@@ -53,6 +53,34 @@ Run `npm run lint` before committing frontend changes.
 - Cross-link overviews down and detail files up (`> Context:`).
 - Update [00-index.md](00-index.md) when adding files.
 
+## LLM agent config (`.claude/`)
+
+Root `.claude/` is **gitignored** today (see root `.gitignore`). Local inventory as of migration:
+
+| Path | Contents |
+|------|----------|
+| `.claude/settings.local.json` | Bash permission allowlist only: `npx tsc *`, `npx --yes tsx -e ' *`, `npm run *` |
+
+**Not present:** slash-commands, project skills, or agent definitions under `.claude/`.
+
+### Recommended commands (not built — add if repeatability matters)
+
+| Command | Purpose |
+|---------|---------|
+| `/start-local` | Run `uv sync && make serve` in `aitu-backend` and `npm run dev` in `aitu-frontend` (two terminals or a small script). |
+| `/lint-frontend` | `cd aitu-frontend && npm run lint` |
+| `/verify-backend` | `cd aitu-backend && uv sync && curl -s http://127.0.0.1:8765/health` |
+
+### Recommended skills (not built)
+
+| Skill topic | When to activate |
+|-------------|------------------|
+| Notation contract | Editing parsing or rendering — point at `context/shared/notation-spec.md` |
+| VexFlow rendering | Changes to `PianoSheet.tsx` or duration/beam logic |
+| uv / FastAPI | Backend dependency or endpoint work |
+
+To version-control agent config, remove `.claude/` from `.gitignore` and commit only non-secret files (`settings.json`, commands, skills).
+
 ## Where to look deeper
 
 - ESLint config: `aitu-frontend/eslint.config.js`

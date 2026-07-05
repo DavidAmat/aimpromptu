@@ -30,8 +30,8 @@ notes; 1 onset + 3 sustains = one long note). Illegal input is normalized.
 sustains/silences) and `keySignature` (VexFlow spec, e.g. `C`, `G`, `Bb`).
 
 **One vs two hands:** either one `matrix` (treble) or `r_matrix` (treble) + `l_matrix` (bass), mutually
-exclusive, with **equal frame counts** so hands align; two hands render as a braced grand staff. Two-hand
-text uses `__` to split right/left per line. Two-hand support is in the working tree (see `TODO.md`).
+exclusive, with **equal frame counts** so hands align; two hands render as a braced grand staff.
+`POST /sequence` takes separate `sequence` (right/treble) and optional `leftSequence` (left/bass) arrays.
 
 ## Flow
 
@@ -86,5 +86,7 @@ GET /scores ──▶ example-scores.json ──▶ same rendering path
 ## Where to look next
 
 - Platform: [01-project.md](01-project.md), [02-tech-stack.md](02-tech-stack.md), [04-local-development.md](04-local-development.md)
-- Notation contract: [shared/notation-spec.md](shared/notation-spec.md) (Phase 2)
+- Notation contract: [shared/notation-spec.md](shared/notation-spec.md)
+- Backend overview: [backend/README.md](backend/README.md) · detail: [../documentation/services/backend/](../documentation/services/backend/)
+- Frontend overview: [frontend/README.md](frontend/README.md) · detail: [../documentation/services/frontend/](../documentation/services/frontend/)
 - Full index: [00-index.md](00-index.md)

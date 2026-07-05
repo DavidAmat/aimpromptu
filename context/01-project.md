@@ -30,8 +30,8 @@ Standard music notation tools expect MIDI, MusicXML, or staff entry. This projec
 3. **Barless rendering** — no measures or time signatures; durations derived from tempo and time-step;
    custom beam rules for a soft voice layout.
 
-Two-hand piano (treble + bass clef, aligned frames) is an active extension; see `TODO.md` and
-`context/shared/notation-spec.md` (Phase 2).
+Two-hand piano (treble + bass clef, aligned frames) is supported via `leftSequence` on `POST /sequence`;
+see [shared/notation-spec.md](shared/notation-spec.md).
 
 ## Repository layout
 

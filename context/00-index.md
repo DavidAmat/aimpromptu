@@ -2,6 +2,12 @@
 
 Single table of contents for `context/` and `documentation/`. One line per file.
 
+## Root
+
+| File | Description |
+|------|-------------|
+| [../README.md](../README.md) | Project entry: tagline, services, run locally, doc links |
+
 ## Platform (`context/`)
 
 | File | Description |
@@ -17,7 +23,7 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 | *(skipped)* `06-*-infrastructure.md` | No cloud provider; POC is local-only |
 | [07-database.md](07-database.md) | No database; file store `data/example-scores.json` only |
 | *(skipped)* `08-security.md` | No auth or network security surface; local POC only |
-| [09-coding-conventions.md](09-coding-conventions.md) | Style grounded in ESLint and Python/uv idioms |
+| [09-coding-conventions.md](09-coding-conventions.md) | Style grounded in ESLint and Python/uv idioms; LLM agent config inventory |
 
 ## Implementations journal (`context/implementations/`)
 
@@ -48,15 +54,27 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 
 | File | Description |
 |------|-------------|
-| [shared/README.md](shared/README.md) | Cross-service capabilities |
+| [shared/README.md](shared/README.md) | Cross-service capabilities index |
 | [shared/notation-spec.md](shared/notation-spec.md) | THE contract: text notation, onset rule, sparse-COO, two-hand, lyrics |
 
 ## Archive (`context/archive/`)
 
 | File | Description |
 |------|-------------|
-| [archive/README.md](archive/README.md) | Historical context |
-| [archive/docs-migration/](archive/docs-migration/) | Migration kit (plan, checklist, templates) |
+| [archive/README.md](archive/README.md) | Historical context; pointer to docs-migration kit |
+
+### Docs migration kit (`context/archive/docs-migration/`)
+
+| File | Description |
+|------|-------------|
+| [archive/docs-migration/documentation-migration-plan.md](archive/docs-migration/documentation-migration-plan.md) | Migration plan and target tree |
+| [archive/docs-migration/docs-migration-checklist.md](archive/docs-migration/docs-migration-checklist.md) | Phase checklist with task IDs |
+| [archive/docs-migration/project-context.md](archive/docs-migration/project-context.md) | Agent orientation primer |
+| [archive/docs-migration/deletions-log.md](archive/docs-migration/deletions-log.md) | Append-only log of consumed/moved sources |
+| [archive/docs-migration/docs-migration.md](archive/docs-migration/docs-migration.md) | Original system prompt (historical) |
+| [archive/docs-migration/agent-prompt-phase1-template.md](archive/docs-migration/agent-prompt-phase1-template.md) | Phase 1 agent template |
+| [archive/docs-migration/agent-prompt-phase2-template.md](archive/docs-migration/agent-prompt-phase2-template.md) | Phase 2 agent template |
+| [archive/docs-migration/00-project-complete-overview.draft.md](archive/docs-migration/00-project-complete-overview.draft.md) | Kit draft (superseded by active overview) |
 
 ## Documentation tree (`documentation/`)
 
@@ -91,4 +109,11 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 | [../documentation/implementations/README.md](../documentation/implementations/README.md) | Stable topic-based how-tos |
 | [../documentation/deprecated/README.md](../documentation/deprecated/README.md) | Superseded or removed features (banner required) |
 | [../documentation/archive/README.md](../documentation/archive/README.md) | Historical reference |
-| [../documentation/archive/vexflow-reference.md](../documentation/archive/vexflow-reference.md) | VexFlow API reference (migrated from aitu-frontend) |
+| [../documentation/archive/vexflow-reference.md](../documentation/archive/vexflow-reference.md) | Archived VexFlow EasyScore notes (superseded by piano-sheet.md) |
+
+## Subrepo pointers
+
+| File | Description |
+|------|-------------|
+| [../aitu-backend/README.md](../aitu-backend/README.md) | Backend entry → links to `context/backend/` |
+| [../aitu-frontend/README.md](../aitu-frontend/README.md) | Frontend entry → links to `context/frontend/` |

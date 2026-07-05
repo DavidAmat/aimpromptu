@@ -36,29 +36,29 @@ Tasks are ordered by dependency. IDs are stable; reference them in `deletions-lo
 
 | ID | Area | Source / touch | Verify against | Produce | Action | Exit |
 |----|------|----------------|----------------|---------|--------|------|
-| P2a | Shared notation spec | both READMEs, `sequence.py`, `matrixToNotation.ts`, `TODO.md` | code | `context/shared/notation-spec.md` (+ `shared/README.md`) | consolidate | single source; text notation, onset rule, sparse-COO, two-hand, lyrics all correct vs code |
-| P2b-1 | Backend overview | `sequence.py`,`schemas.py`,`main.py`,`paths.py`,`README.md` | code | `context/backend/{README,notation-and-parsing,api}.md` | migrate+create | ≤~200 ln each; links to shared spec + down to docs |
-| P2b-2 | Backend detail | same | code | `documentation/services/backend/{endpoints,schemas,sequence-logic,paths-and-data}.md` | migrate+create | endpoint params, 422 cases, field names, onset normalization all code-verified |
-| P2b-3 | Backend README rewrite | `aitu-backend/README.md` | — | short pointer README → root docs | rewrite | no duplicated spec; links to `context/backend/` |
-| P2c-1 | Frontend overview | `App.tsx`,`ScoreStack.tsx`,`SequenceComposer.tsx`,`LayoutControls.tsx`,`README.md` | code | `context/frontend/{README,app-shell,loaded-scores,compose-panel,rendering-pipeline}.md` | migrate+create | structured by UI area (Appendix C); ≤~200 ln each |
-| P2c-2 | Frontend detail | `matrixToNotation.ts`,`PianoSheet.tsx`,`notes.ts`,components | code | `documentation/services/frontend/{matrix-to-notation,piano-sheet,notes,components}.md` | migrate+create | beam rule, key-sig accidentals, dotted decomposition, grand-staff wrap code-verified |
-| P2c-3 | VexFlow ref migrate | `aitu-frontend/documentation/vexflow/README.md` | — | `documentation/archive/vexflow-reference.md` | move (cross-git copy + `git rm`) | logged; original removed |
-| P2c-4 | Frontend README rewrite | `aitu-frontend/README.md` | — | short pointer README | rewrite | no duplicated spec |
+| [x] P2a | Shared notation spec | both READMEs, `sequence.py`, `matrixToNotation.ts`, `TODO.md` | code | `context/shared/notation-spec.md` (+ `shared/README.md`) | consolidate | single source; text notation, onset rule, sparse-COO, two-hand, lyrics all correct vs code |
+| [x] P2b-1 | Backend overview | `sequence.py`,`schemas.py`,`main.py`,`paths.py`,`README.md` | code | `context/backend/{README,notation-and-parsing,api}.md` | migrate+create | ≤~200 ln each; links to shared spec + down to docs |
+| [x] P2b-2 | Backend detail | same | code | `documentation/services/backend/{endpoints,schemas,sequence-logic,paths-and-data}.md` | migrate+create | endpoint params, 422 cases, field names, onset normalization all code-verified |
+| [x] P2b-3 | Backend README rewrite | `aitu-backend/README.md` | — | short pointer README → root docs | rewrite | no duplicated spec; links to `context/backend/` |
+| [x] P2c-1 | Frontend overview | `App.tsx`,`ScoreStack.tsx`,`SequenceComposer.tsx`,`LayoutControls.tsx`,`README.md` | code | `context/frontend/{README,app-shell,loaded-scores,compose-panel,rendering-pipeline}.md` | migrate+create | structured by UI area (Appendix C); ≤~200 ln each |
+| [x] P2c-2 | Frontend detail | `matrixToNotation.ts`,`PianoSheet.tsx`,`notes.ts`,components | code | `documentation/services/frontend/{matrix-to-notation,piano-sheet,notes,components}.md` | migrate+create | beam rule, key-sig accidentals, dotted decomposition, grand-staff wrap code-verified |
+| [x] P2c-3 | VexFlow ref migrate | `aitu-frontend/documentation/vexflow/README.md` | — | `documentation/archive/vexflow-reference.md` | move (cross-git copy + `git rm`) | logged; original removed |
+| [x] P2c-4 | Frontend README rewrite | `aitu-frontend/README.md` | — | short pointer README | rewrite | no duplicated spec |
 
 ## Phase 3 — Index, READMEs, root meta
 
 | ID | Area | Source / touch | Produce | Exit |
 |----|------|----------------|---------|------|
-| P3-1 | Final index | all files | finalized `context/00-index.md` | every real file present, one-liner each |
-| P3-2 | Root README | project | root `README.md`: AImpromptu tagline + intended users (branding) + two services + run both | links into `context/00-*`; concise branding for user to tweak |
-| P3-3 | LLM provider inventory | `.claude/settings.local.json` | note in `09` / `implementations/`; recommend (don't build) commands | inventory recorded |
+| [x] P3-1 | Final index | all files | finalized `context/00-index.md` | every real file present, one-liner each |
+| [x] P3-2 | Root README | project | root `README.md`: AImpromptu tagline + intended users (branding) + two services + run both | links into `context/00-*`; concise branding for user to tweak |
+| [x] P3-3 | LLM provider inventory | `.claude/settings.local.json` | note in `09` / `implementations/`; recommend (don't build) commands | inventory recorded |
 
 ## Phase 4 — Cleanup
 
 | ID | Check | Exit |
 |----|-------|------|
-| P4-1 | Stray names | `git grep -n piano_matrix_generation` / `-ni piano-matrix` / `-n VITE_MATRIX_API_URL` → only in `context/archive/` |
-| P4-2 | Dead links | no links to `docs/`, old folder names, or moved paths |
-| P4-3 | Code diff scoped | only the authorized rename changed code/config; nothing else |
-| P4-4 | Archive kit | this folder lives at `context/archive/docs-migration/` |
-| P4-5 | Overview + index current | `00-index.md` and `00-project-complete-overview.md` match the final tree |
+| [x] P4-1 | Stray names | `git grep -n piano_matrix_generation` / `-ni piano-matrix` / `-n VITE_MATRIX_API_URL` → only in `context/archive/` |
+| [x] P4-2 | Dead links | no links to `docs/`, old folder names, or moved paths |
+| [x] P4-3 | Code diff scoped | only the authorized rename changed code/config; nothing else |
+| [x] P4-4 | Archive kit | this folder lives at `context/archive/docs-migration/` |
+| [x] P4-5 | Overview + index current | `00-index.md` and `00-project-complete-overview.md` match the final tree |

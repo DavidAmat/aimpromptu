@@ -11,7 +11,17 @@ Whenever we receive a .mp3 file, there are python libraries that convert this fi
 
 We want to convert this kind of Midi files format into a sparse matrix format.
 
-Since music is not only about onset of a note but also the duration of it, we need 2 matrices to denote when a note was pressed (onset matrix) and when a note
+Since music is not only about onset of a note but also the duration of it, we need 2 matrices to denote when a note was pressed (onset matrix) and when a note keeps sounding and when it stops (sustain matrix)
 
-A matrix has a 2D dimension:
-- 
+These matrices have 2D dimension, the columns of this matrix are the temporal frames.
+
+## Columns: temporal frame
+
+Temporal duration in music is relative to the beats per minute that each piano sheet decides.
+This is a compulsory **input** for any transformation we do: `bpm`.
+
+When we define the bpm we are defining how many "negras" fit in a given time frame of 60 seconds.
+
+However, whenever we have notes that last less than a "negra" (i.e fusa, semifusa) we need to have sufficient granularity in the temporal dimension to understand when a "fusa" gets onset, how many "seconds" it lasts sustained and when it is released. 
+
+So, the temporal duration of each "column" (how many seconds or milliseconds should ellapse between two columns when we convert the matricial notation into real sounds) is highly dependent on the `bpm` and the temporal resolution of each column. 
