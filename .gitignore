@@ -5,5 +5,9 @@
 aitu-backend/
 aitu-frontend/
 
+# Legacy folder names (Vite cache may recreate at old path)
+piano-matrix-generation/
+piano-matrix-notation/
+
 # Local agent config (optional; not part of docs tree)
 .claude/
