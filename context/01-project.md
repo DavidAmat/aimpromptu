@@ -35,18 +35,24 @@ see [shared/notation-spec.md](shared/notation-spec.md).
 
 ## Repository layout
 
+**Monorepo (POC).** Single git root at `aimpromptu/`. Deployable services live as folders; they are not
+nested git repos. Documentation lives alongside code in `context/` and `documentation/`.
+
 | Path | Role |
 |------|------|
-| `aitu-backend/` | Python/FastAPI service (own git repo) |
-| `aitu-frontend/` | React/TS/Vite app (own git repo) |
-| `context/` + `documentation/` | Umbrella documentation (root git, when initialized) |
+| `aitu-backend/` | Python/FastAPI service |
+| `aitu-frontend/` | React/TS/Vite app |
+| `context/` + `documentation/` | Platform and code-level docs |
 
-Historical folder names: `piano-matrix-generation`, `piano-matrix-notation`, workspace `music-rendering`.
-Phase 0 renames these to aitu names.
+**Future direction:** package `aitu-backend` and `aitu-frontend` as separate Docker containers with clearer
+module boundaries. That modularization is planned, not built yet.
+
+Historical folder names: `piano-matrix-generation`, `piano-matrix-notation`, workspace `music-rendering`
+(now `aimpromptu`). Phase 0 renamed services to `aitu-*`.
 
 ## POC boundaries (out of scope for now)
 
-- Cloud hosting, CI/CD deploy, containers
+- Cloud hosting, CI/CD deploy, Docker images / container orchestration
 - Database or persistent user scores (sample file only)
 - Authentication, secrets management, network hardening
 - AI / LLM features

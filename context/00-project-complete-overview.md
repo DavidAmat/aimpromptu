@@ -4,8 +4,8 @@ One-shot orientation. Paste this alone to get the whole project.
 
 ## What it is
 
-AImpromptu turns a **custom text music notation** into rendered **sheet music**. Two independent
-services under one workspace:
+AImpromptu turns a **custom text music notation** into rendered **sheet music**. Two services in one
+**monorepo** (single git root; POC — future Docker packaging planned, not built yet):
 
 - **aitu-backend** — Python 3.12 / FastAPI (`uv`, hatchling, module `aitu_backend`). Parses the notation
   and emits a compact **sparse-COO JSON score**. Deliberately notation-agnostic: it never emits VexFlow.

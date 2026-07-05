@@ -1,6 +1,7 @@
 # Services overview
 
-Two independent services. The frontend calls the backend over HTTP on localhost.
+Two deployable services in the monorepo (`aitu-backend/`, `aitu-frontend/`). Same git root as docs;
+not separate repos. The frontend calls the backend over HTTP on localhost.
 
 ## aitu-backend
 
@@ -21,7 +22,7 @@ Two independent services. The frontend calls the backend over HTTP on localhost.
 | — | `/docs` | OpenAPI (FastAPI auto) |
 
 **Key modules:** `sequence.py` (notation logic), `schemas.py` (models), `main.py` (app), `paths.py`
-(resolves `data/example-scores.json` relative to repo root).
+(resolves `data/example-scores.json` relative to the `aitu-backend/` service root).
 
 **Does not:** render staff notation, talk to VexFlow, or persist user submissions (returns JSON only).
 

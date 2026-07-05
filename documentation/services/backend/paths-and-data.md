@@ -23,7 +23,7 @@ Used by `GET /scores` in `main.py`.
 ## data/example-scores.json
 
 - JSON array of `MatrixScore` objects (same schema as `POST /sequence` response).
-- Sample data served at runtime; tracked in the backend subrepo git.
+- Sample data served at runtime; tracked in the monorepo under `aitu-backend/data/`.
 - If missing, `/scores` returns 404 with a hint to run
   `notebooks/dummy-matrix/01-generate-dummy-matrix.ipynb` or create the file manually.
 

@@ -18,7 +18,9 @@ Local development only — no hosted deploy, accounts, or database yet.
 | Backend | `aitu-backend/` | Parse text notation → sparse-COO JSON (`POST /sequence`, `GET /scores`) |
 | Frontend | `aitu-frontend/` | Render JSON as sheet music (VexFlow 5) |
 
-Each service is its own git repo nested under this umbrella workspace.
+**Monorepo (POC).** One git repository at the workspace root; `aitu-backend/` and `aitu-frontend/` are
+service folders, not separate repos. Later we plan to package each service as its own Docker container with
+proper modular boundaries — not implemented yet.
 
 ## Run locally
 

@@ -29,7 +29,7 @@ open http://127.0.0.1:8765/docs   # OpenAPI UI
 ```
 
 **Sample data:** `GET /scores` reads `data/example-scores.json` next to `pyproject.toml`. Working
-directory must be the backend repo root (Makefile assumes this).
+directory must be `aitu-backend/` (Makefile assumes this).
 
 ## Frontend
 
@@ -78,7 +78,7 @@ thematic subfolder per POC is the standing convention.
 | Frontend "failed to load scores" | Backend running? `curl /health`. CORS is open locally. |
 | Wrong API host | Set `VITE_AITU_API_URL` (no trailing slash). |
 | Backend import error | `uv sync` from `aitu-backend/`; module is `aitu_backend`. |
-| Empty `/scores` | `data/example-scores.json` exists at backend repo root. |
+| Empty `/scores` | `data/example-scores.json` exists under `aitu-backend/`. |
 
 ## Where to look deeper
 

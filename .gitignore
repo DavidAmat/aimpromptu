@@ -1,13 +1,102 @@
 # macOS
 .DS_Store
 
-# Service subrepos (each has its own git history)
-aitu-backend/
-aitu-frontend/
-
-# Legacy folder names (Vite cache may recreate at old path)
-piano-matrix-generation/
-piano-matrix-notation/
-
 # Local agent config (optional; not part of docs tree)
 .claude/
+
+# =============================================================================
+# aitu-backend — Python / uv / Jupyter
+# =============================================================================
+aitu-backend/.venv/
+aitu-backend/venv/
+aitu-backend/ENV/
+aitu-backend/env/
+aitu-backend/**/__pycache__/
+aitu-backend/**/*.py[cod]
+aitu-backend/**/*$py.class
+aitu-backend/**/*.so
+aitu-backend/.Python
+aitu-backend/build/
+aitu-backend/develop-eggs/
+aitu-backend/dist/
+aitu-backend/downloads/
+aitu-backend/eggs/
+aitu-backend/.eggs/
+aitu-backend/lib/
+aitu-backend/lib64/
+aitu-backend/parts/
+aitu-backend/sdist/
+aitu-backend/var/
+aitu-backend/wheels/
+aitu-backend/share/python-wheels/
+aitu-backend/**/*.egg-info/
+aitu-backend/.installed.cfg
+aitu-backend/**/*.egg
+aitu-backend/MANIFEST
+aitu-backend/.python-version-check
+aitu-backend/**/*.manifest
+aitu-backend/**/*.spec
+aitu-backend/pip-log.txt
+aitu-backend/pip-delete-this-directory.txt
+aitu-backend/htmlcov/
+aitu-backend/.tox/
+aitu-backend/.nox/
+aitu-backend/.coverage
+aitu-backend/.coverage.*
+aitu-backend/.cache
+aitu-backend/nosetests.xml
+aitu-backend/coverage.xml
+aitu-backend/**/*.cover
+aitu-backend/**/*.py,cover
+aitu-backend/.hypothesis/
+aitu-backend/.pytest_cache/
+aitu-backend/.ipynb_checkpoints/
+aitu-backend/profile_default/
+aitu-backend/ipython_config.py
+aitu-backend/.idea/
+aitu-backend/.vscode/
+aitu-backend/**/*.swp
+aitu-backend/**/*.swo
+aitu-backend/**/*~
+aitu-backend/Thumbs.db
+aitu-backend/.env
+aitu-backend/.env.*
+!aitu-backend/.env.example
+aitu-backend/.mypy_cache/
+aitu-backend/.ruff_cache/
+aitu-backend/.dmypy.json
+aitu-backend/dmypy.json
+
+# =============================================================================
+# aitu-frontend — Node / Vite / TypeScript
+# =============================================================================
+aitu-frontend/node_modules/
+aitu-frontend/dist/
+aitu-frontend/dist-ssr/
+aitu-frontend/build/
+aitu-frontend/**/*.local
+aitu-frontend/.env
+aitu-frontend/.env.*
+!aitu-frontend/.env.example
+aitu-frontend/coverage/
+aitu-frontend/**/*.lcov
+aitu-frontend/.nyc_output
+aitu-frontend/**/*.tsbuildinfo
+aitu-frontend/.vite/
+aitu-frontend/.cache/
+aitu-frontend/.turbo/
+aitu-frontend/.vscode/*
+!aitu-frontend/.vscode/extensions.json
+aitu-frontend/.idea/
+aitu-frontend/**/*.suo
+aitu-frontend/**/*.ntvs*
+aitu-frontend/**/*.njsproj
+aitu-frontend/**/*.sln
+aitu-frontend/**/*.sw?
+aitu-frontend/logs/
+aitu-frontend/**/*.log
+aitu-frontend/npm-debug.log*
+aitu-frontend/yarn-debug.log*
+aitu-frontend/yarn-error.log*
+aitu-frontend/pnpm-debug.log*
+aitu-frontend/lerna-debug.log*
