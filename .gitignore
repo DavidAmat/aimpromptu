@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+
+# Service subrepos (each has its own git history)
+aitu-backend/
+aitu-frontend/
+
+# Local agent config (optional; not part of docs tree)
+.claude/
