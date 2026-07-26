@@ -1,4 +1,4 @@
-> Context: [notation-and-parsing.md](../../../context/backend/notation-and-parsing.md) · [notation-spec.md](../../../context/shared/notation-spec.md)
+> Context: [notation-and-parsing.md](../../../context/backend/notation-and-parsing.md) · [notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md.md)
 
 # Sequence logic
 

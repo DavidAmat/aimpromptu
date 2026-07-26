@@ -126,7 +126,7 @@ stage. So we **skip the `docs/` staging step**. Instead:
    English musical term in English (onset, sustain, treble, bass clef, grand staff, beam, tie).
 2. **Code-truth always wins.** The READMEs are excellent but are a starting point; verify each claim
    against `sequence.py` / `schemas.py` / `matrixToNotation.ts` / `PianoSheet.tsx` / `notes.ts`.
-3. **No duplication.** The notation contract lives once in `context/shared/notation-spec.md`; both
+3. **No duplication.** The notation contract lives once in `context/music/notation-logic/02-notation-spec.md.md`; both
    services link to it instead of re-explaining it. Don't restate platform files in entity files.
 4. **One file = one topic.** Split rendering vs API vs notation; keep each `context/<area>/*.md` ≤ ~200 lines.
 5. **Cross-link both ways.** Every `context/<area>/<entity>.md` ends with "Where to look deeper" →
@@ -191,7 +191,7 @@ stage. So we **skip the `docs/` staging step**. Instead:
 
 | Area | Source | Has docs? | Quality | Verdict |
 |---|---|---|---|---|
-| Shared notation contract (text notation, onset rule, sparse-COO, two-hand, lyrics) | both READMEs, `sequence.py`, `matrixToNotation.ts` | yes (in READMEs) | up-to-date | **consolidate** into `context/shared/notation-spec.md` (single source) |
+| Shared notation contract (text notation, onset rule, sparse-COO, two-hand, lyrics) | both READMEs, `sequence.py`, `matrixToNotation.ts` | yes (in READMEs) | up-to-date | **consolidate** into `context/music/notation-logic/02-notation-spec.md.md` (single source) |
 | Backend — sequence logic | `sequence.py` (178 ln) | partial | good | migrate + code-verify → `documentation/services/backend/sequence-logic.md` |
 | Backend — schemas | `schemas.py` (95 ln) | partial (code map only) | ok | create → `.../backend/schemas.md` |
 | Backend — endpoints | `main.py` (105 ln) | yes (README API) | good | migrate → `.../backend/endpoints.md` |
@@ -215,7 +215,7 @@ stage. So we **skip the `docs/` staging step**. Instead:
   (seed), `00-project-complete-overview.md` (finalize the draft in this kit), `01-project.md`,
   `02-tech-stack.md`, `03-services-overview.md`, `04-local-development.md`, `07-database.md` (short),
   `09-coding-conventions.md`; stub `05-deployment.md`; note skips for `06`/`08`. Must precede Phase 2.
-- **Phase 2 — Area agents (parallelisable). Also write `context/shared/notation-spec.md` FIRST within
+- **Phase 2 — Area agents (parallelisable). Also write `context/music/notation-logic/02-notation-spec.md.md` FIRST within
   this phase** (task 2a) because 2b/2c both link to it.
   - 2a `shared-notation-spec` — the contract (do this before/early).
   - 2b `backend` — `context/backend/*` + `documentation/services/backend/*`.
@@ -245,7 +245,7 @@ area work run in parallel against a stable Phase-1 base.
 1. Deep rename executed and **both services verified** to boot/build (Phase 0 exit).
 2. `context/` + `documentation/` populated per §2; every file listed in `00-index.md` with a one-liner.
 3. `00-project-complete-overview.md` orients a fresh reader in one paste.
-4. The notation contract exists once in `context/shared/notation-spec.md`; both services link to it.
+4. The notation contract exists once in `context/music/notation-logic/02-notation-spec.md.md`; both services link to it.
 5. No `docs/` staging left; vexflow reference migrated and original `git rm`'d (logged).
 6. No dead links; no stray old names in live code/config (incl. `VITE_MATRIX_API_URL`); only the
    authorized rename + housekeeping changed code.

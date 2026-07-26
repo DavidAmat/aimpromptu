@@ -43,7 +43,7 @@ Run `npm run lint` before committing frontend changes.
 | Convention | Detail |
 |------------|--------|
 | Score JSON | camelCase field names on the wire |
-| Notation contract | Document once in `context/shared/notation-spec.md`; link, do not copy |
+| Notation contract | Document once in `context/music/notation-logic/02-notation-spec.md.md`; link, do not copy |
 | API docs | Backend OpenAPI at `/docs` when server is running |
 
 ## Documentation work
@@ -75,7 +75,7 @@ Root `.claude/` is **gitignored** today (see root `.gitignore`). Local inventory
 
 | Skill topic | When to activate |
 |-------------|------------------|
-| Notation contract | Editing parsing or rendering — point at `context/shared/notation-spec.md` |
+| Notation contract | Editing parsing or rendering — point at `context/music/notation-logic/02-notation-spec.md.md` |
 | VexFlow rendering | Changes to `PianoSheet.tsx` or duration/beam logic |
 | uv / FastAPI | Backend dependency or endpoint work |
 

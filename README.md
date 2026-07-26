@@ -40,7 +40,7 @@ Override backend URL: `VITE_AITU_API_URL=http://127.0.0.1:8765 npm run dev`
 |------------|---------|
 | [context/00-project-complete-overview.md](context/00-project-complete-overview.md) | One-shot orientation |
 | [context/00-index.md](context/00-index.md) | Full map of all docs |
-| [context/shared/notation-spec.md](context/shared/notation-spec.md) | Notation contract (single source) |
+| [context/music/notation-logic/02-notation-spec.md.md](context/music/notation-logic/02-notation-spec.md.md) | Notation contract (single source) |
 | [documentation/README.md](documentation/README.md) | Code-level detail tree |
 
 Subrepo entry points: [aitu-backend/README.md](aitu-backend/README.md) · [aitu-frontend/README.md](aitu-frontend/README.md)

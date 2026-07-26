@@ -36,7 +36,7 @@ Tasks are ordered by dependency. IDs are stable; reference them in `deletions-lo
 
 | ID | Area | Source / touch | Verify against | Produce | Action | Exit |
 |----|------|----------------|----------------|---------|--------|------|
-| [x] P2a | Shared notation spec | both READMEs, `sequence.py`, `matrixToNotation.ts`, `TODO.md` | code | `context/shared/notation-spec.md` (+ `shared/README.md`) | consolidate | single source; text notation, onset rule, sparse-COO, two-hand, lyrics all correct vs code |
+| [x] P2a | Shared notation spec | both READMEs, `sequence.py`, `matrixToNotation.ts`, `TODO.md` | code | `context/music/notation-logic/02-notation-spec.md.md` (+ `shared/README.md`) | consolidate | single source; text notation, onset rule, sparse-COO, two-hand, lyrics all correct vs code |
 | [x] P2b-1 | Backend overview | `sequence.py`,`schemas.py`,`main.py`,`paths.py`,`README.md` | code | `context/backend/{README,notation-and-parsing,api}.md` | migrate+create | ≤~200 ln each; links to shared spec + down to docs |
 | [x] P2b-2 | Backend detail | same | code | `documentation/services/backend/{endpoints,schemas,sequence-logic,paths-and-data}.md` | migrate+create | endpoint params, 422 cases, field names, onset normalization all code-verified |
 | [x] P2b-3 | Backend README rewrite | `aitu-backend/README.md` | — | short pointer README → root docs | rewrite | no duplicated spec; links to `context/backend/` |

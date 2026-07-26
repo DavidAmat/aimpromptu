@@ -15,7 +15,7 @@ AImpromptu turns a **custom text music notation** into rendered **sheet music**.
 Status: **POC, local-only.** No cloud, deploy pipeline, database, auth, or AI. A single
 `aitu-backend/data/example-scores.json` file backs `GET /scores`.
 
-## The notation (shared contract — full detail in `context/shared/notation-spec.md`)
+## The notation (shared contract — full detail in `context/music/notation-logic/02-notation-spec.md.md`)
 
 One line per **time frame**. `*Note` = onset (struck), `Note` = sustain, `A || B` = chord, blank = silence.
 Names are **Spanish solfège + scientific octave** (`Do-4`=C4 … `La-0`=A0 lowest, `Do-8`=C8 highest), over

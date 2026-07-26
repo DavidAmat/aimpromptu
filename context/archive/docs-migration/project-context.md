@@ -120,4 +120,4 @@ working tree (see `TODO.md`) — document the working-tree behavior; verify agai
 - The two subrepos have their **own git**; the root umbrella git is new. Moving files from a subrepo into
   root docs crosses git boundaries — history won't follow; copy + `git rm`, and log it.
 - Both subrepos have **uncommitted** work; document the working tree, not `HEAD`.
-- The notation contract is **shared** — write it once in `context/shared/notation-spec.md`; link, don't copy.
+- The notation contract is **shared** — write it once in `context/music/notation-logic/02-notation-spec.md.md`; link, don't copy.

@@ -41,7 +41,7 @@ How the AImpromptu (aitu) documentation system works and where to put new materi
 ## Size and duplication
 
 - Keep each `context/<area>/<entity>.md` ≤ ~200 lines; overflow goes to `documentation/`.
-- Do **not** restate the notation contract outside `context/shared/notation-spec.md` — link to it.
+- Do **not** restate the notation contract outside `context/music/notation-logic/02-notation-spec.md.md` — link to it.
 - Do **not** duplicate platform files (`00–09`) in entity files — link instead.
 
 ## After writing

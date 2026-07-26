@@ -20,7 +20,7 @@ You are writing ONE foundational `context/` file for **AImpromptu (aitu)**, a tw
 - **No emojis / no narrative / terse and skimmable.**
 - `context/` files are short and high-level ("what it is / how it flows"). Exact commands, versions,
   field names still belong here for platform files 02/04, but any deep per-entity detail goes to `documentation/`.
-- Do **not** duplicate the notation contract — that lives in `context/shared/notation-spec.md` (Phase 2a);
+- Do **not** duplicate the notation contract — that lives in `context/music/notation-logic/02-notation-spec.md.md` (Phase 2a);
   reference it.
 - **Never change application code.** The Phase-0 rename is the only sanctioned code change; if it hasn't
   run, stop and say so. Markdown only here.

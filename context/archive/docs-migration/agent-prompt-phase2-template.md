@@ -8,7 +8,7 @@ You own ONE area of **AImpromptu (aitu)**. You produce both the high-level `cont
 ## Read first (in order)
 1. `context/archive/docs-migration/project-context.md` — orientation primer.
 2. `context/archive/docs-migration/documentation-migration-plan.md` §2, §4, §6 (gap analysis).
-3. `context/shared/notation-spec.md` — the shared notation contract. **If your task is P2a you WRITE this
+3. `context/music/notation-logic/02-notation-spec.md.md` — the shared notation contract. **If your task is P2a you WRITE this
    file first;** everyone else links to it and must not restate it.
 4. Your source files (checklist row). Respect line counts. **Never deep-read** notebooks, `data/*.json`,
    lockfiles, `node_modules`, `.venv`.
@@ -23,7 +23,7 @@ You own ONE area of **AImpromptu (aitu)**. You produce both the high-level `cont
 - `context/<area>/<entity>.md` ≤ **~200 lines**; overflow detail → `documentation/`.
 - **Cross-link both ways:** each `context/` overview ends with "Where to look deeper" → its
   `documentation/` detail + sibling entities; each `documentation/` file opens with `> Context:` up-link
-  to its overview and, where relevant, to `context/shared/notation-spec.md`.
+  to its overview and, where relevant, to `context/music/notation-logic/02-notation-spec.md.md`.
 - Frontend: structure `context/frontend/` **by UI area** (app-shell, loaded-scores, compose-panel,
   rendering-pipeline) per plan Appendix-C guidance, not by file.
 - **No secrets; no emojis; terse.**

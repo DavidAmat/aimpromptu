@@ -1,4 +1,4 @@
-> Context: [api.md](../../../context/backend/api.md) · [notation-spec.md](../../../context/shared/notation-spec.md)
+> Context: [api.md](../../../context/backend/api.md) · [notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md.md)
 
 # Endpoints
 

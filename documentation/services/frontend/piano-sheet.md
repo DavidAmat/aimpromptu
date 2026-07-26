@@ -1,4 +1,4 @@
-> Context: [rendering-pipeline.md](../../../context/frontend/rendering-pipeline.md) · [notation-spec.md](../../../context/shared/notation-spec.md)
+> Context: [rendering-pipeline.md](../../../context/frontend/rendering-pipeline.md) · [notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md.md)
 
 # PianoSheet
 
