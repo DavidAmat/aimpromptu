@@ -52,16 +52,17 @@ class MatrixScore(BaseModel):
 
     @model_validator(mode="after")
     def _check_hands(self) -> "MatrixScore":
+        right, left = self.r_matrix, self.l_matrix
         one_hand = self.matrix is not None
-        two_hand = self.r_matrix is not None and self.l_matrix is not None
+        two_hand = right is not None and left is not None
         if one_hand == two_hand:
             raise ValueError(
                 "Provide either `matrix` (one hand) or both `r_matrix` and "
                 "`l_matrix` (two hands), never both or neither."
             )
-        if two_hand:
-            r_cols = self.r_matrix.shape[1]
-            l_cols = self.l_matrix.shape[1]
+        if right is not None and left is not None:
+            r_cols = right.shape[1]
+            l_cols = left.shape[1]
             if r_cols != l_cols:
                 raise ValueError(
                     "r_matrix and l_matrix must span the same number of time "

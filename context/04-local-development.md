@@ -6,6 +6,38 @@ Run backend and frontend in separate terminals. Both services must be up for the
 
 - **Backend:** Python 3.12.13, [`uv`](https://docs.astral.sh/uv/) installed
 - **Frontend:** Node.js (compatible with Vite 8 / npm lockfile)
+- **`ffmpeg`** on `PATH` — required by Epic 3 to normalize uploaded and recorded audio, and by
+  Epic 3 Story 3.5 for yt-dlp's mp3 extraction. macOS: `brew install ffmpeg`. Without it,
+  `/audio/upload` answers `503` with that instruction; the audio tests skip rather than fail.
+- **`yt-dlp`** — a normal Python dependency, installed by `uv sync`. It is invoked as
+  `python -m yt_dlp` on the backend's own interpreter, so it does **not** need to be on `PATH`.
+
+### Transcription models (optional extra)
+
+The piano-transcription models are **not** part of the base install — torch is a ~200 MB download.
+
+```bash
+cd aitu-backend
+uv sync --extra transcription     # piano_transcription_inference + torch + librosa
+uv sync --extra basic-pitch       # the benchmark/fallback engine (optional)
+```
+
+Verified July 2026:
+
+- `torch` ships macOS **arm64** wheels for CPython 3.10–3.14, so **Python 3.12 works fine on
+  Apple Silicon (M1–M4)** — no version change needed.
+- `piano_transcription_inference` does **not** pin torch (it needs matplotlib, mido, librosa,
+  torchlibrosa), so there is no dependency conflict to work around.
+- On Apple Silicon the model runs on the **CPU**. The package only moves itself to a device when
+  the string contains `"cuda"`, so `mps` is accepted and then ignored. A short piano clip still
+  transcribes in seconds.
+- The **165 MB model checkpoint** is downloaded on first use into
+  `~/piano_transcription_inference_data/`. The package would normally fetch it with `wget`, which
+  **macOS does not ship** — so the backend downloads it itself, with a progress bar, before
+  loading the model. Nothing extra to install.
+
+Without an engine installed, everything still runs: the `silent` engine returns no notes, so the
+UI and the pipeline can be exercised end to end. `GET /matrix/engines` reports what is available.
 
 ## Backend
 

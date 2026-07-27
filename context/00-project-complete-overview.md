@@ -57,6 +57,8 @@ GET /scores ──▶ example-scores.json ──▶ same rendering path
 
 ## API
 
+Live endpoints (everything else exists and answers `501` naming its epic — see `/docs`):
+
 - `GET /health` — liveness.
 - `GET /scores` — serves `data/example-scores.json`.
 - `POST /sequence` — `sequence` (text) + `tempoBpm`, `timeStepSeconds`, optional `title`/`lyrics`/
@@ -71,10 +73,20 @@ GET /scores ──▶ example-scores.json ──▶ same rendering path
 
 ## Code map
 
-- Backend: `sequence.py` (notation logic — single source of truth), `schemas.py` (Pydantic, camelCase),
-  `main.py` (endpoints), `paths.py`, `data/example-scores.json`, `notebooks/<theme>/` (demos, one folder per POC).
-- Frontend: `src/music/{types,notes,matrixToNotation}.ts`, `src/components/{PianoSheet,SequenceComposer,
-  LayoutControls,ScoreStack}.tsx`, `src/App.tsx`.
+Restructured by Epic 1 (see `implementations/progress/epic-01/`).
+
+- Backend `src/aitu_backend/`: `api/` (one router per section: scores, audio, matrix, notation,
+  library, youtube — later-epic endpoints answer `501`), `matrix/` (`text_notation.py` notation
+  logic — single source of truth, `keys.py` 88-key tables, `convert.py` sparse/dense),
+  `schemas/` (`score.py`, `matrix.py`, `metadata.py`, `naming.py`), `storage/` (`paths.py`,
+  `matrix_store.py` npz), `audio/`, `transcription/`, `notation/` (empty, awaiting their epics),
+  `progress.py` (ProgressReporter for tqdm + SSE), `main.py` (thin app factory),
+  `data/` (see `data/README.md`), `notebooks/<theme>/`.
+- Frontend `src/`: `api/` (typed client per router), `layout/` (AppLayout, PlaygroundLayout,
+  `routes.ts`), `pages/` (one per route), `state/` (working-artifact context), `ui/`
+  (`palette.ts`, `theme.ts`, shared MUI wrappers), `hooks/useProgress.ts`,
+  `music/{types,notes,matrixToNotation}.ts`, `components/{PianoSheet,SequenceComposer,
+  LayoutControls,ScoreStack}.tsx` (kept for Epic 9), `App.tsx` (route table).
 
 ## Conventions
 
@@ -82,6 +94,29 @@ GET /scores ──▶ example-scores.json ──▶ same rendering path
   paths centralized in `paths.py`, `uv` + `uv.lock`.
 - Frontend: functional React + hooks, ESLint flat config (typescript-eslint + react-hooks + react-refresh),
   music logic isolated under `src/music/`, rendering isolated in `PianoSheet.tsx`.
+
+## Where it is going (implementation plan)
+
+The text-notation MVP above is the seed of a much larger product, now fully planned in
+`implementations/plan/` (source requirements: `../project-features.md`). Target feature set:
+
+- **Audio in**: upload mp3/aac/m4a, record from the browser mic (live waveform), download YouTube
+  audio (yt-dlp), Audacity-like time-range selection; uuid audio store with editable aliases.
+- **Transcription**: piano audio -> MIDI-like note events (`piano_transcription_inference`) -> raw
+  88xN 0/1/-1 matrix at fusa granularity -> collapse to user granularity (merge rules) -> sustain
+  cleaning -> two-hands split (C4 threshold). Raw matrix kept so any granularity recomputes instantly.
+- **Playground**: Input tab (5 sources), Matrix tab (circle grid, step pills, JSON export/import,
+  in-situ BPM/granularity switching, editing), Piano Roll + Notes Falling views (piano SVG, player
+  with original vs synthesized sound), Music Notation tab (VexFlow with engraving rules: stems,
+  beams, tie policy, key signatures/naturals, 8va/clef switching, beat guides, cut-measure,
+  tuplets/trills later).
+- **Storage**: versioned playground artifacts (`vN_gX` folders + metadata family), promotion to a
+  performer-facing Library with named versions, rollback, tags and Spotify-like playlists.
+- **Editing**: staged re-recording of selected passages at slower practice tempos with
+  transcribe-then-scale preview; live composing and annotations (lyrics, fingering) as later epics.
+
+Status tracking: `implementations/plan/checklist.md`. Worker instructions:
+`implementations/plan/system-prompt-workers.md`. Progress journal: `implementations/progress/`.
 
 ## Where to look next
 

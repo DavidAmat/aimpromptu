@@ -1,0 +1,14 @@
+# flake8 has no pyproject.toml support; config lives here next to pyproject.
+[flake8]
+max-line-length = 100
+# E501 long lines  — black owns line length, and docstrings run long on purpose.
+# E203 whitespace before ':' — black's slice style.
+# W503 line break before binary operator — black's preferred style.
+extend-ignore = E501,E203,W503
+exclude =
+    .venv,
+    .git,
+    __pycache__,
+    build,
+    dist,
+    notebooks

@@ -27,23 +27,19 @@ row): ``rows`` / ``cols`` mark active cells, and ``onset[i]`` is either
 
 from __future__ import annotations
 
-CHROMATIC_NOTES = [
-    "Do", "Do#", "Re", "Re#", "Mi", "Fa",
-    "Fa#", "Sol", "Sol#", "La", "La#", "Si",
+from aitu_backend.matrix.keys import CHROMATIC_ES, build_grand_piano_rows
+
+#: Kept as an alias: the key tables now live in `aitu_backend.matrix.keys`,
+#: which is the single source of truth for note names and row order.
+CHROMATIC_NOTES = CHROMATIC_ES
+
+__all__ = [
+    "CHROMATIC_NOTES",
+    "build_grand_piano_rows",
+    "parse_timeframe_notes",
+    "sequence_to_sparse_payload",
+    "sequence_to_score",
 ]
-
-
-def build_grand_piano_rows() -> list[str]:
-    """88-key grand piano row order, lowest to highest: La-0 … Do-8."""
-    rows: list[str] = ["La-0", "La#-0", "Si-0"]
-
-    for octave in range(1, 8):
-        rows.extend(f"{note}-{octave}" for note in CHROMATIC_NOTES)
-
-    rows.append("Do-8")
-
-    assert len(rows) == 88
-    return rows
 
 
 def parse_timeframe_notes(cell: str) -> list[tuple[str, bool]]:
@@ -92,8 +88,7 @@ def sequence_to_sparse_payload(
         for note, is_onset in parse_timeframe_notes(cell):
             if note not in note_to_row:
                 raise ValueError(
-                    f"Unknown note '{note}'. Expected one of: "
-                    f"{rows[0]} ... {rows[-1]}"
+                    f"Unknown note '{note}'. Expected one of: " f"{rows[0]} ... {rows[-1]}"
                 )
             items.append((note_to_row[note], is_onset))
 

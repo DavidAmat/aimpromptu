@@ -1,0 +1,58 @@
+/**
+ * The whole backend surface, one module per backend router.
+ * Import from here: `import { matrixApi } from "../api";`
+ */
+
+import { request } from "./client";
+
+export { API_BASE, ApiError, buildUrl, request, upload } from "./client";
+export type { RequestOptions } from "./client";
+
+export { scoresApi } from "./scores";
+export type { SequenceRequest } from "./scores";
+
+// Music contracts, re-exported so components have one import path for the API
+// surface and the shapes it carries.
+export type {
+  Granularity as MatrixGranularity,
+  KeyLabel,
+  MatrixScore,
+  SparseMatrix,
+} from "../music/types";
+
+export { audioApi, SUPPORTED_AUDIO_SUFFIXES } from "./audio";
+export type { AudioItem, AudioSource, WaveformPeaks } from "./audio";
+
+export { matrixApi } from "./matrix";
+export type {
+  Granularity,
+  ImportedMatrix,
+  JobHandle,
+  JobStatus,
+  MatrixEnvelope,
+  MatrixProcessingStep,
+  PianoMatrixEnvelope,
+  TranscribeRequest,
+} from "./matrix";
+
+export { notationApi } from "./notation";
+export type { AnnotationOverlay, ScoreDocument } from "./notation";
+
+export { libraryApi } from "./library";
+export type {
+  LibraryTrack,
+  PlaygroundTrack,
+  PromoteRequest,
+  Promotion,
+  PromotionSuggestion,
+  SaveVersionRequest,
+  SavedVersion,
+  VersionHistoryEntry,
+} from "./library";
+
+export { youtubeApi } from "./youtube";
+export type { BatchEntry, VideoInfo, YoutubeDownloadRequest } from "./youtube";
+
+/** Liveness check used by the app bar indicator. */
+export const health = (signal?: AbortSignal) =>
+  request<{ status: string }>("/health", { signal });

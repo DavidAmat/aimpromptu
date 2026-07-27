@@ -1,0 +1,19 @@
+{
+  "name": "Sunday practice",
+  "slug": "sunday-practice",
+  "description": "Warm-up, then the two Avicii arrangements.",
+  "items": [
+    {
+      "artistSlug": "avicii",
+      "trackSlug": "levels",
+      "promotionName": "Levels (Chill) - Avicii"
+    },
+    {
+      "artistSlug": "avicii",
+      "trackSlug": "levels",
+      "promotionName": "Levels (Full speed) - Avicii"
+    }
+  ],
+  "createdAt": "2026-07-25T08:00:00Z",
+  "updatedAt": null
+}

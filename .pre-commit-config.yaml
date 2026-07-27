@@ -1,0 +1,35 @@
+# Repo-root pre-commit. Backend only for now (the frontend runs `npm run lint`).
+# Install once with:  cd aitu-backend && uv run pre-commit install
+files: ^aitu-backend/
+exclude: ^aitu-backend/(notebooks|data)/
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        args: ["--config", "aitu-backend/pyproject.toml"]
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        args: ["--config", "aitu-backend/.flake8"]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        args: ["--config-file", "aitu-backend/pyproject.toml"]
+        additional_dependencies:
+          - pydantic>=2.9.0
+          - types-tqdm

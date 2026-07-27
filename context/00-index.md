@@ -32,6 +32,16 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 | [implementations/README.md](implementations/README.md) | Dated journal conventions for vibe-coded features |
 | [implementations/00-implementation-index.md](implementations/00-implementation-index.md) | Master index sorted by date |
 
+### Implementation plan (`context/implementations/plan/`)
+
+| File | Description |
+|------|-------------|
+| [implementations/plan/README.md](implementations/plan/README.md) | How the plan is organized; epic list in implementation order |
+| [implementations/plan/checklist.md](implementations/plan/checklist.md) | THE status lookup: every epic/story/task with checkboxes |
+| [implementations/plan/system-prompt-workers.md](implementations/plan/system-prompt-workers.md) | System prompt for worker LLMs implementing tasks |
+| `implementations/plan/epic-NN-*/` | 14 epic folders, each with an `epic-<shortname>-index.md`, story folders and task files |
+| [implementations/progress/README.md](implementations/progress/README.md) | Progress journal written by workers, one report per task |
+
 ## Backend overview (`context/backend/`)
 
 | File | Description |

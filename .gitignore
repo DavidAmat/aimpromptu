@@ -67,6 +67,18 @@ aitu-backend/.ruff_cache/
 aitu-backend/.dmypy.json
 aitu-backend/dmypy.json
 
+# -----------------------------------------------------------------------------
+# aitu-backend — local data store (no database; see context/07-database.md)
+# Policy: metadata is small and worth versioning, payloads are heavy and
+# reproducible. So `metadata*.json` stays committed and the binaries do not.
+# -----------------------------------------------------------------------------
+# Audio: always heavy, always re-downloadable or re-recordable.
+aitu-backend/data/audio/**
+# Matrices: binary .npz anywhere under data/ ...
+aitu-backend/data/**/*.npz
+# ... except the small committed samples used by tests and demos.
+!aitu-backend/data/examples/**/*.npz
+
 # =============================================================================
 # aitu-frontend — Node / Vite / TypeScript
 # =============================================================================

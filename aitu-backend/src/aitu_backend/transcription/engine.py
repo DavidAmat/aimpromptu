@@ -1,0 +1,324 @@
+"""Piano transcription engines behind one stable interface.
+
+The plan is explicit that engines will be swapped when results disappoint, so
+nothing outside this module knows which model produced a note. Everything
+downstream takes a ``list[NoteEvent]``.
+
+Engines available:
+
+| Name | Package | Notes |
+|------|---------|-------|
+| ``bytedance`` | ``piano_transcription_inference`` | default; the research doc's first pick |
+| ``basic-pitch`` | ``basic_pitch`` | Spotify's model, kept as benchmark/fallback |
+| ``silent`` | — | returns nothing; for tests and for wiring the UI without a model |
+
+Both real engines import their package **lazily, inside the constructor**, so
+the backend starts, the API serves and the whole test suite runs on a machine
+where neither is installed. Asking for an engine that is not installed raises
+:class:`EngineUnavailable` naming the install command.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Protocol, runtime_checkable
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+#: Default engine name. Swap here, not at every call site.
+DEFAULT_ENGINE = "bytedance"
+
+#: ``device`` value for this Mac. Kept parameterized for future CUDA hosts.
+DEFAULT_DEVICE = "cpu"
+
+
+class NoteEvent(BaseModel):
+    """One transcribed note, before it meets the matrix grid.
+
+    Times are seconds from the start of the transcribed audio (or of the
+    selected range — the caller offsets them).
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    midi_note: int = Field(..., alias="midiNote", ge=0, le=127)
+    start: float = Field(..., ge=0)
+    end: float = Field(..., gt=0)
+    velocity: int = Field(64, ge=0, le=127)
+
+    @model_validator(mode="after")
+    def _check_order(self) -> "NoteEvent":
+        if self.end <= self.start:
+            raise ValueError(f"A note must end after it starts ({self.end} <= {self.start})")
+        return self
+
+    @property
+    def duration(self) -> float:
+        return self.end - self.start
+
+
+@runtime_checkable
+class TranscriptionEngine(Protocol):
+    """What every engine must provide."""
+
+    #: Stable identifier used in config and in artifact metadata.
+    name: str
+
+    def transcribe(self, wav_path: Path) -> list[NoteEvent]:
+        """Transcribe a mono WAV into note events, ordered by start time."""
+
+
+class EngineUnavailable(RuntimeError):
+    """The requested engine's package is not installed."""
+
+    def __init__(self, engine: str, package: str, install: str) -> None:
+        self.engine = engine
+        super().__init__(
+            f"The '{engine}' transcription engine needs the '{package}' package, which is not "
+            f"installed. Install it with: {install}"
+        )
+
+
+@dataclass
+class SilentEngine:
+    """Transcribes everything as silence.
+
+    Not a joke: it lets the pipeline, the API, the artifacts and the whole UI be
+    exercised end to end on a machine with no model installed, and it is what
+    the tests use so they stay fast and deterministic.
+    """
+
+    name: str = "silent"
+
+    def transcribe(self, wav_path: Path) -> list[NoteEvent]:
+        if not wav_path.is_file():
+            raise FileNotFoundError(f"No audio at {wav_path}")
+        return []
+
+
+#: Where `piano_transcription_inference` expects its checkpoint, and where it
+#: fetches it from. Both are hardcoded in the package (`inference.py`), so they
+#: are mirrored here rather than imported.
+CHECKPOINT_DIR = Path.home() / "piano_transcription_inference_data"
+CHECKPOINT_NAME = "note_F1=0.9677_pedal_F1=0.9186.pth"
+CHECKPOINT_URL = (
+    "https://zenodo.org/record/4034264/files/"
+    "CRNN_note_F1%3D0.9677_pedal_F1%3D0.9186.pth?download=1"
+)
+#: The package's own sanity check: anything smaller is a failed download.
+CHECKPOINT_MIN_BYTES = 160_000_000
+
+
+def checkpoint_path() -> Path:
+    return CHECKPOINT_DIR / CHECKPOINT_NAME
+
+
+def checkpoint_present() -> bool:
+    path = checkpoint_path()
+    return path.is_file() and path.stat().st_size >= CHECKPOINT_MIN_BYTES
+
+
+def download_checkpoint(reporter: object | None = None) -> Path:
+    """Fetch the ~165 MB model checkpoint, with progress.
+
+    **Why this exists.** `piano_transcription_inference` downloads its own
+    checkpoint on first use — with ``os.system('wget ...')``. macOS does not
+    ship ``wget``, so on this Mac that call fails silently, leaves a zero-byte
+    file, and the next line dies inside ``torch.load`` with an error that says
+    nothing about a missing download. Fetching it ourselves with the standard
+    library removes the trap and gives a progress bar instead of a long pause.
+    """
+    import urllib.request  # noqa: PLC0415
+
+    from aitu_backend.progress import BaseProgress, default_reporter  # noqa: PLC0415
+
+    target = checkpoint_path()
+    if checkpoint_present():
+        return target
+
+    progress = default_reporter(reporter if isinstance(reporter, BaseProgress) else None)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    partial = target.with_suffix(".partial")
+
+    with progress.stage("download model", total=100, message="~165 MB, once only") as stage:
+        seen_percent = 0
+
+        def hook(blocks: int, block_size: int, total_size: int) -> None:
+            nonlocal seen_percent
+            if total_size <= 0:
+                return
+            percent = min(100, int(blocks * block_size * 100 / total_size))
+            if percent > seen_percent:
+                stage.advance(percent - seen_percent, message=f"{percent}%")
+                seen_percent = percent
+
+        urllib.request.urlretrieve(CHECKPOINT_URL, partial, reporthook=hook)
+
+    if partial.stat().st_size < CHECKPOINT_MIN_BYTES:
+        partial.unlink(missing_ok=True)
+        raise RuntimeError(
+            f"The model checkpoint downloaded from {CHECKPOINT_URL} is too small to be valid. "
+            "Check your connection and try again."
+        )
+    partial.replace(target)
+    return target
+
+
+class ByteDanceEngine:
+    """``piano_transcription_inference`` — the default engine.
+
+    Imported **lazily**, inside the constructor, so the backend starts and the
+    test suite runs on a machine where torch is not installed.
+
+    **Device.** On Apple Silicon this runs on the **CPU**, whatever you pass.
+    The package only calls ``model.to(device)`` when the device string contains
+    ``"cuda"`` (see its ``inference.py``), and its forward pass reads the device
+    off the model's parameters — so ``"mps"`` would be accepted and then
+    ignored. The parameter stays for a future CUDA host, where it does work.
+    A one-minute piano clip takes a few seconds on an M-series CPU.
+    """
+
+    name = "bytedance"
+
+    def __init__(
+        self,
+        device: str = DEFAULT_DEVICE,
+        checkpoint: str | None = None,
+        *,
+        auto_download: bool = True,
+        reporter: object | None = None,
+    ) -> None:
+        try:
+            from piano_transcription_inference import PianoTranscription  # noqa: PLC0415
+        except ImportError as exc:
+            raise EngineUnavailable(
+                "bytedance",
+                "piano_transcription_inference",
+                "uv sync --extra transcription   (in aitu-backend/)",
+            ) from exc
+
+        if checkpoint is None and auto_download and not checkpoint_present():
+            download_checkpoint(reporter)
+
+        self.device = device
+        self._model = PianoTranscription(
+            device=device,
+            checkpoint_path=checkpoint or str(checkpoint_path()),
+        )
+
+    def transcribe(self, wav_path: Path) -> list[NoteEvent]:
+        """Transcribe a WAV into note events.
+
+        The package returns ``{'est_note_events': [{'midi_note', 'onset_time',
+        'offset_time', 'velocity'}, ...], ...}`` — verified against its
+        ``utilities.RegressionPostProcessor`` rather than assumed.
+        """
+        import librosa  # noqa: PLC0415
+        from piano_transcription_inference import sample_rate as model_rate  # noqa: PLC0415
+
+        if not wav_path.is_file():
+            raise FileNotFoundError(f"No audio at {wav_path}")
+
+        # The store's `normalized.wav` is already mono 16 kHz — which is exactly
+        # `model_rate` — but resampling defensively costs nothing and makes the
+        # engine usable on any WAV.
+        audio, _ = librosa.load(str(wav_path), sr=model_rate, mono=True)
+
+        # `midi_path=None` skips the MIDI write; the package guards it with
+        # `if midi_path:`, so we keep the events in memory.
+        result = self._model.transcribe(audio, None)
+
+        return sorted(
+            (
+                NoteEvent(
+                    midi_note=int(note["midi_note"]),
+                    start=float(note["onset_time"]),
+                    end=float(note["offset_time"]),
+                    velocity=int(note.get("velocity", 64)),
+                )
+                for note in result["est_note_events"]
+                if float(note["offset_time"]) > float(note["onset_time"])
+            ),
+            key=lambda event: (event.start, event.midi_note),
+        )
+
+
+class BasicPitchEngine:
+    """Spotify's Basic Pitch — the benchmark and fallback engine."""
+
+    name = "basic-pitch"
+
+    def __init__(self, device: str = DEFAULT_DEVICE) -> None:
+        try:
+            from basic_pitch.inference import predict  # noqa: PLC0415
+        except ImportError as exc:
+            raise EngineUnavailable(
+                "basic-pitch",
+                "basic_pitch",
+                "uv sync --extra basic-pitch   (in aitu-backend/)",
+            ) from exc
+
+        self.device = device
+        self._predict = predict
+
+    def transcribe(self, wav_path: Path) -> list[NoteEvent]:
+        if not wav_path.is_file():
+            raise FileNotFoundError(f"No audio at {wav_path}")
+
+        _, midi_data, _ = self._predict(str(wav_path))
+        events = [
+            NoteEvent(
+                midi_note=int(note.pitch),
+                start=float(note.start),
+                end=float(note.end),
+                velocity=int(note.velocity),
+            )
+            for instrument in midi_data.instruments
+            for note in instrument.notes
+            if note.end > note.start
+        ]
+        return sorted(events, key=lambda event: (event.start, event.midi_note))
+
+
+#: Constructors by name. Add a new engine here and it becomes selectable.
+ENGINES = {
+    "bytedance": ByteDanceEngine,
+    "basic-pitch": BasicPitchEngine,
+    "silent": SilentEngine,
+}
+
+
+def create_engine(name: str = DEFAULT_ENGINE, **options: Any) -> TranscriptionEngine:
+    """Build an engine by name. Raises :class:`EngineUnavailable` if missing."""
+    try:
+        factory = ENGINES[name]
+    except KeyError as exc:
+        known = ", ".join(sorted(ENGINES))
+        raise ValueError(f"Unknown transcription engine '{name}'. Known: {known}") from exc
+    return factory(**options)
+
+
+def engine_installed(name: str) -> bool:
+    """Is this engine's package importable?
+
+    Deliberately checks the **import**, not a full construction: building the
+    ByteDance engine loads a 165 MB checkpoint into memory, which is not
+    something an availability probe should do.
+    """
+    import importlib.util  # noqa: PLC0415
+
+    if name == "silent":
+        return True
+    module = {"bytedance": "piano_transcription_inference", "basic-pitch": "basic_pitch"}.get(name)
+    if module is None:
+        return False
+    try:
+        return importlib.util.find_spec(module) is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def available_engines() -> dict[str, bool]:
+    """Which engines can run here. Powers `GET /matrix/engines` and the UI."""
+    return {name: engine_installed(name) for name in ENGINES}

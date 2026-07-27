@@ -1,4 +1,4 @@
-.PHONY: serve api
+.PHONY: serve api lint format test hooks
 
 HOST ?= 127.0.0.1
 PORT ?= 8765
@@ -10,3 +10,18 @@ serve:
 	uv run python -m uvicorn aitu_backend.main:app --host $(HOST) --port $(PORT) --reload
 
 api: serve
+
+# Static checks. Run before every commit (pre-commit runs the same tools).
+lint:
+	uv run flake8 --config .flake8 src tests
+	uv run mypy --config-file pyproject.toml
+
+format:
+	uv run black --config pyproject.toml src tests
+
+test:
+	uv run pytest
+
+# One-time setup of the git hooks defined in ../.pre-commit-config.yaml.
+hooks:
+	uv run pre-commit install

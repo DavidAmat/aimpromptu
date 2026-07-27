@@ -13,16 +13,21 @@ Grounded in existing configs and visible patterns across the codebase. Do not in
 
 | Convention | Detail |
 |------------|--------|
-| Layout | `src/aitu_backend/` package; hatchling wheel |
-| Dependencies | `uv` + `uv.lock`; `uv sync` to install |
-| Notation logic | Single source of truth: `sequence.py` — do not duplicate parsing elsewhere |
-| JSON wire format | camelCase via Pydantic `Field(alias=...)` and `model_config` populate_by_name |
-| Paths | Centralized in `paths.py`; repo root derived from `__file__` |
-| API | FastAPI route handlers in `main.py`; thin — delegate to `sequence.py` |
+| Layout | `src/aitu_backend/` package; hatchling wheel. Feature packages: `api/`, `matrix/`, `audio/`, `transcription/`, `storage/`, `notation/`, `schemas/` |
+| Dependencies | `uv` + `uv.lock`; `uv sync` to install (runtime deps + the `dev` group) |
+| Notation logic | Single source of truth: `matrix/text_notation.py` — do not duplicate parsing elsewhere |
+| Key tables | Single source of truth: `matrix/keys.py` (88-key order, EN/ES names, MIDI) |
+| JSON wire format | camelCase via Pydantic `Field(alias=...)` and `model_config` populate_by_name. Build models with **snake_case kwargs**; camelCase belongs in JSON payloads (the pydantic-mypy plugin rejects alias kwargs) |
+| Paths | Centralized in `storage/paths.py`; backend root derived from `__file__`. No path literal elsewhere |
+| Folder names | Built by `schemas/naming.py` (`slugify`, `version_folder`, `matrix_filename`) |
+| API | One `APIRouter` per section in `api/`; `main.py` is a thin app factory. Endpoints owned by a later epic exist already and answer `501` |
+| Progress | Anything >~10 s takes a `ProgressReporter` from `progress.py`; never call `tqdm` directly |
 | Docstrings | Module-level and public functions; explain non-obvious domain rules |
 | Notebooks | One thematic subfolder per POC under `notebooks/<theme>/` |
 
-No enforced formatter config (no ruff/black in pyproject today). Match existing file style.
+Formatting and static checks: **black** (line length 100), **flake8** (`aitu-backend/.flake8`,
+ignoring E501/E203/W503), **mypy** (pydantic plugin, permissive on missing imports). Run
+`make lint` / `make format` / `make test`; `make hooks` installs the repo-root pre-commit.
 
 ## Frontend (TypeScript / React)
 
@@ -30,9 +35,13 @@ No enforced formatter config (no ruff/black in pyproject today). Match existing 
 |------------|--------|
 | ESLint | Flat config in `eslint.config.js`: recommended JS, typescript-eslint recommended, react-hooks recommended, react-refresh vite preset |
 | Ignores | `dist/` globally ignored by ESLint |
-| Components | Functional components + hooks; no class components |
-| Music logic | Isolated under `src/music/` (`types`, `notes`, `matrixToNotation`) |
+| Components | Functional components + hooks; no class components. **MUI** is the component library; layout props go in `sx` (MUI v9 dropped them as direct props) |
+| Colors | Only from `src/ui/palette.ts` — no hex literal in a component or stylesheet |
+| Requests | Only through `src/api/` (one module per backend router); no `fetch` in a component |
+| Routes | Only from `src/layout/routes.ts`; no URL literal in a component |
+| Music logic | Isolated under `src/music/` (`types`, `notes`, `matrixToNotation`); `types.ts` mirrors the backend `schemas/` and must stay in step with it |
 | Rendering | VexFlow isolated in `PianoSheet.tsx` |
+| Effects | Never call `setState` synchronously in an effect body (ESLint errors); derive state during render instead — see `src/hooks/useProgress.ts` |
 | Env vars | Typed in `vite-env.d.ts`; `VITE_*` prefix for client exposure |
 | Strictness | TypeScript project references (`tsc -b` before vite build) |
 

@@ -17,6 +17,40 @@ dependencies = [
     "pydantic>=2.9.0",
     "numpy>=2.4.5",
     "scipy>=1.17.1",
+    "tqdm>=4.67.0",
+    "python-multipart>=0.0.20",
+    "yt-dlp>=2026.7.4",
+]
+
+[project.optional-dependencies]
+# Transcription models. Kept out of the base install only because torch is a
+# ~200 MB download; nothing here pins an old version.
+#   uv sync --extra transcription
+#
+# Verified against the packages themselves (2026-07):
+#   * piano_transcription_inference 0.0.6 requires matplotlib, mido, librosa,
+#     torchlibrosa — and does NOT pin torch, contrary to the task file's note.
+#   * torch >=2.13 ships macOS arm64 wheels for cp310-cp314, so Python 3.12
+#     (this project's pin) is fully supported on Apple Silicon.
+#   * On Apple Silicon the model runs on the CPU: the package only moves itself
+#     to a device when the string contains "cuda". See transcription/engine.py.
+transcription = [
+    "piano_transcription_inference>=0.0.6",
+    "torch>=2.4",
+    "librosa>=0.10",
+]
+# The benchmark/fallback engine. `uv sync --extra basic-pitch`
+basic-pitch = ["basic-pitch>=0.4.0"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "httpx>=0.28.0",
+    "black>=24.10.0",
+    "flake8>=7.1.0",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.0",
+    "types-tqdm>=4.67.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -24,3 +58,27 @@ packages = ["src/aitu_backend"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/aitu_backend", "README.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/aitu_backend", "tests"]
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+# Permissive on purpose: this is a PoC. Tighten per-module as epics stabilize.
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+
+[tool.pydantic-mypy]
+init_typed = true
+warn_required_dynamic_aliases = true
