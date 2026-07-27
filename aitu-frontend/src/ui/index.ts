@@ -13,6 +13,7 @@ export { TabBar } from "./TabBar";
 export type { TabBarProps, TabItem } from "./TabBar";
 export { Placeholder } from "./Placeholder";
 export type { PlaceholderProps } from "./Placeholder";
+export { timestampSx, FRAME_LABEL_WIDTH } from "./timestamps";
 export { palette, grays, semantic, handColors } from "./palette";
 export type { ColorAlias, Shade } from "./palette";
 export { theme } from "./theme";

@@ -460,6 +460,34 @@ def test_the_pipeline_reports_every_stage(scale_audio: str) -> None:
     assert {"transcribe", "events", "collapse", "clean", "two-hands"} <= stages
 
 
+@needs_ffmpeg
+def test_a_progressive_engine_reports_its_real_model_segments(scale_audio: str) -> None:
+    class ProgressiveScaleEngine(ScaleEngine):
+        def transcribe_with_progress(self, wav_path: Path, reporter) -> list[NoteEvent]:
+            with reporter.stage("transcribe", total=3) as stage:
+                stage.advance(message="model segment 1/3")
+                stage.advance(message="model segment 2/3")
+                stage.advance(message="model segment 3/3")
+            return super().transcribe(wav_path)
+
+    events: list[ProgressEvent] = []
+    pipeline.run_pipeline(
+        scale_audio,
+        60,
+        Granularity.NEGRA,
+        engine=ProgressiveScaleEngine(),
+        reporter=CallbackProgress(events.append),
+    )
+
+    model_ticks = [
+        event
+        for event in events
+        if event.stage == "transcribe" and event.message.startswith("model segment")
+    ]
+    assert [event.current for event in model_ticks] == [1, 2, 3]
+    assert [event.fraction for event in model_ticks] == pytest.approx([1 / 3, 2 / 3, 1.0])
+
+
 # ---------------------------------------------------------------------- jobs
 
 

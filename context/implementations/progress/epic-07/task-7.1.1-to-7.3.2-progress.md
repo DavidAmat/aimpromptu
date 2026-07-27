@@ -3,8 +3,10 @@
 Covers Tasks 7.1.1, 7.2.1, 7.2.2, 7.3.1 and 7.3.2. Status: **done, pending your manual trial.**
 Date: 2026-07-27.
 
-Story 7.4 (cell editing and the matrix player) is marked nice-to-have in the plan and is **not**
-built — see the end.
+> Follow-up: Story 7.4 was completed later in the same continuation session. See
+> [`task-7.4.1-progress.md`](task-7.4.1-progress.md) and
+> [`task-7.4.2-progress.md`](task-7.4.2-progress.md). The report below remains the historical
+> handoff for Stories 7.1–7.3.
 
 ## Summary
 
@@ -128,13 +130,11 @@ The short version, after transcribing your `Do Re Mi Fa Sol` recording:
 4. Type `2` into **Go to frame or time** → it scrolls there. Type `0:03.000` → same place.
 5. **Sparse JSON** → a file downloads. **Input tab → Matrix JSON** → choose it → it comes back.
 
-## For the next worker
+## Follow-up seams
 
-- **Story 7.4** (nice-to-have) is unbuilt. `MatrixGrid` already has `onCellClick`, and the backend
-  primitives exist from Task 2.4.2 (`add_onset`, `extend_sustain`, `delete_note`, `delete_cells`) —
-  they just need an endpoint and a palette control.
-- **Epic 8** should reuse `MatrixGrid`'s `focusFrame` prop for its deep link, and
-  `<WaveformView watermark />` from Epic 3 for the roll background.
+- Story 7.4 subsequently used `MatrixGrid`'s `onCellClick` seam and the Task 2.4.2 primitives.
+- Epic 8 subsequently reused `focusFrame` for its Matrix deep link and the waveform data for its
+  roll watermark.
 - The grid renders the **dense** form only. If a piece ever gets big enough that the dense payload
   is the bottleneck, the fix is a windowed endpoint (`?fromFrame=&toFrame=`), not sparse rendering
   in the browser — the backend stays heavy.

@@ -12,7 +12,13 @@ function readStored(): WorkingArtifact {
   try {
     const raw = window.sessionStorage.getItem(WORKING_ARTIFACT_STORAGE_KEY);
     if (!raw) return DEFAULT_WORKING_ARTIFACT;
-    return { ...DEFAULT_WORKING_ARTIFACT, ...(JSON.parse(raw) as Partial<WorkingArtifact>) };
+    const stored = JSON.parse(raw) as Partial<WorkingArtifact> & Record<string, unknown>;
+    // Before physical segment artifacts existed, a temporary range lived in
+    // session state and could make a later whole-file run reuse the wrong raw
+    // matrix. Drop that legacy state once, on read.
+    delete stored.rangeStartSeconds;
+    delete stored.rangeEndSeconds;
+    return { ...DEFAULT_WORKING_ARTIFACT, ...stored };
   } catch {
     return DEFAULT_WORKING_ARTIFACT;
   }

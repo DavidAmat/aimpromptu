@@ -18,11 +18,12 @@ Do them in this order — each builds on the last.
 | 3 | [epic-04-transcription.md](epic-04-transcription.md) | 20 min | the transcription extra |
 | 4 | [epic-06-playground-input.md](epic-06-playground-input.md) | 15 min | everything above |
 | 5 | [epic-07-matrix-tab.md](epic-07-matrix-tab.md) | 20 min | a transcribed piece |
-| 6 | [epic-02-matrix-core.md](epic-02-matrix-core.md) | 10 min | — (no UI; terminal only) |
-| 7 | [epic-05-artifacts.md](epic-05-artifacts.md) | 10 min | — (no UI; terminal only) |
+| 6 | [epic-08-piano-views.md](epic-08-piano-views.md) | 20 min | the same transcribed piece |
+| 7 | [epic-02-matrix-core.md](epic-02-matrix-core.md) | 10 min | — (no UI; terminal only) |
+| 8 | [epic-05-artifacts.md](epic-05-artifacts.md) | 10 min | — (no UI; terminal only) |
 
-**Guide 5 is the satisfying one** — it is where a transcription finally becomes something you can
-look at.
+**Guides 5 and 6 are the satisfying ones** — first the transcription becomes visible, then it
+becomes playable and animated.
 
 Epics 2 and 5 are backend-only, so their guides are terminal sessions rather than clicks. They are
 last because nothing breaks if you skip them — their tests already cover the logic.

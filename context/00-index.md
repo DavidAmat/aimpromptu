@@ -59,6 +59,7 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 | [frontend/loaded-scores.md](frontend/loaded-scores.md) | ScoreStack + LayoutControls |
 | [frontend/compose-panel.md](frontend/compose-panel.md) | SequenceComposer (POST /sequence) |
 | [frontend/rendering-pipeline.md](frontend/rendering-pipeline.md) | matrixToNotation + PianoSheet (VexFlow) |
+| [frontend/timestamps.md](frontend/timestamps.md) | UI rule: `mm:ss.cc`, frame labelled by start only, never wraps |
 
 ## Shared (`context/shared/`)
 

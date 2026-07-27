@@ -23,7 +23,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import { useNavigate } from "react-router-dom";
-import { matrixApi, type Granularity } from "../../api";
+import { matrixApi, type AudioItem, type Granularity } from "../../api";
 import ProgressBanner from "../ProgressBanner";
 import { useProgress } from "../../hooks/useProgress";
 import { ROUTES } from "../../layout/routes";
@@ -34,13 +34,16 @@ import { TRANSCRIPTION_GRANULARITIES } from "../../music/granularities";
 export interface TranscriptionSettingsProps {
   /** Disabled when no audio is loaded. */
   audioUuid?: string | null;
-  /** Whole-file duration, so a range narrower than it can be detected. */
-  durationSeconds?: number | null;
+  /** Metadata distinguishes a full file from a persisted physical segment. */
+  audio?: AudioItem | null;
+  /** A selected range must be materialized before the pipeline can run. */
+  requiresSegmentCreation?: boolean;
 }
 
 export function TranscriptionSettings({
   audioUuid,
-  durationSeconds,
+  audio,
+  requiresSegmentCreation = false,
 }: TranscriptionSettingsProps) {
   const navigate = useNavigate();
   const { artifact, update } = useWorkingArtifact();
@@ -77,12 +80,6 @@ export function TranscriptionSettings({
     }
   }, [progress.status, audioUuid, navigate]);
 
-  const hasRange =
-    artifact.rangeStartSeconds !== undefined &&
-    artifact.rangeEndSeconds !== undefined &&
-    (artifact.rangeStartSeconds > 0.01 ||
-      (durationSeconds != null && artifact.rangeEndSeconds < durationSeconds - 0.01));
-
   const run = async () => {
     if (!audioUuid) return;
     setStarting(true);
@@ -94,8 +91,9 @@ export function TranscriptionSettings({
         tempoBpm: artifact.tempoBpm,
         granularity: artifact.granularity,
         engine: engine || undefined,
-        startSeconds: hasRange ? artifact.rangeStartSeconds : undefined,
-        endSeconds: hasRange ? artifact.rangeEndSeconds : undefined,
+        // Clicking Run means a fresh transcription of this exact physical
+        // audio. Recompute remains available later for BPM/resolution changes.
+        force: true,
       });
       setJobId(handle.jobId);
     } catch (caught) {
@@ -166,25 +164,39 @@ export function TranscriptionSettings({
       </Stack>
 
       <Typography variant="body2" color="text.secondary">
-        {hasRange ? (
+        {audio?.sourceTimeRange ? (
           <>
-            Transcribing only{" "}
-            <strong>
-              {formatTime(artifact.rangeStartSeconds ?? 0)} – {formatTime(artifact.rangeEndSeconds ?? 0)}
+            Transcribing the complete saved segment ({formatTime(audio.durationSeconds ?? 0)}).
+            It maps to original-audio time{" "}
+            <strong style={{ whiteSpace: "nowrap" }}>
+              {formatTime(audio.sourceTimeRange.startSeconds)}–{" "}
+              {formatTime(audio.sourceTimeRange.endSeconds)}
             </strong>
             .
           </>
         ) : (
-          "Transcribing the whole audio. Select a range above to restrict it."
+          "Transcribing the entire audio file. Choose and create a segment above if you only want part of it."
         )}
       </Typography>
+
+      {requiresSegmentCreation ? (
+        <Alert severity="warning">
+          Create the selected segment first. Transcription always runs against the exact audio
+          shown in the waveform.
+        </Alert>
+      ) : null}
 
       <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
         <Button
           variant="contained"
           startIcon={starting ? <CircularProgress size={16} /> : <PlayArrowIcon />}
           onClick={() => void run()}
-          disabled={!audioUuid || starting || progress.status === "running"}
+          disabled={
+            !audioUuid ||
+            requiresSegmentCreation ||
+            starting ||
+            progress.status === "running"
+          }
         >
           Run transcription
         </Button>

@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, Iterable
 
-from aitu_backend.schemas.metadata import AudioMetadata, AudioSource
+from aitu_backend.schemas.metadata import AudioMetadata, AudioSource, TimeRange
 from aitu_backend.storage import paths
 
 #: Copied in chunks so a large upload never lands in memory whole.
@@ -80,13 +80,14 @@ def create(
     audio_uuid: str | None = None,
     original_filename: str | None = None,
     source_url: str | None = None,
+    source_audio_uuid: str | None = None,
+    source_time_range: TimeRange | None = None,
 ) -> StoredAudio:
     """Create an empty uuid folder with its metadata. No audio bytes yet."""
     audio_uuid = audio_uuid or new_uuid()
     directory = paths.audio_dir(audio_uuid)
     if directory.exists():
         raise FileExistsError(f"Audio folder already exists: {audio_uuid}")
-    directory.mkdir(parents=True)
 
     metadata = AudioMetadata(
         uuid=audio_uuid,
@@ -95,7 +96,10 @@ def create(
         format=extension.lstrip("."),
         original_filename=original_filename,
         source_url=source_url,
+        source_audio_uuid=source_audio_uuid,
+        source_time_range=source_time_range,
     )
+    directory.mkdir(parents=True)
     write_metadata(metadata)
     return StoredAudio(metadata=metadata, directory=directory)
 

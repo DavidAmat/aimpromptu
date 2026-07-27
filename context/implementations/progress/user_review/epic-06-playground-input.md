@@ -73,14 +73,15 @@ You have no exported files yet — exporting is Epic 7 — so test the guard ins
 
 Click **Audio library** and select your `Do Re Mi at 60 BPM` recording.
 
-The right-hand side now shows **Range** (from guide 2) and **Transcription settings** below it.
+The right-hand side now shows **Create a segment** (with the range selector from guide 2) and
+**Transcription settings** below it.
 
 **Look at the settings before touching anything:**
 
 - **BPM**: `60`
 - **Temporal resolution**: a dropdown — Negra, Corchea, Semicorchea, Fusa
 - **Engine**: `bytedance`, if you installed it
-- A line reading **"Transcribing the whole audio. Select a range above to restrict it."**
+- A line identifying the selected item as the **entire track**.
 
 > **If a yellow warning says no model is installed**, you skipped `uv sync --extra transcription`.
 > You can still press Run — every piece will just come out silent.
@@ -92,15 +93,20 @@ The right-hand side now shows **Range** (from guide 2) and **Transcription setti
 - The resolution's says *"Changeable later without re-transcribing"* — which is the promise you
   verified at the end of guide 3.
 
-### Restrict the range
+### Create a saved segment
 
 Drag the range handles to cover roughly the middle three notes.
 
-**What you should see:** the line under the settings changes to
-**"Transcribing only 00:01.000 – 00:04.000"**.
+**What you should see:** a suggested name containing `segment` and the selected times,
+**Create segment** becomes available, and **Run transcription** is disabled with an explanation.
+Press **Create segment**.
 
-> Dragging a handle out and back does **not** count as a range — only a selection genuinely
-> narrower than the file restricts anything.
+The panel now says **Saved segment**. The waveform itself is only the chosen passage and starts at
+local time zero. An info banner records the original-source times and offers **Back to original**.
+
+> **Why save it first.** The app physically creates a trimmed audio item. Its waveform, playback,
+> transcription and matrix all refer to that same file, while metadata remembers exactly where it
+> came from. There is no hidden browser-only range that can become stale.
 
 ### Run it
 
@@ -109,9 +115,10 @@ Set the resolution to **Negra** and press **Run transcription**.
 **What you should see, in order:**
 
 1. The button disables.
-2. A progress bar appears, and the label above it **changes as it goes**: `transcribe`, then
-   `events`, `collapse`, `clean`, `two-hands`.
-3. When it finishes, the app **jumps to the Matrix tab** — which shows the Epic 7 placeholder.
+2. A progress bar appears. During model inference it advances through
+   `model segment 1/N`, `2/N`, and so on, then continues through `events`, `collapse`, `clean`,
+   `two-hands` without jumping backward.
+3. When it finishes, the app **jumps to the Matrix tab** and identifies the piece as a SEGMENT.
 
 > **What happened when you pressed Run.** The browser asked the backend to start the job and got
 > back a ticket number immediately — it did not wait. It then opened a live connection to follow
@@ -128,8 +135,8 @@ ls aitu-backend/data/audio/<uuid>/matrices/
 curl -s "127.0.0.1:8765/matrix/<uuid>?granularity=negra&step=clean" | python3 -m json.tool | head -20
 ```
 
-If you restricted the range to three notes, the matrix should have roughly **three columns**, not
-five.
+If you saved a segment containing three notes, the matrix should have roughly **three note
+onsets**, not five.
 
 ---
 
@@ -140,8 +147,10 @@ To feel the intended flow end to end:
 1. **Record** tab → record a new short phrase → save it.
 2. It is selected automatically; its waveform appears.
 3. Drag a range around the bit you like.
-4. Set BPM and resolution.
-5. **Run transcription** → watch the stages → land on Matrix.
+4. Name and **Create segment**; confirm the waveform is now only that part.
+5. Set BPM and resolution.
+6. **Run transcription** → watch the stages → land on Matrix.
+7. Return to Input, choose **Back to original**, Run again, and confirm Matrix says ENTIRE TRACK.
 
 That is the loop the whole product is built around. Everything from Epic 7 onwards is about
 *seeing* what comes out of it.
@@ -154,19 +163,20 @@ That is the loop the whole product is built around. Everything from Epic 7 onwar
 - Text notation parses and reports its frame count; mismatched hands are caught as you type.
 - A wrong JSON file is rejected with a message naming the field.
 - Selecting an audio fills the range panel and enables **Run**.
-- A range narrower than the file changes the "Transcribing only…" line.
-- **Run** shows the five stage names in the progress bar and lands on the Matrix tab.
-- The matrix files exist and reflect the range you chose.
+- A partial range requires **Create segment** before Run and produces a truncated waveform.
+- **Run** progresses through real model segments and later stages, then lands on Matrix.
+- Matrix clearly distinguishes a saved segment from the entire track.
+- Returning to the original and running it replaces the former segment result in the active view.
 
 ## If it goes wrong
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
-| **Run** disabled | No audio selected | Pick one from the library first |
+| **Run** disabled | No audio selected, or a partial range has not been saved | Pick an audio or press **Create segment** |
 | Bar sits at 0%, terminal shows progress | The live connection is not reaching the browser | Check the console for an `EventSource` error and tell me |
 | Bar reaches 99% and stops | The "finished" signal is not arriving | Same — this is the contract between Epics 1 and 4 |
 | Never navigates to Matrix | The job errored | The bar turns red with the reason; also check the terminal |
 | Matrix comes out empty | The `silent` engine is selected | `uv sync --extra transcription`, then pick `bytedance` |
-| Range ignored | Your selection is the whole file | Check the "Transcribing only…" line before pressing Run |
+| Segment looks like the whole file | The selection was never saved | Choose a partial range and press **Create segment** |
 
 Next (optional, terminal only): [5 — Matrix core](epic-02-matrix-core.md)

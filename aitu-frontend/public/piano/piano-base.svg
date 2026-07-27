@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1248 160">
+  <defs>
+    <pattern id="white-keys" width="24" height="160" patternUnits="userSpaceOnUse">
+      <rect width="24" height="160" fill="#FAFAFA"/>
+      <path d="M23.5 0V160" stroke="#393939"/>
+    </pattern>
+  </defs>
+  <rect width="1248" height="160" rx="3" fill="url(#white-keys)" stroke="#393939"/>
+</svg>

@@ -32,6 +32,16 @@ class AudioRename(BaseModel):
     alias: str | None = None
 
 
+class AudioTrimRequest(BaseModel):
+    """Create a physically trimmed audio child with root-source lineage."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    start_seconds: float = Field(..., alias="startSeconds", ge=0)
+    end_seconds: float = Field(..., alias="endSeconds", gt=0)
+    alias: str | None = None
+
+
 class WaveformResponse(BaseModel):
     """Min/max peak pairs, one per bucket."""
 
@@ -128,6 +138,30 @@ def _ingest_upload(file: UploadFile, source: AudioSource, alias: str | None) -> 
     return entry.metadata
 
 
+@router.post(
+    "/{audio_uuid}/trim",
+    response_model=AudioMetadata,
+    response_model_by_alias=True,
+    status_code=201,
+)
+def trim_audio(audio_uuid: str, body: AudioTrimRequest) -> AudioMetadata:
+    """Persist one selected range as a self-contained segment audio."""
+    _found(audio_uuid)
+    try:
+        return ingest.create_segment(
+            audio_uuid,
+            body.start_seconds,
+            body.end_seconds,
+            alias=body.alias,
+        ).metadata
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (ValueError, ConversionFailed) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except FfmpegMissing as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.get("/{audio_uuid}/waveform", response_model=WaveformResponse, response_model_by_alias=True)
 def audio_waveform(
     audio_uuid: str,
@@ -141,6 +175,11 @@ def audio_waveform(
     _found(audio_uuid)
     try:
         peaks = ingest.waveform(audio_uuid, points, refresh=refresh)
+    except FileNotFoundError as exc:
+        # Matrix-JSON imports deliberately have a store entry but no audio
+        # bytes. Piano views treat their waveform as optional, so report that
+        # absence without turning the expected fallback into a server error.
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except FfmpegMissing as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return WaveformResponse.model_validate(peaks.to_dict())

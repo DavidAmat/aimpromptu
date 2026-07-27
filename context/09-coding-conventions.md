@@ -41,6 +41,7 @@ ignoring E501/E203/W503), **mypy** (pydantic plugin, permissive on missing impor
 | Routes | Only from `src/layout/routes.ts`; no URL literal in a component |
 | Music logic | Isolated under `src/music/` (`types`, `notes`, `matrixToNotation`); `types.ts` mirrors the backend `schemas/` and must stay in step with it |
 | Rendering | VexFlow isolated in `PianoSheet.tsx` |
+| Timestamps | Format only via `src/audio/time.ts` (`mm:ss.cc`, two decimals; a frame prints its **start** only — `f:N · mm:ss.cc`). Style via `timestampSx` / `FRAME_LABEL_WIDTH` in `src/ui/timestamps.ts`; a timestamp must never wrap. See [frontend/timestamps.md](frontend/timestamps.md) |
 | Effects | Never call `setState` synchronously in an effect body (ESLint errors); derive state during render instead — see `src/hooks/useProgress.ts` |
 | Env vars | Typed in `vite-env.d.ts`; `VITE_*` prefix for client exposure |
 | Strictness | TypeScript project references (`tsc -b` before vite build) |

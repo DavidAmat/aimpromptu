@@ -48,6 +48,7 @@ class AudioSource(str, Enum):
     UPLOAD = "upload"
     RECORDING = "recording"
     YOUTUBE = "youtube"
+    SEGMENT = "segment"
 
 
 class TimeRange(CamelModel):
@@ -91,7 +92,22 @@ class AudioMetadata(CamelModel):
     sample_rate: int | None = Field(None, alias="sampleRate", gt=0)
     #: Source URL when `source` is `youtube`.
     source_url: str | None = Field(None, alias="sourceUrl")
+    #: Root audio from which this physically trimmed segment was created.
+    source_audio_uuid: str | None = Field(None, alias="sourceAudioUuid")
+    #: Absolute range in the root audio represented by this segment.
+    source_time_range: TimeRange | None = Field(None, alias="sourceTimeRange")
     created_at: datetime = Field(default_factory=_now, alias="createdAt")
+
+    @model_validator(mode="after")
+    def _segment_has_lineage(self) -> "AudioMetadata":
+        lineage = self.source_audio_uuid is not None or self.source_time_range is not None
+        if self.source is AudioSource.SEGMENT and not (
+            self.source_audio_uuid and self.source_time_range
+        ):
+            raise ValueError("A segment needs sourceAudioUuid and sourceTimeRange")
+        if self.source is not AudioSource.SEGMENT and lineage:
+            raise ValueError("Only segment audio may carry sourceAudioUuid/sourceTimeRange")
+        return self
 
 
 # ---------------------------------------------------------------- annotations

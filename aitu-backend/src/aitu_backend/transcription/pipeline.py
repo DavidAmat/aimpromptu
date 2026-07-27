@@ -28,7 +28,6 @@ from aitu_backend.schemas.matrix import Granularity, MatrixProcessingStep
 from aitu_backend.storage.matrix_store import load_matrix, save_matrix
 from aitu_backend.transcription.engine import (
     DEFAULT_ENGINE,
-    NoteEvent,
     TranscriptionEngine,
     create_engine,
 )
@@ -45,6 +44,7 @@ MATRICES_DIR = "matrices"
 #: File names inside it. The raw one is keyed by nothing but "raw": there is
 #: only ever one, and it is the source of everything else.
 RAW_FILE = "raw.npz"
+EDIT_PARENT_FILE = "raw_before_edit.npz"
 
 
 @dataclass(frozen=True)
@@ -87,6 +87,11 @@ def matrices_dir(audio_uuid: str) -> Path:
 
 def raw_path(audio_uuid: str) -> Path:
     return matrices_dir(audio_uuid) / RAW_FILE
+
+
+def edit_parent_path(audio_uuid: str) -> Path:
+    """The untouched transcription, retained when the grid is first edited."""
+    return matrices_dir(audio_uuid) / EDIT_PARENT_FILE
 
 
 def derived_path(audio_uuid: str, step: MatrixProcessingStep, granularity: Granularity) -> Path:
@@ -139,6 +144,27 @@ def _persist(result: PipelineResult) -> None:
     right_path, left_path = hands_paths(uuid, result.granularity)
     save_matrix(right_path, result.hands.right.to_coo_payload())
     save_matrix(left_path, result.hands.left.to_coo_payload())
+
+
+def persist_edited_raw(
+    audio_uuid: str,
+    raw: PianoMatrix,
+    tempo_bpm: float,
+    granularity: Granularity,
+) -> PipelineResult:
+    """Replace the working raw matrix while keeping its first parent.
+
+    Grid/roll edits are made at the displayed granularity. Their caller
+    expands the result back to fusa before arriving here, so every Playground
+    tab and every later recompute sees one canonical source again.
+    """
+    parent = edit_parent_path(audio_uuid)
+    if not parent.is_file():
+        parent.parent.mkdir(parents=True, exist_ok=True)
+        save_matrix(parent, load_raw(audio_uuid, tempo_bpm).to_coo_payload())
+    result = derive(raw, audio_uuid, tempo_bpm, granularity)
+    _persist(result)
+    return result
 
 
 # ------------------------------------------------------------------ the steps
@@ -204,8 +230,12 @@ def transcribe_audio(
         ingest.finalize(audio_uuid)
         entry = store.get(audio_uuid)
 
-    model = create_engine(engine) if isinstance(engine, str) else engine
     progress = default_reporter(reporter)
+    if isinstance(engine, str):
+        options = {"reporter": progress} if engine == "bytedance" else {}
+        model = create_engine(engine, **options)
+    else:
+        model = engine
 
     source_wav = entry.normalized_path
     duration = entry.metadata.duration_seconds or 0.0
@@ -220,9 +250,13 @@ def transcribe_audio(
         duration = end_seconds - start_seconds
         offset = start_seconds
 
-    with progress.stage("transcribe", total=1, message=model.name) as stage:
-        events: list[NoteEvent] = model.transcribe(source_wav)
-        stage.advance()
+    progressive = getattr(model, "transcribe_with_progress", None)
+    if callable(progressive):
+        events = progressive(source_wav, progress)
+    else:
+        with progress.stage("transcribe", total=1, message=model.name) as stage:
+            events = model.transcribe(source_wav)
+            stage.advance()
 
     if offset and events and min(event.start for event in events) >= offset:
         # Defensive: an engine that reports absolute times despite the clip.

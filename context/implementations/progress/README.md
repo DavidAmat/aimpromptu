@@ -12,4 +12,4 @@ When several epics are worked in one sitting, a dated summary at the top level s
 what could not be verified, and what decisions are waiting on the human supervisor. Read the
 summary before the individual reports.
 
-- [2026-07-27 — overnight session](2026-07-27-overnight-session.md): Epics 1–6.
+- [2026-07-27 — overnight + continuation session](2026-07-27-overnight-session.md): Epics 1–8.

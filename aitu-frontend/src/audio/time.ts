@@ -1,24 +1,36 @@
 /**
- * `mm:ss.mmm` time formatting and parsing.
+ * `mm:ss.cc` time formatting and parsing — the one place that knows how a
+ * timestamp looks in this app.
  *
- * The range selector's text inputs speak this format (e.g. `03:03.123`), and so
- * do the tooltips, so both live here rather than being re-derived per component.
+ * **UI rule (see `context/frontend/timestamps.md`):**
+ *
+ * 1. **Two decimals, never three.** Hundredths are as fine as the eye needs and
+ *    they keep every timestamp the same, short width.
+ * 2. **A frame is labelled by its start only** — `f:12 · 00:00.25`. The end is
+ *    the next frame's start, so printing `[start – end]` doubled the width of
+ *    the label to say something the row below already says.
+ * 3. **A timestamp never wraps.** Whatever holds one gives it room and sets
+ *    `whiteSpace: "nowrap"` — see `timestampSx` / `FRAME_LABEL_WIDTH` in
+ *    `src/ui/timestamps.ts`.
+ *
+ * Parsing stays forgiving (`3:03`, `183`, `1:23.456`) so pasted values from
+ * other tools still work; only the *output* is pinned to two decimals.
  */
 
-/** `83.4567` -> `"01:23.457"`. Negative input clamps to zero. */
+const pad = (value: number): string => String(value).padStart(2, "0");
+
+/** `83.4567` -> `"01:23.46"`. Negative input clamps to zero. */
 export function formatTime(seconds: number): string {
   const safe = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
-  const minutes = Math.floor(safe / 60);
-  const wholeSeconds = Math.floor(safe % 60);
-  const milliseconds = Math.round((safe - Math.floor(safe)) * 1000);
-  // Rounding can carry into the next second.
-  const carried = milliseconds === 1000;
+  // Round to hundredths up front, so a carry into the next second — and from
+  // there into the next minute — is handled once, here, and not per field.
+  const hundredths = Math.round(safe * 100);
   return [
-    String(carried && wholeSeconds === 59 ? minutes + 1 : minutes).padStart(2, "0"),
+    pad(Math.floor(hundredths / 6000)),
     ":",
-    String(carried ? (wholeSeconds + 1) % 60 : wholeSeconds).padStart(2, "0"),
+    pad(Math.floor(hundredths / 100) % 60),
     ".",
-    String(carried ? 0 : milliseconds).padStart(3, "0"),
+    pad(hundredths % 100),
   ].join("");
 }
 
@@ -29,7 +41,19 @@ export function formatTimeShort(seconds: number): string {
 }
 
 /**
- * `"03:03.123"` -> `183.123`. Also accepts `"3:03"`, `"183"`, `"183.5"`.
+ * The standard label for a time frame: `"f:12 · 00:00.25"`.
+ *
+ * Start only, by design — the frame's end is the next row's start. Use this
+ * everywhere a frame is named next to its time, so the matrix grid, the piano
+ * roll and any future frame list all read identically.
+ */
+export function formatFrameLabel(frame: number, startSeconds: number): string {
+  return `f:${frame} · ${formatTime(startSeconds)}`;
+}
+
+/**
+ * `"03:03.12"` -> `183.12`. Also accepts `"3:03"`, `"183"`, `"183.5"`, and
+ * three-decimal input left over from elsewhere.
  * Returns `null` when the text is not a time, so a half-typed input does not
  * jump the handles around.
  */

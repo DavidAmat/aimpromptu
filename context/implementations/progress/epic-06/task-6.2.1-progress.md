@@ -1,120 +1,63 @@
 # Task 6.2.1 — Transcription settings and launch · progress report
 
-Status: **done, pending your manual trial.** Date: 2026-07-27. This closes Epic 6.
-
-> UI verification skipped per your instruction. The end-to-end run also depends on a working
-> transcription engine, which has never executed — see the Task 4.1.1 report.
+Status: **done and browser-verified.** Date: 2026-07-27. This closes Epic 6.
 
 ## Summary
 
-`src/components/input/TranscriptionSettings.tsx` — BPM, granularity, engine, range summary, Run,
-and the progress bar. Wired into `/playground/input` beneath the range selector.
+The Input tab now treats a selected passage as a real audio artifact, not an ephemeral pair of
+numbers:
 
-### Settings
+- a partial waveform selection must be named and saved before Run is enabled;
+- the backend physically trims the normalized audio into a new audio-store item;
+- segment metadata keeps the root source uuid and absolute source start/end time;
+- a segment exposes only its own waveform and playback duration;
+- **Back to original** restores the root audio so another passage or the entire track can be used;
+- Run always starts a fresh transcription of the selected physical file and then opens Matrix.
 
-- **BPM**, numeric, default 60, bounded 20–300. Stored on the working artifact, so it survives tab
-  switches and reloads.
-- **Temporal resolution**: `Negra`, `Corchea`, `Semicorchea`, `Fusa` — the four the task file names.
-  (`redonda`, `blanca` and `semifusa` are legal matrix granularities but meaningless as
-  transcription *targets*; the reasoning is written down in `src/music/granularities.ts`.)
-  Helper text: *"Changeable later without re-transcribing"*, which is true and is the whole point
-  of the raw-matrix design.
-- **Engine** dropdown, populated from `GET /matrix/engines`. Uninstalled engines are listed but
-  disabled, and if **no** real model is installed the panel shows a warning naming the fix:
-  *"...only the `silent` engine is available and every piece will come out empty. Install one with
-  `uv sync --extra transcription`."* Without that, an empty matrix would look like a bug in the
-  pipeline rather than a missing download.
+Re-trimming an existing segment keeps absolute lineage to the root source rather than stacking
+relative offsets. Whole-file “segments” are rejected.
 
-### Range restriction
+## Progress correction
 
-The range comes from the working artifact, where the Task 3.4.1 selector puts it. A range is only
-treated as *restricting* when it is actually narrower than the file — dragging a handle and
-dragging it back should not silently change what gets transcribed. The panel states which case you
-are in: *"Transcribing only 03:01.000 – 03:22.000"* or *"Transcribing the whole audio."*
+The ByteDance adapter now exposes its actual overlapping model-segment loop. It publishes
+`model segment N/total` after every inference batch while preserving the package's original
+deframing and note-event post-processing. The UI maps download, model transcription and all later
+pipeline stages onto one monotonic 0–100% bar, so the bar no longer resets or remains at zero while
+the backend is working.
 
-### Run and handoff
+## Errors found and solutions
 
-`POST /matrix/transcribe` -> `jobId` -> `useProgress(matrixApi.progressUrl(jobId))` ->
-`<ProgressBanner>`. On the stream's terminal `done` event the page navigates to the Matrix tab.
+- The former range lived only in browser state, so returning to Input and running the full source
+  could navigate back to a stale segment result. Persisted segment audio plus forced fresh Run
+  removes that ambiguity.
+- Pipeline stages reported their own local fractions, making the browser bar jump backward.
+  `useProgress` now applies stage bands and rejects backward motion.
+- ByteDance previously emitted only one completion tick after all inference. Its real mini-batch
+  loop is now instrumented, so longer audio advances segment by segment.
 
-This is the first place all of Epic 1's plumbing meets Epic 4's: the SSE hook written in Task 1.2.1
-consumes the frames emitted by the job runner written in Task 4.3.1, and the named `done` event is
-the contract between them. **That contract has never been exercised against a live server** — it is
-the single most likely thing to need a fix tomorrow.
+## Agreed deviation from the original task
 
-The handoff is by `audioUuid`, not an artifact id: the pipeline writes its artifacts under the
-audio's uuid folder, so the Matrix tab reads them straight back with
-`GET /matrix/{uuid}?step=&granularity=`.
-
-## Errors found and how they were solved
-
-Nothing broke, but one thing is worth flagging as a **known gap**: the Matrix tab is still a
-placeholder (Epic 7). So after a successful run the app navigates to a page that says *"Coming in
-Epic 7"*. That is correct behaviour for where the plan is, not a bug — but it means the trial below
-ends at a `curl`, not at a picture.
-
-## Deviations from the task file
-
-- Added the engine dropdown and the no-engine warning.
-- The Run button is disabled with no audio loaded and explains why, rather than being hidden.
+The original task passed a transient time range into transcription. The supervisor requested the
+stronger artifact model implemented here: physically trim first, retain source lineage, and make
+the segment the only audio used by its matrix and Playground views.
 
 ## Verification
 
-```
-npx tsc -b, npm run lint      # clean
-npx vite build                # 667 modules, 579 kB (184 kB gzipped)
-```
+Automated coverage includes physical file duration and waveform checks, segment metadata,
+nested-segment absolute lineage, invalid whole-range rejection, and monotonic model-segment
+progress. A real ByteDance run completed successfully on the local Mac.
 
-The backend half of this flow is covered by `tests/test_transcription.py` (36 tests), including the
-`202` + job + `done` sequence over HTTP with a stub engine. What is untested is the browser end of
-the SSE connection.
+Browser verification used an eight-second source and a saved 2–5 second segment:
 
-## Manual trial for the supervisor — Epic 6's acceptance criterion
+- Input showed only the three-second waveform and the root 2–5 second range;
+- Matrix showed **SEGMENT**, local time and original-source time;
+- **Back to original** followed by Run produced **ENTIRE TRACK** and 32 frames instead of reopening
+  the former 12-frame segment;
+- no browser warnings or errors were logged.
 
-**Prerequisite**: `cd aitu-backend && uv sync --extra transcription` (see the Task 4.1.1 report —
-expect the model checkpoint to download on first use).
+## Manual trial
 
-1. `make serve` and `npm run dev`.
-2. **Playground > Upload / Input > Upload audio**. Upload a piano piece you know.
-3. In **Range**, drag out roughly ten seconds of a passage you can hum.
-4. In **Transcription settings**: BPM to whatever that passage is actually played at,
-   resolution **Corchea**.
-5. Press **Run transcription**.
-
-**What correct looks like:** the progress bar names each stage in turn — `transcribe`, `events`,
-`collapse`, `clean`, `two-hands` — then the app lands on the **Matrix** tab. That tab is still an
-Epic 7 placeholder, so to see the result:
-
-```bash
-ls aitu-backend/data/audio/<uuid>/matrices/
-# raw.npz  collapsed_corchea.npz  clean_corchea.npz  two-hands_corchea_right.npz  two-hands_corchea_left.npz
-
-curl -s "127.0.0.1:8765/matrix/<uuid>?granularity=corchea&step=clean" | python3 -m json.tool | head -20
-```
-
-**Things most likely to go wrong, in order:**
-
-1. The engine itself (Task 4.1.1) — most likely by a wide margin.
-2. The SSE stream not reaching the browser. If the bar sits at 0% but the terminal shows tqdm
-   progress, the job is fine and the stream is the problem — check the browser console for the
-   `EventSource` connection.
-3. The `done` event not arriving, leaving the bar at 99% forever. Same diagnosis, opposite symptom.
-
-Then confirm the promise this whole design rests on: **change the resolution and it should not
-re-transcribe.**
-
-```bash
-time curl -s -X POST 127.0.0.1:8765/matrix/recompute -H 'Content-Type: application/json' \
-  -d '{"audioUuid":"<uuid>","tempoBpm":60,"granularity":"semicorchea"}' > /dev/null
-```
-
-That should return in milliseconds with no model activity in the backend terminal.
-
-## For the next worker
-
-- **Epic 7** is the natural next step and unblocks the visual half of every trial above: the Matrix
-  tab is where a transcription finally becomes something you can look at.
-- The in-situ BPM/granularity switch (Story 7.3) is `POST /matrix/recompute` — do **not** re-run
-  `/matrix/transcribe` for it.
-- `useProgress` + `<ProgressBanner>` is the pattern for any long backend job; Epic 11's slow
-  re-recording will want it too.
+Upload a known piece, choose and save a short named segment, and confirm its waveform shrinks to
+the saved passage. Run it and confirm Matrix identifies the source range. Return to Input, click
+**Back to original**, run again, and confirm Matrix identifies the entire track. Use a source over
+ten seconds to see multiple `model segment N/total` progress updates.

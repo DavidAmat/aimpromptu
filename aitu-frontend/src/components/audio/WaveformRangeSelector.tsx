@@ -4,6 +4,9 @@
  * Used wherever a sub-range must be chosen: the Input tab (transcribe only this
  * passage), the editing epic's staged re-recording, and range playback.
  *
+ * Times are shown as `mm:ss.cc` everywhere (see `audio/time.ts`); the inputs
+ * still *accept* three decimals so a value pasted from another tool works.
+ *
  * Playback is done with a plain `<audio>` element seeking within the already
  * downloaded file — no round trip per range, and the cursor is just
  * `currentTime`. The element stops itself at the range end.
@@ -38,6 +41,8 @@ export interface WaveformRangeSelectorProps {
   onRangeChange?: (range: AudioRange) => void;
   points?: number;
   height?: number;
+  /** A persisted segment is already physically trimmed, so it has no handles. */
+  readOnly?: boolean;
 }
 
 type Handle = "start" | "end" | null;
@@ -55,12 +60,13 @@ export function WaveformRangeSelector({
   onRangeChange,
   points = 1000,
   height = 120,
+  readOnly = false,
 }: WaveformRangeSelectorProps) {
   const requestKey = `${audioUuid}:${points}`;
   const [loaded, setLoaded] = useState<PeaksState>({ key: "", peaks: null, error: null });
   const [range, setRange] = useState<AudioRange>({ startSeconds: 0, endSeconds: 0 });
-  const [startText, setStartText] = useState("00:00.000");
-  const [endText, setEndText] = useState("00:00.000");
+  const [startText, setStartText] = useState(() => formatTime(0));
+  const [endText, setEndText] = useState(() => formatTime(0));
   const [dragging, setDragging] = useState<Handle>(null);
   const [cursor, setCursor] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -249,7 +255,7 @@ export function WaveformRangeSelector({
           cursorSeconds={cursor}
         />
 
-        {(["start", "end"] as const).map((which) => {
+        {readOnly ? null : (["start", "end"] as const).map((which) => {
           const seconds = which === "start" ? range.startSeconds : range.endSeconds;
           return (
             <Tooltip
@@ -299,28 +305,34 @@ export function WaveformRangeSelector({
       </Stack>
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: "center" }}>
-        <TextField
-          label="Start"
-          size="small"
-          value={startText}
-          onChange={(event) => setStartText(event.target.value)}
-          onBlur={commitStart}
-          onKeyDown={(event) => event.key === "Enter" && commitStart()}
-          placeholder="mm:ss.mmm"
-          sx={{ width: 140 }}
-        />
-        <TextField
-          label="End"
-          size="small"
-          value={endText}
-          onChange={(event) => setEndText(event.target.value)}
-          onBlur={commitEnd}
-          onKeyDown={(event) => event.key === "Enter" && commitEnd()}
-          placeholder="mm:ss.mmm"
-          sx={{ width: 140 }}
-        />
-        <Typography variant="body2" color="text.secondary">
-          {formatTime(range.endSeconds - range.startSeconds)} selected
+        {readOnly ? null : (
+          <>
+            <TextField
+              label="Start"
+              size="small"
+              value={startText}
+              onChange={(event) => setStartText(event.target.value)}
+              onBlur={commitStart}
+              onKeyDown={(event) => event.key === "Enter" && commitStart()}
+              placeholder="mm:ss.cc"
+              sx={{ width: 140 }}
+            />
+            <TextField
+              label="End"
+              size="small"
+              value={endText}
+              onChange={(event) => setEndText(event.target.value)}
+              onBlur={commitEnd}
+              onKeyDown={(event) => event.key === "Enter" && commitEnd()}
+              placeholder="mm:ss.cc"
+              sx={{ width: 140 }}
+            />
+          </>
+        )}
+        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+          {readOnly
+            ? `${formatTime(duration)} saved segment`
+            : `${formatTime(range.endSeconds - range.startSeconds)} selected`}
         </Typography>
 
         <Box sx={{ flexGrow: 1 }} />
@@ -331,12 +343,14 @@ export function WaveformRangeSelector({
           </Button>
         ) : (
           <>
-            <Button size="small" startIcon={<PlayArrowIcon />} onClick={() => play(false)}>
-              Play range
+            <Button size="small" startIcon={<PlayArrowIcon />} onClick={() => play(readOnly)}>
+              {readOnly ? "Play segment" : "Play range"}
             </Button>
-            <Button size="small" onClick={() => play(true)}>
-              Play all
-            </Button>
+            {readOnly ? null : (
+              <Button size="small" onClick={() => play(true)}>
+                Play all
+              </Button>
+            )}
           </>
         )}
       </Stack>

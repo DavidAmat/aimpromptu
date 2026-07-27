@@ -19,9 +19,6 @@ export interface WorkingArtifact {
   tempoBpm: number;
   granularity: Granularity;
   matrixProcessingStep: MatrixProcessingStep;
-  /** Optional restriction to a range of the source audio, in seconds. */
-  rangeStartSeconds?: number;
-  rangeEndSeconds?: number;
 }
 
 export const DEFAULT_WORKING_ARTIFACT: WorkingArtifact = {

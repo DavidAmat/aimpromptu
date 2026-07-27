@@ -214,8 +214,39 @@ class ByteDanceEngine:
         'offset_time', 'velocity'}, ...], ...}`` — verified against its
         ``utilities.RegressionPostProcessor`` rather than assumed.
         """
+        return self._transcribe(wav_path)
+
+    def transcribe_with_progress(
+        self,
+        wav_path: Path,
+        reporter: object,
+    ) -> list[NoteEvent]:
+        """Transcribe while publishing the package's real model segments."""
+        return self._transcribe(wav_path, reporter)
+
+    def _transcribe(
+        self,
+        wav_path: Path,
+        reporter: object | None = None,
+    ) -> list[NoteEvent]:
+        """The package's inference path with its mini-batch loop instrumented.
+
+        Upstream prints ``Segment N / total`` from a private helper but exposes
+        no callback. Mirroring that small loop here lets the terminal and SSE
+        UI consume the same truthful segment count.
+        """
         import librosa  # noqa: PLC0415
+        import numpy as np  # noqa: PLC0415
+        import torch  # noqa: PLC0415
         from piano_transcription_inference import sample_rate as model_rate  # noqa: PLC0415
+        from piano_transcription_inference.pytorch_utils import (  # noqa: PLC0415
+            move_data_to_device,
+        )
+        from piano_transcription_inference.utilities import (  # noqa: PLC0415
+            RegressionPostProcessor,
+        )
+
+        from aitu_backend.progress import BaseProgress, default_reporter  # noqa: PLC0415
 
         if not wav_path.is_file():
             raise FileNotFoundError(f"No audio at {wav_path}")
@@ -227,7 +258,45 @@ class ByteDanceEngine:
 
         # `midi_path=None` skips the MIDI write; the package guards it with
         # `if midi_path:`, so we keep the events in memory.
-        result = self._model.transcribe(audio, None)
+        audio_batch = audio[None, :]
+        audio_len = audio_batch.shape[1]
+        pad_len = (
+            int(np.ceil(audio_len / self._model.segment_samples)) * self._model.segment_samples
+            - audio_len
+        )
+        audio_batch = np.concatenate((audio_batch, np.zeros((1, pad_len))), axis=1)
+        segments = self._model.enframe(audio_batch, self._model.segment_samples)
+
+        progress = default_reporter(reporter if isinstance(reporter, BaseProgress) else None)
+        output_lists: dict[str, list[Any]] = {}
+        device = next(self._model.model.parameters()).device
+        with progress.stage(
+            "transcribe",
+            total=len(segments),
+            message=f"{len(segments)} model segments",
+        ) as stage:
+            for index, segment in enumerate(segments, start=1):
+                batch = move_data_to_device(segment[None, :], device)
+                with torch.no_grad():
+                    self._model.model.eval()
+                    batch_output = self._model.model(batch)
+                for key, value in batch_output.items():
+                    output_lists.setdefault(key, []).append(value.data.cpu().numpy())
+                stage.advance(message=f"model segment {index}/{len(segments)}")
+
+        output_dict = {key: np.concatenate(values, axis=0) for key, values in output_lists.items()}
+        for key, value in output_dict.items():
+            output_dict[key] = self._model.deframe(value)[0:audio_len]
+
+        post_processor = RegressionPostProcessor(
+            self._model.frames_per_second,
+            classes_num=self._model.classes_num,
+            onset_threshold=self._model.onset_threshold,
+            offset_threshold=self._model.offset_threshod,
+            frame_threshold=self._model.frame_threshold,
+            pedal_offset_threshold=self._model.pedal_offset_threshold,
+        )
+        est_note_events, _ = post_processor.output_dict_to_midi_events(output_dict)
 
         return sorted(
             (
@@ -237,7 +306,7 @@ class ByteDanceEngine:
                     end=float(note["offset_time"]),
                     velocity=int(note.get("velocity", 64)),
                 )
-                for note in result["est_note_events"]
+                for note in est_note_events
                 if float(note["offset_time"]) > float(note["onset_time"])
             ),
             key=lambda event: (event.start, event.midi_note),

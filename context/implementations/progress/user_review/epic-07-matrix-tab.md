@@ -14,10 +14,15 @@ Everything happens on **http://localhost:5173/playground/matrix**.
 
 Load your transcribed recording on the **Input** tab, then click **Matrix**.
 
-**What you should see:** a spreadsheet. Across the top, the 88 piano keys — English name (`C4`)
+**What you should see first:** a source banner. A complete file says **ENTIRE TRACK** and gives its
+duration. A saved passage says **SEGMENT**, names the original audio, shows its absolute
+start–end range, and offers **Change segment**.
+
+Below it is a spreadsheet. Across the top, the 88 piano keys — English name (`C4`)
 with the Spanish name (`Do-4`) turned sideways above it. Black keys have a darker column, so the
-keyboard pattern is visible. Down the left, one row per moment in time, labelled
-`f: 3 [00:03.000 – 00:04.000]`.
+keyboard pattern is visible. For an entire track, rows are labelled `f:3 · 00:03.00`. For a saved
+segment they show both clocks, such as `f:3 · 00:00.75 ↗ 00:02.75`: local segment time first,
+original-source time second.
 
 For your five-note scale you should see **five filled circles stepping down and to the right** —
 down because time moves downward, right because the notes go up in pitch.
@@ -96,7 +101,7 @@ circles stay where they are.
 
 In **Go to frame or time**, type `2` and press Enter → the grid scrolls to frame 2.
 
-Now type `0:03.000` and press Enter → it scrolls to whatever frame contains 3 seconds.
+Now type `0:03.00` and press Enter → it scrolls to whatever frame contains 3 seconds.
 
 > Both work: a plain number is a frame index, anything with a colon or a decimal point is a time.
 > The target lands about a third of the way down the view rather than at the very top, so you can
@@ -135,15 +140,45 @@ was corrected**: a held note with nothing before it becomes a struck note.
 
 ---
 
+## 5.6 — Edit cells
+
+Click **Edit cells**. The processing step locks to clean and the BPM/resolution controls disable
+until you leave edit mode.
+
+1. Keep **Onset** selected and click an empty C5 cell.
+2. The grid changes immediately and says **1 staged change**. It has been checked by the backend,
+   but not saved yet.
+3. Select **Sustain** and click an empty cell whose previous frame on that key is silent. You
+   should get a precise rejection explaining that nothing is sounding there.
+4. Click the added circle to select it. Shift-click another circle to multi-select.
+5. Click **Delete**. Removing an onset also removes its pale sustain tail.
+6. Click **Save**. Open Piano Roll: the saved change is already there.
+
+**Cancel** discards every staged change. The first Save also keeps the untouched transcription as
+a recoverable parent file.
+
+---
+
+## 5.7 — Play the grid
+
+In **Matrix player**, click **Play**. The current row is tinted and stays visible while the
+timestamp advances. Filled circles trigger piano tones; pale circles extend and damp the tone
+instead of striking it again. Pause, type `0:01.00` into Seek, press Go, and resume.
+
+---
+
 ## What "working" looks like
 
 - Five filled circles stepping down-and-right for your scale, with readable key and frame labels.
+- The source banner and row times make segment vs entire-track context unambiguous.
 - Headers stay frozen while scrolling; scrolling down moves forward in time.
 - All four pills render, and `two-hands` splits into blue and green at middle C.
 - **Changing the resolution halves or doubles the rows instantly.**
 - Frame search works for both a number and a time, and refuses out-of-range input politely.
 - Dense and sparse both download, and both re-import to an identical grid.
 - A deliberately broken file imports with a correction note rather than an error.
+- Cell placement previews immediately; invalid sustains explain why; Save appears in other tabs.
+- Matrix player sound and the highlighted row stay synchronized.
 
 ## If it goes wrong
 
@@ -156,5 +191,7 @@ was corrected**: a held note with nothing before it becomes a struck note.
 | Resolution change is slow | It should be milliseconds | Check the backend terminal for model activity |
 | Scrolling stutters | Virtualization not doing its job | Tell me the piece length |
 | Import rejected | The message names the missing field | Check you exported from this app |
+| An edit is rejected | Sustain without a previous sounding cell is illegal | Place an onset first |
+| Playback is silent | Browser audio starts only from a user click | Click Play and check system volume |
 
-Next: [6 — Artifacts and versioning](epic-05-artifacts.md) · back to the [index](README.md)
+Next: [6 — Piano Roll and Notes Falling](epic-08-piano-views.md) · back to the [index](README.md)

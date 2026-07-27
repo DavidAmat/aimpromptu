@@ -21,7 +21,7 @@ export type {
 } from "../music/types";
 
 export { audioApi, SUPPORTED_AUDIO_SUFFIXES } from "./audio";
-export type { AudioItem, AudioSource, WaveformPeaks } from "./audio";
+export type { AudioItem, AudioSource, AudioTimeRange, WaveformPeaks } from "./audio";
 
 export { matrixApi } from "./matrix";
 export type {
@@ -29,6 +29,7 @@ export type {
   ImportedMatrix,
   JobHandle,
   JobStatus,
+  MatrixCellEdit,
   MatrixEnvelope,
   MatrixProcessingStep,
   PianoMatrixEnvelope,

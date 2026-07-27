@@ -17,6 +17,7 @@ Orientation on disk is the wire orientation: **88 x N** (row = key, col = frame)
 from __future__ import annotations
 
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 import numpy as np
 from scipy import sparse
@@ -66,11 +67,28 @@ def from_coo(coo: sparse.coo_matrix) -> SparseCooMatrix:
 
 
 def save_matrix(path: Path, matrix: SparseCooMatrix) -> Path:
-    """Write a matrix to ``path`` (compressed ``.npz``), creating parents."""
+    """Atomically write a compressed matrix, creating its parent folder.
+
+    React development mode may issue the same recompute request twice. Both
+    requests are allowed to finish, so writing directly to the destination can
+    expose a half-written zip archive to the other request. A sibling temporary
+    file plus ``replace`` makes every reader see either complete version.
+    """
     if path.suffix != NPZ_SUFFIX:
         raise ValueError(f"Matrix files must end in {NPZ_SUFFIX}, got '{path.name}'")
     path.parent.mkdir(parents=True, exist_ok=True)
-    sparse.save_npz(path, to_coo(matrix).tocoo(), compressed=True)
+    with NamedTemporaryFile(
+        dir=path.parent,
+        prefix=f".{path.stem}-",
+        suffix=NPZ_SUFFIX,
+        delete=False,
+    ) as temporary:
+        temporary_path = Path(temporary.name)
+    try:
+        sparse.save_npz(temporary_path, to_coo(matrix).tocoo(), compressed=True)
+        temporary_path.replace(path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
     return path
 
 

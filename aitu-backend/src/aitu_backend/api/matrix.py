@@ -1,6 +1,6 @@
 """`/matrix` — the transcription pipeline and matrix retrieval (Epics 2, 4, 7)."""
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import StreamingResponse
@@ -9,9 +9,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from aitu_backend.audio import store
 from aitu_backend.audio.store import AudioNotFound
 from aitu_backend.matrix.convert import to_dense_envelope, to_sparse_envelope
+from aitu_backend.matrix.granularity import upsample_to
 from aitu_backend.matrix.hands import combine_hands
 from aitu_backend.matrix.model import PianoMatrix
-from aitu_backend.matrix.ops import transpose
+from aitu_backend.matrix.ops import EditError, fit_to_width, set_cell, transpose
 from aitu_backend.matrix.validator import normalize
 from aitu_backend.schemas.matrix import (
     Granularity,
@@ -239,6 +240,35 @@ class ImportedMatrix(BaseModel):
     normalized_cells: int = Field(0, alias="normalizedCells")
 
 
+class MatrixCellEdit(BaseModel):
+    """One staged grid operation. Coordinates use the dense UI orientation."""
+
+    frame: int = Field(..., ge=0)
+    key: int = Field(..., ge=0, lt=88)
+    value: Literal[-1, 0, 1]
+
+
+class EditMatrixRequest(BaseModel):
+    """Preview or save a sequence of validator-backed cell edits."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    tempo_bpm: float = Field(60.0, alias="tempoBpm", gt=0)
+    granularity: Granularity = Granularity.SEMICORCHEA
+    edits: list[MatrixCellEdit]
+    persist: bool = False
+
+
+class EditedMatrix(BaseModel):
+    """The normalized preview plus whether it replaced the working source."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    envelope: PianoMatrixEnvelope
+    persisted: bool
+    edit_count: int = Field(..., alias="editCount")
+
+
 @router.post(
     "/import", response_model=ImportedMatrix, response_model_by_alias=True, status_code=201
 )
@@ -275,6 +305,64 @@ def import_matrix(envelope: PianoMatrixEnvelope) -> ImportedMatrix:
         matrix_processing_step=envelope.matrix_processing_step,
         frame_count=normalized.frame_count,
         normalized_cells=changed,
+    )
+
+
+@router.post(
+    "/{audio_uuid}/edit",
+    response_model=EditedMatrix,
+    response_model_by_alias=True,
+)
+def edit_matrix(audio_uuid: str, request: EditMatrixRequest) -> EditedMatrix:
+    """Validate staged edits against the clean working matrix, then optionally save.
+
+    Preview calls are intentionally stateless: the frontend sends its complete
+    staged edit list each time. A sustain with no preceding sound therefore
+    fails immediately with the same domain message as the matrix primitive.
+
+    Saving expands the edited view back to the canonical raw fusa resolution.
+    This is lossy when the user edits a coarser view, which is expected: saving
+    says that view is now the musical truth. The first pre-edit raw matrix is
+    retained as ``raw_before_edit.npz``.
+    """
+    _audio_or_404(audio_uuid)
+    if not pipeline.has_raw(audio_uuid):
+        raise HTTPException(status_code=409, detail="This audio has not been transcribed yet")
+
+    result = pipeline.recompute(audio_uuid, request.tempo_bpm, request.granularity)
+    edited = result.clean
+    try:
+        for change in request.edits:
+            edited = set_cell(edited, change.key, change.frame, change.value)
+    except EditError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    edited = normalize(edited)
+    if request.persist:
+        raw = upsample_to(
+            edited.with_grid(
+                edited.grid,
+                processing_step=MatrixProcessingStep.RAW,
+            ),
+            Granularity.FUSA,
+        )
+        fitted = fit_to_width(raw, result.raw.frame_count)
+        raw = fitted.with_grid(
+            fitted.grid,
+            processing_step=MatrixProcessingStep.RAW,
+        )
+        saved = pipeline.persist_edited_raw(
+            audio_uuid,
+            raw,
+            request.tempo_bpm,
+            request.granularity,
+        )
+        edited = saved.clean
+
+    return EditedMatrix(
+        envelope=to_dense_envelope(edited.to_envelope()),
+        persisted=request.persist,
+        edit_count=len(request.edits),
     )
 
 

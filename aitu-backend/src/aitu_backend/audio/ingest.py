@@ -8,12 +8,13 @@ to know about :func:`ingest_file`.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import BinaryIO
 
 from aitu_backend.audio import formats, store
 from aitu_backend.audio.store import StoredAudio
-from aitu_backend.schemas.metadata import AudioMetadata, AudioSource
+from aitu_backend.schemas.metadata import AudioMetadata, AudioSource, TimeRange
 
 
 def ingest_file(
@@ -89,6 +90,76 @@ def finalize(audio_uuid: str) -> StoredAudio:
         sample_rate=sample_rate,
     )
     return store.get(audio_uuid)
+
+
+def create_segment(
+    audio_uuid: str,
+    start_seconds: float,
+    end_seconds: float,
+    *,
+    alias: str | None = None,
+) -> StoredAudio:
+    """Create a self-contained WAV child for one range of an audio.
+
+    The child owns both ``original.wav`` and ``normalized.wav`` containing only
+    the selected range. Its lineage points to the root audio and uses absolute
+    root timestamps, even if a segment is trimmed again.
+    """
+    source = store.get(audio_uuid)
+    if not source.has_normalized():
+        source = finalize(audio_uuid)
+
+    duration = source.metadata.duration_seconds
+    if duration is None:
+        duration = formats.duration_seconds(source.normalized_path)
+    if start_seconds < 0 or end_seconds > duration + 0.001:
+        raise ValueError(f"The segment must stay inside the {duration:.2f}-second source audio")
+    if end_seconds <= start_seconds:
+        raise ValueError(
+            f"endSeconds must be after startSeconds ({end_seconds} <= {start_seconds})"
+        )
+    if start_seconds <= 0.001 and end_seconds >= duration - 0.001:
+        raise ValueError("Choose a smaller range before creating a segment")
+
+    source_range = source.metadata.source_time_range
+    root_uuid = source.metadata.source_audio_uuid or source.uuid
+    root_start = (source_range.start_seconds if source_range else 0.0) + start_seconds
+    root_end = (source_range.start_seconds if source_range else 0.0) + end_seconds
+    root_range = TimeRange(start_seconds=root_start, end_seconds=root_end)
+    display_alias = (alias or "").strip() or (
+        f"{source.metadata.alias} — segment {root_start:.2f}s–{root_end:.2f}s"
+    )
+    filename = f"{display_alias}.wav"
+
+    segment = store.create(
+        alias=display_alias,
+        source=AudioSource.SEGMENT,
+        extension="wav",
+        original_filename=filename,
+        source_audio_uuid=root_uuid,
+        source_time_range=root_range,
+    )
+    try:
+        original = segment.directory / "original.wav"
+        formats.slice_wav(
+            source.normalized_path,
+            original,
+            start_seconds,
+            end_seconds,
+        )
+        # The source is already the canonical mono 16 kHz WAV. Copying the
+        # physical clip preserves it exactly and avoids a redundant ffmpeg run.
+        shutil.copyfile(original, segment.normalized_path)
+        sample_rate, samples = formats.read_wav(segment.normalized_path)
+        store.update(
+            segment.uuid,
+            duration_seconds=round(len(samples) / sample_rate, 6),
+            sample_rate=sample_rate,
+        )
+        return store.get(segment.uuid)
+    except Exception:
+        store.delete(segment.uuid)
+        raise
 
 
 def waveform(

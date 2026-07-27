@@ -46,6 +46,8 @@ interface StreamState {
   outcome: "running" | "done" | "error";
   error: string | null;
   stages: string[];
+  /** Monotonic whole-pipeline percentage; stage fractions reset at each stage. */
+  percent: number;
 }
 
 const EMPTY: StreamState = {
@@ -54,7 +56,23 @@ const EMPTY: StreamState = {
   outcome: "running",
   error: null,
   stages: [],
+  percent: 0,
 };
+
+const PIPELINE_RANGES: Record<string, readonly [number, number]> = {
+  "download model": [0, 5],
+  transcribe: [5, 80],
+  events: [80, 88],
+  collapse: [88, 94],
+  clean: [94, 99],
+  "two-hands": [99, 100],
+};
+
+function wholePipelinePercent(event: ProgressEvent): number {
+  const range = PIPELINE_RANGES[event.stage];
+  if (!range) return Math.round(event.fraction * 100);
+  return Math.round(range[0] + (range[1] - range[0]) * event.fraction);
+}
 
 function isProgressEvent(value: unknown): value is ProgressEvent {
   if (typeof value !== "object" || value === null) return false;
@@ -94,17 +112,36 @@ export function useProgress(url: string | null): ProgressState {
           base.stages[base.stages.length - 1] === event.stage
             ? base.stages
             : [...base.stages, event.stage];
-        return { ...base, url, event, stages };
+        return {
+          ...base,
+          url,
+          event,
+          stages,
+          percent: Math.max(base.percent, wholePipelinePercent(event)),
+        };
       });
     };
 
     // The backend closes the stream with a named `done` event when finished.
-    source.addEventListener("done", () => {
-      setState((previous) => ({
-        ...(previous.url === url ? previous : { ...EMPTY, url }),
-        url,
-        outcome: "done",
-      }));
+    source.addEventListener("done", (rawEvent) => {
+      const message = rawEvent as MessageEvent<string>;
+      let payload: { status?: string; error?: string | null } = {};
+      try {
+        payload = JSON.parse(message.data) as typeof payload;
+      } catch {
+        // A malformed terminal frame is still a terminal frame.
+      }
+      setState((previous) => {
+        const base = previous.url === url ? previous : { ...EMPTY, url };
+        return payload.status === "error"
+          ? {
+              ...base,
+              url,
+              outcome: "error",
+              error: payload.error || "Transcription failed",
+            }
+          : { ...base, url, outcome: "done", percent: 100 };
+      });
       source.close();
     });
 
@@ -131,7 +168,7 @@ export function useProgress(url: string | null): ProgressState {
   return {
     status,
     event: fresh.event,
-    percent: Math.round((fresh.event?.fraction ?? 0) * 100),
+    percent: fresh.percent,
     error: fresh.error,
     stages: fresh.stages,
     reset,

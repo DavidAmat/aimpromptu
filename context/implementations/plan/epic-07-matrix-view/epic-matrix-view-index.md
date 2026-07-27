@@ -6,7 +6,8 @@ Read first: `project-features.md` "Matrix tab" section.
 
 ## Story 7.1 — Grid visualization
 
-- Task 7.1.1 matrix grid: key columns with EN + rotated ES names, time-frame rows with `f: N [start - end]` labels, onset/sustain circles with connecting edges, frozen header, vertical column separators, downward-scroll time axis.
+- Task 7.1.1 matrix grid: key columns with EN + rotated ES names, time-frame rows with `f:N · start` labels (superseded the original `[start - end]` form — see
+  [frontend/timestamps.md](../../../frontend/timestamps.md)), onset/sustain circles with connecting edges, frozen header, vertical column separators, downward-scroll time axis.
 
 ## Story 7.2 — Steps and export
 

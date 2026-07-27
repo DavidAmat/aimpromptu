@@ -8,24 +8,22 @@ what correct looks like. Start with [`user_review/00-setup.md`](user_review/00-s
 
 ## What was done
 
-**Epics 1 through 6, all tasks.** The checklist is truthful — `[x]` means done, and where a task
-needs your eyes the checklist line says so inline.
+**Epics 1 through 8, all tasks, across the overnight and continuation sessions.** The checklist is
+truthful — `[x]` means done, and where a task needs your eyes the checklist line says so inline.
 
 | Epic | Outcome |
 |------|---------|
 | 1 — Skeleton | Backend restructured into feature packages, tooling + pre-commit, MUI app shell with all routes, matrix and metadata contracts, storage tree |
 | 2 — Matrix core | The whole engine: model, validator, collapse/upsample, Appendix B cleaning, Appendix C approximation, two-hands split, structural ops |
-| 3 — Audio I/O | Audio store, upload + ffmpeg normalization + waveform peaks, browser recording, range selector, YouTube via yt-dlp |
-| 4 — Transcription | Engine interface (3 engines), events → raw matrix, five-step pipeline, background jobs + SSE |
+| 3 — Audio I/O | Audio store, upload + ffmpeg normalization + waveform peaks, browser recording, persisted physical segments with source lineage, YouTube via yt-dlp |
+| 4 — Transcription | Engine interface (3 engines), real ByteDance model-segment progress, events → raw matrix, five-step pipeline, background jobs + SSE |
 | 5 — Artifacts | Playground repository with `vN_gX` versions and lineage, library promotion with rollback |
-| 6 — Input tab | All five input sources wired, transcription settings, Run → progress → Matrix tab |
-| 7 — Matrix tab | The grid (circles, edges, frozen headers, virtualized rows), step pills, JSON export/import, instant recompute, frame search |
+| 6 — Input tab | All five input sources wired, physical segment creation/back-to-original, transcription settings, monotonic progress, Run → Matrix |
+| 7 — Matrix tab | The grid (circles, edges, frozen headers, virtualized rows), explicit segment/full-track context and original times, step pills, JSON export/import, instant recompute, frame search, validator-backed editing, matrix player |
+| 8 — Piano views | Reusable 88-key piano, waveform-backed roll, shared transport and synth/original-audio playback, falling-note view, drag editing |
 
-**464 backend tests pass.** `mypy`, `flake8`, `black`, `tsc -b`, `eslint` and `vite build` are all
-clean.
-
-Epic 7's Story 7.4 (cell editing, matrix player) is marked nice-to-have in the plan and is not
-built; the seams for it are in place.
+**476 backend tests pass.** The full pinned pre-commit suite, `mypy`, `flake8`, `black`, `tsc -b`,
+`eslint` and `vite build` are all clean.
 
 ## Second pass — the blockers researched and fixed
 
@@ -84,15 +82,72 @@ skipping.
 
 ## What is still unverified
 
-**No transcription engine has run**, because torch never finished downloading in the sandbox (over
-90 minutes on an aarch64 Linux wheel — a sandbox network limit, not a project problem). The model
-call is now written against the package's **actual source**, which I read, rather than its
-documentation. [Guide 3](user_review/epic-04-transcription.md) walks through proving it works, and
-its first step is a single command that either prints `engine ready: bytedance on cpu` or tells you
-what is missing.
+The real ByteDance engine has now run successfully on the local Mac against an eight-second
+synthetic source. Its actual package mini-batch loop is instrumented rather than wrapped with an
+invented timer. A longer musical recording is still the useful human quality trial because the
+short fixture contains no piano performance and has only one model batch.
 
-**No UI has been looked at.** You asked me to skip that. The six `user_review/` guides exist so
-that is a pleasant hour rather than a hunt.
+**The Epic 7 and Epic 8 UI has been browser-verified** with both an imported five-note scale and
+physical audio/segment artifacts. Matrix editing and playback, Piano Roll playback, Falling
+playback, drag staging/cancel, key highlighting, deep linking, segment/full-track switching and
+original-time labels all worked with no browser-console errors. Musical A/B judgment against a
+real performance remains the supervisor trial.
+
+The remaining real-device and real-audio checks are collected in the `user_review/` guides. In
+particular, use [guide 6](user_review/epic-08-piano-views.md) for the piano views.
+
+## Continuation — Epic 7 finish and Epic 8
+
+### Matrix editing and player
+
+Story 7.4 is now complete. Edits are staged in the browser but every preview and save is rebuilt
+and validated by the backend. A save keeps the original raw fusa matrix once as
+`raw_before_edit.npz`, expands the edited clean matrix back to raw resolution, and persists the
+derived result. The matrix player uses the same shared clock and piano fallback as Epic 8, so the
+cursor, sounding cells and highlighted piano keys stay aligned.
+
+### Piano views and playback
+
+Epic 8 now has one 88-key piano component in horizontal and vertical orientations, generated key
+geometry for MIDI 21–108, a waveform-watermarked Piano Roll, and an eight-beat windowed Falling
+view. Playback can follow the normalized source audio when one exists or use a WebAudio piano-like
+fallback; speed, range, BPM and granularity controls are shared. Both animated views support
+staged pointer-drag correction with validator-backed Save and Cancel.
+
+The checked-in piano SVGs are deliberate programmatic placeholders, as allowed by Task 8.1.1.
+They can be replaced later without changing the key geometry or page components.
+
+### Saved audio segments, time context and progress
+
+A partial Input selection is now materialized before transcription. The backend creates a named,
+physically trimmed audio item with a truncated waveform and root-source start/end metadata.
+Re-trimming a segment retains absolute root times. Input offers **Back to original**, and every Run
+forces a fresh transcription of the currently selected physical file, so a previous segment can
+never reappear after choosing the full track.
+
+Matrix visibly distinguishes **SEGMENT** from **ENTIRE TRACK**. Segment rows show both local time
+and their corresponding original-source time.
+
+The browser progress bar now maps every pipeline stage monotonically across one whole-job scale.
+ByteDance reports each real model segment, fixing the old mismatch where terminal inference
+advanced while the UI stayed at zero.
+
+### Piano compositing correction
+
+The keyboard uses four SVG layers: white base, pressed white keys, normal black keys, then pressed
+black keys. This prevents a white highlight rectangle from covering neighbouring black keys.
+Live browser inspection confirmed that ordering during playback.
+
+Imported matrix JSON deliberately has no audio waveform. That optional request now returns a clean
+`404` for the views' built-in fallback instead of logging a server exception.
+
+### Runtime defect found
+
+React development mode deliberately issued duplicate matrix requests. Both backend requests used
+to write the same `.npz` archive directly, allowing one request to observe a half-written zip and
+fail with `BadZipFile`. Matrix persistence now writes a sibling temporary archive and atomically
+replaces the target. A regression test verifies the temporary file is cleaned up and the final
+archive remains readable.
 
 ## The ligature decision — resolved
 
@@ -111,34 +166,16 @@ file, and [guide 5 §5.4](user_review/epic-02-matrix-core.md). Full write-up:
 
 **No decisions are outstanding.**
 
-## Nothing is committed
+## Delivery
 
-The work is on disk, unstaged. I did not commit because pre-commit could not run here — its hooks
-are cloned from GitHub, which the sandbox blocks — and the plan says pre-commit must pass.
-
-```bash
-cd aitu-backend
-uv sync && uv sync --extra transcription
-make hooks && make lint && make test
-
-cd ../aitu-frontend && npm install && npm run lint && npm run build
-
-cd .. && git add -A && git status      # confirm no .npz or data/audio slipped in
-git commit -m "Epics 1-6: matrix engine, audio I/O, transcription, artifacts, input tab"
-```
-
-The `.gitignore` was extended for `data/`; I verified nothing under `data/audio/` or any `.npz` is
-tracked.
+The completed Epic 1–8 state, including the final segment/progress/piano corrections, is committed
+to `master` and pushed after the full pinned pre-commit suite passed. The `.gitignore` excludes
+runtime `data/`; no generated audio, matrices or model files are part of the commit.
 
 ## Where the plan stands
 
-Epics 8–14 are untouched, plus Epic 7's nice-to-have Story 7.4.
-
-**Epic 8 (piano roll and notes falling) is the natural next step.** Its two prerequisites are
-already in place: `<WaveformView watermark />` from Epic 3 for the roll background, and
-`MatrixGrid`'s `focusFrame` prop for the deep link back to the Matrix tab. Alternatively **Epic 9
-(notation)** is the bigger prize — it is what turns all of this into actual sheet music — and its
-backend score-format builder is the last major unbuilt piece of the pipeline.
+**Epics 1–8 are complete. Epics 9–14 are untouched.** This continuation explicitly stopped at the
+Epic 8 boundary; no Epic 9 task was started.
 
 ## Environment notes for whoever works here next
 

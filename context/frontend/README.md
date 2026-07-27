@@ -13,6 +13,7 @@ Structured by feature, not by source file:
 | Loaded scores | [loaded-scores.md](loaded-scores.md) | `ScoreStack`, shared `LayoutControls` |
 | Compose panel | [compose-panel.md](compose-panel.md) | `SequenceComposer` — `POST /sequence` |
 | Rendering | [rendering-pipeline.md](rendering-pipeline.md) | `matrixToNotation.ts`, `PianoSheet.tsx`, `notes.ts` |
+| Timestamps | [timestamps.md](timestamps.md) | `audio/time.ts`, `ui/timestamps.ts` — the `mm:ss.cc` / `f:N · start` rule |
 
 ## Data flow
 

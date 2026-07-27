@@ -6,7 +6,8 @@ Read first: `project-features.md` sections "Piano Roll tab", "UI Visualisation o
 
 ## Story 8.1 — Piano SVG assets
 
-- Task 8.1.1 piano svg assets: piano-base.svg + pressed white/black overlays, key coordinate table, PressedKey highlight component.
+- Task 8.1.1 piano svg assets: white-key base + normal black-key layer + pressed white/black
+  overlays, key coordinate table, PressedKey highlight component.
 
 ## Story 8.2 — Piano roll view
 

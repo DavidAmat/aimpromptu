@@ -2,8 +2,9 @@
 
 Single status lookup for the whole plan. Status codes: `[x]` completed, `[p]` in progress, `[b]` blocked (state the blocker), `[c]` cancelled (state why), `[ ]` not started. Workers: mark `[p]` when starting, final status when finishing.
 
-> **Epics 1–6 were completed in the 2026-07-27 overnight session** and are **awaiting the human
-> supervisor's manual trials**. Nothing is committed yet.
+> **Epics 1–8 were completed across the 2026-07-27 overnight and continuation sessions** and are
+> **awaiting the human supervisor's musical real-audio/manual trials**. The completed state is
+> committed to `master`.
 >
 > - **Click-by-click verification guides**: [`../progress/user_review/`](../progress/user_review/README.md)
 >   — start at `00-setup.md`.
@@ -87,11 +88,16 @@ Audio ingestion and management: uuid audio store, uploads with ffmpeg normalizat
 
 Audio to matrix: piano transcription engine behind a swappable interface, note events to raw fusa matrix, and the orchestrated raw→collapsed→clean→two-hands pipeline with fast recompute and progress streaming. Index: `epic-04-transcription/epic-transcription-index.md`.
 
-> **Needs your verification before it can be trusted.** `torch` would not download in the sandbox, so no real transcription engine has ever run. The model call is now written against the package's **actual source** (read and verified: `est_note_events` keys, `sample_rate`, the `midi_path=None` path), and a real trap was found and fixed — the package downloads its 165 MB checkpoint with `wget`, which macOS does not ship, so the backend now fetches it itself. Everything around the model (events → matrix, the five-step chain, artifacts, SSE, recompute) is tested against stub engines. Follow [`user_review/epic-04-transcription.md`](../progress/user_review/epic-04-transcription.md).
+> The real ByteDance engine completed an end-to-end local Mac run. Its actual mini-batch inference
+> loop now reports model-segment progress to the browser. A real piano performance is still the
+> useful quality trial; follow
+> [`user_review/epic-04-transcription.md`](../progress/user_review/epic-04-transcription.md).
 
 ## [x] Story 4.1 — Engine
 
-- [x] Task 4.1.1 **Engine integration**: piano_transcription_inference default, Basic Pitch fallback, benchmark script. *(Model call unverified — see above. Engines are an optional extra: `uv sync --extra transcription`. Python 3.12 confirmed correct for torch on Apple Silicon; the package does **not** pin old torch.)*
+- [x] Task 4.1.1 **Engine integration**: piano_transcription_inference default, Basic Pitch
+  fallback, benchmark script. *(Real ByteDance call verified locally. Engines are an optional
+  extra: `uv sync --extra transcription`. Python 3.12 is supported on Apple Silicon.)*
 
 ## [x] Story 4.2 — Events to matrix
 
@@ -117,7 +123,8 @@ Persistence of musical work: playground repository with vN_gX version folders an
 
 Entry door of the Playground: five input sources (upload, record, library, text notation, JSON) plus BPM/granularity/range settings and pipeline launch. Index: `epic-06-playground-input/epic-playground-input-index.md`.
 
-> Awaiting your manual trial. Note that a successful run lands on the Matrix tab, which is still an Epic 7 placeholder — the result is on disk and readable via `GET /matrix/{uuid}` until then.
+> Browser-verified with both a saved physical segment and its original full track. A musical
+> real-audio quality trial remains.
 
 ## [x] Story 6.1 — Input sources
 
@@ -125,13 +132,15 @@ Entry door of the Playground: five input sources (upload, record, library, text 
 
 ## [x] Story 6.2 — Transcription settings
 
-- [x] Task 6.2.1 **Transcription settings**: BPM, granularity dropdown, range restriction, run + handoff to Matrix tab.
+- [x] Task 6.2.1 **Transcription settings**: physically saved/named audio segments with source
+  lineage, BPM, granularity, truthful model progress, fresh run + handoff to Matrix tab.
 
 # [x] Epic 7 — Matrix tab
 
 Spreadsheet-like matrix view: circles and edges grid with frozen headers, processing-step pills, JSON export/import, instant in-situ BPM/granularity recompute, frame search; editing and matrix player as nice-to-haves. Index: `epic-07-matrix-view/epic-matrix-view-index.md`.
 
-> Stories 7.1–7.3 done and awaiting your trial ([guide 5](../progress/user_review/epic-07-matrix-tab.md)). **Story 7.4 (cell editing and the matrix player) is deliberately not built** — the plan marks it nice-to-have, and the seams for it exist (`MatrixGrid`'s `onCellClick`, and the Task 2.4.2 edit primitives).
+> Complete and browser-verified with an imported five-note scale. The real-audio trial remains in
+> [guide 5](../progress/user_review/epic-07-matrix-tab.md).
 
 ## [x] Story 7.1 — Grid
 
@@ -147,34 +156,40 @@ Spreadsheet-like matrix view: circles and edges grid with frozen headers, proces
 - [x] Task 7.3.1 **In-situ recompute**: BPM/granularity change recomputed from raw, auto-redisplay.
 - [x] Task 7.3.2 **Frame search**: jump by frame number or timestamp, deep link from Piano Roll. *(`MatrixGrid` takes a `focusFrame` prop — Epic 8's deep link sets the same one.)*
 
-## [ ] Story 7.4 — Editing and player (nice to have)
+## [x] Story 7.4 — Editing and player (nice to have)
 
-- [ ] Task 7.4.1 **Cell editing**: palette placement, shift multi-select delete, validator-backed save.
-- [ ] Task 7.4.2 **Matrix player**: row cursor playback with piano tones and damped sustains.
+- [x] Task 7.4.1 **Cell editing**: palette placement, shift multi-select delete, validator-backed save.
+- [x] Task 7.4.2 **Matrix player**: row cursor playback with piano tones and damped sustains.
 
-# [ ] Epic 8 — Piano roll and notes falling
+# [x] Epic 8 — Piano roll and notes falling
 
 Animated matrix views over the piano SVG: assets and key highlighting, horizontal roll view, shared playback engine (original audio vs synthesized piano), Synthesia-style falling view, drag editing nice-to-have. Index: `epic-08-piano-roll/epic-piano-roll-index.md`.
 
-## [ ] Story 8.1 — SVG assets
+> Complete and browser-verified with an imported five-note scale: playback, key highlighting,
+> drag staging and the Matrix deep link. Original-audio A/B and replacement illustrator assets
+> still need the supervisor's manual trial ([guide 6](../progress/user_review/epic-08-piano-views.md)).
 
-- [ ] Task 8.1.1 **Piano SVG assets**: base + pressed overlays, coordinate table, Piano component in both orientations.
+## [x] Story 8.1 — SVG assets
 
-## [ ] Story 8.2 — Roll view
+- [x] Task 8.1.1 **Piano SVG assets**: white-key base + normal black-key layer + pressed overlays,
+  coordinate table, Piano component in both orientations. *(Programmatic placeholders per plan;
+  replace the four SVG files when illustrator assets arrive.)*
 
-- [ ] Task 8.2.1 **Roll view layout**: vertical piano left, note rectangles, dashed numbered guides, full-height fit, waveform watermark.
+## [x] Story 8.2 — Roll view
 
-## [ ] Story 8.3 — Player
+- [x] Task 8.2.1 **Roll view layout**: vertical piano left, note rectangles, dashed numbered guides, full-height fit, waveform watermark.
 
-- [ ] Task 8.3.1 **Playback engine**: transport, key highlighting, original vs sampled-piano sources, speed/BPM/granularity/range filters.
+## [x] Story 8.3 — Player
 
-## [ ] Story 8.4 — Falling view
+- [x] Task 8.3.1 **Playback engine**: transport, key highlighting, original vs synthesized-piano sources, speed/BPM/granularity/range filters. *(Uses the specified WebAudio fallback rather than checked-in samples.)*
 
-- [ ] Task 8.4.1 **Notes falling**: calibrated falling rectangles, velocity from window+BPM+granularity, swallow effect at Y=0.
+## [x] Story 8.4 — Falling view
 
-## [ ] Story 8.5 — Drag editing (nice to have)
+- [x] Task 8.4.1 **Notes falling**: calibrated falling rectangles, velocity from window+BPM+granularity, swallow effect at Y=0.
 
-- [ ] Task 8.5.1 **Drag note editing**: drag to key/frame with landing guides, staged changes, Save.
+## [x] Story 8.5 — Drag editing (nice to have)
+
+- [x] Task 8.5.1 **Drag note editing**: drag to key/frame with landing guides, staged changes, Save.
 
 # [ ] Epic 9 — Music notation
 

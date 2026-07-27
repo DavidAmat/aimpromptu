@@ -91,10 +91,10 @@ Click the **Record** tab.
 With your recording still selected, look at the **Range** panel.
 
 1. **Drag the left handle** rightwards. While you drag, a small black tooltip above it shows the
-   time as `mm:ss.mmm`, live.
+   time as `mm:ss.cc`, live.
 2. **Drag the right handle** leftwards. The selected middle shades purple.
 3. Try dragging the left handle *past* the right one → it stops. They cannot cross.
-4. Under the waveform, type `00:01.000` in **Start** and press Enter → the left handle jumps there,
+4. Under the waveform, type `00:01.00` in **Start** and press Enter → the left handle jumps there,
    and the "N selected" text updates.
 5. Type nonsense like `abc` in **End** and click away → the field snaps back to its previous value.
    The handle does not move. **A half-typed value never moves anything.**

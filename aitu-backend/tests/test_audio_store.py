@@ -135,6 +135,11 @@ def test_create_makes_a_folder_with_metadata(temp_store: Path) -> None:
     assert entry.metadata.format == "mp3"
 
 
+def test_segment_metadata_requires_complete_lineage() -> None:
+    with pytest.raises(ValueError, match="sourceAudioUuid"):
+        store.create("Broken segment", AudioSource.SEGMENT, "wav")
+
+
 def test_save_original_writes_the_bytes(temp_store: Path) -> None:
     entry = store.create("x", AudioSource.UPLOAD, "wav")
     store.save_original(entry.uuid, io.BytesIO(b"RIFFfake"), "wav")
@@ -327,6 +332,80 @@ def test_the_recording_endpoint_tags_its_source(client: TestClient, tmp_path: Pa
 
 
 @needs_ffmpeg
+def test_trim_endpoint_creates_a_physical_segment_with_root_lineage(
+    client: TestClient, tmp_path: Path
+) -> None:
+    source = sine_wav(tmp_path / "long.wav", seconds=4.0, rate=44100)
+    with source.open("rb") as handle:
+        parent = client.post(
+            "/audio/upload",
+            files={"file": ("long.wav", handle, "audio/wav")},
+            data={"alias": "Long take"},
+        ).json()
+
+    response = client.post(
+        f"/audio/{parent['uuid']}/trim",
+        json={"startSeconds": 1.0, "endSeconds": 3.25, "alias": "Long take — chorus"},
+    )
+
+    assert response.status_code == 201, response.text
+    segment = response.json()
+    assert segment["source"] == "segment"
+    assert segment["alias"] == "Long take — chorus"
+    assert segment["sourceAudioUuid"] == parent["uuid"]
+    assert segment["sourceTimeRange"] == {"startSeconds": 1.0, "endSeconds": 3.25}
+    assert segment["durationSeconds"] == pytest.approx(2.25, abs=0.01)
+
+    waveform = client.get(f"/audio/{segment['uuid']}/waveform", params={"points": 80}).json()
+    assert waveform["durationSeconds"] == pytest.approx(2.25, abs=0.01)
+    assert client.get(f"/audio/{segment['uuid']}/file").status_code == 200
+    assert (
+        client.get(f"/audio/{segment['uuid']}/file", params={"normalized": True}).status_code == 200
+    )
+    assert client.get(f"/audio/{parent['uuid']}").json()["durationSeconds"] == pytest.approx(
+        4.0, abs=0.05
+    )
+
+
+@needs_ffmpeg
+def test_trimming_a_segment_keeps_absolute_root_times(client: TestClient, tmp_path: Path) -> None:
+    source = sine_wav(tmp_path / "long.wav", seconds=5.0, rate=44100)
+    with source.open("rb") as handle:
+        root_uuid = client.post(
+            "/audio/upload", files={"file": ("long.wav", handle, "audio/wav")}
+        ).json()["uuid"]
+    first = client.post(
+        f"/audio/{root_uuid}/trim",
+        json={"startSeconds": 1.0, "endSeconds": 4.0},
+    ).json()
+
+    second = client.post(
+        f"/audio/{first['uuid']}/trim",
+        json={"startSeconds": 0.5, "endSeconds": 2.0},
+    ).json()
+
+    assert second["sourceAudioUuid"] == root_uuid
+    assert second["sourceTimeRange"] == {"startSeconds": 1.5, "endSeconds": 3.0}
+
+
+@needs_ffmpeg
+def test_trim_endpoint_rejects_the_whole_audio(client: TestClient, tmp_path: Path) -> None:
+    source = sine_wav(tmp_path / "whole.wav", seconds=2.0, rate=44100)
+    with source.open("rb") as handle:
+        uuid = client.post(
+            "/audio/upload", files={"file": ("whole.wav", handle, "audio/wav")}
+        ).json()["uuid"]
+
+    response = client.post(
+        f"/audio/{uuid}/trim",
+        json={"startSeconds": 0, "endSeconds": 2.0},
+    )
+
+    assert response.status_code == 422
+    assert "smaller range" in response.json()["detail"]
+
+
+@needs_ffmpeg
 def test_a_chrome_style_webm_recording_is_ingested(client: TestClient, tmp_path: Path) -> None:
     """The Chrome case, end to end: webm/opus in, normalized mono WAV out."""
     webm = tmp_path / "take.webm"
@@ -376,6 +455,17 @@ def test_unknown_uuids_are_404(client: TestClient) -> None:
         assert client.get(url).status_code == 404
     assert client.delete("/audio/nope").status_code == 404
     assert client.patch("/audio/nope", json={"alias": "x"}).status_code == 404
+
+
+def test_waveform_is_404_when_a_matrix_import_has_no_audio(
+    client: TestClient, temp_store: Path
+) -> None:
+    entry = store.create("Imported matrix", AudioSource.UPLOAD, "json")
+
+    response = client.get(f"/audio/{entry.uuid}/waveform")
+
+    assert response.status_code == 404
+    assert "no original file" in response.json()["detail"]
 
 
 @needs_ffmpeg

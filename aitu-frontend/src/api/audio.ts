@@ -2,7 +2,12 @@
 
 import { buildUrl, request, upload } from "./client";
 
-export type AudioSource = "upload" | "recording" | "youtube";
+export type AudioSource = "upload" | "recording" | "youtube" | "segment";
+
+export interface AudioTimeRange {
+  startSeconds: number;
+  endSeconds: number;
+}
 
 /** Mirror of `AudioMetadata` in `schemas/metadata.py`. */
 export interface AudioItem {
@@ -17,6 +22,9 @@ export interface AudioItem {
   sampleRate?: number | null;
   /** Present when `source` is "youtube". */
   sourceUrl?: string | null;
+  /** Root audio and absolute root times when this is a physical segment. */
+  sourceAudioUuid?: string | null;
+  sourceTimeRange?: AudioTimeRange | null;
   createdAt: string;
 }
 
@@ -58,6 +66,11 @@ export const audioApi = {
 
   storeRecording: (file: File, alias?: string) =>
     upload<AudioItem>("/audio/recording", file, alias ? { alias } : {}),
+
+  trim: (
+    uuid: string,
+    body: { startSeconds: number; endSeconds: number; alias?: string },
+  ) => request<AudioItem>(`/audio/${uuid}/trim`, { method: "POST", body }),
 
   waveform: (uuid: string, points = 1000, signal?: AbortSignal) =>
     request<WaveformPeaks>(`/audio/${uuid}/waveform`, { query: { points }, signal }),

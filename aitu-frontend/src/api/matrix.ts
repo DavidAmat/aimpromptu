@@ -36,6 +36,18 @@ export interface JobStatus {
   fraction?: number | null;
 }
 
+export interface MatrixCellEdit {
+  frame: number;
+  key: number;
+  value: -1 | 0 | 1;
+}
+
+export interface EditedMatrix {
+  envelope: MatrixEnvelope;
+  persisted: boolean;
+  editCount: number;
+}
+
 export const matrixApi = {
   /** Which engines can actually run on this machine. `false` = not installed. */
   engines: (signal?: AbortSignal) => request<Record<string, boolean>>("/matrix/engines", { signal }),
@@ -106,6 +118,23 @@ export const matrixApi = {
 
   importJson: (envelope: MatrixEnvelope) =>
     request<ImportedMatrix>("/matrix/import", { method: "POST", body: envelope }),
+
+  /** Preview or persist the complete staged edit list. */
+  edit: (
+    audioUuid: string,
+    body: {
+      tempoBpm: number;
+      granularity: Granularity;
+      edits: MatrixCellEdit[];
+      persist?: boolean;
+    },
+    signal?: AbortSignal,
+  ) =>
+    request<EditedMatrix>(`/matrix/${audioUuid}/edit`, {
+      method: "POST",
+      body,
+      signal,
+    }),
 };
 
 /** What an import reports back. */

@@ -18,7 +18,7 @@ import StopIcon from "@mui/icons-material/Stop";
 import { audioApi, type AudioItem } from "../../api";
 import { formatTime } from "../../audio/time";
 import { fileNameFor, useRecorder } from "../../audio/useRecorder";
-import { SectionCard, semantic } from "../../ui";
+import { SectionCard, semantic, timestampSx } from "../../ui";
 import LiveLevelBars from "./LiveLevelBars";
 
 export interface AudioRecorderProps {
@@ -87,7 +87,11 @@ export function AudioRecorder({ onSaved }: AudioRecorderProps) {
             </Button>
           )}
 
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={recorder.status === "requesting" ? undefined : timestampSx}
+          >
             {recorder.status === "requesting"
               ? "Waiting for microphone permission…"
               : formatTime(recorder.elapsedSeconds)}

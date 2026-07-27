@@ -9,6 +9,10 @@
  * Rendered from the **dense** form, which the backend produces. The frontend
  * does no sparse-to-dense work of its own.
  *
+ * Each row is labelled `f:N · mm:ss.cc` — the frame's **start** only, since its
+ * end is the row below's start. The label column is sized so that never wraps;
+ * the rule and its helpers live in `audio/time.ts` and `ui/timestamps.ts`.
+ *
  * Long pieces are simply tall. Rows outside the viewport are not drawn
  * (a windowed range plus a spacer above and below), which keeps a
  * ten-thousand-frame piece scrolling smoothly without changing how it looks.
@@ -18,8 +22,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import type { KeyLabel } from "../../api";
-import { formatTime } from "../../audio/time";
-import { grays, handColors, semantic } from "../../ui";
+import { formatFrameLabel, formatTime } from "../../audio/time";
+import { FRAME_LABEL_WIDTH, grays, handColors, semantic, timestampSx } from "../../ui";
 
 /** Which hand a row of the piano belongs to, for colouring. */
 export type GridHand = "single" | "left" | "right";
@@ -31,7 +35,7 @@ export interface MatrixGridProps {
   columnHeaders: KeyLabel[];
   /** Start time of each frame, in seconds. */
   rowTimestamps: number[];
-  /** Seconds per frame — used for the `[start - end]` label. */
+  /** Seconds per frame — only a fallback when `rowTimestamps` is short. */
   timeStepSeconds: number;
   /**
    * Two-hands view: a second dense grid. When given, `dense` is the right hand
@@ -40,14 +44,20 @@ export interface MatrixGridProps {
   denseLeft?: number[][] | null;
   /** Scroll this frame into view when it changes. */
   focusFrame?: number | null;
-  /** Called when a cell is clicked — the hook Story 7.4's editing will use. */
-  onCellClick?: (frame: number, row: number) => void;
+  /** Called when any cell (including silence) is clicked. */
+  onCellClick?: (frame: number, row: number, shiftKey: boolean) => void;
+  /** Dense-coordinate keys (`"frame:key"`) selected for editing. */
+  selectedCells?: ReadonlySet<string>;
+  /** Playback cursor row. */
+  cursorFrame?: number | null;
+  /** Root-audio timestamp corresponding to local segment time zero. */
+  sourceOffsetSeconds?: number | null;
   height?: number;
 }
 
 const COLUMN_WIDTH = 26;
 const ROW_HEIGHT = 26;
-const LABEL_WIDTH = 168;
+const SOURCE_LABEL_WIDTH = 250;
 const HEADER_HEIGHT = 62;
 const CIRCLE_RADIUS = 7;
 /** Rows drawn beyond the viewport, so scrolling never reveals a blank band. */
@@ -66,6 +76,9 @@ export function MatrixGrid({
   denseLeft,
   focusFrame,
   onCellClick,
+  selectedCells,
+  cursorFrame,
+  sourceOffsetSeconds,
   height = 620,
 }: MatrixGridProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -97,7 +110,21 @@ export function MatrixGrid({
     element.scrollTo({ top: Math.max(0, focusFrame * ROW_HEIGHT - height / 3), behavior: "smooth" });
   }, [focusFrame, height]);
 
+  useEffect(() => {
+    if (cursorFrame === null || cursorFrame === undefined) return;
+    const element = scrollRef.current;
+    if (!element) return;
+    const rowTop = cursorFrame * ROW_HEIGHT;
+    if (rowTop < element.scrollTop || rowTop + ROW_HEIGHT > element.scrollTop + height) {
+      element.scrollTo({ top: Math.max(0, rowTop - height / 3), behavior: "auto" });
+    }
+  }, [cursorFrame, height]);
+
   const gridWidth = columnHeaders.length * COLUMN_WIDTH;
+  const labelWidth =
+    sourceOffsetSeconds === null || sourceOffsetSeconds === undefined
+      ? FRAME_LABEL_WIDTH
+      : SOURCE_LABEL_WIDTH;
 
   /** Colour for a cell, given its value and which hand it came from. */
   const cellColor = (value: number, hand: GridHand): string => {
@@ -150,8 +177,6 @@ export function MatrixGrid({
               fill={color}
               stroke={value === 1 ? "none" : grays.slate}
               strokeWidth={0.5}
-              style={onCellClick ? { cursor: "pointer" } : undefined}
-              onClick={onCellClick ? () => onCellClick(frame, key) : undefined}
             />
           </g>,
         );
@@ -176,7 +201,7 @@ export function MatrixGrid({
       <Box sx={{ display: "flex", borderBottom: 1, borderColor: "divider" }}>
         <Box
           sx={{
-            width: LABEL_WIDTH,
+            width: labelWidth,
             flexShrink: 0,
             height: HEADER_HEIGHT,
             display: "flex",
@@ -188,8 +213,14 @@ export function MatrixGrid({
             backgroundColor: "background.paper",
           }}
         >
-          <Typography variant="caption" color="text.secondary">
-            frame [start – end]
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            {sourceOffsetSeconds === null || sourceOffsetSeconds === undefined
+              ? "frame · start"
+              : "frame · segment time ↗ original time"}
           </Typography>
         </Box>
         <Box
@@ -245,7 +276,7 @@ export function MatrixGrid({
         {/* Row labels, pinned to the left while the keys scroll sideways. */}
         <Box
           sx={{
-            width: LABEL_WIDTH,
+            width: labelWidth,
             flexShrink: 0,
             position: "sticky",
             left: 0,
@@ -270,11 +301,15 @@ export function MatrixGrid({
                   borderColor: grays.charcoal,
                 }}
               >
+                {/* Start only: this row's end is the next row's start. */}
                 <Typography
                   variant="caption"
-                  sx={{ fontFamily: "monospace", fontSize: 11, color: grays.silver }}
+                  sx={{ ...timestampSx, fontSize: 11, color: grays.silver }}
                 >
-                  f: {frame} [{formatTime(from)} – {formatTime(from + timeStepSeconds)}]
+                  {formatFrameLabel(frame, from)}
+                  {sourceOffsetSeconds === null || sourceOffsetSeconds === undefined
+                    ? ""
+                    : ` ↗ ${formatTime(sourceOffsetSeconds + from)}`}
                 </Typography>
               </Box>
             );
@@ -292,7 +327,31 @@ export function MatrixGrid({
               style={{ display: "block" }}
               role="row"
               aria-rowindex={frame + 1}
+              onClick={
+                onCellClick
+                  ? (event) => {
+                      const bounds = event.currentTarget.getBoundingClientRect();
+                      const svgX = ((event.clientX - bounds.left) / bounds.width) * gridWidth;
+                      const key = Math.max(
+                        0,
+                        Math.min(columnHeaders.length - 1, Math.floor(svgX / COLUMN_WIDTH)),
+                      );
+                      onCellClick(frame, key, event.shiftKey);
+                    }
+                  : undefined
+              }
+              cursor={onCellClick ? "pointer" : undefined}
             >
+              {cursorFrame === frame ? (
+                <rect
+                  x={0}
+                  y={0}
+                  width={gridWidth}
+                  height={ROW_HEIGHT}
+                  fill={semantic.waveform.cursor}
+                  opacity={0.14}
+                />
+              ) : null}
               {/* Column separators and black-key shading. */}
               {columnHeaders.map((label, key) => (
                 <g key={label.row}>
@@ -324,6 +383,23 @@ export function MatrixGrid({
                 stroke={grays.charcoal}
                 strokeWidth={1}
               />
+              {selectedCells
+                ? columnHeaders.map((label, key) =>
+                    selectedCells.has(`${frame}:${key}`) ? (
+                      <rect
+                        key={`selected-${label.row}`}
+                        x={key * COLUMN_WIDTH + 1.5}
+                        y={1.5}
+                        width={COLUMN_WIDTH - 3}
+                        height={ROW_HEIGHT - 3}
+                        rx={3}
+                        fill="none"
+                        stroke={semantic.status.warning}
+                        strokeWidth={2}
+                      />
+                    ) : null,
+                  )
+                : null}
               {renderRow(frame)}
             </svg>
           ))}

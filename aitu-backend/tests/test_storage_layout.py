@@ -7,6 +7,7 @@ import pytest
 from aitu_backend.matrix.keys import KEY_COUNT, note_to_row
 from aitu_backend.schemas.matrix import Granularity, SparseCooMatrix
 from aitu_backend.storage import paths
+from aitu_backend.storage import matrix_store
 from aitu_backend.storage.matrix_store import (
     from_coo,
     load_matrix,
@@ -172,6 +173,29 @@ def test_save_and_load_round_trip(tmp_path: Path) -> None:
 
     save_matrix(target, _sample())
     assert matrix_exists(target)
+    assert load_matrix(target).model_dump() == _sample().model_dump()
+
+
+def test_save_uses_an_atomic_sibling_then_cleans_it_up(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Readers never see scipy's partially-written zip archive."""
+    target = tmp_path / "matrix.npz"
+    written_paths: list[Path] = []
+    scipy_save = matrix_store.sparse.save_npz
+
+    def record_path(path: Path, *args: object, **kwargs: object) -> None:
+        written_paths.append(Path(path))
+        scipy_save(path, *args, **kwargs)
+
+    monkeypatch.setattr(matrix_store.sparse, "save_npz", record_path)
+    save_matrix(target, _sample())
+
+    assert len(written_paths) == 1
+    assert written_paths[0] != target
+    assert written_paths[0].parent == target.parent
+    assert written_paths[0].suffix == ".npz"
+    assert not written_paths[0].exists()
     assert load_matrix(target).model_dump() == _sample().model_dump()
 
 
