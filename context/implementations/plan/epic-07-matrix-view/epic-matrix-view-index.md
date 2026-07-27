@@ -1,13 +1,20 @@
 # Epic 7 — Matrix tab
 
-The debugging heart of the Playground: a spreadsheet-like view of any piano matrix (columns = piano keys, rows = time frames), switchable between processing steps, exportable/importable as JSON, with instant BPM/granularity recompute. Editing and audio playback of the matrix are nice-to-have stories at the end.
+The debugging heart of the Playground: a spreadsheet-like view of any piano matrix (columns =
+piano keys, rows = time frames), switchable between processing steps, exportable/importable as
+JSON, with instant BPM/granularity recompute. A source banner distinguishes an entire track from a
+saved segment, whose rows show both local and root-audio time. Editing and audio playback of the
+matrix are nice-to-have stories at the end.
 
 Read first: `project-features.md` "Matrix tab" section.
 
 ## Story 7.1 — Grid visualization
 
-- Task 7.1.1 matrix grid: key columns with EN + rotated ES names, time-frame rows with `f:N · start` labels (superseded the original `[start - end]` form — see
-  [frontend/timestamps.md](../../../frontend/timestamps.md)), onset/sustain circles with connecting edges, frozen header, vertical column separators, downward-scroll time axis.
+- Task 7.1.1 matrix grid: key columns with EN + rotated ES names, time-frame rows with
+  `f:N · start` labels for full tracks and `f:N · local ↗ original` for segments (superseding the
+  original `[start - end]` form — see
+  [frontend/timestamps.md](../../../frontend/timestamps.md)), onset/sustain circles with
+  connecting edges, frozen header, vertical column separators, downward-scroll time axis.
 
 ## Story 7.2 — Steps and export
 

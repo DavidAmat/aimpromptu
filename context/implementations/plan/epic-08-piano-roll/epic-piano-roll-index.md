@@ -15,7 +15,9 @@ Read first: `project-features.md` sections "Piano Roll tab", "UI Visualisation o
 
 ## Story 8.3 — Playback engine
 
-- Task 8.3.1 playback engine: play original audio or synthesized transcription, speed/BPM/granularity/range filters, cursor, pause/seek, key-press highlighting, waveform watermark.
+- Task 8.3.1 playback engine: play the selected physical audio item or synthesized transcription,
+  speed/BPM/granularity/local-range filters, cursor, pause/seek, key-press highlighting, waveform
+  watermark. Persisted segments start locally at zero.
 
 ## Story 8.4 — Notes falling view
 
@@ -27,4 +29,6 @@ Read first: `project-features.md` sections "Piano Roll tab", "UI Visualisation o
 
 ## Exit criteria
 
-Manual trial: transcribe a recorded scale, watch it in both views with keys lighting up in sync with either the original audio or the synthesized piano, over a selected time range.
+Manual trial: transcribe a recorded scale (or a persisted segment of it), watch it in both views
+with keys lighting up in sync with either the physical source audio or the synthesized piano, over
+a local playback range. Confirm neighbouring black keys remain above pressed white-key overlays.

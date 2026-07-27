@@ -13,6 +13,8 @@ Embed the recording component (Task 3.3.1) with name-and-save into the audio lib
 ## Subtask 6.1.1.3 — Load from library
 
 List saved audios (Task 3.1.1) with alias/duration/source; pick one to make it the working audio (e.g. predetermined pieces like a two-hand C-major scale).
+Persisted segments appear as audio items too, but their lineage banner and truncated waveform make
+them visually distinct from an entire track. **Back to original** loads the root source.
 
 ## Subtask 6.1.1.4 — Textual notation
 
@@ -24,4 +26,5 @@ Upload a matrix JSON previously downloaded from the Matrix tab (dense or sparse;
 
 ## Acceptance
 
-Every mode ends with the Playground "working artifact" context populated.
+Every mode ends with the Playground "working artifact" context populated. Switching to notation or
+matrix JSON clears any previously selected audio state so it cannot override the new artifact.

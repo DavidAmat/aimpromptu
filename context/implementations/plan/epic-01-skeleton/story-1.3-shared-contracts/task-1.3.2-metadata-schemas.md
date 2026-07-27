@@ -8,6 +8,11 @@ Pydantic models for every metadata file the storage layer will write. Defined no
 - Granularity codes: `gb` blanca, `gn` negra, `gc` corchea, `gsc` semicorchea, `gf` fusa, `gsf` semifusa (prefix g = granularity). Versions: `v1`, `v2`, …
 - Version+granularity folder name: `v2_gn`.
 
+Audio metadata uses a stable source enum (`upload | recording | youtube | segment`). A physical
+segment additionally requires `sourceAudioUuid` pointing to the root audio and
+`sourceTimeRange` containing absolute start/end seconds in that root. Non-segment audio must not
+carry those lineage fields.
+
 ## Subtask 1.3.2.2 — metadata.json (per version+granularity folder)
 
 Holds everything needed to re-render one saved matrix state:

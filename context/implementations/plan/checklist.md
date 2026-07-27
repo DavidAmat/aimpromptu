@@ -62,11 +62,15 @@ The pure-Python piano matrix engine: model, transition validation, granularity c
 
 # [x] Epic 3 — Audio I/O
 
-Audio ingestion and management: uuid audio store, uploads with ffmpeg normalization and waveform peaks, browser recording with live bars, Audacity-like range selector, YouTube downloads. Index: `epic-03-audio-io/epic-audio-io-index.md`.
+Audio ingestion and management: uuid audio store, uploads with ffmpeg normalization and waveform
+peaks, browser recording with live bars, Audacity-like range selector, physically persisted audio
+segments with root-source lineage, YouTube downloads. Index:
+`epic-03-audio-io/epic-audio-io-index.md`.
 
 ## [x] Story 3.1 — Audio store
 
-- [x] Task 3.1.1 **Audio store**: uuid folders, metadata.json, library CRUD endpoints.
+- [x] Task 3.1.1 **Audio store**: uuid folders, metadata.json, library CRUD endpoints, physical
+  segment children with absolute root-source lineage.
 
 ## [x] Story 3.2 — Upload and formats
 
@@ -78,7 +82,8 @@ Audio ingestion and management: uuid audio store, uploads with ffmpeg normalizat
 
 ## [x] Story 3.4 — Range selection
 
-- [x] Task 3.4.1 **Waveform range selector**: draggable handles, mm:ss.mmm inputs, range playback with cursor. *(Awaiting your manual trial.)*
+- [x] Task 3.4.1 **Waveform range selector**: draggable handles, `mm:ss.cc` inputs, range playback
+  with cursor, and read-only rendering for a persisted truncated segment. *(Browser-verified.)*
 
 ## [x] Story 3.5 — YouTube
 
@@ -105,7 +110,8 @@ Audio to matrix: piano transcription engine behind a swappable interface, note e
 
 ## [x] Story 4.3 — Pipeline
 
-- [x] Task 4.3.1 **Pipeline orchestration**: five steps, persisted artifacts, sub-second recompute from raw, SSE progress.
+- [x] Task 4.3.1 **Pipeline orchestration**: five steps, persisted artifacts, sub-second recompute
+  from raw, real ByteDance batch progress, monotonic SSE progress.
 
 # [x] Epic 5 — Artifacts and versioning
 
@@ -144,7 +150,9 @@ Spreadsheet-like matrix view: circles and edges grid with frozen headers, proces
 
 ## [x] Story 7.1 — Grid
 
-- [x] Task 7.1.1 **Matrix grid**: key columns EN+ES, frame rows with timestamps, onset/sustain circles, connector edges, frozen header. *(Row virtualization added — a five-minute piece is ~100k DOM nodes without it.)*
+- [x] Task 7.1.1 **Matrix grid**: key columns EN+ES, frame rows with local/original timestamps for
+  segments, onset/sustain circles, connector edges, frozen header. *(Row virtualization added — a
+  five-minute piece is ~100k DOM nodes without it.)*
 
 ## [x] Story 7.2 — Steps and export
 

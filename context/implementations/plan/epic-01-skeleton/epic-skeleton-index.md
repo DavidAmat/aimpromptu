@@ -17,7 +17,9 @@ Read first: `context/00-project-complete-overview.md`, `context/02-tech-stack.md
 ## Story 1.3 — Shared contracts
 
 - Task 1.3.1 matrix schemas: Pydantic + TS types for the piano matrix (sparse COO, processing step, hands), dense and sparse JSON export shapes.
-- Task 1.3.2 metadata schemas: `metadata.json`, `metadata_track.json`, `metadata_library_track.json`, slugs, granularity codes, version codes.
+- Task 1.3.2 metadata schemas: audio metadata (including persisted-segment lineage),
+  `metadata.json`, `metadata_track.json`, `metadata_library_track.json`, slugs, granularity codes,
+  version codes.
 
 ## Story 1.4 — Storage skeleton
 

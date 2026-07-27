@@ -12,11 +12,20 @@ class NoteEvent(BaseModel):
     midi_note: int; start: float; end: float; velocity: int
 ```
 
+An engine may additionally expose `transcribe_with_progress(wav_path, reporter)` when it can
+publish real internal work units. The pipeline detects this capability without forcing it onto
+fallback engines.
+
 ## Subtask 4.1.1.2 — ByteDance engine (default)
 
-- `piano_transcription_inference` package; `device="cpu"` on this Mac, expose a `device` setting for future GPU hosts.
-- The package pins old torch versions: isolate carefully in `uv` extras; if dependency resolution fights the main env, run it as a subprocess with its own venv — document whichever works.
-- Parse resulting MIDI with `pretty_midi` into NoteEvents.
+- `piano_transcription_inference` package; `device="cpu"` on this Mac, expose a `device` setting
+  for future GPU hosts. The package does not pin an obsolete torch version.
+- Download and validate the checkpoint in application code because upstream shells out to
+  `wget`, which macOS does not provide. Use a partial file and atomic move so interrupted
+  downloads cannot masquerade as valid checkpoints.
+- Consume upstream's in-memory `est_note_events`; no temporary MIDI parse is needed.
+- Mirror upstream's overlapping mini-batch inference loop to report truthful
+  `model segment N/total` events while preserving its deframing and regression post-processing.
 
 ## Subtask 4.1.1.3 — Basic Pitch fallback + benchmark
 
@@ -24,4 +33,6 @@ Second engine implementing the same Protocol. Keep a small benchmark script (`no
 
 ## Acceptance
 
-A committed short piano clip transcribes into plausible NoteEvents with the default engine; engine selectable via config.
+A short local clip completes with the real default engine; the engine is selectable via config.
+Automated tests cover checkpoint handling and progressive internal segments. Musical plausibility
+remains a human trial with a known piano recording rather than a committed binary fixture.

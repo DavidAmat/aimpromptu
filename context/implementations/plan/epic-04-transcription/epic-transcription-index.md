@@ -1,12 +1,17 @@
 # Epic 4 — Transcription
 
-Audio to piano matrix. Wraps a piano-transcription model, converts its note events into the raw fusa matrix, and orchestrates the full pipeline raw -> collapsed -> clean -> two-hands with persisted artifacts and streamed progress.
+Audio to piano matrix. Wraps a piano-transcription model, converts its note events into the raw
+fusa matrix, and orchestrates the full pipeline raw -> collapsed -> clean -> two-hands with
+persisted artifacts and streamed progress. A saved segment is already a physical local audio file,
+so its matrix timeline begins at zero; root-source times remain metadata/UI context.
 
 Read first: `context/research/piano-transcription/piano-transcription-python-solutions.md`, `context/music/notation-logic/01-matrix-notation-logic.md` appendices B–D.
 
 ## Story 4.1 — Engine
 
-- Task 4.1.1 engine integration: `piano_transcription_inference` (ByteDance) as first engine behind an interface; Basic Pitch as benchmark fallback; CPU on this Mac, CUDA-ready flag.
+- Task 4.1.1 engine integration: `piano_transcription_inference` (ByteDance) as first engine behind
+  an interface; Basic Pitch as benchmark fallback; CPU on this Mac, CUDA-ready flag; real
+  overlapping model-segment progress.
 
 ## Story 4.2 — Events to matrix
 
@@ -14,7 +19,8 @@ Read first: `context/research/piano-transcription/piano-transcription-python-sol
 
 ## Story 4.3 — Pipeline
 
-- Task 4.3.1 pipeline orchestration: one call runs the four steps, persists all artifacts per input uuid, recomputes any granularity from raw quickly, streams progress to the UI.
+- Task 4.3.1 pipeline orchestration: one call runs all five steps, persists all artifacts per input
+  uuid, recomputes any granularity from raw quickly, streams monotonic whole-job progress to the UI.
 
 ## Exit criteria
 

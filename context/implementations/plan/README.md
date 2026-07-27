@@ -10,6 +10,10 @@ How to navigate:
 - Workers read `system-prompt-workers.md` before doing anything, then their assigned Epic > Story > Task file.
 - Progress reports go to `../progress/` (one file per task worked on).
 
+Current implementation boundary: **Epics 1–8 are complete and committed; Epic 9 has not started.**
+The checklist is authoritative for status. Task files describe the current agreed requirements,
+including requirement changes made during implementation.
+
 Epic order (also the recommended implementation order):
 
 1. `epic-01-skeleton` — project skeleton and foundations

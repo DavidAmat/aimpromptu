@@ -16,7 +16,9 @@ Loads the working artifact's matrices; BPM and granularity changeable here too â
 
 ## Subtask 8.2.1.3 â€” Waveform watermark
 
-Original-audio waveform rendered as a faint background watermark of the note area, moving with the same horizontal time axis.
+The selected physical audio item's waveform is rendered as a faint background watermark of the
+note area, moving with the same horizontal time axis. A persisted segment already owns a truncated
+waveform, so the frontend does not slice or offset root-audio peaks.
 
 ## Acceptance
 

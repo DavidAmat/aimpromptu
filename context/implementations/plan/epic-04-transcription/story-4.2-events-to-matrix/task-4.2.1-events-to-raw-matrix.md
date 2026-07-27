@@ -4,7 +4,10 @@
 
 ## Subtask 4.2.1.1 — Grid construction
 
-Given `tempoBpm` (user input, default 60) and fusa granularity, compute `timeStepSeconds` and total column count from the audio (or selected range) duration. Range-limited transcription offsets all event times by the range start.
+Given `tempoBpm` (user input, default 60) and fusa granularity, compute `timeStepSeconds` and total
+column count from the selected physical audio item's duration. A persisted segment contains only
+its clip, so event and matrix time both begin at zero. Its absolute root-source offset is metadata
+for labels and navigation, not matrix arithmetic.
 
 ## Subtask 4.2.1.2 — Event placement
 
