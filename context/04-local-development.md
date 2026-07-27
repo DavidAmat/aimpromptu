@@ -19,8 +19,13 @@ The piano-transcription models are **not** part of the base install — torch is
 ```bash
 cd aitu-backend
 uv sync --extra transcription     # piano_transcription_inference + torch + librosa
-uv sync --extra basic-pitch       # the benchmark/fallback engine (optional)
 ```
+
+> **Basic Pitch is not an extra.** basic-pitch 0.4.0 pins `tensorflow(-macos) <2.15.1`, and cp312
+> tensorflow wheels only start at 2.16.1 — so it cannot install on Python 3.12 on any platform.
+> And because `uv lock` resolves every extra for every platform, merely declaring it made
+> `uv sync --extra transcription` fail too. To benchmark against it, give it its own Python 3.11
+> venv: see `aitu-backend/notebooks/transcription-benchmark/README.md`.
 
 Verified July 2026:
 

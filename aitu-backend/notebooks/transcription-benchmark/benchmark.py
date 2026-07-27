@@ -12,10 +12,12 @@ Usage::
     # or every audio already in the store:
     uv run python notebooks/transcription-benchmark/benchmark.py --store
 
-Install engines first:
+Install the default engine first:
 
-    uv sync --extra transcription      # bytedance (default)
-    uv sync --extra basic-pitch        # the fallback
+    uv sync --extra transcription      # bytedance
+
+Basic Pitch is **not** a project extra — it pins tensorflow <2.15.1, which has no
+Python 3.12 wheels. See README.md in this folder for running it in its own venv.
 """
 
 from __future__ import annotations

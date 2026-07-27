@@ -14,7 +14,7 @@ Locked versions from lockfiles. Re-read `uv.lock` and `package-lock.json` when u
 | Numerics | numpy 2.4.5, scipy 1.17.1 |
 | Progress / uploads | tqdm >=4.67, python-multipart >=0.0.20 |
 | YouTube | yt-dlp >=2026.7.4 |
-| Optional extras | `transcription` (piano_transcription_inference, torch >=2.4, librosa), `basic-pitch` |
+| Optional extras | `transcription` (piano_transcription_inference, torch >=2.4, librosa). **No `basic-pitch` extra** — it pins tensorflow <2.15.1, which has no cp312 wheels, and a declared-but-unresolvable extra breaks `uv lock` for the whole project |
 | Dev group | pytest, httpx, black, flake8, mypy, pre-commit, types-tqdm (`[dependency-groups] dev`) |
 | Notebooks | ipykernel 7.2.0, jupyterlab 4.5.7, ipywidgets (dev/exploratory) |
 
@@ -54,7 +54,7 @@ Locked by the organizer for `context/implementations/plan/`; workers follow thes
 | Progress | `tqdm` for any >10 s processing, mirrored to the UI via a ProgressReporter + SSE |
 | API | Plain FastAPI endpoints; functional over best-practice, no containerization yet |
 | Matrix persistence | `scipy.sparse` COO int8 saved as compressed `.npz` (`save_npz`); dense form only transient for JSON export/import; separate files per hand |
-| Piano transcription | `piano_transcription_inference` (ByteDance) first; Spotify Basic Pitch as benchmark/fallback; both behind `transcription/engine.py` and installed via optional extras (`uv sync --extra transcription`). CPU on Apple Silicon — the package ignores non-CUDA devices |
+| Piano transcription | `piano_transcription_inference` (ByteDance), behind `transcription/engine.py`, installed via `uv sync --extra transcription`. CPU on Apple Silicon — the package ignores non-CUDA devices. Spotify Basic Pitch remains the intended fallback but is Python ≤3.11 only, so it runs in its own venv (see the benchmark README) |
 | Audio tooling | `ffmpeg` (prerequisite) for conversion/normalization, `yt-dlp` (run as `python -m yt_dlp`) for YouTube |
 | Accepted audio | `.mp3 .aac .m4a .wav .webm .ogg` — webm/ogg for browser recordings (Chrome records only webm/opus; ffmpeg converts server-side) |
 | Frontend components | MUI (+ MUI X) standard across all pages; Aceternity UI only decorative; palette from `context/colors/color-palette.md` as `palette.ts` |

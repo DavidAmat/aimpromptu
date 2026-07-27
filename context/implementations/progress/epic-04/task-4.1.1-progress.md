@@ -143,9 +143,10 @@ second apart. The exact octave depends on where you played.
 If any of those is wrong it will be a one-line fix in `ByteDanceEngine.transcribe`, and the
 traceback will point straight at it. Paste it to me and I will correct it.
 
-If the model's output is poor on real recordings, that is the decision point the plan anticipates:
-`uv sync --extra basic-pitch`, re-run the benchmark, and compare. Nothing outside `engine.py`
-changes either way.
+If the model's output is poor on real recordings, that is the decision point the plan anticipates.
+**Basic Pitch cannot be a project extra** (see the 2026-07-27 follow-up report) — it needs its own
+Python 3.11 venv, and `notebooks/transcription-benchmark/README.md` has the recipe. Nothing outside
+`engine.py` changes either way.
 
 ## For the next worker
 

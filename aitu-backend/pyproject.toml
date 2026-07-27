@@ -39,8 +39,18 @@ transcription = [
     "torch>=2.4",
     "librosa>=0.10",
 ]
-# The benchmark/fallback engine. `uv sync --extra basic-pitch`
-basic-pitch = ["basic-pitch>=0.4.0"]
+
+# NOTE: there is deliberately no `basic-pitch` extra.
+#
+# basic-pitch 0.4.0 (the newest) pins `tensorflow(-macos) >=2.4.1,<2.15.1`, and
+# cp312 wheels for tensorflow only begin at 2.16.1 — on macOS *and* Linux. So it
+# cannot be installed on Python 3.12 at all, and because `uv lock` resolves every
+# extra for every platform, declaring it here makes the whole project
+# unresolvable: even `uv sync --extra transcription` fails.
+#
+# The engine itself is still supported (`transcription/engine.py`); it just has
+# to be installed into a separate Python 3.11 environment. See
+# `notebooks/transcription-benchmark/README.md`.
 
 [dependency-groups]
 dev = [

@@ -245,7 +245,19 @@ class ByteDanceEngine:
 
 
 class BasicPitchEngine:
-    """Spotify's Basic Pitch — the benchmark and fallback engine."""
+    """Spotify's Basic Pitch — the benchmark and fallback engine.
+
+    **Not installable alongside the rest of this project.** basic-pitch 0.4.0
+    pins ``tensorflow(-macos) <2.15.1``, and cp312 wheels for tensorflow only
+    start at 2.16.1 — so it cannot run on Python 3.12 on any platform. It is
+    therefore not a project extra; to benchmark against it, install it in a
+    separate Python 3.11 environment (see
+    ``notebooks/transcription-benchmark/README.md``).
+
+    The class stays because the interface is the point: when basic-pitch
+    supports 3.12, or when a run happens in that separate environment, nothing
+    else has to change.
+    """
 
     name = "basic-pitch"
 
@@ -256,7 +268,8 @@ class BasicPitchEngine:
             raise EngineUnavailable(
                 "basic-pitch",
                 "basic_pitch",
-                "uv sync --extra basic-pitch   (in aitu-backend/)",
+                "a separate Python 3.11 venv — it pins tensorflow <2.15.1, which has no "
+                "Python 3.12 wheels. See notebooks/transcription-benchmark/README.md",
             ) from exc
 
         self.device = device

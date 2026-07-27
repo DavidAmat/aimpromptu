@@ -43,8 +43,10 @@ print(available_engines())
 
 Expected: `{'bytedance': True, 'basic-pitch': False, 'silent': True}`
 
-`bytedance: True` means the model is installed. `basic-pitch: False` is fine — it is the optional
-second engine, only useful if the first one disappoints.
+`bytedance: True` means the model is installed. **`basic-pitch: False` is expected and correct** —
+that engine pins an old tensorflow with no Python 3.12 wheels, so it cannot live in this
+environment. It is only needed if the default engine disappoints, and then it runs in its own
+Python 3.11 venv (see `aitu-backend/notebooks/transcription-benchmark/README.md`).
 
 ### Run the checks
 

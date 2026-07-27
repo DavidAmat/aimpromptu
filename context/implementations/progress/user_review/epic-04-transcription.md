@@ -65,16 +65,15 @@ bytedance        3.41s  5 notes over 4.98s — most common: Do-4 x1, Re-4 x1, ..
 Small timing wobbles are expected and fine — that is what the rounding step exists for. What
 matters is that it heard the notes you played.
 
-**If the notes are wrong**, do not change anything else yet:
+**If the notes are wrong**, do not change anything else yet — **send me the output**. Choosing
+between engines on real recordings is exactly the decision the benchmark exists to inform, and it
+is your call, not mine.
 
-```bash
-uv sync --extra basic-pitch
-uv run python notebooks/transcription-benchmark/benchmark.py --store
-```
-
-That runs the second engine on the same audio, and prints both side by side. **Send me the
-output** — choosing between engines on real recordings is exactly the decision this script exists
-to inform, and it is your call, not mine.
+> **About the second engine.** Spotify's Basic Pitch was meant to be the fallback, but it pins a
+> tensorflow version that has no Python 3.12 wheels, so it cannot live in this environment at all.
+> If we need the comparison it runs in its own Python 3.11 venv —
+> `aitu-backend/notebooks/transcription-benchmark/README.md` has the recipe. That is why
+> `available_engines()` reports `basic-pitch: False`.
 
 ---
 
@@ -186,7 +185,7 @@ time curl -s -X POST 127.0.0.1:8765/matrix/recompute \
 | `EngineUnavailable` | The extra was not installed | `uv sync --extra transcription` |
 | Download stalls | Zenodo is slow; it is a 165 MB one-off | Retry; a partial file is discarded, not kept |
 | Model loads but finds no notes | Recording too quiet, or not piano | Check you can hear it in the preview player |
-| Finds far too many notes | Background noise, or a very reverberant room | Try the Basic Pitch engine and compare |
+| Finds far too many notes | Background noise, or a very reverberant room | Send me the benchmark output |
 | Notes right, timing wrong | The BPM you entered is not the BPM you played | This is expected and important — see below |
 | A crash inside the model | The one part never executed | **Send me the traceback**; it will be a one-line fix |
 
