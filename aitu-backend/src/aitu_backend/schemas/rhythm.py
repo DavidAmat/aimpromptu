@@ -6,7 +6,7 @@ file holds the only things that are **not** derived, because a person chose them
 and nothing in the recording implies them:
 
 * which pile of gaps is the beat, and what it is called (D-09, D-10)
-* which signature the piece is written in
+* which signature the piece is written in, and where a passage leaves it
 * where the piece changes speed, and what a gap is worth after each change
   (D-19, D-20)
 * the notes drawn as a different figure by hand (D-17)
@@ -53,6 +53,21 @@ class SpeedChange(BaseModel):
     anchor_ms: float = Field(..., alias="anchorMs", gt=0)
 
 
+class KeyChange(BaseModel):
+    """Where the piece leaves its main signature, and what it changes to.
+
+    A transition rather than a range: at any column exactly one signature is
+    sounding, so two edits cannot disagree about what a reader is looking at.
+    Giving a passage its own key writes two of these, one where it starts and one
+    where the piece goes back to what it was.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_column: int = Field(..., alias="fromColumn", ge=0)
+    key_signature: str = Field(..., alias="keySignature")
+
+
 class SavedRhythm(BaseModel):
     """One reader's reading of one piece.
 
@@ -82,6 +97,10 @@ class SavedRhythm(BaseModel):
     #: sharp or a G flat, so nobody but the reader can answer it.
     key_signature: str | None = Field(None, alias="keySignature")
 
+    #: Where a passage leaves that signature. Empty for a piece written in one
+    #: key from beginning to end, which is the common case.
+    key_changes: list[KeyChange] = Field(default_factory=list, alias="keyChanges")
+
     #: The name given to the anchor pile, and the pile's own length in ms.
     anchor_figure: FigureName = Field(FigureName.NEGRA, alias="anchorFigure")
     anchor_ms: float = Field(..., alias="anchorMs", gt=0)
@@ -98,6 +117,8 @@ class SavedRhythm(BaseModel):
         ]
         if self.key_signature:
             parts.append(f"in {self.key_signature}")
+        if self.key_changes:
+            parts.append(f"{len(self.key_changes)} key change(s)")
         if self.speed_changes:
             parts.append(f"{len(self.speed_changes)} speed change(s)")
         if self.overrides:

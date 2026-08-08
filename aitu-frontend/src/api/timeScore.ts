@@ -302,6 +302,14 @@ export interface SavedRhythm {
    * recorded notes says whether a black key is an F sharp or a G flat.
    */
   keySignature?: KeySignatureName;
+  /**
+   * Where the piece leaves that signature, and what it changes to, keyed by column.
+   *
+   * Transitions rather than ranges: at any column exactly one signature is sounding, so two edits
+   * cannot disagree about what a reader is looking at. Giving a passage its own key writes two,
+   * one where it starts and one where the piece goes back.
+   */
+  keyChanges?: { fromColumn: number; keySignature: KeySignatureName }[];
   anchorFigure: FigureName;
   anchorMs: number;
   speedChanges: SpeedChange[];

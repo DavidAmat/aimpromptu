@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from aitu_backend.main import create_app
-from aitu_backend.schemas.rhythm import SavedRhythm, SpeedChange
+from aitu_backend.schemas.rhythm import KeyChange, SavedRhythm, SpeedChange
 from aitu_backend.schemas.time_matrix import BeamBreak, FigureName, FigureOverride
 from aitu_backend.storage import paths
 from aitu_backend.transcription import pipeline
@@ -61,6 +61,10 @@ def a_reading(anchor_ms: float = 320.0) -> SavedRhythm:
         ],
         beam_breaks=[BeamBreak(hand="left", start_frame=24)],
         key_signature="Bb",
+        key_changes=[
+            KeyChange(from_column=40, key_signature="D"),
+            KeyChange(from_column=80, key_signature="Bb"),
+        ],
     )
 
 
@@ -78,6 +82,10 @@ def test_a_reading_comes_back_exactly_as_it_was_saved(client: TestClient) -> Non
     assert read["anchorMs"] == 320.0
     assert read["frameMs"] == 40
     assert read["keySignature"] == "Bb"
+    assert read["keyChanges"] == [
+        {"fromColumn": 40, "keySignature": "D"},
+        {"fromColumn": 80, "keySignature": "Bb"},
+    ]
     assert read["speedChanges"] == [{"startFrame": 144, "anchorMs": 674.0}]
     assert read["overrides"] == [
         {"hand": "right", "row": 39, "startFrame": 8, "figure": "semicorchea"}
@@ -189,9 +197,11 @@ def test_a_reading_saved_before_keys_existed_still_loads(client: TestClient) -> 
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
     del body["keySignature"]
+    del body["keyChanges"]
 
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
     read = client.get(f"/time/{uuid}/rhythm").json()
 
     assert read["keySignature"] is None
+    assert read["keyChanges"] == []
     assert read["anchorMs"] == 320.0

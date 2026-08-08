@@ -19,6 +19,7 @@ import { PageContainer, SectionCard } from "../../ui";
 import PeakPlot from "../../components/time/PeakPlot";
 import ScorePlayer from "../../components/time/ScorePlayer";
 import TimeScoreView from "../../components/time/TimeScoreView";
+import ToolboxDialog from "../../components/common/ToolboxDialog";
 import {
   FIGURE_LABELS,
   timeScoreApi,
@@ -34,9 +35,26 @@ import {
   type TimeScorePayload,
 } from "../../api";
 import { ApiError } from "../../api";
+import {
+  applyKeySignatureRange,
+  clearKeySignatureRange,
+  keySignatureAtFrame,
+  type KeyChangeAnnotation,
+  type KeySignature,
+} from "@aimpromptu/grid-notation";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 
 const NAMEABLE_FIGURES: FigureName[] = ["blanca", "negra", "corchea", "semicorchea"];
+
+/** `mm:ss.cc`, so a column range can be read as a moment in the recording. */
+function formatSeconds(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds * 100));
+  const minutes = Math.floor(total / 6000);
+  const rest = Math.floor((total % 6000) / 100);
+  return `${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}.${String(
+    total % 100,
+  ).padStart(2, "0")}`;
+}
 
 /**
  * The rungs a figure shift walks: the plain figures, each twice the one below it (D-18).
@@ -143,6 +161,30 @@ export function RhythmPage() {
   const [keySignature, setKeySignature] = useState<KeySignatureName>("C");
   const [keyHint, setKeyHint] = useState<{ best: KeySignatureName; saved: number } | null>(null);
   /**
+   * Where the piece leaves the main signature, and what it changes to.
+   *
+   * Kept as transitions rather than as ranges, which is how the drawing package stores them: at any
+   * column exactly one signature is sounding, so two edits cannot disagree. Giving a passage its own
+   * key writes two, one at each end.
+   */
+  const [keyChanges, setKeyChanges] = useState<KeyChangeAnnotation[]>([]);
+  /** Notes picked on the sheet: click one, then hold Command and click more. */
+  const [selectedNotes, setSelectedNotes] = useState<readonly string[]>([]);
+  const [framesToolbox, setFramesToolbox] = useState(false);
+  const [notesToolbox, setNotesToolbox] = useState(false);
+  /** Raised to drop every selection on the sheet: Escape, or closing a toolbox. */
+  const [clearedAt, setClearedAt] = useState(0);
+  /**
+   * What the frames toolbox will write when Apply is pressed, and which selection it was chosen for.
+   *
+   * Carried with the range it belongs to rather than reset by an effect: picking a different stretch
+   * of columns should offer whatever is sounding there, not whatever was chosen for the last one.
+   */
+  const [passageDraft, setPassageDraft] = useState<{
+    forRange: string;
+    value: KeySignatureName;
+  } | null>(null);
+  /**
    * Notes the reader has asked to start a new beam.
    *
    * Kept beside the overrides and for the same reason: it changes how the page is grouped and
@@ -185,6 +227,18 @@ export function RhythmPage() {
   if (view.key !== key) setView(emptyView(key));
 
   const { peaks, selected, preview, score, error } = view;
+
+  // Which stretch the toolbox is about, and what it will write. The signature offered is whatever
+  // is already sounding at the start of the stretch, until the reader picks another.
+  const rangeKey = range ? `${range.fromColumn}:${range.toColumn}` : "";
+  const passageKey: KeySignatureName =
+    passageDraft?.forRange === rangeKey
+      ? passageDraft.value
+      : (keySignatureAtFrame(
+          range?.fromColumn ?? 0,
+          keySignature as KeySignature,
+          keyChanges,
+        ) as KeySignatureName);
 
   useEffect(() => {
     if (!audioUuid) return;
@@ -243,6 +297,12 @@ export function RhythmPage() {
         );
         setBeamBreaks(new Set(found.beamBreaks.map((one) => `${one.hand}:${one.startFrame}`)));
         if (found.keySignature) setKeySignature(found.keySignature);
+        setKeyChanges(
+          (found.keyChanges ?? []).map((change) => ({
+            fromColumn: change.fromColumn,
+            keySignature: change.keySignature as KeySignature,
+          })),
+        );
       })
       .catch(() => {
         // A reading that cannot be read is not worth stopping the screen for: the plot still works
@@ -250,6 +310,55 @@ export function RhythmPage() {
       });
     return () => controller.abort();
   }, [audioUuid]);
+
+  /**
+   * Both of these have to keep the same identity between renders.
+   *
+   * The sheet is rebuilt whenever anything it draws from changes, and a handler written inline is a
+   * different function every time, so the sheet would be rebuilt on every click and would lose the
+   * selection it had just made.
+   */
+  const pickRange = useCallback((picked: { fromColumn: number; toColumn: number }) => {
+    setRange(picked);
+    setFramesToolbox(true);
+  }, []);
+
+  const pickNotes = useCallback((keys: readonly string[]) => {
+    setSelectedNotes(keys);
+    setNotesToolbox(keys.length > 0);
+  }, []);
+
+  /**
+   * Closing a toolbox lets the selection go with it.
+   *
+   * A dashed outline left on the page after its panel has gone says something is still picked when
+   * nothing is, and the next click would then extend that invisible selection instead of starting a
+   * new one.
+   */
+  const closeFrames = useCallback(() => {
+    setFramesToolbox(false);
+    setRange(null);
+    setPassageDraft(null);
+    setClearedAt((at) => at + 1);
+  }, []);
+
+  const closeNotes = useCallback(() => {
+    setNotesToolbox(false);
+    setSelectedNotes([]);
+    setSelectedNote(null);
+    setClearedAt((at) => at + 1);
+  }, []);
+
+  // Escape drops whatever is picked, which is what it does everywhere else.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      closeFrames();
+      closeNotes();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [closeFrames, closeNotes]);
 
   const save = useCallback(async () => {
     if (!audioUuid || !selected) return;
@@ -259,6 +368,10 @@ export function RhythmPage() {
       hand,
       frameMs,
       keySignature,
+      keyChanges: keyChanges.map((change) => ({
+        fromColumn: change.fromColumn,
+        keySignature: change.keySignature,
+      })),
       anchorFigure: figure,
       anchorMs: selected.medianMs,
       speedChanges: stretches.map((stretch) => ({
@@ -285,7 +398,18 @@ export function RhythmPage() {
     } finally {
       setSaving(false);
     }
-  }, [audioUuid, selected, hand, frameMs, figure, keySignature, stretches, overrides, beamBreaks]);
+  }, [
+    audioUuid,
+    selected,
+    hand,
+    frameMs,
+    figure,
+    keySignature,
+    keyChanges,
+    stretches,
+    overrides,
+    beamBreaks,
+  ]);
 
   const apply = useCallback(async () => {
     if (!audioUuid || !selected) return;
@@ -592,9 +716,13 @@ export function RhythmPage() {
               overrides={overrides}
               beamBreaks={beamBreaks}
               keySignature={keySignature}
+              keyChanges={keyChanges}
               onKeySuggestion={setKeyHint}
               onSelectNote={setSelectedNote}
-              onSelectRange={setRange}
+              onSelectNotes={pickNotes}
+              onSelectRange={pickRange}
+              selectedRange={range}
+              clearSelectionsAt={clearedAt}
               playheadSeconds={playheadSeconds}
             />
             {/*
@@ -696,6 +824,126 @@ export function RhythmPage() {
           </Typography>
         )}
       </SectionCard>
+
+      {/*
+        Two toolboxes, because a column and a notehead answer different questions. A column belongs
+        to the piece and both hands are in it; a notehead is one note in one hand. Keeping them
+        apart is what stopped `8vb` being offered to the right hand only pointing upward.
+      */}
+      <ToolboxDialog
+        open={framesToolbox && range !== null}
+        title="Frames"
+        subtitle={
+          range
+            ? `f${range.fromColumn} – f${range.toColumn - 1} · ${formatSeconds(
+                (range.fromColumn * frameMs) / 1000,
+              )} → ${formatSeconds((range.toColumn * frameMs) / 1000)}`
+            : undefined
+        }
+        initialPosition={{ x: 24, y: 140 }}
+        onClose={closeFrames}
+      >
+        <Stack spacing={1.5}>
+          <Typography variant="body2" color="text.secondary">
+            Click a group of columns above the staves to pick it, then hold Shift and click another
+            to take everything between them.
+          </Typography>
+          <TextField
+            select
+            size="small"
+            label="Key signature for this passage"
+            value={passageKey}
+            onChange={(event) =>
+              setPassageDraft({ forRange: rangeKey, value: event.target.value as KeySignatureName })
+            }
+            fullWidth
+          >
+            {KEY_SIGNATURES.map((name) => (
+              <MenuItem key={name} value={name}>
+                {KEY_LABELS[name]}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Typography variant="caption" color="text.secondary">
+            The passage starts with naturals cancelling what was sounding, both clefs again, and the
+            new signature. Where it ends, the same happens in reverse and the piece returns to{" "}
+            {KEY_LABELS[keySignature].split(" —")[0]}.
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              size="small"
+              disabled={!range}
+              onClick={() => {
+                if (!range || !score) return;
+                setKeyChanges(
+                  applyKeySignatureRange(
+                    keyChanges,
+                    {
+                      fromFrame: range.fromColumn,
+                      toFrame: range.toColumn,
+                      keySignature: passageKey as KeySignature,
+                    },
+                    keySignature as KeySignature,
+                    score.envelope.frameCount,
+                  ),
+                );
+              }}
+            >
+              Write this passage in {passageKey}
+            </Button>
+            <Button
+              size="small"
+              disabled={!range || keyChanges.length === 0}
+              onClick={() => {
+                if (!range || !score) return;
+                setKeyChanges(
+                  clearKeySignatureRange(
+                    keyChanges,
+                    { fromFrame: range.fromColumn, toFrame: range.toColumn },
+                    keySignature as KeySignature,
+                    score.envelope.frameCount,
+                  ),
+                );
+              }}
+            >
+              Back to the piece&rsquo;s key
+            </Button>
+          </Stack>
+          {keyChanges.length > 0 ? (
+            <Typography variant="caption" color="text.secondary">
+              {keyChanges.length} key change
+              {keyChanges.length === 1 ? "" : "s"} in this piece, at{" "}
+              {keyChanges.map((change) => `f${change.fromColumn}`).join(", ")}.
+            </Typography>
+          ) : null}
+        </Stack>
+      </ToolboxDialog>
+
+      <ToolboxDialog
+        open={notesToolbox && selectedNotes.length > 0}
+        title={selectedNotes.length === 1 ? "Note" : `${selectedNotes.length} notes`}
+        subtitle={
+          selectedNotes.length > 0
+            ? selectedNotes
+                .slice(0, 4)
+                .map((noteKey) => `f${noteKey.split(":")[1]}`)
+                .join(", ") + (selectedNotes.length > 4 ? ", …" : "")
+            : undefined
+        }
+        initialPosition={{ x: 420, y: 140 }}
+        onClose={closeNotes}
+      >
+        <Stack spacing={1.5}>
+          <Typography variant="body2" color="text.secondary">
+            Click a notehead to pick it, then hold Command and click more to build a set. Everything
+            this toolbox will offer applies to the whole set at once.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Nothing to set here yet. The controls come next; this is the panel they will live in.
+          </Typography>
+        </Stack>
+      </ToolboxDialog>
     </PageContainer>
   );
 }
