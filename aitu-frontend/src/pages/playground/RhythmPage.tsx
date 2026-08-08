@@ -34,6 +34,31 @@ import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 
 const NAMEABLE_FIGURES: FigureName[] = ["blanca", "negra", "corchea", "semicorchea"];
 
+/**
+ * The rungs a figure shift walks: the plain figures, each twice the one below it (D-18).
+ *
+ * The dotted pair is not here. A dot is an exception the vocabulary allows on two figures so a held
+ * note can be written; it is not a rung, and stepping onto it would re-scale the ladder by 1.5
+ * rather than doubling it. This mirrors `SHIFT_LADDER` in `matrix/ladder.py`, which is the same
+ * list on the other side.
+ */
+const SHIFT_LADDER: FigureName[] = [
+  "semifusa",
+  "fusa",
+  "semicorchea",
+  "corchea",
+  "negra",
+  "blanca",
+  "redonda",
+];
+
+/** The figure `steps` rungs away, or `null` when that runs off the end of the vocabulary. */
+function shifted(figure: FigureName, steps: number): FigureName | null {
+  const at = SHIFT_LADDER.indexOf(figure);
+  if (at < 0) return null;
+  return SHIFT_LADDER[at + steps] ?? null;
+}
+
 /** Everything a single note may be drawn as. Wider than the list used to name a gap. */
 const ALL_FIGURES: FigureName[] = [
   "redonda",
@@ -308,6 +333,51 @@ export function RhythmPage() {
             </Typography>
           ) : null}
         </Stack>
+
+        {/*
+          A figure shift. The same playing, written in longer or shorter figures: `negra = 337`
+          becomes `blanca = 337`, and every note is renamed with it. Nothing moves, because a column
+          is wall clock and the name of a note has no say in where it sits (D-18).
+
+          It is the answer to a page of semicorcheas that should read as corcheas. The names were
+          never wrong in any measurable way, they are just harder to read than they need to be, and
+          this is one button rather than a re-transcription.
+        */}
+        {score ? (
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1, mt: 2 }}
+          >
+            <Typography variant="body2">Too many short notes, or too few?</Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={busy || shifted(figure, 1) === null}
+              onClick={() => {
+                const next = shifted(figure, 1);
+                if (next) setFigure(next);
+              }}
+            >
+              Write it one step longer
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={busy || shifted(figure, -1) === null}
+              onClick={() => {
+                const next = shifted(figure, -1);
+                if (next) setFigure(next);
+              }}
+            >
+              Write it one step shorter
+            </Button>
+            <Typography variant="caption" color="text.secondary">
+              Renames every note. Nothing moves, and the recording is untouched. Press{" "}
+              <strong>Write the sheet</strong> to see it.
+            </Typography>
+          </Stack>
+        ) : null}
       </SectionCard>
 
       {score ? (

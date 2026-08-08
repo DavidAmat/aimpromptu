@@ -202,14 +202,31 @@ def test_the_preview_labels_every_peak_so_the_choice_can_be_judged():
 
 
 def test_a_figure_shift_renames_without_moving_anything():
-    """D-18. Every millisecond value is kept; only the names change."""
+    """D-18, in its own words: `negra = 300` becomes `blanca = 300`."""
     ladder = build_ladder(FigureName.NEGRA, 300.0)
     longer = shift_ladder(ladder, 1)
-    assert longer.anchor_figure == FigureName.DOTTED_NEGRA
+    assert longer.anchor_figure == FigureName.BLANCA
     assert longer.anchor_ms == 300.0
-    two_steps = shift_ladder(ladder, 2)
-    assert two_steps.anchor_figure == FigureName.BLANCA
-    assert two_steps.ms_by_figure[FigureName.NEGRA] == 150.0
+    # Everything else follows by proportion: a negra is now half of 300.
+    assert longer.ms_by_figure[FigureName.NEGRA] == 150.0
+
+
+def test_a_step_is_a_doubling_and_never_lands_on_a_dotted_figure():
+    """A dot is an exception the vocabulary allows, not a rung of the ladder (D-12, D-18).
+
+    Stepping onto `dottedNegra` would re-scale the whole ladder by 1.5, which is not what "one
+    step longer" means. This was the behaviour until P7.3 and it contradicted D-18's example.
+    """
+    shorter = shift_ladder(build_ladder(FigureName.NEGRA, 300.0), -1)
+    assert shorter.anchor_figure == FigureName.CORCHEA
+    two_up = shift_ladder(build_ladder(FigureName.SEMICORCHEA, 120.0), 2)
+    assert two_up.anchor_figure == FigureName.NEGRA
+
+
+def test_shifting_a_dotted_ladder_starts_from_the_figure_it_decorates():
+    dotted = build_ladder(FigureName.DOTTED_NEGRA, 300.0)
+    assert shift_ladder(dotted, 1).anchor_figure == FigureName.BLANCA
+    assert shift_ladder(dotted, 0).anchor_figure == FigureName.NEGRA
 
 
 def test_a_shift_past_the_end_of_the_vocabulary_is_refused():

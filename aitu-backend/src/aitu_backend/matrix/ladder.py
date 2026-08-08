@@ -176,6 +176,29 @@ def _third_of(gap_ms: float, ladder: FigureLadder, tolerance: float = 0.08) -> F
     return FigureName.NEGRA if abs(gap_ms - third) / third < tolerance else None
 
 
+#: The rungs a shift walks: the plain figures, each twice the one below it (D-18).
+#:
+#: The dotted pair is deliberately not here. A dot is an exception the vocabulary allows on two
+#: figures so that one held note can be written (D-12); it is not a rung. Stepping onto it would
+#: re-scale the whole ladder by 1.5, which is not what "one step longer" means to anyone reading:
+#: D-18's own example is ``negra = 300`` becoming ``blanca = 300``, a doubling.
+SHIFT_LADDER: tuple[FigureName, ...] = (
+    FigureName.SEMIFUSA,
+    FigureName.FUSA,
+    FigureName.SEMICORCHEA,
+    FigureName.CORCHEA,
+    FigureName.NEGRA,
+    FigureName.BLANCA,
+    FigureName.REDONDA,
+)
+
+#: Where a dotted anchor starts from when it is shifted: the figure it decorates.
+UNDOTTED: dict[FigureName, FigureName] = {
+    FigureName.DOTTED_NEGRA: FigureName.NEGRA,
+    FigureName.DOTTED_BLANCA: FigureName.BLANCA,
+}
+
+
 def shift_ladder(ladder: FigureLadder, steps: int) -> FigureLadder:
     """Re-point a ladder by whole figures, keeping every millisecond value (D-18).
 
@@ -183,16 +206,18 @@ def shift_ladder(ladder: FigureLadder, steps: int) -> FigureLadder:
     other figure moves with it. Positive steps name each length as a longer figure, so a passage
     written in semicorcheas becomes one written in corcheas. Nothing moves on the page: this is a
     change of names.
+
+    A step is a **doubling**, because the vocabulary is a ladder of halves. See
+    :data:`SHIFT_LADDER` for why the dotted figures are not steps.
     """
-    order = list(FIGURE_NEGRAS)
-    order.sort(key=lambda figure: FIGURE_NEGRAS[figure])
-    position = order.index(ladder.anchor_figure) + steps
-    if not 0 <= position < len(order):
+    anchor = UNDOTTED.get(ladder.anchor_figure, ladder.anchor_figure)
+    position = SHIFT_LADDER.index(anchor) + steps
+    if not 0 <= position < len(SHIFT_LADDER):
         raise ValueError(
             f"Shifting {ladder.anchor_figure.value} by {steps} step(s) leaves the vocabulary; it "
-            f"runs from {order[0].value} to {order[-1].value}."
+            f"runs from {SHIFT_LADDER[0].value} to {SHIFT_LADDER[-1].value}."
         )
-    return build_ladder(order[position], ladder.anchor_ms)
+    return build_ladder(SHIFT_LADDER[position], ladder.anchor_ms)
 
 
 def bpm_of(ladder: FigureLadder) -> float:

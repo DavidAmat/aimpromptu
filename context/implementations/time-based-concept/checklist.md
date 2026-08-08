@@ -138,7 +138,7 @@ overrides and beam breaks.
 
 - [x] P7.1 `[AITU]` Clickable peak plot with live ladder preview
 - [x] P7.2 `[AITU]` Passage drawing from a score selection
-- [ ] P7.3 `[AITU]` Figure-shift control — **not started**; `shift_ladder` exists in the backend with no UI
+- [x] P7.3 `[AITU]` Figure-shift control — *two buttons on the Rhythm tab; shifts the **piece**, not one passage, because the score route carries one `anchorFigure`. Corrected `shift_ladder`: a step is a doubling, not a dot (it contradicted D-18's own example)*
 - [x] P7.4 `[AITU]` Per-note figure override
 - [x] P7.5 `[AITU]` Playback from `events.json` times
 - [x] P7.6 `[AITU]` Library surfaces `needsRederivation` — *done in P4.5; the audio list and the Rhythm tab both print the reason*

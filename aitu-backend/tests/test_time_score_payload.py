@@ -169,7 +169,7 @@ def test_a_figure_shift_renames_a_passage_without_moving_a_note():
     after = to_score_payload(hands, ladder(), passages=shift_passage(passages, "p1", 1))
 
     assert [n.start_frame for n in before.notes] == [n.start_frame for n in after.notes]
-    assert after.passages[0].ladder.anchor_figure == FigureName.DOTTED_NEGRA
+    assert after.passages[0].ladder.anchor_figure == FigureName.BLANCA
     assert after.passages[0].ladder.anchor_ms == NEGRA_MS
     assert {n.figure for n in before.notes} != {n.figure for n in after.notes}
 
