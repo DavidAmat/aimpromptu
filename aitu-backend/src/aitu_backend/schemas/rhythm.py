@@ -11,6 +11,14 @@ and nothing in the recording implies them:
   (D-19, D-20)
 * the notes drawn as a different figure by hand (D-17)
 * the notes the reader asked to start a new beam (D-34)
+* the notes taken off the page, and the notes sent to the other staff
+* which finger plays which note
+
+The last two are readings of the page, not corrections to the recording. A note
+the transcriber invented out of a pedal blur is still in the matrix after the
+reader stops drawing it, and a note the hand split put on the wrong staff is
+still where the split put it. Both are sets of keys held beside the matrix and
+folded in on the way to the drawing, so undoing one restores the note exactly.
 
 None of it changes the music. Losing it costs a person their reading of the
 piece, which they then have to do again from the plot, and that is the whole
@@ -28,11 +36,13 @@ from datetime import datetime, timezone
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from aitu_backend.matrix.keys import KEY_COUNT
 from aitu_backend.schemas.time_matrix import (
     DEFAULT_FRAME_MS,
     BeamBreak,
     FigureName,
     FigureOverride,
+    PrintedHand,
 )
 
 
@@ -91,6 +101,52 @@ class Ottava(BaseModel):
     to_column: int = Field(..., alias="toColumn", ge=0)
 
 
+class HiddenNote(BaseModel):
+    """A note the reader took off the page.
+
+    Addressed without a hand. The two hands can never strike the same key in the
+    same frame — the matrix is rejected if they do — so ``(start_frame, row)``
+    already names one note, and leaving the hand out is what lets the address
+    survive a move to the other staff.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    start_frame: int = Field(..., alias="startFrame", ge=0)
+    row: int = Field(..., ge=0, lt=KEY_COUNT)
+
+
+class HandOverride(BaseModel):
+    """A note the reader sent to the other staff, and which staff that is.
+
+    The hand split is computed by an algorithm that cannot see the player's
+    hands. Where it is wrong a pianist can see it at a glance, and saying so is a
+    statement about how the piece is played rather than about what was recorded.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    start_frame: int = Field(..., alias="startFrame", ge=0)
+    row: int = Field(..., ge=0, lt=KEY_COUNT)
+    hand: PrintedHand
+
+
+class Fingering(BaseModel):
+    """Which finger plays one note.
+
+    Keyed by the staff the note is *drawn* on, so a fingering moves with a note
+    the reader sent across. Several on one chord print stacked, in the order of
+    the noteheads, which is how fingering is written.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    hand: PrintedHand
+    start_frame: int = Field(..., alias="startFrame", ge=0)
+    row: int = Field(..., ge=0, lt=KEY_COUNT)
+    finger: int = Field(..., ge=1, le=5)
+
+
 class SavedRhythm(BaseModel):
     """One reader's reading of one piece.
 
@@ -137,6 +193,11 @@ class SavedRhythm(BaseModel):
     #: own suggestion; an empty list means the reader decided on none.
     ottavas: list[Ottava] | None = None
 
+    #: Page readings. None of these three touch the matrix; see the module note.
+    hidden_notes: list[HiddenNote] = Field(default_factory=list, alias="hiddenNotes")
+    hand_overrides: list[HandOverride] = Field(default_factory=list, alias="handOverrides")
+    fingers: list[Fingering] = Field(default_factory=list)
+
     saved_at: datetime = Field(default_factory=_now, alias="savedAt")
 
     def describe(self) -> str:
@@ -155,4 +216,10 @@ class SavedRhythm(BaseModel):
             parts.append(f"{len(self.beam_breaks)} beam break(s)")
         if self.ottavas:
             parts.append(f"{len(self.ottavas)} octave bracket(s)")
+        if self.hidden_notes:
+            parts.append(f"{len(self.hidden_notes)} note(s) off the page")
+        if self.hand_overrides:
+            parts.append(f"{len(self.hand_overrides)} note(s) moved by hand")
+        if self.fingers:
+            parts.append(f"{len(self.fingers)} fingering(s)")
         return ", ".join(parts) + "."

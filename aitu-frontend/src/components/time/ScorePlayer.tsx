@@ -80,6 +80,11 @@ export function ScorePlayer({
   useEffect(() => {
     const element = new Audio(`${API_BASE}/audio/${audioUuid}/file`);
     audio.current = element;
+    // Say where the recording is the moment there is one, not only when it moves. The line on the
+    // staves is the thing a reader grabs to move the recording, so it has to be on the page before
+    // anything has played — and the teardown below reports `null`, which means a remount that said
+    // nothing would leave the page with no line and no way to get one back.
+    report.current?.(0);
     const tick = () => setSeconds(element.currentTime);
     const stop = () => setPlaying(false);
     element.addEventListener("timeupdate", tick);

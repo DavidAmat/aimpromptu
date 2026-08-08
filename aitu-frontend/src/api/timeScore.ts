@@ -324,5 +324,17 @@ export interface SavedRhythm {
    * page then takes its own suggestion, while an empty list means "decided, none".
    */
   ottavas?: { kind: string; hand: string; fromColumn: number; toColumn: number }[];
+  /**
+   * Notes the reader took off the page, addressed without a hand.
+   *
+   * Right and left can never strike the same key in the same frame, so the pair already names one
+   * note, and leaving the hand out is what lets a note keep its identity across a move to the other
+   * staff. Nothing here is an edit to the recording: the matrix still holds every one of them.
+   */
+  hiddenNotes?: { startFrame: number; row: number }[];
+  /** Notes the reader sent to the other staff, and which staff that is. */
+  handOverrides?: { startFrame: number; row: number; hand: string }[];
+  /** Which finger plays a note, by the staff it is drawn on. */
+  fingers?: { hand: string; startFrame: number; row: number; finger: number }[];
   savedAt?: string;
 }

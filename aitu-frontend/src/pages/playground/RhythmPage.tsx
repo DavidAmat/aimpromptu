@@ -7,12 +7,15 @@
  * cheap and nothing is lost by getting it wrong the first time.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
+import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
+import IconButton from "@mui/material/IconButton";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -44,17 +47,38 @@ import {
   clearOttavaRange,
   keySignatureAtFrame,
   ottavaAtFrame,
+  type FingerNumber,
   type KeyChangeAnnotation,
   type KeySignature,
   type OttavaAnnotation,
   type OttavaKind,
 } from "@aimpromptu/grid-notation";
+import {
+  frameOf,
+  groupKeyOf,
+  handOf,
+  noteRefOf,
+  rowOf,
+  type NoteRef,
+  type PrintedHand,
+} from "../../music/renderOverrides";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 
 const NAMEABLE_FIGURES: FigureName[] = ["blanca", "negra", "corchea", "semicorchea"];
 
+/** Thumb to little finger. There is no 0 and no 6. */
+const FINGERS: FingerNumber[] = [1, 2, 3, 4, 5];
+
 /** Stands for "a saved reading already answered this", which outranks any suggestion. */
 const SAVED_OTTAVAS = "\u0000saved";
+
+/** What a stretch of columns can carry. One pill each, and only that one's controls on screen. */
+const FRAME_TABS = [
+  { id: "key" as const, label: "Key" },
+  { id: "octave" as const, label: "Octave" },
+];
+
+type FrameTab = (typeof FRAME_TABS)[number]["id"];
 
 /** The four brackets, and what each does to a passage, in the order a reader meets them. */
 const OTTAVA_CHOICES: { kind: OttavaKind; label: string; hint: string }[] = [
@@ -199,6 +223,8 @@ export function RhythmPage() {
   /** Notes picked on the sheet: click one, then hold Command and click more. */
   const [selectedNotes, setSelectedNotes] = useState<readonly string[]>([]);
   const [framesToolbox, setFramesToolbox] = useState(false);
+  /** Which pill is open in the frame toolbox. */
+  const [frameTab, setFrameTab] = useState<FrameTab>("key");
   const [notesToolbox, setNotesToolbox] = useState(false);
   /** Raised to drop every selection on the sheet: Escape, or closing a toolbox. */
   const [clearedAt, setClearedAt] = useState(0);
@@ -220,6 +246,31 @@ export function RhythmPage() {
    * phrase restarts — only the person reading can, so they say.
    */
   const [beamBreaks, setBeamBreaks] = useState<ReadonlySet<string>>(new Set());
+  /**
+   * Notes the reader took off the page, as `startFrame:row`.
+   *
+   * A transcriber inventing a note out of a pedal blur is the commonest thing wrong with a page, and
+   * the honest fix is to stop drawing it, not to say it was never played. The recording is evidence
+   * and stays as it is; this is a set of keys beside it. Bringing one back restores it exactly.
+   */
+  const [hiddenNotes, setHiddenNotes] = useState<ReadonlySet<NoteRef>>(new Set());
+  /**
+   * Notes the reader sent to the other staff, as `startFrame:row` to the staff they belong on.
+   *
+   * The hand split is worked out by an algorithm that cannot see the player's hands, and where it is
+   * wrong a pianist can see it at a glance. Correcting it is a statement about how the piece is
+   * played, so it belongs here rather than in the matrix the split was computed from.
+   */
+  const [handOverrides, setHandOverrides] = useState<ReadonlyMap<NoteRef, PrintedHand>>(new Map());
+  /** Which finger plays each note, keyed `hand:startFrame:row` by the staff it is drawn on. */
+  const [fingers, setFingers] = useState<Record<string, FingerNumber>>({});
+  /** Numbers pressed for the selection now open, so a chord can be given several at once. */
+  const [fingerDraft, setFingerDraft] = useState<{
+    forSelection: string;
+    picked: FingerNumber[];
+  } | null>(null);
+  /** A move the far staff had no room for, said once, in words. */
+  const [moveRefused, setMoveRefused] = useState<string | null>(null);
   /**
    * Where the piece changes speed, as frames, and what a gap is called after each of them.
    *
@@ -261,43 +312,92 @@ export function RhythmPage() {
 
   const { peaks, selected, preview, score, error } = view;
 
+  const renderOverrides = useMemo(
+    () => ({ hidden: hiddenNotes, hands: handOverrides }),
+    [hiddenNotes, handOverrides],
+  );
+
+  /**
+   * Every notehead still on the page, gathered into the chord it is drawn as part of.
+   *
+   * Keyed by the staff the note ends up on rather than the one the split gave it, because after a
+   * move the chord a note beams with is the one on its new staff.
+   */
+  const chords = useMemo(() => {
+    const found = new Map<string, number[]>();
+    for (const note of score?.notes ?? []) {
+      const ref: NoteRef = `${note.startFrame}:${note.row}`;
+      if (hiddenNotes.has(ref)) continue;
+      const staff = handOverrides.get(ref) ?? note.hand;
+      const key = `${staff}:${note.startFrame}`;
+      const rows = found.get(key);
+      if (rows) rows.push(note.row);
+      else found.set(key, [note.row]);
+    }
+    return found;
+  }, [score, hiddenNotes, handOverrides]);
+
+  /** The selection, gathered the same way, so the two can be compared chord by chord. */
+  const selectedChords = useMemo(() => {
+    const byGroup = new Map<string, Set<number>>();
+    for (const noteKey of selectedNotes) {
+      const key = groupKeyOf(noteKey);
+      const rows = byGroup.get(key);
+      if (rows) rows.add(rowOf(noteKey));
+      else byGroup.set(key, new Set([rowOf(noteKey)]));
+    }
+    const whole: string[] = [];
+    const partial: string[] = [];
+    for (const [key, rows] of byGroup) {
+      const all = chords.get(key) ?? [];
+      if (all.length > 0 && all.every((row) => rows.has(row))) whole.push(key);
+      else partial.push(key);
+    }
+    return { whole, partial };
+  }, [selectedNotes, chords]);
+
+  /** The whole selection is one chord, which is when several finger numbers make sense at once. */
+  const oneChord = useMemo(() => {
+    if (selectedNotes.length < 2) return null;
+    const groups = new Set(selectedNotes.map(groupKeyOf));
+    if (groups.size !== 1) return null;
+    return [...selectedNotes].sort((left, right) => rowOf(left) - rowOf(right));
+  }, [selectedNotes]);
+
+  const selectionKey = selectedNotes.join("|");
+  // Numbers only belong to the selection they were pressed for. Carried with that selection rather
+  // than cleared by an effect, so picking a different chord offers a clean row of chips without a
+  // render in between showing the last chord's answer.
+  const pickedFingers = useMemo<FingerNumber[]>(
+    () => (fingerDraft?.forSelection === selectionKey ? fingerDraft.picked : []),
+    [fingerDraft, selectionKey],
+  );
+
+
   // Which stretch the toolbox is about, and what it will write. The signature offered is whatever
   // is already sounding at the start of the stretch, until the reader picks another.
   const rangeKey = range ? `${range.fromColumn}:${range.toColumn}` : "";
 
   /**
-   * The stored edits whose stretch the selection covers, each with the one call that removes it.
+   * Which settings this stretch already carries, so its pill can say so before it is opened.
    *
-   * Built here rather than kept in state, because it is a reading of what is stored: an edit list
-   * that could disagree with the edits is worse than no list.
+   * Read from the stored edits rather than kept in state: a marker that could disagree with the
+   * thing it marks is worse than no marker.
    */
-  const editsInRange = range
-    ? keyChanges
-        .filter(
-          (change) => change.fromColumn >= range.fromColumn && change.fromColumn < range.toColumn,
+  const editedHere: Record<FrameTab, boolean> = {
+    key: range
+      ? keySignatureAtFrame(range.fromColumn, keySignature as KeySignature, keyChanges) !==
+          keySignature ||
+        keyChanges.some(
+          (change) => change.fromColumn > range.fromColumn && change.fromColumn < range.toColumn,
         )
-        .map((change) => ({
-          kind: "key",
-          fromColumn: change.fromColumn,
-          label: `Key signature: ${change.keySignature} from column ${change.fromColumn}`,
-          remove: () => {
-            if (!score) return;
-            // The stretch this transition governs runs to the next one, or to the end of the piece.
-            const next = keyChanges.find((other) => other.fromColumn > change.fromColumn);
-            setKeyChanges(
-              clearKeySignatureRange(
-                keyChanges,
-                {
-                  fromFrame: change.fromColumn,
-                  toFrame: next ? next.fromColumn : score.envelope.frameCount,
-                },
-                keySignature as KeySignature,
-                score.envelope.frameCount,
-              ),
-            );
-          },
-        }))
-    : [];
+      : false,
+    octave: range
+      ? ottavaAtFrame(ottavas, "left", range.fromColumn) !== undefined ||
+        ottavaAtFrame(ottavas, "right", range.fromColumn) !== undefined
+      : false,
+  };
+
   const passageKey: KeySignatureName =
     passageDraft?.forRange === rangeKey
       ? passageDraft.value
@@ -363,6 +463,25 @@ export function RhythmPage() {
           ),
         );
         setBeamBreaks(new Set(found.beamBreaks.map((one) => `${one.hand}:${one.startFrame}`)));
+        setHiddenNotes(
+          new Set((found.hiddenNotes ?? []).map((one) => `${one.startFrame}:${one.row}`)),
+        );
+        setHandOverrides(
+          new Map(
+            (found.handOverrides ?? []).map((one) => [
+              `${one.startFrame}:${one.row}`,
+              one.hand as PrintedHand,
+            ]),
+          ),
+        );
+        setFingers(
+          Object.fromEntries(
+            (found.fingers ?? []).map((one) => [
+              `${one.hand}:${one.startFrame}:${one.row}`,
+              one.finger as FingerNumber,
+            ]),
+          ),
+        );
         if (found.keySignature) setKeySignature(found.keySignature);
         setKeyChanges(
           (found.keyChanges ?? []).map((change) => ({
@@ -467,6 +586,113 @@ export function RhythmPage() {
     setClearedAt((at) => at + 1);
   }, []);
 
+  /**
+   * Put the numbers that are pressed onto the notes that are picked.
+   *
+   * One number goes on every note in the selection, which is what a run of the same finger is. Two
+   * or more only mean anything on a single chord: there the numbers are read low to high against the
+   * noteheads low to high, which is the order a hand takes them in and the order they print in. A
+   * selection spanning several onsets keeps to one number, because pairing across chords would be
+   * guessing which note in one chord answers which in the next.
+   */
+  const applyFingers = useCallback(
+    (picked: FingerNumber[], notes: readonly string[], chord: readonly string[] | null) => {
+      setFingers((current) => {
+        const next = { ...current };
+        for (const noteKey of notes) delete next[noteKey];
+        if (picked.length === 0) return next;
+        if (chord && picked.length > 1) {
+          const ordered = [...picked].sort((left, right) => left - right);
+          chord.forEach((noteKey, index) => {
+            const finger = ordered[index];
+            if (finger !== undefined) next[noteKey] = finger;
+          });
+          return next;
+        }
+        const one = picked[picked.length - 1]!;
+        for (const noteKey of notes) next[noteKey] = one;
+        return next;
+      });
+    },
+    [],
+  );
+
+  const pressFinger = useCallback(
+    (finger: FingerNumber) => {
+      const single = oneChord === null;
+      const already = pickedFingers.includes(finger);
+      const picked: FingerNumber[] = single
+        ? already
+          ? []
+          : [finger]
+        : already
+          ? pickedFingers.filter((one) => one !== finger)
+          : [...pickedFingers, finger];
+      setFingerDraft({ forSelection: selectionKey, picked });
+      applyFingers(picked, selectedNotes, oneChord);
+    },
+    [applyFingers, oneChord, pickedFingers, selectedNotes, selectionKey],
+  );
+
+  /** Take the picked notes off the page. The recording keeps them; the drawing stops asking. */
+  const hideSelected = useCallback(() => {
+    const refs = selectedNotes.map(noteRefOf);
+    setHiddenNotes((current) => new Set([...current, ...refs]));
+    setFingers((current) => {
+      const next = { ...current };
+      for (const noteKey of selectedNotes) delete next[noteKey];
+      return next;
+    });
+    closeNotes();
+  }, [selectedNotes, closeNotes]);
+
+  /** Send the picked notes to the other staff. */
+  const moveSelected = useCallback(
+    (to: PrintedHand) => {
+      setMoveRefused(null);
+      setHandOverrides((current) => {
+        const next = new Map(current);
+        for (const noteKey of selectedNotes) next.set(noteRefOf(noteKey), to);
+        return next;
+      });
+      // The numbers travel with the notes, or a fingering would be left over an empty staff.
+      setFingers((current) => {
+        const next = { ...current };
+        for (const noteKey of selectedNotes) {
+          const finger = next[noteKey];
+          if (finger === undefined) continue;
+          delete next[noteKey];
+          next[`${to}:${frameOf(noteKey)}:${rowOf(noteKey)}`] = finger;
+        }
+        return next;
+      });
+      closeNotes();
+    },
+    [selectedNotes, closeNotes],
+  );
+
+  const toggleBeamBreak = useCallback(() => {
+    const targets = selectedChords.whole;
+    if (targets.length === 0 || selectedChords.partial.length > 0) return;
+    setBeamBreaks((current) => {
+      const next = new Set(current);
+      const breaking = !targets.every((key) => next.has(key));
+      for (const key of targets) {
+        if (breaking) next.add(key);
+        else next.delete(key);
+      }
+      return next;
+    });
+  }, [selectedChords]);
+
+  const sayRefused = useCallback((refused: readonly NoteRef[]) => {
+    setMoveRefused(
+      refused.length === 0
+        ? null
+        : `${refused.length} note${refused.length === 1 ? "" : "s"} stayed where they were: the other staff already plays that key at that moment, and one key cannot be struck twice in the same frame.`,
+    );
+  }, []);
+
   // Escape drops whatever is picked, which is what it does everywhere else.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -512,6 +738,20 @@ export function RhythmPage() {
         fromColumn: span.fromColumn,
         toColumn: span.toColumn,
       })),
+      hiddenNotes: [...hiddenNotes].map((ref) => {
+        const [frame, row] = ref.split(":");
+        return { startFrame: Number(frame), row: Number(row) };
+      }),
+      handOverrides: [...handOverrides].map(([ref, staff]) => {
+        const [frame, row] = ref.split(":");
+        return { startFrame: Number(frame), row: Number(row), hand: staff };
+      }),
+      fingers: Object.entries(fingers).map(([noteKey, finger]) => ({
+        hand: handOf(noteKey),
+        startFrame: frameOf(noteKey),
+        row: rowOf(noteKey),
+        finger,
+      })),
     };
     try {
       const stored = await timeScoreApi.saveRhythm(audioUuid, body);
@@ -534,6 +774,9 @@ export function RhythmPage() {
     overrides,
     beamBreaks,
     ottavas,
+    hiddenNotes,
+    handOverrides,
+    fingers,
   ]);
 
   const apply = useCallback(async () => {
@@ -867,12 +1110,20 @@ export function RhythmPage() {
               onSelectNotes={pickNotes}
               onSelectRange={pickRange}
               onSelectMarkedRange={pickMarkedRange}
+              renderOverrides={renderOverrides}
+              fingers={fingers}
+              onMovesRefused={sayRefused}
               selectedRange={range}
               clearSelectionsAt={clearedAt}
               playheadSeconds={playheadSeconds}
               onScrub={scrub}
               scrollCursorAt={scrollCursorAt}
             />
+            {moveRefused ? (
+              <Alert severity="warning" onClose={() => setMoveRefused(null)}>
+                {moveRefused}
+              </Alert>
+            ) : null}
             {/*
               Everything above is a decision, and until now every one of them went when the tab did.
               The columns, the figures and the beams are all worked out again from the recording on
@@ -905,64 +1156,43 @@ export function RhythmPage() {
               )}
             </Stack>
 
+            {/*
+              What the page is no longer showing, and the way back. A note taken off the page cannot
+              be clicked to bring it back, so the only honest place for the undo is here, where it is
+              visible whether or not anything is selected.
+            */}
             <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-              {selectedNote ? (
+              {hiddenNotes.size === 0 && handOverrides.size === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  Click a notehead to open the note toolbox. Hold Command (Control on Windows) and
+                  click more to build a set: a finger number, a beam break, a move to the other staff
+                  or a deletion then applies to the whole set at once.
+                </Typography>
+              ) : (
                 <>
-                  <Typography variant="body2">Draw this one note as</Typography>
-                  <TextField
-                    select
-                    size="small"
-                    value={overrides[figureKeyOf(selectedNote)] ?? ""}
-                    onChange={(event) =>
-                      setOverrides((current) => ({
-                        ...current,
-                        [figureKeyOf(selectedNote)]: event.target.value as FigureName,
-                      }))
-                    }
-                    sx={{ minWidth: 220 }}
-                  >
-                    {ALL_FIGURES.map((name) => (
-                      <MenuItem key={name} value={name}>
-                        {FIGURE_LABELS[name]}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                  {overrides[figureKeyOf(selectedNote)] ? (
-                    <Button
-                      size="small"
-                      onClick={() =>
-                        setOverrides((current) => {
-                          const next = { ...current };
-                          delete next[figureKeyOf(selectedNote)];
-                          return next;
-                        })
-                      }
-                    >
-                      Undo this one
+                  <Typography variant="body2" color="text.secondary">
+                    {hiddenNotes.size > 0
+                      ? `${hiddenNotes.size} note${hiddenNotes.size === 1 ? "" : "s"} off the page`
+                      : null}
+                    {hiddenNotes.size > 0 && handOverrides.size > 0 ? " \u00b7 " : null}
+                    {handOverrides.size > 0
+                      ? `${handOverrides.size} note${
+                          handOverrides.size === 1 ? "" : "s"
+                        } moved to the other staff`
+                      : null}
+                    . The recording still has every one of them.
+                  </Typography>
+                  {hiddenNotes.size > 0 ? (
+                    <Button size="small" onClick={() => setHiddenNotes(new Set())}>
+                      Bring them all back
                     </Button>
                   ) : null}
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() =>
-                      setBeamBreaks((current) => {
-                        const next = new Set(current);
-                        const key = figureKeyOf(selectedNote);
-                        if (!next.delete(key)) next.add(key);
-                        return next;
-                      })
-                    }
-                  >
-                    {beamBreaks.has(figureKeyOf(selectedNote))
-                      ? "Join the beam again"
-                      : "Break the beam here"}
-                  </Button>
+                  {handOverrides.size > 0 ? (
+                    <Button size="small" onClick={() => setHandOverrides(new Map())}>
+                      Undo every move
+                    </Button>
+                  ) : null}
                 </>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Click a notehead to draw that one note as a different figure, or to start a new
-                  beam group on it. Both change how the page reads and nothing about the music.
-                </Typography>
               )}
             </Stack>
           </Stack>
@@ -992,181 +1222,166 @@ export function RhythmPage() {
         onClose={closeFrames}
       >
         <Stack spacing={1.5}>
-          <Typography variant="body2" color="text.secondary">
-            Click a group of columns above the staves to pick it, then hold Shift and click another
-            to take everything between them.
-          </Typography>
-          <TextField
-            select
-            size="small"
-            label="Key signature for this passage"
-            value={passageKey}
-            onChange={(event) =>
-              setPassageDraft({ forRange: rangeKey, value: event.target.value as KeySignatureName })
-            }
-            fullWidth
-          >
-            {KEY_SIGNATURES.map((name) => (
-              <MenuItem key={name} value={name}>
-                {KEY_LABELS[name]}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Typography variant="caption" color="text.secondary">
-            The passage starts with naturals cancelling what was sounding, both clefs again, and the
-            new signature. Where it ends, the same happens in reverse and the piece returns to{" "}
-            {KEY_LABELS[keySignature].split(" —")[0]}.
-          </Typography>
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="contained"
-              size="small"
-              disabled={!range}
-              onClick={() => {
-                if (!range || !score) return;
-                setKeyChanges(
-                  applyKeySignatureRange(
-                    keyChanges,
-                    {
-                      fromFrame: range.fromColumn,
-                      toFrame: range.toColumn,
-                      keySignature: passageKey as KeySignature,
-                    },
-                    keySignature as KeySignature,
-                    score.envelope.frameCount,
-                  ),
-                );
-              }}
-            >
-              Write this passage in {passageKey}
-            </Button>
-            <Button
-              size="small"
-              disabled={!range || keyChanges.length === 0}
-              onClick={() => {
-                if (!range || !score) return;
-                setKeyChanges(
-                  clearKeySignatureRange(
-                    keyChanges,
-                    { fromFrame: range.fromColumn, toFrame: range.toColumn },
-                    keySignature as KeySignature,
-                    score.envelope.frameCount,
-                  ),
-                );
-              }}
-            >
-              Back to the piece&rsquo;s key
-            </Button>
-          </Stack>
           {/*
-            What is already on this stretch, each removable on its own.
+            One pill per thing this stretch can carry, and only that thing's controls below it.
 
-            A stretch can carry more than one thing, and undoing all of them because you wanted one
-            gone is not an undo. Each row is exactly one stored edit, named the way it was made.
+            The panel used to show every control at once with a paragraph explaining each — which
+            made the common case, changing one setting, a page of reading. A pill wears the accent
+            colour when this stretch already carries that setting, so what has been edited here is
+            visible before anything is opened.
           */}
-          {editsInRange.length > 0 ? (
-            <Stack spacing={0.5}>
-              <Typography variant="subtitle2">On this selection</Typography>
-              {editsInRange.map((edit) => (
-                <Stack
-                  key={`${edit.kind}:${edit.fromColumn}`}
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: "center" }}
+          <Stack direction="row" spacing={1}>
+            {FRAME_TABS.map((tab) => (
+              <Chip
+                key={tab.id}
+                size="small"
+                label={tab.label}
+                onClick={() => setFrameTab(tab.id)}
+                // Two signals that must not collide: colour says *this stretch already carries
+                // one*, fill says *this is the pill you are looking at*. Folding them into one
+                // would hide the first behind the second the moment a marked pill was opened.
+                color={editedHere[tab.id] ? "secondary" : "default"}
+                variant={frameTab === tab.id ? "filled" : "outlined"}
+                sx={{ fontWeight: frameTab === tab.id ? 600 : 400 }}
+              />
+            ))}
+          </Stack>
+
+          {frameTab === "key" ? (
+            <Stack spacing={1.5}>
+              <TextField
+                select
+                size="small"
+                label="Key"
+                value={passageKey}
+                onChange={(event) =>
+                  setPassageDraft({
+                    forRange: rangeKey,
+                    value: event.target.value as KeySignatureName,
+                  })
+                }
+                fullWidth
+              >
+                {KEY_SIGNATURES.map((name) => (
+                  <MenuItem key={name} value={name}>
+                    {KEY_LABELS[name]}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  disabled={!range || !score}
+                  onClick={() => {
+                    if (!range || !score) return;
+                    setKeyChanges(
+                      applyKeySignatureRange(
+                        keyChanges,
+                        {
+                          fromFrame: range.fromColumn,
+                          toFrame: range.toColumn,
+                          keySignature: passageKey as KeySignature,
+                        },
+                        keySignature as KeySignature,
+                        score.envelope.frameCount,
+                      ),
+                    );
+                  }}
                 >
-                  <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                    {edit.label}
-                  </Typography>
-                  <Button size="small" color="error" onClick={edit.remove}>
-                    Remove
-                  </Button>
-                </Stack>
-              ))}
+                  Apply
+                </Button>
+                <Button
+                  size="small"
+                  color="error"
+                  disabled={!range || !score || !editedHere.key}
+                  startIcon={<DeleteOutlineIcon />}
+                  onClick={() => {
+                    if (!range || !score) return;
+                    setKeyChanges(
+                      clearKeySignatureRange(
+                        keyChanges,
+                        { fromFrame: range.fromColumn, toFrame: range.toColumn },
+                        keySignature as KeySignature,
+                        score.envelope.frameCount,
+                      ),
+                    );
+                  }}
+                >
+                  Remove
+                </Button>
+              </Stack>
             </Stack>
-          ) : (
-            <Typography variant="caption" color="text.secondary">
-              Nothing has been applied to this stretch yet.
-            </Typography>
-          )}
-          {keyChanges.length > 0 ? (
-            <Typography variant="caption" color="text.secondary">
-              {keyChanges.length} key change
-              {keyChanges.length === 1 ? "" : "s"} in this piece, at{" "}
-              {keyChanges.map((change) => `f${change.fromColumn}`).join(", ")}.
-            </Typography>
           ) : null}
 
-          <Divider />
-
-          {/*
-            Octave brackets. The page writes these itself where a hand runs far outside its staff —
-            that is what stops a passage printing as six ledger lines nobody counts — and this is
-            where a reader disagrees with it. Per hand, because a bracket is one hand's: the left
-            crossing high while the right stays put is an ordinary thing for a piano to do.
-          */}
-          <Typography variant="subtitle2">Octave bracket</Typography>
-          <Typography variant="caption" color="text.secondary">
-            The hand is drawn inside its staff and the bracket says how far from where it sounds.
-            Nothing is transposed: the recording is untouched and so is every other hand.
-          </Typography>
-          {(["left", "right"] as const).map((side) => {
-            const active = range ? ottavaAtFrame(ottavas, side, range.fromColumn) : undefined;
-            return (
-              <Stack key={side} direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                <Typography variant="body2" sx={{ minWidth: 78 }}>
-                  {side === "left" ? "Left hand" : "Right hand"}
-                </Typography>
-                {OTTAVA_CHOICES.map((choice) => (
-                  <Chip
-                    key={choice.kind}
-                    size="small"
-                    label={choice.label}
-                    title={choice.hint}
-                    disabled={!range || !score}
-                    color={active?.kind === choice.kind ? "primary" : "default"}
-                    variant={active?.kind === choice.kind ? "filled" : "outlined"}
-                    onClick={() => {
-                      if (!range || !score) return;
-                      // Touching a chip is the reader deciding, and a decision outlasts every
-                      // redraw: from here on the suggestion never writes over this piece again.
-                      decidedOttavasFor.current = SAVED_OTTAVAS;
-                      // Pressing the bracket that is already on clears it, so one chip is both the
-                      // way in and the way out and there is no separate "none".
-                      setOttavas(
-                        active?.kind === choice.kind
-                          ? clearOttavaRange(ottavas, side, {
-                              fromColumn: range.fromColumn,
-                              toColumn: range.toColumn,
-                            })
-                          : applyOttava(
-                              ottavas,
-                              {
-                                kind: choice.kind,
-                                hand: side,
-                                fromColumn: range.fromColumn,
-                                toColumn: range.toColumn,
-                              },
-                              score.envelope.frameCount,
-                            ),
-                      );
-                    }}
-                  />
-                ))}
-              </Stack>
-            );
-          })}
-          <Typography variant="caption" color="text.secondary">
-            {ottavas.length > 0
-              ? `${ottavas.length} bracket${ottavas.length === 1 ? "" : "s"} in this piece: ${ottavas
-                  .map(
-                    (span) =>
-                      `${span.kind} ${span.hand === "left" ? "L" : "R"} f${span.fromColumn}\u2013f${
-                        span.toColumn - 1
-                      }`,
-                  )
-                  .join(", ")}.`
-              : "No bracket in this piece — nothing runs far enough outside its staff to need one."}
-          </Typography>
+          {frameTab === "octave" ? (
+            <Stack spacing={1}>
+              {(["left", "right"] as const).map((side) => {
+                const active = range ? ottavaAtFrame(ottavas, side, range.fromColumn) : undefined;
+                return (
+                  <Stack key={side} direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+                    <Typography variant="body2" sx={{ minWidth: 34 }}>
+                      {side === "left" ? "L" : "R"}
+                    </Typography>
+                    {OTTAVA_CHOICES.map((choice) => (
+                      <Chip
+                        key={choice.kind}
+                        size="small"
+                        label={choice.label}
+                        title={choice.hint}
+                        disabled={!range || !score}
+                        color={active?.kind === choice.kind ? "secondary" : "default"}
+                        variant={active?.kind === choice.kind ? "filled" : "outlined"}
+                        onClick={() => {
+                          if (!range || !score) return;
+                          // Touching a chip is the reader deciding, and a decision outlasts every
+                          // redraw: from here on the suggestion never writes over this piece.
+                          decidedOttavasFor.current = SAVED_OTTAVAS;
+                          // Pressing the bracket already on clears it, so one chip is both the way
+                          // in and the way out and there is no separate "none".
+                          setOttavas(
+                            active?.kind === choice.kind
+                              ? clearOttavaRange(ottavas, side, {
+                                  fromColumn: range.fromColumn,
+                                  toColumn: range.toColumn,
+                                })
+                              : applyOttava(
+                                  ottavas,
+                                  {
+                                    kind: choice.kind,
+                                    hand: side,
+                                    fromColumn: range.fromColumn,
+                                    toColumn: range.toColumn,
+                                  },
+                                  score.envelope.frameCount,
+                                ),
+                          );
+                        }}
+                      />
+                    ))}
+                    <IconButton
+                      size="small"
+                      color="error"
+                      title="Remove the bracket on this hand"
+                      disabled={!range || !active}
+                      onClick={() => {
+                        if (!range) return;
+                        decidedOttavasFor.current = SAVED_OTTAVAS;
+                        setOttavas(
+                          clearOttavaRange(ottavas, side, {
+                            fromColumn: range.fromColumn,
+                            toColumn: range.toColumn,
+                          }),
+                        );
+                      }}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                );
+              })}
+            </Stack>
+          ) : null}
 
           <Divider />
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
@@ -1179,9 +1394,11 @@ export function RhythmPage() {
             >
               Save with the piece
             </Button>
-            <Typography variant="caption" color="text.secondary">
-              {savedNote ?? "Keeps these key changes, and everything else you have decided."}
-            </Typography>
+            {savedNote ? (
+              <Typography variant="caption" color="text.secondary">
+                {savedNote}
+              </Typography>
+            ) : null}
           </Stack>
         </Stack>
       </ToolboxDialog>
@@ -1190,11 +1407,18 @@ export function RhythmPage() {
         open={notesToolbox && selectedNotes.length > 0}
         title={selectedNotes.length === 1 ? "Note" : `${selectedNotes.length} notes`}
         subtitle={
+          // The columns, each said once. A chord is three notes at one moment, and printing that
+          // moment three times reads as three moments.
           selectedNotes.length > 0
-            ? selectedNotes
-                .slice(0, 4)
-                .map((noteKey) => `f${noteKey.split(":")[1]}`)
-                .join(", ") + (selectedNotes.length > 4 ? ", …" : "")
+            ? (() => {
+                const columns = [...new Set(selectedNotes.map(frameOf))].sort((a, z) => a - z);
+                return (
+                  columns
+                    .slice(0, 4)
+                    .map((column) => `f${column}`)
+                    .join(", ") + (columns.length > 4 ? ", \u2026" : "")
+                );
+              })()
             : undefined
         }
         initialPosition={{ x: 420, y: 140 }}
@@ -1202,11 +1426,153 @@ export function RhythmPage() {
       >
         <Stack spacing={1.5}>
           <Typography variant="body2" color="text.secondary">
-            Click a notehead to pick it, then hold Command and click more to build a set. Everything
-            this toolbox will offer applies to the whole set at once.
+            {selectedNotes.length === 1
+              ? "Hold Command (Control on Windows) and click more noteheads to build a set."
+              : oneChord
+                ? "One chord. Numbers pressed here are read low to high against the noteheads low to high."
+                : "Everything below applies to the whole set at once."}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Nothing to set here yet. The controls come next; this is the panel they will live in.
+
+          <Divider textAlign="left">
+            <Typography variant="caption" color="text.secondary">
+              Fingering
+            </Typography>
+          </Divider>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+            <ButtonGroup size="small">
+              {FINGERS.map((finger) => (
+                <Button
+                  key={finger}
+                  variant={pickedFingers.includes(finger) ? "contained" : "outlined"}
+                  onClick={() => pressFinger(finger)}
+                  data-finger={finger}
+                >
+                  {finger}
+                </Button>
+              ))}
+            </ButtonGroup>
+            <Button
+              size="small"
+              disabled={!selectedNotes.some((noteKey) => fingers[noteKey] !== undefined)}
+              onClick={() => {
+                setFingerDraft({ forSelection: selectionKey, picked: [] });
+                applyFingers([], selectedNotes, oneChord);
+              }}
+            >
+              Clear
+            </Button>
+          </Stack>
+          <Typography variant="caption" color="text.secondary">
+            {oneChord
+              ? `Press one number to give it to all ${oneChord.length} noteheads, or press ${oneChord.length} of them to give each note its own \u2014 they print stacked over the chord, lowest at the bottom.`
+              : "One number, on every note picked. Several at once only mean something on a single chord, where they can be read against the noteheads in order."}
+          </Typography>
+
+          <Divider textAlign="left">
+            <Typography variant="caption" color="text.secondary">
+              Hand
+            </Typography>
+          </Divider>
+          <Typography variant="caption" color="text.secondary">
+            The split is worked out by an algorithm that cannot see your hands. Where it is wrong,
+            say so — the matrix is not touched and the note can come back at any time.
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={selectedNotes.every((noteKey) => handOf(noteKey) === "right")}
+              onClick={() => moveSelected("right")}
+            >
+              Play with the right hand
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={selectedNotes.every((noteKey) => handOf(noteKey) === "left")}
+              onClick={() => moveSelected("left")}
+            >
+              Play with the left hand
+            </Button>
+          </Stack>
+
+          <Divider textAlign="left">
+            <Typography variant="caption" color="text.secondary">
+              Beam
+            </Typography>
+          </Divider>
+          <Button
+            size="small"
+            variant="outlined"
+            disabled={selectedChords.partial.length > 0 || selectedChords.whole.length === 0}
+            onClick={toggleBeamBreak}
+          >
+            {selectedChords.whole.length > 0 &&
+            selectedChords.whole.every((key) => beamBreaks.has(key))
+              ? "Join the beam again"
+              : "Start a new beam here"}
+          </Button>
+          <Typography variant="caption" color="text.secondary">
+            {selectedChords.partial.length > 0
+              ? `A beam holds a whole chord, so it can only be cut in front of all of it. Pick the rest of the notes at ${selectedChords.partial
+                  .map((key) => `f${key.split(":")[1]}`)
+                  .join(", ")} as well.`
+              : "The beam is cut in front of these notes, and a new group runs on from them."}
+          </Typography>
+
+          {selectedNotes.length === 1 && selectedNote ? (
+            <>
+              <Divider textAlign="left">
+                <Typography variant="caption" color="text.secondary">
+                  Figure
+                </Typography>
+              </Divider>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <TextField
+                  select
+                  size="small"
+                  label="Draw this note as"
+                  value={overrides[figureKeyOf(selectedNote)] ?? ""}
+                  onChange={(event) =>
+                    setOverrides((current) => ({
+                      ...current,
+                      [figureKeyOf(selectedNote)]: event.target.value as FigureName,
+                    }))
+                  }
+                  sx={{ minWidth: 200 }}
+                >
+                  {ALL_FIGURES.map((name) => (
+                    <MenuItem key={name} value={name}>
+                      {FIGURE_LABELS[name]}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                {overrides[figureKeyOf(selectedNote)] ? (
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      setOverrides((current) => {
+                        const next = { ...current };
+                        delete next[figureKeyOf(selectedNote)];
+                        return next;
+                      })
+                    }
+                  >
+                    Undo
+                  </Button>
+                ) : null}
+              </Stack>
+            </>
+          ) : null}
+
+          <Divider />
+          <Button size="small" color="error" variant="outlined" onClick={hideSelected}>
+            Take {selectedNotes.length === 1 ? "this note" : `these ${selectedNotes.length} notes`}{" "}
+            off the page
+          </Button>
+          <Typography variant="caption" color="text.secondary">
+            The recording keeps them. Only the drawing stops asking for them, and the undo is under
+            the sheet.
           </Typography>
         </Stack>
       </ToolboxDialog>

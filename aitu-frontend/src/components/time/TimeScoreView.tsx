@@ -7,7 +7,7 @@
  * position and the figure are two separate numbers now.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import {
   frameAtPoint,
@@ -15,12 +15,20 @@ import {
   placeCursor,
   suggestKeySignature,
   suggestOttavas,
+  type FingerAnnotation,
+  type FingerNumber,
   type KeyChangeAnnotation,
   type KeySignature,
   type OttavaAnnotation,
   type SparseMatrix,
 } from "@aimpromptu/grid-notation";
 import type { FigureName, KeySignatureName, TimeScorePayload } from "../../api";
+import {
+  applyRenderOverrides,
+  NO_RENDER_OVERRIDES,
+  type NoteRef,
+  type RenderOverrides,
+} from "../../music/renderOverrides";
 
 export interface TimeScoreViewProps {
   score: TimeScorePayload;
@@ -55,6 +63,23 @@ export interface TimeScoreViewProps {
    * spans are held by the page, not worked out here, so the reader can clear or change any of them.
    */
   ottavas?: readonly OttavaAnnotation[];
+  /**
+   * Notes the reader took off the page and notes they sent to the other staff.
+   *
+   * Folded into a copy of the matrix here, one step before it is drawn. Neither is an edit: the
+   * recording still says a key went down, and dropping the pair restores the note exactly, because
+   * nothing was ever taken away from the score this view was handed.
+   */
+  renderOverrides?: RenderOverrides;
+  /**
+   * Which finger plays each note, keyed `hand:startFrame:row` by the staff the note is drawn on.
+   *
+   * Several notes of one chord each carry their own, and the drawing package stacks them over the
+   * chord in the order of the noteheads, which is how fingering is printed.
+   */
+  fingers?: Readonly<Record<string, FingerNumber>>;
+  /** Told when a move could not be made because the far staff already holds that key. */
+  onMovesRefused?: (refused: readonly NoteRef[]) => void;
   /**
    * The brackets this score would ask for, reported once the music has been read.
    *
@@ -157,6 +182,9 @@ export function TimeScoreView({
   keyChanges,
   ottavas,
   onOttavaSuggestion,
+  renderOverrides = NO_RENDER_OVERRIDES,
+  fingers,
+  onMovesRefused,
   selectedRange,
   clearSelectionsAt,
   onKeySuggestion,
@@ -182,14 +210,41 @@ export function TimeScoreView({
   const renderer = useRef<GridNotationRenderer | null>(null);
   const system = useRef<number | null>(null);
 
+  // The page edits, folded into a copy of the matrix. Memoised because it walks every cell and the
+  // playhead effect below runs sixty times a second.
+  const drawnMatrix = useMemo(
+    () =>
+      applyRenderOverrides(
+        score.envelope.rMatrix as SparseMatrix,
+        score.envelope.lMatrix as SparseMatrix,
+        renderOverrides,
+      ),
+    [score.envelope.rMatrix, score.envelope.lMatrix, renderOverrides],
+  );
+
+  useEffect(() => {
+    if (drawnMatrix.refused.length > 0) onMovesRefused?.(drawnMatrix.refused);
+  }, [drawnMatrix, onMovesRefused]);
+
   useEffect(() => {
     const container = host.current;
     if (!container) return;
     container.replaceChildren();
 
+    // Where each note is actually drawn. A note the reader sent to the other staff takes its figure
+    // and its tuplet mark with it, or the page would print the glyph on one staff and name it on
+    // the other. Notes that are off the page name nothing.
+    const staffOf = (note: { hand: string; startFrame: number; row: number }): string | null =>
+      drawnMatrix.handOf.get(`${note.startFrame}:${note.row}`) ?? null;
+
     const figures = new Map<string, string>();
     for (const note of score.notes) {
-      figures.set(`${note.hand}:${note.startFrame}`, VEXFLOW_FIGURE[note.figure]);
+      const staff = staffOf(note);
+      if (!staff) continue;
+      // First one wins. A moved note joining a chord that is already on the far staff reads as part
+      // of that chord, and a chord has one figure.
+      const key = `${staff}:${note.startFrame}`;
+      if (!figures.has(key)) figures.set(key, VEXFLOW_FIGURE[note.figure]);
     }
     for (const [key, figure] of Object.entries(overrides ?? {})) {
       figures.set(key, VEXFLOW_FIGURE[figure]);
@@ -200,10 +255,29 @@ export function TimeScoreView({
     // rest. Without the mark a reader would play them as written and be wrong.
     const tuplets = new Map<string, { count: number; id: number }>();
     for (const note of score.notes) {
+      const staff = staffOf(note);
+      if (!staff) continue;
       if (note.tuplet && note.tupletId !== null && note.tupletId !== undefined) {
-        tuplets.set(`${note.hand}:${note.startFrame}`, { count: note.tuplet, id: note.tupletId });
+        tuplets.set(`${staff}:${note.startFrame}`, { count: note.tuplet, id: note.tupletId });
       }
     }
+
+    // One annotation per numbered notehead. They are grouped by hand and onset when they are drawn,
+    // so a chord's numbers come out as one column without being asked to.
+    const fingerAnnotations: FingerAnnotation[] = Object.entries(fingers ?? {}).map(
+      ([noteKey, finger]) => {
+        const [staff, startFrame, row] = noteKey.split(":");
+        const column = Number(startFrame);
+        return {
+          anchor: {
+            hand: staff === "left" ? "left" : "right",
+            columns: { fromColumn: column, toColumn: column + 1 },
+            rows: [Number(row)],
+          },
+          finger,
+        };
+      },
+    );
 
     const drawn = new GridNotationRenderer(container, {
       frameCount: score.envelope.frameCount,
@@ -222,6 +296,7 @@ export function TimeScoreView({
         keyChanges: [...(keyChanges ?? [])],
         // Octave brackets, which take a passage out of the ledger lines and into the staff.
         ottavas: [...(ottavas ?? [])],
+        fingers: fingerAnnotations,
       },
       staves: score.layout.hideLeftHand || score.layout.hideRightHand ? "single" : "grand",
       // The two wall-clock levels above the column. A dashed line every `frameMeasure` columns
@@ -244,8 +319,8 @@ export function TimeScoreView({
         // no longer has anywhere to put.
         frameMs: score.envelope.frameMs,
         matrixProcessingStep: "two-hands",
-        rMatrix: score.envelope.rMatrix as SparseMatrix,
-        lMatrix: score.envelope.lMatrix as SparseMatrix,
+        rMatrix: drawnMatrix.rMatrix,
+        lMatrix: drawnMatrix.lMatrix,
       },
       printedFigureFor: (hand: string, onsetFrame: number) =>
         figures.get(`${hand}:${onsetFrame}`) as never,
@@ -315,6 +390,8 @@ export function TimeScoreView({
     score,
     overrides,
     beamBreaks,
+    drawnMatrix,
+    fingers,
     keySignature,
     keyChanges,
     ottavas,
