@@ -170,6 +170,9 @@ export function TimeScoreView({
       // unit a passage is drawn in. Neither means anything musical.
       frameGroup: score.layout.frameGroup,
       frameMeasure: score.layout.frameMeasure,
+      // The room the empty columns of one group share. Silence is charged per group and not per
+      // column, so a stretch of long notes stays compact instead of spreading across the page.
+      silenceGroupPx: score.layout.silenceGroupPx,
       // What each passage prints above the staff where it starts, in place of a tempo mark.
       passageHeaders: score.passages.map((passage) => ({
         startFrame: passage.startFrame,
@@ -289,7 +292,17 @@ export function TimeScoreView({
 
   return (
     <Box sx={{ width: "100%", overflowX: "auto" }}>
-      <Box sx={{ position: "relative", display: "inline-block", minWidth: "100%" }}>
+      <Box
+        sx={{
+          position: "relative",
+          display: "inline-block",
+          minWidth: "100%",
+          // The sheet is a drawing. Without this, shift-clicking a second group of columns makes
+          // the browser select everything between the two clicks and paint it in the highlight
+          // colour, which looks like an error until the next click clears it.
+          userSelect: "none",
+        }}
+      >
         <Box ref={host} />
         <Box
           ref={playhead}
