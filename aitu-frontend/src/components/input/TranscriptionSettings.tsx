@@ -1,16 +1,16 @@
 /**
- * BPM, granularity, and the Run button that starts the pipeline.
+ * How finely to measure the piece, which model to use, and the Run button.
  *
- * Two things worth knowing about the numbers here:
+ * There is one number to choose here and it is a length of time. A matrix column is a slice of wall
+ * clock, so the question is how fine that slice should be, and the answer decides how precisely the
+ * page follows the recording. It does not decide what any note is called: the rhythmic figures are
+ * chosen afterwards, on the Rhythm step, from the playing itself.
  *
- * **BPM is the single most sensitive input.** The engine's timings are snapped
- * onto a grid derived from it, so a piece played at 63 BPM and declared as 60
- * drifts a whole column every twenty beats. The doc's General Note says as much;
- * the helper text says it to the user.
- *
- * **The granularity you pick is not the one that gets transcribed.** The raw
- * matrix is always built at fusa and then collapsed, which is why changing this
- * later is instant — it re-collapses rather than re-transcribing.
+ * The tempo used to be asked for here, and it was the most damaging field in the app. The engine's
+ * timings were snapped onto a grid derived from it, so a piece played at 63 and declared as 60
+ * drifted a whole column every twenty beats, and the printed figures described the mistake rather
+ * than the music. Nothing is derived from a tempo any more, so the field, and the calculator that
+ * helped guess it, are gone.
  */
 
 import { useEffect, useState } from "react";
@@ -23,13 +23,13 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import { useNavigate } from "react-router-dom";
-import { matrixApi, type AudioItem, type Granularity } from "../../api";
+import { matrixApi, type AudioItem } from "../../api";
 import ProgressBanner from "../ProgressBanner";
 import { useProgress } from "../../hooks/useProgress";
 import { ROUTES } from "../../layout/routes";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 import { formatTime } from "../../audio/time";
-import { TRANSCRIPTION_GRANULARITIES } from "../../music/granularities";
+import { FRAME_MS_CHOICES } from "../../music/granularities";
 
 export interface TranscriptionSettingsProps {
   /** Disabled when no audio is loaded. */
@@ -72,11 +72,11 @@ export function TranscriptionSettings({
     return () => controller.abort();
   }, []);
 
-  // The pipeline writes its artifacts under the audio uuid, so that is the
-  // handoff: the Matrix tab reads them straight back.
+  // Transcribing stores the recorded notes under the audio uuid, and Rhythm is
+  // what reads them: naming a gap is the next thing a person does.
   useEffect(() => {
     if (progress.status === "done" && audioUuid) {
-      navigate(ROUTES.playgroundMatrix);
+      navigate(ROUTES.playgroundRhythm);
     }
   }, [progress.status, audioUuid, navigate]);
 
@@ -88,11 +88,9 @@ export function TranscriptionSettings({
     try {
       const handle = await matrixApi.transcribe({
         audioUuid,
-        tempoBpm: artifact.tempoBpm,
-        granularity: artifact.granularity,
+        frameMs: artifact.frameMs,
         engine: engine || undefined,
-        // Clicking Run means a fresh transcription of this exact physical
-        // audio. Recompute remains available later for BPM/resolution changes.
+        // Clicking Run means a fresh transcription of this exact physical audio.
         force: true,
       });
       setJobId(handle.jobId);
@@ -103,7 +101,8 @@ export function TranscriptionSettings({
     }
   };
 
-  const noEngine = engines !== null && !Object.entries(engines).some(([n, r]) => r && n !== "silent");
+  const noEngine =
+    engines !== null && !Object.entries(engines).some(([name, ready]) => ready && name !== "silent");
 
   return (
     <Stack spacing={2}>
@@ -118,26 +117,15 @@ export function TranscriptionSettings({
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
         <TextField
-          label="BPM"
-          type="number"
-          size="small"
-          value={artifact.tempoBpm}
-          onChange={(event) => update({ tempoBpm: Number(event.target.value) || 60 })}
-          slotProps={{ htmlInput: { min: 20, max: 300, step: 1 } }}
-          sx={{ width: 120 }}
-          helperText="The tempo you played at"
-        />
-
-        <TextField
-          label="Temporal resolution"
+          label="Time resolution"
           select
           size="small"
-          value={artifact.granularity}
-          onChange={(event) => update({ granularity: event.target.value as Granularity })}
-          sx={{ minWidth: 220 }}
-          helperText="Changeable later without re-transcribing"
+          value={artifact.frameMs}
+          onChange={(event) => update({ frameMs: Number(event.target.value) })}
+          sx={{ minWidth: 260 }}
+          helperText="How finely the page follows the recording"
         >
-          {TRANSCRIPTION_GRANULARITIES.map((option) => (
+          {FRAME_MS_CHOICES.map((option) => (
             <MenuItem key={option.value} value={option.value}>
               {option.label}
             </MenuItem>
@@ -152,6 +140,7 @@ export function TranscriptionSettings({
             value={engine}
             onChange={(event) => setEngine(event.target.value)}
             sx={{ minWidth: 170 }}
+            helperText="Which model listens to the audio"
           >
             {Object.entries(engines).map(([name, ready]) => (
               <MenuItem key={name} value={name} disabled={!ready}>
@@ -166,10 +155,10 @@ export function TranscriptionSettings({
       <Typography variant="body2" color="text.secondary">
         {audio?.sourceTimeRange ? (
           <>
-            Transcribing the complete saved segment ({formatTime(audio.durationSeconds ?? 0)}).
-            It maps to original-audio time{" "}
+            Transcribing the complete saved segment ({formatTime(audio.durationSeconds ?? 0)}). It
+            maps to original-audio time{" "}
             <strong style={{ whiteSpace: "nowrap" }}>
-              {formatTime(audio.sourceTimeRange.startSeconds)}–{" "}
+              {formatTime(audio.sourceTimeRange.startSeconds)}–
               {formatTime(audio.sourceTimeRange.endSeconds)}
             </strong>
             .
@@ -181,8 +170,8 @@ export function TranscriptionSettings({
 
       {requiresSegmentCreation ? (
         <Alert severity="warning">
-          Create the selected segment first. Transcription always runs against the exact audio
-          shown in the waveform.
+          Create the selected segment first. Transcription always runs against the exact audio shown
+          in the waveform.
         </Alert>
       ) : null}
 
@@ -192,10 +181,7 @@ export function TranscriptionSettings({
           startIcon={starting ? <CircularProgress size={16} /> : <PlayArrowIcon />}
           onClick={() => void run()}
           disabled={
-            !audioUuid ||
-            requiresSegmentCreation ||
-            starting ||
-            progress.status === "running"
+            !audioUuid || requiresSegmentCreation || starting || progress.status === "running"
           }
         >
           Run transcription

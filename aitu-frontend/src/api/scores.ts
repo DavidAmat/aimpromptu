@@ -5,8 +5,8 @@ import { request } from "./client";
 
 export interface SequenceRequest {
   sequence: string[];
-  tempoBpm: number;
-  timeStepSeconds: number;
+  /** How long one written frame lasts, in milliseconds. Defaults to 40. */
+  frameMs?: number;
   title?: string;
   lyrics?: string[];
   keySignature?: string;

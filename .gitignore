@@ -112,3 +112,10 @@ aitu-frontend/yarn-debug.log*
 aitu-frontend/yarn-error.log*
 aitu-frontend/pnpm-debug.log*
 aitu-frontend/lerna-debug.log*
+
+# Local dev server pids and logs (`make serve`).
+.run/
+
+# Scratch: retired files and transfer archives. Never committed.
+_to_delete/
+**/_to_delete/

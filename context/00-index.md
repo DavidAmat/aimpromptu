@@ -41,6 +41,24 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 | [implementations/plan/system-prompt-workers.md](implementations/plan/system-prompt-workers.md) | System prompt for worker LLMs implementing tasks |
 | `implementations/plan/epic-NN-*/` | 14 epic folders, each with an `epic-<shortname>-index.md`, story folders and task files |
 | [implementations/progress/README.md](implementations/progress/README.md) | Progress journal written by workers, one report per task |
+| [implementations/progress/2026-08-02-transcription-accuracy-session.md](implementations/progress/2026-08-02-transcription-accuracy-session.md) | Session: raw falling view, artifact filter, isochrony, Transkun, tempo-map groundwork |
+
+### Time-based concept refactor (`context/implementations/time-based-concept/`)
+
+Wall-clock matrix columns and figure-as-label rendering. Spans **two repos** (`aimpromptu` and `vexflow-v2`); all progress is tracked here.
+
+| File | Description |
+|------|-------------|
+| [implementations/time-based-concept/README.md](implementations/time-based-concept/README.md) | Navigation + the cross-repo reporting rule |
+| [implementations/time-based-concept/PRD.md](implementations/time-based-concept/PRD.md) | Why, what changes, what is out of scope, success criteria |
+| [implementations/time-based-concept/decisions.md](implementations/time-based-concept/decisions.md) | D-01…D-31, the frozen decisions every task cites |
+| [implementations/time-based-concept/contract.md](implementations/time-based-concept/contract.md) | Backend ↔ `@aimpromptu/grid-notation` data contract |
+| [implementations/time-based-concept/plan.md](implementations/time-based-concept/plan.md) | Phases 0–8 with tasks and dependencies |
+| [implementations/time-based-concept/checklist.md](implementations/time-based-concept/checklist.md) | THE status lookup for this refactor |
+| [implementations/time-based-concept/system-prompt-worker.md](implementations/time-based-concept/system-prompt-worker.md) | Template system prompt for worker agents on this refactor |
+| [implementations/time-based-concept/progress/README.md](implementations/time-based-concept/progress/README.md) | Where task reports go, including `vexflow-v2` work |
+| [implementations/time-based-concept/progress/issues.md](implementations/time-based-concept/progress/issues.md) | Append-only log of anything that contradicts a frozen decision; a worker who writes here stops |
+| [implementations/time-based-concept/user-reviews.md](implementations/time-based-concept/user-reviews.md) | What to open and click in the browser to try each group of tasks |
 
 ## Backend overview (`context/backend/`)
 
@@ -60,6 +78,16 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 | [frontend/compose-panel.md](frontend/compose-panel.md) | SequenceComposer (POST /sequence) |
 | [frontend/rendering-pipeline.md](frontend/rendering-pipeline.md) | matrixToNotation + PianoSheet (VexFlow) |
 | [frontend/timestamps.md](frontend/timestamps.md) | UI rule: `mm:ss.cc`, frame labelled by start only, never wraps |
+
+## Music (`context/music/`)
+
+| File | Description |
+|------|-------------|
+| [music/notation-logic/01-matrix-notation-logic.md](music/notation-logic/01-matrix-notation-logic.md) | The piano matrix: appendices incl. B (sustains) and C (duration approximation) |
+| [music/notation-logic/02-notation-spec.md](music/notation-logic/02-notation-spec.md) | The notation contract |
+| [music/notation-logic/03-editing-logic.md](music/notation-logic/03-editing-logic.md) | Editing rules over the matrix |
+| [music/transcription-quality.md](music/transcription-quality.md) | The four layers between audio and a printed figure, and what each gets wrong |
+| [music/piano_svg/01-piano-svg.md](music/piano_svg/01-piano-svg.md) | The 88-key SVG keyboard |
 
 ## Shared (`context/shared/`)
 
@@ -102,6 +130,8 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 | [../documentation/services/backend/schemas.md](../documentation/services/backend/schemas.md) | SparseMatrix, MatrixScore, SequenceRequest (camelCase JSON) |
 | [../documentation/services/backend/sequence-logic.md](../documentation/services/backend/sequence-logic.md) | sequence.py: parsing, onset normalization, COO builder |
 | [../documentation/services/backend/paths-and-data.md](../documentation/services/backend/paths-and-data.md) | paths.py + data/example-scores.json |
+| [../documentation/services/backend/transcription-pipeline.md](../documentation/services/backend/transcription-pipeline.md) | audio → hands: order, artifact/leakage/isochrony parameters, engines, /events and /runs |
+| [../documentation/services/backend/time-matrix.md](../documentation/services/backend/time-matrix.md) | Schema 2.0 field reference: frameMs columns, the figure ladder, passages (stub, filled in per phase) |
 
 ### Frontend detail (`documentation/services/frontend/`)
 
@@ -117,6 +147,8 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 | File | Description |
 |------|-------------|
 | [../documentation/issues/README.md](../documentation/issues/README.md) | Troubleshooting runbooks |
+| [../documentation/issues/piano-matrix-sustains-and-phantom-onsets.md](../documentation/issues/piano-matrix-sustains-and-phantom-onsets.md) | Held chords printing short; chords with a note too many |
+| [../documentation/issues/rhythm-figures-and-tempo.md](../documentation/issues/rhythm-figures-and-tempo.md) | An evenly played passage printing as mixed corcheas/semicorcheas |
 | [../documentation/implementations/README.md](../documentation/implementations/README.md) | Stable topic-based how-tos |
 | [../documentation/deprecated/README.md](../documentation/deprecated/README.md) | Superseded or removed features (banner required) |
 | [../documentation/archive/README.md](../documentation/archive/README.md) | Historical reference |

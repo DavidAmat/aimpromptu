@@ -225,7 +225,8 @@ If you want, I can add a small “beat = negra” terminology table to `context/
 
 # APPENDIX B: Sustained notes until some other note starts an onset
 
-In order to simplify things, since our main goal is to produce neat piano sheets, we will adopt the following rules to avoid long-sounding notes to occupy a lot of space in the piano sheet indicating it keeps sounding.
+In order to simplify things, since our main goal is to produce neat piano sheets, we will adopt
+the following rules to avoid long-sounding notes occupying a lot of space in the piano sheet.
 
 The author that will play the song in piano will need to know this sustained period of the note whenever new notes start to sound after it, meanwhile that note is still sounding.
 
@@ -258,7 +259,55 @@ C3, C4 -> chord onset at 00:00 (duration 10 seconds)
 C3 -> onset at 00:01 (10 seconds) 
 ```
 
-In this case we will treat C3,C4 chord as a 1 second duration chord and C3 as a new onset of 10 seconds duration (as long as no other new note is played)
+In this case we will treat C3,C4 chord as a 1 second duration chord and C3 as a new onset of 10 seconds duration (as long as no other new note is played).
+
+## Amendment (2026-08-01): the rule is per hand, and runs after the split
+
+"Another note" above means **another note of the same hand**. The rule exists because
+one hand's fingers run out, so a key the *other* hand is playing is not an answer to
+the question it asks.
+
+For a while the pipeline applied it to the whole keyboard before splitting the hands,
+which is the same rule with the wrong scope. In `When I Was Your Man` the left hand
+holds a C2/C3 octave under a right-hand Do-Mi / Sol / Do-Mi / Sol figure; the right
+hand's Sol, an eighth later, cut the octave from twelve columns to two, so the printed
+left hand was staccato where the recording holds. The order is now:
+
+```text
+raw -> collapse -> split hands -> clean each hand, independently
+```
+
+The split still *decides* from a whole-keyboard clean — the beam's ergonomic cost model
+reads a hand as pinned for as long as its keys sound, and it was tuned against those
+shorter sustains — and then applies that decision to the uncleaned matrix. Cleaning
+never adds, moves or removes an onset, so the decision transfers exactly.
+
+Nothing about the rule itself changed. Within one hand, every example above still holds
+verbatim, including the C3/C4 chord being cut to one second by the D3 that follows it —
+provided the same hand plays them.
+
+## Score-rendering rule: rests and chord duration
+
+The rendered score is onset-led. These rules affect notation only; they do not rewrite the matrix:
+
+1. A rest is allowed before the first onset of a measure. This supports delayed entrances and
+   keeps the two hands aligned.
+2. After a note or chord has entered, no visible rest may appear before the next onset in the same
+   measure. The preceding event is treated as sustained up to that next onset.
+3. Notes struck together are one chord and share one duration. If the matrix releases some chord
+   members earlier than others, the score keeps the entire chord sounding until the next onset.
+4. The last note/chord is first expanded toward the closing barline using one legal figure. For
+   example, seven corcheas in a 4/4 measure make the final note a negra, filling the missing
+   corchea without a rest.
+5. If the final onset-to-barline span cannot be expressed by one legal figure, use the largest
+   legal figure and a visible trailing rest only for the small remainder.
+6. If an *interior* onset-to-onset span has a mathematically unwritable remainder, preserve its
+   timing with an invisible spacer. Never draw a middle rest or repeat/tie the same note inside the
+   measure.
+7. Ties are never emitted. If an onset-to-onset span crosses a barline, the first event fills to
+   that barline and any time before the next onset is a leading rest in the following measure.
+
+This deliberately favours a light, playable page over reproducing every recorded key release.
 
 
 # APPENDIX C: Approximating note duration to matricial columns

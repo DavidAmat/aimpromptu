@@ -10,6 +10,7 @@ from aitu_backend.audio import formats, ingest, store
 from aitu_backend.audio.formats import ConversionFailed, FfmpegMissing, UnsupportedFormat
 from aitu_backend.audio.store import AudioNotFound
 from aitu_backend.schemas.metadata import AudioMetadata, AudioSource
+from aitu_backend.transcription import pipeline
 
 router = APIRouter(prefix="/audio", tags=["audio"])
 
@@ -59,17 +60,42 @@ def _found(audio_uuid: str) -> None:
         raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
 
 
-@router.get("/", response_model=list[AudioMetadata], response_model_by_alias=True)
-def list_audio() -> list[AudioMetadata]:
+class AudioEntry(AudioMetadata):
+    """One stored audio, plus what the app can currently do with it.
+
+    The two extra fields are computed rather than stored. A screen that lists
+    pieces has to say which of them can be drawn, and asking per row would be one
+    request per piece; and a stored flag would be one more thing that can go out
+    of step with the folder it describes.
+    """
+
+    #: True once the engine has run and the recorded notes are on disk. Without
+    #: them there is no rhythm to measure and no sheet to write.
+    has_notes: bool = Field(False, alias="hasNotes")
+    #: Set for a piece the migration could not carry over, in words meant for a
+    #: reader. `None` for every piece that is fine. See P4.5.
+    needs_rederivation: str | None = Field(None, alias="needsRederivation")
+
+
+def _entry(metadata: AudioMetadata) -> AudioEntry:
+    return AudioEntry(
+        **metadata.model_dump(by_alias=True),
+        hasNotes=pipeline.has_events(metadata.uuid),
+        needsRederivation=pipeline.needs_rederivation(metadata.uuid),
+    )
+
+
+@router.get("/", response_model=list[AudioEntry], response_model_by_alias=True)
+def list_audio() -> list[AudioEntry]:
     """Every audio in the store, newest first. Powers "load from library"."""
-    return [entry.metadata for entry in store.list_all()]
+    return [_entry(entry.metadata) for entry in store.list_all()]
 
 
-@router.get("/{audio_uuid}", response_model=AudioMetadata, response_model_by_alias=True)
-def get_audio(audio_uuid: str) -> AudioMetadata:
-    """Metadata of one stored audio."""
+@router.get("/{audio_uuid}", response_model=AudioEntry, response_model_by_alias=True)
+def get_audio(audio_uuid: str) -> AudioEntry:
+    """Metadata of one stored audio, and whether it can be drawn."""
     try:
-        return store.read_metadata(audio_uuid)
+        return _entry(store.read_metadata(audio_uuid))
     except AudioNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

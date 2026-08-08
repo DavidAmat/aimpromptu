@@ -7,7 +7,7 @@
 
 import Box from "@mui/material/Box";
 import { LEVEL_HISTORY } from "../../audio/useRecorder";
-import { grays, semantic } from "../../ui";
+import { semantic, surface } from "../../ui";
 
 export interface LiveLevelBarsProps {
   /** Levels in 0..1, oldest first. */
@@ -49,7 +49,7 @@ export function LiveLevelBars({ levels, active = true, height = 72 }: LiveLevelB
           y1={height / 2}
           x2="100"
           y2={height / 2}
-          stroke={grays.slate}
+          stroke={surface.strongLine}
           strokeWidth="0.5"
         />
         {levels.map((level, index) => {

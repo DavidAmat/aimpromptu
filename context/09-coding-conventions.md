@@ -36,7 +36,8 @@ ignoring E501/E203/W503), **mypy** (pydantic plugin, permissive on missing impor
 | ESLint | Flat config in `eslint.config.js`: recommended JS, typescript-eslint recommended, react-hooks recommended, react-refresh vite preset |
 | Ignores | `dist/` globally ignored by ESLint |
 | Components | Functional components + hooks; no class components. **MUI** is the component library; layout props go in `sx` (MUI v9 dropped them as direct props) |
-| Colors | Only from `src/ui/palette.ts` — no hex literal in a component or stylesheet |
+| Colors | Only from `src/ui/palette.ts` — no hex literal in a component or stylesheet. Anything that reads *against the page* (backgrounds, rules, label text) comes from `surface`, never a raw `grays.*`: that is what stopped views silently assuming a dark ground |
+| Color scheme | The app is **light, always**. `mode: "light"`, plus `color-scheme: light` in `index.css` and a matching `<meta>` in `index.html`, so a dark OS or browser cannot re-tint it. No `prefers-color-scheme` branch anywhere |
 | Requests | Only through `src/api/` (one module per backend router); no `fetch` in a component |
 | Routes | Only from `src/layout/routes.ts`; no URL literal in a component |
 | Music logic | Isolated under `src/music/` (`types`, `notes`, `matrixToNotation`); `types.ts` mirrors the backend `schemas/` and must stay in step with it |

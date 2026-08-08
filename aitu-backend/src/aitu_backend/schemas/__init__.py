@@ -40,8 +40,8 @@ from aitu_backend.schemas.metadata import (
     VersionMetadata,
 )
 from aitu_backend.schemas.naming import (
-    granularity_code,
-    granularity_from_code,
+    frame_code,
+    frame_from_code,
     matrix_filename,
     next_version,
     parse_version_folder,
@@ -49,6 +49,22 @@ from aitu_backend.schemas.naming import (
     version_folder,
 )
 from aitu_backend.schemas.score import MatrixScore, SequenceRequest, SparseMatrix
+from aitu_backend.schemas.time_matrix import (
+    DEFAULT_FRAME_MS,
+    FIGURE_NEGRAS,
+    MAX_PRINTED_FIGURE,
+    FigureLadder,
+    FigureName,
+    BeamBreak,
+    FigureOverride,
+    LayoutHints,
+    Passage,
+    PrintedHand,
+    PrintedNote,
+    TimeMatrixEnvelope,
+    TimeMatrixProcessingStep,
+    TimeScorePayload,
+)
 
 __all__ = [
     "Annotations",
@@ -70,8 +86,8 @@ __all__ = [
     "TrackMetadata",
     "VersionHistoryEntry",
     "VersionMetadata",
-    "granularity_code",
-    "granularity_from_code",
+    "frame_code",
+    "frame_from_code",
     "matrix_filename",
     "next_version",
     "parse_version_folder",
@@ -91,4 +107,18 @@ __all__ = [
     "SparseCooMatrix",
     "SparseMatrix",
     "key_labels",
+    "DEFAULT_FRAME_MS",
+    "FIGURE_NEGRAS",
+    "MAX_PRINTED_FIGURE",
+    "FigureLadder",
+    "FigureName",
+    "BeamBreak",
+    "FigureOverride",
+    "LayoutHints",
+    "Passage",
+    "PrintedHand",
+    "PrintedNote",
+    "TimeMatrixEnvelope",
+    "TimeMatrixProcessingStep",
+    "TimeScorePayload",
 ]

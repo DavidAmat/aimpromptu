@@ -22,8 +22,14 @@ export type SparseMatrix = {
 
 export type MatrixScore = {
   title?: string;
-  tempoBpm: number;
-  timeStepSeconds: number;
+  /**
+   * How long one written frame lasts, in milliseconds. The only timing the
+   * portable format carries. It replaced a `tempoBpm` and a `timeStepSeconds`
+   * that said the same thing twice: a frame used to be a note figure whose
+   * length came from a tempo, so the same text meant different music depending
+   * on a number stored beside it.
+   */
+  frameMs: number;
   /**
    * Optional row-index -> note-name table. The 88-key order is canonical and
    * rebuilt by the frontend, so the backend no longer ships it.
@@ -42,7 +48,7 @@ export type MatrixScore = {
   l_matrix?: SparseMatrix;
   /** One entry per matrix time step. Empty string means no lyric. */
   lyrics?: string[];
-  /** VexFlow key signature spec, e.g. "C", "G", "Bb". Omitted = no key sig. */
+  /** Key signature spec, e.g. "C", "G", "Bb". Omitted = no key sig. */
   keySignature?: string;
 };
 
@@ -117,6 +123,10 @@ export type KeyLabel = {
  * is N x 88 (row = time frame, col = key), which is what `columnHeaders`
  * (88 key labels) and `rowTimestamps` (N frame times) describe and what the
  * Matrix tab renders.
+ *
+ * This is also, unchanged, what `@aimpromptu/grid-notation` reads: the renderer
+ * takes the pipeline's own envelope rather than an engraved score, which is why
+ * there is no score model in this app to keep in step with the matrix.
  */
 export type PianoMatrixEnvelope = {
   tempoBpm: number;
@@ -147,25 +157,35 @@ export const ONSET = 1;
 export const SUSTAIN = -1;
 export const SILENCE = 0;
 
-/** One merged note (a run of consecutive active cells in the same row). */
-export type NoteEvent = {
-  /** Custom note name, e.g. "Do-3", "Fa#-5". */
-  note: string;
-  /** VexFlow key with accidental baked into the pitch, e.g. "c/3", "f#/5". */
-  vexKey: string;
-  startStep: number;
-  durationSteps: number;
-};
+/** One character per onset in the compact hand map: left or right. */
+export type HandChar = "l" | "r";
 
-/** A renderable slot: a chord (>=1 key) or a rest, with a VexFlow duration. */
-export type VexPiece = {
-  /** VexFlow keys with accidentals baked in, e.g. ["c/3", "f#/5"]. Empty for a rest. */
-  keys: string[];
-  /** VexFlow base duration token: "w" | "h" | "q" | "8" | "16". */
-  duration: string;
-  /** Augmentation dots (0 or 1) — a dotted note is 1.5× its base length. */
-  dots: number;
-  isRest: boolean;
-  /** Matrix step where this piece starts; used to look up a lyric. */
-  startStep: number;
+/**
+ * Which hand plays each onset — mirrors the backend `HandAssignments`.
+ *
+ * `handMap` is one character per onset in the matrix's canonical (column, row)
+ * order, which is exactly the order the sparse COO payload lists its onsets in.
+ * Sustains carry no character: a note is played by one hand from strike to
+ * release, so they inherit their onset's hand. See `handMap.ts` for the reader.
+ *
+ * Computed once when the clean matrix is produced, not per render, so the
+ * notation, piano-roll and falling-note views cannot disagree about who plays
+ * what. Check `onsetCount` / `frameCount` / `granularity` against the matrix in
+ * hand before trusting it — a mismatch means the matrix changed after the split.
+ */
+export type HandAssignments = {
+  schemaVersion: string;
+  /** "beam" | "greedy" | "exact" | "threshold" — which method produced this. */
+  method: string;
+  /** e.g. "rrlrlllrr". */
+  handMap: string;
+  onsetCount: number;
+  granularity: Granularity;
+  frameCount: number;
+  /** Onsets whose decision margin was thin. A review hint, not an error count. */
+  ambiguousOnsets: number;
+  /** Groups no two hands could play. Non-zero means the transcription is off. */
+  infeasibleGroups: number;
+  warnings: string[];
+  computedAt: string;
 };

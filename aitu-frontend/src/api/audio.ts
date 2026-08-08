@@ -26,6 +26,14 @@ export interface AudioItem {
   sourceAudioUuid?: string | null;
   sourceTimeRange?: AudioTimeRange | null;
   createdAt: string;
+  /** True once the engine has run and the recorded notes are on disk. */
+  hasNotes?: boolean;
+  /**
+   * Why this piece cannot be drawn, in words meant to be shown as they are.
+   * Set by the migration for a piece with no recorded notes behind it; `null`
+   * for every piece that is fine.
+   */
+  needsRederivation?: string | null;
 }
 
 /** Min/max peak pairs, one per bucket — computed backend-side. */

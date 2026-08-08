@@ -1,0 +1,223 @@
+{
+  "annotations": {
+    "fingers": [],
+    "keyChanges": [],
+    "lyrics": [],
+    "passages": []
+  },
+  "artifactId": "golden-hands",
+  "beatGuides": [
+    {
+      "beat": 0,
+      "column": 0,
+      "isMeasureStart": true,
+      "measure": 0,
+      "timeSeconds": 0.0
+    },
+    {
+      "beat": 1,
+      "column": 1,
+      "isMeasureStart": false,
+      "measure": 0,
+      "timeSeconds": 1.0
+    },
+    {
+      "beat": 2,
+      "column": 2,
+      "isMeasureStart": false,
+      "measure": 0,
+      "timeSeconds": 2.0
+    },
+    {
+      "beat": 3,
+      "column": 3,
+      "isMeasureStart": false,
+      "measure": 0,
+      "timeSeconds": 3.0
+    }
+  ],
+  "columnsPerMeasure": 4,
+  "frameCount": 4,
+  "granularity": "negra",
+  "hands": [
+    {
+      "clef": "treble",
+      "clefChanges": [],
+      "hand": "right",
+      "measures": [
+        {
+          "accidentalCount": 0,
+          "clef": null,
+          "endColumn": 4,
+          "entries": [
+            {
+              "accidentals": [
+                null
+              ],
+              "beamGroup": null,
+              "columns": 1,
+              "cue": false,
+              "dots": 0,
+              "duration": "q",
+              "fingers": [
+                null
+              ],
+              "isRest": false,
+              "isSpacer": false,
+              "keys": [
+                "c/5"
+              ],
+              "lyric": null,
+              "octaveShift": 0,
+              "startColumn": 0,
+              "stemDirection": "down",
+              "tieToNext": false
+            },
+            {
+              "accidentals": [
+                null
+              ],
+              "beamGroup": null,
+              "columns": 1,
+              "cue": false,
+              "dots": 0,
+              "duration": "q",
+              "fingers": [
+                null
+              ],
+              "isRest": false,
+              "isSpacer": false,
+              "keys": [
+                "e/5"
+              ],
+              "lyric": null,
+              "octaveShift": 0,
+              "startColumn": 1,
+              "stemDirection": "down",
+              "tieToNext": false
+            },
+            {
+              "accidentals": [
+                null
+              ],
+              "beamGroup": null,
+              "columns": 2,
+              "cue": false,
+              "dots": 0,
+              "duration": "h",
+              "fingers": [
+                null
+              ],
+              "isRest": false,
+              "isSpacer": false,
+              "keys": [
+                "g/5"
+              ],
+              "lyric": null,
+              "octaveShift": 0,
+              "startColumn": 2,
+              "stemDirection": "down",
+              "tieToNext": false
+            }
+          ],
+          "index": 0,
+          "keySignature": "C",
+          "startColumn": 0,
+          "suggestedKeySignature": "C"
+        }
+      ],
+      "ottavas": []
+    },
+    {
+      "clef": "bass",
+      "clefChanges": [],
+      "hand": "left",
+      "measures": [
+        {
+          "accidentalCount": 0,
+          "clef": null,
+          "endColumn": 4,
+          "entries": [
+            {
+              "accidentals": [
+                null
+              ],
+              "beamGroup": null,
+              "columns": 2,
+              "cue": false,
+              "dots": 0,
+              "duration": "h",
+              "fingers": [
+                null
+              ],
+              "isRest": false,
+              "isSpacer": false,
+              "keys": [
+                "c/3"
+              ],
+              "lyric": null,
+              "octaveShift": 0,
+              "startColumn": 0,
+              "stemDirection": "up",
+              "tieToNext": false
+            },
+            {
+              "accidentals": [
+                null
+              ],
+              "beamGroup": null,
+              "columns": 2,
+              "cue": false,
+              "dots": 0,
+              "duration": "h",
+              "fingers": [
+                null
+              ],
+              "isRest": false,
+              "isSpacer": false,
+              "keys": [
+                "g/3"
+              ],
+              "lyric": null,
+              "octaveShift": 0,
+              "startColumn": 2,
+              "stemDirection": "down",
+              "tieToNext": false
+            }
+          ],
+          "index": 0,
+          "keySignature": "C",
+          "startColumn": 0,
+          "suggestedKeySignature": "C"
+        }
+      ],
+      "ottavas": []
+    }
+  ],
+  "keySignature": "C",
+  "measureCount": 1,
+  "settings": {
+    "keySignature": "C",
+    "octaveThresholds": {
+      "leftOttavaDown": "Do-2",
+      "leftOttavaDownDouble": "Do-1",
+      "leftTrebleFrom": "Do-4",
+      "rightOttavaUp": "Do-6",
+      "rightOttavaUpDouble": "Do-7"
+    },
+    "timeSignature": {
+      "beatValue": 4,
+      "beats": 4
+    },
+    "title": null,
+    "transposeSemitones": 0
+  },
+  "tempoBpm": 60.0,
+  "timeSignature": {
+    "beatValue": 4,
+    "beats": 4
+  },
+  "timeStepSeconds": 1.0,
+  "title": null,
+  "warnings": []
+}

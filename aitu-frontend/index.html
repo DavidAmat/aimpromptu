@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      This app is light, always. Declaring the scheme here (before any CSS
+      loads) is what stops a dark-mode OS or browser from re-tinting it: Chrome
+      reads it to decide scrollbar and form-control colors, and to leave the
+      page alone under Auto Dark Mode. Sheet music and a piano matrix are black
+      on white; a struck note is nearly black, so a dark ground hides it.
+    -->
+    <meta name="color-scheme" content="light" />
     <title>AImpromptu</title>
   </head>
   <body>

@@ -27,7 +27,7 @@ Runtime entry: `uv run python -m uvicorn aitu_backend.main:app` (see `Makefile`)
 | Runtime | React 19.2.6, react-dom 19.2.6 |
 | Language | TypeScript 6.0.3 |
 | Bundler | Vite 8.0.13, `@vitejs/plugin-react` 6.0.1 |
-| Notation | VexFlow 5.0.0 |
+| Notation | `@aimpromptu/grid-notation` 0.15.x, installed from disk (`file:../../vexflow-v2`); zero runtime dependencies, Bravura inlined |
 | Routing | react-router-dom 7.x |
 | Components | MUI 9.x (`@mui/material`, `@mui/icons-material`, `@mui/x-data-grid`) + emotion 11.x |
 | Lint | ESLint 10.4.0 flat config: `@eslint/js`, `typescript-eslint` 8.x, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `globals` |
@@ -58,7 +58,7 @@ Locked by the organizer for `context/implementations/plan/`; workers follow thes
 | Audio tooling | `ffmpeg` (prerequisite) for conversion/normalization, `yt-dlp` (run as `python -m yt_dlp`) for YouTube |
 | Accepted audio | `.mp3 .aac .m4a .wav .webm .ogg` — webm/ogg for browser recordings (Chrome records only webm/opus; ffmpeg converts server-side) |
 | Frontend components | MUI (+ MUI X) standard across all pages; Aceternity UI only decorative; palette from `context/colors/color-palette.md` as `palette.ts` |
-| Notation rendering | VexFlow 5 in the browser; backend produces a VexFlow-ready score document (frontend stays thin) |
+| Notation rendering | `@aimpromptu/grid-notation` in the browser, engraving the matrix directly. Frame columns — not measures, voices or accumulated ticks — are the horizontal source of truth, so the two hands cannot drift apart. The backend hands over the matrix and stores the reader's markup; it builds no score document |
 | Storage | Local filesystem under `aitu-backend/data/` (playground/library/audio trees); MinIO only if containerized later |
 | GPU | CPU now; keep engine `device` parameterized and matrix ops numpy-vectorized for future CUDA hosts |
 

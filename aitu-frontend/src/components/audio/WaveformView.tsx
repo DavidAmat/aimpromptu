@@ -8,7 +8,7 @@
 
 import Box from "@mui/material/Box";
 import type { WaveformPeaks } from "../../api";
-import { grays, semantic } from "../../ui";
+import { semantic, surface } from "../../ui";
 
 export interface WaveformViewProps {
   peaks: WaveformPeaks;
@@ -57,7 +57,7 @@ export function WaveformView({
           />
         ) : null}
 
-        <line x1="0" y1={middle} x2="100" y2={middle} stroke={grays.slate} strokeWidth="0.4" />
+        <line x1="0" y1={middle} x2="100" y2={middle} stroke={surface.strongLine} strokeWidth="0.4" />
 
         {peaks.max.map((high, index) => {
           const low = peaks.min[index] ?? 0;

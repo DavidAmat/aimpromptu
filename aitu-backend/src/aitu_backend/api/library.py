@@ -6,9 +6,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.api._placeholders import not_implemented
+from aitu_backend.matrix.hands import split_hands
 from aitu_backend.matrix.model import PianoMatrix
 from aitu_backend.schemas.matrix import (
-    Granularity,
     MatrixProcessingStep,
     PianoMatrixEnvelope,
 )
@@ -43,7 +43,7 @@ class SaveVersionRequest(BaseModel):
     comment: str | None = None
     #: Rewrite the existing folder instead of creating a new version.
     overwrite: bool = False
-    #: Pin the version number — how the same state is saved at a second granularity.
+    #: Pin the version number — how the same state is saved on a second grid.
     version: int | None = None
     #: Folder of the version this one was derived from.
     parent_version: str | None = Field(None, alias="parentVersion")
@@ -167,17 +167,34 @@ def save_playground_version(request: SaveVersionRequest) -> SavedVersion:
         except (TrackNotFound, VersionNotFound) as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    # A clean matrix is split once, here, and stored with its hand map. Doing it
+    # at save time rather than at render time is what lets the notation, piano
+    # roll and falling-note views read one decision instead of each inferring
+    # their own — and keeps the saved folder self-contained.
+    hands = split_hands(matrix) if matrix.processing_step is MatrixProcessingStep.CLEAN else None
+
+    common = {
+        "comment": request.comment,
+        "overwrite": request.overwrite,
+        "version": request.version,
+        "parent": parent,
+        "audio": AudioReference(audio_uuid=request.audio_uuid) if request.audio_uuid else None,
+    }
     try:
-        saved = repository.save_version(
-            request.artist_name,
-            request.track_name,
-            matrix,
-            comment=request.comment,
-            overwrite=request.overwrite,
-            version=request.version,
-            parent=parent,
-            audio=AudioReference(audio_uuid=request.audio_uuid) if request.audio_uuid else None,
-        )
+        if hands is not None:
+            saved = repository.save_two_hands(
+                request.artist_name,
+                request.track_name,
+                hands.right,
+                hands.left,
+                single=matrix,
+                hand_assignments=hands.to_metadata(),
+                **common,
+            )
+        else:
+            saved = repository.save_version(
+                request.artist_name, request.track_name, matrix, **common  # type: ignore[arg-type]
+            )
     except FileExistsError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
@@ -318,4 +335,4 @@ def _slugs(artist_name: str, track_name: str) -> tuple[str, str]:
     return slugify(artist_name), slugify(track_name)
 
 
-__all__ = ["router", "Granularity", "MatrixProcessingStep"]
+__all__ = ["router", "MatrixProcessingStep"]

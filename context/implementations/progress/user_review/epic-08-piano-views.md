@@ -55,6 +55,23 @@ Click Play. Each rectangle tip must reach the blue landing line exactly when the
 key turns blue, the rectangle becomes light blue, and the part crossing below the line disappears
 as if the piano swallowed it.
 
+Every sounding key is the same blue, whether it has just been struck or is still ringing. A green
+"struck" colour was tried on 2026-07-27 and removed.
+
+### 6.3a — The note labels ⭐
+
+Look at what is written inside the rectangles, especially in a busy passage.
+
+- A long note carries its full Spanish name at full size: `Sol#-3`.
+- A shorter one keeps the full name in **smaller** type before giving anything up.
+- A short one drops the octave and switches to English: `G#3`, then `G#`.
+- A very short one carries **nothing** — deliberately.
+- Every label is centred, and **no label may cross its own border.** Text spilling out over the
+  neighbouring notes is the bug this step exists to catch; if you see it, note the note name and
+  the resolution you were on.
+
+Rectangle outlines should be a firm black, thick enough to separate two adjacent notes at a glance.
+
 ---
 
 ## 6.4 — Drag a correction

@@ -58,15 +58,14 @@ def list_scores() -> list[MatrixScore]:
 def build_sequence(request: SequenceRequest) -> MatrixScore:
     """Convert a written time-frame sequence into a sparse 88-key score.
 
-    Lets the frontend render an arbitrary passage: it sends the sequence
-    notation plus tempo/time-step, and gets back the same payload shape as
+    Lets a caller render an arbitrary passage: it sends the sequence notation
+    plus how long one frame lasts, and gets back the same payload shape as
     `/scores` so the renderer is reused unchanged.
     """
     try:
         payload = sequence_to_score(
             sequence=request.sequence,
-            tempo_bpm=request.tempo_bpm,
-            time_step_seconds=request.time_step_seconds,
+            frame_ms=request.frame_ms,
             title=request.title,
             lyrics=request.lyrics,
             key_signature=request.key_signature,

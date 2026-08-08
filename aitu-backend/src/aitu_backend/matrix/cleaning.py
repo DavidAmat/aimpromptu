@@ -1,4 +1,17 @@
-"""Appendix B cleaning: a sustain dies when any other key is struck.
+"""Appendix B cleaning: a sustain dies when any other key is struck **on that hand**.
+
+.. important::
+
+   "Any other key" means any other key *of the same hand*. The rule is about one
+   hand's fingers running out, so it only makes sense once the hands are known —
+   which is why the pipeline splits first and cleans each hand afterwards. Applied
+   to the whole keyboard it lets the right hand's melody amputate the left hand's
+   accompaniment: in ``When I Was Your Man`` a left-hand Do-2/Do-3 octave held for
+   twelve frames was cut to two by a right-hand Sol an eighth later.
+
+   This module does not know about hands, and does not need to: it applies the
+   rule to whatever grid it is handed. Hand it one hand.
+
 
 The goal is a readable sheet. A note held for ten seconds under a moving melody
 is *musically* true but produces a page full of tied whole notes crossing every
@@ -48,8 +61,13 @@ def clean_sustains(
     matrix: PianoMatrix,
     *,
     reporter: BaseProgress | None = None,
+    processing_step: MatrixProcessingStep = MatrixProcessingStep.CLEAN,
 ) -> PianoMatrix:
     """Apply the Appendix B rule and return a cleaned copy.
+
+    ``processing_step`` labels the result. It defaults to ``clean`` because that
+    is what cleaning a one-hand matrix produces; pass ``two-hands`` when cleaning
+    one half of a split, so the label keeps describing what the grid actually is.
 
     Vectorized, no column loop. The insight: a sustain cell at ``(row, col)``
     survives only if **no column strictly after the sustain's own span start,
@@ -67,7 +85,7 @@ def clean_sustains(
     grid = matrix.grid
     rows, columns = grid.shape
     if columns == 0:
-        return matrix.with_grid(grid.copy(), processing_step=MatrixProcessingStep.CLEAN)
+        return matrix.with_grid(grid.copy(), processing_step=processing_step)
 
     progress = default_reporter(reporter)
     with progress.stage("clean", total=1) as stage:
@@ -90,7 +108,7 @@ def clean_sustains(
 
         stage.advance(message=f"{int(np.count_nonzero(grid != cleaned))} sustains cut")
 
-    return matrix.with_grid(cleaned, processing_step=MatrixProcessingStep.CLEAN)
+    return matrix.with_grid(cleaned, processing_step=processing_step)
 
 
 def cut_sustain_count(matrix: PianoMatrix) -> int:

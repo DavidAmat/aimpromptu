@@ -40,8 +40,7 @@ class MatrixScore(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     title: str | None = None
-    tempo_bpm: float = Field(..., alias="tempoBpm")
-    time_step_seconds: float = Field(..., alias="timeStepSeconds")
+    frame_ms: float = Field(40.0, alias="frameMs", gt=0)
     rows: list[str] | None = None
     matrix_encoding: str = Field("sparse-coo", alias="matrixEncoding")
     matrix: SparseMatrix | None = None
@@ -88,8 +87,7 @@ class SequenceRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     sequence: list[str]
-    tempo_bpm: float = Field(..., alias="tempoBpm")
-    time_step_seconds: float = Field(..., alias="timeStepSeconds")
+    frame_ms: float = Field(40.0, alias="frameMs", gt=0)
     title: str | None = None
     lyrics: list[str] | None = None
     key_signature: str | None = Field(None, alias="keySignature")

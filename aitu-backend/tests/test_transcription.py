@@ -18,13 +18,14 @@ from fastapi.testclient import TestClient
 from aitu_backend.audio import formats, ingest
 from aitu_backend.main import create_app
 from aitu_backend.matrix.keys import note_to_row
+from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.progress import CallbackProgress, ProgressEvent
-from aitu_backend.schemas.matrix import Granularity, MatrixProcessingStep
 from aitu_backend.schemas.metadata import AudioSource
 from aitu_backend.storage import paths
 from aitu_backend.transcription import engine as engine_module
 from aitu_backend.transcription import jobs, pipeline
 from aitu_backend.transcription.engine import (
+    ENGINES,
     EngineUnavailable,
     NoteEvent,
     SilentEngine,
@@ -32,12 +33,7 @@ from aitu_backend.transcription.engine import (
     available_engines,
     create_engine,
 )
-from aitu_backend.transcription.events_to_matrix import (
-    RAW_GRANULARITY,
-    column_count,
-    events_to_raw_matrix,
-    shift_events,
-)
+from aitu_backend.transcription.events_to_matrix import shift_events
 
 FFMPEG = formats.ffmpeg_available()
 needs_ffmpeg = pytest.mark.skipif(not FFMPEG, reason="ffmpeg is not installed")
@@ -131,9 +127,15 @@ def test_a_missing_engine_package_names_the_install_command(
 
 
 def test_engine_availability_is_reportable() -> None:
+    """Every registered engine is reported, and the stub is always there.
+
+    Derived from ``ENGINES`` rather than written out: registering an engine is
+    meant to be a one-line change, and a hardcoded set here would make it two.
+    """
     status = available_engines()
     assert status["silent"] is True
-    assert set(status) == {"bytedance", "basic-pitch", "silent"}
+    assert set(status) == set(ENGINES)
+    assert {"bytedance", "silent"} <= set(status)
 
 
 def test_availability_does_not_load_a_model(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -206,112 +208,7 @@ def test_a_good_download_is_moved_into_place(
     assert any(event.stage == "download model" for event in events)
 
 
-# ------------------------------------------------------- events -> raw matrix
-
-
-def test_the_grid_is_sized_from_the_audio() -> None:
-    # Fusa at 60 BPM is 0.125 s per column, so 1 s is 8 columns.
-    assert column_count(1.0, 60) == 8
-    assert column_count(1.01, 60) == 9  # never truncates the tail
-    assert column_count(0.01, 60) == 1  # never zero
-
-
-def test_a_non_positive_duration_is_rejected() -> None:
-    with pytest.raises(ValueError, match="positive"):
-        column_count(0, 60)
-
-
-def test_a_single_note_lands_where_it_was_played() -> None:
-    events = [NoteEvent(midi_note=MIDI_C4, start=0.0, end=1.0)]
-    report = events_to_raw_matrix(events, duration_seconds=2.0, tempo_bpm=60)
-
-    assert report.placed == 1
-    assert report.lossless
-    assert report.matrix.granularity is RAW_GRANULARITY
-    assert report.matrix.processing_step is MatrixProcessingStep.RAW
-    # One second at fusa/60 BPM is 8 columns: one onset plus seven sustains.
-    assert report.matrix.grid[DO4][:8].tolist() == [1, -1, -1, -1, -1, -1, -1, -1]
-    assert report.matrix.grid[DO4][8:].tolist() == [0] * 8
-
-
-def test_the_project_features_rounding_example() -> None:
-    """From `project-features.md`:
-
-        C3 -> onset at 00:00 (duration 1.1 seconds)
-        C4 -> onset at 00:01.5 (duration 0.6 seconds)
-
-    At 60 BPM and fusa granularity (0.125 s per column) the writable lengths
-    are 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48 columns — singles and dotted notes
-    only, per the Appendix C adjacency rule.
-
-    * 1.1 s = 8.8 columns -> **8** (a negra, 1.00 s); 12 would be 1.50 s.
-    * 1.5 s onset lands exactly on column 12.
-    * 0.6 s = 4.8 columns -> **4** (a corchea, 0.50 s); 6 would be 0.75 s.
-    """
-    events = [
-        NoteEvent(midi_note=48, start=0.0, end=1.1),  # C3
-        NoteEvent(midi_note=60, start=1.5, end=2.1),  # C4
-    ]
-    matrix = events_to_raw_matrix(events, duration_seconds=3.0, tempo_bpm=60).matrix
-
-    c3, c4 = note_to_row("Do-3"), note_to_row("Do-4")
-    assert matrix.grid[c3][:8].tolist() == [1] + [-1] * 7
-    assert matrix.grid[c3][8] == 0
-    assert matrix.cell(c4, 12) == 1
-    assert matrix.grid[c4][12:16].tolist() == [1, -1, -1, -1]
-    assert matrix.grid[c4][16] == 0
-
-
-def test_notes_outside_the_88_keys_are_dropped_and_reported() -> None:
-    events = [
-        NoteEvent(midi_note=20, start=0.0, end=0.5),  # below A0
-        NoteEvent(midi_note=109, start=0.0, end=0.5),  # above C8
-        NoteEvent(midi_note=MIDI_C4, start=0.0, end=0.5),
-    ]
-    report = events_to_raw_matrix(events, duration_seconds=1.0, tempo_bpm=60)
-
-    assert report.placed == 1
-    assert sorted(report.dropped_out_of_range) == [20, 109]
-    assert not report.lossless
-    assert "outside the 88 keys" in report.describe()
-
-
-def test_a_note_past_the_end_of_the_grid_is_dropped() -> None:
-    events = [NoteEvent(midi_note=MIDI_C4, start=99.0, end=99.5)]
-    report = events_to_raw_matrix(events, duration_seconds=1.0, tempo_bpm=60)
-    assert report.placed == 0
-    assert report.dropped_past_end == 1
-
-
-def test_a_re_strike_shortens_the_previous_note() -> None:
-    """The transition rule: a new onset always wins over a carried sustain."""
-    events = [
-        NoteEvent(midi_note=MIDI_C4, start=0.0, end=2.0),
-        NoteEvent(midi_note=MIDI_C4, start=0.5, end=1.0),
-    ]
-    report = events_to_raw_matrix(events, duration_seconds=3.0, tempo_bpm=60)
-
-    row = report.matrix.grid[DO4]
-    assert row[0] == 1
-    assert row[4] == 1  # 0.5 s = column 4 at fusa/60
-    assert report.truncated == 1
-
-
-def test_a_chord_places_every_note_in_the_same_column() -> None:
-    events = [
-        NoteEvent(midi_note=MIDI_C4, start=0.0, end=1.0),
-        NoteEvent(midi_note=MIDI_C4 + 4, start=0.0, end=1.0),
-        NoteEvent(midi_note=MIDI_C4 + 7, start=0.0, end=1.0),
-    ]
-    matrix = events_to_raw_matrix(events, duration_seconds=1.5, tempo_bpm=60).matrix
-    assert matrix.onsets_in_column(0) == sorted([DO4, MI4, note_to_row("Sol-4")])
-
-
-def test_an_empty_event_list_gives_a_silent_matrix() -> None:
-    report = events_to_raw_matrix([], duration_seconds=2.0, tempo_bpm=60)
-    assert report.matrix.is_empty()
-    assert report.matrix.frame_count == 16
-    assert report.placed == 0
+# ----------------------------------------------------------------- the events
 
 
 def test_shifting_events_rebases_and_drops_what_falls_before_zero() -> None:
@@ -325,18 +222,13 @@ def test_shifting_events_rebases_and_drops_what_falls_before_zero() -> None:
     assert shifted[0].start == 0.0
 
 
-def test_placement_reports_progress() -> None:
-    events: list[ProgressEvent] = []
-    events_to_raw_matrix(
-        [NoteEvent(midi_note=MIDI_C4, start=0.0, end=1.0)],
-        duration_seconds=1.0,
-        tempo_bpm=60,
-        reporter=CallbackProgress(events.append),
-    )
-    assert any(event.stage == "events" for event in events)
-
-
 # ------------------------------------------------------------------ pipeline
+#
+# The pipeline persists one file, ``events.json``, and builds everything else
+# while a request is being answered. What is asserted here is therefore what was
+# heard and what was written down, not what a grid looked like afterwards. The
+# grid itself is covered in ``test_time_matrix_build.py`` and the hand split in
+# ``test_time_pipeline.py``.
 
 
 @pytest.fixture()
@@ -350,100 +242,76 @@ def scale_audio(temp_store: Path, tmp_path: Path) -> str:
 
 
 @needs_ffmpeg
-def test_the_five_steps_run_and_persist(scale_audio: str) -> None:
-    result = pipeline.run_pipeline(scale_audio, 60, Granularity.NEGRA, engine=ScaleEngine())
+def test_a_run_stores_the_recorded_notes_and_nothing_else(scale_audio: str) -> None:
+    hands = pipeline.run_pipeline(scale_audio, engine=ScaleEngine())
 
-    assert result.raw.granularity is RAW_GRANULARITY
-    assert result.collapsed.granularity is Granularity.NEGRA
-    assert result.clean.processing_step is MatrixProcessingStep.CLEAN
-    assert result.hands.right.shape == result.clean.shape
-    assert result.engine_name == "scale-stub"
+    assert hands.frame_ms == DEFAULT_FRAME_MS
+    assert hands.frame_count == round(5.0 * 1000 / DEFAULT_FRAME_MS)
 
-    # Every artifact is on disk.
-    assert pipeline.raw_path(scale_audio).is_file()
-    for step in (MatrixProcessingStep.COLLAPSED, MatrixProcessingStep.CLEAN):
-        assert pipeline.derived_path(scale_audio, step, Granularity.NEGRA).is_file()
-    right, left = pipeline.hands_paths(scale_audio, Granularity.NEGRA)
-    assert right.is_file() and left.is_file()
+    written = sorted(path.name for path in pipeline.matrices_dir(scale_audio).iterdir())
+    assert written == ["events.json"]
 
 
 @needs_ffmpeg
-def test_the_scale_lands_on_consecutive_beats(scale_audio: str) -> None:
-    """Do Re Mi Fa Sol as negras at 60 BPM: one note per column, in order."""
-    result = pipeline.run_pipeline(scale_audio, 60, Granularity.NEGRA, engine=ScaleEngine())
+def test_the_stored_notes_are_the_times_the_engine_reported(scale_audio: str) -> None:
+    pipeline.run_pipeline(scale_audio, engine=ScaleEngine())
 
-    for column, name in enumerate(["Do-4", "Re-4", "Mi-4", "Fa-4", "Sol-4"]):
-        assert result.clean.cell(note_to_row(name), column) == 1
-    # All above middle C, so the left hand is empty.
-    assert result.hands.left.is_empty()
-    assert not result.hands.right.is_empty()
+    stored = pipeline.load_note_events(scale_audio)
+    assert stored is not None
+    assert [event.start for event in stored.events] == [0.0, 1.0, 2.0, 3.0, 4.0]
+    assert stored.duration_seconds == pytest.approx(5.0, abs=0.05)
 
 
 @needs_ffmpeg
-def test_recompute_reuses_the_raw_matrix(scale_audio: str) -> None:
-    """A granularity change must never re-transcribe."""
-    pipeline.run_pipeline(scale_audio, 60, Granularity.NEGRA, engine=ScaleEngine())
+def test_a_second_run_reuses_the_stored_notes(scale_audio: str) -> None:
+    """The model is expensive and its answer does not change. Only ``force`` re-runs it."""
 
-    class ExplodingEngine:
-        name = "must-not-run"
+    class CountingEngine(ScaleEngine):
+        calls = 0
 
         def transcribe(self, wav_path: Path) -> list[NoteEvent]:
-            raise AssertionError("recompute must not re-transcribe")
+            CountingEngine.calls += 1
+            return super().transcribe(wav_path)
 
-    # Even asked to run the pipeline again, it reuses the stored raw matrix.
-    again = pipeline.run_pipeline(scale_audio, 60, Granularity.CORCHEA, engine=ExplodingEngine())
-    assert again.granularity is Granularity.CORCHEA
-    assert again.build is None  # no transcription happened
+    pipeline.run_pipeline(scale_audio, engine=CountingEngine())
+    pipeline.run_pipeline(scale_audio, engine=CountingEngine())
+    assert CountingEngine.calls == 1
 
-
-@needs_ffmpeg
-def test_recompute_is_fast(scale_audio: str) -> None:
-    """The exit criterion behind instant granularity switching."""
-    pipeline.run_pipeline(scale_audio, 60, Granularity.NEGRA, engine=ScaleEngine())
-
-    started = time.perf_counter()
-    pipeline.recompute(scale_audio, 72, Granularity.SEMICORCHEA)
-    assert time.perf_counter() - started < 1.0
+    pipeline.run_pipeline(scale_audio, engine=CountingEngine(), reuse_events=False)
+    assert CountingEngine.calls == 2
 
 
 @needs_ffmpeg
-def test_changing_the_bpm_reinterprets_the_same_grid(scale_audio: str) -> None:
-    pipeline.run_pipeline(scale_audio, 60, Granularity.NEGRA, engine=ScaleEngine())
-    slow = pipeline.recompute(scale_audio, 60, Granularity.NEGRA)
-    fast = pipeline.recompute(scale_audio, 120, Granularity.NEGRA)
+def test_the_frame_length_changes_the_grid_and_not_the_notes(scale_audio: str) -> None:
+    """A different frame length is a different question, not a different transcription."""
+    coarse = pipeline.run_pipeline(scale_audio, engine=ScaleEngine(), frame_ms=40)
+    fine = pipeline.run_pipeline(scale_audio, engine=ScaleEngine(), frame_ms=20)
 
-    assert slow.clean.frame_count == fast.clean.frame_count
-    assert fast.clean.time_step_seconds == pytest.approx(slow.clean.time_step_seconds / 2)
-
-
-@needs_ffmpeg
-def test_recompute_without_a_raw_matrix_explains_itself(scale_audio: str) -> None:
-    with pytest.raises(FileNotFoundError, match="run the pipeline once first"):
-        pipeline.recompute(scale_audio, 60, Granularity.NEGRA)
+    assert fine.frame_count == coarse.frame_count * 2
+    assert len(fine.right.active_rows()) == len(coarse.right.active_rows())
 
 
 @needs_ffmpeg
-def test_stored_granularities_are_listed_coarsest_first(scale_audio: str) -> None:
-    pipeline.run_pipeline(scale_audio, 60, Granularity.NEGRA, engine=ScaleEngine())
-    pipeline.recompute(scale_audio, 60, Granularity.SEMICORCHEA)
-    assert pipeline.stored_granularities(scale_audio) == [
-        Granularity.NEGRA,
-        Granularity.SEMICORCHEA,
-    ]
+def test_no_entry_point_of_the_pipeline_accepts_a_tempo(scale_audio: str) -> None:
+    """D-01, asserted against the signatures rather than against one result."""
+    import inspect
+
+    for name in ("run_pipeline", "transcribe_audio"):
+        parameters = inspect.signature(getattr(pipeline, name)).parameters
+        forbidden = [p for p in parameters if "tempo" in p or "bpm" in p or "granularity" in p]
+        assert forbidden == [], f"{name} still accepts {forbidden}"
 
 
 @needs_ffmpeg
 def test_a_range_limited_run_only_covers_the_range(scale_audio: str) -> None:
-    result = pipeline.run_pipeline(
+    hands = pipeline.run_pipeline(
         scale_audio,
-        60,
-        Granularity.NEGRA,
         engine=ScaleEngine(),
         start_seconds=1.0,
         end_seconds=3.0,
     )
-    # Two seconds at one negra per second.
-    assert result.clean.frame_count == 2
+    # Two seconds at 40 ms per column.
+    assert hands.frame_count == 50
 
 
 @needs_ffmpeg
@@ -451,13 +319,11 @@ def test_the_pipeline_reports_every_stage(scale_audio: str) -> None:
     events: list[ProgressEvent] = []
     pipeline.run_pipeline(
         scale_audio,
-        60,
-        Granularity.NEGRA,
         engine=ScaleEngine(),
         reporter=CallbackProgress(events.append),
     )
     stages = {event.stage for event in events}
-    assert {"transcribe", "events", "collapse", "clean", "two-hands"} <= stages
+    assert {"transcribe", "events"} <= stages
 
 
 @needs_ffmpeg
@@ -473,8 +339,6 @@ def test_a_progressive_engine_reports_its_real_model_segments(scale_audio: str) 
     events: list[ProgressEvent] = []
     pipeline.run_pipeline(
         scale_audio,
-        60,
-        Granularity.NEGRA,
         engine=ProgressiveScaleEngine(),
         reporter=CallbackProgress(events.append),
     )
@@ -541,6 +405,14 @@ def client(temp_store: Path) -> TestClient:
     return TestClient(create_app())
 
 
+def uploaded(client: TestClient, tmp_path: Path, seconds: float = 1.0) -> str:
+    source = sine_wav(tmp_path / "t.wav", seconds=seconds, rate=44100)
+    with source.open("rb") as handle:
+        return client.post("/audio/upload", files={"file": ("t.wav", handle, "audio/wav")}).json()[
+            "uuid"
+        ]
+
+
 def test_the_engines_endpoint_reports_availability(client: TestClient) -> None:
     body = client.get("/matrix/engines").json()
     assert body["silent"] is True
@@ -551,18 +423,15 @@ def test_transcribing_an_unknown_audio_is_a_404(client: TestClient) -> None:
     assert response.status_code == 404
 
 
-def test_reading_a_matrix_before_transcription_is_a_409(client: TestClient, tmp_path: Path) -> None:
-    if not FFMPEG:
-        pytest.skip("ffmpeg is not installed")
-    source = sine_wav(tmp_path / "t.wav", seconds=1.0, rate=44100)
-    with source.open("rb") as handle:
-        uuid = client.post("/audio/upload", files={"file": ("t.wav", handle, "audio/wav")}).json()[
-            "uuid"
-        ]
+@needs_ffmpeg
+def test_reading_the_notes_before_transcription_is_a_409(
+    client: TestClient, tmp_path: Path
+) -> None:
+    uuid = uploaded(client, tmp_path)
 
-    response = client.get(f"/matrix/{uuid}")
+    response = client.get(f"/matrix/{uuid}/events")
     assert response.status_code == 409
-    assert "transcribe" in response.json()["detail"]
+    assert "transcribe" in response.json()["detail"].lower()
 
 
 def test_an_unknown_job_is_a_404(client: TestClient) -> None:
@@ -570,16 +439,14 @@ def test_an_unknown_job_is_a_404(client: TestClient) -> None:
 
 
 @needs_ffmpeg
-def test_the_transcribe_endpoint_returns_a_job(client: TestClient, tmp_path: Path) -> None:
-    source = sine_wav(tmp_path / "t.wav", seconds=1.0, rate=44100)
-    with source.open("rb") as handle:
-        uuid = client.post("/audio/upload", files={"file": ("t.wav", handle, "audio/wav")}).json()[
-            "uuid"
-        ]
+def test_the_transcribe_endpoint_returns_a_job_and_then_the_notes(
+    client: TestClient, tmp_path: Path
+) -> None:
+    uuid = uploaded(client, tmp_path)
 
     response = client.post(
         "/matrix/transcribe",
-        json={"audioUuid": uuid, "tempoBpm": 60, "granularity": "negra", "engine": "silent"},
+        json={"audioUuid": uuid, "frameMs": 40, "engine": "silent"},
     )
     assert response.status_code == 202
     job_id = response.json()["jobId"]
@@ -591,6 +458,15 @@ def test_the_transcribe_endpoint_returns_a_job(client: TestClient, tmp_path: Pat
         time.sleep(0.02)
     assert status["status"] == "done", status
 
-    matrix = client.get(f"/matrix/{uuid}", params={"granularity": "negra"}).json()
-    assert matrix["granularity"] == "negra"
-    assert matrix["matrixProcessingStep"] == "clean"
+    body = client.get(f"/matrix/{uuid}/events").json()
+    assert body["audioUuid"] == uuid
+    assert body["events"] == []
+
+
+def test_the_transcribe_request_has_no_tempo_and_no_granularity() -> None:
+    """The wire contract, not just the Python signature (D-01)."""
+    from aitu_backend.api.matrix import TranscribeRequest
+
+    fields = set(TranscribeRequest.model_fields)
+    assert not {name for name in fields if "tempo" in name or "granularity" in name}
+    assert "frame_ms" in fields

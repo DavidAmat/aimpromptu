@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from aitu_backend.matrix.keys import KEY_COUNT, note_to_row
-from aitu_backend.schemas.matrix import Granularity, SparseCooMatrix
+from aitu_backend.schemas.matrix import SparseCooMatrix
 from aitu_backend.storage import paths
 from aitu_backend.storage import matrix_store
 from aitu_backend.storage.matrix_store import (
@@ -79,30 +79,30 @@ def test_playground_paths(temp_data: Path) -> None:
     assert track == temp_data / "playground" / "avicii" / "levels"
     assert paths.playground_track_metadata_path("avicii", "levels").name == "metadata_track.json"
 
-    version = paths.playground_version_dir("avicii", "levels", 2, Granularity.NEGRA)
-    assert version == track / "v2_gn"
+    version = paths.playground_version_dir("avicii", "levels", 2, 40)
+    assert version == track / "v2_f40"
     assert (
-        paths.playground_version_metadata_path("avicii", "levels", 2, Granularity.NEGRA)
+        paths.playground_version_metadata_path("avicii", "levels", 2, 40)
         == version / "metadata.json"
     )
     assert (
-        paths.playground_matrix_path("avicii", "levels", 2, Granularity.NEGRA)
-        == version / "piano_matrix_v2_gn.npz"
+        paths.playground_matrix_path("avicii", "levels", 2, 40)
+        == version / "piano_matrix_v2_f40.npz"
     )
     assert (
-        paths.playground_matrix_path("avicii", "levels", 2, Granularity.NEGRA, "left").name
-        == "piano_matrix_v2_gn_left.npz"
+        paths.playground_matrix_path("avicii", "levels", 2, 40, "left").name
+        == "piano_matrix_v2_f40_left.npz"
     )
 
 
 def test_playground_listings(temp_data: Path) -> None:
     assert paths.list_playground_artists() == []
-    paths.playground_version_dir("avicii", "levels", 1, Granularity.FUSA).mkdir(parents=True)
-    paths.playground_version_dir("avicii", "levels", 2, Granularity.SEMICORCHEA).mkdir(parents=True)
+    paths.playground_version_dir("avicii", "levels", 1, 20).mkdir(parents=True)
+    paths.playground_version_dir("avicii", "levels", 2, 40).mkdir(parents=True)
 
     assert paths.list_playground_artists() == ["avicii"]
     assert paths.list_playground_tracks("avicii") == ["levels"]
-    assert paths.list_playground_versions("avicii", "levels") == ["v1_gf", "v2_gsc"]
+    assert paths.list_playground_versions("avicii", "levels") == ["v1_f20", "v2_f40"]
 
 
 # ------------------------------------------------------------------ library
@@ -114,10 +114,7 @@ def test_library_paths(temp_data: Path) -> None:
     assert (
         paths.library_track_metadata_path("avicii", "levels").name == "metadata_library_track.json"
     )
-    assert (
-        paths.library_matrix_path("avicii", "levels", 2, Granularity.SEMICORCHEA)
-        == track / "piano_matrix_v2_gsc.npz"
-    )
+    assert paths.library_matrix_path("avicii", "levels", 2, 40) == track / "piano_matrix_v2_f40.npz"
 
     assert (
         paths.playlist_dir("sunday-practice")

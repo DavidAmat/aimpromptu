@@ -3,24 +3,25 @@
   "trackName": "Levels",
   "artistSlug": "avicii",
   "trackSlug": "levels",
-  "tags": ["edm", "easy", "practice"],
+  "tags": [
+    "edm",
+    "easy",
+    "practice"
+  ],
   "promotions": [
     {
       "promotionName": "Levels (Chill) - Avicii",
-      "sourceVersionFolder": "v2_gsc",
+      "sourceVersionFolder": "v2_f40",
       "matrixFilename": "piano_matrix_v2_gsc.npz",
       "promotedAt": "2026-07-21T10:00:00Z",
       "active": true,
       "versionMetadata": {
         "version": 2,
-        "tempoBpm": 72,
-        "granularity": "semicorchea",
         "matrixProcessingStep": "two-hands",
-        "timeStepSeconds": 0.2083333,
         "parentMatrix": {
-          "versionFolder": "v1_gf",
+          "versionFolder": "v1_f40",
           "matrixProcessingStep": "raw",
-          "path": "../v1_gf/piano_matrix_v1_gf.npz"
+          "path": "../v1_f40/piano_matrix_v1_gf.npz"
         },
         "audio": {
           "audioUuid": "4f9c1e6a-2b7d-4c3e-9a10-8d5b6f2c1e77",
@@ -34,12 +35,13 @@
           "keyChanges": []
         },
         "comment": "Cleaned the left-hand sustains in the intro.",
-        "createdAt": "2026-07-20T09:14:00Z"
+        "createdAt": "2026-07-20T09:14:00Z",
+        "frameMs": 40
       }
     },
     {
       "promotionName": "Levels (Full speed) - Avicii",
-      "sourceVersionFolder": "v3_gsc",
+      "sourceVersionFolder": "v3_f40",
       "matrixFilename": "piano_matrix_v3_gsc.npz",
       "promotedAt": "2026-07-24T19:30:00Z",
       "active": true,

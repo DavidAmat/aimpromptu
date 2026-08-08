@@ -33,9 +33,12 @@ export function PlaygroundLayout() {
               ? (artifact.label ?? artifact.artifactId ?? artifact.audioUuid)
               : "none loaded"}
           </Typography>
-          <Pill label={`${artifact.tempoBpm} BPM`} />
-          <Pill label={artifact.granularity} />
-          <Pill label={artifact.matrixProcessingStep} />
+          {/*
+            One pill, and it says how finely the piece is measured. The tempo and the note-figure
+            resolution used to sit here; neither describes anything now, because a column is a slice
+            of wall clock and the figures are named on the Rhythm step.
+          */}
+          <Pill label={`${artifact.frameMs} ms per column`} />
           {hasArtifact ? (
             <Button size="small" onClick={clear}>
               Clear

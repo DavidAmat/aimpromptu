@@ -8,9 +8,9 @@ Tree under ``aitu-backend/data/``::
         original.<ext>
       playground/<artist_slug>/<track_slug>/
         metadata_track.json
-        v1_gsc/
+        v1_f40/
           metadata.json
-          piano_matrix_v1_gsc.npz
+          piano_matrix_v1_f40.npz
       library/
         tracks/<artist_slug>/<track_slug>/
           metadata_library_track.json
@@ -26,7 +26,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aitu_backend.schemas.matrix import Granularity
 from aitu_backend.schemas.naming import matrix_filename, version_folder
 
 # --------------------------------------------------------------------- roots
@@ -130,32 +129,32 @@ def playground_version_dir(
     artist_slug: str,
     track_slug: str,
     version: int,
-    granularity: Granularity,
+    frame_ms: float,
 ) -> Path:
-    """`data/playground/<artist>/<track>/v2_gn/`."""
-    return playground_track_dir(artist_slug, track_slug) / version_folder(version, granularity)
+    """`data/playground/<artist>/<track>/v2_f40/`."""
+    return playground_track_dir(artist_slug, track_slug) / version_folder(version, frame_ms)
 
 
 def playground_version_metadata_path(
     artist_slug: str,
     track_slug: str,
     version: int,
-    granularity: Granularity,
+    frame_ms: float,
 ) -> Path:
-    """`.../v2_gn/metadata.json`."""
-    return playground_version_dir(artist_slug, track_slug, version, granularity) / "metadata.json"
+    """`.../v2_f40/metadata.json`."""
+    return playground_version_dir(artist_slug, track_slug, version, frame_ms) / "metadata.json"
 
 
 def playground_matrix_path(
     artist_slug: str,
     track_slug: str,
     version: int,
-    granularity: Granularity,
+    frame_ms: float,
     hand: str | None = None,
 ) -> Path:
-    """`.../v2_gn/piano_matrix_v2_gn.npz`, or the per-hand variant."""
-    return playground_version_dir(artist_slug, track_slug, version, granularity) / matrix_filename(
-        version, granularity, hand
+    """`.../v2_f40/piano_matrix_v2_f40.npz`, or the per-hand variant."""
+    return playground_version_dir(artist_slug, track_slug, version, frame_ms) / matrix_filename(
+        version, frame_ms, hand
     )
 
 
@@ -189,11 +188,11 @@ def library_matrix_path(
     artist_slug: str,
     track_slug: str,
     version: int,
-    granularity: Granularity,
+    frame_ms: float,
     hand: str | None = None,
 ) -> Path:
     """A promoted matrix inside the library track folder."""
-    return library_track_dir(artist_slug, track_slug) / matrix_filename(version, granularity, hand)
+    return library_track_dir(artist_slug, track_slug) / matrix_filename(version, frame_ms, hand)
 
 
 def playlist_dir(playlist_slug: str) -> Path:

@@ -21,11 +21,12 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
 import { audioApi, type WaveformPeaks } from "../../api";
 import { clamp, formatTime, formatTimeShort, parseTime } from "../../audio/time";
-import { semantic } from "../../ui";
+import { semantic, timestampSx } from "../../ui";
 import WaveformView from "./WaveformView";
 
 export interface AudioRange {
@@ -70,6 +71,8 @@ export function WaveformRangeSelector({
   const [dragging, setDragging] = useState<Handle>(null);
   const [cursor, setCursor] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
+  /** Which span the cursor belongs to, so the readout names the right end. */
+  const [scope, setScope] = useState<"range" | "all">("range");
 
   const trackRef = useRef<HTMLDivElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -186,19 +189,34 @@ export function WaveformRangeSelector({
 
   // --------------------------------------------------------------- playback
 
-  const stop = useCallback(() => {
-    const element = audioRef.current;
-    if (element) {
-      element.pause();
-      element.currentTime = range.startSeconds;
-    }
+  /**
+   * End playback and the follow loop, and leave the cursor where it is.
+   *
+   * Everything that stops the audio goes through here. Keeping the position is
+   * the whole point of showing a timestamp: you press Pause *because* you want
+   * to read where you are, so discarding it at that exact moment would be the
+   * one unhelpful thing to do.
+   */
+  const halt = useCallback(() => {
+    audioRef.current?.pause();
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     frameRef.current = null;
     setPlaying(false);
-    setCursor(null);
-  }, [range.startSeconds]);
+  }, []);
 
-  useEffect(() => stop, [stop]);
+  useEffect(() => halt, [halt]);
+
+  const pause = useCallback(() => {
+    const element = audioRef.current;
+    halt();
+    if (element) setCursor(element.currentTime);
+  }, [halt]);
+
+  /** Park the cursor back at the top of whatever was last played. */
+  const rewind = useCallback(() => {
+    halt();
+    setCursor(null);
+  }, [halt]);
 
   const play = (whole: boolean) => {
     const element = audioRef.current;
@@ -206,8 +224,13 @@ export function WaveformRangeSelector({
 
     const from = whole ? 0 : range.startSeconds;
     const to = whole ? duration : range.endSeconds;
+    // Resume rather than restart when the cursor was left inside this span —
+    // otherwise Pause is indistinguishable from Stop.
+    const startAt = cursor !== null && cursor >= from && cursor < to - 0.01 ? cursor : from;
 
-    element.currentTime = from;
+    setScope(whole ? "all" : "range");
+    element.currentTime = startAt;
+    setCursor(startAt);
     void element.play();
     setPlaying(true);
 
@@ -241,6 +264,10 @@ export function WaveformRangeSelector({
   }
 
   const percent = (seconds: number) => `${duration ? (seconds / duration) * 100 : 0}%`;
+
+  const spanStart = scope === "all" ? 0 : range.startSeconds;
+  const spanEnd = scope === "all" ? duration : range.endSeconds;
+  const cursorSeconds = cursor ?? spanStart;
 
   return (
     <Stack spacing={1.5}>
@@ -337,9 +364,22 @@ export function WaveformRangeSelector({
 
         <Box sx={{ flexGrow: 1 }} />
 
+        {/*
+          Where the cursor is, in the same `mm:ss.cc` as every other time in the
+          app. It stays on screen after Pause and after the range runs out,
+          because the question it answers — "where did I stop?" — is only ever
+          asked once the audio is no longer moving.
+        */}
+        <Typography variant="body2" sx={{ ...timestampSx, fontWeight: 600 }}>
+          {formatTime(cursorSeconds)}
+          <Box component="span" sx={{ color: "text.secondary", fontWeight: 400 }}>
+            {` / ${formatTime(spanEnd)}`}
+          </Box>
+        </Typography>
+
         {playing ? (
-          <Button size="small" startIcon={<StopIcon />} onClick={stop}>
-            Stop
+          <Button size="small" startIcon={<PauseIcon />} onClick={pause}>
+            Pause
           </Button>
         ) : (
           <>
@@ -353,6 +393,14 @@ export function WaveformRangeSelector({
             )}
           </>
         )}
+        <Button
+          size="small"
+          startIcon={<StopIcon />}
+          onClick={rewind}
+          disabled={cursor === null}
+        >
+          Stop
+        </Button>
       </Stack>
 
       <Box component="audio" ref={audioRef} src={audioApi.fileUrl(audioUuid)} preload="auto" hidden />

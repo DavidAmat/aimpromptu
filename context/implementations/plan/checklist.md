@@ -2,12 +2,12 @@
 
 Single status lookup for the whole plan. Status codes: `[x]` completed, `[p]` in progress, `[b]` blocked (state the blocker), `[c]` cancelled (state why), `[ ]` not started. Workers: mark `[p]` when starting, final status when finishing.
 
-> **Epics 1–8 were completed across the 2026-07-27 overnight and continuation sessions** and are
+> **Epics 1–8, and Epic 9's Stories 9.1–9.6, were completed across the 2026-07-27 sessions** and are
 > **awaiting the human supervisor's musical real-audio/manual trials**. The completed state is
 > committed to `master`.
 >
 > - **Click-by-click verification guides**: [`../progress/user_review/`](../progress/user_review/README.md)
->   — start at `00-setup.md`.
+>   — start at `00-setup.md`. Guide 7 covers the new notation tab.
 > - **What happened and what is still open**:
 >   [`../progress/2026-07-27-overnight-session.md`](../progress/2026-07-27-overnight-session.md).
 >
@@ -26,7 +26,7 @@ Structural foundation: backend module layout and tooling, frontend app shell wit
 ## [x] Story 1.2 — Frontend skeleton
 
 - [x] Task 1.2.1 **App shell and navigation**: routing for all sections/tabs, typed API client, SSE progress hook.
-- [x] Task 1.2.2 **UI kit and theme**: MUI standard, palette.ts with semantic color uses.
+- [x] Task 1.2.2 **UI kit and theme**: MUI standard, palette.ts with semantic color uses. *(Theme **reversed to light and pinned** on 2026-07-27 — on the original dark ground a struck matrix note (`grays.ink`) was invisible against a `grays.ink` background. New `surface` tokens stop a view assuming a ground again. See [`task-1.2.2-followup-light-mode.md`](../progress/epic-01/task-1.2.2-followup-light-mode.md).)*
 
 ## [x] Story 1.3 — Shared contracts
 
@@ -57,7 +57,7 @@ The pure-Python piano matrix engine: model, transition validation, granularity c
 
 ## [x] Story 2.4 — Hands and operations
 
-- [x] Task 2.4.1 **Two-hands split**: C4-threshold duplication, equal shapes.
+- [x] Task 2.4.1 **Two-hands split**: equal shapes, lossless recombination. *(The C4 threshold was **replaced on 2026-07-28** by the beam dynamic program from [`research-01-hand-inference`](research-01-hand-inference/02-system-prompt-hand-inference-poc.md), ported into `aitu_backend/hands/`. The rule remains as `split_hands_at_row` / `method="threshold"`. See [`task-2.4.1-followup-hand-inference.md`](../progress/epic-02/task-2.4.1-followup-hand-inference.md).)*
 - [x] Task 2.4.2 **Matrix operations**: transposition, tempo insertion, slice/replace, validated cell edits. *(Also adds `tests/test_matrix_pipeline.py`, the epic's end-to-end exit criteria.)*
 
 # [x] Epic 3 — Audio I/O
@@ -193,40 +193,57 @@ Animated matrix views over the piano SVG: assets and key highlighting, horizonta
 
 ## [x] Story 8.4 — Falling view
 
-- [x] Task 8.4.1 **Notes falling**: calibrated falling rectangles, velocity from window+BPM+granularity, swallow effect at Y=0.
+- [x] Task 8.4.1 **Notes falling**: calibrated falling rectangles, velocity from window+BPM+granularity, swallow effect at Y=0. *(Note labels and borders reworked on 2026-07-27 at the supervisor's request — a fixed 10 px note name used to spill out of short rectangles. A green struck-key colour was tried the same day and reverted; the keyboard has one highlight colour. See [`task-8.4.1-followup-note-labels.md`](../progress/epic-08/task-8.4.1-followup-note-labels.md).)*
 
 ## [x] Story 8.5 — Drag editing (nice to have)
 
 - [x] Task 8.5.1 **Drag note editing**: drag to key/frame with landing guides, staged changes, Save.
 
-# [ ] Epic 9 — Music notation
+# [p] Epic 9 — Music notation
 
-VexFlow sheet music: backend score-format builder, notation tab with responsive wrapping, engraving rules (stems/beams/ties), key signatures and naturals, transposition, octave/clef displacement, beat guides and cut-measure, advanced ornaments at the end. Index: `epic-09-notation/epic-notation-index.md`.
+VexFlow sheet music: backend score-format builder, notation tab with responsive wrapping, engraving rules (stems/beams/no ties), key signatures and naturals, transposition, octave/clef displacement, beat guides and cut-measure, advanced ornaments at the end. Index: `epic-09-notation/epic-notation-index.md`.
 
-## [ ] Story 9.1 — Score format
+> **Stories 9.1–9.6 completed 2026-07-27** and awaiting the supervisor's musical trial —
+> [guide 7](../progress/user_review/epic-09-notation.md). Story 9.7 (nice-to-have ornaments) was
+> not started, per the plan's "end of project" placement, so the epic header stays `[p]`.
+>
+> The score intentionally uses one readable voice per hand. Simultaneous onsets share the longest
+> onset-to-next-onset chord duration; partial chord releases never create separate voices, rests or
+> ties. Cross-barline gaps become leading rests in the following measure. See
+> [`../progress/epic-09/task-9.3.1-followup-rest-and-chord-duration.md`](../progress/epic-09/task-9.3.1-followup-rest-and-chord-duration.md).
 
-- [ ] Task 9.1.1 **VexFlow score format**: backend digest to measures/voices/durations + annotation overlay, pre-generated per version.
+## [x] Story 9.1 — Score format
 
-## [ ] Story 9.2 — Notation tab
+- [x] Task 9.1.1 **VexFlow score format**: backend digest to measures/voices/onset-led durations +
+  annotation overlay, pre-generated per version. *(`notation/score_builder.py` + `spelling.py` +
+  `durations.py` + `artifacts.py`; golden-file tests in `tests/golden/notation/`. Visible rests are
+  limited to leading entrances and an unwritable measure tail.)*
 
-- [ ] Task 9.2.1 **Notation tab UI**: artifact picker, grand staff / single-hand, responsive wrap, save annotations, promote button.
+## [x] Story 9.2 — Notation tab
 
-## [ ] Story 9.3 — Engraving
+- [x] Task 9.2.1 **Notation tab UI**: artifact picker, grand staff / single-hand, responsive wrap, save annotations, promote button. *(The VexFlow drawing is a plain function, `renderScore.ts`, so `npm run check:render` draws every golden document headlessly. The old `PianoSheet.tsx` is kept for the text-notation MVP pages.)*
 
-- [ ] Task 9.3.1 **Stems, beams and ties**: stem direction rules, beam runs with arpeggio break, ties only across barlines.
+## [x] Story 9.3 — Engraving
 
-## [ ] Story 9.4 — Keys and transposition
+- [x] Task 9.3.1 **Stems, beams and no-tie policy**: stem direction rules, beam runs with arpeggio
+  break, rests forbidden between sounding events, chord members unified to one duration, and no
+  ties. *(An unwritable interior residue is an invisible timing spacer; an unwritable trailing
+  residue may be a visible rest. Across a barline, the following measure may start with a rest.)*
 
-- [ ] Task 9.4.1 **Key signatures**: initial key, passage key changes, per-measure minimal-accidental suggestion, naturals preference.
-- [ ] Task 9.4.2 **Transposition**: semitone shift with short-range render preview.
+## [x] Story 9.4 — Keys and transposition
 
-## [ ] Story 9.5 — Octaves and clefs
+- [x] Task 9.4.1 **Key signatures**: initial key, passage key changes, per-measure minimal-accidental suggestion, naturals preference. *(Spelling is a scored search, so "naturals over doubles" and E mayor keeping its A# both fall out of one table. Suggestions are surfaced per measure and never auto-applied.)*
+- [x] Task 9.4.2 **Transposition**: semitone shift with short-range render preview. *(Accept shifts the **raw** matrix, so every granularity and every other tab follows; `POST /matrix/{uuid}/transpose?persist=true`.)*
 
-- [ ] Task 9.5.1 **Octave displacement**: per-hand 8va/8vb/15ma/15mb thresholds, left-hand treble-clef switch.
+## [x] Story 9.5 — Octaves and clefs
 
-## [ ] Story 9.6 — Tempo guides
+- [x] Task 9.5.1 **Octave displacement**: per-hand 8va/8vb/15ma/15mb thresholds, left-hand treble-clef switch. *(Thresholds are note names stored with the version; brackets group per passage and the printed pitch moves with them. The left-hand treble switch is barline-aligned and, with today's C4 hand split, only reachable by lowering its threshold.)*
 
-- [ ] Task 9.6.1 **Beat guides and cut-measure**: dashed beat lines with frame numbers; cut-measure via silence-column insertion.
+## [x] Story 9.6 — Tempo guides
+
+- [x] Task 9.6.1 **Beat guides and cut-measure**: dashed beat lines with frame numbers;
+  cut-measure via timeline-column insertion. *(The preceding note/chord expands to the old
+  barline when possible; the following note begins the new measure.)*
 
 ## [ ] Story 9.7 — Advanced ornaments (nice to have)
 

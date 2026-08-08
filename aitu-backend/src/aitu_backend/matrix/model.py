@@ -23,6 +23,7 @@ from pathlib import Path
 import numpy as np
 
 from aitu_backend.matrix.keys import KEY_COUNT, build_grand_piano_rows, note_to_row
+from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS, seconds_per_frame, validate_frame_ms
 from aitu_backend.schemas.matrix import (
     GRANULARITY_HIERARCHY,
     ONSET,
@@ -68,6 +69,10 @@ class PianoMatrix:
     title: str | None = None
     #: Filled by Task 2.4.1 when the matrix belongs to one hand.
     hand: str | None = field(default=None)
+    #: Length of one column in milliseconds. When this is set the matrix is a **time matrix**: its
+    #: columns are wall clock, ``granularity`` and ``tempo_bpm`` no longer describe anything, and
+    #: asking for a beat value raises. Build one with :meth:`time_based`. See D-01.
+    frame_ms: float | None = field(default=None)
 
     def __post_init__(self) -> None:
         self.grid = np.asarray(self.grid, dtype=np.int8)
@@ -75,11 +80,18 @@ class PianoMatrix:
             raise ValueError(f"A piano matrix is {KEY_COUNT} x N, got shape {self.grid.shape}")
         if self.tempo_bpm <= 0:
             raise ValueError(f"tempo_bpm must be positive, got {self.tempo_bpm}")
+        if self.frame_ms is not None:
+            self.frame_ms = validate_frame_ms(self.frame_ms)
         self.granularity = Granularity(self.granularity)
         self.processing_step = MatrixProcessingStep(self.processing_step)
         illegal = set(np.unique(self.grid).tolist()) - set(CELL_VALUES)
         if illegal:
             raise ValueError(f"Illegal cell values {sorted(illegal)}; only 1, -1 and 0 are allowed")
+
+    @property
+    def is_time_based(self) -> bool:
+        """True when a column is a fixed slice of wall clock rather than a note figure."""
+        return self.frame_ms is not None
 
     # ------------------------------------------------------------ constructors
 
@@ -96,6 +108,43 @@ class PianoMatrix:
             raise ValueError("frame_count cannot be negative")
         grid = np.zeros((KEY_COUNT, frame_count), dtype=np.int8)
         return cls(grid=grid, granularity=Granularity(granularity), tempo_bpm=tempo_bpm, **kwargs)  # type: ignore[arg-type]
+
+    @classmethod
+    def time_based(
+        cls,
+        grid: np.ndarray | list[list[int]],
+        frame_ms: float = DEFAULT_FRAME_MS,
+        **kwargs: object,
+    ) -> "PianoMatrix":
+        """A matrix whose columns are wall clock, not note figures (D-01).
+
+        The 1.x fields still exist on the object because the storage layer, the hand splitter and
+        the editing operations all read them, and they leave in Phase 4. They carry placeholders
+        here and nothing may use them for timing: :attr:`time_step_seconds` comes from ``frame_ms``,
+        and :attr:`beats_per_column` raises, because a frame has no beat value.
+        """
+        array = np.asarray(grid, dtype=np.int8)
+        defaults: dict[str, object] = {
+            "granularity": Granularity.SEMIFUSA,
+            "tempo_bpm": 60.0,
+        }
+        defaults.update(kwargs)
+        return cls(grid=array, frame_ms=validate_frame_ms(frame_ms), **defaults)  # type: ignore[arg-type]
+
+    @classmethod
+    def time_based_from_coo(
+        cls,
+        payload: SparseCooMatrix | dict,
+        frame_ms: float = DEFAULT_FRAME_MS,
+        **kwargs: object,
+    ) -> "PianoMatrix":
+        """Read a stored wall-clock matrix back from the wire format.
+
+        The pair to :meth:`time_based`: the frame length comes from the folder
+        the file was found in, and no tempo takes part.
+        """
+        dense = cls.from_coo_payload(payload).grid
+        return cls.time_based(dense, frame_ms=frame_ms, **kwargs)
 
     @classmethod
     def from_dense(
@@ -179,11 +228,29 @@ class PianoMatrix:
 
     @property
     def time_step_seconds(self) -> float:
-        """Seconds per column: ``beats_per_column * 60 / tempo_bpm``."""
+        """Seconds per column.
+
+        On a time matrix this is ``frame_ms / 1000`` and nothing else takes part. On a 1.x matrix it
+        is still ``beats_per_column * 60 / tempo_bpm``, which is the calculation this refactor
+        removes.
+        """
+        if self.frame_ms is not None:
+            return seconds_per_frame(self.frame_ms)
         return seconds_per_column(self.granularity, self.tempo_bpm)
 
     @property
     def beats_per_column(self) -> float:
+        """How many negras one column lasts. A time matrix has no answer to this.
+
+        The question only makes sense when the column *is* a note figure. Raising here is what stops
+        a beat value leaking back into the layout through a module that was written before the
+        refactor.
+        """
+        if self.frame_ms is not None:
+            raise ValueError(
+                "A time matrix has no beats per column: a frame is "
+                f"{self.frame_ms} ms of wall clock, not a note figure."
+            )
         return beats_per_column(self.granularity)
 
     @property
@@ -300,6 +367,7 @@ class PianoMatrix:
             key_signature=self.key_signature,
             title=self.title,
             hand=self.hand,
+            frame_ms=self.frame_ms,
         )
 
     def with_grid(self, grid: np.ndarray, **overrides: object) -> "PianoMatrix":
@@ -311,6 +379,7 @@ class PianoMatrix:
             "key_signature": self.key_signature,
             "title": self.title,
             "hand": self.hand,
+            "frame_ms": self.frame_ms,
         }
         fields.update(overrides)
         return PianoMatrix(grid=np.asarray(grid, dtype=np.int8), **fields)  # type: ignore[arg-type]
@@ -333,7 +402,8 @@ class PianoMatrix:
         if not isinstance(other, PianoMatrix):
             return NotImplemented
         return (
-            self.granularity == other.granularity
+            self.frame_ms == other.frame_ms
+            and self.granularity == other.granularity
             and self.tempo_bpm == other.tempo_bpm
             and self.processing_step == other.processing_step
             and self.shape == other.shape
@@ -341,8 +411,13 @@ class PianoMatrix:
         )
 
     def __repr__(self) -> str:
+        timing = (
+            f"{self.frame_ms:g} ms/frame"
+            if self.frame_ms is not None
+            else f"{self.granularity.value}, {self.tempo_bpm} BPM"
+        )
         return (
-            f"PianoMatrix({self.shape[0]}x{self.shape[1]}, {self.granularity.value}, "
-            f"{self.tempo_bpm} BPM, {self.processing_step.value}, "
+            f"PianoMatrix({self.shape[0]}x{self.shape[1]}, {timing}, "
+            f"{self.processing_step.value}, "
             f"{int(np.count_nonzero(self.grid))} active cells)"
         )

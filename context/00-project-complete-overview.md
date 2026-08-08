@@ -39,14 +39,18 @@ exclusive, with **equal frame counts** so hands align; two hands render as a bra
 text notation ──POST /sequence──▶ aitu-backend (sequence.py: parse → onset-normalize → sparse-COO)
                                           │  JSON score (rows/cols/onset [+lyrics,+keySignature])
                                           ▼
-aitu-frontend (matrixToNotation.ts: decode → note events → durations/dots → chord/rest timeline)
+aitu-backend (notation/score_builder.py: matrix → onset-led chord timeline → measures/figures)
+        ↓ render-ready ScoreDocument
+aitu-frontend (components/notation/renderScore.ts: thin VexFlow drawing adapter)
    └─▶ PianoSheet.tsx (VexFlow): staves, beams, accidentals vs key, dots, lyrics, line wrap, grand staff
 GET /scores ──▶ example-scores.json ──▶ same rendering path
 ```
 
 ## Rendering nuances (code-truth; see `documentation/services/frontend/`)
 
-- `durationBeats = steps * timeStepSeconds / (60 / tempoBpm)`; held note = fewest symbols (prefer one,
+- `durationBeats = steps * timeStepSeconds / (60 / tempoBpm)`; onset-led rendering sustains each
+  note/chord to the next onset, permits rests before an entrance and at an unwritable measure tail,
+  but never draws a rest between sounding events; held note = fewest symbols (prefer one,
   optionally dotted); off-grid snapped with a console warning.
 - Beams: VexFlow's tick-based `generateBeams` is NOT used (barless soft voice); beam every maximal run of
   ≥2 consecutive beamable notes (eighth-or-shorter, non-rest); lone eighth keeps its flag.
@@ -108,7 +112,7 @@ The text-notation MVP above is the seed of a much larger product, now fully plan
 - **Playground**: Input tab (5 sources), Matrix tab (circle grid, step pills, JSON export/import,
   in-situ BPM/granularity switching, editing), Piano Roll + Notes Falling views (piano SVG, player
   with original vs synthesized sound), Music Notation tab (VexFlow with engraving rules: stems,
-  beams, tie policy, key signatures/naturals, 8va/clef switching, beat guides, cut-measure,
+  beams, no-tie policy, key signatures/naturals, 8va/clef switching, beat guides, cut-measure,
   tuplets/trills later).
 - **Storage**: versioned playground artifacts (`vN_gX` folders + metadata family), promotion to a
   performer-facing Library with named versions, rollback, tags and Spotify-like playlists.

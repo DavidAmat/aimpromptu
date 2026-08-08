@@ -1,13 +1,12 @@
 /**
  * "Current working artifact" — the piece the Playground tabs share.
  *
- * Switching between Input / Matrix / Piano Roll / Notes Falling / Notation must
- * not lose what you loaded, so the selection lives above the routes. Context and
- * types live in this module (no components) so React Fast Refresh stays happy.
+ * Switching between Upload / Input and Rhythm must not lose what you loaded, so
+ * the selection lives above the routes. Context and types live in this module
+ * (no components) so React Fast Refresh stays happy.
  */
 
 import { createContext } from "react";
-import type { Granularity, MatrixProcessingStep } from "../api";
 
 export interface WorkingArtifact {
   /** Backend artifact id once the pipeline has produced one. */
@@ -16,15 +15,16 @@ export interface WorkingArtifact {
   audioUuid?: string;
   /** Display name shown in the Playground header. */
   label?: string;
-  tempoBpm: number;
-  granularity: Granularity;
-  matrixProcessingStep: MatrixProcessingStep;
+  /**
+   * Length of one matrix column, in milliseconds. The one number that decides how finely the piece
+   * is measured. It is a choice about the page, never about the music: changing it re-runs from the
+   * recorded notes and moves the columns, but no note changes its printed figure.
+   */
+  frameMs: number;
 }
 
 export const DEFAULT_WORKING_ARTIFACT: WorkingArtifact = {
-  tempoBpm: 60,
-  granularity: "semicorchea",
-  matrixProcessingStep: "clean",
+  frameMs: 40,
 };
 
 export interface WorkingArtifactContextValue {

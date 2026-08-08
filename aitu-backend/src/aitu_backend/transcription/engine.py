@@ -9,6 +9,7 @@ Engines available:
 | Name | Package | Notes |
 |------|---------|-------|
 | ``bytedance`` | ``piano_transcription_inference`` | default; the research doc's first pick |
+| ``transkun``  | ``transkun``                      | neural semi-CRF, no thresholds, weights ship with the package |
 | ``basic-pitch`` | ``basic_pitch`` | Spotify's model, kept as benchmark/fallback |
 | ``silent`` | — | returns nothing; for tests and for wiring the UI without a model |
 
@@ -313,6 +314,173 @@ class ByteDanceEngine:
         )
 
 
+class TranskunEngine:
+    """Transkun 2 — a neural semi-CRF that decodes note intervals directly.
+
+    Yan & Duan, *Scoring Time Intervals using Non-Hierarchical Transformer for
+    Automatic Piano Transcription* (ISMIR 2024). MIT licensed, `pip install
+    transkun`, weights shipped inside the package — no download step and no
+    checkpoint path to manage.
+
+    Why it is here alongside ByteDance
+    ----------------------------------
+
+    It is **not** strictly better, and it should not be presented as an upgrade.
+    Measured on the Mr Blue Sky passage David flagged, against the stored
+    ByteDance events over segment 254.3–271.5 s: 122 of the notes agree, Transkun
+    finds two ByteDance misses (the D#3 and D3 that complete an octave), and
+    loses four A#2 attacks ByteDance got. Differently wrong. It is here so the
+    two can be compared by ear on real material, which is the only benchmark
+    this project has.
+
+    Two differences that matter downstream:
+
+    * **No thresholds.** The semi-CRF decodes intervals rather than thresholding
+      an onset/offset heatmap, so there is nothing to tune and nothing to get
+      wrong. ByteDance's 0.3/0.3/0.1 have no counterpart here.
+    * **Offsets are key release, not pedal release.** Transkun returns notes of
+      30–300 ms where ByteDance returns 200–1700 ms for the same music. Harmless
+      for this pipeline — the per-hand sustain rule overwrites durations anyway —
+      but it is exactly why :mod:`.artifacts` keeps its floor at 20 ms. A 40 ms
+      floor would delete a third of a Transkun transcription.
+
+    Speed: roughly 1.4x realtime on a CPU, i.e. about seven minutes for a
+    five-minute piece. Pass ``device="cuda"`` where there is a GPU.
+    """
+
+    name = "transkun"
+
+    #: What the shipped weights are called inside the package.
+    WEIGHT = "2.0.pt"
+    CONF = "2.0.conf"
+
+    def __init__(
+        self,
+        device: str = DEFAULT_DEVICE,
+        checkpoint: str | Path | None = None,
+        conf: str | Path | None = None,
+        reporter: object | None = None,
+    ) -> None:
+        try:
+            import moduleconf  # noqa: PLC0415
+            import torch  # noqa: PLC0415
+            import transkun  # noqa: F401, PLC0415
+        except ImportError as exc:
+            raise EngineUnavailable(
+                "transkun", "transkun", "uv sync --extra transkun"
+            ) from exc
+
+        from importlib.resources import files  # noqa: PLC0415
+
+        pretrained = files("transkun") / "pretrained"
+        conf_path = str(conf) if conf else str(pretrained / self.CONF)
+        weight_path = str(checkpoint) if checkpoint else str(pretrained / self.WEIGHT)
+
+        manager = moduleconf.parseFromFile(conf_path)
+        model_class = manager["Model"].module.TransKun
+        state = torch.load(weight_path, map_location=device)
+
+        model = model_class(conf=manager["Model"].config).to(device)
+        # Upstream writes the good weights under `best_state_dict` when it has
+        # them and `state_dict` when it does not; both shipped checkpoints have
+        # been seen with each key.
+        model.load_state_dict(state.get("best_state_dict", state.get("state_dict")), strict=False)
+        model.eval()
+
+        self.device = device
+        self._model = model
+        self._torch = torch
+        self._reporter = reporter
+
+    def transcribe(self, wav_path: Path) -> list[NoteEvent]:
+        return self._transcribe(wav_path, self._reporter)
+
+    def transcribe_with_progress(self, wav_path: Path, reporter: object) -> list[NoteEvent]:
+        return self._transcribe(wav_path, reporter)
+
+    def _transcribe(self, wav_path: Path, reporter: object | None = None) -> list[NoteEvent]:
+        """One `model.transcribe` call, with its segment loop counted.
+
+        **Deliberately not chunked.** The loop inside `TransKun.transcribe`
+        threads a `startPos` between consecutive segments — the CRF continues
+        its decode across the boundary rather than restarting — so slicing the
+        audio and stitching the results is not equivalent to transcribing the
+        whole file. Measured on a 40 s excerpt, external chunking also shifted
+        every onset by ~10 ms per chunk, which is the same order as the timing
+        detail this pipeline now reasons about.
+
+        So the file goes through in one call, and progress comes from wrapping
+        `transcribeFrames`, which that loop invokes exactly once per segment.
+        Reaching into the model like this is the same bargain
+        :meth:`ByteDanceEngine._transcribe` already makes: upstream exposes no
+        callback, and a seven-minute silent progress bar reads as a hang. If a
+        future version renames that method, this falls back to a single
+        indeterminate stage rather than breaking.
+        """
+        import librosa  # noqa: PLC0415
+
+        from aitu_backend.progress import BaseProgress, default_reporter  # noqa: PLC0415
+
+        if not wav_path.is_file():
+            raise FileNotFoundError(f"No audio at {wav_path}")
+
+        torch = self._torch
+        model = self._model
+
+        audio, _ = librosa.load(str(wav_path), sr=model.fs, mono=True)
+        # `TransKun.transcribe` transposes, so it wants (frames, channels).
+        tensor = torch.from_numpy(audio[:, None]).to(self.device)
+
+        step = float(getattr(model, "segmentHopSizeInSecond", 8.0))
+        pad = float(getattr(model, "segmentSizeInSecond", 16.0)) - step
+        segments = max(1, int((len(audio) / model.fs + 2 * pad) / max(step, 0.001)) + 1)
+
+        progress = default_reporter(reporter if isinstance(reporter, BaseProgress) else None)
+        original = getattr(model, "transcribeFrames", None)
+
+        with progress.stage(
+            "transcribe",
+            total=segments,
+            message=f"about {segments} model segments",
+        ) as stage:
+            if original is not None:
+                seen = 0
+
+                def counted(*args: Any, **kwargs: Any) -> Any:
+                    nonlocal seen
+                    result = original(*args, **kwargs)
+                    seen += 1
+                    # Clamp: the segment count is derived from the model's own
+                    # step size, not read from it, so it can be a segment out.
+                    stage.advance(message=f"model segment {min(seen, segments)}/{segments}")
+                    return result
+
+                model.transcribeFrames = counted  # type: ignore[method-assign]
+            try:
+                with torch.no_grad():
+                    estimated = model.transcribe(tensor)
+            finally:
+                if original is not None:
+                    model.transcribeFrames = original  # type: ignore[method-assign]
+
+        return sorted(
+            (
+                NoteEvent(
+                    midi_note=int(note.pitch),
+                    start=max(0.0, float(note.start)),
+                    end=float(note.end),
+                    velocity=max(0, min(127, int(note.velocity))),
+                )
+                # A non-positive pitch is a pedal control change, not a note —
+                # upstream encodes CC numbers as negative pitches. Pedals are
+                # discarded here exactly as they are for ByteDance.
+                for note in estimated
+                if note.pitch > 0 and float(note.end) > float(note.start)
+            ),
+            key=lambda event: (event.start, event.midi_note),
+        )
+
+
 class BasicPitchEngine:
     """Spotify's Basic Pitch — the benchmark and fallback engine.
 
@@ -366,6 +534,7 @@ class BasicPitchEngine:
 #: Constructors by name. Add a new engine here and it becomes selectable.
 ENGINES = {
     "bytedance": ByteDanceEngine,
+    "transkun": TranskunEngine,
     "basic-pitch": BasicPitchEngine,
     "silent": SilentEngine,
 }
@@ -392,7 +561,11 @@ def engine_installed(name: str) -> bool:
 
     if name == "silent":
         return True
-    module = {"bytedance": "piano_transcription_inference", "basic-pitch": "basic_pitch"}.get(name)
+    module = {
+        "bytedance": "piano_transcription_inference",
+        "transkun": "transkun",
+        "basic-pitch": "basic_pitch",
+    }.get(name)
     if module is None:
         return False
     try:

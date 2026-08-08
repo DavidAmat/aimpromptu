@@ -13,10 +13,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import PerformancePage from "./pages/PerformancePage";
 import YouTubePage from "./pages/YouTubePage";
 import InputPage from "./pages/playground/InputPage";
-import MatrixPage from "./pages/playground/MatrixPage";
-import NotationPage from "./pages/playground/NotationPage";
-import NotesFallingPage from "./pages/playground/NotesFallingPage";
-import PianoRollPage from "./pages/playground/PianoRollPage";
+import RhythmPage from "./pages/playground/RhythmPage";
 
 export default function App() {
   return (
@@ -28,10 +25,7 @@ export default function App() {
         <Route path={ROUTES.playground} element={<PlaygroundLayout />}>
           <Route index element={<Navigate to={ROUTES.playgroundInput} replace />} />
           <Route path="input" element={<InputPage />} />
-          <Route path="matrix" element={<MatrixPage />} />
-          <Route path="piano-roll" element={<PianoRollPage />} />
-          <Route path="notes-falling" element={<NotesFallingPage />} />
-          <Route path="notation" element={<NotationPage />} />
+          <Route path="rhythm" element={<RhythmPage />} />
         </Route>
 
         <Route path={ROUTES.library} element={<LibraryPage />} />

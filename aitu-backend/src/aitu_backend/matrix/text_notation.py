@@ -1,5 +1,9 @@
 """Convert a human-written time-frame sequence into a sparse 88-key score.
 
+One list item is one **frame**, and a frame is a fixed slice of wall clock,
+40 ms by default (D-01). It is not a note figure: what the notes are called is
+decided later, from a ladder the reader names, and nothing here needs a tempo.
+
 Textual notation — one list item per time frame, ``||`` separates
 simultaneous notes, an empty string is a silent frame, and a leading
 ``*`` marks an **onset** (the key is struck). A note without ``*`` is a
@@ -28,6 +32,7 @@ row): ``rows`` / ``cols`` mark active cells, and ``onset[i]`` is either
 from __future__ import annotations
 
 from aitu_backend.matrix.keys import CHROMATIC_ES, build_grand_piano_rows
+from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 
 #: Kept as an alias: the key tables now live in `aitu_backend.matrix.keys`,
 #: which is the single source of truth for note names and row order.
@@ -131,14 +136,19 @@ def sequence_to_sparse_payload(
 
 def sequence_to_score(
     sequence: list[str],
-    tempo_bpm: float,
-    time_step_seconds: float,
+    frame_ms: float = DEFAULT_FRAME_MS,
     title: str | None = None,
     lyrics: list[str] | None = None,
     key_signature: str | None = None,
     left_sequence: list[str] | None = None,
 ) -> dict:
     """Build the camelCase score payload consumed by aitu-frontend.
+
+    ``frame_ms`` is how long one written frame lasts, in milliseconds, and it is
+    the only timing the format carries (D-01, D-30). It replaced a ``tempoBpm``
+    and a ``timeStepSeconds`` that said the same thing twice and could disagree:
+    a frame was a note figure whose length came from a tempo, so the same text
+    meant different music depending on a number stored beside it.
 
     ``rows`` is intentionally omitted: the 88-key order is canonical and the
     frontend rebuilds it deterministically. Only the sparse matrix travels.
@@ -152,8 +162,7 @@ def sequence_to_score(
     """
     score: dict = {
         "title": title,
-        "tempoBpm": tempo_bpm,
-        "timeStepSeconds": time_step_seconds,
+        "frameMs": frame_ms,
         "matrixEncoding": "sparse-coo",
         "lyrics": lyrics,
         "keySignature": key_signature,

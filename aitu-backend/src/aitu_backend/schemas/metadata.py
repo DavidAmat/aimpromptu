@@ -184,6 +184,68 @@ class Annotations(CamelModel):
         return not (self.lyrics or self.fingers or self.passages or self.key_changes)
 
 
+# --------------------------------------------------------------- hand splitting
+
+
+class HandAssignments(CamelModel):
+    """Which hand plays each onset, in a form small enough to keep in metadata.
+
+    ``handMap`` is one character per onset — ``"l"`` left, ``"r"`` right — in the
+    matrix's canonical ``(column, row)`` order, i.e. exactly the order the sparse
+    COO payload lists its onsets in. A consumer walking ``rows``/``cols``/``onset``
+    increments its own counter on every onset cell (``onset[i] != -1``) and reads
+    the hand off the same index. Sustains carry no character: a note is played by
+    one hand from strike to release, so they inherit their onset's hand.
+
+    One byte per note keeps a four-minute piece at a few kilobytes instead of the
+    ~100 KB an array of objects would cost, and every field a consumer needs to
+    verify the map still belongs to this matrix (``onsetCount``, ``granularity``,
+    ``frameCount``) travels with it. A mismatch means the matrix was edited after
+    the split and the map must be recomputed rather than trusted.
+
+    Produced by :mod:`aitu_backend.hands`, which replaced Appendix D's fixed
+    ``Do-4`` threshold with a beam dynamic program over onset groups.
+    """
+
+    #: Bumped when this block's shape changes.
+    schema_version: str = Field("1.0", alias="schemaVersion")
+    #: Inference method: ``beam``, ``greedy``, ``exact`` or ``threshold``.
+    method: str
+    #: ``"rrlrl…"`` — one character per onset, canonical order.
+    hand_map: str = Field(..., alias="handMap")
+    #: Length of ``handMap``; a consumer should refuse a map that disagrees.
+    onset_count: int = Field(..., alias="onsetCount", ge=0)
+    #: The matrix this map describes. Both are part of its identity.
+    granularity: Granularity
+    frame_count: int = Field(..., alias="frameCount", ge=0)
+    #: Onsets whose decision margin was thin. A review hint, not an error count.
+    ambiguous_onsets: int = Field(0, alias="ambiguousOnsets", ge=0)
+    #: Onset groups with no physically plausible partition. Non-zero means the
+    #: transcription asks for something unplayable; ``warnings`` says where.
+    infeasible_groups: int = Field(0, alias="infeasibleGroups", ge=0)
+    warnings: list[str] = Field(default_factory=list)
+    computed_at: datetime = Field(default_factory=_now, alias="computedAt")
+
+    @model_validator(mode="after")
+    def _check_length(self) -> "HandAssignments":
+        if len(self.hand_map) != self.onset_count:
+            raise ValueError(
+                f"handMap has {len(self.hand_map)} entries but onsetCount is {self.onset_count}"
+            )
+        unknown = sorted(set(self.hand_map) - {"l", "r"})
+        if unknown:
+            raise ValueError(f"handMap contains unknown hand characters {unknown}; expected l/r")
+        return self
+
+    def matches(self, granularity: Granularity, frame_count: int, onset_count: int) -> bool:
+        """True when this map still describes the given matrix."""
+        return (
+            self.granularity is Granularity(granularity)
+            and self.frame_count == frame_count
+            and self.onset_count == onset_count
+        )
+
+
 # ------------------------------------------------------------------- versions
 
 
@@ -194,7 +256,7 @@ class ParentMatrix(CamelModel):
     one, and so on — which is what makes a sub-second recompute possible.
     """
 
-    #: Version folder of the parent, e.g. ``v1_gf``. Absent for a first import.
+    #: Version folder of the parent, e.g. ``v1_f40``. Absent for a first import.
     version_folder: str | None = Field(None, alias="versionFolder")
     matrix_processing_step: MatrixProcessingStep = Field(..., alias="matrixProcessingStep")
     #: Relative path of the parent `.npz`, when it lives in another folder.
@@ -202,21 +264,29 @@ class ParentMatrix(CamelModel):
 
 
 class VersionMetadata(CamelModel):
-    """``metadata.json`` inside one ``vN_gX`` folder.
+    """``metadata.json`` inside one ``vN_fM`` folder.
 
     Everything needed to re-render that saved matrix state, without reading the
     matrix itself.
+
+    It used to record a ``tempoBpm`` and a ``granularity``, which together said
+    how long a column was. One number says it now, and it is a length of wall
+    clock (D-01, P4.4).
     """
 
     version: int = Field(..., ge=1)
-    tempo_bpm: float = Field(..., alias="tempoBpm", gt=0)
-    granularity: Granularity
+    #: How long one column of this saved matrix lasts, in milliseconds.
+    frame_ms: float = Field(40.0, alias="frameMs", gt=0)
     matrix_processing_step: MatrixProcessingStep = Field(..., alias="matrixProcessingStep")
-    time_step_seconds: float | None = Field(None, alias="timeStepSeconds", gt=0)
 
     parent_matrix: ParentMatrix | None = Field(None, alias="parentMatrix")
     audio: AudioReference | None = None
     key_signature: str | None = Field(None, alias="keySignature")
+
+    #: Which hand plays each onset. Computed once when the clean matrix is
+    #: produced, then read by every view — notation, piano roll, falling notes —
+    #: so they cannot disagree about who plays what.
+    hand_assignments: HandAssignments | None = Field(None, alias="handAssignments")
 
     annotations: Annotations = Field(default_factory=Annotations)
     comment: str | None = None
@@ -224,8 +294,8 @@ class VersionMetadata(CamelModel):
 
     @property
     def folder(self) -> str:
-        """The folder name this metadata belongs in, e.g. ``v2_gn``."""
-        return version_folder(self.version, self.granularity)
+        """The folder name this metadata belongs in, e.g. ``v2_f40``."""
+        return version_folder(self.version, self.frame_ms)
 
 
 class VersionHistoryEntry(CamelModel):
@@ -236,7 +306,8 @@ class VersionHistoryEntry(CamelModel):
     created_at: datetime = Field(default_factory=_now, alias="createdAt")
     #: Folder name of the version this one was branched from.
     parent_version: str | None = Field(None, alias="parentVersion")
-    granularity: Granularity
+    #: How long one column of that version lasts, in milliseconds.
+    frame_ms: float = Field(40.0, alias="frameMs", gt=0)
     matrix_processing_step: MatrixProcessingStep = Field(..., alias="matrixProcessingStep")
 
 
@@ -271,7 +342,7 @@ class Promotion(CamelModel):
 
     #: Human-facing name, e.g. "Levels (Chill) - Avicii".
     promotion_name: str = Field(..., alias="promotionName")
-    #: Playground version folder this came from, e.g. ``v3_gsc``.
+    #: Playground version folder this came from, e.g. ``v3_f40``.
     source_version_folder: str = Field(..., alias="sourceVersionFolder")
     #: Matrix file inside the library track folder.
     matrix_filename: str = Field(..., alias="matrixFilename")

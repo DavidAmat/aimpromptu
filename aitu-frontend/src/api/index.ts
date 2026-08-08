@@ -23,21 +23,31 @@ export type {
 export { audioApi, SUPPORTED_AUDIO_SUFFIXES } from "./audio";
 export type { AudioItem, AudioSource, AudioTimeRange, WaveformPeaks } from "./audio";
 
+export { timeScoreApi, FIGURE_LABELS } from "./timeScore";
+export type {
+  FigureLadder,
+  FigureName,
+  HandChoice,
+  LabelledPeak,
+  LadderPreview,
+  LayoutHints,
+  Passage,
+  Peak,
+  PeaksResponse,
+  PrintedHand,
+  PrintedNote,
+  TimeMatrixEnvelope,
+  TimeScorePayload,
+} from "./timeScore";
+
 export { matrixApi } from "./matrix";
 export type {
-  Granularity,
-  ImportedMatrix,
   JobHandle,
   JobStatus,
-  MatrixCellEdit,
-  MatrixEnvelope,
-  MatrixProcessingStep,
-  PianoMatrixEnvelope,
+  RawEvents,
+  RawNoteEvent,
   TranscribeRequest,
 } from "./matrix";
-
-export { notationApi } from "./notation";
-export type { AnnotationOverlay, ScoreDocument } from "./notation";
 
 export { libraryApi } from "./library";
 export type {

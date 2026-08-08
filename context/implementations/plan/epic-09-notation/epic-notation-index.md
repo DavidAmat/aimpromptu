@@ -1,12 +1,17 @@
 # Epic 9 — Music notation
 
-Turning clean/two-hands matrices into responsive HTML sheet music with VexFlow. The backend digests matrices + annotation metadata into a VexFlow-ready score format (frontend stays thin); the frontend renders staves that rewrap with browser width. This epic also carries the music-specific engraving rules from `project-features.md`.
+Turning clean/two-hands matrices into responsive HTML sheet music with VexFlow. The backend
+digests matrices + annotation metadata into a VexFlow-ready score format (frontend stays thin);
+the frontend renders staves that rewrap with browser width. The score is onset-led: a note/chord
+fills the interval to the next onset, chord members share that duration, and visible rests are
+limited to a measure's leading entrance or an unwritable trailing remainder.
 
 Read first: `project-features.md` sections "Music notation", "Music Specifics", "Tempo", "Right and Left Alignment", "Metadata", "Backend ease the task for Frontend"; existing code `PianoSheet.tsx`, `matrixToNotation.ts` (the working MVP to evolve, not discard); `documentation/services/frontend/piano-sheet.md`.
 
 ## Story 9.1 — Score format
 
-- Task 9.1.1 vexflow score format: backend translation matrix -> measures/voices/durations/chords/rests + annotation overlay format; the frontend only draws.
+- Task 9.1.1 vexflow score format: backend translation matrix -> measures/voices/onset-led
+  durations/chords/limited rests + annotation overlay format; the frontend only draws.
 
 ## Story 9.2 — Notation tab
 
@@ -14,7 +19,9 @@ Read first: `project-features.md` sections "Music notation", "Music Specifics", 
 
 ## Story 9.3 — Engraving rules
 
-- Task 9.3.1 stems, beams and ties: stem direction rules, beam grouping with arpeggio beam-break, ties only across barlines.
+- Task 9.3.1 stems, beams and no-tie policy: stem direction rules, beam grouping with arpeggio
+  beam-break, no visible rests between sounding events, unified chord duration, and leading rests
+  after a barline instead of ties.
 
 ## Story 9.4 — Keys and transposition
 
@@ -27,7 +34,9 @@ Read first: `project-features.md` sections "Music notation", "Music Specifics", 
 
 ## Story 9.6 — Tempo guides and measure ops
 
-- Task 9.6.1 beat guides and cut-measure: dashed beat lines with frame numbers; "Cut measure up to here" inserting silence columns.
+- Task 9.6.1 beat guides and cut-measure: dashed beat lines with frame numbers; "Cut measure up to
+  here" inserts timeline columns, expands the preceding event to the barline when readable, and
+  starts the following note in the new measure.
 
 ## Story 9.7 — Advanced ornaments (nice to have, end of project)
 

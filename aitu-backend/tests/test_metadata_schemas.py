@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from aitu_backend.schemas.matrix import Granularity, Hand, MatrixProcessingStep
+from aitu_backend.schemas.matrix import Hand, MatrixProcessingStep
 from aitu_backend.schemas.metadata import (
     AudioMetadata,
     AudioSource,
@@ -22,8 +22,8 @@ from aitu_backend.schemas.metadata import (
     VersionMetadata,
 )
 from aitu_backend.schemas.naming import (
-    granularity_code,
-    granularity_from_code,
+    frame_code,
+    frame_from_code,
     matrix_filename,
     next_version,
     parse_version_folder,
@@ -62,26 +62,41 @@ def test_slugify_rejects_an_unnameable_value() -> None:
         slugify("...")
 
 
-def test_granularity_codes_round_trip() -> None:
-    for granularity in Granularity:
-        assert granularity_from_code(granularity_code(granularity)) is granularity
-    assert granularity_code(Granularity.BLANCA) == "gb"
-    assert granularity_code(Granularity.NEGRA) == "gn"
-    assert granularity_code(Granularity.CORCHEA) == "gc"
-    assert granularity_code(Granularity.SEMICORCHEA) == "gsc"
-    assert granularity_code(Granularity.FUSA) == "gf"
-    assert granularity_code(Granularity.SEMIFUSA) == "gsf"
+def test_frame_codes_round_trip() -> None:
+    """A folder suffix is a length of wall clock now, not a note figure (P4.4)."""
+    for frame_ms in (10, 20, 40, 100):
+        assert frame_from_code(frame_code(frame_ms)) == frame_ms
+    assert frame_code(40) == "f40"
+    assert frame_code(20) == "f20"
+    # A fractional frame keeps its digits, with the point replaced: a dot in a
+    # folder name invites a reader to treat what follows as an extension.
+    assert frame_code(12.5) == "f12_5"
+    assert frame_from_code("f12_5") == 12.5
 
 
-def test_granularity_from_unknown_code_raises() -> None:
-    with pytest.raises(ValueError, match="Unknown granularity code"):
-        granularity_from_code("gz")
+def test_a_frame_code_must_be_a_frame_code() -> None:
+    with pytest.raises(ValueError, match="not a frame code"):
+        frame_from_code("gsc")
+    with pytest.raises(ValueError, match="positive"):
+        frame_code(0)
 
 
 def test_version_folder_round_trip() -> None:
-    assert version_folder(2, Granularity.NEGRA) == "v2_gn"
-    assert parse_version_folder("v2_gn") == (2, Granularity.NEGRA)
-    assert parse_version_folder("v11_gsc") == (11, Granularity.SEMICORCHEA)
+    assert version_folder(2, 40) == "v2_f40"
+    assert parse_version_folder("v2_f40") == (2, 40.0)
+    assert parse_version_folder("v11_f20") == (11, 20.0)
+    assert parse_version_folder("v1_f12_5") == (1, 12.5)
+
+
+def test_a_folder_written_under_the_old_scheme_is_not_readable() -> None:
+    """`v2_gn` meant "version 2 at negra granularity", which no longer means anything.
+
+    It is refused rather than guessed at, and `next_version` skips it, so a stray
+    old folder cannot block a save or be silently reinterpreted.
+    """
+    with pytest.raises(ValueError, match="not a version folder name"):
+        parse_version_folder("v2_gn")
+    assert next_version(["v2_gn", "v1_f40"]) == 2
 
 
 @pytest.mark.parametrize("folder", ["v0_gn", "gn_v2", "v2-gn", "v2_", "notes"])
@@ -92,17 +107,17 @@ def test_bad_version_folders_are_rejected(folder: str) -> None:
 
 def test_version_numbers_start_at_one() -> None:
     with pytest.raises(ValueError):
-        version_folder(0, Granularity.NEGRA)
+        version_folder(0, 40)
 
 
 def test_next_version_ignores_junk_folders() -> None:
     assert next_version([]) == 1
-    assert next_version(["v1_gf", "v3_gsc", "scratch", "v2_gn"]) == 4
+    assert next_version(["v1_f40", "v3_f20", "scratch", "v2_gn"]) == 4
 
 
 def test_matrix_filename() -> None:
-    assert matrix_filename(1, Granularity.SEMICORCHEA) == "piano_matrix_v1_gsc.npz"
-    assert matrix_filename(1, Granularity.SEMICORCHEA, "left") == "piano_matrix_v1_gsc_left.npz"
+    assert matrix_filename(1, 40) == "piano_matrix_v1_f40.npz"
+    assert matrix_filename(1, 40, "left") == "piano_matrix_v1_f40_left.npz"
 
 
 # ---------------------------------------------------------------- fixtures
@@ -113,11 +128,11 @@ def test_version_metadata_fixture_round_trips() -> None:
     model = VersionMetadata.model_validate(raw)
 
     assert model.version == 2
-    assert model.granularity is Granularity.SEMICORCHEA
+    assert model.frame_ms == 40
     assert model.matrix_processing_step is MatrixProcessingStep.TWO_HANDS
-    assert model.folder == "v2_gsc"
+    assert model.folder == "v2_f40"
     assert model.parent_matrix is not None
-    assert model.parent_matrix.version_folder == "v1_gf"
+    assert model.parent_matrix.version_folder == "v1_f40"
     assert model.audio is not None
     assert model.audio.time_range is not None
     assert model.audio.time_range.duration_seconds == pytest.approx(35.75)
@@ -140,11 +155,11 @@ def test_track_metadata_fixture_round_trips() -> None:
     model = TrackMetadata.model_validate(load("metadata_track.json"))
 
     assert (model.artist_slug, model.track_slug) == ("avicii", "levels")
-    assert model.version_folders() == ["v1_gf", "v2_gsc"]
+    assert model.version_folders() == ["v1_f40", "v2_f40"]
     latest = model.latest()
     assert latest is not None
-    assert latest.folder == "v2_gsc"
-    assert latest.parent_version == "v1_gf"
+    assert latest.folder == "v2_f40"
+    assert latest.parent_version == "v1_f40"
     assert next_version(model.version_folders()) == 3
 
     assert TrackMetadata.model_validate(model.model_dump(by_alias=True, mode="json")) == model
@@ -158,10 +173,10 @@ def test_library_track_fixture_round_trips() -> None:
     assert len(model.active_promotions()) == 2
     chill = model.find_promotion("Levels (Chill) - Avicii")
     assert chill is not None
-    assert chill.source_version_folder == "v2_gsc"
+    assert chill.source_version_folder == "v2_f40"
     # The promoted version's metadata is embedded, so the entry is self-contained.
     assert chill.version_metadata is not None
-    assert chill.version_metadata.granularity is Granularity.SEMICORCHEA
+    assert chill.version_metadata.frame_ms == 40
     assert model.rollback_to == "Levels (Chill) - Avicii"
 
     assert (
@@ -216,9 +231,7 @@ def test_finger_numbers_are_limited_to_one_through_five() -> None:
 def test_annotations_default_to_empty() -> None:
     model = VersionMetadata(
         version=1,
-        tempo_bpm=60,
-        granularity=Granularity.NEGRA,
         matrix_processing_step=MatrixProcessingStep.RAW,
     )
     assert model.annotations.is_empty()
-    assert model.folder == "v1_gn"
+    assert model.folder == "v1_f40"

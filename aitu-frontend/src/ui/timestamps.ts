@@ -27,3 +27,13 @@ export const timestampSx: SxProps<Theme> = {
  * padding). Deliberately roomy: the column is cheap, a wrapped label is not.
  */
 export const FRAME_LABEL_WIDTH = 140;
+
+/**
+ * Width of a frame-*number* column — `1234` at 10px monospace, plus padding.
+ *
+ * The matrix grid prints the number alone. Its timestamp has not been lost, it
+ * has been moved: the transport above the grid shows the cursor's time once,
+ * which is the only place it was ever read from, and reclaiming the other ~90px
+ * per row is most of what lets all 88 keys fit on screen without scrolling.
+ */
+export const FRAME_NUMBER_WIDTH = 52;

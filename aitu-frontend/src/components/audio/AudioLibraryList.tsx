@@ -15,6 +15,7 @@ import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
+import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
 import { audioApi, type AudioItem } from "../../api";
 import { formatTimeShort } from "../../audio/time";
 
@@ -104,9 +105,22 @@ export function AudioLibraryList({ selectedUuid, onSelect, reloadToken = 0 }: Au
               <Box component="span">
                 {item.durationSeconds ? formatTimeShort(item.durationSeconds) : "—"} ·{" "}
                 {item.format.toUpperCase()}
+                {item.needsRederivation ? (
+                  <Box component="span" sx={{ display: "block", color: "warning.main" }}>
+                    {item.needsRederivation}
+                  </Box>
+                ) : null}
               </Box>
             }
           />
+          {item.needsRederivation ? (
+            <ReportProblemOutlinedIcon
+              fontSize="small"
+              color="warning"
+              sx={{ mr: 1 }}
+              titleAccess="This piece cannot be drawn yet"
+            />
+          ) : null}
           <Chip label={item.source} size="small" variant="outlined" sx={{ mr: 1 }} />
           <IconButton
             edge="end"

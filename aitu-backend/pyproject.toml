@@ -40,6 +40,29 @@ transcription = [
     "librosa>=0.10",
 ]
 
+# Transkun 2 — the second real engine, for comparing against ByteDance by ear.
+#   uv sync --extra transkun
+#
+# Verified against the package itself (2026-08):
+#   * transkun 2.0.1 ships its own weights inside the wheel
+#     (`transkun/pretrained/2.0.pt`), so there is no download step and no
+#     checkpoint path to configure.
+#   * It pulls a wide tail — torchaudio, tensorboard, seaborn, matplotlib,
+#     pydub, sox, soxr, ncls — because the published wheel does not separate
+#     its training dependencies from its inference ones. Nothing here is
+#     imported by `TranskunEngine`; the weight is the download size, not a
+#     conflict.
+#   * `sox` (pysox) builds from source and fails against setuptools older than
+#     ~60 with `AttributeError: install_layout`. uv provides a modern one, so
+#     this only bites in a hand-rolled venv.
+#   * `librosa` is listed again on purpose: the engine loads and resamples the
+#     WAV with it rather than transkun's own pydub path, which needs ffmpeg.
+transkun = [
+    "transkun>=2.0.1",
+    "torch>=2.4",
+    "librosa>=0.10",
+]
+
 # NOTE: there is deliberately no `basic-pitch` extra.
 #
 # basic-pitch 0.4.0 (the newest) pins `tensorflow(-macos) >=2.4.1,<2.15.1`, and

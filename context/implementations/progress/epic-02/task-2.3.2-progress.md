@@ -73,7 +73,8 @@ would have to become 4 or 6 — a 25% duration error where 0% was available.
   that ends early leaves a gap; a note that ends late collides with the next onset.
 - **A note can never vanish**: the floor is one column, however short the sample.
 - **The longest two-figure note is 24 columns** (redonda + blanca); anything longer clamps there.
-  Epic 9 will need ties across barlines for genuinely longer notes.
+  Epic 9's later simplified policy avoids ties even across barlines: the note fills to the barline,
+  then the following measure may begin with a rest.
 - `snap_onset` takes a `tolerance` in *fractions of a column* (default `0.5` = nearest boundary).
   Lower values bias onsets later, which is the forgiving setting for a player who rushes. The
   docstring repeats the notation doc's General Note: **this is only as good as the BPM the user

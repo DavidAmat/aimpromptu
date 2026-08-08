@@ -1,0 +1,191 @@
+{
+  "annotations": {
+    "fingers": [],
+    "keyChanges": [],
+    "lyrics": [],
+    "passages": []
+  },
+  "artifactId": "golden-dotted",
+  "beatGuides": [
+    {
+      "beat": 0,
+      "column": 0,
+      "isMeasureStart": true,
+      "measure": 0,
+      "timeSeconds": 0.0
+    },
+    {
+      "beat": 1,
+      "column": 4,
+      "isMeasureStart": false,
+      "measure": 0,
+      "timeSeconds": 1.0
+    },
+    {
+      "beat": 2,
+      "column": 8,
+      "isMeasureStart": false,
+      "measure": 0,
+      "timeSeconds": 2.0
+    },
+    {
+      "beat": 3,
+      "column": 12,
+      "isMeasureStart": false,
+      "measure": 0,
+      "timeSeconds": 3.0
+    },
+    {
+      "beat": 0,
+      "column": 16,
+      "isMeasureStart": true,
+      "measure": 1,
+      "timeSeconds": 4.0
+    },
+    {
+      "beat": 1,
+      "column": 20,
+      "isMeasureStart": false,
+      "measure": 1,
+      "timeSeconds": 5.0
+    },
+    {
+      "beat": 2,
+      "column": 24,
+      "isMeasureStart": false,
+      "measure": 1,
+      "timeSeconds": 6.0
+    },
+    {
+      "beat": 3,
+      "column": 28,
+      "isMeasureStart": false,
+      "measure": 1,
+      "timeSeconds": 7.0
+    }
+  ],
+  "columnsPerMeasure": 16,
+  "frameCount": 32,
+  "granularity": "semicorchea",
+  "hands": [
+    {
+      "clef": "treble",
+      "clefChanges": [],
+      "hand": "single",
+      "measures": [
+        {
+          "accidentalCount": 0,
+          "clef": null,
+          "endColumn": 16,
+          "entries": [
+            {
+              "accidentals": [
+                null
+              ],
+              "beamGroup": null,
+              "columns": 12,
+              "cue": false,
+              "dots": 1,
+              "duration": "h",
+              "fingers": [
+                null
+              ],
+              "isRest": false,
+              "isSpacer": false,
+              "keys": [
+                "c/4"
+              ],
+              "lyric": null,
+              "octaveShift": 0,
+              "startColumn": 0,
+              "stemDirection": "up",
+              "tieToNext": false
+            },
+            {
+              "accidentals": [
+                null
+              ],
+              "beamGroup": null,
+              "columns": 4,
+              "cue": false,
+              "dots": 0,
+              "duration": "q",
+              "fingers": [
+                null
+              ],
+              "isRest": false,
+              "isSpacer": false,
+              "keys": [
+                "g/4"
+              ],
+              "lyric": null,
+              "octaveShift": 0,
+              "startColumn": 12,
+              "stemDirection": "up",
+              "tieToNext": false
+            }
+          ],
+          "index": 0,
+          "keySignature": "C",
+          "startColumn": 0,
+          "suggestedKeySignature": "C"
+        },
+        {
+          "accidentalCount": 0,
+          "clef": null,
+          "endColumn": 32,
+          "entries": [
+            {
+              "accidentals": [],
+              "beamGroup": null,
+              "columns": 16,
+              "cue": false,
+              "dots": 0,
+              "duration": "w",
+              "fingers": [],
+              "isRest": true,
+              "isSpacer": false,
+              "keys": [],
+              "lyric": null,
+              "octaveShift": 0,
+              "startColumn": 16,
+              "stemDirection": null,
+              "tieToNext": false
+            }
+          ],
+          "index": 1,
+          "keySignature": null,
+          "startColumn": 16,
+          "suggestedKeySignature": null
+        }
+      ],
+      "ottavas": []
+    }
+  ],
+  "keySignature": "C",
+  "measureCount": 2,
+  "settings": {
+    "keySignature": "C",
+    "octaveThresholds": {
+      "leftOttavaDown": "Do-2",
+      "leftOttavaDownDouble": "Do-1",
+      "leftTrebleFrom": "Do-4",
+      "rightOttavaUp": "Do-6",
+      "rightOttavaUpDouble": "Do-7"
+    },
+    "timeSignature": {
+      "beatValue": 4,
+      "beats": 4
+    },
+    "title": null,
+    "transposeSemitones": 0
+  },
+  "tempoBpm": 60.0,
+  "timeSignature": {
+    "beatValue": 4,
+    "beats": 4
+  },
+  "timeStepSeconds": 0.25,
+  "title": null,
+  "warnings": []
+}

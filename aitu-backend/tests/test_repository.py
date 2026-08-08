@@ -10,11 +10,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from aitu_backend.main import create_app
-from aitu_backend.matrix.granularity import collapse_to
 from aitu_backend.matrix.hands import split_hands
 from aitu_backend.matrix.keys import KEY_COUNT, note_to_row
 from aitu_backend.matrix.model import PianoMatrix
-from aitu_backend.schemas.matrix import Granularity, MatrixProcessingStep
+from aitu_backend.schemas.matrix import MatrixProcessingStep
 from aitu_backend.storage import paths, promotion, repository
 from aitu_backend.storage.promotion import (
     LibraryTrackNotFound,
@@ -34,7 +33,7 @@ def temp_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def matrix(
-    granularity: Granularity = Granularity.SEMICORCHEA,
+    frame_ms: float = 40,
     frames: int = 8,
     step: MatrixProcessingStep = MatrixProcessingStep.CLEAN,
 ) -> PianoMatrix:
@@ -42,29 +41,28 @@ def matrix(
     grid[DO4, 0] = 1
     grid[DO4, 1] = -1
     grid[note_to_row("Sol-3"), 2] = 1
-    return PianoMatrix.from_dense(grid, granularity=granularity, tempo_bpm=72, processing_step=step)
+    return PianoMatrix.time_based(grid, frame_ms=frame_ms, processing_step=step)
 
 
 # ------------------------------------------------------------------ the tree
 
 
 def test_the_avicii_levels_scenario(temp_store: Path) -> None:
-    """v1_gsc, v1_gn, v2_gn — the example tree from the features doc.
+    """v1_f40, v1_f20, v2_f20 — the example tree, on the wall-clock scheme.
 
-    Two granularities of v1 (same take, collapsed differently) then a real
-    second version.
+    Two views of v1 (the same take on a coarser and a finer grid) then a real
+    second version. P4.4 replaced the granularity code in the folder name with
+    the frame length; the idea it encodes is unchanged.
     """
-    fine = matrix(Granularity.SEMICORCHEA)
-    coarse = collapse_to(
-        matrix(Granularity.SEMICORCHEA, step=MatrixProcessingStep.RAW), Granularity.NEGRA
-    )
+    fine = matrix(frame_ms=40)
+    coarse = matrix(frame_ms=20)
 
     v1_gsc = repository.save_version("Avicii", "Levels", fine, comment="First transcription")
-    assert v1_gsc.folder == "v1_gsc"
+    assert v1_gsc.folder == "v1_f40"
 
-    # Same musical state, second granularity: the version number is pinned.
-    v1_gn = repository.save_version("Avicii", "Levels", coarse, version=1, comment="At negra")
-    assert v1_gn.folder == "v1_gn"
+    # Same musical state, second grid: the version number is pinned.
+    v1_gn = repository.save_version("Avicii", "Levels", coarse, version=1, comment="Finer grid")
+    assert v1_gn.folder == "v1_f20"
 
     v2_gn = repository.save_version(
         "Avicii",
@@ -73,17 +71,17 @@ def test_the_avicii_levels_scenario(temp_store: Path) -> None:
         comment="Cleaned the intro",
         parent=repository.parent_pointer(v1_gn),
     )
-    assert v2_gn.folder == "v2_gn"
+    assert v2_gn.folder == "v2_f20"
 
     track = repository.read_track("avicii", "levels")
-    assert track.version_folders() == ["v1_gsc", "v1_gn", "v2_gn"]
+    assert track.version_folders() == ["v1_f40", "v1_f20", "v2_f20"]
     assert track.artist_name == "Avicii"
 
     tree = paths.playground_track_dir("avicii", "levels")
     assert (tree / "metadata_track.json").is_file()
-    assert (tree / "v1_gsc" / "piano_matrix_v1_gsc.npz").is_file()
-    assert (tree / "v1_gsc" / "metadata.json").is_file()
-    assert (tree / "v2_gn" / "piano_matrix_v2_gn.npz").is_file()
+    assert (tree / "v1_f40" / "piano_matrix_v1_f40.npz").is_file()
+    assert (tree / "v1_f40" / "metadata.json").is_file()
+    assert (tree / "v2_f20" / "piano_matrix_v2_f20.npz").is_file()
 
 
 def test_a_saved_version_round_trips(temp_store: Path) -> None:
@@ -92,13 +90,13 @@ def test_a_saved_version_round_trips(temp_store: Path) -> None:
 
     loaded = repository.load_version("avicii", "levels", saved.folder)
     assert np.array_equal(loaded.matrix.grid, original.grid)
-    assert loaded.matrix.granularity is original.granularity
-    assert loaded.matrix.tempo_bpm == original.tempo_bpm
+    assert loaded.matrix.frame_ms == original.frame_ms
+    assert loaded.matrix.is_time_based
     assert loaded.metadata.comment == "take one"
 
 
 def test_version_numbers_advance(temp_store: Path) -> None:
-    for expected in ("v1_gsc", "v2_gsc", "v3_gsc"):
+    for expected in ("v1_f40", "v2_f40", "v3_f40"):
         assert repository.save_version("A", "B", matrix()).folder == expected
 
 
@@ -110,10 +108,10 @@ def test_saving_over_a_version_needs_the_overwrite_flag(temp_store: Path) -> Non
     replaced = repository.save_version(
         "A", "B", matrix(), version=1, overwrite=True, comment="redo"
     )
-    assert replaced.folder == "v1_gsc"
+    assert replaced.folder == "v1_f40"
     # Overwriting replaces the history entry rather than appending a second one.
     history = repository.list_versions("a", "b")
-    assert [entry.folder for entry in history] == ["v1_gsc"]
+    assert [entry.folder for entry in history] == ["v1_f40"]
     assert history[0].comment == "redo"
 
 
@@ -121,10 +119,10 @@ def test_two_hands_are_saved_beside_their_version(temp_store: Path) -> None:
     hands = split_hands(matrix())
     saved = repository.save_two_hands("A", "B", hands.right, hands.left, comment="split")
 
-    directory = paths.playground_version_dir("a", "b", 1, Granularity.SEMICORCHEA)
-    assert (directory / "piano_matrix_v1_gsc_right.npz").is_file()
-    assert (directory / "piano_matrix_v1_gsc_left.npz").is_file()
-    assert saved.folder == "v1_gsc"
+    directory = paths.playground_version_dir("a", "b", 1, 40)
+    assert (directory / "piano_matrix_v1_f40_right.npz").is_file()
+    assert (directory / "piano_matrix_v1_f40_left.npz").is_file()
+    assert saved.folder == "v1_f40"
 
 
 def test_mismatched_hands_are_refused(temp_store: Path) -> None:
@@ -146,7 +144,7 @@ def test_an_edit_records_its_parent_and_leaves_the_original_alone(temp_store: Pa
     )
 
     assert child.metadata.parent_matrix is not None
-    assert child.metadata.parent_matrix.version_folder == "v1_gsc"
+    assert child.metadata.parent_matrix.version_folder == "v1_f40"
 
     # "Back to the original" loads the parent; it is untouched.
     parent = repository.load_parent(child)
@@ -190,10 +188,10 @@ def test_an_unknown_track_raises(temp_store: Path) -> None:
 def test_deleting_a_version_drops_it_from_the_history(temp_store: Path) -> None:
     repository.save_version("A", "B", matrix())
     repository.save_version("A", "B", matrix())
-    repository.delete_version("a", "b", "v1_gsc")
+    repository.delete_version("a", "b", "v1_f40")
 
-    assert [entry.folder for entry in repository.list_versions("a", "b")] == ["v2_gsc"]
-    assert not (paths.playground_track_dir("a", "b") / "v1_gsc").exists()
+    assert [entry.folder for entry in repository.list_versions("a", "b")] == ["v2_f40"]
+    assert not (paths.playground_track_dir("a", "b") / "v1_f40").exists()
 
 
 def test_loading_the_latest_version(temp_store: Path) -> None:
@@ -212,23 +210,23 @@ def test_the_default_promotion_name() -> None:
 def test_promote_copies_the_matrix_and_embeds_the_metadata(temp_store: Path) -> None:
     """The library must survive the playground being cleaned out."""
     repository.save_version("Avicii", "Levels", matrix(), comment="v1")
-    result = promotion.promote("avicii", "levels", "v1_gsc")
+    result = promotion.promote("avicii", "levels", "v1_f40")
 
     assert result.name == "Levels - Avicii"
     library = paths.library_track_dir("avicii", "levels")
-    assert (library / "piano_matrix_v1_gsc.npz").is_file()
+    assert (library / "piano_matrix_v1_f40.npz").is_file()
     assert (library / "metadata_library_track.json").is_file()
 
     embedded = result.promotion.version_metadata
     assert embedded is not None
     assert embedded.comment == "v1"
-    assert embedded.granularity is Granularity.SEMICORCHEA
+    assert embedded.frame_ms == 40
 
 
 def test_an_editable_promotion_name(temp_store: Path) -> None:
     repository.save_version("Avicii", "Levels", matrix())
     result = promotion.promote(
-        "avicii", "levels", "v1_gsc", promotion_name="Levels (Chill) - Avicii"
+        "avicii", "levels", "v1_f40", promotion_name="Levels (Chill) - Avicii"
     )
     assert result.name == "Levels (Chill) - Avicii"
 
@@ -237,8 +235,8 @@ def test_re_promoting_replaces_but_keeps_the_history(temp_store: Path) -> None:
     repository.save_version("Avicii", "Levels", matrix(), comment="first")
     repository.save_version("Avicii", "Levels", matrix(), comment="second")
 
-    promotion.promote("avicii", "levels", "v1_gsc", promotion_name="Take one")
-    after = promotion.promote("avicii", "levels", "v2_gsc", promotion_name="Take two").track
+    promotion.promote("avicii", "levels", "v1_f40", promotion_name="Take one")
+    after = promotion.promote("avicii", "levels", "v2_f40", promotion_name="Take two").track
 
     assert [item.promotion_name for item in after.active_promotions()] == ["Take two"]
     assert len(after.promotions) == 2  # nothing was deleted
@@ -250,11 +248,11 @@ def test_additional_promotions_live_side_by_side(temp_store: Path) -> None:
     repository.save_version("Avicii", "Levels", matrix(), comment="first")
     repository.save_version("Avicii", "Levels", matrix(), comment="second")
 
-    promotion.promote("avicii", "levels", "v1_gsc", promotion_name="Levels (Chill) - Avicii")
+    promotion.promote("avicii", "levels", "v1_f40", promotion_name="Levels (Chill) - Avicii")
     after = promotion.promote(
         "avicii",
         "levels",
-        "v2_gsc",
+        "v2_f40",
         promotion_name="Levels (Full speed) - Avicii",
         as_additional=True,
     ).track
@@ -268,8 +266,8 @@ def test_additional_promotions_live_side_by_side(temp_store: Path) -> None:
 def test_rollback_restores_the_previous_promotion(temp_store: Path) -> None:
     repository.save_version("Avicii", "Levels", matrix(), comment="first")
     repository.save_version("Avicii", "Levels", matrix(), comment="second")
-    promotion.promote("avicii", "levels", "v1_gsc", promotion_name="Take one")
-    promotion.promote("avicii", "levels", "v2_gsc", promotion_name="Take two")
+    promotion.promote("avicii", "levels", "v1_f40", promotion_name="Take one")
+    promotion.promote("avicii", "levels", "v2_f40", promotion_name="Take two")
 
     rolled = promotion.rollback("avicii", "levels").track
 
@@ -285,7 +283,7 @@ def test_rollback_restores_the_previous_promotion(temp_store: Path) -> None:
 
 def test_rollback_without_a_previous_promotion_is_refused(temp_store: Path) -> None:
     repository.save_version("Avicii", "Levels", matrix())
-    promotion.promote("avicii", "levels", "v1_gsc")
+    promotion.promote("avicii", "levels", "v1_f40")
     with pytest.raises(NothingToRollBackTo):
         promotion.rollback("avicii", "levels")
 
@@ -293,18 +291,18 @@ def test_rollback_without_a_previous_promotion_is_refused(temp_store: Path) -> N
 def test_promoting_a_two_hands_version_copies_both_hands(temp_store: Path) -> None:
     hands = split_hands(matrix())
     repository.save_two_hands("Avicii", "Levels", hands.right, hands.left)
-    promotion.promote("avicii", "levels", "v1_gsc")
+    promotion.promote("avicii", "levels", "v1_f40")
 
     library = paths.library_track_dir("avicii", "levels")
-    assert (library / "piano_matrix_v1_gsc_right.npz").is_file()
-    assert (library / "piano_matrix_v1_gsc_left.npz").is_file()
+    assert (library / "piano_matrix_v1_f40_right.npz").is_file()
+    assert (library / "piano_matrix_v1_f40_left.npz").is_file()
 
 
 def test_library_tracks_filter_by_tag_and_name(temp_store: Path) -> None:
     repository.save_version("Avicii", "Levels", matrix())
     repository.save_version("Claude Debussy", "Clair de Lune", matrix())
-    promotion.promote("avicii", "levels", "v1_gsc")
-    promotion.promote("claude-debussy", "clair-de-lune", "v1_gsc")
+    promotion.promote("avicii", "levels", "v1_f40")
+    promotion.promote("claude-debussy", "clair-de-lune", "v1_f40")
     promotion.set_tags("avicii", "levels", ["edm", "easy"])
 
     assert len(promotion.list_library_tracks()) == 2
@@ -320,7 +318,7 @@ def test_an_unknown_library_track_raises(temp_store: Path) -> None:
 def test_history_survives_a_reread(temp_store: Path) -> None:
     """Everything is on disk, so a restart changes nothing."""
     repository.save_version("Avicii", "Levels", matrix(), comment="first")
-    promotion.promote("avicii", "levels", "v1_gsc", promotion_name="Take one")
+    promotion.promote("avicii", "levels", "v1_f40", promotion_name="Take one")
 
     assert repository.read_track("avicii", "levels").versions[0].comment == "first"
     assert (
@@ -351,7 +349,7 @@ def test_the_full_save_promote_rollback_flow_over_http(client: TestClient) -> No
         },
     )
     assert first.status_code == 201
-    assert first.json()["folder"] == "v1_gsc"
+    assert first.json()["folder"] == "v1_f40"
 
     second = client.post(
         "/library/playground",
@@ -360,18 +358,18 @@ def test_the_full_save_promote_rollback_flow_over_http(client: TestClient) -> No
             "trackName": "Levels",
             "matrix": envelope(),
             "comment": "cleaned the intro",
-            "parentVersion": "v1_gsc",
+            "parentVersion": "v1_f40",
         },
     )
-    assert second.json()["folder"] == "v2_gsc"
-    assert second.json()["metadata"]["parentMatrix"]["versionFolder"] == "v1_gsc"
+    assert second.json()["folder"] == "v2_f40"
+    assert second.json()["metadata"]["parentMatrix"]["versionFolder"] == "v1_f40"
 
     tracks = client.get("/library/playground").json()
     assert tracks[0]["trackName"] == "Levels"
-    assert [entry["folder"] for entry in tracks[0]["versions"]] == ["v1_gsc", "v2_gsc"]
+    assert [entry["folder"] for entry in tracks[0]["versions"]] == ["v1_f40", "v2_f40"]
 
-    loaded = client.get("/library/playground/avicii/levels/v1_gsc").json()
-    assert loaded["granularity"] == "semicorchea"
+    loaded = client.get("/library/playground/avicii/levels/v1_f40").json()
+    assert loaded["matrix"]["shape"] == [88, 8]
 
     suggestion = client.get("/library/promotion-suggestion/avicii/levels").json()
     assert suggestion["suggestedName"] == "Levels - Avicii"
@@ -381,7 +379,7 @@ def test_the_full_save_promote_rollback_flow_over_http(client: TestClient) -> No
         json={
             "artistSlug": "avicii",
             "trackSlug": "levels",
-            "versionFolder": "v1_gsc",
+            "versionFolder": "v1_f40",
             "promotionName": "Levels (Chill) - Avicii",
         },
     ).json()
@@ -392,7 +390,7 @@ def test_the_full_save_promote_rollback_flow_over_http(client: TestClient) -> No
         json={
             "artistSlug": "avicii",
             "trackSlug": "levels",
-            "versionFolder": "v2_gsc",
+            "versionFolder": "v2_f40",
             "promotionName": "Levels (Fast) - Avicii",
         },
     )
@@ -431,7 +429,7 @@ def test_rolling_back_with_no_history_is_a_409(client: TestClient) -> None:
     )
     client.post(
         "/library/promote",
-        json={"artistSlug": "a", "trackSlug": "b", "versionFolder": "v1_gsc"},
+        json={"artistSlug": "a", "trackSlug": "b", "versionFolder": "v1_f40"},
     )
     assert (
         client.post("/library/rollback", json={"artistSlug": "a", "trackSlug": "b"}).status_code

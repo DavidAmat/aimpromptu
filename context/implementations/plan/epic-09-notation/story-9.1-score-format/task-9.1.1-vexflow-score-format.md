@@ -4,7 +4,18 @@
 
 ## Subtask 9.1.1.1 — Format design
 
-JSON score document containing, per hand: ordered measures, each with voice entries `{keys, duration, dots, isRest, tieToNext, beamGroup, annotations}`. Durations derived from column spans and BPM (Epic 2 timing math). Chords = simultaneous onsets in one column. Include measure boundaries computed from the time signature grid (default 4/4 over beat=negra) — needed for the ties-across-barline rule and beat guides.
+JSON score document containing, per hand: ordered measures, each with voice entries
+`{keys, duration, dots, isRest, isSpacer, tieToNext, beamGroup, annotations}`. Durations are
+onset-led: simultaneous onsets form a chord, every chord member shares the span to the next onset,
+and a recorded release never creates an interior rest. `isSpacer` is a timing-only, invisible rest
+used solely when an interior span has an unwritable residue. `tieToNext` is retained for transport
+compatibility but always false: a cross-barline gap becomes a leading rest in the following
+measure. Include measure boundaries computed from the time signature grid (default 4/4 over
+beat=negra).
+
+Visible rests are allowed before a measure's first entrance. At the end, first expand the final
+note/chord to one legal figure that approaches the barline; only an unwritable remainder becomes a
+visible trailing rest.
 
 Evolve the existing frontend `matrixToNotation.ts` logic by porting it into this backend builder; the frontend keeps only a thin VexFlow adapter.
 
@@ -22,4 +33,6 @@ Apply the `annotations` block from `metadata.json` (trill ranges, tuplet groups,
 
 ## Acceptance
 
-Golden-file tests: known matrices -> expected score JSON (scale, chord, dotted note, two hands).
+Golden-file tests: known matrices -> expected score JSON (scale, chord, dotted note, two hands),
+plus regressions for delayed entrances, interior gaps, unequal chord releases and measure-tail
+expansion.

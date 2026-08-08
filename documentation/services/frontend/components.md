@@ -1,74 +1,50 @@
-> Context: [app-shell.md](../../../context/frontend/app-shell.md) · [compose-panel.md](../../../context/frontend/compose-panel.md) · [loaded-scores.md](../../../context/frontend/loaded-scores.md)
+> Context: [app-shell.md](../../../context/frontend/app-shell.md) · [rendering-pipeline.md](../../../context/frontend/rendering-pipeline.md)
 
 # Components
 
-React components in `aitu-frontend/src/components/` plus root `App.tsx`.
+React components in `aitu-frontend/src/components/`.
 
-## App.tsx
+## Notation (`components/notation/`)
 
-| Concern | Detail |
-|---------|--------|
-| API base | `VITE_AITU_API_URL` or `http://127.0.0.1:8765` |
-| Fetch | `GET /scores` on mount |
-| Global layout | `pxPerNote`, `lyricsGap`, `lyricsFontSize` state |
-| Children | `LayoutControls` → `ScoreStack` or error/loading → `SequenceComposer` |
+| Component | Role |
+|-----------|------|
+| `GridScore` | The score. A lifecycle shell around `GridNotationEditor` — see [grid-notation.md](grid-notation.md) |
+| `PromoteDialog` | Promote a saved playground version into the library |
 
-## ScoreStack
+`GridScore` holds no React state beyond two refs. All drawing, selection,
+toolboxes, playback and the resize handling belong to the editor; the component's
+whole job is to build it once per piece and destroy it on unmount.
 
-**Props:** `scores`, `pxPerNote`, `lyricsGap`, `lyricsFontSize`.
+Removed with the VexFlow stack: `PianoSheet`, `ScoreStack`, `SequenceComposer`,
+`LayoutControls`, `ScoreSheet`, `renderScore`, `KeySignaturePanel`, `OctavePanel`.
+The spacing controls those needed have no equivalent — the score re-wraps at a
+fixed size rather than being scaled, and zoom lives in the editor's own chrome.
 
-Renders `scores.map` → section per score → `PianoSheet`. No local state.
+## Elsewhere
 
-## LayoutControls
-
-**Props:** spacing values + three `on*Change` callbacks.
-
-Exported constants:
-
-```typescript
-DEFAULT_PX_PER_NOTE = 30   // min 18, max 120
-DEFAULT_LYRICS_GAP = 10    // min 0, max 60
-DEFAULT_LYRICS_FONT_SIZE = 12  // min 8, max 24
-```
-
-Used in `App` (loaded scores) and `SequenceComposer` (composed passage) — separate state
-instances.
-
-## SequenceComposer
-
-**Props:** `apiBase: string`.
-
-**State:** title, tempo, time step, key signature, three text areas (right/left/lyrics),
-local layout controls, `score`, `error`, `busy`.
-
-**Actions:** `handleRender` → validate frames → `POST /sequence` → `PianoSheet` on success.
-
-**parseFrames:** one line per matrix column; trims trailing blanks.
-
-Client validates hand frame-count match before request (backend also 422s).
-
-## PianoSheet
-
-**Props:** `score`, `pxPerNote`, `lyricsGap`, `lyricsFontSize`.
-
-See [piano-sheet.md](piano-sheet.md). No React state beyond refs/id; all drawing in
-`useEffect` + `ResizeObserver`.
+| Directory | Contents |
+|-----------|----------|
+| `components/audio/` | Recorder, upload, waveform and range selection |
+| `components/input/` | Text-notation input, matrix JSON input, transcription settings |
+| `components/matrix/` | `MatrixGrid` — the matrix as a table |
+| `piano/`, `playback/` | Keyboard, transport and the falling-note views |
+| `ui/` | The shared kit: `PageContainer`, `SectionCard`, `Pill`, `TabBar`, theme |
 
 ## File layout
 
 ```
 src/
-  App.tsx
   components/
-    LayoutControls.tsx
-    ScoreStack.tsx
-    SequenceComposer.tsx
-    PianoSheet.tsx
+    notation/
+      GridScore.tsx
+      PromoteDialog.tsx
   music/
-    types.ts
-    notes.ts
-    matrixToNotation.ts
+    types.ts          # matrix contracts, mirrored from schemas/matrix.py
+    gridNotation.ts   # the seam to @aimpromptu/grid-notation
+    granularities.ts
+    handMap.ts
 ```
 
-Music logic stays under `music/`; VexFlow isolation in `PianoSheet.tsx` per
+Music logic stays under `music/`; the renderer is reached only through
+`music/gridNotation.ts` and `components/notation/GridScore.tsx`, per
 [09-coding-conventions.md](../../../context/09-coding-conventions.md).

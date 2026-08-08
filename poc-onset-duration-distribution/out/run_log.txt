@@ -1,0 +1,62 @@
+Mr Blue Sky — segment 00:05.00–05:10.37  (305.37 s, grids written at 178.00 BPM)
+  hand labelling: 1432 right, 966 left, 0 unmatched, 0 out of range (column offsets used: {0: 2012, -1: 376, 1: 9, -2: 1})
+  1432 right-hand onsets -> 719 attacks at a 20 ms chord window
+
+== summary ==
+segment        span  attacks  intervals  median_ioi_ms  dominant_peak_ms  dominant_share_pct  peaks  mass_in_peaks_pct  fitted_tatum_ms  fitted_beat_ms  fitted_bpm  beat_fit_score  median_lattice_error_pct  within_10pct_of_a_figure  swing_ratio  binary_grid_coin_toss_pct
+      A 0:00 – 3:37      529        528          337.5             337.2                50.2      6               92.2            113.0           335.0       179.1           0.862                       1.2                      93.2         1.70                       38.2
+      B  3:37 – end      190        189          140.9             115.4                44.4      7               88.4            118.5           697.5        86.0           0.798                       7.8                      64.0         2.03                       52.2
+
+== peaks ==
+segment  peak_ms  median_ms  count  share_pct basin_ms  x_dominant  x_beat  nearest_printable                      figure  error_pct
+      A    125.0      124.6     29        5.5   90-166       0.370   0.372             0.3750    semicorchea con puntillo        0.8
+      A    212.0      211.3     87       16.5  166-273       0.627   0.631             0.6667 corchea de tresillo (larga)        5.4
+      A    337.0      337.2    265       50.2  273-423       1.000   1.007             1.0000                       negra        0.7
+      A    463.0      463.0     41        7.8  423-509       1.373   1.382             1.3333   negra de tresillo (larga)        3.7
+      A    674.0      674.2     42        8.0  633-728       1.999   2.013             2.0000                      blanca        0.6
+      A    799.0      798.8     23        4.4  764-910       2.369   2.384             2.0000                      blanca       19.2
+      B     66.0       67.1     22       11.6     0-82       0.581   0.096             0.1250                        fusa       23.1
+      B    113.0      115.4     84       44.4   82-181       1.000   0.166             0.1667     semicorchea de tresillo        0.7
+      B    234.0      233.4     30       15.9  181-269       2.021   0.335             0.3333         corchea de tresillo        0.4
+      B    474.0      473.6      6        3.2  432-539       4.102   0.679             0.6667 corchea de tresillo (larga)        1.8
+      B    751.0      751.3     16        8.5  710-821       6.507   1.077             1.0000                       negra        7.7
+      B    936.0      935.8      5        2.6  903-969       8.106   1.342             1.3333   negra de tresillo (larga)        0.6
+      B   1000.0     1000.1      4        2.1 969-1200       8.663   1.434             1.5000          negra con puntillo        4.4
+
+== beat candidates ==
+segment  rank  beat_ms   bpm  score  score_vs_best_pct  subdivisions_of_tatum
+      A     1    335.0 179.1  0.862              100.0                   2.96
+      A     2    894.5  67.1  0.818               94.8                   7.92
+      A     3    671.0  89.4  0.818               94.8                   5.94
+      A     4    447.0 134.2  0.818               94.8                   3.96
+      B     1    697.5  86.0  0.798              100.0                   5.89
+      B     2    466.5 128.6  0.797               99.9                   3.94
+      B     3    932.0  64.4  0.792               99.2                   7.86
+      B     4    349.0 171.9  0.777               97.4                   2.95
+
+== chord-window sensitivity ==
+ chord_window_ms  attacks  intervals  intervals_under_50ms  dominant_peak_ms
+               0     1413       1412                   695             335.6
+               5      763        762                    45             336.7
+              10      721        720                     3             337.2
+              15      719        718                     1             337.2
+              20      719        718                     1             337.2
+              25      719        718                     1             337.2
+              30      719        718                     1             337.2
+              40      719        718                     1             337.2
+              50      718        717                     0             337.2
+
+== best split boundary in 180-255 s: 245 s (David's 3:37 = 217 s) ==
+ boundary_s  joint_fit
+      245.0    0.69848
+      217.0    0.69802
+      218.0    0.69802
+      215.0    0.69802
+      216.0    0.69802
+      208.0    0.69794
+
+segment A: swing (211.30000000000138, 124.60000000001514, 1.6958266452646524)
+
+segment B: swing (473.6000000000047, 233.3500000000015, 2.0295693164774016)
+
+wrote 16 files to /root/poc-onset-duration-distribution/out

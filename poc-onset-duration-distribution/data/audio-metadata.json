@@ -1,0 +1,16 @@
+{
+  "uuid": "a1689618-0962-4728-9070-a99f2d3c2fa8",
+  "alias": "Mr Blue Sky — segment 00:05.00–05:10.37",
+  "source": "segment",
+  "format": "wav",
+  "originalFilename": "Mr Blue Sky — segment 00:05.00–05:10.37.wav",
+  "durationSeconds": 305.3695,
+  "sampleRate": 16000,
+  "sourceUrl": null,
+  "sourceAudioUuid": "e90de70b-e021-4bb4-984d-f6903cd83dc2",
+  "sourceTimeRange": {
+    "startSeconds": 5.0,
+    "endSeconds": 310.369562
+  },
+  "createdAt": "2026-08-02T16:14:19.299567Z"
+}

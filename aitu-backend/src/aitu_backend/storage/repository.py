@@ -3,18 +3,19 @@
 ```text
 data/playground/<artist_slug>/<track_slug>/
   metadata_track.json          names, slugs, dates, the version history
-  v1_gsc/
+  v1_f40/
     metadata.json              everything needed to re-render this state
-    piano_matrix_v1_gsc.npz
-  v1_gn/                       same version, collapsed differently
-  v2_gn/
+    piano_matrix_v1_f40.npz
+  v1_f20/                      same version, on a finer grid
+  v2_f40/
 ```
 
 Two ideas shape it:
 
-**A version is a musical state, a granularity is a view of it.** ``v1_gsc`` and ``v1_gn`` are the
-same take collapsed two ways, so the version number does not advance when you only change
-granularity. ``v2`` means you changed the music.
+**A version is a musical state, the grid is a view of it.** ``v1_f40`` and ``v1_f20`` are the same
+take on a coarser and a finer wall clock, so the version number does not advance when you only
+change the frame length. ``v2`` means you changed the music. The suffix used to be a granularity
+code (``v1_gsc``); P4.4 replaced it with the frame length in milliseconds.
 
 **Edits never touch the base matrix.** Saving an edited matrix records ``parentMatrix``; "back to
 the original" means loading the parent, not undoing. The lineage is data, not history you can lose.
@@ -26,9 +27,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from aitu_backend.matrix.model import PianoMatrix
-from aitu_backend.schemas.matrix import Granularity, MatrixProcessingStep
+from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
+from aitu_backend.schemas.matrix import MatrixProcessingStep
 from aitu_backend.schemas.metadata import (
     AudioReference,
+    HandAssignments,
     ParentMatrix,
     TrackMetadata,
     VersionHistoryEntry,
@@ -186,11 +189,12 @@ def save_version(
     parent: ParentMatrix | None = None,
     audio: AudioReference | None = None,
     key_signature: str | None = None,
+    hand_assignments: HandAssignments | None = None,
 ) -> LoadedVersion:
     """Write a matrix as a ``vN_gX`` version folder.
 
     ``version`` pins the number explicitly — that is how the same musical state
-    is saved at a second granularity (``v1_gsc`` then ``v1_gn``) without
+    is saved at a second frame length (``v1_f40`` then ``v1_f20``) without
     advancing to ``v2``. Left ``None``, the next unused number is chosen.
 
     ``overwrite`` rewrites an existing folder in place, replacing its history
@@ -198,7 +202,8 @@ def save_version(
     """
     track = ensure_track(artist_name, track_name)
     number = version if version is not None else next_version(track.version_folders())
-    folder = version_folder(number, matrix.granularity)
+    frame_ms = _frame_ms_of(matrix)
+    folder = version_folder(number, frame_ms)
 
     existing = version_exists(track.artist_slug, track.track_slug, folder)
     if existing and not overwrite:
@@ -209,24 +214,21 @@ def save_version(
 
     metadata = VersionMetadata(
         version=number,
-        tempo_bpm=matrix.tempo_bpm,
-        granularity=matrix.granularity,
+        frame_ms=frame_ms,
         matrix_processing_step=matrix.processing_step,
-        time_step_seconds=matrix.time_step_seconds,
         parent_matrix=parent,
         audio=audio,
         key_signature=key_signature or matrix.key_signature,
+        hand_assignments=hand_assignments,
         comment=comment,
     )
 
-    directory = paths.playground_version_dir(
-        track.artist_slug, track.track_slug, number, matrix.granularity
-    )
+    directory = paths.playground_version_dir(track.artist_slug, track.track_slug, number, frame_ms)
     directory.mkdir(parents=True, exist_ok=True)
     (directory / "metadata.json").write_text(
         metadata.model_dump_json(by_alias=True, indent=2) + "\n", encoding="utf-8"
     )
-    save_matrix(directory / matrix_filename(number, matrix.granularity), matrix.to_coo_payload())
+    save_matrix(directory / matrix_filename(number, frame_ms), matrix.to_coo_payload())
 
     _record_history(track, metadata, folder, parent, replace=existing)
 
@@ -243,22 +245,36 @@ def save_two_hands(
     track_name: str,
     right: PianoMatrix,
     left: PianoMatrix,
+    *,
+    single: PianoMatrix | None = None,
     **kwargs: object,
 ) -> LoadedVersion:
-    """Save a two-hands state: one folder, one metadata, two ``.npz`` files."""
+    """Save a two-hands state: one folder, one metadata, two ``.npz`` files.
+
+    ``single`` is the un-split matrix the two hands came from. Supply it and the
+    folder's main ``.npz`` holds the clean matrix, which is what it should be —
+    the hands are the derived artifacts. Left out, the right hand takes that slot
+    (the original behavior, kept so existing folders still read back).
+
+    Pass ``hand_assignments=`` (from :meth:`TwoHands.to_metadata`) so the compact
+    hand map is stored in ``metadata.json`` next to the matrices. Without it the
+    two ``.npz`` files still say who plays what, but only by being two files —
+    any consumer working from the single clean matrix would have to re-infer.
+    """
     if right.shape != left.shape:
         raise ValueError("Both hands must have the same shape to be saved together")
 
-    saved = save_version(artist_name, track_name, right, **kwargs)  # type: ignore[arg-type]
+    saved = save_version(artist_name, track_name, single or right, **kwargs)  # type: ignore[arg-type]
+    frame_ms = saved.metadata.frame_ms
     directory = paths.playground_version_dir(
-        saved.artist_slug, saved.track_slug, saved.metadata.version, right.granularity
+        saved.artist_slug, saved.track_slug, saved.metadata.version, frame_ms
     )
     save_matrix(
-        directory / matrix_filename(saved.metadata.version, right.granularity, "right"),
+        directory / matrix_filename(saved.metadata.version, frame_ms, "right"),
         right.to_coo_payload(),
     )
     save_matrix(
-        directory / matrix_filename(saved.metadata.version, left.granularity, "left"),
+        directory / matrix_filename(saved.metadata.version, frame_ms, "left"),
         left.to_coo_payload(),
     )
     return saved
@@ -275,13 +291,12 @@ def load_version(artist_slug: str, track_slug: str, folder: str) -> LoadedVersio
         raise VersionNotFound(artist_slug, track_slug, folder)
 
     metadata = VersionMetadata.model_validate_json(metadata_path.read_text(encoding="utf-8"))
-    number, granularity = parse_version_folder(folder)
-    payload = load_matrix(directory / matrix_filename(number, granularity))
+    number, frame_ms = parse_version_folder(folder)
+    payload = load_matrix(directory / matrix_filename(number, frame_ms))
 
-    matrix = PianoMatrix.from_coo_payload(
+    matrix = PianoMatrix.time_based_from_coo(
         payload,
-        granularity=metadata.granularity,
-        tempo_bpm=metadata.tempo_bpm,
+        frame_ms=frame_ms,
         processing_step=metadata.matrix_processing_step,
         key_signature=metadata.key_signature,
     )
@@ -315,11 +330,11 @@ def load_parent(version: LoadedVersion) -> LoadedVersion:
 
 def parent_pointer(version: LoadedVersion) -> ParentMatrix:
     """Build the ``parentMatrix`` to record when saving an edit of ``version``."""
-    number, granularity = version.metadata.version, version.metadata.granularity
+    number, frame_ms = version.metadata.version, version.metadata.frame_ms
     return ParentMatrix(
         version_folder=version.folder,
         matrix_processing_step=version.metadata.matrix_processing_step,
-        path=f"../{version.folder}/{matrix_filename(number, granularity)}",
+        path=f"../{version.folder}/{matrix_filename(number, frame_ms)}",
     )
 
 
@@ -358,7 +373,7 @@ def _record_history(
         folder=folder,
         comment=metadata.comment,
         parent_version=parent.version_folder if parent else None,
-        granularity=metadata.granularity,
+        frame_ms=metadata.frame_ms,
         matrix_processing_step=metadata.matrix_processing_step,
     )
     versions = [item for item in track.versions if not (replace and item.folder == folder)]
@@ -373,5 +388,11 @@ def step_of(matrix: PianoMatrix) -> MatrixProcessingStep:
     return matrix.processing_step
 
 
-def granularity_of(matrix: PianoMatrix) -> Granularity:
-    return matrix.granularity
+def _frame_ms_of(matrix: PianoMatrix) -> float:
+    """How long one column of this matrix lasts.
+
+    A wall-clock matrix says so itself. Anything else is a 1.x matrix built
+    before P4.2, and there is no honest answer for it, so it takes the default
+    rather than a number derived from a tempo nobody recorded.
+    """
+    return matrix.frame_ms if matrix.frame_ms else DEFAULT_FRAME_MS

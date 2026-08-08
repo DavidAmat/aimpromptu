@@ -374,9 +374,23 @@ Many audio-to-score transcription programs overuse ties.
 
 This happens because the timing of the transcribed notes rarely matches the exact timing of the original score. To compensate, those programs split notes into several shorter note values connected by ties, making it appear as though the note duration is perfectly represented, when in reality it is simply a sustained note.
 
-In our project, we **do not want ties**, except when a note crosses a barline and must continue sounding into the following measure.
+In our project, we **do not want ties**. Within a measure, the algorithm chooses the cleanest single
+figure for the onset-to-onset span. At a barline, the preceding note/chord fills to the barline and
+any remaining time before the next onset is a leading rest in the following measure. We never print
+the same pitch again merely to connect it with a tie.
 
-Within the same measure, ties should not be generated. Instead, the algorithm must choose the note duration that best approximates the detected note according to the selected temporal granularity.
+## Rests, sustained notes and chords
+
+- A rest may appear before the first onset of a measure, including for pickup/incomplete measures
+  and alignment with the other hand.
+- No visible rest may appear between two onsets in one measure. The preceding note/chord is treated
+  as sustained until the next onset.
+- Notes struck together are one chord with one shared duration. If only some recorded keys remain
+  held, the complete chord is nevertheless sustained for notation.
+- At the end of a measure, first expand the final note/chord to fill the measure with one readable
+  figure. Seven corcheas in 4/4 therefore print the seventh note as a negra.
+- If the final span has a small remainder that cannot be written as one figure, print a trailing
+  rest for that residue. An equivalent interior residue is timing-only and invisible.
 
 ## The Rule of Rendering as Simple and clean as possible
 

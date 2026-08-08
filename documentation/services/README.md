@@ -15,7 +15,11 @@ Code-level detail per service. Overviews in [context/backend/](../../context/bac
 
 | File | Topic |
 |------|-------|
-| [matrix-to-notation.md](frontend/matrix-to-notation.md) | Sparse decode → VexPiece timeline |
-| [piano-sheet.md](frontend/piano-sheet.md) | VexFlow rendering |
-| [notes.md](frontend/notes.md) | 88-key map, KEY_SIGNATURES |
-| [components.md](frontend/components.md) | App, ScoreStack, SequenceComposer, LayoutControls |
+| [grid-notation.md](frontend/grid-notation.md) | How sheet music is drawn: `@aimpromptu/grid-notation`, `GridScore`, persistence |
+| [components.md](frontend/components.md) | The component tree and where each piece lives |
+
+The VexFlow-era pages — `piano-sheet.md`, `matrix-to-notation.md`, `notes.md` —
+described modules that no longer exist and were removed with them. The rendering
+they documented is now in
+[grid-notation.md](frontend/grid-notation.md), and the package's own client
+documentation lives in the sibling `vexflow-v2` checkout under `documentation/`.

@@ -1,18 +1,19 @@
 /**
- * `/playground/input` — the five ways a piece enters the Playground.
+ * `/playground/input` — the three ways a piece enters the Playground.
  *
- * Three of them are audio (upload, record, library) and share the range
- * selector and the transcription settings below. Two of them produce matrices
- * directly (text notation, matrix JSON) and skip the engine entirely — so the
- * settings panel is hidden for those, because BPM and granularity are already
- * baked into what they carry.
+ * All three are a recording: upload one, record one, or pick one from the audio
+ * library. They share the range selector and the transcription settings below,
+ * and they all end the same way, with the working artifact populated and the
+ * recorded notes stored.
  *
- * Every mode ends the same way: the working artifact is populated.
+ * A recording is now the only entry point, because the page is drawn from the
+ * onsets the engine heard. The two modes that produced a matrix directly, text
+ * notation and matrix JSON, had no recording behind them and therefore nothing
+ * to draw; they were removed in P4.2.
  */
 
 import { useEffect, useState } from "react";
 import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Grid from "@mui/material/Grid";
@@ -23,7 +24,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
-import { audioApi, type AudioItem, type ImportedMatrix, type MatrixScore } from "../../api";
+import { audioApi, type AudioItem } from "../../api";
 import { formatTime } from "../../audio/time";
 import AudioLibraryList from "../../components/audio/AudioLibraryList";
 import AudioRecorder from "../../components/audio/AudioRecorder";
@@ -31,25 +32,27 @@ import AudioUpload from "../../components/audio/AudioUpload";
 import WaveformRangeSelector, {
   type AudioRange,
 } from "../../components/audio/WaveformRangeSelector";
-import MatrixJsonInput from "../../components/input/MatrixJsonInput";
-import TextNotationInput from "../../components/input/TextNotationInput";
 import TranscriptionSettings from "../../components/input/TranscriptionSettings";
-import { GRANULARITY_BEATS } from "../../music/types";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 import { PageContainer, SectionCard } from "../../ui";
 
-type Source = "upload" | "record" | "library" | "notation" | "json";
+type Source = "upload" | "record" | "library";
 
+//: Every way a piece enters the Playground, and they are all a recording.
+//:
+//: "Text notation" and "Matrix JSON" used to be here too. Both produced a matrix
+//: with no recording behind it, and under the wall-clock model there is nothing
+//: to show for that: a page is drawn from the recorded onsets in `events.json`,
+//: which a hand-written matrix does not have. They were removed in P4.2 rather
+//: than left as buttons that lead nowhere.
 const SOURCES: { value: Source; label: string; audio: boolean }[] = [
   { value: "upload", label: "Upload audio", audio: true },
   { value: "record", label: "Record", audio: true },
   { value: "library", label: "Audio library", audio: true },
-  { value: "notation", label: "Text notation", audio: false },
-  { value: "json", label: "Matrix JSON", audio: false },
 ];
 
 export function InputPage() {
-  const { artifact, update, hasArtifact } = useWorkingArtifact();
+  const { artifact, update } = useWorkingArtifact();
   const [source, setSource] = useState<Source>("library");
   const [selected, setSelected] = useState<AudioItem | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -59,7 +62,6 @@ export function InputPage() {
   const [trimBusy, setTrimBusy] = useState(false);
   const [trimError, setTrimError] = useState<string | null>(null);
 
-  const isAudioSource = SOURCES.find((item) => item.value === source)?.audio ?? true;
   const activeUuid = selected?.uuid ?? artifact.audioUuid ?? null;
   const selectionIsPartial = Boolean(
     selected?.durationSeconds &&
@@ -145,41 +147,10 @@ export function InputPage() {
     }
   };
 
-  const notationParsed = (score: MatrixScore, frames: number) => {
-    // The score's time step implies a granularity in beats; keep the artifact
-    // consistent with what was actually parsed.
-    setSelected(null);
-    setPendingRange(null);
-    update({
-      audioUuid: undefined,
-      label: score.title || "Text notation",
-      tempoBpm: score.tempoBpm,
-      matrixProcessingStep: "clean",
-    });
-    setNote(`Parsed ${frames} frame(s) from text notation.`);
-  };
-
-  const jsonImported = (imported: ImportedMatrix, label: string) => {
-    // The backend stored it under a uuid, so the Matrix tab reads it exactly
-    // like a transcription — that is the handoff.
-    setSelected(null);
-    setPendingRange(null);
-    update({
-      audioUuid: imported.audioUuid,
-      label,
-      granularity: imported.granularity,
-      matrixProcessingStep: imported.matrixProcessingStep,
-    });
-    setNote(
-      `Imported "${label}" — ${imported.frameCount} frames at ${imported.granularity}. ` +
-        "Open the Matrix tab to see it.",
-    );
-  };
-
   return (
     <PageContainer
       title="Upload / Input"
-      subtitle="Where a piece enters the Playground: upload, record, pick from the library, write text notation, or load a matrix JSON."
+      subtitle="Where a piece enters the Playground: upload a recording, record one, or pick one from the audio library."
       wide
     >
       <Tabs
@@ -201,7 +172,7 @@ export function InputPage() {
       ) : null}
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: isAudioSource ? 5 : 12 }}>
+        <Grid size={{ xs: 12, md: 5 }}>
           {source === "upload" ? (
             <SectionCard title="Upload" description="mp3, aac, m4a or wav.">
               <AudioUpload onUploaded={audioArrived} />
@@ -222,34 +193,9 @@ export function InputPage() {
               />
             </SectionCard>
           ) : null}
-
-          {source === "notation" ? (
-            <SectionCard
-              title="Text notation"
-              description="Produces a matrix directly — no transcription engine involved."
-            >
-              <TextNotationInput
-                tempoBpm={artifact.tempoBpm}
-                timeStepSeconds={
-                  GRANULARITY_BEATS[artifact.granularity] * (60 / artifact.tempoBpm)
-                }
-                onParsed={notationParsed}
-              />
-            </SectionCard>
-          ) : null}
-
-          {source === "json" ? (
-            <SectionCard
-              title="Matrix JSON"
-              description="A file exported from the Matrix tab, dense or sparse."
-            >
-              <MatrixJsonInput onImported={jsonImported} />
-            </SectionCard>
-          ) : null}
         </Grid>
 
-        {isAudioSource ? (
-          <Grid size={{ xs: 12, md: 7 }}>
+        <Grid size={{ xs: 12, md: 7 }}>
             <SectionCard
               title={selected?.sourceTimeRange ? "Saved segment" : "Create a segment"}
               description={
@@ -327,7 +273,7 @@ export function InputPage() {
 
             <SectionCard
               title="Transcription settings"
-              description="The raw matrix is always built at fusa, then collapsed to the resolution you pick."
+              description="The notes are recorded exactly as played. The rhythm is named afterwards, on the Rhythm step."
             >
               <TranscriptionSettings
                 audioUuid={activeUuid}
@@ -335,18 +281,7 @@ export function InputPage() {
                 requiresSegmentCreation={selectionIsPartial}
               />
             </SectionCard>
-          </Grid>
-        ) : (
-          <Grid size={12}>
-            <Box sx={{ mt: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                {hasArtifact
-                  ? "Loaded. Switch to the Matrix tab to see it."
-                  : "This source produces a matrix directly — no BPM or granularity to choose."}
-              </Typography>
-            </Box>
-          </Grid>
-        )}
+        </Grid>
       </Grid>
     </PageContainer>
   );

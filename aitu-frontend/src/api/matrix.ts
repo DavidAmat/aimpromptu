@@ -1,25 +1,29 @@
-/** `/matrix` — transcription pipeline, matrix retrieval and operations. */
+/**
+ * `/matrix` — transcribing an audio, and reading back what the engine heard.
+ *
+ * This module used to carry the whole tempo-based Playground: fetching a matrix
+ * at a chosen BPM and granularity, recomputing one, exporting, importing and
+ * editing cells. P4.2 removed that model from the backend, so what is left here
+ * is the part that has nothing to do with a grid.
+ *
+ * Everything that turns the recorded notes into a page lives in `timeScore.ts`.
+ */
 
-import type { Granularity, MatrixProcessingStep, PianoMatrixEnvelope } from "../music/types";
 import { buildUrl, request } from "./client";
 
-// The contracts live in `src/music/types.ts`, mirroring the backend's
-// `schemas/matrix.py`. Re-exported here so callers can import either way.
-export type { Granularity, MatrixProcessingStep, PianoMatrixEnvelope };
-
-/** Alias kept for readability at call sites. */
-export type MatrixEnvelope = PianoMatrixEnvelope;
-
+/** Body of `POST /matrix/transcribe`. */
 export interface TranscribeRequest {
   audioUuid: string;
-  tempoBpm: number;
-  granularity: Granularity;
-  /** Optional restriction to a time range of the source audio, in seconds. */
+  /**
+   * Length of one column, in milliseconds. The only timing input, and it is a
+   * choice about the page rather than about the music: the same audio at 20 ms
+   * and at 40 ms is the same playing on a finer or a coarser grid.
+   */
+  frameMs?: number;
   startSeconds?: number;
   endSeconds?: number;
-  /** Engine name; see `matrixApi.engines()`. Defaults to the backend's default. */
   engine?: string;
-  /** Re-transcribe even if a raw matrix already exists. */
+  /** Run the model again even when this audio was already transcribed. */
   force?: boolean;
 }
 
@@ -30,22 +34,34 @@ export interface JobHandle {
 
 export interface JobStatus {
   jobId: string;
-  status: "running" | "done" | "error";
-  error?: string | null;
-  stage?: string | null;
-  fraction?: number | null;
+  status: string;
+  error: string | null;
+  stage: string | null;
+  fraction: number | null;
 }
 
-export interface MatrixCellEdit {
-  frame: number;
-  key: number;
-  value: -1 | 0 | 1;
+/** One note exactly as the engine emitted it: seconds, not columns. */
+export interface RawNoteEvent {
+  midiNote: number;
+  start: number;
+  end: number;
+  velocity: number;
+  /** Discarded as too short to have been played — flagged, not omitted. */
+  artifact: boolean;
+  /** 12 or 24 when a note that far above was struck alongside it. */
+  octaveBelow: number | null;
 }
 
-export interface EditedMatrix {
-  envelope: MatrixEnvelope;
-  persisted: boolean;
-  editCount: number;
+/** `GET /matrix/{id}/events` — the transcription before any grid touched it. */
+export interface RawEvents {
+  audioUuid: string;
+  durationSeconds: number;
+  title: string | null;
+  /** How many of `events` carry `artifact: true`. */
+  artifactCount: number;
+  /** Of those, how many sit exactly an octave or two under a struck note. */
+  octavePhantomCount: number;
+  events: RawNoteEvent[];
 }
 
 export const matrixApi = {
@@ -63,86 +79,9 @@ export const matrixApi = {
   job: (jobId: string, signal?: AbortSignal) =>
     request<JobStatus>(`/matrix/jobs/${jobId}`, { signal }),
 
-  /** Steps 3-5 from the stored raw matrix. Synchronous and fast. */
-  recompute: (
-    body: { audioUuid: string; tempoBpm: number; granularity: Granularity },
-    signal?: AbortSignal,
-  ) => request<MatrixEnvelope>("/matrix/recompute", { method: "POST", body, signal }),
-
-  get: (
-    audioUuid: string,
-    options: {
-      step?: MatrixProcessingStep;
-      granularity?: Granularity;
-      tempoBpm?: number;
-      sparse?: boolean;
-    } = {},
-    signal?: AbortSignal,
-  ) =>
-    request<MatrixEnvelope>(`/matrix/${audioUuid}`, {
-      query: {
-        step: options.step,
-        granularity: options.granularity,
-        tempo_bpm: options.tempoBpm,
-        sparse: options.sparse,
-      },
-      signal,
-    }),
-
-  transpose: (
-    audioUuid: string,
-    semitones: number,
-    options: { granularity?: Granularity; tempoBpm?: number } = {},
-  ) =>
-    request<MatrixEnvelope>(`/matrix/${audioUuid}/transpose`, {
-      method: "POST",
-      query: { semitones, granularity: options.granularity, tempo_bpm: options.tempoBpm },
-    }),
-
-  /** Direct URL for a download link — the browser saves the file itself. */
-  exportUrl: (
-    audioUuid: string,
-    options: {
-      step?: MatrixProcessingStep;
-      granularity?: Granularity;
-      tempoBpm?: number;
-      sparse?: boolean;
-    } = {},
-  ) =>
-    buildUrl(`/matrix/${audioUuid}/export`, {
-      step: options.step,
-      granularity: options.granularity,
-      tempo_bpm: options.tempoBpm,
-      sparse: options.sparse,
-    }),
-
-  importJson: (envelope: MatrixEnvelope) =>
-    request<ImportedMatrix>("/matrix/import", { method: "POST", body: envelope }),
-
-  /** Preview or persist the complete staged edit list. */
-  edit: (
-    audioUuid: string,
-    body: {
-      tempoBpm: number;
-      granularity: Granularity;
-      edits: MatrixCellEdit[];
-      persist?: boolean;
-    },
-    signal?: AbortSignal,
-  ) =>
-    request<EditedMatrix>(`/matrix/${audioUuid}/edit`, {
-      method: "POST",
-      body,
-      signal,
-    }),
+  /** The stored transcription in seconds, served verbatim. */
+  events: (audioUuid: string, signal?: AbortSignal) =>
+    request<RawEvents>(`/matrix/${audioUuid}/events`, { signal }),
 };
 
-/** What an import reports back. */
-export interface ImportedMatrix {
-  audioUuid: string;
-  granularity: Granularity;
-  matrixProcessingStep: MatrixProcessingStep;
-  frameCount: number;
-  /** Cells the validator corrected on the way in. */
-  normalizedCells: number;
-}
+export default matrixApi;

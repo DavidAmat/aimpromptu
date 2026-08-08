@@ -19,7 +19,10 @@ def test_scores_returns_a_list() -> None:
     payload = response.json()
     assert isinstance(payload, list)
     assert payload, "data/example-scores.json should ship at least one score"
-    assert "tempoBpm" in payload[0]
+    # The portable format carries one timing, and it is a length of wall clock.
+    # It used to carry a tempo and a time step, which said the same thing twice.
+    assert "frameMs" in payload[0]
+    assert "tempoBpm" not in payload[0]
 
 
 def test_sequence_round_trip_one_hand() -> None:
@@ -28,8 +31,7 @@ def test_sequence_round_trip_one_hand() -> None:
         "/sequence",
         json={
             "sequence": ["*Do-4", "*Re-4", "Re-4", "*Mi-4"],
-            "tempoBpm": 60,
-            "timeStepSeconds": 1.0,
+            "frameMs": 1000,
             "title": "smoke",
         },
     )
@@ -50,8 +52,7 @@ def test_sequence_two_hands_must_align() -> None:
         json={
             "sequence": ["*Do-4", "*Re-4"],
             "leftSequence": ["*Do-3"],
-            "tempoBpm": 60,
-            "timeStepSeconds": 1.0,
+            "frameMs": 1000,
         },
     )
     assert response.status_code == 422
@@ -62,8 +63,7 @@ def test_sequence_rejects_unknown_note() -> None:
         "/sequence",
         json={
             "sequence": ["*Xy-4"],
-            "tempoBpm": 60,
-            "timeStepSeconds": 1.0,
+            "frameMs": 1000,
         },
     )
     assert response.status_code == 422
@@ -73,9 +73,16 @@ def test_placeholder_endpoints_answer_501() -> None:
     """Routes whose epic has not landed yet exist and say so.
 
     `/audio` and `/youtube` went real in Epic 3, `/matrix` in Epics 4 and 7,
-    and most of `/library` in Epic 5. Only notation and playlists are left.
+    most of `/library` in Epic 5 and `/notation` in Epic 9. Only playlists,
+    which belong to Epic 10, are left.
     """
-    for url in ("/notation/some-id", "/library/playlists"):
+    for url in ("/library/playlists",):
         response = client.get(url)
         assert response.status_code == 501, url
         assert "Not implemented yet" in response.json()["detail"]
+
+
+def test_notation_answers_404_for_an_unknown_artifact() -> None:
+    """The notation router resolves an artifact id to a matrix, or says it cannot."""
+    response = client.get("/notation/some-id/matrix")
+    assert response.status_code == 404

@@ -6,7 +6,12 @@ Subtle gray dashed vertical lines at every beat (e.g. one per second at 60 BPM),
 
 ## Subtask 9.6.1.2 — Cut measure up to here
 
-User places the cursor on a beat guide inside a measure and picks "Cut measure up to here": the following note is pushed to the start of a new measure and the remaining tempo fills with silences. Under the hood this is Task 2.4.2 tempo insertion — add silence columns at that frame (addition unit at least the piece granularity). Example: 4/4 measure Do Re Mi Fa in negras, cut at Mi -> Fa becomes the next measure's first note.
+User places the cursor on a beat guide inside a measure and picks "Cut measure up to here": the
+following note is pushed to the start of a new measure. Under the hood this is Task 2.4.2 timeline
+insertion (addition unit at least the piece granularity). In the score, the preceding note/chord
+expands to the old measure's barline when that span is one readable figure; only an unwritable tail
+uses a trailing rest. Example: 4/4 Do Re Mi Fa in negras, cut before Fa -> Mi expands to a blanca
+and Fa becomes the next measure's first note.
 
 ## Subtask 9.6.1.3 — Re-render
 

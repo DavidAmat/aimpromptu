@@ -10,6 +10,8 @@ export const ROUTES = {
   playgroundMatrix: "/playground/matrix",
   playgroundPianoRoll: "/playground/piano-roll",
   playgroundNotesFalling: "/playground/notes-falling",
+  playgroundNotesFallingRaw: "/playground/notes-falling-raw",
+  playgroundRhythm: "/playground/rhythm",
   playgroundNotation: "/playground/notation",
   library: "/library",
   libraryPlay: (id: string) => `/library/play/${id}`,
@@ -29,5 +31,7 @@ export const PLAYGROUND_TABS = [
   { label: "Matrix", to: ROUTES.playgroundMatrix },
   { label: "Piano Roll", to: ROUTES.playgroundPianoRoll },
   { label: "Notes Falling", to: ROUTES.playgroundNotesFalling },
+  { label: "Notes Falling (raw)", to: ROUTES.playgroundNotesFallingRaw },
+  { label: "Rhythm", to: ROUTES.playgroundRhythm },
   { label: "Music Notation", to: ROUTES.playgroundNotation },
 ];

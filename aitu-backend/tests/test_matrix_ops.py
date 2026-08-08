@@ -15,7 +15,6 @@ from aitu_backend.matrix.ops import (
     extend_sustain,
     fit_to_width,
     insert_columns,
-    insert_figure,
     replace_range,
     set_cell,
     slice_range,
@@ -141,25 +140,6 @@ def test_insertion_bounds_are_checked() -> None:
         insert_columns(matrix, at_frame=99, count=1)
     with pytest.raises(ValueError, match="negative"):
         insert_columns(matrix, at_frame=0, count=-1)
-
-
-def test_inserting_a_figure_converts_to_columns() -> None:
-    matrix = sample()  # semicorchea granularity
-    assert insert_figure(matrix, 0, Granularity.NEGRA).frame_count == 4 + 4
-    assert insert_figure(matrix, 0, Granularity.CORCHEA).frame_count == 4 + 2
-    assert insert_figure(matrix, 0, Granularity.NEGRA, repeats=2).frame_count == 4 + 8
-
-
-def test_an_addition_finer_than_the_piece_is_refused() -> None:
-    """A negra-granularity piece cannot accept a corchea rest."""
-    matrix = build({DO4: [1]}, frames=1, granularity=Granularity.NEGRA)
-    with pytest.raises(ValueError, match="finer than"):
-        insert_figure(matrix, 0, Granularity.CORCHEA)
-
-
-def test_repeats_must_be_positive() -> None:
-    with pytest.raises(ValueError, match="repeats"):
-        insert_figure(sample(), 0, Granularity.NEGRA, repeats=0)
 
 
 # ------------------------------------------------------- slice / delete / replace

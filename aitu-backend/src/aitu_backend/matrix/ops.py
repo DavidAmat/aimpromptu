@@ -23,11 +23,10 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from aitu_backend.matrix.approximation import figure_columns
 from aitu_backend.matrix.keys import KEY_COUNT, build_grand_piano_rows
 from aitu_backend.matrix.model import PianoMatrix
 from aitu_backend.matrix.validator import normalize
-from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN, Granularity
+from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN
 
 # ---------------------------------------------------------------- transposition
 
@@ -121,25 +120,6 @@ def insert_columns(matrix: PianoMatrix, at_frame: int, count: int) -> PianoMatri
     silence = np.zeros((KEY_COUNT, count), dtype=np.int8)
     grid = np.concatenate([matrix.grid[:, :at_frame], silence, matrix.grid[:, at_frame:]], axis=1)
     return normalize(matrix.with_grid(grid))
-
-
-def insert_figure(
-    matrix: PianoMatrix,
-    at_frame: int,
-    figure: Granularity | str,
-    repeats: int = 1,
-) -> PianoMatrix:
-    """Insert ``repeats`` rests of one ``figure`` at ``at_frame``.
-
-    The figure is converted to columns at the matrix's own granularity, so an
-    addition can never be finer than the piece: a negra-granularity piece
-    accepts a negra or coarser, and asking for a corchea raises. This is the
-    unit "cut measure up to here" (Epic 9, Story 9.6) works in.
-    """
-    if repeats < 1:
-        raise ValueError("repeats must be at least 1")
-    columns = figure_columns(figure, matrix.granularity) * repeats
-    return insert_columns(matrix, at_frame, columns)
 
 
 def append_silence(matrix: PianoMatrix, count: int) -> PianoMatrix:

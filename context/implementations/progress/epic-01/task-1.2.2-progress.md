@@ -33,6 +33,12 @@ the matrix grid, piano roll and falling views read better on a dark ground, and 
 shades are the saturated ones meant to sit on it. Also sets `borderRadius: 10`, the Inter type
 scale, `textTransform: none` on buttons and tabs.
 
+> **Reversed on 2026-07-27.** The app is now light, and pinned so a dark OS or browser cannot
+> re-tint it. The reasoning above was never checked against the semantic colors: a struck matrix
+> note is `grays.ink` and the background was `grays.ink` too, so it was invisible. See
+> [`task-1.2.2-followup-light-mode.md`](task-1.2.2-followup-light-mode.md) — which also introduces
+> the `surface` tokens that stop a view from assuming a ground again.
+
 **`src/ui/` wrappers**, so no page restyles raw MUI:
 
 | Component | Role |
@@ -83,6 +89,9 @@ app are in `palette.ts`.
 `npm run dev`, then check: dark ground throughout, blue "AImpromptu" wordmark, tab underline in
 brand Blue, the three BPM/granularity/step pills in the Playground bar outlined in Blue.
 If any surface still looks cream/beige, something is importing `App.css` again.
+
+> Superseded by the light-mode follow-up: the ground is now **light** throughout. Everything else in
+> this check still applies.
 
 ## For the next worker
 
