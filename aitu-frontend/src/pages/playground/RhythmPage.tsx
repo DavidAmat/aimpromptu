@@ -697,6 +697,62 @@ export function RhythmPage() {
     [key],
   );
 
+  /**
+   * Every page edit that still has a note under it. What gets drawn, and what gets saved.
+   *
+   * An override is a statement *about* something drawn. Move the notes it was about to the other
+   * staff, or take them off the page, and there is nothing left for it to be about — but the edit
+   * is still in the state, and a range one keeps drawing. That is the `8vb` David found stretched
+   * across an empty treble staff after its chords went to the left hand: a bracket saying "this
+   * sounds an octave down" over nothing at all.
+   *
+   * So an override has to touch at least one note to count, checked against what the page actually
+   * draws. Filtered here rather than deleted from the state, because the state is what the reader
+   * said and the notes can come back: undo the move and the bracket is over its chords again,
+   * exactly the way undoing a deletion restores the note. Nothing dead is drawn, and nothing dead
+   * is written to the file, which is the whole of what "delete it" has to mean.
+   *
+   * Empty until the sheet exists, and then everything would look orphaned — so before that, and
+   * only before that, the reader's own list is passed through untouched.
+   */
+  const live = useMemo(() => {
+    if (!score || chords.size === 0) {
+      return { ottavas, beamBreaks, overrides, fingers };
+    }
+    const occupied: Record<PrintedHand, number[]> = { right: [], left: [] };
+    for (const groupKey of chords.keys()) {
+      const [staff, frame] = groupKey.split(":");
+      occupied[staff === "left" ? "left" : "right"].push(Number(frame));
+    }
+    const anyNoteUnder = (
+      staff: PrintedHand,
+      fromColumn: number,
+      toColumn: number,
+    ): boolean =>
+      occupied[staff].some((frame) => frame >= fromColumn && frame < toColumn);
+
+    return {
+      ottavas: ottavas.filter((span) =>
+        anyNoteUnder(
+          span.hand === "left" ? "left" : "right",
+          span.fromColumn,
+          span.toColumn,
+        ),
+      ),
+      beamBreaks: new Set(
+        [...beamBreaks].filter((groupKey) => chords.has(groupKey)),
+      ),
+      overrides: Object.fromEntries(
+        Object.entries(overrides).filter(([groupKey]) => chords.has(groupKey)),
+      ),
+      fingers: Object.fromEntries(
+        Object.entries(fingers).filter(([noteKey]) =>
+          chords.has(groupKeyOf(noteKey)),
+        ),
+      ),
+    };
+  }, [score, chords, ottavas, beamBreaks, overrides, fingers]);
+
   /** Bring the cursor on screen — space, a click on the bar, a jump the reader did not make. */
   const scrollToCursor = useCallback(
     () => setScrollCursorAt((at) => at + 1),
@@ -844,9 +900,37 @@ export function RhythmPage() {
         }
         return next;
       });
+
+      // A figure and a beam break belong to a whole chord, so they travel only when the whole chord
+      // does. Half a chord moving leaves them where they are and the prune above decides their
+      // fate: they still name the notes that stayed, or they name nothing and go. Carrying them on
+      // a partial move would be a guess about which half the reader meant them for.
+      const whole = new Set(selectedChords.whole);
+      const moved = (groupKey: string): string =>
+        `${to}:${groupKey.split(":")[1]}`;
+      if (whole.size > 0) {
+        setOverrides((current) => {
+          const next = { ...current };
+          for (const groupKey of whole) {
+            const figure = next[groupKey];
+            if (figure === undefined) continue;
+            delete next[groupKey];
+            next[moved(groupKey)] = figure;
+          }
+          return next;
+        });
+        setBeamBreaks((current) => {
+          const next = new Set(current);
+          for (const groupKey of whole) {
+            if (!next.delete(groupKey)) continue;
+            next.add(moved(groupKey));
+          }
+          return next;
+        });
+      }
       closeNotes();
     },
-    [selectedNotes, closeNotes],
+    [selectedNotes, selectedChords, closeNotes],
   );
 
   const toggleBeamBreak = useCallback(() => {
@@ -900,7 +984,7 @@ export function RhythmPage() {
         startFrame: stretch.startFrame,
         anchorMs: stretch.anchorMs,
       })),
-      overrides: Object.entries(overrides).map(([key, name]) => {
+      overrides: Object.entries(live.overrides).map(([key, name]) => {
         const [side, frame] = key.split(":");
         // The row is not part of the key: an override belongs to a chord, not to one notehead, so
         // every note struck together takes it. Row 0 stands for "the group at this column".
@@ -911,11 +995,11 @@ export function RhythmPage() {
           figure: name,
         };
       }),
-      beamBreaks: [...beamBreaks].map((key) => {
+      beamBreaks: [...live.beamBreaks].map((key) => {
         const [side, frame] = key.split(":");
         return { hand: side ?? "right", startFrame: Number(frame) };
       }),
-      ottavas: ottavas.map((span) => ({
+      ottavas: live.ottavas.map((span) => ({
         kind: span.kind,
         hand: span.hand,
         fromColumn: span.fromColumn,
@@ -929,7 +1013,7 @@ export function RhythmPage() {
         const [frame, row] = ref.split(":");
         return { startFrame: Number(frame), row: Number(row), hand: staff };
       }),
-      fingers: Object.entries(fingers).map(([noteKey, finger]) => ({
+      fingers: Object.entries(live.fingers).map(([noteKey, finger]) => ({
         hand: handOf(noteKey),
         startFrame: frameOf(noteKey),
         row: rowOf(noteKey),
@@ -954,12 +1038,9 @@ export function RhythmPage() {
     keySignature,
     keyChanges,
     stretches,
-    overrides,
-    beamBreaks,
-    ottavas,
+    live,
     hiddenNotes,
     handOverrides,
-    fingers,
   ]);
 
   const apply = useCallback(async () => {
@@ -1347,11 +1428,11 @@ export function RhythmPage() {
             >
               <TimeScoreView
                 score={score}
-                overrides={overrides}
-                beamBreaks={beamBreaks}
+                overrides={live.overrides}
+                beamBreaks={live.beamBreaks}
                 keySignature={keySignature}
                 keyChanges={keyChanges}
-                ottavas={ottavas}
+                ottavas={live.ottavas}
                 onOttavaSuggestion={takeSuggestedOttavas}
                 onKeySuggestion={setKeyHint}
                 onSelectNote={setSelectedNote}
@@ -1359,7 +1440,7 @@ export function RhythmPage() {
                 onSelectRange={pickRange}
                 onSelectMarkedRange={pickMarkedRange}
                 renderOverrides={renderOverrides}
-                fingers={fingers}
+                fingers={live.fingers}
                 onMovesRefused={sayRefused}
                 selectedRange={range}
                 clearSelectionsAt={clearedAt}

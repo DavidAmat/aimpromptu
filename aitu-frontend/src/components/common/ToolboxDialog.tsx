@@ -9,7 +9,13 @@
  * while it stays open, and it starts again at its default corner each time it opens, which is
  * where a reader looks for it.
  */
-import { useCallback, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Paper from "@mui/material/Paper";
@@ -41,7 +47,9 @@ export function ToolboxDialog({
   onClose,
   children,
 }: ToolboxDialogProps) {
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(
+    null,
+  );
   const [wasOpen, setWasOpen] = useState(open);
 
   // Back to the default corner each time it opens. A panel that reappears where it was three
@@ -55,10 +63,34 @@ export function ToolboxDialog({
   const clamp = useCallback((x: number, y: number) => {
     const maxX = Math.max(MARGIN, window.innerWidth - WIDTH - MARGIN);
     const maxY = Math.max(MARGIN, window.innerHeight - 80);
-    return { x: Math.min(Math.max(MARGIN, x), maxX), y: Math.min(Math.max(MARGIN, y), maxY) };
+    return {
+      x: Math.min(Math.max(MARGIN, x), maxX),
+      y: Math.min(Math.max(MARGIN, y), maxY),
+    };
   }, []);
 
   const at = position ?? initialPosition ?? { x: 24, y: 120 };
+
+  /**
+   * Lift the panel back on screen if opening it beside something low on the page hangs it off the
+   * bottom.
+   *
+   * Done after it is on the page rather than by the caller, because only the panel knows how tall
+   * it is: the note toolbox grows and shrinks with what is selected, and a caller guessing a height
+   * would be wrong in one direction or the other every time. `useLayoutEffect`, so the correction
+   * lands in the same paint and nothing is ever seen half off the screen.
+   */
+  const card = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const node = card.current;
+    if (!node || !open) return;
+    const highest = Math.max(
+      MARGIN,
+      window.innerHeight - node.offsetHeight - MARGIN,
+    );
+    if (at.y <= highest) return;
+    setPosition({ x: at.x, y: highest });
+  }, [open, at.x, at.y]);
 
   /**
    * Start a drag, listening on the window rather than on the title bar.
@@ -91,6 +123,7 @@ export function ToolboxDialog({
 
   return (
     <Paper
+      ref={card}
       elevation={12}
       sx={{
         position: "fixed",
@@ -126,7 +159,11 @@ export function ToolboxDialog({
             {title}
           </Typography>
           {subtitle ? (
-            <Typography variant="caption" noWrap sx={{ display: "block", opacity: 0.85 }}>
+            <Typography
+              variant="caption"
+              noWrap
+              sx={{ display: "block", opacity: 0.85 }}
+            >
               {subtitle}
             </Typography>
           ) : null}
