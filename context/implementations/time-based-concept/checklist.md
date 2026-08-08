@@ -114,7 +114,7 @@ Working. The unticked boxes are deletions blocked on P4.5, plus one task the con
 - [c] P5.3 `[GN]` Time-fraction placement for orphan notes — **cancelled:** a note with no counterpart simply keeps its own column under D-24
 - [x] P5.4 `[GN]` Retire `FrameClock.frameTimestamps` — *the clock is one scalar again; `shiftFrameTimestamps` went with it*
 - [x] P5.5 `[GN]` Remove `BEATS_PER_FRAME` — *the host says how many frames a negra covers (`framesPerQuarter`); the grid no longer answers*
-- [ ] P5.6 `[GN]` Tests: alignment, silence compression, one-map invariance — *partly covered by `beamed-spacing.test.ts` and `ladder-locality.test.ts`; the silence and invariance cases are not written*
+- [x] P5.6 `[GN]` Tests: alignment, silence compression, one-map invariance — *`tests/time-to-x.test.ts`; D-25 stays out because P5.3 is cancelled*
 
 ## [p] Phase 6 — Renderer: figures, frame groups, no bars `[vexflow-v2]`
 
