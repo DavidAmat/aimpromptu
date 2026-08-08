@@ -96,6 +96,16 @@ export function TimeScoreView({
       // which is what a wall-clock grid is for. Setting `pixelsPerFrame` turns that off.
       keySignature: "C",
       staves: score.layout.hideLeftHand || score.layout.hideRightHand ? "single" : "grand",
+      // The two wall-clock levels above the column. A dashed line every `frameMeasure` columns
+      // says where the page is in time; a selection snaps to `frameGroup` columns, which is the
+      // unit a passage is drawn in. Neither means anything musical.
+      frameGroup: score.layout.frameGroup,
+      frameMeasure: score.layout.frameMeasure,
+      // What each passage prints above the staff where it starts, in place of a tempo mark.
+      passageHeaders: score.passages.map((passage) => ({
+        startFrame: passage.startFrame,
+        label: passage.headerLabel,
+      })),
       matrixEnvelope: {
         sparse: true,
         // A column is this many milliseconds, and that is the whole of what the header says about

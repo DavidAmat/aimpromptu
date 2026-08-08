@@ -121,8 +121,8 @@ Working. The unticked boxes are deletions blocked on P4.5, plus one task the con
 - [x] P6.1 `[GN]` `figure-selection.ts` consumes the payload's figures (`printedFigureFor`) — *the tie machinery is still present and goes with P6.9*
 - [x] P6.2 `[GN]` Delete `STAFF_SPACES_BY_BEATS` — *the engraved table and its two width helpers are gone; widths are measured from content*
 - [x] P6.3 `[GN]` Delete `metre.ts` and the time-signature path — *`metre.ts`, `bar-overlay.ts`, the renderer's `bars` option and the editor's Bars tab are all gone*
-- [ ] P6.4 `[GN]` Frame groups and frame measures drawn from `LayoutHints` — **not started**; the fields are in the contract and the payload, the ruler does not read them yet
-- [ ] P6.5 `[GN]` Passage headers on the staff — **not started**; the frontend prints `negra = 480 ms · ≈125 BPM` above the sheet instead
+- [x] P6.4 `[GN]` Frame groups and frame measures drawn from `LayoutHints` — *the dashed lines follow `frameMeasure`, the selectable regions follow `frameGroup`*
+- [x] P6.5 `[GN]` Passage headers on the staff — *each passage prints its label above the staff where it begins*
 - [x] P6.6 `[GN]` No rest glyphs — `rests: false` (D-16)
 - [x] P6.7 `[GN]` **Open question:** what beams group by, now there is no beat — *answered: a maximal run of consecutive beamable notes in one hand*
 - [x] P6.8 `[GN]` Bump to 0.28.0; update docs; delete `onTempoRequest` — *the BPM tab went with it; five documents rewritten*
