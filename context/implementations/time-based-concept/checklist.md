@@ -112,7 +112,7 @@ Working. The unticked boxes are deletions blocked on P4.5, plus one task the con
 - [x] P5.1 `[GN]` One merged two-hand timeline — *no alignment window: grouping runs before the snap, so near-simultaneous onsets already share a frame, and one frame is one x (I-03)*
 - [x] P5.2 `[GN]` `FrameGrid.frameWidths` measured from content; silence compresses
 - [c] P5.3 `[GN]` Time-fraction placement for orphan notes — **cancelled:** a note with no counterpart simply keeps its own column under D-24
-- [ ] P5.4 `[GN]` Retire `FrameClock.frameTimestamps` — **blocked on P4.5** (1.x reader still uses it)
+- [x] P5.4 `[GN]` Retire `FrameClock.frameTimestamps` — *the clock is one scalar again; `shiftFrameTimestamps` went with it*
 - [ ] P5.5 `[GN]` Remove `BEATS_PER_FRAME` — **blocked on P4.5**
 - [ ] P5.6 `[GN]` Tests: alignment, silence compression, one-map invariance — *partly covered by `beamed-spacing.test.ts` and `ladder-locality.test.ts`; the silence and invariance cases are not written*
 
