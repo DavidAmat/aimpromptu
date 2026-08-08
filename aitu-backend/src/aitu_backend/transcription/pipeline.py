@@ -37,6 +37,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from aitu_backend.audio import store
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
@@ -49,6 +50,9 @@ from aitu_backend.transcription.engine import (
 )
 from aitu_backend.transcription.events_to_matrix import shift_events
 from aitu_backend.transcription.time_pipeline import TimeHands, impose_granularity_and_split
+
+if TYPE_CHECKING:  # pragma: no cover - import for typing only
+    from aitu_backend.schemas.rhythm import SavedRhythm
 
 #: Subfolder of an audio's uuid folder. It is called ``matrices`` for historical
 #: reasons and now holds one file; renaming it is P4.4's decision, not this one's.
@@ -69,6 +73,15 @@ EVENTS_FILE = "events.json"
 #: the piece is marked instead, the screens say what is wrong and what to do, and
 #: the old files are left exactly where they are.
 NEEDS_REDERIVATION_FILE = "needs-rederivation.json"
+
+#: The reader's own decisions about this piece: the named ladder, the speed
+#: changes, the notes renamed by hand and the beams they broke.
+#:
+#: Everything else in a score is derived from `events.json`, so it can be thrown
+#: away and rebuilt. This cannot: nothing in the recording implies which pile is
+#: the beat or where a phrase restarts, and a reader who loses it has to decide
+#: it all again. See :mod:`aitu_backend.schemas.rhythm`.
+RHYTHM_FILE = "rhythm.json"
 
 
 # ------------------------------------------------------------------- storage
@@ -121,6 +134,46 @@ def mark_needs_rederivation(audio_uuid: str, reason: str) -> Path:
 def clear_needs_rederivation(audio_uuid: str) -> None:
     """Transcribing again is what fixes it, so that is where the flag is cleared."""
     needs_rederivation_path(audio_uuid).unlink(missing_ok=True)
+
+
+def rhythm_path(audio_uuid: str) -> Path:
+    return matrices_dir(audio_uuid) / RHYTHM_FILE
+
+
+def load_rhythm(audio_uuid: str) -> "SavedRhythm | None":
+    """The reading saved for this piece, or ``None`` when nobody has saved one.
+
+    A file written by an older shape comes back as ``None`` rather than raising.
+    Losing a saved reading is a nuisance; refusing to open the piece at all
+    because of it would be worse, and the reader can simply name the gap again.
+    """
+    from aitu_backend.schemas.rhythm import SavedRhythm  # noqa: PLC0415 - avoids a cycle
+
+    path = rhythm_path(audio_uuid)
+    if not path.is_file():
+        return None
+    try:
+        return SavedRhythm.model_validate_json(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return None
+
+
+def save_rhythm(audio_uuid: str, rhythm: "SavedRhythm") -> Path:
+    """Write the reading, replacing whatever was there.
+
+    One per piece. A rhythm is a decision rather than a version: what a reader
+    wants back is the last reading they were happy with, not a list of the ones
+    they abandoned.
+    """
+    path = rhythm_path(audio_uuid)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(rhythm.model_dump_json(by_alias=True, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def clear_rhythm(audio_uuid: str) -> None:
+    """Forget the saved reading. Transcribing again also does this, in `transcribe_audio`."""
+    rhythm_path(audio_uuid).unlink(missing_ok=True)
 
 
 @dataclass(frozen=True)
@@ -248,6 +301,11 @@ def transcribe_audio(
 
     span = max(duration, 0.001)
     save_note_events(audio_uuid, events, span, title=entry.metadata.alias)
+    # A saved reading is a set of column numbers over the notes that were there
+    # before. A new transcription is a different set of notes, so those numbers
+    # point at nothing in particular now and keeping them would be worse than
+    # asking the reader to name the gap again.
+    clear_rhythm(audio_uuid)
     # Whatever was wrong with this piece before, it now has its recorded notes.
     clear_needs_rederivation(audio_uuid)
     return TranscribedEvents(events=events, duration_seconds=span, title=entry.metadata.alias)

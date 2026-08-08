@@ -29,6 +29,7 @@ from aitu_backend.matrix.ladder import build_ladder, bpm_of, header_label, label
 from aitu_backend.matrix.passages import one_passage, passages_from_boundaries
 from aitu_backend.matrix.peaks import Peak, peaks_of
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
+from aitu_backend.schemas.rhythm import SavedRhythm
 from aitu_backend.schemas.time_matrix import FigureLadder, FigureName, TimeScorePayload
 from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.time_pipeline import (
@@ -331,3 +332,59 @@ def _passages_from_query(
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+# --------------------------------------------------------------------------- the saved reading
+
+
+@router.get("/{audio_uuid}/rhythm", response_model=SavedRhythm, response_model_by_alias=True)
+def get_rhythm(audio_uuid: str) -> SavedRhythm:
+    """The reading saved for this piece: the named ladder, and what the reader changed by hand.
+
+    Everything else about a score is worked out from the recorded notes on each request. This is the
+    part that cannot be: nothing in a recording says which pile of gaps is the beat, or where a
+    phrase restarts. Answers `404` when nobody has saved one, which is how the screen knows to start
+    from the plot instead.
+    """
+    if not store.exists(audio_uuid):
+        raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
+    saved = pipeline.load_rhythm(audio_uuid)
+    if saved is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"No rhythm has been saved for {audio_uuid}. Name a gap on the Rhythm tab and "
+                "save it."
+            ),
+        )
+    return saved
+
+
+@router.put("/{audio_uuid}/rhythm", response_model=SavedRhythm, response_model_by_alias=True)
+def put_rhythm(audio_uuid: str, rhythm: SavedRhythm) -> SavedRhythm:
+    """Save the reading, replacing any earlier one.
+
+    One per piece, because a rhythm is a decision rather than a version: what a reader wants back is
+    the last reading they were happy with. Transcribing the audio again clears it, since the column
+    numbers in it would then point at a different set of notes.
+    """
+    if not store.exists(audio_uuid):
+        raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
+    if pipeline.load_note_events(audio_uuid) is None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Audio {audio_uuid} has not been transcribed, so there is nothing for a rhythm to "
+                "describe."
+            ),
+        )
+    pipeline.save_rhythm(audio_uuid, rhythm)
+    return rhythm
+
+
+@router.delete("/{audio_uuid}/rhythm", status_code=204)
+def delete_rhythm(audio_uuid: str) -> None:
+    """Forget the saved reading and start again from the plot."""
+    if not store.exists(audio_uuid):
+        raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
+    pipeline.clear_rhythm(audio_uuid)

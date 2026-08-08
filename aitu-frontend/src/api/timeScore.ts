@@ -8,7 +8,7 @@
  * the time resolution is another request rather than a rebuild.
  */
 
-import { request } from "./client";
+import { ApiError, request } from "./client";
 
 export type FigureName =
   | "redonda"
@@ -205,4 +205,49 @@ export const timeScoreApi = {
       signal,
     });
   },
+
+  /**
+   * The reading saved for this piece, or `null` when nobody has saved one.
+   *
+   * Everything else about a score is worked out from the recorded notes on each request. This is
+   * the part that cannot be: nothing in a recording says which pile of gaps is the beat, or where a
+   * phrase restarts. A 404 is the normal answer for a piece nobody has read yet, so it comes back
+   * as `null` rather than throwing.
+   */
+  async rhythm(audioUuid: string, signal?: AbortSignal): Promise<SavedRhythm | null> {
+    try {
+      return await request<SavedRhythm>(`/time/${audioUuid}/rhythm`, { signal });
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 404) return null;
+      throw caught;
+    }
+  },
+
+  saveRhythm(audioUuid: string, body: SavedRhythm, signal?: AbortSignal) {
+    return request<SavedRhythm>(`/time/${audioUuid}/rhythm`, { method: "PUT", body, signal });
+  },
+
+  forgetRhythm(audioUuid: string, signal?: AbortSignal) {
+    return request<void>(`/time/${audioUuid}/rhythm`, { method: "DELETE", signal });
+  },
 };
+
+/** Where the piece changes speed, and what a gap is worth from there on. */
+export interface SpeedChange {
+  startFrame: number;
+  anchorMs: number;
+}
+
+/** One reader's reading of one piece: everything about a score that is not derived. */
+export interface SavedRhythm {
+  schemaVersion?: string;
+  hand: HandChoice;
+  /** The column length the columns below were numbered at. */
+  frameMs: number;
+  anchorFigure: FigureName;
+  anchorMs: number;
+  speedChanges: SpeedChange[];
+  overrides: { hand: string; row: number; startFrame: number; figure: FigureName }[];
+  beamBreaks: { hand: string; startFrame: number }[];
+  savedAt?: string;
+}

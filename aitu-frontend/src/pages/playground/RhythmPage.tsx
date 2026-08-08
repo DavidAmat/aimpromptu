@@ -27,6 +27,7 @@ import {
   type LadderPreview,
   type Peak,
   type PeaksResponse,
+  type SavedRhythm,
   type TimeScorePayload,
 } from "../../api";
 import { ApiError } from "../../api";
@@ -150,6 +151,14 @@ export function RhythmPage() {
   // what hides the line on the staves.
   const [playheadSeconds, setPlayheadSeconds] = useState<number | null>(null);
   const [newAnchorMs, setNewAnchorMs] = useState(320);
+  /**
+   * The reading saved with the piece, and whether this screen still matches it.
+   *
+   * `null` means nobody has read this piece yet, which is the blank state the plot is for.
+   */
+  const [saved, setSaved] = useState<SavedRhythm | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [savedNote, setSavedNote] = useState<string | null>(null);
 
   /**
    * Everything read for one (piece, hand, resolution), kept together under the key it belongs to.
@@ -192,6 +201,77 @@ export function RhythmPage() {
       });
     return () => controller.abort();
   }, [audioUuid, hand, frameMs, key]);
+
+  // Read back what this piece was last read as, once per piece.
+  //
+  // Restoring the anchor is not enough on its own: the pile it names has to be the one the plot
+  // shows, or the number under the name would say one thing and the highlighted bar another. So the
+  // nearest pile is selected too, and if none is near, the saved reading is kept and the plot simply
+  // has nothing highlighted, which is honest about the two disagreeing.
+  useEffect(() => {
+    if (!audioUuid) return;
+    const controller = new AbortController();
+    timeScoreApi
+      .rhythm(audioUuid, controller.signal)
+      .then((found) => {
+        if (!found) return;
+        setSaved(found);
+        setHand(found.hand);
+        setFigure(found.anchorFigure);
+        setStretches(
+          found.speedChanges.map((change) => ({
+            startFrame: change.startFrame,
+            anchorMs: change.anchorMs,
+          })),
+        );
+        setOverrides(
+          Object.fromEntries(
+            found.overrides.map((one) => [`${one.hand}:${one.startFrame}`, one.figure]),
+          ),
+        );
+        setBeamBreaks(new Set(found.beamBreaks.map((one) => `${one.hand}:${one.startFrame}`)));
+      })
+      .catch(() => {
+        // A reading that cannot be read is not worth stopping the screen for: the plot still works
+        // and the reader can name the gap again.
+      });
+    return () => controller.abort();
+  }, [audioUuid]);
+
+  const save = useCallback(async () => {
+    if (!audioUuid || !selected) return;
+    setSaving(true);
+    setSavedNote(null);
+    const body: SavedRhythm = {
+      hand,
+      frameMs,
+      anchorFigure: figure,
+      anchorMs: selected.medianMs,
+      speedChanges: stretches.map((stretch) => ({
+        startFrame: stretch.startFrame,
+        anchorMs: stretch.anchorMs,
+      })),
+      overrides: Object.entries(overrides).map(([key, name]) => {
+        const [side, frame] = key.split(":");
+        // The row is not part of the key: an override belongs to a chord, not to one notehead, so
+        // every note struck together takes it. Row 0 stands for "the group at this column".
+        return { hand: side ?? "right", row: 0, startFrame: Number(frame), figure: name };
+      }),
+      beamBreaks: [...beamBreaks].map((key) => {
+        const [side, frame] = key.split(":");
+        return { hand: side ?? "right", startFrame: Number(frame) };
+      }),
+    };
+    try {
+      const stored = await timeScoreApi.saveRhythm(audioUuid, body);
+      setSaved(stored);
+      setSavedNote("Saved with the piece. It will be here next time.");
+    } catch (caught) {
+      setSavedNote(readable(caught, "Could not save this rhythm."));
+    } finally {
+      setSaving(false);
+    }
+  }, [audioUuid, selected, hand, frameMs, figure, stretches, overrides, beamBreaks]);
 
   const apply = useCallback(async () => {
     if (!audioUuid || !selected) return;
@@ -470,6 +550,37 @@ export function RhythmPage() {
               onSelectRange={setRange}
               playheadSeconds={playheadSeconds}
             />
+            {/*
+              Everything above is a decision, and until now every one of them went when the tab did.
+              The columns, the figures and the beams are all worked out again from the recording on
+              each visit, so they cost nothing to lose; which pile is the beat, where the piece
+              changes speed, which note you renamed and where you broke a beam are not in the
+              recording at all, and re-deciding them is the actual work.
+            */}
+            <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+              <Button
+                variant="outlined"
+                onClick={() => void save()}
+                disabled={!selected || saving}
+                startIcon={saving ? <CircularProgress size={16} /> : undefined}
+              >
+                Save this rhythm with the piece
+              </Button>
+              {savedNote ? (
+                <Typography variant="body2" color="text.secondary">
+                  {savedNote}
+                </Typography>
+              ) : saved ? (
+                <Typography variant="body2" color="text.secondary">
+                  Last saved as {FIGURE_LABELS[saved.anchorFigure]} = {saved.anchorMs.toFixed(0)} ms.
+                </Typography>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Nothing saved yet, so this reading goes when you leave the tab.
+                </Typography>
+              )}
+            </Stack>
+
             <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
               {selectedNote ? (
                 <>
