@@ -89,9 +89,6 @@ const NO_HANDS: ReadonlyMap<NoteRef, PrintedHand> = new Map();
 /** Thumb to little finger. There is no 0 and no 6. */
 const FINGERS: FingerNumber[] = [1, 2, 3, 4, 5];
 
-/** Stands for "a saved reading already answered this", which outranks any suggestion. */
-const SAVED_OTTAVAS = "\u0000saved";
-
 /** What a stretch of columns can carry. One pill each, and only that one's controls on screen. */
 const FRAME_TABS = [
   { id: "key" as const, label: "Key" },
@@ -333,15 +330,17 @@ export function RhythmPage() {
    */
   const [keyChanges, setKeyChanges] = useState<KeyChangeAnnotation[]>([]);
   /**
-   * Where each hand is written an octave or two from where it sounds.
+   * Where each hand is written an octave or two from where it sounds. **Entirely the reader's.**
    *
-   * Seeded from what the register asks for the first time a piece is drawn, and the reader's from
-   * then on: a bracket they cleared must stay cleared, which is why these are held here rather than
-   * worked out on each render. Saved with the rhythm for the same reason.
+   * Nothing proposes these any more. The screen used to seed itself from what the register asked
+   * for, which existed because the hand split left passages stranded on the wrong staff under a
+   * pile of ledger lines and a bracket was the cheapest way to make them readable. P8.6 charged the
+   * split for those ledger lines instead, so the passages are on the right staff to begin with and
+   * an automatic bracket is now mostly a bracket over music that did not need one — noise the
+   * reader has to clear. A single high note still reads better under `8va`, and that is one click
+   * on the Octave pill.
    */
   const [ottavas, setOttavas] = useState<OttavaAnnotation[]>([]);
-  /** The piece whose brackets have already been decided, so a redraw never re-adds a cleared one. */
-  const decidedOttavasFor = useRef<string | null>(null);
   /** Notes picked on the sheet: click one, then hold Command and click more. */
   const [selectedNotes, setSelectedNotes] = useState<readonly string[]>([]);
   const [framesToolbox, setFramesToolbox] = useState(false);
@@ -657,21 +656,17 @@ export function RhythmPage() {
             keySignature: change.keySignature as KeySignature,
           })),
         );
-        // A reading saved before brackets existed has nothing to say about them, so it is left to
-        // the suggestion. One saved since does, including when what it says is "none".
-        if (found.ottavas) {
-          decidedOttavasFor.current = null;
-          setOttavas(
-            found.ottavas.map((span) => ({
-              kind: span.kind as OttavaKind,
-              hand:
-                span.hand === "left" ? ("left" as const) : ("right" as const),
-              fromColumn: span.fromColumn,
-              toColumn: span.toColumn,
-            })),
-          );
-          decidedOttavasFor.current = SAVED_OTTAVAS;
-        }
+        // Whatever the reader put there, and nothing when they put nothing. A reading saved
+        // before brackets existed simply has none, which is now the same answer as any other
+        // piece nobody has bracketed.
+        setOttavas(
+          (found.ottavas ?? []).map((span) => ({
+            kind: span.kind as OttavaKind,
+            hand: span.hand === "left" ? ("left" as const) : ("right" as const),
+            fromColumn: span.fromColumn,
+            toColumn: span.toColumn,
+          })),
+        );
       })
       .catch(() => {
         // A reading that cannot be read is not worth stopping the screen for: the plot still works
@@ -694,26 +689,6 @@ export function RhythmPage() {
       setFramesAt(besideOnScreen(pressedAt.current));
     },
     [],
-  );
-
-  /**
-   * Take the brackets the register asks for — once, and only if nobody has said otherwise.
-   *
-   * The suggestion is recomputed on every redraw, so without the guard a bracket the reader had
-   * just cleared would come straight back on the next keystroke. That is the D38 fault in a
-   * different place: the answer is not to stop suggesting, it is to stop overwriting.
-   */
-  const takeSuggestedOttavas = useCallback(
-    (spans: OttavaAnnotation[]) => {
-      if (
-        decidedOttavasFor.current === key ||
-        decidedOttavasFor.current === SAVED_OTTAVAS
-      )
-        return;
-      decidedOttavasFor.current = key;
-      setOttavas(spans);
-    },
-    [key],
   );
 
   /**
@@ -1135,7 +1110,6 @@ export function RhythmPage() {
     setKeySignature("C");
     setKeyChanges([]);
     setOttavas([]);
-    decidedOttavasFor.current = SAVED_OTTAVAS;
     setHiddenNotes(new Set());
     setFingers({});
     setStretches([]);
@@ -1700,7 +1674,6 @@ export function RhythmPage() {
                 keySignature={keySignature}
                 keyChanges={keyChanges}
                 ottavas={live.ottavas}
-                onOttavaSuggestion={takeSuggestedOttavas}
                 onKeySuggestion={setKeyHint}
                 onSelectNote={setSelectedNote}
                 onSelectNotes={pickNotes}

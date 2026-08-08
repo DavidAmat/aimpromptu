@@ -14,11 +14,9 @@ import {
   GridNotationRenderer,
   placeCursor,
   suggestKeySignature,
-  suggestOttavas,
   type FingerAnnotation,
   type FingerNumber,
   type KeyChangeAnnotation,
-  type KeySignature,
   type OttavaAnnotation,
   type SparseMatrix,
 } from "@aimpromptu/grid-notation";
@@ -80,14 +78,6 @@ export interface TimeScoreViewProps {
   fingers?: Readonly<Record<string, FingerNumber>>;
   /** Told when a move could not be made because the far staff already holds that key. */
   onMovesRefused?: (refused: readonly NoteRef[]) => void;
-  /**
-   * The brackets this score would ask for, reported once the music has been read.
-   *
-   * Reported rather than applied, for the same reason a key signature is: the engraver deciding it
-   * on its own is what made the old implementation impossible to override (D38). The page seeds
-   * itself from this the first time it sees a score and owns them from then on.
-   */
-  onOttavaSuggestion?: (spans: OttavaAnnotation[]) => void;
   /**
    * The stretch of columns picked on the ruler, so the highlight survives a redraw.
    *
@@ -189,7 +179,6 @@ export function TimeScoreView({
   keySignature = "C",
   keyChanges,
   ottavas,
-  onOttavaSuggestion,
   renderOverrides = NO_RENDER_OVERRIDES,
   fingers,
   onMovesRefused,
@@ -390,13 +379,12 @@ export function TimeScoreView({
       );
     }
 
-    // What the register asks for, measured against the staff each hand actually prints on. Reported
-    // on every rebuild; the page keeps the first answer and its own edits after that.
-    if (music && onOttavaSuggestion) {
-      onOttavaSuggestion(
-        suggestOttavas(music, { keySignature: (keySignature ?? "C") as KeySignature }),
-      );
-    }
+    // No bracket is proposed here. `suggestOttavas` is still exported by the drawing package and
+    // still tested there, but nothing in this app calls it: since P8.6 charged the hand split for
+    // the ledger lines it forces onto the page, a passage stranded far outside its own staff is
+    // rare enough that an automatic bracket is more often wrong than right, and a bracket the
+    // reader did not ask for is one they have to notice and clear. The Octave pill in the frame
+    // toolbox is how one gets added.
 
     return () => {
       renderer.current = null;
@@ -413,7 +401,6 @@ export function TimeScoreView({
     keyChanges,
     ottavas,
     onKeySuggestion,
-    onOttavaSuggestion,
     onSelectNote,
     onSelectNotes,
     onSelectRange,
