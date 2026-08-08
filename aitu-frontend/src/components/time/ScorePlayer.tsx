@@ -50,6 +50,13 @@ export interface ScorePlayerProps {
    * looking: pressing space, or clicking the bar.
    */
   onScrollToCursor?: () => void;
+  /**
+   * Whether the recording is sounding, whenever that changes.
+   *
+   * `controls.toggle` is enough to start and stop it from elsewhere, but not to draw a button that
+   * says which of the two it will do. A ref cannot: nothing re-renders when it changes.
+   */
+  onPlaying?: (playing: boolean) => void;
 }
 
 export interface ScorePlayerControls {
@@ -65,6 +72,7 @@ export function ScorePlayer({
   onTime,
   controls,
   onScrollToCursor,
+  onPlaying,
 }: ScorePlayerProps) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const report = useRef(onTime);
@@ -76,6 +84,12 @@ export function ScorePlayer({
   useEffect(() => {
     report.current = onTime;
   }, [onTime]);
+
+  // Said on every change rather than only on the button's own clicks: the recording also stops on
+  // its own at the end, and anything drawing a play button elsewhere has to hear about that too.
+  useEffect(() => {
+    onPlaying?.(playing);
+  }, [playing, onPlaying]);
 
   useEffect(() => {
     const element = new Audio(`${API_BASE}/audio/${audioUuid}/file`);

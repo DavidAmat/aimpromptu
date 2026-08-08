@@ -17,9 +17,14 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweepOutlined";
+import PauseIcon from "@mui/icons-material/Pause";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import SaveIcon from "@mui/icons-material/SaveOutlined";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { PageContainer, SectionCard } from "../../ui";
 import PeakPlot from "../../components/time/PeakPlot";
@@ -27,6 +32,7 @@ import ScorePlayer, {
   type ScorePlayerControls,
 } from "../../components/time/ScorePlayer";
 import TimeScoreView from "../../components/time/TimeScoreView";
+import FloatingBar from "../../components/common/FloatingBar";
 import ToolboxDialog from "../../components/common/ToolboxDialog";
 import {
   FIGURE_LABELS,
@@ -424,6 +430,19 @@ export function RhythmPage() {
   const [saved, setSaved] = useState<SavedRhythm | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedNote, setSavedNote] = useState<string | null>(null);
+  /** Whether the recording is sounding, so the floating bar can draw the button it will act as. */
+  const [playing, setPlaying] = useState(false);
+  /**
+   * Whether the wipe has been armed, and what the bar has just done.
+   *
+   * The wipe throws away everything anyone decided about the piece, which is far too much to lose
+   * to a misclick on a bar that follows the reader down the page — so it takes two presses, and it
+   * forgets the first if the second does not come. `flash` is the other half of the same problem:
+   * the bar is the only thing on screen at that moment, so it has to say what happened itself.
+   */
+  const [armed, setArmed] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [flash, setFlash] = useState<"saved" | "removed" | null>(null);
 
   /**
    * Everything read for one (piece, hand, resolution), kept together under the key it belongs to.
@@ -1024,8 +1043,10 @@ export function RhythmPage() {
       const stored = await timeScoreApi.saveRhythm(audioUuid, body);
       setSaved(stored);
       setSavedNote("Saved with the piece. It will be here next time.");
+      setFlash("saved");
     } catch (caught) {
       setSavedNote(readable(caught, "Could not save this rhythm."));
+      setFlash(null);
     } finally {
       setSaving(false);
     }
@@ -1043,42 +1064,126 @@ export function RhythmPage() {
     handOverrides,
   ]);
 
-  const apply = useCallback(async () => {
-    if (!audioUuid || !selected) return;
-    setBusy(true);
+  // What the bar has just done, said on the button that did it, then gone. Long enough to read
+  // while looking somewhere else on the page, short enough not to be mistaken for the resting state.
+  useEffect(() => {
+    if (!flash) return;
+    const timer = window.setTimeout(() => setFlash(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [flash]);
+
+  // An armed wipe that nobody confirms disarms itself, so a bar left alone is never one press away
+  // from throwing the reading out.
+  useEffect(() => {
+    if (!armed) return;
+    const timer = window.setTimeout(() => setArmed(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [armed]);
+
+  /**
+   * Ask for the sheet again.
+   *
+   * The speed changes can be passed in rather than read off the state, for the one caller that has
+   * just replaced them: React has not re-rendered yet when it calls, so the closure here still
+   * holds the changes it threw away and would draw the sheet it was asked to undo.
+   */
+  const apply = useCallback(
+    async (withStretches?: Stretch[]) => {
+      const drawn = withStretches ?? stretches;
+      if (!audioUuid || !selected) return;
+      setBusy(true);
+      try {
+        const [nextPreview, nextScore] = await Promise.all([
+          timeScoreApi.ladderPreview(audioUuid, {
+            anchorFigure: figure,
+            anchorMs: selected.medianMs,
+            hand,
+            frameMs,
+          }),
+          timeScoreApi.score(audioUuid, {
+            anchorFigure: figure,
+            anchorMs: selected.medianMs,
+            frameMs,
+            boundaries: drawn.map((stretch) => stretch.startFrame),
+            boundaryMs: [
+              selected.medianMs,
+              ...drawn.map((stretch) => stretch.anchorMs),
+            ],
+          }),
+        ]);
+        setView((current) =>
+          current.key === key
+            ? {
+                ...current,
+                preview: nextPreview,
+                score: nextScore,
+                error: null,
+              }
+            : current,
+        );
+      } catch (caught) {
+        const message = readable(caught, "Could not build the sheet.");
+        setView((current) =>
+          current.key === key ? { ...current, error: message } : current,
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [audioUuid, selected, figure, hand, frameMs, key, stretches],
+  );
+
+  /**
+   * Throw away every decision made about this piece, on screen and on disk.
+   *
+   * Everything cleared here is something a person chose and nothing the recording knows: the key
+   * and where it changes, where the piece changes speed, the notes renamed by hand, the beams cut,
+   * the octave brackets, the notes taken off the page, the notes moved to the other staff and every
+   * fingering. What is left is the piece as the recording alone describes it, still drawn from the
+   * gap that was named — starting over on the reading is a different thing and is done above.
+   *
+   * The saved reading goes with it. Clearing only the screen would look identical and be undone by
+   * the next visit, which is the worst kind of button: one that appears to work.
+   *
+   * The brackets need saying twice. They are seeded from what the register suggests the first time
+   * a piece is drawn, so clearing them without also recording that somebody has now decided would
+   * put every one of them straight back on the next redraw (D38).
+   */
+  const wipe = useCallback(async () => {
+    if (!audioUuid) return;
+    setClearing(true);
+    setArmed(false);
+    setSavedNote(null);
+    setOverrides({});
+    setBeamBreaks(new Set());
+    setKeySignature("C");
+    setKeyChanges([]);
+    setOttavas([]);
+    decidedOttavasFor.current = SAVED_OTTAVAS;
+    setHiddenNotes(new Set());
+    setHandOverrides(new Map());
+    setFingers({});
+    setStretches([]);
+    setSelectedNotes([]);
+    setPassageDraft(null);
+    setFingerDraft(null);
+    setMoveRefused(null);
+    setRange(null);
+    setClearedAt((at) => at + 1);
     try {
-      const [nextPreview, nextScore] = await Promise.all([
-        timeScoreApi.ladderPreview(audioUuid, {
-          anchorFigure: figure,
-          anchorMs: selected.medianMs,
-          hand,
-          frameMs,
-        }),
-        timeScoreApi.score(audioUuid, {
-          anchorFigure: figure,
-          anchorMs: selected.medianMs,
-          frameMs,
-          boundaries: stretches.map((stretch) => stretch.startFrame),
-          boundaryMs: [
-            selected.medianMs,
-            ...stretches.map((stretch) => stretch.anchorMs),
-          ],
-        }),
-      ]);
-      setView((current) =>
-        current.key === key
-          ? { ...current, preview: nextPreview, score: nextScore, error: null }
-          : current,
-      );
+      await timeScoreApi.forgetRhythm(audioUuid);
+      setSaved(null);
+      setFlash("removed");
     } catch (caught) {
-      const message = readable(caught, "Could not build the sheet.");
-      setView((current) =>
-        current.key === key ? { ...current, error: message } : current,
-      );
+      // The screen is already clear, so this is only about what a reload would bring back.
+      setSavedNote(readable(caught, "Could not forget the saved reading."));
     } finally {
-      setBusy(false);
+      setClearing(false);
     }
-  }, [audioUuid, selected, figure, hand, frameMs, key, stretches]);
+    // Drawn again with no speed changes, and passed them explicitly: the state above has not
+    // reached this closure yet.
+    await apply([]);
+  }, [audioUuid, apply]);
 
   /**
    * Draw the sheet the piece was last saved as, without asking for it again.
@@ -1373,7 +1478,70 @@ export function RhythmPage() {
               onTime={setPlayheadSeconds}
               controls={player}
               onScrollToCursor={scrollToCursor}
+              onPlaying={setPlaying}
             />
+            {/*
+              The two decisions that are made here and paid for pages further down.
+
+              Everything below this point is one long sheet, and both of these buttons used to sit
+              at the end of it: keeping what you just did meant scrolling past every stave to find
+              **Save**, and then scrolling back to where you were reading. The bar follows instead.
+              It is draggable because it necessarily sits over the notes, and it can be put away
+              because sometimes the notes underneath are the ones being read.
+            */}
+            <FloatingBar open label="sheet buttons">
+              <Tooltip
+                title={playing ? "Pause the recording" : "Play the recording"}
+              >
+                <IconButton
+                  size="small"
+                  color="primary"
+                  aria-label={playing ? "Pause" : "Play"}
+                  onClick={() => {
+                    setArmed(false);
+                    player.current?.toggle();
+                  }}
+                >
+                  {playing ? <PauseIcon /> : <PlayArrowIcon />}
+                </IconButton>
+              </Tooltip>
+              <Divider orientation="vertical" flexItem />
+              <Button
+                size="small"
+                variant="contained"
+                color={flash === "saved" ? "success" : "primary"}
+                disabled={!selected || saving || clearing}
+                // Pressing anything else on the bar is an answer to "sure?", and the answer is no.
+                onClick={() => {
+                  setArmed(false);
+                  void save();
+                }}
+                startIcon={
+                  saving ? <CircularProgress size={14} /> : <SaveIcon />
+                }
+              >
+                {flash === "saved" ? "Saved" : "Save"}
+              </Button>
+              <Button
+                size="small"
+                color={flash === "removed" ? "success" : "error"}
+                variant={armed ? "contained" : "outlined"}
+                disabled={saving || clearing}
+                onClick={() => {
+                  if (armed) void wipe();
+                  else setArmed(true);
+                }}
+                startIcon={
+                  clearing ? <CircularProgress size={14} /> : <DeleteSweepIcon />
+                }
+              >
+                {flash === "removed"
+                  ? "Removed"
+                  : armed
+                    ? "Sure? Remove all"
+                    : "Remove all"}
+              </Button>
+            </FloatingBar>
             {/*
               The key signature belongs beside the sheet rather than beside the plot, because it is
               read off the sheet: you change it and look at how many sharps and flats disappear.
