@@ -21,21 +21,25 @@ Task detail: [`plan.md`](plan.md). Decisions: [`decisions.md`](decisions.md). Co
 > request. What that cost is written down in `progress/P4.2-pipeline-rewired.md` §7: there is no
 > piano-roll view, no falling-notes view and no grid editor any more.
 >
-> **Phase 4 is complete.** The old tempo-based model is gone from the backend: no granularity, no
-> tempo, no stored grid. A transcription writes one file, `events.json`, and everything else is
-> derived per request.
+> **Phases 4, 5 and 6 are complete.** The renderer package no longer contains a beat: no
+> `BEATS_PER_FRAME`, no engraved spacing table, no bars, no metre, no time signature, no per-frame
+> timestamp array, no 1.x file reader and no tempo callback. It is `@aimpromptu/grid-notation`
+> **0.28.0**, and its envelope header is one field, `frameMs`.
 >
-> What is left is the **deletions inside `vexflow-v2`** that were waiting on P4.5 (P5.4, P5.5, P6.2,
-> P6.3, P6.8, P6.9), three unbuilt pieces of the Rhythm screen (P7.3, P7.9, P7.10), **P1.7**, and
-> **Phase 8**.
+> **The sheet now reads the payload's layout hints.** A dashed line every `frameMeasure` columns,
+> a selection that snaps to `frameGroup` columns, and each passage's own label above the staff where
+> it begins.
 >
-> **The migration has now been run** (2026-08-08, with `--apply`). `data/` holds the recording, its
+> **The migration has been run** (2026-08-08, with `--apply`). `data/` holds the recording, its
 > metadata and `events.json`, and nothing else. The seven files the old pipeline wrote, and a full
 > copy of the tree as it was before, are parked in `_to_delete/old-matrices/` for David to remove.
 >
-> **The whole refactor is committed** on the branch `time-based-concept`, commit `9639aed`. It was
-> uncommitted until then, which is what made the 2026-08-08 incident recoverable only in part: see
-> `progress/2026-08-08-overwrite-and-recovery.md`.
+> **Everything is committed.** `aimpromptu` is on the branch `time-based-concept`. `vexflow-v2` is
+> now on a branch of the same name: the renderer's whole half of this refactor was uncommitted on
+> `main` until 2026-08-08 and is now recorded, one commit per task.
+>
+> **What is left: `P1.7`, and all of Phase 8.** P1.7 is the last open box outside Phase 8 and is the
+> one piece of real backend work still to do.
 
 ---
 
@@ -105,9 +109,9 @@ here is reversible without the raw events.
 - [x] P4.7 `[AITU]` `text_notation.py` expresses `frameMs` — *`tempoBpm` and `timeStepSeconds` gone; `example-scores.json` converted*
 - [x] P4.8 `[AITU]` Full backend suite green; delete the BPM-reinterpretation test — *589 pass, 5 skip, 0 fail; both baseline failures gone*
 
-## [p] Phase 5 — Renderer: the time → x map `[vexflow-v2]`
+## [x] Phase 5 — Renderer: the time → x map `[vexflow-v2]`
 
-Working. The unticked boxes are deletions blocked on P4.5, plus one task the contract superseded.
+Complete. P5.3 is the one cancelled box: a note with no counterpart keeps its own column under D-24.
 
 - [x] P5.1 `[GN]` One merged two-hand timeline — *no alignment window: grouping runs before the snap, so near-simultaneous onsets already share a frame, and one frame is one x (I-03)*
 - [x] P5.2 `[GN]` `FrameGrid.frameWidths` measured from content; silence compresses
@@ -116,7 +120,7 @@ Working. The unticked boxes are deletions blocked on P4.5, plus one task the con
 - [x] P5.5 `[GN]` Remove `BEATS_PER_FRAME` — *the host says how many frames a negra covers (`framesPerQuarter`); the grid no longer answers*
 - [x] P5.6 `[GN]` Tests: alignment, silence compression, one-map invariance — *`tests/time-to-x.test.ts`; D-25 stays out because P5.3 is cancelled*
 
-## [p] Phase 6 — Renderer: figures, frame groups, no bars `[vexflow-v2]`
+## [x] Phase 6 — Renderer: figures, frame groups, no bars `[vexflow-v2]`
 
 - [x] P6.1 `[GN]` `figure-selection.ts` consumes the payload's figures (`printedFigureFor`) — *the tie machinery is still present and goes with P6.9*
 - [x] P6.2 `[GN]` Delete `STAFF_SPACES_BY_BEATS` — *the engraved table and its two width helpers are gone; widths are measured from content*
@@ -131,7 +135,7 @@ Working. The unticked boxes are deletions blocked on P4.5, plus one task the con
 - [x] P6.11 `[GN]` `thirtysecond` and `sixtyfourth` figures with their flag glyphs (D-12)
 - [x] P6.12 `[GN]` `beamBreakAt`: the reader breaks a beam on any note, applied after every rule (D-34)
 
-## [p] Phase 7 — Frontend: the ladder UI
+## [x] Phase 7 — Frontend: the ladder UI
 
 The **Rhythm** tab is the whole screen: plot, naming, speed changes, the sheet, the player, per-note
 overrides and beam breaks.
