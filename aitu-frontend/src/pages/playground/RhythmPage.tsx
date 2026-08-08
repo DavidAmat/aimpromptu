@@ -152,7 +152,12 @@ function shifted(figure: FigureName, steps: number): FigureName | null {
   return SHIFT_LADDER[at + steps] ?? null;
 }
 
-/** Everything a single note may be drawn as. Wider than the list used to name a gap. */
+/**
+ * Everything a chord may be drawn as. Wider than the list used to name a gap.
+ *
+ * The two shortest are here because standardising a passage is what this list is mostly used for,
+ * and a fast run named off a semicorchea anchor is written in fusas.
+ */
 const ALL_FIGURES: FigureName[] = [
   "redonda",
   "blanca",
@@ -161,6 +166,8 @@ const ALL_FIGURES: FigureName[] = [
   "dottedNegra",
   "corchea",
   "semicorchea",
+  "fusa",
+  "semifusa",
 ];
 
 interface Stretch {
@@ -168,12 +175,6 @@ interface Stretch {
   startFrame: number;
   /** What a gap is called from here on, in milliseconds. */
   anchorMs: number;
-}
-
-/** A clicked note arrives as `hand:frame:row`; an override belongs to the whole chord at that frame. */
-function figureKeyOf(noteKey: string): string {
-  const [hand, frame] = noteKey.split(":");
-  return `${hand}:${frame}`;
 }
 
 /** How wide the floating toolbox is, and how far it stands off what it is about. */
@@ -298,7 +299,6 @@ export function RhythmPage() {
    * moves and no other note changes. Writing the sheet again keeps them.
    */
   const [overrides, setOverrides] = useState<Record<string, FigureName>>({});
-  const [selectedNote, setSelectedNote] = useState<string | null>(null);
   /**
    * The signature the whole piece is written in, and what the notes themselves suggest.
    *
@@ -516,6 +516,57 @@ export function RhythmPage() {
     if (groups.size !== 1) return null;
     return [...selectedNotes].sort((left, right) => rowOf(left) - rowOf(right));
   }, [selectedNotes]);
+
+  /**
+   * The chords the selection touches, what they are all drawn as, and how to say otherwise.
+   *
+   * A figure belongs to a chord and never to one notehead — notes struck together are written as
+   * one thing — so picking any note of a chord names the whole of it, which is what the single-note
+   * panel always did. What a band adds is doing it to every chord at once: a passage written as a
+   * mix of corcheas, semicorcheas and tresillos becomes one figure without a column moving. That is
+   * safe here in a way it would not be on a bar-counted page, because a column is a slice of wall
+   * clock and a figure is a label on a note rather than its length (D-18).
+   *
+   * `selectedFigure` is empty when the chords picked disagree, so the box offers a name instead of
+   * claiming one of them is already the answer.
+   */
+  const selectedGroups = useMemo(
+    () => [...new Set(selectedNotes.map(groupKeyOf))],
+    [selectedNotes],
+  );
+
+  const selectedFigure = useMemo<FigureName | "">(() => {
+    const named = selectedGroups.map((groupKey) => overrides[groupKey]);
+    const first = named[0];
+    if (!first) return "";
+    return named.every((one) => one === first) ? first : "";
+  }, [selectedGroups, overrides]);
+
+  /** The chords in the selection that carry a name already, which is what the undo is about. */
+  const namedGroups = useMemo(
+    () => selectedGroups.filter((groupKey) => overrides[groupKey] !== undefined),
+    [selectedGroups, overrides],
+  );
+
+  const drawSelectionAs = useCallback(
+    (name: FigureName) => {
+      setOverrides((current) => {
+        const next = { ...current };
+        for (const groupKey of selectedGroups) next[groupKey] = name;
+        return next;
+      });
+    },
+    [selectedGroups],
+  );
+
+  /** Back to whatever the score called them. */
+  const unnameSelection = useCallback(() => {
+    setOverrides((current) => {
+      const next = { ...current };
+      for (const groupKey of selectedGroups) delete next[groupKey];
+      return next;
+    });
+  }, [selectedGroups]);
 
   const selectionKey = selectedNotes.join("|");
   // Numbers only belong to the selection they were pressed for. Carried with that selection rather
@@ -806,7 +857,6 @@ export function RhythmPage() {
   const closeNotes = useCallback(() => {
     setNotesToolbox(false);
     setSelectedNotes([]);
-    setSelectedNote(null);
     setClearedAt((at) => at + 1);
   }, []);
 
@@ -1675,7 +1725,6 @@ export function RhythmPage() {
                 keyChanges={keyChanges}
                 ottavas={live.ottavas}
                 onKeySuggestion={setKeyHint}
-                onSelectNote={setSelectedNote}
                 onSelectNotes={pickNotes}
                 onSelectRange={pickRange}
                 onSelectMarkedRange={pickMarkedRange}
@@ -1921,9 +1970,6 @@ export function RhythmPage() {
                         }
                         onClick={() => {
                           if (!range || !score) return;
-                          // Touching a chip is the reader deciding, and a decision outlasts every
-                          // redraw: from here on the suggestion never writes over this piece.
-                          decidedOttavasFor.current = SAVED_OTTAVAS;
                           // Pressing the bracket already on clears it, so one chip is both the way
                           // in and the way out and there is no separate "none".
                           setOttavas(
@@ -1953,7 +1999,6 @@ export function RhythmPage() {
                       disabled={!range || !active}
                       onClick={() => {
                         if (!range) return;
-                        decidedOttavasFor.current = SAVED_OTTAVAS;
                         setOttavas(
                           clearOttavaRange(ottavas, side, {
                             fromColumn: range.fromColumn,
@@ -2129,51 +2174,46 @@ export function RhythmPage() {
               : "The beam is cut in front of these notes, and a new group runs on from them."}
           </Typography>
 
-          {selectedNotes.length === 1 && selectedNote ? (
-            <>
-              <Divider textAlign="left">
-                <Typography variant="caption" color="text.secondary">
-                  Figure
-                </Typography>
-              </Divider>
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                <TextField
-                  select
-                  size="small"
-                  label="Draw this note as"
-                  value={overrides[figureKeyOf(selectedNote)] ?? ""}
-                  onChange={(event) =>
-                    setOverrides((current) => ({
-                      ...current,
-                      [figureKeyOf(selectedNote)]: event.target
-                        .value as FigureName,
-                    }))
-                  }
-                  sx={{ minWidth: 200 }}
-                >
-                  {ALL_FIGURES.map((name) => (
-                    <MenuItem key={name} value={name}>
-                      {FIGURE_LABELS[name]}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                {overrides[figureKeyOf(selectedNote)] ? (
-                  <Button
-                    size="small"
-                    onClick={() =>
-                      setOverrides((current) => {
-                        const next = { ...current };
-                        delete next[figureKeyOf(selectedNote)];
-                        return next;
-                      })
-                    }
-                  >
-                    Undo
-                  </Button>
-                ) : null}
-              </Stack>
-            </>
-          ) : null}
+          <Divider textAlign="left">
+            <Typography variant="caption" color="text.secondary">
+              Figure
+            </Typography>
+          </Divider>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <TextField
+              select
+              size="small"
+              label={
+                selectedGroups.length === 1
+                  ? "Draw this chord as"
+                  : `Draw all ${selectedGroups.length} as`
+              }
+              value={selectedFigure}
+              onChange={(event) =>
+                drawSelectionAs(event.target.value as FigureName)
+              }
+              sx={{ minWidth: 220 }}
+            >
+              {ALL_FIGURES.map((name) => (
+                <MenuItem key={name} value={name}>
+                  {FIGURE_LABELS[name]}
+                </MenuItem>
+              ))}
+            </TextField>
+            {namedGroups.length > 0 ? (
+              <Button size="small" onClick={unnameSelection}>
+                Undo
+              </Button>
+            ) : null}
+          </Stack>
+          <Typography variant="caption" color="text.secondary">
+            {selectedGroups.length === 1
+              ? "What this chord is drawn as. Nothing else moves: where it sits on the page and when it sounds are untouched."
+              : `One name for all ${selectedGroups.length} chords picked, so a stretch written as a mix of corcheas, semicorcheas and tresillos reads as one figure. Nothing moves \u2014 not a column, not a timing \u2014 and a tresillo renamed here loses its 3, because it is now written as what it says it is.`}
+            {namedGroups.length > 0 && namedGroups.length < selectedGroups.length
+              ? ` ${namedGroups.length} of them carry a name already.`
+              : ""}
+          </Typography>
 
           <Divider />
           <Button

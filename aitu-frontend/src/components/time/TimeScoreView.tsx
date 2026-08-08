@@ -35,6 +35,9 @@ export interface TimeScoreViewProps {
    *
    * Applied here rather than sent back for a rebuild, because that is all an override is: one glyph
    * drawn differently. Nothing moves, nothing is renumbered, no other note is touched.
+   *
+   * The one thing a named figure does take with it is the tresillo mark over the same chord — see
+   * where the tuplets are gathered below.
    */
   overrides?: Readonly<Record<string, FigureName>>;
   /**
@@ -257,11 +260,25 @@ export function TimeScoreView({
     // Which notes are a tresillo. Three notes filling the time the ladder gives to two have no
     // figure in a vocabulary of halves, so they carry an ordinary one and the 3 over them says the
     // rest. Without the mark a reader would play them as written and be wrong.
+    // A tresillo the reader has renamed is not a tresillo any more. Naming a figure by hand says
+    // "draw it as this", and a 3 left over the group says the opposite — that the notes are not what
+    // they are written as. So the mark goes with the change, and it goes for the whole group: a
+    // bracket over two of three notes reads worse than no bracket at all. This is what makes
+    // standardising a mixed passage onto one figure come out looking like one figure.
+    const named = new Set(Object.keys(overrides ?? {}));
+    const renamed = new Set<number>();
+    for (const note of score.notes) {
+      const staff = staffOf(note);
+      if (!staff || note.tupletId === null || note.tupletId === undefined) continue;
+      if (named.has(`${staff}:${note.startFrame}`)) renamed.add(note.tupletId);
+    }
+
     const tuplets = new Map<string, { count: number; id: number }>();
     for (const note of score.notes) {
       const staff = staffOf(note);
       if (!staff) continue;
       if (note.tuplet && note.tupletId !== null && note.tupletId !== undefined) {
+        if (renamed.has(note.tupletId)) continue;
         tuplets.set(`${staff}:${note.startFrame}`, { count: note.tuplet, id: note.tupletId });
       }
     }
