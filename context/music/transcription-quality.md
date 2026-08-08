@@ -83,6 +83,29 @@ The split then runs on the **raw semifusa grid**, not the collapsed one, because
 closer together than one display column merge into a single column when collapsed and the
 splitter sees a chord where the player struck twice.
 
+### ...and why the page has a vote (2026-08-08)
+
+The split also decides which *staff* a note is drawn on — right on the treble, left on the
+bass — so it is a typesetting decision as much as an ergonomic one. Seventeen of the
+eighteen cost terms ask only what the hands can do, and two assignments that were equally
+comfortable were indistinguishable even when one printed four more ledger lines than the
+other. On *Mr Blue Sky* at f1041 that produced the left hand six ledger lines above the bass
+staff and the right hand six below the treble, for three onsets, before the two swapped back.
+
+`C_ledger` charges those lines, **by direction**: running outward is register and is free to
+six lines (the bottom octave of the piano lives six lines under the bass staff), while
+running *across* — the left above the bass staff, the right below the treble — is free only
+to two. La-0 and Fa-5 are both six lines off the bass staff and only one of them is a
+mistake, which is why a single distance threshold cannot express this.
+
+It is a cost, not a veto: a crossing the hands are genuinely committed to still happens, and
+prints with its ledger lines. On the reference file the term agrees with 6 of the 14 hand
+corrections the reader had made by hand; the other 8 are a pedalled chord the model reads as
+seven keys physically held down, which is the pedal limitation, not a tuning problem.
+
+Runbook, including the search bug found alongside it:
+[documentation/issues/hand-split-ledger-lines.md](../../documentation/issues/hand-split-ledger-lines.md).
+
 ## 4. The grid, and the arithmetic that has no way out
 
 This is the subtlest of the four and the one that looks most like a bug when it is not.

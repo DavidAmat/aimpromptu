@@ -48,6 +48,9 @@ class CostWeights:
     role: float = 0.30
     #: Tuned on the dev split (was 0.08). Absolute pitch is only a weak prior.
     pitch_prior: float = 0.10
+    #: Ledger lines the assignment forces onto the page. Deliberately as large as
+    #: ``movement``: how a passage *reads* is not a tiebreaker, it is half the job.
+    ledger: float = 0.50
     octave: float = 0.50
     split: float = 0.60
     #: Hand-load balance for thick groups.
@@ -86,6 +89,27 @@ class HandModel:
     sustain_span_weight: float = 0.35
     #: Do-4 / C4. The old threshold rule, demoted to a weak prior.
     pitch_prior_center: float = 60.0
+    #: Ledger lines a hand may run past its **own** side of its staff for free —
+    #: the left below the bass staff, the right above the treble staff. Six,
+    #: because the bottom octave of the piano is six ledger lines under the bass
+    #: staff and the top of a melody is routinely five over the treble. This is
+    #: register, not a mistake, and charging it would bias every split inwards.
+    ledger_grace_outward: float = 6.0
+    #: Ledger lines a hand may run **across** its staff for free — the left above
+    #: the bass staff, the right below the treble staff. Two, which reaches Fa-4
+    #: in the bass and Sol-3 in the treble: the shared middle register both hands
+    #: write in every day. Past that the charge starts, gently at first — three
+    #: lines is worth 0.08 — so an ordinary chord that dips a little below the
+    #: treble is nudged, not overruled.
+    #:
+    #: Note this is a **grace, not a limit**. The term is one cost among
+    #: eighteen; a passage the hands genuinely have to play across the staves
+    #: still gets played that way, and prints with its ledger lines.
+    ledger_grace_across: float = 2.0
+    #: Ledger lines beyond the grace that count as one unit of trouble. The cost
+    #: is quadratic in the excess divided by this, so a hand two lines past the
+    #: grace is a nudge (0.64) and one six lines past is a verdict (5.76).
+    ledger_reference: float = 2.5
     #: Seconds of memory for voice continuity.
     voice_window: float = 1.20
     #: Semitones considered "the same voice".

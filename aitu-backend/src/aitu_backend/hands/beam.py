@@ -157,15 +157,30 @@ def run(
             # Every candidate was infeasible from every surviving state. Relax once
             # rather than dropping the group: an unplayable passage must appear in the
             # output with a warning, not vanish.
+            #
+            # The `current is None or total < current[0]` guard is not decoration.
+            # Two states that differ only in history — the same notes in the same
+            # hands, reached by a cheap route and by a ruinous one — collapse to the
+            # same `state.key()`, and writing unconditionally let whichever parent
+            # happened to come last win. One impossible chord could therefore hand the
+            # whole rest of the piece to a path 15 units worse, which is how Mr Blue
+            # Sky ended up with its left hand six ledger lines above the bass staff at
+            # f1041 and its right hand under it. Cheapest wins here exactly as it does
+            # in the ordinary branch above.
             for parent_index, parent in enumerate(frontier):
                 for partition in candidates:
                     result = transition(
                         parent.state, group, partition, model, weights, allow_infeasible=True
                     )
+                    expanded += 1
                     if result is None:
                         continue
                     total = parent.cost + result.cost
-                    pool[result.state.key()] = (
+                    key = result.state.key()
+                    current = pool.get(key)
+                    if current is not None and current[0] <= total + 1e-12:
+                        continue
+                    pool[key] = (
                         total,
                         _Node(
                             result.state,
@@ -177,6 +192,13 @@ def run(
                         ),
                     )
             infeasible_groups += 1
+            # `generate` only warns when a group is unplayable *on its own*. This one
+            # is unplayable from where the hands actually are — held keys and all —
+            # which is the more common kind and was silent until now.
+            warnings.append(
+                f"Column {group.column}: no hand partition of {len(group)} onset(s) is "
+                "reachable from any surviving hand position; relaxed to the cheapest"
+            )
 
         ranked = sorted(pool.values(), key=lambda item: item[0])
         pruned += max(0, len(ranked) - beam_width)

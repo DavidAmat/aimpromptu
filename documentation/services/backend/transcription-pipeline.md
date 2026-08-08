@@ -113,7 +113,15 @@ the longest.
 
 ### Hands
 
-Unchanged cost model (`hands/config.py`), but note the hole found on 2026-08-02 and still
+**2026-08-08 — one new cost term and one search fix.** `C_ledger` (`hands/staff.py`, weight
+`0.50`) charges the ledger lines an assignment forces onto the page, with separate graces for
+running outward past your own staff (6 lines, free — that is register) and across into the
+other hand's (2 lines). And `beam.py`'s infeasible-group fallback used to overwrite a pooled
+state unconditionally, so one unplayable chord could hand the rest of the piece to a path 15
+units worse. Both in
+[issues/hand-split-ledger-lines.md](../../issues/hand-split-ledger-lines.md).
+
+Otherwise unchanged (`hands/config.py`), but note the hole found on 2026-08-02 and still
 open: `costs.py` charges the `octave` cost only when `len(events) == 2`, so an `F1+F2+F3`
 stack pays nothing for splitting `F3` off. The artifact filter removes the usual cause; the
 cost itself has not been generalised.

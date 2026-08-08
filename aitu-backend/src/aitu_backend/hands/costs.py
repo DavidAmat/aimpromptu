@@ -26,6 +26,7 @@ Term reference (definitions from the PoC's `implementation/notation.md`):
 ``voice``         taking a note the other hand's recent voice was carrying
 ``role``          swapping which hand is on top
 ``pitch_prior``   the demoted C4 rule: a weak nudge, never a decision
+``ledger``        ledger lines the assignment forces onto the page, charged by direction
 ``octave``        splitting an exposed octave across hands
 ``split``         using two hands for a group one hand could hold
 ``balance``       load evenness for thick groups; grip strain when one hand takes them alone
@@ -43,6 +44,7 @@ from dataclasses import dataclass, field, replace
 
 from aitu_backend.hands.config import CostWeights, HandModel
 from aitu_backend.hands.events import NoteEvent, OnsetGroup
+from aitu_backend.hands.staff import ledger_excursion
 
 #: Sentinel "this hand has never played". Comparisons use ``NEVER / 2`` so that
 #: any real time, however small, reads as later.
@@ -140,6 +142,7 @@ class CostBreakdown:
     voice: float = 0.0
     role: float = 0.0
     pitch_prior: float = 0.0
+    ledger: float = 0.0
     octave: float = 0.0
     split: float = 0.0
     balance: float = 0.0
@@ -161,6 +164,7 @@ class CostBreakdown:
             + weights.voice * self.voice
             + weights.role * self.role
             + weights.pitch_prior * self.pitch_prior
+            + weights.ledger * self.ledger
             + weights.octave * self.octave
             + weights.split * self.split
             + weights.balance * self.balance
@@ -184,6 +188,7 @@ class CostBreakdown:
             "voice": weights.voice * self.voice,
             "role": weights.role * self.role,
             "pitchPrior": weights.pitch_prior * self.pitch_prior,
+            "ledger": weights.ledger * self.ledger,
             "octave": weights.octave * self.octave,
             "split": weights.split * self.split,
             "balance": weights.balance * self.balance,
@@ -367,6 +372,35 @@ def transition(
             else:
                 prior += max(0.0, midi - model.pitch_prior_center) / _OCTAVE
         _add(acc, "pitch_prior", prior / len(assigned))
+
+        # --- ledger lines: what this assignment costs the PAGE ---------------------
+        # Every other term here asks what the hands can do. This one asks what the
+        # result looks like, because the split also decides which staff a note is
+        # drawn on (right = treble, left = bass), and a hand parked on the wrong
+        # staff prints as a stack of ledger lines a reader has to count instead of
+        # read. Two graces, not one: running OUTWARD is register and is nearly free
+        # (the bottom octave of the piano is six ledger lines under the bass staff),
+        # while running ACROSS — the left above the bass staff, the right below the
+        # treble — is the two staves swapping territory, and past a line or two it
+        # is almost always a split that should have gone the other way.
+        across, outward = ledger_excursion(assigned, hand)
+        ledger_cost = 0.0
+        for lines, grace, way in (
+            (across, model.ledger_grace_across, "across"),
+            (outward, model.ledger_grace_outward, "outward"),
+        ):
+            over = max(0.0, lines - grace)
+            if over <= 0.0:
+                continue
+            ledger_cost += (over / model.ledger_reference) ** 2
+            if way == "across":
+                staff = "bass" if hand == LEFT else "treble"
+                reasons.append(
+                    f"{hand}: {lines} ledger lines across the {staff} staff — "
+                    "the other hand's register"
+                )
+        if ledger_cost:
+            _add(acc, "ledger", ledger_cost)
 
         # --- waking an idle hand --------------------------------------------------
         if state.last_time <= NEVER / 2 or (time - state.last_time) > model.engagement_gap:

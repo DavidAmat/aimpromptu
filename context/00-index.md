@@ -149,6 +149,7 @@ Wall-clock matrix columns and figure-as-label rendering. Spans **two repos** (`a
 | [../documentation/issues/README.md](../documentation/issues/README.md) | Troubleshooting runbooks |
 | [../documentation/issues/piano-matrix-sustains-and-phantom-onsets.md](../documentation/issues/piano-matrix-sustains-and-phantom-onsets.md) | Held chords printing short; chords with a note too many |
 | [../documentation/issues/rhythm-figures-and-tempo.md](../documentation/issues/rhythm-figures-and-tempo.md) | An evenly played passage printing as mixed corcheas/semicorcheas |
+| [../documentation/issues/hand-split-ledger-lines.md](../documentation/issues/hand-split-ledger-lines.md) | A hand printed far outside its own staff under a pile of ledger lines |
 | [../documentation/implementations/README.md](../documentation/implementations/README.md) | Stable topic-based how-tos |
 | [../documentation/deprecated/README.md](../documentation/deprecated/README.md) | Superseded or removed features (banner required) |
 | [../documentation/archive/README.md](../documentation/archive/README.md) | Historical reference |
