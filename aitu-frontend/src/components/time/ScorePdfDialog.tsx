@@ -60,6 +60,7 @@ export function ScorePdfDialog({ open, onClose, renderer, pieceName }: ScorePdfD
   const [landscape, setLandscape] = useState(false);
   const [sideMargin, setSideMargin] = useState(14);
   const [endMargin, setEndMargin] = useState(16);
+  const [lineGap, setLineGap] = useState(0);
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [pageNumbers, setPageNumbers] = useState(true);
@@ -87,11 +88,12 @@ export function ScorePdfDialog({ open, onClose, renderer, pieceName }: ScorePdfD
       pageSize: paper,
       orientation: landscape ? ("landscape" as const) : ("portrait" as const),
       marginsMm: { top: endMargin, bottom: endMargin, left: sideMargin, right: sideMargin },
+      systemGap: lineGap,
       pageNumbers,
       ...(title.trim() ? { title: title.trim() } : {}),
       ...(subtitle.trim() ? { subtitle: subtitle.trim() } : {}),
     }),
-    [paper, landscape, endMargin, sideMargin, pageNumbers, title, subtitle],
+    [paper, landscape, endMargin, sideMargin, lineGap, pageNumbers, title, subtitle],
   );
 
   // Redrawn on a short delay, because dragging the margin slider would otherwise re-wrap the whole
@@ -112,6 +114,11 @@ export function ScorePdfDialog({ open, onClose, renderer, pieceName }: ScorePdfD
 
   const layout = drawn?.result ?? null;
   const drawing = drawn?.from !== options;
+  // What the settings actually bought, in the unit the reader is thinking in. A page count alone
+  // does not say whether a margin is the thing standing between four lines and five.
+  const fullestPage = layout
+    ? Math.max(...layout.pages.map((one) => one.plan.toSystem - one.plan.fromSystem))
+    : 0;
   const scale = layout ? Math.min(1, PREVIEW_WIDTH / layout.pageWidth) : 1;
 
   const download = useCallback(async () => {
@@ -203,12 +210,31 @@ export function ScorePdfDialog({ open, onClose, renderer, pieceName }: ScorePdfD
               </Typography>
             </Box>
 
+            <Box>
+              <Typography variant="body2" gutterBottom>
+                Extra space between lines — {lineGap} px
+              </Typography>
+              <Slider
+                size="small"
+                min={0}
+                max={48}
+                value={lineGap}
+                onChange={(_, value) => setLineGap(value as number)}
+                valueLabelDisplay="auto"
+              />
+              <Typography variant="caption" color="text.secondary">
+                On top of the room every line already keeps for its ledger lines and brackets. The
+                distance between the two staves <em>within</em> a line is the one set on the sheet
+                and is not touched here. Adding air costs lines per page.
+              </Typography>
+            </Box>
+
             <TextField
               size="small"
               label="Title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              helperText="Large on page one, small at the top of the rest. Leave it empty for none."
+              helperText="Printed on page one only. Leave it empty for none."
             />
             <TextField
               size="small"
@@ -265,7 +291,9 @@ export function ScorePdfDialog({ open, onClose, renderer, pieceName }: ScorePdfD
           {drawing
             ? "Laying the music out…"
             : layout
-              ? `${layout.pages.length} page${layout.pages.length === 1 ? "" : "s"}, ${
+              ? `${layout.pages.length} page${layout.pages.length === 1 ? "" : "s"}, up to ${
+                  fullestPage
+                } line${fullestPage === 1 ? "" : "s"} a page, ${
                   paper === "a4" ? "A4" : "US Letter"
                 } ${landscape ? "landscape" : "portrait"}`
               : "Nothing to print yet."}

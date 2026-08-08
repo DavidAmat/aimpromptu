@@ -27,7 +27,21 @@ not at the call site, so that a printed page cannot silently lose an option the 
 In particular it passes **the frame widths this renderer already measured**. `renderScorePages` will
 otherwise measure its own, and it does not know about `silenceGroupPx` or `frameGroup` — the two
 numbers that decide how much room a silence gets — so the print would be spaced differently from the
-screen. It also forces `showTimestamps: false`, `frameCells: false`, `rangeMarkers: false`.
+screen.
+
+Its print defaults, all overridable by the caller:
+
+| Default | Why |
+|---|---|
+| `showTimestamps: false`, `frameCells: false`, `rangeMarkers: false` | ways of pointing at something; nothing on paper to point with |
+| `frameLabels: false` | a column number is an address and nobody can click one on paper. Also gives back the 52 px strip reserved to hold the numbers — `GRAND_STAFF_TOP_PADDING` (60) becomes `GRAND_STAFF_TOP_PADDING_BARE` (24) |
+| `runningHead: false` | the piece is named once, where it starts |
+| `systemPadding: { bottom: 20 }` | on screen the page can grow downwards so the slack under the lower staff is set generously; on paper it is the difference between four lines and five |
+
+`systemGap` (the panel's **extra space between lines**) is added on top of that padding. Together
+these take a page of this score from three lines to five, with the staff gap inside each line
+untouched. `resolveSystemPadding` is the single function both the paginator's budget and the drawing
+go through, so a page can never be planned for a system taller than the one that gets drawn.
 
 ## How a page becomes PDF
 
@@ -76,8 +90,9 @@ pdftoppm -r 96 -png sheet.pdf page     # render with a second engine and look
 ```
 
 The margin check that matters: render every page and confirm the ink bounding box stays inside the
-margins. On the 12-page test piece at 14 mm sides, ink starts at 14.3 mm and stops 16.7 mm from the
-right on every page.
+margins. On the 8-page test piece at 14 mm sides and 16 mm ends, music ink starts at 14.6 mm from
+the left, 17.2 mm from the right and 16.9 mm from the top on every page. Exclude the bottom 15 mm
+from that measurement: the folio deliberately sits inside the bottom margin, as folios do.
 
 To check that a line that breaks carries on below, read the systems off the DOM — every
 `[data-system-index]` carries `data-start-frame` and `data-end-frame`, and they should tile the

@@ -18,12 +18,31 @@ the notation package, and pagination is built on top of it (D41).
 Three things follow, and they are the whole reason the panel looks the way it does:
 
 - **The margin is a real control, not a constant.** Narrower side margins give each line more room,
-  so the music breaks in fewer places and the piece takes fewer pages. On the test piece: 14 mm →
-  12 pages, 5 mm → 11 pages, 35 mm → 17 pages. Nothing changes size.
+  so the music breaks in fewer places and the piece takes fewer pages. Nothing changes size.
 - **A line is never split across a page turn.** Pages are a budget of whole lines; a line taller
   than a page still gets a page to itself rather than being cut.
 - **Where a line breaks, the next line starts at exactly that column.** Nothing is dropped at a
   break and nothing is printed twice.
+
+## Five lines to a page
+
+A printed score carries about five systems to a page, and the first version of this carried three.
+The room went to things a reader can only use on a screen:
+
+| Taken off the page | Gave back |
+|---|---|
+| The row of `f1300` frame numbers over every line, and the 52-pixel strip reserved to hold it | 36 px a line |
+| The title repeated at the top of every page after the first | a line's worth over a long score |
+| Slack under the lower staff, which on screen can be generous because the page grows downwards | 20 px a line |
+
+A column number is an address, and nobody can click an address on paper — so the numbers go, and the
+strip goes with them. The **dashed guides** stay: they are the wall clock, and the whole page is
+drawn in it. The title is printed once, where the piece starts, which is also why page one carries
+one line fewer than the pages after it.
+
+What is **not** touched is the distance between the two staves inside a line: that is the staff gap
+set on the sheet, and paper prints it exactly as the screen shows it. **Extra space between lines**
+in the panel adds air on top of what each line already keeps, and costs lines per page as it goes.
 
 ## What the printed page carries over from the screen
 
