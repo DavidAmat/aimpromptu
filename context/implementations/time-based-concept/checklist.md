@@ -126,7 +126,7 @@ Working. The unticked boxes are deletions blocked on P4.5, plus one task the con
 - [x] P6.6 `[GN]` No rest glyphs — `rests: false` (D-16)
 - [x] P6.7 `[GN]` **Open question:** what beams group by, now there is no beat — *answered: a maximal run of consecutive beamable notes in one hand*
 - [ ] P6.8 `[GN]` Bump to 0.28.0; update docs; delete `onTempoRequest` — **blocked on P4.5**
-- [ ] P6.9 `[GN]` Delete the 1.x reader — **only after P4.5**
+- [x] P6.9 `[GN]` Delete the 1.x reader — *`parseMatrixEnvelope` reads schema 2.0 only and refuses a 1.x file; the envelope header is `frameMs` alone*
 - [x] P6.10 `[GN]` Tuplet mark: bracket, numeral, and a beam split at every tuplet boundary (D-32)
 - [x] P6.11 `[GN]` `thirtysecond` and `sixtyfourth` figures with their flag glyphs (D-12)
 - [x] P6.12 `[GN]` `beamBreakAt`: the reader breaks a beam on any note, applied after every rule (D-34)

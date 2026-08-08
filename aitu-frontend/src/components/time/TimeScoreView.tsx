@@ -98,11 +98,10 @@ export function TimeScoreView({
       staves: score.layout.hideLeftHand || score.layout.hideRightHand ? "single" : "grand",
       matrixEnvelope: {
         sparse: true,
-        // Metadata the older reader still expects. Nothing downstream reads them for this score:
-        // the figures arrive named and the positions come from the columns.
-        tempoBpm: 60,
-        timeStepSeconds: score.envelope.frameMs / 1000,
-        granularity: "semicorchea",
+        // A column is this many milliseconds, and that is the whole of what the header says about
+        // time. It used to carry a tempo and a granularity code as well, which the drawing package
+        // no longer has anywhere to put.
+        frameMs: score.envelope.frameMs,
         matrixProcessingStep: "two-hands",
         rMatrix: score.envelope.rMatrix as SparseMatrix,
         lMatrix: score.envelope.lMatrix as SparseMatrix,
