@@ -9,8 +9,13 @@
 
 import { useEffect, useRef } from "react";
 import Box from "@mui/material/Box";
-import { GridNotationRenderer, placeCursor, type SparseMatrix } from "@aimpromptu/grid-notation";
-import type { FigureName, TimeScorePayload } from "../../api";
+import {
+  GridNotationRenderer,
+  placeCursor,
+  suggestKeySignature,
+  type SparseMatrix,
+} from "@aimpromptu/grid-notation";
+import type { FigureName, KeySignatureName, TimeScorePayload } from "../../api";
 
 export interface TimeScoreViewProps {
   score: TimeScorePayload;
@@ -33,6 +38,25 @@ export interface TimeScoreViewProps {
   onSelectNote?: (noteKey: string | null) => void;
   /** A stretch of the piece was selected on the ruler above the staves. */
   onSelectRange?: (range: { fromColumn: number; toColumn: number }) => void;
+  /**
+   * The signature the whole piece is written in. C when nobody has chosen.
+   *
+   * A transcription has no key: the recording says which keys were pressed and nothing about how
+   * they should be spelled. In C every black key prints its own accidental, so a piece in five
+   * flats comes out covered in them and is hard to read. Choosing the signature moves those
+   * accidentals into the clef, where a player reads them once.
+   *
+   * It changes spelling and nothing else. No note moves, no figure changes, and the recording is
+   * untouched.
+   */
+  keySignature?: KeySignatureName;
+  /**
+   * Which signature would print the fewest accidentals, and how many that would save.
+   *
+   * Reported rather than applied. A key is the reader's decision, and a count of accidentals is
+   * only evidence for it: a piece can genuinely be written in a key that costs a few more.
+   */
+  onKeySuggestion?: (suggestion: { best: KeySignatureName; saved: number } | null) => void;
   /** Falls back to the container width when the layout has not settled yet. */
   availableWidth?: number;
   /**
@@ -51,6 +75,8 @@ export function TimeScoreView({
   score,
   overrides,
   beamBreaks,
+  keySignature = "C",
+  onKeySuggestion,
   onSelectNote,
   onSelectRange,
   availableWidth,
@@ -94,7 +120,7 @@ export function TimeScoreView({
       // what is drawn in it, so a column where nothing starts collapses to a sliver and a long
       // silence takes a short space. Distance on the page then reads as how much is happening,
       // which is what a wall-clock grid is for. Setting `pixelsPerFrame` turns that off.
-      keySignature: "C",
+      keySignature,
       staves: score.layout.hideLeftHand || score.layout.hideRightHand ? "single" : "grand",
       // The two wall-clock levels above the column. A dashed line every `frameMeasure` columns
       // says where the page is in time; a selection snaps to `frameGroup` columns, which is the
@@ -136,11 +162,38 @@ export function TimeScoreView({
     });
 
     renderer.current = drawn;
+
+    // What the notes themselves suggest, measured on the same spelling rule the page prints with,
+    // so the number reported is the ink actually saved rather than a second opinion about it.
+    const music = drawn.getMusic();
+    if (music && onKeySuggestion) {
+      const ranked = suggestKeySignature(music, {
+        fromColumn: 0,
+        toColumn: score.envelope.frameCount,
+        activeKeySignature: keySignature,
+      });
+      const best = ranked.candidates[0];
+      onKeySuggestion(
+        best && best.keySignature !== keySignature
+          ? { best: best.keySignature, saved: ranked.savedAgainstActive ?? 0 }
+          : null,
+      );
+    }
+
     return () => {
       renderer.current = null;
       drawn.destroy?.();
     };
-  }, [score, overrides, beamBreaks, onSelectNote, onSelectRange, availableWidth]);
+  }, [
+    score,
+    overrides,
+    beamBreaks,
+    keySignature,
+    onKeySuggestion,
+    onSelectNote,
+    onSelectRange,
+    availableWidth,
+  ]);
 
   // The line is moved rather than redrawn. At sixty ticks a second a full re-render would rebuild
   // every note sixty times to move one line a few pixels, which is the whole cost of the page.

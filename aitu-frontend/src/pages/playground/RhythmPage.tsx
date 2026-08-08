@@ -27,6 +27,9 @@ import {
   type LadderPreview,
   type Peak,
   type PeaksResponse,
+  KEY_LABELS,
+  KEY_SIGNATURES,
+  type KeySignatureName,
   type SavedRhythm,
   type TimeScorePayload,
 } from "../../api";
@@ -131,6 +134,15 @@ export function RhythmPage() {
   const [overrides, setOverrides] = useState<Record<string, FigureName>>({});
   const [selectedNote, setSelectedNote] = useState<string | null>(null);
   /**
+   * The signature the whole piece is written in, and what the notes themselves suggest.
+   *
+   * A transcription has no key. The recording says which keys were pressed and nothing about how
+   * they should be spelled, so until someone chooses, everything is written in C and every black
+   * key prints its own accidental. Choosing moves those accidentals into the clef.
+   */
+  const [keySignature, setKeySignature] = useState<KeySignatureName>("C");
+  const [keyHint, setKeyHint] = useState<{ best: KeySignatureName; saved: number } | null>(null);
+  /**
    * Notes the reader has asked to start a new beam.
    *
    * Kept beside the overrides and for the same reason: it changes how the page is grouped and
@@ -230,6 +242,7 @@ export function RhythmPage() {
           ),
         );
         setBeamBreaks(new Set(found.beamBreaks.map((one) => `${one.hand}:${one.startFrame}`)));
+        if (found.keySignature) setKeySignature(found.keySignature);
       })
       .catch(() => {
         // A reading that cannot be read is not worth stopping the screen for: the plot still works
@@ -245,6 +258,7 @@ export function RhythmPage() {
     const body: SavedRhythm = {
       hand,
       frameMs,
+      keySignature,
       anchorFigure: figure,
       anchorMs: selected.medianMs,
       speedChanges: stretches.map((stretch) => ({
@@ -271,7 +285,7 @@ export function RhythmPage() {
     } finally {
       setSaving(false);
     }
-  }, [audioUuid, selected, hand, frameMs, figure, stretches, overrides, beamBreaks]);
+  }, [audioUuid, selected, hand, frameMs, figure, keySignature, stretches, overrides, beamBreaks]);
 
   const apply = useCallback(async () => {
     if (!audioUuid || !selected) return;
@@ -542,10 +556,43 @@ export function RhythmPage() {
               scoreSeconds={(score.envelope.frameCount * score.envelope.frameMs) / 1000}
               onTime={setPlayheadSeconds}
             />
+            {/*
+              The key signature belongs beside the sheet rather than beside the plot, because it is
+              read off the sheet: you change it and look at how many sharps and flats disappear.
+            */}
+            <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+              <TextField
+                select
+                size="small"
+                label="Key signature"
+                value={keySignature}
+                onChange={(event) => setKeySignature(event.target.value as KeySignatureName)}
+                sx={{ minWidth: 200 }}
+                helperText="Written on both clefs. It changes spelling only: no note moves."
+              >
+                {KEY_SIGNATURES.map((name) => (
+                  <MenuItem key={name} value={name}>
+                    {KEY_LABELS[name]}
+                  </MenuItem>
+                ))}
+              </TextField>
+              {keyHint ? (
+                <Button size="small" onClick={() => setKeySignature(keyHint.best)}>
+                  Try {KEY_LABELS[keyHint.best]}
+                  {keyHint.saved > 0 ? ` (${keyHint.saved} fewer accidentals)` : ""}
+                </Button>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No other signature would print fewer accidentals than this one.
+                </Typography>
+              )}
+            </Stack>
             <TimeScoreView
               score={score}
               overrides={overrides}
               beamBreaks={beamBreaks}
+              keySignature={keySignature}
+              onKeySuggestion={setKeyHint}
               onSelectNote={setSelectedNote}
               onSelectRange={setRange}
               playheadSeconds={playheadSeconds}
@@ -572,7 +619,8 @@ export function RhythmPage() {
                 </Typography>
               ) : saved ? (
                 <Typography variant="body2" color="text.secondary">
-                  Last saved as {FIGURE_LABELS[saved.anchorFigure]} = {saved.anchorMs.toFixed(0)} ms.
+                  Last saved as {FIGURE_LABELS[saved.anchorFigure]} = {saved.anchorMs.toFixed(0)}{" "}
+                  ms{saved.keySignature ? `, in ${KEY_LABELS[saved.keySignature]}` : ""}.
                 </Typography>
               ) : (
                 <Typography variant="body2" color="text.secondary">

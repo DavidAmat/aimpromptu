@@ -238,12 +238,70 @@ export interface SpeedChange {
   anchorMs: number;
 }
 
+/**
+ * The fifteen signatures a staff can be written in, sharpest to flattest.
+ *
+ * A transcription arrives with no key at all: the recording says which keys were pressed and
+ * nothing about how they should be spelled. Until someone chooses, everything is written in C and
+ * every black key prints an accidental.
+ */
+export const KEY_SIGNATURES = [
+  "C",
+  "G",
+  "D",
+  "A",
+  "E",
+  "B",
+  "F#",
+  "C#",
+  "F",
+  "Bb",
+  "Eb",
+  "Ab",
+  "Db",
+  "Gb",
+  "Cb",
+] as const;
+
+export type KeySignatureName = (typeof KEY_SIGNATURES)[number];
+
+/**
+ * What each signature is called on a picker, with the major key first.
+ *
+ * Both names are shown because a reader who knows the piece is in D minor should not have to
+ * remember that D minor and F major print the same one flat.
+ */
+export const KEY_LABELS: Record<KeySignatureName, string> = {
+  C: "C major / A minor — no sharps or flats",
+  G: "G major / E minor — 1 sharp",
+  D: "D major / B minor — 2 sharps",
+  A: "A major / F# minor — 3 sharps",
+  E: "E major / C# minor — 4 sharps",
+  B: "B major / G# minor — 5 sharps",
+  "F#": "F# major / D# minor — 6 sharps",
+  "C#": "C# major / A# minor — 7 sharps",
+  F: "F major / D minor — 1 flat",
+  Bb: "Bb major / G minor — 2 flats",
+  Eb: "Eb major / C minor — 3 flats",
+  Ab: "Ab major / F minor — 4 flats",
+  Db: "Db major / Bb minor — 5 flats",
+  Gb: "Gb major / Eb minor — 6 flats",
+  Cb: "Cb major / Ab minor — 7 flats",
+};
+
 /** One reader's reading of one piece: everything about a score that is not derived. */
 export interface SavedRhythm {
   schemaVersion?: string;
   hand: HandChoice;
   /** The column length the columns below were numbered at. */
   frameMs: number;
+  /**
+   * The signature the whole piece is written in.
+   *
+   * Part of the reading rather than of the recording, exactly like the anchor: nothing in the
+   * recorded notes says whether a black key is an F sharp or a G flat.
+   */
+  keySignature?: KeySignatureName;
   anchorFigure: FigureName;
   anchorMs: number;
   speedChanges: SpeedChange[];

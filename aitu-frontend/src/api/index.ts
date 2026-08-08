@@ -23,11 +23,12 @@ export type {
 export { audioApi, SUPPORTED_AUDIO_SUFFIXES } from "./audio";
 export type { AudioItem, AudioSource, AudioTimeRange, WaveformPeaks } from "./audio";
 
-export { timeScoreApi, FIGURE_LABELS } from "./timeScore";
+export { timeScoreApi, FIGURE_LABELS, KEY_LABELS, KEY_SIGNATURES } from "./timeScore";
 export type {
   FigureLadder,
   FigureName,
   HandChoice,
+  KeySignatureName,
   LabelledPeak,
   LadderPreview,
   LayoutHints,

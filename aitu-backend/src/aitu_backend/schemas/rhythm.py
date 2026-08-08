@@ -6,6 +6,7 @@ file holds the only things that are **not** derived, because a person chose them
 and nothing in the recording implies them:
 
 * which pile of gaps is the beat, and what it is called (D-09, D-10)
+* which signature the piece is written in
 * where the piece changes speed, and what a gap is worth after each change
   (D-19, D-20)
 * the notes drawn as a different figure by hand (D-17)
@@ -72,6 +73,15 @@ class SavedRhythm(BaseModel):
     #: The column length the columns below were numbered at.
     frame_ms: float = Field(DEFAULT_FRAME_MS, alias="frameMs", gt=0)
 
+    #: The signature the whole piece is written in, as its major key: ``C``,
+    #: ``Bb``, ``F#`` and so on. Absent on a reading saved before this existed,
+    #: and absent means C, which is what those readings were drawn in.
+    #:
+    #: Part of the reading rather than of the recording. The recorded notes say
+    #: which keys were pressed and nothing about whether a black key is an F
+    #: sharp or a G flat, so nobody but the reader can answer it.
+    key_signature: str | None = Field(None, alias="keySignature")
+
     #: The name given to the anchor pile, and the pile's own length in ms.
     anchor_figure: FigureName = Field(FigureName.NEGRA, alias="anchorFigure")
     anchor_ms: float = Field(..., alias="anchorMs", gt=0)
@@ -86,6 +96,8 @@ class SavedRhythm(BaseModel):
         parts = [
             f"{self.anchor_figure.value} = {self.anchor_ms:.0f} ms at {self.frame_ms:g} ms/col"
         ]
+        if self.key_signature:
+            parts.append(f"in {self.key_signature}")
         if self.speed_changes:
             parts.append(f"{len(self.speed_changes)} speed change(s)")
         if self.overrides:

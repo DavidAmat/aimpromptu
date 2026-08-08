@@ -60,6 +60,7 @@ def a_reading(anchor_ms: float = 320.0) -> SavedRhythm:
             FigureOverride(hand="right", row=39, start_frame=8, figure=FigureName.SEMICORCHEA)
         ],
         beam_breaks=[BeamBreak(hand="left", start_frame=24)],
+        key_signature="Bb",
     )
 
 
@@ -76,6 +77,7 @@ def test_a_reading_comes_back_exactly_as_it_was_saved(client: TestClient) -> Non
     assert read["anchorFigure"] == "negra"
     assert read["anchorMs"] == 320.0
     assert read["frameMs"] == 40
+    assert read["keySignature"] == "Bb"
     assert read["speedChanges"] == [{"startFrame": 144, "anchorMs": 674.0}]
     assert read["overrides"] == [
         {"hand": "right", "row": 39, "startFrame": 8, "figure": "semicorchea"}
@@ -176,3 +178,20 @@ def test_the_reading_describes_itself_for_a_log(temp_store: Path) -> None:
     assert "1 speed change(s)" in text
     assert "1 note(s) renamed" in text
     assert "1 beam break(s)" in text
+
+
+def test_a_reading_saved_before_keys_existed_still_loads(client: TestClient) -> None:
+    """A stored file with no `keySignature` is not a broken file.
+
+    The field was added after readings were already on disk, and a piece read in C is exactly what
+    those readings were drawn in, so the absent value and C mean the same thing.
+    """
+    uuid = transcribed()
+    body = a_reading().model_dump(by_alias=True, mode="json")
+    del body["keySignature"]
+
+    assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
+    read = client.get(f"/time/{uuid}/rhythm").json()
+
+    assert read["keySignature"] is None
+    assert read["anchorMs"] == 320.0
