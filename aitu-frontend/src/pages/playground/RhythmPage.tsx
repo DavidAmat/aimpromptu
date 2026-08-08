@@ -7,17 +7,19 @@
  * cheap and nothing is lost by getting it wrong the first time.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { PageContainer, SectionCard } from "../../ui";
 import PeakPlot from "../../components/time/PeakPlot";
-import ScorePlayer from "../../components/time/ScorePlayer";
+import ScorePlayer, { type ScorePlayerControls } from "../../components/time/ScorePlayer";
 import TimeScoreView from "../../components/time/TimeScoreView";
 import ToolboxDialog from "../../components/common/ToolboxDialog";
 import {
@@ -37,14 +39,30 @@ import {
 import { ApiError } from "../../api";
 import {
   applyKeySignatureRange,
+  applyOttava,
   clearKeySignatureRange,
+  clearOttavaRange,
   keySignatureAtFrame,
+  ottavaAtFrame,
   type KeyChangeAnnotation,
   type KeySignature,
+  type OttavaAnnotation,
+  type OttavaKind,
 } from "@aimpromptu/grid-notation";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 
 const NAMEABLE_FIGURES: FigureName[] = ["blanca", "negra", "corchea", "semicorchea"];
+
+/** Stands for "a saved reading already answered this", which outranks any suggestion. */
+const SAVED_OTTAVAS = "\u0000saved";
+
+/** The four brackets, and what each does to a passage, in the order a reader meets them. */
+const OTTAVA_CHOICES: { kind: OttavaKind; label: string; hint: string }[] = [
+  { kind: "8va", label: "8va", hint: "written an octave lower than it sounds" },
+  { kind: "15ma", label: "15ma", hint: "written two octaves lower than it sounds" },
+  { kind: "8vb", label: "8vb", hint: "written an octave higher than it sounds" },
+  { kind: "15mb", label: "15mb", hint: "written two octaves higher than it sounds" },
+];
 
 /** `mm:ss.cc`, so a column range can be read as a moment in the recording. */
 function formatSeconds(seconds: number): string {
@@ -168,6 +186,16 @@ export function RhythmPage() {
    * key writes two, one at each end.
    */
   const [keyChanges, setKeyChanges] = useState<KeyChangeAnnotation[]>([]);
+  /**
+   * Where each hand is written an octave or two from where it sounds.
+   *
+   * Seeded from what the register asks for the first time a piece is drawn, and the reader's from
+   * then on: a bracket they cleared must stay cleared, which is why these are held here rather than
+   * worked out on each render. Saved with the rhythm for the same reason.
+   */
+  const [ottavas, setOttavas] = useState<OttavaAnnotation[]>([]);
+  /** The piece whose brackets have already been decided, so a redraw never re-adds a cleared one. */
+  const decidedOttavasFor = useRef<string | null>(null);
   /** Notes picked on the sheet: click one, then hold Command and click more. */
   const [selectedNotes, setSelectedNotes] = useState<readonly string[]>([]);
   const [framesToolbox, setFramesToolbox] = useState(false);
@@ -203,7 +231,12 @@ export function RhythmPage() {
   const [range, setRange] = useState<{ fromColumn: number; toColumn: number } | null>(null);
   // Where the recording is, in seconds, while it plays. `null` when nothing is playing, which is
   // what hides the line on the staves.
-  const [playheadSeconds, setPlayheadSeconds] = useState<number | null>(null);
+  // Starts at zero rather than nothing, so the line is on the page — and so grabbable — before the
+  // recording has ever been played. `null` only after the player itself has gone.
+  const [playheadSeconds, setPlayheadSeconds] = useState<number | null>(0);
+  /** The transport, so dragging the cursor on the staves can move the recording. */
+  const player = useRef<ScorePlayerControls | null>(null);
+  const [scrollCursorAt, setScrollCursorAt] = useState(0);
   const [newAnchorMs, setNewAnchorMs] = useState(320);
   /**
    * The reading saved with the piece, and whether this screen still matches it.
@@ -231,6 +264,40 @@ export function RhythmPage() {
   // Which stretch the toolbox is about, and what it will write. The signature offered is whatever
   // is already sounding at the start of the stretch, until the reader picks another.
   const rangeKey = range ? `${range.fromColumn}:${range.toColumn}` : "";
+
+  /**
+   * The stored edits whose stretch the selection covers, each with the one call that removes it.
+   *
+   * Built here rather than kept in state, because it is a reading of what is stored: an edit list
+   * that could disagree with the edits is worse than no list.
+   */
+  const editsInRange = range
+    ? keyChanges
+        .filter(
+          (change) => change.fromColumn >= range.fromColumn && change.fromColumn < range.toColumn,
+        )
+        .map((change) => ({
+          kind: "key",
+          fromColumn: change.fromColumn,
+          label: `Key signature: ${change.keySignature} from column ${change.fromColumn}`,
+          remove: () => {
+            if (!score) return;
+            // The stretch this transition governs runs to the next one, or to the end of the piece.
+            const next = keyChanges.find((other) => other.fromColumn > change.fromColumn);
+            setKeyChanges(
+              clearKeySignatureRange(
+                keyChanges,
+                {
+                  fromFrame: change.fromColumn,
+                  toFrame: next ? next.fromColumn : score.envelope.frameCount,
+                },
+                keySignature as KeySignature,
+                score.envelope.frameCount,
+              ),
+            );
+          },
+        }))
+    : [];
   const passageKey: KeySignatureName =
     passageDraft?.forRange === rangeKey
       ? passageDraft.value
@@ -303,6 +370,20 @@ export function RhythmPage() {
             keySignature: change.keySignature as KeySignature,
           })),
         );
+        // A reading saved before brackets existed has nothing to say about them, so it is left to
+        // the suggestion. One saved since does, including when what it says is "none".
+        if (found.ottavas) {
+          decidedOttavasFor.current = null;
+          setOttavas(
+            found.ottavas.map((span) => ({
+              kind: span.kind as OttavaKind,
+              hand: span.hand === "left" ? ("left" as const) : ("right" as const),
+              fromColumn: span.fromColumn,
+              toColumn: span.toColumn,
+            })),
+          );
+          decidedOttavasFor.current = SAVED_OTTAVAS;
+        }
       })
       .catch(() => {
         // A reading that cannot be read is not worth stopping the screen for: the plot still works
@@ -322,6 +403,43 @@ export function RhythmPage() {
     setRange(picked);
     setFramesToolbox(true);
   }, []);
+
+  /**
+   * Take the brackets the register asks for — once, and only if nobody has said otherwise.
+   *
+   * The suggestion is recomputed on every redraw, so without the guard a bracket the reader had
+   * just cleared would come straight back on the next keystroke. That is the D38 fault in a
+   * different place: the answer is not to stop suggesting, it is to stop overwriting.
+   */
+  const takeSuggestedOttavas = useCallback(
+    (spans: OttavaAnnotation[]) => {
+      if (decidedOttavasFor.current === key || decidedOttavasFor.current === SAVED_OTTAVAS) return;
+      decidedOttavasFor.current = key;
+      setOttavas(spans);
+    },
+    [key],
+  );
+
+  /** Bring the cursor on screen — space, a click on the bar, a jump the reader did not make. */
+  const scrollToCursor = useCallback(() => setScrollCursorAt((at) => at + 1), []);
+
+  /** The cursor was dragged. The transport owns the recording, so it does the moving. */
+  const scrub = useCallback((seconds: number) => player.current?.seek(seconds), []);
+
+  /**
+   * A corner mark was clicked: select the stretch it belongs to and open the toolbox on it.
+   *
+   * This is the point of drawing the corners. A stretch that carries an edit is visible without
+   * being selected, so a reader who wants to undo one goes straight to it instead of remembering
+   * which columns they used.
+   */
+  const pickMarkedRange = useCallback(
+    (marker: { fromColumn: number; toColumn: number }) => {
+      setRange({ fromColumn: marker.fromColumn, toColumn: marker.toColumn });
+      setFramesToolbox(true);
+    },
+    [],
+  );
 
   const pickNotes = useCallback((keys: readonly string[]) => {
     setSelectedNotes(keys);
@@ -388,6 +506,12 @@ export function RhythmPage() {
         const [side, frame] = key.split(":");
         return { hand: side ?? "right", startFrame: Number(frame) };
       }),
+      ottavas: ottavas.map((span) => ({
+        kind: span.kind,
+        hand: span.hand,
+        fromColumn: span.fromColumn,
+        toColumn: span.toColumn,
+      })),
     };
     try {
       const stored = await timeScoreApi.saveRhythm(audioUuid, body);
@@ -409,6 +533,7 @@ export function RhythmPage() {
     stretches,
     overrides,
     beamBreaks,
+    ottavas,
   ]);
 
   const apply = useCallback(async () => {
@@ -442,6 +567,22 @@ export function RhythmPage() {
       setBusy(false);
     }
   }, [audioUuid, selected, figure, hand, frameMs, key, stretches]);
+
+  /**
+   * Draw the sheet the piece was last saved as, without asking for it again.
+   *
+   * Everything on this page except the reading is worked out from the recording on every visit, so
+   * coming back used to mean pressing **Write the sheet** to see what you already decided. The
+   * reading is on disk; the page can act on it. Once per piece, and only while nothing has been
+   * drawn yet, so it never fights a reader who has already pressed the button.
+   */
+  const restored = useRef<string | null>(null);
+  useEffect(() => {
+    if (!audioUuid || !saved || !selected || score || busy) return;
+    if (restored.current === key) return;
+    restored.current = key;
+    void apply();
+  }, [audioUuid, saved, selected, score, busy, key, apply]);
 
   if (!audioUuid) {
     return (
@@ -679,6 +820,8 @@ export function RhythmPage() {
               audioUuid={audioUuid}
               scoreSeconds={(score.envelope.frameCount * score.envelope.frameMs) / 1000}
               onTime={setPlayheadSeconds}
+              controls={player}
+              onScrollToCursor={scrollToCursor}
             />
             {/*
               The key signature belongs beside the sheet rather than beside the plot, because it is
@@ -717,13 +860,18 @@ export function RhythmPage() {
               beamBreaks={beamBreaks}
               keySignature={keySignature}
               keyChanges={keyChanges}
+              ottavas={ottavas}
+              onOttavaSuggestion={takeSuggestedOttavas}
               onKeySuggestion={setKeyHint}
               onSelectNote={setSelectedNote}
               onSelectNotes={pickNotes}
               onSelectRange={pickRange}
+              onSelectMarkedRange={pickMarkedRange}
               selectedRange={range}
               clearSelectionsAt={clearedAt}
               playheadSeconds={playheadSeconds}
+              onScrub={scrub}
+              scrollCursorAt={scrollCursorAt}
             />
             {/*
               Everything above is a decision, and until now every one of them went when the tab did.
@@ -910,6 +1058,36 @@ export function RhythmPage() {
               Back to the piece&rsquo;s key
             </Button>
           </Stack>
+          {/*
+            What is already on this stretch, each removable on its own.
+
+            A stretch can carry more than one thing, and undoing all of them because you wanted one
+            gone is not an undo. Each row is exactly one stored edit, named the way it was made.
+          */}
+          {editsInRange.length > 0 ? (
+            <Stack spacing={0.5}>
+              <Typography variant="subtitle2">On this selection</Typography>
+              {editsInRange.map((edit) => (
+                <Stack
+                  key={`${edit.kind}:${edit.fromColumn}`}
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center" }}
+                >
+                  <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                    {edit.label}
+                  </Typography>
+                  <Button size="small" color="error" onClick={edit.remove}>
+                    Remove
+                  </Button>
+                </Stack>
+              ))}
+            </Stack>
+          ) : (
+            <Typography variant="caption" color="text.secondary">
+              Nothing has been applied to this stretch yet.
+            </Typography>
+          )}
           {keyChanges.length > 0 ? (
             <Typography variant="caption" color="text.secondary">
               {keyChanges.length} key change
@@ -917,6 +1095,94 @@ export function RhythmPage() {
               {keyChanges.map((change) => `f${change.fromColumn}`).join(", ")}.
             </Typography>
           ) : null}
+
+          <Divider />
+
+          {/*
+            Octave brackets. The page writes these itself where a hand runs far outside its staff —
+            that is what stops a passage printing as six ledger lines nobody counts — and this is
+            where a reader disagrees with it. Per hand, because a bracket is one hand's: the left
+            crossing high while the right stays put is an ordinary thing for a piano to do.
+          */}
+          <Typography variant="subtitle2">Octave bracket</Typography>
+          <Typography variant="caption" color="text.secondary">
+            The hand is drawn inside its staff and the bracket says how far from where it sounds.
+            Nothing is transposed: the recording is untouched and so is every other hand.
+          </Typography>
+          {(["left", "right"] as const).map((side) => {
+            const active = range ? ottavaAtFrame(ottavas, side, range.fromColumn) : undefined;
+            return (
+              <Stack key={side} direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <Typography variant="body2" sx={{ minWidth: 78 }}>
+                  {side === "left" ? "Left hand" : "Right hand"}
+                </Typography>
+                {OTTAVA_CHOICES.map((choice) => (
+                  <Chip
+                    key={choice.kind}
+                    size="small"
+                    label={choice.label}
+                    title={choice.hint}
+                    disabled={!range || !score}
+                    color={active?.kind === choice.kind ? "primary" : "default"}
+                    variant={active?.kind === choice.kind ? "filled" : "outlined"}
+                    onClick={() => {
+                      if (!range || !score) return;
+                      // Touching a chip is the reader deciding, and a decision outlasts every
+                      // redraw: from here on the suggestion never writes over this piece again.
+                      decidedOttavasFor.current = SAVED_OTTAVAS;
+                      // Pressing the bracket that is already on clears it, so one chip is both the
+                      // way in and the way out and there is no separate "none".
+                      setOttavas(
+                        active?.kind === choice.kind
+                          ? clearOttavaRange(ottavas, side, {
+                              fromColumn: range.fromColumn,
+                              toColumn: range.toColumn,
+                            })
+                          : applyOttava(
+                              ottavas,
+                              {
+                                kind: choice.kind,
+                                hand: side,
+                                fromColumn: range.fromColumn,
+                                toColumn: range.toColumn,
+                              },
+                              score.envelope.frameCount,
+                            ),
+                      );
+                    }}
+                  />
+                ))}
+              </Stack>
+            );
+          })}
+          <Typography variant="caption" color="text.secondary">
+            {ottavas.length > 0
+              ? `${ottavas.length} bracket${ottavas.length === 1 ? "" : "s"} in this piece: ${ottavas
+                  .map(
+                    (span) =>
+                      `${span.kind} ${span.hand === "left" ? "L" : "R"} f${span.fromColumn}\u2013f${
+                        span.toColumn - 1
+                      }`,
+                  )
+                  .join(", ")}.`
+              : "No bracket in this piece — nothing runs far enough outside its staff to need one."}
+          </Typography>
+
+          <Divider />
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => void save()}
+              disabled={!selected || saving}
+              startIcon={saving ? <CircularProgress size={14} /> : undefined}
+            >
+              Save with the piece
+            </Button>
+            <Typography variant="caption" color="text.secondary">
+              {savedNote ?? "Keeps these key changes, and everything else you have decided."}
+            </Typography>
+          </Stack>
         </Stack>
       </ToolboxDialog>
 

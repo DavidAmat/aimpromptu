@@ -315,5 +315,14 @@ export interface SavedRhythm {
   speedChanges: SpeedChange[];
   overrides: { hand: string; row: number; startFrame: number; figure: FigureName }[];
   beamBreaks: { hand: string; startFrame: number }[];
+  /**
+   * Where a hand is written an octave or two from where it sounds, as half-open column ranges.
+   *
+   * Part of the reading, not of the recording: the page proposes brackets where a hand runs far
+   * outside its own staff, and the reader keeps, moves or clears them. Absent on a reading saved
+   * before brackets existed, which is why it is optional — absent means "never decided", and the
+   * page then takes its own suggestion, while an empty list means "decided, none".
+   */
+  ottavas?: { kind: string; hand: string; fromColumn: number; toColumn: number }[];
   savedAt?: string;
 }

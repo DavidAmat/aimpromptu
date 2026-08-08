@@ -7,13 +7,17 @@
  * position and the figure are two separate numbers now.
  */
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import {
+  frameAtPoint,
   GridNotationRenderer,
   placeCursor,
   suggestKeySignature,
+  suggestOttavas,
   type KeyChangeAnnotation,
+  type KeySignature,
+  type OttavaAnnotation,
   type SparseMatrix,
 } from "@aimpromptu/grid-notation";
 import type { FigureName, KeySignatureName, TimeScorePayload } from "../../api";
@@ -44,6 +48,22 @@ export interface TimeScoreViewProps {
    */
   keyChanges?: readonly KeyChangeAnnotation[];
   /**
+   * Where a hand is written an octave or two from where it sounds, and how far.
+   *
+   * A passage far outside its own staff prints as a stack of ledger lines that nobody counts
+   * accurately; under a bracket it prints inside the staff and the bracket says how to read it. The
+   * spans are held by the page, not worked out here, so the reader can clear or change any of them.
+   */
+  ottavas?: readonly OttavaAnnotation[];
+  /**
+   * The brackets this score would ask for, reported once the music has been read.
+   *
+   * Reported rather than applied, for the same reason a key signature is: the engraver deciding it
+   * on its own is what made the old implementation impossible to override (D38). The page seeds
+   * itself from this the first time it sees a score and owns them from then on.
+   */
+  onOttavaSuggestion?: (spans: OttavaAnnotation[]) => void;
+  /**
    * The stretch of columns picked on the ruler, so the highlight survives a redraw.
    *
    * The renderer owns the selection while it lives, but every change to the sheet builds a new one,
@@ -70,6 +90,19 @@ export interface TimeScoreViewProps {
   onSelectNotes?: (noteKeys: readonly string[]) => void;
   /** A stretch of the piece was selected on the ruler above the staves. */
   onSelectRange?: (range: { fromColumn: number; toColumn: number }) => void;
+  /**
+   * A corner mark was clicked, so the stretch it belongs to should be selected again.
+   *
+   * Every stretch carrying markup draws two corners in its own colour, at the top and the bottom of
+   * the system. They are there so a reader can see where a thing they applied begins and ends
+   * without selecting anything, and so they can get back to it: the corners are the handle.
+   */
+  onSelectMarkedRange?: (marker: {
+    kind: string;
+    label: string;
+    fromColumn: number;
+    toColumn: number;
+  }) => void;
   /**
    * The signature the whole piece is written in. C when nobody has chosen.
    *
@@ -101,6 +134,19 @@ export interface TimeScoreViewProps {
    * Leave it out, or pass `null`, and no line is drawn.
    */
   playheadSeconds?: number | null;
+  /**
+   * The cursor was dragged to a new moment, in seconds. Move the recording there.
+   *
+   * Leave it out and the cursor is not draggable, which is what a printed view wants.
+   */
+  onScrub?: (seconds: number) => void;
+  /**
+   * Bumped by the page to bring the cursor on screen — pressing space, or clicking the progress bar.
+   *
+   * A number rather than a call, because the page decides *when* and this view is the only thing
+   * that knows *where*: the cursor is placed from a render only this component holds.
+   */
+  scrollCursorAt?: number;
 }
 
 export function TimeScoreView({
@@ -109,16 +155,25 @@ export function TimeScoreView({
   beamBreaks,
   keySignature = "C",
   keyChanges,
+  ottavas,
+  onOttavaSuggestion,
   selectedRange,
   clearSelectionsAt,
   onKeySuggestion,
   onSelectNote,
   onSelectNotes,
   onSelectRange,
+  onSelectMarkedRange,
   availableWidth,
   playheadSeconds,
+  onScrub,
+  scrollCursorAt,
 }: TimeScoreViewProps) {
   const host = useRef<HTMLDivElement | null>(null);
+  // The positioned box the score is drawn into. Both the cursor's placement and a drag over it are
+  // measured from its top-left corner, which is also the SVG's, so the two agree with no offset.
+  const stage = useRef<HTMLDivElement | null>(null);
+  const [dragging, setDragging] = useState(false);
   // The stretch of columns is read when the score is built rather than watched, so picking one
   // never rebuilds the sheet. It is restored after a rebuild the sheet had to do for another
   // reason, which is what keeps the dashed outline on screen while a toolbox is open.
@@ -163,7 +218,11 @@ export function TimeScoreView({
       keySignature,
       // Where the piece leaves that signature. The package draws the whole transition: naturals
       // cancelling the outgoing sharps or flats, both clefs again, then the incoming signature.
-      annotations: { keyChanges: [...(keyChanges ?? [])] },
+      annotations: {
+        keyChanges: [...(keyChanges ?? [])],
+        // Octave brackets, which take a passage out of the ledger lines and into the staff.
+        ottavas: [...(ottavas ?? [])],
+      },
       staves: score.layout.hideLeftHand || score.layout.hideRightHand ? "single" : "grand",
       // The two wall-clock levels above the column. A dashed line every `frameMeasure` columns
       // says where the page is in time; a selection snaps to `frameGroup` columns, which is the
@@ -208,6 +267,16 @@ export function TimeScoreView({
         onSelectNotes?.(keys);
       },
       onFrameRangeSelect: (range) => onSelectRange?.(range),
+      // Two corners per marked stretch, each pair in its own colour so two overlapping stretches
+      // are told apart, and clickable so a reader can pick one up again without hunting for it.
+      rangeMarkers: true,
+      onRangeMarkerSelect: (marker) =>
+        onSelectMarkedRange?.({
+          kind: marker.kind,
+          label: marker.label,
+          fromColumn: marker.fromColumn,
+          toColumn: marker.toColumn,
+        }),
     });
 
     renderer.current = drawn;
@@ -230,6 +299,14 @@ export function TimeScoreView({
       );
     }
 
+    // What the register asks for, measured against the staff each hand actually prints on. Reported
+    // on every rebuild; the page keeps the first answer and its own edits after that.
+    if (music && onOttavaSuggestion) {
+      onOttavaSuggestion(
+        suggestOttavas(music, { keySignature: (keySignature ?? "C") as KeySignature }),
+      );
+    }
+
     return () => {
       renderer.current = null;
       drawn.destroy?.();
@@ -240,10 +317,13 @@ export function TimeScoreView({
     beamBreaks,
     keySignature,
     keyChanges,
+    ottavas,
     onKeySuggestion,
+    onOttavaSuggestion,
     onSelectNote,
     onSelectNotes,
     onSelectRange,
+    onSelectMarkedRange,
     availableWidth,
   ]);
 
@@ -279,7 +359,9 @@ export function TimeScoreView({
     }
 
     marker.style.display = "block";
-    marker.style.left = `${placement.x.toFixed(2)}px`;
+    // The strip is `GRAB_WIDTH` wide with the line down its middle, so it is offset by half of that
+    // to keep the line itself exactly on the moment.
+    marker.style.left = `${(placement.x - GRAB_WIDTH / 2).toFixed(2)}px`;
     marker.style.top = `${placement.topY.toFixed(2)}px`;
     marker.style.height = `${placement.height.toFixed(2)}px`;
 
@@ -290,9 +372,62 @@ export function TimeScoreView({
     }
   }, [playheadSeconds, score.envelope.frameMs]);
 
+  // Bring the cursor on screen because the page asked — space, or a click on the progress bar. The
+  // recording may be four minutes down a page that wraps a hundred times, and playing something the
+  // reader cannot see is the same as not playing it.
+  useEffect(() => {
+    if (scrollCursorAt === undefined) return;
+    const marker = playhead.current;
+    if (!marker || marker.style.display === "none") return;
+    marker.scrollIntoView?.({ block: "center", inline: "center", behavior: "smooth" });
+  }, [scrollCursorAt]);
+
+  /** Where a pointer is, as a moment in the recording. */
+  const secondsAt = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>): number | undefined => {
+      const render = renderer.current?.getLastRender();
+      const box = stage.current?.getBoundingClientRect();
+      if (!render || !box) return undefined;
+      const frames = frameAtPoint(render, event.clientX - box.left, event.clientY - box.top);
+      return frames === undefined ? undefined : (frames * score.envelope.frameMs) / 1000;
+    },
+    [score.envelope.frameMs],
+  );
+
+  // Grab the cursor and it follows the pointer; let go and the recording is there. Dragging *the
+  // cursor* rather than clicking anywhere on the sheet, because a click on the sheet already means
+  // something — it picks a notehead or a stretch of columns — and one gesture cannot mean both.
+  //
+  // Pointer capture is what makes a drag that leaves the two-pixel line keep working, and it is
+  // also what lets the drag go *down* onto another system: the page wraps, so the moment a reader
+  // wants is often on a line below rather than to the right.
+  const startDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!onScrub || event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setDragging(true);
+    const seconds = secondsAt(event);
+    if (seconds !== undefined) onScrub(seconds);
+  };
+
+  const continueDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging || !onScrub) return;
+    event.preventDefault();
+    const seconds = secondsAt(event);
+    if (seconds !== undefined) onScrub(seconds);
+  };
+
+  const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging) return;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    setDragging(false);
+  };
+
   return (
     <Box sx={{ width: "100%", overflowX: "auto" }}>
       <Box
+        ref={stage}
         sx={{
           position: "relative",
           display: "inline-block",
@@ -306,20 +441,70 @@ export function TimeScoreView({
         <Box ref={host} />
         <Box
           ref={playhead}
+          onPointerDown={startDrag}
+          onPointerMove={continueDrag}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          title={onScrub ? "Drag to move the recording — sideways, or down onto another line" : undefined}
           sx={{
             position: "absolute",
             display: "none",
-            width: "2px",
-            borderRadius: "1px",
-            bgcolor: "primary.main",
-            opacity: 0.75,
-            pointerEvents: "none",
+            width: `${GRAB_WIDTH}px`,
+            // The line is two pixels wide and a hand is not. The strip around it is what makes the
+            // cursor catchable without widening the line itself, which has to stay exactly on the
+            // moment it marks.
+            pointerEvents: onScrub ? "auto" : "none",
+            cursor: onScrub ? (dragging ? "grabbing" : "grab") : "default",
+            touchAction: "none",
+            "&:hover .aitu-cursor-line, & .aitu-cursor-line[data-dragging='true']": {
+              opacity: 1,
+              width: "4px",
+              marginLeft: "-1px",
+            },
+            "&:hover .aitu-cursor-grip, & .aitu-cursor-grip[data-dragging='true']": {
+              opacity: 1,
+            },
           }}
-        />
+        >
+          <Box
+            className="aitu-cursor-line"
+            data-dragging={dragging ? "true" : "false"}
+            sx={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: `${GRAB_WIDTH / 2 - 1}px`,
+              width: "2px",
+              borderRadius: "1px",
+              bgcolor: "primary.main",
+              opacity: 0.75,
+              transition: "width 120ms, opacity 120ms",
+            }}
+          />
+          {/* The handle. Something round to aim at says "this one moves" without a tooltip. */}
+          <Box
+            className="aitu-cursor-grip"
+            data-dragging={dragging ? "true" : "false"}
+            sx={{
+              position: "absolute",
+              top: "-5px",
+              left: `${GRAB_WIDTH / 2 - 5}px`,
+              width: "10px",
+              height: "10px",
+              borderRadius: "50%",
+              bgcolor: "primary.main",
+              opacity: dragging ? 1 : 0,
+              transition: "opacity 120ms",
+            }}
+          />
+        </Box>
       </Box>
     </Box>
   );
 }
+
+/** How wide the invisible strip around the cursor is, in pixels. Two is a line; this is a target. */
+const GRAB_WIDTH = 14;
 
 /**
  * The Spanish figure names the backend sends, in the English names the drawing package uses.
