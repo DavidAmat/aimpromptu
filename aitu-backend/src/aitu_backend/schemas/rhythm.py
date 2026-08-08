@@ -11,14 +11,19 @@ and nothing in the recording implies them:
   (D-19, D-20)
 * the notes drawn as a different figure by hand (D-17)
 * the notes the reader asked to start a new beam (D-34)
-* the notes taken off the page, and the notes sent to the other staff
+* the notes taken off the page
 * which finger plays which note
 
-The last two are readings of the page, not corrections to the recording. A note
-the transcriber invented out of a pedal blur is still in the matrix after the
-reader stops drawing it, and a note the hand split put on the wrong staff is
-still where the split put it. Both are sets of keys held beside the matrix and
-folded in on the way to the drawing, so undoing one restores the note exactly.
+Those two are readings of the page, not corrections to the recording. A note the
+transcriber invented out of a pedal blur is still in the matrix after the reader
+stops drawing it; the hidden set is held beside the matrix and folded in on the
+way to the drawing, so undoing it restores the note exactly.
+
+**Which hand plays a note is not here.** That one is a fact about the playing
+rather than about this page: it survives a change of column length, it decides
+the printed length of its neighbours, and everything downstream is derived from
+it. So it is written onto the note event and the matrix is built with it — see
+``pin_hands`` — and nothing about it is stored in this file.
 
 None of it changes the music. Losing it costs a person their reading of the
 piece, which they then have to do again from the plot, and that is the whole
@@ -78,29 +83,6 @@ class KeyChange(BaseModel):
     key_signature: str = Field(..., alias="keySignature")
 
 
-class Ottava(BaseModel):
-    """A stretch over which one hand is written an octave or two from where it sounds.
-
-    Part of the reading rather than of the recording. A passage far outside its
-    own staff prints as a stack of ledger lines nobody counts accurately; under
-    a bracket it prints inside the staff and the bracket says how to read it.
-    The screen proposes these from how far outside its staff each hand runs, and
-    the reader keeps, moves or clears them — which is exactly why they are
-    stored: a cleared bracket that came back on the next visit would make the
-    suggestion impossible to disagree with (D-38).
-    """
-
-    model_config = ConfigDict(populate_by_name=True)
-
-    #: ``8va``, ``8vb``, ``15ma`` or ``15mb``.
-    kind: str
-    #: ``right`` or ``left``. Either hand takes either direction: a left hand
-    #: crossing high asks for ``8va`` exactly as a right hand does.
-    hand: str
-    from_column: int = Field(..., alias="fromColumn", ge=0)
-    to_column: int = Field(..., alias="toColumn", ge=0)
-
-
 class HiddenNote(BaseModel):
     """A note the reader took off the page.
 
@@ -116,27 +98,12 @@ class HiddenNote(BaseModel):
     row: int = Field(..., ge=0, lt=KEY_COUNT)
 
 
-class HandOverride(BaseModel):
-    """A note the reader sent to the other staff, and which staff that is.
-
-    The hand split is computed by an algorithm that cannot see the player's
-    hands. Where it is wrong a pianist can see it at a glance, and saying so is a
-    statement about how the piece is played rather than about what was recorded.
-    """
-
-    model_config = ConfigDict(populate_by_name=True)
-
-    start_frame: int = Field(..., alias="startFrame", ge=0)
-    row: int = Field(..., ge=0, lt=KEY_COUNT)
-    hand: PrintedHand
-
-
 class Fingering(BaseModel):
     """Which finger plays one note.
 
     Keyed by the staff the note is *drawn* on, so a fingering moves with a note
-    the reader sent across. Several on one chord print stacked, in the order of
-    the noteheads, which is how fingering is written.
+    the reader sent across. Several on one chord print stacked, in ascending
+    order, which is how fingering is written.
     """
 
     model_config = ConfigDict(populate_by_name=True)
@@ -188,14 +155,8 @@ class SavedRhythm(BaseModel):
     overrides: list[FigureOverride] = Field(default_factory=list)
     beam_breaks: list[BeamBreak] = Field(default_factory=list, alias="beamBreaks")
 
-    #: The octave brackets on the page. ``None`` on a reading saved before they
-    #: existed, which the screen reads as "never decided" and answers with its
-    #: own suggestion; an empty list means the reader decided on none.
-    ottavas: list[Ottava] | None = None
-
     #: Page readings. None of these three touch the matrix; see the module note.
     hidden_notes: list[HiddenNote] = Field(default_factory=list, alias="hiddenNotes")
-    hand_overrides: list[HandOverride] = Field(default_factory=list, alias="handOverrides")
     fingers: list[Fingering] = Field(default_factory=list)
 
     saved_at: datetime = Field(default_factory=_now, alias="savedAt")
@@ -214,12 +175,8 @@ class SavedRhythm(BaseModel):
             parts.append(f"{len(self.overrides)} note(s) renamed")
         if self.beam_breaks:
             parts.append(f"{len(self.beam_breaks)} beam break(s)")
-        if self.ottavas:
-            parts.append(f"{len(self.ottavas)} octave bracket(s)")
         if self.hidden_notes:
             parts.append(f"{len(self.hidden_notes)} note(s) off the page")
-        if self.hand_overrides:
-            parts.append(f"{len(self.hand_overrides)} note(s) moved by hand")
         if self.fingers:
             parts.append(f"{len(self.fingers)} fingering(s)")
         return ", ".join(parts) + "."

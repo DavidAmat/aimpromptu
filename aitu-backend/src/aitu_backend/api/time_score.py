@@ -18,18 +18,22 @@ them together.
 
 from __future__ import annotations
 
+from functools import lru_cache
+import copy
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import store
 from aitu_backend.matrix.intervals import intervals_ms
+from aitu_backend.matrix.keys import LOWEST_MIDI
 from aitu_backend.matrix.ladder import build_ladder, bpm_of, header_label, label_peaks
 from aitu_backend.matrix.passages import one_passage, passages_from_boundaries
 from aitu_backend.matrix.peaks import Peak, peaks_of
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
-from aitu_backend.schemas.rhythm import SavedRhythm
+from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN
+from aitu_backend.schemas.rhythm import HiddenNote, SavedRhythm
 from aitu_backend.schemas.time_matrix import FigureLadder, FigureName, TimeScorePayload
 from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.time_pipeline import (
@@ -146,6 +150,28 @@ def _events_or_error(audio_uuid: str):
 
 
 def _hands(audio_uuid: str, frame_ms: float) -> TimeHands:
+    _events_or_error(audio_uuid)
+    # Keyed on the recording's own mtime as well, so re-transcribing a piece drops the cached split
+    # instead of serving the previous one for the rest of the process's life.
+    stamp = 0.0
+    path = pipeline.events_path(audio_uuid)
+    if path.exists():
+        stamp = path.stat().st_mtime
+    return _split_cached(audio_uuid, frame_ms, stamp)
+
+
+@lru_cache(maxsize=8)
+def _split_cached(audio_uuid: str, frame_ms: float, _stamp: float) -> TimeHands:
+    """The hand split for one (piece, column length).
+
+    Cached because it is the expensive half of drawing a sheet — around a second on a five-minute
+    piece — and it does not depend on anything the reader is changing. Naming a different peak,
+    moving a passage boundary or correcting the hand of a note all rebuild the *printed notes*,
+    which is fifty milliseconds, and would otherwise pay for the split again every time.
+
+    The returned object is shared, so every caller must treat it as read-only and copy before
+    changing anything. `_with_page_edits` does.
+    """
     stored = _events_or_error(audio_uuid)
     return impose_granularity_and_split(
         stored.events,
@@ -303,6 +329,180 @@ def get_time_score(
     ladder = build_ladder(anchor_figure, anchor_ms)
     passages = _passages_from_query(hands, ladder, anchor_figure, boundaries, boundary_ms)
     return to_score_payload(hands, ladder, passages=passages, title=hands.right.title)
+
+
+class HandAssignment(BaseModel):
+    """One note, and the hand a person says played it."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    start_frame: int = Field(..., alias="startFrame", ge=0)
+    row: int = Field(..., ge=0, lt=88)
+    hand: Literal["right", "left"]
+
+
+class HandAssignmentRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    frame_ms: float = Field(DEFAULT_FRAME_MS, alias="frameMs", gt=0)
+    notes: list[HandAssignment] = Field(default_factory=list)
+
+
+class HandAssignmentResult(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    assigned: int
+    #: Notes whose column and row matched nothing that was recorded.
+    unmatched: int
+
+
+@router.put("/{audio_uuid}/hands", response_model=HandAssignmentResult, response_model_by_alias=True)
+def put_hands(audio_uuid: str, body: HandAssignmentRequest = Body(...)) -> HandAssignmentResult:
+    """Record which hand plays these notes, on the recording itself.
+
+    The hand split is inferred by an algorithm that cannot see the player's hands, and where it is
+    wrong a pianist can see it at a glance. Their answer is not an overlay on the drawing: the
+    printed length of a note is the gap to the next onset **in the same hand**, so a note that
+    changes hands renames its old neighbour, its new neighbour and itself, and a bracket or a beam
+    over it may stop making sense. Everything downstream is derived, so the honest place for the
+    correction is upstream of all of it — written onto the note event, so the matrix is *built*
+    corrected and every consequence falls out by the ordinary path.
+
+    Addressed by column and row because that is what the reader clicked; resolved here to the
+    events that landed there, and stored against the raw times those events were played at. The
+    correction therefore survives a change of column length: it still holds at 20 ms.
+    """
+    stored = _events_or_error(audio_uuid)
+    hands = trim_to_music(_hands(audio_uuid, body.frame_ms))
+
+    # Column and row back to the raw second the key went down, from the record of where each key's
+    # own attack landed. `trim_to_music` may have dropped leading silence, so the lookup is built
+    # from the same trimmed hands the reader was looking at.
+    seconds_at: dict[tuple[int, int], float] = {}
+    for (column, row), seconds in hands.build.event_seconds.items():
+        seconds_at[row, column] = seconds
+
+    wanted: dict[tuple[int, float], str] = {}
+    unmatched = 0
+    for note in body.notes:
+        seconds = seconds_at.get((note.row, note.start_frame))
+        if seconds is None:
+            unmatched += 1
+            continue
+        wanted[note.row, round(seconds, 4)] = note.hand
+
+    assigned = 0
+    for event in stored.events:
+        key = (event.midi_note - LOWEST_MIDI, round(event.start, 4))
+        hand = wanted.get(key)
+        if hand is None or event.hand == hand:
+            continue
+        event.hand = hand
+        assigned += 1
+
+    if assigned:
+        pipeline.save_note_events(
+            audio_uuid, stored.events, stored.duration_seconds, stored.title
+        )
+        # The split is cached per (piece, column length) and has just stopped being true.
+        _split_cached.cache_clear()
+
+    return HandAssignmentResult(assigned=assigned, unmatched=unmatched)
+
+
+class ScoreRequest(BaseModel):
+    """A sheet to draw: the ladder, the passage boundaries, and the reader's page edits.
+
+    A POST rather than a GET because the page edits are a list as long as the reader likes — a
+    marquee over one line of Mr Blue moves forty-eight notes — and that does not belong in a query
+    string. The GET stays for a sheet with no edits, which is what the docs and the tests use.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    anchor_figure: FigureName = Field(FigureName.NEGRA, alias="anchorFigure")
+    anchor_ms: float = Field(..., alias="anchorMs", gt=0)
+    frame_ms: float = Field(DEFAULT_FRAME_MS, alias="frameMs", gt=0)
+    boundaries: list[int] = Field(default_factory=list)
+    boundary_ms: list[float] = Field(default_factory=list, alias="boundaryMs")
+    hidden_notes: list[HiddenNote] = Field(default_factory=list, alias="hiddenNotes")
+
+
+def _with_page_edits(hands: TimeHands, hidden: list[HiddenNote]) -> TimeHands:
+    """The two hands as the reader has corrected them, for the purpose of naming figures.
+
+    The recording is not touched — this is a copy, made per request, and nothing is written back.
+    What it is for is that **the printed figure of a note is the gap to the next onset in the same
+    hand** (D-14). Take a note off the page and whatever preceded it now runs on to a later onset,
+    which is exactly the point of hiding one the transcriber invented out of a pedal blur: the note
+    before it was never that short. Doing this in the browser alone left it named wrong.
+
+    Correcting a *hand* is not here. That one is written onto the note event and the matrix is built
+    with it — see `pin_hands`. A hand is a fact about the playing and survives a change of column
+    length; hiding a note is a decision about this page.
+
+    Frames are never renumbered here. The hands arrive already trimmed and the caller draws with
+    `trim_trailing_silence=False`, so hiding the last note of a piece cannot shift the column
+    numbers that every other annotation is keyed by.
+    """
+    if not hidden:
+        return hands
+
+    edited = copy.deepcopy(hands)
+    planes = {"right": edited.right, "left": edited.left}
+
+    def run_of(plane, row: int, column: int) -> list[int]:
+        """The onset and the sustain cells it owns, as column indices."""
+        cells = [column]
+        follower = column + 1
+        while follower < plane.frame_count and plane.cell(row, follower) == SUSTAIN:
+            cells.append(follower)
+            follower += 1
+        return cells
+
+    def owning_plane(row: int, column: int):
+        for plane in planes.values():
+            if plane.cell(row, column) == ONSET:
+                return plane
+        return None
+
+    for note in hidden:
+        plane = owning_plane(note.row, note.start_frame)
+        if plane is None:
+            continue
+        for column in run_of(plane, note.row, note.start_frame):
+            plane.grid[note.row, column] = SILENCE
+
+    return edited
+
+
+@router.post("/{audio_uuid}/score", response_model=TimeScorePayload, response_model_by_alias=True)
+def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> TimeScorePayload:
+    """The sheet, with the reader's page edits folded in before any figure is named.
+
+    Same answer as the GET for a piece with no edits. See `_with_page_edits` for why the edits have
+    to be applied on this side rather than in the browser.
+    """
+    hands = trim_to_music(_hands(audio_uuid, body.frame_ms))
+    ladder = build_ladder(body.anchor_figure, body.anchor_ms)
+    passages = _passages_from_query(
+        hands,
+        ladder,
+        body.anchor_figure,
+        ",".join(str(frame) for frame in body.boundaries),
+        ",".join(str(value) for value in body.boundary_ms),
+    )
+    edited = _with_page_edits(hands, body.hidden_notes)
+    return to_score_payload(
+        edited,
+        ladder,
+        passages=passages,
+        title=hands.right.title,
+        # Already trimmed above. Trimming the *edited* hands could cut further — hiding the last
+        # note of a piece would shorten it — and that renumbers every column, which every
+        # frame-keyed annotation on the page depends on not happening.
+        trim_trailing_silence=False,
+    )
 
 
 def _passages_from_query(

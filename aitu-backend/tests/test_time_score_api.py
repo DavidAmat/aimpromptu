@@ -231,6 +231,112 @@ def test_both_halves_of_the_shuffle_print_as_corcheas(client, transcribed):
     assert {note["figure"] for note in melody[:-1]} == {"corchea"}
 
 
+def test_posting_the_score_with_no_page_edits_matches_the_plain_route(client, transcribed):
+    plain = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
+    posted = client.post(f"/time/{transcribed}/score", json={"anchorMs": 337.0}).json()
+    assert posted == plain
+
+
+def test_correcting_a_hand_is_written_onto_the_recording_and_renames_its_neighbour(
+    client, transcribed
+):
+    """The printed length of a note is the gap to the next onset **in the same hand** (D-14).
+
+    So a note assigned to the other staff is not merely drawn elsewhere: its old neighbour now runs
+    on to a later onset, and the note itself takes its length from where it landed. The correction
+    goes onto the note event, so the matrix is built with it and every figure falls out of the
+    ordinary path.
+    """
+    plain = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
+    melody = [note for note in plain["notes"] if note["hand"] == "right"]
+    columns = sorted({note["startFrame"] for note in melody})
+    first, second = columns[0], columns[1]
+    moved_rows = [note["row"] for note in melody if note["startFrame"] == second]
+
+    result = client.put(
+        f"/time/{transcribed}/hands",
+        json={
+            "frameMs": 40,
+            "notes": [{"startFrame": second, "row": row, "hand": "left"} for row in moved_rows],
+        },
+    )
+    assert result.status_code == 200
+    assert result.json() == {"assigned": len(moved_rows), "unmatched": 0}
+
+    edited = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
+
+    def one(score, hand, frame):
+        return next(
+            note for note in score["notes"] if note["hand"] == hand and note["startFrame"] == frame
+        )
+
+    before = one(plain, "right", first)
+    after = one(edited, "right", first)
+    assert after["printedMsExact"] > before["printedMsExact"] * 1.5
+    assert after["figure"] != before["figure"]
+
+    # The note is on the other staff now, for everyone, without anything being passed along with
+    # the request that asked for the sheet.
+    assert not any(
+        note["hand"] == "right" and note["startFrame"] == second for note in edited["notes"]
+    )
+    assert one(edited, "left", second)["printedMsExact"] > 0
+
+    # It survives a change of column length, because it is stored against the time the key went
+    # down and not against a column.
+    finer = client.get(
+        f"/time/{transcribed}/score", params={"anchorMs": 337.0, "frameMs": 20}
+    ).json()
+    assert not any(
+        note["hand"] == "right" and abs(note["startFrame"] - second * 2) <= 1
+        for note in finer["notes"]
+    )
+
+    # And it can be taken back the same way.
+    client.put(
+        f"/time/{transcribed}/hands",
+        json={
+            "frameMs": 40,
+            "notes": [{"startFrame": second, "row": row, "hand": "right"} for row in moved_rows],
+        },
+    )
+    restored = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
+    assert one(restored, "right", first)["figure"] == before["figure"]
+
+
+def test_hiding_a_note_lengthens_whatever_came_before_it(client, transcribed):
+    plain = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
+    melody = [note for note in plain["notes"] if note["hand"] == "right"]
+    columns = sorted({note["startFrame"] for note in melody})
+    first, second = columns[0], columns[1]
+
+    edited = client.post(
+        f"/time/{transcribed}/score",
+        json={
+            "anchorMs": 337.0,
+            "hiddenNotes": [
+                {"startFrame": second, "row": note["row"]}
+                for note in melody
+                if note["startFrame"] == second
+            ],
+        },
+    ).json()
+
+    def first_note(score):
+        return next(
+            note
+            for note in score["notes"]
+            if note["hand"] == "right" and note["startFrame"] == first
+        )
+
+    assert first_note(edited)["printedMsExact"] > first_note(plain)["printedMsExact"]
+    assert not any(
+        note["hand"] == "right" and note["startFrame"] == second for note in edited["notes"]
+    )
+    # Hiding the notes never renumbers the columns, which every other annotation is keyed by.
+    assert edited["envelope"]["frameCount"] == plain["envelope"]["frameCount"]
+
+
 def test_a_finer_grid_moves_the_columns_but_not_the_figures(client, transcribed):
     """`frameMs` is a layout parameter: the same music, drawn on a finer grid."""
     coarse = client.get(

@@ -182,6 +182,16 @@ export const timeScoreApi = {
     });
   },
 
+  /**
+   * The sheet: the two hand matrices, the passages, and every note with its figure already named.
+   *
+   * A POST, because the notes taken off the page travel with it and they are a list as long as the
+   * reader likes. They have to be on this request rather than applied in the browser: the printed
+   * length of a note is the gap to the next onset **in the same hand**, so hiding one lengthens
+   * whatever came before it — which is the point of hiding a note the transcriber invented.
+   * Nothing is written to the recording: the backend copies the split, folds the hidden set into
+   * the copy, and names the figures from that.
+   */
   score(
     audioUuid: string,
     query: {
@@ -191,16 +201,20 @@ export const timeScoreApi = {
       /** Frames where a new stretch starts. Each stretch needs its own entry in `boundaryMs`. */
       boundaries?: number[];
       boundaryMs?: number[];
+      /** Notes the reader took off the page. */
+      hiddenNotes?: { startFrame: number; row: number }[];
     },
     signal?: AbortSignal,
   ) {
     return request<TimeScorePayload>(`/time/${audioUuid}/score`, {
-      query: {
+      method: "POST",
+      body: {
         anchorFigure: query.anchorFigure,
         anchorMs: query.anchorMs,
         frameMs: query.frameMs,
-        boundaries: query.boundaries?.length ? query.boundaries.join(",") : undefined,
-        boundaryMs: query.boundaryMs?.length ? query.boundaryMs.join(",") : undefined,
+        boundaries: query.boundaries ?? [],
+        boundaryMs: query.boundaryMs ?? [],
+        hiddenNotes: query.hiddenNotes ?? [],
       },
       signal,
     });
@@ -229,6 +243,29 @@ export const timeScoreApi = {
 
   forgetRhythm(audioUuid: string, signal?: AbortSignal) {
     return request<void>(`/time/${audioUuid}/rhythm`, { method: "DELETE", signal });
+  },
+
+  /**
+   * Say which hand plays these notes. Written onto the recording, not onto this page.
+   *
+   * A hand is a fact about the playing: it survives a change of column length, it decides the
+   * printed length of the notes around it, and every figure, beam and bracket is derived from it.
+   * So the correction goes upstream of all of that rather than being an overlay the drawing has to
+   * remember, and the sheet is asked for again afterwards, built from the corrected matrix.
+   */
+  setHands(
+    audioUuid: string,
+    body: {
+      frameMs: number;
+      notes: { startFrame: number; row: number; hand: "right" | "left" }[];
+    },
+    signal?: AbortSignal,
+  ) {
+    return request<{ assigned: number; unmatched: number }>(`/time/${audioUuid}/hands`, {
+      method: "PUT",
+      body,
+      signal,
+    });
   },
 };
 
@@ -332,8 +369,6 @@ export interface SavedRhythm {
    * staff. Nothing here is an edit to the recording: the matrix still holds every one of them.
    */
   hiddenNotes?: { startFrame: number; row: number }[];
-  /** Notes the reader sent to the other staff, and which staff that is. */
-  handOverrides?: { startFrame: number; row: number; hand: string }[];
   /** Which finger plays a note, by the staff it is drawn on. */
   fingers?: { hand: string; startFrame: number; row: number; finger: number }[];
   savedAt?: string;

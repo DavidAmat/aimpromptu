@@ -80,6 +80,9 @@ const NAMEABLE_FIGURES: FigureName[] = [
   "semicorchea",
 ];
 
+/** No note is moved by hand any more: a corrected hand is written onto the recording. */
+const NO_HANDS: ReadonlyMap<NoteRef, PrintedHand> = new Map();
+
 /** Thumb to little finger. There is no 0 and no 6. */
 const FINGERS: FingerNumber[] = [1, 2, 3, 4, 5];
 
@@ -362,16 +365,6 @@ export function RhythmPage() {
   const [hiddenNotes, setHiddenNotes] = useState<ReadonlySet<NoteRef>>(
     new Set(),
   );
-  /**
-   * Notes the reader sent to the other staff, as `startFrame:row` to the staff they belong on.
-   *
-   * The hand split is worked out by an algorithm that cannot see the player's hands, and where it is
-   * wrong a pianist can see it at a glance. Correcting it is a statement about how the piece is
-   * played, so it belongs here rather than in the matrix the split was computed from.
-   */
-  const [handOverrides, setHandOverrides] = useState<
-    ReadonlyMap<NoteRef, PrintedHand>
-  >(new Map());
   /** Which finger plays each note, keyed `hand:startFrame:row` by the staff it is drawn on. */
   const [fingers, setFingers] = useState<Record<string, FingerNumber>>({});
   /** Numbers pressed for the selection now open, so a chord can be given several at once. */
@@ -379,8 +372,10 @@ export function RhythmPage() {
     forSelection: string;
     picked: FingerNumber[];
   } | null>(null);
-  /** A move the far staff had no room for, said once, in words. */
+  /** A move that could not be made, said once, in words. */
   const [moveRefused, setMoveRefused] = useState<string | null>(null);
+  /** A hand change is on its way to the recording, and the sheet is being drawn again from it. */
+  const [movingHand, setMovingHand] = useState(false);
   /**
    * Where each toolbox opened, measured from what it is about.
    *
@@ -459,8 +454,8 @@ export function RhythmPage() {
   const { peaks, selected, preview, score, error } = view;
 
   const renderOverrides = useMemo(
-    () => ({ hidden: hiddenNotes, hands: handOverrides }),
-    [hiddenNotes, handOverrides],
+    () => ({ hidden: hiddenNotes, hands: NO_HANDS }),
+    [hiddenNotes],
   );
 
   /**
@@ -474,14 +469,14 @@ export function RhythmPage() {
     for (const note of score?.notes ?? []) {
       const ref: NoteRef = `${note.startFrame}:${note.row}`;
       if (hiddenNotes.has(ref)) continue;
-      const staff = handOverrides.get(ref) ?? note.hand;
+      const staff = note.hand;
       const key = `${staff}:${note.startFrame}`;
       const rows = found.get(key);
       if (rows) rows.push(note.row);
       else found.set(key, [note.row]);
     }
     return found;
-  }, [score, hiddenNotes, handOverrides]);
+  }, [score, hiddenNotes]);
 
   /** The selection, gathered the same way, so the two can be compared chord by chord. */
   const selectedChords = useMemo(() => {
@@ -632,14 +627,6 @@ export function RhythmPage() {
             (found.hiddenNotes ?? []).map(
               (one) => `${one.startFrame}:${one.row}`,
             ),
-          ),
-        );
-        setHandOverrides(
-          new Map(
-            (found.handOverrides ?? []).map((one) => [
-              `${one.startFrame}:${one.row}`,
-              one.hand as PrintedHand,
-            ]),
           ),
         );
         setFingers(
@@ -899,59 +886,6 @@ export function RhythmPage() {
     closeNotes();
   }, [selectedNotes, closeNotes]);
 
-  /** Send the picked notes to the other staff. */
-  const moveSelected = useCallback(
-    (to: PrintedHand) => {
-      setMoveRefused(null);
-      setHandOverrides((current) => {
-        const next = new Map(current);
-        for (const noteKey of selectedNotes) next.set(noteRefOf(noteKey), to);
-        return next;
-      });
-      // The numbers travel with the notes, or a fingering would be left over an empty staff.
-      setFingers((current) => {
-        const next = { ...current };
-        for (const noteKey of selectedNotes) {
-          const finger = next[noteKey];
-          if (finger === undefined) continue;
-          delete next[noteKey];
-          next[`${to}:${frameOf(noteKey)}:${rowOf(noteKey)}`] = finger;
-        }
-        return next;
-      });
-
-      // A figure and a beam break belong to a whole chord, so they travel only when the whole chord
-      // does. Half a chord moving leaves them where they are and the prune above decides their
-      // fate: they still name the notes that stayed, or they name nothing and go. Carrying them on
-      // a partial move would be a guess about which half the reader meant them for.
-      const whole = new Set(selectedChords.whole);
-      const moved = (groupKey: string): string =>
-        `${to}:${groupKey.split(":")[1]}`;
-      if (whole.size > 0) {
-        setOverrides((current) => {
-          const next = { ...current };
-          for (const groupKey of whole) {
-            const figure = next[groupKey];
-            if (figure === undefined) continue;
-            delete next[groupKey];
-            next[moved(groupKey)] = figure;
-          }
-          return next;
-        });
-        setBeamBreaks((current) => {
-          const next = new Set(current);
-          for (const groupKey of whole) {
-            if (!next.delete(groupKey)) continue;
-            next.add(moved(groupKey));
-          }
-          return next;
-        });
-      }
-      closeNotes();
-    },
-    [selectedNotes, selectedChords, closeNotes],
-  );
-
   const toggleBeamBreak = useCallback(() => {
     const targets = selectedChords.whole;
     if (targets.length === 0 || selectedChords.partial.length > 0) return;
@@ -1028,10 +962,6 @@ export function RhythmPage() {
         const [frame, row] = ref.split(":");
         return { startFrame: Number(frame), row: Number(row) };
       }),
-      handOverrides: [...handOverrides].map(([ref, staff]) => {
-        const [frame, row] = ref.split(":");
-        return { startFrame: Number(frame), row: Number(row), hand: staff };
-      }),
       fingers: Object.entries(live.fingers).map(([noteKey, finger]) => ({
         hand: handOf(noteKey),
         startFrame: frameOf(noteKey),
@@ -1061,8 +991,30 @@ export function RhythmPage() {
     stretches,
     live,
     hiddenNotes,
-    handOverrides,
   ]);
+
+  /**
+   * The page edits, in the shape the sheet request takes, and a signature for them.
+   *
+   * They travel with the request because the printed length of a note is the gap to the next onset
+   * **in the same hand**: send a note across and its old neighbour runs on to a later onset, its new
+   * neighbour is cut short, and the note itself takes its length from where it landed. Applying the
+   * move only here would leave all three named wrong — on Mr Blue, twenty-five sampled single-note
+   * moves each renamed at least one other note. Hiding a note does the same to whatever preceded it,
+   * which is the point of hiding one the transcriber invented.
+   */
+  const pageEdits = useMemo(
+    () => ({
+      hiddenNotes: [...hiddenNotes].map((ref) => {
+        const [frame, row] = ref.split(":");
+        return { startFrame: Number(frame), row: Number(row) };
+      }),
+    }),
+    [hiddenNotes],
+  );
+  const editSignature = useMemo(() => JSON.stringify(pageEdits), [pageEdits]);
+  /** The edits the sheet on screen was built from, so it is only asked for again when they move. */
+  const sheetBuiltFor = useRef<string | null>(null);
 
   // What the bar has just done, said on the button that did it, then gone. Long enough to read
   // while looking somewhere else on the page, short enough not to be mistaken for the resting state.
@@ -1109,8 +1061,10 @@ export function RhythmPage() {
               selected.medianMs,
               ...drawn.map((stretch) => stretch.anchorMs),
             ],
+            ...pageEdits,
           }),
         ]);
+        sheetBuiltFor.current = editSignature;
         setView((current) =>
           current.key === key
             ? {
@@ -1130,7 +1084,17 @@ export function RhythmPage() {
         setBusy(false);
       }
     },
-    [audioUuid, selected, figure, hand, frameMs, key, stretches],
+    [
+      audioUuid,
+      selected,
+      figure,
+      hand,
+      frameMs,
+      key,
+      stretches,
+      pageEdits,
+      editSignature,
+    ],
   );
 
   /**
@@ -1138,8 +1102,7 @@ export function RhythmPage() {
    *
    * Everything cleared here is something a person chose and nothing the recording knows: the key
    * and where it changes, where the piece changes speed, the notes renamed by hand, the beams cut,
-   * the octave brackets, the notes taken off the page, the notes moved to the other staff and every
-   * fingering. What is left is the piece as the recording alone describes it, still drawn from the
+   * the octave brackets, the notes taken off the page and every fingering. What is left is the piece as the recording alone describes it, still drawn from the
    * gap that was named — starting over on the reading is a different thing and is done above.
    *
    * The saved reading goes with it. Clearing only the screen would look identical and be undone by
@@ -1161,7 +1124,6 @@ export function RhythmPage() {
     setOttavas([]);
     decidedOttavasFor.current = SAVED_OTTAVAS;
     setHiddenNotes(new Set());
-    setHandOverrides(new Map());
     setFingers({});
     setStretches([]);
     setSelectedNotes([]);
@@ -1186,6 +1148,88 @@ export function RhythmPage() {
   }, [audioUuid, apply]);
 
   /**
+   * Say which hand plays the picked notes, on the recording.
+   *
+   * Not a page edit. The printed length of a note is the gap to the next onset **in the same hand**,
+   * so a note that changes hands renames its old neighbour, its new neighbour and itself — measured
+   * on this piece, twenty-five sampled single-note moves each renamed at least one other note. A
+   * bracket or a beam over it may stop making sense too. Everything on the page is derived from the
+   * split, so the correction goes upstream of all of it: written onto the note event, the matrix
+   * built with it, and the sheet asked for again. Nothing about it is kept beside the drawing.
+   *
+   * The fingerings follow, because they are about the noteheads and the noteheads have moved. A
+   * figure or a beam break that is left naming nothing is dropped by `live`.
+   */
+  const moveSelected = useCallback(
+    async (to: PrintedHand) => {
+      if (!audioUuid || selectedNotes.length === 0) return;
+      const picked = [...selectedNotes];
+      setMoveRefused(null);
+      setMovingHand(true);
+      closeNotes();
+      try {
+        const result = await timeScoreApi.setHands(audioUuid, {
+          frameMs,
+          notes: picked.map((noteKey) => ({
+            startFrame: frameOf(noteKey),
+            row: rowOf(noteKey),
+            hand: to,
+          })),
+        });
+        if (result.unmatched > 0) {
+          setMoveRefused(
+            `${result.unmatched} note${result.unmatched === 1 ? "" : "s"} could not be placed: ` +
+              "nothing recorded matches that key at that moment.",
+          );
+        }
+        setFingers((current) => {
+          const next = { ...current };
+          for (const noteKey of picked) {
+            const finger = next[noteKey];
+            if (finger === undefined) continue;
+            delete next[noteKey];
+            next[`${to}:${frameOf(noteKey)}:${rowOf(noteKey)}`] = finger;
+          }
+          return next;
+        });
+        // A figure and a beam break belong to a whole chord, so they travel only when the whole
+        // chord does. Half a chord moving leaves them where they are and `live` decides: they still
+        // name the notes that stayed, or they name nothing and go.
+        const whole = new Set(selectedChords.whole);
+        const movedKey = (groupKey: string): string =>
+          `${to}:${groupKey.split(":")[1]}`;
+        if (whole.size > 0) {
+          setOverrides((current) => {
+            const next = { ...current };
+            for (const groupKey of whole) {
+              const figure = next[groupKey];
+              if (figure === undefined) continue;
+              delete next[groupKey];
+              next[movedKey(groupKey)] = figure;
+            }
+            return next;
+          });
+          setBeamBreaks((current) => {
+            const next = new Set(current);
+            for (const groupKey of whole) {
+              if (!next.delete(groupKey)) continue;
+              next.add(movedKey(groupKey));
+            }
+            return next;
+          });
+        }
+        await apply();
+      } catch (caught) {
+        setMoveRefused(
+          readable(caught, "Could not change the hand of those notes."),
+        );
+      } finally {
+        setMovingHand(false);
+      }
+    },
+    [audioUuid, frameMs, selectedNotes, selectedChords, closeNotes, apply],
+  );
+  /**
    * Draw the sheet the piece was last saved as, without asking for it again.
    *
    * Everything on this page except the reading is worked out from the recording on every visit, so
@@ -1200,6 +1244,22 @@ export function RhythmPage() {
     restored.current = key;
     void apply();
   }, [audioUuid, saved, selected, score, busy, key, apply]);
+
+  /**
+   * Ask for the sheet again when a note has changed hands or left the page.
+   *
+   * Only the figures are wrong until it comes back: the notes are already in the right place, drawn
+   * from the same edits folded into a copy of the matrix in the browser. So this is deliberately
+   * unhurried — a short wait first, so dragging a band over forty-eight notes and sending them
+   * across is one request rather than forty-eight, and no spinner, because nothing on screen is
+   * waiting on it.
+   */
+  useEffect(() => {
+    if (!audioUuid || !selected || !score) return;
+    if (sheetBuiltFor.current === editSignature) return;
+    const waiting = window.setTimeout(() => void apply(), 400);
+    return () => window.clearTimeout(waiting);
+  }, [editSignature, audioUuid, selected, score, apply]);
 
   if (!audioUuid) {
     return (
@@ -1532,7 +1592,11 @@ export function RhythmPage() {
                   else setArmed(true);
                 }}
                 startIcon={
-                  clearing ? <CircularProgress size={14} /> : <DeleteSweepIcon />
+                  clearing ? (
+                    <CircularProgress size={14} />
+                  ) : (
+                    <DeleteSweepIcon />
+                  )
                 }
               >
                 {flash === "removed"
@@ -1673,7 +1737,7 @@ export function RhythmPage() {
               spacing={2}
               sx={{ alignItems: "center", flexWrap: "wrap" }}
             >
-              {hiddenNotes.size === 0 && handOverrides.size === 0 ? (
+              {hiddenNotes.size === 0 ? (
                 <Typography variant="body2" color="text.secondary">
                   Click a notehead to open the note toolbox. Hold Command
                   (Control on Windows) and click more to build a set: a finger
@@ -1683,35 +1747,15 @@ export function RhythmPage() {
               ) : (
                 <>
                   <Typography variant="body2" color="text.secondary">
-                    {hiddenNotes.size > 0
-                      ? `${hiddenNotes.size} note${hiddenNotes.size === 1 ? "" : "s"} off the page`
-                      : null}
-                    {hiddenNotes.size > 0 && handOverrides.size > 0
-                      ? " \u00b7 "
-                      : null}
-                    {handOverrides.size > 0
-                      ? `${handOverrides.size} note${
-                          handOverrides.size === 1 ? "" : "s"
-                        } moved to the other staff`
-                      : null}
-                    . The recording still has every one of them.
+                    {hiddenNotes.size} note{hiddenNotes.size === 1 ? "" : "s"}{" "}
+                    off the page. The recording still has every one of them.
                   </Typography>
-                  {hiddenNotes.size > 0 ? (
-                    <Button
-                      size="small"
-                      onClick={() => setHiddenNotes(new Set())}
-                    >
-                      Bring them all back
-                    </Button>
-                  ) : null}
-                  {handOverrides.size > 0 ? (
-                    <Button
-                      size="small"
-                      onClick={() => setHandOverrides(new Map())}
-                    >
-                      Undo every move
-                    </Button>
-                  ) : null}
+                  <Button
+                    size="small"
+                    onClick={() => setHiddenNotes(new Set())}
+                  >
+                    Bring them all back
+                  </Button>
                 </>
               )}
             </Stack>
@@ -2028,20 +2072,22 @@ export function RhythmPage() {
             <Button
               size="small"
               variant="outlined"
-              disabled={selectedNotes.every(
-                (noteKey) => handOf(noteKey) === "right",
-              )}
-              onClick={() => moveSelected("right")}
+              disabled={
+                movingHand ||
+                selectedNotes.every((noteKey) => handOf(noteKey) === "right")
+              }
+              onClick={() => void moveSelected("right")}
             >
               Play with the right hand
             </Button>
             <Button
               size="small"
               variant="outlined"
-              disabled={selectedNotes.every(
-                (noteKey) => handOf(noteKey) === "left",
-              )}
-              onClick={() => moveSelected("left")}
+              disabled={
+                movingHand ||
+                selectedNotes.every((noteKey) => handOf(noteKey) === "left")
+              }
+              onClick={() => void moveSelected("left")}
             >
               Play with the left hand
             </Button>

@@ -1,15 +1,20 @@
 /**
  * What the reader changed about the *page*, applied to the matrix on its way to the drawing.
  *
- * Two of these — dropping a note and sending one to the other staff — are the sort of thing that
- * looks like an edit to the recording and must not be one. The transcription is evidence: it says
- * which keys went down and when, and no amount of disagreement with it makes that untrue. What is
- * open to disagreement is the *reading*: a note the transcriber invented out of a pedal blur has no
- * business on the page, and the hand split is a guess that a player can simply see is wrong.
+ * Dropping a note looks like an edit to the recording and must not be one. The transcription is
+ * evidence: it says which keys went down and when, and no amount of disagreement with it makes that
+ * untrue. What is open to disagreement is the *reading* — a note the transcriber invented out of a
+ * pedal blur has no business on the page, but it was still recorded.
  *
- * So neither writes to the matrix. Both are kept as a small set of keys beside the score and folded
- * into a copy of it here, one frame before it is drawn. Undoing one restores the original because
- * the original was never gone.
+ * So it does not write to the matrix. The hidden set is a few keys held beside the score and folded
+ * into a copy of it here, one frame before it is drawn. Undoing it restores the note because the
+ * note was never gone.
+ *
+ * **Which hand plays a note is not one of these.** That is a fact about the playing, it decides the
+ * printed length of the notes around it, and everything on the page is derived from it — so it is
+ * written onto the recording by `PUT /time/{id}/hands` and the matrix is built with it. The `hands`
+ * field here is what is left of the old overlay and is always empty; it is kept because the same
+ * transform still has to know which plane a cell belongs to.
  *
  * A note is addressed as `startFrame:row`, without a hand. Right and left can never hold the same
  * onset — the package refuses a matrix where they do — so the pair is already unique, and leaving

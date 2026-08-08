@@ -32,11 +32,12 @@ from dataclasses import dataclass
 import numpy as np
 
 from aitu_backend.matrix.hands import split_hands
+from aitu_backend.matrix.keys import LOWEST_MIDI
 from aitu_backend.matrix.model import PianoMatrix
 from aitu_backend.matrix.passages import ladder_ranges, one_passage
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS, validate_frame_ms
 from aitu_backend.progress import BaseProgress, default_reporter
-from aitu_backend.schemas.matrix import SparseCooMatrix
+from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN, SparseCooMatrix
 from aitu_backend.notation.figures import onset_columns, printed_notes_of_hand
 from aitu_backend.schemas.time_matrix import (
     FigureLadder,
@@ -133,13 +134,74 @@ def impose_granularity_and_split(
     with progress.stage("two-hands", total=1, message="inferring hands") as stage:
         hands = split_hands(build.matrix, method=hand_method)
         stage.advance()
+    pinned = pin_hands(hands.right, hands.left, events, build)
     return TimeHands(
         frame_ms=step,
-        right=hands.right,
-        left=hands.left,
+        right=pinned[0],
+        left=pinned[1],
         unsplit=build.matrix,
         build=build,
     )
+
+
+def pin_hands(
+    right: PianoMatrix,
+    left: PianoMatrix,
+    events: list[NoteEvent],
+    build: TimeBuildReport,
+) -> tuple[PianoMatrix, PianoMatrix]:
+    """Move the notes a person has assigned a hand to onto that hand.
+
+    The split is a guess made by an algorithm that cannot see the player's hands, and a pianist
+    reading the page can often see at a glance where it is wrong. When they say so, the answer is
+    written onto the note event itself and the matrix is built with it — so it is not an overlay
+    that the drawing has to remember to apply, it is what the two hands *are* from here on. Every
+    figure, beam, clef and octave bracket is then derived from the corrected matrix by the ordinary
+    path, with nothing anywhere that could disagree with it.
+
+    Applied after the inference rather than as a constraint inside it. The beam search would give a
+    better answer if it knew the pins while it worked, but this is honest about what it is — the
+    reader's correction laid over the guess — and it cannot make the search fail to converge or
+    quietly change decisions the reader did not ask about.
+
+    A note is found by the raw time it was played at, not by a column, so a pin survives a change of
+    column length: the same correction holds at 20 ms as at 40.
+    """
+    pins = [event for event in events if event.hand in ("right", "left")]
+    if not pins:
+        return right, left
+
+    # (row, seconds) -> column, from the record of where each key's own attack landed.
+    where: dict[tuple[int, float], int] = {}
+    for (column, row), seconds in build.event_seconds.items():
+        where[row, round(seconds, 4)] = column
+
+    planes = {"right": right, "left": left}
+    for event in pins:
+        row = event.midi_note - LOWEST_MIDI
+        column = where.get((row, round(event.start, 4)))
+        if column is None:
+            continue
+        source = next(
+            (plane for plane in planes.values() if plane.cell(row, column) == ONSET),
+            None,
+        )
+        target = planes[event.hand]
+        if source is None or source is target:
+            continue
+        # Refused rather than merged when the far hand already strikes that key in that frame. The
+        # two planes may not hold the same onset, and losing one of them would lose a note that was
+        # really played.
+        if target.cell(row, column) != SILENCE:
+            continue
+        follower = column
+        while follower < source.frame_count and (
+            follower == column or source.cell(row, follower) == SUSTAIN
+        ):
+            target.grid[row, follower] = source.grid[row, follower]
+            source.grid[row, follower] = SILENCE
+            follower += 1
+    return right, left
 
 
 def to_time_envelope(

@@ -47,6 +47,15 @@ class NoteEvent(BaseModel):
     start: float = Field(..., ge=0)
     end: float = Field(..., gt=0)
     velocity: int = Field(64, ge=0, le=127)
+    #: Which hand played it, when a person has said so. ``None`` means nobody has,
+    #: and the split infers it.
+    #:
+    #: The hand is a property of the *playing*, so it belongs on the note and not in
+    #: a rendering overlay: it survives a change of column length, a new ladder and a
+    #: re-wrap, none of which it has anything to do with. An algorithm that cannot see
+    #: the player's hands guesses it; a pianist looking at the page knows, and when
+    #: they say so the answer is kept here and the matrix is built with it.
+    hand: str | None = Field(None, pattern="^(right|left)$")
 
     @model_validator(mode="after")
     def _check_order(self) -> "NoteEvent":
