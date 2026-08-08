@@ -19,6 +19,7 @@ import IconButton from "@mui/material/IconButton";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweepOutlined";
 import PauseIcon from "@mui/icons-material/Pause";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdfOutlined";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import SaveIcon from "@mui/icons-material/SaveOutlined";
 import MenuItem from "@mui/material/MenuItem";
@@ -33,6 +34,7 @@ import ScorePlayer, {
 } from "../../components/time/ScorePlayer";
 import TimeScoreView from "../../components/time/TimeScoreView";
 import FloatingBar from "../../components/common/FloatingBar";
+import ScorePdfDialog from "../../components/time/ScorePdfDialog";
 import ToolboxDialog from "../../components/common/ToolboxDialog";
 import {
   FIGURE_LABELS,
@@ -57,6 +59,7 @@ import {
   keySignatureAtFrame,
   ottavaAtFrame,
   type FingerNumber,
+  type GridNotationRenderer,
   type KeyChangeAnnotation,
   type KeySignature,
   type OttavaAnnotation,
@@ -307,6 +310,16 @@ export function RhythmPage() {
    * key prints its own accidental. Choosing moves those accidentals into the clef.
    */
   const [keySignature, setKeySignature] = useState<KeySignatureName>("C");
+  /**
+   * The live renderer behind the sheet, and whether the print panel is open.
+   *
+   * Printing needs the renderer itself rather than the payload: the widths it measured and every
+   * choice the reader has made since are what make the printed page the same music as the screen.
+   */
+  const [sheetRenderer, setSheetRenderer] =
+    useState<GridNotationRenderer | null>(null);
+  const [pdfOpen, setPdfOpen] = useState(false);
+
   const [keyHint, setKeyHint] = useState<{
     best: KeySignatureName;
     saved: number;
@@ -1605,6 +1618,28 @@ export function RhythmPage() {
                     ? "Sure? Remove all"
                     : "Remove all"}
               </Button>
+              <Divider orientation="vertical" flexItem />
+              {/*
+                The way off the screen. A window is whatever width it happens to be; paper is 210
+                millimetres, so the music has to be laid out again before it can be printed, and
+                the panel is where that is looked at before it is committed to a file.
+              */}
+              <Tooltip title="Lay the sheet out on paper and download it">
+                <span>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    disabled={!sheetRenderer}
+                    onClick={() => {
+                      setArmed(false);
+                      setPdfOpen(true);
+                    }}
+                    startIcon={<PictureAsPdfIcon />}
+                  >
+                    PDF
+                  </Button>
+                </span>
+              </Tooltip>
             </FloatingBar>
             {/*
               The key signature belongs beside the sheet rather than beside the plot, because it is
@@ -1674,6 +1709,7 @@ export function RhythmPage() {
                 renderOverrides={renderOverrides}
                 fingers={live.fingers}
                 onMovesRefused={sayRefused}
+                onRendererChange={setSheetRenderer}
                 selectedRange={range}
                 clearSelectionsAt={clearedAt}
                 playheadSeconds={playheadSeconds}
@@ -2185,6 +2221,13 @@ export function RhythmPage() {
           </Typography>
         </Stack>
       </ToolboxDialog>
+
+      <ScorePdfDialog
+        open={pdfOpen}
+        onClose={() => setPdfOpen(false)}
+        renderer={sheetRenderer}
+        {...(artifact.label ? { pieceName: artifact.label } : {})}
+      />
     </PageContainer>
   );
 }

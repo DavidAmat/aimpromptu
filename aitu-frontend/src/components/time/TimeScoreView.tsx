@@ -172,6 +172,14 @@ export interface TimeScoreViewProps {
    * that knows *where*: the cursor is placed from a render only this component holds.
    */
   scrollCursorAt?: number;
+  /**
+   * The live renderer, handed up whenever the sheet is rebuilt, and `null` when it goes.
+   *
+   * Printing needs it: a printed page has to carry over the widths this render measured and every
+   * choice the reader made, and the renderer is the only thing that holds all of them together.
+   * Handing the object up rather than adding a `print()` prop here keeps this view about drawing.
+   */
+  onRendererChange?: (renderer: GridNotationRenderer | null) => void;
 }
 
 export function TimeScoreView({
@@ -196,6 +204,7 @@ export function TimeScoreView({
   playheadSeconds,
   onScrub,
   scrollCursorAt,
+  onRendererChange,
 }: TimeScoreViewProps) {
   const host = useRef<HTMLDivElement | null>(null);
   // The positioned box the score is drawn into. Both the cursor's placement and a drag over it are
@@ -208,6 +217,12 @@ export function TimeScoreView({
   const latestRange = useRef(selectedRange);
   const playhead = useRef<HTMLDivElement | null>(null);
   const renderer = useRef<GridNotationRenderer | null>(null);
+  // Held in a ref rather than listed as a dependency: a page that passes an inline function would
+  // otherwise rebuild every note on every one of its own renders.
+  const reportRenderer = useRef(onRendererChange);
+  useEffect(() => {
+    reportRenderer.current = onRendererChange;
+  }, [onRendererChange]);
   const system = useRef<number | null>(null);
 
   // The page edits, folded into a copy of the matrix. Memoised because it walks every cell and the
@@ -355,6 +370,7 @@ export function TimeScoreView({
     });
 
     renderer.current = drawn;
+    reportRenderer.current?.(drawn);
     if (latestRange.current) drawn.setSelectedRange(latestRange.current);
 
     // What the notes themselves suggest, measured on the same spelling rule the page prints with,
@@ -384,6 +400,7 @@ export function TimeScoreView({
 
     return () => {
       renderer.current = null;
+      reportRenderer.current?.(null);
       drawn.destroy?.();
     };
   }, [

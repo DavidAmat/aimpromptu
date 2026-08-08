@@ -78,6 +78,7 @@ Wall-clock matrix columns and figure-as-label rendering. Spans **two repos** (`a
 | [frontend/compose-panel.md](frontend/compose-panel.md) | SequenceComposer (POST /sequence) |
 | [frontend/rendering-pipeline.md](frontend/rendering-pipeline.md) | matrixToNotation + PianoSheet (VexFlow) |
 | [frontend/timestamps.md](frontend/timestamps.md) | UI rule: `mm:ss.cc`, frame labelled by start only, never wraps |
+| [frontend/printing.md](frontend/printing.md) | The PDF export: re-wrap to the paper, never scale; the margin is the control |
 
 ## Music (`context/music/`)
 
@@ -141,6 +142,7 @@ Wall-clock matrix columns and figure-as-label rendering. Spans **two repos** (`a
 | [../documentation/services/frontend/piano-sheet.md](../documentation/services/frontend/piano-sheet.md) | VexFlow: staves, beam rule, accidentals, dots, lyrics, wrap, grand staff |
 | [../documentation/services/frontend/notes.md](../documentation/services/frontend/notes.md) | 88-key builder, Spanish→VexFlow map, KEY_SIGNATURES |
 | [../documentation/services/frontend/components.md](../documentation/services/frontend/components.md) | SequenceComposer, LayoutControls, ScoreStack, App wiring |
+| [../documentation/services/frontend/score-pdf.md](../documentation/services/frontend/score-pdf.md) | The PDF writer: SVG to operators, the embedded Bravura, how to check a bad file |
 
 ### Other (`documentation/`)
 
