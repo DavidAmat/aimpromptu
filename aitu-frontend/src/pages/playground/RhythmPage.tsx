@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
@@ -22,7 +23,9 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { PageContainer, SectionCard } from "../../ui";
 import PeakPlot from "../../components/time/PeakPlot";
-import ScorePlayer, { type ScorePlayerControls } from "../../components/time/ScorePlayer";
+import ScorePlayer, {
+  type ScorePlayerControls,
+} from "../../components/time/ScorePlayer";
 import TimeScoreView from "../../components/time/TimeScoreView";
 import ToolboxDialog from "../../components/common/ToolboxDialog";
 import {
@@ -64,7 +67,12 @@ import {
 } from "../../music/renderOverrides";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 
-const NAMEABLE_FIGURES: FigureName[] = ["blanca", "negra", "corchea", "semicorchea"];
+const NAMEABLE_FIGURES: FigureName[] = [
+  "blanca",
+  "negra",
+  "corchea",
+  "semicorchea",
+];
 
 /** Thumb to little finger. There is no 0 and no 6. */
 const FINGERS: FingerNumber[] = [1, 2, 3, 4, 5];
@@ -83,9 +91,21 @@ type FrameTab = (typeof FRAME_TABS)[number]["id"];
 /** The four brackets, and what each does to a passage, in the order a reader meets them. */
 const OTTAVA_CHOICES: { kind: OttavaKind; label: string; hint: string }[] = [
   { kind: "8va", label: "8va", hint: "written an octave lower than it sounds" },
-  { kind: "15ma", label: "15ma", hint: "written two octaves lower than it sounds" },
-  { kind: "8vb", label: "8vb", hint: "written an octave higher than it sounds" },
-  { kind: "15mb", label: "15mb", hint: "written two octaves higher than it sounds" },
+  {
+    kind: "15ma",
+    label: "15ma",
+    hint: "written two octaves lower than it sounds",
+  },
+  {
+    kind: "8vb",
+    label: "8vb",
+    hint: "written an octave higher than it sounds",
+  },
+  {
+    kind: "15mb",
+    label: "15mb",
+    hint: "written two octaves higher than it sounds",
+  },
 ];
 
 /** `mm:ss.cc`, so a column range can be read as a moment in the recording. */
@@ -147,6 +167,76 @@ function figureKeyOf(noteKey: string): string {
   return `${hand}:${frame}`;
 }
 
+/** How wide the floating toolbox is, and how far it stands off what it is about. */
+const TOOLBOX_WIDTH = 360;
+const TOOLBOX_GAP = 16;
+
+/**
+ * The box on screen that a set of drawn elements takes up, or `null` when none are drawn.
+ *
+ * Read from the page rather than worked out from frame numbers, because a frame's x depends on the
+ * system it wrapped onto, how much is happening in it and where the reader has scrolled — three
+ * things the page already knows and this file would only be guessing at.
+ */
+function screenBoxOf(selector: string): DOMRect | null {
+  const nodes = document.querySelectorAll(selector);
+  if (nodes.length === 0) return null;
+  let left = Infinity;
+  let top = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  for (const node of nodes) {
+    const box = node.getBoundingClientRect();
+    if (box.width === 0 && box.height === 0) continue;
+    left = Math.min(left, box.left);
+    top = Math.min(top, box.top);
+    right = Math.max(right, box.right);
+    bottom = Math.max(bottom, box.bottom);
+  }
+  if (!Number.isFinite(left)) return null;
+  return new DOMRect(left, top, right - left, bottom - top);
+}
+
+/**
+ * Where to open a toolbox so it sits beside what it is about instead of on top of it.
+ *
+ * To the right when there is room, otherwise to the left; a panel that covered the notes it edits
+ * would have to be dragged away before it could be used, every time. Vertically it starts level
+ * with the selection and is pulled back onto the screen if that would run off the bottom.
+ */
+/**
+ * The box a press was on: the whole frame group or notehead if it landed on one, else the point.
+ *
+ * A toolbox that must not cover what it is about has to know how big that thing is, and the only
+ * moment the answer is on the page is the press itself — a frame group's highlight is not painted
+ * until a render later.
+ */
+function pressedBox(event: {
+  target: EventTarget | null;
+  clientX: number;
+  clientY: number;
+}): DOMRect {
+  const on = (event.target as Element | null)?.closest?.(
+    ".grid-frame-range, .grid-frame-cell, [data-note-target]",
+  );
+  const box = on?.getBoundingClientRect();
+  if (box && (box.width > 0 || box.height > 0)) return box;
+  return new DOMRect(event.clientX - 8, event.clientY - 8, 16, 16);
+}
+
+function besideOnScreen(
+  box: DOMRect | null,
+): { x: number; y: number } | undefined {
+  if (!box) return undefined;
+  const toTheRight = box.right + TOOLBOX_GAP;
+  const x =
+    toTheRight + TOOLBOX_WIDTH + TOOLBOX_GAP <= window.innerWidth
+      ? toTheRight
+      : Math.max(TOOLBOX_GAP, box.left - TOOLBOX_GAP - TOOLBOX_WIDTH);
+  const y = Math.max(TOOLBOX_GAP, Math.min(box.top, window.innerHeight - 260));
+  return { x: Math.round(x), y: Math.round(y) };
+}
+
 interface View {
   key: string;
   peaks: PeaksResponse | null;
@@ -157,7 +247,14 @@ interface View {
 }
 
 function emptyView(key: string): View {
-  return { key, peaks: null, selected: null, preview: null, score: null, error: null };
+  return {
+    key,
+    peaks: null,
+    selected: null,
+    preview: null,
+    score: null,
+    error: null,
+  };
 }
 
 /**
@@ -201,7 +298,10 @@ export function RhythmPage() {
    * key prints its own accidental. Choosing moves those accidentals into the clef.
    */
   const [keySignature, setKeySignature] = useState<KeySignatureName>("C");
-  const [keyHint, setKeyHint] = useState<{ best: KeySignatureName; saved: number } | null>(null);
+  const [keyHint, setKeyHint] = useState<{
+    best: KeySignatureName;
+    saved: number;
+  } | null>(null);
   /**
    * Where the piece leaves the main signature, and what it changes to.
    *
@@ -253,7 +353,9 @@ export function RhythmPage() {
    * the honest fix is to stop drawing it, not to say it was never played. The recording is evidence
    * and stays as it is; this is a set of keys beside it. Bringing one back restores it exactly.
    */
-  const [hiddenNotes, setHiddenNotes] = useState<ReadonlySet<NoteRef>>(new Set());
+  const [hiddenNotes, setHiddenNotes] = useState<ReadonlySet<NoteRef>>(
+    new Set(),
+  );
   /**
    * Notes the reader sent to the other staff, as `startFrame:row` to the staff they belong on.
    *
@@ -261,7 +363,9 @@ export function RhythmPage() {
    * wrong a pianist can see it at a glance. Correcting it is a statement about how the piece is
    * played, so it belongs here rather than in the matrix the split was computed from.
    */
-  const [handOverrides, setHandOverrides] = useState<ReadonlyMap<NoteRef, PrintedHand>>(new Map());
+  const [handOverrides, setHandOverrides] = useState<
+    ReadonlyMap<NoteRef, PrintedHand>
+  >(new Map());
   /** Which finger plays each note, keyed `hand:startFrame:row` by the staff it is drawn on. */
   const [fingers, setFingers] = useState<Record<string, FingerNumber>>({});
   /** Numbers pressed for the selection now open, so a chord can be given several at once. */
@@ -272,6 +376,26 @@ export function RhythmPage() {
   /** A move the far staff had no room for, said once, in words. */
   const [moveRefused, setMoveRefused] = useState<string | null>(null);
   /**
+   * Where each toolbox opened, measured from what it is about.
+   *
+   * Set when the selection is made and then left alone: the panel is draggable, and moving the
+   * thing it points at should not snatch it back out of the reader's hand.
+   */
+  const [framesAt, setFramesAt] = useState<
+    { x: number; y: number } | undefined
+  >(undefined);
+  const [notesAt, setNotesAt] = useState<{ x: number; y: number } | undefined>(
+    undefined,
+  );
+  /**
+   * Where the last press on the sheet landed.
+   *
+   * The frames toolbox opens from a callback that runs before its highlight is painted, so there
+   * is nothing on the page to measure yet. The click itself is the next best anchor, and it is
+   * where the reader is looking in any case.
+   */
+  const pressedAt = useRef<DOMRect | null>(null);
+  /**
    * Where the piece changes speed, as frames, and what a gap is called after each of them.
    *
    * A boundary is drawn by hand. Nothing detects them: a wrong hand-drawn one spoils one stretch,
@@ -279,7 +403,10 @@ export function RhythmPage() {
    * unreadable. Frames are absolute wall clock, so a boundary never moves a note.
    */
   const [stretches, setStretches] = useState<Stretch[]>([]);
-  const [range, setRange] = useState<{ fromColumn: number; toColumn: number } | null>(null);
+  const [range, setRange] = useState<{
+    fromColumn: number;
+    toColumn: number;
+  } | null>(null);
   // Where the recording is, in seconds, while it plays. `null` when nothing is playing, which is
   // what hides the line on the staves.
   // Starts at zero rather than nothing, so the line is on the page — and so grabbable — before the
@@ -369,10 +496,10 @@ export function RhythmPage() {
   // than cleared by an effect, so picking a different chord offers a clean row of chips without a
   // render in between showing the last chord's answer.
   const pickedFingers = useMemo<FingerNumber[]>(
-    () => (fingerDraft?.forSelection === selectionKey ? fingerDraft.picked : []),
+    () =>
+      fingerDraft?.forSelection === selectionKey ? fingerDraft.picked : [],
     [fingerDraft, selectionKey],
   );
-
 
   // Which stretch the toolbox is about, and what it will write. The signature offered is whatever
   // is already sounding at the start of the stretch, until the reader picks another.
@@ -386,10 +513,15 @@ export function RhythmPage() {
    */
   const editedHere: Record<FrameTab, boolean> = {
     key: range
-      ? keySignatureAtFrame(range.fromColumn, keySignature as KeySignature, keyChanges) !==
-          keySignature ||
+      ? keySignatureAtFrame(
+          range.fromColumn,
+          keySignature as KeySignature,
+          keyChanges,
+        ) !== keySignature ||
         keyChanges.some(
-          (change) => change.fromColumn > range.fromColumn && change.fromColumn < range.toColumn,
+          (change) =>
+            change.fromColumn > range.fromColumn &&
+            change.fromColumn < range.toColumn,
         )
       : false,
     octave: range
@@ -416,9 +548,12 @@ export function RhythmPage() {
         setUntranscribed(false);
         // The pile holding most of the playing is the one a reader looks at first, so it starts
         // chosen. Nothing is committed by that: the sheet only appears once a name is given.
-        const biggest = [...found.peaks].sort((a, b) => b.share - a.share)[0] ?? null;
+        const biggest =
+          [...found.peaks].sort((a, b) => b.share - a.share)[0] ?? null;
         setView((current) =>
-          current.key === key ? { ...current, peaks: found, selected: biggest } : current,
+          current.key === key
+            ? { ...current, peaks: found, selected: biggest }
+            : current,
         );
       })
       .catch((caught: unknown) => {
@@ -428,7 +563,10 @@ export function RhythmPage() {
         setUntranscribed(notTranscribed(caught));
         setView((current) =>
           current.key === key
-            ? { ...current, error: readable(caught, "Could not read the rhythm.") }
+            ? {
+                ...current,
+                error: readable(caught, "Could not read the rhythm."),
+              }
             : current,
         );
       });
@@ -459,12 +597,23 @@ export function RhythmPage() {
         );
         setOverrides(
           Object.fromEntries(
-            found.overrides.map((one) => [`${one.hand}:${one.startFrame}`, one.figure]),
+            found.overrides.map((one) => [
+              `${one.hand}:${one.startFrame}`,
+              one.figure,
+            ]),
           ),
         );
-        setBeamBreaks(new Set(found.beamBreaks.map((one) => `${one.hand}:${one.startFrame}`)));
+        setBeamBreaks(
+          new Set(
+            found.beamBreaks.map((one) => `${one.hand}:${one.startFrame}`),
+          ),
+        );
         setHiddenNotes(
-          new Set((found.hiddenNotes ?? []).map((one) => `${one.startFrame}:${one.row}`)),
+          new Set(
+            (found.hiddenNotes ?? []).map(
+              (one) => `${one.startFrame}:${one.row}`,
+            ),
+          ),
         );
         setHandOverrides(
           new Map(
@@ -496,7 +645,8 @@ export function RhythmPage() {
           setOttavas(
             found.ottavas.map((span) => ({
               kind: span.kind as OttavaKind,
-              hand: span.hand === "left" ? ("left" as const) : ("right" as const),
+              hand:
+                span.hand === "left" ? ("left" as const) : ("right" as const),
               fromColumn: span.fromColumn,
               toColumn: span.toColumn,
             })),
@@ -518,10 +668,14 @@ export function RhythmPage() {
    * different function every time, so the sheet would be rebuilt on every click and would lose the
    * selection it had just made.
    */
-  const pickRange = useCallback((picked: { fromColumn: number; toColumn: number }) => {
-    setRange(picked);
-    setFramesToolbox(true);
-  }, []);
+  const pickRange = useCallback(
+    (picked: { fromColumn: number; toColumn: number }) => {
+      setRange(picked);
+      setFramesToolbox(true);
+      setFramesAt(besideOnScreen(pressedAt.current));
+    },
+    [],
+  );
 
   /**
    * Take the brackets the register asks for — once, and only if nobody has said otherwise.
@@ -532,7 +686,11 @@ export function RhythmPage() {
    */
   const takeSuggestedOttavas = useCallback(
     (spans: OttavaAnnotation[]) => {
-      if (decidedOttavasFor.current === key || decidedOttavasFor.current === SAVED_OTTAVAS) return;
+      if (
+        decidedOttavasFor.current === key ||
+        decidedOttavasFor.current === SAVED_OTTAVAS
+      )
+        return;
       decidedOttavasFor.current = key;
       setOttavas(spans);
     },
@@ -540,10 +698,16 @@ export function RhythmPage() {
   );
 
   /** Bring the cursor on screen — space, a click on the bar, a jump the reader did not make. */
-  const scrollToCursor = useCallback(() => setScrollCursorAt((at) => at + 1), []);
+  const scrollToCursor = useCallback(
+    () => setScrollCursorAt((at) => at + 1),
+    [],
+  );
 
   /** The cursor was dragged. The transport owns the recording, so it does the moving. */
-  const scrub = useCallback((seconds: number) => player.current?.seek(seconds), []);
+  const scrub = useCallback(
+    (seconds: number) => player.current?.seek(seconds),
+    [],
+  );
 
   /**
    * A corner mark was clicked: select the stretch it belongs to and open the toolbox on it.
@@ -556,6 +720,7 @@ export function RhythmPage() {
     (marker: { fromColumn: number; toColumn: number }) => {
       setRange({ fromColumn: marker.fromColumn, toColumn: marker.toColumn });
       setFramesToolbox(true);
+      setFramesAt(besideOnScreen(pressedAt.current));
     },
     [],
   );
@@ -563,6 +728,15 @@ export function RhythmPage() {
   const pickNotes = useCallback((keys: readonly string[]) => {
     setSelectedNotes(keys);
     setNotesToolbox(keys.length > 0);
+    // Measured from the noteheads rather than from the click, so a rubber band that took in half
+    // the line opens its panel clear of the whole band instead of on top of it.
+    if (keys.length > 0) {
+      setNotesAt(
+        besideOnScreen(
+          screenBoxOf(".grid-note-target.is-selected") ?? pressedAt.current,
+        ),
+      );
+    }
   }, []);
 
   /**
@@ -596,7 +770,11 @@ export function RhythmPage() {
    * guessing which note in one chord answers which in the next.
    */
   const applyFingers = useCallback(
-    (picked: FingerNumber[], notes: readonly string[], chord: readonly string[] | null) => {
+    (
+      picked: FingerNumber[],
+      notes: readonly string[],
+      chord: readonly string[] | null,
+    ) => {
       setFingers((current) => {
         const next = { ...current };
         for (const noteKey of notes) delete next[noteKey];
@@ -726,7 +904,12 @@ export function RhythmPage() {
         const [side, frame] = key.split(":");
         // The row is not part of the key: an override belongs to a chord, not to one notehead, so
         // every note struck together takes it. Row 0 stands for "the group at this column".
-        return { hand: side ?? "right", row: 0, startFrame: Number(frame), figure: name };
+        return {
+          hand: side ?? "right",
+          row: 0,
+          startFrame: Number(frame),
+          figure: name,
+        };
       }),
       beamBreaks: [...beamBreaks].map((key) => {
         const [side, frame] = key.split(":");
@@ -795,7 +978,10 @@ export function RhythmPage() {
           anchorMs: selected.medianMs,
           frameMs,
           boundaries: stretches.map((stretch) => stretch.startFrame),
-          boundaryMs: [selected.medianMs, ...stretches.map((stretch) => stretch.anchorMs)],
+          boundaryMs: [
+            selected.medianMs,
+            ...stretches.map((stretch) => stretch.anchorMs),
+          ],
         }),
       ]);
       setView((current) =>
@@ -805,7 +991,9 @@ export function RhythmPage() {
       );
     } catch (caught) {
       const message = readable(caught, "Could not build the sheet.");
-      setView((current) => (current.key === key ? { ...current, error: message } : current));
+      setView((current) =>
+        current.key === key ? { ...current, error: message } : current,
+      );
     } finally {
       setBusy(false);
     }
@@ -835,8 +1023,9 @@ export function RhythmPage() {
         wide
       >
         <Alert severity="info">
-          Load and transcribe an audio on the <strong>Upload / Input</strong> tab first. The rhythm
-          is read from the notes that transcription records.
+          Load and transcribe an audio on the <strong>Upload / Input</strong>{" "}
+          tab first. The rhythm is read from the notes that transcription
+          records.
         </Alert>
       </PageContainer>
     );
@@ -859,7 +1048,11 @@ export function RhythmPage() {
         description="Measured from the recording itself, one hand at a time, before anything was rounded."
       >
         <Stack spacing={2}>
-          <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{ alignItems: "center", flexWrap: "wrap" }}
+          >
             <TextField
               label="Hand"
               select
@@ -893,7 +1086,9 @@ export function RhythmPage() {
               peaks={peaks.peaks}
               labelled={preview?.labelled}
               selectedMs={selected?.centreMs ?? null}
-              onSelect={(peak) => setView((current) => ({ ...current, selected: peak }))}
+              onSelect={(peak) =>
+                setView((current) => ({ ...current, selected: peak }))
+              }
             />
           ) : null}
         </Stack>
@@ -903,9 +1098,15 @@ export function RhythmPage() {
         title="Name it"
         description="One name fixes every other figure, because they are all proportions of each other."
       >
-        <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ alignItems: "center", flexWrap: "wrap" }}
+        >
           <Typography variant="body1">
-            The <strong>{selected ? Math.round(selected.centreMs) : "—"} ms</strong> gap is one
+            The{" "}
+            <strong>{selected ? Math.round(selected.centreMs) : "—"} ms</strong>{" "}
+            gap is one
           </Typography>
           <TextField
             select
@@ -951,7 +1152,9 @@ export function RhythmPage() {
             spacing={1.5}
             sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1, mt: 2 }}
           >
-            <Typography variant="body2">Too many short notes, or too few?</Typography>
+            <Typography variant="body2">
+              Too many short notes, or too few?
+            </Typography>
             <Button
               size="small"
               variant="outlined"
@@ -975,8 +1178,8 @@ export function RhythmPage() {
               Write it one step shorter
             </Button>
             <Typography variant="caption" color="text.secondary">
-              Renames every note. Nothing moves, and the recording is untouched. Press{" "}
-              <strong>Write the sheet</strong> to see it.
+              Renames every note. Nothing moves, and the recording is untouched.
+              Press <strong>Write the sheet</strong> to see it.
             </Typography>
           </Stack>
         ) : null}
@@ -988,7 +1191,11 @@ export function RhythmPage() {
           description="Drag across the numbers above the staves to mark where it changes, then say what a gap is worth after that point. Everything before keeps the name it had."
         >
           <Stack spacing={1.5}>
-            <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
               {range ? (
                 <>
                   <Typography variant="body2">
@@ -998,7 +1205,9 @@ export function RhythmPage() {
                     size="small"
                     type="number"
                     value={newAnchorMs}
-                    onChange={(event) => setNewAnchorMs(Number(event.target.value))}
+                    onChange={(event) =>
+                      setNewAnchorMs(Number(event.target.value))
+                    }
                     sx={{ width: 120 }}
                     slotProps={{ htmlInput: { min: 20, step: 5 } }}
                   />
@@ -1008,8 +1217,13 @@ export function RhythmPage() {
                     onClick={() => {
                       setStretches((current) =>
                         [
-                          ...current.filter((one) => one.startFrame !== range.fromColumn),
-                          { startFrame: range.fromColumn, anchorMs: newAnchorMs },
+                          ...current.filter(
+                            (one) => one.startFrame !== range.fromColumn,
+                          ),
+                          {
+                            startFrame: range.fromColumn,
+                            anchorMs: newAnchorMs,
+                          },
                         ].sort((a, b) => a.startFrame - b.startFrame),
                       );
                       setRange(null);
@@ -1020,18 +1234,28 @@ export function RhythmPage() {
                 </>
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  Nothing selected. Drag over the column numbers above the staves to choose where a
-                  change starts.
+                  Nothing selected. Drag over the column numbers above the
+                  staves to choose where a change starts.
                 </Typography>
               )}
             </Stack>
 
             {stretches.length ? (
-              <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", rowGap: 1 }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ flexWrap: "wrap", rowGap: 1 }}
+              >
                 {score.passages.map((passage, index) => (
-                  <Typography key={passage.id} variant="caption" color="text.secondary">
+                  <Typography
+                    key={passage.id}
+                    variant="caption"
+                    color="text.secondary"
+                  >
                     <strong>
-                      {index === 0 ? "From the start" : `From column ${passage.startFrame}`}
+                      {index === 0
+                        ? "From the start"
+                        : `From column ${passage.startFrame}`}
                     </strong>
                     : {passage.headerLabel}
                   </Typography>
@@ -1043,7 +1267,8 @@ export function RhythmPage() {
             ) : null}
 
             <Typography variant="caption" color="text.secondary">
-              After adding or removing a change, press <strong>Write the sheet</strong> again.
+              After adding or removing a change, press{" "}
+              <strong>Write the sheet</strong> again.
             </Typography>
           </Stack>
         </SectionCard>
@@ -1061,7 +1286,9 @@ export function RhythmPage() {
           <Stack spacing={1.5}>
             <ScorePlayer
               audioUuid={audioUuid}
-              scoreSeconds={(score.envelope.frameCount * score.envelope.frameMs) / 1000}
+              scoreSeconds={
+                (score.envelope.frameCount * score.envelope.frameMs) / 1000
+              }
               onTime={setPlayheadSeconds}
               controls={player}
               onScrollToCursor={scrollToCursor}
@@ -1070,13 +1297,19 @@ export function RhythmPage() {
               The key signature belongs beside the sheet rather than beside the plot, because it is
               read off the sheet: you change it and look at how many sharps and flats disappear.
             */}
-            <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
               <TextField
                 select
                 size="small"
                 label="Key signature"
                 value={keySignature}
-                onChange={(event) => setKeySignature(event.target.value as KeySignatureName)}
+                onChange={(event) =>
+                  setKeySignature(event.target.value as KeySignatureName)
+                }
                 sx={{ minWidth: 200 }}
                 helperText="Written on both clefs. It changes spelling only: no note moves."
               >
@@ -1087,38 +1320,54 @@ export function RhythmPage() {
                 ))}
               </TextField>
               {keyHint ? (
-                <Button size="small" onClick={() => setKeySignature(keyHint.best)}>
+                <Button
+                  size="small"
+                  onClick={() => setKeySignature(keyHint.best)}
+                >
                   Try {KEY_LABELS[keyHint.best]}
-                  {keyHint.saved > 0 ? ` (${keyHint.saved} fewer accidentals)` : ""}
+                  {keyHint.saved > 0
+                    ? ` (${keyHint.saved} fewer accidentals)`
+                    : ""}
                 </Button>
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  No other signature would print fewer accidentals than this one.
+                  No other signature would print fewer accidentals than this
+                  one.
                 </Typography>
               )}
             </Stack>
-            <TimeScoreView
-              score={score}
-              overrides={overrides}
-              beamBreaks={beamBreaks}
-              keySignature={keySignature}
-              keyChanges={keyChanges}
-              ottavas={ottavas}
-              onOttavaSuggestion={takeSuggestedOttavas}
-              onKeySuggestion={setKeyHint}
-              onSelectNote={setSelectedNote}
-              onSelectNotes={pickNotes}
-              onSelectRange={pickRange}
-              onSelectMarkedRange={pickMarkedRange}
-              renderOverrides={renderOverrides}
-              fingers={fingers}
-              onMovesRefused={sayRefused}
-              selectedRange={range}
-              clearSelectionsAt={clearedAt}
-              playheadSeconds={playheadSeconds}
-              onScrub={scrub}
-              scrollCursorAt={scrollCursorAt}
-            />
+            {/*
+              Capture, so the press is recorded before the sheet's own handlers run and open a
+              toolbox from it.
+            */}
+            <Box
+              onPointerDownCapture={(event) => {
+                pressedAt.current = pressedBox(event);
+              }}
+            >
+              <TimeScoreView
+                score={score}
+                overrides={overrides}
+                beamBreaks={beamBreaks}
+                keySignature={keySignature}
+                keyChanges={keyChanges}
+                ottavas={ottavas}
+                onOttavaSuggestion={takeSuggestedOttavas}
+                onKeySuggestion={setKeyHint}
+                onSelectNote={setSelectedNote}
+                onSelectNotes={pickNotes}
+                onSelectRange={pickRange}
+                onSelectMarkedRange={pickMarkedRange}
+                renderOverrides={renderOverrides}
+                fingers={fingers}
+                onMovesRefused={sayRefused}
+                selectedRange={range}
+                clearSelectionsAt={clearedAt}
+                playheadSeconds={playheadSeconds}
+                onScrub={scrub}
+                scrollCursorAt={scrollCursorAt}
+              />
+            </Box>
             {moveRefused ? (
               <Alert severity="warning" onClose={() => setMoveRefused(null)}>
                 {moveRefused}
@@ -1131,7 +1380,11 @@ export function RhythmPage() {
               changes speed, which note you renamed and where you broke a beam are not in the
               recording at all, and re-deciding them is the actual work.
             */}
-            <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
               <Button
                 variant="outlined"
                 onClick={() => void save()}
@@ -1146,12 +1399,17 @@ export function RhythmPage() {
                 </Typography>
               ) : saved ? (
                 <Typography variant="body2" color="text.secondary">
-                  Last saved as {FIGURE_LABELS[saved.anchorFigure]} = {saved.anchorMs.toFixed(0)}{" "}
-                  ms{saved.keySignature ? `, in ${KEY_LABELS[saved.keySignature]}` : ""}.
+                  Last saved as {FIGURE_LABELS[saved.anchorFigure]} ={" "}
+                  {saved.anchorMs.toFixed(0)} ms
+                  {saved.keySignature
+                    ? `, in ${KEY_LABELS[saved.keySignature]}`
+                    : ""}
+                  .
                 </Typography>
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  Nothing saved yet, so this reading goes when you leave the tab.
+                  Nothing saved yet, so this reading goes when you leave the
+                  tab.
                 </Typography>
               )}
             </Stack>
@@ -1161,12 +1419,17 @@ export function RhythmPage() {
               be clicked to bring it back, so the only honest place for the undo is here, where it is
               visible whether or not anything is selected.
             */}
-            <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
               {hiddenNotes.size === 0 && handOverrides.size === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  Click a notehead to open the note toolbox. Hold Command (Control on Windows) and
-                  click more to build a set: a finger number, a beam break, a move to the other staff
-                  or a deletion then applies to the whole set at once.
+                  Click a notehead to open the note toolbox. Hold Command
+                  (Control on Windows) and click more to build a set: a finger
+                  number, a beam break, a move to the other staff or a deletion
+                  then applies to the whole set at once.
                 </Typography>
               ) : (
                 <>
@@ -1174,7 +1437,9 @@ export function RhythmPage() {
                     {hiddenNotes.size > 0
                       ? `${hiddenNotes.size} note${hiddenNotes.size === 1 ? "" : "s"} off the page`
                       : null}
-                    {hiddenNotes.size > 0 && handOverrides.size > 0 ? " \u00b7 " : null}
+                    {hiddenNotes.size > 0 && handOverrides.size > 0
+                      ? " \u00b7 "
+                      : null}
                     {handOverrides.size > 0
                       ? `${handOverrides.size} note${
                           handOverrides.size === 1 ? "" : "s"
@@ -1183,12 +1448,18 @@ export function RhythmPage() {
                     . The recording still has every one of them.
                   </Typography>
                   {hiddenNotes.size > 0 ? (
-                    <Button size="small" onClick={() => setHiddenNotes(new Set())}>
+                    <Button
+                      size="small"
+                      onClick={() => setHiddenNotes(new Set())}
+                    >
                       Bring them all back
                     </Button>
                   ) : null}
                   {handOverrides.size > 0 ? (
-                    <Button size="small" onClick={() => setHandOverrides(new Map())}>
+                    <Button
+                      size="small"
+                      onClick={() => setHandOverrides(new Map())}
+                    >
                       Undo every move
                     </Button>
                   ) : null}
@@ -1218,7 +1489,7 @@ export function RhythmPage() {
               )} → ${formatSeconds((range.toColumn * frameMs) / 1000)}`
             : undefined
         }
-        initialPosition={{ x: 24, y: 140 }}
+        initialPosition={framesAt ?? { x: 24, y: 140 }}
         onClose={closeFrames}
       >
         <Stack spacing={1.5}>
@@ -1301,7 +1572,10 @@ export function RhythmPage() {
                     setKeyChanges(
                       clearKeySignatureRange(
                         keyChanges,
-                        { fromFrame: range.fromColumn, toFrame: range.toColumn },
+                        {
+                          fromFrame: range.fromColumn,
+                          toFrame: range.toColumn,
+                        },
                         keySignature as KeySignature,
                         score.envelope.frameCount,
                       ),
@@ -1317,9 +1591,16 @@ export function RhythmPage() {
           {frameTab === "octave" ? (
             <Stack spacing={1}>
               {(["left", "right"] as const).map((side) => {
-                const active = range ? ottavaAtFrame(ottavas, side, range.fromColumn) : undefined;
+                const active = range
+                  ? ottavaAtFrame(ottavas, side, range.fromColumn)
+                  : undefined;
                 return (
-                  <Stack key={side} direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+                  <Stack
+                    key={side}
+                    direction="row"
+                    spacing={0.75}
+                    sx={{ alignItems: "center" }}
+                  >
                     <Typography variant="body2" sx={{ minWidth: 34 }}>
                       {side === "left" ? "L" : "R"}
                     </Typography>
@@ -1330,8 +1611,12 @@ export function RhythmPage() {
                         label={choice.label}
                         title={choice.hint}
                         disabled={!range || !score}
-                        color={active?.kind === choice.kind ? "secondary" : "default"}
-                        variant={active?.kind === choice.kind ? "filled" : "outlined"}
+                        color={
+                          active?.kind === choice.kind ? "secondary" : "default"
+                        }
+                        variant={
+                          active?.kind === choice.kind ? "filled" : "outlined"
+                        }
                         onClick={() => {
                           if (!range || !score) return;
                           // Touching a chip is the reader deciding, and a decision outlasts every
@@ -1405,13 +1690,17 @@ export function RhythmPage() {
 
       <ToolboxDialog
         open={notesToolbox && selectedNotes.length > 0}
-        title={selectedNotes.length === 1 ? "Note" : `${selectedNotes.length} notes`}
+        title={
+          selectedNotes.length === 1 ? "Note" : `${selectedNotes.length} notes`
+        }
         subtitle={
           // The columns, each said once. A chord is three notes at one moment, and printing that
           // moment three times reads as three moments.
           selectedNotes.length > 0
             ? (() => {
-                const columns = [...new Set(selectedNotes.map(frameOf))].sort((a, z) => a - z);
+                const columns = [...new Set(selectedNotes.map(frameOf))].sort(
+                  (a, z) => a - z,
+                );
                 return (
                   columns
                     .slice(0, 4)
@@ -1421,7 +1710,7 @@ export function RhythmPage() {
               })()
             : undefined
         }
-        initialPosition={{ x: 420, y: 140 }}
+        initialPosition={notesAt ?? { x: 420, y: 140 }}
         onClose={closeNotes}
       >
         <Stack spacing={1.5}>
@@ -1438,12 +1727,18 @@ export function RhythmPage() {
               Fingering
             </Typography>
           </Divider>
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: "center", flexWrap: "wrap" }}
+          >
             <ButtonGroup size="small">
               {FINGERS.map((finger) => (
                 <Button
                   key={finger}
-                  variant={pickedFingers.includes(finger) ? "contained" : "outlined"}
+                  variant={
+                    pickedFingers.includes(finger) ? "contained" : "outlined"
+                  }
                   onClick={() => pressFinger(finger)}
                   data-finger={finger}
                 >
@@ -1453,7 +1748,9 @@ export function RhythmPage() {
             </ButtonGroup>
             <Button
               size="small"
-              disabled={!selectedNotes.some((noteKey) => fingers[noteKey] !== undefined)}
+              disabled={
+                !selectedNotes.some((noteKey) => fingers[noteKey] !== undefined)
+              }
               onClick={() => {
                 setFingerDraft({ forSelection: selectionKey, picked: [] });
                 applyFingers([], selectedNotes, oneChord);
@@ -1474,14 +1771,17 @@ export function RhythmPage() {
             </Typography>
           </Divider>
           <Typography variant="caption" color="text.secondary">
-            The split is worked out by an algorithm that cannot see your hands. Where it is wrong,
-            say so — the matrix is not touched and the note can come back at any time.
+            The split is worked out by an algorithm that cannot see your hands.
+            Where it is wrong, say so — the matrix is not touched and the note
+            can come back at any time.
           </Typography>
           <Stack direction="row" spacing={1}>
             <Button
               size="small"
               variant="outlined"
-              disabled={selectedNotes.every((noteKey) => handOf(noteKey) === "right")}
+              disabled={selectedNotes.every(
+                (noteKey) => handOf(noteKey) === "right",
+              )}
               onClick={() => moveSelected("right")}
             >
               Play with the right hand
@@ -1489,7 +1789,9 @@ export function RhythmPage() {
             <Button
               size="small"
               variant="outlined"
-              disabled={selectedNotes.every((noteKey) => handOf(noteKey) === "left")}
+              disabled={selectedNotes.every(
+                (noteKey) => handOf(noteKey) === "left",
+              )}
               onClick={() => moveSelected("left")}
             >
               Play with the left hand
@@ -1504,7 +1806,10 @@ export function RhythmPage() {
           <Button
             size="small"
             variant="outlined"
-            disabled={selectedChords.partial.length > 0 || selectedChords.whole.length === 0}
+            disabled={
+              selectedChords.partial.length > 0 ||
+              selectedChords.whole.length === 0
+            }
             onClick={toggleBeamBreak}
           >
             {selectedChords.whole.length > 0 &&
@@ -1536,7 +1841,8 @@ export function RhythmPage() {
                   onChange={(event) =>
                     setOverrides((current) => ({
                       ...current,
-                      [figureKeyOf(selectedNote)]: event.target.value as FigureName,
+                      [figureKeyOf(selectedNote)]: event.target
+                        .value as FigureName,
                     }))
                   }
                   sx={{ minWidth: 200 }}
@@ -1566,13 +1872,21 @@ export function RhythmPage() {
           ) : null}
 
           <Divider />
-          <Button size="small" color="error" variant="outlined" onClick={hideSelected}>
-            Take {selectedNotes.length === 1 ? "this note" : `these ${selectedNotes.length} notes`}{" "}
+          <Button
+            size="small"
+            color="error"
+            variant="outlined"
+            onClick={hideSelected}
+          >
+            Take{" "}
+            {selectedNotes.length === 1
+              ? "this note"
+              : `these ${selectedNotes.length} notes`}{" "}
             off the page
           </Button>
           <Typography variant="caption" color="text.secondary">
-            The recording keeps them. Only the drawing stops asking for them, and the undo is under
-            the sheet.
+            The recording keeps them. Only the drawing stops asking for them,
+            and the undo is under the sheet.
           </Typography>
         </Stack>
       </ToolboxDialog>
