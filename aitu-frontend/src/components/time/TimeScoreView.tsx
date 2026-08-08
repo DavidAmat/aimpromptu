@@ -9,7 +9,7 @@
 
 import { useEffect, useRef } from "react";
 import Box from "@mui/material/Box";
-import { GridNotationRenderer, type SparseMatrix } from "@aimpromptu/grid-notation";
+import { GridNotationRenderer, placeCursor, type SparseMatrix } from "@aimpromptu/grid-notation";
 import type { FigureName, TimeScorePayload } from "../../api";
 
 export interface TimeScoreViewProps {
@@ -35,6 +35,16 @@ export interface TimeScoreViewProps {
   onSelectRange?: (range: { fromColumn: number; toColumn: number }) => void;
   /** Falls back to the container width when the layout has not settled yet. */
   availableWidth?: number;
+  /**
+   * Where the recording is, in seconds. Draws a line down the staves at that moment.
+   *
+   * A second is turned into a column by dividing, because a column is a fixed slice of wall clock
+   * and nothing about the music is involved. The line then interpolates inside the column, so it
+   * arrives at each note when the note sounds even though columns are not all the same width.
+   *
+   * Leave it out, or pass `null`, and no line is drawn.
+   */
+  playheadSeconds?: number | null;
 }
 
 export function TimeScoreView({
@@ -44,8 +54,12 @@ export function TimeScoreView({
   onSelectNote,
   onSelectRange,
   availableWidth,
+  playheadSeconds,
 }: TimeScoreViewProps) {
   const host = useRef<HTMLDivElement | null>(null);
+  const playhead = useRef<HTMLDivElement | null>(null);
+  const renderer = useRef<GridNotationRenderer | null>(null);
+  const system = useRef<number | null>(null);
 
   useEffect(() => {
     const container = host.current;
@@ -70,7 +84,7 @@ export function TimeScoreView({
       }
     }
 
-    const renderer = new GridNotationRenderer(container, {
+    const drawn = new GridNotationRenderer(container, {
       frameCount: score.envelope.frameCount,
       // A column is `frameMs` of wall clock. The renderer only uses this to turn a column into a
       // moment for the timestamps; nothing about the music is derived from it.
@@ -112,10 +126,64 @@ export function TimeScoreView({
       onFrameRangeSelect: (range) => onSelectRange?.(range),
     });
 
-    return () => renderer.destroy?.();
+    renderer.current = drawn;
+    return () => {
+      renderer.current = null;
+      drawn.destroy?.();
+    };
   }, [score, overrides, beamBreaks, onSelectNote, onSelectRange, availableWidth]);
 
-  return <Box ref={host} sx={{ width: "100%", overflowX: "auto" }} />;
+  // The line is moved rather than redrawn. At sixty ticks a second a full re-render would rebuild
+  // every note sixty times to move one line a few pixels, which is the whole cost of the page.
+  useEffect(() => {
+    const marker = playhead.current;
+    const drawn = renderer.current;
+    if (!marker) return;
+
+    const render = drawn?.getLastRender();
+    if (playheadSeconds === null || playheadSeconds === undefined || !render) {
+      marker.style.display = "none";
+      return;
+    }
+
+    const frames = (playheadSeconds * 1000) / score.envelope.frameMs;
+    const placement = placeCursor(render, frames);
+    if (!placement) {
+      marker.style.display = "none";
+      return;
+    }
+
+    marker.style.display = "block";
+    marker.style.left = `${placement.x.toFixed(2)}px`;
+    marker.style.top = `${placement.topY.toFixed(2)}px`;
+    marker.style.height = `${placement.height.toFixed(2)}px`;
+
+    // Only when the music moves to another line. Scrolling on every tick would fight the reader.
+    if (placement.systemIndex !== system.current) {
+      system.current = placement.systemIndex;
+      marker.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    }
+  }, [playheadSeconds, score.envelope.frameMs]);
+
+  return (
+    <Box sx={{ width: "100%", overflowX: "auto" }}>
+      <Box sx={{ position: "relative", display: "inline-block", minWidth: "100%" }}>
+        <Box ref={host} />
+        <Box
+          ref={playhead}
+          sx={{
+            position: "absolute",
+            display: "none",
+            width: "2px",
+            borderRadius: "1px",
+            bgcolor: "primary.main",
+            opacity: 0.75,
+            pointerEvents: "none",
+          }}
+        />
+      </Box>
+    </Box>
+  );
 }
 
 /**

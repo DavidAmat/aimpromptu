@@ -121,6 +121,9 @@ export function RhythmPage() {
    */
   const [stretches, setStretches] = useState<Stretch[]>([]);
   const [range, setRange] = useState<{ fromColumn: number; toColumn: number } | null>(null);
+  // Where the recording is, in seconds, while it plays. `null` when nothing is playing, which is
+  // what hides the line on the staves.
+  const [playheadSeconds, setPlayheadSeconds] = useState<number | null>(null);
   const [newAnchorMs, setNewAnchorMs] = useState(320);
 
   /**
@@ -387,6 +390,7 @@ export function RhythmPage() {
             <ScorePlayer
               audioUuid={audioUuid}
               scoreSeconds={(score.envelope.frameCount * score.envelope.frameMs) / 1000}
+              onTime={setPlayheadSeconds}
             />
             <TimeScoreView
               score={score}
@@ -394,6 +398,7 @@ export function RhythmPage() {
               beamBreaks={beamBreaks}
               onSelectNote={setSelectedNote}
               onSelectRange={setRange}
+              playheadSeconds={playheadSeconds}
             />
             <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
               {selectedNote ? (

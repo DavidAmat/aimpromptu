@@ -144,7 +144,7 @@ overrides and beam breaks.
 - [x] P7.6 `[AITU]` Library surfaces `needsRederivation` — *done in P4.5; the audio list and the Rhythm tab both print the reason*
 - [x] P7.7 `[AITU]` Remove the BPM input from every tab
 - [x] P7.8 `[AITU]` **Break the beam here** on the selected note, beside the figure picker (D-34)
-- [ ] P7.9 `[AITU]` A playhead moving along the staff during playback — **not started**
+- [x] P7.9 `[AITU]` A playhead moving along the staff during playback — *`placeCursor` was already in the package; clicking the progress bar seeks, and a refused `play()` now says so*
 - [ ] P7.10 `[AITU]` Save a named rhythm with the piece — **not started**; ladder, overrides and beam breaks all live in the tab's state and go when it does
 - [x] P7.11 `[AITU]` Retire the older tempo-based tabs — *done in P4.2; there were five, not four: Matrix, Piano Roll, Notes Falling, Notes Falling (raw) and Music Notation*
 
