@@ -119,7 +119,7 @@ Working. The unticked boxes are deletions blocked on P4.5, plus one task the con
 ## [p] Phase 6 — Renderer: figures, frame groups, no bars `[vexflow-v2]`
 
 - [x] P6.1 `[GN]` `figure-selection.ts` consumes the payload's figures (`printedFigureFor`) — *the tie machinery is still present and goes with P6.9*
-- [ ] P6.2 `[GN]` Delete `STAFF_SPACES_BY_BEATS` — **blocked on P4.5**; spacing is already content-measured and does not read it for a time score
+- [x] P6.2 `[GN]` Delete `STAFF_SPACES_BY_BEATS` — *the engraved table and its two width helpers are gone; widths are measured from content*
 - [ ] P6.3 `[GN]` Delete `metre.ts` and the time-signature path — **blocked on P4.5**; already unused by a time score
 - [ ] P6.4 `[GN]` Frame groups and frame measures drawn from `LayoutHints` — **not started**; the fields are in the contract and the payload, the ruler does not read them yet
 - [ ] P6.5 `[GN]` Passage headers on the staff — **not started**; the frontend prints `negra = 480 ms · ≈125 BPM` above the sheet instead
