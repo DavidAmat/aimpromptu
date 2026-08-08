@@ -1,18 +1,19 @@
 /**
  * Every route path in one place. Nothing hardcodes a URL string: navigation,
  * the top bar and the Playground tab strip all read from here.
+ *
+ * The Playground had seven tabs. Five of them drew a matrix at a chosen tempo
+ * and granularity, and P4.2 removed that model from the backend, so they were
+ * retired with it: Matrix, Piano Roll, Notes Falling, Notes Falling (raw) and
+ * Music Notation. What they showed is either gone by design (a beats-based
+ * score) or waiting to be rebuilt on the wall clock.
  */
 
 export const ROUTES = {
   youtube: "/youtube",
   playground: "/playground",
   playgroundInput: "/playground/input",
-  playgroundMatrix: "/playground/matrix",
-  playgroundPianoRoll: "/playground/piano-roll",
-  playgroundNotesFalling: "/playground/notes-falling",
-  playgroundNotesFallingRaw: "/playground/notes-falling-raw",
   playgroundRhythm: "/playground/rhythm",
-  playgroundNotation: "/playground/notation",
   library: "/library",
   libraryPlay: (id: string) => `/library/play/${id}`,
 } as const;
@@ -28,10 +29,5 @@ export const TOP_SECTIONS = [
 
 export const PLAYGROUND_TABS = [
   { label: "Upload / Input", to: ROUTES.playgroundInput },
-  { label: "Matrix", to: ROUTES.playgroundMatrix },
-  { label: "Piano Roll", to: ROUTES.playgroundPianoRoll },
-  { label: "Notes Falling", to: ROUTES.playgroundNotesFalling },
-  { label: "Notes Falling (raw)", to: ROUTES.playgroundNotesFallingRaw },
   { label: "Rhythm", to: ROUTES.playgroundRhythm },
-  { label: "Music Notation", to: ROUTES.playgroundNotation },
 ];

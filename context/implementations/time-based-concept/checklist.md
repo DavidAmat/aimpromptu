@@ -27,10 +27,15 @@ Task detail: [`plan.md`](plan.md). Decisions: [`decisions.md`](decisions.md). Co
 >
 > What is left is the **deletions inside `vexflow-v2`** that were waiting on P4.5 (P5.4, P5.5, P6.2,
 > P6.3, P6.8, P6.9), three unbuilt pieces of the Rhythm screen (P7.3, P7.9, P7.10), **P1.7**, and
-> **Phase 8**. P4.5 wrote the migration but **has not been run on `data/`**: see its report §9.
+> **Phase 8**.
 >
-> **Copy `aitu-backend/data/` outside the repository before P4.5 writes anything.** `data/audio/**`
-> is gitignored, so the recorded notes exist in one place only.
+> **The migration has now been run** (2026-08-08, with `--apply`). `data/` holds the recording, its
+> metadata and `events.json`, and nothing else. The seven files the old pipeline wrote, and a full
+> copy of the tree as it was before, are parked in `_to_delete/old-matrices/` for David to remove.
+>
+> **The whole refactor is committed** on the branch `time-based-concept`, commit `9639aed`. It was
+> uncommitted until then, which is what made the 2026-08-08 incident recoverable only in part: see
+> `progress/2026-08-08-overwrite-and-recovery.md`.
 
 ---
 
