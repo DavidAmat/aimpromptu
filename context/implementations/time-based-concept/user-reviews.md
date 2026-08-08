@@ -72,15 +72,31 @@ At the end, after the tresillos, the left hand plays two long runs — sixteen c
 sixteen semicorcheas, climbing two octaves and coming back. Each is **one beam of sixteen**, drawn
 flat and far above the staff. That is what step 7b is about.
 
-### 5. Hear it against the sheet
+### 5. Hear it against the sheet, and see where you are
 
 Press **Play the recording** above the staff. What plays is the recording itself, never anything
 rebuilt from the page. If the notes you see and the notes you hear drift apart, the page is wrong.
 
+A **line runs down both staves** at the moment the recording is at, and the page scrolls when the
+music reaches the next system. The line is read from the recording sixty times a second, so it does
+not drift away from the sound the way a timer of its own would.
+
+**Click the bar under the buttons** to move to a point in the piece. The recording and the line both
+jump there, which is how you look at one particular passage without waiting for the piece to reach
+it.
+
 ### 6. Change your mind about the whole piece
 
-Go back to step 3, click the **240 ms** bar instead and name that one the negra, then press
-**Write the sheet** again.
+Two ways, and they are worth trying in this order.
+
+**Write it longer or shorter.** Under the name there are two buttons: **Write it one step longer**
+and **Write it one step shorter**. Press one and then **Write the sheet**. The same playing comes
+back in longer or shorter note values: `negra = 480 ms` becomes `blanca = 480 ms`, every pile in the
+plot is relabelled, and a page of semicorcheas becomes a page of corcheas. Neither reading is more
+correct — pick the one that is easier to read.
+
+**Or name a different pile.** Go back to step 3, click the **240 ms** bar instead and name that one
+the negra, then press **Write the sheet** again.
 
 Every figure moves one step up the ladder: what was a negra is now a blanca, and the fastest run is
 now semicorcheas. Nothing is re-timed and nothing is reordered — the piece you hear is the same
@@ -122,6 +138,18 @@ One case it *does* make for you: a run that comes back down to its own bottom no
 there automatically, because a figure returning to where it started is two figures. You only need to
 say where that is not the answer.
 
+### 7c. Keep your reading
+
+Everything you have done since step 3 — which pile is the beat, the notes you renamed, the beams you
+broke — is yours, and none of it is in the recording. Press **Save this rhythm with the piece**
+under the staff.
+
+Reload the browser and open **Rhythm** again on the same piece. The anchor, the renamed notes and the
+beam breaks should all be back, and the line under the button should say when you last saved.
+
+Transcribing the piece again clears it on purpose: a saved reading is a set of column numbers over
+the notes that were there before, and a new transcription is a different set of notes.
+
 ### 8. If the piece changes speed
 
 Some pieces slow down or speed up halfway through. Under **Does the piece change speed?**:
@@ -161,9 +189,9 @@ as a mix of dotted eighths and sixteenths, which is the ugliness this refactor e
 
 | Screen | State |
 |---|---|
-| A marker moving along the staff while the recording plays | not built. The bar under the buttons shows how far through you are. |
-| Saving a named rhythm with the piece | not built. Naming it again takes one click. |
-| Making the whole piece one step longer or shorter in one go | not built. Renaming the gap in step 3 does the same thing today. |
+| Shifting **one stretch** a step longer, rather than the whole piece | not built. The buttons in step 6 move every stretch together, because the score request carries one figure name for all of them. |
+| Passage headers printed on the staff itself | not built. The stretch list under **Does the piece change speed?** says the same thing above the sheet instead. |
+| Dashed lines and clickable groups from the score's own layout hints | not built. The ruler draws its own. |
 
 ## What was removed
 
