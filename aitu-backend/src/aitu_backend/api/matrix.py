@@ -14,14 +14,15 @@ transposing, importing and exporting an envelope. They were deleted in P4.2 with
 the Playground tabs that called them.
 """
 
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import store
 from aitu_backend.audio.store import AudioNotFound
+from aitu_backend.matrix.keys import LOWEST_MIDI
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.transcription import jobs, pipeline
 from aitu_backend.transcription.artifacts import drop_artifacts
@@ -92,6 +93,13 @@ class RawNoteEvent(BaseModel):
     #: ``12`` or ``24`` when a note that far above was struck alongside this one,
     #: which is the octave-masking signature. Only set on artifacts.
     octave_below: int | None = Field(None, alias="octaveBelow")
+    #: Which hand plays it, as the standard split decides at ``frameMs``.
+    #:
+    #: A label, not a time. The start and end above stay exactly as the engine
+    #: reported them; this only says which of the two hands the same note ended
+    #: up in, so a view can colour it. ``None`` means the split could not be run
+    #: or did not place this note — a view should draw it rather than hide it.
+    hand: Literal["right", "left"] | None = None
 
 
 class RawEvents(BaseModel):
@@ -112,12 +120,43 @@ class RawEvents(BaseModel):
     artifact_count: int = Field(0, alias="artifactCount")
     #: Of those, how many sit exactly an octave or two under a struck note.
     octave_phantom_count: int = Field(0, alias="octavePhantomCount")
+    #: The column length the ``hand`` labels were decided at. Reported so a view
+    #: can say what it is showing; it does not affect any time in ``events``.
+    frame_ms: float = Field(DEFAULT_FRAME_MS, alias="frameMs")
     events: list[RawNoteEvent]
 
 
 def _audio_or_404(audio_uuid: str) -> None:
     if not store.exists(audio_uuid):
         raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
+
+
+def _hand_labels(audio_uuid: str, frame_ms: float) -> dict[tuple[int, int], str]:
+    """``(row, column) -> "right" | "left"`` for every onset, or an empty map.
+
+    The split runs on a grid and the events do not, so this is a lookup keyed by
+    where each onset landed on that grid rather than a value carried on the note.
+    Nothing here is stored: the answer is re-derived per request from the same
+    ``events.json`` the sheet is drawn from, which is what stops a colour on this
+    page from disagreeing with a stem direction on the other one.
+
+    A failure is swallowed on purpose. This is a decoration on an endpoint whose
+    job is to show the transcription verbatim, and a piece that cannot be split
+    still has notes worth looking at.
+    """
+    try:
+        hands = pipeline.hands_of(audio_uuid, frame_ms=frame_ms)
+    except Exception:  # pragma: no cover - the split is advisory here
+        return {}
+    if hands is None:
+        return {}
+
+    labels: dict[tuple[int, int], str] = {}
+    for name, matrix in (("left", hands.left), ("right", hands.right)):
+        for column in range(matrix.frame_count):
+            for row in matrix.onsets_in_column(column):
+                labels[(row, column)] = name
+    return labels
 
 
 @router.get("/engines")
@@ -185,12 +224,19 @@ def job_status(job_id: str) -> JobStatus:
     response_model=RawEvents,
     response_model_by_alias=True,
 )
-def get_raw_events(audio_uuid: str) -> RawEvents:
+def get_raw_events(
+    audio_uuid: str,
+    frame_ms: float = Query(DEFAULT_FRAME_MS, alias="frameMs", gt=0),
+) -> RawEvents:
     """Every note the model reported, in seconds, with the discards marked.
 
     The artifact filter is applied here only as a label. Nothing is removed from
     the response, because the point of this route is to show what the rest of the
     system chose not to use.
+
+    ``frameMs`` decides nothing about the times below. It is the column length the
+    hand split is run at, and it is here so that a view colouring left against
+    right colours it the same way the sheet does.
     """
     _audio_or_404(audio_uuid)
     stored = pipeline.load_note_events(audio_uuid)
@@ -205,10 +251,25 @@ def get_raw_events(audio_uuid: str) -> RawEvents:
 
     report = drop_artifacts(stored.events)
     discarded = {id(dropped.event): dropped for dropped in report.dropped}
+    labels = _hand_labels(audio_uuid, frame_ms)
+    seconds_per_column = frame_ms / 1000.0
 
     events = []
     for event in stored.events:
         dropped = discarded.get(id(event))
+        row = event.midi_note - LOWEST_MIDI
+        column = int(event.start / seconds_per_column)
+        # The onset is looked for in the neighbouring columns too. Rounding a
+        # boundary onset the other way than the grid builder did would otherwise
+        # lose the label, and an unlabelled note is drawn in the wrong colour
+        # rather than merely uncoloured.
+        hand = (
+            event.hand
+            or labels.get((row, column))
+            or labels.get((row, column + 1))
+            or labels.get((row, column - 1))
+        )
+
         events.append(
             RawNoteEvent(
                 midi_note=event.midi_note,
@@ -217,6 +278,7 @@ def get_raw_events(audio_uuid: str) -> RawEvents:
                 velocity=event.velocity,
                 artifact=dropped is not None,
                 octave_below=dropped.octave_below if dropped else None,
+                hand=hand if hand in ("right", "left") else None,
             )
         )
 
@@ -226,6 +288,7 @@ def get_raw_events(audio_uuid: str) -> RawEvents:
         title=stored.title,
         artifact_count=len(report.dropped),
         octave_phantom_count=report.octave_phantoms,
+        frame_ms=frame_ms,
         events=events,
     )
 

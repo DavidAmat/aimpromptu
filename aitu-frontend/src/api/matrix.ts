@@ -50,6 +50,13 @@ export interface RawNoteEvent {
   artifact: boolean;
   /** 12 or 24 when a note that far above was struck alongside it. */
   octaveBelow: number | null;
+  /**
+   * Which hand plays it, as the standard split decides at `frameMs`. A label
+   * only — `start` and `end` above are still the engine's own milliseconds.
+   * `null` means the split placed nothing here, so draw it uncoloured rather
+   * than guessing.
+   */
+  hand: "right" | "left" | null;
 }
 
 /** `GET /matrix/{id}/events` — the transcription before any grid touched it. */
@@ -61,6 +68,8 @@ export interface RawEvents {
   artifactCount: number;
   /** Of those, how many sit exactly an octave or two under a struck note. */
   octavePhantomCount: number;
+  /** The column length the `hand` labels were decided at. */
+  frameMs: number;
   events: RawNoteEvent[];
 }
 
@@ -79,9 +88,18 @@ export const matrixApi = {
   job: (jobId: string, signal?: AbortSignal) =>
     request<JobStatus>(`/matrix/jobs/${jobId}`, { signal }),
 
-  /** The stored transcription in seconds, served verbatim. */
-  events: (audioUuid: string, signal?: AbortSignal) =>
-    request<RawEvents>(`/matrix/${audioUuid}/events`, { signal }),
+  /**
+   * The stored transcription in seconds, served verbatim.
+   *
+   * `frameMs` changes nothing about the times that come back. It is the column
+   * length the hand split runs at, so that a view colouring left against right
+   * agrees with the sheet drawn at the same setting.
+   */
+  events: (audioUuid: string, frameMs?: number, signal?: AbortSignal) =>
+    request<RawEvents>(`/matrix/${audioUuid}/events`, {
+      query: frameMs ? { frameMs } : undefined,
+      signal,
+    }),
 };
 
 export default matrixApi;

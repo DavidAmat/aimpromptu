@@ -13,6 +13,8 @@ import NotFoundPage from "./pages/NotFoundPage";
 import PerformancePage from "./pages/PerformancePage";
 import YouTubePage from "./pages/YouTubePage";
 import InputPage from "./pages/playground/InputPage";
+import NotesFallingPage from "./pages/playground/NotesFallingPage";
+import PianoRollPage from "./pages/playground/PianoRollPage";
 import RhythmPage from "./pages/playground/RhythmPage";
 
 export default function App() {
@@ -25,6 +27,8 @@ export default function App() {
         <Route path={ROUTES.playground} element={<PlaygroundLayout />}>
           <Route index element={<Navigate to={ROUTES.playgroundInput} replace />} />
           <Route path="input" element={<InputPage />} />
+          <Route path="piano-roll" element={<PianoRollPage />} />
+          <Route path="notes-falling" element={<NotesFallingPage />} />
           <Route path="rhythm" element={<RhythmPage />} />
         </Route>
 
