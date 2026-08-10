@@ -31,6 +31,8 @@ export interface PlayedNote {
   hand: PlayedHand;
   /** The pipeline discards this one as too short to have been played. */
   artifact: boolean;
+  /** A reader has taken it off the recording. */
+  removed: boolean;
   /** 12 or 24 when a note that far above was struck alongside it. */
   octaveBelow: number | null;
 }
@@ -59,6 +61,7 @@ export function playedNotesOf(events: RawNoteEvent[]): PlayedNote[] {
       velocity: event.velocity,
       hand: event.hand ?? "single",
       artifact: event.artifact,
+      removed: event.removed,
       octaveBelow: event.octaveBelow,
     });
   });

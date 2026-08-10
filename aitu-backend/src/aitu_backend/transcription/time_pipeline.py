@@ -118,6 +118,10 @@ def impose_granularity_and_split(
     sense at one frame length.
     """
     step = validate_frame_ms(frame_ms)
+    # A note a reader has taken off the recording never reaches the grid. This is the one place it
+    # is dropped, so every consumer of a matrix — the gap plot, the sheet, the printed page — agrees
+    # about it without any of them having to know the flag exists.
+    events = [event for event in events if not event.removed]
     build = events_to_time_matrix(
         events,
         duration_seconds,

@@ -16,7 +16,7 @@ the Playground tabs that called them.
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -93,6 +93,10 @@ class RawNoteEvent(BaseModel):
     #: ``12`` or ``24`` when a note that far above was struck alongside this one,
     #: which is the octave-masking signature. Only set on artifacts.
     octave_below: int | None = Field(None, alias="octaveBelow")
+    #: True when a reader has said this note was never played. It is still
+    #: returned — this route reports what the engine heard, and a correction you
+    #: cannot see is a correction you cannot undo.
+    removed: bool = False
     #: Which hand plays it, as the standard split decides at ``frameMs``.
     #:
     #: A label, not a time. The start and end above stay exactly as the engine
@@ -278,6 +282,7 @@ def get_raw_events(
                 velocity=event.velocity,
                 artifact=dropped is not None,
                 octave_below=dropped.octave_below if dropped else None,
+                removed=event.removed,
                 hand=hand if hand in ("right", "left") else None,
             )
         )
@@ -291,6 +296,87 @@ def get_raw_events(
         frame_ms=frame_ms,
         events=events,
     )
+
+
+class RemovedNote(BaseModel):
+    """One note to take off the recording, or put back, addressed as it was played."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    midi_note: int = Field(..., alias="midiNote", ge=0, le=127)
+    #: The event's own start in seconds, as ``GET /events`` reported it. Matched to
+    #: four decimal places, which is how the file stores it.
+    start: float = Field(..., ge=0)
+
+
+class RemovalRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    notes: list[RemovedNote] = Field(default_factory=list)
+    #: ``False`` puts the notes back. The same route both ways, because undoing is
+    #: the same decision as doing and should not be a different code path.
+    removed: bool = True
+
+
+class RemovalResult(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    changed: int
+    #: Notes whose pitch and start matched nothing that was recorded.
+    unmatched: int
+
+
+@router.put(
+    "/{audio_uuid}/events/removed",
+    response_model=RemovalResult,
+    response_model_by_alias=True,
+)
+def put_removed_events(audio_uuid: str, body: RemovalRequest = Body(...)) -> RemovalResult:
+    """Take notes off the recording, or put them back.
+
+    A transcriber invents notes — out of a pedal blur, out of an octave ringing
+    under a struck key — and the automatic filter only catches the ones short
+    enough to be obviously wrong. What is left, a player can see at a glance.
+
+    Their answer is written onto the note event, not kept as a filter on one
+    screen, for the reason the hand correction is: the printed length of a note is
+    the gap to the next onset, so removing one renames its neighbour. Everything
+    downstream is derived from these events, so writing it here is what makes the
+    roll, the gap plot and the sheet agree without any of them coordinating.
+
+    Addressed by pitch and start second, which is what the roll was drawing, so the
+    correction is independent of any column length.
+    """
+    _audio_or_404(audio_uuid)
+    stored = pipeline.load_note_events(audio_uuid)
+    if stored is None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Audio {audio_uuid} has no stored note events. "
+                "Run a transcription (POST /matrix/transcribe) to produce them."
+            ),
+        )
+
+    wanted = {(note.midi_note, round(note.start, 4)) for note in body.notes}
+    seen: set[tuple[int, float]] = set()
+    changed = 0
+    for event in stored.events:
+        key = (event.midi_note, round(event.start, 4))
+        if key not in wanted:
+            continue
+        seen.add(key)
+        if event.removed == body.removed:
+            continue
+        event.removed = body.removed
+        changed += 1
+
+    if changed:
+        pipeline.save_note_events(
+            audio_uuid, stored.events, stored.duration_seconds, stored.title
+        )
+
+    return RemovalResult(changed=changed, unmatched=len(wanted - seen))
 
 
 def _engine_error(exc: EngineUnavailable) -> HTTPException:  # pragma: no cover - helper

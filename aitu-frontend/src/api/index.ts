@@ -49,6 +49,8 @@ export type {
   JobStatus,
   RawEvents,
   RawNoteEvent,
+  RemovalResult,
+  RemovedNote,
   TranscribeRequest,
 } from "./matrix";
 

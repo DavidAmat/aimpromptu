@@ -56,6 +56,15 @@ class NoteEvent(BaseModel):
     #: the player's hands guesses it; a pianist looking at the page knows, and when
     #: they say so the answer is kept here and the matrix is built with it.
     hand: str | None = Field(None, pattern="^(right|left)$")
+    #: True when a reader has said this note was never played.
+    #:
+    #: Kept on the note for the same reason the hand is: it is a correction to the
+    #: *recording*, and everything downstream re-derives from here, so the matrix
+    #: is built without it and every consequence — the gaps, the figures, the
+    #: beams, the sheet — falls out by the ordinary path. Flagged rather than
+    #: deleted so it can be put back, and so the raw view can still show what the
+    #: engine actually reported.
+    removed: bool = False
 
     @model_validator(mode="after")
     def _check_order(self) -> "NoteEvent":

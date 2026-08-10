@@ -44,5 +44,5 @@ export const PLAYGROUND_TABS = [
   { label: "Upload / Input", to: ROUTES.playgroundInput },
   { label: "Piano Roll", to: ROUTES.playgroundPianoRoll },
   { label: "Notes Falling", to: ROUTES.playgroundNotesFalling },
-  { label: "Rhythm", to: ROUTES.playgroundRhythm },
+  { label: "Piano Sheet", to: ROUTES.playgroundRhythm },
 ];

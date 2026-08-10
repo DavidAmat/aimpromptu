@@ -4,6 +4,25 @@
  * literals here.
  */
 
+/*
+ * Montserrat, self-hosted. The label on a note rectangle is two or three
+ * characters inside a shape a few pixels tall, so it needs a face with even
+ * stroke weight and open counters at small sizes; the UI stack's fallbacks vary
+ * by machine and one of them would always look wrong. Variable weight, so 500
+ * and 600 cost no extra file.
+ *
+ * Served from `public/`, not a CDN: this app runs against a local backend and
+ * has no business needing the network to draw a note name. SIL OFL 1.1, see
+ * `public/fonts/montserrat-LICENSE.txt`.
+ */
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/montserrat.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /*
    * The app is light regardless of the OS or the browser. This declaration is

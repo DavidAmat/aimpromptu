@@ -51,6 +51,11 @@ export interface RawNoteEvent {
   /** 12 or 24 when a note that far above was struck alongside it. */
   octaveBelow: number | null;
   /**
+   * A reader has said this note was never played. Still returned, so the view
+   * can show it and offer to put it back.
+   */
+  removed: boolean;
+  /**
    * Which hand plays it, as the standard split decides at `frameMs`. A label
    * only — `start` and `end` above are still the engine's own milliseconds.
    * `null` means the split placed nothing here, so draw it uncoloured rather
@@ -71,6 +76,18 @@ export interface RawEvents {
   /** The column length the `hand` labels were decided at. */
   frameMs: number;
   events: RawNoteEvent[];
+}
+
+/** One note to take off the recording, or put back, as `GET /events` reported it. */
+export interface RemovedNote {
+  midiNote: number;
+  start: number;
+}
+
+export interface RemovalResult {
+  changed: number;
+  /** Notes whose pitch and start matched nothing that was recorded. */
+  unmatched: number;
 }
 
 export const matrixApi = {
@@ -98,6 +115,25 @@ export const matrixApi = {
   events: (audioUuid: string, frameMs?: number, signal?: AbortSignal) =>
     request<RawEvents>(`/matrix/${audioUuid}/events`, {
       query: frameMs ? { frameMs } : undefined,
+      signal,
+    }),
+
+  /**
+   * Take notes off the recording, or put them back with `removed: false`.
+   *
+   * Written onto the note events, so everything derived from them follows: the
+   * sheet, the gap plot and both animated views stop counting the note without
+   * any of them having to be told separately.
+   */
+  setRemoved: (
+    audioUuid: string,
+    notes: RemovedNote[],
+    removed: boolean,
+    signal?: AbortSignal,
+  ) =>
+    request<RemovalResult>(`/matrix/${audioUuid}/events/removed`, {
+      method: "PUT",
+      body: { notes, removed },
       signal,
     }),
 };

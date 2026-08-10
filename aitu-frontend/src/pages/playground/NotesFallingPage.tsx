@@ -2,19 +2,22 @@
  * `/playground/notes-falling` — the Synthesia view: notes drop onto the keyboard
  * and are swallowed at the moment they sound.
  *
- * Restored from Epic 8, with one substantive change. The window used to be
- * measured in **beats** — eight of them, converted to seconds through the piece's
- * BPM — so how far ahead you could see depended on a tempo the app no longer
- * has. It is now a plain lead time in seconds that you set yourself, which is
- * also the honest unit: what a player wants is "show me the next two seconds",
- * not "show me the next eight beats of a tempo somebody typed in".
+ * The window is a **lead time in seconds** that the reader sets. It used to be
+ * eight beats converted through the piece's BPM, so how far ahead you could see
+ * depended on a tempo the app no longer has — and seconds are the honest unit
+ * anyway: what a player wants is "show me the next two seconds".
  *
- * Everything else is as it was: only the notes inside the window are drawn, the
- * keyboard lights up as each rectangle crosses the line, and drop speed follows
- * the window so a longer lead means slower travel over the same distance.
+ * Notes can be picked here exactly as on the roll, and for the same reason: a
+ * note the transcriber invented is often easiest to spot as it falls. The
+ * geometry is the other way round — pitch across, time down — so the band maths
+ * differs, but the rules and the panel are shared.
+ *
+ * Like the roll, the SVG is measured rather than stretched, so the note names
+ * inside the rectangles are drawn undistorted and read horizontally instead of
+ * being turned on their side.
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -25,44 +28,77 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { Link } from "react-router-dom";
 import { audioApi } from "../../api";
+import NoteSelectionToolbox from "../../components/notes/NoteSelectionToolbox";
+import { useElementSize } from "../../hooks/useElementSize";
+import { useNoteRemoval } from "../../hooks/useNoteRemoval";
+import { useNoteSelection } from "../../hooks/useNoteSelection";
 import { usePlayedNotes } from "../../hooks/usePlayedNotes";
 import { ROUTES } from "../../layout/routes";
 import { formatTime } from "../../audio/time";
+import { fittingNoteLabel } from "../../music/noteNames";
 import { PIANO_WIDTH, pianoKeyByRow } from "../../piano/keyPositions";
 import Piano from "../../piano/Piano";
-import { describeEvents } from "../../playback/playedNotes";
+import { describeEvents, type PlayedNote } from "../../playback/playedNotes";
+import {
+  labelFontSize,
+  NOTE_LABEL_FAMILY,
+  NOTE_LABEL_FILL,
+  noteVisuals,
+} from "../../playback/noteVisuals";
 import { PlayerToolbar } from "../../playback/PlayerToolbar";
+import ProgressBar from "../../playback/ProgressBar";
 import { usePlayback, type PlaybackSource } from "../../playback/usePlayback";
+import { useSpacebarPlay } from "../../playback/useSpacebarPlay";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
-import { grays, handColors, PageContainer, SectionCard, semantic } from "../../ui";
+import { grays, PageContainer, SectionCard, semantic } from "../../ui";
 
-const PLOT_HEIGHT = 520;
+const PLOT_HEIGHT = "min(58vh, 620px)";
 /** How far ahead the window shows, in seconds. */
 const LEAD_OPTIONS = [1, 1.5, 2, 3, 4, 6, 8];
 const DEFAULT_LEAD = 3;
-/** Below this height a rectangle is a sliver, so it is floored to stay visible. */
-const MIN_NOTE_HEIGHT = 8;
+/** Below this a rectangle is a sliver, so it is floored to stay visible. */
+const MIN_NOTE_HEIGHT = 6;
+const BAND_THRESHOLD = 4;
+
+interface Band {
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  additive: boolean;
+}
 
 export function NotesFallingPage() {
   const { artifact, hasArtifact } = useWorkingArtifact();
-  const data = usePlayedNotes(artifact);
+  const removal = useNoteRemoval(artifact.audioUuid ?? null);
+  const data = usePlayedNotes(artifact, removal.revision);
+  const selection = useNoteSelection(data.notes);
+
   const [source, setSource] = useState<PlaybackSource>("piano");
   const [speed, setSpeed] = useState(1);
   const [leadSeconds, setLeadSeconds] = useState(DEFAULT_LEAD);
-  const [showArtifacts, setShowArtifacts] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const [rangeStart, setRangeStart] = useState(0);
   const [rangeEndOverride, setRangeEndOverride] = useState<number | null>(null);
+  const [band, setBand] = useState<Band | null>(null);
+  const [sizeRef, size] = useElementSize<HTMLDivElement>();
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   const rangeEnd = Math.max(
     rangeStart,
     Math.min(data.durationSeconds, rangeEndOverride ?? data.durationSeconds),
   );
 
+  const hiddenCount = data.notes.filter((note) => note.artifact || note.removed).length;
   const visibleNotes = useMemo(
-    () => (showArtifacts ? data.notes : data.notes.filter((note) => !note.artifact)),
-    [data.notes, showArtifacts],
+    () =>
+      showHidden ? data.notes : data.notes.filter((note) => !note.artifact && !note.removed),
+    [data.notes, showHidden],
   );
-  const audibleNotes = useMemo(() => data.notes.filter((note) => !note.artifact), [data.notes]);
+  const audibleNotes = useMemo(
+    () => data.notes.filter((note) => !note.artifact && !note.removed),
+    [data.notes],
+  );
 
   const originalAvailable = Boolean(data.peaks);
   const playback = usePlayback({
@@ -76,14 +112,98 @@ export function NotesFallingPage() {
       originalAvailable && data.audioUuid ? audioApi.fileUrl(data.audioUuid, true) : null,
   });
 
-  // Pixels per second of travel. The window is the whole plot, so a 3 s lead
-  // over a 520 px drop is ~173 px/s and a 6 s lead is half that.
-  const velocity = PLOT_HEIGHT / leadSeconds;
-  const windowedNotes = visibleNotes.filter((note) => {
-    const bottom = PLOT_HEIGHT - (note.startSeconds - playback.currentSeconds) * velocity;
-    const top = bottom - (note.endSeconds - note.startSeconds) * velocity;
-    return bottom >= 0 && top <= PLOT_HEIGHT;
-  });
+  const togglePlay = useCallback(() => {
+    if (playback.playing) playback.pause();
+    else void playback.play();
+  }, [playback]);
+  useSpacebarPlay(togglePlay, Boolean(data.events));
+
+  const width = size.width || 1;
+  const height = size.height || 1;
+  // Pixels per second of travel. The window is the whole plot, so a 3 s lead over
+  // a 600 px drop is 200 px/s and a 6 s lead is half that.
+  const velocity = height / leadSeconds;
+
+  /** A key's lane, as a fraction of the measured box. */
+  const lane = useCallback(
+    (row: number) => {
+      const key = pianoKeyByRow.get(row);
+      if (!key) return null;
+      return {
+        key,
+        x: (key.x / PIANO_WIDTH) * width,
+        w: (key.width / PIANO_WIDTH) * width,
+      };
+    },
+    [width],
+  );
+
+  /** Where a note's rectangle sits right now, or `null` if it is off the window. */
+  const placement = useCallback(
+    (note: PlayedNote) => {
+      const bottom = height - (note.startSeconds - playback.currentSeconds) * velocity;
+      const noteHeight = Math.max(
+        MIN_NOTE_HEIGHT,
+        (note.endSeconds - note.startSeconds) * velocity,
+      );
+      const top = bottom - noteHeight;
+      if (bottom < 0 || top > height) return null;
+      return { top, height: noteHeight };
+    },
+    [height, playback.currentSeconds, velocity],
+  );
+
+  const windowedNotes = useMemo(
+    () => visibleNotes.filter((note) => placement(note) !== null),
+    [placement, visibleNotes],
+  );
+
+  const pointIn = useCallback((event: { clientX: number; clientY: number }) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const bounds = svg.getBoundingClientRect();
+    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+  }, []);
+
+  const finishBand = useCallback(
+    (current: Band) => {
+      const dx = Math.abs(current.toX - current.fromX);
+      const dy = Math.abs(current.toY - current.fromY);
+      if (dx < BAND_THRESHOLD && dy < BAND_THRESHOLD) {
+        if (!current.additive) selection.clear();
+        return;
+      }
+      const left = Math.min(current.fromX, current.toX);
+      const right = Math.max(current.fromX, current.toX);
+      const top = Math.min(current.fromY, current.toY);
+      const bottom = Math.max(current.fromY, current.toY);
+      const covered = windowedNotes.filter((note) => {
+        const geometry = lane(note.row);
+        const place = placement(note);
+        if (!geometry || !place) return false;
+        return (
+          geometry.x + geometry.w > left &&
+          geometry.x < right &&
+          place.top + place.height > top &&
+          place.top < bottom
+        );
+      });
+      selection.pickMany(
+        covered.map((note) => note.id),
+        current.additive,
+      );
+    },
+    [lane, placement, selection, windowedNotes],
+  );
+
+  const removeSelected = async () => {
+    const present = selection.selected.filter((note) => !note.removed);
+    if (await removal.setRemoved(present, true)) selection.clear();
+  };
+  const restoreSelected = async () => {
+    const absent = selection.selected.filter((note) => note.removed);
+    if (await removal.setRemoved(absent, false)) selection.clear();
+  };
 
   if (!hasArtifact || !artifact.audioUuid) {
     return (
@@ -105,43 +225,51 @@ export function NotesFallingPage() {
   return (
     <PageContainer
       title="Notes Falling"
-      subtitle="Only the seconds ahead are drawn; the keyboard swallows each note as it sounds."
+      subtitle="Only the seconds ahead are drawn. Click a note to pick it, ⌘-click to add, or drag a band over several."
       wide
     >
       <SectionCard>
-        <PlayerToolbar
-          playback={playback}
-          source={source}
-          onSourceChange={setSource}
-          originalAvailable={originalAvailable}
-          speed={speed}
-          onSpeedChange={setSpeed}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          durationSeconds={data.durationSeconds}
-          onRangeChange={(start, end) => {
-            setRangeStart(start);
-            setRangeEndOverride(end);
-          }}
-          showArtifacts={showArtifacts}
-          onShowArtifactsChange={setShowArtifacts}
-          artifactCount={data.artifactCount}
-        >
-          <TextField
-            label="Look ahead"
-            select
-            size="small"
-            value={leadSeconds}
-            onChange={(event) => setLeadSeconds(Number(event.target.value))}
-            sx={{ width: 128 }}
+        <Stack spacing={1.5}>
+          <ProgressBar
+            playback={playback}
+            durationSeconds={data.durationSeconds}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+          />
+          <PlayerToolbar
+            playback={playback}
+            source={source}
+            onSourceChange={setSource}
+            originalAvailable={originalAvailable}
+            speed={speed}
+            onSpeedChange={setSpeed}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            durationSeconds={data.durationSeconds}
+            onRangeChange={(start, end) => {
+              setRangeStart(start);
+              setRangeEndOverride(end);
+            }}
+            showArtifacts={showHidden}
+            onShowArtifactsChange={setShowHidden}
+            artifactCount={hiddenCount}
           >
-            {LEAD_OPTIONS.map((option) => (
-              <MenuItem key={option} value={option}>
-                {option} s
-              </MenuItem>
-            ))}
-          </TextField>
-        </PlayerToolbar>
+            <TextField
+              label="Look ahead"
+              select
+              size="small"
+              value={leadSeconds}
+              onChange={(event) => setLeadSeconds(Number(event.target.value))}
+              sx={{ width: 128 }}
+            >
+              {LEAD_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option} s
+                </MenuItem>
+              ))}
+            </TextField>
+          </PlayerToolbar>
+        </Stack>
       </SectionCard>
 
       {data.error ? <Alert severity="error">{data.error}</Alert> : null}
@@ -168,76 +296,129 @@ export function NotesFallingPage() {
               overflow: "hidden",
             }}
           >
-            <svg
-              viewBox={`0 0 ${PIANO_WIDTH} ${PLOT_HEIGHT}`}
-              width="100%"
-              height="min(58vh, 620px)"
-              preserveAspectRatio="none"
-              style={{ display: "block" }}
-            >
-              <defs>
-                <clipPath id="falling-window">
-                  <rect x={0} y={0} width={PIANO_WIDTH} height={PLOT_HEIGHT} />
-                </clipPath>
-              </defs>
-
-              <g clipPath="url(#falling-window)">
+            <Box ref={sizeRef} sx={{ height: PLOT_HEIGHT, position: "relative" }}>
+              <svg
+                ref={svgRef}
+                width={width}
+                height={height}
+                viewBox={`0 0 ${width} ${height}`}
+                style={{
+                  display: "block",
+                  touchAction: "none",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                }}
+                onPointerDown={(event) => {
+                  if (event.button !== 0) return;
+                  const point = pointIn(event);
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  setBand({
+                    fromX: point.x,
+                    fromY: point.y,
+                    toX: point.x,
+                    toY: point.y,
+                    additive: event.metaKey || event.ctrlKey,
+                  });
+                }}
+                onPointerMove={(event) => {
+                  if (!band) return;
+                  const point = pointIn(event);
+                  setBand({ ...band, toX: point.x, toY: point.y });
+                }}
+                onPointerUp={(event) => {
+                  if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                    event.currentTarget.releasePointerCapture(event.pointerId);
+                  }
+                  if (band) finishBand(band);
+                  setBand(null);
+                }}
+              >
                 {windowedNotes.map((note) => {
-                  const key = pianoKeyByRow.get(note.row);
-                  if (!key) return null;
-                  const bottom =
-                    PLOT_HEIGHT - (note.startSeconds - playback.currentSeconds) * velocity;
-                  const height = Math.max(
-                    MIN_NOTE_HEIGHT,
-                    (note.endSeconds - note.startSeconds) * velocity,
-                  );
-                  const top = bottom - height;
+                  const geometry = lane(note.row);
+                  const place = placement(note);
+                  if (!geometry || !place) return null;
+                  const selected = selection.ids.has(note.id);
                   const active =
                     note.startSeconds <= playback.currentSeconds &&
                     playback.currentSeconds < note.endSeconds;
+                  const boxWidth = Math.max(4, geometry.w - 2);
+                  const visuals = noteVisuals(
+                    { hand: note.hand, active, selected, ghost: note.artifact || note.removed },
+                    place.height,
+                    boxWidth,
+                  );
+                  const fontSize = labelFontSize(boxWidth);
+                  const label = fittingNoteLabel(
+                    note.midiNote,
+                    boxWidth,
+                    place.height,
+                    fontSize,
+                  );
                   return (
-                    <g key={note.id}>
+                    <g
+                      key={note.id}
+                      // Addressable from the outside: the render check and any
+                      // browser automation need a handle on a specific note.
+                      data-note-id={note.id}
+                      data-note-selected={selected || undefined}
+                      style={{ cursor: "pointer" }}
+                      onPointerDown={(event) => {
+                        event.stopPropagation();
+                        selection.pick(note.id, event.metaKey || event.ctrlKey);
+                      }}
+                    >
                       <rect
-                        x={key.x + 1}
-                        y={top}
-                        width={Math.max(6, key.width - 2)}
-                        height={height}
-                        rx={3}
-                        fill={
-                          note.artifact
-                            ? "none"
-                            : active
-                              ? semantic.rightHand.sustain
-                              : handColors(note.hand).sustain
-                        }
-                        stroke={note.artifact ? semantic.status.warning : grays.slate}
-                        strokeWidth={note.artifact ? 1.5 : 1}
-                        strokeDasharray={note.artifact ? "4 3" : undefined}
+                        x={geometry.x + 1}
+                        y={place.top}
+                        width={boxWidth}
+                        height={place.height}
+                        rx={visuals.rx}
+                        fill={visuals.fill}
+                        stroke={visuals.stroke}
+                        strokeWidth={visuals.strokeWidth}
+                        strokeDasharray={visuals.strokeDasharray}
                       />
-                      {height >= 26 ? (
+                      {label ? (
                         <text
-                          x={key.x + key.width / 2}
-                          y={top + 8}
-                          fontSize={10}
-                          fill={note.artifact ? semantic.status.warning : grays.ink}
-                          transform={`rotate(90 ${key.x + key.width / 2} ${top + 8})`}
+                          x={geometry.x + 1 + boxWidth / 2}
+                          y={place.top + place.height / 2}
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fontSize={fontSize}
+                          fontFamily={NOTE_LABEL_FAMILY}
+                          fontWeight={600}
+                          fill={NOTE_LABEL_FILL}
+                          style={{ pointerEvents: "none", userSelect: "none" }}
                         >
-                          {key.es}
+                          {label}
                         </text>
                       ) : null}
                     </g>
                   );
                 })}
-              </g>
-              <line
-                x1={0}
-                x2={PIANO_WIDTH}
-                y1={PLOT_HEIGHT - 1}
-                y2={PLOT_HEIGHT - 1}
-                stroke={semantic.pressedKey}
-                strokeWidth={3}
-              />
-            </svg>
+
+                {band ? (
+                  <rect
+                    x={Math.min(band.fromX, band.toX)}
+                    y={Math.min(band.fromY, band.toY)}
+                    width={Math.abs(band.toX - band.fromX)}
+                    height={Math.abs(band.toY - band.fromY)}
+                    fill={`${semantic.status.info}22`}
+                    stroke={semantic.status.info}
+                    strokeDasharray="4 3"
+                  />
+                ) : null}
+
+                <line
+                  x1={0}
+                  x2={width}
+                  y1={height - 1.5}
+                  y2={height - 1.5}
+                  stroke={semantic.pressedKey}
+                  strokeWidth={3}
+                />
+              </svg>
+            </Box>
             <Piano
               width="100%"
               height="auto"
@@ -247,8 +428,8 @@ export function NotesFallingPage() {
           </Box>
           <Stack direction="row" spacing={2} sx={{ mt: 1, alignItems: "center", flexWrap: "wrap" }}>
             <Typography variant="caption" color="text.secondary">
-              {formatTime(playback.currentSeconds)} · {windowedNotes.length} in the window of{" "}
-              {visibleNotes.length}
+              {formatTime(playback.currentSeconds)} · {windowedNotes.length} in the window
+              {selection.selected.length > 0 ? ` · ${selection.selected.length} selected` : ""}
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ ml: "auto" }}>
               {describeEvents(data.events)}
@@ -256,6 +437,17 @@ export function NotesFallingPage() {
           </Stack>
         </SectionCard>
       ) : null}
+
+      <NoteSelectionToolbox
+        selected={selection.selected as PlayedNote[]}
+        // Top right. The default corner sits over the tabs and the transport,
+        // which are the two things a reader still needs while a selection is up.
+        busy={removal.busy}
+        error={removal.error}
+        onRemove={() => void removeSelected()}
+        onRestore={() => void restoreSelected()}
+        onClose={selection.clear}
+      />
     </PageContainer>
   );
 }
