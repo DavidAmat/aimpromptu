@@ -1768,6 +1768,7 @@ export function RhythmPage() {
                 selectedRange={range}
                 clearSelectionsAt={clearedAt}
                 playheadSeconds={playheadSeconds}
+                followPlayhead={playing}
                 onScrub={scrub}
                 scrollCursorAt={scrollCursorAt}
               />

@@ -153,6 +153,16 @@ export interface TimeScoreViewProps {
    */
   playheadSeconds?: number | null;
   /**
+   * Whether the recording is sounding.
+   *
+   * The page only follows the line onto a new stave while this is true. Following it at all times
+   * sounds harmless and is not: dragging the scrub bar sweeps the line through a hundred staves in
+   * a second, and each one scrolled the page, so the bar the reader was holding shot off the top of
+   * the window and the drag became impossible to finish. Moving the recording without playing it is
+   * something the reader is doing *to* the page, not something the page should chase.
+   */
+  followPlayhead?: boolean;
+  /**
    * The cursor was dragged to a new moment, in seconds. Move the recording there.
    *
    * Leave it out and the cursor is not draggable, which is what a printed view wants.
@@ -194,6 +204,7 @@ export function TimeScoreView({
   onSelectMarkedRange,
   availableWidth,
   playheadSeconds,
+  followPlayhead = false,
   onScrub,
   scrollCursorAt,
   onRendererChange,
@@ -463,12 +474,16 @@ export function TimeScoreView({
     marker.style.top = `${placement.topY.toFixed(2)}px`;
     marker.style.height = `${placement.height.toFixed(2)}px`;
 
-    // Only when the music moves to another line. Scrolling on every tick would fight the reader.
-    if (placement.systemIndex !== system.current) {
-      system.current = placement.systemIndex;
+    // Only while it is playing, and then only when the music moves to another line. Scrolling on
+    // every tick would fight the reader; scrolling while they are scrubbing takes the bar away from
+    // under their pointer. The index is still recorded when not following, so resuming does not
+    // jump on the first tick for a line the reader is already looking at.
+    const moved = placement.systemIndex !== system.current;
+    system.current = placement.systemIndex;
+    if (moved && followPlayhead) {
       marker.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     }
-  }, [playheadSeconds, score.envelope.frameMs]);
+  }, [followPlayhead, playheadSeconds, score.envelope.frameMs]);
 
   // Bring the cursor on screen because the page asked — space, or a click on the progress bar. The
   // recording may be four minutes down a page that wraps a hundred times, and playing something the

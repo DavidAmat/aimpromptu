@@ -15,6 +15,12 @@
  * different engine — an `<audio>` element playing the original recording, rather
  * than the synthesised clock the roll uses — and the reader should not be able to
  * tell which page they are on from the shape of the scrub bar.
+ *
+ * **It never scrolls the page.** Moving the recording and moving the reader are
+ * two different things, and a bar that did both could not be dragged on the
+ * sheet: each stave the line swept past scrolled the window, so the handle went
+ * out from under the pointer before the gesture was finished. Space is what
+ * takes the reader to the line.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -35,14 +41,6 @@ interface ProgressBarProps {
   /** The playable stretch, shaded on the track. Defaults to the whole piece. */
   rangeStart?: number;
   rangeEnd?: number;
-  /**
-   * Called once a gesture ends, never on every pixel of a drag.
-   *
-   * The sheet uses it to bring the cursor on screen. Doing that on every move
-   * would scroll the page out from under the pointer mid-drag, and the reader is
-   * usually watching the bar rather than the staves until they let go.
-   */
-  onAfterSeek?: () => void;
 }
 
 export function ProgressBar({
@@ -51,7 +49,6 @@ export function ProgressBar({
   onSeek,
   rangeStart = 0,
   rangeEnd = durationSeconds,
-  onAfterSeek,
 }: ProgressBarProps) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [scrubbing, setScrubbing] = useState(false);
@@ -75,10 +72,7 @@ export function ProgressBar({
   useEffect(() => {
     if (!scrubbing) return;
     const move = (event: PointerEvent) => onSeek(secondsAt(event.clientX));
-    const up = () => {
-      setScrubbing(false);
-      onAfterSeek?.();
-    };
+    const up = () => setScrubbing(false);
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
@@ -87,7 +81,7 @@ export function ProgressBar({
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
     };
-  }, [onAfterSeek, onSeek, scrubbing, secondsAt]);
+  }, [onSeek, scrubbing, secondsAt]);
 
   const fraction = Math.min(1, Math.max(0, currentSeconds / total));
   const rangeLeft = Math.min(1, Math.max(0, rangeStart / total));
@@ -123,7 +117,6 @@ export function ProgressBar({
           else if (event.key === "End") onSeek(total);
           else return;
           event.preventDefault();
-          onAfterSeek?.();
         }}
         sx={{
           position: "relative",

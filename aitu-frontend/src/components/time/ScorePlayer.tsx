@@ -241,17 +241,13 @@ export function ScorePlayer({
         through a five-minute recording meant a series of guesses. Sharing the
         component means the reader learns one control for the whole app.
       */}
-      <ProgressBar
-        currentSeconds={seconds}
-        durationSeconds={scoreSeconds}
-        onSeek={seekTo}
-        onAfterSeek={onScrollToCursor}
-      />
+      <ProgressBar currentSeconds={seconds} durationSeconds={scoreSeconds} onSeek={seekTo} />
       <Typography variant="caption" color="text.secondary">
         What plays is the recording itself, exactly as it was performed. Nothing here is reconstructed
         from the sheet, so the two can be compared by ear. The line on the staves below shows where
-        the recording is; drag that line to move it, or drag the handle on the bar above. Space
-        plays and pauses from wherever the line is standing.
+        the recording is; drag that line to move it, or drag the handle on the bar above — the page
+        stays where it is while you do. Space plays from wherever the line is standing and brings it
+        on screen.
       </Typography>
     </Stack>
   );
