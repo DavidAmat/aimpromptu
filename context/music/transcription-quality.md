@@ -1,3 +1,15 @@
+> **Updated 2026-08-10.** Layers 1 to 3 — the engine, the artifact filter and the hand split — are
+> still exactly as described, and the hand split gained two corrections in 2026-08-08's review
+> stream: it is charged for the ledger lines its assignments cost, and a reader can override it,
+> which is written onto the recording rather than onto the page.
+>
+> **Layer 4 no longer exists in the form described here.** There is no grid built from a BPM and a
+> note resolution, so the whole class of "played evenly, printed ragged" error that this document
+> attributes to layer 4 is retired: a column is 40 ms of real time and a figure is a label the
+> reader chooses. Read the layer-4 sections as history.
+> [`context/implementations/time-based-concept/CLOSURE.md`](../implementations/time-based-concept/CLOSURE.md)
+> says what replaced it.
+
 # Transcription quality: what goes wrong between audio and a printed figure
 
 How a note travels from a recording to a symbol on the page, and the four distinct

@@ -1,3 +1,23 @@
+> ## ✅ Retired 2026-08-10 — this class of bug cannot happen any more
+>
+> This runbook diagnosed "an evenly played passage prints as a mix of corcheas and semicorcheas".
+> The cause was arithmetic: playing was fitted to a grid of note figures built from a BPM, and no
+> human plays on a grid. **That grid was deleted on 2026-08-08.** A column is now a slice of real
+> time and a figure is a label the reader chooses, so there is nothing left to round against and no
+> BPM to be wrong about.
+>
+> The worked example at 00:46 that this document diagnoses is now a regression test
+> (`test_time_score_api.py`): F5, E5, C5 print as three equal corcheas.
+>
+> **What survives, and is a different problem.** A note the transcription engine never heard, or
+> heard twice, or put in the wrong hand — those are layers 1 to 3 in
+> [`context/music/transcription-quality.md`](../../context/music/transcription-quality.md) and this
+> runbook was never about them.
+>
+> Kept because the arithmetic below is the clearest explanation of *why* the model was changed. For
+> what replaced it, see
+> [`context/implementations/time-based-concept/CLOSURE.md`](../../context/implementations/time-based-concept/CLOSURE.md).
+
 > Context: [context/music/transcription-quality.md](../../context/music/transcription-quality.md)
 
 # An evenly played passage prints as a mix of corcheas and semicorcheas

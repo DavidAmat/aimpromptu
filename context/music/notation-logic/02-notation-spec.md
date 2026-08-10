@@ -1,3 +1,11 @@
+> ## ⚠ Partly obsolete — the tempo field is gone
+>
+> The text notation and the general shape of this contract still hold, but **`tempoBpm` no longer
+> exists**, and neither does any note-figure resolution. Since 2026-08-08 a matrix envelope carries
+> one header field, `frameMs` — how many milliseconds one column covers. The current contract is
+> [`context/implementations/time-based-concept/contract.md`](../../implementations/time-based-concept/contract.md);
+> where the two disagree, that one wins.
+
 # Notation contract
 
 Single source of truth for the music format shared by **aitu-backend** (parser) and

@@ -16,7 +16,8 @@ Special files:
 |---|---|
 | `issues.md` | Anything that contradicts a decision in `../decisions.md`. Append, never overwrite. |
 | `P4.1-artifact-inventory.md` | Required before Phase 4 touches storage. |
-| `P8.1-success-criteria.md` | One entry per criterion in `../PRD.md` §5. |
+| `P8.1-P8.10-the-review-stream.md` | The ten review-driven features of 2026-08-08. Written at closing because P8.9 and P8.10 had no report. |
+| ~~`P8.1-success-criteria.md`~~ | **Never written.** The verification phase was cancelled at closing; the final state of all six criteria is in `../checklist.md`. |
 
 ## What a report contains
 

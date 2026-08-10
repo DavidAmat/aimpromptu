@@ -42,23 +42,27 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 | `implementations/plan/epic-NN-*/` | 14 epic folders, each with an `epic-<shortname>-index.md`, story folders and task files |
 | [implementations/progress/README.md](implementations/progress/README.md) | Progress journal written by workers, one report per task |
 | [implementations/progress/2026-08-02-transcription-accuracy-session.md](implementations/progress/2026-08-02-transcription-accuracy-session.md) | Session: raw falling view, artifact filter, isochrony, Transkun, tempo-map groundwork |
+| [implementations/progress/2026-08-10-time-based-concept-closed.md](implementations/progress/2026-08-10-time-based-concept-closed.md) | The wall-clock refactor from start to close: what it cost, what was dropped, what to carry forward |
 
-### Time-based concept refactor (`context/implementations/time-based-concept/`)
+### Time-based concept refactor (`context/implementations/time-based-concept/`) — CLOSED 2026-08-10
 
-Wall-clock matrix columns and figure-as-label rendering. Spans **two repos** (`aimpromptu` and `vexflow-v2`); all progress is tracked here.
+Wall-clock matrix columns and figure-as-label rendering. Spanned **two repos** (`aimpromptu` and `vexflow-v2`); all progress is tracked here. **The plan is closed** — this folder is history. Start at `CLOSURE.md`.
 
 | File | Description |
 |------|-------------|
+| [implementations/time-based-concept/CLOSURE.md](implementations/time-based-concept/CLOSURE.md) | **Start here.** Why the plan closed, what shipped, what was dropped and why, and the duplicated P8 numbering |
 | [implementations/time-based-concept/README.md](implementations/time-based-concept/README.md) | Navigation + the cross-repo reporting rule |
 | [implementations/time-based-concept/PRD.md](implementations/time-based-concept/PRD.md) | Why, what changes, what is out of scope, success criteria |
-| [implementations/time-based-concept/decisions.md](implementations/time-based-concept/decisions.md) | D-01…D-31, the frozen decisions every task cites |
+| [implementations/time-based-concept/decisions.md](implementations/time-based-concept/decisions.md) | D-01…D-34, the frozen decisions every task cites. Still valid after closing |
 | [implementations/time-based-concept/contract.md](implementations/time-based-concept/contract.md) | Backend ↔ `@aimpromptu/grid-notation` data contract |
-| [implementations/time-based-concept/plan.md](implementations/time-based-concept/plan.md) | Phases 0–8 with tasks and dependencies |
-| [implementations/time-based-concept/checklist.md](implementations/time-based-concept/checklist.md) | THE status lookup for this refactor |
+| [implementations/time-based-concept/plan.md](implementations/time-based-concept/plan.md) | Phases 0–8 as planned. Historical: about a third of what shipped was never in it |
+| [implementations/time-based-concept/checklist.md](implementations/time-based-concept/checklist.md) | The final state of every box, with the two cancellations |
 | [implementations/time-based-concept/system-prompt-worker.md](implementations/time-based-concept/system-prompt-worker.md) | Template system prompt for worker agents on this refactor |
 | [implementations/time-based-concept/progress/README.md](implementations/time-based-concept/progress/README.md) | Where task reports go, including `vexflow-v2` work |
 | [implementations/time-based-concept/progress/issues.md](implementations/time-based-concept/progress/issues.md) | Append-only log of anything that contradicts a frozen decision; a worker who writes here stops |
-| [implementations/time-based-concept/user-reviews.md](implementations/time-based-concept/user-reviews.md) | What to open and click in the browser to try each group of tasks |
+| [implementations/time-based-concept/progress/P8.1-P8.10-the-review-stream.md](implementations/time-based-concept/progress/P8.1-P8.10-the-review-stream.md) | The ten features David's review walks produced on 2026-08-08, and the two real bugs they found |
+| [implementations/time-based-concept/progress/2026-08-08-overwrite-and-recovery.md](implementations/time-based-concept/progress/2026-08-08-overwrite-and-recovery.md) | The twelve backend files destroyed by a stale copy and rebuilt. Authoritative over any comment inside them |
+| [implementations/time-based-concept/user-reviews.md](implementations/time-based-concept/user-reviews.md) | What to open and click in the browser to see all of it. Kept current after closing |
 
 ## Backend overview (`context/backend/`)
 
@@ -84,10 +88,10 @@ Wall-clock matrix columns and figure-as-label rendering. Spans **two repos** (`a
 
 | File | Description |
 |------|-------------|
-| [music/notation-logic/01-matrix-notation-logic.md](music/notation-logic/01-matrix-notation-logic.md) | The piano matrix: appendices incl. B (sustains) and C (duration approximation) |
-| [music/notation-logic/02-notation-spec.md](music/notation-logic/02-notation-spec.md) | The notation contract |
-| [music/notation-logic/03-editing-logic.md](music/notation-logic/03-editing-logic.md) | Editing rules over the matrix |
-| [music/transcription-quality.md](music/transcription-quality.md) | The four layers between audio and a printed figure, and what each gets wrong |
+| [music/notation-logic/01-matrix-notation-logic.md](music/notation-logic/01-matrix-notation-logic.md) | **Obsolete model**, banner-marked. BPM column timing and duration approximation; kept for Appendix B and the wire format |
+| [music/notation-logic/02-notation-spec.md](music/notation-logic/02-notation-spec.md) | The notation contract. Partly obsolete: `tempoBpm` is gone, the envelope header is `frameMs` |
+| [music/notation-logic/03-editing-logic.md](music/notation-logic/03-editing-logic.md) | **Obsolete**, banner-marked. Describes the grid editor deleted in P4.2 |
+| [music/transcription-quality.md](music/transcription-quality.md) | The four layers between audio and a printed figure. Layers 1–3 hold; layer 4 was replaced by the wall-clock matrix |
 | [music/piano_svg/01-piano-svg.md](music/piano_svg/01-piano-svg.md) | The 88-key SVG keyboard |
 
 ## Shared (`context/shared/`)
@@ -150,7 +154,7 @@ Wall-clock matrix columns and figure-as-label rendering. Spans **two repos** (`a
 |------|-------------|
 | [../documentation/issues/README.md](../documentation/issues/README.md) | Troubleshooting runbooks |
 | [../documentation/issues/piano-matrix-sustains-and-phantom-onsets.md](../documentation/issues/piano-matrix-sustains-and-phantom-onsets.md) | Held chords printing short; chords with a note too many |
-| [../documentation/issues/rhythm-figures-and-tempo.md](../documentation/issues/rhythm-figures-and-tempo.md) | An evenly played passage printing as mixed corcheas/semicorcheas |
+| [../documentation/issues/rhythm-figures-and-tempo.md](../documentation/issues/rhythm-figures-and-tempo.md) | **Retired.** An evenly played passage printing as mixed corcheas/semicorcheas — the bug class the wall-clock matrix removed |
 | [../documentation/issues/hand-split-ledger-lines.md](../documentation/issues/hand-split-ledger-lines.md) | A hand printed far outside its own staff under a pile of ledger lines |
 | [../documentation/implementations/README.md](../documentation/implementations/README.md) | Stable topic-based how-tos |
 | [../documentation/deprecated/README.md](../documentation/deprecated/README.md) | Superseded or removed features (banner required) |

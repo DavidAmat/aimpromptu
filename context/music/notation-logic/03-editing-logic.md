@@ -1,3 +1,18 @@
+> ## ⚠ Obsolete model — this describes a screen that no longer exists
+>
+> Every calculation below starts from a BPM and a beat, and the screen it describes — hand-editing
+> a range of cells in the matrix — was deleted on 2026-08-08 with the rest of the tempo model
+> (P4.2). There is no grid editor in the app today, and no BPM to compute a range from.
+>
+> Editing now happens on the drawn sheet, not on the matrix: a reader renames figures, breaks
+> beams, corrects hands, adds fingering, marks octaves and hides notes, and all of it is stored as
+> decisions *about* the recording rather than as changes to it. See
+> [`context/implementations/time-based-concept/user-reviews.md`](../../implementations/time-based-concept/user-reviews.md)
+> for what the controls are, and
+> [`CLOSURE.md`](../../implementations/time-based-concept/CLOSURE.md) for why the old ones went.
+>
+> Kept as the record of what re-recording a range was meant to do, in case that feature comes back.
+
 
 # Editing Logic
 

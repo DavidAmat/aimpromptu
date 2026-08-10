@@ -15,3 +15,4 @@ summary before the individual reports.
 - [2026-07-27 — overnight + continuation session](2026-07-27-overnight-session.md): Epics 1–8.
 - [2026-07-27 — Epic 9 notation session](2026-07-27-epic-09-session.md): Stories 9.1–9.6.
 - [2026-08-02 — transcription accuracy session](2026-08-02-transcription-accuracy-session.md): raw falling view, artifact filter, per-hand run quantiser, Transkun, tempo-map groundwork.
+- [2026-08-10 — the time-based concept plan is closed](2026-08-10-time-based-concept-closed.md): the wall-clock refactor end to end, what it cost, what was dropped at closing, and what the next plan should carry forward.

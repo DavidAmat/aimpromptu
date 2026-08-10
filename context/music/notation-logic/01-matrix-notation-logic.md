@@ -1,3 +1,24 @@
+> ## ⚠ Obsolete model — read this first
+>
+> **This document describes how the app worked before 2026-08-08.** Column timing computed from
+> BPM, duration approximation against a figure grid, the collapse and clean steps — none of that
+> exists in the product any more. It was replaced by the wall-clock matrix: a column is a slice of
+> real time (40 ms by default), and a note figure is a label the reader chooses rather than the
+> thing the layout is built from. There is no BPM anywhere in the app.
+>
+> **Kept, not deleted, for two reasons.** Appendix B (sustains) and the matrix wire format
+> (sparse COO, onset vs sustain) still describe what the code does. And the appendices are the
+> record of the model we moved away from, which is why the parts of the plan that cite them still
+> make sense.
+>
+> **What is true now:**
+> [`context/implementations/time-based-concept/CLOSURE.md`](../../implementations/time-based-concept/CLOSURE.md)
+> for the whole picture,
+> [`contract.md`](../../implementations/time-based-concept/contract.md) for the current data
+> contract, and
+> [`decisions.md`](../../implementations/time-based-concept/decisions.md) (D-01 … D-34) for why each
+> rule is what it is.
+
 Here is how the documentation defines the matrix, what 0/1 means in practice, and how column timing is computed from BPM and the other required input.
 
 ## Matrix layout: rows, columns, and what “0 / 1” means

@@ -1,3 +1,10 @@
+> **This plan is closed (2026-08-10) and is kept as history.** It is what we *intended* to build;
+> about a third of what shipped was never in it, and two of its boxes were cancelled rather than
+> finished. For what actually exists, read [`CLOSURE.md`](CLOSURE.md) and [`checklist.md`](checklist.md).
+>
+> Note also that **Phase 8 below is not the P8 in the commit log.** Ten shipped features took those
+> ids on 2026-08-08; `checklist.md` renumbers this verification phase to Phase 9 to keep them apart.
+
 # Implementation plan
 
 Nine phases. Every task cites the decisions it implements. Status lives in

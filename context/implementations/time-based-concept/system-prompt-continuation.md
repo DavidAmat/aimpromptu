@@ -1,3 +1,8 @@
+> **Stale — the plan this prompt drives is closed (2026-08-10).** Do not follow the task order
+> below; every box it points at is either done or cancelled. Kept as the record of how the work was
+> handed between sessions. For what exists now, read
+> [`CLOSURE.md`](CLOSURE.md); the next piece of work is a **new** plan in its own folder.
+
 # System prompt — time-based concept, continuation worker
 
 You are continuing the time-based concept refactor of **AImpromptu**. It is well underway: the new

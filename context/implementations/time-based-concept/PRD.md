@@ -1,6 +1,6 @@
 # PRD — Time-based piano matrix and figure-as-label rendering
 
-Status: **agreed, not started.** Decisions are frozen in [`decisions.md`](decisions.md).
+Status: **delivered; the plan closed on 2026-08-10.** Decisions are frozen in [`decisions.md`](decisions.md) and stay valid. Four of the six success criteria in §5 are met and backed by tests; two were cancelled unmeasured — see [`CLOSURE.md`](CLOSURE.md) §4.
 
 ---
 
