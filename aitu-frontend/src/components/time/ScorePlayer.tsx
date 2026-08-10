@@ -12,9 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import LinearProgress from "@mui/material/LinearProgress";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import PauseIcon from "@mui/icons-material/Pause";
@@ -22,6 +20,7 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import ReplayIcon from "@mui/icons-material/Replay";
 import { API_BASE } from "../../api";
 import { formatTime } from "../../audio/time";
+import ProgressBar from "../../playback/ProgressBar";
 
 export interface ScorePlayerProps {
   audioUuid: string;
@@ -44,7 +43,7 @@ export interface ScorePlayerProps {
    * should own it. A ref rather than a prop each way, because a seek is an event, not a value —
    * seeking twice to the same second has to move the recording twice.
    */
-  controls?: React.MutableRefObject<ScorePlayerControls | null>;
+  controlsRef?: React.RefObject<ScorePlayerControls | null>;
   /**
    * Bring the cursor on screen. Called whenever the recording jumps somewhere the reader is not
    * looking: pressing space, or clicking the bar.
@@ -70,7 +69,7 @@ export function ScorePlayer({
   audioUuid,
   scoreSeconds,
   onTime,
-  controls,
+  controlsRef,
   onScrollToCursor,
   onPlaying,
 }: ScorePlayerProps) {
@@ -171,12 +170,12 @@ export function ScorePlayer({
   );
 
   useEffect(() => {
-    if (!controls) return;
-    controls.current = { seek: seekTo, toggle: () => void toggle() };
+    if (!controlsRef) return;
+    controlsRef.current = { seek: seekTo, toggle: () => void toggle() };
     return () => {
-      controls.current = null;
+      controlsRef.current = null;
     };
-  }, [controls, seekTo, toggle]);
+  }, [controlsRef, seekTo, toggle]);
 
   /**
    * Space plays and pauses, and takes the reader to where the sound is before it starts.
@@ -212,21 +211,6 @@ export function ScorePlayer({
     onScrollToCursor?.();
   };
 
-  // Clicking the bar moves the recording, and the line on the staves with it. Useful on its own,
-  // and it is also the only way to look at a particular bar without waiting for the piece to reach
-  // it.
-  const seek = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (scoreSeconds <= 0) return;
-    const bar = event.currentTarget.getBoundingClientRect();
-    if (bar.width <= 0) return;
-    const fraction = Math.min(1, Math.max(0, (event.clientX - bar.left) / bar.width));
-    seekTo(fraction * scoreSeconds);
-    // The moment clicked is almost never the one on screen — that is the point of clicking the bar.
-    onScrollToCursor?.();
-  };
-
-  const throughScore = scoreSeconds > 0 ? Math.min(100, (seconds / scoreSeconds) * 100) : 0;
-
   return (
     <Stack spacing={1}>
       <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
@@ -242,7 +226,7 @@ export function ScorePlayer({
           Back to the start
         </Button>
         <Typography variant="body2" color="text.secondary">
-          {formatTime(seconds)} of {formatTime(scoreSeconds)} written
+          of {formatTime(scoreSeconds)} written
         </Typography>
       </Stack>
       {error ? (
@@ -250,18 +234,24 @@ export function ScorePlayer({
           {error}
         </Alert>
       ) : null}
-      <Box
-        onClick={seek}
-        sx={{ cursor: "pointer", py: 0.5 }}
-        title="Click anywhere on the bar to move to that moment"
-      >
-        <LinearProgress variant="determinate" value={throughScore} />
-      </Box>
+      {/*
+        The same scrub bar the roll and the falling view carry. It was a plain
+        progress meter you could click, which drew no handle — so there was
+        nothing on the page that looked like it could be dragged, and scanning
+        through a five-minute recording meant a series of guesses. Sharing the
+        component means the reader learns one control for the whole app.
+      */}
+      <ProgressBar
+        currentSeconds={seconds}
+        durationSeconds={scoreSeconds}
+        onSeek={seekTo}
+        onAfterSeek={onScrollToCursor}
+      />
       <Typography variant="caption" color="text.secondary">
         What plays is the recording itself, exactly as it was performed. Nothing here is reconstructed
         from the sheet, so the two can be compared by ear. The line on the staves below shows where
-        the recording is; drag that line to move it, or click anywhere on the bar above. Space plays
-        and pauses from wherever the line is standing.
+        the recording is; drag that line to move it, or drag the handle on the bar above. Space
+        plays and pauses from wherever the line is standing.
       </Typography>
     </Stack>
   );

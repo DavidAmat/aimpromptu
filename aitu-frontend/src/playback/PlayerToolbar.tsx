@@ -57,10 +57,21 @@ export function PlayerToolbar({
   artifactCount,
   children,
 }: PlayerToolbarProps) {
-  // Changing what is playing while it plays leaves the clock anchored to a
-  // sound that has stopped, so every one of these stops first.
+  /**
+   * Apply a change that the running clock cannot absorb.
+   *
+   * Every control here feeds the transport's own anchor — which sound is playing,
+   * how fast, between which two seconds — and changing one mid-flight would leave
+   * the clock counting against something that no longer exists. So playback stops.
+   *
+   * It stops where it is. It used to `restart()`, which also rewound to the start
+   * of the range, so switching between the original audio and the transcribed
+   * piano at 2:41 threw away the reader's place in the piece — and comparing the
+   * two at one moment is exactly what that switch is for. Where you are is the
+   * reader's, and nothing on this row is a reason to take it.
+   */
   const rebuild = (work: () => void) => {
-    playback.restart();
+    if (playback.playing) playback.pause();
     work();
   };
 

@@ -10,6 +10,11 @@
  * It deliberately owns the position. On the roll, clicking the notes themselves
  * now *selects* them, so seeking needs a surface of its own; giving the two
  * gestures separate places is what lets a click mean one thing in each.
+ *
+ * It takes a position and a way to change one, not a transport. The sheet runs a
+ * different engine — an `<audio>` element playing the original recording, rather
+ * than the synthesised clock the roll uses — and the reader should not be able to
+ * tell which page they are on from the shape of the scrub bar.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,24 +23,35 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { formatTime } from "../audio/time";
 import { grays, semantic, surface, timestampSx } from "../ui";
-import type { PlaybackController } from "./usePlayback";
 
 const TRACK_HEIGHT = 8;
 const HANDLE_RADIUS = 8;
 
 interface ProgressBarProps {
-  playback: PlaybackController;
+  /** Where the piece is now, in seconds. */
+  currentSeconds: number;
   durationSeconds: number;
-  /** The playable stretch, shaded on the track. */
-  rangeStart: number;
-  rangeEnd: number;
+  onSeek: (seconds: number) => void;
+  /** The playable stretch, shaded on the track. Defaults to the whole piece. */
+  rangeStart?: number;
+  rangeEnd?: number;
+  /**
+   * Called once a gesture ends, never on every pixel of a drag.
+   *
+   * The sheet uses it to bring the cursor on screen. Doing that on every move
+   * would scroll the page out from under the pointer mid-drag, and the reader is
+   * usually watching the bar rather than the staves until they let go.
+   */
+  onAfterSeek?: () => void;
 }
 
 export function ProgressBar({
-  playback,
+  currentSeconds,
   durationSeconds,
-  rangeStart,
-  rangeEnd,
+  onSeek,
+  rangeStart = 0,
+  rangeEnd = durationSeconds,
+  onAfterSeek,
 }: ProgressBarProps) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [scrubbing, setScrubbing] = useState(false);
@@ -58,8 +74,11 @@ export function ProgressBar({
   // which it is on every frame while playing.
   useEffect(() => {
     if (!scrubbing) return;
-    const move = (event: PointerEvent) => playback.seek(secondsAt(event.clientX));
-    const up = () => setScrubbing(false);
+    const move = (event: PointerEvent) => onSeek(secondsAt(event.clientX));
+    const up = () => {
+      setScrubbing(false);
+      onAfterSeek?.();
+    };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
@@ -68,16 +87,16 @@ export function ProgressBar({
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
     };
-  }, [playback, scrubbing, secondsAt]);
+  }, [onAfterSeek, onSeek, scrubbing, secondsAt]);
 
-  const fraction = Math.min(1, Math.max(0, playback.currentSeconds / total));
+  const fraction = Math.min(1, Math.max(0, currentSeconds / total));
   const rangeLeft = Math.min(1, Math.max(0, rangeStart / total));
   const rangeWidth = Math.min(1, Math.max(0, (rangeEnd - rangeStart) / total));
 
   return (
     <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", width: "100%" }}>
       <Typography variant="body2" sx={{ ...timestampSx, flexShrink: 0 }}>
-        {formatTime(playback.currentSeconds)}
+        {formatTime(currentSeconds)}
       </Typography>
 
       <Box
@@ -87,23 +106,24 @@ export function ProgressBar({
         aria-label="Position in the piece"
         aria-valuemin={0}
         aria-valuemax={total}
-        aria-valuenow={playback.currentSeconds}
-        aria-valuetext={formatTime(playback.currentSeconds)}
+        aria-valuenow={currentSeconds}
+        aria-valuetext={formatTime(currentSeconds)}
         onPointerDown={(event) => {
           event.preventDefault();
           setScrubbing(true);
-          playback.seek(secondsAt(event.clientX));
+          onSeek(secondsAt(event.clientX));
         }}
         onKeyDown={(event) => {
           // Arrows nudge, shift-arrows jump. Not Space: that is Play everywhere
           // in this app, and a focused scrub bar must not shadow it.
           const step = event.shiftKey ? 10 : 1;
-          if (event.key === "ArrowLeft") playback.seek(playback.currentSeconds - step);
-          else if (event.key === "ArrowRight") playback.seek(playback.currentSeconds + step);
-          else if (event.key === "Home") playback.seek(0);
-          else if (event.key === "End") playback.seek(total);
+          if (event.key === "ArrowLeft") onSeek(currentSeconds - step);
+          else if (event.key === "ArrowRight") onSeek(currentSeconds + step);
+          else if (event.key === "Home") onSeek(0);
+          else if (event.key === "End") onSeek(total);
           else return;
           event.preventDefault();
+          onAfterSeek?.();
         }}
         sx={{
           position: "relative",

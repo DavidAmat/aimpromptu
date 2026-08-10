@@ -1606,7 +1606,7 @@ export function RhythmPage() {
                 (score.envelope.frameCount * score.envelope.frameMs) / 1000
               }
               onTime={setPlayheadSeconds}
-              controls={player}
+              controlsRef={player}
               onScrollToCursor={scrollToCursor}
               onPlaying={setPlaying}
             />

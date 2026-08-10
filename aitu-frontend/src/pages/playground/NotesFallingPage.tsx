@@ -256,8 +256,9 @@ export function NotesFallingPage() {
       <SectionCard>
         <Stack spacing={1.5}>
           <ProgressBar
-            playback={playback}
+            currentSeconds={playback.currentSeconds}
             durationSeconds={data.durationSeconds}
+            onSeek={playback.seek}
             rangeStart={rangeStart}
             rangeEnd={rangeEnd}
           />
