@@ -629,10 +629,36 @@ export function TimeScoreView({
     setDraggingEdge(null);
   };
 
+  /**
+   * Double-click a blank part of the page and the recording goes there.
+   *
+   * Almost every pixel of a stave already means something — a notehead picks a note, a group cell
+   * picks a stretch of columns, the two range handles and the playhead are grabbed — and one
+   * gesture cannot mean two things. What is left over is the strip above the top stave, the gaps
+   * between systems and the margins, which is where a reader points when they mean "here" and
+   * nothing else. So the seek is the *second* click on ground that is otherwise inert: a single
+   * click there can go on meaning nothing, and no existing gesture changes.
+   *
+   * The page does not scroll afterwards. The reader is looking at the place they just pointed at;
+   * moving them to it would only take that place away.
+   */
+  const seekOnDoubleClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!onScrub) return;
+    const target = event.target as Element | null;
+    if (target?.closest?.(INERT_TO_SEEK)) return;
+    const render = renderer.current?.getLastRender();
+    const box = stage.current?.getBoundingClientRect();
+    if (!render || !box) return;
+    const frames = frameAtPoint(render, event.clientX - box.left, event.clientY - box.top);
+    if (frames === undefined) return;
+    onScrub((frames * score.envelope.frameMs) / 1000);
+  };
+
   return (
     <Box sx={{ width: "100%", overflowX: "auto" }}>
       <Box
         ref={stage}
+        onDoubleClick={seekOnDoubleClick}
         sx={{
           position: "relative",
           display: "inline-block",
@@ -787,6 +813,23 @@ export function TimeScoreView({
 
 /** How wide the invisible strip around the cursor is, in pixels. Two is a line; this is a target. */
 const GRAB_WIDTH = 14;
+
+/**
+ * Everything on the page that already answers to a click, and so must not also seek.
+ *
+ * Listed rather than inferred: a double-click lands on whatever is under the pointer, and the
+ * honest test for "is this blank" is "is it none of the things that mean something".
+ */
+const INERT_TO_SEEK = [
+  ".grid-frame-range",
+  ".grid-note-target",
+  ".grid-notehead",
+  ".grid-range-marker-hit",
+  ".grid-range-marker-arm",
+  ".grid-frame-timestamp",
+  "[data-staff-gap-handle]",
+  "[data-range-edge]",
+].join(", ");
 
 /**
  * The Spanish figure names the backend sends, in the English names the drawing package uses.

@@ -245,9 +245,9 @@ export function ScorePlayer({
       <Typography variant="caption" color="text.secondary">
         What plays is the recording itself, exactly as it was performed. Nothing here is reconstructed
         from the sheet, so the two can be compared by ear. The line on the staves below shows where
-        the recording is; drag that line to move it, or drag the handle on the bar above — the page
-        stays where it is while you do. Space plays from wherever the line is standing and brings it
-        on screen.
+        the recording is; drag that line to move it, drag the handle on the bar above, or double-click
+        a blank part of the page — above the top stave, say — to send it there. The page stays where
+        it is for all three. Space plays from wherever the line is standing and brings it on screen.
       </Typography>
     </Stack>
   );
