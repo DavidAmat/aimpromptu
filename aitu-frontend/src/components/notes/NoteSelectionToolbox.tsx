@@ -5,14 +5,13 @@
  * for the same reason: the reader is looking at the notes it is about, so it must
  * not cover them and must not block the page behind it.
  *
- * There is one action and it has two directions. Taking a note off the recording
- * is not a view filter — it is written onto the note event, so the gap plot and
- * the sheet stop counting it too — and that is worth saying on the panel, because
- * it is a bigger thing than "hide" would suggest. Putting it back is the same
- * button pointing the other way, which is why a mixed selection offers both.
+ * There is one action and it has two directions. Neither writes anything. Taking a
+ * note off the recording removes it from the matrix the piece is drawn from — the
+ * printed length of a note is the gap to the next onset, so the note's neighbour
+ * is renamed by it — and a change of that size is staged and reviewed, not applied
+ * on a click. The panel marks; the floating **Save** bar commits.
  */
 
-import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -25,10 +24,10 @@ import type { PlayedNote } from "../../playback/playedNotes";
 
 interface NoteSelectionToolboxProps {
   selected: PlayedNote[];
-  busy: boolean;
-  error: string | null;
-  onRemove: () => void;
-  onRestore: () => void;
+  /** How each selected note currently reads, staged decisions included. */
+  isRemoved: (note: PlayedNote) => boolean;
+  onStageRemove: () => void;
+  onStageRestore: () => void;
   onClose: () => void;
 }
 
@@ -47,15 +46,14 @@ function describe(selected: PlayedNote[]): string {
 
 export function NoteSelectionToolbox({
   selected,
-  busy,
-  error,
-  onRemove,
-  onRestore,
+  isRemoved,
+  onStageRemove,
+  onStageRestore,
   onClose,
 }: NoteSelectionToolboxProps) {
   const open = selected.length > 0;
-  const present = selected.filter((note) => !note.removed);
-  const absent = selected.filter((note) => note.removed);
+  const present = selected.filter((note) => !isRemoved(note));
+  const absent = selected.filter((note) => isRemoved(note));
 
   return (
     <ToolboxDialog
@@ -69,11 +67,10 @@ export function NoteSelectionToolbox({
     >
       <Stack spacing={1.5}>
         <Typography variant="body2" color="text.secondary">
-          Taking a note off the recording removes it from the sheet and from the gaps the
-          rhythm is measured from, not just from this view. It can be put back.
+          Taking a note off removes it from the piano matrix this piece is drawn from, so it
+          leaves the sheet and the gaps the rhythm is measured from as well. Marked here, kept
+          by <strong>Save</strong> on the floating bar, and reversible either way.
         </Typography>
-
-        {error ? <Alert severity="error">{error}</Alert> : null}
 
         <Stack direction="row" spacing={1}>
           <Button
@@ -81,8 +78,8 @@ export function NoteSelectionToolbox({
             color="error"
             size="small"
             startIcon={<DeleteOutlinedIcon />}
-            disabled={busy || present.length === 0}
-            onClick={onRemove}
+            disabled={present.length === 0}
+            onClick={onStageRemove}
           >
             Delete {present.length > 1 ? `${present.length} notes` : "note"}
           </Button>
@@ -91,8 +88,7 @@ export function NoteSelectionToolbox({
               variant="outlined"
               size="small"
               startIcon={<RestoreIcon />}
-              disabled={busy}
-              onClick={onRestore}
+              onClick={onStageRestore}
             >
               Put {absent.length > 1 ? `${absent.length} back` : "it back"}
             </Button>

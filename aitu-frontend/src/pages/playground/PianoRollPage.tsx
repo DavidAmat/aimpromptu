@@ -32,8 +32,9 @@ import { Link } from "react-router-dom";
 import { audioApi } from "../../api";
 import WaveformView from "../../components/audio/WaveformView";
 import NoteSelectionToolbox from "../../components/notes/NoteSelectionToolbox";
+import PendingRemovalsBar from "../../components/notes/PendingRemovalsBar";
 import { useElementSize } from "../../hooks/useElementSize";
-import { useNoteRemoval } from "../../hooks/useNoteRemoval";
+import { useStagedRemovals } from "../../hooks/useStagedRemovals";
 import { useNoteSelection } from "../../hooks/useNoteSelection";
 import { usePlayedNotes } from "../../hooks/usePlayedNotes";
 import { ROUTES } from "../../layout/routes";
@@ -47,6 +48,7 @@ import {
   NOTE_LABEL_FAMILY,
   NOTE_LABEL_FILL,
   noteVisuals,
+  STRIKE_COLOR,
 } from "../../playback/noteVisuals";
 import { PlayerToolbar } from "../../playback/PlayerToolbar";
 import ProgressBar from "../../playback/ProgressBar";
@@ -76,7 +78,7 @@ interface Band {
 
 export function PianoRollPage() {
   const { artifact, hasArtifact } = useWorkingArtifact();
-  const removal = useNoteRemoval(artifact.audioUuid ?? null);
+  const removal = useStagedRemovals(artifact.audioUuid ?? null);
   const data = usePlayedNotes(artifact, removal.revision);
   const selection = useNoteSelection(data.notes);
 
@@ -87,6 +89,8 @@ export function PianoRollPage() {
   const [rangeStart, setRangeStart] = useState(0);
   const [rangeEndOverride, setRangeEndOverride] = useState<number | null>(null);
   const [band, setBand] = useState<Band | null>(null);
+  /** Flashes `Saved` on the floating bar for a moment, as the sheet's does. */
+  const [justSaved, setJustSaved] = useState(false);
   const [draggingCursor, setDraggingCursor] = useState(false);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [sizeRef, size] = useElementSize<HTMLDivElement>();
@@ -97,17 +101,25 @@ export function PianoRollPage() {
     Math.min(data.durationSeconds, rangeEndOverride ?? data.durationSeconds),
   );
 
-  const hiddenCount = data.notes.filter((note) => note.artifact || note.removed).length;
+  // `removal.isRemoved` and not `note.removed`: a staged decision has to read as
+  // if it had already happened, or the reader cannot see what they are about to
+  // save. Staged notes stay drawn regardless of the toggle, struck through, so a
+  // delete never makes a note vanish before it has been kept.
+  const isRemoved = removal.isRemoved;
+  const hiddenCount = data.notes.filter((note) => note.artifact || isRemoved(note)).length;
   const visibleNotes = useMemo(
     () =>
-      showHidden ? data.notes : data.notes.filter((note) => !note.artifact && !note.removed),
-    [data.notes, showHidden],
+      data.notes.filter(
+        (note) =>
+          showHidden || removal.isStaged(note) || (!note.artifact && !isRemoved(note)),
+      ),
+    [data.notes, isRemoved, removal, showHidden],
   );
   // What is *heard* never includes a note the pipeline filtered or the reader
   // took off: playing them back would argue with the sheet.
   const audibleNotes = useMemo(
-    () => data.notes.filter((note) => !note.artifact && !note.removed),
-    [data.notes],
+    () => data.notes.filter((note) => !note.artifact && !isRemoved(note)),
+    [data.notes, isRemoved],
   );
 
   const originalAvailable = Boolean(data.peaks);
@@ -235,13 +247,26 @@ export function PianoRollPage() {
     [lane, selection, visibleNotes, zoom],
   );
 
-  const removeSelected = async () => {
-    const present = selection.selected.filter((note) => !note.removed);
-    if (await removal.setRemoved(present, true)) selection.clear();
+  // Marking, not writing. The floating bar commits the lot; see `useStagedRemovals`.
+  const stageRemove = () => {
+    removal.stage(
+      selection.selected.filter((note) => !removal.isRemoved(note)),
+      true,
+    );
+    selection.clear();
   };
-  const restoreSelected = async () => {
-    const absent = selection.selected.filter((note) => note.removed);
-    if (await removal.setRemoved(absent, false)) selection.clear();
+  const stageRestore = () => {
+    removal.stage(
+      selection.selected.filter((note) => removal.isRemoved(note)),
+      false,
+    );
+    selection.clear();
+  };
+  const saveStaged = async () => {
+    if (await removal.save(data.notes)) {
+      setJustSaved(true);
+      window.setTimeout(() => setJustSaved(false), 2600);
+    }
   };
 
   if (!hasArtifact || !artifact.audioUuid) {
@@ -461,8 +486,15 @@ export function PianoRollPage() {
                   const active =
                     note.startSeconds <= playback.currentSeconds &&
                     playback.currentSeconds < note.endSeconds;
+                  const staged = removal.isStaged(note);
                   const visuals = noteVisuals(
-                    { hand: note.hand, active, selected, ghost: note.artifact || note.removed },
+                    {
+                      hand: note.hand,
+                      active,
+                      selected,
+                      ghost: note.artifact || isRemoved(note),
+                      staged: staged && isRemoved(note),
+                    },
                     width,
                     geometry.h,
                   );
@@ -496,11 +528,28 @@ export function PianoRollPage() {
                           {`${formatTime(note.startSeconds)} → ${formatTime(note.endSeconds)} · ${(
                             (note.endSeconds - note.startSeconds) *
                             1000
-                          ).toFixed(0)} ms${note.removed ? " · taken off the recording" : ""}${
+                          ).toFixed(0)} ms${
+                            isRemoved(note)
+                              ? removal.isStaged(note)
+                                ? " · marked to come off, not saved yet"
+                                : " · taken off the recording"
+                              : ""
+                          }${
                             note.artifact ? " · filtered as an artifact" : ""
                           }`}
                         </title>
                       </rect>
+                      {staged && isRemoved(note) ? (
+                        <line
+                          x1={x + 1}
+                          x2={x + width - 1}
+                          y1={geometry.y + geometry.h / 2}
+                          y2={geometry.y + geometry.h / 2}
+                          stroke={STRIKE_COLOR}
+                          strokeWidth={1.5}
+                          pointerEvents="none"
+                        />
+                      ) : null}
                       {label ? (
                         <text
                           x={x + width / 2}
@@ -573,13 +622,19 @@ export function PianoRollPage() {
 
       <NoteSelectionToolbox
         selected={selection.selected as PlayedNote[]}
-        // Top right. The default corner sits over the tabs and the transport,
-        // which are the two things a reader still needs while a selection is up.
-        busy={removal.busy}
-        error={removal.error}
-        onRemove={() => void removeSelected()}
-        onRestore={() => void restoreSelected()}
+        isRemoved={removal.isRemoved}
+        onStageRemove={stageRemove}
+        onStageRestore={stageRestore}
         onClose={selection.clear}
+      />
+
+      <PendingRemovalsBar
+        removing={removal.counts.removing}
+        restoring={removal.counts.restoring}
+        saving={removal.saving}
+        saved={justSaved}
+        onSave={() => void saveStaged()}
+        onDiscard={removal.discard}
       />
     </PageContainer>
   );

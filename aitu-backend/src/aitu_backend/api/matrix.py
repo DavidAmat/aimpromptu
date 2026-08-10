@@ -375,6 +375,13 @@ def put_removed_events(audio_uuid: str, body: RemovalRequest = Body(...)) -> Rem
         pipeline.save_note_events(
             audio_uuid, stored.events, stored.duration_seconds, stored.title
         )
+        # Imported here rather than at the top: `time_score` imports nothing from
+        # this module today, and a module-level import would make that a rule
+        # nobody can break by accident later. The split is cached per (piece,
+        # column length) and has just stopped being true.
+        from aitu_backend.api.time_score import forget_split_cache
+
+        forget_split_cache()
 
     return RemovalResult(changed=changed, unmatched=len(wanted - seen))
 

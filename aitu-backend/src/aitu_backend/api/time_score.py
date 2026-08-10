@@ -27,7 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import store
 from aitu_backend.matrix.intervals import intervals_ms
-from aitu_backend.matrix.keys import LOWEST_MIDI
+from aitu_backend.matrix.keys import KEY_COUNT, LOWEST_MIDI
 from aitu_backend.matrix.ladder import build_ladder, bpm_of, header_label, label_peaks
 from aitu_backend.matrix.passages import one_passage, passages_from_boundaries
 from aitu_backend.matrix.peaks import Peak, peaks_of
@@ -158,6 +158,21 @@ def _hands(audio_uuid: str, frame_ms: float) -> TimeHands:
     if path.exists():
         stamp = path.stat().st_mtime
     return _split_cached(audio_uuid, frame_ms, stamp)
+
+
+def forget_split_cache() -> None:
+    """Drop every cached split.
+
+    Called by anything that writes to a recording. The cache is keyed on the
+    events file's mtime as well, so this is belt and braces — but mtime has
+    one-second resolution on some filesystems, and two corrections a second
+    apart would otherwise serve the first one twice.
+
+    Public because the writer is not always in this module: taking a note off
+    the recording is done from `/matrix` as well, and reaching into a private
+    name from there would be worse than saying out loud that this is the hook.
+    """
+    _split_cached.cache_clear()
 
 
 @lru_cache(maxsize=8)
@@ -405,9 +420,110 @@ def put_hands(audio_uuid: str, body: HandAssignmentRequest = Body(...)) -> HandA
             audio_uuid, stored.events, stored.duration_seconds, stored.title
         )
         # The split is cached per (piece, column length) and has just stopped being true.
-        _split_cached.cache_clear()
+        forget_split_cache()
 
     return HandAssignmentResult(assigned=assigned, unmatched=unmatched)
+
+
+class RemovedByColumn(BaseModel):
+    """A note to take off the recording, addressed as the sheet drew it."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    start_frame: int = Field(..., alias="startFrame", ge=0)
+    row: int = Field(..., ge=0, lt=KEY_COUNT)
+
+
+class RemovalByColumnRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    frame_ms: float = Field(DEFAULT_FRAME_MS, alias="frameMs", gt=0)
+    notes: list[RemovedByColumn] = Field(default_factory=list)
+    #: ``False`` puts them back.
+    removed: bool = True
+
+
+class RemovalByColumnResult(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    changed: int
+    #: Notes whose column and row matched nothing that was recorded.
+    unmatched: int
+
+
+@router.put(
+    "/{audio_uuid}/removed",
+    response_model=RemovalByColumnResult,
+    response_model_by_alias=True,
+)
+def put_removed_by_column(
+    audio_uuid: str, body: RemovalByColumnRequest = Body(...)
+) -> RemovalByColumnResult:
+    """Take notes off the recording, addressed by the column and row the sheet drew.
+
+    The twin of `PUT /matrix/{id}/events/removed`, which the roll uses. Two routes
+    because the two screens genuinely hold different things: the roll is looking at
+    raw seconds and can say which event it means, while a reader on the sheet has
+    clicked a notehead and knows only where it sits on the grid. Resolving the
+    second one needs the split's record of where each attack landed, which lives
+    here — the same reason `PUT /{id}/hands` is a separate route from anything
+    under `/matrix`.
+
+    What it writes is identical, so a note taken off here is gone from the roll
+    too, and from the gaps the rhythm is measured from.
+    """
+    stored = _events_or_error(audio_uuid)
+
+    if body.removed:
+        hands = trim_to_music(_hands(audio_uuid, body.frame_ms))
+    else:
+        # Putting a note back cannot be resolved against the current matrix,
+        # because the note is not in it — that is what being removed means. The
+        # lookup is built from a split of the recording with every removal undone,
+        # which is the numbering the columns in the request were written down at.
+        # It costs one extra split, and it is an undo, so it is paid once and only
+        # when somebody asks.
+        as_played = [event.model_copy(update={"removed": False}) for event in stored.events]
+        hands = trim_to_music(
+            impose_granularity_and_split(
+                as_played,
+                stored.duration_seconds,
+                frame_ms=body.frame_ms,
+                title=stored.title,
+            )
+        )
+
+    # Column and row back to the raw second the key went down. `trim_to_music` may
+    # have dropped leading silence, so the lookup is built from the same trimmed
+    # hands the numbering came from.
+    seconds_at: dict[tuple[int, int], float] = {}
+    for (column, row), seconds in hands.build.event_seconds.items():
+        seconds_at[row, column] = seconds
+
+    wanted: set[tuple[int, float]] = set()
+    unmatched = 0
+    for note in body.notes:
+        seconds = seconds_at.get((note.row, note.start_frame))
+        if seconds is None:
+            unmatched += 1
+            continue
+        wanted.add((note.row, round(seconds, 4)))
+
+    changed = 0
+    for event in stored.events:
+        key = (event.midi_note - LOWEST_MIDI, round(event.start, 4))
+        if key not in wanted or event.removed == body.removed:
+            continue
+        event.removed = body.removed
+        changed += 1
+
+    if changed:
+        pipeline.save_note_events(
+            audio_uuid, stored.events, stored.duration_seconds, stored.title
+        )
+        forget_split_cache()
+
+    return RemovalByColumnResult(changed=changed, unmatched=unmatched)
 
 
 class ScoreRequest(BaseModel):
