@@ -302,3 +302,30 @@ def test_a_score_carries_the_breaks_the_reader_asked_for():
     assert wire["beamBreaks"] == [{"hand": "right", "startFrame": payload.notes[2].start_frame}]
     # Absent by default: a piece nobody has regrouped says so by having none.
     assert payload.model_dump(by_alias=True)["beamBreaks"] == []
+
+
+# ------------------------------------------------------- the pile-weighted figure lines
+
+
+def test_the_weighted_lines_can_be_switched_off() -> None:
+    """Off is what the app printed before 2026-08-10, and stays reachable."""
+    events = even_run(8)
+    hands = run(events)
+
+    plain = to_score_payload(hands, ladder(), weighted_figure_lines=False)
+    weighted = to_score_payload(hands, ladder(), weighted_figure_lines=True)
+
+    assert [(n.start_frame, n.row) for n in plain.notes] == [
+        (n.start_frame, n.row) for n in weighted.notes
+    ]
+
+
+def test_an_even_run_is_printed_the_same_either_way() -> None:
+    """With one pile and nothing to lean towards, the two rules agree note for note."""
+    hands = run(even_run(8))
+
+    plain = to_score_payload(hands, ladder(), weighted_figure_lines=False)
+    weighted = to_score_payload(hands, ladder(), weighted_figure_lines=True)
+
+    assert [n.figure for n in plain.notes] == [n.figure for n in weighted.notes]
+

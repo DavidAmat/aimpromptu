@@ -33,6 +33,37 @@ DEFAULT_ENGINE = "bytedance"
 #: ``device`` value for this Mac. Kept parameterized for future CUDA hosts.
 DEFAULT_DEVICE = "cpu"
 
+#: How confident the onset head must be before a peak becomes a note, for ByteDance.
+#:
+#: The package ships **0.3**. Its post-processor opens a note at *any* local peak above this,
+#: without checking whether that key is already inside a note the same pass just opened — so a weak
+#: secondary response on a still-ringing key becomes a second note. That is the phantom re-onset the
+#: leakage filter exists to clean up after, and it is much cheaper to prevent than to detect: once
+#: two events exist, a phantom and a genuine re-strike of a pedalled note look the same.
+#:
+#: **0.5** was measured on Chopin's Nocturne Op. 9 no. 1, 343 s, against the printed score for the
+#: first three bars (poc-piano-hand-prediction/notes-duration, 2026-08-10). The model runs once and
+#: only the post-processing is repeated, so the whole sweep costs one forward pass:
+#:
+#: ======  ======  =============  ===============
+#: value   notes   score notes    phantoms left
+#: ======  ======  =============  ===============
+#: 0.30      2001      38 of 38       4 of 4
+#: 0.40      1934      38 of 38       2
+#: **0.50**  1864      **38**         **1**
+#: 0.60      1794      37             0
+#: 0.80      1578      35             0
+#: ======  ======  =============  ===============
+#:
+#: 0.5 is the edge: three of the four phantoms gone with every printed note still found. 0.6 takes
+#: the fourth and starts deleting a note the score asks for, which is the worse trade — a wrong
+#: extra note is visible on the page and can be removed by hand, a missing one is not.
+#:
+#: The fourth phantom is caught by :mod:`.leakage`, whose two-sided lag test only becomes safe once
+#: this threshold has removed the phantoms that were inflating its evidence. The two changes are
+#: complementary and neither works alone.
+DEFAULT_ONSET_THRESHOLD = 0.5
+
 
 class NoteEvent(BaseModel):
     """One transcribed note, before it meets the matrix grid.
@@ -207,6 +238,7 @@ class ByteDanceEngine:
         *,
         auto_download: bool = True,
         reporter: object | None = None,
+        onset_threshold: float = DEFAULT_ONSET_THRESHOLD,
     ) -> None:
         try:
             from piano_transcription_inference import PianoTranscription  # noqa: PLC0415
@@ -225,6 +257,11 @@ class ByteDanceEngine:
             device=device,
             checkpoint_path=checkpoint or str(checkpoint_path()),
         )
+        # Set after construction because the package hard-codes 0.3 in its own __init__ and offers
+        # no argument. It is a plain attribute and the post-processor reads it every call, so this
+        # is the whole of the change. See DEFAULT_ONSET_THRESHOLD for the measurement.
+        self.onset_threshold = float(onset_threshold)
+        self._model.onset_threshold = self.onset_threshold
 
     def transcribe(self, wav_path: Path) -> list[NoteEvent]:
         """Transcribe a WAV into note events.

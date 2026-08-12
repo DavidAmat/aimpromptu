@@ -148,3 +148,30 @@ def test_an_empty_transcription_gives_a_silent_matrix_of_the_right_length():
 def test_the_report_reads_as_a_sentence():
     report = build([note(0, DO4_MIDI), note(8, MI4_MIDI), note(200, SOL4_MIDI, length_ms=10)])
     assert report.describe() == "2 note(s) placed in 1 attack(s); 1 shorter than one frame."
+
+
+def test_the_grouping_window_does_not_follow_the_frame() -> None:
+    """`frameMs` is a layout parameter, so it must not decide what counts as one attack.
+
+    Two notes of a chord struck 25 ms apart are one attack. When the window followed the frame they
+    stopped being one at 20 ms, which invented a gap nobody played and let the column length change
+    a printed figure.
+    """
+    chord = [
+        NoteEvent(midi_note=60, start=1.000, end=2.0, velocity=80),
+        NoteEvent(midi_note=64, start=1.025, end=2.0, velocity=80),
+    ]
+    for frame_ms in (40.0, 20.0, 10.0):
+        report = events_to_time_matrix(chord, 4.0, frame_ms=frame_ms)
+        assert report.groups == 1, f"the chord split at {frame_ms:g} ms"
+
+
+def test_the_grouping_window_can_still_be_overridden() -> None:
+    chord = [
+        NoteEvent(midi_note=60, start=1.000, end=2.0, velocity=80),
+        NoteEvent(midi_note=64, start=1.025, end=2.0, velocity=80),
+    ]
+    report = events_to_time_matrix(chord, 4.0, frame_ms=40.0, group_window_ms=10.0)
+
+    assert report.groups == 2
+
