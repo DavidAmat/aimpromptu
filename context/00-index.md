@@ -37,6 +37,7 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 | File | Description |
 |------|-------------|
 | [implementations/plan/README.md](implementations/plan/README.md) | How the plan is organized; epic list in implementation order |
+| [implementations/plan/wall-clock-rewrite.md](implementations/plan/wall-clock-rewrite.md) | **Read before touching the plan.** What the wall-clock refactor changed for the remaining epics, the splice rule for range editing, and the verdict per epic |
 | [implementations/plan/checklist.md](implementations/plan/checklist.md) | THE status lookup: every epic/story/task with checkboxes |
 | [implementations/plan/system-prompt-workers.md](implementations/plan/system-prompt-workers.md) | System prompt for worker LLMs implementing tasks |
 | `implementations/plan/epic-NN-*/` | 14 epic folders, each with an `epic-<shortname>-index.md`, story folders and task files |

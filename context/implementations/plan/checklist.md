@@ -2,17 +2,25 @@
 
 Single status lookup for the whole plan. Status codes: `[x]` completed, `[p]` in progress, `[b]` blocked (state the blocker), `[c]` cancelled (state why), `[ ]` not started. Workers: mark `[p]` when starting, final status when finishing.
 
-> **Epics 1–8, and Epic 9's Stories 9.1–9.6, were completed across the 2026-07-27 sessions** and are
-> **awaiting the human supervisor's musical real-audio/manual trials**. The completed state is
-> committed to `master`.
+> **Status as of 2026-08-12.** This plan was written for a model the app no longer has. The
+> time-based concept refactor replaced tempo with wall-clock time, closed on 2026-08-10, and deleted
+> the code the old model needed. **Read [`wall-clock-rewrite.md`](wall-clock-rewrite.md) before
+> working on anything here** — it says what changed, the five rules every remaining task obeys, and
+> the verdict for each epic.
 >
-> - **Click-by-click verification guides**: [`../progress/user_review/`](../progress/user_review/README.md)
->   — start at `00-setup.md`. Guide 7 covers the new notation tab.
-> - **What happened and what is still open**:
->   [`../progress/2026-07-27-overnight-session.md`](../progress/2026-07-27-overnight-session.md).
->
-> No decisions are outstanding. The ligature-adjacency question was resolved on 2026-07-27 — the
-> adjacency rule is binding; see Task 2.3.2.
+> - **Epics 1–8 were built and are partly gone.** The refactor deleted five screens that could not
+>   survive without a tempo: Matrix, Piano Roll, Notes Falling, Notes Falling (raw) and Music
+>   Notation. Piano Roll and Notes Falling came back on the wall clock on 2026-08-10; the other
+>   three stay retired. There is no cell editing and no matrix import or export.
+> - **Epic 9's Stories 9.1–9.6 shipped and were then superseded.** The sheet is drawn by
+>   `@aimpromptu/grid-notation` from the time score payload; VexFlow is gone. What those stories
+>   promised — key signatures, transposition, octave and clef displacement, guides — exists again on
+>   the new path, built during the refactor.
+> - **The live backlog is Story 9.7 and Epics 10–14**, all rewritten for the wall clock on
+>   2026-08-12. The task files describe the current requirement; git holds the old text.
+> - **Everything the refactor shipped** is in
+>   [`../time-based-concept/checklist.md`](../time-based-concept/checklist.md), and why it closed is
+>   in [`../time-based-concept/CLOSURE.md`](../time-based-concept/CLOSURE.md).
 
 # [x] Epic 1 — Skeleton
 
@@ -201,6 +209,10 @@ Animated matrix views over the piano SVG: assets and key highlighting, horizonta
 
 # [p] Epic 9 — Music notation
 
+> **Stories 9.1–9.6 were superseded by the refactor**, which rebuilt the sheet on
+> `@aimpromptu/grid-notation` with no VexFlow, no bars and no tempo. Only Story 9.7 is live, and it
+> is rewritten for the wall clock.
+
 VexFlow sheet music: backend score-format builder, notation tab with responsive wrapping, engraving rules (stems/beams/no ties), key signatures and naturals, transposition, octave/clef displacement, beat guides and cut-measure, advanced ornaments at the end. Index: `epic-09-notation/epic-notation-index.md`.
 
 > **Stories 9.1–9.6 completed 2026-07-27** and awaiting the supervisor's musical trial —
@@ -245,12 +257,17 @@ VexFlow sheet music: backend score-format builder, notation tab with responsive 
   cut-measure via timeline-column insertion. *(The preceding note/chord expands to the old
   barline when possible; the following note begins the new measure.)*
 
-## [ ] Story 9.7 — Advanced ornaments (nice to have)
+## [p] Story 9.7 — Tuplets and trills (nice to have)
 
-- [ ] Task 9.7.1 **Tuplets**: manual render-only tuplet grouping over a passage.
-- [ ] Task 9.7.2 **Trills and chord grouping**: "tr" detection from raw events, near-simultaneous notes as chords.
+*Rewritten 2026-08-12. Both tasks are partly shipped: tresillos are found automatically (D-32,
+P3.9/P6.10) and chord grouping runs on raw times (D-04).*
+
+- [ ] Task 9.7.1 **Tuplets the app did not find**: mark a group of notes as an N-tuplet by hand, applied after automatic detection.
+- [ ] Task 9.7.2 **Trills**: detect an alternation on raw events and suggest a `tr` mark. *(Chord grouping: done.)*
 
 # [ ] Epic 10 — Piano Library
+
+> *Alive. Rewritten 2026-08-12: reads the time score payload and the saved rhythm; version folders are `v<N>_f<frameMs>`; the PDF belongs in the performance view.*
 
 Performer-facing section: browse/tag/filter consolidated and playground tracks, clean read-only performance view with overlay toggles, Spotify-like playlists with seamless next-piece flow. Index: `epic-10-library/epic-library-index.md`.
 
@@ -268,6 +285,8 @@ Performer-facing section: browse/tag/filter consolidated and playground tracks, 
 
 # [ ] Epic 11 — Range editing
 
+> *Alive. Rewritten 2026-08-12 onto the splice rule: a re-recorded passage is scaled into exactly the window it replaces, so the piece keeps its length and no column moves.*
+
 Preview-first passage replacement: staged edit sessions with exact column enforcement, slow re-recording with metronome and trimming, transcribe-then-scale preview with accept/reject loop. Index: `epic-11-editing/epic-editing-index.md`.
 
 ## [ ] Story 11.1 — Staged sessions
@@ -284,6 +303,8 @@ Preview-first passage replacement: staged edit sessions with exact column enforc
 
 # [ ] Epic 12 — Annotations (nice to have)
 
+> *Partly shipped. Fingering landed as P8.1; lyrics and cue-size notes are rewritten 2026-08-12 and stored in `rhythm.json`.*
+
 Metadata overlays that never touch the matrix: lyrics over frame ranges, finger numbers with chord stacks, cue-size passages and grace notes; all responsive-wrap safe and toggleable. Index: `epic-12-annotations/epic-annotations-index.md`.
 
 ## [ ] Story 12.1 — Lyrics
@@ -292,10 +313,12 @@ Metadata overlays that never touch the matrix: lyrics over frame ranges, finger 
 
 ## [ ] Story 12.2 — Fingering and small notes
 
-- [ ] Task 12.2.1 **Finger numbers**: per-note 1–5, chord stacking, tunable text size.
+- [x] Task 12.2.1 **Finger numbers**: per-note 1–5, chord stacking. *(Shipped as P8.1 on 2026-08-08 — the note toolbox. What remains is the text size and the performance-view toggle, tracked in the task file.)*
 - [ ] Task 12.2.2 **Small notes**: cue-size passages, acciaccatura/appoggiatura marks.
 
 # [ ] Epic 13 — Composing live (nice to have)
+
+> *Alive. Rewritten 2026-08-12: an empty piece is an empty `events.json` and a `frameMs`; this is the one place a length change is allowed.*
 
 Passage-by-passage composition: empty piece, stage-mode record/iterate, insert/append/overwrite placement, per-passage BPM conversion. Index: `epic-13-compose-live/epic-compose-live-index.md`.
 
@@ -304,6 +327,8 @@ Passage-by-passage composition: empty piece, stage-mode record/iterate, insert/a
 - [ ] Task 13.1.1 **Compose live**: empty piece, passage stage, insertion modes, slow-recorded passage conversion.
 
 # [ ] Epic 14 — Final documentation
+
+> *Alive and larger. Rewritten 2026-08-12: it also covers the wall-clock model and the work committed after the plan closed, which has no reports.*
 
 Always last: bring `documentation/` up to the final codebase, refresh `context/` overviews and index, close the progress journal. Index: `epic-14-docs/epic-docs-index.md`.
 

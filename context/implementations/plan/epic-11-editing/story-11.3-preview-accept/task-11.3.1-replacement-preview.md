@@ -1,23 +1,45 @@
 # Task 11.3.1 — Replacement preview and accept
 
-"Transcribe and preview at current track tempo".
+> **Rewritten 2026-08-12 for the wall-clock model.** See
+> [`../../wall-clock-rewrite.md`](../../wall-clock-rewrite.md).
 
-## Subtask 11.3.1.1 — Transcribe then scale
+## Subtask 11.3.1.1 — Transcribe first, scale second
 
-Transcribe the original slow recording first (avoids time-compression artefacts), then scale event timestamps: `targetTime = recordedTime * recordingBpm / trackBpm`. Build the temporary matrix at track tempo via the normal events-to-matrix path.
+Transcribe the take exactly as it was played. Never transcribe stretched audio: time stretching adds
+artifacts that the engine reads as notes, and the whole point of playing slowly is to give the
+engine a cleaner signal. Scale the resulting event times afterwards, which is arithmetic and cannot
+invent a note.
 
-## Subtask 11.3.1.2 — Passage-only render
+## Subtask 11.3.1.2 — Preview the passage only
 
-Render only the edited passage through the score builder (few seconds of music — must be fast, no full-score regeneration).
+Redraw the marked stretch of the sheet with the take's notes in place, using the ladder of the
+passage the window belongs to, so the user sees the figures that will actually print. This must be
+fast: it is a few seconds of music, not a full score rebuild.
 
-## Subtask 11.3.1.3 — Optional audio preview
+Show the take's own peak plot beside it. A wrong speed choice is obvious there — the peaks of the
+scaled take should land on the same values as the passage's ladder, and a factor that is off by two
+puts every peak one step away.
 
-"Play at current track tempo": pitch-preserving time compression of the recorded audio (e.g. ffmpeg `atempo`). For listening only — notation always comes from the transcription of the original recording.
+## Subtask 11.3.1.3 — Listening
 
-## Subtask 11.3.1.4 — Decision loop
+Three things to play, from the same panel: the take at the speed it was played, the take scaled into
+the window, and the original window it would replace.
 
-From the preview the user can: play raw/converted audio, inspect waveform, temporary matrix and passage notation, re-record (same or slower speed, different capture granularity), accept (Task 11.1.1 semantics) or cancel.
+## Subtask 11.3.1.4 — The decision loop
+
+From the preview: play any of the three, change the speed factor and preview again without playing
+the passage again, record another take, accept, or cancel. Re-recording keeps the same window; the
+window is fixed at session start and is not editable here, because changing it would invalidate the
+take already recorded.
+
+## Subtask 11.3.1.5 — What accept says before it commits
+
+One short confirmation listing: how many notes go, how many arrive, how many editorial marks inside
+the window are dropped and of which kind, whether the audio will be spliced, and that the piece's
+length does not change.
 
 ## Acceptance
 
-Manual trial: full loop on a hard 4-beat passage recorded at 4x slower, accepted, and verified in the final score.
+Manual trial: a hard 3-second passage played again at 4 times slower, previewed, the factor
+corrected once, accepted. In the final sheet the passage shows the new notes, the note after the
+window has the same onset it had before to the millisecond, and playback follows the sheet.
