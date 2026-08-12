@@ -287,7 +287,7 @@ Performer-facing section: browse/tag/filter consolidated and playground tracks, 
 
 > *Alive. Rewritten 2026-08-12 onto the splice rule: a re-recorded passage is scaled into exactly the window it replaces, so the piece keeps its length and no column moves.*
 
-Preview-first passage replacement: staged edit sessions with exact column enforcement, slow re-recording with metronome and trimming, transcribe-then-scale preview with accept/reject loop. Index: `epic-11-editing/epic-editing-index.md`.
+Preview-first passage replacement: mark a stretch of the sheet, play it again at any speed, preview it scaled into that same window, accept or cancel. The piece's length never changes. Index: `epic-11-editing/epic-editing-index.md`.
 
 ## [ ] Story 11.1 — Staged sessions
 
@@ -305,7 +305,7 @@ Preview-first passage replacement: staged edit sessions with exact column enforc
 
 > *Partly shipped. Fingering landed as P8.1; lyrics and cue-size notes are rewritten 2026-08-12 and stored in `rhythm.json`.*
 
-Metadata overlays that never touch the matrix: lyrics over frame ranges, finger numbers with chord stacks, cue-size passages and grace notes; all responsive-wrap safe and toggleable. Index: `epic-12-annotations/epic-annotations-index.md`.
+Marks that never touch the recording: lyrics over frame ranges, finger numbers with chord stacks, cue-size passages and grace notes; stored in `rhythm.json`, safe across re-wrapping and printing, toggleable. Index: `epic-12-annotations/epic-annotations-index.md`.
 
 ## [ ] Story 12.1 — Lyrics
 
@@ -320,7 +320,7 @@ Metadata overlays that never touch the matrix: lyrics over frame ranges, finger 
 
 > *Alive. Rewritten 2026-08-12: an empty piece is an empty `events.json` and a `frameMs`; this is the one place a length change is allowed.*
 
-Passage-by-passage composition: empty piece, stage-mode record/iterate, insert/append/overwrite placement, per-passage BPM conversion. Index: `epic-13-compose-live/epic-compose-live-index.md`.
+Passage-by-passage composition: an empty piece, a stage to play and iterate on one passage, and append / insert / replace placement. The one place a length change is allowed. Index: `epic-13-compose-live/epic-compose-live-index.md`.
 
 ## [ ] Story 13.1 — Live composition
 
