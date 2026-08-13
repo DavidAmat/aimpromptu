@@ -11,11 +11,11 @@ How to navigate:
 - Workers read `system-prompt-workers.md` before doing anything, then their assigned Epic > Story > Task file.
 - Progress reports go to `../progress/` (one file per task worked on).
 
-Current boundary, 2026-08-12: **Epics 1–8 and Stories 9.1–9.6 were built, then partly replaced by
-the wall-clock refactor. The live backlog is Story 9.7 and Epics 10–14, all rewritten for the new
-model.** Read [`wall-clock-rewrite.md`](wall-clock-rewrite.md) first — it says what changed, what is
-dead, and the rules every remaining task obeys. `checklist.md` is authoritative for status; the task
-files describe the current requirement, and git holds the text they replaced.
+Current boundary, 2026-08-13: **Epics 1–8, Stories 9.1–9.6, and Epic 10 were built**, then partly
+replaced by the wall-clock refactor. Story 9.7 (trills) and Epics 11–14 remain. Read
+[`wall-clock-rewrite.md`](wall-clock-rewrite.md) first — it says what changed, what is dead, and
+the rules every remaining task obeys. `checklist.md` is authoritative for status; the task files
+describe the current requirement, and git holds the text they replaced.
 
 Epic order (also the recommended implementation order):
 

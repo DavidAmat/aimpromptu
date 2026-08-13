@@ -1,11 +1,8 @@
 """`/library` — the playground repository and library promotion (Epics 5, 10)."""
 
-from typing import Any
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from aitu_backend.api._placeholders import not_implemented
 from aitu_backend.matrix.hands import split_hands
 from aitu_backend.matrix.model import PianoMatrix
 from aitu_backend.schemas.matrix import (
@@ -14,11 +11,13 @@ from aitu_backend.schemas.matrix import (
 )
 from aitu_backend.schemas.metadata import (
     AudioReference,
-    LibraryTrackMetadata,
-    TrackMetadata,
+    PlaylistItem,
+    PlaylistMetadata,
     VersionMetadata,
 )
-from aitu_backend.storage import promotion, repository
+from aitu_backend.storage import browse, playlists, promotion, repository
+from aitu_backend.storage.browse import LibraryTrackEntry, PlaygroundTrackEntry
+from aitu_backend.storage.playlists import PlaylistNotFound
 from aitu_backend.storage.promotion import (
     LibraryTrackNotFound,
     NothingToRollBackTo,
@@ -27,8 +26,6 @@ from aitu_backend.storage.promotion import (
 from aitu_backend.storage.repository import TrackNotFound, VersionNotFound
 
 router = APIRouter(prefix="/library", tags=["library"])
-
-_PLAYLIST_EPIC = "Epic 10 (Piano Library), Story 10.3"
 
 
 class SaveVersionRequest(BaseModel):
@@ -106,45 +103,69 @@ class PromotionSuggestion(BaseModel):
     current_promotions: list[str] = Field(default_factory=list, alias="currentPromotions")
 
 
+class PlaylistWrite(BaseModel):
+    """Body of `POST /library/playlists`."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str
+    description: str | None = None
+    items: list[PlaylistItem] = Field(default_factory=list)
+
+
+class PlaylistPatch(BaseModel):
+    """Body of `PATCH /library/playlists/{slug}`."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str | None = None
+    description: str | None = None
+    items: list[PlaylistItem] | None = None
+
+
 # ------------------------------------------------------------------ playground
 
 
-@router.get("/playground", response_model=list[TrackMetadata], response_model_by_alias=True)
-def list_playground_tracks(search: str | None = None) -> list[TrackMetadata]:
+@router.get("/playground", response_model=list[PlaygroundTrackEntry], response_model_by_alias=True)
+def list_playground_tracks(search: str | None = None) -> list[PlaygroundTrackEntry]:
     """Every playground track with its version history.
 
     `search` matches the **real** artist and track names, never the slugs.
+    Version folders the old granularity scheme left behind are omitted.
     """
-    return repository.find_tracks(search) if search else repository.list_tracks()
+    tracks = repository.find_tracks(search) if search else repository.list_tracks()
+    return [browse.playground_entry(track) for track in tracks]
 
 
 @router.get(
     "/playground/{artist_slug}/{track_slug}",
-    response_model=TrackMetadata,
+    response_model=PlaygroundTrackEntry,
     response_model_by_alias=True,
 )
-def get_playground_track(artist_slug: str, track_slug: str) -> TrackMetadata:
+def get_playground_track(artist_slug: str, track_slug: str) -> PlaygroundTrackEntry:
     try:
-        return repository.read_track(artist_slug, track_slug)
+        return browse.playground_entry(repository.read_track(artist_slug, track_slug))
     except TrackNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.patch(
     "/playground/{artist_slug}/{track_slug}",
-    response_model=TrackMetadata,
+    response_model=PlaygroundTrackEntry,
     response_model_by_alias=True,
 )
 def rename_playground_track(
     artist_slug: str, track_slug: str, body: RenameTrackRequest
-) -> TrackMetadata:
+) -> PlaygroundTrackEntry:
     """Change the display names. Slugs and folders never move."""
     try:
-        return repository.rename_track(
-            artist_slug,
-            track_slug,
-            artist_name=body.artist_name,
-            track_name=body.track_name,
+        return browse.playground_entry(
+            repository.rename_track(
+                artist_slug,
+                track_slug,
+                artist_name=body.artist_name,
+                track_name=body.track_name,
+            )
         )
     except TrackNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -263,8 +284,8 @@ def promotion_suggestion(artist_slug: str, track_slug: str) -> PromotionSuggesti
     )
 
 
-@router.post("/promote", response_model=LibraryTrackMetadata, response_model_by_alias=True)
-def promote_version(request: PromoteRequest) -> LibraryTrackMetadata:
+@router.post("/promote", response_model=LibraryTrackEntry, response_model_by_alias=True)
+def promote_version(request: PromoteRequest) -> LibraryTrackEntry:
     """Promote a playground version into the library."""
     try:
         result = promotion.promote(
@@ -278,14 +299,16 @@ def promote_version(request: PromoteRequest) -> LibraryTrackMetadata:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return result.track
+    return browse.library_entry(result.track)
 
 
-@router.post("/rollback", response_model=LibraryTrackMetadata, response_model_by_alias=True)
-def rollback_promotion(request: RollbackRequest) -> LibraryTrackMetadata:
+@router.post("/rollback", response_model=LibraryTrackEntry, response_model_by_alias=True)
+def rollback_promotion(request: RollbackRequest) -> LibraryTrackEntry:
     """Restore the previously promoted version. Never deletes anything."""
     try:
-        return promotion.rollback(request.artist_slug, request.track_slug).track
+        return browse.library_entry(
+            promotion.rollback(request.artist_slug, request.track_slug).track
+        )
     except LibraryTrackNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PromotionNotFound as exc:
@@ -294,39 +317,104 @@ def rollback_promotion(request: RollbackRequest) -> LibraryTrackMetadata:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.get("/tracks", response_model=list[LibraryTrackMetadata], response_model_by_alias=True)
+@router.get("/tracks", response_model=list[LibraryTrackEntry], response_model_by_alias=True)
 def list_library_tracks(
     tag: str | None = None, search: str | None = None
-) -> list[LibraryTrackMetadata]:
+) -> list[LibraryTrackEntry]:
     """Library tracks, filterable by tag and free-text name search."""
-    return promotion.list_library_tracks(tag=tag, search=search)
+    return [
+        browse.library_entry(track)
+        for track in promotion.list_library_tracks(tag=tag, search=search)
+    ]
 
 
 @router.get(
     "/tracks/{artist_slug}/{track_slug}",
-    response_model=LibraryTrackMetadata,
+    response_model=LibraryTrackEntry,
     response_model_by_alias=True,
 )
-def get_library_track(artist_slug: str, track_slug: str) -> LibraryTrackMetadata:
+def get_library_track(artist_slug: str, track_slug: str) -> LibraryTrackEntry:
     try:
-        return promotion.read_library_track(artist_slug, track_slug)
+        return browse.library_entry(promotion.read_library_track(artist_slug, track_slug))
     except LibraryTrackNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/tags", response_model=LibraryTrackMetadata, response_model_by_alias=True)
-def set_tags(request: TagsRequest) -> LibraryTrackMetadata:
+@router.get("/tags", response_model=list[str])
+def list_library_tags() -> list[str]:
+    """Every tag currently in use, for the filter chips."""
+    return promotion.list_tags()
+
+
+@router.post("/tags", response_model=LibraryTrackEntry, response_model_by_alias=True)
+def set_tags(request: TagsRequest) -> LibraryTrackEntry:
     """Replace a library track's tags."""
     try:
-        return promotion.set_tags(request.artist_slug, request.track_slug, request.tags)
+        return browse.library_entry(
+            promotion.set_tags(request.artist_slug, request.track_slug, request.tags)
+        )
     except LibraryTrackNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/playlists")
-def list_playlists() -> list[dict[str, Any]]:
+@router.get("/playlists", response_model=list[PlaylistMetadata], response_model_by_alias=True)
+def list_playlists() -> list[PlaylistMetadata]:
     """Playlists with their ordered pieces and selected version names."""
-    raise not_implemented(_PLAYLIST_EPIC, "playlists")
+    return playlists.list_playlists()
+
+
+@router.post(
+    "/playlists",
+    response_model=PlaylistMetadata,
+    response_model_by_alias=True,
+    status_code=201,
+)
+def create_playlist(body: PlaylistWrite) -> PlaylistMetadata:
+    try:
+        return playlists.create_playlist(body.name, description=body.description, items=body.items)
+    except (LibraryTrackNotFound, PromotionNotFound) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get(
+    "/playlists/{slug}",
+    response_model=PlaylistMetadata,
+    response_model_by_alias=True,
+)
+def get_playlist(slug: str) -> PlaylistMetadata:
+    try:
+        return playlists.read_playlist(slug)
+    except PlaylistNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.patch(
+    "/playlists/{slug}",
+    response_model=PlaylistMetadata,
+    response_model_by_alias=True,
+)
+def patch_playlist(slug: str, body: PlaylistPatch) -> PlaylistMetadata:
+    try:
+        return playlists.update_playlist(
+            slug, name=body.name, description=body.description, items=body.items
+        )
+    except PlaylistNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (LibraryTrackNotFound, PromotionNotFound) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.delete("/playlists/{slug}")
+def delete_playlist(slug: str) -> dict[str, str]:
+    try:
+        playlists.delete_playlist(slug)
+    except PlaylistNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "deleted", "slug": slug}
 
 
 def _slugs(artist_name: str, track_name: str) -> tuple[str, str]:

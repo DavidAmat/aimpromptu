@@ -94,6 +94,15 @@ def parse_version_folder(folder: str) -> tuple[int, float]:
     return version, frame_from_code("f" + match.group("frame"))
 
 
+def is_version_folder(folder: str) -> bool:
+    """True for a wall-clock folder such as ``v2_f40``. False for the old ``v2_gn`` scheme."""
+    try:
+        parse_version_folder(folder)
+    except ValueError:
+        return False
+    return True
+
+
 def next_version(existing: list[str]) -> int:
     """Highest version number in ``existing`` plus one; 1 when empty.
 

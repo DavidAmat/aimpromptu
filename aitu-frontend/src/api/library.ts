@@ -1,20 +1,23 @@
 /** `/library` — the playground repository and library promotion (Epics 5, 10). */
 
-import type { Granularity, MatrixProcessingStep, PianoMatrixEnvelope } from "../music/types";
+import type { MatrixProcessingStep, PianoMatrixEnvelope } from "../music/types";
 import { request } from "./client";
 
 /** One line of a track's version history. Mirrors `VersionHistoryEntry`. */
 export interface VersionHistoryEntry {
-  /** Folder name, e.g. `v2_gn`. */
+  /** Folder name, e.g. `v2_f40`. */
   folder: string;
   comment?: string | null;
   createdAt: string;
   parentVersion?: string | null;
-  granularity: Granularity;
+  /** How long one column of that version lasts, in milliseconds. */
+  frameMs: number;
   matrixProcessingStep: MatrixProcessingStep;
+  audioUuid?: string | null;
+  needsRederivation?: string | null;
 }
 
-/** A playground track. Mirrors `TrackMetadata`. */
+/** A playground track. Mirrors `PlaygroundTrackEntry`. */
 export interface PlaygroundTrack {
   artistName: string;
   trackName: string;
@@ -22,11 +25,12 @@ export interface PlaygroundTrack {
   trackSlug: string;
   createdAt: string;
   updatedAt?: string | null;
-  /** Newest last. */
+  /** Newest last. Unparseable (old-scheme) folders are omitted. */
   versions: VersionHistoryEntry[];
+  needsRederivation?: string | null;
 }
 
-/** One promoted version. Mirrors `Promotion`. */
+/** One promoted version. Mirrors `PromotionEntry`. */
 export interface Promotion {
   /** Human-facing name, e.g. "Levels (Chill) - Avicii". */
   promotionName: string;
@@ -35,9 +39,12 @@ export interface Promotion {
   promotedAt: string;
   /** Several promotions can be active at once. */
   active: boolean;
+  audioUuid?: string | null;
+  hasSavedRhythm?: boolean;
+  needsRederivation?: string | null;
 }
 
-/** A library track. Mirrors `LibraryTrackMetadata`. */
+/** A library track. Mirrors `LibraryTrackEntry`. */
 export interface LibraryTrack {
   artistName: string;
   trackName: string;
@@ -48,6 +55,8 @@ export interface LibraryTrack {
   rollbackTo?: string | null;
   createdAt: string;
   updatedAt?: string | null;
+  hasSavedRhythm?: boolean;
+  needsRederivation?: string | null;
 }
 
 export interface SaveVersionRequest {
@@ -57,7 +66,7 @@ export interface SaveVersionRequest {
   comment?: string;
   /** Rewrite the existing folder instead of creating a new version. */
   overwrite?: boolean;
-  /** Pin the version number — saving the same state at a second granularity. */
+  /** Pin the version number — saving the same state at a second frame length. */
   version?: number;
   /** Folder of the version this one was derived from. */
   parentVersion?: string;
@@ -85,6 +94,21 @@ export interface PromoteRequest {
   promotionName?: string;
   /** The dialog's "keep the current one too" checkbox. */
   asAdditional?: boolean;
+}
+
+export interface PlaylistItem {
+  artistSlug: string;
+  trackSlug: string;
+  promotionName: string;
+}
+
+export interface Playlist {
+  name: string;
+  slug: string;
+  description?: string | null;
+  items: PlaylistItem[];
+  createdAt: string;
+  updatedAt?: string | null;
 }
 
 export const libraryApi = {
@@ -140,9 +164,29 @@ export const libraryApi = {
   getTrack: (artistSlug: string, trackSlug: string, signal?: AbortSignal) =>
     request<LibraryTrack>(`/library/tracks/${artistSlug}/${trackSlug}`, { signal }),
 
+  listTags: (signal?: AbortSignal) => request<string[]>("/library/tags", { signal }),
+
   setTags: (artistSlug: string, trackSlug: string, tags: string[]) =>
     request<LibraryTrack>("/library/tags", {
       method: "POST",
       body: { artistSlug, trackSlug, tags },
     }),
+
+  // ------------------------------------------------------------- playlists
+  listPlaylists: (signal?: AbortSignal) =>
+    request<Playlist[]>("/library/playlists", { signal }),
+
+  getPlaylist: (slug: string, signal?: AbortSignal) =>
+    request<Playlist>(`/library/playlists/${slug}`, { signal }),
+
+  createPlaylist: (body: { name: string; description?: string; items?: PlaylistItem[] }) =>
+    request<Playlist>("/library/playlists", { method: "POST", body }),
+
+  updatePlaylist: (
+    slug: string,
+    body: { name?: string; description?: string; items?: PlaylistItem[] },
+  ) => request<Playlist>(`/library/playlists/${slug}`, { method: "PATCH", body }),
+
+  deletePlaylist: (slug: string) =>
+    request<{ status: string }>(`/library/playlists/${slug}`, { method: "DELETE" }),
 };

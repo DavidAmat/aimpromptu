@@ -267,23 +267,23 @@ project wants, and automatic tresillo detection already covers them. Nothing els
 
 - [ ] Task 9.7.2 **Trills**: detect an alternation on raw events and suggest a `tr` mark. *(Chord grouping: done.)*
 
-# [ ] Epic 10 — Piano Library
+# [x] Epic 10 — Piano Library
 
 > *Alive. Rewritten 2026-08-12: reads the time score payload and the saved rhythm; version folders are `v<N>_f<frameMs>`; the PDF belongs in the performance view.*
 
 Performer-facing section: browse/tag/filter consolidated and playground tracks, clean read-only performance view with overlay toggles, Spotify-like playlists with seamless next-piece flow. Index: `epic-10-library/epic-library-index.md`.
 
-## [ ] Story 10.1 — Browsing
+## [x] Story 10.1 — Browsing
 
-- [ ] Task 10.1.1 **Library browse**: tracks list, tags/filters/search, playground library management.
+- [x] Task 10.1.1 **Library browse**: tracks list, tags/filters/search, playground library management.
 
-## [ ] Story 10.2 — Performance view
+## [x] Story 10.2 — Performance view
 
-- [ ] Task 10.2.1 **Performance view**: read-only score page, overlay toggles, scroll/zoom UX.
+- [x] Task 10.2.1 **Performance view**: read-only score page, overlay toggles, scroll/zoom UX.
 
-## [ ] Story 10.3 — Playlists
+## [x] Story 10.3 — Playlists
 
-- [ ] Task 10.3.1 **Playlists**: CRUD, ordering, version-by-name selection, playing mode with Next.
+- [x] Task 10.3.1 **Playlists**: CRUD, ordering, version-by-name selection, playing mode with Next.
 
 # [ ] Epic 11 — Range editing
 

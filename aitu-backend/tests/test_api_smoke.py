@@ -69,17 +69,11 @@ def test_sequence_rejects_unknown_note() -> None:
     assert response.status_code == 422
 
 
-def test_placeholder_endpoints_answer_501() -> None:
-    """Routes whose epic has not landed yet exist and say so.
-
-    `/audio` and `/youtube` went real in Epic 3, `/matrix` in Epics 4 and 7,
-    most of `/library` in Epic 5 and `/notation` in Epic 9. Only playlists,
-    which belong to Epic 10, are left.
-    """
-    for url in ("/library/playlists",):
-        response = client.get(url)
-        assert response.status_code == 501, url
-        assert "Not implemented yet" in response.json()["detail"]
+def test_playlists_are_a_list() -> None:
+    """Playlists landed in Epic 10; the list is real even when it is empty."""
+    response = client.get("/library/playlists")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
 
 
 def test_notation_answers_404_for_an_unknown_artifact() -> None:

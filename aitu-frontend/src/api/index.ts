@@ -58,6 +58,8 @@ export { libraryApi } from "./library";
 export type {
   LibraryTrack,
   PlaygroundTrack,
+  Playlist,
+  PlaylistItem,
   PromoteRequest,
   Promotion,
   PromotionSuggestion,
