@@ -40,7 +40,8 @@ Read first: `project-features.md` sections "Music notation", "Music Specifics", 
 
 ## Story 9.7 — Advanced ornaments (nice to have, end of project)
 
-- Task 9.7.1 tuplets: manual tuplet grouping over a selected passage (render-only, matrix untouched).
+- ~~Task 9.7.1 tuplets~~: dropped 2026-08-12. Only triplets are wanted, and they are already
+  detected automatically (D-32); manual marking of fives, sixes and sevens has no user behind it.
 - Task 9.7.2 trills and chord grouping: trill ("tr") detection of fast alternations; near-simultaneous notes as chords (no arpeggio symbols).
 
 ## Exit criteria

@@ -55,5 +55,5 @@ not at each Mi.
 ## For the next worker
 
 `BEAMABLE_TOKENS` lives in `notation/durations.py`; dotted figures are excluded from beams on
-purpose (same-duration rule). If tuplets (Task 9.7.1) ever beam, they will need their own grouping —
-`beamGroup` is just an integer id, so a tuplet can reuse it.
+purpose (same-duration rule). Automatic tresillos beam as ordinary same-duration runs; there is no
+manual tuplet marking to accommodate (Task 9.7.1 was dropped 2026-08-12).

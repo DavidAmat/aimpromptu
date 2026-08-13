@@ -259,10 +259,12 @@ VexFlow sheet music: backend score-format builder, notation tab with responsive 
 
 ## [p] Story 9.7 — Tuplets and trills (nice to have)
 
-*Rewritten 2026-08-12. Both tasks are partly shipped: tresillos are found automatically (D-32,
-P3.9/P6.10) and chord grouping runs on raw times (D-04).*
+*Rewritten 2026-08-12. Partly shipped: tresillos are found automatically (D-32, P3.9/P6.10) and
+chord grouping runs on raw times (D-04).*
 
-- [ ] Task 9.7.1 **Tuplets the app did not find**: mark a group of notes as an N-tuplet by hand, applied after automatic detection.
+*Task 9.7.1 (manual N-tuplet marking) dropped 2026-08-12: triplets are the only tuplet this
+project wants, and automatic tresillo detection already covers them. Nothing else to build.*
+
 - [ ] Task 9.7.2 **Trills**: detect an alternation on raw events and suggest a `tr` mark. *(Chord grouping: done.)*
 
 # [ ] Epic 10 — Piano Library
