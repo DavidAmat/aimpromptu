@@ -41,6 +41,7 @@ export type {
   SpeedChange,
   TimeMatrixEnvelope,
   TimeScorePayload,
+  TrillMark,
 } from "./timeScore";
 
 export { matrixApi } from "./matrix";

@@ -265,6 +265,35 @@ class BeamBreak(BaseModel):
     start_frame: int = Field(..., alias="startFrame", ge=0)
 
 
+class TrillMark(BaseModel):
+    """A ``tr`` over a frame range: the lower pitch held, the storm of notes hidden.
+
+    Stored in ``rhythm.json`` like every other editorial decision. The notes stay in
+    ``events.json``; this only changes what the page prints. Removing it puts the notes back.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    hand: PrintedHand
+    from_column: int = Field(..., alias="fromColumn", ge=0)
+    to_column: int = Field(..., alias="toColumn", ge=1)
+    lower_row: int = Field(..., alias="lowerRow", ge=0, lt=KEY_COUNT)
+    upper_row: int = Field(..., alias="upperRow", ge=0, lt=KEY_COUNT)
+    #: Pitch changes in the detected run. Informational; 0 on a mark saved without a recount.
+    alternations: int = Field(0, ge=0)
+
+    @model_validator(mode="after")
+    def _check_range(self) -> "TrillMark":
+        if self.to_column <= self.from_column:
+            raise ValueError(
+                f"a trill must cover at least one column, got "
+                f"[{self.from_column}, {self.to_column})"
+            )
+        if self.upper_row <= self.lower_row:
+            raise ValueError("a trill's upper row must sit above its lower row")
+        return self
+
+
 class LayoutHints(BaseModel):
     """Wall-clock aggregation levels and spacing hints for the renderer (D-23, D-24, D-27).
 
@@ -309,6 +338,9 @@ class TimeScorePayload(BaseModel):
     #: Notes the reader asked to start a new beam (D-34). Grouping only; no note changes.
     beam_breaks: list[BeamBreak] = Field(default_factory=list, alias="beamBreaks")
     layout: LayoutHints
+    #: Detected alternations the reader has not accepted yet. Empty when none qualify, or when every
+    #: one is already an accepted mark. Never applied by itself.
+    trill_suggestions: list[TrillMark] = Field(default_factory=list, alias="trillSuggestions")
 
     @model_validator(mode="after")
     def _check_passages_tile(self) -> "TimeScorePayload":

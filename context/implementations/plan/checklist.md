@@ -207,18 +207,14 @@ Animated matrix views over the piano SVG: assets and key highlighting, horizonta
 
 - [x] Task 8.5.1 **Drag note editing**: drag to key/frame with landing guides, staged changes, Save.
 
-# [p] Epic 9 — Music notation
+# [x] Epic 9 — Music notation
 
 > **Stories 9.1–9.6 were superseded by the refactor**, which rebuilt the sheet on
-> `@aimpromptu/grid-notation` with no VexFlow, no bars and no tempo. Only Story 9.7 is live, and it
-> is rewritten for the wall clock.
+> `@aimpromptu/grid-notation` with no VexFlow, no bars and no tempo. Story 9.7 is done: tresillos
+> and chord grouping shipped in the refactor; trill detection (Task 9.7.2) landed 2026-08-13.
 
 VexFlow sheet music: backend score-format builder, notation tab with responsive wrapping, engraving rules (stems/beams/no ties), key signatures and naturals, transposition, octave/clef displacement, beat guides and cut-measure, advanced ornaments at the end. Index: `epic-09-notation/epic-notation-index.md`.
 
-> **Stories 9.1–9.6 completed 2026-07-27** and awaiting the supervisor's musical trial —
-> [guide 7](../progress/user_review/epic-09-notation.md). Story 9.7 (nice-to-have ornaments) was
-> not started, per the plan's "end of project" placement, so the epic header stays `[p]`.
->
 > The score intentionally uses one readable voice per hand. Simultaneous onsets share the longest
 > onset-to-next-onset chord duration; partial chord releases never create separate voices, rests or
 > ties. Cross-barline gaps become leading rests in the following measure. See
@@ -257,15 +253,15 @@ VexFlow sheet music: backend score-format builder, notation tab with responsive 
   cut-measure via timeline-column insertion. *(The preceding note/chord expands to the old
   barline when possible; the following note begins the new measure.)*
 
-## [p] Story 9.7 — Tuplets and trills (nice to have)
+## [x] Story 9.7 — Tuplets and trills (nice to have)
 
-*Rewritten 2026-08-12. Partly shipped: tresillos are found automatically (D-32, P3.9/P6.10) and
-chord grouping runs on raw times (D-04).*
+*Rewritten 2026-08-12. Tresillos are found automatically (D-32, P3.9/P6.10), chord grouping runs
+on raw times (D-04), and trill detection is a suggestion the reader accepts (Task 9.7.2, 2026-08-13).*
 
 *Task 9.7.1 (manual N-tuplet marking) dropped 2026-08-12: triplets are the only tuplet this
 project wants, and automatic tresillo detection already covers them. Nothing else to build.*
 
-- [ ] Task 9.7.2 **Trills**: detect an alternation on raw events and suggest a `tr` mark. *(Chord grouping: done.)*
+- [x] Task 9.7.2 **Trills**: detect an alternation on raw events and suggest a `tr` mark. *(Chord grouping: done.)*
 
 # [ ] Epic 10 — Piano Library
 

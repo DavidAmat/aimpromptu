@@ -19,6 +19,7 @@ import {
   type KeyChangeAnnotation,
   type OttavaAnnotation,
   type SparseMatrix,
+  type TextAnnotation,
 } from "@aimpromptu/grid-notation";
 import type { FigureName, KeySignatureName, TimeScorePayload } from "../../api";
 import {
@@ -65,6 +66,13 @@ export interface TimeScoreViewProps {
    * spans are held by the page, not worked out here, so the reader can clear or change any of them.
    */
   ottavas?: readonly OttavaAnnotation[];
+  /**
+   * Free text on the staff, used here for accepted ``tr`` marks over the held lower note.
+   *
+   * Drawn by the notation package as italic text above the staff at the start of the range. The
+   * notes themselves are already collapsed by the backend before this view sees them.
+   */
+  texts?: readonly TextAnnotation[];
   /**
    * Notes the reader took off the page and notes they sent to the other staff.
    *
@@ -193,6 +201,7 @@ export function TimeScoreView({
   keySignature = "C",
   keyChanges,
   ottavas,
+  texts,
   renderOverrides = NO_RENDER_OVERRIDES,
   fingers,
   onMovesRefused,
@@ -364,6 +373,7 @@ export function TimeScoreView({
         // Octave brackets, which take a passage out of the ledger lines and into the staff.
         ottavas: [...(ottavas ?? [])],
         fingers: fingerAnnotations,
+        texts: [...(texts ?? [])],
       },
       staves: score.layout.hideLeftHand || score.layout.hideRightHand ? "single" : "grand",
       // The two wall-clock levels above the column. A dashed line every `frameMeasure` columns
@@ -464,6 +474,7 @@ export function TimeScoreView({
     keySignature,
     keyChanges,
     ottavas,
+    texts,
     onKeySuggestion,
     onSelectNote,
     onSelectNotes,

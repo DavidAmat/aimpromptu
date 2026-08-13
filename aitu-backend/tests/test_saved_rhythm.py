@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from aitu_backend.main import create_app
 from aitu_backend.schemas.rhythm import KeyChange, SavedRhythm, SpeedChange
-from aitu_backend.schemas.time_matrix import BeamBreak, FigureName, FigureOverride
+from aitu_backend.schemas.time_matrix import BeamBreak, FigureName, FigureOverride, TrillMark
 from aitu_backend.storage import paths
 from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.engine import NoteEvent
@@ -60,6 +60,16 @@ def a_reading(anchor_ms: float = 320.0) -> SavedRhythm:
             FigureOverride(hand="right", row=39, start_frame=8, figure=FigureName.SEMICORCHEA)
         ],
         beam_breaks=[BeamBreak(hand="left", start_frame=24)],
+        trills=[
+            TrillMark(
+                hand="right",
+                from_column=10,
+                to_column=18,
+                lower_row=51,
+                upper_row=53,
+                alternations=6,
+            )
+        ],
         key_signature="Bb",
         key_changes=[
             KeyChange(from_column=40, key_signature="D"),
@@ -91,6 +101,16 @@ def test_a_reading_comes_back_exactly_as_it_was_saved(client: TestClient) -> Non
         {"hand": "right", "row": 39, "startFrame": 8, "figure": "semicorchea"}
     ]
     assert read["beamBreaks"] == [{"hand": "left", "startFrame": 24}]
+    assert read["trills"] == [
+        {
+            "hand": "right",
+            "fromColumn": 10,
+            "toColumn": 18,
+            "lowerRow": 51,
+            "upperRow": 53,
+            "alternations": 6,
+        }
+    ]
 
 
 def test_a_piece_with_no_saved_reading_says_so_rather_than_inventing_one(

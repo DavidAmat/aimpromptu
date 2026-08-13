@@ -33,8 +33,9 @@ from aitu_backend.matrix.passages import one_passage, passages_from_boundaries
 from aitu_backend.matrix.peaks import Peak, peaks_of
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN
+from aitu_backend.notation.trills import apply_trills, find_trills_in_hands, to_trill_mark
 from aitu_backend.schemas.rhythm import HiddenNote, SavedRhythm
-from aitu_backend.schemas.time_matrix import FigureLadder, FigureName, TimeScorePayload
+from aitu_backend.schemas.time_matrix import FigureLadder, FigureName, TimeScorePayload, TrillMark
 from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.time_pipeline import (
     TimeHands,
@@ -343,7 +344,8 @@ def get_time_score(
     hands = trim_to_music(_hands(audio_uuid, frame_ms))
     ladder = build_ladder(anchor_figure, anchor_ms)
     passages = _passages_from_query(hands, ladder, anchor_figure, boundaries, boundary_ms)
-    return to_score_payload(hands, ladder, passages=passages, title=hands.right.title)
+    payload = to_score_payload(hands, ladder, passages=passages, title=hands.right.title)
+    return _with_trill_suggestions(payload, audio_uuid, hands)
 
 
 class HandAssignment(BaseModel):
@@ -371,7 +373,9 @@ class HandAssignmentResult(BaseModel):
     unmatched: int
 
 
-@router.put("/{audio_uuid}/hands", response_model=HandAssignmentResult, response_model_by_alias=True)
+@router.put(
+    "/{audio_uuid}/hands", response_model=HandAssignmentResult, response_model_by_alias=True
+)
 def put_hands(audio_uuid: str, body: HandAssignmentRequest = Body(...)) -> HandAssignmentResult:
     """Record which hand plays these notes, on the recording itself.
 
@@ -416,9 +420,7 @@ def put_hands(audio_uuid: str, body: HandAssignmentRequest = Body(...)) -> HandA
         assigned += 1
 
     if assigned:
-        pipeline.save_note_events(
-            audio_uuid, stored.events, stored.duration_seconds, stored.title
-        )
+        pipeline.save_note_events(audio_uuid, stored.events, stored.duration_seconds, stored.title)
         # The split is cached per (piece, column length) and has just stopped being true.
         forget_split_cache()
 
@@ -518,9 +520,7 @@ def put_removed_by_column(
         changed += 1
 
     if changed:
-        pipeline.save_note_events(
-            audio_uuid, stored.events, stored.duration_seconds, stored.title
-        )
+        pipeline.save_note_events(audio_uuid, stored.events, stored.duration_seconds, stored.title)
         forget_split_cache()
 
     return RemovalByColumnResult(changed=changed, unmatched=unmatched)
@@ -542,6 +542,10 @@ class ScoreRequest(BaseModel):
     boundaries: list[int] = Field(default_factory=list)
     boundary_ms: list[float] = Field(default_factory=list, alias="boundaryMs")
     hidden_notes: list[HiddenNote] = Field(default_factory=list, alias="hiddenNotes")
+    #: Accepted ``tr`` marks. Folded into the sheet the same way hidden notes are: a copy of the
+    #: split, the storm of notes taken off that copy, one held lower note left. Nothing is written
+    #: back to the recording.
+    trills: list[TrillMark] = Field(default_factory=list)
 
 
 def _with_page_edits(hands: TimeHands, hidden: list[HiddenNote]) -> TimeHands:
@@ -609,7 +613,8 @@ def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> TimeScor
         ",".join(str(value) for value in body.boundary_ms),
     )
     edited = _with_page_edits(hands, body.hidden_notes)
-    return to_score_payload(
+    edited = apply_trills(edited, body.trills)
+    payload = to_score_payload(
         edited,
         ladder,
         passages=passages,
@@ -618,6 +623,35 @@ def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> TimeScor
         # note of a piece would shorten it — and that renumbers every column, which every
         # frame-keyed annotation on the page depends on not happening.
         trim_trailing_silence=False,
+    )
+    return _with_trill_suggestions(payload, audio_uuid, hands, accepted=body.trills)
+
+
+def _with_trill_suggestions(
+    payload: TimeScorePayload,
+    audio_uuid: str,
+    hands: TimeHands,
+    *,
+    accepted: list[TrillMark] | None = None,
+) -> TimeScorePayload:
+    """Attach detected trills the reader has not already accepted.
+
+    Detection is a suggestion: the page still prints every note until a mark is accepted. Already
+    accepted ranges are dropped so the same run is not offered twice.
+    """
+    stored = _events_or_error(audio_uuid)
+    found = [to_trill_mark(trill) for trill in find_trills_in_hands(stored.events, hands)]
+    kept = [mark for mark in found if not _trill_overlaps(mark, accepted or [])]
+    payload.trill_suggestions = kept
+    return payload
+
+
+def _trill_overlaps(mark: TrillMark, others: list[TrillMark]) -> bool:
+    return any(
+        mark.hand == other.hand
+        and mark.from_column < other.to_column
+        and mark.to_column > other.from_column
+        for other in others
     )
 
 

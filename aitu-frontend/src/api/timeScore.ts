@@ -24,6 +24,16 @@ export type FigureName =
 export type PrintedHand = "right" | "left";
 export type HandChoice = PrintedHand | "both";
 
+/** A ``tr`` over a frame range: the lower pitch held, the storm of notes hidden. */
+export interface TrillMark {
+  hand: PrintedHand;
+  fromColumn: number;
+  toColumn: number;
+  lowerRow: number;
+  upperRow: number;
+  alternations?: number;
+}
+
 /** How a figure is written on screen, in the words the sheet uses. */
 export const FIGURE_LABELS: Record<FigureName, string> = {
   redonda: "Redonda (whole)",
@@ -148,6 +158,8 @@ export interface TimeScorePayload {
   notes: PrintedNote[];
   overrides: unknown[];
   layout: LayoutHints;
+  /** Detected alternations the reader has not accepted yet. Never applied by itself. */
+  trillSuggestions?: TrillMark[];
 }
 
 export interface PeaksQuery {
@@ -203,6 +215,8 @@ export const timeScoreApi = {
       boundaryMs?: number[];
       /** Notes the reader took off the page. */
       hiddenNotes?: { startFrame: number; row: number }[];
+      /** Accepted ``tr`` marks. The storm of notes leaves the page; the recording still has them. */
+      trills?: TrillMark[];
     },
     signal?: AbortSignal,
   ) {
@@ -215,6 +229,7 @@ export const timeScoreApi = {
         boundaries: query.boundaries ?? [],
         boundaryMs: query.boundaryMs ?? [],
         hiddenNotes: query.hiddenNotes ?? [],
+        trills: query.trills ?? [],
       },
       signal,
     });
@@ -394,5 +409,9 @@ export interface SavedRhythm {
   hiddenNotes?: { startFrame: number; row: number }[];
   /** Which finger plays a note, by the staff it is drawn on. */
   fingers?: { hand: string; startFrame: number; row: number; finger: number }[];
+  /** Accepted ``tr`` marks. The recording still has every note. */
+  trills?: TrillMark[];
+  /** Detected runs the reader said are not trills, so they are not offered again. */
+  ignoredTrills?: TrillMark[];
   savedAt?: string;
 }

@@ -13,6 +13,7 @@ and nothing in the recording implies them:
 * the notes the reader asked to start a new beam (D-34)
 * the notes taken off the page
 * which finger plays which note
+* which fast alternations are marked as trills, and which detected ones the reader refused
 
 Those two are readings of the page, not corrections to the recording. A note the
 transcriber invented out of a pedal blur is still in the matrix after the reader
@@ -48,6 +49,7 @@ from aitu_backend.schemas.time_matrix import (
     FigureName,
     FigureOverride,
     PrintedHand,
+    TrillMark,
 )
 
 
@@ -158,6 +160,11 @@ class SavedRhythm(BaseModel):
     #: Page readings. None of these three touch the matrix; see the module note.
     hidden_notes: list[HiddenNote] = Field(default_factory=list, alias="hiddenNotes")
     fingers: list[Fingering] = Field(default_factory=list)
+    #: Accepted ``tr`` marks. A suggestion until the reader says yes; then the page prints one
+    #: held lower note over this range instead of the storm. The recording still has every note.
+    trills: list[TrillMark] = Field(default_factory=list)
+    #: Detected runs the reader said are not trills, so they are not offered again.
+    ignored_trills: list[TrillMark] = Field(default_factory=list, alias="ignoredTrills")
 
     saved_at: datetime = Field(default_factory=_now, alias="savedAt")
 
@@ -179,4 +186,6 @@ class SavedRhythm(BaseModel):
             parts.append(f"{len(self.hidden_notes)} note(s) off the page")
         if self.fingers:
             parts.append(f"{len(self.fingers)} fingering(s)")
+        if self.trills:
+            parts.append(f"{len(self.trills)} trill(s)")
         return ", ".join(parts) + "."

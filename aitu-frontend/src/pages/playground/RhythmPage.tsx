@@ -49,8 +49,10 @@ import {
   type KeySignatureName,
   type SavedRhythm,
   type TimeScorePayload,
+  type TrillMark,
 } from "../../api";
 import { ApiError } from "../../api";
+import { formatTimeShort } from "../../audio/time";
 import {
   applyKeySignatureRange,
   applyOttava,
@@ -64,6 +66,7 @@ import {
   type KeySignature,
   type OttavaAnnotation,
   type OttavaKind,
+  type TextAnnotation,
 } from "@aimpromptu/grid-notation";
 import {
   frameOf,
@@ -96,6 +99,14 @@ const FRAME_TABS = [
 ];
 
 type FrameTab = (typeof FRAME_TABS)[number]["id"];
+
+function trillOverlaps(left: TrillMark, right: TrillMark): boolean {
+  return (
+    left.hand === right.hand &&
+    left.fromColumn < right.toColumn &&
+    left.toColumn > right.fromColumn
+  );
+}
 
 /** The four brackets, and what each does to a passage, in the order a reader meets them. */
 const OTTAVA_CHOICES: { kind: OttavaKind; label: string; hint: string }[] = [
@@ -341,6 +352,13 @@ export function RhythmPage() {
    * on the Octave pill.
    */
   const [ottavas, setOttavas] = useState<OttavaAnnotation[]>([]);
+  /**
+   * Accepted ``tr`` marks. A suggestion until the reader says yes; then the sheet prints one held
+   * lower note instead of the storm. The recording still has every alternation.
+   */
+  const [trills, setTrills] = useState<TrillMark[]>([]);
+  /** Detected runs the reader said are not trills, so they are not offered again. */
+  const [ignoredTrills, setIgnoredTrills] = useState<TrillMark[]>([]);
   /** Notes picked on the sheet: click one, then hold Command and click more. */
   const [selectedNotes, setSelectedNotes] = useState<readonly string[]>([]);
   const [framesToolbox, setFramesToolbox] = useState(false);
@@ -718,6 +736,8 @@ export function RhythmPage() {
             toColumn: span.toColumn,
           })),
         );
+        setTrills(found.trills ?? []);
+        setIgnoredTrills(found.ignoredTrills ?? []);
       })
       .catch(() => {
         // A reading that cannot be read is not worth stopping the screen for: the plot still works
@@ -1012,6 +1032,8 @@ export function RhythmPage() {
         row: rowOf(noteKey),
         finger,
       })),
+      trills,
+      ignoredTrills,
     };
     try {
       const stored = await timeScoreApi.saveRhythm(audioUuid, body);
@@ -1048,6 +1070,8 @@ export function RhythmPage() {
     stretches,
     live,
     hiddenNotes,
+    trills,
+    ignoredTrills,
   ]);
 
   /**
@@ -1066,12 +1090,35 @@ export function RhythmPage() {
         const [frame, row] = ref.split(":");
         return { startFrame: Number(frame), row: Number(row) };
       }),
+      trills,
     }),
-    [hiddenNotes],
+    [hiddenNotes, trills],
   );
   const editSignature = useMemo(() => JSON.stringify(pageEdits), [pageEdits]);
   /** The edits the sheet on screen was built from, so it is only asked for again when they move. */
   const sheetBuiltFor = useRef<string | null>(null);
+
+  const pendingTrills = useMemo(() => {
+    const suggested = score?.trillSuggestions ?? [];
+    return suggested.filter(
+      (one) =>
+        !trills.some((accepted) => trillOverlaps(accepted, one)) &&
+        !ignoredTrills.some((ignored) => trillOverlaps(ignored, one)),
+    );
+  }, [score, trills, ignoredTrills]);
+
+  const trillTexts: TextAnnotation[] = useMemo(
+    () =>
+      trills.map((mark) => ({
+        anchor: {
+          hand: mark.hand,
+          columns: { fromColumn: mark.fromColumn, toColumn: mark.toColumn },
+          rows: [mark.lowerRow],
+        },
+        text: "tr",
+      })),
+    [trills],
+  );
 
   // What the bar has just done, said on the button that did it, then gone. Long enough to read
   // while looking somewhere else on the page, short enough not to be mistaken for the resting state.
@@ -1159,7 +1206,7 @@ export function RhythmPage() {
    *
    * Everything cleared here is something a person chose and nothing the recording knows: the key
    * and where it changes, where the piece changes speed, the notes renamed by hand, the beams cut,
-   * the octave brackets, the notes taken off the page and every fingering. What is left is the piece as the recording alone describes it, still drawn from the
+   * the octave brackets, the notes taken off the page, the trill marks and every fingering. What is left is the piece as the recording alone describes it, still drawn from the
    * gap that was named — starting over on the reading is a different thing and is done above.
    *
    * The saved reading goes with it. Clearing only the screen would look identical and be undone by
@@ -1190,6 +1237,8 @@ export function RhythmPage() {
     setKeySignature("C");
     setKeyChanges([]);
     setOttavas([]);
+    setTrills([]);
+    setIgnoredTrills([]);
     setHiddenNotes(new Set());
     setFingers({});
     setStretches([]);
@@ -1741,6 +1790,66 @@ export function RhythmPage() {
                 </Typography>
               )}
             </Stack>
+            {(pendingTrills.length > 0 || trills.length > 0) && (
+              <Stack spacing={1} sx={{ mt: 1 }}>
+                {pendingTrills.map((mark) => (
+                  <Stack
+                    key={`suggest-${mark.hand}-${mark.fromColumn}`}
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: "center", flexWrap: "wrap" }}
+                  >
+                    <Typography variant="body2">
+                      Possible trill at{" "}
+                      {formatTimeShort((mark.fromColumn * frameMs) / 1000)} (
+                      {mark.hand} hand
+                      {mark.alternations
+                        ? `, ${mark.alternations} alternations`
+                        : ""}
+                      )
+                    </Typography>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => setTrills((current) => [...current, mark])}
+                    >
+                      Mark tr
+                    </Button>
+                    <Button
+                      size="small"
+                      onClick={() =>
+                        setIgnoredTrills((current) => [...current, mark])
+                      }
+                    >
+                      Not a trill
+                    </Button>
+                  </Stack>
+                ))}
+                {trills.map((mark) => (
+                  <Stack
+                    key={`accepted-${mark.hand}-${mark.fromColumn}`}
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: "center", flexWrap: "wrap" }}
+                  >
+                    <Typography variant="body2">
+                      Trill at {formatTimeShort((mark.fromColumn * frameMs) / 1000)}{" "}
+                      ({mark.hand} hand)
+                    </Typography>
+                    <Button
+                      size="small"
+                      onClick={() =>
+                        setTrills((current) =>
+                          current.filter((one) => !trillOverlaps(one, mark)),
+                        )
+                      }
+                    >
+                      Remove mark
+                    </Button>
+                  </Stack>
+                ))}
+              </Stack>
+            )}
             {/*
               Capture, so the press is recorded before the sheet's own handlers run and open a
               toolbox from it.
@@ -1757,6 +1866,7 @@ export function RhythmPage() {
                 keySignature={keySignature}
                 keyChanges={keyChanges}
                 ottavas={live.ottavas}
+                texts={trillTexts}
                 onKeySuggestion={setKeyHint}
                 onSelectNotes={pickNotes}
                 onSelectRange={pickRange}
