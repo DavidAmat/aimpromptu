@@ -178,6 +178,23 @@ def version_exists(artist_slug: str, track_slug: str, folder: str) -> bool:
     ).is_file()
 
 
+def peek_version_metadata(artist_slug: str, track_slug: str, folder: str) -> VersionMetadata | None:
+    """Read ``metadata.json`` without loading the matrix.
+
+    The library browse list needs the audio uuid to say whether a rhythm exists
+    and whether the piece is flagged. Opening the ``.npz`` for every row would
+    be wasted work, and a folder the old granularity scheme left behind must not
+    be guessed at from its name.
+    """
+    path = paths.playground_track_dir(artist_slug, track_slug) / folder / "metadata.json"
+    if not path.is_file():
+        return None
+    try:
+        return VersionMetadata.model_validate_json(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return None
+
+
 def save_version(
     artist_name: str,
     track_name: str,

@@ -273,9 +273,9 @@ project wants, and automatic tresillo detection already covers them. Nothing els
 
 Performer-facing section: browse/tag/filter consolidated and playground tracks, clean read-only performance view with overlay toggles, Spotify-like playlists with seamless next-piece flow. Index: `epic-10-library/epic-library-index.md`.
 
-## [ ] Story 10.1 — Browsing
+## [x] Story 10.1 — Browsing
 
-- [ ] Task 10.1.1 **Library browse**: tracks list, tags/filters/search, playground library management.
+- [x] Task 10.1.1 **Library browse**: tracks list, tags/filters/search, playground library management.
 
 ## [ ] Story 10.2 — Performance view
 

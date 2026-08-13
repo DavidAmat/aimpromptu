@@ -24,6 +24,7 @@ from aitu_backend.schemas.metadata import (
 from aitu_backend.schemas.naming import (
     frame_code,
     frame_from_code,
+    is_version_folder,
     matrix_filename,
     next_version,
     parse_version_folder,
@@ -96,6 +97,8 @@ def test_a_folder_written_under_the_old_scheme_is_not_readable() -> None:
     """
     with pytest.raises(ValueError, match="not a version folder name"):
         parse_version_folder("v2_gn")
+    assert not is_version_folder("v2_gn")
+    assert is_version_folder("v1_f40")
     assert next_version(["v2_gn", "v1_f40"]) == 2
 
 

@@ -104,14 +104,18 @@ def list_library_tracks(
         tracks = [track for track in tracks if needle in {item.lower() for item in track.tags}]
     if search:
         needle = search.strip().lower()
-        tracks = [
-            track
-            for track in tracks
-            if needle in track.artist_name.lower() or needle in track.track_name.lower()
-        ]
+        tracks = [track for track in tracks if _matches_search(track, needle)]
 
     tracks.sort(key=lambda track: (track.artist_name.lower(), track.track_name.lower()))
     return tracks
+
+
+def list_tags() -> list[str]:
+    """Every tag in use, sorted, so the library page can draw the filter chips."""
+    tags: set[str] = set()
+    for track in list_library_tracks():
+        tags.update(track.tags)
+    return sorted(tags, key=str.lower)
 
 
 def set_tags(artist_slug: str, track_slug: str, tags: list[str]) -> LibraryTrackMetadata:
@@ -286,6 +290,13 @@ def _copy_hand_matrices(
         candidate = source_dir / name
         if candidate.is_file():
             shutil.copy2(candidate, destination / name)
+
+
+def _matches_search(track: LibraryTrackMetadata, needle: str) -> bool:
+    """Real artist, piece, and promotion names — never slugs."""
+    if needle in track.artist_name.lower() or needle in track.track_name.lower():
+        return True
+    return any(needle in item.promotion_name.lower() for item in track.promotions)
 
 
 def _now() -> datetime:

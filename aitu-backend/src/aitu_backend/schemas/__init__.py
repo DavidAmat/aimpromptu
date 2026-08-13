@@ -42,6 +42,7 @@ from aitu_backend.schemas.metadata import (
 from aitu_backend.schemas.naming import (
     frame_code,
     frame_from_code,
+    is_version_folder,
     matrix_filename,
     next_version,
     parse_version_folder,
@@ -88,6 +89,7 @@ __all__ = [
     "VersionMetadata",
     "frame_code",
     "frame_from_code",
+    "is_version_folder",
     "matrix_filename",
     "next_version",
     "parse_version_folder",
