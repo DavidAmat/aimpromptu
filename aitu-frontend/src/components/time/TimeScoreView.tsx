@@ -184,6 +184,17 @@ export interface TimeScoreViewProps {
    * Handing the object up rather than adding a `print()` prop here keeps this view about drawing.
    */
   onRendererChange?: (renderer: GridNotationRenderer | null) => void;
+  /**
+   * A printed view: no note picking, no marked stretch, no toolbox. The playhead still moves.
+   * Pointer events on the SVG are turned off so the ruler cannot start a selection either.
+   */
+  readOnly?: boolean;
+  /** Dashed time lines above the staves. On unless the performance overlay turns them off. */
+  showGuides?: boolean;
+  /** Tresillo (and similar) marks. On unless the performance overlay turns them off. */
+  showTuplets?: boolean;
+  /** Finger numbers. On unless the performance overlay turns them off. */
+  showFingers?: boolean;
 }
 
 export function TimeScoreView({
@@ -209,6 +220,10 @@ export function TimeScoreView({
   onScrub,
   scrollCursorAt,
   onRendererChange,
+  readOnly = false,
+  showGuides = true,
+  showTuplets = true,
+  showFingers = true,
 }: TimeScoreViewProps) {
   const host = useRef<HTMLDivElement | null>(null);
   // The positioned box the score is drawn into. Both the cursor's placement and a drag over it are
@@ -320,18 +335,22 @@ export function TimeScoreView({
     }
 
     const tuplets = new Map<string, { count: number; id: number }>();
-    for (const note of score.notes) {
-      const staff = staffOf(note);
-      if (!staff) continue;
-      if (note.tuplet && note.tupletId !== null && note.tupletId !== undefined) {
-        if (renamed.has(note.tupletId)) continue;
-        tuplets.set(`${staff}:${note.startFrame}`, { count: note.tuplet, id: note.tupletId });
+    if (showTuplets) {
+      for (const note of score.notes) {
+        const staff = staffOf(note);
+        if (!staff) continue;
+        if (note.tuplet && note.tupletId !== null && note.tupletId !== undefined) {
+          if (renamed.has(note.tupletId)) continue;
+          tuplets.set(`${staff}:${note.startFrame}`, { count: note.tuplet, id: note.tupletId });
+        }
       }
     }
 
     // One annotation per numbered notehead. They are grouped by hand and onset when they are drawn,
     // so a chord's numbers come out as one column without being asked to.
-    const fingerAnnotations: FingerAnnotation[] = Object.entries(fingers ?? {}).map(
+    const fingerAnnotations: FingerAnnotation[] = Object.entries(
+      showFingers ? (fingers ?? {}) : {},
+    ).map(
       ([noteKey, finger]) => {
         const [staff, startFrame, row] = noteKey.split(":");
         const column = Number(startFrame);
@@ -370,7 +389,9 @@ export function TimeScoreView({
       // says where the page is in time; a selection snaps to `frameGroup` columns, which is the
       // unit a passage is drawn in. Neither means anything musical.
       frameGroup: score.layout.frameGroup,
-      frameMeasure: score.layout.frameMeasure,
+      // A step past the last column draws no interior dashed line, which is how the overlay
+      // turns the guides off without a second drawing mode in the package.
+      frameMeasure: showGuides ? score.layout.frameMeasure : score.envelope.frameCount + 1,
       // The room the empty columns of one group share. Silence is charged per group and not per
       // column, so a stretch of long notes stays compact instead of spreading across the page.
       silenceGroupPx: score.layout.silenceGroupPx,
@@ -403,22 +424,23 @@ export function TimeScoreView({
       rests: false,
       showTimestamps: false,
       observeResize: true,
-      interactive: Boolean(onSelectNote ?? onSelectNotes),
+      interactive: readOnly ? false : Boolean(onSelectNote ?? onSelectNotes),
       onSelectionChange: (keys) => {
+        if (readOnly) return;
         onSelectNote?.(keys[0] ?? null);
         onSelectNotes?.(keys);
       },
-      onFrameRangeSelect: (range) => onSelectRange?.(range),
-      // Two corners per marked stretch, each pair in its own colour so two overlapping stretches
-      // are told apart, and clickable so a reader can pick one up again without hunting for it.
-      rangeMarkers: true,
-      onRangeMarkerSelect: (marker) =>
-        onSelectMarkedRange?.({
-          kind: marker.kind,
-          label: marker.label,
-          fromColumn: marker.fromColumn,
-          toColumn: marker.toColumn,
-        }),
+      onFrameRangeSelect: readOnly ? undefined : (range) => onSelectRange?.(range),
+      rangeMarkers: !readOnly,
+      onRangeMarkerSelect: readOnly
+        ? undefined
+        : (marker) =>
+            onSelectMarkedRange?.({
+              kind: marker.kind,
+              label: marker.label,
+              fromColumn: marker.fromColumn,
+              toColumn: marker.toColumn,
+            }),
     });
 
     renderer.current = drawn;
@@ -471,6 +493,10 @@ export function TimeScoreView({
     onSelectMarkedRange,
     availableWidth,
     placeRangeHandles,
+    readOnly,
+    showGuides,
+    showTuplets,
+    showFingers,
   ]);
 
   useEffect(() => {
@@ -669,7 +695,7 @@ export function TimeScoreView({
           userSelect: "none",
         }}
       >
-        <Box ref={host} />
+        <Box ref={host} sx={readOnly ? { pointerEvents: "none" } : undefined} />
 
         {/*
           The two ends of the marked stretch, as things you can take hold of.

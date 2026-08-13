@@ -96,6 +96,21 @@ export interface PromoteRequest {
   asAdditional?: boolean;
 }
 
+export interface PlaylistItem {
+  artistSlug: string;
+  trackSlug: string;
+  promotionName: string;
+}
+
+export interface Playlist {
+  name: string;
+  slug: string;
+  description?: string | null;
+  items: PlaylistItem[];
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
 export const libraryApi = {
   // ---------------------------------------------------------- playground
   listPlayground: (search?: string, signal?: AbortSignal) =>
@@ -156,4 +171,22 @@ export const libraryApi = {
       method: "POST",
       body: { artistSlug, trackSlug, tags },
     }),
+
+  // ------------------------------------------------------------- playlists
+  listPlaylists: (signal?: AbortSignal) =>
+    request<Playlist[]>("/library/playlists", { signal }),
+
+  getPlaylist: (slug: string, signal?: AbortSignal) =>
+    request<Playlist>(`/library/playlists/${slug}`, { signal }),
+
+  createPlaylist: (body: { name: string; description?: string; items?: PlaylistItem[] }) =>
+    request<Playlist>("/library/playlists", { method: "POST", body }),
+
+  updatePlaylist: (
+    slug: string,
+    body: { name?: string; description?: string; items?: PlaylistItem[] },
+  ) => request<Playlist>(`/library/playlists/${slug}`, { method: "PATCH", body }),
+
+  deletePlaylist: (slug: string) =>
+    request<{ status: string }>(`/library/playlists/${slug}`, { method: "DELETE" }),
 };

@@ -16,24 +16,28 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
+import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
 import { useNavigate } from "react-router-dom";
 import {
   libraryApi,
   type LibraryTrack,
+  type Playlist,
   type PlaygroundTrack,
   type Promotion,
   type VersionHistoryEntry,
 } from "../api";
+import { AddToPlaylistDialog, PlaylistSection } from "../components/library/PlaylistSection";
 import { ROUTES } from "../layout/routes";
 import { activePromotions, libraryPlayId } from "../library/playId";
 import { useWorkingArtifact } from "../state/useWorkingArtifact";
-import { PageContainer, Pill, Placeholder, SectionCard, semantic } from "../ui";
+import { PageContainer, Pill, SectionCard, semantic } from "../ui";
 
 interface BrowseState {
   query: string;
   tracks: LibraryTrack[] | null;
   playground: PlaygroundTrack[] | null;
+  playlists: Playlist[];
   tags: string[];
   error: string | null;
 }
@@ -49,11 +53,13 @@ export function LibraryPage() {
     query: "",
     tracks: null,
     playground: null,
+    playlists: [],
     tags: [],
     error: null,
   });
   const [renameTarget, setRenameTarget] = useState<PlaygroundTrack | null>(null);
   const [tagsTarget, setTagsTarget] = useState<LibraryTrack | null>(null);
+  const [playlistTarget, setPlaylistTarget] = useState<LibraryTrack | null>(null);
 
   useEffect(() => {
     const handle = window.setTimeout(() => setSearch(searchInput.trim()), 200);
@@ -70,9 +76,10 @@ export function LibraryPage() {
         libraryApi.listTracks({ tag: tag ?? undefined, search: needle }, signal),
         libraryApi.listPlayground(needle, signal),
         libraryApi.listTags(signal),
+        libraryApi.listPlaylists(signal),
       ])
-        .then(([tracks, playground, tags]) =>
-          setState({ query, tracks, playground, tags, error: null }),
+        .then(([tracks, playground, tags, playlists]) =>
+          setState({ query, tracks, playground, playlists, tags, error: null }),
         )
         .catch((caught: unknown) => {
           if (signal?.aborted) return;
@@ -80,6 +87,7 @@ export function LibraryPage() {
             query,
             tracks: [],
             playground: [],
+            playlists: [],
             tags: [],
             error: caught instanceof Error ? caught.message : "Could not load the library.",
           });
@@ -114,7 +122,7 @@ export function LibraryPage() {
     navigate(ROUTES.playgroundInput);
   };
 
-  const { tracks, playground, tags, error } = current;
+  const { tracks, playground, playlists, tags, error } = current;
   const loading = tracks === null || playground === null;
 
   return (
@@ -177,6 +185,7 @@ export function LibraryPage() {
                 track={track}
                 onOpen={openPerformance}
                 onEditTags={() => setTagsTarget(track)}
+                onAddToPlaylist={() => setPlaylistTarget(track)}
                 onSelectTag={setTag}
               />
             ))}
@@ -208,18 +217,21 @@ export function LibraryPage() {
         )}
       </SectionCard>
 
-      <SectionCard title="Playlists">
-        <Placeholder
-          epic="Epic 10 (Piano Library), Story 10.3"
-          what="Spotify-like playlists: CRUD, ordering, version-by-name selection and a playing mode with Next."
-        />
-      </SectionCard>
+      <PlaylistSection playlists={playlists} tracks={tracks ?? []} onChanged={refresh} />
 
       {renameTarget ? (
         <RenameDialog track={renameTarget} onClose={() => setRenameTarget(null)} onSaved={refresh} />
       ) : null}
       {tagsTarget ? (
         <TagsDialog track={tagsTarget} onClose={() => setTagsTarget(null)} onSaved={refresh} />
+      ) : null}
+      {playlistTarget ? (
+        <AddToPlaylistDialog
+          track={playlistTarget}
+          playlists={playlists}
+          onClose={() => setPlaylistTarget(null)}
+          onSaved={refresh}
+        />
       ) : null}
     </PageContainer>
   );
@@ -240,11 +252,13 @@ function LibraryTrackRow({
   track,
   onOpen,
   onEditTags,
+  onAddToPlaylist,
   onSelectTag,
 }: {
   track: LibraryTrack;
   onOpen: (track: LibraryTrack, promotion: Promotion) => void;
   onEditTags: () => void;
+  onAddToPlaylist: () => void;
   onSelectTag: (tag: string) => void;
 }) {
   const live = activePromotions(track.promotions);
@@ -269,6 +283,15 @@ function LibraryTrackRow({
             </Stack>
           ) : null}
         </Box>
+        <Tooltip title="Add to a playlist">
+          <IconButton
+            size="small"
+            aria-label={`Add ${track.trackName} to a playlist`}
+            onClick={onAddToPlaylist}
+          >
+            <PlaylistAddIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
         <Tooltip title="Edit tags">
           <IconButton size="small" aria-label={`Edit tags for ${track.trackName}`} onClick={onEditTags}>
             <LocalOfferOutlinedIcon fontSize="small" />
