@@ -213,6 +213,7 @@ def save_note_events(
                 # Only when someone has said so. Absent on every note the split still guesses,
                 # which is nearly all of them, and which keeps the file the size it was.
                 **({"hand": event.hand} if event.hand else {}),
+                **({"removed": True} if event.removed else {}),
             }
             for event in events
         ],
@@ -236,6 +237,7 @@ def load_note_events(audio_uuid: str) -> TranscribedEvents | None:
                     end=float(item["end"]),
                     velocity=int(item.get("velocity", 64)),
                     hand=item.get("hand"),
+                    removed=bool(item.get("removed", False)),
                 )
                 for item in payload.get("events", [])
             ],

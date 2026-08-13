@@ -1,19 +1,37 @@
-# Task 9.7.2 — Trills and chord grouping (nice to have)
+# Task 9.7.2 — Trills (nice to have)
 
-The "render as simple and clean as possible" rules.
+> **Rewritten 2026-08-12 for the wall-clock model.** The chord half of this task shipped in the
+> refactor. See [`../../wall-clock-rewrite.md`](../../wall-clock-rewrite.md).
 
-## Subtask 9.7.2.1 — Chord grouping threshold
+**Already done — chord grouping.** Notes played within 20 ms of the group's first note are one
+chord, grouped on the raw times before anything is snapped, and non-chaining so a slow arpeggio
+does not swallow the whole bar (D-04). Arpeggio ornament signs are not drawn, by design. Nothing
+remains here.
 
-Notes within the same temporal window are a chord; a slightly arpeggiated chord still renders as a single chord (no arpeggio symbol — arpeggio ornaments are ignored entirely). A finer sub-threshold decides "truly simultaneous"; beyond it, notes stay independent events.
+**Also already answered — the undersampling warning.** The old text worried that a fast trill would
+be undersampled by the grid. It cannot be: the grid is no longer where duration comes from, and
+detection runs on the raw event times, which is what that warning asked for.
 
-## Subtask 9.7.2.2 — Trill detection
+## Subtask 9.7.2.1 — Trill detection
 
-Detect two notes alternating continuously at high speed and render as "tr" over the base note instead of the literal note storm. Caution documented in `project-features.md`: at the finest granularity a very fast trill may be undersampled (C D C D sampled as C C D C…); prefer detecting trills from raw NoteEvents (pre-matrix, inside Epic 4's events pipeline) and storing the trill as an annotation (hand, column range) rather than trusting the matrix sampling.
+Find two notes alternating continuously and quickly in the same hand, on raw times: at least six
+alternations, both pitches within a whole tone of each other, gaps even within some tolerance. Print
+`tr` over the lower note held for the length of the run, instead of the literal storm of notes.
+
+Detection is a **suggestion**, not a rewrite: it proposes the mark, the reader accepts it. A missed
+trill costs nothing, and a wrong one hides real notes.
+
+## Subtask 9.7.2.2 — Storage
+
+The mark lives in `rhythm.json` over a frame range, like every other editorial decision. The notes
+stay in `events.json` untouched — playback still plays every one of them (D-29), and removing the
+mark brings them back onto the page.
 
 ## Subtask 9.7.2.3 — Other ornaments
 
-All other ornaments are ignored by design — performers interpret them; they cannot be reliably inferred from audio.
+Still ignored by design. A performer interprets them; they cannot be inferred from audio.
 
 ## Acceptance
 
-Manual trial: record a trill and a rolled chord; sheet shows "tr" and a single chord respectively.
+Manual trial: record a trill, accept the suggested mark, and see `tr` over one held note; playback
+still sounds every alternation; removing the mark prints the notes again.

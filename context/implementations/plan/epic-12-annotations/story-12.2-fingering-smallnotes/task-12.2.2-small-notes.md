@@ -1,13 +1,29 @@
 # Task 12.2.2 — Small notes and grace notes
 
-## Subtask 12.2.2.1 — Cue-size passages
+> **Rewritten 2026-08-12 for the wall-clock model.** See
+> [`../../wall-clock-rewrite.md`](../../wall-clock-rewrite.md).
 
-User selects a time-frame range and marks it cue-size: those notes render smaller so they occupy less horizontal space (the Cue/Fioritura/small-note effect). Never inferred automatically — user decision only, typically when one hand's passage crowds the other's space.
+## Subtask 12.2.2.1 — Cue-size a stretch
 
-## Subtask 12.2.2.2 — Acciaccatura / appoggiatura
+Mark a stretch and print its notes smaller, so a florid passage in one hand takes less width and
+stops crowding the other hand. Never inferred; the reader asks for it.
 
-User clicks a note and adds an acciaccatura or appoggiatura grace note. The grace note lives in the annotations metadata, not in the piano matrix; score builder emits the VexFlow grace-note group.
+This one has a consequence to check rather than assume: the sheet's spacing is measured from
+content, and a beamed run is already set tighter than an unbeamed one (D-33). Smaller noteheads
+therefore change the widths inside the marked stretch. That is acceptable inside the mark, and
+nothing outside it may move — the same property D-21 protects. Pin it with a test that compares the
+x positions before and after.
+
+## Subtask 12.2.2.2 — Acciaccatura and appoggiatura
+
+Click a note, add a grace note before it. It is a mark, not an event: it is not in `events.json`, it
+is not played back, and it does not take a column of its own. The package draws the grace group
+attached to the note it belongs to.
+
+This needs a feature in `@aimpromptu/grid-notation` — it has no grace-note glyph group today. Size
+that before promising the UI.
 
 ## Acceptance
 
-Manual trial: a florid right-hand run rendered cue-size; one acciaccatura added and removed cleanly.
+Manual trial: a florid right-hand run printed cue-size with the left hand unmoved; one acciaccatura
+added and removed cleanly.

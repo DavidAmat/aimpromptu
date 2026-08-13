@@ -38,7 +38,12 @@ from aitu_backend.matrix.passages import ladder_ranges, one_passage
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS, validate_frame_ms
 from aitu_backend.progress import BaseProgress, default_reporter
 from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN, SparseCooMatrix
-from aitu_backend.notation.figures import onset_columns, printed_notes_of_hand
+from aitu_backend.notation.figures import (
+    bands_for_passages,
+    gaps_of_hand,
+    onset_columns,
+    printed_notes_of_hand,
+)
 from aitu_backend.schemas.time_matrix import (
     FigureLadder,
     FigureOverride,
@@ -118,6 +123,10 @@ def impose_granularity_and_split(
     sense at one frame length.
     """
     step = validate_frame_ms(frame_ms)
+    # A note a reader has taken off the recording never reaches the grid. This is the one place it
+    # is dropped, so every consumer of a matrix — the gap plot, the sheet, the printed page — agrees
+    # about it without any of them having to know the flag exists.
+    events = [event for event in events if not event.removed]
     build = events_to_time_matrix(
         events,
         duration_seconds,
@@ -312,6 +321,7 @@ def to_score_payload(
     key_signature: str | None = None,
     duration_seconds: float | None = None,
     trim_trailing_silence: bool = True,
+    weighted_figure_lines: bool = True,
 ) -> TimeScorePayload:
     """Everything the renderer draws, assembled from the two hands and one named ladder.
 
@@ -325,11 +335,34 @@ def to_score_payload(
     Silence after the last note is cut off. A recording often runs on for several seconds after the
     playing stops, and drawing that gives a page of empty staff with nothing on it. The recording is
     untouched; only the sheet stops where the music does.
+
+    ``weighted_figure_lines`` decides where the line between two figures falls. On, each passage's
+    own gap distribution moves it towards whichever figure that passage plays more of
+    (:mod:`aitu_backend.matrix.bands`); off, every line sits at the halfway point. The two agree
+    exactly when the piles are even, so this is a refinement of D-11 rather than a departure from
+    it — but it is a parameter because it is the one place in the payload where a note's figure
+    depends on notes other than itself.
     """
     hands = trim_to_music(hands) if trim_trailing_silence else hands
     tiles = passages or one_passage(hands.frame_count, ladder)
     ranges = ladder_ranges(tiles)
     tail = hands.duration_seconds if duration_seconds is None else duration_seconds
+
+    seconds_of = {hand: attack_seconds_of_hand(hands, hand) for hand in ("right", "left")}
+    bands_at = None
+    if weighted_figure_lines:
+        # Both hands pooled, and gathered before a single figure is chosen: the lines have to be
+        # drawn from the whole passage before any note is judged against them.
+        pooled: list[tuple[int, float]] = []
+        for hand, matrix in (("right", hands.right), ("left", hands.left)):
+            pooled += gaps_of_hand(
+                matrix,
+                attack_seconds=seconds_of[hand],
+                frame_ms=hands.frame_ms,
+                tail_seconds=tail,
+                drop_open_ended=True,
+            )
+        bands_at = bands_for_passages(pooled, ranges)
 
     notes = []
     tuplet_id = 0
@@ -338,12 +371,13 @@ def to_score_payload(
             matrix,
             hand,
             ranges,
-            attack_seconds=attack_seconds_of_hand(hands, hand),
+            attack_seconds=seconds_of[hand],
             group_id=hands.build.group_id,
             frame_ms=hands.frame_ms,
             tail_seconds=tail,
             # Numbered across the whole piece, so the two hands cannot claim the same tresillo.
             tuplet_start_id=tuplet_id,
+            bands_at=bands_at,
         )
         used = [note.tuplet_id for note in printed if note.tuplet_id is not None]
         tuplet_id = max(used) + 1 if used else tuplet_id

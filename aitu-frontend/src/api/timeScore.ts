@@ -246,6 +246,29 @@ export const timeScoreApi = {
   },
 
   /**
+   * Take notes off the recording, addressed by the column and row the sheet drew.
+   *
+   * The twin of `matrixApi.setRemoved`, which the roll uses with raw seconds. Two
+   * calls because the two screens hold different things — a reader on the sheet
+   * has clicked a notehead and knows only where it sits on the grid — but they
+   * write the same thing, so a note taken off here is gone from the roll too and
+   * from the gaps the rhythm is measured from.
+   */
+  setRemoved(
+    audioUuid: string,
+    frameMs: number,
+    notes: { startFrame: number; row: number }[],
+    removed: boolean,
+    signal?: AbortSignal,
+  ) {
+    return request<{ changed: number; unmatched: number }>(`/time/${audioUuid}/removed`, {
+      method: "PUT",
+      body: { frameMs, notes, removed },
+      signal,
+    });
+  },
+
+  /**
    * Say which hand plays these notes. Written onto the recording, not onto this page.
    *
    * A hand is a fact about the playing: it survives a change of column length, it decides the

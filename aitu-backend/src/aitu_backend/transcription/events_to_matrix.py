@@ -11,7 +11,8 @@ Three rules decide what reaches the grid, in this order:
 * **Near-simultaneous onsets are grouped first, on raw times** (D-04, see
   :mod:`aitu_backend.transcription.grouping`), and the whole group snaps to one column together.
   Grouping after snapping would be phase-dependent, because two notes 39 ms apart can fall either
-  side of a boundary.
+  side of a boundary. The window is a fixed :data:`GROUP_WINDOW_MS` and **not** the frame length:
+  see that constant for why.
 * **The sustain written into the grid is measured and complete**, from the note's own release
   (D-06). Nothing is cut here: a redonda has no length until the user names a peak, so the cap is
   applied when the score payload is built. The sustain is also not the printed length of the note,
@@ -52,6 +53,18 @@ from aitu_backend.transcription.artifacts import (
     drop_artifacts,
 )
 from aitu_backend.transcription.grouping import group_onsets
+
+#: How far apart two onsets may be and still count as one attack (D-04).
+#:
+#: A fixed number of milliseconds, deliberately not ``frame_ms``. It used to follow the frame, and
+#: that made the frame length change the music: at 20 ms two notes of one chord struck 25 ms apart
+#: stop being one attack and become two, which invents a gap nobody played. Measured on Chopin's
+#: Nocturne Op. 9 no. 1, dropping to 10 ms that way conjured 22 semifusas that do not exist at
+#: 40 ms, and it broke the promise that ``frameMs`` is a layout parameter — a note printed as a
+#: semicorchea at 40 ms came out a corchea at 20.
+#:
+#: 40 ms is what the window has always been in practice, since the frame has always been 40.
+GROUP_WINDOW_MS = 40.0
 from aitu_backend.transcription.leakage import (
     DEFAULT_LEAKAGE,
     LeakageConfig,
@@ -178,8 +191,9 @@ def events_to_time_matrix(
     1. Drop the engine's artifacts, then merge phantom re-onsets. Both judgements need the events in
        seconds, so they run before anything is snapped.
     2. Drop notes shorter than one frame (D-05).
-    3. Group near-simultaneous onsets on raw times, one frame wide (D-04). ``group_window_ms``
-       overrides that only for tests; leaving it unset keeps the window and the frame in step.
+    3. Group near-simultaneous onsets on raw times, :data:`GROUP_WINDOW_MS` wide (D-04).
+       ``group_window_ms`` overrides that for tests and for anyone deliberately experimenting; the
+       default does not depend on ``frame_ms``, so changing the frame cannot change the music.
     4. Snap each group to one column, and write the full measured sustain (D-02, D-06).
 
     A new onset always wins over a sustain that is still running on the same key, so two overlapping
@@ -193,7 +207,7 @@ def events_to_time_matrix(
     released at different moments keeps that difference in the grid, because the grid is a record of
     what was played.
     """
-    window_ms = frame_ms if group_window_ms is None else group_window_ms
+    window_ms = GROUP_WINDOW_MS if group_window_ms is None else group_window_ms
     frames = frame_count_for_duration(duration_seconds, frame_ms)
     grid = np.zeros((KEY_COUNT, frames), dtype=np.int8)
     report = TimeBuildReport(

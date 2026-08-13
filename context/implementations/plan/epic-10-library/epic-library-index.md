@@ -1,21 +1,34 @@
 # Epic 10 — Piano Library
 
-The performer-facing section: browse consolidated tracks and the playground working library, open a clean read-only score page, and organize playlists Spotify-style for concerts.
+> **Rewritten 2026-08-12 for the wall-clock model.** The epic survives almost unchanged; what it
+> reads and how a version is named changed. See
+> [`../wall-clock-rewrite.md`](../wall-clock-rewrite.md).
 
-Read first: `project-features.md` sections "Piano Library" and the library half of "Folder Structure for storage".
+The section for the person at the piano: find a piece, open a clean page with nothing but the music
+on it, and put pieces in order for a concert.
+
+Read first: [`../wall-clock-rewrite.md`](../wall-clock-rewrite.md), then `project-features.md`
+section "Piano Library". The library half of "Folder Structure for storage" is out of date on two
+points: a transcription stores one file, `events.json`, and a saved version folder is
+`v<N>_f<frameMs>`, not a granularity code (contract §8).
 
 ## Story 10.1 — Browsing and management
 
-- Task 10.1.1 library browse: consolidated tracks list with metadata tags (genre, artist, …), search by real names, filters; plus the "Piano Playground Library" listing with rename and metadata edition.
+- Task 10.1.1 library browse: promoted tracks with tags, search by real names, filters; plus the
+  playground list with rename and metadata editing, and the `needsRederivation` warning already
+  surfaced there.
 
 ## Story 10.2 — Performance view
 
-- Task 10.2.1 performance view: blank read-only page rendering the promoted score with toggles for lyrics/fingers overlays; scroll + browser zoom is the whole interaction.
+- Task 10.2.1 performance view: a blank read-only page drawing the piece with its saved rhythm, no
+  editing controls, overlay toggles, and the PDF for whoever prefers paper.
 
 ## Story 10.3 — Playlists
 
-- Task 10.3.1 playlists: create/edit playlists picking track (+ promoted version by name), reorder, and the seamless next-piece flow for concerts.
+- Task 10.3.1 playlists: create and order playlists, pick the promoted version by name, step to the
+  next piece with one click.
 
 ## Exit criteria
 
-Manual trial: promote two pieces, tag them, filter by tag, open one in performance view, build a 2-track playlist and step through it with the Next button.
+Manual trial: promote two pieces, tag them, filter by tag, open one in the performance view and
+scroll it end to end with no toolbox in sight, then build a two-piece playlist and step through it.

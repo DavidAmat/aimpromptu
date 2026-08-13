@@ -4,15 +4,18 @@ Organized breakdown of `project-features.md` into epics, stories, tasks and subt
 
 How to navigate:
 
-- `checklist.md` is the single status lookup for the whole project. Start here.
+- `wall-clock-rewrite.md` explains the model the remaining epics are written for. Read it first.
+- `checklist.md` is the single status lookup for the whole project.
 - Each epic is a folder `epic-NN-<shortname>/` with an `epic-<shortname>-index.md` summarizing its stories and tasks.
 - Each story is a nested folder `story-N.M-<shortname>/`. Each task is one markdown file `task-N.M.K-<shortname>.md`. Subtasks are header sections inside the task file.
 - Workers read `system-prompt-workers.md` before doing anything, then their assigned Epic > Story > Task file.
 - Progress reports go to `../progress/` (one file per task worked on).
 
-Current implementation boundary: **Epics 1–8 are complete and committed; Epic 9 has not started.**
-The checklist is authoritative for status. Task files describe the current agreed requirements,
-including requirement changes made during implementation.
+Current boundary, 2026-08-12: **Epics 1–8 and Stories 9.1–9.6 were built, then partly replaced by
+the wall-clock refactor. The live backlog is Story 9.7 and Epics 10–14, all rewritten for the new
+model.** Read [`wall-clock-rewrite.md`](wall-clock-rewrite.md) first — it says what changed, what is
+dead, and the rules every remaining task obeys. `checklist.md` is authoritative for status; the task
+files describe the current requirement, and git holds the text they replaced.
 
 Epic order (also the recommended implementation order):
 

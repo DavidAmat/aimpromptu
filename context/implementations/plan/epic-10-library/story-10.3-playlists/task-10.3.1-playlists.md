@@ -1,19 +1,28 @@
 # Task 10.3.1 — Playlists
 
-Spotify-like organization over library tracks, stored under `library/playlists/<slug>/metadata_library_playlist.json`.
+> **Rewritten 2026-08-12 for the wall-clock model.** Only the slice definition changed. See
+> [`../../wall-clock-rewrite.md`](../../wall-clock-rewrite.md).
 
-## Subtask 10.3.1.1 — CRUD and ordering
+Stored under `library/playlists/<slug>/metadata_library_playlist.json`.
 
-Create/rename/delete playlists; add a track (choosing the promoted version by its promotion name when several exist); drag to reorder; remove entries. Add-to-playlist also reachable from the track list (existing or new playlist).
+## Subtask 10.3.1.1 — Create, order, edit
+
+Create, rename and delete playlists; add a piece, choosing the promoted version by its promotion
+name when there are several; drag to reorder; remove entries. Adding to a playlist is also reachable
+from the library list, for an existing playlist or a new one.
 
 ## Subtask 10.3.1.2 — Playing mode
 
-Selecting a playlist opens a read-only flow: pick the starting track, its score renders in the performance view, and at the end a single Next click loads the following piece seamlessly — the concert use case. Order editable before starting.
+Choosing a playlist opens the performance view on the first piece; one **Next** click loads the
+following one. Order is editable before starting and not during.
 
-## Subtask 10.3.1.3 — Nice to have: slicing
+## Subtask 10.3.1.3 — Nice to have: an excerpt instead of a whole piece
 
-Playlist entries may reference a slice (time range) of a piece rather than the whole score. Skip until asked.
+An entry may point at a stretch of a piece rather than all of it. The stretch is a **wall-clock
+range in seconds**, stored as seconds and not as frames, so it stays correct if the piece is later
+opened on a different `frameMs`. Skip until asked for.
 
 ## Acceptance
 
-Manual trial: an "all_about_avicii" playlist with 2 tracks, played through with Next.
+Manual trial: a two-piece playlist played through with Next, order changed before starting, and the
+same playlist reopened after a restart.

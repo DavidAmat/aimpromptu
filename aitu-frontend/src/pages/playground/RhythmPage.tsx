@@ -912,7 +912,13 @@ export function RhythmPage() {
     [applyFingers, oneChord, pickedFingers, selectedNotes, selectionKey],
   );
 
-  /** Take the picked notes off the page. The recording keeps them; the drawing stops asking. */
+  /**
+   * Take the picked notes off the page.
+   *
+   * Marked here and nothing more. **Save** is what takes them out of the piano matrix the piece is
+   * drawn from, which is also what makes the roll and the falling view agree with this page; until
+   * then it is only the drawing that has stopped asking for them. `wipe` puts them back.
+   */
   const hideSelected = useCallback(() => {
     const refs = selectedNotes.map(noteRefOf);
     setHiddenNotes((current) => new Set([...current, ...refs]));
@@ -1009,6 +1015,19 @@ export function RhythmPage() {
     };
     try {
       const stored = await timeScoreApi.saveRhythm(audioUuid, body);
+      // A note taken off the page is a note the transcriber invented, so keeping
+      // the reading also takes it out of the piano matrix the piece is drawn
+      // from. Until this call it was an overlay: the sheet stopped drawing it,
+      // but the roll and the falling view still showed it and the recording still
+      // had it. The drawing does not change here — the figures were already named
+      // with these notes excluded — but everything else now agrees with the page.
+      //
+      // They stay in the saved reading as well. A reading from before this existed
+      // still lists notes that are still in the recording, and dropping the field
+      // would silently un-hide them.
+      if (body.hiddenNotes && body.hiddenNotes.length > 0) {
+        await timeScoreApi.setRemoved(audioUuid, frameMs, body.hiddenNotes, true);
+      }
       setSaved(stored);
       setSavedNote("Saved with the piece. It will be here next time.");
       setFlash("saved");
@@ -1146,12 +1165,23 @@ export function RhythmPage() {
    * The saved reading goes with it. Clearing only the screen would look identical and be undone by
    * the next visit, which is the worst kind of button: one that appears to work.
    *
+   * The notes taken off the page need the same care for a different reason. Saving now takes them
+   * out of the piano matrix, so clearing the *list* of them would leave the notes themselves gone
+   * with nothing left on screen that remembers them — the same failure one layer down. They are put
+   * back on the recording here, before the list is dropped.
+   *
    * The brackets need saying twice. They are seeded from what the register suggests the first time
    * a piece is drawn, so clearing them without also recording that somebody has now decided would
    * put every one of them straight back on the next redraw (D38).
    */
   const wipe = useCallback(async () => {
     if (!audioUuid) return;
+    // Read before anything is cleared: this is the only record of which notes to
+    // put back, and the state below is about to drop it.
+    const takenOff = [...hiddenNotes].map((ref) => {
+      const [frame, row] = ref.split(":");
+      return { startFrame: Number(frame), row: Number(row) };
+    });
     setClearing(true);
     setArmed(false);
     setSavedNote(null);
@@ -1170,6 +1200,9 @@ export function RhythmPage() {
     setRange(null);
     setClearedAt((at) => at + 1);
     try {
+      if (takenOff.length > 0) {
+        await timeScoreApi.setRemoved(audioUuid, frameMs, takenOff, false);
+      }
       await timeScoreApi.forgetRhythm(audioUuid);
       setSaved(null);
       setFlash("removed");
@@ -1182,7 +1215,7 @@ export function RhythmPage() {
     // Drawn again with no speed changes, and passed them explicitly: the state above has not
     // reached this closure yet.
     await apply([]);
-  }, [audioUuid, apply]);
+  }, [audioUuid, apply, frameMs, hiddenNotes]);
 
   /**
    * Say which hand plays the picked notes, on the recording.
@@ -1573,7 +1606,7 @@ export function RhythmPage() {
                 (score.envelope.frameCount * score.envelope.frameMs) / 1000
               }
               onTime={setPlayheadSeconds}
-              controls={player}
+              controlsRef={player}
               onScrollToCursor={scrollToCursor}
               onPlaying={setPlaying}
             />
@@ -1735,6 +1768,7 @@ export function RhythmPage() {
                 selectedRange={range}
                 clearSelectionsAt={clearedAt}
                 playheadSeconds={playheadSeconds}
+                followPlayhead={playing}
                 onScrub={scrub}
                 scrollCursorAt={scrollCursorAt}
               />
@@ -2229,8 +2263,9 @@ export function RhythmPage() {
             off the page
           </Button>
           <Typography variant="caption" color="text.secondary">
-            The recording keeps them. Only the drawing stops asking for them,
-            and the undo is under the sheet.
+            Until you save, only the drawing stops asking for them. Saving takes
+            them out of the piano matrix this piece is drawn from, so they leave
+            the Piano Roll and Notes Falling too. Remove all puts them back.
           </Typography>
         </Stack>
       </ToolboxDialog>

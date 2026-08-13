@@ -113,7 +113,10 @@ def test_the_metadata_block_describes_the_matrix_it_came_from() -> None:
     assert metadata is not None
     assert metadata.hand_map == hands.hand_map()
     assert metadata.matches(matrix.granularity, matrix.frame_count, metadata.onset_count)
-    assert metadata.method == "beam-dp-v3"
+    # The default is the beam followed by the page-level second pass, so that is the
+    # name that has to reach metadata: a reader of a stored split needs to know which
+    # of the two produced it. ``beam-dp-v3`` is still what ``method="beam"`` reports.
+    assert metadata.method == "beam-refine-v1"
 
 
 def test_a_two_hands_matrix_cannot_be_split_again() -> None:

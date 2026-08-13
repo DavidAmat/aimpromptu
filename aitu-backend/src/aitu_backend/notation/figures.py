@@ -15,6 +15,11 @@ Two rules decide the label, and both are frozen:
   is closed (D-12). The comparison itself lives in :mod:`aitu_backend.matrix.ladder` and is imported
   here rather than written twice.
 
+  Since 2026-08-10 "nearest" is measured against a line that leans towards whichever figure the
+  passage actually plays more of, rather than sitting at the halfway point — see
+  :mod:`aitu_backend.matrix.bands`. With even piles the two are identical, so this refines D-11
+  rather than replacing it. Pass ``bands_at`` to use it; leave it out and the halfway line applies.
+
 The gap is measured between the **raw onset times** the attacks were recorded at, not between column
 indices. At 40 ms columns a 211 ms gap would otherwise arrive as 200 and a 125 ms one as 120, which
 is close enough to change a figure.
@@ -27,6 +32,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from aitu_backend.matrix.bands import FigureBands, build_bands
 from aitu_backend.matrix.ladder import FigureFit, nearest_figure
 from aitu_backend.notation.tuplets import Tresillo, find_tresillos
 from aitu_backend.matrix.model import PianoMatrix
@@ -44,6 +50,8 @@ __all__ = [
     "FIGURE_NEGRAS",
     "FigureFit",
     "FigureName",
+    "bands_for_passages",
+    "gaps_of_hand",
     "onset_columns",
     "printed_notes_of_hand",
     "select_figure",
@@ -76,6 +84,53 @@ def onset_columns(matrix: PianoMatrix) -> list[int]:
     return [int(column) for column in struck.nonzero()[0]]
 
 
+def gaps_of_hand(
+    matrix: PianoMatrix,
+    *,
+    attack_seconds: dict[int, float],
+    frame_ms: float = DEFAULT_FRAME_MS,
+    tail_seconds: float | None = None,
+    drop_open_ended: bool = False,
+) -> list[tuple[int, float]]:
+    """``(column, printed length in ms)`` for every attack of this hand.
+
+    The same lengths :func:`printed_notes_of_hand` will print, exposed on their own so a caller can
+    count the piles before any figure is chosen. Nothing else may compute them a second way: two
+    readings of "the printed length" that disagree would draw the lines from one set of gaps and
+    then judge a different set against them.
+
+    ``drop_open_ended`` leaves out the hand's **last** length, which is not a gap to anything — it
+    runs to the end of the sheet. It is therefore no evidence about what the passage plays, and it
+    is the one length that moves with ``frame_ms``, because the sheet ends on a whole column. Counted,
+    it would let the column length change a printed figure, which ``frameMs`` must never do.
+    :func:`aitu_backend.notation.tuplets.find_tresillos` refuses the same gap for the same reason.
+    """
+    attacks = _attacks_of(matrix, attack_seconds, None, frame_ms)
+    lengths = [
+        (attack.column, _gap_ms(attacks, index, matrix, frame_ms, tail_seconds))
+        for index, attack in enumerate(attacks)
+    ]
+    return lengths[:-1] if drop_open_ended and lengths else lengths
+
+
+def bands_for_passages(
+    gaps: list[tuple[int, float]],
+    ladder_at: FigureLadder | list[tuple[int, int, FigureLadder]],
+) -> FigureBands | list[tuple[int, int, FigureBands]]:
+    """Build one set of figure lines per passage, from the gaps that fall inside it.
+
+    ``gaps`` is both hands pooled — a per-hand reading would print the same length as a corchea on
+    one staff and a negra on the other. Keeps the shape of ``ladder_at`` so the two can be indexed
+    the same way.
+    """
+    if isinstance(ladder_at, FigureLadder):
+        return build_bands([gap for _, gap in gaps], ladder_at)
+    return [
+        (start, end, build_bands([gap for column, gap in gaps if start <= column < end], ladder))
+        for start, end, ladder in ladder_at
+    ]
+
+
 def printed_notes_of_hand(
     matrix: PianoMatrix,
     hand: PrintedHand,
@@ -86,6 +141,7 @@ def printed_notes_of_hand(
     frame_ms: float = DEFAULT_FRAME_MS,
     tail_seconds: float | None = None,
     tuplet_start_id: int = 0,
+    bands_at: FigureBands | list[tuple[int, int, FigureBands]] | None = None,
 ) -> list[PrintedNote]:
     """Every glyph this hand contributes, with its figure already chosen.
 
@@ -95,6 +151,10 @@ def printed_notes_of_hand(
 
     ``attack_seconds`` maps a column to the raw time the attack really happened at, so the gap
     between two notes is the gap that was played rather than a whole number of frames.
+
+    ``bands_at`` carries the figure lines this passage's own gap distribution asks for (see
+    :mod:`aitu_backend.matrix.bands`). Left out, every line sits at the halfway point, which is what
+    the ladder alone implies and what the app did before 2026-08-10.
 
     The **last** note of the hand has no next onset. Its printed length runs to ``tail_seconds`` when
     one is given, otherwise to the end of its own measured sustain, and it is capped like any other.
@@ -117,8 +177,17 @@ def printed_notes_of_hand(
         gap_ms = min(gaps[index], ladder.ms_by_figure[FigureName.REDONDA])
         tresillo = in_tresillo.get(index)
         if tresillo is None:
-            fit = select_figure(gap_ms, ladder)
-            figure, fit_error = fit.figure, fit.fit_error
+            # The hand's last note has no gap — its length runs to where the sheet ends, which is a
+            # whole number of columns and therefore moves with `frame_ms`. The weighted lines answer
+            # "given the gaps this passage plays, which figure is this gap most likely to be", and
+            # that question does not apply to something which is not a gap. It keeps the halfway
+            # rule, so the column length cannot change the figure it is drawn as.
+            bands = _bands_for(attack.column, bands_at) if index + 1 < len(attacks) else None
+            if bands is None:
+                fit = select_figure(gap_ms, ladder)
+                figure, fit_error = fit.figure, fit.fit_error
+            else:
+                figure, fit_error = bands.fit(gap_ms)
         else:
             # Printed as the ordinary figure one step below the one being divided. The 3 and the
             # bracket are what say it is a tresillo, so the glyph itself stays conventional.
@@ -198,6 +267,19 @@ def _sustain_end_ms(matrix: PianoMatrix, attack: _Attack, frame_ms: float) -> fl
             column += 1
         end = max(end, column)
     return (end - attack.column) * frame_ms
+
+
+def _bands_for(
+    column: int,
+    bands_at: FigureBands | list[tuple[int, int, FigureBands]] | None,
+) -> FigureBands | None:
+    """The lines that apply where this note sits, or ``None`` when none were supplied."""
+    if bands_at is None or isinstance(bands_at, FigureBands):
+        return bands_at
+    for start, end, bands in bands_at:
+        if start <= column < end:
+            return bands
+    return None
 
 
 def _ladder_for(

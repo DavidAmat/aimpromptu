@@ -28,6 +28,7 @@ from aitu_backend.hands.staff import (
 )
 from aitu_backend.matrix.keys import KEY_COUNT, note_to_row
 from aitu_backend.matrix.model import PianoMatrix
+from aitu_backend.schemas.matrix import Granularity, MatrixProcessingStep
 
 # --------------------------------------------------------------------- geometry
 
@@ -117,13 +118,24 @@ def _group(names: list[str], time: float = 1.0, duration: int = 4) -> OnsetGroup
     return OnsetGroup(column=0, time_seconds=time, events=decoded.groups[0].events)
 
 
+#: The term runs in the second pass, not in the search, so ``CostWeights.ledger`` is
+#: zero and the weight that matters lives in :class:`RefineConfig`. See
+#: :mod:`aitu_backend.hands.refine` for why it moved.
+LEDGER_WEIGHT = DEFAULT_CONFIG.refine.ledger_weight
+
+
 def _ledger_cost(names: list[str], assignment: tuple[str, ...]) -> float:
-    """The weighted ledger charge for one group, from two rested hands."""
+    """The weighted ledger charge for one group, from two rested hands.
+
+    Two rested hands means the other staff is empty, so the gate is fully open and this
+    measures the raw geometry. What happens when the other hand is *not* free is the
+    subject of ``test_hands_refine.py``.
+    """
     result = transition(
         PairState(), _group(names), assignment, DEFAULT_CONFIG.hand, DEFAULT_CONFIG.weights
     )
     assert result is not None
-    return result.breakdown.weighted_dict(DEFAULT_CONFIG.weights)["ledger"]
+    return LEDGER_WEIGHT * result.breakdown.ledger
 
 
 def test_the_deep_bass_is_free() -> None:
@@ -138,17 +150,20 @@ def test_a_note_or_two_across_the_staff_is_free() -> None:
     assert _ledger_cost(["Fa-4"], (LEFT,)) == 0.0
     assert _ledger_cost(["La-3"], (RIGHT,)) == 0.0
     assert _ledger_cost(["Sol-3"], (RIGHT,)) == 0.0
-    # The third line is charged, but only just: an ordinary right-hand chord
-    # reaching down to Fa-3 is nudged, not overruled.
-    assert _ledger_cost(["Fa-3"], (RIGHT,)) == pytest.approx(0.08)
+    # The third line is where the charge starts, and at the weight the second pass
+    # runs at it is a real number rather than a nudge — 1.0, about the same as an
+    # awkward relocation. What keeps an ordinary chord dipping below the treble from
+    # being overruled is not the size of this number but the gate: unless the other
+    # hand is genuinely free to take the notes, none of it is charged at all.
+    assert _ledger_cost(["Fa-3"], (RIGHT,)) == pytest.approx(1.0)
 
 
 def test_the_charge_grows_with_the_excursion() -> None:
     """Quadratic past the grace: a nudge at three lines, a verdict at six."""
     three = _ledger_cost(["Sol-4"], (LEFT,))
     six = _ledger_cost(["Fa-5"], (LEFT,))
-    assert 0.0 < three < 0.2
-    assert six > 1.2
+    assert three == pytest.approx(1.0)
+    assert six > 12.0
     # Quadratic, not linear — four times the excess is sixteen times the charge.
     assert six == pytest.approx(16 * three)
 
@@ -158,12 +173,31 @@ def test_the_charge_is_symmetric_between_the_two_hands() -> None:
     assert _ledger_cost(["Fa-5"], (LEFT,)) == pytest.approx(_ledger_cost(["Fa-2"], (RIGHT,)))
 
 
-def test_the_picture_costs_and_the_natural_reading_does_not() -> None:
-    """Fa-2 with Fa-5: one way round is free, the other is charged on both staves."""
-    natural = _ledger_cost(["Fa-2", "Fa-5"], (LEFT, RIGHT))
-    swapped = _ledger_cost(["Fa-2", "Fa-5"], (RIGHT, LEFT))
-    assert natural == 0.0
-    assert swapped > 2.0
+def test_the_picture_costs_nothing_to_read_and_is_what_gets_chosen() -> None:
+    """Fa-2 with Fa-5: the natural reading is free, and it is the one the model picks.
+
+    Worth being precise about *which* term earns this. The swapped reading — Fa-2 on the
+    treble staff, Fa-5 on the bass — is charged nothing, because the gate asks "could the
+    other hand also take this note" and the answer is no: thirty-six semitones is beyond
+    any hand. The gate cannot express "they should trade", and it is not asked to. The
+    crossing and collision terms already refuse an inversion this wide, which is why the
+    end-to-end answer is right; the ledger term's job starts where a hand is merely in
+    the wrong place, not where the two are swapped outright.
+    """
+    assert _ledger_cost(["Fa-2", "Fa-5"], (LEFT, RIGHT)) == 0.0
+
+    grid = np.zeros((KEY_COUNT, 4), dtype=np.int8)
+    for name in ("Fa-2", "Fa-5"):
+        grid[note_to_row(name), 0] = 1
+        grid[note_to_row(name), 1:3] = -1
+    matrix = PianoMatrix.from_dense(
+        grid,
+        granularity=Granularity.NEGRA,
+        tempo_bpm=60.0,
+        processing_step=MatrixProcessingStep.CLEAN,
+    )
+    chosen = {item.note: item.hand for item in infer_hands(matrix, DEFAULT_CONFIG).assignments}
+    assert chosen == {"Fa-2": LEFT, "Fa-5": RIGHT}
 
 
 def test_a_crossing_the_hands_are_committed_to_still_ends() -> None:
@@ -189,7 +223,12 @@ def test_a_crossing_the_hands_are_committed_to_still_ends() -> None:
     to_right = transition(pinned, group, (RIGHT,), DEFAULT_CONFIG.hand, DEFAULT_CONFIG.weights)
     assert to_right is None, "the right hand has five keys down; it cannot take a sixth"
     assert to_left is not None
-    assert to_left.breakdown.ledger > 0.0, "the crossing is still charged for its ledger lines"
+    # Still charged: the right hand is blocked by what it is *holding*, and a sustain
+    # can be a decision made too early rather than a fact of the music, so the gate
+    # does not excuse it. What protects the crossing is feasibility, not the size of
+    # the penalty — the second pass will try to move La-5 to the right hand, find the
+    # move infeasible, and leave the crossing exactly where it is.
+    assert to_left.breakdown.ledger > 0.0
 
 
 def test_zeroing_the_weight_removes_the_term() -> None:
@@ -374,13 +413,21 @@ def _across_lines(result, column: int) -> list[int]:
 
 
 def test_without_the_term_the_closing_ascent_lands_on_the_bass_staff() -> None:
-    """The ablation. With ``ledger`` at zero the model still writes David's picture.
+    """The ablation. With the second pass off, the search still writes David's picture.
 
-    This is the honest half of the pair: the term is not decoration on a split
-    that was already right. Turn it off and the last six onsets of the piece go
-    to the left hand, three to seven ledger lines above its staff.
+    This is the honest half of the pair: the term is not decoration on a split that was
+    already right. Turn the pass off and the last six onsets of the piece go to the left
+    hand, three to seven ledger lines above its staff.
+
+    Note *which* half of the design does the work here. The right hand is pinned under
+    sustains it took at column 19, so at column 44 no single move can help — the fix is
+    to have split that earlier chord, which only a re-solve over the window can find.
+    An in-search charge cannot find it either once the gate is honest, because the gate
+    correctly reports that the right hand is unavailable. What makes this case work is
+    that a *sustained* blocker is still charged: the pin is self-inflicted, and saying so
+    is what gives the window re-solve something to improve.
     """
-    result = infer_hands(_cadence_window(), DEFAULT_CONFIG.with_weights(ledger=0.0))
+    result = infer_hands(_cadence_window(), DEFAULT_CONFIG.with_refine(enabled=False))
     hand = {(item.column, item.note): item.hand for item in result.assignments}
     assert hand[(44, "Sol-5")] == LEFT
     assert hand[(69, "Sol-5")] == LEFT
@@ -388,10 +435,10 @@ def test_without_the_term_the_closing_ascent_lands_on_the_bass_staff() -> None:
 
 
 def test_the_term_keeps_the_ascent_on_its_own_staff() -> None:
-    """And the same window with the term on, which is what ships.
+    """And the same window with the second pass on, which is what ships.
 
-    The first triad is split so the right hand stays free; nothing in the
-    cadence then prints more than three ledger lines across its staff.
+    The first triad is split so the right hand stays free; nothing in the cadence then
+    prints more than three ledger lines across its staff.
     """
     result = infer_hands(_cadence_window(), DEFAULT_CONFIG)
     hand = {(item.column, item.note): item.hand for item in result.assignments}

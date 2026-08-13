@@ -6,6 +6,7 @@ breaks real music breaks a test.
 """
 
 import numpy as np
+import pytest
 
 from aitu_backend.matrix.keys import note_to_row
 from aitu_backend.transcription.engine import NoteEvent
@@ -187,3 +188,80 @@ def test_the_filter_runs_by_default_in_the_time_build() -> None:
     report = events_to_time_matrix(the_bruno_mars_passage(), 14.0)
     assert report.leakage.merged == 1
     assert "1 leaked re-onset(s) merged" in report.describe()
+
+
+# --------------------------------------------------------- the 2026-08-10 widening
+
+
+def test_a_phantom_arriving_level_with_the_chord_is_merged() -> None:
+    """Chopin's phantoms land 8-12 ms *ahead* of the cluster, not behind it.
+
+    The lag test used to demand they trail it, which was one file's accident, and all four walked
+    through. Nothing about the music says which side of an attack a secondary detection falls on.
+    """
+    events = [
+        event(53, 6.7497, 7.6200, 48),
+        event(70, 7.6242, 8.6631, 63),
+        event(53, 7.6331, 7.9700, 38),  # 11.5 ms AHEAD of the last of its company
+        event(65, 7.6446, 8.6635, 38),
+    ]
+    _, report = merge_leaked_onsets(events)
+
+    assert report.merged == 1
+    assert report.merges[0].midi_note == 53
+    assert report.merges[0].lag_seconds < 0
+
+
+def test_one_stray_neighbour_no_longer_shields_a_phantom() -> None:
+    """The asymmetry test asked for the predecessor to have *no* company, which is too literal."""
+    events = [
+        event(46, 6.3223, 7.6300, 49),
+        event(73, 6.3550, 8.7000, 70),  # 33 ms after the predecessor. Not a chord.
+        event(70, 7.6242, 8.6631, 63),
+        event(53, 7.6331, 7.9700, 38),
+        event(46, 7.6364, 8.6300, 32),  # the phantom, born from a chord of three
+        event(65, 7.6446, 8.6635, 38),
+    ]
+    merged, report = merge_leaked_onsets(events)
+
+    assert {m.midi_note for m in report.merges} >= {46}
+    assert [e.start for e in merged if e.midi_note == 46] == [6.3223]
+
+
+def test_the_same_chord_struck_twice_is_still_left_alone() -> None:
+    """Counting company is not enough — the D7 re-strike clears the margin. The pitches give it away.
+
+    Every note of the chord sees two more neighbours than its predecessor did, so a margin alone
+    would merge them. They are refused because those neighbours are the *same keys* both times,
+    which is what "the same chord again" looks like and what a phantom can never look like.
+    """
+    events = [
+        event(57, 8.1941, 9.8300, 96),
+        event(60, 8.1945, 9.8300, 99),
+        event(38, 8.1949, 9.8300, 91),
+        event(57, 9.8376, 11.4942, 89),
+        event(60, 9.8376, 11.4700, 93),
+        event(38, 9.8401, 11.4986, 90),
+        event(53, 9.8440, 11.4949, 89),
+    ]
+    _, report = merge_leaked_onsets(events)
+
+    assert report.merged == 0
+
+
+def test_a_caller_can_ask_for_the_old_one_sided_behaviour() -> None:
+    events = [
+        event(53, 6.7497, 7.6200, 48),
+        event(70, 7.6242, 8.6631, 63),
+        event(53, 7.6331, 7.9700, 38),
+        event(65, 7.6446, 8.6635, 38),
+    ]
+    _, report = merge_leaked_onsets(events, LeakageConfig(lag_ahead_seconds=0.0))
+
+    assert report.merged == 0
+
+
+def test_a_company_margin_below_one_is_refused() -> None:
+    with pytest.raises(ValueError):
+        merge_leaked_onsets(the_bruno_mars_passage(), LeakageConfig(min_company_margin=0))
+

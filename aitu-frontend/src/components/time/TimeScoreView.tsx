@@ -27,6 +27,7 @@ import {
   type NoteRef,
   type RenderOverrides,
 } from "../../music/renderOverrides";
+import { palette, surface } from "../../ui";
 
 export interface TimeScoreViewProps {
   score: TimeScorePayload;
@@ -153,6 +154,16 @@ export interface TimeScoreViewProps {
    */
   playheadSeconds?: number | null;
   /**
+   * Whether the recording is sounding.
+   *
+   * The page only follows the line onto a new stave while this is true. Following it at all times
+   * sounds harmless and is not: dragging the scrub bar sweeps the line through a hundred staves in
+   * a second, and each one scrolled the page, so the bar the reader was holding shot off the top of
+   * the window and the drag became impossible to finish. Moving the recording without playing it is
+   * something the reader is doing *to* the page, not something the page should chase.
+   */
+  followPlayhead?: boolean;
+  /**
    * The cursor was dragged to a new moment, in seconds. Move the recording there.
    *
    * Leave it out and the cursor is not draggable, which is what a printed view wants.
@@ -194,6 +205,7 @@ export function TimeScoreView({
   onSelectMarkedRange,
   availableWidth,
   playheadSeconds,
+  followPlayhead = false,
   onScrub,
   scrollCursorAt,
   onRendererChange,
@@ -208,6 +220,12 @@ export function TimeScoreView({
   // reason, which is what keeps the dashed outline on screen while a toolbox is open.
   const latestRange = useRef(selectedRange);
   const playhead = useRef<HTMLDivElement | null>(null);
+  // One handle per end of the marked stretch. Positioned imperatively, like the playhead, because
+  // they move with a render the host never asked for — a re-wrap, a change of width — and a React
+  // state holding pixels would be a frame behind every one of them.
+  const rangeFrom = useRef<HTMLDivElement | null>(null);
+  const rangeTo = useRef<HTMLDivElement | null>(null);
+  const [draggingEdge, setDraggingEdge] = useState<"from" | "to" | null>(null);
   const renderer = useRef<GridNotationRenderer | null>(null);
   // Held in a ref rather than listed as a dependency: a page that passes an inline function would
   // otherwise rebuild every note on every one of its own renders.
@@ -216,6 +234,34 @@ export function TimeScoreView({
     reportRenderer.current = onRendererChange;
   }, [onRendererChange]);
   const system = useRef<number | null>(null);
+
+  /**
+   * Put the two edge handles where the ends of the marked stretch are.
+   *
+   * The same arithmetic the playhead uses, run twice: a column is a slice of wall clock, so a
+   * frame's place on the page is a lookup into the render rather than anything musical. Called
+   * after every redraw as well as on every change of range, because a re-wrap moves both ends
+   * without the range itself changing at all.
+   */
+  const placeRangeHandles = useCallback(() => {
+    const render = renderer.current?.getLastRender();
+    const range = latestRange.current;
+    for (const [node, frame] of [
+      [rangeFrom.current, range?.fromColumn],
+      [rangeTo.current, range?.toColumn],
+    ] as const) {
+      if (!node) continue;
+      const placement = render && frame !== undefined ? placeCursor(render, frame) : undefined;
+      if (!placement) {
+        node.style.display = "none";
+        continue;
+      }
+      node.style.display = "block";
+      node.style.left = `${(placement.x - GRAB_WIDTH / 2).toFixed(2)}px`;
+      node.style.top = `${placement.topY.toFixed(2)}px`;
+      node.style.height = `${placement.height.toFixed(2)}px`;
+    }
+  }, []);
 
   // The page edits, folded into a copy of the matrix. Memoised because it walks every cell and the
   // playhead effect below runs sixty times a second.
@@ -378,6 +424,7 @@ export function TimeScoreView({
     renderer.current = drawn;
     reportRenderer.current?.(drawn);
     if (latestRange.current) drawn.setSelectedRange(latestRange.current);
+    placeRangeHandles();
 
     // What the notes themselves suggest, measured on the same spelling rule the page prints with,
     // so the number reported is the ink actually saved rather than a second opinion about it.
@@ -423,18 +470,22 @@ export function TimeScoreView({
     onSelectRange,
     onSelectMarkedRange,
     availableWidth,
+    placeRangeHandles,
   ]);
 
   useEffect(() => {
     latestRange.current = selectedRange;
     if (selectedRange) renderer.current?.setSelectedRange(selectedRange);
-  }, [selectedRange]);
+    placeRangeHandles();
+  }, [placeRangeHandles, selectedRange]);
 
   useEffect(() => {
     if (clearSelectionsAt === undefined) return;
+    latestRange.current = null;
     renderer.current?.setSelectedRange(undefined);
     renderer.current?.clearSelection();
-  }, [clearSelectionsAt]);
+    placeRangeHandles();
+  }, [clearSelectionsAt, placeRangeHandles]);
 
   // The line is moved rather than redrawn. At sixty ticks a second a full re-render would rebuild
   // every note sixty times to move one line a few pixels, which is the whole cost of the page.
@@ -463,12 +514,16 @@ export function TimeScoreView({
     marker.style.top = `${placement.topY.toFixed(2)}px`;
     marker.style.height = `${placement.height.toFixed(2)}px`;
 
-    // Only when the music moves to another line. Scrolling on every tick would fight the reader.
-    if (placement.systemIndex !== system.current) {
-      system.current = placement.systemIndex;
+    // Only while it is playing, and then only when the music moves to another line. Scrolling on
+    // every tick would fight the reader; scrolling while they are scrubbing takes the bar away from
+    // under their pointer. The index is still recorded when not following, so resuming does not
+    // jump on the first tick for a line the reader is already looking at.
+    const moved = placement.systemIndex !== system.current;
+    system.current = placement.systemIndex;
+    if (moved && followPlayhead) {
       marker.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     }
-  }, [playheadSeconds, score.envelope.frameMs]);
+  }, [followPlayhead, playheadSeconds, score.envelope.frameMs]);
 
   // Bring the cursor on screen because the page asked — space, or a click on the progress bar. The
   // recording may be four minutes down a page that wraps a hundred times, and playing something the
@@ -522,10 +577,88 @@ export function TimeScoreView({
     setDragging(false);
   };
 
+  /** Which frame a pointer is over, as a whole column. */
+  const frameAt = useCallback((event: React.PointerEvent<HTMLDivElement>): number | undefined => {
+    const render = renderer.current?.getLastRender();
+    const box = stage.current?.getBoundingClientRect();
+    if (!render || !box) return undefined;
+    const frames = frameAtPoint(render, event.clientX - box.left, event.clientY - box.top);
+    return frames === undefined ? undefined : Math.round(frames);
+  }, []);
+
+  /**
+   * Move one end of the marked stretch to the frame under the pointer.
+   *
+   * The ends are clamped apart rather than allowed to cross. A range that inverted would read as
+   * empty everywhere downstream — no key change, no octave bracket, nothing to apply — and the
+   * reader would have no way of telling that from a bug.
+   */
+  const dragEdge = (event: React.PointerEvent<HTMLDivElement>, edge: "from" | "to") => {
+    const range = latestRange.current;
+    if (!range || !onSelectRange) return;
+    const frame = frameAt(event);
+    if (frame === undefined) return;
+    const next =
+      edge === "from"
+        ? { fromColumn: Math.min(Math.max(0, frame), range.toColumn - 1), toColumn: range.toColumn }
+        : {
+            fromColumn: range.fromColumn,
+            toColumn: Math.max(range.fromColumn + 1, Math.min(frame, score.envelope.frameCount)),
+          };
+    if (next.fromColumn === range.fromColumn && next.toColumn === range.toColumn) return;
+    onSelectRange(next);
+  };
+
+  const startEdgeDrag = (event: React.PointerEvent<HTMLDivElement>, edge: "from" | "to") => {
+    if (!onSelectRange || event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setDraggingEdge(edge);
+  };
+
+  const continueEdgeDrag = (event: React.PointerEvent<HTMLDivElement>, edge: "from" | "to") => {
+    if (draggingEdge !== edge) return;
+    event.preventDefault();
+    dragEdge(event, edge);
+  };
+
+  const endEdgeDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingEdge) return;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    setDraggingEdge(null);
+  };
+
+  /**
+   * Double-click a blank part of the page and the recording goes there.
+   *
+   * Almost every pixel of a stave already means something — a notehead picks a note, a group cell
+   * picks a stretch of columns, the two range handles and the playhead are grabbed — and one
+   * gesture cannot mean two things. What is left over is the strip above the top stave, the gaps
+   * between systems and the margins, which is where a reader points when they mean "here" and
+   * nothing else. So the seek is the *second* click on ground that is otherwise inert: a single
+   * click there can go on meaning nothing, and no existing gesture changes.
+   *
+   * The page does not scroll afterwards. The reader is looking at the place they just pointed at;
+   * moving them to it would only take that place away.
+   */
+  const seekOnDoubleClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!onScrub) return;
+    const target = event.target as Element | null;
+    if (target?.closest?.(INERT_TO_SEEK)) return;
+    const render = renderer.current?.getLastRender();
+    const box = stage.current?.getBoundingClientRect();
+    if (!render || !box) return;
+    const frames = frameAtPoint(render, event.clientX - box.left, event.clientY - box.top);
+    if (frames === undefined) return;
+    onScrub((frames * score.envelope.frameMs) / 1000);
+  };
+
   return (
     <Box sx={{ width: "100%", overflowX: "auto" }}>
       <Box
         ref={stage}
+        onDoubleClick={seekOnDoubleClick}
         sx={{
           position: "relative",
           display: "inline-block",
@@ -537,6 +670,83 @@ export function TimeScoreView({
         }}
       >
         <Box ref={host} />
+
+        {/*
+          The two ends of the marked stretch, as things you can take hold of.
+          A range is made by clicking groups, and a group is about a second — far coarser than the
+          note a reader is usually aiming at. These let each end be pulled to any frame afterwards,
+          so "up to that redonda and no further" is expressible. They are drawn over the sheet
+          rather than inside it because only this component knows where a frame is on the page.
+        */}
+        {([
+          ["from", rangeFrom, "Drag to move where the marked stretch starts"],
+          ["to", rangeTo, "Drag to move where the marked stretch ends"],
+        ] as const).map(([edge, nodeRef, title]) => (
+          <Box
+            key={edge}
+            ref={nodeRef}
+            data-range-edge={edge}
+            onPointerDown={(event) => startEdgeDrag(event, edge)}
+            onPointerMove={(event) => continueEdgeDrag(event, edge)}
+            onPointerUp={endEdgeDrag}
+            onPointerCancel={endEdgeDrag}
+            title={onSelectRange ? title : undefined}
+            sx={{
+              position: "absolute",
+              display: "none",
+              width: `${GRAB_WIDTH}px`,
+              zIndex: 2,
+              pointerEvents: onSelectRange ? "auto" : "none",
+              cursor: onSelectRange ? (draggingEdge === edge ? "ew-resize" : "col-resize") : "default",
+              touchAction: "none",
+              "&:hover .aitu-range-edge, & .aitu-range-edge[data-dragging='true']": {
+                opacity: 1,
+                width: "3px",
+              },
+              "&:hover .aitu-range-grip, & .aitu-range-grip[data-dragging='true']": {
+                opacity: 1,
+                transform: "scale(1.25)",
+              },
+            }}
+          >
+            <Box
+              className="aitu-range-edge"
+              data-dragging={draggingEdge === edge ? "true" : "false"}
+              sx={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: `${GRAB_WIDTH / 2 - 1}px`,
+                width: "2px",
+                backgroundColor: palette.dark.Lavender,
+                opacity: 0.85,
+                transition: "opacity 120ms, width 120ms",
+              }}
+            />
+            {/*
+              A square, not a circle: the playhead's grip is round, and the two are often within a
+              few pixels of each other. The shape is what says which one you are about to grab.
+            */}
+            <Box
+              className="aitu-range-grip"
+              data-dragging={draggingEdge === edge ? "true" : "false"}
+              sx={{
+                position: "absolute",
+                top: "-5px",
+                left: `${GRAB_WIDTH / 2 - 5}px`,
+                width: "10px",
+                height: "10px",
+                borderRadius: "2px",
+                backgroundColor: palette.dark.Lavender,
+                border: 1,
+                borderColor: surface.panel,
+                opacity: 0.85,
+                transition: "opacity 120ms, transform 120ms",
+              }}
+            />
+          </Box>
+        ))}
+
         <Box
           ref={playhead}
           onPointerDown={startDrag}
@@ -603,6 +813,23 @@ export function TimeScoreView({
 
 /** How wide the invisible strip around the cursor is, in pixels. Two is a line; this is a target. */
 const GRAB_WIDTH = 14;
+
+/**
+ * Everything on the page that already answers to a click, and so must not also seek.
+ *
+ * Listed rather than inferred: a double-click lands on whatever is under the pointer, and the
+ * honest test for "is this blank" is "is it none of the things that mean something".
+ */
+const INERT_TO_SEEK = [
+  ".grid-frame-range",
+  ".grid-note-target",
+  ".grid-notehead",
+  ".grid-range-marker-hit",
+  ".grid-range-marker-arm",
+  ".grid-frame-timestamp",
+  "[data-staff-gap-handle]",
+  "[data-range-edge]",
+].join(", ");
 
 /**
  * The Spanish figure names the backend sends, in the English names the drawing package uses.
