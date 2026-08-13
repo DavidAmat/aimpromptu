@@ -35,7 +35,11 @@ export interface AudioRange {
 }
 
 export interface WaveformRangeSelectorProps {
-  audioUuid: string;
+  audioUuid?: string;
+  /** Direct URL for the `<audio>` element (a take, a blob URL, …). */
+  audioUrl?: string;
+  /** Load peaks from somewhere other than `/audio/{uuid}/waveform`. */
+  loadWaveform?: (points: number, signal: AbortSignal) => Promise<WaveformPeaks>;
   /** Known duration; otherwise taken from the waveform payload. */
   durationSeconds?: number;
   /** Emitted whenever the range changes. */
@@ -57,13 +61,15 @@ interface PeaksState {
 
 export function WaveformRangeSelector({
   audioUuid,
+  audioUrl,
+  loadWaveform,
   durationSeconds,
   onRangeChange,
   points = 1000,
   height = 120,
   readOnly = false,
 }: WaveformRangeSelectorProps) {
-  const requestKey = `${audioUuid}:${points}`;
+  const requestKey = `${audioUrl ?? audioUuid ?? ""}:${points}`;
   const [loaded, setLoaded] = useState<PeaksState>({ key: "", peaks: null, error: null });
   const [range, setRange] = useState<AudioRange>({ startSeconds: 0, endSeconds: 0 });
   const [startText, setStartText] = useState(() => formatTime(0));
@@ -88,15 +94,23 @@ export function WaveformRangeSelector({
   // ---------------------------------------------------------------- loading
 
   useEffect(() => {
+    const loader =
+      loadWaveform ??
+      (audioUuid
+        ? (count: number, signal: AbortSignal) => audioApi.waveform(audioUuid, count, signal)
+        : null);
+    if (!loader) return;
+
     const controller = new AbortController();
 
-    audioApi
-      .waveform(audioUuid, points, controller.signal)
+    loader(points, controller.signal)
       .then((fetched) => {
         setLoaded({ key: requestKey, peaks: fetched, error: null });
-        setRange({ startSeconds: 0, endSeconds: fetched.durationSeconds });
+        const next = { startSeconds: 0, endSeconds: fetched.durationSeconds };
+        setRange(next);
         setStartText(formatTime(0));
         setEndText(formatTime(fetched.durationSeconds));
+        onRangeChange?.(next);
       })
       .catch((caught: unknown) => {
         if (controller.signal.aborted) return;
@@ -108,7 +122,7 @@ export function WaveformRangeSelector({
       });
 
     return () => controller.abort();
-  }, [audioUuid, points, requestKey]);
+  }, [audioUuid, loadWaveform, points, requestKey, onRangeChange]);
 
   const applyRange = useCallback(
     (next: AudioRange) => {
@@ -403,7 +417,13 @@ export function WaveformRangeSelector({
         </Button>
       </Stack>
 
-      <Box component="audio" ref={audioRef} src={audioApi.fileUrl(audioUuid)} preload="auto" hidden />
+      <Box
+        component="audio"
+        ref={audioRef}
+        src={audioUrl ?? (audioUuid ? audioApi.fileUrl(audioUuid) : undefined)}
+        preload="auto"
+        hidden
+      />
     </Stack>
   );
 }

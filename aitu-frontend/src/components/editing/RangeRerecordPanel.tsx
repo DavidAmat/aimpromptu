@@ -1,7 +1,11 @@
 /**
- * Re-record a marked stretch: choose a speed, play the passage, record, preview, accept.
+ * Re-record a marked stretch: choose a speed, play the passage, record, review,
+ * transcribe, then accept.
  *
- * Lives in the Frames toolbox as a new tab. Key and Octave are untouched.
+ * Recording stays in the Frames toolbox so the sheet stays visible. After Stop,
+ * a review dialog mirrors the Input tab: waveform, cut a range, play it,
+ * transcribe, see that stretch of the sheet, then decide whether to splice it in.
+ * Key and Octave are untouched.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -35,6 +39,9 @@ import { fileNameFor, useRecorder } from "../../audio/useRecorder";
 import { formatTime, parseTime } from "../../audio/time";
 import { useProgress } from "../../hooks/useProgress";
 import LiveLevelBars from "../audio/LiveLevelBars";
+import WaveformRangeSelector, {
+  type AudioRange,
+} from "../audio/WaveformRangeSelector";
 import ProgressBanner from "../ProgressBanner";
 import PeakPlot from "../time/PeakPlot";
 import { TimeScoreView } from "../time/TimeScoreView";
@@ -82,6 +89,10 @@ function endSecondsOf(props: RangeRerecordPanelProps): number {
   if (props.endSeconds !== undefined) return props.endSeconds;
   if (props.toColumn !== undefined) return (props.toColumn * props.frameMs) / 1000;
   return 0;
+}
+
+function explain(caught: unknown, fallback: string): string {
+  return caught instanceof Error ? caught.message : fallback;
 }
 
 export function RangeRerecordPanel({
@@ -146,6 +157,8 @@ export function RangeRerecordPanel({
   const [confirm, setConfirm] = useState<Confirmation | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [result, setResult] = useState<AcceptResult | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [takeRange, setTakeRange] = useState<AudioRange | null>(null);
 
   const progress = useProgress(jobId ? matrixApi.progressUrl(jobId) : null);
   const transcribeFailed = progress.status === "error";
@@ -154,9 +167,10 @@ export function RangeRerecordPanel({
     ? (progress.error ?? "Transcription failed.")
     : error;
   const frozen = Boolean(session?.hasTake);
-  const windowSeconds = session?.windowSeconds ?? windowSecondsOf({ audioUuid, frameMs, fromColumn, toColumn, startSeconds, endSeconds });
-  const expected =
-    speed === "fit" ? null : windowSeconds * (speed as number);
+  const windowSeconds =
+    session?.windowSeconds ??
+    windowSecondsOf({ audioUuid, frameMs, fromColumn, toColumn, startSeconds, endSeconds });
+  const expected = speed === "fit" ? null : windowSeconds * (speed as number);
 
   const stopPlayback = () => {
     playing.current?.pause();
@@ -172,13 +186,17 @@ export function RangeRerecordPanel({
 
   const ensureSession = useCallback(async (): Promise<EditSession> => {
     if (session) return session;
-    const body = fromColumn !== undefined && toColumn !== undefined
-      ? { startFrame: fromColumn, endFrame: toColumn, frameMs }
-      : {
-          startSeconds: parseTime(startText) ?? startSecondsOf({ audioUuid, frameMs, startSeconds, fromColumn }),
-          endSeconds: parseTime(endText) ?? endSecondsOf({ audioUuid, frameMs, endSeconds, toColumn }),
-          frameMs,
-        };
+    const body =
+      fromColumn !== undefined && toColumn !== undefined
+        ? { startFrame: fromColumn, endFrame: toColumn, frameMs }
+        : {
+            startSeconds:
+              parseTime(startText) ??
+              startSecondsOf({ audioUuid, frameMs, startSeconds, fromColumn }),
+            endSeconds:
+              parseTime(endText) ?? endSecondsOf({ audioUuid, frameMs, endSeconds, toColumn }),
+            frameMs,
+          };
     const created = await editingApi.start(audioUuid, {
       ...body,
       slowdown: speed === "fit" ? null : speed,
@@ -187,7 +205,20 @@ export function RangeRerecordPanel({
     });
     setSession(created);
     return created;
-  }, [session, fromColumn, toColumn, frameMs, startText, endText, audioUuid, startSeconds, endSeconds, speed, spliceAudio, clickMs]);
+  }, [
+    fromColumn,
+    toColumn,
+    frameMs,
+    startText,
+    endText,
+    audioUuid,
+    startSeconds,
+    endSeconds,
+    speed,
+    spliceAudio,
+    clickMs,
+    session,
+  ]);
 
   const applyTimes = () => {
     if (frozen) return;
@@ -203,7 +234,7 @@ export function RangeRerecordPanel({
       const current = await ensureSession();
       play(editingApi.windowUrl(audioUuid, current.sessionUuid, slowed));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not play the passage.");
+      setError(explain(caught, "Could not play the passage."));
     }
   };
 
@@ -219,7 +250,7 @@ export function RangeRerecordPanel({
       await recorder.start();
     } catch (caught) {
       clicks.stop();
-      setError(caught instanceof Error ? caught.message : "Could not start recording.");
+      setError(explain(caught, "Could not start recording."));
     }
   };
 
@@ -228,7 +259,7 @@ export function RangeRerecordPanel({
     recorder.stop();
   };
 
-  const submitTake = async () => {
+  const openReview = async () => {
     if (!recorder.blob) return;
     const filename = fileNameFor(recorder.blob.type, "take");
     if (!filename) {
@@ -237,45 +268,94 @@ export function RangeRerecordPanel({
     }
     setBusy(true);
     setError(null);
+    setPreview(null);
     try {
       const current = await ensureSession();
       const file = new File([recorder.blob], filename, { type: recorder.blob.type });
       const updated = await editingApi.uploadTake(audioUuid, current.sessionUuid, file);
       setSession(updated);
-      const job = await editingApi.transcribe(audioUuid, current.sessionUuid);
-      setJobId(job.jobId);
+      setTakeRange(
+        updated.untrimmedDurationSeconds
+          ? { startSeconds: 0, endSeconds: updated.untrimmedDurationSeconds }
+          : null,
+      );
+      setReviewOpen(true);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not send the take.");
+      setError(explain(caught, "Could not store the take."));
+    } finally {
       setBusy(false);
     }
   };
 
+  const runTranscribe = async () => {
+    if (!session) return;
+    setBusy(true);
+    setError(null);
+    setPreview(null);
+    try {
+      if (takeRange) {
+        await editingApi.patch(audioUuid, session.sessionUuid, {
+          takeStartSeconds: takeRange.startSeconds,
+          takeEndSeconds: takeRange.endSeconds,
+        });
+      }
+      const job = await editingApi.transcribe(audioUuid, session.sessionUuid);
+      setJobId(job.jobId);
+    } catch (caught) {
+      setError(explain(caught, "Could not transcribe the take."));
+      setBusy(false);
+    }
+  };
+
+  const sessionUuid = session?.sessionUuid;
+
+  const loadTakeWaveform = useCallback(
+    (points: number, signal: AbortSignal) => {
+      if (!sessionUuid) {
+        return Promise.reject(new Error("Record a take first."));
+      }
+      return editingApi.takeWaveform(audioUuid, sessionUuid, points, signal);
+    },
+    [audioUuid, sessionUuid],
+  );
+
   useEffect(() => {
-    if (progress.status !== "done" || !session) return;
+    if (progress.status !== "done" || !jobId || !sessionUuid) return;
     let cancelled = false;
     editingApi
-      .preview(audioUuid, session.sessionUuid, {
-        anchorFigure,
-        anchorMs,
-        speedChanges,
+      .get(audioUuid, sessionUuid)
+      .then((refreshed) => {
+        if (cancelled) return;
+        setSession(refreshed);
+        if (!refreshed.hasEvents) {
+          throw new Error(
+            "Transcription finished but no notes were stored. Try a different range.",
+          );
+        }
+        return editingApi.preview(audioUuid, sessionUuid, {
+          anchorFigure,
+          anchorMs,
+          speedChanges,
+        });
       })
       .then((next) => {
-        if (cancelled) return;
+        if (cancelled || !next) return;
         setPreview(next);
         setSession(next.session);
-        setBusy(false);
-        setJobId(null);
       })
       .catch((caught: unknown) => {
         if (cancelled) return;
-        setError(caught instanceof Error ? caught.message : "Could not preview the take.");
+        setError(explain(caught, "Could not preview the take."));
+      })
+      .finally(() => {
+        if (cancelled) return;
         setBusy(false);
         setJobId(null);
       });
     return () => {
       cancelled = true;
     };
-  }, [progress.status, audioUuid, session, anchorFigure, anchorMs, speedChanges]);
+  }, [progress.status, jobId, audioUuid, sessionUuid, anchorFigure, anchorMs, speedChanges]);
 
   const changeSpeed = async (next: SlowdownChoice | "fit") => {
     setSpeed(next);
@@ -296,7 +376,7 @@ export function RangeRerecordPanel({
       setPreview(shown);
       setSession(shown.session);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not change the speed.");
+      setError(explain(caught, "Could not change the speed."));
     } finally {
       setBusy(false);
     }
@@ -319,6 +399,17 @@ export function RangeRerecordPanel({
     setResult(null);
     setJobId(null);
     setError(null);
+    setReviewOpen(false);
+    setTakeRange(null);
+  };
+
+  const recordAgain = () => {
+    stopPlayback();
+    setPreview(null);
+    setJobId(null);
+    setTakeRange(null);
+    setReviewOpen(false);
+    recorder.reset();
   };
 
   const openConfirm = async () => {
@@ -326,7 +417,7 @@ export function RangeRerecordPanel({
     try {
       setConfirm(await editingApi.confirmation(audioUuid, session.sessionUuid));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not prepare the confirmation.");
+      setError(explain(caught, "Could not prepare the confirmation."));
     }
   };
 
@@ -338,9 +429,11 @@ export function RangeRerecordPanel({
       setResult(accepted);
       setConfirm(null);
       setSession(null);
+      setReviewOpen(false);
+      recorder.reset();
       onAccepted?.(accepted);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not accept the edit.");
+      setError(explain(caught, "Could not accept the edit."));
     } finally {
       setAccepting(false);
     }
@@ -472,61 +565,136 @@ export function RangeRerecordPanel({
             </Button>
           )}
           {recorder.status === "recorded" ? (
-            <Button size="small" variant="contained" onClick={() => void submitTake()} disabled={working}>
-              {busy ? <CircularProgress size={14} /> : "Transcribe this take"}
+            <Button
+              size="small"
+              variant="contained"
+              onClick={() => void openReview()}
+              disabled={working}
+            >
+              {busy ? <CircularProgress size={14} /> : "Review this take"}
             </Button>
           ) : null}
         </Stack>
 
-        {jobId ? <ProgressBanner progress={progress} fallbackLabel="Transcribing the take" /> : null}
-
-        {preview ? (
-          <Stack spacing={1}>
-            <Typography variant="caption" color="text.secondary">
-              {preview.scaledNoteCount} notes scaled into the window. A wrong speed puts every peak
-              one step away from the ladder.
-            </Typography>
-            {preview.peaks.length > 0 ? (
-              <PeakPlot peaks={preview.peaks} labelled={preview.labelled} height={140} />
-            ) : null}
-            <TimeScoreView score={preview.score} readOnly availableWidth={300} />
-            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-              <Button
-                size="small"
-                onClick={() => play(editingApi.takeUrl(audioUuid, preview.session.sessionUuid, false))}
-              >
-                Take as played
-              </Button>
-              <Button
-                size="small"
-                onClick={() => play(editingApi.takeUrl(audioUuid, preview.session.sessionUuid, true))}
-              >
-                Take scaled
-              </Button>
-              <Button
-                size="small"
-                onClick={() => play(editingApi.windowUrl(audioUuid, preview.session.sessionUuid, false))}
-              >
-                Original window
-              </Button>
-            </Stack>
-            <Stack direction="row" spacing={1}>
-              <Button size="small" variant="contained" onClick={() => void openConfirm()} disabled={working}>
-                Accept
-              </Button>
-              <Button size="small" color="error" onClick={() => void cancelSession()}>
-                Cancel
-              </Button>
-            </Stack>
-          </Stack>
-        ) : session ? (
+        {session ? (
           <Button size="small" color="error" onClick={() => void cancelSession()}>
             Cancel session
           </Button>
         ) : null}
       </Stack>
 
-      <Dialog open={confirm !== null} onClose={() => setConfirm(null)}>
+      <Dialog
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        fullWidth
+        maxWidth="lg"
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 2 }}
+      >
+        <DialogTitle>Review this take</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            {displayError ? <Alert severity="error">{displayError}</Alert> : null}
+            <Typography variant="body2" color="text.secondary">
+              Cut the take the same way as on Input: select a range, play it, then transcribe
+              only that stretch. The sheet below is the replacement for the marked window.
+            </Typography>
+
+            {session?.hasTake ? (
+              <WaveformRangeSelector
+                key={`${session.sessionUuid}:${session.untrimmedDurationSeconds ?? 0}`}
+                audioUrl={editingApi.takeUrl(audioUuid, session.sessionUuid, {
+                  untrimmed: true,
+                })}
+                loadWaveform={loadTakeWaveform}
+                durationSeconds={session.untrimmedDurationSeconds ?? undefined}
+                onRangeChange={setTakeRange}
+              />
+            ) : null}
+
+            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => void runTranscribe()}
+                disabled={working || !session?.hasTake}
+              >
+                {busy && !preview ? <CircularProgress size={14} /> : "Transcribe this range"}
+              </Button>
+              <Button size="small" onClick={recordAgain} disabled={working}>
+                Record again
+              </Button>
+            </Stack>
+
+            {jobId ? (
+              <ProgressBanner progress={progress} fallbackLabel="Transcribing the take" />
+            ) : null}
+
+            {preview ? (
+              <Stack spacing={1.5}>
+                <Typography variant="caption" color="text.secondary">
+                  {preview.scaledNoteCount} notes scaled into the {windowSeconds.toFixed(2)} s
+                  window.
+                </Typography>
+                {preview.peaks.length > 0 ? (
+                  <PeakPlot peaks={preview.peaks} labelled={preview.labelled} height={140} />
+                ) : null}
+                <Box sx={{ minHeight: 180, overflow: "auto" }}>
+                  <TimeScoreView score={preview.score} readOnly />
+                </Box>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      play(editingApi.takeUrl(audioUuid, preview.session.sessionUuid))
+                    }
+                  >
+                    Take as played
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      play(
+                        editingApi.takeUrl(audioUuid, preview.session.sessionUuid, {
+                          scaled: true,
+                        }),
+                      )
+                    }
+                  >
+                    Take scaled
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      play(editingApi.windowUrl(audioUuid, preview.session.sessionUuid, false))
+                    }
+                  >
+                    Original window
+                  </Button>
+                </Stack>
+              </Stack>
+            ) : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => void cancelSession()} color="error">
+            Cancel
+          </Button>
+          <Button onClick={() => setReviewOpen(false)}>Back</Button>
+          <Button
+            variant="contained"
+            onClick={() => void openConfirm()}
+            disabled={working || !preview}
+          >
+            Embed this take
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={confirm !== null}
+        onClose={() => setConfirm(null)}
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 3 }}
+      >
         <DialogTitle>Accept this replacement?</DialogTitle>
         <DialogContent>
           {confirm ? (

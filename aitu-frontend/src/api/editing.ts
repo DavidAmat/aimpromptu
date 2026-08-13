@@ -1,6 +1,7 @@
 /** `/audio/{uuid}/edits` — staged range re-recording (Epic 11). */
 
 import { buildUrl, request, upload } from "./client";
+import type { WaveformPeaks } from "./audio";
 import type { FigureName, LabelledPeak, Peak, SpeedChange, TimeScorePayload } from "./timeScore";
 
 export type SlowdownChoice = 1 | 2 | 4;
@@ -31,6 +32,8 @@ export interface EditSession {
   trimLengthSeconds: number | null;
   untrimmedDurationSeconds: number | null;
   expectedTakeSeconds: number | null;
+  takeStartSeconds: number | null;
+  takeEndSeconds: number | null;
 }
 
 export interface Confirmation {
@@ -90,6 +93,8 @@ export const editingApi = {
       spliceAudio?: boolean;
       clickIntervalMs?: number;
       trimLengthSeconds?: number;
+      takeStartSeconds?: number;
+      takeEndSeconds?: number;
     },
   ) => request<EditSession>(`/audio/${audioUuid}/edits/${sessionUuid}`, { method: "PATCH", body }),
 
@@ -124,6 +129,15 @@ export const editingApi = {
   windowUrl: (audioUuid: string, sessionUuid: string, slowed = false) =>
     buildUrl(`/audio/${audioUuid}/edits/${sessionUuid}/window`, slowed ? { slowed: true } : undefined),
 
-  takeUrl: (audioUuid: string, sessionUuid: string, scaled = false) =>
-    buildUrl(`/audio/${audioUuid}/edits/${sessionUuid}/take`, scaled ? { scaled: true } : undefined),
+  takeUrl: (audioUuid: string, sessionUuid: string, options?: { scaled?: boolean; untrimmed?: boolean }) =>
+    buildUrl(`/audio/${audioUuid}/edits/${sessionUuid}/take`, {
+      scaled: options?.scaled || undefined,
+      untrimmed: options?.untrimmed || undefined,
+    }),
+
+  takeWaveform: (audioUuid: string, sessionUuid: string, points = 1000, signal?: AbortSignal) =>
+    request<WaveformPeaks>(`/audio/${audioUuid}/edits/${sessionUuid}/waveform`, {
+      query: { points },
+      signal,
+    }),
 };

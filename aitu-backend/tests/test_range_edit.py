@@ -1,12 +1,16 @@
 """Range editing splice: exact-width replacement, marks inside the window dropped, cancel is a no-op."""
 
+import struct
+import wave
 from pathlib import Path
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+from aitu_backend.audio import formats
 from aitu_backend.editing.history import current_version
-from aitu_backend.editing.session import accept, cancel, start
+from aitu_backend.editing.session import accept, cancel, patch, start, take_peaks, transcribe_take
 from aitu_backend.editing.splice import (
     drop_marks_in_window,
     events_in_window,
@@ -294,3 +298,99 @@ def test_api_preview_and_accept(client: TestClient, temp_store: Path) -> None:
     assert onsets[0] == pytest.approx(1.0)
     # 2.0 * 0.5 + 1.0 = 2.0
     assert onsets[1] == pytest.approx(2.0)
+
+
+def sine_wav(path: Path, seconds: float = 1.0, rate: int = 8000, freq: float = 440.0) -> Path:
+    samples = np.sin(2 * np.pi * freq * np.arange(int(rate * seconds)) / rate)
+    frames = b"".join(struct.pack("<h", int(value * 30000)) for value in samples)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(path), "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(rate)
+        handle.writeframes(frames)
+    return path
+
+
+def test_preview_without_events_asks_to_transcribe(client: TestClient, temp_store: Path) -> None:
+    uuid = transcribed_piece()
+    created = client.post(
+        f"/audio/{uuid}/edits",
+        json={"startFrame": 25, "endFrame": 100, "frameMs": 40, "slowdown": 2},
+    )
+    session = created.json()["sessionUuid"]
+    preview = client.post(f"/audio/{uuid}/edits/{session}/preview", json={})
+    assert preview.status_code == 409
+    assert "Transcribe the take" in preview.json()["detail"]
+
+
+def test_preview_empty_take_explains_itself(client: TestClient, temp_store: Path) -> None:
+    uuid = transcribed_piece()
+    created = client.post(
+        f"/audio/{uuid}/edits",
+        json={"startFrame": 25, "endFrame": 100, "frameMs": 40, "slowdown": 2},
+    )
+    session = created.json()["sessionUuid"]
+    staging.write_take_events(uuid, session, [])
+    preview = client.post(f"/audio/{uuid}/edits/{session}/preview", json={})
+    assert preview.status_code == 409
+    assert "No notes" in preview.json()["detail"]
+
+
+def test_take_waveform_and_selected_range_before_transcribe(
+    temp_store: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    uuid = transcribed_piece()
+    record = start(uuid, start_frame=25, end_frame=100, frame_ms=40, slowdown=2)
+    sine_wav(staging.untrimmed_path(uuid, record.session_uuid), seconds=2.0)
+    record.untrimmed_duration_seconds = 2.0
+    staging.write(record)
+
+    peaks = take_peaks(uuid, record.session_uuid, 50)
+    assert peaks.duration_seconds == pytest.approx(2.0, abs=0.05)
+
+    patched = patch(
+        uuid, record.session_uuid, take_start_seconds=0.5, take_end_seconds=1.5
+    )
+    assert patched.take_start_seconds == pytest.approx(0.5)
+    assert patched.take_end_seconds == pytest.approx(1.5)
+
+    captured: dict[str, float] = {}
+
+    def fake_transcribe(path: Path, **kwargs: object) -> list:
+        captured["seconds"] = formats.duration_seconds(path)
+        return [_note(60, 0.0, 0.2)]
+
+    monkeypatch.setattr(pipeline, "transcribe_file", fake_transcribe)
+    transcribe_take(uuid, record.session_uuid)
+    assert captured["seconds"] == pytest.approx(1.0, abs=0.05)
+    assert staging.selected_path(uuid, record.session_uuid).is_file()
+
+
+def test_waveform_without_a_take_is_a_conflict(client: TestClient, temp_store: Path) -> None:
+    uuid = transcribed_piece()
+    created = client.post(
+        f"/audio/{uuid}/edits",
+        json={"startFrame": 25, "endFrame": 100, "frameMs": 40},
+    )
+    session = created.json()["sessionUuid"]
+    response = client.get(f"/audio/{uuid}/edits/{session}/waveform")
+    assert response.status_code == 409
+    assert "take" in response.json()["detail"].lower()
+
+
+def test_api_take_waveform(client: TestClient, temp_store: Path) -> None:
+    uuid = transcribed_piece()
+    created = client.post(
+        f"/audio/{uuid}/edits",
+        json={"startFrame": 25, "endFrame": 100, "frameMs": 40},
+    )
+    session = created.json()["sessionUuid"]
+    sine_wav(staging.untrimmed_path(uuid, session), seconds=1.5)
+    record = staging.read(uuid, session)
+    record.untrimmed_duration_seconds = 1.5
+    staging.write(record)
+    response = client.get(f"/audio/{uuid}/edits/{session}/waveform?points=20")
+    assert response.status_code == 200, response.text
+    assert response.json()["durationSeconds"] == pytest.approx(1.5, abs=0.05)
+    assert len(response.json()["min"]) == 20

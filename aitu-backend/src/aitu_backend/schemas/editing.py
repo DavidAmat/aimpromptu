@@ -74,6 +74,9 @@ class PatchEditRequest(BaseModel):
     click_interval_ms: float | None = Field(None, alias="clickIntervalMs", gt=0)
     #: How much of the take to keep after its first onset. Omit to use the default.
     trim_length_seconds: float | None = Field(None, alias="trimLengthSeconds", gt=0)
+    #: Range on the untrimmed take, chosen in the review dialog before transcribing.
+    take_start_seconds: float | None = Field(None, alias="takeStartSeconds", ge=0)
+    take_end_seconds: float | None = Field(None, alias="takeEndSeconds", gt=0)
 
 
 class EditSessionOut(BaseModel):
@@ -99,6 +102,8 @@ class EditSessionOut(BaseModel):
     trim_length_seconds: float | None = Field(None, alias="trimLengthSeconds")
     untrimmed_duration_seconds: float | None = Field(None, alias="untrimmedDurationSeconds")
     expected_take_seconds: float | None = Field(None, alias="expectedTakeSeconds")
+    take_start_seconds: float | None = Field(None, alias="takeStartSeconds")
+    take_end_seconds: float | None = Field(None, alias="takeEndSeconds")
 
 
 class ConfirmationOut(BaseModel):

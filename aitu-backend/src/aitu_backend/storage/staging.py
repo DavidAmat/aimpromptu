@@ -18,6 +18,7 @@ from aitu_backend.transcription.engine import NoteEvent
 
 SESSION_FILE = "session.json"
 UNTRIMMED_WAV = "untrimmed.wav"
+SELECTED_WAV = "selected.wav"
 TRIMMED_WAV = "trimmed.wav"
 SCALED_WAV = "scaled.wav"
 TAKE_EVENTS_FILE = "take_events.json"
@@ -52,6 +53,9 @@ class SessionRecord(BaseModel):
     first_onset_seconds: float | None = Field(None, alias="firstOnsetSeconds")
     trim_length_seconds: float | None = Field(None, alias="trimLengthSeconds")
     untrimmed_duration_seconds: float | None = Field(None, alias="untrimmedDurationSeconds")
+    #: Cut the user chose on the untrimmed take, before transcribing.
+    take_start_seconds: float | None = Field(None, alias="takeStartSeconds")
+    take_end_seconds: float | None = Field(None, alias="takeEndSeconds")
 
     @property
     def window_seconds(self) -> float:
@@ -110,6 +114,10 @@ def delete(audio_uuid: str, session_uuid: str) -> None:
 
 def untrimmed_path(audio_uuid: str, session_uuid: str) -> Path:
     return session_dir(audio_uuid, session_uuid) / UNTRIMMED_WAV
+
+
+def selected_path(audio_uuid: str, session_uuid: str) -> Path:
+    return session_dir(audio_uuid, session_uuid) / SELECTED_WAV
 
 
 def trimmed_path(audio_uuid: str, session_uuid: str) -> Path:

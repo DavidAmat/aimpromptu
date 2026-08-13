@@ -80,6 +80,8 @@ def to_out(record: SessionRecord) -> EditSessionOut:
         trim_length_seconds=record.trim_length_seconds,
         untrimmed_duration_seconds=record.untrimmed_duration_seconds,
         expected_take_seconds=record.expected_take_seconds,
+        take_start_seconds=record.take_start_seconds,
+        take_end_seconds=record.take_end_seconds,
     )
 
 
@@ -143,6 +145,8 @@ def patch(
     splice_audio: bool | None = None,
     click_interval_ms: float | None = None,
     trim_length_seconds: float | None = None,
+    take_start_seconds: float | None = None,
+    take_end_seconds: float | None = None,
 ) -> SessionRecord:
     record = staging.read(audio_uuid, session_uuid)
     if fit:
@@ -162,6 +166,19 @@ def patch(
             if trim_length_seconds > remaining + 1e-6:
                 raise EditError("There is no more of the take to extend into.")
         record.trim_length_seconds = trim_length_seconds
+    start = record.take_start_seconds if take_start_seconds is None else take_start_seconds
+    end = record.take_end_seconds if take_end_seconds is None else take_end_seconds
+    if take_start_seconds is not None or take_end_seconds is not None:
+        if start is not None and end is not None and end <= start:
+            raise EditError("The end of the take must be after the start.")
+        duration = record.untrimmed_duration_seconds
+        if duration is not None:
+            if start is not None and start > duration + 1e-6:
+                raise EditError("That cut starts past the end of the take.")
+            if end is not None and end > duration + 1e-6:
+                raise EditError("That cut runs past the end of the take.")
+        record.take_start_seconds = start
+        record.take_end_seconds = end
     take = staging.read_take_events(audio_uuid, session_uuid)
     if take and record.slowdown is None:
         prepared = preview_mod.prepared_take(take, record)
@@ -176,6 +193,17 @@ def store_take(audio_uuid: str, session_uuid: str, source: Path) -> SessionRecor
     target = staging.untrimmed_path(audio_uuid, session_uuid)
     formats.normalize_to_wav(source, target)
     record.untrimmed_duration_seconds = formats.duration_seconds(target)
+    record.first_onset_seconds = None
+    record.take_start_seconds = None
+    record.take_end_seconds = None
+    for stale in (
+        staging.selected_path(audio_uuid, session_uuid),
+        staging.trimmed_path(audio_uuid, session_uuid),
+        staging.scaled_path(audio_uuid, session_uuid),
+        staging.take_events_path(audio_uuid, session_uuid),
+    ):
+        if stale.is_file():
+            stale.unlink()
     staging.write(record)
     return record
 
@@ -191,8 +219,17 @@ def transcribe_take(
     wav = staging.untrimmed_path(audio_uuid, session_uuid)
     if not wav.is_file():
         raise EditError("Record a take before transcribing it.")
+    duration = record.untrimmed_duration_seconds or formats.duration_seconds(wav)
+    start = record.take_start_seconds if record.take_start_seconds is not None else 0.0
+    end = record.take_end_seconds if record.take_end_seconds is not None else duration
+    start = max(0.0, start)
+    end = min(duration, end)
+    if end - start < 0.05:
+        raise EditError("Select a longer stretch of the take.")
+    clip = staging.selected_path(audio_uuid, session_uuid)
+    formats.slice_wav(wav, clip, start, end)
     events = pipeline.transcribe_file(
-        wav, engine=engine or pipeline.DEFAULT_ENGINE, reporter=reporter
+        clip, engine=engine or pipeline.DEFAULT_ENGINE, reporter=reporter
     )
     staging.write_take_events(audio_uuid, session_uuid, events)
     onset = first_onset_seconds(events)
@@ -208,17 +245,22 @@ def transcribe_take(
 
 
 def _write_trimmed_audio(record: SessionRecord) -> None:
-    wav = staging.untrimmed_path(record.audio_uuid, record.session_uuid)
-    if not wav.is_file():
+    source = staging.selected_path(record.audio_uuid, record.session_uuid)
+    if not source.is_file():
+        source = staging.untrimmed_path(record.audio_uuid, record.session_uuid)
+    if not source.is_file():
         return
     onset = record.first_onset_seconds or 0.0
     length = record.trim_length_seconds
+    source_len = formats.duration_seconds(source)
     if length is None:
-        length = max(0.001, (record.untrimmed_duration_seconds or onset) - onset)
-    end = onset + length
+        length = max(0.001, source_len - onset)
+    end = min(source_len, onset + length)
+    if end <= onset:
+        return
     try:
         formats.slice_wav(
-            wav, staging.trimmed_path(record.audio_uuid, record.session_uuid), onset, end
+            source, staging.trimmed_path(record.audio_uuid, record.session_uuid), onset, end
         )
     except ValueError:
         return
@@ -267,9 +309,13 @@ def preview(
     speed_changes: list[SpeedChange] | None = None,
 ) -> PreviewOut:
     record = staging.read(audio_uuid, session_uuid)
+    if not staging.has_events(audio_uuid, session_uuid):
+        raise EditError("Transcribe the take before previewing it.")
     take = staging.read_take_events(audio_uuid, session_uuid)
     if not take:
-        raise EditError("Transcribe the take before previewing it.")
+        raise EditError(
+            "No notes were found in this take. Trim a different range or record again."
+        )
     stored = pipeline.load_note_events(audio_uuid)
     if stored is None:
         raise EditError("This piece has not been transcribed yet.")
@@ -342,6 +388,14 @@ def _ensure_window_clip(record: SessionRecord) -> Path:
     return target
 
 
+def take_peaks(audio_uuid: str, session_uuid: str, points: int = 1000) -> formats.WaveformPeaks:
+    """Min/max peaks of the untrimmed take, for the review range selector."""
+    wav = staging.untrimmed_path(audio_uuid, session_uuid)
+    if not wav.is_file():
+        raise EditError("Record a take first.")
+    return formats.compute_peaks(wav, points)
+
+
 def window_audio(audio_uuid: str, session_uuid: str, *, slowed: bool = False) -> Path:
     record = staging.read(audio_uuid, session_uuid)
     clip = _ensure_window_clip(record)
@@ -356,7 +410,9 @@ def window_audio(audio_uuid: str, session_uuid: str, *, slowed: bool = False) ->
     return slow
 
 
-def take_audio(audio_uuid: str, session_uuid: str, *, scaled: bool = False) -> Path:
+def take_audio(
+    audio_uuid: str, session_uuid: str, *, scaled: bool = False, untrimmed: bool = False
+) -> Path:
     record = staging.read(audio_uuid, session_uuid)
     if scaled:
         trimmed = staging.trimmed_path(audio_uuid, session_uuid)
@@ -369,6 +425,10 @@ def take_audio(audio_uuid: str, session_uuid: str, *, scaled: bool = False) -> P
         source_len = formats.duration_seconds(trimmed)
         audio_splice.stretch_to_length(trimmed, target, source_len, record.window_seconds)
         return target
+    if not untrimmed:
+        selected = staging.selected_path(audio_uuid, session_uuid)
+        if selected.is_file():
+            return selected
     path = staging.untrimmed_path(audio_uuid, session_uuid)
     if not path.is_file():
         raise EditError("Record a take first.")

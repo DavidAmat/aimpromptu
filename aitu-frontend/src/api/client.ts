@@ -58,11 +58,22 @@ async function readError(response: Response): Promise<string> {
   }
 }
 
+async function fetchOrExplain(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (caught) {
+    if (caught instanceof DOMException && caught.name === "AbortError") throw caught;
+    const error = new Error("Could not reach the backend. Is make serve still running?");
+    error.cause = caught;
+    throw error;
+  }
+}
+
 /** Perform a request and decode the JSON body as `T`. */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, query, signal } = options;
 
-  const response = await fetch(buildUrl(path, query), {
+  const response = await fetchOrExplain(buildUrl(path, query), {
     method,
     signal,
     headers: body === undefined ? undefined : { "Content-Type": "application/json" },
@@ -88,7 +99,7 @@ export async function upload<T>(
   form.append("file", file);
   for (const [key, value] of Object.entries(fields)) form.append(key, value);
 
-  const response = await fetch(buildUrl(path), { method: "POST", body: form });
+  const response = await fetchOrExplain(buildUrl(path), { method: "POST", body: form });
   if (!response.ok) {
     throw new ApiError(response.status, await readError(response));
   }

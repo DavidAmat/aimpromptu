@@ -24,6 +24,7 @@ from aitu_backend.editing.session import (
     start,
     store_take,
     take_audio,
+    take_peaks,
     to_out,
     transcribe_take,
     window_audio,
@@ -58,6 +59,18 @@ class PreviewRequest(BaseModel):
     anchor_figure: FigureName = Field(FigureName.NEGRA, alias="anchorFigure")
     anchor_ms: float | None = Field(None, alias="anchorMs", gt=0)
     speed_changes: list[SpeedChange] = Field(default_factory=list, alias="speedChanges")
+
+
+class TakeWaveformOut(BaseModel):
+    """Min/max peaks of the untrimmed take, matching `/audio/{uuid}/waveform`."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    points: int
+    min: list[float]
+    max: list[float]
+    duration_seconds: float = Field(..., alias="durationSeconds")
+    sample_rate: int = Field(..., alias="sampleRate")
 
 
 def _found(audio_uuid: str) -> None:
@@ -137,6 +150,8 @@ def patch_edit(audio_uuid: str, session_uuid: str, body: PatchEditRequest) -> Ed
             splice_audio=body.splice_audio,
             click_interval_ms=body.click_interval_ms,
             trim_length_seconds=body.trim_length_seconds,
+            take_start_seconds=body.take_start_seconds,
+            take_end_seconds=body.take_end_seconds,
         )
     except (SessionNotFound, EditError, ValueError) as exc:
         raise _map_error(exc) from exc
@@ -270,7 +285,12 @@ def get_window_audio(
         path = window_audio(audio_uuid, session_uuid, slowed=slowed)
     except (SessionNotFound, EditError, FfmpegMissing, ConversionFailed, ValueError) as exc:
         raise _map_error(exc) from exc
-    return FileResponse(path, media_type="audio/wav", filename=path.name)
+    return FileResponse(
+        path,
+        media_type="audio/wav",
+        filename=path.name,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.get("/{audio_uuid}/edits/{session_uuid}/take")
@@ -278,11 +298,41 @@ def get_take_audio(
     audio_uuid: str,
     session_uuid: str,
     scaled: bool = Query(False),
+    untrimmed: bool = Query(False),
 ) -> Any:
-    """The take as played, or scaled into the window."""
+    """The take as played, or scaled into the window.
+
+    ``untrimmed`` is the full recording, for the review range picker. After a
+    range is cut, the default file is that slice.
+    """
     _found(audio_uuid)
     try:
-        path = take_audio(audio_uuid, session_uuid, scaled=scaled)
+        path = take_audio(audio_uuid, session_uuid, scaled=scaled, untrimmed=untrimmed)
     except (SessionNotFound, EditError, FfmpegMissing, ConversionFailed, ValueError) as exc:
         raise _map_error(exc) from exc
-    return FileResponse(path, media_type="audio/wav", filename=path.name)
+    return FileResponse(
+        path,
+        media_type="audio/wav",
+        filename=path.name,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.get(
+    "/{audio_uuid}/edits/{session_uuid}/waveform",
+    response_model=TakeWaveformOut,
+    response_model_by_alias=True,
+)
+def get_take_waveform(
+    audio_uuid: str,
+    session_uuid: str,
+    points: Annotated[int, Query(ge=1, le=20000)] = 1000,
+) -> TakeWaveformOut:
+    """Peaks of the recorded take, for the same range picker the Input tab uses."""
+    _found(audio_uuid)
+    try:
+        load(audio_uuid, session_uuid)
+        peaks = take_peaks(audio_uuid, session_uuid, points)
+    except (SessionNotFound, EditError, ValueError) as exc:
+        raise _map_error(exc) from exc
+    return TakeWaveformOut.model_validate(peaks.to_dict())
