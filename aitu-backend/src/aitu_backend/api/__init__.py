@@ -10,6 +10,7 @@ that read it.
 """
 
 from aitu_backend.api.audio import router as audio_router
+from aitu_backend.api.editing import router as editing_router
 from aitu_backend.api.library import router as library_router
 from aitu_backend.api.matrix import router as matrix_router
 from aitu_backend.api.scores import router as scores_router
@@ -20,6 +21,7 @@ from aitu_backend.api.youtube import router as youtube_router
 ALL_ROUTERS = [
     scores_router,
     audio_router,
+    editing_router,
     matrix_router,
     library_router,
     youtube_router,
@@ -29,6 +31,7 @@ ALL_ROUTERS = [
 __all__ = [
     "ALL_ROUTERS",
     "audio_router",
+    "editing_router",
     "library_router",
     "matrix_router",
     "scores_router",

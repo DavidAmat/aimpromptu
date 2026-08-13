@@ -12,7 +12,8 @@ How to navigate:
 - Progress reports go to `../progress/` (one file per task worked on).
 
 Current boundary, 2026-08-13: **Epics 1–8, Stories 9.1–9.6, and Epic 10 were built**, then partly
-replaced by the wall-clock refactor. Story 9.7 (trills) and Epics 11–14 remain. Read
+replaced by the wall-clock refactor. **Epic 11 (range editing) is built on the splice rule.** Story
+9.7 (trills) and Epics 12–14 remain. Read
 [`wall-clock-rewrite.md`](wall-clock-rewrite.md) first — it says what changed, what is dead, and
 the rules every remaining task obeys. `checklist.md` is authoritative for status; the task files
 describe the current requirement, and git holds the text they replaced.

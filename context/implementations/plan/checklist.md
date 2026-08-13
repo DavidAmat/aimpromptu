@@ -285,23 +285,23 @@ Performer-facing section: browse/tag/filter consolidated and playground tracks, 
 
 - [x] Task 10.3.1 **Playlists**: CRUD, ordering, version-by-name selection, playing mode with Next.
 
-# [ ] Epic 11 — Range editing
+# [x] Epic 11 — Range editing
 
 > *Alive. Rewritten 2026-08-12 onto the splice rule: a re-recorded passage is scaled into exactly the window it replaces, so the piece keeps its length and no column moves.*
 
 Preview-first passage replacement: mark a stretch of the sheet, play it again at any speed, preview it scaled into that same window, accept or cancel. The piece's length never changes. Index: `epic-11-editing/epic-editing-index.md`.
 
-## [ ] Story 11.1 — Staged sessions
+## [x] Story 11.1 — Staged sessions
 
-- [ ] Task 11.1.1 **Staged edit session**: session model and folder, range selection, accept/cancel semantics.
+- [x] Task 11.1.1 **Staged edit session**: session model and folder, range selection, accept/cancel semantics.
 
-## [ ] Story 11.2 — Slow recording
+## [x] Story 11.2 — Slow recording
 
-- [ ] Task 11.2.1 **Slow record flow**: slowdown factors, metronome and beat display, trimming, capture granularity.
+- [x] Task 11.2.1 **Slow record flow**: slowdown factors, metronome and beat display, trimming, capture granularity.
 
-## [ ] Story 11.3 — Preview and accept
+## [x] Story 11.3 — Preview and accept
 
-- [ ] Task 11.3.1 **Replacement preview**: transcribe then scale timings, passage-only render, optional tempo-compressed audio, decision loop.
+- [x] Task 11.3.1 **Replacement preview**: transcribe then scale timings, passage-only render, optional tempo-compressed audio, decision loop.
 
 # [ ] Epic 12 — Annotations (nice to have)
 

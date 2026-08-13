@@ -33,6 +33,8 @@ import { audioApi } from "../../api";
 import WaveformView from "../../components/audio/WaveformView";
 import NoteSelectionToolbox from "../../components/notes/NoteSelectionToolbox";
 import PendingRemovalsBar from "../../components/notes/PendingRemovalsBar";
+import ToolboxDialog from "../../components/common/ToolboxDialog";
+import RangeRerecordPanel from "../../components/editing/RangeRerecordPanel";
 import { useElementSize } from "../../hooks/useElementSize";
 import { useStagedRemovals } from "../../hooks/useStagedRemovals";
 import { useNoteSelection } from "../../hooks/useNoteSelection";
@@ -79,7 +81,9 @@ interface Band {
 export function PianoRollPage() {
   const { artifact, hasArtifact } = useWorkingArtifact();
   const removal = useStagedRemovals(artifact.audioUuid ?? null);
-  const data = usePlayedNotes(artifact, removal.revision);
+  const [editRevision, setEditRevision] = useState(0);
+  const [rerecordOpen, setRerecordOpen] = useState(false);
+  const data = usePlayedNotes(artifact, removal.revision + editRevision);
   const selection = useNoteSelection(data.notes);
 
   const [source, setSource] = useState<PlaybackSource>("piano");
@@ -336,6 +340,14 @@ export function PianoRollPage() {
               ))}
             </TextField>
           </PlayerToolbar>
+          <Button
+            size="small"
+            variant="outlined"
+            disabled={rangeEnd - rangeStart < 0.04}
+            onClick={() => setRerecordOpen(true)}
+          >
+            Re-record this stretch ({formatTime(rangeStart)} → {formatTime(rangeEnd)})
+          </Button>
         </Stack>
       </SectionCard>
 
@@ -628,6 +640,26 @@ export function PianoRollPage() {
         onStageRestore={stageRestore}
         onClose={selection.clear}
       />
+
+      {artifact.audioUuid ? (
+        <ToolboxDialog
+          open={rerecordOpen}
+          title="Re-record"
+          subtitle={`${formatTime(rangeStart)} → ${formatTime(rangeEnd)}`}
+          onClose={() => setRerecordOpen(false)}
+        >
+          <RangeRerecordPanel
+            audioUuid={artifact.audioUuid}
+            frameMs={artifact.frameMs}
+            startSeconds={rangeStart}
+            endSeconds={rangeEnd}
+            onAccepted={() => {
+              setEditRevision((current) => current + 1);
+              setRerecordOpen(false);
+            }}
+          />
+        </ToolboxDialog>
+      ) : null}
 
       <PendingRemovalsBar
         removing={removal.counts.removing}

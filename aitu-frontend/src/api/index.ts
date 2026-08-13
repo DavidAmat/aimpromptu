@@ -68,6 +68,17 @@ export type {
   VersionHistoryEntry,
 } from "./library";
 
+export { editingApi } from "./editing";
+export type {
+  AcceptResult,
+  Confirmation,
+  DroppedMarks,
+  EditPreview,
+  EditSession,
+  SlowdownChoice,
+  StartEditBody,
+} from "./editing";
+
 export { youtubeApi } from "./youtube";
 export type { BatchEntry, VideoInfo, YoutubeDownloadRequest } from "./youtube";
 
