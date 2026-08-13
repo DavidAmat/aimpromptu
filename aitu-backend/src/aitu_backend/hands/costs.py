@@ -44,7 +44,7 @@ from dataclasses import dataclass, field, replace
 
 from aitu_backend.hands.config import CostWeights, HandModel
 from aitu_backend.hands.events import NoteEvent, OnsetGroup
-from aitu_backend.hands.staff import ledger_excursion
+from aitu_backend.hands.staff import ledger_charge
 
 #: Sentinel "this hand has never played". Comparisons use ``NEVER / 2`` so that
 #: any real time, however small, reads as later.
@@ -199,7 +199,7 @@ class CostBreakdown:
             "future": weights.future * self.future,
         }
 
-    def __add__(self, other: "CostBreakdown") -> "CostBreakdown":
+    def __add__(self, other: CostBreakdown) -> CostBreakdown:
         return CostBreakdown(
             **{
                 name: getattr(self, name) + getattr(other, name)
@@ -276,10 +276,17 @@ def transition(
     reasons: list[str] = []
     new_states: dict[str, HandState] = {}
 
+    # Both hands' struck and sounding notes, before the per-hand loop, because the
+    # ledger term has to ask what the OTHER hand is doing at this instant.
+    struck_by_hand = {
+        name: tuple(sorted(event.midi for event in per_hand[name])) for name in HANDS
+    }
+    held_by_hand = {name: prev.hand(name).active_held(time) for name in HANDS}
+
     for hand in HANDS:
         state = prev.hand(hand)
-        assigned = tuple(sorted(event.midi for event in per_hand[hand]))
-        held = state.active_held(time)
+        assigned = struck_by_hand[hand]
+        held = held_by_hand[hand]
 
         if not assigned:
             new_states[hand] = replace(
@@ -383,24 +390,25 @@ def transition(
         # while running ACROSS — the left above the bass staff, the right below the
         # treble — is the two staves swapping territory, and past a line or two it
         # is almost always a split that should have gone the other way.
-        across, outward = ledger_excursion(assigned, hand)
-        ledger_cost = 0.0
-        for lines, grace, way in (
-            (across, model.ledger_grace_across, "across"),
-            (outward, model.ledger_grace_outward, "outward"),
-        ):
-            over = max(0.0, lines - grace)
-            if over <= 0.0:
-                continue
-            ledger_cost += (over / model.ledger_reference) ** 2
-            if way == "across":
-                staff = "bass" if hand == LEFT else "treble"
-                reasons.append(
-                    f"{hand}: {lines} ledger lines across the {staff} staff — "
-                    "the other hand's register"
-                )
+        #
+        # The ``across`` half is gated on whether the other hand could actually have
+        # taken these notes. Charging it regardless is worse than not charging it at
+        # all: the penalty then lands on passages where nothing can be done, where it
+        # is a constant that skews every other decision in the group. See
+        # :func:`aitu_backend.hands.staff.reach_gate` for the three cases and the
+        # numbers behind them.
+        other = RIGHT if hand == LEFT else LEFT
+        ledger_cost, across_lines = ledger_charge(
+            hand, assigned, struck_by_hand[other], held_by_hand[other], model
+        )
         if ledger_cost:
             _add(acc, "ledger", ledger_cost)
+            if across_lines > model.ledger_grace_across:
+                staff = "bass" if hand == LEFT else "treble"
+                reasons.append(
+                    f"{hand}: {across_lines} ledger lines across the {staff} staff — "
+                    "the other hand's register, and the other hand could take them"
+                )
 
         # --- waking an idle hand --------------------------------------------------
         if state.last_time <= NEVER / 2 or (time - state.last_time) > model.engagement_gap:

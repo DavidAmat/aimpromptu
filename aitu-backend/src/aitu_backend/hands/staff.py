@@ -107,6 +107,88 @@ def direction_of(midi: int, hand: str) -> Direction:
     return "across" if reaching_across else "outward"
 
 
+def across_offenders(
+    midis: tuple[int, ...] | list[int], hand: str, grace: float
+) -> tuple[int, ...]:
+    """The notes actually responsible for an ``across`` charge, for the gate to price.
+
+    Only these are candidates for moving to the other hand; the rest of the chord is
+    on its own staff and has no complaint.
+    """
+    return tuple(
+        midi
+        for midi in midis
+        if direction_of(midi, hand) == "across" and ledger_lines(midi, hand) > grace
+    )
+
+
+def reach_gate(
+    offenders: tuple[int, ...],
+    other_struck: tuple[int, ...],
+    other_held: tuple[int, ...],
+    *,
+    max_simultaneous: int,
+    hard_span: float,
+    free: float,
+    busy: float,
+    unreachable: float,
+    sustained: float = 1.0,
+) -> float:
+    """How much of the ``across`` charge applies, given what the other hand is doing.
+
+    Without this the term is charged whether or not anything could be done about it,
+    and that is worse than useless. An unavoidable penalty is not merely wasted: it is
+    a constant added to every candidate for that group, and it drags on decisions that
+    have nothing to do with the note in question.
+
+    So the question is not "how far outside its staff is this note" but "could the
+    other hand have taken it":
+
+    * the other hand strikes nothing and holds nothing — its staff is empty, the note
+      is simply in the wrong place, and the charge applies in full;
+    * the other hand is playing but could still absorb these notes — a real musical
+      decision, priced at ``busy``;
+    * the other hand cannot take them without a sixth finger or a span no hand has —
+      nothing to decide, so ``unreachable`` (zero), and the ledger lines are accepted
+      as the correct reading.
+
+    That last case is the one that matters most in practice. It is what lets a left
+    hand sit at Do-5 under a right hand already up at Sol-6, or hold a genuine
+    crossing over a chord the right hand has all five fingers on, without the term
+    quietly arguing against it for the rest of the bar.
+
+    Measured on the research benchmark, gating this way is the difference between the
+    term costing accuracy and earning it: ungated it moves 49 onsets away from the
+    human labels against 34 towards, gated it moves 38 towards and 1 away.
+
+    **Struck and sustained blockers are not the same thing**, and conflating them was a
+    real bug. If the other hand is blocked by keys it is *striking now*, the situation is
+    forced and there is nothing to price. If it is blocked only by what it is still
+    *holding*, the block may be self-inflicted — an earlier group handed it a chord it
+    did not have to take — and exempting it hides exactly the mistake worth finding. The
+    closing cadence of *Mr Blue Sky* is this case: the right hand is pinned under its own
+    sustains, so the ascent lands on the bass staff under seven ledger lines, and a gate
+    that cannot tell the two apart reports nothing wrong. ``sustained`` therefore defaults
+    to full charge; feasibility, not the gate, is what protects a genuine crossing, since
+    a move into a hand that truly cannot take the notes is rejected as infeasible anyway.
+    """
+    blocked_by_struck = set(offenders) | set(other_struck)
+    blocked_by_all = blocked_by_struck | set(other_held)
+
+    def impossible(notes: set[int]) -> bool:
+        return len(notes) > max_simultaneous or (
+            bool(notes) and max(notes) - min(notes) > hard_span
+        )
+
+    if impossible(blocked_by_struck):
+        return unreachable
+    if impossible(blocked_by_all):
+        return sustained
+    if not other_struck and not other_held:
+        return free
+    return busy
+
+
 def ledger_excursion(midis: tuple[int, ...] | list[int], hand: str) -> tuple[int, int]:
     """``(across, outward)`` ledger lines for a chord printed on one staff.
 
@@ -127,13 +209,69 @@ def ledger_excursion(midis: tuple[int, ...] | list[int], hand: str) -> tuple[int
     return across, outward
 
 
+def ledger_charge(
+    hand: str,
+    assigned: tuple[int, ...],
+    other_struck: tuple[int, ...],
+    other_held: tuple[int, ...],
+    model,
+    relief: dict[int, float] | None = None,
+) -> tuple[float, int]:
+    """``(charge, across_lines)`` for one hand's notes in one onset group.
+
+    The single implementation of the ledger term. :func:`aitu_backend.hands.costs.transition`
+    calls it so the search and the diagnostics agree; the second pass calls it with a
+    ``relief`` map so a note a figuration has already explained can be discounted
+    without the geometry being restated anywhere.
+
+    ``relief`` maps a MIDI number to a multiplier in ``[0, 1]``. It scales the *excess*,
+    before the square — a note whose figuration explains it is treated as if it had
+    barely left its staff, not as one that left and got a discount. The difference is
+    not cosmetic: squaring afterwards leaves roughly twenty times more residual charge,
+    which at this weight is enough to stop a climbing figure being reunited.
+    """
+    across, outward = ledger_excursion(assigned, hand)
+    charge = 0.0
+    for lines, grace, way in (
+        (across, model.ledger_grace_across, "across"),
+        (outward, model.ledger_grace_outward, "outward"),
+    ):
+        over = max(0.0, lines - grace)
+        if over <= 0.0:
+            continue
+        scale = 1.0
+        if way == "across":
+            offenders = across_offenders(assigned, hand, model.ledger_grace_across)
+            if model.ledger_gate:
+                scale *= reach_gate(
+                    offenders,
+                    other_struck,
+                    other_held,
+                    max_simultaneous=model.max_simultaneous,
+                    hard_span=model.hard_span,
+                    free=model.ledger_gate_free,
+                    busy=model.ledger_gate_busy,
+                    unreachable=model.ledger_gate_unreachable,
+                    sustained=model.ledger_gate_sustained,
+                )
+            if relief and offenders:
+                # The least-explained note sets the discount: a ledger stack is drawn
+                # once for the whole chord, so one unexplained note keeps it there.
+                over *= max(relief.get(midi, 1.0) for midi in offenders)
+        charge += scale * (over / model.ledger_reference) ** 2
+    return charge, across
+
+
 __all__ = [
     "LEFT",
     "RIGHT",
     "Direction",
+    "across_offenders",
     "diatonic_index",
     "direction_of",
+    "ledger_charge",
     "ledger_excursion",
     "ledger_lines",
+    "reach_gate",
     "staff_step",
 ]

@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from aitu_backend.hands import beam as beam_module
+from aitu_backend.hands import refine as refine_module
 from aitu_backend.hands import threshold as threshold_module
 from aitu_backend.hands.config import DEFAULT_CONFIG, HandInferenceConfig
 from aitu_backend.hands.events import DecodedMatrix, decode_matrix
@@ -19,9 +20,12 @@ from aitu_backend.schemas.matrix import MatrixProcessingStep
 
 _Method = Callable[[DecodedMatrix, HandInferenceConfig], HandInferenceResult]
 
-#: Selectable methods. ``beam`` is the default and the recommendation; the rest
-#: exist for comparison, speed and debugging.
+#: Selectable methods. ``refine`` is the default and the recommendation: the beam
+#: dynamic program followed by the second pass that repairs the two page-level
+#: defects a group-by-group search cannot see (:mod:`aitu_backend.hands.refine`).
+#: ``beam`` is that search on its own; the rest exist for comparison and debugging.
 METHODS: dict[str, _Method] = {
+    "refine": refine_module.infer,
     "beam": beam_module.beam,
     "greedy": beam_module.greedy,
     "exact": beam_module.exact,
@@ -29,7 +33,7 @@ METHODS: dict[str, _Method] = {
 }
 
 #: What a caller gets when it asks for nothing.
-DEFAULT_METHOD = "beam"
+DEFAULT_METHOD = "refine"
 
 
 def infer_hands(
