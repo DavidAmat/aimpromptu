@@ -205,3 +205,51 @@ def test_a_reading_saved_before_keys_existed_still_loads(client: TestClient) -> 
     assert read["keySignature"] is None
     assert read["keyChanges"] == []
     assert read["anchorMs"] == 320.0
+
+
+def test_octave_brackets_survive_a_round_trip(client: TestClient) -> None:
+    """Brackets the reader placed come back, which they did not before 2026-09-13.
+
+    The page has always *sent* `ottavas` in the save body. The model had no field for them and
+    Pydantic ignores extras, so every bracket was dropped without an error and a reload showed a
+    page with none. Nothing failed and nothing said so, which is why it lasted a month.
+    """
+    uuid = transcribed()
+    body = a_reading().model_dump(by_alias=True, mode="json")
+    body["ottavas"] = [
+        {"kind": "8va", "hand": "right", "fromColumn": 12, "toColumn": 40},
+        {"kind": "15mb", "hand": "left", "fromColumn": 0, "toColumn": 12},
+    ]
+
+    assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
+    read = client.get(f"/time/{uuid}/rhythm").json()
+
+    assert read["ottavas"] == body["ottavas"]
+
+
+def test_never_asked_and_asked_none_are_different_answers(client: TestClient) -> None:
+    """`null` is "this reader was never asked"; `[]` is "asked, and none".
+
+    The distinction is load-bearing rather than tidy. A reading saved before brackets were stored
+    has no opinion, and the page may offer its own; a reader who cleared every bracket has one, and
+    the page must not put them back.
+    """
+    uuid = transcribed()
+    body = a_reading().model_dump(by_alias=True, mode="json")
+
+    body.pop("ottavas", None)
+    client.put(f"/time/{uuid}/rhythm", json=body)
+    assert client.get(f"/time/{uuid}/rhythm").json()["ottavas"] is None
+
+    body["ottavas"] = []
+    client.put(f"/time/{uuid}/rhythm", json=body)
+    assert client.get(f"/time/{uuid}/rhythm").json()["ottavas"] == []
+
+
+def test_a_bracket_that_ends_before_it_starts_is_refused(client: TestClient) -> None:
+    """An inverted range reads as empty everywhere downstream, which is not a thing to store."""
+    uuid = transcribed()
+    body = a_reading().model_dump(by_alias=True, mode="json")
+    body["ottavas"] = [{"kind": "8va", "hand": "right", "fromColumn": 40, "toColumn": 12}]
+
+    assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422

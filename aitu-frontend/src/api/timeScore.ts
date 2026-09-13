@@ -485,7 +485,12 @@ export interface SavedRhythm {
    * before brackets existed, which is why it is optional — absent means "never decided", and the
    * page then takes its own suggestion, while an empty list means "decided, none".
    */
-  ottavas?: { kind: string; hand: string; fromColumn: number; toColumn: number }[];
+  ottavas?: {
+    kind: "8va" | "8vb" | "15ma" | "15mb";
+    hand: PrintedHand;
+    fromColumn: number;
+    toColumn: number;
+  }[];
   /**
    * Notes the reader took off the page, addressed without a hand.
    *

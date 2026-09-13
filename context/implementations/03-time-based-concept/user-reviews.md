@@ -3,9 +3,11 @@
 One walk, in the app, from a piece to printed sheet music. Everything below has been opened and
 checked on screen first.
 
-> **Up to date as of 2026-08-10, the day this plan closed.** Steps 1–10 are the original walk;
-> steps 11–15 cover everything added after it was first written. If you are doing the round of real
-> piano music, this is the order to try things in.
+> **Up to date as of 2026-09-13.** Steps 1–10 are the original walk and steps 11–15 cover what was
+> added before this plan closed on 2026-08-10. **Steps 16–20 are everything that shipped after it
+> closed** — the two visual views, note deletion, range editing, annotations, composing and the
+> library — added by Task 14.1.1 so this page stops describing a smaller app than the one that
+> exists. If you are doing the round of real piano music, this is the order to try things in.
 
 ```bash
 cd aitu-backend  && uv run python scripts/make_demo_pieces.py   # once, to put the demo pieces in
@@ -32,7 +34,8 @@ exactly as it happened; what the notes are called is decided in step 3.
 
 ### 2. Look at how the piece was played
 
-Go to the **Rhythm** tab.
+Go to the **Piano Sheet** tab. (It was called **Rhythm** when this walk was written; the route is
+still `/playground/rhythm`.)
 
 Each bar is a gap that keeps repeating between one note and the next, measured before anything was
 rounded. The height is how often that gap happens.
@@ -151,7 +154,7 @@ Everything you have done since step 3 — which pile is the beat, the notes you 
 broke — is yours, and none of it is in the recording. Press **Save this rhythm with the piece** on
 the floating bar over the sheet.
 
-Reload the browser and open **Rhythm** again on the same piece. The anchor, the renamed notes and the
+Reload the browser and open **Piano Sheet** again on the same piece. The anchor, the renamed notes and the
 beam breaks should all be back, and the line under the button should say when you last saved.
 
 Transcribing the piece again clears it on purpose: a saved reading is a set of column numbers over
@@ -280,25 +283,100 @@ still there — they stay on paper on purpose.
 
 ---
 
+---
+
+## Added after the plan closed
+
+Everything below shipped between 2026-08-10 and 2026-09-13. **This section was written on
+2026-09-13 by Task 14.1.1**, because until then this page and `CLOSURE.md` both said some of it did
+not exist.
+
+### 16. The two visual views are back
+
+**Playground → Piano Roll** and **Notes Falling**. Both draw `GET /matrix/{id}/events` — the notes
+in the engine's own seconds — so a rectangle is as long as the note was actually held, and there is
+no BPM or resolution control anywhere on them.
+
+Use them to check a transcription **before** committing to reading it. Ask for the discarded notes
+and they are drawn dashed and never sounded, so the artifact filter can be checked rather than taken
+on trust.
+
+- **The scrub bar moves the recording; the canvas selects.** Click a rectangle, ⌘-click to add, or
+  drag a band. Space plays and pauses.
+- **Delete is staged.** Marked notes draw struck through in red with a bar carrying **Save** and
+  **Discard**. Nothing reaches the recording until Save — and it does reach the recording, because
+  removing a note changes what its neighbour is called. **Put back** restores it exactly.
+
+The same scrub bar is on the sheet. Drag to a moment, press **Space**, and the page comes to you.
+
+### 17. Re-record a passage
+
+On **Piano Sheet**, mark a stretch and open the re-record panel. Play it again as slowly as you
+like — at original speed, 2× or 4× slower, or **Fit to the window** — with the original playing
+under you and a metronome if you want one.
+
+**The take is scaled back into exactly the window it replaces**, so the piece keeps its length and
+nothing after the window moves. Before you accept, the confirmation says how many editorial marks
+inside the window will be dropped, counted by kind.
+
+Preview, then accept or throw the session away. A cancelled session leaves nothing behind.
+
+### 18. Compose a piece from nothing
+
+**Compose** on Upload / Input starts an empty piece — no audio file at all. Then **Add a passage**
+on Piano Sheet: play, cut it, look at that passage on its own with its own peak plot, and **Put it
+in the piece**.
+
+Three placements: **append** after the last note, **insert** at a moment, or **replace** a stretch.
+This is the one place in the product a piece changes length, and on an insert every note and every
+mark after the moment moves by the same number of columns, in one write. The confirmation says how
+many of each and by how many columns before you press the button.
+
+### 19. More to say about the page
+
+- **Trills** — the app finds two notes trading places fast and offers them. Accept one and the run
+  prints as a held note with `tr` over it; the alternations are still in the recording and still
+  play.
+- **Words** on the frames toolbox — mark a stretch, type the line, it is drawn under the lower
+  staff across it.
+- **Small** — print a marked stretch cue-sized, per hand or across both staves.
+- **Grace notes** — the note toolbox leans a small note on a note, crushed or leaned on, at a step
+  or a third.
+- **Smaller / Larger** — one mark size for the whole piece.
+- A **key change** part-way through a piece is now **stored**, not only drawn.
+- **Octave brackets are kept too** — place one, reload, and it is still there.
+
+### 20. The Piano Library
+
+**Piano Library** in the top bar. Promote a version with a name you choose, browse and tag what you
+have promoted, build playlists, and open a piece in the read-only performance view with overlay
+pills for fingering, words and the guides.
+
+---
+
 ## What is still not built
 
 | | State |
 |---|---|
 | Shifting **one stretch** a step longer, rather than the whole piece | Not built. The buttons in step 6 move every stretch together, because the score request carries one figure name for all of them. |
-| A **key change** part-way through a piece | Drawn but not stored. The package can draw one; nothing saves it. |
-| Piano roll, falling notes, editing a cell by hand, matrix import/export | Deleted with the tempo model (P4.2) and not rebuilt. |
+| **Octave brackets survive a reload** | Fixed 2026-09-13. They were dropped silently on Save for a month; they are stored now, and an insertion moves them with the notes. |
+| Editing a matrix cell by hand, matrix JSON import and export | Deleted with the tempo model (P4.2) and not rebuilt. |
 
-## What was removed
+## What was removed, and what came back
 
-The Playground had seven tabs and now has two, **Upload / Input** and **Rhythm**. The five that went
-were **Matrix**, **Piano Roll**, **Notes Falling**, **Notes Falling (raw)** and **Music Notation**.
-All five asked for a tempo and a note resolution and drew from a grid built out of them, which is
-the model this refactor replaces, so they could not be kept once that code was deleted (P4.2).
+The Playground had seven tabs. Five were deleted in P4.2 — **Matrix**, **Piano Roll**, **Notes
+Falling**, **Notes Falling (raw)** and **Music Notation** — because all five asked for a tempo and a
+note resolution and drew from a grid built out of them.
 
-Stated plainly: there is no piano-roll view of a transcription, no falling-notes view, no way to edit
-a cell by hand, and no matrix JSON import or export. The two entry points that produced a matrix
-without a recording, **Text notation** and **Matrix JSON**, are gone from Upload / Input for the same
-reason: a sheet is written from the recorded onsets, and neither of those had any.
+**Piano Roll and Notes Falling came back on 2026-08-10**, rebuilt on the wall clock. The Playground
+has four tabs today: **Upload / Input**, **Piano Roll**, **Notes Falling** and **Piano Sheet**.
 
-Bringing any of them back on the wall-clock path is a feature request for the next plan, not
-unfinished work from this one.
+**Matrix**, **Notes Falling (raw)** and **Music Notation** stay retired. The first two were views of
+a grid that no longer exists, and Music Notation is the Piano Sheet tab now.
+
+Stated plainly, so nobody rediscovers it: there is no way to edit a matrix cell by hand and no
+matrix JSON import or export. The two entry points that produced a matrix without a recording,
+**Text notation** and **Matrix JSON**, are gone from Upload / Input for the same reason as always: a
+sheet is written from recorded onsets, and neither of those had any.
+
+Bringing any of them back on the wall-clock path is a feature request, not unfinished work.

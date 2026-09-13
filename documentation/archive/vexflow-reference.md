@@ -2,7 +2,7 @@
 
 > Historical reference migrated from `aitu-frontend/documentation/vexflow/README.md`.
 > Describes an earlier **EasyScore / Factory** approach. Current rendering uses the
-> low-level API in [piano-sheet.md](../services/frontend/piano-sheet.md).
+> low-level API in [piano-sheet.md](../services/frontend/grid-notation.md).
 
 ---
 

@@ -166,4 +166,4 @@ Every player plays the original recorded onset times. Nothing inferred is ever h
 - [`decisions.md`](decisions.md) — the numbered decisions every task cites
 - [`contract.md`](contract.md) — the backend ↔ renderer interface
 - [`plan.md`](plan.md) — phases, tasks, dependencies
-- [`../../music/notation-logic/01-matrix-notation-logic.md`](../../music/notation-logic/01-matrix-notation-logic.md) — the model being replaced
+- [`../../archive/superseded/01-matrix-notation-logic.md`](../../archive/superseded/01-matrix-notation-logic.md) — the model being replaced

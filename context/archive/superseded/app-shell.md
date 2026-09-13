@@ -52,4 +52,4 @@ Non-OK response → `loadError`. Network/parse errors caught similarly. Cleanup 
 
 - [loaded-scores.md](loaded-scores.md) — `ScoreStack` rendering
 - [compose-panel.md](compose-panel.md) — compose section
-- [components.md](../../documentation/services/frontend/components.md) — wiring detail
+- [components.md](../../../documentation/services/frontend/components.md) — wiring detail

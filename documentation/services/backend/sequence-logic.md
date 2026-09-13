@@ -1,9 +1,19 @@
-> Context: [notation-and-parsing.md](../../../context/backend/notation-and-parsing.md) · [notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md.md)
+> Context: [notation-and-parsing.md](../../../context/backend/notation-and-parsing.md) · [notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md)
 
-# Sequence logic
+# Sequence logic — the text-notation parser
 
-All notation logic lives in `aitu-backend/src/aitu_backend/sequence.py`. Single source of
-truth for text parsing, onset normalization, and sparse-COO construction.
+All text-notation logic lives in `aitu-backend/src/aitu_backend/matrix/text_notation.py` (it was
+`sequence.py` before the Epic 1 restructure). Single source of truth for text parsing, onset
+normalization and sparse-COO construction.
+
+> **This serves `POST /sequence` only.** Text notation is no longer an entry point in the app —
+> see the note at the top of [schemas.md](schemas.md). The parser is kept because it is correct,
+> self-contained and cheap, and because the 88-key tables it grew are now in `matrix/keys.py` and
+> used everywhere.
+
+The 88-key tables moved to `aitu-backend/src/aitu_backend/matrix/keys.py`, where the whole project
+now reads them. `text_notation.py` re-exports `CHROMATIC_NOTES` (as `CHROMATIC_ES`) and
+`build_grand_piano_rows()` from there, so the names below still resolve.
 
 ## Constants
 

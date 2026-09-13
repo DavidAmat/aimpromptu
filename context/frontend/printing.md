@@ -4,7 +4,7 @@ A window is as wide as the reader dragged it. A sheet of A4 is 210 mm. The two c
 same line breaks, so a printed score is not a picture of the screen: it is the same music laid out
 again for a different width.
 
-The **PDF** button on the Rhythm tab's floating bar opens a panel that does exactly that, shows the
+The **PDF** button on the Piano Sheet tab's floating bar opens a panel that does exactly that, shows the
 resulting pages, and writes them to a file.
 
 ## The rule that decides everything: re-wrap, never scale
@@ -79,4 +79,4 @@ and in the right place but not quite the same letterforms as on screen.
   — the files, the PDF object graph, the fonts, and how to check a file that comes out wrong
 - [../../documentation/services/frontend/grid-notation.md](../../documentation/services/frontend/grid-notation.md)
   — the drawing package and how it is installed
-- [rendering-pipeline.md](rendering-pipeline.md) — where frames become notation
+- [rendering.md](rendering.md) — where frames become notation

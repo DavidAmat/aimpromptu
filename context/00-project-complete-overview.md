@@ -1,131 +1,169 @@
-# AImpromptu (aitu) — Complete Project Overview
+# AImpromptu (aitu) — complete project overview
 
 One-shot orientation. Paste this alone to get the whole project.
 
 ## What it is
 
-AImpromptu turns a **custom text music notation** into rendered **sheet music**. Two services in one
-**monorepo** (single git root; POC — future Docker packaging planned, not built yet):
+**Play the piano, get readable sheet music.** You bring in a recording — upload it, record from the
+browser, or pull it off YouTube — a model transcribes it, and the app writes it out as a staff you
+can read, edit, print and play along with.
 
-- **aitu-backend** — Python 3.12 / FastAPI (`uv`, hatchling, module `aitu_backend`). Parses the notation
-  and emits a compact **sparse-COO JSON score**. Deliberately notation-agnostic: it never emits VexFlow.
-- **aitu-frontend** — React 19 + TypeScript + Vite 8 + **VexFlow 5**. Consumes the JSON and does **all**
-  music rendering (staves, beams, dotted notes, key signatures, lyrics, one-hand treble, two-hand grand staff).
+Two services in one monorepo, plus a rendering library in a sibling checkout. **POC, local only**:
+no cloud, no deploy pipeline, no database, no auth.
 
-Status: **POC, local-only.** No cloud, deploy pipeline, database, auth, or AI. A single
-`aitu-backend/data/example-scores.json` file backs `GET /scores`.
+| | |
+|---|---|
+| `aitu-backend` | Python 3.12 / FastAPI. Runs the model, stores the recorded notes, derives everything else |
+| `aitu-frontend` | React 19 + TypeScript + Vite. Every screen, every pixel of the sheet |
+| `../vexflow-v2` | `@aimpromptu/grid-notation` — the notation renderer, installed from disk |
 
-## The notation (shared contract — full detail in `context/music/notation-logic/02-notation-spec.md.md`)
+## The one idea everything follows from
 
-One line per **time frame**. `*Note` = onset (struck), `Note` = sustain, `A || B` = chord, blank = silence.
-Names are **Spanish solfège + scientific octave** (`Do-4`=C4 … `La-0`=A0 lowest, `Do-8`=C8 highest), over
-the canonical 88-key order rebuilt on both sides.
+A matrix column used to do two jobs: it was **where a note sits on the page** and it was **the
+rhythmic value of that note**. Because it was both, its width came from a tempo somebody typed in,
+and a grid that cannot express the playing produces the same wrong figure every time — a run of
+equal notes printed as a mix of sixteenths and dotted eighths, every time.
 
-**Onset rule:** a sustain continues only through frames with no new onset; the first frame with any onset
-ends all carried sustains at the previous frame. This disambiguates repeated cells (4 `Re-4` onsets = 4
-notes; 1 onset + 3 sustains = one long note). Illegal input is normalized.
+The two jobs are now separate numbers.
 
-**Sparse-COO payload:** parallel arrays sorted by `(col,row)` — `rows`/`cols` mark active cells,
-`onset[i]` = `rows[i]` (struck) or `-1` (sustain). Optional `lyrics` (time-frame-indexed; drawn even on
-sustains/silences) and `keySignature` (VexFlow spec, e.g. `C`, `G`, `Bb`).
+- **Position is measured wall-clock time.** A column is a fixed slice of real time, 40 ms by
+  default. The column of an onset is `round(onset_ms / frameMs)`. Nothing is fitted to anything.
+- **The figure is a name the reader chooses.** You look at a picture of how the piece was actually
+  played — the distribution of gaps between one note and the next — click the gap that keeps
+  repeating, and say what it is called. Every other note takes its name from that one choice.
+- **There is no BPM anywhere in the product.** Not in the transcription, not in the drawing, not in
+  any file format.
 
-**One vs two hands:** either one `matrix` (treble) or `r_matrix` (treble) + `l_matrix` (bass), mutually
-exclusive, with **equal frame counts** so hands align; two hands render as a braced grand staff.
-`POST /sequence` takes separate `sequence` (right/treble) and optional `leftSequence` (left/bass) arrays.
+Renaming a note moves nothing. Changing your mind costs one click and no re-timing.
 
-## Flow
+Full reasoning: [backend/time-model.md](backend/time-model.md). The frozen decisions behind it are
+[`decisions.md`](implementations/03-time-based-concept/decisions.md), D-01 … D-34.
+
+## One stored file
 
 ```
-text notation ──POST /sequence──▶ aitu-backend (sequence.py: parse → onset-normalize → sparse-COO)
-                                          │  JSON score (rows/cols/onset [+lyrics,+keySignature])
-                                          ▼
-aitu-backend (notation/score_builder.py: matrix → onset-led chord timeline → measures/figures)
-        ↓ render-ready ScoreDocument
-aitu-frontend (components/notation/renderScore.ts: thin VexFlow drawing adapter)
-   └─▶ PianoSheet.tsx (VexFlow): staves, beams, accidentals vs key, dots, lyrics, line wrap, grand staff
-GET /scores ──▶ example-scores.json ──▶ same rendering path
+data/audio/<uuid>/matrices/events.json      the engine's notes, in seconds — KEPT FOREVER
+data/audio/<uuid>/matrices/rhythm.json      what the reader decided
 ```
 
-## Rendering nuances (code-truth; see `documentation/services/frontend/`)
+Everything else about the music is derived on every request: the matrix, the gap distribution, the
+figure of each note, the sheet. That is what makes the column length a query parameter rather than a
+migration — reading the same piece at 20 ms is another request, not another stored artifact, and
+there is no state on disk that can disagree with the screen.
 
-- `durationBeats = steps * timeStepSeconds / (60 / tempoBpm)`; onset-led rendering sustains each
-  note/chord to the next onset, permits rests before an entrance and at an unwritable measure tail,
-  but never draws a rest between sounding events; held note = fewest symbols (prefer one,
-  optionally dotted); off-grid snapped with a console warning.
-- Beams: VexFlow's tick-based `generateBeams` is NOT used (barless soft voice); beam every maximal run of
-  ≥2 consecutive beamable notes (eighth-or-shorter, non-rest); lone eighth keeps its flag.
-- Key signatures: accidental baked into the pitch (`Fa#-5`→`f#/5`); VexFlow's `applyAccidentals` decides
-  the visible glyph vs the chosen key (e.g. `Fa#-5` shows no sharp in Sol-Mayor, does in Do-Mayor).
-- Barless layout: no bar lines / time signature; key signature repeats each line; one-hand wraps by note
-  count, two-hand wraps by aligned time-window column slices.
+`rhythm.json` holds the only things that are *not* derivable, because a person chose them: which
+pile is the beat and what it is called, the key, where the piece changes speed, renamed figures,
+beam breaks, notes taken off the page, fingering, trills, grace notes, words under the staff and
+cue-size stretches.
 
-## API
+## The flow
 
-Live endpoints (everything else exists and answers `501` naming its epic — see `/docs`):
+```
+audio in ──▶ engine ──▶ events.json (seconds)
+                          │
+                          ├─▶ filters, chord grouping on raw times, snap to columns, split hands
+                          ├─▶ gaps → peaks → the plot the reader clicks
+                          ├─▶ a ladder the reader names → the figure of every note
+                          └─▶ TimeScorePayload ──▶ @aimpromptu/grid-notation ──▶ the staff
+```
 
-- `GET /health` — liveness.
-- `GET /scores` — serves `data/example-scores.json`.
-- `POST /sequence` — `sequence` (text) + `tempoBpm`, `timeStepSeconds`, optional `title`/`lyrics`/
-  `keySignature`/`leftSequence` (bass-clef left hand, matching frame count). Unknown notes / mismatched
-  hands → `422`. Returns a score matching `/scores` items.
+Step by step, with the reason for each ordering:
+[`documentation/services/backend/events-to-sheet.md`](../documentation/services/backend/events-to-sheet.md).
+
+## The screens
+
+**Playground** — four tabs, in the order of the work:
+
+| Tab | What you do |
+|---|---|
+| Upload / Input | Bring a piece in: upload, record, the audio library, or **Compose** an empty one |
+| Piano Roll | The recording against a keyboard, left to right, in seconds |
+| Notes Falling | The same notes arriving at the keys |
+| **Piano Sheet** | The product: the peak plot, naming, the staff, the player, every editing control |
+
+**YouTube to Audio** pulls audio off a video. **Piano Library** is what a performer plays from:
+browse, tag, playlists, and a read-only performance page with overlay toggles.
+
+## What a reader can do to a sheet
+
+Name the beat · write the whole piece one step longer or shorter · say the piece changes speed ·
+rename one note or a whole passage · choose the key, for the piece or a stretch · correct which hand
+plays a note · fingering 1–5 · break or join a beam · octave brackets · take a note off the page ·
+accept a suggested trill · words under the staff · print a stretch cue-sized · a grace note leaning
+on a note · re-record a marked passage at any speed · add a passage to a piece being composed ·
+save the reading with the piece · export a vector PDF · play the recording and follow the line.
+
+Detail: [frontend/annotations.md](frontend/annotations.md). Click by click:
+[`user-reviews.md`](implementations/03-time-based-concept/user-reviews.md).
+
+## The API
+
+`127.0.0.1:8765`, docs at `/docs`. Six routers:
+
+| Prefix | For |
+|---|---|
+| `/audio` | The working store: bring a recording in, trim it, stream it |
+| `/matrix` | Run the model, follow it, read back the notes it heard |
+| `/time` | The score: peaks, the ladder, the payload, the saved reading |
+| `/audio/{uuid}/edits` | Staged re-recording and composing |
+| `/library` | Playground versions, promotion, tags, playlists |
+| `/youtube` | Downloads |
+
+Plus `GET /health`, and `GET /scores` / `POST /sequence` — the project's original text-notation MVP,
+which still runs but which no screen calls.
 
 ## Run locally
 
-- Backend: `cd aitu-backend && uv sync && make serve` → uvicorn `127.0.0.1:8765`, docs `/docs`.
-- Frontend: `cd aitu-frontend && npm install && npm run dev` → expects backend at `http://127.0.0.1:8765`
-  (override via `VITE_AITU_API_URL`).
+```bash
+make serve        # both services, from the repository root
+make logs         # follow both
+make stop
+```
+
+Backend `http://127.0.0.1:8765`, app `http://localhost:5173`. Or one at a time:
+
+```bash
+cd aitu-backend  && uv sync && make serve
+cd aitu-frontend && npm install && npm run dev
+```
+
+`ffmpeg` must be on `PATH`. The transcription models are an optional extra
+(`uv sync --extra transcription`, a ~200 MB torch download); without one the `silent` engine still
+lets every screen be exercised end to end. See [04-local-development.md](04-local-development.md).
 
 ## Code map
 
-Restructured by Epic 1 (see `implementations/progress/epic-01/`).
+**Backend** `src/aitu_backend/`: `api/` (one router per section), `audio/`, `transcription/`
+(engines, filters, events to matrix, jobs), `matrix/` (frame ↔ ms, gaps, peaks, the ladder,
+passages, figure bands), `hands/` (a beam search with a gated second pass), `notation/` (figures,
+tresillos, trills), `editing/` (splice, compose, staging, history), `storage/` (every path in one
+module), `schemas/` (Pydantic, camelCase on the wire), `main.py` (a thin factory).
 
-- Backend `src/aitu_backend/`: `api/` (one router per section: scores, audio, matrix, notation,
-  library, youtube — later-epic endpoints answer `501`), `matrix/` (`text_notation.py` notation
-  logic — single source of truth, `keys.py` 88-key tables, `convert.py` sparse/dense),
-  `schemas/` (`score.py`, `matrix.py`, `metadata.py`, `naming.py`), `storage/` (`paths.py`,
-  `matrix_store.py` npz), `audio/`, `transcription/`, `notation/` (empty, awaiting their epics),
-  `progress.py` (ProgressReporter for tqdm + SSE), `main.py` (thin app factory),
-  `data/` (see `data/README.md`), `notebooks/<theme>/`.
-- Frontend `src/`: `api/` (typed client per router), `layout/` (AppLayout, PlaygroundLayout,
-  `routes.ts`), `pages/` (one per route), `state/` (working-artifact context), `ui/`
-  (`palette.ts`, `theme.ts`, shared MUI wrappers), `hooks/useProgress.ts`,
-  `music/{types,notes,matrixToNotation}.ts`, `components/{PianoSheet,SequenceComposer,
-  LayoutControls,ScoreStack}.tsx` (kept for Epic 9), `App.tsx` (route table).
+**Frontend** `src/`: `api/` (one module per router), `layout/` (shell and `routes.ts`), `pages/`,
+`components/{time,notes,audio,input,editing,library,common}/`, `piano/`, `playback/`, `print/`,
+`state/`, `ui/`, `music/`.
 
-## Conventions
+## What is deliberately gone
 
-- Backend: `src/` layout, notation logic centralized in `sequence.py`, camelCase JSON via Pydantic aliases,
-  paths centralized in `paths.py`, `uv` + `uv.lock`.
-- Frontend: functional React + hooks, ESLint flat config (typescript-eslint + react-hooks + react-refresh),
-  music logic isolated under `src/music/`, rendering isolated in `PianoSheet.tsx`.
+Stated so nobody rediscovers it. There is **no** BPM input, **no** granularity choice, **no** Matrix
+tab, **no** editing a matrix cell by hand, **no** matrix JSON import or export, **no** bar lines,
+time signatures or measures, and **no** text notation as a way to create a piece.
 
-## Where it is going (implementation plan)
+Five Playground tabs were deleted with the tempo model. **Piano Roll** and **Notes Falling** came
+back on the wall clock; **Matrix**, **Notes Falling (raw)** and **Music Notation** stay retired —
+the first two were views of a grid that no longer exists, and the third is the Piano Sheet tab now.
 
-The text-notation MVP above is the seed of a much larger product, now fully planned in
-`implementations/plan/` (source requirements: `../project-features.md`). Target feature set:
-
-- **Audio in**: upload mp3/aac/m4a, record from the browser mic (live waveform), download YouTube
-  audio (yt-dlp), Audacity-like time-range selection; uuid audio store with editable aliases.
-- **Transcription**: piano audio -> MIDI-like note events (`piano_transcription_inference`) -> raw
-  88xN 0/1/-1 matrix at fusa granularity -> collapse to user granularity (merge rules) -> sustain
-  cleaning -> two-hands split (C4 threshold). Raw matrix kept so any granularity recomputes instantly.
-- **Playground**: Input tab (5 sources), Matrix tab (circle grid, step pills, JSON export/import,
-  in-situ BPM/granularity switching, editing), Piano Roll + Notes Falling views (piano SVG, player
-  with original vs synthesized sound), Music Notation tab (VexFlow with engraving rules: stems,
-  beams, no-tie policy, key signatures/naturals, 8va/clef switching, beat guides, cut-measure,
-  tuplets/trills later).
-- **Storage**: versioned playground artifacts (`vN_gX` folders + metadata family), promotion to a
-  performer-facing Library with named versions, rollback, tags and Spotify-like playlists.
-- **Editing**: staged re-recording of selected passages at slower practice tempos with
-  transcribe-then-scale preview; live composing and annotations (lyrics, fingering) as later epics.
-
-Status tracking: `implementations/plan/checklist.md`. Worker instructions:
-`implementations/plan/system-prompt-workers.md`. Progress journal: `implementations/progress/`.
+If one of these should return, it is a new feature request with its own reasoning, not unfinished
+work.
 
 ## Where to look next
 
-- Platform: [01-project.md](01-project.md), [02-tech-stack.md](02-tech-stack.md), [04-local-development.md](04-local-development.md)
-- Notation contract: [shared/notation-spec.md](shared/notation-spec.md)
-- Backend overview: [backend/README.md](backend/README.md) · detail: [../documentation/services/backend/](../documentation/services/backend/)
-- Frontend overview: [frontend/README.md](frontend/README.md) · detail: [../documentation/services/frontend/](../documentation/services/frontend/)
+- Platform: [01-project.md](01-project.md) · [02-tech-stack.md](02-tech-stack.md) ·
+  [03-services-overview.md](03-services-overview.md) · [04-local-development.md](04-local-development.md)
+- The model: [backend/time-model.md](backend/time-model.md)
+- Backend: [backend/README.md](backend/README.md) ·
+  detail [../documentation/services/backend/](../documentation/services/backend/)
+- Frontend: [frontend/README.md](frontend/README.md) ·
+  detail [../documentation/services/frontend/](../documentation/services/frontend/)
+- How it got here: [implementations/README.md](implementations/README.md)
 - Full index: [00-index.md](00-index.md)

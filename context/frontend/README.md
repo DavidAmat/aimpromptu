@@ -1,27 +1,53 @@
 # aitu-frontend
 
-React 19 + TypeScript + Vite app that renders sparse-COO piano scores as sheet music with
-**VexFlow 5**. Consumes JSON from aitu-backend; owns **all** music rendering.
+React 19 + TypeScript + Vite app. It brings a recording in, shows how it was actually played, and
+draws the sheet — with `@aimpromptu/grid-notation`, a renderer built for this project because
+nothing off the shelf lays music out on a wall clock.
 
-## UI areas
+It owns **all** drawing. The backend decides what each note is called; this app decides how the page
+looks and what the reader can do to it.
 
-Structured by feature, not by source file:
+## The sections
 
-| Area | Doc | Components |
-|------|-----|------------|
-| App shell | [app-shell.md](app-shell.md) | `App.tsx` — fetch `/scores`, global layout state |
-| Loaded scores | [loaded-scores.md](loaded-scores.md) | `ScoreStack`, shared `LayoutControls` |
-| Compose panel | [compose-panel.md](compose-panel.md) | `SequenceComposer` — `POST /sequence` |
-| Rendering | [rendering-pipeline.md](rendering-pipeline.md) | `matrixToNotation.ts`, `PianoSheet.tsx`, `notes.ts` |
-| Timestamps | [timestamps.md](timestamps.md) | `audio/time.ts`, `ui/timestamps.ts` — the `mm:ss.cc` / `f:N · start` rule |
+| Section | What it is for |
+|---|---|
+| **YouTube to Audio** | Pull audio off a video into the store |
+| **Playground** | Where a piece is worked on — four tabs, in the order of the work |
+| **Piano Library** | What a performer plays from: browse, tag, playlists, a read-only page |
+
+The Playground tabs:
+
+| Tab | What you do there |
+|---|---|
+| Upload / Input | Bring a piece in — upload, record, the audio library, or **Compose** an empty one |
+| Piano Roll | The recording against a keyboard, left to right |
+| Notes Falling | The same notes arriving at the keys |
+| **Piano Sheet** | The product: read the playing, name one pile, get the sheet, edit it, print it |
+
+The two visual views sit between input and the sheet because that is when they are useful: they are
+how you check a transcription before committing to reading it.
+
+## What a reader does on the sheet
+
+Name the beat · write the whole piece longer or shorter · say the piece changes speed · rename one
+note or a whole passage · choose the key · correct which hand plays a note · fingering · break or
+join a beam · octave brackets · take a note off the page · accept a suggested trill · words under
+the staff · print a stretch small · a grace note leaning on a note · re-record a passage · add a
+passage to a piece being composed · save the reading · print to PDF · play it and follow along.
+
+Detail: [annotations.md](annotations.md).
 
 ## Data flow
 
 ```
-GET /scores  or  POST /sequence  →  MatrixScore  →  matrixToNotation  →  PianoSheet (VexFlow SVG)
+GET /matrix/{id}/events  ──▶  Piano Roll, Notes Falling      (seconds, as recorded)
+GET /time/{id}/peaks     ──▶  the peak plot                  (the picture of the playing)
+GET /time/{id}/score     ──▶  TimeScoreView ──▶ @aimpromptu/grid-notation
+PUT /time/{id}/rhythm    ◀──  the reader's decisions
 ```
 
-Notation contract: [shared/notation-spec.md](../shared/notation-spec.md).
+Nothing is drawn from a stored grid, because there is no stored grid. Every view is derived from the
+recorded notes.
 
 ## Run
 
@@ -29,12 +55,15 @@ Notation contract: [shared/notation-spec.md](../shared/notation-spec.md).
 cd aitu-frontend && npm install && npm run dev
 ```
 
-Backend expected at `http://127.0.0.1:8765`; override with `VITE_AITU_API_URL`.
-See [04-local-development.md](../04-local-development.md).
+Backend expected at `http://127.0.0.1:8765`; override with `VITE_AITU_API_URL`. Or run both from the
+repository root with `make serve`. See [04-local-development.md](../04-local-development.md).
 
 ## Where to look deeper
 
-- [rendering-pipeline.md](rendering-pipeline.md) — sparse decode → VexFlow
-- [documentation/services/frontend/](../../documentation/services/frontend/) — matrix-to-notation,
-  piano-sheet, notes, components
-- [shared/notation-spec.md](../shared/notation-spec.md) — notation contract
+- [pages.md](pages.md) — the routes, the shell, the shared working artifact
+- [rendering.md](rendering.md) — how the sheet is drawn, and what the app does *not* decide
+- [annotations.md](annotations.md) — what a reader can say about a piece, and where it goes
+- [printing.md](printing.md) — the PDF: re-wrap to the paper, never scale
+- [timestamps.md](timestamps.md) — the `mm:ss.cc` rule
+- [documentation/services/frontend/](../../documentation/services/frontend/) — the component tree,
+  the renderer seam, the PDF writer

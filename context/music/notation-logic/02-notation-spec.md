@@ -1,15 +1,28 @@
-> ## ⚠ Partly obsolete — the tempo field is gone
->
-> The text notation and the general shape of this contract still hold, but **`tempoBpm` no longer
-> exists**, and neither does any note-figure resolution. Since 2026-08-08 a matrix envelope carries
-> one header field, `frameMs` — how many milliseconds one column covers. The current contract is
-> [`context/implementations/03-time-based-concept/contract.md`](../../implementations/03-time-based-concept/contract.md);
-> where the two disagree, that one wins.
+# The text-notation contract
 
-# Notation contract
+**Scope: `GET /scores` and `POST /sequence`.** This is the project's original format — a line per
+time frame, written by hand — and it is still parsed exactly as described below.
 
-Single source of truth for the music format shared by **aitu-backend** (parser) and
-**aitu-frontend** (renderer). Both services link here; do not restate this spec elsewhere.
+It is **not** how the app makes a piece. Text notation was removed from Upload / Input in P4.2,
+because a sheet is written from recorded onsets and text notation has none. Two fields here belong
+to that older model and exist nowhere else in the product: `tempoBpm` and any note-figure
+resolution. A wall-clock matrix envelope carries one header field about time, `frameMs` — how many
+milliseconds one column covers.
+
+Where this page and
+[`contract.md`](../../implementations/03-time-based-concept/contract.md) describe the same thing,
+that one wins. For what the app actually does, start at
+[`context/backend/time-model.md`](../../backend/time-model.md).
+
+## What is still shared
+
+The **sparse-COO wire format** below — parallel `rows` / `cols` / `onset` arrays, `1` onset, `-1`
+sustain, `0` silence, sorted by `(col, row)` — is unchanged and is what every matrix in the project
+travels as. The **88-key row order** is unchanged. The **onset rule** is unchanged for this parser.
+
+Do not restate either of those elsewhere; link here, or to
+[`documentation/services/backend/time-matrix.md`](../../../documentation/services/backend/time-matrix.md)
+for the schema 2.0 envelope around them.
 
 ## Text notation
 
@@ -58,9 +71,10 @@ The builder normalizes illegal input:
 This disambiguates four `Re-4` cells: four onsets = four notes; one onset + three
 sustains = one long note.
 
-Implemented in `aitu-backend/src/aitu_backend/sequence.py` (`sequence_to_sparse_payload`)
-and mirrored on decode in `aitu-frontend/src/music/matrixToNotation.ts`
-(`activeCellsToNoteEvents`).
+Implemented in `aitu-backend/src/aitu_backend/matrix/text_notation.py`
+(`sequence_to_sparse_payload`). The frontend decoder that used to mirror it,
+`music/matrixToNotation.ts`, was deleted with the VexFlow stack: the app no longer decodes a matrix
+in the browser, because the backend now hands over each note's printed figure directly.
 
 ## Sparse-COO payload
 
@@ -105,7 +119,7 @@ hands stay vertically aligned.
 The same notation, onset rule, lyrics, and key signature apply to both clefs unchanged.
 
 Text input uses **separate** right-hand and left-hand text areas (not inline `__`
-separators). See [compose-panel.md](../frontend/compose-panel.md).
+separators). See [compose-panel.md](../../archive/superseded/compose-panel.md).
 
 ## Lyrics
 
@@ -114,7 +128,7 @@ Empty string `""` = no syllable on that frame.
 
 Lyrics are **time-indexed**, not note-indexed: the renderer draws each non-empty
 entry at that frame's horizontal position whether the frame is a struck note, a
-sustain, or a silence. See [piano-sheet.md](../../documentation/services/frontend/piano-sheet.md).
+sustain, or a silence. See [piano-sheet.md](../../../documentation/services/frontend/grid-notation.md).
 
 ```
 sequence  →  ["*Do-4 || *Mi-4", "*Re-4", "Re-4", "*Mi-4", "Mi-4", "Mi-4", ""]
@@ -123,9 +137,9 @@ lyrics    →  ["Ho",             "la",    "la",   "dron",  "",      "de",   ""]
 
 ## Where to look deeper
 
-- Backend parsing: [notation-and-parsing.md](../backend/notation-and-parsing.md) →
-  [sequence-logic.md](../../documentation/services/backend/sequence-logic.md)
-- Backend schemas: [schemas.md](../../documentation/services/backend/schemas.md)
-- Frontend decode/render: [rendering-pipeline.md](../frontend/rendering-pipeline.md) →
-  [matrix-to-notation.md](../../documentation/services/frontend/matrix-to-notation.md),
-  [piano-sheet.md](../../documentation/services/frontend/piano-sheet.md)
+- Backend parsing: [notation-and-parsing.md](../../backend/notation-and-parsing.md) →
+  [sequence-logic.md](../../../documentation/services/backend/sequence-logic.md)
+- Backend schemas: [schemas.md](../../../documentation/services/backend/schemas.md)
+- Frontend decode/render: [rendering-pipeline.md](../../frontend/rendering.md) →
+  [matrix-to-notation.md](../../../documentation/services/frontend/grid-notation.md),
+  [piano-sheet.md](../../../documentation/services/frontend/grid-notation.md)

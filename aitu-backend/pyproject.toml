@@ -96,7 +96,10 @@ include = ["src/aitu_backend", "README.md", "pyproject.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+# `src` for the package; `.` for `scripts/`, which has no __init__.py and is
+# imported by tests/test_migration.py. Without the second entry collection fails
+# before a single test runs, so `make test` reports nothing at all.
+pythonpath = ["src", "."]
 addopts = "-q"
 
 [tool.black]

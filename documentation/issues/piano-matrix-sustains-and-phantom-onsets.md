@@ -1,4 +1,4 @@
-> Context: [01-matrix-notation-logic.md](../../context/music/notation-logic/01-matrix-notation-logic.md) (Appendix B, and its 2026-08-01 amendment)
+> Context: [01-matrix-notation-logic.md](../../context/archive/superseded/01-matrix-notation-logic.md) (Appendix B, and its 2026-08-01 amendment)
 
 # Held chords that print short, and chords with a note too many
 
@@ -52,7 +52,7 @@ cleans — so the single-matrix view and the printed grand staff cannot contradi
 each other.
 
 **Blast radius.** Saved library versions store the matrix already cleaned, so they keep
-the old, over-cut sustains until they are recomputed from `raw.npz` / `events.json`.
+the old, over-cut sustains until they are derived again from `events.json`.
 `api/library.py` and `notation/artifacts.py` split an already-clean matrix; per-hand
 cleaning there is a no-op, because whole-keyboard cleaning is strictly more aggressive.
 
@@ -99,23 +99,29 @@ the first chord by 135 ms and then re-strikes *with* the second. Conditions 3 an
 rescue it (Re-3 sits inside the cluster's spread and holds v97 → v96).
 
 On the reference file this keeps **8 of 1117 events (0.7%)**. That is deliberately
-high-precision and low-recall: a surviving phantom is a visible wrong note that the
-merge-onsets UI can fix, while a false merge silently deletes a note the player played.
+high-precision and low-recall: a surviving phantom is a visible wrong note the reader can take off
+the page, while a false merge silently deletes a note the player played.
 
 ---
 
 ## Verifying either fix on a real file
 
-Recompute and read the two hands directly — no UI needed:
+Read the two hands directly — no UI needed:
 
 ```python
 from aitu_backend.transcription import pipeline
-from aitu_backend.schemas.matrix import Granularity
 
-result = pipeline.recompute(audio_uuid, tempo_bpm, Granularity.SEMICORCHEA)
-print(result.hands.left.grid[note_to_row("Do-3"), 54:72])   # should hold, not stop at 58
-print(result.hands.right.grid[note_to_row("Sol-3"), 54:72])  # onsets at 58, 62, 66, 70
+hands = pipeline.hands_of(audio_uuid, frame_ms=40)          # None if not transcribed
+print(hands.left.grid[note_to_row("Do-3"), start:end])       # should hold, not stop early
+print(hands.right.grid[note_to_row("Sol-3"), start:end])     # the alternating onsets
 ```
+
+> **Updated 2026-09-13.** This used to read
+> `pipeline.recompute(audio_uuid, tempo_bpm, Granularity.SEMICORCHEA)`. There is no `recompute`, no
+> tempo and no granularity any more: `hands_of` derives the two hands from `events.json` at whatever
+> column length you ask for, and never writes anything. The column numbers in the worked example
+> below are **semicorchea columns from 2026-08-01** and do not correspond to 40 ms columns — work
+> the range out from the seconds, or pass the `frame_ms` the passage was read at.
 
 Expected for this passage after both fixes:
 

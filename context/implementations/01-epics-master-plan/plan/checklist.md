@@ -2,7 +2,9 @@
 
 Single status lookup for the whole plan. Status codes: `[x]` completed, `[p]` in progress, `[b]` blocked (state the blocker), `[c]` cancelled (state why), `[ ]` not started. Workers: mark `[p]` when starting, final status when finishing.
 
-> **Status as of 2026-08-12.** This plan was written for a model the app no longer has. The
+> **Status as of 2026-09-13: the plan is complete.** All fourteen epics are done.
+>
+> This plan was written for a model the app no longer has. The
 > time-based concept refactor replaced tempo with wall-clock time, closed on 2026-08-10, and deleted
 > the code the old model needed. **Read [`wall-clock-rewrite.md`](wall-clock-rewrite.md) before
 > working on anything here** — it says what changed, the five rules every remaining task obeys, and
@@ -16,9 +18,13 @@ Single status lookup for the whole plan. Status codes: `[x]` completed, `[p]` in
 >   `@aimpromptu/grid-notation` from the time score payload; VexFlow is gone. What those stories
 >   promised — key signatures, transposition, octave and clef displacement, guides — exists again on
 >   the new path, built during the refactor.
-> - **The live backlog is Epic 13 and Epic 14.** Story 9.7 and Epics 10, 11 and 12 shipped
->   after the refactor, all built on the wall clock. The task files describe the current
->   requirement; git holds the old text.
+> - **Every epic is done.** Epic 14 closed on 2026-09-13, which closes the plan. Story 9.7 and
+>   Epics 10 to 13 shipped after the refactor, all built on the wall clock. The task files describe
+>   the current requirement; git holds the old text.
+> - **Three defects were found by Epic 14 and fixed**, all on 2026-09-13; they are listed under
+>   Epic 14 below. They were bugs in shipped code rather than leftover tasks.
+> - **The retrospective** over the whole journal is
+>   [`../progress/RETROSPECTIVE.md`](../progress/RETROSPECTIVE.md).
 > - **Everything the refactor shipped** is in
 >   [`../time-based-concept/checklist.md`](../../03-time-based-concept/checklist.md), and why it closed is
 >   in [`../time-based-concept/CLOSURE.md`](../../03-time-based-concept/CLOSURE.md).
@@ -332,22 +338,64 @@ Marks that never touch the recording: lyrics over frame ranges, finger numbers w
   The note toolbox leans a grace note on one note, crushed or leaned on, at a step or a third —
   drawn in the annotation layer, so it takes no column and moves nothing.)*
 
-# [ ] Epic 13 — Composing live (nice to have)
+# [x] Epic 13 — Composing live (nice to have)
 
-> *Alive. Rewritten 2026-08-12: an empty piece is an empty `events.json` and a `frameMs`; this is the one place a length change is allowed.*
+> *Complete 2026-09-13. An empty piece is an empty `events.json` and a `frameMs`, and this is the one
+> place a length change is allowed — so notes and editorial marks after an insertion move together,
+> in the same write, by the same number of columns.*
 
 Passage-by-passage composition: an empty piece, a stage to play and iterate on one passage, and append / insert / replace placement. The one place a length change is allowed. Index: `epic-13-compose-live/epic-compose-live-index.md`.
 
-## [ ] Story 13.1 — Live composition
+## [x] Story 13.1 — Live composition
 
-- [ ] Task 13.1.1 **Compose live**: empty piece, passage stage, insertion modes, slow-recorded passage conversion.
+- [x] Task 13.1.1 **Compose live**: empty piece, passage stage, insertion modes, slow-recorded
+  passage conversion. *(Shipped 2026-09-13. **Compose** on Upload / Input starts an empty piece;
+  **Add a passage** on Piano Sheet is the stage. A passage occupies a whole number of columns, which
+  is what makes an insertion exact: every column after it moves by the same integer and every mark
+  moves with its note. Membership is by column rather than by onset, deliberately — see
+  [`../progress/epic-13/epic-13-progress.md`](../progress/epic-13/epic-13-progress.md).)*
 
-# [ ] Epic 14 — Final documentation
+# [x] Epic 14 — Final documentation
 
-> *Alive and larger. Rewritten 2026-08-12: it also covers the wall-clock model and the work committed after the plan closed, which has no reports.*
+> *Complete 2026-09-13. The detail tree and the context overviews now describe the wall-clock app,
+> the month that had no progress reports has them, and the journal is closed.*
 
 Always last: bring `documentation/` up to the final codebase, refresh `context/` overviews and index, close the progress journal. Index: `epic-14-docs/epic-docs-index.md`.
 
-## [ ] Story 14.1 — Documentation pass
+## [x] Story 14.1 — Documentation pass
 
-- [ ] Task 14.1.1 **Final documentation**: detail tree rewrite, context refresh, journal retrospective.
+- [x] Task 14.1.1 **Final documentation**: detail tree rewrite, context refresh, journal retrospective.
+  *(Shipped 2026-09-13. Markdown only — no application code changed. `time-matrix.md` un-stubbed;
+  `endpoints.md` grown from 3 documented routes to all 63; three new backend detail files for the
+  derivation path, `rhythm.json` and editing/composing; five new context files including
+  **`backend/time-model.md`**, which is where a new reader is now sent second. Four banner-marked
+  documents resolved — two archived, two rewritten — with `archive/superseded/README.md` mapping each
+  to where its truth went. 27 broken links fixed, **now zero across 291 files**. See
+  [`../progress/epic-14/task-14.1.1-progress.md`](../progress/epic-14/task-14.1.1-progress.md).)*
+  - [x] 14.1.1.1 the detail tree
+  - [x] 14.1.1.2 the context overviews
+  - [x] 14.1.1.3 the gap after the plan closed — six reports in
+    [`../progress/plan-resume/`](../progress/plan-resume/README.md), and `user-reviews.md` and
+    `CLOSURE.md` corrected
+  - [x] 14.1.1.4 closing the journal — [`../progress/RETROSPECTIVE.md`](../progress/RETROSPECTIVE.md)
+
+### Three defects the documentation pass found, all fixed
+
+Found by reading the documentation against the code, then fixed on 2026-09-13 at David's request.
+Report: [`../progress/epic-14/task-14.1.2-progress.md`](../progress/epic-14/task-14.1.2-progress.md).
+
+- [x] **`make test` did not run.** `tests/test_migration.py` imports `scripts.migrate_to_time_matrix`,
+  `scripts/` has no `__init__.py`, and `pyproject.toml` set `pythonpath = ["src"]` only, so
+  collection failed before any test ran and the command reported nothing at all. Fixed by
+  `pythonpath = ["src", "."]`. **769 passed, 1 pre-existing failure.**
+- [x] **Octave brackets were saved and silently dropped.** The page sent `ottavas` in the
+  `PUT /time/{uuid}/rhythm` body; backend `SavedRhythm` had no such field and Pydantic ignores
+  extras, so brackets did not survive a reload. Fixed by an `Ottava` model and an
+  `ottavas: list[Ottava] | None` field, plus an entry in `compose.shift_marks` so an insertion moves
+  them — which also closes the gap Epic 13 noted. `null` (never asked) and `[]` (asked, none) are
+  kept distinct on purpose. Five new tests.
+- [x] **`npm run check:render` had been broken since P6.9.** Its fixture was still a 1.x
+  `tempoBpm` / `granularity` envelope built for `GridNotationEditor`, which the package refuses.
+  This is the project's **only** guard against a silent rendering failure, and it had not run for a
+  month. Rewritten against a schema 2.0 envelope and `GridNotationRenderer`, mirroring
+  `TimeScoreView` — including the Spanish-to-English figure map. **26 checks, all passing.**

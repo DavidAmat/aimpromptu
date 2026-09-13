@@ -1,215 +1,260 @@
-> Context: [rendering-pipeline.md](../../../context/frontend/rendering-pipeline.md) · [02-notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md)
+> Context: [context/frontend/rendering.md](../../../context/frontend/rendering.md) ·
+> [context/music/notation-logic/02-notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md)
 
-# Grid notation
+# Grid notation: how the sheet is drawn
 
-How sheet music is drawn. Replaces the VexFlow stack — `PianoSheet.tsx`,
-`renderScore.ts`, `matrixToNotation.ts`, `notes.ts` and the backend-built
-`ScoreDocument` are all gone.
+Everything on the staff is drawn by `@aimpromptu/grid-notation`. This app supplies the score payload
+and the reader's annotations; the package does all the engraving.
 
-## The package
+The VexFlow stack it replaced — `PianoSheet.tsx`, `renderScore.ts`, `matrixToNotation.ts`,
+`notes.ts` and the backend-built `ScoreDocument` — is gone.
 
-[`@aimpromptu/grid-notation`](../../../../vexflow-v2/documentation/README.md) is a
-local TypeScript package, developed in the sibling `vexflow-v2` checkout and
-installed from disk:
+---
+
+## 1. The package
+
+[`@aimpromptu/grid-notation`](../../../../vexflow-v2/documentation/README.md) is a local TypeScript
+package, developed in the sibling `vexflow-v2` checkout and installed from disk:
 
 ```json
 "@aimpromptu/grid-notation": "file:../../vexflow-v2"
 ```
 
-npm turns that into a symlink, so editing the package and rebuilding it there is
-picked up here — `pip install -e`, with one difference: **npm does not build the
-dependency for you.** After any change in `vexflow-v2`, run `npm run build` (or
-`npm run check`) there, or `dist/` stays stale.
+npm turns that into a symlink, so editing the package and rebuilding it there is picked up here —
+`pip install -e`, with one important difference: **npm does not build the dependency for you.**
+After any change in `vexflow-v2`, run `npm run build` (or `npm run check`) there, or `dist/` stays
+stale.
 
-`vite.config.ts` excludes it from `optimizeDeps` for the same reason: Vite
-pre-bundles linked dependencies and caches the result.
+`vite.config.ts` excludes it from `optimizeDeps` for the same reason: Vite pre-bundles linked
+dependencies and caches the result.
 
 ### The stale-`dist` trap
 
-This has bitten once and will bite again, so it is worth stating as a rule.
-`dist/` is in the package's `.gitignore`, the symlink is live, and there is no
-version anywhere in this app's lockfile. So what runs in the browser is
-**whatever `dist/` was last built from** — and nothing warns when that is eleven
-releases behind the source beside it. That is exactly what happened between
-0.16.0 and 0.26.2: the package's git log said 0.26.2 while `dist/` was still
-0.15.0, and the app quietly kept engraving with the old code.
+This has cost real time once and will again, so it is worth stating as a rule. `dist/` is in the
+package's `.gitignore`, the symlink is live, and there is no version anywhere in this app's
+lockfile. So what runs in the browser is **whatever `dist/` was last built from** — and nothing
+warns when that is eleven releases behind the source beside it. That is exactly what happened
+between 0.16.0 and 0.26.2: the package's git log said 0.26.2 while `dist/` was still 0.15.0, and the
+app quietly kept engraving with the old code.
 
-Pulling the package is therefore never enough. Rebuild it, and if a documented
-feature seems to be missing, check the build before checking the docs:
+Pulling the package is therefore never enough. Rebuild it, and if a documented feature seems to be
+missing, **check the build before checking the docs**:
 
 ```bash
 grep -c planAccidentalColumns ../../vexflow-v2/dist/index.d.ts   # 0.26.2
 ```
 
-Useful markers, one per release worth dating: `suggestKeySignature` (0.16.0),
-`FrameClock` (0.17.0), `StavesMode` (0.18.0), `planMerge` (0.19.0),
-`renderScorePages` (0.25.0), `planAccidentalColumns` (0.26.2).
+Useful markers, one per release worth dating: `suggestKeySignature` (0.16.0), `FrameClock` (0.17.0),
+`StavesMode` (0.18.0), `planMerge` (0.19.0), `renderScorePages` (0.25.0), `planAccidentalColumns`
+(0.26.2), partial group-cell painting under a frame range (0.32.0).
 
-## Why it exists
+The package is at **0.32.0** as of 2026-09-13.
 
-VexFlow lays notes out from accumulated tick arithmetic inside measures. A piano
-matrix has no measures and no metre — it has **frames**, and the one property the
-whole project depends on is that a right-hand and a left-hand event in the same
-frame print at the same x. Tick-based layout can only approximate that, and the
-approximation drifts.
+---
 
-This package makes frame columns the horizontal source of truth: one
-frame → x function, shared by both staves and the ruler. The hands cannot come
-apart, because nothing computes their positions separately.
+## 2. Why it exists
+
+VexFlow lays notes out from accumulated tick arithmetic inside measures. A piano matrix has no
+measures and no metre — it has **columns of wall clock** — and the one property the whole project
+depends on is that a right-hand and a left-hand event in the same column print at the same x.
+Tick-based layout can only approximate that, and the approximation drifts.
+
+This package makes columns the horizontal source of truth: **one `time → x` map, shared by both
+staves, the ruler and every overlay** (D-22). The hands cannot come apart, because nothing computes
+their positions separately. It also means the question "which hand is limiting this region"
+disappears rather than being answered.
 
 Two consequences worth knowing before reading a score:
 
-- **Frames are not evenly spaced.** A frame is as wide as what it draws, so
-  horizontal distance reads as *density*, not duration. Time is read from the
-  frame labels, or by clicking one for the clock time.
-- **The score re-wraps, it never scales.** A narrower window puts the music on
-  more lines at the same size. Do not give the host `width: 100%` expecting it to
-  shrink; let it scroll.
+- **Columns are not evenly spaced.** A column is as wide as what it draws, so horizontal distance
+  reads as *density*, not duration. Silence is charged per frame group rather than per column
+  (D-23), so a five-second rest is a few closely spaced dashed lines instead of five seconds of
+  blank page. Time is read from the dashed lines and the column labels.
+- **The score re-wraps, it never scales.** A narrower window puts the music on more lines at the
+  same size. Do not give the host `width: 100%` expecting it to shrink; let it scroll.
 
-## What this app supplies
+---
 
-| File | Role |
-|------|------|
-| `src/music/gridNotation.ts` | The seam: `readEnvelope`, `patchesToCellEdits`, key-signature re-exports |
-| `src/music/mergeOnsets.ts` | `planHostMerge` — a deliberate superset of the package's `planMerge` |
-| `src/components/notation/GridScore.tsx` | React lifecycle around `GridNotationEditor` |
-| `src/components/notation/ScoreReadingControls.tsx` | Bar lines and ties — reading aids, session-local |
-| `src/api/notation.ts` | `/notation/artifacts`, `/{id}/matrix`, `/{id}/grid-state`, `/{id}/merge-onsets` |
-| `src/pages/playground/NotationPage.tsx` | Artifact picker, starting key, transposition, printing, saving |
+## 3. The seam
 
-There is **no conversion layer**. The renderer reads the pipeline's own envelope
-— `rMatrix`/`lMatrix`, `1` onset / `-1` sustain / `0` silence, the granularity
-naming the frame length — which is why there is no score model in this app to
-keep in step with the matrix.
+There is **one** file that touches the package: `src/components/time/TimeScoreView.tsx`. It imports
+`GridNotationRenderer`, plus three helpers — `frameAtPoint`, `placeCursor` and
+`suggestKeySignature` — and nothing else in the app does.
 
-## GridScore: the one rule
+There is **no conversion layer**. The renderer reads the payload's own envelope: `rMatrix` /
+`lMatrix`, `1` onset / `-1` sustain / `0` silence, and `frameMs` naming the column length. So there
+is no score model in this app to keep in step with the backend.
 
-The editor owns real DOM and a lot of state — the selection, the open toolbox,
-the scroll position, the transport. Build it **once per piece**, drive later
-changes through its methods, destroy it on unmount.
+### What the view passes in
 
-Which is why its effect depends on the music and the starting key, never on the
-callbacks: callbacks change identity on every parent render, and depending on
-them would tear the editor down constantly. They live in a ref the effect reads
-at call time.
+| Option | What it carries |
+|---|---|
+| `frameCount`, `timeStepSeconds` | `frameMs / 1000` — used **only** to turn a column into a clock time |
+| `availableWidth` | The measured box; the music re-wraps into it |
+| `printedFigureFor(hand, frame)` | **The backend's answer.** The view never derives a figure |
+| `tupletFor(hand, frame)` | `3` for a tresillo |
+| `beamBreakAt(hand, frame)` | The reader's grouping decision (D-34) |
+| `keySignature`, `annotations.keyChanges` | The key, and where a passage leaves it |
+| `annotations.ottavas` | Octave brackets |
+| `annotations.fingers`, `.lyrics`, `.texts`, `.passages`, `.graceNotes` | Everything from `rhythm.json` |
+| `annotationScale` | One number for every mark, not one per kind |
+| `staves` | `"grand"`, or `"single"` when a hand is empty |
+| `frameGroup`, `frameMeasure`, `silenceGroupPx` | The layout hints (D-23, D-27) |
+| `passageHeaders` | `negra = 480 ms · ≈125 BPM`, in place of a tempo mark |
+| `beamGroups: true`, `rests: false` | Beams on, no rest glyphs (D-16) |
 
-The same reasoning applies upward: `NotationPage` keeps the renderer's live
-annotations and edit patches in **refs**, not state. Feeding either back in as a
-prop would rebuild the editor on every keystroke and close the toolbox the reader
-is typing in.
+**No `pixelsPerFrame`.** Left to itself the renderer makes each column as wide as what is drawn in
+it, so a column where nothing starts collapses to a sliver. Setting a fixed width turns that off,
+and with it the property that distance reads as how much is happening.
 
-## Where the UI went
+**Guides are turned off by pushing `frameMeasure` past the last column.** A step beyond the end
+draws no interior dashed line, which is how the overlay toggle works without a second drawing mode
+in the package.
 
-Everything about *one score* now lives in the score, in a toolbox that opens
-under whatever was clicked — lyrics, playing-style markings, fingering, key
-changes, line breaks, note dragging, playback. The page keeps only what is not
-about one score: which artifact, what key it starts in, transposition, saving.
+### Building it once
 
-Deliberately gone: `KeySignaturePanel` (now the score's Key tab), `OctavePanel`
-(now its Octave tab), the measure-width slider and the beat-guide toggle. "Cut
-measure" came back in a different shape — the Bars tab's *Downbeat is f n* plus
-*Push to the next bar*.
+The renderer owns real DOM and a lot of state — the selection, the open toolbox, the scroll
+position. It is built **once per piece**, later changes are driven through its methods, and it is
+destroyed on unmount.
 
-What the page kept or gained, and why each is on the page rather than in the
-toolbox — the toolbox opens on a *selection*, and all of these are about the
-whole piece:
+Which is why the effect that builds it depends on the music and the key, **never on the callbacks**.
+Callbacks change identity on every parent render, and depending on them would tear the renderer down
+constantly. They live in a ref the effect reads at call time.
 
-| Control | Notes |
-|---------|-------|
-| **Print** | `editor.print()`. The page is the screen re-wrapped to paper, never scaled — this app has no print path of its own and must not grow one |
-| **Suggest octaves** | `applySuggestedOttavas()`, the old backend's own thresholds. A suggestion the reader accepts, not a rule; nothing sounds different |
-| **Key suggestion** | `suggestKeyFor(0, frameCount)`. Reports the *saving*, never the raw count, and never applies itself |
-| **Bar lines / ties** | `ScoreReadingControls`. Session-local; see below |
-| **One staff** | In the Hand split card, next to the panel that raises the doubt it answers |
+The same reasoning applies upward: `RhythmPage` keeps live annotations in refs rather than state.
+Feeding them back in as props would rebuild the renderer on every keystroke and close the toolbox
+the reader is typing in.
 
-### Reading aids are not markup
+### Things positioned imperatively
 
-Bar lines, ties and one-staff mode change the page and not a note of the music,
-and none of them is stored. `GridScoreState` carries the reader's **markup** —
-lyrics, fingering, key changes, spellings, ottavas — and a reading aid is not
-that. Persisting one means a new field on that contract and therefore a backend
-change; worth doing when someone asks, not before.
+The playhead and the two range handles are placed from `placeCursor` against the last render, not
+from React state. They move with redraws the host never asked for — a re-wrap, a change of width —
+and state holding pixels would be a frame behind every one of them.
 
-Two of the three apply live through `setStaves` / `setBars`. **Ties do not** —
-the renderer has no runtime setter, so toggling ties rebuilds the editor and
-drops the selection. Fine for something set once; check that before putting it
-behind a control anyone would flick repeatedly.
+The range handle grip is a **square** where the playhead's is a circle. The two are often within a
+few pixels of each other, and the shape is what says which one you are about to take hold of. The
+two ends are clamped apart rather than allowed to cross: an inverted range reads as empty everywhere
+downstream, and a reader could not tell that from a bug.
 
-### Inserting and removing frames
+---
 
-The score's Line tab offers *Insert silent frames* and *Remove frames*, and
-these are the only edits that change **how long the piece is**. Everything this
-app sends the backend is addressed by absolute frame index — a cell edit names a
-frame, a merge names a target column — so once frames move, every pending index
-means a different column.
+## 4. What the package decides, and what it does not
 
-There is no backend route for a structural edit yet, so `NotationPage` treats
-one as a **stop**: `onMatrixStructurePatch` drops the pending cell patches,
-disables saving and merging, and says the on-screen piece and the stored matrix
-no longer agree. Reloading is the way out.
+**It decides grouping and engraving.** Beams, stems, accidentals against the key, clefs, ledger
+lines, where a line breaks, how a page re-wraps.
 
-Note the package does *not* hide these buttons when the callback is absent,
-though decision D39 says a host that cannot handle them "simply does not offer
-the gesture". Wiring the callback is not optional here — leaving it off means
-the numbering drifts silently and the next save writes to the wrong frames.
+**It does not decide any note's name.** The figure of every printed note is chosen on the backend
+from a ladder the reader named, and arrives through `printedFigureFor`. That keeps the ladder, the
+proportional comparison (D-11) and the closed vocabulary (D-12) in one place, and it is why renaming
+a note changes a glyph and moves nothing.
 
-## Persistence
+### The one automatic grouping rule with an escape
 
-Two things come out of a session and they are stored separately:
+A beamed run is set **tighter** than the same notes unbeamed (D-33): a beamed onset keeps 35 % of
+the usual space after it, and the empty columns inside a run shrink by the same fraction — but only
+columns nothing else has claimed, so a column carrying the other hand keeps its width.
 
-| What | Where | How |
-|------|-------|-----|
-| The music | The matrix itself | `onMatrixPatch` → `patchesToCellEdits` → `POST /matrix/{uuid}/edit` |
-| Everything else | `grid-notation.json` beside the matrix | `PUT /notation/{id}/grid-state` |
+The cost, stated plainly: the width of a column now depends on the printed figure, and renaming a
+ladder changes printed figures. **So the notes inside a renamed passage shift horizontally.** D-21
+still holds — nothing outside the renamed passage moves, which is the property that matters. What
+does not hold is the stronger "renaming moves nothing at all", which was true before beaming
+existed. `vexflow-v2/tests/ladder-locality.test.ts` pins both halves.
 
-Keeping them apart is what lets the transcription pipeline be re-run without
-losing the reader's markup. The annotation envelope is stored **verbatim**: it
-belongs to the package, is addressed purely by matrix indices, and is documented
-as additive, so a key this app has never heard of must survive a round trip.
+The package cuts a run at a **returning low note**, which catches the common arpeggio. It cannot
+catch the rest, because where a phrase restarts is a reading of the music rather than a property of
+it. That is what `beamBreakAt` is for, and it is applied **last**, after every automatic split
+(D-34).
 
-Note edits are held until asked for rather than written per drag: a pitch change
-is a real edit to the transcription, the same one the Matrix tab makes, and it
-re-derives every granularity below it. A saved version is immutable, so it is
-offered for the working artifact only.
+A break that would strand the first note alone is not an error: that note takes a flag, which is
+what a lone corchea is.
 
-## Merging a splintered chord
+---
 
-When the transcription hears one note of a chord a fraction of a beat early, it
-gets its own column and prints as a stray short note in front of the chord.
+## 5. Key suggestion
 
-The package validates this but **never performs it** (decision D35): the
-correction belongs in the transcription's *seconds*, which the package never
-sees, because a merge written into the grid is thrown away by the next
-re-quantisation. So there are two routes in and both end at
-`POST /notation/{id}/merge-onsets`:
+`suggestKeySignature(music, { fromColumn, toColumn, activeKeySignature })`, measured on the same
+spelling rule the page prints with — so the number reported is the ink actually saved rather than a
+second opinion about it.
 
-- the score's own **Merge onto f*n*** button → `onMergeRequest` → one candidate;
-- the **Merge notes** panel → `planHostMerge` → one plan, possibly per hand.
+**It never applies itself.** A transcription has no key, so everything used to print in C; on one
+real piece that was 242 accidentals that did not need to be there. The suggestion is offered and the
+reader accepts or changes it.
 
-`planHostMerge` is not a duplicate of the package's `planMerge` and is named
-differently to say so. It is a superset: the package rejects a selection
-spanning both hands and returns onsets and a span, while this plans each hand
-independently and carries the **rows**, which is what the endpoint needs to name
-the notes that move. The one rule shared exactly is the refusal to merge across
-an *unselected* onset — that silently reorders the passage, and it is the rule a
-host is most likely to forget.
+---
 
-## The clock
+## 6. Printing
 
-`timeStepSeconds` is the piece's nominal seconds per frame and stays
-authoritative. For a performance whose tempo is not constant the renderer also
-takes `frameTimestamps`, and every conversion it makes then follows that map
-rather than multiplying (decision D32). `readEnvelope` already returns it, and
-`GridScore` passes it through.
+The pages are drawn by the package (`renderScorePages`), which re-wraps the music to the paper
+exactly the way it re-wraps it to a narrower window. Nothing is scaled down to fit: a line that will
+not fit across an A4 page breaks earlier and carries on below.
 
-**Today it changes nothing, and that is worth knowing rather than discovering.**
-The backend's `dense_row_timestamps` generates `i * time_step_seconds` — uniform
-by construction — so the map and the scalar agree exactly. A real tempo map
-would have to come from re-quantising against one, which nothing does yet. The
-wiring is in place for when it does.
+That is what makes **the margin the control**. Narrower margins give every line more room before it
+has to break.
 
-Elsewhere in the app — `playback/matrixNotes.ts`, `playback/useMatrixPlayback.ts`,
-`hooks/usePianoViewData.ts` — frames are still converted to seconds by hand.
-That is fine while the clock is uniform. The day a tempo map exists, those and
-the score will start disagreeing about when a frame happens, and the fix is to
-route them through the renderer's `frameClock` rather than to add a second map.
+The last step — reading the drawn pages off the DOM and writing PDF operators — is this app's, in
+`src/print/`. See [score-pdf.md](score-pdf.md).
+
+---
+
+## 7. Persistence
+
+The reader's decisions go to the backend as `rhythm.json` through `PUT /time/{uuid}/rhythm`, and
+nothing about the drawing is stored. See
+[../backend/rhythm-and-annotations.md](../backend/rhythm-and-annotations.md).
+
+Octave brackets live in the renderer's own state and reach the backend through the same save body
+as everything else. They were the exception until 2026-09-13: `SavedRhythm` had no field for them,
+so they were dropped on save and did not survive a reload. See
+[../backend/rhythm-and-annotations.md](../backend/rhythm-and-annotations.md#ottavas-ottava--null).
+
+There is no `grid-notation.json` and no `/notation/*` route. Those belonged to the VexFlow-era
+editor, where the package owned the markup envelope and the host stored it verbatim. The wall-clock
+model made every annotation a backend model instead, keyed by column.
+
+---
+
+## 8. What went with the old editor
+
+Stated so nobody looks for them: `GridScore`, `ScoreReadingControls`, `NotationPage`,
+`music/gridNotation.ts`, `music/mergeOnsets.ts` and `planHostMerge`, `api/notation.ts`, the
+`/notation/artifacts`, `/{id}/matrix`, `/{id}/grid-state` and `/{id}/merge-onsets` routes, the
+cell-edit patch path, insert-and-remove-frames, and the bar-line and tie reading aids.
+
+**Merging a splintered chord** is gone with them and is worth a sentence, because the problem it
+solved has not disappeared: when the transcription hears one note of a chord a fraction early, it
+gets its own column and prints as a stray short note in front of the chord. The wall-clock answer is
+different — chord grouping now runs on the **raw times before snapping** (D-04), with a fixed 40 ms
+non-chaining window, so the splinter is joined at the source rather than repaired on the grid.
+
+**The frame clock** is gone for the same kind of reason. `frameTimestamps` existed so a renderer
+could follow a non-uniform tempo map. There is no tempo map, and there is no tempo: a column is a
+fixed number of milliseconds and converting one to a moment is multiplication.
+
+---
+
+## 9. Checking the drawing
+
+```bash
+npm run check:render
+```
+
+A notation renderer fails loudly at draw time and **silently at layout time**. A wrong option name
+throws and you see it; a score that draws no noteheads, loses a hand, or stops beaming renders a
+blank-looking page with no error at all. Neither typecheck nor lint can see either one, so
+`scripts/check-render.mjs` draws a real two-hand envelope into jsdom and asserts against the stable
+DOM contract the package documents. Plain `.mjs` on purpose: no build step, no native dependency.
+
+The fixture is a schema 2.0 envelope and the check builds a `GridNotationRenderer` with a
+`printedFigureFor`, mirroring `TimeScoreView`. It crosses the Spanish-to-English figure seam the app
+crosses (`negra` → `quarter`), so a change on either side of that map is caught.
+
+It was broken from P6.9 until 2026-09-13, when its fixture was still 1.x and the package refused it.
+
+---
+
+## 10. Where to look deeper
+
+- `../../vexflow-v2/documentation/` — the package's own client documentation, seven numbered files
+- [components.md](components.md) — where `TimeScoreView` sits in the tree
+- [score-pdf.md](score-pdf.md) — the PDF writer
+- [../backend/time-matrix.md](../backend/time-matrix.md) — the payload it draws

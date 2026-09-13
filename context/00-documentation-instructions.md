@@ -29,7 +29,8 @@ How the AImpromptu (aitu) documentation system works and where to put new materi
 **Service overviews:**
 - `context/backend/` — aitu-backend: parsing, API, notation entry points
 - `context/frontend/` — aitu-frontend: app shell, loaded scores, compose panel, rendering pipeline
-- `context/shared/` — cross-service contract (`notation-spec.md` is the single source for text notation, onset rule, sparse-COO, two-hand, lyrics)
+- `context/music/notation-logic/` — the text-notation contract (`02-notation-spec.md`), which still
+  owns the sparse-COO wire format and the 88-key row order
 
 **Detail files:** `documentation/services/backend/` and `documentation/services/frontend/` mirror the above. Reference material: `documentation/archive/vexflow-reference.md`.
 
@@ -41,7 +42,7 @@ How the AImpromptu (aitu) documentation system works and where to put new materi
 ## Size and duplication
 
 - Keep each `context/<area>/<entity>.md` ≤ ~200 lines; overflow goes to `documentation/`.
-- Do **not** restate the notation contract outside `context/music/notation-logic/02-notation-spec.md.md` — link to it.
+- Do **not** restate the notation contract outside `context/music/notation-logic/02-notation-spec.md` — link to it.
 - Do **not** duplicate platform files (`00–09`) in entity files — link instead.
 
 ## After writing

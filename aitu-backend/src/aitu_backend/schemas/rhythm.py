@@ -160,6 +160,41 @@ class Lyric(BaseModel):
         return self
 
 
+class Ottava(BaseModel):
+    """A stretch written an octave or two away from where it sounds.
+
+    A reading of the page and nothing else: the pitch is untouched, playback is untouched, and
+    removing the bracket prints the same notes back where they were. What it changes is how far
+    from the staff the noteheads are drawn, which is the difference between a passage a player can
+    read and a pile of ledger lines.
+
+    Asked for, never inferred. The page used to suggest a bracket wherever a hand ran far outside
+    its own staff and that was wrong often enough to be noise, so a page nobody has touched carries
+    none.
+
+    Per hand, because the two hands leave their staves independently. Half-open in columns, like
+    every other range in this file, so two brackets that meet do not overlap on one column.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    #: ``8va`` and ``15ma`` are written above the staff, ``8vb`` and ``15mb`` below it.
+    kind: Literal["8va", "8vb", "15ma", "15mb"]
+    hand: PrintedHand
+    from_column: int = Field(..., alias="fromColumn", ge=0)
+    #: Exclusive.
+    to_column: int = Field(..., alias="toColumn", gt=0)
+
+    @model_validator(mode="after")
+    def _check_range(self) -> "Ottava":
+        if self.to_column <= self.from_column:
+            raise ValueError(
+                f"an octave bracket ending at column {self.to_column} does not come after its "
+                f"start column {self.from_column}"
+            )
+        return self
+
+
 class CueRange(BaseModel):
     """A stretch printed smaller than the rest of the page.
 
@@ -288,6 +323,14 @@ class SavedRhythm(BaseModel):
     #: Stretches printed smaller, because the reader offers them rather than asserts them.
     cue_ranges: list[CueRange] = Field(default_factory=list, alias="cueRanges")
 
+    #: Stretches written an octave or two from where they sound.
+    #:
+    #: ``None`` and ``[]`` mean different things here, which is why this one is optional where the
+    #: others are not. A reading saved before brackets were stored has never been asked the
+    #: question, and the page may offer its own answer; an empty list is a reader who was asked and
+    #: said none, and the page must leave it alone.
+    ottavas: list[Ottava] | None = None
+
     #: How large the marks over and under the staff are drawn, as a multiple of their normal size.
     #: One piece can be dense enough that fingering crowds it and another airy enough that the same
     #: numbers are hard to read, and the difference is per piece rather than per app.
@@ -321,4 +364,6 @@ class SavedRhythm(BaseModel):
             parts.append(f"{len(self.lyrics)} lyric line(s)")
         if self.cue_ranges:
             parts.append(f"{len(self.cue_ranges)} cue-size stretch(es)")
+        if self.ottavas:
+            parts.append(f"{len(self.ottavas)} octave bracket(s)")
         return ", ".join(parts) + "."

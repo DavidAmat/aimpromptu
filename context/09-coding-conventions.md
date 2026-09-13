@@ -40,8 +40,9 @@ ignoring E501/E203/W503), **mypy** (pydantic plugin, permissive on missing impor
 | Color scheme | The app is **light, always**. `mode: "light"`, plus `color-scheme: light` in `index.css` and a matching `<meta>` in `index.html`, so a dark OS or browser cannot re-tint it. No `prefers-color-scheme` branch anywhere |
 | Requests | Only through `src/api/` (one module per backend router); no `fetch` in a component |
 | Routes | Only from `src/layout/routes.ts`; no URL literal in a component |
-| Music logic | Isolated under `src/music/` (`types`, `notes`, `matrixToNotation`); `types.ts` mirrors the backend `schemas/` and must stay in step with it |
-| Rendering | VexFlow isolated in `PianoSheet.tsx` |
+| Music logic | Isolated under `src/music/` (`types`, `noteNames`, `renderOverrides`); `types.ts` mirrors the backend `schemas/` and must stay in step with it |
+| Rendering | `@aimpromptu/grid-notation` is reached from **one** file, `components/time/TimeScoreView.tsx`. Nothing else imports it |
+| Figures | The printed figure of a note comes from the backend and is passed through. No component derives a note value from a column count |
 | Timestamps | Format only via `src/audio/time.ts` (`mm:ss.cc`, two decimals; a frame prints its **start** only — `f:N · mm:ss.cc`). Style via `timestampSx` / `FRAME_LABEL_WIDTH` in `src/ui/timestamps.ts`; a timestamp must never wrap. See [frontend/timestamps.md](frontend/timestamps.md) |
 | Effects | Never call `setState` synchronously in an effect body (ESLint errors); derive state during render instead — see `src/hooks/useProgress.ts` |
 | Env vars | Typed in `vite-env.d.ts`; `VITE_*` prefix for client exposure |
@@ -54,7 +55,7 @@ Run `npm run lint` before committing frontend changes.
 | Convention | Detail |
 |------------|--------|
 | Score JSON | camelCase field names on the wire |
-| Notation contract | Document once in `context/music/notation-logic/02-notation-spec.md.md`; link, do not copy |
+| Notation contract | Document once in `context/music/notation-logic/02-notation-spec.md`; link, do not copy |
 | API docs | Backend OpenAPI at `/docs` when server is running |
 
 ## Documentation work
@@ -86,8 +87,8 @@ Root `.claude/` is **gitignored** today (see root `.gitignore`). Local inventory
 
 | Skill topic | When to activate |
 |-------------|------------------|
-| Notation contract | Editing parsing or rendering — point at `context/music/notation-logic/02-notation-spec.md.md` |
-| VexFlow rendering | Changes to `PianoSheet.tsx` or duration/beam logic |
+| The time model | Anything touching columns, figures or the sheet — point at [backend/time-model.md](backend/time-model.md) |
+| Notation rendering | Changes to `TimeScoreView.tsx`, or to `@aimpromptu/grid-notation` in the sibling checkout |
 | uv / FastAPI | Backend dependency or endpoint work |
 
 To version-control agent config, remove `.claude/` from `.gitignore` and commit only non-secret files (`settings.json`, commands, skills).
@@ -95,5 +96,5 @@ To version-control agent config, remove `.claude/` from `.gitignore` and commit 
 ## Where to look deeper
 
 - ESLint config: `aitu-frontend/eslint.config.js`
-- Backend models: [../documentation/services/backend/schemas.md](../documentation/services/backend/schemas.md)
+- Backend models: [../documentation/services/backend/time-matrix.md](../documentation/services/backend/time-matrix.md)
 - Doc placement: [00-documentation-instructions.md](00-documentation-instructions.md)

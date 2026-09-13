@@ -1,9 +1,19 @@
-> Context: [notation-and-parsing.md](../../../context/backend/notation-and-parsing.md) · [notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md.md)
+> Context: [notation-and-parsing.md](../../../context/backend/notation-and-parsing.md) · [notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md)
 
-# Schemas
+# Schemas — the text-notation MVP models
 
-Pydantic models in `aitu-backend/src/aitu_backend/schemas.py`. JSON uses camelCase via
-field aliases; `populate_by_name=True` accepts both forms on input.
+`SparseMatrix`, `MatrixScore` and `SequenceRequest` live in
+`aitu-backend/src/aitu_backend/schemas/score.py`. JSON uses camelCase via field aliases;
+`populate_by_name=True` accepts both forms on input.
+
+> **These are the 1.x models, and they serve `GET /scores` and `POST /sequence` only.** They still
+> run and they are still correct, but no screen calls them: text notation was removed from
+> Upload / Input in P4.2, because a sheet is written from recorded onsets and text notation has
+> none. `tempoBpm` and `timeStepSeconds` below are the clearest sign of which model they belong to.
+>
+> **What the app actually uses is schema 2.0**, in `schemas/time_matrix.py` —
+> see [time-matrix.md](time-matrix.md). The shared sparse-COO shape lives in `schemas/matrix.py`
+> as `SparseCooMatrix` and is used by both.
 
 ## SparseMatrix
 
