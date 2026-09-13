@@ -17,12 +17,12 @@ AImpromptu (aitu) turns piano audio (uploads, mic recordings, YouTube) into clea
 
 ## Read before coding, in this order
 
-1. `context/implementations/plan/checklist.md` — current status of everything. Your task's dependencies should be `[x]`; if a dependency is not done, stop and report the blocker.
+1. `context/implementations/01-epics-master-plan/plan/checklist.md` — current status of everything. Your task's dependencies should be `[x]`; if a dependency is not done, stop and report the blocker.
 2. Your epic's `epic-<shortname>-index.md`, then your task file `task-N.M.K-<shortname>.md` (subtasks are its header sections) and any docs it says to read first.
 3. `context/00-project-complete-overview.md` — project orientation.
 4. `context/02-tech-stack.md` — technology decisions; `context/09-coding-conventions.md` — style rules.
 5. `context/04-local-development.md` — how to run locally (backend: `uv sync && make serve` on :8765; frontend: `npm install && npm run dev`). Reference it if anything fails.
-6. `context/implementations/progress/` — what previous workers did and what changed along the way.
+6. `context/implementations/01-epics-master-plan/progress/` — what previous workers did and what changed along the way.
 
 Domain rules live in `context/music/notation-logic/` (matrix logic + appendices, notation spec, editing logic) and `context/music/piano_svg/`. When your task touches them, read them fully — the appendices contain the exact rules and worked examples your tests must reproduce.
 
@@ -41,11 +41,11 @@ Most features are UI-driven and need manual verification. When your task has a m
 
 ## Changing the plan
 
-Requirements evolve; limitations force different paths. You are allowed to modify `context/implementations/plan/` files — including your epic's index — when a change of requirements or approach is agreed, under one hard rule: NEVER change the requirements specified in the plan autonomously. Only apply plan changes the human supervisor has explicitly agreed to. When you do, update the affected task files, the epic index if it is a high-level change, and note the change in your progress report.
+Requirements evolve; limitations force different paths. You are allowed to modify `context/implementations/01-epics-master-plan/plan/` files — including your epic's index — when a change of requirements or approach is agreed, under one hard rule: NEVER change the requirements specified in the plan autonomously. Only apply plan changes the human supervisor has explicitly agreed to. When you do, update the affected task files, the epic index if it is a high-level change, and note the change in your progress report.
 
 ## When you finish
 
-1. Write a progress report at `context/implementations/progress/epic-NN/task-N.M.K-progress.md` (create folders as needed) covering:
+1. Write a progress report at `context/implementations/01-epics-master-plan/progress/epic-NN/task-N.M.K-progress.md` (create folders as needed) covering:
    - summary of what was implemented
    - main errors found and how you solved them
    - any architectural / software / feature-level change made along the way (deviations from the task file, and why)

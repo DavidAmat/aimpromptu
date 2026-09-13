@@ -5,8 +5,8 @@ closed. This is the trail: what the change was, how it ran, what it cost, and wh
 behind.
 
 The plan's own documents stay where they are, in
-[`../time-based-concept/`](../time-based-concept/README.md). The
-one to read is [`CLOSURE.md`](../time-based-concept/CLOSURE.md).
+[`../time-based-concept/`](../../03-time-based-concept/README.md). The
+one to read is [`CLOSURE.md`](../../03-time-based-concept/CLOSURE.md).
 
 ## What changed, in one paragraph
 
@@ -51,7 +51,7 @@ copy of `aitu-backend` over another session's completed work. Twenty files were 
 had no copy anywhere and were rebuilt from a progress report. The refactor had been sitting
 uncommitted for five days, which is the whole reason a stale copy could destroy instead of
 conflict. Recovery is written up in
-[`../time-based-concept/progress/2026-08-08-overwrite-and-recovery.md`](../time-based-concept/progress/2026-08-08-overwrite-and-recovery.md);
+[`../time-based-concept/progress/2026-08-08-overwrite-and-recovery.md`](../../03-time-based-concept/progress/2026-08-08-overwrite-and-recovery.md);
 the twelve reconstructed files are named there, and that report is the authority over any comment
 inside them.
 

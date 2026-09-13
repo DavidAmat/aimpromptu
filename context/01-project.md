@@ -53,12 +53,12 @@ Historical folder names: `piano-matrix-generation`, `piano-matrix-notation`, wor
 ## Planned scope (implementation plan)
 
 Beyond the text-notation MVP, the project is planned end-to-end in
-[implementations/plan/](implementations/plan/README.md): audio ingestion (upload / mic recording /
+[implementations/plan/](implementations/01-epics-master-plan/plan/README.md): audio ingestion (upload / mic recording /
 YouTube), automatic piano transcription into the 0/1/-1 matrix format with granularity collapsing
 and cleaning, a Playground (matrix grid, piano-roll and notes-falling visualizations, VexFlow
 notation with engraving rules), versioned artifact storage with promotion to a performer Library
 with playlists, and passage re-recording/editing. See
-[implementations/plan/checklist.md](implementations/plan/checklist.md) for status.
+[implementations/plan/checklist.md](implementations/01-epics-master-plan/plan/checklist.md) for status.
 
 ## POC boundaries (out of scope for now)
 

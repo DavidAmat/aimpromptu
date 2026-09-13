@@ -7,9 +7,9 @@
 > Editing now happens on the drawn sheet, not on the matrix: a reader renames figures, breaks
 > beams, corrects hands, adds fingering, marks octaves and hides notes, and all of it is stored as
 > decisions *about* the recording rather than as changes to it. See
-> [`context/implementations/time-based-concept/user-reviews.md`](../../implementations/time-based-concept/user-reviews.md)
+> [`context/implementations/03-time-based-concept/user-reviews.md`](../../implementations/03-time-based-concept/user-reviews.md)
 > for what the controls are, and
-> [`CLOSURE.md`](../../implementations/time-based-concept/CLOSURE.md) for why the old ones went.
+> [`CLOSURE.md`](../../implementations/03-time-based-concept/CLOSURE.md) for why the old ones went.
 >
 > Kept as the record of what re-recording a range was meant to do, in case that feature comes back.
 

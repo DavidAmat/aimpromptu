@@ -13,7 +13,7 @@ Read first: `project-features.md` "Matrix tab" section.
 - Task 7.1.1 matrix grid: key columns with EN + rotated ES names, time-frame rows with
   `f:N · start` labels for full tracks and `f:N · local ↗ original` for segments (superseding the
   original `[start - end]` form — see
-  [frontend/timestamps.md](../../../frontend/timestamps.md)), onset/sustain circles with
+  [frontend/timestamps.md](../../../../frontend/timestamps.md)), onset/sustain circles with
   connecting edges, frozen header, vertical column separators, downward-scroll time axis.
 
 ## Story 7.2 — Steps and export

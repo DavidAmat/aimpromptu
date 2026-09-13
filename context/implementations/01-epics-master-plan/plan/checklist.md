@@ -19,8 +19,8 @@ Single status lookup for the whole plan. Status codes: `[x]` completed, `[p]` in
 > - **The live backlog is Story 9.7 and Epics 10–14**, all rewritten for the wall clock on
 >   2026-08-12. The task files describe the current requirement; git holds the old text.
 > - **Everything the refactor shipped** is in
->   [`../time-based-concept/checklist.md`](../time-based-concept/checklist.md), and why it closed is
->   in [`../time-based-concept/CLOSURE.md`](../time-based-concept/CLOSURE.md).
+>   [`../time-based-concept/checklist.md`](../../03-time-based-concept/checklist.md), and why it closed is
+>   in [`../time-based-concept/CLOSURE.md`](../../03-time-based-concept/CLOSURE.md).
 
 # [x] Epic 1 — Skeleton
 

@@ -39,4 +39,4 @@ Now the way that I want you to structure the organization of the task to be done
 
 Remember that here we will not use any functionality of this project, only we will accept the piano notation (either the dense json or the sparse json) as input (it must be the SAME input this way in this project  I can download the given audio in YouTube and create a piano matrix in this project and then export the JSON and upload it to this new POC repo )
 
-Please create this system prompt in context/implementations/plan/research-01-hand-inference
+Please create this system prompt in context/implementations/01-epics-master-plan/plan/research-01-hand-inference

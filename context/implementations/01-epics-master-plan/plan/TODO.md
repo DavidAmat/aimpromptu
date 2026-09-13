@@ -1,2 +1,6 @@
+> **Loose notes, written before the wall-clock refactor (2026-08-08).** The
+> `/playground/notation` page they mention was deleted by the refactor; the sheet now lives on
+> the Playground **Rhythm** tab. Check each item against the current app before acting on it.
+
 - In  http://localhost:5173/playground/notation in Key signatures when we select a given signature for a given measure, the normal piano classical rendering what they do is to the previous signature we put all the "natural signs" of the notes that were altered from the previous signature, and we put again the treble or bass clef (depending on whether it's left or right hand) and we put the new signature. Once this new signature is not valid and we come back to the main one or another, we put the "natural signs" to invalidate the previous signature and we put the new one, this is how all music notation works. 
 - Music Notation page http://localhost:5173/playground/notation should reproduce original song - we should see a cursor of the current progress, we should be able to select a given frame, a given range of time or frames, etc... similar to what we do in the piano matrix UI view.

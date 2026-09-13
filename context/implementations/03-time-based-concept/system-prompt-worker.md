@@ -45,18 +45,18 @@ code** — most of it implements the model being replaced.
 
 All paths relative to `/Volumes/DevSSD/Documents/projects/music/aimpromptu/`.
 
-1. **`context/implementations/time-based-concept/checklist.md`** — current status. Your task's
+1. **`context/implementations/03-time-based-concept/checklist.md`** — current status. Your task's
    dependencies must be `[x]`. If one is not, **stop and report the blocker**; do not do it yourself.
-2. **`context/implementations/time-based-concept/decisions.md`** — D-01 … D-31. These are frozen.
+2. **`context/implementations/03-time-based-concept/decisions.md`** — D-01 … D-31. These are frozen.
    Read all of them once, then re-read the ones your task cites.
-3. **`context/implementations/time-based-concept/plan.md`** — your phase, your task row, and the
+3. **`context/implementations/03-time-based-concept/plan.md`** — your phase, your task row, and the
    "Things to watch while executing" section at the bottom.
-4. **`context/implementations/time-based-concept/contract.md`** — the backend ↔ renderer interface.
+4. **`context/implementations/03-time-based-concept/contract.md`** — the backend ↔ renderer interface.
    Read this even if your task looks like it is entirely inside one repo; it is what stops the two
    halves diverging.
-5. **`context/implementations/time-based-concept/PRD.md`** — the reasoning and the six success
+5. **`context/implementations/03-time-based-concept/PRD.md`** — the reasoning and the six success
    criteria. Read §7 (known costs) before you "fix" something that looks wrong on purpose.
-6. **`context/implementations/time-based-concept/progress/`** — every report written so far, plus
+6. **`context/implementations/03-time-based-concept/progress/`** — every report written so far, plus
    `issues.md` if it exists. This is where earlier workers recorded what turned out to be false.
 
 Supporting material, read when your task touches it:
@@ -87,7 +87,7 @@ should end. A `GN` task that starts editing backend Python is usually a `GN` tas
 ### Level 2 — always required: report back to `aimpromptu`
 
 Whatever repo you worked in, you **come back** to
-`aimpromptu/context/implementations/time-based-concept/` to tick the checklist and write your
+`aimpromptu/context/implementations/03-time-based-concept/` to tick the checklist and write your
 progress report. This is not a boundary crossing; it is how this refactor is tracked. Every task
 does it, including every `GN` task.
 
@@ -127,7 +127,7 @@ allowed under Level 3 — creating a dependency on it is not, ever.
 **Decisions are frozen.** Every task cites `D-nn` ids. You may not reinterpret one, soften one, or
 work around one. If implementation shows a decision is wrong or impossible:
 
-1. Append to `context/implementations/time-based-concept/progress/issues.md`: the decision id, what
+1. Append to `context/implementations/03-time-based-concept/progress/issues.md`: the decision id, what
    you found, and what you believe the alternative is.
 2. Mark your task `[b]` in the checklist with the blocker.
 3. **Stop.** Wait for the human supervisor. Do not pick an alternative yourself.
@@ -146,7 +146,7 @@ coin toss in absolute terms and a clean 25 % vs 50 % win for corchea in proporti
 blocker. Do not start other tasks, do not "while I'm here" adjacent files.
 
 **Do not change the plan autonomously.** You may edit files under
-`context/implementations/time-based-concept/` only to (a) tick the checklist, (b) write your progress
+`context/implementations/03-time-based-concept/` only to (a) tick the checklist, (b) write your progress
 report, (c) apply a change the human supervisor has explicitly agreed to. Record any agreed change
 in your report.
 
@@ -187,7 +187,7 @@ tqdm/ProgressReporter/SSE convention. Use the palette aliases, never hardcoded h
 ## 7. When you finish
 
 1. **Write the report** at
-   `context/implementations/time-based-concept/progress/P<phase>.<task>-<slug>.md`, covering:
+   `context/implementations/03-time-based-concept/progress/P<phase>.<task>-<slug>.md`, covering:
    - task id and the `D-nn` decisions it implements
    - files added, changed, deleted — paths, not prose
    - small decisions you took that the plan left open, and why
@@ -199,7 +199,7 @@ tqdm/ProgressReporter/SSE convention. Use the palette aliases, never hardcoded h
      Level 3): which repo, which files, why staying in yours was not enough
    - if the task has a manual check, precise instructions for the human: which page to open, what to
      click, and what a correct result looks like
-2. **Tick the checklist** at `context/implementations/time-based-concept/checklist.md` — your task to
+2. **Tick the checklist** at `context/implementations/03-time-based-concept/checklist.md` — your task to
    `[x]`, `[b]` with the blocker, or `[c]` with the reason. Mark the phase header `[x]` only when
    every task under it is done. **Do this from `aimpromptu` even if you worked in `vexflow-v2`.**
 3. **Do not tick a success criterion.** Those are ticked only in `P8.1`.

@@ -5,8 +5,8 @@ We have a set of disorganized feature requirements for this project in `project-
 There will be a smart LLM that will take all these Features and create an implementation plan without implementing anything, simply organizing the features list in a better, well explained and technical manner such that the executors (other LLMs) can run and start implementing.
 
 The goal is to end up with:
-- an implementation technical plan in `context/implementations/plan`: this is just a folder, you should create folders to organize here the files. This is done by the LLM that will organize the features and create a smart plan.
-- a progress documentation of whenever a worker LLM starts working on a given Epic/Story/Task `context/implementations/progress`.
+- an implementation technical plan in `context/implementations/01-epics-master-plan/plan`: this is just a folder, you should create folders to organize here the files. This is done by the LLM that will organize the features and create a smart plan.
+- a progress documentation of whenever a worker LLM starts working on a given Epic/Story/Task `context/implementations/01-epics-master-plan/progress`.
 
 # The Organizer
 
@@ -36,9 +36,9 @@ Instructions here:
 Apart from the markdown files and the folder structure within this plan/ folder we will also get as an output two files:
 
 ## Checklist
-File: `context/implementations/plan/checklist.md`
+File: `context/implementations/01-epics-master-plan/plan/checklist.md`
 
-Create a context/implementations/plan/checklist.md file to detail all the tree of tasks. In 2-3 sentences next to each epic describe what each epic is and the paths of the indexes of each epic (do not repeat all the detail that is inside the `epic-<shortname>-index.md` files, simply create this index file as a super quick look-up with 2-3 sentence only per each epic). Header 1 will be for epics. Header 2 will be for stories. Within a story we will have a checkbox of the **status** of this story, only ticked if all the tasks and subtasks are completed. Finally put as bullet points the tasks (simply put in bold the task short name and a 1 sentence description of it) and put in fron a checkbox to be ticked once completed:
+Create a context/implementations/01-epics-master-plan/plan/checklist.md file to detail all the tree of tasks. In 2-3 sentences next to each epic describe what each epic is and the paths of the indexes of each epic (do not repeat all the detail that is inside the `epic-<shortname>-index.md` files, simply create this index file as a super quick look-up with 2-3 sentence only per each epic). Header 1 will be for epics. Header 2 will be for stories. Within a story we will have a checkbox of the **status** of this story, only ticked if all the tasks and subtasks are completed. Finally put as bullet points the tasks (simply put in bold the task short name and a 1 sentence description of it) and put in fron a checkbox to be ticked once completed:
 
 Nomenclature of **status** (letters within the brackets):
 - [x]: completed
@@ -63,15 +63,15 @@ Nomenclature of **status** (letters within the brackets):
 Put numbers to the epics, stories and tasks (i.e task 1.1.1 belongs to story 1.1 that belongs to epic 1)
 
 ## Sytem prompt for the workers
-File: `context/implementations/plan/system-prompt-workers.md`
+File: `context/implementations/01-epics-master-plan/plan/system-prompt-workers.md`
 
-Once the organizer finishes the organization of all tasks we will dispatch the work to another LLM that will start working on the first feature. Depending on the granularity and complexity of the tasks we will start by one or another. We recommend doing a summary of what are we doing, the context of the project, how we have structured our organization (mention the index file so that the LLM can navigate to all the plan easily) and create a placeholder there for the task to work on. Once we instantiate a worker LLM to take a given task, we will tell which Epic > Story > Task to work on so that it will have the correct set of instructions, it will know were to look at the `context/implementations/plan` folder and will be able to look for the `context/implementations/progress` to see so far what has been implemented.
+Once the organizer finishes the organization of all tasks we will dispatch the work to another LLM that will start working on the first feature. Depending on the granularity and complexity of the tasks we will start by one or another. We recommend doing a summary of what are we doing, the context of the project, how we have structured our organization (mention the index file so that the LLM can navigate to all the plan easily) and create a placeholder there for the task to work on. Once we instantiate a worker LLM to take a given task, we will tell which Epic > Story > Task to work on so that it will have the correct set of instructions, it will know were to look at the `context/implementations/01-epics-master-plan/plan` folder and will be able to look for the `context/implementations/01-epics-master-plan/progress` to see so far what has been implemented.
 
-**Progress**:  We will need to instruct the worker to always fulfill at the end of this implementation the summary of what he has done and any main errors found, how they solve it, any architectural / software / feature-level change that was done during the process. This happens a lot, requirements change or due to some limitations we tend to opt for a different path or different requirements, we should be flexible.  The worker is also allowed to modify the plan `context/implementations/plan/` and also update the `epic-<shortname>-index.md` if that change of requirements affect a high level decision too. The system prompt should contain all the tools to both implement, get what it needs to be done, and have the autonomy to change plans (only if the human supervisor has agreed to do so of course, do NEVER change autonomously the requirements specified in the plan).
+**Progress**:  We will need to instruct the worker to always fulfill at the end of this implementation the summary of what he has done and any main errors found, how they solve it, any architectural / software / feature-level change that was done during the process. This happens a lot, requirements change or due to some limitations we tend to opt for a different path or different requirements, we should be flexible.  The worker is also allowed to modify the plan `context/implementations/01-epics-master-plan/plan/` and also update the `epic-<shortname>-index.md` if that change of requirements affect a high level decision too. The system prompt should contain all the tools to both implement, get what it needs to be done, and have the autonomy to change plans (only if the human supervisor has agreed to do so of course, do NEVER change autonomously the requirements specified in the plan).
 
 **Documentation folder**: as stated in `context/00-documentation-instructions.md` we have a two-split documentation folders. We will only use by now the `context` folder because we are still implementing. Once everything is mature we will document it (make it the very very last epic of all the plan) in the `documentation` folder. Meanwhile, all the workers should look at the `progress` folder to understand at which point we are (i.e the checklist as the main file to be looked up). 
 
-**Checklist update**: make sure the workers update the checklist `context/implementations/plan/checklist.md` after finishing (once starting, put that is in progress). This way by only looking at checklist I can know the current status point of this project implementation. 
+**Checklist update**: make sure the workers update the checklist `context/implementations/01-epics-master-plan/plan/checklist.md` after finishing (once starting, put that is in progress). This way by only looking at checklist I can know the current status point of this project implementation. 
 
 **Human in the loop**: most of the implementations will be UI driven. The user can record some audio and see how it renders. It is a very good practice that after a feature is completed, a given step of manual trial is done. It will be great if it instruct the human what to play in the piano (try always the very simplest MVP to test the functionality works well) and then it can test it. This is why it is important to have as a first implementation the recording capabilities because once we start working on rendering features, we will have to trial and error with the human in the loop a lot.
 

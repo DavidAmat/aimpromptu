@@ -23,7 +23,7 @@ A whole phase means its tasks in order, one at a time, ticking and reporting eac
 
 ## Read first, in this order
 
-All under `context/implementations/time-based-concept/`.
+All under `context/implementations/03-time-based-concept/`.
 
 1. **`checklist.md`** — where everything stands, and what your task depends on. Its header says what
    is left and what is only waiting on a migration. If a dependency is not `[x]`, stop and say so.

@@ -7,9 +7,9 @@ and `vexflow-v2`.
 
 **Read this before picking up the tempo work.** The half-built piece is at the bottom.
 
-Overview: [context/music/transcription-quality.md](../../music/transcription-quality.md).
-Detail: [documentation/services/backend/transcription-pipeline.md](../../../documentation/services/backend/transcription-pipeline.md).
-Runbook: [documentation/issues/rhythm-figures-and-tempo.md](../../../documentation/issues/rhythm-figures-and-tempo.md).
+Overview: [context/music/transcription-quality.md](../../../music/transcription-quality.md).
+Detail: [documentation/services/backend/transcription-pipeline.md](../../../../documentation/services/backend/transcription-pipeline.md).
+Runbook: [documentation/issues/rhythm-figures-and-tempo.md](../../../../documentation/issues/rhythm-figures-and-tempo.md).
 
 ---
 

@@ -14,9 +14,9 @@ still lines up with the page and every editorial mark after the edited window ke
 `../wall-clock-rewrite.md` §3 explains why this is worth enforcing.
 
 Read first: [`../wall-clock-rewrite.md`](../wall-clock-rewrite.md), then
-[`../../time-based-concept/contract.md`](../../time-based-concept/contract.md) §8 (what a piece
+[`../../time-based-concept/contract.md`](../../../03-time-based-concept/contract.md) §8 (what a piece
 stores) and D-02, D-03, D-04, D-05, D-14 in
-[`../../time-based-concept/decisions.md`](../../time-based-concept/decisions.md).
+[`../../time-based-concept/decisions.md`](../../../03-time-based-concept/decisions.md).
 `context/music/notation-logic/03-editing-logic.md` is **obsolete** and banner-marked; do not use it
 as the spec for this epic any more.
 

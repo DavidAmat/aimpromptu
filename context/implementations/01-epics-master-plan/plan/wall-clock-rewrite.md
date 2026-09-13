@@ -7,10 +7,10 @@ rules every remaining task file now obeys. Each rewritten task file links here i
 it.
 
 Model documents, all still valid: the reasoning in
-[`../time-based-concept/PRD.md`](../time-based-concept/PRD.md), the frozen decisions in
-[`../time-based-concept/decisions.md`](../time-based-concept/decisions.md) (D-01 … D-34), the data
-shapes in [`../time-based-concept/contract.md`](../time-based-concept/contract.md), and what
-shipped in [`../time-based-concept/CLOSURE.md`](../time-based-concept/CLOSURE.md).
+[`../time-based-concept/PRD.md`](../../03-time-based-concept/PRD.md), the frozen decisions in
+[`../time-based-concept/decisions.md`](../../03-time-based-concept/decisions.md) (D-01 … D-34), the data
+shapes in [`../time-based-concept/contract.md`](../../03-time-based-concept/contract.md), and what
+shipped in [`../time-based-concept/CLOSURE.md`](../../03-time-based-concept/CLOSURE.md).
 
 ---
 

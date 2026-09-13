@@ -29,7 +29,7 @@ of these do not exist. Write the reports, then correct those two documents.
 
 ## Subtask 14.1.1.4 — Closing the journal
 
-A short retrospective over `context/implementations/progress/`. The checklists stay as the
+A short retrospective over `context/implementations/01-epics-master-plan/progress/`. The checklists stay as the
 historical record of what shipped and what was cancelled.
 
 ## Acceptance

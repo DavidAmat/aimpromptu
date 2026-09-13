@@ -463,7 +463,7 @@ Two implementation notes worth deciding early:
 ## 5. How to plan the work
 
 Organise into **epics → stories → tasks**, mirroring
-`aimpromptu/context/implementations/plan/`. Keep a single `checklist.md` as the status lookup for
+`aimpromptu/context/implementations/01-epics-master-plan/plan/`. Keep a single `checklist.md` as the status lookup for
 the whole plan, with one line per task and the status codes `[ ]` not started, `[p]` in progress,
 `[x]` done, `[b]` blocked (state the blocker), `[c]` cancelled (state why). Give each epic an
 index file, and write a short progress note per story as you finish it.

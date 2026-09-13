@@ -1,4 +1,4 @@
-> Context: [context/implementations/time-based-concept/README.md](../../../context/implementations/time-based-concept/README.md)
+> Context: [context/implementations/03-time-based-concept/README.md](../../../context/implementations/03-time-based-concept/README.md)
 
 # 1. The time matrix: schema 2.0 field reference
 
@@ -7,10 +7,10 @@ so that the field names have one home while the backend phases and the renderer 
 implemented in parallel. Each section is filled in by the phase named in it.
 
 The reasoning behind the change is in
-[`PRD.md`](../../../context/implementations/time-based-concept/PRD.md), the numbered decisions are
-in [`decisions.md`](../../../context/implementations/time-based-concept/decisions.md), and the
+[`PRD.md`](../../../context/implementations/03-time-based-concept/PRD.md), the numbered decisions are
+in [`decisions.md`](../../../context/implementations/03-time-based-concept/decisions.md), and the
 interface this file documents is frozen in
-[`contract.md`](../../../context/implementations/time-based-concept/contract.md).
+[`contract.md`](../../../context/implementations/03-time-based-concept/contract.md).
 
 ## 1.1 What changed and why
 
@@ -76,7 +76,7 @@ proportion. `ms_by_figure` always carries all nine, so the renderer never re-der
 
 Field-by-field detail is filled in by P3.4 and P3.7, when the endpoint that returns them exists. For
 now the shapes are in `schemas/time_matrix.py` and in
-[`contract.md`](../../../context/implementations/time-based-concept/contract.md) §4 and §5.
+[`contract.md`](../../../context/implementations/03-time-based-concept/contract.md) §4 and §5.
 
 ## 3. Endpoints
 
@@ -92,6 +92,6 @@ No stored artifact is ever silently reinterpreted.
 
 ## 5. Where to look deeper
 
-- [`context/implementations/time-based-concept/`](../../../context/implementations/time-based-concept/README.md) — the plan, the decisions and the progress trail
+- [`context/implementations/03-time-based-concept/`](../../../context/implementations/03-time-based-concept/README.md) — the plan, the decisions and the progress trail
 - [`schemas.md`](schemas.md) — the 1.x models this schema replaces
 - [`transcription-pipeline.md`](transcription-pipeline.md) — the pipeline as it stands before Phase 4 rewires it

@@ -12,11 +12,11 @@
 > make sense.
 >
 > **What is true now:**
-> [`context/implementations/time-based-concept/CLOSURE.md`](../../implementations/time-based-concept/CLOSURE.md)
+> [`context/implementations/03-time-based-concept/CLOSURE.md`](../../implementations/03-time-based-concept/CLOSURE.md)
 > for the whole picture,
-> [`contract.md`](../../implementations/time-based-concept/contract.md) for the current data
+> [`contract.md`](../../implementations/03-time-based-concept/contract.md) for the current data
 > contract, and
-> [`decisions.md`](../../implementations/time-based-concept/decisions.md) (D-01 … D-34) for why each
+> [`decisions.md`](../../implementations/03-time-based-concept/decisions.md) (D-01 … D-34) for why each
 > rule is what it is.
 
 Here is how the documentation defines the matrix, what 0/1 means in practice, and how column timing is computed from BPM and the other required input.
