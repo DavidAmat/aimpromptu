@@ -1,0 +1,319 @@
+[12:18:36] ======================================================================
+[12:18:36] seeding from library.json — 31 lines
+[12:18:36]   not downloading 'Mr Blue Sky' — No URL on the source line, which says 'we already have it'. Kept here so this file stays a complete record of the list; not downloaded. The existing copy and its annotation work are in the pre-wipe backup.
+[12:18:36] phase 1 — downloading 30 pieces, one at a time
+[12:18:36]    1/30  The One That Got Away — Katy Perry
+[12:18:40]       ok — 92255337  231s  in 3s
+[12:18:40]     pausing 95s (YouTube throttles bulk downloads)
+[12:20:14]    2/30  1973 — James Blunt
+[12:20:18]       ok — a1c30047  266s  in 3s
+[12:20:18]     pausing 103s (YouTube throttles bulk downloads)
+[12:22:01]    3/30  Drivers License — Olivia Rodrigo
+[12:22:05]       ok — 3c8d4cfa  242s  in 5s
+[12:22:05]     pausing 96s (YouTube throttles bulk downloads)
+[12:23:41]    4/30  Grace Kelly — Mika
+[12:23:45]       ok — 56543911  189s  in 4s
+[12:23:45]     pausing 106s (YouTube throttles bulk downloads)
+[12:25:31]    5/30  Moonlight Shadow — Mike Oldfield
+[12:25:34]       ok — c0edc9b0  226s  in 4s
+[12:25:34]     pausing 62s (YouTube throttles bulk downloads)
+[12:26:36]    6/30  Stay the Night — James Blunt
+[12:26:40]       ok — aa07c1c0  209s  in 4s
+[12:26:40]     pausing 69s (YouTube throttles bulk downloads)
+[12:27:49]    7/30  Bonfire Heart — James Blunt
+[12:27:52]       ok — bef90052  225s  in 4s
+[12:27:52]     pausing 76s (YouTube throttles bulk downloads)
+[12:29:08]    8/30  99 Red Balloons — Nena
+[12:29:12]       ok — b2db46eb  206s  in 4s
+[12:29:12]     pausing 69s (YouTube throttles bulk downloads)
+[12:30:21]    9/30  7 Years — Lukas Graham
+[12:30:25]       ok — 1a16a836  248s  in 4s
+[12:30:25]     pausing 93s (YouTube throttles bulk downloads)
+[12:31:58]   10/30  2002 — Anne-Marie
+[12:32:02]       ok — f73116dd  203s  in 4s
+[12:32:02]     pausing 62s (YouTube throttles bulk downloads)
+[12:33:04]   11/30  The Other Side — Jason Derulo
+[12:33:07]       ok — 96768e80  192s  in 3s
+[12:33:07]     pausing 72s (YouTube throttles bulk downloads)
+[12:34:20]   12/30  Shut Up and Dance — Walk the Moon
+[12:34:24]       ok — 68e277fe  214s  in 4s
+[12:34:24]     pausing 50s (YouTube throttles bulk downloads)
+[12:35:13]   13/30  Superestrella — Aitana
+[12:35:17]       ok — a585f9eb  189s  in 4s
+[12:35:17]     pausing 109s (YouTube throttles bulk downloads)
+[12:37:06]   14/30  What Makes You Beautiful
+[12:37:10]       ok — e3d7c376  215s  in 4s
+[12:37:10]     pausing 77s (YouTube throttles bulk downloads)
+[12:38:27]   15/30  Can't Stop the Feeling — Justin Timberlake
+[12:38:32]       ok — f285e4b7  256s  in 5s
+[12:38:32]     pausing 62s (YouTube throttles bulk downloads)
+[12:39:34]   16/30  Airplanes — B.o.B
+[12:39:38]       ok — b064f815  207s  in 4s
+[12:39:38]     pausing 111s (YouTube throttles bulk downloads)
+[12:41:29]   17/30  Die Young — Kesha
+[12:41:33]       ok — e578f3c0  209s  in 4s
+[12:41:33]     pausing 87s (YouTube throttles bulk downloads)
+[12:43:00]   18/30  Hips Don't Lie — Shakira
+[12:43:04]       ok — 4cb9cb38  188s  in 4s
+[12:43:04]     pausing 46s (YouTube throttles bulk downloads)
+[12:43:50]   19/30  Wild Ones — Sia
+[12:43:53]       ok — 19187d10  131s  in 3s
+[12:43:53]     pausing 105s (YouTube throttles bulk downloads)
+[12:45:38]   20/30  Titanium — David Guetta
+[12:45:42]       ok — f3680cb8  249s  in 4s
+[12:45:42]     pausing 85s (YouTube throttles bulk downloads)
+[12:47:07]   21/30  Poker Face — Lady Gaga
+[12:47:11]       ok — 2ed0f379  230s  in 4s
+[12:47:11]     pausing 89s (YouTube throttles bulk downloads)
+[12:48:40]   22/30  La Tortura — Shakira
+[12:48:43]       ok — 0815f602  207s  in 3s
+[12:48:43]     pausing 81s (YouTube throttles bulk downloads)
+[12:50:04]   23/30  Fate of Ophelia — Taylor Swift
+[12:50:08]       ok — 3633a0c3  241s  in 4s
+[12:50:08]     pausing 116s (YouTube throttles bulk downloads)
+[12:52:05]   24/30  The Winner Takes It All
+[12:52:10]       ok — fb0b0989  356s  in 5s
+[12:52:10]     pausing 87s (YouTube throttles bulk downloads)
+[12:53:36]   25/30  Birds of a Feather
+[12:53:40]       ok — b80e6f5a  225s  in 4s
+[12:53:40]     pausing 92s (YouTube throttles bulk downloads)
+[12:55:12]   26/30  I Knew You Were Trouble
+[12:55:15]       ok — 6eb7af4e  172s  in 3s
+[12:55:15]     pausing 71s (YouTube throttles bulk downloads)
+[12:56:26]   27/30  Raise Your Glass
+[12:56:30]       ok — 12f777af  208s  in 4s
+[12:56:30]     pausing 81s (YouTube throttles bulk downloads)
+[12:57:51]   28/30  Party in the USA
+[12:57:53]       FAILED — DownloadFailed: ERROR: unable to download video data: HTTP Error 403: Forbidden
+[12:57:53]     pausing 105s (YouTube throttles bulk downloads)
+[12:59:38]   29/30  Club Can't Handle Me — David Guetta
+[12:59:43]       ok — d64acd29  236s  in 5s
+[12:59:43]     pausing 107s (YouTube throttles bulk downloads)
+[13:01:29]   30/30  Stronger — Kelly Clarkson
+[13:01:33]       ok — dff5097c  230s  in 4s
+[13:01:33] phase 2 — transcribing 29 pieces (engine bytedance, frameMs 40.0)
+[13:01:33]    1/29  The One That Got Away — Katy Perry
+[13:01:47]       stage: transcribe
+[13:02:45]       stage: events
+[13:02:45]       stage: two-hands
+[13:02:46]       ok — 1618 notes in 73s
+[13:02:56]    2/29  1973 — James Blunt
+[13:02:56]       stage: transcribe
+[13:04:02]       stage: events
+[13:04:02]       stage: two-hands
+[13:04:03]       ok — 2730 notes in 67s
+[13:04:13]    3/29  Drivers License — Olivia Rodrigo
+[13:04:13]       stage: transcribe
+[13:05:14]       stage: events
+[13:05:14]       stage: two-hands
+[13:05:14]       ok — 1733 notes in 61s
+[13:05:24]    4/29  Grace Kelly — Mika
+[13:05:25]       stage: transcribe
+[13:06:10]       stage: events
+[13:06:10]       stage: two-hands
+[13:06:10]       ok — 2144 notes in 46s
+[13:06:20]    5/29  Moonlight Shadow — Mike Oldfield
+[13:06:21]       stage: transcribe
+[13:07:15]       stage: events
+[13:07:15]       stage: two-hands
+[13:07:16]       ok — 2384 notes in 56s
+[13:07:26]    6/29  Stay the Night — James Blunt
+[13:07:27]       stage: transcribe
+[13:08:17]       stage: events
+[13:08:17]       stage: two-hands
+[13:08:18]       ok — 1470 notes in 52s
+[13:08:28]    7/29  Bonfire Heart — James Blunt
+[13:08:28]       stage: transcribe
+[13:09:24]       stage: events
+[13:09:24]       stage: two-hands
+[13:09:25]       ok — 1677 notes in 57s
+[13:09:35]    8/29  99 Red Balloons — Nena
+[13:09:35]       stage: transcribe
+[13:10:26]       stage: events
+[13:10:26]       stage: two-hands
+[13:10:27]       ok — 2599 notes in 52s
+[13:10:37]    9/29  7 Years — Lukas Graham
+[13:10:38]       stage: transcribe
+[13:11:39]       stage: events
+[13:11:39]       stage: two-hands
+[13:11:39]       ok — 1458 notes in 62s
+[13:11:49]   10/29  2002 — Anne-Marie
+[13:11:50]       stage: transcribe
+[13:12:42]       stage: events
+[13:12:42]       stage: two-hands
+[13:12:42]       ok — 1615 notes in 53s
+[13:12:52]   11/29  The Other Side — Jason Derulo
+[13:12:53]       stage: transcribe
+[13:13:40]       stage: events
+[13:13:40]       stage: two-hands
+[13:13:41]       ok — 2019 notes in 49s
+[13:13:51]   12/29  Shut Up and Dance — Walk the Moon
+[13:13:51]       stage: transcribe
+[13:14:44]       stage: events
+[13:14:44]       stage: two-hands
+[13:14:44]       ok — 1992 notes in 53s
+[13:14:54]   13/29  Superestrella — Aitana
+[13:14:55]       stage: transcribe
+[13:15:40]       stage: events
+[13:15:40]       stage: two-hands
+[13:15:41]       ok — 1343 notes in 47s
+[13:15:51]   14/29  What Makes You Beautiful
+[13:15:51]       stage: transcribe
+[13:16:44]       stage: events
+[13:16:44]       stage: two-hands
+[13:16:44]       ok — 2161 notes in 53s
+[13:16:54]   15/29  Can't Stop the Feeling — Justin Timberlake
+[13:16:55]       stage: transcribe
+[13:17:57]       stage: events
+[13:17:57]       stage: two-hands
+[13:17:58]       ok — 2675 notes in 64s
+[13:18:08]   16/29  Airplanes — B.o.B
+[13:18:09]       stage: transcribe
+[13:18:59]       stage: events
+[13:18:59]       stage: two-hands
+[13:19:00]       ok — 2056 notes in 51s
+[13:19:10]   17/29  Die Young — Kesha
+[13:19:10]       stage: transcribe
+[13:20:00]       stage: events
+[13:20:00]       stage: two-hands
+[13:20:01]       ok — 2485 notes in 51s
+[13:20:11]   18/29  Hips Don't Lie — Shakira
+[13:20:12]       stage: transcribe
+[13:20:57]       stage: events
+[13:20:57]       stage: two-hands
+[13:20:57]       ok — 1614 notes in 47s
+[13:21:08]   19/29  Wild Ones — Sia
+[13:21:08]       stage: transcribe
+[13:21:41]       stage: events
+[13:21:41]       stage: two-hands
+[13:21:42]       ok — 1645 notes in 34s
+[13:21:52]   20/29  Titanium — David Guetta
+[13:21:52]       stage: transcribe
+[13:22:52]       stage: events
+[13:22:52]       stage: two-hands
+[13:22:53]       ok — 2221 notes in 61s
+[13:23:03]   21/29  Poker Face — Lady Gaga
+[13:23:03]       stage: transcribe
+[13:23:58]       stage: events
+[13:23:58]       stage: two-hands
+[13:23:58]       ok — 1985 notes in 56s
+[13:24:08]   22/29  La Tortura — Shakira
+[13:24:09]       stage: transcribe
+[13:24:59]       stage: events
+[13:24:59]       stage: two-hands
+[13:25:00]       ok — 2154 notes in 51s
+[13:25:10]   23/29  Fate of Ophelia — Taylor Swift
+[13:25:10]       stage: transcribe
+[13:26:10]       stage: events
+[13:26:10]       stage: two-hands
+[13:26:10]       ok — 2026 notes in 61s
+[13:26:20]   24/29  The Winner Takes It All
+[13:26:21]       stage: transcribe
+[13:27:48]       stage: events
+[13:27:48]       stage: two-hands
+[13:27:49]       ok — 2692 notes in 89s
+[13:27:59]   25/29  Birds of a Feather
+[13:28:00]       stage: transcribe
+[13:28:54]       stage: events
+[13:28:54]       stage: two-hands
+[13:28:55]       ok — 1449 notes in 56s
+[13:29:05]   26/29  I Knew You Were Trouble
+[13:29:05]       stage: transcribe
+[13:29:48]       stage: events
+[13:29:48]       stage: two-hands
+[13:29:49]       ok — 1713 notes in 44s
+[13:29:59]   27/29  Raise Your Glass
+[13:29:59]       stage: transcribe
+[13:30:50]       stage: events
+[13:30:50]       stage: two-hands
+[13:30:50]       ok — 1814 notes in 51s
+[13:31:00]   28/29  Club Can't Handle Me — David Guetta
+[13:31:01]       stage: transcribe
+[13:31:59]       stage: events
+[13:31:59]       stage: two-hands
+[13:32:00]       ok — 3512 notes in 60s
+[13:32:10]   29/29  Stronger — Kelly Clarkson
+[13:32:11]       stage: transcribe
+[13:33:08]       stage: events
+[13:33:08]       stage: two-hands
+[13:33:08]       ok — 2076 notes in 58s
+[13:33:08] ----------------------------------------------------------------------
+[13:33:08] downloaded     29
+[13:33:08] transcribed    29
+[13:33:08] failed         1 download(s), 0 transcription(s)
+[13:33:08]   - Party in the USA: DownloadFailed: ERROR: unable to download video data: HTTP Error 403: Forbidden
+[13:33:08] done. re-run this file to retry the failures; everything that landed is skipped.
+[13:33:14] ======================================================================
+[13:33:14] seeding from library.json — 31 lines
+[13:33:14]   not downloading 'Mr Blue Sky' — No URL on the source line, which says 'we already have it'. Kept here so this file stays a complete record of the list; not downloaded. The existing copy and its annotation work are in the pre-wipe backup.
+[13:33:14] phase 1 — downloading 30 pieces, one at a time
+[13:33:14]    1/30  The One That Got Away — Katy Perry — already stored, skipping
+[13:33:14]    2/30  1973 — James Blunt — already stored, skipping
+[13:33:14]    3/30  Drivers License — Olivia Rodrigo — already stored, skipping
+[13:33:14]    4/30  Grace Kelly — Mika — already stored, skipping
+[13:33:14]    5/30  Moonlight Shadow — Mike Oldfield — already stored, skipping
+[13:33:14]    6/30  Stay the Night — James Blunt — already stored, skipping
+[13:33:14]    7/30  Bonfire Heart — James Blunt — already stored, skipping
+[13:33:14]    8/30  99 Red Balloons — Nena — already stored, skipping
+[13:33:14]    9/30  7 Years — Lukas Graham — already stored, skipping
+[13:33:14]   10/30  2002 — Anne-Marie — already stored, skipping
+[13:33:14]   11/30  The Other Side — Jason Derulo — already stored, skipping
+[13:33:14]   12/30  Shut Up and Dance — Walk the Moon — already stored, skipping
+[13:33:14]   13/30  Superestrella — Aitana — already stored, skipping
+[13:33:14]   14/30  What Makes You Beautiful — already stored, skipping
+[13:33:14]   15/30  Can't Stop the Feeling — Justin Timberlake — already stored, skipping
+[13:33:14]   16/30  Airplanes — B.o.B — already stored, skipping
+[13:33:14]   17/30  Die Young — Kesha — already stored, skipping
+[13:33:14]   18/30  Hips Don't Lie — Shakira — already stored, skipping
+[13:33:14]   19/30  Wild Ones — Sia — already stored, skipping
+[13:33:14]   20/30  Titanium — David Guetta — already stored, skipping
+[13:33:14]   21/30  Poker Face — Lady Gaga — already stored, skipping
+[13:33:14]   22/30  La Tortura — Shakira — already stored, skipping
+[13:33:14]   23/30  Fate of Ophelia — Taylor Swift — already stored, skipping
+[13:33:14]   24/30  The Winner Takes It All — already stored, skipping
+[13:33:14]   25/30  Birds of a Feather — already stored, skipping
+[13:33:14]   26/30  I Knew You Were Trouble — already stored, skipping
+[13:33:14]   27/30  Raise Your Glass — already stored, skipping
+[13:33:14]   28/30  Party in the USA — already stored, skipping
+[13:33:14]   29/30  Club Can't Handle Me — David Guetta — already stored, skipping
+[13:33:14]   30/30  Stronger — Kelly Clarkson — already stored, skipping
+[13:33:14] phase 2 — transcribing 30 pieces (engine bytedance, frameMs 40.0)
+[13:33:14]    1/30  The One That Got Away — Katy Perry — events.json already present, skipping
+[13:33:14]    2/30  1973 — James Blunt — events.json already present, skipping
+[13:33:14]    3/30  Drivers License — Olivia Rodrigo — events.json already present, skipping
+[13:33:14]    4/30  Grace Kelly — Mika — events.json already present, skipping
+[13:33:14]    5/30  Moonlight Shadow — Mike Oldfield — events.json already present, skipping
+[13:33:14]    6/30  Stay the Night — James Blunt — events.json already present, skipping
+[13:33:14]    7/30  Bonfire Heart — James Blunt — events.json already present, skipping
+[13:33:14]    8/30  99 Red Balloons — Nena — events.json already present, skipping
+[13:33:14]    9/30  7 Years — Lukas Graham — events.json already present, skipping
+[13:33:14]   10/30  2002 — Anne-Marie — events.json already present, skipping
+[13:33:14]   11/30  The Other Side — Jason Derulo — events.json already present, skipping
+[13:33:14]   12/30  Shut Up and Dance — Walk the Moon — events.json already present, skipping
+[13:33:14]   13/30  Superestrella — Aitana — events.json already present, skipping
+[13:33:14]   14/30  What Makes You Beautiful — events.json already present, skipping
+[13:33:14]   15/30  Can't Stop the Feeling — Justin Timberlake — events.json already present, skipping
+[13:33:14]   16/30  Airplanes — B.o.B — events.json already present, skipping
+[13:33:14]   17/30  Die Young — Kesha — events.json already present, skipping
+[13:33:14]   18/30  Hips Don't Lie — Shakira — events.json already present, skipping
+[13:33:14]   19/30  Wild Ones — Sia — events.json already present, skipping
+[13:33:14]   20/30  Titanium — David Guetta — events.json already present, skipping
+[13:33:14]   21/30  Poker Face — Lady Gaga — events.json already present, skipping
+[13:33:14]   22/30  La Tortura — Shakira — events.json already present, skipping
+[13:33:14]   23/30  Fate of Ophelia — Taylor Swift — events.json already present, skipping
+[13:33:14]   24/30  The Winner Takes It All — events.json already present, skipping
+[13:33:14]   25/30  Birds of a Feather — events.json already present, skipping
+[13:33:14]   26/30  I Knew You Were Trouble — events.json already present, skipping
+[13:33:14]   27/30  Raise Your Glass — events.json already present, skipping
+[13:33:14]   28/30  Party in the USA
+[13:33:17]       stage: transcribe
+[13:34:05]       stage: events
+[13:34:05]       stage: two-hands
+[13:34:06]       ok — 1738 notes in 51s
+[13:34:16]   29/30  Club Can't Handle Me — David Guetta — events.json already present, skipping
+[13:34:16]   30/30  Stronger — Kelly Clarkson — events.json already present, skipping
+[13:34:16] ----------------------------------------------------------------------
+[13:34:16] downloaded     0
+[13:34:16] transcribed    1
+[13:34:16] failed         0 download(s), 0 transcription(s)
+[13:34:16] done. re-run this file to retry the failures; everything that landed is skipped.
