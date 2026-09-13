@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from aitu_backend.editing import compose
 from aitu_backend.editing.splice import (
     first_onset_seconds,
     last_release_seconds,
@@ -117,6 +118,42 @@ def passage_score(
         duration_seconds=session.window_seconds,
         trim_trailing_silence=False,
     )
+
+
+def composed_passage_score(
+    take: list[NoteEvent],
+    session: SessionRecord,
+    factor: float,
+    *,
+    anchor_figure: FigureName,
+    anchor_ms: float,
+    title: str | None,
+) -> tuple[TimeScorePayload, float, list[NoteEvent]]:
+    """Draw the passage on its own, as it will sound once placed (Epic 13).
+
+    Nothing of the piece is drawn with it. While composing there is no window to fit into and
+    therefore nothing to compare against: what the reader is deciding is whether this passage is
+    the one they meant to play, and the piece it is going into answers a different question, on the
+    sheet, after it is accepted.
+
+    Returns the payload, the passage's length in seconds, and the notes at their offsets from the
+    start of the passage.
+    """
+    prepared = prepared_take(take, session)
+    length, arriving = compose.passage_bounds(
+        prepared, at_seconds=0.0, factor=factor, frame_ms=session.frame_ms
+    )
+    drawn = max(length, session.frame_ms / 1000.0)
+    hands = impose_granularity_and_split(arriving, drawn, frame_ms=session.frame_ms, title=title)
+    ladder = build_ladder(anchor_figure, anchor_ms)
+    payload = to_score_payload(
+        hands,
+        ladder,
+        title=title,
+        duration_seconds=drawn,
+        trim_trailing_silence=False,
+    )
+    return payload, length, arriving
 
 
 def take_peaks(

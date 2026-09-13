@@ -1,15 +1,18 @@
 /**
- * `/playground/input` — the three ways a piece enters the Playground.
+ * `/playground/input` — the ways a piece enters the Playground.
  *
- * All three are a recording: upload one, record one, or pick one from the audio
- * library. They share the range selector and the transcription settings below,
- * and they all end the same way, with the working artifact populated and the
- * recorded notes stored.
+ * Three of them are a recording: upload one, record one, or pick one from the audio library. They
+ * share the range selector and the transcription settings below, and they all end the same way,
+ * with the working artifact populated and the recorded notes stored.
  *
- * A recording is now the only entry point, because the page is drawn from the
- * onsets the engine heard. The two modes that produced a matrix directly, text
- * notation and matrix JSON, had no recording behind them and therefore nothing
- * to draw; they were removed in P4.2.
+ * A recording is the only way to bring an existing piece in, because the page is drawn from the
+ * onsets the engine heard. The two modes that produced a matrix directly, text notation and matrix
+ * JSON, had no recording behind them and therefore nothing to draw; they were removed in P4.2.
+ *
+ * **Compose** is the fourth, and the only one with no recording behind it — because it has no
+ * music behind it either. It makes an empty piece, which is then built passage by passage on the
+ * Piano Sheet tab (Epic 13). Everything on the right of this page is about a recording, so that
+ * mode takes the page on its own.
  */
 
 import { useEffect, useState } from "react";
@@ -29,6 +32,7 @@ import { formatTime } from "../../audio/time";
 import AudioLibraryList from "../../components/audio/AudioLibraryList";
 import AudioRecorder from "../../components/audio/AudioRecorder";
 import AudioUpload from "../../components/audio/AudioUpload";
+import ComposeNewPiece from "../../components/input/ComposeNewPiece";
 import WaveformRangeSelector, {
   type AudioRange,
 } from "../../components/audio/WaveformRangeSelector";
@@ -36,7 +40,7 @@ import TranscriptionSettings from "../../components/input/TranscriptionSettings"
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 import { PageContainer, SectionCard } from "../../ui";
 
-type Source = "upload" | "record" | "library";
+type Source = "upload" | "record" | "library" | "compose";
 
 //: Every way a piece enters the Playground, and they are all a recording.
 //:
@@ -49,6 +53,8 @@ const SOURCES: { value: Source; label: string; audio: boolean }[] = [
   { value: "upload", label: "Upload audio", audio: true },
   { value: "record", label: "Record", audio: true },
   { value: "library", label: "Audio library", audio: true },
+  // The only one with no recording behind it: it starts a piece that has none yet (Epic 13).
+  { value: "compose", label: "Compose", audio: false },
 ];
 
 export function InputPage() {
@@ -80,6 +86,9 @@ export function InputPage() {
       audioUuid: audio.uuid,
       artifactId: undefined,
       label: audio.alias,
+      // A composed piece was given a column length when it was created, because it had no
+      // recording to infer one from. Every other piece keeps whatever the reader is using.
+      ...(audio.frameMs ? { frameMs: audio.frameMs } : {}),
     });
   };
 
@@ -150,7 +159,7 @@ export function InputPage() {
   return (
     <PageContainer
       title="Upload / Input"
-      subtitle="Where a piece enters the Playground: upload a recording, record one, or pick one from the audio library."
+      subtitle="Where a piece enters the Playground: upload a recording, record one, pick one from the audio library — or start an empty piece and compose it."
       wide
     >
       <Tabs
@@ -171,6 +180,21 @@ export function InputPage() {
         </Alert>
       ) : null}
 
+      {source === "compose" ? (
+        <SectionCard
+          title="Compose"
+          description="Start with nothing and build the piece one passage at a time."
+        >
+          <ComposeNewPiece
+            onCreated={(piece) => {
+              audioArrived(piece);
+              setNote(
+                `Created "${piece.alias}". Open the Piano Sheet tab and play its first passage.`,
+              );
+            }}
+          />
+        </SectionCard>
+      ) : (
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 5 }}>
           {source === "upload" ? (
@@ -283,6 +307,7 @@ export function InputPage() {
             </SectionCard>
         </Grid>
       </Grid>
+      )}
     </PageContainer>
   );
 }

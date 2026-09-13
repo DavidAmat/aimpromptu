@@ -81,6 +81,8 @@ export type {
   DroppedMarks,
   EditPreview,
   EditSession,
+  MovedMarks,
+  Placement,
   SlowdownChoice,
   StartEditBody,
 } from "./editing";

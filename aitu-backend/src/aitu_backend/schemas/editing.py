@@ -1,4 +1,10 @@
-"""Wire shapes for Epic 11 range editing: a staged session and its preview."""
+"""Wire shapes for range editing (Epic 11) and composing live (Epic 13).
+
+One session model serves both. A session that replaces a marked stretch is given the window at
+the start and may never change the piece's length; a session that appends or inserts is given a
+moment instead, and its window is the passage itself — it is not known until the take has been
+played and transcribed, and it is what makes the piece longer.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +16,10 @@ from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.schemas.time_matrix import FigureName, TimeScorePayload
 
 SlowdownChoice = Literal[1, 2, 4]
+
+#: Where an accepted take goes. ``replace`` is Epic 11 and preserves the piece's length;
+#: the other two are Epic 13 and are the only operations in the product allowed to change it.
+Placement = Literal["replace", "append", "insert"]
 
 
 class EditWindow(BaseModel):
@@ -43,19 +53,39 @@ class DroppedMarks(BaseModel):
         return self.figure_overrides + self.beam_breaks + self.hidden_notes + self.fingerings
 
 
-class StartEditRequest(BaseModel):
-    """Open a disposable session for one window.
+class MovedMarks(BaseModel):
+    """Marks an insertion pushed later, and by how many columns.
 
-    Either pair is enough. Columns are what the reader clicked; seconds are what
-    the splice uses. The other pair is computed once and frozen.
+    Said out loud rather than left for the reader to notice, because a fingering that has silently
+    moved looks exactly like a fingering that has silently stayed.
     """
 
     model_config = ConfigDict(populate_by_name=True)
 
+    total: int = 0
+    #: How many columns everything at or after the insertion point moved by.
+    frames: int = 0
+
+
+class StartEditRequest(BaseModel):
+    """Open a disposable session.
+
+    For ``replace``, either pair of window bounds is enough: columns are what the reader clicked,
+    seconds are what the splice uses, and the other pair is computed once and frozen.
+
+    For ``append`` nothing is needed but ``gapSeconds`` — the silence to leave after the last note.
+    For ``insert``, one moment, as a column or as a timestamp; the passage opens there.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    placement: Placement = "replace"
     start_frame: int | None = Field(None, alias="startFrame", ge=0)
     end_frame: int | None = Field(None, alias="endFrame", gt=0)
     start_seconds: float | None = Field(None, alias="startSeconds", ge=0)
     end_seconds: float | None = Field(None, alias="endSeconds", gt=0)
+    #: Append only: how much silence to leave after the last note. Ignored on an empty piece.
+    gap_seconds: float = Field(1.0, alias="gapSeconds", ge=0, le=60)
     frame_ms: float = Field(DEFAULT_FRAME_MS, alias="frameMs", gt=0)
     slowdown: SlowdownChoice | None = Field(default=1)
     splice_audio: bool = Field(True, alias="spliceAudio")
@@ -77,6 +107,10 @@ class PatchEditRequest(BaseModel):
     #: Range on the untrimmed take, chosen in the review dialog before transcribing.
     take_start_seconds: float | None = Field(None, alias="takeStartSeconds", ge=0)
     take_end_seconds: float | None = Field(None, alias="takeEndSeconds", gt=0)
+    #: Append only: move the passage nearer to or further from the last note.
+    gap_seconds: float | None = Field(None, alias="gapSeconds", ge=0, le=60)
+    #: Insert only: move the moment the passage opens at.
+    at_seconds: float | None = Field(None, alias="atSeconds", ge=0)
 
 
 class EditSessionOut(BaseModel):
@@ -86,6 +120,9 @@ class EditSessionOut(BaseModel):
 
     session_uuid: str = Field(..., alias="sessionUuid")
     audio_uuid: str = Field(..., alias="audioUuid")
+    placement: Placement = "replace"
+    #: Append only: the silence asked for after the last note.
+    gap_seconds: float | None = Field(None, alias="gapSeconds")
     start_frame: int = Field(..., alias="startFrame")
     end_frame: int = Field(..., alias="endFrame")
     start_seconds: float = Field(..., alias="startSeconds")
@@ -111,12 +148,18 @@ class ConfirmationOut(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
+    placement: Placement = "replace"
     notes_removed: int = Field(..., alias="notesRemoved")
     notes_arriving: int = Field(..., alias="notesArriving")
     dropped_marks: DroppedMarks = Field(..., alias="droppedMarks")
+    #: Composing only: what an insertion pushes later. Zero for append and for replace.
+    moved_marks: MovedMarks = Field(default_factory=MovedMarks, alias="movedMarks")
+    notes_moved: int = Field(0, alias="notesMoved")
     splice_audio: bool = Field(..., alias="spliceAudio")
     length_unchanged: bool = Field(True, alias="lengthUnchanged")
     window_seconds: float = Field(..., alias="windowSeconds")
+    #: What the piece will be after this is accepted. Equal to the current length for a replace.
+    duration_seconds: float = Field(0.0, alias="durationSeconds")
     next_version: int = Field(..., alias="nextVersion")
 
 
@@ -165,9 +208,22 @@ class AcceptOut(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     version: int
+    placement: Placement = "replace"
     duration_seconds: float = Field(..., alias="durationSeconds")
     notes_removed: int = Field(..., alias="notesRemoved")
     notes_arriving: int = Field(..., alias="notesArriving")
     dropped_marks: DroppedMarks = Field(..., alias="droppedMarks")
+    moved_marks: MovedMarks = Field(default_factory=MovedMarks, alias="movedMarks")
+    notes_moved: int = Field(0, alias="notesMoved")
     audio_spliced: bool = Field(..., alias="audioSpliced")
     audio_mismatch: bool = Field(..., alias="audioMismatch")
+
+
+class CreatePieceRequest(BaseModel):
+    """Start a piece with nothing in it (Subtask 13.1.1.1)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str = Field(..., min_length=1, max_length=200)
+    #: The column length to read it at. A view (D-01), changeable later like any other view.
+    frame_ms: float = Field(DEFAULT_FRAME_MS, alias="frameMs", gt=0)
