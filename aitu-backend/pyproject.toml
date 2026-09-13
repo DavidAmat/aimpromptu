@@ -19,7 +19,9 @@ dependencies = [
     "scipy>=1.17.1",
     "tqdm>=4.67.0",
     "python-multipart>=0.0.20",
-    "yt-dlp>=2026.7.4",
+    # 2026.8.19 is a hard floor, not a preference: every earlier build picks a
+    # YouTube player client that now answers 403, so downloads fail outright.
+    "yt-dlp>=2026.8.19",
 ]
 
 [project.optional-dependencies]

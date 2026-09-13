@@ -1,0 +1,241 @@
+{
+  "_comment": [
+    "The record of what the audio library is supposed to contain, parsed by hand from",
+    "01-starting-library.md. The source lines are handwritten and inconsistent — the artist",
+    "sits before the URL on some lines, is glued to the title without a separator on others",
+    "('Grace Kelly Mika-'), and is absent on five — so each entry keeps its raw `sourceLine`",
+    "and the parse is recorded beside it rather than derived from a delimiter.",
+    "",
+    "`artist: null` means the source line named no artist. It is left null on purpose: filling",
+    "one in would be this file inventing a fact the list does not contain.",
+    "",
+    "`alias` is what the piece is called in the app's Audio library.",
+    "`skip` marks a line that is deliberately not downloaded, with the reason."
+  ],
+  "parsedFrom": "library/01-starting-library.md",
+  "parsedAt": "2026-09-13",
+  "lineCount": 31,
+  "downloadCount": 30,
+  "pieces": [
+    {
+      "title": "The One That Got Away",
+      "artist": "Katy Perry",
+      "alias": "The One That Got Away — Katy Perry",
+      "url": "https://www.youtube.com/watch?v=vezSM0djiBc",
+      "sourceLine": "the one that got away - katy perry https://www.youtube.com/watch?v=vezSM0djiBc"
+    },
+    {
+      "title": "1973",
+      "artist": "James Blunt",
+      "alias": "1973 — James Blunt",
+      "url": "https://www.youtube.com/watch?v=a41xd-HB49M",
+      "sourceLine": "1973 - James blunt https://www.youtube.com/watch?v=a41xd-HB49M"
+    },
+    {
+      "title": "Drivers License",
+      "artist": "Olivia Rodrigo",
+      "alias": "Drivers License — Olivia Rodrigo",
+      "url": "https://www.youtube.com/watch?v=ZcSADd0P45Y",
+      "sourceLine": "Drivers license - Olivia rodrigo - https://www.youtube.com/watch?v=ZcSADd0P45Y"
+    },
+    {
+      "title": "Grace Kelly",
+      "artist": "Mika",
+      "alias": "Grace Kelly — Mika",
+      "url": "https://www.youtube.com/watch?v=HbkBxbuZqxc",
+      "sourceLine": "Grace Kelly Mika- https://www.youtube.com/watch?v=HbkBxbuZqxc"
+    },
+    {
+      "title": "Moonlight Shadow",
+      "artist": "Mike Oldfield",
+      "alias": "Moonlight Shadow — Mike Oldfield",
+      "url": "https://www.youtube.com/watch?v=DzLWxsu4x-A",
+      "sourceLine": "Moonlight Shadow Mike Oldfield - https://www.youtube.com/watch?v=DzLWxsu4x-A"
+    },
+    {
+      "title": "Mr Blue Sky",
+      "artist": "ELO",
+      "alias": "Mr Blue Sky — ELO",
+      "url": null,
+      "skip": "No URL on the source line, which says 'we already have it'. Kept here so this file stays a complete record of the list; not downloaded. The existing copy and its annotation work are in the pre-wipe backup.",
+      "sourceLine": "mr blue sky - ELO (we already have it )"
+    },
+    {
+      "title": "Stay the Night",
+      "artist": "James Blunt",
+      "alias": "Stay the Night — James Blunt",
+      "url": "https://www.youtube.com/watch?v=qObFh7lBp3c",
+      "sourceLine": "Stay the Night James Blunt- https://www.youtube.com/watch?v=qObFh7lBp3c"
+    },
+    {
+      "title": "Bonfire Heart",
+      "artist": "James Blunt",
+      "alias": "Bonfire Heart — James Blunt",
+      "url": "https://www.youtube.com/watch?v=-dbQIpcasT0",
+      "sourceLine": "Bonfire Heart James Blunt - https://www.youtube.com/watch?v=-dbQIpcasT0"
+    },
+    {
+      "title": "99 Red Balloons",
+      "artist": "Nena",
+      "alias": "99 Red Balloons — Nena",
+      "url": "https://www.youtube.com/watch?v=wMemWRlw4l8",
+      "sourceLine": "99 red ballons - Nena - https://www.youtube.com/watch?v=wMemWRlw4l8",
+      "note": "Source spells it 'ballons'."
+    },
+    {
+      "title": "7 Years",
+      "artist": "Lukas Graham",
+      "alias": "7 Years — Lukas Graham",
+      "url": "https://www.youtube.com/watch?v=noNzNyRl2mM",
+      "sourceLine": "7 years Lukas Graham - https://www.youtube.com/watch?v=noNzNyRl2mM"
+    },
+    {
+      "title": "2002",
+      "artist": "Anne-Marie",
+      "alias": "2002 — Anne-Marie",
+      "url": "https://www.youtube.com/watch?v=CEfbgpiKueI",
+      "sourceLine": "2002 - Anne Marie - https://www.youtube.com/watch?v=CEfbgpiKueI"
+    },
+    {
+      "title": "The Other Side",
+      "artist": "Jason Derulo",
+      "alias": "The Other Side — Jason Derulo",
+      "url": "https://www.youtube.com/watch?v=LvnIhyRUjKA",
+      "sourceLine": "The Other Side - Json Derulo - https://www.youtube.com/watch?v=LvnIhyRUjKA",
+      "note": "Source spells it 'Json Derulo'. This URL was already in the store before the wipe; re-downloaded by decision."
+    },
+    {
+      "title": "Shut Up and Dance",
+      "artist": "Walk the Moon",
+      "alias": "Shut Up and Dance — Walk the Moon",
+      "url": "https://www.youtube.com/watch?v=Zil8XOMgBQU",
+      "sourceLine": "Shut Up and Dance - Walk the Moon https://www.youtube.com/watch?v=Zil8XOMgBQU"
+    },
+    {
+      "title": "Superestrella",
+      "artist": "Aitana",
+      "alias": "Superestrella — Aitana",
+      "url": "https://www.youtube.com/watch?v=8Ii99DfOUd0",
+      "sourceLine": "Superestrella - Aitana https://www.youtube.com/watch?v=8Ii99DfOUd0"
+    },
+    {
+      "title": "What Makes You Beautiful",
+      "artist": null,
+      "alias": "What Makes You Beautiful",
+      "url": "https://www.youtube.com/watch?v=xlOlknO1lvw",
+      "sourceLine": "What Makes You Beautiful - https://www.youtube.com/watch?v=xlOlknO1lvw"
+    },
+    {
+      "title": "Can't Stop the Feeling",
+      "artist": "Justin Timberlake",
+      "alias": "Can't Stop the Feeling — Justin Timberlake",
+      "url": "https://www.youtube.com/watch?v=5YCnfRt_L0c",
+      "sourceLine": "Can’t Stop the Feeling - Justin Timberlake - https://www.youtube.com/watch?v=5YCnfRt_L0c"
+    },
+    {
+      "title": "Airplanes",
+      "artist": "B.o.B",
+      "alias": "Airplanes — B.o.B",
+      "url": "https://www.youtube.com/watch?v=awMn4UjGIek",
+      "sourceLine": "Airplanes BoB - https://www.youtube.com/watch?v=awMn4UjGIek"
+    },
+    {
+      "title": "Die Young",
+      "artist": "Kesha",
+      "alias": "Die Young — Kesha",
+      "url": "https://www.youtube.com/watch?v=A37_exx8jfE",
+      "sourceLine": "Die Young Kesha - https://www.youtube.com/watch?v=A37_exx8jfE"
+    },
+    {
+      "title": "Hips Don't Lie",
+      "artist": "Shakira",
+      "alias": "Hips Don't Lie — Shakira",
+      "url": "https://www.youtube.com/watch?v=eJppAWibhC4",
+      "sourceLine": "Hips Don’t Lie Shakira - https://www.youtube.com/watch?v=eJppAWibhC4"
+    },
+    {
+      "title": "Wild Ones",
+      "artist": "Sia",
+      "alias": "Wild Ones — Sia",
+      "url": "https://www.youtube.com/watch?v=nXGfCFyh-Nc",
+      "sourceLine": "Wild Ones - Sia - https://www.youtube.com/watch?v=nXGfCFyh-Nc"
+    },
+    {
+      "title": "Titanium",
+      "artist": "David Guetta",
+      "alias": "Titanium — David Guetta",
+      "url": "https://www.youtube.com/watch?v=x_DXYtZK6BU",
+      "sourceLine": "Titanium David Guetta- https://www.youtube.com/watch?v=x_DXYtZK6BU"
+    },
+    {
+      "title": "Poker Face",
+      "artist": "Lady Gaga",
+      "alias": "Poker Face — Lady Gaga",
+      "url": "https://www.youtube.com/watch?v=vzruF6202OE",
+      "sourceLine": "Poker Face Lady Gaga- https://www.youtube.com/watch?v=vzruF6202OE"
+    },
+    {
+      "title": "La Tortura",
+      "artist": "Shakira",
+      "alias": "La Tortura — Shakira",
+      "url": "https://www.youtube.com/watch?v=Hh9IUfUfwNs",
+      "sourceLine": "La Tortura Shakira- https://www.youtube.com/watch?v=Hh9IUfUfwNs"
+    },
+    {
+      "title": "Fate of Ophelia",
+      "artist": "Taylor Swift",
+      "alias": "Fate of Ophelia — Taylor Swift",
+      "url": "https://www.youtube.com/watch?v=XmHkP6uakuo",
+      "sourceLine": "Fate of Ophelia Taylor Swift- https://www.youtube.com/watch?v=XmHkP6uakuo"
+    },
+    {
+      "title": "The Winner Takes It All",
+      "artist": null,
+      "alias": "The Winner Takes It All",
+      "url": "https://www.youtube.com/watch?v=GVbCrWTpB80",
+      "sourceLine": "The Winner Takes it All - https://www.youtube.com/watch?v=GVbCrWTpB80"
+    },
+    {
+      "title": "Birds of a Feather",
+      "artist": null,
+      "alias": "Birds of a Feather",
+      "url": "https://www.youtube.com/watch?v=Pmw0Bgw72OA",
+      "sourceLine": "Birds of a Feather - https://www.youtube.com/watch?v=Pmw0Bgw72OA"
+    },
+    {
+      "title": "I Knew You Were Trouble",
+      "artist": null,
+      "alias": "I Knew You Were Trouble",
+      "url": "https://www.youtube.com/watch?v=Bifp0TXzefk",
+      "sourceLine": "I knew you were trouble - https://www.youtube.com/watch?v=Bifp0TXzefk"
+    },
+    {
+      "title": "Raise Your Glass",
+      "artist": null,
+      "alias": "Raise Your Glass",
+      "url": "https://www.youtube.com/watch?v=uOjPtJCrKqU",
+      "sourceLine": "Raise your Glass - https://www.youtube.com/watch?v=uOjPtJCrKqU"
+    },
+    {
+      "title": "Party in the USA",
+      "artist": null,
+      "alias": "Party in the USA",
+      "url": "https://www.youtube.com/watch?v=seXmOeFi5Is",
+      "sourceLine": "Party in the USA - https://www.youtube.com/watch?v=seXmOeFi5Is"
+    },
+    {
+      "title": "Club Can't Handle Me",
+      "artist": "David Guetta",
+      "alias": "Club Can't Handle Me — David Guetta",
+      "url": "https://www.youtube.com/watch?v=nCoSkFVp-cc",
+      "sourceLine": "Club Can’t Handle me David Guetta - https://www.youtube.com/watch?v=nCoSkFVp-cc"
+    },
+    {
+      "title": "Stronger",
+      "artist": "Kelly Clarkson",
+      "alias": "Stronger — Kelly Clarkson",
+      "url": "https://www.youtube.com/watch?v=VAC2dFjNuEU",
+      "sourceLine": "Stronger - Kelly Clarkson - https://www.youtube.com/watch?v=VAC2dFjNuEU"
+    }
+  ]
+}

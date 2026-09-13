@@ -1,0 +1,400 @@
+{
+  "startedAt": "2026-09-13T12:18:36.548350+00:00",
+  "downloads": {
+    "https://www.youtube.com/watch?v=vezSM0djiBc": {
+      "alias": "The One That Got Away — Katy Perry",
+      "status": "skipped",
+      "uuid": "92255337-9895-40a7-aa12-3b9cc81916ec",
+      "durationSeconds": 230.81,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=a41xd-HB49M": {
+      "alias": "1973 — James Blunt",
+      "status": "skipped",
+      "uuid": "a1c30047-ece3-42b3-be6f-a6429431b16a",
+      "durationSeconds": 265.9,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=ZcSADd0P45Y": {
+      "alias": "Drivers License — Olivia Rodrigo",
+      "status": "skipped",
+      "uuid": "3c8d4cfa-6888-4fce-8e48-23ba778570c1",
+      "durationSeconds": 242.34,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=HbkBxbuZqxc": {
+      "alias": "Grace Kelly — Mika",
+      "status": "skipped",
+      "uuid": "56543911-f14e-4936-92e4-ed1bdd278c54",
+      "durationSeconds": 188.91,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=DzLWxsu4x-A": {
+      "alias": "Moonlight Shadow — Mike Oldfield",
+      "status": "skipped",
+      "uuid": "c0edc9b0-cd26-41a4-b53e-de8de001c470",
+      "durationSeconds": 225.75,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=qObFh7lBp3c": {
+      "alias": "Stay the Night — James Blunt",
+      "status": "skipped",
+      "uuid": "aa07c1c0-fcba-4dff-93e0-2931a340e618",
+      "durationSeconds": 208.81,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=-dbQIpcasT0": {
+      "alias": "Bonfire Heart — James Blunt",
+      "status": "skipped",
+      "uuid": "bef90052-3c70-4998-bfe9-49ec5369ae89",
+      "durationSeconds": 225.09,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=wMemWRlw4l8": {
+      "alias": "99 Red Balloons — Nena",
+      "status": "skipped",
+      "uuid": "b2db46eb-b4c7-4f70-b203-1fe02f4c847d",
+      "durationSeconds": 205.68,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=noNzNyRl2mM": {
+      "alias": "7 Years — Lukas Graham",
+      "status": "skipped",
+      "uuid": "1a16a836-62b9-483b-af46-d89d0ab1b2d8",
+      "durationSeconds": 248.33,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=CEfbgpiKueI": {
+      "alias": "2002 — Anne-Marie",
+      "status": "skipped",
+      "uuid": "f73116dd-1d88-4856-8f3e-63bbd4f5f7cb",
+      "durationSeconds": 203.06,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=LvnIhyRUjKA": {
+      "alias": "The Other Side — Jason Derulo",
+      "status": "skipped",
+      "uuid": "96768e80-653e-49c1-a5dc-364b7d6ed671",
+      "durationSeconds": 191.79,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=Zil8XOMgBQU": {
+      "alias": "Shut Up and Dance — Walk the Moon",
+      "status": "skipped",
+      "uuid": "68e277fe-b65c-489a-8dee-00b62a0929b6",
+      "durationSeconds": 213.64,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=8Ii99DfOUd0": {
+      "alias": "Superestrella — Aitana",
+      "status": "skipped",
+      "uuid": "a585f9eb-36a1-49a0-9f0c-2626f3d292da",
+      "durationSeconds": 189.16,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=xlOlknO1lvw": {
+      "alias": "What Makes You Beautiful",
+      "status": "skipped",
+      "uuid": "e3d7c376-5767-4243-aea8-1b5a8f8bd88f",
+      "durationSeconds": 215.19,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=5YCnfRt_L0c": {
+      "alias": "Can't Stop the Feeling — Justin Timberlake",
+      "status": "skipped",
+      "uuid": "f285e4b7-ac53-480c-b1dc-fcee208c016e",
+      "durationSeconds": 256.44,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=awMn4UjGIek": {
+      "alias": "Airplanes — B.o.B",
+      "status": "skipped",
+      "uuid": "b064f815-c11f-4455-af38-0aa535d695e9",
+      "durationSeconds": 206.7,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=A37_exx8jfE": {
+      "alias": "Die Young — Kesha",
+      "status": "skipped",
+      "uuid": "e578f3c0-d4c1-4353-b80e-8b745b786597",
+      "durationSeconds": 208.54,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=eJppAWibhC4": {
+      "alias": "Hips Don't Lie — Shakira",
+      "status": "skipped",
+      "uuid": "4cb9cb38-f6a6-4ef9-bd11-9021b5e10e22",
+      "durationSeconds": 188.0,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=nXGfCFyh-Nc": {
+      "alias": "Wild Ones — Sia",
+      "status": "skipped",
+      "uuid": "19187d10-1828-4a03-97f3-bb9c2e6cae2c",
+      "durationSeconds": 130.68,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=x_DXYtZK6BU": {
+      "alias": "Titanium — David Guetta",
+      "status": "skipped",
+      "uuid": "f3680cb8-c8d4-4d62-9357-f20107a910ef",
+      "durationSeconds": 249.13,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=vzruF6202OE": {
+      "alias": "Poker Face — Lady Gaga",
+      "status": "skipped",
+      "uuid": "2ed0f379-401b-4102-a102-a3655fa83296",
+      "durationSeconds": 229.92,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=Hh9IUfUfwNs": {
+      "alias": "La Tortura — Shakira",
+      "status": "skipped",
+      "uuid": "0815f602-3ad5-4df8-9f9c-501408089139",
+      "durationSeconds": 207.08,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=XmHkP6uakuo": {
+      "alias": "Fate of Ophelia — Taylor Swift",
+      "status": "skipped",
+      "uuid": "3633a0c3-e796-4c45-9d99-45ba4eef078e",
+      "durationSeconds": 241.49,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=GVbCrWTpB80": {
+      "alias": "The Winner Takes It All",
+      "status": "skipped",
+      "uuid": "fb0b0989-6b46-4ac8-8418-8c304e80a3c2",
+      "durationSeconds": 356.43,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=Pmw0Bgw72OA": {
+      "alias": "Birds of a Feather",
+      "status": "skipped",
+      "uuid": "b80e6f5a-e027-4a40-a7b4-cb3c5a87ba68",
+      "durationSeconds": 225.33,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=Bifp0TXzefk": {
+      "alias": "I Knew You Were Trouble",
+      "status": "skipped",
+      "uuid": "6eb7af4e-6708-43ef-85ac-816ce70bfc35",
+      "durationSeconds": 172.28,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=uOjPtJCrKqU": {
+      "alias": "Raise Your Glass",
+      "status": "skipped",
+      "uuid": "12f777af-5c03-41e1-8858-1edb891bd6dc",
+      "durationSeconds": 208.39,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=seXmOeFi5Is": {
+      "alias": "Party in the USA",
+      "status": "skipped",
+      "detail": "already in the store",
+      "uuid": "51b12412-56f5-4925-b525-9b8d139ef587"
+    },
+    "https://www.youtube.com/watch?v=nCoSkFVp-cc": {
+      "alias": "Club Can't Handle Me — David Guetta",
+      "status": "skipped",
+      "uuid": "d64acd29-9dc7-4445-b144-de9bd6a17cc4",
+      "durationSeconds": 235.58,
+      "detail": "already in the store"
+    },
+    "https://www.youtube.com/watch?v=VAC2dFjNuEU": {
+      "alias": "Stronger — Kelly Clarkson",
+      "status": "skipped",
+      "uuid": "dff5097c-f006-4410-af5c-cbc825ca50cd",
+      "durationSeconds": 230.31,
+      "detail": "already in the store"
+    }
+  },
+  "transcriptions": {
+    "92255337-9895-40a7-aa12-3b9cc81916ec": {
+      "alias": "The One That Got Away — Katy Perry",
+      "status": "skipped",
+      "noteCount": 1618,
+      "detail": "already transcribed"
+    },
+    "a1c30047-ece3-42b3-be6f-a6429431b16a": {
+      "alias": "1973 — James Blunt",
+      "status": "skipped",
+      "noteCount": 2730,
+      "detail": "already transcribed"
+    },
+    "3c8d4cfa-6888-4fce-8e48-23ba778570c1": {
+      "alias": "Drivers License — Olivia Rodrigo",
+      "status": "skipped",
+      "noteCount": 1733,
+      "detail": "already transcribed"
+    },
+    "56543911-f14e-4936-92e4-ed1bdd278c54": {
+      "alias": "Grace Kelly — Mika",
+      "status": "skipped",
+      "noteCount": 2144,
+      "detail": "already transcribed"
+    },
+    "c0edc9b0-cd26-41a4-b53e-de8de001c470": {
+      "alias": "Moonlight Shadow — Mike Oldfield",
+      "status": "skipped",
+      "noteCount": 2384,
+      "detail": "already transcribed"
+    },
+    "aa07c1c0-fcba-4dff-93e0-2931a340e618": {
+      "alias": "Stay the Night — James Blunt",
+      "status": "skipped",
+      "noteCount": 1470,
+      "detail": "already transcribed"
+    },
+    "bef90052-3c70-4998-bfe9-49ec5369ae89": {
+      "alias": "Bonfire Heart — James Blunt",
+      "status": "skipped",
+      "noteCount": 1677,
+      "detail": "already transcribed"
+    },
+    "b2db46eb-b4c7-4f70-b203-1fe02f4c847d": {
+      "alias": "99 Red Balloons — Nena",
+      "status": "skipped",
+      "noteCount": 2599,
+      "detail": "already transcribed"
+    },
+    "1a16a836-62b9-483b-af46-d89d0ab1b2d8": {
+      "alias": "7 Years — Lukas Graham",
+      "status": "skipped",
+      "noteCount": 1458,
+      "detail": "already transcribed"
+    },
+    "f73116dd-1d88-4856-8f3e-63bbd4f5f7cb": {
+      "alias": "2002 — Anne-Marie",
+      "status": "skipped",
+      "noteCount": 1615,
+      "detail": "already transcribed"
+    },
+    "96768e80-653e-49c1-a5dc-364b7d6ed671": {
+      "alias": "The Other Side — Jason Derulo",
+      "status": "skipped",
+      "noteCount": 2019,
+      "detail": "already transcribed"
+    },
+    "68e277fe-b65c-489a-8dee-00b62a0929b6": {
+      "alias": "Shut Up and Dance — Walk the Moon",
+      "status": "skipped",
+      "noteCount": 1992,
+      "detail": "already transcribed"
+    },
+    "a585f9eb-36a1-49a0-9f0c-2626f3d292da": {
+      "alias": "Superestrella — Aitana",
+      "status": "skipped",
+      "noteCount": 1343,
+      "detail": "already transcribed"
+    },
+    "e3d7c376-5767-4243-aea8-1b5a8f8bd88f": {
+      "alias": "What Makes You Beautiful",
+      "status": "skipped",
+      "noteCount": 2161,
+      "detail": "already transcribed"
+    },
+    "f285e4b7-ac53-480c-b1dc-fcee208c016e": {
+      "alias": "Can't Stop the Feeling — Justin Timberlake",
+      "status": "skipped",
+      "noteCount": 2675,
+      "detail": "already transcribed"
+    },
+    "b064f815-c11f-4455-af38-0aa535d695e9": {
+      "alias": "Airplanes — B.o.B",
+      "status": "skipped",
+      "noteCount": 2056,
+      "detail": "already transcribed"
+    },
+    "e578f3c0-d4c1-4353-b80e-8b745b786597": {
+      "alias": "Die Young — Kesha",
+      "status": "skipped",
+      "noteCount": 2485,
+      "detail": "already transcribed"
+    },
+    "4cb9cb38-f6a6-4ef9-bd11-9021b5e10e22": {
+      "alias": "Hips Don't Lie — Shakira",
+      "status": "skipped",
+      "noteCount": 1614,
+      "detail": "already transcribed"
+    },
+    "19187d10-1828-4a03-97f3-bb9c2e6cae2c": {
+      "alias": "Wild Ones — Sia",
+      "status": "skipped",
+      "noteCount": 1645,
+      "detail": "already transcribed"
+    },
+    "f3680cb8-c8d4-4d62-9357-f20107a910ef": {
+      "alias": "Titanium — David Guetta",
+      "status": "skipped",
+      "noteCount": 2221,
+      "detail": "already transcribed"
+    },
+    "2ed0f379-401b-4102-a102-a3655fa83296": {
+      "alias": "Poker Face — Lady Gaga",
+      "status": "skipped",
+      "noteCount": 1985,
+      "detail": "already transcribed"
+    },
+    "0815f602-3ad5-4df8-9f9c-501408089139": {
+      "alias": "La Tortura — Shakira",
+      "status": "skipped",
+      "noteCount": 2154,
+      "detail": "already transcribed"
+    },
+    "3633a0c3-e796-4c45-9d99-45ba4eef078e": {
+      "alias": "Fate of Ophelia — Taylor Swift",
+      "status": "skipped",
+      "noteCount": 2026,
+      "detail": "already transcribed"
+    },
+    "fb0b0989-6b46-4ac8-8418-8c304e80a3c2": {
+      "alias": "The Winner Takes It All",
+      "status": "skipped",
+      "noteCount": 2692,
+      "detail": "already transcribed"
+    },
+    "b80e6f5a-e027-4a40-a7b4-cb3c5a87ba68": {
+      "alias": "Birds of a Feather",
+      "status": "skipped",
+      "noteCount": 1449,
+      "detail": "already transcribed"
+    },
+    "6eb7af4e-6708-43ef-85ac-816ce70bfc35": {
+      "alias": "I Knew You Were Trouble",
+      "status": "skipped",
+      "noteCount": 1713,
+      "detail": "already transcribed"
+    },
+    "12f777af-5c03-41e1-8858-1edb891bd6dc": {
+      "alias": "Raise Your Glass",
+      "status": "skipped",
+      "noteCount": 1814,
+      "detail": "already transcribed"
+    },
+    "d64acd29-9dc7-4445-b144-de9bd6a17cc4": {
+      "alias": "Club Can't Handle Me — David Guetta",
+      "status": "skipped",
+      "noteCount": 3512,
+      "detail": "already transcribed"
+    },
+    "dff5097c-f006-4410-af5c-cbc825ca50cd": {
+      "alias": "Stronger — Kelly Clarkson",
+      "status": "skipped",
+      "noteCount": 2076,
+      "detail": "already transcribed"
+    },
+    "51b12412-56f5-4925-b525-9b8d139ef587": {
+      "alias": "Party in the USA",
+      "status": "done",
+      "noteCount": 1738,
+      "detail": null
+    }
+  },
+  "engine": "bytedance",
+  "frameMs": 40.0,
+  "updatedAt": "2026-09-13T13:34:16.225826+00:00",
+  "finishedAt": "2026-09-13T13:34:16.225823+00:00"
+}
