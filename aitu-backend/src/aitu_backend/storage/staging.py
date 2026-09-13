@@ -13,6 +13,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from aitu_backend.schemas.editing import Placement
 from aitu_backend.storage import paths
 from aitu_backend.transcription.engine import NoteEvent
 
@@ -34,12 +35,24 @@ class SessionNotFound(KeyError):
 
 
 class SessionRecord(BaseModel):
-    """What a session folder remembers about the window and the take."""
+    """What a session folder remembers about the window and the take.
+
+    ``placement`` says which of the two operations this session is. For ``replace`` the window is
+    given at the start, frozen, and never changes — that is the whole of Epic 11's splice rule.
+    For ``append`` and ``insert`` (Epic 13) ``start_seconds`` is the moment the passage opens at
+    and ``end_seconds`` is the passage's own end, which is unknown until the take has been
+    transcribed and is recomputed whenever the take or the speed changes.
+    """
 
     model_config = ConfigDict(populate_by_name=True)
 
     session_uuid: str = Field(..., alias="sessionUuid")
     audio_uuid: str = Field(..., alias="audioUuid")
+    #: ``"replace"``, ``"append"`` or ``"insert"``. Absent in a session written before Epic 13,
+    #: which is why it defaults rather than being required: those sessions all replace.
+    placement: Placement = "replace"
+    #: Append only: the silence to leave after the last note, in seconds.
+    gap_seconds: float | None = Field(None, alias="gapSeconds")
     start_frame: int = Field(..., alias="startFrame")
     end_frame: int = Field(..., alias="endFrame")
     start_seconds: float = Field(..., alias="startSeconds")
@@ -58,12 +71,23 @@ class SessionRecord(BaseModel):
     take_end_seconds: float | None = Field(None, alias="takeEndSeconds")
 
     @property
+    def composing(self) -> bool:
+        """True when this session makes the piece longer rather than replacing part of it."""
+        return self.placement in ("append", "insert")
+
+    @property
     def window_seconds(self) -> float:
+        """The stretch being written: the marked window, or the passage's own length."""
         return self.end_seconds - self.start_seconds
 
     @property
     def expected_take_seconds(self) -> float | None:
-        if self.slowdown is None:
+        """How long the take should last to fill the window.
+
+        Meaningless while composing: there is no window to fill, so the take lasts as long as the
+        passage lasts and the speed factor is the whole answer (Subtask 13.1.1.4).
+        """
+        if self.slowdown is None or self.composing:
             return None
         return self.window_seconds * float(self.slowdown)
 

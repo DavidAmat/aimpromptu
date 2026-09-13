@@ -37,6 +37,7 @@ import TimeScoreView from "../../components/time/TimeScoreView";
 import FloatingBar from "../../components/common/FloatingBar";
 import ScorePdfDialog from "../../components/time/ScorePdfDialog";
 import ToolboxDialog from "../../components/common/ToolboxDialog";
+import ComposePassagePanel from "../../components/editing/ComposePassagePanel";
 import RangeRerecordPanel from "../../components/editing/RangeRerecordPanel";
 import {
   FIGURE_LABELS,
@@ -518,12 +519,44 @@ export function RhythmPage() {
    * invalidates the piles, the chosen pile, the preview and the sheet at once. Comparing the key
    * during render is how the reset happens, which keeps it out of the effect.
    */
-  const key = `${audioUuid ?? ""}|${hand}|${frameMs}`;
+  /**
+   * Raised whenever a passage is put into the piece (Epic 13). It is in the view key because
+   * placing one changes the music: the piles, the chosen pile, the sheet and the saved reading are
+   * all about playing that has just changed, so all of them are read again rather than patched.
+   */
+  const [composed, setComposed] = useState(0);
+  /**
+   * Which piece the reader has unfolded the passage stage on, or `null` while nobody has said.
+   *
+   * Held as the key rather than as a boolean so that loading a different piece forgets the answer:
+   * unfolding it on one piece is not a statement about the next.
+   */
+  const [composeChoice, setComposeChoice] = useState<string | null>(null);
+  const key = `${audioUuid ?? ""}|${hand}|${frameMs}|${composed}`;
   const [view, setView] = useState<View>(() => emptyView(key));
   const [untranscribed, setUntranscribed] = useState(false);
   if (view.key !== key) setView(emptyView(key));
 
   const { peaks, selected, preview, score, error } = view;
+
+  /**
+   * How long the piece is, and whether there is anything in it.
+   *
+   * Read from the envelope rather than from a separate request: the sheet already carries the
+   * column count and the column length, and an empty piece is drawn as one empty column, so "no
+   * notes" is the honest test rather than "no columns".
+   */
+  const pieceSeconds = score
+    ? (score.envelope.frameCount * score.envelope.frameMs) / 1000
+    : (peaks?.endSeconds ?? 0);
+  const pieceIsEmpty = (peaks?.attackCount ?? 0) === 0;
+  /**
+   * A piece with nothing in it has nothing else to offer, so the passage stage is open on arrival.
+   * On a piece that already has music the plot is what the reader came for, so it is folded away
+   * until they ask. Derived rather than stored, so there is no state to keep in step.
+   */
+  const composeOpen =
+    composeChoice === key || (composeChoice === null && Boolean(peaks) && pieceIsEmpty);
 
   const renderOverrides = useMemo(
     () => ({ hidden: hiddenNotes, hands: NO_HANDS }),
@@ -896,7 +929,8 @@ export function RhythmPage() {
     return () => controller.abort();
   }, [audioUuid, hand, frameMs, key]);
 
-  // Read back what this piece was last read as, once per piece.
+  // Read back what this piece was last read as, once per piece — and again after a passage is
+  // placed, because an insertion moves every mark after it and the columns held here are stale.
   //
   // Restoring the anchor is not enough on its own: the pile it names has to be the one the plot
   // shows, or the number under the name would say one thing and the highlighted bar another. So the
@@ -975,7 +1009,7 @@ export function RhythmPage() {
         // and the reader can name the gap again.
       });
     return () => controller.abort();
-  }, [audioUuid]);
+  }, [audioUuid, composed]);
 
   /**
    * Both of these have to keep the same identity between renders.
@@ -1629,6 +1663,41 @@ export function RhythmPage() {
           {error}
         </Alert>
       ) : null}
+
+      {/*
+        Composing (Epic 13). Open by itself on a piece that has nothing in it yet, because on such a
+        piece it is the only thing there is to do; folded away on a piece that already has music,
+        because adding to one is the rarer intent and the plot below is what a reader came for.
+      */}
+      <SectionCard
+        title="Add a passage"
+        description={
+          pieceIsEmpty
+            ? "This piece is empty. Play its first passage and put it in."
+            : "Play a new passage and put it at the end, or open the piece at a moment and put it there."
+        }
+      >
+        {composeOpen ? (
+          <ComposePassagePanel
+            audioUuid={audioUuid}
+            frameMs={frameMs}
+            durationSeconds={pieceSeconds}
+            atColumn={range?.fromColumn}
+            anchorFigure={figure}
+            anchorMs={selected?.medianMs}
+            speedChanges={stretches.map((stretch) => ({
+              startFrame: stretch.startFrame,
+              anchorMs: stretch.anchorMs,
+            }))}
+            clickIntervalMs={selected?.medianMs}
+            onPlaced={() => setComposed((token) => token + 1)}
+          />
+        ) : (
+          <Button variant="outlined" size="small" onClick={() => setComposeChoice(key)}>
+            Play a passage
+          </Button>
+        )}
+      </SectionCard>
 
       <SectionCard
         title="How this piece was played"

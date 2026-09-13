@@ -189,9 +189,13 @@ def _split_cached(audio_uuid: str, frame_ms: float, _stamp: float) -> TimeHands:
     changing anything. `_with_page_edits` does.
     """
     stored = _events_or_error(audio_uuid)
+    # A piece being composed is empty until its first passage lands, and an empty piece is a
+    # `durationSeconds` of zero (Epic 13). It still has to draw: one empty column is enough for a
+    # pair of staves, and the column is a property of the view, not of the music.
+    duration = max(stored.duration_seconds, frame_ms / 1000.0)
     return impose_granularity_and_split(
         stored.events,
-        stored.duration_seconds,
+        duration,
         frame_ms=frame_ms,
         title=stored.title,
     )
@@ -227,6 +231,8 @@ def _find_peaks(values: list[float], frame_ms: float) -> tuple[list[Peak], str |
     reader instead of thrown away.
     """
     if not values:
+        # A piece being composed has no gaps yet, and neither has one whose only notes are a single
+        # chord. Neither is a failure; the plot is simply empty until there is playing to measure.
         return [], None
     try:
         return peaks_of(values, frame_ms=frame_ms), None

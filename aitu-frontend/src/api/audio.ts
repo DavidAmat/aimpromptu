@@ -2,7 +2,13 @@
 
 import { buildUrl, request, upload } from "./client";
 
-export type AudioSource = "upload" | "recording" | "youtube" | "segment";
+export type AudioSource =
+  | "upload"
+  | "recording"
+  | "youtube"
+  | "segment"
+  /** Started empty and built passage by passage on the Compose tab (Epic 13). */
+  | "composed";
 
 export interface AudioTimeRange {
   startSeconds: number;
@@ -25,6 +31,12 @@ export interface AudioItem {
   /** Root audio and absolute root times when this is a physical segment. */
   sourceAudioUuid?: string | null;
   sourceTimeRange?: AudioTimeRange | null;
+  /**
+   * The column length a composed piece is meant to be read at, chosen when it was
+   * created because there was no recording to infer anything from. Still only a
+   * view: any request may ask for a different one.
+   */
+  frameMs?: number | null;
   createdAt: string;
   /** True once the engine has run and the recorded notes are on disk. */
   hasNotes?: boolean;

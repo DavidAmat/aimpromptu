@@ -1,8 +1,14 @@
-"""`/audio/{uuid}/edits` — staged range editing (Epic 11).
+"""`/audio/{uuid}/edits` — staged range editing (Epic 11) and composing live (Epic 13).
 
-A disposable session holds the take. Accept splices it into exactly the window
-it replaces. Cancel deletes the folder and nothing else. The existing Frames
-toolbox (key, octave) is not involved: this router only serves the Re-record tab.
+A disposable session holds the take. Cancel deletes the folder and nothing else.
+
+Accept does one of two things, and which one is the session's ``placement``. A **replace** splices
+the take into exactly the window it replaces and the piece keeps its length, which is what lets
+every mark after the window keep its address. An **append** or an **insert** puts a new passage
+into the piece and makes it longer — the one place in the product where that is allowed, because
+a piece being composed has nothing after the insertion point to protect.
+
+`POST /audio/compose` starts a piece with nothing in it: an empty ``events.json`` and a ``frameMs``.
 """
 
 from __future__ import annotations
@@ -17,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from aitu_backend.audio import store
 from aitu_backend.audio.formats import ConversionFailed, FfmpegMissing
 from aitu_backend.audio.store import AudioNotFound
+from aitu_backend.editing import compose
 from aitu_backend.editing.session import EditError, accept, cancel, confirmation, load
 from aitu_backend.editing.session import patch as patch_session
 from aitu_backend.editing.session import (
@@ -32,11 +39,13 @@ from aitu_backend.editing.session import (
 from aitu_backend.schemas.editing import (
     AcceptOut,
     ConfirmationOut,
+    CreatePieceRequest,
     EditSessionOut,
     PatchEditRequest,
     PreviewOut,
     StartEditRequest,
 )
+from aitu_backend.schemas.metadata import AudioMetadata
 from aitu_backend.schemas.rhythm import SpeedChange
 from aitu_backend.schemas.time_matrix import FigureName
 from aitu_backend.storage import staging
@@ -95,6 +104,27 @@ def _map_error(exc: Exception) -> HTTPException:
 
 
 @router.post(
+    "/compose",
+    response_model=AudioMetadata,
+    response_model_by_alias=True,
+    status_code=201,
+)
+def create_piece(body: CreatePieceRequest) -> AudioMetadata:
+    """Start a piece with nothing in it (Subtask 13.1.1.1).
+
+    There is no BPM and no granularity to choose. The only question is the name, plus the column
+    length to read it at, which is a view like any other and can be changed later.
+
+    The piece it creates draws an empty pair of staves and has no ladder: the ladder arrives with
+    the first passage, named from its peak plot the way every other ladder in the app is.
+    """
+    try:
+        return compose.create_empty_piece(body.name, body.frame_ms)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
     "/{audio_uuid}/edits",
     response_model=EditSessionOut,
     response_model_by_alias=True,
@@ -106,10 +136,12 @@ def start_edit(audio_uuid: str, body: StartEditRequest) -> EditSessionOut:
     try:
         record = start(
             audio_uuid,
+            placement=body.placement,
             start_frame=body.start_frame,
             end_frame=body.end_frame,
             start_seconds=body.start_seconds,
             end_seconds=body.end_seconds,
+            gap_seconds=body.gap_seconds,
             frame_ms=body.frame_ms,
             slowdown=body.slowdown,
             splice_audio=body.splice_audio,
@@ -152,6 +184,8 @@ def patch_edit(audio_uuid: str, session_uuid: str, body: PatchEditRequest) -> Ed
             trim_length_seconds=body.trim_length_seconds,
             take_start_seconds=body.take_start_seconds,
             take_end_seconds=body.take_end_seconds,
+            gap_seconds=body.gap_seconds,
+            at_seconds=body.at_seconds,
         )
     except (SessionNotFound, EditError, ValueError) as exc:
         raise _map_error(exc) from exc

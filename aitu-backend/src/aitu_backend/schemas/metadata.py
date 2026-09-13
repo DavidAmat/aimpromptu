@@ -49,6 +49,8 @@ class AudioSource(str, Enum):
     RECORDING = "recording"
     YOUTUBE = "youtube"
     SEGMENT = "segment"
+    #: Started empty and built passage by passage on the Compose tab (Epic 13).
+    COMPOSED = "composed"
 
 
 class TimeRange(CamelModel):
@@ -96,6 +98,11 @@ class AudioMetadata(CamelModel):
     source_audio_uuid: str | None = Field(None, alias="sourceAudioUuid")
     #: Absolute range in the root audio represented by this segment.
     source_time_range: TimeRange | None = Field(None, alias="sourceTimeRange")
+    #: The column length this piece is meant to be read at. Only a composed piece
+    #: carries one: it is chosen at creation, when there is no recording to infer
+    #: anything from, and it is still only a view (D-01) — every request may ask
+    #: for a different one.
+    frame_ms: float | None = Field(None, alias="frameMs", gt=0)
     created_at: datetime = Field(default_factory=_now, alias="createdAt")
 
     @model_validator(mode="after")
