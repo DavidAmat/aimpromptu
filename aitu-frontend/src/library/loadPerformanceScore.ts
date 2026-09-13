@@ -9,6 +9,7 @@ import {
   timeScoreApi,
   type CueRange,
   type FigureName,
+  type GraceNote,
   type KeySignatureName,
   type LyricLine,
   type SavedRhythm,
@@ -41,6 +42,8 @@ export interface PerformanceReading {
   lyrics: LyricLine[];
   /** Stretches printed smaller than the rest of the page. */
   cueRanges: CueRange[];
+  /** Small notes leaning on a note of the music. */
+  graceNotes: GraceNote[];
   /** How large the marks are drawn, as a multiple of normal. */
   annotationScale: number;
 }
@@ -124,6 +127,7 @@ export async function loadPerformanceScore(
     trills,
     lyrics: [...(rhythm?.lyrics ?? [])],
     cueRanges: [...(rhythm?.cueRanges ?? [])],
+    graceNotes: [...(rhythm?.graceNotes ?? [])],
     annotationScale: rhythm?.annotationScale ?? 1,
   };
 }

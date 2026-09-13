@@ -28,6 +28,7 @@ export type {
   CueRange,
   FigureLadder,
   FigureName,
+  GraceNote,
   HandChoice,
   KeySignatureName,
   LabelledPeak,

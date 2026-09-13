@@ -504,3 +504,36 @@ def test_the_marks_are_kept_with_the_piece(client, shaken):
     assert read_back["lyrics"][0]["text"] == "and it shook"
     assert read_back["cueRanges"][0]["toColumn"] == 55
     assert read_back["annotationScale"] == 0.8
+
+
+def test_grace_notes_are_kept_with_the_piece(client, shaken):
+    """A mark and not an event: it is stored, and nothing about the drawn notes changes."""
+    plain = client.get(f"/time/{shaken}/score", params={"anchorMs": 400}).json()
+    client.put(
+        f"/time/{shaken}/rhythm",
+        json={
+            "hand": "right",
+            "frameMs": 40.0,
+            "anchorFigure": "negra",
+            "anchorMs": 400.0,
+            "speedChanges": [],
+            "overrides": [],
+            "beamBreaks": [],
+            "graceNotes": [
+                {
+                    "hand": "right",
+                    "startFrame": 25,
+                    "targetRow": 50,
+                    "row": 52,
+                    "kind": "appoggiatura",
+                }
+            ],
+        },
+    )
+
+    read_back = client.get(f"/time/{shaken}/rhythm").json()
+    assert read_back["graceNotes"][0]["row"] == 52
+    assert read_back["graceNotes"][0]["kind"] == "appoggiatura"
+
+    after = client.get(f"/time/{shaken}/score", params={"anchorMs": 400}).json()
+    assert after["notes"] == plain["notes"]

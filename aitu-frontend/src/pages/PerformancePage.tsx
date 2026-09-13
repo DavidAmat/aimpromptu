@@ -253,6 +253,7 @@ function PerformanceStand({ audioUuid, title }: { audioUuid: string; title: stri
         trills={reading.trills}
         lyrics={reading.lyrics}
         cueRanges={reading.cueRanges}
+        graceNotes={reading.graceNotes}
         annotationScale={reading.annotationScale}
         showLyrics={showLyrics}
         playheadSeconds={playheadSeconds}

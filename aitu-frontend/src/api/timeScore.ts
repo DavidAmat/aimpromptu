@@ -128,6 +128,24 @@ export interface TrillsResponse {
   suggestions: TrillSuggestion[];
 }
 
+/**
+ * A small note leaning on a note of the music.
+ *
+ * A mark and not an event: it is not in the recording, it takes no column, nothing plays it, and no
+ * figure is measured differently because of it. `row` is the grace note's own pitch; `targetRow` is
+ * the note it leans on.
+ *
+ * An **acciaccatura** is crushed — as fast as possible — and prints with a slash through its stem.
+ * An **appoggiatura** leans, taking time from the note it precedes, and prints without one.
+ */
+export interface GraceNote {
+  hand: PrintedHand;
+  startFrame: number;
+  targetRow: number;
+  row: number;
+  kind: "acciaccatura" | "appoggiatura";
+}
+
 /** A line of words under the staff, over a stretch of columns. */
 export interface LyricLine {
   fromColumn: number;
@@ -480,6 +498,8 @@ export interface SavedRhythm {
   fingers?: { hand: string; startFrame: number; row: number; finger: number }[];
   /** Stretches printed as one held note with `tr` over them. */
   trills?: Trill[];
+  /** Small notes leaning on a note of the music. */
+  graceNotes?: GraceNote[];
   /** Lines of words written under the staff. */
   lyrics?: LyricLine[];
   /** Stretches printed smaller than the rest of the page. */

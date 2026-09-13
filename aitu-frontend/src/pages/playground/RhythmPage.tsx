@@ -42,6 +42,7 @@ import {
   FIGURE_LABELS,
   timeScoreApi,
   type FigureName,
+  type GraceNote,
   type HandChoice,
   type LadderPreview,
   type Peak,
@@ -91,6 +92,22 @@ const NAMEABLE_FIGURES: FigureName[] = [
 
 /** No note is moved by hand any more: a corrected hand is written onto the recording. */
 const NO_HANDS: ReadonlyMap<NoteRef, PrintedHand> = new Map();
+
+/**
+ * The intervals a grace note is offered at, measured from the note it leans on.
+ *
+ * A short list on purpose. Nearly every grace note in piano music is a step or a third from its
+ * principal note, and a list of six buttons is faster to use — and far easier to read back — than
+ * a pitch picker offering all eighty-eight.
+ */
+const GRACE_STEPS = [
+  { semitones: -3, label: "3rd below" },
+  { semitones: -2, label: "Tone below" },
+  { semitones: -1, label: "Semitone below" },
+  { semitones: 1, label: "Semitone above" },
+  { semitones: 2, label: "Tone above" },
+  { semitones: 3, label: "3rd above" },
+];
 
 /** Thumb to little finger. There is no 0 and no 6. */
 const FINGERS: FingerNumber[] = [1, 2, 3, 4, 5];
@@ -412,6 +429,14 @@ export function RhythmPage() {
   } | null>(null);
   /** Stretches printed smaller than the rest of the page. */
   const [cueRanges, setCueRanges] = useState<readonly CueRange[]>([]);
+  /**
+   * Small notes leaning on a note of the music.
+   *
+   * Never inferred, and never played: a grace note is a reading of how a note should be
+   * approached, and nothing in a recording distinguishes one from a very short note that was
+   * really struck.
+   */
+  const [graceNotes, setGraceNotes] = useState<readonly GraceNote[]>([]);
   /** How large the marks over and under the staff are drawn, as a multiple of normal. */
   const [annotationScale, setAnnotationScale] = useState(1);
   /** Numbers pressed for the selection now open, so a chord can be given several at once. */
@@ -762,6 +787,57 @@ export function RhythmPage() {
     [trillSuggestions, trills],
   );
 
+
+  /**
+   * The one note picked, or `null` when none or several are.
+   *
+   * A grace note leans on exactly one note. Offering it for a chord would have to answer which
+   * notehead it hangs off, and the honest answer is that the reader has to say.
+   */
+  const onlyNote = selectedNotes.length === 1 ? selectedNotes[0]! : null;
+  const graceHere = onlyNote
+    ? (graceNotes.find(
+        (one) =>
+          one.hand === handOf(onlyNote) &&
+          one.startFrame === frameOf(onlyNote) &&
+          one.targetRow === rowOf(onlyNote),
+      ) ?? null)
+    : null;
+
+  /**
+   * Put a grace note a given distance above or below the note it leans on, replacing any already
+   * there.
+   *
+   * Offered as intervals rather than as a pitch picker because that is what a grace note almost
+   * always is — the note above, the note below, a third away — and because picking an arbitrary
+   * pitch on a screen with no keyboard on it is a worse way to say the same thing.
+   */
+  const putGrace = useCallback(
+    (noteKey: string, semitones: number) => {
+      const row = rowOf(noteKey) + semitones;
+      if (row < 0 || row > 87) return;
+      const grace: GraceNote = {
+        hand: handOf(noteKey),
+        startFrame: frameOf(noteKey),
+        targetRow: rowOf(noteKey),
+        row,
+        kind: graceHere?.kind ?? "acciaccatura",
+      };
+      setGraceNotes((current) => [
+        ...current.filter(
+          (one) =>
+            !(
+              one.hand === grace.hand &&
+              one.startFrame === grace.startFrame &&
+              one.targetRow === grace.targetRow
+            ),
+        ),
+        grace,
+      ]);
+    },
+    [graceHere],
+  );
+
   /** Ask the backend where two notes are trading places. Nothing is written by asking. */
   const findTrills = useCallback(async () => {
     if (!audioUuid) return;
@@ -873,6 +949,7 @@ export function RhythmPage() {
         setTrills(found.trills ?? []);
         setLyrics(found.lyrics ?? []);
         setCueRanges(found.cueRanges ?? []);
+        setGraceNotes(found.graceNotes ?? []);
         setAnnotationScale(found.annotationScale ?? 1);
         if (found.keySignature) setKeySignature(found.keySignature);
         setKeyChanges(
@@ -1189,6 +1266,7 @@ export function RhythmPage() {
       trills: [...trills],
       lyrics: [...lyrics],
       cueRanges: [...cueRanges],
+      graceNotes: [...graceNotes],
       annotationScale,
     };
     try {
@@ -1229,6 +1307,7 @@ export function RhythmPage() {
     trills,
     lyrics,
     cueRanges,
+    graceNotes,
     annotationScale,
   ]);
 
@@ -1382,6 +1461,7 @@ export function RhythmPage() {
     setLyrics([]);
     setLyricDraft(null);
     setCueRanges([]);
+    setGraceNotes([]);
     setAnnotationScale(1);
     setStretches([]);
     setSelectedNotes([]);
@@ -1957,6 +2037,7 @@ export function RhythmPage() {
                 trills={trills}
                 lyrics={lyrics}
                 cueRanges={cueRanges}
+                graceNotes={graceNotes}
                 annotationScale={annotationScale}
                 onMovesRefused={sayRefused}
                 onRendererChange={setSheetRenderer}
@@ -2689,6 +2770,94 @@ export function RhythmPage() {
               ? `Press one number to give it to all ${oneChord.length} noteheads, or press ${oneChord.length} of them to give each note its own \u2014 they print stacked over the chord, lowest at the bottom.`
               : "One number, on every note picked. Several at once only mean something on a single chord, where they can be read against the noteheads in order."}
           </Typography>
+
+          <Divider textAlign="left">
+            <Typography variant="caption" color="text.secondary">
+              Grace note
+            </Typography>
+          </Divider>
+          {onlyNote === null ? (
+            <Typography variant="caption" color="text.secondary">
+              Pick one notehead to lean a small note on it.
+            </Typography>
+          ) : (
+            <>
+              <Typography variant="caption" color="text.secondary">
+                A small note played just before {noteNameAt(rowOf(onlyNote))}.
+                It is a mark, not a note: nothing plays it, it takes no column,
+                and no figure on the page changes because of it.
+              </Typography>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ alignItems: "center", flexWrap: "wrap" }}
+              >
+                {GRACE_STEPS.map((step) => (
+                  <Button
+                    key={step.semitones}
+                    size="small"
+                    variant={
+                      graceHere?.row === rowOf(onlyNote) + step.semitones
+                        ? "contained"
+                        : "outlined"
+                    }
+                    disabled={
+                      rowOf(onlyNote) + step.semitones < 0 ||
+                      rowOf(onlyNote) + step.semitones > 87
+                    }
+                    onClick={() => putGrace(onlyNote, step.semitones)}
+                  >
+                    {step.label}
+                  </Button>
+                ))}
+              </Stack>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ alignItems: "center", flexWrap: "wrap" }}
+              >
+                <ButtonGroup size="small">
+                  {(["acciaccatura", "appoggiatura"] as const).map((kind) => (
+                    <Button
+                      key={kind}
+                      variant={
+                        (graceHere?.kind ?? "acciaccatura") === kind
+                          ? "contained"
+                          : "outlined"
+                      }
+                      disabled={!graceHere}
+                      onClick={() =>
+                        setGraceNotes((current) =>
+                          current.map((one) =>
+                            one === graceHere ? { ...one, kind } : one,
+                          ),
+                        )
+                      }
+                    >
+                      {kind === "acciaccatura" ? "Crushed" : "Leaned on"}
+                    </Button>
+                  ))}
+                </ButtonGroup>
+                {graceHere ? (
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      setGraceNotes((current) =>
+                        current.filter((one) => one !== graceHere),
+                      )
+                    }
+                  >
+                    Take it off
+                  </Button>
+                ) : null}
+              </Stack>
+              <Typography variant="caption" color="text.secondary">
+                Crushed is an acciaccatura — as fast as possible, with a slash
+                through its stem. Leaned on is an appoggiatura, which takes its
+                time from the note it precedes.
+              </Typography>
+            </>
+          )}
 
           <Divider textAlign="left">
             <Typography variant="caption" color="text.secondary">

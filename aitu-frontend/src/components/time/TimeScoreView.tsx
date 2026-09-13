@@ -17,6 +17,7 @@ import {
   type FingerAnnotation,
   type FingerNumber,
   type KeyChangeAnnotation,
+  type GraceNoteAnnotation,
   type LyricAnnotation,
   type OttavaAnnotation,
   type PassageAnnotation,
@@ -26,6 +27,7 @@ import {
 import type {
   CueRange,
   FigureName,
+  GraceNote,
   KeySignatureName,
   LyricLine,
   TimeScorePayload,
@@ -217,6 +219,13 @@ export interface TimeScoreViewProps {
   lyrics?: readonly LyricLine[];
   /** Stretches printed smaller than the rest of the page. */
   cueRanges?: readonly CueRange[];
+  /**
+   * Small notes leaning on a note of the music.
+   *
+   * Drawn in the annotation layer and not in the music, because a grace note takes no column:
+   * nothing about the spacing of the page is measured from it, and adding one moves no note.
+   */
+  graceNotes?: readonly GraceNote[];
   /** Words under the staff. On unless the performance overlay turns them off. */
   showLyrics?: boolean;
   /**
@@ -258,6 +267,7 @@ export function TimeScoreView({
   trills,
   lyrics,
   cueRanges,
+  graceNotes,
   showLyrics = true,
   annotationScale = 1,
 }: TimeScoreViewProps) {
@@ -433,6 +443,16 @@ export function TimeScoreView({
       options: {},
     }));
 
+    const graceAnnotations: GraceNoteAnnotation[] = (graceNotes ?? []).map((grace) => ({
+      anchor: {
+        hand: grace.hand,
+        columns: { fromColumn: grace.startFrame, toColumn: grace.startFrame + 1 },
+        rows: [grace.targetRow],
+      },
+      row: grace.row,
+      kind: grace.kind,
+    }));
+
     const drawn = new GridNotationRenderer(container, {
       frameCount: score.envelope.frameCount,
       // A column is `frameMs` of wall clock. The renderer only uses this to turn a column into a
@@ -455,6 +475,7 @@ export function TimeScoreView({
         texts: trillTexts,
         lyrics: lyricAnnotations,
         passages: cuePassages,
+        graceNotes: graceAnnotations,
       },
       // How large every mark over and under the staff is drawn. One number rather than one per
       // kind: a reader crowding a dense passage wants all of them smaller, not the numbers only.
@@ -573,6 +594,7 @@ export function TimeScoreView({
     trills,
     lyrics,
     cueRanges,
+    graceNotes,
     showLyrics,
     annotationScale,
     showTuplets,

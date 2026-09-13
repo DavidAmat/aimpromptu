@@ -15,6 +15,7 @@ and nothing in the recording implies them:
 * which finger plays which note
 * the stretches printed as one held note with ``tr`` over them
 * the words written under the staff, and the stretches printed small
+* the small notes leaning on a note
 
 Those two are readings of the page, not corrections to the recording. A note the
 transcriber invented out of a pedal blur is still in the matrix after the reader
@@ -40,6 +41,7 @@ still refer to what they referred to.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -186,6 +188,33 @@ class CueRange(BaseModel):
         return self
 
 
+class GraceNote(BaseModel):
+    """A small note drawn just before a note of the music.
+
+    A mark and not an event. It is not in ``events.json``, it takes no column, nothing plays it,
+    and no figure anywhere is measured differently because of it — which is exactly why it can be
+    added and removed freely.
+
+    ``row`` is the grace note's own pitch and ``target_row`` is the note it leans on. The two are
+    separate because the mark hangs off a note it is not: the target says where to stand, ``row``
+    says what to draw.
+
+    ``kind`` is what a player does with it. An **acciaccatura** is crushed, as fast as possible, and
+    prints with a slash through its stem. An **appoggiatura** leans, taking its time from the note
+    it precedes, and prints without one.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    hand: PrintedHand
+    start_frame: int = Field(..., alias="startFrame", ge=0)
+    #: The note it leans on.
+    target_row: int = Field(..., alias="targetRow", ge=0, lt=KEY_COUNT)
+    #: The grace note's own pitch.
+    row: int = Field(..., ge=0, lt=KEY_COUNT)
+    kind: Literal["acciaccatura", "appoggiatura"] = "acciaccatura"
+
+
 class Fingering(BaseModel):
     """Which finger plays one note.
 
@@ -250,6 +279,9 @@ class SavedRhythm(BaseModel):
     #: Stretches printed as one held note with ``tr`` over them.
     trills: list[Trill] = Field(default_factory=list)
 
+    #: Small notes leaning on a note of the music.
+    grace_notes: list[GraceNote] = Field(default_factory=list, alias="graceNotes")
+
     #: Lines of words written under the staff, over a stretch of columns.
     lyrics: list[Lyric] = Field(default_factory=list)
 
@@ -283,6 +315,8 @@ class SavedRhythm(BaseModel):
             parts.append(f"{len(self.fingers)} fingering(s)")
         if self.trills:
             parts.append(f"{len(self.trills)} trill(s)")
+        if self.grace_notes:
+            parts.append(f"{len(self.grace_notes)} grace note(s)")
         if self.lyrics:
             parts.append(f"{len(self.lyrics)} lyric line(s)")
         if self.cue_ranges:
