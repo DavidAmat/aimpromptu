@@ -25,6 +25,7 @@ export type { AudioItem, AudioSource, AudioTimeRange, WaveformPeaks } from "./au
 
 export { timeScoreApi, FIGURE_LABELS, KEY_LABELS, KEY_SIGNATURES } from "./timeScore";
 export type {
+  CueRange,
   FigureLadder,
   FigureName,
   HandChoice,
@@ -32,6 +33,7 @@ export type {
   LabelledPeak,
   LadderPreview,
   LayoutHints,
+  LyricLine,
   Passage,
   Peak,
   PeaksResponse,
@@ -41,6 +43,9 @@ export type {
   SpeedChange,
   TimeMatrixEnvelope,
   TimeScorePayload,
+  Trill,
+  TrillSuggestion,
+  TrillsResponse,
 } from "./timeScore";
 
 export { matrixApi } from "./matrix";

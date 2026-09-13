@@ -7,10 +7,13 @@
 
 import {
   timeScoreApi,
+  type CueRange,
   type FigureName,
   type KeySignatureName,
+  type LyricLine,
   type SavedRhythm,
   type TimeScorePayload,
+  type Trill,
 } from "../api";
 import type {
   FingerNumber,
@@ -32,6 +35,14 @@ export interface PerformanceReading {
   overrides: Record<string, FigureName>;
   beamBreaks: Set<string>;
   fingers: Record<string, FingerNumber>;
+  /** Stretches printed as one held note with `tr` over them. */
+  trills: Trill[];
+  /** Lines of words under the staff. */
+  lyrics: LyricLine[];
+  /** Stretches printed smaller than the rest of the page. */
+  cueRanges: CueRange[];
+  /** How large the marks are drawn, as a multiple of normal. */
+  annotationScale: number;
 }
 
 export async function loadPerformanceScore(
@@ -59,6 +70,10 @@ export async function loadPerformanceScore(
     row: note.row,
   }));
   const speedChanges = rhythm?.speedChanges ?? [];
+  // The trills go on the request rather than being applied to the drawing: the held note takes
+  // its printed length from the gap to the next onset after the run, which is measured where the
+  // figures are named.
+  const trills = [...(rhythm?.trills ?? [])];
   const score = await timeScoreApi.score(
     audioUuid,
     {
@@ -68,6 +83,7 @@ export async function loadPerformanceScore(
       boundaries: speedChanges.map((change) => change.startFrame),
       boundaryMs: [anchorMs, ...speedChanges.map((change) => change.anchorMs)],
       hiddenNotes,
+      trills,
     },
     signal,
   );
@@ -105,5 +121,9 @@ export async function loadPerformanceScore(
     overrides,
     beamBreaks,
     fingers,
+    trills,
+    lyrics: [...(rhythm?.lyrics ?? [])],
+    cueRanges: [...(rhythm?.cueRanges ?? [])],
+    annotationScale: rhythm?.annotationScale ?? 1,
   };
 }

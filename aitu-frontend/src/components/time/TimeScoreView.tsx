@@ -17,10 +17,20 @@ import {
   type FingerAnnotation,
   type FingerNumber,
   type KeyChangeAnnotation,
+  type LyricAnnotation,
   type OttavaAnnotation,
+  type PassageAnnotation,
   type SparseMatrix,
+  type TextAnnotation,
 } from "@aimpromptu/grid-notation";
-import type { FigureName, KeySignatureName, TimeScorePayload } from "../../api";
+import type {
+  CueRange,
+  FigureName,
+  KeySignatureName,
+  LyricLine,
+  TimeScorePayload,
+  Trill,
+} from "../../api";
 import {
   applyRenderOverrides,
   NO_RENDER_OVERRIDES,
@@ -195,6 +205,27 @@ export interface TimeScoreViewProps {
   showTuplets?: boolean;
   /** Finger numbers. On unless the performance overlay turns them off. */
   showFingers?: boolean;
+  /**
+   * Stretches printed as one held note with `tr` over them.
+   *
+   * The alternations are already off the page by the time the score arrives — they are taken out
+   * on the backend, before any figure is named, because the printed length of a note is the gap to
+   * the next onset in the same hand. All that is left to do here is print the mark.
+   */
+  trills?: readonly Trill[];
+  /** Lines of words under the staff, over a stretch of columns. */
+  lyrics?: readonly LyricLine[];
+  /** Stretches printed smaller than the rest of the page. */
+  cueRanges?: readonly CueRange[];
+  /** Words under the staff. On unless the performance overlay turns them off. */
+  showLyrics?: boolean;
+  /**
+   * How large the marks over and under the staff are drawn, as a multiple of their normal size.
+   *
+   * One piece can be dense enough that fingering crowds it and another airy enough that the same
+   * numbers are hard to read, so the size belongs to the piece rather than to the app.
+   */
+  annotationScale?: number;
 }
 
 export function TimeScoreView({
@@ -224,6 +255,11 @@ export function TimeScoreView({
   showGuides = true,
   showTuplets = true,
   showFingers = true,
+  trills,
+  lyrics,
+  cueRanges,
+  showLyrics = true,
+  annotationScale = 1,
 }: TimeScoreViewProps) {
   const host = useRef<HTMLDivElement | null>(null);
   // The positioned box the score is drawn into. Both the cursor's placement and a drag over it are
@@ -365,6 +401,38 @@ export function TimeScoreView({
       },
     );
 
+    // `tr` over the note that was left standing where the alternations were. The note itself is
+    // already one held note by the time the score arrives; this is only the word above it.
+    const trillTexts: TextAnnotation[] = (trills ?? []).map((trill) => ({
+      anchor: {
+        hand: trill.hand,
+        columns: { fromColumn: trill.startFrame, toColumn: trill.startFrame + 1 },
+        rows: [trill.row],
+      },
+      text: "tr",
+    }));
+
+    // Words belong to the piece rather than to a staff, so they are anchored `single` and drawn
+    // under the lower staff whichever hand is singing them.
+    const lyricAnnotations: LyricAnnotation[] = (showLyrics ? (lyrics ?? []) : []).map((line) => ({
+      anchor: {
+        hand: "single",
+        columns: { fromColumn: line.fromColumn, toColumn: line.toColumn },
+        rows: [],
+      },
+      text: line.text,
+    }));
+
+    const cuePassages: PassageAnnotation[] = (cueRanges ?? []).map((cue) => ({
+      kind: "cue-size",
+      anchor: {
+        hand: cue.hand === "left" ? "left" : cue.hand === "right" ? "right" : "single",
+        columns: { fromColumn: cue.fromColumn, toColumn: cue.toColumn },
+        rows: [],
+      },
+      options: {},
+    }));
+
     const drawn = new GridNotationRenderer(container, {
       frameCount: score.envelope.frameCount,
       // A column is `frameMs` of wall clock. The renderer only uses this to turn a column into a
@@ -383,7 +451,14 @@ export function TimeScoreView({
         // Octave brackets, which take a passage out of the ledger lines and into the staff.
         ottavas: [...(ottavas ?? [])],
         fingers: fingerAnnotations,
+        // `tr` marks, the words under the staff, and the stretches printed small.
+        texts: trillTexts,
+        lyrics: lyricAnnotations,
+        passages: cuePassages,
       },
+      // How large every mark over and under the staff is drawn. One number rather than one per
+      // kind: a reader crowding a dense passage wants all of them smaller, not the numbers only.
+      annotationScale,
       staves: score.layout.hideLeftHand || score.layout.hideRightHand ? "single" : "grand",
       // The two wall-clock levels above the column. A dashed line every `frameMeasure` columns
       // says where the page is in time; a selection snaps to `frameGroup` columns, which is the
@@ -495,6 +570,11 @@ export function TimeScoreView({
     placeRangeHandles,
     readOnly,
     showGuides,
+    trills,
+    lyrics,
+    cueRanges,
+    showLyrics,
+    annotationScale,
     showTuplets,
     showFingers,
   ]);

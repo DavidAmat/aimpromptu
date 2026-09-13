@@ -168,6 +168,8 @@ function PerformanceStand({ audioUuid, title }: { audioUuid: string; title: stri
   const [scrollCursorAt, setScrollCursorAt] = useState(0);
   const player = useRef<ScorePlayerControls | null>(null);
   const [showFingers, setShowFingers] = useState(true);
+  /** The words under the staff. A performer who knows the song does not need them. */
+  const [showLyrics, setShowLyrics] = useState(true);
   const [showMarks, setShowMarks] = useState(true);
   const [showGuides, setShowGuides] = useState(true);
 
@@ -214,6 +216,7 @@ function PerformanceStand({ audioUuid, title }: { audioUuid: string; title: stri
           Overlays
         </Typography>
         <Pill label="Fingering" selected={showFingers} onClick={() => setShowFingers((value) => !value)} />
+        <Pill label="Words" selected={showLyrics} onClick={() => setShowLyrics((value) => !value)} />
         <Tooltip title="Lyrics arrive in Epic 12">
           <span>
             <Pill label="Lyrics" disabled />
@@ -247,6 +250,11 @@ function PerformanceStand({ audioUuid, title }: { audioUuid: string; title: stri
         keyChanges={reading.keyChanges}
         ottavas={reading.ottavas}
         fingers={reading.fingers}
+        trills={reading.trills}
+        lyrics={reading.lyrics}
+        cueRanges={reading.cueRanges}
+        annotationScale={reading.annotationScale}
+        showLyrics={showLyrics}
         playheadSeconds={playheadSeconds}
         followPlayhead={playing}
         onScrub={scrub}

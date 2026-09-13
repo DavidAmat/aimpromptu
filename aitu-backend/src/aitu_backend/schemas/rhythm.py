@@ -13,6 +13,8 @@ and nothing in the recording implies them:
 * the notes the reader asked to start a new beam (D-34)
 * the notes taken off the page
 * which finger plays which note
+* the stretches printed as one held note with ``tr`` over them
+* the words written under the staff, and the stretches printed small
 
 Those two are readings of the page, not corrections to the recording. A note the
 transcriber invented out of a pedal blur is still in the matrix after the reader
@@ -39,7 +41,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from aitu_backend.matrix.keys import KEY_COUNT
 from aitu_backend.schemas.time_matrix import (
@@ -96,6 +98,92 @@ class HiddenNote(BaseModel):
 
     start_frame: int = Field(..., alias="startFrame", ge=0)
     row: int = Field(..., ge=0, lt=KEY_COUNT)
+
+
+class Trill(BaseModel):
+    """A stretch the reader asked to print as one held note with ``tr`` over it.
+
+    A reading of the page, like every other model in this file: the alternations are all still in
+    ``events.json``, playback still sounds every one of them (D-29), and removing the mark prints
+    them again. What the mark changes is only which noteheads are drawn.
+
+    ``row`` is the note that stays — the lower of the two, because ``tr`` means "alternate with the
+    note above". It is stored rather than re-derived so that accepting a suggestion and then editing
+    the notes underneath cannot silently move the mark to a different pitch.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    hand: PrintedHand
+    start_frame: int = Field(..., alias="startFrame", ge=0)
+    #: One past the column of the run's last onset.
+    end_frame: int = Field(..., alias="endFrame", gt=0)
+    row: int = Field(..., ge=0, lt=KEY_COUNT)
+
+    @model_validator(mode="after")
+    def _check_range(self) -> "Trill":
+        if self.end_frame <= self.start_frame:
+            raise ValueError(
+                f"a trill ending at frame {self.end_frame} does not come after its start "
+                f"frame {self.start_frame}"
+            )
+        return self
+
+
+class Lyric(BaseModel):
+    """A line of words written under the staff, across a stretch of columns.
+
+    Hand-independent: words belong to the piece rather than to a staff, and they are drawn under
+    the lower staff whichever hand is singing them.
+
+    The range is what the reader marked, and nothing about the drawing depends on it being tidy: a
+    lyric never widens the layout, because the spacing of the page comes from the notes and never
+    from an annotation (D-22, D-23). A line over a long rest keeps its start and stays there.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_column: int = Field(..., alias="fromColumn", ge=0)
+    #: Exclusive.
+    to_column: int = Field(..., alias="toColumn", gt=0)
+    text: str = Field(..., min_length=1)
+
+    @model_validator(mode="after")
+    def _check_range(self) -> "Lyric":
+        if self.to_column <= self.from_column:
+            raise ValueError(
+                f"a lyric ending at column {self.to_column} does not come after its start "
+                f"column {self.from_column}"
+            )
+        return self
+
+
+class CueRange(BaseModel):
+    """A stretch printed smaller than the rest of the page.
+
+    Asked for, never inferred. A florid run in one hand set at full size crowds the other hand off
+    the system; set smaller it takes less width and reads as decoration, which is what it is.
+
+    The narrowing is allowed to move the notes **inside** the mark and nothing outside it, which is
+    the same locality D-21 gives a ladder change.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    #: ``"right"``, ``"left"``, or ``"single"`` for both staves at once.
+    hand: str = "single"
+    from_column: int = Field(..., alias="fromColumn", ge=0)
+    #: Exclusive.
+    to_column: int = Field(..., alias="toColumn", gt=0)
+
+    @model_validator(mode="after")
+    def _check_range(self) -> "CueRange":
+        if self.to_column <= self.from_column:
+            raise ValueError(
+                f"a cue-size stretch ending at column {self.to_column} does not come after its "
+                f"start column {self.from_column}"
+            )
+        return self
 
 
 class Fingering(BaseModel):
@@ -155,9 +243,23 @@ class SavedRhythm(BaseModel):
     overrides: list[FigureOverride] = Field(default_factory=list)
     beam_breaks: list[BeamBreak] = Field(default_factory=list, alias="beamBreaks")
 
-    #: Page readings. None of these three touch the matrix; see the module note.
+    #: Page readings. None of these touch the matrix; see the module note.
     hidden_notes: list[HiddenNote] = Field(default_factory=list, alias="hiddenNotes")
     fingers: list[Fingering] = Field(default_factory=list)
+
+    #: Stretches printed as one held note with ``tr`` over them.
+    trills: list[Trill] = Field(default_factory=list)
+
+    #: Lines of words written under the staff, over a stretch of columns.
+    lyrics: list[Lyric] = Field(default_factory=list)
+
+    #: Stretches printed smaller, because the reader offers them rather than asserts them.
+    cue_ranges: list[CueRange] = Field(default_factory=list, alias="cueRanges")
+
+    #: How large the marks over and under the staff are drawn, as a multiple of their normal size.
+    #: One piece can be dense enough that fingering crowds it and another airy enough that the same
+    #: numbers are hard to read, and the difference is per piece rather than per app.
+    annotation_scale: float = Field(1.0, alias="annotationScale", gt=0.3, le=2.0)
 
     saved_at: datetime = Field(default_factory=_now, alias="savedAt")
 
@@ -179,4 +281,10 @@ class SavedRhythm(BaseModel):
             parts.append(f"{len(self.hidden_notes)} note(s) off the page")
         if self.fingers:
             parts.append(f"{len(self.fingers)} fingering(s)")
+        if self.trills:
+            parts.append(f"{len(self.trills)} trill(s)")
+        if self.lyrics:
+            parts.append(f"{len(self.lyrics)} lyric line(s)")
+        if self.cue_ranges:
+            parts.append(f"{len(self.cue_ranges)} cue-size stretch(es)")
         return ", ".join(parts) + "."
