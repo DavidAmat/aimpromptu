@@ -60,7 +60,7 @@ the global controls in `App.tsx`.
 
 Separate text areas for right (treble) and left (bass). **Not** inline `__` separators —
 the API takes `sequence` + `leftSequence` as parallel arrays. See
-[notation-spec.md](../shared/notation-spec.md).
+[notation-spec.md](../../music/notation-logic/02-notation-spec.md).
 
 ## Notation hints (in-UI)
 
@@ -69,7 +69,7 @@ hand must match right-hand frame count.
 
 ## Where to look deeper
 
-- [notation-spec.md](../shared/notation-spec.md) — text notation contract
-- [endpoints.md](../../documentation/services/backend/endpoints.md) — API body/422
-- [components.md](../../documentation/services/frontend/components.md) — `SequenceComposer` detail
+- [notation-spec.md](../../music/notation-logic/02-notation-spec.md) — text notation contract
+- [endpoints.md](../../../documentation/services/backend/endpoints.md) — API body/422
+- [components.md](../../../documentation/services/frontend/components.md) — `SequenceComposer` detail
 - [rendering-pipeline.md](rendering-pipeline.md) — how the returned score renders

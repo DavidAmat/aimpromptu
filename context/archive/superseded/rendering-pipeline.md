@@ -2,7 +2,7 @@
 
 Sparse-COO JSON → VexFlow SVG. All music logic under `src/music/`; drawing in `PianoSheet.tsx`.
 
-Notation contract: [notation-spec.md](../shared/notation-spec.md).
+Notation contract: [notation-spec.md](../../music/notation-logic/02-notation-spec.md).
 
 ## Pipeline stages
 
@@ -62,7 +62,7 @@ over sustains and silences. Two-hand: lyrics above treble; `lyricColOffset` = wi
 
 ## Where to look deeper
 
-- [matrix-to-notation.md](../../documentation/services/frontend/matrix-to-notation.md)
-- [piano-sheet.md](../../documentation/services/frontend/piano-sheet.md)
-- [notes.md](../../documentation/services/frontend/notes.md)
-- [documentation/archive/vexflow-reference.md](../../documentation/archive/vexflow-reference.md) — legacy VexFlow notes (superseded by low-level API in PianoSheet)
+- [matrix-to-notation.md](../../../documentation/services/frontend/grid-notation.md)
+- [piano-sheet.md](../../../documentation/services/frontend/grid-notation.md)
+- [notes.md](../../../documentation/services/frontend/grid-notation.md)
+- [documentation/archive/vexflow-reference.md](../../../documentation/archive/vexflow-reference.md) — legacy VexFlow notes (superseded by low-level API in PianoSheet)

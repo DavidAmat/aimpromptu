@@ -38,5 +38,5 @@ two hands: time-window wrap uses the same spacing for note area width).
 
 - [app-shell.md](app-shell.md) — fetch and global state
 - [rendering-pipeline.md](rendering-pipeline.md) — how `PianoSheet` uses layout props
-- [components.md](../../documentation/services/frontend/components.md) — component props
-- [piano-sheet.md](../../documentation/services/frontend/piano-sheet.md) — VexFlow layout math
+- [components.md](../../../documentation/services/frontend/components.md) — component props
+- [piano-sheet.md](../../../documentation/services/frontend/grid-notation.md) — VexFlow layout math

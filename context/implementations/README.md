@@ -8,14 +8,17 @@ decisions, and the progress reports.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 01 | [`01-epics-master-plan/`](01-epics-master-plan/README.md) | The whole product, cut into 14 epics: skeleton, matrix engine, audio, transcription, artifacts, the Playground tabs, notation, library, range editing, annotations, live composing, documentation | 2026-07-27 | **Live.** Epics 1–12 built; Epics 13 and 14 remain. [`plan/checklist.md`](01-epics-master-plan/plan/checklist.md) is the status lookup |
+| 01 | [`01-epics-master-plan/`](01-epics-master-plan/README.md) | The whole product, cut into 14 epics: skeleton, matrix engine, audio, transcription, artifacts, the Playground tabs, notation, library, range editing, annotations, live composing, documentation | 2026-07-27 | **Complete 2026-09-13.** All 14 epics built. [`plan/checklist.md`](01-epics-master-plan/plan/checklist.md) is the status lookup; [`progress/RETROSPECTIVE.md`](01-epics-master-plan/progress/RETROSPECTIVE.md) closes the journal |
 | 02 | [`02-vexflow-migration/`](02-vexflow-migration/README.md) | The brief that created our own notation renderer, `@aimpromptu/grid-notation`, in a separate repository (`vexflow-v2`), instead of drawing with VexFlow | 2026-07-28 | **Closed.** The package exists and draws every sheet the app shows |
 | 03 | [`03-time-based-concept/`](03-time-based-concept/CLOSURE.md) | The wall-clock refactor: a column became a slice of real time, the note figure became a label you choose, and tempo left the product entirely | 2026-08-08 | **Closed 2026-08-10.** Nothing here is waiting to be picked up; [`CLOSURE.md`](03-time-based-concept/CLOSURE.md) says what shipped and what was dropped |
 
 ## How to read this folder
 
 - **"Where are we?"** → [`01-epics-master-plan/plan/checklist.md`](01-epics-master-plan/plan/checklist.md).
-  It is the one status list for the project.
+  It is the one status list for the project. Every epic is done; three defects are open under
+  Epic 14.
+- **"How did we get here, and what did it teach us?"** →
+  [`01-epics-master-plan/progress/RETROSPECTIVE.md`](01-epics-master-plan/progress/RETROSPECTIVE.md).
 - **"Why does the app work this way?"** → [`03-time-based-concept/decisions.md`](03-time-based-concept/decisions.md)
   (D-01 … D-34, frozen and still binding) and
   [`03-time-based-concept/CLOSURE.md`](03-time-based-concept/CLOSURE.md).

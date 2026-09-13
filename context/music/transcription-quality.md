@@ -1,23 +1,13 @@
-> **Updated 2026-08-10.** Layers 1 to 3 — the engine, the artifact filter and the hand split — are
-> still exactly as described, and the hand split gained two corrections in 2026-08-08's review
-> stream: it is charged for the ledger lines its assignments cost, and a reader can override it,
-> which is written onto the recording rather than onto the page.
->
-> **Layer 4 no longer exists in the form described here.** There is no grid built from a BPM and a
-> note resolution, so the whole class of "played evenly, printed ragged" error that this document
-> attributes to layer 4 is retired: a column is 40 ms of real time and a figure is a label the
-> reader chooses. Read the layer-4 sections as history.
-> [`context/implementations/03-time-based-concept/CLOSURE.md`](../implementations/03-time-based-concept/CLOSURE.md)
-> says what replaced it.
-
 # Transcription quality: what goes wrong between audio and a printed figure
 
-How a note travels from a recording to a symbol on the page, and the four distinct
-places that journey can produce something the player never played. Written 2026-08-02
-after a session that measured all four on the same file.
+How a note travels from a recording to a symbol on the page, and the four distinct places that
+journey can produce something the player never played. Written 2026-08-02 after a session that
+measured all four on the same file; **layers 1 to 3 are unchanged and layer 4 was removed by the
+wall-clock model** — §4 below says what took its place.
 
 Detail and exact parameters: [documentation/services/backend/transcription-pipeline.md](../../documentation/services/backend/transcription-pipeline.md).
-Diagnosing a specific bad passage: [documentation/issues/rhythm-figures-and-tempo.md](../../documentation/issues/rhythm-figures-and-tempo.md).
+Diagnosing a specific bad passage:
+[documentation/issues/piano-matrix-sustains-and-phantom-onsets.md](../../documentation/issues/piano-matrix-sustains-and-phantom-onsets.md).
 
 ---
 
@@ -38,11 +28,12 @@ The four layers, in the order they run:
 | 1 | The engine | Missing a note, or inventing one |
 | 2 | The artifact filter | Keeping something that is not a note |
 | 3 | The hand split | Giving a note to the wrong hand |
-| 4 | The grid | Printing an evenly played run as ragged figures |
+| 4 | ~~The grid~~ | **Removed.** It printed an evenly played run as ragged figures; see §4 |
 
-The **Notes Falling (raw)** tab exists to separate layer 1 from the rest: it draws
-`events.json` directly, in seconds, with no grid anywhere. If a passage looks even there
-and ragged on the score, the engine is not the problem.
+**Piano Roll** and **Notes Falling** exist to separate layer 1 from the rest: both draw
+`events.json` directly, in seconds, with no grid anywhere, and both can show the notes the artifact
+filter discarded, dashed. If a passage looks even there and ragged on the score, the engine is not
+the problem.
 
 ---
 
@@ -118,54 +109,52 @@ seven keys physically held down, which is the pedal limitation, not a tuning pro
 Runbook, including the search bug found alongside it:
 [documentation/issues/hand-split-ledger-lines.md](../../documentation/issues/hand-split-ledger-lines.md).
 
-## 4. The grid, and the arithmetic that has no way out
+## 4. The grid — the layer that was removed
 
-This is the subtlest of the four and the one that looks most like a bug when it is not.
+This was the subtlest of the four and the one that looked most like a bug when it was not. It is
+recorded here because the reasoning is what produced the wall-clock model, and because a reader who
+finds an old note about "ragged figures" should be able to find out what happened to it.
 
-A run of notes 106.7 ms apart, on a grid whose columns are 84.27 ms, is **1.27 columns per
-note**. An onset can only land on a whole column. Twelve such gaps are 15.2 columns of real
-time, so twelve gaps have to be written as nine 1s and three 2s — nine semicorcheas and
-three corcheas — and there is no other way to do it. Nobody decided the corcheas; they are
-the change left over.
+**The arithmetic had no way out.** A run of notes 106.7 ms apart, on a grid whose columns were
+84.27 ms, is **1.27 columns per note**. An onset can only land on a whole column. Twelve such gaps
+are 15.2 columns of real time, so twelve gaps had to be written as nine 1s and three 2s — nine
+semicorcheas and three corcheas — and there was no other way to do it. Nobody decided the corcheas;
+they were the change left over.
 
-Two things follow, and both are implemented:
+Two mitigations were built and both are gone with the layer: quantising runs as runs per hand, and
+refusing a run that did not fit rather than forcing it.
 
-- **Runs are quantised as runs, per hand** — one integer span for the whole stretch instead
-  of rounding each onset alone. Within a hand, because a left hand holding a redonda has two
-  onsets while the right plays twenty-five, and mixed together they are not a run at all.
-- **A run that does not fit is refused, not forced.** Forcing 1.27 into 1 ends the passage a
-  quarter short and dumps the difference as a rest in the middle of the phrase, which is
-  worse notation than the ragged figures it replaced. So it is left as played and the tempo
-  it is *asking for* is reported instead.
+**The measurement that ended the layer.** The refusals on the reference file clustered at about
+139 BPM against a stated 178, and a grid fitted to the attacks either side of 218 s gave 133.5
+before and 127.9 after. The piece genuinely changed tempo. Worse, one half mixed sixteenths (107 ms)
+and eighth-note triplets (143 ms): at 140 BPM those are 107.2 ms and 142.9 ms, which fits, and **a
+binary grid can print the first and cannot print the second at any tempo**.
 
-That report is the useful part. A run of 21 notes all 1.27 columns long is not ambiguous
-data — it is a measurement saying the tempo is 27 % out.
+At that point the conclusion was not "fit a better grid". It was that a grid built from a typed
+tempo cannot express playing, and the position of a note should not be derived from its rhythmic
+value at all.
 
----
+### What replaced it
 
-## The tempo is not one number
+Position is measured wall-clock time — a column is a fixed 40 ms — and the figure is a name the
+reader chooses from the distribution of gaps in their own playing. The whole class of "played
+evenly, printed ragged" error is retired, and the two problems this section left open were answered
+rather than fixed:
 
-The refusals on the reference file cluster at ~139 BPM against a stated 178, and a grid fit
-to the attacks either side of 218 s gives 133.5 before and 127.9 after. The piece genuinely
-changes tempo.
+| The old problem | What answers it now |
+|---|---|
+| The piece changes tempo | Passages: mark a stretch, say what a gap is worth from there on. Nothing outside it moves |
+| Some passages are tuplets | Tresillos are detected on the raw gaps and marked with a bracket, not rounded |
 
-Worse, one half mixes **sixteenths (107 ms) and eighth-note triplets (143 ms)** — at 140 BPM
-those are 107.2 ms and 142.9 ms, which fits. A binary grid can print the first and cannot
-print the second at any tempo. So there are two separate outstanding problems:
-
-| Problem | Fix | Status |
-|---|---|---|
-| The piece changes tempo | Per-region tempo, re-quantised from `events.json` | Clock built and tested; not yet wired |
-| Some passages are tuplets | Triplet subdivision in `Granularity` | Not started |
-
-Do not conflate them. Per-region tempo will fix the sixteenths completely and will not touch
-the triplets.
+Full reasoning in [`../backend/time-model.md`](../backend/time-model.md); the derivation path in
+[`documentation/services/backend/events-to-sheet.md`](../../documentation/services/backend/events-to-sheet.md).
 
 ---
 
 ## Where to look deeper
 
 - [documentation/services/backend/transcription-pipeline.md](../../documentation/services/backend/transcription-pipeline.md) — modules, order, parameters, endpoints
-- [documentation/issues/rhythm-figures-and-tempo.md](../../documentation/issues/rhythm-figures-and-tempo.md) — the diagnostic recipe for a bad passage
-- [notation-logic/01-matrix-notation-logic.md](notation-logic/01-matrix-notation-logic.md) — Appendices B (sustains) and C (duration approximation)
+- [documentation/issues/rhythm-figures-and-tempo.md](../../documentation/issues/rhythm-figures-and-tempo.md) — **retired.** The bug class layer 4 produced, kept as the record of it
+- [`../backend/time-model.md`](../backend/time-model.md) — the model that replaced layer 4
+- [archive/superseded/01-matrix-notation-logic.md](../archive/superseded/01-matrix-notation-logic.md) — Appendix B (sustains), still in force; the rest is history
 - [../research/piano-transcription/piano-transcription-python-solutions.md](../research/piano-transcription/piano-transcription-python-solutions.md) — the engine survey

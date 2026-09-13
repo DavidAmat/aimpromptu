@@ -1,15 +1,23 @@
-# Notation and parsing
+# Notation and parsing — the text-notation MVP
 
 How aitu-backend turns text frames into a sparse-COO score. The format contract is
-[shared/notation-spec.md](../shared/notation-spec.md); this file covers backend
+[02-notation-spec.md](../music/notation-logic/02-notation-spec.md); this file covers backend
 ownership only.
+
+> **This path is the project's original seed and is no longer an entry point.** Text notation and
+> matrix JSON were removed from Upload / Input in P4.2, for one reason: a sheet is written from
+> recorded onsets and neither of those has any. `POST /sequence` still runs and is still correct.
+>
+> The parser is kept because it is self-contained and cheap, and because the 88-key tables it grew
+> are now in `matrix/keys.py` and used by everything. **What the app actually does** is in
+> [time-model.md](time-model.md).
 
 ## Input
 
-`POST /sequence` accepts `sequence: list[str]` — one string per time frame. The
-compose UI maps one line per frame; see [compose-panel.md](../frontend/compose-panel.md).
+`POST /sequence` accepts `sequence: list[str]` — one string per time frame. One line per frame. The compose UI that produced them was deleted with the tempo model;
+see [`archive/superseded/compose-panel.md`](../archive/superseded/compose-panel.md).
 
-Parsing is in `sequence.py`:
+Parsing is in `matrix/text_notation.py` (it was `sequence.py` before the Epic 1 restructure):
 
 - `parse_timeframe_notes(cell)` — splits on `||`, strips whitespace, reads leading `*`
   for onsets.
@@ -41,12 +49,12 @@ The `rows` note-name table is **not** included — the frontend rebuilds the can
 
 ## 88-key row order
 
-`build_grand_piano_rows()` — `La-0`, `La#-0`, `Si-0`, then full chromatic octaves 1–7,
-then `Do-8`. Mirrors `buildGrandPianoRows()` in the frontend.
+`build_grand_piano_rows()`, now in `matrix/keys.py` — `La-0`, `La#-0`, `Si-0`, then full chromatic octaves 1–7,
+then `Do-8`. Mirrored in the frontend by `music/noteNames.ts`.
 
 ## Where to look deeper
 
-- [shared/notation-spec.md](../shared/notation-spec.md) — full contract
+- [02-notation-spec.md](../music/notation-logic/02-notation-spec.md) — full contract
 - [sequence-logic.md](../../documentation/services/backend/sequence-logic.md) — function-level detail
 - [schemas.md](../../documentation/services/backend/schemas.md) — Pydantic models
 - [api.md](api.md) — `POST /sequence` request/response

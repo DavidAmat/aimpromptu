@@ -56,6 +56,6 @@ semicorchea / dotted corchea / semicorchea. That example is now a regression tes
 ## Where to look deeper
 
 - [`../../music/transcription-quality.md`](../../music/transcription-quality.md) — the four layers between audio and a printed figure. Layers 1–3 still hold; layer 4 is what this refactor replaced
-- [`../../music/notation-logic/01-matrix-notation-logic.md`](../../music/notation-logic/01-matrix-notation-logic.md) — the notation model that was replaced, banner-marked as obsolete
+- [`../../archive/superseded/01-matrix-notation-logic.md`](../../archive/superseded/01-matrix-notation-logic.md) — the notation model that was replaced, banner-marked as obsolete
 - [`../../../documentation/issues/rhythm-figures-and-tempo.md`](../../../documentation/issues/rhythm-figures-and-tempo.md) — the runbook this refactor retired
 - [`../plan/checklist.md`](../01-epics-master-plan/plan/checklist.md) — the original Epic 1–14 plan; this refactor superseded parts of Epics 2, 4 and 9

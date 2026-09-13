@@ -2,8 +2,13 @@
 
 > **Status: CLOSED on 2026-08-10.** Nothing in this plan is waiting to be worked on. Two boxes were
 > left undone on purpose; they are named below with the reason. **No task from this plan carries
-> forward.** Anything we do next is a new implementation plan, opened from what real playing shows
-> us, not from what is left here.
+> forward.**
+>
+> **Corrected 2026-09-13 by Task 14.1.1.** This document was written on the day the plan closed and
+> described the app as it stood that morning. Work started again that same afternoon and did not
+> stop, so several statements below — chiefly §3, "what was removed" — had been wrong for a month.
+> §8 at the end is new and says what happened next; §3 now points at it. Nothing else has been
+> rewritten: this is still the record of what the plan itself did.
 
 This was the project's kickoff plan. It started as "fix the rhythm figures" and became a change of
 model, which is why it grew from a fix into eight phases across two repositories. The model is now
@@ -80,18 +85,30 @@ Four of the six things we said would prove the model were measured and hold:
 
 ---
 
-## 3. What was removed, and is not coming back on its own
+## 3. What was removed, and what has since come back
 
 The Playground had seven tabs. Five were deleted: **Matrix**, **Piano Roll**, **Notes Falling**,
 **Notes Falling (raw)** and **Music Notation**. All five asked for a tempo and drew from a grid
 built out of it, so they could not survive the model change.
 
-Stated plainly, so nobody rediscovers it later: there is **no piano-roll view**, **no falling-notes
-view**, **no editing a cell by hand**, and **no matrix import or export**. The two ways of making a
-piece without a recording — **Text notation** and **Matrix JSON** — are gone from Upload / Input
-for the same reason: a sheet is written from recorded onsets and neither of those had any.
+> **Two of them came back on 2026-08-10**, the same day this was written, rebuilt on the wall clock:
+> **Piano Roll** and **Notes Falling** now draw `GET /matrix/{id}/events` in seconds and ask for no
+> tempo and no resolution. See §8. The paragraph below said otherwise for a month; it is kept, struck
+> through, because deleting it would hide that this document was wrong rather than that the app
+> changed.
 
-If one of these should come back on the wall-clock path, it is a feature request for the next plan.
+~~Stated plainly, so nobody rediscovers it later: there is **no piano-roll view**, **no
+falling-notes view**, no editing a cell by hand, and no matrix import or export.~~
+
+What is still true: there is **no editing a cell by hand** and **no matrix import or export**.
+**Matrix**, **Notes Falling (raw)** and **Music Notation** stay retired — the first two were views
+of a grid that no longer exists, and Music Notation is the Piano Sheet tab now. The two ways of
+making a piece without a recording, **Text notation** and **Matrix JSON**, are gone from
+Upload / Input for the same reason as always: a sheet is written from recorded onsets and neither of
+those had any.
+
+If one of these should come back on the wall-clock path, it is a feature request, not unfinished
+work.
 
 ---
 
@@ -120,6 +137,11 @@ overfitted to *Mr Blue Sky*. The round of real playing replaces it.
 
 **One known gap, worth naming.** A piece that changes key part-way through can be drawn but not
 saved. The drawing package handles it; nothing stores it.
+
+> **Closed since.** `SavedRhythm.keyChanges` stores them now. A *different* gap of exactly the same
+> shape was found on 2026-09-13 — octave brackets were sent by the page and dropped by the backend,
+> so they did not survive a reload — and closed the same day. Both are stored. See
+> [`rhythm-and-annotations.md`](../../../documentation/services/backend/rhythm-and-annotations.md).
 
 ---
 
@@ -164,3 +186,30 @@ of this plan that keeps working after it closes.
 David plays a round of varied piano music through the app and collects what is wrong or awkward.
 That list becomes a new implementation plan, with its own PRD, its own numbering and its own
 checklist, in a new folder under `context/implementations/`. This folder becomes history.
+
+---
+
+## 8. What actually happened next
+
+**Added 2026-09-13 by Task 14.1.1.** The round of playing began the same afternoon, and what it
+found was fixed immediately rather than collected into a new plan folder. So §7 is right about the
+method and wrong about the bookkeeping: there was no new plan, the work went onto the existing epic
+backlog, and for a month it had no reports at all.
+
+**2026-08-10 to 2026-08-12 — the `plan-resume` branch.** Piano Roll and Notes Falling back on the
+wall clock; picking notes on either view; taking a note off the recording, staged and saved; one
+scrub bar for every page, with a draggable playhead; both ends of a marked stretch pullable to any
+column; double-click blank ground to seek; and four measured changes that got Chopin's left hand
+printing in corcheas. Reports, written late, are in
+[`../01-epics-master-plan/progress/plan-resume/`](../01-epics-master-plan/progress/plan-resume/README.md).
+
+**2026-08-12 — the remaining epics were rewritten for the wall clock.**
+[`wall-clock-rewrite.md`](../01-epics-master-plan/plan/wall-clock-rewrite.md) restated Epics 10 to
+14 against this model and set out the five rules any new work obeys.
+
+**2026-08-12 to 2026-09-13 — Story 9.7 and Epics 10 to 14 shipped**: trills, the Piano Library with
+playlists and a performance view, range re-recording, annotations (words, fingering, cue-size
+stretches, grace notes), composing a piece one passage at a time, and this documentation pass.
+
+`decisions.md` needed no change through any of it. That is the part of this plan that kept working
+after it closed.

@@ -44,6 +44,6 @@ formatting — that is the whole point of the rule.
 
 ## Where to look deeper
 
-- [rendering-pipeline.md](rendering-pipeline.md) — where frames become notation
+- [rendering.md](rendering.md) — where frames become notation
 - [../09-coding-conventions.md](../09-coding-conventions.md) — frontend conventions table
 - [../../documentation/services/frontend/components.md](../../documentation/services/frontend/components.md) — component detail

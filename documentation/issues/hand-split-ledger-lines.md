@@ -1,4 +1,4 @@
-> Context: [transcription quality — the four layers](../../../context/music/transcription-quality.md),
+> Context: [transcription quality — the four layers](../../context/music/transcription-quality.md),
 > [the transcription pipeline](../services/backend/transcription-pipeline.md).
 
 # A hand printing far outside its own staff
