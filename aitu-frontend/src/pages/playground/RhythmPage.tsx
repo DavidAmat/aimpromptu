@@ -36,6 +36,7 @@ import TimeScoreView from "../../components/time/TimeScoreView";
 import FloatingBar from "../../components/common/FloatingBar";
 import ScorePdfDialog from "../../components/time/ScorePdfDialog";
 import ToolboxDialog from "../../components/common/ToolboxDialog";
+import RangeRerecordPanel from "../../components/editing/RangeRerecordPanel";
 import {
   FIGURE_LABELS,
   timeScoreApi,
@@ -93,6 +94,7 @@ const FINGERS: FingerNumber[] = [1, 2, 3, 4, 5];
 const FRAME_TABS = [
   { id: "key" as const, label: "Key" },
   { id: "octave" as const, label: "Octave" },
+  { id: "rerecord" as const, label: "Re-record" },
 ];
 
 type FrameTab = (typeof FRAME_TABS)[number]["id"];
@@ -605,6 +607,7 @@ export function RhythmPage() {
       ? ottavaAtFrame(ottavas, "left", range.fromColumn) !== undefined ||
         ottavaAtFrame(ottavas, "right", range.fromColumn) !== undefined
       : false,
+    rerecord: false,
   };
 
   const passageKey: KeySignatureName =
@@ -2047,6 +2050,78 @@ export function RhythmPage() {
                 );
               })}
             </Stack>
+          ) : null}
+
+          {frameTab === "rerecord" && range && audioUuid ? (
+            <RangeRerecordPanel
+              audioUuid={audioUuid}
+              frameMs={frameMs}
+              fromColumn={range.fromColumn}
+              toColumn={range.toColumn}
+              anchorFigure={figure}
+              anchorMs={selected?.medianMs}
+              speedChanges={stretches.map((stretch) => ({
+                startFrame: stretch.startFrame,
+                anchorMs: stretch.anchorMs,
+              }))}
+              clickIntervalMs={((): number => {
+                let ms = selected?.medianMs ?? 480;
+                for (const stretch of stretches) {
+                  if (stretch.startFrame <= range.fromColumn) ms = stretch.anchorMs;
+                }
+                return ms;
+              })()}
+              onRangeChange={(start, end) => {
+                const fromColumn = Math.max(0, Math.round((start * 1000) / frameMs));
+                const toColumn = Math.max(
+                  fromColumn + 1,
+                  Math.round((end * 1000) / frameMs),
+                );
+                setRange({ fromColumn, toColumn });
+              }}
+              onAccepted={() => {
+                const from = range.fromColumn;
+                const to = range.toColumn;
+                const inside = (frame: number) => frame >= from && frame < to;
+                setOverrides((current) => {
+                  const next = { ...current };
+                  for (const key of Object.keys(next)) {
+                    if (inside(Number(key.split(":")[1]))) delete next[key];
+                  }
+                  return next;
+                });
+                setBeamBreaks(
+                  (current) =>
+                    new Set(
+                      [...current].filter(
+                        (key) => !inside(Number(key.split(":")[1])),
+                      ),
+                    ),
+                );
+                setHiddenNotes(
+                  (current) =>
+                    new Set(
+                      [...current].filter(
+                        (ref) => !inside(Number(ref.split(":")[0])),
+                      ),
+                    ),
+                );
+                setFingers((current) => {
+                  const next = { ...current };
+                  for (const key of Object.keys(next)) {
+                    if (inside(Number(key.split(":")[1]))) delete next[key];
+                  }
+                  return next;
+                });
+                setOttavas((current) =>
+                  current.filter(
+                    (span) =>
+                      span.fromColumn < from || span.fromColumn >= to,
+                  ),
+                );
+                void apply();
+              }}
+            />
           ) : null}
 
           <Divider />

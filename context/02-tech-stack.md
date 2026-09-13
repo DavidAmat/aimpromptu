@@ -45,7 +45,7 @@ Scripts: `npm run dev` (vite), `npm run build` (`tsc -b && vite build`), `npm ru
 
 ## Decisions for the implementation plan
 
-Locked by the organizer for `context/implementations/plan/`; workers follow these unless the human supervisor agrees to a change.
+Locked by the organizer for `context/implementations/01-epics-master-plan/plan/`; workers follow these unless the human supervisor agrees to a change.
 
 | Area | Decision |
 |------|----------|

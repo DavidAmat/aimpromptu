@@ -29,41 +29,48 @@ Single table of contents for `context/` and `documentation/`. One line per file.
 
 | File | Description |
 |------|-------------|
-| [implementations/README.md](implementations/README.md) | Dated journal conventions for vibe-coded features |
-| [implementations/00-implementation-index.md](implementations/00-implementation-index.md) | Master index sorted by date |
+| [implementations/README.md](implementations/README.md) | **Start here.** The numbered index of every implementation, in the order they were opened, with their status |
 
-### Implementation plan (`context/implementations/plan/`)
+### 01 — Epics master plan (`context/implementations/01-epics-master-plan/`)
 
 | File | Description |
 |------|-------------|
-| [implementations/plan/README.md](implementations/plan/README.md) | How the plan is organized; epic list in implementation order |
-| [implementations/plan/wall-clock-rewrite.md](implementations/plan/wall-clock-rewrite.md) | **Read before touching the plan.** What the wall-clock refactor changed for the remaining epics, the splice rule for range editing, and the verdict per epic |
-| [implementations/plan/checklist.md](implementations/plan/checklist.md) | THE status lookup: every epic/story/task with checkboxes |
-| [implementations/plan/system-prompt-workers.md](implementations/plan/system-prompt-workers.md) | System prompt for worker LLMs implementing tasks |
-| `implementations/plan/epic-NN-*/` | 14 epic folders, each with an `epic-<shortname>-index.md`, story folders and task files |
-| [implementations/progress/README.md](implementations/progress/README.md) | Progress journal written by workers, one report per task |
-| [implementations/progress/2026-08-02-transcription-accuracy-session.md](implementations/progress/2026-08-02-transcription-accuracy-session.md) | Session: raw falling view, artifact filter, isochrony, Transkun, tempo-map groundwork |
-| [implementations/progress/2026-08-10-time-based-concept-closed.md](implementations/progress/2026-08-10-time-based-concept-closed.md) | The wall-clock refactor from start to close: what it cost, what was dropped, what to carry forward |
+| [implementations/01-epics-master-plan/README.md](implementations/01-epics-master-plan/README.md) | Status in one look: what is built, what remains |
+| [implementations/01-epics-master-plan/plan/README.md](implementations/01-epics-master-plan/plan/README.md) | How the plan is organized; epic list in implementation order |
+| [implementations/01-epics-master-plan/plan/wall-clock-rewrite.md](implementations/01-epics-master-plan/plan/wall-clock-rewrite.md) | **Read before touching the plan.** What the wall-clock refactor changed for the remaining epics, the splice rule for range editing, and the verdict per epic |
+| [implementations/01-epics-master-plan/plan/checklist.md](implementations/01-epics-master-plan/plan/checklist.md) | THE status lookup: every epic/story/task with checkboxes |
+| [implementations/01-epics-master-plan/plan/system-prompt-workers.md](implementations/01-epics-master-plan/plan/system-prompt-workers.md) | System prompt for worker LLMs implementing tasks |
+| `implementations/01-epics-master-plan/plan/epic-NN-*/` | 14 epic folders, each with an `epic-<shortname>-index.md`, story folders and task files |
+| [implementations/01-epics-master-plan/progress/README.md](implementations/01-epics-master-plan/progress/README.md) | Progress journal written by workers, one report per task |
+| [implementations/01-epics-master-plan/progress/2026-08-02-transcription-accuracy-session.md](implementations/01-epics-master-plan/progress/2026-08-02-transcription-accuracy-session.md) | Session: raw falling view, artifact filter, isochrony, Transkun, tempo-map groundwork |
+| [implementations/01-epics-master-plan/progress/2026-08-10-time-based-concept-closed.md](implementations/01-epics-master-plan/progress/2026-08-10-time-based-concept-closed.md) | The wall-clock refactor from start to close: what it cost, what was dropped, what to carry forward |
 
-### Time-based concept refactor (`context/implementations/time-based-concept/`) — CLOSED 2026-08-10
+### 02 — VexFlow migration (`context/implementations/02-vexflow-migration/`) — CLOSED
+
+| File | Description |
+|------|-------------|
+| [implementations/02-vexflow-migration/README.md](implementations/02-vexflow-migration/README.md) | Why we built our own renderer instead of drawing with VexFlow |
+| [implementations/02-vexflow-migration/01-system-prompt-vexflow-v2.md](implementations/02-vexflow-migration/01-system-prompt-vexflow-v2.md) | The brief that created `@aimpromptu/grid-notation` in the `vexflow-v2` repository |
+
+### 03 — Time-based concept refactor (`context/implementations/03-time-based-concept/`) — CLOSED 2026-08-10
 
 Wall-clock matrix columns and figure-as-label rendering. Spanned **two repos** (`aimpromptu` and `vexflow-v2`); all progress is tracked here. **The plan is closed** — this folder is history. Start at `CLOSURE.md`.
 
 | File | Description |
 |------|-------------|
-| [implementations/time-based-concept/CLOSURE.md](implementations/time-based-concept/CLOSURE.md) | **Start here.** Why the plan closed, what shipped, what was dropped and why, and the duplicated P8 numbering |
-| [implementations/time-based-concept/README.md](implementations/time-based-concept/README.md) | Navigation + the cross-repo reporting rule |
-| [implementations/time-based-concept/PRD.md](implementations/time-based-concept/PRD.md) | Why, what changes, what is out of scope, success criteria |
-| [implementations/time-based-concept/decisions.md](implementations/time-based-concept/decisions.md) | D-01…D-34, the frozen decisions every task cites. Still valid after closing |
-| [implementations/time-based-concept/contract.md](implementations/time-based-concept/contract.md) | Backend ↔ `@aimpromptu/grid-notation` data contract |
-| [implementations/time-based-concept/plan.md](implementations/time-based-concept/plan.md) | Phases 0–8 as planned. Historical: about a third of what shipped was never in it |
-| [implementations/time-based-concept/checklist.md](implementations/time-based-concept/checklist.md) | The final state of every box, with the two cancellations |
-| [implementations/time-based-concept/system-prompt-worker.md](implementations/time-based-concept/system-prompt-worker.md) | Template system prompt for worker agents on this refactor |
-| [implementations/time-based-concept/progress/README.md](implementations/time-based-concept/progress/README.md) | Where task reports go, including `vexflow-v2` work |
-| [implementations/time-based-concept/progress/issues.md](implementations/time-based-concept/progress/issues.md) | Append-only log of anything that contradicts a frozen decision; a worker who writes here stops |
-| [implementations/time-based-concept/progress/P8.1-P8.10-the-review-stream.md](implementations/time-based-concept/progress/P8.1-P8.10-the-review-stream.md) | The ten features David's review walks produced on 2026-08-08, and the two real bugs they found |
-| [implementations/time-based-concept/progress/2026-08-08-overwrite-and-recovery.md](implementations/time-based-concept/progress/2026-08-08-overwrite-and-recovery.md) | The twelve backend files destroyed by a stale copy and rebuilt. Authoritative over any comment inside them |
-| [implementations/time-based-concept/user-reviews.md](implementations/time-based-concept/user-reviews.md) | What to open and click in the browser to see all of it. Kept current after closing |
+| [implementations/03-time-based-concept/CLOSURE.md](implementations/03-time-based-concept/CLOSURE.md) | **Start here.** Why the plan closed, what shipped, what was dropped and why, and the duplicated P8 numbering |
+| [implementations/03-time-based-concept/README.md](implementations/03-time-based-concept/README.md) | Navigation + the cross-repo reporting rule |
+| [implementations/03-time-based-concept/PRD.md](implementations/03-time-based-concept/PRD.md) | Why, what changes, what is out of scope, success criteria |
+| [implementations/03-time-based-concept/decisions.md](implementations/03-time-based-concept/decisions.md) | D-01…D-34, the frozen decisions every task cites. Still valid after closing |
+| [implementations/03-time-based-concept/contract.md](implementations/03-time-based-concept/contract.md) | Backend ↔ `@aimpromptu/grid-notation` data contract |
+| [implementations/03-time-based-concept/plan.md](implementations/03-time-based-concept/plan.md) | Phases 0–8 as planned. Historical: about a third of what shipped was never in it |
+| [implementations/03-time-based-concept/checklist.md](implementations/03-time-based-concept/checklist.md) | The final state of every box, with the two cancellations |
+| [implementations/03-time-based-concept/system-prompt-worker.md](implementations/03-time-based-concept/system-prompt-worker.md) | Template system prompt for worker agents on this refactor |
+| [implementations/03-time-based-concept/progress/README.md](implementations/03-time-based-concept/progress/README.md) | Where task reports go, including `vexflow-v2` work |
+| [implementations/03-time-based-concept/progress/issues.md](implementations/03-time-based-concept/progress/issues.md) | Append-only log of anything that contradicts a frozen decision; a worker who writes here stops |
+| [implementations/03-time-based-concept/progress/P8.1-P8.10-the-review-stream.md](implementations/03-time-based-concept/progress/P8.1-P8.10-the-review-stream.md) | The ten features David's review walks produced on 2026-08-08, and the two real bugs they found |
+| [implementations/03-time-based-concept/progress/2026-08-08-overwrite-and-recovery.md](implementations/03-time-based-concept/progress/2026-08-08-overwrite-and-recovery.md) | The twelve backend files destroyed by a stale copy and rebuilt. Authoritative over any comment inside them |
+| [implementations/03-time-based-concept/user-reviews.md](implementations/03-time-based-concept/user-reviews.md) | What to open and click in the browser to see all of it. Kept current after closing |
 
 ## Backend overview (`context/backend/`)
 

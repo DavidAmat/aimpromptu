@@ -252,6 +252,32 @@ def load_note_events(audio_uuid: str) -> TranscribedEvents | None:
 # ------------------------------------------------------------------ the steps
 
 
+def transcribe_file(
+    wav_path: Path,
+    *,
+    engine: TranscriptionEngine | str = DEFAULT_ENGINE,
+    reporter: BaseProgress | None = None,
+) -> list[NoteEvent]:
+    """Run the model on a WAV and return events. Does not write ``events.json``.
+
+    Range editing transcribes the take into the session folder. Writing onto the
+    piece here would replace the music being edited.
+    """
+    progress = default_reporter(reporter)
+    if isinstance(engine, str):
+        options = {"reporter": progress} if engine == "bytedance" else {}
+        model = create_engine(engine, **options)
+    else:
+        model = engine
+    progressive = getattr(model, "transcribe_with_progress", None)
+    if callable(progressive):
+        return list(progressive(wav_path, progress))
+    with progress.stage("transcribe", total=1, message=model.name) as stage:
+        events = model.transcribe(wav_path)
+        stage.advance()
+    return list(events)
+
+
 def transcribe_audio(
     audio_uuid: str,
     *,

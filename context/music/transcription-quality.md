@@ -7,7 +7,7 @@
 > note resolution, so the whole class of "played evenly, printed ragged" error that this document
 > attributes to layer 4 is retired: a column is 40 ms of real time and a figure is a label the
 > reader chooses. Read the layer-4 sections as history.
-> [`context/implementations/time-based-concept/CLOSURE.md`](../implementations/time-based-concept/CLOSURE.md)
+> [`context/implementations/03-time-based-concept/CLOSURE.md`](../implementations/03-time-based-concept/CLOSURE.md)
 > says what replaced it.
 
 # Transcription quality: what goes wrong between audio and a printed figure

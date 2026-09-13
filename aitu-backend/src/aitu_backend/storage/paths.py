@@ -108,6 +108,39 @@ def list_audio_uuids() -> list[str]:
     return _child_names(audio_root())
 
 
+# -------------------------------------------------------- range-edit staging
+
+
+def staging_root(audio_uuid: str) -> Path:
+    """`data/audio/<uuid>/staging/` — disposable Epic 11 sessions."""
+    return audio_dir(audio_uuid) / "staging"
+
+
+def staging_session_dir(audio_uuid: str, session_uuid: str) -> Path:
+    """`data/audio/<uuid>/staging/<session_uuid>/`."""
+    return staging_root(audio_uuid) / session_uuid
+
+
+def history_root(audio_uuid: str) -> Path:
+    """`data/audio/<uuid>/history/` — snapshots of events.json before a splice."""
+    return audio_dir(audio_uuid) / "history"
+
+
+def history_version_dir(audio_uuid: str, version: int) -> Path:
+    """`data/audio/<uuid>/history/v1/` — one musical state, before it was replaced."""
+    return history_root(audio_uuid) / f"v{version}"
+
+
+def music_version_path(audio_uuid: str) -> Path:
+    """`data/audio/<uuid>/matrices/music-version.json` — the current version number."""
+    return audio_dir(audio_uuid) / "matrices" / "music-version.json"
+
+
+def audio_mismatches_path(audio_uuid: str) -> Path:
+    """Windows where the recording no longer matches the sheet, after a failed audio splice."""
+    return audio_dir(audio_uuid) / "matrices" / "audio-mismatches.json"
+
+
 # ---------------------------------------------------------------- playground
 
 

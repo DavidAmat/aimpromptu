@@ -16,7 +16,7 @@
 >
 > Kept because the arithmetic below is the clearest explanation of *why* the model was changed. For
 > what replaced it, see
-> [`context/implementations/time-based-concept/CLOSURE.md`](../../context/implementations/time-based-concept/CLOSURE.md).
+> [`context/implementations/03-time-based-concept/CLOSURE.md`](../../context/implementations/03-time-based-concept/CLOSURE.md).
 
 > Context: [context/music/transcription-quality.md](../../context/music/transcription-quality.md)
 
