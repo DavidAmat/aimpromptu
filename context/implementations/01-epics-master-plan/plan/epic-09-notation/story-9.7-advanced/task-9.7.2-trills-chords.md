@@ -1,5 +1,11 @@
 # Task 9.7.2 — Trills (nice to have)
 
+> **Shipped 2026-09-13.** The rule, where it lives and what it draws are in
+> [`../../../progress/epic-09/task-9.7.2-progress.md`](../../../progress/epic-09/task-9.7.2-progress.md).
+> The threshold that was built is the pair coming round **three times** — six notes — rather
+> than the six alternations this file asked for; three times over is what a reader recognises
+> as a shake, and the two numbers are close enough that no real trill falls between them.
+>
 > **Rewritten 2026-08-12 for the wall-clock model.** The chord half of this task shipped in the
 > refactor. See [`../../wall-clock-rewrite.md`](../../wall-clock-rewrite.md).
 

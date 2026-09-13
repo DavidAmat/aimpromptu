@@ -1,5 +1,10 @@
 # Task 12.2.2 — Small notes and grace notes
 
+> **Shipped 2026-09-13.** Both halves. The grace-note feature the drawing package was missing
+> turned out to be small — cue-size ink and the existing flag glyph, no new font metrics — so
+> the sizing this file asked for came back cheap. See
+> [`../../../progress/epic-12/epic-12-progress.md`](../../../progress/epic-12/epic-12-progress.md).
+>
 > **Rewritten 2026-08-12 for the wall-clock model.** See
 > [`../../wall-clock-rewrite.md`](../../wall-clock-rewrite.md).
 

@@ -33,7 +33,8 @@ from aitu_backend.matrix.passages import one_passage, passages_from_boundaries
 from aitu_backend.matrix.peaks import Peak, peaks_of
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN
-from aitu_backend.schemas.rhythm import HiddenNote, SavedRhythm
+from aitu_backend.notation.trills import MIN_PAIR_REPEATS, detect_trills
+from aitu_backend.schemas.rhythm import HiddenNote, SavedRhythm, Trill
 from aitu_backend.schemas.time_matrix import FigureLadder, FigureName, TimeScorePayload
 from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.time_pipeline import (
@@ -371,7 +372,9 @@ class HandAssignmentResult(BaseModel):
     unmatched: int
 
 
-@router.put("/{audio_uuid}/hands", response_model=HandAssignmentResult, response_model_by_alias=True)
+@router.put(
+    "/{audio_uuid}/hands", response_model=HandAssignmentResult, response_model_by_alias=True
+)
 def put_hands(audio_uuid: str, body: HandAssignmentRequest = Body(...)) -> HandAssignmentResult:
     """Record which hand plays these notes, on the recording itself.
 
@@ -416,9 +419,7 @@ def put_hands(audio_uuid: str, body: HandAssignmentRequest = Body(...)) -> HandA
         assigned += 1
 
     if assigned:
-        pipeline.save_note_events(
-            audio_uuid, stored.events, stored.duration_seconds, stored.title
-        )
+        pipeline.save_note_events(audio_uuid, stored.events, stored.duration_seconds, stored.title)
         # The split is cached per (piece, column length) and has just stopped being true.
         forget_split_cache()
 
@@ -518,9 +519,7 @@ def put_removed_by_column(
         changed += 1
 
     if changed:
-        pipeline.save_note_events(
-            audio_uuid, stored.events, stored.duration_seconds, stored.title
-        )
+        pipeline.save_note_events(audio_uuid, stored.events, stored.duration_seconds, stored.title)
         forget_split_cache()
 
     return RemovalByColumnResult(changed=changed, unmatched=unmatched)
@@ -542,6 +541,9 @@ class ScoreRequest(BaseModel):
     boundaries: list[int] = Field(default_factory=list)
     boundary_ms: list[float] = Field(default_factory=list, alias="boundaryMs")
     hidden_notes: list[HiddenNote] = Field(default_factory=list, alias="hiddenNotes")
+    #: Stretches the reader accepted as trills. Each prints as one held note with ``tr``
+    #: over it, and the alternations under it are left off the page.
+    trills: list[Trill] = Field(default_factory=list)
 
 
 def _with_page_edits(hands: TimeHands, hidden: list[HiddenNote]) -> TimeHands:
@@ -592,6 +594,51 @@ def _with_page_edits(hands: TimeHands, hidden: list[HiddenNote]) -> TimeHands:
     return edited
 
 
+def _with_trills(hands: TimeHands, trills: list[Trill]) -> TimeHands:
+    """Each accepted trill drawn as one held note, on a copy of the hands.
+
+    Same contract as `_with_page_edits` and for the same reason: the printed figure of a note is
+    the gap to the next onset in the same hand (D-14), so taking the alternations off the page has
+    to happen before any figure is named. Done in the browser the held note would print as a
+    semicorchea with a `tr` over it.
+
+    What the copy gets is the run's notes cleared and one note put back: an onset at the run's
+    first column on the trill's own row, sounding to the end of what was cleared. The recording is
+    untouched, so playback still sounds every alternation (D-29) and dropping the mark restores
+    them exactly.
+    """
+    if not trills:
+        return hands
+
+    edited = copy.deepcopy(hands)
+    planes = {"right": edited.right, "left": edited.left}
+
+    for trill in trills:
+        plane = planes[trill.hand]
+        end_frame = min(trill.end_frame, plane.frame_count)
+        if trill.start_frame >= end_frame:
+            continue
+
+        # Every note whose onset is inside the run, including the cells its sustain owns. A note
+        # that started before the run and is still sounding through it is not part of it and stays.
+        last_column = end_frame - 1
+        for column in range(trill.start_frame, end_frame):
+            for row in list(plane.onsets_in_column(column)):
+                follower = column
+                while follower < plane.frame_count and (
+                    follower == column or plane.cell(row, follower) == SUSTAIN
+                ):
+                    plane.grid[row, follower] = SILENCE
+                    last_column = max(last_column, follower)
+                    follower += 1
+
+        plane.grid[trill.row, trill.start_frame] = ONSET
+        for column in range(trill.start_frame + 1, min(last_column + 1, plane.frame_count)):
+            plane.grid[trill.row, column] = SUSTAIN
+
+    return edited
+
+
 @router.post("/{audio_uuid}/score", response_model=TimeScorePayload, response_model_by_alias=True)
 def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> TimeScorePayload:
     """The sheet, with the reader's page edits folded in before any figure is named.
@@ -608,7 +655,7 @@ def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> TimeScor
         ",".join(str(frame) for frame in body.boundaries),
         ",".join(str(value) for value in body.boundary_ms),
     )
-    edited = _with_page_edits(hands, body.hidden_notes)
+    edited = _with_trills(_with_page_edits(hands, body.hidden_notes), body.trills)
     return to_score_payload(
         edited,
         ladder,
@@ -648,6 +695,80 @@ def _passages_from_query(
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+# --------------------------------------------------------------------------- trills
+
+
+class TrillSuggestion(BaseModel):
+    """One stretch where two notes alternate, offered to the reader."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    hand: Literal["right", "left"]
+    start_frame: int = Field(..., alias="startFrame")
+    end_frame: int = Field(..., alias="endFrame")
+    #: The note that would stay on the page: the lower of the two.
+    row: int
+    #: The note it alternates with.
+    other_row: int = Field(..., alias="otherRow")
+    #: What the two notes are called, for example ``Si-3`` and ``Do-4``.
+    note_name: str = Field(..., alias="noteName")
+    other_note_name: str = Field(..., alias="otherNoteName")
+    #: How many notes the run holds, and how many times the pair comes round.
+    note_count: int = Field(..., alias="noteCount")
+    pair_repeats: int = Field(..., alias="pairRepeats")
+    #: The middle gap of the run, in milliseconds.
+    median_gap_ms: float = Field(..., alias="medianGapMs")
+    start_seconds: float = Field(..., alias="startSeconds")
+    end_seconds: float = Field(..., alias="endSeconds")
+
+
+class TrillsResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    audio_uuid: str = Field(..., alias="audioUuid")
+    frame_ms: float = Field(..., alias="frameMs")
+    suggestions: list[TrillSuggestion]
+
+
+@router.get("/{audio_uuid}/trills", response_model=TrillsResponse, response_model_by_alias=True)
+def get_trills(
+    audio_uuid: str,
+    frame_ms: float = Query(DEFAULT_FRAME_MS, alias="frameMs", gt=0),
+    min_pair_repeats: int = Query(MIN_PAIR_REPEATS, alias="minPairRepeats", ge=2, le=20),
+) -> TrillsResponse:
+    """Where two notes are trading places fast enough to be worth one ``tr``.
+
+    A suggestion and nothing more. Nothing is written here and the sheet does not change until the
+    reader accepts one: a missed trill costs a reader nothing, and a wrong one hides notes that were
+    really played, so the reader has the last word (D-17).
+    """
+    hands = trim_to_music(_hands(audio_uuid, frame_ms))
+    runs = detect_trills(hands, min_pair_repeats=min_pair_repeats)
+    key_names = hands.right.key_names()
+    seconds_per_frame = frame_ms / 1000.0
+    return TrillsResponse(
+        audio_uuid=audio_uuid,
+        frame_ms=frame_ms,
+        suggestions=[
+            TrillSuggestion(
+                hand=run.hand,
+                start_frame=run.start_frame,
+                end_frame=run.end_frame,
+                row=run.row,
+                other_row=run.other_row,
+                note_name=key_names[run.row],
+                other_note_name=key_names[run.other_row],
+                note_count=run.note_count,
+                pair_repeats=run.pair_repeats,
+                median_gap_ms=run.median_gap_ms,
+                start_seconds=run.start_frame * seconds_per_frame,
+                end_seconds=run.end_frame * seconds_per_frame,
+            )
+            for run in runs
+        ],
+    )
 
 
 # --------------------------------------------------------------------------- the saved reading

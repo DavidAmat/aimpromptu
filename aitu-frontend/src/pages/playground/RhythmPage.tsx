@@ -28,6 +28,7 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { PageContainer, SectionCard } from "../../ui";
+import { noteName } from "../../music/noteNames";
 import PeakPlot from "../../components/time/PeakPlot";
 import ScorePlayer, {
   type ScorePlayerControls,
@@ -41,15 +42,20 @@ import {
   FIGURE_LABELS,
   timeScoreApi,
   type FigureName,
+  type GraceNote,
   type HandChoice,
   type LadderPreview,
   type Peak,
   type PeaksResponse,
   KEY_LABELS,
   KEY_SIGNATURES,
+  type CueRange,
   type KeySignatureName,
+  type LyricLine,
   type SavedRhythm,
   type TimeScorePayload,
+  type Trill,
+  type TrillSuggestion,
 } from "../../api";
 import { ApiError } from "../../api";
 import {
@@ -87,6 +93,22 @@ const NAMEABLE_FIGURES: FigureName[] = [
 /** No note is moved by hand any more: a corrected hand is written onto the recording. */
 const NO_HANDS: ReadonlyMap<NoteRef, PrintedHand> = new Map();
 
+/**
+ * The intervals a grace note is offered at, measured from the note it leans on.
+ *
+ * A short list on purpose. Nearly every grace note in piano music is a step or a third from its
+ * principal note, and a list of six buttons is faster to use — and far easier to read back — than
+ * a pitch picker offering all eighty-eight.
+ */
+const GRACE_STEPS = [
+  { semitones: -3, label: "3rd below" },
+  { semitones: -2, label: "Tone below" },
+  { semitones: -1, label: "Semitone below" },
+  { semitones: 1, label: "Semitone above" },
+  { semitones: 2, label: "Tone above" },
+  { semitones: 3, label: "3rd above" },
+];
+
 /** Thumb to little finger. There is no 0 and no 6. */
 const FINGERS: FingerNumber[] = [1, 2, 3, 4, 5];
 
@@ -94,6 +116,9 @@ const FINGERS: FingerNumber[] = [1, 2, 3, 4, 5];
 const FRAME_TABS = [
   { id: "key" as const, label: "Key" },
   { id: "octave" as const, label: "Octave" },
+  { id: "trill" as const, label: "Trill" },
+  { id: "words" as const, label: "Words" },
+  { id: "small" as const, label: "Small" },
   { id: "rerecord" as const, label: "Re-record" },
 ];
 
@@ -381,6 +406,39 @@ export function RhythmPage() {
   );
   /** Which finger plays each note, keyed `hand:startFrame:row` by the staff it is drawn on. */
   const [fingers, setFingers] = useState<Record<string, FingerNumber>>({});
+  /**
+   * Stretches printed as one held note with `tr` over them.
+   *
+   * The alternations stay in the recording and playback still sounds every one of them; what the
+   * mark changes is which noteheads are drawn. They travel with the sheet request rather than being
+   * applied here, because the printed length of the held note is the gap to the next onset after
+   * the run, and only the backend measures that.
+   */
+  const [trills, setTrills] = useState<readonly Trill[]>([]);
+  /** What the backend found the last time it was asked, and whether it is looking now. */
+  const [trillSuggestions, setTrillSuggestions] = useState<
+    readonly TrillSuggestion[] | null
+  >(null);
+  const [findingTrills, setFindingTrills] = useState(false);
+  /** Lines of words under the staff, over a stretch of columns. */
+  const [lyrics, setLyrics] = useState<readonly LyricLine[]>([]);
+  /** What is being typed for the stretch now open, so the field survives a redraw. */
+  const [lyricDraft, setLyricDraft] = useState<{
+    forRange: string;
+    text: string;
+  } | null>(null);
+  /** Stretches printed smaller than the rest of the page. */
+  const [cueRanges, setCueRanges] = useState<readonly CueRange[]>([]);
+  /**
+   * Small notes leaning on a note of the music.
+   *
+   * Never inferred, and never played: a grace note is a reading of how a note should be
+   * approached, and nothing in a recording distinguishes one from a very short note that was
+   * really struck.
+   */
+  const [graceNotes, setGraceNotes] = useState<readonly GraceNote[]>([]);
+  /** How large the marks over and under the staff are drawn, as a multiple of normal. */
+  const [annotationScale, setAnnotationScale] = useState(1);
   /** Numbers pressed for the selection now open, so a chord can be given several at once. */
   const [fingerDraft, setFingerDraft] = useState<{
     forSelection: string;
@@ -607,8 +665,193 @@ export function RhythmPage() {
       ? ottavaAtFrame(ottavas, "left", range.fromColumn) !== undefined ||
         ottavaAtFrame(ottavas, "right", range.fromColumn) !== undefined
       : false,
+    trill: range
+      ? trills.some(
+          (mark) =>
+            mark.startFrame < range.toColumn && mark.endFrame > range.fromColumn,
+        )
+      : false,
+    words: range
+      ? lyrics.some(
+          (line) =>
+            line.fromColumn < range.toColumn && line.toColumn > range.fromColumn,
+        )
+      : false,
+    small: range
+      ? cueRanges.some(
+          (cue) =>
+            cue.fromColumn < range.toColumn && cue.toColumn > range.fromColumn,
+        )
+      : false,
     rerecord: false,
   };
+
+
+  /**
+   * What the three mark tabs need to know about the stretch now open.
+   *
+   * Read from the marks themselves rather than kept in state: a panel that could disagree with
+   * what is on the page is worse than a panel that has to look it up.
+   */
+  const trillHere = range
+    ? (trills.find(
+        (mark) =>
+          mark.startFrame < range.toColumn && mark.endFrame > range.fromColumn,
+      ) ?? null)
+    : null;
+  const suggestedHere = range
+    ? ((trillSuggestions ?? []).find(
+        (one) =>
+          one.startFrame < range.toColumn && one.endFrame > range.fromColumn,
+      ) ?? null)
+    : null;
+  const lyricHere = range
+    ? (lyrics.find(
+        (line) =>
+          line.fromColumn < range.toColumn && line.toColumn > range.fromColumn,
+      ) ?? null)
+    : null;
+  const lyricText =
+    lyricDraft?.forRange === rangeKey ? lyricDraft.text : (lyricHere?.text ?? "");
+
+  /** Row 0 is MIDI 21, the bottom A of an 88-key piano. */
+  const noteNameAt = useCallback((row: number) => noteName(row + 21), []);
+
+  /** The lowest note this hand strikes inside a stretch, or `null` if it strikes none. */
+  const lowestRowIn = useCallback(
+    (side: PrintedHand, stretch: { fromColumn: number; toColumn: number }) => {
+      const rows = (score?.notes ?? [])
+        .filter(
+          (one) =>
+            one.hand === side &&
+            one.startFrame >= stretch.fromColumn &&
+            one.startFrame < stretch.toColumn,
+        )
+        .map((one) => one.row);
+      return rows.length > 0 ? Math.min(...rows) : null;
+    },
+    [score],
+  );
+
+  /**
+   * Write this stretch as a trill, from the suggestion when there is one and from the notes when
+   * there is not.
+   *
+   * The suggestion is preferred because it knows where the alternation really began and ended,
+   * which is rarely exactly where a reader dragged. Marking a stretch by hand is still allowed: an
+   * ornament the rule was too strict for is exactly the case a reader has to be able to overrule.
+   */
+  const markTrill = useCallback(
+    (side: PrintedHand) => {
+      if (!range) return;
+      if (suggestedHere && suggestedHere.hand === side) {
+        const { hand, startFrame, endFrame, row } = suggestedHere;
+        setTrills((current) => [...current, { hand, startFrame, endFrame, row }]);
+        return;
+      }
+      const row = lowestRowIn(side, range);
+      if (row === null) return;
+      const struck = (score?.notes ?? [])
+        .filter(
+          (one) =>
+            one.hand === side &&
+            one.startFrame >= range.fromColumn &&
+            one.startFrame < range.toColumn,
+        )
+        .map((one) => one.startFrame);
+      setTrills((current) => [
+        ...current,
+        {
+          hand: side,
+          startFrame: Math.min(...struck),
+          endFrame: Math.max(...struck) + 1,
+          row,
+        },
+      ]);
+    },
+    [range, suggestedHere, lowestRowIn, score],
+  );
+
+  /** The suggestions that are not already written as a trill. */
+  const unmarkedTrills = useMemo(
+    () =>
+      (trillSuggestions ?? []).filter(
+        (one) =>
+          !trills.some(
+            (mark) =>
+              mark.hand === one.hand &&
+              mark.startFrame < one.endFrame &&
+              mark.endFrame > one.startFrame,
+          ),
+      ),
+    [trillSuggestions, trills],
+  );
+
+
+  /**
+   * The one note picked, or `null` when none or several are.
+   *
+   * A grace note leans on exactly one note. Offering it for a chord would have to answer which
+   * notehead it hangs off, and the honest answer is that the reader has to say.
+   */
+  const onlyNote = selectedNotes.length === 1 ? selectedNotes[0]! : null;
+  const graceHere = onlyNote
+    ? (graceNotes.find(
+        (one) =>
+          one.hand === handOf(onlyNote) &&
+          one.startFrame === frameOf(onlyNote) &&
+          one.targetRow === rowOf(onlyNote),
+      ) ?? null)
+    : null;
+
+  /**
+   * Put a grace note a given distance above or below the note it leans on, replacing any already
+   * there.
+   *
+   * Offered as intervals rather than as a pitch picker because that is what a grace note almost
+   * always is — the note above, the note below, a third away — and because picking an arbitrary
+   * pitch on a screen with no keyboard on it is a worse way to say the same thing.
+   */
+  const putGrace = useCallback(
+    (noteKey: string, semitones: number) => {
+      const row = rowOf(noteKey) + semitones;
+      if (row < 0 || row > 87) return;
+      const grace: GraceNote = {
+        hand: handOf(noteKey),
+        startFrame: frameOf(noteKey),
+        targetRow: rowOf(noteKey),
+        row,
+        kind: graceHere?.kind ?? "acciaccatura",
+      };
+      setGraceNotes((current) => [
+        ...current.filter(
+          (one) =>
+            !(
+              one.hand === grace.hand &&
+              one.startFrame === grace.startFrame &&
+              one.targetRow === grace.targetRow
+            ),
+        ),
+        grace,
+      ]);
+    },
+    [graceHere],
+  );
+
+  /** Ask the backend where two notes are trading places. Nothing is written by asking. */
+  const findTrills = useCallback(async () => {
+    if (!audioUuid) return;
+    setFindingTrills(true);
+    try {
+      const found = await timeScoreApi.trills(audioUuid, { frameMs });
+      setTrillSuggestions(found.suggestions);
+    } catch {
+      // Nothing on the page depends on the answer, so a failure leaves the sheet as it is.
+      setTrillSuggestions([]);
+    } finally {
+      setFindingTrills(false);
+    }
+  }, [audioUuid, frameMs]);
 
   const passageKey: KeySignatureName =
     passageDraft?.forRange === rangeKey
@@ -703,6 +946,11 @@ export function RhythmPage() {
             ]),
           ),
         );
+        setTrills(found.trills ?? []);
+        setLyrics(found.lyrics ?? []);
+        setCueRanges(found.cueRanges ?? []);
+        setGraceNotes(found.graceNotes ?? []);
+        setAnnotationScale(found.annotationScale ?? 1);
         if (found.keySignature) setKeySignature(found.keySignature);
         setKeyChanges(
           (found.keyChanges ?? []).map((change) => ({
@@ -1015,6 +1263,11 @@ export function RhythmPage() {
         row: rowOf(noteKey),
         finger,
       })),
+      trills: [...trills],
+      lyrics: [...lyrics],
+      cueRanges: [...cueRanges],
+      graceNotes: [...graceNotes],
+      annotationScale,
     };
     try {
       const stored = await timeScoreApi.saveRhythm(audioUuid, body);
@@ -1051,6 +1304,11 @@ export function RhythmPage() {
     stretches,
     live,
     hiddenNotes,
+    trills,
+    lyrics,
+    cueRanges,
+    graceNotes,
+    annotationScale,
   ]);
 
   /**
@@ -1069,8 +1327,11 @@ export function RhythmPage() {
         const [frame, row] = ref.split(":");
         return { startFrame: Number(frame), row: Number(row) };
       }),
+      // On the request for the same reason: the held note a trill prints as takes its length from
+      // the gap to the next onset after the run, which is measured where the figures are named.
+      trills: [...trills],
     }),
-    [hiddenNotes],
+    [hiddenNotes, trills],
   );
   const editSignature = useMemo(() => JSON.stringify(pageEdits), [pageEdits]);
   /** The edits the sheet on screen was built from, so it is only asked for again when they move. */
@@ -1195,6 +1456,13 @@ export function RhythmPage() {
     setOttavas([]);
     setHiddenNotes(new Set());
     setFingers({});
+    setTrills([]);
+    setTrillSuggestions(null);
+    setLyrics([]);
+    setLyricDraft(null);
+    setCueRanges([]);
+    setGraceNotes([]);
+    setAnnotationScale(1);
     setStretches([]);
     setSelectedNotes([]);
     setPassageDraft(null);
@@ -1766,6 +2034,11 @@ export function RhythmPage() {
                 onSelectMarkedRange={pickMarkedRange}
                 renderOverrides={renderOverrides}
                 fingers={live.fingers}
+                trills={trills}
+                lyrics={lyrics}
+                cueRanges={cueRanges}
+                graceNotes={graceNotes}
+                annotationScale={annotationScale}
                 onMovesRefused={sayRefused}
                 onRendererChange={setSheetRenderer}
                 selectedRange={range}
@@ -1853,6 +2126,116 @@ export function RhythmPage() {
                   </Button>
                 </>
               )}
+            </Stack>
+
+            {/*
+              The marks that are not attached to one notehead: the shakes, the words and the size
+              they are all drawn at. Kept here rather than in the frames toolbox because none of
+              them needs a stretch selected to be worth seeing — finding the trills in a piece is
+              the first thing a reader does, before they have marked anything.
+            */}
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => void findTrills()}
+                disabled={findingTrills}
+                startIcon={
+                  findingTrills ? <CircularProgress size={14} /> : undefined
+                }
+              >
+                Find trills
+              </Button>
+              {trillSuggestions === null ? (
+                <Typography variant="body2" color="text.secondary">
+                  Two notes taking turns at least three times over are written as
+                  one held note with <em>tr</em> over it.
+                </Typography>
+              ) : unmarkedTrills.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  {trillSuggestions.length === 0
+                    ? "Nothing in this piece looks like a shake."
+                    : "Every shake found is already written as a trill."}
+                </Typography>
+              ) : (
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center", flexWrap: "wrap" }}
+                >
+                  {unmarkedTrills.map((one) => (
+                    <Chip
+                      key={`${one.hand}:${one.startFrame}`}
+                      size="small"
+                      variant="outlined"
+                      label={`${one.noteName}–${one.otherNoteName} · ${one.noteCount} notes · ${formatSeconds(one.startSeconds)}`}
+                      title={`${one.hand === "left" ? "Left" : "Right"} hand, about ${one.medianGapMs.toFixed(0)} ms apart. Click to write it as one held note with tr over it.`}
+                      onClick={() =>
+                        setTrills((current) => [
+                          ...current,
+                          {
+                            hand: one.hand,
+                            startFrame: one.startFrame,
+                            endFrame: one.endFrame,
+                            row: one.row,
+                          },
+                        ])
+                      }
+                    />
+                  ))}
+                </Stack>
+              )}
+              {trills.length > 0 ? (
+                <Button size="small" onClick={() => setTrills([])}>
+                  Print all the alternations again
+                </Button>
+              ) : null}
+            </Stack>
+
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Mark size
+              </Typography>
+              <ButtonGroup size="small" variant="outlined">
+                <Button
+                  onClick={() =>
+                    setAnnotationScale((value) =>
+                      Math.max(0.5, Math.round((value - 0.1) * 10) / 10),
+                    )
+                  }
+                  disabled={annotationScale <= 0.5}
+                >
+                  Smaller
+                </Button>
+                <Button
+                  onClick={() =>
+                    setAnnotationScale((value) =>
+                      Math.min(2, Math.round((value + 0.1) * 10) / 10),
+                    )
+                  }
+                  disabled={annotationScale >= 2}
+                >
+                  Larger
+                </Button>
+              </ButtonGroup>
+              <Typography variant="body2" color="text.secondary">
+                {Math.round(annotationScale * 100)}% — the fingering, the words
+                and the <em>tr</em> marks. No note moves.
+              </Typography>
+              {lyrics.length > 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  {lyrics.length} line{lyrics.length === 1 ? "" : "s"} of words
+                  under the staff.
+                </Typography>
+              ) : null}
             </Stack>
           </Stack>
         ) : (
@@ -2052,6 +2435,173 @@ export function RhythmPage() {
             </Stack>
           ) : null}
 
+          {frameTab === "trill" && range ? (
+            <Stack spacing={1.5}>
+              <Typography variant="body2" color="text.secondary">
+                Two notes taking turns fast are written as one held note with{" "}
+                <em>tr</em> over it. The recording keeps every alternation and
+                still plays them all.
+              </Typography>
+              {trillHere ? (
+                <>
+                  <Typography variant="body2">
+                    This stretch is written as a trill on{" "}
+                    {noteNameAt(trillHere.row)}.
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() =>
+                      setTrills((current) =>
+                        current.filter((mark) => mark !== trillHere),
+                      )
+                    }
+                  >
+                    Print the notes again
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {suggestedHere ? (
+                    <Typography variant="body2">
+                      {suggestedHere.noteName} and {suggestedHere.otherNoteName},{" "}
+                      {suggestedHere.noteCount} notes about{" "}
+                      {suggestedHere.medianGapMs.toFixed(0)} ms apart.
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Nothing in this stretch looks like a shake. Marking it
+                      anyway writes the lowest note of the chosen hand and takes
+                      the rest off the page.
+                    </Typography>
+                  )}
+                  <Stack direction="row" spacing={1}>
+                    {(["right", "left"] as const).map((side) => (
+                      <Button
+                        key={side}
+                        size="small"
+                        variant={suggestedHere?.hand === side ? "contained" : "outlined"}
+                        disabled={lowestRowIn(side, range) === null}
+                        onClick={() => markTrill(side)}
+                      >
+                        {side === "right" ? "Right hand" : "Left hand"}
+                      </Button>
+                    ))}
+                  </Stack>
+                </>
+              )}
+            </Stack>
+          ) : null}
+
+          {frameTab === "words" && range ? (
+            <Stack spacing={1.5}>
+              <TextField
+                size="small"
+                label="Words"
+                multiline
+                maxRows={3}
+                value={lyricText}
+                placeholder="The line sung over this stretch"
+                onChange={(event) =>
+                  setLyricDraft({ forRange: rangeKey, text: event.target.value })
+                }
+                helperText="Drawn under the lower staff, across the marked stretch. It never moves a note."
+              />
+              <Stack direction="row" spacing={1}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  disabled={lyricText.trim().length === 0}
+                  onClick={() => {
+                    const text = lyricText.trim();
+                    setLyrics((current) => [
+                      ...current.filter(
+                        (line) =>
+                          line.fromColumn >= range.toColumn ||
+                          line.toColumn <= range.fromColumn,
+                      ),
+                      {
+                        fromColumn: range.fromColumn,
+                        toColumn: range.toColumn,
+                        text,
+                      },
+                    ]);
+                    setLyricDraft(null);
+                  }}
+                >
+                  Write it here
+                </Button>
+                {lyricHere ? (
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setLyrics((current) =>
+                        current.filter((line) => line !== lyricHere),
+                      );
+                      setLyricDraft(null);
+                    }}
+                  >
+                    Take it off
+                  </Button>
+                ) : null}
+              </Stack>
+            </Stack>
+          ) : null}
+
+          {frameTab === "small" && range ? (
+            <Stack spacing={1.5}>
+              <Typography variant="body2" color="text.secondary">
+                A florid run printed smaller takes less width and reads as
+                decoration. Only the notes inside the mark move.
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                {(["single", "right", "left"] as const).map((side) => {
+                  const marked = cueRanges.some(
+                    (cue) =>
+                      cue.hand === side &&
+                      cue.fromColumn < range.toColumn &&
+                      cue.toColumn > range.fromColumn,
+                  );
+                  return (
+                    <Button
+                      key={side}
+                      size="small"
+                      variant={marked ? "contained" : "outlined"}
+                      onClick={() =>
+                        setCueRanges((current) => {
+                          const clear = current.filter(
+                            (cue) =>
+                              !(
+                                cue.hand === side &&
+                                cue.fromColumn < range.toColumn &&
+                                cue.toColumn > range.fromColumn
+                              ),
+                          );
+                          return marked
+                            ? clear
+                            : [
+                                ...clear,
+                                {
+                                  hand: side,
+                                  fromColumn: range.fromColumn,
+                                  toColumn: range.toColumn,
+                                },
+                              ];
+                        })
+                      }
+                    >
+                      {side === "single"
+                        ? "Both staves"
+                        : side === "right"
+                          ? "Right hand"
+                          : "Left hand"}
+                    </Button>
+                  );
+                })}
+              </Stack>
+            </Stack>
+          ) : null}
+
           {frameTab === "rerecord" && range && audioUuid ? (
             <RangeRerecordPanel
               audioUuid={audioUuid}
@@ -2220,6 +2770,94 @@ export function RhythmPage() {
               ? `Press one number to give it to all ${oneChord.length} noteheads, or press ${oneChord.length} of them to give each note its own \u2014 they print stacked over the chord, lowest at the bottom.`
               : "One number, on every note picked. Several at once only mean something on a single chord, where they can be read against the noteheads in order."}
           </Typography>
+
+          <Divider textAlign="left">
+            <Typography variant="caption" color="text.secondary">
+              Grace note
+            </Typography>
+          </Divider>
+          {onlyNote === null ? (
+            <Typography variant="caption" color="text.secondary">
+              Pick one notehead to lean a small note on it.
+            </Typography>
+          ) : (
+            <>
+              <Typography variant="caption" color="text.secondary">
+                A small note played just before {noteNameAt(rowOf(onlyNote))}.
+                It is a mark, not a note: nothing plays it, it takes no column,
+                and no figure on the page changes because of it.
+              </Typography>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ alignItems: "center", flexWrap: "wrap" }}
+              >
+                {GRACE_STEPS.map((step) => (
+                  <Button
+                    key={step.semitones}
+                    size="small"
+                    variant={
+                      graceHere?.row === rowOf(onlyNote) + step.semitones
+                        ? "contained"
+                        : "outlined"
+                    }
+                    disabled={
+                      rowOf(onlyNote) + step.semitones < 0 ||
+                      rowOf(onlyNote) + step.semitones > 87
+                    }
+                    onClick={() => putGrace(onlyNote, step.semitones)}
+                  >
+                    {step.label}
+                  </Button>
+                ))}
+              </Stack>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ alignItems: "center", flexWrap: "wrap" }}
+              >
+                <ButtonGroup size="small">
+                  {(["acciaccatura", "appoggiatura"] as const).map((kind) => (
+                    <Button
+                      key={kind}
+                      variant={
+                        (graceHere?.kind ?? "acciaccatura") === kind
+                          ? "contained"
+                          : "outlined"
+                      }
+                      disabled={!graceHere}
+                      onClick={() =>
+                        setGraceNotes((current) =>
+                          current.map((one) =>
+                            one === graceHere ? { ...one, kind } : one,
+                          ),
+                        )
+                      }
+                    >
+                      {kind === "acciaccatura" ? "Crushed" : "Leaned on"}
+                    </Button>
+                  ))}
+                </ButtonGroup>
+                {graceHere ? (
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      setGraceNotes((current) =>
+                        current.filter((one) => one !== graceHere),
+                      )
+                    }
+                  >
+                    Take it off
+                  </Button>
+                ) : null}
+              </Stack>
+              <Typography variant="caption" color="text.secondary">
+                Crushed is an acciaccatura — as fast as possible, with a slash
+                through its stem. Leaned on is an appoggiatura, which takes its
+                time from the note it precedes.
+              </Typography>
+            </>
+          )}
 
           <Divider textAlign="left">
             <Typography variant="caption" color="text.secondary">

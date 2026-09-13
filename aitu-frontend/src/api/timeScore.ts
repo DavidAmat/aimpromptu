@@ -89,6 +89,80 @@ export interface LadderPreview {
   labelled: LabelledPeak[];
 }
 
+/**
+ * A stretch printed as one held note with `tr` over it, instead of the alternations played.
+ *
+ * A reading of the page and nothing more: every alternation is still in the recording, playback
+ * still sounds all of them, and dropping the mark prints them again exactly.
+ */
+export interface Trill {
+  hand: PrintedHand;
+  startFrame: number;
+  /** One past the column of the run's last onset. */
+  endFrame: number;
+  /** The note that stays on the page — the lower of the two, because `tr` means "with the one above". */
+  row: number;
+}
+
+/** One stretch the backend found two notes alternating in, offered to the reader. */
+export interface TrillSuggestion {
+  hand: PrintedHand;
+  startFrame: number;
+  endFrame: number;
+  row: number;
+  otherRow: number;
+  /** What the two notes are called, for example `Si-3` and `Do-4`. */
+  noteName: string;
+  otherNoteName: string;
+  noteCount: number;
+  /** How many times the pair came round. Three is the threshold. */
+  pairRepeats: number;
+  medianGapMs: number;
+  startSeconds: number;
+  endSeconds: number;
+}
+
+export interface TrillsResponse {
+  audioUuid: string;
+  frameMs: number;
+  suggestions: TrillSuggestion[];
+}
+
+/**
+ * A small note leaning on a note of the music.
+ *
+ * A mark and not an event: it is not in the recording, it takes no column, nothing plays it, and no
+ * figure is measured differently because of it. `row` is the grace note's own pitch; `targetRow` is
+ * the note it leans on.
+ *
+ * An **acciaccatura** is crushed — as fast as possible — and prints with a slash through its stem.
+ * An **appoggiatura** leans, taking time from the note it precedes, and prints without one.
+ */
+export interface GraceNote {
+  hand: PrintedHand;
+  startFrame: number;
+  targetRow: number;
+  row: number;
+  kind: "acciaccatura" | "appoggiatura";
+}
+
+/** A line of words under the staff, over a stretch of columns. */
+export interface LyricLine {
+  fromColumn: number;
+  /** Exclusive. */
+  toColumn: number;
+  text: string;
+}
+
+/** A stretch printed smaller than the rest of the page. Asked for, never inferred. */
+export interface CueRange {
+  /** `"right"`, `"left"`, or `"single"` for both staves. */
+  hand: string;
+  fromColumn: number;
+  /** Exclusive. */
+  toColumn: number;
+}
+
 export interface SparseMatrix {
   format: "binary-coo";
   shape: [number, number];
@@ -203,6 +277,15 @@ export const timeScoreApi = {
       boundaryMs?: number[];
       /** Notes the reader took off the page. */
       hiddenNotes?: { startFrame: number; row: number }[];
+      /**
+       * Stretches the reader accepted as trills.
+       *
+       * On the request for the same reason the hidden notes are: the printed figure of a note
+       * is the gap to the next onset in the same hand, so taking the alternations off the page
+       * has to happen before any figure is named. Collapsed in the browser the held note would
+       * print as a semicorchea with a `tr` over it.
+       */
+      trills?: Trill[];
     },
     signal?: AbortSignal,
   ) {
@@ -215,7 +298,26 @@ export const timeScoreApi = {
         boundaries: query.boundaries ?? [],
         boundaryMs: query.boundaryMs ?? [],
         hiddenNotes: query.hiddenNotes ?? [],
+        trills: query.trills ?? [],
       },
+      signal,
+    });
+  },
+
+  /**
+   * Where two notes are trading places fast enough to be worth one `tr`.
+   *
+   * A suggestion and nothing more. Nothing is written and the sheet does not change until the
+   * reader accepts one: a missed trill costs a reader nothing, and a wrong one hides notes that
+   * were really played.
+   */
+  trills(
+    audioUuid: string,
+    query: { frameMs?: number; minPairRepeats?: number } = {},
+    signal?: AbortSignal,
+  ) {
+    return request<TrillsResponse>(`/time/${audioUuid}/trills`, {
+      query: { frameMs: query.frameMs, minPairRepeats: query.minPairRepeats },
       signal,
     });
   },
@@ -394,5 +496,20 @@ export interface SavedRhythm {
   hiddenNotes?: { startFrame: number; row: number }[];
   /** Which finger plays a note, by the staff it is drawn on. */
   fingers?: { hand: string; startFrame: number; row: number; finger: number }[];
+  /** Stretches printed as one held note with `tr` over them. */
+  trills?: Trill[];
+  /** Small notes leaning on a note of the music. */
+  graceNotes?: GraceNote[];
+  /** Lines of words written under the staff. */
+  lyrics?: LyricLine[];
+  /** Stretches printed smaller than the rest of the page. */
+  cueRanges?: CueRange[];
+  /**
+   * How large the marks over and under the staff are drawn, as a multiple of their normal size.
+   *
+   * Per piece rather than per app: one piece is dense enough that fingering crowds it, another airy
+   * enough that the same numbers are hard to read.
+   */
+  annotationScale?: number;
   savedAt?: string;
 }

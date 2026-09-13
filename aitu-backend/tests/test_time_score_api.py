@@ -404,3 +404,136 @@ def test_a_machine_perfect_piece_gets_its_plot_and_a_warning_rather_than_an_erro
 def test_an_ordinary_piece_carries_no_warning(client, transcribed):
     body = client.get(f"/time/{transcribed}/peaks", params={"hand": "right"}).json()
     assert body["warning"] is None
+
+
+# --------------------------------------------------------------------------- trills
+
+
+@pytest.fixture()
+def shaken(temp_store: Path, tmp_path: Path) -> str:
+    """A piece with one obvious shake in it: Si and Do taking turns ten times, then one long note."""
+    if not FFMPEG:
+        pytest.skip("ffmpeg is not installed")
+    source = sine_wav(tmp_path / "shake.wav", seconds=6.0)
+    with source.open("rb") as handle:
+        audio_uuid = ingest.ingest_file(handle, "shake.wav", AudioSource.RECORDING).uuid
+    events = [
+        NoteEvent(
+            midi_note=71 + index % 2,
+            start=1.0 + index * 0.08,
+            end=1.0 + index * 0.08 + 0.06,
+        )
+        for index in range(10)
+    ]
+    events.append(NoteEvent(midi_note=79, start=2.2, end=2.8))
+    pipeline.save_note_events(audio_uuid, events, 6.0, title="Shake stub")
+    return audio_uuid
+
+
+def test_the_trills_route_offers_the_shake_and_writes_nothing(client, shaken):
+    response = client.get(f"/time/{shaken}/trills")
+    assert response.status_code == 200
+    body = response.json()
+
+    assert len(body["suggestions"]) == 1
+    found = body["suggestions"][0]
+    assert found["noteCount"] == 10
+    assert found["pairRepeats"] == 5
+    assert found["hand"] == "right"
+    assert found["noteName"] and found["otherNoteName"]
+
+    # A suggestion is not a decision: the sheet is the same before and after asking.
+    drawn = client.get(f"/time/{shaken}/score", params={"anchorMs": 400}).json()
+    assert len(drawn["notes"]) == 11
+
+
+def test_a_shuffle_is_not_offered_as_a_trill(client, transcribed):
+    """The rule has to say no to a piece that alternates in pitch but not in a shake."""
+    assert client.get(f"/time/{transcribed}/trills").json()["suggestions"] == []
+
+
+def test_an_accepted_trill_draws_one_held_note(client, shaken):
+    found = client.get(f"/time/{shaken}/trills").json()["suggestions"][0]
+    body = {
+        "anchorMs": 400,
+        "trills": [
+            {
+                "hand": found["hand"],
+                "startFrame": found["startFrame"],
+                "endFrame": found["endFrame"],
+                "row": found["row"],
+            }
+        ],
+    }
+    drawn = client.post(f"/time/{shaken}/score", json=body).json()
+
+    in_run = [
+        note
+        for note in drawn["notes"]
+        if found["startFrame"] <= note["startFrame"] < found["endFrame"]
+    ]
+    assert len(in_run) == 1
+    assert in_run[0]["row"] == found["row"]
+    # The piece keeps its length: a mark on the page never moves a column.
+    plain = client.get(f"/time/{shaken}/score", params={"anchorMs": 400}).json()
+    assert drawn["envelope"]["frameCount"] == plain["envelope"]["frameCount"]
+
+
+def test_the_marks_are_kept_with_the_piece(client, shaken):
+    """Trills, words and cue-size stretches survive a save and come back on the next visit."""
+    saved = client.put(
+        f"/time/{shaken}/rhythm",
+        json={
+            "hand": "right",
+            "frameMs": 40.0,
+            "anchorFigure": "negra",
+            "anchorMs": 400.0,
+            "speedChanges": [],
+            "overrides": [],
+            "beamBreaks": [],
+            "trills": [{"hand": "right", "startFrame": 25, "endFrame": 55, "row": 50}],
+            "lyrics": [{"fromColumn": 25, "toColumn": 55, "text": "and it shook"}],
+            "cueRanges": [{"hand": "right", "fromColumn": 25, "toColumn": 55}],
+            "annotationScale": 0.8,
+        },
+    )
+    assert saved.status_code == 200
+
+    read_back = client.get(f"/time/{shaken}/rhythm").json()
+    assert read_back["trills"] == [{"hand": "right", "startFrame": 25, "endFrame": 55, "row": 50}]
+    assert read_back["lyrics"][0]["text"] == "and it shook"
+    assert read_back["cueRanges"][0]["toColumn"] == 55
+    assert read_back["annotationScale"] == 0.8
+
+
+def test_grace_notes_are_kept_with_the_piece(client, shaken):
+    """A mark and not an event: it is stored, and nothing about the drawn notes changes."""
+    plain = client.get(f"/time/{shaken}/score", params={"anchorMs": 400}).json()
+    client.put(
+        f"/time/{shaken}/rhythm",
+        json={
+            "hand": "right",
+            "frameMs": 40.0,
+            "anchorFigure": "negra",
+            "anchorMs": 400.0,
+            "speedChanges": [],
+            "overrides": [],
+            "beamBreaks": [],
+            "graceNotes": [
+                {
+                    "hand": "right",
+                    "startFrame": 25,
+                    "targetRow": 50,
+                    "row": 52,
+                    "kind": "appoggiatura",
+                }
+            ],
+        },
+    )
+
+    read_back = client.get(f"/time/{shaken}/rhythm").json()
+    assert read_back["graceNotes"][0]["row"] == 52
+    assert read_back["graceNotes"][0]["kind"] == "appoggiatura"
+
+    after = client.get(f"/time/{shaken}/score", params={"anchorMs": 400}).json()
+    assert after["notes"] == plain["notes"]

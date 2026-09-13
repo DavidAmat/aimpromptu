@@ -1,5 +1,8 @@
 # Task 12.1.1 — Lyrics
 
+> **Shipped 2026-09-13** as the **Words** tab on the frames toolbox. See
+> [`../../../progress/epic-12/epic-12-progress.md`](../../../progress/epic-12/epic-12-progress.md).
+>
 > **Rewritten 2026-08-12 for the wall-clock model.** The authoring home changed and the storage
 > changed. See [`../../wall-clock-rewrite.md`](../../wall-clock-rewrite.md).
 

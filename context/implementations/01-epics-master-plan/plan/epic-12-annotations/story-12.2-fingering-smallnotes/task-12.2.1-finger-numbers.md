@@ -1,5 +1,11 @@
 # Task 12.2.1 — Finger numbers
 
+> **Closed 2026-09-13.** The mark size is **Smaller** / **Larger** under the sheet, per piece;
+> the performance-view toggle was already there. Fingering from the Piano Roll selection was
+> **not built**: the task file said to try the sheet first and only build it if the sheet turned
+> out to be slower in use, and nobody has reported that it is. See
+> [`../../../progress/epic-12/epic-12-progress.md`](../../../progress/epic-12/epic-12-progress.md).
+>
 > **Rewritten 2026-08-12: mostly shipped.** See
 > [`../../wall-clock-rewrite.md`](../../wall-clock-rewrite.md).
 

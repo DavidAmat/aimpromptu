@@ -16,8 +16,9 @@ Single status lookup for the whole plan. Status codes: `[x]` completed, `[p]` in
 >   `@aimpromptu/grid-notation` from the time score payload; VexFlow is gone. What those stories
 >   promised — key signatures, transposition, octave and clef displacement, guides — exists again on
 >   the new path, built during the refactor.
-> - **The live backlog is Story 9.7 and Epics 10–14**, all rewritten for the wall clock on
->   2026-08-12. The task files describe the current requirement; git holds the old text.
+> - **The live backlog is Epic 13 and Epic 14.** Story 9.7 and Epics 10, 11 and 12 shipped
+>   after the refactor, all built on the wall clock. The task files describe the current
+>   requirement; git holds the old text.
 > - **Everything the refactor shipped** is in
 >   [`../time-based-concept/checklist.md`](../../03-time-based-concept/checklist.md), and why it closed is
 >   in [`../time-based-concept/CLOSURE.md`](../../03-time-based-concept/CLOSURE.md).
@@ -207,17 +208,17 @@ Animated matrix views over the piano SVG: assets and key highlighting, horizonta
 
 - [x] Task 8.5.1 **Drag note editing**: drag to key/frame with landing guides, staged changes, Save.
 
-# [p] Epic 9 — Music notation
+# [x] Epic 9 — Music notation
 
 > **Stories 9.1–9.6 were superseded by the refactor**, which rebuilt the sheet on
-> `@aimpromptu/grid-notation` with no VexFlow, no bars and no tempo. Only Story 9.7 is live, and it
-> is rewritten for the wall clock.
+> `@aimpromptu/grid-notation` with no VexFlow, no bars and no tempo. Story 9.7 was the last piece
+> and closed on 2026-09-13.
 
 VexFlow sheet music: backend score-format builder, notation tab with responsive wrapping, engraving rules (stems/beams/no ties), key signatures and naturals, transposition, octave/clef displacement, beat guides and cut-measure, advanced ornaments at the end. Index: `epic-09-notation/epic-notation-index.md`.
 
 > **Stories 9.1–9.6 completed 2026-07-27** and awaiting the supervisor's musical trial —
-> [guide 7](../progress/user_review/epic-09-notation.md). Story 9.7 (nice-to-have ornaments) was
-> not started, per the plan's "end of project" placement, so the epic header stays `[p]`.
+> [guide 7](../progress/user_review/epic-09-notation.md). Story 9.7 (nice-to-have ornaments)
+> closed on 2026-09-13 with trill detection, so the epic is complete.
 >
 > The score intentionally uses one readable voice per hand. Simultaneous onsets share the longest
 > onset-to-next-onset chord duration; partial chord releases never create separate voices, rests or
@@ -257,7 +258,7 @@ VexFlow sheet music: backend score-format builder, notation tab with responsive 
   cut-measure via timeline-column insertion. *(The preceding note/chord expands to the old
   barline when possible; the following note begins the new measure.)*
 
-## [p] Story 9.7 — Tuplets and trills (nice to have)
+## [x] Story 9.7 — Tuplets and trills (nice to have)
 
 *Rewritten 2026-08-12. Partly shipped: tresillos are found automatically (D-32, P3.9/P6.10) and
 chord grouping runs on raw times (D-04).*
@@ -265,7 +266,11 @@ chord grouping runs on raw times (D-04).*
 *Task 9.7.1 (manual N-tuplet marking) dropped 2026-08-12: triplets are the only tuplet this
 project wants, and automatic tresillo detection already covers them. Nothing else to build.*
 
-- [ ] Task 9.7.2 **Trills**: detect an alternation on raw events and suggest a `tr` mark. *(Chord grouping: done.)*
+- [x] Task 9.7.2 **Trills**: detect an alternation on raw events and suggest a `tr` mark.
+  *(Shipped 2026-09-13. Two notes a whole tone or less apart, the pair coming round at least three
+  times, evenly and under 300 ms — measured on the raw attack times, per hand. A suggestion only;
+  accepting one collapses the run to a held note with `tr` over it, on the backend, before any
+  figure is named. Chord grouping was already done.)*
 
 # [x] Epic 10 — Piano Library
 
@@ -303,20 +308,29 @@ Preview-first passage replacement: mark a stretch of the sheet, play it again at
 
 - [x] Task 11.3.1 **Replacement preview**: transcribe then scale timings, passage-only render, optional tempo-compressed audio, decision loop.
 
-# [ ] Epic 12 — Annotations (nice to have)
+# [x] Epic 12 — Annotations (nice to have)
 
-> *Partly shipped. Fingering landed as P8.1; lyrics and cue-size notes are rewritten 2026-08-12 and stored in `rhythm.json`.*
+> *Complete 2026-09-13. Fingering landed as P8.1; lyrics, cue-size stretches, grace notes and the
+> mark size followed, all stored in `rhythm.json` and all cleared by **Remove all**.*
 
 Marks that never touch the recording: lyrics over frame ranges, finger numbers with chord stacks, cue-size passages and grace notes; stored in `rhythm.json`, safe across re-wrapping and printing, toggleable. Index: `epic-12-annotations/epic-annotations-index.md`.
 
-## [ ] Story 12.1 — Lyrics
+## [x] Story 12.1 — Lyrics
 
-- [ ] Task 12.1.1 **Lyrics annotations**: range-based authoring with passage-render iteration, stored per version.
+- [x] Task 12.1.1 **Lyrics annotations**: range-based authoring with passage-render iteration,
+  stored per version. *(Shipped 2026-09-13 as the **Words** tab on the frames toolbox: mark a
+  stretch, type the line, it is drawn under the lower staff across it. Hand-independent, cleared by
+  **Remove all**, and hidden by a **Words** pill in the performance view.)*
 
-## [ ] Story 12.2 — Fingering and small notes
+## [x] Story 12.2 — Fingering and small notes
 
-- [x] Task 12.2.1 **Finger numbers**: per-note 1–5, chord stacking. *(Shipped as P8.1 on 2026-08-08 — the note toolbox. What remains is the text size and the performance-view toggle, tracked in the task file.)*
-- [ ] Task 12.2.2 **Small notes**: cue-size passages, acciaccatura/appoggiatura marks.
+- [x] Task 12.2.1 **Finger numbers**: per-note 1–5, chord stacking. *(Shipped as P8.1 on
+  2026-08-08 — the note toolbox. The two remainders closed on 2026-09-13: **Smaller / Larger**
+  sets one mark size per piece, and the performance view already had its **Fingering** pill.)*
+- [x] Task 12.2.2 **Small notes**: cue-size passages, acciaccatura/appoggiatura marks. *(Shipped
+  2026-09-13. The **Small** tab prints a marked stretch cue-sized, per hand or across both staves.
+  The note toolbox leans a grace note on one note, crushed or leaned on, at a step or a third —
+  drawn in the annotation layer, so it takes no column and moves nothing.)*
 
 # [ ] Epic 13 — Composing live (nice to have)
 
