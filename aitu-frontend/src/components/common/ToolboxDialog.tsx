@@ -32,7 +32,18 @@ export interface ToolboxDialogProps {
   /** Where it appears when it opens, in pixels from the top left of the window. */
   initialPosition?: { x: number; y: number };
   onClose: () => void;
+  /**
+   * One control in the title bar, to the left of the close button.
+   *
+   * For the one thing a panel can say about *itself* rather than about the music it edits: the
+   * frames toolbox and the note toolbox each carry a button here that hands the selection over to
+   * the other one. It sits in the bar because it is not one of the panel's edits — everything in
+   * the body changes the piece, and this changes only what is picked.
+   */
+  headerAction?: ReactNode;
   children: ReactNode;
+  /** How wide the panel is, in pixels. The default suits a column of controls; a keyboard needs more. */
+  width?: number;
 }
 
 const WIDTH = 360;
@@ -45,7 +56,9 @@ export function ToolboxDialog({
   subtitle,
   initialPosition,
   onClose,
+  headerAction,
   children,
+  width = WIDTH,
 }: ToolboxDialogProps) {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(
     null,
@@ -61,13 +74,13 @@ export function ToolboxDialog({
   }
 
   const clamp = useCallback((x: number, y: number) => {
-    const maxX = Math.max(MARGIN, window.innerWidth - WIDTH - MARGIN);
+    const maxX = Math.max(MARGIN, window.innerWidth - width - MARGIN);
     const maxY = Math.max(MARGIN, window.innerHeight - 80);
     return {
       x: Math.min(Math.max(MARGIN, x), maxX),
       y: Math.min(Math.max(MARGIN, y), maxY),
     };
-  }, []);
+  }, [width]);
 
   const at = position ?? initialPosition ?? { x: 24, y: 120 };
 
@@ -129,7 +142,7 @@ export function ToolboxDialog({
         position: "fixed",
         left: `${at.x}px`,
         top: `${at.y}px`,
-        width: WIDTH,
+        width,
         zIndex: 1300,
         borderRadius: 2,
         overflow: "hidden",
@@ -168,6 +181,19 @@ export function ToolboxDialog({
             </Typography>
           ) : null}
         </Box>
+        {/*
+          Kept out of the drag: a press on a control in the title bar is a press on the control, and
+          without this the panel follows the pointer while the reader is aiming at the button.
+        */}
+        {headerAction ? (
+          <Box
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            sx={{ display: "flex", alignItems: "center" }}
+          >
+            {headerAction}
+          </Box>
+        ) : null}
         <IconButton
           size="small"
           onClick={onClose}

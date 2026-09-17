@@ -1,0 +1,25 @@
+picture                  roll lean  spread  edges   key border lean: left  mid  right   (degrees from vertical)
+7years                       0.00    4.21    5933       0.06  -0.09  -0.15
+airplanes                   -0.08    3.94    6617       0.80   0.49   0.29
+derulo                      -0.00    0.00    3636       0.00   0.00   0.00
+feather                     -0.29    5.13    4376       0.14   0.01  -0.28
+more-examples-1              0.00    1.09    4842      -0.41   0.11  -0.02
+more-examples-10             0.19   10.58    5428      -0.18   0.22   0.70
+more-examples-11             0.00    2.83    5990       0.13  -0.02  -0.30
+more-examples-12            -0.00    3.09    6296      -0.05   0.28   0.36
+more-examples-13             0.14   13.06    3990       0.17   0.05   0.07
+more-examples-14            -0.87   19.97    4649       0.75   0.14   0.00
+more-examples-2             -0.00    6.25    3900      -0.26   0.21   0.05
+more-examples-3              1.77   26.96    2435      -0.09   0.12   0.12
+more-examples-4             -0.00    8.75    2704      -0.24   0.33   0.30
+more-examples-5              3.58   26.49    4597      -0.14   0.12   0.16
+more-examples-6             -0.18   10.72    4805      -0.05   0.04   0.26
+more-examples-7             -0.27    5.60    6326      -0.04   0.09   0.21
+more-examples-8             -0.10    4.05    6521      -0.13   0.13   0.43
+more-examples-9             -0.00   15.56    4694       0.02   0.12  -0.09
+not-immediate-strokes       -0.36   13.85    2903      -0.01   0.10   0.19
+ode1                         0.81   25.20    5007       0.02   0.09  -0.04
+ode2                         0.58   24.89    5028      -0.09   0.14   0.07
+ode3                         0.66   24.86    5032      -0.07   0.14   0.16
+shut-up-and-dance           -0.00    0.00    8381       0.00   0.00   0.00
+superestrella               -0.38   14.11     115      -0.02  -0.01   0.00

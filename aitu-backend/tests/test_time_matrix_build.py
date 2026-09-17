@@ -174,4 +174,3 @@ def test_the_grouping_window_can_still_be_overridden() -> None:
     report = events_to_time_matrix(chord, 4.0, frame_ms=40.0, group_window_ms=10.0)
 
     assert report.groups == 2
-

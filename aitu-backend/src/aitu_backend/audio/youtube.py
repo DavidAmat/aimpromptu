@@ -42,8 +42,10 @@ YOUTUBE_URL = re.compile(
     re.IGNORECASE,
 )
 
-#: yt-dlp's progress lines look like `[download]  42.3% of ...`.
-_PROGRESS_LINE = re.compile(r"\[download\]\s+(\d+(?:\.\d+)?)%")
+#: yt-dlp's progress lines look like `[download]  42.3% of ...`. Public because
+#: the video download of implementation 04 parses the same lines from the same
+#: command line tool.
+PROGRESS_LINE = re.compile(r"\[download\]\s+(\d+(?:\.\d+)?)%")
 
 
 class YtDlpMissing(RuntimeError):
@@ -107,7 +109,7 @@ def probe(url: str) -> VideoInfo:
         text=True,
     )
     if result.returncode != 0:
-        raise DownloadFailed(_clean_error(result.stderr))
+        raise DownloadFailed(clean_error(result.stderr))
 
     try:
         payload = json.loads(result.stdout)
@@ -166,7 +168,7 @@ def download(
             )
             assert process.stdout is not None
             for line in process.stdout:
-                match = _PROGRESS_LINE.search(line)
+                match = PROGRESS_LINE.search(line)
                 if match:
                     percent = float(match.group(1))
                     if percent > seen:
@@ -175,7 +177,7 @@ def download(
             process.wait()
             if process.returncode != 0:
                 stderr = process.stderr.read() if process.stderr else ""
-                raise DownloadFailed(_clean_error(stderr))
+                raise DownloadFailed(clean_error(stderr))
 
         downloaded = sorted(target.glob("*.mp3"))
         if not downloaded:
@@ -192,7 +194,7 @@ def download(
         )
 
 
-def _clean_error(stderr: str) -> str:
+def clean_error(stderr: str) -> str:
     """The last meaningful yt-dlp error line, shown to the user verbatim.
 
     Rate limits, private videos and geo blocks all surface here, and yt-dlp's

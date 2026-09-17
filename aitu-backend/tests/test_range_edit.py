@@ -349,9 +349,7 @@ def test_take_waveform_and_selected_range_before_transcribe(
     peaks = take_peaks(uuid, record.session_uuid, 50)
     assert peaks.duration_seconds == pytest.approx(2.0, abs=0.05)
 
-    patched = patch(
-        uuid, record.session_uuid, take_start_seconds=0.5, take_end_seconds=1.5
-    )
+    patched = patch(uuid, record.session_uuid, take_start_seconds=0.5, take_end_seconds=1.5)
     assert patched.take_start_seconds == pytest.approx(0.5)
     assert patched.take_end_seconds == pytest.approx(1.5)
 

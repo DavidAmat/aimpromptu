@@ -372,9 +372,7 @@ def put_removed_events(audio_uuid: str, body: RemovalRequest = Body(...)) -> Rem
         changed += 1
 
     if changed:
-        pipeline.save_note_events(
-            audio_uuid, stored.events, stored.duration_seconds, stored.title
-        )
+        pipeline.save_note_events(audio_uuid, stored.events, stored.duration_seconds, stored.title)
         # Imported here rather than at the top: `time_score` imports nothing from
         # this module today, and a module-level import would make that a rule
         # nobody can break by accident later. The split is cached per (piece,

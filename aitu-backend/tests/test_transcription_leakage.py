@@ -264,4 +264,3 @@ def test_a_caller_can_ask_for_the_old_one_sided_behaviour() -> None:
 def test_a_company_margin_below_one_is_refused() -> None:
     with pytest.raises(ValueError):
         merge_leaked_onsets(the_bruno_mars_passage(), LeakageConfig(min_company_margin=0))
-

@@ -309,6 +309,8 @@ class TimeScorePayload(BaseModel):
     #: Notes the reader asked to start a new beam (D-34). Grouping only; no note changes.
     beam_breaks: list[BeamBreak] = Field(default_factory=list, alias="beamBreaks")
     layout: LayoutHints
+    #: How many ornaments were left off the page because the reader asked for it.
+    decorative_dropped: int = Field(0, alias="decorativeDropped", ge=0)
 
     @model_validator(mode="after")
     def _check_passages_tile(self) -> "TimeScorePayload":

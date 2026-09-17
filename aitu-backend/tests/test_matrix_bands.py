@@ -72,7 +72,7 @@ def test_a_rare_figure_keeps_a_fifth_of_the_room() -> None:
     bands = build_bands(gaps, lad)
 
     assert bands.share[SEMICORCHEA] == pytest.approx(SHARE_CLAMP[0])
-    assert bands.line[SEMICORCHEA] == pytest.approx(134.0 * 2.0**SHARE_CLAMP[0])
+    assert bands.line[SEMICORCHEA] == pytest.approx(134.0 * 2.0 ** SHARE_CLAMP[0])
     assert bands.figure_of(134.0) is SEMICORCHEA
 
 

@@ -92,11 +92,7 @@ class Replay:
     _suffix: tuple[list[float], list[float], list[int]] | None = None
 
     def total(self, refine: RefineConfig) -> float:
-        return (
-            self.base
-            + refine.ledger_weight * self.ledger
-            + refine.pattern_weight * self.pattern
-        )
+        return self.base + refine.ledger_weight * self.ledger + refine.pattern_weight * self.pattern
 
     def suffix(self) -> tuple[list[float], list[float], list[int]]:
         """Cached ``(base, ledger, infeasible)`` totals of ``groups[i:]``."""
@@ -163,9 +159,7 @@ def pattern_cost(
         n = len(ids)
         broken = len(off) / n
         split = sum(1 for o in ids if hand_map[o] != owner) / n
-        switch = sum(1 for a, b in pairwise(ids) if hand_map[a] != hand_map[b]) / max(
-            1, n - 1
-        )
+        switch = sum(1 for a, b in pairwise(ids) if hand_map[a] != hand_map[b]) / max(1, n - 1)
         confidence = (
             figure.confidence if figure.confidence >= config.figures.min_confidence else 0.0
         )
@@ -331,9 +325,7 @@ def _set_hand(hand_map: HandMap, onset_ids: list[str], hand: str) -> HandMap:
     return out
 
 
-def changed_span(
-    decoded: DecodedMatrix, current: HandMap, candidate: HandMap
-) -> tuple[int, int]:
+def changed_span(decoded: DecodedMatrix, current: HandMap, candidate: HandMap) -> tuple[int, int]:
     """``(first, last)`` onset-group indices a change touches; ``(n, -1)`` if none."""
     changed = {o for o in candidate if candidate[o] != current.get(o)}
     first, last = len(decoded.groups), -1
@@ -353,9 +345,8 @@ def flagged(
     for index, group in enumerate(decoded.groups):
         for event in group.events:
             hand = hand_map[event.onset_id]
-            if (
-                ledger_lines(event.midi, hand) >= threshold
-                and across_offenders((event.midi,), hand, config.hand.ledger_grace_across)
+            if ledger_lines(event.midi, hand) >= threshold and across_offenders(
+                (event.midi,), hand, config.hand.ledger_grace_across
             ):
                 out.setdefault((index, hand), []).append(event.onset_id)
     return out
@@ -387,9 +378,7 @@ def _runs(
 
             def reaches(index: int, hand: str = hand) -> bool:
                 midis = [
-                    e.midi
-                    for e in decoded.groups[index].events
-                    if hand_map[e.onset_id] == hand
+                    e.midi for e in decoded.groups[index].events if hand_map[e.onset_id] == hand
                 ]
                 return bool(midis) and max(ledger_lines(m, hand) for m in midis) >= shoulder
 
@@ -646,8 +635,7 @@ def refine_map(
             if family == "pattern":
                 _cost, parts = pattern_cost(figures, current, config)
                 targets = [
-                    p["figure"] for p in sorted(parts, key=lambda p: -p["cost"])
-                    if p["cost"] > EPS
+                    p["figure"] for p in sorted(parts, key=lambda p: -p["cost"]) if p["cost"] > EPS
                 ]
             else:
                 relief = relief_map(figures, current, config)
@@ -701,8 +689,12 @@ def refine_map(
                         continue
                     stats.bump(stats.tried, kind)
                     trial = evaluate(
-                        decoded, candidate, config, figures,
-                        reference=score, changed=changed_span(decoded, current, candidate),
+                        decoded,
+                        candidate,
+                        config,
+                        figures,
+                        reference=score,
+                        changed=changed_span(decoded, current, candidate),
                     )
                     if trial.infeasible > score.infeasible:
                         stats.rejected_by_guard += 1
@@ -760,7 +752,11 @@ def infer(decoded: DecodedMatrix, config: HandInferenceConfig) -> HandInferenceR
     for index, group in enumerate(decoded.groups):
         partition = partition_of(group, refined)
         result = transition(
-            score.states[index], group, partition, config.hand, config.weights,
+            score.states[index],
+            group,
+            partition,
+            config.hand,
+            config.weights,
             allow_infeasible=True,
         )
         assert result is not None

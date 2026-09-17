@@ -87,8 +87,41 @@ export type {
   StartEditBody,
 } from "./editing";
 
+export { videoApi } from "./video";
+export type {
+  DetectionReport,
+  FrameLine,
+  ScrollSpeed,
+  VideoJobHandle,
+  VideoMeasurement,
+  VideoMetadata,
+  VideoSummary,
+} from "./video";
+
 export { youtubeApi } from "./youtube";
 export type { BatchEntry, VideoInfo, YoutubeDownloadRequest } from "./youtube";
+
+export { frameExamplesApi } from "./frameExamples";
+export type {
+  Annotation,
+  BlackBorder,
+  Calibration,
+  DetectedRun,
+  Detection,
+  Disagreement,
+  ExampleSummary,
+  FindRequest,
+  Found,
+  FrameExample,
+  Geometry,
+  KeyLane,
+  KeyState,
+  MomentumVerdict,
+  PianoKey,
+  PianoRect,
+  ScoreBoard,
+  ScoreLine,
+} from "./frameExamples";
 
 /** Liveness check used by the app bar indicator. */
 export const health = (signal?: AbortSignal) =>

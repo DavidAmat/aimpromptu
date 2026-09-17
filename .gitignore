@@ -78,6 +78,11 @@ aitu-backend/data/audio/**
 aitu-backend/data/**/*.npz
 # ... except the small committed samples used by tests and demos.
 !aitu-backend/data/examples/**/*.npz
+# Frame examples: the calibration and the hand annotations of one Synthesia
+# screenshot are small, are read by hand and cannot be reproduced, so they are
+# committed. The working-resolution copy beside them is written from the
+# screenshot by one function and is not.
+aitu-backend/data/frame-examples/cache/
 
 # =============================================================================
 # aitu-frontend — Node / Vite / TypeScript
@@ -116,6 +121,31 @@ aitu-frontend/lerna-debug.log*
 # Local dev server pids and logs (`make serve`).
 .run/
 
+# The screenshots implementation 04 was read from: twenty-five PNGs of three to
+# five megabytes, 75 MB in all. They are evidence a person looked at once, they
+# are on the machine that made them, and they would be four times the weight of
+# everything else in this repository put together. The reports that cite them are
+# committed; the pictures are not.
+context/implementations/04-synthesia-to-notes/examples/
+
 # Scratch: retired files and transfer archives. Never committed.
 _to_delete/
 **/_to_delete/
+
+# poc-synthesia-frames: the research spike of implementation 04.
+# The video and the frames sampled from it are a download and a cache, not
+# source (V-01). The scripts, the calibrations, the ground truth and the
+# pictures in out/ are kept; data/video/ is not.
+poc-synthesia-frames/data/video/
+poc-synthesia-frames/out/ui/
+# The pictures in out/ are regenerated from the example screenshots, which are
+# in the repository, by one command each — see the spike's README. Only the run
+# log and the stitched roll are kept: the log is the evidence behind every
+# number in RESULTS.md, and the stitched roll cannot be rebuilt without the
+# video.
+poc-synthesia-frames/out/thumbs/
+poc-synthesia-frames/out/zoom/
+poc-synthesia-frames/out/labels/
+poc-synthesia-frames/out/calibration/
+poc-synthesia-frames/out/detectors/
+poc-synthesia-frames/scripts/__pycache__/

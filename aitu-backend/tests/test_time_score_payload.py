@@ -328,4 +328,3 @@ def test_an_even_run_is_printed_the_same_either_way() -> None:
     weighted = to_score_payload(hands, ladder(), weighted_figure_lines=True)
 
     assert [n.figure for n in plain.notes] == [n.figure for n in weighted.notes]
-

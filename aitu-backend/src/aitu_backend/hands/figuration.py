@@ -75,14 +75,10 @@ class Figure:
         return max(0.0, self.match * self.coverage * turns)
 
     def phase_of(self) -> dict[str, int]:
-        return {
-            oid: i % self.period for i, slot in enumerate(self.slots) for oid in slot
-        }
+        return {oid: i % self.period for i, slot in enumerate(self.slots) for oid in slot}
 
     def cycle_of(self) -> dict[str, int]:
-        return {
-            oid: i // self.period for i, slot in enumerate(self.slots) for oid in slot
-        }
+        return {oid: i // self.period for i, slot in enumerate(self.slots) for oid in slot}
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -164,8 +160,10 @@ def _runs_on_grid(
             continue
         gap = time - slots[index - 1][0]
         steps = round(gap / unit) if unit > 0 else 0
-        if steps < 1 or abs(gap - steps * unit) > tol * max(1, steps) or (
-            steps - 1 > params.max_gap_slots
+        if (
+            steps < 1
+            or abs(gap - steps * unit) > tol * max(1, steps)
+            or (steps - 1 > params.max_gap_slots)
         ):
             if len(current) >= 4:
                 runs.append(current)
@@ -191,7 +189,9 @@ def _slot_pitch(events: list[NoteEvent] | None) -> float | None:
     return float(min(e.midi for e in events))
 
 
-def _score_period(pitches: list[float | None], period: int, params: FigureModel) -> tuple[float, int]:
+def _score_period(
+    pitches: list[float | None], period: int, params: FigureModel
+) -> tuple[float, int]:
     """``(agreement, turns)`` for one candidate period.
 
     Each turn is compared with the one before it, *after* subtracting each turn's own anchor, so a
@@ -215,9 +215,7 @@ def _score_period(pitches: list[float | None], period: int, params: FigureModel)
         shapes.append({k: p - anchor for k, p in known.items()})
 
     # --- the beam break: the turn's lowest note must sit at a settled phase -----------------
-    low_phases = [
-        min(shape, key=lambda k: shape[k]) for shape in shapes if len(shape) >= 2
-    ]
+    low_phases = [min(shape, key=lambda k: shape[k]) for shape in shapes if len(shape) >= 2]
     if len(low_phases) < params.min_cycles:
         return 0.0, n_cycles
     modal = Counter(low_phases).most_common(1)[0][1]
@@ -236,9 +234,7 @@ def _score_period(pitches: list[float | None], period: int, params: FigureModel)
         if anchors[c] is not None and len(shapes[c]) >= 2
     ]
     if len(ranges) >= 2:
-        overlaps = [
-            min(a[1], b[1]) - max(a[0], b[0]) >= 0 for a, b in pairwise(ranges)
-        ]
+        overlaps = [min(a[1], b[1]) - max(a[0], b[0]) >= 0 for a, b in pairwise(ranges)]
         if sum(overlaps) / len(overlaps) < params.min_cycle_overlap:
             return 0.0, n_cycles
 
@@ -291,7 +287,9 @@ def _modal_shape(pitches: list[float | None], period: int) -> tuple[dict[int, fl
     n_cycles = len(pitches) // period
     turns = [pitches[c * period : (c + 1) * period] for c in range(n_cycles)]
     complete = [t for t in turns if all(p is not None for p in t)]
-    source = complete if len(complete) >= 2 else [t for t in turns if sum(p is not None for p in t) >= 2]
+    source = (
+        complete if len(complete) >= 2 else [t for t in turns if sum(p is not None for p in t) >= 2]
+    )
 
     per_phase: dict[int, list[float]] = {}
     for turn in source:
@@ -308,9 +306,7 @@ def _modal_shape(pitches: list[float | None], period: int) -> tuple[dict[int, fl
     shape = {k: v - floor for k, v in shape.items()}
 
     anchors = [a for a in (_anchor_of(turn, shape) for turn in turns) if a is not None]
-    drift = (
-        float(median([b - a for a, b in pairwise(anchors)])) if len(anchors) > 1 else 0.0
-    )
+    drift = float(median([b - a for a, b in pairwise(anchors)])) if len(anchors) > 1 else 0.0
     return shape, drift
 
 
@@ -416,9 +412,7 @@ def _extend(
                 if group is None:
                     continue
                 target = predicted_anchor + shape[k]
-                near = [
-                    e for e in group.events if abs(e.midi - target) <= params.absorb_tolerance
-                ]
+                near = [e for e in group.events if abs(e.midi - target) <= params.absorb_tolerance]
                 if near:
                     found.append((k, min(near, key=lambda e: abs(e.midi - target))))
             if len(found) < max(2, (2 * len(shape)) // 3):
@@ -560,9 +554,11 @@ def detect(
                     period=period,
                     ioi=unit,
                     slots=[[e.onset_id for e in s] if s else [] for s in run_copy],
-                    absorbed={a for a in absorbed if any(
-                        a == e.onset_id for s in run_copy if s for e in s
-                    )},
+                    absorbed={
+                        a
+                        for a in absorbed
+                        if any(a == e.onset_id for s in run_copy if s for e in s)
+                    },
                     match=match,
                     coverage=sum(1 for s in run_copy if s) / max(1, len(run_copy)),
                     n_cycles=cycles,

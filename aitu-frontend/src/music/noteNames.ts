@@ -58,3 +58,39 @@ export function fittingNoteLabel(
 
   return null;
 }
+
+/**
+ * The Spanish name of a note the sheet has already spelled: `Do 4`, `Do-# 3`, `Re-b 5`.
+ *
+ * Spelled, not computed from the pitch. The same key sounds the same and is written two ways, and
+ * which one the sheet prints depends on the signature the piece is in and on any preference the
+ * reader has expressed — so a panel that worked the name out from the MIDI number on its own would
+ * say `Do-#` under a notehead printed as `Re-b`. The caller passes what `pitchToStaffPosition`
+ * returned, which is the same answer the glyph on the page came from.
+ *
+ * The octave is separated by a space and the accidental by a hyphen. It is a label to be read once,
+ * beside the note it is about, so it is set out rather than packed: the keyboard's own key labels
+ * stay the tighter `Do#-4`, because there the name is inside a key twenty pixels wide.
+ *
+ * Middle C is `Do 4`, the reckoning the keyboard, the roll and the tooltips all already use.
+ */
+export function spanishNoteName(pitch: {
+  letter: string;
+  accidental: -1 | 0 | 1;
+  octave: number;
+}): string {
+  const name = SPANISH_LETTERS[pitch.letter.toUpperCase()] ?? pitch.letter;
+  const accidental = pitch.accidental === 1 ? "-#" : pitch.accidental === -1 ? "-b" : "";
+  return `${name}${accidental} ${pitch.octave}`;
+}
+
+/** The seven letters, in the solfège the rest of the app names keys and notation in. */
+const SPANISH_LETTERS: Readonly<Record<string, string>> = {
+  C: "Do",
+  D: "Re",
+  E: "Mi",
+  F: "Fa",
+  G: "Sol",
+  A: "La",
+  B: "Si",
+};

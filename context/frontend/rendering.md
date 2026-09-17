@@ -15,6 +15,92 @@ The package makes columns the horizontal source of truth: **one `time → x` map
 staves, the ruler and every overlay**. The hands cannot come apart, because nothing computes their
 positions separately.
 
+## How far apart the lines are
+
+The white space between one set of pentagrams and the next is a slider beside the key signature,
+saved with the piece. **The number on it is the white space itself**: at 0 the staves of one line
+sit directly under the staves of the line above, and at 72 — the default — there are 72 pixels
+between them.
+
+That plainness took some doing, and the reason is worth knowing. A **system** is not its staves.
+Over them is a strip that holds the frame numbers, over that a block for the words, and a band at
+each end for the corner marks: some 160 pixels in all, `SYSTEM_ROOM` in the package. The
+package's own `systemGap` is the distance between two *boxes*, so setting it to nought still leaves
+the lines further apart than the staves are tall. A reader asked for a number and got one that did
+nothing they could see. `TimeScoreView` takes the room off before handing the number over, and the
+package floors the result per render so no setting can pull one line through the next. Room a lyric
+or an octave bracket needs is added back by the drawing, because the words live in it.
+
+It is **vertical**, so it is nowhere in the `time → x` map: no column changes width, no note moves
+sideways, and `vexflow-v2/tests/system-gap.test.ts` pins that.
+
+## Magnifying the page
+
+**Hold Command (Control on Windows) and scroll over the sheet** and it is drawn larger, up to four
+times. The chip beside **Show frame numbers** says what it is at and puts it back.
+
+It is a **magnifier and not a change to the music**: the drawing is scaled on screen, so no column
+is measured again, the page wraps exactly where it did, and nothing about a note moves relative to
+anything else. One is the floor, because the natural size is already the page laid out for this
+window and drawing it smaller would show no more music. It is for working on a crowded passage —
+picking one notehead out of a chord, putting the end of a stretch on the right column — where the
+page at its natural size is smaller than a pointer is accurate.
+
+Two things it has to get right, and both are in `TimeScoreView`. The point under the pointer stays
+under it, by scrolling the page back by however far the anchor drifted; and **every measurement
+taken from a pointer is divided by it**, because the stage's box on screen is the magnified one
+while the drawing's own units are not. It is how the page is being looked at, so it is not in
+`SheetEdits`, not undoable and not saved. The gap **inside** a system, between
+the two staves of one hand pair, is a separate number and is dragged on the page itself.
+
+### One line spread on its own
+
+The handle between the two staves of a line spreads **that line**. It used to write one number for
+the whole page, so a reader opening out a chord that needed the room got every line on the score
+opened out with it.
+
+Each answer is keyed by a **column inside the line**, never by the line's place down the page: the
+score re-wraps to the window, so "the third line" is different music at another width. Where a
+re-wrap brings two answers onto one line the wider wins — both were a reader asking for room, and
+giving less than was asked for is the only outcome that loses something.
+
+Lines can therefore be different heights, which the paginator is told about: it budgets each line at
+its own height rather than at one average, or a page would take more lines than fit.
+
+### Where an octave bracket starts and stops
+
+The bracket is measured from the **notes it covers**, not from the columns the reader dragged
+across. It used to run from `xForFrame(fromColumn)` to `xForFrame(toColumn)`, and `toColumn` is
+exclusive — so the hook came down on the x of the first note the bracket does *not* cover. A
+notehead is centred on its column, so the hook landed on that notehead, and a reader looking at it
+could not tell whether it was inside the bracket or outside. That is the one question a bracket
+exists to answer.
+
+Now the `8va` begins just before the first notehead it covers and the hook falls just after the last
+one, cut to a fraction of the way to the neighbour where that neighbour is close. Both ends land in
+a gap and never on a note. `vexflow-v2/tests/ottava-span.test.ts` pins it.
+
+### Which brackets the page proposes
+
+`suggestOttavas` measures how far outside its staff a hand is written, in **ledger lines** rather
+than in pitch, and offers a bracket where a run of chords is far enough out for long enough. It
+proposes; the reader keeps, moves or clears.
+
+The rule that matters when reading its output: **a bracket already open is what a second one has to
+beat.** A chord is judged on its own account by `kindFor`, which knows nothing about what is open,
+so a lone very high note asks for `15ma` — and it used to get one, over a single note, in the middle
+of an `8va` a reader was already holding. Now a different bracket is only proposed where a run of
+onsets wants it, or where one chord is left hopeless *even under the open bracket*, and how far out
+a chord is is measured under that bracket rather than against the bare staff.
+
+### The corner marks
+
+A stretch carrying an edit draws two corners, and until 0.34.0 they were measured from the **edge of
+the system box** rather than from the staves. The two are a long way apart: the box begins above the
+frame-number strip, so a corner sat some eighty pixels clear of the music it was about, while the
+band reserved for it — immediately above the staff — stayed empty. It read as page furniture rather
+than as a mark on a passage, and it paid for the room twice.
+
 ## Two things a reader notices
 
 **Columns are not evenly spaced.** A column is as wide as what it draws, so horizontal distance

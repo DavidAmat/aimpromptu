@@ -82,16 +82,16 @@ def test_the_users_sees_yt_dlps_own_error_line() -> None:
         "WARNING: unable to fetch something\n"
         "ERROR: [youtube] abc: Sign in to confirm you're not a bot\n"
     )
-    assert "Sign in to confirm" in youtube._clean_error(stderr)
+    assert "Sign in to confirm" in youtube.clean_error(stderr)
 
 
 def test_the_last_error_wins_when_several_are_reported() -> None:
     stderr = "ERROR: first problem\nERROR: the real problem\n"
-    assert youtube._clean_error(stderr) == "ERROR: the real problem"
+    assert youtube.clean_error(stderr) == "ERROR: the real problem"
 
 
 def test_a_silent_failure_still_produces_a_message() -> None:
-    assert "without a message" in youtube._clean_error("   \n  ")
+    assert "without a message" in youtube.clean_error("   \n  ")
 
 
 def test_a_missing_yt_dlp_names_the_fix(monkeypatch: pytest.MonkeyPatch) -> None:

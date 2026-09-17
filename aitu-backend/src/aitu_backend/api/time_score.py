@@ -35,8 +35,10 @@ from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN
 from aitu_backend.notation.trills import MIN_PAIR_REPEATS, detect_trills
 from aitu_backend.schemas.rhythm import HiddenNote, SavedRhythm, Trill
+from aitu_backend.notation.decorative import decorative_notes
 from aitu_backend.schemas.time_matrix import FigureLadder, FigureName, TimeScorePayload
 from aitu_backend.transcription import pipeline
+from aitu_backend.transcription.engine import NoteEvent
 from aitu_backend.transcription.time_pipeline import (
     TimeHands,
     attack_times_of_hand,
@@ -531,6 +533,92 @@ def put_removed_by_column(
     return RemovalByColumnResult(changed=changed, unmatched=unmatched)
 
 
+class AddedNote(BaseModel):
+    """A note a reader put in from the keyboard panel, addressed as the sheet draws one."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    start_frame: int = Field(..., alias="startFrame", ge=0)
+    row: int = Field(..., ge=0, lt=KEY_COUNT)
+    hand: Literal["right", "left"]
+    #: How many columns it is held for. One column is the shortest a note can be.
+    length_frames: int = Field(1, alias="lengthFrames", ge=1)
+
+
+class AddNotesRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    frame_ms: float = Field(DEFAULT_FRAME_MS, alias="frameMs", gt=0)
+    notes: list[AddedNote] = Field(default_factory=list)
+
+
+class AddNotesResult(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    added: int
+    #: Notes refused because that key is already struck in that column.
+    duplicate: int
+
+
+@router.put("/{audio_uuid}/notes", response_model=AddNotesResult, response_model_by_alias=True)
+def put_added_notes(audio_uuid: str, body: AddNotesRequest = Body(...)) -> AddNotesResult:
+    """Put a note into the recording, addressed by the column and row the sheet draws.
+
+    The opposite of ``PUT /{id}/removed``, and written to the same place for the same reason. A
+    reader looking at a chord on the keyboard panel can see that a note is missing from it, and the
+    honest fix is to say the key went down — not to hang an extra notehead off the drawing. The
+    printed length of a note is the gap to the next onset **in the same hand**, so a note that
+    appears out of nowhere renames its neighbour; only a recording can carry that.
+
+    The hand is pinned on the event, exactly as ``PUT /{id}/hands`` pins a correction, so the split
+    puts the note on the staff the reader asked for rather than on the one the register suggests.
+
+    A column and a row are all the reader has, so the times are the column's own: a note added at
+    f120 starts at 120 column-lengths into the piece. That is only ever a few milliseconds from
+    where a played note would have landed, and the whole page is drawn on that grid anyway.
+
+    Refused where that key is already struck in that column, in either hand. The matrix rejects a
+    frame where both hands hold one key, and silently merging the two would lose a note.
+    """
+    stored = _events_or_error(audio_uuid)
+    seconds_per_frame = body.frame_ms / 1000
+
+    # What is already struck, so an addition can step aside rather than collide. Read from the raw
+    # events: the columns in the request were numbered on the same grid this rounds to.
+    struck = {
+        (round(event.start / seconds_per_frame), event.midi_note - LOWEST_MIDI)
+        for event in stored.events
+        if not event.removed
+    }
+
+    added = 0
+    duplicate = 0
+    for note in body.notes:
+        if (note.start_frame, note.row) in struck:
+            duplicate += 1
+            continue
+        start = note.start_frame * seconds_per_frame
+        stored.events.append(
+            NoteEvent(
+                midi_note=note.row + LOWEST_MIDI,
+                start=start,
+                end=start + note.length_frames * seconds_per_frame,
+                velocity=64,
+                hand=note.hand,
+            )
+        )
+        struck.add((note.start_frame, note.row))
+        added += 1
+
+    if added:
+        # Ordered by start time, which is what every reader of `events.json` assumes.
+        stored.events.sort(key=lambda event: (event.start, event.midi_note))
+        pipeline.save_note_events(audio_uuid, stored.events, stored.duration_seconds, stored.title)
+        forget_split_cache()
+
+    return AddNotesResult(added=added, duplicate=duplicate)
+
+
 class ScoreRequest(BaseModel):
     """A sheet to draw: the ladder, the passage boundaries, and the reader's page edits.
 
@@ -550,6 +638,15 @@ class ScoreRequest(BaseModel):
     #: Stretches the reader accepted as trills. Each prints as one held note with ``tr``
     #: over it, and the alternations under it are left off the page.
     trills: list[Trill] = Field(default_factory=list)
+    #: Leave the ornaments off: a sixteenth or shorter printed right before an eighth or
+    #: longer in the same hand is taken off the page, and the note before it runs on.
+    drop_decorative: bool = Field(False, alias="dropDecorative")
+
+
+#: How many more times the figures are named after ornaments are taken off. Taking one off
+#: lengthens the note before it, which can only ever make that note *longer*, so the second
+#: pass finds ornaments whose leaning note was itself an ornament and the third finds nothing.
+DECORATIVE_PASSES = 3
 
 
 def _with_page_edits(hands: TimeHands, hidden: list[HiddenNote]) -> TimeHands:
@@ -661,17 +758,35 @@ def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> TimeScor
         ",".join(str(frame) for frame in body.boundaries),
         ",".join(str(value) for value in body.boundary_ms),
     )
-    edited = _with_trills(_with_page_edits(hands, body.hidden_notes), body.trills)
-    return to_score_payload(
-        edited,
-        ladder,
-        passages=passages,
-        title=hands.right.title,
-        # Already trimmed above. Trimming the *edited* hands could cut further — hiding the last
-        # note of a piece would shorten it — and that renumbers every column, which every
-        # frame-keyed annotation on the page depends on not happening.
-        trim_trailing_silence=False,
-    )
+    hidden = list(body.hidden_notes)
+    dropped: list[HiddenNote] = []
+    # The ornaments are found on the printed figures, and taking one off renames the note before
+    # it, so the figures are named again until nothing short is left before something long.
+    for _ in range(DECORATIVE_PASSES + 1):
+        edited = _with_trills(_with_page_edits(hands, hidden), body.trills)
+        payload = to_score_payload(
+            edited,
+            ladder,
+            passages=passages,
+            title=hands.right.title,
+            # Already trimmed above. Trimming the *edited* hands could cut further — hiding the
+            # last note of a piece would shorten it — and that renumbers every column, which
+            # every frame-keyed annotation on the page depends on not happening.
+            trim_trailing_silence=False,
+        )
+        if not body.drop_decorative:
+            break
+        found = [
+            note
+            for note in decorative_notes(payload.notes)
+            if (note.start_frame, note.row) not in {(h.start_frame, h.row) for h in hidden}
+        ]
+        if not found:
+            break
+        hidden.extend(found)
+        dropped.extend(found)
+    payload.decorative_dropped = len(dropped)
+    return payload
 
 
 def _passages_from_query(

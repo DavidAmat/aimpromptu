@@ -152,6 +152,18 @@ export interface LyricLine {
   /** Exclusive. */
   toColumn: number;
   text: string;
+  /**
+   * Where the reader dragged the block, in pixels from where the page would have put it.
+   *
+   * The columns are still what the words belong to, so a re-wrap carries them to wherever that
+   * music went and this offset with them. Absent is a block nobody has moved.
+   */
+  offsetX?: number;
+  offsetY?: number;
+  /** How wide the block is drawn, in pixels. The words wrap inside it. */
+  width?: number;
+  /** How large the words are drawn, in pixels. Absent is the page's own size. */
+  fontSize?: number;
 }
 
 /** A stretch printed smaller than the rest of the page. Asked for, never inferred. */
@@ -222,6 +234,8 @@ export interface TimeScorePayload {
   notes: PrintedNote[];
   overrides: unknown[];
   layout: LayoutHints;
+  /** How many ornaments were left off the page because the reader asked for it. */
+  decorativeDropped?: number;
 }
 
 export interface PeaksQuery {
@@ -286,6 +300,12 @@ export const timeScoreApi = {
        * print as a semicorchea with a `tr` over it.
        */
       trills?: Trill[];
+      /**
+       * Leave the ornaments off: a sixteenth or shorter printed right before an eighth or longer
+       * in the same hand is taken off the page, and the note before it runs on. Nothing is
+       * written in its place (D-16).
+       */
+      dropDecorative?: boolean;
     },
     signal?: AbortSignal,
   ) {
@@ -299,6 +319,7 @@ export const timeScoreApi = {
         boundaryMs: query.boundaryMs ?? [],
         hiddenNotes: query.hiddenNotes ?? [],
         trills: query.trills ?? [],
+        dropDecorative: query.dropDecorative ?? false,
       },
       signal,
     });
@@ -366,6 +387,37 @@ export const timeScoreApi = {
     return request<{ changed: number; unmatched: number }>(`/time/${audioUuid}/removed`, {
       method: "PUT",
       body: { frameMs, notes, removed },
+      signal,
+    });
+  },
+
+  /**
+   * Put notes into the recording, addressed by the column and row the sheet draws.
+   *
+   * The opposite of `setRemoved`, and written to the same place for the same reason. A reader
+   * looking at the keyboard panel can see a note missing from a chord, and hanging an extra
+   * notehead off the drawing would be the wrong fix twice over: the printed length of a note is
+   * the gap to the next onset in the same hand, so a note appearing out of nowhere renames its
+   * neighbour — and the roll, the falling view and playback would all go on disagreeing with the
+   * page. The hand travels with it, pinned the way a corrected hand is.
+   */
+  addNotes(
+    audioUuid: string,
+    body: {
+      frameMs: number;
+      notes: {
+        startFrame: number;
+        row: number;
+        hand: PrintedHand;
+        /** How many columns it is held for. One is the shortest a note can be. */
+        lengthFrames?: number;
+      }[];
+    },
+    signal?: AbortSignal,
+  ) {
+    return request<{ added: number; duplicate: number }>(`/time/${audioUuid}/notes`, {
+      method: "PUT",
+      body,
       signal,
     });
   },
@@ -472,11 +524,27 @@ export interface SavedRhythm {
    * one where it starts and one where the piece goes back.
    */
   keyChanges?: { fromColumn: number; keySignature: KeySignatureName }[];
+  /**
+   * Where one hand starts printing a different clef, keyed by column.
+   *
+   * Transitions rather than ranges, exactly as the key changes are. A left hand that spends a page
+   * above middle C reads better on a treble clef than under a stack of ledger lines, and nothing in
+   * the recording says which a reader wants.
+   */
+  clefChanges?: { hand: PrintedHand; fromColumn: number; clef: "treble" | "bass" }[];
   anchorFigure: FigureName;
   anchorMs: number;
   speedChanges: SpeedChange[];
   overrides: { hand: string; row: number; startFrame: number; figure: FigureName }[];
   beamBreaks: { hand: string; startFrame: number }[];
+  /**
+   * Notes the reader asked to keep inside the beam they are in.
+   *
+   * The other half of a beam break. A break says "start a new group here"; a join says "do not",
+   * and stands the automatic rule down where a run turns over at its lowest note but the player
+   * hears one gesture. Neither is derivable, so both are stored.
+   */
+  beamJoins?: { hand: string; startFrame: number }[];
   /**
    * Where a hand is written an octave or two from where it sounds, as half-open column ranges.
    *
@@ -490,6 +558,14 @@ export interface SavedRhythm {
     hand: PrintedHand;
     fromColumn: number;
     toColumn: number;
+    /**
+     * The reader took the bracket off the page and kept the reading.
+     *
+     * Not a removal: the notes under it are still written an octave from where they sound, so this
+     * is only the dashed line and the `8va` going. Absent on a reading saved before a bracket could
+     * be hidden, which reads as drawn.
+     */
+    hidden?: boolean;
   }[];
   /**
    * Notes the reader took off the page, addressed without a hand.
@@ -509,6 +585,23 @@ export interface SavedRhythm {
   lyrics?: LyricLine[];
   /** Stretches printed smaller than the rest of the page. */
   cueRanges?: CueRange[];
+  /** Stretches the reader set wider or narrower than the page would set them. */
+  spacings?: { fromColumn: number; toColumn: number; scale: number }[];
+  /**
+   * Runs of one hand's notes set an equal distance apart, whatever the other hand needs.
+   *
+   * `scale` is a multiple of the widest gap the run already had. One is the tightest spacing at
+   * which nothing has to give way; below one the run is closed tighter than its columns measured
+   * and the glyphs may touch, which the reader is allowed to ask for and can see.
+   */
+  evenSpacings?: {
+    hand: PrintedHand;
+    fromColumn: number;
+    toColumn: number;
+    scale: number;
+  }[];
+  /** Whether the ornaments are left off the page. A switch on the page, remembered here. */
+  dropDecorative?: boolean;
   /**
    * How large the marks over and under the staff are drawn, as a multiple of their normal size.
    *
@@ -516,5 +609,35 @@ export interface SavedRhythm {
    * enough that the same numbers are hard to read.
    */
   annotationScale?: number;
+  /**
+   * How much white space there is between one set of pentagrams and the next, in pixels.
+   *
+   * Per piece, for the same reason the mark size is: one fixed gap is more page than a piece that
+   * stays inside its staves needs, and not enough for one where a low note of the left hand and a
+   * high note of the next line's right hand reach towards each other through it.
+   *
+   * Absent means nobody was ever asked — a reading saved before the control existed — and the page
+   * draws it with its own default.
+   */
+  lineSpacing?: number;
+  /**
+   * Lines the reader spread wider or narrower than the rest, one at a time.
+   *
+   * Keyed by a column inside the line rather than by its place down the page: the sheet re-wraps to
+   * the window, so "the third line" is different music at another width, while a column never
+   * moves.
+   */
+  staffGaps?: { fromColumn: number; gap: number }[];
+  /**
+   * Extra pixels between one note and the next, everywhere on the page.
+   *
+   * The twin of `lineSpacing`, one axis over. The page measures each column from what is drawn in
+   * it, which is right and can still be tighter than a person wants to play from; this is their own
+   * answer, charged to the columns carrying a note so the silences keep the width the wall clock
+   * gives them.
+   *
+   * Absent means nobody was ever asked, and the page draws it with its own default.
+   */
+  noteSpacing?: number;
   savedAt?: string;
 }

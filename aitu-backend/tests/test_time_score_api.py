@@ -537,3 +537,73 @@ def test_grace_notes_are_kept_with_the_piece(client, shaken):
 
     after = client.get(f"/time/{shaken}/score", params={"anchorMs": 400}).json()
     assert after["notes"] == plain["notes"]
+
+
+def test_a_note_added_from_the_keyboard_goes_onto_the_recording(client, transcribed):
+    """A note the transcriber missed is put in the same place a removed one is taken out of.
+
+    The keyboard panel shows what is sounding under the playhead, so a reader can see a chord with
+    a note missing from it. Hanging an extra notehead off the drawing would be the wrong fix twice
+    over: the printed length of a note is the gap to the next onset in the same hand, so a note
+    appearing out of nowhere renames its neighbour — and the roll, the falling view and playback
+    would all go on disagreeing with the page.
+    """
+    plain = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
+    column = sorted({note["startFrame"] for note in plain["notes"] if note["hand"] == "right"})[1]
+    taken = {note["row"] for note in plain["notes"] if note["startFrame"] == column}
+    free = next(row for row in range(40, 80) if row not in taken)
+
+    result = client.put(
+        f"/time/{transcribed}/notes",
+        json={
+            "frameMs": 40,
+            "notes": [
+                {"startFrame": column, "row": free, "hand": "right", "lengthFrames": 4},
+            ],
+        },
+    )
+    assert result.status_code == 200
+    assert result.json() == {"added": 1, "duplicate": 0}
+
+    edited = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
+    added = [
+        note
+        for note in edited["notes"]
+        if note["startFrame"] == column and note["row"] == free and note["hand"] == "right"
+    ]
+    assert len(added) == 1
+    assert added[0]["printedMsExact"] > 0
+
+    # It can be taken off again by the route that takes any note off, because it is now an
+    # ordinary recorded note and nothing about it is special.
+    assert (
+        client.put(
+            f"/time/{transcribed}/removed",
+            json={"frameMs": 40, "notes": [{"startFrame": column, "row": free}], "removed": True},
+        ).json()["changed"]
+        == 1
+    )
+    after = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
+    assert not any(
+        note["startFrame"] == column and note["row"] == free for note in after["notes"]
+    )
+
+
+def test_a_key_already_struck_in_that_column_is_refused_rather_than_doubled(client, transcribed):
+    """Both hands holding one key in one frame is a matrix the drawing package rejects.
+
+    Merging the two silently would lose a note the recording says was played, so the addition is
+    refused and counted, and the reader is told how many did not go in.
+    """
+    plain = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
+    note = plain["notes"][0]
+
+    result = client.put(
+        f"/time/{transcribed}/notes",
+        json={
+            "frameMs": 40,
+            "notes": [{"startFrame": note["startFrame"], "row": note["row"], "hand": "left"}],
+        },
+    )
+    assert result.status_code == 200
+    assert result.json() == {"added": 0, "duplicate": 1}

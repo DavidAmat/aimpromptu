@@ -48,6 +48,7 @@ Every request and response body is camelCase, produced by Pydantic aliases. CORS
 | GET | `/time/{uuid}/trills` | Alternating runs, offered as suggestions. |
 | PUT | `/time/{uuid}/hands` | Correct which hand plays a note. |
 | PUT | `/time/{uuid}/removed` | Take notes off the page, by column and row. |
+| PUT | `/time/{uuid}/notes` | Put notes into the recording, by column and row. |
 | GET PUT DELETE | `/time/{uuid}/rhythm` | The saved reading. |
 | **Editing and composing** | `api/editing.py` | |
 | POST | `/audio/{uuid}/edits` | Open a disposable session. |
@@ -232,7 +233,7 @@ per hand.
 accepts one: a missed trill costs a reader nothing, and a wrong one hides notes that were really
 played, so the reader has the last word.
 
-### PUT /time/{uuid}/hands, PUT /time/{uuid}/removed
+### PUT /time/{uuid}/hands, PUT /time/{uuid}/removed, PUT /time/{uuid}/notes
 
 Which hand plays a note is a fact about the *playing*, not about the page: it survives a change of
 column length and it decides the printed length of its neighbours. So it is written onto the note
@@ -243,10 +244,25 @@ against the current matrix — the note is not in it, which is what removed mean
 builds its lookup from a split with every removal undone, which is the numbering the columns were
 written down at. One extra split, paid only on an undo.
 
+`PUT /time/{uuid}/notes` is its opposite, and writes to the same place for the same reason. A reader
+looking at the keyboard panel can see a note missing from a chord; drawing an extra notehead beside
+the score would be the wrong fix twice over, because the printed length of a note is the gap to the
+next onset in the same hand — so a note appearing out of nowhere renames its neighbour — and because
+the roll, the falling view and playback would all go on disagreeing with the page.
+
+The times are the column's own: a note added at f120 starts 120 column-lengths into the piece. That
+is only ever a few milliseconds from where a played note would have landed, and the whole page is
+drawn on that grid anyway. The hand travels with it, pinned the way a corrected hand is. A key
+already struck in that column is **refused and counted** rather than merged, because the matrix
+rejects a frame where both hands hold one key and merging would lose a note.
+
+Answers `{"added": n, "duplicate": n}`.
+
 ### GET / PUT / DELETE /time/{uuid}/rhythm
 
-The reader's saved reading: the anchor, the key, speed changes, renamed figures, beam breaks, hidden
-notes, fingering, trills, grace notes, lyrics and cue-size stretches. One per piece — a second
+The reader's saved reading: the anchor, the key, clef changes, speed changes, renamed figures, beam
+breaks and beam joins, hidden notes, fingering, trills, grace notes, lyrics, cue-size stretches and
+how far apart the notes and the lines stand. One per piece — a second
 reading replaces the first. See [`rhythm-and-annotations.md`](rhythm-and-annotations.md).
 
 `DELETE` answers `204` and is what **Remove all** calls.

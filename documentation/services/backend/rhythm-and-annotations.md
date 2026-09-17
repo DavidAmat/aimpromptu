@@ -57,6 +57,8 @@ numbers it is holding still refer to what they referred to.
 | `anchor_figure` | `anchorFigure` | `FigureName` | The pile the reader named. Default `negra`. |
 | `anchor_ms` | `anchorMs` | `float > 0` | What they said it lasts. |
 | `annotation_scale` | `annotationScale` | `0.3 < f ≤ 2.0` | How large marks over and under the staff are drawn. |
+| `line_spacing` | `lineSpacing` | `0 ≤ f ≤ 240`, optional | White space between the staves of one line and the staves of the next, in pixels. |
+| `note_spacing` | `noteSpacing` | `0 ≤ f ≤ 48`, optional | Extra pixels charged to every column carrying a note, and to no silence. The twin of `line_spacing`, one axis over. |
 | `saved_at` | `savedAt` | datetime | |
 
 `hand` is not part of the sheet, but it is what the reader was looking at, and returning them to the
@@ -69,6 +71,48 @@ drawn in.
 
 `annotationScale` is per piece rather than per app, because one piece can be dense enough that
 fingering crowds it and another airy enough that the same numbers are hard to read.
+
+`lineSpacing` is per piece for the same reason, one axis over. A line of the sheet is a pair of
+staves under one curly bracket, and a long piece wraps onto many of them. **The number is the white
+space itself** — at `0` one pair of staves sits directly under the pair above — and not the drawing
+package's `systemGap`, which is the distance between two system *boxes* and leaves the lines about
+160 pixels apart when it is nought. One fixed gap cannot be right for every piece: most sheets are mostly white space at it, and on a piece with high notes a
+low note of the left hand and a high note of the next line's right hand reach towards each other
+through it until the two runs of ledger lines meet. **Absent means nobody was asked** — a reading
+saved before the control existed — and the page draws it with its own default; a number means a
+reader answered. Stored rather than derived for the same reason as `ottavas`: the page's own default
+may change, and a reader's answer must not change with it.
+
+### `staffGaps: StaffGap[]`
+
+| Field | JSON | Type |
+|---|---|---|
+| `from_column` | `fromColumn` | `int ≥ 0` |
+| `gap` | `gap` | `24 ≤ f ≤ 200` |
+
+How far apart the two staves of **one line** are, where the reader opened it out with the handle
+between them.
+
+**The floor is the drawing package's `MIN_STAFF_GAP`, which is 24 px** (3 staff spaces of 8). It
+read 30 for a while, and that cost a reader a day's work: the handle on the page stops at 24, so a
+line tightened past 30 made the whole reading unsaveable — every later save of that piece answered
+`422` about a field the reader was not editing, including a save of a figure they had just renamed.
+A bound tighter than the one the page enforces is a trap rather than a validation. The ceiling is
+deliberately looser than the package's `MAX_STAFF_GAP` (160), because this model reads stored files
+as well as requests and a bound that refuses something already written takes a reading away from
+whoever saved it.
+
+Per line rather than per piece, because the reason for wanting it is per line: one wide chord, or
+one passage reaching down, needs room that every other line would only waste. It used to be one
+number for the whole page, so spreading one line spread all of them.
+
+**Keyed by a column inside the line, not by its place down the page.** A place down the page is not
+an address — the sheet re-wraps to the window, so "the third line" is different music at another
+width — while a column never moves. Where a re-wrap brings two of these onto one line, the drawing
+takes the wider.
+
+Empty for a piece nobody has spread, which is the common case and what every reading saved before
+this existed reads as.
 
 ### `keyChanges: KeyChange[]`
 
@@ -83,6 +127,27 @@ where it starts and one where the piece returns to what it was.
 
 Empty for a piece written in one key from beginning to end, which is the common case.
 
+### `clefChanges: ClefChange[]`
+
+| Field | JSON | Type |
+|---|---|---|
+| `hand` | `hand` | `"right" \| "left"` |
+| `from_column` | `fromColumn` | `int ≥ 0` |
+| `clef` | `clef` | `"treble"` \| `"bass"` |
+
+Where one hand starts printing a different clef. A **transition, not a range**, exactly as
+`keyChanges` is: at any column each hand prints exactly one clef, so two edits cannot disagree.
+Giving a passage its own clef writes two of these, one where it starts and one where the hand goes
+back to the clef it normally reads.
+
+A reading of the page and nothing else — the pitch is untouched, playback is untouched, and what
+changes is which lines the noteheads are drawn on. It is the honest answer to a hand that spends a
+page far outside its own staff, and a better one than an octave bracket where the passage is long:
+under a bracket the notes are written an octave from where they sound, on the other clef they are
+written exactly where they sound.
+
+Empty for a piece written on the two clefs a piano score normally uses, which is the common case.
+
 ### `speedChanges: SpeedChange[]`
 
 | Field | JSON | Type |
@@ -93,11 +158,17 @@ Empty for a piece written in one key from beginning to end, which is the common 
 Where the piece changes speed, and what a gap is worth from there on. Keyed by column, which is
 absolute wall clock, so a boundary never moves when anything else about the reading changes (D-19).
 
-### `overrides: FigureOverride[]`, `beamBreaks: BeamBreak[]`
+### `overrides: FigureOverride[]`, `beamBreaks: BeamBreak[]`, `beamJoins: BeamBreak[]`
 
 Defined in `schemas/time_matrix.py` and described in
 [`time-matrix.md`](time-matrix.md#26-figureoverride). A renamed note (D-17) and a note the reader
 asked to start a new beam (D-34). Both change one glyph or one grouping and nothing else.
+
+`beamJoins` is the other half of `beamBreaks`, in the same shape. A break says *start a new group
+here* and beats every rule; a join says *do not*, and stands down the one automatic cut that is a
+guess — where a run turns over at its lowest note. Neither can be derived: where a phrase restarts,
+and where it does not, are both readings of the music. A join cannot carry a beam across a key
+change, a clef change or a tuplet boundary, because those are not guesses.
 
 ### `hiddenNotes: HiddenNote[]`
 
@@ -173,14 +244,27 @@ An **acciaccatura** is crushed, as fast as possible, and prints with a slash thr
 | `from_column` | `fromColumn` | `int ≥ 0` |
 | `to_column` | `toColumn` | `int >` from — **exclusive** |
 | `text` | `text` | non-empty string |
+| `offset_x` | `offsetX` | `float \| null` — pixels from where the page would have drawn the block |
+| `offset_y` | `offsetY` | `float \| null` |
+| `width` | `width` | `float \| null`, 32 … 2000 — how wide the block is, in pixels |
+| `font_size` | `fontSize` | `float \| null`, 7 … 36 — how large the words are, in pixels |
 
-A line of words written under the staff, across a stretch of columns.
+A line of words written across a stretch of columns, **drawn above the right hand** in a block of
+its own at the top of the system.
 
-**Hand-independent**: words belong to the piece rather than to a staff, and they are drawn under the
-lower staff whichever hand is singing them.
+**Hand-independent**: words belong to the piece rather than to a staff. They sit above everything
+that hangs off a staff, because an octave bracket's height comes from the highest note it covers
+rather than from a fixed distance off the staff — so there is no distance from the staff at which
+words are safe, and the top of the system box is the one line everything above a staff fits under.
 
-A lyric never widens the layout, because the spacing of the page comes from the notes and never from
-an annotation (D-22, D-23). A line over a long rest keeps its start and stays there.
+**The last four fields are the reader's placement, and all four may be absent.** A reading saved
+before they existed draws exactly as it did. The columns are still what the words belong to, so a
+re-wrap carries the block to wherever that music went and the offset with it; a block the reader has
+moved stops widening its own columns, because it is no longer over them.
+
+A lyric nobody has moved never widens the layout beyond making room for its own words, because the
+spacing of the page comes from the notes and never from an annotation (D-22, D-23). A line over a
+long rest keeps its start and stays there.
 
 ### `ottavas: Ottava[] | null`
 
@@ -190,6 +274,7 @@ an annotation (D-22, D-23). A line over a long rest keeps its start and stays th
 | `hand` | `hand` | `"right" \| "left"` |
 | `from_column` | `fromColumn` | `int ≥ 0` |
 | `to_column` | `toColumn` | `int >` from — **exclusive** |
+| `hidden` | `hidden` | `bool`, default `false` |
 
 A stretch written an octave or two from where it sounds. A reading of the page and nothing else: the
 pitch is untouched, playback is untouched, and removing the bracket prints the same notes back where
@@ -208,6 +293,36 @@ leave it alone.
 
 `8va` and `15ma` are written above the staff, `8vb` and `15mb` below it. An unknown kind is a `422`.
 
+**`hidden` is not a removal, and the difference is the whole of the field.** The notes under a
+hidden bracket are still written an octave from where they sound; only the dashed line and the
+`8va` go. A player who already knows a passage is played an octave up does not need it said over
+every bar, and above the right hand is the most crowded strip on the page — but un-shifting the
+notes would be a different edit, and a reader asking for less ink would get a wall of ledger lines
+instead. Removing a bracket is still removing it, and the trash button in the Octave pill is the
+only way to do that; a hidden bracket keeps its corner marks, which is how a reader gets back to
+one. Absent on a reading saved before 2026-09-17, which reads as drawn.
+
+### `evenSpacings: EvenSpacing[]`
+
+| Field | JSON | Type |
+|---|---|---|
+| `hand` | `hand` | `"right" \| "left"` |
+| `from_column` | `fromColumn` | `int ≥ 0` |
+| `to_column` | `toColumn` | `int >` from — **exclusive** |
+| `scale` | `scale` | `0.25 ≤ f ≤ 4.0` |
+
+A run of one hand's notes set an equal distance apart. Each column is as wide as what is drawn in it
+and **both staves share the column**, so a run of even corcheas in one hand is drawn unevenly
+wherever the other hand needs room at one of those moments — truthful, and it reads as an uneven
+performance. This is the reader choosing evenness and paying for it in width; the other hand moves
+with it.
+
+`scale` is a multiple of the widest gap the run already had. One is the tightest spacing at which
+nothing has to give way, because every gap is then the sum of the widths its columns asked for.
+Below one the run is closed tighter than that and the glyphs may touch — allowed, because the widest
+gap is usually wide on account of the *other* hand, and a reader looking at their own hand's notes
+with room to spare is right about it. The bounds are the drawing package's own.
+
 ### `cueRanges: CueRange[]`
 
 | Field | JSON | Type |
@@ -225,7 +340,19 @@ same locality D-21 gives a ladder change.
 
 ---
 
-## 4. What clears it
+## 4. Taking an edit back
+
+Everything above is one press of Command-Z away on the page, and none of it reaches this file until
+**Save**. The history lives entirely in the browser: it is a list of the values this file would hold,
+so there is nothing to store and nothing here to migrate.
+
+The one route an undo calls is `PUT /time/{uuid}/hands`. A hand swap is written onto the recording
+rather than kept beside the drawing, so taking it back means writing the old hands back, and the
+route takes a hand per note, which makes it exactly symmetrical. Nothing else about undo touches the
+backend. See [`../../../context/frontend/annotations.md`](../../../context/frontend/annotations.md)
+for what Command-Z does and does not reach.
+
+## 5. What clears it
 
 `DELETE /time/{uuid}/rhythm` — what **Remove all** calls. It clears every editorial decision and
 forgets the reading saved with the piece, so a reload does not bring it back.
@@ -239,7 +366,7 @@ over the notes that were there before, and a new transcription is a different se
 
 ---
 
-## 5. Marks and edits
+## 6. Marks and edits
 
 A replacement splice (Epic 11) **drops** marks anchored inside the window it replaces, and
 `GET …/confirmation` counts them by kind before the button is pressed. An insertion (Epic 13)
@@ -252,7 +379,7 @@ end, so it still covers exactly the notes it covered before. Detail in
 
 ---
 
-## 6. Where to look deeper
+## 7. Where to look deeper
 
 - [`time-matrix.md`](time-matrix.md) — `FigureOverride` and `BeamBreak`, shared with the payload
 - [`endpoints.md`](endpoints.md#4-time--the-wall-clock-score) — the three rhythm routes

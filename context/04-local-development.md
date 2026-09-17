@@ -158,6 +158,7 @@ cd aitu-frontend
 npm run build         # tsc -b && vite build
 npm run lint          # eslint .
 npm run check:render  # draw a real score headlessly in jsdom
+npm run check:note-names  # what the note toolbox calls a note, against how the sheet spells it
 npm run preview       # preview production build
 ```
 

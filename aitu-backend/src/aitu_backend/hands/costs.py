@@ -278,9 +278,7 @@ def transition(
 
     # Both hands' struck and sounding notes, before the per-hand loop, because the
     # ledger term has to ask what the OTHER hand is doing at this instant.
-    struck_by_hand = {
-        name: tuple(sorted(event.midi for event in per_hand[name])) for name in HANDS
-    }
+    struck_by_hand = {name: tuple(sorted(event.midi for event in per_hand[name])) for name in HANDS}
     held_by_hand = {name: prev.hand(name).active_held(time) for name in HANDS}
 
     for hand in HANDS:

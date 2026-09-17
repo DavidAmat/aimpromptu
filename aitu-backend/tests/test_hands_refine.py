@@ -73,9 +73,13 @@ def hands_of(matrix: PianoMatrix, **overrides) -> dict[str, str]:
 
 def test_the_gate_is_open_when_the_other_staff_is_empty() -> None:
     gate = reach_gate(
-        (72,), (), (),
-        max_simultaneous=5, hard_span=15.0,
-        free=HAND.ledger_gate_free, busy=HAND.ledger_gate_busy,
+        (72,),
+        (),
+        (),
+        max_simultaneous=5,
+        hard_span=15.0,
+        free=HAND.ledger_gate_free,
+        busy=HAND.ledger_gate_busy,
         unreachable=HAND.ledger_gate_unreachable,
     )
     assert gate == pytest.approx(1.0)
@@ -84,9 +88,13 @@ def test_the_gate_is_open_when_the_other_staff_is_empty() -> None:
 def test_the_gate_is_shut_when_the_other_hand_cannot_reach() -> None:
     """Left hand at Do-5 while the right is at Sol-6: nineteen semitones, no hand."""
     gate = reach_gate(
-        (72,), (91,), (),
-        max_simultaneous=5, hard_span=15.0,
-        free=HAND.ledger_gate_free, busy=HAND.ledger_gate_busy,
+        (72,),
+        (91,),
+        (),
+        max_simultaneous=5,
+        hard_span=15.0,
+        free=HAND.ledger_gate_free,
+        busy=HAND.ledger_gate_busy,
         unreachable=HAND.ledger_gate_unreachable,
     )
     assert gate == pytest.approx(0.0)
@@ -95,9 +103,14 @@ def test_the_gate_is_shut_when_the_other_hand_cannot_reach() -> None:
 def test_the_gate_is_shut_when_the_other_hand_has_no_fingers_left() -> None:
     full = (60, 62, 64, 65, 67)
     gate = reach_gate(
-        (69,), full, (),
-        max_simultaneous=5, hard_span=15.0,
-        free=1.0, busy=1.0, unreachable=0.0,
+        (69,),
+        full,
+        (),
+        max_simultaneous=5,
+        hard_span=15.0,
+        free=1.0,
+        busy=1.0,
+        unreachable=0.0,
     )
     assert gate == pytest.approx(0.0)
 
@@ -124,22 +137,34 @@ def test_outward_register_is_not_charged_across() -> None:
 
 def test_a_lone_high_left_hand_note_moves_when_the_right_hand_is_free() -> None:
     matrix = build(
-        [("Do-2", 0, 2), ("Sol-2", 2, 2), ("Do-3", 4, 2), ("Do-5", 6, 2),
-         ("Sol-2", 8, 2), ("Do-2", 10, 4)],
+        [
+            ("Do-2", 0, 2),
+            ("Sol-2", 2, 2),
+            ("Do-3", 4, 2),
+            ("Do-5", 6, 2),
+            ("Sol-2", 8, 2),
+            ("Do-2", 10, 4),
+        ],
         granularity=Granularity.CORCHEA,
     )
     hands = hands_of(matrix)
-    spike = next(
-        event for event in decode_matrix(matrix).events if event.note == "Do-5"
-    )
+    spike = next(event for event in decode_matrix(matrix).events if event.note == "Do-5")
     assert hands[spike.onset_id] == "right"
 
 
 def test_the_same_note_stays_put_when_the_right_hand_is_already_high() -> None:
     """Do-5 under a right hand at Do-6/Mi-6/Sol-6 is nineteen semitones out of reach."""
     matrix = build(
-        [("Do-6", 0, 2), ("Mi-6", 0, 2), ("Sol-6", 0, 2), ("Do-5", 0, 2),
-         ("Do-6", 2, 2), ("Mi-6", 2, 2), ("Sol-6", 2, 2), ("Sol-4", 2, 2)],
+        [
+            ("Do-6", 0, 2),
+            ("Mi-6", 0, 2),
+            ("Sol-6", 0, 2),
+            ("Do-5", 0, 2),
+            ("Do-6", 2, 2),
+            ("Mi-6", 2, 2),
+            ("Sol-6", 2, 2),
+            ("Sol-4", 2, 2),
+        ],
         granularity=Granularity.CORCHEA,
     )
     hands = hands_of(matrix)
@@ -150,8 +175,14 @@ def test_the_same_note_stays_put_when_the_right_hand_is_already_high() -> None:
 
 def test_the_pass_reports_what_it_flagged_and_moved() -> None:
     matrix = build(
-        [("Do-2", 0, 2), ("Sol-2", 2, 2), ("Do-3", 4, 2), ("Do-5", 6, 2),
-         ("Sol-2", 8, 2), ("Do-2", 10, 4)],
+        [
+            ("Do-2", 0, 2),
+            ("Sol-2", 2, 2),
+            ("Do-3", 4, 2),
+            ("Do-5", 6, 2),
+            ("Sol-2", 8, 2),
+            ("Do-2", 10, 4),
+        ],
         granularity=Granularity.CORCHEA,
     )
     result = infer_hands(matrix, DEFAULT_CONFIG)
@@ -167,9 +198,16 @@ def test_the_pass_reports_what_it_flagged_and_moved() -> None:
 
 ALBERTI = figure([["Do-3", "Sol-3", "Mi-3", "Sol-3"]] * 6)
 CLIMB = figure(
-    [["Sol-2", "Si-2", "Re-3"], ["Si-2", "Re-3", "Sol-3"], ["Re-3", "Sol-3", "Si-3"],
-     ["Sol-3", "Si-3", "Re-4"], ["Si-3", "Re-4", "Sol-4"], ["Re-4", "Sol-4", "Si-4"],
-     ["Sol-4", "Si-4", "Re-5"], ["Si-4", "Re-5", "Sol-5"]]
+    [
+        ["Sol-2", "Si-2", "Re-3"],
+        ["Si-2", "Re-3", "Sol-3"],
+        ["Re-3", "Sol-3", "Si-3"],
+        ["Sol-3", "Si-3", "Re-4"],
+        ["Si-3", "Re-4", "Sol-4"],
+        ["Re-4", "Sol-4", "Si-4"],
+        ["Sol-4", "Si-4", "Re-5"],
+        ["Si-4", "Re-5", "Sol-5"],
+    ]
 )
 
 
@@ -186,9 +224,28 @@ def test_alberti_bass_is_a_figure() -> None:
     "events",
     [
         pytest.param(
-            [(name, index, 1) for index, name in enumerate(
-                ["Do-4", "Re-4", "Mi-4", "Fa-4", "Sol-4", "La-4", "Si-4", "Do-5",
-                 "Re-5", "Mi-5", "Fa-5", "Sol-5", "La-5", "Si-5", "Do-6"])],
+            [
+                (name, index, 1)
+                for index, name in enumerate(
+                    [
+                        "Do-4",
+                        "Re-4",
+                        "Mi-4",
+                        "Fa-4",
+                        "Sol-4",
+                        "La-4",
+                        "Si-4",
+                        "Do-5",
+                        "Re-5",
+                        "Mi-5",
+                        "Fa-5",
+                        "Sol-5",
+                        "La-5",
+                        "Si-5",
+                        "Do-6",
+                    ]
+                )
+            ],
             id="a scale is not a figure",
         ),
         pytest.param(
@@ -196,9 +253,29 @@ def test_alberti_bass_is_a_figure() -> None:
             id="a trill is not a figure",
         ),
         pytest.param(
-            [(name, index, 1) for index, name in enumerate(
-                ["Sol#-5", "Sol-5", "Fa-5", "Mi-5", "Fa-5", "Sol-5", "Sol#-5", "La#-5",
-                 "Do-6", "La#-5", "Sol#-5", "Sol-5", "Fa-5", "Mi-5", "Fa-5", "Sol-5"])],
+            [
+                (name, index, 1)
+                for index, name in enumerate(
+                    [
+                        "Sol#-5",
+                        "Sol-5",
+                        "Fa-5",
+                        "Mi-5",
+                        "Fa-5",
+                        "Sol-5",
+                        "Sol#-5",
+                        "La#-5",
+                        "Do-6",
+                        "La#-5",
+                        "Sol#-5",
+                        "Sol-5",
+                        "Fa-5",
+                        "Mi-5",
+                        "Fa-5",
+                        "Sol-5",
+                    ]
+                )
+            ],
             id="a wandering melody is not a figure",
         ),
     ],
@@ -248,8 +325,14 @@ def test_relief_reaches_the_owner_of_a_figure_and_nobody_else() -> None:
 def test_relief_does_not_leak_to_notes_with_no_figure_behind_them() -> None:
     """The control: with no pattern, a high left hand is still a high left hand."""
     matrix = build(
-        [("Do-2", 0, 2), ("Sol-2", 2, 2), ("Do-3", 4, 2), ("Do-5", 6, 2),
-         ("Sol-2", 8, 2), ("Do-2", 10, 4)],
+        [
+            ("Do-2", 0, 2),
+            ("Sol-2", 2, 2),
+            ("Do-3", 4, 2),
+            ("Do-5", 6, 2),
+            ("Sol-2", 8, 2),
+            ("Do-2", 10, 4),
+        ],
         granularity=Granularity.CORCHEA,
     )
     decoded = decode_matrix(matrix)
@@ -260,10 +343,18 @@ def test_relief_does_not_leak_to_notes_with_no_figure_behind_them() -> None:
 
 def test_the_figuration_term_is_inert_where_there_is_no_figuration() -> None:
     matrix = build(
-        [(name, index * 2, 2) for index, name in enumerate(
-            ["Do-5", "Mi-5", "Sol-5", "Mi-5", "Do-5", "Si-4"])]
-        + [("Do-3", 0, 4), ("Sol-3", 0, 4), ("Fa-2", 4, 4), ("Do-3", 4, 4),
-           ("Sol-2", 8, 4), ("Re-3", 8, 4)],
+        [
+            (name, index * 2, 2)
+            for index, name in enumerate(["Do-5", "Mi-5", "Sol-5", "Mi-5", "Do-5", "Si-4"])
+        ]
+        + [
+            ("Do-3", 0, 4),
+            ("Sol-3", 0, 4),
+            ("Fa-2", 4, 4),
+            ("Do-3", 4, 4),
+            ("Sol-2", 8, 4),
+            ("Re-3", 8, 4),
+        ],
         granularity=Granularity.CORCHEA,
     )
     only_ledger = hands_of(matrix, refine={"pattern_weight": 0.0})
@@ -315,8 +406,9 @@ def test_incremental_replay_agrees_with_a_full_one() -> None:
         for onset_id in rng.sample(sorted(candidate), rng.randint(1, len(candidate))):
             candidate[onset_id] = "left" if candidate[onset_id] == "right" else "right"
         span = changed_span(decoded, hand_map, candidate)
-        fast = evaluate(decoded, candidate, DEFAULT_CONFIG, figures,
-                        reference=reference, changed=span)
+        fast = evaluate(
+            decoded, candidate, DEFAULT_CONFIG, figures, reference=reference, changed=span
+        )
         slow = evaluate(decoded, candidate, DEFAULT_CONFIG, figures)
         assert fast.base == pytest.approx(slow.base)
         assert fast.ledger == pytest.approx(slow.ledger)

@@ -113,6 +113,39 @@ is tracked here. **The plan is closed** — this folder is history, but `decisio
 | [implementations/03-time-based-concept/progress/issues.md](implementations/03-time-based-concept/progress/issues.md) | Append-only log of anything contradicting a frozen decision |
 | [implementations/03-time-based-concept/user-reviews.md](implementations/03-time-based-concept/user-reviews.md) | **What to open and click to see all of it.** Kept current |
 
+### 04 — Synthesia to notes — LIVE
+
+Reading a piano roll video into the same `events.json` the transcription model writes. Opened
+2026-09-13.
+
+| File | Description |
+|------|-------------|
+| [implementations/04-synthesia-to-notes/README.md](implementations/04-synthesia-to-notes/README.md) | What it is, and every file in the folder |
+| [implementations/04-synthesia-to-notes/04-prompt.md](implementations/04-synthesia-to-notes/04-prompt.md) | The brief, in the user's own words |
+| [implementations/04-synthesia-to-notes/04-plan.md](implementations/04-synthesia-to-notes/04-plan.md) | **The plan.** Terminology, storage, the HTTP surface, the algorithm, the five phases |
+| [implementations/04-synthesia-to-notes/04-decisions.md](implementations/04-synthesia-to-notes/04-decisions.md) | **V-01 … V-43, frozen.** Every task cites these; V-09 is superseded by V-37 |
+| [implementations/04-synthesia-to-notes/04-checklist.md](implementations/04-synthesia-to-notes/04-checklist.md) | THE status lookup for this implementation |
+| [implementations/04-synthesia-to-notes/04-phase-1-implementation.md](implementations/04-synthesia-to-notes/04-phase-1-implementation.md) | Phase 1: the survey, the casuistry catalogue, the five detectors, the scroll speed |
+| [implementations/04-synthesia-to-notes/04-phase-2-implementation.md](implementations/04-synthesia-to-notes/04-phase-2-implementation.md) | Phase 2: the detector in the app, the annotation page, the score board |
+| [implementations/04-synthesia-to-notes/04-phase-3-implementation.md](implementations/04-synthesia-to-notes/04-phase-3-implementation.md) | Phase 3: a real video downloaded, sampled, calibrated, measured and read into `frames.jsonl` |
+| `implementations/04-synthesia-to-notes/examples/` | 24 screenshots covering how these videos draw a rectangle |
+
+### 05 — The piano overlay, found from the black keys — COMPLETE
+
+Replaces Story 2.1 of 04: one rotatable rectangle over the piano area, every key found inside it,
+and a `Calibration` of per-key borders. Opened, planned and completed 2026-09-14.
+
+| File | Description |
+|------|-------------|
+| [implementations/05-piano-overlay-from-black-keys/README.md](implementations/05-piano-overlay-from-black-keys/README.md) | What it is, what it does not touch, and the decisions it changed |
+| [implementations/05-piano-overlay-from-black-keys/05-prompt.md](implementations/05-piano-overlay-from-black-keys/05-prompt.md) | The brief, in the user's own words |
+| [implementations/05-piano-overlay-from-black-keys/05-plan.md](implementations/05-piano-overlay-from-black-keys/05-plan.md) | **The plan.** The model change and its cost, the finder, the two routes and their score, three phases |
+| [implementations/05-piano-overlay-from-black-keys/05-checklist.md](implementations/05-piano-overlay-from-black-keys/05-checklist.md) | THE status lookup for this implementation |
+| [implementations/05-piano-overlay-from-black-keys/05-phase-1-implementation.md](implementations/05-piano-overlay-from-black-keys/05-phase-1-implementation.md) | Phase 1: the black key finder, the truth, the families, the route chosen |
+| [implementations/05-piano-overlay-from-black-keys/05-phase-2-implementation.md](implementations/05-piano-overlay-from-black-keys/05-phase-2-implementation.md) | Phase 2: per-key borders in both services, the grid upgrade |
+| [implementations/05-piano-overlay-from-black-keys/05-phase-3-implementation.md](implementations/05-piano-overlay-from-black-keys/05-phase-3-implementation.md) | Phase 3: the finder in the app, every example found, the one rectangle on the screen |
+| `poc-piano-overlay/` | Phase 1's spike at the repository root: scripts, truth, tables in `RESULTS.md` |
+
 ## Archive (`context/archive/`)
 
 | File | Description |

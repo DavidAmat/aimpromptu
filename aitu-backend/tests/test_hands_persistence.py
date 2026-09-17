@@ -17,7 +17,6 @@ from aitu_backend.schemas.matrix import Granularity
 
 import pytest
 
-
 # ------------------------------------------------------------------- the schema
 
 

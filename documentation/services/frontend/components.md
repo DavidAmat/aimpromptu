@@ -63,6 +63,14 @@ band — opens the note toolbox; shift-dragging across the column numbers opens 
 which is about a *stretch of time* rather than about notes. A stretch carrying an edit draws two
 corner marks in its own colour, so it can be seen without being selected.
 
+**Each toolbox can hand its selection to the other.** `ToolboxDialog` takes a `headerAction`, one
+control in the title bar beside the close button: **Select frames** on the note toolbox marks the
+stretch from the first picked note to the last, and **Select notes** on the frames toolbox picks
+every note that begins inside the stretch on the hands **Applies to** names. Both go through the
+renderer's own `setSelection` / `clearSelection` rather than through page state, so the far panel
+opens, is placed and takes the cursor to the music exactly as a click would. Neither raises
+`clearSelectionsAt` — that drops *both* selections, which is one half too much here.
+
 **The playhead follows the music only while the recording is sounding.** A scrub drag sweeps the
 line through a hundred staves in a second, and the page chasing it made the gesture impossible to
 finish. `followPlayhead` gates it; the stave index is still recorded while not following, so
@@ -191,6 +199,7 @@ cd aitu-frontend
 npm run lint          # eslint .
 npm run build         # tsc -b && vite build
 npm run check:render  # draw a real score headlessly in jsdom
+npm run check:note-names  # what the note toolbox calls a note, against how the sheet spells it
 ```
 
 `check:render` exists because a notation renderer fails loudly at draw time and **silently at layout

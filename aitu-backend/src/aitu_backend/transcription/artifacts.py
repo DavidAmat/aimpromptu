@@ -96,8 +96,13 @@ class DroppedNote:
     octave_below: int | None
 
     def describe(self) -> str:
-        relation = f", {self.octave_below} semitones under a struck note" if self.octave_below else ""
-        return f"MIDI {self.event.midi_note} at {self.event.start:.3f}s, " f"{self.event.duration * 1000:.1f} ms{relation}"
+        relation = (
+            f", {self.octave_below} semitones under a struck note" if self.octave_below else ""
+        )
+        return (
+            f"MIDI {self.event.midi_note} at {self.event.start:.3f}s, "
+            f"{self.event.duration * 1000:.1f} ms{relation}"
+        )
 
 
 @dataclass

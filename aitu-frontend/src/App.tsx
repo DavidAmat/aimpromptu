@@ -7,7 +7,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "./layout/AppLayout";
 import PlaygroundLayout from "./layout/PlaygroundLayout";
-import { LIBRARY_PLAY_PATTERN, ROUTES } from "./layout/routes";
+import VideoLayout from "./layout/VideoLayout";
+import { LIBRARY_PLAY_PATTERN, ROUTES, VIDEO_EXAMPLE_PATTERN } from "./layout/routes";
 import LibraryPage from "./pages/LibraryPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import PerformancePage from "./pages/PerformancePage";
@@ -16,6 +17,11 @@ import InputPage from "./pages/playground/InputPage";
 import NotesFallingPage from "./pages/playground/NotesFallingPage";
 import PianoRollPage from "./pages/playground/PianoRollPage";
 import RhythmPage from "./pages/playground/RhythmPage";
+import ExamplesPage from "./pages/video/ExamplesPage";
+import VideoCalibrationPage from "./pages/video/VideoCalibrationPage";
+import VideoDetectionPage from "./pages/video/VideoDetectionPage";
+import VideoNotesPage from "./pages/video/VideoNotesPage";
+import VideoPlayerPage from "./pages/video/VideoPlayerPage";
 
 export default function App() {
   return (
@@ -23,6 +29,16 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route index element={<Navigate to={ROUTES.playgroundInput} replace />} />
         <Route path={ROUTES.youtube} element={<YouTubePage />} />
+
+        <Route path={ROUTES.video} element={<VideoLayout />}>
+          <Route index element={<Navigate to={ROUTES.videoExamples} replace />} />
+          <Route path="player" element={<VideoPlayerPage />} />
+          <Route path="calibration" element={<VideoCalibrationPage />} />
+          <Route path="detection" element={<VideoDetectionPage />} />
+          <Route path="notes" element={<VideoNotesPage />} />
+          <Route path="examples" element={<ExamplesPage />} />
+          <Route path={VIDEO_EXAMPLE_PATTERN.replace("/video/", "")} element={<ExamplesPage />} />
+        </Route>
 
         <Route path={ROUTES.playground} element={<PlaygroundLayout />}>
           <Route index element={<Navigate to={ROUTES.playgroundInput} replace />} />

@@ -1,0 +1,196 @@
+{
+  "slug": "shut-up-and-dance",
+  "imageWidth": 1280,
+  "imageHeight": 571,
+  "calibration": {
+    "imageWidth": 1280,
+    "imageHeight": 571,
+    "pianoRect": {
+      "x": 0.0,
+      "y": 376.0,
+      "width": 1280.0,
+      "height": 195.0,
+      "angle": 0.0
+    },
+    "upperLine": 376.0,
+    "whiteBorders": [
+      -0.5181428571428555,
+      38.19614285714286,
+      76.93700000000001,
+      115.67785714285715,
+      153.12857142857143,
+      191.85007142857143,
+      230.57157142857142,
+      269.6522142857143,
+      309.19125,
+      347.9345535714286,
+      386.67785714285714,
+      424.125,
+      462.8482857142857,
+      501.5715714285714,
+      540.1515714285714,
+      580.69125,
+      619.1845535714285,
+      657.6778571428572,
+      695.625,
+      734.0982857142858,
+      772.5715714285715,
+      811.65125,
+      851.6961428571428,
+      890.187,
+      928.6778571428572,
+      966.6285714285714,
+      1005.1000714285714,
+      1043.5715714285714,
+      1082.6515714285715,
+      1122.6961428571428,
+      1161.187,
+      1199.6778571428572,
+      1237.6285714285714,
+      1276.3428571428572
+    ],
+    "blackBorders": [
+      {
+        "left": 30.5,
+        "right": 56.5
+      },
+      {
+        "left": 99.5,
+        "right": 124.5
+      },
+      {
+        "left": 144.5,
+        "right": 169.5
+      },
+      {
+        "left": 212.5,
+        "right": 238.5
+      },
+      {
+        "left": 257.5,
+        "right": 282.5
+      },
+      {
+        "left": 301.5,
+        "right": 327.5
+      },
+      {
+        "left": 374.5,
+        "right": 391.5
+      },
+      {
+        "left": 415.5,
+        "right": 440.5
+      },
+      {
+        "left": 483.5,
+        "right": 509.5
+      },
+      {
+        "left": 532.5,
+        "right": 548.5
+      },
+      {
+        "left": 573.5,
+        "right": 598.5
+      },
+      {
+        "left": 641.5,
+        "right": 666.5
+      },
+      {
+        "left": 686.5,
+        "right": 712.5
+      },
+      {
+        "left": 754.5,
+        "right": 780.5
+      },
+      {
+        "left": 799.5,
+        "right": 824.5
+      },
+      {
+        "left": 844.5,
+        "right": 869.5
+      },
+      {
+        "left": 912.5,
+        "right": 937.5
+      },
+      {
+        "left": 957.5,
+        "right": 983.5
+      },
+      {
+        "left": 1025.5,
+        "right": 1051.5
+      },
+      {
+        "left": 1070.5,
+        "right": 1095.5
+      },
+      {
+        "left": 1115.5,
+        "right": 1140.5
+      },
+      {
+        "left": 1183.5,
+        "right": 1208.5
+      },
+      {
+        "left": 1228.5,
+        "right": 1254.5
+      }
+    ],
+    "blackDepth": 125.0,
+    "whiteWidth": 38.714285714285715,
+    "firstWhitePitchClass": 9,
+    "firstWhiteOctave": 1,
+    "rollTop": 0.0,
+    "guardBand": 0.0,
+    "found": {
+      "route": "A",
+      "confidence": 1.0,
+      "extrapolated": [],
+      "confirmed": [],
+      "corrected": []
+    },
+    "note": "seeded: found by route A \u00b7 family real \u00b7 gap ratio 1.51 \u00b7 0 candidates thrown out"
+  },
+  "annotations": [
+    {
+      "offsetPx": 30.0,
+      "onsets": [
+        68
+      ],
+      "sustains": [
+        49,
+        53,
+        56
+      ],
+      "skip": [
+        65
+      ],
+      "note": "Read by the Phase 2 agent off a ruled crop of the picture, then checked against the brightness down the middle third of each key's own columns. No detector logic was used to produce it. A window of 346 to 375. G#4's tip is at 357 and falls inside it; C#5's is at 320 and falls outside, so C#5 is released here and an onset at d = 77.4. The three crossed rectangles are still sustains, and F4 still cannot be answered for."
+    },
+    {
+      "offsetPx": 77.42857142857143,
+      "onsets": [
+        68,
+        73
+      ],
+      "sustains": [
+        49,
+        53,
+        56
+      ],
+      "skip": [
+        65
+      ],
+      "note": "read by hand in Phase 1. Clean Synthesia. 65 is skipped: its rectangle is entirely past the upper line and the strike light covers what is left, so the picture cannot say whether any of it is still above the line."
+    }
+  ],
+  "noRoll": false,
+  "note": ""
+}

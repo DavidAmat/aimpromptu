@@ -92,8 +92,7 @@ class TwoHands:
         right, left = self.right.grid, self.left.grid
         onsets = np.nonzero(((right == ONSET) | (left == ONSET)).T)  # (column, row) order
         return "".join(
-            "r" if right[row, column] == ONSET else "l"
-            for column, row in zip(*onsets, strict=True)
+            "r" if right[row, column] == ONSET else "l" for column, row in zip(*onsets, strict=True)
         )
 
     def to_metadata(self) -> HandAssignments | None:

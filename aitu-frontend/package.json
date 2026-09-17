@@ -8,7 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check:render": "node scripts/check-render.mjs"
+    "check:render": "node scripts/check-render.mjs",
+    "check:history": "tsx scripts/check-history.ts",
+    "check:note-names": "tsx scripts/check-note-names.ts",
+    "check:geometry": "tsx scripts/check-geometry.ts"
   },
   "dependencies": {
     "@aimpromptu/grid-notation": "file:../../vexflow-v2",

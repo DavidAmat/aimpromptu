@@ -1,0 +1,18 @@
+{
+  "_about": "Read by hand off poc-synthesia-frames/out/labels/<slug>.jpg, which draws the offset line at d = 2.0 white key widths above the upper line and names every key. The rule applied is V-18, word for word. 'skip' lists keys the picture cannot answer, with the reason: those keys are left out of the score for that example rather than guessed.",
+  "d_in_white_keys": 2.0,
+  "examples": {
+    "derulo": {
+      "onsets": [57, 64, 69],
+      "sustains": [],
+      "skip": [],
+      "note": "Clean Synthesia. Three columns, each an upper rectangle whose tip is inside the window and a lower rectangle that already crossed and whose last tip is below the offset line, so released. Onset wins on all three."
+    },
+    "shut-up-and-dance": {
+      "onsets": [68, 73],
+      "sustains": [49, 53, 56],
+      "skip": [65],
+      "note": "Clean Synthesia. 65 is skipped: its rectangle is entirely past the upper line and the strike light covers what is left, so the picture cannot say whether any of it is still above the line."
+    }
+  }
+}

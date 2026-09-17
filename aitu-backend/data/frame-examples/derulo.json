@@ -1,0 +1,273 @@
+{
+  "slug": "derulo",
+  "imageWidth": 1280,
+  "imageHeight": 391,
+  "calibration": {
+    "imageWidth": 1280,
+    "imageHeight": 391,
+    "pianoRect": {
+      "x": 5.835866261398176,
+      "y": 164.91793313069908,
+      "width": 1280.0,
+      "height": 229.0,
+      "angle": 0.0
+    },
+    "upperLine": 164.91793313069908,
+    "whiteBorders": [
+      -7.714285714285715,
+      17.0,
+      41.5,
+      66.0,
+      91.0,
+      115.5,
+      140.0,
+      165.0,
+      190.0,
+      214.75,
+      239.5,
+      264.0,
+      289.0,
+      314.0,
+      339.0,
+      363.0,
+      388.0,
+      413.0,
+      442.8632218844985,
+      462.5,
+      487.0,
+      513.5,
+      536.5,
+      561.25,
+      586.0,
+      612.5,
+      636.75,
+      661.0,
+      685.5502207458516,
+      710.4528635079491,
+      735.2264317539746,
+      760.0,
+      784.0,
+      809.0,
+      834.0,
+      859.0,
+      883.0,
+      908.0,
+      933.0,
+      958.0,
+      982.5,
+      1007.0,
+      1032.0,
+      1057.0,
+      1081.5,
+      1106.0,
+      1131.0,
+      1156.0,
+      1181.0,
+      1205.0,
+      1230.0,
+      1254.7142857142858,
+      1279.4285714285716
+    ],
+    "blackBorders": [
+      {
+        "left": 9.5,
+        "right": 24.5
+      },
+      {
+        "left": 58.5,
+        "right": 73.5
+      },
+      {
+        "left": 83.5,
+        "right": 98.5
+      },
+      {
+        "left": 132.5,
+        "right": 147.5
+      },
+      {
+        "left": 157.5,
+        "right": 172.5
+      },
+      {
+        "left": 182.5,
+        "right": 197.5
+      },
+      {
+        "left": 232.5,
+        "right": 246.5
+      },
+      {
+        "left": 256.5,
+        "right": 271.5
+      },
+      {
+        "left": 306.5,
+        "right": 321.5
+      },
+      {
+        "left": 331.5,
+        "right": 346.5
+      },
+      {
+        "left": 355.5,
+        "right": 370.5
+      },
+      {
+        "left": 405.5,
+        "right": 420.5
+      },
+      {
+        "left": 430.5,
+        "right": 445.5
+      },
+      {
+        "left": 479.5,
+        "right": 494.5
+      },
+      {
+        "left": 504.5,
+        "right": 522.5
+      },
+      {
+        "left": 528.5,
+        "right": 544.5
+      },
+      {
+        "left": 578.5,
+        "right": 593.5
+      },
+      {
+        "left": 603.5,
+        "right": 621.5
+      },
+      {
+        "left": 653.5,
+        "right": 668.5
+      },
+      {
+        "left": 678.0502207458516,
+        "right": 693.0502207458516
+      },
+      {
+        "left": 702.9528635079491,
+        "right": 717.9528635079491
+      },
+      {
+        "left": 752.5,
+        "right": 767.5
+      },
+      {
+        "left": 776.5,
+        "right": 791.5
+      },
+      {
+        "left": 826.5,
+        "right": 841.5
+      },
+      {
+        "left": 851.5,
+        "right": 866.5
+      },
+      {
+        "left": 875.5,
+        "right": 890.5
+      },
+      {
+        "left": 925.5,
+        "right": 940.5
+      },
+      {
+        "left": 950.5,
+        "right": 965.5
+      },
+      {
+        "left": 999.5,
+        "right": 1014.5
+      },
+      {
+        "left": 1024.5,
+        "right": 1039.5
+      },
+      {
+        "left": 1049.5,
+        "right": 1064.5
+      },
+      {
+        "left": 1098.5,
+        "right": 1113.5
+      },
+      {
+        "left": 1123.5,
+        "right": 1138.5
+      },
+      {
+        "left": 1173.5,
+        "right": 1188.5
+      },
+      {
+        "left": 1197.5,
+        "right": 1212.5
+      },
+      {
+        "left": 1222.5,
+        "right": 1237.5
+      }
+    ],
+    "blackDepth": 95.0,
+    "whiteWidth": 24.773568246025434,
+    "firstWhitePitchClass": 9,
+    "firstWhiteOctave": 0,
+    "rollTop": 0.0,
+    "guardBand": 0.0,
+    "found": {
+      "route": "A",
+      "confidence": 0.7772211281803967,
+      "extrapolated": [
+        68,
+        70
+      ],
+      "confirmed": [
+        68,
+        70
+      ],
+      "corrected": [
+        18
+      ]
+    },
+    "note": "found by route A \u00b7 family boundary \u00b7 gap ratio 1.98 \u00b7 0 candidates thrown out"
+  },
+  "annotations": [
+    {
+      "offsetPx": 6.0,
+      "onsets": [],
+      "sustains": [],
+      "skip": [],
+      "note": "Read by the Phase 2 agent off a ruled crop of the picture, then checked against the brightness down the middle third of each key's own columns. No detector logic was used to produce it. A window of 156 to 161, which every tip is above: the answer is that nothing is sounding. A detector that reports a rectangle near the line rather than one inside the window invents three onsets here, and the strike light sits in exactly these rows."
+    },
+    {
+      "offsetPx": 15.0,
+      "onsets": [
+        57,
+        64,
+        69
+      ],
+      "sustains": [],
+      "skip": [],
+      "note": "Read by the Phase 2 agent off a ruled crop of the picture, then checked against the brightness down the middle third of each key's own columns. No detector logic was used to produce it. A narrow window that all three tips fall inside (147 to 161), and that every rectangle higher up the roll falls outside. It tests that the detector reads the window and not simply the nearest rectangle."
+    },
+    {
+      "offsetPx": 49.81549329002178,
+      "onsets": [
+        57,
+        64,
+        69
+      ],
+      "sustains": [],
+      "skip": [],
+      "note": "read by hand in Phase 1. Clean Synthesia. Three columns, each an upper rectangle whose tip is inside the window and a lower rectangle that already crossed and whose last tip is below the offset line, so released. Onset wins on all three."
+    }
+  ],
+  "noRoll": false,
+  "note": ""
+}

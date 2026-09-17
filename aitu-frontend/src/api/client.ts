@@ -48,10 +48,36 @@ export function buildUrl(path: string, query?: RequestOptions["query"]): string 
   return qs ? `${url}?${qs}` : url;
 }
 
+/**
+ * One line of English from whatever the backend answered with.
+ *
+ * A refusal the backend wrote itself is a sentence, and it is used as it stands. A **422** is not:
+ * FastAPI answers those with a list of objects, one per field it would not take, and the whole list
+ * was being printed as raw JSON — which is how a reader ended up looking at
+ * `{"detail":[{"type":"greater_than_equal","loc":["body","staffGaps",0,"gap"],...}]}` and learned
+ * nothing from it. The field and the reason are the two parts that mean something, so those are
+ * what is said: `staffGaps → 0 → gap: Input should be greater than or equal to 24`.
+ */
+function sayValidation(detail: readonly unknown[]): string {
+  const said = detail
+    .map((entry) => {
+      const one = entry as { loc?: unknown[]; msg?: unknown };
+      const where = (one.loc ?? [])
+        // `body` is every request's first step and says nothing about which field it was.
+        .filter((step) => step !== "body")
+        .join(" \u2192 ");
+      const why = typeof one.msg === "string" ? one.msg : "was refused";
+      return where ? `${where}: ${why}` : why;
+    })
+    .filter((line) => line.length > 0);
+  return said.length > 0 ? said.join("; ") : "The request was refused.";
+}
+
 async function readError(response: Response): Promise<string> {
   try {
     const payload = (await response.json()) as { detail?: unknown };
     if (typeof payload.detail === "string") return payload.detail;
+    if (Array.isArray(payload.detail)) return sayValidation(payload.detail);
     return JSON.stringify(payload);
   } catch {
     return response.statusText || "Request failed";

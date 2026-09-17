@@ -1,0 +1,291 @@
+========================================================================
+CATALOGUE, the measurable half
+========================================================================
+example                  keys first last  wkey  roll roll/key contr chroma  glow guard  lit
+7years                     88    21  108  24.6   295    12.0   239      5  0.28  1.95 1.00
+airplanes                  89    31  119  24.6   312    12.7   209    164  1.67  3.14 1.00
+derulo                     87    21  107  24.7   162     6.6   128    102  0.00  0.00 0.00
+feather                    87    21  107  24.9   238     9.6   187    230  0.56  1.81 1.00
+more-examples-1            87    21  107  24.9   249    10.0   143    156  0.40  0.48 0.94
+more-examples-10           87    21  107  25.0   327    13.1   132     64  0.80  1.52 0.99
+more-examples-11           85    23  107  25.1   269    10.7   146      4  0.16  3.18 0.61
+more-examples-12           87    21  107  25.1   325    12.9   198     52  0.91  2.27 1.00
+more-examples-13           87    21  107  24.9   293    11.8   181     69  0.80  1.73 0.99
+more-examples-14           87    21  107  24.7   358    14.5   157    108  0.77  1.79 1.00
+more-examples-2            87    21  107  25.0   237     9.5   143    206  0.60  1.08 1.00
+more-examples-3            87    21  107  24.9   184     7.4   253    209  0.56  0.72 1.00
+more-examples-4            85    23  107  25.1   171     6.8   153    136  0.64  0.80 1.00
+more-examples-5            87    21  107  24.8   360    14.5   254    145  0.56  0.65 0.99
+more-examples-6            87    21  107  24.9   312    12.6   166    200  0.80  2.78 1.00
+more-examples-7            87    21  107  24.9   324    13.0   249      6  1.05  4.14 1.00
+more-examples-8            87    21  107  24.7   316    12.8   152    168  0.69  1.89 0.99
+more-examples-9            87    21  107  24.9   294    11.8   104    185  0.40  0.48 0.97
+not-immediate-strokes      87    21  107  25.0   185     7.4   237      6  1.00  3.40 1.00
+shut-up-and-dance          56    33   88  38.7   376     9.7   170    130  0.21  0.88 0.97
+superestrella              72    24   95  30.6    14     0.5    21     40  0.26  0.39 0.60
+
+roll height, in white key widths: median 11.8, min 0.5, max 14.5
+contrast: median 166, min 21
+chroma: median 130, below 40 (all but grey): ['7years', 'more-examples-11', 'more-examples-7', 'not-immediate-strokes']
+========================================================================
+IS THE WHITE KEY WIDTH UNIFORM
+========================================================================
+example                    left    mid  right  spread
+7years                    25.00  24.43  25.00    2.3%
+airplanes                 25.71  24.43  24.57    5.2%
+derulo                    24.71  24.71  24.71    0.0%
+feather                   25.14  24.43  25.14    2.9%
+more-examples-1           25.29  24.43  25.29    3.4%
+more-examples-10          25.29  24.43  25.29    3.4%
+more-examples-11          25.43  24.57  25.29    3.4%
+more-examples-12          25.71  24.71  25.29    4.0%
+more-examples-13          25.14  24.29  25.00    3.5%
+more-examples-14          25.00  24.29  25.14    3.5%
+more-examples-2           25.29  24.43  25.29    3.4%
+more-examples-3           25.14  24.43  25.14    2.9%
+more-examples-4           25.29  24.57  25.29    2.9%
+more-examples-5           25.00  24.29  25.14    3.5%
+more-examples-6           25.00  24.29  25.29    4.0%
+more-examples-7           25.29  24.43  25.00    3.4%
+more-examples-8           25.00  24.14  25.00    3.5%
+more-examples-9           25.14  24.29  25.00    3.5%
+not-immediate-strokes     25.43  24.43  25.14    4.0%
+shut-up-and-dance         38.71  38.71  38.71    0.0%
+superestrella             30.71  30.57  30.57    0.5%
+
+worst: airplanes at 5.2%
+median spread: 3.4%
+========================================================================
+HOW FAR DOES THE LIGHT REACH
+========================================================================
+example                  line rows  keys bloom rows  keys lit at line
+7years                           7  0.28         48  1.95        1.00
+airplanes                       41  1.67         77  3.14        1.00
+derulo                           0  0.00          0  0.00        0.00
+feather                         14  0.56         45  1.81        1.00
+more-examples-1                 10  0.40         12  0.48        0.94
+more-examples-10                20  0.80         38  1.52        0.99
+more-examples-11                 4  0.16         80  3.18        0.61
+more-examples-12                23  0.91         57  2.27        1.00
+more-examples-13                20  0.80         43  1.73        0.99
+more-examples-14                19  0.77         44  1.79        1.00
+more-examples-2                 15  0.60         27  1.08        1.00
+more-examples-3                 14  0.56         18  0.72        1.00
+more-examples-4                 16  0.64         20  0.80        1.00
+more-examples-5                 14  0.56         16  0.65        0.99
+more-examples-6                 20  0.80         69  2.78        1.00
+more-examples-7                 26  1.05        103  4.14        1.00
+more-examples-8                 17  0.69         47  1.89        0.99
+more-examples-9                 10  0.40         12  0.48        0.97
+not-immediate-strokes           25  1.00         85  3.40        1.00
+shut-up-and-dance                8  0.21         34  0.88        0.97
+superestrella                    8  0.26         12  0.39        0.60
+
+glow line, in white key widths: median 0.60 max 1.67
+local bloom, in white key widths: median 1.73 max 4.14
+the plan guessed a 12 row guard band = 0.48 white keys at this resolution (24.9 px per white key)
+========================================================================
+SCORE BOARD, against the hand read ground truth
+========================================================================
+detector     example               on ok  on inv  on miss  sus ok  sus inv  sus miss
+absolute     derulo                    3       0        0       0        0         0
+absolute     shut-up-and-dance         2       0        0       3        0         0
+absolute     TOTAL                     5       0       0       3       0       0 
+
+plate        derulo                    3       0        0       0        0         0
+plate        shut-up-and-dance         2       0        0       3        0         0
+plate        TOTAL                     5       0       0       3       0       0 
+
+edges        derulo                    3       4        0       0        0         0   invented [59, 67, 70, 71]
+edges        shut-up-and-dance         2       4        0       0        0         3   invented [49, 53, 55, 56]
+edges        TOTAL                     5       8       0       0       0       3 
+
+colour       derulo                    3       0        0       0        0         0
+colour       shut-up-and-dance         2       0        0       3        0         0
+colour       TOTAL                     5       0       0       3       0       0 
+
+single-row   derulo                    3       3        0       0        0         0   invented [56, 63, 68]
+single-row   shut-up-and-dance         2      53        0       0        0         3   invented [33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 69, 70, 71, 72, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88]
+single-row   TOTAL                     5      56       0       0       0       3 
+
+========================================================================
+SHAPE QUALITY, high in the roll
+========================================================================
+band 8.0 to 3.0 white key widths above the upper line
+detector   example                 runs  on a midpoint        white width        black width
+absolute   derulo                     5      5   100%        0.81 +-0.04                  -
+absolute   shut-up-and-dance          8      8   100%        0.97 +-0.03        0.57 +-0.03
+absolute   7years                     2      2   100%        0.71 +-0.04                  -
+absolute   feather                    6      6   100%        1.15 +-0.16        0.74 +-0.12
+absolute   not-immediate-strokes     15     15   100%        1.00 +-0.64        0.60 +-0.60
+absolute   more-examples-9            7      7   100%        1.17 +-0.00        0.64 +-0.12
+absolute   more-examples-10           7      7   100%        0.86 +-0.56        0.56 +-0.48
+absolute   more-examples-12           2      2   100%        1.03 +-0.00        0.88 +-0.00
+absolute   more-examples-3           17     17   100%        0.70 +-0.97        0.56 +-0.84
+absolute   TOTAL                     69     69   100%    widest disagreement within one example and kind: 0.97 keys
+
+plate      derulo                     5      5   100%        0.85 +-0.04                  -
+plate      shut-up-and-dance          8      8   100%        0.97 +-0.03        0.57 +-0.03
+plate      7years                     2      2   100%        0.71 +-0.04                  -
+plate      feather                    8      8   100%        1.17 +-0.28        0.76 +-0.32
+plate      not-immediate-strokes     14     14   100%        1.00 +-0.68        0.66 +-0.76
+plate      more-examples-9            9      9   100%        1.11 +-0.16        0.64 +-0.24
+plate      more-examples-10           5      5   100%        0.92 +-0.28        0.48 +-0.00
+plate      more-examples-12           1      1   100%                  -        0.56 +-0.00
+plate      more-examples-3           19     19   100%        0.68 +-0.97        0.66 +-0.80
+plate      TOTAL                     71     71   100%    widest disagreement within one example and kind: 0.97 keys
+
+edges      derulo                    13     13   100%        1.01 +-0.16                  -
+edges      shut-up-and-dance         55     55   100%        0.83 +-0.59        0.67 +-0.05
+edges      7years                    28     28   100%        1.06 +-0.41        0.73 +-0.49
+edges      feather                   21     21   100%        1.29 +-0.16        0.68 +-0.40
+edges      not-immediate-strokes     29     29   100%        1.16 +-0.80        0.74 +-0.52
+edges      more-examples-9           33     33   100%        1.25 +-0.80        0.80 +-0.44
+edges      more-examples-10          20     20   100%        1.12 +-0.32        0.44 +-0.48
+edges      more-examples-12          21     21   100%        1.27 +-0.48        0.56 +-0.56
+edges      more-examples-3           26     26   100%        1.17 +-0.72        0.76 +-0.93
+edges      TOTAL                    246    246   100%    widest disagreement within one example and kind: 0.93 keys
+
+colour     derulo                     5      5   100%        0.81 +-0.04                  -
+colour     shut-up-and-dance          8      8   100%        0.97 +-0.03        0.57 +-0.03
+colour     7years                     1      1   100%        0.81 +-0.00                  -
+colour     feather                    7      7   100%        1.15 +-0.36        0.76 +-0.44
+colour     not-immediate-strokes     17     17   100%        1.08 +-0.72        0.64 +-0.76
+colour     more-examples-9           11     11   100%        1.13 +-0.12        0.64 +-0.24
+colour     more-examples-10           3      3   100%        0.84 +-0.48                  -
+colour     more-examples-12           0      0     0%                  -                  -
+colour     more-examples-3           18     18   100%        0.60 +-0.72        0.54 +-0.84
+colour     TOTAL                     70     70   100%    widest disagreement within one example and kind: 0.84 keys
+
+========================================================================
+RUN COUNTS, high in the roll
+========================================================================
+derulo                   absolute=5  plate=5  edges=13  colour=5  single-row=0
+shut-up-and-dance        absolute=8  plate=8  edges=55  colour=8  single-row=0
+7years                   absolute=2  plate=2  edges=28  colour=1  single-row=0
+feather                  absolute=6  plate=8  edges=21  colour=7  single-row=0
+not-immediate-strokes    absolute=15  plate=14  edges=29  colour=17  single-row=0
+more-examples-9          absolute=7  plate=9  edges=33  colour=11  single-row=0
+more-examples-10         absolute=7  plate=5  edges=20  colour=3  single-row=0
+more-examples-12         absolute=2  plate=1  edges=21  colour=0  single-row=0
+more-examples-3          absolute=17  plate=19  edges=26  colour=18  single-row=0
+========================================================================
+RUN COUNTS, at the upper line
+========================================================================
+derulo                   absolute=6  plate=6  edges=20  colour=6  single-row=0
+shut-up-and-dance        absolute=10  plate=10  edges=35  colour=11  single-row=0
+7years                   absolute=6  plate=7  edges=17  colour=7  single-row=0
+feather                  absolute=5  plate=5  edges=11  colour=5  single-row=0
+not-immediate-strokes    absolute=11  plate=21  edges=27  colour=11  single-row=0
+more-examples-9          absolute=8  plate=15  edges=24  colour=12  single-row=0
+more-examples-10         absolute=7  plate=11  edges=20  colour=7  single-row=0
+more-examples-12         absolute=3  plate=14  edges=38  colour=4  single-row=0
+more-examples-3          absolute=18  plate=31  edges=31  colour=18  single-row=0
+========================================================================
+THE GAP BETWEEN TWO STACKED RECTANGLES, on test.mp4
+========================================================================
+5808 gaps between runs, over 60 sampled frames
+gap rows  count
+       1    668  ############################################################
+       2    204  ###################################################
+       3    180  #############################################
+       4    147  ####################################
+       5    356  ############################################################
+       6    485  ############################################################
+       7    150  #####################################
+       8     33  ########
+       9     30  #######
+      10     35  ########
+      11     29  #######
+      12     25  ######
+      13     14  ###
+      14     10  ##
+      15     10  ##
+     >15   3432   (different notes, far apart)
+
+gaps of 15 rows or less: 2376
+  1 to 2 rows: 872   — texture inside one rectangle, to be closed
+  3 to 7 rows: 1318   — two rectangles touching, to be kept
+========================================================================
+HOW DEEP IS A BORDER, on test.mp4
+========================================================================
+8050 interior local minima, over 40 sampled frames
+ prominence  count
+ 0.00-0.02   4684  ############################################################
+ 0.02-0.04    838  #########################################
+ 0.04-0.06    255  ############
+ 0.06-0.08    138  ######
+ 0.08-0.10     86  ####
+ 0.10-0.15    169  ########
+ 0.15-0.20    211  ##########
+ 0.20-0.25    123  ######
+ 0.25-0.30     94  ####
+ 0.30-0.40    317  ###############
+ 0.40-0.50    245  ############
+ 0.50-0.70    178  ########
+ 0.70-1.00    316  ###############
+ 1.00-  +    396  ###################
+
+  cutting at prominence 0.10:   2049 borders,   6001 left as texture
+  cutting at prominence 0.15:   1880 borders,   6170 left as texture
+  cutting at prominence 0.20:   1669 borders,   6381 left as texture
+  cutting at prominence 0.25:   1546 borders,   6504 left as texture
+  cutting at prominence 0.30:   1452 borders,   6598 left as texture
+  cutting at prominence 0.35:   1279 borders,   6771 left as texture
+  cutting at prominence 0.40:   1135 borders,   6915 left as texture
+========================================================================
+WHERE THE ROLL STARTS, on test.mp4
+========================================================================
+roll top found at row 62, roll runs to row 531, upper line at 561
+
+row   does this row look like it moved down one frame of travel?
+   0  -0.524 
+   4  -0.910 
+   8  -0.940 
+  12  -0.989 
+  16  -0.942 
+  20  -0.994 
+  24  -1.045 
+  28  -0.753 
+  32  -0.581 
+  36  -0.415 
+  40  -0.587 
+  44  -0.840 
+  48  -1.012 
+  52  -1.017 
+  56  -0.750 
+  60  -0.171 
+  64   0.296 #################
+  68   0.312 ##################
+  72   0.311 ##################
+  76   0.306 ##################
+  80   0.308 ##################
+  84   0.309 ##################
+  88   0.301 ##################
+  92   0.301 ##################
+ 120   0.287 #################
+ 200   0.305 ##################
+ 300   0.292 #################
+ 400   0.310 ##################
+ 500   0.315 ##################
+ 540  -0.012 
+========================================================================
+FRAME TO FRAME AGREEMENT, on test.mp4
+========================================================================
+agreement 98.2%  (2242 of 2283)  runs/frame 30.2
+
+SPLIT_PROMINENCE    continuity  runs/frame  height med    p95   max
+0.1                      99.5%        30.5        36.0  200.0   208    (752 of 756)
+0.25                     99.5%        30.4        37.0  200.0   226    (748 of 752)
+0.4                      98.8%        27.8        39.0  201.0   322    (649 of 657)
+0.55                     99.5%        27.7        39.0  201.3   342    (649 of 652)
+2.0                      93.2%        27.1        43.0  202.5   342    (587 of 630)
+========================================================================
+THE STITCHED ROLL
+========================================================================
+30 s of music, 4800 rows, 268 shapes, 268 kept after dropping specks
+notes per second: 8.9
+width  in white key widths: median 0.62, 5th..95th 0.62..1.03
+length in ms:               median 145, 5th..95th 95..292
+distance from the nearest key midpoint, in white key widths: median 0.067, 95th 0.157, worst 0.170
+shapes whose midpoint is more than a quarter key from any key: 0 of 268

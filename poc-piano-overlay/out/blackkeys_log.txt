@@ -1,0 +1,24 @@
+7years                   depth=103 cands=22 keys=36 seen=22 extrapolated=14 confirmed=10 thrown= 0 semitone=14.50 cost=  9.45 runner= 14.36 conf=0.52 first=A#
+airplanes                depth=101 cands=36 keys=36 seen=35 extrapolated= 1 confirmed= 1 thrown= 1 semitone=14.25 cost= 12.68 runner= 17.11 conf=0.35 first=A#
+derulo                   depth= 98 cands=34 keys=36 seen=34 extrapolated= 2 confirmed= 2 thrown= 0 semitone=12.50 cost=  6.31 runner= 11.85 conf=0.88 first=A#
+feather                  depth=104 cands=25 keys=36 seen=24 extrapolated=12 confirmed=12 thrown= 1 semitone=14.47 cost=  9.39 runner= 15.87 conf=0.69 first=A#
+more-examples-1          depth=100 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.30 cost=  9.15 runner= 14.20 conf=0.55 first=A#
+more-examples-10         depth= 97 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.25 cost=  9.55 runner= 14.62 conf=0.53 first=A#
+more-examples-11         depth=100 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.50 cost=  9.74 runner= 14.85 conf=0.52 first=A#
+more-examples-12         depth= 94 cands=36 keys=36 seen=34 extrapolated= 2 confirmed= 2 thrown= 2 semitone=14.55 cost= 13.24 runner= 18.05 conf=0.36 first=A#
+more-examples-13         depth= 93 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.25 cost=  9.90 runner= 15.09 conf=0.52 first=A#
+more-examples-14         depth= 89 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.25 cost= 10.37 runner= 15.55 conf=0.50 first=A#
+more-examples-2          depth= 98 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.50 cost=  9.40 runner= 14.94 conf=0.59 first=A#
+more-examples-3          depth= 95 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.50 cost=  9.86 runner= 15.26 conf=0.55 first=A#
+more-examples-4          depth= 89 cands=35 keys=36 seen=35 extrapolated= 1 confirmed= 1 thrown= 0 semitone=14.50 cost= 11.40 runner= 16.70 conf=0.46 first=A#
+more-examples-5          depth= 90 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.30 cost=  8.68 runner= 13.84 conf=0.59 first=A#
+more-examples-6          depth= 88 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.50 cost= 12.00 runner= 17.01 conf=0.42 first=A#
+more-examples-7          depth= 97 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.30 cost= 14.76 runner= 20.08 conf=0.36 first=A#
+more-examples-8          depth= 92 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.25 cost= 11.94 runner= 17.04 conf=0.43 first=A#
+more-examples-9          depth= 93 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.30 cost= 10.43 runner= 15.59 conf=0.49 first=A#
+not-immediate-strokes    depth= 97 cands=36 keys=36 seen=35 extrapolated= 1 confirmed= 1 thrown= 1 semitone=14.50 cost= 12.91 runner= 18.03 conf=0.40 first=A#
+ode1                     depth= 94 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.30 cost=  9.73 runner= 14.69 conf=0.51 first=A#
+ode2                     depth= 92 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.25 cost= 10.82 runner= 15.92 conf=0.47 first=A#
+ode3                     depth= 94 cands=36 keys=36 seen=36 extrapolated= 0 confirmed= 0 thrown= 0 semitone=14.30 cost=  8.88 runner= 14.11 conf=0.59 first=A#
+shut-up-and-dance        depth=125 cands=23 keys=23 seen=23 extrapolated= 0 confirmed= 0 thrown= 0 semitone=22.50 cost=  1.69 runner=  7.68 conf=1.00 first=A#
+superestrella            depth=131 cands=29 keys=30 seen=29 extrapolated= 1 confirmed= 0 thrown= 0 semitone=17.50 cost=  5.88 runner= 13.94 conf=1.00 first=C#

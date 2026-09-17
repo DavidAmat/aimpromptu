@@ -1,0 +1,170 @@
+{
+  "7years": {
+    "x": 0.0,
+    "y": 295.0,
+    "width": 1280.0,
+    "height": 259.0,
+    "angle": 0.0
+  },
+  "airplanes": {
+    "x": 0.0,
+    "y": 312.0,
+    "width": 1280.0,
+    "height": 221.0,
+    "angle": 0.0
+  },
+  "derulo": {
+    "x": 0.0,
+    "y": 162.0,
+    "width": 1280.0,
+    "height": 229.0,
+    "angle": 0.0
+  },
+  "feather": {
+    "x": 0.0,
+    "y": 238.0,
+    "width": 1280.0,
+    "height": 286.0,
+    "angle": 0.0
+  },
+  "more-examples-1": {
+    "x": 0.0,
+    "y": 249.0,
+    "width": 1280.0,
+    "height": 232.0,
+    "angle": 0.0
+  },
+  "more-examples-10": {
+    "x": 0.0,
+    "y": 327.0,
+    "width": 1280.0,
+    "height": 296.0,
+    "angle": 0.0
+  },
+  "more-examples-11": {
+    "x": 0.0,
+    "y": 269.0,
+    "width": 1280.0,
+    "height": 297.0,
+    "angle": 0.0
+  },
+  "more-examples-12": {
+    "x": 0.0,
+    "y": 325.0,
+    "width": 1280.0,
+    "height": 243.0,
+    "angle": 0.0
+  },
+  "more-examples-13": {
+    "x": 0.0,
+    "y": 293.0,
+    "width": 1280.0,
+    "height": 294.0,
+    "angle": 0.0
+  },
+  "more-examples-14": {
+    "x": 0.0,
+    "y": 358.0,
+    "width": 1280.0,
+    "height": 287.0,
+    "angle": 0.0
+  },
+  "more-examples-2": {
+    "x": 0.0,
+    "y": 237.0,
+    "width": 1280.0,
+    "height": 249.0,
+    "angle": 0.0
+  },
+  "more-examples-3": {
+    "x": 0.0,
+    "y": 184.0,
+    "width": 1280.0,
+    "height": 252.0,
+    "angle": 0.0
+  },
+  "more-examples-4": {
+    "x": 0.0,
+    "y": 171.0,
+    "width": 1280.0,
+    "height": 226.0,
+    "angle": 0.0
+  },
+  "more-examples-5": {
+    "x": 0.0,
+    "y": 360.0,
+    "width": 1280.0,
+    "height": 302.0,
+    "angle": 0.0
+  },
+  "more-examples-6": {
+    "x": 0.0,
+    "y": 312.0,
+    "width": 1280.0,
+    "height": 297.0,
+    "angle": 0.0
+  },
+  "more-examples-7": {
+    "x": 0.0,
+    "y": 324.0,
+    "width": 1280.0,
+    "height": 295.0,
+    "angle": 0.0
+  },
+  "more-examples-8": {
+    "x": 0.0,
+    "y": 316.0,
+    "width": 1280.0,
+    "height": 297.0,
+    "angle": 0.0
+  },
+  "more-examples-9": {
+    "x": 0.0,
+    "y": 294.0,
+    "width": 1280.0,
+    "height": 293.0,
+    "angle": 0.0
+  },
+  "not-immediate-strokes": {
+    "x": 0.0,
+    "y": 185.0,
+    "width": 1280.0,
+    "height": 259.0,
+    "angle": 0.0
+  },
+  "ode1": {
+    "x": 0.0,
+    "y": 423.0,
+    "width": 1280.0,
+    "height": 249.0,
+    "angle": 0.0
+  },
+  "ode2": {
+    "x": 0.0,
+    "y": 426.0,
+    "width": 1280.0,
+    "height": 248.0,
+    "angle": 0.0
+  },
+  "ode3": {
+    "x": 0.0,
+    "y": 424.0,
+    "width": 1280.0,
+    "height": 254.0,
+    "angle": 0.0
+  },
+  "shut-up-and-dance": {
+    "x": 0.0,
+    "y": 376.0,
+    "width": 1280.0,
+    "height": 195.0,
+    "angle": 0.0
+  },
+  "superestrella": {
+    "x": 0.0,
+    "y": 14.0,
+    "width": 1280.0,
+    "height": 197.0,
+    "angle": 0.0
+  }
+}

@@ -19,6 +19,11 @@ dependencies = [
     "scipy>=1.17.1",
     "tqdm>=4.67.0",
     "python-multipart>=0.0.20",
+    # Reading video frames and example screenshots, and writing the working-
+    # resolution copy the calibration is made against (04-synthesia-to-notes).
+    # It was already present transitively; it is declared here because the
+    # detector imports it directly.
+    "pillow>=11.0.0",
     # 2026.8.19 is a hard floor, not a preference: every earlier build picks a
     # YouTube player client that now answers 403, so downloads fail outright.
     "yt-dlp>=2026.8.19",

@@ -421,9 +421,7 @@ class TranskunEngine:
             import torch  # noqa: PLC0415
             import transkun  # noqa: F401, PLC0415
         except ImportError as exc:
-            raise EngineUnavailable(
-                "transkun", "transkun", "uv sync --extra transkun"
-            ) from exc
+            raise EngineUnavailable("transkun", "transkun", "uv sync --extra transkun") from exc
 
         from importlib.resources import files  # noqa: PLC0415
 
