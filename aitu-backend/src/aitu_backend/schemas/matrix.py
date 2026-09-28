@@ -22,6 +22,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
+import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from aitu_backend.matrix.keys import (
@@ -149,16 +150,28 @@ class SparseCooMatrix(BaseModel):
                 "rows, cols and onset must be parallel arrays "
                 f"(got {len(self.rows)}, {len(self.cols)}, {len(self.onset)})"
             )
-        for index, (row, col, onset) in enumerate(zip(self.rows, self.cols, self.onset)):
-            if not 0 <= row < self.shape[0]:
-                raise ValueError(f"rows[{index}] = {row} outside 0..{self.shape[0] - 1}")
-            if not 0 <= col < self.shape[1]:
-                raise ValueError(f"cols[{index}] = {col} outside 0..{self.shape[1] - 1}")
-            if onset != row and onset != -1:
-                raise ValueError(
-                    f"onset[{index}] must be rows[{index}] ({row}) for an onset or -1 "
-                    f"for a sustain, got {onset}"
-                )
+        if not self.rows:
+            return self
+        # One array operation per rule instead of a Python loop over every cell: a piece of a few
+        # minutes has about 90,000 active cells, and the loop cost milliseconds on every request.
+        rows = np.fromiter(self.rows, dtype=np.int64, count=len(self.rows))
+        cols = np.fromiter(self.cols, dtype=np.int64, count=len(self.cols))
+        onset = np.fromiter(self.onset, dtype=np.int64, count=len(self.onset))
+        bad = np.nonzero((rows < 0) | (rows >= self.shape[0]))[0]
+        if bad.size:
+            index = int(bad[0])
+            raise ValueError(f"rows[{index}] = {rows[index]} outside 0..{self.shape[0] - 1}")
+        bad = np.nonzero((cols < 0) | (cols >= self.shape[1]))[0]
+        if bad.size:
+            index = int(bad[0])
+            raise ValueError(f"cols[{index}] = {cols[index]} outside 0..{self.shape[1] - 1}")
+        bad = np.nonzero((onset != rows) & (onset != -1))[0]
+        if bad.size:
+            index = int(bad[0])
+            raise ValueError(
+                f"onset[{index}] must be rows[{index}] ({rows[index]}) for an onset or -1 "
+                f"for a sustain, got {onset[index]}"
+            )
         return self
 
     @property

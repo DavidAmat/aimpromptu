@@ -22,7 +22,7 @@ from functools import lru_cache
 import copy
 from typing import Literal
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import store
@@ -153,14 +153,26 @@ def _events_or_error(audio_uuid: str):
 
 
 def _hands(audio_uuid: str, frame_ms: float) -> TimeHands:
-    _events_or_error(audio_uuid)
+    # Only a missing piece reads the file here, to say why. A cached split needs the file's stamp
+    # alone: reading and checking every note of it on each request cost about 10 ms for nothing.
+    if not store.exists(audio_uuid) or not pipeline.has_events(audio_uuid):
+        _events_or_error(audio_uuid)
     # Keyed on the recording's own mtime as well, so re-transcribing a piece drops the cached split
-    # instead of serving the previous one for the rest of the process's life.
-    stamp = 0.0
-    path = pipeline.events_path(audio_uuid)
-    if path.exists():
-        stamp = path.stat().st_mtime
+    # instead of serving the previous one for the rest of the process's life. Nanoseconds, so two
+    # saves within one second are two different stamps.
+    stamp = pipeline.events_path(audio_uuid).stat().st_mtime_ns
     return _split_cached(audio_uuid, frame_ms, stamp)
+
+
+def _json(payload: BaseModel) -> Response:
+    """The payload as JSON, encoded once.
+
+    Returning the model lets FastAPI dump it to a dictionary, check the dictionary against the
+    response model again (every COO cell a second time) and only then encode it. The payload was
+    built and checked here, so that second pass is skipped. ``response_model`` stays on the routes
+    for the documentation.
+    """
+    return Response(content=payload.model_dump_json(by_alias=True), media_type="application/json")
 
 
 def forget_split_cache() -> None:
@@ -179,7 +191,7 @@ def forget_split_cache() -> None:
 
 
 @lru_cache(maxsize=8)
-def _split_cached(audio_uuid: str, frame_ms: float, _stamp: float) -> TimeHands:
+def _split_cached(audio_uuid: str, frame_ms: float, _stamp: int) -> TimeHands:
     """The hand split for one (piece, column length).
 
     Cached because it is the expensive half of drawing a sheet — around a second on a five-minute
@@ -337,7 +349,7 @@ def get_time_score(
         ),
     ),
     boundary_ms: str = Query("", alias="boundaryMs"),
-) -> TimeScorePayload:
+) -> Response:
     """Everything the renderer draws: the two hand matrices, the passages, and every printed note.
 
     The figure of each note is decided here and not in the renderer, so the ladder, the proportional
@@ -352,7 +364,7 @@ def get_time_score(
     hands = trim_to_music(_hands(audio_uuid, frame_ms))
     ladder = build_ladder(anchor_figure, anchor_ms)
     passages = _passages_from_query(hands, ladder, anchor_figure, boundaries, boundary_ms)
-    return to_score_payload(hands, ladder, passages=passages, title=hands.right.title)
+    return _json(to_score_payload(hands, ladder, passages=passages, title=hands.right.title))
 
 
 class HandAssignment(BaseModel):
@@ -743,7 +755,7 @@ def _with_trills(hands: TimeHands, trills: list[Trill]) -> TimeHands:
 
 
 @router.post("/{audio_uuid}/score", response_model=TimeScorePayload, response_model_by_alias=True)
-def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> TimeScorePayload:
+def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> Response:
     """The sheet, with the reader's page edits folded in before any figure is named.
 
     Same answer as the GET for a piece with no edits. See `_with_page_edits` for why the edits have
@@ -786,7 +798,7 @@ def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> TimeScor
         hidden.extend(found)
         dropped.extend(found)
     payload.decorative_dropped = len(dropped)
-    return payload
+    return _json(payload)
 
 
 def _passages_from_query(

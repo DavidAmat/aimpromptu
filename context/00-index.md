@@ -35,6 +35,7 @@ assumes.
 |------|-------------|
 | [backend/README.md](backend/README.md) | aitu-backend entry: the packages and what each is for |
 | [backend/time-model.md](backend/time-model.md) | **The wall-clock model.** What replaced tempo, the five rules, what is dead |
+| [backend/piano-matrix-notation.md](backend/piano-matrix-notation.md) | The piano matrix notation: the sparse form, `events.json` with ids and header, the wire columns, every adapter (`pmn/`) |
 | [backend/editing.md](backend/editing.md) | Re-recording a passage, and composing a piece from nothing |
 | [backend/api.md](backend/api.md) | The HTTP surface: six routers and the shape of a session |
 | [backend/notation-and-parsing.md](backend/notation-and-parsing.md) | The text-notation MVP path, kept but no longer an entry point |

@@ -225,8 +225,13 @@ def to_time_envelope(
     A one-hand piece is not a different shape. It is two hands with one of them empty, and the
     renderer is told to hide that staff through :func:`layout_hints_for`. Keeping one shape means
     every consumer, every stored file and every test stays on one code path.
+
+    Built with ``model_construct``: pydantic runs a model's "after" checks again on every model
+    instance it is given, so a normal construction would check each COO cell once more, although
+    the two payloads were just built from the arrays (:mod:`aitu_backend.pmn.coo`). The envelope's
+    own frame check still runs when the score payload receives it.
     """
-    return TimeMatrixEnvelope(
+    return TimeMatrixEnvelope.model_construct(
         frame_ms=hands.frame_ms,
         frame_count=hands.frame_count,
         duration_seconds=hands.duration_seconds if duration_seconds is None else duration_seconds,

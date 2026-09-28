@@ -1,6 +1,6 @@
 # 08: MuScriptor, the live piano roll, and the move to Ubuntu
 
-**State: in progress. Planned 2026-09-28, with all six decisions answered the same day. Phase 0 done 2026-09-28 ([`08-implementation-phase-0.md`](08-implementation-phase-0.md)); Phase 1 runs on Ubuntu.** The brief is [`08-prompt.md`](08-prompt.md), the plan
+**State: in progress. Planned 2026-09-28, with all six decisions answered the same day. Phase 0 done 2026-09-28 ([`08-implementation-phase-0.md`](08-implementation-phase-0.md)); Phase 1 done on Ubuntu ([`08-implementation-phase-1.md`](08-implementation-phase-1.md)); Phase 2, the piano matrix notation format, done ([`08-implementation-phase-2.md`](08-implementation-phase-2.md)).** The brief is [`08-prompt.md`](08-prompt.md), the plan
 is [`08-plan.md`](08-plan.md) and the status lookup is [`08-checklist.md`](08-checklist.md). Phase
 reports go beside them as `08-implementation-phase-N.md`, following
 [`../../language/communication-implementation-plans.md`](../../language/communication-implementation-plans.md).
@@ -12,6 +12,7 @@ reports go beside them as `08-implementation-phase-N.md`, following
 | [`08-checklist.md`](08-checklist.md) | The status lookup, and the open decisions |
 | [`muscriptor_paper.pdf`](muscriptor_paper.pdf) | The MuScriptor paper |
 | [`examples/`](examples/) | Three screenshots of MuScriptor's own live piano roll visualization |
+| [`measurements/`](measurements/) | Raw measurement files of the phases (Phase 2: the payload sizes and times of 34 pieces) |
 
 ## What it is for
 

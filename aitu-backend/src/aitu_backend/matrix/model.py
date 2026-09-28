@@ -320,20 +320,10 @@ class PianoMatrix:
         return self.grid.copy()
 
     def to_coo_payload(self) -> SparseCooMatrix:
-        """The Task 1.3.1 wire format, sorted by ``(col, row)``."""
-        # Iterating column-major yields (col, row) order directly.
-        cols, rows = np.nonzero(self.grid.T)
-        rows_list = rows.astype(int).tolist()
-        cols_list = cols.astype(int).tolist()
-        onset = [
-            row if self.grid[row, col] == ONSET else -1 for row, col in zip(rows_list, cols_list)
-        ]
-        return SparseCooMatrix(
-            shape=[self.shape[0], self.shape[1]],
-            rows=rows_list,
-            cols=cols_list,
-            onset=onset,
-        )
+        """The Task 1.3.1 wire format, sorted by ``(col, row)``. Built with NumPy, see `pmn.coo`."""
+        from aitu_backend.pmn.coo import coo_from_grid  # noqa: PLC0415 - pmn imports this module
+
+        return coo_from_grid(self.grid)
 
     def to_envelope(self, sparse: bool = True) -> PianoMatrixEnvelope:
         """Wrap this matrix in the export envelope."""

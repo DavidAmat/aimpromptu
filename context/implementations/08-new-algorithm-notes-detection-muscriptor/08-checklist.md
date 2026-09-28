@@ -61,22 +61,24 @@ Done 2026-09-28. Report: [`08-implementation-phase-1.md`](08-implementation-phas
 - [x] Task 1.3.6 **The filters**: `artifacts.py` and `leakage.py` on MuScriptor notes, helpful or harmful. Both off for MuScriptor (no effect, and leakage would merge real repeated notes without velocity).
 - [x] Task 1.3.7 **`RESULTS.md`** and the learnings in the phase report, with a recommendation for the model size, the dtype, the batch size, the lag and the filters. Report: [`08-implementation-phase-1.md`](08-implementation-phase-1.md); plan sections 3 and 9.1 updated.
 
-# [ ] Phase 2: The piano matrix notation format
+# [x] Phase 2: The piano matrix notation format
 
-## [ ] Story 2.1: The `pmn` module
-- [ ] Task 2.1.1 **The sparse form**: `id`, `key`, `onMs`, `lenMs`, `hand`, as NumPy arrays.
-- [ ] Task 2.1.2 **The adapters**: `events.json`, dense matrix (whole and per hand), COO, columns, MIDI, MuScriptor events, portable `.pmn.json`.
-- [ ] Task 2.1.3 **Round-trip tests** for every adapter, including the matrix at 10 ms and at 40 ms.
+Done 2026-09-28. Report: [`08-implementation-phase-2.md`](08-implementation-phase-2.md). Specification: [`../../backend/piano-matrix-notation.md`](../../backend/piano-matrix-notation.md).
 
-## [ ] Story 2.2: `events.json`
-- [ ] Task 2.2.1 **Stable ids**, given once and kept.
-- [ ] Task 2.2.2 **The header**: `notesRevision`, `handsRevision`, `engine`, `audioRevision`, `lagCorrectionMs`, with old files read without a change on disk.
+## [x] Story 2.1: The `pmn` module
+- [x] Task 2.1.1 **The sparse form**: `id`, `key`, `onMs`, `lenMs`, `hand`, as NumPy arrays. `pmn/notes.py`; times are float ms in memory (0.1 ms of the old pieces kept), plus `velocity` and `removed`.
+- [x] Task 2.1.2 **The adapters**: `events.json`, dense matrix (whole and per hand), COO, columns, MIDI, MuScriptor events, portable `.pmn.json`. One module each under `pmn/`; `mido` added to the base dependencies.
+- [x] Task 2.1.3 **Round-trip tests** for every adapter, including the matrix at 10 ms and at 40 ms. `tests/test_pmn.py`, 33 tests, including every `events.json` of the library.
 
-## [ ] Story 2.3: Faster payloads
-- [ ] Task 2.3.1 **The COO payload** built with NumPy instead of Python loops.
-- [ ] Task 2.3.2 **gzip** on responses.
-- [ ] Task 2.3.3 **The table**: sizes and build times on all 34 transcribed pieces, before and after.
-- [ ] Task 2.3.4 **The specification page**: `context/backend/piano-matrix-notation.md`.
+## [x] Story 2.2: `events.json`
+- [x] Task 2.2.1 **Stable ids**, given once and kept. `0..n-1` in file order for an old file; `nextId` for new notes; never reused.
+- [x] Task 2.2.2 **The header**: `notesRevision`, `handsRevision`, `engine`, `audioRevision`, `lagCorrectionMs`, with old files read without a change on disk. Schema `1.1`, plus `nextId`; no revision is bumped yet (Phase 5).
+
+## [x] Story 2.3: Faster payloads
+- [x] Task 2.3.1 **The COO payload** built with NumPy instead of Python loops. Also: the cell check vectorised and no longer run 4 times per request, no second FastAPI validation, no `events.json` read per request. Same answers on all 34 pieces.
+- [x] Task 2.3.2 **gzip** on responses. JSON only, level 5; audio and SSE untouched.
+- [x] Task 2.3.3 **The table**: sizes and build times on all 34 transcribed pieces, before and after. Warm sheet request 24 to 19 ms median, sent at 56 KB instead of 634 KB; the first request (hand split) is still 0.56 s median.
+- [x] Task 2.3.4 **The specification page**: `context/backend/piano-matrix-notation.md`.
 
 # [ ] Phase 3: Containers, the GPU in the backend, and the tunnel
 

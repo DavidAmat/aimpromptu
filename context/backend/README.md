@@ -32,12 +32,17 @@ Full reasoning: [time-model.md](time-model.md).
 | Contracts | `schemas/` | Pydantic models, camelCase on the wire, mirrored in TypeScript |
 | Editing | `editing/` | The replacement splice, composing, staging, history |
 | Persistence | `storage/` | Every path in one module; playground versions, library, playlists |
+| The format | `pmn/` | The piano matrix notation: the sparse form and every adapter |
 
 ## The one stored file
 
 `data/audio/<uuid>/matrices/events.json` — the engine's note events in seconds, before any grid was
 involved. Everything else about the music is a function of it, so re-reading a piece at 20 ms
 instead of 40 is a different query string rather than a migration.
+
+Its format, the sparse form it is read into, and every conversion (the dense matrix, the COO
+payload, the wire columns, MIDI, MuScriptor events, `.pmn.json`) are one package, `pmn/`:
+[piano-matrix-notation.md](piano-matrix-notation.md).
 
 The one thing stored beside it is `rhythm.json`: what the reader decided, which is the only thing
 about a piece that nothing can derive.

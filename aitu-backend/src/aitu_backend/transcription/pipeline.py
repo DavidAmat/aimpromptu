@@ -35,12 +35,14 @@ What used to live in this module and no longer does:
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aitu_backend.audio import store
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
+from aitu_backend.pmn import events_file
+from aitu_backend.pmn.events_file import PieceHeader
 from aitu_backend.progress import BaseProgress, default_reporter
 from aitu_backend.transcription.engine import (
     DEFAULT_ENGINE,
@@ -182,11 +184,14 @@ class TranscribedEvents:
 
     ``duration_seconds`` is kept because the events alone do not carry it: a
     piece that ends in silence would otherwise shrink every time it was rebuilt.
+    ``header`` holds the revisions and the next free note id (implementation 08,
+    plan section 6.3); a file written before it existed reads with the defaults.
     """
 
     events: list[NoteEvent]
     duration_seconds: float
     title: str | None = None
+    header: PieceHeader = field(default_factory=PieceHeader)
 
 
 def save_note_events(
@@ -194,44 +199,42 @@ def save_note_events(
     events: list[NoteEvent],
     duration_seconds: float,
     title: str | None = None,
+    *,
+    header: PieceHeader | None = None,
 ) -> Path:
-    """Persist the transcription in seconds. The only write this module makes."""
+    """Persist the transcription in seconds. The only write this module makes.
+
+    Every note keeps its ``id``; a note without one gets the next free id, and
+    the id is set on the event itself. Without ``header`` the one already on
+    disk is kept, so a writer that only changes notes cannot lose the revisions.
+    The format is :mod:`aitu_backend.pmn.events_file`.
+    """
     path = events_path(audio_uuid)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "schemaVersion": "1.0",
-        "durationSeconds": round(float(duration_seconds), 6),
-        "title": title,
-        # Milliseconds are far finer than any frame length this project uses, and
-        # the rounding keeps a 5000-note piece around a hundred kilobytes.
-        "events": [
-            {
-                "midiNote": event.midi_note,
-                "start": round(event.start, 4),
-                "end": round(event.end, 4),
-                "velocity": event.velocity,
-                # Only when someone has said so. Absent on every note the split still guesses,
-                # which is nearly all of them, and which keeps the file the size it was.
-                **({"hand": event.hand} if event.hand else {}),
-                **({"removed": True} if event.removed else {}),
-            }
-            for event in events
-        ],
-    }
-    path.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
-    return path
+    base = events_file.read_header(path) if header is None else header
+    payload = events_file.payload_from_events(events, base, duration_seconds, title)
+    return events_file.write_payload(path, payload)
 
 
 def load_note_events(audio_uuid: str) -> TranscribedEvents | None:
-    """The stored transcription, or ``None`` when there is none."""
+    """The stored transcription, or ``None`` when there is none.
+
+    Reading never writes. A file saved before note ids existed gets ``0, 1, 2 ...``
+    in file order, the same on every read, and keeps them at its next save.
+    """
     path = events_path(audio_uuid)
     if not path.is_file():
         return None
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
+        items = payload.get("events", [])
+        header = events_file.header_from_payload(payload)
+        ids, _ = events_file.assign_ids(
+            (item.get("id") for item in items), int(payload.get("nextId") or 0)
+        )
         return TranscribedEvents(
             events=[
                 NoteEvent(
+                    id=note_id,
                     midi_note=int(item["midiNote"]),
                     start=float(item["start"]),
                     end=float(item["end"]),
@@ -239,10 +242,11 @@ def load_note_events(audio_uuid: str) -> TranscribedEvents | None:
                     hand=item.get("hand"),
                     removed=bool(item.get("removed", False)),
                 )
-                for item in payload.get("events", [])
+                for note_id, item in zip(ids, items)
             ],
             duration_seconds=float(payload["durationSeconds"]),
             title=payload.get("title"),
+            header=header,
         )
     except (ValueError, KeyError, TypeError):
         # A file written by an older schema is not worth failing a render over.
@@ -332,7 +336,9 @@ def transcribe_audio(
         events = shift_events(events, offset)
 
     span = max(duration, 0.001)
-    save_note_events(audio_uuid, events, span, title=entry.metadata.alias)
+    # The new notes take ids after every id the piece has used, and the header records the engine.
+    header = replace(events_file.read_header(events_path(audio_uuid)), engine=model.name)
+    save_note_events(audio_uuid, events, span, title=entry.metadata.alias, header=header)
     # A saved reading is a set of column numbers over the notes that were there
     # before. A new transcription is a different set of notes, so those numbers
     # point at nothing in particular now and keeping them would be worse than
@@ -340,7 +346,9 @@ def transcribe_audio(
     clear_rhythm(audio_uuid)
     # Whatever was wrong with this piece before, it now has its recorded notes.
     clear_needs_rederivation(audio_uuid)
-    return TranscribedEvents(events=events, duration_seconds=span, title=entry.metadata.alias)
+    return TranscribedEvents(
+        events=events, duration_seconds=span, title=entry.metadata.alias, header=header
+    )
 
 
 def run_pipeline(

@@ -1,6 +1,6 @@
 """FastAPI app factory.
 
-Thin by design: it builds the app, installs CORS, ensures the storage tree
+Thin by design: it builds the app, installs CORS and gzip, ensures the storage tree
 exists and includes every router from :mod:`aitu_backend.api`. All logic
 lives in the feature packages (`matrix/`, `audio/`, `transcription/`,
 `storage/`, `notation/`).
@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from aitu_backend.api import ALL_ROUTERS
+from aitu_backend.compression import JsonGZipMiddleware
 from aitu_backend.storage.paths import ensure_data_tree
 
 
@@ -39,6 +40,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # JSON only: the piano sheet answer is about 12 times smaller, and the audio is left alone.
+    application.add_middleware(JsonGZipMiddleware)
 
     @application.get("/health", tags=["health"])
     def health() -> dict[str, str]:

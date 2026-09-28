@@ -74,6 +74,9 @@ class NoteEvent(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
+    #: The note's stable identity in its piece, stored in ``events.json`` (implementation 08, plan
+    #: section 6.2). ``None`` for a note that has not been saved yet; the save gives it one.
+    id: int | None = Field(None, ge=0)
     midi_note: int = Field(..., alias="midiNote", ge=0, le=127)
     start: float = Field(..., ge=0)
     end: float = Field(..., gt=0)

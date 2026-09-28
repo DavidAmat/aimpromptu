@@ -68,6 +68,12 @@ Each event carries its start, its end, its MIDI note, and two flags a reader can
 correction to the split) and `removed` (a note taken off the recording). Both are written onto the
 event rather than kept as an overlay, because both change what the *neighbouring* notes are called.
 
+Since schema `1.1` (implementation 08, Phase 2) each event also carries a stable `id`, and the file
+carries `nextId` and the revisions header (`notesRevision`, `handsRevision`, `audioRevision`,
+`engine`, `lagCorrectionMs`). A `1.0` file reads with ids in file order and the default header, and
+is not rewritten until its next save. Field by field:
+[`context/backend/piano-matrix-notation.md`](../../../context/backend/piano-matrix-notation.md).
+
 An empty piece — created by `POST /audio/compose` — is an `events.json` with no events and
 `durationSeconds: 0`, and no audio file at all.
 

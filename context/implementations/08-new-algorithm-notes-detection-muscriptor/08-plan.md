@@ -220,6 +220,15 @@ One rectangle carries five values:
 Milliseconds and not columns, because of D-03 and rule 4: the same stored piece is viewed at 10 ms on
 the piano roll visualization and at 40 ms on the piano sheet.
 
+**Changed in Phase 2.** The table above is the wire form. In memory (`aitu_backend/pmn/notes.py`)
+the times are `float64` milliseconds, not integers, and two more fields are kept: `velocity` and
+`removed` (a note a reader took off, kept so it can be put back). The reason for the floats: the
+pieces transcribed by ByteDance store 0.1 ms, a column is chosen by rounding, and rounding the stored
+time to a whole millisecond could move an onset to the next column and detach the reader's marks. A
+MuScriptor piece has whole milliseconds only, so nothing changes for the new pieces. The wire form
+rounds to whole milliseconds; `.pmn.json` keeps one decimal. The specification is
+[`../../backend/piano-matrix-notation.md`](../../backend/piano-matrix-notation.md).
+
 ## 6.3 On disk
 
 `events.json` keeps its current shape, so every existing reader keeps working. Three things are added:
@@ -228,6 +237,11 @@ the piano roll visualization and at 40 ms on the piano sheet.
 - a header with `notesRevision`, `handsRevision`, `engine` (for example `muscriptor-large`),
   `audioRevision` and `lagCorrectionMs` (section 8);
 - a `hand` on every note once the hand split is saved (today `hand` is only a manual pin).
+
+**Done in Phase 2.** The file is schema `1.1`. The header also carries `nextId`, the first id no note
+has used. An old file reads with ids `0..n-1` in file order and `notesRevision 1`, `handsRevision 0`,
+`audioRevision 0`, and is not rewritten until its next save. A writer that changes only notes keeps
+the header on disk. Nothing bumps a revision yet: that is Phase 5.
 
 ## 6.4 On the wire
 
@@ -243,6 +257,11 @@ This is fast for the frontend, because it copies each list once into a typed arr
 those arrays with no conversion. It is also small: an estimate for 2,000 notes is about 40 KB, or
 about 12 KB compressed. The backend adds gzip compression to its responses (`GZipMiddleware`). Phase 2
 measures the real sizes on all 34 transcribed pieces.
+
+**Measured in Phase 2**: 37 KB median (83 KB at most), 14 KB compressed, built in 2 ms. Only live
+notes travel, sorted by onset then key. In `hand`, a note with no hand yet is `-`. The gzip is JSON
+only and at level 5 (`aitu_backend/compression.py`): Starlette's default also compresses the audio
+files and uses level 9, which takes 35 ms on the largest piece against 5 ms.
 
 Edits go back to the backend as a **list of operations**, never as the whole piece:
 
@@ -556,7 +575,9 @@ controls do not change.
 
 **Moving a note to the other hand on the piano sheet must stay light.** The user does it freely and
 often. Today one move costs about 0.5 s of hand split computed again on the backend, and then the
-whole piano sheet payload (666 KB) is built and sent again. After this work:
+whole piano sheet payload (666 KB) is built and sent again. (Measured on Ubuntu in Phase 2: the hand
+split of a piece takes 0.3 to 4.3 s, 0.56 s median; the payload is 634 KB median and, once the split
+is cached, is built and encoded in 19 ms median. The split is the cost to remove.) After this work:
 
 1. The page keeps calling `PUT /time/{uuid}/hands`, so `RhythmPage` and its undo do not change. The
    backend finds the notes by their id and changes only their `hand` in the saved hands. The request
@@ -662,7 +683,7 @@ The prompt allows clear, low-effort fixes. These were found, and each has an own
 | The device is fixed to CPU | `DEFAULT_DEVICE = "cpu"` | `AITU_DEVICE` | 3 |
 | The transcription job computes the hand split and throws it away | The first sheet request pays it again | Put the result in the split cache | 4 |
 | `GET /matrix/{uuid}/events` runs the hand split on every call | about 0.5 s each | Use the split cache | 4 |
-| The piano sheet payload is 666 KB, built with Python loops | about 0.5 s to build | NumPy adapters and gzip | 2 |
+| The piano sheet payload is 666 KB, built with Python loops | about 0.5 s to build. **Phase 2 measured** 24 ms median on Ubuntu once the split is cached; the 0.5 s was the hand split | NumPy adapters and gzip. **Done**: 19 ms median, sent at 56 KB instead of 634 KB | 2 |
 | The YouTube download blocks the HTTP request | yt-dlp and ffmpeg inside the request | A job with progress | 6 |
 | The piano roll visualization rebuilds every note 33 times per second | SVG, one element per note | The canvas editor | 7 |
 | `torchaudio 2.11` locked beside `torch 2.13` | a version mismatch | Align the versions in the lock file | 3 |
