@@ -144,7 +144,7 @@ a browser, headless Chromium driven by Playwright against make serve
   dropdown, and the machine numbers are above.
 - **The names of the keys are not on hover on step 1**, for the reason in section 3.
 - **The rotation handle was not exercised on a real picture.** No picture in the set needs it.
-- **`poc-piano-overlay/out/` is 11 MB of pictures** the eye checked. They are the evidence of Phase 1
+- **`pocs/poc-piano-overlay/out/` is 11 MB of pictures** the eye checked. They are the evidence of Phase 1
   and are left in place; whether they are committed is the user's call, as it was for 04's spike.
 
 ## 6. What Phase 3 of implementation 04 should know

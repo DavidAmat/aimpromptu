@@ -19,7 +19,7 @@ Two parameters shape the answer, and both are deliberate:
 * A peak's **basin** runs to the neighbouring minima of the density, so the reported mass is a real
   partition: every gap belongs to exactly one basin and the shares can be compared between passages.
 
-Ported from ``poc-onset-duration-distribution/scripts/analysis.py``, whose output is the table in
+Ported from ``pocs/poc-onset-duration-distribution/scripts/analysis.py``, whose output is the table in
 ``RESULTS.md``. The defaults below are the values that produced it.
 """
 

@@ -31,7 +31,7 @@ from aitu_backend.video import examples, finder, geometry, images
 from aitu_backend.video.finder import NoKeyboard
 
 #: Where Phase 1 of 04 left its measurements.
-SPIKE = paths.repo_root() / "poc-synthesia-frames" / "data"
+SPIKE = paths.repo_root() / "pocs" / "poc-synthesia-frames" / "data"
 
 #: The example with no roll at all: a crop of a keyboard. Left out of the score
 #: board rather than counted as a failure.

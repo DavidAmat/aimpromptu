@@ -263,7 +263,7 @@ def test_an_interval_set_describes_itself_in_a_sentence():
 
 # --------------------------------------------------------------------------- the real piece
 
-POC_DATA = Path(__file__).resolve().parents[2] / "poc-onset-duration-distribution" / "data"
+POC_DATA = Path(__file__).resolve().parents[2] / "pocs" / "poc-onset-duration-distribution" / "data"
 
 
 def load_poc_grid(name: str) -> np.ndarray:
@@ -314,7 +314,7 @@ def right_hand_events_of_segment_a() -> list[NoteEvent]:
 def test_the_real_piece_reproduces_the_measured_peak_table():
     """Phase 2's exit criterion, on the recording the whole refactor was designed from.
 
-    ``poc-onset-duration-distribution/RESULTS.md`` reports six peaks for the right hand of the first
+    ``pocs/poc-onset-duration-distribution/RESULTS.md`` reports six peaks for the right hand of the first
     section. This is the ported code producing the same six, to the millisecond, along with the same
     shares. If this drifts, the plot the user is asked to read has changed and the decisions taken
     from it need revisiting.

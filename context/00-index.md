@@ -144,7 +144,7 @@ and a `Calibration` of per-key borders. Opened, planned and completed 2026-09-14
 | [implementations/05-piano-overlay-from-black-keys/05-phase-1-implementation.md](implementations/05-piano-overlay-from-black-keys/05-phase-1-implementation.md) | Phase 1: the black key finder, the truth, the families, the route chosen |
 | [implementations/05-piano-overlay-from-black-keys/05-phase-2-implementation.md](implementations/05-piano-overlay-from-black-keys/05-phase-2-implementation.md) | Phase 2: per-key borders in both services, the grid upgrade |
 | [implementations/05-piano-overlay-from-black-keys/05-phase-3-implementation.md](implementations/05-piano-overlay-from-black-keys/05-phase-3-implementation.md) | Phase 3: the finder in the app, every example found, the one rectangle on the screen |
-| `poc-piano-overlay/` | Phase 1's spike at the repository root: scripts, truth, tables in `RESULTS.md` |
+| `pocs/poc-piano-overlay/` | Phase 1's spike, under `pocs/`: scripts, truth, tables in `RESULTS.md` |
 
 ## Archive (`context/archive/`)
 

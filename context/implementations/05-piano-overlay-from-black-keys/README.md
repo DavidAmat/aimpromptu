@@ -14,7 +14,7 @@ following
 | [`05-phase-1-implementation.md`](05-phase-1-implementation.md) | Phase 1: the black key finder, the truth, two families, the rectangles fall vertically, route A chosen |
 | [`05-phase-2-implementation.md`](05-phase-2-implementation.md) | Phase 2: per-key borders in both services, the grid upgrade, the score board unchanged |
 | [`05-phase-3-implementation.md`](05-phase-3-implementation.md) | Phase 3: the finder in the app, every example found, the one rectangle on the screen |
-| [`../../../poc-piano-overlay/`](../../../poc-piano-overlay/README.md) | Phase 1's spike: the truth, the families, both routes and their scores |
+| [`../../../pocs/poc-piano-overlay/`](../../../pocs/poc-piano-overlay/README.md) | Phase 1's spike: the truth, the families, both routes and their scores |
 
 ## What it is for
 

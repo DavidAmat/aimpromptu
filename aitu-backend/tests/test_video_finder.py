@@ -1,7 +1,7 @@
 """The finder: one picture and one rectangle in, the piano overlay out (V-37).
 
 Everything here is drawn on purpose rather than photographed, so a failure says
-which step broke. The real pictures are measured in `poc-piano-overlay/` and the
+which step broke. The real pictures are measured in `pocs/poc-piano-overlay/` and the
 seeded examples are checked against those numbers by `test_video_examples.py`.
 """
 

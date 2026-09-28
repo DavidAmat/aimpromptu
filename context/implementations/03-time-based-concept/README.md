@@ -48,7 +48,7 @@ order is reconstructable at all.
 ## Origin
 
 The measurement that motivated this lives in
-[`../../../poc-onset-duration-distribution/`](../../../poc-onset-duration-distribution/) —
+[`../../../pocs/poc-onset-duration-distribution/`](../../../pocs/poc-onset-duration-distribution/) —
 `RESULTS.md` there is the evidence base for D-07 (measure on raw times) and for the worked example
 at 00:46 that showed the old pipeline printing three equal corcheas as
 semicorchea / dotted corchea / semicorchea. That example is now a regression test.

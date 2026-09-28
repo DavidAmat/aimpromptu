@@ -1,13 +1,13 @@
 # PoC — reading a Synthesia frame
 
 **Status:** research spike, Phase 1 of
-[`04-synthesia-to-notes`](../context/implementations/04-synthesia-to-notes/04-plan.md).
+[`04-synthesia-to-notes`](../../context/implementations/04-synthesia-to-notes/04-plan.md).
 Nothing here is wired into the app, imports the app, or writes anywhere the app
 reads. It reads the example screenshots and one video downloaded by hand, and it
 produces pictures and tables.
 
 The conclusions are in [`RESULTS.md`](RESULTS.md) and, for the next agent, in
-[`04-phase-1-implementation.md`](../context/implementations/04-synthesia-to-notes/04-phase-1-implementation.md).
+[`04-phase-1-implementation.md`](../../context/implementations/04-synthesia-to-notes/04-phase-1-implementation.md).
 
 ---
 
@@ -71,7 +71,7 @@ pillow. There is no new dependency.
 
 ```bash
 cd aitu-backend
-uv run python -c "import sys; sys.path.insert(0,'../poc-synthesia-frames/scripts'); \
+uv run python -c "import sys; sys.path.insert(0,'../pocs/poc-synthesia-frames/scripts'); \
   import run_calibrate; run_calibrate.main()"
 ```
 
@@ -86,9 +86,9 @@ download by hand, of a piece the audio library already has:
 cd aitu-backend
 uv run python -m yt_dlp \
   -f "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]" \
-  -o "../poc-synthesia-frames/data/video/shut-up-and-dance.%(ext)s" \
+  -o "../pocs/poc-synthesia-frames/data/video/shut-up-and-dance.%(ext)s" \
   --no-playlist "https://www.youtube.com/watch?v=Zil8XOMgBQU"
-cd ../poc-synthesia-frames/data/video
+cd ../pocs/poc-synthesia-frames/data/video
 mkdir -p frames && ffmpeg -v error -i shut-up-and-dance.mp4 -vf fps=10 -q:v 3 frames/f%06d.jpg
 ```
 
@@ -105,9 +105,9 @@ It is what `measure_gaps.py` and `export_ui.py` read.
 ```bash
 cd aitu-backend
 uv run python -m yt_dlp -f "bestvideo[height<=720]+bestaudio/best[height<=720]" \
-  -o "../poc-synthesia-frames/data/video/src.%(ext)s" --no-playlist \
+  -o "../pocs/poc-synthesia-frames/data/video/src.%(ext)s" --no-playlist \
   "https://www.youtube.com/watch?v=pgLt4WmPMYQ"
-cd ../poc-synthesia-frames/data/video
+cd ../pocs/poc-synthesia-frames/data/video
 ffmpeg -v error -y -ss 0 -t 90 -i src.mkv -c:v libx264 -crf 18 -preset veryfast -c:a aac test.mp4
 rm src.mkv && mkdir -p frames_test
 ffmpeg -v error -i test.mp4 -vf fps=10 -q:v 3 frames_test/f%06d.jpg

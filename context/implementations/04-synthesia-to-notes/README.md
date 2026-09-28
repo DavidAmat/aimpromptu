@@ -18,7 +18,7 @@ instead of guessing them from the sound.
 | [`04-phase-2-implementation.md`](04-phase-2-implementation.md) | Phase 2, Evaluation: the detector in the app, the annotation page, the score board |
 | [`04-phase-3-implementation.md`](04-phase-3-implementation.md) | Phase 3: a real video downloaded, sampled, calibrated, measured and read into `frames.jsonl` |
 | `04-phase-X-implementation.md` | One report per phase, written when the phase closes |
-| [`../../../poc-synthesia-frames/`](../../../poc-synthesia-frames) | Phase 1's research spike: the scripts, the pictures and `RESULTS.md` |
+| [`../../../pocs/poc-synthesia-frames/`](../../../pocs/poc-synthesia-frames) | Phase 1's research spike: the scripts, the pictures and `RESULTS.md` |
 
 **Story 2.1, the piano overlay, is replaced by
 [`../05-piano-overlay-from-black-keys/`](../05-piano-overlay-from-black-keys/README.md)** (opened

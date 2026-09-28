@@ -17,7 +17,7 @@ from PIL import Image
 from scipy import ndimage
 
 ROOT = Path(__file__).resolve().parents[1]
-EXAMPLES = ROOT.parent / "context" / "implementations" / "04-synthesia-to-notes" / "examples"
+EXAMPLES = ROOT.parents[1] / "context" / "implementations" / "04-synthesia-to-notes" / "examples"
 DATA = ROOT / "data"
 OUT = ROOT / "out"
 WORK_WIDTH = 1280

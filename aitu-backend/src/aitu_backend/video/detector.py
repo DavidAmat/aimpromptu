@@ -5,7 +5,7 @@ the picture came from an example screenshot or from a sampled frame of a video.
 
 Every threshold below carries the measurement Phase 1 made for it; the report is
 `context/implementations/04-synthesia-to-notes/04-phase-1-implementation.md` and
-the evidence is `poc-synthesia-frames/RESULTS.md`. A rule with no measurement
+the evidence is `pocs/poc-synthesia-frames/RESULTS.md`. A rule with no measurement
 beside it does not ship (V-20).
 
 The order of the steps, once per key:

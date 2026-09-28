@@ -17,7 +17,7 @@ The rule is **non-chaining**. A group is opened by an onset and admits every lat
 window of the group's *first* onset, never of the previous one. Chaining would let a fast run
 swallow itself one small hop at a time until half a bar was one chord.
 
-Ported from ``poc-onset-duration-distribution/scripts/common.py::collapse_attacks``, which is the
+Ported from ``pocs/poc-onset-duration-distribution/scripts/common.py::collapse_attacks``, which is the
 tested implementation the measurement in ``RESULTS.md`` was produced with. The difference here is
 that this returns the whole group rather than only its start time, because the pipeline needs to
 know which notes belong together, not just when the attack happened.

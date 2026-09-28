@@ -5,7 +5,7 @@ Every script is run from `aitu-backend` with its own interpreter and takes a scr
 its first argument, where it reads and writes its `.npy` and `.json` intermediates:
 
 ```text
-cd aitu-backend && .venv/bin/python ../poc-synthesia-frames/scripts/photo/<script>.py <scratch folder> [...]
+cd aitu-backend && .venv/bin/python ../pocs/poc-synthesia-frames/scripts/photo/<script>.py <scratch folder> [...]
 ```
 
 The two videos are hardcoded by uuid: `b99bc3ae-…` is AITANA — SUPERESTRELLA (the photograph)

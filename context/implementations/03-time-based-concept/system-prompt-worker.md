@@ -61,7 +61,7 @@ All paths relative to `/Volumes/DevSSD/Documents/projects/music/aimpromptu/`.
 
 Supporting material, read when your task touches it:
 
-- `poc-onset-duration-distribution/RESULTS.md` — the measurement that motivated this, and the source
+- `pocs/poc-onset-duration-distribution/RESULTS.md` — the measurement that motivated this, and the source
   of the algorithms Phase 2 ports. `scripts/common.py` and `scripts/analysis.py` there are tested,
   working reference implementations — port them, do not reinvent them.
 - `context/music/notation-logic/` — the model being **replaced**. Useful for understanding what is

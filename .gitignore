@@ -132,20 +132,34 @@ context/implementations/04-synthesia-to-notes/examples/
 _to_delete/
 **/_to_delete/
 
-# poc-synthesia-frames: the research spike of implementation 04.
+# pocs/poc-synthesia-frames: the research spike of implementation 04.
 # The video and the frames sampled from it are a download and a cache, not
 # source (V-01). The scripts, the calibrations, the ground truth and the
 # pictures in out/ are kept; data/video/ is not.
-poc-synthesia-frames/data/video/
-poc-synthesia-frames/out/ui/
+pocs/poc-synthesia-frames/data/video/
+pocs/poc-synthesia-frames/out/ui/
 # The pictures in out/ are regenerated from the example screenshots, which are
 # in the repository, by one command each — see the spike's README. Only the run
 # log and the stitched roll are kept: the log is the evidence behind every
 # number in RESULTS.md, and the stitched roll cannot be rebuilt without the
 # video.
-poc-synthesia-frames/out/thumbs/
-poc-synthesia-frames/out/zoom/
-poc-synthesia-frames/out/labels/
-poc-synthesia-frames/out/calibration/
-poc-synthesia-frames/out/detectors/
-poc-synthesia-frames/scripts/__pycache__/
+pocs/poc-synthesia-frames/out/thumbs/
+pocs/poc-synthesia-frames/out/zoom/
+pocs/poc-synthesia-frames/out/labels/
+pocs/poc-synthesia-frames/out/calibration/
+pocs/poc-synthesia-frames/out/detectors/
+pocs/poc-synthesia-frames/scripts/__pycache__/
+
+# pocs/: every research spike. Model weights, audio and video are downloads or
+# copies of the data folder, never source. Each spike's README says how to get
+# them back.
+pocs/**/__pycache__/
+pocs/**/*.safetensors
+pocs/**/*.pth
+pocs/**/*.pt
+pocs/**/*.ckpt
+pocs/**/*.mp3
+pocs/**/*.wav
+pocs/**/*.flac
+pocs/**/*.mp4
+pocs/**/*.webm

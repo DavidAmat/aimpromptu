@@ -4,8 +4,8 @@ Technical, for the agent that takes Phase 2. The plan is [`04-plan.md`](04-plan.
 the frozen decisions [`04-decisions.md`](04-decisions.md), the status
 [`04-checklist.md`](04-checklist.md).
 
-The work lives in [`../../../poc-synthesia-frames/`](../../../poc-synthesia-frames)
-at the repository root. Its [`RESULTS.md`](../../../poc-synthesia-frames/RESULTS.md)
+The work lives in [`../../../pocs/poc-synthesia-frames/`](../../../pocs/poc-synthesia-frames)
+at the repository root. Its [`RESULTS.md`](../../../pocs/poc-synthesia-frames/RESULTS.md)
 holds every table in full and `out/run_log.txt` is one run of every script. This
 report is the argument; that file is the evidence.
 
@@ -97,7 +97,7 @@ calibration. The problem is far easier and does not need a model.
 ## 2. Task 1.2.1 — the casuistry catalogue
 
 The measurable half is in
-[`RESULTS.md` section 1](../../../poc-synthesia-frames/RESULTS.md). The half a
+[`RESULTS.md` section 1](../../../pocs/poc-synthesia-frames/RESULTS.md). The half a
 human has to read is here. All 21 were looked at; the thumbnails are in
 `out/thumbs/`.
 
@@ -200,7 +200,7 @@ the real piano offsets, is needed and its default should be the real one.
 
 ## 4. Task 1.2.2 — the five detectors
 
-Full tables in [`RESULTS.md` section 4](../../../poc-synthesia-frames/RESULTS.md).
+Full tables in [`RESULTS.md` section 4](../../../pocs/poc-synthesia-frames/RESULTS.md).
 The short version:
 
 - **The single row watcher, the baseline the plan asked to beat, loses badly.**
@@ -376,7 +376,7 @@ piece as one tall picture whose vertical axis is time. The strip is taken 40
 rows down from the top of the frame, as far from the upper line as it gets, so
 **there is no halo, no sparkle and no strike light in it at all.**
 
-[`out/stitch/roll.jpg`](../../../poc-synthesia-frames/out/stitch/roll.jpg) is
+[`out/stitch/roll.jpg`](../../../pocs/poc-synthesia-frames/out/stitch/roll.jpg) is
 ten seconds of the piece rebuilt that way. Every note is one clean separate
 shape. Thirty seconds of it, labelled with connected components:
 
@@ -468,7 +468,7 @@ before Phase 4 depends on the answer.
 ## 10. The checks, and a baseline the next agent will need
 
 Phase 1 touched no application code at all: `git status` on `aitu-backend` and
-`aitu-frontend` is empty. Everything it wrote is under `poc-synthesia-frames/`
+`aitu-frontend` is empty. Everything it wrote is under `pocs/poc-synthesia-frames/`
 and in this folder. The checks were still run, and this is the state they are in
 **before** Phase 2 starts:
 
@@ -489,7 +489,7 @@ lint errors are also pre-existing and the plan does not name them**, so they are
 written down here: a fifth is Phase 2's, the first four are not.
 
 `make lint` runs flake8 over `src` and `tests` in `aitu-backend` only, so it does
-not see `poc-synthesia-frames/`.
+not see `pocs/poc-synthesia-frames/`.
 
 ---
 
@@ -501,7 +501,7 @@ and for a picture of what it was doing. Both answers were no and yes. Building
 the picture exposed four defects, three of them structural, and the detector was
 rebuilt. This section is the account.
 
-**The test video.** `poc-synthesia-frames/data/video/test.mp4` — 90 seconds of
+**The test video.** `pocs/poc-synthesia-frames/data/video/test.mp4` — 90 seconds of
 [pgLt4WmPMYQ](https://www.youtube.com/watch?v=pgLt4WmPMYQ), 1280x720, sampled at
 10 frames per second into 900 frames in `frames_test/`. Whole 88 key piano, A0 to
 C8, 52 white keys, upper line row 561, white key width 24.57 px, black key
@@ -795,7 +795,7 @@ room for aliasing shrinks with it.
 ### 12.3 Where the pages are
 
 Three inspection pages were published for the user, all built from
-`poc-synthesia-frames/out/ui*`:
+`pocs/poc-synthesia-frames/out/ui*`:
 
 - the five frames of `test.mp4` with the rebuilt detector,
 - `more-examples-3` alone, which is where the lettering problem was seen,

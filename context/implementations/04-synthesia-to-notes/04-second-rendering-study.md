@@ -4,7 +4,7 @@ Technical, for the agent that rebuilds the detector after the decisions below ar
 is [`04-plan.md`](04-plan.md), the frozen decisions are [`04-decisions.md`](04-decisions.md), and the
 report before this one is [`04-phase-4-implementation.md`](04-phase-4-implementation.md). The
 scripts behind every number are in
-[`../../../poc-synthesia-frames/scripts/photo/`](../../../poc-synthesia-frames/scripts/photo/).
+[`../../../pocs/poc-synthesia-frames/scripts/photo/`](../../../pocs/poc-synthesia-frames/scripts/photo/).
 
 Every rule below was first measured by patching the shipping modules from outside, on the two videos
 on this machine, and raised for a decision. **The recommended rules were then built on 2026-09-16**:
@@ -319,7 +319,7 @@ Two things this rendering does that the plan's vocabulary has no word for:
 
 ## 6. Where the evidence is
 
-`poc-synthesia-frames/scripts/photo/`, one script per measurement, run as its README says. The
+`pocs/poc-synthesia-frames/scripts/photo/`, one script per measurement, run as its README says. The
 intermediate files — the plates, the strike lists, the per-frame runs, every reading as JSON — were in
 the session's scratch folder and are not kept; every one is rebuilt by its script in under a minute.
 

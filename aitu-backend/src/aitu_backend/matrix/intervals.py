@@ -11,14 +11,14 @@ clearest signal in the data, one spike holding half of all gaps, would appear as
 spikes and the user would be asked to name a peak that does not exist. The same happens to 211,
 which splits into 200 and 240, and to 125, which splits into 120 and 160.
 
-That is measured, not assumed: see ``poc-onset-duration-distribution/RESULTS.md``. The regression
+That is measured, not assumed: see ``pocs/poc-onset-duration-distribution/RESULTS.md``. The regression
 test in ``tests/test_matrix_peaks.py`` reproduces the split and must never be deleted.
 
 Gaps are measured **per hand**. A right-hand run above a held left-hand chord produces gaps between
 the two hands that no player would call a rhythm, and mixing them fills the low end of the
 distribution with noise.
 
-Ported from ``poc-onset-duration-distribution/scripts/common.py``.
+Ported from ``pocs/poc-onset-duration-distribution/scripts/common.py``.
 """
 
 from __future__ import annotations

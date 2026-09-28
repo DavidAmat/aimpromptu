@@ -244,7 +244,7 @@ def test_the_frame_length_does_not_change_which_figures_are_printed():
 
 # --------------------------------------------------------------------------- the real piece
 
-POC_DATA = Path(__file__).resolve().parents[2] / "poc-onset-duration-distribution" / "data"
+POC_DATA = Path(__file__).resolve().parents[2] / "pocs" / "poc-onset-duration-distribution" / "data"
 
 
 @pytest.mark.skipif(not POC_DATA.exists(), reason="the PoC transcription is not in this checkout")

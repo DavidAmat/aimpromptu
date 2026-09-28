@@ -57,7 +57,7 @@ read            2728 frames in 22.2 s over 8 worker processes, plus 4.2 s for th
 the whole piece instead of 90 seconds of it: the spike read 16.89 px per sampled frame, roll top 62
 and a guard band of 39 rows; the app reads 16.888, 62 and 37. That is the strongest evidence there is
 that the port is faithful, because nothing in `video/motion.py` was copied from
-`poc-synthesia-frames/scripts/` without being rewritten.
+`pocs/poc-synthesia-frames/scripts/` without being rewritten.
 
 ### 1.1 The exit criterion: ten frames, checked by eye
 
@@ -391,7 +391,7 @@ the plate cannot.
    `store.frames()`, `store.load_measurement()` and `store.load_calibration()`.
 2. **The strip is 16.89 rows per frame on this video.** 2728 frames stitch to about 46 000 rows at
    1280 px wide, which is 59 MB as one grey picture. The user accepted that cost in V-32.
-   `poc-synthesia-frames/scripts/stitch.py` is the spike's version and its numbers are in
+   `pocs/poc-synthesia-frames/scripts/stitch.py` is the spike's version and its numbers are in
    `RESULTS.md` section 7 — 268 of 268 shapes in thirty seconds were notes.
 3. **The limitation frame 2100 showed is Phase 4's to close.** A short staccato note's rectangle
    crosses the upper line inside one sampled frame, so no frame holds it as a sustain. In the

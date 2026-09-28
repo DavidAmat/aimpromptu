@@ -2,9 +2,9 @@
 import pathlib, sys
 from PIL import Image
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
+ROOT = pathlib.Path(__file__).resolve().parents[3]
 EX = ROOT / ("context/implementations/04-synthesia-to-notes/examples")
-OUT = ROOT / "poc-synthesia-frames/out/thumbs"
+OUT = ROOT / "pocs/poc-synthesia-frames/out/thumbs"
 OUT.mkdir(parents=True, exist_ok=True)
 
 rows = []

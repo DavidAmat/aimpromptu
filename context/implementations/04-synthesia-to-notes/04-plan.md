@@ -5,7 +5,7 @@ this plan are [`04-decisions.md`](04-decisions.md), V-01 to V-34. The status loo
 [`04-checklist.md`](04-checklist.md).
 
 Phase 1 is done: its report is [`04-phase-1-implementation.md`](04-phase-1-implementation.md) and its
-work is in [`../../../poc-synthesia-frames/`](../../../poc-synthesia-frames). Phase 2 is done: its
+work is in [`../../../pocs/poc-synthesia-frames/`](../../../pocs/poc-synthesia-frames). Phase 2 is done: its
 report is [`04-phase-2-implementation.md`](04-phase-2-implementation.md), and its work is in the app
 — `aitu-backend/src/aitu_backend/video/` and the Video to Notes section of the frontend. Phase 3 is
 done: its report is [`04-phase-3-implementation.md`](04-phase-3-implementation.md), and a real
@@ -186,7 +186,7 @@ Routes are declared in `layout/routes.ts` with everything else. Nothing hardcode
 
 Phase 1 measured this and replaced the parts measurement did not support. Every number below has a
 measurement beside it in [`04-phase-1-implementation.md`](04-phase-1-implementation.md) and in
-[`../../../poc-synthesia-frames/RESULTS.md`](../../../poc-synthesia-frames/RESULTS.md). The five
+[`../../../pocs/poc-synthesia-frames/RESULTS.md`](../../../pocs/poc-synthesia-frames/RESULTS.md). The five
 things Phase 1 changed are marked **new** or **changed**.
 
 Per video, once:
@@ -375,12 +375,12 @@ What this does not handle, named honestly:
 # Phase 1 — Research  ·  done
 
 Understand the problem before writing the detector, and decide what we go for. Nothing in this phase
-ships to a user. Its work lives in `poc-synthesia-frames/` at the repository root, beside the
-existing `poc-onset-duration-distribution/`, and its conclusions go into
+ships to a user. Its work lives in `pocs/poc-synthesia-frames/` at the repository root, beside the
+existing `pocs/poc-onset-duration-distribution/`, and its conclusions go into
 [`04-decisions.md`](04-decisions.md).
 
 What it found is [`04-phase-1-implementation.md`](04-phase-1-implementation.md), the evidence is
-[`../../../poc-synthesia-frames/RESULTS.md`](../../../poc-synthesia-frames/RESULTS.md), and the
+[`../../../pocs/poc-synthesia-frames/RESULTS.md`](../../../pocs/poc-synthesia-frames/RESULTS.md), and the
 chosen algorithm is section 8 above. The tasks below are left as they were written, so a reader can
 see what was asked as well as what came back.
 

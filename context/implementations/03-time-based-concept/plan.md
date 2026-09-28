@@ -59,7 +59,7 @@ Replaces the granularity-based raw matrix with a wall-clock one.
 | id | repo | task | decisions |
 |---|---|---|---|
 | P1.1 | AITU | `matrix/time_grid.py`: the frame ↔ ms conversions, `frameMs` default 40, validation. This is the only module that knows the frame length. | D-01 |
-| P1.2 | AITU | `transcription/grouping.py`: chord/arpeggio grouping on **raw** float times. 20 ms window, non-chaining, measured from the group's first onset. Returns groups, not columns. Port the tested implementation from `poc-onset-duration-distribution/scripts/common.py::collapse_attacks`. | D-04 |
+| P1.2 | AITU | `transcription/grouping.py`: chord/arpeggio grouping on **raw** float times. 20 ms window, non-chaining, measured from the group's first onset. Returns groups, not columns. Port the tested implementation from `pocs/poc-onset-duration-distribution/scripts/common.py::collapse_attacks`. | D-04 |
 | P1.3 | AITU | Rewrite `transcription/events_to_matrix.py`: drop sub-frame notes, group per P1.2, snap each group to one frame, write measured sustain capped at one redonda. No tempo argument anywhere in the signature. | D-02, D-05, D-06 |
 | P1.4 | AITU | Rewrite `matrix/model.py`: `PianoMatrix` carries `frame_ms` instead of `granularity` + `tempo_bpm`. `seconds_per_column` becomes a constant lookup. | D-01, D-30 |
 | P1.5 | AITU | **Delete** `matrix/granularity.py` (collapse/upsample) and the `collapsed`/`clean` processing steps. There is one grid now; there is nothing to collapse to. | D-01 |
@@ -77,7 +77,7 @@ The PoC promoted to production code. **Everything here reads raw timestamps.**
 
 | id | repo | task | decisions |
 |---|---|---|---|
-| P2.1 | AITU | `matrix/intervals.py`: gaps between consecutive attacks per hand, from raw times. Port from `poc-onset-duration-distribution/scripts/common.py`. | D-03, D-07 |
+| P2.1 | AITU | `matrix/intervals.py`: gaps between consecutive attacks per hand, from raw times. Port from `pocs/poc-onset-duration-distribution/scripts/common.py`. | D-03, D-07 |
 | P2.2 | AITU | `matrix/peaks.py`: KDE + basin peak finding. Port `analysis.py::gaussian_kde_grid` / `find_peaks`. Guard: assert the input is raw seconds, never frame indices. | D-07 |
 | P2.3 | AITU | `matrix/ladder.py`: given a peak the user named and its figure, build the full nine-entry ladder by proportion. Also the reverse preview — "if you call *this* peak a negra, here is what every other peak becomes". | D-10, D-12 |
 | P2.4 | AITU | `GET /matrix/{uuid}/peaks?startSeconds=&endSeconds=&hand=` → peak list with centre, count, share and basin. Whole piece when the range is omitted. | D-08 |

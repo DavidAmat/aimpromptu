@@ -1,22 +1,9 @@
 
-# Documents
 
-The current prompt naming is: context/XXX/XXX-prompt.md
-Read communication guidelines: <<<<< PATH HERE >>>>>>
-
-Produce the following documents in the same folder:
-
-- The plan: *-plan.md
-- The checklist: *-checklist.md
-- The implementation phase X reports:  *-phase-X-implementation.md
-
-# Communication style
-
+# Communication guidelines and style
 This section describes the way that you should communicate and the way that you should write any report, communicate to me, and so on. First of all, I want you to use the same terminology that I have used in this prompt. You are not allowed to use different wording, synonyms, or different ways of identifying a given thing that I have mentioned in this prompt with a given name. Please use the same terminology. Then, for any other new stuff that you bring up or that you just talk about, use super plain English, super simple and easy to explain. Avoid phrasal verbs. Try to always use the simplest verb in English possible. Don't try to use complex adjectives. Try to use very simple adjectives. Try to use nouns that are really standard and super basic English, because for the technical stuff, most of the things are already mentioned in this prompt. You are, of course, allowed to talk technically about AWS stuff, but always try to use simple English. And sometimes, when you are referring to a given phase of the plan, a decision, or an issue, try to always explain the context in maybe one sentence, in simple terms. It is very useful for me if the information that you provide is already contextualized in a previous sentence to explain: "Look, I have tried to do this. I faced this error. I tried to do this because I wanted to do this thing, or this error happens because we were instructed to do this. This has caused this kind of problem in AWS because of this." Try to be super clear and simple when explaining things.
 
 Plus, what I want you to do is to follow a strict methodology for reporting to me on the progress of given implementations that I will detail in the following section.
-
-This section aims to be brief, only talk high level about what you did. Only enter into details if they are useful for later explaining a decision to be made or an issue found or explaining the context for a later human intervention needed.
 
 ## Methodology for reporting
 
@@ -40,10 +27,11 @@ Raise here clearly the decisions to be made by me. The structure here is very si
 2. Tell me the two or three options, or more, that you recommend to me as the most valuable or optimal ones.
 3. Tell me, more or less, what the consequences of each option are. You can do this in one line for every option to explain a bit more what I need to decide and to give me all the information to make the proper decision. Don't be super verbose because I hate reading a lot of decisions with lots of text. Try to be short but also clear.
 
+
 # HUMAN INTERVENTION (optional)
 This is the section that, whenever we are more advanced or whenever we need human intervention to do something, we write this section. This is normally when we want the human to look for a given UI or to check a given URL in the browser to see the UI, or to check that everything has been, for example, migrated well, or that the new EC2 instance is reachable via its browser, or that we web is reachable and responding well, etc... 
 
-Sometimes we need the user to perform an action in the terminal because you don't have permissions, and sometimes we need the user to check something in the AWS console ( I prefer if you use the AWS CLI, read `context/04-local-development.md` ). 
+Sometimes we need the user to perform an action in the terminal because you don't have permissions, and sometimes we need the user to check something in the AWS console ( I prefer if you use the AWS CLI, read <<<<< AWS FILE >>>>>>>> )
 
 In principle, for everything that is not a decision, if the human needs to do some action that you maybe cannot do, try explaining it to the human, putting some context first, explaining to the user specifically what they need to do step by step Don't be super verbose. Try to make it very bullet-pointed as a checklist of things that the user needs to do, but don't overload them with lots of information, because otherwise the human will not follow everything.
 
@@ -55,3 +43,29 @@ So whenever you finish a given implementation of a given phase, We normally tend
 As you see, it is a very short message, but it provides all the context, referencing the araba sign and all the files that it needs to read. It also informs about the previous implementation plan because, in the implementation phase, X reports normally include some learnings about some common failures or decisions taken. The most important ones are normally already back-propagated to the implementation plan or corrected there, but it's good that they have the context of what has been done in the previous phases.
 **Only present this section when the Phase is fully done, no decisions pending nor human intervention needed, so the phase is fully done**.
 ```
+
+# Documentions
+
+Produce the following documents:
+
+- The plan: <<<<<<<<<< plan file >>>>>>>>>>>>
+- The checklist: <<<<<<<<<< checklist file >>>>>>>>>>>>
+- The implementation phase X reports:  <<<<<<<<<< phase X >>>>>>>>>>>>
+
+## First discussion
+
+The overall goal of this implementation phase is that you produce all the documents in the previous section. However, it could be that there are some open topics worth addressing before implementing the plan. 
+
+Sometimes I have asked questions that needed your response, sometimes I explained to you things that need your verification (check the files, check AWS, check other repos if referenced, search internet if needed, etc...), and want you to discuss them with me. The very first step that we need to do is to have this live discussion, it should be brief and only on really important critical topics. We will have a discussion in a given session with the AI agent about this discussion. You will need to:
+1. Take a look at all the context you need
+2. Ask some questions that are clear to understand and that have a clear explanation of the context of it, what needs to be decided, the different options and what each option will imply (and your recommendation).
+3. I will provide responses for those, that will be documented in this prompt, so that whenever everything is clarified, then we are able to write the implementation plan.
+4. Maybe some open questions needs to be decided on the go, so feel free that in the plan we add some phases that can modify this implementation plan we will write because sometimes we change directions, change approaches, based on things we only see once we are hands-on on the implementation.
+
+# Output
+
+First, read all the context you need and do actions that allows you get the context that you need to draft the plan.
+
+Second let's have a discussion on some questions you may have, or important/critical things you need to raise to me that I am not aware. 
+
+Only once everything is clarified, then create the plan.

@@ -1,7 +1,7 @@
 # poc-piano-overlay
 
 Phase 1 of implementation 05, the piano overlay found from the black keys:
-[`../context/implementations/05-piano-overlay-from-black-keys/05-plan.md`](../context/implementations/05-piano-overlay-from-black-keys/05-plan.md).
+[`../context/implementations/05-piano-overlay-from-black-keys/05-plan.md`](../../context/implementations/05-piano-overlay-from-black-keys/05-plan.md).
 Nothing here ships. Phase 3 ports `blackkeys.py` and the route A half of `routes.py` into
 `aitu_backend/video/finder.py`; the line reader stays here as the tool the truth was read with.
 
@@ -10,11 +10,11 @@ screenshots of 04, at 1280 px wide.
 
 ```bash
 cd aitu-backend
-uv run python ../poc-piano-overlay/scripts/run_blackkeys.py   # the black keys, out/blackkeys*.png
-uv run python ../poc-piano-overlay/scripts/run_lines.py       # the thin dark lines, out/lines/, data/truth-draft.json
-uv run python ../poc-piano-overlay/scripts/truth.py           # the truth, out/truth/, data/truth.json, the families
-uv run python ../poc-piano-overlay/scripts/fall.py            # do the rectangles fall vertically
-uv run python ../poc-piano-overlay/scripts/routes.py          # route A against route B, data/routes.json
+uv run python ../pocs/poc-piano-overlay/scripts/run_blackkeys.py   # the black keys, out/blackkeys*.png
+uv run python ../pocs/poc-piano-overlay/scripts/run_lines.py       # the thin dark lines, out/lines/, data/truth-draft.json
+uv run python ../pocs/poc-piano-overlay/scripts/truth.py           # the truth, out/truth/, data/truth.json, the families
+uv run python ../pocs/poc-piano-overlay/scripts/fall.py            # do the rectangles fall vertically
+uv run python ../pocs/poc-piano-overlay/scripts/routes.py          # route A against route B, data/routes.json
 ```
 
 | File | What it is |

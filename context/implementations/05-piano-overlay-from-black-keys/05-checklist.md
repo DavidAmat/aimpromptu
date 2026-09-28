@@ -12,10 +12,10 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 # [x] Phase 1 — Measure the pictures and decide the route
 Read the white key borders of three octaves per picture by hand, find the families of black key
 placement the 24 pictures use, check that the rectangles fall vertically on the tilted ones, build
-both routes in `poc-piano-overlay/`, score them on the same truth, and choose. Nothing ships.
+both routes in `pocs/poc-piano-overlay/`, score them on the same truth, and choose. Nothing ships.
 
 Done. The report is [`05-phase-1-implementation.md`](05-phase-1-implementation.md), the evidence is
-[`../../../poc-piano-overlay/RESULTS.md`](../../../poc-piano-overlay/RESULTS.md). The truth is 901
+[`../../../pocs/poc-piano-overlay/RESULTS.md`](../../../pocs/poc-piano-overlay/RESULTS.md). The truth is 901
 white key borders on all 24 pictures, read by a line tool and checked by eye. The black keys were
 found on every picture — 36 of 36 on the 21 full pianos, 23 and 30 on the two shorter ones — with
 96.0% seen and the rest placed through the hands. Two families (V-40), the rectangles fall

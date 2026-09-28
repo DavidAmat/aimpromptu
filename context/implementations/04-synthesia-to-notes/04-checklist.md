@@ -10,11 +10,11 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 # [x] Phase 1 — Research
 Understand how to find the falling rectangles before building anything. Survey what other people do,
 measure the 21 example screenshots, and decide the algorithm we go for. Work lives in
-`poc-synthesia-frames/`; conclusions go into `04-decisions.md`.
+`pocs/poc-synthesia-frames/`; conclusions go into `04-decisions.md`.
 
 Done, then reopened once and rebuilt after the user reviewed it on a video of their own. The report
 is [`04-phase-1-implementation.md`](04-phase-1-implementation.md) — section 11 is the rebuild — and
-the evidence is [`../../../poc-synthesia-frames/RESULTS.md`](../../../poc-synthesia-frames/RESULTS.md).
+the evidence is [`../../../pocs/poc-synthesia-frames/RESULTS.md`](../../../pocs/poc-synthesia-frames/RESULTS.md).
 The chosen algorithm is section 8 of the plan; V-21 to V-31 were added and V-15 was corrected by
 V-29. On the two examples with hand read ground truth the detector now finds every onset and every
 sustain and invents none; on a 90 second video it agrees with itself frame to frame 98.2% of the

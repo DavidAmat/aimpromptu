@@ -58,7 +58,7 @@ not nested git repos.
 | `aitu-backend/` | Python / FastAPI service |
 | `aitu-frontend/` | React / TypeScript / Vite app |
 | `context/` + `documentation/` | Platform and code-level docs |
-| `poc-onset-duration-distribution/` | A measurement POC kept for its data |
+| `pocs/poc-onset-duration-distribution/` | A measurement POC kept for its data |
 
 The notation renderer, `@aimpromptu/grid-notation`, lives in a **sibling checkout** at
 `../vexflow-v2` and is installed from disk. It is a separate repository on purpose: it knows nothing

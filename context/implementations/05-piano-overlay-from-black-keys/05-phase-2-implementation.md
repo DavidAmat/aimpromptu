@@ -133,7 +133,7 @@ cd aitu-frontend
    borders from route A in u along the top edge, black borders from each key's `centre ± width / 2`,
    `blackDepth` from the band, `found` from the alignment. `whiteWidth` may be left at zero; the
    validator derives it.
-2. **The rectifier is `poc-piano-overlay/scripts/common.py rectify()`**: bilinear sampling of the
+2. **The rectifier is `pocs/poc-piano-overlay/scripts/common.py rectify()`**: bilinear sampling of the
    picture inside the rectangle at one sample per pixel of the top edge, rotated by the angle about
    the top left corner. Port it beside the finder; it has never run at a non-zero angle on a real
    picture, so a drawn keyboard at an angle is the test.

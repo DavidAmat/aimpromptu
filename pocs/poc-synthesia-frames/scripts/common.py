@@ -2,7 +2,7 @@
 
 Nothing here is imported by the app. It reads the example screenshots in
 context/implementations/04-synthesia-to-notes/examples and writes pictures and
-tables into poc-synthesia-frames/out.
+tables into pocs/poc-synthesia-frames/out.
 
 Working resolution is 1280 px wide on purpose: Phase 3 caps the video download
 at 720p, so every threshold measured here is measured at the resolution the
@@ -17,10 +17,10 @@ from dataclasses import dataclass, asdict, field
 import numpy as np
 from PIL import Image
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
+ROOT = pathlib.Path(__file__).resolve().parents[3]
 EXAMPLES = ROOT / "context/implementations/04-synthesia-to-notes/examples"
-OUT = ROOT / "poc-synthesia-frames/out"
-DATA = ROOT / "poc-synthesia-frames/data"
+OUT = ROOT / "pocs/poc-synthesia-frames/out"
+DATA = ROOT / "pocs/poc-synthesia-frames/data"
 WORK_WIDTH = 1280
 
 # The twelve semitones of an octave, and which of them are black keys.

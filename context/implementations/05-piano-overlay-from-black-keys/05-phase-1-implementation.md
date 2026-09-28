@@ -4,19 +4,19 @@ Technical, for the agent that takes Phase 2. The plan is [`05-plan.md`](05-plan.
 [`05-checklist.md`](05-checklist.md), the decisions are the V numbers of
 [`../04-synthesia-to-notes/04-decisions.md`](../04-synthesia-to-notes/04-decisions.md) — this phase
 added V-39, V-40 and V-41 — and the evidence is
-[`../../../poc-piano-overlay/RESULTS.md`](../../../poc-piano-overlay/RESULTS.md). Nothing in this
+[`../../../pocs/poc-piano-overlay/RESULTS.md`](../../../pocs/poc-piano-overlay/RESULTS.md). Nothing in this
 phase touched application code.
 
 ## 0. What this phase produced, in one table
 
 | | Where | What it is |
 |---|---|---|
-| the black key finder | `poc-piano-overlay/scripts/blackkeys.py` | the band, the candidates, the alignment, the extrapolation, the check. **This is what Phase 3 ports.** |
-| route A | `poc-piano-overlay/scripts/routes.py` `route_a()` | the white key borders from the black keys. **Ships.** |
-| route B | `poc-piano-overlay/scripts/routes.py` `route_b()`, `lines.py` | the borders from the thin dark lines. Measured, does not ship, stays as the truth's tool |
-| the truth | `poc-piano-overlay/data/truth.json` | 901 white key borders on all 24 pictures, read by the line tool on two rows and checked by eye |
-| the rectifier | `poc-piano-overlay/scripts/common.py` `rectify()` | the strip inside the one rectangle, rotated straight |
-| the tables | `poc-piano-overlay/RESULTS.md` | black keys, truth, families, perspective, fall, routes — one row per picture |
+| the black key finder | `pocs/poc-piano-overlay/scripts/blackkeys.py` | the band, the candidates, the alignment, the extrapolation, the check. **This is what Phase 3 ports.** |
+| route A | `pocs/poc-piano-overlay/scripts/routes.py` `route_a()` | the white key borders from the black keys. **Ships.** |
+| route B | `pocs/poc-piano-overlay/scripts/routes.py` `route_b()`, `lines.py` | the borders from the thin dark lines. Measured, does not ship, stays as the truth's tool |
+| the truth | `pocs/poc-piano-overlay/data/truth.json` | 901 white key borders on all 24 pictures, read by the line tool on two rows and checked by eye |
+| the rectifier | `pocs/poc-piano-overlay/scripts/common.py` `rectify()` | the strip inside the one rectangle, rotated straight |
+| the tables | `pocs/poc-piano-overlay/RESULTS.md` | black keys, truth, families, perspective, fall, routes — one row per picture |
 
 ## 1. The decision, and the numbers behind it
 

@@ -29,7 +29,7 @@ it is not noise — it is the same wrong answer every time the figure appears.
 (10 and 6 units of 16 per beat). A 5 : 3 split of a beat has no representation on any power-of-two
 subdivision, at any resolution.
 
-Full evidence: [`../../../poc-onset-duration-distribution/RESULTS.md`](../../../poc-onset-duration-distribution/RESULTS.md).
+Full evidence: [`../../../pocs/poc-onset-duration-distribution/RESULTS.md`](../../../pocs/poc-onset-duration-distribution/RESULTS.md).
 
 ## 2. The change in one sentence
 

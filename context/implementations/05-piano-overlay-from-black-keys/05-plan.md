@@ -73,7 +73,7 @@ frames, white key width. New work uses these and no synonyms.
   changes here; the other three do not.
 - `aitu_backend/video/detector.py` — reads keys and lanes through `geometry.keys()`. It changes in
   three lines, all about which white key width a length is measured in.
-- `poc-synthesia-frames/scripts/find_keyboard.py` — Phase 1 of 04 already found the keyboard
+- `pocs/poc-synthesia-frames/scripts/find_keyboard.py` — Phase 1 of 04 already found the keyboard
   without the user, from the horizontal autocorrelation of the rows and the pattern of black keys.
   It is a grid finder, so it goes, but two of its findings are kept: the 75th percentile of a window
   is what separates a black key from a thin dark line, and the pitch class hypotheses have to be
@@ -399,12 +399,12 @@ one gesture and one dropdown, against the four gestures and two dropdowns of the
 # Phase 1 — Measure the pictures and decide the route  ·  done
 
 What it found is [`05-phase-1-implementation.md`](05-phase-1-implementation.md) and the evidence is
-[`../../../poc-piano-overlay/RESULTS.md`](../../../poc-piano-overlay/RESULTS.md). V-39, V-40 and
+[`../../../pocs/poc-piano-overlay/RESULTS.md`](../../../pocs/poc-piano-overlay/RESULTS.md). V-39, V-40 and
 V-41 were added. The tasks below are left as they were written, so a reader can see what was asked
 as well as what came back.
 
-Nothing in this phase ships to a user. Its work lives in `poc-piano-overlay/` at the repository
-root, beside `poc-synthesia-frames/`; when the route is accepted, Phase 3 ports it into the backend
+Nothing in this phase ships to a user. Its work lives in `pocs/poc-piano-overlay/` at the repository
+root, beside `pocs/poc-synthesia-frames/`; when the route is accepted, Phase 3 ports it into the backend
 and the frontend as appropriate and the spike stays as the evidence. Its conclusions go into
 [`../04-synthesia-to-notes/04-decisions.md`](../04-synthesia-to-notes/04-decisions.md) as new V
 numbers, each with the measurement behind it.
@@ -415,7 +415,7 @@ numbers, each with the measurement behind it.
 
 For every one of the 24 pictures, the u of every white key border of three octaves, read by hand off
 zoomed, ruled crops as section 6.4 says, plus the angle of the keyboard and the one rectangle used,
-in `poc-piano-overlay/data/truth.json`. A border a hand covers is left out and counted; nothing is
+in `pocs/poc-piano-overlay/data/truth.json`. A border a hand covers is left out and counted; nothing is
 guessed into the truth.
 
 ### Task 1.1.2 — The families

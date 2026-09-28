@@ -15,7 +15,7 @@ builds the page that says whether a change to the detector helped.
 | | Where | What it is |
 |---|---|---|
 | the overlay geometry | `aitu_backend/video/geometry.py` + `aitu-frontend/src/video/overlayGeometry.ts` | two rectangles become every key and its lane; one fixture keeps the two in step |
-| the detector | `aitu_backend/video/detector.py` | the algorithm of section 8 of the plan, ported from `poc-synthesia-frames/scripts/detectors.py` |
+| the detector | `aitu_backend/video/detector.py` | the algorithm of section 8 of the plan, ported from `pocs/poc-synthesia-frames/scripts/detectors.py` |
 | the plate | `aitu_backend/video/plate.py` | the 20th percentile plate, the single screenshot stand-in, the gradient channel |
 | the momentum rule | `aitu_backend/video/momentum.py` | V-33 and V-34, ported and unit tested; **no caller yet — Phase 3 is its first** |
 | the colour check | `aitu_backend/video/colour.py` | Task 2.3.4, measured and switched off |
@@ -462,7 +462,7 @@ b = scoring.board(); print(b.total.model_dump()); print(b.skipped)"
 6. **Wire the momentum rule** as described in 4.2, and report what it drops on a real video — Phase 1
    only ever ran it on three registered screenshots.
 7. **Frame to frame agreement (V-31) is the score once there is a video**, and it needs no labelling.
-   `poc-synthesia-frames/scripts/continuity.py` is the measurement; it is the thing that found four
+   `pocs/poc-synthesia-frames/scripts/continuity.py` is the measurement; it is the thing that found four
    of the five defects in Phase 1's section 11.
 8. **Do not score anything at the upper line without saying so.** The numbers there are dominated by
    the halo; the detector's real job is read high in the roll (V-23).
