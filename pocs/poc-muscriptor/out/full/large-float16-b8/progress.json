@@ -1,0 +1,32 @@
+[
+ {
+  "t": 0.0031,
+  "completed": 0,
+  "total": 38
+ },
+ {
+  "t": 1.0821,
+  "completed": 8,
+  "total": 38
+ },
+ {
+  "t": 2.3115,
+  "completed": 16,
+  "total": 38
+ },
+ {
+  "t": 3.5251,
+  "completed": 24,
+  "total": 38
+ },
+ {
+  "t": 4.7783,
+  "completed": 32,
+  "total": 38
+ },
+ {
+  "t": 6.2227,
+  "completed": 38,
+  "total": 38
+ }
+]

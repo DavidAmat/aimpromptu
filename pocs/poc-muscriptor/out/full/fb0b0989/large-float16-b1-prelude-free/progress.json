@@ -1,0 +1,367 @@
+[
+ {
+  "t": 0.0025,
+  "completed": 0,
+  "total": 72
+ },
+ {
+  "t": 0.0429,
+  "completed": 1,
+  "total": 72
+ },
+ {
+  "t": 0.6075,
+  "completed": 2,
+  "total": 72
+ },
+ {
+  "t": 1.1957,
+  "completed": 3,
+  "total": 72
+ },
+ {
+  "t": 1.7353,
+  "completed": 4,
+  "total": 72
+ },
+ {
+  "t": 2.3338,
+  "completed": 5,
+  "total": 72
+ },
+ {
+  "t": 2.8967,
+  "completed": 6,
+  "total": 72
+ },
+ {
+  "t": 3.515,
+  "completed": 7,
+  "total": 72
+ },
+ {
+  "t": 3.7951,
+  "completed": 8,
+  "total": 72
+ },
+ {
+  "t": 4.3975,
+  "completed": 9,
+  "total": 72
+ },
+ {
+  "t": 5.0398,
+  "completed": 10,
+  "total": 72
+ },
+ {
+  "t": 5.7796,
+  "completed": 11,
+  "total": 72
+ },
+ {
+  "t": 6.4325,
+  "completed": 12,
+  "total": 72
+ },
+ {
+  "t": 7.1246,
+  "completed": 13,
+  "total": 72
+ },
+ {
+  "t": 7.9444,
+  "completed": 14,
+  "total": 72
+ },
+ {
+  "t": 8.7152,
+  "completed": 15,
+  "total": 72
+ },
+ {
+  "t": 9.475,
+  "completed": 16,
+  "total": 72
+ },
+ {
+  "t": 10.0874,
+  "completed": 17,
+  "total": 72
+ },
+ {
+  "t": 10.8028,
+  "completed": 18,
+  "total": 72
+ },
+ {
+  "t": 11.4204,
+  "completed": 19,
+  "total": 72
+ },
+ {
+  "t": 12.0727,
+  "completed": 20,
+  "total": 72
+ },
+ {
+  "t": 12.8179,
+  "completed": 21,
+  "total": 72
+ },
+ {
+  "t": 13.4999,
+  "completed": 22,
+  "total": 72
+ },
+ {
+  "t": 14.2204,
+  "completed": 23,
+  "total": 72
+ },
+ {
+  "t": 15.0397,
+  "completed": 24,
+  "total": 72
+ },
+ {
+  "t": 15.7305,
+  "completed": 25,
+  "total": 72
+ },
+ {
+  "t": 16.5246,
+  "completed": 26,
+  "total": 72
+ },
+ {
+  "t": 17.2637,
+  "completed": 27,
+  "total": 72
+ },
+ {
+  "t": 18.2991,
+  "completed": 28,
+  "total": 72
+ },
+ {
+  "t": 19.3706,
+  "completed": 29,
+  "total": 72
+ },
+ {
+  "t": 19.977,
+  "completed": 30,
+  "total": 72
+ },
+ {
+  "t": 20.61,
+  "completed": 31,
+  "total": 72
+ },
+ {
+  "t": 21.1977,
+  "completed": 32,
+  "total": 72
+ },
+ {
+  "t": 21.88,
+  "completed": 33,
+  "total": 72
+ },
+ {
+  "t": 22.5073,
+  "completed": 34,
+  "total": 72
+ },
+ {
+  "t": 23.2387,
+  "completed": 35,
+  "total": 72
+ },
+ {
+  "t": 23.8079,
+  "completed": 36,
+  "total": 72
+ },
+ {
+  "t": 24.5091,
+  "completed": 37,
+  "total": 72
+ },
+ {
+  "t": 25.2897,
+  "completed": 38,
+  "total": 72
+ },
+ {
+  "t": 26.1989,
+  "completed": 39,
+  "total": 72
+ },
+ {
+  "t": 26.8558,
+  "completed": 40,
+  "total": 72
+ },
+ {
+  "t": 27.7604,
+  "completed": 41,
+  "total": 72
+ },
+ {
+  "t": 28.7466,
+  "completed": 42,
+  "total": 72
+ },
+ {
+  "t": 29.6491,
+  "completed": 43,
+  "total": 72
+ },
+ {
+  "t": 30.2027,
+  "completed": 44,
+  "total": 72
+ },
+ {
+  "t": 30.4533,
+  "completed": 45,
+  "total": 72
+ },
+ {
+  "t": 31.0756,
+  "completed": 46,
+  "total": 72
+ },
+ {
+  "t": 31.634,
+  "completed": 47,
+  "total": 72
+ },
+ {
+  "t": 32.3261,
+  "completed": 48,
+  "total": 72
+ },
+ {
+  "t": 33.16,
+  "completed": 49,
+  "total": 72
+ },
+ {
+  "t": 33.7975,
+  "completed": 50,
+  "total": 72
+ },
+ {
+  "t": 34.4501,
+  "completed": 51,
+  "total": 72
+ },
+ {
+  "t": 35.2494,
+  "completed": 52,
+  "total": 72
+ },
+ {
+  "t": 35.9898,
+  "completed": 53,
+  "total": 72
+ },
+ {
+  "t": 36.7537,
+  "completed": 54,
+  "total": 72
+ },
+ {
+  "t": 37.6603,
+  "completed": 55,
+  "total": 72
+ },
+ {
+  "t": 39.031,
+  "completed": 56,
+  "total": 72
+ },
+ {
+  "t": 40.1893,
+  "completed": 57,
+  "total": 72
+ },
+ {
+  "t": 40.9681,
+  "completed": 58,
+  "total": 72
+ },
+ {
+  "t": 41.253,
+  "completed": 59,
+  "total": 72
+ },
+ {
+  "t": 41.547,
+  "completed": 60,
+  "total": 72
+ },
+ {
+  "t": 41.9938,
+  "completed": 61,
+  "total": 72
+ },
+ {
+  "t": 42.415,
+  "completed": 62,
+  "total": 72
+ },
+ {
+  "t": 42.8383,
+  "completed": 63,
+  "total": 72
+ },
+ {
+  "t": 43.1922,
+  "completed": 64,
+  "total": 72
+ },
+ {
+  "t": 43.78,
+  "completed": 65,
+  "total": 72
+ },
+ {
+  "t": 43.9183,
+  "completed": 66,
+  "total": 72
+ },
+ {
+  "t": 43.9781,
+  "completed": 67,
+  "total": 72
+ },
+ {
+  "t": 44.0574,
+  "completed": 68,
+  "total": 72
+ },
+ {
+  "t": 44.6268,
+  "completed": 69,
+  "total": 72
+ },
+ {
+  "t": 45.2141,
+  "completed": 70,
+  "total": 72
+ },
+ {
+  "t": 45.7518,
+  "completed": 71,
+  "total": 72
+ },
+ {
+  "t": 45.9044,
+  "completed": 72,
+  "total": 72
+ }
+]

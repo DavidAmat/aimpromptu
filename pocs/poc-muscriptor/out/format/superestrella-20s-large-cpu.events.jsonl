@@ -1,0 +1,209 @@
+{"t": 0.0003, "type": "ProgressEvent", "completed": 0, "total": 4}
+{"t": 1.9943, "type": "NoteStartEvent", "pitch": 30, "start_time": 0.86, "index": 0, "instrument": "acoustic_piano"}
+{"t": 2.0852, "type": "NoteStartEvent", "pitch": 42, "start_time": 0.86, "index": 1, "instrument": "acoustic_piano"}
+{"t": 2.1759, "type": "NoteStartEvent", "pitch": 70, "start_time": 0.86, "index": 2, "instrument": "acoustic_piano"}
+{"t": 2.4489, "type": "NoteEndEvent", "end_time": 1.08, "start_event_index": 2}
+{"t": 2.6312, "type": "NoteStartEvent", "pitch": 66, "start_time": 1.08, "index": 3, "instrument": "acoustic_piano"}
+{"t": 2.907, "type": "NoteEndEvent", "end_time": 1.31, "start_event_index": 3}
+{"t": 3.0918, "type": "NoteStartEvent", "pitch": 70, "start_time": 1.31, "index": 4, "instrument": "acoustic_piano"}
+{"t": 3.365, "type": "NoteEndEvent", "end_time": 1.53, "start_event_index": 4}
+{"t": 3.5557, "type": "NoteStartEvent", "pitch": 66, "start_time": 1.53, "index": 5, "instrument": "acoustic_piano"}
+{"t": 3.8525, "type": "NoteEndEvent", "end_time": 1.76, "start_event_index": 5}
+{"t": 4.0514, "type": "NoteStartEvent", "pitch": 58, "start_time": 1.76, "index": 6, "instrument": "acoustic_piano"}
+{"t": 4.152, "type": "NoteStartEvent", "pitch": 70, "start_time": 1.76, "index": 7, "instrument": "acoustic_piano"}
+{"t": 4.4615, "type": "NoteEndEvent", "end_time": 1.98, "start_event_index": 7}
+{"t": 4.6641, "type": "NoteStartEvent", "pitch": 66, "start_time": 1.98, "index": 8, "instrument": "acoustic_piano"}
+{"t": 4.9618, "type": "NoteEndEvent", "end_time": 2.21, "start_event_index": 8}
+{"t": 5.1599, "type": "NoteStartEvent", "pitch": 70, "start_time": 2.21, "index": 9, "instrument": "acoustic_piano"}
+{"t": 5.4584, "type": "NoteEndEvent", "end_time": 2.43, "start_event_index": 9}
+{"t": 5.657, "type": "NoteStartEvent", "pitch": 66, "start_time": 2.43, "index": 10, "instrument": "acoustic_piano"}
+{"t": 5.9592, "type": "NoteEndEvent", "end_time": 2.64, "start_event_index": 6}
+{"t": 6.0598, "type": "NoteEndEvent", "end_time": 2.64, "start_event_index": 10}
+{"t": 6.2597, "type": "NoteStartEvent", "pitch": 58, "start_time": 2.64, "index": 11, "instrument": "acoustic_piano"}
+{"t": 6.359, "type": "NoteStartEvent", "pitch": 61, "start_time": 2.64, "index": 12, "instrument": "acoustic_piano"}
+{"t": 6.4584, "type": "NoteStartEvent", "pitch": 70, "start_time": 2.64, "index": 13, "instrument": "acoustic_piano"}
+{"t": 6.7565, "type": "NoteEndEvent", "end_time": 2.86, "start_event_index": 13}
+{"t": 6.9596, "type": "NoteStartEvent", "pitch": 66, "start_time": 2.86, "index": 14, "instrument": "acoustic_piano"}
+{"t": 7.2592, "type": "NoteEndEvent", "end_time": 3.09, "start_event_index": 14}
+{"t": 7.4634, "type": "NoteStartEvent", "pitch": 70, "start_time": 3.09, "index": 15, "instrument": "acoustic_piano"}
+{"t": 7.7625, "type": "NoteEndEvent", "end_time": 3.29, "start_event_index": 15}
+{"t": 7.9627, "type": "NoteStartEvent", "pitch": 66, "start_time": 3.29, "index": 16, "instrument": "acoustic_piano"}
+{"t": 8.2612, "type": "NoteEndEvent", "end_time": 3.52, "start_event_index": 11}
+{"t": 8.3608, "type": "NoteEndEvent", "end_time": 3.52, "start_event_index": 12}
+{"t": 8.4604, "type": "NoteEndEvent", "end_time": 3.52, "start_event_index": 16}
+{"t": 8.6595, "type": "NoteStartEvent", "pitch": 58, "start_time": 3.52, "index": 17, "instrument": "acoustic_piano"}
+{"t": 8.7593, "type": "NoteStartEvent", "pitch": 61, "start_time": 3.52, "index": 18, "instrument": "acoustic_piano"}
+{"t": 8.8589, "type": "NoteStartEvent", "pitch": 71, "start_time": 3.52, "index": 19, "instrument": "acoustic_piano"}
+{"t": 9.1588, "type": "NoteEndEvent", "end_time": 3.74, "start_event_index": 19}
+{"t": 9.361, "type": "NoteStartEvent", "pitch": 71, "start_time": 3.74, "index": 20, "instrument": "acoustic_piano"}
+{"t": 9.6633, "type": "NoteEndEvent", "end_time": 3.97, "start_event_index": 20}
+{"t": 9.8687, "type": "NoteStartEvent", "pitch": 71, "start_time": 3.97, "index": 21, "instrument": "acoustic_piano"}
+{"t": 10.1725, "type": "NoteEndEvent", "end_time": 4.19, "start_event_index": 21}
+{"t": 10.3724, "type": "NoteStartEvent", "pitch": 71, "start_time": 4.19, "index": 22, "instrument": "acoustic_piano"}
+{"t": 10.6736, "type": "NoteEndEvent", "end_time": 4.4, "start_event_index": 0}
+{"t": 10.7745, "type": "NoteEndEvent", "end_time": 4.4, "start_event_index": 1}
+{"t": 10.8749, "type": "NoteEndEvent", "end_time": 4.4, "start_event_index": 17}
+{"t": 10.9747, "type": "NoteEndEvent", "end_time": 4.4, "start_event_index": 18}
+{"t": 11.0744, "type": "NoteEndEvent", "end_time": 4.4, "start_event_index": 22}
+{"t": 11.2739, "type": "NoteStartEvent", "pitch": 32, "start_time": 4.4, "index": 23, "instrument": "acoustic_piano"}
+{"t": 11.3737, "type": "NoteStartEvent", "pitch": 44, "start_time": 4.4, "index": 24, "instrument": "acoustic_piano"}
+{"t": 11.5732, "type": "NoteStartEvent", "pitch": 75, "start_time": 4.63, "index": 25, "instrument": "acoustic_piano"}
+{"t": 11.7115, "type": "ProgressEvent", "completed": 1, "total": 4}
+{"t": 13.3598, "type": "NoteEndEvent", "end_time": 5.29, "start_event_index": 23}
+{"t": 13.4504, "type": "NoteEndEvent", "end_time": 5.29, "start_event_index": 24}
+{"t": 13.6352, "type": "NoteStartEvent", "pitch": 54, "start_time": 5.29, "index": 26, "instrument": "acoustic_piano"}
+{"t": 13.7281, "type": "NoteStartEvent", "pitch": 59, "start_time": 5.29, "index": 27, "instrument": "acoustic_piano"}
+{"t": 13.819, "type": "NoteStartEvent", "pitch": 63, "start_time": 5.29, "index": 28, "instrument": "acoustic_piano"}
+{"t": 14.0908, "type": "NoteEndEvent", "end_time": 6.18, "start_event_index": 26}
+{"t": 14.1824, "type": "NoteEndEvent", "end_time": 6.18, "start_event_index": 27}
+{"t": 14.276, "type": "NoteEndEvent", "end_time": 6.18, "start_event_index": 28}
+{"t": 14.3691, "type": "NoteEndEvent", "end_time": 6.18, "start_event_index": 25}
+{"t": 14.5533, "type": "NoteStartEvent", "pitch": 54, "start_time": 6.18, "index": 29, "instrument": "acoustic_piano"}
+{"t": 14.644, "type": "NoteStartEvent", "pitch": 59, "start_time": 6.18, "index": 30, "instrument": "acoustic_piano"}
+{"t": 14.7348, "type": "NoteStartEvent", "pitch": 63, "start_time": 6.18, "index": 31, "instrument": "acoustic_piano"}
+{"t": 15.0073, "type": "NoteEndEvent", "end_time": 6.85, "start_event_index": 29}
+{"t": 15.106, "type": "NoteEndEvent", "end_time": 6.85, "start_event_index": 30}
+{"t": 15.1999, "type": "NoteEndEvent", "end_time": 6.85, "start_event_index": 31}
+{"t": 15.3888, "type": "NoteStartEvent", "pitch": 44, "start_time": 6.85, "index": 32, "instrument": "acoustic_piano"}
+{"t": 15.6669, "type": "NoteEndEvent", "end_time": 7.07, "start_event_index": 32}
+{"t": 15.8485, "type": "NoteStartEvent", "pitch": 54, "start_time": 7.07, "index": 33, "instrument": "acoustic_piano"}
+{"t": 15.9393, "type": "NoteStartEvent", "pitch": 59, "start_time": 7.07, "index": 34, "instrument": "acoustic_piano"}
+{"t": 16.0301, "type": "NoteStartEvent", "pitch": 63, "start_time": 7.07, "index": 35, "instrument": "acoustic_piano"}
+{"t": 16.3027, "type": "NoteEndEvent", "end_time": 7.29, "start_event_index": 35}
+{"t": 16.4868, "type": "NoteStartEvent", "pitch": 61, "start_time": 7.29, "index": 36, "instrument": "acoustic_piano"}
+{"t": 16.765, "type": "NoteEndEvent", "end_time": 7.95, "start_event_index": 33}
+{"t": 16.857, "type": "NoteEndEvent", "end_time": 7.95, "start_event_index": 34}
+{"t": 16.9518, "type": "NoteEndEvent", "end_time": 7.95, "start_event_index": 36}
+{"t": 17.1365, "type": "NoteStartEvent", "pitch": 35, "start_time": 7.95, "index": 37, "instrument": "acoustic_piano"}
+{"t": 17.2284, "type": "NoteStartEvent", "pitch": 47, "start_time": 7.95, "index": 38, "instrument": "acoustic_piano"}
+{"t": 17.3203, "type": "NoteStartEvent", "pitch": 59, "start_time": 7.95, "index": 39, "instrument": "acoustic_piano"}
+{"t": 17.4131, "type": "NoteStartEvent", "pitch": 63, "start_time": 7.95, "index": 40, "instrument": "acoustic_piano"}
+{"t": 17.5065, "type": "NoteStartEvent", "pitch": 71, "start_time": 7.95, "index": 41, "instrument": "acoustic_piano"}
+{"t": 17.7818, "type": "NoteEndEvent", "end_time": 8.4, "start_event_index": 39}
+{"t": 17.8728, "type": "NoteEndEvent", "end_time": 8.4, "start_event_index": 40}
+{"t": 17.9643, "type": "NoteEndEvent", "end_time": 8.4, "start_event_index": 41}
+{"t": 18.148, "type": "NoteStartEvent", "pitch": 71, "start_time": 8.4, "index": 42, "instrument": "acoustic_piano"}
+{"t": 18.4258, "type": "NoteEndEvent", "end_time": 8.84, "start_event_index": 37}
+{"t": 18.518, "type": "NoteEndEvent", "end_time": 8.84, "start_event_index": 38}
+{"t": 18.6113, "type": "NoteEndEvent", "end_time": 8.84, "start_event_index": 42}
+{"t": 18.7931, "type": "NoteStartEvent", "pitch": 54, "start_time": 8.84, "index": 43, "instrument": "acoustic_piano"}
+{"t": 18.8844, "type": "NoteStartEvent", "pitch": 59, "start_time": 8.84, "index": 44, "instrument": "acoustic_piano"}
+{"t": 18.9752, "type": "NoteStartEvent", "pitch": 63, "start_time": 8.84, "index": 45, "instrument": "acoustic_piano"}
+{"t": 19.0661, "type": "NoteStartEvent", "pitch": 71, "start_time": 8.84, "index": 46, "instrument": "acoustic_piano"}
+{"t": 19.3391, "type": "NoteEndEvent", "end_time": 9.28, "start_event_index": 46}
+{"t": 19.5221, "type": "NoteStartEvent", "pitch": 71, "start_time": 9.28, "index": 47, "instrument": "acoustic_piano"}
+{"t": 19.7988, "type": "NoteEndEvent", "end_time": 9.5, "start_event_index": 43}
+{"t": 19.8909, "type": "NoteEndEvent", "end_time": 9.5, "start_event_index": 44}
+{"t": 19.9819, "type": "NoteEndEvent", "end_time": 9.5, "start_event_index": 45}
+{"t": 20.1638, "type": "NoteStartEvent", "pitch": 47, "start_time": 9.5, "index": 48, "instrument": "acoustic_piano"}
+{"t": 20.4373, "type": "NoteEndEvent", "end_time": 9.72, "start_event_index": 48}
+{"t": 20.5323, "type": "NoteEndEvent", "end_time": 9.72, "start_event_index": 47}
+{"t": 20.7235, "type": "NoteStartEvent", "pitch": 54, "start_time": 9.72, "index": 49, "instrument": "acoustic_piano"}
+{"t": 20.8181, "type": "NoteStartEvent", "pitch": 59, "start_time": 9.72, "index": 50, "instrument": "acoustic_piano"}
+{"t": 20.912, "type": "NoteStartEvent", "pitch": 63, "start_time": 9.72, "index": 51, "instrument": "acoustic_piano"}
+{"t": 21.0053, "type": "NoteStartEvent", "pitch": 71, "start_time": 9.72, "index": 52, "instrument": "acoustic_piano"}
+{"t": 21.12, "type": "ProgressEvent", "completed": 2, "total": 4}
+{"t": 22.9277, "type": "NoteEndEvent", "end_time": 10.15, "start_event_index": 52}
+{"t": 23.1088, "type": "NoteStartEvent", "pitch": 71, "start_time": 10.15, "index": 53, "instrument": "acoustic_piano"}
+{"t": 23.3807, "type": "NoteEndEvent", "end_time": 10.37, "start_event_index": 53}
+{"t": 23.562, "type": "NoteStartEvent", "pitch": 66, "start_time": 10.37, "index": 54, "instrument": "acoustic_piano"}
+{"t": 23.8348, "type": "NoteEndEvent", "end_time": 10.59, "start_event_index": 49}
+{"t": 23.9266, "type": "NoteEndEvent", "end_time": 10.59, "start_event_index": 50}
+{"t": 24.0203, "type": "NoteEndEvent", "end_time": 10.59, "start_event_index": 51}
+{"t": 24.1115, "type": "NoteEndEvent", "end_time": 10.59, "start_event_index": 54}
+{"t": 24.2943, "type": "NoteStartEvent", "pitch": 54, "start_time": 10.59, "index": 55, "instrument": "acoustic_piano"}
+{"t": 24.3855, "type": "NoteStartEvent", "pitch": 59, "start_time": 10.59, "index": 56, "instrument": "acoustic_piano"}
+{"t": 24.4763, "type": "NoteStartEvent", "pitch": 63, "start_time": 10.59, "index": 57, "instrument": "acoustic_piano"}
+{"t": 24.5686, "type": "NoteStartEvent", "pitch": 71, "start_time": 10.59, "index": 58, "instrument": "acoustic_piano"}
+{"t": 24.8476, "type": "NoteEndEvent", "end_time": 10.82, "start_event_index": 58}
+{"t": 25.0337, "type": "NoteStartEvent", "pitch": 71, "start_time": 10.82, "index": 59, "instrument": "acoustic_piano"}
+{"t": 25.3065, "type": "NoteEndEvent", "end_time": 11.04, "start_event_index": 59}
+{"t": 25.4915, "type": "NoteStartEvent", "pitch": 71, "start_time": 11.04, "index": 60, "instrument": "acoustic_piano"}
+{"t": 25.7679, "type": "NoteEndEvent", "end_time": 11.26, "start_event_index": 60}
+{"t": 25.9522, "type": "NoteStartEvent", "pitch": 71, "start_time": 11.26, "index": 61, "instrument": "acoustic_piano"}
+{"t": 26.2509, "type": "NoteEndEvent", "end_time": 11.48, "start_event_index": 55}
+{"t": 26.3504, "type": "NoteEndEvent", "end_time": 11.48, "start_event_index": 56}
+{"t": 26.4456, "type": "NoteEndEvent", "end_time": 11.48, "start_event_index": 57}
+{"t": 26.5363, "type": "NoteEndEvent", "end_time": 11.48, "start_event_index": 61}
+{"t": 26.7173, "type": "NoteStartEvent", "pitch": 30, "start_time": 11.48, "index": 62, "instrument": "acoustic_piano"}
+{"t": 26.8086, "type": "NoteStartEvent", "pitch": 42, "start_time": 11.48, "index": 63, "instrument": "acoustic_piano"}
+{"t": 26.9001, "type": "NoteStartEvent", "pitch": 71, "start_time": 11.48, "index": 64, "instrument": "acoustic_piano"}
+{"t": 27.1871, "type": "NoteEndEvent", "end_time": 11.7, "start_event_index": 64}
+{"t": 27.369, "type": "NoteStartEvent", "pitch": 70, "start_time": 11.7, "index": 65, "instrument": "acoustic_piano"}
+{"t": 27.6456, "type": "NoteEndEvent", "end_time": 12.37, "start_event_index": 62}
+{"t": 27.7391, "type": "NoteEndEvent", "end_time": 12.37, "start_event_index": 63}
+{"t": 27.8303, "type": "NoteEndEvent", "end_time": 12.37, "start_event_index": 65}
+{"t": 28.012, "type": "NoteStartEvent", "pitch": 54, "start_time": 12.37, "index": 66, "instrument": "acoustic_piano"}
+{"t": 28.1029, "type": "NoteStartEvent", "pitch": 58, "start_time": 12.37, "index": 67, "instrument": "acoustic_piano"}
+{"t": 28.1942, "type": "NoteStartEvent", "pitch": 61, "start_time": 12.37, "index": 68, "instrument": "acoustic_piano"}
+{"t": 28.3788, "type": "NoteStartEvent", "pitch": 66, "start_time": 12.59, "index": 69, "instrument": "acoustic_piano"}
+{"t": 28.6571, "type": "NoteEndEvent", "end_time": 12.81, "start_event_index": 69}
+{"t": 28.8389, "type": "NoteStartEvent", "pitch": 71, "start_time": 12.81, "index": 70, "instrument": "acoustic_piano"}
+{"t": 29.1115, "type": "NoteEndEvent", "end_time": 13.03, "start_event_index": 70}
+{"t": 29.2958, "type": "NoteStartEvent", "pitch": 78, "start_time": 13.03, "index": 71, "instrument": "acoustic_piano"}
+{"t": 29.5687, "type": "NoteEndEvent", "end_time": 13.25, "start_event_index": 71}
+{"t": 29.7518, "type": "NoteStartEvent", "pitch": 71, "start_time": 13.25, "index": 72, "instrument": "acoustic_piano"}
+{"t": 30.0289, "type": "NoteEndEvent", "end_time": 13.47, "start_event_index": 72}
+{"t": 30.213, "type": "NoteStartEvent", "pitch": 73, "start_time": 13.47, "index": 73, "instrument": "acoustic_piano"}
+{"t": 30.486, "type": "NoteEndEvent", "end_time": 13.69, "start_event_index": 73}
+{"t": 30.6693, "type": "NoteStartEvent", "pitch": 83, "start_time": 13.69, "index": 74, "instrument": "acoustic_piano"}
+{"t": 30.9428, "type": "NoteEndEvent", "end_time": 13.91, "start_event_index": 74}
+{"t": 31.1249, "type": "NoteStartEvent", "pitch": 90, "start_time": 13.91, "index": 75, "instrument": "acoustic_piano"}
+{"t": 31.4063, "type": "NoteEndEvent", "end_time": 14.13, "start_event_index": 75}
+{"t": 31.6017, "type": "NoteStartEvent", "pitch": 90, "start_time": 14.13, "index": 76, "instrument": "acoustic_piano"}
+{"t": 31.886, "type": "NoteEndEvent", "end_time": 14.58, "start_event_index": 76}
+{"t": 32.0687, "type": "NoteStartEvent", "pitch": 66, "start_time": 14.58, "index": 77, "instrument": "acoustic_piano"}
+{"t": 32.3426, "type": "NoteEndEvent", "end_time": 14.8, "start_event_index": 77}
+{"t": 32.5251, "type": "NoteStartEvent", "pitch": 70, "start_time": 14.8, "index": 78, "instrument": "acoustic_piano"}
+{"t": 32.6503, "type": "ProgressEvent", "completed": 3, "total": 4}
+{"t": 34.5484, "type": "NoteEndEvent", "end_time": 15.2, "start_event_index": 78}
+{"t": 34.7309, "type": "NoteStartEvent", "pitch": 66, "start_time": 15.2, "index": 79, "instrument": "acoustic_piano"}
+{"t": 35.0066, "type": "NoteEndEvent", "end_time": 15.43, "start_event_index": 79}
+{"t": 35.1892, "type": "NoteStartEvent", "pitch": 70, "start_time": 15.43, "index": 80, "instrument": "acoustic_piano"}
+{"t": 35.4607, "type": "NoteEndEvent", "end_time": 15.65, "start_event_index": 80}
+{"t": 35.6436, "type": "NoteStartEvent", "pitch": 70, "start_time": 15.65, "index": 81, "instrument": "acoustic_piano"}
+{"t": 35.9214, "type": "NoteEndEvent", "end_time": 15.88, "start_event_index": 81}
+{"t": 36.1055, "type": "NoteStartEvent", "pitch": 68, "start_time": 15.88, "index": 82, "instrument": "acoustic_piano"}
+{"t": 36.3771, "type": "NoteEndEvent", "end_time": 16.09, "start_event_index": 82}
+{"t": 36.5583, "type": "NoteStartEvent", "pitch": 66, "start_time": 16.09, "index": 83, "instrument": "acoustic_piano"}
+{"t": 36.83, "type": "NoteEndEvent", "end_time": 16.31, "start_event_index": 83}
+{"t": 37.0165, "type": "NoteStartEvent", "pitch": 66, "start_time": 16.31, "index": 84, "instrument": "acoustic_piano"}
+{"t": 37.3084, "type": "NoteEndEvent", "end_time": 16.54, "start_event_index": 84}
+{"t": 37.496, "type": "NoteStartEvent", "pitch": 66, "start_time": 16.54, "index": 85, "instrument": "acoustic_piano"}
+{"t": 37.7767, "type": "NoteEndEvent", "end_time": 16.77, "start_event_index": 85}
+{"t": 37.9615, "type": "NoteStartEvent", "pitch": 71, "start_time": 16.77, "index": 86, "instrument": "acoustic_piano"}
+{"t": 38.2349, "type": "NoteEndEvent", "end_time": 16.97, "start_event_index": 86}
+{"t": 38.4181, "type": "NoteStartEvent", "pitch": 71, "start_time": 16.97, "index": 87, "instrument": "acoustic_piano"}
+{"t": 38.6913, "type": "NoteEndEvent", "end_time": 17.2, "start_event_index": 87}
+{"t": 38.8758, "type": "NoteStartEvent", "pitch": 73, "start_time": 17.2, "index": 88, "instrument": "acoustic_piano"}
+{"t": 39.1511, "type": "NoteEndEvent", "end_time": 17.41, "start_event_index": 88}
+{"t": 39.3332, "type": "NoteStartEvent", "pitch": 71, "start_time": 17.41, "index": 89, "instrument": "acoustic_piano"}
+{"t": 39.6065, "type": "NoteEndEvent", "end_time": 17.85, "start_event_index": 89}
+{"t": 39.7889, "type": "NoteStartEvent", "pitch": 70, "start_time": 17.85, "index": 90, "instrument": "acoustic_piano"}
+{"t": 40.0633, "type": "NoteEndEvent", "end_time": 18.06, "start_event_index": 90}
+{"t": 40.2453, "type": "NoteStartEvent", "pitch": 66, "start_time": 18.06, "index": 91, "instrument": "acoustic_piano"}
+{"t": 40.5232, "type": "NoteEndEvent", "end_time": 18.29, "start_event_index": 91}
+{"t": 40.7069, "type": "NoteStartEvent", "pitch": 70, "start_time": 18.29, "index": 92, "instrument": "acoustic_piano"}
+{"t": 40.984, "type": "NoteEndEvent", "end_time": 18.51, "start_event_index": 66}
+{"t": 41.0754, "type": "NoteEndEvent", "end_time": 18.51, "start_event_index": 67}
+{"t": 41.1672, "type": "NoteEndEvent", "end_time": 18.51, "start_event_index": 68}
+{"t": 41.3494, "type": "NoteStartEvent", "pitch": 44, "start_time": 18.51, "index": 93, "instrument": "acoustic_piano"}
+{"t": 41.4406, "type": "NoteStartEvent", "pitch": 51, "start_time": 18.51, "index": 94, "instrument": "acoustic_piano"}
+{"t": 41.5317, "type": "NoteStartEvent", "pitch": 56, "start_time": 18.51, "index": 95, "instrument": "acoustic_piano"}
+{"t": 41.8053, "type": "NoteEndEvent", "end_time": 18.74, "start_event_index": 92}
+{"t": 41.9925, "type": "NoteStartEvent", "pitch": 66, "start_time": 18.74, "index": 96, "instrument": "acoustic_piano"}
+{"t": 42.2762, "type": "NoteEndEvent", "end_time": 18.95, "start_event_index": 96}
+{"t": 42.4701, "type": "NoteStartEvent", "pitch": 70, "start_time": 18.95, "index": 97, "instrument": "acoustic_piano"}
+{"t": 42.7718, "type": "NoteEndEvent", "end_time": 19.17, "start_event_index": 97}
+{"t": 42.9553, "type": "NoteStartEvent", "pitch": 70, "start_time": 19.17, "index": 98, "instrument": "acoustic_piano"}
+{"t": 43.2297, "type": "NoteEndEvent", "end_time": 19.4, "start_event_index": 98}
+{"t": 43.4158, "type": "NoteStartEvent", "pitch": 68, "start_time": 19.4, "index": 99, "instrument": "acoustic_piano"}
+{"t": 43.6923, "type": "NoteEndEvent", "end_time": 19.63, "start_event_index": 99}
+{"t": 43.8748, "type": "NoteStartEvent", "pitch": 66, "start_time": 19.63, "index": 100, "instrument": "acoustic_piano"}
+{"t": 44.1488, "type": "NoteEndEvent", "end_time": 19.83, "start_event_index": 100}
+{"t": 44.3336, "type": "NoteStartEvent", "pitch": 66, "start_time": 19.83, "index": 101, "instrument": "acoustic_piano"}
+{"t": 44.4295, "type": "ProgressEvent", "completed": 4, "total": 4}
+{"t": 44.4296, "type": "NoteEndEvent", "end_time": 18.520000000000003, "start_event_index": 93}
+{"t": 44.4296, "type": "NoteEndEvent", "end_time": 18.520000000000003, "start_event_index": 94}
+{"t": 44.4296, "type": "NoteEndEvent", "end_time": 18.520000000000003, "start_event_index": 95}
+{"t": 44.4296, "type": "NoteEndEvent", "end_time": 19.84, "start_event_index": 101}

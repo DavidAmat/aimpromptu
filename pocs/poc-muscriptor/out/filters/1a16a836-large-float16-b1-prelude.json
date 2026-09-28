@@ -1,0 +1,73 @@
+{
+ "config": "large-float16-b1-prelude",
+ "uuid": "1a16a836-62b9-483b-af46-d89d0ab1b2d8",
+ "muscriptor": {
+  "notes": 1437,
+  "artifacts_dropped": 4,
+  "artifacts_octave_phantoms": 1,
+  "artifacts_kept_isolated_short": 0,
+  "artifact_examples": [
+   "MIDI 58 at 234.760s, 10.0 ms, 12 semitones under a struck note",
+   "MIDI 62 at 234.760s, 10.0 ms",
+   "MIDI 65 at 234.760s, 10.0 ms",
+   "MIDI 70 at 234.760s, 10.0 ms"
+  ],
+  "leakage_merged": 0,
+  "leakage_merged_without_velocity_condition": 19,
+  "leakage_examples_without_velocity_condition": [
+   "MIDI 72 at 81.5600s merged into 81.3900s (gap 0.0ms, 2 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 70 at 88.0500s merged into 87.9000s (gap 10.0ms, 3 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 67 at 93.0500s merged into 92.8800s (gap 0.0ms, 3 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 70 at 96.0600s merged into 95.8500s (gap 20.0ms, 4 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 70 at 120.0600s merged into 119.8900s (gap 20.0ms, 3 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 70 at 133.0600s merged into 132.5600s (gap 30.0ms, 4 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 70 at 134.0700s merged into 133.5600s (gap 30.0ms, 3 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 70 at 144.0500s merged into 143.8800s (gap 10.0ms, 2 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 55 at 171.0600s merged into 170.8900s (gap 10.0ms, 3 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 72 at 172.0600s merged into 171.8900s (gap 10.0ms, 3 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 74 at 182.0800s merged into 181.9100s (gap 0.0ms, 4 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 70 at 192.0600s merged into 191.8800s (gap 10.0ms, 4 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 72 at 199.5300s merged into 199.3000s (gap 10.0ms, 3 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 82 at 201.5700s merged into 201.4000s (gap 10.0ms, 2 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 82 at 202.0600s merged into 201.5700s (gap 30.0ms, 4 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 74 at 203.0500s merged into 202.7300s (gap 20.0ms, 3 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 82 at 204.0500s merged into 203.8800s (gap 10.0ms, 3 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 75 at 205.0500s merged into 204.7100s (gap 0.0ms, 4 co-onset(s), lag 0.0ms, velocity -0)",
+   "MIDI 70 at 214.0500s merged into 213.5500s (gap 20.0ms, 3 co-onset(s), lag 0.0ms, velocity -0)"
+  ],
+  "notes_after": 1433
+ },
+ "bytedance": {
+  "notes": 1458,
+  "artifacts_dropped": 0,
+  "artifacts_octave_phantoms": 0,
+  "artifacts_kept_isolated_short": 0,
+  "artifact_examples": [],
+  "leakage_merged": 14,
+  "leakage_merged_without_velocity_condition": 21,
+  "leakage_examples_without_velocity_condition": [
+   "MIDI 74 at 10.0729s merged into 9.0686s (gap 12.9ms, 4 co-onset(s), lag -6.2ms, velocity -3)",
+   "MIDI 74 at 18.0733s merged into 17.0694s (gap 13.3ms, 4 co-onset(s), lag -3.7ms, velocity -1)",
+   "MIDI 74 at 20.0723s merged into 19.0726s (gap 12.3ms, 4 co-onset(s), lag -6.1ms, velocity -6)",
+   "MIDI 70 at 49.5730s merged into 48.5725s (gap 13.0ms, 3 co-onset(s), lag -3.0ms, velocity -0)",
+   "MIDI 70 at 64.0743s merged into 63.8986s (gap 14.3ms, 2 co-onset(s), lag -0.6ms, velocity -4)",
+   "MIDI 62 at 68.0759s merged into 66.8991s (gap 5.9ms, 2 co-onset(s), lag -0.1ms, velocity -6)",
+   "MIDI 58 at 68.0760s merged into 66.5760s (gap 6.0ms, 2 co-onset(s), lag 0.1ms, velocity -3)",
+   "MIDI 70 at 88.0713s merged into 87.8968s (gap 11.3ms, 3 co-onset(s), lag -2.8ms, velocity -4)",
+   "MIDI 67 at 93.0751s merged into 92.8961s (gap 5.1ms, 3 co-onset(s), lag -0.9ms, velocity -5)",
+   "MIDI 70 at 96.0731s merged into 95.8967s (gap 13.1ms, 4 co-onset(s), lag -1.4ms, velocity -3)",
+   "MIDI 74 at 118.0703s merged into 117.0702s (gap 10.3ms, 3 co-onset(s), lag -10.9ms, velocity -2)",
+   "MIDI 70 at 120.0725s merged into 119.8969s (gap 12.5ms, 3 co-onset(s), lag -2.1ms, velocity -0)",
+   "MIDI 74 at 129.0736s merged into 128.5704s (gap 13.6ms, 3 co-onset(s), lag -1.1ms, velocity -2)",
+   "MIDI 70 at 134.0758s merged into 133.5714s (gap 5.8ms, 3 co-onset(s), lag -4.7ms, velocity -3)",
+   "MIDI 70 at 144.0735s merged into 143.8973s (gap 13.5ms, 2 co-onset(s), lag -1.2ms, velocity -8)",
+   "MIDI 70 at 192.0729s merged into 191.8974s (gap 12.9ms, 4 co-onset(s), lag -2.4ms, velocity -4)",
+   "MIDI 55 at 196.0756s merged into 194.8970s (gap 5.6ms, 2 co-onset(s), lag -0.9ms, velocity -3)",
+   "MIDI 72 at 199.5728s merged into 199.3199s (gap 12.8ms, 3 co-onset(s), lag -1.9ms, velocity -9)",
+   "MIDI 82 at 202.0704s merged into 201.5692s (gap 10.4ms, 4 co-onset(s), lag -1.6ms, velocity -3)",
+   "MIDI 79 at 209.5727s merged into 208.5689s (gap 12.7ms, 2 co-onset(s), lag -2.6ms, velocity -2)",
+   "MIDI 74 at 223.0722s merged into 221.0722s (gap 12.2ms, 3 co-onset(s), lag -6.1ms, velocity -1)"
+  ],
+  "notes_after": 1444
+ }
+}

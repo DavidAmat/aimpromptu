@@ -1,0 +1,197 @@
+[
+ {
+  "t": 0.0014,
+  "completed": 0,
+  "total": 38
+ },
+ {
+  "t": 0.5367,
+  "completed": 1,
+  "total": 38
+ },
+ {
+  "t": 0.9886,
+  "completed": 2,
+  "total": 38
+ },
+ {
+  "t": 1.5461,
+  "completed": 3,
+  "total": 38
+ },
+ {
+  "t": 2.1148,
+  "completed": 4,
+  "total": 38
+ },
+ {
+  "t": 2.658,
+  "completed": 5,
+  "total": 38
+ },
+ {
+  "t": 3.3358,
+  "completed": 6,
+  "total": 38
+ },
+ {
+  "t": 4.0357,
+  "completed": 7,
+  "total": 38
+ },
+ {
+  "t": 4.7058,
+  "completed": 8,
+  "total": 38
+ },
+ {
+  "t": 5.2084,
+  "completed": 9,
+  "total": 38
+ },
+ {
+  "t": 5.7256,
+  "completed": 10,
+  "total": 38
+ },
+ {
+  "t": 6.2163,
+  "completed": 11,
+  "total": 38
+ },
+ {
+  "t": 6.9894,
+  "completed": 12,
+  "total": 38
+ },
+ {
+  "t": 7.6878,
+  "completed": 13,
+  "total": 38
+ },
+ {
+  "t": 8.3807,
+  "completed": 14,
+  "total": 38
+ },
+ {
+  "t": 9.186,
+  "completed": 15,
+  "total": 38
+ },
+ {
+  "t": 9.8496,
+  "completed": 16,
+  "total": 38
+ },
+ {
+  "t": 10.5033,
+  "completed": 17,
+  "total": 38
+ },
+ {
+  "t": 11.1679,
+  "completed": 18,
+  "total": 38
+ },
+ {
+  "t": 11.8716,
+  "completed": 19,
+  "total": 38
+ },
+ {
+  "t": 12.52,
+  "completed": 20,
+  "total": 38
+ },
+ {
+  "t": 13.2286,
+  "completed": 21,
+  "total": 38
+ },
+ {
+  "t": 13.8457,
+  "completed": 22,
+  "total": 38
+ },
+ {
+  "t": 14.5299,
+  "completed": 23,
+  "total": 38
+ },
+ {
+  "t": 15.296,
+  "completed": 24,
+  "total": 38
+ },
+ {
+  "t": 15.9041,
+  "completed": 25,
+  "total": 38
+ },
+ {
+  "t": 16.5426,
+  "completed": 26,
+  "total": 38
+ },
+ {
+  "t": 17.3845,
+  "completed": 27,
+  "total": 38
+ },
+ {
+  "t": 18.1369,
+  "completed": 28,
+  "total": 38
+ },
+ {
+  "t": 18.9017,
+  "completed": 29,
+  "total": 38
+ },
+ {
+  "t": 19.6069,
+  "completed": 30,
+  "total": 38
+ },
+ {
+  "t": 20.2754,
+  "completed": 31,
+  "total": 38
+ },
+ {
+  "t": 21.0453,
+  "completed": 32,
+  "total": 38
+ },
+ {
+  "t": 21.7279,
+  "completed": 33,
+  "total": 38
+ },
+ {
+  "t": 22.7434,
+  "completed": 34,
+  "total": 38
+ },
+ {
+  "t": 23.4774,
+  "completed": 35,
+  "total": 38
+ },
+ {
+  "t": 24.4909,
+  "completed": 36,
+  "total": 38
+ },
+ {
+  "t": 24.7638,
+  "completed": 37,
+  "total": 38
+ },
+ {
+  "t": 24.8102,
+  "completed": 38,
+  "total": 38
+ }
+]

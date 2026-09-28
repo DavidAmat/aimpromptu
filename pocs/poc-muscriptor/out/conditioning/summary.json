@@ -1,0 +1,319 @@
+{
+ "seconds": 60.0,
+ "size": "large",
+ "conditioned_notes": 347,
+ "conditioned_instruments": {
+  "acoustic_piano": 347
+ },
+ "free_notes": 387,
+ "free_instruments": {
+  "acoustic_piano": 387
+ },
+ "free_notes_missing_when_conditioned": 49,
+ "missing_by_instrument": {
+  "acoustic_piano": 49
+ },
+ "missing_examples": [
+  {
+   "pitch": 54,
+   "start": 17.63,
+   "end": 18.51,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 58,
+   "start": 17.63,
+   "end": 18.51,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 61,
+   "start": 17.63,
+   "end": 18.51,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 66,
+   "start": 22.07,
+   "end": 23.62,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 47,
+   "start": 23.84,
+   "end": 25.58,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 59,
+   "start": 23.84,
+   "end": 25.58,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 49,
+   "start": 29.11,
+   "end": 30.01,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 29.99,
+   "end": 30.01,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 66,
+   "start": 30.01,
+   "end": 30.45,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 80,
+   "start": 30.01,
+   "end": 30.23,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 30.23,
+   "end": 30.45,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 30.45,
+   "end": 30.67,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 30.67,
+   "end": 30.89,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 58,
+   "start": 30.89,
+   "end": 31.78,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 61,
+   "start": 30.89,
+   "end": 31.78,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 83,
+   "start": 30.89,
+   "end": 31.11,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 83,
+   "start": 31.11,
+   "end": 31.34,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 85,
+   "start": 31.34,
+   "end": 31.56,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 83,
+   "start": 31.56,
+   "end": 31.78,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 58,
+   "start": 31.78,
+   "end": 32.44,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 71,
+   "start": 31.78,
+   "end": 32.0,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 82,
+   "start": 32.0,
+   "end": 32.44,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 32.44,
+   "end": 32.66,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 32.66,
+   "end": 32.88,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 32.88,
+   "end": 33.1,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 82,
+   "start": 33.1,
+   "end": 33.32,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 82,
+   "start": 33.32,
+   "end": 33.54,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 80,
+   "start": 33.54,
+   "end": 33.76,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 33.76,
+   "end": 33.98,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 33.98,
+   "end": 34.2,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 34.2,
+   "end": 34.42,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 83,
+   "start": 34.42,
+   "end": 34.64,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 83,
+   "start": 34.64,
+   "end": 34.86,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 85,
+   "start": 34.86,
+   "end": 35.09,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 83,
+   "start": 35.09,
+   "end": 35.53,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 82,
+   "start": 35.53,
+   "end": 35.97,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 35.97,
+   "end": 36.19,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 36.19,
+   "end": 37.07,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 75,
+   "start": 37.07,
+   "end": 37.74,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 83,
+   "start": 38.84,
+   "end": 39.06,
+   "instrument": "acoustic_piano"
+  }
+ ],
+ "conditioned_notes_missing_when_free": 9,
+ "added_examples": [
+  {
+   "pitch": 73,
+   "start": 28.89,
+   "end": 29.33,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 78,
+   "start": 29.78,
+   "end": 29.99,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 70,
+   "start": 29.99,
+   "end": 30.01,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 54,
+   "start": 30.01,
+   "end": 30.89,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 66,
+   "start": 30.23,
+   "end": 30.45,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 59,
+   "start": 30.89,
+   "end": 31.77,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 70,
+   "start": 58.47,
+   "end": 58.92,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 68,
+   "start": 58.92,
+   "end": 59.14,
+   "instrument": "acoustic_piano"
+  },
+  {
+   "pitch": 70,
+   "start": 59.14,
+   "end": 59.36,
+   "instrument": "acoustic_piano"
+  }
+ ],
+ "wall_seconds": {
+  "conditioned": 15.555,
+  "free": 16.067
+ }
+}

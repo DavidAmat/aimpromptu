@@ -1,0 +1,21 @@
+{
+ "config": "large-float16-b1-prelude",
+ "uuid": "0815f602-3ad5-4df8-9f9c-501408089139",
+ "1_muscriptor_onset_delay_ms": null,
+ "1_beat_subdivision": null,
+ "1_bpm": null,
+ "2_envelope_best_lag_ms": {
+  "muscriptor": -30,
+  "bytedance": -18
+ },
+ "2_muscriptor_minus_bytedance_ms": -12,
+ "2_detected_onset_median_ms": {
+  "muscriptor": -24.0,
+  "bytedance": -12.0
+ },
+ "2_detected_onset_pairs": {
+  "muscriptor": 784,
+  "bytedance": 1502
+ },
+ "3_matched_pairs_median_ms_mus_minus_byt": -12.2
+}

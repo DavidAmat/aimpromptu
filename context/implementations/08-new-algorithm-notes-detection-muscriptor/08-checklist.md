@@ -10,7 +10,7 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 
 ## Decisions
 
-The plan's section 11. All six were answered by the user on 2026-09-28.
+The plan's section 11. All seven were answered by the user on 2026-09-28.
 
 - [x] **Q-1** After a cut, the piece is shorter. The audio and the piano matrix notation share one axis of 10 ms time frames, and a cut is a range of frames (plan section 9.2).
 - [x] **Q-2** A cut after a transcription starts a new transcription. The old notes go into history.
@@ -18,6 +18,7 @@ The plan's section 11. All six were answered by the user on 2026-09-28.
 - [x] **Q-4** Notes Falling stays. The old Piano Roll tab is removed in Phase 9.
 - [x] **Q-5** The frontend container runs in development mode.
 - [x] **Q-6** The non-commercial licence is acceptable: the app is for personal use.
+- [x] **Q-7** One chunk at a time (batch 1, prelude forcing, float16), not batching. Answered after Phase 1.
 
 # [x] Phase 0: Commit and push from the Mac, and move to Ubuntu (on the Mac)
 
@@ -37,26 +38,28 @@ Done 2026-09-28. Report: [`08-implementation-phase-0.md`](08-implementation-phas
 - [x] Task 0.3.1 **The instructions**: in the walkthrough, the commands to open Cursor on Ubuntu, clone `aimpromptu` and `vexflow-v2` side by side, and run the copy script from the Mac.
 - [x] Task 0.3.2 **Ubuntu to Mac access** (optional, recommended): the steps to enable Remote Login on the Mac and authorise the Ubuntu key, and the Mac's LAN address.
 
-# [ ] Phase 1: MuScriptor on Ubuntu, and what it outputs (on Ubuntu)
+# [x] Phase 1: MuScriptor on Ubuntu, and what it outputs (on Ubuntu)
 
-## [ ] Story 1.1: The machine
-- [ ] Task 1.1.1 **The checks**: `nvidia-smi`, the driver and CUDA versions, Docker, the NVIDIA Container Toolkit, `uv`, Node, `ffmpeg`. Anything missing goes to HUMAN INTERVENTION.
-- [ ] Task 1.1.2 **The data**: compare the copied files with the Phase 0 manifest.
-- [ ] Task 1.1.3 **The app, natively**: `uv sync` with the extras and `make test` in the backend; `npm install && npm run build` in `vexflow-v2`; `npm install && npm run build` in the frontend.
+Done 2026-09-28. Report: [`08-implementation-phase-1.md`](08-implementation-phase-1.md). Results: [`../../../pocs/poc-muscriptor/RESULTS.md`](../../../pocs/poc-muscriptor/RESULTS.md).
 
-## [ ] Story 1.2: MuScriptor out of the box
-- [ ] Task 1.2.1 **Clone and install** beside the project, with `uv sync`.
-- [ ] Task 1.2.2 **Hugging Face**: the licence accepted for `muscriptor-large` and `HF_TOKEN` in a gitignored `.env` (human step). The Hugging Face cache on `/mnt/ssd2`.
-- [ ] Task 1.2.3 **Their tools**: `muscriptor transcribe` on a short file, and `muscriptor serve` opened from the Mac through a tunnel.
+## [x] Story 1.1: The machine
+- [x] Task 1.1.1 **The checks**: `nvidia-smi`, the driver and CUDA versions, Docker, the NVIDIA Container Toolkit, `uv`, Node, `ffmpeg`. Anything missing goes to HUMAN INTERVENTION. Nothing missing; the GPU is seen from a container (`nvidia/cuda:12.9.1-base-ubuntu24.04`).
+- [x] Task 1.1.2 **The data**: compare the copied files with the Phase 0 manifest. Identical: 10,626 files, same bytes per folder.
+- [x] Task 1.1.3 **The app, natively**: `uv sync` with the extras and `make test` in the backend; `npm install && npm run build` in `vexflow-v2`; `npm install && npm run build` in the frontend. 906 passed, 1 known failure (Phase 0 report 2.1); both builds pass.
 
-## [ ] Story 1.3: The POC `pocs/poc-muscriptor/`
-- [ ] Task 1.3.1 **The output format**: the first 20 seconds of Superestrella, on CPU and on GPU, raw events saved as they come.
-- [ ] Task 1.3.2 **Speed and memory**: `small`, `medium`, `large`; float32, float16, bfloat16; batch size 1 against larger batches; with and without `torch.compile`.
-- [ ] Task 1.3.3 **The lag**: MuScriptor's `onset_delay` against a direct onset detection on the audio.
-- [ ] Task 1.3.4 **Conditioning**: every run on `acoustic_piano`, and one short check without it to confirm that no piano note is lost.
-- [ ] Task 1.3.5 **The whole song against ByteDance**: counts, onsets that agree within 50 ms, both piano roll visualizations as pictures.
-- [ ] Task 1.3.6 **The filters**: `artifacts.py` and `leakage.py` on MuScriptor notes, helpful or harmful.
-- [ ] Task 1.3.7 **`RESULTS.md`** and the learnings in the phase report, with a recommendation for the model size, the dtype, the batch size, the lag and the filters.
+## [x] Story 1.2: MuScriptor out of the box
+- [x] Task 1.2.1 **Clone and install** beside the project, with `uv sync`. `../muscriptor` at `7f213af`; its tests pass (221 passed, 24 skipped for missing weights); web UI built with pnpm.
+- [x] Task 1.2.2 **Hugging Face**: the licence accepted for `muscriptor-large` and `HF_TOKEN` in a gitignored `.env` (human step). The Hugging Face cache on `/mnt/ssd2`. Licences accepted for the three sizes; `HF_TOKEN` is already in `~/.zshrc` (the `.env` for Compose is Phase 3); weights in `HF_HUB_CACHE=/mnt/ssd2/hf/data/hub`.
+- [x] Task 1.2.3 **Their tools**: `muscriptor transcribe` on a short file, and `muscriptor serve` opened from the Mac through a tunnel. CLI: 20 s in 5 s. The user opened the web UI through `ssh -N -L 8222:localhost:8222 ubuntu`, transcribed Superestrella and judged it good.
+
+## [x] Story 1.3: The POC `pocs/poc-muscriptor/`
+- [x] Task 1.3.1 **The output format**: the first 20 seconds of Superestrella, on CPU and on GPU, raw events saved as they come. Same 102 notes on both; times on a 10 ms grid; no velocity.
+- [x] Task 1.3.2 **Speed and memory**: `small`, `medium`, `large`; float32, float16, bfloat16; batch size 1 against larger batches; with and without `torch.compile`. `large` float16 batch 1: 7.8 x real, 3.5 GB, same notes as float32; batch 8: 34 x real, 7% of notes change; compile slower.
+- [x] Task 1.3.3 **The lag**: MuScriptor's `onset_delay` against a direct onset detection on the audio. Their `onset_delay` refused all six pieces; the lag changes per piece (+15 to -17 ms against ByteDance) and is measured per piece from the audio envelope.
+- [x] Task 1.3.4 **Conditioning**: every run on `acoustic_piano`, and one short check without it to confirm that no piano note is lost. One chunk of Superestrella loses notes, but conditioning agrees more with ByteDance on 5 of 6 whole songs; Q-3 unchanged.
+- [x] Task 1.3.5 **The whole song against ByteDance**: counts, onsets that agree within 50 ms, both piano roll visualizations as pictures. Six pieces: 81 to 98% agreement, Superestrella 65% (its ByteDance version is the noisiest).
+- [x] Task 1.3.6 **The filters**: `artifacts.py` and `leakage.py` on MuScriptor notes, helpful or harmful. Both off for MuScriptor (no effect, and leakage would merge real repeated notes without velocity).
+- [x] Task 1.3.7 **`RESULTS.md`** and the learnings in the phase report, with a recommendation for the model size, the dtype, the batch size, the lag and the filters. Report: [`08-implementation-phase-1.md`](08-implementation-phase-1.md); plan sections 3 and 9.1 updated.
 
 # [ ] Phase 2: The piano matrix notation format
 
@@ -105,7 +108,7 @@ Done 2026-09-28. Report: [`08-implementation-phase-0.md`](08-implementation-phas
 - [ ] Task 4.1.2 **Forced**: the default, first in the registry, the only one offered; ByteDance and Transkun kept and tested.
 - [ ] Task 4.1.3 **The model registry** and the preload at startup.
 - [ ] Task 4.1.4 **One job at a time on the GPU**, with a "waiting" state.
-- [ ] Task 4.1.5 **The lag correction and the filters** as Phase 1 decided.
+- [ ] Task 4.1.5 **The lag correction and the filters** as Phase 1 decided: `lagCorrectionMs` per piece from the audio envelope, both filters off for MuScriptor; `large`, float16, batch 1, prelude forcing (Q-7).
 
 ## [ ] Story 4.2: The selected region
 - [ ] Task 4.2.1 **`cuts`** in `metadata.json`, as frame ranges of 10 ms, and `audioRevision`.

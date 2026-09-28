@@ -1,0 +1,8 @@
+{
+ "audio_seconds": 188.906,
+ "wall_seconds": 35.42,
+ "audio_per_wall": 5.33,
+ "first_note_seconds": 0.044,
+ "peak_gpu_gb": 3.53,
+ "note_count": 2142
+}

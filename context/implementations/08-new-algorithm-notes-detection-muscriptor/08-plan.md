@@ -107,8 +107,10 @@ same way everywhere.
 # 3. What MuScriptor is, from the paper and the code
 
 These facts come from the paper (`muscriptor_paper.pdf`) and from reading the repository
-`github.com/muscriptor/muscriptor` (version 0.3.0). They are documented facts, not measurements. Phase
-1 measures the ones marked "to measure".
+`github.com/muscriptor/muscriptor` (version 0.3.0). When the plan was written they were documented
+facts, not measurements. Phase 1 measured the ones marked "to measure", and the rows marked
+"Phase 1" now carry the measured answer. The full results are in
+[`../../../pocs/poc-muscriptor/RESULTS.md`](../../../pocs/poc-muscriptor/RESULTS.md).
 
 | Fact | Consequence for us |
 |---|---|
@@ -118,12 +120,12 @@ These facts come from the paper (`muscriptor_paper.pdf`) and from reading the re
 | Weights licence **CC BY-NC 4.0** (non-commercial). Code licence MIT | Accepted: the app is for personal use only and will not be sold (Q-6) |
 | `TranscriptionModel.transcribe()` is a generator. It yields `NoteStartEvent(pitch, start_time, index, instrument)`, then later `NoteEndEvent(end_time, start_event)`, plus `ProgressEvent(completed, total)` once per chunk | This is the stream mode. The notes of chunk N all arrive before any note of chunk N+1 |
 | Times have a 10 ms step (a 100 Hz frame rate) | Finer than our 40 ms default column. Nothing is lost when we snap to columns |
-| Velocity exists in the tokens but is not in the public events | Our `velocity` field stays at its default (64) unless Phase 1 finds a cheap way to read it |
+| Velocity exists in the tokens but is not in the public events | **Phase 1: this was wrong.** The velocity token has only two values, 1 opens a note and 0 closes it, so MuScriptor has no loudness at all. Our `velocity` field stays at its default (64) |
 | One note per key at a time. A new onset of a key ends the open note of that key | This is exactly the prompt's rule for a rectangle |
-| "Prelude forcing" (the default) carries the notes that are still sounding from one chunk into the next, so a long note is not cut at each chunk border. It needs `batch_size = 1`, so chunks run one after the other | Quality at chunk borders against speed. To measure |
+| "Prelude forcing" (the default) carries the notes that are still sounding from one chunk into the next, so a long note is not cut at each chunk border. It needs `batch_size = 1`, so chunks run one after the other | **Phase 1:** without it about 7% of the notes change and notes are cut at the borders (40 in 2 minutes). Batch 1 with prelude forcing is kept |
 | Instrument conditioning: `instruments=["acoustic_piano"]` forbids every other instrument | We always pass `acoustic_piano`: the whole project is for the piano (Q-3) |
-| The event times can carry a constant lag of up to about 25 ms. MuScriptor removes it using a beat grid (BPM) | Rule 3 forbids storing a BPM. We may apply a fixed lag correction without storing any tempo. To measure |
-| The default dtype on CUDA is float32 with float16 autocast | To measure: float16 and bfloat16 speed and memory on the RTX 4090 |
+| The event times can carry a constant lag of up to about 25 ms. MuScriptor removes it using a beat grid (BPM) | Rule 3 forbids storing a BPM. **Phase 1:** the lag is constant within a piece but changes between pieces (from 17 ms late to 22 ms early against ByteDance, on six pieces), and MuScriptor's beat grid refused all six. `lagCorrectionMs` is therefore measured per piece from the audio onset envelope (about 1 s of CPU, no tempo stored) |
+| The default dtype on CUDA is float32 with float16 autocast | **Phase 1:** float16 weights give exactly the same notes, 2.2 times faster (7.8 x real on 120 s) and with half the memory (3.5 GB). `AITU_MUSCRIPTOR_DTYPE=float16` is the default |
 | Their own web UI draws the piano roll visualization on one 2D canvas, reveals each rectangle with a short animation, and smooths the progress bar between chunk anchors (`web/src/pianoroll.ts`, `progress.ts`) | A good model for our live view (section 9.3). We copy the ideas, not the code |
 
 **An assumption to check early.** The prompt hopes that "1 second of processing already processes 20
@@ -131,6 +133,12 @@ seconds of the audio". This is not guaranteed. The large model generates tokens 
 run in order when prelude forcing is on. Phase 1 measures the real speed of `large` on the RTX 4090 and
 reports it with the options that make it faster (float16 or bfloat16, a larger batch without prelude
 forcing, `torch.compile`, or the `medium` model). The live view in section 9.3 works at any speed.
+
+**What Phase 1 measured.** `large` in float16 with prelude forcing runs at 5.3 to 8.6 x real on whole
+songs (25 s for the 189 s of Superestrella). 20 x real is reached only with batching (34 x at batch
+8), which changes about 7% of the notes. `torch.compile` is slower, and `medium` and `small` give a
+different transcription (84 to 86% agreement with `large`). The events stream token by token (one
+every 22 ms), so the live view receives notes during a chunk, not only at its end.
 
 ---
 
@@ -395,8 +403,11 @@ before it replaces them. Today a new transcription deletes `rhythm.json` with no
   to `cpu` and the data folder cannot be moved.
 - **One transcription at a time on the GPU.** A single worker queue. A second request waits and its
   progress bar says "waiting". Today two jobs can load two models and write the same `events.json`.
-- **The filters.** `artifacts.py` and `leakage.py` were tuned for ByteDance. Phase 1 measures whether
-  they help or harm MuScriptor, and the engine turns them on or off from that result.
+- **The filters.** `artifacts.py` and `leakage.py` were tuned for ByteDance. Phase 1 measured them on
+  six pieces: `artifacts.py` drops 0 to 4 MuScriptor notes per song, and `leakage.py` cannot merge
+  anything because MuScriptor has no velocity. Without its velocity test it would merge real repeated
+  notes (a new onset of a key closes the open note at the same instant, gap 0 ms). Both are **off**
+  for MuScriptor and stay on for ByteDance.
 
 ## 9.2 Backend and frontend: the selected region, as ranges of time frames
 
@@ -661,6 +672,7 @@ The prompt allows clear, low-effort fixes. These were found, and each has an own
 # 11. Decisions
 
 The first version of this plan listed six open questions. The user answered all six on 2026-09-28.
+Phase 1 raised a seventh (Q-7), answered the same day.
 They are kept here with the answer, so a later reader knows what was asked and why the plan reads as
 it does.
 
@@ -684,6 +696,13 @@ There is no production image until everything is ready to package.
 
 **Q-6. The MuScriptor weights are licensed for non-commercial use only (CC BY-NC 4.0).**
 **Answered: acceptable.** The app is for the user's personal use and will not be sold.
+
+**Q-7. Transcribe one chunk at a time, or several chunks at the same time (batching)?** Asked after
+Phase 1. One chunk at a time with prelude forcing gives the best notes at 5 to 9 x real (about 25 s for
+Superestrella). Batching 8 chunks reaches about 30 x real, but about 7% of the notes change and notes
+are cut at the 5 s chunk borders. **Answered on 2026-09-28: one chunk at a time** (`batch_size = 1`,
+prelude forcing on, float16). The user also listened to `large` on Superestrella in MuScriptor's own web
+UI and judged the result good.
 
 **Also confirmed by the user:** `vexflow-v2` is cloned in the same folder as `aimpromptu`; Phase 1
 measures the real speed of MuScriptor before anything depends on it; and moving a note to the other

@@ -1,0 +1,217 @@
+[
+ {
+  "t": 0.0016,
+  "completed": 0,
+  "total": 42
+ },
+ {
+  "t": 0.5796,
+  "completed": 1,
+  "total": 42
+ },
+ {
+  "t": 1.6163,
+  "completed": 2,
+  "total": 42
+ },
+ {
+  "t": 2.4117,
+  "completed": 3,
+  "total": 42
+ },
+ {
+  "t": 3.3393,
+  "completed": 4,
+  "total": 42
+ },
+ {
+  "t": 4.1453,
+  "completed": 5,
+  "total": 42
+ },
+ {
+  "t": 5.0679,
+  "completed": 6,
+  "total": 42
+ },
+ {
+  "t": 5.9794,
+  "completed": 7,
+  "total": 42
+ },
+ {
+  "t": 6.8057,
+  "completed": 8,
+  "total": 42
+ },
+ {
+  "t": 7.6322,
+  "completed": 9,
+  "total": 42
+ },
+ {
+  "t": 8.6074,
+  "completed": 10,
+  "total": 42
+ },
+ {
+  "t": 9.6871,
+  "completed": 11,
+  "total": 42
+ },
+ {
+  "t": 10.624,
+  "completed": 12,
+  "total": 42
+ },
+ {
+  "t": 11.7717,
+  "completed": 13,
+  "total": 42
+ },
+ {
+  "t": 12.3226,
+  "completed": 14,
+  "total": 42
+ },
+ {
+  "t": 13.0196,
+  "completed": 15,
+  "total": 42
+ },
+ {
+  "t": 14.0682,
+  "completed": 16,
+  "total": 42
+ },
+ {
+  "t": 14.9034,
+  "completed": 17,
+  "total": 42
+ },
+ {
+  "t": 15.9269,
+  "completed": 18,
+  "total": 42
+ },
+ {
+  "t": 16.8152,
+  "completed": 19,
+  "total": 42
+ },
+ {
+  "t": 17.7373,
+  "completed": 20,
+  "total": 42
+ },
+ {
+  "t": 18.4951,
+  "completed": 21,
+  "total": 42
+ },
+ {
+  "t": 19.3005,
+  "completed": 22,
+  "total": 42
+ },
+ {
+  "t": 20.4273,
+  "completed": 23,
+  "total": 42
+ },
+ {
+  "t": 21.4207,
+  "completed": 24,
+  "total": 42
+ },
+ {
+  "t": 22.2921,
+  "completed": 25,
+  "total": 42
+ },
+ {
+  "t": 23.3407,
+  "completed": 26,
+  "total": 42
+ },
+ {
+  "t": 24.2927,
+  "completed": 27,
+  "total": 42
+ },
+ {
+  "t": 25.1431,
+  "completed": 28,
+  "total": 42
+ },
+ {
+  "t": 26.1007,
+  "completed": 29,
+  "total": 42
+ },
+ {
+  "t": 27.2107,
+  "completed": 30,
+  "total": 42
+ },
+ {
+  "t": 28.3058,
+  "completed": 31,
+  "total": 42
+ },
+ {
+  "t": 29.3436,
+  "completed": 32,
+  "total": 42
+ },
+ {
+  "t": 30.4069,
+  "completed": 33,
+  "total": 42
+ },
+ {
+  "t": 31.4217,
+  "completed": 34,
+  "total": 42
+ },
+ {
+  "t": 32.3542,
+  "completed": 35,
+  "total": 42
+ },
+ {
+  "t": 33.4073,
+  "completed": 36,
+  "total": 42
+ },
+ {
+  "t": 34.4953,
+  "completed": 37,
+  "total": 42
+ },
+ {
+  "t": 35.5163,
+  "completed": 38,
+  "total": 42
+ },
+ {
+  "t": 36.4189,
+  "completed": 39,
+  "total": 42
+ },
+ {
+  "t": 37.3105,
+  "completed": 40,
+  "total": 42
+ },
+ {
+  "t": 38.2065,
+  "completed": 41,
+  "total": 42
+ },
+ {
+  "t": 38.2224,
+  "completed": 42,
+  "total": 42
+ }
+]

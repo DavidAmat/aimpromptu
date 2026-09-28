@@ -1,0 +1,81 @@
+{
+ "seconds": 20.0,
+ "size": "large",
+ "runs": {
+  "cuda": {
+   "load_seconds": 1.01,
+   "audio_seconds": 20.0,
+   "wall_seconds": 4.831,
+   "audio_per_wall": 4.14,
+   "first_note_seconds": 0.267,
+   "peak_gpu_gb": 7.05,
+   "note_count": 102,
+   "progress": [
+    {
+     "t": 0.0004,
+     "completed": 0,
+     "total": 4
+    },
+    {
+     "t": 1.3625,
+     "completed": 1,
+     "total": 4
+    },
+    {
+     "t": 2.3579,
+     "completed": 2,
+     "total": 4
+    },
+    {
+     "t": 3.5832,
+     "completed": 3,
+     "total": 4
+    },
+    {
+     "t": 4.8314,
+     "completed": 4,
+     "total": 4
+    }
+   ]
+  },
+  "cpu": {
+   "load_seconds": 4.04,
+   "audio_seconds": 20.0,
+   "wall_seconds": 44.43,
+   "audio_per_wall": 0.45,
+   "first_note_seconds": 1.994,
+   "peak_gpu_gb": null,
+   "note_count": 102,
+   "progress": [
+    {
+     "t": 0.0003,
+     "completed": 0,
+     "total": 4
+    },
+    {
+     "t": 11.7115,
+     "completed": 1,
+     "total": 4
+    },
+    {
+     "t": 21.12,
+     "completed": 2,
+     "total": 4
+    },
+    {
+     "t": 32.6503,
+     "completed": 3,
+     "total": 4
+    },
+    {
+     "t": 44.4295,
+     "completed": 4,
+     "total": 4
+    }
+   ]
+  }
+ },
+ "same_notes": 102,
+ "only_first": [],
+ "only_second": []
+}
