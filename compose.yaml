@@ -1,0 +1,79 @@
+# AImpromptu in containers, on the Ubuntu machine (implementation 08, Phase 3; plan section 10.3).
+#
+#   make up      build if needed, start both, wait until they answer
+#   make down    stop both
+#   make logs    follow both logs
+#
+# Both services run in development mode (Q-5): the repository is mounted, not copied, so an edit on
+# the host reloads the backend (uvicorn --reload) and the page (Vite). The browser on the Mac
+# reaches everything through one port, 5173, with `scripts/tunnel-from-mac.sh`.
+#
+# The values come from `.env` beside this file (copy `.env.example`). Only HF_TOKEN has no default.
+
+name: aimpromptu
+
+services:
+  backend:
+    build:
+      context: ./aitu-backend
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: aimpromptu-backend:dev
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      AITU_DEVICE: ${AITU_DEVICE:-cuda}
+      # MuScriptor, as Phase 1 chose: large, float16. The model loads when the server starts, so
+      # the first transcription does not wait for it (and the page can report a missing token).
+      AITU_MUSCRIPTOR_MODEL: ${AITU_MUSCRIPTOR_MODEL:-large}
+      AITU_MUSCRIPTOR_DTYPE: ${AITU_MUSCRIPTOR_DTYPE:-float16}
+      AITU_PRELOAD_ENGINE: ${AITU_PRELOAD_ENGINE:-muscriptor-large}
+      # Inside the container the data is always at the default path; AITU_DATA_DIR below chooses
+      # which folder of the host is mounted there.
+      AITU_DATA_DIR: ""
+      HF_TOKEN: ${HF_TOKEN:-}
+      HF_HUB_CACHE: /hf/hub
+    volumes:
+      - .:/work/aimpromptu
+      - ${AITU_DATA_DIR:-./aitu-backend/data}:/work/aimpromptu/aitu-backend/data
+      # The MuScriptor weights (5.5 GB for large), shared with the host's own Hugging Face cache.
+      - ${HF_HUB_CACHE:-/mnt/ssd2/hf/data/hub}:/hf/hub
+      # The rest of what the engines download into the home folder: the ByteDance checkpoint
+      # (~/piano_transcription_inference_data, 164 MB) and the torch hub cache. Kept on SSD 2 so a
+      # new container does not download them again.
+      - ${AITU_CACHE_DIR:-/mnt/ssd2/aimpromptu/home}:/home/app
+    ports:
+      # Localhost only: the Mac never needs this port (the page reaches the backend through Vite),
+      # but an agent on Ubuntu can `curl` it.
+      - "127.0.0.1:${AITU_PORT:-8765}:8765"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./aitu-frontend
+      additional_contexts:
+        vexflow: ../vexflow-v2
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: aimpromptu-frontend:dev
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      AITU_API_PROXY: http://backend:8765
+    volumes:
+      - ./aitu-frontend:/work/aimpromptu/aitu-frontend
+      # The image's own packages stay in front of the host's node_modules.
+      - /work/aimpromptu/aitu-frontend/node_modules
+    ports:
+      - "127.0.0.1:${WEB_PORT:-5173}:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

@@ -154,7 +154,16 @@ def write(audio_uuid: str) -> Written:
         version = history.snapshot_current(audio_uuid)
 
     title = metadata.title or None
-    pipeline.save_note_events(audio_uuid, events_for(kept), duration, title=title)
+    # A whole new set of notes, like a transcription: the revisions go up and the hands are missing.
+    pipeline.save_edit(
+        audio_uuid,
+        events_for(kept),
+        duration,
+        title,
+        notes_changed=True,
+        hands_changed=False,
+        new_notes=True,
+    )
     pipeline.clear_rhythm(audio_uuid)
     pipeline.clear_needs_rederivation(audio_uuid)
     return Written(

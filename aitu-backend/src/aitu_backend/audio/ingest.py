@@ -12,7 +12,7 @@ import shutil
 from pathlib import Path
 from typing import BinaryIO
 
-from aitu_backend.audio import formats, store
+from aitu_backend.audio import formats, piece_audio, store
 from aitu_backend.audio.store import StoredAudio
 from aitu_backend.schemas.metadata import AudioMetadata, AudioSource, TimeRange
 
@@ -120,6 +120,12 @@ def create_segment(
         )
     if start_seconds <= 0.001 and end_seconds >= duration - 0.001:
         raise ValueError("Choose a smaller range before creating a segment")
+    if source.metadata.cuts:
+        # The selector's seconds are those of the piece (the cuts removed), the file's are not.
+        raise ValueError(
+            "This piece has cuts. Cut it on the Audio tab of the Piece page instead of creating a "
+            "segment."
+        )
 
     source_range = source.metadata.source_time_range
     root_uuid = source.metadata.source_audio_uuid or source.uuid
@@ -184,7 +190,9 @@ def waveform(
         finalize(audio_uuid)
         entry = store.get(audio_uuid)
 
-    peaks = formats.compute_peaks(entry.normalized_path, points)
+    # The waveform of the piece: with cuts, the edited audio every player plays.
+    piece = piece_audio.ensure(audio_uuid)
+    peaks = formats.compute_peaks(piece.normalized if piece else entry.normalized_path, points)
     store.write_waveform(audio_uuid, peaks.to_dict())
     return peaks
 

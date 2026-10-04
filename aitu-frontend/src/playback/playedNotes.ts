@@ -35,6 +35,8 @@ export interface PlayedNote {
   removed: boolean;
   /** 12 or 24 when a note that far above was struck alongside it. */
   octaveBelow: number | null;
+  /** The note's stable id in `events.json`, for an edit sent to the backend. */
+  noteId: number | null;
 }
 
 /**
@@ -63,6 +65,7 @@ export function playedNotesOf(events: RawNoteEvent[]): PlayedNote[] {
       artifact: event.artifact,
       removed: event.removed,
       octaveBelow: event.octaveBelow,
+      noteId: event.id ?? null,
     });
   });
 

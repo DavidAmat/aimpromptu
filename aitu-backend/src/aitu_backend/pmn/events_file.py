@@ -10,7 +10,9 @@ per note with ``midiNote``, ``start`` and ``end`` in seconds, ``velocity``, and 
 * the header: ``notesRevision``, ``handsRevision``, ``audioRevision``, ``engine`` and
   ``lagCorrectionMs`` (plan section 8), plus ``nextId``, the first id no note has used, so a deleted
   note's id is never given again. An old file reads with the defaults of :class:`PieceHeader`.
-* ``hand`` on every note once the hand split is saved. Until Phase 5 it is only the reader's pin.
+* ``hand`` on every note once the hand split is saved, and ``handGuessed`` on a note whose hand
+  came from the quick rule for an added note (plan section 8.3). Before Phase 5 ``hand`` was only
+  the reader's pin, and it still is on a piece whose hands were never saved as a step.
 
 Nothing here writes on a read. ``schemaVersion`` becomes ``"1.1"`` when a file is saved.
 """
@@ -65,8 +67,13 @@ class PieceHeader:
     #: Goes up when a transcription finishes or a notes edit is saved. An old file has one
     #: transcription, so it reads as 1.
     notes_revision: int = 1
-    #: Goes up when the hands change. 0 means no hand split was ever saved.
+    #: Goes up when anything in the file changes: the notes or a hand (plan section 8.2). The piano
+    #: sheet records the value it was saved for in ``rhythm.json``.
     hands_revision: int = 0
+    #: The ``notesRevision`` the hands were last saved for as a whole (every live note with a
+    #: hand). 0 means the hands of these notes were never saved as a step: the hand split then runs
+    #: on each read, as before implementation 08 (D-31, changed in Phase 5).
+    hands_notes_revision: int = 0
     #: The ``audioRevision`` of ``metadata.json`` the notes were transcribed from.
     audio_revision: int = 0
     #: Which engine made the notes, for example ``muscriptor-large``. ``None`` when not recorded.
@@ -80,6 +87,7 @@ class PieceHeader:
     KEYS = {
         "notes_revision": "notesRevision",
         "hands_revision": "handsRevision",
+        "hands_notes_revision": "handsNotesRevision",
         "audio_revision": "audioRevision",
         "engine": "engine",
         "lag_correction_ms": "lagCorrectionMs",
@@ -120,6 +128,7 @@ def header_from_payload(payload: dict[str, Any]) -> PieceHeader:
     return PieceHeader(
         notes_revision=int(values["notes_revision"]),
         hands_revision=int(values["hands_revision"]),
+        hands_notes_revision=int(values["hands_notes_revision"]),
         audio_revision=int(values["audio_revision"]),
         engine=values["engine"],
         lag_correction_ms=float(values["lag_correction_ms"]),
@@ -165,6 +174,9 @@ def piece_from_payload(payload: dict[str, Any]) -> Piece:
         removed = np.fromiter(
             (bool(item.get("removed", False)) for item in items), bool, len(items)
         )
+        guessed = np.fromiter(
+            (bool(item.get("handGuessed", False)) for item in items), bool, len(items)
+        )
         duration_ms = float(payload["durationSeconds"]) * 1000.0
     except (KeyError, TypeError) as exc:
         raise ValueError(f"events.json is not readable: {exc!r}") from exc
@@ -180,6 +192,7 @@ def piece_from_payload(payload: dict[str, Any]) -> Piece:
         hand=hand[inside],
         velocity=velocity[inside],
         removed=removed[inside],
+        hand_guessed=guessed[inside],
     )
     return Piece(
         notes=notes,
@@ -199,7 +212,7 @@ def piece_to_payload(piece: Piece) -> dict[str, Any]:
     notes = piece.notes
     header = replace(piece.header, next_id=max(piece.header.next_id, notes.next_id))
     rows: list[dict[str, Any]] = []
-    for note_id, midi, start, end, velocity, hand, removed in zip(
+    for note_id, midi, start, end, velocity, hand, removed, guessed in zip(
         notes.id.tolist(),
         notes.midi.tolist(),
         _seconds(notes.on_ms),
@@ -207,8 +220,9 @@ def piece_to_payload(piece: Piece) -> dict[str, Any]:
         notes.velocity.tolist(),
         notes.hand.tolist(),
         notes.removed.tolist(),
+        notes.hand_guessed.tolist(),
     ):
-        rows.append(_row(note_id, midi, start, end, velocity, HAND_NAMES[hand], removed))
+        rows.append(_row(note_id, midi, start, end, velocity, HAND_NAMES[hand], removed, guessed))
     return _payload(rows, header, piece.duration_ms / 1000.0, piece.title)
 
 
@@ -220,6 +234,7 @@ def _row(
     velocity: int,
     hand: str | None,
     removed: bool,
+    hand_guessed: bool = False,
 ) -> dict[str, Any]:
     return {
         "id": note_id,
@@ -229,6 +244,7 @@ def _row(
         "velocity": velocity,
         # Only when set, which keeps the file the size it was for the notes nobody touched.
         **({"hand": hand} if hand else {}),
+        **({"handGuessed": True} if hand and hand_guessed else {}),
         **({"removed": True} if removed else {}),
     }
 
@@ -317,6 +333,7 @@ def notes_from_events(events: list["NoteEvent"], *, next_id: int = 0) -> Notes:
         hand=[HAND_CODES[event.hand] for event in kept],
         velocity=[event.velocity for event in kept],
         removed=[event.removed for event in kept],
+        hand_guessed=[event.hand_guessed for event in kept],
     )
 
 
@@ -332,9 +349,10 @@ def events_from_notes(notes: Notes) -> list["NoteEvent"]:
             end=end,
             velocity=velocity,
             hand=HAND_NAMES[hand],
+            hand_guessed=guessed,
             removed=removed,
         )
-        for note_id, midi, start, end, velocity, hand, removed in zip(
+        for note_id, midi, start, end, velocity, hand, removed, guessed in zip(
             notes.id.tolist(),
             notes.midi.tolist(),
             _seconds(notes.on_ms),
@@ -342,6 +360,7 @@ def events_from_notes(notes: Notes) -> list["NoteEvent"]:
             notes.velocity.tolist(),
             notes.hand.tolist(),
             notes.removed.tolist(),
+            notes.hand_guessed.tolist(),
         )
     ]
 
@@ -371,6 +390,7 @@ def payload_from_events(
                 event.velocity,
                 event.hand,
                 event.removed,
+                event.hand_guessed,
             )
         )
     return _payload(rows, replace(header, next_id=next_id), duration_seconds, title)

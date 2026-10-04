@@ -166,6 +166,10 @@ instead of computing them again. Old pieces that have no saved hands keep the ol
 nothing that exists today breaks. The phase that makes this change (Phase 5) adds a short note under
 D-31 in `decisions.md` that explains the sequence.
 
+**Done in Phase 5.** The note is in `decisions.md`. The saved hands are painted onto the same cells
+the inference paints: on all 34 pieces of the library the two hand matrices are identical, at 40 ms
+and at 20 ms, and building them takes 17 ms instead of 670 ms (median).
+
 ---
 
 # 5. What already exists and is reused
@@ -177,7 +181,7 @@ D-31 in `decisions.md` that explains the sequence.
 | The hand split | `hands/infer.py` (`infer_hands`, method `refine`), `matrix/hands.py` | Unchanged. About 0.5 s for a 3.5-minute piece |
 | Events to the piano matrix notation | `transcription/events_to_matrix.py` (`ONSET = 1`, `SUSTAIN = -1`) | The dense form. Section 6 adds the adapters around it |
 | History folders | `editing/history.py` (`history/vN/`) | A copy of `events.json` before it is replaced, so nothing is lost |
-| The vertical piano keyboard | `aitu-frontend/src/piano/Piano.tsx`, `keyPositions.ts` | The "piano SVG" of the prompt, with per-key colours already possible |
+| The vertical piano keyboard | `aitu-frontend/src/piano/Piano.tsx`, `keyPositions.ts` | The "piano SVG" of the prompt, with per-key colours already possible. **Phase 7:** the Notes tab draws its own keyboard on the canvas, one row per key (section 9.5) |
 | Undo and redo | `aitu-frontend/src/hooks/useEditHistory.ts` (implementation 06) | A generic history that groups one gesture into one step. Reused by the new editor |
 | Selection | `hooks/useNoteSelection.ts` | Click, Command-click, and a band drawn over empty space |
 | Toolboxes and bars | `components/common/ToolboxDialog.tsx`, `FloatingBar.tsx` | The floating panels the piano sheet uses. The new editor uses the same ones, so the pages look alike |
@@ -213,7 +217,7 @@ One rectangle carries five values:
 |---|---|---|
 | `id` | integer | Stable identity, given by the backend, never reused in a piece |
 | `key` | 0 to 87 | Row of the piano matrix notation (MIDI = key + 21) |
-| `onMs` | integer ms | The onset, in milliseconds of the original audio timeline (section 9.2) |
+| `onMs` | integer ms | The onset, in milliseconds of the piece: the original audio with the cuts removed (section 9.2) |
 | `lenMs` | integer ms | Onset plus sustain. The release is `onMs + lenMs` |
 | `hand` | `r`, `l` or none | The hand, empty until the hand split runs |
 
@@ -229,6 +233,12 @@ MuScriptor piece has whole milliseconds only, so nothing changes for the new pie
 rounds to whole milliseconds; `.pmn.json` keeps one decimal. The specification is
 [`../../backend/piano-matrix-notation.md`](../../backend/piano-matrix-notation.md).
 
+**Changed in Phase 4.** The first version of the table above said "milliseconds of the original
+audio timeline". That was written before Q-1 was answered. The answer (section 9.2) makes the piece
+shorter by its cuts, and the notes live in the time of the piece; the frame table converts a time of
+the piece to a time of the original for playback. For a piece with no cut, which is every piece
+today, the two are the same.
+
 ## 6.3 On disk
 
 `events.json` keeps its current shape, so every existing reader keeps working. Three things are added:
@@ -242,6 +252,11 @@ rounds to whole milliseconds; `.pmn.json` keeps one decimal. The specification i
 has used. An old file reads with ids `0..n-1` in file order and `notesRevision 1`, `handsRevision 0`,
 `audioRevision 0`, and is not rewritten until its next save. A writer that changes only notes keeps
 the header on disk. Nothing bumps a revision yet: that is Phase 5.
+
+**Done in Phase 5.** The header gained `handsNotesRevision` (section 8.2), and a note can carry
+`handGuessed: true` when its hand came from the quick rule (section 8.3). Every writer of
+`events.json` other than a transcription now goes through one function, `pipeline.save_edit`,
+which moves the revisions.
 
 ## 6.4 On the wire
 
@@ -281,6 +296,27 @@ backend for the hand split. The backend already holds the saved notes, so the re
 revision: `POST /pieces/{uuid}/hands/predict {"baseRevision": 7}`. The answer is the hand string,
 `"rrlrl..."`, in the same order as the ids. Unsaved edits must be saved first, which the save button
 already does in one click.
+
+**Done in Phase 5** (`aitu_backend/api/pieces.py`, `aitu_backend/pieces/`), with these details:
+
+- `GET /pieces/{uuid}/notes` also sends `stale` (the selected region changed after the
+  transcription) and `guessed`, the ids of the notes whose hand came from the quick rule.
+- The operations are `move` (with an optional `key`: a move with Shift held), `delete` (the note is
+  marked removed, so it keeps its id), `restore` (a deleted note put back, for undo after a save),
+  `add` and `hand`. `baseHandsRevision` is optional beside `baseRevision`: when given, a hand
+  changed elsewhere is also refused with 409. An operation that cannot be applied (an unknown id,
+  a note that would end after the piece, two notes of one key at the same onset) is refused with
+  422 and its reason, and nothing is written. A PATCH on stale notes is refused with 409.
+- The answer holds the new revisions, the id of each added note (`tempId` to `id`), and `changed`:
+  the notes the backend changed beyond the request, as columns (the added notes, a note the
+  same-key rule shortened, a note the quick rule gave a hand). The page replaces its copy of each.
+  `sheetStale` says when a current piano sheet became stale.
+- The backend applies the same-key rule of section 9.5 too, on the keys an operation touched: a
+  note that runs into the next onset of its key is shortened to it.
+- **Predict hands** writes nothing. It takes `frameMs` (the one the piano sheet uses, 40 by
+  default) and `replace`: by default the hands the user set are kept and only the notes with no
+  hand or a guessed hand are predicted; `replace: true` predicts every note again. The answer also
+  holds `id` and how many notes would change hand. It is cached, so a second press is 9 ms.
 
 ## 6.5 The adapters
 
@@ -332,11 +368,30 @@ rectangles coloured by hand, and it adds the hand tools. Keeping them as two tab
 order ("the hand split step, the step of the piano roll notation"), and it makes the staleness rule of
 section 8 visible: a notes edit can make the Hands tab stale without touching the Notes tab.
 
+**Done in Phase 6.** The page is `pages/piece/PiecePage.tsx`. Each tab shows the state of its
+step as an icon, and a tab that is not enabled is greyed and says why on hover. A tab typed in the
+address that is not enabled yet opens the step the piece reached instead. The top bar has a new first
+entry, **Piece** (`/piece`), which opens the working piece (the one the Playground shares) or a new
+one. Until Phases 7 and 8, the Notes, Hands and Sheet tabs show the state of their step, follow a
+running transcription with its progress bar, and open the Playground view of the same piece.
+
+**Done in Phase 7.** The Notes tab is `pages/piece/NotesTab.tsx` (section 9.5). The Hands and Sheet
+tabs keep the placeholder until Phase 8.
+
+**Done in Phase 8.** The Hands tab is the Notes tab's editor coloured by hand (section 9.6). The
+Sheet tab is `pages/piece/SheetTab.tsx`, the Playground's `RhythmPage` given the piece and the
+state of its step by the flow page (section 9.7). The placeholder `LaterStepTab` is gone.
+
 ## 7.2 What happens to the current Playground
 
 The flow page becomes the entry point of the app (`/` goes to `/piece/new`). The Playground's Input
 page keeps working, but its engine choice disappears, because MuScriptor is forced. Piano Roll and
 Notes Falling stay reachable for now. Whether they stay after this work is decision Q-4.
+
+**Done in Phase 9 (Q-4 applied).** The Playground's Piano Roll tab is removed, with its page and the
+two components only it used; `/playground/piano-roll` redirects to `/piece`, and the two links of
+Video to Notes open the Notes tab of the piece they wrote. Notes Falling stays, and its note panel
+keeps only Delete and Put back (the hand buttons belonged to the old Piano Roll).
 
 ## 7.3 Save and leaving a tab
 
@@ -344,6 +399,13 @@ Every edit on the Audio, Notes and Hands tabs is held in the page until the user
 floating bar shows "N unsaved changes" with **Save** and **Discard**. Moving to the next tab with
 unsaved changes asks the user to save or discard first. Leaving the page with unsaved changes shows
 the browser's own warning.
+
+**Done in Phase 6.** A tab reports its unsaved edits with `useUnsavedChanges(summary, {save,
+discard})` (`pages/piece/pieceContext.ts`); the bar says what is unsaved in words ("Unsaved: 1 cut,
+00:18.92 removed"). Any navigation inside the app is asked about, not only a tab change: another tab,
+a link of the top bar, the browser's back button. This needs React Router's `useBlocker`, which only
+works with a data router, so `main.tsx` now creates one with a single route that renders `App`'s
+route table as before. The dialog offers **Stay**, **Discard** and **Save and continue**.
 
 ---
 
@@ -365,8 +427,31 @@ Each step records the revision of the step before it at the moment it was made:
 | `events.json` header | `handsRevision` | Anything above changes, or a hand changes | the `notesRevision` the hand split was predicted for |
 | `rhythm.json` | - | - | the `handsRevision` the piano sheet was saved for |
 
+**Done in Phase 4**, the part a transcription owns: a new transcription writes `notesRevision` 1,
+or one more than before, and records the `audioRevision` of `metadata.json`; saving cuts that
+change makes `audioRevision` go up by one. `handsRevision` is not touched yet: what a new
+transcription does to it is part of the chain of Phase 5.
+
 One endpoint, `GET /pieces/{uuid}/status`, compares these numbers and answers the state of every step:
 `missing`, `running`, `ready` or `stale`. The flow page uses only that answer to enable its tabs.
+
+**Done in Phase 5.** The counters, as built:
+
+- `notesRevision` goes up with a transcription and with every saved notes edit, on any page (the
+  Notes tab, the old piano roll, a note removed or added on the piano sheet, a range edit).
+- `handsRevision` goes up with every change of `events.json`: a transcription, a notes edit or a
+  hand. It is the number the piano sheet compares against.
+- `handsNotesRevision` (new) is the `notesRevision` the hands were last saved for as a whole, that
+  is when every live note had a hand. 0 means the hands of these notes were never saved as a step;
+  a new transcription sets it to 0.
+- `rhythm.json` gained `handsRevision`. The backend sets it when the reading is saved
+  (`PUT /time/{uuid}/rhythm`); the client's value is ignored. An old reading has none and reads
+  as 0, which is also the `handsRevision` of a piece nobody has edited since, so every sheet that
+  exists today reads `ready`.
+- The status answers, per step, `state`, `enabled` (every step before it is ready; a stale Sheet
+  tab stays enabled because it opens with its banner), `reason` (the words for the tooltip or the
+  banner) and `details` (note count, notes without a hand, guessed hands, the running job). It
+  also answers `resume`, the step a piece opens on, and every revision.
 
 ## 8.3 What each change makes stale
 
@@ -402,6 +487,32 @@ again.
 **A new transcription** copies the previous `events.json` and `rhythm.json` into `history/vN/`
 before it replaces them. Today a new transcription deletes `rhythm.json` with no copy.
 
+**Done in Phase 5**, one test per row (`tests/test_pieces.py`), with three differences from the
+table above:
+
+- **A new transcription makes the Sheet tab `missing`, not `stale`.** Phase 4 kept the rule that a
+  new transcription removes `rhythm.json` after copying it into history, because its marks are
+  column numbers over the old notes, and after a cut every column moves. With no reading the step
+  is missing; the user writes the sheet again either way.
+- **Every edit made on the Sheet tab keeps a current sheet ready**, not only a hand change: a note
+  taken off the recording and a note added from the keyboard panel too. The reason is the one the
+  table gives for a hand: the page that made the change draws it at once. It matters in practice,
+  because saving the reading on the piano sheet is followed at once by taking its hidden notes off
+  the recording; with the plan's rule that save would have made its own sheet stale.
+- **The quick rule** looks at the notes that start within 1 s of the new note or still sound at its
+  onset, and copies the hand of the closest in pitch (the nearest in time breaks a tie); with none,
+  middle C and above is the right hand. "The nearest note in time" alone is ambiguous in a chord,
+  where the bass and the melody start together. The rule runs only when the hands were saved as a
+  whole before (`handsNotesRevision` > 0), and also for a note put back and for the notes a range
+  edit brings in.
+
+**The hands of an old piece.** A piece whose hands were never saved keeps the old behaviour: the
+piano sheet runs the inference and lays the reader's pinned hands on top. When it already has a
+saved sheet, its Hands step reads `ready` with `saved: false`, so it keeps opening on the Sheet tab
+as today. The first hand change on its piano sheet saves the hand of every note as the sheet draws
+it, then applies the change: the page looks the same, and from then on the sheet is painted from
+the saved hands.
+
 ---
 
 # 9. The design, step by step
@@ -427,6 +538,28 @@ before it replaces them. Today a new transcription deletes `rhythm.json` with no
   anything because MuScriptor has no velocity. Without its velocity test it would merge real repeated
   notes (a new onset of a key closes the open note at the same instant, gap 0 ms). Both are **off**
   for MuScriptor and stay on for ByteDance.
+
+**Done in Phase 4**, with these details:
+
+- The filters run inside the hand split, on every read, so "off for MuScriptor" is decided by the
+  `engine` in the header of `events.json` (`pipeline.filters_for`): `muscriptor-*` pieces get no
+  filter, every other piece keeps both, as before.
+- The model registry is `transcription/models.py`. `compose.yaml` sets
+  `AITU_PRELOAD_ENGINE=muscriptor-large`, so the container loads the model when it starts; `none`
+  turns it off. `GET /matrix/engine` says what is loaded and why a load failed (a missing token or
+  licence), which is the startup check of section 13.
+- The GPU queue is in `transcription/jobs.py`: one worker thread, in order of arrival, with a
+  `waiting` stage that says how many transcriptions are before this one. A second request for a
+  piece that is already waiting or running returns the same job. The range-edit take goes through
+  the same queue, because it also uses MuScriptor now.
+- `/matrix/engines` lists only `muscriptor`, which hides the engine choice on the Input page with
+  no frontend change; `POST /matrix/transcribe` refuses any other engine with 422.
+- **The lag correction needs about a minute of music.** On Superestrella the rule of section 3
+  gives +15 ms on the whole song, as in Phase 1, and 13 to 15 ms on any 60 s excerpt, but anything
+  from -7 to +17 ms on 20 s excerpts (about 70 onsets). A wrong correction of 20 ms is worse than
+  none, so below 200 distinct onsets no correction is applied (`lag.MIN_ONSETS`).
+- MuScriptor's `print` lines are silenced in its own modules only, not by redirecting the output of
+  the whole server.
 
 ## 9.2 Backend and frontend: the selected region, as ranges of time frames
 
@@ -468,6 +601,32 @@ the user chose a new transcription, but it is the simple option to use if that c
 
 Old "segments" made with **Create segment** stay as they are.
 
+**Changed in Phase 6, by the user (2026-09-29): once the cuts are saved, the edited audio is the
+audio of the piece.** Until then the plan kept only the cuts, and every player was to jump over
+them. The Audio tab's player did, but the other players (the Playground's Piano Roll, Notes Falling,
+the piano sheet) still played the whole original, so on a cut piece the audio ran ahead of the notes
+by the length of the cuts before the playhead. The user's rule: after Save, the cut version is the
+audio, everywhere. The user chose to keep the untouched original on disk, hidden, so the Audio tab
+can still show and restore a cut. `PUT /audio/{uuid}/cuts` now writes `piece-r<N>.flac` (the
+original decoded at its own rate and channels, the kept frames joined with the same 5 ms fades as
+the engine's input; FLAC because it is lossless and sample exact, where an MP3 would add about
+25 ms of encoder delay) and `piece-r<N>.wav` (the same from `normalized.wav`).
+`GET /audio/{uuid}/file` (and `?normalized=true`) serves them for a piece with cuts; only
+`?original=true`, used by the Audio tab, serves the untouched file. The waveform route and the
+`durationSeconds` of the audio list follow the edited audio (`originalDurationSeconds` keeps the
+other), and **Create segment** refuses a piece with cuts. The module is
+`aitu_backend/audio/piece_audio.py`.
+
+**Done in Phase 4** (backend only; the Audio tab is Phase 6). `metadata.json` has `cuts` and
+`audioRevision`. `GET /audio/{uuid}/cuts` answers the cuts, the frame table (`kept`, one row per
+kept range), the frame counts and `notesStale`. `PUT /audio/{uuid}/cuts` sorts, clips and merges the
+cuts (two touching cuts are one), raises `audioRevision` only when they change, refuses with 409 when
+its `baseRevision` is old and with 422 when nothing would be kept. The table is
+`aitu_backend/audio/frames.py`. A cut does not start a transcription by itself: it makes the notes
+stale, and the next transcription request transcribes again (the page's **Transcribe** button, Phase
+6). An engine that reads a file (ByteDance, Transkun) gets a temporary WAV of the piece when there is
+a cut; MuScriptor gets the samples.
+
 ## 9.3 Backend: the live stream of notes
 
 The transcription job sends one SSE message per chunk:
@@ -487,6 +646,23 @@ differs from the streamed notes only by those corrections.
 The stream carries the messages of a running job to any page that connects, including a page that
 reconnects after a reload. Their order is the order of the chunks.
 
+**Done in Phase 4**, with three additions:
+
+- Messages are also sent **inside** a chunk, at most every 0.25 s when a note started or ended, so
+  the live view grows several times per chunk instead of once (`transcription/live.py`). `done`
+  still counts whole chunks. One more message after the last chunk carries the notes MuScriptor
+  closes after its last progress event; a note never closed ends at the end of the piece there, as
+  it does in the saved notes.
+- The messages are named SSE events (`event: chunk`), so the current Input page, which listens only
+  to the unnamed progress frames, ignores them. The last frame is `event: done` with `type`,
+  `status`, `error`, `revision`, `lagCorrectionMs`, `noteCount` and `audioUuid`.
+- Every frame has an SSE `id`. A page that connects late gets every frame from the start, a
+  reconnecting `EventSource` resumes after `Last-Event-ID`, and `GET /matrix/{uuid}/job` finds the
+  running job of a piece after a reload.
+
+The hand split is not computed before `done` any more: the job warms the shared split cache on a
+thread after it saves (section 10.5), so `done` is not delayed by 0.3 to 4.3 s.
+
 ## 9.4 Frontend: the Audio tab
 
 A canvas waveform with zoom (Command and the mouse wheel, like the piano sheet), a playhead, and a
@@ -504,6 +680,20 @@ selection made by dragging. The keyboard and the buttons:
 The waveform peaks come from `GET /audio/{uuid}/waveform?points=N`. When the user zooms far in, the
 page asks for more points in the visible range. It does not draw one SVG element per bar, which is
 what makes the current waveform slow.
+
+**Done in Phase 6, with one change.** Instead of asking for more points on each zoom, one request,
+`GET /audio/{uuid}/frames/peaks`, gives the lowest and the highest sample of every 10 ms time frame
+of `normalized.wav` (signed bytes, base64): 18,917 frames and 35 KB sent for Superestrella, answered
+in 8 to 30 ms. Every zoom level down to a single frame is then drawn from memory, and every pixel
+falls on the same axis as the cuts. The waveform is two canvases (the waveform, the cuts and the
+selection below; the playhead alone above) and an overview strip of the whole audio. The gestures:
+drag to select; drag an edge of the selection by its grip (it moves only left or right, and the view
+scrolls when the drag passes its side); press or drag in the time ruler, or double-click, to move the
+playhead; a single click clears the selection, or inside a cut selects the cut so **Restore** puts it
+back; Command and the wheel or a pinch to zoom, **Zoom to the selection**, a sideways swipe to move. **Play selection** plays the selected frames, cut or not, so a part can be heard
+before it is deleted or restored. **Transcribe** saves first, asks before it replaces notes that are
+current, and opens the Notes tab. The cut rules of the page are the backend's (`src/audio/cuts.ts`,
+checked by `npm run check:cuts`).
 
 ## 9.5 Frontend: the Notes tab, live
 
@@ -555,6 +745,28 @@ Moves snap to 10 ms by default, which is MuScriptor's own step. A move that woul
 rectangle on the same key shortens the earlier one, because one key cannot sound twice at the same
 time.
 
+**Done in Phase 7** ([report](08-implementation-phase-7.md)), with these differences:
+
+- **The keyboard is drawn on the canvas**, one row of the same height per key, as in the MuScriptor
+  examples, instead of the SVG `Piano.tsx` whose black-key lanes overlap the white ones (a click
+  there is ambiguous). The rows show the keys the piece uses with a small margin (at least 36 rows),
+  and only grow while the page is open. The keys of the sounding notes are lit on the canvas.
+- **The notes are orange** before the hand split, not red: red means "no hand" on this app. A
+  sounding note is black with a thick border in its colour, as on the other views.
+- **The double-click adds a note**, as the gesture table says; the playhead is moved in the time
+  ruler (press or drag) and on the bar under the roll, which is the progress bar during the
+  transcription and the scrub bar afterwards.
+- **Moves go by whole steps of 10 ms from where the note was**, not onto a 10 ms grid: MuScriptor
+  onsets carry the per-piece lag correction (for example 3,055 ms).
+- **Also:** the arrow keys nudge the selection (10 ms, one key; with Shift 100 ms, an octave),
+  Command-A selects everything, undo works after a save (a saved delete comes back as `restore`),
+  and stale notes are shown read-only with **Play** disabled.
+- **Playback over cuts needs no frame table here**: since the Phase 6 change of section 9.2 the file
+  of the piece is the edited audio, which is in the time of the notes.
+- **The targets are met** (`npm run bench:roll`, headless Chromium with a software canvas): 60 frames
+  per second and no dropped frame with 10,000 rectangles, also with all of them in view (2.7 ms per
+  frame), and at 100 (and 200) stream messages per second.
+
 ## 9.6 Frontend: the Hands tab
 
 The same editor. The rectangles are coloured by hand with the existing `handColors()`, and the keys of
@@ -567,6 +779,31 @@ the piano keyboard light up in the hand colour during playback.
   the other. The rectangle takes the other colour.
 - A filter shows both hands, only the right hand, or only the left hand.
 - **Save**, then **Continue to the sheet**.
+
+**Changed after Phase 6, by the user (2026-09-29): a note the hand split cannot place is shown,
+not guessed.** The split works on the piano sheet's grid and cannot place a note shorter than one
+column or sharing its column with another note of its key. Phase 5 gave such a note a hand by the
+quick rule. The rule now: after **Predict hands**, those notes have no hand and are drawn in red,
+because they are often notes the engine imagined; the user deletes them or gives them a hand, and
+the Hands step is ready only when every live note has one. The Playground's Piano Roll does this
+already (Phase 6 report 2.9); the Hands tab must do the same, and `POST /hands/predict` must stop
+guessing for them.
+
+**Done after Phase 7 (Story 8.1, at the user's request on 2026-10-01).** The Hands tab is the Notes
+tab's editor coloured by hand (`NotesEditor`, step `hands`). **Predict hands** runs as a job,
+`POST /pieces/{uuid}/hands/predict/job`, whose progress bar is real: the hand inference reports how
+far its beam search and its second pass are. The answer is unsaved until **Save**, and the notes it
+cannot place stay red (`-` in the answer). Before the first prediction the notes stay orange; once
+the piece has hands, the Notes tab colours them too, with a **Hand colours** switch to hide them. A
+progress bar that stands alone is at most 520 px wide. Details: the
+[Phase 7 report](08-implementation-phase-7.md), section 6.
+
+**Changed again by the user (2026-10-01): a note the split cannot place no longer blocks the
+step.** The Hands step is ready once every note the piano sheet places has a hand, which is the
+case right after **Predict hands** and **Save**. A note the sheet cannot place stays red and is
+counted (`details.unplaced`), the quick rule does not guess its hand on a later save, and the sheet
+leaves it out as before. While the Notes or Hands tab has unsaved changes, the Hands tab shows a
+pencil instead of its tick; **Save** brings the tick back. Phase 7 report, section 8.
 
 ## 9.7 The Sheet tab
 
@@ -588,9 +825,37 @@ is cached, is built and encoded in 19 ms median. The split is the cost to remove
 3. The payload is built with the NumPy adapters of Phase 2 and sent with gzip.
 
 The target is under 300 ms from the click to the redrawn piano sheet for a 3.5-minute piece, measured
-in Phase 8 with the time of each part (request, build, transfer, drawing). If the drawing itself is
+in Phase 8 with the time of each part (request, build, transfer, drawing).
+
+**Done in Phase 5 (backend part).** Measured through the backend container on copies of three
+pieces (`measurements/phase-5-pieces.json`): on the two Superestrella pieces (189 s) the hand move
+is 8 to 12 ms and the sheet request after it 33 to 36 ms (45 KB sent), against 1.1 to 1.5 s before,
+when the split ran again. On the largest piece of the library (4,295 notes) it is 21 to 28 ms and
+74 to 136 ms. What is left for Phase 8 is the transfer and the drawing in the browser. If the drawing itself is
 the largest part, the report says so and proposes the next step. It does not change the drawing
 package in this implementation.
+
+**Done in Phase 8.** `pages/piece/SheetTab.tsx` renders `RhythmPage` with an optional `step` prop
+(the piece, the Sheet step's state and reason, and a callback after a saved reading or **Remove
+all**); without it the Playground page is unchanged. A stale reading is loaded but not drawn: a
+banner asks for **Write the sheet**, **Save** appears only once the sheet is drawn, and only that
+save makes the step ready. The hand move, measured with `npm run bench:sheet` in a headless
+Chromium on copies of three pieces (median of 6 moves, press to redrawn sheet):
+
+| Piece | Before | After |
+|---|---:|---:|
+| Elefants (3:53, 1,292 notes) | 438 ms | 252 ms |
+| Superestrella tutorial (3:10, 1,497 notes, decorative notes removed) | 507 ms (first move) | 272 ms |
+| The Other Side (4:33, 4,295 notes) | - | 599 ms |
+
+The measurement found three costs on the page and one on the backend, all fixed without changing
+what the sheet shows: the sheet was drawn five times per move instead of once (equal values handed
+to the renderer as new objects), the page's re-render at the press held back the sheet request
+(now a transition), and the sheet request with decorative notes removed deep-copied the hands on
+each of its passes (now only the two grids; 88 to 50 ms, answers identical). On the largest piece
+the drawing package is the largest part (360 ms to draw and lay out every system again); the
+[Phase 8 report](08-implementation-phase-8.md) section 3.3 proposes redrawing only the systems that
+changed, which is a change in `vexflow-v2`.
 
 Two other small performance fixes are possible and are **not** part of the plan unless they leave the
 page's look and behaviour exactly the same: the page re-renders itself on every animation frame during
@@ -659,6 +924,24 @@ The host needs the NVIDIA Container Toolkit so a container can use the GPU. Phas
 `docker run --rm --gpus all nvidia/cuda:<version>-base nvidia-smi` and asks the user to install it if
 it is missing.
 
+**Done in Phase 3**, with three differences from the list above:
+
+- **The whole repository is mounted, not only the data folder.** Both images hold only the tools and
+  the packages; the code, the tests, `pocs/` and `context/` are the host's own files at
+  `/work/aimpromptu`. This is what makes uvicorn and Vite reload on every edit, and what lets every
+  backend test run in the container unchanged. `AITU_DATA_DIR` in `.env` chooses which host folder
+  is mounted as the container's data folder.
+- **The Hugging Face cache is the host's own** (`/mnt/ssd2/hf/data/hub`, bind-mounted), so the 5.5 GB
+  of `large` weights downloaded in Phase 1 are not downloaded again. The backend's home folder (the
+  ByteDance checkpoint, the torch cache) is `/mnt/ssd2/aimpromptu/home`.
+- **The base is `python:3.12-slim-bookworm`, not a CUDA image.** The PyPI torch wheel carries its own
+  CUDA 13.0 libraries; the NVIDIA Container Toolkit adds the driver. The image is 10.4 GB, almost all
+  of it torch and its CUDA libraries.
+
+`HF_TOKEN` is read from the shell (it is exported in `~/.zshrc` on Ubuntu) or from `.env`. The root
+`Makefile` has `up`, `down`, `logs`, `ps`, `build`, `test-backend` and `shell-backend`. The native
+servers' `make logs` became `make logs-native`, because `logs` now follows the containers.
+
 ## 10.4 The tunnel
 
 Today the browser calls the backend directly on port 8765, and the frontend on port 5173. That would
@@ -673,20 +956,25 @@ ssh -N -L 5173:localhost:5173 ubuntu
 and the browser uses `http://localhost:5173`. A script `scripts/tunnel-from-mac.sh` holds this command
 and says what to open.
 
+**Done in Phase 3.** `API_BASE` is `/api` by default, and the Vite proxy removes the prefix. The
+proxy passes the gzip answers, the audio range requests (seeking) and the progress stream unchanged.
+The one new behaviour: when the backend is stopped, the page's own server answers 502 instead of the
+browser failing to connect, so the frontend client treats a 502 as "Could not reach the backend".
+
 ## 10.5 Low-effort performance fixes found during the exploration
 
 The prompt allows clear, low-effort fixes. These were found, and each has an owner phase:
 
 | Problem | Today | Fix | Phase |
 |---|---|---|---|
-| A new model for every transcription | torch import and weights loaded per job | The model registry of section 9.1 | 4 |
-| The device is fixed to CPU | `DEFAULT_DEVICE = "cpu"` | `AITU_DEVICE` | 3 |
-| The transcription job computes the hand split and throws it away | The first sheet request pays it again | Put the result in the split cache | 4 |
-| `GET /matrix/{uuid}/events` runs the hand split on every call | about 0.5 s each | Use the split cache | 4 |
+| A new model for every transcription | torch import and weights loaded per job | The model registry of section 9.1. **Done** | 4 |
+| The device is fixed to CPU | `DEFAULT_DEVICE = "cpu"` | `AITU_DEVICE`. **Done**: ByteDance takes 4.6 s on the GPU against 54 s on the CPU for Superestrella (189 s), 12 times faster, with 1,338 of 1,343 notes identical | 3 |
+| The transcription job computes the hand split and throws it away | The first sheet request pays it again | Put the result in the split cache. **Done**: one cache for every reader (`transcription/split_cache.py`), warmed by the job, computed once when two requests ask at the same time | 4 |
+| `GET /matrix/{uuid}/events` runs the hand split on every call | about 0.5 s each | Use the split cache. **Done** | 4 |
 | The piano sheet payload is 666 KB, built with Python loops | about 0.5 s to build. **Phase 2 measured** 24 ms median on Ubuntu once the split is cached; the 0.5 s was the hand split | NumPy adapters and gzip. **Done**: 19 ms median, sent at 56 KB instead of 634 KB | 2 |
-| The YouTube download blocks the HTTP request | yt-dlp and ffmpeg inside the request | A job with progress | 6 |
-| The piano roll visualization rebuilds every note 33 times per second | SVG, one element per note | The canvas editor | 7 |
-| `torchaudio 2.11` locked beside `torch 2.13` | a version mismatch | Align the versions in the lock file | 3 |
+| The YouTube download blocks the HTTP request | yt-dlp and ffmpeg inside the request | A job with progress. **Done**: `POST /youtube/jobs`, followed on the progress stream of every job; a 19 s video took 2.5 s from the click to the Audio tab | 6 |
+| The piano roll visualization rebuilds every note 33 times per second | SVG, one element per note | The canvas editor. **Done**: no React render during playback or the live stream; 60 fps with 10,000 rectangles | 7 |
+| `torchaudio 2.11` locked beside `torch 2.13` | a version mismatch | Align the versions in the lock file. **Phase 3: nothing to change.** 2.11 is the newest `torchaudio` on PyPI, it has no `torch` pin, and its native libraries use PyTorch's stable interface (`abi3`), so it is built to work beside 2.13. Its library loads and the function Transkun uses runs on the GPU | 3 |
 
 ---
 
@@ -832,6 +1120,13 @@ pages in `context/` and `documentation/` for the new engine, the format, the flo
 and the tunnel. `context/02b-local-setup.md` updated for the new way of working. Q-4 applied. The
 folder README marked complete.
 
+**Done on 2026-10-01.** `npm run time:flow` walks the flow on three temporary pieces (an upload of
+Superestrella, a copy of The Winner Takes It All opened from the library, a new YouTube URL): 31 to
+60 s from the piece to a saved piano sheet, almost all of it the transcription. New overview pages
+`context/backend/muscriptor.md`, `context/backend/pieces-and-revisions.md` and
+`context/frontend/flow-page.md`; the platform pages, the detail pages and the READMEs updated. Report:
+[`08-implementation-phase-9.md`](08-implementation-phase-9.md).
+
 ---
 
 # 13. What could go wrong
@@ -855,7 +1150,11 @@ folder README marked complete.
 - `aitu-backend`: `make test`, inside the container from Phase 3 on. New tests for the adapters, the
   engine with a fake model, the stream messages, the operations, the revisions and staleness.
 - `aitu-frontend`: `npm run lint`, `npm run build`, `npm run check:render`, `npm run check:history`,
-  plus a check script for the editor's typed arrays and operations.
+  `npm run check:cuts` (Phase 6), plus a check script for the editor's typed arrays and operations
+  (`npm run check:notes`, Phase 7). `npm run check:flow` walks the flow page in a headless Chromium,
+  the live transcription, the editor, the Hands tab and the Sheet tab included; `npm run bench:roll`
+  measures the Notes tab and `npm run bench:sheet` a hand move on the Sheet tab (Phase 8);
+  `npm run time:flow` times the whole flow on three temporary pieces (Phase 9).
 - `vexflow-v2`: `npm test` if anything there changes (nothing is planned).
 - In the browser, through the tunnel, by the user, at the end of Phases 6, 7, 8 and 9. From Phase 3
   on, the agent also takes its own screenshots with Playwright before it asks the user.

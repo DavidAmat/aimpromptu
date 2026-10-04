@@ -47,13 +47,13 @@ import useProgress from "../../hooks/useProgress";
 import { ROUTES } from "../../layout/routes";
 import { noteName } from "../../music/noteNames";
 import { formatTime } from "../../audio/time";
-import { PageContainer, SectionCard, surface } from "../../ui";
+import { PageContainer, progressSx, SectionCard, surface } from "../../ui";
 import { buildKeys } from "../../video/overlayGeometry";
 import { noteId, place } from "../../video/notePlacement";
 import { readSelectedVideo, writeSelectedVideo } from "../../video/selectedVideo";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 
-/** A drag shorter than this is a click, not a band. The Piano Roll's number. */
+/** A drag shorter than this is a click, not a band. The old Piano Roll's number. */
 const BAND_THRESHOLD = 3;
 
 interface Band {
@@ -327,8 +327,8 @@ export function VideoNotesPage() {
       .writeEvents(video.metadata.audioUuid)
       .then((result) => {
         setWritten(result);
-        // The piece the Playground tabs share is now this one, so the Piano
-        // Roll and the sheet open on it without a second picker.
+        // The piece the Playground tabs share is now this one, so Notes
+        // Falling and the sheet open on it without a second picker.
         updateWorkingArtifact({ audioUuid: result.audioUuid, label: result.title });
         void refresh();
       })
@@ -376,7 +376,7 @@ export function VideoNotesPage() {
         ) : null}
 
         {running ? (
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2, ...progressSx }}>
             <LinearProgress
               variant={progress.event?.total ? "determinate" : "indeterminate"}
               value={progress.event ? progress.event.fraction * 100 : 0}
@@ -464,8 +464,13 @@ export function VideoNotesPage() {
               sx={{ mb: 2 }}
               action={
                 <Stack direction="row" spacing={1}>
-                  <Button color="inherit" size="small" component={Link} to={ROUTES.playgroundPianoRoll}>
-                    Open the Piano Roll
+                  <Button
+                    color="inherit"
+                    size="small"
+                    component={Link}
+                    to={ROUTES.piece(written.audioUuid, "notes")}
+                  >
+                    Open the notes
                   </Button>
                   <Button color="inherit" size="small" component={Link} to={ROUTES.playgroundRhythm}>
                     Open the sheet
@@ -569,7 +574,7 @@ export function VideoNotesPage() {
             ? ` · ${written.unmatched} corrections named a note the reading no longer holds`
             : ""}
           . It is an ordinary piece now:{" "}
-          <Link to={ROUTES.playgroundPianoRoll}>open it on the Piano Roll</Link>.
+          <Link to={ROUTES.piece(written.audioUuid, "notes")}>open its notes</Link>.
         </Alert>
       ) : null}
     </PageContainer>

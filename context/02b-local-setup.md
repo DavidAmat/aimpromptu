@@ -9,6 +9,8 @@ The environment is a pair of machines on the same Wi-Fi network:
 
 The Mac has limited RAM and a small internal disk. The Ubuntu machine has a strong CPU, 64 GB of RAM, an NVIDIA RTX 4090, and much more disk. The default pattern is: edit on the Mac, run heavy work on Ubuntu over SSH.
 
+**AImpromptu is the exception.** Since implementation 08 (October 2026) the whole project lives and runs on Ubuntu: the code, the data, the containers, and the IDE session of the agent. The Mac is only the browser, and it reaches the app through one SSH tunnel. Section 12 describes this way of working.
+
 ---
 
 ## 1. How the two machines relate
@@ -235,7 +237,7 @@ Notable `work/` contents:
 
 | Item | Value |
 | --- | --- |
-| OS | Ubuntu 24.04.4 LTS (noble), kernel 6.17 (reported as 7.0.0-30-generic in `uname`) |
+| OS | Ubuntu 24.04.4 LTS (noble), kernel reported as 7.0.0-34-generic in `uname` (October 2026) |
 | Hostname | `david-ubuntu` |
 | User | `david` (sudo, docker, ollama groups), shell `zsh` |
 | CPU | Intel Core i9-14900KF, 24 cores / 32 threads, up to 6.0 GHz |
@@ -247,6 +249,8 @@ Notable `work/` contents:
 | Other local AI | Ollama, llama.cpp GGUF files, vLLM images, ComfyUI, LM Studio models |
 
 GPU check: `nvidia-smi`. If it fails after a reboot, driver modules may need a reload. Do not silently fall back to CPU for GPU jobs.
+
+The BIOS was updated to version 1836 (Intel Default Settings) on 2026-09-29. Before that, the i9-14900KF crashed under load ("invalid opcode", machine check errors), which is the known instability of Intel 13th and 14th generation processors. After a BIOS reset, check that the Intel Default Settings are still selected.
 
 ComfyUI currently runs from `/mnt/ssd2/image-generation/ComfyUI`.
 
@@ -282,6 +286,10 @@ Code that is not huge lives on SSD 1 under `/home/david/Documents`.
       glasic-admin-app/
   projects/
     knowledge-base/
+    music/
+      aimpromptu/            # this project (git: github.com:DavidAmat/aimpromptu)
+      vexflow-v2/            # @aimpromptu/grid-notation, must sit beside aimpromptu
+      muscriptor/            # MuScriptor's own repository, for reference and its tools
   utils/
     zsh-autosuggestions/
     zsh-syntax-highlighting/
@@ -301,7 +309,8 @@ SSD 2 is the bulk disk. Approximate sizes:
 | --- | --- | --- |
 | `/mnt/ssd2/docker` | live Docker data-root (root-owned; `docker system df` is the right way to measure it) | Images, containers, volumes, build cache |
 | `/mnt/ssd2/docker_bk` | ~116 G | Old Docker data backup |
-| `/mnt/ssd2/hf` | ~77 G | Hugging Face cache and model checkouts |
+| `/mnt/ssd2/hf` | ~84 G | Hugging Face cache and model checkouts. `hf/data/hub` holds the MuScriptor weights (5.5 GB for `large`), which the AImpromptu backend container mounts |
+| `/mnt/ssd2/aimpromptu` | ~0.2 G | AImpromptu's backend container home: the ByteDance checkpoint and the torch cache |
 | `/mnt/ssd2/ollama` | ~73 G | Ollama blobs/manifests |
 | `/mnt/ssd2/image-generation` | ~44 G | ComfyUI and its HF cache |
 | `/mnt/ssd2/lms` | ~34 G | LM Studio models |
@@ -509,7 +518,7 @@ If the user says the current project is for company B, look up the matching `git
 
 ## 11. How agents should work in this setup
 
-1. Assume the session is on the **Mac** unless the prompt says otherwise.
+1. Assume the session is on the **Mac** unless the prompt says otherwise. For AImpromptu, assume **Ubuntu** (section 12).
 2. For GPU, large training, embeddings, Docker image builds, or multi-hour jobs: give Ubuntu commands (`ssh ubuntu '...'`) or run them only when already on that host.
 3. Default `docker` on the Mac is the **Ubuntu** daemon. Images land in `/mnt/ssd2/docker`.
 4. Use `docker --context colima` only when Mac files must be bind-mounted (Supabase-local, similar cases). Start Colima first if it is stopped.
@@ -519,3 +528,50 @@ If the user says the current project is for company B, look up the matching `git
 8. Keep secrets on the machine that needs them. Do not copy `.env` files between Mac and Ubuntu unless asked.
 9. Confirm `pwd` and which machine you are on before destructive or long commands.
 10. Prefer a short smoke test. Leave long GPU runs for the user to monitor in an Ubuntu terminal.
+
+---
+
+## 12. AImpromptu: everything on Ubuntu, the browser on the Mac
+
+Implementation 08 moved AImpromptu from the Mac to Ubuntu, because its transcription model (MuScriptor `large`, 1.4 billion parameters) needs the RTX 4090. The Mac stays the machine the user looks at the app from.
+
+### 12.1 Who runs what
+
+| What | Where |
+| --- | --- |
+| The repositories `aimpromptu` and `vexflow-v2` (side by side), and `muscriptor` | Ubuntu, `/home/david/Documents/projects/music/` |
+| The IDE session (Cursor) and the AI agent | Ubuntu |
+| The backend and the frontend | Ubuntu, in two Docker containers (`compose.yaml` at the repository root) |
+| The piece data (`aitu-backend/data/`, gitignored) | Ubuntu. The Mac's copy, `/Volumes/DevSSD/Documents/projects/music/aimpromptu`, is the state of 2026-09-28 and is no longer updated |
+| The browser | The Mac, through the tunnel |
+| Headless screenshots and browser checks by the agent | Ubuntu (Playwright's Chromium in `~/.cache/ms-playwright`) |
+
+### 12.2 Start the app (on Ubuntu)
+
+```bash
+cd ~/Documents/projects/music/aimpromptu
+make up        # builds the images if needed, starts both containers, waits until they answer
+make logs      # follow both
+make down      # stop both
+```
+
+The backend container reserves the GPU and loads MuScriptor `large` at start (about 3.5 GB of GPU memory). `HF_TOKEN` (the Hugging Face token of the account that accepted the MuScriptor licence) is exported in `~/.zshrc`, and Compose reads it from the shell. Both containers publish their ports on `127.0.0.1` only: 5173 (the page) and 8765 (the backend, for `curl` on Ubuntu).
+
+### 12.3 Open the app (on the Mac)
+
+```bash
+ssh -N -L 5173:localhost:5173 ubuntu
+# or, from the Mac's copy of the repository:
+scripts/tunnel-from-mac.sh
+```
+
+Then open `http://localhost:5173` in the browser of the Mac. One port is enough: the page's own server (Vite) passes `/api` to the backend, including the audio files and the progress stream. The tunnel stays open until Ctrl-C, and it closes when the Mac sleeps; run it again after.
+
+When an agent gives the user a URL of the app, it gives this tunnel command with it.
+
+### 12.4 Things to know
+
+- **A lost GPU in the container.** After the host's service manager reloads (for example after a system update), a running container can lose its GPU: `GET /matrix/engine` says "No CUDA GPUs are available" and a transcription ends at once with no notes. `docker compose up -d --force-recreate backend` gives it back.
+- **Ubuntu has no access to the Mac.** Remote Login is on for the Mac, but Ubuntu has no key or `Host mac` entry for it. Phase 0 of implementation 08 wrote the steps (`context/implementations/08-new-algorithm-notes-detection-muscriptor/08-implementation-phase-0.md`), and they are optional: nothing in the project needs files from the Mac now.
+- **Disk.** The backend image is 10.4 GB (almost all of it PyTorch with its CUDA libraries) and the frontend image 1 GB; both live in Docker's data root on `/mnt/ssd2/docker`.
+- **Commands and troubleshooting** for the containers are in `context/04-local-development.md`.

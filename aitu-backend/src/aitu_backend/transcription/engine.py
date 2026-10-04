@@ -8,12 +8,17 @@ Engines available:
 
 | Name | Package | Notes |
 |------|---------|-------|
-| ``bytedance`` | ``piano_transcription_inference`` | default; the research doc's first pick |
+| ``muscriptor`` | ``muscriptor`` | default and the only one offered (implementation 08) |
+| ``bytedance`` | ``piano_transcription_inference`` | the default before implementation 08 |
 | ``transkun``  | ``transkun``                      | neural semi-CRF, no thresholds, weights ship with the package |
 | ``basic-pitch`` | ``basic_pitch`` | Spotify's model, kept as benchmark/fallback |
 | ``silent`` | — | returns nothing; for tests and for wiring the UI without a model |
 
-Both real engines import their package **lazily, inside the constructor**, so
+**MuScriptor is forced** (implementation 08, plan section 9.1): it is the default, it is first in
+:data:`ENGINES`, and :func:`selectable_engines` (``GET /matrix/engines``) offers only it, so the
+page shows no engine choice. ByteDance and Transkun stay importable, tested and callable from code.
+
+Every real engine imports its package **lazily, inside the constructor**, so
 the backend starts, the API serves and the whole test suite runs on a machine
 where neither is installed. Asking for an engine that is not installed raises
 :class:`EngineUnavailable` naming the install command.
@@ -21,17 +26,25 @@ where neither is installed. Asking for an engine that is not installed raises
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
+import numpy as np
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-#: Default engine name. Swap here, not at every call site.
-DEFAULT_ENGINE = "bytedance"
+from aitu_backend import config
 
-#: ``device`` value for this Mac. Kept parameterized for future CUDA hosts.
-DEFAULT_DEVICE = "cpu"
+#: Default engine name. Swap here, not at every call site.
+DEFAULT_ENGINE = "muscriptor"
+
+#: The engines the page may offer (implementation 08: MuScriptor only, the user does not choose).
+SELECTABLE_ENGINES = ("muscriptor",)
+
+#: What an engine runs on when the caller does not say: ``AITU_DEVICE`` (:mod:`aitu_backend.config`),
+#: ``cpu`` when it is unset. Kept as a name so a caller can still pass ``device=DEFAULT_DEVICE``.
+DEFAULT_DEVICE = None
 
 #: How confident the onset head must be before a peak becomes a note, for ByteDance.
 #:
@@ -90,6 +103,10 @@ class NoteEvent(BaseModel):
     #: the player's hands guesses it; a pianist looking at the page knows, and when
     #: they say so the answer is kept here and the matrix is built with it.
     hand: str | None = Field(None, pattern="^(right|left)$")
+    #: True when ``hand`` was given by the quick rule for a note added after the hand split
+    #: (implementation 08, plan section 8.3), not by the split or by a person. The Hands tab draws
+    #: it with a dashed border until someone confirms it or predicts the hands again.
+    hand_guessed: bool = Field(False, alias="handGuessed")
     #: True when a reader has said this note was never played.
     #:
     #: Kept on the note for the same reason the hand is: it is a correction to the
@@ -120,6 +137,20 @@ class TranscriptionEngine(Protocol):
 
     def transcribe(self, wav_path: Path) -> list[NoteEvent]:
         """Transcribe a mono WAV into note events, ordered by start time."""
+
+
+@dataclass
+class EngineRun:
+    """What an engine returns when the pipeline gives it the audio as samples (:meth:`run_signal`).
+
+    ``lag_correction_ms`` is the timing fix already subtracted from every onset and release; the
+    pipeline stores it in the header of ``events.json``.
+    """
+
+    events: list[NoteEvent]
+    lag_correction_ms: float = 0.0
+    #: Facts about the run for the report of the job (chunks, messages sent, notes left out).
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 class EngineUnavailable(RuntimeError):
@@ -228,21 +259,22 @@ class ByteDanceEngine:
     The package only calls ``model.to(device)`` when the device string contains
     ``"cuda"`` (see its ``inference.py``), and its forward pass reads the device
     off the model's parameters — so ``"mps"`` would be accepted and then
-    ignored. The parameter stays for a future CUDA host, where it does work.
-    A one-minute piano clip takes a few seconds on an M-series CPU.
+    ignored. On the Ubuntu machine ``cuda`` does work (``AITU_DEVICE=cuda``, implementation 08
+    Phase 3). A one-minute piano clip takes a few seconds on an M-series CPU.
     """
 
     name = "bytedance"
 
     def __init__(
         self,
-        device: str = DEFAULT_DEVICE,
+        device: str | None = DEFAULT_DEVICE,
         checkpoint: str | None = None,
         *,
         auto_download: bool = True,
         reporter: object | None = None,
         onset_threshold: float = DEFAULT_ONSET_THRESHOLD,
     ) -> None:
+        device = device or config.device()
         try:
             from piano_transcription_inference import PianoTranscription  # noqa: PLC0415
         except ImportError as exc:
@@ -414,11 +446,12 @@ class TranskunEngine:
 
     def __init__(
         self,
-        device: str = DEFAULT_DEVICE,
+        device: str | None = DEFAULT_DEVICE,
         checkpoint: str | Path | None = None,
         conf: str | Path | None = None,
         reporter: object | None = None,
     ) -> None:
+        device = device or config.device()
         try:
             import moduleconf  # noqa: PLC0415
             import torch  # noqa: PLC0415
@@ -537,6 +570,157 @@ class TranskunEngine:
         )
 
 
+class MuScriptorEngine:
+    """MuScriptor (Kyutai and Mirelo, 2026), the engine of implementation 08.
+
+    A decoder-only transformer that reads 5-second chunks of 16 kHz mono audio and writes note
+    tokens. The settings are the ones Phase 1 measured and the user chose (plan section 3, Q-7):
+
+    * ``large`` in ``float16``: the same notes as ``float32``, 2.2 times faster, 3.5 GB of GPU;
+    * one chunk at a time with prelude forcing, so a note that sounds across a chunk border is not
+      cut (5 to 9 times faster than real time on the RTX 4090, about 25 s for a 3-minute song);
+    * conditioned on ``acoustic_piano`` only (Q-3);
+    * the per-piece lag correction of :mod:`.lag`, measured on the audio after the notes are known;
+    * no artifact filter and no leakage filter (:func:`aitu_backend.transcription.pipeline.filters_for`).
+
+    The model is loaded once per process by :mod:`.models`. MuScriptor has no loudness, so every
+    note has velocity 64.
+
+    :meth:`run_signal` takes the samples of the piece (the kept frames joined in memory, plan
+    section 9.2) and sends the live ``chunk`` messages of :mod:`.live` through ``reporter.send``.
+    """
+
+    #: Only piano is asked for (Q-3).
+    INSTRUMENTS = ("acoustic_piano",)
+    SAMPLE_RATE = 16_000
+
+    def __init__(
+        self,
+        device: str | None = DEFAULT_DEVICE,
+        size: str | None = None,
+        dtype: str | None = None,
+        *,
+        model: Any = None,
+        reporter: object | None = None,
+    ) -> None:
+        self.device = device or config.device()
+        self.size = size or config.muscriptor_model()
+        self.dtype = dtype or config.muscriptor_dtype()
+        #: Stored in the header of ``events.json``, for example ``muscriptor-large``.
+        self.name = f"muscriptor-{self.size}"
+        if model is None:
+            if not engine_installed("muscriptor"):
+                raise EngineUnavailable(
+                    "muscriptor", "muscriptor", "uv sync --extra muscriptor   (in aitu-backend/)"
+                )
+            from aitu_backend.transcription import models  # noqa: PLC0415 - avoids a cycle
+
+            model = models.muscriptor(self.size, self.device, self.dtype)
+        self._model = model
+
+    def transcribe(self, wav_path: Path) -> list[NoteEvent]:
+        return self.transcribe_with_progress(wav_path, None)
+
+    def transcribe_with_progress(self, wav_path: Path, reporter: object | None) -> list[NoteEvent]:
+        from aitu_backend.audio import formats  # noqa: PLC0415
+
+        if not wav_path.is_file():
+            raise FileNotFoundError(f"No audio at {wav_path}")
+        rate, samples = formats.read_wav(wav_path)
+        return self.run_signal(samples, rate, reporter).events
+
+    def run_signal(
+        self,
+        samples: np.ndarray,
+        sample_rate: int,
+        reporter: object | None = None,
+        *,
+        first_id: int = 0,
+        flush_seconds: float | None = None,
+    ) -> EngineRun:
+        """Transcribe the samples, stream the live notes, and return the corrected notes.
+
+        The ids start at ``first_id`` (the piece's ``nextId``), in the order the notes start, so the
+        ids of the live messages are the ids of the saved notes.
+        """
+        import contextlib  # noqa: PLC0415
+
+        from aitu_backend.pmn.events_file import events_from_notes  # noqa: PLC0415
+        from aitu_backend.pmn.muscriptor import MuScriptorAssembler, event_kind  # noqa: PLC0415
+        from aitu_backend.progress import BaseProgress, default_reporter  # noqa: PLC0415
+        from aitu_backend.transcription.lag import lag_correction_ms  # noqa: PLC0415
+        from aitu_backend.transcription.live import FLUSH_SECONDS, LiveNotes  # noqa: PLC0415
+
+        progress = default_reporter(reporter if isinstance(reporter, BaseProgress) else None)
+        signal = np.ascontiguousarray(samples, dtype=np.float32)
+        if sample_rate != self.SAMPLE_RATE:
+            import librosa  # noqa: PLC0415
+
+            signal = librosa.resample(signal, orig_sr=sample_rate, target_sr=self.SAMPLE_RATE)
+            sample_rate = self.SAMPLE_RATE
+        duration_ms = len(signal) * 1000.0 / sample_rate
+
+        assembler = MuScriptorAssembler(first_id=first_id, instruments=self.INSTRUMENTS)
+        live = LiveNotes(
+            assembler,
+            progress.send,
+            duration_ms,
+            flush_seconds=FLUSH_SECONDS if flush_seconds is None else flush_seconds,
+        )
+        with contextlib.ExitStack() as stack:
+            stage = None
+            seen = 0
+            for event in self._model.transcribe(
+                (_as_tensor(signal), sample_rate),
+                instruments=list(self.INSTRUMENTS),
+                batch_size=1,
+                prelude_forcing=True,
+            ):
+                assembler.add(event)
+                if event_kind(event) == "ProgressEvent":
+                    if stage is None:
+                        stage = stack.enter_context(
+                            progress.stage(
+                                "transcribe",
+                                total=assembler.total,
+                                message=f"{assembler.total} chunks of 5 s",
+                            )
+                        )
+                    if assembler.completed > seen:
+                        stage.advance(
+                            assembler.completed - seen,
+                            message=f"chunk {assembler.completed}/{assembler.total}",
+                        )
+                        seen = assembler.completed
+                live.observe(event)
+        live.finish()
+
+        with progress.stage("timing", total=1, message="measuring the lag on the audio") as stage:
+            raw = assembler.notes(end_ms=duration_ms)
+            lag = lag_correction_ms(signal, sample_rate, raw.on_ms)
+            stage.advance(message=f"lag correction {lag:+.0f} ms")
+        notes = assembler.notes(end_ms=duration_ms, lag_correction_ms=lag)
+        return EngineRun(
+            events=events_from_notes(notes),
+            lag_correction_ms=lag,
+            details={
+                "chunks": assembler.total,
+                "messages": live.sent,
+                "skipped": assembler.skipped,
+                "zeroLength": assembler.zero_length,
+            },
+        )
+
+
+def _as_tensor(signal: np.ndarray) -> Any:
+    """``[1, T]`` float32 for MuScriptor. A fake model in the tests gets the same object."""
+    try:
+        import torch  # noqa: PLC0415
+    except ImportError:  # pragma: no cover - a fake model without torch installed
+        return signal[None, :]
+    return torch.from_numpy(signal).unsqueeze(0)
+
+
 class BasicPitchEngine:
     """Spotify's Basic Pitch — the benchmark and fallback engine.
 
@@ -554,7 +738,8 @@ class BasicPitchEngine:
 
     name = "basic-pitch"
 
-    def __init__(self, device: str = DEFAULT_DEVICE) -> None:
+    def __init__(self, device: str | None = DEFAULT_DEVICE) -> None:
+        device = device or config.device()
         try:
             from basic_pitch.inference import predict  # noqa: PLC0415
         except ImportError as exc:
@@ -589,6 +774,7 @@ class BasicPitchEngine:
 
 #: Constructors by name. Add a new engine here and it becomes selectable.
 ENGINES = {
+    "muscriptor": MuScriptorEngine,
     "bytedance": ByteDanceEngine,
     "transkun": TranskunEngine,
     "basic-pitch": BasicPitchEngine,
@@ -618,6 +804,7 @@ def engine_installed(name: str) -> bool:
     if name == "silent":
         return True
     module = {
+        "muscriptor": "muscriptor",
         "bytedance": "piano_transcription_inference",
         "transkun": "transkun",
         "basic-pitch": "basic_pitch",
@@ -631,5 +818,28 @@ def engine_installed(name: str) -> bool:
 
 
 def available_engines() -> dict[str, bool]:
-    """Which engines can run here. Powers `GET /matrix/engines` and the UI."""
+    """Which engines can run here, all of them. For tests and scripts."""
     return {name: engine_installed(name) for name in ENGINES}
+
+
+def selectable_engines() -> dict[str, bool]:
+    """The engines the page may offer, and whether each can run. Powers `GET /matrix/engines`.
+
+    Only MuScriptor (implementation 08): with one entry, the Input page shows no engine choice.
+    """
+    return {name: engine_installed(name) for name in SELECTABLE_ENGINES}
+
+
+def shared_engine(name: str = DEFAULT_ENGINE, *, reporter: object | None = None) -> Any:
+    """The engine called ``name``, built once per process and device (:mod:`.models`).
+
+    ``reporter`` only matters the first time, for ByteDance's checkpoint download. ``silent`` is
+    built each time: it holds nothing worth keeping. So is ``muscriptor``: the object is small and
+    its model, the part worth keeping, is already shared per size, device and weight type.
+    """
+    if name in ("silent", "muscriptor"):
+        return create_engine(name)
+    from aitu_backend.transcription import models  # noqa: PLC0415 - avoids a cycle
+
+    options = {"reporter": reporter} if name == "bytedance" else {}
+    return models.engine(name, lambda: create_engine(name, **options))

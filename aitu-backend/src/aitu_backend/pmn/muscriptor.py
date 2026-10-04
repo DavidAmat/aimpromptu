@@ -29,7 +29,13 @@ import numpy as np
 
 from aitu_backend.pmn.notes import KEY_COUNT, LOWEST_MIDI, Notes
 
-__all__ = ["MUSCRIPTOR_FRAME_MS", "MuScriptorAssembler", "from_muscriptor_events"]
+__all__ = [
+    "MUSCRIPTOR_FRAME_MS",
+    "PIANO",
+    "MuScriptorAssembler",
+    "event_kind",
+    "from_muscriptor_events",
+]
 
 #: MuScriptor's time step: every start and end time is a multiple of it.
 MUSCRIPTOR_FRAME_MS = 10
@@ -38,7 +44,8 @@ MUSCRIPTOR_FRAME_MS = 10
 PIANO = "acoustic_piano"
 
 
-def _kind(event: Any) -> str:
+def event_kind(event: Any) -> str:
+    """``NoteStartEvent``, ``NoteEndEvent`` or ``ProgressEvent``, for an object or a dictionary."""
     if isinstance(event, dict):
         return str(event.get("type", ""))
     return type(event).__name__
@@ -85,7 +92,7 @@ class MuScriptorAssembler:
         self._next_id = self.first_id
 
     def add(self, event: Any) -> None:
-        kind = _kind(event)
+        kind = event_kind(event)
         if kind == "NoteStartEvent":
             self._start(event)
         elif kind == "NoteEndEvent":
@@ -140,6 +147,11 @@ class MuScriptorAssembler:
     def open_notes(self) -> list[tuple[int, int, int]]:
         """``(id, key, onMs)`` of the notes still sounding, in id order."""
         return sorted((note.note_id, note.key, note.on_ms) for note in self._open.values())
+
+    @property
+    def next_id(self) -> int:
+        """The id the next note will get. It grows by one for every note started."""
+        return self._next_id
 
     @property
     def closed_count(self) -> int:

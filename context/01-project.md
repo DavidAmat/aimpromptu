@@ -64,21 +64,27 @@ The notation renderer, `@aimpromptu/grid-notation`, lives in a **sibling checkou
 `../vexflow-v2` and is installed from disk. It is a separate repository on purpose: it knows nothing
 about this app's API, and this app reaches it through exactly one file.
 
-**Future direction:** package both services as Docker containers. Planned, not built.
+**Containers.** Since implementation 08 both services run as Docker containers on the Ubuntu
+machine, the backend with the GPU, and the browser on the Mac reaches them through one SSH tunnel
+([04-local-development.md](04-local-development.md)). They are development images; there is no
+production image yet.
 
 Historical folder names: `piano-matrix-generation`, `piano-matrix-notation`, workspace
 `music-rendering` (now `aimpromptu`). Phase 0 renamed the services to `aitu-*`.
 
 ## How it was built
 
-Two closed implementation plans and one open one, all under
-[implementations/](implementations/README.md):
+The implementation plans, all under [implementations/](implementations/README.md) (its table says
+which are open):
 
 | | |
 |---|---|
 | **01 — Epics master plan** | Fourteen epics: skeleton, matrix engine, audio, transcription, storage, the Playground, notation, library, range editing, annotations, composing, documentation |
 | **02 — VexFlow migration** | Why the project built its own renderer instead of drawing with VexFlow. Closed |
 | **03 — Time-based concept** | The wall-clock refactor. Spanned two repositories; closed 2026-08-10 |
+| **04, 05 — Synthesia to notes, the piano overlay** | Reading a piano roll video into a piece |
+| **06 — Varied implementations** | Smaller briefs on top of the finished product |
+| **08 — MuScriptor** | MuScriptor as the only engine, the live piano roll and its editor, the hand split as a step, the flow page, revisions, and the move to the Ubuntu machine with containers. Complete 2026-10-01 |
 
 The third one replaced the model the first eight epics were built on, which is why several epic
 task files were rewritten mid-plan. [`wall-clock-rewrite.md`](implementations/01-epics-master-plan/plan/wall-clock-rewrite.md)
@@ -86,7 +92,7 @@ is the bridge between them.
 
 ## POC boundaries (out of scope)
 
-- Cloud hosting, CI/CD, Docker images, orchestration
+- Cloud hosting, CI/CD, production images, orchestration
 - A database — persistence is the local filesystem
 - Authentication, secrets management, network hardening
 

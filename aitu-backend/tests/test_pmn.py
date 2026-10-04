@@ -138,6 +138,30 @@ def test_the_events_json_round_trip_is_exact_including_sub_millisecond_times() -
     assert again.notes.equals(piece.notes) and again.header == piece.header
 
 
+def test_a_guessed_hand_and_the_hands_notes_revision_survive_a_save() -> None:
+    """Phase 5: ``handGuessed`` on a note, ``handsNotesRevision`` in the header, and the wire's
+    ``guessed`` list of ids."""
+    payload = {
+        **OLD_FILE,
+        "handsNotesRevision": 4,
+        "events": [
+            {**OLD_FILE["events"][0], "hand": "right", "handGuessed": True},
+            *OLD_FILE["events"][1:],
+        ],
+    }
+    piece = events_file.piece_from_payload(payload)
+    assert piece.header.hands_notes_revision == 4
+    assert piece.notes.hand_guessed.tolist() == [True, False, False]
+    written = events_file.piece_to_payload(piece)
+    assert written["handsNotesRevision"] == 4
+    assert written["events"][0]["handGuessed"] is True
+    assert "handGuessed" not in written["events"][1]
+    assert columns.to_columns(piece.notes)["guessed"] == [0]
+    events = events_file.events_from_notes(piece.notes)
+    assert events[0].hand_guessed is True
+    assert events_file.notes_from_events(events).hand_guessed.tolist() == [True, False, False]
+
+
 def test_reading_an_old_file_never_writes_it(data_dir: Path) -> None:
     uuid = store.create("Old", AudioSource.UPLOAD, "wav").uuid
     path = pipeline.events_path(uuid)

@@ -708,7 +708,17 @@ def accept(audio_uuid: str, session_uuid: str) -> AcceptOut:
         pipeline.load_rhythm(audio_uuid), record.start_frame, record.end_frame
     )
     history.snapshot_current(audio_uuid)
-    pipeline.save_note_events(audio_uuid, result, original_duration, stored.title)
+    # A notes edit (implementation 08, plan section 8.2): the revisions go up, a new note gets the
+    # quick rule's hand when the hands were saved, and the piano sheet becomes stale.
+    pipeline.save_edit(
+        audio_uuid,
+        result,
+        original_duration,
+        stored.title,
+        before=stored.header,
+        notes_changed=True,
+        hands_changed=False,
+    )
     saved_after = pipeline.load_note_events(audio_uuid)
     if saved_after is None or abs(saved_after.duration_seconds - original_duration) > 1e-6:
         raise AssertionError("Range editing must not change the piece's length.")
@@ -778,7 +788,15 @@ def _accept_passage(
 
     history.snapshot_current(audio_uuid)
     title = stored.title or store.read_metadata(audio_uuid).alias
-    pipeline.save_note_events(audio_uuid, result, new_duration, title)
+    pipeline.save_edit(
+        audio_uuid,
+        result,
+        new_duration,
+        title,
+        before=stored.header,
+        notes_changed=True,
+        hands_changed=False,
+    )
     saved_after = pipeline.load_note_events(audio_uuid)
     if saved_after is None or abs(saved_after.duration_seconds - new_duration) > 1e-6:
         raise AssertionError("A placed passage must leave the piece the length it was measured at.")

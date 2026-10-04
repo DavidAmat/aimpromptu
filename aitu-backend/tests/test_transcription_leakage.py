@@ -57,6 +57,17 @@ def test_the_phantom_sol_is_merged_back() -> None:
     assert sols[0].velocity == 73
 
 
+def test_the_note_that_absorbs_a_phantom_keeps_its_id_and_its_hand() -> None:
+    """Implementation 08, Phase 5: the saved hands find their notes by id after the merge."""
+    events = [
+        e.model_copy(update={"id": index, "hand": "left" if e.midi_note == 55 else "right"})
+        for index, e in enumerate(the_bruno_mars_passage())
+    ]
+    merged, _ = merge_leaked_onsets(events)
+    survivor = next(e for e in merged if e.midi_note == 55 and e.start == 11.8964)
+    assert (survivor.id, survivor.hand, survivor.end) == (2, "left", 12.7100)
+
+
 def test_the_phantom_no_longer_lands_in_the_chord_column() -> None:
     """The whole point, checked on the grid the score is drawn from."""
     events = the_bruno_mars_passage()

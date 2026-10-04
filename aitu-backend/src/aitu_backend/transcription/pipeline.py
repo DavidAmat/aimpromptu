@@ -35,20 +35,23 @@ What used to live in this module and no longer does:
 from __future__ import annotations
 
 import json
+import threading
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aitu_backend.audio import store
+from aitu_backend.audio.frames import FrameTable, frame_count, join_kept
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.pmn import events_file
 from aitu_backend.pmn.events_file import PieceHeader
 from aitu_backend.progress import BaseProgress, default_reporter
+from aitu_backend.transcription import saved_hands, split_cache
 from aitu_backend.transcription.engine import (
     DEFAULT_ENGINE,
     NoteEvent,
     TranscriptionEngine,
-    create_engine,
+    shared_engine,
 )
 from aitu_backend.transcription.events_to_matrix import shift_events
 from aitu_backend.transcription.time_pipeline import TimeHands, impose_granularity_and_split
@@ -215,6 +218,101 @@ def save_note_events(
     return events_file.write_payload(path, payload)
 
 
+_locks_guard = threading.Lock()
+_locks: dict[str, threading.Lock] = {}
+
+
+def piece_lock(audio_uuid: str) -> threading.Lock:
+    """One lock per piece. A writer holds it from reading ``events.json`` to writing it, so a
+    revision check and its write cannot interleave with another request's (plan section 6.4)."""
+    with _locks_guard:
+        return _locks.setdefault(audio_uuid, threading.Lock())
+
+
+@dataclass(frozen=True)
+class SavedEdit:
+    """What :func:`save_edit` wrote."""
+
+    header: PieceHeader
+    #: Live notes the quick rule gave a hand to, because the piece's hands were saved and these
+    #: notes had none (an added note, or a note put back).
+    guessed: list[NoteEvent]
+    #: True when ``rhythm.json`` was current and moved forward with the edit.
+    sheet_moved: bool
+
+
+def save_edit(
+    audio_uuid: str,
+    events: list[NoteEvent],
+    duration_seconds: float,
+    title: str | None,
+    *,
+    before: PieceHeader | None = None,
+    notes_changed: bool,
+    hands_changed: bool,
+    sheet_follows: bool = False,
+    new_notes: bool = False,
+) -> SavedEdit:
+    """Write an edit of the piece and move the revisions of plan section 8.2. Every writer of
+    ``events.json`` except a transcription goes through here.
+
+    * ``notesRevision`` goes up when a note changed (``notes_changed``): moved, resized, added,
+      deleted, put back.
+    * ``handsRevision`` goes up on every edit: anything above the hands, or a hand.
+    * ``handsNotesRevision`` becomes the new ``notesRevision`` when a hand changed and every live
+      note the piano sheet places now has one: the hands were saved as a whole for these notes.
+    * **The quick rule** (plan section 8.3): when the hands were saved as a whole before, a live
+      note with no hand (an added note, a note put back) gets the hand of its neighbours, marked
+      as guessed. ``new_notes`` is a whole new set of notes (a video read into notes): no quick
+      rule, and the hands are missing.
+    * **The piano sheet** (``rhythm.json``) records the ``handsRevision`` it was saved for. An edit
+      made on the Sheet tab passes ``sheet_follows``: the page that made it already draws the
+      result, so a reading that was current moves forward with it and stays current. Any other
+      edit leaves it behind, which makes the Sheet tab stale.
+
+    ``before`` is the header the caller read with the notes; without it the one on disk is used.
+    The caller holds :func:`piece_lock` from its read to this write.
+    """
+    base = before if before is not None else events_file.read_header(events_path(audio_uuid))
+    guessed: list[NoteEvent] = []
+    # The notes the piano sheet places: only those need a hand (a note it cannot place stays red).
+    placed: set[int] | None = None
+    if not new_notes and (base.hands_notes_revision > 0 or hands_changed):
+        placed = saved_hands.placed_ids(
+            events, duration_seconds, **filters_for(base.engine)  # type: ignore[arg-type]
+        )
+    if not new_notes and base.hands_notes_revision > 0:
+        guessed = saved_hands.fill_quick_hands(events, placed)
+    notes_revision = base.notes_revision + (1 if notes_changed else 0)
+    if new_notes:
+        hands_notes_revision = 0
+    elif hands_changed and saved_hands.hands_complete(events, placed):
+        hands_notes_revision = notes_revision
+    else:
+        hands_notes_revision = base.hands_notes_revision
+    header = replace(
+        base,
+        notes_revision=notes_revision,
+        hands_revision=base.hands_revision + 1,
+        hands_notes_revision=hands_notes_revision,
+    )
+    save_note_events(audio_uuid, events, duration_seconds, title, header=header)
+    ids = [event.id for event in events if event.id is not None]
+    header = replace(header, next_id=max([header.next_id, *(value + 1 for value in ids)]))
+
+    moved = False
+    if sheet_follows:
+        rhythm = load_rhythm(audio_uuid)
+        if rhythm is not None and (rhythm.hands_revision or 0) == base.hands_revision:
+            save_rhythm(
+                audio_uuid, rhythm.model_copy(update={"hands_revision": header.hands_revision})
+            )
+            moved = True
+    # The cache keys change with the file's mtime already; a clock tick can hold two saves.
+    split_cache.forget(audio_uuid)
+    return SavedEdit(header=header, guessed=guessed, sheet_moved=moved)
+
+
 def load_note_events(audio_uuid: str) -> TranscribedEvents | None:
     """The stored transcription, or ``None`` when there is none.
 
@@ -240,6 +338,7 @@ def load_note_events(audio_uuid: str) -> TranscribedEvents | None:
                     end=float(item["end"]),
                     velocity=int(item.get("velocity", 64)),
                     hand=item.get("hand"),
+                    hand_guessed=bool(item.get("handGuessed", False)),
                     removed=bool(item.get("removed", False)),
                 )
                 for note_id, item in zip(ids, items)
@@ -253,7 +352,195 @@ def load_note_events(audio_uuid: str) -> TranscribedEvents | None:
         return None
 
 
+def notes_are_stale(audio_uuid: str, stored: TranscribedEvents | None = None) -> bool:
+    """Were the stored notes transcribed from other cuts than the ones saved now? (plan section 8)
+
+    A cut saved after a transcription makes the notes stale, and the next transcription request
+    transcribes again instead of reusing them (Q-2). A piece with no notes is not stale, it is
+    missing.
+    """
+    stored = stored if stored is not None else load_note_events(audio_uuid)
+    if stored is None:
+        return False
+    return stored.header.audio_revision != store.read_metadata(audio_uuid).audio_revision
+
+
+def current_events(audio_uuid: str) -> TranscribedEvents | None:
+    """The stored notes when they exist and are not stale, else ``None``."""
+    stored = load_note_events(audio_uuid)
+    if stored is None or notes_are_stale(audio_uuid, stored):
+        return None
+    return stored
+
+
+def filters_for(engine: str | None) -> dict[str, None]:
+    """The filters the hand split applies to the notes of a piece made by ``engine``.
+
+    ``artifacts.py`` and ``leakage.py`` were tuned for ByteDance. Phase 1 measured them on six
+    pieces of MuScriptor notes: the first drops 0 to 4 notes per song, and the second would merge
+    real repeated notes, because MuScriptor has no velocity and closes a note at the next onset of
+    its key (a gap of 0 ms). Both are off for a piece whose header says ``muscriptor-*``, and on,
+    as before, for every other piece (plan section 9.1). The answer is keyword arguments for
+    :func:`impose_granularity_and_split`: empty means its defaults.
+    """
+    if engine and engine.startswith("muscriptor"):
+        return {"leakage": None, "artifacts": None}
+    return {}
+
+
+def split_of(
+    audio_uuid: str,
+    frame_ms: float = DEFAULT_FRAME_MS,
+    *,
+    reporter: BaseProgress | None = None,
+) -> TimeHands:
+    """The hand split of a transcribed piece, shared by every reader (:mod:`.split_cache`).
+
+    **D-31, changed in implementation 08, Phase 5.** When every live note has a saved hand, the
+    two hand matrices are painted from those hands (:func:`saved_hands.split_with_saved_hands`,
+    a few milliseconds) and no inference runs. Otherwise the old behaviour runs: the inference on
+    the snapped time matrix, then the reader's pinned hands on top. Both build the whole keyboard
+    the same way.
+
+    Raises ``FileNotFoundError`` when the piece has no notes. The object is shared: treat it as
+    read-only. ``reporter`` receives the progress of the split only when it is computed here.
+    """
+    path = events_path(audio_uuid)
+    try:
+        stamp = path.stat().st_mtime_ns
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Audio {audio_uuid} has no stored note events") from None
+
+    def compute() -> TimeHands:
+        stored = load_note_events(audio_uuid)
+        if stored is None:
+            raise FileNotFoundError(f"Audio {audio_uuid} has no readable note events")
+        # A piece being composed is empty until its first passage lands, and an empty piece is a
+        # `durationSeconds` of zero (Epic 13). It still has to draw: one empty column is enough for
+        # a pair of staves, and the column is a property of the view, not of the music.
+        duration = max(stored.duration_seconds, frame_ms / 1000.0)
+        complete = saved_hands.hands_complete(stored.events, placed_note_ids(audio_uuid, frame_ms))
+        split = saved_hands.split_with_saved_hands if complete else impose_granularity_and_split
+        return split(
+            stored.events,
+            duration,
+            frame_ms=frame_ms,
+            title=stored.title,
+            reporter=reporter,
+            **filters_for(stored.header.engine),
+        )
+
+    return split_cache.get((audio_uuid, float(frame_ms), stamp), compute)
+
+
+def placed_note_ids(audio_uuid: str, frame_ms: float = DEFAULT_FRAME_MS) -> set[int]:
+    """The ids of the live notes the piano sheet places (:func:`saved_hands.placed_ids`), cached
+    until ``events.json`` changes. Raises ``FileNotFoundError`` when the piece has no notes."""
+    path = events_path(audio_uuid)
+    try:
+        stamp = path.stat().st_mtime_ns
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Audio {audio_uuid} has no stored note events") from None
+
+    def compute() -> set[int]:
+        stored = load_note_events(audio_uuid)
+        if stored is None:
+            raise FileNotFoundError(f"Audio {audio_uuid} has no readable note events")
+        return saved_hands.placed_ids(
+            stored.events,
+            stored.duration_seconds,
+            frame_ms=frame_ms,
+            **filters_for(stored.header.engine),  # type: ignore[arg-type]
+        )
+
+    return split_cache.get((audio_uuid, float(frame_ms), stamp, "placed"), compute)
+
+
+def inferred_split(
+    audio_uuid: str,
+    frame_ms: float = DEFAULT_FRAME_MS,
+    *,
+    keep_saved: bool = True,
+    reporter: BaseProgress | None = None,
+) -> TimeHands:
+    """The split the hand inference makes, whatever hands are saved: **Predict hands**.
+
+    ``keep_saved`` lays the saved hands that were not guessed over the inference, as the old
+    behaviour lays the reader's pins (so a hand the user set survives a new prediction); a
+    guessed hand is inferred again. Without it every note is inferred. Cached beside the ordinary
+    split under its own key, so pressing the button twice pays the inference once. ``reporter``
+    receives the progress (stages ``events`` and ``two-hands``) only when it is computed here.
+    """
+    path = events_path(audio_uuid)
+    try:
+        stamp = path.stat().st_mtime_ns
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Audio {audio_uuid} has no stored note events") from None
+
+    def compute() -> TimeHands:
+        stored = load_note_events(audio_uuid)
+        if stored is None:
+            raise FileNotFoundError(f"Audio {audio_uuid} has no readable note events")
+        events = [
+            (
+                event
+                if keep_saved and event.hand and not event.hand_guessed
+                else event.model_copy(update={"hand": None, "hand_guessed": False})
+            )
+            for event in stored.events
+        ]
+        return impose_granularity_and_split(
+            events,
+            max(stored.duration_seconds, frame_ms / 1000.0),
+            frame_ms=frame_ms,
+            title=stored.title,
+            reporter=reporter,
+            **filters_for(stored.header.engine),
+        )
+
+    key = (audio_uuid, float(frame_ms), stamp, "keep" if keep_saved else "all")
+    return split_cache.get(key, compute)
+
+
+def warm_split(audio_uuid: str, frame_ms: float = DEFAULT_FRAME_MS) -> threading.Thread:
+    """Compute the hand split on a background thread, so the first sheet request finds it ready.
+
+    Used by the transcription job after it saves: the ``done`` frame is not delayed by the split
+    (0.3 to 4.3 s), and a page that asks for the sheet right after waits for this computation
+    instead of starting a second one (:func:`split_cache.get`).
+    """
+
+    def run() -> None:
+        try:
+            split_of(audio_uuid, frame_ms)
+        except Exception:  # pragma: no cover - the reader that needs it will raise it
+            pass
+
+    thread = threading.Thread(target=run, name="aitu-split-warm", daemon=True)
+    thread.start()
+    return thread
+
+
 # ------------------------------------------------------------------ the steps
+
+
+def _engine(engine: TranscriptionEngine | str, progress: BaseProgress) -> TranscriptionEngine:
+    """A name becomes the process's shared engine (:mod:`.models`): no model is loaded twice."""
+    if isinstance(engine, str):
+        return shared_engine(engine, reporter=progress)
+    return engine
+
+
+def _run_on_file(
+    model: TranscriptionEngine, wav_path: Path, progress: BaseProgress
+) -> list[NoteEvent]:
+    progressive = getattr(model, "transcribe_with_progress", None)
+    if callable(progressive):
+        return list(progressive(wav_path, progress))
+    with progress.stage("transcribe", total=1, message=model.name) as stage:
+        events = model.transcribe(wav_path)
+        stage.advance()
+    return list(events)
 
 
 def transcribe_file(
@@ -268,18 +555,7 @@ def transcribe_file(
     piece here would replace the music being edited.
     """
     progress = default_reporter(reporter)
-    if isinstance(engine, str):
-        options = {"reporter": progress} if engine == "bytedance" else {}
-        model = create_engine(engine, **options)
-    else:
-        model = engine
-    progressive = getattr(model, "transcribe_with_progress", None)
-    if callable(progressive):
-        return list(progressive(wav_path, progress))
-    with progress.stage("transcribe", total=1, message=model.name) as stage:
-        events = model.transcribe(wav_path)
-        stage.advance()
-    return list(events)
+    return _run_on_file(_engine(engine, progress), wav_path, progress)
 
 
 def transcribe_audio(
@@ -292,9 +568,23 @@ def transcribe_audio(
 ) -> TranscribedEvents:
     """Run the model and store what it heard. No tempo, no grid, no figures.
 
-    A time range transcribes only that slice: the WAV is cut first, so the engine
-    never sees the rest of the piece and the events come back already relative to
-    the range start.
+    **The selected region** (implementation 08, plan section 9.2). The engine hears the piece: the
+    frames of ``normalized.wav`` that no cut of ``metadata.json`` deletes, joined in memory with a
+    5 ms fade at each join. No audio file is written for an engine that takes samples
+    (MuScriptor's ``run_signal``); the others get a temporary WAV when there is a cut. The notes
+    are stored in the time of the piece, which is shorter than the original by the cuts.
+
+    **What the header records.** The engine's name, the ``audioRevision`` the notes were made from
+    (a later cut makes them stale), the lag correction, and ``notesRevision``: 1 for a first
+    transcription, one more than before for a new one. The ids of the new notes continue after
+    every id the piece has used.
+
+    **Nothing is lost.** A piece that already has notes gets its ``events.json`` and
+    ``rhythm.json`` copied into ``history/vN/`` before they are replaced (plan section 8.3).
+
+    A time range (``start_seconds``, ``end_seconds``) is the older way to transcribe part of the
+    file: the WAV is cut first, the cuts are not applied, and the events come back relative to the
+    range start.
     """
     entry = store.get(audio_uuid)
     if not entry.has_normalized():
@@ -304,51 +594,109 @@ def transcribe_audio(
         entry = store.get(audio_uuid)
 
     progress = default_reporter(reporter)
-    if isinstance(engine, str):
-        options = {"reporter": progress} if engine == "bytedance" else {}
-        model = create_engine(engine, **options)
-    else:
-        model = engine
-
-    source_wav = entry.normalized_path
-    duration = entry.metadata.duration_seconds or 0.0
-    offset = 0.0
+    model = _engine(engine, progress)
+    before = events_file.read_header(events_path(audio_uuid))
+    had_notes = has_events(audio_uuid)
+    metadata = entry.metadata
+    lag_correction_ms = 0.0
+    #: True when the engine numbered the notes from the piece's ``nextId`` itself.
+    numbered = False
 
     if start_seconds is not None and end_seconds is not None:
         from aitu_backend.audio import formats  # noqa: PLC0415
 
         clip = entry.directory / "transcribe_range.wav"
-        formats.slice_wav(source_wav, clip, start_seconds, end_seconds)
-        source_wav = clip
+        formats.slice_wav(entry.normalized_path, clip, start_seconds, end_seconds)
+        events = _run_on_file(model, clip, progress)
         duration = end_seconds - start_seconds
-        offset = start_seconds
-
-    progressive = getattr(model, "transcribe_with_progress", None)
-    if callable(progressive):
-        events = progressive(source_wav, progress)
+        if events and min(event.start for event in events) >= start_seconds:
+            # Defensive: an engine that reports absolute times despite the clip.
+            events = shift_events(events, start_seconds)
     else:
-        with progress.stage("transcribe", total=1, message=model.name) as stage:
-            events = model.transcribe(source_wav)
-            stage.advance()
+        events, duration, lag_correction_ms, numbered = _transcribe_piece(
+            model, entry, before.next_id, progress
+        )
 
-    if offset and events and min(event.start for event in events) >= offset:
-        # Defensive: an engine that reports absolute times despite the clip.
-        events = shift_events(events, offset)
+    if not numbered:
+        # The ids of a new transcription continue after every id the piece has used.
+        for event in events:
+            event.id = None
+
+    if had_notes:
+        from aitu_backend.editing import history  # noqa: PLC0415 - history imports this module
+
+        history.snapshot_notes(audio_uuid)
 
     span = max(duration, 0.001)
-    # The new notes take ids after every id the piece has used, and the header records the engine.
-    header = replace(events_file.read_header(events_path(audio_uuid)), engine=model.name)
-    save_note_events(audio_uuid, events, span, title=entry.metadata.alias, header=header)
+    header = replace(
+        before,
+        engine=model.name,
+        notes_revision=before.notes_revision + 1 if had_notes else 1,
+        # New notes have no hand: the hands are missing, and the piano sheet must be written again.
+        hands_revision=before.hands_revision + 1,
+        hands_notes_revision=0,
+        audio_revision=metadata.audio_revision,
+        lag_correction_ms=float(lag_correction_ms),
+    )
+    save_note_events(audio_uuid, events, span, title=metadata.alias, header=header)
     # A saved reading is a set of column numbers over the notes that were there
     # before. A new transcription is a different set of notes, so those numbers
     # point at nothing in particular now and keeping them would be worse than
-    # asking the reader to name the gap again.
+    # asking the reader to name the gap again. The copy is in history.
     clear_rhythm(audio_uuid)
     # Whatever was wrong with this piece before, it now has its recorded notes.
     clear_needs_rederivation(audio_uuid)
     return TranscribedEvents(
-        events=events, duration_seconds=span, title=entry.metadata.alias, header=header
+        events=events,
+        duration_seconds=span,
+        title=metadata.alias,
+        header=events_file.read_header(events_path(audio_uuid)),
     )
+
+
+def _transcribe_piece(
+    model: TranscriptionEngine,
+    entry: store.StoredAudio,
+    first_id: int,
+    progress: BaseProgress,
+) -> tuple[list[NoteEvent], float, float, bool]:
+    """The engine on the kept frames. Returns the events, the length of the piece in seconds, the
+    lag correction and whether the engine numbered the notes."""
+    from aitu_backend.audio import formats  # noqa: PLC0415
+
+    run_signal = getattr(model, "run_signal", None)
+    if not entry.metadata.cuts and not callable(run_signal):
+        # The whole file, as before implementation 08: the engine reads it itself.
+        duration = entry.metadata.duration_seconds or 0.0
+        return _run_on_file(model, entry.normalized_path, progress), duration, 0.0, False
+
+    rate, samples = formats.read_wav(entry.normalized_path)
+    table = FrameTable.from_cuts(entry.metadata.cuts, frame_count(len(samples)))
+    if not table.is_whole and rate != formats.TRANSCRIPTION_SAMPLE_RATE:
+        raise ValueError(
+            f"normalized.wav of {entry.uuid} is at {rate} Hz; the cuts need "
+            f"{formats.TRANSCRIPTION_SAMPLE_RATE} Hz. Upload the audio again."
+        )
+    piece = join_kept(samples, table)
+    if table.is_whole:
+        duration = entry.metadata.duration_seconds or len(samples) / rate
+    else:
+        duration = len(piece) / rate
+
+    if callable(run_signal):
+        run = run_signal(piece, rate, progress, first_id=first_id)
+        return run.events, duration, run.lag_correction_ms, True
+    if table.is_whole:
+        return _run_on_file(model, entry.normalized_path, progress), duration, 0.0, False
+
+    import tempfile  # noqa: PLC0415
+
+    from scipy.io import wavfile  # noqa: PLC0415
+
+    with tempfile.TemporaryDirectory(prefix="aitu-piece-") as folder:
+        joined = Path(folder) / "piece.wav"
+        wavfile.write(joined, rate, piece)
+        return _run_on_file(model, joined, progress), duration, 0.0, False
 
 
 def run_pipeline(
@@ -366,16 +714,20 @@ def run_pipeline(
     ``reuse_events`` (default) skips the model when this audio has already been
     transcribed, which is the common case: a different frame length is a rebuild,
     not a re-transcription. Pass ``False`` to force the model to run again, for
-    example after switching engines.
+    example after switching engines. Notes made before the cuts last changed are
+    stale and are never reused (Q-2).
+
+    The split comes from the shared cache, so the first sheet request after this
+    finds it ready (plan section 10.5).
 
     A time range always re-transcribes, because a stored transcription of the
     whole piece is not a transcription of the range.
     """
     ranged = start_seconds is not None and end_seconds is not None
 
-    stored = None if ranged or not reuse_events else load_note_events(audio_uuid)
+    stored = None if ranged or not reuse_events else current_events(audio_uuid)
     if stored is None:
-        stored = transcribe_audio(
+        transcribe_audio(
             audio_uuid,
             engine=engine,
             start_seconds=start_seconds,
@@ -383,13 +735,7 @@ def run_pipeline(
             reporter=reporter,
         )
 
-    return impose_granularity_and_split(
-        stored.events,
-        stored.duration_seconds,
-        frame_ms=frame_ms,
-        title=stored.title,
-        reporter=reporter,
-    )
+    return split_of(audio_uuid, frame_ms, reporter=reporter)
 
 
 def hands_of(
@@ -401,14 +747,10 @@ def hands_of(
 
     The read path every screen uses. It never runs the model and never writes,
     so calling it twice with two frame lengths is two answers about one piece
-    rather than two competing artifacts.
+    rather than two competing artifacts. The answer comes from the shared split
+    cache and must be treated as read-only.
     """
-    stored = load_note_events(audio_uuid)
-    if stored is None:
+    try:
+        return split_of(audio_uuid, frame_ms)
+    except FileNotFoundError:
         return None
-    return impose_granularity_and_split(
-        stored.events,
-        stored.duration_seconds,
-        frame_ms=frame_ms,
-        title=stored.title,
-    )

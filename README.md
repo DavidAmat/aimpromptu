@@ -1,8 +1,12 @@
 # AImpromptu (aitu)
 
 **Play the piano, get readable sheet music.** Bring in a recording — upload it, record from the
-browser, or pull it off YouTube — and the app transcribes it, writes it out as a staff you can read
-and correct, and prints it.
+browser, or pull it off YouTube — and the app transcribes it with MuScriptor on the GPU while you
+watch the notes appear, lets you correct the notes and the hands on a piano roll, writes it out as a
+staff you can read and correct, and prints it.
+
+The way in is the **Piece** page: five tabs, Source, Audio, Notes, Hands and Sheet, each enabled
+once the step before it is ready ([context/frontend/flow-page.md](context/frontend/flow-page.md)).
 
 Local development only: no hosted deploy, no accounts, no database.
 
@@ -30,35 +34,50 @@ Why: [context/backend/time-model.md](context/backend/time-model.md).
 
 | Service | Folder | Role |
 |---|---|---|
-| Backend | `aitu-backend/` | Run the model, store the recorded notes, derive the score |
+| Backend | `aitu-backend/` | Run MuScriptor on the GPU, store the recorded notes, derive the score |
 | Frontend | `aitu-frontend/` | Every screen, and every pixel of the sheet |
 | Renderer | `../vexflow-v2` | `@aimpromptu/grid-notation`, installed from disk |
 
 **Monorepo (POC).** One git repository at the workspace root; `aitu-backend/` and `aitu-frontend/`
 are service folders, not separate repos. The renderer is a **sibling checkout** on purpose: it knows
-nothing about this app's API. Later we plan to package each service as its own Docker container —
-not implemented yet.
+nothing about this app's API. On the Ubuntu machine each service runs in its own development
+container (`compose.yaml`), with the repository mounted so edits reload.
 
-## Run locally
+## Run in containers (the Ubuntu machine, with the GPU)
 
 ```bash
-make serve     # both services; prints where they are
-make logs      # follow both
+make up            # build if needed, start both, wait for both
+make logs          # follow both
+make test-backend  # the backend tests inside the backend image
+make down
+```
+
+From the Mac: `scripts/tunnel-from-mac.sh` (one SSH tunnel to port 5173), then open
+`http://localhost:5173`. The page calls the backend at `/api`, which Vite passes on, so one port is
+enough. `.env.example` lists every setting; only `HF_TOKEN` (the MuScriptor weights) has no default.
+
+## Run locally, without containers
+
+```bash
+make serve        # both services; prints where they are
+make logs-native  # follow both
 make stop
 ```
 
-App `http://localhost:5173`, API `http://127.0.0.1:8765`, API docs `/docs`.
+App `http://localhost:5173`, API `http://127.0.0.1:8765` (the page reaches it through `/api`), API
+docs `/docs`.
 
 Or one at a time:
 
 ```bash
-cd aitu-backend  && uv sync && make serve
+cd aitu-backend  && uv sync --extra muscriptor && make serve
 cd aitu-frontend && npm install && npm run dev
 ```
 
-`ffmpeg` must be on `PATH`. The transcription models are an optional extra
-(`uv sync --extra transcription`); without one, every screen still works against the `silent`
-engine. Full setup: [context/04-local-development.md](context/04-local-development.md).
+`ffmpeg` must be on `PATH`. The engines are optional extras (`muscriptor`, and the older
+`transcription` and `transkun`); natively the backend runs on the CPU unless `AITU_DEVICE=cuda`.
+Full setup: [context/04-local-development.md](context/04-local-development.md). The two machines and
+the tunnel: [context/02b-local-setup.md](context/02b-local-setup.md).
 
 ## Documentation
 

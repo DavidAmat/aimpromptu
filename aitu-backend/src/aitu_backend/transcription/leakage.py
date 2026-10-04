@@ -313,12 +313,8 @@ def merge_leaked_onsets(
         for index in range(1, len(group)):
             candidate = group[index]
             if index in phantoms:
-                current = NoteEvent(
-                    midi_note=midi,
-                    start=current.start,
-                    end=max(current.end, candidate.end),
-                    velocity=current.velocity,
-                )
+                # A copy of the note that absorbs the phantom, so its id and its hand survive.
+                current = current.model_copy(update={"end": max(current.end, candidate.end)})
                 continue
             kept.append(current)
             current = candidate

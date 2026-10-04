@@ -77,13 +77,25 @@ export function FloatingBar({ open, label, children }: FloatingBarProps) {
     );
   }, [open, position, clamp]);
 
-  // A window made smaller must not take the bar with it off the edge.
+  // A window made smaller must not take the bar with it off the edge, and neither must a bar that
+  // grows: its words change ("1 note moved" becomes "1 note moved, 1 deleted, 1 added"), and the
+  // part pushed past the edge is the Save button.
   useEffect(() => {
     const onResize = () =>
-      setPosition((at) => (at ? clamp(at.x, at.y) : at));
+      setPosition((at) => {
+        if (!at) return at;
+        const next = clamp(at.x, at.y);
+        return next.x === at.x && next.y === at.y ? at : next;
+      });
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [clamp]);
+    const bar = node.current;
+    const observer = bar ? new ResizeObserver(onResize) : null;
+    if (bar) observer?.observe(bar);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      observer?.disconnect();
+    };
+  }, [clamp, open, hidden]);
 
   /**
    * Start a drag, listening on the window rather than on the grip.

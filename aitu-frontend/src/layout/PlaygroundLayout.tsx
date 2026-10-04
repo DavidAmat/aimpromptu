@@ -1,5 +1,5 @@
 /**
- * Playground chrome: the five tabs plus a banner naming the current working
+ * Playground chrome: its tabs (`PLAYGROUND_TABS`) plus a banner naming the current working
  * artifact. The artifact lives in context, so switching tabs keeps the piece.
  */
 

@@ -13,6 +13,8 @@ with no conversion::
   release the browser computes is the stored release rounded, and never shorter than 1 ms.
 * ``hand`` is a string with one character per note: ``r``, ``l``, or ``-`` for a note with no hand
   yet. The same idea as the hand map of :mod:`aitu_backend.hands.encoding`.
+* ``guessed`` lists the ids of the notes whose hand came from the quick rule for an added note
+  (plan section 8.3). Usually empty; the Hands tab draws those notes with a dashed border.
 """
 
 from __future__ import annotations
@@ -69,6 +71,7 @@ def to_columns(
             "onMs": on.tolist(),
             "lenMs": (end - on).tolist(),
             "hand": encode_hands(live.hand),
+            "guessed": live.id[live.hand_guessed & (live.hand != HAND_NONE)].tolist(),
         }
     )
     return payload
@@ -86,6 +89,7 @@ def from_columns(payload: dict[str, Any]) -> Notes:
     hand_text = payload.get("hand") or HAND_CHARS[HAND_NONE] * len(ids)
     if len(hand_text) != len(ids):
         raise ValueError(f"hand has {len(hand_text)} characters for {len(ids)} notes")
+    guessed = set(payload.get("guessed") or ())
     return Notes(
         id=ids,
         key=keys,
@@ -93,4 +97,5 @@ def from_columns(payload: dict[str, Any]) -> Notes:
         len_ms=len_ms,
         hand=decode_hands(hand_text),
         velocity=payload.get("velocity") or (),
+        hand_guessed=[note_id in guessed for note_id in ids] if guessed else (),
     )

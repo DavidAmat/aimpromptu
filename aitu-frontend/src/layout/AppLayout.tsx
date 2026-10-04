@@ -3,7 +3,6 @@
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
 import { Link, Outlet } from "react-router-dom";
 import { TabBar } from "../ui";
 import { ROUTES, TOP_SECTIONS } from "./routes";
@@ -14,14 +13,15 @@ export function AppLayout() {
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Toolbar sx={{ gap: 3 }}>
-          <Typography
+          {/* The official logo (`public/logo-final-2.svg`), drawn at the height of the bar. */}
+          <Box
             component={Link}
-            to={ROUTES.playgroundInput}
-            variant="h2"
-            sx={{ textDecoration: "none", color: "primary.main", flexShrink: 0 }}
+            to={ROUTES.pieceRoot}
+            aria-label="AImpromptu, open the working piece"
+            sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}
           >
-            AImpromptu
-          </Typography>
+            <Box component="img" src="/logo-final-2.svg" alt="AImpromptu" sx={{ height: 34, width: "auto", display: "block" }} />
+          </Box>
           <Box sx={{ flexGrow: 1 }}>
             <TabBar items={TOP_SECTIONS} />
           </Box>

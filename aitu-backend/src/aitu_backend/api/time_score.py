@@ -18,8 +18,8 @@ them together.
 
 from __future__ import annotations
 
-from functools import lru_cache
 import copy
+import dataclasses
 from typing import Literal
 
 from fastapi import APIRouter, Body, HTTPException, Query, Response
@@ -37,7 +37,7 @@ from aitu_backend.notation.trills import MIN_PAIR_REPEATS, detect_trills
 from aitu_backend.schemas.rhythm import HiddenNote, SavedRhythm, Trill
 from aitu_backend.notation.decorative import decorative_notes
 from aitu_backend.schemas.time_matrix import FigureLadder, FigureName, TimeScorePayload
-from aitu_backend.transcription import pipeline
+from aitu_backend.transcription import pipeline, saved_hands, split_cache
 from aitu_backend.transcription.engine import NoteEvent
 from aitu_backend.transcription.time_pipeline import (
     TimeHands,
@@ -157,11 +157,13 @@ def _hands(audio_uuid: str, frame_ms: float) -> TimeHands:
     # alone: reading and checking every note of it on each request cost about 10 ms for nothing.
     if not store.exists(audio_uuid) or not pipeline.has_events(audio_uuid):
         _events_or_error(audio_uuid)
-    # Keyed on the recording's own mtime as well, so re-transcribing a piece drops the cached split
-    # instead of serving the previous one for the rest of the process's life. Nanoseconds, so two
-    # saves within one second are two different stamps.
-    stamp = pipeline.events_path(audio_uuid).stat().st_mtime_ns
-    return _split_cached(audio_uuid, frame_ms, stamp)
+    # The split is shared with the transcription job and the old piano roll, and keyed on the
+    # recording's own mtime in nanoseconds, so re-transcribing or saving an edit drops it.
+    try:
+        return pipeline.split_of(audio_uuid, frame_ms)
+    except FileNotFoundError:
+        _events_or_error(audio_uuid)
+        raise
 
 
 def _json(payload: BaseModel) -> Response:
@@ -184,35 +186,10 @@ def forget_split_cache() -> None:
     apart would otherwise serve the first one twice.
 
     Public because the writer is not always in this module: taking a note off
-    the recording is done from `/matrix` as well, and reaching into a private
-    name from there would be worse than saying out loud that this is the hook.
+    the recording is done from `/matrix` as well. The cache itself is
+    :mod:`aitu_backend.transcription.split_cache` (implementation 08, Phase 4).
     """
-    _split_cached.cache_clear()
-
-
-@lru_cache(maxsize=8)
-def _split_cached(audio_uuid: str, frame_ms: float, _stamp: int) -> TimeHands:
-    """The hand split for one (piece, column length).
-
-    Cached because it is the expensive half of drawing a sheet — around a second on a five-minute
-    piece — and it does not depend on anything the reader is changing. Naming a different peak,
-    moving a passage boundary or correcting the hand of a note all rebuild the *printed notes*,
-    which is fifty milliseconds, and would otherwise pay for the split again every time.
-
-    The returned object is shared, so every caller must treat it as read-only and copy before
-    changing anything. `_with_page_edits` does.
-    """
-    stored = _events_or_error(audio_uuid)
-    # A piece being composed is empty until its first passage lands, and an empty piece is a
-    # `durationSeconds` of zero (Epic 13). It still has to draw: one empty column is enough for a
-    # pair of staves, and the column is a property of the view, not of the music.
-    duration = max(stored.duration_seconds, frame_ms / 1000.0)
-    return impose_granularity_and_split(
-        stored.events,
-        duration,
-        frame_ms=frame_ms,
-        title=stored.title,
-    )
+    split_cache.forget()
 
 
 def _gaps(hands: TimeHands, hand: HandChoice, start_seconds: float, end_seconds: float | None):
@@ -407,41 +384,57 @@ def put_hands(audio_uuid: str, body: HandAssignmentRequest = Body(...)) -> HandA
     corrected and every consequence falls out by the ordinary path.
 
     Addressed by column and row because that is what the reader clicked; resolved here to the
-    events that landed there, and stored against the raw times those events were played at. The
-    correction therefore survives a change of column length: it still holds at 20 ms.
+    note whose onset is that cell, by its id. The correction therefore survives a change of column
+    length: it still holds at 20 ms.
+
+    **Light and fast** (implementation 08, plan section 9.7). The reader does this often, so no
+    hand split runs because of it. The cell is found in the split the page is already showing
+    (cached), and the hand is written onto the note by id. When the piece has no saved hands yet,
+    the first change saves the hand of every note as that split draws it, then applies the change:
+    the page looks the same, and from then on the sheet is painted from the saved hands in a few
+    milliseconds instead of running the inference again. The page that made the change draws it at
+    once, so a saved reading that was current stays current (plan section 8.3).
     """
-    stored = _events_or_error(audio_uuid)
-    hands = trim_to_music(_hands(audio_uuid, body.frame_ms))
+    with pipeline.piece_lock(audio_uuid):
+        stored = _events_or_error(audio_uuid)
+        split = _hands(audio_uuid, body.frame_ms)
+        id_at = {(row, column): note_id for (column, row), note_id in split.build.event_ids.items()}
 
-    # Column and row back to the raw second the key went down, from the record of where each key's
-    # own attack landed. `trim_to_music` may have dropped leading silence, so the lookup is built
-    # from the same trimmed hands the reader was looking at.
-    seconds_at: dict[tuple[int, int], float] = {}
-    for (column, row), seconds in hands.build.event_seconds.items():
-        seconds_at[row, column] = seconds
+        wanted: dict[int, str] = {}
+        unmatched = 0
+        for note in body.notes:
+            note_id = id_at.get((note.row, note.start_frame))
+            if note_id is None:
+                unmatched += 1
+                continue
+            wanted[note_id] = note.hand
 
-    wanted: dict[tuple[int, float], str] = {}
-    unmatched = 0
-    for note in body.notes:
-        seconds = seconds_at.get((note.row, note.start_frame))
-        if seconds is None:
-            unmatched += 1
-            continue
-        wanted[note.row, round(seconds, 4)] = note.hand
+        by_id = {event.id: event for event in stored.events}
+        if wanted and not saved_hands.hands_complete(stored.events):
+            for note_id, hand in saved_hands.hands_of_split(split, stored.events).items():
+                by_id[note_id].hand = hand
+                by_id[note_id].hand_guessed = False
 
-    assigned = 0
-    for event in stored.events:
-        key = (event.midi_note - LOWEST_MIDI, round(event.start, 4))
-        hand = wanted.get(key)
-        if hand is None or event.hand == hand:
-            continue
-        event.hand = hand
-        assigned += 1
+        assigned = 0
+        for note_id, hand in wanted.items():
+            event = by_id.get(note_id)
+            if event is None or (event.hand == hand and not event.hand_guessed):
+                continue
+            event.hand = hand
+            event.hand_guessed = False
+            assigned += 1
 
-    if assigned:
-        pipeline.save_note_events(audio_uuid, stored.events, stored.duration_seconds, stored.title)
-        # The split is cached per (piece, column length) and has just stopped being true.
-        forget_split_cache()
+        if assigned:
+            pipeline.save_edit(
+                audio_uuid,
+                stored.events,
+                stored.duration_seconds,
+                stored.title,
+                before=stored.header,
+                notes_changed=False,
+                hands_changed=True,
+                sheet_follows=True,
+            )
 
     return HandAssignmentResult(assigned=assigned, unmatched=unmatched)
 
@@ -491,8 +484,14 @@ def put_removed_by_column(
     under `/matrix`.
 
     What it writes is identical, so a note taken off here is gone from the roll
-    too, and from the gaps the rhythm is measured from.
+    too, and from the gaps the rhythm is measured from. The sheet that made the
+    change draws it at once, so a saved reading that was current stays current.
     """
+    with pipeline.piece_lock(audio_uuid):
+        return _put_removed_by_column(audio_uuid, body)
+
+
+def _put_removed_by_column(audio_uuid: str, body: RemovalByColumnRequest) -> RemovalByColumnResult:
     stored = _events_or_error(audio_uuid)
 
     if body.removed:
@@ -511,6 +510,7 @@ def put_removed_by_column(
                 stored.duration_seconds,
                 frame_ms=body.frame_ms,
                 title=stored.title,
+                **pipeline.filters_for(stored.header.engine),
             )
         )
 
@@ -539,8 +539,16 @@ def put_removed_by_column(
         changed += 1
 
     if changed:
-        pipeline.save_note_events(audio_uuid, stored.events, stored.duration_seconds, stored.title)
-        forget_split_cache()
+        pipeline.save_edit(
+            audio_uuid,
+            stored.events,
+            stored.duration_seconds,
+            stored.title,
+            before=stored.header,
+            notes_changed=True,
+            hands_changed=False,
+            sheet_follows=True,
+        )
 
     return RemovalByColumnResult(changed=changed, unmatched=unmatched)
 
@@ -591,7 +599,15 @@ def put_added_notes(audio_uuid: str, body: AddNotesRequest = Body(...)) -> AddNo
 
     Refused where that key is already struck in that column, in either hand. The matrix rejects a
     frame where both hands hold one key, and silently merging the two would lose a note.
+
+    The sheet that made the change draws it at once, so a saved reading that was current stays
+    current (implementation 08, plan section 8.3).
     """
+    with pipeline.piece_lock(audio_uuid):
+        return _put_added_notes(audio_uuid, body)
+
+
+def _put_added_notes(audio_uuid: str, body: AddNotesRequest) -> AddNotesResult:
     stored = _events_or_error(audio_uuid)
     seconds_per_frame = body.frame_ms / 1000
 
@@ -625,8 +641,16 @@ def put_added_notes(audio_uuid: str, body: AddNotesRequest = Body(...)) -> AddNo
     if added:
         # Ordered by start time, which is what every reader of `events.json` assumes.
         stored.events.sort(key=lambda event: (event.start, event.midi_note))
-        pipeline.save_note_events(audio_uuid, stored.events, stored.duration_seconds, stored.title)
-        forget_split_cache()
+        pipeline.save_edit(
+            audio_uuid,
+            stored.events,
+            stored.duration_seconds,
+            stored.title,
+            before=stored.header,
+            notes_changed=True,
+            hands_changed=True,
+            sheet_follows=True,
+        )
 
     return AddNotesResult(added=added, duplicate=duplicate)
 
@@ -661,6 +685,21 @@ class ScoreRequest(BaseModel):
 DECORATIVE_PASSES = 3
 
 
+def _editable_copy(hands: TimeHands) -> TimeHands:
+    """The two hands with grids of their own, sharing everything else with the original.
+
+    The page edits and the trills write cells of the two hand grids and nothing else, so only those
+    are copied. A deep copy of the whole `TimeHands` (the unsplit keyboard, the build report and
+    its notes) was about two thirds of a sheet request with decorative notes removed, which copies
+    once per pass (implementation 08, Phase 8).
+    """
+    right = copy.copy(hands.right)
+    right.grid = hands.right.grid.copy()
+    left = copy.copy(hands.left)
+    left.grid = hands.left.grid.copy()
+    return dataclasses.replace(hands, right=right, left=left)
+
+
 def _with_page_edits(hands: TimeHands, hidden: list[HiddenNote]) -> TimeHands:
     """The two hands as the reader has corrected them, for the purpose of naming figures.
 
@@ -681,7 +720,7 @@ def _with_page_edits(hands: TimeHands, hidden: list[HiddenNote]) -> TimeHands:
     if not hidden:
         return hands
 
-    edited = copy.deepcopy(hands)
+    edited = _editable_copy(hands)
     planes = {"right": edited.right, "left": edited.left}
 
     def run_of(plane, row: int, column: int) -> list[int]:
@@ -725,7 +764,7 @@ def _with_trills(hands: TimeHands, trills: list[Trill]) -> TimeHands:
     if not trills:
         return hands
 
-    edited = copy.deepcopy(hands)
+    edited = _editable_copy(hands)
     planes = {"right": edited.right, "left": edited.left}
 
     for trill in trills:
@@ -788,10 +827,11 @@ def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> Response
         )
         if not body.drop_decorative:
             break
+        already = {(h.start_frame, h.row) for h in hidden}
         found = [
             note
             for note in decorative_notes(payload.notes)
-            if (note.start_frame, note.row) not in {(h.start_frame, h.row) for h in hidden}
+            if (note.start_frame, note.row) not in already
         ]
         if not found:
             break
@@ -937,18 +977,25 @@ def put_rhythm(audio_uuid: str, rhythm: SavedRhythm) -> SavedRhythm:
     One per piece, because a rhythm is a decision rather than a version: what a reader wants back is
     the last reading they were happy with. Transcribing the audio again clears it, since the column
     numbers in it would then point at a different set of notes.
+
+    The reading records the ``handsRevision`` of the notes it was written for (implementation 08,
+    plan section 8.2), set here from ``events.json``, so the Sheet tab knows when a later edit of
+    the notes or the hands makes it stale.
     """
     if not store.exists(audio_uuid):
         raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
-    if pipeline.load_note_events(audio_uuid) is None:
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                f"Audio {audio_uuid} has not been transcribed, so there is nothing for a rhythm to "
-                "describe."
-            ),
-        )
-    pipeline.save_rhythm(audio_uuid, rhythm)
+    with pipeline.piece_lock(audio_uuid):
+        stored = pipeline.load_note_events(audio_uuid)
+        if stored is None:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Audio {audio_uuid} has not been transcribed, so there is nothing for a "
+                    "rhythm to describe."
+                ),
+            )
+        rhythm = rhythm.model_copy(update={"hands_revision": stored.header.hands_revision})
+        pipeline.save_rhythm(audio_uuid, rhythm)
     return rhythm
 
 

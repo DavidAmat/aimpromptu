@@ -1,0 +1,117 @@
+{
+  "date": "2026-10-01T21:15:38.509Z",
+  "engine": {
+    "name": "muscriptor",
+    "installed": true,
+    "device": "cuda",
+    "loaded": [
+      "muscriptor-large (cuda, float16)"
+    ],
+    "waiting": 0,
+    "error": null
+  },
+  "pieces": [
+    {
+      "piece": "upload",
+      "problems": [],
+      "in": {
+        "how": "upload",
+        "ms": 230
+      },
+      "uuid": "d6e66362-b4fd-4d87-be99-d4de52cdf801",
+      "title": "time:flow upload of Superestrella",
+      "durationSeconds": 189,
+      "transcribe": {
+        "firstNote": 347,
+        "livePixels": 5739,
+        "notes": 27419,
+        "backend": "0:26",
+        "count": 1351,
+        "engine": "muscriptor-large"
+      },
+      "hands": {
+        "predict": 857,
+        "page": "Predicted in 0.7 s · 1350 notes changed hand · 1 without a hand",
+        "save": 85,
+        "withoutHand": 1
+      },
+      "sheet": {
+        "open": 144,
+        "firstSheet": 624,
+        "save": 158,
+        "noteheads": 1350,
+        "steps": "ready ready ready ready ready"
+      },
+      "total": 33029
+    },
+    {
+      "piece": "library",
+      "problems": [],
+      "in": {
+        "how": "library",
+        "ms": 207,
+        "opensOn": "notes"
+      },
+      "uuid": "69361c12-ce8e-430a-b582-d35dc3c62eef",
+      "title": "time:flow copy of The Winner Takes It All",
+      "durationSeconds": 356,
+      "transcribedAgain": true,
+      "transcribe": {
+        "firstNote": 229,
+        "livePixels": 5006,
+        "notes": 51511,
+        "backend": "0:50",
+        "count": 2553,
+        "engine": "muscriptor-large"
+      },
+      "hands": {
+        "predict": 2370,
+        "page": "Predicted in 1.9 s · 2553 notes changed hand",
+        "save": 115,
+        "withoutHand": 0
+      },
+      "sheet": {
+        "open": 165,
+        "firstSheet": 992,
+        "save": 162,
+        "noteheads": 2553,
+        "steps": "ready ready ready ready ready"
+      },
+      "total": 60035
+    },
+    {
+      "piece": "youtube",
+      "problems": [],
+      "in": {
+        "how": "youtube",
+        "ms": 3754,
+        "url": "https://www.youtube.com/watch?v=znfYwABeSZ0"
+      },
+      "uuid": "6ed26471-b266-4a80-b230-c36f7ee2cfdd",
+      "title": "Comptine d'un autre été, l'après-midi",
+      "durationSeconds": 141,
+      "transcribe": {
+        "firstNote": 337,
+        "livePixels": 5327,
+        "notes": 21395,
+        "backend": "0:21",
+        "count": 1014,
+        "engine": "muscriptor-large"
+      },
+      "hands": {
+        "predict": 1363,
+        "page": "Predicted in 0.8 s · 1008 notes changed hand · 6 without a hand",
+        "save": 96,
+        "withoutHand": 6
+      },
+      "sheet": {
+        "open": 141,
+        "firstSheet": 551,
+        "save": 211,
+        "noteheads": 1008,
+        "steps": "ready ready ready ready ready"
+      },
+      "total": 31136
+    }
+  ]
+}

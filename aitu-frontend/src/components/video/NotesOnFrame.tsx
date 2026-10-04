@@ -10,7 +10,7 @@
  * on a rectangle; if it is not, that is something you can look at rather than
  * something you have to imagine.
  *
- * **The picking is the one the Piano Roll already has**, through
+ * **The picking is the one Notes Falling already has**, through
  * `useNoteSelection`: click a note and it becomes the selection, ⌘-click adds or
  * takes out, drag a band over empty picture and everything under it is picked,
  * click empty picture and nothing is. No second way of picking notes was

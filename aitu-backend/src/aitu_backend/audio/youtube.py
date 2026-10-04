@@ -186,12 +186,17 @@ def download(
                 "check it is on PATH (macOS: `brew install ffmpeg`)."
             )
 
-        return ingest.ingest_path(
-            downloaded[0],
-            AudioSource.YOUTUBE,
-            alias=alias or downloaded[0].stem,
-            source_url=cleaned,
-        )
+        # The conversion to the 16 kHz `normalized.wav` takes a second or two after the download
+        # reached 100%. Its own stage, so a progress bar does not look stuck there.
+        with progress.stage("store", total=1, message="Converting the audio") as stage:
+            stored = ingest.ingest_path(
+                downloaded[0],
+                AudioSource.YOUTUBE,
+                alias=alias or downloaded[0].stem,
+                source_url=cleaned,
+            )
+            stage.advance(1)
+        return stored
 
 
 def clean_error(stderr: str) -> str:

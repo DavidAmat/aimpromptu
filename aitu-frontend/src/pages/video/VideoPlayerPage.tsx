@@ -23,7 +23,7 @@ import Typography from "@mui/material/Typography";
 import { audioApi } from "../../api/audio";
 import { videoApi, type VideoSummary } from "../../api/video";
 import useProgress from "../../hooks/useProgress";
-import { PageContainer, SectionCard, surface } from "../../ui";
+import { PageContainer, progressSx, SectionCard, surface } from "../../ui";
 import { readSelectedVideo, writeSelectedVideo } from "../../video/selectedVideo";
 import FramePlayer from "../../components/video/FramePlayer";
 import VideoBar from "../../components/video/VideoBar";
@@ -172,7 +172,7 @@ export function VideoPlayerPage() {
         </VideoBar>
 
         {running ? (
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2, ...progressSx }}>
             <LinearProgress
               variant={progress.event?.total ? "determinate" : "indeterminate"}
               value={progress.event ? progress.event.fraction * 100 : 0}

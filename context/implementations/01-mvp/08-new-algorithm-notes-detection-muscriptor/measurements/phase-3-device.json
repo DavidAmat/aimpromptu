@@ -1,0 +1,49 @@
+{
+ "piece": "a585f9eb-36a1-49a0-9f0c-2626f3d292da",
+ "durationS": 189.16,
+ "torch": "2.13.0+cu130",
+ "gpu": "NVIDIA GeForce RTX 4090",
+ "runs": [
+  {
+   "engine": "bytedance",
+   "device": "cpu",
+   "loadS": 7.2,
+   "transcribeS": 53.57,
+   "xReal": 3.53,
+   "notes": 1343
+  },
+  {
+   "engine": "bytedance",
+   "device": "cuda",
+   "loadS": 1.23,
+   "transcribeS": 4.57,
+   "xReal": 41.39,
+   "notes": 1340
+  },
+  {
+   "engine": "muscriptor-large",
+   "device": "cuda",
+   "dtype": "float16",
+   "loadS": 0.95,
+   "transcribeS": 25.31,
+   "firstNoteS": 0.18,
+   "xReal": 7.47,
+   "gpuPeakGB": 3.52,
+   "notes": 1351
+  }
+ ],
+ "bytedanceCpuAgainstCuda": {
+  "notesA": 1343,
+  "notesB": 1340,
+  "matched": 1338,
+  "toleranceMs": 1.0,
+  "worstMatchedMs": 0.885
+ },
+ "muscriptorAgainstPhase1Native": {
+  "notesA": 1351,
+  "notesB": 1351,
+  "matched": 1351,
+  "toleranceMs": 0.5,
+  "worstMatchedMs": 0.0
+ }
+}

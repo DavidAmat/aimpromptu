@@ -7,14 +7,25 @@
  * retired with it: Matrix, Piano Roll, Notes Falling, Notes Falling (raw) and
  * Music Notation.
  *
- * **Piano Roll and Notes Falling are back**, rebuilt on the wall clock: they read
+ * **Piano Roll and Notes Falling came back**, rebuilt on the wall clock: they read
  * `GET /matrix/{id}/events` and draw the recording in seconds, so neither of them
  * asks for a tempo or a resolution. The other three stay retired — Matrix and
  * Notes Falling (raw) were views of a grid that no longer exists, and Music
  * Notation is the Rhythm tab now.
+ *
+ * **The Piano Roll left again in implementation 08** (Q-4): the Notes and Hands
+ * tabs of the flow page are the piano roll visualization now, with its editor.
+ * `/playground/piano-roll` redirects to the piece.
  */
 
+import type { PieceStep } from "../api/pieces";
+
 export const ROUTES = {
+  /** The flow page (implementation 08): one tab per step, from the audio to the piano sheet. */
+  pieceRoot: "/piece",
+  pieceNew: "/piece/new",
+  /** A piece at one step, or at the step it opens on when `step` is left out. */
+  piece: (uuid: string, step?: PieceStep) => (step ? `/piece/${uuid}/${step}` : `/piece/${uuid}`),
   youtube: "/youtube",
   video: "/video",
   videoPlayer: "/video/player",
@@ -26,11 +37,15 @@ export const ROUTES = {
   playground: "/playground",
   playgroundInput: "/playground/input",
   playgroundRhythm: "/playground/rhythm",
-  playgroundPianoRoll: "/playground/piano-roll",
   playgroundNotesFalling: "/playground/notes-falling",
   library: "/library",
   libraryPlay: (id: string) => `/library/play/${id}`,
+  /** The Notes tab's performance measurements (Phase 7), in a development build only. */
+  devRollBench: "/dev/roll-bench",
 } as const;
+
+/** Pattern form for `<Route path>`; `piece` is a function above. */
+export const PIECE_PATTERN = "/piece/:uuid";
 
 /** Pattern form for `<Route path>`; `libraryPlay` is a function above. */
 export const LIBRARY_PLAY_PATTERN = "/library/play/:id";
@@ -39,6 +54,8 @@ export const LIBRARY_PLAY_PATTERN = "/library/play/:id";
 export const VIDEO_EXAMPLE_PATTERN = "/video/examples/:slug";
 
 export const TOP_SECTIONS = [
+  // First, because it is where a piece now starts: audio in, notes, hands, then the sheet.
+  { label: "Piece", to: ROUTES.pieceRoot },
   { label: "YouTube to Audio", to: ROUTES.youtube },
   { label: "Video to Notes", to: ROUTES.video },
   { label: "Playground", to: ROUTES.playground },
@@ -47,13 +64,12 @@ export const TOP_SECTIONS = [
 
 /**
  * Tab order is the order of the work: bring a piece in, look at how it was
- * actually played, then name the figures and write the sheet. The two visual
- * views sit between input and Rhythm because that is when they are useful —
- * they are how you check the transcription before you commit to reading it.
+ * actually played, then name the figures and write the sheet. Notes Falling
+ * sits between input and Rhythm because that is when it is useful — it is how
+ * you check the transcription before you commit to reading it.
  */
 export const PLAYGROUND_TABS = [
   { label: "Upload / Input", to: ROUTES.playgroundInput },
-  { label: "Piano Roll", to: ROUTES.playgroundPianoRoll },
   { label: "Notes Falling", to: ROUTES.playgroundNotesFalling },
   { label: "Piano Sheet", to: ROUTES.playgroundRhythm },
 ];

@@ -79,7 +79,7 @@ export interface HistoryState<T> {
 
 export type HistoryAction<T> =
   | { kind: "edit"; key: keyof T; label: string; value: SetStateAction<T[keyof T]>; gesture: number }
-  | { kind: "stage"; label: string; effects: StepEffects; gesture: number }
+  | { kind: "stage"; label: string; effects?: StepEffects; gesture: number }
   | { kind: "walk"; to: "undo" | "redo" }
   | { kind: "reset"; value: T | ((current: T) => T) };
 
@@ -153,7 +153,8 @@ export function historyReducer<T extends object>(state: HistoryState<T>, action:
     }
     case "stage":
       // Opened even though nothing on the page has moved yet: the write to the recording is the
-      // step, and the fields this gesture goes on to touch join it.
+      // step, and the fields this gesture goes on to touch join it. Without effects, it only names
+      // the step.
       return record(state, {
         label: action.label,
         after: state.present,
@@ -193,13 +194,13 @@ export interface EditHistory<T> {
   set: { [K in keyof T]: Dispatch<SetStateAction<T[K]>> };
   /**
    * Name the step being built in this run, and give it the calls that take a backend write back
-   * and put it again.
+   * and put it again (or none, to name it only: "Move 3 notes").
    *
    * Called *before* the setters it belongs to. Without it a step takes the name of the first field
    * written, which is right for an ordinary edit and wrong for one — a hand swap moves fingerings
    * and would otherwise be called "Fingering".
    */
-  stage: (label: string, effects: StepEffects) => void;
+  stage: (label: string, effects?: StepEffects) => void;
   /**
    * Replace the edits and forget every step, in one go.
    *
@@ -259,7 +260,7 @@ export function useEditHistory<T extends object>(
     [labels],
   );
 
-  const stage = useCallback((label: string, effects: StepEffects) => {
+  const stage = useCallback((label: string, effects?: StepEffects) => {
     dispatch({ kind: "stage", label, effects, gesture: gesture() });
   }, []);
 

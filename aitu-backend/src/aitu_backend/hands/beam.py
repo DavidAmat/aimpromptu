@@ -30,6 +30,7 @@ import math
 import time as _time
 from dataclasses import dataclass
 
+from aitu_backend.hands import progress as hand_progress
 from aitu_backend.hands.candidates import Partition, generate
 from aitu_backend.hands.config import HandInferenceConfig
 from aitu_backend.hands.costs import (
@@ -109,7 +110,10 @@ def run(
     candidate_counts: list[int] = []
     group_candidates: list[list[Partition]] = []
 
+    group_count = max(1, len(decoded.groups))
     for index, group in enumerate(decoded.groups):
+        if index % 16 == 0:
+            hand_progress.report("beam", index / group_count)
         candidates, relaxed = generate(group, model, search)
         group_candidates.append(candidates)
         candidate_counts.append(len(candidates))

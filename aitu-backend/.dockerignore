@@ -1,0 +1,6 @@
+# The image needs only the two files that decide the Python environment. The code, the tests and
+# the data (1.1 GB of audio) are mounted by compose.yaml, never copied, so nothing else is sent to
+# the builder.
+*
+!pyproject.toml
+!uv.lock

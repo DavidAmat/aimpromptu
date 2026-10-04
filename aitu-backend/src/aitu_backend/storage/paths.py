@@ -32,14 +32,15 @@ Tree under ``aitu-backend/data/``::
         <slug>.json                 one example's calibration and annotations
         cache/<slug>.jpg            the working-resolution copy, derived
 
-No path literal lives outside this module. If storage is ever containerized the
-tree maps 1:1 onto a MinIO bucket; not now.
+No path literal lives outside this module. ``AITU_DATA_DIR`` moves the whole tree
+(:mod:`aitu_backend.config`); the container keeps the default and mounts the host's folder there.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
+from aitu_backend import config
 from aitu_backend.schemas.naming import matrix_filename, version_folder
 
 # --------------------------------------------------------------------- roots
@@ -51,8 +52,8 @@ def backend_root() -> Path:
 
 
 def data_dir() -> Path:
-    """`aitu-backend/data/` — root of all local persistence."""
-    return backend_root() / "data"
+    """`aitu-backend/data/` — root of all local persistence, unless `AITU_DATA_DIR` says otherwise."""
+    return config.data_dir_override() or backend_root() / "data"
 
 
 def audio_root() -> Path:

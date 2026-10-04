@@ -11,7 +11,14 @@
     "check:render": "node scripts/check-render.mjs",
     "check:history": "tsx scripts/check-history.ts",
     "check:note-names": "tsx scripts/check-note-names.ts",
-    "check:geometry": "tsx scripts/check-geometry.ts"
+    "check:geometry": "tsx scripts/check-geometry.ts",
+    "check:cuts": "tsx scripts/check-cuts.ts",
+    "check:notes": "tsx scripts/check-notes.ts",
+    "check:flow": "node scripts/check-flow.mjs",
+    "screenshot": "node scripts/screenshot.mjs",
+    "bench:roll": "node scripts/bench-roll.mjs",
+    "bench:sheet": "node scripts/bench-sheet.mjs",
+    "time:flow": "node scripts/time-flow.mjs"
   },
   "dependencies": {
     "@aimpromptu/grid-notation": "file:../../vexflow-v2",
@@ -36,6 +43,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "jsdom": "^30.0.0",
+    "playwright": "^1.63.0",
     "tsx": "^4.23.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",

@@ -7,12 +7,12 @@
  * depended on a tempo the app no longer has — and seconds are the honest unit
  * anyway: what a player wants is "show me the next two seconds".
  *
- * Notes can be picked here exactly as on the roll, and for the same reason: a
+ * Notes can be picked here as they were on the old Piano Roll, and for the same reason: a
  * note the transcriber invented is often easiest to spot as it falls. The
  * geometry is the other way round — pitch across, time down — so the band maths
  * differs, but the rules and the panel are shared.
  *
- * Like the roll, the SVG is measured rather than stretched, so the note names
+ * The SVG is measured rather than stretched, so the note names
  * inside the rectangles are drawn undistorted and read horizontally instead of
  * being turned on their side.
  */
@@ -45,7 +45,6 @@ import { describeEvents, type PlayedNote } from "../../playback/playedNotes";
 import {
   labelFontSize,
   NOTE_LABEL_FAMILY,
-  NOTE_LABEL_FILL,
   noteVisuals,
   STRIKE_COLOR,
 } from "../../playback/noteVisuals";
@@ -443,7 +442,7 @@ export function NotesFallingPage() {
                           fontSize={fontSize}
                           fontFamily={NOTE_LABEL_FAMILY}
                           fontWeight={600}
-                          fill={NOTE_LABEL_FILL}
+                          fill={visuals.labelFill}
                           style={{ pointerEvents: "none", userSelect: "none" }}
                         >
                           {label}

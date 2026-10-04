@@ -55,6 +55,29 @@ def snapshot_current(audio_uuid: str) -> int:
     return nxt
 
 
+def snapshot_notes(audio_uuid: str) -> int:
+    """Copy ``events.json`` and ``rhythm.json`` into ``history/vN/`` and return the new version.
+
+    Called before a new transcription replaces them (implementation 08, plan section 8.3): before
+    this, a new transcription deleted ``rhythm.json`` with no copy. The audio is not copied, unlike
+    :func:`snapshot_current`, because a transcription does not change it. The version counter is
+    the same, so the two kinds of snapshot never share a folder.
+    """
+    version = current_version(audio_uuid)
+    dest = paths.history_version_dir(audio_uuid, version)
+    dest.mkdir(parents=True, exist_ok=True)
+    for source in (pipeline.events_path(audio_uuid), pipeline.rhythm_path(audio_uuid)):
+        if source.is_file():
+            shutil.copy2(source, dest / source.name)
+    (dest / "snapshot.json").write_text(
+        json.dumps({"reason": "a new transcription replaced these notes"}) + "\n",
+        encoding="utf-8",
+    )
+    nxt = version + 1
+    _write_version(audio_uuid, nxt)
+    return nxt
+
+
 def load_mismatches(audio_uuid: str) -> list[dict]:
     path = paths.audio_mismatches_path(audio_uuid)
     if not path.is_file():

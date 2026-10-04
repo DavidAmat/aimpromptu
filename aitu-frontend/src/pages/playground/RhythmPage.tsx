@@ -5,9 +5,22 @@
  * makes sense: look at where the notes keep landing, say what one of those piles is, and read the
  * result. Naming a different pile changes the names on the page and nothing else, so trying two is
  * cheap and nothing is lost by getting it wrong the first time.
+ *
+ * The same page is step 5 (**Sheet**) of the flow page (implementation 08, Story 8.2). There it is
+ * given its piece and the state of its step instead of reading the Playground's working piece, and
+ * it adds one thing: when the notes or the hands changed after the reading was saved, it opens with
+ * a banner and waits for **Write the sheet** instead of drawing the old reading by itself.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import Box from "@mui/material/Box";
@@ -42,6 +55,7 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { PageContainer, SectionCard } from "../../ui";
+import type { StepState } from "../../api";
 import { noteName, spanishNoteName } from "../../music/noteNames";
 import PeakPlot from "../../components/time/PeakPlot";
 import ScorePlayer, {
@@ -727,10 +741,59 @@ function notTranscribed(caught: unknown): boolean {
   return caught instanceof ApiError && caught.status === 409;
 }
 
-export function RhythmPage() {
+/**
+ * What the flow page tells the piano sheet when it is the Sheet tab.
+ *
+ * `state` and `reason` are the backend's answer for the Sheet step (`GET /pieces/{uuid}/status`).
+ * `onChanged` is called after a write that can change that answer: a saved reading makes the step
+ * ready, **Remove all** makes it missing.
+ */
+export interface SheetStep {
+  audioUuid: string;
+  label?: string | undefined;
+  state: StepState;
+  reason: string | null;
+  onChanged: () => void;
+}
+
+/** The page frame: the Playground's titled page, or a plain block under the flow page's tabs. */
+function Frame({
+  step,
+  subtitle,
+  children,
+}: {
+  step: SheetStep | undefined;
+  subtitle: string;
+  children: ReactNode;
+}) {
+  if (!step) {
+    return (
+      <PageContainer title="Rhythm" subtitle={subtitle} wide>
+        {children}
+      </PageContainer>
+    );
+  }
+  return (
+    <Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        {subtitle}
+      </Typography>
+      {children}
+    </Box>
+  );
+}
+
+export function RhythmPage({ step }: { step?: SheetStep } = {}) {
   const { artifact } = useWorkingArtifact();
-  const audioUuid = artifact.audioUuid;
+  const audioUuid = step ? step.audioUuid : artifact.audioUuid;
+  const pieceLabel = step ? step.label : artifact.label;
   const frameMs = artifact.frameMs;
+  /**
+   * The notes or the hands changed after the reading was saved (plan section 8.3). The reading is
+   * still loaded, but it is not drawn by itself: the reader presses **Write the sheet** and then
+   * **Save**, and only that save makes the step ready again.
+   */
+  const stale = step?.state === "stale";
 
   const [hand, setHand] = useState<HandChoice>("right");
   const [figure, setFigure] = useState<FigureName>("negra");
@@ -1876,6 +1939,29 @@ export function RhythmPage() {
   }, [score, chords, ottavas, beamBreaks, beamJoins, overrides, fingers, evenSpacings]);
 
   /**
+   * `live`, kept as the same objects while its content is the same, for the sheet.
+   *
+   * The sheet is drawn again from scratch whenever one of these is a new object, and `live` gives
+   * six new ones whenever anything it reads changes, even when nothing in them did. A hand move
+   * did exactly that: the fingerings were handed back as an equal copy, and the whole sheet was
+   * drawn once more with the old notes before the new sheet arrived (implementation 08, Phase 8).
+   */
+  const liveContent = useMemo(
+    () =>
+      JSON.stringify([
+        live.ottavas,
+        [...live.beamBreaks],
+        [...live.beamJoins],
+        live.overrides,
+        live.evenSpacings,
+        live.fingers,
+      ]),
+    [live],
+  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the same content keeps the same objects
+  const drawnMarks = useMemo(() => live, [liveContent]);
+
+  /**
    * A lyric's block was dragged somewhere, or its right edge pulled in. Keep where it was put.
    *
    * The columns it is stored against never change, so the words stay with their music through a
@@ -2548,6 +2634,7 @@ export function RhythmPage() {
       setSaved(stored);
       setSavedNote("Saved with the piece. It will be here next time.");
       setFlash("saved");
+      step?.onChanged();
     } catch (caught) {
       const why = readable(caught, "Could not save this rhythm.");
       setSavedNote(
@@ -2586,6 +2673,7 @@ export function RhythmPage() {
     staffGaps,
     dropDecorative,
     spacings,
+    step,
   ]);
 
   /**
@@ -2766,6 +2854,7 @@ export function RhythmPage() {
       await timeScoreApi.forgetRhythm(audioUuid);
       setSaved(null);
       setFlash("removed");
+      step?.onChanged();
     } catch (caught) {
       // The screen is already clear, so this is only about what a reload would bring back.
       setSavedNote(readable(caught, "Could not forget the saved reading."));
@@ -2775,7 +2864,7 @@ export function RhythmPage() {
     // Drawn again with no speed changes, and passed them explicitly: the state above has not
     // reached this closure yet.
     await apply([]);
-  }, [audioUuid, apply, frameMs, hiddenNotes, resetEdits]);
+  }, [audioUuid, apply, frameMs, hiddenNotes, resetEdits, step]);
 
   /**
    * Say which hand plays the picked notes, on the recording.
@@ -2807,9 +2896,14 @@ export function RhythmPage() {
         row: rowOf(noteKey),
         hand: to,
       }));
-      setMoveRefused(null);
-      setMovingHand(true);
-      closeNotes();
+      // Not urgent: re-rendering this page to close the panel takes tens of milliseconds, and
+      // while it runs the answer of the hand request below cannot be read, so the new sheet would
+      // be asked for only after it. As a transition React pauses that render for the answer.
+      startTransition(() => {
+        setMoveRefused(null);
+        setMovingHand(true);
+        closeNotes();
+      });
       try {
         const result = await timeScoreApi.setHands(audioUuid, {
           frameMs,
@@ -3029,11 +3123,12 @@ export function RhythmPage() {
    */
   const restored = useRef<string | null>(null);
   useEffect(() => {
-    if (!audioUuid || !saved || !selected || score || busy) return;
+    // A stale reading waits for the reader: the banner asks for **Write the sheet** first.
+    if (!audioUuid || !saved || !selected || score || busy || stale) return;
     if (restored.current === key) return;
     restored.current = key;
     void apply();
-  }, [audioUuid, saved, selected, score, busy, key, apply]);
+  }, [audioUuid, saved, selected, score, busy, stale, key, apply]);
 
   /**
    * Ask for the sheet again when a note has changed hands or left the page.
@@ -3053,26 +3148,49 @@ export function RhythmPage() {
 
   if (!audioUuid) {
     return (
-      <PageContainer
-        title="Rhythm"
+      <Frame
+        step={step}
         subtitle="Read how the piece was played, name one gap, and the sheet follows."
-        wide
       >
         <Alert severity="info">
           Load and transcribe an audio on the <strong>Upload / Input</strong>{" "}
           tab first. The rhythm is read from the notes that transcription
           records.
         </Alert>
-      </PageContainer>
+      </Frame>
     );
   }
 
   return (
-    <PageContainer
-      title="Rhythm"
+    <Frame
+      step={step}
       subtitle="Every bar below is a gap that keeps repeating between one note and the next. Click the one you recognise, say what it is, and the sheet is written from it. Choosing a different one renames the notes and moves nothing."
-      wide
     >
+      {/*
+        The Sheet tab of the flow page only. A stale reading is loaded but not drawn until the reader
+        presses Write the sheet; once drawn, Save makes it the sheet of the piece again.
+      */}
+      {stale ? (
+        <Alert severity="warning" sx={{ mb: 2 }} data-sheet-banner="stale">
+          {score ? (
+            <>
+              The sheet below is drawn from the current notes and hands. Press{" "}
+              <strong>Save</strong> to make it the sheet of this piece.
+            </>
+          ) : (
+            <>
+              The notes or the hands changed since this sheet was saved. Your reading is kept:
+              press <strong>Write the sheet</strong> to draw it from the current notes and hands,
+              check it, then press <strong>Save</strong>.
+            </>
+          )}
+        </Alert>
+      ) : step?.state === "missing" && !saved && step.reason ? (
+        <Alert severity="info" sx={{ mb: 2 }} data-sheet-banner="missing">
+          {step.reason}
+        </Alert>
+      ) : null}
+
       {error ? (
         <Alert severity={untranscribed ? "warning" : "error"} sx={{ mb: 2 }}>
           {error}
@@ -3746,18 +3864,18 @@ export function RhythmPage() {
             >
               <TimeScoreView
                 score={score}
-                overrides={live.overrides}
-                beamBreaks={live.beamBreaks}
-                beamJoins={live.beamJoins}
+                overrides={drawnMarks.overrides}
+                beamBreaks={drawnMarks.beamBreaks}
+                beamJoins={drawnMarks.beamJoins}
                 keySignature={keySignature}
                 keyChanges={keyChanges}
                 clefChanges={clefChanges}
-                ottavas={live.ottavas}
+                ottavas={drawnMarks.ottavas}
                 onKeySuggestion={setKeyHint}
                 onOttavaSuggestion={setOttavaHint}
                 showFrameLabels={frameLabelsOn}
                 spacings={spacings}
-                evenSpacings={live.evenSpacings}
+                evenSpacings={drawnMarks.evenSpacings}
                 lineSpacing={lineSpacing}
                 noteSpacing={noteSpacing}
                 staffGaps={staffGaps}
@@ -3767,7 +3885,7 @@ export function RhythmPage() {
                 onSelectMarkedRange={pickMarkedRange}
                 onOttavaResize={stretchOttava}
                 renderOverrides={renderOverrides}
-                fingers={live.fingers}
+                fingers={drawnMarks.fingers}
                 trills={trills}
                 lyrics={lyrics}
                 onLyricLayoutChange={placeLyric}
@@ -5226,9 +5344,9 @@ export function RhythmPage() {
         open={pdfOpen}
         onClose={() => setPdfOpen(false)}
         renderer={sheetRenderer}
-        {...(artifact.label ? { pieceName: artifact.label } : {})}
+        {...(pieceLabel ? { pieceName: pieceLabel } : {})}
       />
-    </PageContainer>
+    </Frame>
   );
 }
 

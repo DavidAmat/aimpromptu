@@ -24,7 +24,10 @@ export interface AudioItem {
   /** Container/codec suffix without the dot, e.g. "mp3". */
   format: string;
   originalFilename?: string | null;
+  /** The length of the piece: the original minus its saved cuts. */
   durationSeconds?: number | null;
+  /** The length of the untouched original. */
+  originalDurationSeconds?: number | null;
   sampleRate?: number | null;
   /** Present when `source` is "youtube". */
   sourceUrl?: string | null;
@@ -55,6 +58,70 @@ export interface WaveformPeaks {
   max: number[];
   durationSeconds: number;
   sampleRate: number;
+}
+
+/** A cut: `[startFrame, endFrame)` of the original audio, in 10 ms time frames. */
+export type Cut = [number, number];
+
+/** One row of the frame table: a kept range of the original audio, in frames. */
+export interface KeptRange {
+  /** Where the range starts in the piece (the original minus the cuts). */
+  pieceStart: number;
+  /** Where it starts in the original audio file. */
+  originalStart: number;
+  length: number;
+}
+
+/**
+ * `GET` and `PUT /audio/{uuid}/cuts`: the selected region (implementation 08, plan section 9.2).
+ *
+ * The audio file never changes. A cut is a range of 10 ms time frames the user deleted, and the
+ * piece is every frame that is not in a cut.
+ */
+export interface CutsState {
+  audioUuid: string;
+  /** Goes up by one each time the cuts are saved with a change. Send it back as `baseRevision`. */
+  audioRevision: number;
+  /** One time frame, in ms (10). */
+  frameMs: number;
+  totalFrames: number;
+  pieceFrames: number;
+  /** Sorted, never touching or overlapping. */
+  cuts: Cut[];
+  kept: KeptRange[];
+  /** The stored notes were transcribed from other cuts: transcribe again. */
+  notesStale: boolean;
+}
+
+/**
+ * The waveform at one pair of values per time frame, decoded into typed arrays.
+ *
+ * One request covers every zoom level, down to the single frame a cut snaps to.
+ */
+export interface FramePeaks {
+  frameMs: number;
+  totalFrames: number;
+  /** The loudest sample of the audio (0 to 1); `min` and `max` are scaled so it is 127. */
+  peak: number;
+  min: Int8Array;
+  max: Int8Array;
+}
+
+interface FramePeaksWire {
+  audioUuid: string;
+  frameMs: number;
+  totalFrames: number;
+  peak: number;
+  min: string;
+  max: string;
+}
+
+/** Base64 of signed bytes, as the backend packs them, into an `Int8Array`. */
+function decodeInt8(base64: string): Int8Array {
+  const text = atob(base64);
+  const bytes = new Uint8Array(text.length);
+  for (let index = 0; index < text.length; index += 1) bytes[index] = text.charCodeAt(index);
+  return new Int8Array(bytes.buffer);
 }
 
 /**
@@ -95,7 +162,37 @@ export const audioApi = {
   waveform: (uuid: string, points = 1000, signal?: AbortSignal) =>
     request<WaveformPeaks>(`/audio/${uuid}/waveform`, { query: { points }, signal }),
 
-  /** Direct URL for an `<audio>` element — no fetch needed. */
+  /** The cuts and the frame table of the selected region. */
+  cuts: (uuid: string, signal?: AbortSignal) => request<CutsState>(`/audio/${uuid}/cuts`, { signal }),
+
+  /**
+   * Save the cuts. Refused with 409 when `baseRevision` is not the stored one any more, so a page
+   * never writes over a selection changed somewhere else.
+   */
+  saveCuts: (uuid: string, cuts: Cut[], baseRevision: number) =>
+    request<CutsState>(`/audio/${uuid}/cuts`, { method: "PUT", body: { cuts, baseRevision } }),
+
+  /** The waveform of the Audio tab, one lowest and one highest sample per 10 ms frame. */
+  framePeaks: async (uuid: string, signal?: AbortSignal): Promise<FramePeaks> => {
+    const wire = await request<FramePeaksWire>(`/audio/${uuid}/frames/peaks`, { signal });
+    return {
+      frameMs: wire.frameMs,
+      totalFrames: wire.totalFrames,
+      peak: wire.peak,
+      min: decodeInt8(wire.min),
+      max: decodeInt8(wire.max),
+    };
+  },
+
+  /**
+   * Direct URL for an `<audio>` element — no fetch needed.
+   *
+   * The audio of the piece: once cuts are saved, the edited audio (the original with the cuts
+   * removed), which is the time the notes are in. Every player uses this.
+   */
   fileUrl: (uuid: string, normalized = false) =>
     buildUrl(`/audio/${uuid}/file`, normalized ? { normalized: true } : undefined),
+
+  /** The untouched original, cuts and all. Only the Audio tab plays it, to show and restore cuts. */
+  originalFileUrl: (uuid: string) => buildUrl(`/audio/${uuid}/file`, { original: true }),
 };

@@ -251,7 +251,8 @@ def transcribe_edit(audio_uuid: str, session_uuid: str) -> JobHandle:
     def work(reporter: Any) -> Any:
         return transcribe_take(audio_uuid, session_uuid, reporter=reporter)
 
-    job = jobs.submit(work)
+    # The take goes through the default engine, MuScriptor: one GPU job at a time.
+    job = jobs.submit(work, gpu=True)
     return JobHandle(job_id=job.id, status=job.status)
 
 

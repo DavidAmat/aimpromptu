@@ -275,6 +275,71 @@ def test_the_request_accepts_the_documented_field_name(
     assert response.status_code == 503  # got past validation to the yt-dlp check
 
 
+def _follow(client: TestClient, job_id: str) -> tuple[list[str], dict]:
+    """Every SSE frame of a job, until its `done` frame: the stage names, and the final payload."""
+    import json
+
+    stages: list[str] = []
+    final: dict = {}
+    with client.stream("GET", f"/matrix/progress/{job_id}") as response:
+        event = None
+        for line in response.iter_lines():
+            if line.startswith("event: "):
+                event = line[len("event: ") :]
+            elif line.startswith("data: "):
+                payload = json.loads(line[len("data: ") :])
+                if event == "done":
+                    final = payload
+                    break
+                stages.append(payload.get("stage", ""))
+                event = None
+    return stages, final
+
+
+def test_a_download_job_answers_at_once_and_ends_with_the_audio_uuid(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Source tab (implementation 08, Phase 6): the request does not wait for yt-dlp."""
+    monkeypatch.setattr(youtube, "yt_dlp_available", lambda: True)
+
+    def fake_popen(command, **kwargs):
+        workspace = Path(command[command.index("-o") + 1]).parent
+        (workspace / "Levels piano cover.mp3").write_bytes(b"fake")
+        return FakeProcess(["[download]  40.0% of 3.00MiB\n", "[download] 100.0% of 3.00MiB\n"])
+
+    monkeypatch.setattr(youtube.subprocess, "Popen", fake_popen)
+    stored = SimpleNamespace(
+        metadata=SimpleNamespace(uuid="abc", alias="Levels piano cover", duration_seconds=12.5)
+    )
+    monkeypatch.setattr(youtube.ingest, "ingest_path", lambda *args, **kwargs: stored)
+
+    response = client.post("/youtube/jobs", json={"url": "https://youtu.be/dQw4w9WgXcQ"})
+    assert response.status_code == 202
+    stages, final = _follow(client, response.json()["jobId"])
+    assert "download" in stages and "store" in stages
+    assert final["status"] == "done"
+    assert final["audioUuid"] == "abc" and final["durationSeconds"] == 12.5
+
+
+def test_a_download_job_refuses_a_wrong_url_before_it_starts(client: TestClient) -> None:
+    response = client.post("/youtube/jobs", json={"url": "https://vimeo.com/1"})
+    assert response.status_code == 422
+
+
+def test_a_failed_download_job_ends_with_yt_dlps_words(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(youtube, "yt_dlp_available", lambda: True)
+    monkeypatch.setattr(
+        youtube.subprocess,
+        "Popen",
+        lambda *a, **k: FakeProcess([], returncode=1, stderr="ERROR: Private video"),
+    )
+    response = client.post("/youtube/jobs", json={"url": "https://youtu.be/bbbbbbbbbbb"})
+    _, final = _follow(client, response.json()["jobId"])
+    assert final["status"] == "error" and "Private video" in final["error"]
+
+
 def test_batch_reports_each_item_separately(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -36,6 +36,7 @@ from aitu_backend.matrix.keys import LOWEST_MIDI
 from aitu_backend.matrix.model import PianoMatrix
 from aitu_backend.matrix.passages import ladder_ranges, one_passage
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS, validate_frame_ms
+from aitu_backend.hands import progress as hand_progress
 from aitu_backend.progress import BaseProgress, default_reporter
 from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN, SparseCooMatrix
 from aitu_backend.notation.figures import (
@@ -140,9 +141,22 @@ def impose_granularity_and_split(
     # Named so the progress bar shows it. The old `derive` wrapped the split in a
     # stage of its own, and losing it would make the bar jump from the events
     # straight to the end on the slowest step of a long piece.
-    with progress.stage("two-hands", total=1, message="inferring hands") as stage:
-        hands = split_hands(build.matrix, method=hand_method)
-        stage.advance()
+    # In hundredths: the beam search is the first 60, the second pass the rest (measured on three
+    # pieces, the beam takes half to two thirds of the time). Only a change of a whole hundredth
+    # is published, so a long piece sends at most a hundred ticks.
+    with progress.stage("two-hands", total=100, message="inferring hands") as stage:
+        done = 0
+
+        def moved(part: str, fraction: float) -> None:
+            nonlocal done
+            at = int(fraction * 60) if part == "beam" else 60 + int(fraction * 40)
+            if at > done:
+                stage.advance(at - done, message="searching" if part == "beam" else "checking")
+                done = at
+
+        with hand_progress.listening(moved):
+            hands = split_hands(build.matrix, method=hand_method)
+        stage.advance(100 - done)
     pinned = pin_hands(hands.right, hands.left, events, build)
     return TimeHands(
         frame_ms=step,

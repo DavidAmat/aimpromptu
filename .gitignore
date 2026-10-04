@@ -4,6 +4,9 @@
 # Local agent config (optional; not part of docs tree)
 .claude/
 
+# The Compose settings: HF_TOKEN is a secret. `.env.example` lists every name.
+/.env
+
 # =============================================================================
 # aitu-backend — Python / uv / Jupyter
 # =============================================================================
@@ -126,7 +129,7 @@ aitu-frontend/lerna-debug.log*
 # are on the machine that made them, and they would be four times the weight of
 # everything else in this repository put together. The reports that cite them are
 # committed; the pictures are not.
-context/implementations/04-synthesia-to-notes/examples/
+context/implementations/01-mvp/04-synthesia-to-notes/examples/
 
 # Scratch: retired files and transfer archives. Never committed.
 _to_delete/

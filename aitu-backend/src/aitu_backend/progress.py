@@ -108,6 +108,15 @@ class BaseProgress:
     def emit(self, event: ProgressEvent) -> None:  # pragma: no cover - overridden
         raise NotImplementedError
 
+    def send(self, event: str, payload: dict[str, Any]) -> None:
+        """Publish a named message beside the progress ticks. Most reporters ignore it.
+
+        The transcription job uses it for the live notes of a transcription (implementation 08,
+        plan section 9.3): a ``chunk`` message is not a progress tick, and the terminal bar has
+        nothing to draw for it. The job's reporter puts it on the SSE stream as ``event: chunk``.
+        """
+        return None
+
     @contextmanager
     def stage(self, name: str, total: int, message: str = "") -> Iterator[_Stage]:
         handle = _Stage(self, name, total)
@@ -163,11 +172,20 @@ class CallbackProgress(BaseProgress):
     endpoint; tests use it to assert the exact event sequence.
     """
 
-    def __init__(self, callback: Callable[[ProgressEvent], None]) -> None:
+    def __init__(
+        self,
+        callback: Callable[[ProgressEvent], None],
+        on_message: Callable[[str, dict[str, Any]], None] | None = None,
+    ) -> None:
         self._callback = callback
+        self._on_message = on_message
 
     def emit(self, event: ProgressEvent) -> None:
         self._callback(event)
+
+    def send(self, event: str, payload: dict[str, Any]) -> None:
+        if self._on_message is not None:
+            self._on_message(event, payload)
 
 
 class MultiProgress(BaseProgress):
@@ -179,6 +197,10 @@ class MultiProgress(BaseProgress):
     def emit(self, event: ProgressEvent) -> None:
         for reporter in self._reporters:
             reporter.emit(event)
+
+    def send(self, event: str, payload: dict[str, Any]) -> None:
+        for reporter in self._reporters:
+            reporter.send(event, payload)
 
 
 def default_reporter(reporter: BaseProgress | None) -> BaseProgress:

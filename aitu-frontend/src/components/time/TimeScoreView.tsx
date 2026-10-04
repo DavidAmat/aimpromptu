@@ -579,7 +579,14 @@ export function TimeScoreView({
   useEffect(() => {
     const container = host.current;
     if (!container) return;
+    // Measured before the old drawing goes. While the sheet is magnified its box is only as wide as
+    // what it holds, so once emptied it reads 0 wide, and the renderer refuses a 0-wide sheet: a
+    // hand move on a zoomed sheet took the whole page down.
+    const drawnWidth = container.clientWidth;
     container.replaceChildren();
+    const widthNow = container.clientWidth;
+    const width =
+      widthNow > 0 ? widthNow : drawnWidth > 0 ? drawnWidth : scroller.current?.clientWidth || 900;
 
     // Where each note is actually drawn. A note the reader sent to the other staff takes its figure
     // and its tuplet mark with it, or the page would print the glyph on one staff and name it on
@@ -702,7 +709,7 @@ export function TimeScoreView({
       // A column is `frameMs` of wall clock. The renderer only uses this to turn a column into a
       // moment for the timestamps; nothing about the music is derived from it.
       timeStepSeconds: score.envelope.frameMs / 1000,
-      availableWidth: availableWidth ?? container.clientWidth ?? 900,
+      availableWidth: availableWidth ?? width,
       // Read from a ref rather than listed below, so a change to it never rebuilds the sheet.
       systemGap: systemGapFor(gapNow.current, showFrameLabels),
       staffGaps: spreadNow.current,
@@ -938,26 +945,32 @@ export function TimeScoreView({
    * back where they belong afterwards.
    */
   useEffect(() => {
+    // The sheet on screen was drawn with an equal value already: nothing to redraw.
+    const unchanged = sameContent(rangeRoomNow.current, spacings);
     rangeRoomNow.current = spacings;
     const drawn = renderer.current;
-    if (!drawn) return;
+    if (!drawn || unchanged) return;
     drawn.setSpacings(spacings ?? []);
     placeRangeHandles();
   }, [spacings, placeRangeHandles]);
 
   /** The runs set an equal distance apart, applied to the drawing already there. */
   useEffect(() => {
+    // The sheet on screen was drawn with an equal value already: nothing to redraw.
+    const unchanged = sameContent(evenRoomNow.current, evenSpacings);
     evenRoomNow.current = evenSpacings;
     const drawn = renderer.current;
-    if (!drawn) return;
+    if (!drawn || unchanged) return;
     drawn.setEvenSpacings(evenSpacings ?? []);
     placeRangeHandles();
   }, [evenSpacings, placeRangeHandles]);
 
   useEffect(() => {
+    // The sheet on screen was drawn with an equal value already: nothing to redraw.
+    const unchanged = sameContent(spreadNow.current, staffGaps);
     spreadNow.current = staffGaps;
     const drawn = renderer.current;
-    if (!drawn) return;
+    if (!drawn || unchanged) return;
     drawn.setStaffGaps(staffGaps ?? []);
     placeRangeHandles();
   }, [staffGaps, placeRangeHandles]);
@@ -972,14 +985,20 @@ export function TimeScoreView({
    */
   useEffect(() => {
     latestRange.current = selectedRange;
-    renderer.current?.setSelectedRange(selectedRange ?? undefined);
+    const drawn = renderer.current;
+    // Only a different stretch is drawn again: the same one handed over anew changes nothing.
+    if (drawn && !sameRange(drawn.getSelectedRange(), selectedRange)) {
+      drawn.setSelectedRange(selectedRange ?? undefined);
+    }
     placeRangeHandles();
   }, [placeRangeHandles, selectedRange]);
 
   useEffect(() => {
     if (clearSelectionsAt === undefined) return;
     latestRange.current = null;
-    renderer.current?.setSelectedRange(undefined);
+    // Clearing a stretch redraws the whole sheet, so it is done only when one is drawn. Closing
+    // the notes panel raises this on every hand move, where no stretch is marked.
+    if (renderer.current?.getSelectedRange()) renderer.current.setSelectedRange(undefined);
     renderer.current?.clearSelection();
     placeRangeHandles();
   }, [clearSelectionsAt, placeRangeHandles]);
@@ -1437,6 +1456,31 @@ export function TimeScoreView({
 }
 
 /** How wide the invisible strip around the cursor is, in pixels. Two is a line; this is a target. */
+/**
+ * Whether two values the renderer is given hold the same content.
+ *
+ * Each of the renderer's setters draws the whole sheet again, even when the value it is handed is
+ * the one it already has. The page often hands over an equal copy (a list worked out again after an
+ * unrelated change), and on a 3.5-minute piece each redraw is tens of milliseconds, so an equal
+ * value is not handed over.
+ */
+function sameContent(a: unknown, b: unknown): boolean {
+  return a === b || JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+/** The marked stretch the renderer is drawing now and the one asked for are the same stretch. */
+function sameRange(
+  drawn: { fromColumn: number; toColumn: number; hand?: string } | undefined,
+  asked: { fromColumn: number; toColumn: number; hand?: string } | null | undefined,
+): boolean {
+  if (!drawn || !asked) return !drawn && !asked;
+  return (
+    drawn.fromColumn === asked.fromColumn &&
+    drawn.toColumn === asked.toColumn &&
+    (drawn.hand ?? null) === (asked.hand ?? null)
+  );
+}
+
 const GRAB_WIDTH = 14;
 
 /**

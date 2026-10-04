@@ -52,6 +52,7 @@ from dataclasses import dataclass, field, replace
 from itertools import pairwise
 from typing import Any
 
+from aitu_backend.hands import progress as hand_progress
 from aitu_backend.hands import beam as beam_module
 from aitu_backend.hands.candidates import generate
 from aitu_backend.hands.config import DEFAULT_CONFIG, HandInferenceConfig, RefineConfig
@@ -627,7 +628,7 @@ def refine_map(
         stats.rounds += 1
         improved = False
 
-        for family in families:
+        for family_index, family in enumerate(families):
             if _time.perf_counter() - started > settings.time_budget_s:
                 break
 
@@ -657,9 +658,16 @@ def refine_map(
                         if t[0] == "group"
                     ]
 
-            for target in targets:
+            for target_index, target in enumerate(targets):
                 if _time.perf_counter() - started > settings.time_budget_s:
                     break
+                if target_index % 8 == 0:
+                    # Rounds stop as soon as one improves nothing, so most runs end before the
+                    # last round: the bar may jump to the end, never back.
+                    within = (family_index + target_index / max(1, len(targets))) / max(
+                        1, len(families)
+                    )
+                    hand_progress.report("refine", (_round + within) / max(1, settings.max_rounds))
 
                 # built here, against the live map — see the module docstring
                 if family == "pattern":

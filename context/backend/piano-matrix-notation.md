@@ -15,9 +15,17 @@ again. One run is one **rectangle** of the piano roll visualization. Storing eac
 `frameMs` is rebuilt from the rectangles in one pass. It is also much smaller: a 3.5-minute piece is
 about 2,000 rectangles and about 28,000 active cells at 40 ms.
 
-The rectangles keep **milliseconds of the original audio**, not columns. The same notes are then
-viewed at 10 ms on the piano roll visualization and at 40 ms on the piano sheet, which is what D-03
-(the times are the source of truth) and rule 4 (`frameMs` is a view) ask for.
+The rectangles keep **milliseconds**, not columns. The same notes are then viewed at 10 ms on the
+piano roll visualization and at 40 ms on the piano sheet, which is what D-03 (the times are the
+source of truth) and rule 4 (`frameMs` is a view) ask for.
+
+The milliseconds are those of the **piece**: the original audio with the parts the user cut out
+removed (plan section 9.2, Q-1). A cut is a range of 10 ms time frames of the original audio, stored
+in `metadata.json`; the original audio file never changes. Once cuts are saved, the backend writes
+the edited audio beside it (`piece-r<N>.flac`), which every player plays, so the playhead and the
+notes share one time. For a piece with no cut, the time of the piece is the time of the original
+audio. The table from one to the other is
+`aitu_backend/audio/frames.py` (`FrameTable`), served by `GET /audio/{uuid}/cuts`.
 
 ## 2. The sparse form (`pmn/notes.py`)
 
@@ -27,11 +35,12 @@ viewed at 10 ms on the piano roll visualization and at 40 ms on the piano sheet,
 |---|---|---|
 | `id` | int64 | Stable identity. Given by the backend, kept across edits and saves, never reused in a piece |
 | `key` | int16, 0 to 87 | Row of the matrix. MIDI is `key + 21` |
-| `on_ms` | float64 | The onset, in ms of the original audio |
+| `on_ms` | float64 | The onset, in ms of the piece (section 1) |
 | `len_ms` | float64, > 0 | Onset plus sustain. The release is `on_ms + len_ms` |
 | `hand` | int8 | 0 no hand yet, 1 right hand, 2 left hand |
 | `velocity` | uint8 | 64 when the engine has no loudness (MuScriptor has none) |
 | `removed` | bool | A reader said the note was never played. Kept so it can be put back; every view leaves it out |
+| `hand_guessed` | bool | The hand came from the quick rule for an added note, not from the hand split or a person |
 
 **Why float and not whole milliseconds.** MuScriptor times are whole milliseconds (a 10 ms grid,
 then a per-piece lag correction in whole ms). The pieces transcribed by ByteDance store 0.1 ms, and
@@ -43,23 +52,40 @@ arrays keep what the file holds, and only the wire form (section 4) uses whole m
 
 `data/audio/<uuid>/matrices/events.json` is still the stored piece (rule 1) and keeps the shape
 every reader knows: `durationSeconds`, `title`, and one object per note with `midiNote`, `start`
-and `end` in seconds (4 decimals), `velocity`, and `hand` / `removed` only when set. Schema `1.1`
-adds:
+and `end` in seconds (4 decimals), `velocity`, and `hand` / `handGuessed` / `removed` only when
+set. Schema `1.1` adds:
 
 | Key | Where | Default for an old file |
 |---|---|---|
 | `id` | every note | `0, 1, 2 ...` in file order, given on read and stored at the next save |
 | `nextId` | top level | the note count: the first id no note has used |
 | `notesRevision` | top level | 1 |
-| `handsRevision` | top level | 0 (no hand split saved) |
+| `handsRevision` | top level | 0 (nothing edited since the file was written) |
+| `handsNotesRevision` | top level | 0 (the hands of these notes were never saved as a step) |
 | `audioRevision` | top level | 0 |
 | `engine` | top level | `null`; a new transcription records the engine's name |
 | `lagCorrectionMs` | top level | 0 |
 
 Reading never writes: an old file gives the same ids on every read, because nothing changes on disk
 until the next save. A writer that only changes notes keeps the header already on disk. A new
-note gets `nextId`, so the id of a deleted note is never given again. The revisions are only stored
-here; what makes them go up is plan section 8 (Phase 5).
+note gets `nextId`, so the id of a deleted note is never given again, not even by a new
+transcription of the same piece. What makes the revisions go up is plan section 8:
+
+- A new transcription writes `notesRevision` (1, or one more than before), `audioRevision` (the one
+  of `metadata.json` it was made from; a later cut makes the notes stale), `engine` and
+  `lagCorrectionMs`, raises `handsRevision` and sets `handsNotesRevision` to 0. The notes it
+  replaces are copied to `history/vN/` first.
+- Every other writer goes through `pipeline.save_edit`: a notes edit raises `notesRevision`; any
+  edit raises `handsRevision`; saving hands that leave every live note with a hand sets
+  `handsNotesRevision` to the current `notesRevision`.
+- `rhythm.json` records the `handsRevision` the piano sheet was saved for. A different value in
+  `events.json` makes the Sheet tab stale.
+
+**The saved hands** (D-31, changed in Phase 5). When every live note has a `hand`, the two hand
+matrices are painted from those hands and no inference runs
+(`transcription/saved_hands.py`); otherwise the inference runs and the hands that are set are laid
+on top, as before. `handGuessed` marks a hand given by the quick rule to a note added after the
+hands were saved (plan section 8.3).
 
 ## 4. To the browser: the columns (`pmn/columns.py`)
 
@@ -74,8 +100,12 @@ array:
 
 Only live notes, sorted by onset then key. Times are whole milliseconds: `lenMs` is the rounded
 release minus the rounded onset, at least 1. `hand` has one character per note: `r`, `l`, or `-`
-for no hand yet. Measured on the 34 pieces of the library: 38 KB median (83 KB at most), 14 KB
-compressed, against 634 KB (1.5 MB at most) for the piano sheet payload.
+for no hand yet. `guessed` lists the ids of the notes whose hand came from the quick rule. Measured
+on the 34 pieces of the library: 38 KB median (83 KB at most), 14 KB compressed, against 634 KB
+(1.5 MB at most) for the piano sheet payload.
+
+`GET /pieces/{uuid}/notes` sends this form, with `stale`. Edits come back as a list of operations
+(`PATCH /pieces/{uuid}/notes`, plan section 6.4), never as the whole piece.
 
 ## 5. The dense matrix (`pmn/dense.py`)
 
@@ -102,7 +132,7 @@ groups near-simultaneous onsets (D-04) and drops notes shorter than one column (
 | `events_file` | both | `events.json`, and the pipeline's `NoteEvent` list | Storage |
 | `dense` | both | 88 x N `int8`, whole or per hand | The hand split, the `.npz` exports |
 | `coo` | out (and back) | The COO payload of the piano sheet, with NumPy | `PianoMatrix.to_coo_payload` |
-| `columns` | both | The wire form of section 4 | The frontend (Phase 5 onward) |
+| `columns` | both | The wire form of section 4 | `GET /pieces/{uuid}/notes` and the answer of its `PATCH` |
 | `midi` | both | A Standard MIDI File | Export, and reading MIDI later |
 | `muscriptor` | in | MuScriptor's events, one at a time (`MuScriptorAssembler`) | The engine and the live stream (Phase 4) |
 | `portable` | both | `.pmn.json` | Any future export (D-30) |
@@ -119,6 +149,11 @@ file from elsewhere is read with its own tempo map.
 live stream is the id of the saved note. Open and closed notes can be asked for at any moment. The
 per-piece lag correction is subtracted from every onset and release only when the notes are taken,
 because it is known only at the end.
+
+The live stream (Phase 4, `transcription/live.py`) sends those open and closed notes to the browser
+as `event: chunk` frames of `GET /matrix/progress/{jobId}`, in the same column layout as section 4
+(`id`, `key`, `onMs`, `lenMs`), with the engine's own times before the lag correction. The notes
+the page reads after the `done` frame carry the correction.
 
 **`.pmn.json`.** A header (`format: "aimpromptu-pmn"`, `version`, `lowestMidi: 21`, `keys: 88`,
 `frameMs: 10`, `timeUnit: "ms"`, `durationMs`, `title`) and the columns with `velocity`. `frameMs` is
@@ -138,7 +173,9 @@ the old and the new code are identical on all 34 pieces. What changed is how it 
 
 Measured in Phase 2 on the Ubuntu machine, over the 34 pieces: a warm request (hand split already
 cached) went from 24 ms to 19 ms median, and from 46 ms to 29 ms for the largest piece. The first
-request of a piece is still 0.3 to 4.3 s, because the hand split runs; Phases 4 and 5 remove that.
+request of a piece was still 0.3 to 4.3 s, because the hand split ran. Phase 4 made the
+transcription job warm the split cache, and Phase 5 paints the hand matrices from the saved hands
+when every note has one (about 20 ms).
 The table per piece is in the
 [Phase 2 report](../implementations/08-new-algorithm-notes-detection-muscriptor/08-implementation-phase-2.md).
 

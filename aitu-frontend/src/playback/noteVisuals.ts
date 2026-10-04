@@ -51,6 +51,8 @@ export interface NoteVisuals {
   strokeWidth: number;
   strokeDasharray?: string;
   rx: number;
+  /** The colour of the note's name inside the rectangle: white on a sounding (black) note. */
+  labelFill: string;
 }
 
 /**
@@ -79,6 +81,7 @@ export function noteVisuals(
       strokeWidth: Math.max(1.4, weight),
       strokeDasharray: "5 3",
       rx,
+      labelFill: NOTE_LABEL_FILL,
     };
   }
 
@@ -89,17 +92,32 @@ export function noteVisuals(
       strokeWidth: Math.max(1.2, weight),
       strokeDasharray: "4 3",
       rx,
+      labelFill: NOTE_LABEL_FILL,
+    };
+  }
+
+  // Sounding under the playhead: black, with the name in white, and a thick border in the colour
+  // of its hand (blue right, green left). The same for every hand, so "is it sounding" is read
+  // from the fill alone and "which hand" from the border alone. The old rule borrowed the right
+  // hand's light blue, which a right-hand note already has: those did not change at all while
+  // they sounded. (A note without a hand, red, is drawn by the Hands tab's canvas, `rollPaint`.)
+  if (active) {
+    return {
+      fill: grays.ink,
+      stroke: hand === "single" ? grays.silver : handColors(hand).onset,
+      strokeWidth: Math.max(2.4, weight),
+      rx,
+      labelFill: grays.white,
     };
   }
 
   const colors = handColors(hand);
   return {
-    // `active` borrows the other hand's light shade rather than a colour of its
-    // own: the playhead is already on it, so it only has to differ, not shout.
-    fill: `${active ? semantic.rightHand.sustain : colors.sustain}${FILL_ALPHA}`,
+    fill: `${colors.sustain}${FILL_ALPHA}`,
     stroke: selected ? selectionStroke : colors.onset,
     strokeWidth: selected ? Math.max(2, weight) : weight,
     rx,
+    labelFill: NOTE_LABEL_FILL,
   };
 }
 

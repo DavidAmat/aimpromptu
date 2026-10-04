@@ -21,7 +21,28 @@ export type {
 } from "../music/types";
 
 export { audioApi, SUPPORTED_AUDIO_SUFFIXES } from "./audio";
-export type { AudioItem, AudioSource, AudioTimeRange, WaveformPeaks } from "./audio";
+export type {
+  AudioItem,
+  AudioSource,
+  AudioTimeRange,
+  Cut,
+  CutsState,
+  FramePeaks,
+  KeptRange,
+  WaveformPeaks,
+} from "./audio";
+
+export { piecesApi, PIECE_STEPS } from "./pieces";
+export type {
+  NotesOperation,
+  NotesPatchResult,
+  PieceNotes,
+  PieceStatus,
+  PredictResult,
+  PieceStep,
+  StepState,
+  StepStatus,
+} from "./pieces";
 
 export { timeScoreApi, FIGURE_LABELS, KEY_LABELS, KEY_SIGNATURES } from "./timeScore";
 export type {

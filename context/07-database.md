@@ -1,7 +1,9 @@
 # Database
 
-**There is no database.** All persistence is the local filesystem under `aitu-backend/data/`, and
-every path is built in one module, `storage/paths.py`. No path string lives outside it.
+**There is no database.** All persistence is the local filesystem under `aitu-backend/data/` on the
+Ubuntu machine (mounted into the backend container; `AITU_DATA_DIR` can point elsewhere), and every
+folder is built in one module, `storage/paths.py`. A few modules name their own files inside a
+piece's folder (`transcription/pipeline.py`, `audio/store.py`, `audio/piece_audio.py`).
 
 ## What is stored
 
@@ -9,12 +11,14 @@ every path is built in one module, `storage/paths.py`. No path string lives outs
 data/
   audio/<uuid>/                     one folder per ingested recording
     metadata.json  original.<ext>  normalized.wav  waveform.json
+                                    metadata.json also holds the cuts and audioRevision
+    piece-r<N>.flac  piece-r<N>.wav the edited audio, once cuts are saved (the original stays)
     matrices/
-      events.json                   THE TRANSCRIPTION, in seconds. Kept forever.
-      rhythm.json                   what the reader decided
+      events.json                   THE TRANSCRIPTION, in seconds, with ids, hands, revisions
+      rhythm.json                   what the reader decided, and the handsRevision it was saved for
       music-version.json            the current musical version
     staging/<session>/              disposable edit sessions
-    history/v<N>/                   a musical state, before it was replaced
+    history/v<N>/                   a musical state, before it was replaced (also before a new transcription)
   playground/<artist>/<track>/v2_f40/    versioned work
   library/tracks/…  library/playlists/…  what a performer plays from
   example-scores.json               seed data for the text-notation MVP
@@ -39,13 +43,21 @@ disk that can disagree with what the screen shows**.
 piece that nothing can derive, because a person chose them. One per piece — a second reading
 replaces the first.
 
+Since implementation 08 two more things a person chose live in the existing files: the **cuts** of
+the selected region in `metadata.json`, and the **hand of each note** in `events.json` once the hand
+split is saved. Revision numbers beside them say which step is out of date
+([backend/pieces-and-revisions.md](backend/pieces-and-revisions.md)). The edited audio
+`piece-r<N>.flac` is the one derived file written to disk, because a browser plays a file; it is
+written again from the cuts when it is missing.
+
 ## Versions
 
 Two different axes, and they are easy to confuse.
 
 | | Means | Where |
 |---|---|---|
-| `music-version.json` + `history/v<N>/` | **The music changed** — a splice was accepted | Beside `events.json` |
+| `music-version.json` + `history/v<N>/` | **The music changed** — a splice was accepted, or a new transcription replaced the notes | Beside `events.json` |
+| `audioRevision`, `notesRevision`, `handsRevision` | **One step changed**, so the later steps may be stale | `metadata.json`, the `events.json` header, `rhythm.json` |
 | `v<N>_f<frameMs>` playground folders | A saved state, at a given column length | `data/playground/…` |
 
 The folder suffix exists because the same recording at 20 ms and at 40 ms is the same playing on a

@@ -1,0 +1,109 @@
+{
+  "measuredOn": "2026-09-29T22:28:04.614Z",
+  "browser": "headless Chromium (software canvas)",
+  "viewport": "1440x900",
+  "results": [
+    {
+      "scenario": "play",
+      "notes": 10000,
+      "frameInterval": {
+        "count": 360,
+        "median": 16.7,
+        "p95": 16.7,
+        "max": 16.8
+      },
+      "fps": 60,
+      "dropped": 0,
+      "paintMs": {
+        "count": 362,
+        "median": 0.1,
+        "p95": 0.2,
+        "max": 6.8
+      },
+      "longTasks": 0,
+      "longestTaskMs": 0
+    },
+    {
+      "scenario": "scroll",
+      "notes": 10000,
+      "frameInterval": {
+        "count": 360,
+        "median": 16.7,
+        "p95": 16.7,
+        "max": 16.8
+      },
+      "fps": 60,
+      "dropped": 0,
+      "paintMs": {
+        "count": 361,
+        "median": 0.8,
+        "p95": 1.1,
+        "max": 4.4
+      },
+      "longTasks": 0,
+      "longestTaskMs": 0
+    },
+    {
+      "scenario": "whole",
+      "notes": 10000,
+      "frameInterval": {
+        "count": 360,
+        "median": 16.7,
+        "p95": 16.7,
+        "max": 16.8
+      },
+      "fps": 60,
+      "dropped": 0,
+      "paintMs": {
+        "count": 362,
+        "median": 2.7,
+        "p95": 3,
+        "max": 11.8
+      },
+      "longTasks": 0,
+      "longestTaskMs": 0
+    },
+    {
+      "scenario": "live",
+      "notes": 6001,
+      "messages": 600,
+      "messagesPerSecond": 100,
+      "frameInterval": {
+        "count": 360,
+        "median": 16.7,
+        "p95": 16.7,
+        "max": 16.8
+      },
+      "fps": 60,
+      "dropped": 0,
+      "paintMs": {
+        "count": 408,
+        "median": 1.2,
+        "p95": 2.1,
+        "max": 8.7
+      },
+      "longTasks": 0,
+      "longestTaskMs": 0
+    },
+    {
+      "scenario": "idle",
+      "notes": 10000,
+      "frameInterval": {
+        "count": 360,
+        "median": 16.7,
+        "p95": 16.7,
+        "max": 16.8
+      },
+      "fps": 60,
+      "dropped": 0,
+      "paintMs": {
+        "count": 408,
+        "median": 0.3,
+        "p95": 0.4,
+        "max": 9.3
+      },
+      "longTasks": 0,
+      "longestTaskMs": 0
+    }
+  ]
+}

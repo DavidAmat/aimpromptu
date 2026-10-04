@@ -104,6 +104,26 @@ class AudioMetadata(CamelModel):
     #: for a different one.
     frame_ms: float | None = Field(None, alias="frameMs", gt=0)
     created_at: datetime = Field(default_factory=_now, alias="createdAt")
+    #: The parts of the audio the user deleted, as ranges ``[startFrame, endFrame)`` of 10 ms time
+    #: frames of the original audio (implementation 08, plan section 9.2). Sorted, never
+    #: overlapping, never touching: :func:`aitu_backend.audio.frames.normalize_cuts`. The audio
+    #: file itself is never changed; the kept frames are joined in memory.
+    cuts: list[tuple[int, int]] = Field(default_factory=list)
+    #: Goes up by one each time the cuts are saved with a change (plan section 8.2). A
+    #: transcription records the revision it was made from, so a later cut makes it stale.
+    audio_revision: int = Field(0, alias="audioRevision", ge=0)
+
+    @model_validator(mode="after")
+    def _cuts_are_normalized(self) -> "AudioMetadata":
+        previous_end = -1
+        for start, end in self.cuts:
+            if start < 0 or end <= start or start <= previous_end:
+                raise ValueError(
+                    "cuts must be sorted ranges [startFrame, endFrame) that neither overlap nor "
+                    f"touch; got {self.cuts}"
+                )
+            previous_end = end
+        return self
 
     @model_validator(mode="after")
     def _segment_has_lineage(self) -> "AudioMetadata":

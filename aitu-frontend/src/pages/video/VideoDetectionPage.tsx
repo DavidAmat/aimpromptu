@@ -25,7 +25,7 @@ import type { DetectedRun, Detection } from "../../api/frameExamples";
 import { videoApi, type DetectionReport, type FrameLine, type VideoSummary } from "../../api/video";
 import { buildKeys } from "../../video/overlayGeometry";
 import useProgress from "../../hooks/useProgress";
-import { PageContainer, SectionCard, surface } from "../../ui";
+import { PageContainer, progressSx, SectionCard, surface } from "../../ui";
 import { readSelectedVideo, writeSelectedVideo } from "../../video/selectedVideo";
 import FramePlayer from "../../components/video/FramePlayer";
 import PianoOverlay from "../../components/video/PianoOverlay";
@@ -201,7 +201,7 @@ export function VideoDetectionPage() {
         ) : null}
 
         {running ? (
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2, ...progressSx }}>
             <LinearProgress
               variant={progress.event?.total ? "determinate" : "indeterminate"}
               value={progress.event ? progress.event.fraction * 100 : 0}

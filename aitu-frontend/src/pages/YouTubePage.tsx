@@ -15,7 +15,7 @@ import AudioLibraryList from "../components/audio/AudioLibraryList";
 import { formatTimeShort } from "../audio/time";
 import { ROUTES } from "../layout/routes";
 import { useWorkingArtifact } from "../state/useWorkingArtifact";
-import { PageContainer, SectionCard } from "../ui";
+import { PageContainer, progressSx, SectionCard } from "../ui";
 
 export function YouTubePage() {
   const { update } = useWorkingArtifact();
@@ -118,7 +118,7 @@ export function YouTubePage() {
             ) : null}
           </Stack>
 
-          {downloading ? <LinearProgress /> : null}
+          {downloading ? <LinearProgress sx={progressSx} /> : null}
 
           {saved ? (
             <Alert

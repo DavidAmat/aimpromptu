@@ -192,6 +192,19 @@ converged form everything downstream operates on.
 
 **D-31 — The hand split runs on the snapped time matrix**, after conversion, before everything else.
 
+> **Changed in implementation 08, Phase 5 (2026-09-29).** When D-31 was written, the hand split
+> was a hidden computation that ran again on every read, and the reader saw its result only on the
+> piano sheet. Implementation 08 made the hand split a visible step: the user presses **Predict
+> hands**, checks the hands on the piano roll visualization, corrects them note by note, and saves
+> them. The split still runs on the snapped time matrix, with the same `infer_hands` code, so the
+> first half of D-31 is unchanged. What changed is **when** it runs (once, on **Predict hands**)
+> and **where the result lives** (one hand per note in `events.json`). When every live note has a
+> saved hand, the two hand matrices are painted from the saved hands and no inference runs; on the
+> 34 pieces of the library this gives exactly the same cells as the inference, in about 17 ms
+> instead of about 0.7 s. A piece whose hands were never saved keeps the old behaviour. See
+> [`../08-new-algorithm-notes-detection-muscriptor/08-plan.md`](../08-new-algorithm-notes-detection-muscriptor/08-plan.md)
+> section 4 and the Phase 5 report.
+
 ---
 
 ## Decision index
@@ -228,7 +241,7 @@ converged form everything downstream operates on.
 | D-28 | no bars, no time signature, no metre |
 | D-29 | players play the recorded times |
 | D-30 | sparse matrix stays portable, header carries frameMs |
-| D-31 | hand split runs on the snapped time matrix |
+| D-31 | hand split runs on the snapped time matrix (since impl. 08 Phase 5: once, on Predict hands; saved per note) |
 | D-32 | three even gaps at a third of a known figure are a tresillo, marked not rounded |
 | D-33 | beamed runs set tighter; renaming moves notes inside the passage, never outside it |
 | D-34 | the reader may break a beam on any note; it beats every automatic grouping rule |

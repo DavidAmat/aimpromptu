@@ -35,6 +35,11 @@ export interface ProgressState {
   error: string | null;
   /** Every stage seen so far, in order — useful for a multi-step pipeline UI. */
   stages: string[];
+  /**
+   * The payload of the final `done` frame, once it arrived: what the job made. A transcription
+   * carries `revision` and `noteCount`; a YouTube download carries `audioUuid`.
+   */
+  result: Record<string, unknown> | null;
   /** Drop what was received and reopen the stream. */
   reset: () => void;
 }
@@ -48,6 +53,7 @@ interface StreamState {
   stages: string[];
   /** Monotonic whole-pipeline percentage; stage fractions reset at each stage. */
   percent: number;
+  result: Record<string, unknown> | null;
 }
 
 const EMPTY: StreamState = {
@@ -57,6 +63,7 @@ const EMPTY: StreamState = {
   error: null,
   stages: [],
   percent: 0,
+  result: null,
 };
 
 const PIPELINE_RANGES: Record<string, readonly [number, number]> = {
@@ -125,7 +132,7 @@ export function useProgress(url: string | null): ProgressState {
     // The backend closes the stream with a named `done` event when finished.
     source.addEventListener("done", (rawEvent) => {
       const message = rawEvent as MessageEvent<string>;
-      let payload: { status?: string; error?: string | null } = {};
+      let payload: { status?: string; error?: string | null } & Record<string, unknown> = {};
       try {
         payload = JSON.parse(message.data) as typeof payload;
       } catch {
@@ -140,7 +147,7 @@ export function useProgress(url: string | null): ProgressState {
               outcome: "error",
               error: payload.error || "Transcription failed",
             }
-          : { ...base, url, outcome: "done", percent: 100 };
+          : { ...base, url, outcome: "done", percent: 100, result: payload };
       });
       source.close();
     });
@@ -171,6 +178,7 @@ export function useProgress(url: string | null): ProgressState {
     percent: fresh.percent,
     error: fresh.error,
     stages: fresh.stages,
+    result: fresh.result,
     reset,
   };
 }

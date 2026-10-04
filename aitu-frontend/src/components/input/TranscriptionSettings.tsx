@@ -1,5 +1,9 @@
 /**
- * How finely to measure the piece, which model to use, and the Run button.
+ * How finely to measure the piece, and the Run button.
+ *
+ * There is no choice of model. Every transcription uses MuScriptor (implementation 08, plan section
+ * 9.1): the backend offers no other engine and refuses one if it is asked for. ByteDance and
+ * Transkun are still in the backend's code, not in the app.
  *
  * There is one number to choose here and it is a length of time. A matrix column is a slice of wall
  * clock, so the question is how fine that slice should be, and the answer decides how precisely the
@@ -47,8 +51,8 @@ export function TranscriptionSettings({
 }: TranscriptionSettingsProps) {
   const navigate = useNavigate();
   const { artifact, update } = useWorkingArtifact();
-  const [engines, setEngines] = useState<Record<string, boolean> | null>(null);
-  const [engine, setEngine] = useState<string>("");
+  /** Whether the engine the backend offers is installed; `null` until it answered. */
+  const [installed, setInstalled] = useState<boolean | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -59,15 +63,9 @@ export function TranscriptionSettings({
     const controller = new AbortController();
     matrixApi
       .engines(controller.signal)
-      .then((available) => {
-        setEngines(available);
-        const usable = Object.entries(available).find(
-          ([name, ready]) => ready && name !== "silent",
-        );
-        setEngine(usable ? usable[0] : "silent");
-      })
+      .then((available) => setInstalled(Object.values(available).some(Boolean)))
       .catch(() => {
-        if (!controller.signal.aborted) setEngines({});
+        if (!controller.signal.aborted) setInstalled(null);
       });
     return () => controller.abort();
   }, []);
@@ -89,7 +87,6 @@ export function TranscriptionSettings({
       const handle = await matrixApi.transcribe({
         audioUuid,
         frameMs: artifact.frameMs,
-        engine: engine || undefined,
         // Clicking Run means a fresh transcription of this exact physical audio.
         force: true,
       });
@@ -101,17 +98,16 @@ export function TranscriptionSettings({
     }
   };
 
-  const noEngine =
-    engines !== null && !Object.entries(engines).some(([name, ready]) => ready && name !== "silent");
+  const noEngine = installed === false;
 
   return (
     <Stack spacing={2}>
       {error ? <Alert severity="error">{error}</Alert> : null}
       {noEngine ? (
         <Alert severity="warning">
-          No transcription model is installed, so only the <code>silent</code> engine is available
-          and every piece will come out empty. Install one with{" "}
-          <code>uv sync --extra transcription</code> in <code>aitu-backend/</code>.
+          MuScriptor is not installed in the backend, so nothing can be transcribed. Install it with{" "}
+          <code>uv sync --extra muscriptor</code> in <code>aitu-backend/</code>, or run the backend
+          container (<code>make up</code>).
         </Alert>
       ) : null}
 
@@ -132,24 +128,9 @@ export function TranscriptionSettings({
           ))}
         </TextField>
 
-        {engines && Object.keys(engines).length > 1 ? (
-          <TextField
-            label="Engine"
-            select
-            size="small"
-            value={engine}
-            onChange={(event) => setEngine(event.target.value)}
-            sx={{ minWidth: 170 }}
-            helperText="Which model listens to the audio"
-          >
-            {Object.entries(engines).map(([name, ready]) => (
-              <MenuItem key={name} value={name} disabled={!ready}>
-                {name}
-                {ready ? "" : " (not installed)"}
-              </MenuItem>
-            ))}
-          </TextField>
-        ) : null}
+        <Typography variant="body2" color="text.secondary" sx={{ alignSelf: "center" }}>
+          Engine: MuScriptor (the only one)
+        </Typography>
       </Stack>
 
       <Typography variant="body2" color="text.secondary">

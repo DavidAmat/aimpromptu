@@ -4,11 +4,15 @@
  * next to this file, mirroring the backend's `api/` package.
  */
 
-/** Base URL with any trailing slash removed. */
-export const API_BASE = (import.meta.env.VITE_AITU_API_URL ?? "http://127.0.0.1:8765").replace(
-  /\/$/,
-  "",
-);
+/**
+ * Base URL with any trailing slash removed.
+ *
+ * `/api` by default: a path on the page's own address, which the Vite server passes to the backend
+ * (`vite.config.ts`). The page, the backend, the audio and the progress stream then share one port,
+ * which is the one port the SSH tunnel from the Mac forwards. `VITE_AITU_API_URL` still points the
+ * page at another backend directly.
+ */
+export const API_BASE = (import.meta.env.VITE_AITU_API_URL ?? "/api").replace(/\/$/, "");
 
 /** An error carrying the HTTP status and the backend's `detail` string. */
 export class ApiError extends Error {
@@ -84,15 +88,27 @@ async function readError(response: Response): Promise<string> {
   }
 }
 
+const UNREACHABLE = "Could not reach the backend. Is it still running (make up, or make serve)?";
+
+/**
+ * `fetch`, with one English sentence when the backend is not there.
+ *
+ * Two answers mean the same thing. Called directly, a stopped backend is a network error. Called
+ * through the Vite proxy (`/api`, the default), the page's own server answers instead, with a
+ * **502** and no JSON; the backend itself never sends a 502.
+ */
 async function fetchOrExplain(input: string, init?: RequestInit): Promise<Response> {
+  let response: Response;
   try {
-    return await fetch(input, init);
+    response = await fetch(input, init);
   } catch (caught) {
     if (caught instanceof DOMException && caught.name === "AbortError") throw caught;
-    const error = new Error("Could not reach the backend. Is make serve still running?");
+    const error = new Error(UNREACHABLE);
     error.cause = caught;
     throw error;
   }
+  if (response.status === 502) throw new Error(UNREACHABLE);
+  return response;
 }
 
 /** Perform a request and decode the JSON body as `T`. */

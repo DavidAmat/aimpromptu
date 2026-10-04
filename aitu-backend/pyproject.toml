@@ -73,6 +73,24 @@ transkun = [
     "librosa>=0.10",
 ]
 
+# MuScriptor — the engine of implementation 08 (Kyutai and Mirelo, 2026).
+#   uv sync --extra muscriptor
+#
+# Verified against the package itself (2026-09, implementation 08 Phase 1 and Phase 3):
+#   * The weights are not in the wheel. They come from Hugging Face on first use and are gated:
+#     accept the licence on the model page once and export HF_TOKEN. The weights licence is
+#     CC BY-NC 4.0 (non-commercial); the code is MIT.
+#   * It pulls fastapi, uvicorn and typer for its own `muscriptor serve`, and `beat-this` for its
+#     tempo grid. The backend uses neither (rule 3: no BPM is stored).
+#   * On Intel Macs it pins NumPy below 2, which is why `[tool.uv] environments` below leaves that
+#     platform out of the lock.
+muscriptor = [
+    "muscriptor>=0.3.0",
+    "torch>=2.4",
+    # The per-piece lag correction measures an onset envelope of the audio (Phase 4, `lag.py`).
+    "librosa>=0.10",
+]
+
 # NOTE: there is deliberately no `basic-pitch` extra.
 #
 # basic-pitch 0.4.0 (the newest) pins `tensorflow(-macos) >=2.4.1,<2.15.1`, and
@@ -84,6 +102,15 @@ transkun = [
 # The engine itself is still supported (`transcription/engine.py`); it just has
 # to be installed into a separate Python 3.11 environment. See
 # `notebooks/transcription-benchmark/README.md`.
+
+[tool.uv]
+# The lock file is resolved for the two machines of this project only: the Ubuntu machine (Linux,
+# x86_64, the GPU) and the Mac mini (Apple Silicon). Without this, uv also resolves for Intel
+# Macs, where MuScriptor pins NumPy below 2 and the whole lock fails against numpy>=2.4.5.
+environments = [
+    "sys_platform == 'linux'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
 
 [dependency-groups]
 dev = [

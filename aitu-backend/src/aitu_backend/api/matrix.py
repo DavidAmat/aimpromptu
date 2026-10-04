@@ -16,7 +16,7 @@ the Playground tabs that called them.
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -24,12 +24,16 @@ from aitu_backend.audio import store
 from aitu_backend.audio.store import AudioNotFound
 from aitu_backend.matrix.keys import LOWEST_MIDI
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
-from aitu_backend.transcription import jobs, pipeline
+from aitu_backend import config
+from aitu_backend.transcription import jobs, models, pipeline
 from aitu_backend.transcription.artifacts import drop_artifacts
 from aitu_backend.transcription.engine import (
     DEFAULT_ENGINE,
+    ENGINES,
+    SELECTABLE_ENGINES,
     EngineUnavailable,
-    available_engines,
+    engine_installed,
+    selectable_engines,
 )
 
 router = APIRouter(prefix="/matrix", tags=["matrix"])
@@ -51,6 +55,7 @@ class TranscribeRequest(BaseModel):
     #: Restrict to a range of the source audio, in seconds.
     start_seconds: float | None = Field(None, alias="startSeconds", ge=0)
     end_seconds: float | None = Field(None, alias="endSeconds", gt=0)
+    #: Kept for older clients. Implementation 08 forces MuScriptor: any other engine is refused.
     engine: str = DEFAULT_ENGINE
     #: Run the model again even when this audio already has its recorded notes.
     force: bool = False
@@ -63,6 +68,23 @@ class JobHandle(BaseModel):
 
     job_id: str = Field(..., alias="jobId")
     status: str
+
+
+class EngineStatus(BaseModel):
+    """`GET /matrix/engine`: the one engine the app uses, and whether it can run now."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str
+    installed: bool
+    #: ``cuda`` or ``cpu`` (``AITU_DEVICE``).
+    device: str
+    #: What is loaded in the process, for example ``muscriptor-large (cuda, float16)``.
+    loaded: list[str]
+    #: Transcriptions waiting for the GPU behind the running one.
+    waiting: int
+    #: Why the model could not be loaded at startup, in plain words; ``None`` when it could.
+    error: str | None = None
 
 
 class JobStatus(BaseModel):
@@ -104,6 +126,8 @@ class RawNoteEvent(BaseModel):
     #: up in, so a view can colour it. ``None`` means the split could not be run
     #: or did not place this note — a view should draw it rather than hide it.
     hand: Literal["right", "left"] | None = None
+    #: The note's stable id in ``events.json``, which ``PATCH /pieces/{uuid}/notes`` names it by.
+    id: int | None = None
 
 
 class RawEvents(BaseModel):
@@ -128,6 +152,10 @@ class RawEvents(BaseModel):
     #: can say what it is showing; it does not affect any time in ``events``.
     frame_ms: float = Field(DEFAULT_FRAME_MS, alias="frameMs")
     events: list[RawNoteEvent]
+    #: The notes revision and the hands revision, for a page that edits through
+    #: ``PATCH /pieces/{uuid}/notes`` (``baseRevision``, ``baseHandsRevision``).
+    revision: int = 0
+    hands_revision: int = Field(0, alias="handsRevision")
 
 
 def _audio_or_404(audio_uuid: str) -> None:
@@ -165,12 +193,44 @@ def _hand_labels(audio_uuid: str, frame_ms: float) -> dict[tuple[int, int], str]
 
 @router.get("/engines")
 def list_engines() -> dict[str, bool]:
-    """Which transcription engines can actually run here.
+    """The engines the page may offer, and whether each can run here.
 
-    `false` means the package is not installed, so the UI can grey the option out
-    instead of letting the user pick something that will fail.
+    Implementation 08 forces MuScriptor, so this lists only ``muscriptor``. With one entry the
+    Input page shows no engine choice; `false` means the package is not installed.
     """
-    return available_engines()
+    return selectable_engines()
+
+
+@router.get("/engine", response_model=EngineStatus, response_model_by_alias=True)
+def engine_status() -> EngineStatus:
+    """The one engine, whether it is installed and loaded, and why it failed to load, if it did.
+
+    With ``AITU_PRELOAD_ENGINE`` the model loads when the server starts; a missing Hugging Face
+    token or licence is then reported here before any job fails.
+    """
+    return EngineStatus(
+        name=DEFAULT_ENGINE,
+        installed=engine_installed(DEFAULT_ENGINE),
+        device=config.device(),
+        loaded=models.loaded(),
+        waiting=jobs.waiting_on_gpu(),
+        error=models.preload_error(),
+    )
+
+
+def _check_engine(name: str) -> None:
+    """MuScriptor only (plan section 9.1): the other engines stay in the code, not in the app."""
+    if name in SELECTABLE_ENGINES:
+        return
+    if name not in ENGINES:
+        raise HTTPException(status_code=422, detail=f"Unknown transcription engine '{name}'")
+    raise HTTPException(
+        status_code=422,
+        detail=(
+            f"The '{name}' engine is kept in the code but cannot be chosen: every transcription "
+            f"uses {DEFAULT_ENGINE}."
+        ),
+    )
 
 
 @router.post("/transcribe", response_model=JobHandle, response_model_by_alias=True, status_code=202)
@@ -178,30 +238,78 @@ def transcribe(request: TranscribeRequest) -> JobHandle:
     """Start the model in the background and return a job id.
 
     Transcription takes tens of seconds, so this answers `202` immediately and
-    the caller follows `GET /matrix/progress/{jobId}` for the stream.
+    the caller follows `GET /matrix/progress/{jobId}` for the stream: the progress
+    ticks, the live notes as `event: chunk` frames (plan section 9.3), and a final
+    `event: done` frame with the `revision` of the saved notes.
+
+    One transcription runs on the GPU at a time; a second one waits and its stream
+    says so. While a transcription of this audio is waiting or running, this returns
+    that job instead of starting another.
     """
     _audio_or_404(request.audio_uuid)
+    _check_engine(request.engine)
+    ranged = request.start_seconds is not None and request.end_seconds is not None
+    needs_model = request.force or ranged or pipeline.current_events(request.audio_uuid) is None
 
     def work(reporter: Any) -> Any:
-        return pipeline.run_pipeline(
-            request.audio_uuid,
-            frame_ms=request.frame_ms,
-            engine=request.engine,
-            start_seconds=request.start_seconds,
-            end_seconds=request.end_seconds,
-            reuse_events=not request.force,
-            reporter=reporter,
-        )
+        stored: pipeline.TranscribedEvents | None
+        if needs_model:
+            stored = pipeline.transcribe_audio(
+                request.audio_uuid,
+                engine=request.engine,
+                start_seconds=request.start_seconds,
+                end_seconds=request.end_seconds,
+                reporter=reporter,
+            )
+        else:
+            stored = pipeline.load_note_events(request.audio_uuid)
+        # The split is computed beside the stream, not before `done`, and kept for the sheet.
+        pipeline.warm_split(request.audio_uuid, request.frame_ms)
+        return stored
 
-    job = jobs.submit(work)
+    def describe(stored: Any) -> dict[str, Any]:
+        header = stored.header if stored is not None else None
+        return {
+            "audioUuid": request.audio_uuid,
+            "revision": header.notes_revision if header else None,
+            "lagCorrectionMs": header.lag_correction_ms if header else None,
+            "noteCount": len(stored.events) if stored is not None else 0,
+        }
+
+    job = jobs.submit(
+        work, gpu=needs_model, key=f"transcribe:{request.audio_uuid}", describe=describe
+    )
+    return JobHandle(job_id=job.id, status=job.status)
+
+
+@router.get(
+    "/{audio_uuid}/job",
+    response_model=JobHandle,
+    response_model_by_alias=True,
+)
+def active_job(audio_uuid: str) -> JobHandle:
+    """The transcription of this audio that is waiting or running, so a page opened or reloaded
+    during it can follow the stream from the start. 404 when there is none."""
+    _audio_or_404(audio_uuid)
+    job = jobs.active(f"transcribe:{audio_uuid}")
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"No transcription of {audio_uuid} is running")
     return JobHandle(job_id=job.id, status=job.status)
 
 
 @router.get("/progress/{job_id}")
-def transcription_progress(job_id: str) -> StreamingResponse:
-    """SSE stream of the job's progress, ending with a named `done` event."""
+def transcription_progress(
+    job_id: str,
+    last_event_id: str | None = Header(None, alias="Last-Event-ID"),
+) -> StreamingResponse:
+    """SSE stream of the job, ending with a named `done` event.
+
+    A page that connects late receives every frame already sent first. An
+    ``EventSource`` that reconnects sends ``Last-Event-ID`` and resumes after it.
+    """
+    after = int(last_event_id) if last_event_id and last_event_id.isdigit() else None
     return StreamingResponse(
-        jobs.stream(job_id),
+        jobs.stream(job_id, after=after),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -213,7 +321,7 @@ def job_status(job_id: str) -> JobStatus:
     job = jobs.get(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"No job '{job_id}'")
-    latest = job.history[-1] if job.history else None
+    latest = job.latest
     return JobStatus(
         job_id=job.id,
         status=job.status,
@@ -253,8 +361,14 @@ def get_raw_events(
             ),
         )
 
-    report = drop_artifacts(stored.events)
-    discarded = {id(dropped.event): dropped for dropped in report.dropped}
+    # The artifact filter is labelled only where the split applies it: not on MuScriptor pieces.
+    if pipeline.filters_for(stored.header.engine):
+        dropped_events: list[Any] = []
+        octave_phantoms = 0
+    else:
+        report = drop_artifacts(stored.events)
+        dropped_events, octave_phantoms = report.dropped, report.octave_phantoms
+    discarded = {id(dropped.event): dropped for dropped in dropped_events}
     labels = _hand_labels(audio_uuid, frame_ms)
     seconds_per_column = frame_ms / 1000.0
 
@@ -284,6 +398,7 @@ def get_raw_events(
                 octave_below=dropped.octave_below if dropped else None,
                 removed=event.removed,
                 hand=hand if hand in ("right", "left") else None,
+                id=event.id,
             )
         )
 
@@ -291,10 +406,12 @@ def get_raw_events(
         audio_uuid=audio_uuid,
         duration_seconds=stored.duration_seconds,
         title=stored.title,
-        artifact_count=len(report.dropped),
-        octave_phantom_count=report.octave_phantoms,
+        artifact_count=len(dropped_events),
+        octave_phantom_count=octave_phantoms,
         frame_ms=frame_ms,
         events=events,
+        revision=stored.header.notes_revision,
+        hands_revision=stored.header.hands_revision,
     )
 
 
@@ -348,38 +465,42 @@ def put_removed_events(audio_uuid: str, body: RemovalRequest = Body(...)) -> Rem
     correction is independent of any column length.
     """
     _audio_or_404(audio_uuid)
-    stored = pipeline.load_note_events(audio_uuid)
-    if stored is None:
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                f"Audio {audio_uuid} has no stored note events. "
-                "Run a transcription (POST /matrix/transcribe) to produce them."
-            ),
-        )
+    with pipeline.piece_lock(audio_uuid):
+        stored = pipeline.load_note_events(audio_uuid)
+        if stored is None:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Audio {audio_uuid} has no stored note events. "
+                    "Run a transcription (POST /matrix/transcribe) to produce them."
+                ),
+            )
 
-    wanted = {(note.midi_note, round(note.start, 4)) for note in body.notes}
-    seen: set[tuple[int, float]] = set()
-    changed = 0
-    for event in stored.events:
-        key = (event.midi_note, round(event.start, 4))
-        if key not in wanted:
-            continue
-        seen.add(key)
-        if event.removed == body.removed:
-            continue
-        event.removed = body.removed
-        changed += 1
+        wanted = {(note.midi_note, round(note.start, 4)) for note in body.notes}
+        seen: set[tuple[int, float]] = set()
+        changed = 0
+        for event in stored.events:
+            key = (event.midi_note, round(event.start, 4))
+            if key not in wanted:
+                continue
+            seen.add(key)
+            if event.removed == body.removed:
+                continue
+            event.removed = body.removed
+            changed += 1
 
-    if changed:
-        pipeline.save_note_events(audio_uuid, stored.events, stored.duration_seconds, stored.title)
-        # Imported here rather than at the top: `time_score` imports nothing from
-        # this module today, and a module-level import would make that a rule
-        # nobody can break by accident later. The split is cached per (piece,
-        # column length) and has just stopped being true.
-        from aitu_backend.api.time_score import forget_split_cache
-
-        forget_split_cache()
+        if changed:
+            # A notes edit (plan section 8.2): the notes and hands revisions go up, and the piano
+            # sheet becomes stale, because this page is not the sheet.
+            pipeline.save_edit(
+                audio_uuid,
+                stored.events,
+                stored.duration_seconds,
+                stored.title,
+                before=stored.header,
+                notes_changed=True,
+                hands_changed=False,
+            )
 
     return RemovalResult(changed=changed, unmatched=len(wanted - seen))
 

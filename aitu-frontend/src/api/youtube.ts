@@ -27,6 +27,15 @@ export const youtubeApi = {
   probe: (url: string, signal?: AbortSignal) =>
     request<VideoInfo>("/youtube/probe", { method: "POST", body: { url }, signal }),
 
+  /**
+   * Start the download as a background job and answer at once (the Source tab).
+   *
+   * Follow it with `matrixApi.progressUrl(jobId)`: a `download` stage in percent, a `store` stage
+   * while the audio is converted, then a `done` frame whose result carries `audioUuid`.
+   */
+  startDownload: (body: YoutubeDownloadRequest, signal?: AbortSignal) =>
+    request<{ jobId: string; status: string }>("/youtube/jobs", { method: "POST", body, signal }),
+
   download: (body: YoutubeDownloadRequest, signal?: AbortSignal) =>
     request<AudioItem>("/youtube/download", { method: "POST", body, signal }),
 

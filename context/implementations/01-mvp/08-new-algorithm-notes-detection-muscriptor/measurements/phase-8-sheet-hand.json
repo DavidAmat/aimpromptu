@@ -1,0 +1,614 @@
+{
+  "date": "2026-10-01T19:20:47.348Z",
+  "base": "http://localhost:5173",
+  "moves": 6,
+  "pieces": [
+    {
+      "source": "6594364e-6bcf-4038-9898-e30c0ae46347",
+      "alias": "Elefants - Oques Grasses",
+      "flow": {
+        "before": "stale",
+        "staleDrawsNothing": true,
+        "writeMs": 515,
+        "bannerAfterWrite": "The sheet below is drawn from the current notes and hands. Press Save to make it the sheet of this piece.",
+        "after": "ready",
+        "tabTicked": true,
+        "afterMoves": "ready"
+      },
+      "first": {
+        "hands": 18.5,
+        "build": 113.6,
+        "transfer": 0.6,
+        "sentKB": 39.2,
+        "rawKB": 510.3,
+        "ladder": 106.8,
+        "waitBeforeSheet": 22.2,
+        "draw": 70.4,
+        "paint": 46.1,
+        "total": 271.7,
+        "longestTask": 75,
+        "redraws": 2,
+        "timeline": {
+          "handsAnswered": 18.5,
+          "sheetAsked": 40.7,
+          "sheetAnswered": 155.2,
+          "redrawsAt": [
+            187.4,
+            197.2
+          ],
+          "drawn": 225.6
+        }
+      },
+      "moves": [
+        {
+          "hands": 23,
+          "build": 48.8,
+          "transfer": 0.8,
+          "sentKB": 39.2,
+          "rawKB": 510.3,
+          "ladder": 43.6,
+          "waitBeforeSheet": 19.6,
+          "draw": 115.8,
+          "paint": 46.5,
+          "total": 254.8,
+          "longestTask": 72,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 23,
+            "sheetAsked": 42.6,
+            "sheetAnswered": 92.5,
+            "redrawsAt": [
+              171.3,
+              179.8
+            ],
+            "drawn": 208.3
+          }
+        },
+        {
+          "hands": 18.8,
+          "build": 50,
+          "transfer": 0.4,
+          "sentKB": 39.2,
+          "rawKB": 510.3,
+          "ladder": 44.4,
+          "waitBeforeSheet": 22.2,
+          "draw": 113.7,
+          "paint": 48.1,
+          "total": 253.5,
+          "longestTask": 72,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 18.8,
+            "sheetAsked": 41,
+            "sheetAnswered": 91.7,
+            "redrawsAt": [
+              169.7,
+              177.9
+            ],
+            "drawn": 205.4
+          }
+        },
+        {
+          "hands": 18.5,
+          "build": 47.7,
+          "transfer": 0.4,
+          "sentKB": 39.2,
+          "rawKB": 510.3,
+          "ladder": 42.8,
+          "waitBeforeSheet": 21.8,
+          "draw": 112.7,
+          "paint": 46.1,
+          "total": 247.6,
+          "longestTask": 72,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 18.5,
+            "sheetAsked": 40.3,
+            "sheetAnswered": 88.8,
+            "redrawsAt": [
+              167.3,
+              174.8
+            ],
+            "drawn": 201.5
+          }
+        },
+        {
+          "hands": 23.9,
+          "build": 48.8,
+          "transfer": 0.5,
+          "sentKB": 39.3,
+          "rawKB": 510.3,
+          "ladder": 43.3,
+          "waitBeforeSheet": 17.6,
+          "draw": 113.1,
+          "paint": 46.8,
+          "total": 251,
+          "longestTask": 71,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 23.9,
+            "sheetAsked": 41.5,
+            "sheetAnswered": 91.1,
+            "redrawsAt": [
+              169.8,
+              177.7
+            ],
+            "drawn": 204.2
+          }
+        },
+        {
+          "hands": 18.4,
+          "build": 52,
+          "transfer": 0.7,
+          "sentKB": 39.3,
+          "rawKB": 510.3,
+          "ladder": 45.5,
+          "waitBeforeSheet": 22.1,
+          "draw": 113.7,
+          "paint": 47.2,
+          "total": 254.6,
+          "longestTask": 76,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 18.4,
+            "sheetAsked": 40.5,
+            "sheetAnswered": 93.7,
+            "redrawsAt": [
+              172.9,
+              180.3
+            ],
+            "drawn": 207.4
+          }
+        },
+        {
+          "hands": 19.5,
+          "build": 50.9,
+          "transfer": 0.8,
+          "sentKB": 39.4,
+          "rawKB": 510.3,
+          "ladder": 44.9,
+          "waitBeforeSheet": 21.7,
+          "draw": 108.3,
+          "paint": 43.8,
+          "total": 245.4,
+          "longestTask": 71,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 19.5,
+            "sheetAsked": 41.2,
+            "sheetAnswered": 93.3,
+            "redrawsAt": [
+              168.5,
+              176.1
+            ],
+            "drawn": 201.6
+          }
+        }
+      ],
+      "notes": 1292,
+      "durationS": 233.4,
+      "median": {
+        "hands": 19.2,
+        "build": 49.4,
+        "transfer": 0.6,
+        "draw": 113.4,
+        "paint": 46.6,
+        "total": 252.3,
+        "longestTask": 72,
+        "redraws": 2,
+        "sentKB": 39.3,
+        "rawKB": 510.3,
+        "ladder": 44,
+        "waitBeforeSheet": 21.8
+      }
+    },
+    {
+      "source": "b99bc3ae-30a5-4aa0-9b3b-8f11eea5fba7",
+      "alias": "AITANA - SUPERESTRELLA | PIANO TUTORIAL / COVER",
+      "flow": {
+        "before": "ready",
+        "after": "ready",
+        "tabTicked": true,
+        "afterMoves": "ready"
+      },
+      "first": {
+        "hands": 42.4,
+        "build": 97.7,
+        "transfer": 0.9,
+        "sentKB": 41.5,
+        "rawKB": 403.1,
+        "ladder": 78.1,
+        "waitBeforeSheet": 22.1,
+        "draw": 77.5,
+        "paint": 56.7,
+        "total": 297.7,
+        "longestTask": 77,
+        "redraws": 4,
+        "timeline": {
+          "handsAnswered": 42.4,
+          "sheetAsked": 64.5,
+          "sheetAnswered": 163.5,
+          "redrawsAt": [
+            193.5,
+            205.2,
+            207.6,
+            207.7
+          ],
+          "drawn": 241
+        }
+      },
+      "moves": [
+        {
+          "hands": 21.6,
+          "build": 155.2,
+          "transfer": 0.6,
+          "sentKB": 41.5,
+          "rawKB": 403.1,
+          "ladder": 112,
+          "waitBeforeSheet": 21.4,
+          "draw": 76.8,
+          "paint": 53.6,
+          "total": 329.5,
+          "longestTask": 78,
+          "redraws": 4,
+          "timeline": {
+            "handsAnswered": 21.6,
+            "sheetAsked": 43,
+            "sheetAnswered": 199.1,
+            "redrawsAt": [
+              230.8,
+              243.2,
+              245.5,
+              245.5
+            ],
+            "drawn": 275.9
+          }
+        },
+        {
+          "hands": 21.3,
+          "build": 89.5,
+          "transfer": 0.6,
+          "sentKB": 41.5,
+          "rawKB": 403.1,
+          "ladder": 58.9,
+          "waitBeforeSheet": 21,
+          "draw": 77.1,
+          "paint": 53.2,
+          "total": 263,
+          "longestTask": 74,
+          "redraws": 4,
+          "timeline": {
+            "handsAnswered": 21.3,
+            "sheetAsked": 42.3,
+            "sheetAnswered": 132.7,
+            "redrawsAt": [
+              168.4,
+              178.9,
+              180.9,
+              180.9
+            ],
+            "drawn": 209.8
+          }
+        },
+        {
+          "hands": 21.4,
+          "build": 89.8,
+          "transfer": 0.9,
+          "sentKB": 41.6,
+          "rawKB": 403.5,
+          "ladder": 60.1,
+          "waitBeforeSheet": 21.8,
+          "draw": 85.9,
+          "paint": 54.8,
+          "total": 274.8,
+          "longestTask": 75,
+          "redraws": 4,
+          "timeline": {
+            "handsAnswered": 21.4,
+            "sheetAsked": 43.2,
+            "sheetAnswered": 134.1,
+            "redrawsAt": [
+              175.4,
+              186.6,
+              188.8,
+              188.8
+            ],
+            "drawn": 220
+          }
+        },
+        {
+          "hands": 22.4,
+          "build": 91.1,
+          "transfer": 0.9,
+          "sentKB": 41.6,
+          "rawKB": 403.5,
+          "ladder": 46.9,
+          "waitBeforeSheet": 22.4,
+          "draw": 72.7,
+          "paint": 55.6,
+          "total": 265.4,
+          "longestTask": 76,
+          "redraws": 4,
+          "timeline": {
+            "handsAnswered": 22.4,
+            "sheetAsked": 44.8,
+            "sheetAnswered": 137.1,
+            "redrawsAt": [
+              169,
+              179.4,
+              181.3,
+              181.3
+            ],
+            "drawn": 209.8
+          }
+        },
+        {
+          "hands": 23,
+          "build": 160.9,
+          "transfer": 0.9,
+          "sentKB": 41.6,
+          "rawKB": 403.4,
+          "ladder": 47.1,
+          "waitBeforeSheet": 19.2,
+          "draw": 70,
+          "paint": 55.1,
+          "total": 329.4,
+          "longestTask": 75,
+          "redraws": 4,
+          "timeline": {
+            "handsAnswered": 23,
+            "sheetAsked": 42.2,
+            "sheetAnswered": 204.3,
+            "redrawsAt": [
+              229.8,
+              240.3,
+              242.6,
+              242.6
+            ],
+            "drawn": 274.3
+          }
+        },
+        {
+          "hands": 21.2,
+          "build": 89.2,
+          "transfer": 0.6,
+          "sentKB": 41.6,
+          "rawKB": 402.9,
+          "ladder": 46.5,
+          "waitBeforeSheet": 21.6,
+          "draw": 80.4,
+          "paint": 55.6,
+          "total": 269,
+          "longestTask": 75,
+          "redraws": 4,
+          "timeline": {
+            "handsAnswered": 21.2,
+            "sheetAsked": 42.8,
+            "sheetAnswered": 133,
+            "redrawsAt": [
+              170.5,
+              180.5,
+              182.8,
+              182.8
+            ],
+            "drawn": 213.4
+          }
+        }
+      ],
+      "notes": 1497,
+      "durationS": 189.6,
+      "median": {
+        "hands": 21.5,
+        "build": 90.5,
+        "transfer": 0.7,
+        "draw": 77,
+        "paint": 54.9,
+        "total": 271.9,
+        "longestTask": 75,
+        "redraws": 4,
+        "sentKB": 41.6,
+        "rawKB": 403.3,
+        "ladder": 53,
+        "waitBeforeSheet": 21.5
+      }
+    },
+    {
+      "source": "ddd8bce8-3e3f-4262-9595-46aaf66de54b",
+      "alias": "Elektronomia - The Other Side | Synthesia Piano Cover",
+      "flow": {
+        "before": "missing",
+        "handsPredicted": true,
+        "writeMs": 1455,
+        "after": "ready",
+        "tabTicked": true,
+        "afterMoves": "ready"
+      },
+      "first": {
+        "hands": 56.4,
+        "build": 185.1,
+        "transfer": 0.8,
+        "sentKB": 70.9,
+        "rawKB": 1101.2,
+        "ladder": 175.2,
+        "waitBeforeSheet": 31.8,
+        "draw": 185.4,
+        "paint": 162.2,
+        "total": 622.1,
+        "longestTask": 152,
+        "redraws": 2,
+        "timeline": {
+          "handsAnswered": 56.4,
+          "sheetAsked": 88.2,
+          "sheetAnswered": 274.5,
+          "redrawsAt": [
+            320.9,
+            348.8
+          ],
+          "drawn": 459.9
+        }
+      },
+      "moves": [
+        {
+          "hands": 47.2,
+          "build": 122.2,
+          "transfer": 1.3,
+          "sentKB": 70.9,
+          "rawKB": 1101.2,
+          "ladder": 109.8,
+          "waitBeforeSheet": 39.6,
+          "draw": 200,
+          "paint": 166.3,
+          "total": 577,
+          "longestTask": 156,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 47.2,
+            "sheetAsked": 86.8,
+            "sheetAnswered": 210.7,
+            "redrawsAt": [
+              275.3,
+              299.9
+            ],
+            "drawn": 410.7
+          }
+        },
+        {
+          "hands": 48.9,
+          "build": 128.5,
+          "transfer": 0.9,
+          "sentKB": 70.9,
+          "rawKB": 1101.2,
+          "ladder": 118.7,
+          "waitBeforeSheet": 45.8,
+          "draw": 199.1,
+          "paint": 171.3,
+          "total": 594.9,
+          "longestTask": 162,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 48.9,
+            "sheetAsked": 94.7,
+            "sheetAnswered": 224.5,
+            "redrawsAt": [
+              285.2,
+              311.1
+            ],
+            "drawn": 423.6
+          }
+        },
+        {
+          "hands": 122.5,
+          "build": 114.9,
+          "transfer": 0.8,
+          "sentKB": 71,
+          "rawKB": 1101.2,
+          "ladder": 105.9,
+          "waitBeforeSheet": 56,
+          "draw": 181.7,
+          "paint": 209.5,
+          "total": 685.8,
+          "longestTask": 162,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 122.5,
+            "sheetAsked": 178.5,
+            "sheetAnswered": 294.6,
+            "redrawsAt": [
+              339.9,
+              364.5
+            ],
+            "drawn": 476.3
+          }
+        },
+        {
+          "hands": 49.1,
+          "build": 117.9,
+          "transfer": 0.8,
+          "sentKB": 71,
+          "rawKB": 1101.3,
+          "ladder": 106.3,
+          "waitBeforeSheet": 35.8,
+          "draw": 213.8,
+          "paint": 235,
+          "total": 652.8,
+          "longestTask": 188,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 49.1,
+            "sheetAsked": 84.9,
+            "sheetAnswered": 204,
+            "redrawsAt": [
+              288.7,
+              311.2
+            ],
+            "drawn": 417.8
+          }
+        },
+        {
+          "hands": 49.6,
+          "build": 208.8,
+          "transfer": 0.8,
+          "sentKB": 71,
+          "rawKB": 1101.3,
+          "ladder": 196.9,
+          "waitBeforeSheet": 13.5,
+          "draw": 166.8,
+          "paint": 163.7,
+          "total": 603.6,
+          "longestTask": 154,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 49.6,
+            "sheetAsked": 63.1,
+            "sheetAnswered": 273.1,
+            "redrawsAt": [
+              312,
+              337.9
+            ],
+            "drawn": 439.9
+          }
+        },
+        {
+          "hands": 47.7,
+          "build": 122.3,
+          "transfer": 0.8,
+          "sentKB": 71,
+          "rawKB": 1101.3,
+          "ladder": 88.3,
+          "waitBeforeSheet": 15.6,
+          "draw": 179.4,
+          "paint": 168.9,
+          "total": 535,
+          "longestTask": 159,
+          "redraws": 2,
+          "timeline": {
+            "handsAnswered": 47.7,
+            "sheetAsked": 63.3,
+            "sheetAnswered": 186.7,
+            "redrawsAt": [
+              235.2,
+              259.5
+            ],
+            "drawn": 366.1
+          }
+        }
+      ],
+      "notes": 4295,
+      "durationS": 272.9,
+      "median": {
+        "hands": 49,
+        "build": 122.3,
+        "transfer": 0.8,
+        "draw": 190.4,
+        "paint": 170.1,
+        "total": 599.3,
+        "longestTask": 160.5,
+        "redraws": 2,
+        "sentKB": 71,
+        "rawKB": 1101.2,
+        "ladder": 108,
+        "waitBeforeSheet": 37.7
+      }
+    }
+  ]
+}

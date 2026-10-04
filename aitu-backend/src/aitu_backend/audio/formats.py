@@ -118,6 +118,12 @@ def read_wav(path: Path) -> tuple[int, np.ndarray]:
     return int(sample_rate), samples
 
 
+def sample_count(path: Path) -> tuple[int, int]:
+    """``(sample_rate, samples)`` of a WAV, without reading the samples (a memory map)."""
+    sample_rate, samples = wavfile.read(path, mmap=True)
+    return int(sample_rate), int(samples.shape[0])
+
+
 def duration_seconds(path: Path) -> float:
     """Length of a WAV in seconds."""
     sample_rate, samples = read_wav(path)

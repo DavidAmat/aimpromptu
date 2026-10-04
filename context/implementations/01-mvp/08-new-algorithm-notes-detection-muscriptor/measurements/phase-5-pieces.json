@@ -1,0 +1,104 @@
+[
+  {
+    "uuid": "b99bc3ae-30a5-4aa0-9b3b-8f11eea5fba7",
+    "statusMs": 23.8,
+    "notesMs": 3.9,
+    "notes": 1497,
+    "notesKb": [
+      27,
+      11
+    ],
+    "sheetFirstMs": 1537.7,
+    "sheetMoveOldPiece": {
+      "assigned": 1,
+      "putMs": 11.8,
+      "scoreMs": 34.5,
+      "scoreKb": [
+        436,
+        45
+      ]
+    },
+    "sheetMoveSaved": {
+      "assigned": 1,
+      "putMs": 8.9,
+      "scoreMs": 33.4,
+      "scoreKb": [
+        436,
+        45
+      ]
+    },
+    "predictFirstMs": 1490.4,
+    "predictAgainMs": 8.7,
+    "saveHandsMs": 8.9,
+    "moveMs": 7.9,
+    "sheetAfterMoveMs": 33.6
+  },
+  {
+    "uuid": "a585f9eb-36a1-49a0-9f0c-2626f3d292da",
+    "statusMs": 5.1,
+    "notesMs": 3.3,
+    "notes": 1343,
+    "notesKb": [
+      25,
+      10
+    ],
+    "sheetFirstMs": 1147.2,
+    "sheetMoveOldPiece": {
+      "assigned": 1,
+      "putMs": 11.4,
+      "scoreMs": 34.1,
+      "scoreKb": [
+        598,
+        45
+      ]
+    },
+    "sheetMoveSaved": {
+      "assigned": 1,
+      "putMs": 8.3,
+      "scoreMs": 36.2,
+      "scoreKb": [
+        598,
+        45
+      ]
+    },
+    "predictFirstMs": 1222.1,
+    "predictAgainMs": 9.2,
+    "saveHandsMs": 4.6,
+    "moveMs": 7.6,
+    "sheetAfterMoveMs": 33.6
+  },
+  {
+    "uuid": "ddd8bce8-3e3f-4262-9595-46aaf66de54b",
+    "statusMs": 16.0,
+    "notesMs": 7.2,
+    "notes": 4295,
+    "notesKb": [
+      81,
+      22
+    ],
+    "sheetFirstMs": 5454.9,
+    "sheetMoveOldPiece": {
+      "assigned": 1,
+      "putMs": 28.0,
+      "scoreMs": 136.2,
+      "scoreKb": [
+        1107,
+        71
+      ]
+    },
+    "sheetMoveSaved": {
+      "assigned": 1,
+      "putMs": 20.9,
+      "scoreMs": 73.8,
+      "scoreKb": [
+        1107,
+        71
+      ]
+    },
+    "predictFirstMs": 5407.1,
+    "predictAgainMs": 21.9,
+    "saveHandsMs": 12.2,
+    "moveMs": 21.1,
+    "sheetAfterMoveMs": 134.6
+  }
+]

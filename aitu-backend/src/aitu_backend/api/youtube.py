@@ -1,4 +1,11 @@
-"""`/youtube` — audio downloads via yt-dlp (Epic 3, Story 3.5)."""
+"""`/youtube` — audio downloads via yt-dlp (Epic 3, Story 3.5).
+
+`POST /youtube/jobs` (implementation 08, Phase 6) runs the same download as a background job, so
+the request answers at once and the page follows the progress stream of every job,
+`GET /matrix/progress/{jobId}`. Its final `done` frame carries the `audioUuid` of the stored audio.
+"""
+
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
@@ -9,7 +16,9 @@ from aitu_backend.audio.youtube import (
     InvalidYoutubeUrl,
     YtDlpMissing,
 )
+from aitu_backend.progress import BaseProgress
 from aitu_backend.schemas.metadata import AudioMetadata
+from aitu_backend.transcription import jobs
 
 router = APIRouter(prefix="/youtube", tags=["youtube"])
 
@@ -32,6 +41,15 @@ class VideoInfoResponse(BaseModel):
     title: str
     duration_seconds: float | None = Field(None, alias="durationSeconds")
     uploader: str | None = None
+
+
+class DownloadJob(BaseModel):
+    """What `POST /youtube/jobs` answers: the job to follow."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    job_id: str = Field(..., alias="jobId")
+    status: str
 
 
 class BatchRequest(BaseModel):
@@ -91,6 +109,38 @@ def download(request: YoutubeRequest) -> AudioMetadata:
     except (InvalidYoutubeUrl, YtDlpMissing, DownloadFailed) as exc:
         raise _handle(exc) from exc
     return entry.metadata
+
+
+@router.post("/jobs", response_model=DownloadJob, response_model_by_alias=True, status_code=202)
+def start_download(request: YoutubeRequest) -> DownloadJob:
+    """Start the download in the background and answer at once (the Source tab).
+
+    The URL is checked here, so a wrong link is refused with 422 before any job exists. The page
+    follows `GET /matrix/progress/{jobId}`: a `download` stage in percent, then a `store` stage
+    while the audio is converted, then `event: done` with `audioUuid`, `alias` and
+    `durationSeconds`, or with `status: "error"` and yt-dlp's own words. A second request for the
+    same URL while the first is running returns the first job.
+    """
+    try:
+        cleaned = youtube.validate_url(request.url)
+    except InvalidYoutubeUrl as exc:
+        raise _handle(exc) from exc
+    if not youtube.yt_dlp_available():
+        raise _handle(YtDlpMissing())
+
+    def work(reporter: BaseProgress) -> Any:
+        return youtube.download(cleaned, request.alias, reporter=reporter)
+
+    def describe(entry: Any) -> dict[str, Any]:
+        metadata = entry.metadata
+        return {
+            "audioUuid": metadata.uuid,
+            "alias": metadata.alias,
+            "durationSeconds": metadata.duration_seconds,
+        }
+
+    job = jobs.submit(work, key=f"youtube:{cleaned}", describe=describe)
+    return DownloadJob(job_id=job.id, status=job.status)
 
 
 @router.post("/batch", response_model=list[BatchEntry], response_model_by_alias=True)

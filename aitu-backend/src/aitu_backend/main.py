@@ -12,15 +12,25 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from aitu_backend import config
 from aitu_backend.api import ALL_ROUTERS
 from aitu_backend.compression import JsonGZipMiddleware
 from aitu_backend.storage.paths import ensure_data_tree
+from aitu_backend.transcription import models
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Create the `data/` tree before serving the first request."""
+    """Create the `data/` tree before serving the first request, and start loading the model.
+
+    With ``AITU_PRELOAD_ENGINE=muscriptor-large`` the model loads on a background thread, so the
+    server answers at once and the first transcription does not pay the load. A failure (no token,
+    licence not accepted) is reported by ``GET /matrix/engine``.
+    """
     ensure_data_tree()
+    spec = config.preload_engine()
+    if spec:
+        models.preload_in_background(spec)
     yield
 
 
@@ -61,8 +71,8 @@ def run() -> None:
 
     uvicorn.run(
         "aitu_backend.main:app",
-        host="127.0.0.1",
-        port=8765,
+        host=config.host(),
+        port=config.port(),
         reload=True,
     )
 

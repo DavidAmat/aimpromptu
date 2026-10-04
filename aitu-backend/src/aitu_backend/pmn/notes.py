@@ -77,7 +77,8 @@ class Notes:
     can be put back, and every view (the dense matrix, the wire, the exports) leaves it out.
 
     The constructor takes anything NumPy can read (arrays, lists) and stores contiguous arrays of
-    fixed types. ``hand``, ``velocity`` and ``removed`` may be left empty: no hand, 64, not removed.
+    fixed types. ``hand``, ``velocity``, ``removed`` and ``hand_guessed`` may be left empty: no hand,
+    64, not removed, not guessed.
     """
 
     #: Stable identity, ``int64``.
@@ -94,6 +95,8 @@ class Notes:
     velocity: np.ndarray
     #: ``bool``.
     removed: np.ndarray
+    #: ``bool``. The hand came from the quick rule for an added note, not from the split or a person.
+    hand_guessed: np.ndarray
 
     def __init__(
         self,
@@ -104,6 +107,7 @@ class Notes:
         hand: npt.ArrayLike = (),
         velocity: npt.ArrayLike = (),
         removed: npt.ArrayLike = (),
+        hand_guessed: npt.ArrayLike = (),
     ) -> None:
         self.id = _array(id, np.int64)
         count = self.id.size
@@ -113,6 +117,7 @@ class Notes:
         self.hand = _array(hand, np.int8, count, HAND_NONE)
         self.velocity = _array(velocity, np.uint8, count, DEFAULT_VELOCITY)
         self.removed = _array(removed, bool, count, False)
+        self.hand_guessed = _array(hand_guessed, bool, count, False)
         self.validate()
 
     # ------------------------------------------------------------ construction
@@ -167,7 +172,7 @@ class Notes:
     def validate(self) -> None:
         """Raise ``ValueError`` when the arrays do not describe a set of notes."""
         count = self.id.size
-        for name in ("key", "on_ms", "len_ms", "hand", "velocity", "removed"):
+        for name in ("key", "on_ms", "len_ms", "hand", "velocity", "removed", "hand_guessed"):
             if getattr(self, name).size != count:
                 raise ValueError(
                     f"Notes fields must be parallel arrays: id has {count} entries, "
@@ -200,6 +205,7 @@ class Notes:
             hand=self.hand[index],
             velocity=self.velocity[index],
             removed=self.removed[index],
+            hand_guessed=self.hand_guessed[index],
         )
 
     def copy(self) -> "Notes":
@@ -229,6 +235,7 @@ class Notes:
             and np.array_equal(self.hand, other.hand)
             and np.array_equal(self.velocity, other.velocity)
             and np.array_equal(self.removed, other.removed)
+            and np.array_equal(self.hand_guessed, other.hand_guessed)
         )
         return bool(same and (not ids or np.array_equal(self.id, other.id)))
 

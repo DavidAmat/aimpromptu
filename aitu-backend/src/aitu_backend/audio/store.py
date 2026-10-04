@@ -195,6 +195,30 @@ def update(audio_uuid: str, **changes: object) -> AudioMetadata:
     return updated
 
 
+def set_cuts(audio_uuid: str, cuts: list[tuple[int, int]]) -> AudioMetadata:
+    """Store the cuts, already normalized (:func:`aitu_backend.audio.frames.normalize_cuts`).
+
+    ``audioRevision`` goes up by one only when the cuts change, so saving the same cuts twice does
+    not make the notes stale (implementation 08, plan section 8.2). Validated, unlike
+    :func:`update`, because a wrong cut would move every note of the next transcription.
+    """
+    metadata = read_metadata(audio_uuid)
+    wanted = [(int(start), int(end)) for start, end in cuts]
+    if wanted == list(metadata.cuts):
+        return metadata
+    updated = AudioMetadata.model_validate(
+        {
+            **metadata.model_dump(by_alias=True),
+            "cuts": wanted,
+            "audioRevision": metadata.audio_revision + 1,
+        }
+    )
+    write_metadata(updated)
+    # The cached waveform is the piece's, and the piece just changed length.
+    get(audio_uuid).waveform_path.unlink(missing_ok=True)
+    return updated
+
+
 def rename(audio_uuid: str, alias: str) -> AudioMetadata:
     """Change the display alias — the common case, so it gets its own verb."""
     if not alias.strip():

@@ -1,0 +1,6 @@
+# The image installs the packages and builds nothing of the app: compose.yaml mounts the source so
+# Vite reloads on every edit. The host's node_modules and dist are never sent to the builder.
+node_modules
+dist
+.vite
+*.log

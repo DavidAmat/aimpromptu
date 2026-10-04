@@ -157,6 +157,38 @@ export const semantic = {
     selection: palette.dark.Lavender,
     cursor: palette.dark.Pink,
   },
+  /**
+   * The Notes tab's piano roll visualization (implementation 08, plan section 9.5): a dark panel,
+   * as in the MuScriptor examples, so the rectangles are the brightest thing on it.
+   *
+   * The notes before the hand split are orange, not the red of the examples: on this app red
+   * means "no hand" or "marked to come off", and blue and green are the two hands.
+   */
+  roll: {
+    background: "#1d1e23",
+    /** The rows of the black keys, a little darker, so the octaves can be read at a glance. */
+    blackRow: "#17181c",
+    /** The line under every C. */
+    octaveLine: "#2b2d35",
+    grid: "#2a2c33",
+    gridStrong: "#3a3d46",
+    ruler: "#15161a",
+    rulerText: "#9a9eab",
+    /** The part of the piece the live transcription has already covered. */
+    transcribed: "rgba(255, 255, 255, 0.035)",
+    /** After the end of the piece. */
+    afterEnd: "rgba(0, 0, 0, 0.35)",
+    keyWhite: "#d9dbe2",
+    keyBlack: "#2a2b31",
+    keyLine: "#8e919c",
+    keyLabel: "#3a3c44",
+    note: palette.dark.Orange,
+    noteBorder: "rgba(0, 0, 0, 0.45)",
+    selected: palette.light.Lavender,
+    selectedBorder: palette.dark.Lavender,
+    band: "rgba(192, 182, 255, 0.16)",
+    playhead: palette.dark.Pink,
+  },
 } as const;
 
 /** Hand-aware lookup used by the matrix grid and the roll views. */

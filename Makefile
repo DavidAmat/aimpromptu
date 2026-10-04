@@ -1,24 +1,40 @@
 # AImpromptu — both services from the repo root.
 #
-#   make serve    start the backend and the frontend, print where they are
-#   make stop     shut both down
-#   make logs     follow both logs
-#   make status   what is running
+# In containers, on the Ubuntu machine (implementation 08, Phase 3). This is the usual way:
+#
+#   make up             build if needed, start the backend (GPU) and the frontend, wait for both
+#   make down           stop both
+#   make logs           follow both logs
+#   make ps             what is running
+#   make test-backend   the backend tests, inside the backend image (ARGS="-k pmn" to filter)
+#   make shell-backend  a shell in the running backend container
+#   make build          rebuild both images (after a change of uv.lock, package-lock.json or
+#                       vexflow-v2)
+#
+# Natively, without containers:
+#
+#   make serve        start the backend and the frontend, print where they are
+#   make stop         shut both down
+#   make logs-native  follow both logs
+#   make status       what is running
+#
+# Both ways use the same two ports, 5173 and 8765, so `make up` stops the native servers first.
 #
 # `serve` starts them in the background and returns your terminal, so closing it
 # does not kill them — `make stop` does. Logs go to .run/ and are followed with
-# `make logs`.
+# `make logs-native`.
 #
 # The frontend port is pinned with --strictPort on purpose. Vite's default is to
 # hop to the next free port when 5173 is taken, which is friendly right up until
 # you have two copies of the app running and are reading the wrong one. Failing
 # loudly is better; run `make stop` or `make serve WEB_PORT=5174`.
 
-.PHONY: serve stop restart status logs logs-web logs-api _start _report
+.PHONY: serve stop restart status logs-native logs-web logs-api _start _report \
+	up down logs ps build test-backend shell-backend
 
 WEB_PORT ?= 5173
-API_HOST ?= 127.0.0.1
-API_PORT ?= 8765
+API_HOST ?= $(or $(AITU_HOST),127.0.0.1)
+API_PORT ?= $(or $(AITU_PORT),8765)
 
 RUN_DIR := .run
 WEB_LOG := $(RUN_DIR)/web.log
@@ -74,7 +90,7 @@ _report:
 	@echo "  api       http://$(API_HOST):$(API_PORT)"
 	@echo "  api docs  http://$(API_HOST):$(API_PORT)/docs"
 	@echo ""
-	@echo "  make logs   follow both      make stop   shut down"
+	@echo "  make logs-native   follow both      make stop   shut down"
 	@echo ""
 
 # Two ways of stopping, because either alone leaves something behind. The PID
@@ -116,7 +132,7 @@ status:
 		fi; \
 	done
 
-logs:
+logs-native:
 	@tail -f $(WEB_LOG) $(API_LOG)
 
 logs-web:
@@ -124,3 +140,45 @@ logs-web:
 
 logs-api:
 	@tail -f $(API_LOG)
+
+# ------------------------------------------------------------------ containers
+#
+# `.env` is optional and Compose reads it itself. The Makefile needs only the cache folder from it,
+# and reads that one line: including the whole file would let an empty `WEB_PORT=` blank out the
+# default above. The ids are passed so the images write files as the host user, not as root.
+
+export UID := $(shell id -u)
+export GID := $(shell id -g)
+CACHE_DIR := $(or $(AITU_CACHE_DIR),$(shell sed -n 's/^AITU_CACHE_DIR=//p' .env 2>/dev/null),/mnt/ssd2/aimpromptu/home)
+COMPOSE := docker compose
+
+# The cache folder must exist before Docker mounts it, or Docker creates it as root.
+# --renew-anon-volumes: the frontend keeps its node_modules in an anonymous volume, and without the
+# flag a rebuilt image would still see the old packages.
+up: stop
+	@mkdir -p "$(CACHE_DIR)"
+	$(COMPOSE) up -d --build --renew-anon-volumes --wait
+	@echo ""
+	@echo "  app       http://localhost:$(WEB_PORT)   (from the Mac: scripts/tunnel-from-mac.sh)"
+	@echo "  api       http://127.0.0.1:$(API_PORT)   (on this machine; the page uses /api)"
+	@echo ""
+	@echo "  make logs   follow both      make down   stop both"
+	@echo ""
+
+down:
+	$(COMPOSE) down
+
+logs:
+	$(COMPOSE) logs -f --tail=100
+
+ps:
+	$(COMPOSE) ps
+
+build:
+	$(COMPOSE) build
+
+test-backend:
+	$(COMPOSE) run --rm --no-deps backend python -m pytest $(ARGS)
+
+shell-backend:
+	$(COMPOSE) exec backend bash

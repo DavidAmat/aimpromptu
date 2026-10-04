@@ -1,5 +1,5 @@
 /**
- * The one loader behind Piano Roll and Notes Falling.
+ * The loader behind Notes Falling (and the old Piano Roll, removed in implementation 08).
  *
  * It asks for two things: the notes as the engine heard them, and the waveform
  * of the recording they came from. The waveform is optional — it is a watermark

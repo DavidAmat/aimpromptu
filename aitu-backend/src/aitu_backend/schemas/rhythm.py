@@ -529,6 +529,13 @@ class SavedRhythm(BaseModel):
     #: ``None`` is a reading saved before the control existed, and the page draws with its own.
     note_spacing: float | None = Field(None, alias="noteSpacing", ge=0, le=48)
 
+    #: The ``handsRevision`` of ``events.json`` this reading was saved for (implementation 08, plan
+    #: section 8.2). The backend sets it when the reading is saved; the client's value is ignored.
+    #: When the notes or the hands change afterwards, the two numbers differ and the Sheet tab is
+    #: stale. ``None`` is a reading saved before Phase 5, and reads as 0, the value of a piece
+    #: nobody has edited since.
+    hands_revision: int | None = Field(None, alias="handsRevision", ge=0)
+
     saved_at: datetime = Field(default_factory=_now, alias="savedAt")
 
     def describe(self) -> str:

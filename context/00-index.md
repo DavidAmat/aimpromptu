@@ -20,9 +20,10 @@ assumes.
 | [00-index.md](00-index.md) | This file — map of all documentation |
 | [00-project-complete-overview.md](00-project-complete-overview.md) | One-shot orientation for a fresh reader or LLM |
 | [01-project.md](01-project.md) | What AImpromptu is, who uses it, the problem it solves |
-| [02-tech-stack.md](02-tech-stack.md) | Locked versions from lockfiles, and the standing technical decisions |
+| [02-tech-stack.md](02-tech-stack.md) | Locked versions from lockfiles, the containers, and the standing technical decisions |
+| [02b-local-setup.md](02b-local-setup.md) | The Mac mini and the Ubuntu machine; section 12: AImpromptu on Ubuntu, the browser on the Mac through the tunnel |
 | [03-services-overview.md](03-services-overview.md) | The two services and the renderer: roles, ports, how they connect |
-| [04-local-development.md](04-local-development.md) | Run it, test it, and the troubleshooting table |
+| [04-local-development.md](04-local-development.md) | Run it in containers or natively, open it from the Mac, the checks, the troubleshooting table |
 | [05-deployment.md](05-deployment.md) | STUB: POC local-only; no deploy flow yet |
 | *(skipped)* `06-*-infrastructure.md` | No cloud provider; POC is local-only |
 | [07-database.md](07-database.md) | No database: the file store, what is kept and why so little |
@@ -36,6 +37,8 @@ assumes.
 | [backend/README.md](backend/README.md) | aitu-backend entry: the packages and what each is for |
 | [backend/time-model.md](backend/time-model.md) | **The wall-clock model.** What replaced tempo, the five rules, what is dead |
 | [backend/piano-matrix-notation.md](backend/piano-matrix-notation.md) | The piano matrix notation: the sparse form, `events.json` with ids and header, the wire columns, every adapter (`pmn/`) |
+| [backend/muscriptor.md](backend/muscriptor.md) | **The transcription engine.** MuScriptor's settings and why, the GPU queue, the live stream of notes, the lag correction |
+| [backend/pieces-and-revisions.md](backend/pieces-and-revisions.md) | The steps of a piece, the revisions, what makes a step stale, the `/pieces` routes, the saved hands |
 | [backend/editing.md](backend/editing.md) | Re-recording a passage, and composing a piece from nothing |
 | [backend/api.md](backend/api.md) | The HTTP surface: six routers and the shape of a session |
 | [backend/notation-and-parsing.md](backend/notation-and-parsing.md) | The text-notation MVP path, kept but no longer an entry point |
@@ -45,6 +48,7 @@ assumes.
 | File | Description |
 |------|-------------|
 | [frontend/README.md](frontend/README.md) | aitu-frontend entry: the sections, the tabs, the data flow |
+| [frontend/flow-page.md](frontend/flow-page.md) | **The flow page** (Piece): the five tabs from the audio to the piano sheet, the editor's gestures, the timings |
 | [frontend/pages.md](frontend/pages.md) | Routes, the shell, and the "position has one home" rule |
 | [frontend/rendering.md](frontend/rendering.md) | How the sheet is drawn, what the app does *not* decide, the stale-`dist` trap |
 | [frontend/annotations.md](frontend/annotations.md) | Everything a reader can say about a piece, and where it goes |
@@ -146,6 +150,22 @@ and a `Calibration` of per-key borders. Opened, planned and completed 2026-09-14
 | [implementations/05-piano-overlay-from-black-keys/05-phase-2-implementation.md](implementations/05-piano-overlay-from-black-keys/05-phase-2-implementation.md) | Phase 2: per-key borders in both services, the grid upgrade |
 | [implementations/05-piano-overlay-from-black-keys/05-phase-3-implementation.md](implementations/05-piano-overlay-from-black-keys/05-phase-3-implementation.md) | Phase 3: the finder in the app, every example found, the one rectangle on the screen |
 | `pocs/poc-piano-overlay/` | Phase 1's spike, under `pocs/`: scripts, truth, tables in `RESULTS.md` |
+
+### 08 — MuScriptor, the live piano roll, and the move to Ubuntu — COMPLETE
+
+MuScriptor as the only engine, the live piano roll visualization and its editor, the hand split as a
+visible step, one flow page from the audio to the piano sheet, revisions, and the move to the Ubuntu
+machine with containers and one SSH tunnel. Opened 2026-09-28, complete 2026-10-01.
+
+| File | Description |
+|------|-------------|
+| [implementations/08-new-algorithm-notes-detection-muscriptor/README.md](implementations/08-new-algorithm-notes-detection-muscriptor/README.md) | What it is, and every file in the folder |
+| [implementations/08-new-algorithm-notes-detection-muscriptor/08-prompt.md](implementations/08-new-algorithm-notes-detection-muscriptor/08-prompt.md) | The brief, in the user's own words |
+| [implementations/08-new-algorithm-notes-detection-muscriptor/08-plan.md](implementations/08-new-algorithm-notes-detection-muscriptor/08-plan.md) | **The plan.** Terminology, the format, the flow page, revisions, the move, ten phases, decisions Q-1 to Q-7 |
+| [implementations/08-new-algorithm-notes-detection-muscriptor/08-checklist.md](implementations/08-new-algorithm-notes-detection-muscriptor/08-checklist.md) | THE status lookup for this implementation |
+| `implementations/08-new-algorithm-notes-detection-muscriptor/08-implementation-phase-N.md` | Ten phase reports, 0 to 9 |
+| `implementations/08-new-algorithm-notes-detection-muscriptor/measurements/` | Raw measurements of Phases 2 to 9 |
+| `pocs/poc-muscriptor/` | Phase 1's POC: MuScriptor's output, speed, lag, against ByteDance; `RESULTS.md` |
 
 ## Archive (`context/archive/`)
 

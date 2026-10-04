@@ -62,6 +62,8 @@ export interface RawNoteEvent {
    * than guessing.
    */
   hand: "right" | "left" | null;
+  /** The note's stable id, which `PATCH /pieces/{uuid}/notes` names it by. */
+  id?: number | null;
 }
 
 /** `GET /matrix/{id}/events` — the transcription before any grid touched it. */
@@ -76,6 +78,9 @@ export interface RawEvents {
   /** The column length the `hand` labels were decided at. */
   frameMs: number;
   events: RawNoteEvent[];
+  /** The notes revision and the hands revision, sent back with an edit. */
+  revision?: number;
+  handsRevision?: number;
 }
 
 /** One note to take off the recording, or put back, as `GET /events` reported it. */
@@ -98,7 +103,14 @@ export const matrixApi = {
   transcribe: (body: TranscribeRequest, signal?: AbortSignal) =>
     request<JobHandle>("/matrix/transcribe", { method: "POST", body, signal }),
 
-  /** SSE endpoint consumed by `useProgress`. */
+  /**
+   * The transcription of this audio that is waiting or running, so a page opened during it can
+   * follow the stream from the start. Rejects with a 404 `ApiError` when there is none.
+   */
+  activeJob: (audioUuid: string, signal?: AbortSignal) =>
+    request<JobHandle>(`/matrix/${audioUuid}/job`, { signal }),
+
+  /** SSE endpoint consumed by `useProgress`. Every job streams here, not only transcriptions. */
   progressUrl: (jobId: string) => buildUrl(`/matrix/progress/${jobId}`),
 
   /** Polling fallback for the same job. */

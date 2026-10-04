@@ -131,6 +131,10 @@ class TimeBuildReport:
     #: right-hand note comes out 20 ms short — enough to change a fusa into a semifusa. Per hand,
     #: the gap has to be measured from that hand's own attack.
     event_seconds: dict[tuple[int, int], float] = field(default_factory=dict)
+    #: ``(column, row)`` -> the id of the note whose onset is that cell: the one
+    #: :attr:`event_seconds` records. How a click on the sheet finds its note, and how a hand split
+    #: goes back to the notes (implementation 08, Phase 5). Notes with no id are not in it.
+    event_ids: dict[tuple[int, int], int] = field(default_factory=dict)
     #: Column -> the sequential number of that attack. Becomes ``groupId`` in the payload (D-04).
     #: Shared across both hands, because the grouping ran before the split.
     group_id: dict[int, int] = field(default_factory=dict)
@@ -258,9 +262,12 @@ def events_to_time_matrix(
                     continue
 
                 known = report.event_seconds.get((start, row))
-                report.event_seconds[start, row] = (
-                    event.start if known is None else min(known, event.start)
-                )
+                if known is None or event.start < known:
+                    report.event_seconds[start, row] = event.start
+                    if event.id is not None:
+                        report.event_ids[start, row] = event.id
+                    else:
+                        report.event_ids.pop((start, row), None)
 
                 end = min(frames, max(start + 1, frame_of_seconds(event.end, frame_ms)))
                 if grid[row, start] != 0 or (

@@ -394,7 +394,7 @@ def test_a_late_subscriber_catches_up_on_the_history() -> None:
         time.sleep(0.01)
 
     frames = list(jobs.stream(job.id))
-    assert any('"stage": "collapse"' in frame for frame in frames)
+    assert any('"stage":"collapse"' in frame for frame in frames)
 
 
 # ----------------------------------------------------------------- endpoints
@@ -413,9 +413,24 @@ def uploaded(client: TestClient, tmp_path: Path, seconds: float = 1.0) -> str:
         ]
 
 
-def test_the_engines_endpoint_reports_availability(client: TestClient) -> None:
+def test_the_engines_endpoint_offers_muscriptor_only(client: TestClient) -> None:
+    """Implementation 08 forces MuScriptor: one entry, so the Input page shows no choice."""
     body = client.get("/matrix/engines").json()
-    assert body["silent"] is True
+    assert list(body) == ["muscriptor"]
+    assert body["muscriptor"] is engine_module.engine_installed("muscriptor")
+
+
+@pytest.mark.parametrize("name", ["bytedance", "transkun", "silent"])
+def test_the_transcribe_endpoint_refuses_every_other_engine(
+    client: TestClient, tmp_path: Path, name: str
+) -> None:
+    """The other engines stay in the code (and in these tests), not in the app."""
+    if not FFMPEG:
+        pytest.skip("ffmpeg is not installed")
+    uuid = uploaded(client, tmp_path)
+    response = client.post("/matrix/transcribe", json={"audioUuid": uuid, "engine": name})
+    assert response.status_code == 422
+    assert "muscriptor" in response.json()["detail"]
 
 
 def test_transcribing_an_unknown_audio_is_a_404(client: TestClient) -> None:
@@ -440,20 +455,28 @@ def test_an_unknown_job_is_a_404(client: TestClient) -> None:
 
 @needs_ffmpeg
 def test_the_transcribe_endpoint_returns_a_job_and_then_the_notes(
-    client: TestClient, tmp_path: Path
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """End to end through the route, with a MuScriptor model that hears nothing."""
+    from aitu_backend.transcription import models
+
+    class Deaf:
+        def transcribe(self, audio, **options):  # noqa: ANN001, ANN003 - MuScriptor's shape
+            yield {"type": "ProgressEvent", "completed": 0, "total": 1}
+            yield {"type": "ProgressEvent", "completed": 1, "total": 1}
+
+    models.clear()
+    monkeypatch.setattr(models, "_load_muscriptor", lambda *args: Deaf())
+    monkeypatch.setattr(engine_module, "engine_installed", lambda name: True)
     uuid = uploaded(client, tmp_path)
 
-    response = client.post(
-        "/matrix/transcribe",
-        json={"audioUuid": uuid, "frameMs": 40, "engine": "silent"},
-    )
+    response = client.post("/matrix/transcribe", json={"audioUuid": uuid, "frameMs": 40})
     assert response.status_code == 202
     job_id = response.json()["jobId"]
 
-    for _ in range(200):
+    for _ in range(300):
         status = client.get(f"/matrix/jobs/{job_id}").json()
-        if status["status"] != "running":
+        if status["status"] not in ("running", "waiting"):
             break
         time.sleep(0.02)
     assert status["status"] == "done", status
@@ -461,6 +484,7 @@ def test_the_transcribe_endpoint_returns_a_job_and_then_the_notes(
     body = client.get(f"/matrix/{uuid}/events").json()
     assert body["audioUuid"] == uuid
     assert body["events"] == []
+    models.clear()
 
 
 def test_the_transcribe_request_has_no_tempo_and_no_granularity() -> None:

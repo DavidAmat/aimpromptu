@@ -20,6 +20,28 @@ export function noteName(midi: number): string {
   return `${SHARP_NAMES[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`;
 }
 
+const SPANISH_SHARP_NAMES = ["Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"] as const;
+
+/**
+ * `Do - 5`, `Fa# - 3`: the Spanish name of a key from its MIDI number, for the title of a panel
+ * about one note of the piano roll.
+ *
+ * Black keys are named with a sharp, as the keyboard names its keys: the roll has no key
+ * signature, so it has nothing to spell a flat from. The octave is the one the roll's own labels
+ * use (`C5` is `Do - 5`).
+ */
+export function spanishKeyName(midi: number): string {
+  return `${SPANISH_SHARP_NAMES[((midi % 12) + 12) % 12]} - ${Math.floor(midi / 12) - 1}`;
+}
+
+/**
+ * `Do# 3`: the short Spanish name of a key, for the selection on the Notes and Hands tabs. Black
+ * keys take a sharp, as the keyboard names them; middle C is `Do 4`.
+ */
+export function spanishNoteShort(midi: number): string {
+  return `${SPANISH_SHARP_NAMES[((midi % 12) + 12) % 12]} ${Math.floor(midi / 12) - 1}`;
+}
+
 /** `C#` — pitch class alone, for a rectangle with no room for the octave. */
 export function pitchClassName(midi: number): string {
   return SHARP_NAMES[((midi % 12) + 12) % 12];

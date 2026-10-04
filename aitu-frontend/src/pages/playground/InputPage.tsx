@@ -27,6 +27,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
+import { Link } from "react-router-dom";
 import { audioApi, type AudioItem } from "../../api";
 import { formatTime } from "../../audio/time";
 import AudioLibraryList from "../../components/audio/AudioLibraryList";
@@ -37,6 +38,7 @@ import WaveformRangeSelector, {
   type AudioRange,
 } from "../../components/audio/WaveformRangeSelector";
 import TranscriptionSettings from "../../components/input/TranscriptionSettings";
+import { ROUTES } from "../../layout/routes";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 import { PageContainer, SectionCard } from "../../ui";
 
@@ -162,6 +164,20 @@ export function InputPage() {
       subtitle="Where a piece enters the Playground: upload a recording, record one, pick one from the audio library — or start an empty piece and compose it."
       wide
     >
+      {/* The flow page (implementation 08) is the new way in; this page keeps working beside it. */}
+      <Alert
+        severity="info"
+        sx={{ mb: 2 }}
+        action={
+          <Button component={Link} to={ROUTES.pieceNew} size="small">
+            Open the Piece page
+          </Button>
+        }
+      >
+        The <strong>Piece</strong> page cuts parts of the audio without copying it, and shows every
+        step from the audio to the piano sheet.
+      </Alert>
+
       <Tabs
         value={source}
         onChange={(_, value: Source) => setSource(value)}

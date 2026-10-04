@@ -1,0 +1,154 @@
+{
+ "piece": "a585f9eb-36a1-49a0-9f0c-2626f3d292da",
+ "copy": "00e0b88e-8b10-4443-9e3d-1871a5df7dd4",
+ "engineBefore": {
+  "name": "muscriptor",
+  "installed": true,
+  "device": "cuda",
+  "loaded": [
+   "muscriptor-large (cuda, float16)"
+  ],
+  "waiting": 0,
+  "error": null
+ },
+ "whole": {
+  "jobId": "1913165c-bbc3-4514-9566-abd3e4b98d17",
+  "firstNoteS": 0.25,
+  "chunkMessages": 122,
+  "medianGapS": 0.251,
+  "longestGapS": 0.268,
+  "totalS": 25.57,
+  "stageStartsS": {
+   "transcribe": 0.0,
+   "timing": 25.2
+  },
+  "done": {
+   "type": "done",
+   "status": "done",
+   "error": null,
+   "audioUuid": "00e0b88e-8b10-4443-9e3d-1871a5df7dd4",
+   "revision": 1,
+   "lagCorrectionMs": 15.0,
+   "noteCount": 1351
+  },
+  "firstSheetRequestS40ms": 0.027,
+  "firstSheetRequestS20ms": 0.714,
+  "notes": 1351
+ },
+ "againstPhase1Native": {
+  "ours": 1351,
+  "phase1": 1351,
+  "sameKeyAndOnset": 1346
+ },
+ "withCut": {
+  "jobId": "75c39e84-83e3-455f-85ae-9992314c8e6a",
+  "firstNoteS": 0.25,
+  "chunkMessages": 118,
+  "medianGapS": 0.252,
+  "longestGapS": 0.267,
+  "totalS": 24.79,
+  "stageStartsS": {
+   "transcribe": 0.0,
+   "timing": 24.44
+  },
+  "done": {
+   "type": "done",
+   "status": "done",
+   "error": null,
+   "audioUuid": "00e0b88e-8b10-4443-9e3d-1871a5df7dd4",
+   "revision": 2,
+   "lagCorrectionMs": 15.0,
+   "noteCount": 1309
+  },
+  "notes": 1309,
+  "join": {
+   "atS": 60.0,
+   "cutNotesWithin300ms": [
+    [
+     78,
+     59.785
+    ],
+    [
+     82,
+     59.785
+    ],
+    [
+     54,
+     60.295
+    ],
+    [
+     58,
+     60.295
+    ],
+    [
+     61,
+     60.295
+    ],
+    [
+     73,
+     60.295
+    ]
+   ],
+   "wholeNotesWithin300msOfTheCutStart": [
+    [
+     78,
+     59.785
+    ],
+    [
+     82,
+     59.785
+    ],
+    [
+     30,
+     60.215
+    ],
+    [
+     42,
+     60.215
+    ],
+    [
+     73,
+     60.215
+    ]
+   ],
+   "wholeNotesWithin300msOfTheCutEnd": [
+    [
+     78,
+     64.855
+    ],
+    [
+     82,
+     64.855
+    ],
+    [
+     54,
+     65.285
+    ],
+    [
+     59,
+     65.285
+    ],
+    [
+     63,
+     65.285
+    ],
+    [
+     73,
+     65.285
+    ]
+   ]
+  },
+  "sameKeyAndOnset": {
+   "beforeTheJoin": [
+    343,
+    343,
+    343
+   ],
+   "afterTheJoin": [
+    914,
+    914,
+    914
+   ]
+  }
+ }
+}
