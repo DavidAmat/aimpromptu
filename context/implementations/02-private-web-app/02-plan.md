@@ -831,6 +831,13 @@ goes. The page is the piano sheet, a floating bar, and the toolboxes.
 Paste, Print, and a `⋯` with Save, Remove all and the frame numbers on or off. **Save** stays explicit
 (nothing is written before it), and the bar shows a small dot when there are unsaved changes.
 
+*As built in Phase 2:* **Save** is a visible button on the bar, with the dot on it, not an item of
+the `⋯` (a save hidden in a menu is the "hidden action" of the 09 guidelines). The `⋯` holds *Show
+the keyboard*, *Find trills*, *Bring back N notes taken off* and *Remove all* (with a confirmation).
+The frame numbers are in the **Layout** tab. **Paste** joins the bar in Phase 8. **Record** opens
+today's compose panel (play a passage and put it in) until Phase 9. A thin scrub bar stays above the
+sheet.
+
 **Line wrapping.** The prompt says the line wrap of `vexflow-v2` may have stopped working. The survey
 found the renderer wraps to the container width on each draw. Phase 2 checks it on three widths and on
 a window resize, finds where it fails if it does, and fixes it (in the frontend, or in `vexflow-v2`).
@@ -853,9 +860,9 @@ step.
 
 | Tab | Content |
 |---|---|
-| **Title** | Title, subtitle, artist name printed on the sheet |
+| **Title** | Title, subtitle, artist name printed on the sheet (Phase 2: stored in `rhythm.json` as `title`, `subtitle`, `artist`) |
 | **Key** | The key signature of the piece. Key changes of passages are in the range toolbox |
-| **Transpose** | Two tabs, **Notes** and **Figures** (below) |
+| **Transpose** | Two tabs, **Notes** and **Figures** (below). Phase 2 has a simpler **Figures** tab in its place: one `FigurePicker` for the main figure (what the highest pile is called), one undo step; Phase 7 replaces it |
 | **Lyrics** | The pasted lyrics and their pieces (section 11.5) |
 | **Layout** | Space between notes, space between lines, size of marks, zoom, frame numbers on or off |
 
@@ -910,7 +917,9 @@ words.
 ## 11.6 Selections
 
 Unchanged in what they can do, which already matches the app context: a range of frames with **Both /
-R / L**, or a set of notes; each toolbox hands its selection to the other; notes move to the right or
+R / L**, or a set of notes; since Phase 2 the range toolbox also has a **Speed** tab (the old card
+*Does the piece change speed?*), shown as a percentage of the speed of the piece and stored as
+before; each toolbox hands its selection to the other; notes move to the right or
 the left hand. Restyled as icon actions with tooltips, and with one addition per toolbox:
 
 - **The range toolbox** gains **Key for this passage**: it runs the fewest-accidentals rule on the

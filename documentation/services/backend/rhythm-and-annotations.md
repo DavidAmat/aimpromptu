@@ -51,18 +51,19 @@ numbers it is holding still refer to what they referred to.
 | Field | JSON | Type | Meaning |
 |---|---|---|---|
 | `schema_version` | `schemaVersion` | `string` | `"1.0"` |
-| `hand` | `hand` | `string` | Which hand's gaps the plot was read from. Default `right`. |
+| `hand` | `hand` | `string` | Which hand's gaps the figure ladder was measured from (`both` when that hand had no pile). Default `right`. |
 | `frame_ms` | `frameMs` | `float > 0` | The column length the numbers below were written at. |
+| `title`, `subtitle`, `artist` | same | `string?`, ≤ 200 | What the sheet prints above the music (the Title tab, implementation 02 Phase 2). `null` prints the project's name as the title. |
 | `key_signature` | `keySignature` | `string?` | The piece's key, as a major key: `C`, `Bb`, `F#`. |
-| `anchor_figure` | `anchorFigure` | `FigureName` | The pile the reader named. Default `negra`. |
-| `anchor_ms` | `anchorMs` | `float > 0` | What they said it lasts. |
+| `anchor_figure` | `anchorFigure` | `FigureName` | What the highest pile of gaps is called (the main figure). `negra` until the reader changes it (D-09 as changed by implementation 02). |
+| `anchor_ms` | `anchorMs` | `float > 0` | The median gap of that pile (`GET /time/{uuid}/default-reading`). |
 | `annotation_scale` | `annotationScale` | `0.3 < f ≤ 2.0` | How large marks over and under the staff are drawn. |
 | `line_spacing` | `lineSpacing` | `0 ≤ f ≤ 240`, optional | White space between the staves of one line and the staves of the next, in pixels. |
 | `note_spacing` | `noteSpacing` | `0 ≤ f ≤ 48`, optional | Extra pixels charged to every column carrying a note, and to no silence. The twin of `line_spacing`, one axis over. |
 | `saved_at` | `savedAt` | datetime | |
 
-`hand` is not part of the sheet, but it is what the reader was looking at, and returning them to the
-other hand's plot would be a small surprise every time.
+`hand` is not part of the sheet; it says which hand's piles the ladder is measured from, so a
+reload measures the same hand.
 
 `keySignature` is part of the reading rather than of the recording: the recorded notes say which
 keys were pressed and nothing about whether a black key is an F sharp or a G flat, so nobody but the

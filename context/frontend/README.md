@@ -46,7 +46,7 @@ project's `⋯` menu, and the old paths redirect.
 
 ## What a reader does on the sheet
 
-Name the beat · write the whole piece longer or shorter · say the piece changes speed · rename one
+Read the sheet drawn on arrival · change the main figure · title the sheet · say the piece changes speed · rename one
 note or a whole passage · choose the key · correct which hand plays a note · fingering · break or
 join a beam · octave brackets · take a note off the page · accept a suggested trill · words under
 the staff · print a stretch small · a grace note leaning on a note · re-record a passage · add a
@@ -64,7 +64,7 @@ PUT   /audio/{id}/cuts          ◀──  the selected region
 POST  /matrix/transcribe        ◀──  Transcribe; the progress stream feeds the live Notes tab
 PATCH /pieces/{id}/notes        ◀──  the edits of the Notes and Hands tabs, as operations
 GET   /matrix/{id}/events       ──▶  Notes Falling          (seconds, as recorded)
-GET   /time/{id}/peaks          ──▶  the peak plot          (the picture of the playing)
+GET   /time/{id}/default-reading ─▶ the figure ladder      (the highest pile of gaps is a negra)
 GET   /time/{id}/score          ──▶  TimeScoreView ──▶ @aimpromptu/grid-notation
 PUT   /time/{id}/rhythm         ◀──  the reader's decisions on the sheet
 ```
@@ -92,7 +92,9 @@ and the Vite server passes it to the backend. See
 - [pages.md](pages.md): the routes, the shell, the shared working artifact
 - [../colors/color-palette.md](../colors/color-palette.md): the tokens and the colours of the music
 - [rendering.md](rendering.md): how the sheet is drawn, and what the app does *not* decide
-- [annotations.md](annotations.md): what a reader can say about a piece, and where it goes
+- [annotations.md](annotations.md): the Sheet step (the page, the defaults, undo, saving), with
+  [annotations-notes.md](annotations-notes.md), [annotations-stretches.md](annotations-stretches.md)
+  and [annotations-sheet.md](annotations-sheet.md) for its three toolboxes
 - [printing.md](printing.md): the PDF, re-wrapped to the paper, never scaled
 - [timestamps.md](timestamps.md): the `mm:ss.cc` rule
 - [documentation/services/frontend/](../../documentation/services/frontend/): the component tree,

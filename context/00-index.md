@@ -57,7 +57,10 @@ assumes.
 | [frontend/flow-page.md](frontend/flow-page.md) | **Projects and the steps of a project**: the five steps from the audio to the piano sheet, the editor's gestures, the timings |
 | [frontend/pages.md](frontend/pages.md) | Routes, the shell, and the "position has one home" rule |
 | [frontend/rendering.md](frontend/rendering.md) | How the sheet is drawn, what the app does *not* decide, the stale-`dist` trap |
-| [frontend/annotations.md](frontend/annotations.md) | Everything a reader can say about a piece, and where it goes |
+| [frontend/annotations.md](frontend/annotations.md) | **The Sheet step**: the page, the defaults of a first write, the two selections, undo, saving |
+| [frontend/annotations-notes.md](frontend/annotations-notes.md) | The note toolbox: figures, fingers, hand, beams, even spacing, decorations |
+| [frontend/annotations-stretches.md](frontend/annotations-stretches.md) | The range toolbox (key, clef, octave, lyrics, spacing, speed, re-record) and brackets on the page |
+| [frontend/annotations-sheet.md](frontend/annotations-sheet.md) | The sheet toolbox (title, key, figures, layout), the keyboard panel, Find trills |
 | [frontend/printing.md](frontend/printing.md) | The PDF export: re-wrap to the paper, never scale; the margin is the control |
 | [frontend/timestamps.md](frontend/timestamps.md) | UI rule: `mm:ss.cc`, frame labelled by start only, never wraps |
 

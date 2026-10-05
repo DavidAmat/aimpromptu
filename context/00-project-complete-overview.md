@@ -93,7 +93,7 @@ work; a step opens only when the step before it is ready ([frontend/flow-page.md
 | Audio | See the waveform, play it, cut parts out of the selected region, **Transcribe** |
 | Notes | Watch the rectangles appear live, then edit them on a canvas piano roll and play the original audio |
 | Hands | **Predict hands**, check the colours along the song, move notes between the hands, **Save** |
-| **Sheet** | The product: the peak plot, naming, the staff, the player, every editing control |
+| **Sheet** | The product: the staff drawn on arrival (the highest pile of gaps is a negra), the floating bar, the sheet, note and range toolboxes |
 
 **Notes Falling** opens from a project's `⋯` menu. **Lab** holds the video reader's pages: it reads a
 Synthesia-style video into a piece. The Playground, YouTube to Audio and the old Piano Library were

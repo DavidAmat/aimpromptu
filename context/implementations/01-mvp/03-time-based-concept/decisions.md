@@ -48,6 +48,16 @@ demand.**
 Interval statistics fix the ladder only up to a rational factor; on this piece's second half two
 candidates scored within 0.1 % of each other. The app presents; it does not decide.
 
+> **Changed by implementation 02 (2026-10-05).** The app context asks to remove the plot of gaps:
+> the **highest peak** (the pile holding the most gaps) **is a negra by default**, and the user
+> changes the figures afterwards in one action (the figure shift of D-18, later **Figures
+> transposition**). The reason of D-09 still holds: statistics cannot pick the ladder, so the
+> first choice is a convention, not a measurement, and the user's answer beats it (rule 5). Only
+> the first choice is automatic. The rule is `default_anchor` in `matrix/ladder.py` and the route
+> `GET /time/{uuid}/default-reading`; see
+> [`../../02-private-web-app/02-plan.md`](../../02-private-web-app/02-plan.md) section 4 and the
+> Phase 2 report. D-10 (the plot that labels every peak) left the screen with it.
+
 **D-10 — Naming one peak fixes the whole ladder by proportion, and the UI shows the consequence
 immediately.**
 Click the 337 ms peak → "negra" → every other peak is instantly labelled (211 → corchea,
@@ -219,7 +229,7 @@ converged form everything downstream operates on.
 | D-06 | store measured sustain, capped at one redonda |
 | D-07 | measure on raw times, never on columns |
 | D-08 | peaks per piece and per selected passage |
-| D-09 | the user names the ladder, never the app |
+| D-09 | the user names the ladder, never the app (changed by 02: the highest peak is a negra by default) |
 | D-10 | naming one peak labels the rest by proportion, shown immediately |
 | D-11 | nearest figure by proportion, not milliseconds |
 | D-12 | closed vocabulary; dots only on blanca and negra |

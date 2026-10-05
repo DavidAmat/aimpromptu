@@ -132,31 +132,57 @@ them one at a time), the selection's Spanish name, **Save**.
 
 ### 2.4 Sheet
 
-`pages/piece/SheetTab.tsx` renders `RhythmPage` (section 3) with its `step` prop (`SheetStep`: the
-piece, the Sheet step's state and reason, and `onChanged`). The piece comes from the project, a
-stale reading is loaded but not drawn until **Write the sheet**, and `onChanged` refreshes the
-status after a saved reading or **Remove all**, so the dot of the step follows.
+`pages/piece/SheetTab.tsx` renders `sheet/SheetPage` (section 3) with its `step` prop (`SheetStep`:
+the piece, the Sheet step's state and reason, and `onChanged`). The piece comes from the project, a
+stale reading is loaded but not drawn until **Write the sheet** (in the stale banner), and
+`onChanged` refreshes the status after a save or **Remove all**, so the dot of the step follows.
 
-The Sheet tab does not use `useUnsavedChanges`, because `RhythmPage` does not know whether the
-reading on screen differs from the saved one.
+The page now knows whether the sheet differs from the saved one (`unsaved`, the dot on **Save**), so
+a leave dialog like the other steps' is possible; it is not wired yet.
 
 ---
 
 ## 3. The sheet
 
-`pages/piece/RhythmPage.tsx` is the largest file in the app and it is the product: see where the
-notes keep landing, say what one of those piles is, and read the result. It is the **Sheet** step of
-a project; Phase 2 of implementation 02 splits it into modules and redesigns it. Phase 1 only moved
-it out of `pages/playground/` and replaced its cards by `ui/Section`.
+`pages/piece/sheet/` is the Sheet step of a project. Implementation 02, Phase 2 split the old
+`RhythmPage.tsx` (5,328 lines) into it with no change of behaviour (twelve screenshots identical
+byte for byte), then redesigned it to plan section 11. What it does for the reader is
+[`context/frontend/annotations.md`](../../../context/frontend/annotations.md) and its three sub pages.
 
-| Component | Role |
+| Module | Role |
 |---|---|
-| `components/time/PeakPlot.tsx` | The distribution of gaps. Click a bar to name it. |
-| `components/time/TimeScoreView.tsx` | The staff. Owns the renderer instance, the playhead, selection and the range handles. |
-| `components/time/ScorePlayer.tsx` | Play the recording under the sheet. |
-| `components/time/ScorePdfDialog.tsx` | Paper size, margins, title, and a preview of the real pages. |
-| `ui/FloatingBar.tsx` | Save / Remove all / PDF, floating over the sheet. Also the toolbars of the Audio, Notes and Hands steps. |
-| `ui/Toolbox.tsx` | The draggable shell every toolbox uses (it was `ToolboxDialog`). |
+| `SheetPage.tsx` | The page: the state the modules share, the requests (default reading, saved reading, sheet, save, Remove all), the effects, the layout (title lines, scrub bar, sheet, floating bar, the toolboxes) |
+| `sheetEdits.ts` | The edits model: `SheetEdits` (one value, so undo is one history), `NO_EDITS`, the undo labels, `editsFromSaved` and `savedRhythmOf` (to and from `rhythm.json`) |
+| `sheetConstants.ts` | The colours of the keyboards, the tabs of the range toolbox, the figure ladder, small helpers |
+| `toolboxPlacement.ts` | Where a toolbox opens, measured from what is drawn |
+| `useNoteActions.ts`, `NoteToolbox.tsx` | What the note toolbox knows about the picked notes and its actions; the panel |
+| `useRangeActions.ts`, `RangeToolbox.tsx` | The same for a marked stretch; the panel with its tabs, Speed among them |
+| `SheetToolbox.tsx` | The sheet toolbox: Title, Key, Figures, Layout |
+| `SheetFloatingBar.tsx` | Play, undo, redo, sheet toolbox, Record, Print, Save with its unsaved dot, `⋯`; the messages of a refused save and a refused move |
+| `PianoToolboxes.tsx` | The keyboard under the playhead, and the decoration keyboard |
+
+| Shared component | Role |
+|---|---|
+| `components/time/TimeScoreView.tsx` | The staff. Owns the renderer instance, the playhead, selection and the range handles |
+| `components/time/ScorePlayer.tsx` | Plays the recording; `compact` draws only the scrub bar (the Sheet step) |
+| `components/time/ScorePdfDialog.tsx` | Paper size, margins, title, and a preview of the real pages |
+| `components/time/PeakPlot.tsx` | The plot of gaps; left only in the compose and re-record panels, which Phases 8 and 9 replace |
+| `ui/Toolbox.tsx`, `ui/FloatingBar.tsx` | The draggable panel and the floating bar every step uses |
+
+**The sheet is drawn on arrival.** `SheetPage` asks for the saved reading and for
+`GET /time/{uuid}/default-reading` (the highest pile of gaps of the reading's hand, called a negra)
+at the same time, and draws as soon as both are answered, so the defaults of a first write (the key
+with the fewest accidentals, then the octave brackets in that key, taken from the first build's
+`onKeySuggestion` / `onOttavaSuggestion`) never land on a reader's own key. After that, any change of
+the page edits, the main figure or the speed changes asks for the sheet again after 400 ms.
+
+**Unsaved is an identity.** Every edit makes a new `SheetEdits` value and undo puts the old one
+back, so `edits.state !== cleanEdits` (the value saved or loaded) is exactly "the page is not what was
+saved".
+
+**The stage of `TimeScoreView` is a block at normal zoom.** As an inline-block it took the width of
+the drawing in it, so a narrower window never reached the renderer's resize watch and the lines kept
+their length, cut off at the right. It is an inline-block only while magnified.
 
 **`TimeScoreView` passes the figures straight through.** It does not work out what a note should be
 called from how many columns it covers, because a column is a slice of time and says nothing about
@@ -164,17 +190,18 @@ note values. That is the whole point of the model: position and figure are two s
 
 **The floating bar exists because of a real failure.** A long piece went unsaved simply because the
 button was past every stave. The bar follows the reader down the page and can be dragged, hidden
-and shown again. It keeps itself inside the window when its width changes.
+and shown again. It keeps itself inside the window when its width changes, and wraps into two rows
+on a phone.
 
 **Both toolboxes open beside what they are about.** Selecting notes (click, ⌘-click, or a rubber
-band) opens the note toolbox; shift-dragging across the column numbers opens the frames toolbox,
+band) opens the note toolbox; a click above the staves opens the range toolbox (titled *Frames*),
 which is about a *stretch of time* rather than about notes. A stretch carrying an edit draws two
 corner marks in its own colour, so it can be seen without being selected.
 
 **Each toolbox can hand its selection to the other.** `Toolbox` takes a `headerAction`, one
-control in the title bar beside the close button: **Select frames** on the note toolbox marks the
-stretch from the first picked note to the last, and **Select notes** on the frames toolbox picks
-every note that begins inside the stretch on the hands **Applies to** names. Both use the
+control in the title bar beside the close button: *Select the frames of these notes* on the note
+toolbox marks the stretch from the first picked note to the last, and *Select the notes in this
+stretch* on the range toolbox picks every note that begins inside it on the staves in scope. Both use the
 renderer's own `setSelection` / `clearSelection` rather than through page state, so the far panel
 opens, is placed and takes the cursor to the music exactly as a click would. Neither raises
 `clearSelectionsAt`, which drops *both* selections and is one half too much here.

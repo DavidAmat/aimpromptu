@@ -95,10 +95,12 @@ split could not place stays red, and a counter in the toolbar goes through them 
 hand given by the quick rule to an added note has a dashed border. **Save** ticks the tab and
 enables the Sheet tab.
 
-**5. Sheet.** The piano sheet page (`RhythmPage`) with every tool it has, given the piece by the
-project. Its redesign is Phase 2 of implementation 02. A stale sheet (the notes or the hands changed after it was saved) opens with
-a banner and is not drawn until the user presses **Write the sheet**; **Save** then makes it current
-again. A hand moved on the piano sheet redraws it in about 250 to 270 ms on a piece of 3 to 4
+**5. Sheet.** The piano sheet (`pages/piece/sheet/SheetPage`), drawn as soon as the step opens:
+the highest pile of gaps is a negra, and a first write takes the key with the fewest accidentals and
+the octave brackets of high passages ([annotations.md](annotations.md)). The page is the sheet, a
+floating bar and the toolboxes. A stale sheet (the notes or the hands changed after it was saved)
+opens with a banner and is not drawn until the user presses **Write the sheet**; **Save** then makes
+it current again. A hand moved on the piano sheet redraws it in about 250 to 270 ms on a piece of 3 to 4
 minutes.
 
 ## 4. Timings

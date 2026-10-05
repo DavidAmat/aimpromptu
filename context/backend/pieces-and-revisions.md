@@ -36,7 +36,7 @@ and every revision.
 | Source, Audio | The audio exists | - |
 | Notes | `events.json` exists and its `audioRevision` is the current one | `running` while a transcription job runs; `stale` after the cuts changed ("Transcribe again") |
 | Hands | Every live note the piano sheet can place has a hand | `missing`, "Predict hands first", or "N notes have no hand" |
-| Sheet | `rhythm.json`'s `handsRevision` equals `events.json`'s | `missing` (no reading), or `stale`: the Sheet tab opens with a banner and asks for **Write the sheet** again |
+| Sheet | `rhythm.json`'s `handsRevision` equals `events.json`'s | `missing` (no reading: the Sheet tab draws the sheet from the defaults, and **Save** makes it ready), or `stale`: the Sheet tab opens with a banner and asks for **Write the sheet** again |
 
 A step after one that is not ready is disabled, except a stale Sheet tab, which opens with its
 banner. Two details matter:

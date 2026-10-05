@@ -58,23 +58,23 @@ The plan's section 3.
 ## [x] Story 1.4: Documentation
 - [x] Task 1.4.1 `color-palette.md`, `frontend/README.md`, `pages.md`, `components.md`, `aitu-frontend/README.md`, `flow-page.md` (first move towards `projects.md`).
 
-# [ ] Phase 2: The sheet page
+# [x] Phase 2: The sheet page
 
-## [ ] Story 2.1: The split
-- [ ] Task 2.1.1 `RhythmPage.tsx` split into modules with no change of behaviour; the checks and screenshots identical.
+## [x] Story 2.1: The split
+- [x] Task 2.1.1 `RhythmPage.tsx` split into modules with no change of behaviour; the checks and screenshots identical.
 
-## [ ] Story 2.2: The defaults
-- [ ] Task 2.2.1 The default negra from the highest peak (backend, test); the note under D-09 in `decisions.md`.
-- [ ] Task 2.2.2 The default key signature and octave brackets on first write.
+## [x] Story 2.2: The defaults
+- [x] Task 2.2.1 The default negra from the highest peak (backend, test); the note under D-09 in `decisions.md`.
+- [x] Task 2.2.2 The default key signature and octave brackets on first write.
 
-## [ ] Story 2.3: The page
-- [ ] Task 2.3.1 The cards and the captions removed; the floating bar; the sheet toolbox with Title, Key and Layout.
-- [ ] Task 2.3.2 The range and note toolboxes as icon actions with tooltips; the speed changes as a range toolbox tab.
-- [ ] Task 2.3.3 The line wrap checked on three widths and on resize; fixed where it fails.
-- [ ] Task 2.3.4 Timings of the first piano sheet and of a hand move, against implementation 08.
+## [x] Story 2.3: The page
+- [x] Task 2.3.1 The cards and the captions removed; the floating bar; the sheet toolbox with Title, Key and Layout.
+- [x] Task 2.3.2 The range and note toolboxes as icon actions with tooltips; the speed changes as a range toolbox tab.
+- [x] Task 2.3.3 The line wrap checked on three widths and on resize; fixed where it fails (it never re-wrapped on a narrower window: fixed in `TimeScoreView`).
+- [x] Task 2.3.4 Timings of the first piano sheet and of a hand move, against implementation 08.
 
-## [ ] Story 2.4: Documentation
-- [ ] Task 2.4.1 `annotations.md` updated and split under 200 lines a page.
+## [x] Story 2.4: Documentation
+- [x] Task 2.4.1 `annotations.md` updated and split under 200 lines a page.
 
 # [ ] Phase 3: The `.database/` folder, the tables, the project bundle, the migration
 

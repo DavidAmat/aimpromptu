@@ -59,6 +59,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/pieces/{uuid}/hands/predict/job` | The same, as a job with progress (implementation 08). |
 | **The score** | `api/time_score.py` | |
 | GET | `/time/{uuid}/peaks` | Where the gaps between attacks gather into piles. |
+| GET | `/time/{uuid}/default-reading` | The figure ladder a sheet is written from by default: the highest pile is a negra. |
 | POST | `/time/{uuid}/ladder-preview` | Name one peak, see what every other becomes. |
 | GET | `/time/{uuid}/score` | The drawable score payload. |
 | POST | `/time/{uuid}/score` | The same, with the reader's page edits applied. |
@@ -402,6 +403,21 @@ half the data becomes two half-height spikes and the reader is asked to name a p
 Each hand is measured on its own, because the gap between a right-hand run and a held left-hand
 chord is not a rhythm and would hide the peak that matters.
 
+### GET /time/{uuid}/default-reading
+
+| Query | Default | Meaning |
+|---|---|---|
+| `hand` | `right` | The hand whose gaps are measured (the saved reading's hand, when there is one). |
+| `frameMs` | 40 | |
+
+Returns `{audioUuid, hand, frameMs, anchorFigure, anchorMs, centreMs, attackCount, gapCount,
+endSeconds}`. `anchorFigure` is always `negra` and `anchorMs` is the median gap of the pile holding
+the most gaps (`matrix/ladder.py::default_anchor`): D-09 as changed by implementation 02, Phase 2.
+When the hand asked for has no pile, both hands are measured and `hand` says `both`. `anchorMs` is
+`null` for a piece with no gaps (nothing played yet, or one chord), which is not an error. `404` for
+an unknown audio, `409` when it has no notes. The Sheet step calls it on every visit and draws the
+sheet from it; the saved reading's `anchorFigure`, when there is one, replaces the negra.
+
 ### POST /time/{uuid}/ladder-preview
 
 ```json
@@ -515,6 +531,8 @@ how far apart the notes and the lines stand. One per piece: a second reading rep
 `PUT` stamps `handsRevision` with the current value from `events.json`; the client's value is
 ignored. A later edit of the notes or the hands outside the Sheet tab makes the reading stale, and
 the Sheet tab asks the reader to press **Write the sheet** again. `409` when the piece has no notes.
+Since implementation 02, Phase 2 the reading also carries `title`, `subtitle` and `artist` (each
+optional, at most 200 characters): what the sheet prints above the music.
 
 `DELETE` answers `204` and is what **Remove all** calls.
 

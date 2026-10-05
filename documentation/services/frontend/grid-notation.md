@@ -189,7 +189,7 @@ the two.
 
 **The staff gap is per line, and the page holds it.** `setStaffGapAt(column, gap)` spreads the one
 line that column falls on; `setStaffGap` is still the page's own, which every line that has not been
-spread takes. The renderer reports a drag through `onStaffGapsChange` and `RhythmPage` keeps the
+spread takes. The renderer reports a drag through `onStaffGapsChange` and `SheetPage` keeps the
 list, because the renderer is rebuilt on the reader's next edit and anything it alone remembered
 would go with it. Lines can be different heights as a result, and `planPages` takes a
 `systemHeights` list so a page is never given more lines than fit.
@@ -235,7 +235,7 @@ with it.
 
 **A range drag says so.** `onSelectRange(range, { adjusting: true })` when the reader is pulling one
 end of a stretch that already exists. From inside the view the two gestures look identical; to a
-host they are not, and treating an adjustment as a fresh selection made `RhythmPage` re-place its
+host they are not, and treating an adjustment as a fresh selection made `SheetPage` re-place its
 panel on every pixel of the drag — next to the *handle*, so the panel walked along underneath the
 stretch being dragged out.
 
@@ -259,7 +259,7 @@ Which is why the effect that builds it depends on the music and the key, **never
 Callbacks change identity on every parent render, and depending on them would tear the renderer down
 constantly. They live in a ref the effect reads at call time.
 
-The same reasoning applies upward. `RhythmPage` holds every edit in one object behind
+The same reasoning applies upward. `SheetPage` holds every edit in one object behind
 `useEditHistory`, and the setters that write to it are made once and are the same function on every
 render. A setter that changed identity would land in this effect's dependency list and rebuild every
 note on every render of the page, closing the toolbox the reader is typing in.
