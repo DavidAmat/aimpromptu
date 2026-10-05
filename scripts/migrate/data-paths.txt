@@ -16,7 +16,7 @@ aitu-backend/data/audio
 aitu-backend/data/frame-examples/cache
 
 # The Synthesia screenshots of implementation 04. The 04 and 05 POCs read them.
-context/implementations/04-synthesia-to-notes/examples
+context/implementations/01-mvp/04-synthesia-to-notes/examples
 
 # The 04 POC: its test videos and sampled frames, and the pictures it wrote.
 pocs/poc-synthesia-frames/data/video

@@ -1,5 +1,5 @@
 > Context: [context/backend/time-model.md](../../../context/backend/time-model.md) ·
-> [context/implementations/03-time-based-concept/contract.md](../../../context/implementations/03-time-based-concept/contract.md)
+> [context/implementations/03-time-based-concept/contract.md](../../../context/implementations/01-mvp/03-time-based-concept/contract.md)
 
 # The time matrix: schema 2.0 field reference
 
@@ -9,9 +9,9 @@ Every model the backend and the drawing package agree on, field by field. The mo
 renamed in one has to be renamed in the other in the same change.
 
 The reasoning behind the model is in
-[`PRD.md`](../../../context/implementations/03-time-based-concept/PRD.md); the numbered decisions
+[`PRD.md`](../../../context/implementations/01-mvp/03-time-based-concept/PRD.md); the numbered decisions
 this file cites (`D-nn`) are in
-[`decisions.md`](../../../context/implementations/03-time-based-concept/decisions.md).
+[`decisions.md`](../../../context/implementations/01-mvp/03-time-based-concept/decisions.md).
 
 ---
 
@@ -284,5 +284,5 @@ puts every note at the wrong time, and a warning the reader can see is the only 
 - [`rhythm-and-annotations.md`](rhythm-and-annotations.md) — `rhythm.json`, the reader's decisions
 - [`paths-and-data.md`](paths-and-data.md) — where these files sit on disk
 - [`../frontend/grid-notation.md`](../frontend/grid-notation.md) — the package that draws the payload
-- [`contract.md`](../../../context/implementations/03-time-based-concept/contract.md) — the frozen
+- [`contract.md`](../../../context/implementations/01-mvp/03-time-based-concept/contract.md) — the frozen
   interface, §2 and §5

@@ -40,7 +40,7 @@ Done 2026-09-28. Report: [`08-implementation-phase-0.md`](08-implementation-phas
 
 # [x] Phase 1: MuScriptor on Ubuntu, and what it outputs (on Ubuntu)
 
-Done 2026-09-28. Report: [`08-implementation-phase-1.md`](08-implementation-phase-1.md). Results: [`../../../pocs/poc-muscriptor/RESULTS.md`](../../../pocs/poc-muscriptor/RESULTS.md).
+Done 2026-09-28. Report: [`08-implementation-phase-1.md`](08-implementation-phase-1.md). Results: [`../../../../pocs/poc-muscriptor/RESULTS.md`](../../../../pocs/poc-muscriptor/RESULTS.md).
 
 ## [x] Story 1.1: The machine
 - [x] Task 1.1.1 **The checks**: `nvidia-smi`, the driver and CUDA versions, Docker, the NVIDIA Container Toolkit, `uv`, Node, `ffmpeg`. Anything missing goes to HUMAN INTERVENTION. Nothing missing; the GPU is seen from a container (`nvidia/cuda:12.9.1-base-ubuntu24.04`).
@@ -63,7 +63,7 @@ Done 2026-09-28. Report: [`08-implementation-phase-1.md`](08-implementation-phas
 
 # [x] Phase 2: The piano matrix notation format
 
-Done 2026-09-28. Report: [`08-implementation-phase-2.md`](08-implementation-phase-2.md). Specification: [`../../backend/piano-matrix-notation.md`](../../backend/piano-matrix-notation.md).
+Done 2026-09-28. Report: [`08-implementation-phase-2.md`](08-implementation-phase-2.md). Specification: [`../../../backend/piano-matrix-notation.md`](../../../backend/piano-matrix-notation.md).
 
 ## [x] Story 2.1: The `pmn` module
 - [x] Task 2.1.1 **The sparse form**: `id`, `key`, `onMs`, `lenMs`, `hand`, as NumPy arrays. `pmn/notes.py`; times are float ms in memory (0.1 ms of the old pieces kept), plus `velocity` and `removed`.

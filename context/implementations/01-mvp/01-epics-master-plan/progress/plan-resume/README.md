@@ -37,7 +37,7 @@ summarised.
 
 One more commit from the same window, `4da19a2` — the hand-inference second pass — **was** already
 documented, in
-[`documentation/services/backend/hand-inference-second-pass.md`](../../../../../documentation/services/backend/hand-inference-second-pass.md).
+[`documentation/services/backend/hand-inference-second-pass.md`](../../../../../../documentation/services/backend/hand-inference-second-pass.md).
 It is listed here only so the window is complete.
 
 ## What ties them together

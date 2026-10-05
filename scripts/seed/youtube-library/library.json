@@ -12,7 +12,7 @@
     "`alias` is what the piece is called in the app's Audio library.",
     "`skip` marks a line that is deliberately not downloaded, with the reason."
   ],
-  "parsedFrom": "library/01-starting-library.md",
+  "parsedFrom": "scripts/seed/youtube-library/01-starting-library.md",
   "parsedAt": "2026-09-13",
   "lineCount": 31,
   "downloadCount": 30,

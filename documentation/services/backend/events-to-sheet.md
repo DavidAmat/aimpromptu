@@ -345,4 +345,4 @@ reader notices:
 - [`transcription-pipeline.md`](transcription-pipeline.md) — engines and their parameters
 - [`hand-inference-second-pass.md`](hand-inference-second-pass.md) — the gated repair pass
 - [`rhythm-and-annotations.md`](rhythm-and-annotations.md) — what is stored beside `events.json`
-- [`decisions.md`](../../../context/implementations/03-time-based-concept/decisions.md) — D-01 … D-34
+- [`decisions.md`](../../../context/implementations/01-mvp/03-time-based-concept/decisions.md) — D-01 … D-34

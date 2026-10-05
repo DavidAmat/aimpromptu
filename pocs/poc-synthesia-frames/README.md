@@ -1,13 +1,13 @@
 # PoC — reading a Synthesia frame
 
 **Status:** research spike, Phase 1 of
-[`04-synthesia-to-notes`](../../context/implementations/04-synthesia-to-notes/04-plan.md).
+[`04-synthesia-to-notes`](../../context/implementations/01-mvp/04-synthesia-to-notes/04-plan.md).
 Nothing here is wired into the app, imports the app, or writes anywhere the app
 reads. It reads the example screenshots and one video downloaded by hand, and it
 produces pictures and tables.
 
 The conclusions are in [`RESULTS.md`](RESULTS.md) and, for the next agent, in
-[`04-phase-1-implementation.md`](../../context/implementations/04-synthesia-to-notes/04-phase-1-implementation.md).
+[`04-phase-1-implementation.md`](../../context/implementations/01-mvp/04-synthesia-to-notes/04-phase-1-implementation.md).
 
 ---
 

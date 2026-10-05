@@ -1,10 +1,10 @@
-"""Seed the audio library from `library/library.json`, then transcribe it.
+"""Seed the audio library from `scripts/seed/youtube-library/library.json`, then transcribe it.
 
 Run it from `aitu-backend/`, which is where the backend's dependencies and its
 `data/` tree live::
 
     cd aitu-backend
-    nohup uv run python ../library/seed_library.py > /dev/null 2>&1 &
+    nohup uv run python ../scripts/seed/youtube-library/seed_library.py > /dev/null 2>&1 &
 
 Two phases, in order, one piece at a time:
 

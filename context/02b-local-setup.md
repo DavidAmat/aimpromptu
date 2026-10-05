@@ -572,6 +572,6 @@ When an agent gives the user a URL of the app, it gives this tunnel command with
 ### 12.4 Things to know
 
 - **A lost GPU in the container.** After the host's service manager reloads (for example after a system update), a running container can lose its GPU: `GET /matrix/engine` says "No CUDA GPUs are available" and a transcription ends at once with no notes. `docker compose up -d --force-recreate backend` gives it back.
-- **Ubuntu has no access to the Mac.** Remote Login is on for the Mac, but Ubuntu has no key or `Host mac` entry for it. Phase 0 of implementation 08 wrote the steps (`context/implementations/08-new-algorithm-notes-detection-muscriptor/08-implementation-phase-0.md`), and they are optional: nothing in the project needs files from the Mac now.
+- **Ubuntu has no access to the Mac.** Remote Login is on for the Mac, but Ubuntu has no key or `Host mac` entry for it. Phase 0 of implementation 08 wrote the steps (`context/implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-implementation-phase-0.md`), and they are optional: nothing in the project needs files from the Mac now.
 - **Disk.** The backend image is 10.4 GB (almost all of it PyTorch with its CUDA libraries) and the frontend image 1 GB; both live in Docker's data root on `/mnt/ssd2/docker`.
 - **Commands and troubleshooting** for the containers are in `context/04-local-development.md`.

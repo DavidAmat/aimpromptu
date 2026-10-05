@@ -68,7 +68,7 @@ live bar.
 ## 2.3 The documentation
 
 The pages that describe one entity follow the two-folder rule of
-[`00-documentation-instructions.md`](../../00-documentation-instructions.md): an overview in
+[`00-documentation-instructions.md`](../../../00-documentation-instructions.md): an overview in
 `context/` (what it is and how it flows, under 200 lines) and the exact routes, fields and paths in
 `documentation/`. The engine and the steps got their own overview pages because no existing page
 could hold them; the flow page likewise. `piano-matrix-notation.md` (Phase 2) was already current

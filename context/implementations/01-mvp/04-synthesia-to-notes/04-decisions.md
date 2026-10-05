@@ -404,7 +404,7 @@ more, and that is the point.
 
 V-39 to V-41 were added by Phase 1 of implementation 05, from
 [`../05-piano-overlay-from-black-keys/05-phase-1-implementation.md`](../05-piano-overlay-from-black-keys/05-phase-1-implementation.md)
-and the evidence in [`../../../pocs/poc-piano-overlay/RESULTS.md`](../../../pocs/poc-piano-overlay/RESULTS.md).
+and the evidence in [`../../../../pocs/poc-piano-overlay/RESULTS.md`](../../../../pocs/poc-piano-overlay/RESULTS.md).
 Every one of them has a measurement behind it, as V-20 requires.
 
 V-39 — The rectangles fall vertically in the picture, so a lane is a vertical strip whatever the

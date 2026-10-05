@@ -1,7 +1,7 @@
 # PoC: MuScriptor on the RTX 4090
 
 **Status:** research spike for implementation 08, Phase 1
-([`../../context/implementations/08-new-algorithm-notes-detection-muscriptor/08-plan.md`](../../context/implementations/08-new-algorithm-notes-detection-muscriptor/08-plan.md)).
+([`../../context/implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-plan.md`](../../context/implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-plan.md)).
 Nothing here is wired into the app. It reads the stored audio of Superestrella and the
 stored ByteDance `events.json`, and writes only under `out/`.
 

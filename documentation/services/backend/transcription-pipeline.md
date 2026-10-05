@@ -473,5 +473,5 @@ nothing at all. That was the state until 2026-09-13.
   the stored notes, the ids and the revisions
 - [`endpoints.md`](endpoints.md): the routes that start and follow a transcription
 - [`../../issues/piano-matrix-sustains-and-phantom-onsets.md`](../../issues/piano-matrix-sustains-and-phantom-onsets.md): the runbook
-- `context/implementations/08-new-algorithm-notes-detection-muscriptor/`: the plan and the phase
+- `context/implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/`: the plan and the phase
   reports behind every MuScriptor number on this page

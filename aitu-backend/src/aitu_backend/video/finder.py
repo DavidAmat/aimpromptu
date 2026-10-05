@@ -4,7 +4,7 @@ The user drags one rectangle over the piano area and everything inside it is
 found. This is the port of `pocs/poc-piano-overlay/scripts/blackkeys.py` and the
 route A half of `routes.py`; every threshold below carries the measurement Phase
 1 of implementation 05 made for it, in
-`context/implementations/05-piano-overlay-from-black-keys/05-phase-1-implementation.md`
+`context/implementations/01-mvp/05-piano-overlay-from-black-keys/05-phase-1-implementation.md`
 and `pocs/poc-piano-overlay/RESULTS.md`. A rule with no measurement beside it does
 not ship (V-20).
 

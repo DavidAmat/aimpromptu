@@ -4,7 +4,7 @@ Task 2.3.1, and the algorithm of section 8 of the plan. It has no idea whether
 the picture came from an example screenshot or from a sampled frame of a video.
 
 Every threshold below carries the measurement Phase 1 made for it; the report is
-`context/implementations/04-synthesia-to-notes/04-phase-1-implementation.md` and
+`context/implementations/01-mvp/04-synthesia-to-notes/04-phase-1-implementation.md` and
 the evidence is `pocs/poc-synthesia-frames/RESULTS.md`. A rule with no measurement
 beside it does not ship (V-20).
 

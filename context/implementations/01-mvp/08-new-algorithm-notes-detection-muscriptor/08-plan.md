@@ -3,8 +3,8 @@
 Read the prompt this plan answers first: [`08-prompt.md`](08-prompt.md). The status lookup is
 [`08-checklist.md`](08-checklist.md). Phase reports go beside them as `08-implementation-phase-N.md`,
 written by the agent that finishes phase N, following
-[`../../language/communication-implementation-plans.md`](../../language/communication-implementation-plans.md)
-and [`../../language/communication-style.md`](../../language/communication-style.md).
+[`../../../language/communication-implementation-plans.md`](../../../language/communication-implementation-plans.md)
+and [`../../../language/communication-style.md`](../../../language/communication-style.md).
 
 The binding rules of the project still apply: the five rules of
 [`../01-epics-master-plan/plan/wall-clock-rewrite.md`](../01-epics-master-plan/plan/wall-clock-rewrite.md),
@@ -55,7 +55,7 @@ matrix notation." The exploration of the code confirmed six concrete problems:
 
 The Mac mini is too small for a 1.4 billion parameter model, and it has no NVIDIA GPU. The Ubuntu
 machine (`david-ubuntu`, RTX 4090, 64 GB of RAM, described in
-[`../../02b-local-setup.md`](../../02b-local-setup.md)) is where MuScriptor, the backend and the
+[`../../../02b-local-setup.md`](../../../02b-local-setup.md)) is where MuScriptor, the backend and the
 frontend will run. The Mac stays as the browser, reached through one SSH tunnel.
 
 ---
@@ -110,7 +110,7 @@ These facts come from the paper (`muscriptor_paper.pdf`) and from reading the re
 `github.com/muscriptor/muscriptor` (version 0.3.0). When the plan was written they were documented
 facts, not measurements. Phase 1 measured the ones marked "to measure", and the rows marked
 "Phase 1" now carry the measured answer. The full results are in
-[`../../../pocs/poc-muscriptor/RESULTS.md`](../../../pocs/poc-muscriptor/RESULTS.md).
+[`../../../../pocs/poc-muscriptor/RESULTS.md`](../../../../pocs/poc-muscriptor/RESULTS.md).
 
 | Fact | Consequence for us |
 |---|---|
@@ -231,7 +231,7 @@ pieces transcribed by ByteDance store 0.1 ms, a column is chosen by rounding, an
 time to a whole millisecond could move an onset to the next column and detach the reader's marks. A
 MuScriptor piece has whole milliseconds only, so nothing changes for the new pieces. The wire form
 rounds to whole milliseconds; `.pmn.json` keeps one decimal. The specification is
-[`../../backend/piano-matrix-notation.md`](../../backend/piano-matrix-notation.md).
+[`../../../backend/piano-matrix-notation.md`](../../../backend/piano-matrix-notation.md).
 
 **Changed in Phase 4.** The first version of the table above said "milliseconds of the original
 audio timeline". That was written before Q-1 was answered. The answer (section 9.2) makes the piece

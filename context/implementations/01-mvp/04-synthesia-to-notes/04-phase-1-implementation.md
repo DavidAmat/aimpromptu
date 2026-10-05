@@ -4,8 +4,8 @@ Technical, for the agent that takes Phase 2. The plan is [`04-plan.md`](04-plan.
 the frozen decisions [`04-decisions.md`](04-decisions.md), the status
 [`04-checklist.md`](04-checklist.md).
 
-The work lives in [`../../../pocs/poc-synthesia-frames/`](../../../pocs/poc-synthesia-frames)
-at the repository root. Its [`RESULTS.md`](../../../pocs/poc-synthesia-frames/RESULTS.md)
+The work lives in [`../../../../pocs/poc-synthesia-frames`](../../../../pocs/poc-synthesia-frames)
+at the repository root. Its [`RESULTS.md`](../../../../pocs/poc-synthesia-frames/RESULTS.md)
 holds every table in full and `out/run_log.txt` is one run of every script. This
 report is the argument; that file is the evidence.
 
@@ -97,7 +97,7 @@ calibration. The problem is far easier and does not need a model.
 ## 2. Task 1.2.1 — the casuistry catalogue
 
 The measurable half is in
-[`RESULTS.md` section 1](../../../pocs/poc-synthesia-frames/RESULTS.md). The half a
+[`RESULTS.md` section 1](../../../../pocs/poc-synthesia-frames/RESULTS.md). The half a
 human has to read is here. All 21 were looked at; the thumbnails are in
 `out/thumbs/`.
 
@@ -200,7 +200,7 @@ the real piano offsets, is needed and its default should be the real one.
 
 ## 4. Task 1.2.2 — the five detectors
 
-Full tables in [`RESULTS.md` section 4](../../../pocs/poc-synthesia-frames/RESULTS.md).
+Full tables in [`RESULTS.md` section 4](../../../../pocs/poc-synthesia-frames/RESULTS.md).
 The short version:
 
 - **The single row watcher, the baseline the plan asked to beat, loses badly.**
@@ -376,7 +376,7 @@ piece as one tall picture whose vertical axis is time. The strip is taken 40
 rows down from the top of the frame, as far from the upper line as it gets, so
 **there is no halo, no sparkle and no strike light in it at all.**
 
-[`out/stitch/roll.jpg`](../../../pocs/poc-synthesia-frames/out/stitch/roll.jpg) is
+[`out/stitch/roll.jpg`](../../../../pocs/poc-synthesia-frames/out/stitch/roll.jpg) is
 ten seconds of the piece rebuilt that way. Every note is one clean separate
 shape. Thirty seconds of it, labelled with connected components:
 

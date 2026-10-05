@@ -1,7 +1,7 @@
 # poc-piano-overlay
 
 Phase 1 of implementation 05, the piano overlay found from the black keys:
-[`../context/implementations/05-piano-overlay-from-black-keys/05-plan.md`](../../context/implementations/05-piano-overlay-from-black-keys/05-plan.md).
+[`../../context/implementations/01-mvp/05-piano-overlay-from-black-keys/05-plan.md`](../../context/implementations/01-mvp/05-piano-overlay-from-black-keys/05-plan.md).
 Nothing here ships. Phase 3 ports `blackkeys.py` and the route A half of `routes.py` into
 `aitu_backend/video/finder.py`; the line reader stays here as the tool the truth was read with.
 

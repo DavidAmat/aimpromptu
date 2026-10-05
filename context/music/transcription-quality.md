@@ -157,4 +157,4 @@ Full reasoning in [`../backend/time-model.md`](../backend/time-model.md); the de
 - [documentation/issues/rhythm-figures-and-tempo.md](../../documentation/issues/rhythm-figures-and-tempo.md) — **retired.** The bug class layer 4 produced, kept as the record of it
 - [`../backend/time-model.md`](../backend/time-model.md) — the model that replaced layer 4
 - [archive/superseded/01-matrix-notation-logic.md](../archive/superseded/01-matrix-notation-logic.md) — Appendix B (sustains), still in force; the rest is history
-- [../research/piano-transcription/piano-transcription-python-solutions.md](../research/piano-transcription/piano-transcription-python-solutions.md) — the engine survey
+- [../archive/piano-transcription-python-solutions.md](../archive/piano-transcription-python-solutions.md) — the engine survey

@@ -94,7 +94,9 @@ def repo_root() -> Path:
 
 def frame_examples_source_dir() -> Path:
     """The example screenshots, read only, where the plan keeps them."""
-    return repo_root() / "context" / "implementations" / "04-synthesia-to-notes" / "examples"
+    return (
+        repo_root() / "context" / "implementations" / "01-mvp" / "04-synthesia-to-notes" / "examples"
+    )
 
 
 def frame_examples_root() -> Path:

@@ -87,7 +87,7 @@ which are open):
 | **08 — MuScriptor** | MuScriptor as the only engine, the live piano roll and its editor, the hand split as a step, the flow page, revisions, and the move to the Ubuntu machine with containers. Complete 2026-10-01 |
 
 The third one replaced the model the first eight epics were built on, which is why several epic
-task files were rewritten mid-plan. [`wall-clock-rewrite.md`](implementations/01-epics-master-plan/plan/wall-clock-rewrite.md)
+task files were rewritten mid-plan. [`wall-clock-rewrite.md`](implementations/01-mvp/01-epics-master-plan/plan/wall-clock-rewrite.md)
 is the bridge between them.
 
 ## POC boundaries (out of scope)

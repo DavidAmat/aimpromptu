@@ -1,7 +1,7 @@
 """Shared pieces of the Phase 1 research spike.
 
 Nothing here is imported by the app. It reads the example screenshots in
-context/implementations/04-synthesia-to-notes/examples and writes pictures and
+context/implementations/01-mvp/04-synthesia-to-notes/examples and writes pictures and
 tables into pocs/poc-synthesia-frames/out.
 
 Working resolution is 1280 px wide on purpose: Phase 3 caps the video download
@@ -18,7 +18,7 @@ import numpy as np
 from PIL import Image
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-EXAMPLES = ROOT / "context/implementations/04-synthesia-to-notes/examples"
+EXAMPLES = ROOT / "context/implementations/01-mvp/04-synthesia-to-notes/examples"
 OUT = ROOT / "pocs/poc-synthesia-frames/out"
 DATA = ROOT / "pocs/poc-synthesia-frames/data"
 WORK_WIDTH = 1280

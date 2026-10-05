@@ -1,7 +1,7 @@
 """The example set: the screenshots, their calibrations and their annotations.
 
 Task 2.2.1. The screenshots stay where the user put them, under
-`context/implementations/04-synthesia-to-notes/examples/`, and are read from
+`context/implementations/01-mvp/04-synthesia-to-notes/examples/`, and are read from
 there; only what we derive from them is data. Every example needs its own
 calibration because every example is a different piano.
 """

@@ -4,7 +4,7 @@
 [`05-prompt.md`](05-prompt.md), the plan is [`05-plan.md`](05-plan.md) and the status lookup is
 [`05-checklist.md`](05-checklist.md). Phase reports go beside them as `05-phase-X-implementation.md`,
 following
-[`../../language/communication-implementation-plans.md`](../../language/communication-implementation-plans.md).
+[`../../../language/communication-implementation-plans.md`](../../../language/communication-implementation-plans.md).
 
 | File | What it is |
 |---|---|
@@ -14,7 +14,7 @@ following
 | [`05-phase-1-implementation.md`](05-phase-1-implementation.md) | Phase 1: the black key finder, the truth, two families, the rectangles fall vertically, route A chosen |
 | [`05-phase-2-implementation.md`](05-phase-2-implementation.md) | Phase 2: per-key borders in both services, the grid upgrade, the score board unchanged |
 | [`05-phase-3-implementation.md`](05-phase-3-implementation.md) | Phase 3: the finder in the app, every example found, the one rectangle on the screen |
-| [`../../../pocs/poc-piano-overlay/`](../../../pocs/poc-piano-overlay/README.md) | Phase 1's spike: the truth, the families, both routes and their scores |
+| [`../../../pocs/poc-piano-overlay/`](../../../../pocs/poc-piano-overlay/README.md) | Phase 1's spike: the truth, the families, both routes and their scores |
 
 ## What it is for
 

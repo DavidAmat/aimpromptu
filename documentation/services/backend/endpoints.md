@@ -104,7 +104,7 @@ The last two are the project's original MVP and are **not** part of the wall-clo
 
 The video reader's routers (`/video` in `api/video.py`, `/frame-examples` in
 `api/frame_examples.py`, implementations 04 to 07) are not described on this page. Their reasoning
-is in `context/implementations/04-synthesia-to-notes/` and `05-piano-overlay-from-black-keys/`.
+is in `context/implementations/01-mvp/04-synthesia-to-notes/` and `05-piano-overlay-from-black-keys/`.
 
 ---
 

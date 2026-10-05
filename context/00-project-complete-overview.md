@@ -40,7 +40,7 @@ The two jobs are now separate numbers.
 Renaming a note moves nothing. Changing your mind costs one click and no re-timing.
 
 Full reasoning: [backend/time-model.md](backend/time-model.md). The frozen decisions behind it are
-[`decisions.md`](implementations/03-time-based-concept/decisions.md), D-01 … D-34.
+[`decisions.md`](implementations/01-mvp/03-time-based-concept/decisions.md), D-01 … D-34.
 
 ## One stored file
 
@@ -107,7 +107,7 @@ on a note · re-record a marked passage at any speed · add a passage to a piece
 save the reading with the piece · export a vector PDF · play the recording and follow the line.
 
 Detail: [frontend/annotations.md](frontend/annotations.md). Click by click:
-[`user-reviews.md`](implementations/03-time-based-concept/user-reviews.md).
+[`user-reviews.md`](implementations/01-mvp/03-time-based-concept/user-reviews.md).
 
 ## The API
 

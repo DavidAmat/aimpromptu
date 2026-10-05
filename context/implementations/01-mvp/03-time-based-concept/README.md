@@ -31,7 +31,7 @@ in one place — including work done inside `vexflow-v2`. Both repositories are 
 | [`progress/2026-08-08-overwrite-and-recovery.md`](progress/2026-08-08-overwrite-and-recovery.md) | The twelve backend files that were destroyed and rebuilt. **Authoritative over any comment inside them** |
 
 The session trail for the whole refactor is
-[`../progress/2026-08-10-time-based-concept-closed.md`](../01-epics-master-plan/progress/2026-08-10-time-based-concept-closed.md).
+[`../01-epics-master-plan/progress/2026-08-10-time-based-concept-closed.md`](../01-epics-master-plan/progress/2026-08-10-time-based-concept-closed.md).
 
 ## The reporting rule (while this plan was live)
 
@@ -48,14 +48,14 @@ order is reconstructable at all.
 ## Origin
 
 The measurement that motivated this lives in
-[`../../../pocs/poc-onset-duration-distribution/`](../../../pocs/poc-onset-duration-distribution/) —
+[`../../../../pocs/poc-onset-duration-distribution/`](../../../../pocs/poc-onset-duration-distribution/) —
 `RESULTS.md` there is the evidence base for D-07 (measure on raw times) and for the worked example
 at 00:46 that showed the old pipeline printing three equal corcheas as
 semicorchea / dotted corchea / semicorchea. That example is now a regression test.
 
 ## Where to look deeper
 
-- [`../../music/transcription-quality.md`](../../music/transcription-quality.md) — the four layers between audio and a printed figure. Layers 1–3 still hold; layer 4 is what this refactor replaced
-- [`../../archive/superseded/01-matrix-notation-logic.md`](../../archive/superseded/01-matrix-notation-logic.md) — the notation model that was replaced, banner-marked as obsolete
-- [`../../../documentation/issues/rhythm-figures-and-tempo.md`](../../../documentation/issues/rhythm-figures-and-tempo.md) — the runbook this refactor retired
-- [`../plan/checklist.md`](../01-epics-master-plan/plan/checklist.md) — the original Epic 1–14 plan; this refactor superseded parts of Epics 2, 4 and 9
+- [`../../../music/transcription-quality.md`](../../../music/transcription-quality.md) — the four layers between audio and a printed figure. Layers 1–3 still hold; layer 4 is what this refactor replaced
+- [`../../../archive/superseded/01-matrix-notation-logic.md`](../../../archive/superseded/01-matrix-notation-logic.md) — the notation model that was replaced, banner-marked as obsolete
+- [`../../../../documentation/issues/rhythm-figures-and-tempo.md`](../../../../documentation/issues/rhythm-figures-and-tempo.md) — the runbook this refactor retired
+- [`../01-epics-master-plan/plan/checklist.md`](../01-epics-master-plan/plan/checklist.md) — the original Epic 1–14 plan; this refactor superseded parts of Epics 2, 4 and 9

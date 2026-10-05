@@ -85,7 +85,7 @@ runs once, when the user presses **Predict hands**, and the result is saved as a
 `events.json`. When every live note has a hand, the piano sheet paints the two hand matrices from
 those hands instead of running the inference: the same cells on all 34 pieces of the library, in
 17 ms instead of 670 ms (median). The note under D-31 in
-[`decisions.md`](../implementations/03-time-based-concept/decisions.md) explains the sequence.
+[`decisions.md`](../implementations/01-mvp/03-time-based-concept/decisions.md) explains the sequence.
 
 A hand moved on the piano sheet (`PUT /time/{uuid}/hands`) is written by note id into the same
 saved hands, so the Hands tab shows it too. On an old piece the first move saves every hand as the
@@ -96,5 +96,5 @@ sheet draws it, then applies the move.
 - The format of `events.json` and the wire columns: [piano-matrix-notation.md](piano-matrix-notation.md)
 - The engine that writes the notes: [muscriptor.md](muscriptor.md)
 - Every field of every route: [`documentation/services/backend/endpoints.md`](../../documentation/services/backend/endpoints.md)
-- The design and its tests: [plan section 8](../implementations/08-new-algorithm-notes-detection-muscriptor/08-plan.md),
+- The design and its tests: [plan section 8](../implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-plan.md),
   `aitu-backend/tests/test_pieces.py`

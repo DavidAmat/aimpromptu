@@ -10,7 +10,7 @@ resolution. A wall-clock matrix envelope carries one header field about time, `f
 milliseconds one column covers.
 
 Where this page and
-[`contract.md`](../../implementations/03-time-based-concept/contract.md) describe the same thing,
+[`contract.md`](../../implementations/01-mvp/03-time-based-concept/contract.md) describe the same thing,
 that one wins. For what the app actually does, start at
 [`context/backend/time-model.md`](../../backend/time-model.md).
 

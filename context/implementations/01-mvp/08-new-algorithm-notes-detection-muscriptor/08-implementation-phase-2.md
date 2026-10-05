@@ -2,7 +2,7 @@
 
 The plan is [`08-plan.md`](08-plan.md) section 6 and section 12, Phase 2. The status lookup is
 [`08-checklist.md`](08-checklist.md). The specification page written in this phase is
-[`../../backend/piano-matrix-notation.md`](../../backend/piano-matrix-notation.md). This report is
+[`../../../backend/piano-matrix-notation.md`](../../../backend/piano-matrix-notation.md). This report is
 for the agents of later phases: what was built, the choices made inside the phase, the
 measurements, and what Phases 3 to 8 must know.
 

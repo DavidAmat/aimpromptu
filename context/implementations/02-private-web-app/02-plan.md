@@ -273,7 +273,7 @@ when no other project uses it (section 8.5). The app context asks for this to sa
 | Notes Falling | `pages/playground/NotesFallingPage.tsx` | A view of Play mode (Q-4) |
 | The video reader | `aitu-backend/src/aitu_backend/video/`, `pages/video/` | A source of From source (Q-4); its development pages in Lab |
 | Jobs and progress streams | `transcription/jobs.py`, `hooks/useProgress.ts` | Unchanged, with an owner per job (section 18) |
-| The seed list of 31 songs | `library/library.json`, `library/seed-state.json` (it maps each uuid to a title and an artist) | The artist and song of the migrated pieces (Phase 3) |
+| The seed list of 31 songs | `scripts/seed/youtube-library/library.json`, `seed-state.json` beside it (it maps each uuid to a title and an artist) | The artist and song of the migrated pieces (Phase 3) |
 | Playwright on Ubuntu | `scripts/check-flow.mjs`, `screenshot.mjs` | Screenshots at the end of every UI phase |
 
 ---
@@ -629,7 +629,7 @@ promotions) is deleted, with its storage modules (`storage/repository.py`, `prom
 2. For each `aitu-backend/data/audio/<uuid>/` with notes: a project with one part (id = uuid);
    `events.json` → `notes.pmn`, `rhythm.json` → `sheet.json`, `metadata.json` cuts → timeline, audio
    files → `audio/<hash>`, `history/` → `.database/history/`.
-3. A piece found in `library/seed-state.json` (it maps the uuid to a title and an artist) goes to the
+3. A piece found in `scripts/seed/youtube-library/seed-state.json` (it maps the uuid to a title and an artist) goes to the
    master user's Private Library, under a private song and a private artist, version name "original".
    Every other piece goes to the master user's Personal Vault.
 4. A piece with a video: the video folder goes to `tmp/<masterId>/` and stays there.

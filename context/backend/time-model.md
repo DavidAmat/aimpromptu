@@ -4,8 +4,8 @@ What replaced tempo, why, and the rules everything downstream obeys. This is the
 important idea in the project: almost every other design decision follows from it.
 
 The reasoning at length is in
-[`PRD.md`](../implementations/03-time-based-concept/PRD.md); the numbered decisions are
-[`decisions.md`](../implementations/03-time-based-concept/decisions.md) (D-01 … D-34) and they stay
+[`PRD.md`](../implementations/01-mvp/03-time-based-concept/PRD.md); the numbered decisions are
+[`decisions.md`](../implementations/01-mvp/03-time-based-concept/decisions.md) (D-01 … D-34) and they stay
 frozen and valid.
 
 ## The problem it solves
@@ -126,5 +126,5 @@ reasoning, not unfinished work.
   — every schema 2.0 field
 - [`documentation/services/backend/rhythm-and-annotations.md`](../../documentation/services/backend/rhythm-and-annotations.md)
   — what is stored beside `events.json`
-- [`decisions.md`](../implementations/03-time-based-concept/decisions.md) — D-01 … D-34, frozen
-- [`CLOSURE.md`](../implementations/03-time-based-concept/CLOSURE.md) — how the refactor closed
+- [`decisions.md`](../implementations/01-mvp/03-time-based-concept/decisions.md) — D-01 … D-34, frozen
+- [`CLOSURE.md`](../implementations/01-mvp/03-time-based-concept/CLOSURE.md) — how the refactor closed

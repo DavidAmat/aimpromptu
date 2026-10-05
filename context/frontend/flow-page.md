@@ -107,4 +107,4 @@ removed in Phase 9 of implementation 08 (decision Q-4), because the Notes and Ha
   [backend/muscriptor.md](../backend/muscriptor.md)
 - The piano sheet itself: [rendering.md](rendering.md), [annotations.md](annotations.md)
 - The plan and the phase reports:
-  [`implementations/08-new-algorithm-notes-detection-muscriptor/`](../implementations/08-new-algorithm-notes-detection-muscriptor/README.md)
+  [`implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/`](../implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/README.md)

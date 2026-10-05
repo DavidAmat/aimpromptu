@@ -141,7 +141,7 @@ saved. The drawing package handles it; nothing stores it.
 > **Closed since.** `SavedRhythm.keyChanges` stores them now. A *different* gap of exactly the same
 > shape was found on 2026-09-13 — octave brackets were sent by the page and dropped by the backend,
 > so they did not survive a reload — and closed the same day. Both are stored. See
-> [`rhythm-and-annotations.md`](../../../documentation/services/backend/rhythm-and-annotations.md).
+> [`rhythm-and-annotations.md`](../../../../documentation/services/backend/rhythm-and-annotations.md).
 
 ---
 

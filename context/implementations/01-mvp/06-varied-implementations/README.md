@@ -4,7 +4,7 @@
 finished product, one plan at a time. The first brief is [`06-prompt.md`](06-prompt.md), the plan is
 [`06-plan.md`](06-plan.md) and the status lookup is [`06-checklist.md`](06-checklist.md). Phase
 reports go beside them as `06-phase-X-implementation.md`, following
-[`../../language/communication-implementation-plans.md`](../../language/communication-implementation-plans.md).
+[`../../../language/communication-implementation-plans.md`](../../../language/communication-implementation-plans.md).
 
 | File | What it is |
 |---|---|

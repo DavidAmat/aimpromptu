@@ -9,7 +9,7 @@ five tabs, and Phase 9's checks, documentation and the removal of the old Piano 
 to do. The brief is [`08-prompt.md`](08-prompt.md), the plan
 is [`08-plan.md`](08-plan.md) and the status lookup is [`08-checklist.md`](08-checklist.md). Phase
 reports go beside them as `08-implementation-phase-N.md`, following
-[`../../language/communication-implementation-plans.md`](../../language/communication-implementation-plans.md).
+[`../../../language/communication-implementation-plans.md`](../../../language/communication-implementation-plans.md).
 
 | File | What it is |
 |---|---|
@@ -41,9 +41,9 @@ over several lines). ByteDance and Transkun stay in the code.
 
 ## Where the result is documented
 
-[`context/backend/muscriptor.md`](../../backend/muscriptor.md) (the engine),
-[`context/backend/pieces-and-revisions.md`](../../backend/pieces-and-revisions.md) (the steps and
-revisions), [`context/backend/piano-matrix-notation.md`](../../backend/piano-matrix-notation.md) (the
-format), [`context/frontend/flow-page.md`](../../frontend/flow-page.md) (the flow page),
-[`context/04-local-development.md`](../../04-local-development.md) and
-[`context/02b-local-setup.md`](../../02b-local-setup.md) section 12 (the containers and the tunnel).
+[`context/backend/muscriptor.md`](../../../backend/muscriptor.md) (the engine),
+[`context/backend/pieces-and-revisions.md`](../../../backend/pieces-and-revisions.md) (the steps and
+revisions), [`context/backend/piano-matrix-notation.md`](../../../backend/piano-matrix-notation.md) (the
+format), [`context/frontend/flow-page.md`](../../../frontend/flow-page.md) (the flow page),
+[`context/04-local-development.md`](../../../04-local-development.md) and
+[`context/02b-local-setup.md`](../../../02b-local-setup.md) section 12 (the containers and the tunnel).

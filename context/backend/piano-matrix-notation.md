@@ -5,7 +5,7 @@ per key), one column per `frameMs` of time, and a cell that is an **onset** (`1`
 struck), a **sustain** (`-1`, the key is still sounding) or silence (`0`). This page says how that
 notation is stored, how it travels to the browser, and how it converts to every other format. The
 code is one package, `aitu-backend/src/aitu_backend/pmn/`, written in implementation 08, Phase 2
-([plan section 6](../implementations/08-new-algorithm-notes-detection-muscriptor/08-plan.md)).
+([plan section 6](../implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-plan.md)).
 
 ## 1. Why a sparse form
 
@@ -177,12 +177,12 @@ request of a piece was still 0.3 to 4.3 s, because the hand split ran. Phase 4 m
 transcription job warm the split cache, and Phase 5 paints the hand matrices from the saved hands
 when every note has one (about 20 ms).
 The table per piece is in the
-[Phase 2 report](../implementations/08-new-algorithm-notes-detection-muscriptor/08-implementation-phase-2.md).
+[Phase 2 report](../implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-implementation-phase-2.md).
 
 ## Where to look deeper
 
 - The format decision and the flow around it:
-  [08-plan.md](../implementations/08-new-algorithm-notes-detection-muscriptor/08-plan.md) sections 6
+  [08-plan.md](../implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-plan.md) sections 6
   and 8.
 - The wall-clock model this format serves: [time-model.md](time-model.md).
 - The tests, one round trip per adapter: `aitu-backend/tests/test_pmn.py`.

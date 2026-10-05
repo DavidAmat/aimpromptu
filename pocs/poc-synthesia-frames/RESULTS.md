@@ -289,7 +289,7 @@ test.mp4, agreement over 120 sampled frames
 ```
 
 Five defects, in the order they were found. The full account is in
-[`04-phase-1-implementation.md`](../../context/implementations/04-synthesia-to-notes/04-phase-1-implementation.md)
+[`04-phase-1-implementation.md`](../../context/implementations/01-mvp/04-synthesia-to-notes/04-phase-1-implementation.md)
 section 11.
 
 1. **Three answers about one rectangle.** Reading every lane and then sorting

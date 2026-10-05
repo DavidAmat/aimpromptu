@@ -1,6 +1,6 @@
 # The second rendering: a roll drawn over a photograph
 
-The study behind `context/implementations/04-synthesia-to-notes/04-second-rendering-study.md`.
+The study behind `context/implementations/01-mvp/04-synthesia-to-notes/04-second-rendering-study.md`.
 Every script is run from `aitu-backend` with its own interpreter and takes a scratch folder as
 its first argument, where it reads and writes its `.npy` and `.json` intermediates:
 

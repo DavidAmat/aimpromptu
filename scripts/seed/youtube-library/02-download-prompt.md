@@ -11,11 +11,11 @@ wait for it later.
 **Read these first, in this order. Do not skip them — they are why this project does things the way
 it does, and several of them will contradict an assumption you are about to make.**
 
-1. `context/implementations/01-epics-master-plan/plan/wall-clock-rewrite.md` — the five rules every
+1. `context/implementations/01-mvp/01-epics-master-plan/plan/wall-clock-rewrite.md` — the five rules every
    task obeys, and the list of things that are dead and are not coming back.
-2. `context/implementations/03-time-based-concept/decisions.md` — the frozen decisions D-01…D-34.
+2. `context/implementations/01-mvp/03-time-based-concept/decisions.md` — the frozen decisions D-01…D-34.
    **D-09 and D-10 constrain this task directly.** A task may not reinterpret a decision.
-3. `context/implementations/01-epics-master-plan/plan/checklist.md` — what is built. Epics 1–13 are
+3. `context/implementations/01-mvp/01-epics-master-plan/plan/checklist.md` — what is built. Epics 1–13 are
    done; Epic 14 (documentation) is the only thing left.
 4. `aitu-backend/src/aitu_backend/audio/youtube.py` and `audio/store.py` — how a YouTube download
    becomes a stored piece, and the rule about what may touch `data/audio/`.
@@ -26,7 +26,7 @@ it does, and several of them will contradict an assumption you are about to make
 
 **The work.**
 
-- `library/01-starting-library.md` is the source list. Parse it into a JSON file — one entry per
+- `scripts/seed/youtube-library/01-starting-library.md` is the source list. Parse it into a JSON file — one entry per
   piece with `title`, `artist` and `url` as separate fields — and keep that file; it is the record
   of what the library is supposed to contain. The lines are handwritten and inconsistent (the artist
   is sometimes before the URL, sometimes after, sometimes missing), so read them carefully rather

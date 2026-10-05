@@ -5,7 +5,7 @@ this plan are [`04-decisions.md`](04-decisions.md), V-01 to V-34. The status loo
 [`04-checklist.md`](04-checklist.md).
 
 Phase 1 is done: its report is [`04-phase-1-implementation.md`](04-phase-1-implementation.md) and its
-work is in [`../../../pocs/poc-synthesia-frames/`](../../../pocs/poc-synthesia-frames). Phase 2 is done: its
+work is in [`../../../../pocs/poc-synthesia-frames`](../../../../pocs/poc-synthesia-frames). Phase 2 is done: its
 report is [`04-phase-2-implementation.md`](04-phase-2-implementation.md), and its work is in the app
 — `aitu-backend/src/aitu_backend/video/` and the Video to Notes section of the frontend. Phase 3 is
 done: its report is [`04-phase-3-implementation.md`](04-phase-3-implementation.md), and a real
@@ -71,7 +71,7 @@ The words of the prompt, used with one meaning each. New work uses these words a
   implementation 05 the overlay is per-key borders found inside one rectangle, not a grid.
 - `make serve` runs both services, `make test` in `aitu-backend` runs the suite: 853 pass after
   Phase 3 and one failure that is already there before this plan starts. See
-  [`../../04-local-development.md`](../../04-local-development.md).
+  [`../../../04-local-development.md`](../../../04-local-development.md).
 
 New dependencies, kept small on purpose: `pillow` for reading and writing frames, and `scipy`
 which is already installed for the labelling and filtering the detector needs. `ffmpeg` is already
@@ -186,7 +186,7 @@ Routes are declared in `layout/routes.ts` with everything else. Nothing hardcode
 
 Phase 1 measured this and replaced the parts measurement did not support. Every number below has a
 measurement beside it in [`04-phase-1-implementation.md`](04-phase-1-implementation.md) and in
-[`../../../pocs/poc-synthesia-frames/RESULTS.md`](../../../pocs/poc-synthesia-frames/RESULTS.md). The five
+[`../../../../pocs/poc-synthesia-frames/RESULTS.md`](../../../../pocs/poc-synthesia-frames/RESULTS.md). The five
 things Phase 1 changed are marked **new** or **changed**.
 
 Per video, once:
@@ -380,7 +380,7 @@ existing `pocs/poc-onset-duration-distribution/`, and its conclusions go into
 [`04-decisions.md`](04-decisions.md).
 
 What it found is [`04-phase-1-implementation.md`](04-phase-1-implementation.md), the evidence is
-[`../../../pocs/poc-synthesia-frames/RESULTS.md`](../../../pocs/poc-synthesia-frames/RESULTS.md), and the
+[`../../../../pocs/poc-synthesia-frames/RESULTS.md`](../../../../pocs/poc-synthesia-frames/RESULTS.md), and the
 chosen algorithm is section 8 above. The tasks below are left as they were written, so a reader can
 see what was asked as well as what came back.
 
@@ -801,7 +801,7 @@ nothing new is invented for it here.
 exact commands. Add both to `context/00-index.md`, add a line to
 `context/00-project-complete-overview.md`, and add this implementation to the table in
 `context/implementations/README.md`. Follow
-[`../../00-documentation-instructions.md`](../../00-documentation-instructions.md).
+[`../../../00-documentation-instructions.md`](../../../00-documentation-instructions.md).
 
 Exit criteria: a reader who has never seen this plan can download a Synthesia video, calibrate it,
 read it and print the sheet, using the documentation alone.
@@ -834,7 +834,7 @@ One agent per phase, with the phase's whole context in one session. At the end o
 writes `04-phase-X-implementation.md` in this folder — technical, for the next agent, as detailed as
 it likes — updates [`04-checklist.md`](04-checklist.md), and writes the walkthrough message in the
 structure of
-[`../../language/communication-implementation-plans.md`](../../language/communication-implementation-plans.md).
+[`../../../language/communication-implementation-plans.md`](../../../language/communication-implementation-plans.md).
 The handoff sentence for the next agent is short and tags what it must read:
 
 ```text
@@ -855,7 +855,7 @@ Every worker, every phase:
   [`../01-epics-master-plan/plan/wall-clock-rewrite.md`](../01-epics-master-plan/plan/wall-clock-rewrite.md)
   and D-01 to D-34. They are still binding. In particular there is no BPM anywhere in this plan
   either, and `sampleMs` is never used where `frameMs` is meant (V-04).
-- Follows [`../../09-coding-conventions.md`](../../09-coding-conventions.md), and keeps paths in
+- Follows [`../../../09-coding-conventions.md`](../../../09-coding-conventions.md), and keeps paths in
   `storage/paths.py` and routes in `layout/routes.ts`.
 - Runs `make test` and `make lint` in `aitu-backend` and `npm run lint` in `aitu-frontend` before
   reporting done, and states the counts. One failure is known and pre-existing; a second one is not.

@@ -4,7 +4,7 @@ Technical, for the agent that takes Phase 2. The plan is [`05-plan.md`](05-plan.
 [`05-checklist.md`](05-checklist.md), the decisions are the V numbers of
 [`../04-synthesia-to-notes/04-decisions.md`](../04-synthesia-to-notes/04-decisions.md) — this phase
 added V-39, V-40 and V-41 — and the evidence is
-[`../../../pocs/poc-piano-overlay/RESULTS.md`](../../../pocs/poc-piano-overlay/RESULTS.md). Nothing in this
+[`../../../../pocs/poc-piano-overlay/RESULTS.md`](../../../../pocs/poc-piano-overlay/RESULTS.md). Nothing in this
 phase touched application code.
 
 ## 0. What this phase produced, in one table

@@ -1,6 +1,6 @@
 """Reading a Synthesia video, or one screenshot of one, into notes.
 
-The plan is `context/implementations/04-synthesia-to-notes/04-plan.md` and the
+The plan is `context/implementations/01-mvp/04-synthesia-to-notes/04-plan.md` and the
 frozen decisions are `04-decisions.md`. Nothing in here knows about `events.json`:
 this package finds falling rectangles and says which keys are onset and which are
 sustained. Turning that into the piece is Phase 4, through the writer that

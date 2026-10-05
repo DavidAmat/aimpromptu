@@ -25,7 +25,7 @@ documents describe, and the work done after the time-based plan closed has no re
 > files, and no document describes a screen or a concept the app no longer has.*
 
 The overview was rewritten for the wall-clock app and now sends a reader to
-[`context/backend/time-model.md`](../../../../backend/time-model.md) second, because everything else
+[`context/backend/time-model.md`](../../../../../backend/time-model.md) second, because everything else
 assumes it. Every relative link in `context/` and `documentation/` resolves — 291 files checked, 27
 broken found, zero left. Four banner-marked documents were resolved rather than left banner-marked:
 two archived with a README mapping each to where its truth went, two rewritten to say what they now

@@ -29,7 +29,7 @@ it is not noise — it is the same wrong answer every time the figure appears.
 (10 and 6 units of 16 per beat). A 5 : 3 split of a beat has no representation on any power-of-two
 subdivision, at any resolution.
 
-Full evidence: [`../../../pocs/poc-onset-duration-distribution/RESULTS.md`](../../../pocs/poc-onset-duration-distribution/RESULTS.md).
+Full evidence: [`../../../../pocs/poc-onset-duration-distribution/RESULTS.md`](../../../../pocs/poc-onset-duration-distribution/RESULTS.md).
 
 ## 2. The change in one sentence
 
@@ -166,4 +166,4 @@ Every player plays the original recorded onset times. Nothing inferred is ever h
 - [`decisions.md`](decisions.md) — the numbered decisions every task cites
 - [`contract.md`](contract.md) — the backend ↔ renderer interface
 - [`plan.md`](plan.md) — phases, tasks, dependencies
-- [`../../archive/superseded/01-matrix-notation-logic.md`](../../archive/superseded/01-matrix-notation-logic.md) — the model being replaced
+- [`../../../archive/superseded/01-matrix-notation-logic.md`](../../../archive/superseded/01-matrix-notation-logic.md) — the model being replaced

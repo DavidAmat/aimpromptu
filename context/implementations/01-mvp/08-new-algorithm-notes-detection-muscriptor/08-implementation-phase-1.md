@@ -1,8 +1,8 @@
 # 08 Phase 1: MuScriptor on Ubuntu, and what it outputs
 
 The plan is [`08-plan.md`](08-plan.md) section 12, Phase 1. The status lookup is
-[`08-checklist.md`](08-checklist.md). The POC is [`../../../pocs/poc-muscriptor/`](../../../pocs/poc-muscriptor/),
-and its measured results are in its [`RESULTS.md`](../../../pocs/poc-muscriptor/RESULTS.md). This report is
+[`08-checklist.md`](08-checklist.md). The POC is [`../../../../pocs/poc-muscriptor/`](../../../../pocs/poc-muscriptor/),
+and its measured results are in its [`RESULTS.md`](../../../../pocs/poc-muscriptor/RESULTS.md). This report is
 for the agents of later phases: it says what was done, what changed in the plan, and what Phase 2 to
 Phase 4 must know.
 

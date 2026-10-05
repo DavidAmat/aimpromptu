@@ -104,6 +104,6 @@ the error of the preload, if any.
 - The routes: [`documentation/services/backend/endpoints.md`](../../documentation/services/backend/endpoints.md)
 - The measurements and the choice of settings: [`pocs/poc-muscriptor/RESULTS.md`](../../pocs/poc-muscriptor/RESULTS.md)
 - The plan and the phase reports:
-  [`implementations/08-new-algorithm-notes-detection-muscriptor/`](../implementations/08-new-algorithm-notes-detection-muscriptor/README.md)
+  [`implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/`](../implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/README.md)
 - Code: `aitu-backend/src/aitu_backend/transcription/` (`engine.py`, `models.py`, `jobs.py`,
   `live.py`, `lag.py`, `pipeline.py`), `audio/frames.py`

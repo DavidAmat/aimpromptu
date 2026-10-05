@@ -15,7 +15,7 @@ placement the 24 pictures use, check that the rectangles fall vertically on the 
 both routes in `pocs/poc-piano-overlay/`, score them on the same truth, and choose. Nothing ships.
 
 Done. The report is [`05-phase-1-implementation.md`](05-phase-1-implementation.md), the evidence is
-[`../../../pocs/poc-piano-overlay/RESULTS.md`](../../../pocs/poc-piano-overlay/RESULTS.md). The truth is 901
+[`../../../../pocs/poc-piano-overlay/RESULTS.md`](../../../../pocs/poc-piano-overlay/RESULTS.md). The truth is 901
 white key borders on all 24 pictures, read by a line tool and checked by eye. The black keys were
 found on every picture — 36 of 36 on the 21 full pianos, 23 and 30 on the two shorter ones — with
 96.0% seen and the rest placed through the hands. Two families (V-40), the rectangles fall

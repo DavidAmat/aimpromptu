@@ -50,7 +50,7 @@ def main(slug: str = "more-examples-3"):
 
     payload = dict(
         mode="screenshot", video=f"{slug}.png",
-        source="context/implementations/04-synthesia-to-notes/examples/",
+        source="context/implementations/01-mvp/04-synthesia-to-notes/examples/",
         width=w, height=h, sampleMs=None,
         upperLine=cal.upper_line, rollTop=0.0,
         guardBand=detectors.GUARD_BAND * cal.white_width,

@@ -83,7 +83,7 @@ frames, white key width. New work uses these and no synonyms.
 - `components/video/PianoOverlay.tsx` — one element per key. It keeps its drawing and its press;
   it loses the two gestures that moved the grid.
 - The example set: the 24 screenshots in
-  [`../04-synthesia-to-notes/examples/`](../04-synthesia-to-notes/examples), served at 1280 px
+  [`../04-synthesia-to-notes/examples`](../04-synthesia-to-notes/examples), served at 1280 px
   wide (V-35), the 21 seeded calibrations under `data/frame-examples/`, and the five hand readings
   on `derulo` and `shut-up-and-dance` that give the score board its 9/0/0 onsets and 6/0/0
   sustains. Those readings are keyed by offset line and MIDI pitch, not by geometry, so they survive
@@ -399,7 +399,7 @@ one gesture and one dropdown, against the four gestures and two dropdowns of the
 # Phase 1 — Measure the pictures and decide the route  ·  done
 
 What it found is [`05-phase-1-implementation.md`](05-phase-1-implementation.md) and the evidence is
-[`../../../pocs/poc-piano-overlay/RESULTS.md`](../../../pocs/poc-piano-overlay/RESULTS.md). V-39, V-40 and
+[`../../../../pocs/poc-piano-overlay/RESULTS.md`](../../../../pocs/poc-piano-overlay/RESULTS.md). V-39, V-40 and
 V-41 were added. The tasks below are left as they were written, so a reader can see what was asked
 as well as what came back.
 
@@ -587,7 +587,7 @@ picture), the "what this does not handle" list (`airplanes` comes off it or stay
 reason), and Task 3.3.2, which opens the calibration UI of this plan on a frame. In
 [`../04-synthesia-to-notes/04-checklist.md`](../04-synthesia-to-notes/04-checklist.md), Story 2.1
 points here. The README of this folder, the table in
-[`../README.md`](../README.md) and [`../../00-index.md`](../../00-index.md) say the state.
+[`../../README.md`](../../README.md) and [`../../../00-index.md`](../../../00-index.md) say the state.
 
 Exit criteria: an unseen screenshot is calibrated with one gesture and one dropdown in under thirty
 seconds; every one of the 24 examples has a found overlay; the two routes' scores are in the report
@@ -601,7 +601,7 @@ The same as implementation 04. One agent per phase, with the phase's whole conte
 the end of a phase the agent writes `05-phase-X-implementation.md` in this folder — technical, for
 the next agent — updates [`05-checklist.md`](05-checklist.md), and writes the walkthrough message in
 the structure of
-[`../../language/communication-implementation-plans.md`](../../language/communication-implementation-plans.md).
+[`../../../language/communication-implementation-plans.md`](../../../language/communication-implementation-plans.md).
 The handoff sentence for the next agent:
 
 ```text
@@ -619,7 +619,7 @@ Every worker, every phase:
 - Reads the five rules in
   [`../01-epics-master-plan/plan/wall-clock-rewrite.md`](../01-epics-master-plan/plan/wall-clock-rewrite.md)
   and D-01 to D-34. They are still binding.
-- Follows [`../../09-coding-conventions.md`](../../09-coding-conventions.md), keeps paths in
+- Follows [`../../../09-coding-conventions.md`](../../../09-coding-conventions.md), keeps paths in
   `storage/paths.py` and routes in `layout/routes.ts`, and remembers the three ESLint rules Phase 2
   of 04 wrote down in its section 5.3.
 - Runs `make test` and `make lint` in `aitu-backend`, and `npm run lint`, `npm run check:geometry`

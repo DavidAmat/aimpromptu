@@ -306,5 +306,5 @@ their notes in the same write — see [`../backend/editing.md`](../backend/editi
 - [`documentation/services/backend/rhythm-and-annotations.md`](../../documentation/services/backend/rhythm-and-annotations.md)
   — `rhythm.json` field by field
 - [rendering.md](rendering.md) — what the renderer does with them
-- [`../implementations/03-time-based-concept/user-reviews.md`](../implementations/03-time-based-concept/user-reviews.md)
+- [`../implementations/01-mvp/03-time-based-concept/user-reviews.md`](../implementations/01-mvp/03-time-based-concept/user-reviews.md)
   — the click-by-click walk through all of it
