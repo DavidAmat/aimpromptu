@@ -11,7 +11,7 @@
 import type { Cut, FramePeaks } from "../../api";
 import { formatTime, formatTimeShort } from "../../audio/time";
 import type { FrameView } from "../../audio/frameView";
-import { grays, semantic, surface } from "../../ui";
+import { grays, semantic, ui } from "../../ui";
 
 /**
  * The strip at the top of the main waveform where the time labels are. It is also where the
@@ -118,15 +118,15 @@ function paintCut(
   context.restore();
   if (label && width > 70) {
     context.save();
-    context.fillStyle = surface.text;
-    context.font = "600 11px Inter, system-ui, sans-serif";
+    context.fillStyle = ui.text;
+    context.font = "600 11px Geist, system-ui, sans-serif";
     context.textBaseline = "top";
     const text = context.measureText(label);
     context.fillStyle = grays.white;
     context.globalAlpha = 0.85;
     context.fillRect(left + 4, top + 4, text.width + 8, 16);
     context.globalAlpha = 1;
-    context.fillStyle = surface.text;
+    context.fillStyle = ui.text;
     context.fillText(label, left + 8, top + 7);
     context.restore();
   }
@@ -140,11 +140,11 @@ function paintRuler(context: CanvasRenderingContext2D, view: FrameView, width: n
   const firstSecond = Math.ceil(view.start / FRAMES_PER_SECOND / step) * step;
 
   context.save();
-  context.fillStyle = surface.page;
+  context.fillStyle = ui.bg;
   context.fillRect(0, 0, width, RULER);
-  context.strokeStyle = surface.strongLine;
-  context.fillStyle = surface.mutedText;
-  context.font = "11px Inter, system-ui, sans-serif";
+  context.strokeStyle = ui.lineStrong;
+  context.fillStyle = ui.text2;
+  context.font = "11px Geist, system-ui, sans-serif";
   context.textBaseline = "middle";
   context.lineWidth = 1;
   context.beginPath();
@@ -160,7 +160,7 @@ function paintRuler(context: CanvasRenderingContext2D, view: FrameView, width: n
 
   const pixelsPerFrame = width / span;
   if (pixelsPerFrame >= FRAME_GRID_PX) {
-    context.strokeStyle = surface.line;
+    context.strokeStyle = ui.line;
     context.beginPath();
     for (let frame = Math.ceil(view.start); frame <= view.end; frame += 1) {
       const x = Math.round((frame - view.start) * pixelsPerFrame) + 0.5;
@@ -184,7 +184,7 @@ export interface WaveformScene {
 /** A small box of text, readable on the waveform and on a cut. */
 function tag(context: CanvasRenderingContext2D, text: string, x: number, y: number, align: "left" | "right"): void {
   context.save();
-  context.font = "600 11px Inter, system-ui, sans-serif";
+  context.font = "600 11px Geist, system-ui, sans-serif";
   context.textBaseline = "top";
   const width = context.measureText(text).width + 10;
   const left = align === "left" ? x : x - width;
@@ -265,11 +265,11 @@ export function paintWaveform(
   const top = RULER + 1;
   const body = height - top;
 
-  context.fillStyle = surface.panel;
+  context.fillStyle = ui.bg;
   context.fillRect(0, top, width, body);
   paintRuler(context, view, width, height);
 
-  context.strokeStyle = surface.strongLine;
+  context.strokeStyle = ui.lineStrong;
   context.lineWidth = 1;
   context.beginPath();
   context.moveTo(0, top + body / 2 + 0.5);
@@ -324,7 +324,7 @@ export function paintOverview(
   const context = prepare(canvas, width, height);
   if (!context || width <= 0) return;
   const whole = { start: 0, end: peaks.totalFrames };
-  context.fillStyle = surface.page;
+  context.fillStyle = ui.bg;
   context.fillRect(0, 0, width, height);
   paintPeaks(context, peaks, whole, width, 0, height);
   const toX = (frame: number) => (frame / peaks.totalFrames) * width;

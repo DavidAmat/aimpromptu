@@ -31,7 +31,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import type { Calibration, FindRequest, PianoRect as Rect } from "../../api/frameExamples";
 import { buildKeys, medianWhiteWidth } from "../../video/overlayGeometry";
-import { palette, surface } from "../../ui";
+import { palette, ui } from "../../ui";
 import FrameCanvas from "./FrameCanvas";
 import { rectColours } from "./overlayColours";
 import PianoOverlay from "./PianoOverlay";
@@ -229,7 +229,7 @@ export function CalibrationEditor({
         ) : null}
         {finding ? <CircularProgress size={18} /> : null}
         {summary ? (
-          <Typography variant="caption" sx={{ color: surface.mutedText }}>
+          <Typography variant="caption" sx={{ color: ui.text2 }}>
             {summary}
           </Typography>
         ) : null}

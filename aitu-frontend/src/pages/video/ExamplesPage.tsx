@@ -32,7 +32,7 @@ import {
   type ScoreBoard,
 } from "../../api/frameExamples";
 import { ROUTES } from "../../layout/routes";
-import { PageContainer, SectionCard, palette } from "../../ui";
+import { Section, palette } from "../../ui";
 import AnnotationEditor from "../../components/video/AnnotationEditor";
 import CalibrationEditor from "../../components/video/CalibrationEditor";
 import DetectionView from "../../components/video/DetectionView";
@@ -204,18 +204,12 @@ export function ExamplesPage() {
   const imageUrl = slug ? frameExamplesApi.imageUrl(slug) : "";
 
   return (
-    <PageContainer
-      title="Examples"
-      subtitle="Every rendering these videos use, read by hand and read by the detector, side by side."
-      wide
-      actions={
-        slug ? (
-          <Button size="small" onClick={() => navigate(ROUTES.videoExamples)}>
-            All examples
-          </Button>
-        ) : null
-      }
-    >
+    <Box>
+      {slug ? (
+        <Button size="small" onClick={() => navigate(ROUTES.labExamples)} sx={{ mb: 1 }}>
+          All examples
+        </Button>
+      ) : null}
       {error ? (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
           {error}
@@ -224,9 +218,8 @@ export function ExamplesPage() {
 
       {!slug ? (
         <>
-          <SectionCard
+          <Section
             title="The example set"
-            description="One screenshot per rendering. Every example needs its own calibration, because every example is a different piano."
           >
             {list === null ? (
               <CircularProgress size={20} />
@@ -237,7 +230,7 @@ export function ExamplesPage() {
                     key={row.slug}
                     label={label(row)}
                     variant={row.annotationCount ? "filled" : "outlined"}
-                    onClick={() => navigate(ROUTES.videoExample(row.slug))}
+                    onClick={() => navigate(ROUTES.labExample(row.slug))}
                     sx={
                       row.noRoll
                         ? { opacity: 0.55 }
@@ -249,11 +242,10 @@ export function ExamplesPage() {
                 ))}
               </Stack>
             )}
-          </SectionCard>
+          </Section>
 
-          <SectionCard
+          <Section
             title="The score board"
-            description="Every annotated example at every annotated offset line position. This is the number a change has to quote."
             actions={
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <TextField
@@ -287,19 +279,18 @@ export function ExamplesPage() {
             {board ? (
               <ScoreBoardTable
                 board={board}
-                onPickExample={(picked) => navigate(ROUTES.videoExample(picked))}
+                onPickExample={(picked) => navigate(ROUTES.labExample(picked))}
               />
             ) : (
               <CircularProgress size={20} />
             )}
-          </SectionCard>
+          </Section>
         </>
       ) : null}
 
       {slug && record ? (
-        <SectionCard
+        <Section
           title={slug}
-          description={`${record.imageWidth} × ${record.imageHeight} · ${record.annotations.length} reading${record.annotations.length === 1 ? "" : "s"} saved`}
           actions={
             <FormControlLabel
               control={<Switch size="small" checked={record.noRoll} onChange={toggleNoRoll} />}
@@ -361,7 +352,7 @@ export function ExamplesPage() {
               )}
             />
           ) : null}
-        </SectionCard>
+        </Section>
       ) : null}
 
       {slug && !record ? (
@@ -369,7 +360,7 @@ export function ExamplesPage() {
           <CircularProgress size={24} />
         </Box>
       ) : null}
-    </PageContainer>
+    </Box>
   );
 }
 

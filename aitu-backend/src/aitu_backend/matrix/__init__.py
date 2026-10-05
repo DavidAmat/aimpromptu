@@ -8,7 +8,7 @@ opinion about what any note is called.
 | Module | Role |
 |--------|------|
 | ``keys`` | canonical 88-key tables: ES/EN names, MIDI, middle-C row |
-| ``text_notation`` | the custom text notation parser; its header carries ``frameMs`` |
+| ``text_notation`` | the custom text notation parser; no route serves it since implementation 02 (Q-4), the tests build matrices with it |
 | ``time_grid`` | frame <-> millisecond conversion; the only module that knows the frame length |
 | ``model`` | ``PianoMatrix``, timing math, conversions, npz |
 | ``validator`` | per-row transition rules; ``validate`` / ``normalize`` |

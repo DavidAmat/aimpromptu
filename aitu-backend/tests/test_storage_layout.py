@@ -134,10 +134,6 @@ def test_library_listings(temp_data: Path) -> None:
     assert paths.list_playlists() == ["sunday-practice"]
 
 
-def test_scores_seed_path(temp_data: Path) -> None:
-    assert paths.scores_json_path() == temp_data / "example-scores.json"
-
-
 # --------------------------------------------------------------- npz format
 
 

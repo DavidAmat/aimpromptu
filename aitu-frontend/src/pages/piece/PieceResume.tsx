@@ -13,7 +13,7 @@ import { usePiece } from "./pieceContext";
 export function PieceResume() {
   const { uuid, status } = usePiece();
   if (!uuid || !status) return null;
-  return <Navigate to={ROUTES.piece(uuid, status.resume)} replace />;
+  return <Navigate to={ROUTES.project(uuid, status.resume)} replace />;
 }
 
 export default PieceResume;

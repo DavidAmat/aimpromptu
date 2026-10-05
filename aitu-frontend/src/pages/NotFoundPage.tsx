@@ -1,19 +1,23 @@
-/** Fallback route. */
+/** A path that matches no page: say so, and offer the way back to Projects. */
 
-import Button from "@mui/material/Button";
-import { Link } from "react-router-dom";
-import { PageContainer, SectionCard } from "../ui";
+import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../layout/routes";
+import { EmptyState, PageBody, PageHeader, PillButton } from "../ui";
 
 export function NotFoundPage() {
+  const navigate = useNavigate();
   return (
-    <PageContainer title="Page not found">
-      <SectionCard>
-        <Button component={Link} to={ROUTES.playgroundInput} variant="contained">
-          Go to the Playground
-        </Button>
-      </SectionCard>
-    </PageContainer>
+    <PageBody>
+      <PageHeader title="Page not found" />
+      <EmptyState
+        message="There is no page at this address."
+        action={
+          <PillButton kind="primary" onClick={() => navigate(ROUTES.projects)}>
+            Open Projects
+          </PillButton>
+        }
+      />
+    </PageBody>
   );
 }
 

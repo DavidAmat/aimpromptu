@@ -23,7 +23,7 @@ import Typography from "@mui/material/Typography";
 import type { Calibration, FindRequest } from "../../api/frameExamples";
 import { videoApi, type VideoSummary } from "../../api/video";
 import useProgress from "../../hooks/useProgress";
-import { PageContainer, progressSx, SectionCard, surface } from "../../ui";
+import { progressSx, Section, ui } from "../../ui";
 import { readSelectedVideo, writeSelectedVideo } from "../../video/selectedVideo";
 import CalibrationEditor from "../../components/video/CalibrationEditor";
 import FramePlayer from "../../components/video/FramePlayer";
@@ -115,24 +115,19 @@ export function VideoCalibrationPage() {
   const speed = video?.measurement?.scrollSpeed ?? null;
 
   return (
-    <PageContainer
-      title="Calibration"
-      subtitle="Fit the piano overlay onto a frame of the video, then measure how fast the rectangles fall."
-      wide
-    >
+    <Box>
       {error ? (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
           {error}
         </Alert>
       ) : null}
 
-      <SectionCard
+      <Section
         title="Fit the piano"
-        description="Drag one rectangle over the piano area and every key inside it is found. The piano does not move, so this is done once, on any frame."
       >
         <VideoBar videos={videos} selected={selected} onSelect={pick}>
           {video && video.metadata.frameCount > 0 ? (
-            <Typography variant="caption" sx={{ color: surface.mutedText }}>
+            <Typography variant="caption" sx={{ color: ui.text2 }}>
               fitting on frame {chosen + 1} of {video.metadata.frameCount}
             </Typography>
           ) : null}
@@ -154,12 +149,11 @@ export function VideoCalibrationPage() {
             This video has no sampled frames yet. Sample it on the Video tab first.
           </Alert>
         ) : null}
-      </SectionCard>
+      </Section>
 
       {video?.calibration ? (
-        <SectionCard
+        <Section
           title="How fast the roll falls"
-          description="The rectangles measure it themselves: every one is followed from one sampled frame into the next and the fall of its edges is averaged, one estimate per pair of frames. The same pass finds where the roll starts and where the strike light begins, because the roll scrolls and nothing else does."
           actions={
             <Button variant="outlined" size="small" onClick={measure} disabled={running}>
               {running ? "Measuring…" : speed ? "Measure again" : "Measure"}
@@ -172,7 +166,7 @@ export function VideoCalibrationPage() {
                 variant={progress.event?.total ? "determinate" : "indeterminate"}
                 value={progress.event ? progress.event.fraction * 100 : 0}
               />
-              <Typography variant="caption" sx={{ color: surface.mutedText }}>
+              <Typography variant="caption" sx={{ color: ui.text2 }}>
                 {progress.event?.stage} · {progress.event?.current} of {progress.event?.total}
               </Typography>
             </Box>
@@ -192,7 +186,7 @@ export function VideoCalibrationPage() {
                 {speed.pxPerFrame.toFixed(2)} px per sampled frame · quartiles{" "}
                 {speed.q1.toFixed(2)} to {speed.q3.toFixed(2)}
               </Typography>
-              <Typography variant="caption" sx={{ color: surface.mutedText }}>
+              <Typography variant="caption" sx={{ color: ui.text2 }}>
                 {speed.usablePairs} of {speed.totalPairs} pairs of frames answered; {speed.stillPairs}{" "}
                 had nothing falling in them at all. The roll starts at row{" "}
                 {video.measurement.rollTop.toFixed(0)} and the strike light reaches{" "}
@@ -224,15 +218,15 @@ export function VideoCalibrationPage() {
             </FramePlayer>
           ) : null}
 
-          <Typography variant="caption" sx={{ color: surface.mutedText }}>
+          <Typography variant="caption" sx={{ color: ui.text2 }}>
             The red line is the upper line: a rectangle tip crossing it is an onset. Each yellow band
             above it is one sampled frame of travel, so the bands say which rectangles land in which
             frame. The dashed blue line is where the roll starts and the red band is where the strike
             light makes the picture unreadable.
           </Typography>
-        </SectionCard>
+        </Section>
       ) : null}
-    </PageContainer>
+    </Box>
   );
 }
 

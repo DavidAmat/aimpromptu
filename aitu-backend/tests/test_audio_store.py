@@ -307,9 +307,13 @@ def test_upload_endpoint_round_trip(client: TestClient, tmp_path: Path) -> None:
 
     assert client.get("/audio/").json()[0]["uuid"] == uuid
     assert client.get(f"/audio/{uuid}").json()["alias"] == "Do Re Mi"
+    uploaded_at = client.get(f"/audio/{uuid}").json()["updatedAt"]
+    assert uploaded_at is not None
 
     renamed = client.patch(f"/audio/{uuid}", json={"alias": "Scale"})
     assert renamed.json()["alias"] == "Scale"
+    # The Projects page sorts by when a piece last changed: a rename is a change.
+    assert client.get(f"/audio/{uuid}").json()["updatedAt"] >= uploaded_at
 
     waveform = client.get(f"/audio/{uuid}/waveform", params={"points": 64}).json()
     assert waveform["points"] == 64

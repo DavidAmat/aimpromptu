@@ -3,7 +3,7 @@
  * Phase 8, Task 8.2.3; plan section 9.7, target under 300 ms for a 3.5-minute piece).
  *
  * For each piece it makes a temporary copy in the data folder (a new uuid, deleted at the end, so
- * the library is never changed), opens it on the Sheet tab of the flow page and makes it current
+ * the library is never changed), opens it on the Sheet step of the project and makes it current
  * the way a reader does: a stale reading shows its banner and waits for **Write the sheet** and
  * **Save**; a piece with no reading is written from the pile the page selects. Then it moves notes
  * to the other hand the way a reader does (a click on the notehead, then **L** or **R** in the
@@ -163,7 +163,7 @@ for (const source of values.piece.map(resolvePiece)) {
     }
 
     // 1. The Sheet tab, made current the way a reader does it.
-    await page.goto(`${base}/piece/${copy}/sheet`);
+    await page.goto(`${base}/projects/${copy}/sheet`);
     await page.waitForSelector('text=How this piece was played');
     if (piece.flow.before === 'ready') await page.waitForSelector('.grid-notehead', { timeout: 30000 });
     const writeButton = page.getByRole('button', { name: 'Write the sheet', exact: true });
@@ -191,7 +191,7 @@ for (const source of values.piece.map(resolvePiece)) {
     }
     piece.flow.after = (await status()).state;
     await page.waitForTimeout(300);
-    piece.flow.tabTicked = (await page.getByRole('tab', { name: /^5\. Sheet/ }).locator('[data-testid=CheckCircleIcon]').count()) === 1;
+    piece.flow.tabTicked = (await page.locator('[role=tab][data-step=sheet]').getAttribute('data-state')) === 'ready';
     await page.waitForTimeout(1500);
 
     // 2. The hand moves: a right-hand note to the left hand, then a left-hand note to the right

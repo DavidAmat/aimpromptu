@@ -1,7 +1,7 @@
 /**
  * What you can do with the notes you have picked on Notes Falling.
  *
- * A floating `ToolboxDialog`, the same panel the sheet opens on a selected note,
+ * A floating `Toolbox`, the same panel the sheet opens on a selected note,
  * for the same reason: the reader is looking at the notes it is about, so it must
  * not cover them and must not block the page behind it.
  *
@@ -19,7 +19,7 @@ import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import RestoreIcon from "@mui/icons-material/Restore";
-import { ToolboxDialog } from "../common/ToolboxDialog";
+import { Toolbox } from "../../ui";
 import { spanishKeyName } from "../../music/noteNames";
 import type { PlayedNote } from "../../playback/playedNotes";
 
@@ -45,7 +45,7 @@ export function NoteSelectionToolbox({
   const single = selected.length === 1;
 
   return (
-    <ToolboxDialog
+    <Toolbox
       open={open}
       title={single ? spanishKeyName(selected[0]!.midiNote) : `${selected.length} notes`}
       // Top right, clear of the tabs and the transport — both of which a reader
@@ -70,7 +70,7 @@ export function NoteSelectionToolbox({
           </Button>
         ) : null}
       </Stack>
-    </ToolboxDialog>
+    </Toolbox>
   );
 }
 

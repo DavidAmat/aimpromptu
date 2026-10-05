@@ -13,7 +13,7 @@
  * the one after it, and so on up the roll.
  */
 
-import { palette, surface } from "../../ui";
+import { palette, ui } from "../../ui";
 
 export interface TimeFrameLinesProps {
   upperLine: number;
@@ -109,7 +109,7 @@ export function TimeFrameLines({
           y={upperLine - offsetPx - 5 * scale}
           fill={palette.dark.Yellow}
           fontSize={11 * scale}
-          stroke={surface.text}
+          stroke={ui.text}
           strokeWidth={2.5 * scale}
           style={{ paintOrder: "stroke", pointerEvents: "none" }}
         >

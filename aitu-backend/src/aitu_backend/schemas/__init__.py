@@ -2,7 +2,7 @@
 
 camelCase on the wire via ``Field(alias=...)`` plus
 ``model_config = ConfigDict(populate_by_name=True)``, mirrored in the
-frontend's ``src/music/types.ts``.
+frontend's ``src/api/`` modules.
 """
 
 from aitu_backend.schemas.matrix import (
@@ -49,7 +49,6 @@ from aitu_backend.schemas.naming import (
     slugify,
     version_folder,
 )
-from aitu_backend.schemas.score import MatrixScore, SequenceRequest, SparseMatrix
 from aitu_backend.schemas.time_matrix import (
     DEFAULT_FRAME_MS,
     FIGURE_NEGRAS,
@@ -103,11 +102,8 @@ __all__ = [
     "Hand",
     "KeyLabel",
     "MatrixProcessingStep",
-    "MatrixScore",
     "PianoMatrixEnvelope",
-    "SequenceRequest",
     "SparseCooMatrix",
-    "SparseMatrix",
     "key_labels",
     "DEFAULT_FRAME_MS",
     "FIGURE_NEGRAS",

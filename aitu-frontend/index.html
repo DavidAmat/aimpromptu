@@ -5,15 +5,15 @@
     <!-- The logo (public/logo-final-2.svg): SVG for the browsers that take it (black, white in dark
          mode), a PNG for the others (Safari), and the home screen icon. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/fonts/geist.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
-      This app is light, always. Declaring the scheme here (before any CSS
-      loads) is what stops a dark-mode OS or browser from re-tinting it: Chrome
-      reads it to decide scrollbar and form-control colors, and to leave the
-      page alone under Auto Dark Mode. Sheet music and a piano matrix are black
-      on white; a struck note is nearly black, so a dark ground hides it.
+      The app opens light until the theme choice of the user menu exists
+      (implementation 02, Phase 4). Declaring the scheme here, before any CSS
+      loads, stops a dark-mode OS or browser from re-tinting scrollbars and form
+      controls. The piano sheet stays white in both schemes.
     -->
     <meta name="color-scheme" content="light" />
     <title>AImpromptu</title>

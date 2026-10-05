@@ -3,7 +3,7 @@
 HOST ?= $(or $(AITU_HOST),127.0.0.1)
 PORT ?= $(or $(AITU_PORT),8765)
 
-# Run from repo root so `data/example-scores.json` resolves next to pyproject.toml.
+# Run from the backend folder so `data/` resolves next to pyproject.toml.
 # Use `python -m uvicorn` so we never exec `.venv/bin/uvicorn`; its shebang embeds the
 # full path to Python and can be truncated (~127 bytes), yielding `.../bin/pyt` on long paths.
 serve:

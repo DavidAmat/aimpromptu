@@ -16,7 +16,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import SaveIcon from "@mui/icons-material/SaveOutlined";
 import UndoIcon from "@mui/icons-material/UndoOutlined";
-import FloatingBar from "../common/FloatingBar";
+import { FloatingBar } from "../../ui";
 import { semantic } from "../../ui";
 
 interface PendingRemovalsBarProps {

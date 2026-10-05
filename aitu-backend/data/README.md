@@ -5,7 +5,6 @@ startup by `aitu_backend.storage.paths.ensure_data_tree()`.
 
 ```text
 data/
-  example-scores.json                       seed for GET /scores
   audio/<uuid>/
     metadata.json                           alias, source, format, duration
     original.<ext>                          the ffmpeg-normalized audio

@@ -23,7 +23,7 @@ import Typography from "@mui/material/Typography";
 import { audioApi } from "../../api/audio";
 import { videoApi, type VideoSummary } from "../../api/video";
 import useProgress from "../../hooks/useProgress";
-import { PageContainer, progressSx, SectionCard, surface } from "../../ui";
+import { progressSx, Section, ui } from "../../ui";
 import { readSelectedVideo, writeSelectedVideo } from "../../video/selectedVideo";
 import FramePlayer from "../../components/video/FramePlayer";
 import VideoBar from "../../components/video/VideoBar";
@@ -108,20 +108,15 @@ export function VideoPlayerPage() {
   const running = jobId !== null && progress.status === "running";
 
   return (
-    <PageContainer
-      title="Video"
-      subtitle="Paste a YouTube URL, download the video, and step through its sampled frames."
-      wide
-    >
+    <Box>
       {error ? (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
           {error}
         </Alert>
       ) : null}
 
-      <SectionCard
+      <Section
         title="Bring a video in"
-        description="One URL gives one piece: the video, and the audio of that same video beside it. You are not asked about the audio — the Piano Sheet tab plays it later."
       >
         <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <TextField
@@ -140,16 +135,15 @@ export function VideoPlayerPage() {
           </Button>
         </Stack>
         {busy ? (
-          <Typography variant="caption" sx={{ color: surface.mutedText }}>
+          <Typography variant="caption" sx={{ color: ui.text2 }}>
             The picture is capped at 720p, because every picture is read at 1280 px wide and the
             file stays small. The audio is taken out of that same file with ffmpeg.
           </Typography>
         ) : null}
-      </SectionCard>
+      </Section>
 
-      <SectionCard
+      <Section
         title="The video"
-        description="Sampling writes one picture per sampling granularity. The video is the source and the frames are a cache, so sampling again at another granularity replaces them and nothing is lost."
       >
         <VideoBar videos={videos} selected={selected} onSelect={pick}>
           <TextField
@@ -177,7 +171,7 @@ export function VideoPlayerPage() {
               variant={progress.event?.total ? "determinate" : "indeterminate"}
               value={progress.event ? progress.event.fraction * 100 : 0}
             />
-            <Typography variant="caption" sx={{ color: surface.mutedText }}>
+            <Typography variant="caption" sx={{ color: ui.text2 }}>
               {progress.event?.stage} · {progress.event?.message}
             </Typography>
           </Box>
@@ -207,8 +201,8 @@ export function VideoPlayerPage() {
         ) : videos === null ? (
           <CircularProgress size={20} />
         ) : null}
-      </SectionCard>
-    </PageContainer>
+      </Section>
+    </Box>
   );
 }
 

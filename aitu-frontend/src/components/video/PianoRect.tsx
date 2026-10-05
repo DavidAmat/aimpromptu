@@ -17,7 +17,7 @@
 
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { PianoRect as Rect } from "../../api/frameExamples";
-import { surface } from "../../ui";
+import { ui } from "../../ui";
 
 export interface PianoRectProps {
   rect: Rect;
@@ -94,7 +94,7 @@ export function PianoRect({ rect, onChange, onGesture, colour, scale, bounds }: 
           y={spot.v - size / 2}
           width={size}
           height={size}
-          fill={surface.panel}
+          fill={ui.bg}
           stroke={colour}
           strokeWidth={1.2 * scale}
           style={{ cursor: spot.cursor }}
@@ -115,7 +115,7 @@ export function PianoRect({ rect, onChange, onGesture, colour, scale, bounds }: 
         cx={rect.width + reach}
         cy={0}
         r={size / 2}
-        fill={surface.panel}
+        fill={ui.bg}
         stroke={colour}
         strokeWidth={1.2 * scale}
         style={{ cursor: "grab" }}

@@ -8,18 +8,6 @@ import { request } from "./client";
 export { API_BASE, ApiError, buildUrl, request, upload } from "./client";
 export type { RequestOptions } from "./client";
 
-export { scoresApi } from "./scores";
-export type { SequenceRequest } from "./scores";
-
-// Music contracts, re-exported so components have one import path for the API
-// surface and the shapes it carries.
-export type {
-  Granularity as MatrixGranularity,
-  KeyLabel,
-  MatrixScore,
-  SparseMatrix,
-} from "../music/types";
-
 export { audioApi, SUPPORTED_AUDIO_SUFFIXES } from "./audio";
 export type {
   AudioItem,
@@ -80,20 +68,6 @@ export type {
   RemovedNote,
   TranscribeRequest,
 } from "./matrix";
-
-export { libraryApi } from "./library";
-export type {
-  LibraryTrack,
-  PlaygroundTrack,
-  Playlist,
-  PlaylistItem,
-  PromoteRequest,
-  Promotion,
-  PromotionSuggestion,
-  SaveVersionRequest,
-  SavedVersion,
-  VersionHistoryEntry,
-} from "./library";
 
 export { editingApi } from "./editing";
 export type {

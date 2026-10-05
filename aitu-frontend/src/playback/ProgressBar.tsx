@@ -28,7 +28,7 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { formatTime } from "../audio/time";
-import { grays, semantic, surface, timestampSx } from "../ui";
+import { grays, semantic, ui, timestampSx } from "../ui";
 
 const TRACK_HEIGHT = 8;
 const HANDLE_RADIUS = 8;
@@ -139,7 +139,7 @@ export function ProgressBar({
             right: 0,
             height: TRACK_HEIGHT,
             borderRadius: TRACK_HEIGHT,
-            backgroundColor: surface.line,
+            backgroundColor: ui.line,
             overflow: "hidden",
           }}
         >
@@ -175,7 +175,7 @@ export function ProgressBar({
             borderRadius: "50%",
             backgroundColor: semantic.waveform.cursor,
             border: 2,
-            borderColor: surface.panel,
+            borderColor: ui.bg,
             transition: scrubbing ? "none" : "left 60ms linear",
             pointerEvents: "none",
           }}

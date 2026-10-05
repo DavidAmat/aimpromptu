@@ -17,7 +17,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import type { ScoreBoard, ScoreLine } from "../../api/frameExamples";
-import { palette, surface } from "../../ui";
+import { palette, ui } from "../../ui";
 
 export interface ScoreBoardTableProps {
   board: ScoreBoard;
@@ -43,7 +43,7 @@ function Row({
       onClick={onPick}
       sx={{
         cursor: onPick ? "pointer" : "default",
-        "& td": total ? { fontWeight: 700, borderTop: 2, borderColor: surface.strongLine } : undefined,
+        "& td": total ? { fontWeight: 700, borderTop: 2, borderColor: ui.lineStrong } : undefined,
       }}
     >
       <TableCell>{total ? "total" : line.slug}</TableCell>

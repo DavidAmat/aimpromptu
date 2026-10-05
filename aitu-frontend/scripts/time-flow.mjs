@@ -6,7 +6,7 @@
  * button to its result on screen:
  *
  * - `in`: the piece arriving. An upload (the request), a YouTube download (Download to the Audio
- *   tab), or a library piece opened from the Source tab (the click to the step it resumes on);
+ *   tab), or a library piece opened from Projects (the click to the step it resumes on);
  * - `transcribe`: Transcribe to the first note received in the live view (`firstNote`), and to the saved notes on screen
  *   (`notes`); `backend` is the time the page shows, "Transcribed in", on the backend's clock;
  * - `hands`: Predict hands to its answer on screen (`predict`), then Save (`save`);
@@ -95,7 +95,7 @@ async function walk(name, arrive) {
     row.title = audio.alias ?? audio.title;
     row.durationSeconds = Math.round(audio.durationSeconds ?? audio.duration_seconds ?? 0);
     if (!page.url().endsWith('/audio')) {
-      await page.getByRole('tab', { name: /^2\. Audio/ }).click();
+      await page.getByRole('tab', { name: 'Audio', exact: true }).click();
       await page.waitForURL('**/audio');
     }
     await page.getByRole('button', { name: /^Transcribe/ }).waitFor();
@@ -170,10 +170,10 @@ async function walk(name, arrive) {
     };
 
     // 4. The Sheet tab: Write the sheet (the first piano sheet), then Save.
-    const sheetTab = page.getByRole('tab', { name: /^5\. Sheet/ });
+    const sheetTab = page.getByRole('tab', { name: 'Sheet', exact: true });
     await page.waitForFunction(() => document.querySelector('[role=tab][aria-disabled=false]') !== null);
     await page.waitForFunction(() => {
-      const tab = [...document.querySelectorAll('[role=tab]')].find((t) => /^5\. Sheet/.test(t.textContent ?? ''));
+      const tab = document.querySelector('[role=tab][data-step=sheet]');
       return tab && tab.getAttribute('aria-disabled') !== 'true';
     }, null, { timeout: 15000 });
     const tabPressed = Date.now();
@@ -223,32 +223,32 @@ const pieces = {
     const uuid = (await answer.json()).uuid;
     created.push(uuid);
     row.in = { how: 'upload', ms: Date.now() - t0 };
-    await page.goto(`${base}/piece/${uuid}`);
+    await page.goto(`${base}/projects/${uuid}`);
     await page.waitForURL('**/audio');
     return { uuid };
   },
-  // A library piece, copied, opened from the library list of the Source tab.
+  // A library piece, copied, opened from its row in Projects.
   library: async (page, row) => {
     const { uuid, alias } = copyPiece(values.library);
     created.push(uuid);
-    await page.goto(`${base}/piece/new`);
+    await page.goto(`${base}/projects`);
     const item = page.getByText(alias, { exact: true });
     await item.waitFor({ timeout: 15000 });
     const t0 = Date.now();
     await item.click();
-    await page.waitForURL(new RegExp(`/piece/${uuid}/(audio|notes|hands|sheet)$`));
+    await page.waitForURL(new RegExp(`/projects/${uuid}/(audio|notes|hands|sheet)$`));
     await page.locator('[role=tab][aria-selected=true]').waitFor();
     row.in = { how: 'library', ms: Date.now() - t0, opensOn: page.url().split('/').pop() };
     return { uuid };
   },
   // A new YouTube URL, downloaded on the Source tab.
   youtube: async (page, row) => {
-    await page.goto(`${base}/piece/new`);
-    await page.getByLabel('YouTube URL').fill(values.youtube);
-    // The name is left empty: the piece takes the video's title, as a reader's download does.
+    await page.goto(`${base}/projects/new`);
+    await page.getByLabel('Paste a YouTube link').fill(values.youtube);
+    // No name is asked for: the piece takes the video's title.
     const t0 = Date.now();
-    await page.getByRole('button', { name: 'Download', exact: true }).click();
-    await page.waitForURL(/\/piece\/[0-9a-f-]{36}\/audio$/, { timeout: 300000 });
+    await page.getByRole('button', { name: 'Download the audio', exact: true }).click();
+    await page.waitForURL(/\/projects\/[0-9a-f-]{36}\/audio$/, { timeout: 300000 });
     const uuid = page.url().split('/').at(-2);
     created.push(uuid);
     row.in = { how: 'youtube', ms: Date.now() - t0, url: values.youtube };

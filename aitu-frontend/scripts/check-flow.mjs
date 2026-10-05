@@ -5,7 +5,7 @@
  * reaches. This drives the real page through the running app (`make up`), on a temporary copy of
  * an audio file that it uploads first and deletes at the end, so the library is never changed:
  *
- * - `/` opens `/piece/new`; a piece opens on the step it reached; a disabled tab says why;
+ * - `/` opens Projects and **New project** opens `/projects/new`; a piece opens on the step it reached; a disabled tab says why;
  * - on the Audio tab: drag, a click that clears, the two edges, the playhead in the ruler and on a
  *   double-click, zoom to the selection, Delete, the save bar, the leave dialog, undo and redo,
  *   Save, playback jumping over the cut, Restore and Discard, zoom;
@@ -69,7 +69,8 @@ page.on('console', (m) => { if (m.type() === 'error' && !/status of 404/.test(m.
 page.on('pageerror', (e) => problems.push(`page error: ${e.message}`));
 page.on('response', (r) => { if (r.status() >= 400 && !(r.status() === 404 && expected404(r.url()))) problems.push(`${r.status()} ${r.url()}`); });
 const shot = (name) => page.screenshot({ path: path.join(out, `${name}.png`) });
-const readout = async () => (await page.locator('text=/Selected region/').first().textContent()) ?? '';
+const readout = async () => (await page.locator('[data-audio]').getAttribute('data-cuts')) ?? '';
+const unsavedCount = () => page.locator('[data-unsaved^="Unsaved"]').count();
 
 try {
   const reset = await (await fetch(`${api}/audio/${uuid}/cuts`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cuts: [] }) })).json();
@@ -77,32 +78,35 @@ try {
 
   // 1. The new piece: only Source is enabled.
   await page.goto(`${base}/`);
-  await page.waitForURL('**/piece/new');
-  await page.waitForSelector('text=Audio library');
+  await page.waitForURL('**/projects');
+  check('/ goes to Projects', page.url().endsWith('/projects'));
+  await page.getByRole('button', { name: 'New project' }).click();
+  await page.waitForURL('**/projects/new');
+  await page.waitForSelector('text=Drop an audio file');
   await page.waitForTimeout(600);
   await shot('01-new');
   const disabled = await page.locator('[role=tab][aria-disabled=true]').count();
-  check('/ goes to /piece/new with 4 tabs disabled', disabled === 4, `disabled=${disabled}`);
+  check('New project opens the Source step with 4 steps disabled', disabled === 4, `disabled=${disabled}`);
 
   // 2. Resume: a piece with a sheet opens on Sheet, a transcribed one on Notes.
-  await page.goto(`${base}/piece/b99bc3ae-30a5-4aa0-9b3b-8f11eea5fba7`);
+  await page.goto(`${base}/projects/b99bc3ae-30a5-4aa0-9b3b-8f11eea5fba7`);
   await page.waitForURL('**/sheet');
   check('a piece with a piano sheet opens on the Sheet tab', page.url().endsWith('/sheet'));
-  await page.goto(`${base}/piece/a585f9eb-36a1-49a0-9f0c-2626f3d292da`);
+  await page.goto(`${base}/projects/a585f9eb-36a1-49a0-9f0c-2626f3d292da`);
   await page.waitForURL('**/notes');
   check('a transcribed piece opens on the Notes tab', page.url().endsWith('/notes'));
-  await page.goto(`${base}/piece/a585f9eb-36a1-49a0-9f0c-2626f3d292da/sheet`);
+  await page.goto(`${base}/projects/a585f9eb-36a1-49a0-9f0c-2626f3d292da/sheet`);
   await page.waitForURL('**/notes');
   check('a disabled tab in the address goes to the resume step', page.url().endsWith('/notes'));
-  const sheetTab = page.getByRole('tab', { name: /^5\. Sheet/ });
-  await sheetTab.locator('span').last().hover();
+  const sheetTab = page.getByRole('tab', { name: 'Sheet', exact: true });
+  await sheetTab.hover();
   await page.waitForSelector('[role=tooltip]');
   const tip = await page.locator('[role=tooltip]').textContent();
   check('the disabled Sheet tab says why', /Predict hands first/.test(tip ?? ''), tip);
   await shot('02-notes-tooltip');
 
   // 3. The new upload opens on Audio.
-  await page.goto(`${base}/piece/${uuid}`);
+  await page.goto(`${base}/projects/${uuid}`);
   await page.waitForURL('**/audio');
   await page.waitForSelector('canvas');
   await page.waitForTimeout(500);
@@ -118,7 +122,7 @@ try {
   await page.mouse.move(box.x + box.width * 0.35, y, { steps: 5 });
   await page.mouse.move(box.x + box.width * 0.4, y, { steps: 5 });
   await page.mouse.up();
-  const selText = await page.locator('text=/^Selection /').textContent();
+  const selText = await page.locator('[data-selection]').first().textContent();
   check('a drag selects a part', /Selection/.test(selText ?? ''), selText);
 
   // 4b. Each place of the waveform has one job (the ruler moves the playhead, an edge moves only
@@ -128,9 +132,8 @@ try {
     return Math.round((Number(m) * 60 + Number(s)) * 100);
   };
   const selection = async () => {
-    const text = (await page.locator('text=/^(Selection |No selection)/').textContent()) ?? '';
-    const found = text.match(/(\d\d:\d\d\.\d\d) – (\d\d:\d\d\.\d\d)/);
-    return found ? [frames(found[1]), frames(found[2])] : null;
+    const text = (await page.locator('[data-audio]').getAttribute('data-selection')) ?? '';
+    return text ? text.split('-').map(Number) : null;
   };
   const playhead = async () =>
     frames((await page.locator('text=/^\\d\\d:\\d\\d\\.\\d\\d \\//').first().textContent()).split(' ')[0]);
@@ -182,21 +185,21 @@ try {
 
   await page.getByRole('button', { name: 'Zoom to the selection' }).click();
   await page.waitForTimeout(200);
-  const zoomed = (await page.locator('text=/^View /').textContent()) ?? '';
-  const [viewStart, viewEnd] = zoomed.match(/\d\d:\d\d\.\d\d/g).map(frames);
+  const zoomed = (await page.locator('[data-audio]').getAttribute('data-view')) ?? '';
+  const [viewStart, viewEnd] = zoomed.split('-').map(Number);
   check('Zoom to the selection frames it with a margin', viewStart < afterStart[0] && viewEnd > afterStart[1] && viewEnd - viewStart < totalFrames / 2, zoomed);
   await shot('04c-zoomed-selection');
   await page.getByRole('button', { name: 'Show the whole audio' }).click();
   await page.waitForTimeout(150);
   await page.keyboard.press('Delete');
-  await page.waitForSelector('text=/Unsaved: 1 cut/');
+  await page.waitForSelector('[data-unsaved^="Unsaved: 1 cut"]');
   await page.waitForTimeout(200);
   await shot('04-deleted');
   check('Delete makes a cut and the save bar says it', true, await readout());
 
   // 5. Leaving with unsaved cuts asks first.
-  await page.getByRole('tab', { name: /^3\. Notes/ }).click();
-  await page.waitForSelector('text=Unsaved changes');
+  await page.getByRole('tab', { name: 'Notes', exact: true }).click();
+  await page.waitForSelector('text=Save your changes?');
   await shot('05-leave-dialog');
   check('leaving the tab asks to save or discard', page.url().endsWith('/audio'));
   await page.getByRole('button', { name: 'Stay' }).click();
@@ -206,24 +209,24 @@ try {
   // 6. Undo and redo.
   await page.keyboard.press('Control+z');
   await page.waitForTimeout(200);
-  check('undo takes the cut back', (await page.locator('text=/Unsaved:/').count()) === 0, await readout());
+  check('undo takes the cut back', (await unsavedCount()) === 0, await readout());
   await page.keyboard.press('Control+Shift+z');
   await page.waitForTimeout(200);
-  check('redo puts it again', (await page.locator('text=/Unsaved: 1 cut/').count()) > 0);
+  check('redo puts it again', (await page.locator('[data-unsaved^="Unsaved: 1 cut"]').count()) > 0);
 
   // 7. Save.
   await page.getByRole('button', { name: 'Save', exact: true }).first().click();
   await page.waitForTimeout(800);
   const saved = await (await fetch(`${api}/audio/${uuid}/cuts`)).json();
   check('Save writes the cut', saved.cuts.length === 1 && saved.audioRevision === before + 1, JSON.stringify(saved.cuts));
-  check('the save bar goes away', (await page.locator('text=/Unsaved:/').count()) === 0);
+  check('nothing is left unsaved', (await unsavedCount()) === 0);
   const [cutStart, cutEnd] = saved.cuts[0];
 
   // 8. Play over the cut: from 1 s before it, for 2 s.
   const fraction = (f) => f / saved.totalFrames;
   await page.mouse.click(box.x + box.width * fraction(cutStart - 100), yRuler);
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Play all' }).click();
+  await page.getByRole('button', { name: 'Play, jumping over the cuts' }).click();
   await page.waitForTimeout(1800);
   await shot('06-playing');
   await page.getByRole('button', { name: 'Pause' }).click();
@@ -235,13 +238,13 @@ try {
 
   // 9. Click in the cut, Restore, then Discard.
   await page.mouse.click(box.x + box.width * fraction((cutStart + cutEnd) / 2), y);
-  const restore = page.getByRole('button', { name: 'Restore' });
+  const restore = page.getByRole('button', { name: 'Restore the cuts in the selection' });
   check('a click in a cut selects it and enables Restore', await restore.isEnabled());
   await restore.click();
-  await page.waitForSelector('text=/Unsaved: no cut/');
-  await page.getByRole('button', { name: 'Discard' }).click();
+  await page.waitForSelector('[data-unsaved^="Unsaved: no cut"]');
+  await page.getByRole('button', { name: 'Discard the changes' }).click();
   await page.waitForTimeout(200);
-  check('Discard goes back to the saved cut', (await page.locator('text=/Unsaved:/').count()) === 0, await readout());
+  check('Discard goes back to the saved cut', (await unsavedCount()) === 0, await readout());
 
   // 10. Zoom with Control and the wheel.
   await page.mouse.move(box.x + box.width * 0.5, y);
@@ -249,8 +252,9 @@ try {
   for (let i = 0; i < 6; i += 1) await page.mouse.wheel(0, -300);
   await page.keyboard.up('Control');
   await page.waitForTimeout(300);
-  const viewText = await page.locator('text=/^View /').textContent();
-  check('Control and the wheel zoom in', !/View 00:00.00 – 03:0/.test(viewText ?? ''), viewText);
+  const viewText = (await page.locator('[data-audio]').getAttribute('data-view')) ?? '';
+  const [zoomStart, zoomEnd] = viewText.split('-').map(Number);
+  check('Control and the wheel zoom in', zoomEnd - zoomStart < saved.totalFrames * 0.9, viewText);
   await shot('07-zoomed');
   for (let i = 0; i < 6; i += 1) { await page.keyboard.down('Control'); await page.mouse.wheel(0, -400); await page.keyboard.up('Control'); }
   await page.waitForTimeout(300);
@@ -282,13 +286,13 @@ try {
   check('the progress bar moves with the transcription', earlyText !== laterText, `${earlyText} then ${laterText}`);
   const liveRight = (await page.locator('[data-bar=details]').textContent()) ?? '';
   check('the bar says the notes, the time taken and the time left', /notes · \d:\d\d elapsed/.test(liveRight), liveRight);
-  await page.getByRole('button', { name: 'Play', exact: true }).waitFor({ timeout: 90000 });
+  await page.getByRole('button', { name: 'Play from the playhead', exact: true }).waitFor({ timeout: 90000 });
   await page.waitForTimeout(600);
   await shot('10-transcribed');
   const status = await (await fetch(`${api}/pieces/${uuid}/status`)).json();
   check('the notes are ready after the transcription', status.steps[2].state === 'ready', JSON.stringify(status.steps[2].details));
-  const took = (await page.locator('text=/^Transcribed in /').textContent()) ?? '';
-  check('the page says how long the transcription took', /Transcribed in \d:\d\d/.test(took), took);
+  const took = (await page.locator('[data-bar=details]').textContent()) ?? '';
+  check('the page says how many notes it found', /\d+ notes/.test(took) || (await page.locator('text=/^\\d+ notes$/').count()) > 0, took);
 
   // 12. The editor: select, move, undo and redo, resize, add, delete, a band, save.
   await page.getByRole('button', { name: 'Show the whole piece' }).click();
@@ -417,7 +421,7 @@ try {
   await page.waitForTimeout(150);
   const rested = await clock();
   check('a press in the ruler moves the playhead', Math.abs(rested - (target.on + 100)) <= 30, `${rested} ms, aimed at ${target.on + 100}`);
-  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.getByRole('button', { name: 'Play from the playhead', exact: true }).click();
   const pressed = Date.now();
   while ((await clock()) === rested && Date.now() - pressed < 5000) await page.waitForTimeout(20);
   const startedAfter = Date.now() - pressed;
@@ -444,7 +448,7 @@ try {
 
   // 14. The Hands tab: Predict hands with its progress, the filter, a note to the other hand, Save,
   //     and the hand colours on the Notes tab.
-  await page.getByRole('tab', { name: /^4\. Hands/ }).click();
+  await page.getByRole('tab', { name: 'Hands', exact: true }).click();
   await page.waitForURL('**/hands');
   const predictButton = page.getByRole('button', { name: 'Predict hands', exact: true });
   await predictButton.waitFor();
@@ -458,15 +462,15 @@ try {
   }
   if (sawProgress) await shot('17-predicting');
   check('Predict hands shows a progress bar while it runs', sawProgress);
-  const predictedText = (await page.locator('text=/^Predicted in /').textContent({ timeout: 30000 })) ?? '';
-  check('Predict hands says what it found', /Predicted in \d+\.\d s · \d+ notes changed hand/.test(predictedText), predictedText);
+  const predictedText = (await page.locator('[data-predicted]').textContent({ timeout: 30000 })) ?? '';
+  check('Predict hands says what it found', /^\d+ notes? changed hand/.test(predictedText), predictedText);
   const progressWidth = await page.evaluate(() => document.querySelector('[role=status]')?.getBoundingClientRect().width ?? 0);
   check('the progress bar is gone at the end', progressWidth === 0, String(progressWidth));
   await page.waitForTimeout(300);
   await shot('18-predicted');
   check('the prediction is an unsaved change', /^Unsaved: \d+ notes with another hand$/.test((await unsaved()) ?? ''), await unsaved());
-  const handsTab = page.getByRole('tab', { name: /^4\. Hands/ });
-  check('while it is unsaved, the Hands tab shows a pencil, not a tick', (await handsTab.locator('[data-testid=EditOutlinedIcon]').count()) === 1 && (await handsTab.locator('[data-testid=CheckCircleIcon]').count()) === 0);
+  const handsTab = page.getByRole('tab', { name: 'Hands', exact: true });
+  check('while it is unsaved, the Hands step shows an amber dot', (await handsTab.getAttribute('data-state')) === 'unsaved', await handsTab.getAttribute('data-state'));
   const coloured = await page.evaluate(() => {
     const canvas = document.querySelector('canvas[data-roll=base]');
     const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
@@ -482,7 +486,7 @@ try {
   await page.getByRole('button', { name: 'Right', exact: true }).click();
   await page.waitForTimeout(250);
   await shot('19-right-only');
-  await page.getByRole('button', { name: 'Both hands', exact: true }).click();
+  await page.getByRole('button', { name: 'Both', exact: true }).click();
   // One note to the other hand, by its key: the note the walk moved earlier.
   const g2 = await geometry();
   const box2 = await top.boundingBox();
@@ -520,10 +524,10 @@ try {
   const handlessLeft = [...afterHands.hand].filter((h) => h === '-').length;
   check('after Save the Hands step is ready, even with notes the sheet cannot place', handsStatus.state === 'ready' && handsStatus.details.unplaced === handlessLeft, `${handsStatus.state}, ${handlessLeft} without a hand`);
   await page.waitForTimeout(300);
-  check('and the Hands tab shows its tick again', (await handsTab.locator('[data-testid=CheckCircleIcon]').count()) === 1);
-  check('and the Sheet tab can be opened', (await page.getByRole('tab', { name: /^5\. Sheet/ }).getAttribute('aria-disabled')) !== 'true');
+  check('and the Hands step shows its dot as done again', (await handsTab.getAttribute('data-state')) === 'ready');
+  check('and the Sheet tab can be opened', (await page.getByRole('tab', { name: 'Sheet', exact: true }).getAttribute('aria-disabled')) !== 'true');
   await shot('20-hands-saved');
-  await page.getByRole('tab', { name: /^3\. Notes/ }).click();
+  await page.getByRole('tab', { name: 'Notes', exact: true }).click();
   await page.waitForURL('**/notes');
   const handSwitch = page.getByLabel('Hand colours');
   await handSwitch.waitFor();
@@ -539,12 +543,12 @@ try {
   // 15. The Sheet tab: the piano sheet inside the flow page. A new piece has no reading yet; once
   //     written and saved the tab is ticked. A notes edit made elsewhere makes it stale: the page
   //     waits with its banner until Write the sheet, then Save makes it ready again.
-  const sheetTabNow = page.getByRole('tab', { name: /^5\. Sheet/ });
+  const sheetTabNow = page.getByRole('tab', { name: 'Sheet', exact: true });
   const sheetState = async () => (await (await fetch(`${api}/pieces/${uuid}/status`)).json()).steps[4].state;
   await sheetTabNow.click();
   await page.waitForURL('**/sheet');
   await page.waitForSelector('text=How this piece was played');
-  check('the Sheet tab opens the piano sheet in the flow page', (await page.locator('text=Every bar below is a gap').count()) === 1);
+  check('the Sheet tab opens the piano sheet in the project', (await page.locator('text=How this piece was played').count()) === 1);
   check('a piece with no reading says what to do', (await page.locator('[data-sheet-banner=missing]').count()) === 1, await page.locator('[data-sheet-banner]').first().textContent().catch(() => 'no banner'));
   const writeSheet = page.getByRole('button', { name: 'Write the sheet', exact: true });
   await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent === 'Write the sheet' && !b.disabled), null, { timeout: 30000 });
@@ -553,7 +557,7 @@ try {
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('[data-sheet-banner]') === null, null, { timeout: 15000 });
   await page.waitForTimeout(400);
-  check('Write the sheet and Save make the Sheet step ready, and its tab is ticked', (await sheetState()) === 'ready' && (await sheetTabNow.locator('[data-testid=CheckCircleIcon]').count()) === 1, await sheetState());
+  check('Write the sheet and Save make the Sheet step ready, and its tab is ticked', (await sheetState()) === 'ready' && (await sheetTabNow.getAttribute('data-state')) === 'ready', await sheetState());
   await shot('23-sheet-saved');
   const sheetNotes = await (await fetch(`${api}/pieces/${uuid}/notes`)).json();
   const edited = await fetch(`${api}/pieces/${uuid}/notes`, {
@@ -580,7 +584,7 @@ try {
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('[data-sheet-banner]') === null, null, { timeout: 15000 });
   await page.waitForTimeout(400);
-  check('Save makes the stale sheet ready again', (await sheetState()) === 'ready' && (await sheetTabNow.locator('[data-testid=CheckCircleIcon]').count()) === 1, await sheetState());
+  check('Save makes the stale sheet ready again', (await sheetState()) === 'ready' && (await sheetTabNow.getAttribute('data-state')) === 'ready', await sheetState());
   await shot('25-sheet-ready-again');
 
   // 16. A hand move on a zoomed sheet (Command and the wheel, or a pinch). The rebuild used to read

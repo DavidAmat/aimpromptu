@@ -3,6 +3,9 @@
 Each module exposes a single ``router`` (an ``APIRouter`` with its URL prefix and
 tag) that :mod:`aitu_backend.main` includes.
 
+The text-notation MVP (``/scores`` and ``/sequence``) was deleted in implementation 02,
+Phase 1 (Q-4).
+
 ``/video`` brings a Synthesia video in, samples its frames and reads the
 falling rectangles off them; ``/frame-examples`` is where a detection rule earns
 its place before it is trusted on one.
@@ -21,14 +24,12 @@ from aitu_backend.api.frame_examples import router as frame_examples_router
 from aitu_backend.api.library import router as library_router
 from aitu_backend.api.matrix import router as matrix_router
 from aitu_backend.api.pieces import router as pieces_router
-from aitu_backend.api.scores import router as scores_router
 from aitu_backend.api.time_score import router as time_score_router
 from aitu_backend.api.video import router as video_router
 from aitu_backend.api.youtube import router as youtube_router
 
 #: Included by the app factory in this order.
 ALL_ROUTERS = [
-    scores_router,
     audio_router,
     editing_router,
     matrix_router,
@@ -48,7 +49,6 @@ __all__ = [
     "library_router",
     "matrix_router",
     "pieces_router",
-    "scores_router",
     "time_score_router",
     "video_router",
     "youtube_router",

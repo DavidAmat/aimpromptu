@@ -56,7 +56,7 @@ import {
   type NoteRef,
   type RenderOverrides,
 } from "../../music/renderOverrides";
-import { palette, surface } from "../../ui";
+import { palette, ui } from "../../ui";
 
 export interface TimeScoreViewProps {
   score: TimeScorePayload;
@@ -1382,7 +1382,7 @@ export function TimeScoreView({
                   borderRadius: "2px",
                   backgroundColor: palette.dark.Lavender,
                   border: 1,
-                  borderColor: surface.panel,
+                  borderColor: ui.bg,
                   opacity: 0.85,
                   transition: "opacity 120ms, transform 120ms",
                 }}

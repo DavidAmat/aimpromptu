@@ -1,5 +1,7 @@
 /**
- * The flow page: one piece, five tabs in the order of the work (implementation 08, plan section 7).
+ * A project, step by step: five steps in the order of the work (implementation 08, plan section 7;
+ * restyled by implementation 02, plan section 10.2). Until Phase 3 a project is one piece, and its
+ * id is the piece's audio uuid.
  *
  * **Source** brings the audio in, **Audio** chooses the selected region, **Notes** transcribes and
  * edits the notes, **Hands** splits them between the two hands, and **Sheet** is the piano sheet.
@@ -7,8 +9,9 @@
  * tabs from that answer only, so a tab never opens on a result made from an older version of an
  * earlier step. The reader can always go back to an earlier tab.
  *
- * The piece is in the address (`/piece/<uuid>/<step>`), so a reload or a shared link opens the same
- * piece at the same step. `/piece/<uuid>` opens it on the furthest step that is ready.
+ * The project is in the address (`/projects/<id>/<step>`), so a reload or a shared link opens the
+ * same project at the same step. `/projects/<id>` opens it on the furthest step that is ready. The
+ * header is the back arrow to Projects, the title, the step tabs, and the `⋯` menu of the project.
  *
  * **Unsaved edits.** A tab with unsaved edits tells the page through `useUnsavedChanges`. Leaving
  * it by any link then asks the reader to save or discard first, and closing the browser tab shows
@@ -18,18 +21,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
-import Container from "@mui/material/Container";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import LibraryMusicIcon from "@mui/icons-material/LibraryMusicOutlined";
+import Skeleton from "@mui/material/Skeleton";
+import WaterfallIcon from "@mui/icons-material/WaterfallChartOutlined";
 import {
   Navigate,
   Outlet,
@@ -48,11 +41,10 @@ import {
   type PieceStep,
   type StepStatus,
 } from "../../api";
-import { formatTimeShort } from "../../audio/time";
-import StepTabs from "../../components/piece/StepTabs";
 import { STEP_LABELS } from "../../components/piece/stepLabels";
 import { ROUTES } from "../../layout/routes";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
+import { ConfirmDialog, PageHeader, PillButton, RowMenu, StepTabs } from "../../ui";
 import {
   PieceContext,
   SAVED_NAVIGATION,
@@ -61,16 +53,16 @@ import {
   type UnsavedHandlers,
 } from "./pieceContext";
 
-/** The tabs of `/piece/new`: only Source can be opened. */
+/** The steps of `/projects/new`: only Source can be opened. */
 const NO_PIECE: StepStatus[] = PIECE_STEPS.map((step) => ({
   step,
   state: step === "source" ? "ready" : "missing",
   enabled: step === "source",
-  reason: step === "source" ? null : "Choose an audio first.",
+  reason: step === "source" ? null : "Choose an audio first",
   details: {},
 }));
 
-/** Which tab the address names, or `null` for `/piece/<uuid>` itself. */
+/** Which step the address names, or `null` for `/projects/<id>` itself and for Notes Falling. */
 function stepOf(pathname: string, uuid: string | undefined): PieceStep | null {
   if (!uuid) return "source";
   const last = pathname.replace(/\/$/, "").split("/").pop();
@@ -88,7 +80,7 @@ interface Loaded {
 const EMPTY: Loaded = { uuid: null, audio: null, status: null, error: null };
 
 export function PiecePage() {
-  const { uuid } = useParams();
+  const { id: uuid } = useParams();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { update } = useWorkingArtifact();
@@ -198,44 +190,56 @@ export function PiecePage() {
   const steps = uuid ? status?.steps ?? null : NO_PIECE;
   const here = step ? stepStatus(status, step) : null;
 
-  // A tab that cannot be opened yet (typed in the address, or an old bookmark) goes to the step
-  // the piece has reached instead.
+  // A step that cannot be opened yet (typed in the address, or an old bookmark) goes to the step
+  // the project has reached instead.
   if (uuid && status && step && here && !here.enabled) {
-    return <Navigate to={ROUTES.piece(uuid, status.resume)} replace />;
+    return <Navigate to={ROUTES.project(uuid, status.resume)} replace />;
   }
 
   const audio = current.audio;
-  const notes = stepStatus(status, "notes");
-  const engine = typeof notes?.details.engine === "string" ? notes.details.engine : null;
-  const blockedTab = step ? STEP_LABELS[step] : "This";
+  const blockedTab = step ? STEP_LABELS[step] : "This step";
+  const title = uuid ? (audio?.alias ?? "") : "New project";
+  const hasNotes = stepStatus(status, "notes")?.state === "ready";
 
   return (
     <PieceContext value={context}>
-      <Container maxWidth={false} sx={{ pt: 1.5, pb: 4 }}>
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1, mb: 0.5 }}
+      <Box sx={{ px: { xs: 2, md: 3 }, pt: 1, pb: 4 }}>
+        <PageHeader
+          title={title}
+          back={{ to: ROUTES.projects, label: "Back to Projects" }}
+          actions={
+            uuid ? (
+              <RowMenu
+                title="Project actions"
+                items={[
+                  {
+                    label: "Notes Falling",
+                    icon: <WaterfallIcon fontSize="small" />,
+                    onClick: () => navigate(ROUTES.projectNotesFalling(uuid)),
+                    disabled: !hasNotes,
+                  },
+                ]}
+              />
+            ) : undefined
+          }
         >
-          <Typography variant="h2" sx={{ mr: 1 }}>
-            {uuid ? (audio?.alias ?? " ") : "New piece"}
-          </Typography>
-          {audio?.durationSeconds ? (
-            <Chip size="small" variant="outlined" label={formatTimeShort(audio.durationSeconds)} />
-          ) : null}
-          {audio ? <Chip size="small" variant="outlined" label={audio.source} /> : null}
-          {engine ? <Chip size="small" variant="outlined" label={`Notes: ${engine}`} /> : null}
-          <Box sx={{ flexGrow: 1 }} />
-          {uuid ? (
-            <Button
-              size="small"
-              startIcon={<LibraryMusicIcon />}
-              onClick={() => navigate(ROUTES.pieceNew)}
-            >
-              Open another piece
-            </Button>
-          ) : null}
-        </Stack>
+          {steps ? (
+            <StepTabs
+              steps={steps.map((item) => ({
+                key: item.step,
+                label: STEP_LABELS[item.step],
+                state: item.state,
+                enabled: item.enabled,
+                reason: item.reason,
+              }))}
+              current={step}
+              unsaved={unsavedStep}
+              onSelect={(next) => navigate(uuid ? ROUTES.project(uuid, next) : ROUTES.projectNew)}
+            />
+          ) : current.error ? null : (
+            <Skeleton variant="rounded" width={320} height={28} />
+          )}
+        </PageHeader>
 
         {current.error ? (
           <Alert severity="error" sx={{ my: 2 }}>
@@ -243,49 +247,24 @@ export function PiecePage() {
           </Alert>
         ) : null}
 
-        {steps ? (
-          <StepTabs
-            steps={steps}
-            current={step}
-            unsaved={unsavedStep}
-            onSelect={(next) => navigate(uuid ? ROUTES.piece(uuid, next) : ROUTES.pieceNew)}
-          />
-        ) : current.error ? null : (
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center", py: 2 }}>
-            <CircularProgress size={18} />
-            <Typography variant="body2" color="text.secondary">
-              Loading the piece…
-            </Typography>
-          </Stack>
-        )}
-
         <Box sx={{ pt: 2 }}>{!uuid || status ? <Outlet /> : null}</Box>
-      </Container>
+      </Box>
 
-      <Dialog open={blocker.state === "blocked"} onClose={() => void leaveWith("stay")}>
-        <DialogTitle>Unsaved changes</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {`${blockedTab} tab: ${unsaved ?? "some changes are not saved"}. Save them before you leave?`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => void leaveWith("stay")} disabled={leaving}>
-            Stay
-          </Button>
-          <Button color="error" onClick={() => void leaveWith("discard")} disabled={leaving}>
+      <ConfirmDialog
+        open={blocker.state === "blocked"}
+        title="Save your changes?"
+        message={`${blockedTab}: ${unsaved ?? "some changes are not saved"}.`}
+        cancelLabel="Stay"
+        confirmLabel="Save and continue"
+        busy={leaving}
+        onCancel={() => void leaveWith("stay")}
+        onConfirm={() => void leaveWith("save")}
+        extra={
+          <PillButton kind="quiet" onClick={() => void leaveWith("discard")} disabled={leaving} sx={{ color: "error.main" }}>
             Discard
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => void leaveWith("save")}
-            disabled={leaving}
-            startIcon={leaving ? <CircularProgress size={14} color="inherit" /> : undefined}
-          >
-            Save and continue
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </PillButton>
+        }
+      />
     </PieceContext>
   );
 }

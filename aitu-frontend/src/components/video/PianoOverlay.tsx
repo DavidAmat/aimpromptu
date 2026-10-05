@@ -21,7 +21,7 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { Calibration, PianoKey } from "../../api/frameExamples";
 import { topEdgeU } from "../../video/overlayGeometry";
-import { palette, surface } from "../../ui";
+import { palette, ui } from "../../ui";
 import { markColours, rectColours, type MarkState } from "./overlayColours";
 
 const radians = (degrees: number) => degrees * (Math.PI / 180);
@@ -123,7 +123,7 @@ export function PianoOverlay({
           height={height}
           fill={picked ? palette.dark.Red : mark === "released" ? "transparent" : markColours[mark]}
           fillOpacity={picked ? 0.35 : mark === "released" ? 0 : 0.8}
-          stroke={picked ? palette.dark.Red : hovered ? palette.dark.Lavender : surface.strongLine}
+          stroke={picked ? palette.dark.Red : hovered ? palette.dark.Lavender : ui.lineStrong}
           strokeWidth={(picked ? 2.5 : hovered ? 2 : key.kind === "black" ? 0.8 : 0.6) * scale}
           strokeDasharray={
             dotted.has(key.midi)
@@ -146,11 +146,11 @@ export function PianoOverlay({
           <text
             x={(u0 + u1) / 2}
             y={height + 11 * scale}
-            fill={surface.text}
+            fill={ui.text}
             fontSize={10 * scale}
             textAnchor="middle"
             style={{ pointerEvents: "none", paintOrder: "stroke" }}
-            stroke={surface.panel}
+            stroke={ui.bg}
             strokeWidth={3 * scale}
           >
             {key.nameEn}

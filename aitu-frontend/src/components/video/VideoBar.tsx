@@ -18,7 +18,7 @@ import Typography from "@mui/material/Typography";
 import type { ReactNode } from "react";
 import type { VideoSummary } from "../../api/video";
 import { formatTimeShort } from "../../audio/time";
-import { palette, surface } from "../../ui";
+import { palette, ui } from "../../ui";
 import { steps } from "./videoSteps";
 
 export interface VideoBarProps {
@@ -54,7 +54,7 @@ export function VideoBar({ videos, selected, onSelect, children }: VideoBarProps
           ))}
         </TextField>
         {video ? (
-          <Typography variant="caption" sx={{ color: surface.mutedText }}>
+          <Typography variant="caption" sx={{ color: ui.text2 }}>
             {formatTimeShort(video.metadata.durationSeconds)} · {video.metadata.width}×
             {video.metadata.height} at {video.metadata.fps.toFixed(0)} fps · {mb(video.metadata.sizeBytes)}
             {video.metadata.framesBytes ? ` + ${mb(video.metadata.framesBytes)} of frames` : ""}

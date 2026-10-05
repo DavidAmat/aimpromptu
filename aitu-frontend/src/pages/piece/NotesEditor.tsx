@@ -1,9 +1,10 @@
 /**
- * Steps 3 and 4, **Notes** and **Hands**: one editor of the piano roll visualization (plan sections
- * 7.1, 9.5 and 9.6). The Notes step is the live transcription and the edits of the rectangles;
+ * Steps 3 and 4, **Notes** and **Hands**: one editor of the piano roll visualization (implementation
+ * 08, plan sections 7.1, 9.5 and 9.6; restyled by implementation 02, plan section 10.2: icon actions
+ * with tooltips, the primary action on the top row, the hand tools in the floating toolbox). The Notes step is the live transcription and the edits of the rectangles;
  * the Hands step is the same view coloured by hand, with **Predict hands** and the hand tools.
  *
- * **While the piece is transcribed**, the rectangles appear as MuScriptor writes them: the page
+ * **While the piece is transcribed**, the rectangles appear as the engine writes them: the page
  * follows the progress stream of the running job (`status.steps.notes.details.jobId`), the view
  * follows the part already transcribed, and the bar below says how far it is and how long it
  * took. No audio plays. A page opened or reloaded during the transcription receives everything
@@ -32,8 +33,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import Alert from "@mui/material/Alert";
 import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
@@ -41,8 +40,6 @@ import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
@@ -55,18 +52,17 @@ import MyLocationIcon from "@mui/icons-material/MyLocation";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import RedoIcon from "@mui/icons-material/Redo";
+import ReplayIcon from "@mui/icons-material/Replay";
 import SaveIcon from "@mui/icons-material/Save";
 import UndoIcon from "@mui/icons-material/Undo";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import { useNavigate } from "react-router-dom";
 import { ApiError, audioApi, matrixApi, piecesApi, type PredictResult } from "../../api";
-import { formatTimeShort } from "../../audio/time";
 import { useCutPlayer } from "../../audio/useCutPlayer";
 import PianoRollCanvas, { type RollHandle, type RollMode } from "../../components/notes/PianoRollCanvas";
 import RollTimeBar from "../../components/notes/RollTimeBar";
 import type { HandFilter } from "../../components/notes/rollPaint";
-import FloatingBar from "../../components/common/FloatingBar";
 import StepProgress from "../../components/piece/StepProgress";
 import { followJob, type FollowedJob } from "../../hooks/followJob";
 import { useEditHistory } from "../../hooks/useEditHistory";
@@ -102,7 +98,7 @@ import { RollNotes } from "../../notes/rollNotes";
 import { useLiveTranscription } from "../../notes/useLiveTranscription";
 import { useSpacebarPlay } from "../../playback/useSpacebarPlay";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
-import { timestampSx } from "../../ui";
+import { EmptyState, FloatingBar, IconAction, PillButton, Segmented, timestampSx } from "../../ui";
 import { stepStatus, usePiece, useUnsavedChanges } from "./pieceContext";
 
 const FRAME_MS = 10;
@@ -113,7 +109,7 @@ const NO_CUTS: [number, number][] = [];
 function stageWords(stage: string | null, message: string | null): string | null {
   if (stage === "waiting") return message || "Waiting for another transcription to finish";
   if (stage === "timing") return "Measuring the timing of the notes…";
-  if (stage === "transcribe") return "Transcribing with MuScriptor…";
+  if (stage === "transcribe") return "Transcribing…";
   if (stage) return "Starting…";
   return null;
 }
@@ -587,26 +583,41 @@ export function NotesEditor({ step }: { step: EditorStep }) {
 
   if (here.state === "missing" && !followed) {
     return (
-      <Stack spacing={2}>
-        <Alert severity="info">{here.reason ?? "This piece has no notes yet."}</Alert>
-        <Box>
-          <Button variant="contained" onClick={() => navigate(ROUTES.piece(uuid, "audio"))}>
-            Go to the Audio tab
-          </Button>
-        </Box>
-      </Stack>
+      <EmptyState
+        message={here.reason ?? "This project has no notes yet."}
+        action={
+          <PillButton kind="primary" onClick={() => navigate(ROUTES.project(uuid, "audio"))}>
+            Open the Audio step
+          </PillButton>
+        }
+      />
     );
   }
 
   const waiting = stageWords(live.stage, live.message);
   const noteCount = base ? liveCount(base, present) : null;
-  const took = typeof live.result?.elapsedSeconds === "number" ? Math.round(live.result.elapsedSeconds) : null;
   const cursorMs = player.cursor * FRAME_MS;
   const busy = predicting !== null || saving;
-  const tight = { py: 0.25, px: 1.25, textTransform: "none" } as const;
+
+  const next =
+    mode === "live" ? null : !onHands ? (
+      hands?.enabled ? (
+        <PillButton kind="primary" onClick={() => navigate(ROUTES.project(uuid, "hands"))}>
+          Continue to Hands
+        </PillButton>
+      ) : null
+    ) : (
+      <Tooltip title={sheet?.enabled ? "" : (sheet?.reason ?? "Save the hands first")}>
+        <span>
+          <PillButton kind="primary" disabled={!sheet?.enabled} onClick={() => navigate(ROUTES.project(uuid, "sheet"))}>
+            Continue to Sheet
+          </PillButton>
+        </span>
+      </Tooltip>
+    );
 
   return (
-    // Room under the page, so the floating toolbar can be scrolled clear of the Continue button.
+    // Room under the page, so the floating toolbar can be moved clear of the piano roll.
     <Stack spacing={1.5} sx={{ pb: editing ? 9 : 0 }}>
       {live.status === "error" ? <Alert severity="error">{live.error}</Alert> : null}
       {loadError ? <Alert severity="error">{loadError}</Alert> : null}
@@ -620,133 +631,71 @@ export function NotesEditor({ step }: { step: EditorStep }) {
         <Alert
           severity="error"
           action={
-            <Button color="inherit" size="small" onClick={reload}>
+            <PillButton size="small" onClick={reload}>
               Reload the notes
-            </Button>
+            </PillButton>
           }
         >
-          {`The notes could not be saved: ${conflict} They were changed somewhere else (another tab or page). Reload them to continue; the unsaved changes on this page are then lost.`}
+          {`The notes changed in another tab, so these changes could not be saved (${conflict}). Reload the notes to continue; the unsaved changes here are lost.`}
         </Alert>
       ) : null}
       {here.state === "stale" ? (
         <Alert
           severity="warning"
           action={
-            <Button color="inherit" size="small" onClick={() => navigate(ROUTES.piece(uuid, "audio"))}>
-              Go to the Audio tab
-            </Button>
+            <PillButton size="small" onClick={() => navigate(ROUTES.project(uuid, "audio"))}>
+              Open the Audio step
+            </PillButton>
           }
         >
-          The selected region changed after this transcription, so these notes no longer match the
-          audio. They can be looked at, not edited or played. Transcribe the piece again on the Audio tab.
+          The cuts changed after this transcription, so these notes no longer match the audio. Transcribe again on the Audio step to edit or play them.
         </Alert>
       ) : null}
 
-      <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1, minHeight: 36 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1, minHeight: 40 }}>
         {mode === "live" ? (
           <>
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center", pr: 1 }}>
-              {running ? <CircularProgress size={16} /> : null}
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {running ? (waiting ?? "Transcribing with MuScriptor…") : ended ? "Reading the saved notes…" : "Loading the notes…"}
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center", pr: 1 }} role="status" aria-live="polite">
+              {running ? <CircularProgress size={14} /> : null}
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {running ? (waiting ?? "Transcribing…") : ended ? "Reading the saved notes…" : "Loading the notes…"}
               </Typography>
             </Stack>
-            <Tooltip describeChild title="Keep the part being transcribed in view">
-              <ToggleButton size="small" value="follow" selected={follow} onChange={() => setFollow((value) => !value)} sx={tight}>
-                <MyLocationIcon fontSize="small" sx={{ mr: 0.5 }} />
-                Follow
-              </ToggleButton>
-            </Tooltip>
+            <IconAction
+              title="Keep the part being transcribed in view"
+              icon={<MyLocationIcon fontSize="small" />}
+              active={follow}
+              onClick={() => setFollow((value) => !value)}
+            />
           </>
         ) : null}
-
-        {onHands && editing ? (
-          <>
-            <Tooltip
-              describeChild
-              title={
-                hasHands
-                  ? "Predict the hands of the notes with no hand, and of the ones the quick rule guessed; the hands you set are kept"
-                  : "Run the hand split on the notes: every rectangle takes the colour of its hand"
-              }
-            >
-              <span>
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={predicting ? <CircularProgress size={16} color="inherit" /> : <AutoFixHighIcon />}
-                  disabled={busy}
-                  onClick={() => void predict(false)}
-                >
-                  Predict hands
-                </Button>
-              </span>
-            </Tooltip>
-            {hasHands ? (
-              <Tooltip describeChild title="Predict every note again, also the ones you gave a hand yourself">
-                <span>
-                  <Button size="small" disabled={busy} onClick={() => void predict(true)}>
-                    Predict every note again
-                  </Button>
-                </span>
-              </Tooltip>
-            ) : null}
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              value={handFilter}
-              onChange={(_event, value: HandFilter | null) => value && setHandFilter(value)}
-              aria-label="Which hand to show"
-            >
-              <ToggleButton value="both" sx={tight}>
-                Both hands
-              </ToggleButton>
-              <ToggleButton value="right" sx={tight}>
-                Right
-              </ToggleButton>
-              <ToggleButton value="left" sx={tight}>
-                Left
-              </ToggleButton>
-            </ToggleButtonGroup>
-            {predicted && !predicting ? (
-              <Chip
-                size="small"
-                variant="outlined"
-                onDelete={() => setPredicted(null)}
-                label={`Predicted in ${(predicted.result.elapsedMs / 1000).toFixed(1)} s · ${plural(predicted.applied, "note")} changed hand${predicted.result.unplaced ? ` · ${predicted.result.unplaced} without a hand` : ""}`}
-              />
-            ) : null}
-          </>
-        ) : null}
-
-        <Box sx={{ flexGrow: 1 }} />
 
         {!onHands && editing ? (
-          <Tooltip describeChild title={hasHands ? "Colour the notes by hand: blue right, green left, red no hand" : "Predict hands on the Hands tab first"}>
+          <Tooltip title={hasHands ? "Colour the notes by hand: blue right, green left, red no hand" : "Predict hands on the Hands step first"}>
             <FormControlLabel
-              sx={{ mr: 1 }}
+              sx={{ ml: 0, mr: 1 }}
               control={<Switch size="small" checked={hasHands && handColours} disabled={!hasHands} onChange={toggleHandColours} />}
               label={<Typography variant="body2">Hand colours</Typography>}
             />
           </Tooltip>
         ) : null}
-        {took !== null && mode !== "live" ? <Chip size="small" variant="outlined" label={`Transcribed in ${formatTimeShort(took)}`} /> : null}
-        {noteCount !== null ? <Chip size="small" variant="outlined" label={`${noteCount} notes`} /> : null}
-        <Tooltip describeChild title="Zoom out (Command and the mouse wheel, or pinch)">
-          <IconButton size="small" onClick={() => rollRef.current?.zoomBy(0.5)} aria-label="Zoom out">
-            <ZoomOutIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip describeChild title="Zoom in (Command and the mouse wheel, or pinch)">
-          <IconButton size="small" onClick={() => rollRef.current?.zoomBy(2)} aria-label="Zoom in">
-            <ZoomInIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip describeChild title="Show the whole piece">
-          <IconButton size="small" onClick={() => rollRef.current?.showWhole()} aria-label="Show the whole piece">
-            <FitScreenIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {noteCount !== null ? (
+          <Typography variant="body2" color="text.secondary" sx={timestampSx}>
+            {plural(noteCount, "note")}
+          </Typography>
+        ) : null}
+        {predicted && !predicting ? (
+          <Typography variant="body2" color="text.secondary" data-predicted>
+            {`${plural(predicted.applied, "note")} changed hand${predicted.result.unplaced ? ` · ${predicted.result.unplaced} without a hand` : ""}`}
+          </Typography>
+        ) : null}
+
+        <Box sx={{ flexGrow: 1 }} />
+
+        <IconAction title="Zoom out" icon={<ZoomOutIcon fontSize="small" />} onClick={() => rollRef.current?.zoomBy(0.5)} />
+        <IconAction title="Zoom in" icon={<ZoomInIcon fontSize="small" />} onClick={() => rollRef.current?.zoomBy(2)} />
+        <IconAction title="Show the whole piece" icon={<FitScreenIcon fontSize="small" />} onClick={() => rollRef.current?.showWhole()} />
+        {next ? <Box sx={{ pl: 1 }}>{next}</Box> : null}
       </Stack>
 
       {predicting ? (
@@ -784,84 +733,79 @@ export function NotesEditor({ step }: { step: EditorStep }) {
         onSeek={playable ? seek : null}
       />
 
-      {mode !== "live" ? (
-        <Stack direction="row" spacing={1.5} sx={{ justifyContent: "flex-end" }}>
-          {!onHands && hands?.enabled ? (
-            <Button variant="contained" onClick={() => navigate(ROUTES.piece(uuid, "hands"))}>
-              Continue to Hands
-            </Button>
-          ) : null}
-          {onHands ? (
-            <Tooltip describeChild title={sheet?.enabled ? "Open the piano sheet" : (sheet?.reason ?? "Save the hands first")}>
-              <span>
-                <Button variant="contained" disabled={!sheet?.enabled} onClick={() => navigate(ROUTES.piece(uuid, "sheet"))}>
-                  Continue to Sheet
-                </Button>
-              </span>
-            </Tooltip>
-          ) : null}
-        </Stack>
-      ) : null}
-
-      {/* The editor's toolbar, floating so it stays at hand along the whole piece. */}
-      <FloatingBar open={editing} label="the editing toolbar">
+      {/* The editor's toolbox, floating so it stays at hand along the whole piece. */}
+      <FloatingBar open={editing} label={onHands ? "the hands toolbox" : "the editing toolbar"}>
         {player.playing ? (
-          <Tooltip describeChild title="Pause (Space)">
-            <IconButton size="small" color="primary" onClick={player.pause} aria-label="Pause">
-              <PauseIcon />
-            </IconButton>
-          </Tooltip>
+          <IconAction title="Pause" shortcut="Space" icon={<PauseIcon />} onClick={player.pause} />
         ) : (
-          <Tooltip describeChild title="Play from the playhead, following it (Space)">
-            <IconButton size="small" color="primary" onClick={play} aria-label="Play">
-              <PlayArrowIcon />
-            </IconButton>
-          </Tooltip>
+          <IconAction title="Play from the playhead" shortcut="Space" icon={<PlayArrowIcon />} onClick={play} />
         )}
-        <Tooltip describeChild title={history.canUndo ? `Undo: ${history.undoLabel ?? ""} (Command-Z)` : "Nothing to undo"}>
-          <span>
-            <IconButton size="small" disabled={!history.canUndo} onClick={() => void history.undo()} aria-label="Undo">
-              <UndoIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip describeChild title={history.canRedo ? `Redo: ${history.redoLabel ?? ""} (Shift-Command-Z)` : "Nothing to redo"}>
-          <span>
-            <IconButton size="small" disabled={!history.canRedo} onClick={() => void history.redo()} aria-label="Redo">
-              <RedoIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip describeChild title="Delete the selected notes (Delete or Backspace)">
-          <span>
-            <IconButton size="small" color="error" disabled={selection.size === 0} onClick={deleteSelection} aria-label="Delete">
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
+        <IconAction
+          title={history.canUndo ? `Undo ${history.undoLabel ?? ""}`.trim() : "Nothing to undo"}
+          shortcut="⌘Z"
+          icon={<UndoIcon fontSize="small" />}
+          disabled={!history.canUndo}
+          onClick={() => void history.undo()}
+        />
+        <IconAction
+          title={history.canRedo ? `Redo ${history.redoLabel ?? ""}`.trim() : "Nothing to redo"}
+          shortcut="⇧⌘Z"
+          icon={<RedoIcon fontSize="small" />}
+          disabled={!history.canRedo}
+          onClick={() => void history.redo()}
+        />
+        <IconAction
+          title="Delete the selected notes"
+          shortcut="Delete"
+          disabledTitle="Select notes first"
+          icon={<DeleteIcon fontSize="small" />}
+          disabled={selection.size === 0}
+          onClick={deleteSelection}
+        />
         {onHands ? (
           <>
             <Divider orientation="vertical" flexItem />
-            <Tooltip describeChild title="Give the selected notes to the left hand (L)">
+            <IconAction
+              title={hasHands ? "Predict hands for the notes you did not place yourself" : "Predict hands"}
+              icon={predicting ? <CircularProgress size={16} /> : <AutoFixHighIcon fontSize="small" />}
+              disabled={busy}
+              onClick={() => void predict(false)}
+            />
+            {hasHands ? (
+              <IconAction
+                title="Predict every note again, also the ones you placed"
+                icon={<ReplayIcon fontSize="small" />}
+                disabled={busy}
+                onClick={() => void predict(true)}
+              />
+            ) : null}
+            <Segmented<HandFilter>
+              label="Which hand to show"
+              value={handFilter}
+              onChange={setHandFilter}
+              options={[
+                { value: "both", label: "Both", tooltip: "Show both hands" },
+                { value: "right", label: "Right", tooltip: "Show the right hand only" },
+                { value: "left", label: "Left", tooltip: "Show the left hand only" },
+              ]}
+            />
+            <Tooltip title="Give the selected notes to the right hand (R)">
               <span>
-                <Button size="small" color="success" disabled={selection.size === 0} onClick={() => giveHand("l")} sx={{ minWidth: 0 }}>
-                  To Left
-                </Button>
+                <PillButton kind="quiet" size="small" disabled={selection.size === 0} onClick={() => giveHand("r")}>
+                  To right
+                </PillButton>
               </span>
             </Tooltip>
-            <Tooltip describeChild title="Give the selected notes to the right hand (R)">
+            <Tooltip title="Give the selected notes to the left hand (L)">
               <span>
-                <Button size="small" disabled={selection.size === 0} onClick={() => giveHand("r")} sx={{ minWidth: 0 }}>
-                  To Right
-                </Button>
+                <PillButton kind="quiet" size="small" disabled={selection.size === 0} onClick={() => giveHand("l")}>
+                  To left
+                </PillButton>
               </span>
             </Tooltip>
             {handless.length > 0 && hasHands ? (
               <>
-                <Tooltip
-                  describeChild
-                  title={`Select the ${plural(handless.length, "note")} without a hand (red). The hand split cannot place a note shorter than one column of the piano sheet (${artifact.frameMs} ms), or one that shares its column with another note of its key; it is often a note the engine imagined. Then go through them with the arrows, and give each a hand (L, R) or delete it.`}
-                >
+                <Tooltip title={`Select the ${plural(handless.length, "note")} without a hand, then give each a hand (L, R) or delete it`}>
                   <IconButton size="small" color="error" onClick={selectHandless} aria-label="Select the notes without a hand">
                     <Badge badgeContent={handless.length} color="error" max={999}>
                       <BackHandIcon fontSize="small" />
@@ -870,15 +814,11 @@ export function NotesEditor({ step }: { step: EditorStep }) {
                 </Tooltip>
                 {reviewShown ? (
                   <>
-                    <IconButton size="small" onClick={() => stepHandless(-1)} aria-label="Previous note without a hand">
-                      <ChevronLeftIcon fontSize="small" />
-                    </IconButton>
+                    <IconAction title="Previous note without a hand" icon={<ChevronLeftIcon fontSize="small" />} onClick={() => stepHandless(-1)} />
                     <Typography variant="body2" sx={{ ...timestampSx, minWidth: 44, textAlign: "center" }} data-review>
                       {reviewIndex >= 0 ? `${reviewIndex + 1} / ${handless.length}` : `– / ${handless.length}`}
                     </Typography>
-                    <IconButton size="small" onClick={() => stepHandless(1)} aria-label="Next note without a hand">
-                      <ChevronRightIcon fontSize="small" />
-                    </IconButton>
+                    <IconAction title="Next note without a hand" icon={<ChevronRightIcon fontSize="small" />} onClick={() => stepHandless(1)} />
                   </>
                 ) : null}
               </>
@@ -891,18 +831,19 @@ export function NotesEditor({ step }: { step: EditorStep }) {
           </Typography>
         ) : null}
         <Divider orientation="vertical" flexItem />
-        <Tooltip describeChild title={summary ?? "Nothing to save"}>
+        <Tooltip title={summary ?? "Nothing to save"}>
           <span>
-            <Button
+            <PillButton
               size="small"
-              variant="contained"
-              startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <SaveIcon />}
+              kind={summary === null ? "quiet" : "primary"}
+              startIcon={<SaveIcon fontSize="small" />}
+              busy={saving}
               disabled={summary === null || busy}
               onClick={() => void save()}
               data-unsaved={summary ?? ""}
             >
               Save
-            </Button>
+            </PillButton>
           </span>
         </Tooltip>
       </FloatingBar>

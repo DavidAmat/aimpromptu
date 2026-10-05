@@ -33,7 +33,7 @@ import type {
   PianoKey,
 } from "../../api/frameExamples";
 import { buildKeys } from "../../video/overlayGeometry";
-import { palette, surface } from "../../ui";
+import { palette, ui } from "../../ui";
 import FrameCanvas from "./FrameCanvas";
 import OffsetLine from "./OffsetLine";
 import PianoOverlay from "./PianoOverlay";
@@ -172,7 +172,7 @@ export function DetectionView({
         <Chip
           size="small"
           label={`${pick("onset").length} onset`}
-          sx={{ backgroundColor: markColours.onset, color: surface.panel }}
+          sx={{ backgroundColor: markColours.onset, color: ui.bg }}
         />
         <Chip
           size="small"
@@ -183,7 +183,7 @@ export function DetectionView({
           <Chip
             size="small"
             label={`${corrections} correction${corrections === 1 ? "" : "s"}`}
-            sx={{ backgroundColor: palette.dark.Orange, color: surface.panel }}
+            sx={{ backgroundColor: palette.dark.Orange, color: ui.bg }}
           />
         ) : null}
         {saved ? (

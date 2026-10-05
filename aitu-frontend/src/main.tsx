@@ -30,7 +30,8 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider theme={theme}>
+    {/* Light until the theme choice of the user menu exists (Phase 4); the dark scheme is defined. */}
+    <ThemeProvider theme={theme} defaultMode="light">
       <CssBaseline />
       <RouterProvider router={router} />
     </ThemeProvider>

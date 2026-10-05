@@ -1,4 +1,4 @@
-"""Smoke tests for the restructured app: health, scores and sequence."""
+"""Smoke tests for the restructured app: health, and the routes that exist."""
 
 from fastapi.testclient import TestClient
 
@@ -13,60 +13,10 @@ def test_health() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_scores_returns_a_list() -> None:
-    response = client.get("/scores")
-    assert response.status_code == 200
-    payload = response.json()
-    assert isinstance(payload, list)
-    assert payload, "data/example-scores.json should ship at least one score"
-    # The portable format carries one timing, and it is a length of wall clock.
-    # It used to carry a tempo and a time step, which said the same thing twice.
-    assert "frameMs" in payload[0]
-    assert "tempoBpm" not in payload[0]
-
-
-def test_sequence_round_trip_one_hand() -> None:
-    """Do Re Mi with one held Re: 4 frames, 4 active cells, one sustain."""
-    response = client.post(
-        "/sequence",
-        json={
-            "sequence": ["*Do-4", "*Re-4", "Re-4", "*Mi-4"],
-            "frameMs": 1000,
-            "title": "smoke",
-        },
-    )
-    assert response.status_code == 200
-    score = response.json()
-    matrix = score["matrix"]
-    assert matrix["format"] == "binary-coo"
-    assert matrix["shape"] == [88, 4]
-    assert matrix["cols"] == [0, 1, 2, 3]
-    # Row 39 is Do-4 (La-0 .. Si-0 = 3 rows, then 3 full octaves = 36).
-    assert matrix["rows"] == [39, 41, 41, 43]
-    assert matrix["onset"] == [39, 41, -1, 43]
-
-
-def test_sequence_two_hands_must_align() -> None:
-    response = client.post(
-        "/sequence",
-        json={
-            "sequence": ["*Do-4", "*Re-4"],
-            "leftSequence": ["*Do-3"],
-            "frameMs": 1000,
-        },
-    )
-    assert response.status_code == 422
-
-
-def test_sequence_rejects_unknown_note() -> None:
-    response = client.post(
-        "/sequence",
-        json={
-            "sequence": ["*Xy-4"],
-            "frameMs": 1000,
-        },
-    )
-    assert response.status_code == 422
+def test_the_text_notation_mvp_is_gone() -> None:
+    """`/scores` and `/sequence` were deleted with the text-notation MVP (implementation 02, Q-4)."""
+    assert client.get("/scores").status_code == 404
+    assert client.post("/sequence", json={"sequence": ["*Do-4"]}).status_code in (404, 405)
 
 
 def test_playlists_are_a_list() -> None:

@@ -4,12 +4,12 @@
  * The user looks at the app from the Mac, through a tunnel. An agent on the Ubuntu machine has no
  * screen, so it takes its own pictures with this before asking the user to look.
  *
- *     npm run screenshot -- /playground/input
- *     npm run screenshot -- /playground/rhythm --piece a585f9eb-36a1-49a0-9f0c-2626f3d292da
- *     npm run screenshot -- /library --out /tmp/library.png --width 1600 --height 1000 --full
+ *     npm run screenshot -- /projects
+ *     npm run screenshot -- /projects/<uuid>/sheet --wait .grid-notehead
+ *     npm run screenshot -- /admin/lab/video --out /tmp/lab.png --width 1600 --height 1000 --full
  *
  * Options:
- *   --piece <uuid>      open the page with this piece loaded (what the Library does on a click)
+ *   --piece <uuid>      make this piece the working piece (session storage) before the page opens
  *   --wait <selector>   wait for this CSS selector before the picture (default: network quiet)
  *   --delay <ms>        wait this long after that (default 500), for animations and canvases
  *   --out <file.png>    default ../.run/screenshots/<path>.png (ignored by git)
@@ -71,7 +71,7 @@ page.on('requestfailed', (request) => {
 });
 
 if (values.piece) {
-  // The Playground keeps the current piece in session storage (`aitu.workingArtifact`).
+  // The working piece lives in session storage (`aitu.workingArtifact`).
   const artifact = JSON.stringify({ audioUuid: values.piece, label: values.piece, frameMs: 40 });
   await page.addInitScript((value) => {
     window.sessionStorage.setItem('aitu.workingArtifact', value);

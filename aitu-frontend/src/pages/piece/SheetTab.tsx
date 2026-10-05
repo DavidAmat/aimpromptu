@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from "react";
-import RhythmPage, { type SheetStep } from "../playground/RhythmPage";
+import RhythmPage, { type SheetStep } from "./RhythmPage";
 import { stepStatus, usePiece } from "./pieceContext";
 
 export function SheetTab() {

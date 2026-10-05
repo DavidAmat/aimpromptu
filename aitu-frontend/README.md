@@ -4,11 +4,14 @@ React 19 + TypeScript + Vite app. It brings a recording in, shows how it was act
 draws the sheet with `@aimpromptu/grid-notation`, a renderer built for this project, because
 nothing off the shelf lays music out on a wall clock.
 
-The app opens on the **flow page** (`/piece`): one piece, five tabs in the order of the work
-(Source, Audio, Notes, Hands, Sheet), from the audio to the piano sheet.
+The app opens on **Projects** (`/projects`), inside a shell with a left sidebar. A project goes from
+its audio to its piano sheet in five steps (Source, Audio, Notes, Hands, Sheet), at
+`/projects/:id/:step`. **Lab** holds the video reader's pages. The look is black, white and grey,
+with colour only on the music (implementation 02, plan section 7).
 
 **Documentation:** [context/frontend/](../context/frontend/README.md) ·
-the flow page: [flow-page.md](../context/frontend/flow-page.md) ·
+projects and their steps: [flow-page.md](../context/frontend/flow-page.md) ·
+colours: [color-palette.md](../context/colors/color-palette.md) ·
 components: [components.md](../documentation/services/frontend/components.md) ·
 rendering: [rendering.md](../context/frontend/rendering.md)
 
@@ -51,12 +54,12 @@ both natively.
 | `npm run check:history` | Undo reverses exactly one press and returns to where it started |
 | `npm run check:note-names` | The note toolbox names a note the way the sheet spells it |
 | `npm run check:geometry` | The video piano overlay matches the backend's fixture |
-| `npm run check:cuts` | The Audio tab's cuts follow the backend's rules, and playback jumps over them |
+| `npm run check:cuts` | The Audio step's cuts follow the backend's rules, and playback jumps over them |
 | `npm run check:notes` | The Notes tab's typed arrays, live feed and edits (the operations a save sends) |
-| `npm run check:flow` | The flow page walked in a headless Chromium, every tab, live transcription included (`--no-transcribe` skips it) |
-| `npm run time:flow` | The whole flow timed on three temporary pieces (an upload, a library copy, a YouTube URL) |
+| `npm run check:flow` | A project walked in a headless Chromium, every step, live transcription included (`--no-transcribe` skips it) |
+| `npm run time:flow` | The whole flow timed on three temporary pieces (an upload, a copy opened from Projects, a YouTube URL) |
 | `npm run bench:roll` | The Notes tab at 10,000 rectangles and at 100 stream messages per second |
-| `npm run bench:sheet` | A hand move on the Sheet tab's piano sheet, timed part by part, on copies |
+| `npm run bench:sheet` | A hand move on the Sheet step's piano sheet, timed part by part, on copies |
 | `npm run screenshot -- <path>` | A screenshot of a page in a headless Chromium, for a machine with no screen |
 
 **These need the running app** (`make up`): `check:flow`, `time:flow`, `bench:roll`, `bench:sheet`
@@ -71,41 +74,41 @@ backend.
 src/
   api/        # typed client, one module per backend router; no component calls fetch
   hooks/      # useProgress (SSE), followJob, useEditHistory, selection, staged removals, element size
-  layout/     # AppLayout, PlaygroundLayout, VideoLayout, routes.ts (every path lives here)
+  layout/     # AppLayout (the shell), LabLayout, SearchDialog, ShortcutsDialog, LegacyRedirect, routes.ts (every path lives here)
   pages/      # one component per route
-    piece/    #   the flow page: PiecePage, the five tabs, NotesEditor (Notes and Hands)
-    playground/ # Upload / Input, Notes Falling, the piano sheet (RhythmPage)
-    video/    #   Video to Notes
+    ProjectsPage.tsx  # Projects
+    piece/    #   a project: PiecePage, the five steps, NotesEditor (Notes and Hands), RhythmPage (Sheet), Notes Falling
+    video/    #   the Lab pages: the video reader
     dev/      #   /dev/roll-bench, development builds only
-  state/      # WorkingArtifactProvider: the piece shared across Playground tabs and the flow page
-  ui/         # palette.ts, theme.ts, timestamps.ts, progress.ts and the shared MUI wrappers
-  music/      # matrix contracts mirrored from the backend, note names, figures, overrides
+  state/      # WorkingArtifactProvider: the working piece and its frameMs
+  ui/         # the design system: tokens, theme, palette (the colours of the music), the shared components
+  music/      # note names, figures, overrides
   notes/      # the piano roll visualization's data: typed arrays, view, live feed, edits
-  audio/      # recorder, mm:ss.cc, the Audio tab's cuts, view window and player
+  audio/      # recorder, mm:ss.cc, the Audio step's cuts, view window and player
   piano/      # the 88-key SVG keyboard
   playback/   # the transport, the scrub bar, how a note rectangle is drawn
   print/      # the PDF writer
-  library/    # load a piece for the performance view
+  library/    # load a piece for a read-only sheet (kept for Play mode)
   video/      # the video piano overlay geometry, note placement, the selected video
   components/
-    piece/    # the flow page's tabs, save bar, step progress, YouTube download
+    piece/    # step names, step progress
     notes/    # PianoRollCanvas, rollPaint, RollTimeBar; the Notes Falling toolbox and removals bar
-    time/     # PeakPlot, TimeScoreView (the ONLY file that touches the renderer)
-    audio/    # recorder, upload, waveforms (CutWaveform for the Audio tab), range selection
-    input/    # transcription settings, compose a new piece
+    time/     # PeakPlot, TimeScoreView (the ONLY file that touches the renderer), FigureGlyph
+    audio/    # waveforms (CutWaveform for the Audio step), range selection, level bars
     editing/  # re-record a passage, add a passage
-    library/  # playlists
-    video/    # the Video to Notes views: player, calibration, detection, overlay
-    common/   # the floating bar and the draggable toolbox shell
+    video/    # the Lab views: player, calibration, detection, overlay
 ```
 
 ## Rules
 
-- **Colors** come from `src/ui/palette.ts` only. No hex literal in a component or stylesheet.
+- **Colors** come from `src/ui/tokens.ts` (the page) and `src/ui/palette.ts` (the music) only. No
+  hex literal in a component or stylesheet.
+- **Shared components** come from `src/ui/`: a title, a button, a list row, a table, a toolbox, an
+  empty state, a confirmation. Every icon button is an `IconAction`, with its tooltip.
 - **Requests** use `src/api/`. No `fetch` in a component.
 - **Routes** come from `src/layout/routes.ts`. No URL string literal in a component.
-- **Components** are MUI. Aceternity UI is allowed for decoration only; every functional
-  control stays MUI so behavior is consistent.
+- **Components** are MUI, styled by the theme. Every functional control stays MUI so behavior is
+  consistent.
 - **The renderer** is reached from `components/time/TimeScoreView.tsx` and nowhere else.
 - **No component derives a note's figure.** The printed figure comes from the backend and is
   passed through.

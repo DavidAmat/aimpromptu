@@ -32,7 +32,7 @@ import Typography from "@mui/material/Typography";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import type { Annotation, Calibration, PianoKey } from "../../api/frameExamples";
 import { buildKeys } from "../../video/overlayGeometry";
-import { surface } from "../../ui";
+import { ui } from "../../ui";
 import FrameCanvas from "./FrameCanvas";
 import OffsetLine from "./OffsetLine";
 import PianoOverlay from "./PianoOverlay";
@@ -116,13 +116,13 @@ export function AnnotationEditor({
         <Chip
           size="small"
           label={`${counts.onset} onset`}
-          sx={{ backgroundColor: markColours.onset, color: surface.panel }}
+          sx={{ backgroundColor: markColours.onset, color: ui.bg }}
         />
         <Chip size="small" label={`${counts.sustain} sustain`} sx={{ backgroundColor: markColours.sustain }} />
         <Chip
           size="small"
           label={`${counts.skip} cannot say`}
-          sx={{ backgroundColor: markColours.skip, color: surface.panel }}
+          sx={{ backgroundColor: markColours.skip, color: ui.bg }}
         />
         <Box sx={{ flexGrow: 1 }} />
         {annotations.map((annotation) => (
@@ -206,7 +206,7 @@ export function AnnotationEditor({
           </Typography>
           {RULE.map(([what, rule]) => (
             <Stack key={what} direction="row" spacing={1}>
-              <Typography variant="body2" sx={{ minWidth: 190, color: surface.mutedText }}>
+              <Typography variant="body2" sx={{ minWidth: 190, color: ui.text2 }}>
                 {what}
               </Typography>
               <Typography variant="body2" sx={{ fontFamily: "monospace" }}>

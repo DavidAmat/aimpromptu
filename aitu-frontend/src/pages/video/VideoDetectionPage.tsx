@@ -25,7 +25,7 @@ import type { DetectedRun, Detection } from "../../api/frameExamples";
 import { videoApi, type DetectionReport, type FrameLine, type VideoSummary } from "../../api/video";
 import { buildKeys } from "../../video/overlayGeometry";
 import useProgress from "../../hooks/useProgress";
-import { PageContainer, progressSx, SectionCard, surface } from "../../ui";
+import { progressSx, Section, ui } from "../../ui";
 import { readSelectedVideo, writeSelectedVideo } from "../../video/selectedVideo";
 import FramePlayer from "../../components/video/FramePlayer";
 import PianoOverlay from "../../components/video/PianoOverlay";
@@ -170,20 +170,15 @@ export function VideoDetectionPage() {
   );
 
   return (
-    <PageContainer
-      title="Detection"
-      subtitle="Run the detector over the whole video and look at what it found, frame by frame."
-      wide
-    >
+    <Box>
       {error ? (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
           {error}
         </Alert>
       ) : null}
 
-      <SectionCard
+      <Section
         title="Read the video"
-        description="The background plate first, then every sampled frame, writing one line per frame: its onsets and its sustains. Released is the default and is never written down."
         actions={
           <Button variant="contained" size="small" onClick={run} disabled={!ready || running}>
             {running ? "Reading…" : video?.detected ? "Read it again" : "Read it"}
@@ -206,7 +201,7 @@ export function VideoDetectionPage() {
               variant={progress.event?.total ? "determinate" : "indeterminate"}
               value={progress.event ? progress.event.fraction * 100 : 0}
             />
-            <Typography variant="caption" sx={{ color: surface.mutedText }}>
+            <Typography variant="caption" sx={{ color: ui.text2 }}>
               {progress.event?.stage} · {progress.event?.current} of {progress.event?.total}
             </Typography>
           </Box>
@@ -224,7 +219,7 @@ export function VideoDetectionPage() {
               {report.frameCount} sampled frames · {report.onsetsPerSecond.toFixed(2)} onsets a
               second
             </Typography>
-            <Typography variant="caption" sx={{ color: surface.mutedText }}>
+            <Typography variant="caption" sx={{ color: ui.text2 }}>
               {report.runsFound} rectangles kept and {report.runsRefused} refused for not falling ·
               frame to frame agreement {(report.agreement * 100).toFixed(1)}% · read in{" "}
               {report.elapsedSeconds.toFixed(1)} s over {report.workers} worker
@@ -232,18 +227,17 @@ export function VideoDetectionPage() {
             </Typography>
           </Stack>
         ) : null}
-      </SectionCard>
+      </Section>
 
       {video && video.metadata.frameCount > 0 && video.calibration ? (
-        <SectionCard
+        <Section
           title="What it saw"
-          description="Every rectangle drawn on the pixels it was found in. A rectangle in purple is one the momentum rule refused, because a neighbouring frame holds it in exactly the same place — a rectangle falls, and anything that does not fall is not a note."
         >
           <Stack direction="row" spacing={1} sx={{ mb: 1, alignItems: "center", flexWrap: "wrap" }}>
             <Chip
               size="small"
               label={`${detection?.onsets.length ?? 0} onset`}
-              sx={{ backgroundColor: markColours.onset, color: surface.panel }}
+              sx={{ backgroundColor: markColours.onset, color: ui.bg }}
             />
             <Chip
               size="small"
@@ -254,18 +248,18 @@ export function VideoDetectionPage() {
               <Chip
                 size="small"
                 label={`${detection.refused.length} refused`}
-                sx={{ backgroundColor: refusedColour, color: surface.panel }}
+                sx={{ backgroundColor: refusedColour, color: ui.bg }}
               />
             ) : null}
             <Box sx={{ flexGrow: 1 }} />
             {line ? (
-              <Typography variant="caption" sx={{ color: surface.mutedText }}>
+              <Typography variant="caption" sx={{ color: ui.text2 }}>
                 frames.jsonl at t = {line.t.toFixed(1)} s: {line.onsets.length} onsets,{" "}
                 {line.sustains.length} sustains
               </Typography>
             ) : null}
             {detection ? (
-              <Typography variant="caption" sx={{ color: surface.mutedText }}>
+              <Typography variant="caption" sx={{ color: ui.text2 }}>
                 {detection.runs.length} rectangles · {detection.elapsedMs.toFixed(0)} ms
               </Typography>
             ) : null}
@@ -303,9 +297,9 @@ export function VideoDetectionPage() {
               </>
             )}
           </FramePlayer>
-        </SectionCard>
+        </Section>
       ) : null}
-    </PageContainer>
+    </Box>
   );
 }
 

@@ -11,13 +11,13 @@
 import type { SxProps, Theme } from "@mui/material/styles";
 
 /**
- * Monospace, tabular figures, no wrapping. Callers add size and colour.
+ * Tabular figures, no wrapping. Callers add size and colour.
  *
- * `tabular-nums` matters as much as the font: without it the digits shift
- * sideways as a counter ticks, which reads as flicker.
+ * The face is the app's own (Geist has tabular figures), not a monospace one:
+ * `tabular-nums` is what keeps the digits from shifting sideways as a counter
+ * ticks, which reads as flicker.
  */
 export const timestampSx: SxProps<Theme> = {
-  fontFamily: "monospace",
   fontVariantNumeric: "tabular-nums",
   whiteSpace: "nowrap",
 };

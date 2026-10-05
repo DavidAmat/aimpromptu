@@ -153,7 +153,7 @@ export function Piano({
                 y={PIANO_HEIGHT - OCTAVE_LABEL_BASELINE}
                 textAnchor="middle"
                 fontSize={OCTAVE_LABEL_SIZE}
-                fontFamily="Inter, ui-sans-serif, system-ui, sans-serif"
+                fontFamily="Geist, system-ui, sans-serif"
                 fill={litRows.has(key.row) ? grays.white : grays.slate}
                 style={{ pointerEvents: "none", userSelect: "none" }}
               >

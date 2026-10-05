@@ -1,6 +1,7 @@
 """`/audio` — the audio working store (Epic 3, Stories 3.1 and 3.2)."""
 
 import base64
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
@@ -19,6 +20,7 @@ from aitu_backend.audio.frames import (
 from aitu_backend.audio.formats import ConversionFailed, FfmpegMissing, UnsupportedFormat
 from aitu_backend.audio.store import AudioNotFound
 from aitu_backend.schemas.metadata import AudioMetadata, AudioSource
+from aitu_backend.storage import paths
 from aitu_backend.transcription import pipeline
 
 router = APIRouter(prefix="/audio", tags=["audio"])
@@ -147,6 +149,23 @@ class AudioEntry(AudioMetadata):
     #: The length of the untouched original. `durationSeconds` is the length of the piece: once cuts
     #: are saved, the edited audio is the audio of the piece (implementation 08, Phase 6).
     original_duration_seconds: float | None = Field(None, alias="originalDurationSeconds")
+    #: When the piece last changed: the newest file directly in its folder (the audio, the
+    #: metadata, the notes, the piano sheet). The Projects page sorts and shows it.
+    updated_at: datetime | None = Field(None, alias="updatedAt")
+
+
+def _updated_at(audio_uuid: str) -> datetime | None:
+    """The newest modification time of the files directly in the piece's folder.
+
+    One `stat` per file, no file read, so the list of every piece stays fast. History, staging and
+    the video folder are not looked at: they are not edits of the piece itself.
+    """
+    folder = paths.audio_dir(audio_uuid)
+    try:
+        times = [child.stat().st_mtime for child in folder.iterdir() if child.is_file()]
+    except OSError:
+        return None
+    return datetime.fromtimestamp(max(times), tz=UTC) if times else None
 
 
 def _entry(metadata: AudioMetadata) -> AudioEntry:
@@ -160,6 +179,7 @@ def _entry(metadata: AudioMetadata) -> AudioEntry:
         hasNotes=pipeline.has_events(metadata.uuid),
         needsRederivation=pipeline.needs_rederivation(metadata.uuid),
         originalDurationSeconds=original,
+        updatedAt=_updated_at(metadata.uuid),
     )
 
 

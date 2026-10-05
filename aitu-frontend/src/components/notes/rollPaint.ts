@@ -26,8 +26,8 @@ import { gridStep, msAt, spanMs, xOf, yOf, type RollLayout, type RollView } from
 import { grays, palette, semantic } from "../../ui";
 
 const roll = semantic.roll;
-const LABEL_FONT = "600 10px Montserrat, Inter, sans-serif";
-const RULER_FONT = "11px Inter, ui-sans-serif, system-ui, sans-serif";
+const LABEL_FONT = "600 10px Montserrat, Geist, sans-serif";
+const RULER_FONT = "11px Geist, system-ui, sans-serif";
 /** How long a new rectangle takes to grow to its full length. */
 export const REVEAL_MS = 250;
 
@@ -332,7 +332,7 @@ function paintKeyboard(context: CanvasRenderingContext2D, layout: RollLayout): v
     }
   }
   if (rowHeight >= 5) {
-    context.font = `${Math.min(10, Math.max(7, rowHeight + 1))}px Inter, ui-sans-serif, system-ui, sans-serif`;
+    context.font = `${Math.min(10, Math.max(7, rowHeight + 1))}px Geist, system-ui, sans-serif`;
     context.textBaseline = "middle";
     context.fillStyle = roll.keyLabel;
     for (let key = 3; key <= highKey; key += 12) {

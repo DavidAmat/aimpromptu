@@ -32,7 +32,7 @@ import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { formatTime } from "../../audio/time";
-import { surface } from "../../ui";
+import { ui } from "../../ui";
 import FrameCanvas, { type FrameCanvasProps } from "./FrameCanvas";
 
 export interface FramePlayerProps {
@@ -255,7 +255,7 @@ export function FramePlayer({
         </Typography>
       </Stack>
 
-      <Typography variant="caption" sx={{ color: surface.mutedText }}>
+      <Typography variant="caption" sx={{ color: ui.text2 }}>
         Frame {index + 1} of {frameCount} · click the picture, then spacebar plays and pauses, the
         arrows step one sampled frame and shift with an arrow steps ten. Drag the bar to move
         {audioUrl

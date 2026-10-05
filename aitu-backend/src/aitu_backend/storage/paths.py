@@ -428,14 +428,6 @@ def list_playlists() -> list[str]:
     return _child_names(library_playlists_root())
 
 
-# --------------------------------------------------------------------- seeds
-
-
-def scores_json_path() -> Path:
-    """Seed example scores served by `GET /scores`."""
-    return data_dir() / "example-scores.json"
-
-
 # ------------------------------------------------------------------ internal
 
 

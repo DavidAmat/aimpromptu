@@ -13,7 +13,7 @@
  */
 
 import type { MouseEvent as ReactMouseEvent } from "react";
-import { palette, surface } from "../../ui";
+import { palette, ui } from "../../ui";
 
 export interface OffsetLineProps {
   upperLine: number;
@@ -106,7 +106,7 @@ export function OffsetLine({
         y={y - 5 * scale}
         fill={palette.dark.Yellow}
         fontSize={11 * scale}
-        stroke={surface.text}
+        stroke={ui.text}
         strokeWidth={2.5 * scale}
         style={{ paintOrder: "stroke", pointerEvents: "none" }}
       >

@@ -27,7 +27,7 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
 import useElementSize from "../../hooks/useElementSize";
-import { surface } from "../../ui";
+import { ui } from "../../ui";
 
 export interface Viewport {
   /** Top-left of the visible part, in picture pixels. */
@@ -227,7 +227,7 @@ export function FrameCanvas({
           borderColor: "divider",
           borderRadius: 1,
           overflow: "hidden",
-          backgroundColor: surface.panel,
+          backgroundColor: ui.bg,
           height,
         }}
       >
@@ -275,11 +275,11 @@ export function FrameCanvas({
       >
         <Typography
           variant="caption"
-          sx={{ backgroundColor: surface.panel, px: 0.75, borderRadius: 0.5 }}
+          sx={{ backgroundColor: ui.bg, px: 0.75, borderRadius: 0.5 }}
         >
           {zoom.toFixed(1)}x
         </Typography>
-        <ButtonGroup size="small" variant="outlined" sx={{ backgroundColor: surface.panel }}>
+        <ButtonGroup size="small" variant="outlined" sx={{ backgroundColor: ui.bg }}>
           <Button onClick={() => zoomAt(BUTTON_STEP, centre)}>+</Button>
           <Button onClick={() => zoomAt(1 / BUTTON_STEP, centre)}>−</Button>
           <Button onClick={() => setView(whole)}>Fit</Button>

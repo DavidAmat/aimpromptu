@@ -41,6 +41,8 @@ export interface AudioItem {
    */
   frameMs?: number | null;
   createdAt: string;
+  /** When the piece last changed (the newest file of its folder); `null` when it cannot be read. */
+  updatedAt?: string | null;
   /** True once the engine has run and the recorded notes are on disk. */
   hasNotes?: boolean;
   /**

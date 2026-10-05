@@ -47,7 +47,7 @@ import useProgress from "../../hooks/useProgress";
 import { ROUTES } from "../../layout/routes";
 import { noteName } from "../../music/noteNames";
 import { formatTime } from "../../audio/time";
-import { PageContainer, progressSx, SectionCard, surface } from "../../ui";
+import { progressSx, Section, ui } from "../../ui";
 import { buildKeys } from "../../video/overlayGeometry";
 import { noteId, place } from "../../video/notePlacement";
 import { readSelectedVideo, writeSelectedVideo } from "../../video/selectedVideo";
@@ -345,20 +345,15 @@ export function VideoNotesPage() {
   const chosen = notes.filter((note) => picked.has(noteId(note)));
 
   return (
-    <PageContainer
-      title="Notes"
-      subtitle="The whole video as one picture whose vertical axis is time, the notes read off it, and then the piece."
-      wide
-    >
+    <Box>
       {error ? (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
           {error}
         </Alert>
       ) : null}
 
-      <SectionCard
+      <Section
         title="Read the video into notes"
-        description="The fresh strip of every sampled frame, piled up into one tall picture: a note is one shape in it, and its bottom row is the onset and its top row the release. This does not write the piece — it is what will be written."
         actions={
           <Button variant="contained" size="small" onClick={runRead} disabled={!ready || running}>
             {running ? "Reading…" : read ? "Read it again" : "Read it"}
@@ -381,7 +376,7 @@ export function VideoNotesPage() {
               variant={progress.event?.total ? "determinate" : "indeterminate"}
               value={progress.event ? progress.event.fraction * 100 : 0}
             />
-            <Typography variant="caption" sx={{ color: surface.mutedText }}>
+            <Typography variant="caption" sx={{ color: ui.text2 }}>
               {progress.event?.stage} · {progress.event?.current} of {progress.event?.total}
             </Typography>
           </Box>
@@ -399,13 +394,13 @@ export function VideoNotesPage() {
               {report.notesPerSecond.toFixed(2)} a second · median {report.medianLengthMs.toFixed(0)}{" "}
               ms long and {report.medianWidthKeys.toFixed(2)} white keys wide
             </Typography>
-            <Typography variant="caption" sx={{ color: surface.mutedText }}>
+            <Typography variant="caption" sx={{ color: ui.text2 }}>
               the picture is {report.rows.toLocaleString()} rows by {report.width}, which is{" "}
               {report.megabytes.toFixed(1)} MB · strip of {report.stripHeight} rows from row{" "}
               {report.stripTop}, with a head of {report.headRows} · stitched and read in{" "}
               {report.elapsedSeconds.toFixed(1)} s
             </Typography>
-            <Typography variant="caption" sx={{ color: surface.mutedText }}>
+            <Typography variant="caption" sx={{ color: ui.text2 }}>
               furthest from a key midpoint {report.worstKeyDistance.toFixed(3)} white key widths, and
               V-14 has a measured margin of 0.33 · plain connected shapes on the same picture find{" "}
               {report.connectedShapes} ·{" "}
@@ -425,7 +420,7 @@ export function VideoNotesPage() {
               </Typography>
             ) : null}
             {report.notesStartingBefore || report.notesEndingAfter || report.notesPastTheEnd ? (
-              <Typography variant="caption" sx={{ color: surface.mutedText }}>
+              <Typography variant="caption" sx={{ color: ui.text2 }}>
                 {report.notesStartingBefore} already sounding when the video started ·{" "}
                 {report.notesEndingAfter} still falling when it ended · {report.notesPastTheEnd} that
                 never reached the piano and were dropped
@@ -433,12 +428,11 @@ export function VideoNotesPage() {
             ) : null}
           </Stack>
         ) : null}
-      </SectionCard>
+      </Section>
 
       {read && video && calibration && video.metadata.frameCount > 0 ? (
-        <SectionCard
+        <Section
           title="What will be written"
-          description="Every note put back where its rectangle is at this moment: if the reading is right, every box lands on a rectangle. Click a note to pick it, ⌘-click to add one, drag a band over the picture to pick several, and shift-drag on a key to draw a note the reading missed."
           actions={
             <Stack direction="row" spacing={1}>
               <Button size="small" onClick={toggleRemoved} disabled={!chosen.length}>
@@ -468,11 +462,11 @@ export function VideoNotesPage() {
                     color="inherit"
                     size="small"
                     component={Link}
-                    to={ROUTES.piece(written.audioUuid, "notes")}
+                    to={ROUTES.project(written.audioUuid, "notes")}
                   >
                     Open the notes
                   </Button>
-                  <Button color="inherit" size="small" component={Link} to={ROUTES.playgroundRhythm}>
+                  <Button color="inherit" size="small" component={Link} to={ROUTES.project(written.audioUuid, "sheet")}>
                     Open the sheet
                   </Button>
                 </Stack>
@@ -498,12 +492,12 @@ export function VideoNotesPage() {
             ) : null}
             <Box sx={{ flexGrow: 1 }} />
             {chosen.length === 1 ? (
-              <Typography variant="caption" sx={{ color: surface.mutedText }}>
+              <Typography variant="caption" sx={{ color: ui.text2 }}>
                 {noteName(chosen[0]!.midi)} at {formatTime(chosen[0]!.start)},{" "}
                 {((chosen[0]!.end - chosen[0]!.start) * 1000).toFixed(0)} ms long
               </Typography>
             ) : chosen.length ? (
-              <Typography variant="caption" sx={{ color: surface.mutedText }}>
+              <Typography variant="caption" sx={{ color: ui.text2 }}>
                 {chosen.length} notes picked · backspace or the button takes them off
               </Typography>
             ) : null}
@@ -560,7 +554,7 @@ export function VideoNotesPage() {
               )}
             </FramePlayer>
           </Box>
-        </SectionCard>
+        </Section>
       ) : null}
 
       {written ? (
@@ -574,10 +568,10 @@ export function VideoNotesPage() {
             ? ` · ${written.unmatched} corrections named a note the reading no longer holds`
             : ""}
           . It is an ordinary piece now:{" "}
-          <Link to={ROUTES.piece(written.audioUuid, "notes")}>open its notes</Link>.
+          <Link to={ROUTES.project(written.audioUuid, "notes")}>open its notes</Link>.
         </Alert>
       ) : null}
-    </PageContainer>
+    </Box>
   );
 }
 

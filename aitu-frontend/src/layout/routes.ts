@@ -1,98 +1,75 @@
 /**
- * Every route path in one place. Nothing hardcodes a URL string: navigation,
- * the top bar and the Playground tab strip all read from here.
+ * Every route path in one place (implementation 02, plan section 6.3). Nothing hardcodes a URL
+ * string: navigation, the sidebar, the step tabs and the redirects all read from here.
  *
- * The Playground had seven tabs. Five of them drew a matrix at a chosen tempo
- * and granularity, and P4.2 removed that model from the backend, so they were
- * retired with it: Matrix, Piano Roll, Notes Falling, Notes Falling (raw) and
- * Music Notation.
+ * A project is today's piece: its id is the audio uuid, until Phase 3 gives projects their own
+ * storage (plan section 8.8, P-6). `/projects/new` opens the Source step of a new project; Phase 5
+ * puts the three ways in (From source, From scratch, From other projects) in front of it.
  *
- * **Piano Roll and Notes Falling came back**, rebuilt on the wall clock: they read
- * `GET /matrix/{id}/events` and draw the recording in seconds, so neither of them
- * asks for a tempo or a resolution. The other three stay retired — Matrix and
- * Notes Falling (raw) were views of a grid that no longer exists, and Music
- * Notation is the Rhythm tab now.
+ * **Lab** holds the video reader's pages: the video, its calibration, the detection, its notes and
+ * the examples it is measured on. The video steps of a project open these pages until Phase 5 makes
+ * the video a step of the project itself.
  *
- * **The Piano Roll left again in implementation 08** (Q-4): the Notes and Hands
- * tabs of the flow page are the piano roll visualization now, with its editor.
- * `/playground/piano-roll` redirects to the piece.
+ * The old paths (`/piece/...`, `/playground/...`, `/youtube`, `/video/...`, `/library...`) redirect
+ * to their new home (`LEGACY_REDIRECTS`) until Phase 15 removes them.
  */
 
 import type { PieceStep } from "../api/pieces";
 
 export const ROUTES = {
-  /** The flow page (implementation 08): one tab per step, from the audio to the piano sheet. */
-  pieceRoot: "/piece",
-  pieceNew: "/piece/new",
-  /** A piece at one step, or at the step it opens on when `step` is left out. */
-  piece: (uuid: string, step?: PieceStep) => (step ? `/piece/${uuid}/${step}` : `/piece/${uuid}`),
-  youtube: "/youtube",
-  video: "/video",
-  videoPlayer: "/video/player",
-  videoCalibration: "/video/calibration",
-  videoDetection: "/video/detection",
-  videoNotes: "/video/notes",
-  videoExamples: "/video/examples",
-  videoExample: (slug: string) => `/video/examples/${slug}`,
-  playground: "/playground",
-  playgroundInput: "/playground/input",
-  playgroundRhythm: "/playground/rhythm",
-  playgroundNotesFalling: "/playground/notes-falling",
-  library: "/library",
-  libraryPlay: (id: string) => `/library/play/${id}`,
-  /** The Notes tab's performance measurements (Phase 7), in a development build only. */
+  home: "/",
+  projects: "/projects",
+  projectNew: "/projects/new",
+  /** A project at one step, or at the step it opens on when `step` is left out. */
+  project: (id: string, step?: PieceStep) => (step ? `/projects/${id}/${step}` : `/projects/${id}`),
+  /** Notes Falling of a project, until Play mode makes it a view of its own (Phase 11). */
+  projectNotesFalling: (id: string) => `/projects/${id}/notes-falling`,
+  lab: "/admin/lab",
+  labVideo: "/admin/lab/video",
+  labCalibration: "/admin/lab/calibration",
+  labDetection: "/admin/lab/detection",
+  labNotes: "/admin/lab/notes",
+  labExamples: "/admin/lab/examples",
+  labExample: (slug: string) => `/admin/lab/examples/${slug}`,
+  /** The video steps of a project, for one video: the Lab pages with that video chosen. */
+  labVideoOf: (id: string) => `/admin/lab/video?video=${id}`,
+  /** The Notes tab's performance measurements (implementation 08, Phase 7), development builds only. */
   devRollBench: "/dev/roll-bench",
+  /** Every shared component of `src/ui/` on one page, development builds only. */
+  devUi: "/dev/ui",
 } as const;
 
-/** Pattern form for `<Route path>`; `piece` is a function above. */
-export const PIECE_PATTERN = "/piece/:uuid";
+/** Pattern forms for `<Route path>`. */
+export const PROJECT_PATTERN = "/projects/:id";
+export const LAB_EXAMPLE_PATTERN = "/admin/lab/examples/:slug";
 
-/** Pattern form for `<Route path>`; `libraryPlay` is a function above. */
-export const LIBRARY_PLAY_PATTERN = "/library/play/:id";
-
-/** Pattern form for `<Route path>`; `videoExample` is a function above. */
-export const VIDEO_EXAMPLE_PATTERN = "/video/examples/:slug";
-
-export const TOP_SECTIONS = [
-  // First, because it is where a piece now starts: audio in, notes, hands, then the sheet.
-  { label: "Piece", to: ROUTES.pieceRoot },
-  { label: "YouTube to Audio", to: ROUTES.youtube },
-  { label: "Video to Notes", to: ROUTES.video },
-  { label: "Playground", to: ROUTES.playground },
-  { label: "Piano Library", to: ROUTES.library },
+/** The Lab tabs, in the order of the work on a video; Examples last, because it is where a rule is measured. */
+export const LAB_TABS = [
+  { label: "Video", to: ROUTES.labVideo },
+  { label: "Calibration", to: ROUTES.labCalibration },
+  { label: "Detection", to: ROUTES.labDetection },
+  { label: "Notes", to: ROUTES.labNotes },
+  { label: "Examples", to: ROUTES.labExamples },
 ];
 
 /**
- * Tab order is the order of the work: bring a piece in, look at how it was
- * actually played, then name the figures and write the sheet. Notes Falling
- * sits between input and Rhythm because that is when it is useful — it is how
- * you check the transcription before you commit to reading it.
+ * The old paths and where they go now: `[old pattern, new path]`, where `:name` in the new path is
+ * taken from the old one and `*` is the rest of the old path. The query string is kept, so a link
+ * to `/video/notes?video=<uuid>` still opens that video.
  */
-export const PLAYGROUND_TABS = [
-  { label: "Upload / Input", to: ROUTES.playgroundInput },
-  { label: "Notes Falling", to: ROUTES.playgroundNotesFalling },
-  { label: "Piano Sheet", to: ROUTES.playgroundRhythm },
-];
-
-/**
- * Video to Notes: the tabs are the order of the work. Bring the video in, fit the
- * piano overlay onto it, read the falling rectangles, turn them into the piece,
- * and — on the example screenshots — check what was read against what a person
- * read by hand.
- *
- * Detection and Notes are two different readings of the same video and both are
- * kept. Detection is per sampled frame: what the picture showed at one moment,
- * which is what a hand reading can be compared against. Notes is the whole video
- * stitched into one picture whose vertical axis is time (V-32), which is what
- * becomes the piece.
- *
- * Examples is last because it is the measuring tab, not a step of the work: it is
- * where a detection rule earns its place before it is trusted on a real video.
- */
-export const VIDEO_TABS = [
-  { label: "Video", to: ROUTES.videoPlayer },
-  { label: "Calibration", to: ROUTES.videoCalibration },
-  { label: "Detection", to: ROUTES.videoDetection },
-  { label: "Notes", to: ROUTES.videoNotes },
-  { label: "Examples", to: ROUTES.videoExamples },
+export const LEGACY_REDIRECTS: readonly (readonly [string, string])[] = [
+  ["/piece", ROUTES.projects],
+  ["/piece/new", ROUTES.projectNew],
+  ["/piece/:id/*", "/projects/:id/*"],
+  ["/playground/*", ROUTES.projects],
+  ["/youtube", ROUTES.projectNew],
+  ["/video", ROUTES.labVideo],
+  ["/video/player", ROUTES.labVideo],
+  ["/video/calibration", ROUTES.labCalibration],
+  ["/video/detection", ROUTES.labDetection],
+  ["/video/notes", ROUTES.labNotes],
+  ["/video/examples", ROUTES.labExamples],
+  ["/video/examples/:slug", "/admin/lab/examples/:slug"],
+  ["/library", ROUTES.projects],
+  ["/library/*", ROUTES.projects],
 ];

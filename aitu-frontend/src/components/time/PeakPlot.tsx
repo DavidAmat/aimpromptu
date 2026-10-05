@@ -13,7 +13,7 @@
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { surface, semantic } from "../../ui/palette";
+import { ui, semantic } from "../../ui";
 import { FIGURE_LABELS, type LabelledPeak, type Peak } from "../../api";
 
 export interface PeakPlotProps {
@@ -84,7 +84,7 @@ export function PeakPlot({
                 x2={x}
                 y1={0}
                 y2={plotHeight}
-                stroke={surface.line}
+                stroke={ui.line}
                 strokeWidth={1}
               />
               <text
@@ -92,7 +92,7 @@ export function PeakPlot({
                 y={plotHeight + 20}
                 textAnchor="middle"
                 fontSize={12}
-                fill={surface.mutedText}
+                fill={ui.text2}
               >
                 {tick}
               </text>
@@ -104,7 +104,7 @@ export function PeakPlot({
           y={plotHeight + 34}
           textAnchor="end"
           fontSize={11}
-          fill={surface.mutedText}
+          fill={ui.text2}
         >
           milliseconds between one note and the next
         </text>
@@ -113,7 +113,7 @@ export function PeakPlot({
           x2={1000 - PAD_RIGHT}
           y1={plotHeight}
           y2={plotHeight}
-          stroke={surface.strongLine}
+          stroke={ui.lineStrong}
           strokeWidth={1.5}
         />
 
@@ -159,7 +159,7 @@ export function PeakPlot({
                     ? semantic.rightHand.onset
                     : semantic.rightHand.sustain
                 }
-                stroke={selected ? semantic.rightHand.onset : surface.line}
+                stroke={selected ? semantic.rightHand.onset : ui.line}
                 strokeWidth={selected ? 2 : 1}
               />
               <line
@@ -167,7 +167,7 @@ export function PeakPlot({
                 x2={(left + right) / 2}
                 y1={labelTop + LABEL_ROW_HEIGHT - 6}
                 y2={top}
-                stroke={surface.line}
+                stroke={ui.line}
                 strokeWidth={1}
               />
               <text
@@ -176,7 +176,7 @@ export function PeakPlot({
                 textAnchor="middle"
                 fontSize={14}
                 fontWeight={selected ? 700 : 500}
-                fill={surface.text}
+                fill={ui.text}
               >
                 {Math.round(peak.centreMs)} ms
               </text>
@@ -185,7 +185,7 @@ export function PeakPlot({
                 y={labelTop + 27}
                 textAnchor="middle"
                 fontSize={12}
-                fill={surface.mutedText}
+                fill={ui.text2}
               >
                 {Math.round(peak.share * 100)}% {name ? `· ${name}` : ""}
               </text>

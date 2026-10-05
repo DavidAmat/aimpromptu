@@ -1,5 +1,7 @@
 /**
- * Step 2, **Audio**: listen to the audio and choose the selected region (plan section 9.4).
+ * Step 2, **Audio**: listen to the audio and choose the selected region (implementation 08, plan
+ * section 9.4; restyled by implementation 02, plan section 10.2: the waveform full width, its tools
+ * as icon actions in a floating bar, **Transcribe** as the primary action).
  *
  * The audio file is never copied or changed. The reader selects a part of the waveform and presses
  * **Delete**, and that part becomes a cut: a range of 10 ms time frames that the piece leaves out
@@ -15,18 +17,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import CloseIcon from "@mui/icons-material/Close";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
 import GraphicEqIcon from "@mui/icons-material/GraphicEq";
@@ -53,12 +49,11 @@ import { clampView, wholeView, zoomView, type FrameView } from "../../audio/fram
 import { formatTime } from "../../audio/time";
 import { useCutPlayer } from "../../audio/useCutPlayer";
 import CutWaveform from "../../components/audio/CutWaveform";
-import SaveBar from "../../components/piece/SaveBar";
 import { useEditHistory } from "../../hooks/useEditHistory";
 import { ROUTES } from "../../layout/routes";
 import { useSpacebarPlay } from "../../playback/useSpacebarPlay";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
-import { timestampSx } from "../../ui";
+import { ConfirmDialog, FloatingBar, IconAction, PillButton, timestampSx } from "../../ui";
 import { SAVED_NAVIGATION, stepStatus, usePiece, useUnsavedChanges } from "./pieceContext";
 
 const FRAMES_PER_SECOND = 100;
@@ -242,7 +237,7 @@ function AudioEditor({ uuid, initial, peaks }: AudioEditorProps) {
       if (unsaved && !(await save())) return;
       await matrixApi.transcribe({ audioUuid: uuid, frameMs: artifact.frameMs, force: again });
       await refresh();
-      navigate(ROUTES.piece(uuid, "notes"), { state: SAVED_NAVIGATION });
+      navigate(ROUTES.project(uuid, "notes"), { state: SAVED_NAVIGATION });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The transcription could not start.");
     } finally {
@@ -252,7 +247,7 @@ function AudioEditor({ uuid, initial, peaks }: AudioEditorProps) {
 
   const onTranscribe = () => {
     if (notes?.state === "running") {
-      navigate(ROUTES.piece(uuid, "notes"));
+      navigate(ROUTES.project(uuid, "notes"));
       return;
     }
     // Current notes are replaced only when the reader says so; stale or missing ones are not
@@ -295,8 +290,19 @@ function AudioEditor({ uuid, initial, peaks }: AudioEditorProps) {
   const keptFrames = total - cutFrames(cuts);
   const notesHaveCuts = notes && notes.state !== "missing";
 
+  const cutWords = cuts.length === 0 ? null : `${describe(cuts)} · ${formatTime(seconds(keptFrames))} kept`;
+
   return (
-    <Stack spacing={1.5}>
+    // Room under the waveform, so the floating bar can be moved clear of it. The data attributes
+    // are for the browser checks (`check:flow`): what the old readout lines printed, not shown.
+    <Stack
+      spacing={1.5}
+      sx={{ pb: 10 }}
+      data-audio
+      data-selection={hasSelection ? `${selection[0]}-${selection[1]}` : ""}
+      data-view={`${Math.round(view.start)}-${Math.round(view.end)}`}
+      data-cuts={describe(cuts)}
+    >
       {error ? (
         <Alert severity="error" onClose={() => setError(null)}>
           {error}
@@ -304,104 +310,35 @@ function AudioEditor({ uuid, initial, peaks }: AudioEditorProps) {
       ) : null}
       {player.error ? <Alert severity="warning">{player.error}</Alert> : null}
       {saved.notesStale && !unsaved ? (
-        <Alert severity="info">
-          The notes were transcribed before the last change of the cuts. Press <strong>Transcribe
-          again</strong> to transcribe the selected region; the current notes go to history.
-        </Alert>
+        <Alert severity="warning">The notes were made before the last change of the cuts. Transcribe again to update them.</Alert>
       ) : null}
       {unsaved && notesHaveCuts && !saved.notesStale ? (
         <Alert severity="warning">
-          This piece already has notes. Saving these cuts makes them stale: the piece is then
-          transcribed again, and the current notes, with their edits, go to history.
+          Saving these cuts puts the current notes out of date. They go to history when the audio is transcribed again.
         </Alert>
       ) : null}
 
-      <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>
-        {player.playing ? (
-          <Button size="small" variant="contained" startIcon={<PauseIcon />} onClick={player.pause}>
-            Pause
-          </Button>
-        ) : (
-          <Tooltip describeChild title="Play the selected region from the playhead, jumping over the cuts (Space)">
-            <Button size="small" variant="contained" startIcon={<PlayArrowIcon />} onClick={player.playAll}>
-              Play all
-            </Button>
-          </Tooltip>
-        )}
-        <Tooltip describeChild title="Play exactly the selected part, cut or not">
-          <span>
-            <Button
-              size="small"
-              startIcon={<GraphicEqIcon />}
-              disabled={!hasSelection}
-              onClick={() => selection && player.playSelection(selection)}
-            >
-              Play selection
-            </Button>
-          </span>
-        </Tooltip>
-        <Typography variant="body2" sx={{ ...timestampSx, fontWeight: 600, px: 1 }}>
+      <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1, minHeight: 40 }}>
+        <Typography variant="body2" sx={{ ...timestampSx, fontWeight: 600 }} aria-label="Playhead">
           {formatTime(seconds(player.cursor))}
           <Box component="span" sx={{ color: "text.secondary", fontWeight: 400 }}>
             {` / ${formatTime(seconds(total))}`}
           </Box>
         </Typography>
-
-        <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-
-        <Tooltip describeChild title="Delete the selected part: it becomes a cut (Delete or Backspace)">
-          <span>
-            <Button size="small" color="error" startIcon={<ContentCutIcon />} disabled={!hasSelection} onClick={deleteSelection}>
-              Delete
-            </Button>
-          </span>
-        </Tooltip>
-        <Tooltip describeChild title="Put back every cut part inside the selection. Click a cut to select it">
-          <span>
-            <Button size="small" startIcon={<RestoreIcon />} disabled={!canRestore} onClick={restoreSelection}>
-              Restore
-            </Button>
-          </span>
-        </Tooltip>
-        <Tooltip describeChild title={history.canUndo ? `Undo ${history.undoLabel ?? ""} (Command-Z)` : "Nothing to undo"}>
-          <span>
-            <IconButton size="small" disabled={!history.canUndo} onClick={() => void history.undo()} aria-label="Undo">
-              <UndoIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip describeChild title={history.canRedo ? `Redo ${history.redoLabel ?? ""} (Shift-Command-Z)` : "Nothing to redo"}>
-          <span>
-            <IconButton size="small" disabled={!history.canRedo} onClick={() => void history.redo()} aria-label="Redo">
-              <RedoIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-
+        {hasSelection ? (
+          <Typography variant="body2" color="text.secondary" sx={timestampSx} data-selection>
+            {`Selection ${formatTime(seconds(selection[0]))} – ${formatTime(seconds(selection[1]))}`}
+          </Typography>
+        ) : null}
+        {cutWords ? (
+          <Typography variant="body2" color="text.secondary" sx={timestampSx}>
+            {cutWords}
+          </Typography>
+        ) : null}
         <Box sx={{ flexGrow: 1 }} />
-
-        <Tooltip describeChild title="Zoom out (Command and the mouse wheel, or pinch)">
-          <IconButton size="small" onClick={() => zoom(2)} aria-label="Zoom out">
-            <ZoomOutIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip describeChild title="Zoom in (Command and the mouse wheel, or pinch)">
-          <IconButton size="small" onClick={() => zoom(0.5)} aria-label="Zoom in">
-            <ZoomInIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip describeChild title="Zoom to the selection, to place its edges precisely">
-          <span>
-            <IconButton size="small" disabled={!hasSelection} onClick={zoomToSelection} aria-label="Zoom to the selection">
-              <ZoomInMapIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip describeChild title="Show the whole audio">
-          <IconButton size="small" onClick={() => setView(wholeView(total))} aria-label="Show the whole audio">
-            <FitScreenIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <PillButton kind="primary" busy={starting} disabled={saving} onClick={onTranscribe} startIcon={<PlayArrowIcon />}>
+          {transcribeLabel}
+        </PillButton>
       </Stack>
 
       <CutWaveform
@@ -418,66 +355,89 @@ function AudioEditor({ uuid, initial, peaks }: AudioEditorProps) {
         position={player.position}
       />
 
-      <Stack direction={{ xs: "column", md: "row" }} spacing={{ xs: 0.5, md: 3 }}>
-        <Typography variant="body2" color="text.secondary" sx={timestampSx}>
-          {hasSelection
-            ? `Selection ${formatTime(seconds(selection[0]))} – ${formatTime(seconds(selection[1]))} (${formatTime(seconds(selection[1] - selection[0]))})`
-            : "No selection."}
+      <FloatingBar open label="the audio toolbar">
+        {player.playing ? (
+          <IconAction title="Pause" shortcut="Space" icon={<PauseIcon />} onClick={player.pause} />
+        ) : (
+          <IconAction title="Play, jumping over the cuts" shortcut="Space" icon={<PlayArrowIcon />} onClick={player.playAll} />
+        )}
+        <IconAction
+          title="Play the selection"
+          disabledTitle="Select a part of the waveform first"
+          icon={<GraphicEqIcon fontSize="small" />}
+          disabled={!hasSelection}
+          onClick={() => selection && player.playSelection(selection)}
+        />
+        <Divider orientation="vertical" flexItem />
+        <IconAction
+          title="Cut the selection"
+          shortcut="Delete"
+          disabledTitle="Select a part of the waveform first"
+          icon={<ContentCutIcon fontSize="small" />}
+          disabled={!hasSelection}
+          onClick={deleteSelection}
+        />
+        <IconAction
+          title="Restore the cuts in the selection"
+          disabledTitle="Click a cut to select it"
+          icon={<RestoreIcon fontSize="small" />}
+          disabled={!canRestore}
+          onClick={restoreSelection}
+        />
+        <IconAction
+          title={history.canUndo ? `Undo ${history.undoLabel ?? ""}`.trim() : "Nothing to undo"}
+          shortcut="⌘Z"
+          icon={<UndoIcon fontSize="small" />}
+          disabled={!history.canUndo}
+          onClick={() => void history.undo()}
+        />
+        <IconAction
+          title={history.canRedo ? `Redo ${history.redoLabel ?? ""}`.trim() : "Nothing to redo"}
+          shortcut="⇧⌘Z"
+          icon={<RedoIcon fontSize="small" />}
+          disabled={!history.canRedo}
+          onClick={() => void history.redo()}
+        />
+        <Divider orientation="vertical" flexItem />
+        <IconAction title="Zoom out" icon={<ZoomOutIcon fontSize="small" />} onClick={() => zoom(2)} />
+        <IconAction title="Zoom in" icon={<ZoomInIcon fontSize="small" />} onClick={() => zoom(0.5)} />
+        <IconAction
+          title="Zoom to the selection"
+          disabledTitle="Select a part of the waveform first"
+          icon={<ZoomInMapIcon fontSize="small" />}
+          disabled={!hasSelection}
+          onClick={zoomToSelection}
+        />
+        <IconAction title="Show the whole audio" icon={<FitScreenIcon fontSize="small" />} onClick={() => setView(wholeView(total))} />
+        <Divider orientation="vertical" flexItem />
+        {unsaved ? (
+          <IconAction title="Discard the changes" icon={<CloseIcon fontSize="small" />} onClick={discard} disabled={saving} />
+        ) : null}
+        <Tooltip title={summary ?? "Nothing to save"}>
+          <span>
+            <PillButton
+              kind={unsaved ? "primary" : "quiet"}
+              size="small"
+              startIcon={<SaveIcon fontSize="small" />}
+              disabled={!unsaved || starting}
+              busy={saving}
+              onClick={() => void save()}
+              data-unsaved={summary ?? ""}
+            >
+              Save
+            </PillButton>
+          </span>
+        </Tooltip>
+      </FloatingBar>
 
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={timestampSx}>
-          {`Selected region ${formatTime(seconds(keptFrames))} of ${formatTime(seconds(total))} · ${describe(cuts)}`}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={timestampSx}>
-          {`View ${formatTime(seconds(view.start))} – ${formatTime(seconds(view.end))}`}
-        </Typography>
-      </Stack>
-      <Typography variant="body2" color="text.secondary">
-        Drag over the waveform to select a part, and drag its purple edges to adjust it (zoom in to
-        place them precisely). Move the playhead in the time ruler at the top, or double-click
-        anywhere.
-      </Typography>
-
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", pt: 1 }}>
-        <Button
-          variant="outlined"
-          startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
-          disabled={!unsaved || saving || starting}
-          onClick={() => void save()}
-        >
-          Save
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={starting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
-          disabled={saving || starting}
-          onClick={onTranscribe}
-        >
-          {transcribeLabel}
-        </Button>
-        <Typography variant="body2" color="text.secondary">
-          Every transcription uses MuScriptor on the selected region.
-        </Typography>
-      </Stack>
-
-      <SaveBar summary={summary} saving={saving} onSave={() => void save()} onDiscard={discard} />
-
-      <Dialog open={confirmAgain} onClose={() => setConfirmAgain(false)}>
-        <DialogTitle>Transcribe again?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            This piece already has notes for this selected region. A new transcription replaces
-            them: the current notes and every edit made to them go to history, and the hands and
-            the piano sheet must be done again.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmAgain(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => void transcribe(true)}>
-            Transcribe again
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmAgain}
+        title="Transcribe again?"
+        message="The current notes and their edits go to history, and the hands and the piano sheet must be done again."
+        confirmLabel="Transcribe again"
+        onCancel={() => setConfirmAgain(false)}
+        onConfirm={() => void transcribe(true)}
+      />
     </Stack>
   );
 }

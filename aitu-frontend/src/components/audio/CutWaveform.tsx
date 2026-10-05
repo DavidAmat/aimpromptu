@@ -29,7 +29,7 @@ import Box from "@mui/material/Box";
 import type { Cut, FramePeaks } from "../../api";
 import { clampView, pageTo, panView, zoomView, type FrameView } from "../../audio/frameView";
 import { useElementSize } from "../../hooks/useElementSize";
-import { surface } from "../../ui";
+import { ui } from "../../ui";
 import { paintOverview, paintPlayhead, paintWaveform, RULER } from "./waveformPaint";
 
 export interface CutWaveformProps {
@@ -321,7 +321,7 @@ export function CutWaveform({
           borderColor: "divider",
           borderRadius: 1,
           overflow: "hidden",
-          bgcolor: surface.panel,
+          bgcolor: ui.bg,
         }}
       >
         <canvas ref={baseRef} style={{ position: "absolute", inset: 0, width: "100%", height }} />

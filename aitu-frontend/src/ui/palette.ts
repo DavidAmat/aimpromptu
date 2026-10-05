@@ -1,12 +1,16 @@
 /**
- * Brand palette — the single source of truth for color in this app.
+ * The colours of the music: the two hands, the selection, the piano roll, the
+ * waveform, the marks drawn over a note or a video frame.
  *
- * Ported from `context/colors/color-palette.md` (originally a Python dict for
- * seaborn). Alias names are kept verbatim so a conversation about "dark Green"
- * or "light Blue" maps 1:1 onto the code.
+ * Everything around the music (page, sidebar, text, lines, buttons) is black, white
+ * and grey and comes from `tokens.ts` (implementation 02, plan section 7.1). This
+ * file is the one place colour is spent, so the sheet and the piano roll are the
+ * most colourful things on any screen.
  *
- * Rule: no component ever writes a hex literal. Import `palette` for a raw
- * alias, or `semantic` for a decided product meaning.
+ * The aliases are the ones of `context/colors/color-palette.md`, kept verbatim so a
+ * conversation about "dark Green" or "light Blue" maps 1:1 onto the code. No
+ * component writes a hex literal: it imports `palette` for a raw alias, or
+ * `semantic` for a decided meaning.
  */
 
 export type Shade = "dark" | "light";
@@ -51,9 +55,8 @@ export const palette: Record<Shade, Record<ColorAlias, string>> = {
 };
 
 /**
- * The extra grays the palette doc explicitly allows ("free to use all the
- * spectrum of grays you want"). Defined here so they are still not hex
- * literals scattered across components.
+ * The greys of the drawn music: the ink of a struck note, the grey of a held one,
+ * the keys of a drawn piano. The greys of the page are tokens (`tokens.ts`).
  */
 export const grays = {
   ink: "#151515",
@@ -66,61 +69,10 @@ export const grays = {
 } as const;
 
 /**
- * The page itself: background, panels, rules and text.
- *
- * Why this exists. Views used to reach for `grays.charcoal` for a grid line and
- * `grays.paper` for a label, which silently encoded "we are on a dark ground".
- * The moment the app went light, a struck note (`grays.ink`) had been sitting on
- * an ink background — a black circle on a black page, invisible, which is
- * exactly the bug that prompted the switch.
- *
- * So surface colors get names that say **what they are for**, not how dark they
- * are. Anything that has to read against the page reads it from here, and
- * changing ground once changes every view.
- */
-export const surface = {
-  /** The app background. */
-  page: grays.paper,
-  /** Cards, grids, staves — anything sitting on the page. */
-  panel: grays.white,
-  /** Hairlines: grid rules, borders, separators. */
-  line: grays.mist,
-  /** A line that must stay visible on its own, e.g. an axis. */
-  strongLine: grays.silver,
-  /** Primary text on `panel`. */
-  text: grays.ink,
-  /** Secondary text: headers, captions, frame numbers. */
-  mutedText: grays.slate,
-  /** Columns and lanes standing for a black piano key. */
-  blackKey: grays.mist,
-} as const;
-
-/**
  * Product meanings decided by the features spec. Components reference these,
  * not the raw aliases, whenever the color carries meaning.
  */
 export const semantic = {
-  /**
-   * Matrix grid columns, read as a keyboard.
-   *
-   * The grid's 88 columns *are* the keys, so they are coloured like keys: a
-   * white ground for the naturals, a dark one for the sharps. That pattern is
-   * the fastest way to find a note in a wall of circles — but it also means a
-   * struck note in the one-hand view (ink) would vanish on the dark columns,
-   * so on those it flips to a light head, exactly as a real keyboard does.
-   * Held notes keep the one light gray on both grounds, so "struck vs held"
-   * never depends on which column you happen to be looking at.
-   *
-   * Separate from `surface.blackKey`, which is the *pale* lane used by views
-   * that draw the keyboard sideways; this one has to survive a note drawn on
-   * top of it.
-   */
-  matrixKeyboard: {
-    whiteColumn: grays.white,
-    blackColumn: grays.charcoal,
-    blackColumnOnset: grays.white,
-    blackColumnLabel: grays.white,
-  },
   /** Matrix grid, one-hand view: struck vs held. */
   matrixOneHand: {
     onset: grays.ink,
@@ -137,14 +89,7 @@ export const semantic = {
   },
   /** Piano SVG: a key currently sounding. */
   pressedKey: palette.dark.Blue,
-  /** Processing-step pills (raw -> collapsed -> clean -> two-hands). */
-  steps: {
-    raw: palette.dark.Gray,
-    collapsed: palette.dark.Lavender,
-    clean: palette.dark.Cyan,
-    "two-hands": palette.dark.Blue,
-  },
-  /** Feedback states, reused by MUI's theme palette. */
+  /** Marks drawn on the music: a note marked to come off, a recording dot, a live feed. */
   status: {
     info: palette.dark.Blue,
     success: palette.dark.Green,
