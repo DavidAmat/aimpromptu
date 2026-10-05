@@ -1,0 +1,2546 @@
+/**
+ * The Sheet step of a project: the piano sheet, its floating bar and its toolboxes.
+ *
+ * Everything the wall-clock model asks of a person happens on this one screen, in the order it
+ * makes sense: look at where the notes keep landing, say what one of those piles is, and read the
+ * result. Naming a different pile changes the names on the page and nothing else, so trying two is
+ * cheap and nothing is lost by getting it wrong the first time.
+ *
+ * It is step 5 (**Sheet**) of the flow page (implementation 08, Story 8.2). It is given its piece
+ * and the state of its step, and when the notes or the hands changed after the reading was saved,
+ * it opens with a banner and waits for **Write the sheet** instead of drawing the old reading by
+ * itself.
+ *
+ * Implementation 02, Phase 2 split the old `RhythmPage.tsx` into this folder: the edits model
+ * (`sheetEdits.ts`), the note toolbox, the range toolbox, the two keyboards, the floating bar and
+ * the controls of the whole sheet each have their own module, and this page keeps the state they
+ * share, the requests and the effects.
+ */
+
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import ButtonGroup from "@mui/material/ButtonGroup";
+import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
+import RedoIcon from "@mui/icons-material/RedoOutlined";
+import UndoIcon from "@mui/icons-material/UndoOutlined";
+import MenuItem from "@mui/material/MenuItem";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
+import { Section } from "../../../ui";
+import type { StepState } from "../../../api";
+import { noteName } from "../../../music/noteNames";
+import PeakPlot from "../../../components/time/PeakPlot";
+import ScorePlayer, {
+  type ScorePlayerControls,
+} from "../../../components/time/ScorePlayer";
+import TimeScoreView, { MIN_ZOOM } from "../../../components/time/TimeScoreView";
+import ScorePdfDialog from "../../../components/time/ScorePdfDialog";
+import ComposePassagePanel from "../../../components/editing/ComposePassagePanel";
+import {
+  FIGURE_LABELS,
+  timeScoreApi,
+  type FigureName,
+  type HandChoice,
+  type LadderPreview,
+  type Peak,
+  type PeaksResponse,
+  KEY_LABELS,
+  type KeySignatureName,
+  type SavedRhythm,
+  type TimeScorePayload,
+  type TrillSuggestion,
+} from "../../../api";
+import {
+  ottavaAtFrame,
+  resizeOttava,
+  type GridNotationRenderer,
+  type LyricLayoutChange,
+  type OttavaAnnotation,
+  type OttavaResizeChange,
+} from "@aimpromptu/grid-notation";
+import {
+  frameOf,
+  groupKeyOf,
+  handOf,
+  rowOf,
+  type NoteRef,
+  type PrintedHand,
+} from "../../../music/renderOverrides";
+import { useEditHistory } from "../../../hooks/useEditHistory";
+import { useWorkingArtifact } from "../../../state/useWorkingArtifact";
+import {
+  formatSeconds,
+  HAND_COLOUR,
+  HELD_COLOUR,
+  MARKER_TABS,
+  NAMEABLE_FIGURES,
+  NO_HANDS,
+  notTranscribed,
+  readable,
+  shifted,
+  type FrameTab,
+  type RangeHand,
+  type SoundingNote,
+} from "./sheetConstants";
+import {
+  EDIT_LABELS,
+  editsFromSaved,
+  hiddenNotesOut,
+  NO_EDITS,
+  savedRhythmOf,
+  type SheetEdits,
+  type Stretch,
+} from "./sheetEdits";
+import {
+  besideOnScreen,
+  clearOfRange,
+  firstLineBoxOf,
+  pressedBox,
+  screenBoxOf,
+} from "./toolboxPlacement";
+import { useNoteActions, type FingerDraft } from "./useNoteActions";
+import { useRangeActions, type FrameRange } from "./useRangeActions";
+import { NoteToolbox } from "./NoteToolbox";
+import { RangeToolbox } from "./RangeToolbox";
+import { DecorationToolbox, PianoToolbox } from "./PianoToolboxes";
+import { SheetFloatingBar } from "./SheetFloatingBar";
+import { SheetControls } from "./SheetControls";
+
+interface View {
+  key: string;
+  peaks: PeaksResponse | null;
+  selected: Peak | null;
+  preview: LadderPreview | null;
+  score: TimeScorePayload | null;
+  error: string | null;
+}
+
+function emptyView(key: string): View {
+  return {
+    key,
+    peaks: null,
+    selected: null,
+    preview: null,
+    score: null,
+    error: null,
+  };
+}
+
+/**
+ * What the flow page tells the piano sheet when it is the Sheet tab.
+ *
+ * `state` and `reason` are the backend's answer for the Sheet step (`GET /pieces/{uuid}/status`).
+ * `onChanged` is called after a write that can change that answer: a saved reading makes the step
+ * ready, **Remove all** makes it missing.
+ */
+export interface SheetStep {
+  audioUuid: string;
+  label?: string | undefined;
+  state: StepState;
+  reason: string | null;
+  onChanged: () => void;
+}
+
+/**
+ * The page frame: a plain block under the step tabs of the project. The explanation it used to
+ * print above the sheet went with the Playground (implementation 02, Phase 1); `subtitle` stays in
+ * the call sites for Phase 2, which rewrites this page.
+ */
+function Frame({
+  children,
+}: {
+  step: SheetStep | undefined;
+  subtitle: string;
+  children: ReactNode;
+}) {
+  return <Box>{children}</Box>;
+}
+
+export function SheetPage({ step }: { step?: SheetStep } = {}) {
+  const { artifact } = useWorkingArtifact();
+  const audioUuid = step ? step.audioUuid : artifact.audioUuid;
+  const pieceLabel = step ? step.label : artifact.label;
+  const frameMs = artifact.frameMs;
+  /**
+   * The notes or the hands changed after the reading was saved (plan section 8.3). The reading is
+   * still loaded, but it is not drawn by itself: the reader presses **Write the sheet** and then
+   * **Save**, and only that save makes the step ready again.
+   */
+  const stale = step?.state === "stale";
+
+  const [hand, setHand] = useState<HandChoice>("right");
+  const [figure, setFigure] = useState<FigureName>("negra");
+  const [busy, setBusy] = useState(false);
+
+  /**
+   * Every edit a reader makes on this sheet, and the way back through all of them.
+   *
+   * The sixteen values below used to be sixteen pieces of state, each with its own private way out
+   * — an Undo button in one toolbox, a chip that cleared itself in another, a "Bring them all
+   * back" under the sheet, and for a fingering, nothing at all. One history replaces the lot:
+   * Command-Z takes the last edit back whatever kind it was, and every setter below is written
+   * exactly the way a `useState` setter is, so nothing else on this page had to change.
+   *
+   * The labels are what the two buttons say they are about, so a reader knows what is about to go
+   * before they press.
+   */
+  const edits = useEditHistory<SheetEdits>(NO_EDITS, EDIT_LABELS);
+  const {
+    keySignature,
+    keyChanges,
+    clefChanges,
+    ottavas,
+    trills,
+    lyrics,
+    cueRanges,
+    spacings,
+    evenSpacings,
+    fingers,
+    overrides,
+    beamBreaks,
+    beamJoins,
+    hiddenNotes,
+    graceNotes,
+    dropDecorative,
+    annotationScale,
+    lineSpacing,
+    noteSpacing,
+    staffGaps,
+    stretches,
+  } = edits.state;
+  const {
+    keySignature: setKeySignature,
+    ottavas: setOttavas,
+    trills: setTrills,
+    lyrics: setLyrics,
+    fingers: setFingers,
+    overrides: setOverrides,
+    beamBreaks: setBeamBreaks,
+    hiddenNotes: setHiddenNotes,
+    dropDecorative: setDropDecorative,
+    annotationScale: setAnnotationScale,
+    lineSpacing: setLineSpacing,
+    noteSpacing: setNoteSpacing,
+    staffGaps: setStaffGaps,
+    stretches: setStretches,
+  } = edits.set;
+  const resetEdits = edits.reset;
+  const stageEdit = edits.stage;
+  /**
+   * The live renderer behind the sheet, and whether the print panel is open.
+   *
+   * Printing needs the renderer itself rather than the payload: the widths it measured and every
+   * choice the reader has made since are what make the printed page the same music as the screen.
+   */
+  const [sheetRenderer, setSheetRenderer] =
+    useState<GridNotationRenderer | null>(null);
+  const [pdfOpen, setPdfOpen] = useState(false);
+
+  const [keyHint, setKeyHint] = useState<{
+    best: KeySignatureName;
+    saved: number;
+  } | null>(null);
+  /**
+   * The octave brackets the notes ask for, reported by the sheet on every build. Taken as they
+   * are the first time a piece is drawn that nobody has decided about brackets on, and on request
+   * after that: a passage of three or more chords far outside its staff reads as one bracket, and
+   * the reader keeps, moves or clears what was proposed with the Octave pill.
+   */
+  const [ottavaHint, setOttavaHint] = useState<OttavaAnnotation[]>([]);
+  const ottavasDecided = useRef(false);
+  /** The keyboard panel: what is sounding under the playhead, coloured on a piano. */
+  const [pianoOpen, setPianoOpen] = useState(false);
+  /**
+   * Whether the column numbers are printed over the guides. **Off until asked for.**
+   *
+   * A column number is an address, not notation. It is what every mark on this page is keyed by and
+   * it is how a reader says where something is, so it has to be one click away — but it is also
+   * fifty-two of the sixty pixels above every staff, spent on numbers that mean nothing musically,
+   * on a page whose whole job is to be read as music. Off is the better resting state.
+   *
+   * Not an edit, so it is not in `SheetEdits`: it is how the page is being looked at rather than
+   * something decided about the piece, the same as the keyboard panel beside it.
+   */
+  const [frameLabelsOn, setFrameLabelsOn] = useState(false);
+  /**
+   * How large the sheet is drawn, as a multiple of its natural size. Command and the wheel moves it.
+   *
+   * Not an edit, so it is not in `SheetEdits`: it is how the page is being looked at rather than
+   * something decided about the piece, the same as the column numbers above. It is also not a
+   * change to the music — the drawing is magnified, so no column is measured again and the page
+   * does not wrap somewhere else — which is why nothing about it is saved.
+   */
+  const [sheetZoom, setSheetZoom] = useState(MIN_ZOOM);
+  /** Notes picked on the sheet: click one, then hold Command and click more. */
+  const [selectedNotes, setSelectedNotes] = useState<readonly string[]>([]);
+  const [framesToolbox, setFramesToolbox] = useState(false);
+  /**
+   * Raised each time a stretch is marked, so the panel can be placed against the highlight the page
+   * paints rather than against the click that started it. See the effect beside `pickRange`.
+   */
+  const [framesOpenedAt, setFramesOpenedAt] = useState(0);
+  /** Which pill is open in the frame toolbox. */
+  const [frameTab, setFrameTab] = useState<FrameTab>("key");
+  /**
+   * Which staff the marked stretch is about.
+   *
+   * Not an edit, so it is not in `SheetEdits`: it is part of the selection, like the columns
+   * themselves, and a Command-Z that put the hand pills back where they were would be a nuisance.
+   * It survives one selection to the next on purpose — a reader narrowing a clef to the left hand
+   * is usually about to do it again a page later — and is let go when the toolbox closes.
+   */
+  const [rangeHand, setRangeHand] = useState<RangeHand>("both");
+  /**
+   * The note the decoration keyboard is open for, or `null`.
+   *
+   * Held as the note key rather than as a boolean, so the panel cannot end up open over a note that
+   * is no longer picked.
+   */
+  const [decorationFor, setDecorationFor] = useState<string | null>(null);
+  /** Which hand a note added from the keyboard panel is given to. */
+  const [addHand, setAddHand] = useState<PrintedHand>("right");
+  /** A note is on its way onto the recording, and the sheet is being drawn again from it. */
+  const [addingNote, setAddingNote] = useState(false);
+  const [notesToolbox, setNotesToolbox] = useState(false);
+  /** Raised to drop every selection on the sheet: Escape, or closing a toolbox. */
+  const [clearedAt, setClearedAt] = useState(0);
+  /**
+   * What the frames toolbox will write when Apply is pressed, and which selection it was chosen for.
+   *
+   * Carried with the range it belongs to rather than reset by an effect: picking a different stretch
+   * of columns should offer whatever is sounding there, not whatever was chosen for the last one.
+   */
+  const [passageDraft, setPassageDraft] = useState<{
+    forRange: string;
+    value: KeySignatureName;
+  } | null>(null);
+  /** What the backend found the last time it was asked, and whether it is looking now. */
+  const [trillSuggestions, setTrillSuggestions] = useState<
+    readonly TrillSuggestion[] | null
+  >(null);
+  const [findingTrills, setFindingTrills] = useState(false);
+  /** What is being typed for the stretch now open, so the field survives a redraw. */
+  const [lyricDraft, setLyricDraft] = useState<{
+    forRange: string;
+    text: string;
+  } | null>(null);
+  /** Numbers pressed for the selection now open, so a chord can be given several at once. */
+  const [fingerDraft, setFingerDraft] = useState<FingerDraft | null>(null);
+  /** A move that could not be made, said once, in words. */
+  const [moveRefused, setMoveRefused] = useState<string | null>(null);
+  /** A hand change is on its way to the recording, and the sheet is being drawn again from it. */
+  const [movingHand, setMovingHand] = useState(false);
+  /**
+   * Where each toolbox opened, measured from what it is about.
+   *
+   * Set when the selection is made and then left alone: the panel is draggable, and moving the
+   * thing it points at should not snatch it back out of the reader's hand.
+   */
+  const [framesAt, setFramesAt] = useState<
+    { x: number; y: number } | undefined
+  >(undefined);
+  const [notesAt, setNotesAt] = useState<{ x: number; y: number } | undefined>(
+    undefined,
+  );
+  /**
+   * Where the last press on the sheet landed.
+   *
+   * The frames toolbox opens from a callback that runs before its highlight is painted, so there
+   * is nothing on the page to measure yet. The click itself is the next best anchor, and it is
+   * where the reader is looking in any case.
+   */
+  const pressedAt = useRef<DOMRect | null>(null);
+  const [range, setRange] = useState<{
+    fromColumn: number;
+    toColumn: number;
+  } | null>(null);
+  // Where the recording is, in seconds, while it plays. `null` when nothing is playing, which is
+  // what hides the line on the staves.
+  // Starts at zero rather than nothing, so the line is on the page — and so grabbable — before the
+  // recording has ever been played. `null` only after the player itself has gone.
+  const [playheadSeconds, setPlayheadSeconds] = useState<number | null>(0);
+  /** The transport, so dragging the cursor on the staves can move the recording. */
+  const player = useRef<ScorePlayerControls | null>(null);
+  const [scrollCursorAt, setScrollCursorAt] = useState(0);
+  const [newAnchorMs, setNewAnchorMs] = useState(320);
+  /**
+   * The reading saved with the piece, and whether this screen still matches it.
+   *
+   * `null` means nobody has read this piece yet, which is the blank state the plot is for.
+   */
+  const [saved, setSaved] = useState<SavedRhythm | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [savedNote, setSavedNote] = useState<string | null>(null);
+  /**
+   * Why the last save did not happen, in the backend's own words.
+   *
+   * Held apart from `savedNote` because the two are read in different places and one of them is an
+   * emergency. The note is a line under the Save at the foot of the page; a failure has to reach a
+   * reader wherever they are, because the Save they pressed is on the bar that follows them down
+   * the sheet — and until now a refused save said nothing at all up there. A reading that a reader
+   * believes is saved and is not is the worst thing this page can do.
+   */
+  const [saveProblem, setSaveProblem] = useState<string | null>(null);
+  /** Whether the recording is sounding, so the floating bar can draw the button it will act as. */
+  const [playing, setPlaying] = useState(false);
+  /**
+   * Whether the wipe has been armed, and what the bar has just done.
+   *
+   * The wipe throws away everything anyone decided about the piece, which is far too much to lose
+   * to a misclick on a bar that follows the reader down the page — so it takes two presses, and it
+   * forgets the first if the second does not come. `flash` is the other half of the same problem:
+   * the bar is the only thing on screen at that moment, so it has to say what happened itself.
+   */
+  const [armed, setArmed] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [flash, setFlash] = useState<"saved" | "removed" | null>(null);
+
+  /**
+   * Everything read for one (piece, hand, resolution), kept together under the key it belongs to.
+   *
+   * One object rather than five, because they always change together: asking about the other hand
+   * invalidates the piles, the chosen pile, the preview and the sheet at once. Comparing the key
+   * during render is how the reset happens, which keeps it out of the effect.
+   */
+  /**
+   * Raised whenever a passage is put into the piece (Epic 13). It is in the view key because
+   * placing one changes the music: the piles, the chosen pile, the sheet and the saved reading are
+   * all about playing that has just changed, so all of them are read again rather than patched.
+   */
+  const [composed, setComposed] = useState(0);
+  /**
+   * Which piece the reader has unfolded the passage stage on, or `null` while nobody has said.
+   *
+   * Held as the key rather than as a boolean so that loading a different piece forgets the answer:
+   * unfolding it on one piece is not a statement about the next.
+   */
+  const [composeChoice, setComposeChoice] = useState<string | null>(null);
+  const key = `${audioUuid ?? ""}|${hand}|${frameMs}|${composed}`;
+  const [view, setView] = useState<View>(() => emptyView(key));
+  const [untranscribed, setUntranscribed] = useState(false);
+  if (view.key !== key) setView(emptyView(key));
+
+  /**
+   * A different piece, or a passage placed into this one: start the edits and the history again.
+   *
+   * Not on a change of hand, which only changes which hand's gaps the plot is read from and leaves
+   * every decision about the sheet standing. Placing a passage is in here because it moves every
+   * mark after the insertion point, so a step from before it would put a bracket back over notes
+   * that are somewhere else now.
+   *
+   * Compared during render, the same way the view above is, so there is no render in between
+   * showing one piece's edits over another piece's notes.
+   */
+  const editsKey = `${audioUuid ?? ""}|${composed}`;
+  const [editsFor, setEditsFor] = useState(editsKey);
+  if (editsFor !== editsKey) {
+    setEditsFor(editsKey);
+    resetEdits(NO_EDITS);
+  }
+
+  const { peaks, selected, preview, score, error } = view;
+
+  /**
+   * How long the piece is, and whether there is anything in it.
+   *
+   * Read from the envelope rather than from a separate request: the sheet already carries the
+   * column count and the column length, and an empty piece is drawn as one empty column, so "no
+   * notes" is the honest test rather than "no columns".
+   */
+  const pieceSeconds = score
+    ? (score.envelope.frameCount * score.envelope.frameMs) / 1000
+    : (peaks?.endSeconds ?? 0);
+  const pieceIsEmpty = (peaks?.attackCount ?? 0) === 0;
+  /**
+   * A piece with nothing in it has nothing else to offer, so the passage stage is open on arrival.
+   * On a piece that already has music the plot is what the reader came for, so it is folded away
+   * until they ask. Derived rather than stored, so there is no state to keep in step.
+   */
+  const composeOpen =
+    composeChoice === key || (composeChoice === null && Boolean(peaks) && pieceIsEmpty);
+
+  const renderOverrides = useMemo(
+    () => ({ hidden: hiddenNotes, hands: NO_HANDS }),
+    [hiddenNotes],
+  );
+
+  /**
+   * Every notehead still on the page, gathered into the chord it is drawn as part of.
+   *
+   * Keyed by the staff the note ends up on rather than the one the split gave it, because after a
+   * move the chord a note beams with is the one on its new staff.
+   */
+  const chords = useMemo(() => {
+    const found = new Map<string, number[]>();
+    for (const note of score?.notes ?? []) {
+      const ref: NoteRef = `${note.startFrame}:${note.row}`;
+      if (hiddenNotes.has(ref)) continue;
+      const staff = note.hand;
+      const key = `${staff}:${note.startFrame}`;
+      const rows = found.get(key);
+      if (rows) rows.push(note.row);
+      else found.set(key, [note.row]);
+    }
+    return found;
+  }, [score, hiddenNotes]);
+
+  /**
+   * Which settings this stretch already carries, so its pill can say so before it is opened.
+   *
+   * Read from the stored edits rather than kept in state: a marker that could disagree with the
+   * thing it marks is worse than no marker.
+   */
+  /**
+   * The first sheet of a piece nobody has decided about brackets on takes the proposal whole.
+   *
+   * It replaces the baseline rather than becoming a step, because the reader did not do it. A
+   * Command-Z on a page nobody has touched yet must do nothing, not take back something the page
+   * did to itself before anyone arrived.
+   */
+  useEffect(() => {
+    if (ottavasDecided.current || ottavaHint.length === 0) return;
+    ottavasDecided.current = true;
+    resetEdits((current) => ({ ...current, ottavas: ottavaHint }));
+  }, [ottavaHint, resetEdits]);
+
+  /** Row 0 is MIDI 21, the bottom A of an 88-key piano. */
+  const noteNameAt = useCallback((row: number) => noteName(row + 21), []);
+
+  /** The suggestions that are not already written as a trill. */
+  const unmarkedTrills = useMemo(
+    () =>
+      (trillSuggestions ?? []).filter(
+        (one) =>
+          !trills.some(
+            (mark) =>
+              mark.hand === one.hand &&
+              mark.startFrame < one.endFrame &&
+              mark.endFrame > one.startFrame,
+          ),
+      ),
+    [trillSuggestions, trills],
+  );
+
+  /** Ask the backend where two notes are trading places. Nothing is written by asking. */
+  const findTrills = useCallback(async () => {
+    if (!audioUuid) return;
+    setFindingTrills(true);
+    try {
+      const found = await timeScoreApi.trills(audioUuid, { frameMs });
+      setTrillSuggestions(found.suggestions);
+    } catch {
+      // Nothing on the page depends on the answer, so a failure leaves the sheet as it is.
+      setTrillSuggestions([]);
+    } finally {
+      setFindingTrills(false);
+    }
+  }, [audioUuid, frameMs]);
+
+  useEffect(() => {
+    if (!audioUuid) return;
+    const controller = new AbortController();
+    timeScoreApi
+      .peaks(audioUuid, { hand, frameMs }, controller.signal)
+      .then((found) => {
+        setUntranscribed(false);
+        // The pile holding most of the playing is the one a reader looks at first, so it starts
+        // chosen. Nothing is committed by that: the sheet only appears once a name is given.
+        const biggest =
+          [...found.peaks].sort((a, b) => b.share - a.share)[0] ?? null;
+        setView((current) =>
+          current.key === key
+            ? { ...current, peaks: found, selected: biggest }
+            : current,
+        );
+      })
+      .catch((caught: unknown) => {
+        if (controller.signal.aborted) return;
+        // Stop waiting. Leaving the spinner turning says "nearly there" to a
+        // reader whose piece is never going to load.
+        setUntranscribed(notTranscribed(caught));
+        setView((current) =>
+          current.key === key
+            ? {
+                ...current,
+                error: readable(caught, "Could not read the rhythm."),
+              }
+            : current,
+        );
+      });
+    return () => controller.abort();
+  }, [audioUuid, hand, frameMs, key]);
+
+  // Read back what this piece was last read as, once per piece — and again after a passage is
+  // placed, because an insertion moves every mark after it and the columns held here are stale.
+  //
+  // Restoring the anchor is not enough on its own: the pile it names has to be the one the plot
+  // shows, or the number under the name would say one thing and the highlighted bar another. So the
+  // nearest pile is selected too, and if none is near, the saved reading is kept and the plot simply
+  // has nothing highlighted, which is honest about the two disagreeing.
+  //
+  // The reading arrives as the baseline and not as a step. It is where the reader left off rather
+  // than something they have just done, and a Command-Z that emptied the page on arrival would be
+  // the worst possible first impression of an undo.
+  useEffect(() => {
+    if (!audioUuid) return;
+    // Whether anybody has decided about brackets is a fact about this piece, so a different piece
+    // has not been asked yet and may take the page's own proposal.
+    ottavasDecided.current = false;
+    const controller = new AbortController();
+    timeScoreApi
+      .rhythm(audioUuid, controller.signal)
+      .then((found) => {
+        if (!found) return;
+        setSaved(found);
+        setHand(found.hand);
+        setFigure(found.anchorFigure);
+        // A reading that carries a list of brackets — even an empty one — was decided; one saved
+        // before brackets existed was not, and the page may take its own proposal.
+        ottavasDecided.current = Array.isArray(found.ottavas);
+        resetEdits(editsFromSaved(found));
+      })
+      .catch(() => {
+        // A reading that cannot be read is not worth stopping the screen for: the plot still works
+        // and the reader can name the gap again.
+      });
+    return () => controller.abort();
+  }, [audioUuid, composed, resetEdits]);
+
+  /**
+   * Both of these have to keep the same identity between renders.
+   *
+   * The sheet is rebuilt whenever anything it draws from changes, and a handler written inline is a
+   * different function every time, so the sheet would be rebuilt on every click and would lose the
+   * selection it had just made.
+   */
+  const pickRange = useCallback(
+    (
+      picked: { fromColumn: number; toColumn: number },
+      options?: { adjusting?: boolean },
+    ) => {
+      setRange(picked);
+      setFramesToolbox(true);
+      // Only when the stretch is a new one.
+      //
+      // Dragging an end of a stretch that is already marked reports through here too, and placing
+      // the panel again on every step of that drag put it next to the *handle* — which is the end
+      // being dragged, so the panel walked along underneath the stretch it was supposed to be clear
+      // of. Where a panel sits is the reader's, from the moment it opens: it moves when they drag
+      // it and at no other time.
+      if (options?.adjusting) return;
+      // The click, for now. The highlight it is supposed to be clear of is not painted until a
+      // render later, so this is an opening guess and the effect below settles it.
+      setFramesAt(clearOfRange(pressedAt.current));
+      setFramesOpenedAt((at) => at + 1);
+    },
+    [],
+  );
+
+  /**
+   * Put the frames toolbox clear of the highlight the page actually painted.
+   *
+   * The click is the only thing on screen at the moment a stretch is marked, so that is what the
+   * placement above can measure — and a click is sixteen pixels while the stretch it starts is
+   * whatever the reader drags it out to. That was survivable until the sheet could be **magnified**:
+   * at 3× the band is three times the size and the panel, placed beside a point, lands inside it.
+   *
+   * So it is placed again here, against the band itself. On the next animation frame rather than in
+   * the effect body: the band is drawn by the sheet's own effect and the only moment its box is a
+   * real answer is after the page has painted, which is what `requestAnimationFrame` waits for.
+   */
+  useEffect(() => {
+    if (framesOpenedAt === 0) return;
+    const frame = requestAnimationFrame(() => {
+      const band = firstLineBoxOf(".grid-frame-range-fill");
+      if (band) setFramesAt(clearOfRange(band));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [framesOpenedAt]);
+
+  /**
+   * Every page edit that still has a note under it. What gets drawn, and what gets saved.
+   *
+   * An override is a statement *about* something drawn. Move the notes it was about to the other
+   * staff, or take them off the page, and there is nothing left for it to be about — but the edit
+   * is still in the state, and a range one keeps drawing. That is the `8vb` David found stretched
+   * across an empty treble staff after its chords went to the left hand: a bracket saying "this
+   * sounds an octave down" over nothing at all.
+   *
+   * So an override has to touch at least one note to count, checked against what the page actually
+   * draws. Filtered here rather than deleted from the state, because the state is what the reader
+   * said and the notes can come back: undo the move and the bracket is over its chords again,
+   * exactly the way undoing a deletion restores the note. Nothing dead is drawn, and nothing dead
+   * is written to the file, which is the whole of what "delete it" has to mean.
+   *
+   * Empty until the sheet exists, and then everything would look orphaned — so before that, and
+   * only before that, the reader's own list is passed through untouched.
+   */
+  /**
+   * What is sounding in each column, which hand is holding it, and where that note began.
+   *
+   * The onset matters as much as the pitch: the keyboard panel is a way of *editing* a chord now,
+   * and a note is addressed by the column it started in — not by the column the reader happens to
+   * be looking at halfway through it. The run each held cell belongs to is worked out the same way
+   * the drawing works it out, breaking at a new attack and at a gap in the columns.
+   *
+   * Notes the reader has taken off the page are left out, so the keyboard and the sheet agree.
+   */
+  const soundingByFrame = useMemo(() => {
+    const byFrame = new Map<number, SoundingNote[]>();
+    if (!score || !pianoOpen) return byFrame;
+    for (const [side, matrix] of [
+      ["right", score.envelope.rMatrix],
+      ["left", score.envelope.lMatrix],
+    ] as const) {
+      const byRow = new Map<number, { col: number; onset: boolean }[]>();
+      matrix.rows.forEach((row, index) => {
+        const cell = { col: matrix.cols[index]!, onset: matrix.onset[index] === row };
+        const cells = byRow.get(row);
+        if (cells) cells.push(cell);
+        else byRow.set(row, [cell]);
+      });
+      for (const [row, cells] of byRow) {
+        cells.sort((left, right) => left.col - right.col);
+        let onsetFrame: number | null = null;
+        let previous: number | null = null;
+        for (const cell of cells) {
+          const broken = previous !== null && cell.col !== previous + 1;
+          if (cell.onset || onsetFrame === null || broken) onsetFrame = cell.col;
+          previous = cell.col;
+          if (hiddenNotes.has(`${onsetFrame}:${row}`)) continue;
+          const here = byFrame.get(cell.col);
+          const note: SoundingNote = { row, hand: side, onsetFrame };
+          if (here) here.push(note);
+          else byFrame.set(cell.col, [note]);
+        }
+      }
+    }
+    return byFrame;
+  }, [score, pianoOpen, hiddenNotes]);
+
+  /**
+   * Which column the playhead is in, as a whole number.
+   *
+   * The nudge is not superstition. A column turned into seconds and back is a division and a
+   * multiplication in binary floating point, and on about one column in a hundred the answer comes
+   * out a hair *under* the whole number — so a cursor put exactly on a note landed in the column
+   * before it, and the keyboard panel drew the wrong chord. A millionth of a column is far below
+   * anything that can be seen and far above the error.
+   */
+  const playheadFrame = useMemo(() => {
+    if (!score || playheadSeconds === null) return null;
+    return Math.floor((playheadSeconds * 1000) / score.envelope.frameMs + 1e-6);
+  }, [score, playheadSeconds]);
+
+  const soundingNow = useMemo<readonly SoundingNote[]>(
+    () => (playheadFrame === null ? [] : (soundingByFrame.get(playheadFrame) ?? [])),
+    [playheadFrame, soundingByFrame],
+  );
+
+  /**
+   * One colour per hand, and a paler one for a key held from an earlier column.
+   *
+   * Two things a reader needs at once: who is playing this note, and whether it begins here. Full
+   * colour is struck in this column and has a notehead on the page under the cursor; pale is still
+   * ringing from a note that began further back, and its notehead is where it began.
+   */
+  const soundingColours = useMemo(() => {
+    const colours: Record<number, string> = {};
+    for (const note of soundingNow) {
+      colours[note.row] =
+        note.onsetFrame === playheadFrame
+          ? HAND_COLOUR[note.hand]
+          : HELD_COLOUR[note.hand];
+    }
+    return colours;
+  }, [soundingNow, playheadFrame]);
+
+  const live = useMemo(() => {
+    if (!score || chords.size === 0) {
+      return { ottavas, beamBreaks, beamJoins, overrides, fingers, evenSpacings };
+    }
+    const occupied: Record<PrintedHand, number[]> = { right: [], left: [] };
+    for (const groupKey of chords.keys()) {
+      const [staff, frame] = groupKey.split(":");
+      occupied[staff === "left" ? "left" : "right"].push(Number(frame));
+    }
+    const anyNoteUnder = (
+      staff: PrintedHand,
+      fromColumn: number,
+      toColumn: number,
+    ): boolean =>
+      occupied[staff].some((frame) => frame >= fromColumn && frame < toColumn);
+
+    return {
+      ottavas: ottavas.filter((span) =>
+        anyNoteUnder(
+          span.hand === "left" ? "left" : "right",
+          span.fromColumn,
+          span.toColumn,
+        ),
+      ),
+      beamBreaks: new Set(
+        [...beamBreaks].filter((groupKey) => chords.has(groupKey)),
+      ),
+      beamJoins: new Set(
+        [...beamJoins].filter((groupKey) => chords.has(groupKey)),
+      ),
+      overrides: Object.fromEntries(
+        Object.entries(overrides).filter(([groupKey]) => chords.has(groupKey)),
+      ),
+      evenSpacings: evenSpacings.filter((run) =>
+        anyNoteUnder(run.hand, run.fromColumn, run.toColumn),
+      ),
+      fingers: Object.fromEntries(
+        Object.entries(fingers).filter(([noteKey]) =>
+          chords.has(groupKeyOf(noteKey)),
+        ),
+      ),
+    };
+  }, [score, chords, ottavas, beamBreaks, beamJoins, overrides, fingers, evenSpacings]);
+
+  /**
+   * `live`, kept as the same objects while its content is the same, for the sheet.
+   *
+   * The sheet is drawn again from scratch whenever one of these is a new object, and `live` gives
+   * six new ones whenever anything it reads changes, even when nothing in them did. A hand move
+   * did exactly that: the fingerings were handed back as an equal copy, and the whole sheet was
+   * drawn once more with the old notes before the new sheet arrived (implementation 08, Phase 8).
+   */
+  const liveContent = useMemo(
+    () =>
+      JSON.stringify([
+        live.ottavas,
+        [...live.beamBreaks],
+        [...live.beamJoins],
+        live.overrides,
+        live.evenSpacings,
+        live.fingers,
+      ]),
+    [live],
+  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the same content keeps the same objects
+  const drawnMarks = useMemo(() => live, [liveContent]);
+
+  /**
+   * A lyric's block was dragged somewhere, or its right edge pulled in. Keep where it was put.
+   *
+   * The columns it is stored against never change, so the words stay with their music through a
+   * re-wrap and this is only how far from it the reader moved them. Reported once when the pointer
+   * is let go, which is what makes it one step of Command-Z rather than one per pixel.
+   */
+  const placeLyric = useCallback(
+    (change: LyricLayoutChange) => {
+      setLyrics((current) =>
+        current.map((line) =>
+          line.fromColumn === change.fromColumn && line.toColumn === change.toColumn
+            ? {
+                ...line,
+                offsetX: change.offsetX,
+                offsetY: change.offsetY,
+                width: change.width,
+              }
+            : line,
+        ),
+      );
+    },
+    [setLyrics],
+  );
+
+  /** Bring the cursor on screen — space, a click on the bar, a jump the reader did not make. */
+  const scrollToCursor = useCallback(
+    () => setScrollCursorAt((at) => at + 1),
+    [],
+  );
+
+  /** The cursor was dragged. The transport owns the recording, so it does the moving. */
+  const scrub = useCallback(
+    (seconds: number) => player.current?.seek(seconds),
+    [],
+  );
+
+  /**
+   * A corner mark was clicked: select the stretch it belongs to and open the toolbox on it.
+   *
+   * This is the point of drawing the corners. A stretch that carries an edit is visible without
+   * being selected, so a reader who wants to undo one goes straight to it instead of remembering
+   * which columns they used.
+   */
+  const pickMarkedRange = useCallback(
+    (marker: { kind: string; hand: string; fromColumn: number; toColumn: number }) => {
+      setRange({ fromColumn: marker.fromColumn, toColumn: marker.toColumn });
+      // The stretch arrives with its own answers to the two questions the panel asks first: which
+      // staff it is about, and which kind of markup it carries. Filling both in is the difference
+      // between "here is the stretch" and "here is the thing you clicked" — a reader who clicks an
+      // octave bracket is asking about that bracket, not about the columns under it.
+      if (marker.hand === "right" || marker.hand === "left") setRangeHand(marker.hand);
+      const tab = MARKER_TABS[marker.kind];
+      if (tab) setFrameTab(tab);
+      setFramesToolbox(true);
+      setFramesAt(clearOfRange(pressedAt.current));
+      setFramesOpenedAt((at) => at + 1);
+    },
+    [],
+  );
+
+  /**
+   * A reader pulled one end of an octave bracket on the sheet and let go.
+   *
+   * The bracket being dragged wins over whatever it now reaches: enlarging an `8va` over a `15ma`
+   * leaves the `8va` and no trace of the `15ma`. Two brackets over one note would have to be added
+   * together, which is never what anyone meant, and refusing the drag instead would leave the
+   * reader dragging against a wall with nothing on the page to say why.
+   *
+   * One step in the history, so Command-Z puts the bracket back the length it was.
+   */
+  const stretchOttava = useCallback(
+    (change: OttavaResizeChange) => {
+      const frameCount = score?.envelope.frameCount;
+      if (frameCount === undefined) return;
+      setOttavas((current) =>
+        resizeOttava(
+          current,
+          { hand: change.hand, fromColumn: change.fromColumn, toColumn: change.toColumn },
+          { fromColumn: change.nextFromColumn, toColumn: change.nextToColumn },
+          frameCount,
+        ),
+      );
+    },
+    [score, setOttavas],
+  );
+
+  /**
+   * Take the bracket off the page without taking the reading off the piece.
+   *
+   * A player who already knows a passage is played an octave up does not need a dashed line over
+   * every bar of it saying so, and above the right hand is the most crowded strip on the page. But
+   * the notes under a bracket are written an octave from where they sound: un-shifting them would
+   * be a different edit, and a reader asking for less ink would get a wall of ledger lines. So the
+   * transposition stays and only the bracket goes.
+   *
+   * **Not a way of removing one.** The trash button in the Octave pill is the only way out, which
+   * is why a hidden bracket keeps its corner marks — they are the way back to it.
+   *
+   * The bracket covering the **first column** of the stretch, which is the one the pill's chips are
+   * already describing. Every bracket the stretch overlaps would be more generous and would make
+   * the panel lie: the row says `8va` about one bracket, and the eye beside it would have acted on
+   * two.
+   */
+  const setOttavaHidden = useCallback(
+    (hands: readonly PrintedHand[], atColumn: number, hidden: boolean) => {
+      setOttavas((current) =>
+        current.map((span) =>
+          hands.includes(span.hand) && span.fromColumn <= atColumn && span.toColumn > atColumn
+            ? { ...span, hidden }
+            : span,
+        ),
+      );
+    },
+    [setOttavas],
+  );
+
+  /**
+   * Picking noteheads also takes the recording to where they are.
+   *
+   * Every note is a moment as well as a pitch, and the keyboard panel only ever draws one moment —
+   * the one under the cursor. Without this, clicking a chord on the staves opened a panel about it
+   * while the keyboard went on showing whatever the cursor happened to be standing on, which is
+   * usually a different chord and sometimes nothing at all.
+   *
+   * The **first** column of the selection, when a band takes in several: a range has to resolve to
+   * one moment and its start is the one the reader dragged from.
+   *
+   * The page is deliberately **not** scrolled. The reader is looking at the notes they just
+   * clicked; bringing the cursor on screen would only take that place away. This is the same choice
+   * the double-click seek makes, for the same reason.
+   */
+  const pickNotes = useCallback(
+    (keys: readonly string[]) => {
+      setSelectedNotes(keys);
+      setNotesToolbox(keys.length > 0);
+      if (keys.length === 0) return;
+      // Measured from the noteheads rather than from the click, so a rubber band that took in half
+      // the line opens its panel clear of the whole band instead of on top of it.
+      setNotesAt(
+        besideOnScreen(
+          screenBoxOf(".grid-note-target.is-selected") ?? pressedAt.current,
+        ),
+      );
+      player.current?.seek((Math.min(...keys.map(frameOf)) * frameMs) / 1000);
+    },
+    [frameMs],
+  );
+
+  /**
+   * Closing a toolbox lets the selection go with it.
+   *
+   * A dashed outline left on the page after its panel has gone says something is still picked when
+   * nothing is, and the next click would then extend that invisible selection instead of starting a
+   * new one.
+   */
+  const closeFrames = useCallback(() => {
+    setFramesToolbox(false);
+    setRange(null);
+    setPassageDraft(null);
+    // The hand scope is part of the selection, so it goes when the selection does. It survives one
+    // stretch to the next while the panel stays open, which is what a reader narrowing a clef to
+    // the left hand for a whole page wants.
+    setRangeHand("both");
+    setClearedAt((at) => at + 1);
+  }, []);
+
+  const closeNotes = useCallback(() => {
+    setNotesToolbox(false);
+    setSelectedNotes([]);
+    // The decoration keyboard is about one picked note, so it cannot outlive the picking.
+    setDecorationFor(null);
+    setClearedAt((at) => at + 1);
+  }, []);
+
+  const notes = useNoteActions({
+    score,
+    selectedNotes,
+    chords,
+    state: edits.state,
+    set: edits.set,
+    fingerDraft,
+    setFingerDraft,
+    closeNotes,
+  });
+  const { selectedChords, onlyNote, graceHere, hideSelected } = notes;
+
+  const rangeActions = useRangeActions({
+    range,
+    rangeHand,
+    chords,
+    state: edits.state,
+    set: edits.set,
+    lyricDraft,
+    passageDraft,
+  });
+  const { notesUnderRange } = rangeActions;
+
+  /**
+   * A re-record was accepted. It writes over a window of the recording, and may splice the audio
+   * itself. Nothing brings that back, so the marks inside the window are dropped and the history is
+   * started again here rather than left holding steps that point into a passage that is not there
+   * any more. The panel says so before Accept is pressed.
+   */
+  const acceptRerecord = (accepted: FrameRange) => {
+    const from = accepted.fromColumn;
+    const to = accepted.toColumn;
+    const inside = (frame: number) => frame >= from && frame < to;
+    setOverrides((current) => {
+      const next = { ...current };
+      for (const key of Object.keys(next)) {
+        if (inside(Number(key.split(":")[1]))) delete next[key];
+      }
+      return next;
+    });
+    setBeamBreaks(
+      (current) =>
+        new Set(
+          [...current].filter(
+            (key) => !inside(Number(key.split(":")[1])),
+          ),
+        ),
+    );
+    setHiddenNotes(
+      (current) =>
+        new Set(
+          [...current].filter(
+            (ref) => !inside(Number(ref.split(":")[0])),
+          ),
+        ),
+    );
+    setFingers((current) => {
+      const next = { ...current };
+      for (const key of Object.keys(next)) {
+        if (inside(Number(key.split(":")[1]))) delete next[key];
+      }
+      return next;
+    });
+    setOttavas((current) =>
+      current.filter(
+        (span) =>
+          span.fromColumn < from || span.fromColumn >= to,
+      ),
+    );
+    resetEdits((current) => current);
+    void apply();
+  };
+
+  /**
+   * The two selections are one selection, said two ways, and either button hands it to the other.
+   *
+   * A reader who has picked three noteheads and now wants a clef change over them was marking the
+   * same music twice: once by clicking the notes, and then again on the ruler, by eye, trying to
+   * find the columns they were already pointing at. Both directions are exact, because both read
+   * the same addresses — a note carries the column it begins in, and a stretch of columns carries
+   * every note that begins inside it.
+   *
+   * **Neither of them raises `clearedAt`.** That is the page's "drop everything picked", and it
+   * clears the stretch *and* the noteheads — which is precisely one half too much here, and would
+   * wipe the selection this has just handed over. Each side is closed by hand instead.
+   *
+   * The selection itself is made through the renderer rather than by writing state: the renderer
+   * owns which noteheads are picked, and `setSelection` reports straight back through the same
+   * `onSelectionChange` a click does, so the panel opens, is placed and takes the cursor to the
+   * notes exactly as if the reader had clicked them.
+   */
+  const selectNotesUnderRange = useCallback(() => {
+    if (!range || notesUnderRange.length === 0) return;
+    setFramesToolbox(false);
+    setPassageDraft(null);
+    // The hand scope goes with the stretch: the noteheads now say which staff this is about, and a
+    // scope left behind would narrow the *next* stretch the reader marks.
+    setRangeHand("both");
+    setRange(null);
+    sheetRenderer?.setSelection(notesUnderRange);
+  }, [range, notesUnderRange, sheetRenderer]);
+
+  /**
+   * The other way: the stretch from the leftmost picked note to the rightmost.
+   *
+   * Whichever staff they are on. A selection spanning both hands names the columns it spans and the
+   * scope stays **Both**; one that is all in one hand arrives with that hand's pills already
+   * pressed, because a reader who picked only left-hand notes is about to do something to the left
+   * hand.
+   *
+   * The end is the last picked column **plus one**, because a range is half-open here: a stretch
+   * ending at the column its last note begins in would not contain that note.
+   */
+  const selectRangeOfNotes = useCallback(() => {
+    if (selectedNotes.length === 0) return;
+    const columns = selectedNotes.map(frameOf);
+    const hands = new Set(selectedNotes.map(handOf));
+    // Measured before the selection goes, because it is the noteheads that say where the frames
+    // panel should open and they are about to stop being marked.
+    const box = screenBoxOf(".grid-note-target.is-selected") ?? pressedAt.current;
+    sheetRenderer?.clearSelection();
+    setNotesToolbox(false);
+    setSelectedNotes([]);
+    setDecorationFor(null);
+    setRangeHand(hands.size === 1 ? [...hands][0]! : "both");
+    setRange({
+      fromColumn: Math.min(...columns),
+      toColumn: Math.max(...columns) + 1,
+    });
+    setFramesToolbox(true);
+    setFramesAt(clearOfRange(box));
+    setFramesOpenedAt((at) => at + 1);
+  }, [selectedNotes, sheetRenderer]);
+
+  const sayRefused = useCallback((refused: readonly NoteRef[]) => {
+    setMoveRefused(
+      refused.length === 0
+        ? null
+        : `${refused.length} note${refused.length === 1 ? "" : "s"} stayed where they were: the other staff already plays that key at that moment, and one key cannot be struck twice in the same frame.`,
+    );
+  }, []);
+
+  /**
+   * Delete takes the picked notes off the page, exactly as the trash button does.
+   *
+   * The same call, so it is the same one step in the history and Command-Z brings them back
+   * whichever way they went — a shortcut that did its own thing would be a second way to delete a
+   * note and a second thing to keep in step with the undo.
+   *
+   * **Both keys.** On a Mac the key most people call Delete sends `Backspace`; `Delete` is the
+   * forward one, which the full keyboards have. Refusing one of them would be right about the names
+   * and wrong about the hands.
+   *
+   * It stands down while the focus is in a field, because there Backspace already means something
+   * and deleting four noteheads while somebody edits a lyric would be unforgivable.
+   *
+   * **With no note picked and a stretch marked, it hides that stretch's octave bracket instead.**
+   * Notes first, because that is what the key has always meant here and a note is the smaller, more
+   * frequent thing; and only then the bracket, because a marked stretch with nothing picked inside
+   * it is a reader pointing at the stretch itself. Hiding is not removing — the notes stay written
+   * where the bracket puts them and the trash button in the Octave pill is still the only way out.
+   */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      const on = event.target as Element | null;
+      if (on?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+      if (selectedNotes.length > 0) {
+        // Backspace is the browser's "go back" on a page with nothing focused, which would take the
+        // reader off the sheet and lose every edit they had not saved.
+        event.preventDefault();
+        hideSelected();
+        return;
+      }
+      if (!range) return;
+      const hands: PrintedHand[] = rangeHand === "both" ? ["right", "left"] : [rangeHand];
+      // Only the ones that are actually drawn. With every bracket here already hidden, Delete has
+      // nothing to do, and swallowing the key would leave the reader pressing it at nothing.
+      const bracketed = hands.filter((side) => {
+        const span = ottavaAtFrame(ottavas, side, range.fromColumn);
+        return span !== undefined && !span.hidden;
+      });
+      if (bracketed.length === 0) return;
+      event.preventDefault();
+      setOttavaHidden(bracketed, range.fromColumn, true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedNotes, hideSelected, range, rangeHand, ottavas, setOttavaHidden]);
+
+  // Escape drops whatever is picked, which is what it does everywhere else.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      closeFrames();
+      closeNotes();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [closeFrames, closeNotes]);
+
+  /**
+   * Command-Z takes the last edit back, Shift-Command-Z puts it back.
+   *
+   * Control-Z on Windows, and Control-Y as well, because that is the other redo half the world
+   * has. The browser has its own undo for text, so this stands down while the focus is in a field:
+   * pressing Command-Z in the **Words** box takes back what you typed, which is what it should do.
+   *
+   * `preventDefault` matters here. Without it the browser runs its own undo on top of this one, on
+   * whatever field it last saw.
+   */
+  const { undo, redo } = edits;
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      const pressed = event.key.toLowerCase();
+      const wants =
+        pressed === "z" ? (event.shiftKey ? "redo" : "undo") : pressed === "y" ? "redo" : null;
+      if (!wants) return;
+      const on = event.target as Element | null;
+      if (on?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+      event.preventDefault();
+      void (wants === "undo" ? undo() : redo());
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undo, redo]);
+
+  const save = useCallback(async () => {
+    if (!audioUuid || !selected) return;
+    setSaving(true);
+    setSavedNote(null);
+    setSaveProblem(null);
+    const body: SavedRhythm = savedRhythmOf({
+      hand,
+      frameMs,
+      figure,
+      anchorMs: selected.medianMs,
+      edits: edits.state,
+      live,
+    });
+    let kept = false;
+    try {
+      const stored = await timeScoreApi.saveRhythm(audioUuid, body);
+      // From here on the reading is on disk. What follows writes to the recording, and a failure
+      // there must not be reported as "your reading was lost", because it was not.
+      kept = true;
+      // A note taken off the page is a note the transcriber invented, so keeping
+      // the reading also takes it out of the piano matrix the piece is drawn
+      // from. Until this call it was an overlay: the sheet stopped drawing it,
+      // but the roll and the falling view still showed it and the recording still
+      // had it. The drawing does not change here — the figures were already named
+      // with these notes excluded — but everything else now agrees with the page.
+      //
+      // They stay in the saved reading as well. A reading from before this existed
+      // still lists notes that are still in the recording, and dropping the field
+      // would silently un-hide them.
+      if (body.hiddenNotes && body.hiddenNotes.length > 0) {
+        await timeScoreApi.setRemoved(audioUuid, frameMs, body.hiddenNotes, true);
+      }
+      setSaved(stored);
+      setSavedNote("Saved with the piece. It will be here next time.");
+      setFlash("saved");
+      step?.onChanged();
+    } catch (caught) {
+      const why = readable(caught, "Could not save this rhythm.");
+      setSavedNote(
+        kept
+          ? `The reading was saved. Taking the hidden notes off the recording failed: ${why}`
+          : why,
+      );
+      setSaveProblem(
+        kept
+          ? `Saved, but the notes you took off the page are still in the recording. ${why}`
+          : `Not saved. ${why}`,
+      );
+      setFlash(null);
+    } finally {
+      setSaving(false);
+    }
+  }, [audioUuid, selected, hand, frameMs, figure, edits.state, live, step]);
+
+  /**
+   * The page edits, in the shape the sheet request takes, and a signature for them.
+   *
+   * They travel with the request because the printed length of a note is the gap to the next onset
+   * **in the same hand**: send a note across and its old neighbour runs on to a later onset, its new
+   * neighbour is cut short, and the note itself takes its length from where it landed. Applying the
+   * move only here would leave all three named wrong — on Mr Blue, twenty-five sampled single-note
+   * moves each renamed at least one other note. Hiding a note does the same to whatever preceded it,
+   * which is the point of hiding one the transcriber invented.
+   */
+  const pageEdits = useMemo(
+    () => ({
+      hiddenNotes: hiddenNotesOut(hiddenNotes),
+      // On the request for the same reason: the held note a trill prints as takes its length from
+      // the gap to the next onset after the run, which is measured where the figures are named.
+      trills: [...trills],
+      // On the request because an ornament is found on the printed figures and taking it off
+      // renames the note before it, which only the side that names figures can do.
+      dropDecorative,
+    }),
+    [hiddenNotes, trills, dropDecorative],
+  );
+  const editSignature = useMemo(() => JSON.stringify(pageEdits), [pageEdits]);
+  /** The edits the sheet on screen was built from, so it is only asked for again when they move. */
+  const sheetBuiltFor = useRef<string | null>(null);
+
+  // What the bar has just done, said on the button that did it, then gone. Long enough to read
+  // while looking somewhere else on the page, short enough not to be mistaken for the resting state.
+  useEffect(() => {
+    if (!flash) return;
+    const timer = window.setTimeout(() => setFlash(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [flash]);
+
+  // An armed wipe that nobody confirms disarms itself, so a bar left alone is never one press away
+  // from throwing the reading out.
+  useEffect(() => {
+    if (!armed) return;
+    const timer = window.setTimeout(() => setArmed(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [armed]);
+
+  /**
+   * Ask for the sheet again.
+   *
+   * The speed changes can be passed in rather than read off the state, for the one caller that has
+   * just replaced them: React has not re-rendered yet when it calls, so the closure here still
+   * holds the changes it threw away and would draw the sheet it was asked to undo.
+   */
+  const apply = useCallback(
+    async (withStretches?: Stretch[]) => {
+      const drawn = withStretches ?? stretches;
+      if (!audioUuid || !selected) return;
+      setBusy(true);
+      try {
+        const [nextPreview, nextScore] = await Promise.all([
+          timeScoreApi.ladderPreview(audioUuid, {
+            anchorFigure: figure,
+            anchorMs: selected.medianMs,
+            hand,
+            frameMs,
+          }),
+          timeScoreApi.score(audioUuid, {
+            anchorFigure: figure,
+            anchorMs: selected.medianMs,
+            frameMs,
+            boundaries: drawn.map((stretch) => stretch.startFrame),
+            boundaryMs: [
+              selected.medianMs,
+              ...drawn.map((stretch) => stretch.anchorMs),
+            ],
+            ...pageEdits,
+          }),
+        ]);
+        sheetBuiltFor.current = editSignature;
+        setView((current) =>
+          current.key === key
+            ? {
+                ...current,
+                preview: nextPreview,
+                score: nextScore,
+                error: null,
+              }
+            : current,
+        );
+      } catch (caught) {
+        const message = readable(caught, "Could not build the sheet.");
+        setView((current) =>
+          current.key === key ? { ...current, error: message } : current,
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [
+      audioUuid,
+      selected,
+      figure,
+      hand,
+      frameMs,
+      key,
+      stretches,
+      pageEdits,
+      editSignature,
+    ],
+  );
+
+  /**
+   * The latest `apply`, reachable from a closure that was made several edits ago.
+   *
+   * A step that carries a backend call has to draw the sheet again after it has taken that call
+   * back, and the closure holding it was made when the edit happened. The `apply` it captured then
+   * still holds the ladder and the speed changes of that moment, so calling it would redraw the
+   * piece as it was rather than as it is.
+   */
+  const applyRef = useRef(apply);
+  useEffect(() => {
+    applyRef.current = apply;
+  }, [apply]);
+
+  /**
+   * Throw away every decision made about this piece, on screen and on disk.
+   *
+   * Everything cleared here is something a person chose and nothing the recording knows: the key
+   * and where it changes, where the piece changes speed, the notes renamed by hand, the beams cut,
+   * the octave brackets, the notes taken off the page and every fingering. What is left is the piece as the recording alone describes it, still drawn from the
+   * gap that was named — starting over on the reading is a different thing and is done above.
+   *
+   * The saved reading goes with it. Clearing only the screen would look identical and be undone by
+   * the next visit, which is the worst kind of button: one that appears to work.
+   *
+   * The notes taken off the page need the same care for a different reason. Saving now takes them
+   * out of the piano matrix, so clearing the *list* of them would leave the notes themselves gone
+   * with nothing left on screen that remembers them — the same failure one layer down. They are put
+   * back on the recording here, before the list is dropped.
+   *
+   * The brackets need saying twice. They are seeded from what the register suggests the first time
+   * a piece is drawn, so clearing them without also recording that somebody has now decided would
+   * put every one of them straight back on the next redraw (D38).
+   *
+   * **Command-Z does not reach this.** It is the one control that also deletes the file and puts
+   * notes back on the recording, and an undo that restored the screen would say the file had come
+   * back too, which it has not. So it starts the history again rather than adding a step to it, and
+   * the button says as much. It is already armed behind two presses for the same reason.
+   */
+  const wipe = useCallback(async () => {
+    if (!audioUuid) return;
+    // Read before anything is cleared: this is the only record of which notes to
+    // put back, and the state below is about to drop it.
+    const takenOff = hiddenNotesOut(hiddenNotes);
+    setClearing(true);
+    setArmed(false);
+    setSavedNote(null);
+    // Every decision at once, back to the piece as the recording alone describes it. Somebody has
+    // now decided about brackets, so the proposal does not come straight back on the next redraw.
+    ottavasDecided.current = true;
+    resetEdits(NO_EDITS);
+    setTrillSuggestions(null);
+    setLyricDraft(null);
+    setSelectedNotes([]);
+    setPassageDraft(null);
+    setFingerDraft(null);
+    setMoveRefused(null);
+    setRange(null);
+    setClearedAt((at) => at + 1);
+    try {
+      if (takenOff.length > 0) {
+        await timeScoreApi.setRemoved(audioUuid, frameMs, takenOff, false);
+      }
+      await timeScoreApi.forgetRhythm(audioUuid);
+      setSaved(null);
+      setFlash("removed");
+      step?.onChanged();
+    } catch (caught) {
+      // The screen is already clear, so this is only about what a reload would bring back.
+      setSavedNote(readable(caught, "Could not forget the saved reading."));
+    } finally {
+      setClearing(false);
+    }
+    // Drawn again with no speed changes, and passed them explicitly: the state above has not
+    // reached this closure yet.
+    await apply([]);
+  }, [audioUuid, apply, frameMs, hiddenNotes, resetEdits, step]);
+
+  /**
+   * Say which hand plays the picked notes, on the recording.
+   *
+   * Not a page edit. The printed length of a note is the gap to the next onset **in the same hand**,
+   * so a note that changes hands renames its old neighbour, its new neighbour and itself — measured
+   * on this piece, twenty-five sampled single-note moves each renamed at least one other note. A
+   * bracket or a beam over it may stop making sense too. Everything on the page is derived from the
+   * split, so the correction goes upstream of all of it: written onto the note event, the matrix
+   * built with it, and the sheet asked for again. Nothing about it is kept beside the drawing.
+   *
+   * The fingerings follow, because they are about the noteheads and the noteheads have moved. A
+   * figure or a beam break that is left naming nothing is dropped by `live`.
+   */
+  const moveSelected = useCallback(
+    async (to: PrintedHand) => {
+      if (!audioUuid || selectedNotes.length === 0) return;
+      const picked = [...selectedNotes];
+      // The hand each note is drawn on now, read before anything moves. This is the whole of what
+      // taking the move back needs: the route that writes a hand takes one per note, so writing
+      // these back is the exact opposite of writing the new one.
+      const wasPlayedBy = picked.map((noteKey) => ({
+        startFrame: frameOf(noteKey),
+        row: rowOf(noteKey),
+        hand: handOf(noteKey),
+      }));
+      const nowPlayedBy = picked.map((noteKey) => ({
+        startFrame: frameOf(noteKey),
+        row: rowOf(noteKey),
+        hand: to,
+      }));
+      // Not urgent: re-rendering this page to close the panel takes tens of milliseconds, and
+      // while it runs the answer of the hand request below cannot be read, so the new sheet would
+      // be asked for only after it. As a transition React pauses that render for the answer.
+      startTransition(() => {
+        setMoveRefused(null);
+        setMovingHand(true);
+        closeNotes();
+      });
+      try {
+        const result = await timeScoreApi.setHands(audioUuid, {
+          frameMs,
+          notes: nowPlayedBy,
+        });
+        // Named before the fingerings and the figures are moved, so the step is called what the
+        // reader did rather than what it happened to touch first, and so it carries the two calls
+        // that take the move off the recording and put it back.
+        stageEdit("Hand", {
+          undo: async () => {
+            await timeScoreApi.setHands(audioUuid, {
+              frameMs,
+              notes: wasPlayedBy,
+            });
+            await applyRef.current();
+          },
+          redo: async () => {
+            await timeScoreApi.setHands(audioUuid, {
+              frameMs,
+              notes: nowPlayedBy,
+            });
+            await applyRef.current();
+          },
+        });
+        if (result.unmatched > 0) {
+          setMoveRefused(
+            `${result.unmatched} note${result.unmatched === 1 ? "" : "s"} could not be placed: ` +
+              "nothing recorded matches that key at that moment.",
+          );
+        }
+        setFingers((current) => {
+          const next = { ...current };
+          for (const noteKey of picked) {
+            const finger = next[noteKey];
+            if (finger === undefined) continue;
+            delete next[noteKey];
+            next[`${to}:${frameOf(noteKey)}:${rowOf(noteKey)}`] = finger;
+          }
+          return next;
+        });
+        // A figure and a beam break belong to a whole chord, so they travel only when the whole
+        // chord does. Half a chord moving leaves them where they are and `live` decides: they still
+        // name the notes that stayed, or they name nothing and go.
+        const whole = new Set(selectedChords.whole);
+        const movedKey = (groupKey: string): string =>
+          `${to}:${groupKey.split(":")[1]}`;
+        if (whole.size > 0) {
+          setOverrides((current) => {
+            const next = { ...current };
+            for (const groupKey of whole) {
+              const figure = next[groupKey];
+              if (figure === undefined) continue;
+              delete next[groupKey];
+              next[movedKey(groupKey)] = figure;
+            }
+            return next;
+          });
+          setBeamBreaks((current) => {
+            const next = new Set(current);
+            for (const groupKey of whole) {
+              if (!next.delete(groupKey)) continue;
+              next.add(movedKey(groupKey));
+            }
+            return next;
+          });
+        }
+        await apply();
+      } catch (caught) {
+        setMoveRefused(
+          readable(caught, "Could not change the hand of those notes."),
+        );
+      } finally {
+        setMovingHand(false);
+      }
+    },
+    [
+      audioUuid,
+      frameMs,
+      selectedNotes,
+      selectedChords,
+      closeNotes,
+      apply,
+      stageEdit,
+      setBeamBreaks,
+      setFingers,
+      setOverrides,
+    ],
+  );
+  /**
+   * How many columns a note added by hand is held for.
+   *
+   * The same as whatever that hand is already holding at that moment, which is the answer a reader
+   * expects: adding a note to a chord makes it part of that chord, and a chord is written as one
+   * figure. Where the hand is holding several lengths at once — a held bass under a moving inner
+   * voice — the longest wins, because the note is far more likely to be joining the chord than
+   * cutting across it. Where it is holding nothing, the named gap is used: it is the one length on
+   * this page anybody has actually chosen.
+   *
+   * It is only a starting point in any case. The note can be drawn as anything from the figure
+   * pills the moment it is on the page.
+   */
+  const lengthForAddedNote = useCallback(
+    (side: PrintedHand, frame: number): number => {
+      const held = (score?.notes ?? []).filter(
+        (note) =>
+          note.hand === side &&
+          note.startFrame <= frame &&
+          note.startFrame + Math.max(1, note.printedFrames) > frame,
+      );
+      if (held.length > 0) {
+        return Math.max(1, Math.max(...held.map((note) => note.printedFrames)));
+      }
+      return Math.max(1, Math.round((selected?.medianMs ?? frameMs) / frameMs));
+    },
+    [score, selected, frameMs],
+  );
+
+  /**
+   * Put a note into the recording from the keyboard panel.
+   *
+   * Not a page edit, and for exactly the reason a hand change is not one: the printed length of a
+   * note is the gap to the next onset **in the same hand**, so a note appearing out of nowhere
+   * renames its neighbour. Drawing it beside the score would also leave the roll, the falling view
+   * and playback all disagreeing with the page. So it goes onto the recorded notes, the matrix is
+   * built with it, and the sheet is asked for again.
+   *
+   * Taking it back marks it removed rather than deleting it, which is what every other way off this
+   * page does and is exact: the note is gone from the matrix, the gaps and the sheet.
+   */
+  const addNoteAt = useCallback(
+    async (row: number) => {
+      if (!audioUuid || playheadFrame === null) return;
+      const frame = playheadFrame;
+      const side = addHand;
+      setAddingNote(true);
+      try {
+        const result = await timeScoreApi.addNotes(audioUuid, {
+          frameMs,
+          notes: [
+            {
+              startFrame: frame,
+              row,
+              hand: side,
+              lengthFrames: lengthForAddedNote(side, frame),
+            },
+          ],
+        });
+        if (result.added === 0) {
+          setMoveRefused(
+            "That key is already struck in that column, so nothing was added. One key cannot be " +
+              "played twice in the same frame.",
+          );
+          return;
+        }
+        stageEdit("Note added", {
+          undo: async () => {
+            await timeScoreApi.setRemoved(
+              audioUuid,
+              frameMs,
+              [{ startFrame: frame, row }],
+              true,
+            );
+            await applyRef.current();
+          },
+          redo: async () => {
+            await timeScoreApi.setRemoved(
+              audioUuid,
+              frameMs,
+              [{ startFrame: frame, row }],
+              false,
+            );
+            await applyRef.current();
+          },
+        });
+        await apply();
+      } catch (caught) {
+        setMoveRefused(readable(caught, "Could not add that note."));
+      } finally {
+        setAddingNote(false);
+      }
+    },
+    [audioUuid, playheadFrame, addHand, frameMs, lengthForAddedNote, stageEdit, apply],
+  );
+
+  /**
+   * A key on the panel was clicked: take that note off the page, or put a new one there.
+   *
+   * One gesture, two meanings, and which one it is is never ambiguous — a key that is already lit
+   * is a note the reader can see, and clicking it means that one. A key that is dark holds nothing
+   * at this moment, so clicking it can only mean "there should be a note here".
+   */
+  const pressKeyboardKey = useCallback(
+    (row: number) => {
+      const sounding = soundingNow.find((note) => note.row === row);
+      if (!sounding) {
+        void addNoteAt(row);
+        return;
+      }
+      const ref: NoteRef = `${sounding.onsetFrame}:${row}`;
+      setHiddenNotes((current) => new Set([...current, ref]));
+      setFingers((current) => {
+        const next = { ...current };
+        delete next[`${sounding.hand}:${sounding.onsetFrame}:${row}`];
+        return next;
+      });
+    },
+    [soundingNow, addNoteAt, setHiddenNotes, setFingers],
+  );
+
+  /**
+   * Draw the sheet the piece was last saved as, without asking for it again.
+   *
+   * Everything on this page except the reading is worked out from the recording on every visit, so
+   * coming back used to mean pressing **Write the sheet** to see what you already decided. The
+   * reading is on disk; the page can act on it. Once per piece, and only while nothing has been
+   * drawn yet, so it never fights a reader who has already pressed the button.
+   */
+  const restored = useRef<string | null>(null);
+  useEffect(() => {
+    // A stale reading waits for the reader: the banner asks for **Write the sheet** first.
+    if (!audioUuid || !saved || !selected || score || busy || stale) return;
+    if (restored.current === key) return;
+    restored.current = key;
+    void apply();
+  }, [audioUuid, saved, selected, score, busy, stale, key, apply]);
+
+  /**
+   * Ask for the sheet again when a note has changed hands or left the page.
+   *
+   * Only the figures are wrong until it comes back: the notes are already in the right place, drawn
+   * from the same edits folded into a copy of the matrix in the browser. So this is deliberately
+   * unhurried — a short wait first, so dragging a band over forty-eight notes and sending them
+   * across is one request rather than forty-eight, and no spinner, because nothing on screen is
+   * waiting on it.
+   */
+  useEffect(() => {
+    if (!audioUuid || !selected || !score) return;
+    if (sheetBuiltFor.current === editSignature) return;
+    const waiting = window.setTimeout(() => void apply(), 400);
+    return () => window.clearTimeout(waiting);
+  }, [editSignature, audioUuid, selected, score, apply]);
+
+  if (!audioUuid) {
+    return (
+      <Frame
+        step={step}
+        subtitle="Read how the piece was played, name one gap, and the sheet follows."
+      >
+        <Alert severity="info">
+          Load and transcribe an audio on the <strong>Upload / Input</strong>{" "}
+          tab first. The rhythm is read from the notes that transcription
+          records.
+        </Alert>
+      </Frame>
+    );
+  }
+
+  return (
+    <Frame
+      step={step}
+      subtitle="Every bar below is a gap that keeps repeating between one note and the next. Click the one you recognise, say what it is, and the sheet is written from it. Choosing a different one renames the notes and moves nothing."
+    >
+      {/*
+        The Sheet tab of the flow page only. A stale reading is loaded but not drawn until the reader
+        presses Write the sheet; once drawn, Save makes it the sheet of the piece again.
+      */}
+      {stale ? (
+        <Alert severity="warning" sx={{ mb: 2 }} data-sheet-banner="stale">
+          {score ? (
+            <>
+              The sheet below is drawn from the current notes and hands. Press{" "}
+              <strong>Save</strong> to make it the sheet of this piece.
+            </>
+          ) : (
+            <>
+              The notes or the hands changed since this sheet was saved. Your reading is kept:
+              press <strong>Write the sheet</strong> to draw it from the current notes and hands,
+              check it, then press <strong>Save</strong>.
+            </>
+          )}
+        </Alert>
+      ) : step?.state === "missing" && !saved && step.reason ? (
+        <Alert severity="info" sx={{ mb: 2 }} data-sheet-banner="missing">
+          {step.reason}
+        </Alert>
+      ) : null}
+
+      {error ? (
+        <Alert severity={untranscribed ? "warning" : "error"} sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      ) : null}
+
+      {/*
+        Composing (Epic 13). Open by itself on a piece that has nothing in it yet, because on such a
+        piece it is the only thing there is to do; folded away on a piece that already has music,
+        because adding to one is the rarer intent and the plot below is what a reader came for.
+      */}
+      <Section
+        title="Add a passage"
+      >
+        {composeOpen ? (
+          <Stack spacing={1.5}>
+            <Alert severity="warning" variant="outlined">
+              A passage put into the piece is written onto the recording, and
+              every mark after it moves along with the notes.{" "}
+              <strong>Command-Z cannot take it back</strong>, and placing one
+              forgets every edit you could have taken back until now.
+            </Alert>
+            <ComposePassagePanel
+              audioUuid={audioUuid}
+              frameMs={frameMs}
+              durationSeconds={pieceSeconds}
+              atColumn={range?.fromColumn}
+              anchorFigure={figure}
+              anchorMs={selected?.medianMs}
+              speedChanges={stretches.map((stretch) => ({
+                startFrame: stretch.startFrame,
+                anchorMs: stretch.anchorMs,
+              }))}
+              clickIntervalMs={selected?.medianMs}
+                onPlaced={() => setComposed((token) => token + 1)}
+            />
+          </Stack>
+        ) : (
+          <Button variant="outlined" size="small" onClick={() => setComposeChoice(key)}>
+            Play a passage
+          </Button>
+        )}
+      </Section>
+
+      <Section
+        title="How this piece was played"
+      >
+        <Stack spacing={2}>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{ alignItems: "center", flexWrap: "wrap" }}
+          >
+            <TextField
+              label="Hand"
+              select
+              size="small"
+              value={hand}
+              onChange={(event) => setHand(event.target.value as HandChoice)}
+              sx={{ minWidth: 160 }}
+            >
+              <MenuItem value="right">Right hand</MenuItem>
+              <MenuItem value="left">Left hand</MenuItem>
+              <MenuItem value="both">Both hands</MenuItem>
+            </TextField>
+            {peaks ? (
+              <Typography variant="body2" color="text.secondary">
+                {peaks.gapCount} gaps between {peaks.attackCount} notes, over{" "}
+                {peaks.endSeconds.toFixed(1)} seconds.
+              </Typography>
+            ) : error ? null : (
+              <CircularProgress size={18} />
+            )}
+          </Stack>
+
+          {peaks?.warning ? (
+            <Alert severity="info" sx={{ mb: 1 }}>
+              {peaks.warning}
+            </Alert>
+          ) : null}
+
+          {peaks ? (
+            <PeakPlot
+              peaks={peaks.peaks}
+              labelled={preview?.labelled}
+              selectedMs={selected?.centreMs ?? null}
+              onSelect={(peak) =>
+                setView((current) => ({ ...current, selected: peak }))
+              }
+            />
+          ) : null}
+        </Stack>
+      </Section>
+
+      <Section
+        title="Name it"
+      >
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ alignItems: "center", flexWrap: "wrap" }}
+        >
+          <Typography variant="body1">
+            The{" "}
+            <strong>{selected ? Math.round(selected.centreMs) : "—"} ms</strong>{" "}
+            gap is one
+          </Typography>
+          <TextField
+            select
+            size="small"
+            value={figure}
+            onChange={(event) => setFigure(event.target.value as FigureName)}
+            sx={{ minWidth: 240 }}
+            disabled={!selected}
+          >
+            {NAMEABLE_FIGURES.map((name) => (
+              <MenuItem key={name} value={name}>
+                {FIGURE_LABELS[name]}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Button
+            variant="contained"
+            onClick={() => void apply()}
+            disabled={!selected || busy}
+            startIcon={busy ? <CircularProgress size={16} /> : undefined}
+          >
+            Write the sheet
+          </Button>
+          {/*
+            The way back, beside the way forward.
+
+            Every edit on this sheet is one press of Command-Z away, and these two are the same
+            thing for a reader who does not know that. Each says what it is about — *Undo: Octave
+            bracket* — because a button that only says "Undo" asks a reader to remember what they
+            last did, and on a page with sixteen kinds of edit they often do not.
+          */}
+          <ButtonGroup size="small" variant="outlined">
+            <Tooltip
+              title={
+                edits.canUndo
+                  ? `Undo: ${edits.undoLabel} (⌘Z)`
+                  : "Nothing to take back yet"
+              }
+            >
+              <span>
+                <Button
+                  onClick={() => void edits.undo()}
+                  disabled={!edits.canUndo || edits.busy}
+                  startIcon={
+                    edits.busy ? <CircularProgress size={14} /> : <UndoIcon />
+                  }
+                  aria-label="Undo the last edit"
+                >
+                  Undo
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip
+              title={
+                edits.canRedo
+                  ? `Redo: ${edits.redoLabel} (⇧⌘Z)`
+                  : "Nothing to put back"
+              }
+            >
+              <span>
+                <Button
+                  onClick={() => void edits.redo()}
+                  disabled={!edits.canRedo || edits.busy}
+                  startIcon={<RedoIcon />}
+                  aria-label="Redo the last edit taken back"
+                >
+                  Redo
+                </Button>
+              </span>
+            </Tooltip>
+          </ButtonGroup>
+          {preview ? (
+            <Typography variant="body1" sx={{ fontWeight: 600 }}>
+              {preview.headerLabel}
+            </Typography>
+          ) : null}
+        </Stack>
+
+        {edits.failure ? (
+          <Alert severity="warning" sx={{ mt: 2 }} onClose={edits.clearFailure}>
+            {readable(
+              edits.failure,
+              "That edit could not be taken back. Nothing on the page has changed.",
+            )}
+          </Alert>
+        ) : null}
+
+        {/*
+          A figure shift. The same playing, written in longer or shorter figures: `negra = 337`
+          becomes `blanca = 337`, and every note is renamed with it. Nothing moves, because a column
+          is wall clock and the name of a note has no say in where it sits (D-18).
+
+          It is the answer to a page of semicorcheas that should read as corcheas. The names were
+          never wrong in any measurable way, they are just harder to read than they need to be, and
+          this is one button rather than a re-transcription.
+        */}
+        {score ? (
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1, mt: 2 }}
+          >
+            <Typography variant="body2">
+              Too many short notes, or too few?
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={busy || shifted(figure, 1) === null}
+              onClick={() => {
+                const next = shifted(figure, 1);
+                if (next) setFigure(next);
+              }}
+            >
+              Write it one step longer
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={busy || shifted(figure, -1) === null}
+              onClick={() => {
+                const next = shifted(figure, -1);
+                if (next) setFigure(next);
+              }}
+            >
+              Write it one step shorter
+            </Button>
+            <Typography variant="caption" color="text.secondary">
+              Renames every note. Nothing moves, and the recording is untouched.
+              Press <strong>Write the sheet</strong> to see it.
+            </Typography>
+          </Stack>
+        ) : null}
+      </Section>
+
+      {score ? (
+        <Section
+          title="Does the piece change speed?"
+        >
+          <Stack spacing={1.5}>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
+              {range ? (
+                <>
+                  <Typography variant="body2">
+                    From column <strong>{range.fromColumn}</strong>, a gap is
+                  </Typography>
+                  <TextField
+                    size="small"
+                    type="number"
+                    value={newAnchorMs}
+                    onChange={(event) =>
+                      setNewAnchorMs(Number(event.target.value))
+                    }
+                    sx={{ width: 120 }}
+                    slotProps={{ htmlInput: { min: 20, step: 5 } }}
+                  />
+                  <Typography variant="body2">ms</Typography>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      setStretches((current) =>
+                        [
+                          ...current.filter(
+                            (one) => one.startFrame !== range.fromColumn,
+                          ),
+                          {
+                            startFrame: range.fromColumn,
+                            anchorMs: newAnchorMs,
+                          },
+                        ].sort((a, b) => a.startFrame - b.startFrame),
+                      );
+                      setRange(null);
+                    }}
+                  >
+                    Add the change
+                  </Button>
+                </>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Nothing selected. Drag over the column numbers above the
+                  staves to choose where a change starts.
+                </Typography>
+              )}
+            </Stack>
+
+            {stretches.length ? (
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ flexWrap: "wrap", rowGap: 1 }}
+              >
+                {score.passages.map((passage, index) => (
+                  <Typography
+                    key={passage.id}
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    <strong>
+                      {index === 0
+                        ? "From the start"
+                        : `From column ${passage.startFrame}`}
+                    </strong>
+                    : {passage.headerLabel}
+                  </Typography>
+                ))}
+                <Button size="small" onClick={() => setStretches([])}>
+                  Remove all changes
+                </Button>
+              </Stack>
+            ) : null}
+
+            <Typography variant="caption" color="text.secondary">
+              After adding or removing a change, press{" "}
+              <strong>Write the sheet</strong> again.
+            </Typography>
+          </Stack>
+        </Section>
+      ) : null}
+
+      <Section
+        title="The sheet"
+      >
+        {score ? (
+          <Stack spacing={1.5}>
+            <ScorePlayer
+              audioUuid={audioUuid}
+              scoreSeconds={
+                (score.envelope.frameCount * score.envelope.frameMs) / 1000
+              }
+              onTime={setPlayheadSeconds}
+              controlsRef={player}
+              onScrollToCursor={scrollToCursor}
+              onPlaying={setPlaying}
+            />
+            {/*
+              The two decisions that are made here and paid for pages further down.
+
+              Everything below this point is one long sheet, and both of these buttons used to sit
+              at the end of it: keeping what you just did meant scrolling past every stave to find
+              **Save**, and then scrolling back to where you were reading. The bar follows instead.
+              It is draggable because it necessarily sits over the notes, and it can be put away
+              because sometimes the notes underneath are the ones being read.
+            */}
+            <SheetFloatingBar
+              playing={playing}
+              onTogglePlay={() => {
+                setArmed(false);
+                player.current?.toggle();
+              }}
+              canSave={Boolean(selected)}
+              saving={saving}
+              clearing={clearing}
+              saveProblem={saveProblem}
+              onCloseProblem={() => setSaveProblem(null)}
+              flash={flash}
+              armed={armed}
+              // Pressing anything else on the bar is an answer to "sure?", and the answer is no.
+              onSave={() => {
+                setArmed(false);
+                void save();
+              }}
+              onRemoveAll={() => {
+                if (armed) void wipe();
+                else setArmed(true);
+              }}
+              canPrint={Boolean(sheetRenderer)}
+              onPrint={() => {
+                setArmed(false);
+                setPdfOpen(true);
+              }}
+            />
+            <SheetControls
+              score={score}
+              keySignature={keySignature}
+              setKeySignature={setKeySignature}
+              lineSpacing={lineSpacing}
+              setLineSpacing={setLineSpacing}
+              noteSpacing={noteSpacing}
+              setNoteSpacing={setNoteSpacing}
+              keyHint={keyHint}
+              ottavaHint={ottavaHint}
+              onTakeOttavaHint={() => {
+                ottavasDecided.current = true;
+                setOttavas(ottavaHint);
+              }}
+              frameLabelsOn={frameLabelsOn}
+              setFrameLabelsOn={setFrameLabelsOn}
+              sheetZoom={sheetZoom}
+              setSheetZoom={setSheetZoom}
+              dropDecorative={dropDecorative}
+              setDropDecorative={setDropDecorative}
+              pianoOpen={pianoOpen}
+              setPianoOpen={setPianoOpen}
+            />
+            {/*
+              Capture, so the press is recorded before the sheet's own handlers run and open a
+              toolbox from it.
+            */}
+            <Box
+              onPointerDownCapture={(event) => {
+                pressedAt.current = pressedBox(event);
+              }}
+            >
+              <TimeScoreView
+                score={score}
+                overrides={drawnMarks.overrides}
+                beamBreaks={drawnMarks.beamBreaks}
+                beamJoins={drawnMarks.beamJoins}
+                keySignature={keySignature}
+                keyChanges={keyChanges}
+                clefChanges={clefChanges}
+                ottavas={drawnMarks.ottavas}
+                onKeySuggestion={setKeyHint}
+                onOttavaSuggestion={setOttavaHint}
+                showFrameLabels={frameLabelsOn}
+                spacings={spacings}
+                evenSpacings={drawnMarks.evenSpacings}
+                lineSpacing={lineSpacing}
+                noteSpacing={noteSpacing}
+                staffGaps={staffGaps}
+                onStaffGapsChange={setStaffGaps}
+                onSelectNotes={pickNotes}
+                onSelectRange={pickRange}
+                onSelectMarkedRange={pickMarkedRange}
+                onOttavaResize={stretchOttava}
+                renderOverrides={renderOverrides}
+                fingers={drawnMarks.fingers}
+                trills={trills}
+                lyrics={lyrics}
+                onLyricLayoutChange={placeLyric}
+                zoom={sheetZoom}
+                onZoomChange={setSheetZoom}
+                cueRanges={cueRanges}
+                graceNotes={graceNotes}
+                annotationScale={annotationScale}
+                onMovesRefused={sayRefused}
+                onRendererChange={setSheetRenderer}
+                // The hand travels with the stretch so the highlight covers the staff the pills
+                // are about, and only that one.
+                selectedRange={
+                  range && rangeHand !== "both" ? { ...range, hand: rangeHand } : range
+                }
+                clearSelectionsAt={clearedAt}
+                playheadSeconds={playheadSeconds}
+                followPlayhead={playing}
+                onScrub={scrub}
+                scrollCursorAt={scrollCursorAt}
+              />
+            </Box>
+            {moveRefused ? (
+              <Alert severity="warning" onClose={() => setMoveRefused(null)}>
+                {moveRefused}
+              </Alert>
+            ) : null}
+            {/*
+              Everything above is a decision, and until now every one of them went when the tab did.
+              The columns, the figures and the beams are all worked out again from the recording on
+              each visit, so they cost nothing to lose; which pile is the beat, where the piece
+              changes speed, which note you renamed and where you broke a beam are not in the
+              recording at all, and re-deciding them is the actual work.
+            */}
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
+              <Button
+                variant="outlined"
+                onClick={() => void save()}
+                disabled={!selected || saving}
+                startIcon={saving ? <CircularProgress size={16} /> : undefined}
+              >
+                Save this rhythm with the piece
+              </Button>
+              {savedNote ? (
+                <Typography variant="body2" color="text.secondary">
+                  {savedNote}
+                </Typography>
+              ) : saved ? (
+                <Typography variant="body2" color="text.secondary">
+                  Last saved as {FIGURE_LABELS[saved.anchorFigure]} ={" "}
+                  {saved.anchorMs.toFixed(0)} ms
+                  {saved.keySignature
+                    ? `, in ${KEY_LABELS[saved.keySignature]}`
+                    : ""}
+                  .
+                </Typography>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Nothing saved yet, so this reading goes when you leave the
+                  tab.
+                </Typography>
+              )}
+            </Stack>
+
+            {/*
+              What the page is no longer showing, and the way back. A note taken off the page cannot
+              be clicked to bring it back, so the only honest place for the undo is here, where it is
+              visible whether or not anything is selected.
+            */}
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
+              {hiddenNotes.size === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  Click a notehead to open the note toolbox. Hold Command
+                  (Control on Windows) and click more to build a set: a finger
+                  number, a beam break, a move to the other staff or a deletion
+                  then applies to the whole set at once.
+                </Typography>
+              ) : (
+                <>
+                  <Typography variant="body2" color="text.secondary">
+                    {hiddenNotes.size} note{hiddenNotes.size === 1 ? "" : "s"}{" "}
+                    off the page. The recording still has every one of them.
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setHiddenNotes(new Set())}
+                  >
+                    Bring them all back
+                  </Button>
+                </>
+              )}
+            </Stack>
+
+            {/*
+              The marks that are not attached to one notehead: the shakes, the words and the size
+              they are all drawn at. Kept here rather than in the frames toolbox because none of
+              them needs a stretch selected to be worth seeing — finding the trills in a piece is
+              the first thing a reader does, before they have marked anything.
+            */}
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => void findTrills()}
+                disabled={findingTrills}
+                startIcon={
+                  findingTrills ? <CircularProgress size={14} /> : undefined
+                }
+              >
+                Find trills
+              </Button>
+              {trillSuggestions === null ? (
+                <Typography variant="body2" color="text.secondary">
+                  Two notes taking turns at least three times over are written as
+                  one held note with <em>tr</em> over it.
+                </Typography>
+              ) : unmarkedTrills.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  {trillSuggestions.length === 0
+                    ? "Nothing in this piece looks like a shake."
+                    : "Every shake found is already written as a trill."}
+                </Typography>
+              ) : (
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center", flexWrap: "wrap" }}
+                >
+                  {unmarkedTrills.map((one) => (
+                    <Chip
+                      key={`${one.hand}:${one.startFrame}`}
+                      size="small"
+                      variant="outlined"
+                      label={`${one.noteName}–${one.otherNoteName} · ${one.noteCount} notes · ${formatSeconds(one.startSeconds)}`}
+                      title={`${one.hand === "left" ? "Left" : "Right"} hand, about ${one.medianGapMs.toFixed(0)} ms apart. Click to write it as one held note with tr over it.`}
+                      onClick={() =>
+                        setTrills((current) => [
+                          ...current,
+                          {
+                            hand: one.hand,
+                            startFrame: one.startFrame,
+                            endFrame: one.endFrame,
+                            row: one.row,
+                          },
+                        ])
+                      }
+                    />
+                  ))}
+                </Stack>
+              )}
+              {trills.length > 0 ? (
+                <Button size="small" onClick={() => setTrills([])}>
+                  Print all the alternations again
+                </Button>
+              ) : null}
+            </Stack>
+
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Mark size
+              </Typography>
+              <ButtonGroup size="small" variant="outlined">
+                <Button
+                  onClick={() =>
+                    setAnnotationScale((value) =>
+                      Math.max(0.5, Math.round((value - 0.1) * 10) / 10),
+                    )
+                  }
+                  disabled={annotationScale <= 0.5}
+                >
+                  Smaller
+                </Button>
+                <Button
+                  onClick={() =>
+                    setAnnotationScale((value) =>
+                      Math.min(2, Math.round((value + 0.1) * 10) / 10),
+                    )
+                  }
+                  disabled={annotationScale >= 2}
+                >
+                  Larger
+                </Button>
+              </ButtonGroup>
+              <Typography variant="body2" color="text.secondary">
+                {Math.round(annotationScale * 100)}% — the fingering, the words
+                and the <em>tr</em> marks. No note moves.
+              </Typography>
+              {lyrics.length > 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  {lyrics.length} line{lyrics.length === 1 ? "" : "s"} of words
+                  under the staff.
+                </Typography>
+              ) : null}
+            </Stack>
+          </Stack>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Nothing written yet.
+          </Typography>
+        )}
+      </Section>
+
+      {/*
+        Two toolboxes, because a column and a notehead answer different questions. A column belongs
+        to the piece and both hands are in it; a notehead is one note in one hand. Keeping them
+        apart is what stopped `8vb` being offered to the right hand only pointing upward.
+      */}
+      <PianoToolbox
+        open={pianoOpen}
+        onClose={() => setPianoOpen(false)}
+        playheadFrame={playheadFrame}
+        addHand={addHand}
+        setAddHand={setAddHand}
+        addingNote={addingNote}
+        soundingColours={soundingColours}
+        soundingNow={soundingNow}
+        onKeyPress={pressKeyboardKey}
+        noteNameAt={noteNameAt}
+      />
+
+
+      {/*
+        The decoration keyboard.
+
+        The same drawing doing the opposite job: instead of reporting what is sounding, it asks what
+        should sound just before the picked note. The note it leans on is coloured so the answer can
+        be read off as an interval without anybody naming one.
+      */}
+      <DecorationToolbox
+        open={decorationFor !== null && onlyNote !== null}
+        onlyNote={onlyNote}
+        onClose={() => setDecorationFor(null)}
+        graceHere={graceHere}
+        clearGrace={notes.clearGrace}
+        putGrace={notes.putGrace}
+        noteNameAt={noteNameAt}
+      />
+      <RangeToolbox
+        open={framesToolbox}
+        range={range}
+        setRange={setRange}
+        frameMs={frameMs}
+        framesAt={framesAt}
+        onClose={closeFrames}
+        onSelectNotes={selectNotesUnderRange}
+        canSelectNotes={Boolean(sheetRenderer)}
+        rangeHand={rangeHand}
+        setRangeHand={setRangeHand}
+        frameTab={frameTab}
+        setFrameTab={setFrameTab}
+        rangeActions={rangeActions}
+        setPassageDraft={setPassageDraft}
+        setLyricDraft={setLyricDraft}
+        score={score}
+        state={edits.state}
+        set={edits.set}
+        setOttavaHidden={setOttavaHidden}
+        audioUuid={audioUuid}
+        figure={figure}
+        selected={selected}
+        onRerecordAccepted={acceptRerecord}
+      />
+
+      <NoteToolbox
+        open={notesToolbox}
+        selectedNotes={selectedNotes}
+        notesAt={notesAt}
+        onClose={closeNotes}
+        onSelectFrames={selectRangeOfNotes}
+        notes={notes}
+        fingers={fingers}
+        setFingerDraft={setFingerDraft}
+        movingHand={movingHand}
+        onMoveHand={moveSelected}
+        noteNameAt={noteNameAt}
+        onOpenDecoration={setDecorationFor}
+      />
+
+
+      <ScorePdfDialog
+        open={pdfOpen}
+        onClose={() => setPdfOpen(false)}
+        renderer={sheetRenderer}
+        {...(pieceLabel ? { pieceName: pieceLabel } : {})}
+      />
+    </Frame>
+  );
+}
+
+export default SheetPage;
