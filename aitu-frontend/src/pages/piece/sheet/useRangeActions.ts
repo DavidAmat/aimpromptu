@@ -1,7 +1,7 @@
 /**
  * What the range toolbox knows about the marked stretch of frames, and the edits it makes there.
  *
- * Split out of `RhythmPage.tsx` (implementation 02, Phase 2) with no change.
+ * Split out of `RhythmPage.tsx` (implementation 02, Phase 2).
  */
 
 import { useMemo } from "react";
@@ -39,7 +39,7 @@ export function useRangeActions({
   lyricDraft: { forRange: string; text: string } | null;
   passageDraft: { forRange: string; value: KeySignatureName } | null;
 }) {
-  const { keySignature, keyChanges, clefChanges, ottavas, lyrics, spacings } = state;
+  const { keySignature, keyChanges, clefChanges, ottavas, lyrics, spacings, stretches } = state;
   const { spacings: setSpacings } = set;
 
   // Which stretch the toolbox is about, and what it will write. The signature offered is whatever
@@ -135,6 +135,12 @@ export function useRangeActions({
       ? spacings.some(
           (stretch) =>
             stretch.fromColumn < range.toColumn && stretch.toColumn > range.fromColumn,
+        )
+      : false,
+    speed: range
+      ? stretches.some(
+          (stretch) =>
+            stretch.startFrame >= range.fromColumn && stretch.startFrame < range.toColumn,
         )
       : false,
     rerecord: false,

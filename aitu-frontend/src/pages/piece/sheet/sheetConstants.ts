@@ -2,20 +2,13 @@
  * The fixed values of the Sheet step: the colours of the keyboard panels, the pills of the range
  * toolbox, the figure ladder, and the small helpers several of its modules share.
  *
- * Split out of `RhythmPage.tsx` (implementation 02, Phase 2) with no change.
+ * Split out of `RhythmPage.tsx` (implementation 02, Phase 2).
  */
 
 import { palette, semantic } from "../../../ui";
 import { ApiError, type FigureName } from "../../../api";
 import type { Clef, FingerNumber, OttavaKind } from "@aimpromptu/grid-notation";
 import type { NoteRef, PrintedHand } from "../../../music/renderOverrides";
-
-export const NAMEABLE_FIGURES: FigureName[] = [
-  "blanca",
-  "negra",
-  "corchea",
-  "semicorchea",
-];
 
 /** No note is moved by hand any more: a corrected hand is written onto the recording. */
 export const NO_HANDS: ReadonlyMap<NoteRef, PrintedHand> = new Map();
@@ -107,6 +100,7 @@ export const FRAME_TABS = [
   { id: "octave" as const, label: "Octave" },
   { id: "lyrics" as const, label: "Lyrics" },
   { id: "spacing" as const, label: "Spacing" },
+  { id: "speed" as const, label: "Speed" },
   { id: "rerecord" as const, label: "Re-record" },
 ];
 
@@ -192,7 +186,11 @@ export const SHIFT_LADDER: FigureName[] = [
   "redonda",
 ];
 
-/** The figure `steps` rungs away, or `null` when that runs off the end of the vocabulary. */
+/**
+ * The figure `steps` rungs away, or `null` when that runs off the end of the vocabulary. Not used
+ * since the figure shift buttons went (implementation 02, Phase 2); Figures transposition (Phase 7)
+ * is the figure shift of D-18 and starts from it.
+ */
 export function shifted(figure: FigureName, steps: number): FigureName | null {
   const at = SHIFT_LADDER.indexOf(figure);
   if (at < 0) return null;

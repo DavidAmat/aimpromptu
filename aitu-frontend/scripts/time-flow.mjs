@@ -8,9 +8,9 @@
  * - `in`: the piece arriving. An upload (the request), a YouTube download (Download to the Audio
  *   tab), or a library piece opened from Projects (the click to the step it resumes on);
  * - `transcribe`: Transcribe to the first note received in the live view (`firstNote`), and to the saved notes on screen
- *   (`notes`); `backend` is the time the page shows, "Transcribed in", on the backend's clock;
+ *   (`notes`); `backend` is no longer on screen (implementation 02, Phase 1) and stays empty;
  * - `hands`: Predict hands to its answer on screen (`predict`), then Save (`save`);
- * - `sheet`: the Sheet tab to **Write the sheet** ready (`open`), Write the sheet to the first
+ * - `sheet`: the Sheet tab to the page (`open`), the Sheet tab to the first
  *   notehead drawn (`firstSheet`), then Save (`save`).
  *
  * The three pieces, all temporary, deleted at the end, so the library is never changed:
@@ -137,23 +137,27 @@ async function walk(name, arrive) {
     await page.waitForTimeout(Math.max(0, 8000 - (Date.now() - pressed)));
     const live = await drawn();
     await shot('1-live');
-    await page.getByRole('button', { name: 'Play', exact: true }).waitFor({ timeout: 600000 });
+    await page.getByRole('button', { name: 'Play from the playhead', exact: true }).waitFor({ timeout: 600000 });
     const notesShown = Date.now() - pressed;
-    const took = (await page.locator('text=/^Transcribed in /').textContent()) ?? '';
+    // The page no longer prints "Transcribed in" (implementation 02, Phase 1): the backend's own
+    // clock is not on screen any more, so only the time measured here is kept.
+    const took = '';
     const notes = await (await fetch(`${api}/pieces/${arrived.uuid}/notes`)).json();
     const status = await (await fetch(`${api}/pieces/${arrived.uuid}/status`)).json();
-    row.transcribe = { firstNote, livePixels: live, notes: notesShown, backend: took.replace('Transcribed in ', ''), count: notes.id.length, engine: status.steps[2].details?.engine ?? null };
+    row.transcribe = { firstNote, livePixels: live, notes: notesShown, backend: took || null, count: notes.id.length, engine: status.steps[2].details?.engine ?? null };
     await page.waitForTimeout(500);
     await shot('2-notes');
 
     // 3. Predict hands, then Save.
-    await page.getByRole('tab', { name: /^4\. Hands/ }).click();
+    await page.getByRole('tab', { name: 'Hands', exact: true }).click();
     await page.waitForURL('**/hands');
     const predict = page.getByRole('button', { name: 'Predict hands', exact: true });
     await predict.waitFor();
     const predictPressed = Date.now();
     await predict.click();
-    const predicted = (await page.locator('text=/^Predicted in /').textContent({ timeout: 120000 })) ?? '';
+    // What the prediction changed, said on the page (`data-predicted`) once it has answered.
+    await page.waitForSelector('[data-predicted]', { timeout: 120000 });
+    const predicted = (await page.locator('[data-predicted]').textContent()) ?? '';
     const predictTime = Date.now() - predictPressed;
     await page.waitForTimeout(300);
     await shot('3-hands');
@@ -169,7 +173,9 @@ async function walk(name, arrive) {
       withoutHand: [...afterHands.hand].filter((h) => h === '-').length,
     };
 
-    // 4. The Sheet tab: Write the sheet (the first piano sheet), then Save.
+    // 4. The Sheet tab: the first piano sheet, drawn on arrival (implementation 02, Phase 2), then
+    //    Save. `open` is the tab press to the page, `firstSheet` the tab press to the first notehead
+    //    (in implementation 08 it was the press of Write the sheet, a separate step after `open`).
     const sheetTab = page.getByRole('tab', { name: 'Sheet', exact: true });
     await page.waitForFunction(() => document.querySelector('[role=tab][aria-disabled=false]') !== null);
     await page.waitForFunction(() => {
@@ -179,17 +185,15 @@ async function walk(name, arrive) {
     const tabPressed = Date.now();
     await sheetTab.click();
     await page.waitForURL('**/sheet');
-    await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent === 'Write the sheet' && !b.disabled), null, { timeout: 60000 });
+    await page.waitForSelector('[data-sheet-page]', { timeout: 60000 });
     const sheetOpen = Date.now() - tabPressed;
-    const writePressed = Date.now();
-    await page.getByRole('button', { name: 'Write the sheet', exact: true }).click();
     await page.waitForSelector('.grid-notehead', { timeout: 120000 });
-    const firstSheet = Date.now() - writePressed;
+    const firstSheet = Date.now() - tabPressed;
     await page.waitForTimeout(400);
     await shot('4-sheet');
     const sheetSavePressed = Date.now();
     await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await page.waitForFunction(() => document.querySelector('[data-sheet-banner]') === null, null, { timeout: 30000 });
+    await page.waitForFunction(() => document.querySelector('[data-unsaved]')?.getAttribute('data-unsaved') === '', null, { timeout: 30000 });
     const sheetSaved = Date.now() - sheetSavePressed;
     const finalStatus = await (await fetch(`${api}/pieces/${arrived.uuid}/status`)).json();
     row.sheet = {

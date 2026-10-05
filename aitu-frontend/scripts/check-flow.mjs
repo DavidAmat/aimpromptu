@@ -13,8 +13,8 @@
  *   grow, the progress bar moves), then the editor: select, move, undo and redo, resize, add,
  *   delete, a band, Save (checked against `GET /pieces/{uuid}/notes`), undo after the save, and
  *   playback from the ruler;
- * - the Hands tab (Predict hands, the filter, R and L, Save) and the Sheet tab (Write the sheet and
- *   Save; a notes edit makes it stale, its banner, Write the sheet again, Save).
+ * - the Hands tab (Predict hands, the filter, R and L, Save) and the Sheet tab (drawn on arrival with
+ *   the defaults, Save; a notes edit makes it stale, its banner, Write the sheet, Save).
  *
  *     npm run check:flow
  *     npm run check:flow -- --audio ../some.mp3 --out /tmp/flow --no-transcribe
@@ -540,24 +540,24 @@ try {
   await shot('22-notes-without-hands');
   await handSwitch.click();
 
-  // 15. The Sheet tab: the piano sheet inside the flow page. A new piece has no reading yet; once
-  //     written and saved the tab is ticked. A notes edit made elsewhere makes it stale: the page
-  //     waits with its banner until Write the sheet, then Save makes it ready again.
+  // 15. The Sheet tab: the piano sheet inside the flow page. A new piece is drawn on arrival from the
+  //     defaults (implementation 02, Phase 2) and Save ticks the tab. A notes edit made elsewhere
+  //     makes it stale: the page waits with its banner until Write the sheet, then Save.
   const sheetTabNow = page.getByRole('tab', { name: 'Sheet', exact: true });
   const sheetState = async () => (await (await fetch(`${api}/pieces/${uuid}/status`)).json()).steps[4].state;
   await sheetTabNow.click();
   await page.waitForURL('**/sheet');
-  await page.waitForSelector('text=How this piece was played');
-  check('the Sheet tab opens the piano sheet in the project', (await page.locator('text=How this piece was played').count()) === 1);
-  check('a piece with no reading says what to do', (await page.locator('[data-sheet-banner=missing]').count()) === 1, await page.locator('[data-sheet-banner]').first().textContent().catch(() => 'no banner'));
-  const writeSheet = page.getByRole('button', { name: 'Write the sheet', exact: true });
-  await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent === 'Write the sheet' && !b.disabled), null, { timeout: 30000 });
-  await writeSheet.click();
+  await page.waitForSelector('[data-sheet-page]');
+  check('the Sheet tab opens the piano sheet in the project', (await page.locator('[data-sheet-page]').count()) === 1);
   await page.waitForSelector('.grid-notehead', { timeout: 60000 });
+  check('a new piece is drawn without a button to press', (await page.getByRole('button', { name: 'Write the sheet' }).count()) === 0);
+  check('and its Save carries the unsaved dot', (await page.locator('[data-unsaved]').getAttribute('data-unsaved')) === 'unsaved');
+  check('undo has nothing to take back on arrival (the defaults are the baseline)', !(await page.getByRole('button', { name: /^Undo/ }).isEnabled()));
+  const writeSheet = page.getByRole('button', { name: 'Write the sheet', exact: true });
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('[data-sheet-banner]') === null, null, { timeout: 15000 });
   await page.waitForTimeout(400);
-  check('Write the sheet and Save make the Sheet step ready, and its tab is ticked', (await sheetState()) === 'ready' && (await sheetTabNow.getAttribute('data-state')) === 'ready', await sheetState());
+  check('Save makes the Sheet step ready, and its tab is ticked', (await sheetState()) === 'ready' && (await sheetTabNow.getAttribute('data-state')) === 'ready', await sheetState());
   await shot('23-sheet-saved');
   const sheetNotes = await (await fetch(`${api}/pieces/${uuid}/notes`)).json();
   const edited = await fetch(`${api}/pieces/${uuid}/notes`, {
@@ -579,7 +579,7 @@ try {
   await writeSheet.click();
   await page.waitForSelector('.grid-notehead', { timeout: 60000 });
   const afterWrite = (await page.locator('[data-sheet-banner=stale]').textContent()) ?? '';
-  check('after Write the sheet the banner asks for Save', /Press Save/.test(afterWrite), afterWrite);
+  check('after Write the sheet the banner asks for Save', /Save to keep it/.test(afterWrite), afterWrite);
   check('and the step is still stale until Save', (await sheetState()) === 'stale');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('[data-sheet-banner]') === null, null, { timeout: 15000 });
@@ -607,7 +607,7 @@ try {
       node.dispatchEvent(new Ctor(type, { bubbles: true, clientX: x, clientY: y, button: 0, buttons: type === 'pointerdown' ? 1 : 0, pointerId: 1, isPrimary: true }));
     }
   }, [pickBox.x + pickBox.width / 2, pickBox.y + pickBox.height / 2]);
-  await page.locator('button[title^="Play with the left hand"]').click();
+  await page.getByRole('button', { name: 'Left', exact: true }).click();
   const movedKey = `left:${pickKey.split(':').slice(1).join(':')}`;
   await page.waitForSelector(`.grid-note-target[data-note-key="${movedKey}"]`, { timeout: 15000 }).catch(() => null);
   check('a hand move on a zoomed sheet redraws it without an error',

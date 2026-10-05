@@ -1298,7 +1298,13 @@ export function TimeScoreView({
           onDoubleClick={seekOnDoubleClick}
           sx={{
             position: "relative",
-            display: "inline-block",
+            // At normal size the stage is a block, so it is always exactly as wide as the page and
+            // the renderer's own resize watch sees the window shrink as well as grow, and wraps the
+            // lines again either way (implementation 02, Phase 2). As an inline-block it took the
+            // width of the drawing already in it, so a narrower window left the lines as long as
+            // before and cut them off. Magnified, it has to take the drawing's width: a transform is
+            // not layout, and the layout keeps the width it had at normal size.
+            display: magnified ? "inline-block" : "block",
             minWidth: magnified ? 0 : "100%",
             // The magnifier. Everything inside scales together — the staves, the playhead and the two
             // range handles — so a handle stays exactly on the column it marks and nothing has to be

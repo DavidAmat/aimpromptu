@@ -156,6 +156,83 @@ def test_an_unknown_audio_says_so(client):
     assert client.get("/time/not-a-uuid/peaks").status_code == 404
 
 
+# --------------------------------------------------------------------------- the default reading
+
+
+def test_the_highest_peak_is_a_negra_by_default(client, transcribed):
+    """D-09 as changed by implementation 02: nobody names a peak, the tallest pile is a negra."""
+    peaks = client.get(f"/time/{transcribed}/peaks", params={"hand": "right"}).json()["peaks"]
+    tallest = max(peaks, key=lambda peak: peak["count"])
+
+    response = client.get(f"/time/{transcribed}/default-reading")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["hand"] == "right"
+    assert body["anchorFigure"] == "negra"
+    assert body["anchorMs"] == pytest.approx(tallest["medianMs"])
+    assert body["centreMs"] == pytest.approx(tallest["centreMs"])
+    # The shuffle has ten long gaps and nine short ones, so the long half is the negra.
+    assert abs(body["centreMs"] - SHUFFLE_LONG_MS) < 10
+    assert body["attackCount"] == 20
+    assert body["gapCount"] == 19
+    assert body["endSeconds"] > 0
+
+
+def test_the_default_reading_measures_the_hand_it_is_asked_for(client, transcribed):
+    """A saved reading keeps its hand: the page asks for that hand's highest peak."""
+    both = client.get(f"/time/{transcribed}/default-reading", params={"hand": "both"}).json()
+    peaks = client.get(f"/time/{transcribed}/peaks", params={"hand": "both"}).json()["peaks"]
+    assert both["hand"] == "both"
+    assert both["gapCount"] == 20
+    assert both["anchorMs"] == pytest.approx(max(peaks, key=lambda p: p["count"])["medianMs"])
+
+
+def test_a_hand_with_too_few_notes_for_a_peak_falls_back_to_both(client, transcribed):
+    """The held bass of the shuffle is two notes: one gap, no pile, so both hands are measured."""
+    left = client.get(f"/time/{transcribed}/default-reading", params={"hand": "left"}).json()
+    assert left["hand"] == "both"
+    assert left["anchorMs"] is not None
+
+
+def test_a_hand_with_no_gaps_falls_back_to_both(client, temp_store, tmp_path):
+    """A piece played by the left hand only still gets a ladder, from both hands."""
+    if not FFMPEG:
+        pytest.skip("ffmpeg is not installed")
+    source = sine_wav(tmp_path / "low.wav", seconds=4.0)
+    with source.open("rb") as handle:
+        audio_uuid = ingest.ingest_file(handle, "low.wav", AudioSource.RECORDING).uuid
+    events = [
+        NoteEvent(midi_note=36 + index % 3, start=index * 0.3, end=index * 0.3 + 0.25)
+        for index in range(10)
+    ]
+    pipeline.save_note_events(audio_uuid, events, 4.0, title="Left hand only")
+
+    body = client.get(f"/time/{audio_uuid}/default-reading").json()
+    assert body["hand"] == "both"
+    assert body["anchorFigure"] == "negra"
+    assert body["anchorMs"] == pytest.approx(300.0, abs=15)
+
+
+def test_a_piece_with_no_gaps_has_no_anchor_and_is_not_an_error(client, temp_store, tmp_path):
+    if not FFMPEG:
+        pytest.skip("ffmpeg is not installed")
+    source = sine_wav(tmp_path / "chord.wav", seconds=2.0)
+    with source.open("rb") as handle:
+        audio_uuid = ingest.ingest_file(handle, "chord.wav", AudioSource.RECORDING).uuid
+    chord = [NoteEvent(midi_note=note, start=0.1, end=1.0) for note in (60, 64, 67)]
+    pipeline.save_note_events(audio_uuid, chord, 2.0, title="One chord")
+
+    response = client.get(f"/time/{audio_uuid}/default-reading")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["anchorMs"] is None
+    assert body["anchorFigure"] == "negra"
+
+
+def test_the_default_reading_of_an_unknown_audio_says_so(client):
+    assert client.get("/time/not-a-uuid/default-reading").status_code == 404
+
+
 # --------------------------------------------------------------------------- ladder preview
 
 

@@ -50,6 +50,24 @@ export interface Peak {
   hiMs: number;
 }
 
+/**
+ * What a sheet is written from before anybody names a figure: the highest peak of one hand's gaps,
+ * called a negra (D-09 as changed by implementation 02). `anchorMs` is `null` for a piece with no
+ * gaps yet.
+ */
+export interface DefaultReading {
+  audioUuid: string;
+  /** The hand whose gaps were measured: the one asked for, or `both` when it has no peak. */
+  hand: HandChoice;
+  frameMs: number;
+  anchorFigure: FigureName;
+  anchorMs: number | null;
+  centreMs: number | null;
+  attackCount: number;
+  gapCount: number;
+  endSeconds: number;
+}
+
 export interface PeaksResponse {
   audioUuid: string;
   hand: HandChoice;
@@ -254,6 +272,18 @@ export const timeScoreApi = {
         startSeconds: query.startSeconds,
         endSeconds: query.endSeconds,
       },
+      signal,
+    });
+  },
+
+  /** The highest peak of `hand`, called a negra: what a sheet is written from by default. */
+  defaultReading(
+    audioUuid: string,
+    query: { hand?: HandChoice; frameMs?: number } = {},
+    signal?: AbortSignal,
+  ) {
+    return request<DefaultReading>(`/time/${audioUuid}/default-reading`, {
+      query: { hand: query.hand, frameMs: query.frameMs },
       signal,
     });
   },
@@ -509,6 +539,10 @@ export interface SavedRhythm {
   hand: HandChoice;
   /** The column length the columns below were numbered at. */
   frameMs: number;
+  /** What the sheet prints above the music. Absent: the project's name, and nothing under it. */
+  title?: string | null;
+  subtitle?: string | null;
+  artist?: string | null;
   /**
    * The signature the whole piece is written in.
    *

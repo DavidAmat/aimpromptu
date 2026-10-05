@@ -53,6 +53,18 @@ export interface Stretch {
  * about the sheet, and a Command-Z that took the reader's selection away would be a nuisance.
  */
 export interface SheetEdits {
+  /**
+   * What the highest pile of gaps is called, and so what every other note is called by proportion.
+   *
+   * A negra until the reader says otherwise (D-09 as changed by implementation 02): the plot that
+   * used to ask for it is gone, and changing it is one action in the sheet toolbox, undone like any
+   * other edit. Nothing moves when it changes, only the names (D-18).
+   */
+  anchorFigure: FigureName;
+  /** What the sheet prints above the music. `null` prints the project's name as the title. */
+  title: string | null;
+  subtitle: string | null;
+  artist: string | null;
   /** The signature the whole piece is written in. C until somebody chooses. */
   keySignature: KeySignatureName;
   /**
@@ -208,6 +220,10 @@ export interface SheetEdits {
  * fields at once is named by the first of them — or explicitly, where that would read wrong.
  */
 export const EDIT_LABELS: Readonly<Record<keyof SheetEdits, string>> = {
+  anchorFigure: "Main figure",
+  title: "Title",
+  subtitle: "Subtitle",
+  artist: "Artist",
   keySignature: "Key signature",
   keyChanges: "Key of a stretch",
   clefChanges: "Clef of a stretch",
@@ -233,6 +249,10 @@ export const EDIT_LABELS: Readonly<Record<keyof SheetEdits, string>> = {
 
 /** A piece nobody has read yet. Also what **Remove all** goes back to. */
 export const NO_EDITS: SheetEdits = {
+  anchorFigure: "negra",
+  title: null,
+  subtitle: null,
+  artist: null,
   keySignature: "C",
   keyChanges: [],
   clefChanges: [],
@@ -264,6 +284,10 @@ export const NO_EDITS: SheetEdits = {
  */
 export function editsFromSaved(found: SavedRhythm): SheetEdits {
   return {
+    anchorFigure: found.anchorFigure,
+    title: found.title ?? null,
+    subtitle: found.subtitle ?? null,
+    artist: found.artist ?? null,
     keySignature: found.keySignature ?? "C",
     keyChanges: (found.keyChanges ?? []).map((change) => ({
       fromColumn: change.fromColumn,
@@ -352,15 +376,17 @@ export function hiddenNotesOut(hiddenNotes: ReadonlySet<NoteRef>): HiddenNote[] 
 export function savedRhythmOf(reading: {
   hand: HandChoice;
   frameMs: number;
-  figure: FigureName;
   anchorMs: number;
   edits: SheetEdits;
   live: LiveMarks;
 }): SavedRhythm {
-  const { hand, frameMs, figure, anchorMs, edits, live } = reading;
+  const { hand, frameMs, anchorMs, edits, live } = reading;
   return {
     hand,
     frameMs,
+    title: edits.title,
+    subtitle: edits.subtitle,
+    artist: edits.artist,
     keySignature: edits.keySignature,
     keyChanges: edits.keyChanges.map((change) => ({
       fromColumn: change.fromColumn,
@@ -371,7 +397,7 @@ export function savedRhythmOf(reading: {
       fromColumn: change.fromColumn,
       clef: change.clef,
     })),
-    anchorFigure: figure,
+    anchorFigure: edits.anchorFigure,
     anchorMs,
     speedChanges: edits.stretches.map((stretch) => ({
       startFrame: stretch.startFrame,

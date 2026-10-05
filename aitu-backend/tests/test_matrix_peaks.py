@@ -18,14 +18,16 @@ from aitu_backend.matrix.intervals import (
     intervals_ms,
 )
 from aitu_backend.matrix.ladder import (
+    DEFAULT_ANCHOR_FIGURE,
     bpm_of,
     build_ladder,
+    default_anchor,
     header_label,
     label_peaks,
     nearest_figure,
     shift_ladder,
 )
-from aitu_backend.matrix.peaks import density_grid, find_peaks, gaussian_kde, peaks_of
+from aitu_backend.matrix.peaks import Peak, density_grid, find_peaks, gaussian_kde, peaks_of
 from aitu_backend.matrix.time_grid import frame_of_seconds
 from aitu_backend.schemas.time_matrix import FigureName
 from aitu_backend.transcription.engine import NoteEvent
@@ -344,3 +346,35 @@ def test_naming_the_dominant_peak_a_negra_makes_the_swing_pair_two_corcheas():
     assert named[337] == FigureName.NEGRA
     assert named[674] == FigureName.BLANCA
     assert header_label(ladder) == "negra = 337 ms · ≈178 BPM"
+
+
+# --------------------------------------------------------------------------- the default anchor
+
+
+def _peak(centre_ms: float, mass: int) -> Peak:
+    return Peak(
+        centre_ms=centre_ms,
+        mass=mass,
+        share=mass / 100,
+        lo_ms=centre_ms - 20,
+        hi_ms=centre_ms + 20,
+        mean_ms=centre_ms,
+        median_ms=centre_ms + 1,
+    )
+
+
+def test_the_default_anchor_is_the_peak_with_the_most_gaps():
+    """D-09 as changed by implementation 02: the highest peak, called a negra."""
+    peaks = [_peak(120, 30), _peak(240, 55), _peak(480, 15)]
+    assert default_anchor(peaks) is peaks[1]
+    assert DEFAULT_ANCHOR_FIGURE is FigureName.NEGRA
+
+
+def test_a_tie_between_two_peaks_is_always_answered_the_same_way():
+    peaks = [_peak(150, 40), _peak(300, 40)]
+    assert default_anchor(peaks) is peaks[0]
+    assert default_anchor(list(peaks)) is peaks[0]
+
+
+def test_no_peaks_means_no_anchor():
+    assert default_anchor([]) is None

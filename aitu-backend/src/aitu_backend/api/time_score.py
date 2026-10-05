@@ -28,7 +28,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from aitu_backend.audio import store
 from aitu_backend.matrix.intervals import intervals_ms
 from aitu_backend.matrix.keys import KEY_COUNT, LOWEST_MIDI
-from aitu_backend.matrix.ladder import build_ladder, bpm_of, header_label, label_peaks
+from aitu_backend.matrix.ladder import (
+    DEFAULT_ANCHOR_FIGURE,
+    build_ladder,
+    bpm_of,
+    default_anchor,
+    header_label,
+    label_peaks,
+)
 from aitu_backend.matrix.passages import one_passage, passages_from_boundaries
 from aitu_backend.matrix.peaks import Peak, peaks_of
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
@@ -127,6 +134,30 @@ class LadderPreviewResponse(BaseModel):
     #: The same ladder expressed as a tempo, for readers who think in BPM.
     bpm: float
     labelled: list[LabelledPeak]
+
+
+class DefaultReading(BaseModel):
+    """What a sheet is written from before anybody names a figure (D-09 as changed by 02).
+
+    The highest peak of one hand's gaps, called a negra. ``anchorMs`` is ``None`` when the piece has
+    no gaps at all, which is a piece with nothing to write yet rather than a failure.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    audio_uuid: str = Field(..., alias="audioUuid")
+    #: The hand whose gaps were measured: the one asked for, or ``both`` when it has no peak.
+    hand: HandChoice
+    frame_ms: float = Field(..., alias="frameMs")
+    anchor_figure: FigureName = Field(..., alias="anchorFigure")
+    #: The middle gap of the highest peak, which is what the ladder is built from.
+    anchor_ms: float | None = Field(None, alias="anchorMs")
+    #: Where that peak is centred.
+    centre_ms: float | None = Field(None, alias="centreMs")
+    attack_count: int = Field(..., alias="attackCount")
+    gap_count: int = Field(..., alias="gapCount")
+    #: How long the piece is, in seconds.
+    end_seconds: float = Field(..., alias="endSeconds")
 
 
 def _events_or_error(audio_uuid: str):
@@ -275,6 +306,47 @@ def get_peaks(
         gap_count=len(values),
         peaks=[_peak_out(peak) for peak in found],
         warning=warning,
+    )
+
+
+@router.get(
+    "/{audio_uuid}/default-reading",
+    response_model=DefaultReading,
+    response_model_by_alias=True,
+)
+def get_default_reading(
+    audio_uuid: str,
+    hand: HandChoice = "right",
+    frame_ms: float = Query(DEFAULT_FRAME_MS, alias="frameMs", gt=0),
+) -> DefaultReading:
+    """The figure ladder a sheet is written from when nobody has named a peak: the highest is a negra.
+
+    The Sheet step used to show the plot of gaps and wait for the reader to click a pile and name it
+    (D-09). Implementation 02 removed the plot: the pile holding the most gaps is a negra, and the
+    reader changes the figures afterwards in one action. A saved reading keeps its own hand and
+    figure; the page asks this route with that hand for the peak to build from.
+
+    When the hand asked for has no peak (a piece played by the other hand only, or too few notes in
+    it to make a pile), both hands are measured instead, so a piece with music gets a ladder.
+    """
+    hands = _hands(audio_uuid, frame_ms)
+    measured: HandChoice = hand
+    values, attacks = _gaps(hands, measured, 0.0, None)
+    peak = default_anchor(_find_peaks(values, frame_ms)[0])
+    if peak is None and hand != "both":
+        measured = "both"
+        values, attacks = _gaps(hands, measured, 0.0, None)
+        peak = default_anchor(_find_peaks(values, frame_ms)[0])
+    return DefaultReading(
+        audio_uuid=audio_uuid,
+        hand=measured,
+        frame_ms=frame_ms,
+        anchor_figure=DEFAULT_ANCHOR_FIGURE,
+        anchor_ms=peak.median_ms if peak else None,
+        centre_ms=peak.centre_ms if peak else None,
+        attack_count=attacks,
+        gap_count=len(values),
+        end_seconds=hands.duration_seconds,
     )
 
 

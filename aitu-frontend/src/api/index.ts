@@ -35,6 +35,7 @@ export type {
 export { timeScoreApi, FIGURE_LABELS, KEY_LABELS, KEY_SIGNATURES } from "./timeScore";
 export type {
   CueRange,
+  DefaultReading,
   FigureLadder,
   FigureName,
   GraceNote,

@@ -5,7 +5,7 @@
  * For each piece it makes a temporary copy in the data folder (a new uuid, deleted at the end, so
  * the library is never changed), opens it on the Sheet step of the project and makes it current
  * the way a reader does: a stale reading shows its banner and waits for **Write the sheet** and
- * **Save**; a piece with no reading is written from the pile the page selects. Then it moves notes
+ * **Save**; a piece with no reading is drawn on arrival from the defaults and saved. Then it moves notes
  * to the other hand the way a reader does (a click on the notehead, then **L** or **R** in the
  * panel) and times each part:
  *
@@ -164,14 +164,19 @@ for (const source of values.piece.map(resolvePiece)) {
 
     // 1. The Sheet tab, made current the way a reader does it.
     await page.goto(`${base}/projects/${copy}/sheet`);
-    await page.waitForSelector('text=How this piece was played');
-    if (piece.flow.before === 'ready') await page.waitForSelector('.grid-notehead', { timeout: 30000 });
+    await page.waitForSelector('[data-sheet-page]');
+    // Every sheet but a stale one is drawn on arrival (implementation 02, Phase 2).
+    if (piece.flow.before !== 'stale') await page.waitForSelector('.grid-notehead', { timeout: 60000 });
     const writeButton = page.getByRole('button', { name: 'Write the sheet', exact: true });
     if (piece.flow.before === 'stale') {
       await page.waitForSelector('[data-sheet-banner=stale]');
       await page.waitForTimeout(3000);
       piece.flow.staleDrawsNothing = (await page.locator('.grid-notehead').count()) === 0;
       await page.screenshot({ path: path.join(values.shots, `${source.slice(0, 8)}-stale.png`) });
+    }
+    if (piece.flow.before === 'missing') {
+      await page.getByRole('button', { name: 'Save', exact: true }).click();
+      await page.waitForFunction(() => document.querySelector('[data-unsaved]')?.getAttribute('data-unsaved') === '', null, { timeout: 15000 });
     }
     if ((await page.locator('.grid-notehead').count()) === 0) {
       await writeButton.waitFor();
@@ -216,7 +221,7 @@ for (const source of values.piece.map(resolvePiece)) {
       await page.waitForTimeout(200);
       const box = await target.boundingBox();
       await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-      const button = page.locator(`button[title^="Play with the ${to} hand"]`);
+      const button = page.getByRole('button', { name: to === 'left' ? 'Left' : 'Right', exact: true });
       await button.waitFor();
       await page.waitForTimeout(200);
       // Armed in the page, so every time is read on the page's own clock.

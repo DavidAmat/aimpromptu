@@ -1,7 +1,7 @@
 /**
  * Where a toolbox of the Sheet step opens, measured from what is drawn on the page.
  *
- * Split out of `RhythmPage.tsx` (implementation 02, Phase 2) with no change.
+ * Split out of `RhythmPage.tsx` (implementation 02, Phase 2).
  */
 
 /** How wide the floating toolbox is, and how far it stands off what it is about. */

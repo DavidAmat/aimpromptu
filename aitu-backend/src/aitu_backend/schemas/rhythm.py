@@ -430,6 +430,13 @@ class SavedRhythm(BaseModel):
     #: The column length the columns below were numbered at.
     frame_ms: float = Field(DEFAULT_FRAME_MS, alias="frameMs", gt=0)
 
+    #: What the sheet prints above the music: its title, a line under it, and the artist. Set in the
+    #: Title tab of the sheet toolbox (implementation 02, Phase 2). ``None`` prints the project's
+    #: name as the title and nothing else. Phase 3 moves the reading into ``sheet.json``.
+    title: str | None = Field(None, max_length=200)
+    subtitle: str | None = Field(None, max_length=200)
+    artist: str | None = Field(None, max_length=200)
+
     #: The signature the whole piece is written in, as its major key: ``C``,
     #: ``Bb``, ``F#`` and so on. Absent on a reading saved before this existed,
     #: and absent means C, which is what those readings were drawn in.

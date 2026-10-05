@@ -158,7 +158,7 @@ def piece_status(audio_uuid: str) -> PieceStatus:
             "sheet",
             "missing",
             enabled=sheet_enabled,
-            reason=disabled_reason or "Write the sheet: name a gap and save the reading.",
+            reason=disabled_reason or "Not saved yet.",
         )
     elif not sheet_enabled:
         sheet = StepStatus("sheet", "stale", enabled=False, reason=disabled_reason)
@@ -166,7 +166,7 @@ def piece_status(audio_uuid: str) -> PieceStatus:
         sheet = StepStatus(
             "sheet",
             "stale",
-            reason="The notes or the hands changed since this sheet was saved. Write the sheet again.",
+            reason="The notes or the hands changed since this sheet was saved.",
         )
     else:
         sheet = StepStatus("sheet", "ready")

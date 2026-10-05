@@ -1,26 +1,30 @@
 /**
- * The range toolbox: what a marked stretch of frames can carry, one pill each.
+ * The range toolbox: what a marked stretch of frames can carry, one tab each (plan section 11.6).
  *
- * Split out of `RhythmPage.tsx` (implementation 02, Phase 2) with no change.
+ * Key, clef and octave bracket of the stretch, its lyrics, its spacing, where the piece changes
+ * speed, and Re-record. Each control is an icon action with a tooltip or a labelled field; what a
+ * control does is said in its tooltip, not in a caption under it (the 09 guidelines). The tabs
+ * carry a dot when this stretch already has that setting, so what was edited here shows before it
+ * is opened.
  */
 
+import { useState, type Dispatch, type SetStateAction } from "react";
 import Alert from "@mui/material/Alert";
+import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import ButtonGroup from "@mui/material/ButtonGroup";
 import Chip from "@mui/material/Chip";
-import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Slider from "@mui/material/Slider";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import CheckIcon from "@mui/icons-material/Check";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SwapHorizIcon from "@mui/icons-material/SwapHorizOutlined";
 import VisibilityIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOffOutlined";
-import type { Dispatch, SetStateAction } from "react";
 import {
   applyClefRange,
   applyKeySignatureRange,
@@ -38,15 +42,13 @@ import {
 import {
   KEY_LABELS,
   KEY_SIGNATURES,
-  type FigureName,
   type KeySignatureName,
-  type Peak,
   type TimeScorePayload,
 } from "../../../api";
 import RangeRerecordPanel from "../../../components/editing/RangeRerecordPanel";
 import type { EditHistory } from "../../../hooks/useEditHistory";
 import type { PrintedHand } from "../../../music/renderOverrides";
-import { Toolbox } from "../../../ui";
+import { IconAction, PillButton, Segmented, Toolbox } from "../../../ui";
 import {
   CLEF_CHOICES,
   DEFAULT_CLEF,
@@ -58,6 +60,16 @@ import {
 } from "./sheetConstants";
 import type { SheetEdits } from "./sheetEdits";
 import type { FrameRange, RangeActions } from "./useRangeActions";
+
+/** The slowest and the fastest a speed change goes, against the speed of the piece. */
+const MIN_SPEED = 50;
+const MAX_SPEED = 200;
+
+const HAND_OPTIONS = [
+  { value: "both" as const, label: "Both", tooltip: "Both staves" },
+  { value: "right" as const, label: "Right", tooltip: "The right hand's staff only" },
+  { value: "left" as const, label: "Left", tooltip: "The left hand's staff only" },
+];
 
 export function RangeToolbox({
   open: framesToolbox,
@@ -80,8 +92,7 @@ export function RangeToolbox({
   set,
   setOttavaHidden,
   audioUuid,
-  figure,
-  selected,
+  anchorMs,
   onRerecordAccepted,
 }: {
   open: boolean;
@@ -106,8 +117,8 @@ export function RangeToolbox({
   set: EditHistory<SheetEdits>["set"];
   setOttavaHidden: (hands: readonly PrintedHand[], atColumn: number, hidden: boolean) => void;
   audioUuid: string;
-  figure: FigureName;
-  selected: Peak | null;
+  /** The length of the highest pile of gaps, which the whole piece is named from. */
+  anchorMs: number | null;
   onRerecordAccepted: (range: FrameRange) => void;
 }) {
   const {
@@ -122,129 +133,88 @@ export function RangeToolbox({
     passageKey,
     notesUnderRange,
   } = rangeActions;
-  const { keySignature, keyChanges, clefChanges, ottavas, stretches } = state;
+  const { keySignature, keyChanges, clefChanges, ottavas, stretches, anchorFigure } = state;
   const {
     keyChanges: setKeyChanges,
     clefChanges: setClefChanges,
     ottavas: setOttavas,
     lyrics: setLyrics,
+    stretches: setStretches,
   } = set;
+  const frameCount = score?.envelope.frameCount;
+
   return (
     <Toolbox
       open={framesToolbox && range !== null}
       title="Frames"
       subtitle={
         range
-          ? `f${range.fromColumn} – f${range.toColumn - 1} · ${formatSeconds(
-              (range.fromColumn * frameMs) / 1000,
-            )} → ${formatSeconds((range.toColumn * frameMs) / 1000)}`
+          ? `${formatSeconds((range.fromColumn * frameMs) / 1000)} – ${formatSeconds(
+              (range.toColumn * frameMs) / 1000,
+            )}`
           : undefined
       }
       initialPosition={framesAt ?? { x: 24, y: 140 }}
       onClose={closeFrames}
       headerAction={
         /*
-          The same music, picked the other way round. It is disabled rather than hidden when the
-          stretch holds no notes on the staves in scope, so the tooltip can say which of the two
-          it is — an empty stretch, or a hand that is silent through it.
+          The same music, picked the other way round. Disabled rather than hidden when the stretch
+          holds no notes on the staves in scope, so the tooltip can say so.
         */
-        <Tooltip
-          title={
-            notesUnderRange.length === 0
-              ? "No notes begin inside this stretch on the staff it is about"
-              : `Pick the ${notesUnderRange.length} note${
-                  notesUnderRange.length === 1 ? "" : "s"
-                } that begin inside this stretch and open the note toolbox on them`
-          }
-        >
-          <span>
-            <Button
-              size="small"
-              color="inherit"
-              disabled={notesUnderRange.length === 0 || !canSelectNotes}
-              startIcon={<SwapHorizIcon fontSize="small" />}
-              onClick={selectNotesUnderRange}
-              sx={{ textTransform: "none", whiteSpace: "nowrap" }}
-            >
-              Select notes
-            </Button>
-          </span>
-        </Tooltip>
+        <IconAction
+          title={`Select the ${notesUnderRange.length} note${
+            notesUnderRange.length === 1 ? "" : "s"
+          } in this stretch`}
+          disabledTitle="No notes begin inside this stretch on this staff"
+          icon={<SwapHorizIcon fontSize="small" />}
+          disabled={notesUnderRange.length === 0 || !canSelectNotes}
+          onClick={selectNotesUnderRange}
+        />
       }
     >
       <Stack spacing={1.5}>
-        {/*
-          Which staff this stretch is about, asked first because it changes what everything under
-          it means and what the highlight on the page covers.
-
-          A clef and an octave bracket belong to one hand; a key signature is drawn on both clefs
-          and a line of words is sung over the piece, so those two read this and ignore it. The
-          labels are one letter because the reader is aiming at them, not reading them.
-        */}
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{ alignItems: "center" }}
-        >
-          <Typography variant="caption" color="text.secondary" sx={{ minWidth: 42 }}>
-            Applies to
-          </Typography>
-          <ButtonGroup size="small">
-            {([
-              ["both", "Both"],
-              ["right", "R"],
-              ["left", "L"],
-            ] as const).map(([side, label]) => (
-              <Button
-                key={side}
-                variant={rangeHand === side ? "contained" : "outlined"}
-                onClick={() => setRangeHand(side)}
-                sx={{ minWidth: 34, px: 1 }}
-                title={
-                  side === "both"
-                    ? "The whole system: the highlight covers both staves"
-                    : `Only the ${side} hand: the highlight covers that staff alone`
-                }
-              >
-                {label}
-              </Button>
-            ))}
-          </ButtonGroup>
-        </Stack>
+        <Segmented<RangeHand>
+          label="Which staff"
+          value={rangeHand}
+          options={HAND_OPTIONS}
+          onChange={setRangeHand}
+        />
 
         {/*
-          One pill per thing this stretch can carry, and only that thing's controls below it.
-
-          Laid out as a grid rather than a row: there are six of them, and a row of six on a panel
-          this wide put half of them off the edge. A pill wears the accent colour when this stretch
-          already carries that setting, so what has been edited here is visible before anything is
-          opened.
+          One tab per thing this stretch can carry. A dot says this stretch already carries that
+          setting; the filled tab is the one open. Two signals, so opening a marked tab does not
+          hide that it was marked.
         */}
         <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 0.75,
-          }}
+          role="tablist"
+          aria-label="What this stretch carries"
+          sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0.75 }}
         >
           {FRAME_TABS.map((tab) => (
-            <Chip
+            <Badge
               key={tab.id}
-              size="small"
-              label={tab.label}
-              onClick={() => setFrameTab(tab.id)}
-              // Two signals that must not collide: colour says *this stretch already carries
-              // one*, fill says *this is the pill you are looking at*. Folding them into one
-              // would hide the first behind the second the moment a marked pill was opened.
-              color={editedHere[tab.id] ? "secondary" : "default"}
-              variant={frameTab === tab.id ? "filled" : "outlined"}
-              sx={{ fontWeight: frameTab === tab.id ? 600 : 400 }}
-            />
+              color="warning"
+              variant="dot"
+              invisible={!editedHere[tab.id]}
+              sx={{ display: "block", "& .MuiBadge-badge": { right: 6, top: 6 } }}
+            >
+              <Chip
+                size="small"
+                role="tab"
+                aria-selected={frameTab === tab.id}
+                label={tab.label}
+                onClick={() => setFrameTab(tab.id)}
+                color={frameTab === tab.id ? "primary" : "default"}
+                variant={frameTab === tab.id ? "filled" : "outlined"}
+                sx={{ width: "100%" }}
+                data-edited={editedHere[tab.id] ? "yes" : "no"}
+              />
+            </Badge>
           ))}
         </Box>
 
         {frameTab === "key" ? (
-          <Stack spacing={1.5}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
             <TextField
               select
               size="small"
@@ -256,7 +226,7 @@ export function RangeToolbox({
                   value: event.target.value as KeySignatureName,
                 })
               }
-              fullWidth
+              sx={{ flex: 1 }}
             >
               {KEY_SIGNATURES.map((name) => (
                 <MenuItem key={name} value={name}>
@@ -264,149 +234,115 @@ export function RangeToolbox({
                 </MenuItem>
               ))}
             </TextField>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="contained"
-                size="small"
-                disabled={!range || !score}
-                onClick={() => {
-                  if (!range || !score) return;
-                  setKeyChanges(
-                    applyKeySignatureRange(
-                      keyChanges,
-                      {
-                        fromFrame: range.fromColumn,
-                        toFrame: range.toColumn,
-                        keySignature: passageKey as KeySignature,
-                      },
-                      keySignature as KeySignature,
-                      score.envelope.frameCount,
-                    ),
-                  );
-                }}
-              >
-                Apply
-              </Button>
-              <Button
-                size="small"
-                color="error"
-                disabled={!range || !score || !editedHere.key}
-                startIcon={<DeleteOutlineIcon />}
-                onClick={() => {
-                  if (!range || !score) return;
-                  setKeyChanges(
-                    clearKeySignatureRange(
-                      keyChanges,
-                      {
-                        fromFrame: range.fromColumn,
-                        toFrame: range.toColumn,
-                      },
-                      keySignature as KeySignature,
-                      score.envelope.frameCount,
-                    ),
-                  );
-                }}
-              >
-                Remove
-              </Button>
-            </Stack>
+            <IconAction
+              title="Use this key here"
+              icon={<CheckIcon fontSize="small" />}
+              disabled={!range || frameCount === undefined}
+              onClick={() => {
+                if (!range || frameCount === undefined) return;
+                setKeyChanges(
+                  applyKeySignatureRange(
+                    keyChanges,
+                    {
+                      fromFrame: range.fromColumn,
+                      toFrame: range.toColumn,
+                      keySignature: passageKey as KeySignature,
+                    },
+                    keySignature as KeySignature,
+                    frameCount,
+                  ),
+                );
+              }}
+            />
+            <IconAction
+              title="Back to the key of the piece"
+              icon={<DeleteOutlineIcon fontSize="small" />}
+              danger
+              disabled={!range || frameCount === undefined || !editedHere.key}
+              onClick={() => {
+                if (!range || frameCount === undefined) return;
+                setKeyChanges(
+                  clearKeySignatureRange(
+                    keyChanges,
+                    { fromFrame: range.fromColumn, toFrame: range.toColumn },
+                    keySignature as KeySignature,
+                    frameCount,
+                  ),
+                );
+              }}
+            />
           </Stack>
         ) : null}
 
         {frameTab === "octave" ? (
           <Stack spacing={1}>
-            {/*
-              One row per staff in scope. Narrowing to a hand above leaves one row here, which is
-              the panel's answer to being asked the same question twice: the reader has already
-              said which hand, and a second L/R inside the pill was the thing they were saying it
-              to.
-            */}
+            {/* One row per staff in scope; narrowing to one hand above leaves one row. */}
             {handsInScope.map((side) => {
-              const active = range
-                ? ottavaAtFrame(ottavas, side, range.fromColumn)
-                : undefined;
+              const active = range ? ottavaAtFrame(ottavas, side, range.fromColumn) : undefined;
               return (
-                <Stack
-                  key={side}
-                  direction="row"
-                  spacing={0.75}
-                  sx={{ alignItems: "center" }}
-                >
+                <Stack key={side} direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
                   {handsInScope.length > 1 ? (
-                    <Typography variant="body2" sx={{ minWidth: 34 }}>
-                      {side === "left" ? "L" : "R"}
+                    <Typography variant="body2" sx={{ minWidth: 40 }}>
+                      {side === "left" ? "Left" : "Right"}
                     </Typography>
                   ) : null}
                   {OTTAVA_CHOICES.map((choice) => (
-                    <Chip
-                      key={choice.kind}
-                      size="small"
-                      label={choice.label}
-                      title={choice.hint}
-                      disabled={!range || !score}
-                      color={
-                        active?.kind === choice.kind ? "secondary" : "default"
-                      }
-                      variant={
-                        active?.kind === choice.kind ? "filled" : "outlined"
-                      }
-                      onClick={() => {
-                        if (!range || !score) return;
-                        // Pressing the bracket already on clears it, so one chip is both the way
-                        // in and the way out and there is no separate "none".
-                        setOttavas(
-                          active?.kind === choice.kind
-                            ? clearOttavaRange(ottavas, side, {
-                                fromColumn: range.fromColumn,
-                                toColumn: range.toColumn,
-                              })
-                            : applyOttava(
-                                ottavas,
-                                {
-                                  kind: choice.kind,
-                                  hand: side,
+                    <Tooltip key={choice.kind} title={choice.hint}>
+                      <Chip
+                        size="small"
+                        label={choice.label}
+                        disabled={!range || frameCount === undefined}
+                        color={active?.kind === choice.kind ? "primary" : "default"}
+                        variant={active?.kind === choice.kind ? "filled" : "outlined"}
+                        onClick={() => {
+                          if (!range || frameCount === undefined) return;
+                          // The bracket already on clears it: one chip is the way in and out.
+                          setOttavas(
+                            active?.kind === choice.kind
+                              ? clearOttavaRange(ottavas, side, {
                                   fromColumn: range.fromColumn,
                                   toColumn: range.toColumn,
-                                },
-                                score.envelope.frameCount,
-                              ),
-                        );
-                      }}
-                    />
+                                })
+                              : applyOttava(
+                                  ottavas,
+                                  {
+                                    kind: choice.kind,
+                                    hand: side,
+                                    fromColumn: range.fromColumn,
+                                    toColumn: range.toColumn,
+                                  },
+                                  frameCount,
+                                ),
+                          );
+                        }}
+                      />
+                    </Tooltip>
                   ))}
                   {/*
-                    Take the bracket off the page without taking the reading off the piece.
-
-                    A player who already knows a passage is played an octave up does not need a
-                    dashed line over every bar of it saying so, and above the right hand is the
-                    most crowded strip on the page. The notes stay written exactly where the
-                    bracket puts them — that is the whole difference between this and the trash
-                    beside it — so a hidden bracket is still there, and its corner marks are how
-                    a reader gets back to it. Delete does the same thing from the keyboard.
+                    Hide keeps the notes written where the bracket puts them and only takes the
+                    dashed line off; its corner marks stay, as the way back to it. Delete does the
+                    same from the keyboard.
                   */}
-                  <IconButton
-                    size="small"
-                    title={
-                      active?.hidden
-                        ? "Draw the bracket again. The notes do not move either way."
-                        : "Hide the bracket and keep the reading — or press Delete. The notes stay written where it puts them."
+                  <IconAction
+                    title={active?.hidden ? "Show the bracket" : "Hide the bracket, keep the notes where they are"}
+                    shortcut={active?.hidden ? undefined : "Delete"}
+                    icon={
+                      active?.hidden ? (
+                        <VisibilityOffIcon fontSize="small" />
+                      ) : (
+                        <VisibilityIcon fontSize="small" />
+                      )
                     }
                     disabled={!range || !active}
                     onClick={() => {
                       if (!range || !active) return;
                       setOttavaHidden([side], range.fromColumn, !active.hidden);
                     }}
-                  >
-                    {active?.hidden ? (
-                      <VisibilityOffIcon fontSize="small" />
-                    ) : (
-                      <VisibilityIcon fontSize="small" />
-                    )}
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    color="error"
-                    title="Remove the bracket on this hand. The notes go back to where they sound, in ledger lines if that is where they are."
+                  />
+                  <IconAction
+                    title="Remove the bracket"
+                    icon={<DeleteOutlineIcon fontSize="small" />}
+                    danger
                     disabled={!range || !active}
                     onClick={() => {
                       if (!range) return;
@@ -417,9 +353,7 @@ export function RangeToolbox({
                         }),
                       );
                     }}
-                  >
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
+                  />
                 </Stack>
               );
             })}
@@ -427,13 +361,8 @@ export function RangeToolbox({
         ) : null}
 
         {/*
-          Which clef each hand in scope prints over this stretch.
-
-          The answer to a hand that spends a passage far outside its own staff, and a better one
-          than an octave bracket where the passage is long: under a bracket the notes are written
-          an octave from where they sound and the reader has to hold that in mind, while on the
-          other clef they are written exactly where they sound. Nothing moves and nothing is
-          renamed — a clef decides which lines the noteheads are drawn on and nothing else.
+          Which clef each hand in scope prints over this stretch. Nothing moves and nothing is
+          renamed: a clef decides which lines the noteheads are drawn on and nothing else.
         */}
         {frameTab === "clef" ? (
           <Stack spacing={1}>
@@ -442,91 +371,73 @@ export function RangeToolbox({
                 ? clefAtFrame(range.fromColumn, side, clefChanges)
                 : DEFAULT_CLEF[side];
               return (
-                <Stack
-                  key={side}
-                  direction="row"
-                  spacing={0.75}
-                  sx={{ alignItems: "center" }}
-                >
+                <Stack key={side} direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
                   {handsInScope.length > 1 ? (
-                    <Typography variant="body2" sx={{ minWidth: 34 }}>
-                      {side === "left" ? "L" : "R"}
+                    <Typography variant="body2" sx={{ minWidth: 40 }}>
+                      {side === "left" ? "Left" : "Right"}
                     </Typography>
                   ) : null}
                   {CLEF_CHOICES.map((choice) => (
-                    <Chip
-                      key={choice.clef}
-                      size="small"
-                      label={choice.label}
-                      title={choice.hint}
-                      disabled={!range || !score}
-                      color={active === choice.clef ? "secondary" : "default"}
-                      variant={active === choice.clef ? "filled" : "outlined"}
-                      onClick={() => {
-                        if (!range || !score) return;
-                        // Asking for the clef the hand already reads is asking for nothing, so
-                        // the stretch goes back to the hand's own rather than storing a
-                        // transition that changes nothing.
-                        setClefChanges(
-                          choice.clef === DEFAULT_CLEF[side]
-                            ? clearClefRange(
-                                clefChanges,
-                                {
-                                  hand: side,
-                                  fromFrame: range.fromColumn,
-                                  toFrame: range.toColumn,
-                                },
-                                score.envelope.frameCount,
-                              )
-                            : applyClefRange(
-                                clefChanges,
-                                {
-                                  hand: side,
-                                  fromFrame: range.fromColumn,
-                                  toFrame: range.toColumn,
-                                  clef: choice.clef,
-                                },
-                                score.envelope.frameCount,
-                              ),
-                        );
-                      }}
-                    />
+                    <Tooltip key={choice.clef} title={choice.hint}>
+                      <Chip
+                        size="small"
+                        label={choice.label}
+                        disabled={!range || frameCount === undefined}
+                        color={active === choice.clef ? "primary" : "default"}
+                        variant={active === choice.clef ? "filled" : "outlined"}
+                        onClick={() => {
+                          if (!range || frameCount === undefined) return;
+                          // The clef the hand already reads stores nothing: the stretch goes back.
+                          setClefChanges(
+                            choice.clef === DEFAULT_CLEF[side]
+                              ? clearClefRange(
+                                  clefChanges,
+                                  { hand: side, fromFrame: range.fromColumn, toFrame: range.toColumn },
+                                  frameCount,
+                                )
+                              : applyClefRange(
+                                  clefChanges,
+                                  {
+                                    hand: side,
+                                    fromFrame: range.fromColumn,
+                                    toFrame: range.toColumn,
+                                    clef: choice.clef,
+                                  },
+                                  frameCount,
+                                ),
+                          );
+                        }}
+                      />
+                    </Tooltip>
                   ))}
-                  <IconButton
-                    size="small"
-                    color="error"
-                    title="Back to the clef this hand normally reads"
-                    disabled={!range || !score || active === DEFAULT_CLEF[side]}
+                  <IconAction
+                    title="Back to this hand's own clef"
+                    icon={<DeleteOutlineIcon fontSize="small" />}
+                    danger
+                    disabled={!range || frameCount === undefined || active === DEFAULT_CLEF[side]}
                     onClick={() => {
-                      if (!range || !score) return;
+                      if (!range || frameCount === undefined) return;
                       setClefChanges(
                         clearClefRange(
                           clefChanges,
-                          {
-                            hand: side,
-                            fromFrame: range.fromColumn,
-                            toFrame: range.toColumn,
-                          },
-                          score.envelope.frameCount,
+                          { hand: side, fromFrame: range.fromColumn, toFrame: range.toColumn },
+                          frameCount,
                         ),
                       );
                     }}
-                  >
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
+                  />
                 </Stack>
               );
             })}
           </Stack>
         ) : null}
 
+        {/*
+          How much room this stretch takes against what the page measured. Both staves, whichever
+          hand is chosen: a column is one slice of the clock and the two hands share it (D-22).
+        */}
         {frameTab === "spacing" && range ? (
-          <Stack spacing={1}>
-            <Typography variant="caption" color="text.secondary">
-              How much room this stretch takes, against what the page measured
-              for it. Only the columns inside it move, and the sheet redraws as
-              the handle moves so the right spot can be found by looking at it.
-            </Typography>
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
             <Slider
               size="small"
               min={25}
@@ -538,33 +449,30 @@ export function RangeToolbox({
               valueLabelDisplay="auto"
               valueLabelFormat={(value) => `${value}%`}
               disabled={!score}
-              aria-label="How much room this stretch takes"
+              aria-label="Room this stretch takes, on both staves"
+              sx={{ flex: 1 }}
             />
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <Typography variant="body2" sx={{ minWidth: 54 }}>
-                {Math.round(spacingHere * 100)}%
-              </Typography>
-              <IconButton
-                size="small"
-                color="error"
-                title="Back to the page's own spacing"
-                disabled={spacingHere === 1}
-                onClick={clearSpacingRange}
-              >
-                <DeleteOutlineIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-            {/*
-              Said out loud because the pills above promise otherwise. A column is one slice of
-              wall clock and both staves share it — that is the whole of what makes the two hands
-              line up (D-22) — so there is no such thing as widening a column for one hand. The
-              clef and the octave bracket honour the hand pills; this one cannot.
-            */}
-            <Typography variant="caption" color="text.secondary">
-              Both staves, whichever hand is chosen above: a column is one slice
-              of the clock and the two hands share it.
+            <Typography variant="body2" sx={{ minWidth: 44, textAlign: "right" }}>
+              {Math.round(spacingHere * 100)}%
             </Typography>
+            <IconAction
+              title="Back to the page's own spacing"
+              icon={<RestartAltIcon fontSize="small" />}
+              disabled={spacingHere === 1}
+              onClick={clearSpacingRange}
+            />
           </Stack>
+        ) : null}
+
+        {frameTab === "speed" && range ? (
+          <SpeedTab
+            key={rangeKey}
+            fromColumn={range.fromColumn}
+            anchorMs={anchorMs}
+            anchorFigure={anchorFigure}
+            stretches={stretches}
+            setStretches={setStretches}
+          />
         ) : null}
 
         {frameTab === "lyrics" && range ? (
@@ -575,106 +483,85 @@ export function RangeToolbox({
               multiline
               maxRows={3}
               value={lyricText}
-              placeholder="The line sung over this stretch"
-              onChange={(event) =>
-                setLyricDraft({ forRange: rangeKey, text: event.target.value })
-              }
-              helperText="Drawn above the right hand, over the marked stretch. Drag the block to move it, drag its right edge to fold the words into more lines. It never moves a note."
+              onChange={(event) => setLyricDraft({ forRange: rangeKey, text: event.target.value })}
             />
             {lyricHere ? (
-              <>
-                {/*
-                  Per lyric and not per page, because the reason for changing it is per lyric:
-                  one line is three words over eight seconds and the next a whole sentence over
-                  one.
-                */}
-                <Stack spacing={0.5}>
-                  <Typography variant="caption" color="text.secondary">
-                    Text size — {Math.round(lyricHere.fontSize ?? LYRIC_FONT_SIZE)} px
-                  </Typography>
-                  <Slider
-                    size="small"
-                    value={lyricHere.fontSize ?? LYRIC_FONT_SIZE}
-                    min={MIN_LYRIC_FONT_SIZE}
-                    max={MAX_LYRIC_FONT_SIZE}
-                    step={1}
-                    valueLabelDisplay="auto"
-                    onChange={(_event, value) =>
-                      setLyrics((current) =>
-                        current.map((line) =>
-                          line === lyricHere
-                            ? { ...line, fontSize: value as number }
-                            : line,
-                        ),
-                      )
-                    }
-                  />
-                </Stack>
-                {lyricHere.offsetX !== undefined ||
-                lyricHere.offsetY !== undefined ||
-                lyricHere.width !== undefined ? (
-                  <Button
-                    size="small"
-                    onClick={() =>
-                      setLyrics((current) =>
-                        // Built back up rather than picked apart, because "no answer" here is
-                        // the field being absent and not a number meaning nothing.
-                        current.map((line) =>
-                          line === lyricHere
-                            ? {
-                                fromColumn: line.fromColumn,
-                                toColumn: line.toColumn,
-                                text: line.text,
-                                ...(line.fontSize === undefined
-                                  ? {}
-                                  : { fontSize: line.fontSize }),
-                              }
-                            : line,
-                        ),
-                      )
-                    }
-                  >
-                    Put the block back over its stretch
-                  </Button>
-                ) : null}
-              </>
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 36 }}>
+                  Size
+                </Typography>
+                <Slider
+                  size="small"
+                  value={lyricHere.fontSize ?? LYRIC_FONT_SIZE}
+                  min={MIN_LYRIC_FONT_SIZE}
+                  max={MAX_LYRIC_FONT_SIZE}
+                  step={1}
+                  valueLabelDisplay="auto"
+                  aria-label="Text size of these words"
+                  onChange={(_event, value) =>
+                    setLyrics((current) =>
+                      current.map((line) =>
+                        line === lyricHere ? { ...line, fontSize: value as number } : line,
+                      ),
+                    )
+                  }
+                  sx={{ flex: 1 }}
+                />
+                <IconAction
+                  title="Put the words back over their stretch"
+                  icon={<RestartAltIcon fontSize="small" />}
+                  disabled={
+                    lyricHere.offsetX === undefined &&
+                    lyricHere.offsetY === undefined &&
+                    lyricHere.width === undefined
+                  }
+                  onClick={() =>
+                    setLyrics((current) =>
+                      // Built back up rather than picked apart, because "no answer" here is the
+                      // field being absent and not a number meaning nothing.
+                      current.map((line) =>
+                        line === lyricHere
+                          ? {
+                              fromColumn: line.fromColumn,
+                              toColumn: line.toColumn,
+                              text: line.text,
+                              ...(line.fontSize === undefined ? {} : { fontSize: line.fontSize }),
+                            }
+                          : line,
+                      ),
+                    )
+                  }
+                />
+              </Stack>
             ) : null}
-            <Stack direction="row" spacing={1}>
-              <Button
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <PillButton
+                kind="primary"
                 size="small"
-                variant="contained"
                 disabled={lyricText.trim().length === 0}
                 onClick={() => {
                   const text = lyricText.trim();
                   setLyrics((current) => [
                     ...current.filter(
-                      (line) =>
-                        line.fromColumn >= range.toColumn ||
-                        line.toColumn <= range.fromColumn,
+                      (line) => line.fromColumn >= range.toColumn || line.toColumn <= range.fromColumn,
                     ),
-                    {
-                      fromColumn: range.fromColumn,
-                      toColumn: range.toColumn,
-                      text,
-                    },
+                    { fromColumn: range.fromColumn, toColumn: range.toColumn, text },
                   ]);
                   setLyricDraft(null);
                 }}
               >
-                Write it here
-              </Button>
+                {lyricHere ? "Change the words" : "Add the words"}
+              </PillButton>
               {lyricHere ? (
-                <Button
-                  size="small"
+                <IconAction
+                  title="Remove these words"
+                  icon={<DeleteOutlineIcon fontSize="small" />}
+                  danger
                   onClick={() => {
-                    setLyrics((current) =>
-                      current.filter((line) => line !== lyricHere),
-                    );
+                    setLyrics((current) => current.filter((line) => line !== lyricHere));
                     setLyricDraft(null);
                   }}
-                >
-                  Take it off
-                </Button>
+                />
               ) : null}
             </Stack>
           </Stack>
@@ -682,24 +569,23 @@ export function RangeToolbox({
 
         {frameTab === "rerecord" && range && audioUuid ? (
           <Stack spacing={1.5}>
+            {/* A warning that applies every time: this edit is the one undo cannot reach. */}
             <Alert severity="warning" variant="outlined">
-              Playing this stretch again writes over the recording.{" "}
-              <strong>Command-Z cannot take it back</strong>, and accepting it
-              also forgets every edit you could have taken back until now.
+              Accepting writes over the recording. Undo cannot take it back.
             </Alert>
             <RangeRerecordPanel
               audioUuid={audioUuid}
               frameMs={frameMs}
               fromColumn={range.fromColumn}
               toColumn={range.toColumn}
-              anchorFigure={figure}
-              anchorMs={selected?.medianMs}
+              anchorFigure={anchorFigure}
+              anchorMs={anchorMs ?? undefined}
               speedChanges={stretches.map((stretch) => ({
                 startFrame: stretch.startFrame,
                 anchorMs: stretch.anchorMs,
               }))}
               clickIntervalMs={((): number => {
-                let ms = selected?.medianMs ?? 480;
+                let ms = anchorMs ?? 480;
                 for (const stretch of stretches) {
                   if (stretch.startFrame <= range.fromColumn) ms = stretch.anchorMs;
                 }
@@ -707,27 +593,102 @@ export function RangeToolbox({
               })()}
               onRangeChange={(start, end) => {
                 const fromColumn = Math.max(0, Math.round((start * 1000) / frameMs));
-                const toColumn = Math.max(
-                  fromColumn + 1,
-                  Math.round((end * 1000) / frameMs),
-                );
+                const toColumn = Math.max(fromColumn + 1, Math.round((end * 1000) / frameMs));
                 setRange({ fromColumn, toColumn });
               }}
               onAccepted={() => onRerecordAccepted(range)}
             />
           </Stack>
         ) : null}
-
-        {/*
-          No **Save with the piece** here any more.
-
-          Every panel on this page edits the same one reading, and a save button inside one of
-          them read as saving that panel's own part of it. The bar that follows the reader down
-          the sheet carries the only Save there is, beside Remove all, which is where a reader
-          looking for either of them goes.
-        */}
       </Stack>
     </Toolbox>
+  );
+}
+
+/**
+ * Where the piece changes speed: from the start of the stretch, its notes are named as if played at
+ * this speed, against the speed of the whole piece.
+ *
+ * The stored value is still a length in milliseconds for the main figure (`speedChanges` of the
+ * reading, rule 3: no BPM). The tab shows it as a percentage of the piece's own speed, because
+ * that is how a reader thinks about "this part goes faster", and milliseconds are not on screen.
+ * The sheet is drawn again on its own once the change is made.
+ */
+function SpeedTab({
+  fromColumn,
+  anchorMs,
+  anchorFigure,
+  stretches,
+  setStretches,
+}: {
+  fromColumn: number;
+  anchorMs: number | null;
+  anchorFigure: string;
+  stretches: SheetEdits["stretches"];
+  setStretches: EditHistory<SheetEdits>["set"]["stretches"];
+}) {
+  const here = stretches.find((stretch) => stretch.startFrame === fromColumn) ?? null;
+  // The speed already in force at the start of the stretch: the last change before it, or 100 %.
+  let inForce = anchorMs;
+  for (const stretch of stretches) {
+    if (stretch.startFrame <= fromColumn) inForce = stretch.anchorMs;
+  }
+  const percentOf = (ms: number | null) =>
+    anchorMs && ms ? Math.round((anchorMs / ms) * 100) : 100;
+  const [percent, setPercent] = useState(percentOf(inForce));
+  const changed = percent !== percentOf(inForce);
+  if (!anchorMs) return null;
+  return (
+    <Stack spacing={1}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+        <Slider
+          size="small"
+          min={MIN_SPEED}
+          max={MAX_SPEED}
+          step={5}
+          marks={[{ value: 100 }]}
+          value={percent}
+          onChange={(_, value) => setPercent(value as number)}
+          valueLabelDisplay="auto"
+          valueLabelFormat={(value) => `${value}%`}
+          aria-label={`Speed from here, against the speed of the piece (the ${anchorFigure})`}
+          sx={{ flex: 1 }}
+        />
+        <Typography variant="body2" sx={{ minWidth: 44, textAlign: "right" }}>
+          {percent}%
+        </Typography>
+        <IconAction
+          title="Change the speed from here"
+          icon={<CheckIcon fontSize="small" />}
+          disabled={!changed}
+          onClick={() => {
+            const ms = Math.round((anchorMs * 100) / percent);
+            setStretches((current) =>
+              [
+                ...current.filter((one) => one.startFrame !== fromColumn),
+                { startFrame: fromColumn, anchorMs: ms },
+              ].sort((a, b) => a.startFrame - b.startFrame),
+            );
+          }}
+        />
+        <IconAction
+          title="Remove the speed change here"
+          icon={<DeleteOutlineIcon fontSize="small" />}
+          danger
+          disabled={here === null}
+          onClick={() =>
+            setStretches((current) => current.filter((one) => one.startFrame !== fromColumn))
+          }
+        />
+      </Stack>
+      {stretches.length > 1 || (stretches.length === 1 && here === null) ? (
+        <Box>
+          <PillButton kind="quiet" size="small" onClick={() => setStretches([])}>
+            Remove every speed change ({stretches.length})
+          </PillButton>
+        </Box>
+      ) : null}
+    </Stack>
   );
 }
 

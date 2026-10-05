@@ -1,7 +1,7 @@
 /**
  * What the note toolbox knows about the picked notes, and every action it offers on them.
  *
- * Split out of `RhythmPage.tsx` (implementation 02, Phase 2) with no change: the derived values
+ * Split out of `RhythmPage.tsx` (implementation 02, Phase 2): the derived values
  * and the actions are the page's own, now read from the edits they act on.
  */
 

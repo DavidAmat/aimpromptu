@@ -2,9 +2,12 @@
 
 The user looks at the plot of gaps, points at one pile and says what it is. "That 337 ms peak is the
 negra." Everything else follows: a negra of 337 ms makes a corchea 168.5, a semicorchea 84.25, a
-blanca 674, and so on down and up the closed vocabulary. The app never picks the anchor (D-09), and
-it shows the consequence of the choice immediately so the user can judge it before committing
-(D-10).
+blanca 674, and so on down and up the closed vocabulary.
+
+D-09 said the app never picks the anchor. Implementation 02 changed it (its plan, section 4): the
+plot of gaps left the screen, and the **highest peak is a negra** until the reader says otherwise
+(:func:`default_anchor`). The ladder is still the reader's to change in one action; only the first
+choice is automatic.
 
 A figure is now only a label. Getting one wrong moves nothing on the page, because the column is the
 same width either way. That is why re-pointing the whole ladder (D-18) and overriding a single note
@@ -38,7 +41,9 @@ __all__ = [
     "FigureFit",
     "PeakLabel",
     "bpm_of",
+    "DEFAULT_ANCHOR_FIGURE",
     "build_ladder",
+    "default_anchor",
     "header_label",
     "label_peaks",
     "nearest_figure",
@@ -90,6 +95,22 @@ _SPELLED: dict[FigureName, str] = {
     FigureName.DOTTED_BLANCA: "blanca con puntillo",
     FigureName.DOTTED_NEGRA: "negra con puntillo",
 }
+
+
+#: What the highest peak is called when nobody has named it (D-09 as changed by implementation 02).
+DEFAULT_ANCHOR_FIGURE = FigureName.NEGRA
+
+
+def default_anchor(peaks: list[Peak]) -> Peak | None:
+    """The peak a sheet is written from when nobody has named one: the one holding the most gaps.
+
+    "The highest peak" is the tallest pile of the plot the reader used to click, which is the pile
+    with the most gaps in it. On a tie the first in the list wins, so the answer never changes from
+    one request to the next. ``None`` for a piece with no gaps (nothing played yet, or one chord).
+    """
+    if not peaks:
+        return None
+    return max(peaks, key=lambda peak: peak.mass)
 
 
 def build_ladder(anchor_figure: FigureName, anchor_ms: float) -> FigureLadder:

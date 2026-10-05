@@ -594,3 +594,33 @@ def test_a_lyric_block_no_drawing_could_use_is_refused(client: TestClient) -> No
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
     body["lyrics"] = [{"fromColumn": 8, "toColumn": 24, "text": "do re mi", "fontSize": 96.0}]
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
+
+
+def test_the_title_lines_of_the_sheet_survive_a_round_trip(client: TestClient) -> None:
+    """The Title tab of the sheet toolbox (implementation 02, Phase 2) is part of the reading."""
+    uuid = transcribed()
+    body = a_reading().model_dump(by_alias=True, mode="json")
+    body.update({"title": "Superestrella", "subtitle": "Piano", "artist": "Aitana"})
+
+    assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
+    back = client.get(f"/time/{uuid}/rhythm").json()
+    assert (back["title"], back["subtitle"], back["artist"]) == ("Superestrella", "Piano", "Aitana")
+
+
+def test_a_reading_without_title_lines_leaves_them_to_the_page(client: TestClient) -> None:
+    """Absent means the page prints the project's name, as it did before the Title tab existed."""
+    uuid = transcribed()
+    body = a_reading().model_dump(by_alias=True, mode="json")
+    for field in ("title", "subtitle", "artist"):
+        body.pop(field, None)
+
+    assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
+    back = client.get(f"/time/{uuid}/rhythm").json()
+    assert back["title"] is None and back["subtitle"] is None and back["artist"] is None
+
+
+def test_a_title_longer_than_a_line_could_hold_is_refused(client: TestClient) -> None:
+    uuid = transcribed()
+    body = a_reading().model_dump(by_alias=True, mode="json")
+    body["title"] = "x" * 201
+    assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422

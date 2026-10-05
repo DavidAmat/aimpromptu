@@ -2,21 +2,21 @@
  * The two keyboards of the Sheet step: what is sounding under the playhead, and the decoration of
  * one picked note.
  *
- * Split out of `RhythmPage.tsx` (implementation 02, Phase 2) with no change.
+ * Split out of `RhythmPage.tsx` (implementation 02, Phase 2).
  */
 
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import ButtonGroup from "@mui/material/ButtonGroup";
 import CircularProgress from "@mui/material/CircularProgress";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import type { GraceNote } from "../../../api";
 import { rowOf, type PrintedHand } from "../../../music/renderOverrides";
 import { Piano } from "../../../piano/Piano";
-import { Toolbox } from "../../../ui";
+import { IconAction, Segmented, Toolbox } from "../../../ui";
 import {
   DECORATION_COLOUR,
+  formatSeconds,
   KEY_LEGEND,
   PRINCIPAL_COLOUR,
   type SoundingNote,
@@ -26,6 +26,7 @@ export function PianoToolbox({
   open: pianoOpen,
   onClose,
   playheadFrame,
+  frameMs,
   addHand,
   setAddHand,
   addingNote,
@@ -37,6 +38,7 @@ export function PianoToolbox({
   open: boolean;
   onClose: () => void;
   playheadFrame: number | null;
+  frameMs: number;
   addHand: PrintedHand;
   setAddHand: (hand: PrintedHand) => void;
   addingNote: boolean;
@@ -50,9 +52,7 @@ export function PianoToolbox({
       open={pianoOpen}
       title="Piano"
       subtitle={
-        playheadFrame === null
-          ? "The keys sounding under the playhead"
-          : `f${playheadFrame} \u00b7 click a lit key to take it off the page, a dark one to add it`
+        playheadFrame === null ? undefined : formatSeconds((playheadFrame * frameMs) / 1000)
       }
       initialPosition={{ x: 24, y: Math.max(80, window.innerHeight - 300) }}
       onClose={onClose}
@@ -70,22 +70,18 @@ export function PianoToolbox({
           spacing={1.5}
           sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
         >
-          <Typography variant="caption" color="text.secondary">
-            Add note
+          <Typography variant="body2" color="text.secondary">
+            Add to
           </Typography>
-          <ButtonGroup size="small">
-            {(["right", "left"] as const).map((side) => (
-              <Button
-                key={side}
-                variant={addHand === side ? "contained" : "outlined"}
-                onClick={() => setAddHand(side)}
-                sx={{ minWidth: 34 }}
-                title={`A key you click that is not already sounding is added to the ${side} hand`}
-              >
-                {side === "right" ? "R" : "L"}
-              </Button>
-            ))}
-          </ButtonGroup>
+          <Segmented<PrintedHand>
+            label="Which hand a key you add goes to"
+            value={addHand}
+            onChange={setAddHand}
+            options={[
+              { value: "right", label: "Right", tooltip: "A dark key you click is added to the right hand" },
+              { value: "left", label: "Left", tooltip: "A dark key you click is added to the left hand" },
+            ]}
+          />
           {/*
             The legend, and the only explanation the panel needs.
 
@@ -134,7 +130,7 @@ export function PianoToolbox({
             // only place that can say so before the reader presses it.
             return sounding.onsetFrame === playheadFrame
               ? `${noteNameAt(row)} \u2014 ${hand} hand, struck here. Click to take it off the page.`
-              : `${noteNameAt(row)} \u2014 ${hand} hand, still sounding from f${sounding.onsetFrame}. Click to take that note off the page.`;
+              : `${noteNameAt(row)} \u2014 ${hand} hand, still sounding from ${formatSeconds((sounding.onsetFrame * frameMs) / 1000)}. Click to take that note off the page.`;
           }}
           ariaLabel="Keys sounding under the playhead"
         />
@@ -209,9 +205,12 @@ export function DecorationToolbox({
               </Typography>
             </Stack>
             {graceHere ? (
-              <Button size="small" color="error" onClick={clearGrace}>
-                Take it off
-              </Button>
+              <IconAction
+                title="Remove the decoration"
+                icon={<DeleteOutlineIcon fontSize="small" />}
+                danger
+                onClick={clearGrace}
+              />
             ) : null}
           </Stack>
           <Piano

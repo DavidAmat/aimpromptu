@@ -77,7 +77,7 @@ src/
   layout/     # AppLayout (the shell), LabLayout, SearchDialog, ShortcutsDialog, LegacyRedirect, routes.ts (every path lives here)
   pages/      # one component per route
     ProjectsPage.tsx  # Projects
-    piece/    #   a project: PiecePage, the five steps, NotesEditor (Notes and Hands), RhythmPage (Sheet), Notes Falling
+    piece/    #   a project: PiecePage, the five steps, NotesEditor (Notes and Hands), sheet/ (the Sheet step, split into modules), Notes Falling
     video/    #   the Lab pages: the video reader
     dev/      #   /dev/roll-bench, development builds only
   state/      # WorkingArtifactProvider: the working piece and its frameMs
@@ -93,7 +93,7 @@ src/
   components/
     piece/    # step names, step progress
     notes/    # PianoRollCanvas, rollPaint, RollTimeBar; the Notes Falling toolbox and removals bar
-    time/     # PeakPlot, TimeScoreView (the ONLY file that touches the renderer), FigureGlyph
+    time/     # TimeScoreView (the ONLY file that touches the renderer), ScorePlayer, FigureGlyph, PeakPlot (compose panels)
     audio/    # waveforms (CutWaveform for the Audio step), range selection, level bars
     editing/  # re-record a passage, add a passage
     video/    # the Lab views: player, calibration, detection, overlay

@@ -1,20 +1,21 @@
 /**
  * The Sheet step of a project: the piano sheet, its floating bar and its toolboxes.
  *
- * Everything the wall-clock model asks of a person happens on this one screen, in the order it
- * makes sense: look at where the notes keep landing, say what one of those piles is, and read the
- * result. Naming a different pile changes the names on the page and nothing else, so trying two is
- * cheap and nothing is lost by getting it wrong the first time.
+ * The page is the sheet (plan section 11.2): the title lines, a scrub bar, the music, and a
+ * floating bar with play, undo, redo, the sheet toolbox, Record, Print and Save. The figure ladder
+ * is chosen by the backend when nobody has named it (the highest pile of gaps is a negra, D-09 as
+ * changed by implementation 02), and the key signature with the fewest accidentals and the octave
+ * brackets of high passages are applied when the sheet is first written (plan section 11.3). Each
+ * default is an ordinary edit after that.
  *
- * It is step 5 (**Sheet**) of the flow page (implementation 08, Story 8.2). It is given its piece
- * and the state of its step, and when the notes or the hands changed after the reading was saved,
- * it opens with a banner and waits for **Write the sheet** instead of drawing the old reading by
- * itself.
+ * It is step 5 (**Sheet**) of the flow page (implementation 08, Story 8.2). When the notes or the
+ * hands changed after the reading was saved, it opens with a banner and waits for **Write the
+ * sheet** instead of drawing the old reading by itself.
  *
  * Implementation 02, Phase 2 split the old `RhythmPage.tsx` into this folder: the edits model
- * (`sheetEdits.ts`), the note toolbox, the range toolbox, the two keyboards, the floating bar and
- * the controls of the whole sheet each have their own module, and this page keeps the state they
- * share, the requests and the effects.
+ * (`sheetEdits.ts`), the note toolbox, the range toolbox, the sheet toolbox, the two keyboards and
+ * the floating bar each have their own module, and this page keeps the state they share, the
+ * requests and the effects.
  */
 
 import {
@@ -24,40 +25,26 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import ButtonGroup from "@mui/material/ButtonGroup";
-import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
-import RedoIcon from "@mui/icons-material/RedoOutlined";
-import UndoIcon from "@mui/icons-material/UndoOutlined";
-import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { Section } from "../../../ui";
+import { ConfirmDialog, EmptyState, IconAction, PillButton, Toolbox } from "../../../ui";
 import type { StepState } from "../../../api";
 import { noteName } from "../../../music/noteNames";
-import PeakPlot from "../../../components/time/PeakPlot";
 import ScorePlayer, {
   type ScorePlayerControls,
 } from "../../../components/time/ScorePlayer";
 import TimeScoreView, { MIN_ZOOM } from "../../../components/time/TimeScoreView";
 import ScorePdfDialog from "../../../components/time/ScorePdfDialog";
 import ComposePassagePanel from "../../../components/editing/ComposePassagePanel";
+import CheckIcon from "@mui/icons-material/Check";
 import {
-  FIGURE_LABELS,
   timeScoreApi,
-  type FigureName,
+  type DefaultReading,
   type HandChoice,
-  type LadderPreview,
-  type Peak,
-  type PeaksResponse,
-  KEY_LABELS,
   type KeySignatureName,
   type SavedRhythm,
   type TimeScorePayload,
@@ -86,11 +73,9 @@ import {
   HAND_COLOUR,
   HELD_COLOUR,
   MARKER_TABS,
-  NAMEABLE_FIGURES,
   NO_HANDS,
   notTranscribed,
   readable,
-  shifted,
   type FrameTab,
   type RangeHand,
   type SoundingNote,
@@ -117,26 +102,21 @@ import { NoteToolbox } from "./NoteToolbox";
 import { RangeToolbox } from "./RangeToolbox";
 import { DecorationToolbox, PianoToolbox } from "./PianoToolboxes";
 import { SheetFloatingBar } from "./SheetFloatingBar";
-import { SheetControls } from "./SheetControls";
+import { SheetToolbox, type SheetTab } from "./SheetToolbox";
 
+/**
+ * Everything read for one (piece, hand, resolution), kept together under the key it belongs to:
+ * the figure ladder the sheet is written from, the sheet itself, and why it could not be drawn.
+ */
 interface View {
   key: string;
-  peaks: PeaksResponse | null;
-  selected: Peak | null;
-  preview: LadderPreview | null;
+  reading: DefaultReading | null;
   score: TimeScorePayload | null;
   error: string | null;
 }
 
 function emptyView(key: string): View {
-  return {
-    key,
-    peaks: null,
-    selected: null,
-    preview: null,
-    score: null,
-    error: null,
-  };
+  return { key, reading: null, score: null, error: null };
 }
 
 /**
@@ -154,21 +134,6 @@ export interface SheetStep {
   onChanged: () => void;
 }
 
-/**
- * The page frame: a plain block under the step tabs of the project. The explanation it used to
- * print above the sheet went with the Playground (implementation 02, Phase 1); `subtitle` stays in
- * the call sites for Phase 2, which rewrites this page.
- */
-function Frame({
-  children,
-}: {
-  step: SheetStep | undefined;
-  subtitle: string;
-  children: ReactNode;
-}) {
-  return <Box>{children}</Box>;
-}
-
 export function SheetPage({ step }: { step?: SheetStep } = {}) {
   const { artifact } = useWorkingArtifact();
   const audioUuid = step ? step.audioUuid : artifact.audioUuid;
@@ -181,8 +146,11 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    */
   const stale = step?.state === "stale";
 
+  /**
+   * Which hand's gaps the figure ladder is measured from. Right until a saved reading says
+   * otherwise; the backend falls back to both hands when this one has no peak.
+   */
   const [hand, setHand] = useState<HandChoice>("right");
-  const [figure, setFigure] = useState<FigureName>("negra");
   const [busy, setBusy] = useState(false);
 
   /**
@@ -199,6 +167,10 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    */
   const edits = useEditHistory<SheetEdits>(NO_EDITS, EDIT_LABELS);
   const {
+    anchorFigure,
+    title,
+    subtitle,
+    artist,
     keySignature,
     keyChanges,
     clefChanges,
@@ -222,7 +194,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     stretches,
   } = edits.state;
   const {
-    keySignature: setKeySignature,
     ottavas: setOttavas,
     trills: setTrills,
     lyrics: setLyrics,
@@ -230,12 +201,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     overrides: setOverrides,
     beamBreaks: setBeamBreaks,
     hiddenNotes: setHiddenNotes,
-    dropDecorative: setDropDecorative,
-    annotationScale: setAnnotationScale,
-    lineSpacing: setLineSpacing,
-    noteSpacing: setNoteSpacing,
     staffGaps: setStaffGaps,
-    stretches: setStretches,
   } = edits.set;
   const resetEdits = edits.reset;
   const stageEdit = edits.stage;
@@ -261,6 +227,16 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    */
   const [ottavaHint, setOttavaHint] = useState<OttavaAnnotation[]>([]);
   const ottavasDecided = useRef(false);
+  /**
+   * Whether the key signature of this sheet has been decided: by a saved reading, by the reader,
+   * or by the default taken on the first write (plan section 11.3).
+   */
+  const keyDecided = useRef(false);
+  /**
+   * The first write has just replaced the key, so the octave brackets that same build proposed
+   * were measured in the old key. The next build proposes them again in the new one.
+   */
+  const keyMoving = useRef(false);
   /** The keyboard panel: what is sounding under the playhead, coloured on a piano. */
   const [pianoOpen, setPianoOpen] = useState(false);
   /**
@@ -375,15 +351,15 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   /** The transport, so dragging the cursor on the staves can move the recording. */
   const player = useRef<ScorePlayerControls | null>(null);
   const [scrollCursorAt, setScrollCursorAt] = useState(0);
-  const [newAnchorMs, setNewAnchorMs] = useState(320);
-  /**
-   * The reading saved with the piece, and whether this screen still matches it.
-   *
-   * `null` means nobody has read this piece yet, which is the blank state the plot is for.
-   */
-  const [saved, setSaved] = useState<SavedRhythm | null>(null);
   const [saving, setSaving] = useState(false);
-  const [savedNote, setSavedNote] = useState<string | null>(null);
+  /**
+   * The edits as they were last saved or loaded, by identity.
+   *
+   * Every edit makes a new value and undo puts the old one back, so comparing identities is
+   * exactly "is the page what was saved". `null` while nothing is saved: every sheet then has
+   * changes to keep, including the defaults of its first write.
+   */
+  const [cleanEdits, setCleanEdits] = useState<SheetEdits | null>(null);
   /**
    * Why the last save did not happen, in the backend's own words.
    *
@@ -396,17 +372,18 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   const [saveProblem, setSaveProblem] = useState<string | null>(null);
   /** Whether the recording is sounding, so the floating bar can draw the button it will act as. */
   const [playing, setPlaying] = useState(false);
-  /**
-   * Whether the wipe has been armed, and what the bar has just done.
-   *
-   * The wipe throws away everything anyone decided about the piece, which is far too much to lose
-   * to a misclick on a bar that follows the reader down the page — so it takes two presses, and it
-   * forgets the first if the second does not come. `flash` is the other half of the same problem:
-   * the bar is the only thing on screen at that moment, so it has to say what happened itself.
-   */
-  const [armed, setArmed] = useState(false);
+  /** **Remove all** asks first: it throws away every decision about the piece, on disk too. */
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [clearing, setClearing] = useState(false);
-  const [flash, setFlash] = useState<"saved" | "removed" | null>(null);
+  /** What the bar has just done, said on the button that did it, then gone. */
+  const [flash, setFlash] = useState<"saved" | null>(null);
+  /** The sheet toolbox, and which of its tabs is open. */
+  const [sheetToolbox, setSheetToolbox] = useState(false);
+  const [sheetTab, setSheetTab] = useState<SheetTab>("title");
+  /** The Record toolbox: play a passage and put it into the piece. */
+  const [recordOpen, setRecordOpen] = useState(false);
+  /** The Trills toolbox: what **Find trills** found, each one a press away from being written. */
+  const [trillsOpen, setTrillsOpen] = useState(false);
 
   /**
    * Everything read for one (piece, hand, resolution), kept together under the key it belongs to.
@@ -421,13 +398,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    * all about playing that has just changed, so all of them are read again rather than patched.
    */
   const [composed, setComposed] = useState(0);
-  /**
-   * Which piece the reader has unfolded the passage stage on, or `null` while nobody has said.
-   *
-   * Held as the key rather than as a boolean so that loading a different piece forgets the answer:
-   * unfolding it on one piece is not a statement about the next.
-   */
-  const [composeChoice, setComposeChoice] = useState<string | null>(null);
   const key = `${audioUuid ?? ""}|${hand}|${frameMs}|${composed}`;
   const [view, setView] = useState<View>(() => emptyView(key));
   const [untranscribed, setUntranscribed] = useState(false);
@@ -446,12 +416,21 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    */
   const editsKey = `${audioUuid ?? ""}|${composed}`;
   const [editsFor, setEditsFor] = useState(editsKey);
+  /**
+   * Whether the saved reading of this piece has been asked for and answered (found or not). The
+   * first sheet waits for it: drawing before it would write the defaults over the reader's own
+   * key and brackets.
+   */
+  const [rhythmCheckedFor, setRhythmCheckedFor] = useState<string | null>(null);
+  const rhythmChecked = rhythmCheckedFor === editsKey;
   if (editsFor !== editsKey) {
     setEditsFor(editsKey);
     resetEdits(NO_EDITS);
   }
 
-  const { peaks, selected, preview, score, error } = view;
+  const { reading, score, error } = view;
+  /** The length of the highest pile of gaps, which every figure is named from. */
+  const anchorMs = reading?.anchorMs ?? null;
 
   /**
    * How long the piece is, and whether there is anything in it.
@@ -462,15 +441,10 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    */
   const pieceSeconds = score
     ? (score.envelope.frameCount * score.envelope.frameMs) / 1000
-    : (peaks?.endSeconds ?? 0);
-  const pieceIsEmpty = (peaks?.attackCount ?? 0) === 0;
-  /**
-   * A piece with nothing in it has nothing else to offer, so the passage stage is open on arrival.
-   * On a piece that already has music the plot is what the reader came for, so it is folded away
-   * until they ask. Derived rather than stored, so there is no state to keep in step.
-   */
-  const composeOpen =
-    composeChoice === key || (composeChoice === null && Boolean(peaks) && pieceIsEmpty);
+    : (reading?.endSeconds ?? 0);
+  const pieceIsEmpty = reading !== null && reading.attackCount === 0;
+  /** Unsaved: nothing saved yet, or the page is not what was saved, or the saved one is stale. */
+  const unsaved = cleanEdits === null || edits.state !== cleanEdits || stale;
 
   const renderOverrides = useMemo(
     () => ({ hidden: hiddenNotes, hands: NO_HANDS }),
@@ -498,23 +472,35 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   }, [score, hiddenNotes]);
 
   /**
-   * Which settings this stretch already carries, so its pill can say so before it is opened.
+   * The defaults of the first write (plan section 11.3): the key signature with the fewest
+   * accidentals, then the octave brackets of the high passages, measured in that key.
    *
-   * Read from the stored edits rather than kept in state: a marker that could disagree with the
-   * thing it marks is worse than no marker.
+   * The sheet reports both on every build. The first report of a sheet nobody has decided about is
+   * taken whole, as the baseline rather than as a step: the reader did not do it, and a Command-Z
+   * on a page nobody has touched must do nothing. After that each is an ordinary edit, and the
+   * same answers stay one press away in the sheet toolbox.
    */
-  /**
-   * The first sheet of a piece nobody has decided about brackets on takes the proposal whole.
-   *
-   * It replaces the baseline rather than becoming a step, because the reader did not do it. A
-   * Command-Z on a page nobody has touched yet must do nothing, not take back something the page
-   * did to itself before anyone arrived.
-   */
-  useEffect(() => {
-    if (ottavasDecided.current || ottavaHint.length === 0) return;
-    ottavasDecided.current = true;
-    resetEdits((current) => ({ ...current, ottavas: ottavaHint }));
-  }, [ottavaHint, resetEdits]);
+  const takeKeyHint = useCallback(
+    (hint: { best: KeySignatureName; saved: number } | null) => {
+      setKeyHint(hint);
+      keyMoving.current = false;
+      if (keyDecided.current) return;
+      keyDecided.current = true;
+      if (!hint) return;
+      keyMoving.current = true;
+      resetEdits((current) => ({ ...current, keySignature: hint.best }));
+    },
+    [resetEdits],
+  );
+  const takeOttavaHint = useCallback(
+    (spans: OttavaAnnotation[]) => {
+      setOttavaHint(spans);
+      if (keyMoving.current || ottavasDecided.current || spans.length === 0) return;
+      ottavasDecided.current = true;
+      resetEdits((current) => ({ ...current, ottavas: spans }));
+    },
+    [resetEdits],
+  );
 
   /** Row 0 is MIDI 21, the bottom A of an 88-key piano. */
   const noteNameAt = useCallback((row: number) => noteName(row + 21), []);
@@ -549,21 +535,20 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     }
   }, [audioUuid, frameMs]);
 
+  /**
+   * The figure ladder the sheet is written from: the highest pile of gaps of `hand`, which the
+   * backend calls a negra (D-09 as changed by implementation 02). The reader's own name for it,
+   * when there is one, is `anchorFigure` of the edits; only the pile comes from here.
+   */
   useEffect(() => {
     if (!audioUuid) return;
     const controller = new AbortController();
     timeScoreApi
-      .peaks(audioUuid, { hand, frameMs }, controller.signal)
+      .defaultReading(audioUuid, { hand, frameMs }, controller.signal)
       .then((found) => {
         setUntranscribed(false);
-        // The pile holding most of the playing is the one a reader looks at first, so it starts
-        // chosen. Nothing is committed by that: the sheet only appears once a name is given.
-        const biggest =
-          [...found.peaks].sort((a, b) => b.share - a.share)[0] ?? null;
         setView((current) =>
-          current.key === key
-            ? { ...current, peaks: found, selected: biggest }
-            : current,
+          current.key === key ? { ...current, reading: found } : current,
         );
       })
       .catch((caught: unknown) => {
@@ -586,38 +571,39 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   // Read back what this piece was last read as, once per piece — and again after a passage is
   // placed, because an insertion moves every mark after it and the columns held here are stale.
   //
-  // Restoring the anchor is not enough on its own: the pile it names has to be the one the plot
-  // shows, or the number under the name would say one thing and the highlighted bar another. So the
-  // nearest pile is selected too, and if none is near, the saved reading is kept and the plot simply
-  // has nothing highlighted, which is honest about the two disagreeing.
-  //
   // The reading arrives as the baseline and not as a step. It is where the reader left off rather
   // than something they have just done, and a Command-Z that emptied the page on arrival would be
   // the worst possible first impression of an undo.
   useEffect(() => {
     if (!audioUuid) return;
-    // Whether anybody has decided about brackets is a fact about this piece, so a different piece
-    // has not been asked yet and may take the page's own proposal.
+    // Whether anybody has decided about the key and the brackets is a fact about this piece, so a
+    // different piece has not been asked yet and may take the page's own defaults.
     ottavasDecided.current = false;
+    keyDecided.current = false;
     const controller = new AbortController();
     timeScoreApi
       .rhythm(audioUuid, controller.signal)
       .then((found) => {
-        if (!found) return;
-        setSaved(found);
-        setHand(found.hand);
-        setFigure(found.anchorFigure);
-        // A reading that carries a list of brackets — even an empty one — was decided; one saved
-        // before brackets existed was not, and the page may take its own proposal.
-        ottavasDecided.current = Array.isArray(found.ottavas);
-        resetEdits(editsFromSaved(found));
+        if (found) {
+          setHand(found.hand);
+          // A saved reading decided its key. A reading that carries a list of brackets — even an
+          // empty one — decided those too; one saved before brackets existed did not.
+          keyDecided.current = true;
+          ottavasDecided.current = Array.isArray(found.ottavas);
+          const next = editsFromSaved(found);
+          resetEdits(next);
+          setCleanEdits(next);
+        }
+        setRhythmCheckedFor(editsKey);
       })
       .catch(() => {
-        // A reading that cannot be read is not worth stopping the screen for: the plot still works
-        // and the reader can name the gap again.
+        if (controller.signal.aborted) return;
+        // A reading that cannot be read is not worth stopping the screen for: the sheet is written
+        // from the defaults instead.
+        setRhythmCheckedFor(editsKey);
       });
     return () => controller.abort();
-  }, [audioUuid, composed, resetEdits]);
+  }, [audioUuid, editsKey, resetEdits]);
 
   /**
    * Both of these have to keep the same identity between renders.
@@ -1239,21 +1225,21 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   }, [undo, redo]);
 
   const save = useCallback(async () => {
-    if (!audioUuid || !selected) return;
+    if (!audioUuid || anchorMs === null) return;
     setSaving(true);
-    setSavedNote(null);
     setSaveProblem(null);
+    const keptEdits = edits.state;
     const body: SavedRhythm = savedRhythmOf({
-      hand,
+      // The hand the ladder was measured from, which may be both when the asked hand had no peak.
+      hand: reading?.hand ?? hand,
       frameMs,
-      figure,
-      anchorMs: selected.medianMs,
-      edits: edits.state,
+      anchorMs,
+      edits: keptEdits,
       live,
     });
     let kept = false;
     try {
-      const stored = await timeScoreApi.saveRhythm(audioUuid, body);
+      await timeScoreApi.saveRhythm(audioUuid, body);
       // From here on the reading is on disk. What follows writes to the recording, and a failure
       // there must not be reported as "your reading was lost", because it was not.
       kept = true;
@@ -1270,17 +1256,12 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       if (body.hiddenNotes && body.hiddenNotes.length > 0) {
         await timeScoreApi.setRemoved(audioUuid, frameMs, body.hiddenNotes, true);
       }
-      setSaved(stored);
-      setSavedNote("Saved with the piece. It will be here next time.");
+      setCleanEdits(keptEdits);
       setFlash("saved");
       step?.onChanged();
     } catch (caught) {
-      const why = readable(caught, "Could not save this rhythm.");
-      setSavedNote(
-        kept
-          ? `The reading was saved. Taking the hidden notes off the recording failed: ${why}`
-          : why,
-      );
+      const why = readable(caught, "Could not save this sheet.");
+      if (kept) setCleanEdits(keptEdits);
       setSaveProblem(
         kept
           ? `Saved, but the notes you took off the page are still in the recording. ${why}`
@@ -1290,7 +1271,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     } finally {
       setSaving(false);
     }
-  }, [audioUuid, selected, hand, frameMs, figure, edits.state, live, step]);
+  }, [audioUuid, anchorMs, reading, hand, frameMs, edits.state, live, step]);
 
   /**
    * The page edits, in the shape the sheet request takes, and a signature for them.
@@ -1314,7 +1295,15 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     }),
     [hiddenNotes, trills, dropDecorative],
   );
-  const editSignature = useMemo(() => JSON.stringify(pageEdits), [pageEdits]);
+  /**
+   * Everything the sheet request is built from, as one string: the page edits above, the figure
+   * ladder and the speed changes. When it moves the sheet is asked for again by itself; there is
+   * no **Write the sheet** to press, except on a stale sheet.
+   */
+  const editSignature = useMemo(
+    () => JSON.stringify({ pageEdits, anchorFigure, anchorMs, stretches }),
+    [pageEdits, anchorFigure, anchorMs, stretches],
+  );
   /** The edits the sheet on screen was built from, so it is only asked for again when they move. */
   const sheetBuiltFor = useRef<string | null>(null);
 
@@ -1326,56 +1315,39 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     return () => window.clearTimeout(timer);
   }, [flash]);
 
-  // An armed wipe that nobody confirms disarms itself, so a bar left alone is never one press away
-  // from throwing the reading out.
-  useEffect(() => {
-    if (!armed) return;
-    const timer = window.setTimeout(() => setArmed(false), 5000);
-    return () => window.clearTimeout(timer);
-  }, [armed]);
-
   /**
    * Ask for the sheet again.
    *
-   * The speed changes can be passed in rather than read off the state, for the one caller that has
-   * just replaced them: React has not re-rendered yet when it calls, so the closure here still
-   * holds the changes it threw away and would draw the sheet it was asked to undo.
+   * What it is drawn from can be passed in rather than read off the state, for the one caller that
+   * has just replaced it (**Remove all**): React has not re-rendered yet when it calls, so the
+   * closure here still holds the edits it threw away and would draw the sheet it was asked to
+   * forget.
    */
   const apply = useCallback(
-    async (withStretches?: Stretch[]) => {
-      const drawn = withStretches ?? stretches;
-      if (!audioUuid || !selected) return;
+    async (fresh?: {
+      stretches: Stretch[];
+      anchorFigure: SheetEdits["anchorFigure"];
+      pageEdits: typeof pageEdits;
+    }) => {
+      const drawn = fresh?.stretches ?? stretches;
+      const figure = fresh?.anchorFigure ?? anchorFigure;
+      const marks = fresh?.pageEdits ?? pageEdits;
+      if (!audioUuid || anchorMs === null) return;
       setBusy(true);
       try {
-        const [nextPreview, nextScore] = await Promise.all([
-          timeScoreApi.ladderPreview(audioUuid, {
-            anchorFigure: figure,
-            anchorMs: selected.medianMs,
-            hand,
-            frameMs,
-          }),
-          timeScoreApi.score(audioUuid, {
-            anchorFigure: figure,
-            anchorMs: selected.medianMs,
-            frameMs,
-            boundaries: drawn.map((stretch) => stretch.startFrame),
-            boundaryMs: [
-              selected.medianMs,
-              ...drawn.map((stretch) => stretch.anchorMs),
-            ],
-            ...pageEdits,
-          }),
-        ]);
-        sheetBuiltFor.current = editSignature;
+        const nextScore = await timeScoreApi.score(audioUuid, {
+          anchorFigure: figure,
+          anchorMs,
+          frameMs,
+          boundaries: drawn.map((stretch) => stretch.startFrame),
+          boundaryMs: [anchorMs, ...drawn.map((stretch) => stretch.anchorMs)],
+          ...marks,
+        });
+        sheetBuiltFor.current = fresh
+          ? JSON.stringify({ pageEdits: marks, anchorFigure: figure, anchorMs, stretches: drawn })
+          : editSignature;
         setView((current) =>
-          current.key === key
-            ? {
-                ...current,
-                preview: nextPreview,
-                score: nextScore,
-                error: null,
-              }
-            : current,
+          current.key === key ? { ...current, score: nextScore, error: null } : current,
         );
       } catch (caught) {
         const message = readable(caught, "Could not build the sheet.");
@@ -1386,17 +1358,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         setBusy(false);
       }
     },
-    [
-      audioUuid,
-      selected,
-      figure,
-      hand,
-      frameMs,
-      key,
-      stretches,
-      pageEdits,
-      editSignature,
-    ],
+    [audioUuid, anchorMs, anchorFigure, frameMs, key, stretches, pageEdits, editSignature],
   );
 
   /**
@@ -1443,12 +1405,14 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     // put back, and the state below is about to drop it.
     const takenOff = hiddenNotesOut(hiddenNotes);
     setClearing(true);
-    setArmed(false);
-    setSavedNote(null);
-    // Every decision at once, back to the piece as the recording alone describes it. Somebody has
-    // now decided about brackets, so the proposal does not come straight back on the next redraw.
-    ottavasDecided.current = true;
+    setConfirmRemove(false);
+    // Every decision at once, back to the piece as the recording alone describes it. The sheet is
+    // then written for the first time again, so it takes the defaults of a first write: the key
+    // with the fewest accidentals and the brackets of the high passages (plan section 11.3).
+    keyDecided.current = false;
+    ottavasDecided.current = false;
     resetEdits(NO_EDITS);
+    setCleanEdits(null);
     setTrillSuggestions(null);
     setLyricDraft(null);
     setSelectedNotes([]);
@@ -1462,18 +1426,18 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         await timeScoreApi.setRemoved(audioUuid, frameMs, takenOff, false);
       }
       await timeScoreApi.forgetRhythm(audioUuid);
-      setSaved(null);
-      setFlash("removed");
       step?.onChanged();
     } catch (caught) {
       // The screen is already clear, so this is only about what a reload would bring back.
-      setSavedNote(readable(caught, "Could not forget the saved reading."));
+      setSaveProblem(readable(caught, "Could not forget the saved sheet."));
     } finally {
       setClearing(false);
     }
-    // Drawn again with no speed changes, and passed them explicitly: the state above has not
-    // reached this closure yet.
-    await apply([]);
+    await apply({
+      stretches: NO_EDITS.stretches,
+      anchorFigure: NO_EDITS.anchorFigure,
+      pageEdits: { hiddenNotes: [], trills: [], dropDecorative: NO_EDITS.dropDecorative },
+    });
   }, [audioUuid, apply, frameMs, hiddenNotes, resetEdits, step]);
 
   /**
@@ -1626,9 +1590,9 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       if (held.length > 0) {
         return Math.max(1, Math.max(...held.map((note) => note.printedFrames)));
       }
-      return Math.max(1, Math.round((selected?.medianMs ?? frameMs) / frameMs));
+      return Math.max(1, Math.round((anchorMs ?? frameMs) / frameMs));
     },
-    [score, selected, frameMs],
+    [score, anchorMs, frameMs],
   );
 
   /**
@@ -1724,21 +1688,22 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   );
 
   /**
-   * Draw the sheet the piece was last saved as, without asking for it again.
+   * Draw the sheet on arrival, from the saved reading or from the defaults.
    *
-   * Everything on this page except the reading is worked out from the recording on every visit, so
-   * coming back used to mean pressing **Write the sheet** to see what you already decided. The
-   * reading is on disk; the page can act on it. Once per piece, and only while nothing has been
-   * drawn yet, so it never fights a reader who has already pressed the button.
+   * Coming back used to mean pressing **Write the sheet** to see what you already decided, and a
+   * new piece waited for a peak to be named on a plot. Neither waits now (plan section 11.1). Once
+   * per piece, and only while nothing has been drawn yet.
    */
   const restored = useRef<string | null>(null);
   useEffect(() => {
-    // A stale reading waits for the reader: the banner asks for **Write the sheet** first.
-    if (!audioUuid || !saved || !selected || score || busy || stale) return;
+    // A stale reading waits for the reader: the banner asks for **Write the sheet** first. Every
+    // other sheet is drawn as soon as the saved reading has been asked for (so the defaults of a
+    // first write never land on a reader's own key) and the figure ladder is known.
+    if (!audioUuid || !rhythmChecked || anchorMs === null || score || busy || stale) return;
     if (restored.current === key) return;
     restored.current = key;
     void apply();
-  }, [audioUuid, saved, selected, score, busy, stale, key, apply]);
+  }, [audioUuid, rhythmChecked, anchorMs, score, busy, stale, key, apply]);
 
   /**
    * Ask for the sheet again when a note has changed hands or left the page.
@@ -1750,54 +1715,43 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    * waiting on it.
    */
   useEffect(() => {
-    if (!audioUuid || !selected || !score) return;
+    if (!audioUuid || anchorMs === null || !score) return;
     if (sheetBuiltFor.current === editSignature) return;
     const waiting = window.setTimeout(() => void apply(), 400);
     return () => window.clearTimeout(waiting);
-  }, [editSignature, audioUuid, selected, score, apply]);
+  }, [editSignature, audioUuid, anchorMs, score, apply]);
 
   if (!audioUuid) {
-    return (
-      <Frame
-        step={step}
-        subtitle="Read how the piece was played, name one gap, and the sheet follows."
-      >
-        <Alert severity="info">
-          Load and transcribe an audio on the <strong>Upload / Input</strong>{" "}
-          tab first. The rhythm is read from the notes that transcription
-          records.
-        </Alert>
-      </Frame>
-    );
+    return <EmptyState message="Open a project to see its sheet." />;
   }
 
+  const sheetTitle = title ?? pieceLabel ?? "Untitled";
+  const underTitle = [subtitle, artist].filter(Boolean).join(" · ");
+  const recordAt = range?.fromColumn;
+
   return (
-    <Frame
-      step={step}
-      subtitle="Every bar below is a gap that keeps repeating between one note and the next. Click the one you recognise, say what it is, and the sheet is written from it. Choosing a different one renames the notes and moves nothing."
-    >
+    <Box data-sheet-page>
       {/*
-        The Sheet tab of the flow page only. A stale reading is loaded but not drawn until the reader
-        presses Write the sheet; once drawn, Save makes it the sheet of the piece again.
+        A stale reading is loaded but not drawn until the reader presses Write the sheet; once
+        drawn, Save makes it the sheet of the piece again. The one warning of this page, because it
+        changes what the reader should do next.
       */}
       {stale ? (
-        <Alert severity="warning" sx={{ mb: 2 }} data-sheet-banner="stale">
-          {score ? (
-            <>
-              The sheet below is drawn from the current notes and hands. Press{" "}
-              <strong>Save</strong> to make it the sheet of this piece.
-            </>
-          ) : (
-            <>
-              The notes or the hands changed since this sheet was saved. Your reading is kept:
-              press <strong>Write the sheet</strong> to draw it from the current notes and hands,
-              check it, then press <strong>Save</strong>.
-            </>
-          )}
-        </Alert>
-      ) : step?.state === "missing" && !saved && step.reason ? (
-        <Alert severity="info" sx={{ mb: 2 }} data-sheet-banner="missing">
-          {step.reason}
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          data-sheet-banner="stale"
+          action={
+            score ? undefined : (
+              <PillButton kind="primary" size="small" busy={busy} disabled={anchorMs === null} onClick={() => void apply()}>
+                Write the sheet
+              </PillButton>
+            )
+          }
+        >
+          {score
+            ? "Drawn from the current notes and hands. Save to keep it."
+            : "The notes or the hands changed since this sheet was saved."}
         </Alert>
       ) : null}
 
@@ -1807,664 +1761,272 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         </Alert>
       ) : null}
 
-      {/*
-        Composing (Epic 13). Open by itself on a piece that has nothing in it yet, because on such a
-        piece it is the only thing there is to do; folded away on a piece that already has music,
-        because adding to one is the rarer intent and the plot below is what a reader came for.
-      */}
-      <Section
-        title="Add a passage"
-      >
-        {composeOpen ? (
-          <Stack spacing={1.5}>
-            <Alert severity="warning" variant="outlined">
-              A passage put into the piece is written onto the recording, and
-              every mark after it moves along with the notes.{" "}
-              <strong>Command-Z cannot take it back</strong>, and placing one
-              forgets every edit you could have taken back until now.
-            </Alert>
-            <ComposePassagePanel
-              audioUuid={audioUuid}
-              frameMs={frameMs}
-              durationSeconds={pieceSeconds}
-              atColumn={range?.fromColumn}
-              anchorFigure={figure}
-              anchorMs={selected?.medianMs}
-              speedChanges={stretches.map((stretch) => ({
-                startFrame: stretch.startFrame,
-                anchorMs: stretch.anchorMs,
-              }))}
-              clickIntervalMs={selected?.medianMs}
-                onPlaced={() => setComposed((token) => token + 1)}
-            />
-          </Stack>
-        ) : (
-          <Button variant="outlined" size="small" onClick={() => setComposeChoice(key)}>
-            Play a passage
-          </Button>
-        )}
-      </Section>
-
-      <Section
-        title="How this piece was played"
-      >
-        <Stack spacing={2}>
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{ alignItems: "center", flexWrap: "wrap" }}
-          >
-            <TextField
-              label="Hand"
-              select
-              size="small"
-              value={hand}
-              onChange={(event) => setHand(event.target.value as HandChoice)}
-              sx={{ minWidth: 160 }}
-            >
-              <MenuItem value="right">Right hand</MenuItem>
-              <MenuItem value="left">Left hand</MenuItem>
-              <MenuItem value="both">Both hands</MenuItem>
-            </TextField>
-            {peaks ? (
-              <Typography variant="body2" color="text.secondary">
-                {peaks.gapCount} gaps between {peaks.attackCount} notes, over{" "}
-                {peaks.endSeconds.toFixed(1)} seconds.
-              </Typography>
-            ) : error ? null : (
-              <CircularProgress size={18} />
-            )}
-          </Stack>
-
-          {peaks?.warning ? (
-            <Alert severity="info" sx={{ mb: 1 }}>
-              {peaks.warning}
-            </Alert>
-          ) : null}
-
-          {peaks ? (
-            <PeakPlot
-              peaks={peaks.peaks}
-              labelled={preview?.labelled}
-              selectedMs={selected?.centreMs ?? null}
-              onSelect={(peak) =>
-                setView((current) => ({ ...current, selected: peak }))
-              }
-            />
-          ) : null}
-        </Stack>
-      </Section>
-
-      <Section
-        title="Name it"
-      >
-        <Stack
-          direction="row"
-          spacing={2}
-          sx={{ alignItems: "center", flexWrap: "wrap" }}
-        >
-          <Typography variant="body1">
-            The{" "}
-            <strong>{selected ? Math.round(selected.centreMs) : "—"} ms</strong>{" "}
-            gap is one
-          </Typography>
-          <TextField
-            select
-            size="small"
-            value={figure}
-            onChange={(event) => setFigure(event.target.value as FigureName)}
-            sx={{ minWidth: 240 }}
-            disabled={!selected}
-          >
-            {NAMEABLE_FIGURES.map((name) => (
-              <MenuItem key={name} value={name}>
-                {FIGURE_LABELS[name]}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Button
-            variant="contained"
-            onClick={() => void apply()}
-            disabled={!selected || busy}
-            startIcon={busy ? <CircularProgress size={16} /> : undefined}
-          >
-            Write the sheet
-          </Button>
-          {/*
-            The way back, beside the way forward.
-
-            Every edit on this sheet is one press of Command-Z away, and these two are the same
-            thing for a reader who does not know that. Each says what it is about — *Undo: Octave
-            bracket* — because a button that only says "Undo" asks a reader to remember what they
-            last did, and on a page with sixteen kinds of edit they often do not.
-          */}
-          <ButtonGroup size="small" variant="outlined">
-            <Tooltip
-              title={
-                edits.canUndo
-                  ? `Undo: ${edits.undoLabel} (⌘Z)`
-                  : "Nothing to take back yet"
-              }
-            >
-              <span>
-                <Button
-                  onClick={() => void edits.undo()}
-                  disabled={!edits.canUndo || edits.busy}
-                  startIcon={
-                    edits.busy ? <CircularProgress size={14} /> : <UndoIcon />
-                  }
-                  aria-label="Undo the last edit"
-                >
-                  Undo
-                </Button>
-              </span>
-            </Tooltip>
-            <Tooltip
-              title={
-                edits.canRedo
-                  ? `Redo: ${edits.redoLabel} (⇧⌘Z)`
-                  : "Nothing to put back"
-              }
-            >
-              <span>
-                <Button
-                  onClick={() => void edits.redo()}
-                  disabled={!edits.canRedo || edits.busy}
-                  startIcon={<RedoIcon />}
-                  aria-label="Redo the last edit taken back"
-                >
-                  Redo
-                </Button>
-              </span>
-            </Tooltip>
-          </ButtonGroup>
-          {preview ? (
-            <Typography variant="body1" sx={{ fontWeight: 600 }}>
-              {preview.headerLabel}
-            </Typography>
-          ) : null}
-        </Stack>
-
-        {edits.failure ? (
-          <Alert severity="warning" sx={{ mt: 2 }} onClose={edits.clearFailure}>
-            {readable(
-              edits.failure,
-              "That edit could not be taken back. Nothing on the page has changed.",
-            )}
-          </Alert>
-        ) : null}
-
-        {/*
-          A figure shift. The same playing, written in longer or shorter figures: `negra = 337`
-          becomes `blanca = 337`, and every note is renamed with it. Nothing moves, because a column
-          is wall clock and the name of a note has no say in where it sits (D-18).
-
-          It is the answer to a page of semicorcheas that should read as corcheas. The names were
-          never wrong in any measurable way, they are just harder to read than they need to be, and
-          this is one button rather than a re-transcription.
-        */}
-        {score ? (
-          <Stack
-            direction="row"
-            spacing={1.5}
-            sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1, mt: 2 }}
-          >
-            <Typography variant="body2">
-              Too many short notes, or too few?
-            </Typography>
-            <Button
-              size="small"
-              variant="outlined"
-              disabled={busy || shifted(figure, 1) === null}
-              onClick={() => {
-                const next = shifted(figure, 1);
-                if (next) setFigure(next);
-              }}
-            >
-              Write it one step longer
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              disabled={busy || shifted(figure, -1) === null}
-              onClick={() => {
-                const next = shifted(figure, -1);
-                if (next) setFigure(next);
-              }}
-            >
-              Write it one step shorter
-            </Button>
-            <Typography variant="caption" color="text.secondary">
-              Renames every note. Nothing moves, and the recording is untouched.
-              Press <strong>Write the sheet</strong> to see it.
-            </Typography>
-          </Stack>
-        ) : null}
-      </Section>
-
-      {score ? (
-        <Section
-          title="Does the piece change speed?"
-        >
-          <Stack spacing={1.5}>
-            <Stack
-              direction="row"
-              spacing={2}
-              sx={{ alignItems: "center", flexWrap: "wrap" }}
-            >
-              {range ? (
-                <>
-                  <Typography variant="body2">
-                    From column <strong>{range.fromColumn}</strong>, a gap is
-                  </Typography>
-                  <TextField
-                    size="small"
-                    type="number"
-                    value={newAnchorMs}
-                    onChange={(event) =>
-                      setNewAnchorMs(Number(event.target.value))
-                    }
-                    sx={{ width: 120 }}
-                    slotProps={{ htmlInput: { min: 20, step: 5 } }}
-                  />
-                  <Typography variant="body2">ms</Typography>
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      setStretches((current) =>
-                        [
-                          ...current.filter(
-                            (one) => one.startFrame !== range.fromColumn,
-                          ),
-                          {
-                            startFrame: range.fromColumn,
-                            anchorMs: newAnchorMs,
-                          },
-                        ].sort((a, b) => a.startFrame - b.startFrame),
-                      );
-                      setRange(null);
-                    }}
-                  >
-                    Add the change
-                  </Button>
-                </>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Nothing selected. Drag over the column numbers above the
-                  staves to choose where a change starts.
-                </Typography>
-              )}
-            </Stack>
-
-            {stretches.length ? (
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{ flexWrap: "wrap", rowGap: 1 }}
-              >
-                {score.passages.map((passage, index) => (
-                  <Typography
-                    key={passage.id}
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    <strong>
-                      {index === 0
-                        ? "From the start"
-                        : `From column ${passage.startFrame}`}
-                    </strong>
-                    : {passage.headerLabel}
-                  </Typography>
-                ))}
-                <Button size="small" onClick={() => setStretches([])}>
-                  Remove all changes
-                </Button>
-              </Stack>
-            ) : null}
-
-            <Typography variant="caption" color="text.secondary">
-              After adding or removing a change, press{" "}
-              <strong>Write the sheet</strong> again.
-            </Typography>
-          </Stack>
-        </Section>
+      {pieceIsEmpty ? (
+        <EmptyState
+          message="Nothing to write yet."
+          action={
+            <PillButton kind="primary" onClick={() => setRecordOpen(true)}>
+              Record a passage
+            </PillButton>
+          }
+        />
       ) : null}
 
-      <Section
-        title="The sheet"
-      >
-        {score ? (
-          <Stack spacing={1.5}>
-            <ScorePlayer
-              audioUuid={audioUuid}
-              scoreSeconds={
-                (score.envelope.frameCount * score.envelope.frameMs) / 1000
-              }
-              onTime={setPlayheadSeconds}
-              controlsRef={player}
-              onScrollToCursor={scrollToCursor}
-              onPlaying={setPlaying}
-            />
-            {/*
-              The two decisions that are made here and paid for pages further down.
-
-              Everything below this point is one long sheet, and both of these buttons used to sit
-              at the end of it: keeping what you just did meant scrolling past every stave to find
-              **Save**, and then scrolling back to where you were reading. The bar follows instead.
-              It is draggable because it necessarily sits over the notes, and it can be put away
-              because sometimes the notes underneath are the ones being read.
-            */}
-            <SheetFloatingBar
-              playing={playing}
-              onTogglePlay={() => {
-                setArmed(false);
-                player.current?.toggle();
-              }}
-              canSave={Boolean(selected)}
-              saving={saving}
-              clearing={clearing}
-              saveProblem={saveProblem}
-              onCloseProblem={() => setSaveProblem(null)}
-              flash={flash}
-              armed={armed}
-              // Pressing anything else on the bar is an answer to "sure?", and the answer is no.
-              onSave={() => {
-                setArmed(false);
-                void save();
-              }}
-              onRemoveAll={() => {
-                if (armed) void wipe();
-                else setArmed(true);
-              }}
-              canPrint={Boolean(sheetRenderer)}
-              onPrint={() => {
-                setArmed(false);
-                setPdfOpen(true);
-              }}
-            />
-            <SheetControls
-              score={score}
-              keySignature={keySignature}
-              setKeySignature={setKeySignature}
-              lineSpacing={lineSpacing}
-              setLineSpacing={setLineSpacing}
-              noteSpacing={noteSpacing}
-              setNoteSpacing={setNoteSpacing}
-              keyHint={keyHint}
-              ottavaHint={ottavaHint}
-              onTakeOttavaHint={() => {
-                ottavasDecided.current = true;
-                setOttavas(ottavaHint);
-              }}
-              frameLabelsOn={frameLabelsOn}
-              setFrameLabelsOn={setFrameLabelsOn}
-              sheetZoom={sheetZoom}
-              setSheetZoom={setSheetZoom}
-              dropDecorative={dropDecorative}
-              setDropDecorative={setDropDecorative}
-              pianoOpen={pianoOpen}
-              setPianoOpen={setPianoOpen}
-            />
-            {/*
-              Capture, so the press is recorded before the sheet's own handlers run and open a
-              toolbox from it.
-            */}
-            <Box
-              onPointerDownCapture={(event) => {
-                pressedAt.current = pressedBox(event);
-              }}
+      {score ? (
+        <Stack spacing={1.5}>
+          {/* The title lines of the sheet, as they print. Changed in the Title tab. */}
+          <Box sx={{ px: 1 }}>
+            <Typography
+              component="h2"
+              sx={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3 }}
+              noWrap
+              title={sheetTitle}
+              data-sheet-title
             >
-              <TimeScoreView
-                score={score}
-                overrides={drawnMarks.overrides}
-                beamBreaks={drawnMarks.beamBreaks}
-                beamJoins={drawnMarks.beamJoins}
-                keySignature={keySignature}
-                keyChanges={keyChanges}
-                clefChanges={clefChanges}
-                ottavas={drawnMarks.ottavas}
-                onKeySuggestion={setKeyHint}
-                onOttavaSuggestion={setOttavaHint}
-                showFrameLabels={frameLabelsOn}
-                spacings={spacings}
-                evenSpacings={drawnMarks.evenSpacings}
-                lineSpacing={lineSpacing}
-                noteSpacing={noteSpacing}
-                staffGaps={staffGaps}
-                onStaffGapsChange={setStaffGaps}
-                onSelectNotes={pickNotes}
-                onSelectRange={pickRange}
-                onSelectMarkedRange={pickMarkedRange}
-                onOttavaResize={stretchOttava}
-                renderOverrides={renderOverrides}
-                fingers={drawnMarks.fingers}
-                trills={trills}
-                lyrics={lyrics}
-                onLyricLayoutChange={placeLyric}
-                zoom={sheetZoom}
-                onZoomChange={setSheetZoom}
-                cueRanges={cueRanges}
-                graceNotes={graceNotes}
-                annotationScale={annotationScale}
-                onMovesRefused={sayRefused}
-                onRendererChange={setSheetRenderer}
-                // The hand travels with the stretch so the highlight covers the staff the pills
-                // are about, and only that one.
-                selectedRange={
-                  range && rangeHand !== "both" ? { ...range, hand: rangeHand } : range
-                }
-                clearSelectionsAt={clearedAt}
-                playheadSeconds={playheadSeconds}
-                followPlayhead={playing}
-                onScrub={scrub}
-                scrollCursorAt={scrollCursorAt}
-              />
-            </Box>
-            {moveRefused ? (
-              <Alert severity="warning" onClose={() => setMoveRefused(null)}>
-                {moveRefused}
-              </Alert>
+              {sheetTitle}
+            </Typography>
+            {underTitle ? (
+              <Typography variant="body2" color="text.secondary" noWrap title={underTitle}>
+                {underTitle}
+              </Typography>
             ) : null}
-            {/*
-              Everything above is a decision, and until now every one of them went when the tab did.
-              The columns, the figures and the beams are all worked out again from the recording on
-              each visit, so they cost nothing to lose; which pile is the beat, where the piece
-              changes speed, which note you renamed and where you broke a beam are not in the
-              recording at all, and re-deciding them is the actual work.
-            */}
-            <Stack
-              direction="row"
-              spacing={2}
-              sx={{ alignItems: "center", flexWrap: "wrap" }}
-            >
-              <Button
-                variant="outlined"
-                onClick={() => void save()}
-                disabled={!selected || saving}
-                startIcon={saving ? <CircularProgress size={16} /> : undefined}
-              >
-                Save this rhythm with the piece
-              </Button>
-              {savedNote ? (
-                <Typography variant="body2" color="text.secondary">
-                  {savedNote}
-                </Typography>
-              ) : saved ? (
-                <Typography variant="body2" color="text.secondary">
-                  Last saved as {FIGURE_LABELS[saved.anchorFigure]} ={" "}
-                  {saved.anchorMs.toFixed(0)} ms
-                  {saved.keySignature
-                    ? `, in ${KEY_LABELS[saved.keySignature]}`
-                    : ""}
-                  .
-                </Typography>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Nothing saved yet, so this reading goes when you leave the
-                  tab.
-                </Typography>
-              )}
-            </Stack>
+          </Box>
+          <ScorePlayer
+            compact
+            audioUuid={audioUuid}
+            scoreSeconds={(score.envelope.frameCount * score.envelope.frameMs) / 1000}
+            onTime={setPlayheadSeconds}
+            controlsRef={player}
+            onScrollToCursor={scrollToCursor}
+            onPlaying={setPlaying}
+          />
+          <SheetFloatingBar
+            playing={playing}
+            onTogglePlay={() => player.current?.toggle()}
+            undo={{
+              can: edits.canUndo,
+              label: edits.undoLabel,
+              busy: edits.busy,
+              run: () => void edits.undo(),
+            }}
+            redo={{
+              can: edits.canRedo,
+              label: edits.redoLabel,
+              busy: edits.busy,
+              run: () => void edits.redo(),
+            }}
+            toolboxOpen={sheetToolbox}
+            onToolbox={() => setSheetToolbox((open) => !open)}
+            onRecord={() => setRecordOpen(true)}
+            canPrint={Boolean(sheetRenderer)}
+            onPrint={() => setPdfOpen(true)}
+            canSave={anchorMs !== null}
+            unsaved={unsaved}
+            saving={saving}
+            flash={flash}
+            onSave={() => void save()}
+            pianoOpen={pianoOpen}
+            onPiano={() => setPianoOpen((open) => !open)}
+            onFindTrills={() => {
+              setTrillsOpen(true);
+              void findTrills();
+            }}
+            hiddenCount={hiddenNotes.size}
+            onBringBack={() => setHiddenNotes(new Set())}
+            clearing={clearing}
+            onRemoveAll={() => setConfirmRemove(true)}
+            saveProblem={saveProblem}
+            onCloseProblem={() => setSaveProblem(null)}
+            refused={moveRefused ?? (edits.failure ? readable(edits.failure, "That edit could not be taken back.") : null)}
+            onCloseRefused={() => {
+              setMoveRefused(null);
+              edits.clearFailure();
+            }}
+          />
+          {/*
+            Capture, so the press is recorded before the sheet's own handlers run and open a
+            toolbox from it.
+          */}
+          <Box
+            onPointerDownCapture={(event) => {
+              pressedAt.current = pressedBox(event);
+            }}
+          >
+            <TimeScoreView
+              score={score}
+              overrides={drawnMarks.overrides}
+              beamBreaks={drawnMarks.beamBreaks}
+              beamJoins={drawnMarks.beamJoins}
+              keySignature={keySignature}
+              keyChanges={keyChanges}
+              clefChanges={clefChanges}
+              ottavas={drawnMarks.ottavas}
+              onKeySuggestion={takeKeyHint}
+              onOttavaSuggestion={takeOttavaHint}
+              showFrameLabels={frameLabelsOn}
+              spacings={spacings}
+              evenSpacings={drawnMarks.evenSpacings}
+              lineSpacing={lineSpacing}
+              noteSpacing={noteSpacing}
+              staffGaps={staffGaps}
+              onStaffGapsChange={setStaffGaps}
+              onSelectNotes={pickNotes}
+              onSelectRange={pickRange}
+              onSelectMarkedRange={pickMarkedRange}
+              onOttavaResize={stretchOttava}
+              renderOverrides={renderOverrides}
+              fingers={drawnMarks.fingers}
+              trills={trills}
+              lyrics={lyrics}
+              onLyricLayoutChange={placeLyric}
+              zoom={sheetZoom}
+              onZoomChange={setSheetZoom}
+              cueRanges={cueRanges}
+              graceNotes={graceNotes}
+              annotationScale={annotationScale}
+              onMovesRefused={sayRefused}
+              onRendererChange={setSheetRenderer}
+              // The hand travels with the stretch so the highlight covers the staff the pills
+              // are about, and only that one.
+              selectedRange={
+                range && rangeHand !== "both" ? { ...range, hand: rangeHand } : range
+              }
+              clearSelectionsAt={clearedAt}
+              playheadSeconds={playheadSeconds}
+              followPlayhead={playing}
+              onScrub={scrub}
+              scrollCursorAt={scrollCursorAt}
+            />
+          </Box>
+        </Stack>
+      ) : !error && !pieceIsEmpty && !(stale && rhythmChecked && anchorMs !== null) ? (
+        // Reserve the place of the sheet while it is written, so nothing jumps when it arrives.
+        <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }} data-sheet-loading>
+          <CircularProgress size={22} />
+        </Box>
+      ) : null}
 
-            {/*
-              What the page is no longer showing, and the way back. A note taken off the page cannot
-              be clicked to bring it back, so the only honest place for the undo is here, where it is
-              visible whether or not anything is selected.
-            */}
-            <Stack
-              direction="row"
-              spacing={2}
-              sx={{ alignItems: "center", flexWrap: "wrap" }}
-            >
-              {hiddenNotes.size === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  Click a notehead to open the note toolbox. Hold Command
-                  (Control on Windows) and click more to build a set: a finger
-                  number, a beam break, a move to the other staff or a deletion
-                  then applies to the whole set at once.
-                </Typography>
-              ) : (
-                <>
-                  <Typography variant="body2" color="text.secondary">
-                    {hiddenNotes.size} note{hiddenNotes.size === 1 ? "" : "s"}{" "}
-                    off the page. The recording still has every one of them.
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => setHiddenNotes(new Set())}
-                  >
-                    Bring them all back
-                  </Button>
-                </>
-              )}
-            </Stack>
-
-            {/*
-              The marks that are not attached to one notehead: the shakes, the words and the size
-              they are all drawn at. Kept here rather than in the frames toolbox because none of
-              them needs a stretch selected to be worth seeing — finding the trills in a piece is
-              the first thing a reader does, before they have marked anything.
-            */}
-            <Stack
-              direction="row"
-              spacing={2}
-              sx={{ alignItems: "center", flexWrap: "wrap" }}
-            >
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => void findTrills()}
-                disabled={findingTrills}
-                startIcon={
-                  findingTrills ? <CircularProgress size={14} /> : undefined
-                }
-              >
-                Find trills
-              </Button>
-              {trillSuggestions === null ? (
-                <Typography variant="body2" color="text.secondary">
-                  Two notes taking turns at least three times over are written as
-                  one held note with <em>tr</em> over it.
-                </Typography>
-              ) : unmarkedTrills.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  {trillSuggestions.length === 0
-                    ? "Nothing in this piece looks like a shake."
-                    : "Every shake found is already written as a trill."}
-                </Typography>
-              ) : (
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: "center", flexWrap: "wrap" }}
-                >
-                  {unmarkedTrills.map((one) => (
-                    <Chip
-                      key={`${one.hand}:${one.startFrame}`}
-                      size="small"
-                      variant="outlined"
-                      label={`${one.noteName}–${one.otherNoteName} · ${one.noteCount} notes · ${formatSeconds(one.startSeconds)}`}
-                      title={`${one.hand === "left" ? "Left" : "Right"} hand, about ${one.medianGapMs.toFixed(0)} ms apart. Click to write it as one held note with tr over it.`}
-                      onClick={() =>
-                        setTrills((current) => [
-                          ...current,
-                          {
-                            hand: one.hand,
-                            startFrame: one.startFrame,
-                            endFrame: one.endFrame,
-                            row: one.row,
-                          },
-                        ])
-                      }
-                    />
-                  ))}
-                </Stack>
-              )}
-              {trills.length > 0 ? (
-                <Button size="small" onClick={() => setTrills([])}>
-                  Print all the alternations again
-                </Button>
-              ) : null}
-            </Stack>
-
-            <Stack
-              direction="row"
-              spacing={2}
-              sx={{ alignItems: "center", flexWrap: "wrap" }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                Mark size
-              </Typography>
-              <ButtonGroup size="small" variant="outlined">
-                <Button
-                  onClick={() =>
-                    setAnnotationScale((value) =>
-                      Math.max(0.5, Math.round((value - 0.1) * 10) / 10),
-                    )
-                  }
-                  disabled={annotationScale <= 0.5}
-                >
-                  Smaller
-                </Button>
-                <Button
-                  onClick={() =>
-                    setAnnotationScale((value) =>
-                      Math.min(2, Math.round((value + 0.1) * 10) / 10),
-                    )
-                  }
-                  disabled={annotationScale >= 2}
-                >
-                  Larger
-                </Button>
-              </ButtonGroup>
-              <Typography variant="body2" color="text.secondary">
-                {Math.round(annotationScale * 100)}% — the fingering, the words
-                and the <em>tr</em> marks. No note moves.
-              </Typography>
-              {lyrics.length > 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  {lyrics.length} line{lyrics.length === 1 ? "" : "s"} of words
-                  under the staff.
-                </Typography>
-              ) : null}
-            </Stack>
-          </Stack>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            Nothing written yet.
-          </Typography>
-        )}
-      </Section>
+      <SheetToolbox
+        open={sheetToolbox && score !== null}
+        onClose={() => setSheetToolbox(false)}
+        tab={sheetTab}
+        onTab={setSheetTab}
+        state={edits.state}
+        set={edits.set}
+        pieceLabel={pieceLabel}
+        keyHint={keyHint}
+        ottavaHint={ottavaHint}
+        onTakeOttavaHint={() => {
+          ottavasDecided.current = true;
+          setOttavas(ottavaHint);
+        }}
+        frameLabelsOn={frameLabelsOn}
+        setFrameLabelsOn={setFrameLabelsOn}
+        sheetZoom={sheetZoom}
+        setSheetZoom={setSheetZoom}
+      />
 
       {/*
-        Two toolboxes, because a column and a notehead answer different questions. A column belongs
-        to the piece and both hands are in it; a notehead is one note in one hand. Keeping them
-        apart is what stopped `8vb` being offered to the right hand only pointing upward.
+        Record: play a passage and put it into the piece, at the start of the marked stretch or at
+        the end. Paste joins it in Phase 8 and Record in Sheet replaces it in Phase 9.
       */}
+      <Toolbox
+        open={recordOpen}
+        title="Record a passage"
+        subtitle={
+          recordAt === undefined
+            ? "Added at the end"
+            : `Added at ${formatSeconds((recordAt * frameMs) / 1000)}`
+        }
+        initialPosition={{ x: 24, y: 120 }}
+        onClose={() => setRecordOpen(false)}
+        width={420}
+      >
+        <Stack spacing={1.5}>
+          <Alert severity="warning" variant="outlined">
+            Placing a passage writes it onto the recording. Undo cannot take it back.
+          </Alert>
+          <ComposePassagePanel
+            audioUuid={audioUuid}
+            frameMs={frameMs}
+            durationSeconds={pieceSeconds}
+            atColumn={recordAt}
+            anchorFigure={anchorFigure}
+            anchorMs={anchorMs ?? undefined}
+            speedChanges={stretches.map((stretch) => ({
+              startFrame: stretch.startFrame,
+              anchorMs: stretch.anchorMs,
+            }))}
+            clickIntervalMs={anchorMs ?? undefined}
+            onPlaced={() => {
+              setRecordOpen(false);
+              setComposed((token) => token + 1);
+            }}
+          />
+        </Stack>
+      </Toolbox>
+
+      {/* What Find trills found: two notes taking turns three times or more, one row each. */}
+      <Toolbox
+        open={trillsOpen}
+        title="Trills"
+        initialPosition={{ x: 24, y: 120 }}
+        onClose={() => setTrillsOpen(false)}
+      >
+        {findingTrills || trillSuggestions === null ? (
+          <CircularProgress size={18} />
+        ) : unmarkedTrills.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            {trillSuggestions.length === 0
+              ? "No trills found."
+              : "Every trill found is already written."}
+          </Typography>
+        ) : (
+          <Stack spacing={0.5} data-trill-suggestions={unmarkedTrills.length}>
+            {unmarkedTrills.map((one) => (
+              <Stack
+                key={`${one.hand}:${one.startFrame}`}
+                direction="row"
+                spacing={1}
+                sx={{ alignItems: "center" }}
+              >
+                <Typography variant="body2" sx={{ flex: 1 }}>
+                  {one.noteName}–{one.otherNoteName} · {one.hand === "left" ? "left" : "right"} hand ·{" "}
+                  {formatSeconds(one.startSeconds)}
+                </Typography>
+                <IconAction
+                  title="Write as a trill"
+                  icon={<CheckIcon fontSize="small" />}
+                  onClick={() =>
+                    setTrills((current) => [
+                      ...current,
+                      {
+                        hand: one.hand,
+                        startFrame: one.startFrame,
+                        endFrame: one.endFrame,
+                        row: one.row,
+                      },
+                    ])
+                  }
+                />
+              </Stack>
+            ))}
+          </Stack>
+        )}
+        {trills.length > 0 ? (
+          <Box sx={{ mt: 1.5 }}>
+            <PillButton kind="quiet" size="small" onClick={() => setTrills([])}>
+              Print every trill as its notes ({trills.length})
+            </PillButton>
+          </Box>
+        ) : null}
+      </Toolbox>
+
       <PianoToolbox
         open={pianoOpen}
         onClose={() => setPianoOpen(false)}
         playheadFrame={playheadFrame}
+        frameMs={frameMs}
         addHand={addHand}
         setAddHand={setAddHand}
         addingNote={addingNote}
@@ -2474,14 +2036,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         noteNameAt={noteNameAt}
       />
 
-
-      {/*
-        The decoration keyboard.
-
-        The same drawing doing the opposite job: instead of reporting what is sounding, it asks what
-        should sound just before the picked note. The note it leans on is coloured so the answer can
-        be read off as an interval without anybody naming one.
-      */}
       <DecorationToolbox
         open={decorationFor !== null && onlyNote !== null}
         onlyNote={onlyNote}
@@ -2512,8 +2066,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         set={edits.set}
         setOttavaHidden={setOttavaHidden}
         audioUuid={audioUuid}
-        figure={figure}
-        selected={selected}
+        anchorMs={anchorMs}
         onRerecordAccepted={acceptRerecord}
       />
 
@@ -2521,6 +2074,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         open={notesToolbox}
         selectedNotes={selectedNotes}
         notesAt={notesAt}
+        frameMs={frameMs}
         onClose={closeNotes}
         onSelectFrames={selectRangeOfNotes}
         notes={notes}
@@ -2532,14 +2086,24 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         onOpenDecoration={setDecorationFor}
       />
 
+      <ConfirmDialog
+        open={confirmRemove}
+        title="Remove all your changes to this sheet?"
+        message="The key, the figures, every mark and the notes taken off go back to the first sheet. The saved sheet is deleted. Undo cannot take this back."
+        confirmLabel="Remove all"
+        danger
+        busy={clearing}
+        onConfirm={() => void wipe()}
+        onCancel={() => setConfirmRemove(false)}
+      />
 
       <ScorePdfDialog
         open={pdfOpen}
         onClose={() => setPdfOpen(false)}
         renderer={sheetRenderer}
-        {...(pieceLabel ? { pieceName: pieceLabel } : {})}
+        pieceName={sheetTitle}
       />
-    </Frame>
+    </Box>
   );
 }
 

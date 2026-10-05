@@ -56,6 +56,11 @@ export interface ScorePlayerProps {
    * says which of the two it will do. A ref cannot: nothing re-renders when it changes.
    */
   onPlaying?: (playing: boolean) => void;
+  /**
+   * Only the scrub bar. The Sheet step plays and pauses from its floating bar, so it draws neither
+   * the two buttons nor the paragraph under the bar (implementation 02, Phase 2).
+   */
+  compact?: boolean;
 }
 
 export interface ScorePlayerControls {
@@ -72,6 +77,7 @@ export function ScorePlayer({
   controlsRef,
   onScrollToCursor,
   onPlaying,
+  compact = false,
 }: ScorePlayerProps) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const report = useRef(onTime);
@@ -210,6 +216,19 @@ export function ScorePlayer({
     seekTo(0);
     onScrollToCursor?.();
   };
+
+  if (compact) {
+    return (
+      <Stack spacing={1}>
+        {error ? (
+          <Alert severity="warning" onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        ) : null}
+        <ProgressBar currentSeconds={seconds} durationSeconds={scoreSeconds} onSeek={seekTo} />
+      </Stack>
+    );
+  }
 
   return (
     <Stack spacing={1}>

@@ -1,174 +1,224 @@
 /**
- * The floating bar of the Sheet step, and the message of a refused save that sits with it.
+ * The floating bar of the Sheet step (plan section 11.2), and the two messages that sit with it.
  *
- * Split out of `RhythmPage.tsx` (implementation 02, Phase 2) with no change.
+ * Play or pause, undo, redo, the sheet toolbox, Record, Print, **Save**, and a `⋯` with the rest.
+ * Save stays a visible button: nothing is written before it, and a dot on it says there are
+ * changes it would keep. The bar is draggable and can be hidden (the shared `FloatingBar`).
+ *
+ * A refused save and a refused hand move appear here rather than under the sheet, because the
+ * reader is looking at the bar when they press it and the sheet can be pages long.
  */
 
 import Alert from "@mui/material/Alert";
-import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
+import Badge from "@mui/material/Badge";
 import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
 import Snackbar from "@mui/material/Snackbar";
 import Tooltip from "@mui/material/Tooltip";
+import CheckIcon from "@mui/icons-material/Check";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweepOutlined";
+import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecordOutlined";
+import GraphicEqIcon from "@mui/icons-material/GraphicEqOutlined";
 import PauseIcon from "@mui/icons-material/Pause";
-import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdfOutlined";
+import PianoIcon from "@mui/icons-material/PianoOutlined";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import SaveIcon from "@mui/icons-material/SaveOutlined";
-import { FloatingBar } from "../../../ui";
+import PrintIcon from "@mui/icons-material/PrintOutlined";
+import RedoIcon from "@mui/icons-material/RedoOutlined";
+import RestoreIcon from "@mui/icons-material/RestoreOutlined";
+import TuneIcon from "@mui/icons-material/TuneOutlined";
+import UndoIcon from "@mui/icons-material/UndoOutlined";
+import { FloatingBar, IconAction, PillButton, RowMenu, type RowMenuItem } from "../../../ui";
 
 export function SheetFloatingBar({
   playing,
   onTogglePlay,
-  canSave,
-  saving,
-  clearing,
-  saveProblem,
-  onCloseProblem,
-  flash,
-  armed,
-  onSave,
-  onRemoveAll,
+  undo,
+  redo,
+  toolboxOpen,
+  onToolbox,
+  onRecord,
   canPrint,
   onPrint,
+  canSave,
+  unsaved,
+  saving,
+  flash,
+  onSave,
+  pianoOpen,
+  onPiano,
+  onFindTrills,
+  hiddenCount,
+  onBringBack,
+  clearing,
+  onRemoveAll,
+  saveProblem,
+  onCloseProblem,
+  refused,
+  onCloseRefused,
 }: {
   playing: boolean;
   onTogglePlay: () => void;
-  canSave: boolean;
-  saving: boolean;
-  clearing: boolean;
-  saveProblem: string | null;
-  onCloseProblem: () => void;
-  flash: "saved" | "removed" | null;
-  armed: boolean;
-  onSave: () => void;
-  onRemoveAll: () => void;
+  undo: { can: boolean; label: string | null; busy: boolean; run: () => void };
+  redo: { can: boolean; label: string | null; busy: boolean; run: () => void };
+  toolboxOpen: boolean;
+  onToolbox: () => void;
+  onRecord: () => void;
   canPrint: boolean;
   onPrint: () => void;
+  canSave: boolean;
+  /** There are changes that Save would keep. */
+  unsaved: boolean;
+  saving: boolean;
+  flash: "saved" | "removed" | null;
+  onSave: () => void;
+  pianoOpen: boolean;
+  onPiano: () => void;
+  onFindTrills: () => void;
+  /** How many notes are taken off the page, for the item that brings them back. */
+  hiddenCount: number;
+  onBringBack: () => void;
+  clearing: boolean;
+  onRemoveAll: () => void;
+  saveProblem: string | null;
+  onCloseProblem: () => void;
+  refused: string | null;
+  onCloseRefused: () => void;
 }) {
+  const more: RowMenuItem[] = [
+    {
+      label: pianoOpen ? "Hide the keyboard" : "Show the keyboard",
+      icon: <PianoIcon fontSize="small" />,
+      onClick: onPiano,
+    },
+    { label: "Find trills", icon: <GraphicEqIcon fontSize="small" />, onClick: onFindTrills },
+    ...(hiddenCount > 0
+      ? [
+          {
+            label: `Bring back ${hiddenCount} note${hiddenCount === 1 ? "" : "s"} taken off`,
+            icon: <RestoreIcon fontSize="small" />,
+            onClick: onBringBack,
+          },
+        ]
+      : []),
+    {
+      label: "Remove all",
+      icon: <DeleteSweepIcon fontSize="small" />,
+      onClick: onRemoveAll,
+      danger: true,
+      disabled: saving || clearing,
+    },
+  ];
   return (
     <>
-        {/*
-          A refused save, where the reader is.
-
-          It stays until it is closed rather than fading: this is the one message on the page
-          that a reader must not miss, and a save is pressed and then looked away from. The
-          backend's own words, so a bound it refused names the field it refused.
-        */}
-        <Snackbar
-          open={saveProblem !== null}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-          onClose={onCloseProblem}
-          sx={{ zIndex: 1250 }}
+      {/*
+        A refused save, where the reader is. It stays until it is closed: a save is pressed and then
+        looked away from, and a reading that the reader believes is saved and is not is the worst
+        thing this page can do.
+      */}
+      <Snackbar
+        open={saveProblem !== null}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        onClose={onCloseProblem}
+        sx={{ zIndex: 1250 }}
+      >
+        <Alert severity="error" variant="filled" onClose={onCloseProblem} sx={{ maxWidth: 560 }}>
+          {saveProblem}
+        </Alert>
+      </Snackbar>
+      <Snackbar
+        open={refused !== null && saveProblem === null}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        onClose={(_event, reason) => {
+          if (reason !== "clickaway") onCloseRefused();
+        }}
+        sx={{ zIndex: 1250 }}
+      >
+        <Alert severity="warning" onClose={onCloseRefused} sx={{ maxWidth: 560 }}>
+          {refused}
+        </Alert>
+      </Snackbar>
+      <FloatingBar open label="sheet buttons">
+        <IconAction
+          title={playing ? "Pause" : "Play"}
+          shortcut="Space"
+          icon={playing ? <PauseIcon /> : <PlayArrowIcon />}
+          onClick={onTogglePlay}
+          placement="top"
+        />
+        <IconAction
+          title={undo.label ? `Undo: ${undo.label}` : "Undo"}
+          shortcut="⌘Z"
+          icon={<UndoIcon />}
+          onClick={undo.run}
+          disabled={!undo.can || undo.busy}
+          disabledTitle="Nothing to undo"
+          placement="top"
+        />
+        <IconAction
+          title={redo.label ? `Redo: ${redo.label}` : "Redo"}
+          shortcut="⇧⌘Z"
+          icon={<RedoIcon />}
+          onClick={redo.run}
+          disabled={!redo.can || redo.busy}
+          disabledTitle="Nothing to redo"
+          placement="top"
+        />
+        <Divider orientation="vertical" flexItem />
+        <IconAction
+          title="Sheet toolbox"
+          icon={<TuneIcon />}
+          onClick={onToolbox}
+          active={toolboxOpen}
+          placement="top"
+        />
+        <IconAction
+          title="Record a passage"
+          icon={<FiberManualRecordIcon />}
+          onClick={onRecord}
+          placement="top"
+        />
+        <IconAction
+          title="Print to PDF"
+          icon={<PrintIcon />}
+          onClick={onPrint}
+          disabled={!canPrint}
+          placement="top"
+        />
+        <Divider orientation="vertical" flexItem />
+        <Tooltip
+          title={
+            !canSave
+              ? "Nothing to save until the sheet is written"
+              : saveProblem
+                ? saveProblem
+                : unsaved
+                  ? "Keep these changes"
+                  : "Everything is saved"
+          }
+          placement="top"
         >
-          <Alert
-            severity="error"
-            variant="filled"
-            onClose={onCloseProblem}
-            sx={{ maxWidth: 560 }}
-          >
-            {saveProblem}
-          </Alert>
-        </Snackbar>
-        <FloatingBar open label="sheet buttons">
-          <Tooltip
-            title={playing ? "Pause the recording" : "Play the recording"}
-          >
-            <IconButton
-              size="small"
-              color="primary"
-              aria-label={playing ? "Pause" : "Play"}
-              onClick={onTogglePlay}
+          <span>
+            <Badge
+              color="warning"
+              variant="dot"
+              overlap="rectangular"
+              invisible={!unsaved || flash === "saved"}
+              data-unsaved={unsaved ? "unsaved" : ""}
             >
-              {playing ? <PauseIcon /> : <PlayArrowIcon />}
-            </IconButton>
-          </Tooltip>
-          <Divider orientation="vertical" flexItem />
-          {/*
-            A greyed Save used to say nothing about why. It is disabled until a pile of gaps is
-            named, because the name is half of what a reading *is* — and a reader looking at a
-            drawn sheet has no way of guessing that the plot above it is what the button is
-            waiting for. A failed save is the other half: it turns red and says so, because the
-            only Save there is lives up here on the bar.
-          */}
-          <Tooltip
-            title={
-              !canSave
-                ? "Name a pile of gaps on the plot above first: that is what a reading is saved as"
-                : saveProblem
-                  ? saveProblem
-                  : "Keep this reading with the piece"
-            }
-          >
-            <span>
-              <Button
+              <PillButton
+                kind="primary"
                 size="small"
-                variant="contained"
-                color={
-                  flash === "saved"
-                    ? "success"
-                    : saveProblem
-                      ? "error"
-                      : "primary"
-                }
-                disabled={!canSave || saving || clearing}
-                // Pressing anything else on the bar is an answer to "sure?", and the answer is no.
+                busy={saving}
+                disabled={!canSave || clearing}
                 onClick={onSave}
-                startIcon={
-                  saving ? <CircularProgress size={14} /> : <SaveIcon />
-                }
+                startIcon={flash === "saved" ? <CheckIcon /> : undefined}
               >
-                {flash === "saved"
-                  ? "Saved"
-                  : saveProblem
-                    ? "Save failed"
-                    : "Save"}
-              </Button>
-            </span>
-          </Tooltip>
-          <Tooltip title="Throws away every decision about this piece, on screen and on disk, and puts back the notes taken off the recording. Command-Z cannot take it back.">
-          <Button
-            size="small"
-            color={flash === "removed" ? "success" : "error"}
-            variant={armed ? "contained" : "outlined"}
-            disabled={saving || clearing}
-            onClick={onRemoveAll}
-            startIcon={
-              clearing ? (
-                <CircularProgress size={14} />
-              ) : (
-                <DeleteSweepIcon />
-              )
-            }
-          >
-            {flash === "removed"
-              ? "Removed"
-              : armed
-                ? "Sure? Remove all"
-                : "Remove all"}
-          </Button>
-          </Tooltip>
-          <Divider orientation="vertical" flexItem />
-          {/*
-            The way off the screen. A window is whatever width it happens to be; paper is 210
-            millimetres, so the music has to be laid out again before it can be printed, and
-            the panel is where that is looked at before it is committed to a file.
-          */}
-          <Tooltip title="Lay the sheet out on paper and download it">
-            <span>
-              <Button
-                size="small"
-                variant="outlined"
-                disabled={!canPrint}
-                onClick={onPrint}
-                startIcon={<PictureAsPdfIcon />}
-              >
-                PDF
-              </Button>
-            </span>
-          </Tooltip>
-        </FloatingBar>
+                {flash === "saved" ? "Saved" : saveProblem ? "Save failed" : "Save"}
+              </PillButton>
+            </Badge>
+          </span>
+        </Tooltip>
+        <RowMenu items={more} title="More sheet actions" />
+      </FloatingBar>
     </>
   );
 }
