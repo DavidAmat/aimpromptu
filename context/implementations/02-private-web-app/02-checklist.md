@@ -23,21 +23,21 @@ The plan's section 3.
 - [ ] **Q-7** Offline downloads per project, now or in the production version. Raised in Phase 6.
 - [ ] **Q-8** Live notes from the video reader. Raised in Phase 5.
 
-# [ ] Phase 0: The documentation repaired, and a baseline
+# [x] Phase 0: The documentation repaired, and a baseline
 
-## [ ] Story 0.1: The links
-- [ ] Task 0.1.1 **The link checker**: `scripts/docs/check-links.py` checks every relative link of `context/`, `documentation/` and the READMEs, and exits non-zero on a broken one.
-- [ ] Task 0.1.2 **The fix**: every link broken by the move into `01-mvp/` (about 120), and the plain-text old paths (`02b-local-setup.md` section 12.4, `09-prompt.md`, `library/02-download-prompt.md`).
-- [ ] Task 0.1.3 **The indexes**: `context/implementations/README.md` rewritten for the two groups (01-mvp, 02) with rows for 07 and 09 and the numbering rule; the implementation part of `00-index.md`; `app/01-app-context.md`, the two language guides and this folder added.
+## [x] Story 0.1: The links
+- [x] Task 0.1.1 **The link checker**: `scripts/docs/check-links.py` checks every relative link of `context/`, `documentation/` and the READMEs, and exits non-zero on a broken one.
+- [x] Task 0.1.2 **The fix**: every link broken by the move into `01-mvp/` (about 120), and the plain-text old paths (`02b-local-setup.md` section 12.4, `09-prompt.md`, `library/02-download-prompt.md`).
+- [x] Task 0.1.3 **The indexes**: `context/implementations/README.md` rewritten for the two groups (01-mvp, 02) with rows for 07 and 09 and the numbering rule; the implementation part of `00-index.md`; `app/01-app-context.md`, the two language guides and this folder added.
 
-## [ ] Story 0.2: The leftovers
-- [ ] Task 0.2.1 `TODO.md`, `project-features.md`, `project-implementation-organization.md` and `context/research/piano-transcription/piano-transcription-python-solutions.md` moved to `context/archive/`, with a line in the archive README each.
-- [ ] Task 0.2.2 `library/` moved to `scripts/seed/youtube-library/`, its script paths fixed.
-- [ ] Task 0.2.3 `00-documentation-instructions.md` updated (implementation folders, the end of the migration rules, `08-security` planned).
+## [x] Story 0.2: The leftovers
+- [x] Task 0.2.1 `TODO.md`, `project-features.md`, `project-implementation-organization.md` and `context/research/piano-transcription/piano-transcription-python-solutions.md` moved to `context/archive/`, with a line in the archive README each.
+- [x] Task 0.2.2 `library/` moved to `scripts/seed/youtube-library/`, its script paths fixed.
+- [x] Task 0.2.3 `00-documentation-instructions.md` updated (implementation folders, the end of the migration rules, `08-security` planned).
 
-## [ ] Story 0.3: The baseline
-- [ ] Task 0.3.1 Screenshots of every current page into the report.
-- [ ] Task 0.3.2 Backend test count and frontend checks, as the reference for later phases.
+## [x] Story 0.3: The baseline
+- [x] Task 0.3.1 Screenshots of every current page into the report.
+- [x] Task 0.3.2 Backend test count and frontend checks, as the reference for later phases.
 
 # [ ] Phase 1: The design system and the app shell
 

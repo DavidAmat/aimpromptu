@@ -1478,6 +1478,8 @@ folder README marked complete.
 # 22. How it is checked
 
 - `aitu-backend`: `make test-backend` (inside the container), with a temporary `.database/` per test.
+  When another project holds the GPU, the tests run on the CPU instead (the command is in the Phase 0
+  report, section 4.2); the baseline is 1,040 tests.
   New tests: the bundle and `notes.pmn` version 2, the timeline, the migration on a fixture tree, the
   export and import round trip, the rights table, the login, copy and paste, the promotions, the
   requests and partial acceptance, the popularity formula.
