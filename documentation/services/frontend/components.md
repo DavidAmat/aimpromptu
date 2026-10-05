@@ -11,50 +11,44 @@
 
 ## 1. Routes and shell
 
-`layout/routes.ts` is the single place every URL is written. Nothing hardcodes a path: navigation,
-the top bar and the Playground tab strip all read from it. `App.tsx` holds the route table.
-
-The top bar, in this order: **Piece**, **YouTube to Audio**, **Video to Notes**, **Playground**,
-**Piano Library** (`TOP_SECTIONS`). **Piece** is first because a piece now starts there.
+`layout/routes.ts` is the single place every URL is written (`ROUTES`, the patterns, `LAB_TABS`,
+`LEGACY_REDIRECTS`). Nothing hardcodes a path. `App.tsx` holds the route table.
 
 | Section | Path | Page |
 |---|---|---|
-| (start) | `/` | redirects to `/piece/new` |
-| **Piece** (the flow page) | `/piece` | `pages/piece/PieceIndex.tsx`: the working piece, or `/piece/new` |
-| · new piece | `/piece/new` | `pages/piece/PiecePage.tsx` with the Source tab only |
-| · a piece | `/piece/:uuid` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the piece reached |
-| · one step | `/piece/:uuid/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab`, `HandsTab` or `SheetTab` |
-| YouTube to Audio | `/youtube` | `pages/YouTubePage.tsx` |
-| Video to Notes | `/video/*` | `layout/VideoLayout.tsx` and `pages/video/` |
-| **Playground** | `/playground` | `layout/PlaygroundLayout.tsx` |
-| · Upload / Input | `/playground/input` | `pages/playground/InputPage.tsx` |
-| · Notes Falling | `/playground/notes-falling` | `pages/playground/NotesFallingPage.tsx` |
-| · Piano Sheet | `/playground/rhythm` | `pages/playground/RhythmPage.tsx` |
-| · (old Piano Roll) | `/playground/piano-roll` | redirects to `/piece` |
-| Piano Library | `/library` | `pages/LibraryPage.tsx` |
-| Performance view | `/library/play/:id` | `pages/PerformancePage.tsx` |
+| (start) | `/` | redirects to `/projects` |
+| **Projects** | `/projects` | `pages/ProjectsPage.tsx` |
+| · new project | `/projects/new` | `pages/piece/PiecePage.tsx` with the Source step only |
+| · a project | `/projects/:id` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the project reached |
+| · one step | `/projects/:id/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab`, `HandsTab` or `SheetTab` |
+| · Notes Falling | `/projects/:id/notes-falling` | `PiecePage.tsx` + `pages/piece/NotesFallingPage.tsx` |
+| **Lab** | `/admin/lab/<tab>` | `layout/LabLayout.tsx` and `pages/video/` |
+| (old paths) | `/piece/...`, `/video/...`, `/youtube`, `/playground/...`, `/library...` | `layout/LegacyRedirect.tsx`, until Phase 15 |
 | (development only) | `/dev/roll-bench` | `pages/dev/RollBenchPage.tsx`, lazy, only when `import.meta.env.DEV` |
 
 `<step>` is one of `PIECE_STEPS` in `api/pieces.ts`: `source`, `audio`, `notes`, `hands`, `sheet`.
-`ROUTES.piece(uuid, step?)` builds the address.
+`ROUTES.project(id, step?)` builds the address. Until Phase 3 the id of a project is the uuid of its
+piece.
 
-**The Piano Roll tab was removed in implementation 08** (decision Q-4). The Notes and Hands tabs of
-the flow page are the piano roll visualization now, with its editor. The old address redirects to
-`/piece` so a saved link still opens something useful.
+**The shell** (implementation 02, plan section 6.2): `layout/AppLayout.tsx` renders `ui/AppShell`
+with `ui/Sidebar` (the logo, **Search**, Projects, Lab under Admin, and the user menu at the bottom,
+a placeholder with **Keyboard shortcuts** until Phase 4). The sidebar is open on the list pages and
+closed inside a project and under 900 px. `⌘K` opens `layout/SearchDialog.tsx` from anywhere;
+`layout/ShortcutsDialog.tsx` lists the shortcuts.
 
 `main.tsx` creates a **data router** (`createBrowserRouter`) with one route that renders `App`'s
-route table. It exists for one reason: React Router's `useBlocker`, which the flow page needs to
-ask before a reader leaves a tab with unsaved changes, only works with a data router.
+route table. It exists for one reason: React Router's `useBlocker`, which the project page needs to
+ask before a reader leaves a step with unsaved changes, only works with a data router. It also gives
+the theme `defaultMode="light"`.
 
-`state/WorkingArtifactProvider.tsx` holds the piece the Playground tabs share, in
-`sessionStorage`, so switching tabs does not lose it. The flow page sets it when it loads a piece,
-so the Playground and the flow page show the same piece.
+`state/WorkingArtifactProvider.tsx` holds the working piece in `sessionStorage`. The project page
+sets it when it loads a project; the sheet reads its `frameMs` from it.
 
 ---
 
-## 2. The flow page
+## 2. The page of a project
 
-One piece, five tabs in the order of the work: Source, Audio, Notes, Hands, Sheet. What each step
+One project, five steps in the order of the work: Source, Audio, Notes, Hands, Sheet. What each step
 means for the reader is in [flow-page.md](../../../context/frontend/flow-page.md). This section
 lists where the code is.
 
@@ -62,13 +56,11 @@ lists where the code is.
 
 | File | Role |
 |---|---|
-| `pages/piece/PiecePage.tsx` | The page: loads the audio and `GET /pieces/{uuid}/status`, draws the tabs, redirects a step that is not enabled, holds the leave dialog (**Stay**, **Discard**, **Save and continue**) and the `beforeunload` warning |
+| `pages/piece/PiecePage.tsx` | The page: loads the audio and `GET /pieces/{uuid}/status`, draws the header (back arrow, title, the step tabs, the `⋯` menu with Notes Falling), redirects a step that is not enabled, holds the leave dialog (**Stay**, **Discard**, **Save and continue**, a `ConfirmDialog`) and the `beforeunload` warning |
 | `pages/piece/pieceContext.ts` | What every tab shares: `usePiece()` (the piece, its status, `refresh()`), `stepStatus()`, and `useUnsavedChanges(summary, {save, discard})` |
-| `pages/piece/PieceIndex.tsx` | `/piece`: the working piece, or a new one |
-| `pages/piece/PieceResume.tsx` | `/piece/:uuid`: follows the backend's `resume` |
-| `components/piece/StepTabs.tsx` | The numbered tabs with the state icon of each step (ready, running, stale, missing; a pencil while the Notes or Hands tab has unsaved changes) and the reason as a tooltip |
+| `pages/piece/PieceResume.tsx` | `/projects/:id`: follows the backend's `resume` |
+| `ui/StepTabs.tsx` | The step tabs, each with a dot for its state (filled ready, a spinner running, amber stale or unsaved, a ring missing) and the reason as a tooltip; `data-step` and `data-state` on each tab for the checks |
 | `components/piece/stepLabels.ts` | The names of the five steps |
-| `components/piece/SaveBar.tsx` | The save bar (the `FloatingBar`): what is unsaved, **Discard**, **Save** |
 | `components/piece/StepProgress.tsx` | A short job in progress: label, bar, seconds taken |
 | `api/pieces.ts` | `piecesApi`: `status`, `notes`, `patchNotes`, `predictHands`; the types `PieceStatus`, `StepStatus`, `PieceNotes` |
 
@@ -83,14 +75,13 @@ show.
 
 | File | Role |
 |---|---|
-| `pages/piece/SourceTab.tsx` | Three ways in: the library (`AudioLibraryList`), YouTube, upload |
-| `components/piece/YouTubeDownload.tsx` | Paste a URL; the download runs as a job (`POST /youtube/jobs`) with its progress bar |
-| `pages/piece/AudioTab.tsx` | The waveform, cuts, undo and redo, **Save** (`PUT /audio/{uuid}/cuts`), **Transcribe** |
+| `pages/piece/SourceTab.tsx` | A new project: the drop zone for an audio file, **Paste a YouTube link** with **Audio** / **Video** (`POST /youtube/jobs` as a job, or `POST /video/download` then Lab). An existing project: where its audio came from |
+| `pages/piece/AudioTab.tsx` | The waveform full width, cuts, undo and redo, the floating bar of icon actions with **Save** (`PUT /audio/{uuid}/cuts`), **Transcribe** on the top row. `data-selection`, `data-view` and `data-cuts` on its root are read by `check:flow` |
 | `components/audio/CutWaveform.tsx` | Two stacked canvases (waveform, cuts and selection below; the playhead alone above) and an overview strip |
 | `components/audio/waveformPaint.ts` | The painters of `CutWaveform` |
 | `audio/frameView.ts` | The window of time frames on screen: zoom, pan, whole view |
 | `audio/cuts.ts` | The cut rules, the same as the backend's `normalize_cuts`; pure functions |
-| `audio/useCutPlayer.ts` | Plays the audio and jumps over the page's current cuts (**Play all**), or plays the frames selected (**Play selection**) |
+| `audio/useCutPlayer.ts` | Plays the audio and jumps over the page's current cuts, or plays the frames selected |
 
 The waveform comes from one request, `GET /audio/{uuid}/frames/peaks`: the lowest and highest
 sample of every 10 ms time frame. Every zoom level is then drawn from memory, and every pixel sits
@@ -103,7 +94,7 @@ The Notes and Hands tabs are one editor. `NotesTab.tsx` and `HandsTab.tsx` are o
 
 | File | Role |
 |---|---|
-| `pages/piece/NotesEditor.tsx` | The editor page: live view, playback, every gesture as an undo step, **Save**, and on the Hands step **Predict hands**, **To Left** / **To Right** (keys L and R), the hand filter |
+| `pages/piece/NotesEditor.tsx` | The editor page: live view, playback, every gesture as an undo step, **Save**, the primary action on the top row (**Continue to Hands**, **Continue to Sheet**), and on the Hands step the floating toolbox with **Predict hands**, the hand filter, **To right** / **To left** (keys R and L) |
 | `components/notes/PianoRollCanvas.tsx` | The piano roll visualization: the vertical keyboard, one row per key, the rectangles; modes `live`, `edit`, `view` |
 | `components/notes/rollPaint.ts` | The painters: the lower canvas (rows, grid, ruler, keyboard, rectangles of the visible range) and the upper canvas (playhead, lit keys, sounding notes, band) |
 | `components/notes/RollTimeBar.tsx` | The bar under the roll: the progress bar while the piece is transcribed, the scrub bar afterwards |
@@ -141,11 +132,10 @@ them one at a time), the selection's Spanish name, **Save**.
 
 ### 2.4 Sheet
 
-`pages/piece/SheetTab.tsx` renders `RhythmPage` (section 3) with an optional `step` prop
-(`SheetStep`: the piece, the Sheet step's state and reason, and `onChanged`). Without the prop the
-Playground page is unchanged. With it, the piece comes from the flow page, a stale reading is
-loaded but not drawn until **Write the sheet**, and `onChanged` refreshes the status after a saved
-reading or **Remove all**, so the tab's tick follows.
+`pages/piece/SheetTab.tsx` renders `RhythmPage` (section 3) with its `step` prop (`SheetStep`: the
+piece, the Sheet step's state and reason, and `onChanged`). The piece comes from the project, a
+stale reading is loaded but not drawn until **Write the sheet**, and `onChanged` refreshes the
+status after a saved reading or **Remove all**, so the dot of the step follows.
 
 The Sheet tab does not use `useUnsavedChanges`, because `RhythmPage` does not know whether the
 reading on screen differs from the saved one.
@@ -154,9 +144,10 @@ reading on screen differs from the saved one.
 
 ## 3. The sheet
 
-`pages/playground/RhythmPage.tsx` is the largest file in the app and it is the product: see
-where the notes keep landing, say what one of those piles is, and read the result. It is both the
-Playground's **Piano Sheet** tab and the flow page's **Sheet** tab.
+`pages/piece/RhythmPage.tsx` is the largest file in the app and it is the product: see where the
+notes keep landing, say what one of those piles is, and read the result. It is the **Sheet** step of
+a project; Phase 2 of implementation 02 splits it into modules and redesigns it. Phase 1 only moved
+it out of `pages/playground/` and replaced its cards by `ui/Section`.
 
 | Component | Role |
 |---|---|
@@ -164,8 +155,8 @@ Playground's **Piano Sheet** tab and the flow page's **Sheet** tab.
 | `components/time/TimeScoreView.tsx` | The staff. Owns the renderer instance, the playhead, selection and the range handles. |
 | `components/time/ScorePlayer.tsx` | Play the recording under the sheet. |
 | `components/time/ScorePdfDialog.tsx` | Paper size, margins, title, and a preview of the real pages. |
-| `components/common/FloatingBar.tsx` | Save / Remove all / PDF, floating over the sheet. Also the save bar and toolbar of the flow page. |
-| `components/common/ToolboxDialog.tsx` | The draggable shell every toolbox uses. |
+| `ui/FloatingBar.tsx` | Save / Remove all / PDF, floating over the sheet. Also the toolbars of the Audio, Notes and Hands steps. |
+| `ui/Toolbox.tsx` | The draggable shell every toolbox uses (it was `ToolboxDialog`). |
 
 **`TimeScoreView` passes the figures straight through.** It does not work out what a note should be
 called from how many columns it covers, because a column is a slice of time and says nothing about
@@ -180,7 +171,7 @@ band) opens the note toolbox; shift-dragging across the column numbers opens the
 which is about a *stretch of time* rather than about notes. A stretch carrying an edit draws two
 corner marks in its own colour, so it can be seen without being selected.
 
-**Each toolbox can hand its selection to the other.** `ToolboxDialog` takes a `headerAction`, one
+**Each toolbox can hand its selection to the other.** `Toolbox` takes a `headerAction`, one
 control in the title bar beside the close button: **Select frames** on the note toolbox marks the
 stretch from the first picked note to the last, and **Select notes** on the frames toolbox picks
 every note that begins inside the stretch on the hands **Applies to** names. Both use the
@@ -197,7 +188,7 @@ resuming does not jump.
 
 ## 4. Notes Falling
 
-`pages/playground/NotesFallingPage.tsx`, drawn from `GET /matrix/{uuid}/events`: the notes in the
+`pages/piece/NotesFallingPage.tsx`, inside the page of a project (the project in the address), drawn from `GET /matrix/{uuid}/events`: the notes in the
 engine's own seconds. **It asks for no tempo and no resolution**, and a rectangle is as long as the
 note was actually held.
 
@@ -231,35 +222,22 @@ box now: one unit is one pixel, text is undistorted, and a 2 px border is 2 px.
 
 ---
 
-## 5. Input, audio and editing
+## 5. Audio and editing
 
 | Directory | Contents |
 |---|---|
-| `components/audio/` | `AudioUpload`, `AudioRecorder`, `LiveLevelBars`, `WaveformView`, `WaveformRangeSelector`, `AudioLibraryList`; `CutWaveform` and `waveformPaint` (the Audio tab, section 2.2) |
-| `components/input/` | `TranscriptionSettings` (the time resolution), `ComposeNewPiece` |
+| `components/audio/` | `LiveLevelBars`, `WaveformView`, `WaveformRangeSelector` (the re-record and compose panels); `CutWaveform` and `waveformPaint` (the Audio step, section 2.2) |
 | `components/editing/` | `RangeRerecordPanel` (Epic 11), `ComposePassagePanel` (Epic 13), `useClickTrack` |
-| `audio/` | `useRecorder` (MediaRecorder), `time.ts` (`mm:ss.cc`); `cuts.ts`, `frameView.ts`, `useCutPlayer.ts` (the Audio tab) |
-| `components/ProgressBanner.tsx` | The progress of a long job (transcription, YouTube download, re-record) |
-
-`TranscriptionSettings` has **no engine field** since implementation 08: MuScriptor is the only
-engine, and the page warns when it is not installed. There is no BPM and no granularity, because
-neither exists.
-
-`ComposeNewPiece` is a source on Upload / Input beside upload, record and the audio library. It is
-the only entry point with no recording behind it, so it takes the page on its own. **Record** and
-**Compose** are only on the Playground; the flow page's Source tab has the library, YouTube and
-upload. The Input page shows one line pointing to the **Piece** page.
+| `audio/` | `useRecorder` (MediaRecorder), `time.ts` (`mm:ss.cc`); `cuts.ts`, `frameView.ts`, `useCutPlayer.ts` (the Audio step) |
+| `components/ProgressBanner.tsx` | The progress of a long job of the re-record and compose panels |
 
 ---
 
-## 6. Library and printing
+## 6. Printing, and what Play mode will start from
 
 | Module | Role |
 |---|---|
-| `pages/LibraryPage.tsx` | Browse, tag, filter; playground version management |
-| `components/library/PlaylistSection.tsx` | Playlists, ordering, playing mode |
-| `pages/PerformancePage.tsx` | Read-only performance view with overlay pills |
-| `library/loadPerformanceScore.ts` | Fetch the score payload and the saved rhythm together |
+| `library/loadPerformanceScore.ts` | Fetch the score payload and the saved rhythm together. Kept for Play mode (Phase 11); nothing calls it now |
 | `print/scorePdf.ts`, `drawPage.ts`, `pdf.ts`, `opentype.ts` | The PDF writer |
 
 Detail on the PDF in [score-pdf.md](score-pdf.md).
@@ -278,15 +256,13 @@ import { timeScoreApi, matrixApi, piecesApi } from "../api";
 | Module | Router |
 |---|---|
 | `client.ts` | `API_BASE`, `request`, `upload`, `buildUrl`, `ApiError` |
-| `audio.ts` | `/audio`, including `cuts`, `saveCuts`, `framePeaks`, `fileUrl` |
+| `audio.ts` | `/audio`, including `list` (with `updatedAt`), `cuts`, `saveCuts`, `framePeaks`, `fileUrl` |
 | `matrix.ts` | `/matrix`, including `transcribe`, `activeJob`, `progressUrl` |
-| `pieces.ts` | `/pieces`: the flow page's status, notes and hands |
+| `pieces.ts` | `/pieces`: the status of a project's steps, its notes and hands |
 | `timeScore.ts` | `/time`, the largest, and the mirror of `schemas/time_matrix.py` |
 | `editing.ts` | `/audio/{uuid}/edits` |
-| `library.ts` | `/library` |
 | `youtube.ts` | `/youtube`, including `startDownload` (`POST /youtube/jobs`) |
-| `video.ts`, `frameExamples.ts` | `/video`, `/frame-examples` (Video to Notes) |
-| `scores.ts` | `/scores`, `/sequence`, the text-notation MVP |
+| `video.ts`, `frameExamples.ts` | `/video`, `/frame-examples` (Lab) |
 
 **`API_BASE` is `/api` by default**: a path on the page's own address. The Vite server passes it to
 the backend without the prefix (`vite.config.ts`: `http://127.0.0.1:8765`, or `AITU_API_PROXY`,
@@ -299,20 +275,44 @@ that starts a short job and uses its answer.
 
 ---
 
-## 8. The UI kit
+## 8. The shared components and the tokens
 
-`src/ui/`: `PageContainer`, `SectionCard`, `Pill`, `TabBar`, `Placeholder`, `theme.ts`,
-`palette.ts`, `timestamps.ts`, `progress.ts`.
+`src/ui/` (implementation 02, plan sections 7.2 to 7.4). Pages draw these things only through them,
+so the same job looks the same everywhere.
 
-`progress.ts` gives a progress bar that stands on its own a width of at most 520 px. A bar that
-belongs to something wide (the bar under the piano roll visualization, which is also its time axis)
-keeps that width.
+| Component | What it draws |
+|---|---|
+| `AppShell`, `PageBody` | The sidebar beside the page; the side gutters and the 960 px width of a list page (`wide` for a canvas) |
+| `Sidebar` | Open (260 px, words) or closed (64 px, icons with tooltips); groups with a heading; the footer |
+| `PageHeader` | The title on the left, the primary action on the right, an optional back arrow and a middle row (the step tabs). No subtitle |
+| `Section` | A group inside a page: an optional small title and its controls, no description, no border (it replaced `SectionCard`) |
+| `IconAction` | An icon button with its tooltip, which is also its name; the shortcut after the title; a tooltip that says why when disabled |
+| `PillButton` | `primary` (black), `secondary` (white, grey border), `quiet`, `danger`; `busy` shows a spinner |
+| `Segmented` | One of 2 to 4 options, as one rounded group |
+| `ListRow`, `RowMenu` | A row: title (truncated, full on hover), status and meta in fixed columns, the `⋯` menu |
+| `DataTable` | Sticky header, sortable columns, rows per page, sized to its content |
+| `EmptyState` | One line, and the action that creates the first one |
+| `ConfirmDialog` | The confirm button repeats the action ("Delete project"); **Cancel**; an optional third choice |
+| `Toolbox`, `FloatingBar` | The draggable toolbox and the floating bar, white with the one shadow; the bar wraps on a narrow screen |
+| `MiniPiano` | 88 keys at half size, to pick one key; Spanish names on hover; arrows move by a semitone or an octave |
+| `FigurePicker` | The figure icons (`FigureGlyph`) as a `Segmented`, the Spanish name in the tooltip |
+| `StepTabs` | The steps of a project, section 2.1 |
+| `Pill`, `TabBar` | A small toggle chip; a tab strip that follows the address (the Lab tabs) |
+| `timestamps.ts`, `progress.ts`, `relativeTime.ts` | Tabular figures that never wrap; the 520 px width of a progress bar on its own; "2 h ago", "yesterday", "3 Oct" |
 
-The theme is **light and pinned**. It was reversed from dark on 2026-07-27 after a real failure: on
-the original dark ground a struck matrix note drawn in `grays.ink` was invisible against a
-`grays.ink` background. The `surface` tokens exist so a view cannot assume a ground again. The one
-dark panel is the piano roll visualization (`semantic.roll`), as in the MuScriptor examples. Colour
-definitions: [color-palette.md](../../../context/colors/color-palette.md).
+`MiniPiano` and `FigurePicker` are built in Phase 1 and used from Phase 7 (transposition).
+
+**The tokens** are in `tokens.ts`: the colours of the page, light and dark, the type scale (13, 14,
+16, 20, 28 px), the radii (12 for inputs, 16 for floating things, a pill for buttons) and the one
+shadow. `theme.ts` builds the MUI theme from them, with both schemes as CSS variables; the app opens
+in the light one until the theme choice of Phase 4. Drawing code that cannot read the theme (a
+canvas, an SVG) imports `ui`, the scheme in use. **`palette.ts` keeps only the colours of the
+music**: the hands, the selection, the piano roll, the waveform, the marks on notes and video
+frames. The one dark panel is the piano roll visualization (`semantic.roll`). Colour definitions:
+[color-palette.md](../../../context/colors/color-palette.md).
+
+**The face is Geist Sans**, self-hosted in `public/fonts/geist.woff2` (SIL OFL 1.1) and preloaded by
+`index.html`. Montserrat stays for the note names on the rectangles, Bravura for the music.
 
 Timestamps are `mm:ss.cc` everywhere and never wrap:
 [timestamps.md](../../../context/frontend/timestamps.md).
@@ -322,6 +322,16 @@ Timestamps are `mm:ss.cc` everywhere and never wrap:
 ## 9. Removed
 
 Stated so nobody looks for them.
+
+**In implementation 02, Phase 1** (decision Q-4): the Playground (`layout/PlaygroundLayout.tsx`,
+`pages/playground/InputPage.tsx`; Notes Falling and the sheet moved to `pages/piece/`), the YouTube
+to Audio page (`pages/YouTubePage.tsx`), the old Piano Library (`pages/LibraryPage.tsx`,
+`pages/PerformancePage.tsx`, `components/library/`, `library/playId.ts`, `api/library.ts`), the
+text-notation MVP client (`api/scores.ts`, `music/types.ts`), the old shell (`layout/VideoLayout.tsx`,
+`layout/BackendStatus.tsx`, the "API online" chip), the old kit (`ui/PageContainer.tsx`,
+`ui/SectionCard.tsx`, `ui/Placeholder.tsx`), `pages/piece/PieceIndex.tsx`, and the components the
+new Source step replaced (`AudioLibraryList`, `AudioUpload`, `YouTubeDownload`, `AudioRecorder`,
+`TranscriptionSettings`, `ComposeNewPiece`, `SaveBar`, the old `StepTabs`).
 
 **With the old Piano Roll (implementation 08, Q-4):** `pages/playground/PianoRollPage.tsx`,
 `components/notes/RollNote.tsx` (one memoized SVG rectangle per note) and
@@ -337,8 +347,7 @@ gone, along with the `components/notation/` and `components/matrix/` folders.
 The spacing controls those needed have no equivalent: the score re-wraps at a fixed size rather than
 being scaled, and zoom lives in the renderer's own chrome.
 
-What survives under `music/` is `types.ts` (matrix contracts mirrored from `schemas/matrix.py`),
-`noteNames.ts`, `figures.ts`, `granularities.ts` and `renderOverrides.ts`.
+What survives under `music/` is `noteNames.ts`, `figures.ts`, `granularities.ts` and `renderOverrides.ts`.
 
 ---
 
@@ -360,13 +369,13 @@ These need the running app (`make up` from the repository root). Each works on t
 uploads and deletes them at the end, so the library is never changed:
 
 ```bash
-npm run check:flow    # the flow page walked in a headless Chromium, every tab, live transcription included
+npm run check:flow    # a project walked in a headless Chromium, every step, live transcription included
 npm run time:flow     # the whole flow timed on three temporary pieces (upload, library copy, YouTube)
 npm run bench:roll    # the Notes tab at 10,000 rectangles and at 100 stream messages per second
 npm run bench:sheet   # a hand move on the Sheet tab, timed part by part
 ```
 
-`check:flow` exists because the flow page is mostly gestures on a canvas and navigation between
+`check:flow` exists because the page of a project is mostly gestures on a canvas and navigation between
 tabs, which no unit check reaches. It takes about 2 minutes with the transcription
 (`--no-transcribe` skips it). `bench:roll` opens `/dev/roll-bench`, so it needs a development build.
 
@@ -386,7 +395,7 @@ deleted. Nothing said so, which is the failure mode this check exists to prevent
 
 ## 11. Where to look deeper
 
-- [flow-page.md](../../../context/frontend/flow-page.md): the flow page, step by step
+- [flow-page.md](../../../context/frontend/flow-page.md): Projects and the steps of a project
 - [grid-notation.md](grid-notation.md): how the sheet is actually drawn, and the stale-`dist` trap
 - [score-pdf.md](score-pdf.md): the PDF writer
 - [../backend/endpoints.md](../backend/endpoints.md): what the API client calls

@@ -95,12 +95,8 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/youtube/download` | Download the audio as mp3, in the request. |
 | POST | `/youtube/jobs` | The same download as a job; returns `202` and a job id (implementation 08). |
 | POST | `/youtube/batch` | Queue several. |
-| **Text-notation MVP** | `api/scores.py` | |
-| GET | `/scores` | Seed scores from `data/example-scores.json`. |
-| POST | `/sequence` | Text notation to a sparse score. |
-
-The last two are the project's original MVP and are **not** part of the wall-clock path. See
-[§9](#9-the-text-notation-mvp-routes).
+The text-notation MVP routes (`GET /scores`, `POST /sequence`) were deleted in implementation 02,
+Phase 1. See [§9](#9-the-text-notation-mvp-routes).
 
 The video reader's routers (`/video` in `api/video.py`, `/frame-examples` in
 `api/frame_examples.py`, implementations 04 to 07) are not described on this page. Their reasoning
@@ -127,8 +123,10 @@ flow page instead.
 empty `events.json` (`durationSeconds: 0`) and a `frameMs` on the metadata, and the first accepted
 passage is what creates a recording. Body: `{ "name": string, "frameMs": number }`.
 
-`GET /audio/` and `GET /audio/{uuid}` add three computed fields to `metadata.json`: `hasNotes`,
-`needsRederivation`, and `originalDurationSeconds`. Once cuts are saved, `durationSeconds` is the
+`GET /audio/` and `GET /audio/{uuid}` add four computed fields to `metadata.json`: `hasNotes`,
+`needsRederivation`, `originalDurationSeconds`, and `updatedAt` (the newest modification time of the
+files directly in the piece's folder, one `stat` per file; the Projects page sorts by it and shows
+it; added in implementation 02, Phase 1). Once cuts are saved, `durationSeconds` is the
 length of the piece (the original minus the cuts) and `originalDurationSeconds` keeps the length of
 the untouched file.
 
@@ -569,9 +567,10 @@ Detail in [`editing-and-compose.md`](editing-and-compose.md).
 
 ---
 
-## 6. `/pieces`: the flow page
+## 6. `/pieces`: the steps of a project
 
-The flow page (`/piece/:uuid` in the frontend) has five tabs: Source, Audio, Notes, Hands, Sheet.
+The page of a project (`/projects/:id/:step` in the frontend, the "flow page" of implementation 08)
+has five steps: Source, Audio, Notes, Hands, Sheet.
 Before implementation 08 nothing on the backend could say which of these steps a piece had
 completed, and the notes could only be edited through the sheet's columns and rows. The `/pieces`
 router (`api/pieces.py`, Phase 5) gives the page one status answer to enable its tabs from, the notes
@@ -774,20 +773,12 @@ answers `202` with `{jobId, status}` at once.
 
 ## 9. The text-notation MVP routes
 
-`GET /scores` and `POST /sequence` are the project's original seed: a line-per-time-frame text
-notation converted into a sparse 88-key score. They still run, and `matrix/text_notation.py` is
-still their single source of truth.
-
-**They are not part of the wall-clock path and no screen calls them.** Text notation and matrix JSON
-were removed from Upload / Input in P4.2 for one reason: a sheet is written from recorded onsets and
-neither of those has any. `POST /sequence` still takes `tempoBpm` and `timeStepSeconds`, which is
-the clearest sign of which model it belongs to.
-
-Parsing detail in [`sequence-logic.md`](sequence-logic.md), payload shapes in
-[`schemas.md`](schemas.md).
-
-`GET /scores` reads `data/example-scores.json` and answers `404` with a hint if it is missing.
-`POST /sequence` answers `422` for an unknown note name or for hands with different frame counts.
+`GET /scores` and `POST /sequence`, the project's original seed (a line-per-time-frame text notation
+converted into a sparse 88-key score), were **deleted in implementation 02, Phase 1** (decision Q-4),
+with `api/scores.py`, `schemas/score.py` and `data/example-scores.json`. No screen had called them
+since P4.2. Both paths now answer `404` (a test says so). `matrix/text_notation.py` stays, as a
+builder of test matrices. The old pages are in `documentation/deprecated/`
+([`sequence-logic.md`](../../deprecated/sequence-logic.md), [`schemas.md`](../../deprecated/schemas.md)).
 
 ---
 

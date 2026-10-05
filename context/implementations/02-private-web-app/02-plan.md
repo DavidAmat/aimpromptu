@@ -269,8 +269,8 @@ when no other project uses it (section 8.5). The app context asks for this to sa
 | The words under the staff | `Lyric` in `schemas/rhythm.py`, the Lyrics tab | The new lyrics (section 11.5) |
 | Recording, metronome, slowed playing | `audio/useRecorder.ts`, `components/editing/useClickTrack.ts` | Recording in Sheet, From scratch |
 | The PDF writer | `src/print/` | Unchanged |
-| The read-only performance page | `pages/PerformancePage.tsx` | The base of Play mode |
-| Notes Falling | `pages/playground/NotesFallingPage.tsx` | A view of Play mode (Q-4) |
+| The read-only performance page | `pages/PerformancePage.tsx`, deleted in Phase 1 with the old Piano Library it read; its loader `library/loadPerformanceScore.ts` is kept | The base of Play mode (git history keeps the page) |
+| Notes Falling | `pages/piece/NotesFallingPage.tsx` (moved in Phase 1) | A view of Play mode (Q-4) |
 | The video reader | `aitu-backend/src/aitu_backend/video/`, `pages/video/` | A source of From source (Q-4); its development pages in Lab |
 | Jobs and progress streams | `transcription/jobs.py`, `hooks/useProgress.ts` | Unchanged, with an owner per job (section 18) |
 | The seed list of 31 songs | `scripts/seed/youtube-library/library.json`, `seed-state.json` beside it (it maps each uuid to a title and an artist) | The artist and song of the migrated pieces (Phase 3) |
@@ -366,6 +366,7 @@ one OpenAI uses.
 | `/projects` | The Personal Vault: the list of projects | 1 (on pieces), 5 |
 | `/projects/new` | Choose: From source, From scratch, From other projects | 5 |
 | `/projects/:id/:step` | The flow: `source`, `audio`, `notes`, `hands`, `sheet` | 1, 5 |
+| `/projects/:id/notes-falling` | Notes Falling of a project, until Play mode | 1 (removed in 11) |
 | `/projects/:id/passages/:passageId` | Recording in Sheet | 9 |
 | `/projects/:id/compose` | From other projects | 10 |
 | `/library/songs`, `/library/songs/:id` | My songs, one song with its versions | 6 |
@@ -380,7 +381,8 @@ one OpenAI uses.
 | `/requests`, `/requests/:id` | My requests | 14 |
 | `/admin/requests`, `/admin/requests/:id` | Review | 14 |
 | `/admin/users` | Users | 4 |
-| `/admin/lab/...` | The video reader's development pages | 1 |
+| `/admin/lab/...` | The video reader's pages: `video`, `calibration`, `detection`, `notes`, `examples` | 1 |
+| `/dev/ui`, `/dev/roll-bench` | Development builds only: every shared component on one page; the Notes step's measurements | 1 |
 
 Every old path (`/piece/...`, `/playground/...`, `/youtube`, `/video/...`, `/library/play/...`)
 redirects to its new home for one implementation, then is removed in Phase 15.
@@ -446,7 +448,9 @@ transposition and grace notes), `FigurePicker` (the figure icons as a segmented 
 (the steps of a project, restyled).
 
 `PageContainer` and `SectionCard` (title plus description) are deleted: the description is the thing
-the guidelines remove.
+the guidelines remove. Phase 1 added two more: `Section` (a group with an optional small title and
+no description, in place of `SectionCard`) and `RowMenu` (the `⋯` menu of a row or a page).
+`/dev/ui` shows every shared component on one page in a development build.
 
 ## 7.5 What happens to the words
 
@@ -1420,7 +1424,8 @@ step (section 14.1: subheaders, the sub-song panel, reorder, join and split part
 Section 17: the clean page, Close and Next, Play and Pause with the scroll that keeps the cursor in
 the middle, the lyrics shown by their frames, the keys, Notes Falling as a view, songs playlists (next
 song, the list when closed, the continuous page). Entry points from every place a version or a
-playlist is shown. The old `PerformancePage` removed.
+playlist is shown. (The old `PerformancePage` was already removed in Phase 1, with the old library
+it read; `library/loadPerformanceScore.ts` is kept for this phase.)
 
 ## Phase 12: The music library data reconciled (any time after Phase 3, once the parallel work has data)
 

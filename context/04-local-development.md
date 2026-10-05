@@ -46,7 +46,7 @@ ssh -N -L 5173:localhost:5173 ubuntu      # or scripts/tunnel-from-mac.sh
 
 Then open `http://localhost:5173`. The page calls the backend at `/api`, which the Vite server passes
 to the backend container; the audio files and the progress stream go the same way. The page opens on
-**Piece**, the flow page: Source, Audio, Notes, Hands, Sheet
+**Projects**; a project goes through Source, Audio, Notes, Hands, Sheet
 ([frontend/flow-page.md](frontend/flow-page.md)).
 
 ## 3. Natively, without containers
@@ -97,7 +97,7 @@ Playwright's Chromium, installed once with `npx playwright install chromium`):
 | `npm run check:render` | A real score drawn headlessly in jsdom (a renderer fails silently at layout time) |
 | `npm run check:history`, `check:note-names`, `check:geometry` | Undo and redo, Spanish note names, sheet geometry |
 | `npm run check:cuts`, `check:notes` | The Audio tab's cuts; the Notes tab's arrays, edits and operations |
-| `npm run check:flow` | The flow page walked in a headless Chromium on a temporary upload (about 2 minutes with the transcription) |
+| `npm run check:flow` | A project walked in a headless Chromium on a temporary upload (about 2 minutes with the transcription) |
 | `npm run time:flow` | The whole flow, timed, on three temporary pieces (an upload, a copied library piece, a new YouTube download) |
 | `npm run bench:roll`, `bench:sheet` | The Notes tab's frame rate; a hand move on the piano sheet, part by part |
 | `npm run screenshot -- <file> [--piece <uuid>]` | One screenshot of the app |

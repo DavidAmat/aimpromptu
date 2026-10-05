@@ -4,48 +4,50 @@ Every route, what lives on it, and the rules the shell enforces.
 
 ## Routes
 
-`src/layout/routes.ts` is the single place a URL is written. Nothing hardcodes a path: navigation,
-the top bar and the Playground tab strip all read from it.
-
-The top bar starts with **Piece**, because a piece now starts there. Then **YouTube to Audio**,
-**Video to Notes**, **Playground** and **Piano Library**.
+`src/layout/routes.ts` is the single place a URL is written. Nothing hardcodes a path: the sidebar,
+the step tabs, the Lab tabs and the redirects all read from it. The table of every path, by phase,
+is plan section 6.3 of [implementation 02](../implementations/02-private-web-app/02-plan.md).
 
 | Path | Page | Notes |
 |---|---|---|
-| `/` | | Redirects to `/piece/new` |
-| `/piece` | `PieceIndex` | The **Piece** entry: the working piece, or a new one |
-| `/piece/new` | `PiecePage` | The flow page with only the Source tab |
-| `/piece/:uuid` | `PiecePage` | Opens the piece on the furthest step that is ready |
-| `/piece/:uuid/<step>` | `PiecePage` | One tab: `source`, `audio`, `notes`, `hands` or `sheet` |
-| `/youtube` | `YouTubePage` | Probe a video, download its audio |
-| `/video/*` | `VideoLayout` | Video to Notes |
-| `/playground/input` | `InputPage` | Upload, record, the audio library, **Compose** |
-| `/playground/notes-falling` | `NotesFallingPage` | |
-| `/playground/rhythm` | `RhythmPage` | The **Piano Sheet** tab; the route kept its old name |
-| `/playground/piano-roll` | | Redirects to `/piece` (the old Piano Roll, removed) |
-| `/library` | `LibraryPage` | Browse, tag, playlists, playground version management |
-| `/library/play/:id` | `PerformancePage` | Read-only, with overlay pills |
-| `/dev/roll-bench` | `RollBenchPage` | Development builds only: the Notes tab's measurements |
+| `/` | | Redirects to `/projects` |
+| `/projects` | `ProjectsPage` | The projects, newest change first; **New project** |
+| `/projects/new` | `PiecePage` | A new project, with only the Source step |
+| `/projects/:id` | `PiecePage` | Opens the project on the furthest step that is ready |
+| `/projects/:id/<step>` | `PiecePage` | One step: `source`, `audio`, `notes`, `hands` or `sheet` |
+| `/projects/:id/notes-falling` | `NotesFallingPage` | Inside the project's page, from its `⋯` menu |
+| `/admin/lab/<tab>` | `LabLayout` | `video`, `calibration`, `detection`, `notes`, `examples` (and `examples/:slug`) |
+| `/dev/roll-bench` | `RollBenchPage` | Development builds only: the Notes step's measurements |
 
-## The flow page
+**Old paths** redirect to their new home, keeping the query string (`LEGACY_REDIRECTS`):
+`/piece/...` to `/projects/...`, `/video/<tab>` to `/admin/lab/<tab>`, `/youtube` to
+`/projects/new`, and `/playground/...` and `/library...` to `/projects`. Phase 15 removes them.
 
-`/piece/:uuid/<step>` is one page with five tabs in the order of the work: Source, Audio, Notes,
-Hands, Sheet. The piece is in the address, so a reload or a shared link opens the same piece at the
-same step. The backend says which steps are ready; a tab that is not ready is greyed and its tooltip
-says what is missing. A tab with unsaved changes asks the reader to save or discard before any
-navigation, and closing the browser tab shows the browser's own warning.
+## The shell
+
+`layout/AppLayout.tsx` puts the sidebar (`ui/Sidebar.tsx`) beside the page (`ui/AppShell.tsx`). The
+sidebar is open on the list pages and closed inside a project; the reader's own choice holds until
+they move between the two kinds of page. Under 900 px it stays closed, as a rail of icons with
+their names in tooltips. `⌘K` (`Ctrl+K`) opens **Search** from anywhere (`layout/SearchDialog.tsx`):
+it filters the projects by title as the reader types, the arrows move through the results, and
+Enter opens one.
+
+## The steps of a project
+
+`/projects/:id/<step>` is one page with five steps in the order of the work: Source, Audio, Notes,
+Hands, Sheet. The project is in the address, so a reload or a shared link opens the same project at
+the same step. The backend says which steps are ready; a step that is not ready is grey and its
+tooltip says what is missing. A step with unsaved changes asks the reader to save or discard before
+any navigation, and closing the browser tab shows the browser's own warning.
 
 Detail: [flow-page.md](flow-page.md).
 
-**The old Piano Roll tab is gone** (implementation 08, decision Q-4). The Notes and Hands tabs are
-the piano roll visualization now, drawn on a canvas, with an editor. Notes Falling stays on the
-Playground.
-
 ## The shared working artifact
 
-`state/WorkingArtifactProvider` holds the piece the Playground tabs are about, in `sessionStorage`,
-so moving between tabs does not lose it. The flow page sets it when it loads a piece, so the
-Playground shows the same piece, and **Piece** in the top bar returns to it.
+`state/WorkingArtifactProvider` holds the working piece in `sessionStorage`: the project page sets
+it when it loads a project, and it carries the column length (`frameMs`) the sheet and Notes Falling
+read the piece at. It was made for the Playground tabs, which are gone; the project in the address
+is now what every page works on.
 
 It drops one piece of legacy state on read: a temporary time range used to live in session state,
 before trimmed audio became a real child audio with its own uuid, and leaving it there could make a
@@ -65,9 +67,9 @@ nothing else**: the strip above the top stave, the gaps between systems, the mar
 there already means nothing, and every element that does mean something is listed rather than
 inferred.
 
-The flow page follows the same idea. On the Audio tab, the playhead is moved in the **time ruler**
+The steps of a project follow the same idea. On the Audio step, the playhead is moved in the **time ruler**
 at the top of the waveform (press or drag) or with a double-click; a drag in the waveform selects.
-On the Notes and Hands tabs, the playhead is moved in the time ruler and on the bar under the piano
+On the Notes and Hands steps, the playhead is moved in the time ruler and on the bar under the piano
 roll visualization. There a double-click on empty space adds a note, so it does not move the
 playhead.
 
@@ -96,6 +98,6 @@ transcribed.
 
 - [`documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md):
   every component and where it sits
-- [flow-page.md](flow-page.md): the flow page, step by step
+- [flow-page.md](flow-page.md): Projects and the steps of a project
 - [rendering.md](rendering.md): the sheet itself
 - [timestamps.md](timestamps.md): `mm:ss.cc`, and why it never wraps

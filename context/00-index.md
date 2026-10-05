@@ -47,14 +47,14 @@ assumes.
 | [backend/pieces-and-revisions.md](backend/pieces-and-revisions.md) | The steps of a piece, the revisions, what makes a step stale, the `/pieces` routes, the saved hands |
 | [backend/editing.md](backend/editing.md) | Re-recording a passage, and composing a piece from nothing |
 | [backend/api.md](backend/api.md) | The HTTP surface: six routers and the shape of a session |
-| [backend/notation-and-parsing.md](backend/notation-and-parsing.md) | The text-notation MVP path, kept but no longer an entry point |
+| [notation-and-parsing.md](../documentation/deprecated/notation-and-parsing.md) | Deprecated: the text-notation MVP path, deleted in implementation 02, Phase 1 |
 
 ## Frontend overview (`context/frontend/`)
 
 | File | Description |
 |------|-------------|
 | [frontend/README.md](frontend/README.md) | aitu-frontend entry: the sections, the tabs, the data flow |
-| [frontend/flow-page.md](frontend/flow-page.md) | **The flow page** (Piece): the five tabs from the audio to the piano sheet, the editor's gestures, the timings |
+| [frontend/flow-page.md](frontend/flow-page.md) | **Projects and the steps of a project**: the five steps from the audio to the piano sheet, the editor's gestures, the timings |
 | [frontend/pages.md](frontend/pages.md) | Routes, the shell, and the "position has one home" rule |
 | [frontend/rendering.md](frontend/rendering.md) | How the sheet is drawn, what the app does *not* decide, the stale-`dist` trap |
 | [frontend/annotations.md](frontend/annotations.md) | Everything a reader can say about a piece, and where it goes |
@@ -234,8 +234,8 @@ Reading a piano roll video into the same `events.json` the transcription model w
 | [../documentation/services/backend/rhythm-and-annotations.md](../documentation/services/backend/rhythm-and-annotations.md) | `rhythm.json` field by field: everything a reader decided |
 | [../documentation/services/backend/editing-and-compose.md](../documentation/services/backend/editing-and-compose.md) | The replacement splice, and the one place a piece may change length |
 | [../documentation/services/backend/paths-and-data.md](../documentation/services/backend/paths-and-data.md) | The storage tree: every path, `v<N>_f<frameMs>`, staging and history |
-| [../documentation/services/backend/schemas.md](../documentation/services/backend/schemas.md) | The 1.x models the text-notation MVP still uses |
-| [../documentation/services/backend/sequence-logic.md](../documentation/services/backend/sequence-logic.md) | `matrix/text_notation.py`: parsing, onset normalisation, the COO builder |
+| [../documentation/deprecated/schemas.md](../documentation/deprecated/schemas.md) | Deprecated: the models of the deleted text-notation MVP |
+| [../documentation/deprecated/sequence-logic.md](../documentation/deprecated/sequence-logic.md) | Deprecated: `matrix/text_notation.py`, now only a builder of test matrices |
 
 ### Frontend detail (`documentation/services/frontend/`)
 

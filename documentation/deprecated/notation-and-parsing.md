@@ -1,7 +1,14 @@
+> **Deprecated (implementation 02, Phase 1, 2026-10-05).** The text-notation MVP was removed by
+> decision Q-4 of [implementation 02](../../context/implementations/02-private-web-app/02-plan.md):
+> `GET /scores`, `POST /sequence`, `schemas/score.py`, `data/example-scores.json` and the frontend's
+> `api/scores.ts` are deleted; git history keeps them. `matrix/text_notation.py` stays only as a
+> builder of test matrices. The sparse-COO wire format and the 88-key row order are still owned by
+> [02-notation-spec.md](../../context/music/notation-logic/02-notation-spec.md).
+
 # Notation and parsing — the text-notation MVP
 
 How aitu-backend turns text frames into a sparse-COO score. The format contract is
-[02-notation-spec.md](../music/notation-logic/02-notation-spec.md); this file covers backend
+[02-notation-spec.md](../../context/music/notation-logic/02-notation-spec.md); this file covers backend
 ownership only.
 
 > **This path is the project's original seed and is no longer an entry point.** Text notation and
@@ -10,12 +17,12 @@ ownership only.
 >
 > The parser is kept because it is self-contained and cheap, and because the 88-key tables it grew
 > are now in `matrix/keys.py` and used by everything. **What the app actually does** is in
-> [time-model.md](time-model.md).
+> [time-model.md](../../context/backend/time-model.md).
 
 ## Input
 
 `POST /sequence` accepts `sequence: list[str]` — one string per time frame. One line per frame. The compose UI that produced them was deleted with the tempo model;
-see [`archive/superseded/compose-panel.md`](../archive/superseded/compose-panel.md).
+see [`archive/superseded/compose-panel.md`](../../context/archive/superseded/compose-panel.md).
 
 Parsing is in `matrix/text_notation.py` (it was `sequence.py` before the Epic 1 restructure):
 
@@ -54,7 +61,7 @@ then `Do-8`. Mirrored in the frontend by `music/noteNames.ts`.
 
 ## Where to look deeper
 
-- [02-notation-spec.md](../music/notation-logic/02-notation-spec.md) — full contract
-- [sequence-logic.md](../../documentation/services/backend/sequence-logic.md) — function-level detail
-- [schemas.md](../../documentation/services/backend/schemas.md) — Pydantic models
-- [api.md](api.md) — `POST /sequence` request/response
+- [02-notation-spec.md](../../context/music/notation-logic/02-notation-spec.md) — full contract
+- [sequence-logic.md](sequence-logic.md) — function-level detail
+- [schemas.md](schemas.md) — Pydantic models
+- [api.md](../../context/backend/api.md) — `POST /sequence` request/response

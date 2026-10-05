@@ -32,7 +32,8 @@ them through one SSH tunnel to the frontend's port; the frontend passes `/api` t
 | `schemas/` | Pydantic contracts, camelCase on the wire, mirrored in TypeScript |
 
 **Endpoints:** `/health`, `/audio`, `/matrix`, `/pieces`, `/time`, `/audio/{uuid}/edits`, `/library`,
-`/youtube`, `/video`, `/frame-examples`, plus the text-notation MVP `/scores` and `/sequence`. Table in
+`/youtube`, `/video`, `/frame-examples`. (The text-notation MVP `/scores` and `/sequence` was deleted
+in implementation 02, Phase 1.) Table in
 [backend/api.md](backend/api.md), detail in
 [`documentation/services/backend/endpoints.md`](../documentation/services/backend/endpoints.md).
 
@@ -49,9 +50,8 @@ where in time it sits.
 | API base | `/api`, which the Vite server passes to the backend; `VITE_AITU_API_URL` overrides it |
 | Role | Every screen, and every pixel of the sheet |
 
-**Sections:** **Piece** (the flow page: Source, Audio, Notes, Hands, Sheet;
-[frontend/flow-page.md](frontend/flow-page.md)), YouTube to Audio, Video to Notes, Playground
-(Upload / Input · Notes Falling · Piano Sheet), Piano Library, and a read-only performance page.
+**Sections** (a left sidebar): **Projects** (each project: Source, Audio, Notes, Hands, Sheet;
+[frontend/flow-page.md](frontend/flow-page.md)) and **Lab** (the video reader's pages).
 
 **Does not:** decide any note's name — the figures arrive from the backend and are passed straight
 through to the renderer.
@@ -75,7 +75,7 @@ there. See [frontend/rendering.md](frontend/rendering.md).
 ```
 Browser on the Mac ──ssh -L 5173──▶ frontend container (Vite, :5173)
                                       │  /api/* passed to the backend
-    GET  /pieces/{id}/status      which steps are ready     → the tabs of the flow page
+    GET  /pieces/{id}/status      which steps are ready     → the step tabs of a project
     PUT  /audio/{id}/cuts         the selected region       → the Audio tab
     POST /matrix/transcribe       + SSE chunk messages      → the live Notes tab
     GET/PATCH /pieces/{id}/notes  the notes, as operations  → the Notes and Hands tabs

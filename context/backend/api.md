@@ -18,8 +18,8 @@ server. CORS allows all origins — local, no auth surface.
 | `/youtube` | `api/youtube.py` | Downloads via yt-dlp, also as a job with progress |
 | `/video`, `/frame-examples` | `api/video.py`, `api/frame_examples.py` | Reading a Synthesia-style video into a piece (implementations 04 and 05) |
 
-Plus `GET /health`, and `GET /scores` / `POST /sequence` — the original text-notation MVP, which
-still runs but which no screen calls.
+Plus `GET /health`. The original text-notation MVP (`GET /scores`, `POST /sequence`) was deleted in
+implementation 02, Phase 1 (Q-4); its pages are in `documentation/deprecated/`.
 
 ## The shape of a session
 

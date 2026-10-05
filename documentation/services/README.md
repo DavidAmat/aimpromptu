@@ -15,8 +15,8 @@ Code-level detail per service. Overviews in [context/backend/](../../context/bac
 | [rhythm-and-annotations.md](backend/rhythm-and-annotations.md) | `rhythm.json`: everything a reader decided that is not derivable |
 | [editing-and-compose.md](backend/editing-and-compose.md) | The replacement splice, and the one place a piece may change length |
 | [paths-and-data.md](backend/paths-and-data.md) | The storage tree: every path, `v<N>_f<frameMs>`, staging and history |
-| [schemas.md](backend/schemas.md) | The 1.x models the text-notation MVP still uses |
-| [sequence-logic.md](backend/sequence-logic.md) | `matrix/text_notation.py`: parsing and the COO builder |
+| [schemas.md](../deprecated/schemas.md) | Deprecated: the models of the deleted text-notation MVP |
+| [sequence-logic.md](../deprecated/sequence-logic.md) | Deprecated: `matrix/text_notation.py`, now a builder of test matrices |
 
 ## Frontend (`frontend/`)
 

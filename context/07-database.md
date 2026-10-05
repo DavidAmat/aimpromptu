@@ -21,7 +21,6 @@ data/
     history/v<N>/                   a musical state, before it was replaced (also before a new transcription)
   playground/<artist>/<track>/v2_f40/    versioned work
   library/tracks/…  library/playlists/…  what a performer plays from
-  example-scores.json               seed data for the text-notation MVP
 ```
 
 Full tree, file by file:

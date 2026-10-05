@@ -23,7 +23,6 @@ Three groups of file names live beside the code that owns them: the files of `ma
 
 ```text
 aitu-backend/data/                     or the folder AITU_DATA_DIR names
-  example-scores.json                  seed scores for GET /scores (text-notation MVP)
   audio/<uuid>/
     metadata.json                      name, source, lineage, frameMs, cuts, audioRevision
     original.<ext>                     as ingested; never changed
@@ -253,13 +252,10 @@ read time rather than storing them.
 
 ---
 
-## 6. `data/example-scores.json`
+## 6. `data/example-scores.json` (deleted)
 
-Seed scores for `GET /scores`, the text-notation MVP route. A JSON array of `MatrixScore` objects.
-If it is missing, `/scores` answers `404` with a hint to run
-`notebooks/dummy-matrix/01-generate-dummy-matrix.ipynb` or to create the file by hand.
-
-Treat it as opaque persisted scores; it is not part of the wall-clock path.
+The seed scores of `GET /scores` were deleted with the text-notation MVP in implementation 02,
+Phase 1 (Q-4).
 
 ---
 

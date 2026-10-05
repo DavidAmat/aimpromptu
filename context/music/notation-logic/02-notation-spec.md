@@ -1,7 +1,10 @@
 # The text-notation contract
 
-**Scope: `GET /scores` and `POST /sequence`.** This is the project's original format — a line per
-time frame, written by hand — and it is still parsed exactly as described below.
+**Scope: the text notation and the sparse-COO wire format.** This is the project's original format,
+a line per time frame written by hand. The routes that served it (`GET /scores`, `POST /sequence`)
+were deleted in implementation 02, Phase 1 (Q-4). The parser (`matrix/text_notation.py`) remains,
+as a builder of test matrices, and still parses exactly as described below. The sparse-COO format
+and the 88-key row order of this page are still the contract of the whole app.
 
 It is **not** how the app makes a piece. Text notation was removed from Upload / Input in P4.2,
 because a sheet is written from recorded onsets and text notation has none. Two fields here belong
@@ -137,9 +140,9 @@ lyrics    →  ["Ho",             "la",    "la",   "dron",  "",      "de",   ""]
 
 ## Where to look deeper
 
-- Backend parsing: [notation-and-parsing.md](../../backend/notation-and-parsing.md) →
-  [sequence-logic.md](../../../documentation/services/backend/sequence-logic.md)
-- Backend schemas: [schemas.md](../../../documentation/services/backend/schemas.md)
+- Backend parsing: [notation-and-parsing.md](../../../documentation/deprecated/notation-and-parsing.md) →
+  [sequence-logic.md](../../../documentation/deprecated/sequence-logic.md)
+- Backend schemas: [schemas.md](../../../documentation/deprecated/schemas.md)
 - Frontend decode/render: [rendering-pipeline.md](../../frontend/rendering.md) →
   [matrix-to-notation.md](../../../documentation/services/frontend/grid-notation.md),
   [piano-sheet.md](../../../documentation/services/frontend/grid-notation.md)

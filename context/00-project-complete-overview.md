@@ -81,21 +81,23 @@ Step by step, with the reason for each ordering:
 
 ## The screens
 
-**Piece** — the flow page, the way in since implementation 08. Five tabs in the order of the work; a
-tab opens only when the step before it is ready ([frontend/flow-page.md](frontend/flow-page.md)):
+A left sidebar with **Search** (`⌘K`), **Projects** and **Lab**, in black, white and grey with colour
+only on the music (implementation 02, Phase 1; [frontend/README.md](frontend/README.md)).
 
-| Tab | What you do |
+**Projects** — the way in. A project (today one piece) goes through five steps in the order of the
+work; a step opens only when the step before it is ready ([frontend/flow-page.md](frontend/flow-page.md)):
+
+| Step | What you do |
 |---|---|
-| Source | Pick a piece from the library, paste a YouTube URL, or upload a file |
+| Source | Drop an audio file, or paste a YouTube link (as audio, or as a video read in Lab) |
 | Audio | See the waveform, play it, cut parts out of the selected region, **Transcribe** |
 | Notes | Watch the rectangles appear live, then edit them on a canvas piano roll and play the original audio |
 | Hands | **Predict hands**, check the colours along the song, move notes between the hands, **Save** |
 | **Sheet** | The product: the peak plot, naming, the staff, the player, every editing control |
 
-**Playground** — Upload / Input (also **Record** and **Compose**), Notes Falling, and the same Piano
-Sheet page. **YouTube to Audio** pulls audio off a video. **Video to Notes** reads a Synthesia-style
-video into a piece. **Piano Library** is what a performer plays from: browse, tag, playlists, and a
-read-only performance page with overlay toggles.
+**Notes Falling** opens from a project's `⋯` menu. **Lab** holds the video reader's pages: it reads a
+Synthesia-style video into a piece. The Playground, YouTube to Audio and the old Piano Library were
+removed in implementation 02, Phase 1 (decision Q-4).
 
 ## What a reader can do to a sheet
 
@@ -124,8 +126,8 @@ Detail: [frontend/annotations.md](frontend/annotations.md). Click by click:
 | `/youtube` | Downloads, as jobs |
 | `/video`, `/frame-examples` | Reading a Synthesia-style video into a piece (implementations 04 and 05) |
 
-Plus `GET /health`, and `GET /scores` / `POST /sequence` — the project's original text-notation MVP,
-which still runs but which no screen calls.
+Plus `GET /health`. The project's original text-notation MVP (`GET /scores`, `POST /sequence`) was
+deleted in implementation 02, Phase 1.
 
 ## Run locally
 
@@ -152,9 +154,9 @@ tresillos, trills), `editing/` (splice, compose, staging, history), `storage/` (
 module), `schemas/` (Pydantic, camelCase on the wire), `main.py` (a thin factory).
 
 **Frontend** `src/`: `api/` (one module per router), `layout/` (shell and `routes.ts`), `pages/`
-(`piece/` is the flow page), `components/{piece,time,notes,audio,input,editing,library,common}/`,
+(`ProjectsPage`, and `piece/`: the steps of a project), `components/{piece,time,notes,audio,editing,video}/`,
 `notes/` (the canvas piano roll's arrays, live feed and edits), `audio/` (cuts, the cut player),
-`piano/`, `playback/`, `print/`, `state/`, `ui/`, `music/`.
+`piano/`, `playback/`, `print/`, `state/`, `ui/` (the tokens, the theme and the shared components), `music/`.
 
 ## What is deliberately gone
 
@@ -165,8 +167,8 @@ time signatures or measures, and **no** text notation as a way to create a piece
 Five Playground tabs were deleted with the tempo model. **Piano Roll** and **Notes Falling** came
 back on the wall clock; **Matrix**, **Notes Falling (raw)** and **Music Notation** stay retired —
 the first two were views of a grid that no longer exists, and the third is the Piano Sheet tab now.
-**Piano Roll** left again in implementation 08: the Notes and Hands tabs of the flow page are the
-piano roll visualization now, with an editor. There is also **no** engine choice: MuScriptor is the
+**Piano Roll** left again in implementation 08: the Notes and Hands steps are the piano roll
+visualization now, with an editor. The whole Playground left in implementation 02, Phase 1. There is also **no** engine choice: MuScriptor is the
 only engine the user can run (ByteDance and Transkun stay in the code).
 
 If one of these should return, it is a new feature request with its own reasoning, not unfinished

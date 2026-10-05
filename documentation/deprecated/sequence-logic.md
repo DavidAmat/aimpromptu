@@ -1,4 +1,11 @@
-> Context: [notation-and-parsing.md](../../../context/backend/notation-and-parsing.md) · [notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md)
+> **Deprecated (implementation 02, Phase 1, 2026-10-05).** The text-notation MVP was removed by
+> decision Q-4 of [implementation 02](../../context/implementations/02-private-web-app/02-plan.md):
+> `GET /scores`, `POST /sequence`, `schemas/score.py`, `data/example-scores.json` and the frontend's
+> `api/scores.ts` are deleted; git history keeps them. `matrix/text_notation.py` stays only as a
+> builder of test matrices. The sparse-COO wire format and the 88-key row order are still owned by
+> [02-notation-spec.md](../../context/music/notation-logic/02-notation-spec.md).
+
+> Context: [notation-and-parsing.md](notation-and-parsing.md) · [notation-spec.md](../../context/music/notation-logic/02-notation-spec.md)
 
 # Sequence logic — the text-notation parser
 

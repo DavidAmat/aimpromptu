@@ -39,24 +39,24 @@ The plan's section 3.
 - [x] Task 0.3.1 Screenshots of every current page into the report.
 - [x] Task 0.3.2 Backend test count and frontend checks, as the reference for later phases.
 
-# [ ] Phase 1: The design system and the app shell
+# [x] Phase 1: The design system and the app shell
 
-## [ ] Story 1.1: The design system
-- [ ] Task 1.1.1 **Tokens** (`src/ui/tokens.ts`), light and dark, the MUI theme, Geist self-hosted; `palette.ts` keeps only the colours of the music.
-- [ ] Task 1.1.2 **The shared components** of plan section 7.4; `PageContainer` and `SectionCard` deleted.
+## [x] Story 1.1: The design system
+- [x] Task 1.1.1 **Tokens** (`src/ui/tokens.ts`), light and dark, the MUI theme, Geist self-hosted; `palette.ts` keeps only the colours of the music.
+- [x] Task 1.1.2 **The shared components** of plan section 7.4; `PageContainer` and `SectionCard` deleted.
 
-## [ ] Story 1.2: The shell
-- [ ] Task 1.2.1 `AppShell` and the sidebar (Projects, Lab, the user menu as a placeholder), open and closed states, `⌘K` search as a placeholder that lists pieces.
-- [ ] Task 1.2.2 The routes of plan section 6.3 for Phase 1; the old paths redirect.
+## [x] Story 1.2: The shell
+- [x] Task 1.2.1 `AppShell` and the sidebar (Projects, Lab, the user menu as a placeholder), open and closed states, `⌘K` search as a placeholder that lists pieces.
+- [x] Task 1.2.2 The routes of plan section 6.3 for Phase 1; the old paths redirect.
 
-## [ ] Story 1.3: The pages
-- [ ] Task 1.3.1 The flow at `/projects/:id/:step`; the step tabs and the Source, Audio, Notes and Hands steps restyled (plan section 10.2).
-- [ ] Task 1.3.2 Playground, YouTube page and old Piano Library removed from the UI; Notes Falling reachable from a project's menu; the video development pages under `/admin/lab/`.
-- [ ] Task 1.3.3 `/scores`, `/sequence`, their frontend module and their documentation removed (Q-4).
-- [ ] Task 1.3.4 The 13-check pass of the 09 guidelines on every page touched, with screenshots.
+## [x] Story 1.3: The pages
+- [x] Task 1.3.1 The flow at `/projects/:id/:step`; the step tabs and the Source, Audio, Notes and Hands steps restyled (plan section 10.2).
+- [x] Task 1.3.2 Playground, YouTube page and old Piano Library removed from the UI; Notes Falling reachable from a project's menu; the video development pages under `/admin/lab/`.
+- [x] Task 1.3.3 `/scores`, `/sequence`, their frontend module and their documentation removed (Q-4).
+- [x] Task 1.3.4 The 13-check pass of the 09 guidelines on every page touched, with screenshots.
 
-## [ ] Story 1.4: Documentation
-- [ ] Task 1.4.1 `color-palette.md`, `frontend/README.md`, `pages.md`, `components.md`, `aitu-frontend/README.md`, `flow-page.md` (first move towards `projects.md`).
+## [x] Story 1.4: Documentation
+- [x] Task 1.4.1 `color-palette.md`, `frontend/README.md`, `pages.md`, `components.md`, `aitu-frontend/README.md`, `flow-page.md` (first move towards `projects.md`).
 
 # [ ] Phase 2: The sheet page
 
@@ -211,7 +211,7 @@ The plan's section 3.
 
 ## [ ] Story 11.2: Playlists
 - [ ] Task 11.2.1 The next song, the list when closed, the continuous page.
-- [ ] Task 11.2.2 Entry points everywhere; `PerformancePage` removed.
+- [ ] Task 11.2.2 Entry points everywhere (`PerformancePage` was removed in Phase 1).
 
 ## [ ] Story 11.3: Documentation
 - [ ] Task 11.3.1 `context/frontend/play-mode.md` (new).

@@ -2,7 +2,9 @@
 
 **State: live, opened 2026-10-05.** Four decisions answered (Q-1 to Q-4); four more are raised during the
 work (Q-5 to Q-8). Sixteen phases, 0 to 15, each on its own `feat/phase-N` branch. **Phase 0 done and merged
-2026-10-05** ([`02-implementation-phase-0.md`](02-implementation-phase-0.md)). Next: Phase 1.
+2026-10-05** ([`02-implementation-phase-0.md`](02-implementation-phase-0.md)). **Phase 1 done
+2026-10-05** on `feat/phase-1`, waiting for the user's check before the merge
+([`02-implementation-phase-1.md`](02-implementation-phase-1.md)). Next: Phase 2.
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)
@@ -16,6 +18,7 @@ and the status lookup is [`02-checklist.md`](02-checklist.md). Phase reports go 
 | [`02-plan.md`](02-plan.md) | The plan: the structure of the app, the design system, `.database/`, users, projects, the sheet, copy and paste, Recording in Sheet, playlists, the music library, requests, Play mode, sixteen phases |
 | [`02-checklist.md`](02-checklist.md) | The status lookup, and the decisions |
 | [`02-implementation-phase-0.md`](02-implementation-phase-0.md) | Phase 0: the links repaired, the leftovers archived, the baseline (screenshots in [`screenshots/phase-0/`](screenshots/phase-0/), test counts) |
+| [`02-implementation-phase-1.md`](02-implementation-phase-1.md) | Phase 1: the design system, the sidebar shell, Projects and the restyled steps, the removed pages (screenshots in [`screenshots/phase-1/`](screenshots/phase-1/)) |
 | [`public-library-build/`](public-library-build/) | A parallel piece of work: downloading `musicchartsarchive.com` into `.music-library/` to build the data of the Public Library. Phase 12 reconciles it with this plan |
 
 ## What it is for

@@ -80,6 +80,6 @@ See [04-local-development.md](../04-local-development.md).
 - [piano-matrix-notation.md](piano-matrix-notation.md) — the stored form, the wire form, the adapters
 - [editing.md](editing.md) — re-recording a passage, and composing a piece from nothing
 - [api.md](api.md) — the HTTP surface
-- [notation-and-parsing.md](notation-and-parsing.md) — the text-notation MVP path
-- [documentation/services/backend/](../../documentation/services/backend/) — every endpoint, field,
+- [notation-and-parsing.md](../../documentation/deprecated/notation-and-parsing.md) — deprecated: the text-notation MVP, deleted in implementation 02, Phase 1
+- [documentation/services/backend/](../../documentation/services/backend) — every endpoint, field,
   path and parameter

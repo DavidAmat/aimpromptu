@@ -7,42 +7,42 @@ off the shelf lays music out on a wall clock.
 It owns **all** drawing. The backend decides what each note is called; this app decides how the page
 looks and what the reader can do to it.
 
-## The sections
+## The shell
 
-The top bar, in this order:
+A left sidebar and the page on its right, no top bar (implementation 02, plan section 6.2). The
+sidebar has the logo, **Search** (`⌘K`), the sections, and the user menu at the bottom. It is
+260 px wide with words, or 64 px with icons only; it is open on the list pages and closed inside a
+project. A section appears only once it is built:
 
 | Section | What it is for |
 |---|---|
-| **Piece** | The flow page: one piece, from its audio to its piano sheet, one tab per step. Where a piece starts |
-| **YouTube to Audio** | Download the audio of a video into the store |
-| **Video to Notes** | Read the falling rectangles of a piano tutorial video |
-| **Playground** | The older working tabs, kept beside the flow page |
-| **Piano Library** | What a performer plays from: browse, tag, playlists, a read-only page |
+| **Projects** | The projects being worked on; each one goes from its audio to its piano sheet, one step at a time |
+| **Lab** (under Admin) | The video reader's pages: the video, its calibration, the detection, its notes, the examples |
 
-The app opens on the flow page (`/` goes to `/piece/new`).
+The libraries, Requests and Admin's other pages appear in the phases that build them. The user menu
+is a placeholder until users exist (Phase 4): it holds **Keyboard shortcuts**. `/` goes to
+`/projects`.
 
-## The flow page
+A page has a title on the left and its one primary action on the right, and no subtitle. The look
+is black, white and grey, with colour spent only on the music: see
+[`../colors/color-palette.md`](../colors/color-palette.md).
 
-Implementation 08 added one page that walks a piece through five steps in order: **Source** (bring
+## The steps of a project
+
+Implementation 08 built one page that walks a piece through five steps in order: **Source** (bring
 the audio in), **Audio** (choose the selected region with cuts), **Notes** (watch the live
 transcription, then edit the rectangles of the piano roll visualization), **Hands** (the hand split,
-then reassign notes to the right hand or the left hand) and **Sheet** (the piano sheet). A tab opens
-only when the step before it is ready, and a step whose input changed is marked stale. Nothing on
-the Audio, Notes and Hands tabs is written before **Save**.
+then reassign notes to the right hand or the left hand) and **Sheet** (the piano sheet).
+Implementation 02 made it the page of a project (`/projects/:id/:step`). A step opens only when the
+step before it is ready, and a step whose input changed is marked stale. Nothing on the Audio, Notes
+and Hands steps is written before **Save**.
 
 Detail: [flow-page.md](flow-page.md).
 
-## The Playground
-
-| Tab | What you do there |
-|---|---|
-| Upload / Input | Bring a piece in: upload, record, the audio library, or **Compose** an empty one |
-| Notes Falling | The notes arriving at the keys |
-| **Piano Sheet** | The product: read the playing, name one pile, get the sheet, edit it, print it |
-
-The Piano Sheet tab and the flow page's Sheet tab are the same page. The Playground's **Piano Roll**
-tab was removed in implementation 08: the Notes and Hands tabs of the flow page are the piano roll
-visualization now, and `/playground/piano-roll` opens the flow page.
+**Removed in implementation 02, Phase 1** (decision Q-4): the Playground (Upload / Input, Notes
+Falling, Piano Sheet as tabs), the YouTube to Audio page, and the old Piano Library with its
+read-only performance page. A YouTube download is the Source step, Notes Falling opens from a
+project's `⋯` menu, and the old paths redirect.
 
 ## What a reader does on the sheet
 
@@ -57,7 +57,8 @@ Detail: [annotations.md](annotations.md).
 ## Data flow
 
 ```
-GET   /pieces/{id}/status       ──▶  the flow page: which tabs are ready, stale or missing
+GET   /audio/                   ──▶  Projects and Search: every piece, with when it last changed
+GET   /pieces/{id}/status       ──▶  a project: which steps are ready, stale or missing
 GET   /audio/{id}/frames/peaks  ──▶  the Audio tab's waveform
 PUT   /audio/{id}/cuts          ◀──  the selected region
 POST  /matrix/transcribe        ◀──  Transcribe; the progress stream feeds the live Notes tab
@@ -87,8 +88,9 @@ and the Vite server passes it to the backend. See
 
 ## Where to look deeper
 
-- [flow-page.md](flow-page.md): the flow page, step by step
+- [flow-page.md](flow-page.md): Projects and the steps of a project
 - [pages.md](pages.md): the routes, the shell, the shared working artifact
+- [../colors/color-palette.md](../colors/color-palette.md): the tokens and the colours of the music
 - [rendering.md](rendering.md): how the sheet is drawn, and what the app does *not* decide
 - [annotations.md](annotations.md): what a reader can say about a piece, and where it goes
 - [printing.md](printing.md): the PDF, re-wrapped to the paper, never scaled
