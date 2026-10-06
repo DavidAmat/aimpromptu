@@ -51,6 +51,8 @@ export interface AudioItem {
    * for every piece that is fine.
    */
   needsRederivation?: string | null;
+  /** The project has a video: its Audio step is the Video step. */
+  hasVideo?: boolean;
 }
 
 /** Min/max peak pairs, one per bucket — computed backend-side. */
@@ -93,6 +95,16 @@ export interface CutsState {
   kept: KeptRange[];
   /** The stored notes were transcribed from other cuts: transcribe again. */
   notesStale: boolean;
+  /** The files of the audio laid end to end, in order (**add audio**): one for most projects. */
+  files: AxisFile[];
+}
+
+/** One file of the audio of a project, on the axis of the Audio step. */
+export interface AxisFile {
+  name: string;
+  /** Where the file starts, and its length, in 10 ms frames. */
+  startFrame: number;
+  frames: number;
 }
 
 /**
@@ -152,6 +164,9 @@ export const audioApi = {
 
   upload: (file: File, alias?: string) =>
     upload<AudioItem>("/audio/upload", file, alias ? { alias } : {}),
+
+  /** **Add audio**: another file at the end of the project's audio. */
+  addAudio: (uuid: string, file: File) => upload<AudioItem>(`/audio/${uuid}/add`, file),
 
   storeRecording: (file: File, alias?: string) =>
     upload<AudioItem>("/audio/recording", file, alias ? { alias } : {}),

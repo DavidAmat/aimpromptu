@@ -1,38 +1,198 @@
-"""``/projects``: the projects of the Personal Vault (implementation 02, plan section 8.8).
+"""``/projects``: the projects of the Personal Vault (implementation 02, plan sections 8.8 and 10.1).
 
-Phase 3 makes one route, **duplicate**, because the scripts that measure and check the app work on
-a temporary copy of a project and can no longer copy a folder by hand: a project is a bundle plus
-its rows in the database. Phase 5 adds the list, create, rename, delete, export and import.
+List, create, rename, delete, duplicate, export and import. A project made by this app has the id of
+its first part, so the uuid of a piece is also the id of its project, and the routes of the steps
+(``/audio``, ``/pieces``, ``/time``, ``/matrix``) keep working on it.
 
-A project made by this app has the id of its first part, so the uuid of a piece is also the id of
-its project.
+**The step of a row** is the lowest step its parts reached (section 10.5), kept in
+``projects.step``. Computing it reads the notes and the sheet of every part (about 25 ms a part), so
+it is stored: a write of a part's notes, sheet or timeline clears it
+(:func:`aitu_backend.storage.bundle.step_changed`), and the list works out again only the rows it
+finds cleared. A part whose transcription or video reading is running says so instead.
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+import tempfile
+from datetime import datetime
+from pathlib import Path
+from typing import Annotated, Literal
 
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
+from starlette.background import BackgroundTask
+
+from aitu_backend.db import tools
+from aitu_backend.db.database import session
+from aitu_backend.db.models import Project
 from aitu_backend.db.users import current_user_id
-from aitu_backend.storage import bundle, locate
+from aitu_backend.storage import bundle, exchange, locate
+from aitu_backend.transcription import jobs, pipeline
+from aitu_backend.video import store as video_store
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
+Layer = Literal["vault", "private"]
 
-class DuplicateIn(BaseModel):
+
+class _Camel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    #: The title of the copy; the original's when absent.
-    title: str | None = Field(None, max_length=300)
+
+class ProjectRow(_Camel):
+    """One project, as the Projects page lists it."""
+
+    id: str
+    title: str
+    kind: str
+    #: ``vault`` (Personal Vault) or ``private`` (Private Library).
+    layer: str
+    #: The lowest step the parts reached: ``audio``, ``notes``, ``hands`` or ``sheet``.
+    step: str | None = None
+    #: ``transcribing`` or ``reading`` while a job works on a part, else ``None``.
+    running: str | None = None
+    #: The ids of the parts, in order. The first one is the uuid the step routes take.
+    parts: list[str]
+    #: Where the audio of the first part came from: ``upload``, ``youtube``, ``recording`` ...
+    source: str | None = None
+    has_video: bool = Field(False, alias="hasVideo")
+    has_notes: bool = Field(False, alias="hasNotes")
+    based_on: str | None = Field(None, alias="basedOn")
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime | None = Field(None, alias="updatedAt")
 
 
-class ProjectOut(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
+class ProjectOut(_Camel):
     id: str
     title: str
     #: The ids of the parts, in order. The first one is the uuid the other routes take.
     parts: list[str]
+
+
+class DuplicateIn(_Camel):
+    #: The title of the copy; the original's when absent.
+    title: str | None = Field(None, max_length=300)
+
+
+class CreateIn(_Camel):
+    title: str = Field("", max_length=300)
+
+
+class RenameIn(_Camel):
+    title: str = Field(..., min_length=1, max_length=300)
+
+
+def _running(part_ids: list[str]) -> str | None:
+    for part_id in part_ids:
+        if jobs.active(f"transcribe:{part_id}") is not None:
+            return "transcribing"
+        if jobs.active(f"video-read:{part_id}") is not None:
+            return "reading"
+    return None
+
+
+def _row(project: Project) -> ProjectRow:
+    part_ids = bundle.part_ids_of(project.id)
+    step = project.step
+    if step is None:
+        step = tools.refresh_step(project.id)
+    source = None
+    try:
+        source = bundle.read_project(project.id).parts[0].source.kind
+    except (locate.NotFound, IndexError, ValueError):
+        pass
+    first = part_ids[0] if part_ids else None
+    return ProjectRow(
+        id=project.id,
+        title=project.title,
+        kind=project.kind,
+        layer=project.layer,
+        step=step,
+        running=_running(part_ids),
+        parts=part_ids,
+        source=source,
+        has_video=bool(first and video_store.exists(first)),
+        has_notes=bool(first and pipeline.has_events(first)),
+        based_on=project.based_on,
+        created_at=project.created_at,
+        updated_at=bundle.last_change(project.id) or project.updated_at,
+    )
+
+
+def _project_or_404(project_id: str) -> Project:
+    with session() as db:
+        row = db.get(Project, project_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"No project with id '{project_id}'")
+        db.expunge(row)
+        return row
+
+
+@router.get("", response_model=list[ProjectRow], response_model_by_alias=True)
+def list_projects(
+    layer: Annotated[list[Layer] | None, Query()] = None,
+) -> list[ProjectRow]:
+    """The current user's projects, the most recently changed first: the Personal Vault, or the
+    layers asked for (``?layer=vault&layer=private``)."""
+    layers = layer or ["vault"]
+    with session() as db:
+        rows = list(
+            db.scalars(
+                select(Project).where(
+                    Project.owner_id == current_user_id(), Project.layer.in_(layers)
+                )
+            )
+        )
+        for row in rows:
+            db.expunge(row)
+    out = [_row(row) for row in rows]
+    out.sort(key=lambda item: item.updated_at or item.created_at, reverse=True)
+    return out
+
+
+@router.post("", response_model=ProjectRow, response_model_by_alias=True, status_code=201)
+def create_project(body: CreateIn | None = None) -> ProjectRow:
+    """An empty project in the Personal Vault: no audio, no notes (From scratch, section 10.3)."""
+    project = bundle.create_project(owner_id=current_user_id(), title=(body.title if body else ""))
+    return _row(_project_or_404(project.id))
+
+
+@router.post("/import", response_model=ProjectRow, response_model_by_alias=True, status_code=201)
+def import_project(file: Annotated[UploadFile, File()]) -> ProjectRow:
+    """A ``.aitu`` file made into a new project of the current user's Personal Vault."""
+    try:
+        project = exchange.import_upload(file.file, owner_id=current_user_id())
+    except exchange.ImportRefused as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _row(_project_or_404(project.id))
+
+
+@router.get("/{project_id}", response_model=ProjectRow, response_model_by_alias=True)
+def get_project(project_id: str) -> ProjectRow:
+    return _row(_project_or_404(project_id))
+
+
+@router.patch("/{project_id}", response_model=ProjectRow, response_model_by_alias=True)
+def rename_project(project_id: str, body: RenameIn) -> ProjectRow:
+    """Change the title of a project."""
+    _project_or_404(project_id)
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(status_code=422, detail="A title cannot be empty")
+    with bundle.project_lock(project_id):
+        project = bundle.read_project(project_id)
+        bundle.write_project(project.model_copy(update={"title": title}))
+    return _row(_project_or_404(project_id))
+
+
+@router.delete("/{project_id}", status_code=204)
+def delete_project(project_id: str) -> None:
+    """Delete a project with everything it has: its bundle, its history, its temporary files (a
+    video and its frames), and the audio files no other project uses."""
+    _project_or_404(project_id)
+    bundle.delete_project(project_id)
 
 
 @router.post(
@@ -53,3 +213,24 @@ def duplicate(project_id: str, body: DuplicateIn | None = None) -> ProjectOut:
     except locate.NotFound as exc:
         raise HTTPException(status_code=404, detail=f"No project with id '{project_id}'") from exc
     return ProjectOut(id=copy.id, title=copy.title, parts=[part.id for part in copy.parts])
+
+
+@router.get("/{project_id}/export")
+def export_project(project_id: str) -> FileResponse:
+    """The ``.aitu`` file of the project: its bundle and the audio files it uses (section 8.3)."""
+    row = _project_or_404(project_id)
+    handle, name = tempfile.mkstemp(prefix="aitu-export-", suffix=exchange.EXTENSION)
+    target = Path(name)
+    with open(handle, "wb"):
+        pass
+    try:
+        exchange.export_project(project_id, target)
+    except Exception:
+        target.unlink(missing_ok=True)
+        raise
+    return FileResponse(
+        target,
+        media_type="application/zip",
+        filename=exchange.export_name(row.title),
+        background=BackgroundTask(target.unlink, missing_ok=True),
+    )

@@ -11,7 +11,7 @@
  * is the column length the sheet is read at (V-04).
  */
 
-import { buildUrl, request } from "./client";
+import { buildUrl, request, upload } from "./client";
 import type { Calibration, Detection, FindRequest } from "./frameExamples";
 
 /** `video/metadata_video.json` — what the file is, and how it was sampled. */
@@ -208,6 +208,16 @@ export const videoApi = {
       body: { url, fileName: alias },
       signal,
     }),
+
+  /** A video file from the user's disk becomes a project, as a downloaded video does. */
+  upload: (file: File) => upload<VideoMetadata>("/video/upload", file),
+
+  /**
+   * **Read notes** of the Video step: sample, measure, read and write the notes in one job, each
+   * step only when it is not done yet for this piano overlay.
+   */
+  readAndWrite: (uuid: string, signal?: AbortSignal) =>
+    request<VideoJobHandle>(`/video/${uuid}/read`, { method: "POST", signal }),
 
   /** Sample the frames, as a job with progress. */
   sample: (uuid: string, sampleMs: number, signal?: AbortSignal) =>

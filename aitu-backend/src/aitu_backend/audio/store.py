@@ -21,7 +21,13 @@ The audio file itself is in the audio store, ``.database/audio/<sha256>.<ext>``
 engine's input) and ``waveform.json`` are derived files in the part's ``cache/`` folder, written
 again from the stored file when they are missing.
 
-**Every filesystem access for the audio of a part goes through this module.**
+**A part of several files** (**add audio**, Phase 5): its files are laid end to end, and the
+"original" is that axis. ``normalized.wav`` is the files' 16 kHz copies joined, and the original
+the Audio step plays is a joined FLAC (:mod:`aitu_backend.audio.sources`). ``durationSeconds`` is
+the length of the axis, and the cuts are ranges of it. :func:`append` adds a file.
+
+**Every filesystem access for the audio of a part goes through this module** (and
+:mod:`aitu_backend.audio.sources` for the joined files of a part of several files).
 """
 
 from __future__ import annotations
@@ -33,11 +39,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, Iterable
 
-from aitu_backend.audio import formats
+from aitu_backend.audio import formats, sources
 from aitu_backend.db.users import current_user_id
 from aitu_backend.schemas.metadata import AudioMetadata, AudioSource, TimeRange
 from aitu_backend.storage import audio_files, bundle, locate, paths
-from aitu_backend.storage.bundle import AudioEntry, PartSource, Segment, Timeline
+from aitu_backend.storage.bundle import AddedFile, AudioEntry, PartSource, Timeline
 
 #: Copied in chunks so a large upload never lands in memory whole.
 COPY_CHUNK_BYTES = audio_files.CHUNK_BYTES
@@ -58,8 +64,17 @@ class StoredAudio:
     metadata: AudioMetadata
     #: ``<project>/cache/<partId>/``: derived files and scratch clips of this part.
     directory: Path
-    #: The file in the audio store, or ``None`` before the first audio arrives.
+    #: The file in the audio store, or ``None`` before the first audio arrives. For a part of
+    #: several files, the joined FLAC in the cache, which may not be written yet: read it through
+    #: :func:`original_file`.
     original_path: Path | None = None
+    #: The timeline the entry was read from.
+    timeline: Timeline | None = None
+
+    @property
+    def joined(self) -> bool:
+        """Several files laid end to end (``timeline.sources``)."""
+        return self.timeline is not None and len(self.timeline.source_list()) > 1
 
     @property
     def uuid(self) -> str:
@@ -90,6 +105,10 @@ def _project_of(audio_uuid: str) -> bundle.ProjectFile:
 
 def _metadata(project: bundle.ProjectFile, part_id: str, timeline: Timeline) -> AudioMetadata:
     source = project.part(part_id).source
+    duration = source.duration_seconds
+    if len(timeline.source_list()) > 1:
+        frames = timeline.axis_frames()
+        duration = None if frames is None else frames * bundle.FRAME_MS / 1000.0
     return AudioMetadata.model_validate(
         {
             "uuid": part_id,
@@ -97,7 +116,7 @@ def _metadata(project: bundle.ProjectFile, part_id: str, timeline: Timeline) -> 
             "source": source.kind,
             "format": source.format or "wav",
             "originalFilename": source.original_filename,
-            "durationSeconds": source.duration_seconds,
+            "durationSeconds": duration,
             "sampleRate": source.sample_rate,
             "sourceUrl": source.url,
             "sourceAudioUuid": source.source_audio_uuid,
@@ -110,7 +129,7 @@ def _metadata(project: bundle.ProjectFile, part_id: str, timeline: Timeline) -> 
     )
 
 
-def _source_of(metadata: AudioMetadata) -> PartSource:
+def _source_of(metadata: AudioMetadata, added: list[AddedFile] | None = None) -> PartSource:
     return PartSource(
         kind=metadata.source.value,
         format=metadata.format,
@@ -124,14 +143,25 @@ def _source_of(metadata: AudioMetadata) -> PartSource:
             if metadata.source_time_range
             else None
         ),
+        added=list(added or []),
     )
 
 
-def _original_of(timeline: Timeline) -> Path | None:
-    content_hash = timeline.single_audio
-    if content_hash is None:
+def _original_of(part_id: str, timeline: Timeline) -> Path | None:
+    files = timeline.source_list()
+    if not files:
         return None
-    return audio_files.file_path(content_hash, timeline.audio[content_hash].format)
+    if len(files) > 1:
+        return sources.listen_path(part_id, timeline)
+    return audio_files.file_path(files[0], timeline.audio[files[0]].format)
+
+
+def original_file(entry: StoredAudio) -> Path | None:
+    """The original of a part, ready to read: its one stored file, or, for a part of several
+    files, their joined FLAC (written now when it is missing)."""
+    if entry.joined and entry.timeline is not None:
+        return sources.ensure_listen(entry.uuid, entry.timeline)
+    return entry.original_path
 
 
 _normalize_locks: dict[str, threading.Lock] = {}
@@ -146,13 +176,18 @@ def _restore_normalized(audio_uuid: str, entry: StoredAudio) -> None:
     """
     if entry.has_normalized() or entry.metadata.duration_seconds is None:
         return
-    original = entry.original_path
-    if original is None or not original.is_file():
-        return
     if not formats.ffmpeg_available():
         return
     with _normalize_guard:
         lock = _normalize_locks.setdefault(audio_uuid, threading.Lock())
+    if entry.joined and entry.timeline is not None:
+        with lock:
+            if not entry.has_normalized():
+                sources.write_normalized(audio_uuid, entry.timeline, entry.normalized_path)
+        return
+    original = entry.original_path
+    if original is None or not original.is_file():
+        return
     with lock:
         if not entry.has_normalized():
             entry.directory.mkdir(parents=True, exist_ok=True)
@@ -243,18 +278,23 @@ def _use_audio(
         timeline = timeline.model_copy(
             update={
                 "audio": {content_hash: AudioEntry(format=extension, frames=frames)},
+                "sources": None,
                 "segments": bundle.segments_for_cuts(content_hash, [], None),
             }
         )
         if cuts:
             timeline = _with_cuts(timeline, cuts)
         bundle.write_timeline(audio_uuid, timeline)
-        # The derived files of the old audio: the joined audio of the cuts and the peaks.
+        # The derived files of the old audio: the joined audio of the cuts and the peaks, and the
+        # joined files of a part that had several.
         cache = paths.part_cache_dir(audio_uuid)
         for stale in [*cache.glob("piece-r*.*"), cache / "waveform.json"]:
             stale.unlink(missing_ok=True)
+        sources.clear(audio_uuid, keep_sources=False)
         project = bundle.read_project(project.id)
-        project.part(audio_uuid).source.format = extension
+        source = project.part(audio_uuid).source
+        source.format = extension
+        source.added = []
         bundle.write_project(project)
     return audio_files.file_path(content_hash, extension)
 
@@ -264,9 +304,10 @@ def set_audio_frames(audio_uuid: str, frames: int) -> None:
     project = _project_of(audio_uuid)
     with bundle.project_lock(project.id):
         timeline = bundle.read_timeline(audio_uuid)
-        content_hash = timeline.single_audio
-        if content_hash is None:
+        files = timeline.source_list()
+        if len(files) != 1:
             return
+        content_hash = files[0]
         cuts = bundle.cuts_of(timeline)
         audio = dict(timeline.audio)
         audio[content_hash] = audio[content_hash].model_copy(update={"frames": int(frames)})
@@ -275,15 +316,91 @@ def set_audio_frames(audio_uuid: str, frames: int) -> None:
 
 
 def _with_cuts(timeline: Timeline, cuts: list[tuple[int, int]]) -> Timeline:
-    content_hash = timeline.single_audio
-    if content_hash is None:
-        if cuts:
-            raise ValueError("A part with no audio has nothing to cut")
-        return timeline
-    segments: list[Segment] = bundle.segments_for_cuts(
-        content_hash, cuts, timeline.audio[content_hash].frames
-    )
-    return timeline.model_copy(update={"segments": segments})
+    return timeline.model_copy(update={"segments": bundle.segments_with_cuts(timeline, cuts)})
+
+
+def append(
+    audio_uuid: str,
+    content_hash: str,
+    extension: str,
+    frames: int,
+    *,
+    original_filename: str | None = None,
+    kind: str = "upload",
+) -> AudioMetadata:
+    """Add a stored, measured file at the end of the part's audio (**add audio**).
+
+    The axis grows at its end, so every cut keeps its frames. ``audioRevision`` goes up by one: the
+    audio of the part changed, so its notes are stale until it is transcribed again. The joined
+    files are written again; a part that had one file keeps that file's 16 kHz copy as the first
+    one's.
+    """
+    extension = extension.lstrip(".").lower()
+    project = _project_of(audio_uuid)
+    cache = paths.part_cache_dir(audio_uuid)
+    with bundle.project_lock(project.id):
+        timeline = bundle.read_timeline(audio_uuid)
+        files = timeline.source_list()
+        if not files:
+            raise ValueError("This part has no audio yet: upload its first file instead")
+        if timeline.axis_frames() is None:
+            raise ValueError("The first audio file is not measured yet. Try again in a moment.")
+        if len(files) == 1:
+            # Its normalized.wav is that file's own 16 kHz copy: keep it as the first source's.
+            first = cache / f"{sources.SOURCE_PREFIX}{files[0]}.wav"
+            normalized = cache / "normalized.wav"
+            if normalized.is_file() and not first.is_file():
+                first.write_bytes(normalized.read_bytes())
+        cuts = bundle.cuts_of(timeline)
+        audio = dict(timeline.audio)
+        audio.setdefault(content_hash, AudioEntry(format=extension, frames=frames))
+        timeline = timeline.model_copy(
+            update={
+                "audio": audio,
+                "sources": [*files, content_hash],
+                "audio_revision": timeline.audio_revision + 1,
+            }
+        )
+        timeline = _with_cuts(timeline, cuts)
+        bundle.write_timeline(audio_uuid, timeline)
+        for stale in [*cache.glob("piece-r*.*"), cache / "waveform.json", cache / "normalized.wav"]:
+            stale.unlink(missing_ok=True)
+        sources.clear(audio_uuid)
+        project = bundle.read_project(project.id)
+        project.part(audio_uuid).source.added.append(
+            AddedFile(
+                audio=content_hash,
+                kind=kind,
+                format=extension,
+                original_filename=original_filename,
+                duration_seconds=frames * bundle.FRAME_MS / 1000.0,
+            )
+        )
+        bundle.write_project(project)
+    entry = get(audio_uuid)  # writes the joined normalized.wav
+    return entry.metadata
+
+
+def files_of(audio_uuid: str) -> list[dict[str, object]]:
+    """The files of the part's axis in order: name, first frame and length in frames. Empty while
+    the part has no measured audio."""
+    project = _project_of(audio_uuid)
+    timeline = bundle.read_timeline(audio_uuid)
+    try:
+        axis = timeline.axis()
+    except ValueError:
+        return []
+    source = project.part(audio_uuid).source
+    names = [source.original_filename or project.title] + [
+        added.original_filename or "Added audio" for added in source.added
+    ]
+    out: list[dict[str, object]] = []
+    start = 0
+    for index, (_, frames) in enumerate(axis):
+        name = names[index] if index < len(names) else f"Audio {index + 1}"
+        out.append({"name": name, "startFrame": start, "frames": frames})
+        start += frames
+    return out
 
 
 # -------------------------------------------------------------------- reading
@@ -310,7 +427,8 @@ def get(audio_uuid: str) -> StoredAudio:
     entry = StoredAudio(
         metadata=_metadata(project, audio_uuid, timeline),
         directory=paths.part_cache_dir(audio_uuid),
-        original_path=_original_of(timeline),
+        original_path=_original_of(audio_uuid, timeline),
+        timeline=timeline,
     )
     _restore_normalized(audio_uuid, entry)
     return entry
@@ -342,7 +460,11 @@ def write_metadata(metadata: AudioMetadata) -> AudioMetadata:
     with bundle.project_lock(project.id):
         project = bundle.read_project(project.id)
         entry = project.part(metadata.uuid)
-        entry.source = _source_of(metadata)
+        first_duration = entry.source.duration_seconds
+        entry.source = _source_of(metadata, entry.source.added)
+        if entry.source.added:
+            # The metadata's length is the axis; the source keeps its first file's own length.
+            entry.source.duration_seconds = first_duration
         project = project.model_copy(
             update={"title": metadata.alias, "frame_ms": metadata.frame_ms}
         )

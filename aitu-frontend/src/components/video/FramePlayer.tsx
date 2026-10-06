@@ -62,6 +62,8 @@ export interface FramePlayerProps {
   onPictureMouseDown?: FrameCanvasProps["onPictureMouseDown"];
   onPictureClick?: FrameCanvasProps["onPictureClick"];
   panDisabled?: boolean;
+  /** No help line under the bar: the Video step of a project (implementation 02, Phase 5). */
+  quiet?: boolean;
 }
 
 /** How many frames ahead are fetched, so the clock never waits on the network. */
@@ -81,6 +83,7 @@ export function FramePlayer({
   onPictureMouseDown,
   onPictureClick,
   panDisabled = false,
+  quiet = false,
 }: FramePlayerProps) {
   const [playing, setPlaying] = useState(false);
   const [sound, setSound] = useState(true);
@@ -255,6 +258,7 @@ export function FramePlayer({
         </Typography>
       </Stack>
 
+      {quiet ? null : (
       <Typography variant="caption" sx={{ color: ui.text2 }}>
         Frame {index + 1} of {frameCount} · click the picture, then spacebar plays and pauses, the
         arrows step one sampled frame and shift with an arrow steps ten. Drag the bar to move
@@ -262,6 +266,7 @@ export function FramePlayer({
           ? " — it moves the audio with it, and the audio of this same video is what the playing follows."
           : "."}
       </Typography>
+      )}
     </Stack>
   );
 }

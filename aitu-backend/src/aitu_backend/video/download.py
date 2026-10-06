@@ -27,6 +27,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import BinaryIO
 
 from aitu_backend.audio import formats, ingest
 from aitu_backend.audio.youtube import (
@@ -50,6 +51,60 @@ from aitu_backend.video import store
 #: audio under 720p, then the best single file under 720p, then whatever there is
 #: — a video that only exists at 1080p is better downloaded than refused.
 VIDEO_FORMAT = "bestvideo[height<=720]+bestaudio/best[height<=720]/best"
+
+#: The video files the Source step takes from the user's disk (implementation 02, plan section
+#: 10.2). ffmpeg reads them all; the file is kept under the name ``source.mp4`` whatever it is.
+VIDEO_SUFFIXES = (".mp4", ".mov", ".m4v", ".webm", ".mkv")
+
+
+class UnsupportedVideo(ValueError):
+    """Not a video file the Source step takes."""
+
+
+def is_video_name(filename: str) -> bool:
+    return Path(filename).suffix.lower() in VIDEO_SUFFIXES
+
+
+def ingest_file(stream: BinaryIO, filename: str, alias: str | None = None) -> VideoMetadata:
+    """A video file from the user's disk: the same project as a downloaded video (its audio
+    extracted and stored, the video kept as a temporary file of the part), with no network."""
+    if not is_video_name(filename):
+        raise UnsupportedVideo(
+            f"'{filename}' is not a video file this app reads ({', '.join(VIDEO_SUFFIXES)})"
+        )
+    if not formats.ffmpeg_available():
+        raise formats.FfmpegMissing()
+    with tempfile.TemporaryDirectory(prefix="aitu-video-") as workspace:
+        target = Path(workspace)
+        uploaded = target / f"source{Path(filename).suffix.lower()}"
+        with uploaded.open("wb") as handle:
+            shutil.copyfileobj(stream, handle, length=1024 * 1024)
+        probed = probe_file(uploaded)
+        audio_file = _extract_audio(uploaded, target / "audio.mp3")
+        entry = ingest.ingest_path(
+            audio_file, AudioSource.UPLOAD, alias=alias or Path(filename).stem
+        )
+        try:
+            destination = paths.video_source_path(entry.uuid)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(uploaded), destination)
+            return store.save_metadata(
+                VideoMetadata(
+                    audio_uuid=entry.uuid,
+                    title=entry.metadata.alias,
+                    source_url=None,
+                    width=probed["width"],
+                    height=probed["height"],
+                    duration_seconds=probed["duration"],
+                    fps=probed["fps"],
+                    size_bytes=destination.stat().st_size,
+                )
+            )
+        except Exception:
+            from aitu_backend.audio import store as audio_store  # noqa: PLC0415
+
+            audio_store.delete(entry.uuid)
+            raise
 
 
 def download(

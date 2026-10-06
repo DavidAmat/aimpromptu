@@ -12,9 +12,15 @@
  * Nothing is written until **Save**. **Transcribe** saves first, starts the transcription and opens
  * the Notes tab. A change of the cuts after a transcription makes the notes stale, and the next
  * transcription replaces them; the old notes go to history (Q-2).
+ *
+ * **Add audio** (implementation 02, plan section 8.5) puts another file at the end of the audio:
+ * the waveform then shows the files end to end, each with its name, and a cut may cross the join.
+ * Adding a file changes the audio, so the notes become stale.
+ *
+ * A project made from a video has the **Video** step here instead (`VideoStep`, plan section 10.2).
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -22,6 +28,7 @@ import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import AddCircleIcon from "@mui/icons-material/AddCircleOutlineOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
@@ -36,7 +43,15 @@ import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomInMapIcon from "@mui/icons-material/ZoomInMap";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import { useNavigate } from "react-router-dom";
-import { ApiError, audioApi, matrixApi, type Cut, type CutsState, type FramePeaks } from "../../api";
+import {
+  ApiError,
+  audioApi,
+  matrixApi,
+  SUPPORTED_AUDIO_SUFFIXES,
+  type Cut,
+  type CutsState,
+  type FramePeaks,
+} from "../../api";
 import {
   addCut,
   cutAt,
@@ -55,6 +70,7 @@ import { useSpacebarPlay } from "../../playback/useSpacebarPlay";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 import { ConfirmDialog, FloatingBar, IconAction, PillButton, timestampSx } from "../../ui";
 import { SAVED_NAVIGATION, stepStatus, usePiece, useUnsavedChanges } from "./pieceContext";
+import { VideoStep } from "./VideoStep";
 
 const FRAMES_PER_SECOND = 100;
 const seconds = (frames: number) => frames / FRAMES_PER_SECOND;
@@ -68,9 +84,17 @@ interface Loaded {
 }
 
 export function AudioTab() {
+  const { audio } = usePiece();
+  return audio?.hasVideo ? <VideoStep /> : <AudioOfProject />;
+}
+
+function AudioOfProject() {
   const { uuid } = usePiece();
   const [loaded, setLoaded] = useState<Loaded>({ uuid: null, cuts: null, peaks: null, error: null });
   const current = loaded.uuid === uuid ? loaded : { uuid, cuts: null, peaks: null, error: null };
+  // Bumped after **Add audio**: the waveform and the cuts are loaded again, and the editor starts
+  // over on them.
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     if (!uuid) return;
@@ -87,7 +111,7 @@ export function AudioTab() {
         });
       });
     return () => controller.abort();
-  }, [uuid]);
+  }, [uuid, version]);
 
   if (current.error) return <Alert severity="error">{current.error}</Alert>;
   if (!uuid || !current.cuts || !current.peaks) {
@@ -100,13 +124,25 @@ export function AudioTab() {
       </Stack>
     );
   }
-  return <AudioEditor key={uuid} uuid={uuid} initial={current.cuts} peaks={current.peaks} />;
+  return (
+    <AudioEditor
+      // The length too: right after **Add audio** the old waveform is still here for a moment, and
+      // the editor must start again on the new one, with the whole audio in view.
+      key={`${uuid}:${version}:${current.cuts.totalFrames}`}
+      uuid={uuid}
+      initial={current.cuts}
+      peaks={current.peaks}
+      onAudioChanged={() => setVersion((count) => count + 1)}
+    />
+  );
 }
 
 interface AudioEditorProps {
   uuid: string;
   initial: CutsState;
   peaks: FramePeaks;
+  /** The files of the audio changed (**Add audio**): load the waveform again. */
+  onAudioChanged: () => void;
 }
 
 interface Edits {
@@ -122,7 +158,7 @@ function describe(cuts: readonly Cut[]): string {
   return `${count}, ${formatTime(seconds(cutFrames(cuts)))} removed`;
 }
 
-function AudioEditor({ uuid, initial, peaks }: AudioEditorProps) {
+function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps) {
   const navigate = useNavigate();
   const { status, refresh } = usePiece();
   const { artifact } = useWorkingArtifact();
@@ -170,6 +206,36 @@ function AudioEditor({ uuid, initial, peaks }: AudioEditorProps) {
   const discard = useCallback(() => setCuts(saved.cuts), [setCuts, saved.cuts]);
 
   useUnsavedChanges(summary, { save, discard });
+
+  // ------------------------------------------------------------------ add audio
+
+  const addInput = useRef<HTMLInputElement | null>(null);
+  const [adding, setAdding] = useState<string | null>(null);
+
+  const addAudio = async (file: File | undefined) => {
+    if (!file) return;
+    if (!SUPPORTED_AUDIO_SUFFIXES.some((suffix) => file.name.toLowerCase().endsWith(suffix))) {
+      setError(`“${file.name}” is not an audio file this app reads (${SUPPORTED_AUDIO_SUFFIXES.join(", ")}).`);
+      return;
+    }
+    setError(null);
+    // The cuts are kept where they are, so unsaved ones are saved first.
+    if (unsaved && !(await save())) return;
+    setAdding(file.name);
+    try {
+      await audioApi.addAudio(uuid, file);
+      await refresh();
+      onAudioChanged();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The file could not be added.");
+      setAdding(null);
+    }
+  };
+
+  const waveformFiles = useMemo(
+    () => (initial.files.length > 1 ? initial.files.map((file) => ({ startFrame: file.startFrame, name: file.name })) : undefined),
+    [initial.files],
+  );
 
   // ------------------------------------------------------------------ edits
 
@@ -302,6 +368,7 @@ function AudioEditor({ uuid, initial, peaks }: AudioEditorProps) {
       data-selection={hasSelection ? `${selection[0]}-${selection[1]}` : ""}
       data-view={`${Math.round(view.start)}-${Math.round(view.end)}`}
       data-cuts={describe(cuts)}
+      data-files={initial.files.length}
     >
       {error ? (
         <Alert severity="error" onClose={() => setError(null)}>
@@ -335,6 +402,14 @@ function AudioEditor({ uuid, initial, peaks }: AudioEditorProps) {
             {cutWords}
           </Typography>
         ) : null}
+        {adding ? (
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }} role="status">
+            <CircularProgress size={14} />
+            <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 260 }}>
+              {`Adding ${adding}`}
+            </Typography>
+          </Stack>
+        ) : null}
         <Box sx={{ flexGrow: 1 }} />
         <PillButton kind="primary" busy={starting} disabled={saving} onClick={onTranscribe} startIcon={<PlayArrowIcon />}>
           {transcribeLabel}
@@ -353,6 +428,7 @@ function AudioEditor({ uuid, initial, peaks }: AudioEditorProps) {
         cursor={player.cursor}
         playing={player.playing !== null}
         position={player.position}
+        files={waveformFiles}
       />
 
       <FloatingBar open label="the audio toolbar">
@@ -409,6 +485,24 @@ function AudioEditor({ uuid, initial, peaks }: AudioEditorProps) {
           onClick={zoomToSelection}
         />
         <IconAction title="Show the whole audio" icon={<FitScreenIcon fontSize="small" />} onClick={() => setView(wholeView(total))} />
+        <Divider orientation="vertical" flexItem />
+        <IconAction
+          title="Add audio at the end"
+          icon={<AddCircleIcon fontSize="small" />}
+          disabled={adding !== null || saving || starting}
+          onClick={() => addInput.current?.click()}
+        />
+        <input
+          ref={addInput}
+          type="file"
+          hidden
+          accept={SUPPORTED_AUDIO_SUFFIXES.join(",")}
+          aria-label="Choose an audio file to add"
+          onChange={(event) => {
+            void addAudio(event.target.files?.[0]);
+            event.target.value = "";
+          }}
+        />
         <Divider orientation="vertical" flexItem />
         {unsaved ? (
           <IconAction title="Discard the changes" icon={<CloseIcon fontSize="small" />} onClick={discard} disabled={saving} />

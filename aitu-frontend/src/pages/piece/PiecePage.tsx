@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Skeleton from "@mui/material/Skeleton";
+import DownloadIcon from "@mui/icons-material/FileDownloadOutlined";
 import WaterfallIcon from "@mui/icons-material/WaterfallChartOutlined";
 import {
   Navigate,
@@ -37,6 +38,7 @@ import {
   audioApi,
   piecesApi,
   PIECE_STEPS,
+  projectsApi,
   type AudioItem,
   type PieceStatus,
   type PieceStep,
@@ -227,6 +229,16 @@ export function PiecePage() {
                     onClick: () => navigate(ROUTES.projectNotesFalling(uuid)),
                     disabled: !hasNotes,
                   },
+                  {
+                    label: "Export",
+                    icon: <DownloadIcon fontSize="small" />,
+                    onClick: () => {
+                      const link = document.createElement("a");
+                      link.href = projectsApi.exportUrl(uuid);
+                      link.download = "";
+                      link.click();
+                    },
+                  },
                 ]}
               />
             ) : undefined
@@ -236,7 +248,8 @@ export function PiecePage() {
             <StepTabs
               steps={steps.map((item) => ({
                 key: item.step,
-                label: STEP_LABELS[item.step],
+                // A video project's second step is its video (plan section 10.2).
+                label: item.step === "audio" && audio?.hasVideo ? "Video" : STEP_LABELS[item.step],
                 state: item.state,
                 enabled: item.enabled,
                 reason: item.reason,

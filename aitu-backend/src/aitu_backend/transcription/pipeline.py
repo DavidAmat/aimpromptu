@@ -46,7 +46,7 @@ from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.pmn import events_file
 from aitu_backend.pmn.events_file import PieceHeader
 from aitu_backend.progress import BaseProgress, default_reporter
-from aitu_backend.storage import locate, paths
+from aitu_backend.storage import bundle, locate, paths
 from aitu_backend.transcription import saved_hands, split_cache
 from aitu_backend.transcription.engine import (
     DEFAULT_ENGINE,
@@ -160,12 +160,14 @@ def save_rhythm(audio_uuid: str, rhythm: "SavedRhythm") -> Path:
     path = rhythm_path(audio_uuid)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(rhythm.model_dump_json(by_alias=True, indent=2) + "\n", encoding="utf-8")
+    bundle.step_changed(audio_uuid)
     return path
 
 
 def clear_rhythm(audio_uuid: str) -> None:
     """Forget the saved reading. Transcribing again also does this, in `transcribe_audio`."""
     rhythm_path(audio_uuid).unlink(missing_ok=True)
+    bundle.step_changed(audio_uuid)
 
 
 @dataclass(frozen=True)
@@ -202,7 +204,9 @@ def save_note_events(
     path = events_path(audio_uuid)
     base = events_file.read_header(path) if header is None else header
     payload = events_file.payload_from_events(events, base, duration_seconds, title)
-    return events_file.write_payload(path, payload)
+    written = events_file.write_payload(path, payload)
+    bundle.step_changed(audio_uuid)
+    return written
 
 
 _locks_guard = threading.Lock()

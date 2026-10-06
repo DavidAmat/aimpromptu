@@ -59,7 +59,8 @@ export function PageHeader({ title, back, actions, children }: PageHeaderProps) 
           {children}
         </Box>
       ) : null}
-      {children ? null : <Box sx={{ flexGrow: 1 }} />}
+      {/* Narrow, the title itself grows; a spacer beside it would take half of the room. */}
+      {children ? null : <Box sx={{ flexGrow: 1, display: { xs: "none", md: "block" } }} />}
       {actions ? (
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexShrink: 0 }}>
           {actions}

@@ -179,6 +179,62 @@ export interface WaveformScene {
   view: FrameView;
   /** The edge under the pointer or being dragged: drawn stronger, with its time beside it. */
   activeEdge?: "start" | "end" | null;
+  /** Where each file of the audio starts, when there are several (**add audio**). */
+  files?: readonly WaveformFile[];
+}
+
+/** One file of the audio laid end to end: its first frame and its name. */
+export interface WaveformFile {
+  startFrame: number;
+  name: string;
+}
+
+/**
+ * Where one file ends and the next begins: a dashed grey line, and the file's name at the top of
+ * its part. Grey, because colour is kept for the music and the selection.
+ */
+function paintFiles(
+  context: CanvasRenderingContext2D,
+  files: readonly WaveformFile[],
+  toX: (frame: number) => number,
+  top: number,
+  body: number,
+  width: number,
+  labels: boolean,
+): void {
+  if (files.length < 2) return;
+  context.save();
+  context.strokeStyle = ui.text2;
+  context.lineWidth = 1;
+  context.setLineDash([4, 3]);
+  for (const file of files.slice(1)) {
+    const x = Math.round(toX(file.startFrame)) + 0.5;
+    if (x < 0 || x > width) continue;
+    context.beginPath();
+    context.moveTo(x, top);
+    context.lineTo(x, top + body);
+    context.stroke();
+  }
+  context.setLineDash([]);
+  if (labels) {
+    context.font = "500 11px Geist, system-ui, sans-serif";
+    context.textBaseline = "top";
+    files.forEach((file, index) => {
+      const start = Math.max(0, toX(file.startFrame));
+      const end = index + 1 < files.length ? toX(files[index + 1].startFrame) : width;
+      const room = Math.min(end, width) - start - 12;
+      if (room < 24) return;
+      let text = file.name;
+      while (text.length > 1 && context.measureText(text).width > room) text = `${text.slice(0, -2)}…`;
+      context.fillStyle = ui.bg;
+      context.globalAlpha = 0.85;
+      context.fillRect(start + 4, top + 4, context.measureText(text).width + 8, 16);
+      context.globalAlpha = 1;
+      context.fillStyle = ui.text2;
+      context.fillText(text, start + 8, top + 6);
+    });
+  }
+  context.restore();
 }
 
 /** A small box of text, readable on the waveform and on a cut. */
@@ -256,7 +312,7 @@ export function paintWaveform(
   canvas: HTMLCanvasElement,
   width: number,
   height: number,
-  { peaks, cuts, selection, view, activeEdge = null }: WaveformScene,
+  { peaks, cuts, selection, view, activeEdge = null, files = [] }: WaveformScene,
 ): void {
   const context = prepare(canvas, width, height);
   if (!context || width <= 0) return;
@@ -283,6 +339,8 @@ export function paintWaveform(
     const seconds = (end - start) / FRAMES_PER_SECOND;
     paintCut(context, toX(start), toX(end), top, body, `Cut · ${formatTime(seconds)}`);
   }
+
+  paintFiles(context, files, toX, top, body, width, true);
 
   if (selection) paintSelection(context, selection, toX, top, body, width, activeEdge);
 }
@@ -319,7 +377,7 @@ export function paintOverview(
   canvas: HTMLCanvasElement,
   width: number,
   height: number,
-  { peaks, cuts, view }: Omit<WaveformScene, "selection">,
+  { peaks, cuts, view, files = [] }: Omit<WaveformScene, "selection">,
 ): void {
   const context = prepare(canvas, width, height);
   if (!context || width <= 0) return;
@@ -329,6 +387,7 @@ export function paintOverview(
   paintPeaks(context, peaks, whole, width, 0, height);
   const toX = (frame: number) => (frame / peaks.totalFrames) * width;
   for (const [start, end] of cuts) paintCut(context, toX(start), toX(end), 0, height, null);
+  paintFiles(context, files, toX, 0, height, width, false);
 
   const left = toX(view.start);
   const right = Math.max(left + 3, toX(view.end));

@@ -30,7 +30,7 @@ import type { Cut, FramePeaks } from "../../api";
 import { clampView, pageTo, panView, zoomView, type FrameView } from "../../audio/frameView";
 import { useElementSize } from "../../hooks/useElementSize";
 import { ui, useScheme } from "../../ui";
-import { paintOverview, paintPlayhead, paintWaveform, RULER } from "./waveformPaint";
+import { paintOverview, paintPlayhead, paintWaveform, RULER, type WaveformFile } from "./waveformPaint";
 
 export interface CutWaveformProps {
   peaks: FramePeaks;
@@ -49,6 +49,8 @@ export interface CutWaveformProps {
   /** The live position in frames, read on each animation frame while playing. */
   position: () => number;
   height?: number;
+  /** Where each file starts, when the audio is several files end to end. */
+  files?: readonly WaveformFile[];
 }
 
 /** How far from a selection edge, in pixels on either side, a press grabs the edge. */
@@ -83,6 +85,7 @@ export function CutWaveform({
   playing,
   position,
   height = 220,
+  files,
 }: CutWaveformProps) {
   const scheme = useScheme();
   const [boxRef, size] = useElementSize<HTMLDivElement>();
@@ -108,15 +111,15 @@ export function CutWaveform({
 
   useLayoutEffect(() => {
     if (baseRef.current && width > 0) {
-      paintWaveform(baseRef.current, width, height, { peaks, cuts, selection: shown, view, activeEdge });
+      paintWaveform(baseRef.current, width, height, { peaks, cuts, selection: shown, view, activeEdge, files });
     }
-  }, [width, height, peaks, cuts, shown, view, activeEdge, scheme]);
+  }, [width, height, peaks, cuts, shown, view, activeEdge, scheme, files]);
 
   useLayoutEffect(() => {
     if (overviewRef.current && width > 0) {
-      paintOverview(overviewRef.current, width, OVERVIEW_HEIGHT, { peaks, cuts, view });
+      paintOverview(overviewRef.current, width, OVERVIEW_HEIGHT, { peaks, cuts, view, files });
     }
-  }, [width, peaks, cuts, view, scheme]);
+  }, [width, peaks, cuts, view, scheme, files]);
 
   useEffect(() => {
     const canvas = topRef.current;

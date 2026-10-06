@@ -137,6 +137,10 @@ def id_of(client: TestClient, uuid: str, midi: int, on_ms: int) -> int:
 
 def test_a_piece_with_no_notes_opens_on_the_audio_tab(client: TestClient, data_dir: Path) -> None:
     uuid = store.create("Empty", AudioSource.UPLOAD, "wav").uuid
+    # An audio and no notes. (A part with neither is a new empty project: Source first, Phase 5.)
+    clip = data_dir.parent / "clip.wav"
+    wavfile.write(clip, 16_000, np.zeros(16_000, dtype=np.int16))
+    store.replace_original(uuid, clip, "wav", keep_cuts=False)
     body = status(client, uuid)
     states = {step["step"]: (step["state"], step["enabled"]) for step in body["steps"]}
     assert states == {

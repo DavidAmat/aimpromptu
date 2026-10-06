@@ -2,12 +2,14 @@
  * Every route path in one place (implementation 02, plan section 6.3). Nothing hardcodes a URL
  * string: navigation, the sidebar, the step tabs and the redirects all read from here.
  *
- * A project's id is the id of its first part, the uuid of the backend's routes (plan P-6). `/projects/new` opens the Source step of a new project; Phase 5
- * puts the three ways in (From source, From scratch, From other projects) in front of it.
+ * A project's id is the id of its first part, the uuid of the backend's routes (plan P-6).
+ * `/projects/new` opens the Source step of a new project (**New project → From source** on the
+ * Projects page; From scratch and From other projects come in Phases 8 and 10).
  *
- * **Lab** holds the video reader's pages: the video, its calibration, the detection, its notes and
- * the examples it is measured on. The video steps of a project open these pages until Phase 5 makes
- * the video a step of the project itself.
+ * **Lab** holds the video reader's development pages: the video, its calibration, the detection,
+ * its notes and the examples it is measured on. A video project fits its piano and reads its notes
+ * on its own Video step (`/projects/:id/audio`, Phase 5); Lab opens the same video for the master
+ * user's measurements.
  *
  * `/login` is the one page outside the shell; every other page needs a user signed in, and the
  * Admin pages (Users, Lab) the master user (Phase 4).
@@ -38,8 +40,6 @@ export const ROUTES = {
   labNotes: "/admin/lab/notes",
   labExamples: "/admin/lab/examples",
   labExample: (slug: string) => `/admin/lab/examples/${slug}`,
-  /** The video steps of a project, for one video: the Lab pages with that video chosen. */
-  labVideoOf: (id: string) => `/admin/lab/video?video=${id}`,
   /** The Notes tab's performance measurements (implementation 08, Phase 7), development builds only. */
   devRollBench: "/dev/roll-bench",
   /** Every shared component of `src/ui/` on one page, development builds only. */

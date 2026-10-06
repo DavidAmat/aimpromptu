@@ -23,6 +23,7 @@ from aitu_backend.audio.store import AudioNotFound
 from aitu_backend.schemas.metadata import AudioMetadata, AudioSource
 from aitu_backend.storage import paths
 from aitu_backend.transcription import pipeline
+from aitu_backend.video import store as video_store
 
 router = APIRouter(prefix="/audio", tags=["audio"])
 
@@ -114,6 +115,22 @@ class CutsResponse(BaseModel):
     kept: list[KeptRange]
     #: True when the stored notes were transcribed from other cuts: transcribe again (Q-2).
     notes_stale: bool = Field(False, alias="notesStale")
+    #: The files of the audio laid end to end, in order (**add audio**): one for most parts.
+    files: list["AxisFile"] = Field(default_factory=list)
+
+
+class AxisFile(BaseModel):
+    """One file of the axis of the Audio step."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str
+    #: Where the file starts on the axis, and its length, in 10 ms frames.
+    start_frame: int = Field(..., alias="startFrame")
+    frames: int
+
+
+CutsResponse.model_rebuild()
 
 
 class CutsRequest(BaseModel):
@@ -153,6 +170,8 @@ class AudioEntry(AudioMetadata):
     #: When the piece last changed: the newest file directly in its folder (the audio, the
     #: metadata, the notes, the piano sheet). The Projects page sorts and shows it.
     updated_at: datetime | None = Field(None, alias="updatedAt")
+    #: The part has a video (a video project): its Audio step is the Video step (section 10.2).
+    has_video: bool = Field(False, alias="hasVideo")
 
 
 def _updated_at(audio_uuid: str) -> datetime | None:
@@ -184,6 +203,7 @@ def _entry(metadata: AudioMetadata) -> AudioEntry:
         needsRederivation=pipeline.needs_rederivation(metadata.uuid),
         originalDurationSeconds=original,
         updatedAt=_updated_at(metadata.uuid),
+        hasVideo=video_store.exists(metadata.uuid),
     )
 
 
@@ -264,6 +284,33 @@ def _ingest_upload(file: UploadFile, source: AudioSource, alias: str | None) -> 
     except ConversionFailed as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return entry.metadata
+
+
+@router.post(
+    "/{audio_uuid}/add",
+    response_model=AudioMetadata,
+    response_model_by_alias=True,
+    status_code=201,
+)
+def add_audio(audio_uuid: str, file: Annotated[UploadFile, File()]) -> AudioMetadata:
+    """**Add audio**: another file at the end of the part's audio (plan section 8.5).
+
+    The file is stored once by its content, measured, and appended to the timeline; the cuts keep
+    their frames. The audio changed, so ``audioRevision`` goes up and the notes become stale.
+    """
+    _found(audio_uuid)
+    if not file.filename:
+        raise HTTPException(status_code=422, detail="The uploaded file has no name")
+    try:
+        return ingest.append_file(audio_uuid, file.file, file.filename)
+    except UnsupportedFormat as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except FfmpegMissing as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ConversionFailed as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post(
@@ -363,6 +410,7 @@ def _cuts_response(audio_uuid: str) -> CutsResponse:
         cuts=table.cuts(),
         kept=[KeptRange.model_validate(row) for row in table.rows()],
         notes_stale=pipeline.notes_are_stale(audio_uuid),
+        files=[AxisFile.model_validate(row) for row in store.files_of(audio_uuid)],
     )
 
 
@@ -444,10 +492,17 @@ def stream_audio(audio_uuid: str, normalized: bool = False, original: bool = Fal
             entry.normalized_path, media_type="audio/wav", headers={"Cache-Control": "no-cache"}
         )
 
-    original_path = entry.original_path
+    try:
+        original_path = store.original_file(entry)
+    except (ConversionFailed, FfmpegMissing) as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     if original_path is None:
         raise HTTPException(status_code=404, detail="This audio has no stored original file")
-    media_type = _MEDIA_TYPES.get(entry.metadata.format, "application/octet-stream")
+    media_type = (
+        "audio/flac"
+        if entry.joined
+        else _MEDIA_TYPES.get(entry.metadata.format, "application/octet-stream")
+    )
     # The stored file is named by its content; the download keeps the name the user knows.
     name = Path(entry.metadata.original_filename or entry.metadata.alias).stem or "audio"
     return FileResponse(

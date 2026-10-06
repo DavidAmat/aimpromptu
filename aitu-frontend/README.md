@@ -13,7 +13,7 @@ with colour only on the music (implementation 02, plan section 7), in a light or
 in the user menu. Who can open what: [08-security.md](../context/08-security.md).
 
 **Documentation:** [context/frontend/](../context/frontend/README.md) ·
-projects and their steps: [flow-page.md](../context/frontend/flow-page.md) ·
+projects and their steps: [projects.md](../context/frontend/projects.md) ·
 colours: [color-palette.md](../context/colors/color-palette.md) ·
 components: [components.md](../documentation/services/frontend/components.md) ·
 rendering: [rendering.md](../context/frontend/rendering.md)
@@ -63,19 +63,24 @@ both natively. Natively the page listens on `localhost` only.
 | `npm run check:cuts` | The Audio step's cuts follow the backend's rules, and playback jumps over them |
 | `npm run check:notes` | The Notes tab's typed arrays, live feed and edits (the operations a save sends) |
 | `npm run check:flow` | A project walked in a headless Chromium, every step, live transcription included (`--no-transcribe` skips it) |
+| `npm run check:projects` | The Projects page and the Personal Vault in a headless Chromium: New project, **Add audio**, Duplicate, Export, Import, Rename, Delete, a video file opening its Video step; on files it makes and deletes |
 | `npm run time:flow` | The whole flow timed on three temporary pieces (an upload, a copy opened from Projects, a YouTube URL) |
 | `npm run bench:roll` | The Notes tab at 10,000 rectangles and at 100 stream messages per second |
 | `npm run bench:sheet` | A hand move on the Sheet step's piano sheet, timed part by part, on copies |
 | `npm run screenshot -- <path>` | A screenshot of a page in a headless Chromium, for a machine with no screen. Options: `--piece <uuid>`, `--wait <selector>`, `--delay <ms>`, `--out <file.png>`, `--width`, `--height`, `--full`, `--base <url>`, `--theme dark` (the dark scheme), `--signed-out` (the sign-in page, without signing in) |
 
-**These need the running app** (`make up`): `check:flow`, `time:flow`, `bench:roll`, `bench:sheet`
-and `screenshot`. They open `http://localhost:5173` (`--base` changes it). The first four work on
-temporary pieces and delete them at the end, so the library is never changed. `bench:roll` opens
+**These need the running app** (`make up`): `check:flow`, `check:projects`, `time:flow`,
+`bench:roll`, `bench:sheet` and `screenshot`. They open `http://localhost:5173` (`--base` changes
+it). The first five work on temporary pieces and delete them at the end, so the library is never
+changed. `bench:roll` opens
 `/dev/roll-bench`, which exists in development builds only and needs no sign in. The other checks
 need no browser and no backend.
 
 **Signing in.** Every page and every route of the backend need a session, so `check:flow`,
-`time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`. They act as
+`check:projects`, `time:flow`, `bench:sheet` and `screenshot` sign in first through
+`scripts/session.mjs`. Once the master user's password was changed in the app (as on the Ubuntu
+machine since 2026-10-06), the line of `.env` no longer signs in: give `AITU_CHECK_PASSWORD` (and
+`AITU_CHECK_USERNAME` for another user) in the environment of the command. They act as
 the master user, with `AITU_MASTER_USERNAME` (default `master`) and `AITU_MASTER_PASSWORD` of `.env`
 at the repository root, the same values the backend made the master user from. To sign in as
 another user, set `AITU_CHECK_USERNAME` and `AITU_CHECK_PASSWORD` in the environment. Without a
