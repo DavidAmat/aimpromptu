@@ -11,7 +11,7 @@ page of the app is new: [`../../08-security.md`](../../08-security.md).
 |---|---|
 | 4.1 The backend | `auth/` (Argon2id, a 30-day `HttpOnly` session cookie renewed on use, the slow-down after five wrong passwords), `/auth` and `/admin/users`; one check on every router (the session, then the rights of section 9.3 for the project the route names); the master user's first password from `.env`; jobs with an owner. 22 new tests, one per row of the rights table with two users |
 | 4.2 The frontend | The sign-in page, the guards (every page needs a user, Admin needs the master user), the user menu (Change password, Light / Dark / System, Sign out), Admin → Users; the dark scheme for the drawing code, with the piano sheet kept white |
-| 4.3 The network | The page on every address (`WEB_BIND`, default `0.0.0.0`), Vite's allowed host names; the backend stays on `127.0.0.1`. Checked from Ubuntu at `http://192.168.0.112:5173`; the check from the Mac is the user's |
+| 4.3 The network | The page on every address (`WEB_BIND`, default `0.0.0.0`), Vite's allowed host names; the backend stays on `127.0.0.1`. Checked from Ubuntu at `http://192.168.0.112:5173`, and by the user from the Mac at `http://ubuntu:5173` |
 | 4.4 Documentation | `context/08-security.md` (new), and the pages of section 6 |
 
 Checks at the end (section 5): backend 1,046 tests on the GPU, 1 failed (the known one); every
@@ -231,7 +231,8 @@ out, and another user's project answers 404.
 
 # 8. Open points
 
-- **The check from the Mac** of `http://ubuntu:5173` (Task 4.3.1) is the user's.
+- **The check from the Mac** of `http://ubuntu:5173` (Task 4.3.1): done by the user on 2026-10-06,
+  who signed in and changed the master password from the user menu (`.env`'s line is no longer read).
 - **The Docker port 2375** of the machine is open on the network with no authentication. It is not
   part of this app and it is the largest risk on the security page; closing it is the user's choice.
 - **`projects.step`** is still not kept current at runtime (Phase 3 report); Phase 5 owns it.

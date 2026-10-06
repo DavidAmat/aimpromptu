@@ -6,8 +6,8 @@ work (Q-5 to Q-8). Sixteen phases, 0 to 15, each on its own `feat/phase-N` branc
 2026-10-05** ([`02-implementation-phase-1.md`](02-implementation-phase-1.md)). **Phase 2 done and merged
 2026-10-06** ([`02-implementation-phase-2.md`](02-implementation-phase-2.md)). **Phase 3 done and merged
 2026-10-06** ([`02-implementation-phase-3.md`](02-implementation-phase-3.md)); `aitu-backend/data/`
-deleted after the user's check (its committed `README.md` and Lab records stay). **Phase 4 done on
-`feat/phase-4`, waiting for the user's check** ([`02-implementation-phase-4.md`](02-implementation-phase-4.md)).
+deleted after the user's check (its committed `README.md` and Lab records stay). **Phase 4 done and merged
+2026-10-06** ([`02-implementation-phase-4.md`](02-implementation-phase-4.md)). Next: Phase 5.
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)

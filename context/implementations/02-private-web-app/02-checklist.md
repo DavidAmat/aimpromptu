@@ -96,7 +96,7 @@ The plan's section 3.
 ## [x] Story 3.4: Documentation
 - [x] Task 3.4.1 `07-database.md` and `paths-and-data.md` rewritten; `piano-matrix-notation.md`, `pieces-and-revisions.md`, `backend/README.md`, `02-tech-stack.md`, `04-local-development.md` updated.
 
-# [p] Phase 4: Users, login and the home network
+# [x] Phase 4: Users, login and the home network
 
 ## [x] Story 4.1: The backend
 - [x] Task 4.1.1 Users, sessions, Argon2, the `/auth` routes, the slow-down after wrong passwords.
@@ -106,8 +106,8 @@ The plan's section 3.
 ## [x] Story 4.2: The frontend
 - [x] Task 4.2.1 The login page; the user menu (password, theme, sign out); Admin → Users.
 
-## [p] Story 4.3: The network
-- [p] Task 4.3.1 `WEB_BIND`, Vite's allowed hosts; the app opened from the Mac at `http://ubuntu:5173`. Done and checked from Ubuntu at `http://192.168.0.112:5173`; the check from the Mac is the user's.
+## [x] Story 4.3: The network
+- [x] Task 4.3.1 `WEB_BIND`, Vite's allowed hosts; the app opened from the Mac at `http://ubuntu:5173` (checked by the user on 2026-10-06, who then changed the master password).
 
 ## [x] Story 4.4: Documentation
 - [x] Task 4.4.1 `context/08-security.md` (new); `02b-local-setup.md` section 12, `04-local-development.md`, `README.md`, `09-coding-conventions.md`, `api.md`, `endpoints.md`.
@@ -218,7 +218,7 @@ The plan's section 3.
 
 # [ ] Phase 12: The music library data reconciled
 
-Starts once the parallel work ([`public-library-build/`](public-library-build/)) has data in `.music-library/`. Writes nothing into that folder or its scripts.
+Starts once the parallel work ([`public-library-build/`](public-library-build/)) has data in `data/music-library/` (next to the repository). Writes nothing into that folder or its scripts.
 
 ## [ ] Story 12.1: The reconciliation
 - [ ] Task 12.1.1 Read the parallel work's plan, response and database.
