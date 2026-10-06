@@ -9,7 +9,7 @@ The environment is a pair of machines on the same Wi-Fi network:
 
 The Mac has limited RAM and a small internal disk. The Ubuntu machine has a strong CPU, 64 GB of RAM, an NVIDIA RTX 4090, and much more disk. The default pattern is: edit on the Mac, run heavy work on Ubuntu over SSH.
 
-**AImpromptu is the exception.** Since implementation 08 (October 2026) the whole project lives and runs on Ubuntu: the code, the data, the containers, and the IDE session of the agent. The Mac is only the browser, and it reaches the app through one SSH tunnel. Section 12 describes this way of working.
+**AImpromptu is the exception.** Since implementation 08 (October 2026) the whole project lives and runs on Ubuntu: the code, the data, the containers, and the IDE session of the agent. The Mac is only the browser: it opens the app at `http://ubuntu:5173` on the home network and signs in (implementation 02, Phase 4), or through one SSH tunnel as a fallback. Section 12 describes this way of working.
 
 ---
 
@@ -544,7 +544,7 @@ Implementation 08 moved AImpromptu from the Mac to Ubuntu, because its transcrip
 | The backend and the frontend | Ubuntu, in two Docker containers (`compose.yaml` at the repository root) |
 | Every record and every file of the app: `.database/` at the root of the repository, gitignored | Ubuntu: a link to `/mnt/ssd2/aimpromptu/.database` (implementation 02, Phase 3), mounted into the backend container at `/database`. Backups (`make db-backup`) land beside it |
 | The old piece store (`aitu-backend/data/`, gitignored) | Ubuntu, read only by the migration of Phase 3; the user deletes it after checking the app. The Mac's copy, `/Volumes/DevSSD/Documents/projects/music/aimpromptu`, is the state of 2026-09-28 and is no longer updated |
-| The browser | The Mac, through the tunnel |
+| The browser | The Mac, at `http://ubuntu:5173` over the home network (implementation 02, Phase 4); the SSH tunnel is the fallback |
 | Headless screenshots and browser checks by the agent | Ubuntu (Playwright's Chromium in `~/.cache/ms-playwright`) |
 
 ### 12.2 Start the app (on Ubuntu)
@@ -556,9 +556,15 @@ make logs      # follow both
 make down      # stop both
 ```
 
-The backend container reserves the GPU and loads MuScriptor `large` at start (about 3.5 GB of GPU memory). `HF_TOKEN` (the Hugging Face token of the account that accepted the MuScriptor licence) is exported in `~/.zshrc`, and Compose reads it from the shell. Both containers publish their ports on `127.0.0.1` only: 5173 (the page) and 8765 (the backend, for `curl` on Ubuntu).
+The backend container reserves the GPU and loads MuScriptor `large` at start (about 3.5 GB of GPU memory). `HF_TOKEN` (the Hugging Face token of the account that accepted the MuScriptor licence) is exported in `~/.zshrc`, and Compose reads it from the shell. The frontend container publishes 5173 (the page) on every address of the Ubuntu machine (`WEB_BIND`, default `0.0.0.0`), so the Mac reaches it over the home network. The backend container publishes 8765 on `127.0.0.1` only, for `curl` on Ubuntu: the browser reaches the backend through the page's `/api`. `make up` ends by printing the address to open from the Mac.
 
 ### 12.3 Open the app (on the Mac)
+
+Open `http://ubuntu:5173` in the browser of the Mac. The Mac's `/etc/hosts` maps the name `ubuntu` to the machine, and `http://192.168.0.112:5173` works too. One port is enough: the page's own server (Vite) passes `/api` to the backend, including the audio files and the progress stream.
+
+Every page asks to sign in first. The **Username** is `master` (or `AITU_MASTER_USERNAME` of `.env`) and the **Password** is the first one, in `.env` on Ubuntu (12.4). The session lasts 30 days and is renewed on use, so the browser of the Mac rarely asks again. Who can sign in and what each user can open is in [08-security.md](08-security.md).
+
+**The SSH tunnel is the fallback**, for example away from home or with `WEB_BIND=127.0.0.1`:
 
 ```bash
 ssh -N -L 5173:localhost:5173 ubuntu
@@ -566,12 +572,13 @@ ssh -N -L 5173:localhost:5173 ubuntu
 scripts/tunnel-from-mac.sh
 ```
 
-Then open `http://localhost:5173` in the browser of the Mac. One port is enough: the page's own server (Vite) passes `/api` to the backend, including the audio files and the progress stream. The tunnel stays open until Ctrl-C, and it closes when the Mac sleeps; run it again after.
+Then open `http://localhost:5173` and sign in the same way. The tunnel stays open until Ctrl-C, and it closes when the Mac sleeps; run it again after.
 
-When an agent gives the user a URL of the app, it gives this tunnel command with it.
+When an agent gives the user a URL of the app, it gives `http://ubuntu:5173`, and the tunnel command as the fallback.
 
 ### 12.4 Things to know
 
+- **The master user's password.** The backend makes the master user on its first start, and sets its first password from `AITU_MASTER_PASSWORD` of `.env` (on this machine `.env` holds a generated one; read it with `grep AITU_MASTER_PASSWORD .env`). `.env` is read only while the master user has no password, so a password changed from the user menu (**Change password**) stays. The other users are made in **Admin → Users**. The browser scripts of the agent sign in with the same values (`aitu-frontend/scripts/session.mjs`).
 - **A lost GPU in the container.** After the host's service manager reloads (for example after a system update), a running container can lose its GPU: `GET /matrix/engine` says "No CUDA GPUs are available" and a transcription ends at once with no notes. `docker compose up -d --force-recreate backend` gives it back.
 - **Ubuntu has no access to the Mac.** Remote Login is on for the Mac, but Ubuntu has no key or `Host mac` entry for it. Phase 0 of implementation 08 wrote the steps (`context/implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-implementation-phase-0.md`), and they are optional: nothing in the project needs files from the Mac now.
 - **`.database/` on a new machine.** Make the folder and the link before the first `make up`: `mkdir -p /mnt/ssd2/aimpromptu/.database && ln -s /mnt/ssd2/aimpromptu/.database .database`, then `make db-restore FILE=…` to bring a backup. The commands are in `context/04-local-development.md`.

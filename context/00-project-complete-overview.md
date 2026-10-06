@@ -11,9 +11,15 @@ edit, print and play along with.
 
 Two services in one monorepo, plus a rendering library in a sibling checkout. **Local only**: no
 cloud and no deploy pipeline. Everything is stored in one folder, `.database/` (SQLite and files,
-implementation 02, Phase 3); the login comes in Phase 4. Both services run in containers on an Ubuntu machine
-with an RTX 4090, and the browser on a Mac reaches them through one SSH tunnel
-([02b-local-setup.md](02b-local-setup.md) section 12).
+implementation 02, Phase 3). Both services run in containers on an Ubuntu machine with an RTX 4090,
+and the browser of any device of the home network opens the page at `http://ubuntu:5173`
+([02b-local-setup.md](02b-local-setup.md) section 12; the SSH tunnel still works).
+
+**Users** (implementation 02, Phase 4). Every page asks to sign in, and every route of the backend
+needs a session. The master user is made on the first start from `.env` and makes the other users
+in **Admin → Users**; there is no sign-up. Each user sees and changes only their own projects, and
+the master user has no right over another user's private projects. The users, the session cookie,
+the rights table and what this setup does not protect: [08-security.md](08-security.md).
 
 | | |
 |---|---|
@@ -85,22 +91,26 @@ Step by step, with the reason for each ordering:
 
 ## The screens
 
-A left sidebar with **Search** (`⌘K`), **Projects** and **Lab**, in black, white and grey with colour
-only on the music (implementation 02, Phase 1; [frontend/README.md](frontend/README.md)).
+A sign-in page first (**Username**, **Password**, **Sign in**). Then a left sidebar with **Search**
+(`⌘K`), **Projects**, and for the master user an **Admin** group with **Users** and **Lab**, in black,
+white and grey with colour only on the music (implementation 02, Phase 1;
+[frontend/README.md](frontend/README.md)). The user menu at the bottom changes the password, chooses
+the theme (**Light**, **Dark** or **System**; the piano sheet stays white paper) and signs out.
 
 **Projects** — the way in. A project (today one piece) goes through five steps in the order of the
 work; a step opens only when the step before it is ready ([frontend/flow-page.md](frontend/flow-page.md)):
 
 | Step | What you do |
 |---|---|
-| Source | Drop an audio file, or paste a YouTube link (as audio, or as a video read in Lab) |
+| Source | Drop an audio file, or paste a YouTube link (as audio, or, for the master user only until Phase 5, as a video read in Lab) |
 | Audio | See the waveform, play it, cut parts out of the selected region, **Transcribe** |
 | Notes | Watch the rectangles appear live, then edit them on a canvas piano roll and play the original audio |
 | Hands | **Predict hands**, check the colours along the song, move notes between the hands, **Save** |
 | **Sheet** | The product: the staff drawn on arrival (the highest pile of gaps is a negra), the floating bar, the sheet, note and range toolboxes |
 
-**Notes Falling** opens from a project's `⋯` menu. **Lab** holds the video reader's pages: it reads a
-Synthesia-style video into a piece. The Playground, YouTube to Audio and the old Piano Library were
+**Notes Falling** opens from a project's `⋯` menu. **Lab** (master user only) holds the video
+reader's pages: it reads a Synthesia-style video into a piece. **Users** (master user only) makes
+users, disables them and resets a password. The Playground, YouTube to Audio and the old Piano Library were
 removed in implementation 02, Phase 1 (decision Q-4).
 
 ## What a reader can do to a sheet
@@ -126,12 +136,14 @@ Detail: [frontend/annotations.md](frontend/annotations.md). Click by click:
 | `/pieces` | Which steps of a piece are ready; the notes as columns and their edits; predict the hands |
 | `/time` | The score: peaks, the ladder, the payload, the saved reading |
 | `/audio/{uuid}/edits` | Staged re-recording and composing |
-| `/library` | Playground versions, promotion, tags, playlists |
+| `/projects` | The Personal Vault: today a copy of a project (Phase 5 adds the rest) |
 | `/youtube` | Downloads, as jobs |
+| `/auth`, `/admin` | Sign in, sign out, change one's password; the users (master user only) |
 | `/video`, `/frame-examples` | Reading a Synthesia-style video into a piece (implementations 04 and 05) |
 
-Plus `GET /health`. The project's original text-notation MVP (`GET /scores`, `POST /sequence`) was
-deleted in implementation 02, Phase 1.
+Plus `GET /health`. Every route except `/health` and `POST /auth/login` needs a session. The
+project's original text-notation MVP (`GET /scores`, `POST /sequence`) was deleted in
+implementation 02, Phase 1, and the old `/library` router in Phase 3.
 
 ## Run locally
 
@@ -143,26 +155,29 @@ make logs         # follow both
 make down
 ```
 
-On the Mac: `ssh -N -L 5173:localhost:5173 ubuntu`, then open `http://localhost:5173`. Running
-natively without containers (`make serve`) still works. See
+On the Mac: open `http://ubuntu:5173` and sign in (the master user's first password is
+`AITU_MASTER_PASSWORD` of `.env`). The SSH tunnel (`ssh -N -L 5173:localhost:5173 ubuntu`, then
+`http://localhost:5173`) is the fallback. Running natively without containers (`make serve`) still works. See
 [04-local-development.md](04-local-development.md).
 
 ## Code map
 
-**Backend** `src/aitu_backend/`: `api/` (one router per section), `audio/` (also the cuts and the
+**Backend** `src/aitu_backend/`: `api/` (one router per section), `auth/` (the session, the
+passwords, the rights check), `audio/` (also the cuts and the
 frame table), `transcription/` (engines, the GPU queue, the live stream, the lag correction, filters,
 events to matrix, jobs, saved hands), `pieces/` (step states and note operations), `pmn/` (the piano
 matrix notation and its adapters), `matrix/` (frame ↔ ms, gaps, peaks, the ladder,
 passages, figure bands), `hands/` (a beam search with a gated second pass), `notation/` (figures,
 tresillos, trills), `editing/` (splice, compose, staging, history), `storage/` (every path in one
 module, the project bundle, the audio store), `db/` (the SQLAlchemy tables, the Alembic revisions,
-the master user, the backup and check tools), `schemas/` (Pydantic, camelCase on the wire),
+the users, the backup and check tools), `schemas/` (Pydantic, camelCase on the wire),
 `main.py` (a thin factory).
 
-**Frontend** `src/`: `api/` (one module per router), `layout/` (shell and `routes.ts`), `pages/`
-(`ProjectsPage`, and `piece/`: the steps of a project), `components/{piece,time,notes,audio,editing,video}/`,
+**Frontend** `src/`: `api/` (one module per router), `layout/` (shell, `routes.ts`, the guards
+`RequireUser` and `RequireMaster`), `pages/` (`LoginPage`, `ProjectsPage`, `admin/UsersPage`, and
+`piece/`: the steps of a project), `components/{piece,time,notes,audio,editing,video}/`,
 `notes/` (the canvas piano roll's arrays, live feed and edits), `audio/` (cuts, the cut player),
-`piano/`, `playback/`, `print/`, `state/`, `ui/` (the tokens, the theme and the shared components), `music/`.
+`piano/`, `playback/`, `print/`, `state/` (also the signed-in user), `ui/` (the tokens, the light and dark theme and the shared components), `music/`.
 
 ## What is deliberately gone
 
@@ -183,7 +198,8 @@ work.
 ## Where to look next
 
 - Platform: [01-project.md](01-project.md) · [02-tech-stack.md](02-tech-stack.md) ·
-  [03-services-overview.md](03-services-overview.md) · [04-local-development.md](04-local-development.md)
+  [03-services-overview.md](03-services-overview.md) · [04-local-development.md](04-local-development.md) ·
+  [08-security.md](08-security.md)
 - The model: [backend/time-model.md](backend/time-model.md)
 - Backend: [backend/README.md](backend/README.md) ·
   detail [../documentation/services/backend/](../documentation/services/backend/)

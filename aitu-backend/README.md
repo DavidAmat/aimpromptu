@@ -21,11 +21,19 @@ uv sync --extra muscriptor && make serve   # http://127.0.0.1:8765
 
 Interactive API docs: `/docs`.
 
+Every route needs a session except `GET /health` and `POST /auth/login` (implementation 02,
+Phase 4). With `curl`, sign in first and keep the cookie:
+`curl -c /tmp/aitu.cookie -H 'Content-Type: application/json' -d '{"username":"master","password":"…"}' http://127.0.0.1:8765/auth/login`,
+then pass `-b /tmp/aitu.cookie` to every request. The users, the session and the rights table:
+[context/08-security.md](../context/08-security.md).
+
 ## Module layout
 
 ```text
 src/aitu_backend/
-  api/            # FastAPI routers, one file per section
+  api/            # FastAPI routers, one file per section (also /auth and /admin)
+  auth/           # the session cookie, Argon2id passwords, the slow-down after wrong passwords,
+                  # the rights table and the check every route runs
   audio/          # upload, recording ingest, waveform, youtube, cuts and the frame table
   transcription/  # engines (MuScriptor first), the GPU queue, the live stream, the lag
                   # correction, filters, events -> the wall-clock matrix, jobs, saved hands
@@ -36,7 +44,7 @@ src/aitu_backend/
   notation/       # figures, tresillos, trills
   editing/        # the replacement splice, composing, staging, history
   storage/        # every filesystem path in one module; the project bundle, the audio store
-  db/             # SQLAlchemy models, Alembic migrations, the master user, backup/check/reindex
+  db/             # SQLAlchemy models, Alembic migrations, the users, backup/check/reindex
   schemas/        # Pydantic models (camelCase on the wire)
   progress.py     # ProgressReporter: one code path for tqdm and SSE
   config.py       # the AITU_* settings
@@ -61,14 +69,22 @@ uv sync            # install, including the dev dependency group
 make hooks         # one-time: uv run pre-commit install
 make lint          # flake8 + mypy
 make format        # black
-make test          # pytest (in the container: make test-backend from the root) — 1,023 passing,
-                   # 1 known failure (test_the_worked_example_at_00_46_prints_three_equal_corcheas)
+make test          # pytest (in the container: make test-backend from the root): 1,046 tests,
+                   # 1,045 passed and 1 known failure
+                   # (test_the_worked_example_at_00_46_prints_three_equal_corcheas)
 ```
 
 `pyproject.toml` sets `pythonpath = ["src", "."]`. The `"."` was needed by
 `tests/test_migration.py`, which imported `scripts.migrate_to_time_matrix`; implementation 02,
 Phase 3 deleted both. Every test has its own temporary `.database/` (`tests/conftest.py`), so the
 tests never touch the real one.
+
+**Users in the tests** (implementation 02, Phase 4). Every request of a test acts as the master
+user, with no cookie (`tests/conftest.py`), unless the test is marked `real_login`
+(`@pytest.mark.real_login`): then its requests sign in through `/auth` like the browser.
+`tests/test_auth.py` checks the sign in, the cookie, the slow-down and Admin → Users;
+`tests/test_rights.py` checks each row of the rights table with two users and the master user. A
+new route that writes adds its rows there.
 
 Pre-commit config lives at the repo root (`../.pre-commit-config.yaml`) and runs
 black, flake8 and mypy over `aitu-backend/`. Each phase of implementation 02 is built on its own

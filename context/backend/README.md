@@ -25,7 +25,8 @@ Full reasoning: [time-model.md](time-model.md).
 
 | Area | Package | Role |
 |---|---|---|
-| HTTP | `api/` | One router per product section; `main.py` is a thin factory |
+| HTTP | `api/` | One router per product section, `/auth` and `/admin` among them; `main.py` is a thin factory that puts every router behind the session and rights check |
+| Users and rights | `auth/` | The session cookie, Argon2id passwords, the slow-down after wrong passwords, the rights table, the check every route runs before anything else ([08-security.md](../08-security.md)) |
 | Audio | `audio/` | Upload, browser recording, YouTube, ffmpeg normalisation, waveforms, the cuts and the frame table, the edited audio |
 | Transcription | `transcription/` | Engines ([MuScriptor](muscriptor.md), ByteDance, Transkun), the model registry and the GPU queue, the live stream, the lag correction, the filters, events to matrix, the split cache, the saved hands |
 | Steps of a piece | `pieces/` | Which steps are ready or stale, and the note operations ([pieces-and-revisions.md](pieces-and-revisions.md)) |
@@ -35,7 +36,7 @@ Full reasoning: [time-model.md](time-model.md).
 | Contracts | `schemas/` | Pydantic models, camelCase on the wire, mirrored in TypeScript |
 | Editing | `editing/` | The replacement splice, composing, staging, history |
 | Persistence | `storage/` | Every path in one module (`paths.py`); the project bundle, the audio store, finding the project of a part |
-| Database | `db/` | The SQLite tables (SQLAlchemy 2 models), the Alembic migrations, the master user, the backup, check and reindex tools |
+| Database | `db/` | The SQLite tables (SQLAlchemy 2 models, times stored and returned in UTC), the Alembic migrations, the users and the sessions, the backup, check and reindex tools |
 | The format | `pmn/` | The piano matrix notation: the sparse form and every adapter |
 
 ## The one stored file
@@ -57,7 +58,10 @@ the part plays. Where all of this lives, and the tables of the database: [07-dat
 ## API
 
 `127.0.0.1:8765`, interactive docs at `/docs`. The page reaches it as `/api` through the frontend's
-server. Overview: [api.md](api.md).
+server. Every route needs a session except `GET /health` and `POST /auth/login`, and checks the
+rights of the project it names: a project the user may not read answers `404`, one they may read but
+not change answers `403`. Overview: [api.md](api.md); the users, the session and the rights table:
+[08-security.md](../08-security.md).
 
 ## Notebooks
 
@@ -83,6 +87,7 @@ See [04-local-development.md](../04-local-development.md).
 - [piano-matrix-notation.md](piano-matrix-notation.md) — the stored form, the wire form, the adapters
 - [editing.md](editing.md) — re-recording a passage, and composing a piece from nothing
 - [api.md](api.md) — the HTTP surface
+- [08-security.md](../08-security.md): the users, the session, the rights table
 - [notation-and-parsing.md](../../documentation/deprecated/notation-and-parsing.md) — deprecated: the text-notation MVP, deleted in implementation 02, Phase 1
 - [documentation/services/backend/](../../documentation/services/backend) — every endpoint, field,
   path and parameter

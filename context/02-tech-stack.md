@@ -15,6 +15,8 @@ Locked versions from lockfiles. Re-read `uv.lock` and `package-lock.json` when u
 | Progress / uploads | tqdm >=4.67, python-multipart >=0.0.20 |
 | YouTube | yt-dlp **>=2026.8.19** — a hard floor, not a preference: every earlier build picks a YouTube player client that now answers `403`, so downloads fail outright |
 | MIDI | mido 1.3.3 (base dependency since implementation 08: the MIDI adapter of `pmn/`) |
+| Passwords | argon2-cffi 25.1.0 (`>=23.1.0`): Argon2id hashes with its default parameters (`auth/passwords.py`, implementation 02, Phase 4) |
+| Sessions | No library: 32 random bytes in the cookie `aitu_session` (`HttpOnly`, `SameSite=Lax`, 30 days, renewed on use), and only their SHA-256 in the `sessions` table (`auth/sessions.py`). See [08-security.md](08-security.md) |
 | Optional extras | `muscriptor` (muscriptor 0.3.0, librosa 0.11.0; **the engine in use**), `transcription` (ByteDance's piano_transcription_inference 0.0.6, librosa), `transkun` (Transkun 2.0.1). All three pull torch **2.13.0** (with its own CUDA 13.0 libraries on Linux) and torchaudio 2.11.0. The lock is resolved for Linux and Apple Silicon only. **No `basic-pitch` extra** — it pins tensorflow <2.15.1, which has no cp312 wheels, and a declared-but-unresolvable extra breaks `uv lock` for the whole project |
 | Dev group | pytest, httpx, black, flake8, mypy, pre-commit, types-tqdm (`[dependency-groups] dev`) |
 | Notebooks | ipykernel 7.2.0, jupyterlab 4.5.7, ipywidgets (dev/exploratory) |
@@ -28,10 +30,10 @@ container (`compose.yaml`).
 |------|----------------------|
 | Runtime | React 19.2.6, react-dom 19.2.6 |
 | Language | TypeScript 6.0.3 |
-| Bundler | Vite 8.1.5, `@vitejs/plugin-react` 6.0.1. The development server proxies `/api` to the backend |
+| Bundler | Vite 8.1.5, `@vitejs/plugin-react` 6.0.1. The development server proxies `/api` to the backend, and answers only to the host names of `allowedHosts` (`vite.config.ts`) and to IP addresses |
 | Notation | `@aimpromptu/grid-notation` **0.42.0**, installed from disk (`file:../../vexflow-v2`); zero runtime dependencies, Bravura inlined. **Rebuild it after pulling** — npm does not build a linked dependency and a stale `dist/` fails silently |
 | Routing | react-router-dom 7.x |
-| Components | MUI 9.x (`@mui/material`, `@mui/icons-material`, `@mui/x-data-grid`) + emotion 11.x |
+| Components | MUI 9.x (`@mui/material`, `@mui/icons-material`, `@mui/x-data-grid`) + emotion 11.x. The theme has a light and a dark colour scheme on CSS variables; MUI keeps the user's choice in the browser (`mui-mode`) |
 | Lint | ESLint 10.4.0 flat config: `@eslint/js`, `typescript-eslint` 8.x, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `globals` |
 | Browser checks | Playwright 1.63.0 with its headless Chromium (`check:flow`, `time:flow`, `bench:*`, `screenshot`), and tsx for the `check:*` scripts in TypeScript |
 
@@ -53,11 +55,12 @@ section 5), `npm run preview`.
 
 | Item | Value |
 |------|-------|
-| API base in the page | `/api`, passed to the backend by the Vite server (one port for the SSH tunnel) |
-| Backend address | `127.0.0.1:8765` on the Ubuntu machine |
+| API base in the page | `/api`, passed to the backend by the Vite server (one port, on the home network or through the SSH tunnel), so the browser sends the session cookie by itself |
+| Page address | `0.0.0.0:5173` on the Ubuntu machine (`WEB_BIND`); `http://ubuntu:5173` from the Mac |
+| Backend address | `127.0.0.1:8765` on the Ubuntu machine, never on the network |
 | Frontend override env | `VITE_AITU_API_URL` (no trailing slash) |
 | JSON field casing | camelCase on the wire (Pydantic aliases on backend; TS types on frontend) |
-| CORS | Backend allows all origins (`*`) for local POC |
+| CORS | Backend allows all origins (`*`) without credentials, so no page of another origin can send the session cookie |
 
 ## Decisions for the implementation plan
 
@@ -83,7 +86,11 @@ Locked by the organizer for `context/implementations/01-mvp/01-epics-master-plan
 
 - Cloud provider SDKs
 - Database servers (SQLite is a file in `.database/`; the SQLAlchemy models can move to Postgres in the production version)
-- Auth libraries (OAuth, JWT, etc.)
+- HTTPS: the app is plain HTTP on the home network; the production answer is a reverse proxy ([08-security.md](08-security.md))
+
+The sign in (implementation 02, Phase 4) uses one library, argon2-cffi, for the password hashes. The
+session is the app's own: a random cookie checked against the `sessions` table, with no OAuth and no
+JWT ([08-security.md](08-security.md)).
 
 ## Where to look deeper
 

@@ -708,6 +708,13 @@ the scripts that work on copies (`bench:sheet`, `time:flow`) could no longer cop
 One function per route checks this before anything else, and tests check each row of this table
 with two users.
 
+*As built in Phase 4* (`auth/dependencies.py`, `auth/rights.py`, `context/08-security.md`): one
+router-level check reads the session, then applies the table to the project the route names by its
+path parameter. A project the user may not read answers 404, like a project that does not exist; one
+they may read but not write answers 403. The master user has no right over another user's private
+projects. **One change for now:** the owner writes a Private Library project in place, as before;
+the copy in the vault of section 10.6 arrives in Phase 6, which changes that one line.
+
 ## 9.4 Access on the home network
 
 - The frontend container publishes 5173 on all addresses of the Ubuntu machine (`WEB_BIND=0.0.0.0`),
@@ -715,6 +722,11 @@ with two users.
 - The backend stays on `127.0.0.1`: the browser reaches it only through the frontend's `/api`.
 - From the Mac: `http://ubuntu:5173` (the Mac's `/etc/hosts` already maps `ubuntu`) or
   `http://192.168.0.112:5173`. The tunnel still works and stays documented.
+- *As built in Phase 4:* Vite also answers to `david-ubuntu` (the machine's own name) and to the
+  names in `AITU_ALLOWED_HOSTS`; `WEB_BIND=127.0.0.1` in `.env` keeps the page to the machine. The
+  browser scripts sign in as the master user with the password of `.env`
+  (`aitu-frontend/scripts/session.mjs`). The **Video** choice of the Source step is shown to the
+  master user only until Phase 5, because a video project still opens in Lab.
 - **What this does not protect**: the traffic is plain HTTP on the home network, so a password crosses
   the Wi-Fi unencrypted. This is acceptable at home and is written in a new `context/08-security.md`,
   with the production answer (HTTPS behind a reverse proxy). The Docker port 2375 of the machine,

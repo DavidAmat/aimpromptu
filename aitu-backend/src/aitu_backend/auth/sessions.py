@@ -49,10 +49,12 @@ def _hash(token: str) -> str:
 
 
 def create(user_id: int) -> str:
-    """A new session for the user; the token goes in the cookie and nowhere else."""
+    """A new session for the user; the token goes in the cookie and nowhere else. The expired
+    sessions of every user are deleted on the way (a script signs in on every run)."""
     token = secrets.token_urlsafe(32)
     moment = _now()
     with session() as db:
+        db.execute(delete(Session).where(Session.expires_at <= moment))
         db.add(
             Session(
                 token_hash=_hash(token),

@@ -96,21 +96,21 @@ The plan's section 3.
 ## [x] Story 3.4: Documentation
 - [x] Task 3.4.1 `07-database.md` and `paths-and-data.md` rewritten; `piano-matrix-notation.md`, `pieces-and-revisions.md`, `backend/README.md`, `02-tech-stack.md`, `04-local-development.md` updated.
 
-# [ ] Phase 4: Users, login and the home network
+# [p] Phase 4: Users, login and the home network
 
-## [ ] Story 4.1: The backend
-- [ ] Task 4.1.1 Users, sessions, Argon2, the `/auth` routes, the slow-down after wrong passwords.
-- [ ] Task 4.1.2 The session check on every route; the rights table of plan section 9.3 with a test per row and two users.
-- [ ] Task 4.1.3 The master user from `.env`; jobs with an owner.
+## [x] Story 4.1: The backend
+- [x] Task 4.1.1 Users, sessions, Argon2, the `/auth` routes, the slow-down after wrong passwords.
+- [x] Task 4.1.2 The session check on every route; the rights table of plan section 9.3 with a test per row and two users.
+- [x] Task 4.1.3 The master user from `.env`; jobs with an owner.
 
-## [ ] Story 4.2: The frontend
-- [ ] Task 4.2.1 The login page; the user menu (password, theme, sign out); Admin → Users.
+## [x] Story 4.2: The frontend
+- [x] Task 4.2.1 The login page; the user menu (password, theme, sign out); Admin → Users.
 
-## [ ] Story 4.3: The network
-- [ ] Task 4.3.1 `WEB_BIND`, Vite's allowed hosts; the app opened from the Mac at `http://ubuntu:5173`.
+## [p] Story 4.3: The network
+- [p] Task 4.3.1 `WEB_BIND`, Vite's allowed hosts; the app opened from the Mac at `http://ubuntu:5173`. Done and checked from Ubuntu at `http://192.168.0.112:5173`; the check from the Mac is the user's.
 
-## [ ] Story 4.4: Documentation
-- [ ] Task 4.4.1 `context/08-security.md` (new); `02b-local-setup.md` section 12, `04-local-development.md`, `README.md`, `09-coding-conventions.md`, `api.md`, `endpoints.md`.
+## [x] Story 4.4: Documentation
+- [x] Task 4.4.1 `context/08-security.md` (new); `02b-local-setup.md` section 12, `04-local-development.md`, `README.md`, `09-coding-conventions.md`, `api.md`, `endpoints.md`.
 
 # [ ] Phase 5: Projects and the Personal Vault
 

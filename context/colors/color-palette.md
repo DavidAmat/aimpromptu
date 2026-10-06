@@ -29,8 +29,26 @@ Two files hold every colour, and no component writes a hex value:
 | `danger` | `#D92D20` | `#F97066` | Only inside the confirmation of a destructive action |
 | `paper` | `#FFFFFF` | `#FFFFFF` | The piano sheet, white in both schemes |
 
-The dark scheme is defined in the theme. The app opens in the light one until the user menu offers
-the choice (implementation 02, Phase 4).
+### 1.1 Choosing the scheme
+
+Since implementation 02, Phase 4 the user menu offers **Light**, **Dark** and **System** (the
+device's own setting). The app opens in the light one until the user chooses, and MUI keeps the
+choice in the browser (`localStorage`, `mui-mode`), so each browser remembers its own.
+
+Everything styled through the MUI theme follows a change at once, because the theme keeps both
+schemes as CSS variables. Drawing code (a canvas, an SVG) cannot read those variables, so it reads
+`ui` from `tokens.ts` instead, and follows a change in three steps:
+
+1. `SchemeSync` (`ui/scheme.tsx`, placed in `main.tsx`) reads MUI's mode.
+2. It calls `applyScheme`, which copies the light or the dark tokens into `ui` in place, before
+   the page renders.
+3. Every component that draws with `ui` calls `useScheme()`, so it renders again with the new
+   colours. Nothing is remounted, so a page with unsaved changes keeps them. The Lab pages, which
+   use many `ui` colours, are redrawn from the start instead.
+
+**Two things do not change with the scheme.** The piano sheet stays white paper in both schemes
+(`paper`, plan P-8), because it is the page that is printed. The piano roll keeps its own dark panel
+and the colours of section 2.
 
 ## 2. The colours of the music
 

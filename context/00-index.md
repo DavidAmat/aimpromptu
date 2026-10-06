@@ -27,13 +27,13 @@ assumes.
 | [00-project-complete-overview.md](00-project-complete-overview.md) | One-shot orientation for a fresh reader or LLM |
 | [01-project.md](01-project.md) | What AImpromptu is, who uses it, the problem it solves |
 | [02-tech-stack.md](02-tech-stack.md) | Locked versions from lockfiles, the containers, and the standing technical decisions |
-| [02b-local-setup.md](02b-local-setup.md) | The Mac mini and the Ubuntu machine; section 12: AImpromptu on Ubuntu, the browser on the Mac through the tunnel |
+| [02b-local-setup.md](02b-local-setup.md) | The Mac mini and the Ubuntu machine; section 12: AImpromptu on Ubuntu, the browser on the Mac at `http://ubuntu:5173` (the tunnel as the fallback) |
 | [03-services-overview.md](03-services-overview.md) | The two services and the renderer: roles, ports, how they connect |
 | [04-local-development.md](04-local-development.md) | Run it in containers or natively, open it from the Mac, the checks, the troubleshooting table |
 | [05-deployment.md](05-deployment.md) | STUB: POC local-only; no deploy flow yet |
 | *(skipped)* `06-*-infrastructure.md` | No cloud provider; POC is local-only |
 | [07-database.md](07-database.md) | `.database/`: SQLite and the project bundles, the audio store by hash, what is kept and why so little, backup and check |
-| *(planned)* `08-security.md` | The login, the session cookie and the rights table; written by Phase 4 of 02 |
+| [08-security.md](08-security.md) | **Security**: the users, the sign in and the session cookie, the rights table, the home network, and what this setup does not protect (implementation 02, Phase 4) |
 | [09-coding-conventions.md](09-coding-conventions.md) | Style grounded in ESLint and Python/uv idioms; LLM agent config inventory |
 
 ## Backend overview (`context/backend/`)
@@ -46,7 +46,7 @@ assumes.
 | [backend/muscriptor.md](backend/muscriptor.md) | **The transcription engine.** MuScriptor's settings and why, the GPU queue, the live stream of notes, the lag correction |
 | [backend/pieces-and-revisions.md](backend/pieces-and-revisions.md) | The steps of a piece, the revisions, what makes a step stale, the `/pieces` routes, the saved hands |
 | [backend/editing.md](backend/editing.md) | Re-recording a passage, and composing a piece from nothing |
-| [backend/api.md](backend/api.md) | The HTTP surface: six routers and the shape of a session |
+| [backend/api.md](backend/api.md) | The HTTP surface: the routers, the session and rights check every route runs, and the shape of a working session |
 | [notation-and-parsing.md](../documentation/deprecated/notation-and-parsing.md) | Deprecated: the text-notation MVP path, deleted in implementation 02, Phase 1 |
 
 ## Frontend overview (`context/frontend/`)

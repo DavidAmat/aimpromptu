@@ -4,13 +4,38 @@ FastAPI app in `main.py`, thin by design: it builds the app, installs CORS and g
 opens `.database/` (brings the tables to the newest Alembic revision, makes the top folders and the
 master user), starts the engine preload, and includes every router from `api/`. Default
 `127.0.0.1:8765`, interactive docs at `/docs`. The page calls it as `/api` through the frontend's
-server. CORS allows all origins — local, no auth surface. Until the login of implementation 02,
-Phase 4, every request acts as the master user.
+server, on the page's own origin, so the browser sends the session cookie by itself. CORS allows all
+origins but without credentials, so a page of another origin cannot send that cookie.
+
+## Every route needs a session
+
+Since implementation 02, Phase 4 every route except `GET /health` and `POST /auth/login` needs the
+session cookie `aitu_session` that the sign in sets. `main.py` includes the routers in three groups
+(`api/__init__.py`), each behind its own check (`auth/dependencies.py`):
+
+| Group | Routers | Check |
+|---|---|---|
+| Open | `/auth` | none for the sign in |
+| User | `/audio`, `/audio/{uuid}/edits`, `/matrix`, `/pieces`, `/time`, `/projects`, `/youtube`, `/video` | a session, then the rights of the project the route names |
+| Master | `/admin`, `/frame-examples` (Lab) | a session of the master user |
+
+The rights check reads the project from the path (`audio_uuid`, the id of a part, or `project_id`)
+and applies the rights table of [08-security.md](../08-security.md). A `GET` reads and every other
+method writes, except five `POST` routes that compute an answer and change nothing (the sheet with
+the page edits, the ladder preview, the hand prediction, trim, duplicate). `POST /matrix/transcribe`
+names its part in the body and checks it itself.
+
+The code below a route knows the user of the request, so the lists are the user's own (`GET /audio/`
+lists only their projects; `GET /video` their videos, and every video for the master user), a new
+project belongs to them, and a job records its owner and runs as them. Only the owner of a job and
+the master user can follow it.
 
 ## The routers
 
 | Prefix | Module | What it is for |
 |---|---|---|
+| `/auth` | `api/auth.py` | Sign in, sign out, who is signed in, change one's own password |
+| `/admin` | `api/admin.py` | The users: list, make, disable, reset a password (master user only) |
 | `/audio` | `api/audio.py` | The working store: bring a recording in, trim it, stream it |
 | `/matrix` | `api/matrix.py` | Run the model, follow it (the notes arrive live on the stream), read back the notes it heard |
 | `/pieces` | `api/pieces.py` | The state of each step, the notes as columns, note operations, predict the hands ([pieces-and-revisions.md](pieces-and-revisions.md)) |
@@ -18,7 +43,7 @@ Phase 4, every request acts as the master user.
 | `/audio/{uuid}/edits` | `api/editing.py` | Staged range editing and composing |
 | `/projects` | `api/projects.py` | The Personal Vault. Phase 3 has one route, duplicate (a copy with new ids, the same audio files); Phase 5 adds the rest |
 | `/youtube` | `api/youtube.py` | Downloads via yt-dlp, also as a job with progress |
-| `/video`, `/frame-examples` | `api/video.py`, `api/frame_examples.py` | Reading a Synthesia-style video into a piece (implementations 04 and 05) |
+| `/video`, `/frame-examples` | `api/video.py`, `api/frame_examples.py` | Reading a Synthesia-style video into a piece (implementations 04 and 05). `/frame-examples` is the master user's (Lab) |
 
 Plus `GET /health`. The original text-notation MVP (`GET /scores`, `POST /sequence`) was deleted in
 implementation 02, Phase 1 (Q-4); its pages are in `documentation/deprecated/`. The old Piano
@@ -28,11 +53,12 @@ the path answers `404` until the Private Library of Phase 6.
 The `{uuid}` of `/audio`, `/matrix`, `/pieces` and `/time` is the id of a **part** of a project
 (plan P-6). A project made by this app has the id of its first part.
 
-## The shape of a session
+## The shape of a working session
 
-The flow page, from audio to a saved piano sheet:
+The flow page, from signing in to a saved piano sheet:
 
 ```
+POST /auth/login              the cookie aitu_session; every request after sends it
 POST /audio/upload            or /youtube/jobs, /audio/recording, /audio/compose
 GET  /pieces/{id}/status      which steps are ready; the tabs follow it
 PUT  /audio/{id}/cuts         the selected region (optional)
@@ -68,15 +94,18 @@ download and **Predict hands** are jobs on the same stream.
 
 | Status | When |
 |---|---|
-| 404 | No such audio, project, session or job |
-| 409 | An operation the session's placement does not allow, or a write whose `baseRevision` is old |
+| 401 | No session, or an ended one: "Sign in first." (the page opens the sign-in page) |
+| 403 | A project the user may read but not change ("You can open this project but not change it."), a page of the master user asked by another user, or a wrong current password |
+| 404 | No such audio, project, editing session or job, **or one the user may not read**: the answer is the same, so an address tells nothing about another user's work |
+| 409 | An operation the editing session's placement does not allow, a write whose `baseRevision` is old, or a username that is taken |
 | 422 | A body or query the models reject, and conversion failures |
 | 503 | `ffmpeg` is missing — the message says so and how to install it |
 
 ## Where to look deeper
 
-- [`documentation/services/backend/endpoints.md`](../../documentation/services/backend/endpoints.md)
-  — every route, its parameters and what it obeys
+- [`documentation/services/backend/endpoints.md`](../../documentation/services/backend/endpoints.md):
+  every route, its parameters and what it obeys, with `/auth` and `/admin`
+- [08-security.md](../08-security.md): the users, the session cookie, the rights table
 - `http://127.0.0.1:8765/docs` — the generated, always-current field reference
 - [time-model.md](time-model.md) — why `/time` looks the way it does
 - [editing.md](editing.md) — the session flow behind `/audio/{uuid}/edits`

@@ -127,6 +127,15 @@ def test_a_session_is_renewed_on_use_and_ends_when_it_expires(master: int) -> No
     assert client.get("/auth/me").status_code == 401
 
 
+def test_signing_in_deletes_the_expired_sessions(master: int) -> None:
+    client_of("master", MASTER_PASSWORD)
+    with session() as db:
+        db.scalar(select(Session)).expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+    client_of("master", MASTER_PASSWORD)
+    with session() as db:
+        assert len(list(db.scalars(select(Session)))) == 1
+
+
 def test_changing_my_password(master: int) -> None:
     here = client_of("master", MASTER_PASSWORD)
     elsewhere = client_of("master", MASTER_PASSWORD)

@@ -37,7 +37,7 @@ ignoring E501/E203/W503), **mypy** (pydantic plugin, permissive on missing impor
 | Ignores | `dist/` globally ignored by ESLint |
 | Components | Functional components + hooks; no class components. **MUI** is the component library; layout props go in `sx` (MUI v9 dropped them as direct props) |
 | Colors | Only from `src/ui/palette.ts` — no hex literal in a component or stylesheet. Anything that reads *against the page* (backgrounds, rules, label text) comes from `surface`, never a raw `grays.*`: that is what stopped views silently assuming a dark ground |
-| Color scheme | The app is **light, always**. `mode: "light"`, plus `color-scheme: light` in `index.css` and a matching `<meta>` in `index.html`, so a dark OS or browser cannot re-tint it. No `prefers-color-scheme` branch anywhere |
+| Color scheme | Light by default; the user chooses **Light**, **Dark** or **System** in the user menu (implementation 02, Phase 4), and MUI keeps the choice. Pages style through the theme (`text.secondary`, `divider`, ...) and follow it by themselves. Drawing code (a canvas, an SVG) reads `ui` from `src/ui/tokens.ts` and calls `useScheme()` so that it re-renders on a change. The piano sheet stays white paper in both schemes. See [colors/color-palette.md](colors/color-palette.md) |
 | Requests | Only through `src/api/` (one module per backend router); no `fetch` in a component |
 | Routes | Only from `src/layout/routes.ts`; no URL literal in a component |
 | Music logic | Isolated under `src/music/` (`types`, `noteNames`, `renderOverrides`); `types.ts` mirrors the backend `schemas/` and must stay in step with it |
@@ -49,6 +49,24 @@ ignoring E501/E203/W503), **mypy** (pydantic plugin, permissive on missing impor
 | Strictness | TypeScript project references (`tsc -b` before vite build) |
 
 Run `npm run lint` before committing frontend changes.
+
+## Users and rights
+
+Since implementation 02, Phase 4 every request acts as a signed-in user, and a project belongs to
+one. The rules and the rights table are in [08-security.md](08-security.md). New code keeps them:
+
+- **Every new route goes in a router that `main.py` includes with the session and rights check**:
+  `USER_ROUTERS` of `api/__init__.py` (`signed_in`, then `project_rights`), or `MASTER_ROUTERS` for
+  a page of the master user only. Only `/health` and `POST /auth/login` are open.
+- **A route names its project by its path parameter**, `audio_uuid` (the id of a part) or
+  `project_id`, so the router's check finds it. A route that names it in the body calls
+  `require_part` itself, as `POST /matrix/transcribe` does. A `POST` that reads and changes nothing
+  goes into `READ_ROUTES` of `auth/dependencies.py`.
+- **Every query is scoped by its owner.** A list shows the current user's projects only
+  (`db/users.py`, `current_user_id`), a new project or job belongs to the user of the request, and a
+  job records its `owner_id` and is followed with `require_job`.
+- **A test per right.** A new kind of thing, or a new route that writes, adds its rows to
+  `aitu-backend/tests/test_rights.py`, which checks the table with two users and the master user.
 
 ## Cross-service
 

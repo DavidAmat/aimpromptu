@@ -8,8 +8,11 @@ staff you can read and correct, and prints it.
 The way in is the **Piece** page: five tabs, Source, Audio, Notes, Hands and Sheet, each enabled
 once the step before it is ready ([context/frontend/flow-page.md](context/frontend/flow-page.md)).
 
-Local development only: no hosted deploy, and no login yet (every request acts as one master user
-until implementation 02, Phase 4). Everything the app stores is in `.database/` at the repository
+It runs on one machine and is opened from the devices of one home network: no hosted deploy.
+Every page asks to sign in. The master user is made on the first start and makes the other users in
+**Admin → Users**; each user sees only their own projects. The users, the session, the rights table
+and what this setup does not protect are in [context/08-security.md](context/08-security.md).
+Everything the app stores is in `.database/` at the repository
 root: a SQLite database, the projects and the audio files. `make db-backup` copies it while the app
 runs ([context/07-database.md](context/07-database.md)).
 
@@ -55,9 +58,13 @@ make test-backend  # the backend tests inside the backend image
 make down
 ```
 
-From the Mac: `scripts/tunnel-from-mac.sh` (one SSH tunnel to port 5173), then open
-`http://localhost:5173`. The page calls the backend at `/api`, which Vite passes on, so one port is
-enough. `.env.example` lists every setting; only `HF_TOKEN` (the MuScriptor weights) has no default.
+From the Mac: open `http://ubuntu:5173` (or `http://192.168.0.112:5173`), which `make up` prints
+when it ends, and sign in. The **Username** is `master` and the **Password** is
+`AITU_MASTER_PASSWORD` of `.env`, the master user's first password, which can then be changed from
+the user menu. The SSH tunnel (`scripts/tunnel-from-mac.sh`, then `http://localhost:5173`) is the
+fallback. The page calls the backend at `/api`, which Vite passes on, so one port is enough; the
+backend itself stays on `127.0.0.1:8765`. `.env.example` lists every setting; only `HF_TOKEN` (the
+MuScriptor weights) has no default.
 
 ## Run locally, without containers
 
@@ -68,7 +75,7 @@ make stop
 ```
 
 App `http://localhost:5173`, API `http://127.0.0.1:8765` (the page reaches it through `/api`), API
-docs `/docs`.
+docs `/docs`. Sign in the same way; natively the page listens on `localhost` only.
 
 Or one at a time:
 

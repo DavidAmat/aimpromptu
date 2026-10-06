@@ -19,8 +19,9 @@ See [backend/time-model.md](backend/time-model.md).
 
 ## Who uses it
 
-One musician, on one machine, on their own recordings. It is a local development POC, not a hosted
-product: no accounts, no auth, no multi-user anything.
+One musician and the people of their home, on one machine, on their own recordings. It is a local
+app, not a hosted product: since implementation 02, Phase 4 each person signs in with a username
+and a password made by the master user ([08-security.md](08-security.md)).
 
 ## Problem domain
 
@@ -65,7 +66,8 @@ The notation renderer, `@aimpromptu/grid-notation`, lives in a **sibling checkou
 about this app's API, and this app reaches it through exactly one file.
 
 **Containers.** Since implementation 08 both services run as Docker containers on the Ubuntu
-machine, the backend with the GPU, and the browser on the Mac reaches them through one SSH tunnel
+machine, the backend with the GPU, and a browser at home opens the page at `http://ubuntu:5173`
+(implementation 02, Phase 4; one SSH tunnel before that, still a fallback)
 ([04-local-development.md](04-local-development.md)). They are development images; there is no
 production image yet.
 

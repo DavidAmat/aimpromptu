@@ -24,7 +24,7 @@ How the AImpromptu (aitu) documentation system works and where to put new materi
 
 ## This repo's areas
 
-**Platform files** (`context/00–09`): project, stack, services, local dev, deployment stub, database (file store), coding conventions. Skipped: `06-*-infrastructure` (no cloud). Planned: `08-security` (the login, the cookie, the rights table), written by Phase 4 of implementation 02.
+**Platform files** (`context/00–09`): project, stack, services, local dev, deployment stub, database (file store), security (the users, the session cookie, the rights table, the home network; written by Phase 4 of implementation 02), coding conventions. Skipped: `06-*-infrastructure` (no cloud).
 
 **The app and the language:**
 - `context/app/` — [01-app-context.md](app/01-app-context.md), the app being built, in the user's words; its glossary is the vocabulary of every new page

@@ -37,13 +37,16 @@
   font-display: swap;
 }
 
+:root[data-scheme="dark"] {
+  color-scheme: dark;
+}
+
 :root {
   /*
-   * The app is light regardless of the OS or the browser. This declaration is
-   * the one the browser itself obeys — it keeps scrollbars and native form
-   * controls light under a dark Mac, and tells Chrome's Auto Dark Mode to leave
-   * the page alone. The MUI theme is pinned to light to match; neither is
-   * sufficient on its own.
+   * The scheme the browser itself obeys, for scrollbars and native form controls:
+   * light unless the user chose Dark (or System on a dark device) in the user menu,
+   * which makes MUI set `data-scheme="dark"` on this element (implementation 02,
+   * Phase 4). The OS alone never darkens the page.
    */
   color-scheme: light;
   font-family:

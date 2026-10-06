@@ -10,12 +10,12 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
-      The app opens light until the theme choice of the user menu exists
-      (implementation 02, Phase 4). Declaring the scheme here, before any CSS
-      loads, stops a dark-mode OS or browser from re-tinting scrollbars and form
-      controls. The piano sheet stays white in both schemes.
+      The page supports both schemes; the user chooses one in the user menu
+      (Light, Dark, System; implementation 02, Phase 4), and src/index.css gives
+      the browser the chosen one. Declaring both here also keeps Chrome's Auto
+      Dark Mode from re-tinting the page. The piano sheet stays white in both.
     -->
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
     <title>AImpromptu</title>
   </head>
   <body>

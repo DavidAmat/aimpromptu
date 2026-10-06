@@ -10,23 +10,47 @@ is plan section 6.3 of [implementation 02](../implementations/02-private-web-app
 
 | Path | Page | Notes |
 |---|---|---|
+| `/login` | `LoginPage` | **Sign in**: Username, Password. Outside the shell and open to all. Returns to `?next=` (an address of this app only) |
 | `/` | | Redirects to `/projects` |
-| `/projects` | `ProjectsPage` | The projects, newest change first; **New project** |
+| `/projects` | `ProjectsPage` | The user's own projects, newest change first; **New project** |
 | `/projects/new` | `PiecePage` | A new project, with only the Source step |
 | `/projects/:id` | `PiecePage` | Opens the project on the furthest step that is ready |
 | `/projects/:id/<step>` | `PiecePage` | One step: `source`, `audio`, `notes`, `hands` or `sheet` |
 | `/projects/:id/notes-falling` | `NotesFallingPage` | Inside the project's page, from its `⋯` menu |
-| `/admin/lab/<tab>` | `LabLayout` | `video`, `calibration`, `detection`, `notes`, `examples` (and `examples/:slug`) |
+| `/admin/users` | `UsersPage` (`pages/admin/`) | Master user only. Every user; **New user**, **Reset password**, **Disable** / **Enable** |
+| `/admin/lab/<tab>` | `LabLayout` | Master user only. `video`, `calibration`, `detection`, `notes`, `examples` (and `examples/:slug`) |
 | `/dev/roll-bench` | `RollBenchPage` | Development builds only: the Notes step's measurements |
 
 **Old paths** redirect to their new home, keeping the query string (`LEGACY_REDIRECTS`):
 `/piece/...` to `/projects/...`, `/video/<tab>` to `/admin/lab/<tab>`, `/youtube` to
 `/projects/new`, and `/playground/...` and `/library...` to `/projects`. Phase 15 removes them.
 
+## Signing in and the guards
+
+Since implementation 02, Phase 4 every page except `/login` needs a signed-in user. Two guards of
+`layout/RequireUser.tsx` wrap the routes in `App.tsx`:
+
+- **`RequireUser`** wraps the whole shell. While the page asks the backend who is signed in
+  (`GET /auth/me`, once when the page opens) it draws nothing; with nobody signed in it opens
+  `/login?next=<the address asked for>`, and the sign-in page returns to that address after the sign in.
+- **`RequireMaster`** wraps **Users** and **Lab**. A user who is not the master user sees
+  "Page not found", so an Admin address tells them nothing. The backend refuses those routes on its
+  own (`403`).
+
+`state/AuthProvider.tsx` holds the signed-in user (`useAuth()` of `state/authContext.ts`). When any
+request answers `401` (the session ended elsewhere, the password was reset, or 30 days passed),
+`api/client.ts` sends `SIGNED_OUT_EVENT`, the provider forgets the user, and `RequireUser` opens the
+sign-in page. A project the user may not open answers `404` from the backend, like a project that
+does not exist, and the project page shows "There is no project of yours at this address." with
+**Open Projects**. The rules are in [`../08-security.md`](../08-security.md).
+
 ## The shell
 
 `layout/AppLayout.tsx` puts the sidebar (`ui/Sidebar.tsx`) beside the page (`ui/AppShell.tsx`). The
-sidebar is open on the list pages and closed inside a project; the reader's own choice holds until
+sidebar shows **Projects**, and for the master user an **Admin** group with **Users** and **Lab**.
+The user menu at its foot shows the username and the role, then **Change password**
+(`layout/PasswordDialog.tsx`), the theme (**Light**, **Dark** or **System**), **Keyboard shortcuts**
+and **Sign out**. The sidebar is open on the list pages and closed inside a project; the reader's own choice holds until
 they move between the two kinds of page. Under 900 px it stays closed, as a rail of icons with
 their names in tooltips. `⌘K` (`Ctrl+K`) opens **Search** from anywhere (`layout/SearchDialog.tsx`):
 it filters the projects by title as the reader types, the arrows move through the results, and

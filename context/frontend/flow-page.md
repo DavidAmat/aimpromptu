@@ -17,7 +17,7 @@ page becomes `projects.md` in Phase 5, when the three ways to start a project ex
 | Address | What opens |
 |---|---|
 | `/` | Goes to `/projects` |
-| `/projects` | The list of projects, newest change first, with the step each one reached |
+| `/projects` | The list of the user's own projects, newest change first, with the step each one reached |
 | `/projects/new` | The Source step alone, for a new project (**New project**) |
 | `/projects/<id>` | The step the project reached (`resume` of `GET /pieces/{id}/status`) |
 | `/projects/<id>/<step>` | That step: `source`, `audio`, `notes`, `hands` or `sheet` |
@@ -51,7 +51,9 @@ overwritten.
 ## 3. The tabs
 
 **1. Source.** On a new project: one drop zone for an audio file (**Choose file**), and one field
-**Paste a YouTube link** with the choice **Audio** or **Video**. No name is asked for: the project
+**Paste a YouTube link** with the choice **Audio** or **Video** (the **Video** choice is shown to the
+master user only until Phase 5, because a video project still opens in Lab, which only the master
+user can open). No name is asked for: the project
 takes the name of its file or of its video. An audio file and a YouTube link as Audio open the Audio
 step (the download runs as a job with a thin progress bar, about 4 s for a 2-minute video). A YouTube
 link as Video downloads the video and its audio and opens it in **Lab**, where the piano is fitted
@@ -117,7 +119,8 @@ Measured on 2026-10-01 with `npm run time:flow`, through the whole flow, on the 
 
 The project is the entry point. The Playground, the YouTube to Audio page and the old Piano Library
 were removed in implementation 02, Phase 1 (decision Q-4): a YouTube download is the Source step,
-Notes Falling opens from a project, and the video reader's pages are in **Lab**. The Playground's
+Notes Falling opens from a project, and the video reader's pages are in **Lab** (master user only,
+since implementation 02, Phase 4). The Playground's
 **Piano Roll** tab had already gone in implementation 08, because the Notes and Hands steps replace
 it.
 

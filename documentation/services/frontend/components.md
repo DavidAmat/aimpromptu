@@ -16,13 +16,15 @@
 
 | Section | Path | Page |
 |---|---|---|
+| **Sign in** | `/login` | `pages/LoginPage.tsx`, outside the shell (implementation 02, Phase 4) |
 | (start) | `/` | redirects to `/projects` |
 | **Projects** | `/projects` | `pages/ProjectsPage.tsx` |
 | · new project | `/projects/new` | `pages/piece/PiecePage.tsx` with the Source step only |
 | · a project | `/projects/:id` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the project reached |
 | · one step | `/projects/:id/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab`, `HandsTab` or `SheetTab` |
 | · Notes Falling | `/projects/:id/notes-falling` | `PiecePage.tsx` + `pages/piece/NotesFallingPage.tsx` |
-| **Lab** | `/admin/lab/<tab>` | `layout/LabLayout.tsx` and `pages/video/` |
+| **Users** (Admin) | `/admin/users` | `pages/admin/UsersPage.tsx`, inside `RequireMaster` |
+| **Lab** (Admin) | `/admin/lab/<tab>` | `layout/LabLayout.tsx` and `pages/video/`, inside `RequireMaster` |
 | (old paths) | `/piece/...`, `/video/...`, `/youtube`, `/playground/...`, `/library...` | `layout/LegacyRedirect.tsx`, until Phase 15 |
 | (development only) | `/dev/roll-bench` | `pages/dev/RollBenchPage.tsx`, lazy, only when `import.meta.env.DEV` |
 
@@ -31,15 +33,32 @@
 piece.
 
 **The shell** (implementation 02, plan section 6.2): `layout/AppLayout.tsx` renders `ui/AppShell`
-with `ui/Sidebar` (the logo, **Search**, Projects, Lab under Admin, and the user menu at the bottom,
-a placeholder with **Keyboard shortcuts** until Phase 4). The sidebar is open on the list pages and
-closed inside a project and under 900 px. `⌘K` opens `layout/SearchDialog.tsx` from anywhere;
+with `ui/Sidebar` (the logo, **Search**, Projects, for the master user an Admin group with **Users**
+and **Lab**, and the user menu at the bottom). The sidebar is open on the list pages and closed
+inside a project and under 900 px. `⌘K` opens `layout/SearchDialog.tsx` from anywhere;
 `layout/ShortcutsDialog.tsx` lists the shortcuts.
+
+**The user menu** (`UserMenu` in `AppLayout.tsx`, Phase 4): the username and the role (Master user or
+User), **Change password** (`layout/PasswordDialog.tsx`: the current password and a new one of at
+least 8 characters, `PUT /auth/password`), the theme as a `Segmented` of **Light**, **Dark** and
+**System** (MUI's `useColorScheme().setMode`), **Keyboard shortcuts** and **Sign out**.
+
+**Signing in** (Phase 4):
+
+| File | Role |
+|---|---|
+| `pages/LoginPage.tsx` | `/login`: the logo, **Username**, **Password**, **Sign in**. Returns to `?next=` when it is an address of this app, otherwise to Projects. The button stays busy while the backend slows a try after wrong passwords |
+| `state/AuthProvider.tsx`, `state/authContext.ts` | The signed-in user (`useAuth()`: `user`, `signIn`, `signOut`). Asks `GET /auth/me` once when the page opens; forgets the user on `SIGNED_OUT_EVENT` |
+| `layout/RequireUser.tsx` | `RequireUser` (wraps the shell: nobody signed in opens `/login?next=...`) and `RequireMaster` (wraps Users and Lab: "Page not found" for another user) |
+| `pages/admin/UsersPage.tsx` | **Admin → Users**: a `DataTable` of the users, **New user** (username and first password), per row **Reset password** and **Disable** / **Enable** |
+| `pages/piece/PiecePage.tsx` | A project the backend answers `404` for (another user's, or none) shows "There is no project of yours at this address." with **Open Projects** |
+| `pages/piece/SourceTab.tsx` | The **Video** choice of a YouTube link is shown to the master user only, until Phase 5, because a video project still opens in Lab |
 
 `main.tsx` creates a **data router** (`createBrowserRouter`) with one route that renders `App`'s
 route table. It exists for one reason: React Router's `useBlocker`, which the project page needs to
 ask before a reader leaves a step with unsaved changes, only works with a data router. It also gives
-the theme `defaultMode="light"`.
+the theme `defaultMode="light"`, wraps the router in `AuthProvider`, and puts `SchemeSync`
+(`ui/scheme.tsx`) between the theme and the router (section 8).
 
 `state/WorkingArtifactProvider.tsx` holds the working piece in `sessionStorage`. The project page
 sets it when it loads a project; the sheet reads its `frameMs` from it.
@@ -282,7 +301,9 @@ import { timeScoreApi, matrixApi, piecesApi } from "../api";
 
 | Module | Router |
 |---|---|
-| `client.ts` | `API_BASE`, `request`, `upload`, `buildUrl`, `ApiError` |
+| `client.ts` | `API_BASE`, `request`, `upload`, `buildUrl`, `ApiError`, `SIGNED_OUT_EVENT` (sent on any `401` except from the sign in itself) |
+| `auth.ts` | `/auth`: `login`, `logout`, `me`, `changePassword`; the type `Me` |
+| `admin.ts` | `/admin`: `users`, `createUser`, `changeUser` (disable, enable, reset the password); the type `AdminUser` |
 | `audio.ts` | `/audio`, including `list` (with `updatedAt`), `cuts`, `saveCuts`, `framePeaks`, `fileUrl` |
 | `matrix.ts` | `/matrix`, including `transcribe`, `activeJob`, `progressUrl` |
 | `pieces.ts` | `/pieces`: the status of a project's steps, its notes and hands |
@@ -294,7 +315,10 @@ import { timeScoreApi, matrixApi, piecesApi } from "../api";
 **`API_BASE` is `/api` by default**: a path on the page's own address. The Vite server passes it to
 the backend without the prefix (`vite.config.ts`: `http://127.0.0.1:8765`, or `AITU_API_PROXY`,
 which `compose.yaml` sets to the `backend` service). The JSON, the audio files and the progress
-stream then share one port. `VITE_AITU_API_URL` still points the page at another backend directly.
+stream then share one port, and because they are on the page's own origin the browser sends the
+session cookie `aitu_session` with every one of them, the `<audio>` elements and the `EventSource`
+streams included. `VITE_AITU_API_URL` still points the page at another backend directly, which then
+has no session (the backend's CORS sends no credentials).
 
 `hooks/useProgress.ts` consumes the Server-Sent Events (SSE) progress stream of a job and returns
 its `done` payload as `result`. `hooks/followJob.ts` does the same as one `await`, for a button
@@ -331,9 +355,27 @@ so the same job looks the same everywhere.
 
 **The tokens** are in `tokens.ts`: the colours of the page, light and dark, the type scale (13, 14,
 16, 20, 28 px), the radii (12 for inputs, 16 for floating things, a pill for buttons) and the one
-shadow. `theme.ts` builds the MUI theme from them, with both schemes as CSS variables; the app opens
-in the light one until the theme choice of Phase 4. Drawing code that cannot read the theme (a
-canvas, an SVG) imports `ui`, the scheme in use. **`palette.ts` keeps only the colours of the
+shadow. `theme.ts` builds the MUI theme from them, with both schemes as CSS variables. The app
+opens in the light one, and the user menu chooses Light, Dark or System; MUI keeps the choice in the
+browser (`localStorage`, `mui-mode`) and switches its variables at once, so everything styled
+through the theme follows by itself.
+
+Drawing code that cannot read the theme (a canvas, an SVG) imports `ui`, the scheme in use, and
+follows a change this way (Phase 4):
+
+- `applyScheme(scheme)` of `tokens.ts` copies the light or the dark tokens into `ui` in place.
+- `SchemeSync` (`ui/scheme.tsx`, in `main.tsx`) reads MUI's mode, calls `applyScheme` before its
+  children render, and provides the scheme in use.
+- A component that draws with `ui` calls `useScheme()` (`ui/schemeContext.ts`), so it re-renders with
+  the new colours: `CutWaveform`, `WaveformView`, `LiveLevelBars`, `PeakPlot`, `ProgressBar`,
+  `MiniPiano`, `StepTabs`, `SourceTab`. Nothing is remounted, so a page with unsaved changes keeps
+  them.
+- The Lab pages draw with many `ui` colours, so `LabLayout` redraws them from the start on a change
+  (a `key` on the scheme).
+- The piano sheet stays white paper in both schemes (`paper`, plan P-8), and the piano roll keeps its
+  own colours.
+
+**`palette.ts` keeps only the colours of the
 music**: the hands, the selection, the piano roll, the waveform, the marks on notes and video
 frames. The one dark panel is the piano roll visualization (`semantic.roll`). Colour definitions:
 [color-palette.md](../../../context/colors/color-palette.md).
@@ -393,7 +435,12 @@ npm run check:notes       # the Notes tab's typed arrays, live feed and edits
 ```
 
 These need the running app (`make up` from the repository root). Each works on temporary copies or
-uploads and deletes them at the end, so the library is never changed. Since implementation 02,
+uploads and deletes them at the end, so the library is never changed. `check:flow`, `time:flow`,
+`bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
+user with `AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env` at the repository root (or
+`AITU_CHECK_USERNAME` and `AITU_CHECK_PASSWORD` from the environment), makes every `fetch` of the
+script send the cookie (`signIn(base)`), and gives every Playwright page the same cookie
+(`useSession(browser)`). Since implementation 02,
 Phase 3 a temporary copy is made by `POST /projects/{id}/duplicate` (new ids, the same audio files):
 
 ```bash
@@ -402,6 +449,9 @@ npm run time:flow     # the whole flow timed on three temporary pieces (upload, 
 npm run bench:roll    # the Notes tab at 10,000 rectangles and at 100 stream messages per second
 npm run bench:sheet   # a hand move on the Sheet tab, timed part by part
 ```
+
+`npm run screenshot -- <path>` takes one picture of the app; `--theme dark` takes it in the dark
+scheme, and `--signed-out` takes it without signing in (the sign-in page).
 
 `check:flow` exists because the page of a project is mostly gestures on a canvas and navigation between
 tabs, which no unit check reaches. It takes about 2 minutes with the transcription

@@ -13,8 +13,44 @@ route is *for*, which decisions it obeys, and where the model lives. A schema du
 those things.
 
 Every request and response body is camelCase, produced by Pydantic aliases. CORS allows all origins
-(`allow_origins=["*"]`, `allow_credentials=False`); this is a local POC with no auth surface. Until
-the login of implementation 02, Phase 4, every request acts as the master user (`db/users.py`).
+(`allow_origins=["*"]`) but without credentials (`allow_credentials=False`), so a page of another
+origin can never send the session cookie. The page itself calls the backend as `/api` through the
+Vite server, on its own origin, so the browser sends the cookie by itself.
+
+**Every route needs a session** (implementation 02, Phase 4), except `GET /health` and
+`POST /auth/login`. The session is the cookie `aitu_session` that `POST /auth/login` sets; its
+properties and the reasons for them are in [`context/08-security.md`](../../../context/08-security.md).
+`main.py` includes the routers in three groups (`api/__init__.py`):
+
+| Group | Routers | Check before the handler (`auth/dependencies.py`) |
+|---|---|---|
+| `OPEN_ROUTERS` | `/auth` | None for `POST /auth/login` and `POST /auth/logout`; `GET /auth/me` and `PUT /auth/password` ask for the session themselves |
+| `USER_ROUTERS` | `/audio`, `/audio/{uuid}/edits`, `/matrix`, `/pieces`, `/time`, `/projects`, `/youtube`, `/video` | `signed_in`, then `project_rights` |
+| `MASTER_ROUTERS` | `/frame-examples`, `/admin` | `signed_in`, then `master_only` |
+
+The answers of these checks:
+
+- **401** `{"detail": "Sign in first."}`: no cookie, an unknown one, or an expired one. The page then
+  opens the sign-in page.
+- **404**: the route names a project by its path parameter (`audio_uuid`, the id of a part, or
+  `project_id`) and the user may not read it. The answer is the same as for a project that does not
+  exist, so an address tells nothing about another user's work.
+- **403** "You can open this project but not change it.": the user may read the project but the
+  request writes. A `GET` reads; every other method writes, except five `POST` routes that compute an
+  answer and change nothing (`READ_ROUTES`): `/time/{uuid}/score`, `/time/{uuid}/ladder-preview`,
+  `/pieces/{uuid}/hands/predict`, `/audio/{uuid}/trim` and `/projects/{id}/duplicate`.
+- **403** "Only the master user can open this.": a route of `/frame-examples` or `/admin` asked by
+  another user.
+
+The rights table these checks apply is in [`context/08-security.md`](../../../context/08-security.md).
+A route that names its project in the body instead of the path checks it itself
+(`require_part`): `POST /matrix/transcribe` needs write on the part of its `audioUuid`. The
+functions below a route know the user of the request (`auth/context.py`), so a project or a job the
+route makes belongs to that user (`db/users.py`, `current_user_id`).
+
+Times read from the database (for example `createdAt` of a user) are returned in UTC with their
+offset, because every time column has the `UTCDateTime` type (`db/models.py`). A browser therefore
+shows them right in its own time zone.
 
 **JSON answers are compressed.** `JsonGZipMiddleware` (`aitu_backend/compression.py`, implementation
 08, Phase 2) compresses a JSON answer of 1 KB or more with gzip at level 5 when the client sends
@@ -28,9 +64,18 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/health` | Liveness: `{"status": "ok"}`. |
+| GET | `/health` | Liveness: `{"status": "ok"}`. Open without a session. |
+| **Signing in** | `api/auth.py` | |
+| POST | `/auth/login` | Check the password, set the session cookie (implementation 02, Phase 4). Open without a session. |
+| POST | `/auth/logout` | End the session. |
+| GET | `/auth/me` | The signed-in user. |
+| PUT | `/auth/password` | Change one's own password. |
+| **Admin** | `api/admin.py` | Master user only |
+| GET | `/admin/users` | Every user. |
+| POST | `/admin/users` | Make a user with a first password. |
+| PATCH | `/admin/users/{id}` | Disable or enable a user, reset a password. |
 | **Audio** | `api/audio.py` | |
-| GET | `/audio/` | Every ingested audio. |
+| GET | `/audio/` | Every ingested audio of the current user's projects. |
 | POST | `/audio/upload` | Upload a file; ffmpeg normalises it. |
 | POST | `/audio/recording` | Store a browser recording. |
 | POST | `/audio/compose` | Start a piece with **nothing in it** (Epic 13). |
@@ -94,6 +139,45 @@ deleted in Phase 3. See [§7](#7-projects-the-personal-vault).
 The video reader's routers (`/video` in `api/video.py`, `/frame-examples` in
 `api/frame_examples.py`, implementations 04 to 07) are not described on this page. Their reasoning
 is in `context/implementations/01-mvp/04-synthesia-to-notes/` and `05-piano-overlay-from-black-keys/`.
+Since implementation 02, Phase 4 their access is this: `/frame-examples` (Lab) answers only the
+master user (`403` otherwise). `/video` checks the rights of the project of its `audio_uuid` like
+the other routers; `GET /video` lists the user's own videos, and every video for the master user;
+`GET /video/progress/{jobId}` answers `404` to a user who did not start the job, except the master
+user.
+
+### 1.1 `/auth`: signing in
+
+`api/auth.py`, plan section 9.2. The session itself (the cookie, its lifetime, the slow-down after
+wrong passwords) is described in [`context/08-security.md`](../../../context/08-security.md); the
+code is in `aitu_backend/auth/` (`sessions.py`, `passwords.py`, `throttle.py`).
+
+| Route | Body | Answer |
+|---|---|---|
+| `POST /auth/login` | `{username, password}` | `200` `{id, username, role, isMaster}` and the cookie `aitu_session` (`HttpOnly`, `SameSite=Lax`, not `Secure`, 30 days, renewed on use). `401` "The username or the password is wrong." |
+| `POST /auth/logout` | none | `204`. The session is deleted and the cookie removed. |
+| `GET /auth/me` | none | `200` `{id, username, role, isMaster}`; `401` without a session. The page asks it when it opens. |
+| `PUT /auth/password` | `{current, new}` | `204`. `403` when `current` is wrong; `422` when `new` is shorter than 8 characters. Every other session of the user ends; the current one stays. |
+
+- `POST /auth/login` gives the same `401` for an unknown username, a wrong password and a disabled
+  user, so the answer does not say which usernames exist. The username is compared without case.
+- **The slow-down.** After five wrong passwords for one username within a minute, each next try
+  waits before the password is checked: 2 s, then 3 s, and so on, at most 10 s. A correct password
+  clears the count. The count is in memory, so a restart clears it too.
+- `role` is `master` or `user`; `isMaster` is true for the master user.
+
+### 1.2 `/admin`: the users
+
+`api/admin.py`, plan section 9.1. The whole router answers only the master user (`403` "Only the
+master user can open this." otherwise). It is the backend of **Admin → Users**.
+
+| Route | Body | Answer |
+|---|---|---|
+| `GET /admin/users` | none | Every user, by id: `[{id, username, role, disabled, createdAt, hasPassword}]`. `hasPassword` is false for the master user until `AITU_MASTER_PASSWORD` gives it one. |
+| `POST /admin/users` | `{username, password}` | `201` and the user. `409` when the username is taken (without case). `422` for a username that is not 2 to 32 letters, digits, `.`, `_` or `-`, or a password under 8 characters. |
+| `PATCH /admin/users/{id}` | `{disabled?, password?}` | `200` and the user. `404` for an unknown id. `422` for a short password, or to disable the master user. |
+
+Disabling a user and resetting a password both end every session of that user at once. A new user
+signs in with the first password and changes it from the user menu (`PUT /auth/password`).
 
 ---
 
@@ -119,7 +203,9 @@ flow page instead.
 empty `notes.pmn` (`durationMs: 0`) and a `frameMs` in `project.json`, and the first accepted
 passage is what creates a recording. Body: `{ "name": string, "frameMs": number }`.
 
-`GET /audio/` and `GET /audio/{uuid}` answer the `AudioMetadata` shape. Since Phase 3 there is no
+`GET /audio/` lists only the parts of the current user's own projects, in the Personal Vault and
+the Private Library (since implementation 02, Phase 4). `GET /audio/` and `GET /audio/{uuid}` answer
+the `AudioMetadata` shape. Since Phase 3 there is no
 `metadata.json`: `audio/store.py` builds that shape from `project.json` and `timeline.json`. The
 routes add four computed fields: `hasNotes`,
 `needsRederivation`, `originalDurationSeconds`, and `updatedAt` (the newest modification time of the
@@ -262,11 +348,14 @@ called: the figures are chosen afterwards, from a ladder the reader names (D-01,
   one worker thread, in order of arrival. While another transcription runs, the job's status is
   `waiting` and its stream sends a `waiting` stage ("Waiting for 1 other transcription to finish").
   The range-edit take (`POST /audio/{uuid}/edits/{session}/transcribe`) uses the same queue.
-- **One job per piece.** The job carries the key `transcribe:<uuid>`. While a job with that key is
-  waiting or running, this route returns that job instead of starting a second one, so a double
-  click or a second browser tab cannot transcribe the same piece twice.
+- **One job per piece.** The job carries the key `transcribe:<uuid>`. While a job of the same user
+  with that key is waiting or running, this route returns that job instead of starting a second one,
+  so a double click or a second browser tab cannot transcribe the same piece twice.
 - **A range** (`startSeconds` and `endSeconds`) is the older path: the WAV is sliced first and the
   cuts are not applied.
+- **Rights.** The part is named in the body, so the route checks it itself: a part the user may not
+  read answers `404`, one they may read but not write answers `403`. The job runs as the user who
+  started it.
 
 Answers `202` with `{ "jobId", "status" }`, where `status` is usually `running` or `waiting`. A full
 transcription of Superestrella (189 s) takes about 25 s on the RTX 4090.
@@ -323,13 +412,19 @@ other. A reconnecting `EventSource` sends `Last-Event-ID` and resumes after that
 line (`: keep-alive`) is sent after 15 s with no frame. An unknown job id answers one `event: error`
 frame and a `done` frame with `status: "error"`.
 
+**The owner of a job.** Since implementation 02, Phase 4 every job records the user who started it
+(`owner_id` in `transcription/jobs.py`) and runs as that user, so a project it makes is theirs. This
+stream, `GET /matrix/jobs/{jobId}` and `GET /video/progress/{jobId}` answer `404` to any other user,
+as for an unknown job; the master user can follow every job.
+
 Jobs live in memory: the last 50 finished jobs are remembered, and a restart of the backend (also
 any `--reload`) loses them. The notes themselves are on disk.
 
 ### 3.5 GET /matrix/jobs/{jobId}
 
 `{jobId, status, error, stage, fraction}` from the last progress frame, for clients that cannot hold
-an SSE connection. `status` is `waiting`, `running`, `done` or `error`. `404` for an unknown job.
+an SSE connection. `status` is `waiting`, `running`, `done` or `error`. `404` for an unknown job,
+and for a job another user started (except for the master user).
 
 ### 3.6 GET /matrix/{uuid}/events
 
@@ -761,7 +856,9 @@ adds the list, create, rename, delete, export and import.
 when absent). It makes a copy in the current user's Personal Vault with new ids. The copy uses the
 same audio files of the audio store, so no audio bytes are copied. History, staging and the video
 are not copied. Answers `201` with `{id, title, parts}`, where `parts` holds the ids of the parts in
-order (the first one is the uuid the other routes take), and `404` for an unknown id.
+order (the first one is the uuid the other routes take), and `404` for an unknown id or a project
+the user may not read. The route is a read for the rights check, because the original is not
+changed and the copy belongs to the user who asks.
 
 Storage layout in [`paths-and-data.md`](paths-and-data.md).
 
@@ -842,6 +939,8 @@ Implementation 08 deleted no route. It removed two choices and one page:
 
 ## 11. Where to look deeper
 
+- [`context/08-security.md`](../../../context/08-security.md): the users, the session, the rights
+  table, the home network and what this setup does not protect
 - [`context/backend/piano-matrix-notation.md`](../../../context/backend/piano-matrix-notation.md):
   `notes.pmn` (and the in-memory shape of `events.json`), the columns form, the revisions
 - [`time-matrix.md`](time-matrix.md): every schema 2.0 field
