@@ -79,7 +79,7 @@ The plan's section 3.
 # [x] Phase 3: The `.database/` folder, the tables, the project bundle, the migration
 
 ## [x] Story 3.1: The folder
-- [x] Task 3.1.1 `AITU_DATABASE_DIR`, the link to `/mnt/ssd2/aimpromptu/.database`, `.gitignore`, the Compose mount, `VERSION`.
+- [x] Task 3.1.1 `AITU_DATABASE_DIR`, the folder `/mnt/ssd2/aimpromptu/.database` (a link in the repository at first; `AITU_DATABASE_DIR` in `.env` since 2026-10-06), `.gitignore`, the Compose mount, `VERSION`.
 - [x] Task 3.1.2 SQLAlchemy and Alembic; every table of plan section 8.6.
 
 ## [x] Story 3.2: The bundle

@@ -21,13 +21,20 @@ Phase 2 numbers; `db-check --hashes` clean on the real `.database/` and on a res
 
 ## 2.1 `.database/`
 
-`paths.database_dir()` is `AITU_DATABASE_DIR` or `<repository>/.database`. On this machine
-`.database` is a symbolic link to `/mnt/ssd2/aimpromptu/.database` (P-4), made once:
-`mkdir -p /mnt/ssd2/aimpromptu/.database && ln -s … .database`. Compose mounts the host folder
+`paths.database_dir()` is `AITU_DATABASE_DIR` or `<repository>/.database`. In this phase,
+`.database` on this machine was a symbolic link to `/mnt/ssd2/aimpromptu/.database` (P-4), made
+once: `mkdir -p /mnt/ssd2/aimpromptu/.database && ln -s … .database`. Compose mounts the host folder
 (`${AITU_DATABASE_DIR:-./.database}`) at `/database` and sets `AITU_DATABASE_DIR=/database` inside;
 mounting at a fixed path avoids a link that points outside the container. `make up` and
-`make test-backend` make `./.database` first when nothing is there, because Docker would make a
+`make test-backend` make the folder first when nothing is there, because Docker would make a
 missing mount source as root.
+
+**Changed after Phase 4 (2026-10-06, by the user).** The editor followed the link and watched every
+file of the database, so the user removed the link. `.env` now sets
+`AITU_DATABASE_DIR=/mnt/ssd2/aimpromptu/.database`, the `Makefile` reads it from `.env` and exports
+it (for the mount and for the `make db-*` commands), and the repository holds no `.database`. The
+folder and its content did not change. The backup named in section 4.3 was at the root of the
+repository; backups are now written beside the folder, in `/mnt/ssd2/aimpromptu/`.
 
 `db/database.py` opens the SQLite file on first use: it makes the folder, writes or checks `VERSION`
 (layout `1`; another value stops the app with `LayoutVersionMismatch`), brings the tables to the
@@ -172,7 +179,8 @@ project exists, so a second run changes nothing (tested, and run twice on the tr
 
 1. **Trial** into a folder of the scratchpad: 38 of 39, one failed (the demo piece, section 3.2).
    After the fix: 39 of 39; a second run skipped 39; `db-check --hashes` clean.
-2. **For real** into `.database/`, then emptied and run again for the times (section 4.1).
+2. **For real** into `.database/` (then the link to `/mnt/ssd2/aimpromptu/.database`), emptied and
+   run again for the times (section 4.1).
 
 | Count | |
 |---|---|
@@ -215,8 +223,9 @@ testing it and fixed:
 `db-reindex` is tested on the fixture: with every project row deleted, it writes them again from
 the bundles (owner, layer, parts, step) and `db-check` is clean.
 
-One backup is at the root of the repository, `.database-20261006-140014.tar.zst` (1.08 GB,
-gitignored), taken right after the migration.
+One backup was taken right after the migration, `.database-20261006-140014.tar.zst` (1.08 GB), at
+the root of the repository (beside the link of that time). It is no longer there; a new
+`make db-backup` writes into `/mnt/ssd2/aimpromptu/` (section 2.1).
 
 # 5. The tests
 

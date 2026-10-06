@@ -25,7 +25,7 @@ and the status lookup is [`02-checklist.md`](02-checklist.md). Phase reports go 
 | [`02-implementation-phase-2.md`](02-implementation-phase-2.md) | Phase 2: the sheet page split into modules, the defaults (the highest peak is a negra), the redesigned page and toolboxes, the line wrap fixed, the timings (screenshots in [`screenshots/phase-2/`](screenshots/phase-2/)) |
 | [`02-implementation-phase-3.md`](02-implementation-phase-3.md) | Phase 3: `.database/` (SQLite and the project bundles), the tables, `notes.pmn` version 2, the audio store by hash, the migration of the 39 pieces, backup and check (screenshots in [`screenshots/phase-3/`](screenshots/phase-3/)) |
 | [`02-implementation-phase-4.md`](02-implementation-phase-4.md) | Phase 4: users, sign in, the rights table with a test per row, Admin → Users, the dark theme, the app on the home network (screenshots in [`screenshots/phase-4/`](screenshots/phase-4/)) |
-| [`public-library-build/`](public-library-build/) | A parallel piece of work: downloading `musicchartsarchive.com` into `.music-library/` to build the data of the Public Library. Phase 12 reconciles it with this plan |
+| [`public-library-build/`](public-library-build/) | A parallel piece of work: downloading `musicchartsarchive.com` into `data/music-library/` (next to the repository) to build the data of the Public Library. Phase 12 reconciles it with this plan |
 
 ## What it is for
 

@@ -7,7 +7,7 @@
 Everything the app knows is in `.database/` (implementation 02, plan section 8): one SQLite file for
 the records and folders beside it for the audio and the project bundles. The folder is
 `.database/` at the root of the repository unless `AITU_DATABASE_DIR` names another one
-(`aitu_backend/config.py`). Every path is built in one module,
+(`aitu_backend/config.py`); on the Ubuntu machine `.env` names `/mnt/ssd2/aimpromptu/.database` (§7). Every path is built in one module,
 `aitu-backend/src/aitu_backend/storage/paths.py`; its module docstring repeats the tree below.
 
 `aitu-backend/data/` is the store before Phase 3. Only the migration (§9) reads it.
@@ -283,27 +283,33 @@ current.
 ## 7. Where the data lives: `AITU_DATABASE_DIR` and the containers
 
 **Natively**, `paths.database_dir()` returns `AITU_DATABASE_DIR` when it is set and not empty,
-otherwise `<repository>/.database`. On the Ubuntu machine `.database` is a symbolic link to
-`/mnt/ssd2/aimpromptu/.database`, made once by hand:
+otherwise `<repository>/.database`. On the Ubuntu machine the folder is not inside the repository:
+`.env` sets `AITU_DATABASE_DIR=/mnt/ssd2/aimpromptu/.database`, and the folder was made once by hand:
 
-    mkdir -p /mnt/ssd2/aimpromptu/.database && ln -s /mnt/ssd2/aimpromptu/.database .database
+    mkdir -p /mnt/ssd2/aimpromptu/.database
+
+There is no `.database` link in the repository. Phase 3 made one, and the user removed it on
+2026-10-06: the editor followed the link and watched every file of the database. The `Makefile`
+reads `AITU_DATABASE_DIR` from `.env` and exports it, so `make up`, `make test-backend` and the
+`make db-*` commands all use the same folder.
 
 **In the containers** (`compose.yaml`, project name `aimpromptu`) the backend sees the folder at
 `/database` (`AITU_DATABASE_DIR=/database` inside), and the host variable chooses which host folder
-is mounted there (default `./.database`, the link). `make up` and `make test-backend` make
-`./.database` first if it is missing, because Docker would make it as root.
+is mounted there (default `./.database`). `make up` and `make test-backend` make that folder first
+if it is missing, because Docker would make it as root.
 
 | Host | Container | Why |
 |---|---|---|
 | The repository (`.`) | `/work/aimpromptu` | The code is the host's, so uvicorn (`--reload --reload-dir src`) and Vite reload on every edit; the tests also read `pocs/`, `context/` and `scripts/` |
-| `${AITU_DATABASE_DIR:-./.database}` | `/database` | Every record and every file of the app |
+| `${AITU_DATABASE_DIR:-./.database}` (on this machine `/mnt/ssd2/aimpromptu/.database`, from `.env`) | `/database` | Every record and every file of the app |
 | `${AITU_DATA_DIR:-./aitu-backend/data}` | `/work/aimpromptu/aitu-backend/data` | The old store, for the migration only |
 | `${HF_HUB_CACHE:-/mnt/ssd2/hf/data/hub}` | `/hf/hub` (`HF_HUB_CACHE`) | The MuScriptor weights (5.5 GB for `large`) |
 | `${AITU_CACHE_DIR:-/mnt/ssd2/aimpromptu/home}` | `/home/app` | The ByteDance checkpoint and the torch cache |
 | `./aitu-frontend` | `/work/aimpromptu/aitu-frontend` | The frontend code; an anonymous volume keeps the image's `node_modules` |
 
-Both containers run as the host user, so every file in `.database/` belongs to that user. Both
-ports bind to `127.0.0.1` only (until Phase 4). Every variable is listed in `.env.example`.
+Both containers run as the host user, so every file in `.database/` belongs to that user. The
+backend's port binds to `127.0.0.1` only; the page's port binds to `WEB_BIND` (default `0.0.0.0`,
+the home network, since Phase 4). Every variable is listed in `.env.example`.
 
 **The tests** never touch the real folder: `tests/conftest.py` points `AITU_DATABASE_DIR` at a
 temporary folder before any test module loads, and at a new one for every test, copied from one

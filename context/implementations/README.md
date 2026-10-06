@@ -32,7 +32,7 @@ closed.
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
 | 02 | [`02-private-web-app/`](02-private-web-app/README.md) | The app of the app context: the design system and the sidebar shell, `.database/`, users and login on the home network, projects and the Personal Vault, the Private and Public Libraries, the sheet toolbox, copy and paste, Recording in Sheet, playlists, Play mode, requests and the Admin panel | 2026-10-05 | **Live.** Sixteen phases, 0 to 15. [`02-checklist.md`](02-private-web-app/02-checklist.md) is the status lookup |
-| 02-a | [`02-private-web-app/public-library-build/`](02-private-web-app/public-library-build/README.md) | A parallel piece of work: the data of the Public Library, downloaded from `musicchartsarchive.com` into `.music-library/` | 2026-10-05 | **Live**, run by another agent. 02 Phase 12 reconciles it |
+| 02-a | [`02-private-web-app/public-library-build/`](02-private-web-app/public-library-build/README.md) | A parallel piece of work: the data of the Public Library, downloaded from `musicchartsarchive.com` into `data/music-library/` (next to the repository) | 2026-10-05 | **Live**, run by another agent. 02 Phase 12 reconciles it |
 
 ## How to read this folder
 

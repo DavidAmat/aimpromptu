@@ -86,6 +86,12 @@ user cannot be disabled.
 (`chmod 600`, ignored by git), so the user can sign in, and the browser scripts sign in with it.
 The user changes the password from the user menu; the line in `.env` is then not read again.
 
+*Later the same day:* the user changed the master password from the user menu (section 8), so the
+line in `.env` no longer works for the browser scripts; they need `AITU_CHECK_USERNAME` and
+`AITU_CHECK_PASSWORD` (the user's password, or a test user). The user also added
+`AITU_DATABASE_DIR=/mnt/ssd2/aimpromptu/.database` to `.env` and removed the `.database` link from
+the repository (the Phase 3 report, section 2.1).
+
 **A defect found by the screenshots:** SQLite keeps no time zone, so a user created two minutes
 earlier showed "2 h ago" (the browser read UTC as Barcelona time). Every time column now uses a
 `UTCDateTime` type that reads the value back in UTC; Alembic finds no change to the tables.
@@ -249,6 +255,7 @@ out, and another user's project answers 404.
   (`AITU_MASTER_PASSWORD`).
 - **Screenshots with a second user** on a throwaway instance (`AITU_DATABASE_DIR` in the
   scratchpad, a native backend on 8766, Vite on 5174 with `AITU_API_PROXY`), so the real database
-  gets no test users.
+  gets no test users. Set `AITU_DATABASE_DIR` explicitly for such an instance: since 2026-10-06 the
+  real folder is named by `.env`, and the default `<repository>/.database` no longer exists.
 - **Look at the music in dark mode**: a page of the app can follow the theme while the drawing it
   holds must not.

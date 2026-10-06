@@ -1405,7 +1405,7 @@ implementation 08 numbers.
 
 ## Phase 3: The `.database/` folder, the tables, the project bundle, the migration
 
-`AITU_DATABASE_DIR`, the link to `/mnt/ssd2`, `.gitignore`, the Compose mount. SQLAlchemy and Alembic,
+`AITU_DATABASE_DIR`, the folder on `/mnt/ssd2` (a link at first; `.env` since 2026-10-06), `.gitignore`, the Compose mount. SQLAlchemy and Alembic,
 the tables of section 8.6 (all of them, so later phases add no migration they can avoid). The bundle
 (section 8.3) with `notes.pmn` version 2 and `sheet.json`; the audio store by hash; the audio timeline
 of section 8.5 (one audio per part for now, cuts as segments); the cached joined audio. Every module
