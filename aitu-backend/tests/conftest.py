@@ -9,11 +9,19 @@ from typing import Iterator
 
 import pytest
 
+from aitu_backend.auth import dependencies, throttle
+from aitu_backend.auth.context import CurrentUser
 from aitu_backend.db import database
+from aitu_backend.db.users import ensure_master_user
 from aitu_backend.storage import locate
 
 # Before any test module is imported: code that runs while the tests are collected (a `skipif`, a
 # module-level client) must never reach the real `.database/`, which the container mounts.
+# The real one stays known, for the few tests that read the library (never write it).
+os.environ.setdefault(
+    "AITU_REAL_DATABASE_DIR",
+    os.environ.get("AITU_DATABASE_DIR") or str(Path(__file__).resolve().parents[2] / ".database"),
+)
 os.environ["AITU_DATABASE_DIR"] = tempfile.mkdtemp(prefix="aitu-collect-database-")
 
 
@@ -27,6 +35,7 @@ def _no_data_dir_override(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     monkeypatch.delenv("AITU_DATA_DIR", raising=False)
     monkeypatch.delenv("AITU_MASTER_USERNAME", raising=False)
+    monkeypatch.delenv("AITU_MASTER_PASSWORD", raising=False)
 
 
 @pytest.fixture(scope="session")
@@ -52,3 +61,17 @@ def _temporary_database(
     yield folder
     locate.forget()
     database.forget_engines()
+
+
+def _as_master() -> CurrentUser:
+    return CurrentUser(ensure_master_user(), "master", "master")
+
+
+@pytest.fixture(autouse=True)
+def _signed_in(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every request of a test acts as the master user, with no cookie, unless the test is marked
+    ``real_login``: then it signs in through ``/auth`` like the browser (implementation 02,
+    Phase 4)."""
+    throttle.clear()
+    if request.node.get_closest_marker("real_login") is None:
+        monkeypatch.setattr(dependencies, "test_user", _as_master)

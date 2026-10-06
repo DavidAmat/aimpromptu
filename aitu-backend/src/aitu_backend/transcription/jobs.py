@@ -28,14 +28,18 @@ A job can also carry a ``key`` (the audio uuid of a transcription): while a job
 with that key is waiting or running, submitting another one returns the first,
 so a double click or a second tab cannot start the same transcription twice.
 
-In-memory only. This is a single-user local app: a restart loses job history,
-which is fine because the *artifacts* are on disk and a finished job's result is
-just a file read.
+**An owner** (implementation 02, plan section 18): a job records the user who started it, runs in
+that user's context (so a piece it makes belongs to them), and is followed only by them and the
+master user. Two users never join each other's job through a key.
+
+In-memory only: a restart loses job history, which is fine because the *artifacts* are on disk and
+a finished job's result is just a file read.
 """
 
 from __future__ import annotations
 
 import collections
+import contextvars
 import json
 import threading
 import uuid as uuid_module
@@ -43,6 +47,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Iterator
 
+from aitu_backend.auth import context
 from aitu_backend.progress import (
     BaseProgress,
     CallbackProgress,
@@ -75,6 +80,8 @@ class Job:
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     #: What the job is about, for example the audio uuid of a transcription. See :func:`submit`.
     key: str | None = None
+    #: The user who started it; ``None`` outside a request (a script, a test).
+    owner_id: int | None = None
     #: Every frame sent so far, ``(SSE event name or None, payload)``, in order. The index of a
     #: frame is its SSE ``id``.
     frames: list[tuple[str | None, dict[str, Any]]] = field(default_factory=list)
@@ -240,13 +247,17 @@ def submit(
     returned instead of starting a second one. ``describe(result)`` gives extra
     fields for the final ``done`` frame (a transcription adds its ``revision``).
     """
+    user = context.current()
+    owner = user.id if user is not None else None
     with _lock:
         if key is not None:
             for existing in _jobs.values():
-                if existing.key == key and not existing.finished:
+                if existing.key == key and existing.owner_id == owner and not existing.finished:
                     return existing
-        job = Job(id=str(uuid_module.uuid4()), key=key)
+        job = Job(id=str(uuid_module.uuid4()), key=key, owner_id=owner)
         _remember(job)
+    # The work runs with the request's context: the user it acts as, above all.
+    request_context = contextvars.copy_context()
 
     reporters: list[BaseProgress] = [
         CallbackProgress(lambda event: _tick(job, event), on_message=job.publish)
@@ -257,7 +268,7 @@ def submit(
 
     def run() -> None:
         try:
-            job.result = work(reporter)
+            job.result = request_context.run(work, reporter)
             if describe is not None:
                 job.summary = dict(describe(job.result))
             job._finish("done")

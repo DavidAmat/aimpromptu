@@ -45,9 +45,7 @@ DRAWN = [
 def a_video_piece(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     """One ordinary audio piece (V-03) with a drawn video inside it, read."""
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    audio_store.create(
-        alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID
-    )
+    audio_store.create(alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID)
     make_video(tmp_path, monkeypatch, DRAWN)
     notes_module.read_notes(UUID)
     return UUID
@@ -79,9 +77,7 @@ def test_it_writes_the_notes_through_the_writer_that_already_exists(
 
     assert written.notes == len(stored.events) == len(DRAWN)
     assert stored.title == "Drawn"
-    assert stored.duration_seconds == pytest.approx(
-        FRAMES * SAMPLE_MS / 1000.0, abs=0.5
-    )
+    assert stored.duration_seconds == pytest.approx(FRAMES * SAMPLE_MS / 1000.0, abs=0.5)
 
 
 def test_no_hand_is_written_on_any_event(a_video_piece: str) -> None:
@@ -124,9 +120,7 @@ def test_an_unread_video_is_refused_rather_than_written_empty(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    audio_store.create(
-        alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID
-    )
+    audio_store.create(alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID)
     make_video(tmp_path, monkeypatch, DRAWN)
     with pytest.raises(piece.NotRead):
         piece.write(UUID)
@@ -177,8 +171,7 @@ def test_a_note_can_be_taken_off_and_a_missed_one_put_on_before_it_is_written(
         for event in stored.events
     )
     assert any(
-        event.midi_note == 60 and event.start == pytest.approx(1.0)
-        for event in stored.events
+        event.midi_note == 60 and event.start == pytest.approx(1.0) for event in stored.events
     )
 
 
@@ -187,9 +180,7 @@ def test_a_correction_that_names_a_note_the_reading_no_longer_holds_is_reported(
 ) -> None:
     """Reported rather than dropped in silence: a correction made against an
     older reading is a thing the person will want to know about."""
-    store.save_corrections(
-        UUID, NoteCorrections(removed=[NoteCorrection(midi=127, start=99.0)])
-    )
+    store.save_corrections(UUID, NoteCorrections(removed=[NoteCorrection(midi=127, start=99.0)]))
     written = piece.write(UUID)
     assert written.removed == 0 and written.unmatched == 1
 
@@ -197,9 +188,7 @@ def test_a_correction_that_names_a_note_the_reading_no_longer_holds_is_reported(
 def test_corrections_survive_the_video_being_read_again(a_video_piece: str) -> None:
     """The frames, the plate, `frames.jsonl` and `notes.json` are all a cache
     (V-01). What a person decided is not."""
-    store.save_corrections(
-        UUID, NoteCorrections(added=[NoteCorrection(midi=64, start=2.0)])
-    )
+    store.save_corrections(UUID, NoteCorrections(added=[NoteCorrection(midi=64, start=2.0)]))
     store.clear_frames(UUID)
 
     assert store.load_notes(UUID) is None
@@ -269,9 +258,7 @@ def test_writing_a_video_nobody_has_read_is_a_409_with_the_reason(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    audio_store.create(
-        alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID
-    )
+    audio_store.create(alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID)
     make_video(tmp_path, monkeypatch, DRAWN)
 
     assert client.get(f"/video/{UUID}/notes").status_code == 404

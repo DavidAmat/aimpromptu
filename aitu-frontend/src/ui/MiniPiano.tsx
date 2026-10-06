@@ -13,6 +13,7 @@ import Box from "@mui/material/Box";
 import { spanishNoteShort } from "../music/noteNames";
 import { pianoKeyPositions, PIANO_HEIGHT, PIANO_WIDTH } from "../piano/keyPositions";
 import { grays, semantic } from "./palette";
+import { useScheme } from "./schemeContext";
 import { ui } from "./tokens";
 
 const SCALE = 0.5;
@@ -29,6 +30,7 @@ export interface MiniPianoProps {
 }
 
 export function MiniPiano({ value, onChange, label, disabled }: MiniPianoProps) {
+  useScheme();
   const scroller = useRef<HTMLDivElement | null>(null);
   const width = PIANO_WIDTH * SCALE;
   const height = PIANO_HEIGHT * SCALE * 0.7;

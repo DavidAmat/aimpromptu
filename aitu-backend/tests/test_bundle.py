@@ -26,9 +26,7 @@ from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.engine import NoteEvent
 
 
-def tone(
-    folder: Path, seconds: float, name: str = "tone.wav", pitch: float = 220.0
-) -> Path:
+def tone(folder: Path, seconds: float, name: str = "tone.wav", pitch: float = 220.0) -> Path:
     rate = 16_000
     samples = 0.3 * np.sin(2 * np.pi * pitch * np.arange(int(rate * seconds)) / rate)
     path = folder / name
@@ -42,9 +40,7 @@ def a_part(folder: Path, seconds: float = 2.0, title: str = "Piece") -> str:
     normalized = tone(paths.part_cache_dir(part), seconds, "normalized.wav")
     store.replace_original(part, normalized, "wav", keep_cuts=False)
     store.update(part, duration_seconds=seconds, sample_rate=16_000)
-    pipeline.save_note_events(
-        part, [NoteEvent(midi_note=60, start=0.1, end=0.5)], seconds, title
-    )
+    pipeline.save_note_events(part, [NoteEvent(midi_note=60, start=0.1, end=0.5)], seconds, title)
     return part
 
 
@@ -64,9 +60,7 @@ def a_part(folder: Path, seconds: float = 2.0, title: str = "Piece") -> str:
 )
 def test_cuts_and_segments_convert_both_ways(cuts: list[tuple[int, int]]) -> None:
     segments = bundle.segments_for_cuts("h", cuts, 200)
-    timeline = Timeline(
-        audio={"h": AudioEntry(format="wav", frames=200)}, segments=segments
-    )
+    timeline = Timeline(audio={"h": AudioEntry(format="wav", frames=200)}, segments=segments)
     assert bundle.cuts_of(timeline) == cuts
 
 
@@ -76,9 +70,7 @@ def test_the_segments_are_the_kept_ranges_in_ms() -> None:
 
 
 def test_a_file_not_measured_yet_is_one_open_segment() -> None:
-    assert bundle.segments_for_cuts("h", [], None) == [
-        Segment(audio="h", from_ms=0, to_ms=None)
-    ]
+    assert bundle.segments_for_cuts("h", [], None) == [Segment(audio="h", from_ms=0, to_ms=None)]
     timeline = Timeline(
         audio={"h": AudioEntry(format="mp3")},
         segments=bundle.segments_for_cuts("h", [], None),
@@ -113,15 +105,9 @@ def test_cuts_are_stored_in_the_timeline_of_the_part(tmp_path: Path) -> None:
 
 
 def test_a_new_project_has_its_bundle_and_its_rows(tmp_path: Path) -> None:
-    part = store.create(
-        "My tune", AudioSource.YOUTUBE, "mp3", source_url="https://x"
-    ).uuid
+    part = store.create("My tune", AudioSource.YOUTUBE, "mp3", source_url="https://x").uuid
     project = json.loads(paths.project_json_path(part).read_text())
-    assert (
-        project["id"] == part
-        and project["title"] == "My tune"
-        and project["kind"] == "song"
-    )
+    assert project["id"] == part and project["title"] == "My tune" and project["kind"] == "song"
     assert project["ownerId"] == ensure_master_user()
     assert project["parts"] == [
         {
@@ -146,9 +132,7 @@ def test_a_new_project_has_its_bundle_and_its_rows(tmp_path: Path) -> None:
             "My tune",
             ensure_master_user(),
         )
-        assert [
-            p.id for p in db.scalars(select(Part).where(Part.project_id == part))
-        ] == [part]
+        assert [p.id for p in db.scalars(select(Part).where(Part.project_id == part))] == [part]
 
 
 def test_the_title_is_the_alias_and_stays_in_step_with_its_row(tmp_path: Path) -> None:

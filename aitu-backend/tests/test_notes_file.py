@@ -43,11 +43,7 @@ def test_the_body_has_the_header_and_the_columns_in_the_order_of_the_part() -> N
     assert body["onMs"] == [3070.1, 3070, 0.1, 188999.9]
     assert body["hand"] == "rl--"
     assert body["removed"] == [2] and body["handGuessed"] == [4]
-    assert (
-        body["notesRevision"] == 3
-        and body["nextId"] == 9
-        and body["lagCorrectionMs"] == -12.5
-    )
+    assert body["notesRevision"] == 3 and body["nextId"] == 9 and body["lagCorrectionMs"] == -12.5
     assert "outside" not in body
 
 
@@ -76,9 +72,7 @@ def test_a_note_outside_the_keyboard_survives() -> None:
     outside = {"id": 9, "midiNote": 110, "start": 1.0, "end": 2.0, "velocity": 64}
     payload = {**FULL, "events": [*FULL["events"], outside]}
     body = notes_file.to_pmn(payload)
-    assert body["outside"] == [
-        {"id": 9, "midiNote": 110, "start": 1.0, "end": 2.0, "velocity": 64}
-    ]
+    assert body["outside"] == [{"id": 9, "midiNote": 110, "start": 1.0, "end": 2.0, "velocity": 64}]
     assert notes_file.from_pmn(body)["events"][-1]["midiNote"] == 110
 
 

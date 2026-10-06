@@ -77,9 +77,7 @@ def test_the_travel_is_voted_for_by_the_runs_and_never_zero() -> None:
         _run(64, 220 - travel),
     ]
 
-    best, agreeing, standing_still = momentum.vote_for_travel(
-        falling + lettering, previous
-    )
+    best, agreeing, standing_still = momentum.vote_for_travel(falling + lettering, previous)
     assert best == travel
     assert agreeing == 3
     assert standing_still == 3, "how much of the picture is not music"

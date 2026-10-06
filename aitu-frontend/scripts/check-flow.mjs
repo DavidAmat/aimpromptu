@@ -29,6 +29,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
+import { signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { values } = parseArgs({
@@ -43,6 +44,7 @@ const { values } = parseArgs({
 const base = values.base;
 // The backend through the page's own proxy, as the browser reaches it.
 const api = `${base}/api`;
+await signIn(base);
 const out = path.resolve(values.out);
 mkdirSync(out, { recursive: true });
 
@@ -68,6 +70,7 @@ if (!uploaded.ok) throw new Error(`The upload failed: ${uploaded.status} ${await
 const uuid = (await uploaded.json()).uuid;
 
 const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+useSession(browser);
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const problems = [];
 // A 404 on `/rhythm` is how the Sheet tab asks whether a reading exists; the browser logs it too.

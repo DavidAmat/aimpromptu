@@ -88,9 +88,7 @@ def tree(tmp_path: Path) -> tuple[Path, Path]:
     """Four pieces: one of the seed list with cuts, a sheet and history; one with old notes and no
     ids; one with a video and no notes; one that cannot be read. And the seed list."""
     data = tmp_path / "data"
-    seed = piece(
-        data, SEED, "Superestrella", cuts=[[0, 10], [290, 300]], audioRevision=1
-    )
+    seed = piece(data, SEED, "Superestrella", cuts=[[0, 10], [290, 300]], audioRevision=1)
     (seed / "matrices").mkdir()
     (seed / "matrices" / "events.json").write_text(json.dumps(events(12)))
     (seed / "matrices" / "rhythm.json").write_text(json.dumps({"anchorMs": 217.1}))
@@ -123,13 +121,9 @@ def tree(tmp_path: Path) -> tuple[Path, Path]:
     seed_dir = tmp_path / "seed"
     seed_dir.mkdir()
     url = f"https://www.youtube.com/watch?v={SEED[:4]}"
-    (seed_dir / "seed-state.json").write_text(
-        json.dumps({"downloads": {url: {"uuid": SEED}}})
-    )
+    (seed_dir / "seed-state.json").write_text(json.dumps({"downloads": {url: {"uuid": SEED}}}))
     (seed_dir / "library.json").write_text(
-        json.dumps(
-            {"pieces": [{"url": url, "title": "Superestrella", "artist": "Aitana"}]}
-        )
+        json.dumps({"pieces": [{"url": url, "title": "Superestrella", "artist": "Aitana"}]})
     )
     return data, seed_dir
 
@@ -167,10 +161,7 @@ def test_a_piece_keeps_its_notes_cuts_sheet_and_history(
     assert json.loads(pipeline.rhythm_path(SEED).read_text()) == {"anchorMs": 217.1}
     assert json.loads(paths.music_version_path(SEED).read_text()) == {"version": 2}
     entry = store.get(SEED)
-    assert (
-        entry.original_path.read_bytes()
-        == (data / "audio" / SEED / "original.wav").read_bytes()
-    )
+    assert entry.original_path.read_bytes() == (data / "audio" / SEED / "original.wav").read_bytes()
     assert entry.has_normalized() and entry.waveform_path.is_file()
     snapshot = paths.history_version_dir(SEED, 1)
     assert sorted(path.name for path in snapshot.iterdir()) == [
@@ -198,9 +189,7 @@ def test_the_seed_piece_is_a_song_of_the_private_library(
         song = db.scalar(select(Song))
         assert (song.scope, song.title) == ("private", "Superestrella")
         name = db.scalar(
-            select(ArtistName.name)
-            .join(SongArtist)
-            .where(SongArtist.song_id == song.id)
+            select(ArtistName.name).join(SongArtist).where(SongArtist.song_id == song.id)
         )
         assert name == "Aitana"
         version = db.scalar(select(PrivateVersion))
@@ -220,14 +209,10 @@ def test_the_video_is_a_temporary_file_of_its_owner(tree: tuple[Path, Path]) -> 
 def test_running_it_twice_changes_nothing(tree: tuple[Path, Path]) -> None:
     script = load_script()
     script.migrate(*tree)
-    before = sorted(
-        str(path) for path in paths.database_dir().rglob("*") if path.is_file()
-    )
+    before = sorted(str(path) for path in paths.database_dir().rglob("*") if path.is_file())
     again = script.migrate(*tree)
     assert again["counts"]["moved"] == 0 and again["counts"]["skipped"] == 3
-    after = sorted(
-        str(path) for path in paths.database_dir().rglob("*") if path.is_file()
-    )
+    after = sorted(str(path) for path in paths.database_dir().rglob("*") if path.is_file())
     assert after == before
     with session() as db:
         assert len(list(db.scalars(select(Song)))) == 1

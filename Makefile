@@ -168,7 +168,7 @@ up: stop _database
 	@mkdir -p "$(CACHE_DIR)"
 	$(COMPOSE) up -d --build --renew-anon-volumes --wait
 	@echo ""
-	@echo "  app       http://localhost:$(WEB_PORT)   (from the Mac: scripts/tunnel-from-mac.sh)"
+	@echo "  app       http://localhost:$(WEB_PORT)   (from the Mac: http://ubuntu:$(WEB_PORT); sign in)"
 	@echo "  api       http://127.0.0.1:$(API_PORT)   (on this machine; the page uses /api)"
 	@echo ""
 	@echo "  make logs   follow both      make down   stop both"

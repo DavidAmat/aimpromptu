@@ -26,6 +26,7 @@ from aitu_backend.pmn import events_file
 from aitu_backend.pmn.muscriptor import MuScriptorAssembler
 from aitu_backend.schemas.metadata import AudioSource
 from aitu_backend.storage import paths
+from parts import library_file
 from aitu_backend.transcription import engine as engine_module
 from aitu_backend.transcription import lag, models, pipeline, split_cache, time_pipeline
 from aitu_backend.transcription.engine import (
@@ -39,7 +40,7 @@ from aitu_backend.transcription.live import LiveNotes
 FIXTURES = Path(__file__).parent / "fixtures" / "pmn"
 EVENTS_20S = FIXTURES / "superestrella-20s-large-cuda.events.jsonl"
 SUPERESTRELLA = "a585f9eb-36a1-49a0-9f0c-2626f3d292da"
-LIBRARY_WAV = paths.backend_root() / "data" / "audio" / SUPERESTRELLA / "normalized.wav"
+LIBRARY_WAV = library_file(SUPERESTRELLA, "normalized.wav")
 PHASE_1_FULL = (
     paths.repo_root()
     / "pocs"
@@ -50,9 +51,7 @@ PHASE_1_FULL = (
     / "notes.json"
 )
 
-needs_ffmpeg = pytest.mark.skipif(
-    not formats.ffmpeg_available(), reason="ffmpeg is not installed"
-)
+needs_ffmpeg = pytest.mark.skipif(not formats.ffmpeg_available(), reason="ffmpeg is not installed")
 
 
 def fixture_events() -> list[dict[str, Any]]:
@@ -62,9 +61,7 @@ def fixture_events() -> list[dict[str, Any]]:
 class ReplayModel:
     """Stands for ``muscriptor.TranscriptionModel``: same call, same events, no weights."""
 
-    def __init__(
-        self, events: list[dict[str, Any]] | None = None, pause: float = 0.0
-    ) -> None:
+    def __init__(self, events: list[dict[str, Any]] | None = None, pause: float = 0.0) -> None:
         self.events = fixture_events() if events is None else events
         self.pause = pause
         self.calls: list[dict[str, Any]] = []
@@ -159,17 +156,11 @@ def test_the_notes_are_the_phase_2_notes_with_ids_from_the_piece(
     replay: ReplayModel,
 ) -> None:
     engine = MuScriptorEngine(device="cpu")
-    run = engine.run_signal(
-        np.zeros(20 * 16_000, dtype=np.float32), 16_000, first_id=40
-    )
-    expected = (
-        MuScriptorAssembler(first_id=40).add_all(fixture_events()).notes(end_ms=20_000)
-    )
+    run = engine.run_signal(np.zeros(20 * 16_000, dtype=np.float32), 16_000, first_id=40)
+    expected = MuScriptorAssembler(first_id=40).add_all(fixture_events()).notes(end_ms=20_000)
     assert [event.id for event in run.events] == expected.id.tolist()
     assert [event.midi_note for event in run.events] == expected.midi.tolist()
-    assert [
-        round(event.start * 1000) for event in run.events
-    ] == expected.on_ms.tolist()
+    assert [round(event.start * 1000) for event in run.events] == expected.on_ms.tolist()
     assert all(event.velocity == 64 for event in run.events)
     # 102 distinct onsets are too few to measure the lag (lag.MIN_ONSETS), so none is applied.
     assert run.lag_correction_ms == 0.0
@@ -180,9 +171,7 @@ def test_a_missing_package_names_the_install_command(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(engine_module, "engine_installed", lambda name: False)
-    with pytest.raises(
-        engine_module.EngineUnavailable, match="uv sync --extra muscriptor"
-    ):
+    with pytest.raises(engine_module.EngineUnavailable, match="uv sync --extra muscriptor"):
         MuScriptorEngine(device="cpu")
 
 
@@ -221,14 +210,10 @@ def test_the_preload_reads_its_spec(monkeypatch: pytest.MonkeyPatch) -> None:
 # -------------------------------------------------------------------- the stream
 
 
-def messages_of(
-    events: list[dict[str, Any]], duration_ms: float, **options: Any
-) -> list[dict]:
+def messages_of(events: list[dict[str, Any]], duration_ms: float, **options: Any) -> list[dict]:
     sent: list[dict] = []
     assembler = MuScriptorAssembler(first_id=0)
-    live = LiveNotes(
-        assembler, lambda name, payload: sent.append(payload), duration_ms, **options
-    )
+    live = LiveNotes(assembler, lambda name, payload: sent.append(payload), duration_ms, **options)
     for event in events:
         assembler.add(event)
         live.observe(event)
@@ -249,9 +234,7 @@ def test_every_rectangle_arrives_once_closed_with_its_saved_id() -> None:
     expected = MuScriptorAssembler().add_all(fixture_events()).notes(end_ms=20_000)
     assert closed == {
         int(i): (int(k), int(o), int(n))
-        for i, k, o, n in zip(
-            expected.id, expected.key, expected.on_ms, expected.len_ms
-        )
+        for i, k, o, n in zip(expected.id, expected.key, expected.on_ms, expected.len_ms)
     }
     assert sent[-1]["open"] == {"id": [], "key": [], "onMs": []}
 
@@ -398,16 +381,10 @@ def test_the_route_streams_the_live_notes_and_ends_with_the_revision(
 ) -> None:
     client = TestClient(create_app())
     uuid = ingested(tmp_path)
-    handle = client.post(
-        "/matrix/transcribe", json={"audioUuid": uuid, "force": True}
-    ).json()
+    handle = client.post("/matrix/transcribe", json={"audioUuid": uuid, "force": True}).json()
     body = client.get(f"/matrix/progress/{handle['jobId']}").text
 
-    frames = [
-        frame
-        for frame in body.split("\n\n")
-        if frame.startswith(("event", "id", "data"))
-    ]
+    frames = [frame for frame in body.split("\n\n") if frame.startswith(("event", "id", "data"))]
     chunks = [f for f in frames if f.startswith("event: chunk")]
     assert len(chunks) >= 5
     done = json.loads(frames[-1].split("data: ", 1)[1])
@@ -434,12 +411,8 @@ def test_a_second_request_for_the_same_piece_joins_the_running_job(
     client = TestClient(create_app())
     uuid = ingested(tmp_path)
 
-    first = client.post(
-        "/matrix/transcribe", json={"audioUuid": uuid, "force": True}
-    ).json()
-    second = client.post(
-        "/matrix/transcribe", json={"audioUuid": uuid, "force": True}
-    ).json()
+    first = client.post("/matrix/transcribe", json={"audioUuid": uuid, "force": True}).json()
+    second = client.post("/matrix/transcribe", json={"audioUuid": uuid, "force": True}).json()
     assert second["jobId"] == first["jobId"]
     assert client.get(f"/matrix/{uuid}/job").json()["jobId"] == first["jobId"]
 
@@ -471,10 +444,7 @@ def test_the_lag_of_superestrella_is_the_phase_1_answer() -> None:
     onsets = np.array([note["start"] * 1000.0 for note in notes])
     assert lag.lag_correction_ms(samples, rate, onsets) == 15.0
     # Too few onsets: no correction rather than a noisy one.
-    assert (
-        lag.lag_correction_ms(samples[: 20 * rate], rate, onsets[onsets < 20_000])
-        == 0.0
-    )
+    assert lag.lag_correction_ms(samples[: 20 * rate], rate, onsets[onsets < 20_000]) == 0.0
 
 
 # ------------------------------------------------------------------------ the GPU
@@ -486,29 +456,21 @@ def _gpu_and_weights() -> bool:
         from huggingface_hub import try_to_load_from_cache
     except ImportError:
         return False
-    if not torch.cuda.is_available() or not engine_module.engine_installed(
-        "muscriptor"
-    ):
+    if not torch.cuda.is_available() or not engine_module.engine_installed("muscriptor"):
         return False
     cached = try_to_load_from_cache("MuScriptor/muscriptor-large", "model.safetensors")
     return isinstance(cached, str)
 
 
-@pytest.mark.skipif(
-    not LIBRARY_WAV.is_file(), reason="needs the library copy of Superestrella"
-)
-@pytest.mark.skipif(
-    not _gpu_and_weights(), reason="needs a GPU and the cached MuScriptor weights"
-)
+@pytest.mark.skipif(not LIBRARY_WAV.is_file(), reason="needs the library copy of Superestrella")
+@pytest.mark.skipif(not _gpu_and_weights(), reason="needs a GPU and the cached MuScriptor weights")
 def test_the_real_model_on_the_gpu_gives_the_phase_1_notes() -> None:
     """The first 20 s of Superestrella, MuScriptor large in float16, against Phase 1's events."""
     rate, samples = formats.read_wav(LIBRARY_WAV)
     sent: list[dict] = []
     from aitu_backend.progress import CallbackProgress
 
-    reporter = CallbackProgress(
-        lambda event: None, on_message=lambda n, p: sent.append(p)
-    )
+    reporter = CallbackProgress(lambda event: None, on_message=lambda n, p: sent.append(p))
     engine = MuScriptorEngine(device="cuda", size="large", dtype="float16")
     started = time.perf_counter()
     run = engine.run_signal(samples[: 20 * rate], rate, reporter, first_id=1000)

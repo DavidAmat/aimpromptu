@@ -46,9 +46,7 @@ from aitu_backend.schemas.matrix import Granularity, MatrixProcessingStep
         ("Do-4", LEFT, 10),
     ],
 )
-def test_the_staff_steps_agree_with_the_engraver(
-    note: str, hand: str, step: int
-) -> None:
+def test_the_staff_steps_agree_with_the_engraver(note: str, hand: str, step: int) -> None:
     """These six anchors are the contract with ``grid-notation``'s ``pitch.ts``.
 
     That module computes the same steps for drawing. If one side moves without
@@ -77,9 +75,7 @@ def test_the_staff_steps_agree_with_the_engraver(
         ("Re-3", LEFT, 0),
     ],
 )
-def test_ledger_lines_are_counted_as_lines_not_steps(
-    note: str, hand: str, lines: int
-) -> None:
+def test_ledger_lines_are_counted_as_lines_not_steps(note: str, hand: str, lines: int) -> None:
     assert ledger_lines(note_to_row(note) + 21, hand) == lines
 
 
@@ -182,9 +178,7 @@ def test_the_charge_grows_with_the_excursion() -> None:
 
 def test_the_charge_is_symmetric_between_the_two_hands() -> None:
     """A right hand under the treble staff is the same fault as a left hand over the bass."""
-    assert _ledger_cost(["Fa-5"], (LEFT,)) == pytest.approx(
-        _ledger_cost(["Fa-2"], (RIGHT,))
-    )
+    assert _ledger_cost(["Fa-5"], (LEFT,)) == pytest.approx(_ledger_cost(["Fa-2"], (RIGHT,)))
 
 
 def test_the_picture_costs_nothing_to_read_and_is_what_gets_chosen() -> None:
@@ -210,9 +204,7 @@ def test_the_picture_costs_nothing_to_read_and_is_what_gets_chosen() -> None:
         tempo_bpm=60.0,
         processing_step=MatrixProcessingStep.CLEAN,
     )
-    chosen = {
-        item.note: item.hand for item in infer_hands(matrix, DEFAULT_CONFIG).assignments
-    }
+    chosen = {item.note: item.hand for item in infer_hands(matrix, DEFAULT_CONFIG).assignments}
     assert chosen == {"Fa-2": LEFT, "Fa-5": RIGHT}
 
 
@@ -235,12 +227,8 @@ def test_a_crossing_the_hands_are_committed_to_still_ends() -> None:
         ),
     )
     group = _group(["La-5"], time=1.2)
-    to_left = transition(
-        pinned, group, (LEFT,), DEFAULT_CONFIG.hand, DEFAULT_CONFIG.weights
-    )
-    to_right = transition(
-        pinned, group, (RIGHT,), DEFAULT_CONFIG.hand, DEFAULT_CONFIG.weights
-    )
+    to_left = transition(pinned, group, (LEFT,), DEFAULT_CONFIG.hand, DEFAULT_CONFIG.weights)
+    to_right = transition(pinned, group, (RIGHT,), DEFAULT_CONFIG.hand, DEFAULT_CONFIG.weights)
     assert to_right is None, "the right hand has five keys down; it cannot take a sixth"
     assert to_left is not None
     # Still charged: the right hand is blocked by what it is *holding*, and a sustain
@@ -254,9 +242,7 @@ def test_a_crossing_the_hands_are_committed_to_still_ends() -> None:
 def test_zeroing_the_weight_removes_the_term() -> None:
     """Every term here is separately ablatable, and this one is no exception."""
     config = DEFAULT_CONFIG.with_weights(ledger=0.0)
-    result = transition(
-        PairState(), _group(["Fa-5"]), (LEFT,), config.hand, config.weights
-    )
+    result = transition(PairState(), _group(["Fa-5"]), (LEFT,), config.hand, config.weights)
     assert result is not None
     assert result.breakdown.ledger > 0.0
     assert result.breakdown.weighted_dict(config.weights)["ledger"] == 0.0
@@ -351,8 +337,7 @@ def test_nothing_in_the_passage_is_printed_far_across_its_staff() -> None:
     offenders = [
         (item.note, item.hand, ledger_lines(item.midi, item.hand))
         for item in result.assignments
-        if direction_of(item.midi, item.hand) == "across"
-        and ledger_lines(item.midi, item.hand) > 4
+        if direction_of(item.midi, item.hand) == "across" and ledger_lines(item.midi, item.hand) > 4
     ]
     assert offenders == []
 
@@ -372,17 +357,11 @@ def test_an_impossible_chord_does_not_rewrite_the_music_before_it() -> None:
     the two windows share must land in the same hand.
     """
     full = infer_hands(_mr_blue_window(), DEFAULT_CONFIG)
-    assert (
-        full.diagnostics.infeasible_groups >= 1
-    ), "column 51 should still be unplayable"
-    assert any(
-        "no hand partition" in text and "reachable" in text for text in full.warnings
-    )
+    assert full.diagnostics.infeasible_groups >= 1, "column 51 should still be unplayable"
+    assert any("no hand partition" in text and "reachable" in text for text in full.warnings)
 
     trimmed_grid = _mr_blue_window().grid[:, :50]
-    trimmed = infer_hands(
-        PianoMatrix.time_based(trimmed_grid, frame_ms=40.0), DEFAULT_CONFIG
-    )
+    trimmed = infer_hands(PianoMatrix.time_based(trimmed_grid, frame_ms=40.0), DEFAULT_CONFIG)
 
     before = {item.onset_id: item.hand for item in full.assignments if item.column < 50}
     after = {item.onset_id: item.hand for item in trimmed.assignments}

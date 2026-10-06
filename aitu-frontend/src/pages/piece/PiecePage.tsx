@@ -33,6 +33,7 @@ import {
   type BlockerFunction,
 } from "react-router-dom";
 import {
+  ApiError,
   audioApi,
   piecesApi,
   PIECE_STEPS,
@@ -44,7 +45,9 @@ import {
 import { STEP_LABELS } from "../../components/piece/stepLabels";
 import { ROUTES } from "../../layout/routes";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
-import { ConfirmDialog, PageHeader, PillButton, RowMenu, StepTabs } from "../../ui";
+import { ConfirmDialog, EmptyState, PageHeader, PillButton, RowMenu, StepTabs } from "../../ui";
+
+const NOT_FOUND = "There is no project of yours at this address.";
 import {
   PieceContext,
   SAVED_NAVIGATION,
@@ -104,7 +107,13 @@ export function PiecePage() {
           uuid,
           audio: null,
           status: null,
-          error: caught instanceof Error ? caught.message : "Could not load this piece.",
+          // 404: no project here, or one of another user, which the backend does not tell apart.
+          error:
+            caught instanceof ApiError && caught.status === 404
+              ? NOT_FOUND
+              : caught instanceof Error
+                ? caught.message
+                : "Could not load this piece.",
         });
       });
     return () => controller.abort();
@@ -241,7 +250,16 @@ export function PiecePage() {
           )}
         </PageHeader>
 
-        {current.error ? (
+        {current.error === NOT_FOUND ? (
+          <EmptyState
+            message={NOT_FOUND}
+            action={
+              <PillButton kind="primary" onClick={() => navigate(ROUTES.projects)}>
+                Open Projects
+              </PillButton>
+            }
+          />
+        ) : current.error ? (
           <Alert severity="error" sx={{ my: 2 }}>
             {current.error}
           </Alert>

@@ -7,7 +7,8 @@
  *
  * - An audio file is uploaded and the project opens on its Audio step.
  * - A YouTube link as **Audio** downloads as a job with a thin progress bar, then opens the Audio step.
- * - A YouTube link as **Video** downloads the video (its audio comes with it) and opens it in Lab,
+ * - A YouTube link as **Video** (the master user only, until Phase 5 makes the video a step of the
+ *   project) downloads the video (its audio comes with it) and opens it in Lab,
  *   where the piano is fitted and the notes are read. Phase 5 makes those pages steps of the project.
  *
  * On a project that already has its audio, the step says where that audio came from.
@@ -29,8 +30,9 @@ import { audioApi, matrixApi, SUPPORTED_AUDIO_SUFFIXES, videoApi, youtubeApi } f
 import { formatTimeShort } from "../../audio/time";
 import { useProgress } from "../../hooks/useProgress";
 import { ROUTES } from "../../layout/routes";
+import { useAuth } from "../../state/authContext";
 import { writeSelectedVideo } from "../../video/selectedVideo";
-import { IconAction, PillButton, Segmented, ui } from "../../ui";
+import { IconAction, PillButton, Segmented, ui, useScheme } from "../../ui";
 import { usePiece } from "./pieceContext";
 
 type LinkKind = "audio" | "video";
@@ -71,6 +73,8 @@ function SourceOfProject() {
 }
 
 function NewSource() {
+  useScheme();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -222,16 +226,19 @@ function NewSource() {
               },
             }}
           />
-          <Segmented<LinkKind>
-            label="What to download"
-            value={kind}
-            onChange={setKind}
-            disabled={busy}
-            options={[
-              { value: "audio", label: "Audio", tooltip: "Download the audio and transcribe it" },
-              { value: "video", label: "Video", tooltip: "Download a piano roll video and read its notes" },
-            ]}
-          />
+          {/* The video opens in Lab, the master user's, until Phase 5 makes it a step of the project. */}
+          {user?.isMaster ? (
+            <Segmented<LinkKind>
+              label="What to download"
+              value={kind}
+              onChange={setKind}
+              disabled={busy}
+              options={[
+                { value: "audio", label: "Audio", tooltip: "Download the audio and transcribe it" },
+                { value: "video", label: "Video", tooltip: "Download a piano roll video and read its notes" },
+              ]}
+            />
+          ) : null}
         </Stack>
         {busyLink ? (
           <Box role="status" aria-live="polite">

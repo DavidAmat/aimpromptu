@@ -11,9 +11,7 @@ from aitu_backend.notation.decorative import decorative_notes
 from aitu_backend.schemas.time_matrix import FigureName, PrintedNote
 
 
-def _note(
-    hand: str, frame: int, row: int, figure: FigureName, group: int
-) -> PrintedNote:
+def _note(hand: str, frame: int, row: int, figure: FigureName, group: int) -> PrintedNote:
     return PrintedNote(
         hand=hand,  # type: ignore[arg-type]
         row=row,

@@ -14,6 +14,7 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Tooltip from "@mui/material/Tooltip";
 import { palette } from "./palette";
+import { useScheme } from "./schemeContext";
 import { ui } from "./tokens";
 
 export type StepState = "ready" | "running" | "stale" | "missing";
@@ -35,6 +36,7 @@ const STATE_WORDS: Record<StepState, string> = {
 };
 
 function Dot({ state, unsaved }: { state: StepState; unsaved: boolean }) {
+  useScheme();
   if (state === "running") return <CircularProgress size={9} thickness={6} sx={{ color: ui.text2 }} />;
   const amber = unsaved || state === "stale";
   const filled = unsaved || state !== "missing";

@@ -29,11 +29,35 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.engine import Dialect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator
 
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+class UTCDateTime(TypeDecorator[datetime]):
+    """A time stored in UTC and read back in UTC.
+
+    SQLite keeps no zone: a time written as 14:58 UTC came back as a plain 14:58, which a browser
+    then read as its own local time (two hours off in Barcelona). Every time column uses this type,
+    so a time always leaves the database with its zone.
+    """
+
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_bind_param(self, value: datetime | None, dialect: Dialect) -> datetime | None:
+        if value is not None and value.tzinfo is not None:
+            value = value.astimezone(timezone.utc)
+        return value
+
+    def process_result_value(self, value: datetime | None, dialect: Dialect) -> datetime | None:
+        if value is not None and value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
 
 
 class Base(DeclarativeBase):
@@ -77,7 +101,7 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(16), default="user")
     disabled: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 class Session(Base):
@@ -88,9 +112,9 @@ class Session(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     token_hash: Mapped[str] = mapped_column(String(128), unique=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    last_used_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
 
 
 # -------------------------------------------------------------------- projects
@@ -116,8 +140,8 @@ class Project(Base):
     based_on: Mapped[str | None] = mapped_column(String(36))
     #: The public project a private copy was pulled from (section 15.1).
     public_source_id: Mapped[str | None] = mapped_column(String(36))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
     #: The lowest step reached by the parts (section 10.5), for the list of projects.
     step: Mapped[str | None] = mapped_column(String(16))
 
@@ -145,7 +169,7 @@ class AudioFile(Base):
     format: Mapped[str] = mapped_column(String(16))
     duration_ms: Mapped[int | None] = mapped_column(Integer)
     size_bytes: Mapped[int] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 class AudioRef(Base):
@@ -175,7 +199,7 @@ class Artist(Base):
     #: The id of the source the public row was imported from (Phase 12), so a new run of the
     #: import finds the same row.
     external_key: Mapped[str | None] = mapped_column(String(300), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 class ArtistName(Base):
@@ -200,7 +224,7 @@ class Album(Base):
     external_key: Mapped[str | None] = mapped_column(String(300), index=True)
     title: Mapped[str] = mapped_column(String(300))
     year: Mapped[int | None] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 class Song(Base):
@@ -219,7 +243,7 @@ class Song(Base):
     popularity: Mapped[float | None] = mapped_column(Float)
     #: The fixed version Default points at: Hard unless the master user changes it.
     default_version: Mapped[str] = mapped_column(String(24), default="hard")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 class SongArtist(Base):
@@ -263,7 +287,7 @@ class SongVersion(Base):
     project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"))
     #: The user whose project this is, shown as the creator of the version (Phase 14).
     creator_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 class UserVersion(Base):
@@ -277,7 +301,7 @@ class UserVersion(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     version_name: Mapped[str] = mapped_column(String(24))
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 class PrivateVersion(Base):
@@ -291,7 +315,7 @@ class PrivateVersion(Base):
     project_id: Mapped[str] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), unique=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 # ------------------------------------------------------- metadata of a public song
@@ -404,8 +428,8 @@ class Playlist(Base):
     scope: Mapped[str] = mapped_column(String(16))
     public_id: Mapped[int | None] = mapped_column(ForeignKey("playlists.id"))
     title: Mapped[str] = mapped_column(String(300))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 class PlaylistItem(Base):
@@ -436,7 +460,7 @@ class Like(Base):
     project_id: Mapped[str] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 class LibraryShare(Base):
@@ -450,7 +474,7 @@ class LibraryShare(Base):
     shared_with_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 # -------------------------------------------------------------------- requests
@@ -466,9 +490,9 @@ class Request(Base):
     kind: Mapped[str] = mapped_column(String(32))
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     status: Mapped[str] = mapped_column(String(32), default="open")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+    decided_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
 
 
 class RequestItem(Base):
@@ -498,7 +522,7 @@ class RequestComment(Base):
     )
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     body: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 #: The fixed lists written by the first migration (section 15.3).

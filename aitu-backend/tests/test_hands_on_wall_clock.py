@@ -28,22 +28,16 @@ def two_handed_passage() -> list[NoteEvent]:
     for index in range(8):
         start = index * 0.6
         for midi in (41, 53):  # Fa-2 and Fa-3
-            events.append(
-                NoteEvent(midi_note=midi, start=start, end=start + 0.55, velocity=70)
-            )
+            events.append(NoteEvent(midi_note=midi, start=start, end=start + 0.55, velocity=70))
     # Right hand: a melody at 150 ms that crosses under middle C and back.
     line = [72, 69, 67, 64, 60, 59, 57, 59, 60, 64, 67, 69, 72, 69, 67, 64]
     for index, midi in enumerate(line * 2):
         start = 0.075 + index * 0.15
-        events.append(
-            NoteEvent(midi_note=midi, start=start, end=start + 0.14, velocity=84)
-        )
+        events.append(NoteEvent(midi_note=midi, start=start, end=start + 0.14, velocity=84))
     return events
 
 
-def assignment(
-    events: list[NoteEvent], frame_ms: float
-) -> dict[tuple[int, float], str]:
+def assignment(events: list[NoteEvent], frame_ms: float) -> dict[tuple[int, float], str]:
     """Which hand played each note, keyed by pitch and the time it was really played.
 
     Keyed on the note's **own** recorded time, from the build report, rather than on
@@ -51,9 +45,7 @@ def assignment(
     a column's group time is not the same key either: a chord takes the earliest
     onset in it, and which notes share a column also moves with the frame length.
     """
-    hands = impose_granularity_and_split(
-        events, duration_seconds=6.0, frame_ms=frame_ms
-    )
+    hands = impose_granularity_and_split(events, duration_seconds=6.0, frame_ms=frame_ms)
     played = hands.build.event_seconds  # (column, row) -> the recorded second
     out: dict[tuple[int, float], str] = {}
     for name, matrix in (("right", hands.right), ("left", hands.left)):
@@ -99,9 +91,7 @@ def test_the_hands_are_the_ones_a_player_would_use() -> None:
     content. The melody dips to Si-3 and La-3, below middle C, and stays in the
     right hand — which is the case a pitch threshold cannot express.
     """
-    hands = impose_granularity_and_split(
-        two_handed_passage(), duration_seconds=6.0, frame_ms=40
-    )
+    hands = impose_granularity_and_split(two_handed_passage(), duration_seconds=6.0, frame_ms=40)
 
     left_rows = set(hands.left.active_rows())
     right_rows = set(hands.right.active_rows())

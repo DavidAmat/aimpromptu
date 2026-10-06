@@ -21,9 +21,7 @@ DO4, MI4, SOL4 = midi_to_row(DO4_MIDI), midi_to_row(MI4_MIDI), midi_to_row(SOL4_
 
 
 def note(start_ms: float, midi: int = DO4_MIDI, length_ms: float = 200.0) -> NoteEvent:
-    return NoteEvent(
-        midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0
-    )
+    return NoteEvent(midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0)
 
 
 def build(events, duration_seconds=4.0, **kwargs):
@@ -111,18 +109,14 @@ def test_the_sustain_written_down_is_the_measured_release():
 
 def test_notes_of_one_chord_keep_their_own_release_times():
     """The chord shares an onset column; it does not share a length."""
-    matrix = build(
-        [note(0, DO4_MIDI, length_ms=600), note(10, MI4_MIDI, length_ms=120)]
-    ).matrix
+    matrix = build([note(0, DO4_MIDI, length_ms=600), note(10, MI4_MIDI, length_ms=120)]).matrix
     assert matrix.cell(DO4, 0) == ONSET and matrix.cell(MI4, 0) == ONSET
     assert matrix.cell(DO4, 10) == SUSTAIN
     assert matrix.cell(MI4, 10) == SILENCE
 
 
 def test_a_restrike_of_the_same_key_cuts_the_first_note():
-    report = build(
-        [note(0, DO4_MIDI, length_ms=400), note(160, DO4_MIDI, length_ms=200)]
-    )
+    report = build([note(0, DO4_MIDI, length_ms=400), note(160, DO4_MIDI, length_ms=200)])
     assert report.truncated == 1
     assert report.matrix.cell(DO4, 4) == ONSET
     assert report.matrix.cell(DO4, 3) == SUSTAIN
@@ -157,13 +151,8 @@ def test_an_empty_transcription_gives_a_silent_matrix_of_the_right_length():
 
 
 def test_the_report_reads_as_a_sentence():
-    report = build(
-        [note(0, DO4_MIDI), note(8, MI4_MIDI), note(200, SOL4_MIDI, length_ms=10)]
-    )
-    assert (
-        report.describe()
-        == "2 note(s) placed in 1 attack(s); 1 shorter than one frame."
-    )
+    report = build([note(0, DO4_MIDI), note(8, MI4_MIDI), note(200, SOL4_MIDI, length_ms=10)])
+    assert report.describe() == "2 note(s) placed in 1 attack(s); 1 shorter than one frame."
 
 
 def test_the_grouping_window_does_not_follow_the_frame() -> None:

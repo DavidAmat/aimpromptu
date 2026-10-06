@@ -13,6 +13,8 @@ Variable               Default                             Meaning
                                                            migration to ``.database/`` (Phase 3)
 ``AITU_MASTER_         ``master``                          The username of the master user, made on
 USERNAME``                                                 the first start (plan section 9.1)
+``AITU_MASTER_         empty                               Its password, set while it has none
+PASSWORD``
 ``AITU_DEVICE``        ``cpu``                             ``cpu``, ``cuda`` or ``auto`` (``cuda``
                                                            when torch sees a GPU, else ``cpu``)
 ``AITU_HOST``          ``127.0.0.1``                       Where ``python -m aitu_backend.main``
@@ -62,6 +64,12 @@ DEFAULT_MASTER_USERNAME = "master"
 def master_username() -> str:
     """The username the master user is created with when the database has none."""
     return os.environ.get("AITU_MASTER_USERNAME", "").strip() or DEFAULT_MASTER_USERNAME
+
+
+def master_password() -> str | None:
+    """The master user's first password, or ``None``. Read only while the user has no password."""
+    value = os.environ.get("AITU_MASTER_PASSWORD", "")
+    return value or None
 
 
 def device() -> str:

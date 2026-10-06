@@ -28,7 +28,7 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { formatTime } from "../audio/time";
-import { grays, semantic, ui, timestampSx } from "../ui";
+import { grays, semantic, ui, timestampSx, useScheme } from "../ui";
 
 const TRACK_HEIGHT = 8;
 const HANDLE_RADIUS = 8;
@@ -50,6 +50,7 @@ export function ProgressBar({
   rangeStart = 0,
   rangeEnd = durationSeconds,
 }: ProgressBarProps) {
+  useScheme();
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [scrubbing, setScrubbing] = useState(false);
   const total = Math.max(durationSeconds, 0.001);

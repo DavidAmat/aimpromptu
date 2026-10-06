@@ -5,8 +5,9 @@
 #   make logs    follow both logs
 #
 # Both services run in development mode (Q-5): the repository is mounted, not copied, so an edit on
-# the host reloads the backend (uvicorn --reload) and the page (Vite). The browser on the Mac
-# reaches everything through one port, 5173, with `scripts/tunnel-from-mac.sh`.
+# the host reloads the backend (uvicorn --reload) and the page (Vite). A browser at home reaches
+# everything through one port, 5173: http://ubuntu:5173 from the Mac (implementation 02, Phase 4),
+# or the SSH tunnel `scripts/tunnel-from-mac.sh`. Every page asks to sign in.
 #
 # The values come from `.env` beside this file (copy `.env.example`). Only HF_TOKEN has no default.
 
@@ -35,6 +36,7 @@ services:
       # folder is. On the Ubuntu machine `./.database` is a link to /mnt/ssd2/aimpromptu/.database.
       AITU_DATABASE_DIR: /database
       AITU_MASTER_USERNAME: ${AITU_MASTER_USERNAME:-}
+      AITU_MASTER_PASSWORD: ${AITU_MASTER_PASSWORD:-}
       HF_TOKEN: ${HF_TOKEN:-}
       HF_HUB_CACHE: /hf/hub
     volumes:
@@ -72,12 +74,16 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     environment:
       AITU_API_PROXY: http://backend:8765
+      AITU_ALLOWED_HOSTS: ${AITU_ALLOWED_HOSTS:-}
     volumes:
       - ./aitu-frontend:/work/aimpromptu/aitu-frontend
       # The image's own packages stay in front of the host's node_modules.
       - /work/aimpromptu/aitu-frontend/node_modules
     ports:
-      - "127.0.0.1:${WEB_PORT:-5173}:5173"
+      # On every address of the Ubuntu machine (implementation 02, plan section 9.4): any device at
+      # home opens http://ubuntu:5173 or http://192.168.0.112:5173, and signs in. WEB_BIND=127.0.0.1
+      # in .env keeps it to this machine and the SSH tunnel. The backend below stays on localhost.
+      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-5173}:5173"
     depends_on:
       backend:
         condition: service_healthy

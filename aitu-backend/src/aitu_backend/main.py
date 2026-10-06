@@ -9,11 +9,12 @@ lives in the feature packages (`matrix/`, `audio/`, `transcription/`,
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from aitu_backend import config
-from aitu_backend.api import ALL_ROUTERS
+from aitu_backend.api import MASTER_ROUTERS, OPEN_ROUTERS, USER_ROUTERS
+from aitu_backend.auth.dependencies import master_only, project_rights, signed_in
 from aitu_backend.compression import JsonGZipMiddleware
 from aitu_backend.db.database import engine
 from aitu_backend.db.users import ensure_master_user
@@ -50,6 +51,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # The page reaches the backend through its own server (`/api`), on the same origin, so the
+    # browser sends the session cookie by itself. CORS stays open for scripts, without credentials:
+    # a page of another origin can never send the cookie (context/08-security.md).
     application.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -64,8 +68,16 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    for router in ALL_ROUTERS:
+    # Every route but signing in and /health needs a session, and checks the rights of the
+    # project it names before anything else (implementation 02, plan sections 9.2 and 9.3).
+    for router in OPEN_ROUTERS:
         application.include_router(router)
+    for router in USER_ROUTERS:
+        application.include_router(
+            router, dependencies=[Depends(signed_in), Depends(project_rights)]
+        )
+    for router in MASTER_ROUTERS:
+        application.include_router(router, dependencies=[Depends(signed_in), Depends(master_only)])
 
     return application
 

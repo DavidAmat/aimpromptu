@@ -121,9 +121,7 @@ def restore(archive: Path) -> Path:
     if root.exists() and any(root.iterdir()):
         raise SystemExit(f"{root} is not empty; restore only into an empty .database/")
     root.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(
-        prefix="aitu-restore-", dir=root.resolve().parent
-    ) as work:
+    with tempfile.TemporaryDirectory(prefix="aitu-restore-", dir=root.resolve().parent) as work:
         subprocess.run(["tar", "--zstd", "-xf", str(archive), "-C", work], check=True)
         unpacked = Path(work) / ".database"
         for child in unpacked.iterdir():
@@ -150,9 +148,7 @@ def _bundles_on_disk() -> dict[str, tuple[int, str, Path]]:
     """``project id -> (owner, layer, folder)`` for every ``project.json`` on disk."""
     found: dict[str, tuple[int, str, Path]] = {}
     folders = {"vault": "vault", "library": "private"}
-    for user_dir in (
-        sorted(paths.users_dir().glob("*")) if paths.users_dir().is_dir() else []
-    ):
+    for user_dir in (sorted(paths.users_dir().glob("*")) if paths.users_dir().is_dir() else []):
         if not user_dir.name.isdigit():
             continue
         for folder, layer in folders.items():
@@ -196,9 +192,7 @@ def check(*, hashes: bool = False) -> Report:
     for project_id in sorted(set(rows) - set(on_disk)):
         report.problems.append(f"project {project_id}: a row with no bundle on disk")
     for project_id in sorted(set(on_disk) - set(rows)):
-        report.problems.append(
-            f"project {project_id}: a bundle with no row (run db-reindex)"
-        )
+        report.problems.append(f"project {project_id}: a bundle with no row (run db-reindex)")
 
     used: set[str] = set()
     for project_id in sorted(set(rows) & set(on_disk)):
@@ -213,9 +207,7 @@ def check(*, hashes: bool = False) -> Report:
             (folder / "project.json").read_text(encoding="utf-8")
         )
         if [entry.id for entry in project.parts] != part_rows.get(project_id, []):
-            report.problems.append(
-                f"project {project_id}: its parts differ from the parts rows"
-            )
+            report.problems.append(f"project {project_id}: its parts differ from the parts rows")
         for part_id in part_rows.get(project_id, []):
             part_dir = folder / "parts" / part_id
             notes = part_dir / "notes.pmn"
@@ -224,27 +216,17 @@ def check(*, hashes: bool = False) -> Report:
             timeline = bundle.read_timeline(part_id)
             for content_hash, entry in timeline.audio.items():
                 if content_hash not in files:
-                    report.problems.append(
-                        f"part {part_id}: audio {content_hash[:12]} has no row"
-                    )
+                    report.problems.append(f"part {part_id}: audio {content_hash[:12]} has no row")
                 if not paths.audio_file_path(content_hash, entry.format).is_file():
-                    report.problems.append(
-                        f"part {part_id}: audio {content_hash[:12]} is missing"
-                    )
+                    report.problems.append(f"part {part_id}: audio {content_hash[:12]} is missing")
         wanted = bundle.used_hashes(project_id)
         used |= wanted
         if wanted != refs.get(project_id, set()):
-            report.problems.append(
-                f"project {project_id}: audio_refs differ from its bundle"
-            )
+            report.problems.append(f"project {project_id}: audio_refs differ from its bundle")
 
     store_files = {
         path.stem: path
-        for path in (
-            paths.audio_store_dir().iterdir()
-            if paths.audio_store_dir().is_dir()
-            else []
-        )
+        for path in (paths.audio_store_dir().iterdir() if paths.audio_store_dir().is_dir() else [])
         if path.is_file() and not path.name.startswith(".")
     }
     for content_hash in sorted(set(files) - set(store_files)):
@@ -259,9 +241,7 @@ def check(*, hashes: bool = False) -> Report:
 
         for content_hash, path in sorted(store_files.items()):
             if audio_files.hash_file(path) != content_hash:
-                report.problems.append(
-                    f"audio {content_hash[:12]}: its content changed"
-                )
+                report.problems.append(f"audio {content_hash[:12]}: its content changed")
     return report
 
 
@@ -328,9 +308,7 @@ def main(argv: list[str] | None = None) -> int:
     restored = commands.add_parser("restore")
     restored.add_argument("file", type=Path)
     checked = commands.add_parser("check")
-    checked.add_argument(
-        "--hashes", action="store_true", help="also hash every audio file"
-    )
+    checked.add_argument("--hashes", action="store_true", help="also hash every audio file")
     commands.add_parser("reindex")
     args = parser.parse_args(argv)
 

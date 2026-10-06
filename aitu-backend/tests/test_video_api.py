@@ -41,9 +41,7 @@ def one_video(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
         audio_uuid=UUID,
     )
     paths.video_source_path(entry.uuid).parent.mkdir(parents=True, exist_ok=True)
-    paths.video_source_path(entry.uuid).write_bytes(
-        b"not read by anything in this test"
-    )
+    paths.video_source_path(entry.uuid).write_bytes(b"not read by anything in this test")
 
     folder = paths.video_frames_dir(UUID)
     folder.mkdir(parents=True, exist_ok=True)

@@ -6,6 +6,7 @@ uuid makes the part first.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +14,17 @@ from scipy.io import wavfile
 
 from aitu_backend.audio import store
 from aitu_backend.schemas.metadata import AudioSource
+
+#: The real `.database/`, read only, for the tests that measure the user's library.
+REAL_DATABASE = Path(os.environ.get("AITU_REAL_DATABASE_DIR", ""))
+
+
+def library_file(part_id: str, name: str) -> Path:
+    """A file of a part of the real library (`notes.pmn`, or `normalized.wav` of its cache), or a
+    path that does not exist."""
+    folder = "cache" if name.endswith(".wav") else "parts"
+    found = sorted(REAL_DATABASE.glob(f"users/*/*/*/{folder}/{part_id}/{name}"))
+    return found[0] if found else REAL_DATABASE / "missing" / name
 
 
 def make_part(part_id: str, title: str = "Test piece") -> str:

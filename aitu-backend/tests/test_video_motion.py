@@ -31,9 +31,7 @@ def _run(midi: int, top: float, height: float = 40.0) -> DetectedRun:
     )
 
 
-def _falling(
-    travel: float, count: int, keys: tuple[int, ...] = (60, 62, 64, 65, 67)
-) -> list:
+def _falling(travel: float, count: int, keys: tuple[int, ...] = (60, 62, 64, 65, 67)) -> list:
     """``count`` frames of rectangles, every one ``travel`` lower than in the last.
 
     Five keys with two rectangles each, staggered, so every pair of frames has
@@ -141,15 +139,11 @@ def _scrolling_frames(
     return out
 
 
-def test_the_roll_top_is_found_from_motion_and_not_from_what_the_chrome_looks_like() -> (
-    None
-):
+def test_the_roll_top_is_found_from_motion_and_not_from_what_the_chrome_looks_like() -> None:
     """V-28. The chrome is as busy as the roll and just as bright; the only thing
     that separates them is that one of them moved."""
     frames = _scrolling_frames(count=12, travel=17, chrome_rows=40, upper=300)
-    top, bottom, score = motion.roll_bounds(
-        lambda i: frames[i], list(range(10)), 300, 17
-    )
+    top, bottom, score = motion.roll_bounds(lambda i: frames[i], list(range(10)), 300, 17)
     assert 38 <= top <= 44
     assert bottom > top + 100
     assert score[top + 50] > motion.ROLL_SCORE
@@ -181,9 +175,7 @@ def test_a_roll_the_bounds_cannot_see_leaves_the_guard_band_at_its_default() -> 
     """A picture that never moves answers (0, 0), and `measure` then writes a
     guard band of zero, which the geometry reads as the measured default (V-24)
     rather than the whole roll."""
-    same = np.repeat(
-        np.random.default_rng(1).uniform(0, 255, size=(340, 60))[:, :, None], 3, 2
-    )
+    same = np.repeat(np.random.default_rng(1).uniform(0, 255, size=(340, 60))[:, :, None], 3, 2)
     frames = [same.astype(np.float32)] * 12
     top, bottom, _ = motion.roll_bounds(lambda i: frames[i], list(range(10)), 300, 17)
     assert (top, bottom) == (0, 0)

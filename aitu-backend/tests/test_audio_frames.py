@@ -26,18 +26,14 @@ from aitu_backend.storage import paths
 from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.engine import NoteEvent
 
-needs_ffmpeg = pytest.mark.skipif(
-    not formats.ffmpeg_available(), reason="ffmpeg is not installed"
-)
+needs_ffmpeg = pytest.mark.skipif(not formats.ffmpeg_available(), reason="ffmpeg is not installed")
 
 
 # ------------------------------------------------------------------ the cuts
 
 
 def test_cuts_are_sorted_clipped_and_merged() -> None:
-    assert normalize_cuts(
-        [(50, 60), (10, 20), (15, 30), (30, 35), (90, 200), (5, 5)], 100
-    ) == [
+    assert normalize_cuts([(50, 60), (10, 20), (15, 30), (30, 35), (90, 200), (5, 5)], 100) == [
         (10, 35),
         (50, 60),
         (90, 100),
@@ -96,9 +92,7 @@ def test_a_frame_of_the_piece_maps_to_the_original_and_back() -> None:
     assert t.to_original(299) == 499
     assert t.to_original(300) == 550
     assert t.to_original(749) == 999
-    assert (
-        t.to_original(750) == 1000
-    )  # the end of the piece is the end of the last kept range
+    assert t.to_original(750) == 1000  # the end of the piece is the end of the last kept range
     frames = np.arange(750)
     assert np.array_equal(t.to_piece(t.to_original(frames)), frames)
 
@@ -160,9 +154,7 @@ def test_each_join_fades_out_and_in_over_5_ms() -> None:
 
 def test_without_a_cut_the_audio_is_untouched() -> None:
     samples = np.linspace(-1, 1, 3000, dtype=np.float32)
-    assert np.array_equal(
-        join_kept(samples, FrameTable.from_cuts([], frame_count(3000))), samples
-    )
+    assert np.array_equal(join_kept(samples, FrameTable.from_cuts([], frame_count(3000))), samples)
 
 
 # --------------------------------------------------------- stored, and the route
@@ -187,9 +179,7 @@ def ingested(tmp_path: Path, seconds: float = 10.0) -> str:
 
 
 @needs_ffmpeg
-def test_saving_the_same_cuts_again_is_not_a_change(
-    data_dir: Path, tmp_path: Path
-) -> None:
+def test_saving_the_same_cuts_again_is_not_a_change(data_dir: Path, tmp_path: Path) -> None:
     uuid = ingested(tmp_path, seconds=1.0)
     assert store.set_cuts(uuid, [(10, 20)]).audio_revision == 1
     assert store.set_cuts(uuid, [(10, 20)]).audio_revision == 1
@@ -206,9 +196,7 @@ def test_the_cuts_route_normalizes_counts_and_protects_a_newer_revision(
 
     first = client.get(f"/audio/{uuid}/cuts").json()
     assert first["totalFrames"] == 1000 and first["pieceFrames"] == 1000
-    assert (
-        first["cuts"] == [] and first["audioRevision"] == 0 and first["frameMs"] == 10
-    )
+    assert first["cuts"] == [] and first["audioRevision"] == 0 and first["frameMs"] == 10
 
     saved = client.put(
         f"/audio/{uuid}/cuts",
@@ -226,9 +214,7 @@ def test_the_cuts_route_normalizes_counts_and_protects_a_newer_revision(
 
 
 @needs_ffmpeg
-def test_a_cut_after_a_transcription_makes_the_notes_stale(
-    data_dir: Path, tmp_path: Path
-) -> None:
+def test_a_cut_after_a_transcription_makes_the_notes_stale(data_dir: Path, tmp_path: Path) -> None:
     """Q-2: the notes are not reused; the next transcription transcribes again."""
 
     class Counting:
@@ -248,9 +234,7 @@ def test_a_cut_after_a_transcription_makes_the_notes_stale(
     store.set_cuts(uuid, [(100, 200)])
     assert pipeline.notes_are_stale(uuid)
     assert pipeline.current_events(uuid) is None
-    assert (
-        TestClient(create_app()).get(f"/audio/{uuid}/cuts").json()["notesStale"] is True
-    )
+    assert TestClient(create_app()).get(f"/audio/{uuid}/cuts").json()["notesStale"] is True
 
     pipeline.run_pipeline(uuid, engine=Counting())
     assert Counting.calls == 2
@@ -262,9 +246,7 @@ def test_a_cut_after_a_transcription_makes_the_notes_stale(
 
 
 @needs_ffmpeg
-def test_an_engine_that_reads_a_file_gets_the_joined_audio(
-    data_dir: Path, tmp_path: Path
-) -> None:
+def test_an_engine_that_reads_a_file_gets_the_joined_audio(data_dir: Path, tmp_path: Path) -> None:
     """ByteDance and Transkun read a WAV: with a cut they get a temporary one of the piece."""
     heard: dict[str, int] = {}
 
@@ -318,9 +300,7 @@ def test_the_peaks_route_has_as_many_frames_as_the_cuts_route(
     high = np.frombuffer(base64.b64decode(answer["max"]), dtype=np.int8)
     low = np.frombuffer(base64.b64decode(answer["min"]), dtype=np.int8)
     assert len(high) == len(low) == 300
-    assert (
-        high.max() == 127 and low.min() <= -126
-    )  # a steady tone reaches the peak both ways
+    assert high.max() == 127 and low.min() <= -126  # a steady tone reaches the peak both ways
     assert 0.25 < answer["peak"] <= 0.31
 
 
@@ -331,9 +311,7 @@ def test_joined_samples_keep_the_channels_and_land_on_the_frames() -> None:
     from aitu_backend.audio.piece_audio import join_samples
 
     rate = 44_100
-    stereo = np.stack(
-        [np.arange(rate, dtype=np.float32), -np.arange(rate, dtype=np.float32)], 1
-    )
+    stereo = np.stack([np.arange(rate, dtype=np.float32), -np.arange(rate, dtype=np.float32)], 1)
     table = FrameTable.from_cuts([(10, 30)], 100)  # 1 s of audio, 0.1 to 0.3 s cut
     joined = join_samples(stereo, rate, table)
     assert joined.shape == (80 * 441, 2)
@@ -341,9 +319,7 @@ def test_joined_samples_keep_the_channels_and_land_on_the_frames() -> None:
     assert joined[50 * 441, 0] == 70 * 441 and joined[50 * 441, 1] == -70 * 441
     # The 5 ms fades sit inside the kept samples, on both sides of the join.
     assert joined[10 * 441 - 1, 0] < 10 * 441 - 1 and joined[10 * 441, 0] == 0.0
-    assert np.array_equal(
-        join_samples(stereo, rate, FrameTable.from_cuts([], 100)), stereo
-    )
+    assert np.array_equal(join_samples(stereo, rate, FrameTable.from_cuts([], 100)), stereo)
 
 
 def _decode(content: bytes, tmp_path: Path, name: str) -> tuple[int, np.ndarray]:
@@ -352,9 +328,7 @@ def _decode(content: bytes, tmp_path: Path, name: str) -> tuple[int, np.ndarray]
     source = tmp_path / name
     source.write_bytes(content)
     target = tmp_path / f"{name}.wav"
-    subprocess.run(
-        ["ffmpeg", "-v", "error", "-y", "-i", str(source), str(target)], check=True
-    )
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(source), str(target)], check=True)
     rate, samples = wavfile.read(target)
     return int(rate), samples
 
@@ -386,13 +360,9 @@ def test_once_cuts_are_saved_every_player_gets_the_edited_audio(
     assert got_rate == rate and piece.shape == (800 * 441, 2)
     # Second 5 of the piece is second 7 of the original, sample for sample (16-bit rounding apart).
     original = (np.stack([left, right], 1) * 32767).astype(np.int16)
-    assert (
-        np.abs(piece[5 * rate].astype(int) - original[7 * rate].astype(int)).max() <= 1
-    )
+    assert np.abs(piece[5 * rate].astype(int) - original[7 * rate].astype(int)).max() <= 1
 
-    engine = _decode(
-        client.get(f"/audio/{uuid}/file?normalized=true").content, tmp_path, "n.wav"
-    )
+    engine = _decode(client.get(f"/audio/{uuid}/file?normalized=true").content, tmp_path, "n.wav")
     assert engine[0] == 16_000 and len(engine[1]) == 800 * 160
     untouched = client.get(f"/audio/{uuid}/file?original=true")
     assert _decode(untouched.content, tmp_path, "o.wav")[1].shape == (rate * 10, 2)
@@ -400,19 +370,15 @@ def test_once_cuts_are_saved_every_player_gets_the_edited_audio(
     entry = client.get(f"/audio/{uuid}").json()
     assert entry["durationSeconds"] == pytest.approx(8.0)
     assert entry["originalDurationSeconds"] == pytest.approx(10.0)
-    assert client.get(f"/audio/{uuid}/waveform?points=100").json()[
-        "durationSeconds"
-    ] == (pytest.approx(8.0))
-    segment = client.post(
-        f"/audio/{uuid}/trim", json={"startSeconds": 1, "endSeconds": 2}
+    assert client.get(f"/audio/{uuid}/waveform?points=100").json()["durationSeconds"] == (
+        pytest.approx(8.0)
     )
+    segment = client.post(f"/audio/{uuid}/trim", json={"startSeconds": 1, "endSeconds": 2})
     assert segment.status_code == 422 and "Audio tab" in segment.json()["detail"]
 
     # No cut any more: the original is the audio of the piece again, and the files are gone.
     client.put(f"/audio/{uuid}/cuts", json={"cuts": []})
-    assert _decode(client.get(f"/audio/{uuid}/file").content, tmp_path, "w2")[
-        1
-    ].shape == (
+    assert _decode(client.get(f"/audio/{uuid}/file").content, tmp_path, "w2")[1].shape == (
         rate * 10,
         2,
     )

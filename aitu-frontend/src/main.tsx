@@ -4,7 +4,9 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
+import { AuthProvider } from "./state/AuthProvider";
 import { WorkingArtifactProvider } from "./state/WorkingArtifactProvider";
+import { SchemeSync } from "./ui/scheme";
 import { theme } from "./ui/theme";
 import "./index.css";
 
@@ -21,19 +23,23 @@ const router = createBrowserRouter([
   {
     path: "*",
     element: (
-      <WorkingArtifactProvider>
-        <App />
-      </WorkingArtifactProvider>
+      <AuthProvider>
+        <WorkingArtifactProvider>
+          <App />
+        </WorkingArtifactProvider>
+      </AuthProvider>
     ),
   },
 ]);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {/* Light until the theme choice of the user menu exists (Phase 4); the dark scheme is defined. */}
+    {/* Light unless the user chose Dark or System in the user menu; MUI keeps the choice. */}
     <ThemeProvider theme={theme} defaultMode="light">
       <CssBaseline />
-      <RouterProvider router={router} />
+      <SchemeSync>
+        <RouterProvider router={router} />
+      </SchemeSync>
     </ThemeProvider>
   </StrictMode>,
 );

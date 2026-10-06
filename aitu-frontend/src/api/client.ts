@@ -91,6 +91,19 @@ async function readError(response: Response): Promise<string> {
 const UNREACHABLE = "Could not reach the backend. Is it still running (make up, or make serve)?";
 
 /**
+ * Sent on `window` when the backend answers **401** to any request but signing in: the session
+ * ended (signed out elsewhere, a password reset, 30 days). The sign-in guard listens and opens the
+ * sign-in page (implementation 02, Phase 4).
+ */
+export const SIGNED_OUT_EVENT = "aitu:signed-out";
+
+function noticeSignedOut(path: string, response: Response): void {
+  if (response.status === 401 && !path.startsWith("/auth/login")) {
+    window.dispatchEvent(new Event(SIGNED_OUT_EVENT));
+  }
+}
+
+/**
  * `fetch`, with one English sentence when the backend is not there.
  *
  * Two answers mean the same thing. Called directly, a stopped backend is a network error. Called
@@ -123,6 +136,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   });
 
   if (!response.ok) {
+    noticeSignedOut(path, response);
     throw new ApiError(response.status, await readError(response));
   }
   if (response.status === 204) {
@@ -143,6 +157,7 @@ export async function upload<T>(
 
   const response = await fetchOrExplain(buildUrl(path), { method: "POST", body: form });
   if (!response.ok) {
+    noticeSignedOut(path, response);
     throw new ApiError(response.status, await readError(response));
   }
   return (await response.json()) as T;

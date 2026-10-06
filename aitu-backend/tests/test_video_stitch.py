@@ -77,9 +77,7 @@ def test_a_row_of_the_picture_is_a_time_and_the_bottom_row_is_the_start(
 
     assert geom.seconds(geom.rows - 1) == pytest.approx((GUARD + 1) / SPEED, abs=1e-6)
     # One row is one pixel of travel, and the picture reads downward in reverse.
-    assert geom.seconds(geom.rows - 2) - geom.seconds(geom.rows - 1) == pytest.approx(
-        1 / SPEED
-    )
+    assert geom.seconds(geom.rows - 2) - geom.seconds(geom.rows - 1) == pytest.approx(1 / SPEED)
     assert geom.seconds(0) > geom.seconds(geom.rows - 1)
 
 
@@ -96,9 +94,7 @@ def test_the_picture_costs_what_the_plan_said_it_would(one_note) -> None:
             update={"white_width": 24.6, "upper_line": 560.0, "roll_top": 62.0}
         ),
         measurement().model_copy(
-            update={
-                "scroll_speed": ScrollSpeed(px_per_frame=16.888, px_per_second=168.88)
-            }
+            update={"scroll_speed": ScrollSpeed(px_per_frame=16.888, px_per_second=168.88)}
         ),
         2728,
     )
@@ -192,9 +188,7 @@ def test_a_shape_a_gate_threw_out_is_reported_and_never_rounded_onto_a_key(
         top, bottom = max(0, int(tip) - drawn[1].height), min(UPPER, int(tip))
         if bottom > top:
             picture[top:bottom, int(5.5 * KEY) : int(9.5 * KEY)] = 235
-        Image.fromarray(picture).save(
-            folder / f"f{index + 1:06d}.jpg", "JPEG", quality=95
-        )
+        Image.fromarray(picture).save(folder / f"f{index + 1:06d}.jpg", "JPEG", quality=95)
 
     read = notes_module.read_notes(UUID)
 

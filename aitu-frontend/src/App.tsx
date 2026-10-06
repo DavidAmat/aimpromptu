@@ -1,6 +1,9 @@
 /**
  * The route table (implementation 02, plan section 6.3). Every path is declared in
  * `layout/routes.ts`; the router itself is created in `main.tsx`, which renders this table inside it.
+ *
+ * `/login` is outside the shell. Every other page needs a user signed in (`RequireUser`), and the
+ * Admin pages, Users and Lab, the master user (`RequireMaster`; Phase 4).
  */
 
 import { lazy, Suspense } from "react";
@@ -8,7 +11,10 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "./layout/AppLayout";
 import LabLayout from "./layout/LabLayout";
 import LegacyRedirect from "./layout/LegacyRedirect";
+import { RequireMaster, RequireUser } from "./layout/RequireUser";
 import { LAB_EXAMPLE_PATTERN, LEGACY_REDIRECTS, PROJECT_PATTERN, ROUTES } from "./layout/routes";
+import UsersPage from "./pages/admin/UsersPage";
+import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import AudioTab from "./pages/piece/AudioTab";
@@ -33,6 +39,7 @@ const UiGalleryPage = import.meta.env.DEV ? lazy(() => import("./pages/dev/UiGal
 export default function App() {
   return (
     <Routes>
+      <Route path={ROUTES.login} element={<LoginPage />} />
       {RollBenchPage ? (
         <Route
           path={ROUTES.devRollBench}
@@ -43,7 +50,13 @@ export default function App() {
           }
         />
       ) : null}
-      <Route element={<AppLayout />}>
+      <Route
+        element={
+          <RequireUser>
+            <AppLayout />
+          </RequireUser>
+        }
+      >
         <Route index element={<Navigate to={ROUTES.projects} replace />} />
         {UiGalleryPage ? (
           <Route
@@ -75,7 +88,22 @@ export default function App() {
           <Route path="notes-falling" element={<NotesFallingPage />} />
         </Route>
 
-        <Route path={ROUTES.lab} element={<LabLayout />}>
+        <Route
+          path={ROUTES.adminUsers}
+          element={
+            <RequireMaster>
+              <UsersPage />
+            </RequireMaster>
+          }
+        />
+        <Route
+          path={ROUTES.lab}
+          element={
+            <RequireMaster>
+              <LabLayout />
+            </RequireMaster>
+          }
+        >
           <Route index element={<Navigate to={ROUTES.labVideo} replace />} />
           <Route path="video" element={<VideoPlayerPage />} />
           <Route path="calibration" element={<VideoCalibrationPage />} />

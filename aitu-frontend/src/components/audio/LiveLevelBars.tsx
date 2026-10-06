@@ -7,7 +7,7 @@
 
 import Box from "@mui/material/Box";
 import { LEVEL_HISTORY } from "../../audio/useRecorder";
-import { semantic, ui } from "../../ui";
+import { semantic, ui, useScheme } from "../../ui";
 
 export interface LiveLevelBarsProps {
   /** Levels in 0..1, oldest first. */
@@ -18,6 +18,7 @@ export interface LiveLevelBarsProps {
 }
 
 export function LiveLevelBars({ levels, active = true, height = 72 }: LiveLevelBarsProps) {
+  useScheme();
   const slots = LEVEL_HISTORY;
   const barWidth = 100 / slots;
   // Right-align the history so new bars appear at the leading edge.

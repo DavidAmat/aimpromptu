@@ -60,9 +60,7 @@ def _uneven(
     for i in range(len(widths) - 1):
         if pcs[(first + i) % 7] in (4, 11):
             continue
-        blacks.append(
-            BlackBorder(left=borders[i + 1] - 7.0, right=borders[i + 1] + 7.0)
-        )
+        blacks.append(BlackBorder(left=borders[i + 1] - 7.0, right=borders[i + 1] + 7.0))
     return Calibration(
         image_width=1280,
         image_height=720,
@@ -82,12 +80,10 @@ def test_the_fixture_is_what_this_module_builds(fixture: dict) -> None:
     for case in fixture["cases"]:
         cal = Calibration.model_validate(case["calibration"])
         built = geometry.geometry(cal, case["margin"])
-        assert [k.model_dump(by_alias=True) for k in built.keys] == case["keys"], case[
+        assert [k.model_dump(by_alias=True) for k in built.keys] == case["keys"], case["name"]
+        assert [lane.model_dump(by_alias=True) for lane in built.lanes] == case["lanes"], case[
             "name"
         ]
-        assert [lane.model_dump(by_alias=True) for lane in built.lanes] == case[
-            "lanes"
-        ], case["name"]
 
 
 def test_fifty_two_white_keys_from_a0_are_the_whole_piano() -> None:
@@ -114,17 +110,13 @@ def test_white_keys_tile_their_borders_with_no_gap() -> None:
     assert len(whites) == 8
     for left, right in zip(whites, whites[1:]):
         assert left.right == pytest.approx(right.left)
-    assert [k.right - k.left for k in whites] == pytest.approx(
-        [20, 22, 24, 26, 28, 30, 32, 34]
-    )
+    assert [k.right - k.left for k in whites] == pytest.approx([20, 22, 24, 26, 28, 30, 32, 34])
 
 
 def test_a_black_key_keeps_the_borders_the_picture_gave_it() -> None:
     """No offset table, no replication: each black key's own borders (V-38)."""
     cal = _uneven([24.0] * 8)
-    cal.black_borders[0] = BlackBorder(
-        left=15.0, right=29.0
-    )  # C#2, pushed right of its boundary
+    cal.black_borders[0] = BlackBorder(left=15.0, right=29.0)  # C#2, pushed right of its boundary
     keys = {k.midi: k for k in geometry.keys(cal)}
     assert keys[37].kind == "black"
     assert (keys[37].left, keys[37].right, keys[37].mid) == (15.0, 29.0, 22.0)
@@ -178,10 +170,7 @@ def test_the_median_white_key_width_is_derived_and_never_set_by_hand() -> None:
     cal = _uneven([20.0, 22.0, 24.0, 26.0, 28.0, 30.0, 32.0, 34.0])
     assert cal.white_width == pytest.approx(28.0)
     assert geometry.guard_band_px(cal) == pytest.approx(1.75 * 28.0)
-    assert (
-        geometry.guard_band_px(Calibration(**{**cal.model_dump(), "guard_band": 39.0}))
-        == 39.0
-    )
+    assert geometry.guard_band_px(Calibration(**{**cal.model_dump(), "guard_band": 39.0})) == 39.0
 
 
 def test_a_grid_spelt_out_is_the_grid_04_built() -> None:
@@ -190,10 +179,7 @@ def test_a_grid_spelt_out_is_the_grid_04_built() -> None:
     The straight case of the fixture is 04's test video spelt out, and its keys
     are the numbers 04's own fixture carried: A#0 at 22.14 to 36.39.
     """
-    keys = {
-        k.midi: k
-        for k in geometry.keys(_even(leftBorder=1.5, whiteWidth=24.571428571428573))
-    }
+    keys = {k.midi: k for k in geometry.keys(_even(leftBorder=1.5, whiteWidth=24.571428571428573))}
     assert keys[21].left == pytest.approx(1.5)
     assert keys[22].left == pytest.approx(22.140000000000004)
     assert keys[22].right == pytest.approx(36.39142857142858)

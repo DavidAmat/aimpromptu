@@ -29,7 +29,7 @@ import Box from "@mui/material/Box";
 import type { Cut, FramePeaks } from "../../api";
 import { clampView, pageTo, panView, zoomView, type FrameView } from "../../audio/frameView";
 import { useElementSize } from "../../hooks/useElementSize";
-import { ui } from "../../ui";
+import { ui, useScheme } from "../../ui";
 import { paintOverview, paintPlayhead, paintWaveform, RULER } from "./waveformPaint";
 
 export interface CutWaveformProps {
@@ -84,6 +84,7 @@ export function CutWaveform({
   position,
   height = 220,
 }: CutWaveformProps) {
+  const scheme = useScheme();
   const [boxRef, size] = useElementSize<HTMLDivElement>();
   const baseRef = useRef<HTMLCanvasElement | null>(null);
   const topRef = useRef<HTMLCanvasElement | null>(null);
@@ -109,13 +110,13 @@ export function CutWaveform({
     if (baseRef.current && width > 0) {
       paintWaveform(baseRef.current, width, height, { peaks, cuts, selection: shown, view, activeEdge });
     }
-  }, [width, height, peaks, cuts, shown, view, activeEdge]);
+  }, [width, height, peaks, cuts, shown, view, activeEdge, scheme]);
 
   useLayoutEffect(() => {
     if (overviewRef.current && width > 0) {
       paintOverview(overviewRef.current, width, OVERVIEW_HEIGHT, { peaks, cuts, view });
     }
-  }, [width, peaks, cuts, view]);
+  }, [width, peaks, cuts, view, scheme]);
 
   useEffect(() => {
     const canvas = topRef.current;

@@ -1291,7 +1291,9 @@ export function TimeScoreView({
         };
 
   return (
-    <Box ref={scroller} sx={{ width: "100%", overflowX: "auto" }}>
+    // The sheet is a page of paper, white in both colour schemes (implementation 02, plan P-8): the
+    // engraving is black and would vanish on the dark page.
+    <Box ref={scroller} sx={{ width: "100%", overflowX: "auto", backgroundColor: ui.paper, borderRadius: 1 }}>
       <Box sx={magnified}>
         <Box
           ref={stage}
@@ -1388,7 +1390,7 @@ export function TimeScoreView({
                   borderRadius: "2px",
                   backgroundColor: palette.dark.Lavender,
                   border: 1,
-                  borderColor: ui.bg,
+                  borderColor: ui.paper,
                   opacity: 0.85,
                   transition: "opacity 120ms, transform 120ms",
                 }}

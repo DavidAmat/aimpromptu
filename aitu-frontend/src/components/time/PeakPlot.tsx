@@ -13,7 +13,7 @@
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { ui, semantic } from "../../ui";
+import { ui, semantic, useScheme } from "../../ui";
 import { FIGURE_LABELS, type LabelledPeak, type Peak } from "../../api";
 
 export interface PeakPlotProps {
@@ -45,6 +45,7 @@ export function PeakPlot({
   onSelect,
   height = 240,
 }: PeakPlotProps) {
+  useScheme();
   if (!peaks.length) {
     return (
       <Typography variant="body2" color="text.secondary">

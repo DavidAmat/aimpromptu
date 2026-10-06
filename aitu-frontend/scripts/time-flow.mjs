@@ -31,6 +31,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
+import { signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SUPERESTRELLA = 'a585f9eb-36a1-49a0-9f0c-2626f3d292da';
@@ -51,6 +52,7 @@ const { values } = parseArgs({
 });
 const base = values.base;
 const api = `${base}/api`;
+await signIn(base);
 mkdirSync(values.shots, { recursive: true });
 
 const engine = await (await fetch(`${api}/matrix/engine`)).json();
@@ -81,6 +83,7 @@ async function originalOf(uuid) {
 }
 
 const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+useSession(browser);
 const created = [];
 const report = [];
 

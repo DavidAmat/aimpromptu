@@ -8,7 +8,7 @@
 
 import Box from "@mui/material/Box";
 import type { WaveformPeaks } from "../../api";
-import { semantic, ui } from "../../ui";
+import { semantic, ui, useScheme } from "../../ui";
 
 export interface WaveformViewProps {
   peaks: WaveformPeaks;
@@ -28,6 +28,7 @@ export function WaveformView({
   cursorSeconds,
   watermark = false,
 }: WaveformViewProps) {
+  useScheme();
   const duration = peaks.durationSeconds || 1;
   const middle = height / 2;
   const scale = (height / 2) * 0.95;

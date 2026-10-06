@@ -125,9 +125,7 @@ def test_an_ordinary_pile_is_still_named_ordinarily():
 
 
 def note(start_ms: float, midi: int, length_ms: float = 80.0) -> NoteEvent:
-    return NoteEvent(
-        midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0
-    )
+    return NoteEvent(midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0)
 
 
 def test_a_tresillo_prints_as_three_corcheas_carrying_the_number_three():
@@ -142,9 +140,7 @@ def test_a_tresillo_prints_as_three_corcheas_carrying_the_number_three():
         events.append(note(clock, 76, 250.0))
         clock += NEGRA_MS
 
-    hands = impose_granularity_and_split(
-        events, 4.0, frame_ms=20, artifacts=None, leakage=None
-    )
+    hands = impose_granularity_and_split(events, 4.0, frame_ms=20, artifacts=None, leakage=None)
     score = to_score_payload(hands, ladder())
 
     inside = [note for note in score.notes if note.tuplet]
@@ -166,19 +162,11 @@ def test_the_two_hands_never_claim_the_same_tresillo():
         events.append(note(clock + 50, 45))
         clock += NEGRA_MS / 3
 
-    hands = impose_granularity_and_split(
-        events, 4.0, frame_ms=20, artifacts=None, leakage=None
-    )
+    hands = impose_granularity_and_split(events, 4.0, frame_ms=20, artifacts=None, leakage=None)
     score = to_score_payload(hands, ladder())
 
-    right = {
-        n.tuplet_id
-        for n in score.notes
-        if n.hand == "right" and n.tuplet_id is not None
-    }
-    left = {
-        n.tuplet_id for n in score.notes if n.hand == "left" and n.tuplet_id is not None
-    }
+    right = {n.tuplet_id for n in score.notes if n.hand == "right" and n.tuplet_id is not None}
+    left = {n.tuplet_id for n in score.notes if n.hand == "left" and n.tuplet_id is not None}
     assert right and left
     assert not (right & left)
 

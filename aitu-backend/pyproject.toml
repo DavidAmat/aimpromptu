@@ -34,6 +34,8 @@ dependencies = [
     # code runs on SQLite now and on Postgres later, and Alembic numbers the migrations.
     "sqlalchemy>=2.0.36",
     "alembic>=1.14.0",
+    # The password hashes of the users (implementation 02, plan section 9.2): Argon2id.
+    "argon2-cffi>=23.1.0",
 ]
 
 [project.optional-dependencies]
@@ -138,6 +140,9 @@ testpaths = ["tests"]
 # `src` for the package; `.` for `scripts/`, which has no __init__.py.
 pythonpath = ["src", "."]
 addopts = "-q"
+markers = [
+    "real_login: requests sign in through /auth instead of acting as the master user",
+]
 
 [tool.black]
 line-length = 100

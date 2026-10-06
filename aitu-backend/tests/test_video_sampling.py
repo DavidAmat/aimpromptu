@@ -110,9 +110,7 @@ def test_sampling_again_replaces_the_frames_and_everything_derived_from_them(
     _make_video(paths.video_source_path(UUID))
     sampling.sample(UUID, 100.0)
     paths.video_plate_path(UUID).write_bytes(b"not a plate")
-    paths.video_frames_jsonl_path(UUID).write_text(
-        '{"t": 0.0, "onsets": [], "sustains": []}\n'
-    )
+    paths.video_frames_jsonl_path(UUID).write_text('{"t": 0.0, "onsets": [], "sustains": []}\n')
 
     metadata = sampling.sample(UUID, 500.0)
 
@@ -144,9 +142,7 @@ def test_the_metadata_and_the_measurement_are_kept_beside_the_video(
     temp_store: Path,
 ) -> None:
     """V-12: the calibration is kept beside the video, never inside rhythm.json."""
-    store.save_metadata(
-        VideoMetadata(audio_uuid=UUID, title="a piece", sample_ms=100.0)
-    )
+    store.save_metadata(VideoMetadata(audio_uuid=UUID, title="a piece", sample_ms=100.0))
 
     assert store.load_metadata(UUID).title == "a piece"
     assert paths.video_metadata_path(UUID).parent == paths.video_dir(UUID)

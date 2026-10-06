@@ -15,6 +15,9 @@
  *   --out <file.png>    default ../.run/screenshots/<path>.png (ignored by git)
  *   --width, --height   the window, default 1440 x 900; --full takes the whole page
  *   --base <url>        default http://localhost:5173 (the app of `make up` or `make serve`)
+ *   --theme dark        the dark scheme of the user menu (default light)
+ *   --signed-out        do not sign in (the sign-in page); otherwise signed in as the master user,
+ *                       with the password of .env (scripts/session.mjs)
  *
  * It prints every console error and failed request of the page, since a blank picture with an
  * error behind it is the usual way a page fails. Once per machine: `npx playwright install chromium`.
@@ -25,6 +28,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
+import { signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,6 +43,11 @@ const { values, positionals } = parseArgs({
     height: { type: 'string', default: '900' },
     full: { type: 'boolean', default: false },
     base: { type: 'string', default: 'http://localhost:5173' },
+    // The page as somebody signed out sees it (the sign-in page); signed in as the master user
+    // otherwise (scripts/session.mjs).
+    'signed-out': { type: 'boolean', default: false },
+    // The colour scheme: light (default) or dark, as the user menu sets it.
+    theme: { type: 'string', default: 'light' },
   },
 });
 
@@ -51,9 +60,15 @@ const out = path.resolve(
 mkdirSync(path.dirname(out), { recursive: true });
 
 const browser = await chromium.launch();
+if (!values['signed-out']) {
+  await signIn(values.base);
+  useSession(browser);
+}
 const page = await browser.newPage({
   viewport: { width: Number(values.width), height: Number(values.height) },
 });
+// MUI keeps the user's theme in the browser's storage, under `mui-mode`.
+await page.addInitScript((mode) => window.localStorage.setItem('mui-mode', mode), values.theme);
 
 const problems = [];
 page.on('console', (message) => {

@@ -86,9 +86,7 @@ def transcribed(temp_store: Path, tmp_path: Path) -> str:
         pytest.skip("ffmpeg is not installed")
     source = sine_wav(tmp_path / "shuffle.wav", seconds=6.0)
     with source.open("rb") as handle:
-        audio_uuid = ingest.ingest_file(
-            handle, "shuffle.wav", AudioSource.RECORDING
-        ).uuid
+        audio_uuid = ingest.ingest_file(handle, "shuffle.wav", AudioSource.RECORDING).uuid
     events = ShuffleEngine().transcribe(source)
     pipeline.save_note_events(audio_uuid, events, 6.0, title="Shuffle stub")
     return audio_uuid
@@ -145,9 +143,7 @@ def test_each_hand_is_measured_on_its_own(client, transcribed):
     assert both["attackCount"] == right["attackCount"] + left["attackCount"]
 
 
-def test_the_frame_length_is_a_query_parameter_and_the_peaks_do_not_move(
-    client, transcribed
-):
+def test_the_frame_length_is_a_query_parameter_and_the_peaks_do_not_move(client, transcribed):
     """The peaks are measured on the raw times, so the grid cannot shift them."""
     coarse = client.get(f"/time/{transcribed}/peaks", params={"frameMs": 40}).json()
     fine = client.get(f"/time/{transcribed}/peaks", params={"frameMs": 20}).json()
@@ -165,9 +161,7 @@ def test_an_unknown_audio_says_so(client):
 
 def test_the_highest_peak_is_a_negra_by_default(client, transcribed):
     """D-09 as changed by implementation 02: nobody names a peak, the tallest pile is a negra."""
-    peaks = client.get(f"/time/{transcribed}/peaks", params={"hand": "right"}).json()[
-        "peaks"
-    ]
+    peaks = client.get(f"/time/{transcribed}/peaks", params={"hand": "right"}).json()["peaks"]
     tallest = max(peaks, key=lambda peak: peak["count"])
 
     response = client.get(f"/time/{transcribed}/default-reading")
@@ -186,24 +180,16 @@ def test_the_highest_peak_is_a_negra_by_default(client, transcribed):
 
 def test_the_default_reading_measures_the_hand_it_is_asked_for(client, transcribed):
     """A saved reading keeps its hand: the page asks for that hand's highest peak."""
-    both = client.get(
-        f"/time/{transcribed}/default-reading", params={"hand": "both"}
-    ).json()
-    peaks = client.get(f"/time/{transcribed}/peaks", params={"hand": "both"}).json()[
-        "peaks"
-    ]
+    both = client.get(f"/time/{transcribed}/default-reading", params={"hand": "both"}).json()
+    peaks = client.get(f"/time/{transcribed}/peaks", params={"hand": "both"}).json()["peaks"]
     assert both["hand"] == "both"
     assert both["gapCount"] == 20
-    assert both["anchorMs"] == pytest.approx(
-        max(peaks, key=lambda p: p["count"])["medianMs"]
-    )
+    assert both["anchorMs"] == pytest.approx(max(peaks, key=lambda p: p["count"])["medianMs"])
 
 
 def test_a_hand_with_too_few_notes_for_a_peak_falls_back_to_both(client, transcribed):
     """The held bass of the shuffle is two notes: one gap, no pile, so both hands are measured."""
-    left = client.get(
-        f"/time/{transcribed}/default-reading", params={"hand": "left"}
-    ).json()
+    left = client.get(f"/time/{transcribed}/default-reading", params={"hand": "left"}).json()
     assert left["hand"] == "both"
     assert left["anchorMs"] is not None
 
@@ -227,9 +213,7 @@ def test_a_hand_with_no_gaps_falls_back_to_both(client, temp_store, tmp_path):
     assert body["anchorMs"] == pytest.approx(300.0, abs=15)
 
 
-def test_a_piece_with_no_gaps_has_no_anchor_and_is_not_an_error(
-    client, temp_store, tmp_path
-):
+def test_a_piece_with_no_gaps_has_no_anchor_and_is_not_an_error(client, temp_store, tmp_path):
     if not FFMPEG:
         pytest.skip("ffmpeg is not installed")
     source = sine_wav(tmp_path / "chord.wav", seconds=2.0)
@@ -265,16 +249,12 @@ def test_naming_one_peak_labels_the_others(client, transcribed):
     assert len(body["ladder"]["msByFigure"]) == 9
     assert body["ladder"]["msByFigure"]["corchea"] == pytest.approx(168.5)
 
-    named = {
-        round(item["peak"]["centreMs"]): item["figure"] for item in body["labelled"]
-    }
+    named = {round(item["peak"]["centreMs"]): item["figure"] for item in body["labelled"]}
     assert all(figure == "corchea" for figure in named.values()), named
 
 
 def test_the_preview_says_how_badly_each_peak_fits(client, transcribed):
-    body = client.post(
-        f"/time/{transcribed}/ladder-preview", json={"anchorMs": 337.0}
-    ).json()
+    body = client.post(f"/time/{transcribed}/ladder-preview", json={"anchorMs": 337.0}).json()
     assert all(item["percentOff"] >= 0 for item in body["labelled"])
     assert any(item["percentOff"] > 10 for item in body["labelled"])
 
@@ -300,9 +280,7 @@ def test_the_score_route_returns_something_the_renderer_can_draw(client, transcr
 
 
 def test_every_printed_note_is_complete(client, transcribed):
-    notes = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()[
-        "notes"
-    ]
+    notes = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()["notes"]
     for note in notes:
         assert note["hand"] in {"right", "left"}
         assert 0 <= note["row"] < 88
@@ -324,17 +302,13 @@ def test_every_printed_note_is_complete(client, transcribed):
 
 def test_both_halves_of_the_shuffle_print_as_corcheas(client, transcribed):
     """The point of the whole refactor, over HTTP."""
-    notes = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()[
-        "notes"
-    ]
+    notes = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()["notes"]
     melody = [note for note in notes if note["hand"] == "right"]
     assert len(melody) >= 15
     assert {note["figure"] for note in melody[:-1]} == {"corchea"}
 
 
-def test_posting_the_score_with_no_page_edits_matches_the_plain_route(
-    client, transcribed
-):
+def test_posting_the_score_with_no_page_edits_matches_the_plain_route(client, transcribed):
     plain = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
     posted = client.post(f"/time/{transcribed}/score", json={"anchorMs": 337.0}).json()
     assert posted == plain
@@ -360,9 +334,7 @@ def test_correcting_a_hand_is_written_onto_the_recording_and_renames_its_neighbo
         f"/time/{transcribed}/hands",
         json={
             "frameMs": 40,
-            "notes": [
-                {"startFrame": second, "row": row, "hand": "left"} for row in moved_rows
-            ],
+            "notes": [{"startFrame": second, "row": row, "hand": "left"} for row in moved_rows],
         },
     )
     assert result.status_code == 200
@@ -372,9 +344,7 @@ def test_correcting_a_hand_is_written_onto_the_recording_and_renames_its_neighbo
 
     def one(score, hand, frame):
         return next(
-            note
-            for note in score["notes"]
-            if note["hand"] == hand and note["startFrame"] == frame
+            note for note in score["notes"] if note["hand"] == hand and note["startFrame"] == frame
         )
 
     before = one(plain, "right", first)
@@ -385,8 +355,7 @@ def test_correcting_a_hand_is_written_onto_the_recording_and_renames_its_neighbo
     # The note is on the other staff now, for everyone, without anything being passed along with
     # the request that asked for the sheet.
     assert not any(
-        note["hand"] == "right" and note["startFrame"] == second
-        for note in edited["notes"]
+        note["hand"] == "right" and note["startFrame"] == second for note in edited["notes"]
     )
     assert one(edited, "left", second)["printedMsExact"] > 0
 
@@ -405,15 +374,10 @@ def test_correcting_a_hand_is_written_onto_the_recording_and_renames_its_neighbo
         f"/time/{transcribed}/hands",
         json={
             "frameMs": 40,
-            "notes": [
-                {"startFrame": second, "row": row, "hand": "right"}
-                for row in moved_rows
-            ],
+            "notes": [{"startFrame": second, "row": row, "hand": "right"} for row in moved_rows],
         },
     )
-    restored = client.get(
-        f"/time/{transcribed}/score", params={"anchorMs": 337.0}
-    ).json()
+    restored = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
     assert one(restored, "right", first)["figure"] == before["figure"]
 
 
@@ -444,8 +408,7 @@ def test_hiding_a_note_lengthens_whatever_came_before_it(client, transcribed):
 
     assert first_note(edited)["printedMsExact"] > first_note(plain)["printedMsExact"]
     assert not any(
-        note["hand"] == "right" and note["startFrame"] == second
-        for note in edited["notes"]
+        note["hand"] == "right" and note["startFrame"] == second for note in edited["notes"]
     )
     # Hiding the notes never renumbers the columns, which every other annotation is keyed by.
     assert edited["envelope"]["frameCount"] == plain["envelope"]["frameCount"]
@@ -461,9 +424,7 @@ def test_a_finer_grid_moves_the_columns_but_not_the_figures(client, transcribed)
     ).json()
 
     # Twice as many columns, give or take the one the trim lands on.
-    assert (
-        abs(fine["envelope"]["frameCount"] - 2 * coarse["envelope"]["frameCount"]) <= 1
-    )
+    assert abs(fine["envelope"]["frameCount"] - 2 * coarse["envelope"]["frameCount"]) <= 1
 
     # The same notes with the same figures. Only the order in the list can differ, because two
     # notes that shared a column at 40 ms can sit in neighbouring columns at 20 ms.
@@ -509,9 +470,7 @@ def test_a_machine_perfect_piece_gets_its_plot_and_a_warning_rather_than_an_erro
     snapped columns — and also of a MIDI file, which is exact because a machine played it. Refusing
     to draw the plot would answer a real question with a 500.
     """
-    response = client.get(
-        f"/time/{machine_perfect}/peaks", params={"hand": "right", "frameMs": 40}
-    )
+    response = client.get(f"/time/{machine_perfect}/peaks", params={"hand": "right", "frameMs": 40})
 
     assert response.status_code == 200
     body = response.json()
@@ -618,9 +577,7 @@ def test_the_marks_are_kept_with_the_piece(client, shaken):
     assert saved.status_code == 200
 
     read_back = client.get(f"/time/{shaken}/rhythm").json()
-    assert read_back["trills"] == [
-        {"hand": "right", "startFrame": 25, "endFrame": 55, "row": 50}
-    ]
+    assert read_back["trills"] == [{"hand": "right", "startFrame": 25, "endFrame": 55, "row": 50}]
     assert read_back["lyrics"][0]["text"] == "and it shook"
     assert read_back["cueRanges"][0]["toColumn"] == 55
     assert read_back["annotationScale"] == 0.8
@@ -669,9 +626,7 @@ def test_a_note_added_from_the_keyboard_goes_onto_the_recording(client, transcri
     would all go on disagreeing with the page.
     """
     plain = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
-    column = sorted(
-        {note["startFrame"] for note in plain["notes"] if note["hand"] == "right"}
-    )[1]
+    column = sorted({note["startFrame"] for note in plain["notes"] if note["hand"] == "right"})[1]
     taken = {note["row"] for note in plain["notes"] if note["startFrame"] == column}
     free = next(row for row in range(40, 80) if row not in taken)
 
@@ -691,9 +646,7 @@ def test_a_note_added_from_the_keyboard_goes_onto_the_recording(client, transcri
     added = [
         note
         for note in edited["notes"]
-        if note["startFrame"] == column
-        and note["row"] == free
-        and note["hand"] == "right"
+        if note["startFrame"] == column and note["row"] == free and note["hand"] == "right"
     ]
     assert len(added) == 1
     assert added[0]["printedMsExact"] > 0
@@ -712,14 +665,10 @@ def test_a_note_added_from_the_keyboard_goes_onto_the_recording(client, transcri
         == 1
     )
     after = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
-    assert not any(
-        note["startFrame"] == column and note["row"] == free for note in after["notes"]
-    )
+    assert not any(note["startFrame"] == column and note["row"] == free for note in after["notes"])
 
 
-def test_a_key_already_struck_in_that_column_is_refused_rather_than_doubled(
-    client, transcribed
-):
+def test_a_key_already_struck_in_that_column_is_refused_rather_than_doubled(client, transcribed):
     """Both hands holding one key in one frame is a matrix the drawing package rejects.
 
     Merging the two silently would lose a note the recording says was played, so the addition is
@@ -732,9 +681,7 @@ def test_a_key_already_struck_in_that_column_is_refused_rather_than_doubled(
         f"/time/{transcribed}/notes",
         json={
             "frameMs": 40,
-            "notes": [
-                {"startFrame": note["startFrame"], "row": note["row"], "hand": "left"}
-            ],
+            "notes": [{"startFrame": note["startFrame"], "row": note["row"], "hand": "left"}],
         },
     )
     assert result.status_code == 200

@@ -23,6 +23,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import formats, store as audio_store
 from aitu_backend.audio.youtube import DownloadFailed, InvalidYoutubeUrl, YtDlpMissing
+from aitu_backend.auth import context, rights
+from aitu_backend.auth.dependencies import require_job
 from aitu_backend.schemas.video import (
     Calibration,
     Detection,
@@ -125,7 +127,11 @@ def list_videos() -> list[VideoSummary]:
     shows a title and five chips has no use for any of them.
     """
     out: list[VideoSummary] = []
+    user = context.current()
     for audio_uuid in store.uuids():
+        # The user's own videos; the master user sees every video in Lab.
+        if user is not None and not user.is_master and not rights.part_access(user, audio_uuid):
+            continue
         summary = _summary(audio_uuid)
         if summary.measurement is not None:
             summary.measurement.scroll_speed.series = []
@@ -136,6 +142,9 @@ def list_videos() -> list[VideoSummary]:
 @router.get("/progress/{job_id}")
 def video_progress(job_id: str) -> StreamingResponse:
     """SSE stream of a sampling or detection job, ending with a named `done`."""
+    found = jobs.get(job_id)
+    if found is not None:
+        require_job(found.owner_id, job_id)
     return StreamingResponse(
         jobs.stream(job_id),
         media_type="text/event-stream",

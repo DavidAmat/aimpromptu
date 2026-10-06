@@ -57,9 +57,7 @@ def test_iterate_advances_once_per_item() -> None:
 def test_multi_progress_fans_out() -> None:
     left: list[ProgressEvent] = []
     right: list[ProgressEvent] = []
-    reporter = MultiProgress(
-        CallbackProgress(left.append), CallbackProgress(right.append)
-    )
+    reporter = MultiProgress(CallbackProgress(left.append), CallbackProgress(right.append))
 
     with reporter.stage("split", total=1) as stage:
         stage.advance()

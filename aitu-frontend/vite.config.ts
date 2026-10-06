@@ -5,10 +5,23 @@ import react from '@vitejs/plugin-react'
 // `backend` service of compose.yaml, which sets AITU_API_PROXY.
 const apiTarget = process.env.AITU_API_PROXY ?? 'http://127.0.0.1:8765'
 
+// The names the page answers to on the home network (implementation 02, plan section 9.4). Vite
+// refuses any other Host header, which keeps a web page elsewhere from reaching it through a name
+// it controls (DNS rebinding). Addresses (192.168.0.112, 127.0.0.1) are always allowed.
+// AITU_ALLOWED_HOSTS adds names, separated by commas.
+const allowedHosts = [
+  'localhost',
+  'ubuntu',
+  'david-ubuntu',
+  'david-ubuntu.local',
+  ...(process.env.AITU_ALLOWED_HOSTS ?? '').split(',').map((name) => name.trim()).filter(Boolean),
+]
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
+    allowedHosts,
     // One port for everything (implementation 08, plan section 10.4). The browser calls `/api/...`
     // on the page's own address, and Vite passes it to the backend without the prefix. The JSON,
     // the audio files (with their range requests, for seeking) and the progress stream all take

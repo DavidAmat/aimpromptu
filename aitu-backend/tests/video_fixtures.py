@@ -123,9 +123,7 @@ def draw_frame(index: int, drawn: list[Drawn]) -> np.ndarray:
     return frame
 
 
-def make_video(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, drawn: list[Drawn]
-) -> None:
+def make_video(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, drawn: list[Drawn]) -> None:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
     monkeypatch.setattr(images, "WORK_WIDTH", WIDTH)
     paths.ensure_database_tree()

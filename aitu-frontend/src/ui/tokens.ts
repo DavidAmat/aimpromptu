@@ -9,8 +9,10 @@
  * that cannot read the theme (a canvas, an SVG) imports `ui`.
  *
  * There are two schemes, light and dark. The piano sheet is a page of paper and
- * stays white in both (`paper`). Only the light scheme is in use for now: the
- * choice of theme arrives with the user menu (Phase 4), and `ui` then follows it.
+ * stays white in both (`paper`), and the piano roll keeps its own colours
+ * (`palette.ts`). The user chooses the scheme in the user menu (Phase 4):
+ * `applyScheme` copies it into `ui` in place, and the components that draw with
+ * `ui` re-render through `useScheme()` (`scheme.tsx`).
  */
 
 export interface Tokens {
@@ -69,8 +71,15 @@ export const darkTokens: Tokens = {
   paper: "#FFFFFF",
 };
 
-/** The scheme in use, for drawing code that cannot read the theme. */
-export const ui: Tokens = lightTokens;
+/** The scheme in use, for drawing code that cannot read the theme. Changed in place. */
+export const ui: Tokens = { ...lightTokens };
+
+export type SchemeName = "light" | "dark";
+
+/** Make `ui` the tokens of a scheme. Components re-render through `useScheme()`. */
+export function applyScheme(scheme: SchemeName): void {
+  Object.assign(ui, scheme === "dark" ? darkTokens : lightTokens);
+}
 
 /** The type scale (plan section 7.3), in pixels. */
 export const fontSize = {

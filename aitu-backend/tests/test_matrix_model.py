@@ -22,9 +22,7 @@ RE4 = note_to_row("Re-4")
 MI4 = note_to_row("Mi-4")
 
 
-def sample(
-    granularity: Granularity = Granularity.SEMICORCHEA, bpm: float = 60.0
-) -> PianoMatrix:
+def sample(granularity: Granularity = Granularity.SEMICORCHEA, bpm: float = 60.0) -> PianoMatrix:
     """Do-4 struck and held two frames, then Mi-4 struck."""
     return PianoMatrix.from_coo_payload(
         sequence_to_sparse_payload(["*Do-4", "Do-4", "Do-4", "*Mi-4"]),
@@ -173,10 +171,7 @@ def test_dense_round_trip_in_both_orientations() -> None:
     matrix = sample()
     assert PianoMatrix.from_dense(matrix.to_dense()) == matrix
     assert (
-        PianoMatrix.from_dense(
-            matrix.to_dense(frames_as_rows=True), frames_as_rows=True
-        )
-        == matrix
+        PianoMatrix.from_dense(matrix.to_dense(frames_as_rows=True), frames_as_rows=True) == matrix
     )
 
 
@@ -193,9 +188,7 @@ def test_coo_payload_is_sorted_by_column_then_row() -> None:
     grid[DO4, 0] = 1
     grid[DO4, 2] = 1
     payload = PianoMatrix.from_dense(grid).to_coo_payload()
-    assert list(zip(payload.cols, payload.rows)) == sorted(
-        zip(payload.cols, payload.rows)
-    )
+    assert list(zip(payload.cols, payload.rows)) == sorted(zip(payload.cols, payload.rows))
 
 
 def test_envelope_round_trip_sparse_and_dense() -> None:

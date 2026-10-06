@@ -25,9 +25,7 @@ SI, DO = 71, 72
 
 
 def note(start_ms: float, midi: int, length_ms: float = 60.0) -> NoteEvent:
-    return NoteEvent(
-        midiNote=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0
-    )
+    return NoteEvent(midiNote=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0)
 
 
 def alternation(
@@ -40,8 +38,7 @@ def alternation(
 ) -> list[NoteEvent]:
     """``count`` notes taking turns, starting on the lower one."""
     return [
-        note(start_ms + index * gap_ms, low if index % 2 == 0 else high)
-        for index in range(count)
+        note(start_ms + index * gap_ms, low if index % 2 == 0 else high) for index in range(count)
     ]
 
 
@@ -81,9 +78,7 @@ def test_a_long_shake_is_one_trill_and_not_several():
 
 def test_the_lower_note_is_the_one_that_stays():
     """``tr`` means "alternate with the note above", so the note written is the lower one."""
-    started_high = [
-        note(1000 + index * 80, DO if index % 2 == 0 else SI) for index in range(8)
-    ]
+    started_high = [note(1000 + index * 80, DO if index % 2 == 0 else SI) for index in range(8)]
     found = detect_trills(hands_of(started_high))
     assert len(found) == 1
     assert found[0].row == SI - 21
@@ -155,9 +150,7 @@ def test_an_accepted_trill_prints_as_one_held_note():
     after = to_score_payload(_with_trills(hands, [marked]), anchor())
 
     in_run_before = [
-        n
-        for n in before.notes
-        if marked.start_frame <= n.start_frame < marked.end_frame
+        n for n in before.notes if marked.start_frame <= n.start_frame < marked.end_frame
     ]
     in_run_after = [
         n for n in after.notes if marked.start_frame <= n.start_frame < marked.end_frame

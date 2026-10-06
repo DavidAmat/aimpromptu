@@ -2,13 +2,15 @@
  * Every route path in one place (implementation 02, plan section 6.3). Nothing hardcodes a URL
  * string: navigation, the sidebar, the step tabs and the redirects all read from here.
  *
- * A project is today's piece: its id is the audio uuid, until Phase 3 gives projects their own
- * storage (plan section 8.8, P-6). `/projects/new` opens the Source step of a new project; Phase 5
+ * A project's id is the id of its first part, the uuid of the backend's routes (plan P-6). `/projects/new` opens the Source step of a new project; Phase 5
  * puts the three ways in (From source, From scratch, From other projects) in front of it.
  *
  * **Lab** holds the video reader's pages: the video, its calibration, the detection, its notes and
  * the examples it is measured on. The video steps of a project open these pages until Phase 5 makes
  * the video a step of the project itself.
+ *
+ * `/login` is the one page outside the shell; every other page needs a user signed in, and the
+ * Admin pages (Users, Lab) the master user (Phase 4).
  *
  * The old paths (`/piece/...`, `/playground/...`, `/youtube`, `/video/...`, `/library...`) redirect
  * to their new home (`LEGACY_REDIRECTS`) until Phase 15 removes them.
@@ -18,6 +20,11 @@ import type { PieceStep } from "../api/pieces";
 
 export const ROUTES = {
   home: "/",
+  login: "/login",
+  /** The sign-in page, coming back to `next` after. */
+  signIn: (next?: string) => (next && next !== "/" ? `/login?next=${encodeURIComponent(next)}` : "/login"),
+  /** Admin → Users: the master user's (Phase 4). */
+  adminUsers: "/admin/users",
   projects: "/projects",
   projectNew: "/projects/new",
   /** A project at one step, or at the step it opens on when `step` is left out. */

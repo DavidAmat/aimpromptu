@@ -25,16 +25,11 @@ def test_the_data_folder_moves(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     assert paths.frame_examples_seed_dir() == tmp_path.resolve() / "frame-examples"
 
 
-def test_the_database_folder_moves(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_the_database_folder_moves(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AITU_DATABASE_DIR", str(tmp_path))
     assert paths.database_dir() == tmp_path.resolve()
     assert paths.sqlite_path() == tmp_path.resolve() / "aitu.sqlite"
-    assert (
-        paths.audio_file_path("ab12", "mp3")
-        == tmp_path.resolve() / "audio" / "ab12.mp3"
-    )
+    assert paths.audio_file_path("ab12", "mp3") == tmp_path.resolve() / "audio" / "ab12.mp3"
     monkeypatch.setenv("AITU_DATABASE_DIR", "")
     assert paths.database_dir() == paths.repo_root() / ".database"
 

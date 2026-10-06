@@ -41,12 +41,8 @@ def test_a_layout_this_code_does_not_know_is_refused(_temporary_database: Path) 
 def test_every_table_of_section_8_6_exists(_temporary_database: Path) -> None:
     database.engine()
     with sqlite3.connect(paths.sqlite_path()) as connection:
-        tables = {
-            row[0] for row in connection.execute("SELECT name FROM sqlite_master")
-        }
-        version = connection.execute(
-            "SELECT version_num FROM alembic_version"
-        ).fetchone()[0]
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master")}
+        version = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
     assert version == database.HEAD_REVISION
     expected = {
         "users", "sessions", "projects", "parts", "audio_files", "audio_refs", "artists",
@@ -78,9 +74,7 @@ def test_the_migration_runs_on_an_empty_file_too(tmp_path: Path) -> None:
     target = tmp_path / "fresh.sqlite"
     database.migrate(target)
     with sqlite3.connect(target) as connection:
-        assert connection.execute("SELECT count(*) FROM genres").fetchone()[0] == len(
-            GENRES
-        )
+        assert connection.execute("SELECT count(*) FROM genres").fetchone()[0] == len(GENRES)
 
 
 def test_the_master_user_is_made_once(
@@ -108,13 +102,7 @@ def test_a_part_finds_its_project_and_an_unknown_one_is_not_found(
         "vault",
     )
     assert paths.part_dir(project.id) == (
-        paths.database_dir()
-        / "users"
-        / str(owner)
-        / "vault"
-        / project.id
-        / "parts"
-        / project.id
+        paths.database_dir() / "users" / str(owner) / "vault" / project.id / "parts" / project.id
     )
     with pytest.raises(locate.NotFound):
         locate.part("missing")

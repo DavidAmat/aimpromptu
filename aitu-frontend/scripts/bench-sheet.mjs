@@ -30,6 +30,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
+import { signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { values } = parseArgs({
@@ -53,6 +54,7 @@ const { values } = parseArgs({
 });
 const base = values.base;
 const api = `${base}/api`;
+await signIn(base);
 const moves = Number(values.moves);
 mkdirSync(values.shots, { recursive: true });
 
@@ -116,6 +118,7 @@ function summarise(profile) {
 }
 
 const browser = await chromium.launch();
+useSession(browser);
 const report = { date: new Date().toISOString(), base, moves, pieces: [] };
 const problems = [];
 

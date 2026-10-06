@@ -14,11 +14,38 @@ from __future__ import annotations
 import argparse
 import gzip
 import json
+import os
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
+
+
+#: The session cookie, after :func:`sign_in` (implementation 02, Phase 4: every route needs one).
+COOKIE: dict[str, str] = {}
+
+
+def sign_in(api: str) -> None:
+    """Sign in as the master user, with the password of `.env` (or `AITU_CHECK_PASSWORD`)."""
+    env: dict[str, str] = {}
+    dotenv = Path(__file__).resolve().parents[2] / ".env"
+    if dotenv.is_file():
+        for line in dotenv.read_text(encoding="utf-8").splitlines():
+            if "=" in line and not line.lstrip().startswith("#"):
+                key, value = line.split("=", 1)
+                env[key.strip()] = value.strip()
+    username = os.environ.get("AITU_CHECK_USERNAME") or env.get("AITU_MASTER_USERNAME") or "master"
+    password = os.environ.get("AITU_CHECK_PASSWORD") or env.get("AITU_MASTER_PASSWORD") or ""
+    request = urllib.request.Request(
+        api + "/auth/login",
+        data=json.dumps({"username": username, "password": password}).encode(),
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(request) as response:
+        cookie = response.headers.get("Set-Cookie", "").split(";")[0]
+    COOKIE["Cookie"] = cookie
 
 
 def call(api: str, method: str, path: str, body: Any = None) -> tuple[Any, float, int, int]:
@@ -29,7 +56,7 @@ def call(api: str, method: str, path: str, body: Any = None) -> tuple[Any, float
         api + path,
         data=data,
         method=method,
-        headers={"Content-Type": "application/json", "Accept-Encoding": "gzip"},
+        headers={"Content-Type": "application/json", "Accept-Encoding": "gzip", **COOKIE},
     )
     begin = time.perf_counter()
     with urllib.request.urlopen(request) as response:
@@ -125,6 +152,7 @@ def main() -> None:
     parser.add_argument("--api", default="http://127.0.0.1:8765")
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
+    sign_in(args.api)
     rows = [bench(args.api, source) for source in args.uuids]
     print(json.dumps(rows, indent=2))
     if args.out:

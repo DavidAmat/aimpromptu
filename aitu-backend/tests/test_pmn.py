@@ -31,13 +31,15 @@ from aitu_backend.pmn import (
 from aitu_backend.schemas.matrix import ONSET, SUSTAIN, SparseCooMatrix
 from aitu_backend.schemas.metadata import AudioSource
 from aitu_backend.storage import paths
+from parts import REAL_DATABASE
 from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.engine import NoteEvent
 
 FIXTURES = Path(__file__).parent / "fixtures" / "pmn"
 EVENTS_20S = FIXTURES / "superestrella-20s-large-cuda.events.jsonl"
 NOTES_20S = FIXTURES / "superestrella-20s-large-cuda.notes.json"
-LIBRARY = Path(__file__).resolve().parents[1] / "data" / "audio"
+#: The notes of every part of the real library, read only (`.database/`, implementation 02).
+LIBRARY_NOTES = sorted(REAL_DATABASE.glob("users/*/*/*/parts/*/notes.pmn"))
 
 
 def superestrella_20s() -> Notes:
@@ -65,9 +67,7 @@ def one_note_per_key(notes: Notes) -> Notes:
     following = np.full(key.size, np.inf)
     same = key[1:] == key[:-1]
     following[:-1][same] = on[1:][same]
-    keep = (
-        following > on
-    )  # two onsets of one key at one instant: keep the later one only
+    keep = following > on  # two onsets of one key at one instant: keep the later one only
     cut = np.minimum(end, following)
     return Notes(
         id=notes.id[order][keep],
@@ -103,9 +103,7 @@ def test_the_sparse_form_refuses_what_is_not_a_set_of_notes() -> None:
 
 
 def test_removed_notes_stay_in_the_form_and_leave_every_view() -> None:
-    notes = Notes.build(
-        key=[40, 41], on_ms=[0, 100], len_ms=[50, 50], removed=[False, True]
-    )
+    notes = Notes.build(key=[40, 41], on_ms=[0, 100], len_ms=[50, 50], removed=[False, True])
     assert len(notes) == 2 and len(notes.live()) == 1
     assert columns.to_columns(notes)["id"] == [0]
     grid = dense.to_dense(notes, 10)
@@ -201,9 +199,7 @@ def test_reading_an_old_file_never_writes_it(data_dir: Path) -> None:
 
 def test_ids_are_kept_by_a_save_and_never_reused(data_dir: Path) -> None:
     uuid = store.create("Ids", AudioSource.UPLOAD, "wav").uuid
-    events = [
-        NoteEvent(midi_note=60 + i, start=i * 0.5, end=i * 0.5 + 0.3) for i in range(4)
-    ]
+    events = [NoteEvent(midi_note=60 + i, start=i * 0.5, end=i * 0.5 + 0.3) for i in range(4)]
     pipeline.save_note_events(uuid, events, 3.0)
     assert [event.id for event in events] == [0, 1, 2, 3]
 
@@ -234,17 +230,13 @@ def test_a_writer_that_only_changes_notes_keeps_the_header(data_dir: Path) -> No
         engine="muscriptor-large",
         lag_correction_ms=15.0,
     )
-    pipeline.save_note_events(
-        uuid, [NoteEvent(midi_note=60, start=0, end=1)], 2.0, header=header
-    )
+    pipeline.save_note_events(uuid, [NoteEvent(midi_note=60, start=0, end=1)], 2.0, header=header)
 
     stored = pipeline.load_note_events(uuid)
     assert stored is not None
     stored.events[0].hand = "right"
     # The way `PUT /time/{uuid}/hands` saves: no header given.
-    pipeline.save_note_events(
-        uuid, stored.events, stored.duration_seconds, stored.title
-    )
+    pipeline.save_note_events(uuid, stored.events, stored.duration_seconds, stored.title)
 
     again = pipeline.load_note_events(uuid)
     assert again is not None and again.events[0].hand == "right"
@@ -284,7 +276,7 @@ def test_a_new_transcription_records_its_engine_and_continues_the_ids(
     assert stored is not None and stored.header.engine == "two-notes"
 
 
-@pytest.mark.skipif(not LIBRARY.is_dir(), reason="no local library in data/audio")
+@pytest.mark.skipif(not LIBRARY_NOTES, reason="no local library in .database/")
 def test_every_piece_of_the_library_round_trips_through_the_sparse_form() -> None:
     """Exact, at the 0.1 ms every save has always written.
 
@@ -299,10 +291,9 @@ def test_every_piece_of_the_library_round_trips_through_the_sparse_form() -> Non
             if key != "id"
         }
 
-    files = sorted(LIBRARY.glob("*/matrices/events.json"))
-    assert files
-    for path in files:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+    for path in LIBRARY_NOTES:
+        payload = events_file.read_payload(path)
+        assert payload is not None, path
         piece = events_file.piece_from_payload(payload)
         assert piece.outside_keyboard == 0, path
         written = events_file.piece_to_payload(piece)
@@ -408,9 +399,7 @@ def coo_the_old_way(grid: np.ndarray) -> tuple[list[int], list[int], list[int]]:
     """The Python loop `PianoMatrix.to_coo_payload` used before Phase 2."""
     cols, rows = np.nonzero(grid.T)
     rows_list, cols_list = rows.astype(int).tolist(), cols.astype(int).tolist()
-    onset = [
-        row if grid[row, col] == ONSET else -1 for row, col in zip(rows_list, cols_list)
-    ]
+    onset = [row if grid[row, col] == ONSET else -1 for row, col in zip(rows_list, cols_list)]
     return rows_list, cols_list, onset
 
 
@@ -445,9 +434,7 @@ def test_coo_from_notes_is_the_coo_of_the_dense_matrix() -> None:
 
 def test_the_columns_round_trip() -> None:
     notes = random_notes()
-    payload = columns.to_columns(
-        notes, revision=7, hands_revision=3, duration_ms=61_000.4
-    )
+    payload = columns.to_columns(notes, revision=7, hands_revision=3, duration_ms=61_000.4)
 
     assert payload["revision"] == 7 and payload["handsRevision"] == 3
     assert payload["durationMs"] == 61_000
@@ -497,9 +484,7 @@ def test_the_midi_round_trip_keeps_keys_times_hands_and_velocity() -> None:
 
 def test_a_repeated_note_at_the_same_instant_survives_midi() -> None:
     # MuScriptor closes a note of a key at the instant the same key is struck again (gap 0 ms).
-    notes = Notes.build(
-        key=[50, 50], on_ms=[8400, 8840], len_ms=[440, 300], hand=[1, 1]
-    )
+    notes = Notes.build(key=[50, 50], on_ms=[8400, 8840], len_ms=[440, 300], hand=[1, 1])
     back = midi.from_midi(midi.to_midi_bytes(notes))
     assert back.on_ms.tolist() == [8400.0, 8840.0] and back.len_ms.tolist() == [
         440.0,
@@ -513,20 +498,14 @@ def test_a_midi_file_from_elsewhere_follows_its_tempo_map() -> None:
     file = mido.MidiFile(type=1, ticks_per_beat=480)
     conductor = mido.MidiTrack()
     conductor.append(mido.MetaMessage("set_tempo", tempo=500_000, time=0))  # 120 BPM
-    conductor.append(
-        mido.MetaMessage("set_tempo", tempo=1_000_000, time=960)
-    )  # 60 BPM after 1 s
+    conductor.append(mido.MetaMessage("set_tempo", tempo=1_000_000, time=960))  # 60 BPM after 1 s
     file.tracks.append(conductor)
     piano = mido.MidiTrack()
     piano.append(mido.Message("note_on", note=60, velocity=90, time=0))
     piano.append(mido.Message("note_on", note=60, velocity=0, time=480))  # 0.5 s
     piano.append(mido.Message("note_on", note=64, velocity=80, time=480))  # at 1.0 s
-    piano.append(
-        mido.Message("note_off", note=64, velocity=0, time=480)
-    )  # 1.0 s later at 60 BPM
-    piano.append(
-        mido.Message("note_on", channel=9, note=40, velocity=90, time=0)
-    )  # a drum
+    piano.append(mido.Message("note_off", note=64, velocity=0, time=480))  # 1.0 s later at 60 BPM
+    piano.append(mido.Message("note_on", channel=9, note=40, velocity=90, time=0))  # a drum
     file.tracks.append(piano)
 
     notes = midi.from_midi(file)
@@ -547,8 +526,7 @@ def test_muscriptor_events_give_the_notes_muscriptor_itself_assembled() -> None:
     assert len(notes) == len(theirs) == 102
     ours = sorted(zip(notes.midi.tolist(), notes.on_ms.tolist(), notes.end_ms.tolist()))
     expected = sorted(
-        (item["pitch"], round(item["start"] * 1000), round(item["end"] * 1000))
-        for item in theirs
+        (item["pitch"], round(item["start"] * 1000), round(item["end"] * 1000)) for item in theirs
     )
     assert ours == expected
     # Whole milliseconds on MuScriptor's 10 ms grid, and no loudness.
@@ -561,9 +539,7 @@ def test_ids_follow_the_order_the_starts_arrive_in() -> None:
     starts = [event for event in events if event["type"] == "NoteStartEvent"]
     notes = muscriptor.from_muscriptor_events(events, end_ms=20_000, first_id=100)
 
-    by_id = {
-        int(i): (int(m), float(o)) for i, m, o in zip(notes.id, notes.midi, notes.on_ms)
-    }
+    by_id = {int(i): (int(m), float(o)) for i, m, o in zip(notes.id, notes.midi, notes.on_ms)}
     for position, event in enumerate(starts):
         assert by_id[100 + position] == (
             event["pitch"],
@@ -653,11 +629,7 @@ def test_the_portable_file_round_trips(tmp_path: Path) -> None:
     )
     body = json.loads(path.read_text())
 
-    assert (
-        body["format"] == "aimpromptu-pmn"
-        and body["lowestMidi"] == 21
-        and body["keys"] == 88
-    )
+    assert body["format"] == "aimpromptu-pmn" and body["lowestMidi"] == 21 and body["keys"] == 88
     assert body["onMs"] == [250.1, 250.3]  # the 0.1 ms of the old pieces survive
     back, duration, title = portable.read_portable(path)
     assert back.equals(notes.live().sorted())

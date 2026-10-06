@@ -178,9 +178,7 @@ def test_download_parses_progress_and_ingests(
     monkeypatch.setattr(youtube.ingest, "ingest_path", fake_ingest)
 
     events: list[ProgressEvent] = []
-    youtube.download(
-        "https://youtu.be/dQw4w9WgXcQ", reporter=CallbackProgress(events.append)
-    )
+    youtube.download("https://youtu.be/dQw4w9WgXcQ", reporter=CallbackProgress(events.append))
 
     assert Path(str(seen["path"])).name == "Levels piano cover.mp3"
     assert seen["source"] == "youtube"
@@ -231,9 +229,7 @@ def test_a_failed_download_surfaces_the_error(
     monkeypatch.setattr(
         youtube.subprocess,
         "Popen",
-        lambda *a, **k: FakeProcess(
-            [], returncode=1, stderr="ERROR: Video unavailable"
-        ),
+        lambda *a, **k: FakeProcess([], returncode=1, stderr="ERROR: Video unavailable"),
     )
     with pytest.raises(DownloadFailed, match="Video unavailable"):
         youtube.download("https://youtu.be/dQw4w9WgXcQ")
@@ -248,31 +244,21 @@ def test_an_invalid_url_is_a_422(client: TestClient) -> None:
     assert "not a YouTube URL" in response.json()["detail"]
 
 
-def test_a_missing_yt_dlp_is_a_503(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_missing_yt_dlp_is_a_503(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(youtube, "yt_dlp_available", lambda: False)
-    response = client.post(
-        "/youtube/download", json={"url": "https://youtu.be/dQw4w9WgXcQ"}
-    )
+    response = client.post("/youtube/download", json={"url": "https://youtu.be/dQw4w9WgXcQ"})
     assert response.status_code == 503
 
 
-def test_a_youtube_refusal_is_a_502(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_youtube_refusal_is_a_502(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """Their problem, not ours — hence a gateway error, with their wording."""
     monkeypatch.setattr(youtube, "yt_dlp_available", lambda: True)
     monkeypatch.setattr(
         youtube.subprocess,
         "Popen",
-        lambda *a, **k: FakeProcess(
-            [], returncode=1, stderr="ERROR: Sign in to confirm"
-        ),
+        lambda *a, **k: FakeProcess([], returncode=1, stderr="ERROR: Sign in to confirm"),
     )
-    response = client.post(
-        "/youtube/download", json={"url": "https://youtu.be/dQw4w9WgXcQ"}
-    )
+    response = client.post("/youtube/download", json={"url": "https://youtu.be/dQw4w9WgXcQ"})
     assert response.status_code == 502
     assert "Sign in to confirm" in response.json()["detail"]
 
@@ -319,21 +305,15 @@ def test_a_download_job_answers_at_once_and_ends_with_the_audio_uuid(
     def fake_popen(command, **kwargs):
         workspace = Path(command[command.index("-o") + 1]).parent
         (workspace / "Levels piano cover.mp3").write_bytes(b"fake")
-        return FakeProcess(
-            ["[download]  40.0% of 3.00MiB\n", "[download] 100.0% of 3.00MiB\n"]
-        )
+        return FakeProcess(["[download]  40.0% of 3.00MiB\n", "[download] 100.0% of 3.00MiB\n"])
 
     monkeypatch.setattr(youtube.subprocess, "Popen", fake_popen)
     stored = SimpleNamespace(
-        metadata=SimpleNamespace(
-            uuid="abc", alias="Levels piano cover", duration_seconds=12.5
-        )
+        metadata=SimpleNamespace(uuid="abc", alias="Levels piano cover", duration_seconds=12.5)
     )
     monkeypatch.setattr(youtube.ingest, "ingest_path", lambda *args, **kwargs: stored)
 
-    response = client.post(
-        "/youtube/jobs", json={"url": "https://youtu.be/dQw4w9WgXcQ"}
-    )
+    response = client.post("/youtube/jobs", json={"url": "https://youtu.be/dQw4w9WgXcQ"})
     assert response.status_code == 202
     stages, final = _follow(client, response.json()["jobId"])
     assert "download" in stages and "store" in stages
@@ -357,9 +337,7 @@ def test_a_failed_download_job_ends_with_yt_dlps_words(
         "Popen",
         lambda *a, **k: FakeProcess([], returncode=1, stderr="ERROR: Private video"),
     )
-    response = client.post(
-        "/youtube/jobs", json={"url": "https://youtu.be/bbbbbbbbbbb"}
-    )
+    response = client.post("/youtube/jobs", json={"url": "https://youtu.be/bbbbbbbbbbb"})
     _, final = _follow(client, response.json()["jobId"])
     assert final["status"] == "error" and "Private video" in final["error"]
 
@@ -397,8 +375,6 @@ def test_yt_dlp_runs_through_this_interpreter() -> None:
     assert youtube.YT_DLP[0] == sys.executable
     assert youtube.YT_DLP[1:] == ["-m", "yt_dlp"]
 
-    result = subprocess.run(
-        [*youtube.YT_DLP, "--version"], capture_output=True, text=True
-    )
+    result = subprocess.run([*youtube.YT_DLP, "--version"], capture_output=True, text=True)
     assert result.returncode == 0
     assert result.stdout.strip()  # a version string, e.g. 2026.07.04

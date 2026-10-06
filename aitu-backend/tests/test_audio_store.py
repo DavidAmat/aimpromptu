@@ -29,9 +29,7 @@ def temp_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path / "data"
 
 
-def sine_wav(
-    path: Path, seconds: float = 1.0, rate: int = 8000, freq: float = 440.0
-) -> Path:
+def sine_wav(path: Path, seconds: float = 1.0, rate: int = 8000, freq: float = 440.0) -> Path:
     """A real, decodable WAV — a 440 Hz tone."""
     samples = np.sin(2 * np.pi * freq * np.arange(int(rate * seconds)) / rate)
     frames = b"".join(struct.pack("<h", int(value * 30000)) for value in samples)
@@ -74,9 +72,7 @@ def test_reading_a_wav_gives_normalized_floats(tmp_path: Path) -> None:
 
 
 def test_duration_of_a_known_wav(tmp_path: Path) -> None:
-    assert formats.duration_seconds(
-        sine_wav(tmp_path / "t.wav", seconds=2.0)
-    ) == pytest.approx(2.0)
+    assert formats.duration_seconds(sine_wav(tmp_path / "t.wav", seconds=2.0)) == pytest.approx(2.0)
 
 
 # -------------------------------------------------------------------- peaks
@@ -185,10 +181,7 @@ def test_listing_is_newest_first(temp_store: Path) -> None:
     listed = [entry.metadata.alias for entry in store.list_all()]
     assert set(listed) == {"one", "two"}
     assert len(listed) == 2
-    assert (
-        store.list_all()[0].metadata.created_at
-        >= store.list_all()[1].metadata.created_at
-    )
+    assert store.list_all()[0].metadata.created_at >= store.list_all()[1].metadata.created_at
     assert first.uuid != second.uuid
 
 
@@ -227,9 +220,7 @@ def test_deleting_a_missing_audio_raises(temp_store: Path) -> None:
 
 
 @needs_ffmpeg
-def test_ingest_normalizes_and_records_the_duration(
-    temp_store: Path, tmp_path: Path
-) -> None:
+def test_ingest_normalizes_and_records_the_duration(temp_store: Path, tmp_path: Path) -> None:
     source = sine_wav(tmp_path / "scale.wav", seconds=1.5, rate=44100)
 
     with source.open("rb") as handle:
@@ -246,14 +237,10 @@ def test_ingest_normalizes_and_records_the_duration(
 
 
 @needs_ffmpeg
-def test_an_explicit_alias_wins_over_the_filename(
-    temp_store: Path, tmp_path: Path
-) -> None:
+def test_an_explicit_alias_wins_over_the_filename(temp_store: Path, tmp_path: Path) -> None:
     source = sine_wav(tmp_path / "raw-take-3.wav")
     with source.open("rb") as handle:
-        entry = ingest.ingest_file(
-            handle, source.name, AudioSource.UPLOAD, alias="Levels - Avicii"
-        )
+        entry = ingest.ingest_file(handle, source.name, AudioSource.UPLOAD, alias="Levels - Avicii")
     assert entry.metadata.alias == "Levels - Avicii"
 
 
@@ -261,9 +248,7 @@ def test_a_failed_ingest_leaves_no_folder_behind(temp_store: Path) -> None:
     """A half-ingested audio in the library is worse than a failed upload."""
     before = set(bundle.list_parts())
     with pytest.raises(Exception):
-        ingest.ingest_file(
-            io.BytesIO(b"not audio at all"), "junk.wav", AudioSource.UPLOAD
-        )
+        ingest.ingest_file(io.BytesIO(b"not audio at all"), "junk.wav", AudioSource.UPLOAD)
     assert set(bundle.list_parts()) == before
     assert not list(paths.users_dir().glob("*/vault/*"))
 
@@ -341,24 +326,17 @@ def test_upload_endpoint_round_trip(client: TestClient, tmp_path: Path) -> None:
     assert len(waveform["min"]) == len(waveform["max"]) == 64
 
     assert client.get(f"/audio/{uuid}/file").status_code == 200
-    assert (
-        client.get(f"/audio/{uuid}/file", params={"normalized": True}).status_code
-        == 200
-    )
+    assert client.get(f"/audio/{uuid}/file", params={"normalized": True}).status_code == 200
 
     assert client.delete(f"/audio/{uuid}").json()["status"] == "deleted"
     assert client.get(f"/audio/{uuid}").status_code == 404
 
 
 @needs_ffmpeg
-def test_the_recording_endpoint_tags_its_source(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_the_recording_endpoint_tags_its_source(client: TestClient, tmp_path: Path) -> None:
     source = sine_wav(tmp_path / "mic.wav", rate=44100)
     with source.open("rb") as handle:
-        response = client.post(
-            "/audio/recording", files={"file": ("mic.wav", handle, "audio/wav")}
-        )
+        response = client.post("/audio/recording", files={"file": ("mic.wav", handle, "audio/wav")})
     assert response.status_code == 201
     assert response.json()["source"] == "recording"
 
@@ -388,26 +366,19 @@ def test_trim_endpoint_creates_a_physical_segment_with_root_lineage(
     assert segment["sourceTimeRange"] == {"startSeconds": 1.0, "endSeconds": 3.25}
     assert segment["durationSeconds"] == pytest.approx(2.25, abs=0.01)
 
-    waveform = client.get(
-        f"/audio/{segment['uuid']}/waveform", params={"points": 80}
-    ).json()
+    waveform = client.get(f"/audio/{segment['uuid']}/waveform", params={"points": 80}).json()
     assert waveform["durationSeconds"] == pytest.approx(2.25, abs=0.01)
     assert client.get(f"/audio/{segment['uuid']}/file").status_code == 200
     assert (
-        client.get(
-            f"/audio/{segment['uuid']}/file", params={"normalized": True}
-        ).status_code
-        == 200
+        client.get(f"/audio/{segment['uuid']}/file", params={"normalized": True}).status_code == 200
     )
-    assert client.get(f"/audio/{parent['uuid']}").json()[
-        "durationSeconds"
-    ] == pytest.approx(4.0, abs=0.05)
+    assert client.get(f"/audio/{parent['uuid']}").json()["durationSeconds"] == pytest.approx(
+        4.0, abs=0.05
+    )
 
 
 @needs_ffmpeg
-def test_trimming_a_segment_keeps_absolute_root_times(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_trimming_a_segment_keeps_absolute_root_times(client: TestClient, tmp_path: Path) -> None:
     source = sine_wav(tmp_path / "long.wav", seconds=5.0, rate=44100)
     with source.open("rb") as handle:
         root_uuid = client.post(
@@ -428,9 +399,7 @@ def test_trimming_a_segment_keeps_absolute_root_times(
 
 
 @needs_ffmpeg
-def test_trim_endpoint_rejects_the_whole_audio(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_trim_endpoint_rejects_the_whole_audio(client: TestClient, tmp_path: Path) -> None:
     source = sine_wav(tmp_path / "whole.wav", seconds=2.0, rate=44100)
     with source.open("rb") as handle:
         uuid = client.post(
@@ -447,9 +416,7 @@ def test_trim_endpoint_rejects_the_whole_audio(
 
 
 @needs_ffmpeg
-def test_a_chrome_style_webm_recording_is_ingested(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_a_chrome_style_webm_recording_is_ingested(client: TestClient, tmp_path: Path) -> None:
     """The Chrome case, end to end: webm/opus in, normalized mono WAV out."""
     webm = tmp_path / "take.webm"
     subprocess.run(
@@ -512,18 +479,14 @@ def test_waveform_is_404_when_a_matrix_import_has_no_audio(
 
 
 @needs_ffmpeg
-def test_the_range_endpoint_returns_only_that_slice(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_the_range_endpoint_returns_only_that_slice(client: TestClient, tmp_path: Path) -> None:
     source = sine_wav(tmp_path / "long.wav", seconds=3.0, rate=44100)
     with source.open("rb") as handle:
         uuid = client.post(
             "/audio/upload", files={"file": ("long.wav", handle, "audio/wav")}
         ).json()["uuid"]
 
-    response = client.get(
-        f"/audio/{uuid}/range", params={"startSeconds": 1.0, "endSeconds": 2.0}
-    )
+    response = client.get(f"/audio/{uuid}/range", params={"startSeconds": 1.0, "endSeconds": 2.0})
     assert response.status_code == 200
     assert response.headers["content-type"] == "audio/wav"
 
@@ -536,20 +499,17 @@ def test_the_range_endpoint_returns_only_that_slice(
 def test_a_backwards_range_is_a_422(client: TestClient, tmp_path: Path) -> None:
     source = sine_wav(tmp_path / "t.wav", seconds=2.0, rate=44100)
     with source.open("rb") as handle:
-        uuid = client.post(
-            "/audio/upload", files={"file": ("t.wav", handle, "audio/wav")}
-        ).json()["uuid"]
-    response = client.get(
-        f"/audio/{uuid}/range", params={"startSeconds": 1.5, "endSeconds": 0.5}
-    )
+        uuid = client.post("/audio/upload", files={"file": ("t.wav", handle, "audio/wav")}).json()[
+            "uuid"
+        ]
+    response = client.get(f"/audio/{uuid}/range", params={"startSeconds": 1.5, "endSeconds": 0.5})
     assert response.status_code == 422
 
 
 def test_the_waveform_point_count_is_bounded(client: TestClient) -> None:
-    assert client.get("/audio/any/waveform", params={"points": 0}).status_code == 422
-    assert (
-        client.get("/audio/any/waveform", params={"points": 999999}).status_code == 422
-    )
+    uuid = store.create("Bounded", AudioSource.UPLOAD, "wav").uuid
+    assert client.get(f"/audio/{uuid}/waveform", params={"points": 0}).status_code == 422
+    assert client.get(f"/audio/{uuid}/waveform", params={"points": 999999}).status_code == 422
 
 
 def test_ffmpeg_is_documented_as_a_prerequisite() -> None:

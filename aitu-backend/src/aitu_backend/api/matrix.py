@@ -25,6 +25,7 @@ from aitu_backend.audio.store import AudioNotFound
 from aitu_backend.matrix.keys import LOWEST_MIDI
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend import config
+from aitu_backend.auth.dependencies import require_job, require_part
 from aitu_backend.transcription import jobs, models, pipeline
 from aitu_backend.transcription.artifacts import drop_artifacts
 from aitu_backend.transcription.engine import (
@@ -247,6 +248,7 @@ def transcribe(request: TranscribeRequest) -> JobHandle:
     that job instead of starting another.
     """
     _audio_or_404(request.audio_uuid)
+    require_part(request.audio_uuid, write=True)
     _check_engine(request.engine)
     ranged = request.start_seconds is not None and request.end_seconds is not None
     needs_model = request.force or ranged or pipeline.current_events(request.audio_uuid) is None
@@ -308,6 +310,9 @@ def transcription_progress(
     ``EventSource`` that reconnects sends ``Last-Event-ID`` and resumes after it.
     """
     after = int(last_event_id) if last_event_id and last_event_id.isdigit() else None
+    found = jobs.get(job_id)
+    if found is not None:
+        require_job(found.owner_id, job_id)
     return StreamingResponse(
         jobs.stream(job_id, after=after),
         media_type="text/event-stream",
@@ -321,6 +326,7 @@ def job_status(job_id: str) -> JobStatus:
     job = jobs.get(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"No job '{job_id}'")
+    require_job(job.owner_id, job_id)
     latest = job.latest
     return JobStatus(
         job_id=job.id,

@@ -112,9 +112,7 @@ def test_the_metadata_block_describes_the_matrix_it_came_from() -> None:
 
     assert metadata is not None
     assert metadata.hand_map == hands.hand_map()
-    assert metadata.matches(
-        matrix.granularity, matrix.frame_count, metadata.onset_count
-    )
+    assert metadata.matches(matrix.granularity, matrix.frame_count, metadata.onset_count)
     # The default is the beam followed by the page-level second pass, so that is the
     # name that has to reach metadata: a reader of a stored split needs to know which
     # of the two produced it. ``beam-dp-v3`` is still what ``method="beam"`` reports.
@@ -318,9 +316,7 @@ def test_a_left_hand_chord_under_a_right_hand_scale() -> None:
     matrix = build(rows, frames=4)
 
     hands = split_hands(matrix)
-    assert hands.left.active_rows() == sorted(
-        [note_to_row("Do-3"), note_to_row("Sol-3")]
-    )
+    assert hands.left.active_rows() == sorted([note_to_row("Do-3"), note_to_row("Sol-3")])
     assert hands.right.active_rows() == sorted(
         note_to_row(name) for name in ["Do-4", "Re-4", "Mi-4", "Fa-4"]
     )

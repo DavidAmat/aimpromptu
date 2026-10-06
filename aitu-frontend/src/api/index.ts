@@ -5,8 +5,13 @@
 
 import { request } from "./client";
 
-export { API_BASE, ApiError, buildUrl, request, upload } from "./client";
+export { API_BASE, ApiError, buildUrl, request, SIGNED_OUT_EVENT, upload } from "./client";
 export type { RequestOptions } from "./client";
+
+export { authApi } from "./auth";
+export type { Me } from "./auth";
+export { adminApi } from "./admin";
+export type { AdminUser } from "./admin";
 
 export { audioApi, SUPPORTED_AUDIO_SUFFIXES } from "./audio";
 export type {
