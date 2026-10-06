@@ -37,7 +37,7 @@ nothing there yet, or because moving it is precisely what was asked for.
 ## 2. The session
 
 `editing/session.py` and `storage/staging.py`. A disposable folder under
-`data/audio/<uuid>/staging/<session-uuid>/` holds the take and the decisions about it. **Nothing
+`<projectId>/staging/<session-uuid>/` in the project bundle (under `.database/`) holds the take and the decisions about it. **Nothing
 outside that folder changes until accept**, and cancel deletes the folder and that is the whole of
 it.
 
@@ -127,9 +127,14 @@ Marks outside the window are untouched, and that is the whole point of the lengt
 ### Accept
 
 `splice_events` returns the new event list, what was removed and what arrived.
-`editing/history.py` copies the **previous** `events.json` into `history/v<N>/` and advances
-`music-version.json`, then `audio_splice.splice_wav` writes the stretched take into the recording at
-the same offset.
+`editing/history.py` copies the **previous** `notes.pmn`, `sheet.json` and `timeline.json` into
+`.database/history/<projectId>/parts/<partId>/v<N>/` and advances `music-version.json`, then
+`audio_splice.splice_wav` writes the stretched take into the recording at the same offset.
+
+Since implementation 02, Phase 3 the spliced recording does not overwrite the stored audio. It is a
+new file of the audio store (`.database/audio/<sha256>.wav`, `store.replace_original`), and the
+part's `timeline.json` points at it. The previous file stays in the store, so a history snapshot
+never holds a copy of the audio. The same is true when a composed passage makes the recording longer.
 
 If the audio splice fails, the window is recorded in `audio-mismatches.json` rather than failing the
 edit: the notes were written correctly and only the sound is behind, so saying so is more useful
@@ -143,8 +148,8 @@ than rolling back a correct result.
 
 ### An empty piece
 
-`create_empty_piece` — `POST /audio/compose` — writes an empty `events.json` with
-`durationSeconds: 0` and a `frameMs` on the metadata, and **no audio file at all**. The first
+`create_empty_piece` — `POST /audio/compose` — writes an empty `notes.pmn` with
+`durationMs: 0` and a `frameMs` in `project.json`, and **no audio file at all**. The first
 accepted passage is what creates a recording.
 
 There is no BPM and no granularity to choose, because neither exists.
@@ -152,7 +157,7 @@ There is no BPM and no granularity to choose, because neither exists.
 One accommodation was needed to make an empty piece drawable: the drawing duration is clamped to at
 least one column, because every path below `events_to_time_matrix` rejects a zero duration. One
 empty column is enough for a pair of staves, and a column is a property of the view rather than of
-the music, so `events.json` still says zero.
+the music, so `notes.pmn` still says zero.
 
 ### A passage occupies a whole number of columns
 
@@ -258,6 +263,6 @@ show.
 ## 9. Where to look deeper
 
 - [`endpoints.md`](endpoints.md#5-audiouuidedits--staged-editing-and-composing) — the routes
-- [`paths-and-data.md`](paths-and-data.md#4-dataaudiouuidstagingsession--disposable-sessions) — the session folder
+- [`paths-and-data.md`](paths-and-data.md#44-stagingsessionid-disposable-sessions) — the session folder
 - [`rhythm-and-annotations.md`](rhythm-and-annotations.md) — the marks that are dropped or moved
 - [`../frontend/components.md`](../frontend/components.md) — `RangeRerecordPanel` and `ComposePassagePanel`

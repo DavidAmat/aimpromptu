@@ -34,12 +34,14 @@ Full reasoning: [time-model.md](time-model.md).
 | Naming notes | `notation/` | Figures, tresillos, trills |
 | Contracts | `schemas/` | Pydantic models, camelCase on the wire, mirrored in TypeScript |
 | Editing | `editing/` | The replacement splice, composing, staging, history |
-| Persistence | `storage/` | Every path in one module; playground versions, library, playlists |
+| Persistence | `storage/` | Every path in one module (`paths.py`); the project bundle, the audio store, finding the project of a part |
+| Database | `db/` | The SQLite tables (SQLAlchemy 2 models), the Alembic migrations, the master user, the backup, check and reindex tools |
 | The format | `pmn/` | The piano matrix notation: the sparse form and every adapter |
 
 ## The one stored file
 
-`data/audio/<uuid>/matrices/events.json` — the engine's note events in seconds, before any grid was
+`parts/<partId>/notes.pmn` in the project bundle under `.database/` (until implementation 02, Phase 3,
+`data/audio/<uuid>/matrices/events.json`) — the engine's note events, before any grid was
 involved, with an id per note, the hand of each note once the hand split is saved, and the revisions
 of section 1 of [pieces-and-revisions.md](pieces-and-revisions.md). Everything else about the music is a function of it, so re-reading a piece at 20 ms
 instead of 40 is a different query string rather than a migration.
@@ -48,8 +50,9 @@ Its format, the sparse form it is read into, and every conversion (the dense mat
 payload, the wire columns, MIDI, MuScriptor events, `.pmn.json`) are one package, `pmn/`:
 [piano-matrix-notation.md](piano-matrix-notation.md).
 
-The one thing stored beside it is `rhythm.json`: what the reader decided, which is the only thing
-about a piece that nothing can derive.
+The one thing stored beside it is `sheet.json` (was `rhythm.json`): what the reader decided, which is
+the only thing about a piece that nothing can derive. Beside them, `timeline.json` says which audio
+the part plays. Where all of this lives, and the tables of the database: [07-database.md](../07-database.md).
 
 ## API
 

@@ -55,6 +55,7 @@ each other.
 the old, over-cut sustains until they are derived again from `events.json`.
 `api/library.py` and `notation/artifacts.py` split an already-clean matrix; per-hand
 cleaning there is a no-op, because whole-keyboard cleaning is strictly more aggressive.
+(The saved library versions and `api/library.py` were deleted in implementation 02, Phase 3.)
 
 ---
 
@@ -119,7 +120,9 @@ print(hands.right.grid[note_to_row("Sol-3"), start:end])     # the alternating o
 > **Updated 2026-09-13.** This used to read
 > `pipeline.recompute(audio_uuid, tempo_bpm, Granularity.SEMICORCHEA)`. There is no `recompute`, no
 > tempo and no granularity any more: `hands_of` derives the two hands from `events.json` at whatever
-> column length you ask for, and never writes anything. The column numbers in the worked example
+> column length you ask for (since implementation 02, Phase 3 the stored file is
+> `parts/<partId>/notes.pmn` in the project bundle under `.database/`), and never writes anything.
+> The column numbers in the worked example
 > below are **semicorchea columns from 2026-08-01** and do not correspond to 40 ms columns — work
 > the range out from the seconds, or pass the `frame_ms` the passage was read at.
 

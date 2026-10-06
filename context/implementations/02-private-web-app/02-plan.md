@@ -497,6 +497,11 @@ symbolic link to `/mnt/ssd2/aimpromptu/.database` (P-4), and Compose mounts the 
 The users' Private Libraries never mix: a project is under its owner's folder, and every query is
 scoped by owner (section 9.3).
 
+*As built in Phase 3:* the video of a part is `tmp/<userId>/<partId>/video/`; the history of a part
+(a splice, a new transcription) is `history/<projectId>/parts/<partId>/vN/`, which leaves
+`history/<projectId>/vN/` for the library saves of Phase 6; `lab/frame-examples/` starts as a copy
+of the records committed in `aitu-backend/data/frame-examples/`.
+
 ## 8.3 The project bundle
 
 The same layout in the Personal Vault, the Private Library, the Public Library and the export file:
@@ -528,6 +533,12 @@ the user gave the format. Every writer still goes through one function (`pipelin
 
 **`sheet.json`** is `rhythm.json` with three additions: the lyrics pool (section 11.5), the figure the
 next figures transposition starts from, and the sheet title block (title, subtitle, artist text).
+
+*As built in Phase 3:* the cache is one folder per part, `cache/<partId>/` (`normalized.wav`,
+`waveform.json`, `piece-r<N>.flac/.wav`, scratch clips), and `normalized.wav` is written again from
+the stored file when it is missing. `notes.pmn` keeps milliseconds with up to three decimals, not
+one: the two hand-made demo pieces have microseconds, and the migration checks every note equal. A
+project made by this app has the id of its first part.
 
 **The export** is the bundle plus the audio files it uses, in one zip named `<title>.aitu`. The
 import makes a new project in the importer's Personal Vault, with new ids. A test checks that export,
@@ -573,8 +584,14 @@ segments. `audio/frames.py` (`FrameTable`) becomes the table from the time of th
 and a time inside its file. Every range is on the 10 ms grid, and a join gets the 5 ms fade of
 implementation 08.
 
-**The joined audio** that the browser plays is written to `cache/<partId>-r<audioRevision>.flac`, as
-`piece-r<N>.flac` is today, and written again when it is missing.
+**The joined audio** that the browser plays is written to `cache/<partId>/piece-r<audioRevision>.flac`
+(as built), and written again when it is missing.
+
+*As built in Phase 3:* `timeline.json` also lists the files it uses with their extension and their
+length in 10 ms frames (`"audio": {"<hash>": {"format": "mp3", "frames": 26351}}`), so it reads
+without the database and a cut that reaches the end of the file is still a cut; `toMs` is `null`
+for a file not measured yet. A splice or a passage put in stores the new recording as a new file
+(`store.replace_original`).
 
 **Writing the audio on save (Q-3).** When a project is saved to the Private Library, each audio file
 that the timeline uses only in part is written again with only the ranges in use, and the segments are
@@ -601,6 +618,12 @@ script, `make db-reindex`, rebuilds the project rows from the bundles if they ev
 | Playlists | `playlists` (`owner_id`, `scope`, title), `playlist_items` (position, song, project, optional range). An integrated playlist is a project, not a row here |
 | Social | `likes` (user, project), `library_shares` (owner, the user it is shared with) |
 | Requests | `requests` (`kind`, author, status, timestamps), `request_items` (one proposed change each, with its own decision and comment), `request_comments` |
+
+*As built in Phase 3* (revision `0001`): every table above, plus `parts` (a part finds its project,
+P-6) and `song_genres` (the link of a song to its one or two genres), plus `external_key` on the
+public artists, albums and songs for the import of Phase 12, and `songs.default_version`. The fixed
+lists are written by the revision: 13 genres, 4 tag categories, the region `worldwide`.
+`projects.step` is filled by the migration and `db-reindex`; Phase 5 keeps it current.
 
 ## 8.7 Moving, backing up, the cloud
 
@@ -642,6 +665,11 @@ promotions) is deleted, with its storage modules (`storage/repository.py`, `prom
 
 `aitu-backend/data/` is not deleted. The user deletes it after checking the app (a human step at the
 end of Phase 3), and Phase 15 removes the code that reads it.
+
+*As built in Phase 3:* the two pieces with audio and no notes were moved too (one has a calibrated
+video), so nothing is left behind; every note is checked against the old file; the new files keep
+the times of the old ones. `POST /projects/{id}/duplicate` (Phase 5's route) was made early, because
+the scripts that work on copies (`bench:sheet`, `time:flow`) could no longer copy a folder by hand.
 
 ---
 

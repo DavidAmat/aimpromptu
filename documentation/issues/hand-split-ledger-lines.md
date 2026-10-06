@@ -162,8 +162,9 @@ for item in result.assignments:
 
 ## Where the reader still overrules everything
 
-None of this replaces the note toolbox's *send to the other staff*, which writes a
-`handOverride` into `rhythm.json`. The split is a proposal about music the algorithm cannot
+None of this replaces the note toolbox's *send to the other staff*, which writes the
+hand onto the note in `notes.pmn` (`PUT /time/{uuid}/hands`; it once wrote a `handOverride`
+into `rhythm.json`). The split is a proposal about music the algorithm cannot
 see the player's hands for; the reader has the last word, and always did.
 
 ## Tests

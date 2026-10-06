@@ -45,15 +45,34 @@ audio. The table from one to the other is
 **Why float and not whole milliseconds.** MuScriptor times are whole milliseconds (a 10 ms grid,
 then a per-piece lag correction in whole ms). The pieces transcribed by ByteDance store 0.1 ms, and
 a column is chosen by rounding. Rounding a stored time to a whole millisecond could move an onset
-to the next column and detach the reader's marks keyed on that column (`rhythm.json`). So the
+to the next column and detach the reader's marks keyed on that column (`sheet.json`). So the
 arrays keep what the file holds, and only the wire form (section 4) uses whole milliseconds.
 
-## 3. On disk: `events.json` (`pmn/events_file.py`)
+## 3. On disk: `notes.pmn` (`pmn/notes_file.py`, `pmn/events_file.py`)
 
-`data/audio/<uuid>/matrices/events.json` is still the stored piece (rule 1) and keeps the shape
-every reader knows: `durationSeconds`, `title`, and one object per note with `midiNote`, `start`
-and `end` in seconds (4 decimals), `velocity`, and `hand` / `handGuessed` / `removed` only when
-set. Schema `1.1` adds:
+Since implementation 02, Phase 3, the stored notes of a part (rule 1) are `parts/<partId>/notes.pmn`
+in the project bundle ([../07-database.md](../07-database.md)): the portable file of section 6,
+**version 2** (plan P-5). It is the file of an export too, so nothing is converted on the way out:
+
+```json
+{"format": "aimpromptu-pmn", "version": 2, "lowestMidi": 21, "keys": 88, "frameMs": 10,
+ "timeUnit": "ms", "durationMs": 257060, "title": "Come on Eileen",
+ "notesRevision": 2, "handsRevision": 6, "handsNotesRevision": 0, "audioRevision": 1,
+ "engine": "muscriptor-large", "lagCorrectionMs": -21.0, "nextId": 2219,
+ "id": [0, 1], "key": [39, 43], "onMs": [3070, 3363], "lenMs": [1220, 587],
+ "hand": "rl", "velocity": [64, 64], "removed": [], "handGuessed": []}
+```
+
+Version 2 keeps **every note in the order of the part**, the removed ones too (they can be put
+back): `removed` and `handGuessed` list note ids. Times are milliseconds with up to three decimals:
+the 0.1 ms of the ByteDance pieces and the microseconds of the two hand-made demo pieces convert
+with every number equal (the migration checked all 71,290 notes). `outside` would hold a note
+outside the 88 keys; none exists.
+
+The code still works in the shape the file had before, `events.json` (one object per note with
+`midiNote`, `start` and `end` in seconds, `velocity`, and `hand` / `handGuessed` / `removed` when
+set), and converts at the file boundary (`events_file.read_payload`, `write_payload`). The header is
+the one of schema `1.1` of `events.json`:
 
 | Key | Where | Default for an old file |
 |---|---|---|
@@ -72,14 +91,14 @@ note gets `nextId`, so the id of a deleted note is never given again, not even b
 transcription of the same piece. What makes the revisions go up is plan section 8:
 
 - A new transcription writes `notesRevision` (1, or one more than before), `audioRevision` (the one
-  of `metadata.json` it was made from; a later cut makes the notes stale), `engine` and
+  of `timeline.json` it was made from; a later cut makes the notes stale), `engine` and
   `lagCorrectionMs`, raises `handsRevision` and sets `handsNotesRevision` to 0. The notes it
-  replaces are copied to `history/vN/` first.
+  replaces are copied to the part's history first.
 - Every other writer goes through `pipeline.save_edit`: a notes edit raises `notesRevision`; any
   edit raises `handsRevision`; saving hands that leave every live note with a hand sets
   `handsNotesRevision` to the current `notesRevision`.
-- `rhythm.json` records the `handsRevision` the piano sheet was saved for. A different value in
-  `events.json` makes the Sheet tab stale.
+- `sheet.json` records the `handsRevision` the piano sheet was saved for. A different value in
+  `notes.pmn` makes the Sheet tab stale.
 
 **The saved hands** (D-31, changed in Phase 5). When every live note has a `hand`, the two hand
 matrices are painted from those hands and no inference runs
@@ -129,13 +148,14 @@ groups near-simultaneous onsets (D-04) and drops notes shorter than one column (
 
 | Module | Direction | What | Used by |
 |---|---|---|---|
-| `events_file` | both | `events.json`, and the pipeline's `NoteEvent` list | Storage |
-| `dense` | both | 88 x N `int8`, whole or per hand | The hand split, the `.npz` exports |
+| `events_file` | both | The shape of `events.json`, and the pipeline's `NoteEvent` list; the file boundary | Storage |
+| `notes_file` | both | `notes.pmn`, the `.pmn` version 2, from and to that shape | Storage |
+| `dense` | both | 88 x N `int8`, whole or per hand | The hand split |
 | `coo` | out (and back) | The COO payload of the piano sheet, with NumPy | `PianoMatrix.to_coo_payload` |
 | `columns` | both | The wire form of section 4 | `GET /pieces/{uuid}/notes` and the answer of its `PATCH` |
 | `midi` | both | A Standard MIDI File | Export, and reading MIDI later |
 | `muscriptor` | in | MuScriptor's events, one at a time (`MuScriptorAssembler`) | The engine and the live stream (Phase 4) |
-| `portable` | both | `.pmn.json` | Any future export (D-30) |
+| `portable` | both | `.pmn.json` version 1, the live notes; it reads version 2 as an export | Any export (D-30) |
 
 The COO payload itself is the unchanged contract of
 [`02-notation-spec.md`](../music/notation-logic/02-notation-spec.md).
@@ -157,8 +177,8 @@ the page reads after the `done` frame carry the correction.
 
 **`.pmn.json`.** A header (`format: "aimpromptu-pmn"`, `version`, `lowestMidi: 21`, `keys: 88`,
 `frameMs: 10`, `timeUnit: "ms"`, `durationMs`, `title`) and the columns with `velocity`. `frameMs` is
-the time frame of the shared axis of the audio and the notes (plan section 9.2). Times keep one
-decimal, so the old pieces are exact.
+the time frame of the shared axis of the audio and the notes (plan section 9.2). Version 1 keeps one
+decimal and only the live notes; version 2 is the stored `notes.pmn` of section 3.
 
 ## 7. What the piano sheet request gained
 
@@ -167,16 +187,12 @@ the old and the new code are identical on all 34 pieces. What changed is how it 
 
 - The COO lists are built with NumPy, and the per-cell check is one array operation.
 - The route sends the payload it built instead of letting FastAPI dump it, check it again and
-  encode it, and it no longer reads `events.json` on every request only to see that it exists.
+  encode it, and it no longer reads the notes file on every request only to see that it exists.
 - JSON answers are compressed with gzip at level 5 (`aitu_backend/compression.py`); audio and the
   progress stream are not. The piano sheet answer is about 12 times smaller (56 KB median).
 
-Measured in Phase 2 on the Ubuntu machine, over the 34 pieces: a warm request (hand split already
-cached) went from 24 ms to 19 ms median, and from 46 ms to 29 ms for the largest piece. The first
-request of a piece was still 0.3 to 4.3 s, because the hand split ran. Phase 4 made the
-transcription job warm the split cache, and Phase 5 paints the hand matrices from the saved hands
-when every note has one (about 20 ms).
-The table per piece is in the
+Measured in implementation 08, Phase 2, over the 34 pieces: a warm request went from 24 ms to
+19 ms median; the table per piece is in the
 [Phase 2 report](../implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-implementation-phase-2.md).
 
 ## Where to look deeper
@@ -185,5 +201,6 @@ The table per piece is in the
   [08-plan.md](../implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-plan.md) sections 6
   and 8.
 - The wall-clock model this format serves: [time-model.md](time-model.md).
-- The tests, one round trip per adapter: `aitu-backend/tests/test_pmn.py`.
+- The tests, one round trip per adapter: `aitu-backend/tests/test_pmn.py`; `notes.pmn`:
+  `aitu-backend/tests/test_notes_file.py`.
 - The measurement script: `aitu-backend/scripts/bench_payloads.py`.

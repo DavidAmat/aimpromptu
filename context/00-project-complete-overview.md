@@ -10,7 +10,8 @@ correct the notes and the hands on a piano roll, and the app writes it out as a 
 edit, print and play along with.
 
 Two services in one monorepo, plus a rendering library in a sibling checkout. **Local only**: no
-cloud, no deploy pipeline, no database, no auth. Both services run in containers on an Ubuntu machine
+cloud and no deploy pipeline. Everything is stored in one folder, `.database/` (SQLite and files,
+implementation 02, Phase 3); the login comes in Phase 4. Both services run in containers on an Ubuntu machine
 with an RTX 4090, and the browser on a Mac reaches them through one SSH tunnel
 ([02b-local-setup.md](02b-local-setup.md) section 12).
 
@@ -45,12 +46,15 @@ Full reasoning: [backend/time-model.md](backend/time-model.md). The frozen decis
 ## One stored file
 
 ```
-data/audio/<uuid>/metadata.json             the audio, its cuts and their revision
-data/audio/<uuid>/matrices/events.json      the notes, in seconds, with ids, hands and revisions
-data/audio/<uuid>/matrices/rhythm.json      what the reader decided on the piano sheet
+.database/users/<user>/<layer>/<projectId>/project.json            the project: title, owner, parts
+.database/users/<user>/<layer>/<projectId>/parts/<partId>/notes.pmn      the notes, with ids, hands and revisions
+.database/users/<user>/<layer>/<projectId>/parts/<partId>/sheet.json     what the reader decided on the piano sheet
+.database/users/<user>/<layer>/<projectId>/parts/<partId>/timeline.json  the audio files it plays, and the cuts
+.database/audio/<sha256>.<ext>                                     every audio file, once
 ```
 
-`events.json` is the piano matrix notation in its stored form
+A piece is a **part** of a **project**; the uuid of the routes is the id of the part
+([07-database.md](07-database.md)). `notes.pmn` is the piano matrix notation in its stored form
 ([backend/piano-matrix-notation.md](backend/piano-matrix-notation.md)). Since implementation 08 it
 also holds the hand of each note once the user saves the hand split, and revision numbers that tell
 the app which later step is out of date ([backend/pieces-and-revisions.md](backend/pieces-and-revisions.md)).
@@ -60,7 +64,7 @@ figure of each note, the sheet. That is what makes the column length a query par
 migration — reading the same piece at 20 ms is another request, not another stored artifact, and
 there is no state on disk that can disagree with the screen.
 
-`rhythm.json` holds the only things that are *not* derivable, because a person chose them: which
+`sheet.json` holds the only things that are *not* derivable, because a person chose them: which
 pile is the beat and what it is called, the key, where the piece changes speed, renamed figures,
 beam breaks, notes taken off the page, fingering, trills, grace notes, words under the staff and
 cue-size stretches.
@@ -68,7 +72,7 @@ cue-size stretches.
 ## The flow
 
 ```
-audio in ──▶ cuts ──▶ MuScriptor (GPU, live) ──▶ events.json (seconds) ◀── edits, saved hands
+audio in ──▶ cuts ──▶ MuScriptor (GPU, live) ──▶ notes.pmn (ms) ◀── edits, saved hands
                           │
                           ├─▶ filters, chord grouping on raw times, snap to columns, split hands
                           ├─▶ gaps → peaks → the plot the reader clicks
@@ -151,7 +155,9 @@ events to matrix, jobs, saved hands), `pieces/` (step states and note operations
 matrix notation and its adapters), `matrix/` (frame ↔ ms, gaps, peaks, the ladder,
 passages, figure bands), `hands/` (a beam search with a gated second pass), `notation/` (figures,
 tresillos, trills), `editing/` (splice, compose, staging, history), `storage/` (every path in one
-module), `schemas/` (Pydantic, camelCase on the wire), `main.py` (a thin factory).
+module, the project bundle, the audio store), `db/` (the SQLAlchemy tables, the Alembic revisions,
+the master user, the backup and check tools), `schemas/` (Pydantic, camelCase on the wire),
+`main.py` (a thin factory).
 
 **Frontend** `src/`: `api/` (one module per router), `layout/` (shell and `routes.ts`), `pages/`
 (`ProjectsPage`, and `piece/`: the steps of a project), `components/{piece,time,notes,audio,editing,video}/`,

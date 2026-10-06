@@ -36,10 +36,12 @@ one choice, by proportion.
 
 Every feature in the product obeys these.
 
-**1. `events.json` is the piece.** The engine's output in seconds is the only thing stored; every
+**1. The stored notes are the piece.** The engine's output is the only thing stored; every
 matrix, peak, ladder, figure and sheet is derived from it per request. A feature that changes the
-music changes `events.json`. A feature that changes only how the music *reads* is stored beside it,
-in `rhythm.json`.
+music changes the notes. A feature that changes only how the music *reads* is stored beside them,
+in `sheet.json`. Since implementation 02, Phase 3 the notes are `notes.pmn` (milliseconds), in the
+part's folder of the project bundle; until then they were `events.json` (seconds), which is still
+the shape the code works in.
 
 **2. A column never moves.** Anything keyed by frame stays valid as long as the piece's wall-clock
 length does not change. This is what makes editorial marks survive edits, and it is why a
@@ -52,8 +54,9 @@ some readers think in BPM.
 
 **4. Granularity is gone as a concept.** There is no raw / collapsed / clean / two-hands ladder of
 resolutions, and no collapse or upsample step. `frameMs` is a **view** of the same events, chosen
-per request. A version folder is `v<N>_f<frameMs>`: the version number means the music changed, the
-suffix means you looked at it on a finer clock.
+per request. The old playground named a version folder `v<N>_f<frameMs>`: the version number meant
+the music changed, the suffix meant you looked at it on a finer clock. Implementation 02, Phase 3
+deleted the playground.
 
 **5. The reader's answer beats the rule.** Every automatic choice — figure, beam group, tuplet, hand
 — has a manual override that is applied last and stays local. Any new automatic behaviour ships with
@@ -125,6 +128,6 @@ reasoning, not unfinished work.
 - [`documentation/services/backend/time-matrix.md`](../../documentation/services/backend/time-matrix.md)
   — every schema 2.0 field
 - [`documentation/services/backend/rhythm-and-annotations.md`](../../documentation/services/backend/rhythm-and-annotations.md)
-  — what is stored beside `events.json`
+  — what is stored beside the notes (`sheet.json`)
 - [`decisions.md`](../implementations/01-mvp/03-time-based-concept/decisions.md) — D-01 … D-34, frozen
 - [`CLOSURE.md`](../implementations/01-mvp/03-time-based-concept/CLOSURE.md) — how the refactor closed

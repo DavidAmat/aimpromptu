@@ -542,7 +542,8 @@ Implementation 08 moved AImpromptu from the Mac to Ubuntu, because its transcrip
 | The repositories `aimpromptu` and `vexflow-v2` (side by side), and `muscriptor` | Ubuntu, `/home/david/Documents/projects/music/` |
 | The IDE session (Cursor) and the AI agent | Ubuntu |
 | The backend and the frontend | Ubuntu, in two Docker containers (`compose.yaml` at the repository root) |
-| The piece data (`aitu-backend/data/`, gitignored) | Ubuntu. The Mac's copy, `/Volumes/DevSSD/Documents/projects/music/aimpromptu`, is the state of 2026-09-28 and is no longer updated |
+| Every record and every file of the app: `.database/` at the root of the repository, gitignored | Ubuntu: a link to `/mnt/ssd2/aimpromptu/.database` (implementation 02, Phase 3), mounted into the backend container at `/database`. Backups (`make db-backup`) land beside it |
+| The old piece store (`aitu-backend/data/`, gitignored) | Ubuntu, read only by the migration of Phase 3; the user deletes it after checking the app. The Mac's copy, `/Volumes/DevSSD/Documents/projects/music/aimpromptu`, is the state of 2026-09-28 and is no longer updated |
 | The browser | The Mac, through the tunnel |
 | Headless screenshots and browser checks by the agent | Ubuntu (Playwright's Chromium in `~/.cache/ms-playwright`) |
 
@@ -573,5 +574,6 @@ When an agent gives the user a URL of the app, it gives this tunnel command with
 
 - **A lost GPU in the container.** After the host's service manager reloads (for example after a system update), a running container can lose its GPU: `GET /matrix/engine` says "No CUDA GPUs are available" and a transcription ends at once with no notes. `docker compose up -d --force-recreate backend` gives it back.
 - **Ubuntu has no access to the Mac.** Remote Login is on for the Mac, but Ubuntu has no key or `Host mac` entry for it. Phase 0 of implementation 08 wrote the steps (`context/implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-implementation-phase-0.md`), and they are optional: nothing in the project needs files from the Mac now.
+- **`.database/` on a new machine.** Make the folder and the link before the first `make up`: `mkdir -p /mnt/ssd2/aimpromptu/.database && ln -s /mnt/ssd2/aimpromptu/.database .database`, then `make db-restore FILE=…` to bring a backup. The commands are in `context/04-local-development.md`.
 - **Disk.** The backend image is 10.4 GB (almost all of it PyTorch with its CUDA libraries) and the frontend image 1 GB; both live in Docker's data root on `/mnt/ssd2/docker`.
 - **Commands and troubleshooting** for the containers are in `context/04-local-development.md`.

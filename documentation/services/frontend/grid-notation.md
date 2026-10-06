@@ -100,7 +100,7 @@ is no score model in this app to keep in step with the backend.
 | `annotations.clefChanges` | Where one hand leaves the clef it normally reads |
 | `annotations.ottavas` | Octave brackets, each with the reader's `hidden` — no ink, and the notes stay where the bracket puts them |
 | `onOttavaResize` | Which end of a bracket the reader pulled and where it landed, reported once per gesture. While the tip is held the package paints a `.grid-ottava-drag` overlay over the whole page — the stretch it would cover on every line it crosses, the column the end would drop into, and the columns either side of it. Amber, not the selection purple, and gone on pointer-up |
-| `annotations.fingers`, `.lyrics`, `.trills`, `.passages`, `.graceNotes` | Everything from `rhythm.json` |
+| `annotations.fingers`, `.lyrics`, `.trills`, `.passages`, `.graceNotes` | Everything from the saved reading (`sheet.json`) |
 | `onLyricLayout` | Where the reader dragged a lyric's block and how wide they left it, reported once per gesture |
 | `annotations.evenSpacings` | Runs of one hand set an equal distance apart |
 | `annotationScale` | One number for every mark, not one per kind |
@@ -371,7 +371,7 @@ The last step — reading the drawn pages off the DOM and writing PDF operators 
 
 ## 7. Persistence
 
-The reader's decisions go to the backend as `rhythm.json` through `PUT /time/{uuid}/rhythm`, and
+The reader's decisions go to the backend through `PUT /time/{uuid}/rhythm`, which stores them as `sheet.json`, and
 nothing about the drawing is stored. See
 [../backend/rhythm-and-annotations.md](../backend/rhythm-and-annotations.md).
 

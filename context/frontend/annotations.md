@@ -104,9 +104,9 @@ says there are changes it would keep: a sheet never saved, a change since the la
 sheet. Undoing back to the saved state takes the dot away. A refused save is said in a message at
 the bottom of the window that stays until it is closed.
 
-Everything is stored in one file beside the recording, `rhythm.json` (the *metadata* of the app
-context; Phase 3 moves it into `sheet.json`), and **none of it is in the recording**, except the
-notes taken off the page, which Save also takes out of the matrix. Transcribing the piece again
+Everything is stored in one file beside the notes, `sheet.json` (the *metadata* of the app
+context; `rhythm.json` until implementation 02, Phase 3), and **none of it is in the recording**,
+except the notes taken off the page, which Save also takes out of the matrix. Transcribing the piece again
 clears the file on purpose: its column numbers point at the notes that were there before.
 
 ## Why a column number is a safe address
@@ -120,7 +120,7 @@ inserting a passage, and there marks move with their notes in the same write; se
 ## Where to look deeper
 
 - [`documentation/services/backend/rhythm-and-annotations.md`](../../documentation/services/backend/rhythm-and-annotations.md)
-  — `rhythm.json` field by field
+  — `sheet.json` field by field
 - [rendering.md](rendering.md) — what the renderer does with the marks
 - [flow-page.md](flow-page.md) — the steps of a project around the Sheet step
 - [`../implementations/02-private-web-app/02-implementation-phase-2.md`](../implementations/02-private-web-app/02-implementation-phase-2.md)

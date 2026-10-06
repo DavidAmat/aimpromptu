@@ -1,41 +1,37 @@
-# `data/` — local file store
+# `data/`: the old file store
 
-There is no database. Everything the backend persists lives here, created on app
-startup by `aitu_backend.storage.paths.ensure_data_tree()`.
+Until implementation 02, Phase 3, everything the backend stored was in this folder, as plain files
+with no database. Since Phase 3 the app stores everything in `.database/` at the repository root (a
+SQLite database, the project bundles and the audio store; see
+[context/07-database.md](../../context/07-database.md)). **The app reads and writes nothing here.**
+
+The only code that reads this folder is the migration, `scripts/migrate/to_database.py` (from the
+repository root), which copies each piece into `.database/` and never writes here. `AITU_DATA_DIR`
+points it at another folder.
+
+## What is here
 
 ```text
 data/
-  audio/<uuid>/
-    metadata.json                           alias, source, format, duration
-    original.<ext>                          the ffmpeg-normalized audio
-  playground/<artist_slug>/<track_slug>/
-    metadata_track.json                     names, slugs, version history
-    v1_gsc/
-      metadata.json                         everything needed to re-render this state
-      piano_matrix_v1_gsc.npz               scipy.sparse COO, int8
-  library/
-    tracks/<artist_slug>/<track_slug>/
-      metadata_library_track.json           tags, promotions, rollback pointer
-      piano_matrix_<...>.npz
-    playlists/<playlist_slug>/
-      metadata_library_playlist.json
-  examples/                                 small committed sample artifacts
+  audio/<uuid>/                 one piece per uuid
+    metadata.json               alias, source, format, duration, and the cuts when there are any
+    original.<ext>              the file the user gave
+    normalized.wav              16 kHz mono, the engine's input
+    waveform.json, piece-r<N>.flac/.wav   derived, when present
+    matrices/events.json        the notes (now parts/<partId>/notes.pmn)
+    matrices/rhythm.json        the saved reading (now parts/<partId>/sheet.json)
+    history/vN/                 earlier states (now .database/history/<projectId>/parts/<partId>/vN/)
+    video/                      a Synthesia video and its reading (now .database/tmp/<userId>/<partId>/video/)
+  frame-examples/*.json         the Lab records, committed (now .database/lab/frame-examples/)
+  playground/, library/         the old Piano Library (.npz matrices, promotions, playlists),
+                                empty; its code was deleted in Phase 3
 ```
 
-Folder names come from `schemas/naming.py` (`slugify`, `version_folder`,
-`matrix_filename`); paths come from `storage/paths.py`. Nothing else builds a path.
+The migration makes one project with one part per `audio/<uuid>/`, and the part keeps the uuid as
+its id, so every link to a piece still works. `metadata.json` becomes `project.json` and
+`timeline.json`, and the audio file goes to `.database/audio/<sha256>.<ext>`.
 
-## What is committed
+## When it goes
 
-`metadata*.json` files are small and worth versioning, so they are **not** ignored.
-Payloads are heavy and reproducible, so they are: `data/audio/**` and every `.npz`
-except those under `data/examples/`. See the root `.gitignore`.
-
-## Matrix file format
-
-`scipy.sparse.save_npz` with a COO matrix of `int8`, shape **88 x N** (row = key,
-col = time frame). Stored values are the cell values: `1` onset, `-1` sustain,
-absent = silence. Dense grids are never persisted — dense exists only transiently
-for JSON export and import. See `storage/matrix_store.py`.
-
-If this ever gets containerized, the tree maps 1:1 onto a MinIO bucket. Not now.
+The user deletes this folder after checking the app on `.database/` (a human step at the end of
+Phase 3). Phase 15 removes the code that reads it (`paths.data_dir`, the migration).

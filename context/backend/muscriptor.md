@@ -36,7 +36,7 @@ POST /matrix/transcribe ──▶ the GPU queue (one job at a time) ──▶ Mu
         │                                                                │
         │  202 + job id                       chunk messages, live ◀─────┤
         ▼                                                                ▼
-GET /matrix/progress/{jobId}  (SSE)           lag correction ──▶ events.json ──▶ done
+GET /matrix/progress/{jobId}  (SSE)           lag correction ──▶ notes.pmn ──▶ done
 ```
 
 - **One model per process.** `transcription/models.py` keeps one loaded model per size, device and
@@ -76,13 +76,13 @@ as they are found, so the Notes tab draws the rectangles while the transcription
 
 ## 4. What it stores
 
-`events.json` of the piece, in the piano matrix notation's stored form
-([piano-matrix-notation.md](piano-matrix-notation.md)): one note per rectangle with its id, MIDI key,
-start and end in seconds, and velocity 64 (MuScriptor has no loudness). The header records `engine`
+`notes.pmn` of the part (until implementation 02, Phase 3, `events.json`), in the piano matrix
+notation's stored form ([piano-matrix-notation.md](piano-matrix-notation.md)): one note per rectangle
+with its id, key, onset and length in milliseconds, and velocity 64 (MuScriptor has no loudness). The header records `engine`
 (`muscriptor-large`), `lagCorrectionMs`, the `audioRevision` the notes were made from, and raises the
 revisions, so the Hands and Sheet steps know they must be done again
 ([pieces-and-revisions.md](pieces-and-revisions.md)). The previous notes and reading are copied into
-`history/vN/` first.
+`.database/history/<projectId>/parts/<partId>/vN/` first.
 
 ## 5. Settings
 

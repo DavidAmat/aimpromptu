@@ -16,7 +16,7 @@ from sqlalchemy import select
 from aitu_backend.audio import store
 from aitu_backend.db.database import session
 from aitu_backend.db.models import ArtistName, PrivateVersion, Project, Song, SongArtist
-from aitu_backend.db.tools import check
+from aitu_backend.db.tools import check, reindex
 from aitu_backend.storage import bundle, paths
 from aitu_backend.transcription import pipeline
 
@@ -154,6 +154,10 @@ def test_a_piece_keeps_its_notes_cuts_sheet_and_history(
     data, _ = tree
     metadata = store.read_metadata(SEED)
     assert metadata.alias == "Superestrella" and metadata.audio_revision == 1
+    # "When it changed" is the newest file of the old folder, not the day it was migrated.
+    newest = max(path.stat().st_mtime for path in (data / "audio" / SEED).iterdir())
+    assert bundle.read_project(SEED).updated_at.timestamp() == pytest.approx(newest)
+    assert paths.project_json_path(SEED).stat().st_mtime == pytest.approx(newest)
     assert metadata.cuts == [(0, 10), (290, 300)]
     assert metadata.source_url == f"https://www.youtube.com/watch?v={SEED[:4]}"
     stored = pipeline.load_note_events(SEED)
@@ -234,3 +238,18 @@ def test_the_source_is_never_written(tree: tuple[Path, Path]) -> None:
     before = {path: path.stat().st_mtime_ns for path in data.rglob("*")}
     load_script().migrate(*tree)
     assert {path: path.stat().st_mtime_ns for path in data.rglob("*")} == before
+
+
+def test_reindex_writes_the_rows_again_from_the_bundles(tree: tuple[Path, Path]) -> None:
+    load_script().migrate(*tree)
+    with session() as db:
+        steps = {row.id: row.step for row in db.scalars(select(Project))}
+        for row in db.scalars(select(Project)):
+            db.delete(row)
+    assert check().problems  # three bundles with no row
+    reindex()
+    assert check().problems == []
+    with session() as db:
+        assert {row.id: row.step for row in db.scalars(select(Project))} == steps
+        assert db.get(Project, SEED).layer == "private"
+    assert store.read_metadata(SEED).cuts == [(0, 10), (290, 300)]

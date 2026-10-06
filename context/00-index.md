@@ -32,7 +32,7 @@ assumes.
 | [04-local-development.md](04-local-development.md) | Run it in containers or natively, open it from the Mac, the checks, the troubleshooting table |
 | [05-deployment.md](05-deployment.md) | STUB: POC local-only; no deploy flow yet |
 | *(skipped)* `06-*-infrastructure.md` | No cloud provider; POC is local-only |
-| [07-database.md](07-database.md) | No database: the file store, what is kept and why so little |
+| [07-database.md](07-database.md) | `.database/`: SQLite and the project bundles, the audio store by hash, what is kept and why so little, backup and check |
 | *(planned)* `08-security.md` | The login, the session cookie and the rights table; written by Phase 4 of 02 |
 | [09-coding-conventions.md](09-coding-conventions.md) | Style grounded in ESLint and Python/uv idioms; LLM agent config inventory |
 
@@ -236,7 +236,7 @@ Reading a piano roll video into the same `events.json` the transcription model w
 | [../documentation/services/backend/hand-inference-second-pass.md](../documentation/services/backend/hand-inference-second-pass.md) | The gated repair pass over the hand split |
 | [../documentation/services/backend/rhythm-and-annotations.md](../documentation/services/backend/rhythm-and-annotations.md) | `rhythm.json` field by field: everything a reader decided |
 | [../documentation/services/backend/editing-and-compose.md](../documentation/services/backend/editing-and-compose.md) | The replacement splice, and the one place a piece may change length |
-| [../documentation/services/backend/paths-and-data.md](../documentation/services/backend/paths-and-data.md) | The storage tree: every path, `v<N>_f<frameMs>`, staging and history |
+| [../documentation/services/backend/paths-and-data.md](../documentation/services/backend/paths-and-data.md) | `.database/`: every path, the bundle, the timeline, every table, the migration, backup and check |
 | [../documentation/deprecated/schemas.md](../documentation/deprecated/schemas.md) | Deprecated: the models of the deleted text-notation MVP |
 | [../documentation/deprecated/sequence-logic.md](../documentation/deprecated/sequence-logic.md) | Deprecated: `matrix/text_notation.py`, now only a builder of test matrices |
 

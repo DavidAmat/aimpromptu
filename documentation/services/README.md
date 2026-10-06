@@ -7,14 +7,14 @@ Code-level detail per service. Overviews in [context/backend/](../../context/bac
 
 | File | Topic |
 |------|-------|
-| [endpoints.md](backend/endpoints.md) | The whole HTTP surface: `/audio`, `/matrix`, `/time`, `/audio/{uuid}/edits`, `/library`, `/youtube` |
+| [endpoints.md](backend/endpoints.md) | The whole HTTP surface: `/audio`, `/matrix`, `/pieces`, `/time`, `/audio/{uuid}/edits`, `/projects`, `/youtube` |
 | [time-matrix.md](backend/time-matrix.md) | Schema 2.0 field reference: the envelope, the figure ladder, passages, printed notes |
 | [events-to-sheet.md](backend/events-to-sheet.md) | The derivation path: one stored file to a drawn staff, and why the steps are in that order |
 | [transcription-pipeline.md](backend/transcription-pipeline.md) | Engines, thresholds, the artifact and leakage filters, the measurement behind each number |
 | [hand-inference-second-pass.md](backend/hand-inference-second-pass.md) | The gated repair pass over the hand split |
-| [rhythm-and-annotations.md](backend/rhythm-and-annotations.md) | `rhythm.json`: everything a reader decided that is not derivable |
+| [rhythm-and-annotations.md](backend/rhythm-and-annotations.md) | `sheet.json` (was `rhythm.json`): everything a reader decided that is not derivable |
 | [editing-and-compose.md](backend/editing-and-compose.md) | The replacement splice, and the one place a piece may change length |
-| [paths-and-data.md](backend/paths-and-data.md) | The storage tree: every path, `v<N>_f<frameMs>`, staging and history |
+| [paths-and-data.md](backend/paths-and-data.md) | The storage tree: `.database/`, the project bundle, the audio store, staging and history |
 | [schemas.md](../deprecated/schemas.md) | Deprecated: the models of the deleted text-notation MVP |
 | [sequence-logic.md](../deprecated/sequence-logic.md) | Deprecated: `matrix/text_notation.py`, now a builder of test matrices |
 

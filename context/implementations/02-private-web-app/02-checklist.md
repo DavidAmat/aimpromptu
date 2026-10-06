@@ -76,25 +76,25 @@ The plan's section 3.
 ## [x] Story 2.4: Documentation
 - [x] Task 2.4.1 `annotations.md` updated and split under 200 lines a page.
 
-# [ ] Phase 3: The `.database/` folder, the tables, the project bundle, the migration
+# [x] Phase 3: The `.database/` folder, the tables, the project bundle, the migration
 
-## [ ] Story 3.1: The folder
-- [ ] Task 3.1.1 `AITU_DATABASE_DIR`, the link to `/mnt/ssd2/aimpromptu/.database`, `.gitignore`, the Compose mount, `VERSION`.
-- [ ] Task 3.1.2 SQLAlchemy and Alembic; every table of plan section 8.6.
+## [x] Story 3.1: The folder
+- [x] Task 3.1.1 `AITU_DATABASE_DIR`, the link to `/mnt/ssd2/aimpromptu/.database`, `.gitignore`, the Compose mount, `VERSION`.
+- [x] Task 3.1.2 SQLAlchemy and Alembic; every table of plan section 8.6.
 
-## [ ] Story 3.2: The bundle
-- [ ] Task 3.2.1 `notes.pmn` version 2 and `sheet.json` (adapters and tests).
-- [ ] Task 3.2.2 The audio store by hash, `audio_refs`, the timeline with cuts as segments, the cached joined audio.
-- [ ] Task 3.2.3 Every writer moved to the bundle through `storage/paths.py`; the routes keyed by uuid work on parts.
-- [ ] Task 3.2.4 The old `/library` router and its storage modules deleted.
+## [x] Story 3.2: The bundle
+- [x] Task 3.2.1 `notes.pmn` version 2 and `sheet.json` (adapters and tests).
+- [x] Task 3.2.2 The audio store by hash, `audio_refs`, the timeline with cuts as segments, the cached joined audio.
+- [x] Task 3.2.3 Every writer moved to the bundle through `storage/paths.py`; the routes keyed by uuid work on parts.
+- [x] Task 3.2.4 The old `/library` router and its storage modules deleted.
 
-## [ ] Story 3.3: The migration
-- [ ] Task 3.3.1 `scripts/migrate/to_database.py` (plan section 8.9), tested on a fixture tree.
-- [ ] Task 3.3.2 Run on a copy, then for real; the report with counts and sizes.
-- [ ] Task 3.3.3 `make db-backup`, `db-restore`, `db-check`, `db-reindex`.
+## [x] Story 3.3: The migration
+- [x] Task 3.3.1 `scripts/migrate/to_database.py` (plan section 8.9), tested on a fixture tree.
+- [x] Task 3.3.2 Run on a copy, then for real; the report with counts and sizes.
+- [x] Task 3.3.3 `make db-backup`, `db-restore`, `db-check`, `db-reindex`.
 
-## [ ] Story 3.4: Documentation
-- [ ] Task 3.4.1 `07-database.md` and `paths-and-data.md` rewritten; `piano-matrix-notation.md`, `pieces-and-revisions.md`, `backend/README.md`, `02-tech-stack.md`, `04-local-development.md` updated.
+## [x] Story 3.4: Documentation
+- [x] Task 3.4.1 `07-database.md` and `paths-and-data.md` rewritten; `piano-matrix-notation.md`, `pieces-and-revisions.md`, `backend/README.md`, `02-tech-stack.md`, `04-local-development.md` updated.
 
 # [ ] Phase 4: Users, login and the home network
 

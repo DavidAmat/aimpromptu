@@ -1,14 +1,17 @@
 > Context: [context/backend/time-model.md](../../../context/backend/time-model.md) ·
 > [context/frontend/annotations.md](../../../context/frontend/annotations.md)
 
-# `rhythm.json` — the reader's own decisions
+# `sheet.json` — the reader's own decisions
 
 Everything else about a score is derived. The columns come from the recorded notes, the figures come
 from the ladder, the beams come from the figures. This file holds the only things that are **not**
 derived, because a person chose them and nothing in the recording implies them.
 
 Model: `aitu-backend/src/aitu_backend/schemas/rhythm.py`, class `SavedRhythm`.
-Stored at `data/audio/<uuid>/matrices/rhythm.json`.
+Stored at `parts/<partId>/sheet.json` in the project bundle under `.database/` (the uuid of the
+routes is the part id; full layout in [`paths-and-data.md`](paths-and-data.md)). Until
+implementation 02, Phase 3 the same content was `data/audio/<uuid>/matrices/rhythm.json`; the routes
+kept the old name.
 Routes: `GET`, `PUT` and `DELETE /time/{uuid}/rhythm`.
 
 **One per piece.** A second reading replaces the first, because a rhythm is a decision rather than a
@@ -60,6 +63,8 @@ numbers it is holding still refer to what they referred to.
 | `annotation_scale` | `annotationScale` | `0.3 < f ≤ 2.0` | How large marks over and under the staff are drawn. |
 | `line_spacing` | `lineSpacing` | `0 ≤ f ≤ 240`, optional | White space between the staves of one line and the staves of the next, in pixels. |
 | `note_spacing` | `noteSpacing` | `0 ≤ f ≤ 48`, optional | Extra pixels charged to every column carrying a note, and to no silence. The twin of `line_spacing`, one axis over. |
+| `lyrics_pool` | `lyricsPool` | `string[]` | The lyrics pasted in the Lyrics tab and not placed on the sheet yet, one line per piece, in order (plan section 11.5). Added in Phase 3, filled from Phase 7. |
+| `figures_from` | `figuresFrom` | `FigureName?` | The figure the next figures transposition starts from: the last one it went to (plan section 11.4). `null` starts from negra. Added in Phase 3, set from Phase 7. |
 | `saved_at` | `savedAt` | datetime | |
 
 `hand` is not part of the sheet; it says which hand's piles the ladder is measured from, so a
@@ -211,7 +216,7 @@ Several on one chord print stacked in ascending order, which is how fingering is
 | `row` | `row` | `0…87` |
 
 A stretch printed as one held note with `tr` over it. The alternations are all still in
-`events.json`, playback still sounds every one of them (D-29), and removing the mark prints them
+`notes.pmn`, playback still sounds every one of them (D-29), and removing the mark prints them
 again — what the mark changes is only which noteheads are drawn.
 
 `row` is the note that **stays**: the lower of the two, because `tr` means "alternate with the note
@@ -228,7 +233,7 @@ underneath cannot silently move the mark to a different pitch.
 | `row` | `row` | `0…87` — the grace note's own pitch |
 | `kind` | `kind` | `"acciaccatura"` \| `"appoggiatura"` |
 
-A mark and **not an event**. It is not in `events.json`, it takes no column, nothing plays it, and
+A mark and **not an event**. It is not in `notes.pmn`, it takes no column, nothing plays it, and
 no figure anywhere is measured differently because of it — which is exactly why it can be added and
 removed freely.
 

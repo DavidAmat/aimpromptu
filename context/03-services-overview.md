@@ -9,10 +9,11 @@ them through one SSH tunnel to the frontend's port; the frontend passes `/api` t
 
 | Property | Value |
 |---|---|
-| Stack | Python 3.12, FastAPI, Pydantic 2, uvicorn, numpy, scipy, PyTorch with CUDA |
+| Stack | Python 3.12, FastAPI, Pydantic 2, uvicorn, numpy, scipy, PyTorch with CUDA, SQLAlchemy 2 and Alembic over SQLite |
 | Module | `aitu_backend` under `src/aitu_backend/` |
 | Container | `backend` (`aimpromptu-backend:dev`), the GPU reserved, published on `127.0.0.1:8765` |
 | Natively | `127.0.0.1:8765` (`AITU_HOST` / `AITU_PORT`) |
+| Data | `.database/` at the repository root (`AITU_DATABASE_DIR`), mounted at `/database` in the container: [07-database.md](07-database.md) |
 | Role | Run MuScriptor on the GPU, store the recorded notes, keep the revisions of each step, derive the score |
 
 **Packages:**
@@ -28,12 +29,13 @@ them through one SSH tunnel to the frontend's port; the frontend passes `/api` t
 | `hands/` | Which hand plays each onset: a beam search with a gated second pass |
 | `notation/` | Figures, tresillos, trills |
 | `editing/` | The replacement splice, composing, staging, history |
-| `storage/` | Every filesystem path in one module; playground, library, playlists |
+| `storage/` | Every filesystem path in one module; the project bundle, the audio store |
+| `db/` | The SQLite tables, the Alembic migrations, the master user, the backup, check and reindex tools |
 | `schemas/` | Pydantic contracts, camelCase on the wire, mirrored in TypeScript |
 
-**Endpoints:** `/health`, `/audio`, `/matrix`, `/pieces`, `/time`, `/audio/{uuid}/edits`, `/library`,
+**Endpoints:** `/health`, `/audio`, `/matrix`, `/pieces`, `/time`, `/audio/{uuid}/edits`, `/projects`,
 `/youtube`, `/video`, `/frame-examples`. (The text-notation MVP `/scores` and `/sequence` was deleted
-in implementation 02, Phase 1.) Table in
+in implementation 02, Phase 1, and the old Piano Library router `/library` in Phase 3.) Table in
 [backend/api.md](backend/api.md), detail in
 [`documentation/services/backend/endpoints.md`](../documentation/services/backend/endpoints.md).
 
@@ -82,7 +84,8 @@ Browser on the Mac ──ssh -L 5173──▶ frontend container (Vite, :5173)
     GET  /time/{id}/score         the drawable payload      → the Sheet tab
                                       ▼
                          backend container (:8765, the GPU)
-    reads and writes data/audio/<uuid>/metadata.json, matrices/events.json, matrices/rhythm.json
+    reads and writes .database/: aitu.sqlite, the project bundles (project.json,
+    parts/<id>/notes.pmn, sheet.json, timeline.json) and audio/<sha256>.<ext>
                                       ▼
 TimeScorePayload ──▶ TimeScoreView ──▶ @aimpromptu/grid-notation ──▶ SVG
 ```

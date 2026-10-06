@@ -7,6 +7,20 @@ piano sheet must never be shown as if it were current after a change of a note o
 says how the backend records what each step was made from, and how it answers which steps are
 ready. The code is `aitu-backend/src/aitu_backend/pieces/` and `api/pieces.py`.
 
+## 0. A piece is a part of a project
+
+Since implementation 02, Phase 3, a piece is a **part** of a **project** (plan sections 8.3 and
+8.8). A normal project has one part; an integrated playlist (Phase 10) has one per sub-song, each
+with its own notes, sheet, timeline, revisions, steps and staleness, exactly as a piece had before.
+The uuid of every route of this page is the **id of a part**, and a project made by this app has
+the id of its first part, so a project of one part has one uuid. A migrated piece kept its uuid
+(plan P-6).
+
+Each project has an **owner** and a **layer** (Personal Vault, Private Library, Public Library),
+recorded in the `projects` table; its part finds them through the `parts` table
+(`storage/locate.py`). Until the login (Phase 4) every request acts as the master user. Where the
+files are: [../07-database.md](../07-database.md).
+
 ## 1. The revisions
 
 A **revision** is a number that goes up by one each time the thing it counts changes. Each step
@@ -14,13 +28,15 @@ records the revision of the step before it when it is saved:
 
 | Stored in | Number | Goes up when | Also records |
 |---|---|---|---|
-| `metadata.json` | `audioRevision` | Cuts that change are saved on the Audio tab | - |
-| `events.json` header | `notesRevision` | A transcription finishes, or a notes edit is saved (move, resize, add, delete, restore) | `audioRevision`: the one the notes were transcribed from |
-| `events.json` header | `handsRevision` | **Any** change of `events.json`: a transcription, a notes edit, a hand | - |
-| `events.json` header | `handsNotesRevision` | A hand edit leaves every live note with a hand; a new transcription sets it to 0 | - |
-| `rhythm.json` | `handsRevision` | Set by the backend when the reading is saved (`PUT /time/{uuid}/rhythm`) | the `handsRevision` the piano sheet was saved for |
+| `timeline.json` | `audioRevision` | Cuts that change are saved on the Audio tab | - |
+| `notes.pmn` header | `notesRevision` | A transcription finishes, or a notes edit is saved (move, resize, add, delete, restore) | `audioRevision`: the one the notes were transcribed from |
+| `notes.pmn` header | `handsRevision` | **Any** change of `notes.pmn`: a transcription, a notes edit, a hand | - |
+| `notes.pmn` header | `handsNotesRevision` | A hand edit leaves every live note with a hand; a new transcription sets it to 0 | - |
+| `sheet.json` | `handsRevision` | Set by the backend when the reading is saved (`PUT /time/{uuid}/rhythm`) | the `handsRevision` the piano sheet was saved for |
 
-Every writer of `events.json` goes through one function, `pipeline.save_edit`, which raises the
+The three files are in the part's folder of the project bundle (`parts/<partId>/`); before Phase 3
+they were `metadata.json`, `matrices/events.json` and `matrices/rhythm.json`. Every writer of
+`notes.pmn` goes through one function, `pipeline.save_edit`, which raises the
 numbers. `handsRevision` is therefore the finest version of the file, and the only number the piano
 sheet compares with.
 
@@ -34,9 +50,9 @@ and every revision.
 | Step | Ready when | Otherwise |
 |---|---|---|
 | Source, Audio | The audio exists | - |
-| Notes | `events.json` exists and its `audioRevision` is the current one | `running` while a transcription job runs; `stale` after the cuts changed ("Transcribe again") |
+| Notes | `notes.pmn` exists and its `audioRevision` is the current one | `running` while a transcription job runs; `stale` after the cuts changed ("Transcribe again") |
 | Hands | Every live note the piano sheet can place has a hand | `missing`, "Predict hands first", or "N notes have no hand" |
-| Sheet | `rhythm.json`'s `handsRevision` equals `events.json`'s | `missing` (no reading: the Sheet tab draws the sheet from the defaults, and **Save** makes it ready), or `stale`: the Sheet tab opens with a banner and asks for **Write the sheet** again |
+| Sheet | `sheet.json`'s `handsRevision` equals `notes.pmn`'s | `missing` (no reading: the Sheet tab draws the sheet from the defaults, and **Save** makes it ready), or `stale`: the Sheet tab opens with a banner and asks for **Write the sheet** again |
 
 A step after one that is not ready is disabled, except a stale Sheet tab, which opens with its
 banner. Two details matter:
@@ -54,7 +70,7 @@ banner. Two details matter:
 | Saved change | Notes | Hands | Sheet |
 |---|---|---|---|
 | The selected region (cuts) | stale: transcribe again (decision Q-2) | stale | stale |
-| A new transcription | new | missing | missing (the reading goes to `history/vN/`) |
+| A new transcription | new | missing | missing (the reading goes to the part's history) |
 | A rectangle moved, resized or deleted | - | still valid | stale |
 | A rectangle added | - | the new note gets a hand from the quick rule, marked as guessed | stale |
 | A hand changed on the Hands tab | - | - | stale |
@@ -75,14 +91,14 @@ The Hands tab draws it with a dashed border until the user confirms it or predic
 | `POST /pieces/{uuid}/hands/predict/job` | The same as a job with real progress on `GET /matrix/progress/{jobId}`. About 1 s for a 3-minute piece |
 
 The cuts have their own routes, `GET` and `PUT /audio/{uuid}/cuts`, with `baseRevision` too. Once
-cuts are saved, `GET /audio/{uuid}/file` serves the edited audio (`piece-r<N>.flac`), which is in the
-time of the notes; the original stays on disk for the Audio tab.
+cuts are saved, `GET /audio/{uuid}/file` serves the edited audio (`piece-r<N>.flac` in the part's
+cache), which is in the time of the notes; the stored file stays unchanged for the Audio tab.
 
 ## 5. The saved hands (decision D-31, changed)
 
 Before implementation 08 the hand split was computed again on every request and never shown. Now it
 runs once, when the user presses **Predict hands**, and the result is saved as a hand per note in
-`events.json`. When every live note has a hand, the piano sheet paints the two hand matrices from
+`notes.pmn`. When every live note has a hand, the piano sheet paints the two hand matrices from
 those hands instead of running the inference: the same cells on all 34 pieces of the library, in
 17 ms instead of 670 ms (median). The note under D-31 in
 [`decisions.md`](../implementations/01-mvp/03-time-based-concept/decisions.md) explains the sequence.
@@ -93,7 +109,8 @@ sheet draws it, then applies the move.
 
 ## Where to look deeper
 
-- The format of `events.json` and the wire columns: [piano-matrix-notation.md](piano-matrix-notation.md)
+- The format of `notes.pmn` and the wire columns: [piano-matrix-notation.md](piano-matrix-notation.md)
+- Where the files are: [../07-database.md](../07-database.md)
 - The engine that writes the notes: [muscriptor.md](muscriptor.md)
 - Every field of every route: [`documentation/services/backend/endpoints.md`](../../documentation/services/backend/endpoints.md)
 - The design and its tests: [plan section 8](../implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/08-plan.md),

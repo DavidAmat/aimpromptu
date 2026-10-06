@@ -35,16 +35,24 @@ src/aitu_backend/
   hands/          # which hand plays each onset: a beam search + a gated second pass
   notation/       # figures, tresillos, trills
   editing/        # the replacement splice, composing, staging, history
-  storage/        # every filesystem path in one module; playground, library
+  storage/        # every filesystem path in one module; the project bundle, the audio store
+  db/             # SQLAlchemy models, Alembic migrations, the master user, backup/check/reindex
   schemas/        # Pydantic models (camelCase on the wire)
   progress.py     # ProgressReporter: one code path for tqdm and SSE
   config.py       # the AITU_* settings
   main.py         # thin app factory
 ```
 
-**One file is stored per piece** — `data/audio/<uuid>/matrices/events.json`, the engine's notes in
-seconds, with ids, hands and revisions — plus `rhythm.json`, what the reader decided. Everything else is derived on every request,
+**One file of notes is stored per part:** `parts/<partId>/notes.pmn` in the project bundle, the
+engine's notes with ids, hands and revisions. Beside it are `sheet.json`, what the reader decided,
+and `timeline.json`, which audio the part plays. Everything else is derived on every request,
 which is why the column length is a query parameter rather than a migration.
+
+Everything the app stores is in `.database/` at the repository root (`AITU_DATABASE_DIR` moves it):
+the SQLite file `aitu.sqlite`, the project bundles, and the audio store `audio/<sha256>.<ext>`.
+Layout and the `make db-backup`, `db-restore`, `db-check` and `db-reindex` targets:
+[context/07-database.md](../context/07-database.md). `data/` is the store before implementation 02,
+Phase 3, read only by the migration ([data/README.md](data/README.md)).
 
 ## Development
 
@@ -53,17 +61,19 @@ uv sync            # install, including the dev dependency group
 make hooks         # one-time: uv run pre-commit install
 make lint          # flake8 + mypy
 make format        # black
-make test          # pytest (in the container: make test-backend from the root) — 1,039 passing,
+make test          # pytest (in the container: make test-backend from the root) — 1,023 passing,
                    # 1 known failure (test_the_worked_example_at_00_46_prints_three_equal_corcheas)
 ```
 
-`pyproject.toml` sets `pythonpath = ["src", "."]`. The `"."` is load-bearing:
-`tests/test_migration.py` imports `scripts.migrate_to_time_matrix` and `scripts/` has no
-`__init__.py`, so without it collection fails before a single test runs.
+`pyproject.toml` sets `pythonpath = ["src", "."]`. The `"."` was needed by
+`tests/test_migration.py`, which imported `scripts.migrate_to_time_matrix`; implementation 02,
+Phase 3 deleted both. Every test has its own temporary `.database/` (`tests/conftest.py`), so the
+tests never touch the real one.
 
 Pre-commit config lives at the repo root (`../.pre-commit-config.yaml`) and runs
-black, flake8 and mypy over `aitu-backend/`. Commits go straight to `master`, so the
-hooks are the only gate — install them before your first commit.
+black, flake8 and mypy over `aitu-backend/`. Each phase of implementation 02 is built on its own
+`feat/phase-N` branch and merged into `master` after the user's check; the hooks are the only
+automatic gate, so install them before your first commit.
 
 ### Progress convention
 

@@ -8,7 +8,10 @@ staff you can read and correct, and prints it.
 The way in is the **Piece** page: five tabs, Source, Audio, Notes, Hands and Sheet, each enabled
 once the step before it is ready ([context/frontend/flow-page.md](context/frontend/flow-page.md)).
 
-Local development only: no hosted deploy, no accounts, no database.
+Local development only: no hosted deploy, and no login yet (every request acts as one master user
+until implementation 02, Phase 4). Everything the app stores is in `.database/` at the repository
+root: a SQLite database, the projects and the audio files. `make db-backup` copies it while the app
+runs ([context/07-database.md](context/07-database.md)).
 
 ## What makes it different
 

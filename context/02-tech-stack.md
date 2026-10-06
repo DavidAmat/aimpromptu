@@ -69,20 +69,20 @@ Locked by the organizer for `context/implementations/01-mvp/01-epics-master-plan
 | Data models | Pydantic everywhere on the backend; camelCase wire format via aliases |
 | Progress | `tqdm` for any >10 s processing, mirrored to the UI via a ProgressReporter + SSE |
 | API | Plain FastAPI endpoints; functional over best-practice. Containers since implementation 08 |
-| Matrix persistence | `scipy.sparse` COO int8 saved as compressed `.npz` (`save_npz`); dense form only transient; separate files per hand. **Only `events.json` and `rhythm.json` are stored per piece** — every matrix is derived per request |
+| Matrix persistence | No matrix is stored: **only `notes.pmn` (the notes, the portable `.pmn` version 2) and `sheet.json` (the reader's decisions) are stored per part**, and every matrix is derived per request. The `.npz` files of the old Piano Library were deleted in implementation 02, Phase 3 |
 | Piano transcription | **MuScriptor `large`** since implementation 08: the only engine the user can choose, on the GPU, float16, one chunk at a time, piano only ([backend/muscriptor.md](backend/muscriptor.md)). Before it, `piano_transcription_inference` (ByteDance, onset threshold **0.5**) was the default and **Transkun** a second choice; both stay in the code behind `transcription/engine.py` and are refused by the route. Spotify Basic Pitch cannot install on Python 3.12 |
 | Audio tooling | `ffmpeg` (prerequisite) for conversion/normalization, `yt-dlp` (run as `python -m yt_dlp`) for YouTube |
 | Accepted audio | `.mp3 .aac .m4a .wav .webm .ogg` — webm/ogg for browser recordings (Chrome records only webm/opus; ffmpeg converts server-side) |
 | Frontend components | MUI (+ MUI X) standard across all pages; Aceternity UI only decorative; palette from `context/colors/color-palette.md` as `palette.ts` |
 | Notation rendering | `@aimpromptu/grid-notation` in the browser, engraving the matrix directly. Frame columns — not measures, voices or accumulated ticks — are the horizontal source of truth, so the two hands cannot drift apart. The backend chooses every note's printed figure and hands it over with the matrix; it builds no score document and draws nothing |
 | Time model | A column is a fixed number of milliseconds (`frameMs`, 40 by default) and carries no rhythmic meaning. No BPM, no granularity, no bar lines. See [backend/time-model.md](backend/time-model.md) |
-| Storage | Local filesystem under `aitu-backend/data/` (playground/library/audio trees), on the Ubuntu machine, mounted into the backend container |
+| Storage | `.database/` (implementation 02, plan section 8): **SQLite** for the records (users, projects, the music library, requests), through **SQLAlchemy 2** models with **Alembic** migrations (`aitu_backend/db/`), and folders beside it for the audio files (stored once, by SHA-256) and the project bundles. On the Ubuntu machine a link to `/mnt/ssd2/aimpromptu/.database`, mounted into the backend container at `/database`. See [07-database.md](07-database.md) |
 | GPU | The RTX 4090 of the Ubuntu machine (`AITU_DEVICE=cuda` in the container); natively the default stays `cpu` |
 
 ## Not used (POC)
 
 - Cloud provider SDKs
-- SQL/NoSQL database drivers
+- Database servers (SQLite is a file in `.database/`; the SQLAlchemy models can move to Postgres in the production version)
 - Auth libraries (OAuth, JWT, etc.)
 
 ## Where to look deeper

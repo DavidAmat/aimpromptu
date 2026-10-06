@@ -35,8 +35,29 @@ images hold the packages, and the frontend image holds its own build of the pian
 used at once.
 
 **Variables.** Compose reads `.env` beside `compose.yaml` (copy `.env.example`, which lists every
-variable with its default). Nothing is required on Ubuntu: `HF_TOKEN` is exported in the shell, the
-data folder defaults to `aitu-backend/data`, and the Hugging Face cache to `/mnt/ssd2/hf/data/hub`.
+variable with its default). Nothing is required on Ubuntu: `HF_TOKEN` is exported in the shell,
+`.database/` is the link at the root of the repository (mounted at `/database` in the backend), the
+master user is `master` unless `AITU_MASTER_USERNAME` says otherwise, and the Hugging Face cache is
+`/mnt/ssd2/hf/data/hub`.
+
+**`.database/`**, where every record and every file of the app is ([07-database.md](07-database.md)).
+On a new machine, make the folder before the first `make up` (Docker would make a missing one as
+root; `make up` makes a plain folder when nothing is there):
+
+```bash
+mkdir -p /mnt/ssd2/aimpromptu/.database && ln -s /mnt/ssd2/aimpromptu/.database .database
+```
+
+| Command (on the host, from the repository root) | Does |
+|---|---|
+| `make db-backup` | `.database-YYYYMMDD-HHMMSS.tar.zst` beside `.database/`; safe while the app runs |
+| `make db-restore FILE=.database-….tar.zst` | Into an empty `.database/`; then `make up` |
+| `make db-check` | The tables against the bundles and the audio store (`HASHES=1` hashes every file) |
+| `make db-reindex` | The rows of the projects and the audio again, from the bundles on disk |
+
+They run with the local environment (`uv run --no-sync`), because they need `tar` with zstd, which
+the image does not have. The tables reach the newest Alembic revision by themselves when the backend
+starts.
 
 ## 2. Open the app from the Mac
 

@@ -1,6 +1,6 @@
 > Context: [context/backend/time-model.md](../../../context/backend/time-model.md)
 
-# From `events.json` to a drawn sheet
+# From the stored notes (`notes.pmn`) to a drawn sheet
 
 One stored file becomes a printed staff. This page follows that path step by step, names the module
 each step lives in, and says why each step is where it is — several of the orderings were arrived at
@@ -14,7 +14,7 @@ A transcription is expensive: tens of seconds of model inference on a five-minut
 Everything after it is arithmetic. So the expensive result is stored and **nothing else is**:
 
 ```text
-events.json          the engine's note events, in seconds          KEPT FOREVER
+notes.pmn            the engine's note events, in milliseconds     KEPT FOREVER
   │
   ├─ the matrix at 40 ms      built per request
   ├─ the gap distribution     built per request
@@ -30,11 +30,13 @@ This is what makes `frameMs` a **query parameter instead of a migration**. Readi
 disagree with what the screen shows. The cost is a second or two per request on a long piece, and
 what it buys is a system with no stale state in it.
 
-`events.json` holds the real onsets and releases in seconds, before any grid was involved, and it is
-the only thing here that cannot be recreated (D-03). Every measurement reads it (D-07).
+`notes.pmn` holds the real onsets and releases in milliseconds, before any grid was involved, and it is
+the only thing here that cannot be recreated (D-03). Until implementation 02, Phase 3 this file was
+`events.json`; the code still reads it in that shape (note rows in seconds), converting at the file
+boundary. Every measurement reads it (D-07).
 
-The one thing stored **beside** it is the reader's own decisions, in `rhythm.json` — see
-[`rhythm-and-annotations.md`](rhythm-and-annotations.md). Those are not derivable from anything,
+The one thing stored **beside** it is the reader's own decisions, in `sheet.json` (until Phase 3,
+`rhythm.json`) — see [`rhythm-and-annotations.md`](rhythm-and-annotations.md). Those are not derivable from anything,
 because a person chose them.
 
 ---
@@ -44,7 +46,7 @@ because a person chose them.
 ```text
 audio
   └─ engine                    transcription/engine.py          notes in seconds
-       └─ events.json          transcription/pipeline.py        stored, kept forever
+       └─ notes.pmn            transcription/pipeline.py        stored, kept forever
             │
             ├─ drop removed    time_pipeline.impose_granularity_and_split
             ├─ drop artifacts  transcription/artifacts.py       notes too short to be notes
@@ -102,7 +104,7 @@ octaves, which no hand can hold, so the hand splitter is forced into a wrong ans
 assignment unravels. It also runs before the leakage filter, whose asymmetry test asks which other
 keys attacked alongside a suspect note — artifacts in that answer are noise.
 
-Nothing is deleted from `events.json`. The filter runs on the way out, so every rebuild gets it,
+Nothing is deleted from `notes.pmn`. The filter runs on the way out, so every rebuild gets it,
 including recordings transcribed before it existed, and the raw falling view can still show what was
 discarded.
 
@@ -288,7 +290,7 @@ notes a whole tone or less apart, the pair coming round at least three times, ev
 
 Accepting one collapses the run to a held note with `tr` over it **on the backend, before any figure
 is named** — not as an overlay, because the notes it replaces would otherwise still be named and
-drawn. The alternations stay in `events.json` and playback still sounds every one of them (D-29), so
+drawn. The alternations stay in `notes.pmn` and playback still sounds every one of them (D-29), so
 removing the mark prints them again.
 
 ---
@@ -344,5 +346,5 @@ reader notices:
 - [`endpoints.md`](endpoints.md) — the routes this path answers
 - [`transcription-pipeline.md`](transcription-pipeline.md) — engines and their parameters
 - [`hand-inference-second-pass.md`](hand-inference-second-pass.md) — the gated repair pass
-- [`rhythm-and-annotations.md`](rhythm-and-annotations.md) — what is stored beside `events.json`
+- [`rhythm-and-annotations.md`](rhythm-and-annotations.md) — what is stored beside `notes.pmn`
 - [`decisions.md`](../../../context/implementations/01-mvp/03-time-based-concept/decisions.md) — D-01 … D-34

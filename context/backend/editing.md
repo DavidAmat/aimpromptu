@@ -30,7 +30,7 @@ has silently gone looks exactly like one that was never there.
 
 ## Compose a piece — the one place length may change
 
-**Compose** on Upload / Input starts a piece with nothing in it: an empty `events.json`, a column
+**Compose** on Upload / Input starts a piece with nothing in it: an empty `notes.pmn`, a column
 length, and no audio file at all. The first accepted passage is what creates a recording.
 
 **Add a passage** on Piano Sheet is the stage. Play, cut the recording the way Input does, read that
@@ -79,8 +79,10 @@ derived from them is stored — there is still no BPM anywhere.
 
 ## History
 
-Accepting snapshots the previous `events.json` into `history/v<N>/` and advances a version counter.
-A version here means *the music changed*.
+Accepting snapshots the previous `notes.pmn`, `sheet.json` and `timeline.json` into
+`.database/history/<projectId>/parts/<partId>/v<N>/` and advances a version counter. A version here
+means *the music changed*. Since implementation 02, Phase 3 the new recording is a new file of the
+audio store and the timeline points at it, so the snapshot never copies audio.
 
 If the audio splice fails, the window is recorded as not matching the sheet rather than failing the
 edit: the notes were written correctly and only the sound is behind, so saying so is more useful

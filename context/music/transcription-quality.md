@@ -13,7 +13,8 @@ Diagnosing a specific bad passage:
 
 ## The one idea to hold on to
 
-**`events.json` is the transcription. The matrix is an opinion about it.**
+**The stored notes are the transcription. The matrix is an opinion about it.** (The file is
+`notes.pmn` since implementation 02, Phase 3; before, `events.json`.)
 
 The engine emits notes in seconds. Everything after that — which column a note lands in,
 which hand plays it, whether it prints as a corchea or a semicorchea — is a decision this
@@ -31,7 +32,7 @@ The four layers, in the order they run:
 | 4 | ~~The grid~~ | **Removed.** It printed an evenly played run as ragged figures; see §4 |
 
 **Piano Roll** and **Notes Falling** exist to separate layer 1 from the rest: both draw
-`events.json` directly, in seconds, with no grid anywhere, and both can show the notes the artifact
+the stored notes directly, in seconds, with no grid anywhere, and both can show the notes the artifact
 filter discarded, dashed. If a passage looks even there and ragged on the score, the engine is not
 the problem.
 

@@ -13,7 +13,8 @@ route is *for*, which decisions it obeys, and where the model lives. A schema du
 those things.
 
 Every request and response body is camelCase, produced by Pydantic aliases. CORS allows all origins
-(`allow_origins=["*"]`, `allow_credentials=False`); this is a local POC with no auth surface.
+(`allow_origins=["*"]`, `allow_credentials=False`); this is a local POC with no auth surface. Until
+the login of implementation 02, Phase 4, every request acts as the master user (`db/users.py`).
 
 **JSON answers are compressed.** `JsonGZipMiddleware` (`aitu_backend/compression.py`, implementation
 08, Phase 2) compresses a JSON answer of 1 KB or more with gzip at level 5 when the client sends
@@ -35,7 +36,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/audio/compose` | Start a piece with **nothing in it** (Epic 13). |
 | GET | `/audio/{uuid}` | One entry. |
 | PATCH | `/audio/{uuid}` | Rename. |
-| DELETE | `/audio/{uuid}` | Delete the uuid folder. |
+| DELETE | `/audio/{uuid}` | Delete the project of this part, with its whole bundle. |
 | POST | `/audio/{uuid}/trim` | Persist a range as a new child audio, with lineage. Refused on a piece with cuts. |
 | GET | `/audio/{uuid}/file` | Stream the audio of the piece (the edited audio once cuts are saved). |
 | GET | `/audio/{uuid}/range` | Stream one range of `normalized.wav`. |
@@ -79,25 +80,16 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/audio/{uuid}/edits/{session}/preview` | Scale it into the window and draw that stretch. |
 | GET | `/audio/{uuid}/edits/{session}/confirmation` | What accepting would change. |
 | POST | `/audio/{uuid}/edits/{session}/accept` | Write it into the piece. |
-| **Library** | `api/library.py` | |
-| GET POST | `/library/playground` | List playground tracks; save a version. |
-| GET PATCH | `/library/playground/{artist}/{track}` | One track; rename it. |
-| GET DELETE | `/library/playground/{artist}/{track}/{folder}` | One version. |
-| GET | `/library/promotion-suggestion/{artist}/{track}` | A suggested promotion name. |
-| POST | `/library/promote` | Promote a version into the library. |
-| POST | `/library/rollback` | Return to an earlier promotion. |
-| GET | `/library/tracks` | Promoted tracks. |
-| GET | `/library/tracks/{artist}/{track}` | One promoted track. |
-| GET POST | `/library/tags` | Every tag; set a track's tags. |
-| GET POST | `/library/playlists` | List and create. |
-| GET PATCH DELETE | `/library/playlists/{slug}` | One playlist. |
+| **Projects** | `api/projects.py` | |
+| POST | `/projects/{id}/duplicate` | A copy of a project in the Personal Vault, with new ids (implementation 02, Phase 3). |
 | **YouTube** | `api/youtube.py` | |
 | POST | `/youtube/probe` | Title and length, without downloading. |
 | POST | `/youtube/download` | Download the audio as mp3, in the request. |
 | POST | `/youtube/jobs` | The same download as a job; returns `202` and a job id (implementation 08). |
 | POST | `/youtube/batch` | Queue several. |
 The text-notation MVP routes (`GET /scores`, `POST /sequence`) were deleted in implementation 02,
-Phase 1. See [§9](#9-the-text-notation-mvp-routes).
+Phase 1. See [§9](#9-the-text-notation-mvp-routes). The old Piano Library router (`/library`) was
+deleted in Phase 3. See [§7](#7-projects-the-personal-vault).
 
 The video reader's routers (`/video` in `api/video.py`, `/frame-examples` in
 `api/frame_examples.py`, implementations 04 to 07) are not described on this page. Their reasoning
@@ -107,7 +99,10 @@ is in `context/implementations/01-mvp/04-synthesia-to-notes/` and `05-piano-over
 
 ## 2. `/audio`: the working store
 
-One uuid folder per ingested audio, whatever the source. Upload, browser recording and YouTube all
+One project with one part per ingested audio, whatever the source. Since implementation 02, Phase 3
+the uuid of these routes is the id of the **part** (plan P-6), and a project made by this app has
+the id of its first part, so the two are the same uuid. The bundle and the audio store are described
+in [`paths-and-data.md`](paths-and-data.md). Upload, browser recording and YouTube all
 converge on `audio/ingest.py`, so the rest of the system never asks where a recording came from.
 
 `POST /audio/upload` accepts `.mp3 .aac .m4a .wav .webm .ogg`. Browser recordings arrive as webm or
@@ -121,12 +116,14 @@ selector are those of the piece and the file's are not: such a piece is cut on t
 flow page instead.
 
 `POST /audio/compose` is the odd one out: it creates a piece with no audio file at all. It writes an
-empty `events.json` (`durationSeconds: 0`) and a `frameMs` on the metadata, and the first accepted
+empty `notes.pmn` (`durationMs: 0`) and a `frameMs` in `project.json`, and the first accepted
 passage is what creates a recording. Body: `{ "name": string, "frameMs": number }`.
 
-`GET /audio/` and `GET /audio/{uuid}` add four computed fields to `metadata.json`: `hasNotes`,
+`GET /audio/` and `GET /audio/{uuid}` answer the `AudioMetadata` shape. Since Phase 3 there is no
+`metadata.json`: `audio/store.py` builds that shape from `project.json` and `timeline.json`. The
+routes add four computed fields: `hasNotes`,
 `needsRederivation`, `originalDurationSeconds`, and `updatedAt` (the newest modification time of the
-files directly in the piece's folder, one `stat` per file; the Projects page sorts by it and shows
+part's files and of `project.json`, one `stat` per file; the Projects page sorts by it and shows
 it; added in implementation 02, Phase 1). Once cuts are saved, `durationSeconds` is the
 length of the piece (the original minus the cuts) and `originalDurationSeconds` keeps the length of
 the untouched file.
@@ -136,7 +133,8 @@ the untouched file.
 Before implementation 08, the only way to remove part of a recording was **Create segment**, which
 copies the audio. The flow page needed a selected region that a reader can change and restore, and
 that maps directly onto the notes. A cut is therefore a range of 10 ms time frames of the original
-audio, `[startFrame, endFrame)`, stored in `metadata.json`. The piece is every frame that no cut
+audio, `[startFrame, endFrame)`. Since implementation 02, Phase 3 a cut is stored as the gap
+between two segments of the part's `timeline.json`. The piece is every frame that no cut
 deletes. The model is in `audio/frames.py` (`FrameTable`, `normalize_cuts`, `join_kept`).
 
 The answer of both methods (`CutsResponse`):
@@ -161,11 +159,11 @@ The answer of both methods (`CutsResponse`):
   selection. `422` when the cuts would delete the whole audio. `409` from both methods when the audio
   has no `normalized.wav` yet.
 - A change writes the edited audio, `piece-r<N>.flac` and `piece-r<N>.wav`
-  ([`paths-and-data.md`](paths-and-data.md#22-the-edited-audio-piece-rnflac-and-piece-rnwav)), and
+  ([`paths-and-data.md`](paths-and-data.md#41-cachepartid-derived-files)), and
   deletes the cached `waveform.json`. `500` when ffmpeg cannot write the edited audio.
 - The route does **not** start a transcription. It makes the stored notes stale. The next
   `POST /matrix/transcribe` then transcribes again without `force`, and the old notes are copied to
-  `history/vN/` first.
+  `.database/history/<projectId>/parts/<partId>/vN/` first.
 
 ### 2.2 GET /audio/{uuid}/file
 
@@ -173,8 +171,11 @@ The audio of the piece, for every player. Two query flags, both `false` by defau
 
 | Piece | No flag | `normalized=true` | `original=true` |
 |---|---|---|---|
-| No cuts | The file the user gave (`original.<ext>`) | `normalized.wav` | `original.<ext>` |
-| With cuts | `piece-r<N>.flac` | `piece-r<N>.wav` | `original.<ext>` |
+| No cuts | The file the user gave (the stored file) | `normalized.wav` | The stored file |
+| With cuts | `piece-r<N>.flac` | `piece-r<N>.wav` | The stored file |
+
+The stored file is `.database/audio/<sha256>.<ext>`, named by its content; the download keeps the
+name of the file the user gave. `normalized.wav` and `piece-r<N>.*` are in the part's `cache/` folder.
 
 Until Phase 6 every player played the untouched original, so on a cut piece the audio ran ahead of
 the notes by the length of the cuts before the playhead. The user's rule (2026-09-29) is that once
@@ -254,7 +255,7 @@ called: the figures are chosen afterwards, from a ladder the reader names (D-01,
   message saying the engine is kept in the code but cannot be chosen for `bytedance`, `transkun`,
   `basic-pitch` and `silent`. A missing audio answers `404` before that check.
 - **When the model runs.** It runs when `force` is true, when a range is given, or when the piece
-  has no current notes (no `events.json`, or notes made from another `audioRevision`). Otherwise the
+  has no current notes (no `notes.pmn`, or notes made from another `audioRevision`). Otherwise the
   job reads the stored notes, prepares the split and ends: `force` is needed only to replace current
   notes.
 - **The GPU queue.** A job that runs the model goes into the GPU queue of `transcription/jobs.py`:
@@ -339,14 +340,14 @@ rest of the system chose not to use: a filter that can be checked instead of tak
 
 Each event carries:
 
-- `id`, the stable note id of `events.json`, which `PATCH /pieces/{uuid}/notes` names it by;
+- `id`, the stable note id of `notes.pmn`, which `PATCH /pieces/{uuid}/notes` names it by;
 - `hand`: the saved hand when there is one, otherwise the hand of the standard split at `frameMs`,
   read from the shared split cache. It is a label and nothing else: the times are untouched, and a
   split that fails leaves the notes uncoloured rather than failing the request;
 - `removed`, `artifact`, `octaveBelow`.
 
 The answer also carries `revision` and `handsRevision`, which a page needs to send a `PATCH`.
-`409` when the piece has no `events.json`.
+`409` when the piece has no `notes.pmn`.
 
 **Notes Falling** draws this. The Playground's Piano Roll page, which also drew it, was removed in
 Phase 9: the Notes and Hands tabs of the flow page replace it, and they read
@@ -376,10 +377,10 @@ sheet.
 
 ## 4. `/time`: the wall-clock score
 
-Everything here is derived from the stored `events.json`, so reading a piece at 20 ms instead of 40
+Everything here is derived from the stored notes (`notes.pmn`), so reading a piece at 20 ms instead of 40
 is a different query string rather than a migration. One thing is kept in memory: the hand split of
 each piece, in the shared split cache (`transcription/split_cache.py`), keyed by the uuid, `frameMs`
-and the modification time of `events.json` in nanoseconds. Any save of `events.json` is a new key, so
+and the modification time of `notes.pmn` in nanoseconds. Any save of `notes.pmn` is a new key, so
 an old split is never served. When every placed note has a saved hand, the split is painted from
 those hands in a few milliseconds instead of running the inference (D-31, changed in implementation
 08, Phase 5).
@@ -528,7 +529,7 @@ breaks and beam joins, hidden notes, fingering, trills, grace notes, lyrics, cue
 how far apart the notes and the lines stand. One per piece: a second reading replaces the first. See
 [`rhythm-and-annotations.md`](rhythm-and-annotations.md).
 
-`PUT` stamps `handsRevision` with the current value from `events.json`; the client's value is
+`PUT` stamps `handsRevision` with the current value from `notes.pmn`; the client's value is
 ignored. A later edit of the notes or the hands outside the Sheet tab makes the reading stale, and
 the Sheet tab asks the reader to press **Write the sheet** again. `409` when the piece has no notes.
 Since implementation 02, Phase 2 the reading also carries `title`, `subtitle` and `artist` (each
@@ -595,7 +596,7 @@ router (`api/pieces.py`, Phase 5) gives the page one status answer to enable its
 in the compact columns form, and edits by note id with a revision check. The model is in
 `aitu_backend/pieces/` (`status.py`, `edits.py`) and `transcription/saved_hands.py`. The revision
 chain is described in
-[`context/backend/piano-matrix-notation.md`](../../../context/backend/piano-matrix-notation.md#3-on-disk-eventsjson-pmnevents_filepy).
+[`context/backend/piano-matrix-notation.md`](../../../context/backend/piano-matrix-notation.md#3-on-disk-notespmn-pmnnotes_filepy-pmnevents_filepy).
 
 ### 6.1 GET /pieces/{uuid}/status
 
@@ -619,8 +620,8 @@ chain is described in
   `guessed` and `saved`.
 - `resume` is the furthest enabled step that is ready or running (or a stale Sheet): the tab a piece
   opens on.
-- `revisions` are the numbers the states are computed from: `audio` (`metadata.json`), `notes`,
-  `notesAudio`, `hands`, `handsNotes` (`events.json`), and `sheetHands` (`rhythm.json`).
+- `revisions` are the numbers the states are computed from: `audio` (`timeline.json`), `notes`,
+  `notesAudio`, `hands`, `handsNotes` (`notes.pmn`), and `sheetHands` (`sheet.json`).
 
 The Notes step is `stale` when `notesAudio` differs from `audio` (a cut was saved after the
 transcription). The Hands step is `ready` when every live note the piano sheet places at 40 ms has a
@@ -743,15 +744,24 @@ not use the GPU queue.
 
 ---
 
-## 7. `/library`: playground versions and promotion
+<a id="7-projects-the-personal-vault"></a>
 
-Two trees, and the difference between them is the point. The **playground** holds work in progress,
-versioned per track as `v<N>_f<frameMs>` folders. The **library** holds what a performer plays from:
-named promotions, rollback, tags and playlists.
+## 7. `/projects`: the Personal Vault
 
-`POST /library/promote` takes an editable promotion name, and either replaces the current promotion
-or adds another alongside it. `GET /library/promotion-suggestion/{artist}/{track}` proposes one
-before the dialog opens.
+The old `/library` router (playground versions, `.npz` matrices, promotions, tags, playlists) was
+**deleted in implementation 02, Phase 3**. The path answers `404` until the Private Library of
+Phase 6 uses it again.
+
+The scripts that measure and check the app (`bench:sheet`, `time:flow`, `bench_pieces.py`) work on a
+temporary copy of a project. A project is a bundle plus its rows in the database, so a script can no
+longer copy a folder by hand. Phase 3 therefore adds one route of the `/projects` router; Phase 5
+adds the list, create, rename, delete, export and import.
+
+`POST /projects/{id}/duplicate`, body `{ "title": string | null }` (optional; the original's title
+when absent). It makes a copy in the current user's Personal Vault with new ids. The copy uses the
+same audio files of the audio store, so no audio bytes are copied. History, staging and the video
+are not copied. Answers `201` with `{id, title, parts}`, where `parts` holds the ids of the parts in
+order (the first one is the uuid the other routes take), and `404` for an unknown id.
 
 Storage layout in [`paths-and-data.md`](paths-and-data.md).
 
@@ -814,6 +824,9 @@ deleted in P4.2 with the Playground tabs that called them:
 If one of these should return on the wall-clock path, it is a new feature request with its own
 reasoning, not unfinished work.
 
+Implementation 02 deleted the text-notation routes in Phase 1 (§9) and the old `/library` router in
+Phase 3 (§7).
+
 Implementation 08 deleted no route. It removed two choices and one page:
 
 - **The engine choice.** `POST /matrix/transcribe` refuses every engine except `muscriptor` with
@@ -830,11 +843,11 @@ Implementation 08 deleted no route. It removed two choices and one page:
 ## 11. Where to look deeper
 
 - [`context/backend/piano-matrix-notation.md`](../../../context/backend/piano-matrix-notation.md):
-  `events.json` schema 1.1, the columns form, the revisions
+  `notes.pmn` (and the in-memory shape of `events.json`), the columns form, the revisions
 - [`time-matrix.md`](time-matrix.md): every schema 2.0 field
 - [`events-to-sheet.md`](events-to-sheet.md): how a response is derived
 - [`editing-and-compose.md`](editing-and-compose.md): the splice and the insertion
-- [`rhythm-and-annotations.md`](rhythm-and-annotations.md): `rhythm.json`
+- [`rhythm-and-annotations.md`](rhythm-and-annotations.md): `sheet.json`
 - [`transcription-pipeline.md`](transcription-pipeline.md): what happens before any of this
 - [`paths-and-data.md`](paths-and-data.md): where each file of these routes lives
 - `http://127.0.0.1:8765/docs`: the generated, always-current field reference

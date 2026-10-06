@@ -32,7 +32,7 @@ a fifth faster. ✓ writes the change, 🗑 removes the one that starts here, an
 change* clears them all. The sheet is drawn again by itself.
 
 The stored value is still a length in milliseconds for the main figure (`speedChanges` of
-`rhythm.json`, rule 3: no BPM); the percentage is how it is shown. Implementation 02, Phase 2 moved
+`sheet.json`, rule 3: no BPM); the percentage is how it is shown. Implementation 02, Phase 2 moved
 this from the card *Does the piece change speed?* above the sheet into the toolbox.
 
 ## An octave bracket, once it is on the page

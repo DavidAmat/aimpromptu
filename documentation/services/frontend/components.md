@@ -152,7 +152,7 @@ byte for byte), then redesigned it to plan section 11. What it does for the read
 | Module | Role |
 |---|---|
 | `SheetPage.tsx` | The page: the state the modules share, the requests (default reading, saved reading, sheet, save, Remove all), the effects, the layout (title lines, scrub bar, sheet, floating bar, the toolboxes) |
-| `sheetEdits.ts` | The edits model: `SheetEdits` (one value, so undo is one history), `NO_EDITS`, the undo labels, `editsFromSaved` and `savedRhythmOf` (to and from `rhythm.json`) |
+| `sheetEdits.ts` | The edits model: `SheetEdits` (one value, so undo is one history), `NO_EDITS`, the undo labels, `editsFromSaved` and `savedRhythmOf` (to and from the saved reading, `sheet.json`) |
 | `sheetConstants.ts` | The colours of the keyboards, the tabs of the range toolbox, the figure ladder, small helpers |
 | `toolboxPlacement.ts` | Where a toolbox opens, measured from what is drawn |
 | `useNoteActions.ts`, `NoteToolbox.tsx` | What the note toolbox knows about the picked notes and its actions; the panel |
@@ -393,11 +393,12 @@ npm run check:notes       # the Notes tab's typed arrays, live feed and edits
 ```
 
 These need the running app (`make up` from the repository root). Each works on temporary copies or
-uploads and deletes them at the end, so the library is never changed:
+uploads and deletes them at the end, so the library is never changed. Since implementation 02,
+Phase 3 a temporary copy is made by `POST /projects/{id}/duplicate` (new ids, the same audio files):
 
 ```bash
 npm run check:flow    # a project walked in a headless Chromium, every step, live transcription included
-npm run time:flow     # the whole flow timed on three temporary pieces (upload, library copy, YouTube)
+npm run time:flow     # the whole flow timed on three temporary pieces (upload, a duplicated library piece, YouTube)
 npm run bench:roll    # the Notes tab at 10,000 rectangles and at 100 stream messages per second
 npm run bench:sheet   # a hand move on the Sheet tab, timed part by part
 ```

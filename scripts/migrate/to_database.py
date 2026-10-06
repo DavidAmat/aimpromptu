@@ -52,7 +52,6 @@ from aitu_backend.db.models import (  # noqa: E402
     Artist,
     ArtistName,
     PrivateVersion,
-    Project,
     Song,
     SongArtist,
 )
@@ -335,6 +334,10 @@ def keep_times(folder: Path, uuid: str) -> None:
     from datetime import datetime, timezone  # noqa: PLC0415
 
     own = [child.stat().st_mtime for child in folder.iterdir() if child.is_file()]
+    if own:
+        changed = datetime.fromtimestamp(max(own), tz=timezone.utc)
+        project = bundle.read_project(uuid)
+        bundle.write_project(project.model_copy(update={"updated_at": changed}), touch=False)
     part = paths.part_dir(uuid)
     pairs = {
         paths.project_json_path(uuid): max(own) if own else None,
@@ -344,10 +347,6 @@ def keep_times(folder: Path, uuid: str) -> None:
     for target, when in pairs.items():
         if when is not None and target.is_file():
             os.utime(target, (when, when))
-    if own:
-        with session() as db:
-            row = db.get(Project, uuid)
-            row.updated_at = datetime.fromtimestamp(max(own), tz=timezone.utc)
 
 
 def move_examples(source: Path) -> int:

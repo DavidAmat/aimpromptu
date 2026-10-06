@@ -1,9 +1,11 @@
 # HTTP API
 
 FastAPI app in `main.py`, thin by design: it builds the app, installs CORS and gzip for JSON answers,
-creates the `data/` tree, starts the engine preload, and includes every router from `api/`. Default
+opens `.database/` (brings the tables to the newest Alembic revision, makes the top folders and the
+master user), starts the engine preload, and includes every router from `api/`. Default
 `127.0.0.1:8765`, interactive docs at `/docs`. The page calls it as `/api` through the frontend's
-server. CORS allows all origins — local, no auth surface.
+server. CORS allows all origins — local, no auth surface. Until the login of implementation 02,
+Phase 4, every request acts as the master user.
 
 ## The routers
 
@@ -14,12 +16,17 @@ server. CORS allows all origins — local, no auth surface.
 | `/pieces` | `api/pieces.py` | The state of each step, the notes as columns, note operations, predict the hands ([pieces-and-revisions.md](pieces-and-revisions.md)) |
 | `/time` | `api/time_score.py` | The score: peaks, the ladder, the drawable payload, the saved reading |
 | `/audio/{uuid}/edits` | `api/editing.py` | Staged range editing and composing |
-| `/library` | `api/library.py` | Playground versions, promotion, tags, playlists |
+| `/projects` | `api/projects.py` | The Personal Vault. Phase 3 has one route, duplicate (a copy with new ids, the same audio files); Phase 5 adds the rest |
 | `/youtube` | `api/youtube.py` | Downloads via yt-dlp, also as a job with progress |
 | `/video`, `/frame-examples` | `api/video.py`, `api/frame_examples.py` | Reading a Synthesia-style video into a piece (implementations 04 and 05) |
 
 Plus `GET /health`. The original text-notation MVP (`GET /scores`, `POST /sequence`) was deleted in
-implementation 02, Phase 1 (Q-4); its pages are in `documentation/deprecated/`.
+implementation 02, Phase 1 (Q-4); its pages are in `documentation/deprecated/`. The old Piano
+Library router (`/library`: playground versions, promotion, tags, playlists) was deleted in Phase 3;
+the path answers `404` until the Private Library of Phase 6.
+
+The `{uuid}` of `/audio`, `/matrix`, `/pieces` and `/time` is the id of a **part** of a project
+(plan P-6). A project made by this app has the id of its first part.
 
 ## The shape of a session
 
@@ -41,12 +48,12 @@ PUT  /time/{id}/rhythm        keep the reading
 
 ## Nothing on the score path is stored
 
-Every `/time` response is derived from the stored `events.json` on each request. Nothing is written
+Every `/time` response is derived from the stored notes (`notes.pmn`) on each request. Nothing is written
 and nothing is stored, so asking for the same piece at 20 ms instead of 40 is a different query
 string rather than a migration. **Nothing on disk can disagree with what the screen shows.**
 
 Since implementation 08 one thing is kept in memory: the hand split, in `transcription/split_cache.py`,
-keyed by the piece, the column length and the time `events.json` was last written, so any save makes
+keyed by the piece, the column length and the time `notes.pmn` was last written, so any save makes
 it a new entry. A piece whose hands are saved does not need the inference at all: its two hand
 matrices are painted from the saved hands in about 20 ms.
 
@@ -61,7 +68,7 @@ download and **Predict hands** are jobs on the same stream.
 
 | Status | When |
 |---|---|
-| 404 | No such audio, session, job, track or playlist |
+| 404 | No such audio, project, session or job |
 | 409 | An operation the session's placement does not allow, or a write whose `baseRevision` is old |
 | 422 | A body or query the models reject, and conversion failures |
 | 503 | `ffmpeg` is missing — the message says so and how to install it |

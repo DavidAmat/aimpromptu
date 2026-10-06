@@ -257,7 +257,7 @@ OpenAPI page at `http://127.0.0.1:8765/docs`.
 | `GET` `PUT` `DELETE /time/{uuid}/rhythm` | The saved reading — see [`rhythm-and-annotations.md`](rhythm-and-annotations.md). |
 
 **Nothing here is cached and nothing is written.** Every response is derived from the stored
-`events.json` on each request, so asking for the same piece at 20 ms instead of 40 is a different
+notes (`notes.pmn`) on each request, so asking for the same piece at 20 ms instead of 40 is a different
 query string rather than a migration. That costs a second or two on a five-minute piece and buys a
 system with no stale state in it.
 
@@ -265,10 +265,12 @@ system with no stale state in it.
 
 ## 4. Migration from 1.x
 
-`aitu-backend/scripts/migrate_to_time_matrix.py`, tested by `tests/test_migration.py`.
+The one-off script `aitu-backend/scripts/migrate_to_time_matrix.py` (tested by
+`tests/test_migration.py`) made this migration. Implementation 02, Phase 3 deleted both; the flag
+below and its two functions stay.
 
-An artifact that has its `events.json` is re-derived at 40 ms. An artifact with no recorded events —
-a grid that was hand-edited under the old model, which nothing can rebuild — is marked with
+An artifact that had its `events.json` was re-derived at 40 ms. An artifact with no recorded events —
+a grid that was hand-edited under the old model, which nothing can rebuild — was marked with
 `needs-rederivation.json` beside it and surfaced rather than converted. **No stored artifact is
 ever silently reinterpreted**; a grid written under one set of assumptions and read under another
 puts every note at the wrong time, and a warning the reader can see is the only honest answer.
@@ -281,7 +283,7 @@ puts every note at the wrong time, and a warning the reader can see is the only 
 
 - [`events-to-sheet.md`](events-to-sheet.md) — the derivation path: one stored file to a drawn staff
 - [`endpoints.md`](endpoints.md) — the whole HTTP surface
-- [`rhythm-and-annotations.md`](rhythm-and-annotations.md) — `rhythm.json`, the reader's decisions
+- [`rhythm-and-annotations.md`](rhythm-and-annotations.md) — `sheet.json`, the reader's decisions
 - [`paths-and-data.md`](paths-and-data.md) — where these files sit on disk
 - [`../frontend/grid-notation.md`](../frontend/grid-notation.md) — the package that draws the payload
 - [`contract.md`](../../../context/implementations/01-mvp/03-time-based-concept/contract.md) — the frozen

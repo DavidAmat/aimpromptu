@@ -24,7 +24,7 @@ audio (normalized.wav, 16 kHz mono)
   -> the selected region         audio/frames.py                    kept frames joined in memory, 5 ms fades
   -> engine                      transcription/engine.py            MuScriptor; live `chunk` frames on the stream
   -> lag correction              transcription/lag.py               MuScriptor only; subtracted from every time
-  -> events.json                 transcription/pipeline.py          the transcription, kept forever
+  -> notes.pmn                   transcription/pipeline.py          the transcription, kept forever
        |
   -> drop removed notes          time_pipeline                      the reader's deletions
   -> drop artifacts              transcription/artifacts.py         not on muscriptor-* pieces
@@ -41,8 +41,8 @@ recording onto a grid whose spacing came from a tempo somebody typed in. There i
 so `collapse`, `clean` and `re-quantise` have nothing to do, and `matrix/granularity.py`,
 `matrix/isochrony.py` and `matrix/tempo_map.py` were deleted with them.
 
-Only the first part is expensive, and **only its result is stored**. Everything after `events.json`
-is a function of that file and a frame length. It is computed again whenever `events.json` changes,
+Only the first part is expensive, and **only its result is stored**. Everything after `notes.pmn`
+is a function of that file and a frame length. It is computed again whenever `notes.pmn` changes,
 and otherwise served from the shared split cache (§4.4).
 
 Two orderings are essential and were each found by fixing a real defect:
@@ -64,22 +64,28 @@ at 20 ms, in 17 ms median instead of 670 ms.
 
 ## 2. Files on disk
 
-`data/audio/<uuid>/matrices/` holds **one** file that matters:
+Since implementation 02, Phase 3 the notes of a piece are in its part folder of the project bundle,
+`.database/users/<userId>/vault/<projectId>/parts/<partId>/` (the uuid of the routes is the part id).
+That folder holds **one** file of notes:
 
 | File | What it is |
 |---|---|
-| `events.json` | **The transcription**, in seconds of the piece. Never filtered in place. Schema `1.1` since implementation 08: note ids and a header of revisions (`engine`, `lagCorrectionMs`, `audioRevision` and the others). |
+| `notes.pmn` | **The transcription**, in milliseconds of the piece. Never filtered in place. The portable `.pmn` file version 2: the note columns (`id`, `key`, `onMs`, `lenMs`, `hand`, `velocity`), the header of revisions (`engine`, `lagCorrectionMs`, `audioRevision` and the others), and the ids of removed notes. Until Phase 3 this file was `matrices/events.json`. |
 
-A new transcription of a piece that already has notes first copies `events.json` and `rhythm.json`
-to `history/vN/` (`editing/history.py`, `snapshot_notes`), then writes the new notes and deletes
-`rhythm.json`, because the reading's column numbers point at notes that no longer exist.
+The code still works in the shape of `events.json` (note rows in seconds, schema `1.1` since
+implementation 08) and converts at the file boundary (`pmn/events_file.py`, `read_payload` and
+`write_payload`; the version 2 file is `pmn/notes_file.py`).
+
+A new transcription of a piece that already has notes first copies `notes.pmn` and `sheet.json` to
+`.database/history/<projectId>/parts/<partId>/vN/` (`editing/history.py`, `snapshot_notes`), then writes the new notes and deletes `sheet.json`, because the reading's column
+numbers point at notes that no longer exist.
 
 `raw.npz`, `raw-granularity.txt`, `raw-edited.flag`, `collapsed_<gran>.npz`, `clean_<gran>.npz`,
 `two-hands_<gran>_*.npz` and `hands_<gran>.json` are all gone. A grid that is a pure function of a
 file next to it is not worth storing, and a sidecar recording the tempo it was built at is not worth
 keeping when no tempo takes part.
 
-Full tree in [`paths-and-data.md`](paths-and-data.md). Every field of `events.json` in
+Full tree in [`paths-and-data.md`](paths-and-data.md). Every field of `notes.pmn` and `events.json` in
 [`context/backend/piano-matrix-notation.md`](../../../context/backend/piano-matrix-notation.md).
 
 ---
@@ -120,7 +126,7 @@ Phase 1 measured and the user chose:
 | Instruments | `acoustic_piano` only (Q-3) | Without conditioning, Superestrella gains 70 `electric_bass` notes and 70 `drums` hits |
 | Velocity | 64 for every note | MuScriptor has no loudness |
 
-The name stored in the header of `events.json` is `muscriptor-<size>`, for example
+The name stored in the header of `notes.pmn` is `muscriptor-<size>`, for example
 `muscriptor-large`. MuScriptor prints a timing line for every chunk; those `print` calls are
 silenced inside MuScriptor's own modules only (`models._silence`), not by redirecting the output of
 the whole server.
@@ -154,8 +160,8 @@ waiting or running returns the same job.
 
 ### 3.4 The selected region
 
-A cut is a range of 10 ms time frames of the original audio, saved in `metadata.json`
-(`PUT /audio/{uuid}/cuts`). The engine hears **the piece**: `pipeline._transcribe_piece` reads
+A cut is a range of 10 ms time frames of the original audio, saved as a gap between two segments of
+the part's `timeline.json` (`PUT /audio/{uuid}/cuts`). The engine hears **the piece**: `pipeline._transcribe_piece` reads
 `normalized.wav`, and `frames.join_kept` joins the kept frames in memory. At each join a 5 ms linear
 fade out and a 5 ms fade in, inside the kept samples, avoid a click that could be read as a note,
 without changing the number of frames. MuScriptor receives the samples directly
@@ -205,7 +211,7 @@ real repeated notes, because MuScriptor has no velocity and closes a note at the
 key (a gap of 0 ms).
 
 Both filters run inside the hand split, on every read, so the decision is made from the `engine` in
-the header of `events.json` (`pipeline.filters_for`):
+the header of `notes.pmn` (`pipeline.filters_for`):
 
 | `engine` in the header | Artifacts | Leakage |
 |---|---|---|
@@ -294,7 +300,7 @@ the key; Transkun reports true key release and returns 34–85 ms notes for a pa
 200–1700 ms. A 40 ms floor would silently delete a third of a Transkun transcription. There is a
 test.
 
-Nothing is deleted from `events.json`. The filter runs on the way out, so every rebuild gets it,
+Nothing is deleted from `notes.pmn`. The filter runs on the way out, so every rebuild gets it,
 including recordings transcribed before it existed.
 
 ### 4.2 Leakage: `transcription/leakage.py`
@@ -383,7 +389,7 @@ a hand is marked `handGuessed`.
 **The split cache** (`transcription/split_cache.py`, Phase 4). The split costs 0.3 to 4.3 s on the
 Ubuntu machine (0.56 s median). Before Phase 4 the transcription job computed it and discarded it,
 and `GET /matrix/{uuid}/events` computed it on every call. Now every reader asks one cache, keyed
-`(uuid, frameMs, mtime of events.json in ns, ...)`, holding 8 entries. A new transcription or any
+`(uuid, frameMs, mtime of notes.pmn in ns, ...)`, holding 8 entries. A new transcription or any
 saved edit is a new key, and `save_edit` also calls `split_cache.forget(uuid)`, because two saves can
 fall in the same clock tick. Two requests for the same key at the same time compute it once. The
 value is shared and must be treated as read-only.
@@ -421,7 +427,7 @@ and clamped to 80/20 so a rare figure keeps a fifth of the room on each side.
 | `GET /matrix/{uuid}/job` | The waiting or running transcription of a piece |
 | `GET /matrix/progress/{jobId}` | SSE stream: progress, `event: chunk` live notes, `event: done` |
 | `GET /matrix/jobs/{jobId}` | The same state, for pollers |
-| `GET /matrix/{uuid}/events` | `events.json` plus `id`, `hand`, `artifact` / `octaveBelow` per note and the counts. **Flags rather than omits**: a filter you cannot see is a filter you cannot check |
+| `GET /matrix/{uuid}/events` | The stored notes in the shape of `events.json`, plus `id`, `hand`, `artifact` / `octaveBelow` per note and the counts. **Flags rather than omits**: a filter you cannot see is a filter you cannot check |
 | `PUT /matrix/{uuid}/events/removed` | Mark notes as removed from the recording, by pitch and second |
 | `GET /pieces/{uuid}/notes` | The saved notes as columns, with the revisions |
 
@@ -446,8 +452,8 @@ Or in the backend container, from the repository root:
 make test-backend
 ```
 
-State at the end of implementation 08, Phase 8: **1,039 passed, 1 failed**, in the container and
-natively. The failure,
+State at the end of implementation 02, Phase 3: **1,023 passed, 1 failed** on the GPU (1,039 and 1
+at the end of implementation 08; the tests of the old Piano Library went in Phase 3). The failure,
 `test_time_score_payload.py::test_the_worked_example_at_00_46_prints_three_equal_corcheas`, existed
 before implementation 08 on a clean checkout and is unrelated to it.
 
@@ -457,10 +463,13 @@ the real model (`test_the_real_model_on_the_gpu_gives_the_phase_1_notes`,
 `test_a_progressive_engine_reports_its_real_model_segments`). They are skipped unless CUDA is visible
 and the weights are already in the Hugging Face cache, because a test never downloads 5.5 GB.
 
-`pyproject.toml` sets `pythonpath = ["src", "."]`. The second entry is required:
-`tests/test_migration.py` imports `scripts.migrate_to_time_matrix` and `scripts/` has no
-`__init__.py`, so without it collection fails before a single test runs and `make test` reports
-nothing at all. That was the state until 2026-09-13.
+`pyproject.toml` sets `pythonpath = ["src", "."]`. The second entry was required while
+`tests/test_migration.py` imported `scripts.migrate_to_time_matrix` (`scripts/` has no
+`__init__.py`, so without it collection failed before a single test ran; that was the state until
+2026-09-13). Implementation 02, Phase 3 deleted that test and that script.
+
+Since Phase 3 every test has its own temporary `.database/` (`tests/conftest.py`), so no test reads
+or writes the real one.
 
 ---
 

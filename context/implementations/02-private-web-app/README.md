@@ -4,7 +4,8 @@
 work (Q-5 to Q-8). Sixteen phases, 0 to 15, each on its own `feat/phase-N` branch. **Phase 0 done and merged
 2026-10-05** ([`02-implementation-phase-0.md`](02-implementation-phase-0.md)). **Phase 1 done and merged
 2026-10-05** ([`02-implementation-phase-1.md`](02-implementation-phase-1.md)). **Phase 2 done and merged
-2026-10-06** ([`02-implementation-phase-2.md`](02-implementation-phase-2.md)). Next: Phase 3.
+2026-10-06** ([`02-implementation-phase-2.md`](02-implementation-phase-2.md)). **Phase 3 done on
+`feat/phase-3`, waiting for the user's check** ([`02-implementation-phase-3.md`](02-implementation-phase-3.md)).
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)
@@ -20,6 +21,7 @@ and the status lookup is [`02-checklist.md`](02-checklist.md). Phase reports go 
 | [`02-implementation-phase-0.md`](02-implementation-phase-0.md) | Phase 0: the links repaired, the leftovers archived, the baseline (screenshots in [`screenshots/phase-0/`](screenshots/phase-0/), test counts) |
 | [`02-implementation-phase-1.md`](02-implementation-phase-1.md) | Phase 1: the design system, the sidebar shell, Projects and the restyled steps, the removed pages (screenshots in [`screenshots/phase-1/`](screenshots/phase-1/)) |
 | [`02-implementation-phase-2.md`](02-implementation-phase-2.md) | Phase 2: the sheet page split into modules, the defaults (the highest peak is a negra), the redesigned page and toolboxes, the line wrap fixed, the timings (screenshots in [`screenshots/phase-2/`](screenshots/phase-2/)) |
+| [`02-implementation-phase-3.md`](02-implementation-phase-3.md) | Phase 3: `.database/` (SQLite and the project bundles), the tables, `notes.pmn` version 2, the audio store by hash, the migration of the 39 pieces, backup and check (screenshots in [`screenshots/phase-3/`](screenshots/phase-3/)) |
 | [`public-library-build/`](public-library-build/) | A parallel piece of work: downloading `musicchartsarchive.com` into `.music-library/` to build the data of the Public Library. Phase 12 reconciles it with this plan |
 
 ## What it is for
