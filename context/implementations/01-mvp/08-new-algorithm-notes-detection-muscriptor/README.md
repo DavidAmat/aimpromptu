@@ -44,6 +44,6 @@ over several lines). ByteDance and Transkun stay in the code.
 [`context/backend/muscriptor.md`](../../../backend/muscriptor.md) (the engine),
 [`context/backend/pieces-and-revisions.md`](../../../backend/pieces-and-revisions.md) (the steps and
 revisions), [`context/backend/piano-matrix-notation.md`](../../../backend/piano-matrix-notation.md) (the
-format), [`context/frontend/flow-page.md`](../../../frontend/flow-page.md) (the flow page),
+format), [`context/frontend/flow-page.md`](../../../frontend/projects.md) (the flow page),
 [`context/04-local-development.md`](../../../04-local-development.md) and
 [`context/02b-local-setup.md`](../../../02b-local-setup.md) section 12 (the containers and the tunnel).

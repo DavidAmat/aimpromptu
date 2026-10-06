@@ -7,7 +7,9 @@ work (Q-5 to Q-8). Sixteen phases, 0 to 15, each on its own `feat/phase-N` branc
 2026-10-06** ([`02-implementation-phase-2.md`](02-implementation-phase-2.md)). **Phase 3 done and merged
 2026-10-06** ([`02-implementation-phase-3.md`](02-implementation-phase-3.md)); `aitu-backend/data/`
 deleted after the user's check (its committed `README.md` and Lab records stay). **Phase 4 done and merged
-2026-10-06** ([`02-implementation-phase-4.md`](02-implementation-phase-4.md)). Next: Phase 5.
+2026-10-06** ([`02-implementation-phase-4.md`](02-implementation-phase-4.md)). **Phase 5 built on
+`feat/phase-5`** ([`02-implementation-phase-5.md`](02-implementation-phase-5.md)), waiting for the
+user's check and the decision Q-8.
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)
@@ -25,6 +27,7 @@ and the status lookup is [`02-checklist.md`](02-checklist.md). Phase reports go 
 | [`02-implementation-phase-2.md`](02-implementation-phase-2.md) | Phase 2: the sheet page split into modules, the defaults (the highest peak is a negra), the redesigned page and toolboxes, the line wrap fixed, the timings (screenshots in [`screenshots/phase-2/`](screenshots/phase-2/)) |
 | [`02-implementation-phase-3.md`](02-implementation-phase-3.md) | Phase 3: `.database/` (SQLite and the project bundles), the tables, `notes.pmn` version 2, the audio store by hash, the migration of the 39 pieces, backup and check (screenshots in [`screenshots/phase-3/`](screenshots/phase-3/)) |
 | [`02-implementation-phase-4.md`](02-implementation-phase-4.md) | Phase 4: users, sign in, the rights table with a test per row, Admin → Users, the dark theme, the app on the home network (screenshots in [`screenshots/phase-4/`](screenshots/phase-4/)) |
+| [`02-implementation-phase-5.md`](02-implementation-phase-5.md) | Phase 5: the `/projects` routes and the Projects page, **add audio**, the video as a step of the project, the `.aitu` export and import, Q-8 measured (screenshots in [`screenshots/phase-5/`](screenshots/phase-5/)) |
 | [`public-library-build/`](public-library-build/) | A parallel piece of work: downloading `musicchartsarchive.com` into `data/music-library/` (next to the repository) to build the data of the Public Library. Phase 12 reconciles it with this plan |
 
 ## What it is for

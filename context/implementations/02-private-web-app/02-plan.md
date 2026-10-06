@@ -25,12 +25,13 @@ Three rules from the user hold for every phase:
   done and the user says it is fine, the branch is merged into `master` locally and `master` is pushed
   to `origin`. There are no pull requests.
 
-**A parallel piece of work.** Another agent builds the data of the Public Library at the same time,
+**A parallel piece of work.** Another agent builds the data of the Public Library,
 from the brief [`public-library-build/02-a-public-library-build-prompt.md`](public-library-build/02-a-public-library-build-prompt.md):
 it downloads the chart history, songs, artists, albums and lyrics of `musicchartsarchive.com` into
-`data/music-library/` next to the repository (not inside it; changed 2026-10-06), with its scripts in its own folder under `scripts/`, and designs a
-relational model for it. This plan does not write to those folders. Phase 12 is where the two meet
-(section 15.5).
+`data/music-library/` next to the repository (not inside it; changed 2026-10-06). The database Phase 12
+reads is `library.sqlite` in that folder. The scripts are `scripts/music-library/`, on the branch
+`feat/02-a-public-library` until that branch is merged. This plan does not write to those folders.
+Phase 12 is where the two meet (section 15.5). The download and `library.sqlite` are ready (2026-10-07).
 
 ---
 
@@ -210,7 +211,7 @@ its walkthrough under DECISIONS.
 | Q-5 | The worldwide source is chosen: `musicchartsarchive.com`, downloaded by the parallel work (section 15.5). Still open: the sources for the `spain` and `catalan` regions, and anything that source does not give (genres, tags) | Phase 12, after the reconciliation |
 | Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12 |
 | Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production) |
-| Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement |
+| Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report |
 
 ---
 
@@ -472,8 +473,9 @@ user, song, project and audio file. The code never writes data anywhere else.
 
 The parallel work's music library (section 15.5) is a separate folder and is not part of
 `.database/`. On this machine it is `/home/david/Documents/projects/music/data/music-library`
-(`data/music-library` next to the repository). The import of Phase 13 copies its public rows into
-`.database/`, so the running app never reads that folder.
+(`data/music-library` next to the repository). Phase 12 reads `library.sqlite` in that folder.
+`raw/` is the saved HTML, and `manifest.sqlite` is the download log. The import of Phase 13 copies
+the public rows into `.database/`, so the running app never reads that folder.
 
 `AITU_DATABASE_DIR` names the folder (default `./.database`). On this machine `.env` sets it to
 `/mnt/ssd2/aimpromptu/.database` (P-4). There is no `.database` link inside the repository. Compose
@@ -546,6 +548,12 @@ project made by this app has the id of its first part.
 import makes a new project in the importer's Personal Vault, with new ids. A test checks that export,
 import and export again give the same `notes.pmn`, `sheet.json` and audio.
 
+*As built in Phase 5* (`storage/exchange.py`): the zip also holds `export.json` (the format, its
+version, when and from which project); the part files are copied byte for byte; nothing derived,
+temporary or historical is exported. The import checks each part file reads as what it is and each
+audio file's SHA-256 against its name, reads members only by the names it expects, and leaves
+nothing behind when it refuses a file. `origin` of the new project is `{"importedFrom": id}`.
+
 ## 8.4 Parts
 
 A normal project has one part. **From other projects** (section 10.4) makes one part per group of
@@ -595,6 +603,15 @@ without the database and a cut that reaches the end of the file is still a cut; 
 for a file not measured yet. A splice or a passage put in stores the new recording as a new file
 (`store.replace_original`).
 
+*As built in Phase 5* (**add audio**): `timeline.json` gains `sources`, the files of the Audio step
+laid end to end in order, and each segment the place of its file in that list (`source`), because
+the same file may come twice. The Audio step shows that axis and a cut is a range of it, so the cuts
+of implementation 08 and every route that reads `normalized.wav` work unchanged: for a part of
+several files, `normalized.wav` is the files' 16 kHz copies joined on whole frames, and a joined
+FLAC stands in for the original (`audio/sources.py`). Adding a file raises `audioRevision`. The
+general timeline of Phases 8 and 9 (a pasted passage in the middle) is not this list of files end to
+end; those phases extend the axis to ranges of files.
+
 **Writing the audio on save (Q-3).** When a project is saved to the Private Library, each audio file
 that the timeline uses only in part is written again with only the ranges in use, and the segments are
 renumbered to point into the new file. A file that no project uses any more is deleted. A temporary
@@ -625,7 +642,9 @@ script, `make db-reindex`, rebuilds the project rows from the bundles if they ev
 P-6) and `song_genres` (the link of a song to its one or two genres), plus `external_key` on the
 public artists, albums and songs for the import of Phase 12, and `songs.default_version`. The fixed
 lists are written by the revision: 13 genres, 4 tag categories, the region `worldwide`.
-`projects.step` is filled by the migration and `db-reindex`; Phase 5 keeps it current.
+`projects.step` is filled by the migration and `db-reindex`; Phase 5 keeps it current. *As built in
+Phase 5:* a write of a part's notes, sheet or timeline clears it, and the list of projects works it
+out again for the cleared rows only (working it out reads every part: 0.9 s for 39 projects).
 
 ## 8.7 Moving, backing up, the cloud
 
@@ -748,6 +767,11 @@ small menu with three choices: **From source**, **From scratch**, **From other p
 
 Empty state: "No projects yet" and the **New project** button.
 
+*As built in Phase 5:* the menu shows **From scratch** and **From other projects** disabled ("Not
+available yet") until Phases 8 and 10. The row menu also has **Rename** and **Notes Falling**. Until
+Phase 6 gives the Private Library its pages, its projects are listed on this page too, in a group
+**In my library** under the vault, so the 30 migrated songs stay one click away.
+
 ## 10.2 From source
 
 The user is never asked for a name, a song or an artist before the piano sheet is ready (app context).
@@ -777,6 +801,15 @@ is ready.
    right** (R), **To left** (L), the hand filter, and the counter of notes with no hand. Explanations
    only in tooltips.
 5. **Sheet.** Section 11.
+
+*As built in Phase 5:* the drop zone takes an audio or a video file (`.mp4 .mov .m4v .mkv`; a
+video file becomes a project like a downloaded video, `POST /video/upload`), and the **Video** choice
+is shown to every user. The Video step (the Audio tab is named **Video**) prepares the frames on
+opening, fits the piano on one frame with the calibration editor (**Save the piano**), and plays the
+video with the piano on it; **Read notes** is one job that measures the roll once per fitting, reads
+and writes the notes (`POST /video/{id}/read`), then opens the Notes step. The detection, the
+measurements and single-note corrections stay in Lab. The video stays a temporary file of the part
+until Phase 6 deletes it on save.
 
 **Save to library** asks three things in one dialog: **Artist** and **Song** (each a searchable select
 over the user's Private Library, with "Create …" when the name is not there, and suggestions from the
@@ -1172,19 +1205,17 @@ its songs to their own library (the same pull as from the Public Library).
 
 **The data is built by a parallel piece of work**, not by this plan: the brief
 [`public-library-build/02-a-public-library-build-prompt.md`](public-library-build/02-a-public-library-build-prompt.md),
-with its own plan and response in the same folder. What it is known to produce, from its brief:
+with its own plan and phase reports in the same folder. There is no response file. The download
+finished on 2026-10-07. What it produced:
 
-- the source: `musicchartsarchive.com`, every decade, year and weekly singles chart;
-- the raw download in `data/music-library/raw/` (next to the repository, not inside it), in folders that follow the site's own hierarchy;
-- songs, artists (only those with an artist page; several artists per song), albums (optional per
-  song, with their track list), the chart history of each song and each album, and the lyrics of each
-  song;
-- the region `worldwide` for everything it downloads, and nothing invented for fields the site does
-  not give (no genre, no tags);
-- its own relational design, with the chart dates normalised (one table of dates, referenced by id).
+- the source: `musicchartsarchive.com`, the singles charts and the album charts;
+- the raw HTML in `data/music-library/raw/` (next to the repository, not inside it), in folders that follow the site;
+- the database Phase 12 reads: `library.sqlite` in that same folder. On this machine the full path is `/home/david/Documents/projects/music/data/music-library/library.sqlite`. It holds songs, artists (only those with an artist page; several artists per song), albums (optional per song, with their track list), the chart history of each song and each album, the lyrics, and the all-weeks popularity. The region is `worldwide`. Nothing is invented for fields the site does not give (no genre, no tags). The chart dates are one table of dates, referenced by id;
+- `manifest.sqlite` in the same folder is the download log. Phase 12 does not import it.
 
-**Phase 12 reconciles that data with this app.** It reads what the parallel work has built at that
-moment and documents, without changing the parallel work:
+**Phase 12 reconciles that database with this app.** It reads `library.sqlite`, the parallel plan, and
+the phase reports `02-a-implementation-phase-1.md` through `02-a-implementation-phase-5.md`. It does
+not change the parallel work:
 
 1. **The mapping** from its tables to the tables of section 8.6: songs, artists, artist names, albums,
    song and album relations, chart sources and entries, regions. Each field of the parallel model is
@@ -1478,15 +1509,17 @@ song, the list when closed, the continuous page). Entry points from every place 
 playlist is shown. (The old `PerformancePage` was already removed in Phase 1, with the old library
 it read; `library/loadPerformanceScore.ts` is kept for this phase.)
 
-## Phase 12: The music library data reconciled (any time after Phase 3, once the parallel work has data)
+## Phase 12: The music library data reconciled (any time after Phase 3; the parallel data is ready)
 
-Read the parallel work's plan, response and database (section 15.5). Write
-`context/music-library/reconciliation.md`: the mapping of its tables to section 8.6, the gaps in both
-directions, the identity rule, and the decisions they need. Add to section 8.6 (and its Alembic
-migration) only what the reconciliation shows is missing. Run the popularity formula of section 15.6
-on the downloaded chart history of songs (and of albums, if Q-6 keeps them), and tune it on a list the
-user ranks by hand. Q-5 (the regions not covered) and Q-6 raised with a recommendation each. This
-phase writes nothing into `data/music-library/` or into the parallel work's scripts.
+Read `library.sqlite` at the path in section 15.5, the parallel plan, and its phase reports. There is
+no response file. Write `context/music-library/reconciliation.md`: the mapping of its tables to
+section 8.6, the gaps in both directions, the identity rule, and the decisions they need. Add to
+section 8.6 (and its Alembic migration) only what the reconciliation shows is missing. Run the
+popularity formula of section 15.6 on the downloaded chart history of songs (and of albums, if Q-6
+keeps them), and tune it on a list the user ranks by hand. Q-5 (the regions not covered) and Q-6
+raised with a recommendation each. This phase writes nothing into `data/music-library/` or into the
+parallel work's scripts. Those scripts are on `feat/02-a-public-library` until that branch is merged.
+The database is already in the folder next to the repository, so this phase can read it from here.
 
 ## Phase 13: The Public Library
 

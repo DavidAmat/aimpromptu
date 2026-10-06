@@ -57,7 +57,7 @@ where in time it sits.
 | Role | Every screen, and every pixel of the sheet |
 
 **Sections** (a left sidebar): **Projects** (each project: Source, Audio, Notes, Hands, Sheet;
-[frontend/flow-page.md](frontend/flow-page.md)) and, for the master user only, **Admin**: **Users**
+[frontend/projects.md](frontend/projects.md)) and, for the master user only, **Admin**: **Users**
 and **Lab** (the video reader's pages). Every page asks to sign in first (`/login`).
 
 **Does not:** decide any note's name — the figures arrive from the backend and are passed straight

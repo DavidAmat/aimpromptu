@@ -54,7 +54,7 @@ assumes.
 | File | Description |
 |------|-------------|
 | [frontend/README.md](frontend/README.md) | aitu-frontend entry: the sections, the tabs, the data flow |
-| [frontend/flow-page.md](frontend/flow-page.md) | **Projects and the steps of a project**: the five steps from the audio to the piano sheet, the editor's gestures, the timings |
+| [frontend/projects.md](frontend/projects.md) | **Projects and the steps of a project**: the five steps from the audio to the piano sheet, the editor's gestures, the timings |
 | [frontend/pages.md](frontend/pages.md) | Routes, the shell, and the "position has one home" rule |
 | [frontend/rendering.md](frontend/rendering.md) | How the sheet is drawn, what the app does *not* decide, the stale-`dist` trap |
 | [frontend/annotations.md](frontend/annotations.md) | **The Sheet step**: the page, the defaults of a first write, the two selections, undo, saving |

@@ -60,7 +60,12 @@ edits it in place.
   **403**.
 - **The master user has no extra right over another user's private projects.** An Admin who could
   read every library would make "private" a word the app does not keep.
-- Lists are the user's own: `GET /audio/` lists the user's projects; Lab lists every video for the
+- **Export and import** (Phase 5): exporting a project is a read, so a user exports only what they
+  may read. An import always makes a new project in the importer's own Personal Vault; the zip is
+  read member by member by the names the app expects (a name in it never becomes a path on the
+  disk), its size and number of entries are capped, and each audio file must match the hash in its
+  name.
+- Lists are the user's own: `GET /projects` and `GET /audio/` list the user's projects; Lab lists every video for the
   master user only.
 - A background job (a transcription, a download) records its owner, runs as them (a project it
   makes is theirs), and is followed only by them and the master user.

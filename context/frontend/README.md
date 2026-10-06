@@ -52,7 +52,7 @@ step before it is ready, and a step whose input changed is marked stale. Nothing
 and Hands steps is written before **Save**. A project of another user, or one that does not exist,
 shows "There is no project of yours at this address." with **Open Projects**.
 
-Detail: [flow-page.md](flow-page.md).
+Detail: [projects.md](projects.md).
 
 **Removed in implementation 02, Phase 1** (decision Q-4): the Playground (Upload / Input, Notes
 Falling, Piano Sheet as tabs), the YouTube to Audio page, and the old Piano Library with its
@@ -106,7 +106,7 @@ and the Vite server passes it to the backend. See
 
 ## Where to look deeper
 
-- [flow-page.md](flow-page.md): Projects and the steps of a project
+- [projects.md](projects.md): Projects and the steps of a project
 - [pages.md](pages.md): the routes, the shell, the shared working artifact
 - [../colors/color-palette.md](../colors/color-palette.md): the tokens and the colours of the music
 - [rendering.md](rendering.md): how the sheet is drawn, and what the app does *not* decide

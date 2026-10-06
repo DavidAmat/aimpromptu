@@ -72,8 +72,15 @@ file is deleted only when no project uses it, and nothing deletes one from the P
 
 **The cuts are a timeline.** Since implementation 08 a cut is a range removed from the audio. It is
 now the gap between two **segments** of the part's timeline (one stored file, several ranges of
-it), with the `audioRevision` beside them. When a project is saved to the Private Library
-(Phase 6), the audio is written again with only the ranges in use (Q-3).
+it), with the `audioRevision` beside them. **Add audio** (Phase 5) puts another file at the end:
+the timeline then lists its files in order (`sources`), the Audio step shows them end to end, and a
+cut may cross the join. When a project is saved to the Private Library (Phase 6), the audio is
+written again with only the ranges in use (Q-3).
+
+**A project moves as one file.** **Export** writes `<title>.aitu`: a zip of the bundle (without
+its cache, staging, history or video) and the audio files it uses. **Import** makes a new project
+in the importer's Personal Vault from it, checking every audio file against the hash in its name.
+The format: [`paths-and-data.md`](../documentation/services/backend/paths-and-data.md) section 2.5.
 
 **Every user's projects are under their own folder**, and every query is scoped by owner: a
 request acts as the user of its session (Phase 4, [08-security.md](08-security.md)). The master user
@@ -88,6 +95,10 @@ Two different axes, and they are easy to confuse.
 | `music-version.json` + `history/<projectId>/parts/<partId>/v<N>/` | **The music changed**: a splice was accepted, or a new transcription replaced the notes. A snapshot keeps `notes.pmn`, `sheet.json` and `timeline.json`; the audio it names stays in the store | The part's folder; `.database/history/` |
 | `audioRevision`, `notesRevision`, `handsRevision` | **One step changed**, so the later steps may be stale | `timeline.json`, the `notes.pmn` header, `sheet.json` |
 | `alembic_version` | The tables changed shape | `aitu.sqlite` |
+
+`projects.step` (the step a project reached, for the Projects page) is not a version: it is a copy
+of what the bundles say, cleared when a part's notes, sheet or timeline is written and worked out
+again by the next list (Phase 5).
 
 ## Formats
 

@@ -1,6 +1,6 @@
 > Context: [context/frontend/README.md](../../../context/frontend/README.md) ·
 > [context/frontend/pages.md](../../../context/frontend/pages.md) ·
-> [context/frontend/flow-page.md](../../../context/frontend/flow-page.md)
+> [context/frontend/projects.md](../../../context/frontend/projects.md)
 
 # The component tree: where each piece lives
 
@@ -18,7 +18,7 @@
 |---|---|---|
 | **Sign in** | `/login` | `pages/LoginPage.tsx`, outside the shell (implementation 02, Phase 4) |
 | (start) | `/` | redirects to `/projects` |
-| **Projects** | `/projects` | `pages/ProjectsPage.tsx` |
+| **Projects** | `/projects` | `pages/ProjectsPage.tsx`: `GET /projects`, the **New project** menu with Import (`POST /projects/import`), the row menu (Duplicate, Export, Rename, Notes Falling, Delete) through `api/projects.ts` |
 | · new project | `/projects/new` | `pages/piece/PiecePage.tsx` with the Source step only |
 | · a project | `/projects/:id` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the project reached |
 | · one step | `/projects/:id/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab`, `HandsTab` or `SheetTab` |
@@ -52,7 +52,6 @@ least 8 characters, `PUT /auth/password`), the theme as a `Segmented` of **Light
 | `layout/RequireUser.tsx` | `RequireUser` (wraps the shell: nobody signed in opens `/login?next=...`) and `RequireMaster` (wraps Users and Lab: "Page not found" for another user) |
 | `pages/admin/UsersPage.tsx` | **Admin → Users**: a `DataTable` of the users, **New user** (username and first password), per row **Reset password** and **Disable** / **Enable** |
 | `pages/piece/PiecePage.tsx` | A project the backend answers `404` for (another user's, or none) shows "There is no project of yours at this address." with **Open Projects** |
-| `pages/piece/SourceTab.tsx` | The **Video** choice of a YouTube link is shown to the master user only, until Phase 5, because a video project still opens in Lab |
 
 `main.tsx` creates a **data router** (`createBrowserRouter`) with one route that renders `App`'s
 route table. It exists for one reason: React Router's `useBlocker`, which the project page needs to
@@ -68,14 +67,14 @@ sets it when it loads a project; the sheet reads its `frameMs` from it.
 ## 2. The page of a project
 
 One project, five steps in the order of the work: Source, Audio, Notes, Hands, Sheet. What each step
-means for the reader is in [flow-page.md](../../../context/frontend/flow-page.md). This section
+means for the reader is in [projects.md](../../../context/frontend/projects.md). This section
 lists where the code is.
 
 ### 2.1 The page and its tabs
 
 | File | Role |
 |---|---|
-| `pages/piece/PiecePage.tsx` | The page: loads the audio and `GET /pieces/{uuid}/status`, draws the header (back arrow, title, the step tabs, the `⋯` menu with Notes Falling), redirects a step that is not enabled, holds the leave dialog (**Stay**, **Discard**, **Save and continue**, a `ConfirmDialog`) and the `beforeunload` warning |
+| `pages/piece/PiecePage.tsx` | The page: loads the audio and `GET /pieces/{uuid}/status`, draws the header (back arrow, title, the step tabs with the Audio tab named **Video** for a video project, the `⋯` menu with Notes Falling and Export), redirects a step that is not enabled, holds the leave dialog (**Stay**, **Discard**, **Save and continue**, a `ConfirmDialog`) and the `beforeunload` warning |
 | `pages/piece/pieceContext.ts` | What every tab shares: `usePiece()` (the piece, its status, `refresh()`), `stepStatus()`, and `useUnsavedChanges(summary, {save, discard})` |
 | `pages/piece/PieceResume.tsx` | `/projects/:id`: follows the backend's `resume` |
 | `ui/StepTabs.tsx` | The step tabs, each with a dot for its state (filled ready, a spinner running, amber stale or unsaved, a ring missing) and the reason as a tooltip; `data-step` and `data-state` on each tab for the checks |
@@ -94,10 +93,11 @@ show.
 
 | File | Role |
 |---|---|
-| `pages/piece/SourceTab.tsx` | A new project: the drop zone for an audio file, **Paste a YouTube link** with **Audio** / **Video** (`POST /youtube/jobs` as a job, or `POST /video/download` then Lab). An existing project: where its audio came from |
-| `pages/piece/AudioTab.tsx` | The waveform full width, cuts, undo and redo, the floating bar of icon actions with **Save** (`PUT /audio/{uuid}/cuts`), **Transcribe** on the top row. `data-selection`, `data-view` and `data-cuts` on its root are read by `check:flow` |
+| `pages/piece/SourceTab.tsx` | A new project: the drop zone for an audio or a video file (`POST /audio/upload` or `POST /video/upload`), **Paste a YouTube link** with **Audio** / **Video** (`POST /youtube/jobs` as a job, or `POST /video/download`); a video opens the Video step. An existing project: where its audio came from, file by file after **add audio** |
+| `pages/piece/AudioTab.tsx` | The waveform full width, cuts, undo and redo, the floating bar of icon actions with **Add audio at the end** (`POST /audio/{uuid}/add`) and **Save** (`PUT /audio/{uuid}/cuts`), **Transcribe** on the top row. `data-selection`, `data-view`, `data-cuts` and `data-files` on its root are read by `check:flow` and `check:projects`. A project with a video gets `VideoStep` instead |
+| `pages/piece/VideoStep.tsx` | The Video step (Phase 5): prepares the frames (`POST /video/{uuid}/sample`), fits the piano with `CalibrationEditor` in its compact form, plays the video with the piano on it (`FramePlayer`, `PianoOverlay`), **Read notes** (`POST /video/{uuid}/read`, followed on its progress stream), then opens Notes |
 | `components/audio/CutWaveform.tsx` | Two stacked canvases (waveform, cuts and selection below; the playhead alone above) and an overview strip |
-| `components/audio/waveformPaint.ts` | The painters of `CutWaveform` |
+| `components/audio/waveformPaint.ts` | The painters of `CutWaveform`, with the joins of a part of several files (a dashed grey line and each file's name) |
 | `audio/frameView.ts` | The window of time frames on screen: zoom, pan, whole view |
 | `audio/cuts.ts` | The cut rules, the same as the backend's `normalize_cuts`; pure functions |
 | `audio/useCutPlayer.ts` | Plays the audio and jumps over the page's current cuts, or plays the frames selected |
@@ -435,8 +435,8 @@ npm run check:notes       # the Notes tab's typed arrays, live feed and edits
 ```
 
 These need the running app (`make up` from the repository root). Each works on temporary copies or
-uploads and deletes them at the end, so the library is never changed. `check:flow`, `time:flow`,
-`bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
+uploads and deletes them at the end, so the library is never changed. `check:flow`,
+`check:projects`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
 user with `AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env` at the repository root (or
 `AITU_CHECK_USERNAME` and `AITU_CHECK_PASSWORD` from the environment), makes every `fetch` of the
 script send the cookie (`signIn(base)`), and gives every Playwright page the same cookie
@@ -445,6 +445,7 @@ Phase 3 a temporary copy is made by `POST /projects/{id}/duplicate` (new ids, th
 
 ```bash
 npm run check:flow    # a project walked in a headless Chromium, every step, live transcription included
+npm run check:projects  # the Projects page: New project, Add audio, Duplicate, Export, Import, Rename, Delete, a video file
 npm run time:flow     # the whole flow timed on three temporary pieces (upload, a duplicated library piece, YouTube)
 npm run bench:roll    # the Notes tab at 10,000 rectangles and at 100 stream messages per second
 npm run bench:sheet   # a hand move on the Sheet tab, timed part by part
@@ -473,7 +474,7 @@ deleted. Nothing said so, which is the failure mode this check exists to prevent
 
 ## 11. Where to look deeper
 
-- [flow-page.md](../../../context/frontend/flow-page.md): Projects and the steps of a project
+- [projects.md](../../../context/frontend/projects.md): Projects and the steps of a project
 - [grid-notation.md](grid-notation.md): how the sheet is actually drawn, and the stale-`dist` trap
 - [score-pdf.md](score-pdf.md): the PDF writer
 - [../backend/endpoints.md](../backend/endpoints.md): what the API client calls

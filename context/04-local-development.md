@@ -79,7 +79,7 @@ backend itself stays on `127.0.0.1:8765` of Ubuntu.
 Every page first asks to sign in: **Username** `master` (or `AITU_MASTER_USERNAME`) and the
 **Password** of `AITU_MASTER_PASSWORD` in `.env`. The other users are made in **Admin → Users**.
 After signing in the page opens on **Projects**; a project goes through Source, Audio, Notes, Hands,
-Sheet ([frontend/flow-page.md](frontend/flow-page.md)). The users, the session and what each user
+Sheet ([frontend/projects.md](frontend/projects.md)). The users, the session and what each user
 can open are in [08-security.md](08-security.md).
 
 The SSH tunnel still works, as the fallback (away from home, or with `WEB_BIND=127.0.0.1`):

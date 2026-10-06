@@ -97,13 +97,15 @@ white and grey with colour only on the music (implementation 02, Phase 1;
 [frontend/README.md](frontend/README.md)). The user menu at the bottom changes the password, chooses
 the theme (**Light**, **Dark** or **System**; the piano sheet stays white paper) and signs out.
 
-**Projects** — the way in. A project (today one piece) goes through five steps in the order of the
-work; a step opens only when the step before it is ready ([frontend/flow-page.md](frontend/flow-page.md)):
+**Projects** — the way in: the Personal Vault, with **New project** (From source; From scratch and
+From other projects later), **Import** of a `.aitu` file, and per row Duplicate, Export, Rename and
+Delete. A project goes through five steps in the order of the
+work; a step opens only when the step before it is ready ([frontend/projects.md](frontend/projects.md)):
 
 | Step | What you do |
 |---|---|
-| Source | Drop an audio file, or paste a YouTube link (as audio, or, for the master user only until Phase 5, as a video read in Lab) |
-| Audio | See the waveform, play it, cut parts out of the selected region, **Transcribe** |
+| Source | Drop an audio or a video file, or paste a YouTube link (as audio, or as a piano roll video) |
+| Audio | See the waveform, play it, cut parts out, add another audio at the end, **Transcribe**. For a video project this step is **Video**: fit the piano on the video, **Read notes** |
 | Notes | Watch the rectangles appear live, then edit them on a canvas piano roll and play the original audio |
 | Hands | **Predict hands**, check the colours along the song, move notes between the hands, **Save** |
 | **Sheet** | The product: the staff drawn on arrival (the highest pile of gaps is a negra), the floating bar, the sheet, note and range toolboxes |
@@ -136,7 +138,7 @@ Detail: [frontend/annotations.md](frontend/annotations.md). Click by click:
 | `/pieces` | Which steps of a piece are ready; the notes as columns and their edits; predict the hands |
 | `/time` | The score: peaks, the ladder, the payload, the saved reading |
 | `/audio/{uuid}/edits` | Staged re-recording and composing |
-| `/projects` | The Personal Vault: today a copy of a project (Phase 5 adds the rest) |
+| `/projects` | The Personal Vault: list, create, rename, delete, duplicate, export and import a project |
 | `/youtube` | Downloads, as jobs |
 | `/auth`, `/admin` | Sign in, sign out, change one's password; the users (master user only) |
 | `/video`, `/frame-examples` | Reading a Synthesia-style video into a piece (implementations 04 and 05) |

@@ -53,6 +53,7 @@ made the folder, written or checked `VERSION`, and brought the tables to the new
   staging/<sessionId>/                       disposable edit sessions (§4.4)
   cache/<partId>/                            derived, safe to delete (§4.1)
     normalized.wav  waveform.json  piece-r<N>.flac  piece-r<N>.wav  scratch clips
+    src-<sha256>.wav  sources-<key>.flac     only for a part of several files (§2.2)
 ```
 
 A normal project has one part. **A project made by this app has the id of its first part**, so a
@@ -63,8 +64,9 @@ a part (plan P-6). `storage/locate.py` finds the project, the owner and the laye
 
 The functions that read and write a bundle are in `storage/bundle.py`: `create_project`,
 `read_project` / `write_project` (which keeps the `projects` row in step), `read_timeline` /
-`write_timeline` (which updates `audio_refs`), `duplicate_project`, `delete_project`,
-`list_parts`, `sync_audio_refs`. `audio/store.py` keeps the functions every older reader calls
+`write_timeline` (which updates `audio_refs` and clears the stored step), `new_bundle_from`,
+`duplicate_project`, `delete_project`, `list_parts`, `sync_audio_refs`, `step_changed`,
+`last_change`. The `.aitu` export and import are in `storage/exchange.py` (§2.5). `audio/store.py` keeps the functions every older reader calls
 (`get`, `read_metadata`, `update`, `set_cuts`, `rename`, `delete` ...) on top of them.
 
 ### 2.1 `project.json`
@@ -89,10 +91,11 @@ The functions that read and write a bundle are in `storage/bundle.py`: `create_p
 | `title` | The project's name; what the API calls `alias` |
 | `subtitle`, `artistText` | The project's own lines (Phase 5); the sheet's printed title block is in `sheet.json` |
 | `frameMs` | The column length a project made from scratch is meant to be read at (a view, D-01) |
-| `origin` | What it was made from: `{"duplicateOf": id}`, later the passages of From other projects |
+| `origin` | What it was made from: `{"duplicateOf": id}`, `{"importedFrom": id}`, later the passages of From other projects |
 | `basedOn` | The library project a vault project edits (plan section 10.6) |
 | `parts[].subheader` | The title between the parts of an integrated playlist |
-| `parts[].source` | Where the part's audio came from: `kind` (`upload`, `recording`, `youtube`, `segment`, `composed`), the extension of the file, its original name, its length and rate after normalization, the YouTube link, the lineage of a segment |
+| `parts[].source` | Where the part's audio came from: `kind` (`upload`, `recording`, `youtube`, `segment`, `composed`), the extension of the file, its original name, its length and rate after normalization, the YouTube link, the lineage of a segment. These describe the **first** file |
+| `parts[].source.added` | The files appended with **add audio** (Phase 5), in order: `audio` (the hash), `kind`, `format`, `originalFilename`, `durationSeconds`. Absent for a part of one file |
 
 **What the API answers.** `GET /audio/` and `GET /audio/{uuid}` still answer the
 `AudioMetadata` shape of implementation 08: `alias` is `title`, the source fields come from
@@ -117,13 +120,35 @@ still a cut. `toMs` is `null` for a segment that runs to the end of a file not m
 
 **The cuts of implementation 08 are the gaps between the segments of one file.** Above, the cuts
 `[[0, 316], [26022, 26351]]` (frames) are the two ranges before 3,160 ms and after 260,220 ms.
-`bundle.segments_for_cuts` and `bundle.cuts_of` convert both ways. Phase 3 has one audio file per
-part; `Timeline.single_audio` refuses cuts on a part with several (Phase 5 adds files).
-`audioRevision` rises by one each time the cuts change (`store.set_cuts`). A part with no audio
-(composed, empty) has `"audio": {}` and refuses a cut.
+`bundle.segments_for_cuts` and `bundle.cuts_of` convert both ways. `audioRevision` rises by one each
+time the cuts change (`store.set_cuts`) or a file is added. A part with no audio (composed, empty)
+has `"audio": {}` and refuses a cut.
+
+**Several files** (**add audio**, Phase 5, `POST /audio/{uuid}/add`):
+
+```json
+{"schemaVersion": 1, "audioRevision": 3,
+ "audio": {"9f3c…": {"format": "mp3", "frames": 20000}, "b71a…": {"format": "wav", "frames": 900}},
+ "sources": ["9f3c…", "b71a…"],
+ "segments": [{"audio": "9f3c…", "fromMs": 0, "toMs": 199000, "source": 0},
+              {"audio": "b71a…", "fromMs": 500, "toMs": 9000, "source": 1}]}
+```
+
+`sources` lists the files of the Audio step laid end to end, in order (the same file may come
+twice). That is the **axis** the Audio step shows (frames 0 to 20,900 above), and a cut is a range
+of it, as before: here the cut `[19900, 20050]` crosses the join. `bundle.segments_for_axis` splits
+the kept ranges where a file ends; each segment's `source` is the place of its file in `sources`, so
+`bundle.cuts_of` reads the cuts back even when a file comes twice. A part of one file has no
+`sources` and no `source` on its segments, so every timeline written before Phase 5 reads unchanged.
+A part of several files has no single original; two derived files of its cache stand in for it
+(`audio/sources.py`): `normalized.wav` is each file's own 16 kHz copy (`src-<sha256>.wav`) padded
+to whole frames and joined, and `sources-<key>.flac` is the files decoded at 44.1 kHz (48 kHz when a
+file is above it) and joined, which the Audio step plays (`?original=true`) and the joined audio of
+the cuts is cut from. Each join of two files gets the 5 ms fade of a cut.
 
 `replace_original` gives a part a new stored file and points every segment at it, keeping the cuts.
-The joined audio and the peaks of the old file are deleted from the cache then.
+The joined audio and the peaks of the old file are deleted from the cache then. A part of several
+files becomes a part of one file again (`sources` and `added` are dropped).
 
 ### 2.3 `notes.pmn`
 
@@ -144,6 +169,29 @@ derivable. Fields in [`rhythm-and-annotations.md`](rhythm-and-annotations.md). P
 optional fields, both empty until Phase 7: `lyricsPool` (the pasted lyrics not placed yet, one line
 per piece) and `figuresFrom` (the figure the next figures transposition starts from). It records
 the `handsRevision` it was saved for; when the notes' header differs, the Sheet step is `stale`.
+
+### 2.5 The `.aitu` file: export and import
+
+`storage/exchange.py`, `GET /projects/{id}/export` and `POST /projects/import` (Phase 5, plan
+section 8.3). A zip of the bundle and the audio it uses:
+
+```text
+<title>.aitu
+  export.json                  {"format": "aimpromptu-project", "version": 1, "exportedAt", "projectId"}
+  project.json                 as in the bundle
+  parts/<partId>/notes.pmn     sheet.json  timeline.json   (byte for byte)
+  audio/<sha256>.<ext>         every file a timeline names, stored without compression
+```
+
+No cache, no staging, no history, no video. The import makes a new project in the importer's
+Personal Vault (`bundle.new_bundle_from`: new ids, the same title, `origin: {"importedFrom": id}`)
+and writes the part files as they came. It refuses (`ImportRefused`, `422`) a file that is not a
+zip or has no `export.json` of this format, a version newer than its own, more than 10,000 members
+or 2 GB, a part file that does not read as what it is (`notes.pmn` as a `.pmn`, `sheet.json` as a
+saved reading, `timeline.json` as a timeline whose cuts read back), and an audio file that is
+missing or whose SHA-256 is not its name; a failure deletes what it made and the audio files no
+project uses. Members are read only by the names it expects, so no name in the zip becomes a path.
+`tests/test_projects.py` checks export, import and export again give the same part files and audio.
 
 ---
 
@@ -175,7 +223,8 @@ user knows (the original file name, or the title) with the stored extension.
 
 | File | Content | Written |
 |---|---|---|
-| `normalized.wav` | The stored file at 16 kHz mono: the engine's input | By the ingest (`ingest.finalize`); again by `store.get` when it is missing and the part was measured |
+| `normalized.wav` | The stored file at 16 kHz mono: the engine's input. For a part of several files, their 16 kHz copies joined (§2.2) | By the ingest (`ingest.finalize`) or **add audio**; again by `store.get` when it is missing and the part was measured |
+| `src-<sha256>.wav`, `sources-<key>.flac` | A part of several files only: each file's 16 kHz copy, and the files joined at one rate (§2.2) | By **add audio**, and on the first request after they were deleted |
 | `waveform.json` | Peaks for the waveform view | On request; deleted when the cuts or the audio change |
 | `piece-r<N>.flac` | With cuts: the stored file decoded at its own rate, kept ranges joined, lossless | `PUT /audio/{uuid}/cuts`, or on the first request (`audio/piece_audio.py`) |
 | `piece-r<N>.wav` | With cuts: `normalized.wav` with the kept ranges joined | Same |
@@ -247,9 +296,9 @@ A video belongs to the part whose audio came out of it (V-03) and is a temporary
 
 | File | |
 |---|---|
-| `source.mp4` | The download (V-01) |
+| `source.mp4` | The download, or the video file the user uploaded (Phase 5), whatever its container (V-01) |
 | `metadata_video.json` | Size, length, frames per second, `sampleMs` |
-| `calibration.json` | The piano overlay and what was measured from it. **The user's work** |
+| `calibration.json` | The piano overlay, what was measured from it, and `measuredFor` (the overlay that measurement was made with, so **Read notes** measures again only after a new fitting). **The user's work** |
 | `corrections.json` | Notes a person took off or put on by hand. **The user's work** |
 | `plate.npy`, `frames/f000001.jpg`, `frames.jsonl`, `detection-report.json`, `notes.json`, `detection/` | Derived: thrown away and written again |
 
@@ -275,8 +324,9 @@ empty until their phase.
 
 Two tables are not in the list of section 8.6 and follow from it: `parts` (a part must find its
 project, P-6) and `song_genres` (a song has one or two genres). `projects.step` is the lowest step
-its parts reached; Phase 3 fills it in the migration and in `db-reindex`, and Phase 5 keeps it
-current.
+its parts reached. Phase 3 fills it in the migration and in `db-reindex`; since Phase 5 a write of a
+part's notes, sheet or timeline clears it (`bundle.step_changed`) and `GET /projects` works it out
+again for the cleared rows (`db/tools.refresh_step`).
 
 ---
 

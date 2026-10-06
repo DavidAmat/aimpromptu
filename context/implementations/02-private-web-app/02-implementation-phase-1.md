@@ -258,7 +258,7 @@ has its 39 pieces, as before.
 - Rewritten: [`../../colors/color-palette.md`](../../colors/color-palette.md) (tokens and the
   colours of the music), [`../../frontend/README.md`](../../frontend/README.md),
   [`../../frontend/pages.md`](../../frontend/pages.md),
-  [`../../frontend/flow-page.md`](../../frontend/flow-page.md) (now "Projects and the steps of a
+  [`../../frontend/flow-page.md`](../../frontend/projects.md) (now "Projects and the steps of a
   project"; renamed `projects.md` in Phase 5),
   [`components.md`](../../../documentation/services/frontend/components.md) sections 1, 2, 5, 6, 8, 9,
   [`aitu-frontend/README.md`](../../../aitu-frontend/README.md).
