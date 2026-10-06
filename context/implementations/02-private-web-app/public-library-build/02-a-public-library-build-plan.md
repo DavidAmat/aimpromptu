@@ -215,8 +215,8 @@ one written here.
 | # | Choice | Why |
 |---|---|---|
 | D-1 | Wait 10 seconds between requests. One request at a time. A later run skips files already saved with status 200 | `robots.txt` asks for 10 seconds. About 5,200 week pages then take about 15 hours. Song, artist and album pages are a second, longer run. The real counts are measured in Phase 2, before that second run starts |
-| D-2 | Save the HTML under `.music-library/raw/`, in folders that follow the site, with week files split by year | The brief asks for text files and for a hierarchy like the site, so one folder does not hold every week. HTML is kept so a later parse does not download again |
-| D-3 | The relational database is `.music-library/library.sqlite`. The download log is `.music-library/manifest.sqlite`. Neither file is the app database | The brief asks for a relational database and for no integration with the app. SQLite is one file, and it is the same kind of database the app plan chose for `.database/` |
+| D-2 | Save the HTML under `data/music-library/raw/` next to the repository, in folders that follow the site, with week files split by year | The brief asks for text files and for a hierarchy like the site, so one folder does not hold every week. HTML is kept so a later parse does not download again. The folder is outside the repository so an editor opened on the project does not watch the files (changed 2026-10-06; it was `.music-library/` inside the repository) |
+| D-3 | The relational database is `data/music-library/library.sqlite`. The download log is `data/music-library/manifest.sqlite`. Neither file is the app database | The brief asks for a relational database and for no integration with the app. SQLite is one file, and it is the same kind of database the app plan chose for `.database/`. `MUSIC_LIBRARY_DIR` can point somewhere else |
 | D-4 | A song or an album is unique by its source path, not by its title | The app context: two songs may share a title and stay two songs |
 | D-5 | The ranking stored for popularity is the Chart History on the song or album page. A week page fills a missing week only, and only for a position the week page actually shows | The history includes positions such as 65, which the top-50 week page cannot show. Where both exist, they are compared |
 | D-6 | The chart size N in the popularity formula is 100 | The history reaches at least position 98. The week page shows 50 rows, but the formula in the app plan uses the top 100. A position worse than 100 adds nothing |
@@ -246,7 +246,7 @@ scripts/music-library/
   fixtures/              a few saved pages, committed, used by the tests
   test_parse.py          parser tests, no network
 
-.music-library/                  gitignored
+data/music-library/             next to the repository, not in git
   raw/
     decades/1970s.html
     singles-charts/1978.html
@@ -264,7 +264,7 @@ scripts/music-library/
 Week files sit under the year so `singles-chart/` is not one flat folder of thousands of files.
 The path stored in the database is still the site path, `/singles-chart/1978-02-11`.
 
-`.gitignore` gains one block, `/.music-library/`. The fixtures stay in git. They are small and the
+The download lives in `data/music-library/` beside the repository (the parent of the checkout), or in `MUSIC_LIBRARY_DIR` when that is set. On this machine that is `/home/david/Documents/projects/music/data/music-library`. It is not inside the repository, so it is not committed. `/.music-library/` stays in `.gitignore` so an old folder there is still ignored. The fixtures stay in git. They are small and the
 tests need them with no network.
 
 ---

@@ -10,7 +10,7 @@ The brief is [`02-a-public-library-build-prompt.md`](02-a-public-library-build-p
 ## What it is for
 
 Download the worldwide charts from musicchartsarchive.com and store songs, artists, albums, lyrics
-and rankings in `.music-library/library.sqlite`. Popularity is calculated from the rankings with the
+and rankings in `data/music-library/library.sqlite` (next to the repository, not inside it). Popularity is calculated from the rankings with the
 formula already chosen in the app plan.
 
 ## What it does not do

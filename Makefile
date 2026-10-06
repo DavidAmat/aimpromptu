@@ -157,13 +157,16 @@ logs-api:
 export UID := $(shell id -u)
 export GID := $(shell id -g)
 CACHE_DIR := $(or $(AITU_CACHE_DIR),$(shell sed -n 's/^AITU_CACHE_DIR=//p' .env 2>/dev/null),/mnt/ssd2/aimpromptu/home)
+DATABASE_DIR := $(shell sed -n 's/^AITU_DATABASE_DIR=//p' .env 2>/dev/null)
+export AITU_DATABASE_DIR := $(DATABASE_DIR)
 COMPOSE := docker compose
 
 # The cache folder must exist before Docker mounts it, or Docker creates it as root.
 # --renew-anon-volumes: the frontend keeps its node_modules in an anonymous volume, and without the
 # flag a rebuilt image would still see the old packages.
-# `.database/` must exist before Docker mounts it, for the same reason (on the Ubuntu machine it is
-# a link to /mnt/ssd2/aimpromptu/.database, made once by hand; see context/02b-local-setup.md).
+# The database folder must exist before Docker mounts it, or Docker creates it as root.
+# On this machine it is AITU_DATABASE_DIR in .env (/mnt/ssd2/aimpromptu/.database), not a link
+# inside the repository.
 up: stop _database
 	@mkdir -p "$(CACHE_DIR)"
 	$(COMPOSE) up -d --build --renew-anon-volumes --wait
@@ -187,7 +190,7 @@ build:
 	$(COMPOSE) build
 
 _database:
-	@[ -e .database ] || mkdir -p .database
+	@if [ -n "$(AITU_DATABASE_DIR)" ]; then mkdir -p "$(AITU_DATABASE_DIR)"; else mkdir -p .database; fi
 
 test-backend: _database
 	$(COMPOSE) run --rm --no-deps backend python -m pytest $(ARGS)

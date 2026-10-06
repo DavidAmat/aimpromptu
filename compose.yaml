@@ -33,7 +33,7 @@ services:
       # chooses which folder of the host is mounted there. Only the migration reads it.
       AITU_DATA_DIR: ""
       # `.database/` (implementation 02, plan section 8): mounted at /database, whatever the host
-      # folder is. On the Ubuntu machine `./.database` is a link to /mnt/ssd2/aimpromptu/.database.
+      # folder is. On this machine .env sets AITU_DATABASE_DIR to /mnt/ssd2/aimpromptu/.database.
       AITU_DATABASE_DIR: /database
       AITU_MASTER_USERNAME: ${AITU_MASTER_USERNAME:-}
       AITU_MASTER_PASSWORD: ${AITU_MASTER_PASSWORD:-}

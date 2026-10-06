@@ -28,7 +28,7 @@ Three rules from the user hold for every phase:
 **A parallel piece of work.** Another agent builds the data of the Public Library at the same time,
 from the brief [`public-library-build/02-a-public-library-build-prompt.md`](public-library-build/02-a-public-library-build-prompt.md):
 it downloads the chart history, songs, artists, albums and lyrics of `musicchartsarchive.com` into
-`.music-library/` (gitignored), with its scripts in its own folder under `scripts/`, and designs a
+`data/music-library/` next to the repository (not inside it; changed 2026-10-06), with its scripts in its own folder under `scripts/`, and designs a
 relational model for it. This plan does not write to those folders. Phase 12 is where the two meet
 (section 15.5).
 
@@ -194,7 +194,7 @@ These follow from the answers above or from the code. Each can be changed by the
 | P-1 | Keep React, MUI and the current build; replace the theme and the shared components | The sheet editor, the canvas piano roll and the toolboxes are all MUI. A new library would rewrite them for no gain to the user. The look comes from the tokens of section 7, not from the library |
 | P-2 | SQLAlchemy 2 and Alembic for the tables | The same code works on SQLite now and on Postgres later (Q-1). Alembic gives numbered migrations |
 | P-3 | Audio files are stored once, named by the hash of their content | A copy and paste of a passage, a duplicated project and a pull from the Public Library then copy no audio bytes, which is what the app context asks ("the clipboard does not keep the audio binary") |
-| P-4 | `.database/` at the root of the repository, gitignored; on this machine it is a link to `/mnt/ssd2/aimpromptu/.database` | The prompt asks for a folder in the repository; the link puts the bytes on the large SSD. `AITU_DATABASE_DIR` can point anywhere |
+| P-4 | `.database/` is gitignored. On this machine it is not inside the repository: `AITU_DATABASE_DIR` in `.env` is `/mnt/ssd2/aimpromptu/.database` | The bytes stay on the large SSD. A link named `.database` inside the repository makes the editor follow it and watch every file (changed 2026-10-06). `AITU_DATABASE_DIR` can point anywhere |
 | P-5 | The stored form of the notes becomes `notes.pmn`: the portable `.pmn.json` of implementation 08, with the header of `events.json` | The file in the bundle is the file in the export: no conversion, so an imported project reads exactly as it was saved (section 8.3) |
 | P-6 | The migrated pieces keep their uuid as the id of their part | The routes keyed by uuid keep working while the storage changes under them (section 8.8) |
 | P-7 | Users are created by the master user; there is no public sign-up | A home network app. A sign-up page is production work |
@@ -470,12 +470,14 @@ piano sheet and the lyrics placement.
 clones the repository, decompresses a `.database/` archive at its root and runs `make up` has every
 user, song, project and audio file. The code never writes data anywhere else.
 
-The parallel work's `.music-library/` (section 15.5) is a separate folder and is not part of
-`.database/`: the import of Phase 13 copies its public rows into `.database/`, so the running app never
-reads `.music-library/`.
+The parallel work's music library (section 15.5) is a separate folder and is not part of
+`.database/`. On this machine it is `/home/david/Documents/projects/music/data/music-library`
+(`data/music-library` next to the repository). The import of Phase 13 copies its public rows into
+`.database/`, so the running app never reads that folder.
 
-`AITU_DATABASE_DIR` names the folder (default `./.database`). On this machine, `.database` is a
-symbolic link to `/mnt/ssd2/aimpromptu/.database` (P-4), and Compose mounts the target.
+`AITU_DATABASE_DIR` names the folder (default `./.database`). On this machine `.env` sets it to
+`/mnt/ssd2/aimpromptu/.database` (P-4). There is no `.database` link inside the repository. Compose
+mounts the path from `.env`.
 
 ## 8.2 The layout
 
@@ -1173,7 +1175,7 @@ its songs to their own library (the same pull as from the Public Library).
 with its own plan and response in the same folder. What it is known to produce, from its brief:
 
 - the source: `musicchartsarchive.com`, every decade, year and weekly singles chart;
-- the raw download in `.music-library/raw/`, in folders that follow the site's own hierarchy;
+- the raw download in `data/music-library/raw/` (next to the repository, not inside it), in folders that follow the site's own hierarchy;
 - songs, artists (only those with an artist page; several artists per song), albums (optional per
   song, with their track list), the chart history of each song and each album, and the lyrics of each
   song;
@@ -1484,7 +1486,7 @@ directions, the identity rule, and the decisions they need. Add to section 8.6 (
 migration) only what the reconciliation shows is missing. Run the popularity formula of section 15.6
 on the downloaded chart history of songs (and of albums, if Q-6 keeps them), and tune it on a list the
 user ranks by hand. Q-5 (the regions not covered) and Q-6 raised with a recommendation each. This
-phase writes nothing into `.music-library/` or into the parallel work's scripts.
+phase writes nothing into `data/music-library/` or into the parallel work's scripts.
 
 ## Phase 13: The Public Library
 
