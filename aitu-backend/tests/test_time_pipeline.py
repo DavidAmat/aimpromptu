@@ -21,7 +21,9 @@ BASS, TENOR, TREBLE, HIGH = 41, 48, 72, 79  # Fa-2, Do-3, Do-6, Sol-6
 
 
 def note(start_ms: float, midi: int, length_ms: float = 200.0) -> NoteEvent:
-    return NoteEvent(midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0)
+    return NoteEvent(
+        midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0
+    )
 
 
 def two_hand_events() -> list[NoteEvent]:
@@ -40,7 +42,9 @@ def run(events, duration_seconds=3.0, **kwargs):
 
 def test_the_pipeline_gives_two_hands_and_nothing_else():
     hands = run(two_hand_events())
-    assert hands.right.frame_count == hands.left.frame_count == hands.unsplit.frame_count
+    assert (
+        hands.right.frame_count == hands.left.frame_count == hands.unsplit.frame_count
+    )
     assert hands.right.is_time_based and hands.left.is_time_based
     assert hands.frame_ms == 40.0
 
@@ -97,7 +101,9 @@ def test_a_piece_is_always_sent_as_two_hands():
     assert wire["matrixProcessingStep"] == "two-hands"
     assert "rMatrix" in wire and "lMatrix" in wire
     assert wire["frameMs"] == 40.0
-    assert wire["frameCount"] == envelope.r_matrix.shape[1] == envelope.l_matrix.shape[1]
+    assert (
+        wire["frameCount"] == envelope.r_matrix.shape[1] == envelope.l_matrix.shape[1]
+    )
 
 
 def test_a_right_hand_only_piece_is_two_hands_with_an_empty_left_and_a_hidden_staff():
@@ -141,7 +147,9 @@ def test_a_hand_measures_its_own_attack_and_not_the_other_hand_s():
     events = [note(index * 60.0, TREBLE, 50.0) for index in range(6)]
     events.append(note(3 * 60.0 - 20.0, BASS, 50.0))
 
-    hands = impose_granularity_and_split(events, 2.0, frame_ms=40, artifacts=None, leakage=None)
+    hands = impose_granularity_and_split(
+        events, 2.0, frame_ms=40, artifacts=None, leakage=None
+    )
     right = attack_times_of_hand(hands, "right")
     gaps = [round((b - a) * 1000.0) for a, b in zip(right, right[1:])]
 
@@ -153,6 +161,8 @@ def test_the_two_hands_still_share_the_column_they_were_played_in():
     events = [note(index * 60.0, TREBLE, 50.0) for index in range(6)]
     events.append(note(3 * 60.0 - 20.0, BASS, 50.0))
 
-    hands = impose_granularity_and_split(events, 2.0, frame_ms=40, artifacts=None, leakage=None)
+    hands = impose_granularity_and_split(
+        events, 2.0, frame_ms=40, artifacts=None, leakage=None
+    )
     shared = int(np.nonzero(hands.left.grid[midi_to_row(BASS)] == ONSET)[0][0])
     assert hands.right.grid[midi_to_row(TREBLE), shared] == ONSET

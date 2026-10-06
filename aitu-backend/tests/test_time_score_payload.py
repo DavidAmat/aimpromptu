@@ -31,7 +31,9 @@ NEGRA_MS = 320.0
 
 
 def note(start_ms: float, midi: int, length_ms: float = 150.0) -> NoteEvent:
-    return NoteEvent(midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0)
+    return NoteEvent(
+        midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0
+    )
 
 
 def ladder(negra_ms: float = NEGRA_MS):
@@ -62,7 +64,9 @@ def test_the_printed_length_is_the_gap_to_the_next_onset_in_the_same_hand():
 
 def test_the_gap_is_measured_between_the_real_times_not_between_columns():
     """A 211 ms gap must stay 211, not become 200 because a column is 40 ms wide."""
-    score = to_score_payload(run([note(0, TREBLE), note(211, TREBLE + 2)]), ladder(337.0))
+    score = to_score_payload(
+        run([note(0, TREBLE), note(211, TREBLE + 2)]), ladder(337.0)
+    )
     first = min(score.notes, key=lambda n: n.start_frame)
     assert first.printed_ms_exact == pytest.approx(211.0, abs=0.5)
     assert first.figure == FigureName.CORCHEA
@@ -76,12 +80,18 @@ def test_a_held_note_under_a_run_stays_long_on_the_other_hand():
     right = [n for n in score.notes if n.hand == "right"]
     assert len(left) == 1
     assert left[0].printed_ms_exact > max(n.printed_ms_exact for n in right)
-    assert left[0].figure in {FigureName.BLANCA, FigureName.DOTTED_BLANCA, FigureName.REDONDA}
+    assert left[0].figure in {
+        FigureName.BLANCA,
+        FigureName.DOTTED_BLANCA,
+        FigureName.REDONDA,
+    }
 
 
 def test_no_note_is_ever_printed_longer_than_a_redonda():
     """D-15 and D-06: the cap is applied here, where a redonda finally has a length."""
-    score = to_score_payload(run([note(0, BASS, 5000.0)], duration_seconds=8.0), ladder())
+    score = to_score_payload(
+        run([note(0, BASS, 5000.0)], duration_seconds=8.0), ladder()
+    )
     assert score.notes[0].printed_ms_exact == pytest.approx(4 * NEGRA_MS)
     assert score.notes[0].figure == FigureName.REDONDA
 
@@ -127,8 +137,14 @@ def test_the_sheet_stops_where_the_music_stops():
 
 
 def test_passages_drawn_by_hand_tile_the_piece():
-    passages = passages_from_boundaries(100, [40, 70], [ladder(320), ladder(400), ladder(300)])
-    assert [(p.start_frame, p.end_frame) for p in passages] == [(0, 40), (40, 70), (70, 100)]
+    passages = passages_from_boundaries(
+        100, [40, 70], [ladder(320), ladder(400), ladder(300)]
+    )
+    assert [(p.start_frame, p.end_frame) for p in passages] == [
+        (0, 40),
+        (40, 70),
+        (70, 100),
+    ]
     assert [p.id for p in passages] == ["p1", "p2", "p3"]
 
 
@@ -147,7 +163,9 @@ def test_changing_one_passage_ladder_moves_nothing_outside_it():
     passages = passages_from_boundaries(frames, [half], [ladder(320), ladder(320)])
 
     before = to_score_payload(hands, ladder(), passages=passages)
-    after = to_score_payload(hands, ladder(), passages=with_ladder(passages, "p2", ladder(640)))
+    after = to_score_payload(
+        hands, ladder(), passages=with_ladder(passages, "p2", ladder(640))
+    )
 
     early_before = [n for n in before.notes if n.start_frame < half]
     early_after = [n for n in after.notes if n.start_frame < half]
@@ -164,7 +182,9 @@ def test_changing_one_passage_ladder_moves_nothing_outside_it():
 def test_a_figure_shift_renames_a_passage_without_moving_a_note():
     """D-18. Every column is identical afterwards; only the glyphs change."""
     hands = run(even_run(8))
-    passages = one_passage(to_score_payload(hands, ladder()).envelope.frame_count, ladder())
+    passages = one_passage(
+        to_score_payload(hands, ladder()).envelope.frame_count, ladder()
+    )
     before = to_score_payload(hands, ladder(), passages=passages)
     after = to_score_payload(hands, ladder(), passages=shift_passage(passages, "p1", 1))
 
@@ -236,7 +256,10 @@ def test_the_frame_length_does_not_change_which_figures_are_printed():
     """`frameMs` is a layout parameter. A corchea stays a corchea at 20, 30 or 40 ms."""
     events = even_run(8)
     figures = {
-        step: [n.figure for n in to_score_payload(run(events, frame_ms=step), ladder()).notes]
+        step: [
+            n.figure
+            for n in to_score_payload(run(events, frame_ms=step), ladder()).notes
+        ]
         for step in (40, 30, 20)
     }
     assert figures[40] == figures[30] == figures[20]
@@ -244,10 +267,17 @@ def test_the_frame_length_does_not_change_which_figures_are_printed():
 
 # --------------------------------------------------------------------------- the real piece
 
-POC_DATA = Path(__file__).resolve().parents[2] / "pocs" / "poc-onset-duration-distribution" / "data"
+POC_DATA = (
+    Path(__file__).resolve().parents[2]
+    / "pocs"
+    / "poc-onset-duration-distribution"
+    / "data"
+)
 
 
-@pytest.mark.skipif(not POC_DATA.exists(), reason="the PoC transcription is not in this checkout")
+@pytest.mark.skipif(
+    not POC_DATA.exists(), reason="the PoC transcription is not in this checkout"
+)
 def test_the_worked_example_at_00_46_prints_three_equal_corcheas():
     """**Success criterion 1.** The case the whole refactor exists to fix.
 
@@ -274,11 +304,15 @@ def test_the_worked_example_at_00_46_prints_three_equal_corcheas():
     }
     printed = {}
     for name, (row, column) in wanted.items():
-        found = [n for n in score.notes if n.row == row and abs(n.start_frame - column) <= 1]
+        found = [
+            n for n in score.notes if n.row == row and abs(n.start_frame - column) <= 1
+        ]
         assert found, f"{name} was not printed anywhere near column {column}"
         printed[name] = found[0]
 
-    assert [printed[name].figure for name in ("F5", "E5", "C5")] == [FigureName.CORCHEA] * 3
+    assert [printed[name].figure for name in ("F5", "E5", "C5")] == [
+        FigureName.CORCHEA
+    ] * 3
     assert all(note.hand == "right" for note in printed.values())
 
 
@@ -295,11 +329,17 @@ def test_a_beam_break_names_a_note_and_nothing_else():
 def test_a_score_carries_the_breaks_the_reader_asked_for():
     payload = to_score_payload(run(even_run()), ladder())
     regrouped = payload.model_copy(
-        update={"beam_breaks": [BeamBreak(hand="right", start_frame=payload.notes[2].start_frame)]}
+        update={
+            "beam_breaks": [
+                BeamBreak(hand="right", start_frame=payload.notes[2].start_frame)
+            ]
+        }
     )
 
     wire = regrouped.model_dump(by_alias=True)
-    assert wire["beamBreaks"] == [{"hand": "right", "startFrame": payload.notes[2].start_frame}]
+    assert wire["beamBreaks"] == [
+        {"hand": "right", "startFrame": payload.notes[2].start_frame}
+    ]
     # Absent by default: a piece nobody has regrouped says so by having none.
     assert payload.model_dump(by_alias=True)["beamBreaks"] == []
 

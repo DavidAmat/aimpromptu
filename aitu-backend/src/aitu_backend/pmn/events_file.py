@@ -1,6 +1,11 @@
-"""``events.json``, the stored piece (rule 1), to the sparse form and back.
+"""The stored notes of a part (rule 1), in the shape of ``events.json``, to the sparse form and back.
 
-The file keeps the shape every reader already knows: ``durationSeconds``, ``title`` and one object
+Since implementation 02, Phase 3, the file on disk is ``notes.pmn`` (:mod:`.notes_file`, the
+portable ``.pmn`` version 2). This module still works in the shape of ``events.json``, which every
+reader knows, and converts at the file boundary (:func:`read_payload`, :func:`write_payload`); an
+``events.json`` of an older layout is still read as it is.
+
+The shape: ``durationSeconds``, ``title`` and one object
 per note with ``midiNote``, ``start`` and ``end`` in seconds, ``velocity``, and ``hand`` and
 ``removed`` when they are set. Plan section 6.3 adds three things:
 
@@ -264,14 +269,26 @@ def _payload(
 # ----------------------------------------------------------------------- files
 
 
-def _load_json(path: Path) -> dict[str, Any] | None:
+def read_payload(path: Path) -> dict[str, Any] | None:
+    """The stored notes at ``path`` in the shape of ``events.json``, or ``None`` when unreadable.
+
+    ``notes.pmn`` is converted (:func:`~aitu_backend.pmn.notes_file.from_pmn`); an ``events.json``
+    is returned as it is.
+    """
+    from aitu_backend.pmn import notes_file  # noqa: PLC0415 - notes_file imports this module
+
     if not path.is_file():
         return None
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except (ValueError, OSError):
+        if isinstance(payload, dict) and notes_file.is_pmn(payload):
+            payload = notes_file.from_pmn(payload)
+    except (ValueError, OSError, KeyError, TypeError):
         return None
     return payload if isinstance(payload, dict) else None
+
+
+_load_json = read_payload
 
 
 def read_header(path: Path) -> PieceHeader:
@@ -283,7 +300,7 @@ def read_header(path: Path) -> PieceHeader:
 
 
 def read_piece(audio_uuid_or_path: str | Path) -> Piece | None:
-    """The piece of an audio uuid (or of an ``events.json`` path), or ``None`` when unreadable."""
+    """The piece of a part id (or of a ``notes.pmn`` path), or ``None`` when unreadable."""
     path = _path_of(audio_uuid_or_path)
     payload = _load_json(path)
     if payload is None:
@@ -300,10 +317,16 @@ def write_piece(audio_uuid_or_path: str | Path, piece: Piece) -> Path:
 
 
 def write_payload(path: Path, payload: dict[str, Any]) -> Path:
-    """Write through a temporary file, so a reader never sees half a piece."""
+    """Write through a temporary file, so a reader never sees half a piece.
+
+    A ``.pmn`` path is written as ``notes.pmn`` version 2; any other path as ``events.json``.
+    """
+    from aitu_backend.pmn import notes_file  # noqa: PLC0415 - notes_file imports this module
+
     path.parent.mkdir(parents=True, exist_ok=True)
+    body = notes_file.to_pmn(payload) if path.suffix == ".pmn" else payload
     temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+    temporary.write_text(json.dumps(body, separators=(",", ":")), encoding="utf-8")
     temporary.replace(path)
     return path
 

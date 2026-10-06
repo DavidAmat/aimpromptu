@@ -9,11 +9,16 @@ annotation page of Task 2.2.2 is for.
 
 from __future__ import annotations
 
+import json
+import shutil
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
 from aitu_backend.main import create_app
 from aitu_backend.schemas.video import Annotation
+from aitu_backend.storage import paths
 from aitu_backend.video import examples, images, scoring
 
 client = TestClient(create_app())
@@ -23,10 +28,27 @@ HAND_READ = ["derulo", "shut-up-and-dance"]
 
 
 def _seeded(slug: str) -> bool:
-    return examples.exists(slug) and examples.load(slug).calibration is not None
+    """The screenshot is checked out and its committed record has an overlay. Read from the
+    committed record, not from Lab: this runs when the tests are collected, before each test has its
+    own `.database/` (implementation 02, Phase 3)."""
+    record = paths.frame_examples_seed_dir() / f"{slug}.json"
+    if not examples.exists(slug) or not record.is_file():
+        return False
+    return json.loads(record.read_text()).get("calibration") is not None
 
 
-@pytest.mark.skipif(not examples.slugs(), reason="the example screenshots are not checked out")
+@pytest.fixture(autouse=True)
+def _lab(_temporary_database: Path) -> None:
+    """Each test's Lab starts with the committed records, as the migration leaves the real one."""
+    target = paths.frame_examples_root()
+    target.mkdir(parents=True, exist_ok=True)
+    for record in paths.frame_examples_seed_dir().glob("*.json"):
+        shutil.copy2(record, target / record.name)
+
+
+@pytest.mark.skipif(
+    not examples.slugs(), reason="the example screenshots are not checked out"
+)
 def test_every_screenshot_is_listed_once() -> None:
     response = client.get("/frame-examples")
     assert response.status_code == 200
@@ -35,7 +57,9 @@ def test_every_screenshot_is_listed_once() -> None:
     assert all("hasCalibration" in row and "annotationCount" in row for row in payload)
 
 
-@pytest.mark.skipif(not examples.slugs(), reason="the example screenshots are not checked out")
+@pytest.mark.skipif(
+    not examples.slugs(), reason="the example screenshots are not checked out"
+)
 def test_the_picture_is_served_at_the_working_resolution() -> None:
     """One width for the UI and the detector, so a coordinate means one thing."""
     slug = examples.slugs()[0]
@@ -54,11 +78,15 @@ def test_an_unknown_slug_is_a_404() -> None:
     assert client.get("/frame-examples/not-a-screenshot/image").status_code == 404
 
 
-@pytest.mark.skipif(not _seeded("derulo"), reason="run scripts/seed_frame_examples.py first")
+@pytest.mark.skipif(
+    not _seeded("derulo"), reason="run scripts/seed_frame_examples.py first"
+)
 def test_the_two_services_build_the_same_overlay() -> None:
     """The endpoint that proves the frontend's own geometry has not drifted."""
     record = client.get("/frame-examples/derulo").json()
-    response = client.post("/frame-examples/derulo/geometry", json=record["calibration"])
+    response = client.post(
+        "/frame-examples/derulo/geometry", json=record["calibration"]
+    )
     assert response.status_code == 200
     built = response.json()
     whites = [key for key in built["keys"] if key["kind"] == "white"]
@@ -66,11 +94,15 @@ def test_the_two_services_build_the_same_overlay() -> None:
     # `derulo` is a whole piano with its top Do cropped off by the screenshot,
     # which is what 19 of the 21 examples look like.
     assert built["keys"][0]["nameEn"] == "A0"
-    assert [key["midi"] for key in built["keys"]] == list(range(21, 21 + len(built["keys"])))
+    assert [key["midi"] for key in built["keys"]] == list(
+        range(21, 21 + len(built["keys"]))
+    )
     assert len(built["lanes"]) == len(built["keys"])
 
 
-@pytest.mark.skipif(not _seeded("derulo"), reason="run scripts/seed_frame_examples.py first")
+@pytest.mark.skipif(
+    not _seeded("derulo"), reason="run scripts/seed_frame_examples.py first"
+)
 def test_the_detector_draws_its_runs_on_the_pixels_they_came_from() -> None:
     """Task 2.3.2: a disagreement has to be something you can look at."""
     record = client.get("/frame-examples/derulo").json()
@@ -80,13 +112,23 @@ def test_the_detector_draws_its_runs_on_the_pixels_they_came_from() -> None:
     detection = response.json()
     assert detection["runs"], "derulo has rectangles on it"
     run = detection["runs"][0]
-    for field in ("midi", "yTop", "yBottom", "x0", "x1", "widthKeys", "clipped", "verdict"):
+    for field in (
+        "midi",
+        "yTop",
+        "yBottom",
+        "x0",
+        "x1",
+        "widthKeys",
+        "clipped",
+        "verdict",
+    ):
         assert field in run
     assert run["yTop"] < run["yBottom"], "y grows downward; the tip is the lowest row"
 
 
 @pytest.mark.skipif(
-    not all(_seeded(slug) for slug in HAND_READ), reason="run scripts/seed_frame_examples.py first"
+    not all(_seeded(slug) for slug in HAND_READ),
+    reason="run scripts/seed_frame_examples.py first",
 )
 def test_on_the_hand_read_examples_every_onset_is_found_and_none_invented() -> None:
     """Phase 2's exit criteria, on the ground truth that exists.
@@ -106,11 +148,15 @@ def test_on_the_hand_read_examples_every_onset_is_found_and_none_invented() -> N
 
     # And it found something: a detector that reports nothing at all would pass
     # every line above.
-    expected = sum(len(a.onsets) for slug in HAND_READ for a in examples.load(slug).annotations)
+    expected = sum(
+        len(a.onsets) for slug in HAND_READ for a in examples.load(slug).annotations
+    )
     assert board.total.onsets_found == expected
 
 
-@pytest.mark.skipif(not _seeded("derulo"), reason="run scripts/seed_frame_examples.py first")
+@pytest.mark.skipif(
+    not _seeded("derulo"), reason="run scripts/seed_frame_examples.py first"
+)
 def test_the_detector_follows_the_offset_line_and_not_the_nearest_rectangle() -> None:
     """V-25, as the example set tests it.
 
@@ -127,7 +173,9 @@ def test_the_detector_follows_the_offset_line_and_not_the_nearest_rectangle() ->
     assert by_offset[15].onsets_found == 3 and by_offset[15].onsets_invented == 0
 
 
-@pytest.mark.skipif(not examples.slugs(), reason="the example screenshots are not checked out")
+@pytest.mark.skipif(
+    not examples.slugs(), reason="the example screenshots are not checked out"
+)
 def test_an_example_with_no_annotation_is_named_rather_than_counted() -> None:
     """An honest failure list is a result; a rounded up number is not."""
     board = scoring.board()
@@ -138,7 +186,9 @@ def test_an_example_with_no_annotation_is_named_rather_than_counted() -> None:
 
 def test_a_key_the_picture_cannot_answer_for_leaves_the_score_on_both_sides() -> None:
     annotation = Annotation(offset_px=50.0, onsets=[60], sustains=[], skip=[65])
-    line = scoring.score_one("made-up", annotation, detected_onsets=[60, 65], detected_sustains=[])
+    line = scoring.score_one(
+        "made-up", annotation, detected_onsets=[60, 65], detected_sustains=[]
+    )
     assert line.onsets_found == 1
     assert line.onsets_invented == 0, "65 was skipped, so it is not an invention"
     assert line.disagreements == []
@@ -150,7 +200,9 @@ def test_an_annotation_never_lists_a_key_as_both_onset_and_sustain() -> None:
     assert annotation.sustains == [48]
 
 
-@pytest.mark.skipif(not examples.slugs(), reason="the example screenshots are not checked out")
+@pytest.mark.skipif(
+    not examples.slugs(), reason="the example screenshots are not checked out"
+)
 def test_saving_a_reading_twice_at_one_offset_replaces_it() -> None:
     """The entry is the triple (example, offset line position, keys marked)."""
     slug = examples.slugs()[0]

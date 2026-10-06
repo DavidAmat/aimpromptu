@@ -33,7 +33,9 @@ def ladder(negra_ms: float = 320.0) -> FigureLadder:
     return FigureLadder(
         anchor_figure=FigureName.NEGRA,
         anchor_ms=negra_ms,
-        ms_by_figure={figure: negras * negra_ms for figure, negras in FIGURE_NEGRAS.items()},
+        ms_by_figure={
+            figure: negras * negra_ms for figure, negras in FIGURE_NEGRAS.items()
+        },
     )
 
 
@@ -111,7 +113,9 @@ def test_a_ladder_carries_every_figure():
     assert ladder().ms_by_figure[FigureName.CORCHEA] == 160.0
     incomplete = {FigureName.NEGRA: 320.0}
     with pytest.raises(ValidationError, match="msByFigure"):
-        FigureLadder(anchor_figure=FigureName.NEGRA, anchor_ms=320.0, ms_by_figure=incomplete)
+        FigureLadder(
+            anchor_figure=FigureName.NEGRA, anchor_ms=320.0, ms_by_figure=incomplete
+        )
 
 
 def test_a_passage_ends_after_it_starts():

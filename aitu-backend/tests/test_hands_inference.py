@@ -21,7 +21,12 @@ from aitu_backend.hands import (
     encode_hand_map,
     infer_hands,
 )
-from aitu_backend.hands.candidates import all_partitions, generate, is_feasible, is_overloaded
+from aitu_backend.hands.candidates import (
+    all_partitions,
+    generate,
+    is_feasible,
+    is_overloaded,
+)
 from aitu_backend.hands.config import HandModel, SearchConfig
 from aitu_backend.hands.costs import LEFT, RIGHT, PairState, transition
 from aitu_backend.matrix.keys import KEY_COUNT, note_to_row
@@ -29,7 +34,9 @@ from aitu_backend.matrix.model import PianoMatrix
 from aitu_backend.schemas.matrix import Granularity, MatrixProcessingStep
 
 
-def matrix_from(rows: dict[str, list[int]], frames: int, bpm: float = 60.0) -> PianoMatrix:
+def matrix_from(
+    rows: dict[str, list[int]], frames: int, bpm: float = 60.0
+) -> PianoMatrix:
     """Build a clean matrix from ``{"Do-4": [1, -1, 0, ...]}``."""
     grid = np.zeros((KEY_COUNT, frames), dtype=np.int8)
     for name, cells in rows.items():
@@ -79,7 +86,9 @@ def test_a_restruck_key_is_a_new_onset() -> None:
 
 
 def test_simultaneous_onsets_form_one_group_sorted_by_pitch() -> None:
-    decoded = decode_matrix(matrix_from({"Mi-4": [1], "Do-4": [1], "Sol-4": [1]}, frames=1))
+    decoded = decode_matrix(
+        matrix_from({"Mi-4": [1], "Do-4": [1], "Sol-4": [1]}, frames=1)
+    )
     assert len(decoded.groups) == 1
     assert decoded.groups[0].midis == (60, 64, 67)
 
@@ -163,7 +172,8 @@ def test_every_onset_gets_exactly_one_hand() -> None:
 
 def test_the_split_grids_recombine_to_the_input() -> None:
     matrix = matrix_from(
-        {"Do-3": [1, -1, 0, 1], "Sol-3": [1, -1, 0, 0], "Do-5": [0, 1, -1, -1]}, frames=4
+        {"Do-3": [1, -1, 0, 1], "Sol-3": [1, -1, 0, 0], "Do-5": [0, 1, -1, -1]},
+        frames=4,
     )
     result = infer_hands(matrix)
     combined = np.where(result.right_grid != 0, result.right_grid, result.left_grid)
@@ -172,14 +182,18 @@ def test_the_split_grids_recombine_to_the_input() -> None:
 
 
 def test_an_empty_matrix_infers_nothing_and_does_not_fail() -> None:
-    result = infer_hands(PianoMatrix.empty(8, processing_step=MatrixProcessingStep.CLEAN))
+    result = infer_hands(
+        PianoMatrix.empty(8, processing_step=MatrixProcessingStep.CLEAN)
+    )
     assert result.assignments == []
     assert result.hand_map == ""
 
 
 def test_a_two_hands_matrix_is_refused() -> None:
     matrix = melody(["Do-4"])
-    already_split = matrix.with_grid(matrix.grid, processing_step=MatrixProcessingStep.TWO_HANDS)
+    already_split = matrix.with_grid(
+        matrix.grid, processing_step=MatrixProcessingStep.TWO_HANDS
+    )
     with pytest.raises(ValueError, match="already split"):
         infer_hands(already_split)
 
@@ -208,7 +222,9 @@ def test_a_wider_beam_never_costs_more_than_a_narrow_one() -> None:
 
 def test_candidate_generation_respects_finger_capacity() -> None:
     group = decode_matrix(
-        matrix_from({name: [1] for name in ["Do-4", "Re-4", "Mi-4", "Fa-4", "Sol-4"]}, frames=1)
+        matrix_from(
+            {name: [1] for name in ["Do-4", "Re-4", "Mi-4", "Fa-4", "Sol-4"]}, frames=1
+        )
     ).groups[0]
     candidates, relaxed = generate(group, HandModel(), SearchConfig())
     assert not relaxed
@@ -242,7 +258,10 @@ def test_an_unreachable_span_is_infeasible_rather_than_expensive() -> None:
     """Hard constraints return None; they are not a large penalty to outweigh."""
     group = decode_matrix(matrix_from({"Do-2": [1], "Do-6": [1]}, frames=1)).groups[0]
     both_left = (LEFT, LEFT)
-    assert transition(PairState(), group, both_left, HandModel(), DEFAULT_CONFIG.weights) is None
+    assert (
+        transition(PairState(), group, both_left, HandModel(), DEFAULT_CONFIG.weights)
+        is None
+    )
 
 
 def test_zeroing_a_weight_removes_its_term() -> None:
@@ -337,4 +356,6 @@ def test_confidence_is_bounded_and_ordered() -> None:
     """It is uncalibrated, but it must at least be a usable ordering."""
     result = infer_hands(melody(["Do-3", "Sol-3", "Do-4", "Mi-4"]))
     assert all(0.0 <= item.confidence <= 1.0 for item in result.assignments)
-    assert result.ambiguous() == sorted(result.ambiguous(), key=lambda item: item.confidence)
+    assert result.ambiguous() == sorted(
+        result.ambiguous(), key=lambda item: item.confidence
+    )

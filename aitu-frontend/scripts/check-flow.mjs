@@ -33,10 +33,8 @@ import { chromium } from 'playwright';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { values } = parseArgs({
   options: {
-    audio: {
-      type: 'string',
-      default: path.join(here, '..', '..', 'aitu-backend', 'data', 'audio', 'a585f9eb-36a1-49a0-9f0c-2626f3d292da', 'original.mp3'),
-    },
+    // A file to upload; Superestrella's own stored audio (`GET /audio/{id}/file`) when absent.
+    audio: { type: 'string' },
     out: { type: 'string', default: path.join(here, '..', '..', '.run', 'screenshots', 'flow') },
     base: { type: 'string', default: 'http://localhost:5173' },
     'no-transcribe': { type: 'boolean', default: false },
@@ -54,7 +52,16 @@ const check = (label, ok, extra = '') => {
 };
 
 const form = new FormData();
-form.append('file', new Blob([readFileSync(values.audio)]), path.basename(values.audio));
+const SUPERESTRELLA = 'a585f9eb-36a1-49a0-9f0c-2626f3d292da';
+let audio;
+if (values.audio) {
+  audio = { bytes: readFileSync(values.audio), name: path.basename(values.audio) };
+} else {
+  const stored = await fetch(`${api}/audio/${SUPERESTRELLA}/file?original=true`);
+  if (!stored.ok) throw new Error(`No audio for Superestrella: ${stored.status}`);
+  audio = { bytes: await stored.arrayBuffer(), name: 'Superestrella.mp3' };
+}
+form.append('file', new Blob([audio.bytes]), audio.name);
 form.append('alias', 'check:flow (temporary)');
 const uploaded = await fetch(`${api}/audio/upload`, { method: 'POST', body: form });
 if (!uploaded.ok) throw new Error(`The upload failed: ${uploaded.status} ${await uploaded.text()}`);

@@ -30,6 +30,9 @@ __all__ = ["FORMAT", "VERSION", "from_portable", "read_portable", "to_portable",
 
 FORMAT = "aimpromptu-pmn"
 VERSION = 1
+#: ``notes.pmn``, the stored notes of a part, is version 2 of the same format (:mod:`.notes_file`):
+#: this reader reads it as an export, without the removed notes.
+STORED_VERSION = 2
 #: The shared time frame of the audio and the notes (plan section 9.2).
 FRAME_MS = 10
 
@@ -63,9 +66,10 @@ def from_portable(payload: dict[str, Any]) -> tuple[Notes, float, str | None]:
     """The notes, the duration in milliseconds and the title of a ``.pmn.json`` payload."""
     if payload.get("format") != FORMAT:
         raise ValueError(f"Not a {FORMAT} file (format is {payload.get('format')!r})")
-    if int(payload.get("version", 0)) > VERSION:
+    version = int(payload.get("version", 0))
+    if version > STORED_VERSION:
         raise ValueError(
-            f"{FORMAT} version {payload['version']} is newer than this reader ({VERSION})"
+            f"{FORMAT} version {payload['version']} is newer than this reader ({STORED_VERSION})"
         )
     if (
         payload.get("lowestMidi", LOWEST_MIDI) != LOWEST_MIDI
@@ -81,6 +85,9 @@ def from_portable(payload: dict[str, Any]) -> tuple[Notes, float, str | None]:
         hand=decode_hands(payload.get("hand") or "-" * count),
         velocity=payload.get("velocity") or (),
     )
+    if version >= 2 and payload.get("removed"):
+        # The stored notes of a part (version 2) keep the removed notes; an export does not.
+        notes = notes.take(~np.isin(notes.id, np.asarray(payload["removed"], dtype=np.int64)))
     return notes, float(payload["durationMs"]), payload.get("title")
 
 

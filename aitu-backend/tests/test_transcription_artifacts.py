@@ -87,7 +87,9 @@ def test_the_duration_floor_is_where_the_config_says() -> None:
 def test_the_filter_can_be_relaxed_or_disabled() -> None:
     events = phantom_octave()
 
-    assert drop_artifacts(events, ArtifactConfig(min_duration_seconds=0.0)).dropped == []
+    assert (
+        drop_artifacts(events, ArtifactConfig(min_duration_seconds=0.0)).dropped == []
+    )
 
     # And raising it eats the music, which is the whole warning: at half a
     # second the played Fa-2 and Fa-3 (456 and 465 ms) go too.
@@ -128,7 +130,9 @@ def test_placement_can_be_asked_for_the_engines_events_verbatim() -> None:
     runs before the hand split, where a phantom bass note does the real damage.
     The frame rule is only about what a column can hold.
     """
-    report = events_to_time_matrix(phantom_octave(), duration_seconds=13.0, artifacts=None)
+    report = events_to_time_matrix(
+        phantom_octave(), duration_seconds=13.0, artifacts=None
+    )
 
     assert report.artifacts.dropped == []
     assert report.dropped_sub_frame == 1
@@ -146,7 +150,9 @@ def test_a_fine_enough_grid_does_place_it_when_the_filter_is_off() -> None:
 
 def test_the_filter_still_removes_it_on_that_same_fine_grid() -> None:
     """And the proof that the filter is doing real work rather than duplicating it."""
-    report = events_to_time_matrix(phantom_octave(), duration_seconds=13.0, frame_ms=5.0)
+    report = events_to_time_matrix(
+        phantom_octave(), duration_seconds=13.0, frame_ms=5.0
+    )
 
     assert not (report.matrix.grid[midi_to_row(F1)] == ONSET).any()
     assert len(report.artifacts.dropped) == 1

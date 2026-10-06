@@ -32,7 +32,14 @@ def test_fraction_and_wire_payload() -> None:
     payload = event.to_dict()
     assert payload["stage"] == "clean"
     assert payload["fraction"] == 0.25
-    assert set(payload) == {"stage", "current", "total", "fraction", "message", "timestamp"}
+    assert set(payload) == {
+        "stage",
+        "current",
+        "total",
+        "fraction",
+        "message",
+        "timestamp",
+    }
 
 
 def test_fraction_is_zero_without_a_total() -> None:
@@ -50,7 +57,9 @@ def test_iterate_advances_once_per_item() -> None:
 def test_multi_progress_fans_out() -> None:
     left: list[ProgressEvent] = []
     right: list[ProgressEvent] = []
-    reporter = MultiProgress(CallbackProgress(left.append), CallbackProgress(right.append))
+    reporter = MultiProgress(
+        CallbackProgress(left.append), CallbackProgress(right.append)
+    )
 
     with reporter.stage("split", total=1) as stage:
         stage.advance()

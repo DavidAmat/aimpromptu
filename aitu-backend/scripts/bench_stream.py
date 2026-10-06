@@ -30,7 +30,8 @@ from typing import Any
 
 import httpx
 
-from aitu_backend.storage import paths
+from aitu_backend.audio import store
+from aitu_backend.storage import bundle, paths
 
 SUPERESTRELLA = "a585f9eb-36a1-49a0-9f0c-2626f3d292da"
 PHASE_1_NOTES = (
@@ -53,10 +54,12 @@ DEFAULT_OUT = (
 
 
 def _piece(prefix: str) -> Path:
-    matches = sorted(p for p in paths.audio_root().iterdir() if p.name.startswith(prefix))
+    """The cache folder of the one part whose id starts with ``prefix``: it holds
+    ``normalized.wav``, and its name is the part's id (implementation 02, Phase 3)."""
+    matches = [part for part in bundle.list_parts() if part.startswith(prefix)]
     if len(matches) != 1:
         raise SystemExit(f"{len(matches)} pieces start with {prefix!r}")
-    return matches[0]
+    return paths.part_cache_dir(matches[0])
 
 
 def _frames(response: httpx.Response):
@@ -119,7 +122,8 @@ def main() -> None:
     args = parser.parse_args()
 
     source = _piece(args.uuid)
-    original = next(source.glob("original.*"))
+    original = store.get(source.name).original_path
+    assert original is not None, "the piece has no stored audio file"
     client = httpx.Client(base_url=args.api, timeout=120)
     engine = client.get("/matrix/engine").json()
     with original.open("rb") as handle:

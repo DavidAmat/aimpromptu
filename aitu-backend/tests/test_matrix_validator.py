@@ -96,7 +96,9 @@ def test_violations_are_ordered_by_column_then_row() -> None:
     grid[DO4, 1] = SUSTAIN
     grid[DO4, 3] = SUSTAIN
     violations = validate(PianoMatrix.from_dense(grid))
-    assert [(v.column, v.row) for v in violations] == sorted((v.column, v.row) for v in violations)
+    assert [(v.column, v.row) for v in violations] == sorted(
+        (v.column, v.row) for v in violations
+    )
     assert len(violations) == 3
 
 

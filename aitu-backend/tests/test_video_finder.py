@@ -78,13 +78,19 @@ def test_a_drawn_keyboard_is_found_border_for_border() -> None:
     assert cal.white_borders == pytest.approx(borders, abs=1.0)
     assert len(cal.black_borders) == 25
     assert cal.black_depth == pytest.approx(DEPTH, abs=3)
-    assert cal.found is not None and cal.found.route == "A" and cal.found.extrapolated == []
+    assert (
+        cal.found is not None
+        and cal.found.route == "A"
+        and cal.found.extrapolated == []
+    )
     assert cal.white_width == pytest.approx(WHITE, abs=0.5)
 
 
 def test_the_pitch_class_comes_from_the_pattern_and_the_octave_from_the_user() -> None:
     """V-10. A keyboard from A: the first black key is A#, one white key in."""
-    image, borders = draw_keyboard(white_count=52, first_pc=9, left=48.0, canvas=(500, 1400))
+    image, borders = draw_keyboard(
+        white_count=52, first_pc=9, left=48.0, canvas=(500, 1400)
+    )
     cal = finder.find_overlay(image, rect_for(width=1400.0), first_white_octave=0)
     assert cal.first_white_pitch_class == 9
     assert cal.first_white_octave == 0
@@ -105,8 +111,12 @@ def test_keys_a_hand_hides_are_placed_through_it_and_flagged() -> None:
     assert (
         len(cal.found.extrapolated) >= 3
     ), "the black keys under the hand were placed from the pattern"
-    assert cal.found.confirmed == [], "a hand is lighter than a black key, so none is confirmed"
-    hidden = {k.midi for k in geometry.keys(cal) if k.kind == "black" and x0 < k.mid < x1}
+    assert (
+        cal.found.confirmed == []
+    ), "a hand is lighter than a black key, so none is confirmed"
+    hidden = {
+        k.midi for k in geometry.keys(cal) if k.kind == "black" and x0 < k.mid < x1
+    }
     assert set(cal.found.extrapolated) == hidden
 
 
@@ -126,7 +136,9 @@ def test_a_rotated_keyboard_is_read_inside_a_rotated_rectangle() -> None:
     # rotate the picture about its centre, the way a camera would tilt it
     rotated = np.stack(
         [
-            ndimage.rotate(image[..., c], -angle, reshape=False, order=1, mode="nearest")
+            ndimage.rotate(
+                image[..., c], -angle, reshape=False, order=1, mode="nearest"
+            )
             for c in range(3)
         ],
         axis=2,

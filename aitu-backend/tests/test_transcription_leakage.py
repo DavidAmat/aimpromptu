@@ -60,7 +60,9 @@ def test_the_phantom_sol_is_merged_back() -> None:
 def test_the_note_that_absorbs_a_phantom_keeps_its_id_and_its_hand() -> None:
     """Implementation 08, Phase 5: the saved hands find their notes by id after the merge."""
     events = [
-        e.model_copy(update={"id": index, "hand": "left" if e.midi_note == 55 else "right"})
+        e.model_copy(
+            update={"id": index, "hand": "left" if e.midi_note == 55 else "right"}
+        )
         for index, e in enumerate(the_bruno_mars_passage())
     ]
     merged, _ = merge_leaked_onsets(events)
@@ -274,4 +276,6 @@ def test_a_caller_can_ask_for_the_old_one_sided_behaviour() -> None:
 
 def test_a_company_margin_below_one_is_refused() -> None:
     with pytest.raises(ValueError):
-        merge_leaked_onsets(the_bruno_mars_passage(), LeakageConfig(min_company_margin=0))
+        merge_leaked_onsets(
+            the_bruno_mars_passage(), LeakageConfig(min_company_margin=0)
+        )

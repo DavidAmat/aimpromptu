@@ -16,14 +16,17 @@ def test_health() -> None:
 def test_the_text_notation_mvp_is_gone() -> None:
     """`/scores` and `/sequence` were deleted with the text-notation MVP (implementation 02, Q-4)."""
     assert client.get("/scores").status_code == 404
-    assert client.post("/sequence", json={"sequence": ["*Do-4"]}).status_code in (404, 405)
+    assert client.post("/sequence", json={"sequence": ["*Do-4"]}).status_code in (
+        404,
+        405,
+    )
 
 
-def test_playlists_are_a_list() -> None:
-    """Playlists landed in Epic 10; the list is real even when it is empty."""
-    response = client.get("/library/playlists")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+def test_the_old_piano_library_is_gone() -> None:
+    """The old `/library` router (playground, `.npz`, promotions, tags, playlists) was deleted in
+    implementation 02, Phase 3; the Private Library takes the path in Phase 6."""
+    assert client.get("/library/playlists").status_code == 404
+    assert client.get("/library/tracks").status_code == 404
 
 
 def test_notation_answers_404_for_an_unknown_artifact() -> None:

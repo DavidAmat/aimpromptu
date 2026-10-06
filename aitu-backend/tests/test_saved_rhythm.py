@@ -22,7 +22,7 @@ from aitu_backend.transcription.engine import NoteEvent
 @pytest.fixture()
 def temp_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    paths.ensure_data_tree()
+    paths.ensure_database_tree()
     return tmp_path / "data"
 
 
@@ -40,7 +40,9 @@ def transcribed(uuid_alias: str = "Piece") -> str:
     pipeline.save_note_events(
         entry.uuid,
         [
-            NoteEvent(midi_note=60 + index % 5, start=index * 0.32, end=index * 0.32 + 0.2)
+            NoteEvent(
+                midi_note=60 + index % 5, start=index * 0.32, end=index * 0.32 + 0.2
+            )
             for index in range(8)
         ],
         duration_seconds=3.0,
@@ -57,7 +59,9 @@ def a_reading(anchor_ms: float = 320.0) -> SavedRhythm:
         anchor_ms=anchor_ms,
         speed_changes=[SpeedChange(start_frame=144, anchor_ms=674.0)],
         overrides=[
-            FigureOverride(hand="right", row=39, start_frame=8, figure=FigureName.SEMICORCHEA)
+            FigureOverride(
+                hand="right", row=39, start_frame=8, figure=FigureName.SEMICORCHEA
+            )
         ],
         beam_breaks=[BeamBreak(hand="left", start_frame=24)],
         key_signature="Bb",
@@ -106,16 +110,24 @@ def test_a_piece_with_no_saved_reading_says_so_rather_than_inventing_one(
 def test_saving_twice_replaces_rather_than_accumulating(client: TestClient) -> None:
     """A rhythm is a decision, not a version. What a reader wants back is the last one."""
     uuid = transcribed()
-    client.put(f"/time/{uuid}/rhythm", json=a_reading(320.0).model_dump(by_alias=True, mode="json"))
-    client.put(f"/time/{uuid}/rhythm", json=a_reading(337.0).model_dump(by_alias=True, mode="json"))
+    client.put(
+        f"/time/{uuid}/rhythm",
+        json=a_reading(320.0).model_dump(by_alias=True, mode="json"),
+    )
+    client.put(
+        f"/time/{uuid}/rhythm",
+        json=a_reading(337.0).model_dump(by_alias=True, mode="json"),
+    )
 
     assert client.get(f"/time/{uuid}/rhythm").json()["anchorMs"] == 337.0
-    assert len(list(pipeline.matrices_dir(uuid).glob("rhythm*.json"))) == 1
+    assert len(list(paths.part_dir(uuid).glob("sheet*.json"))) == 1
 
 
 def test_a_reading_can_be_forgotten(client: TestClient) -> None:
     uuid = transcribed()
-    client.put(f"/time/{uuid}/rhythm", json=a_reading().model_dump(by_alias=True, mode="json"))
+    client.put(
+        f"/time/{uuid}/rhythm", json=a_reading().model_dump(by_alias=True, mode="json")
+    )
     assert client.delete(f"/time/{uuid}/rhythm").status_code == 204
     assert client.get(f"/time/{uuid}/rhythm").status_code == 404
 
@@ -126,7 +138,9 @@ def test_a_reading_can_be_forgotten(client: TestClient) -> None:
 def test_a_rhythm_for_an_unknown_audio_is_a_404(client: TestClient) -> None:
     assert client.get("/time/nope/rhythm").status_code == 404
     assert (
-        client.put("/time/nope/rhythm", json=a_reading().model_dump(by_alias=True, mode="json"))
+        client.put(
+            "/time/nope/rhythm", json=a_reading().model_dump(by_alias=True, mode="json")
+        )
     ).status_code == 404
 
 
@@ -139,7 +153,8 @@ def test_a_rhythm_cannot_be_saved_for_a_piece_that_was_never_transcribed(
 
     entry = store.create("Silent", AudioSource.UPLOAD, "wav")
     response = client.put(
-        f"/time/{entry.uuid}/rhythm", json=a_reading().model_dump(by_alias=True, mode="json")
+        f"/time/{entry.uuid}/rhythm",
+        json=a_reading().model_dump(by_alias=True, mode="json"),
     )
     assert response.status_code == 409
     assert "not been transcribed" in response.json()["detail"]
@@ -172,7 +187,9 @@ def test_transcribing_again_throws_the_reading_away(temp_store: Path) -> None:
     assert pipeline.load_rhythm(uuid) is None
 
 
-def test_a_file_written_by_an_older_shape_reads_as_nothing_saved(temp_store: Path) -> None:
+def test_a_file_written_by_an_older_shape_reads_as_nothing_saved(
+    temp_store: Path,
+) -> None:
     """Losing a reading is a nuisance; refusing to open the piece over it would be worse."""
     uuid = transcribed()
     pipeline.rhythm_path(uuid).parent.mkdir(parents=True, exist_ok=True)
@@ -217,8 +234,20 @@ def test_octave_brackets_survive_a_round_trip(client: TestClient) -> None:
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
     body["ottavas"] = [
-        {"kind": "8va", "hand": "right", "fromColumn": 12, "toColumn": 40, "hidden": False},
-        {"kind": "15mb", "hand": "left", "fromColumn": 0, "toColumn": 12, "hidden": False},
+        {
+            "kind": "8va",
+            "hand": "right",
+            "fromColumn": 12,
+            "toColumn": 40,
+            "hidden": False,
+        },
+        {
+            "kind": "15mb",
+            "hand": "left",
+            "fromColumn": 0,
+            "toColumn": 12,
+            "hidden": False,
+        },
     ]
 
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
@@ -238,7 +267,13 @@ def test_a_hidden_bracket_comes_back_hidden(client: TestClient) -> None:
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
     body["ottavas"] = [
-        {"kind": "8va", "hand": "right", "fromColumn": 12, "toColumn": 40, "hidden": True},
+        {
+            "kind": "8va",
+            "hand": "right",
+            "fromColumn": 12,
+            "toColumn": 40,
+            "hidden": True,
+        },
     ]
 
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
@@ -249,11 +284,15 @@ def test_a_hidden_bracket_comes_back_hidden(client: TestClient) -> None:
     assert read["ottavas"][0]["toColumn"] == 40
 
 
-def test_a_bracket_saved_before_hiding_existed_reads_as_drawn(client: TestClient) -> None:
+def test_a_bracket_saved_before_hiding_existed_reads_as_drawn(
+    client: TestClient,
+) -> None:
     """A reading written before the flag had no way of saying so, and it meant drawn."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
-    body["ottavas"] = [{"kind": "8va", "hand": "right", "fromColumn": 12, "toColumn": 40}]
+    body["ottavas"] = [
+        {"kind": "8va", "hand": "right", "fromColumn": 12, "toColumn": 40}
+    ]
 
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
 
@@ -283,7 +322,9 @@ def test_a_bracket_that_ends_before_it_starts_is_refused(client: TestClient) -> 
     """An inverted range reads as empty everywhere downstream, which is not a thing to store."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
-    body["ottavas"] = [{"kind": "8va", "hand": "right", "fromColumn": 40, "toColumn": 12}]
+    body["ottavas"] = [
+        {"kind": "8va", "hand": "right", "fromColumn": 40, "toColumn": 12}
+    ]
 
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
 
@@ -320,7 +361,9 @@ def test_a_reading_saved_before_the_spacing_existed_leaves_it_to_the_page(
     assert client.get(f"/time/{uuid}/rhythm").json()["lineSpacing"] is None
 
 
-def test_a_space_between_lines_no_drawing_could_use_is_refused(client: TestClient) -> None:
+def test_a_space_between_lines_no_drawing_could_use_is_refused(
+    client: TestClient,
+) -> None:
     """Out of range is a mistake, and a stored mistake would take the sheet down on every visit."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -409,7 +452,9 @@ def test_a_clef_change_survives_a_round_trip(client: TestClient) -> None:
     ]
 
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
-    assert client.get(f"/time/{uuid}/rhythm").json()["clefChanges"] == body["clefChanges"]
+    assert (
+        client.get(f"/time/{uuid}/rhythm").json()["clefChanges"] == body["clefChanges"]
+    )
 
 
 def test_a_reading_with_no_clef_change_reads_as_the_two_a_piano_score_uses(
@@ -475,7 +520,9 @@ def test_a_reading_saved_before_the_note_spacing_existed_leaves_it_to_the_page(
     assert client.get(f"/time/{uuid}/rhythm").json()["noteSpacing"] is None
 
 
-def test_a_space_between_notes_no_drawing_could_use_is_refused(client: TestClient) -> None:
+def test_a_space_between_notes_no_drawing_could_use_is_refused(
+    client: TestClient,
+) -> None:
     """Out of range is a mistake, and a stored mistake would take the sheet down on every visit."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -502,10 +549,15 @@ def test_an_even_spacing_run_survives_a_round_trip(client: TestClient) -> None:
     ]
 
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
-    assert client.get(f"/time/{uuid}/rhythm").json()["evenSpacings"] == body["evenSpacings"]
+    assert (
+        client.get(f"/time/{uuid}/rhythm").json()["evenSpacings"]
+        == body["evenSpacings"]
+    )
 
 
-def test_an_even_spacing_tighter_than_the_page_measured_is_kept(client: TestClient) -> None:
+def test_an_even_spacing_tighter_than_the_page_measured_is_kept(
+    client: TestClient,
+) -> None:
     """A run closed below one is the reader saying their own hand has room to spare.
 
     The widest gap in a run is usually wide because of the *other* hand, so evening a run to it makes
@@ -514,10 +566,15 @@ def test_an_even_spacing_tighter_than_the_page_measured_is_kept(client: TestClie
     """
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
-    body["evenSpacings"] = [{"hand": "right", "fromColumn": 8, "toColumn": 24, "scale": 0.55}]
+    body["evenSpacings"] = [
+        {"hand": "right", "fromColumn": 8, "toColumn": 24, "scale": 0.55}
+    ]
 
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
-    assert client.get(f"/time/{uuid}/rhythm").json()["evenSpacings"] == body["evenSpacings"]
+    assert (
+        client.get(f"/time/{uuid}/rhythm").json()["evenSpacings"]
+        == body["evenSpacings"]
+    )
 
 
 def test_an_even_spacing_no_drawing_could_use_is_refused(client: TestClient) -> None:
@@ -525,11 +582,17 @@ def test_an_even_spacing_no_drawing_could_use_is_refused(client: TestClient) -> 
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
 
-    body["evenSpacings"] = [{"hand": "right", "fromColumn": 8, "toColumn": 24, "scale": 0.1}]
+    body["evenSpacings"] = [
+        {"hand": "right", "fromColumn": 8, "toColumn": 24, "scale": 0.1}
+    ]
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
-    body["evenSpacings"] = [{"hand": "right", "fromColumn": 8, "toColumn": 24, "scale": 9}]
+    body["evenSpacings"] = [
+        {"hand": "right", "fromColumn": 8, "toColumn": 24, "scale": 9}
+    ]
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
-    body["evenSpacings"] = [{"hand": "right", "fromColumn": 24, "toColumn": 8, "scale": 1}]
+    body["evenSpacings"] = [
+        {"hand": "right", "fromColumn": 24, "toColumn": 8, "scale": 1}
+    ]
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
 
 
@@ -571,7 +634,9 @@ def test_where_a_lyric_was_placed_survives_a_round_trip(client: TestClient) -> N
     assert stored["fontSize"] == 18.0
 
 
-def test_a_lyric_nobody_has_moved_reads_back_with_no_placement(client: TestClient) -> None:
+def test_a_lyric_nobody_has_moved_reads_back_with_no_placement(
+    client: TestClient,
+) -> None:
     """Absent is a block the page puts where it likes, which is what every older reading holds."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -590,9 +655,13 @@ def test_a_lyric_block_no_drawing_could_use_is_refused(client: TestClient) -> No
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
 
-    body["lyrics"] = [{"fromColumn": 8, "toColumn": 24, "text": "do re mi", "width": 4.0}]
+    body["lyrics"] = [
+        {"fromColumn": 8, "toColumn": 24, "text": "do re mi", "width": 4.0}
+    ]
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
-    body["lyrics"] = [{"fromColumn": 8, "toColumn": 24, "text": "do re mi", "fontSize": 96.0}]
+    body["lyrics"] = [
+        {"fromColumn": 8, "toColumn": 24, "text": "do re mi", "fontSize": 96.0}
+    ]
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
 
 
@@ -604,10 +673,16 @@ def test_the_title_lines_of_the_sheet_survive_a_round_trip(client: TestClient) -
 
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 200
     back = client.get(f"/time/{uuid}/rhythm").json()
-    assert (back["title"], back["subtitle"], back["artist"]) == ("Superestrella", "Piano", "Aitana")
+    assert (back["title"], back["subtitle"], back["artist"]) == (
+        "Superestrella",
+        "Piano",
+        "Aitana",
+    )
 
 
-def test_a_reading_without_title_lines_leaves_them_to_the_page(client: TestClient) -> None:
+def test_a_reading_without_title_lines_leaves_them_to_the_page(
+    client: TestClient,
+) -> None:
     """Absent means the page prints the project's name, as it did before the Title tab existed."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")

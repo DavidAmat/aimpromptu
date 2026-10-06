@@ -2,6 +2,7 @@
 
 import base64
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
@@ -155,15 +156,18 @@ class AudioEntry(AudioMetadata):
 
 
 def _updated_at(audio_uuid: str) -> datetime | None:
-    """The newest modification time of the files directly in the piece's folder.
+    """The newest modification time of the part's files (notes, sheet, timeline) and of
+    ``project.json`` (its title and source).
 
-    One `stat` per file, no file read, so the list of every piece stays fast. History, staging and
-    the video folder are not looked at: they are not edits of the piece itself.
+    One `stat` per file, no file read, so the list of every project stays fast. History, staging,
+    the cache and the video are not looked at: they are not edits of the project itself.
     """
-    folder = paths.audio_dir(audio_uuid)
     try:
-        times = [child.stat().st_mtime for child in folder.iterdir() if child.is_file()]
-    except OSError:
+        folder = paths.part_dir(audio_uuid)
+        files = [child for child in folder.iterdir() if child.is_file()]
+        files.append(folder.parent.parent / "project.json")
+        times = [child.stat().st_mtime for child in files if child.is_file()]
+    except (OSError, KeyError):
         return None
     return datetime.fromtimestamp(max(times), tz=UTC) if times else None
 
@@ -444,10 +448,12 @@ def stream_audio(audio_uuid: str, normalized: bool = False, original: bool = Fal
     if original_path is None:
         raise HTTPException(status_code=404, detail="This audio has no stored original file")
     media_type = _MEDIA_TYPES.get(entry.metadata.format, "application/octet-stream")
+    # The stored file is named by its content; the download keeps the name the user knows.
+    name = Path(entry.metadata.original_filename or entry.metadata.alias).stem or "audio"
     return FileResponse(
         original_path,
         media_type=media_type,
-        filename=original_path.name,
+        filename=f"{name}{original_path.suffix}",
         headers={"Cache-Control": "no-cache"},
     )
 

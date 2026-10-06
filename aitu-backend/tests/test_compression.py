@@ -43,7 +43,9 @@ def client(tmp_path: Path) -> TestClient:
 
     @app.get("/stream")
     def stream() -> StreamingResponse:
-        frames = (f"data: {json.dumps({'n': n, 'pad': 'x' * 400})}\n\n" for n in range(10))
+        frames = (
+            f"data: {json.dumps({'n': n, 'pad': 'x' * 400})}\n\n" for n in range(10)
+        )
         return StreamingResponse(frames, media_type="text/event-stream")
 
     return TestClient(app)
@@ -56,7 +58,9 @@ def test_a_large_json_answer_is_compressed(client: TestClient) -> None:
     assert response.json() == BIG
 
 
-def test_a_client_that_does_not_ask_for_gzip_gets_plain_json(client: TestClient) -> None:
+def test_a_client_that_does_not_ask_for_gzip_gets_plain_json(
+    client: TestClient,
+) -> None:
     response = client.get("/big", headers={"Accept-Encoding": "identity"})
     assert "content-encoding" not in response.headers
     assert response.json() == BIG
@@ -68,10 +72,14 @@ def test_a_small_answer_is_not_compressed(client: TestClient) -> None:
     assert len(response.content) < MINIMUM_SIZE
 
 
-def test_audio_is_sent_as_it_is_and_still_answers_a_byte_range(client: TestClient) -> None:
+def test_audio_is_sent_as_it_is_and_still_answers_a_byte_range(
+    client: TestClient,
+) -> None:
     whole = client.get("/audio", headers={"Accept-Encoding": "gzip"})
     assert "content-encoding" not in whole.headers
-    part = client.get("/audio", headers={"Accept-Encoding": "gzip", "Range": "bytes=4-19"})
+    part = client.get(
+        "/audio", headers={"Accept-Encoding": "gzip", "Range": "bytes=4-19"}
+    )
     assert part.status_code == 206
     assert "content-encoding" not in part.headers
     assert part.content == whole.content[4:20]

@@ -38,7 +38,7 @@ from aitu_backend.transcription.engine import NoteEvent
 @pytest.fixture()
 def temp_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    paths.ensure_data_tree()
+    paths.ensure_database_tree()
     return tmp_path / "data"
 
 
@@ -63,7 +63,9 @@ def piece_with_notes() -> str:
     return entry.uuid
 
 
-def sine_wav(path: Path, seconds: float = 1.0, rate: int = 8000, freq: float = 440.0) -> Path:
+def sine_wav(
+    path: Path, seconds: float = 1.0, rate: int = 8000, freq: float = 440.0
+) -> Path:
     samples = np.sin(2 * np.pi * freq * np.arange(int(rate * seconds)) / rate)
     frames = b"".join(struct.pack("<h", int(value * 30000)) for value in samples)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -78,7 +80,9 @@ def sine_wav(path: Path, seconds: float = 1.0, rate: int = 8000, freq: float = 4
 # --------------------------------------------------------------- 13.1.1.1 empty piece
 
 
-def test_an_empty_piece_is_an_empty_events_json_and_a_frame_ms(temp_store: Path) -> None:
+def test_an_empty_piece_is_an_empty_events_json_and_a_frame_ms(
+    temp_store: Path,
+) -> None:
     metadata = compose.create_empty_piece("Nocturne in progress", 40.0)
     assert metadata.source is AudioSource.COMPOSED
     assert metadata.frame_ms == 40.0
@@ -89,7 +93,9 @@ def test_an_empty_piece_is_an_empty_events_json_and_a_frame_ms(temp_store: Path)
     assert stored.duration_seconds == 0.0
 
 
-def test_creating_a_piece_asks_only_for_a_name(client: TestClient, temp_store: Path) -> None:
+def test_creating_a_piece_asks_only_for_a_name(
+    client: TestClient, temp_store: Path
+) -> None:
     created = client.post("/audio/compose", json={"name": "Study", "frameMs": 20})
     assert created.status_code == 201, created.text
     body = created.json()
@@ -101,7 +107,9 @@ def test_creating_a_piece_asks_only_for_a_name(client: TestClient, temp_store: P
     assert listed[0]["hasNotes"] is True
 
 
-def test_an_empty_piece_draws_empty_staves(client: TestClient, temp_store: Path) -> None:
+def test_an_empty_piece_draws_empty_staves(
+    client: TestClient, temp_store: Path
+) -> None:
     uuid = client.post("/audio/compose", json={"name": "Study"}).json()["uuid"]
     score = client.get(f"/time/{uuid}/score", params={"anchorMs": 500, "frameMs": 40})
     assert score.status_code == 200, score.text
@@ -127,15 +135,22 @@ def test_append_leaves_the_silence_that_was_asked_for(temp_store: Path) -> None:
     assert compose.append_anchor(events, 1.0, 40.0) == pytest.approx(2.44)
 
 
-def test_the_last_note_does_not_count_notes_taken_off_the_page(temp_store: Path) -> None:
-    events = [_note(60, 0.0, 0.4), NoteEvent(midi_note=62, start=5.0, end=5.4, removed=True)]
+def test_the_last_note_does_not_count_notes_taken_off_the_page(
+    temp_store: Path,
+) -> None:
+    events = [
+        _note(60, 0.0, 0.4),
+        NoteEvent(midi_note=62, start=5.0, end=5.4, removed=True),
+    ]
     assert compose.append_anchor(events, 1.0, 40.0) == pytest.approx(1.4)
 
 
 def test_a_passage_occupies_a_whole_number_of_columns(temp_store: Path) -> None:
     """The reason an insertion is exact rather than nearly exact — see the compose module note."""
     prepared = [_note(60, 0.0, 0.2), _note(62, 0.5, 0.73)]
-    length, arriving = compose.passage_bounds(prepared, at_seconds=1.0, factor=1.0, frame_ms=40.0)
+    length, arriving = compose.passage_bounds(
+        prepared, at_seconds=1.0, factor=1.0, frame_ms=40.0
+    )
     assert length == pytest.approx(0.76)
     assert round(length * 1000 / 40.0, 6) == 19
     # Nothing the take played is cut: the length rounds up, never down.
@@ -210,7 +225,12 @@ def test_a_note_sounding_across_the_moment_is_cut_there(temp_store: Path) -> Non
 def test_a_passage_with_no_notes_cannot_be_placed(temp_store: Path) -> None:
     with pytest.raises(ValueError):
         compose.insert_events(
-            [], [], at_seconds=0.0, passage_seconds=0.0, duration_seconds=0.0, placement="append"
+            [],
+            [],
+            at_seconds=0.0,
+            passage_seconds=0.0,
+            duration_seconds=0.0,
+            placement="append",
         )
 
 
@@ -226,7 +246,9 @@ def marked_rhythm() -> SavedRhythm:
             KeyChange(from_column=60, key_signature="G"),
         ],
         speed_changes=[SpeedChange(start_frame=80, anchor_ms=400.0)],
-        overrides=[FigureOverride(hand="right", row=40, start_frame=5, figure=FigureName.NEGRA)],
+        overrides=[
+            FigureOverride(hand="right", row=40, start_frame=5, figure=FigureName.NEGRA)
+        ],
         beam_breaks=[BeamBreak(hand="right", start_frame=70)],
         fingers=[
             Fingering(hand="right", start_frame=5, row=40, finger=1),
@@ -300,7 +322,9 @@ def test_appending_moves_no_marks(temp_store: Path) -> None:
     assert shifted == rhythm
 
 
-def test_a_mark_is_counted_once_however_many_of_its_columns_move(temp_store: Path) -> None:
+def test_a_mark_is_counted_once_however_many_of_its_columns_move(
+    temp_store: Path,
+) -> None:
     rhythm = SavedRhythm(
         anchor_ms=500.0,
         frame_ms=40.0,
@@ -381,7 +405,9 @@ def test_a_second_passage_lands_after_the_silence_asked_for(temp_store: Path) ->
     assert [round(event.start, 4) for event in stored.events] == [0.0, 1.4]
 
 
-def test_half_speed_puts_the_passage_in_half_the_time_it_took_to_play(temp_store: Path) -> None:
+def test_half_speed_puts_the_passage_in_half_the_time_it_took_to_play(
+    temp_store: Path,
+) -> None:
     """Subtask 13.1.1.4: with no window to fit, the factor is the whole answer."""
     uuid = compose.create_empty_piece("Study", 40.0).uuid
     record = staged(
@@ -399,7 +425,9 @@ def test_half_speed_puts_the_passage_in_half_the_time_it_took_to_play(temp_store
     assert [round(event.start, 4) for event in stored.events] == [0.0, 1.0]
 
 
-def test_insert_moves_the_notes_and_the_marks_in_one_operation(temp_store: Path) -> None:
+def test_insert_moves_the_notes_and_the_marks_in_one_operation(
+    temp_store: Path,
+) -> None:
     uuid = piece_with_notes()
     pipeline.save_rhythm(
         uuid,
@@ -433,7 +461,14 @@ def test_insert_moves_the_notes_and_the_marks_in_one_operation(temp_store: Path)
 
     stored = pipeline.load_note_events(uuid)
     assert stored is not None
-    assert [round(event.start, 4) for event in stored.events] == [0.0, 1.0, 2.0, 2.4, 3.4, 4.4]
+    assert [round(event.start, 4) for event in stored.events] == [
+        0.0,
+        1.0,
+        2.0,
+        2.4,
+        3.4,
+        4.4,
+    ]
     saved = pipeline.load_rhythm(uuid)
     assert saved is not None
     assert [item.start_frame for item in saved.fingers] == [0, 85]
@@ -486,7 +521,8 @@ def test_notes_outside_an_append_are_byte_identical(temp_store: Path) -> None:
     after = pipeline.load_note_events(uuid)
     assert after is not None
     assert [
-        (event.midi_note, event.start, event.end) for event in after.events[: len(before)]
+        (event.midi_note, event.start, event.end)
+        for event in after.events[: len(before)]
     ] == before
 
 
@@ -526,10 +562,13 @@ def test_moving_a_passage_keeps_the_take(temp_store: Path) -> None:
     assert staging.has_events(uuid, record.session_uuid)
 
 
-def test_cancel_leaves_an_empty_piece_empty(client: TestClient, temp_store: Path) -> None:
+def test_cancel_leaves_an_empty_piece_empty(
+    client: TestClient, temp_store: Path
+) -> None:
     uuid = client.post("/audio/compose", json={"name": "Study"}).json()["uuid"]
     created = client.post(
-        f"/audio/{uuid}/edits", json={"placement": "append", "gapSeconds": 1.0, "frameMs": 40}
+        f"/audio/{uuid}/edits",
+        json={"placement": "append", "gapSeconds": 1.0, "frameMs": 40},
     )
     assert created.status_code == 201, created.text
     session = created.json()["sessionUuid"]
@@ -545,7 +584,9 @@ def test_two_passages_one_at_half_speed_read_as_one_piece(
     client: TestClient, temp_store: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The epic's exit criteria, without a browser or a microphone."""
-    uuid = client.post("/audio/compose", json={"name": "Duet", "frameMs": 40}).json()["uuid"]
+    uuid = client.post("/audio/compose", json={"name": "Duet", "frameMs": 40}).json()[
+        "uuid"
+    ]
 
     def play(session: str, take: list[NoteEvent], seconds: float) -> None:
         sine_wav(staging.untrimmed_path(uuid, session), seconds=seconds)
@@ -572,7 +613,9 @@ def test_two_passages_one_at_half_speed_read_as_one_piece(
     # The first passage's last note released at 0.9 s; a one-second silence lands on column 48.
     assert second["startSeconds"] == pytest.approx(1.92)
     play(second["sessionUuid"], [_note(67, 0.0, 0.8), _note(72, 1.0, 1.8)], 2.0)
-    confirmation = client.get(f"/audio/{uuid}/edits/{second['sessionUuid']}/confirmation").json()
+    confirmation = client.get(
+        f"/audio/{uuid}/edits/{second['sessionUuid']}/confirmation"
+    ).json()
     assert confirmation["placement"] == "append"
     assert confirmation["lengthUnchanged"] is False
     assert confirmation["notesArriving"] == 2
@@ -599,7 +642,9 @@ def test_the_recording_grows_with_the_piece(
     sine_wav(staging.untrimmed_path(uuid, session), seconds=1.0)
     record.untrimmed_duration_seconds = 1.0
     staging.write(record)
-    monkeypatch.setattr(pipeline, "transcribe_file", lambda path, **kw: [_note(60, 0.0, 0.9)])
+    monkeypatch.setattr(
+        pipeline, "transcribe_file", lambda path, **kw: [_note(60, 0.0, 0.9)]
+    )
     transcribe_take(uuid, session)
 
     result = accept(uuid, session)
@@ -611,17 +656,23 @@ def test_the_recording_grows_with_the_piece(
     )
 
 
-def test_insert_wav_opens_the_recording_rather_than_overwriting_it(tmp_path: Path) -> None:
+def test_insert_wav_opens_the_recording_rather_than_overwriting_it(
+    tmp_path: Path,
+) -> None:
     source = sine_wav(tmp_path / "source.wav", seconds=2.0, rate=16000)
     patch_wav = sine_wav(tmp_path / "patch.wav", seconds=0.5, rate=16000, freq=880.0)
-    grown = insert_wav(source, patch_wav, tmp_path / "out.wav", 1.0, 0.5, keep_tail=True)
+    grown = insert_wav(
+        source, patch_wav, tmp_path / "out.wav", 1.0, 0.5, keep_tail=True
+    )
     assert formats.duration_seconds(grown) == pytest.approx(2.5, abs=0.01)
 
 
 def test_insert_wav_pads_silence_up_to_an_append(tmp_path: Path) -> None:
     missing = tmp_path / "nothing.wav"
     patch_wav = sine_wav(tmp_path / "patch.wav", seconds=0.5, rate=16000)
-    grown = insert_wav(missing, patch_wav, tmp_path / "out.wav", 1.0, 0.5, keep_tail=False)
+    grown = insert_wav(
+        missing, patch_wav, tmp_path / "out.wav", 1.0, 0.5, keep_tail=False
+    )
     assert formats.duration_seconds(grown) == pytest.approx(1.5, abs=0.01)
 
 
@@ -653,7 +704,9 @@ def test_a_sustain_that_outruns_the_recording_does_not_stretch_the_passage(
     assert max(event.end for event in stored.events) <= 3.92 + 1e-9
 
 
-def test_a_note_that_rounds_into_the_insertion_column_moves_with_it(temp_store: Path) -> None:
+def test_a_note_that_rounds_into_the_insertion_column_moves_with_it(
+    temp_store: Path,
+) -> None:
     """Notes and marks are both decided by the column, so neither is left behind by the other.
 
     A note at 1.99 s is drawn in column 50 at 40 ms a column, and so is the moment 2.0 s. Under an

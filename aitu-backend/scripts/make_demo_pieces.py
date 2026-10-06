@@ -23,9 +23,7 @@ replaces the pieces rather than adding a second copy of each.
 
 from __future__ import annotations
 
-import json
 import math
-import shutil
 import struct
 import sys
 import wave
@@ -35,6 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from aitu_backend.audio import store  # noqa: E402
+from aitu_backend.pmn import events_file  # noqa: E402
 from aitu_backend.storage import paths  # noqa: E402
 from aitu_backend.transcription import pipeline  # noqa: E402
 
@@ -203,9 +202,8 @@ def sound(midi: int, start: float, length: float) -> Note:
 
 def write_piece(audio_uuid: str, alias: str, title: str, notes: list[Note]) -> None:
     """Replace this piece in the store: its audio, its metadata and its raw events."""
-    directory = paths.audio_dir(audio_uuid)
-    if directory.exists():
-        shutil.rmtree(directory)
+    if store.exists(audio_uuid):
+        store.delete(audio_uuid)
 
     duration = math.ceil(max(note.end for note in notes)) + 1.0
     stored = store.create(
@@ -215,14 +213,15 @@ def write_piece(audio_uuid: str, alias: str, title: str, notes: list[Note]) -> N
         audio_uuid=audio_uuid,
         original_filename=f"{alias}.wav",
     )
-    render_wav(stored.directory / "original.wav", notes, duration)
-    shutil.copyfile(stored.directory / "original.wav", stored.directory / "normalized.wav")
+    # Rendered at 16 kHz mono, so the stored file is also its own normalized copy.
+    render_wav(stored.normalized_path, notes, duration)
+    store.replace_original(audio_uuid, stored.normalized_path, "wav", keep_cuts=False)
     store.update(audio_uuid, duration_seconds=duration, sample_rate=SAMPLE_RATE)
 
     events_path = pipeline.events_path(audio_uuid)
-    events_path.parent.mkdir(parents=True, exist_ok=True)
-    events_path.write_text(
-        json.dumps(
+    events_file.write_payload(
+        events_path,
+        (
             {
                 "schemaVersion": "1.0",
                 "durationSeconds": duration,
@@ -236,10 +235,8 @@ def write_piece(audio_uuid: str, alias: str, title: str, notes: list[Note]) -> N
                     }
                     for note in sorted(notes, key=lambda note: (note.start, note.midi))
                 ],
-            },
-            indent=2,
+            }
         ),
-        encoding="utf-8",
     )
     print(f"{alias}: {len(notes)} notes, {duration:.1f} s — {audio_uuid}")
 
@@ -275,12 +272,12 @@ def render_wav(path: Path, notes: list[Note], duration: float) -> None:
 
 
 def main() -> None:
-    paths.ensure_data_tree()
+    paths.ensure_database_tree()
     title, notes = even_and_swung()
     write_piece(EVEN_AND_SWUNG_UUID, "even-and-swung", title, notes)
     title, notes = classical_mix()
     write_piece(CLASSICAL_MIX_UUID, "classical-mix", title, notes)
-    print("\nOpen Playground → Upload / Input and pick one from the audio library.")
+    print("\nOpen Projects and pick one.")
 
 
 if __name__ == "__main__":

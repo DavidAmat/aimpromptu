@@ -1,15 +1,16 @@
 """One video on disk: the file, its metadata, its calibration, its frames.
 
 Task 3.1.1 and Task 3.2.1 of `04-synthesia-to-notes`. Everything under
-`data/audio/<uuid>/video/` is read and written here and nowhere else, the way
-`audio/store.py` owns `data/audio/<uuid>/`.
+`.database/tmp/<userId>/<partId>/video/` (implementation 02, plan section 8.5: the video is a
+temporary file of its owner) is read and written here and nowhere else, the way `audio/store.py`
+owns the audio of a part.
 
 Two rules from the frozen decisions shape it:
 
 * **The video is the source and the sampled frames are a cache** (V-01). The
   frames, the plate and `frames.jsonl` can all be thrown away and written again;
   the video file and `calibration.json` cannot.
-* **The calibration is kept beside the video, never inside `rhythm.json`**
+* **The calibration is kept beside the video, never inside `sheet.json`**
   (V-12). How the notes were read off the screen is a different thing from what
   a reader decided about the sheet.
 
@@ -55,7 +56,10 @@ class VideoNotFound(LookupError):
 
 def exists(audio_uuid: str) -> bool:
     """Is there a downloaded video for this piece?"""
-    return paths.video_source_path(audio_uuid).is_file()
+    try:
+        return paths.video_source_path(audio_uuid).is_file()
+    except KeyError:  # no such part
+        return False
 
 
 def require(audio_uuid: str) -> Path:
@@ -68,7 +72,7 @@ def require(audio_uuid: str) -> Path:
 
 def uuids() -> list[str]:
     """Every piece that has a downloaded video, sorted."""
-    return paths.list_video_uuids()
+    return paths.list_video_part_ids()
 
 
 # -------------------------------------------------------- the metadata ------

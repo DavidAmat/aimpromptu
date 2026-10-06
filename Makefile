@@ -11,6 +11,13 @@
 #   make build          rebuild both images (after a change of uv.lock, package-lock.json or
 #                       vexflow-v2)
 #
+# `.database/` (implementation 02, plan section 8.7), on the host (they need tar with zstd):
+#
+#   make db-backup      .database-YYYYMMDD-HHMMSS.tar.zst beside .database/, safe while the app runs
+#   make db-restore FILE=.database-....tar.zst   into an empty .database/
+#   make db-check       the tables against the bundles and the audio store (HASHES=1: hash every file)
+#   make db-reindex     the rows of the projects and the audio again, from the bundles on disk
+#
 # Natively, without containers:
 #
 #   make serve        start the backend and the frontend, print where they are
@@ -30,7 +37,7 @@
 # loudly is better; run `make stop` or `make serve WEB_PORT=5174`.
 
 .PHONY: serve stop restart status logs-native logs-web logs-api _start _report \
-	up down logs ps build test-backend shell-backend
+	up down logs ps build test-backend shell-backend _database db-backup db-restore db-check db-reindex
 
 WEB_PORT ?= 5173
 API_HOST ?= $(or $(AITU_HOST),127.0.0.1)
@@ -155,7 +162,9 @@ COMPOSE := docker compose
 # The cache folder must exist before Docker mounts it, or Docker creates it as root.
 # --renew-anon-volumes: the frontend keeps its node_modules in an anonymous volume, and without the
 # flag a rebuilt image would still see the old packages.
-up: stop
+# `.database/` must exist before Docker mounts it, for the same reason (on the Ubuntu machine it is
+# a link to /mnt/ssd2/aimpromptu/.database, made once by hand; see context/02b-local-setup.md).
+up: stop _database
 	@mkdir -p "$(CACHE_DIR)"
 	$(COMPOSE) up -d --build --renew-anon-volumes --wait
 	@echo ""
@@ -177,8 +186,29 @@ ps:
 build:
 	$(COMPOSE) build
 
-test-backend:
+_database:
+	@[ -e .database ] || mkdir -p .database
+
+test-backend: _database
 	$(COMPOSE) run --rm --no-deps backend python -m pytest $(ARGS)
 
 shell-backend:
 	$(COMPOSE) exec backend bash
+
+# ------------------------------------------------------------------- .database
+
+# `--no-sync`: the local environment keeps the extras it was made with (the engines).
+DB_TOOLS := cd aitu-backend && uv run --no-sync python -m aitu_backend.db.tools
+
+db-backup:
+	$(DB_TOOLS) backup
+
+db-restore:
+	@test -n "$(FILE)" || (echo "usage: make db-restore FILE=.database-YYYYMMDD-HHMMSS.tar.zst"; exit 1)
+	$(DB_TOOLS) restore $(abspath $(FILE))
+
+db-check:
+	$(DB_TOOLS) check $(if $(HASHES),--hashes,)
+
+db-reindex:
+	$(DB_TOOLS) reindex

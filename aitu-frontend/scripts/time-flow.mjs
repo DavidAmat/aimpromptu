@@ -16,7 +16,7 @@
  * The three pieces, all temporary, deleted at the end, so the library is never changed:
  *
  * 1. Superestrella: its audio uploaded as a new piece (as `check:flow` does);
- * 2. a library piece: a copy of its folder under a new uuid (as `bench:sheet` does), opened from
+ * 2. a library piece: a copy made by `POST /projects/{id}/duplicate` (as `bench:sheet` does), opened from
  *    the library list, transcribed again with MuScriptor (the confirmation is pressed);
  * 3. a new YouTube URL, downloaded on the Source tab.
  *
@@ -26,18 +26,18 @@
  * It needs `make up`. `--keep` leaves the three pieces in the library (to look at them after).
  */
 
-import { cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(here, '..', '..', 'aitu-backend', 'data', 'audio');
+const SUPERESTRELLA = 'a585f9eb-36a1-49a0-9f0c-2626f3d292da';
 const { values } = parseArgs({
   options: {
-    audio: { type: 'string', default: path.join(dataDir, 'a585f9eb-36a1-49a0-9f0c-2626f3d292da', 'original.mp3') },
+    // A file to upload; Superestrella's own stored audio when absent.
+    audio: { type: 'string' },
     // The Winner Takes It All, 5:56: the longest piece of the library, ByteDance notes, no hands.
     library: { type: 'string', default: 'fb0b0989' },
     // Yann Tiersen, "Comptine d'un autre été, l'après-midi", 2:21, solo piano; not in the library.
@@ -56,21 +56,28 @@ mkdirSync(values.shots, { recursive: true });
 const engine = await (await fetch(`${api}/matrix/engine`)).json();
 console.log(`Engine: ${JSON.stringify(engine)}`);
 
-/** A copy of a library piece under a new uuid, without its history, staging and video folders. */
-function copyPiece(prefix) {
-  const source = readdirSync(dataDir).find((name) => name.startsWith(prefix.slice(0, 8)));
+/** A temporary copy of a library piece (`POST /projects/{id}/duplicate`): new ids, the same audio
+ * files, no history, staging or video. */
+async function copyPiece(prefix) {
+  const listed = await (await fetch(`${api}/audio/`)).json();
+  const source = listed.find((entry) => entry.uuid.startsWith(prefix.slice(0, 8)));
   if (!source) throw new Error(`No piece starts with ${prefix}`);
-  const copy = randomUUID();
-  const from = path.join(dataDir, source);
-  const to = path.join(dataDir, copy);
-  const skip = new Set(['history', 'staging', 'video']);
-  cpSync(from, to, { recursive: true, filter: (file) => !skip.has(path.relative(from, file).split(path.sep)[0]) });
-  const metadataPath = path.join(to, 'metadata.json');
-  const metadata = JSON.parse(readFileSync(metadataPath, 'utf8'));
-  metadata.uuid = copy;
-  metadata.alias = `time:flow copy of ${metadata.alias}`;
-  writeFileSync(metadataPath, JSON.stringify(metadata));
-  return { uuid: copy, alias: metadata.alias };
+  const alias = `time:flow copy of ${source.alias}`;
+  const answer = await fetch(`${api}/projects/${source.uuid}/duplicate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: alias }),
+  });
+  if (!answer.ok) throw new Error(`The copy failed: ${answer.status} ${await answer.text()}`);
+  return { uuid: (await answer.json()).parts[0], alias };
+}
+
+/** The stored audio file of a piece, as the user uploaded it (`GET /audio/{id}/file?original=true`). */
+async function originalOf(uuid) {
+  const answer = await fetch(`${api}/audio/${uuid}/file?original=true`);
+  if (!answer.ok) throw new Error(`No audio for ${uuid}: ${answer.status}`);
+  const name = /filename="?([^";]+)"?/.exec(answer.headers.get('content-disposition') ?? '')?.[1] ?? 'audio.mp3';
+  return { bytes: await answer.arrayBuffer(), name };
 }
 
 const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
@@ -220,7 +227,10 @@ const pieces = {
   upload: async (page, row) => {
     const t0 = Date.now();
     const form = new FormData();
-    form.append('file', new Blob([readFileSync(values.audio)]), path.basename(values.audio));
+    const audio = values.audio
+      ? { bytes: readFileSync(values.audio), name: path.basename(values.audio) }
+      : await originalOf(SUPERESTRELLA);
+    form.append('file', new Blob([audio.bytes]), audio.name);
     form.append('alias', 'time:flow upload of Superestrella');
     const answer = await fetch(`${api}/audio/upload`, { method: 'POST', body: form });
     if (!answer.ok) throw new Error(`The upload failed: ${answer.status} ${await answer.text()}`);
@@ -233,7 +243,7 @@ const pieces = {
   },
   // A library piece, copied, opened from its row in Projects.
   library: async (page, row) => {
-    const { uuid, alias } = copyPiece(values.library);
+    const { uuid, alias } = await copyPiece(values.library);
     created.push(uuid);
     await page.goto(`${base}/projects`);
     const item = page.getByText(alias, { exact: true });

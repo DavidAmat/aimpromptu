@@ -19,7 +19,7 @@ from typing import Any
 
 import numpy as np
 
-from aitu_backend.storage import paths
+from aitu_backend.storage import bundle
 from aitu_backend.transcription import pipeline, saved_hands
 from aitu_backend.transcription.time_pipeline import impose_granularity_and_split
 
@@ -67,9 +67,9 @@ def main() -> None:
     args = parser.parse_args()
 
     rows = []
-    for folder in sorted(paths.audio_root().iterdir()):
-        if (folder / "matrices" / "events.json").is_file():
-            row = check(folder.name, args.frame_ms)
+    for part_id in sorted(bundle.list_parts()):
+        if pipeline.has_events(part_id):
+            row = check(part_id, args.frame_ms)
             if row is not None:
                 rows.append(row)
                 print(

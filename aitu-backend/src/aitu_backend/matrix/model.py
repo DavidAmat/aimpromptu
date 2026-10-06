@@ -7,8 +7,8 @@ Why dense in memory when the wire and disk forms are sparse: the operations this
 epic needs — collapse, clean, split, transpose, slice — are all whole-array
 numpy work, and 88 x N int8 is 88 bytes per frame, i.e. ~1 MB for two hours of
 fusas at 120 BPM. Sparsity buys nothing at that size and costs vectorization.
-The COO form is produced on the way out (:meth:`to_coo_payload`,
-:meth:`save_npz`) and consumed on the way in.
+The COO form is produced on the way out (:meth:`to_coo_payload`) and consumed on the
+way in. The ``.npz`` file of the old Piano Library was deleted in implementation 02, Phase 3.
 
 Timing follows ``context/music/notation-logic/01-matrix-notation-logic.md``:
 a beat is a **negra**, ``beats_per_column`` comes from the granularity, and
@@ -18,7 +18,6 @@ a beat is a **negra**, ``beats_per_column`` comes from the granularity, and
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
 
 import numpy as np
 
@@ -56,8 +55,7 @@ def seconds_per_column(granularity: Granularity | str, tempo_bpm: float) -> floa
 class PianoMatrix:
     """An 88 x N piano matrix plus the metadata needed to interpret it.
 
-    Construct with :meth:`empty`, :meth:`from_dense`, :meth:`from_coo_payload`
-    or :meth:`load_npz`. ``grid`` is owned by the instance — callers that mutate
+    Construct with :meth:`empty`, :meth:`from_dense` or :meth:`from_coo_payload`. ``grid`` is owned by the instance — callers that mutate
     it must re-run the validator (Task 2.1.2).
     """
 
@@ -202,19 +200,6 @@ class PianoMatrix:
             return cls.from_dense(envelope.dense_matrix, frames_as_rows=True, **common)  # type: ignore[arg-type]
         raise ValueError("Envelope carries no one-hand matrix (it is probably two-hands)")
 
-    @classmethod
-    def load_npz(
-        cls,
-        path: Path,
-        granularity: Granularity | str = Granularity.SEMICORCHEA,
-        tempo_bpm: float = 60.0,
-        **kwargs: object,
-    ) -> "PianoMatrix":
-        """Read a matrix persisted by :meth:`save_npz`."""
-        from aitu_backend.storage.matrix_store import load_matrix
-
-        return cls.from_coo_payload(load_matrix(path), granularity, tempo_bpm, **kwargs)
-
     # --------------------------------------------------------------- geometry
 
     @property
@@ -338,12 +323,6 @@ class PianoMatrix:
             key_signature=self.key_signature,
             title=self.title,
         )
-
-    def save_npz(self, path: Path) -> Path:
-        """Persist as compressed sparse ``.npz`` (see `storage/matrix_store.py`)."""
-        from aitu_backend.storage.matrix_store import save_matrix
-
-        return save_matrix(path, self.to_coo_payload())
 
     # -------------------------------------------------------------- structure
 

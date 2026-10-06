@@ -27,7 +27,13 @@ from aitu_backend.matrix.ladder import (
     nearest_figure,
     shift_ladder,
 )
-from aitu_backend.matrix.peaks import Peak, density_grid, find_peaks, gaussian_kde, peaks_of
+from aitu_backend.matrix.peaks import (
+    Peak,
+    density_grid,
+    find_peaks,
+    gaussian_kde,
+    peaks_of,
+)
 from aitu_backend.matrix.time_grid import frame_of_seconds
 from aitu_backend.schemas.time_matrix import FigureName
 from aitu_backend.transcription.engine import NoteEvent
@@ -36,10 +42,14 @@ RANDOM = np.random.default_rng(20260806)
 
 
 def note(start_ms: float, midi: int = 60, length_ms: float = 100.0) -> NoteEvent:
-    return NoteEvent(midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0)
+    return NoteEvent(
+        midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0
+    )
 
 
-def swung_run(count: int = 200, long_ms: float = 211.0, short_ms: float = 125.0) -> list[NoteEvent]:
+def swung_run(
+    count: int = 200, long_ms: float = 211.0, short_ms: float = 125.0
+) -> list[NoteEvent]:
     """A shuffle: alternating long and short halves of a 337 ms beat, with human jitter.
 
     This is the shape the measurement found on the real piece. The jitter is what makes the peaks
@@ -56,7 +66,9 @@ def swung_run(count: int = 200, long_ms: float = 211.0, short_ms: float = 125.0)
 
 
 def test_a_chord_counts_as_one_attack():
-    attacks = attack_times_seconds([note(0, 60), note(8, 64), note(15, 67), note(400, 72)])
+    attacks = attack_times_seconds(
+        [note(0, 60), note(8, 64), note(15, 67), note(400, 72)]
+    )
     assert attacks.tolist() == pytest.approx([0.0, 0.4])
 
 
@@ -113,7 +125,9 @@ def test_snapping_before_measuring_splits_a_peak_in_two():
     columns = np.array([frame_of_seconds(event.start) for event in events], dtype=float)
     snapped_gaps = np.diff(columns) * 40.0
     grid = density_grid()
-    snapped_peaks = find_peaks(snapped_gaps, grid, gaussian_kde(snapped_gaps, grid, 12.0))
+    snapped_peaks = find_peaks(
+        snapped_gaps, grid, gaussian_kde(snapped_gaps, grid, 12.0)
+    )
 
     snapped_centres = [peak.centre_ms for peak in snapped_peaks]
     assert len(snapped_peaks) > len(raw_peaks)
@@ -154,7 +168,9 @@ def test_a_peak_reports_how_much_of_the_data_it_holds():
 def test_a_pile_too_small_to_name_is_not_offered():
     """One stray gap among four hundred is not a rhythm the user should be asked about."""
     events = swung_run(count=400) + [note(999_000, 60)]
-    centres = [peak.centre_ms for peak in peaks_of(intervals_from_events(events).values_ms)]
+    centres = [
+        peak.centre_ms for peak in peaks_of(intervals_from_events(events).values_ms)
+    ]
     assert all(centre < 900 for centre in centres)
 
 
@@ -199,7 +215,10 @@ def test_both_halves_of_a_swung_pair_are_corcheas():
 def test_the_preview_labels_every_peak_so_the_choice_can_be_judged():
     peaks = peaks_of(intervals_from_events(swung_run(count=400)).values_ms)
     labels = label_peaks(peaks, build_ladder(FigureName.NEGRA, 337.0))
-    assert [label.fit.figure for label in labels] == [FigureName.CORCHEA, FigureName.CORCHEA]
+    assert [label.fit.figure for label in labels] == [
+        FigureName.CORCHEA,
+        FigureName.CORCHEA,
+    ]
     assert all(label.fit.percent_off >= 0 for label in labels)
 
 
@@ -265,7 +284,12 @@ def test_an_interval_set_describes_itself_in_a_sentence():
 
 # --------------------------------------------------------------------------- the real piece
 
-POC_DATA = Path(__file__).resolve().parents[2] / "pocs" / "poc-onset-duration-distribution" / "data"
+POC_DATA = (
+    Path(__file__).resolve().parents[2]
+    / "pocs"
+    / "poc-onset-duration-distribution"
+    / "data"
+)
 
 
 def load_poc_grid(name: str) -> np.ndarray:
@@ -304,7 +328,11 @@ def right_hand_events_of_segment_a() -> list[NoteEvent]:
                 continue
             if right[row, candidate] == 1:
                 events.append(
-                    NoteEvent(midi_note=entry["midiNote"], start=entry["start"], end=entry["end"])
+                    NoteEvent(
+                        midi_note=entry["midiNote"],
+                        start=entry["start"],
+                        end=entry["end"],
+                    )
                 )
                 break
             if left[row, candidate] == 1:
@@ -312,7 +340,9 @@ def right_hand_events_of_segment_a() -> list[NoteEvent]:
     return events
 
 
-@pytest.mark.skipif(not POC_DATA.exists(), reason="the PoC transcription is not in this checkout")
+@pytest.mark.skipif(
+    not POC_DATA.exists(), reason="the PoC transcription is not in this checkout"
+)
 def test_the_real_piece_reproduces_the_measured_peak_table():
     """Phase 2's exit criterion, on the recording the whole refactor was designed from.
 
@@ -321,7 +351,9 @@ def test_the_real_piece_reproduces_the_measured_peak_table():
     shares. If this drifts, the plot the user is asked to read has changed and the decisions taken
     from it need revisiting.
     """
-    measured = intervals_from_events(right_hand_events_of_segment_a(), end_seconds=217.0)
+    measured = intervals_from_events(
+        right_hand_events_of_segment_a(), end_seconds=217.0
+    )
     assert measured.count == 528
 
     found = peaks_of(measured.values_ms)
@@ -333,14 +365,21 @@ def test_the_real_piece_reproduces_the_measured_peak_table():
     assert dominant.share == pytest.approx(0.502, abs=0.001)
 
 
-@pytest.mark.skipif(not POC_DATA.exists(), reason="the PoC transcription is not in this checkout")
+@pytest.mark.skipif(
+    not POC_DATA.exists(), reason="the PoC transcription is not in this checkout"
+)
 def test_naming_the_dominant_peak_a_negra_makes_the_swing_pair_two_corcheas():
     """The result the user is meant to see after one click, on the real piece."""
-    measured = intervals_from_events(right_hand_events_of_segment_a(), end_seconds=217.0)
+    measured = intervals_from_events(
+        right_hand_events_of_segment_a(), end_seconds=217.0
+    )
     found = peaks_of(measured.values_ms)
     ladder = build_ladder(FigureName.NEGRA, found[2].median_ms)
 
-    named = {round(label.peak.centre_ms): label.fit.figure for label in label_peaks(found, ladder)}
+    named = {
+        round(label.peak.centre_ms): label.fit.figure
+        for label in label_peaks(found, ladder)
+    }
     assert named[125] == FigureName.CORCHEA
     assert named[212] == FigureName.CORCHEA
     assert named[337] == FigureName.NEGRA

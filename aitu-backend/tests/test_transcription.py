@@ -45,7 +45,7 @@ MIDI_C4 = 60
 @pytest.fixture()
 def temp_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    paths.ensure_data_tree()
+    paths.ensure_database_tree()
     return tmp_path / "data"
 
 
@@ -72,7 +72,9 @@ class ScaleEngine:
 
     def transcribe(self, wav_path: Path) -> list[NoteEvent]:
         return [
-            NoteEvent(midi_note=MIDI_C4 + step, start=float(index), end=float(index) + 0.98)
+            NoteEvent(
+                midi_note=MIDI_C4 + step, start=float(index), end=float(index) + 0.98
+            )
             for index, step in enumerate([0, 2, 4, 5, 7])
         ]
 
@@ -154,13 +156,20 @@ def test_availability_does_not_load_a_model(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_the_checkpoint_lives_where_the_package_looks_for_it() -> None:
     """Mirrors the hardcoded path inside `piano_transcription_inference`."""
-    assert engine_module.checkpoint_path().parent.name == "piano_transcription_inference_data"
+    assert (
+        engine_module.checkpoint_path().parent.name
+        == "piano_transcription_inference_data"
+    )
     assert engine_module.checkpoint_path().name.endswith(".pth")
 
 
-def test_an_existing_checkpoint_is_not_re_downloaded(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_existing_checkpoint_is_not_re_downloaded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(engine_module, "checkpoint_present", lambda: True)
-    monkeypatch.setattr(engine_module, "download_checkpoint", engine_module.download_checkpoint)
+    monkeypatch.setattr(
+        engine_module, "download_checkpoint", engine_module.download_checkpoint
+    )
 
     def explode(*args: object, **kwargs: object) -> None:
         raise AssertionError("should not download when the checkpoint is present")
@@ -169,7 +178,9 @@ def test_an_existing_checkpoint_is_not_re_downloaded(monkeypatch: pytest.MonkeyP
     assert engine_module.download_checkpoint() == engine_module.checkpoint_path()
 
 
-def test_a_truncated_download_is_rejected(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_a_truncated_download_is_rejected(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """A half-file is worse than no file: torch.load's error explains nothing."""
     target = tmp_path / "checkpoint.pth"
     monkeypatch.setattr(engine_module, "checkpoint_path", lambda: target)
@@ -248,8 +259,8 @@ def test_a_run_stores_the_recorded_notes_and_nothing_else(scale_audio: str) -> N
     assert hands.frame_ms == DEFAULT_FRAME_MS
     assert hands.frame_count == round(5.0 * 1000 / DEFAULT_FRAME_MS)
 
-    written = sorted(path.name for path in pipeline.matrices_dir(scale_audio).iterdir())
-    assert written == ["events.json"]
+    written = sorted(path.name for path in paths.part_dir(scale_audio).iterdir())
+    assert written == ["notes.pmn", "timeline.json"]
 
 
 @needs_ffmpeg
@@ -298,7 +309,9 @@ def test_no_entry_point_of_the_pipeline_accepts_a_tempo(scale_audio: str) -> Non
 
     for name in ("run_pipeline", "transcribe_audio"):
         parameters = inspect.signature(getattr(pipeline, name)).parameters
-        forbidden = [p for p in parameters if "tempo" in p or "bpm" in p or "granularity" in p]
+        forbidden = [
+            p for p in parameters if "tempo" in p or "bpm" in p or "granularity" in p
+        ]
         assert forbidden == [], f"{name} still accepts {forbidden}"
 
 
@@ -349,7 +362,9 @@ def test_a_progressive_engine_reports_its_real_model_segments(scale_audio: str) 
         if event.stage == "transcribe" and event.message.startswith("model segment")
     ]
     assert [event.current for event in model_ticks] == [1, 2, 3]
-    assert [event.fraction for event in model_ticks] == pytest.approx([1 / 3, 2 / 3, 1.0])
+    assert [event.fraction for event in model_ticks] == pytest.approx(
+        [1 / 3, 2 / 3, 1.0]
+    )
 
 
 # ---------------------------------------------------------------------- jobs
@@ -408,9 +423,9 @@ def client(temp_store: Path) -> TestClient:
 def uploaded(client: TestClient, tmp_path: Path, seconds: float = 1.0) -> str:
     source = sine_wav(tmp_path / "t.wav", seconds=seconds, rate=44100)
     with source.open("rb") as handle:
-        return client.post("/audio/upload", files={"file": ("t.wav", handle, "audio/wav")}).json()[
-            "uuid"
-        ]
+        return client.post(
+            "/audio/upload", files={"file": ("t.wav", handle, "audio/wav")}
+        ).json()["uuid"]
 
 
 def test_the_engines_endpoint_offers_muscriptor_only(client: TestClient) -> None:
@@ -428,7 +443,9 @@ def test_the_transcribe_endpoint_refuses_every_other_engine(
     if not FFMPEG:
         pytest.skip("ffmpeg is not installed")
     uuid = uploaded(client, tmp_path)
-    response = client.post("/matrix/transcribe", json={"audioUuid": uuid, "engine": name})
+    response = client.post(
+        "/matrix/transcribe", json={"audioUuid": uuid, "engine": name}
+    )
     assert response.status_code == 422
     assert "muscriptor" in response.json()["detail"]
 
@@ -461,7 +478,9 @@ def test_the_transcribe_endpoint_returns_a_job_and_then_the_notes(
     from aitu_backend.transcription import models
 
     class Deaf:
-        def transcribe(self, audio, **options):  # noqa: ANN001, ANN003 - MuScriptor's shape
+        def transcribe(
+            self, audio, **options
+        ):  # noqa: ANN001, ANN003 - MuScriptor's shape
             yield {"type": "ProgressEvent", "completed": 0, "total": 1}
             yield {"type": "ProgressEvent", "completed": 1, "total": 1}
 
@@ -470,7 +489,9 @@ def test_the_transcribe_endpoint_returns_a_job_and_then_the_notes(
     monkeypatch.setattr(engine_module, "engine_installed", lambda name: True)
     uuid = uploaded(client, tmp_path)
 
-    response = client.post("/matrix/transcribe", json={"audioUuid": uuid, "frameMs": 40})
+    response = client.post(
+        "/matrix/transcribe", json={"audioUuid": uuid, "frameMs": 40}
+    )
     assert response.status_code == 202
     job_id = response.json()["jobId"]
 

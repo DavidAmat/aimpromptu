@@ -10,7 +10,14 @@ from fastapi.testclient import TestClient
 
 from aitu_backend.audio import formats
 from aitu_backend.editing.history import current_version
-from aitu_backend.editing.session import accept, cancel, patch, start, take_peaks, transcribe_take
+from aitu_backend.editing.session import (
+    accept,
+    cancel,
+    patch,
+    start,
+    take_peaks,
+    transcribe_take,
+)
 from aitu_backend.editing.splice import (
     drop_marks_in_window,
     events_in_window,
@@ -21,7 +28,13 @@ from aitu_backend.editing.splice import (
     window_from_frames,
 )
 from aitu_backend.main import create_app
-from aitu_backend.schemas.rhythm import Fingering, HiddenNote, KeyChange, SavedRhythm, SpeedChange
+from aitu_backend.schemas.rhythm import (
+    Fingering,
+    HiddenNote,
+    KeyChange,
+    SavedRhythm,
+    SpeedChange,
+)
 from aitu_backend.schemas.time_matrix import BeamBreak, FigureName, FigureOverride
 from aitu_backend.storage import paths, staging
 from aitu_backend.transcription import pipeline
@@ -31,7 +44,7 @@ from aitu_backend.transcription.engine import NoteEvent
 @pytest.fixture()
 def temp_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    paths.ensure_data_tree()
+    paths.ensure_database_tree()
     return tmp_path / "data"
 
 
@@ -83,7 +96,9 @@ def test_membership_is_onset_only() -> None:
 
 def test_scale_take_compresses_and_cuts_at_the_window_end() -> None:
     take = [_note(60, 0.0, 1.0), _note(62, 5.5, 6.5)]
-    scaled = scale_take(take, factor=0.5, start_seconds=1.0, end_seconds=4.0, frame_ms=40)
+    scaled = scale_take(
+        take, factor=0.5, start_seconds=1.0, end_seconds=4.0, frame_ms=40
+    )
     assert scaled[0].start == pytest.approx(1.0)
     assert scaled[0].end == pytest.approx(1.5)
     # 1 + 5.5*0.5 = 3.75, 1 + 6.5*0.5 = 4.25 → cut at 4.0
@@ -93,7 +108,9 @@ def test_scale_take_compresses_and_cuts_at_the_window_end() -> None:
 
 def test_notes_shorter_than_one_frame_are_dropped() -> None:
     take = [_note(60, 0.0, 0.05)]
-    scaled = scale_take(take, factor=0.5, start_seconds=0.0, end_seconds=3.0, frame_ms=40)
+    scaled = scale_take(
+        take, factor=0.5, start_seconds=0.0, end_seconds=3.0, frame_ms=40
+    )
     assert scaled == []
 
 
@@ -132,8 +149,12 @@ def test_marks_inside_the_window_are_dropped_and_counted() -> None:
         anchor_ms=480,
         speed_changes=[SpeedChange(start_frame=50, anchor_ms=600)],
         overrides=[
-            FigureOverride(hand="right", row=39, start_frame=30, figure=FigureName.CORCHEA),
-            FigureOverride(hand="right", row=39, start_frame=120, figure=FigureName.CORCHEA),
+            FigureOverride(
+                hand="right", row=39, start_frame=30, figure=FigureName.CORCHEA
+            ),
+            FigureOverride(
+                hand="right", row=39, start_frame=120, figure=FigureName.CORCHEA
+            ),
         ],
         beam_breaks=[BeamBreak(hand="right", start_frame=35)],
         hidden_notes=[HiddenNote(start_frame=40, row=10)],
@@ -146,7 +167,9 @@ def test_marks_inside_the_window_are_dropped_and_counted() -> None:
     ]
     assert cleaned.beam_breaks == []
     assert cleaned.hidden_notes == []
-    assert cleaned.fingers == [Fingering(hand="right", start_frame=200, row=10, finger=1)]
+    assert cleaned.fingers == [
+        Fingering(hand="right", start_frame=200, row=10, finger=1)
+    ]
     # A boundary inside the window is kept.
     assert cleaned.speed_changes == rhythm.speed_changes
     assert cleaned.key_changes == rhythm.key_changes
@@ -170,7 +193,9 @@ def test_accept_keeps_duration_and_outside_events(temp_store: Path) -> None:
     stored = pipeline.load_note_events(uuid)
     assert stored is not None
     outside_before = [
-        event.model_dump() for event in stored.events if event.start < 1.0 or event.start >= 4.0
+        event.model_dump()
+        for event in stored.events
+        if event.start < 1.0 or event.start >= 4.0
     ]
     record = start(uuid, start_frame=25, end_frame=100, frame_ms=40, slowdown=2)
     take = [_note(72, 0.0, 1.0), _note(74, 2.0, 3.0)]
@@ -184,7 +209,9 @@ def test_accept_keeps_duration_and_outside_events(temp_store: Path) -> None:
     assert after is not None
     assert after.duration_seconds == pytest.approx(6.0)
     outside_after = [
-        event.model_dump() for event in after.events if event.start < 1.0 or event.start >= 4.0
+        event.model_dump()
+        for event in after.events
+        if event.start < 1.0 or event.start >= 4.0
     ]
     assert outside_after == outside_before
     arriving = [event for event in after.events if 1.0 <= event.start < 4.0]
@@ -205,8 +232,12 @@ def test_accept_drops_marks_inside_the_window(temp_store: Path) -> None:
             anchor_figure=FigureName.NEGRA,
             anchor_ms=480,
             overrides=[
-                FigureOverride(hand="right", row=0, start_frame=50, figure=FigureName.CORCHEA),
-                FigureOverride(hand="right", row=0, start_frame=120, figure=FigureName.CORCHEA),
+                FigureOverride(
+                    hand="right", row=0, start_frame=50, figure=FigureName.CORCHEA
+                ),
+                FigureOverride(
+                    hand="right", row=0, start_frame=120, figure=FigureName.CORCHEA
+                ),
             ],
         ),
     )
@@ -300,7 +331,9 @@ def test_api_preview_and_accept(client: TestClient, temp_store: Path) -> None:
     assert onsets[1] == pytest.approx(2.0)
 
 
-def sine_wav(path: Path, seconds: float = 1.0, rate: int = 8000, freq: float = 440.0) -> Path:
+def sine_wav(
+    path: Path, seconds: float = 1.0, rate: int = 8000, freq: float = 440.0
+) -> Path:
     samples = np.sin(2 * np.pi * freq * np.arange(int(rate * seconds)) / rate)
     frames = b"".join(struct.pack("<h", int(value * 30000)) for value in samples)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -312,7 +345,9 @@ def sine_wav(path: Path, seconds: float = 1.0, rate: int = 8000, freq: float = 4
     return path
 
 
-def test_preview_without_events_asks_to_transcribe(client: TestClient, temp_store: Path) -> None:
+def test_preview_without_events_asks_to_transcribe(
+    client: TestClient, temp_store: Path
+) -> None:
     uuid = transcribed_piece()
     created = client.post(
         f"/audio/{uuid}/edits",
@@ -324,7 +359,9 @@ def test_preview_without_events_asks_to_transcribe(client: TestClient, temp_stor
     assert "Transcribe the take" in preview.json()["detail"]
 
 
-def test_preview_empty_take_explains_itself(client: TestClient, temp_store: Path) -> None:
+def test_preview_empty_take_explains_itself(
+    client: TestClient, temp_store: Path
+) -> None:
     uuid = transcribed_piece()
     created = client.post(
         f"/audio/{uuid}/edits",
@@ -349,7 +386,9 @@ def test_take_waveform_and_selected_range_before_transcribe(
     peaks = take_peaks(uuid, record.session_uuid, 50)
     assert peaks.duration_seconds == pytest.approx(2.0, abs=0.05)
 
-    patched = patch(uuid, record.session_uuid, take_start_seconds=0.5, take_end_seconds=1.5)
+    patched = patch(
+        uuid, record.session_uuid, take_start_seconds=0.5, take_end_seconds=1.5
+    )
     assert patched.take_start_seconds == pytest.approx(0.5)
     assert patched.take_end_seconds == pytest.approx(1.5)
 
@@ -365,7 +404,9 @@ def test_take_waveform_and_selected_range_before_transcribe(
     assert staging.selected_path(uuid, record.session_uuid).is_file()
 
 
-def test_waveform_without_a_take_is_a_conflict(client: TestClient, temp_store: Path) -> None:
+def test_waveform_without_a_take_is_a_conflict(
+    client: TestClient, temp_store: Path
+) -> None:
     uuid = transcribed_piece()
     created = client.post(
         f"/audio/{uuid}/edits",

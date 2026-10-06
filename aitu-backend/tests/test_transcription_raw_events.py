@@ -28,7 +28,7 @@ from aitu_backend.transcription.engine import NoteEvent
 @pytest.fixture()
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    paths.ensure_data_tree()
+    paths.ensure_database_tree()
     return TestClient(create_app())
 
 
@@ -59,7 +59,9 @@ def test_the_events_route_returns_them_verbatim(client: TestClient) -> None:
     assert [event["velocity"] for event in body["events"]] == [71, 64]
 
 
-def test_a_note_too_short_to_have_been_played_is_flagged_not_hidden(client: TestClient) -> None:
+def test_a_note_too_short_to_have_been_played_is_flagged_not_hidden(
+    client: TestClient,
+) -> None:
     """The filter has to be visible here, or it cannot be checked.
 
     A phantom Fa-1 under a played Fa-2/Fa-3 octave never reaches the grid, but it
@@ -98,7 +100,9 @@ def test_the_events_route_is_a_404_for_an_unknown_audio(client: TestClient) -> N
     assert client.get("/matrix/not-an-audio/events").status_code == 404
 
 
-def test_the_stored_file_is_the_only_thing_the_pipeline_writes(client: TestClient) -> None:
+def test_the_stored_file_is_the_only_thing_the_pipeline_writes(
+    client: TestClient,
+) -> None:
     """P4.2's whole claim, in one assertion.
 
     A matrix on disk could disagree with what the screen shows, because the screen
@@ -112,6 +116,9 @@ def test_the_stored_file_is_the_only_thing_the_pipeline_writes(client: TestClien
         duration_seconds=2.0,
     )
 
-    folder = pipeline.matrices_dir(uuid)
-    assert [path.name for path in sorted(folder.iterdir())] == ["events.json"]
+    folder = paths.part_dir(uuid)
+    assert [path.name for path in sorted(folder.iterdir())] == [
+        "notes.pmn",
+        "timeline.json",
+    ]
     assert pipeline.has_events(uuid)

@@ -27,6 +27,7 @@ from aitu_backend.schemas.video import (
     VideoMetadata,
 )
 from aitu_backend.storage import paths
+from parts import make_part
 from aitu_backend.video import geometry, images, store
 
 UUID = "stitched-video"
@@ -122,10 +123,13 @@ def draw_frame(index: int, drawn: list[Drawn]) -> np.ndarray:
     return frame
 
 
-def make_video(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, drawn: list[Drawn]) -> None:
+def make_video(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, drawn: list[Drawn]
+) -> None:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
     monkeypatch.setattr(images, "WORK_WIDTH", WIDTH)
-    paths.ensure_data_tree()
+    paths.ensure_database_tree()
+    make_part(UUID)
     folder = paths.video_frames_dir(UUID)
     folder.mkdir(parents=True, exist_ok=True)
     for index in range(FRAMES):

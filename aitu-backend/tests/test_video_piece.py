@@ -1,6 +1,6 @@
 """A video becomes the piece, and the piece is a piece like any other (Story 4.1, 4.2).
 
-Task 4.1.3, Task 4.2.1 and Task 4.3.1. Reading a video produces `events.json` and
+Task 4.1.3, Task 4.2.1 and Task 4.3.1. Reading a video produces the notes (`notes.pmn`) and
 nothing else (V-02): everything after that point — the hand split, the matrix, the
 peaks, the ladder, the payload — reads the same file the model writes and is never
 told where the notes came from. If any of them needed to know, that would be a
@@ -11,6 +11,8 @@ to the pixel.
 """
 
 from __future__ import annotations
+
+import json
 
 from pathlib import Path
 
@@ -43,7 +45,9 @@ DRAWN = [
 def a_video_piece(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     """One ordinary audio piece (V-03) with a drawn video inside it, read."""
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    audio_store.create(alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID)
+    audio_store.create(
+        alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID
+    )
     make_video(tmp_path, monkeypatch, DRAWN)
     notes_module.read_notes(UUID)
     return UUID
@@ -52,7 +56,9 @@ def a_video_piece(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
 # ------------------------------------------------------- writing the piece --
 
 
-def test_the_stitched_roll_finds_every_rectangle_that_was_drawn(a_video_piece: str) -> None:
+def test_the_stitched_roll_finds_every_rectangle_that_was_drawn(
+    a_video_piece: str,
+) -> None:
     read = store.load_notes(UUID)
     assert read is not None
     assert sorted(note.midi for note in read.notes) == sorted(
@@ -64,7 +70,7 @@ def test_the_stitched_roll_finds_every_rectangle_that_was_drawn(a_video_piece: s
         assert note.end == pytest.approx(one.release_seconds(), abs=0.02)
 
 
-def test_it_writes_events_json_through_the_writer_that_already_exists(
+def test_it_writes_the_notes_through_the_writer_that_already_exists(
     a_video_piece: str,
 ) -> None:
     written = piece.write(UUID)
@@ -73,20 +79,22 @@ def test_it_writes_events_json_through_the_writer_that_already_exists(
 
     assert written.notes == len(stored.events) == len(DRAWN)
     assert stored.title == "Drawn"
-    assert stored.duration_seconds == pytest.approx(FRAMES * SAMPLE_MS / 1000.0, abs=0.5)
+    assert stored.duration_seconds == pytest.approx(
+        FRAMES * SAMPLE_MS / 1000.0, abs=0.5
+    )
 
 
 def test_no_hand_is_written_on_any_event(a_video_piece: str) -> None:
     """V-17. Many of these videos colour the two hands differently and the app
     already has a way to split hands; a hint from a colour is what V-17 refuses.
-    The check is on the file, not on the model, because `hand` is left out of the
-    JSON entirely unless somebody has said so."""
+    The check is on the file, not on the model: in `notes.pmn` a note with no hand
+    is `-` in the `hand` column (implementation 02, P-5)."""
     piece.write(UUID)
-    raw = pipeline.events_path(UUID).read_text()
+    raw = json.loads(pipeline.events_path(UUID).read_text())
 
     stored = pipeline.load_note_events(UUID)
     assert stored is not None
-    assert '"hand"' not in raw
+    assert set(raw["hand"]) == {"-"}
     assert all(event.hand is None for event in stored.events)
 
 
@@ -100,7 +108,7 @@ def test_writing_the_piece_advances_the_music_version(a_video_piece: str) -> Non
 
     piece.write(UUID)
     assert history.current_version(UUID) == 2
-    assert (paths.history_version_dir(UUID, 1) / "events.json").is_file()
+    assert (paths.history_version_dir(UUID, 1) / "notes.pmn").is_file()
 
 
 def test_a_saved_reading_is_cleared_because_it_points_at_other_notes(
@@ -116,7 +124,9 @@ def test_an_unread_video_is_refused_rather_than_written_empty(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    audio_store.create(alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID)
+    audio_store.create(
+        alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID
+    )
     make_video(tmp_path, monkeypatch, DRAWN)
     with pytest.raises(piece.NotRead):
         piece.write(UUID)
@@ -167,7 +177,8 @@ def test_a_note_can_be_taken_off_and_a_missed_one_put_on_before_it_is_written(
         for event in stored.events
     )
     assert any(
-        event.midi_note == 60 and event.start == pytest.approx(1.0) for event in stored.events
+        event.midi_note == 60 and event.start == pytest.approx(1.0)
+        for event in stored.events
     )
 
 
@@ -176,7 +187,9 @@ def test_a_correction_that_names_a_note_the_reading_no_longer_holds_is_reported(
 ) -> None:
     """Reported rather than dropped in silence: a correction made against an
     older reading is a thing the person will want to know about."""
-    store.save_corrections(UUID, NoteCorrections(removed=[NoteCorrection(midi=127, start=99.0)]))
+    store.save_corrections(
+        UUID, NoteCorrections(removed=[NoteCorrection(midi=127, start=99.0)])
+    )
     written = piece.write(UUID)
     assert written.removed == 0 and written.unmatched == 1
 
@@ -184,7 +197,9 @@ def test_a_correction_that_names_a_note_the_reading_no_longer_holds_is_reported(
 def test_corrections_survive_the_video_being_read_again(a_video_piece: str) -> None:
     """The frames, the plate, `frames.jsonl` and `notes.json` are all a cache
     (V-01). What a person decided is not."""
-    store.save_corrections(UUID, NoteCorrections(added=[NoteCorrection(midi=64, start=2.0)]))
+    store.save_corrections(
+        UUID, NoteCorrections(added=[NoteCorrection(midi=64, start=2.0)])
+    )
     store.clear_frames(UUID)
 
     assert store.load_notes(UUID) is None
@@ -194,7 +209,9 @@ def test_corrections_survive_the_video_being_read_again(a_video_piece: str) -> N
 # ---------------------------------------------- it is a piece like any other --
 
 
-def test_the_piece_goes_straight_through_everything_downstream(a_video_piece: str) -> None:
+def test_the_piece_goes_straight_through_everything_downstream(
+    a_video_piece: str,
+) -> None:
     """Task 4.2.1. The hand split, the matrix, the peaks, the ladder and the
     payload, with no special case anywhere: every one of them is asked over HTTP
     for the uuid a video wrote, and none of them is told that it was a video."""
@@ -208,7 +225,8 @@ def test_the_piece_goes_straight_through_everything_downstream(a_video_piece: st
     assert peaks.status_code == 200
 
     score = client.get(
-        f"/time/{UUID}/score", params={"frameMs": 40, "anchorMs": 250, "anchorFigure": "negra"}
+        f"/time/{UUID}/score",
+        params={"frameMs": 40, "anchorMs": 250, "anchorFigure": "negra"},
     )
     assert score.status_code == 200
     payload = score.json()
@@ -251,7 +269,9 @@ def test_writing_a_video_nobody_has_read_is_a_409_with_the_reason(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    audio_store.create(alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID)
+    audio_store.create(
+        alias="drawn", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID
+    )
     make_video(tmp_path, monkeypatch, DRAWN)
 
     assert client.get(f"/video/{UUID}/notes").status_code == 404

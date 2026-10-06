@@ -30,6 +30,10 @@ dependencies = [
     # The MIDI adapter of the piano matrix notation (`aitu_backend.pmn.midi`). Pure Python and
     # small; it was already installed through the `transcription` extra.
     "mido>=1.3.3",
+    # The records of `.database/aitu.sqlite` (implementation 02, plan section 8.6, P-2): the same
+    # code runs on SQLite now and on Postgres later, and Alembic numbers the migrations.
+    "sqlalchemy>=2.0.36",
+    "alembic>=1.14.0",
 ]
 
 [project.optional-dependencies]
@@ -131,9 +135,7 @@ include = ["src/aitu_backend", "README.md", "pyproject.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# `src` for the package; `.` for `scripts/`, which has no __init__.py and is
-# imported by tests/test_migration.py. Without the second entry collection fails
-# before a single test runs, so `make test` reports nothing at all.
+# `src` for the package; `.` for `scripts/`, which has no __init__.py.
 pythonpath = ["src", "."]
 addopts = "-q"
 

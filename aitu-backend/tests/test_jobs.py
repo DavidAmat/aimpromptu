@@ -58,7 +58,9 @@ def test_gpu_jobs_run_one_at_a_time_in_order() -> None:
 
         return run
 
-    submitted = [jobs.submit(work(n), gpu=True, mirror_to_terminal=False) for n in range(3)]
+    submitted = [
+        jobs.submit(work(n), gpu=True, mirror_to_terminal=False) for n in range(3)
+    ]
     time.sleep(0.05)
     assert [job.status for job in submitted[1:]] == ["waiting", "waiting"]
     assert jobs.waiting_on_gpu() == 2
@@ -78,7 +80,11 @@ def test_a_waiting_job_says_how_many_are_before_it() -> None:
     release.set()
     for job in (first, second, third):
         wait(job)
-    waiting = [p for e, _, p in parse(list(jobs.stream(third.id))) if p.get("stage") == "waiting"]
+    waiting = [
+        p
+        for e, _, p in parse(list(jobs.stream(third.id)))
+        if p.get("stage") == "waiting"
+    ]
     assert [p["message"] for p in waiting] == [
         "Waiting for 2 other transcriptions to finish",
         "Waiting for 1 other transcription to finish",
@@ -87,7 +93,9 @@ def test_a_waiting_job_says_how_many_are_before_it() -> None:
 
 def test_a_second_job_with_the_same_key_is_the_first_one() -> None:
     release = threading.Event()
-    first = jobs.submit(lambda r: release.wait(5), key="transcribe:x", mirror_to_terminal=False)
+    first = jobs.submit(
+        lambda r: release.wait(5), key="transcribe:x", mirror_to_terminal=False
+    )
     again = jobs.submit(lambda r: None, key="transcribe:x", mirror_to_terminal=False)
     assert again is first
     assert jobs.active("transcribe:x") is first
@@ -99,7 +107,9 @@ def test_a_second_job_with_the_same_key_is_the_first_one() -> None:
     wait(later)
 
 
-def test_named_messages_travel_beside_the_ticks_and_the_done_frame_carries_the_summary() -> None:
+def test_named_messages_travel_beside_the_ticks_and_the_done_frame_carries_the_summary() -> (
+    None
+):
     def work(reporter) -> int:
         with reporter.stage("transcribe", total=2) as stage:
             reporter.send("chunk", {"type": "chunk", "done": 1})
@@ -108,7 +118,9 @@ def test_named_messages_travel_beside_the_ticks_and_the_done_frame_carries_the_s
             stage.advance()
         return 7
 
-    job = jobs.submit(work, mirror_to_terminal=False, describe=lambda result: {"revision": result})
+    job = jobs.submit(
+        work, mirror_to_terminal=False, describe=lambda result: {"revision": result}
+    )
     wait(job)
     frames = parse(list(jobs.stream(job.id)))
     chunks = [payload["done"] for event, _, payload in frames if event == "chunk"]

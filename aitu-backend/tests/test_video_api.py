@@ -32,13 +32,18 @@ def one_video(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     """One piece with a video and four sampled frames, and nothing else."""
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
     monkeypatch.setattr(images, "WORK_WIDTH", WIDTH)
-    paths.ensure_data_tree()
+    paths.ensure_database_tree()
 
     entry = audio_store.create(
-        alias="a drawn video", source=AudioSource.YOUTUBE, extension="mp3", audio_uuid=UUID
+        alias="a drawn video",
+        source=AudioSource.YOUTUBE,
+        extension="mp3",
+        audio_uuid=UUID,
     )
     paths.video_source_path(entry.uuid).parent.mkdir(parents=True, exist_ok=True)
-    paths.video_source_path(entry.uuid).write_bytes(b"not read by anything in this test")
+    paths.video_source_path(entry.uuid).write_bytes(
+        b"not read by anything in this test"
+    )
 
     folder = paths.video_frames_dir(UUID)
     folder.mkdir(parents=True, exist_ok=True)

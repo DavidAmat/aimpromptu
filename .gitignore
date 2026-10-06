@@ -7,6 +7,11 @@
 # The Compose settings: HF_TOKEN is a secret. `.env.example` lists every name.
 /.env
 
+# Every record and every file of the app (implementation 02, plan section 8). On the Ubuntu machine
+# it is a link to /mnt/ssd2/aimpromptu/.database. Its backups (`make db-backup`) beside it.
+/.database
+/.database-*.tar.zst
+
 # =============================================================================
 # aitu-backend — Python / uv / Jupyter
 # =============================================================================
@@ -71,7 +76,8 @@ aitu-backend/.dmypy.json
 aitu-backend/dmypy.json
 
 # -----------------------------------------------------------------------------
-# aitu-backend — local data store (no database; see context/07-database.md)
+# aitu-backend — the old file store, read only by the migration to .database/
+# (implementation 02, Phase 3; context/07-database.md)
 # Policy: metadata is small and worth versioning, payloads are heavy and
 # reproducible. So `metadata*.json` stays committed and the binaries do not.
 # -----------------------------------------------------------------------------
@@ -123,6 +129,9 @@ aitu-frontend/lerna-debug.log*
 
 # Local dev server pids and logs (`make serve`).
 .run/
+
+# The repository's own scripts (the migration, the seed, the link checker).
+scripts/**/__pycache__/
 
 # The screenshots implementation 04 was read from: twenty-five PNGs of three to
 # five megabytes, 75 MB in all. They are evidence a person looked at once, they

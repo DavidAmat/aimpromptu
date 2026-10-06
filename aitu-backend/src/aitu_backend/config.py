@@ -7,7 +7,12 @@ plain ``make serve`` on a laptop needs nothing set. The container sets what diff
 =====================  ==================================  =========================================
 Variable               Default                             Meaning
 =====================  ==================================  =========================================
-``AITU_DATA_DIR``      ``aitu-backend/data``               The root of all local persistence
+``AITU_DATABASE_DIR``  ``<repository>/.database``           Every record and every file of the app
+                                                           (implementation 02, plan section 8)
+``AITU_DATA_DIR``      ``aitu-backend/data``               The old file store, read only by the
+                                                           migration to ``.database/`` (Phase 3)
+``AITU_MASTER_         ``master``                          The username of the master user, made on
+USERNAME``                                                 the first start (plan section 9.1)
 ``AITU_DEVICE``        ``cpu``                             ``cpu``, ``cuda`` or ``auto`` (``cuda``
                                                            when torch sees a GPU, else ``cpu``)
 ``AITU_HOST``          ``127.0.0.1``                       Where ``python -m aitu_backend.main``
@@ -43,6 +48,20 @@ def data_dir_override() -> Path | None:
     """``AITU_DATA_DIR`` as a path, or ``None`` when it is unset or empty."""
     value = os.environ.get("AITU_DATA_DIR", "").strip()
     return Path(value).expanduser().resolve() if value else None
+
+
+def database_dir_override() -> Path | None:
+    """``AITU_DATABASE_DIR`` as a path, or ``None`` when it is unset or empty."""
+    value = os.environ.get("AITU_DATABASE_DIR", "").strip()
+    return Path(value).expanduser().resolve() if value else None
+
+
+DEFAULT_MASTER_USERNAME = "master"
+
+
+def master_username() -> str:
+    """The username the master user is created with when the database has none."""
+    return os.environ.get("AITU_MASTER_USERNAME", "").strip() or DEFAULT_MASTER_USERNAME
 
 
 def device() -> str:

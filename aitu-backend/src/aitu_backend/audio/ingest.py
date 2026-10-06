@@ -8,11 +8,11 @@ to know about :func:`ingest_file`.
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from typing import BinaryIO
 
 from aitu_backend.audio import formats, piece_audio, store
+from aitu_backend.audio.frames import frame_count
 from aitu_backend.audio.store import StoredAudio
 from aitu_backend.schemas.metadata import AudioMetadata, AudioSource, TimeRange
 
@@ -31,7 +31,7 @@ def ingest_file(
     ``alias`` defaults to the filename without its extension, which is almost
     always what the user meant; it stays editable afterwards.
 
-    If ffmpeg is missing or the conversion fails, the **uuid folder is removed**
+    If ffmpeg is missing or the conversion fails, the **project is removed**
     before the error propagates — a half-ingested audio in the library is worse
     than a failed upload.
     """
@@ -75,15 +75,17 @@ def ingest_path(
 
 
 def finalize(audio_uuid: str) -> StoredAudio:
-    """Normalize the stored original and record duration and sample rate."""
+    """Normalize the stored original, and record its duration, sample rate and length in frames."""
     entry = store.get(audio_uuid)
     original = entry.original_path
     if original is None:
         raise FileNotFoundError(f"Audio {audio_uuid} has no original file")
 
+    entry.directory.mkdir(parents=True, exist_ok=True)
     formats.normalize_to_wav(original, entry.normalized_path)
     sample_rate, samples = formats.read_wav(entry.normalized_path)
 
+    store.set_audio_frames(audio_uuid, frame_count(len(samples)))
     store.update(
         audio_uuid,
         duration_seconds=round(len(samples) / sample_rate, 6),
@@ -101,8 +103,8 @@ def create_segment(
 ) -> StoredAudio:
     """Create a self-contained WAV child for one range of an audio.
 
-    The child owns both ``original.wav`` and ``normalized.wav`` containing only
-    the selected range. Its lineage points to the root audio and uses absolute
+    The child is a new project whose one audio file is a WAV of only the selected
+    range, with the same samples as its ``normalized.wav``. Its lineage points to the root audio and uses absolute
     root timestamps, even if a segment is trimmed again.
     """
     source = store.get(audio_uuid)
@@ -146,16 +148,16 @@ def create_segment(
         source_time_range=root_range,
     )
     try:
-        original = segment.directory / "original.wav"
+        segment.directory.mkdir(parents=True, exist_ok=True)
         formats.slice_wav(
             source.normalized_path,
-            original,
+            segment.normalized_path,
             start_seconds,
             end_seconds,
         )
-        # The source is already the canonical mono 16 kHz WAV. Copying the
-        # physical clip preserves it exactly and avoids a redundant ffmpeg run.
-        shutil.copyfile(original, segment.normalized_path)
+        # The source is already the canonical mono 16 kHz WAV, so the clip is both the stored
+        # file and its normalized copy: no ffmpeg run.
+        store.replace_original(segment.uuid, segment.normalized_path, "wav", keep_cuts=False)
         sample_rate, samples = formats.read_wav(segment.normalized_path)
         store.update(
             segment.uuid,
@@ -176,7 +178,7 @@ def waveform(
 ) -> formats.WaveformPeaks:
     """Peaks for the range selector and the piano-roll watermark.
 
-    Cached as ``waveform.json`` next to the audio. The cache is reused only when
+    Cached as ``waveform.json`` in the part's cache folder. The cache is reused only when
     it holds the requested number of points, so asking for a different
     resolution recomputes rather than returning the wrong shape.
     """

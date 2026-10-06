@@ -151,7 +151,10 @@ def test_version_metadata_fixture_round_trips() -> None:
     assert annotations.passages[0].options == {"ratio": [3, 2]}
     assert annotations.key_changes[0].key_signature == "D"
 
-    assert VersionMetadata.model_validate(model.model_dump(by_alias=True, mode="json")) == model
+    assert (
+        VersionMetadata.model_validate(model.model_dump(by_alias=True, mode="json"))
+        == model
+    )
 
 
 def test_track_metadata_fixture_round_trips() -> None:
@@ -165,7 +168,10 @@ def test_track_metadata_fixture_round_trips() -> None:
     assert latest.parent_version == "v1_f40"
     assert next_version(model.version_folders()) == 3
 
-    assert TrackMetadata.model_validate(model.model_dump(by_alias=True, mode="json")) == model
+    assert (
+        TrackMetadata.model_validate(model.model_dump(by_alias=True, mode="json"))
+        == model
+    )
 
 
 def test_library_track_fixture_round_trips() -> None:
@@ -183,7 +189,10 @@ def test_library_track_fixture_round_trips() -> None:
     assert model.rollback_to == "Levels (Chill) - Avicii"
 
     assert (
-        LibraryTrackMetadata.model_validate(model.model_dump(by_alias=True, mode="json")) == model
+        LibraryTrackMetadata.model_validate(
+            model.model_dump(by_alias=True, mode="json")
+        )
+        == model
     )
 
 
@@ -193,7 +202,10 @@ def test_audio_metadata_fixture_round_trips() -> None:
     assert model.source is AudioSource.YOUTUBE
     assert model.format == "mp3"
     assert model.duration_seconds == pytest.approx(187.4)
-    assert AudioMetadata.model_validate(model.model_dump(by_alias=True, mode="json")) == model
+    assert (
+        AudioMetadata.model_validate(model.model_dump(by_alias=True, mode="json"))
+        == model
+    )
 
 
 def test_playlist_fixture_round_trips() -> None:
@@ -204,7 +216,10 @@ def test_playlist_fixture_round_trips() -> None:
         "Levels (Chill) - Avicii",
         "Levels (Full speed) - Avicii",
     ]
-    assert PlaylistMetadata.model_validate(model.model_dump(by_alias=True, mode="json")) == model
+    assert (
+        PlaylistMetadata.model_validate(model.model_dump(by_alias=True, mode="json"))
+        == model
+    )
 
 
 # -------------------------------------------------------------- validation
@@ -219,7 +234,10 @@ def test_time_range_must_move_forward() -> None:
 
 def test_column_range_must_move_forward() -> None:
     raw = load("metadata.json")
-    raw["annotations"]["lyrics"][0]["anchor"]["columns"] = {"fromColumn": 9, "toColumn": 4}
+    raw["annotations"]["lyrics"][0]["anchor"]["columns"] = {
+        "fromColumn": 9,
+        "toColumn": 4,
+    }
     with pytest.raises(ValidationError, match="toColumn must be greater"):
         VersionMetadata.model_validate(raw)
 

@@ -2,7 +2,7 @@
  * A hand move on the piano sheet, timed part by part in a headless Chromium (implementation 08,
  * Phase 8, Task 8.2.3; plan section 9.7, target under 300 ms for a 3.5-minute piece).
  *
- * For each piece it makes a temporary copy in the data folder (a new uuid, deleted at the end, so
+ * For each piece it makes a temporary copy (`POST /projects/{id}/duplicate`, deleted at the end, so
  * the library is never changed), opens it on the Sheet step of the project and makes it current
  * the way a reader does: a stale reading shows its banner and waits for **Write the sheet** and
  * **Save**; a piece with no reading is drawn on arrival from the defaults and saved. Then it moves notes
@@ -25,15 +25,13 @@
  * not cross the SSH tunnel, so `transfer` is the time on this machine only.
  */
 
-import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(here, '..', '..', 'aitu-backend', 'data', 'audio');
 const { values } = parseArgs({
   options: {
     piece: {
@@ -59,28 +57,25 @@ const moves = Number(values.moves);
 mkdirSync(values.shots, { recursive: true });
 
 /** A piece named by its uuid or the first 8 characters of it. */
-function resolvePiece(prefix) {
-  const found = readdirSync(dataDir).find((name) => name.startsWith(prefix.slice(0, 8)));
+async function resolvePiece(prefix) {
+  const listed = await (await fetch(`${api}/audio/`)).json();
+  const found = listed.find((entry) => entry.uuid.startsWith(prefix.slice(0, 8)));
   if (!found) throw new Error(`No piece starts with ${prefix}`);
-  return found;
+  return found.uuid;
 }
 
-/** A copy of the piece under a new uuid, without its history, staging and video folders. */
-function copyPiece(source) {
-  const copy = randomUUID();
-  const from = path.join(dataDir, source);
-  const to = path.join(dataDir, copy);
-  const skip = new Set(['history', 'staging', 'video']);
-  cpSync(from, to, {
-    recursive: true,
-    filter: (file) => !skip.has(path.relative(from, file).split(path.sep)[0]),
+/** A temporary copy of the project (`POST /projects/{id}/duplicate`): new ids, the same audio
+ * files, no history, staging or video. Deleted with `DELETE /audio/{id}`. */
+async function copyPiece(source) {
+  const original = await (await fetch(`${api}/audio/${source}`)).json();
+  const answer = await fetch(`${api}/projects/${source}/duplicate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: `bench:sheet copy of ${original.alias}` }),
   });
-  const metadataPath = path.join(to, 'metadata.json');
-  const metadata = JSON.parse(readFileSync(metadataPath, 'utf8'));
-  metadata.uuid = copy;
-  metadata.alias = `bench:sheet copy of ${metadata.alias}`;
-  writeFileSync(metadataPath, JSON.stringify(metadata));
-  return { copy, alias: metadata.alias.replace('bench:sheet copy of ', '') };
+  if (!answer.ok) throw new Error(`The copy failed: ${answer.status} ${await answer.text()}`);
+  const copy = (await answer.json()).parts[0];
+  return { copy, alias: original.alias };
 }
 
 const median = (list) => {
@@ -124,8 +119,9 @@ const browser = await chromium.launch();
 const report = { date: new Date().toISOString(), base, moves, pieces: [] };
 const problems = [];
 
-for (const source of values.piece.map(resolvePiece)) {
-  const { copy, alias } = copyPiece(source);
+for (const prefix of values.piece) {
+  const source = await resolvePiece(prefix);
+  const { copy, alias } = await copyPiece(source);
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.on('pageerror', (e) => problems.push(`${alias}: page error: ${e.message} (${(e.stack ?? '').split('\n').slice(1, 4).map((l) => l.trim()).join(' < ')})`));
   // A 404 on `/rhythm` is how the page asks whether a reading exists; the browser logs it too.
@@ -320,7 +316,7 @@ for (const source of values.piece.map(resolvePiece)) {
     await page.screenshot({ path: path.join(values.shots, `${source.slice(0, 8)}-failed.png`) }).catch(() => {});
   } finally {
     await page.close();
-    rmSync(path.join(dataDir, copy), { recursive: true, force: true });
+    await fetch(`${api}/audio/${copy}`, { method: 'DELETE' });
   }
   report.pieces.push(piece);
   console.log(JSON.stringify({ alias: piece.alias, notes: piece.notes, durationS: piece.durationS, flow: piece.flow, first: piece.first, median: piece.median, profile: piece.profile, error: piece.error }, null, 1));

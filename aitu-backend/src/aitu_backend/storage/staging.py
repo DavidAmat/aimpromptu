@@ -1,4 +1,4 @@
-"""Disposable staged edit sessions under ``data/audio/<uuid>/staging/<session>/``.
+"""Disposable staged edit sessions under ``<project>/staging/<session>/`` (plan section 8.3).
 
 Nothing outside this folder changes until the user accepts. Cancel deletes the
 folder and that is the whole of it.

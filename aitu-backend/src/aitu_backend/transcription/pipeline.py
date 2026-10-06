@@ -46,6 +46,7 @@ from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.pmn import events_file
 from aitu_backend.pmn.events_file import PieceHeader
 from aitu_backend.progress import BaseProgress, default_reporter
+from aitu_backend.storage import locate, paths
 from aitu_backend.transcription import saved_hands, split_cache
 from aitu_backend.transcription.engine import (
     DEFAULT_ENGINE,
@@ -59,54 +60,44 @@ from aitu_backend.transcription.time_pipeline import TimeHands, impose_granulari
 if TYPE_CHECKING:  # pragma: no cover - import for typing only
     from aitu_backend.schemas.rhythm import SavedRhythm
 
-#: Subfolder of an audio's uuid folder. It is called ``matrices`` for historical
-#: reasons and now holds one file; renaming it is P4.4's decision, not this one's.
-MATRICES_DIR = "matrices"
-
-#: The transcription in **seconds**, before any grid was involved.
+#: The transcription, kept forever: ``notes.pmn`` in the part's folder (implementation 02, P-5).
 #:
 #: This is the real output of the model and the only artifact worth keeping. The
 #: matrix is a quantised view of it (D-03), so it can always be rebuilt, while
-#: nothing can rebuild these times once they are gone.
-EVENTS_FILE = "events.json"
+#: nothing can rebuild these times once they are gone. It was ``matrices/events.json``
+#: before implementation 02, Phase 3; the shape the code works in is still that one
+#: (:mod:`aitu_backend.pmn.events_file`).
+NOTES_FILE = "notes.pmn"
 
-#: Written by the migration for a piece that has no recorded notes to rebuild from.
+#: The reader's own decisions about this part: the named ladder, the speed
+#: changes, the notes renamed by hand and the beams they broke. ``sheet.json``
+#: (was ``rhythm.json``).
 #:
-#: Success criterion 5 is that nothing is silently reinterpreted. A grid built
-#: before the note events were kept describes a piece at some tempo nobody wrote
-#: down, and reading it as wall clock would move every note without saying so. So
-#: the piece is marked instead, the screens say what is wrong and what to do, and
-#: the old files are left exactly where they are.
-NEEDS_REDERIVATION_FILE = "needs-rederivation.json"
-
-#: The reader's own decisions about this piece: the named ladder, the speed
-#: changes, the notes renamed by hand and the beams they broke.
-#:
-#: Everything else in a score is derived from `events.json`, so it can be thrown
+#: Everything else in a score is derived from the notes, so it can be thrown
 #: away and rebuilt. This cannot: nothing in the recording implies which pile is
 #: the beat or where a phrase restarts, and a reader who loses it has to decide
 #: it all again. See :mod:`aitu_backend.schemas.rhythm`.
-RHYTHM_FILE = "rhythm.json"
+SHEET_FILE = "sheet.json"
 
 
 # ------------------------------------------------------------------- storage
 
 
-def matrices_dir(audio_uuid: str) -> Path:
-    return store.get(audio_uuid).directory / MATRICES_DIR
-
-
 def events_path(audio_uuid: str) -> Path:
-    return matrices_dir(audio_uuid) / EVENTS_FILE
+    """``notes.pmn`` of a part. Raises :class:`~aitu_backend.storage.locate.NotFound`."""
+    return paths.part_notes_path(audio_uuid)
 
 
 def has_events(audio_uuid: str) -> bool:
     """Is there a transcription to work from, without re-running the model?"""
-    return events_path(audio_uuid).is_file()
+    try:
+        return events_path(audio_uuid).is_file()
+    except locate.NotFound:
+        return False
 
 
 def needs_rederivation_path(audio_uuid: str) -> Path:
-    return matrices_dir(audio_uuid) / NEEDS_REDERIVATION_FILE
+    return paths.needs_rederivation_path(audio_uuid)
 
 
 def needs_rederivation(audio_uuid: str) -> str | None:
@@ -115,7 +106,10 @@ def needs_rederivation(audio_uuid: str) -> str | None:
     The text is written to be shown to a reader as it stands, because a flag that
     only a developer can interpret is not much better than silence.
     """
-    path = needs_rederivation_path(audio_uuid)
+    try:
+        path = needs_rederivation_path(audio_uuid)
+    except locate.NotFound:
+        return None
     if not path.is_file():
         return None
     try:
@@ -125,24 +119,14 @@ def needs_rederivation(audio_uuid: str) -> str | None:
         return "This piece has to be transcribed again."
 
 
-def mark_needs_rederivation(audio_uuid: str, reason: str) -> Path:
-    """Flag a piece the migration could not carry over. Never called at runtime."""
-    path = needs_rederivation_path(audio_uuid)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps({"schemaVersion": "1.0", "reason": reason}, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return path
-
-
 def clear_needs_rederivation(audio_uuid: str) -> None:
     """Transcribing again is what fixes it, so that is where the flag is cleared."""
     needs_rederivation_path(audio_uuid).unlink(missing_ok=True)
 
 
 def rhythm_path(audio_uuid: str) -> Path:
-    return matrices_dir(audio_uuid) / RHYTHM_FILE
+    """``sheet.json`` of a part."""
+    return paths.part_sheet_path(audio_uuid)
 
 
 def load_rhythm(audio_uuid: str) -> "SavedRhythm | None":
@@ -154,7 +138,10 @@ def load_rhythm(audio_uuid: str) -> "SavedRhythm | None":
     """
     from aitu_backend.schemas.rhythm import SavedRhythm  # noqa: PLC0415 - avoids a cycle
 
-    path = rhythm_path(audio_uuid)
+    try:
+        path = rhythm_path(audio_uuid)
+    except locate.NotFound:
+        return None
     if not path.is_file():
         return None
     try:
@@ -319,11 +306,14 @@ def load_note_events(audio_uuid: str) -> TranscribedEvents | None:
     Reading never writes. A file saved before note ids existed gets ``0, 1, 2 ...``
     in file order, the same on every read, and keeps them at its next save.
     """
-    path = events_path(audio_uuid)
-    if not path.is_file():
+    try:
+        path = events_path(audio_uuid)
+    except locate.NotFound:
+        return None
+    payload = events_file.read_payload(path)
+    if payload is None:
         return None
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
         items = payload.get("events", [])
         header = events_file.header_from_payload(payload)
         ids, _ = events_file.assign_ids(

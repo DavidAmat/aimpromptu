@@ -4,8 +4,6 @@ The timing assertions reproduce the worked examples in
 `context/music/notation-logic/01-matrix-notation-logic.md`.
 """
 
-from pathlib import Path
-
 import numpy as np
 import pytest
 
@@ -24,7 +22,9 @@ RE4 = note_to_row("Re-4")
 MI4 = note_to_row("Mi-4")
 
 
-def sample(granularity: Granularity = Granularity.SEMICORCHEA, bpm: float = 60.0) -> PianoMatrix:
+def sample(
+    granularity: Granularity = Granularity.SEMICORCHEA, bpm: float = 60.0
+) -> PianoMatrix:
     """Do-4 struck and held two frames, then Mi-4 struck."""
     return PianoMatrix.from_coo_payload(
         sequence_to_sparse_payload(["*Do-4", "Do-4", "Do-4", "*Mi-4"]),
@@ -71,7 +71,9 @@ def test_from_dense_accepts_both_orientations() -> None:
 def test_rejects_a_non_piano_row_count() -> None:
     with pytest.raises(ValueError, match="88 x N"):
         PianoMatrix(
-            grid=np.zeros((12, 4), dtype=np.int8), granularity=Granularity.NEGRA, tempo_bpm=60
+            grid=np.zeros((12, 4), dtype=np.int8),
+            granularity=Granularity.NEGRA,
+            tempo_bpm=60,
         )
 
 
@@ -171,7 +173,10 @@ def test_dense_round_trip_in_both_orientations() -> None:
     matrix = sample()
     assert PianoMatrix.from_dense(matrix.to_dense()) == matrix
     assert (
-        PianoMatrix.from_dense(matrix.to_dense(frames_as_rows=True), frames_as_rows=True) == matrix
+        PianoMatrix.from_dense(
+            matrix.to_dense(frames_as_rows=True), frames_as_rows=True
+        )
+        == matrix
     )
 
 
@@ -188,7 +193,9 @@ def test_coo_payload_is_sorted_by_column_then_row() -> None:
     grid[DO4, 0] = 1
     grid[DO4, 2] = 1
     payload = PianoMatrix.from_dense(grid).to_coo_payload()
-    assert list(zip(payload.cols, payload.rows)) == sorted(zip(payload.cols, payload.rows))
+    assert list(zip(payload.cols, payload.rows)) == sorted(
+        zip(payload.cols, payload.rows)
+    )
 
 
 def test_envelope_round_trip_sparse_and_dense() -> None:
@@ -201,20 +208,9 @@ def test_envelope_round_trip_sparse_and_dense() -> None:
         assert PianoMatrix.from_envelope(envelope) == matrix
 
 
-def test_npz_round_trip(tmp_path: Path) -> None:
-    matrix = sample()
-    target = tmp_path / "piano_matrix_v1_gsc.npz"
-    matrix.save_npz(target)
-    restored = PianoMatrix.load_npz(target, granularity=matrix.granularity, tempo_bpm=60)
-    assert restored == matrix
-
-
-def test_empty_matrix_survives_every_round_trip(tmp_path: Path) -> None:
+def test_empty_matrix_survives_the_coo_round_trip() -> None:
     matrix = PianoMatrix.empty(5, granularity=Granularity.NEGRA, tempo_bpm=90)
     assert PianoMatrix.from_coo_payload(matrix.to_coo_payload()).frame_count == 5
-    target = tmp_path / "empty.npz"
-    matrix.save_npz(target)
-    assert PianoMatrix.load_npz(target, Granularity.NEGRA, 90) == matrix
 
 
 # -------------------------------------------------------------------- structure

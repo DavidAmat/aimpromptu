@@ -8,7 +8,6 @@ that is allowed in exactly this one place.
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 from aitu_backend.audio import formats, store
@@ -871,15 +870,10 @@ def _place_audio(record: SessionRecord, passage_seconds: float) -> None:
         keep_tail=(record.placement == "insert"),
     )
     tmp.replace(entry.normalized_path)
-    if entry.waveform_path.is_file():
-        entry.waveform_path.unlink()
-    # Playback serves the original. A composed piece has no original until now, and a piece being
-    # composed has no original worth keeping: the recording is the passages, in order.
-    original = entry.original_path
-    if original is not None and original.is_file() and original.suffix.lower() != ".wav":
-        original.unlink()
-    shutil.copy2(entry.normalized_path, entry.directory / "original.wav")
-    store.update(record.audio_uuid, format="wav")
+    # Playback serves the stored file. A composed piece has none until now, and a piece being
+    # composed has none worth keeping: the recording is the passages, in order. The grown recording
+    # is a new file of the audio store; the previous one stays for the history.
+    store.replace_original(record.audio_uuid, entry.normalized_path, "wav")
 
 
 def _splice_audio(record: SessionRecord) -> None:
@@ -902,14 +896,7 @@ def _splice_audio(record: SessionRecord) -> None:
         record.end_seconds,
     )
     tmp.replace(entry.normalized_path)
-    if entry.waveform_path.is_file():
-        entry.waveform_path.unlink()
-    original = entry.original_path
-    if original is not None and original.is_file():
-        # The original is what playback serves. Write the spliced wav over it as wav;
-        # ingest already treats wav as a first-class original.
-        spliced_original = entry.directory / "original.wav"
-        shutil.copy2(entry.normalized_path, spliced_original)
-        if original.resolve() != spliced_original.resolve():
-            original.unlink()
-            store.update(record.audio_uuid, format="wav")
+    if entry.original_path is not None:
+        # The stored file is what playback serves: the spliced WAV becomes the part's new file.
+        # Ingest already treats a WAV as a first-class original.
+        store.replace_original(record.audio_uuid, entry.normalized_path, "wav")

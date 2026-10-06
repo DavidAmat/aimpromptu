@@ -24,8 +24,11 @@ from aitu_backend.storage import paths
 from aitu_backend.transcription import pipeline, saved_hands, split_cache, time_pipeline
 from aitu_backend.transcription.engine import NoteEvent
 from aitu_backend.transcription.events_to_matrix import events_to_time_matrix
+from parts import with_audio
 
-needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg is not installed")
+needs_ffmpeg = pytest.mark.skipif(
+    shutil.which("ffmpeg") is None, reason="ffmpeg is not installed"
+)
 
 DURATION = 8.0
 READING = {"anchorFigure": "negra", "anchorMs": 500.0, "frameMs": 40.0}
@@ -34,7 +37,7 @@ READING = {"anchorFigure": "negra", "anchorMs": 500.0, "frameMs": 40.0}
 @pytest.fixture()
 def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    paths.ensure_data_tree()
+    paths.ensure_database_tree()
     split_cache.forget()
     return tmp_path / "data"
 
@@ -83,7 +86,8 @@ def notes(client: TestClient, uuid: str) -> dict:
 def patch(client: TestClient, uuid: str, ops: list[dict], **extra) -> dict:
     base = notes(client, uuid)
     response = client.patch(
-        f"/pieces/{uuid}/notes", json={"baseRevision": base["revision"], "ops": ops, **extra}
+        f"/pieces/{uuid}/notes",
+        json={"baseRevision": base["revision"], "ops": ops, **extra},
     )
     assert response.status_code == 200, response.text
     return response.json()
@@ -99,7 +103,10 @@ def predict_and_save(client: TestClient, uuid: str) -> dict:
     return patch(
         client,
         uuid,
-        [{"op": "hand", "ids": right, "hand": "r"}, {"op": "hand", "ids": left, "hand": "l"}],
+        [
+            {"op": "hand", "ids": right, "hand": "r"},
+            {"op": "hand", "ids": left, "hand": "l"},
+        ],
     )
 
 
@@ -130,7 +137,9 @@ def id_of(client: TestClient, uuid: str, midi: int, on_ms: int) -> int:
 # --------------------------------------------------------------------------- the steps
 
 
-def test_a_piece_with_no_notes_opens_on_the_audio_tab(client: TestClient, data_dir: Path) -> None:
+def test_a_piece_with_no_notes_opens_on_the_audio_tab(
+    client: TestClient, data_dir: Path
+) -> None:
     uuid = store.create("Empty", AudioSource.UPLOAD, "wav").uuid
     body = status(client, uuid)
     states = {step["step"]: (step["state"], step["enabled"]) for step in body["steps"]}
@@ -164,11 +173,19 @@ def test_a_transcribed_piece_opens_on_the_notes_tab_and_asks_for_the_hands(
     assert body["resume"] == "notes"
 
 
-def test_the_notes_travel_as_columns_with_their_revisions(client: TestClient, piece: str) -> None:
+def test_the_notes_travel_as_columns_with_their_revisions(
+    client: TestClient, piece: str
+) -> None:
     body = notes(client, piece)
     assert body["revision"] == 1 and body["handsRevision"] == 0
     assert body["durationMs"] == 8000 and body["stale"] is False
-    assert len(body["id"]) == len(body["key"]) == len(body["onMs"]) == len(body["lenMs"]) == 37
+    assert (
+        len(body["id"])
+        == len(body["key"])
+        == len(body["onMs"])
+        == len(body["lenMs"])
+        == 37
+    )
     assert body["hand"] == "-" * 37 and body["guessed"] == []
     assert body["onMs"][:3] == [0, 0, 250] and body["lenMs"][0] in (200, 900)
 
@@ -198,7 +215,9 @@ def test_predict_as_a_job_reports_its_progress_and_gives_the_same_answer(
 
     from aitu_backend.transcription import jobs
 
-    started = client.post(f"/pieces/{piece}/hands/predict/job", json={"baseRevision": 1})
+    started = client.post(
+        f"/pieces/{piece}/hands/predict/job", json={"baseRevision": 1}
+    )
     assert started.status_code == 202, started.text
     job = jobs.get(started.json()["jobId"])
     assert job is not None
@@ -213,11 +232,15 @@ def test_predict_as_a_job_reports_its_progress_and_gives_the_same_answer(
         if name is None and payload.get("stage") == "two-hands"
     ]
     assert len(hands) >= 2, "the inference reports more than its end"
-    assert [frame["current"] for frame in hands] == sorted(frame["current"] for frame in hands)
+    assert [frame["current"] for frame in hands] == sorted(
+        frame["current"] for frame in hands
+    )
     assert hands[-1]["current"] == hands[-1]["total"] == 100
 
     done = job.summary  # what the `done` frame of the stream carries
-    direct = client.post(f"/pieces/{piece}/hands/predict", json={"baseRevision": 1}).json()
+    direct = client.post(
+        f"/pieces/{piece}/hands/predict", json={"baseRevision": 1}
+    ).json()
     assert done["id"] == direct["id"] and done["hand"] == direct["hand"]
     assert done["changed"] == direct["changed"] == 37
 
@@ -235,8 +258,12 @@ def test_predict_leaves_a_note_it_cannot_place_without_a_hand(
     events = sorted([*music(), short], key=lambda event: (event.start, event.midi_note))
     pipeline.save_note_events(uuid, events, DURATION, title="Short note")
     base = notes(client, uuid)
-    answer = client.post(f"/pieces/{uuid}/hands/predict", json={"baseRevision": 1}).json()
-    unplaced = [note_id for note_id, hand in zip(answer["id"], answer["hand"]) if hand == "-"]
+    answer = client.post(
+        f"/pieces/{uuid}/hands/predict", json={"baseRevision": 1}
+    ).json()
+    unplaced = [
+        note_id for note_id, hand in zip(answer["id"], answer["hand"]) if hand == "-"
+    ]
     position = base["onMs"].index(3110)
     assert unplaced == [base["id"][position]]
     assert answer["unplaced"] == 1
@@ -248,10 +275,13 @@ def test_a_note_the_sheet_cannot_place_does_not_keep_the_hands_from_being_ready(
 ) -> None:
     """The user's rule of 2026-10-01: once the prediction is saved, the Hands step is ready, even
     when a note the split could not place has no hand. That note stays without one (red), the
-    quick rule does not guess it on a later save, and the sheet paints the saved hands."""
+    quick rule does not guess it on a later save, and the sheet paints the saved hands.
+    """
     uuid = store.create("Short note", AudioSource.UPLOAD, "wav").uuid
     store.update(uuid, duration_seconds=DURATION)
-    short = NoteEvent(midi_note=60, start=3.11, end=3.12)  # 10 ms: shorter than one column
+    short = NoteEvent(
+        midi_note=60, start=3.11, end=3.12
+    )  # 10 ms: shorter than one column
     events = sorted([*music(), short], key=lambda event: (event.start, event.midi_note))
     pipeline.save_note_events(uuid, events, DURATION, title="Short note")
     short_id = notes(client, uuid)["id"][notes(client, uuid)["onMs"].index(3110)]
@@ -282,7 +312,9 @@ def test_a_note_the_sheet_cannot_place_does_not_keep_the_hands_from_being_ready(
     assert after["hand"][after["id"].index(short_id)] == "-"
 
     def no_inference(*args: object, **kwargs: object) -> None:
-        raise AssertionError("the sheet must paint the saved hands, not run the inference")
+        raise AssertionError(
+            "the sheet must paint the saved hands, not run the inference"
+        )
 
     monkeypatch.setattr(pipeline, "impose_granularity_and_split", no_inference)
     split_cache.forget()
@@ -305,10 +337,15 @@ def test_saved_hands_make_the_step_ready_and_the_sheet_uses_them_without_inferen
         "guessed": 0,
         "saved": True,
     }
-    assert body["by"]["sheet"]["state"] == "missing" and body["by"]["sheet"]["enabled"] is True
+    assert (
+        body["by"]["sheet"]["state"] == "missing"
+        and body["by"]["sheet"]["enabled"] is True
+    )
 
     def no_inference(*args, **kwargs):
-        raise AssertionError("the hand inference ran although every note has a saved hand")
+        raise AssertionError(
+            "the hand inference ran although every note has a saved hand"
+        )
 
     monkeypatch.setattr(time_pipeline, "split_hands", no_inference)
     split_cache.forget()
@@ -319,11 +356,15 @@ def test_saved_hands_make_the_step_ready_and_the_sheet_uses_them_without_inferen
     assert {note["hand"] for note in printed if note["row"] + 21 < 60} == {"left"}
 
 
-def test_writing_the_sheet_records_the_hands_revision(client: TestClient, piece: str) -> None:
+def test_writing_the_sheet_records_the_hands_revision(
+    client: TestClient, piece: str
+) -> None:
     predict_and_save(client, piece)
     reading = write_sheet(client, piece)
     assert reading["handsRevision"] == 1
-    reading = client.put(f"/time/{piece}/rhythm", json={**READING, "handsRevision": 99}).json()
+    reading = client.put(
+        f"/time/{piece}/rhythm", json={**READING, "handsRevision": 99}
+    ).json()
     assert reading["handsRevision"] == 1, "the client's value is ignored"
     body = status(client, piece)
     assert body["by"]["sheet"]["state"] == "ready" and body["resume"] == "sheet"
@@ -341,13 +382,20 @@ def test_writing_the_sheet_records_the_hands_revision(client: TestClient, piece:
 
 
 def test_row_1_a_new_selected_region_makes_every_later_step_stale(
-    client: TestClient, ready: str
+    client: TestClient, ready: str, tmp_path: Path
 ) -> None:
+    with_audio(ready, tmp_path, DURATION)
     store.set_cuts(ready, [(100, 200)])
     body = status(client, ready)
     assert body["by"]["notes"]["state"] == "stale"
-    assert body["by"]["hands"]["state"] == "stale" and body["by"]["hands"]["enabled"] is False
-    assert body["by"]["sheet"]["state"] == "stale" and body["by"]["sheet"]["enabled"] is False
+    assert (
+        body["by"]["hands"]["state"] == "stale"
+        and body["by"]["hands"]["enabled"] is False
+    )
+    assert (
+        body["by"]["sheet"]["state"] == "stale"
+        and body["by"]["sheet"]["enabled"] is False
+    )
     assert body["resume"] == "audio"
     assert notes(client, ready)["stale"] is True
     refused = client.patch(
@@ -362,7 +410,9 @@ def test_row_2_a_new_transcription_makes_the_hands_missing_and_keeps_the_old_she
     client: TestClient, data_dir: Path, tmp_path: Path
 ) -> None:
     rate = 16_000
-    tone = (0.3 * np.sin(2 * np.pi * 220 * np.arange(rate * 8) / rate) * 32767).astype(np.int16)
+    tone = (0.3 * np.sin(2 * np.pi * 220 * np.arange(rate * 8) / rate) * 32767).astype(
+        np.int16
+    )
     source = tmp_path / "tone.wav"
     wavfile.write(source, rate, tone)
     with source.open("rb") as handle:
@@ -378,7 +428,11 @@ def test_row_2_a_new_transcription_makes_the_hands_missing_and_keeps_the_old_she
     predict_and_save(client, uuid)
     write_sheet(client, uuid)
     before = events_file.read_header(pipeline.events_path(uuid))
-    assert (before.notes_revision, before.hands_revision, before.hands_notes_revision) == (1, 2, 1)
+    assert (
+        before.notes_revision,
+        before.hands_revision,
+        before.hands_notes_revision,
+    ) == (1, 2, 1)
 
     pipeline.transcribe_audio(uuid, engine=Stub())
     after = events_file.read_header(pipeline.events_path(uuid))
@@ -391,30 +445,41 @@ def test_row_2_a_new_transcription_makes_the_hands_missing_and_keeps_the_old_she
     # The old reading points at columns of the old notes, so it is not kept beside the new ones:
     # the Sheet tab asks for a new one, and the old one is in history (plan section 8.3).
     assert body["by"]["sheet"]["state"] == "missing"
-    assert list(paths.audio_dir(uuid).glob("history/v*/rhythm.json"))
+    assert list(paths.part_history_dir(uuid).glob("v*/sheet.json"))
 
 
 def test_row_3_a_moved_or_resized_rectangle_keeps_the_hands_and_makes_the_sheet_stale(
     client: TestClient, ready: str
 ) -> None:
     note_id = id_of(client, ready, 72, 0)
-    result = patch(client, ready, [{"op": "move", "id": note_id, "onMs": 30, "lenMs": 150}])
+    result = patch(
+        client, ready, [{"op": "move", "id": note_id, "onMs": 30, "lenMs": 150}]
+    )
     assert result["revision"] == 2 and result["handsRevision"] == 2
     assert result["sheetStale"] is True
     body = status(client, ready)
     assert body["by"]["hands"]["state"] == "ready"
-    assert body["by"]["sheet"]["state"] == "stale" and body["by"]["sheet"]["enabled"] is True
+    assert (
+        body["by"]["sheet"]["state"] == "stale"
+        and body["by"]["sheet"]["enabled"] is True
+    )
     assert body["resume"] == "sheet"
     moved = notes(client, ready)
     index = moved["id"].index(note_id)
-    assert (moved["onMs"][index], moved["lenMs"][index], moved["hand"][index]) == (30, 150, "r")
+    assert (moved["onMs"][index], moved["lenMs"][index], moved["hand"][index]) == (
+        30,
+        150,
+        "r",
+    )
 
 
 def test_row_4_an_added_rectangle_gets_a_guessed_hand_and_makes_the_sheet_stale(
     client: TestClient, ready: str
 ) -> None:
     result = patch(
-        client, ready, [{"op": "add", "tempId": -1, "key": 40, "onMs": 2100, "lenMs": 250}]
+        client,
+        ready,
+        [{"op": "add", "tempId": -1, "key": 40, "onMs": 2100, "lenMs": 250}],
     )
     [added] = result["added"]
     assert added["tempId"] == -1 and added["id"] == 37
@@ -436,7 +501,9 @@ def test_row_4_without_saved_hands_an_added_rectangle_has_no_hand(
     client: TestClient, piece: str
 ) -> None:
     result = patch(
-        client, piece, [{"op": "add", "tempId": -7, "key": 40, "onMs": 2100, "lenMs": 250}]
+        client,
+        piece,
+        [{"op": "add", "tempId": -7, "key": 40, "onMs": 2100, "lenMs": 250}],
     )
     assert result["changed"]["hand"] == "-"
     assert status(client, piece)["by"]["hands"]["state"] == "missing"
@@ -475,7 +542,10 @@ def test_row_7_a_hand_changed_on_the_sheet_tab_keeps_the_sheet_ready(
     before = events_file.read_header(pipeline.events_path(ready)).hands_revision
     response = client.put(
         f"/time/{ready}/hands",
-        json={"frameMs": 40, "notes": [{"startFrame": 0, "row": 72 - 21, "hand": "left"}]},
+        json={
+            "frameMs": 40,
+            "notes": [{"startFrame": 0, "row": 72 - 21, "hand": "left"}],
+        },
     )
     assert response.json() == {"assigned": 1, "unmatched": 0}
     after = events_file.read_header(pipeline.events_path(ready))
@@ -487,11 +557,16 @@ def test_row_7_a_hand_changed_on_the_sheet_tab_keeps_the_sheet_ready(
     assert moved["hand"][moved["id"].index(id_of(client, ready, 72, 0))] == "l"
 
 
-def test_a_sheet_tab_edit_does_not_make_a_stale_sheet_ready(client: TestClient, ready: str) -> None:
+def test_a_sheet_tab_edit_does_not_make_a_stale_sheet_ready(
+    client: TestClient, ready: str
+) -> None:
     patch(client, ready, [{"op": "delete", "ids": [id_of(client, ready, 73, 250)]}])
     client.put(
         f"/time/{ready}/hands",
-        json={"frameMs": 40, "notes": [{"startFrame": 0, "row": 72 - 21, "hand": "left"}]},
+        json={
+            "frameMs": 40,
+            "notes": [{"startFrame": 0, "row": 72 - 21, "hand": "left"}],
+        },
     )
     assert status(client, ready)["by"]["sheet"]["state"] == "stale"
 
@@ -503,7 +578,11 @@ def test_saving_the_reading_then_taking_its_hidden_notes_off_keeps_it_ready(
     write_sheet(client, ready)
     response = client.put(
         f"/time/{ready}/removed",
-        json={"frameMs": 40, "notes": [{"startFrame": 6, "row": 73 - 21}], "removed": True},
+        json={
+            "frameMs": 40,
+            "notes": [{"startFrame": 6, "row": 73 - 21}],
+            "removed": True,
+        },
     )
     assert response.json()["changed"] == 1
     assert status(client, ready)["by"]["sheet"]["state"] == "ready"
@@ -517,12 +596,17 @@ def test_an_old_base_revision_is_refused_and_nothing_is_written(
 ) -> None:
     before = pipeline.events_path(ready).read_bytes()
     stale = client.patch(
-        f"/pieces/{ready}/notes", json={"baseRevision": 0, "ops": [{"op": "delete", "ids": [0]}]}
+        f"/pieces/{ready}/notes",
+        json={"baseRevision": 0, "ops": [{"op": "delete", "ids": [0]}]},
     )
     assert stale.status_code == 409 and "Reload" in stale.json()["detail"]
     hands = client.patch(
         f"/pieces/{ready}/notes",
-        json={"baseRevision": 1, "baseHandsRevision": 0, "ops": [{"op": "delete", "ids": [0]}]},
+        json={
+            "baseRevision": 1,
+            "baseHandsRevision": 0,
+            "ops": [{"op": "delete", "ids": [0]}],
+        },
     )
     assert hands.status_code == 409
     assert pipeline.events_path(ready).read_bytes() == before
@@ -547,7 +631,9 @@ def test_an_operation_that_cannot_be_applied_is_refused_with_its_reason(
     client: TestClient, piece: str, ops: list[dict], words: str
 ) -> None:
     before = pipeline.events_path(piece).read_bytes()
-    response = client.patch(f"/pieces/{piece}/notes", json={"baseRevision": 1, "ops": ops})
+    response = client.patch(
+        f"/pieces/{piece}/notes", json={"baseRevision": 1, "ops": ops}
+    )
     assert response.status_code == 422
     assert words in response.json()["detail"]
     assert pipeline.events_path(piece).read_bytes() == before
@@ -557,21 +643,30 @@ def test_a_deleted_note_cannot_be_moved(client: TestClient, piece: str) -> None:
     patch(client, piece, [{"op": "delete", "ids": [0]}])
     response = client.patch(
         f"/pieces/{piece}/notes",
-        json={"baseRevision": 2, "ops": [{"op": "move", "id": 0, "onMs": 0, "lenMs": 10}]},
+        json={
+            "baseRevision": 2,
+            "ops": [{"op": "move", "id": 0, "onMs": 0, "lenMs": 10}],
+        },
     )
-    assert response.status_code == 422 and "Restore it first" in response.json()["detail"]
+    assert (
+        response.status_code == 422 and "Restore it first" in response.json()["detail"]
+    )
 
 
 def test_one_key_sounds_one_note_at_a_time(client: TestClient, piece: str) -> None:
     """A move that runs into the next onset of its key shortens the earlier note."""
     first = id_of(client, piece, 72, 0)  # 72 again at 1250 ms
-    result = patch(client, piece, [{"op": "move", "id": first, "onMs": 1000, "lenMs": 600}])
+    result = patch(
+        client, piece, [{"op": "move", "id": first, "onMs": 1000, "lenMs": 600}]
+    )
     changed = result["changed"]
     assert changed["id"] == [first]
     assert (changed["onMs"], changed["lenMs"]) == ([1000], [250])
 
 
-def test_operations_that_change_nothing_write_nothing(client: TestClient, ready: str) -> None:
+def test_operations_that_change_nothing_write_nothing(
+    client: TestClient, ready: str
+) -> None:
     before = pipeline.events_path(ready).read_bytes()
     note_id = id_of(client, ready, 72, 0)
     result = patch(client, ready, [{"op": "hand", "ids": [note_id], "hand": "r"}])
@@ -584,7 +679,9 @@ def test_predict_keeps_the_hands_the_user_set_unless_asked_to_replace_them(
 ) -> None:
     note_id = id_of(client, ready, 72, 0)
     patch(client, ready, [{"op": "hand", "ids": [note_id], "hand": "l"}])
-    kept = client.post(f"/pieces/{ready}/hands/predict", json={"baseRevision": 1}).json()
+    kept = client.post(
+        f"/pieces/{ready}/hands/predict", json={"baseRevision": 1}
+    ).json()
     assert kept["hand"][kept["id"].index(note_id)] == "l" and kept["changed"] == 0
     fresh = client.post(
         f"/pieces/{ready}/hands/predict", json={"baseRevision": 1, "replace": True}
@@ -610,9 +707,11 @@ def old_piece(data_dir: Path) -> str:
         for index, event in enumerate(music())
     ]
     path = pipeline.events_path(uuid)
-    path.parent.mkdir(parents=True)
+    # An `events.json` of the old layout, read as it is (pmn/events_file.py).
     path.write_text(
-        json.dumps({"schemaVersion": "1.0", "durationSeconds": DURATION, "events": rows})
+        json.dumps(
+            {"schemaVersion": "1.0", "durationSeconds": DURATION, "events": rows}
+        )
     )
     pipeline.rhythm_path(uuid).write_text(json.dumps(READING))
     return uuid
@@ -635,7 +734,10 @@ def test_the_first_hand_change_on_the_sheet_saves_every_hand_as_the_sheet_draws_
     drawn = pipeline.split_of(old_piece, 40.0)
     response = client.put(
         f"/time/{old_piece}/hands",
-        json={"frameMs": 40, "notes": [{"startFrame": 0, "row": 72 - 21, "hand": "left"}]},
+        json={
+            "frameMs": 40,
+            "notes": [{"startFrame": 0, "row": 72 - 21, "hand": "left"}],
+        },
     )
     assert response.json() == {"assigned": 1, "unmatched": 0}
 
@@ -644,8 +746,12 @@ def test_the_first_hand_change_on_the_sheet_saves_every_hand_as_the_sheet_draws_
     assert stored.header.hands_notes_revision == 1
     after = pipeline.split_of(old_piece, 40.0)
     moved_cells = (after.right.grid != drawn.right.grid).sum()
-    assert moved_cells == 5, "only the one note (an onset and four sustain cells) changed hand"
-    assert np.array_equal(after.right.grid + after.left.grid, drawn.right.grid + drawn.left.grid)
+    assert (
+        moved_cells == 5
+    ), "only the one note (an onset and four sustain cells) changed hand"
+    assert np.array_equal(
+        after.right.grid + after.left.grid, drawn.right.grid + drawn.left.grid
+    )
     assert status(client, old_piece)["by"]["sheet"]["state"] == "ready"
 
 
@@ -653,11 +759,18 @@ def test_the_first_hand_change_on_the_sheet_saves_every_hand_as_the_sheet_draws_
 
 
 def test_the_saved_hands_paint_the_same_cells_as_the_inference() -> None:
-    events = [event.model_copy(update={"id": index}) for index, event in enumerate(music())]
+    events = [
+        event.model_copy(update={"id": index}) for index, event in enumerate(music())
+    ]
     events[5] = events[5].model_copy(update={"hand": "left"})
-    inferred = time_pipeline.impose_granularity_and_split(events, DURATION, frame_ms=40.0)
+    inferred = time_pipeline.impose_granularity_and_split(
+        events, DURATION, frame_ms=40.0
+    )
     hands = saved_hands.hands_of_split(inferred, events)
-    saved = [event.model_copy(update={"hand": hands[index]}) for index, event in enumerate(events)]
+    saved = [
+        event.model_copy(update={"hand": hands[index]})
+        for index, event in enumerate(events)
+    ]
     painted = saved_hands.split_with_saved_hands(saved, DURATION, frame_ms=40.0)
     assert np.array_equal(painted.right.grid, inferred.right.grid)
     assert np.array_equal(painted.left.grid, inferred.left.grid)
@@ -669,17 +782,23 @@ def test_the_build_records_the_id_of_the_note_that_owns_each_onset_cell() -> Non
         NoteEvent(id=3, midi_note=60, start=0.101, end=0.3),
         NoteEvent(id=9, midi_note=64, start=0.52, end=0.9),
     ]
-    build = events_to_time_matrix(events, 1.0, frame_ms=40.0, leakage=None, artifacts=None)
+    build = events_to_time_matrix(
+        events, 1.0, frame_ms=40.0, leakage=None, artifacts=None
+    )
     assert build.event_ids == {(3, 39): 3, (13, 43): 9}
 
 
-def test_the_quick_rule_copies_the_closest_pitch_around_the_note_then_uses_middle_c() -> None:
+def test_the_quick_rule_copies_the_closest_pitch_around_the_note_then_uses_middle_c() -> (
+    None
+):
     reference = [
         NoteEvent(midi_note=40, start=1.0, end=4.0, hand="left"),
         NoteEvent(midi_note=76, start=1.0, end=1.2, hand="right"),
     ]
     assert saved_hands.quick_hand(45, 1.1, reference) == "left"
     assert saved_hands.quick_hand(64, 1.1, reference) == "right"
-    assert saved_hands.quick_hand(64, 3.0, reference) == "left", "only the bass is around"
+    assert (
+        saved_hands.quick_hand(64, 3.0, reference) == "left"
+    ), "only the bass is around"
     assert saved_hands.quick_hand(59, 9.0, reference) == "left"
     assert saved_hands.quick_hand(60, 9.0, reference) == "right"

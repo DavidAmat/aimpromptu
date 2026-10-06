@@ -411,9 +411,9 @@ class EvenSpacing(BaseModel):
 
 
 class SavedRhythm(BaseModel):
-    """One reader's reading of one piece.
+    """One reader's reading of one part: ``sheet.json`` (implementation 02, plan section 8.3).
 
-    Stored under the audio it belongs to. There is one per piece: a second
+    Stored in the folder of the part it belongs to (``rhythm.json`` before Phase 3). There is one per piece: a second
     reading replaces the first, because a rhythm is a decision rather than a
     version, and the thing a reader wants back is the last one they were happy
     with.
@@ -432,7 +432,7 @@ class SavedRhythm(BaseModel):
 
     #: What the sheet prints above the music: its title, a line under it, and the artist. Set in the
     #: Title tab of the sheet toolbox (implementation 02, Phase 2). ``None`` prints the project's
-    #: name as the title and nothing else. Phase 3 moves the reading into ``sheet.json``.
+    #: name as the title and nothing else.
     title: str | None = Field(None, max_length=200)
     subtitle: str | None = Field(None, max_length=200)
     artist: str | None = Field(None, max_length=200)
@@ -482,6 +482,12 @@ class SavedRhythm(BaseModel):
 
     #: Lines of words written under the staff, over a stretch of columns.
     lyrics: list[Lyric] = Field(default_factory=list)
+    #: The lyrics pasted in the Lyrics tab that are not placed on the sheet yet, one line per piece,
+    #: in order (plan section 11.5). Phase 7 fills it.
+    lyrics_pool: list[str] = Field(default_factory=list, alias="lyricsPool")
+    #: The figure the next figures transposition starts from: the last one it went **to** (plan
+    #: section 11.4). ``None`` starts from negra. Phase 7 sets it.
+    figures_from: FigureName | None = Field(None, alias="figuresFrom")
 
     #: Stretches printed smaller, because the reader offers them rather than asserts them.
     cue_ranges: list[CueRange] = Field(default_factory=list, alias="cueRanges")

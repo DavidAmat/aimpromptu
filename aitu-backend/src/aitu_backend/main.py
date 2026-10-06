@@ -1,7 +1,7 @@
 """FastAPI app factory.
 
-Thin by design: it builds the app, installs CORS and gzip, ensures the storage tree
-exists and includes every router from :mod:`aitu_backend.api`. All logic
+Thin by design: it builds the app, installs CORS and gzip, opens ``.database/`` (the tables,
+the folders, the master user) and includes every router from :mod:`aitu_backend.api`. All logic
 lives in the feature packages (`matrix/`, `audio/`, `transcription/`,
 `storage/`, `notation/`).
 """
@@ -15,19 +15,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from aitu_backend import config
 from aitu_backend.api import ALL_ROUTERS
 from aitu_backend.compression import JsonGZipMiddleware
-from aitu_backend.storage.paths import ensure_data_tree
+from aitu_backend.db.database import engine
+from aitu_backend.db.users import ensure_master_user
+from aitu_backend.storage.paths import ensure_database_tree
 from aitu_backend.transcription import models
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Create the `data/` tree before serving the first request, and start loading the model.
+    """Open ``.database/`` before serving the first request, and start loading the model.
+
+    The tables are brought to the newest Alembic revision, the top folders are made, and the master
+    user is made from ``AITU_MASTER_USERNAME`` when the database has none (plan section 9.1).
 
     With ``AITU_PRELOAD_ENGINE=muscriptor-large`` the model loads on a background thread, so the
     server answers at once and the first transcription does not pay the load. A failure (no token,
     licence not accepted) is reported by ``GET /matrix/engine``.
     """
-    ensure_data_tree()
+    engine()
+    ensure_database_tree()
+    ensure_master_user()
     spec = config.preload_engine()
     if spec:
         models.preload_in_background(spec)

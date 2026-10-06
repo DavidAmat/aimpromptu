@@ -28,6 +28,7 @@ from aitu_backend.schemas.video import (
     VideoMetadata,
 )
 from aitu_backend.storage import paths
+from parts import make_part
 from aitu_backend.video import geometry, images, reading, store
 
 UUID = "drawn-video"
@@ -123,7 +124,8 @@ def drawn(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> list[int]:
     """
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
     monkeypatch.setattr(images, "WORK_WIDTH", WIDTH)
-    paths.ensure_data_tree()
+    paths.ensure_database_tree()
+    make_part(UUID)
 
     tops = [-40 + index * TRAVEL for index in range(24)]
     _write(UUID, [_frame(top, index in BLOB_FRAMES) for index, top in enumerate(tops)])
@@ -150,7 +152,9 @@ def test_the_reading_is_one_line_per_sampled_frame(drawn: list[int]) -> None:
     assert [line.t for line in lines[:3]] == [0.0, 0.1, 0.2]
 
 
-def test_the_onset_is_reported_in_the_one_frame_the_tip_crosses_in(drawn: list[int]) -> None:
+def test_the_onset_is_reported_in_the_one_frame_the_tip_crosses_in(
+    drawn: list[int],
+) -> None:
     """V-18 and V-25 together. The window is the measured travel and nothing
     else, so the tip is inside it in exactly one frame — set it wider and the
     same onset is reported in five frames in a row."""
@@ -201,7 +205,8 @@ def test_a_video_with_no_overlay_is_refused_rather_than_guessed_at(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
-    paths.ensure_data_tree()
+    paths.ensure_database_tree()
+    make_part("bare")
     _write("bare", [_frame(0, False)])
     with pytest.raises(reading.NotCalibrated):
         reading.read_video("bare", offset_px=TRAVEL, travel=TRAVEL, workers=1)

@@ -1,9 +1,11 @@
-"""Snapshots of ``events.json`` (and the audio) taken before an accepted splice.
+"""Snapshots of a part taken before an accepted splice or a new transcription replaced it.
 
-The live piece is still one ``events.json`` per audio uuid — that is the current
-storage, and this module does not change it. Accepting an edit copies the
-previous musical state into ``history/vN/`` and advances a counter beside the
-file. Playground ``vN_f<frameMs>`` folders are left alone.
+Accepting an edit copies the previous musical state of the part into
+``.database/history/<projectId>/parts/<partId>/vN/`` and advances a counter in the part's folder
+(``music-version.json``). A snapshot holds ``notes.pmn``, ``sheet.json`` and ``timeline.json``. The
+audio is not copied: the timeline names the stored files (``.database/audio/``), which never
+change, and ``audio_refs`` counts the snapshot's files as used by the project, so they are never
+deleted under it (implementation 02, plan section 8.5).
 """
 
 from __future__ import annotations
@@ -11,8 +13,7 @@ from __future__ import annotations
 import json
 import shutil
 
-from aitu_backend.audio import store
-from aitu_backend.storage import paths
+from aitu_backend.storage import bundle, locate, paths
 from aitu_backend.transcription import pipeline
 
 
@@ -34,32 +35,28 @@ def _write_version(audio_uuid: str, version: int) -> None:
 
 
 def snapshot_current(audio_uuid: str) -> int:
-    """Copy the live piece into ``history/vN/`` and return the new version number."""
+    """Copy the live part (notes, sheet, audio timeline) into ``vN/``; return the new version."""
     version = current_version(audio_uuid)
     dest = paths.history_version_dir(audio_uuid, version)
     dest.mkdir(parents=True, exist_ok=True)
-    events = pipeline.events_path(audio_uuid)
-    if events.is_file():
-        shutil.copy2(events, dest / "events.json")
-    rhythm = pipeline.rhythm_path(audio_uuid)
-    if rhythm.is_file():
-        shutil.copy2(rhythm, dest / "rhythm.json")
-    entry = store.get(audio_uuid)
-    if entry.has_normalized():
-        shutil.copy2(entry.normalized_path, dest / "normalized.wav")
-    original = entry.original_path
-    if original is not None and original.is_file():
-        shutil.copy2(original, dest / original.name)
+    for source in (
+        pipeline.events_path(audio_uuid),
+        pipeline.rhythm_path(audio_uuid),
+        paths.part_timeline_path(audio_uuid),
+    ):
+        if source.is_file():
+            shutil.copy2(source, dest / source.name)
+    bundle.sync_audio_refs(locate.part(audio_uuid).project_id)
     nxt = version + 1
     _write_version(audio_uuid, nxt)
     return nxt
 
 
 def snapshot_notes(audio_uuid: str) -> int:
-    """Copy ``events.json`` and ``rhythm.json`` into ``history/vN/`` and return the new version.
+    """Copy ``notes.pmn`` and ``sheet.json`` into ``vN/`` and return the new version.
 
     Called before a new transcription replaces them (implementation 08, plan section 8.3): before
-    this, a new transcription deleted ``rhythm.json`` with no copy. The audio is not copied, unlike
+    this, a new transcription deleted the saved sheet with no copy. The audio is not copied, unlike
     :func:`snapshot_current`, because a transcription does not change it. The version counter is
     the same, so the two kinds of snapshot never share a folder.
     """

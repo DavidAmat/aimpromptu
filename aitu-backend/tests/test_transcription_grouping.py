@@ -17,7 +17,9 @@ from aitu_backend.transcription.grouping import (
 
 
 def note(start_ms: float, midi: int = 60, length_ms: float = 200.0) -> NoteEvent:
-    return NoteEvent(midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0)
+    return NoteEvent(
+        midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0
+    )
 
 
 def test_the_window_is_one_frame_wide():
@@ -85,7 +87,9 @@ def test_a_chord_that_straddles_a_column_boundary_is_still_one_attack():
 def test_grouping_does_not_depend_on_the_order_the_engine_emitted_events():
     forward = group_onsets([note(0, 60), note(8, 64), note(300, 67)])
     shuffled = group_onsets([note(300, 67), note(8, 64), note(0, 60)])
-    assert [group.midi_notes for group in forward] == [group.midi_notes for group in shuffled]
+    assert [group.midi_notes for group in forward] == [
+        group.midi_notes for group in shuffled
+    ]
     assert group_start_seconds(forward) == group_start_seconds(shuffled)
 
 

@@ -40,7 +40,10 @@ def _calibration(**overrides: object) -> Calibration:
     )
     raw = grid_to_borders(grid)
     raw.update(
-        {"rollTop": overrides.pop("roll_top", 0.0), "guardBand": overrides.pop("guard_band", 0.0)}
+        {
+            "rollTop": overrides.pop("roll_top", 0.0),
+            "guardBand": overrides.pop("guard_band", 0.0),
+        }
     )
     assert not overrides, f"unknown overrides {overrides}"
     return Calibration.model_validate(raw)
@@ -53,7 +56,9 @@ def _blank(cal: Calibration) -> np.ndarray:
     return image
 
 
-def _draw(image: np.ndarray, cal: Calibration, midi: int, y_top: int, y_bottom: int) -> None:
+def _draw(
+    image: np.ndarray, cal: Calibration, midi: int, y_top: int, y_bottom: int
+) -> None:
     """A solid rectangle on one key, the way these animations draw a note."""
     key = next(k for k in geometry.keys(cal) if k.midi == midi)
     x0, x1 = int(round(key.left)), int(round(key.right))
@@ -63,7 +68,9 @@ def _draw(image: np.ndarray, cal: Calibration, midi: int, y_top: int, y_bottom: 
 # --------------------------------------------------------- the window rule ---
 
 
-def _run(y_top: int, y_bottom: int, clipped: bool = False, midi: int = 60) -> DetectedRun:
+def _run(
+    y_top: int, y_bottom: int, clipped: bool = False, midi: int = 60
+) -> DetectedRun:
     return DetectedRun(
         midi=midi,
         y_top=y_top,
@@ -88,7 +95,9 @@ def test_the_window_rule_is_v18_word_for_word() -> None:
     assert onsets == [60], "the offset line itself is inside the window"
 
     onsets, sustains = detector.window_rule([_run(300, UPPER - int(d) - 1)], UPPER, d)
-    assert onsets == [] and sustains == [], "above the offset line it has not arrived yet"
+    assert (
+        onsets == [] and sustains == []
+    ), "above the offset line it has not arrived yet"
 
 
 def test_a_run_that_already_crossed_is_a_sustain_not_an_onset() -> None:
@@ -108,7 +117,9 @@ def test_a_run_cut_by_the_upper_line_is_sounding_not_tipped_there() -> None:
 
 def test_a_key_with_an_onset_is_not_also_reported_as_a_sustain() -> None:
     d = 40.0
-    onsets, sustains = detector.window_rule([_run(200, UPPER + 5), _run(330, UPPER - 1)], UPPER, d)
+    onsets, sustains = detector.window_rule(
+        [_run(200, UPPER + 5), _run(330, UPPER - 1)], UPPER, d
+    )
     assert onsets == [60] and sustains == []
 
 

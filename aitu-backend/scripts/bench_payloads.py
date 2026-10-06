@@ -1,6 +1,6 @@
 """Sizes and build times of the payloads the piano sheet and the piano roll ask for.
 
-Implementation 08, Phase 2, task 2.3.3. Runs every transcribed piece in ``data/audio`` through
+Implementation 08, Phase 2, task 2.3.3. Runs every transcribed part of ``.database/`` through
 the real FastAPI app (``TestClient``, so the time includes validation and JSON encoding, which is
 where most of it went) and writes one JSON file with a row per piece.
 
@@ -32,13 +32,15 @@ from fastapi.testclient import TestClient
 
 from aitu_backend.api import time_score
 from aitu_backend.main import app
-from aitu_backend.storage.paths import audio_root
+from aitu_backend.pmn import events_file
+from aitu_backend.storage import bundle, paths
+from aitu_backend.transcription import pipeline
 
 WARM_RUNS = 3
 
 
 def _anchor(piece: Path) -> tuple[str, float]:
-    rhythm = piece / "matrices" / "rhythm.json"
+    rhythm = piece / pipeline.SHEET_FILE
     if rhythm.is_file():
         saved = json.loads(rhythm.read_text(encoding="utf-8"))
         return saved.get("anchorFigure", "negra"), float(saved["anchorMs"])
@@ -120,7 +122,7 @@ def measure(client: TestClient, piece: Path) -> dict:
     uuid = piece.name
     figure, anchor_ms = _anchor(piece)
     body = {"anchorFigure": figure, "anchorMs": anchor_ms, "frameMs": 40}
-    events = json.loads((piece / "matrices" / "events.json").read_text(encoding="utf-8"))
+    events = events_file.read_payload(piece / pipeline.NOTES_FILE) or {}
 
     time_score.forget_split_cache()
     first, cold_ms = _timed(lambda: client.post(f"/time/{uuid}/score", json=body))
@@ -148,7 +150,7 @@ def measure(client: TestClient, piece: Path) -> dict:
         "title": events.get("title"),
         "notes": len(events.get("events", [])),
         "durationSeconds": events.get("durationSeconds"),
-        "eventsJsonBytes": (piece / "matrices" / "events.json").stat().st_size,
+        "eventsJsonBytes": (piece / pipeline.NOTES_FILE).stat().st_size,
         "scoreBytes": len(first.content),
         # Before Phase 2 nothing was compressed; the level-9 size is what Starlette's default gives.
         "scoreGzipBytes": zipped_bytes if gzip_applied else len(gzip.compress(first.content, 9)),
@@ -171,7 +173,7 @@ def main() -> None:
     args = parser.parse_args()
 
     pieces = sorted(
-        path.parent.parent for path in audio_root().glob("*/matrices/events.json") if path.is_file()
+        paths.part_dir(part) for part in bundle.list_parts() if pipeline.has_events(part)
     )
     if args.limit:
         pieces = pieces[: args.limit]

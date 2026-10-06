@@ -36,7 +36,9 @@ from aitu_backend.schemas.matrix import Granularity, MatrixProcessingStep
 HAND = DEFAULT_CONFIG.hand
 
 
-def build(events: list[tuple[str, int, int]], granularity=Granularity.SEMICORCHEA) -> PianoMatrix:
+def build(
+    events: list[tuple[str, int, int]], granularity=Granularity.SEMICORCHEA
+) -> PianoMatrix:
     """``[(note, start_frame, duration)]`` -> a clean matrix."""
     frames = max(start + duration for _n, start, duration in events)
     grid = np.zeros((KEY_COUNT, frames), dtype=np.int8)
@@ -148,7 +150,9 @@ def test_a_lone_high_left_hand_note_moves_when_the_right_hand_is_free() -> None:
         granularity=Granularity.CORCHEA,
     )
     hands = hands_of(matrix)
-    spike = next(event for event in decode_matrix(matrix).events if event.note == "Do-5")
+    spike = next(
+        event for event in decode_matrix(matrix).events if event.note == "Do-5"
+    )
     assert hands[spike.onset_id] == "right"
 
 
@@ -319,7 +323,9 @@ def test_relief_reaches_the_owner_of_a_figure_and_nobody_else() -> None:
     taken = [o for o in figures[0].onset_ids if beam_hands[o] != owner]
     assert owned and taken
     assert all(relief.get(o, 1.0) < 0.2 for o in owned)
-    assert all(relief.get(o, 1.0) == 1.0 for o in taken), "a stolen note earns no relief"
+    assert all(
+        relief.get(o, 1.0) == 1.0 for o in taken
+    ), "a stolen note earns no relief"
 
 
 def test_relief_does_not_leak_to_notes_with_no_figure_behind_them() -> None:
@@ -345,7 +351,9 @@ def test_the_figuration_term_is_inert_where_there_is_no_figuration() -> None:
     matrix = build(
         [
             (name, index * 2, 2)
-            for index, name in enumerate(["Do-5", "Mi-5", "Sol-5", "Mi-5", "Do-5", "Si-4"])
+            for index, name in enumerate(
+                ["Do-5", "Mi-5", "Sol-5", "Mi-5", "Do-5", "Si-4"]
+            )
         ]
         + [
             ("Do-3", 0, 4),
@@ -385,7 +393,9 @@ def test_the_pass_never_makes_the_music_or_the_pattern_worse(events) -> None:
     after = evaluate(decoded, after_map, DEFAULT_CONFIG, figures)
     assert after.pattern <= before.pattern + 1e-9
     assert after.infeasible <= before.infeasible
-    assert after.total(DEFAULT_CONFIG.refine) <= before.total(DEFAULT_CONFIG.refine) + 1e-9
+    assert (
+        after.total(DEFAULT_CONFIG.refine) <= before.total(DEFAULT_CONFIG.refine) + 1e-9
+    )
 
 
 def test_incremental_replay_agrees_with_a_full_one() -> None:
@@ -407,7 +417,12 @@ def test_incremental_replay_agrees_with_a_full_one() -> None:
             candidate[onset_id] = "left" if candidate[onset_id] == "right" else "right"
         span = changed_span(decoded, hand_map, candidate)
         fast = evaluate(
-            decoded, candidate, DEFAULT_CONFIG, figures, reference=reference, changed=span
+            decoded,
+            candidate,
+            DEFAULT_CONFIG,
+            figures,
+            reference=reference,
+            changed=span,
         )
         slow = evaluate(decoded, candidate, DEFAULT_CONFIG, figures)
         assert fast.base == pytest.approx(slow.base)

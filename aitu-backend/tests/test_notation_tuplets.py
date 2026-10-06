@@ -15,7 +15,10 @@ from aitu_backend.matrix.peaks import Peak
 from aitu_backend.notation.tuplets import find_tresillos
 from aitu_backend.schemas.time_matrix import FigureName
 from aitu_backend.transcription.engine import NoteEvent
-from aitu_backend.transcription.time_pipeline import impose_granularity_and_split, to_score_payload
+from aitu_backend.transcription.time_pipeline import (
+    impose_granularity_and_split,
+    to_score_payload,
+)
 
 NEGRA_MS = 300.0
 
@@ -26,7 +29,13 @@ def ladder(negra_ms: float = NEGRA_MS):
 
 def peak(ms: float) -> Peak:
     return Peak(
-        centre_ms=ms, mass=20, share=0.3, lo_ms=ms - 12, hi_ms=ms + 12, mean_ms=ms, median_ms=ms
+        centre_ms=ms,
+        mass=20,
+        share=0.3,
+        lo_ms=ms - 12,
+        hi_ms=ms + 12,
+        mean_ms=ms,
+        median_ms=ms,
     )
 
 
@@ -116,7 +125,9 @@ def test_an_ordinary_pile_is_still_named_ordinarily():
 
 
 def note(start_ms: float, midi: int, length_ms: float = 80.0) -> NoteEvent:
-    return NoteEvent(midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0)
+    return NoteEvent(
+        midi_note=midi, start=start_ms / 1000.0, end=(start_ms + length_ms) / 1000.0
+    )
 
 
 def test_a_tresillo_prints_as_three_corcheas_carrying_the_number_three():
@@ -131,7 +142,9 @@ def test_a_tresillo_prints_as_three_corcheas_carrying_the_number_three():
         events.append(note(clock, 76, 250.0))
         clock += NEGRA_MS
 
-    hands = impose_granularity_and_split(events, 4.0, frame_ms=20, artifacts=None, leakage=None)
+    hands = impose_granularity_and_split(
+        events, 4.0, frame_ms=20, artifacts=None, leakage=None
+    )
     score = to_score_payload(hands, ladder())
 
     inside = [note for note in score.notes if note.tuplet]
@@ -153,11 +166,19 @@ def test_the_two_hands_never_claim_the_same_tresillo():
         events.append(note(clock + 50, 45))
         clock += NEGRA_MS / 3
 
-    hands = impose_granularity_and_split(events, 4.0, frame_ms=20, artifacts=None, leakage=None)
+    hands = impose_granularity_and_split(
+        events, 4.0, frame_ms=20, artifacts=None, leakage=None
+    )
     score = to_score_payload(hands, ladder())
 
-    right = {n.tuplet_id for n in score.notes if n.hand == "right" and n.tuplet_id is not None}
-    left = {n.tuplet_id for n in score.notes if n.hand == "left" and n.tuplet_id is not None}
+    right = {
+        n.tuplet_id
+        for n in score.notes
+        if n.hand == "right" and n.tuplet_id is not None
+    }
+    left = {
+        n.tuplet_id for n in score.notes if n.hand == "left" and n.tuplet_id is not None
+    }
     assert right and left
     assert not (right & left)
 
@@ -171,7 +192,14 @@ def test_a_piece_may_end_on_a_tresillo():
     Without this the closing three notes of every tresillo piece print as two odd figures among
     sixty even ones — raggedness in the one place a reader looks last.
     """
-    gaps = [100.0, 100.0, 100.0, 100.0, 100.0, 900.0]  # the 900 is the run-out to the end
+    gaps = [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        900.0,
+    ]  # the 900 is the run-out to the end
     assert len(find_tresillos(gaps, ladder(), open_ended=True)) == 2
     assert len(find_tresillos(gaps, ladder())) == 1
 

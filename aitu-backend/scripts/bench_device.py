@@ -28,7 +28,7 @@ import time
 from pathlib import Path
 
 
-from aitu_backend.storage import paths
+from aitu_backend.storage import bundle, paths
 
 SUPERESTRELLA = "a585f9eb-36a1-49a0-9f0c-2626f3d292da"
 PHASE_1_NOTES = (
@@ -51,10 +51,12 @@ DEFAULT_OUT = (
 
 
 def _piece(prefix: str) -> Path:
-    matches = sorted(p for p in paths.audio_root().iterdir() if p.name.startswith(prefix))
+    """The cache folder of the one part whose id starts with ``prefix``: it holds
+    ``normalized.wav``, and its name is the part's id (implementation 02, Phase 3)."""
+    matches = [part for part in bundle.list_parts() if part.startswith(prefix)]
     if len(matches) != 1:
         raise SystemExit(f"{len(matches)} pieces start with {prefix!r}")
-    return matches[0]
+    return paths.part_cache_dir(matches[0])
 
 
 def _sync() -> None:

@@ -1,6 +1,6 @@
 """Time the piece API of implementation 08, Phase 5, through the running backend.
 
-Works on a temporary copy of each piece (a new uuid in the data folder), deleted at the end, so the
+Works on a temporary copy of each piece (`POST /projects/{id}/duplicate`), deleted at the end, so the
 library is never changed. For each piece: the status, the notes as columns (size raw and with gzip),
 **Predict hands** (first and second call), saving the prediction, a move, and the hand move of the
 piano sheet (`PUT /time/{uuid}/hands`, then the sheet request the page makes after it), once on the
@@ -14,14 +14,11 @@ from __future__ import annotations
 import argparse
 import gzip
 import json
-import shutil
 import time
+import urllib.error
 import urllib.request
-import uuid as uuid_module
 from pathlib import Path
 from typing import Any
-
-from aitu_backend.storage import paths
 
 
 def call(api: str, method: str, path: str, body: Any = None) -> tuple[Any, float, int, int]:
@@ -42,16 +39,10 @@ def call(api: str, method: str, path: str, body: Any = None) -> tuple[Any, float
     return (json.loads(raw) if raw else None), round(elapsed, 1), len(raw), len(sent)
 
 
-def copy_piece(source_uuid: str) -> str:
-    copy_uuid = str(uuid_module.uuid4())
-    source = paths.audio_dir(source_uuid)
-    target = paths.audio_dir(copy_uuid)
-    shutil.copytree(source, target, ignore=shutil.ignore_patterns("history", "*.wav", "*.mp3"))
-    metadata = json.loads((target / "metadata.json").read_text())
-    metadata["uuid"] = copy_uuid
-    metadata["alias"] = f"bench copy of {metadata.get('alias')}"
-    (target / "metadata.json").write_text(json.dumps(metadata))
-    return copy_uuid
+def copy_piece(api: str, source_uuid: str) -> str:
+    """A temporary copy of the project (implementation 02: `POST /projects/{id}/duplicate`)."""
+    copy, _, _, _ = call(api, "POST", f"/projects/{source_uuid}/duplicate", {"title": "bench copy"})
+    return copy["parts"][0]
 
 
 def sheet_move(api: str, piece: str, reading: dict[str, Any], column: int, row: int, hand: str):
@@ -59,18 +50,27 @@ def sheet_move(api: str, piece: str, reading: dict[str, Any], column: int, row: 
         api,
         "PUT",
         f"/time/{piece}/hands",
-        {"frameMs": reading["frameMs"], "notes": [{"startFrame": column, "row": row, "hand": hand}]},
+        {
+            "frameMs": reading["frameMs"],
+            "notes": [{"startFrame": column, "row": row, "hand": hand}],
+        },
     )
     _, score_ms, raw, sent = call(api, "POST", f"/time/{piece}/score", reading)
-    return {"assigned": moved["assigned"], "putMs": put_ms, "scoreMs": score_ms, "scoreKb": [
-        round(raw / 1024), round(sent / 1024)]}
+    return {
+        "assigned": moved["assigned"],
+        "putMs": put_ms,
+        "scoreMs": score_ms,
+        "scoreKb": [round(raw / 1024), round(sent / 1024)],
+    }
 
 
 def bench(api: str, source_uuid: str) -> dict[str, Any]:
-    piece = copy_piece(source_uuid)
+    piece = copy_piece(api, source_uuid)
     try:
-        rhythm_path = paths.audio_dir(piece) / "matrices" / "rhythm.json"
-        saved = json.loads(rhythm_path.read_text()) if rhythm_path.is_file() else {}
+        try:
+            saved, _, _, _ = call(api, "GET", f"/time/{piece}/rhythm")
+        except urllib.error.HTTPError:
+            saved = {}
         reading = {
             "anchorFigure": saved.get("anchorFigure", "negra"),
             "anchorMs": saved.get("anchorMs", 500.0),
@@ -116,7 +116,7 @@ def bench(api: str, source_uuid: str) -> dict[str, Any]:
         _, row["sheetAfterMoveMs"], _, _ = call(api, "POST", f"/time/{piece}/score", reading)
         return row
     finally:
-        shutil.rmtree(paths.audio_dir(piece), ignore_errors=True)
+        call(api, "DELETE", f"/audio/{piece}")
 
 
 def main() -> None:
