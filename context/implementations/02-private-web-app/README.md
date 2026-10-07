@@ -9,9 +9,9 @@ work (Q-5 to Q-8). Sixteen phases, 0 to 15, each on its own `feat/phase-N` branc
 deleted after the user's check (its committed `README.md` and Lab records stay). **Phase 4 done and merged
 2026-10-06** ([`02-implementation-phase-4.md`](02-implementation-phase-4.md)). **Phase 5 done and
 checked by the user 2026-10-07** ([`02-implementation-phase-5.md`](02-implementation-phase-5.md)),
-merged at the start of Phase 6. **Phase 6 done 2026-10-07**
-([`02-implementation-phase-6.md`](02-implementation-phase-6.md)), on `feat/phase-6`, waiting for the
-user's check. Q-7 and Q-8 are open.
+merged at the start of Phase 6. **Phase 6 done and checked by the user 2026-10-07**
+([`02-implementation-phase-6.md`](02-implementation-phase-6.md)), merged at the start of Phase 7.
+Q-7 and Q-8 are open.
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)
