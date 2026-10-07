@@ -483,10 +483,10 @@ class SavedRhythm(BaseModel):
     #: Lines of words written under the staff, over a stretch of columns.
     lyrics: list[Lyric] = Field(default_factory=list)
     #: The lyrics pasted in the Lyrics tab that are not placed on the sheet yet, one line per piece,
-    #: in order (plan section 11.5). Phase 7 fills it.
+    #: in order (plan section 11.5). Filled since Phase 7 by the Lyrics tab of the sheet toolbox.
     lyrics_pool: list[str] = Field(default_factory=list, alias="lyricsPool")
     #: The figure the next figures transposition starts from: the last one it went **to** (plan
-    #: section 11.4). ``None`` starts from negra. Phase 7 sets it.
+    #: section 11.4). ``None`` starts from negra. Set since Phase 7 by Transpose → Figures.
     figures_from: FigureName | None = Field(None, alias="figuresFrom")
 
     #: Stretches printed smaller, because the reader offers them rather than asserts them.

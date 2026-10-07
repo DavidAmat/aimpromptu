@@ -8,8 +8,8 @@ toolbox is on its own page:
   even spacing, decoration, small print, trill, taking a note off the page).
 - [annotations-stretches.md](annotations-stretches.md): the **range toolbox** (key, clef, octave
   brackets, lyrics, spacing, speed, re-record) and what can be done to a bracket on the page.
-- [annotations-sheet.md](annotations-sheet.md): the **sheet toolbox** (title, key, figures, layout),
-  the keyboard panel, and **Find trills**.
+- [annotations-sheet.md](annotations-sheet.md): the **sheet toolbox** (title, key, transpose,
+  lyrics, layout), the keyboard panel, and **Find trills**.
 
 The code is `aitu-frontend/src/pages/piece/sheet/` (implementation 02, Phase 2 split the old
 5,328-line `RhythmPage.tsx` into it; see
@@ -39,18 +39,19 @@ of gaps, *Name it*, *Does the piece change speed?*) and the captions under the c
 
 ## The defaults of a first write
 
-Three things the reader used to choose by hand are chosen when a sheet is first written (a project
+Four things the reader used to choose by hand are chosen when a sheet is first written (a project
 with no saved sheet, or after **Remove all**). Each is the baseline of the page, not an undo step,
 and an ordinary edit after that:
 
 | Default | How | Where to change it |
 |---|---|---|
-| **The figures** | The highest pile of gaps (the one holding the most) is a **negra** (D-09 as changed by implementation 02). The backend chooses the pile: `GET /time/{uuid}/default-reading` | Sheet toolbox, **Figures** |
+| **The figures** | The highest pile of gaps (the one holding the most) is a **negra** (D-09 as changed by implementation 02). The backend chooses the pile: `GET /time/{uuid}/default-reading` | Sheet toolbox, **Transpose → Figures** |
 | **The key signature** | The one that prints the fewest accidentals, measured on the drawn notes | Sheet toolbox, **Key**; a passage in the range toolbox, **Key** |
-| **Octave brackets** | Over every run of three or more chords written three ledger lines or more outside its staff, measured in the key just chosen | Range toolbox, **Octave**; again with *Group high notes under 8va* in **Layout** |
+| **The left hand's clef** | The treble clef over every run of four or more left-hand chords written two ledger lines or more above the bass staff (the clef rule, [rendering.md](rendering.md)) | Range toolbox, **Clef** |
+| **Octave brackets** | Over every run of three or more chords written three ledger lines or more outside its staff, measured in the key just chosen, never over a passage the clef rule moved | Range toolbox, **Octave**; again with *Group high notes under 8va* in **Layout** |
 
 The negra is a convention, not a measurement: statistics cannot tell a negra from a corchea, so a
-piece can come out twice too fast or too slow. One press in **Figures** renames every note and moves
+piece can come out twice too fast or too slow. One **Transpose → Figures** renames every note and moves
 nothing.
 
 ## The two selections, and the two toolboxes
@@ -85,12 +86,13 @@ Windows), and so do the two arrows of the floating bar, whose tooltips say what 
 *Undo: Main figure*. In a text field the keys do what they do in any text field. **One press is one
 step**, however many things it changed. At least 20 steps are kept (the history keeps 100).
 
-Four edits are written onto the **recording** rather than onto this page:
+Five edits are written onto the **recording** rather than onto this page:
 
 | Edit | Does Command-Z reach it? |
 |---|---|
 | **A note added on the keyboard panel** | Yes. It is marked removed again, and the sheet is drawn again |
 | **A hand swap** | Yes. The hand each note had before is written back, and the sheet is drawn again |
+| **A notes transposition** | Yes. Every note moves back by the same interval, the notes it took off the keyboard come back, and the key and the marks move back with them |
 | **A re-record** | No. It writes over a window of the recording; its tab says so. Accepting it also forgets the steps taken until then |
 | **Placing a passage** (Record) | No, for the same reason, and it moves every mark after the insertion point |
 | **Remove all** | No. It asks first, deletes the saved sheet and puts the notes taken off back on the recording |

@@ -12,10 +12,9 @@ with a dot means this stretch already carries that setting.
 
 | Tab | Reads the hand? | What it does |
 |---|---|---|
-| **Key** | No | The stretch gets its own key signature (✓), drawn on both clefs; 🗑 goes back to the key of the piece |
-| **Clef** | **Yes** | The hand prints a treble or a bass clef over the stretch, and goes back to its own after it |
+| **Key** | No | The stretch gets its own key signature (✓), drawn on both clefs; 🗑 goes back to the key of the piece. **Key for this passage**: when another key prints fewer accidentals over the stretch than the one in force, a button names it ("Use Bb major here") and one press applies it |
+| **Clef** | **Yes** | The hand prints a treble or a bass clef over the stretch, and goes back to its own after it. Where the clef rule (below) finds high left-hand runs in the stretch, a button offers it again: "Treble clef for the high left-hand notes (n)" |
 | **Octave** | **Yes** | The four brackets (`8va`, `15ma`, `8vb`, `15mb`) per hand; the eye hides one, the bin removes it. Pressing the bracket already on removes it |
-| **Lyrics** | No | A line of words over the stretch, its text size, and *Put the words back over their stretch* |
 | **Spacing** | No | How much room the stretch takes, from 25 % to 400 % of what the page measured. The sheet redraws as the handle moves |
 | **Speed** | No | Where the piece changes speed (below) |
 | **Re-record** | No | Play the stretch again, over the recording. Undo cannot reach it, and the tab says so |
@@ -63,17 +62,24 @@ sound.
 
 **A clef change is the honest answer to a hand that spends a page far outside its own staff**, and a
 better one than an octave bracket where the passage is long: on the other clef the notes are written
-where they sound. Nothing moves and nothing is renamed. Phase 7 of implementation 02 adds an
-automatic clef rule for high left-hand runs.
+where they sound. Nothing moves and nothing is renamed.
+
+**The clef rule** (implementation 02, Phase 7, plan section 11.7): on a first write, a run of at
+least four left-hand chords whose lowest note is two ledger lines or more above the bass staff (E4
+and up) is written in the treble clef. One lower chord inside the run is kept in it, unless it
+would sit under the treble staff; a shorter run keeps the bass clef and may take an `8va`; a very
+low run takes an `8vb`. A bracket is never put over a passage the rule wrote in the treble clef: it
+is cut where the clef changes. The numbers are `DEFAULT_CLEF_RULE` of the drawing package, measured
+on the library ([rendering.md](rendering.md)). Each change is an ordinary clef change after that.
 
 **Spacing is both staves, whichever hand is chosen.** A column is one slice of wall clock and the
 two hands share it (D-22), so there is no widening a column for one hand.
 
 **Words belong to the piece, not to a staff.** They are drawn above the right hand, in a block of
-their own at the top of the line, above the octave brackets. The block is the reader's: drag it
-anywhere, drag its right edge to fold the words into more lines. Everything stays keyed by the
-columns, so the words travel with their music when the page re-wraps. A lyric never widens the
-layout beyond its own words. Phase 7 replaces this tab with the lyrics pool of the sheet toolbox.
+their own at the top of the line, above the octave brackets. Since implementation 02, Phase 7 they
+are the lyrics pieces of the sheet toolbox's Lyrics tab ([annotations-sheet.md](annotations-sheet.md)),
+placed by dragging and snapped to frames; the range toolbox has no Lyrics tab. In the Lyrics tab, a
+stretch marked above the staves picks the pieces over it instead of opening this toolbox.
 
 ## Where to look deeper
 

@@ -118,6 +118,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | PUT | `/time/{uuid}/hands` | Correct which hand plays a note. Written by note id since implementation 08. |
 | PUT | `/time/{uuid}/removed` | Mark notes as removed from the page, by column and row. |
 | PUT | `/time/{uuid}/notes` | Add notes to the recording, by column and row. |
+| POST | `/time/{uuid}/transpose` | Move every note of the part by a number of semitones; a preview counts, an undo is exact (Phase 7). |
 | GET PUT DELETE | `/time/{uuid}/rhythm` | The saved reading. |
 | **Editing and composing** | `api/editing.py` | |
 | POST | `/audio/{uuid}/edits` | Open a disposable session. |
@@ -619,7 +620,11 @@ documentation (Phase 2).
 ### POST /time/{uuid}/score
 
 The same answer, with the reader's page edits applied **before any figure is named**. Body adds
-`hiddenNotes` and `trills` to the query parameters above, and `dropDecorative`.
+`hiddenNotes` and `trills` to the query parameters above, and `dropDecorative`. `transpose`
+(semitones, -87 to 87, default 0) draws the sheet as if every note were moved, writing nothing: the
+preview of a notes transposition (implementation 02, Phase 7). The notes are moved by
+`notation/transpose.py` and split by `pipeline.split_events`, the way `split_of` splits stored
+notes, without the cache; `hiddenNotes` and `trills` are then addressed on the moved keys.
 
 The edits have to be applied on this side rather than in the browser for one reason: hiding a note
 changes the gap to its neighbour, and therefore that neighbour's printed figure. An overlay drawn
@@ -685,6 +690,23 @@ rejects a frame where both hands hold one key and merging would lose a note.
 `{changed, unmatched}`. Both go through `pipeline.save_edit` with `sheet_follows`, like the hand
 route.
 
+### POST /time/{uuid}/transpose
+
+**Transpose → Notes** of the sheet toolbox (implementation 02, Phase 7, plan section 11.4). Body:
+`{"semitones": 2, "preview": false, "hold": [], "restore": []}`. Every note of the part (the ones
+taken off the page too) moves by `semitones`; no time moves, so every mark keyed by a column stays
+on its music, and each note keeps its hand. A note that would leave the 88 keys is **taken off**
+(`removed`) and stays on its key. Answers `{moved, outside, held, takenOff, putBack}`: the notes on
+the page that moved, the ones taken off, and the ids an undo needs. `preview` counts and writes
+nothing.
+
+**The undo is the same route**: the opposite `semitones`, `hold` set to the answer's `held` (those
+notes stay where they are) and `restore` to its `takenOff` (those are put back on the page). Every
+note is then as it was, note for note (`tests/test_time_score_api.py`). A write goes through
+`pipeline.save_edit` with `notes_changed`, `hands_changed` and `sheet_follows`: the notes revision
+rises, the hands stay complete, and a saved sheet that was current stays current. `422` for
+`semitones` 0; it is a write, so a version of the Private Library answers `403`.
+
 ### GET / PUT / DELETE /time/{uuid}/rhythm
 
 The reader's saved reading: the anchor, the key, clef changes, speed changes, renamed figures, beam
@@ -696,7 +718,9 @@ how far apart the notes and the lines stand. One per piece: a second reading rep
 ignored. A later edit of the notes or the hands outside the Sheet tab makes the reading stale, and
 the Sheet tab asks the reader to press **Write the sheet** again. `409` when the piece has no notes.
 Since implementation 02, Phase 2 the reading also carries `title`, `subtitle` and `artist` (each
-optional, at most 200 characters): what the sheet prints above the music.
+optional, at most 200 characters): what the sheet prints above the music. Since Phase 7 the page
+fills `lyricsPool` (the pasted lyrics not placed yet) and `figuresFrom` (where the next figures
+transposition starts), and `lyrics` holds the lyrics pieces, each starting and ending on a frame.
 
 `DELETE` answers `204` and is what **Remove all** calls.
 

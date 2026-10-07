@@ -93,6 +93,22 @@ of an `8va` a reader was already holding. Now a different bracket is only propos
 onsets wants it, or where one chord is left hopeless *even under the open bracket*, and how far out
 a chord is is measured under that bracket rather than against the bare staff.
 
+### Which clefs the page proposes
+
+`suggestClefRanges` (0.43.0, implementation 02, Phase 7, plan section 11.7) proposes the **treble
+clef** for a left-hand run, and the page takes it on a first write with the key and the brackets. A
+chord is **high** when its lowest note is at least `minLedgerLines` (2) ledger lines above the bass
+staff (E4 and up, where a stem reaches the right hand). A run of `minRunOnsets` (4) high chords or
+more prints in the treble clef; one lower chord (`bridgeOnsets`) stays inside it only if it prints
+no more ledger lines on the treble staff than on the bass, so a low chord is never written under the
+treble staff. The run must save ledger lines, ends at the next left-hand onset at the latest, and
+gives no change at frame 0. Shorter runs are left to `suggestOttavas`; a proposed bracket is cut
+where a clef change begins.
+
+**Measured on the 38 pieces with notes:** 10 pieces get runs (62 in all), almost all on tutorials
+whose left hand plays high (Superestrella's tutorial, The Other Side); 28 get none. One ledger line
+instead of two reaches 16 pieces, mostly over middle C; six chords instead of four leaves 18 runs.
+
 ### The corner marks
 
 A stretch carrying an edit draws two corners, and until 0.34.0 they were measured from the **edge of

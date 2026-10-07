@@ -66,8 +66,8 @@ assumes.
 | [frontend/rendering.md](frontend/rendering.md) | How the sheet is drawn, what the app does *not* decide, the stale-`dist` trap |
 | [frontend/annotations.md](frontend/annotations.md) | **The Sheet step**: the page, the defaults of a first write, the two selections, undo, saving |
 | [frontend/annotations-notes.md](frontend/annotations-notes.md) | The note toolbox: figures, fingers, hand, beams, even spacing, decorations |
-| [frontend/annotations-stretches.md](frontend/annotations-stretches.md) | The range toolbox (key, clef, octave, lyrics, spacing, speed, re-record) and brackets on the page |
-| [frontend/annotations-sheet.md](frontend/annotations-sheet.md) | The sheet toolbox (title, key, figures, layout), the keyboard panel, Find trills |
+| [frontend/annotations-stretches.md](frontend/annotations-stretches.md) | The range toolbox (key and Key for this passage, clef and the clef rule, octave, spacing, speed, re-record) and brackets on the page |
+| [frontend/annotations-sheet.md](frontend/annotations-sheet.md) | The sheet toolbox (title, key, transpose, lyrics, layout), the keyboard panel, Find trills |
 | [frontend/printing.md](frontend/printing.md) | The PDF export: re-wrap to the paper, never scale; the margin is the control |
 | [frontend/timestamps.md](frontend/timestamps.md) | UI rule: `mm:ss.cc`, frame labelled by start only, never wraps |
 
@@ -241,7 +241,7 @@ Reading a piano roll video into the same `events.json` the transcription model w
 | [../documentation/services/backend/events-to-sheet.md](../documentation/services/backend/events-to-sheet.md) | The derivation path, step by step, with the reason for each ordering |
 | [../documentation/services/backend/transcription-pipeline.md](../documentation/services/backend/transcription-pipeline.md) | Engines, thresholds, the artifact and leakage filters, the measurement behind each number |
 | [../documentation/services/backend/hand-inference-second-pass.md](../documentation/services/backend/hand-inference-second-pass.md) | The gated repair pass over the hand split |
-| [../documentation/services/backend/rhythm-and-annotations.md](../documentation/services/backend/rhythm-and-annotations.md) | `rhythm.json` field by field: everything a reader decided |
+| [../documentation/services/backend/rhythm-and-annotations.md](../documentation/services/backend/rhythm-and-annotations.md) | `sheet.json` (once `rhythm.json`) field by field: everything a reader decided, the lyrics pieces and pool |
 | [../documentation/services/backend/editing-and-compose.md](../documentation/services/backend/editing-and-compose.md) | The replacement splice, and the one place a piece may change length |
 | [../documentation/services/backend/paths-and-data.md](../documentation/services/backend/paths-and-data.md) | `.database/`: every path, the bundle, the timeline, every table, the migration, backup and check |
 | [../documentation/deprecated/schemas.md](../documentation/deprecated/schemas.md) | Deprecated: the models of the deleted text-notation MVP |

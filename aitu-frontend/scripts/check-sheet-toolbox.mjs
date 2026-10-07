@@ -110,7 +110,10 @@ const hasLyric = async (words) => (await lyricNamed(words)) !== null;
 
 async function freshCopy(label, piece = values.piece) {
   const vault = await json(`${api}/projects`);
-  const source = vault.find((row) => row.step === 'sheet' && row.title.includes(piece));
+  // Never one of this script's own copies, which carry "(check-…)" in their title.
+  const source = vault.find(
+    (row) => row.step === 'sheet' && row.title.includes(piece) && !row.title.includes('(check-'),
+  );
   if (!source) throw new Error(`No project of the vault named ${piece} has its piano sheet`);
   const copy = await send('POST', `${api}/projects/${source.id}/duplicate`, { title: `${source.title} (${label})` });
   made.add(copy.id);
@@ -179,15 +182,28 @@ try {
     await shot('04-figures-from-corchea');
     await page.getByRole('button', { name: 'Close the toolbox' }).first().click().catch(() => undefined);
 
-    // The range toolbox: a stretch, its Key tab and its Clef tab.
+    // The range toolbox: a stretch, its Key tab and its Clef tab. The piece is put in C major
+    // first, so a stretch of this piece (in flats) has a better key of its own to offer.
+    await openTab('Key');
+    await toolbox().getByLabel('Key signature').click();
+    await page.getByRole('option', { name: /^C major/ }).click();
+    await page.waitForTimeout(1500);
+    await page.getByRole('button', { name: 'Close the toolbox' }).first().click();
     const ruler = page.locator('.grid-frame-ruler').first();
     const box = await ruler.boundingBox();
     if (box) {
       await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2);
       await page.locator('[role=tablist][aria-label="What this stretch carries"]').waitFor({ timeout: 10000 });
       const hint = page.locator('[data-passage-key]');
-      check('the Key tab of a stretch can offer its own key', true, (await hint.count()) > 0 ? `offers ${await hint.getAttribute('data-passage-key')}` : 'this stretch is already in its best key');
+      await hint.waitFor({ timeout: 10000 }).catch(() => undefined);
+      const offered = (await hint.count()) > 0 ? await hint.getAttribute('data-passage-key') : null;
+      check('Key for this passage offers the key with the fewest accidentals', offered !== null && offered !== 'C', String(offered));
       await shot('05-passage-key');
+      if (offered) {
+        await hint.click();
+        await page.waitForTimeout(800);
+        check('one press gives the stretch that key', (await page.getByRole('tab', { name: 'Key' }).getAttribute('data-edited')) === 'yes');
+      }
       await page.getByRole('tab', { name: 'Clef' }).click();
       const rule = page.locator('[data-clef-rule]');
       check('the Clef tab offers the clef rule where it applies', true, (await rule.count()) > 0 ? `${await rule.getAttribute('data-clef-rule')} run(s)` : 'no high left-hand run here');
@@ -196,6 +212,29 @@ try {
     } else {
       check('the frame ruler is on the page', false);
     }
+
+    // Narrow and dark: the Transpose tab and its dialog.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(600);
+    await openTab('Transpose');
+    await toolbox().getByRole('button', { name: 'Notes', exact: true }).click();
+    const narrow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    check('the Transpose tab at 390 px has no sideways scroll', narrow <= 0, `${narrow} px`);
+    await shot('14-transpose-390');
+    await toolbox().locator('[aria-label="Transpose to"] rect[data-midi="59"]').click();
+    await toolbox().locator('[data-transpose-preview=notes]').click();
+    await page.locator('[data-transpose-dialog] [data-transpose-sheet] .grid-onset-group').first().waitFor({ timeout: 60000 });
+    await shot('15-transpose-dialog-390');
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.evaluate(() => localStorage.setItem('mui-mode', 'dark'));
+    await page.reload();
+    await waitForSheet();
+    await openTab('Transpose');
+    await shot('16-transpose-dark');
+    await page.evaluate(() => localStorage.removeItem('mui-mode'));
+    await page.emulateMedia({ colorScheme: 'light' });
   }
 
   if (runs('lyrics')) {
@@ -378,7 +417,7 @@ const unexpected = problems.filter(
   (line) =>
     !/401 .*\/auth\/me/.test(line) &&
     !/404 .*\/time\/[0-9a-f-]+\/rhythm$/.test(line) &&
-    !(values.only === 'clefs' && /Failed to load resource: .* 404/.test(line)),
+    !(runs('clefs') && /Failed to load resource: .* 404/.test(line)),
 );
 console.log(results.join('\n'));
 if (unexpected.length) console.log(`\nProblems:\n${unexpected.slice(0, 20).join('\n')}`);
