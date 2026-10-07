@@ -20,8 +20,10 @@ from aitu_backend.audio.frames import (
 )
 from aitu_backend.audio.formats import ConversionFailed, FfmpegMissing, UnsupportedFormat
 from aitu_backend.audio.store import AudioNotFound
+from aitu_backend.db.database import session
+from aitu_backend.db.models import Project
 from aitu_backend.schemas.metadata import AudioMetadata, AudioSource
-from aitu_backend.storage import paths
+from aitu_backend.storage import locate, paths
 from aitu_backend.transcription import pipeline
 from aitu_backend.video import store as video_store
 
@@ -204,6 +206,12 @@ class AudioEntry(AudioMetadata):
     updated_at: datetime | None = Field(None, alias="updatedAt")
     #: The part has a video (a video project): its Audio step is the Video step (section 10.2).
     has_video: bool = Field(False, alias="hasVideo")
+    #: The project of the part, and its layer: a project of the Private Library opens read only,
+    #: and is changed through **Edit** (Phase 6, section 10.6).
+    project_id: str | None = Field(None, alias="projectId")
+    layer: str | None = None
+    #: The library project this vault project edits, if it is an edit copy.
+    based_on: str | None = Field(None, alias="basedOn")
 
 
 def _updated_at(audio_uuid: str) -> datetime | None:
@@ -225,6 +233,16 @@ def _updated_at(audio_uuid: str) -> datetime | None:
 
 def _entry(metadata: AudioMetadata) -> AudioEntry:
     fields = metadata.model_dump(by_alias=True)
+    where: locate.Location | None
+    try:
+        where = locate.part(metadata.uuid)
+    except locate.NotFound:
+        where = None
+    based_on = None
+    if where is not None:
+        with session() as db:
+            row = db.get(Project, where.project_id)
+            based_on = row.based_on if row is not None else None
     original = metadata.duration_seconds
     if original is not None and metadata.cuts:
         removed = sum(end - start for start, end in metadata.cuts) * FRAME_MS / 1000.0
@@ -236,6 +254,9 @@ def _entry(metadata: AudioMetadata) -> AudioEntry:
         originalDurationSeconds=original,
         updatedAt=_updated_at(metadata.uuid),
         hasVideo=video_store.exists(metadata.uuid),
+        projectId=where.project_id if where else None,
+        layer=where.layer if where else None,
+        basedOn=based_on,
     )
 
 

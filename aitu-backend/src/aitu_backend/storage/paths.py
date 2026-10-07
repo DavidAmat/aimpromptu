@@ -236,6 +236,19 @@ def history_version_dir(part_id: str, version: int) -> Path:
     return part_history_dir(part_id) / f"v{version}"
 
 
+def saved_versions_dir(project_id: str) -> Path:
+    """`.database/history/<projectId>/`: the earlier states of a Private Library project, one
+    folder `v<N>/` each, kept when **Replace the version** or a restore replaced it (Phase 6).
+    Beside `parts/`, the history of each part."""
+    return history_dir() / project_id
+
+
+def saved_version_dir(project_id: str, number: int) -> Path:
+    """`.database/history/<projectId>/v<N>/`: `project.json`, `snapshot.json`, and
+    `parts/<partId>/` with the part's files."""
+    return saved_versions_dir(project_id) / f"v{number}"
+
+
 # --------------------------------------------------------------------- video
 #
 # A video belongs to the part whose audio came out of it (V-03), and it is a temporary file of its

@@ -4,17 +4,19 @@
 Thing                                      Read                               Write
 =========================================  =================================  ==================================
 A project in a Personal Vault              its owner                          its owner
-A project in a Private Library             its owner; users it is shared      its owner (*)
-                                           with (``library_shares``)
+A project in a Private Library             its owner; users it is shared      its owner, through a copy
+                                           with (``library_shares``)          in the vault (*)
 The Public Library                         every user                         the master user
 A request                                  its author and the master user     its author until it is reviewed;
                                                                               the master user (the decision)
 Users, Lab                                 the master user                    the master user
 =========================================  =================================  ==================================
 
-(*) The plan writes a library project "through a copy in the vault" (section 10.6). That flow
-arrives in Phase 6; until then the owner edits their Private Library projects in place, as before
-Phase 3, so the 30 migrated songs stay editable. Phase 6 changes this one line.
+(*) A library project is never written in place (section 10.6, Phase 6): its owner reads it, and
+changes it by **Edit** (a copy in the vault, ``POST /projects/{id}/edit``) and **Save to library**
+(``POST /projects/{copy}/library``, which replaces the version). Those flows, and the ``/library``
+routes that rename, restore and delete versions, check the owner themselves. Until Phase 6 the
+owner wrote it in place.
 
 The master user has no extra right over another user's private projects: an Admin who can read
 every library would make "private" a promise the app does not keep.
@@ -65,7 +67,7 @@ def _access(user: CurrentUser, where: locate.Location) -> Access:
     if where.layer == "public":
         return Access.WRITE if user.is_master else Access.READ
     if where.owner_id == user.id:
-        return Access.WRITE
+        return Access.READ if where.layer == "private" else Access.WRITE
     if where.layer == "private" and _shared_with(where.owner_id, user.id):
         return Access.READ
     return Access.NONE

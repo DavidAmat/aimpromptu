@@ -81,7 +81,11 @@ def test_row_2_a_project_in_a_private_library(people: dict) -> None:
     joan_id, joan = people["joan"]
     _, master = people["master"]
     part = project(anna_id, "private")
-    assert (reads(anna, part), writes(anna, part)) == (200, 200)
+    # Anna reads her library and changes it only through a copy in her vault (Phase 6).
+    assert (reads(anna, part), writes(anna, part)) == (200, 403)
+    edit = anna.post(f"/projects/{part}/edit")
+    assert edit.status_code == 200 and edit.json()["basedOn"] == part
+    assert writes(anna, edit.json()["id"]) == 200
     assert (reads(joan, part), writes(joan, part)) == (404, 404)
     with session() as db:
         db.add(LibraryShare(owner_id=anna_id, shared_with_id=joan_id))
@@ -89,6 +93,8 @@ def test_row_2_a_project_in_a_private_library(people: dict) -> None:
     # change it.
     assert (reads(joan, part), writes(joan, part)) == (200, 403)
     assert joan.get(f"/audio/{part}").status_code == 200
+    # Editing is for the owner: Joan duplicates instead.
+    assert joan.post(f"/projects/{part}/edit").status_code == 409
     copy = joan.post(f"/projects/{part}/duplicate", json={})
     assert copy.status_code == 201
     assert writes(joan, copy.json()["id"]) == 200

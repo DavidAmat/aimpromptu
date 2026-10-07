@@ -1,6 +1,8 @@
 """``/projects``: the projects of the Personal Vault (implementation 02, plan sections 8.8 and 10.1).
 
-List, create, rename, delete, duplicate, export and import. A project made by this app has the id of
+List, create, rename, delete, duplicate, export and import; **Save to library** and **Edit** (Phase
+6, sections 10.2 and 10.6), which move a project into the Private Library and copy a version out of
+it. A project made by this app has the id of
 its first part, so the uuid of a piece is also the id of its project, and the routes of the steps
 (``/audio``, ``/pieces``, ``/time``, ``/matrix``) keep working on it.
 
@@ -28,6 +30,7 @@ from aitu_backend.db import tools
 from aitu_backend.db.database import session
 from aitu_backend.db.models import Project
 from aitu_backend.db.users import current_user_id
+from aitu_backend.library import flow, rows
 from aitu_backend.storage import bundle, exchange, locate
 from aitu_backend.transcription import jobs, pipeline
 from aitu_backend.video import store as video_store
@@ -39,6 +42,18 @@ Layer = Literal["vault", "private"]
 
 class _Camel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
+
+
+class LibraryLink(_Camel):
+    """The song and the version a project is (or, for an edit copy, the one it edits)."""
+
+    song_id: int = Field(..., alias="songId")
+    song_title: str = Field(..., alias="songTitle")
+    artists: list[str]
+    version_id: int = Field(..., alias="versionId")
+    version_name: str = Field(..., alias="versionName")
+    #: The library project of that version.
+    project_id: str = Field(..., alias="projectId")
 
 
 class ProjectRow(_Camel):
@@ -62,6 +77,10 @@ class ProjectRow(_Camel):
     based_on: str | None = Field(None, alias="basedOn")
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime | None = Field(None, alias="updatedAt")
+    #: A project of the Private Library: its song and version.
+    library: LibraryLink | None = None
+    #: A project of the Personal Vault that edits a version (section 10.6): that version.
+    editing: LibraryLink | None = None
 
 
 class ProjectOut(_Camel):
@@ -84,6 +103,23 @@ class RenameIn(_Camel):
     title: str = Field(..., min_length=1, max_length=300)
 
 
+class SaveIn(_Camel):
+    """**Save to library**: the song (an existing one by id, or a title and an artist) and the
+    version name; or ``replace`` for an edit copy, which saves over the version it edits."""
+
+    song_id: int | None = Field(None, alias="songId")
+    song: str | None = Field(None, max_length=300)
+    artist: str | None = Field(None, max_length=300)
+    version: str = Field("", max_length=200)
+    replace: bool = False
+
+
+class SavedOut(_Camel):
+    song_id: int = Field(..., alias="songId")
+    version_id: int = Field(..., alias="versionId")
+    project_id: str = Field(..., alias="projectId")
+
+
 def _running(part_ids: list[str]) -> str | None:
     for part_id in part_ids:
         if jobs.active(f"transcribe:{part_id}") is not None:
@@ -93,7 +129,26 @@ def _running(part_ids: list[str]) -> str | None:
     return None
 
 
-def _row(project: Project) -> ProjectRow:
+def _links(projects: list[Project]) -> dict[str, LibraryLink]:
+    """The song and version of each library project, and of the version each edit copy edits."""
+    wanted = [row.id for row in projects if row.layer == "private"]
+    wanted += [row.based_on for row in projects if row.based_on]
+    with session() as db:
+        found = rows.links_of(db, wanted)
+    return {
+        project_id: LibraryLink(
+            song_id=link.song_id,
+            song_title=link.song_title,
+            artists=link.artists,
+            version_id=link.version_id,
+            version_name=link.version_name,
+            project_id=project_id,
+        )
+        for project_id, link in found.items()
+    }
+
+
+def _row(project: Project, links: dict[str, LibraryLink] | None = None) -> ProjectRow:
     part_ids = bundle.part_ids_of(project.id)
     step = project.step
     if step is None:
@@ -104,6 +159,8 @@ def _row(project: Project) -> ProjectRow:
     except (locate.NotFound, IndexError, ValueError):
         pass
     first = part_ids[0] if part_ids else None
+    if links is None:
+        links = _links([project])
     return ProjectRow(
         id=project.id,
         title=project.title,
@@ -118,6 +175,8 @@ def _row(project: Project) -> ProjectRow:
         based_on=project.based_on,
         created_at=project.created_at,
         updated_at=bundle.last_change(project.id) or project.updated_at,
+        library=links.get(project.id) if project.layer == "private" else None,
+        editing=links.get(project.based_on) if project.based_on else None,
     )
 
 
@@ -138,16 +197,17 @@ def list_projects(
     layers asked for (``?layer=vault&layer=private``)."""
     layers = layer or ["vault"]
     with session() as db:
-        rows = list(
+        found = list(
             db.scalars(
                 select(Project).where(
                     Project.owner_id == current_user_id(), Project.layer.in_(layers)
                 )
             )
         )
-        for row in rows:
+        for row in found:
             db.expunge(row)
-    out = [_row(row) for row in rows]
+    links = _links(found)
+    out = [_row(row, links) for row in found]
     out.sort(key=lambda item: item.updated_at or item.created_at, reverse=True)
     return out
 
@@ -234,3 +294,47 @@ def export_project(project_id: str) -> FileResponse:
         filename=exchange.export_name(row.title),
         background=BackgroundTask(target.unlink, missing_ok=True),
     )
+
+
+@router.post(
+    "/{project_id}/library",
+    response_model=SavedOut,
+    response_model_by_alias=True,
+    status_code=201,
+)
+def save_to_library(project_id: str, body: SaveIn) -> SavedOut:
+    """**Save to library** (section 10.2): the project moves from the Personal Vault into the
+    Private Library as a version of a song. Its audio is written again with only the ranges in use,
+    and its temporary files are deleted (section 8.5, Q-3). An edit copy can instead **replace the
+    version** it edits (section 10.6). ``409`` when the piano sheet is not saved yet, a job is
+    writing the notes, or the song already has a version of that name."""
+    _project_or_404(project_id)
+    try:
+        saved = flow.save(
+            project_id,
+            owner=current_user_id(),
+            version_name=body.version,
+            song_id=body.song_id,
+            song_title=body.song,
+            artist=body.artist,
+            replace=body.replace,
+        )
+    except rows.NotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (rows.Conflict, flow.Refused) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return SavedOut(song_id=saved.song_id, version_id=saved.version_id, project_id=saved.project_id)
+
+
+@router.post("/{project_id}/edit", response_model=ProjectRow, response_model_by_alias=True)
+def edit_version(project_id: str) -> ProjectRow:
+    """**Edit** a version of the Private Library (section 10.6): a copy in the Personal Vault that
+    points at it (``basedOn``). The copy already open is returned instead of a second one."""
+    _project_or_404(project_id)
+    try:
+        copy_id = flow.open_edit(project_id, owner=current_user_id())
+    except flow.Refused as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _row(_project_or_404(copy_id))
