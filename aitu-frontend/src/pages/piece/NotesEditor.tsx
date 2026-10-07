@@ -607,13 +607,27 @@ export function NotesEditor({ step }: { step: EditorStep }) {
         </PillButton>
       ) : null
     ) : (
-      <Tooltip title={sheet?.enabled ? "" : (sheet?.reason ?? "Save the hands first")}>
-        <span>
-          <PillButton kind="primary" disabled={!sheet?.enabled} onClick={() => navigate(ROUTES.project(uuid, "sheet"))}>
-            Continue to Sheet
-          </PillButton>
-        </span>
-      </Tooltip>
+      <Stack direction="row" spacing={1}>
+        {/* The main action of the Hands step, in words beside Continue (the user's review of
+            Phase 5): the wand of the floating toolbox alone was not found. Primary until the
+            hands are there. */}
+        <PillButton
+          kind={hasHands ? "secondary" : "primary"}
+          startIcon={<AutoFixHighIcon fontSize="small" />}
+          busy={predicting !== null}
+          disabled={busy}
+          onClick={() => void predict(false)}
+        >
+          Predict hands
+        </PillButton>
+        <Tooltip title={sheet?.enabled ? "" : (sheet?.reason ?? "Save the hands first")}>
+          <span>
+            <PillButton kind="primary" disabled={!sheet?.enabled} onClick={() => navigate(ROUTES.project(uuid, "sheet"))}>
+              Continue to Sheet
+            </PillButton>
+          </span>
+        </Tooltip>
+      </Stack>
     );
 
   return (
@@ -765,12 +779,6 @@ export function NotesEditor({ step }: { step: EditorStep }) {
         {onHands ? (
           <>
             <Divider orientation="vertical" flexItem />
-            <IconAction
-              title={hasHands ? "Predict hands for the notes you did not place yourself" : "Predict hands"}
-              icon={predicting ? <CircularProgress size={16} /> : <AutoFixHighIcon fontSize="small" />}
-              disabled={busy}
-              onClick={() => void predict(false)}
-            />
             {hasHands ? (
               <IconAction
                 title="Predict every note again, also the ones you placed"

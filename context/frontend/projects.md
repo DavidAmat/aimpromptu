@@ -135,7 +135,7 @@ One key sounds one note at a time: a note moved into the next onset of its key i
 The page stays at 60 frames per second with 10,000 rectangles.
 
 **4. Hands.** The same editor, coloured by hand (right hand blue, left hand green), with a floating
-toolbox: **Predict hands** (a real progress bar, about 1 s for a 3-minute piece, shown as unsaved
+toolbox. **Predict hands** is the button beside **Continue to Sheet** (a real progress bar, about 1 s for a 3-minute piece, shown as unsaved
 changes), **To right** and **To left** (keys R and L), the filter (**Both**, **Right**, **Left**),
 and a counter that goes through the notes the split could not place. **Save** enables the Sheet tab.
 

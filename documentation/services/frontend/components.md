@@ -114,7 +114,7 @@ The Notes and Hands tabs are one editor. `NotesTab.tsx` and `HandsTab.tsx` are o
 
 | File | Role |
 |---|---|
-| `pages/piece/NotesEditor.tsx` | The editor page: live view, playback, every gesture as an undo step, **Save**, the primary action on the top row (**Continue to Hands**, **Continue to Sheet**), and on the Hands step the floating toolbox with **Predict hands**, the hand filter, **To right** / **To left** (keys R and L) |
+| `pages/piece/NotesEditor.tsx` | The editor page: live view, playback, every gesture as an undo step, **Save**, the primary action on the top row (**Continue to Hands**, **Continue to Sheet**), and on the Hands step **Predict hands** beside **Continue to Sheet** (after the user's review of Phase 5; it was only a wand icon of the toolbox) and the floating toolbox with **Predict every note again**, the hand filter, **To right** / **To left** (keys R and L) |
 | `components/notes/PianoRollCanvas.tsx` | The piano roll visualization: the vertical keyboard, one row per key, the rectangles; modes `live`, `edit`, `view` |
 | `components/notes/rollPaint.ts` | The painters: the lower canvas (rows, grid, ruler, keyboard, rectangles of the visible range) and the upper canvas (playhead, lit keys, sounding notes, band) |
 | `components/notes/RollTimeBar.tsx` | The bar under the roll: the progress bar while the piece is transcribed, the scrub bar afterwards |
