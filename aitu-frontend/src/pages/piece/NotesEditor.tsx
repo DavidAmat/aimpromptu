@@ -754,6 +754,13 @@ export function NotesEditor({ step }: { step: EditorStep }) {
         ) : (
           <IconAction title="Play from the playhead" shortcut="Space" icon={<PlayArrowIcon />} onClick={play} />
         )}
+        {/* On by default; moving the view by hand turns it off, and Play turns it on again. */}
+        <IconAction
+          title="Follow the playhead"
+          icon={<MyLocationIcon fontSize="small" />}
+          active={follow}
+          onClick={() => setFollow((value) => !value)}
+        />
         <IconAction
           title={history.canUndo ? `Undo ${history.undoLabel ?? ""}`.trim() : "Nothing to undo"}
           shortcut="⌘Z"

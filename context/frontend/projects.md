@@ -117,7 +117,7 @@ stay in **Lab**, for the master user.
 **3. Notes.** The piano roll on a canvas: a vertical keyboard on the left, one row per key, the
 rectangles on a time axis. While MuScriptor runs, the rectangles appear and grow as the notes
 arrive, with a progress bar. After it, the audio plays with the playhead, and the notes can be
-edited. The floating bar has play, undo, redo, delete and **Save**; **Continue to Hands** is on the
+edited. The floating bar has play, **Follow the playhead** (on by default: the roll scrolls with the playhead; moving the view by hand turns it off, and Play turns it on again), undo, redo, delete and **Save**; **Continue to Hands** is on the
 top row:
 
 | Gesture | Effect |
