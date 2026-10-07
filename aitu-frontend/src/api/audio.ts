@@ -101,10 +101,24 @@ export interface CutsState {
 
 /** One file of the audio of a project, on the axis of the Audio step. */
 export interface AxisFile {
+  /** Its place in the order of the audio, from 0. */
+  index: number;
+  /** The name the user gave it (its file name, or the video's title, at first). */
   name: string;
+  kind: AudioSource;
+  originalFilename: string | null;
+  url: string | null;
   /** Where the file starts, and its length, in 10 ms frames. */
   startFrame: number;
   frames: number;
+  /** How many of its frames are cut. */
+  cutFrames: number;
+}
+
+/** `GET /audio/{uuid}/files`: the files of a project's audio, in order. */
+export interface AudioFiles {
+  audioRevision: number;
+  files: AxisFile[];
 }
 
 /**
@@ -166,7 +180,21 @@ export const audioApi = {
     upload<AudioItem>("/audio/upload", file, alias ? { alias } : {}),
 
   /** **Add audio**: another file at the end of the project's audio. */
-  addAudio: (uuid: string, file: File) => upload<AudioItem>(`/audio/${uuid}/add`, file),
+  addAudio: (uuid: string, file: File, name?: string) =>
+    upload<AudioItem>(`/audio/${uuid}/add`, file, name ? { name } : {}),
+
+  /** The files of the project's audio, in order. */
+  files: (uuid: string, signal?: AbortSignal) => request<AudioFiles>(`/audio/${uuid}/files`, { signal }),
+
+  renameFile: (uuid: string, index: number, name: string) =>
+    request<AudioFiles>(`/audio/${uuid}/files/${index}`, { method: "PATCH", body: { name } }),
+
+  /** `order` lists the current places of the files in their new order. */
+  reorderFiles: (uuid: string, order: number[], baseRevision: number) =>
+    request<AudioFiles>(`/audio/${uuid}/files/order`, { method: "PUT", body: { order, baseRevision } }),
+
+  removeFile: (uuid: string, index: number, baseRevision: number) =>
+    request<AudioFiles>(`/audio/${uuid}/files/${index}`, { method: "DELETE", query: { baseRevision } }),
 
   storeRecording: (file: File, alias?: string) =>
     upload<AudioItem>("/audio/recording", file, alias ? { alias } : {}),

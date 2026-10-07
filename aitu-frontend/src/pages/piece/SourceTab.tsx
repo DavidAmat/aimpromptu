@@ -12,8 +12,9 @@
  * - A YouTube link as **Video** downloads the video (its audio comes with it) and opens the Video
  *   step, where the piano is fitted and the notes are read.
  *
- * On a project that already has its audio, the step says where that audio came from, file by file
- * when **add audio** put several end to end.
+ * On a project that has its audio, the step lists its audio files in the order they play, to
+ * rename, reorder, remove, and add more (`SourceFiles`). On a video project it says where the video
+ * came from.
  */
 
 import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
@@ -28,12 +29,13 @@ import Typography from "@mui/material/Typography";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import UploadFileIcon from "@mui/icons-material/UploadFileOutlined";
 import { useNavigate } from "react-router-dom";
-import { audioApi, matrixApi, SUPPORTED_AUDIO_SUFFIXES, videoApi, youtubeApi, type AxisFile } from "../../api";
+import { audioApi, matrixApi, SUPPORTED_AUDIO_SUFFIXES, videoApi, youtubeApi } from "../../api";
 import { formatTimeShort } from "../../audio/time";
 import { useProgress } from "../../hooks/useProgress";
 import { ROUTES } from "../../layout/routes";
 import { IconAction, PillButton, Segmented, ui, useScheme } from "../../ui";
 import { usePiece } from "./pieceContext";
+import { SourceFiles } from "./SourceFiles";
 
 type LinkKind = "audio" | "video";
 
@@ -44,23 +46,14 @@ const isAudioFile = (file: File) => SUPPORTED_AUDIO_SUFFIXES.some((suffix) => fi
 const isVideoFile = (file: File) => VIDEO_SUFFIXES.some((suffix) => file.name.toLowerCase().endsWith(suffix));
 
 export function SourceTab() {
-  const { uuid } = usePiece();
-  return uuid ? <SourceOfProject /> : <NewSource />;
+  const { uuid, audio } = usePiece();
+  if (!uuid) return <NewSource />;
+  return audio?.hasVideo ? <SourceOfVideo /> : <SourceFiles />;
 }
 
-/** What the audio of an existing project is: the file it was uploaded from, or its YouTube link. */
-function SourceOfProject() {
-  const { uuid, audio } = usePiece();
-  const [files, setFiles] = useState<AxisFile[] | null>(null);
-  useEffect(() => {
-    if (!uuid) return;
-    const controller = new AbortController();
-    audioApi
-      .cuts(uuid, controller.signal)
-      .then((cuts) => setFiles(cuts.files))
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, [uuid]);
+/** Where the video of a video project came from: the file it was uploaded from, or its link. */
+function SourceOfVideo() {
+  const { audio } = usePiece();
   if (!audio) return null;
   const from =
     audio.source === "youtube" && audio.sourceUrl ? (
@@ -79,30 +72,15 @@ function SourceOfProject() {
     : { upload: "Audio file", youtube: "YouTube", recording: "Recording", segment: "Part of another project", composed: "Composed" }[
         audio.source
       ];
-  const added = files && files.length > 1 ? files.slice(1) : [];
   return (
     <Box sx={{ maxWidth: 640, mx: "auto", pt: 4 }}>
       <Stack spacing={0.5}>
         <Typography variant="body2" color="text.secondary">
           {kind}
-          {files && files.length > 1
-            ? ` · ${formatTimeShort(files[0].frames / 100)}`
-            : audio.originalDurationSeconds
-              ? ` · ${formatTimeShort(audio.originalDurationSeconds)}`
-              : ""}
+          {audio.originalDurationSeconds ? ` · ${formatTimeShort(audio.originalDurationSeconds)}` : ""}
         </Typography>
         {from}
       </Stack>
-      {added.map((file) => (
-        <Stack key={file.startFrame} spacing={0.5} sx={{ mt: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            {`Added audio · ${formatTimeShort(file.frames / 100)}`}
-          </Typography>
-          <Typography component="span" sx={{ wordBreak: "break-all" }}>
-            {file.name}
-          </Typography>
-        </Stack>
-      ))}
     </Box>
   );
 }

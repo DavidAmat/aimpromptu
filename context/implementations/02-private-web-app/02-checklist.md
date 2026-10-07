@@ -221,7 +221,7 @@ The plan's section 3.
 Starts any time after Phase 3. The parallel data is ready: `data/music-library/library.sqlite` next to the repository (on this machine `/home/david/Documents/projects/music/data/music-library/library.sqlite`). Writes nothing into that folder or its scripts.
 
 ## [ ] Story 12.1: The reconciliation
-- [ ] Task 12.1.1 Read `library.sqlite`, the parallel plan, and the phase reports. There is no response file.
+- [ ] Task 12.1.1 Read `public-library-build/02-a-public-library-build-implementation.md`, then `library.sqlite`. There is no response file.
 - [ ] Task 12.1.2 `context/music-library/reconciliation.md`: the mapping to plan section 8.6, the gaps in both directions (genre, tags, regions; lyrics, album chart history), the identity rule for songs and artists across runs.
 - [ ] Task 12.1.3 Only the missing fields added to section 8.6 and its Alembic migration.
 - [ ] Task 12.1.4 The import script the Phase 13 import starts from; the 31 seed songs checked.

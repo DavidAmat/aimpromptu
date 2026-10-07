@@ -14,8 +14,11 @@
  * transcription replaces them; the old notes go to history (Q-2).
  *
  * **Add audio** (implementation 02, plan section 8.5) puts another file at the end of the audio:
- * the waveform then shows the files end to end, each with its name, and a cut may cross the join.
- * Adding a file changes the audio, so the notes become stale.
+ * the waveform then shows the files end to end, each in its own band with its name, and a cut may
+ * cross the join. Adding a file changes the audio, so the notes become stale. With several files a
+ * panel on the left lists them by name: a click selects that file's part of the waveform and zooms
+ * to it, so a cut can be made inside one file. The names and the order are changed on the Source
+ * step.
  *
  * A project made from a video has the **Video** step here instead (`VideoStep`, plan section 10.2).
  */
@@ -23,6 +26,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import ButtonBase from "@mui/material/ButtonBase";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
@@ -48,6 +52,7 @@ import {
   audioApi,
   matrixApi,
   SUPPORTED_AUDIO_SUFFIXES,
+  type AxisFile,
   type Cut,
   type CutsState,
   type FramePeaks,
@@ -68,7 +73,7 @@ import { useEditHistory } from "../../hooks/useEditHistory";
 import { ROUTES } from "../../layout/routes";
 import { useSpacebarPlay } from "../../playback/useSpacebarPlay";
 import { useWorkingArtifact } from "../../state/useWorkingArtifact";
-import { ConfirmDialog, FloatingBar, IconAction, PillButton, timestampSx } from "../../ui";
+import { ConfirmDialog, FloatingBar, IconAction, PillButton, timestampSx, ui, useScheme } from "../../ui";
 import { SAVED_NAVIGATION, stepStatus, usePiece, useUnsavedChanges } from "./pieceContext";
 import { VideoStep } from "./VideoStep";
 
@@ -347,10 +352,19 @@ function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps)
   };
 
   /** The selection with a margin of a fifth of its length each side, so both edges can be grabbed. */
+  const zoomTo = (range: Cut) => {
+    const margin = Math.max(10, (range[1] - range[0]) * 0.2);
+    setView(clampView({ start: range[0] - margin, end: range[1] + margin }, total));
+  };
   const zoomToSelection = () => {
-    if (!selection) return;
-    const margin = Math.max(10, (selection[1] - selection[0]) * 0.2);
-    setView(clampView({ start: selection[0] - margin, end: selection[1] + margin }, total));
+    if (selection) zoomTo(selection);
+  };
+
+  /** A file of the panel: select its whole part of the waveform and show it. */
+  const selectFile = (file: AxisFile) => {
+    const range: Cut = [file.startFrame, file.startFrame + file.frames];
+    setSelection(range);
+    zoomTo(range);
   };
   const onViewChange = useCallback((next: FrameView) => setView(clampView(next, total)), [total]);
   const keptFrames = total - cutFrames(cuts);
@@ -416,20 +430,34 @@ function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps)
         </PillButton>
       </Stack>
 
-      <CutWaveform
-        peaks={peaks}
-        cuts={cuts}
-        selection={selection}
-        onSelectionChange={setSelection}
-        onClickFrame={clickFrame}
-        onSeek={player.seek}
-        view={view}
-        onViewChange={onViewChange}
-        cursor={player.cursor}
-        playing={player.playing !== null}
-        position={player.position}
-        files={waveformFiles}
-      />
+      <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ alignItems: "flex-start" }}>
+        {initial.files.length > 1 ? (
+          <FilePanel
+            files={initial.files}
+            cuts={cuts}
+            selection={selection}
+            onSelect={selectFile}
+            onAdd={() => addInput.current?.click()}
+            adding={adding !== null}
+          />
+        ) : null}
+        <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+          <CutWaveform
+            peaks={peaks}
+            cuts={cuts}
+            selection={selection}
+            onSelectionChange={setSelection}
+            onClickFrame={clickFrame}
+            onSeek={player.seek}
+            view={view}
+            onViewChange={onViewChange}
+            cursor={player.cursor}
+            playing={player.playing !== null}
+            position={player.position}
+            files={waveformFiles}
+          />
+        </Box>
+      </Stack>
 
       <FloatingBar open label="the audio toolbar">
         {player.playing ? (
@@ -533,6 +561,97 @@ function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps)
         onConfirm={() => void transcribe(true)}
       />
     </Stack>
+  );
+}
+
+/**
+ * The files of the audio, by name, in the order they play (a project of several files). A click
+ * selects the file's part of the waveform; the line under the name says how much of it is kept.
+ */
+function FilePanel({
+  files,
+  cuts,
+  selection,
+  onSelect,
+  onAdd,
+  adding,
+}: {
+  files: readonly AxisFile[];
+  cuts: readonly Cut[];
+  selection: Cut | null;
+  onSelect: (file: AxisFile) => void;
+  onAdd: () => void;
+  adding: boolean;
+}) {
+  useScheme();
+  return (
+    <Box
+      component="nav"
+      aria-label="The audio files"
+      data-file-panel
+      sx={{ width: { xs: "100%", md: 220 }, flexShrink: 0, borderRight: { md: `1px solid ${ui.line}` }, pr: { md: 1 } }}
+    >
+      <Typography variant="body2" color="text.secondary" sx={{ px: 1, pb: 0.5 }}>
+        Audio files
+      </Typography>
+      {files.map((file) => {
+        const end = file.startFrame + file.frames;
+        const cut = cuts.reduce((sum, [a, b]) => sum + Math.max(0, Math.min(end, b) - Math.max(file.startFrame, a)), 0);
+        const selected = selection !== null && selection[0] === file.startFrame && selection[1] === end;
+        return (
+          <ButtonBase
+            key={`${file.index}:${file.startFrame}`}
+            onClick={() => onSelect(file)}
+            aria-pressed={selected}
+            data-file={file.index}
+            sx={(theme) => ({
+              display: "flex",
+              width: "100%",
+              justifyContent: "flex-start",
+              textAlign: "left",
+              gap: 1,
+              px: 1,
+              py: 0.75,
+              borderRadius: "10px",
+              backgroundColor: selected ? (theme.vars ?? theme).palette.action.selected : "transparent",
+              "&:hover": { backgroundColor: (theme.vars ?? theme).palette.action.hover },
+            })}
+          >
+            <Box
+              aria-hidden
+              sx={{
+                width: 6,
+                alignSelf: "stretch",
+                borderRadius: "3px",
+                // The same grey as the file's band on the waveform: every second file is shaded.
+                backgroundColor: file.index % 2 === 1 ? ui.bgHover : "transparent",
+                border: `1px solid ${ui.line}`,
+              }}
+            />
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="body2" noWrap title={file.name} sx={{ fontWeight: 500 }}>
+                {file.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={timestampSx}>
+                {cut > 0
+                  ? `${formatTime(seconds(file.frames - cut))} of ${formatTime(seconds(file.frames))}`
+                  : formatTime(seconds(file.frames))}
+              </Typography>
+            </Box>
+          </ButtonBase>
+        );
+      })}
+      <PillButton
+        kind="quiet"
+        size="small"
+        startIcon={<AddCircleIcon fontSize="small" />}
+        onClick={onAdd}
+        disabled={adding}
+        sx={{ mt: 0.5 }}
+      >
+        Add audio
+      </PillButton>
+    </Box>
   );
 }
 

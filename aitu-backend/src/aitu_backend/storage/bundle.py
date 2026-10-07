@@ -56,7 +56,7 @@ from aitu_backend.db.models import AudioRef, Part, Project
 from aitu_backend.storage import audio_files, locate, paths
 
 __all__ = [
-    "AddedFile",
+    "SourceFile",
     "PartEntry",
     "PartSource",
     "ProjectFile",
@@ -72,10 +72,12 @@ __all__ = [
     "part_ids_of",
     "read_project",
     "read_timeline",
+    "default_name",
     "segments_for_axis",
     "segments_for_cuts",
     "segments_with_cuts",
     "step_changed",
+    "source_files",
     "sync_audio_refs",
     "write_project",
     "write_timeline",
@@ -107,19 +109,23 @@ class PartSource(_Camel):
     url: str | None = None
     source_audio_uuid: str | None = Field(None, alias="sourceAudioUuid")
     source_time_range: dict[str, float] | None = Field(None, alias="sourceTimeRange")
-    #: The files added after the first one (**add audio**), in the order of the timeline's
-    #: ``sources`` from its second entry on. Empty for a part of one file.
-    added: list["AddedFile"] = Field(default_factory=list)
+    #: Every file of the part's audio, in the order of the timeline's axis, with the name the user
+    #: gave it (**add audio**, the Source step). Empty until a file is added or named: the one file
+    #: is then described by the fields above (:func:`source_files`).
+    files: list["SourceFile"] = Field(default_factory=list)
 
 
-class AddedFile(_Camel):
-    """One file appended to a part's audio with **add audio**: where it came from."""
+class SourceFile(_Camel):
+    """One file of a part's audio: its name, and where it came from."""
 
     audio: str
+    #: The name the user sees and can change; the file's name or the video's title at first.
+    name: str = ""
     kind: str = "upload"
     format: str | None = None
     original_filename: str | None = Field(None, alias="originalFilename")
     duration_seconds: float | None = Field(None, alias="durationSeconds")
+    url: str | None = None
 
 
 PartSource.model_rebuild()
@@ -255,9 +261,9 @@ def write_project(project: ProjectFile, *, touch: bool = True) -> ProjectFile:
         project = project.model_copy(update={"updated_at": _now()})
     body = project.model_dump(by_alias=True, mode="json")
     for entry in body["parts"]:
-        if not entry["source"].get("added"):
+        if not entry["source"].get("files"):
             # A part of one file keeps the shape it had before **add audio** existed.
-            entry["source"].pop("added", None)
+            entry["source"].pop("files", None)
     _write_json(paths.project_json_path(project.id), json.dumps(body, indent=2) + "\n")
     with session() as db:
         row = db.get(Project, project.id)
@@ -331,6 +337,56 @@ def last_change(project_id: str) -> datetime | None:
         except OSError:
             continue
     return datetime.fromtimestamp(max(times), tz=timezone.utc) if times else None
+
+
+# ------------------------------------------------------------------ source files
+
+
+def default_name(original_filename: str | None, fallback: str) -> str:
+    """The first name of a file: its own name without the extension, or ``fallback``."""
+    if original_filename:
+        stem = Path(original_filename).stem.strip()
+        if stem:
+            return stem
+    return fallback
+
+
+def source_files(project: "ProjectFile", part_id: str, timeline: "Timeline") -> list[SourceFile]:
+    """The files of a part's axis in order, each with its name and origin.
+
+    ``parts[].source.files`` when it matches the timeline; a part written before Phase 5 (or never
+    given a second file or a name) is described from its source fields.
+    """
+    sources = timeline.source_list()
+    entry = project.part(part_id).source
+    if entry.files and [file.audio for file in entry.files] == sources:
+        return [file.model_copy() for file in entry.files]
+    out: list[SourceFile] = []
+    for index, content_hash in enumerate(sources):
+        audio = timeline.audio.get(content_hash)
+        frames = audio.frames if audio else None
+        if index == 0:
+            out.append(
+                SourceFile(
+                    audio=content_hash,
+                    name=default_name(entry.original_filename, project.title or "Audio 1"),
+                    kind=entry.kind,
+                    format=entry.format,
+                    original_filename=entry.original_filename,
+                    duration_seconds=entry.duration_seconds,
+                    url=entry.url,
+                )
+            )
+        else:
+            out.append(
+                SourceFile(
+                    audio=content_hash,
+                    name=f"Audio {index + 1}",
+                    format=audio.format if audio else None,
+                    duration_seconds=None if frames is None else frames * FRAME_MS / 1000.0,
+                )
+            )
+    return out
 
 
 # ------------------------------------------------------------------- cuts

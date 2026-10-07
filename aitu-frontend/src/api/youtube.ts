@@ -5,6 +5,8 @@ import { request } from "./client";
 
 export interface YoutubeDownloadRequest {
   url: string;
+  /** A project (its part) to add the audio to, instead of making a new project. */
+  appendTo?: string;
   /** Display name for the stored audio. Defaults to the video title. */
   alias?: string;
 }

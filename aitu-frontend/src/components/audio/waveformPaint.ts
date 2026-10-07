@@ -190,6 +190,32 @@ export interface WaveformFile {
 }
 
 /**
+ * Each file of the audio in its own band: every second file on a light grey ground, so the files
+ * read as separate parts of one line. Painted under the peaks.
+ */
+function paintFileBands(
+  context: CanvasRenderingContext2D,
+  files: readonly WaveformFile[],
+  totalFrames: number,
+  toX: (frame: number) => number,
+  top: number,
+  body: number,
+  width: number,
+): void {
+  if (files.length < 2) return;
+  context.save();
+  context.fillStyle = ui.bgHover;
+  files.forEach((file, index) => {
+    if (index % 2 === 0) return;
+    const end = index + 1 < files.length ? files[index + 1].startFrame : totalFrames;
+    const left = Math.max(0, toX(file.startFrame));
+    const right = Math.min(width, toX(end));
+    if (right > left) context.fillRect(left, top, right - left, body);
+  });
+  context.restore();
+}
+
+/**
  * Where one file ends and the next begins: a dashed grey line, and the file's name at the top of
  * its part. Grey, because colour is kept for the music and the selection.
  */
@@ -323,6 +349,7 @@ export function paintWaveform(
 
   context.fillStyle = ui.bg;
   context.fillRect(0, top, width, body);
+  paintFileBands(context, files, peaks.totalFrames, toX, top, body, width);
   paintRuler(context, view, width, height);
 
   context.strokeStyle = ui.lineStrong;
@@ -384,8 +411,9 @@ export function paintOverview(
   const whole = { start: 0, end: peaks.totalFrames };
   context.fillStyle = ui.bg;
   context.fillRect(0, 0, width, height);
-  paintPeaks(context, peaks, whole, width, 0, height);
   const toX = (frame: number) => (frame / peaks.totalFrames) * width;
+  paintFileBands(context, files, peaks.totalFrames, toX, 0, height, width);
+  paintPeaks(context, peaks, whole, width, 0, height);
   for (const [start, end] of cuts) paintCut(context, toX(start), toX(end), 0, height, null);
   paintFiles(context, files, toX, 0, height, width, false);
 

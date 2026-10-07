@@ -78,15 +78,26 @@ and one field **Paste a YouTube link** with the choice **Audio** or **Video**. N
 the project takes the name of its file or of its video. An audio file and a YouTube link as Audio
 open the Audio step (the download is a job with a thin progress bar). A video file or a YouTube link
 as Video stores the audio of the video, keeps the video as a temporary file of the project, and
-opens the Video step. On a project that has its audio, the step says where it came from, file by
-file when audio was added.
+opens the Video step.
+
+On a project that has its audio, the Source step lists its **audio files in the order they play**:
+for each, its name (the file's name or the video's title at first), where it came from, its length
+and how much of it is cut. A file is dragged by its handle to another place (or moved with **Move
+up** and **Move down** in its `⋯` menu), renamed in place (**Rename**), or removed (**Remove**,
+with a confirmation; not the last one). Each file keeps its own cuts when the order changes. Below
+the list, **Add audio**: drop or choose one or more files, or paste a YouTube link; each is added at
+the end. A change of the files changes the audio, so the step then says the notes must be
+transcribed again, with **Open Audio**. A video project's Source step only says where the video came
+from.
 
 **2. Audio.** The waveform of the audio, full width, with zoom down to single 10 ms time frames and
 an overview strip. Its tools are icon actions in a floating bar, each with a tooltip: play (jumping
 over the cuts), play the selection, cut, restore, undo, redo, the zooms, **Add audio at the end**,
 and **Save**. A cut is a range of time frames; the audio file is never changed. **Add audio** puts
-another file at the end: the waveform then shows the files end to end, each part named after its
-file with a dashed line at each join, and a cut may cross a join. Adding a file changes the audio,
+another file at the end: the waveform then shows the files end to end, every second file on a
+grey band, each named, with a dashed line at each join, and a cut may cross a join. With several
+files a panel on the left lists them by name with their kept length: a click selects that file's
+part of the waveform and zooms to it, so a cut can be made inside one file. Adding a file changes the audio,
 so notes made before it are out of date. The primary action, **Transcribe**, saves first, asks
 before it replaces notes that are current, and opens the Notes step.
 

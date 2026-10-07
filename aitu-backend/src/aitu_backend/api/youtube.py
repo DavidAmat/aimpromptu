@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import youtube
+from aitu_backend.auth.dependencies import require_part
 from aitu_backend.audio.youtube import (
     DownloadFailed,
     InvalidYoutubeUrl,
@@ -31,6 +32,8 @@ class YoutubeRequest(BaseModel):
     url: str
     #: Display name for the stored audio. Defaults to the video title.
     alias: str | None = Field(None, alias="fileName")
+    #: A part to add the audio to (**add audio** from the Source step), instead of a new project.
+    append_to: str | None = Field(None, alias="appendTo")
 
 
 class VideoInfoResponse(BaseModel):
@@ -127,9 +130,14 @@ def start_download(request: YoutubeRequest) -> DownloadJob:
         raise _handle(exc) from exc
     if not youtube.yt_dlp_available():
         raise _handle(YtDlpMissing())
+    if request.append_to is not None:
+        # The part is named in the body, so its rights are checked here (plan section 9.3).
+        require_part(request.append_to, write=True)
 
     def work(reporter: BaseProgress) -> Any:
-        return youtube.download(cleaned, request.alias, reporter=reporter)
+        return youtube.download(
+            cleaned, request.alias, reporter=reporter, append_to=request.append_to
+        )
 
     def describe(entry: Any) -> dict[str, Any]:
         metadata = entry.metadata
@@ -139,7 +147,8 @@ def start_download(request: YoutubeRequest) -> DownloadJob:
             "durationSeconds": metadata.duration_seconds,
         }
 
-    job = jobs.submit(work, key=f"youtube:{cleaned}", describe=describe)
+    key = f"youtube:{cleaned}" + (f":{request.append_to}" if request.append_to else "")
+    job = jobs.submit(work, key=key, describe=describe)
     return DownloadJob(job_id=job.id, status=job.status)
 
 

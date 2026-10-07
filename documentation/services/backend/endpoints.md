@@ -83,6 +83,10 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | PATCH | `/audio/{uuid}` | Rename. |
 | DELETE | `/audio/{uuid}` | Delete the project of this part, with its whole bundle. |
 | POST | `/audio/{uuid}/add` | **Add audio**: another file at the end of the part's audio (implementation 02, Phase 5). |
+| GET | `/audio/{uuid}/files` | The files of the part's audio in order: names, origin, place on the axis, cut frames. |
+| PATCH | `/audio/{uuid}/files/{index}` | Name one file. |
+| PUT | `/audio/{uuid}/files/order` | Put the files in a new order; each keeps its cuts. |
+| DELETE | `/audio/{uuid}/files/{index}` | Take one file out (not the last one). |
 | POST | `/audio/{uuid}/trim` | Persist a range as a new child audio, with lineage. Refused on a piece with cuts. |
 | GET | `/audio/{uuid}/file` | Stream the audio of the piece (the edited audio once cuts are saved). |
 | GET | `/audio/{uuid}/range` | Stream one range of `normalized.wav`. |
@@ -239,6 +243,18 @@ yet. A part of several files plays a joined FLAC as its original (`?original=tru
 `normalized.wav` is the files' 16 kHz copies joined, so every other route works on the axis
 unchanged ([`paths-and-data.md`](paths-and-data.md) §3).
 
+**The files of the audio** (the Source step, Phase 5). `POST /audio/{uuid}/add` takes an optional
+form field `name`. `GET /audio/{uuid}/files` answers `{audioRevision, files}` (the fields of the
+`files` of the cuts answer). `PATCH /audio/{uuid}/files/{index}`, body `{name}` (1 to 200
+characters), names a file and changes nothing else. `PUT /audio/{uuid}/files/order`, body
+`{order, baseRevision}` where `order` lists the current places in the new order (`[2, 0, 1]` puts
+the third file first): each file keeps its cuts. `DELETE /audio/{uuid}/files/{index}?baseRevision=`
+takes a file out; the last one stays (`422`), and so does a file whose removal would leave only cut
+audio. Both raise `audioRevision`, so the notes become stale; a stale `baseRevision` answers `409`,
+an unknown index `404`. A YouTube link is added to a part with `POST /youtube/jobs`, body
+`{url, appendTo: <uuid>}` (the rights of that part are checked, `404` for another user's): the job
+adds the audio at the end, named after the video, instead of making a project.
+
 `GET /audio/` lists only the parts of the current user's own projects, in the Personal Vault and
 the Private Library (since implementation 02, Phase 4). `GET /audio/` and `GET /audio/{uuid}` answer
 the `AudioMetadata` shape. Since Phase 3 there is no
@@ -272,7 +288,7 @@ The answer of both methods (`CutsResponse`):
 | `cuts` | Sorted `[startFrame, endFrame)` pairs of the original. |
 | `kept` | The frame table: one row per kept range, `{pieceStart, originalStart, length}` in frames. |
 | `notesStale` | True when the stored notes were transcribed from other cuts. |
-| `files` | The files of the audio laid end to end, in order: `{name, startFrame, frames}` each. One entry for most parts; several after **add audio** (Phase 5). |
+| `files` | The files of the audio laid end to end, in order (Phase 5): `{index, name, kind, originalFilename, url, startFrame, frames, cutFrames}` each. One entry for most parts; several after **add audio**. |
 
 `PUT` body: `{ "cuts": [[start, end], ...], "baseRevision": n }`. `baseRevision` is optional.
 

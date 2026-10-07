@@ -48,9 +48,11 @@ const work = mkdtempSync(path.join(os.tmpdir(), 'aitu-check-projects-'));
 const ffmpeg = (...args) => execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-y', ...args]);
 const first = path.join(work, 'check-projects first.wav');
 const second = path.join(work, 'check-projects second.wav');
+const third = path.join(work, 'check-projects third.wav');
 const video = path.join(work, 'check-projects video.mp4');
 ffmpeg('-f', 'lavfi', '-i', 'sine=frequency=440:duration=3', first);
 ffmpeg('-f', 'lavfi', '-i', 'sine=frequency=660:duration=2', second);
+ffmpeg('-f', 'lavfi', '-i', 'sine=frequency=550:duration=1', third);
 ffmpeg('-f', 'lavfi', '-i', 'testsrc=size=640x360:rate=10', '-f', 'lavfi', '-i', 'sine=frequency=330', '-t', '2', '-shortest', video);
 
 /** Every project this script made, deleted at the end whatever happens. */
@@ -109,10 +111,41 @@ try {
   check('and the audio revision went up', two.audioRevision === one.audioRevision + 1);
   const original = await fetch(`${api}/audio/${audioId}/file?original=true`);
   check('the Audio step plays both files joined', original.ok && original.headers.get('content-type') === 'audio/flac');
+  // 2b. The Source step: the files by name, rename, add, drag to a new place, remove.
+  const namesNow = async () => (await (await fetch(`${api}/audio/${audioId}/files`)).json()).files.map((file) => file.name);
   await page.getByRole('tab', { name: 'Source', exact: true }).click();
-  await page.waitForSelector('text=Added audio');
-  check('the Source step lists the added file', (await page.locator('text=check-projects second.wav').count()) === 1);
+  await page.waitForSelector('[data-source-files="2"]');
+  check('the Source step lists the two files by name', JSON.stringify(await namesNow()) === JSON.stringify(['check-projects first', 'check-projects second']));
   await shot('03-source-two-files');
+  await page.locator('[data-file-row="1"]').getByRole('button', { name: 'File actions' }).click();
+  await page.getByRole('menuitem', { name: 'Rename' }).click();
+  await page.getByLabel('Name').fill('Chorus');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('text=Chorus');
+  check('Rename gives a file a name', (await namesNow())[1] === 'Chorus');
+  await page.locator('input[aria-label="Choose audio files to add"]').setInputFiles(third);
+  await page.waitForSelector('[data-source-files="3"]', { timeout: 60000 });
+  check('Choose files adds a file at the end', (await namesNow())[2] === 'check-projects third');
+  await page.locator('[data-file-row="2"] [draggable="true"]').dragTo(page.locator('[data-file-row="0"]'));
+  await page.waitForFunction(async () => document.querySelector('[data-file-row="0"]')?.textContent?.includes('third'), null, { timeout: 15000 }).catch(() => null);
+  const dragged = await namesNow();
+  check('a file dragged to the top plays first', JSON.stringify(dragged) === JSON.stringify(['check-projects third', 'check-projects first', 'Chorus']), dragged.join(', '));
+  await shot('03b-source-three-files');
+  await page.locator('[data-file-row="0"]').getByRole('button', { name: 'File actions' }).click();
+  await page.getByRole('menuitem', { name: 'Remove' }).click();
+  await page.getByRole('button', { name: 'Remove the file' }).click();
+  await page.waitForSelector('[data-source-files="2"]', { timeout: 15000 });
+  check('Remove takes a file out', JSON.stringify(await namesNow()) === JSON.stringify(['check-projects first', 'Chorus']));
+  check('and the notes would have to be made again (the audio changed)', (await (await fetch(`${api}/audio/${audioId}/cuts`)).json()).audioRevision > two.audioRevision);
+
+  // 2c. The Audio step: the panel of files selects one file's part.
+  await page.getByRole('tab', { name: 'Audio', exact: true }).click();
+  await page.waitForSelector('[data-file-panel]');
+  await page.locator('[data-file="1"]').click();
+  const picked = await page.locator('[data-audio]').getAttribute('data-selection');
+  check('a file of the panel selects its part of the waveform', picked === '300-500', picked ?? '');
+  await page.waitForTimeout(400);
+  await shot('03c-audio-panel');
 
   // 3. The row menu: Duplicate, Export, Rename.
   await page.goto(`${base}/projects`);

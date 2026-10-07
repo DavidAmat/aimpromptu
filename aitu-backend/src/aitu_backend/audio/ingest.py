@@ -80,8 +80,13 @@ def append_file(
     stream: BinaryIO,
     filename: str,
     source: AudioSource | str = AudioSource.UPLOAD,
+    *,
+    name: str | None = None,
+    url: str | None = None,
 ) -> AudioMetadata:
-    """**Add audio**: store a file, measure it, and append it to the part's audio.
+    """**Add audio**: store a file, measure it, and append it to the part's audio. ``name`` is the
+    name the Source step shows (the file's name by default); ``url`` the link it was downloaded
+    from.
 
     A file that cannot be read is not kept: when the conversion fails, the stored bytes are deleted
     again unless another project already uses them.
@@ -98,6 +103,8 @@ def append_file(
             frames,
             original_filename=filename,
             kind=AudioSource(source).value,
+            name=name,
+            url=url,
         )
     except Exception:
         audio_files.delete_unused([content_hash])

@@ -156,9 +156,9 @@ def test_add_audio_appends_a_file_and_keeps_the_cuts() -> None:
     assert cuts["cuts"] == [[10, 20]]
     assert cuts["audioRevision"] == before["audioRevision"] + 1
     assert cuts["notesStale"] is True
-    assert cuts["files"] == [
-        {"name": "first.wav", "startFrame": 0, "frames": 200},
-        {"name": "second.wav", "startFrame": 200, "frames": 100},
+    assert [(f["name"], f["startFrame"], f["frames"], f["cutFrames"]) for f in cuts["files"]] == [
+        ("first", 0, 200, 10),
+        ("second", 200, 100, 0),
     ]
     timeline = bundle.read_timeline(part)
     assert len(timeline.sources or []) == 2 and len(timeline.audio) == 2
@@ -212,7 +212,7 @@ def test_a_new_single_file_after_several_forgets_the_others() -> None:
     store.replace_original(part, clip, "wav")
     timeline = bundle.read_timeline(part)
     assert timeline.sources is None and len(timeline.audio) == 1
-    assert bundle.read_project(part).parts[0].source.added == []
+    assert bundle.read_project(part).parts[0].source.files == []
 
 
 # ------------------------------------------------------------- export, import
@@ -386,7 +386,130 @@ def test_the_source_of_a_part_lists_the_added_files() -> None:
     client.post(f"/audio/{part}/add", files={"file": ("b.wav", tone_bytes(1.0), "audio/wav")})
     source = bundle.read_project(part).parts[0].source
     assert source.original_filename == "a.wav"
-    assert [added.original_filename for added in source.added] == ["b.wav"]
+    assert [(file.name, file.original_filename) for file in source.files] == [
+        ("a", "a.wav"),
+        ("b", "b.wav"),
+    ]
     assert source.duration_seconds == pytest.approx(1.0)
     assert store.read_metadata(part).duration_seconds == pytest.approx(2.0)
     assert AudioSource(source.kind) is AudioSource.UPLOAD
+
+
+# ------------------------------------------------------------- the files of a part
+
+
+def three_files() -> str:
+    """A part of three files: 1 s, 2 s, 1 s, each with a cut of 0.1 s inside it."""
+    part = uploaded(1.0, "a.wav", 220.0)
+    client.post(
+        f"/audio/{part}/add", files={"file": ("b.wav", tone_bytes(2.0, 330.0), "audio/wav")}
+    )
+    client.post(
+        f"/audio/{part}/add",
+        files={"file": ("c.wav", tone_bytes(1.0, 440.0), "audio/wav")},
+        data={"name": "Bridge"},
+    )
+    assert (
+        client.put(
+            f"/audio/{part}/cuts", json={"cuts": [[10, 20], [150, 160], [320, 330]]}
+        ).status_code
+        == 200
+    )
+    return part
+
+
+def names(part: str) -> list[str]:
+    return [file["name"] for file in client.get(f"/audio/{part}/files").json()["files"]]
+
+
+def test_the_files_have_names_and_can_be_renamed() -> None:
+    part = three_files()
+    answer = client.get(f"/audio/{part}/files").json()
+    assert [
+        (f["index"], f["name"], f["startFrame"], f["frames"], f["cutFrames"])
+        for f in answer["files"]
+    ] == [
+        (0, "a", 0, 100, 10),
+        (1, "b", 100, 200, 10),
+        (2, "Bridge", 300, 100, 10),
+    ]
+    revision = answer["audioRevision"]
+    renamed = client.patch(f"/audio/{part}/files/1", json={"name": "  Verse   two "})
+    assert renamed.status_code == 200
+    assert names(part) == ["a", "Verse two", "Bridge"]
+    assert renamed.json()["audioRevision"] == revision  # a name does not change the audio
+    assert client.patch(f"/audio/{part}/files/7", json={"name": "x"}).status_code == 404
+
+
+def test_a_new_order_moves_each_file_with_its_cuts() -> None:
+    part = three_files()
+    before = client.get(f"/audio/{part}/files").json()
+    moved = client.put(
+        f"/audio/{part}/files/order",
+        json={"order": [2, 0, 1], "baseRevision": before["audioRevision"]},
+    )
+    assert moved.status_code == 200, moved.text
+    assert [f["name"] for f in moved.json()["files"]] == ["Bridge", "a", "b"]
+    assert moved.json()["audioRevision"] == before["audioRevision"] + 1
+    cuts = client.get(f"/audio/{part}/cuts").json()
+    # Bridge (100) then a (100) then b (200): each cut moved with its file.
+    assert cuts["cuts"] == [[20, 30], [110, 120], [250, 260]]
+    assert cuts["totalFrames"] == 400
+    rate, samples = formats.read_wav(store.get(part).normalized_path)
+    assert len(samples) == 400 * 160
+    # A stale revision is refused, and a list that is not an order too.
+    stale = client.put(f"/audio/{part}/files/order", json={"order": [0, 1, 2], "baseRevision": 0})
+    assert stale.status_code == 409
+    assert client.put(f"/audio/{part}/files/order", json={"order": [0, 0, 1]}).status_code == 422
+
+
+def test_removing_a_file_keeps_the_others_and_their_cuts() -> None:
+    part = three_files()
+    hashes = bundle.read_timeline(part).source_list()
+    gone = client.delete(f"/audio/{part}/files/1")
+    assert gone.status_code == 200, gone.text
+    assert [f["name"] for f in gone.json()["files"]] == ["a", "Bridge"]
+    cuts = client.get(f"/audio/{part}/cuts").json()
+    assert cuts["cuts"] == [[10, 20], [120, 130]] and cuts["totalFrames"] == 200
+    assert audio_files.info(hashes[1]) is None  # no other project used it
+    # Down to one file: the part is a part of one file again, with the cut of its file.
+    client.delete(f"/audio/{part}/files/0")
+    timeline = bundle.read_timeline(part)
+    assert timeline.sources is None and len(timeline.audio) == 1
+    assert client.get(f"/audio/{part}/cuts").json()["cuts"] == [[20, 30]]
+    source = bundle.read_project(part).parts[0].source
+    assert source.original_filename == "c.wav" and names(part) == ["Bridge"]
+    assert client.delete(f"/audio/{part}/files/0").status_code == 422  # the last one stays
+
+
+def test_a_youtube_download_can_be_added_to_a_project(monkeypatch: pytest.MonkeyPatch) -> None:
+    from aitu_backend.audio import ingest  # noqa: PLC0415
+
+    part = uploaded(1.0, "a.wav")
+    added = ingest.append_file(
+        part,
+        io.BytesIO(tone_bytes(1.0, 330.0)),
+        "Cara de cul.mp3".replace(".mp3", ".wav"),
+        AudioSource.YOUTUBE,
+        name="Cara de cul",
+        url="https://www.youtube.com/watch?v=x",
+    )
+    assert added.uuid == part
+    files = client.get(f"/audio/{part}/files").json()["files"]
+    assert (files[1]["name"], files[1]["kind"], files[1]["url"]) == (
+        "Cara de cul",
+        "youtube",
+        "https://www.youtube.com/watch?v=x",
+    )
+
+
+def test_a_youtube_download_cannot_be_added_to_another_users_project() -> None:
+    from aitu_backend.db import users  # noqa: PLC0415
+
+    anna = users.create_user("anna", "anna-password")
+    hers = bundle.create_project(owner_id=anna.id, title="Hers").id
+    answer = client.post(
+        "/youtube/jobs",
+        json={"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "appendTo": hers},
+    )
+    assert answer.status_code in (404, 503)  # 503 only where yt-dlp is not installed

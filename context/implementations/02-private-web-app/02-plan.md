@@ -610,7 +610,10 @@ of implementation 08 and every route that reads `normalized.wav` work unchanged:
 several files, `normalized.wav` is the files' 16 kHz copies joined on whole frames, and a joined
 FLAC stands in for the original (`audio/sources.py`). Adding a file raises `audioRevision`. The
 general timeline of Phases 8 and 9 (a pasted passage in the middle) is not this list of files end to
-end; those phases extend the axis to ranges of files.
+end; those phases extend the axis to ranges of files. After the user's review of Phase 5, each file
+has a name (`project.json` `parts[].source.files`), and the Source step lists the files to rename,
+reorder by dragging (each file keeps its cuts), remove, and add by file or YouTube link; the Audio
+step shows each file on its own band and a panel of the files that selects one file's part.
 
 **Writing the audio on save (Q-3).** When a project is saved to the Private Library, each audio file
 that the timeline uses only in part is written again with only the ranges in use, and the segments are
@@ -1205,17 +1208,19 @@ its songs to their own library (the same pull as from the Public Library).
 
 **The data is built by a parallel piece of work**, not by this plan: the brief
 [`public-library-build/02-a-public-library-build-prompt.md`](public-library-build/02-a-public-library-build-prompt.md),
-with its own plan and phase reports in the same folder. There is no response file. The download
-finished on 2026-10-07. What it produced:
+with its own plan and phase reports in the same folder. There is no response file. The methods,
+the faster download, the move of the folder, and the counts are in
+[`public-library-build/02-a-public-library-build-implementation.md`](public-library-build/02-a-public-library-build-implementation.md).
+The download finished on 2026-10-07. What it produced:
 
 - the source: `musicchartsarchive.com`, the singles charts and the album charts;
 - the raw HTML in `data/music-library/raw/` (next to the repository, not inside it), in folders that follow the site;
 - the database Phase 12 reads: `library.sqlite` in that same folder. On this machine the full path is `/home/david/Documents/projects/music/data/music-library/library.sqlite`. It holds songs, artists (only those with an artist page; several artists per song), albums (optional per song, with their track list), the chart history of each song and each album, the lyrics, and the all-weeks popularity. The region is `worldwide`. Nothing is invented for fields the site does not give (no genre, no tags). The chart dates are one table of dates, referenced by id;
 - `manifest.sqlite` in the same folder is the download log. Phase 12 does not import it.
 
-**Phase 12 reconciles that database with this app.** It reads `library.sqlite`, the parallel plan, and
-the phase reports `02-a-implementation-phase-1.md` through `02-a-implementation-phase-5.md`. It does
-not change the parallel work:
+**Phase 12 reconciles that database with this app.** It reads the implementation file above, then
+`library.sqlite`. The phase reports are the detail behind that file. It does not change the parallel
+work:
 
 1. **The mapping** from its tables to the tables of section 8.6: songs, artists, artist names, albums,
    song and album relations, chart sources and entries, regions. Each field of the parallel model is
@@ -1511,8 +1516,9 @@ it read; `library/loadPerformanceScore.ts` is kept for this phase.)
 
 ## Phase 12: The music library data reconciled (any time after Phase 3; the parallel data is ready)
 
-Read `library.sqlite` at the path in section 15.5, the parallel plan, and its phase reports. There is
-no response file. Write `context/music-library/reconciliation.md`: the mapping of its tables to
+Read [`public-library-build/02-a-public-library-build-implementation.md`](public-library-build/02-a-public-library-build-implementation.md)
+first, then `library.sqlite` at the path in section 15.5. There is no response file. Write
+`context/music-library/reconciliation.md`: the mapping of its tables to
 section 8.6, the gaps in both directions, the identity rule, and the decisions they need. Add to
 section 8.6 (and its Alembic migration) only what the reconciliation shows is missing. Run the
 popularity formula of section 15.6 on the downloaded chart history of songs (and of albums, if Q-6
@@ -1523,7 +1529,9 @@ The database is already in the folder next to the repository, so this phase can 
 
 ## Phase 13: The Public Library
 
-The import of the reconciled data of Phase 12 into public rows, safe to run again. The Public Library pages:
+The import of the reconciled data of Phase 12 into public rows, safe to run again. The rows come
+from `library.sqlite`, as described in
+[`public-library-build/02-a-public-library-build-implementation.md`](public-library-build/02-a-public-library-build-implementation.md). The Public Library pages:
 search, the filter chips (decade, genre, region, tag category and value), sort by popularity, year or
 title; one song with its metadata, fixed versions and Other versions by user; artists with their
 names; public playlists. Likes. **Add to my library** for a song, an artist or a playlist (section

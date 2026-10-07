@@ -95,7 +95,7 @@ The functions that read and write a bundle are in `storage/bundle.py`: `create_p
 | `basedOn` | The library project a vault project edits (plan section 10.6) |
 | `parts[].subheader` | The title between the parts of an integrated playlist |
 | `parts[].source` | Where the part's audio came from: `kind` (`upload`, `recording`, `youtube`, `segment`, `composed`), the extension of the file, its original name, its length and rate after normalization, the YouTube link, the lineage of a segment. These describe the **first** file |
-| `parts[].source.added` | The files appended with **add audio** (Phase 5), in order: `audio` (the hash), `kind`, `format`, `originalFilename`, `durationSeconds`. Absent for a part of one file |
+| `parts[].source.files` | Every file of the part's audio in the order of the axis (Phase 5): `audio` (the hash), `name` (what the Source step shows; the file's name or the video's title at first), `kind`, `format`, `originalFilename`, `durationSeconds`, `url`. Written once a file is added, named, moved or removed; absent before, when the one file is described by the fields above (`bundle.source_files`) |
 
 **What the API answers.** `GET /audio/` and `GET /audio/{uuid}` still answer the
 `AudioMetadata` shape of implementation 08: `alias` is `title`, the source fields come from
@@ -148,7 +148,15 @@ the cuts is cut from. Each join of two files gets the 5 ms fade of a cut.
 
 `replace_original` gives a part a new stored file and points every segment at it, keeping the cuts.
 The joined audio and the peaks of the old file are deleted from the cache then. A part of several
-files becomes a part of one file again (`sources` and `added` are dropped).
+files becomes a part of one file again (`sources` and `files` are dropped).
+
+**Changing the list of files** (the Source step, `store.rename_file`, `reorder_files`,
+`remove_file`, routes `/audio/{uuid}/files`). A name changes only `project.json`. A new order
+permutes `sources`, `files` and the segments grouped by file, so each file keeps its own cuts and
+its kept ranges move with it. Removing a file drops its segments; the store deletes the file when no
+project uses it any more, and a part left with one file becomes a part of one file again (its
+source fields then describe that file). Both raise `audioRevision`, refuse a stale `baseRevision`,
+and delete the joined files of the cache, which are written again.
 
 ### 2.3 `notes.pmn`
 

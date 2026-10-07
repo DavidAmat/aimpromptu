@@ -14,7 +14,7 @@ Checklist: [`02-checklist.md`](02-checklist.md). Branch `feat/phase-5`, made fro
 | 5.3 Export and import | The `.aitu` zip and its round-trip test; a refused import leaves nothing behind |
 | 5.4 Documentation | `flow-page.md` became `projects.md`; `pieces-and-revisions.md`, `endpoints.md`, `paths-and-data.md`, `07-database.md`, `08-security.md` and the pages of section 7 |
 
-Checks at the end (section 7): backend 1,073 tests on the GPU, 1 failed (the known one); every
+Checks at the end (section 7): backend 1,078 tests on the GPU, 1 failed (the known one); every
 frontend check passes, the new `check:projects` too; `check:flow` with the live transcription;
 `bench:sheet` and `time:flow` at the Phase 4 numbers.
 
@@ -170,7 +170,42 @@ the video (the corrections are still applied by **Read notes**). `ROUTES.labVide
 **The frame player's help line** ("click the picture, then spacebar plays…") was a paragraph under
 the video on a project page; the player gained `quiet`, used by the Video step. Lab keeps it.
 
-## 4.4 Q-8, measured
+## 4.4 After the user's review: the files of a part
+
+The user's review of the first build (2026-10-07): back on the Source step of a project with its
+audio, nothing could be added; the step only said where the first file came from. They asked to
+see the ways to add audio, to reorder the files by dragging, to see on the Audio step which part
+of the line comes from which file, and to name each file and select one file's part from a panel.
+
+- **Names.** `project.json` `parts[].source.added` (the files after the first) became
+  `parts[].source.files`: every file in the order of the axis, each with a `name` (the file's name
+  without its extension, or the video's title, at first), `kind`, `format`, `originalFilename`,
+  `durationSeconds` and `url`. It is written once a file is added, named, moved or removed;
+  `bundle.source_files` describes an older part from its source fields. Nothing stored had used
+  `added` (the branch was not merged).
+- **Routes.** `GET /audio/{uuid}/files`; `PATCH /audio/{uuid}/files/{index}` (name);
+  `PUT /audio/{uuid}/files/order` (`order` lists the current places in the new order);
+  `DELETE /audio/{uuid}/files/{index}`; `POST /audio/{uuid}/add` takes a `name`;
+  `POST /youtube/jobs` takes `appendTo` (the rights of that part are checked in the route, because
+  it is in the body), and the job adds the audio at the end of that part, named after the video.
+- **A new order** permutes `sources`, `files` and the segments grouped by file
+  (`store._segments_by_file`), so each file keeps its own cuts: a cut inside the third file is
+  inside it again after it moves first. **Removing** drops the file's segments, deletes the stored
+  file when no project uses it, and makes a part of one file again when one is left (its source
+  fields then describe that file). Both raise `audioRevision` and refuse a stale `baseRevision`.
+- **The Source step** (`pages/piece/SourceFiles.tsx`): the list (drag handle, place, name, origin,
+  length, cut length, the link of a YouTube file), the `⋯` menu (**Rename** in place, **Move up**,
+  **Move down**, **Remove** with a confirmation), and **Add audio** (drop or choose several files,
+  or a YouTube link with its progress). After a change that makes the notes stale, one line says so,
+  with **Open Audio**. Drag and drop is the browser's own (no new library). **A defect found by
+  `check:projects`:** the rename field closed at once, because the menu gave the focus back to its
+  `⋯` button; `RowMenu` gained `restoreFocus`, off for this menu.
+- **The Audio step**: every second file on a light grey band under the peaks (waveform and
+  overview), and, with several files, a panel on the left (`FilePanel`) with each file's name and
+  kept length; a click selects that file's part of the waveform and zooms to it. The names and the
+  order are changed on the Source step only.
+
+## 4.5 Q-8, measured
 
 `aitu-backend/scripts/bench_video_read.py` runs **Read notes** on a temporary copy of a video
 project (duplicate, copy the video folder, read, delete) and prints each stage. On Superestrella's
@@ -212,6 +247,7 @@ same status as the original; five damaged files are each refused and leave nothi
 | File | Tests | What |
 |---|---|---|
 | `test_projects.py` (new) | 22 | the list and its layers; an empty project opens on Source; the step stored and cleared; rename, delete (its audio deleted); duplicate; the axis and its cuts both ways with a repeated file; a cut across a join; add audio (frames, revision, stale notes, the joined `normalized.wav` on whole frames, the FLAC original); an unreadable file refused and not kept; a splice makes one file again; the round trip; five refused imports; the export name; another user's project; a video file uploaded (ffmpeg makes one), its Notes step, `409` before fitting, its video deleted with the project; add audio needs a first file; the source lists the added file |
+| `test_projects.py`, after the review | 5 more | the files have names and are renamed (the audio does not change); a new order moves each file with its cuts, a stale revision and a list that is not an order are refused; removing keeps the others and their cuts, deletes the unused file, and the last file becomes a part of one file again; a YouTube download added to a project carries its name and link; it cannot be added to another user's project |
 | `test_video_step.py` (new) | 5 | **Read notes** measures once per overlay and again after a new fitting; samples first when there are no frames; needs the piano fitted; stops on an unstable speed; the Notes step of a video part |
 | `test_pieces.py` | changed | the piece with no notes gets an audio file (section 3.3) |
 
@@ -219,11 +255,11 @@ same status as the original; five damaged files are each refused and leave nothi
 
 | Check | Result |
 |---|---|
-| Backend, full run on the GPU | 1,073 tests: 1,072 passed, 1 failed, the known `test_the_worked_example_at_00_46_prints_three_equal_corcheas` |
+| Backend, full run on the GPU | 1,078 tests (after the review): 1,077 passed, 1 failed, the known `test_the_worked_example_at_00_46_prints_three_equal_corcheas` |
 | `black`, `flake8`, `mypy` on the changed modules | clean |
 | `tsc -b`, `npm run lint`, `npm run build` | clean; the build has the chunk-size warning of Phase 0 |
 | `check:render`, `check:history`, `check:note-names`, `check:geometry`, `check:cuts`, `check:notes` | 60, all, 15, all, all, all passed |
-| `check:projects` (new), signed in | every check passed (20), no console error; nothing it made is left |
+| `check:projects` (new), signed in | every check passed (29 after the review: rename, add several files, drag to reorder, remove, the panel of the Audio step), no console error; nothing it made is left |
 | `check:flow`, signed in, with the live transcription | every check passed, no console error (again after the last change, without the transcription) |
 | `bench:sheet`, median of a hand move | Elefants 212 ms, Superestrella tutorial 270 ms, The Other Side 516 ms (Phase 3: 215, 268, 492) |
 | `time:flow`, the first piano sheet | 0.6 s, 0.9 s, 0.5 s (Phase 4: 0.6, 0.9, 0.5); notes saved 26.9 s, 51.0 s, 20.9 s |
@@ -263,7 +299,8 @@ projects.
 | Shot | Page |
 |---|---|
 | 01 | The New project menu |
-| 02, 03 | **Add audio**: two files end to end with their names; the Source step listing the added file |
+| 02, 03 | **Add audio**: two files end to end with their names; the Source step listing the two files |
+| 03b, 03c | After the review: three files after a drag (the third first); the Audio step's panel with one file selected |
 | 04 to 06 | The row menu; a duplicate added; the delete confirmation |
 | 07 | A video file just uploaded: fit the piano |
 | 08, 09 | Projects with **In my library** |

@@ -24,7 +24,9 @@ again from the stored file when they are missing.
 **A part of several files** (**add audio**, Phase 5): its files are laid end to end, and the
 "original" is that axis. ``normalized.wav`` is the files' 16 kHz copies joined, and the original
 the Audio step plays is a joined FLAC (:mod:`aitu_backend.audio.sources`). ``durationSeconds`` is
-the length of the axis, and the cuts are ranges of it. :func:`append` adds a file.
+the length of the axis, and the cuts are ranges of it. :func:`append` adds a file;
+:func:`rename_file`, :func:`reorder_files` and :func:`remove_file` change the list (the Source
+step), and :func:`files_of` describes it.
 
 **Every filesystem access for the audio of a part goes through this module** (and
 :mod:`aitu_backend.audio.sources` for the joined files of a part of several files).
@@ -43,7 +45,7 @@ from aitu_backend.audio import formats, sources
 from aitu_backend.db.users import current_user_id
 from aitu_backend.schemas.metadata import AudioMetadata, AudioSource, TimeRange
 from aitu_backend.storage import audio_files, bundle, locate, paths
-from aitu_backend.storage.bundle import AddedFile, AudioEntry, PartSource, Timeline
+from aitu_backend.storage.bundle import AudioEntry, PartSource, Segment, SourceFile, Timeline
 
 #: Copied in chunks so a large upload never lands in memory whole.
 COPY_CHUNK_BYTES = audio_files.CHUNK_BYTES
@@ -129,7 +131,7 @@ def _metadata(project: bundle.ProjectFile, part_id: str, timeline: Timeline) -> 
     )
 
 
-def _source_of(metadata: AudioMetadata, added: list[AddedFile] | None = None) -> PartSource:
+def _source_of(metadata: AudioMetadata, files: list[SourceFile] | None = None) -> PartSource:
     return PartSource(
         kind=metadata.source.value,
         format=metadata.format,
@@ -143,7 +145,7 @@ def _source_of(metadata: AudioMetadata, added: list[AddedFile] | None = None) ->
             if metadata.source_time_range
             else None
         ),
-        added=list(added or []),
+        files=list(files or []),
     )
 
 
@@ -294,7 +296,7 @@ def _use_audio(
         project = bundle.read_project(project.id)
         source = project.part(audio_uuid).source
         source.format = extension
-        source.added = []
+        source.files = []
         bundle.write_project(project)
     return audio_files.file_path(content_hash, extension)
 
@@ -327,6 +329,8 @@ def append(
     *,
     original_filename: str | None = None,
     kind: str = "upload",
+    name: str | None = None,
+    url: str | None = None,
 ) -> AudioMetadata:
     """Add a stored, measured file at the end of the part's audio (**add audio**).
 
@@ -343,6 +347,7 @@ def append(
         files = timeline.source_list()
         if not files:
             raise ValueError("This part has no audio yet: upload its first file instead")
+        described = bundle.source_files(bundle.read_project(project.id), audio_uuid, timeline)
         if timeline.axis_frames() is None:
             raise ValueError("The first audio file is not measured yet. Try again in a moment.")
         if len(files) == 1:
@@ -367,39 +372,196 @@ def append(
             stale.unlink(missing_ok=True)
         sources.clear(audio_uuid)
         project = bundle.read_project(project.id)
-        project.part(audio_uuid).source.added.append(
-            AddedFile(
+        project.part(audio_uuid).source.files = [
+            *described,
+            SourceFile(
                 audio=content_hash,
+                name=(name or "").strip()
+                or bundle.default_name(original_filename, f"Audio {len(described) + 1}"),
                 kind=kind,
                 format=extension,
                 original_filename=original_filename,
                 duration_seconds=frames * bundle.FRAME_MS / 1000.0,
-            )
-        )
+                url=url,
+            ),
+        ]
         bundle.write_project(project)
     entry = get(audio_uuid)  # writes the joined normalized.wav
     return entry.metadata
 
 
+def _forget_joined(audio_uuid: str) -> None:
+    """The derived files of the axis, which changed: written again on the next request."""
+    cache = paths.part_cache_dir(audio_uuid)
+    for stale in [*cache.glob("piece-r*.*"), cache / "waveform.json", cache / "normalized.wav"]:
+        stale.unlink(missing_ok=True)
+    sources.clear(audio_uuid)
+
+
+def _check_revision(timeline: Timeline, base_revision: int | None) -> None:
+    if base_revision is not None and base_revision != timeline.audio_revision:
+        raise RevisionMismatch(timeline.audio_revision, base_revision)
+
+
+class RevisionMismatch(ValueError):
+    """The audio changed since the page loaded it."""
+
+    def __init__(self, current: int, base: int) -> None:
+        self.current = current
+        super().__init__(
+            "The audio was changed somewhere else since this page loaded it "
+            f"(revision {current}, not {base}). Reload the page to see it."
+        )
+
+
+def rename_file(audio_uuid: str, index: int, name: str) -> list[SourceFile]:
+    """Give file ``index`` of the part's audio a name. Nothing else changes."""
+    cleaned = " ".join(name.split())
+    if not cleaned:
+        raise ValueError("A name cannot be empty")
+    project = _project_of(audio_uuid)
+    with bundle.project_lock(project.id):
+        project = bundle.read_project(project.id)
+        timeline = bundle.read_timeline(audio_uuid)
+        files = bundle.source_files(project, audio_uuid, timeline)
+        if not 0 <= index < len(files):
+            raise IndexError(f"This audio has no file {index + 1}")
+        files[index].name = cleaned[:200]
+        project.part(audio_uuid).source.files = files
+        bundle.write_project(project)
+    return files
+
+
+def _segments_by_file(timeline: Timeline) -> list[list[Segment]]:
+    """The segments of each file of the axis, in order (a part of one file has one list)."""
+    count = len(timeline.source_list())
+    groups: list[list[Segment]] = [[] for _ in range(count)]
+    for segment in timeline.segments:
+        groups[segment.source if segment.source is not None else 0].append(segment)
+    return groups
+
+
+def _with_files(timeline: Timeline, order: list[str], groups: list[list[Segment]]) -> Timeline:
+    """A timeline of the files ``order`` (hashes) with their kept segments ``groups``."""
+    several = len(order) > 1
+    segments = [
+        segment.model_copy(update={"source": index if several else None})
+        for index, group in enumerate(groups)
+        for segment in group
+    ]
+    audio = {key: value for key, value in timeline.audio.items() if key in order}
+    return timeline.model_copy(
+        update={
+            "audio": audio,
+            "sources": order if several else None,
+            "segments": segments,
+            "audio_revision": timeline.audio_revision + 1,
+        }
+    )
+
+
+def reorder_files(
+    audio_uuid: str, order: list[int], *, base_revision: int | None = None
+) -> list[SourceFile]:
+    """Put the files of the part's audio in a new order (``order`` lists the current positions).
+
+    Each file keeps its own cuts: its kept ranges move with it. The audio of the part changed, so
+    ``audioRevision`` goes up and the notes become stale.
+    """
+    project = _project_of(audio_uuid)
+    with bundle.project_lock(project.id):
+        project = bundle.read_project(project.id)
+        timeline = bundle.read_timeline(audio_uuid)
+        _check_revision(timeline, base_revision)
+        files = bundle.source_files(project, audio_uuid, timeline)
+        if sorted(order) != list(range(len(files))):
+            raise ValueError(f"The order must name each of the {len(files)} files once")
+        if order == list(range(len(files))):
+            return files
+        groups = _segments_by_file(timeline)
+        hashes = timeline.source_list()
+        timeline = _with_files(timeline, [hashes[at] for at in order], [groups[at] for at in order])
+        bundle.write_timeline(audio_uuid, timeline)
+        files = [files[at] for at in order]
+        project.part(audio_uuid).source.files = files
+        bundle.write_project(project)
+        _forget_joined(audio_uuid)
+    return files
+
+
+def remove_file(
+    audio_uuid: str, index: int, *, base_revision: int | None = None
+) -> list[SourceFile]:
+    """Take file ``index`` out of the part's audio. The last file cannot be removed.
+
+    The stored file is deleted when no project uses it any more. The audio changed, so
+    ``audioRevision`` goes up and the notes become stale.
+    """
+    project = _project_of(audio_uuid)
+    with bundle.project_lock(project.id):
+        project = bundle.read_project(project.id)
+        timeline = bundle.read_timeline(audio_uuid)
+        _check_revision(timeline, base_revision)
+        files = bundle.source_files(project, audio_uuid, timeline)
+        if not 0 <= index < len(files):
+            raise IndexError(f"This audio has no file {index + 1}")
+        if len(files) == 1:
+            raise ValueError("A project keeps at least one audio file")
+        groups = _segments_by_file(timeline)
+        hashes = timeline.source_list()
+        removed = hashes[index]
+        keep = [at for at in range(len(files)) if at != index]
+        if not any(groups[at] for at in keep):
+            raise ValueError("The other files are cut completely: restore a part of them first")
+        timeline = _with_files(timeline, [hashes[at] for at in keep], [groups[at] for at in keep])
+        bundle.write_timeline(audio_uuid, timeline)
+        files = [files[at] for at in keep]
+        source = project.part(audio_uuid).source
+        source.files = files
+        if index == 0:
+            # The fields of the source describe the first file.
+            first = files[0]
+            source.kind = first.kind
+            source.format = first.format
+            source.original_filename = first.original_filename
+            source.duration_seconds = first.duration_seconds
+            source.url = first.url
+        bundle.write_project(project)
+        _forget_joined(audio_uuid)
+    audio_files.delete_unused([removed])
+    return files
+
+
 def files_of(audio_uuid: str) -> list[dict[str, object]]:
-    """The files of the part's axis in order: name, first frame and length in frames. Empty while
-    the part has no measured audio."""
+    """The files of the part's axis in order: their place, name and origin, their first frame and
+    length in frames, and how many of their frames are cut. Empty while the part has no measured
+    audio."""
     project = _project_of(audio_uuid)
     timeline = bundle.read_timeline(audio_uuid)
     try:
         axis = timeline.axis()
     except ValueError:
         return []
-    source = project.part(audio_uuid).source
-    names = [source.original_filename or project.title] + [
-        added.original_filename or "Added audio" for added in source.added
-    ]
+    described = bundle.source_files(project, audio_uuid, timeline)
+    cuts = bundle.cuts_of(timeline)
     out: list[dict[str, object]] = []
     start = 0
-    for index, (_, frames) in enumerate(axis):
-        name = names[index] if index < len(names) else f"Audio {index + 1}"
-        out.append({"name": name, "startFrame": start, "frames": frames})
-        start += frames
+    for index, ((_, frames), file) in enumerate(zip(axis, described)):
+        end = start + frames
+        cut = sum(max(0, min(end, b) - max(start, a)) for a, b in cuts)
+        out.append(
+            {
+                "index": index,
+                "name": file.name,
+                "kind": file.kind,
+                "originalFilename": file.original_filename,
+                "url": file.url,
+                "startFrame": start,
+                "frames": frames,
+                "cutFrames": cut,
+            }
+        )
+        start = end
     return out
 
 
@@ -461,8 +623,9 @@ def write_metadata(metadata: AudioMetadata) -> AudioMetadata:
         project = bundle.read_project(project.id)
         entry = project.part(metadata.uuid)
         first_duration = entry.source.duration_seconds
-        entry.source = _source_of(metadata, entry.source.added)
-        if entry.source.added:
+        several = len(bundle.read_timeline(metadata.uuid).source_list()) > 1
+        entry.source = _source_of(metadata, entry.source.files)
+        if several:
             # The metadata's length is the axis; the source keeps its first file's own length.
             entry.source.duration_seconds = first_duration
         project = project.model_copy(
