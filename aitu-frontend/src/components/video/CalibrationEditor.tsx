@@ -31,7 +31,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import type { Calibration, FindRequest, PianoRect as Rect } from "../../api/frameExamples";
 import { buildKeys, medianWhiteWidth } from "../../video/overlayGeometry";
-import { palette, ui } from "../../ui";
+import { palette, PillButton, ui } from "../../ui";
 import FrameCanvas from "./FrameCanvas";
 import { rectColours } from "./overlayColours";
 import PianoOverlay from "./PianoOverlay";
@@ -46,6 +46,15 @@ export interface CalibrationEditorProps {
   onFind: (body: FindRequest) => Promise<Calibration>;
   onSave: (calibration: Calibration) => void;
   saving?: boolean;
+  /**
+   * The Video step of a project (implementation 02, plan section 10.2): no help paragraph, one
+   * short line until the keys are found, the primary button saying what it saves, and a
+   * **Cancel** when `onCancel` is given. Lab keeps the long form.
+   */
+  compact?: boolean;
+  onCancel?: () => void;
+  /** The height of the picture, in pixels. */
+  height?: number;
 }
 
 /** How tall the grab strip of the upper line is, in screen pixels. */
@@ -66,6 +75,9 @@ export function CalibrationEditor({
   onFind,
   onSave,
   saving = false,
+  compact = false,
+  onCancel,
+  height = 560,
 }: CalibrationEditorProps) {
   const [rect, setRect] = useState<Rect>(
     () => calibration?.pianoRect ?? startingRect(imageWidth, imageHeight),
@@ -233,23 +245,47 @@ export function CalibrationEditor({
             {summary}
           </Typography>
         ) : null}
+        {compact && !draft && !moved ? (
+          <Typography variant="body2" color="text.secondary">
+            Drag the rectangle onto the piano keys
+          </Typography>
+        ) : null}
         <Box sx={{ flexGrow: 1 }} />
-        <Button
-          variant="contained"
-          size="small"
-          disabled={!draft || saving || finding || moved}
-          onClick={() => draft && onSave(draft)}
-        >
-          {saving ? "Saving…" : "Save"}
-        </Button>
+        {compact && onCancel ? (
+          <PillButton kind="quiet" size="small" onClick={onCancel} disabled={saving}>
+            Cancel
+          </PillButton>
+        ) : null}
+        {compact ? (
+          <PillButton
+            kind="primary"
+            size="small"
+            disabled={!draft || finding || moved}
+            busy={saving}
+            onClick={() => draft && onSave(draft)}
+          >
+            Save the piano
+          </PillButton>
+        ) : (
+          <Button
+            variant="contained"
+            size="small"
+            disabled={!draft || saving || finding || moved}
+            onClick={() => draft && onSave(draft)}
+          >
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        )}
       </Stack>
 
-      <Typography variant="caption" color="text.secondary">
-        Drag the rectangle over the piano area; every key inside it is found when it settles. Then
-        drag the red line onto the top of the keys, choose the octave, and save. A border the finder
-        got wrong can be dragged along the top of the keys; the names of the keys are on the next
-        step, under the pointer.
-      </Typography>
+      {compact ? null : (
+        <Typography variant="caption" color="text.secondary">
+          Drag the rectangle over the piano area; every key inside it is found when it settles. Then
+          drag the red line onto the top of the keys, choose the octave, and save. A border the finder
+          got wrong can be dragged along the top of the keys; the names of the keys are on the next
+          step, under the pointer.
+        </Typography>
+      )}
 
       {problem ? (
         <Alert severity="warning" variant="outlined" onClose={() => setProblem(null)}>
@@ -262,7 +298,7 @@ export function CalibrationEditor({
         imageWidth={imageWidth}
         imageHeight={imageHeight}
         panDisabled={dragging}
-        height={560}
+        height={height}
       >
         {(scale) => (
           <>
@@ -315,7 +351,7 @@ export function CalibrationEditor({
         )}
       </FrameCanvas>
 
-      {!draft && !moved ? (
+      {!draft && !moved && !compact ? (
         <Alert severity="info" variant="outlined">
           Zoom with the wheel, drag the picture to move it. Move the rectangle onto the piano to
           find the keys.

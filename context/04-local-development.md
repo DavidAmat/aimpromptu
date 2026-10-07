@@ -37,7 +37,7 @@ used at once.
 
 **Variables.** Compose reads `.env` beside `compose.yaml` (copy `.env.example`, which lists every
 variable with its default). Nothing is required on Ubuntu: `HF_TOKEN` is exported in the shell,
-`.database/` is the link at the root of the repository (mounted at `/database` in the backend), the
+`.database/` is `AITU_DATABASE_DIR` in `.env` (mounted at `/database` in the backend), the
 master user is `master` unless `AITU_MASTER_USERNAME` says otherwise, and the Hugging Face cache is
 `/mnt/ssd2/hf/data/hub`. Three names of `.env` came with the users and the home network
 (implementation 02, Phase 4):
@@ -53,8 +53,10 @@ On a new machine, make the folder before the first `make up` (Docker would make 
 root; `make up` makes a plain folder when nothing is there):
 
 ```bash
-mkdir -p /mnt/ssd2/aimpromptu/.database && ln -s /mnt/ssd2/aimpromptu/.database .database
+mkdir -p /mnt/ssd2/aimpromptu/.database
 ```
+
+Set `AITU_DATABASE_DIR=/mnt/ssd2/aimpromptu/.database` in `.env`. Do not put a link to that folder inside the repository: the editor follows the link and watches every file.
 
 | Command (on the host, from the repository root) | Does |
 |---|---|
@@ -77,7 +79,7 @@ backend itself stays on `127.0.0.1:8765` of Ubuntu.
 Every page first asks to sign in: **Username** `master` (or `AITU_MASTER_USERNAME`) and the
 **Password** of `AITU_MASTER_PASSWORD` in `.env`. The other users are made in **Admin → Users**.
 After signing in the page opens on **Projects**; a project goes through Source, Audio, Notes, Hands,
-Sheet ([frontend/flow-page.md](frontend/flow-page.md)). The users, the session and what each user
+Sheet ([frontend/projects.md](frontend/projects.md)). The users, the session and what each user
 can open are in [08-security.md](08-security.md).
 
 The SSH tunnel still works, as the fallback (away from home, or with `WEB_BIND=127.0.0.1`):

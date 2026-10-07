@@ -21,7 +21,7 @@ The plan's section 3.
 - [p] **Q-5** The sources of the Public Library. Worldwide: `musicchartsarchive.com`, downloaded by the parallel work (`public-library-build/`). The `spain` and `catalan` regions and the fields that site does not give: raised in Phase 12.
 - [ ] **Q-6** The popularity weights. Raised in Phase 12.
 - [ ] **Q-7** Offline downloads per project, now or in the production version. Raised in Phase 6.
-- [ ] **Q-8** Live notes from the video reader. Raised in Phase 5.
+- [p] **Q-8** Live notes from the video reader. Measured in Phase 5 (61 s for a 3:09 video, notes only at the end); raised with three options (recommended: keep one job with its stages), not answered yet.
 
 # [x] Phase 0: The documentation repaired, and a baseline
 
@@ -79,7 +79,7 @@ The plan's section 3.
 # [x] Phase 3: The `.database/` folder, the tables, the project bundle, the migration
 
 ## [x] Story 3.1: The folder
-- [x] Task 3.1.1 `AITU_DATABASE_DIR`, the link to `/mnt/ssd2/aimpromptu/.database`, `.gitignore`, the Compose mount, `VERSION`.
+- [x] Task 3.1.1 `AITU_DATABASE_DIR`, the folder `/mnt/ssd2/aimpromptu/.database` (a link in the repository at first; `AITU_DATABASE_DIR` in `.env` since 2026-10-06), `.gitignore`, the Compose mount, `VERSION`.
 - [x] Task 3.1.2 SQLAlchemy and Alembic; every table of plan section 8.6.
 
 ## [x] Story 3.2: The bundle
@@ -112,22 +112,22 @@ The plan's section 3.
 ## [x] Story 4.4: Documentation
 - [x] Task 4.4.1 `context/08-security.md` (new); `02b-local-setup.md` section 12, `04-local-development.md`, `README.md`, `09-coding-conventions.md`, `api.md`, `endpoints.md`.
 
-# [ ] Phase 5: Projects and the Personal Vault
+# [x] Phase 5: Projects and the Personal Vault
 
-## [ ] Story 5.1: The projects
-- [ ] Task 5.1.1 The `/projects` routes (list, create, rename, delete, duplicate).
-- [ ] Task 5.1.2 The Projects page and **New project** with its three choices.
+## [x] Story 5.1: The projects
+- [x] Task 5.1.1 The `/projects` routes (list, create, rename, delete, duplicate); the step kept in `projects.step`.
+- [x] Task 5.1.2 The Projects page and **New project** with its three choices (two disabled until Phases 8 and 10) and Import.
 
-## [ ] Story 5.2: From source
-- [ ] Task 5.2.1 The Source step (file, YouTube audio or video) on projects.
-- [ ] Task 5.2.2 The Audio step with **add audio** (several files in one timeline).
-- [ ] Task 5.2.3 The video as a step of the project, its temporary files; Q-8 measured.
+## [x] Story 5.2: From source
+- [x] Task 5.2.1 The Source step (an audio or a video file, YouTube audio or video) on projects, for every user.
+- [x] Task 5.2.2 The Audio step with **add audio** (several files in one timeline).
+- [x] Task 5.2.3 The video as a step of the project, its temporary files; Q-8 measured.
 
-## [ ] Story 5.3: Export and import
-- [ ] Task 5.3.1 The `.aitu` file and its round-trip test.
+## [x] Story 5.3: Export and import
+- [x] Task 5.3.1 The `.aitu` file and its round-trip test.
 
-## [ ] Story 5.4: Documentation
-- [ ] Task 5.4.1 `projects.md` (from `flow-page.md`), `pieces-and-revisions.md`, `endpoints.md`.
+## [x] Story 5.4: Documentation
+- [x] Task 5.4.1 `projects.md` (from `flow-page.md`), `pieces-and-revisions.md`, `endpoints.md`.
 
 # [ ] Phase 6: The Private Library
 
@@ -218,10 +218,10 @@ The plan's section 3.
 
 # [ ] Phase 12: The music library data reconciled
 
-Starts once the parallel work ([`public-library-build/`](public-library-build/)) has data in `data/music-library/` (next to the repository). Writes nothing into that folder or its scripts.
+Starts any time after Phase 3. The parallel data is ready: `data/music-library/library.sqlite` next to the repository (on this machine `/home/david/Documents/projects/music/data/music-library/library.sqlite`). Writes nothing into that folder or its scripts.
 
 ## [ ] Story 12.1: The reconciliation
-- [ ] Task 12.1.1 Read the parallel work's plan, response and database.
+- [ ] Task 12.1.1 Read `public-library-build/02-a-public-library-build-implementation.md`, then `library.sqlite`. There is no response file.
 - [ ] Task 12.1.2 `context/music-library/reconciliation.md`: the mapping to plan section 8.6, the gaps in both directions (genre, tags, regions; lyrics, album chart history), the identity rule for songs and artists across runs.
 - [ ] Task 12.1.3 Only the missing fields added to section 8.6 and its Alembic migration.
 - [ ] Task 12.1.4 The import script the Phase 13 import starts from; the 31 seed songs checked.

@@ -29,7 +29,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from aitu_backend.audio import ingest
+from aitu_backend.audio import ingest, store
 from aitu_backend.audio.store import StoredAudio
 from aitu_backend.progress import BaseProgress, default_reporter
 from aitu_backend.schemas.metadata import AudioSource
@@ -129,10 +129,12 @@ def download(
     alias: str | None = None,
     *,
     reporter: BaseProgress | None = None,
+    append_to: str | None = None,
 ) -> StoredAudio:
     """Download a video's audio as mp3 and ingest it into the audio store.
 
-    ``alias`` defaults to the video title. Progress is reported through the
+    ``alias`` defaults to the video title. With ``append_to`` (a part), the audio is added at the
+    end of that part's audio (**add audio**, named after the video) instead of making a project. Progress is reported through the
     standard :class:`~aitu_backend.progress.ProgressReporter`, so the same
     events feed a terminal bar and the SSE stream.
     """
@@ -189,12 +191,24 @@ def download(
         # The conversion to the 16 kHz `normalized.wav` takes a second or two after the download
         # reached 100%. Its own stage, so a progress bar does not look stuck there.
         with progress.stage("store", total=1, message="Converting the audio") as stage:
-            stored = ingest.ingest_path(
-                downloaded[0],
-                AudioSource.YOUTUBE,
-                alias=alias or downloaded[0].stem,
-                source_url=cleaned,
-            )
+            if append_to is not None:
+                with downloaded[0].open("rb") as handle:
+                    ingest.append_file(
+                        append_to,
+                        handle,
+                        downloaded[0].name,
+                        AudioSource.YOUTUBE,
+                        name=alias or downloaded[0].stem,
+                        url=cleaned,
+                    )
+                stored = store.get(append_to)
+            else:
+                stored = ingest.ingest_path(
+                    downloaded[0],
+                    AudioSource.YOUTUBE,
+                    alias=alias or downloaded[0].stem,
+                    source_url=cleaned,
+                )
             stage.advance(1)
         return stored
 

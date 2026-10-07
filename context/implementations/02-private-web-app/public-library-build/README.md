@@ -1,7 +1,9 @@
 # 02-a: The public music library
 
-**State: planned, 2026-10-05.** Eight decisions are in the plan (D-1 to D-8). Two questions are
-raised only if the download or the years require them (Q-1, Q-2). Five phases, none started.
+**State: finished, 2026-10-07.** Phases 1 to 5 are done. How the download ran, where the files
+were moved, and what `library.sqlite` contains is
+[`02-a-public-library-build-implementation.md`](02-a-public-library-build-implementation.md).
+Phase 12 and Phase 13 of the app plan read that file. Q-1 was not raised. Q-2 was not large.
 
 The brief is [`02-a-public-library-build-prompt.md`](02-a-public-library-build-prompt.md). The plan is
 [`02-a-public-library-build-plan.md`](02-a-public-library-build-plan.md). The status lookup is
@@ -10,7 +12,7 @@ The brief is [`02-a-public-library-build-prompt.md`](02-a-public-library-build-p
 ## What it is for
 
 Download the worldwide charts from musicchartsarchive.com and store songs, artists, albums, lyrics
-and rankings in `.music-library/library.sqlite`. Popularity is calculated from the rankings with the
+and rankings in `data/music-library/library.sqlite` (next to the repository, not inside it). Popularity is calculated from the rankings with the
 formula already chosen in the app plan.
 
 ## What it does not do

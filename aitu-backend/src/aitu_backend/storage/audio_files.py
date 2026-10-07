@@ -23,7 +23,15 @@ from aitu_backend.db.database import session
 from aitu_backend.db.models import AudioFile, AudioRef
 from aitu_backend.storage import paths
 
-__all__ = ["add_file", "add_stream", "delete_unused", "file_path", "hash_file", "info"]
+__all__ = [
+    "add_file",
+    "add_stream",
+    "delete_unused",
+    "file_path",
+    "hash_file",
+    "info",
+    "record_duration",
+]
 
 CHUNK_BYTES = 1024 * 1024
 
@@ -88,6 +96,14 @@ def add_stream(stream: BinaryIO | Iterable[bytes], extension: str) -> str:
         temporary.replace(target)
     _register(content_hash, extension, target.stat().st_size, None)
     return content_hash
+
+
+def record_duration(content_hash: str, duration_ms: int) -> None:
+    """Record the length of a stored file once it is measured."""
+    with session() as db:
+        row = db.get(AudioFile, content_hash)
+        if row is not None and row.duration_ms is None:
+            row.duration_ms = duration_ms
 
 
 def info(content_hash: str) -> AudioFile | None:

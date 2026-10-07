@@ -5,7 +5,7 @@
  * reaches. This drives the real page through the running app (`make up`), on a temporary copy of
  * an audio file that it uploads first and deletes at the end, so the library is never changed:
  *
- * - `/` opens Projects and **New project** opens `/projects/new`; a piece opens on the step it reached; a disabled tab says why;
+ * - `/` opens Projects and **New project → From source** opens `/projects/new`; a piece opens on the step it reached; a disabled tab says why;
  * - on the Audio tab: drag, a click that clears, the two edges, the playhead in the ruler and on a
  *   double-click, zoom to the selection, Delete, the save bar, the leave dialog, undo and redo,
  *   Save, playback jumping over the cut, Restore and Discard, zoom;
@@ -91,8 +91,9 @@ try {
   await page.waitForURL('**/projects');
   check('/ goes to Projects', page.url().endsWith('/projects'));
   await page.getByRole('button', { name: 'New project' }).click();
+  await page.getByRole('menuitem', { name: /From source/ }).click();
   await page.waitForURL('**/projects/new');
-  await page.waitForSelector('text=Drop an audio file');
+  await page.waitForSelector('text=Drop an audio or video file');
   await page.waitForTimeout(600);
   await shot('01-new');
   const disabled = await page.locator('[role=tab][aria-disabled=true]').count();

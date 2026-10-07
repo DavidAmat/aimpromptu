@@ -19,12 +19,16 @@ export type {
   AudioSource,
   AudioTimeRange,
   Cut,
+  AudioFiles,
+  AxisFile,
   CutsState,
   FramePeaks,
   KeptRange,
   WaveformPeaks,
 } from "./audio";
 
+export { projectsApi } from "./projects";
+export type { DuplicatedProject, ProjectLayer, ProjectRow } from "./projects";
 export { piecesApi, PIECE_STEPS } from "./pieces";
 export type {
   NotesOperation,

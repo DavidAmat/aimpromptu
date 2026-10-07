@@ -122,9 +122,32 @@ def save_calibration(audio_uuid: str, calibration: Calibration) -> Calibration:
     payload = {
         "calibration": calibration.model_dump(by_alias=True),
         "measurement": existing.get("measurement"),
+        "measuredFor": existing.get("measuredFor"),
     }
     path.write_text(json.dumps(payload, indent=2) + "\n")
     return calibration
+
+
+def overlay_key(calibration: Calibration) -> str:
+    """The piano overlay a measurement depends on: everything fitted, not what motion measured
+    (the roll top and the guard band)."""
+    fitted = calibration.model_dump(by_alias=True, exclude={"roll_top", "guard_band"})
+    return json.dumps(fitted, sort_keys=True)
+
+
+def measured_for(audio_uuid: str) -> str | None:
+    """The :func:`overlay_key` the stored measurement was made with, when it was recorded."""
+    path = paths.video_calibration_path(audio_uuid)
+    if not path.exists():
+        return None
+    return json.loads(path.read_text()).get("measuredFor")
+
+
+def record_measured_for(audio_uuid: str, key: str) -> None:
+    path = paths.video_calibration_path(audio_uuid)
+    existing = json.loads(path.read_text()) if path.exists() else {}
+    existing["measuredFor"] = key
+    path.write_text(json.dumps(existing, indent=2) + "\n")
 
 
 def load_measurement(audio_uuid: str) -> VideoMeasurement | None:

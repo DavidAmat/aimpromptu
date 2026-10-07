@@ -41,7 +41,7 @@ the master user can follow it.
 | `/pieces` | `api/pieces.py` | The state of each step, the notes as columns, note operations, predict the hands ([pieces-and-revisions.md](pieces-and-revisions.md)) |
 | `/time` | `api/time_score.py` | The score: peaks, the ladder, the drawable payload, the saved reading |
 | `/audio/{uuid}/edits` | `api/editing.py` | Staged range editing and composing |
-| `/projects` | `api/projects.py` | The Personal Vault. Phase 3 has one route, duplicate (a copy with new ids, the same audio files); Phase 5 adds the rest |
+| `/projects` | `api/projects.py` | The Personal Vault: list (with the step of each project), create, rename, delete, duplicate (new ids, the same audio files), export and import a `.aitu` file (implementation 02, Phase 5) |
 | `/youtube` | `api/youtube.py` | Downloads via yt-dlp, also as a job with progress |
 | `/video`, `/frame-examples` | `api/video.py`, `api/frame_examples.py` | Reading a Synthesia-style video into a piece (implementations 04 and 05). `/frame-examples` is the master user's (Lab) |
 

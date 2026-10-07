@@ -23,6 +23,7 @@ from aitu_backend.audio.store import AudioNotFound
 from aitu_backend.schemas.metadata import AudioMetadata, AudioSource
 from aitu_backend.storage import paths
 from aitu_backend.transcription import pipeline
+from aitu_backend.video import store as video_store
 
 router = APIRouter(prefix="/audio", tags=["audio"])
 
@@ -114,6 +115,54 @@ class CutsResponse(BaseModel):
     kept: list[KeptRange]
     #: True when the stored notes were transcribed from other cuts: transcribe again (Q-2).
     notes_stale: bool = Field(False, alias="notesStale")
+    #: The files of the audio laid end to end, in order (**add audio**): one for most parts.
+    files: list["AxisFile"] = Field(default_factory=list)
+
+
+class AxisFile(BaseModel):
+    """One file of the axis of the Audio step."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    #: Its place in the order of the audio, from 0.
+    index: int = 0
+    #: The name the user gave it (its file name, or the video's title, at first).
+    name: str
+    #: ``upload``, ``youtube``, ``recording`` ...
+    kind: str = "upload"
+    original_filename: str | None = Field(None, alias="originalFilename")
+    url: str | None = None
+    #: Where the file starts on the axis, and its length, in 10 ms frames.
+    start_frame: int = Field(..., alias="startFrame")
+    frames: int
+    #: How many of its frames are cut.
+    cut_frames: int = Field(0, alias="cutFrames")
+
+
+class FilesResponse(BaseModel):
+    """`/audio/{uuid}/files`: the files of the part's audio, in order (the Source step)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    audio_revision: int = Field(..., alias="audioRevision")
+    files: list[AxisFile]
+
+
+class FileName(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str = Field(..., min_length=1, max_length=200)
+
+
+class FileOrder(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    #: The current places of the files, in their new order: ``[1, 0, 2]`` swaps the first two.
+    order: list[int]
+    base_revision: int | None = Field(None, alias="baseRevision", ge=0)
+
+
+CutsResponse.model_rebuild()
 
 
 class CutsRequest(BaseModel):
@@ -153,6 +202,8 @@ class AudioEntry(AudioMetadata):
     #: When the piece last changed: the newest file directly in its folder (the audio, the
     #: metadata, the notes, the piano sheet). The Projects page sorts and shows it.
     updated_at: datetime | None = Field(None, alias="updatedAt")
+    #: The part has a video (a video project): its Audio step is the Video step (section 10.2).
+    has_video: bool = Field(False, alias="hasVideo")
 
 
 def _updated_at(audio_uuid: str) -> datetime | None:
@@ -184,6 +235,7 @@ def _entry(metadata: AudioMetadata) -> AudioEntry:
         needsRederivation=pipeline.needs_rederivation(metadata.uuid),
         originalDurationSeconds=original,
         updatedAt=_updated_at(metadata.uuid),
+        hasVideo=video_store.exists(metadata.uuid),
     )
 
 
@@ -264,6 +316,97 @@ def _ingest_upload(file: UploadFile, source: AudioSource, alias: str | None) -> 
     except ConversionFailed as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return entry.metadata
+
+
+@router.post(
+    "/{audio_uuid}/add",
+    response_model=AudioMetadata,
+    response_model_by_alias=True,
+    status_code=201,
+)
+def add_audio(
+    audio_uuid: str,
+    file: Annotated[UploadFile, File()],
+    name: Annotated[str | None, Form()] = None,
+) -> AudioMetadata:
+    """**Add audio**: another file at the end of the part's audio (plan section 8.5).
+
+    The file is stored once by its content, measured, and appended to the timeline; the cuts keep
+    their frames. The audio changed, so ``audioRevision`` goes up and the notes become stale.
+    ``name`` is the name the Source step shows; the file's name without its extension by default.
+    """
+    _found(audio_uuid)
+    if not file.filename:
+        raise HTTPException(status_code=422, detail="The uploaded file has no name")
+    try:
+        return ingest.append_file(audio_uuid, file.file, file.filename, name=name)
+    except UnsupportedFormat as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except FfmpegMissing as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ConversionFailed as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+def _files(audio_uuid: str) -> FilesResponse:
+    return FilesResponse(
+        audio_revision=store.read_metadata(audio_uuid).audio_revision,
+        files=[AxisFile.model_validate(row) for row in store.files_of(audio_uuid)],
+    )
+
+
+def _file_change(audio_uuid: str, change: Any) -> FilesResponse:
+    _found(audio_uuid)
+    try:
+        change()
+    except store.RevisionMismatch as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except IndexError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _files(audio_uuid)
+
+
+@router.get("/{audio_uuid}/files", response_model=FilesResponse, response_model_by_alias=True)
+def list_files(audio_uuid: str) -> FilesResponse:
+    """The files of the part's audio in order, with their names and how much of each is cut."""
+    _found(audio_uuid)
+    return _files(audio_uuid)
+
+
+@router.patch(
+    "/{audio_uuid}/files/{index}", response_model=FilesResponse, response_model_by_alias=True
+)
+def rename_file(audio_uuid: str, index: int, body: FileName) -> FilesResponse:
+    """Name one file of the audio. The audio does not change."""
+    return _file_change(audio_uuid, lambda: store.rename_file(audio_uuid, index, body.name))
+
+
+@router.put("/{audio_uuid}/files/order", response_model=FilesResponse, response_model_by_alias=True)
+def reorder_files(audio_uuid: str, body: FileOrder) -> FilesResponse:
+    """Put the files in a new order. Each keeps its cuts; the notes become stale."""
+    return _file_change(
+        audio_uuid,
+        lambda: store.reorder_files(audio_uuid, body.order, base_revision=body.base_revision),
+    )
+
+
+@router.delete(
+    "/{audio_uuid}/files/{index}", response_model=FilesResponse, response_model_by_alias=True
+)
+def remove_file(
+    audio_uuid: str,
+    index: int,
+    base_revision: Annotated[int | None, Query(alias="baseRevision", ge=0)] = None,
+) -> FilesResponse:
+    """Take one file out of the audio (not the last one). The notes become stale."""
+    return _file_change(
+        audio_uuid,
+        lambda: store.remove_file(audio_uuid, index, base_revision=base_revision),
+    )
 
 
 @router.post(
@@ -363,6 +506,7 @@ def _cuts_response(audio_uuid: str) -> CutsResponse:
         cuts=table.cuts(),
         kept=[KeptRange.model_validate(row) for row in table.rows()],
         notes_stale=pipeline.notes_are_stale(audio_uuid),
+        files=[AxisFile.model_validate(row) for row in store.files_of(audio_uuid)],
     )
 
 
@@ -444,10 +588,17 @@ def stream_audio(audio_uuid: str, normalized: bool = False, original: bool = Fal
             entry.normalized_path, media_type="audio/wav", headers={"Cache-Control": "no-cache"}
         )
 
-    original_path = entry.original_path
+    try:
+        original_path = store.original_file(entry)
+    except (ConversionFailed, FfmpegMissing) as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     if original_path is None:
         raise HTTPException(status_code=404, detail="This audio has no stored original file")
-    media_type = _MEDIA_TYPES.get(entry.metadata.format, "application/octet-stream")
+    media_type = (
+        "audio/flac"
+        if entry.joined
+        else _MEDIA_TYPES.get(entry.metadata.format, "application/octet-stream")
+    )
     # The stored file is named by its content; the download keeps the name the user knows.
     name = Path(entry.metadata.original_filename or entry.metadata.alias).stem or "audio"
     return FileResponse(

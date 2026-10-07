@@ -10,6 +10,12 @@ from an older revision of an earlier step; it must be done again) or ``ready``. 
 one step past the last ready one. The Sheet tab stays enabled when it is stale, because it opens
 with a banner and asks the user to write the sheet again (plan section 8.3).
 
+**A project with no audio and no notes yet** (an empty project, section 10.3) has its Source step
+missing and every later step closed. A part with notes and no audio (a piece being composed) reads
+as before. **A video project** (its part has a video, section 10.2) gets its notes
+from reading the video instead of a transcription, so its Notes step says so, and is ``running``
+while the video is read.
+
 **The hands of an old piece.** A piece transcribed before Phase 5 has no saved hands: the piano
 sheet runs the hand split on each read, as it always did. When such a piece already has a saved
 sheet, its Hands step reads ``ready`` with ``saved: false``, so its Sheet tab keeps opening as
@@ -23,7 +29,9 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from aitu_backend.audio import store
+from aitu_backend.storage import bundle
 from aitu_backend.transcription import jobs, pipeline
+from aitu_backend.video import store as video_store
 
 State = Literal["missing", "running", "stale", "ready"]
 
@@ -57,9 +65,12 @@ class PieceStatus:
 def piece_status(audio_uuid: str) -> PieceStatus:
     """The state of every step of a piece. Raises ``AudioNotFound`` for an unknown uuid."""
     metadata = store.read_metadata(audio_uuid)
+    if not bundle.read_timeline(audio_uuid).audio and not pipeline.has_events(audio_uuid):
+        return _no_audio(audio_uuid, metadata.audio_revision)
     stored = pipeline.load_note_events(audio_uuid)
     rhythm = pipeline.load_rhythm(audio_uuid)
-    job = jobs.active(f"transcribe:{audio_uuid}")
+    video = video_store.exists(audio_uuid)
+    job = jobs.active(f"video-read:{audio_uuid}" if video else f"transcribe:{audio_uuid}")
     header = stored.header if stored is not None else None
 
     source = StepStatus("source", "ready")
@@ -75,15 +86,19 @@ def piece_status(audio_uuid: str) -> PieceStatus:
         notes = StepStatus(
             "notes",
             "running",
-            reason="The transcription is running.",
-            details={"jobId": job.id, "jobStatus": job.status},
+            reason="The video is being read." if video else "The transcription is running.",
+            details={"jobId": job.id, "jobStatus": job.status, "video": video},
         )
     elif stored is None:
         notes = StepStatus(
             "notes",
             "missing",
             reason=pipeline.needs_rederivation(audio_uuid)
-            or "Transcribe the audio to see its notes.",
+            or (
+                "Read the notes of the video to see them."
+                if video
+                else "Transcribe the audio to see its notes."
+            ),
         )
     elif header is not None and header.audio_revision != metadata.audio_revision:
         notes = StepStatus(
@@ -104,7 +119,7 @@ def piece_status(audio_uuid: str) -> PieceStatus:
             "hands",
             "stale" if notes.state == "stale" else "missing",
             enabled=False,
-            reason=_first_notes(notes),
+            reason=_first_notes(notes, video),
         )
     else:
         assert stored is not None and header is not None
@@ -152,7 +167,7 @@ def piece_status(audio_uuid: str) -> PieceStatus:
     # ------------------------------------------------------------------ sheet
     sheet: StepStatus
     sheet_enabled = hands.state == "ready"
-    disabled_reason = None if sheet_enabled else _first_hands(hands, notes)
+    disabled_reason = None if sheet_enabled else _first_hands(hands, notes, video)
     if rhythm is None:
         sheet = StepStatus(
             "sheet",
@@ -187,18 +202,45 @@ def piece_status(audio_uuid: str) -> PieceStatus:
     )
 
 
-def _first_notes(notes: StepStatus) -> str:
+def _first_notes(notes: StepStatus, video: bool = False) -> str:
     if notes.state == "running":
-        return "Wait for the transcription to finish."
+        return (
+            "Wait for the video to be read." if video else "Wait for the transcription to finish."
+        )
     if notes.state == "stale":
         return "Transcribe again first: the selected region changed."
-    return "Transcribe first."
+    return "Read the notes of the video first." if video else "Transcribe first."
 
 
-def _first_hands(hands: StepStatus, notes: StepStatus) -> str:
+def _first_hands(hands: StepStatus, notes: StepStatus, video: bool = False) -> str:
     if notes.state != "ready":
-        return _first_notes(notes)
+        return _first_notes(notes, video)
     return "Predict hands first."
+
+
+def _no_audio(audio_uuid: str, audio_revision: int) -> PieceStatus:
+    """A part with no audio yet: only its Source step can be opened."""
+    closed = "Add an audio first."
+    steps = [
+        StepStatus("source", "missing", reason="No audio yet."),
+        StepStatus("audio", "missing", enabled=False, reason=closed),
+        StepStatus("notes", "missing", enabled=False, reason=closed),
+        StepStatus("hands", "missing", enabled=False, reason=closed),
+        StepStatus("sheet", "missing", enabled=False, reason=closed),
+    ]
+    return PieceStatus(
+        audio_uuid=audio_uuid,
+        steps=steps,
+        resume="source",
+        revisions={
+            "audio": audio_revision,
+            "notes": None,
+            "notesAudio": None,
+            "hands": None,
+            "handsNotes": None,
+            "sheetHands": None,
+        },
+    )
 
 
 def _resume(steps: list[StepStatus]) -> str:

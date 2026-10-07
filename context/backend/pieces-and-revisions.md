@@ -1,6 +1,6 @@
 # Pieces, steps and revisions
 
-The flow page ([frontend/flow-page.md](../frontend/flow-page.md)) takes a piece through five steps:
+The flow page ([frontend/projects.md](../frontend/projects.md)) takes a piece through five steps:
 Source, Audio, Notes, Hands, Sheet. Each step is made from the one before it, so a change in an
 early step can leave a later one out of date. The user's rule (implementation 08) is that an old
 piano sheet must never be shown as if it were current after a change of a note or a hand. This page
@@ -18,8 +18,16 @@ the id of its first part, so a project of one part has one uuid. A migrated piec
 
 Each project has an **owner** and a **layer** (Personal Vault, Private Library, Public Library),
 recorded in the `projects` table; its part finds them through the `parts` table
-(`storage/locate.py`). Until the login (Phase 4) every request acts as the master user. Where the
-files are: [../07-database.md](../07-database.md).
+(`storage/locate.py`). Every route checks the user of the session against them before anything
+else (Phase 4, [../08-security.md](../08-security.md)). Where the files are:
+[../07-database.md](../07-database.md).
+
+**The step of a project** (Phase 5) is the lowest `resume` of its parts, shown on the Projects page.
+Working it out reads the notes and the sheet of every part (about 25 ms a part, 0.9 s for 39
+projects), so it is kept in `projects.step`: any write of a part's `notes.pmn`, `sheet.json` or
+`timeline.json` clears it (`bundle.step_changed`), and `GET /projects` works out again only the rows
+it finds cleared (`db/tools.refresh_step`). A running transcription or video reading is read from
+the job queue at each list, so the row says "Transcribing" or "Reading" at once.
 
 ## 1. The revisions
 
@@ -28,7 +36,7 @@ records the revision of the step before it when it is saved:
 
 | Stored in | Number | Goes up when | Also records |
 |---|---|---|---|
-| `timeline.json` | `audioRevision` | Cuts that change are saved on the Audio tab | - |
+| `timeline.json` | `audioRevision` | Cuts that change are saved on the Audio tab, or a file is added (**add audio**) | - |
 | `notes.pmn` header | `notesRevision` | A transcription finishes, or a notes edit is saved (move, resize, add, delete, restore) | `audioRevision`: the one the notes were transcribed from |
 | `notes.pmn` header | `handsRevision` | **Any** change of `notes.pmn`: a transcription, a notes edit, a hand | - |
 | `notes.pmn` header | `handsNotesRevision` | A hand edit leaves every live note with a hand; a new transcription sets it to 0 | - |
@@ -49,8 +57,8 @@ and every revision.
 
 | Step | Ready when | Otherwise |
 |---|---|---|
-| Source, Audio | The audio exists | - |
-| Notes | `notes.pmn` exists and its `audioRevision` is the current one | `running` while a transcription job runs; `stale` after the cuts changed ("Transcribe again") |
+| Source, Audio | The audio exists | A part with no audio and no notes (a new empty project) has Source `missing` and every later step closed: "Add an audio first" |
+| Notes | `notes.pmn` exists and its `audioRevision` is the current one | `running` while a transcription job runs (for a video project, while **Read notes** runs, job key `video-read:<uuid>`); `stale` after the cuts changed or audio was added ("Transcribe again"). A video project says "Read the notes of the video" instead of "Transcribe" |
 | Hands | Every live note the piano sheet can place has a hand | `missing`, "Predict hands first", or "N notes have no hand" |
 | Sheet | `sheet.json`'s `handsRevision` equals `notes.pmn`'s | `missing` (no reading: the Sheet tab draws the sheet from the defaults, and **Save** makes it ready), or `stale`: the Sheet tab opens with a banner and asks for **Write the sheet** again |
 

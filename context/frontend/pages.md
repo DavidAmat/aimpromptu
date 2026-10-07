@@ -12,7 +12,7 @@ is plan section 6.3 of [implementation 02](../implementations/02-private-web-app
 |---|---|---|
 | `/login` | `LoginPage` | **Sign in**: Username, Password. Outside the shell and open to all. Returns to `?next=` (an address of this app only) |
 | `/` | | Redirects to `/projects` |
-| `/projects` | `ProjectsPage` | The user's own projects, newest change first; **New project** |
+| `/projects` | `ProjectsPage` | The Personal Vault (and, until Phase 6, the projects of the library in a group **In my library**), newest change first; **New project** (From source, Import; From scratch and From other projects later); per row Duplicate, Export, Rename, Delete |
 | `/projects/new` | `PiecePage` | A new project, with only the Source step |
 | `/projects/:id` | `PiecePage` | Opens the project on the furthest step that is ready |
 | `/projects/:id/<step>` | `PiecePage` | One step: `source`, `audio`, `notes`, `hands` or `sheet` |
@@ -64,7 +64,7 @@ the same step. The backend says which steps are ready; a step that is not ready 
 tooltip says what is missing. A step with unsaved changes asks the reader to save or discard before
 any navigation, and closing the browser tab shows the browser's own warning.
 
-Detail: [flow-page.md](flow-page.md).
+Detail: [projects.md](projects.md).
 
 ## The shared working artifact
 
@@ -122,6 +122,6 @@ transcribed.
 
 - [`documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md):
   every component and where it sits
-- [flow-page.md](flow-page.md): Projects and the steps of a project
+- [projects.md](projects.md): Projects and the steps of a project
 - [rendering.md](rendering.md): the sheet itself
 - [timestamps.md](timestamps.md): `mm:ss.cc`, and why it never wraps

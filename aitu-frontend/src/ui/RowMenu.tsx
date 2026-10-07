@@ -24,9 +24,14 @@ export interface RowMenuProps {
   items: readonly RowMenuItem[];
   /** The tooltip of the `⋯` button. */
   title?: string;
+  /**
+   * Give the focus back to the `⋯` button when the menu closes (the default). Off for a menu whose
+   * item opens a field in place (Rename), which must keep the focus.
+   */
+  restoreFocus?: boolean;
 }
 
-export function RowMenu({ items, title = "More actions" }: RowMenuProps) {
+export function RowMenu({ items, title = "More actions", restoreFocus = true }: RowMenuProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return (
     <>
@@ -43,6 +48,7 @@ export function RowMenu({ items, title = "More actions" }: RowMenuProps) {
         open={anchor !== null}
         onClose={() => setAnchor(null)}
         onClick={(event) => event.stopPropagation()}
+        disableRestoreFocus={!restoreFocus}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
       >

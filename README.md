@@ -6,7 +6,7 @@ watch the notes appear, lets you correct the notes and the hands on a piano roll
 staff you can read and correct, and prints it.
 
 The way in is the **Piece** page: five tabs, Source, Audio, Notes, Hands and Sheet, each enabled
-once the step before it is ready ([context/frontend/flow-page.md](context/frontend/flow-page.md)).
+once the step before it is ready ([context/frontend/projects.md](context/frontend/projects.md)).
 
 It runs on one machine and is opened from the devices of one home network: no hosted deploy.
 Every page asks to sign in. The master user is made on the first start and makes the other users in

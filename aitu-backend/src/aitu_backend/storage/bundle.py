@@ -27,8 +27,13 @@ so the timeline reads without the database and a cut that reaches the end of the
 cut. ``toMs`` is ``null`` for a segment that runs to the end of a file whose length is not measured
 yet (between the upload and its normalization).
 
-Phase 3 has one audio per part, as the plan says: the cuts of implementation 08 are the gaps
-between the segments of that one file (:func:`cuts_of`, :func:`segments_for_cuts`).
+**Several files** (Phase 5, **add audio**): ``sources`` lists the files of the Audio step laid end
+to end, in order (the same file may come twice). The Audio step shows that **axis**: file 1 from its
+start to its end, then file 2, and so on. A cut is a range of the axis, as before, and the segments
+are the kept ranges split where one file ends and the next begins (:func:`segments_for_axis`). A
+part of one file has no ``sources`` (it reads as its one file), so every timeline written before
+Phase 5 reads unchanged. The cuts of implementation 08 are still the gaps between the segments
+(:func:`cuts_of`, :func:`segments_for_cuts`).
 
 A project made by this app has the id of its first part, so a project of one part has one uuid.
 """
@@ -44,13 +49,14 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 
 from aitu_backend.db.database import session
 from aitu_backend.db.models import AudioRef, Part, Project
 from aitu_backend.storage import audio_files, locate, paths
 
 __all__ = [
+    "SourceFile",
     "PartEntry",
     "PartSource",
     "ProjectFile",
@@ -60,11 +66,18 @@ __all__ = [
     "cuts_of",
     "delete_project",
     "duplicate_project",
+    "last_change",
     "list_parts",
+    "new_bundle_from",
     "part_ids_of",
     "read_project",
     "read_timeline",
+    "default_name",
+    "segments_for_axis",
     "segments_for_cuts",
+    "segments_with_cuts",
+    "step_changed",
+    "source_files",
     "sync_audio_refs",
     "write_project",
     "write_timeline",
@@ -96,6 +109,26 @@ class PartSource(_Camel):
     url: str | None = None
     source_audio_uuid: str | None = Field(None, alias="sourceAudioUuid")
     source_time_range: dict[str, float] | None = Field(None, alias="sourceTimeRange")
+    #: Every file of the part's audio, in the order of the timeline's axis, with the name the user
+    #: gave it (**add audio**, the Source step). Empty until a file is added or named: the one file
+    #: is then described by the fields above (:func:`source_files`).
+    files: list["SourceFile"] = Field(default_factory=list)
+
+
+class SourceFile(_Camel):
+    """One file of a part's audio: its name, and where it came from."""
+
+    audio: str
+    #: The name the user sees and can change; the file's name or the video's title at first.
+    name: str = ""
+    kind: str = "upload"
+    format: str | None = None
+    original_filename: str | None = Field(None, alias="originalFilename")
+    duration_seconds: float | None = Field(None, alias="durationSeconds")
+    url: str | None = None
+
+
+PartSource.model_rebuild()
 
 
 class PartEntry(_Camel):
@@ -138,6 +171,9 @@ class Segment(_Camel):
     from_ms: int = Field(..., alias="fromMs")
     #: ``None``: to the end of the file, whose length is not measured yet.
     to_ms: int | None = Field(None, alias="toMs")
+    #: The place of its file in ``Timeline.sources`` (a part of several files only): the same
+    #: file may come twice, and the range alone would not say which time it is.
+    source: int | None = None
 
 
 class AudioEntry(_Camel):
@@ -152,16 +188,44 @@ class Timeline(_Camel):
     schema_version: int = Field(TIMELINE_SCHEMA_VERSION, alias="schemaVersion")
     audio_revision: int = Field(0, alias="audioRevision")
     audio: dict[str, AudioEntry] = Field(default_factory=dict)
+    #: The files of the Audio step laid end to end (**add audio**); absent for a part of one file.
+    sources: list[str] | None = None
     segments: list[Segment] = Field(default_factory=list)
+
+    def source_list(self) -> list[str]:
+        """The files of the axis of the Audio step, in order: ``sources``, or the one file."""
+        if self.sources is not None:
+            return list(self.sources)
+        if len(self.audio) > 1:
+            raise ValueError("This part plays several audio files and does not list them in order")
+        return list(self.audio)
 
     @property
     def single_audio(self) -> str | None:
-        """The one file of a part of Phase 3, or ``None`` when the part has no audio yet."""
-        if not self.audio:
+        """The one file of a part of one file, or ``None`` when the part has no audio yet."""
+        sources = self.source_list()
+        if not sources:
             return None
-        if len(self.audio) > 1:
-            raise ValueError("This part plays several audio files; cuts need one")
-        return next(iter(self.audio))
+        if len(sources) > 1:
+            raise ValueError("This part plays several audio files")
+        return sources[0]
+
+    def axis(self) -> list[tuple[str, int]]:
+        """``(hash, frames)`` of each file of the axis, in order. Every file must be measured."""
+        out: list[tuple[str, int]] = []
+        for content_hash in self.source_list():
+            frames = self.audio[content_hash].frames
+            if frames is None:
+                raise ValueError("The length of every audio file must be known")
+            out.append((content_hash, frames))
+        return out
+
+    def axis_frames(self) -> int | None:
+        """The length of the axis in 10 ms frames, or ``None`` while a file is not measured."""
+        try:
+            return sum(frames for _, frames in self.axis())
+        except ValueError:
+            return None
 
 
 _locks: dict[str, threading.Lock] = {}
@@ -195,10 +259,12 @@ def write_project(project: ProjectFile, *, touch: bool = True) -> ProjectFile:
     """Write ``project.json`` and keep the ``projects`` row in step (title, time)."""
     if touch:
         project = project.model_copy(update={"updated_at": _now()})
-    _write_json(
-        paths.project_json_path(project.id),
-        project.model_dump_json(by_alias=True, indent=2) + "\n",
-    )
+    body = project.model_dump(by_alias=True, mode="json")
+    for entry in body["parts"]:
+        if not entry["source"].get("files"):
+            # A part of one file keeps the shape it had before **add audio** existed.
+            entry["source"].pop("files", None)
+    _write_json(paths.project_json_path(project.id), json.dumps(body, indent=2) + "\n")
     with session() as db:
         row = db.get(Project, project.id)
         if row is not None:
@@ -218,12 +284,109 @@ def read_timeline(part_id: str) -> Timeline:
 
 def write_timeline(part_id: str, timeline: Timeline) -> Timeline:
     """Write ``timeline.json`` and record which audio files the project now uses."""
-    _write_json(
-        paths.part_timeline_path(part_id),
-        timeline.model_dump_json(by_alias=True, indent=2) + "\n",
-    )
+    body = timeline.model_dump(by_alias=True, mode="json")
+    for segment in body["segments"]:
+        if segment.get("source") is None:
+            segment.pop("source", None)
+    if body.get("sources") is None:
+        body.pop("sources", None)
+    _write_json(paths.part_timeline_path(part_id), json.dumps(body, indent=2) + "\n")
     sync_audio_refs(locate.part(part_id).project_id)
+    step_changed(part_id)
     return timeline
+
+
+def step_changed(part_id: str) -> None:
+    """A file that decides the step of the part changed (its notes, its sheet, its timeline):
+    forget the project's stored step (section 10.5). The next list of projects works it out again
+    (:func:`aitu_backend.db.tools.refresh_step`), so the list never computes the step of a project
+    that did not change."""
+    try:
+        project_id = locate.part(part_id).project_id
+    except locate.NotFound:
+        return
+    with session() as db:
+        db.execute(
+            update(Project)
+            .where(Project.id == project_id, Project.step.is_not(None))
+            .values(step=None)
+        )
+
+
+def last_change(project_id: str) -> datetime | None:
+    """When the project last changed: the newest file directly in its parts' folders (the notes,
+    the sheet, the timeline) and ``project.json`` (its title, its source).
+
+    One ``stat`` per file and no read, so a list of every project stays fast. History, staging, the
+    cache and the video are not looked at: they are not edits of the project itself.
+    """
+    times: list[float] = []
+    try:
+        root = paths.project_dir(project_id)
+    except locate.NotFound:
+        return None
+    candidates = [root / "project.json"]
+    for part_id in part_ids_of(project_id):
+        folder = root / "parts" / part_id
+        if folder.is_dir():
+            candidates.extend(child for child in folder.iterdir())
+    for path in candidates:
+        try:
+            if path.is_file():
+                times.append(path.stat().st_mtime)
+        except OSError:
+            continue
+    return datetime.fromtimestamp(max(times), tz=timezone.utc) if times else None
+
+
+# ------------------------------------------------------------------ source files
+
+
+def default_name(original_filename: str | None, fallback: str) -> str:
+    """The first name of a file: its own name without the extension, or ``fallback``."""
+    if original_filename:
+        stem = Path(original_filename).stem.strip()
+        if stem:
+            return stem
+    return fallback
+
+
+def source_files(project: "ProjectFile", part_id: str, timeline: "Timeline") -> list[SourceFile]:
+    """The files of a part's axis in order, each with its name and origin.
+
+    ``parts[].source.files`` when it matches the timeline; a part written before Phase 5 (or never
+    given a second file or a name) is described from its source fields.
+    """
+    sources = timeline.source_list()
+    entry = project.part(part_id).source
+    if entry.files and [file.audio for file in entry.files] == sources:
+        return [file.model_copy() for file in entry.files]
+    out: list[SourceFile] = []
+    for index, content_hash in enumerate(sources):
+        audio = timeline.audio.get(content_hash)
+        frames = audio.frames if audio else None
+        if index == 0:
+            out.append(
+                SourceFile(
+                    audio=content_hash,
+                    name=default_name(entry.original_filename, project.title or "Audio 1"),
+                    kind=entry.kind,
+                    format=entry.format,
+                    original_filename=entry.original_filename,
+                    duration_seconds=entry.duration_seconds,
+                    url=entry.url,
+                )
+            )
+        else:
+            out.append(
+                SourceFile(
+                    audio=content_hash,
+                    name=f"Audio {index + 1}",
+                    format=audio.format if audio else None,
+                    duration_seconds=None if frames is None else frames * FRAME_MS / 1000.0,
+                )
+            )
+    return out
 
 
 # ------------------------------------------------------------------- cuts
@@ -253,8 +416,55 @@ def segments_for_cuts(
     return segments
 
 
+def segments_for_axis(
+    files: list[tuple[str, int]], cuts: Iterable[tuple[int, int]]
+) -> list[Segment]:
+    """The kept ranges of the axis of ``files`` (``(hash, frames)`` end to end) around ``cuts``
+    (normalized frames of the axis), split where one file ends and the next begins."""
+    total = sum(frames for _, frames in files)
+    kept: list[tuple[int, int]] = []
+    start = 0
+    for cut_start, cut_end in cuts:
+        if cut_start > start:
+            kept.append((start, cut_start))
+        start = max(start, cut_end)
+    if start < total:
+        kept.append((start, total))
+    segments: list[Segment] = []
+    for keep_start, keep_end in kept:
+        offset = 0
+        for index, (content_hash, frames) in enumerate(files):
+            first, last = max(keep_start, offset), min(keep_end, offset + frames)
+            if first < last:
+                segments.append(
+                    Segment(
+                        audio=content_hash,
+                        from_ms=(first - offset) * FRAME_MS,
+                        to_ms=(last - offset) * FRAME_MS,
+                        source=index,
+                    )
+                )
+            offset += frames
+    return segments
+
+
+def segments_with_cuts(timeline: Timeline, cuts: list[tuple[int, int]]) -> list[Segment]:
+    """The segments of ``timeline``'s files with ``cuts``: one file or several."""
+    sources = timeline.source_list()
+    if not sources:
+        if cuts:
+            raise ValueError("A part with no audio has nothing to cut")
+        return []
+    if len(sources) == 1:
+        return segments_for_cuts(sources[0], cuts, timeline.audio[sources[0]].frames)
+    return segments_for_axis(timeline.axis(), cuts)
+
+
 def cuts_of(timeline: Timeline) -> list[tuple[int, int]]:
-    """The cuts of a part of one audio file: the gaps between its segments, in frames."""
+    """The cuts of a part: the gaps between its segments, in frames of the axis."""
+    sources = timeline.source_list()
+    if len(sources) > 1:
+        return _cuts_of_axis(timeline)
     content_hash = timeline.single_audio
     if content_hash is None:
         return []
@@ -270,6 +480,36 @@ def cuts_of(timeline: Timeline) -> list[tuple[int, int]]:
             cuts.append((position, start))
         position = max(position, end)
     if total is not None and position < total:
+        cuts.append((position, total))
+    return cuts
+
+
+def _cuts_of_axis(timeline: Timeline) -> list[tuple[int, int]]:
+    """:func:`cuts_of` for several files: each segment is placed on the axis by walking the files
+    in order, so a file that comes twice is told apart by where the walk is."""
+    files = timeline.axis()
+    offsets = [0]
+    for _, frames in files[:-1]:
+        offsets.append(offsets[-1] + frames)
+    cuts: list[tuple[int, int]] = []
+    position = index = 0
+    for segment in timeline.segments:
+        start = segment.from_ms // FRAME_MS
+        if segment.source is not None and segment.source >= index:
+            index = segment.source
+        while index < len(files) and not (
+            files[index][0] == segment.audio and offsets[index] + start >= position
+        ):
+            index += 1
+        if index == len(files):
+            raise ValueError("The segments of this part do not follow its files in order")
+        end = files[index][1] if segment.to_ms is None else segment.to_ms // FRAME_MS
+        axis_start, axis_end = offsets[index] + start, offsets[index] + end
+        if axis_start > position:
+            cuts.append((position, axis_start))
+        position = max(position, axis_end)
+    total = offsets[-1] + files[-1][1]
+    if position < total:
         cuts.append((position, total))
     return cuts
 
@@ -420,16 +660,20 @@ PART_FILES = ("notes.pmn", "sheet.json", "timeline.json", "needs-rederivation.js
 CACHE_FILES = ("normalized.wav",)
 
 
-def duplicate_project(
-    project_id: str,
+def new_bundle_from(
+    source: ProjectFile,
     *,
-    owner_id: int | None = None,
+    owner_id: int,
     layer: str = "vault",
     title: str | None = None,
-) -> ProjectFile:
-    """A copy of a project with new ids: no audio bytes copied (P-3), only the bundle."""
-    source = read_project(project_id)
-    owner = source.owner_id if owner_id is None else owner_id
+    origin: dict[str, Any] | None = None,
+) -> tuple[ProjectFile, dict[str, str]]:
+    """The rows and the empty folders of a new project shaped like ``source``, with new ids.
+
+    Returns the new ``project.json`` (not written yet) and the map from each old part id to its new
+    one. The project's id is its first part's, as for every project made by this app. The caller
+    fills the parts' folders, then writes ``project.json`` and syncs ``audio_refs``.
+    """
     new_project = new_id()
     mapping = {
         entry.id: (new_project if index == 0 else new_id())
@@ -439,12 +683,12 @@ def duplicate_project(
     copy = source.model_copy(
         update={
             "id": new_project,
-            "owner_id": owner,
+            "owner_id": owner_id,
             "title": source.title if title is None else title,
             "created_at": moment,
             "updated_at": moment,
             "revision": 1,
-            "origin": {"duplicateOf": project_id},
+            "origin": origin,
             "parts": [entry.model_copy(update={"id": mapping[entry.id]}) for entry in source.parts],
         }
     )
@@ -452,7 +696,7 @@ def duplicate_project(
         db.add(
             Project(
                 id=new_project,
-                owner_id=owner,
+                owner_id=owner_id,
                 layer=layer,
                 kind=copy.kind,
                 title=copy.title,
@@ -465,12 +709,34 @@ def duplicate_project(
         for position, entry in enumerate(copy.parts):
             db.add(Part(id=entry.id, project_id=new_project, position=position))
     locate.forget(new_project)
-    target = paths.project_dir_at(new_project, owner, layer)
+    target = paths.project_dir_at(new_project, owner_id, layer)
+    for new_part in mapping.values():
+        (target / "parts" / new_part).mkdir(parents=True)
+        (target / "cache" / new_part).mkdir(parents=True, exist_ok=True)
+    return copy, mapping
+
+
+def duplicate_project(
+    project_id: str,
+    *,
+    owner_id: int | None = None,
+    layer: str = "vault",
+    title: str | None = None,
+) -> ProjectFile:
+    """A copy of a project with new ids: no audio bytes copied (P-3), only the bundle."""
+    source = read_project(project_id)
+    owner = source.owner_id if owner_id is None else owner_id
+    copy, mapping = new_bundle_from(
+        source,
+        owner_id=owner,
+        layer=layer,
+        title=title,
+        origin={"duplicateOf": project_id},
+    )
+    target = paths.project_dir_at(copy.id, owner, layer)
     for old_id, new_part in mapping.items():
         source_part = paths.part_dir(old_id)
         target_part = target / "parts" / new_part
-        target_part.mkdir(parents=True)
-        (target / "cache" / new_part).mkdir(parents=True, exist_ok=True)
         for name in PART_FILES:
             if (source_part / name).is_file():
                 shutil.copy2(source_part / name, target_part / name)
@@ -479,5 +745,5 @@ def duplicate_project(
             if (source_cache / name).is_file():
                 shutil.copy2(source_cache / name, target / "cache" / new_part / name)
     write_project(copy, touch=False)
-    sync_audio_refs(new_project)
+    sync_audio_refs(copy.id)
     return copy

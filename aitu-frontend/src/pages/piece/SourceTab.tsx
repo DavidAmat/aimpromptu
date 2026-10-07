@@ -1,17 +1,20 @@
 /**
  * Step 1, **Source**: where the audio of a project comes from (implementation 02, plan section 10.2).
  *
- * On a new project: one drop zone for an audio file, and one field for a YouTube link with the
- * choice **Audio** or **Video**. Nothing else, and no name is asked for: a project takes the name of
- * its file or of its video, and the user names it later.
+ * On a new project: one drop zone for an audio or a video file, and one field for a YouTube link
+ * with the choice **Audio** or **Video**. Nothing else, and no name is asked for: a project takes the
+ * name of its file or of its video, and the user names it later.
  *
  * - An audio file is uploaded and the project opens on its Audio step.
+ * - A video file (a piano roll video) is uploaded: its audio is taken out and stored, the video is
+ *   kept as a temporary file of the project, and the project opens on its Video step (Phase 5).
  * - A YouTube link as **Audio** downloads as a job with a thin progress bar, then opens the Audio step.
- * - A YouTube link as **Video** (the master user only, until Phase 5 makes the video a step of the
- *   project) downloads the video (its audio comes with it) and opens it in Lab,
- *   where the piano is fitted and the notes are read. Phase 5 makes those pages steps of the project.
+ * - A YouTube link as **Video** downloads the video (its audio comes with it) and opens the Video
+ *   step, where the piano is fitted and the notes are read.
  *
- * On a project that already has its audio, the step says where that audio came from.
+ * On a project that has its audio, the step lists its audio files in the order they play, to
+ * rename, reorder, remove, and add more (`SourceFiles`). On a video project it says where the video
+ * came from.
  */
 
 import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
@@ -30,22 +33,26 @@ import { audioApi, matrixApi, SUPPORTED_AUDIO_SUFFIXES, videoApi, youtubeApi } f
 import { formatTimeShort } from "../../audio/time";
 import { useProgress } from "../../hooks/useProgress";
 import { ROUTES } from "../../layout/routes";
-import { useAuth } from "../../state/authContext";
-import { writeSelectedVideo } from "../../video/selectedVideo";
 import { IconAction, PillButton, Segmented, ui, useScheme } from "../../ui";
 import { usePiece } from "./pieceContext";
+import { SourceFiles } from "./SourceFiles";
 
 type LinkKind = "audio" | "video";
 
+/** The video files the backend takes (`video/download.py`, `VIDEO_SUFFIXES`); `.webm` is read as audio. */
+const VIDEO_SUFFIXES = [".mp4", ".mov", ".m4v", ".mkv"] as const;
+
 const isAudioFile = (file: File) => SUPPORTED_AUDIO_SUFFIXES.some((suffix) => file.name.toLowerCase().endsWith(suffix));
+const isVideoFile = (file: File) => VIDEO_SUFFIXES.some((suffix) => file.name.toLowerCase().endsWith(suffix));
 
 export function SourceTab() {
-  const { uuid } = usePiece();
-  return uuid ? <SourceOfProject /> : <NewSource />;
+  const { uuid, audio } = usePiece();
+  if (!uuid) return <NewSource />;
+  return audio?.hasVideo ? <SourceOfVideo /> : <SourceFiles />;
 }
 
-/** What the audio of an existing project is: the file it was uploaded from, or its YouTube link. */
-function SourceOfProject() {
+/** Where the video of a video project came from: the file it was uploaded from, or its link. */
+function SourceOfVideo() {
   const { audio } = usePiece();
   if (!audio) return null;
   const from =
@@ -58,7 +65,13 @@ function SourceOfProject() {
         {audio.originalFilename ?? audio.alias}
       </Typography>
     );
-  const kind = { upload: "Audio file", youtube: "YouTube", recording: "Recording", segment: "Part of another project", composed: "Composed" }[audio.source];
+  const kind = audio.hasVideo
+    ? audio.source === "youtube"
+      ? "YouTube video"
+      : "Video file"
+    : { upload: "Audio file", youtube: "YouTube", recording: "Recording", segment: "Part of another project", composed: "Composed" }[
+        audio.source
+      ];
   return (
     <Box sx={{ maxWidth: 640, mx: "auto", pt: 4 }}>
       <Stack spacing={0.5}>
@@ -74,7 +87,6 @@ function SourceOfProject() {
 
 function NewSource() {
   useScheme();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -101,15 +113,23 @@ function NewSource() {
 
   const upload = async (file: File | undefined) => {
     if (!file || busy) return;
-    if (!isAudioFile(file)) {
-      setError(`“${file.name}” is not an audio file this app reads (${SUPPORTED_AUDIO_SUFFIXES.join(", ")}).`);
+    const video = isVideoFile(file);
+    if (!video && !isAudioFile(file)) {
+      setError(
+        `“${file.name}” is not an audio or video file this app reads (${[...SUPPORTED_AUDIO_SUFFIXES, ...VIDEO_SUFFIXES].join(", ")}).`,
+      );
       return;
     }
     setError(null);
     setUploading(file.name);
     try {
-      const stored = await audioApi.upload(file);
-      openAudio(stored.uuid);
+      if (video) {
+        const stored = await videoApi.upload(file);
+        openAudio(stored.audioUuid);
+      } else {
+        const stored = await audioApi.upload(file);
+        openAudio(stored.uuid);
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The file could not be uploaded.");
       setUploading(null);
@@ -132,8 +152,7 @@ function NewSource() {
     setDownloadingVideo(true);
     try {
       const video = await videoApi.download(link);
-      writeSelectedVideo(video.audioUuid);
-      navigate(ROUTES.labVideoOf(video.audioUuid));
+      openAudio(video.audioUuid);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The video could not be downloaded.");
       setDownloadingVideo(false);
@@ -179,7 +198,7 @@ function NewSource() {
         })}
       >
         <UploadFileIcon sx={{ color: "text.secondary" }} />
-        <Typography color="text.secondary">{uploading ? `Uploading ${uploading}` : "Drop an audio file"}</Typography>
+        <Typography color="text.secondary">{uploading ? `Uploading ${uploading}` : "Drop an audio or video file"}</Typography>
         {uploading ? (
           <LinearProgress sx={{ width: 200 }} />
         ) : (
@@ -191,8 +210,8 @@ function NewSource() {
           ref={fileInput}
           type="file"
           hidden
-          accept={SUPPORTED_AUDIO_SUFFIXES.join(",")}
-          aria-label="Choose an audio file"
+          accept={[...SUPPORTED_AUDIO_SUFFIXES, ...VIDEO_SUFFIXES].join(",")}
+          aria-label="Choose an audio or video file"
           onChange={(event) => {
             void upload(event.target.files?.[0]);
             event.target.value = "";
@@ -226,19 +245,16 @@ function NewSource() {
               },
             }}
           />
-          {/* The video opens in Lab, the master user's, until Phase 5 makes it a step of the project. */}
-          {user?.isMaster ? (
-            <Segmented<LinkKind>
-              label="What to download"
-              value={kind}
-              onChange={setKind}
-              disabled={busy}
-              options={[
-                { value: "audio", label: "Audio", tooltip: "Download the audio and transcribe it" },
-                { value: "video", label: "Video", tooltip: "Download a piano roll video and read its notes" },
-              ]}
-            />
-          ) : null}
+          <Segmented<LinkKind>
+            label="What to download"
+            value={kind}
+            onChange={setKind}
+            disabled={busy}
+            options={[
+              { value: "audio", label: "Audio", tooltip: "Download the audio and transcribe it" },
+              { value: "video", label: "Video", tooltip: "Download a piano roll video and read its notes" },
+            ]}
+          />
         </Stack>
         {busyLink ? (
           <Box role="status" aria-live="polite">

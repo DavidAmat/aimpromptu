@@ -82,6 +82,11 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | GET | `/audio/{uuid}` | One entry. |
 | PATCH | `/audio/{uuid}` | Rename. |
 | DELETE | `/audio/{uuid}` | Delete the project of this part, with its whole bundle. |
+| POST | `/audio/{uuid}/add` | **Add audio**: another file at the end of the part's audio (implementation 02, Phase 5). |
+| GET | `/audio/{uuid}/files` | The files of the part's audio in order: names, origin, place on the axis, cut frames. |
+| PATCH | `/audio/{uuid}/files/{index}` | Name one file. |
+| PUT | `/audio/{uuid}/files/order` | Put the files in a new order; each keeps its cuts. |
+| DELETE | `/audio/{uuid}/files/{index}` | Take one file out (not the last one). |
 | POST | `/audio/{uuid}/trim` | Persist a range as a new child audio, with lineage. Refused on a piece with cuts. |
 | GET | `/audio/{uuid}/file` | Stream the audio of the piece (the edited audio once cuts are saved). |
 | GET | `/audio/{uuid}/range` | Stream one range of `normalized.wav`. |
@@ -125,8 +130,15 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/audio/{uuid}/edits/{session}/preview` | Scale it into the window and draw that stretch. |
 | GET | `/audio/{uuid}/edits/{session}/confirmation` | What accepting would change. |
 | POST | `/audio/{uuid}/edits/{session}/accept` | Write it into the piece. |
-| **Projects** | `api/projects.py` | |
-| POST | `/projects/{id}/duplicate` | A copy of a project in the Personal Vault, with new ids (implementation 02, Phase 3). |
+| **Projects** | `api/projects.py` | Implementation 02, Phase 5 (duplicate since Phase 3) |
+| GET | `/projects` | The current user's projects, newest change first, with the step each reached. `?layer=` repeats. |
+| POST | `/projects` | An empty project: no audio, no notes. |
+| POST | `/projects/import` | A `.aitu` file made into a new project of the Personal Vault. |
+| GET | `/projects/{id}` | One project, as the list shows it. |
+| PATCH | `/projects/{id}` | Rename. |
+| DELETE | `/projects/{id}` | Delete, with its history, its temporary files and the audio no other project uses. |
+| POST | `/projects/{id}/duplicate` | A copy in the Personal Vault, with new ids. |
+| GET | `/projects/{id}/export` | The `.aitu` file: the bundle and the audio files it uses. |
 | **YouTube** | `api/youtube.py` | |
 | POST | `/youtube/probe` | Title and length, without downloading. |
 | POST | `/youtube/download` | Download the audio as mp3, in the request. |
@@ -144,6 +156,25 @@ master user (`403` otherwise). `/video` checks the rights of the project of its 
 the other routers; `GET /video` lists the user's own videos, and every video for the master user;
 `GET /video/progress/{jobId}` answers `404` to a user who did not start the job, except the master
 user.
+
+Two `/video` routes serve the **Video step of a project** (implementation 02, Phase 5, plan section
+10.2), for every user:
+
+- `POST /video/upload` (multipart `file`, `.mp4 .mov .m4v .webm .mkv`) makes a project from a video
+  file on the user's disk, as `POST /video/download` does from a YouTube link: the audio is taken
+  out with ffmpeg and stored like an upload, and the video becomes a temporary file of the part
+  (`tmp/<userId>/<partId>/video/source.mp4`). Answers `201` with the video's metadata, whose
+  `audioUuid` is the part; `422` for another kind of file.
+- `POST /video/{uuid}/read` is **Read notes**: one job (`202`, follow it on
+  `GET /video/progress/{jobId}`) that samples the frames when there are none, measures the roll
+  when it was never measured for this piano overlay, stitches the video, reads the notes and writes
+  them into the part (`plate`, `follow`, `stitch`, `notes`, `shapes`, `write` stages). Its key is
+  `video-read:<uuid>`, so a second press joins the running job and the Notes step shows it running.
+  `409` when the piano is not fitted. A video whose scroll speed is not stable ends with an error
+  that says so (V-06).
+
+`PUT /video/{uuid}/calibration` also keeps `measuredFor`, the overlay the stored measurement was
+made with, so **Read notes** measures again only after the piano was fitted again.
 
 ### 1.1 `/auth`: signing in
 
@@ -203,11 +234,33 @@ flow page instead.
 empty `notes.pmn` (`durationMs: 0`) and a `frameMs` in `project.json`, and the first accepted
 passage is what creates a recording. Body: `{ "name": string, "frameMs": number }`.
 
+`POST /audio/{uuid}/add` (multipart `file`, the formats of the upload) is **add audio**
+(implementation 02, Phase 5): the file is stored once by its content, normalized to its own 16 kHz
+copy and measured, and appended to the part's timeline. The Audio step then shows the files end to
+end (the **axis**), the cuts keep their frames, and `audioRevision` goes up by one, so the notes are
+stale. `422` for a file ffmpeg cannot read (its bytes are not kept), `409` for a part with no audio
+yet. A part of several files plays a joined FLAC as its original (`?original=true`), and its
+`normalized.wav` is the files' 16 kHz copies joined, so every other route works on the axis
+unchanged ([`paths-and-data.md`](paths-and-data.md) §3).
+
+**The files of the audio** (the Source step, Phase 5). `POST /audio/{uuid}/add` takes an optional
+form field `name`. `GET /audio/{uuid}/files` answers `{audioRevision, files}` (the fields of the
+`files` of the cuts answer). `PATCH /audio/{uuid}/files/{index}`, body `{name}` (1 to 200
+characters), names a file and changes nothing else. `PUT /audio/{uuid}/files/order`, body
+`{order, baseRevision}` where `order` lists the current places in the new order (`[2, 0, 1]` puts
+the third file first): each file keeps its cuts. `DELETE /audio/{uuid}/files/{index}?baseRevision=`
+takes a file out; the last one stays (`422`), and so does a file whose removal would leave only cut
+audio. Both raise `audioRevision`, so the notes become stale; a stale `baseRevision` answers `409`,
+an unknown index `404`. A YouTube link is added to a part with `POST /youtube/jobs`, body
+`{url, appendTo: <uuid>}` (the rights of that part are checked, `404` for another user's): the job
+adds the audio at the end, named after the video, instead of making a project.
+
 `GET /audio/` lists only the parts of the current user's own projects, in the Personal Vault and
 the Private Library (since implementation 02, Phase 4). `GET /audio/` and `GET /audio/{uuid}` answer
 the `AudioMetadata` shape. Since Phase 3 there is no
 `metadata.json`: `audio/store.py` builds that shape from `project.json` and `timeline.json`. The
-routes add four computed fields: `hasNotes`,
+routes add five computed fields: `hasNotes`, `hasVideo` (the part has a video: its Audio step is the
+Video step, Phase 5),
 `needsRederivation`, `originalDurationSeconds`, and `updatedAt` (the newest modification time of the
 part's files and of `project.json`, one `stat` per file; the Projects page sorts by it and shows
 it; added in implementation 02, Phase 1). Once cuts are saved, `durationSeconds` is the
@@ -235,6 +288,7 @@ The answer of both methods (`CutsResponse`):
 | `cuts` | Sorted `[startFrame, endFrame)` pairs of the original. |
 | `kept` | The frame table: one row per kept range, `{pieceStart, originalStart, length}` in frames. |
 | `notesStale` | True when the stored notes were transcribed from other cuts. |
+| `files` | The files of the audio laid end to end, in order (Phase 5): `{index, name, kind, originalFilename, url, startFrame, frames, cutFrames}` each. One entry for most parts; several after **add audio**. |
 
 `PUT` body: `{ "cuts": [[start, end], ...], "baseRevision": n }`. `baseRevision` is optional.
 
@@ -843,22 +897,45 @@ not use the GPU queue.
 
 ## 7. `/projects`: the Personal Vault
 
-The old `/library` router (playground versions, `.npz` matrices, promotions, tags, playlists) was
-**deleted in implementation 02, Phase 3**. The path answers `404` until the Private Library of
-Phase 6 uses it again.
+`api/projects.py`, implementation 02 plan sections 8.3, 8.8 and 10.1. A project's id is the id of
+its first part, the uuid the step routes take. Every route checks the rights of the project it
+names (`404` for one the user may not read); the list is scoped by owner. The old `/library` router
+(playground versions, `.npz` matrices, promotions, tags, playlists) was **deleted in Phase 3**; the
+path answers `404` until the Private Library of Phase 6 uses it again.
 
-The scripts that measure and check the app (`bench:sheet`, `time:flow`, `bench_pieces.py`) work on a
-temporary copy of a project. A project is a bundle plus its rows in the database, so a script can no
-longer copy a folder by hand. Phase 3 therefore adds one route of the `/projects` router; Phase 5
-adds the list, create, rename, delete, export and import.
+**The row** (`GET /projects`, `GET /projects/{id}`, and the answer of create, rename and import):
 
-`POST /projects/{id}/duplicate`, body `{ "title": string | null }` (optional; the original's title
-when absent). It makes a copy in the current user's Personal Vault with new ids. The copy uses the
-same audio files of the audio store, so no audio bytes are copied. History, staging and the video
-are not copied. Answers `201` with `{id, title, parts}`, where `parts` holds the ids of the parts in
-order (the first one is the uuid the other routes take), and `404` for an unknown id or a project
-the user may not read. The route is a read for the rights check, because the original is not
-changed and the copy belongs to the user who asks.
+| Field | Meaning |
+|---|---|
+| `id`, `title`, `kind`, `layer` | `kind`: `song` or `integratedPlaylist`; `layer`: `vault` or `private` |
+| `step` | The lowest `resume` of the parts (`source`, `audio`, `notes`, `hands`, `sheet`), kept in `projects.step` and worked out again only after a part changed |
+| `running` | `transcribing` or `reading` while a job works on a part, else `null` |
+| `parts` | The ids of the parts, in order |
+| `source` | Where the first part's audio came from (`upload`, `youtube`, `recording` ...) |
+| `hasVideo`, `hasNotes` | The first part has a video; it has notes |
+| `basedOn`, `createdAt`, `updatedAt` | `updatedAt` is the newest file of the parts and `project.json` |
+
+- `GET /projects?layer=vault&layer=private`: the current user's projects of those layers (default
+  `vault`), newest change first.
+- `POST /projects`, body `{ "title": string }`: an empty project in the Personal Vault (no audio, no
+  notes; its status opens on Source). For From scratch (Phase 8).
+- `PATCH /projects/{id}`, body `{ "title": string }` (1 to 300 characters, trimmed; `422` when
+  empty).
+- `DELETE /projects/{id}` answers `204`. The bundle, the history, the temporary files (a video and its
+  frames) and every audio file no other project uses are deleted.
+- `POST /projects/{id}/duplicate`, body `{ "title": string | null }`: a copy in the current user's
+  Personal Vault with new ids. The audio files are shared, not copied; history, staging and the
+  video are not copied. `201` with `{id, title, parts}`. A read for the rights check: the original
+  does not change and the copy is the asker's. (Made in Phase 3 for the scripts that work on
+  copies.)
+- `GET /projects/{id}/export` answers the `.aitu` file (`application/zip`, named `<title>.aitu`):
+  `export.json`, `project.json`, `parts/<partId>/notes.pmn|sheet.json|timeline.json`, and
+  `audio/<sha256>.<ext>` for every file a timeline names.
+- `POST /projects/import` (multipart `file`) makes a new project in the current user's Personal
+  Vault, with new ids, the same title, and `origin: {"importedFrom": <id>}`. Every member is read by
+  the name this route expects (a name in the zip never becomes a path), each part file must read as
+  what it is, and each audio file is hashed again and must match its name. `422` with the reason
+  otherwise, and nothing is left behind.
 
 Storage layout in [`paths-and-data.md`](paths-and-data.md).
 

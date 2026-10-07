@@ -184,8 +184,8 @@ def ensure(audio_uuid: str) -> PieceAudio | None:
         if not normalized.is_file():
             _write_normalized(entry.normalized_path, normalized, table)
         if not listen.is_file():
-            original = entry.original_path
-            if original is None or not formats.ffmpeg_available():
+            original = store.original_file(entry) if formats.ffmpeg_available() else None
+            if original is None:
                 # Nothing better to offer than the engine's own audio of the piece.
                 listen = normalized
             else:

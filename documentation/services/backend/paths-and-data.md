@@ -7,7 +7,7 @@
 Everything the app knows is in `.database/` (implementation 02, plan section 8): one SQLite file for
 the records and folders beside it for the audio and the project bundles. The folder is
 `.database/` at the root of the repository unless `AITU_DATABASE_DIR` names another one
-(`aitu_backend/config.py`). Every path is built in one module,
+(`aitu_backend/config.py`); on the Ubuntu machine `.env` names `/mnt/ssd2/aimpromptu/.database` (§7). Every path is built in one module,
 `aitu-backend/src/aitu_backend/storage/paths.py`; its module docstring repeats the tree below.
 
 `aitu-backend/data/` is the store before Phase 3. Only the migration (§9) reads it.
@@ -53,6 +53,7 @@ made the folder, written or checked `VERSION`, and brought the tables to the new
   staging/<sessionId>/                       disposable edit sessions (§4.4)
   cache/<partId>/                            derived, safe to delete (§4.1)
     normalized.wav  waveform.json  piece-r<N>.flac  piece-r<N>.wav  scratch clips
+    src-<sha256>.wav  sources-<key>.flac     only for a part of several files (§2.2)
 ```
 
 A normal project has one part. **A project made by this app has the id of its first part**, so a
@@ -63,8 +64,9 @@ a part (plan P-6). `storage/locate.py` finds the project, the owner and the laye
 
 The functions that read and write a bundle are in `storage/bundle.py`: `create_project`,
 `read_project` / `write_project` (which keeps the `projects` row in step), `read_timeline` /
-`write_timeline` (which updates `audio_refs`), `duplicate_project`, `delete_project`,
-`list_parts`, `sync_audio_refs`. `audio/store.py` keeps the functions every older reader calls
+`write_timeline` (which updates `audio_refs` and clears the stored step), `new_bundle_from`,
+`duplicate_project`, `delete_project`, `list_parts`, `sync_audio_refs`, `step_changed`,
+`last_change`. The `.aitu` export and import are in `storage/exchange.py` (§2.5). `audio/store.py` keeps the functions every older reader calls
 (`get`, `read_metadata`, `update`, `set_cuts`, `rename`, `delete` ...) on top of them.
 
 ### 2.1 `project.json`
@@ -89,10 +91,11 @@ The functions that read and write a bundle are in `storage/bundle.py`: `create_p
 | `title` | The project's name; what the API calls `alias` |
 | `subtitle`, `artistText` | The project's own lines (Phase 5); the sheet's printed title block is in `sheet.json` |
 | `frameMs` | The column length a project made from scratch is meant to be read at (a view, D-01) |
-| `origin` | What it was made from: `{"duplicateOf": id}`, later the passages of From other projects |
+| `origin` | What it was made from: `{"duplicateOf": id}`, `{"importedFrom": id}`, later the passages of From other projects |
 | `basedOn` | The library project a vault project edits (plan section 10.6) |
 | `parts[].subheader` | The title between the parts of an integrated playlist |
-| `parts[].source` | Where the part's audio came from: `kind` (`upload`, `recording`, `youtube`, `segment`, `composed`), the extension of the file, its original name, its length and rate after normalization, the YouTube link, the lineage of a segment |
+| `parts[].source` | Where the part's audio came from: `kind` (`upload`, `recording`, `youtube`, `segment`, `composed`), the extension of the file, its original name, its length and rate after normalization, the YouTube link, the lineage of a segment. These describe the **first** file |
+| `parts[].source.files` | Every file of the part's audio in the order of the axis (Phase 5): `audio` (the hash), `name` (what the Source step shows; the file's name or the video's title at first), `kind`, `format`, `originalFilename`, `durationSeconds`, `url`. Written once a file is added, named, moved or removed; absent before, when the one file is described by the fields above (`bundle.source_files`) |
 
 **What the API answers.** `GET /audio/` and `GET /audio/{uuid}` still answer the
 `AudioMetadata` shape of implementation 08: `alias` is `title`, the source fields come from
@@ -117,13 +120,43 @@ still a cut. `toMs` is `null` for a segment that runs to the end of a file not m
 
 **The cuts of implementation 08 are the gaps between the segments of one file.** Above, the cuts
 `[[0, 316], [26022, 26351]]` (frames) are the two ranges before 3,160 ms and after 260,220 ms.
-`bundle.segments_for_cuts` and `bundle.cuts_of` convert both ways. Phase 3 has one audio file per
-part; `Timeline.single_audio` refuses cuts on a part with several (Phase 5 adds files).
-`audioRevision` rises by one each time the cuts change (`store.set_cuts`). A part with no audio
-(composed, empty) has `"audio": {}` and refuses a cut.
+`bundle.segments_for_cuts` and `bundle.cuts_of` convert both ways. `audioRevision` rises by one each
+time the cuts change (`store.set_cuts`) or a file is added. A part with no audio (composed, empty)
+has `"audio": {}` and refuses a cut.
+
+**Several files** (**add audio**, Phase 5, `POST /audio/{uuid}/add`):
+
+```json
+{"schemaVersion": 1, "audioRevision": 3,
+ "audio": {"9f3c…": {"format": "mp3", "frames": 20000}, "b71a…": {"format": "wav", "frames": 900}},
+ "sources": ["9f3c…", "b71a…"],
+ "segments": [{"audio": "9f3c…", "fromMs": 0, "toMs": 199000, "source": 0},
+              {"audio": "b71a…", "fromMs": 500, "toMs": 9000, "source": 1}]}
+```
+
+`sources` lists the files of the Audio step laid end to end, in order (the same file may come
+twice). That is the **axis** the Audio step shows (frames 0 to 20,900 above), and a cut is a range
+of it, as before: here the cut `[19900, 20050]` crosses the join. `bundle.segments_for_axis` splits
+the kept ranges where a file ends; each segment's `source` is the place of its file in `sources`, so
+`bundle.cuts_of` reads the cuts back even when a file comes twice. A part of one file has no
+`sources` and no `source` on its segments, so every timeline written before Phase 5 reads unchanged.
+A part of several files has no single original; two derived files of its cache stand in for it
+(`audio/sources.py`): `normalized.wav` is each file's own 16 kHz copy (`src-<sha256>.wav`) padded
+to whole frames and joined, and `sources-<key>.flac` is the files decoded at 44.1 kHz (48 kHz when a
+file is above it) and joined, which the Audio step plays (`?original=true`) and the joined audio of
+the cuts is cut from. Each join of two files gets the 5 ms fade of a cut.
 
 `replace_original` gives a part a new stored file and points every segment at it, keeping the cuts.
-The joined audio and the peaks of the old file are deleted from the cache then.
+The joined audio and the peaks of the old file are deleted from the cache then. A part of several
+files becomes a part of one file again (`sources` and `files` are dropped).
+
+**Changing the list of files** (the Source step, `store.rename_file`, `reorder_files`,
+`remove_file`, routes `/audio/{uuid}/files`). A name changes only `project.json`. A new order
+permutes `sources`, `files` and the segments grouped by file, so each file keeps its own cuts and
+its kept ranges move with it. Removing a file drops its segments; the store deletes the file when no
+project uses it any more, and a part left with one file becomes a part of one file again (its
+source fields then describe that file). Both raise `audioRevision`, refuse a stale `baseRevision`,
+and delete the joined files of the cache, which are written again.
 
 ### 2.3 `notes.pmn`
 
@@ -144,6 +177,29 @@ derivable. Fields in [`rhythm-and-annotations.md`](rhythm-and-annotations.md). P
 optional fields, both empty until Phase 7: `lyricsPool` (the pasted lyrics not placed yet, one line
 per piece) and `figuresFrom` (the figure the next figures transposition starts from). It records
 the `handsRevision` it was saved for; when the notes' header differs, the Sheet step is `stale`.
+
+### 2.5 The `.aitu` file: export and import
+
+`storage/exchange.py`, `GET /projects/{id}/export` and `POST /projects/import` (Phase 5, plan
+section 8.3). A zip of the bundle and the audio it uses:
+
+```text
+<title>.aitu
+  export.json                  {"format": "aimpromptu-project", "version": 1, "exportedAt", "projectId"}
+  project.json                 as in the bundle
+  parts/<partId>/notes.pmn     sheet.json  timeline.json   (byte for byte)
+  audio/<sha256>.<ext>         every file a timeline names, stored without compression
+```
+
+No cache, no staging, no history, no video. The import makes a new project in the importer's
+Personal Vault (`bundle.new_bundle_from`: new ids, the same title, `origin: {"importedFrom": id}`)
+and writes the part files as they came. It refuses (`ImportRefused`, `422`) a file that is not a
+zip or has no `export.json` of this format, a version newer than its own, more than 10,000 members
+or 2 GB, a part file that does not read as what it is (`notes.pmn` as a `.pmn`, `sheet.json` as a
+saved reading, `timeline.json` as a timeline whose cuts read back), and an audio file that is
+missing or whose SHA-256 is not its name; a failure deletes what it made and the audio files no
+project uses. Members are read only by the names it expects, so no name in the zip becomes a path.
+`tests/test_projects.py` checks export, import and export again give the same part files and audio.
 
 ---
 
@@ -175,7 +231,8 @@ user knows (the original file name, or the title) with the stored extension.
 
 | File | Content | Written |
 |---|---|---|
-| `normalized.wav` | The stored file at 16 kHz mono: the engine's input | By the ingest (`ingest.finalize`); again by `store.get` when it is missing and the part was measured |
+| `normalized.wav` | The stored file at 16 kHz mono: the engine's input. For a part of several files, their 16 kHz copies joined (§2.2) | By the ingest (`ingest.finalize`) or **add audio**; again by `store.get` when it is missing and the part was measured |
+| `src-<sha256>.wav`, `sources-<key>.flac` | A part of several files only: each file's 16 kHz copy, and the files joined at one rate (§2.2) | By **add audio**, and on the first request after they were deleted |
 | `waveform.json` | Peaks for the waveform view | On request; deleted when the cuts or the audio change |
 | `piece-r<N>.flac` | With cuts: the stored file decoded at its own rate, kept ranges joined, lossless | `PUT /audio/{uuid}/cuts`, or on the first request (`audio/piece_audio.py`) |
 | `piece-r<N>.wav` | With cuts: `normalized.wav` with the kept ranges joined | Same |
@@ -247,9 +304,9 @@ A video belongs to the part whose audio came out of it (V-03) and is a temporary
 
 | File | |
 |---|---|
-| `source.mp4` | The download (V-01) |
+| `source.mp4` | The download, or the video file the user uploaded (Phase 5), whatever its container (V-01) |
 | `metadata_video.json` | Size, length, frames per second, `sampleMs` |
-| `calibration.json` | The piano overlay and what was measured from it. **The user's work** |
+| `calibration.json` | The piano overlay, what was measured from it, and `measuredFor` (the overlay that measurement was made with, so **Read notes** measures again only after a new fitting). **The user's work** |
 | `corrections.json` | Notes a person took off or put on by hand. **The user's work** |
 | `plate.npy`, `frames/f000001.jpg`, `frames.jsonl`, `detection-report.json`, `notes.json`, `detection/` | Derived: thrown away and written again |
 
@@ -275,35 +332,42 @@ empty until their phase.
 
 Two tables are not in the list of section 8.6 and follow from it: `parts` (a part must find its
 project, P-6) and `song_genres` (a song has one or two genres). `projects.step` is the lowest step
-its parts reached; Phase 3 fills it in the migration and in `db-reindex`, and Phase 5 keeps it
-current.
+its parts reached. Phase 3 fills it in the migration and in `db-reindex`; since Phase 5 a write of a
+part's notes, sheet or timeline clears it (`bundle.step_changed`) and `GET /projects` works it out
+again for the cleared rows (`db/tools.refresh_step`).
 
 ---
 
 ## 7. Where the data lives: `AITU_DATABASE_DIR` and the containers
 
 **Natively**, `paths.database_dir()` returns `AITU_DATABASE_DIR` when it is set and not empty,
-otherwise `<repository>/.database`. On the Ubuntu machine `.database` is a symbolic link to
-`/mnt/ssd2/aimpromptu/.database`, made once by hand:
+otherwise `<repository>/.database`. On the Ubuntu machine the folder is not inside the repository:
+`.env` sets `AITU_DATABASE_DIR=/mnt/ssd2/aimpromptu/.database`, and the folder was made once by hand:
 
-    mkdir -p /mnt/ssd2/aimpromptu/.database && ln -s /mnt/ssd2/aimpromptu/.database .database
+    mkdir -p /mnt/ssd2/aimpromptu/.database
+
+There is no `.database` link in the repository. Phase 3 made one, and the user removed it on
+2026-10-06: the editor followed the link and watched every file of the database. The `Makefile`
+reads `AITU_DATABASE_DIR` from `.env` and exports it, so `make up`, `make test-backend` and the
+`make db-*` commands all use the same folder.
 
 **In the containers** (`compose.yaml`, project name `aimpromptu`) the backend sees the folder at
 `/database` (`AITU_DATABASE_DIR=/database` inside), and the host variable chooses which host folder
-is mounted there (default `./.database`, the link). `make up` and `make test-backend` make
-`./.database` first if it is missing, because Docker would make it as root.
+is mounted there (default `./.database`). `make up` and `make test-backend` make that folder first
+if it is missing, because Docker would make it as root.
 
 | Host | Container | Why |
 |---|---|---|
 | The repository (`.`) | `/work/aimpromptu` | The code is the host's, so uvicorn (`--reload --reload-dir src`) and Vite reload on every edit; the tests also read `pocs/`, `context/` and `scripts/` |
-| `${AITU_DATABASE_DIR:-./.database}` | `/database` | Every record and every file of the app |
+| `${AITU_DATABASE_DIR:-./.database}` (on this machine `/mnt/ssd2/aimpromptu/.database`, from `.env`) | `/database` | Every record and every file of the app |
 | `${AITU_DATA_DIR:-./aitu-backend/data}` | `/work/aimpromptu/aitu-backend/data` | The old store, for the migration only |
 | `${HF_HUB_CACHE:-/mnt/ssd2/hf/data/hub}` | `/hf/hub` (`HF_HUB_CACHE`) | The MuScriptor weights (5.5 GB for `large`) |
 | `${AITU_CACHE_DIR:-/mnt/ssd2/aimpromptu/home}` | `/home/app` | The ByteDance checkpoint and the torch cache |
 | `./aitu-frontend` | `/work/aimpromptu/aitu-frontend` | The frontend code; an anonymous volume keeps the image's `node_modules` |
 
-Both containers run as the host user, so every file in `.database/` belongs to that user. Both
-ports bind to `127.0.0.1` only (until Phase 4). Every variable is listed in `.env.example`.
+Both containers run as the host user, so every file in `.database/` belongs to that user. The
+backend's port binds to `127.0.0.1` only; the page's port binds to `WEB_BIND` (default `0.0.0.0`,
+the home network, since Phase 4). Every variable is listed in `.env.example`.
 
 **The tests** never touch the real folder: `tests/conftest.py` points `AITU_DATABASE_DIR` at a
 temporary folder before any test module loads, and at a new one for every test, copied from one

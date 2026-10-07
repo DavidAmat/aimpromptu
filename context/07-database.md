@@ -2,13 +2,15 @@
 
 **Everything the app knows is in one folder, `.database/`, and nothing else is needed to run it**
 (implementation 02, plan section 8). A person who clones the repository, unpacks a `.database/`
-backup at its root and runs `make up` has every user, song, project and audio file. The code writes
-nothing anywhere else.
+backup at its root (or into the folder `AITU_DATABASE_DIR` names) and runs `make up` has every user,
+song, project and audio file. The code writes nothing anywhere else.
 
-`.database/` sits at the root of the repository and is ignored by git. `AITU_DATABASE_DIR` moves it.
-On the Ubuntu machine it is a symbolic link to `/mnt/ssd2/aimpromptu/.database` (the large SSD), and
-the backend container mounts that folder at `/database`. Every path in it is built by one module,
-`aitu_backend/storage/paths.py`.
+By default `.database/` sits at the root of the repository and is ignored by git.
+`AITU_DATABASE_DIR` moves it. On the Ubuntu machine it is **not inside the repository**: `.env` sets
+`AITU_DATABASE_DIR=/mnt/ssd2/aimpromptu/.database` (the large SSD), and the backend container mounts
+that folder at `/database`. Phase 3 used a symbolic link named `.database` in the repository; the
+user removed it on 2026-10-06, because the editor followed the link and watched every file of the
+database. Every path in the folder is built by one module, `aitu_backend/storage/paths.py`.
 
 ## What is stored
 
@@ -70,12 +72,19 @@ file is deleted only when no project uses it, and nothing deletes one from the P
 
 **The cuts are a timeline.** Since implementation 08 a cut is a range removed from the audio. It is
 now the gap between two **segments** of the part's timeline (one stored file, several ranges of
-it), with the `audioRevision` beside them. When a project is saved to the Private Library
-(Phase 6), the audio is written again with only the ranges in use (Q-3).
+it), with the `audioRevision` beside them. **Add audio** (Phase 5) puts another file at the end:
+the timeline then lists its files in order (`sources`), the Audio step shows them end to end, and a
+cut may cross the join. When a project is saved to the Private Library (Phase 6), the audio is
+written again with only the ranges in use (Q-3).
 
-**Every user's projects are under their own folder**, and every query is scoped by owner. Until the
-login exists (Phase 4) every request acts as the master user, who is made on the first start from
-`AITU_MASTER_USERNAME` (default `master`).
+**A project moves as one file.** **Export** writes `<title>.aitu`: a zip of the bundle (without
+its cache, staging, history or video) and the audio files it uses. **Import** makes a new project
+in the importer's Personal Vault from it, checking every audio file against the hash in its name.
+The format: [`paths-and-data.md`](../documentation/services/backend/paths-and-data.md) section 2.5.
+
+**Every user's projects are under their own folder**, and every query is scoped by owner: a
+request acts as the user of its session (Phase 4, [08-security.md](08-security.md)). The master user
+is made on the first start from `AITU_MASTER_USERNAME` (default `master`).
 
 ## Versions
 
@@ -86,6 +95,10 @@ Two different axes, and they are easy to confuse.
 | `music-version.json` + `history/<projectId>/parts/<partId>/v<N>/` | **The music changed**: a splice was accepted, or a new transcription replaced the notes. A snapshot keeps `notes.pmn`, `sheet.json` and `timeline.json`; the audio it names stays in the store | The part's folder; `.database/history/` |
 | `audioRevision`, `notesRevision`, `handsRevision` | **One step changed**, so the later steps may be stale | `timeline.json`, the `notes.pmn` header, `sheet.json` |
 | `alembic_version` | The tables changed shape | `aitu.sqlite` |
+
+`projects.step` (the step a project reached, for the Projects page) is not a version: it is a copy
+of what the bundles say, cleared when a part's notes, sheet or timeline is written and worked out
+again by the next list (Phase 5).
 
 ## Formats
 
@@ -112,7 +125,7 @@ after checking the app; Phase 15 removes the code.
 
 | Command | Does |
 |---|---|
-| `make db-backup` | `.database-YYYYMMDD-HHMMSS.tar.zst` beside `.database/`; SQLite's own backup first, so a running app gives a consistent copy |
+| `make db-backup` | `.database-YYYYMMDD-HHMMSS.tar.zst` beside `.database/` (on this machine in `/mnt/ssd2/aimpromptu/`); SQLite's own backup first, so a running app gives a consistent copy |
 | `make db-restore FILE=…` | unpacks a backup into an empty `.database/` |
 | `make db-check` | the tables against the bundles and the audio store (`HASHES=1` also hashes every audio file) |
 | `make db-reindex` | writes the rows of the projects, parts and audio files again from what is on disk |

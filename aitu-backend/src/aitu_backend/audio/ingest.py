@@ -11,10 +11,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import BinaryIO
 
-from aitu_backend.audio import formats, piece_audio, store
+from aitu_backend.audio import formats, piece_audio, sources, store
 from aitu_backend.audio.frames import frame_count
 from aitu_backend.audio.store import StoredAudio
 from aitu_backend.schemas.metadata import AudioMetadata, AudioSource, TimeRange
+from aitu_backend.storage import audio_files
 
 
 def ingest_file(
@@ -72,6 +73,42 @@ def ingest_path(
             alias=alias,
             source_url=source_url,
         )
+
+
+def append_file(
+    audio_uuid: str,
+    stream: BinaryIO,
+    filename: str,
+    source: AudioSource | str = AudioSource.UPLOAD,
+    *,
+    name: str | None = None,
+    url: str | None = None,
+) -> AudioMetadata:
+    """**Add audio**: store a file, measure it, and append it to the part's audio. ``name`` is the
+    name the Source step shows (the file's name by default); ``url`` the link it was downloaded
+    from.
+
+    A file that cannot be read is not kept: when the conversion fails, the stored bytes are deleted
+    again unless another project already uses them.
+    """
+    extension = formats.detect_extension(filename)
+    content_hash = audio_files.add_stream(stream, extension)
+    try:
+        frames = sources.measure(audio_uuid, content_hash, extension)
+        audio_files.record_duration(content_hash, frames * 10)
+        return store.append(
+            audio_uuid,
+            content_hash,
+            extension,
+            frames,
+            original_filename=filename,
+            kind=AudioSource(source).value,
+            name=name,
+            url=url,
+        )
+    except Exception:
+        audio_files.delete_unused([content_hash])
+        raise
 
 
 def finalize(audio_uuid: str) -> StoredAudio:

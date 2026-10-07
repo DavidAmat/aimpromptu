@@ -15,9 +15,9 @@ of that same video included, and the user is never asked about the audio.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -114,6 +114,22 @@ def download_video(request: VideoDownloadRequest) -> VideoMetadata:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except (DownloadFailed, formats.ConversionFailed) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.post("/upload", response_model=VideoMetadata, response_model_by_alias=True, status_code=201)
+def upload_video(file: Annotated[UploadFile, File()]) -> VideoMetadata:
+    """A video file from the user's disk becomes a project, as a downloaded video does: its audio
+    is stored and the video is kept as a temporary file of the part (plan section 10.2)."""
+    if not file.filename:
+        raise HTTPException(status_code=422, detail="The uploaded file has no name")
+    try:
+        return download.ingest_file(file.file, file.filename)
+    except download.UnsupportedVideo as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except formats.FfmpegMissing as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except formats.ConversionFailed as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("", response_model=list[VideoSummary], response_model_by_alias=True)
@@ -219,6 +235,30 @@ def put_calibration(audio_uuid: str, calibration: Calibration) -> VideoSummary:
     _video_or_404(audio_uuid)
     store.save_calibration(audio_uuid, calibration)
     return _summary(audio_uuid)
+
+
+@router.post(
+    "/{audio_uuid}/read", response_model=JobHandle, response_model_by_alias=True, status_code=202
+)
+def read_and_write(audio_uuid: str) -> JobHandle:
+    """**Read notes** of the Video step: sample, measure, read and write the notes in one job, each
+    step only when it is not done yet for this piano overlay (plan section 10.2).
+
+    The job's key is ``video-read:<uuid>``, so the part's Notes step shows it running, and a second
+    press joins the running job.
+    """
+    _video_or_404(audio_uuid)
+    if store.load_calibration(audio_uuid) is None:
+        raise HTTPException(status_code=409, detail="Fit the piano on the video first.")
+
+    def work(reporter: Any) -> Any:
+        return piece.read_and_write(audio_uuid, reporter=reporter)
+
+    def describe(written: Any) -> dict[str, Any]:
+        return {"notes": written.notes, "musicVersion": written.music_version}
+
+    job = jobs.submit(work, key=f"video-read:{audio_uuid}", describe=describe)
+    return JobHandle(job_id=job.id, status=job.status)
 
 
 @router.post("/{audio_uuid}/find", response_model=Calibration, response_model_by_alias=True)

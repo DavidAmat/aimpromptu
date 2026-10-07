@@ -7,8 +7,9 @@
 # The Compose settings: HF_TOKEN is a secret. `.env.example` lists every name.
 /.env
 
-# Every record and every file of the app (implementation 02, plan section 8). On the Ubuntu machine
-# it is a link to /mnt/ssd2/aimpromptu/.database. Its backups (`make db-backup`) beside it.
+# Every record and every file of the app (implementation 02, plan section 8), when it is kept in the
+# repository. On the Ubuntu machine it is outside: AITU_DATABASE_DIR in .env. Its backups
+# (`make db-backup`) beside it.
 /.database
 /.database-*.tar.zst
 
