@@ -49,6 +49,13 @@ assumes.
 | [backend/api.md](backend/api.md) | The HTTP surface: the routers, the session and rights check every route runs, and the shape of a working session |
 | [notation-and-parsing.md](../documentation/deprecated/notation-and-parsing.md) | Deprecated: the text-notation MVP path, deleted in implementation 02, Phase 1 |
 
+## The music library (`context/music-library/`)
+
+| File | Description |
+|------|-------------|
+| [music-library/README.md](music-library/README.md) | The catalogue in two scopes (Private and Public Library), and the pages of this folder |
+| [music-library/private-library.md](music-library/private-library.md) | **My library**: songs, artists and their names, versions; **Save to library** (the audio written again, the temporary files deleted), **Edit** through a copy, Replace, history (implementation 02, Phase 6) |
+
 ## Frontend overview (`context/frontend/`)
 
 | File | Description |

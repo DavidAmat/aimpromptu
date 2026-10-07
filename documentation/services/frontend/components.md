@@ -18,14 +18,16 @@
 |---|---|---|
 | **Sign in** | `/login` | `pages/LoginPage.tsx`, outside the shell (implementation 02, Phase 4) |
 | (start) | `/` | redirects to `/projects` |
-| **Projects** | `/projects` | `pages/ProjectsPage.tsx`: `GET /projects`, the **New project** menu with Import (`POST /projects/import`), the row menu (Duplicate, Export, Rename, Notes Falling, Delete) through `api/projects.ts` |
+| **Projects** | `/projects` | `pages/ProjectsPage.tsx`: `GET /projects` (the vault), the **New project** menu with Import (`POST /projects/import`), the row menu (Duplicate, Export, Rename, Notes Falling, Delete) through `api/projects.ts`; an edit copy (`row.editing`) says **Editing**, adds **Open the song**, and its Delete is **Discard changes** |
 | · new project | `/projects/new` | `pages/piece/PiecePage.tsx` with the Source step only |
 | · a project | `/projects/:id` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the project reached |
 | · one step | `/projects/:id/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab`, `HandsTab` or `SheetTab` |
 | · Notes Falling | `/projects/:id/notes-falling` | `PiecePage.tsx` + `pages/piece/NotesFallingPage.tsx` |
+| **Songs** (My library) | `/library/songs`, `/library/songs/:id` | `pages/library/SongsPage.tsx`, `SongPage.tsx` (Phase 6, section 10) |
+| **Artists** (My library) | `/library/artists`, `/library/artists/:id` | `pages/library/ArtistsPage.tsx`, `ArtistPage.tsx` |
 | **Users** (Admin) | `/admin/users` | `pages/admin/UsersPage.tsx`, inside `RequireMaster` |
 | **Lab** (Admin) | `/admin/lab/<tab>` | `layout/LabLayout.tsx` and `pages/video/`, inside `RequireMaster` |
-| (old paths) | `/piece/...`, `/video/...`, `/youtube`, `/playground/...`, `/library...` | `layout/LegacyRedirect.tsx`, until Phase 15 |
+| (old paths) | `/piece/...`, `/video/...`, `/youtube`, `/playground/...`, `/library`, `/library/play/...` | `layout/LegacyRedirect.tsx`, until Phase 15 |
 | (development only) | `/dev/roll-bench` | `pages/dev/RollBenchPage.tsx`, lazy, only when `import.meta.env.DEV` |
 
 `<step>` is one of `PIECE_STEPS` in `api/pieces.ts`: `source`, `audio`, `notes`, `hands`, `sheet`.
@@ -33,9 +35,11 @@
 piece.
 
 **The shell** (implementation 02, plan section 6.2): `layout/AppLayout.tsx` renders `ui/AppShell`
-with `ui/Sidebar` (the logo, **Search**, Projects, for the master user an Admin group with **Users**
-and **Lab**, and the user menu at the bottom). The sidebar is open on the list pages and closed
-inside a project and under 900 px. `⌘K` opens `layout/SearchDialog.tsx` from anywhere;
+with `ui/Sidebar` (the logo, **Search**, Projects, the **My library** group with **Songs** and
+**Artists**, for the master user an Admin group with **Users** and **Lab**, and the user menu at the
+bottom). The sidebar is open on the list pages and closed
+inside a project and under 900 px. `⌘K` opens `layout/SearchDialog.tsx` from anywhere (the songs of
+My library and the projects of the vault, Phase 6);
 `layout/ShortcutsDialog.tsx` lists the shortcuts.
 
 **The user menu** (`UserMenu` in `AppLayout.tsx`, Phase 4): the username and the role (Master user or
@@ -64,6 +68,16 @@ sets it when it loads a project; the sheet reads its `frameMs` from it.
 
 ---
 
+### 1.1 My library (implementation 02, Phase 6)
+
+| File | Role |
+|---|---|
+| `pages/library/SongsPage.tsx` | **Songs**: `GET /library/songs` as a `DataTable` (Title with **Editing** when a copy is open, Artist, Versions, Changed), a **Filter** field on the title and the artists, the empty state with **Open Projects** |
+| `pages/library/SongPage.tsx` | One song: its artists as links, its versions as `ListRow`s (a row opens the project read only; its `⋯`: Open, **Edit** or **Continue editing** (`POST /projects/{id}/edit`), Duplicate, Export, Rename, History, Delete); the header's `⋯`: Rename song, Artists (an `Autocomplete` of names, `PATCH /library/songs/{id}`), Delete song. `HistoryDialog` lists `GET /library/versions/{id}/history`, each with **Restore** after a confirmation. `data-testid="version-<id>"` is read by `check:library` |
+| `pages/library/ArtistsPage.tsx` | **Artists**: `GET /library/artists` as a `DataTable` (Name, Other names, Songs) with a **Filter** |
+| `pages/library/ArtistPage.tsx` | One artist: **Names** (`ListRow`s, the default marked; Make default, Rename, Remove) with **Add a name**, **Songs**; the header's `⋯`: Merge into another artist (`MergeDialog`), Delete artist (disabled while it has songs) |
+| `pages/library/TextDialog.tsx`, `shared.ts` | One field and one button (rename, add a name); `said()` (the backend's words of a refusal) and `download()` |
+
 ## 2. The page of a project
 
 One project, five steps in the order of the work: Source, Audio, Notes, Hands, Sheet. What each step
@@ -74,8 +88,9 @@ lists where the code is.
 
 | File | Role |
 |---|---|
-| `pages/piece/PiecePage.tsx` | The page: loads the audio and `GET /pieces/{uuid}/status`, draws the header (back arrow, title, the step tabs with the Audio tab named **Video** for a video project, the `⋯` menu with Notes Falling and Export), redirects a step that is not enabled, holds the leave dialog (**Stay**, **Discard**, **Save and continue**, a `ConfirmDialog`) and the `beforeunload` warning |
-| `pages/piece/pieceContext.ts` | What every tab shares: `usePiece()` (the piece, its status, `refresh()`), `stepStatus()`, and `useUnsavedChanges(summary, {save, discard})` |
+| `pages/piece/PiecePage.tsx` | The page: loads the audio, `GET /pieces/{uuid}/status` and the project's row (`GET /projects/{projectId}`: its `library` or `editing` link), draws the header (back arrow, title, the step tabs with the Audio tab named **Video** for a video project, the primary action, the `⋯` menu with Notes Falling, Export, and **Discard changes** on an edit copy), redirects a step that is not enabled, holds the leave dialog (**Stay**, **Discard**, **Save and continue**, a `ConfirmDialog`) and the `beforeunload` warning. Phase 6: **Save to library** once the Sheet step is ready (`SaveToLibraryDialog`); a project of the library (`audio.layer === "private"`) is `readOnly`, titled "<song> (<version>)", goes back to its song, and has **Edit** (`POST /projects/{id}/edit`) as its action |
+| `pages/piece/pieceContext.ts` | What every tab shares: `usePiece()` (the piece, its status, `readOnly`, `refresh()`), `stepStatus()`, and `useUnsavedChanges(summary, {save, discard})`. `readOnly`: a version of the library, which every step shows without its changes (no handles or menus on Source; no cut, Save, Add audio or Transcribe on Audio, and no Video step; the roll in `view` mode with playback and no edit, Predict hands or Save; the sheet with Play and Print only and no toolbox) |
+| `pages/piece/SaveToLibraryDialog.tsx` | **Save to library** (Phase 6): Artist and Song as `Autocomplete` over `GET /library/artists` and `GET /library/songs` that take a new name as typed (choosing a known song sends its id and fills its artist), **Version name** ("original" at first). On an edit copy a `Segmented` **Replace “<version>”** / **New version**. `POST /projects/{id}/library`, then the song |
 | `pages/piece/PieceResume.tsx` | `/projects/:id`: follows the backend's `resume` |
 | `ui/StepTabs.tsx` | The step tabs, each with a dot for its state (filled ready, a spinner running, amber stale or unsaved, a ring missing) and the reason as a tooltip; `data-step` and `data-state` on each tab for the checks |
 | `components/piece/stepLabels.ts` | The names of the five steps |
@@ -305,7 +320,9 @@ import { timeScoreApi, matrixApi, piecesApi } from "../api";
 | `client.ts` | `API_BASE`, `request`, `upload`, `buildUrl`, `ApiError`, `SIGNED_OUT_EVENT` (sent on any `401` except from the sign in itself) |
 | `auth.ts` | `/auth`: `login`, `logout`, `me`, `changePassword`; the type `Me` |
 | `admin.ts` | `/admin`: `users`, `createUser`, `changeUser` (disable, enable, reset the password); the type `AdminUser` |
-| `audio.ts` | `/audio`, including `list` (with `updatedAt`), `cuts`, `saveCuts`, `framePeaks`, `fileUrl` |
+| `audio.ts` | `/audio`, including `list` (with `updatedAt`), `cuts`, `saveCuts`, `framePeaks`, `fileUrl`; `AudioItem` has `projectId`, `layer`, `basedOn` (Phase 6) |
+| `projects.ts` | `/projects`: `list`, `get`, `create`, `rename`, `remove`, `duplicate`, `exportUrl`, `import`, and (Phase 6) `saveToLibrary`, `edit`; `ProjectRow` with its `library` and `editing` links |
+| `library.ts` | `/library` (Phase 6): songs, versions (rename, delete, history, restore), artists and their names (add, change, remove, merge) |
 | `matrix.ts` | `/matrix`, including `transcribe`, `activeJob`, `progressUrl` |
 | `pieces.ts` | `/pieces`: the status of a project's steps, its notes and hands |
 | `timeScore.ts` | `/time`, the largest, and the mirror of `schemas/time_matrix.py` |
@@ -437,7 +454,7 @@ npm run check:notes       # the Notes tab's typed arrays, live feed and edits
 
 These need the running app (`make up` from the repository root). Each works on temporary copies or
 uploads and deletes them at the end, so the library is never changed. `check:flow`,
-`check:projects`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
+`check:projects`, `check:library`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
 user with `AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env` at the repository root (or
 `AITU_CHECK_USERNAME` and `AITU_CHECK_PASSWORD` from the environment), makes every `fetch` of the
 script send the cookie (`signIn(base)`), and gives every Playwright page the same cookie
@@ -447,6 +464,7 @@ Phase 3 a temporary copy is made by `POST /projects/{id}/duplicate` (new ids, th
 ```bash
 npm run check:flow    # a project walked in a headless Chromium, every step, live transcription included
 npm run check:projects  # the Projects page: New project, Add audio, Duplicate, Export, Import, Rename, Delete, a video file
+npm run check:library   # My library on a copy of Elefants: Save to library, a version read only, Edit, Replace, History, New version, Artists
 npm run time:flow     # the whole flow timed on three temporary pieces (upload, a duplicated library piece, YouTube)
 npm run bench:roll    # the Notes tab at 10,000 rectangles and at 100 stream messages per second
 npm run bench:sheet   # a hand move on the Sheet tab, timed part by part

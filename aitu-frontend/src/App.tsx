@@ -2,7 +2,7 @@
  * The route table (implementation 02, plan section 6.3). Every path is declared in
  * `layout/routes.ts`; the router itself is created in `main.tsx`, which renders this table inside it.
  *
- * `/login` is outside the shell. Every other page needs a user signed in (`RequireUser`), and the
+ * `/login` is outside the shell. My library (`/library/...`, Phase 6) is the Private Library. Every other page needs a user signed in (`RequireUser`), and the
  * Admin pages, Users and Lab, the master user (`RequireMaster`; Phase 4).
  */
 
@@ -12,8 +12,19 @@ import AppLayout from "./layout/AppLayout";
 import LabLayout from "./layout/LabLayout";
 import LegacyRedirect from "./layout/LegacyRedirect";
 import { RequireMaster, RequireUser } from "./layout/RequireUser";
-import { LAB_EXAMPLE_PATTERN, LEGACY_REDIRECTS, PROJECT_PATTERN, ROUTES } from "./layout/routes";
+import {
+  LAB_EXAMPLE_PATTERN,
+  LEGACY_REDIRECTS,
+  LIBRARY_ARTIST_PATTERN,
+  LIBRARY_SONG_PATTERN,
+  PROJECT_PATTERN,
+  ROUTES,
+} from "./layout/routes";
 import UsersPage from "./pages/admin/UsersPage";
+import ArtistPage from "./pages/library/ArtistPage";
+import ArtistsPage from "./pages/library/ArtistsPage";
+import SongPage from "./pages/library/SongPage";
+import SongsPage from "./pages/library/SongsPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import ProjectsPage from "./pages/ProjectsPage";
@@ -87,6 +98,12 @@ export default function App() {
           <Route path="sheet" element={<SheetTab />} />
           <Route path="notes-falling" element={<NotesFallingPage />} />
         </Route>
+
+        {/* My library: the Private Library (Phase 6). */}
+        <Route path={ROUTES.librarySongs} element={<SongsPage />} />
+        <Route path={LIBRARY_SONG_PATTERN} element={<SongPage />} />
+        <Route path={ROUTES.libraryArtists} element={<ArtistsPage />} />
+        <Route path={LIBRARY_ARTIST_PATTERN} element={<ArtistPage />} />
 
         <Route
           path={ROUTES.adminUsers}

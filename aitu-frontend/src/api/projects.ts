@@ -1,5 +1,6 @@
 /**
- * `/projects` — the projects of the Personal Vault (implementation 02, plan sections 8.8 and 10.1).
+ * `/projects` — the projects of the Personal Vault (implementation 02, plan sections 8.8 and 10.1),
+ * and the way into and out of the Private Library (Phase 6, sections 10.2 and 10.6).
  *
  * A project's id is the id of its first part, the uuid the step routes (`/audio`, `/pieces`,
  * `/time`, `/matrix`) take. Mirrors `aitu-backend/src/aitu_backend/api/projects.py`.
@@ -9,6 +10,17 @@ import type { PieceStep } from "./pieces";
 import { buildUrl, request, upload } from "./client";
 
 export type ProjectLayer = "vault" | "private";
+
+/** The song and version a project is, or, for a copy being edited, the one it edits. */
+export interface LibraryLink {
+  songId: number;
+  songTitle: string;
+  artists: string[];
+  versionId: number;
+  versionName: string;
+  /** The library project of that version. */
+  projectId: string;
+}
 
 /** One project, as the Projects page lists it. */
 export interface ProjectRow {
@@ -29,6 +41,25 @@ export interface ProjectRow {
   basedOn: string | null;
   createdAt: string;
   updatedAt: string | null;
+  /** A project of the Private Library: its song and version. */
+  library: LibraryLink | null;
+  /** A project of the Personal Vault that edits a version: that version. */
+  editing: LibraryLink | null;
+}
+
+/** **Save to library**: an existing song by id, or a title and an artist; or `replace` for a copy. */
+export interface SaveToLibrary {
+  songId?: number;
+  song?: string;
+  artist?: string;
+  version?: string;
+  replace?: boolean;
+}
+
+export interface SavedToLibrary {
+  songId: number;
+  versionId: number;
+  projectId: string;
 }
 
 export interface DuplicatedProject {
@@ -61,4 +92,11 @@ export const projectsApi = {
 
   /** A `.aitu` file made into a new project of the Personal Vault. */
   import: (file: File) => upload<ProjectRow>("/projects/import", file),
+
+  /** Move the project into the Private Library, as a version of a song (Phase 6). */
+  saveToLibrary: (id: string, body: SaveToLibrary) =>
+    request<SavedToLibrary>(`/projects/${id}/library`, { method: "POST", body }),
+
+  /** The copy in Projects that edits a version of the library: the one open, or a new one. */
+  edit: (id: string) => request<ProjectRow>(`/projects/${id}/edit`, { method: "POST" }),
 };

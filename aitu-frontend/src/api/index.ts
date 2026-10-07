@@ -28,7 +28,25 @@ export type {
 } from "./audio";
 
 export { projectsApi } from "./projects";
-export type { DuplicatedProject, ProjectLayer, ProjectRow } from "./projects";
+export type {
+  DuplicatedProject,
+  LibraryLink,
+  ProjectLayer,
+  ProjectRow,
+  SavedToLibrary,
+  SaveToLibrary,
+} from "./projects";
+export { libraryApi } from "./library";
+export type {
+  ArtistDetail,
+  ArtistNameRow,
+  ArtistRow,
+  Credit,
+  EarlierState,
+  SongDetail,
+  SongRow,
+  VersionRow,
+} from "./library";
 export { piecesApi, PIECE_STEPS } from "./pieces";
 export type {
   NotesOperation,

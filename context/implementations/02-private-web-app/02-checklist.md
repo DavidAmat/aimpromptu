@@ -20,8 +20,8 @@ The plan's section 3.
 - [x] **Q-4** Video into From source, Notes Falling into Play mode, the video development pages into Lab; the Playground, the old `.npz` library and the text-notation MVP deleted. Answered 2026-10-05.
 - [p] **Q-5** The sources of the Public Library. Worldwide: `musicchartsarchive.com`, downloaded by the parallel work (`public-library-build/`). The `spain` and `catalan` regions and the fields that site does not give: raised in Phase 12.
 - [ ] **Q-6** The popularity weights. Raised in Phase 12.
-- [ ] **Q-7** Offline downloads per project, now or in the production version. Raised in Phase 6.
-- [p] **Q-8** Live notes from the video reader. Measured in Phase 5 (61 s for a 3:09 video, notes only at the end); raised with three options (recommended: keep one job with its stages), not answered yet.
+- [p] **Q-7** Offline downloads per project, now or in the production version. Raised in the Phase 6 walkthrough (recommended: leave it for the production version), not answered yet.
+- [p] **Q-8** Live notes from the video reader. Measured in Phase 5 (61 s for a 3:09 video, notes only at the end); raised with three options (recommended: keep one job with its stages), asked again in the Phase 6 walkthrough, not answered yet.
 
 # [x] Phase 0: The documentation repaired, and a baseline
 
@@ -129,18 +129,18 @@ The plan's section 3.
 ## [x] Story 5.4: Documentation
 - [x] Task 5.4.1 `projects.md` (from `flow-page.md`), `pieces-and-revisions.md`, `endpoints.md`.
 
-# [ ] Phase 6: The Private Library
+# [x] Phase 6: The Private Library
 
-## [ ] Story 6.1: Saving
-- [ ] Task 6.1.1 **Save to library** (artist, song, version name); the audio written on save; temporary files deleted.
+## [x] Story 6.1: Saving
+- [x] Task 6.1.1 **Save to library** (artist, song, version name); the audio written on save; temporary files deleted.
 
-## [ ] Story 6.2: The pages
-- [ ] Task 6.2.1 Songs, one song with its versions, Artists with their names.
-- [ ] Task 6.2.2 Edit through a vault copy; Replace the version or Save as a new version; history.
-- [ ] Task 6.2.3 Duplicate and Export from any version.
+## [x] Story 6.2: The pages
+- [x] Task 6.2.1 Songs, one song with its versions, Artists with their names.
+- [x] Task 6.2.2 Edit through a vault copy; Replace the version or Save as a new version; history.
+- [x] Task 6.2.3 Duplicate and Export from any version.
 
-## [ ] Story 6.3: Documentation
-- [ ] Task 6.3.1 `context/music-library/` started; `projects.md`, `endpoints.md`.
+## [x] Story 6.3: Documentation
+- [x] Task 6.3.1 `context/music-library/` started; `projects.md`, `endpoints.md`.
 
 # [ ] Phase 7: The sheet toolbox: transposition, lyrics, keys and clefs of passages
 

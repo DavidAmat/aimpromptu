@@ -29,6 +29,7 @@ import UndoIcon from "@mui/icons-material/UndoOutlined";
 import { FloatingBar, IconAction, PillButton, RowMenu, type RowMenuItem } from "../../../ui";
 
 export function SheetFloatingBar({
+  readOnly = false,
   playing,
   onTogglePlay,
   undo,
@@ -55,6 +56,8 @@ export function SheetFloatingBar({
   refused,
   onCloseRefused,
 }: {
+  /** A version of the library: Play and Print only (Phase 6). */
+  readOnly?: boolean;
   playing: boolean;
   onTogglePlay: () => void;
   undo: { can: boolean; label: string | null; busy: boolean; run: () => void };
@@ -107,6 +110,20 @@ export function SheetFloatingBar({
       disabled: saving || clearing,
     },
   ];
+  if (readOnly) {
+    return (
+      <FloatingBar open label="sheet buttons">
+        <IconAction
+          title={playing ? "Pause" : "Play"}
+          shortcut="Space"
+          icon={playing ? <PauseIcon /> : <PlayArrowIcon />}
+          onClick={onTogglePlay}
+          placement="top"
+        />
+        <IconAction title="Print to PDF" icon={<PrintIcon />} onClick={onPrint} disabled={!canPrint} placement="top" />
+      </FloatingBar>
+    );
+  }
   return (
     <>
       {/*

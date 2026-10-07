@@ -7,12 +7,12 @@
  * **New project** opens a small menu: **From source**, **From scratch** and **From other
  * projects** (the last two are built in Phases 8 and 10), and **Import** for a `.aitu` file.
  *
- * The list is one request (`GET /projects`), with the step of every row in it. Until Phase 6 gives
- * the Private Library its own pages, the projects of the library are listed here too, in their own
- * group under the vault.
+ * The list is one request (`GET /projects`), with the step of every row in it. Finished work is in
+ * My library (Phase 6); a copy made there by **Edit** is listed here, says **Editing**, and its menu
+ * leads back to its song. Deleting that copy discards the changes; the version stays as it was.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Dialog from "@mui/material/Dialog";
@@ -38,6 +38,7 @@ import EditNoteIcon from "@mui/icons-material/EditNoteOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LaunchIcon from "@mui/icons-material/Launch";
 import LibraryAddIcon from "@mui/icons-material/LibraryAddOutlined";
+import LibraryMusicIcon from "@mui/icons-material/LibraryMusicOutlined";
 import MusicNoteIcon from "@mui/icons-material/MusicNoteOutlined";
 import UploadFileIcon from "@mui/icons-material/UploadFileOutlined";
 import WaterfallIcon from "@mui/icons-material/WaterfallChartOutlined";
@@ -54,7 +55,6 @@ import {
   PageHeader,
   PillButton,
   relativeTime,
-  Section,
 } from "../ui";
 
 /** What a row says about the step the project reached. */
@@ -93,7 +93,7 @@ export function ProjectsPage() {
   useEffect(() => {
     const controller = new AbortController();
     projectsApi
-      .list(["vault", "private"], controller.signal)
+      .list(["vault"], controller.signal)
       .then((list) => {
         setRows(list);
         setError(null);
@@ -172,8 +172,6 @@ export function ProjectsPage() {
     [navigate],
   );
 
-  const vault = useMemo(() => rows?.filter((row) => row.layer === "vault") ?? [], [rows]);
-  const library = useMemo(() => rows?.filter((row) => row.layer === "private") ?? [], [rows]);
 
   const newProject = <NewProjectButton busy={importing} onImport={(file) => void importFile(file)} />;
 
@@ -189,7 +187,17 @@ export function ProjectsPage() {
               data-testid={`project-${row.id}`}
               title={title}
               onOpen={() => navigate(ROUTES.project(first))}
-              status={stepWords(row)}
+              status={
+                row.editing ? (
+                  <Tooltip title={`Editing “${row.editing.versionName}” of ${row.editing.songTitle}`}>
+                    <Typography variant="body2" color="text.secondary" noWrap>
+                      Editing
+                    </Typography>
+                  </Tooltip>
+                ) : (
+                  stepWords(row)
+                )
+              }
               meta={
                 <Tooltip title={fullTime(changed)} placement="left">
                   <span>{relativeTime(changed)}</span>
@@ -206,7 +214,21 @@ export function ProjectsPage() {
                   onClick: () => navigate(ROUTES.projectNotesFalling(first)),
                   disabled: !row.hasNotes,
                 },
-                { label: "Delete", icon: <DeleteIcon fontSize="small" />, onClick: () => setDeleting(row), danger: true },
+                ...(row.editing
+                  ? [
+                      {
+                        label: "Open the song",
+                        icon: <LibraryMusicIcon fontSize="small" />,
+                        onClick: () => row.editing && navigate(ROUTES.librarySong(row.editing.songId)),
+                      },
+                    ]
+                  : []),
+                {
+                  label: row.editing ? "Discard changes" : "Delete",
+                  icon: <DeleteIcon fontSize="small" />,
+                  onClick: () => setDeleting(row),
+                  danger: true,
+                },
               ]}
             />
           </Box>
@@ -244,18 +266,7 @@ export function ProjectsPage() {
       ) : rows.length === 0 ? (
         <EmptyState message="No projects yet" action={newProject} />
       ) : (
-        <>
-          <Box sx={{ pt: 1, mb: 4 }}>
-            {vault.length > 0 ? (
-              list(vault, "Projects")
-            ) : (
-              <Typography color="text.secondary" sx={{ px: 1.5, py: 1.25 }}>
-                No projects in progress
-              </Typography>
-            )}
-          </Box>
-          {library.length > 0 ? <Section title="In my library">{list(library, "In my library")}</Section> : null}
-        </>
+        <Box sx={{ pt: 1, mb: 4 }}>{list(rows, "Projects")}</Box>
       )}
 
       {renaming ? (
@@ -274,10 +285,16 @@ export function ProjectsPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title={`Delete “${deleting?.title || "Untitled project"}”?`}
+        title={
+          deleting?.editing
+            ? `Discard your changes to “${deleting.editing.versionName}”?`
+            : `Delete “${deleting?.title || "Untitled project"}”?`
+        }
         message={
           <>
-            The audio, the notes and the piano sheet of this project are deleted. This cannot be undone.
+            {deleting?.editing
+              ? "This copy is deleted. The version in your library stays as it is."
+              : "The audio, the notes and the piano sheet of this project are deleted. This cannot be undone."}
             {actionError ? (
               <Typography color="error" sx={{ mt: 1 }}>
                 {actionError}
@@ -285,7 +302,7 @@ export function ProjectsPage() {
             ) : null}
           </>
         }
-        confirmLabel="Delete project"
+        confirmLabel={deleting?.editing ? "Discard changes" : "Delete project"}
         danger
         busy={busy}
         onConfirm={() => deleting && void remove(deleting)}

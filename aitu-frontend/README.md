@@ -64,12 +64,13 @@ both natively. Natively the page listens on `localhost` only.
 | `npm run check:notes` | The Notes tab's typed arrays, live feed and edits (the operations a save sends) |
 | `npm run check:flow` | A project walked in a headless Chromium, every step, live transcription included (`--no-transcribe` skips it) |
 | `npm run check:projects` | The Projects page and the Personal Vault in a headless Chromium: New project, **Add audio**, Duplicate, Export, Import, Rename, Delete, a video file opening its Video step; on files it makes and deletes |
+| `npm run check:library` | My library in a headless Chromium, on a copy of Elefants under a song of its own: **Save to library** (the audio written again), a version read only, **Edit**, Replace, History and Restore, a new version, Songs and Artists; all deleted at the end |
 | `npm run time:flow` | The whole flow timed on three temporary pieces (an upload, a copy opened from Projects, a YouTube URL) |
 | `npm run bench:roll` | The Notes tab at 10,000 rectangles and at 100 stream messages per second |
 | `npm run bench:sheet` | A hand move on the Sheet step's piano sheet, timed part by part, on copies |
 | `npm run screenshot -- <path>` | A screenshot of a page in a headless Chromium, for a machine with no screen. Options: `--piece <uuid>`, `--wait <selector>`, `--delay <ms>`, `--out <file.png>`, `--width`, `--height`, `--full`, `--base <url>`, `--theme dark` (the dark scheme), `--signed-out` (the sign-in page, without signing in) |
 
-**These need the running app** (`make up`): `check:flow`, `check:projects`, `time:flow`,
+**These need the running app** (`make up`): `check:flow`, `check:projects`, `check:library`, `time:flow`,
 `bench:roll`, `bench:sheet` and `screenshot`. They open `http://localhost:5173` (`--base` changes
 it). The first five work on temporary pieces and delete them at the end, so the library is never
 changed. `bench:roll` opens
@@ -77,7 +78,7 @@ changed. `bench:roll` opens
 need no browser and no backend.
 
 **Signing in.** Every page and every route of the backend need a session, so `check:flow`,
-`check:projects`, `time:flow`, `bench:sheet` and `screenshot` sign in first through
+`check:projects`, `check:library`, `time:flow`, `bench:sheet` and `screenshot` sign in first through
 `scripts/session.mjs`. Once the master user's password was changed in the app (as on the Ubuntu
 machine since 2026-10-06), the line of `.env` no longer signs in: give `AITU_CHECK_PASSWORD` (and
 `AITU_CHECK_USERNAME` for another user) in the environment of the command. They act as

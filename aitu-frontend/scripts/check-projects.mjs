@@ -58,7 +58,7 @@ ffmpeg('-f', 'lavfi', '-i', 'testsrc=size=640x360:rate=10', '-f', 'lavfi', '-i',
 /** Every project this script made, deleted at the end whatever happens. */
 const made = new Set();
 const idFromUrl = (url) => /\/projects\/([0-9a-f-]{36})/.exec(url)?.[1] ?? null;
-const listed = async () => (await fetch(`${api}/projects?layer=vault&layer=private`)).json();
+const listed = async () => (await fetch(`${api}/projects`)).json();
 
 const browser = await chromium.launch();
 useSession(browser);
@@ -79,7 +79,7 @@ try {
   await page.goto(`${base}/projects`);
   await page.waitForSelector('[role=list]');
   const rows = await page.locator('[data-testid^=project-]').count();
-  check('Projects lists every project of the vault and the library', rows === before.length, `${rows} rows, ${before.length} projects`);
+  check('Projects lists every project of the vault', rows === before.length, `${rows} rows, ${before.length} projects`);
   await page.getByRole('button', { name: 'New project' }).click();
   const fromSource = page.getByRole('menuitem', { name: /From source/ });
   await fromSource.waitFor();

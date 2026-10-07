@@ -41,14 +41,15 @@ the master user can follow it.
 | `/pieces` | `api/pieces.py` | The state of each step, the notes as columns, note operations, predict the hands ([pieces-and-revisions.md](pieces-and-revisions.md)) |
 | `/time` | `api/time_score.py` | The score: peaks, the ladder, the drawable payload, the saved reading |
 | `/audio/{uuid}/edits` | `api/editing.py` | Staged range editing and composing |
-| `/projects` | `api/projects.py` | The Personal Vault: list (with the step of each project), create, rename, delete, duplicate (new ids, the same audio files), export and import a `.aitu` file (implementation 02, Phase 5) |
+| `/projects` | `api/projects.py` | The Personal Vault: list (with the step of each project), create, rename, delete, duplicate (new ids, the same audio files), export and import a `.aitu` file (implementation 02, Phase 5); **Save to library** and **Edit** (Phase 6) |
+| `/library` | `api/library.py` | The Private Library (Phase 6): songs and their versions, artists and their names, the history of a version ([music-library/private-library.md](../music-library/private-library.md)) |
 | `/youtube` | `api/youtube.py` | Downloads via yt-dlp, also as a job with progress |
 | `/video`, `/frame-examples` | `api/video.py`, `api/frame_examples.py` | Reading a Synthesia-style video into a piece (implementations 04 and 05). `/frame-examples` is the master user's (Lab) |
 
 Plus `GET /health`. The original text-notation MVP (`GET /scores`, `POST /sequence`) was deleted in
 implementation 02, Phase 1 (Q-4); its pages are in `documentation/deprecated/`. The old Piano
 Library router (`/library`: playground versions, promotion, tags, playlists) was deleted in Phase 3;
-the path answers `404` until the Private Library of Phase 6.
+`/library` is the Private Library since Phase 6.
 
 The `{uuid}` of `/audio`, `/matrix`, `/pieces` and `/time` is the id of a **part** of a project
 (plan P-6). A project made by this app has the id of its first part.

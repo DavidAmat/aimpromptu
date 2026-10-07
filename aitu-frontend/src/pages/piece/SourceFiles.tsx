@@ -10,6 +10,8 @@
  *
  * Any change of the files changes the audio, so notes made before it are out of date; the step then
  * says so once, with the way to the Audio step where the audio is transcribed again.
+ *
+ * A version of the library (read only, Phase 6) shows the list only: no handle, no menu, no Add audio.
  */
 
 import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
@@ -60,7 +62,7 @@ function moved(count: number, from: number, to: number): number[] {
 
 export function SourceFiles() {
   useScheme();
-  const { uuid, status, refresh } = usePiece();
+  const { uuid, status, refresh, readOnly } = usePiece();
   const navigate = useNavigate();
   const [state, setState] = useState<AudioFiles | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -207,7 +209,7 @@ export function SourceFiles() {
           {error ?? failed}
         </Alert>
       ) : null}
-      {notes?.state === "stale" ? (
+      {notes?.state === "stale" && !readOnly ? (
         <Alert
           severity="warning"
           action={
@@ -262,27 +264,29 @@ export function SourceFiles() {
                   "&:hover": { backgroundColor: (theme.vars ?? theme).palette.action.hover },
                 })}
               >
-                <Box
-                  draggable={state.files.length > 1 && !busy}
-                  onDragStart={(event) => {
-                    event.dataTransfer.effectAllowed = "move";
-                    event.dataTransfer.setData("text/plain", String(file.index));
-                    setDragging(file.index);
-                  }}
-                  onDragEnd={() => {
-                    setDragging(null);
-                    setOver(null);
-                  }}
-                  title={state.files.length > 1 ? "Drag to put it in another place" : undefined}
-                  aria-hidden
-                  sx={{
-                    display: "flex",
-                    color: state.files.length > 1 ? "text.secondary" : "text.disabled",
-                    cursor: state.files.length > 1 ? "grab" : "default",
-                  }}
-                >
-                  <DragIndicatorIcon fontSize="small" />
-                </Box>
+                {readOnly ? null : (
+                  <Box
+                    draggable={state.files.length > 1 && !busy}
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData("text/plain", String(file.index));
+                      setDragging(file.index);
+                    }}
+                    onDragEnd={() => {
+                      setDragging(null);
+                      setOver(null);
+                    }}
+                    title={state.files.length > 1 ? "Drag to put it in another place" : undefined}
+                    aria-hidden
+                    sx={{
+                      display: "flex",
+                      color: state.files.length > 1 ? "text.secondary" : "text.disabled",
+                      cursor: state.files.length > 1 ? "grab" : "default",
+                    }}
+                  >
+                    <DragIndicatorIcon fontSize="small" />
+                  </Box>
+                )}
                 <Typography variant="body2" color="text.secondary" sx={{ width: 20, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                   {file.index + 1}
                 </Typography>
@@ -308,119 +312,123 @@ export function SourceFiles() {
                     ) : null}
                   </Typography>
                 </Box>
-                <RowMenu
-                  title="File actions"
-                  restoreFocus={false}
-                  items={[
-                    { label: "Rename", icon: <DriveFileRenameIcon fontSize="small" />, onClick: () => setRenaming(file.index) },
-                    {
-                      label: "Move up",
-                      icon: <ArrowUpwardIcon fontSize="small" />,
-                      onClick: () => reorder(moved(state.files.length, file.index, file.index - 1)),
-                      disabled: file.index === 0 || busy,
-                    },
-                    {
-                      label: "Move down",
-                      icon: <ArrowDownwardIcon fontSize="small" />,
-                      onClick: () => reorder(moved(state.files.length, file.index, file.index + 1)),
-                      disabled: file.index === state.files.length - 1 || busy,
-                    },
-                    {
-                      label: "Remove",
-                      icon: <DeleteIcon fontSize="small" />,
-                      onClick: () => setRemoving(file),
-                      danger: true,
-                      disabled: state.files.length === 1 || busy,
-                    },
-                  ]}
-                />
+                {readOnly ? null : (
+                  <RowMenu
+                    title="File actions"
+                    restoreFocus={false}
+                    items={[
+                      { label: "Rename", icon: <DriveFileRenameIcon fontSize="small" />, onClick: () => setRenaming(file.index) },
+                      {
+                        label: "Move up",
+                        icon: <ArrowUpwardIcon fontSize="small" />,
+                        onClick: () => reorder(moved(state.files.length, file.index, file.index - 1)),
+                        disabled: file.index === 0 || busy,
+                      },
+                      {
+                        label: "Move down",
+                        icon: <ArrowDownwardIcon fontSize="small" />,
+                        onClick: () => reorder(moved(state.files.length, file.index, file.index + 1)),
+                        disabled: file.index === state.files.length - 1 || busy,
+                      },
+                      {
+                        label: "Remove",
+                        icon: <DeleteIcon fontSize="small" />,
+                        onClick: () => setRemoving(file),
+                        danger: true,
+                        disabled: state.files.length === 1 || busy,
+                      },
+                    ]}
+                  />
+                )}
               </Box>
             ))}
           </Box>
         )}
       </Section>
 
-      <Section title="Add audio">
-        <Stack spacing={1.5}>
-          <Box
-            onDragOver={(event) => {
-              if (dragging !== null) return;
-              event.preventDefault();
-              setDroppingOver(true);
-            }}
-            onDragLeave={() => setDroppingOver(false)}
-            onDrop={onZoneDrop}
-            data-testid="add-drop-zone"
-            sx={(theme) => ({
-              border: `1.5px dashed ${droppingOver ? ui.text : ui.lineStrong}`,
-              borderRadius: "16px",
-              backgroundColor: droppingOver ? (theme.vars ?? theme).palette.action.hover : "transparent",
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              px: 2.5,
-              py: 2,
-              flexWrap: "wrap",
-            })}
-          >
-            <UploadFileIcon sx={{ color: "text.secondary" }} />
-            <Typography color="text.secondary" sx={{ flex: 1, minWidth: 160 }} role={adding ? "status" : undefined}>
-              {adding ? `Adding ${adding}` : "Drop audio files"}
-            </Typography>
-            {adding ? (
-              <LinearProgress sx={{ width: 120 }} />
-            ) : (
-              <PillButton onClick={() => fileInput.current?.click()} disabled={busy || downloading}>
-                Choose files
-              </PillButton>
-            )}
-            <input
-              ref={fileInput}
-              type="file"
-              hidden
-              multiple
-              accept={SUPPORTED_AUDIO_SUFFIXES.join(",")}
-              aria-label="Choose audio files to add"
-              onChange={(event) => {
-                void addFiles(Array.from(event.target.files ?? []));
-                event.target.value = "";
+      {readOnly ? null : (
+        <Section title="Add audio">
+          <Stack spacing={1.5}>
+            <Box
+              onDragOver={(event) => {
+                if (dragging !== null) return;
+                event.preventDefault();
+                setDroppingOver(true);
+              }}
+              onDragLeave={() => setDroppingOver(false)}
+              onDrop={onZoneDrop}
+              data-testid="add-drop-zone"
+              sx={(theme) => ({
+                border: `1.5px dashed ${droppingOver ? ui.text : ui.lineStrong}`,
+                borderRadius: "16px",
+                backgroundColor: droppingOver ? (theme.vars ?? theme).palette.action.hover : "transparent",
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                px: 2.5,
+                py: 2,
+                flexWrap: "wrap",
+              })}
+            >
+              <UploadFileIcon sx={{ color: "text.secondary" }} />
+              <Typography color="text.secondary" sx={{ flex: 1, minWidth: 160 }} role={adding ? "status" : undefined}>
+                {adding ? `Adding ${adding}` : "Drop audio files"}
+              </Typography>
+              {adding ? (
+                <LinearProgress sx={{ width: 120 }} />
+              ) : (
+                <PillButton onClick={() => fileInput.current?.click()} disabled={busy || downloading}>
+                  Choose files
+                </PillButton>
+              )}
+              <input
+                ref={fileInput}
+                type="file"
+                hidden
+                multiple
+                accept={SUPPORTED_AUDIO_SUFFIXES.join(",")}
+                aria-label="Choose audio files to add"
+                onChange={(event) => {
+                  void addFiles(Array.from(event.target.files ?? []));
+                  event.target.value = "";
+                }}
+              />
+            </Box>
+            <TextField
+              fullWidth
+              label="Paste a YouTube link"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void download();
+              }}
+              disabled={downloading || busy}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconAction
+                        title="Download the audio and add it at the end"
+                        icon={<ArrowForwardIcon fontSize="small" />}
+                        onClick={() => void download()}
+                        disabled={!url.trim() || downloading || busy}
+                      />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
-          </Box>
-          <TextField
-            fullWidth
-            label="Paste a YouTube link"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") void download();
-            }}
-            disabled={downloading || busy}
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconAction
-                      title="Download the audio and add it at the end"
-                      icon={<ArrowForwardIcon fontSize="small" />}
-                      onClick={() => void download()}
-                      disabled={!url.trim() || downloading || busy}
-                    />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-          {downloading ? (
-            <Box role="status" aria-live="polite">
-              <LinearProgress variant={percent === null ? "indeterminate" : "determinate"} value={percent ?? 0} />
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
-                {percent === null ? "Downloading" : `Downloading · ${Math.round(percent)}%`}
-              </Typography>
-            </Box>
-          ) : null}
-        </Stack>
-      </Section>
+            {downloading ? (
+              <Box role="status" aria-live="polite">
+                <LinearProgress variant={percent === null ? "indeterminate" : "determinate"} value={percent ?? 0} />
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
+                  {percent === null ? "Downloading" : `Downloading · ${Math.round(percent)}%`}
+                </Typography>
+              </Box>
+            ) : null}
+          </Stack>
+        </Section>
+      )}
 
       <ConfirmDialog
         open={removing !== null}

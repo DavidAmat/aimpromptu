@@ -11,10 +11,13 @@
  * on its own Video step (`/projects/:id/audio`, Phase 5); Lab opens the same video for the master
  * user's measurements.
  *
+ * **My library** (`/library/songs`, `/library/artists`, Phase 6) is the Private Library: finished
+ * work, as songs with their versions.
+ *
  * `/login` is the one page outside the shell; every other page needs a user signed in, and the
  * Admin pages (Users, Lab) the master user (Phase 4).
  *
- * The old paths (`/piece/...`, `/playground/...`, `/youtube`, `/video/...`, `/library...`) redirect
+ * The old paths (`/piece/...`, `/playground/...`, `/youtube`, `/video/...`, `/library/play/...`) redirect
  * to their new home (`LEGACY_REDIRECTS`) until Phase 15 removes them.
  */
 
@@ -33,6 +36,11 @@ export const ROUTES = {
   project: (id: string, step?: PieceStep) => (step ? `/projects/${id}/${step}` : `/projects/${id}`),
   /** Notes Falling of a project, until Play mode makes it a view of its own (Phase 11). */
   projectNotesFalling: (id: string) => `/projects/${id}/notes-falling`,
+  /** My library (the Private Library, Phase 6): songs with their versions, artists. */
+  librarySongs: "/library/songs",
+  librarySong: (id: number) => `/library/songs/${id}`,
+  libraryArtists: "/library/artists",
+  libraryArtist: (id: number) => `/library/artists/${id}`,
   lab: "/admin/lab",
   labVideo: "/admin/lab/video",
   labCalibration: "/admin/lab/calibration",
@@ -48,6 +56,8 @@ export const ROUTES = {
 
 /** Pattern forms for `<Route path>`. */
 export const PROJECT_PATTERN = "/projects/:id";
+export const LIBRARY_SONG_PATTERN = "/library/songs/:id";
+export const LIBRARY_ARTIST_PATTERN = "/library/artists/:id";
 export const LAB_EXAMPLE_PATTERN = "/admin/lab/examples/:slug";
 
 /** The Lab tabs, in the order of the work on a video; Examples last, because it is where a rule is measured. */
@@ -77,6 +87,7 @@ export const LEGACY_REDIRECTS: readonly (readonly [string, string])[] = [
   ["/video/notes", ROUTES.labNotes],
   ["/video/examples", ROUTES.labExamples],
   ["/video/examples/:slug", "/admin/lab/examples/:slug"],
-  ["/library", ROUTES.projects],
-  ["/library/*", ROUTES.projects],
+  ["/library", ROUTES.librarySongs],
+  // The old Piano Library's performance page; My library has its songs now (Phase 6).
+  ["/library/play/*", ROUTES.librarySongs],
 ];

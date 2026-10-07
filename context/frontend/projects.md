@@ -19,8 +19,10 @@ changed. The whole row opens the project on that step. The `⋯` menu of a row h
 **Duplicate**, **Export**, **Rename**, **Notes Falling** (once it has notes) and **Delete** (with a
 confirmation).
 
-Until Phase 6 gives the Private Library its pages, the projects of the user's library (the 30 songs
-of the seed list, for the master user) are listed under the vault, in a group **In my library**.
+Finished work is not here: it is in **My library** ([music-library/private-library.md](../music-library/private-library.md),
+Phase 6). A copy made there by **Edit** is listed here like any project, says **Editing** (its
+tooltip names the version and the song), and its `⋯` adds **Open the song**; its Delete reads
+**Discard changes** and leaves the version as it was.
 
 **New project** opens a menu:
 
@@ -31,8 +33,7 @@ of the seed list, for the master user) are listed under the vault, in a group **
 | **From other projects** | Not built yet (Phase 10): shown disabled |
 | **Import** | Takes a `.aitu` file and opens the new project it makes |
 
-The list is one request, `GET /projects?layer=vault&layer=private`, with the step of every row in
-it. The backend keeps each project's step in its table and works it out again only after a part
+The list is one request, `GET /projects`, with the step of every row in it. The backend keeps each project's step in its table and works it out again only after a part
 changed ([backend/pieces-and-revisions.md](../backend/pieces-and-revisions.md) section 0).
 
 ## 2. Duplicate, export, import
@@ -59,7 +60,17 @@ changed ([backend/pieces-and-revisions.md](../backend/pieces-and-revisions.md) s
 | `/projects/<id>/notes-falling` | Notes Falling, from the project's `⋯` menu (until Play mode, Phase 11) |
 
 The old addresses (`/piece/...`) redirect to these. The header of a project is the back arrow to
-Projects, the title, the step tabs, and the `⋯` menu (**Notes Falling**, **Export**). The tabs are
+Projects, the title, the step tabs, the primary action, and the `⋯` menu (**Notes Falling**,
+**Export**, and **Discard changes** on an edit copy). The primary action is **Save to library** once
+the Sheet step is ready (disabled while a step has unsaved edits), and nothing before.
+
+**A version of My library** opens on the same page **read only** (Phase 6): the title is the song
+and the version ("Superestrella (original)"), the back arrow goes to the song, and the one action is
+**Edit**. Each step shows what it holds and offers no change: the Source step lists the files
+without handles, menus or Add audio; the Audio step plays and zooms (no cut, no Save, no
+Transcribe); Notes and Hands draw the roll and play it (no edit, no Predict hands, no Save); the
+Sheet draws, plays and prints, and nothing on it opens a toolbox. A version with a video shows its
+audio, not the Video step. The tabs are
 enabled from the backend's status answer, never from the page's own guess. Each tab has a small dot
 for its state: filled when ready, a spinner while running, amber when out of date or unsaved, an
 empty ring when not done. A tab that is not enabled is grey, and its tooltip says what is missing
@@ -143,6 +154,12 @@ and a counter that goes through the notes the split could not place. **Save** en
 pile of gaps is a negra, and a first write takes the key with the fewest accidentals and the octave
 brackets of high passages ([annotations.md](annotations.md)). A stale sheet opens with a banner and
 is not drawn until **Write the sheet**; **Save** makes it current again.
+
+**Then, Save to library.** Once the sheet is saved, **Save to library** asks **Artist**, **Song** and
+**Version name**, moves the project into My library (its audio written again with only the ranges in
+use, its video and other temporary files deleted) and opens the song. On an edit copy the dialog
+opens on **Replace “<version>”**, with **New version** beside it. The whole flow:
+[music-library/private-library.md](../music-library/private-library.md).
 
 ## 5. Timings
 

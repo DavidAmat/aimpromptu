@@ -28,6 +28,7 @@ the records and folders beside it for the audio and the project bundles. The fol
   tmp/<userId>/<partId>/video/               the video of a part (§5)
   lab/frame-examples/<slug>.json             the Lab records; cache/<slug>.jpg derived
   history/<projectId>/parts/<partId>/v<N>/   earlier states of a part (§4.5)
+  history/<projectId>/v<N>/                  earlier states of a Private Library project (§4.7)
   jobs/                                      reserved for job records
 ```
 
@@ -216,9 +217,21 @@ one file.
 | `audio_refs` | `(project_id, hash)`: the project uses the file in a timeline of its parts or in a history snapshot |
 
 `delete_unused(hashes)` deletes a file only when no `audio_refs` row names it. `delete_project`
-calls it; nothing else deletes audio. The Personal Vault never deletes a file, so every cut can be
-undone. Writing the audio again with only the ranges in use happens when a project is saved to the
-Private Library (Phase 6, Q-3).
+calls it, and so does **Save to library** for the files it replaced (below); nothing else deletes
+audio. The Personal Vault never deletes a file, so every cut can be undone.
+
+**Writing the audio again on save** (Phase 6, Q-3, `audio/compact.py`). When a project is saved to
+the Private Library, each file a part's timeline uses only in part becomes a new file of the store:
+the old file decoded at its own rate and channels, its kept frames joined with the 5 ms fade of a
+cut (`piece_audio.write_joined`, as `piece-r<N>.flac` is made), FLAC, `<sha256>.flac`. Its 16 kHz
+copy is the old 16 kHz copy with the same frames joined, so the engine's audio is the one the notes
+were made from to the sample. The timeline then points at each file from its start to its end (no
+cut), its `audio` entry has the number of kept frames, and `audioRevision` does not change: the
+notes stay current. A part of several files keeps its files, their order and their names
+(`parts[].source.files` takes the new hashes); a file cut away completely leaves the list; a file
+used whole is not touched. `prepare` writes the new files first and changes nothing, so a failure
+leaves the project as it was; `apply` then points the part at them, and the replaced files are
+deleted once `audio_refs` says no project uses them.
 
 **Download name.** `GET /audio/{uuid}/file?original=true` serves the stored file under the name the
 user knows (the original file name, or the title) with the stored extension.
@@ -295,6 +308,40 @@ them as used by the project, so they are never deleted under it.
 Windows where the recording no longer matches the sheet, after an audio splice failed. Recorded
 rather than raised: the notes were written correctly and only the sound is behind.
 
+### 4.7 A project of the Private Library, and `history/<projectId>/v<N>/`
+
+`library/flow.py` (Phase 6, plan sections 8.5 and 10.6;
+[`context/music-library/private-library.md`](../../../context/music-library/private-library.md)).
+
+**Save to library** (`flow.save`) checks every part's Sheet step is `ready` and no job writes its
+notes, writes the audio again (§3), moves the folder `users/<id>/vault/<projectId>/` to
+`users/<id>/library/<projectId>/` (one rename: the same ids, the same bundle), sets
+`projects.layer = 'private'`, and deletes the temporary files: `tmp/<userId>/<partId>/` (a video
+and its frames), `staging/`, and `history/<projectId>/parts/` (whose timelines name the audio just
+replaced). Then `audio_refs` is synced, the replaced files are deleted, and the song, its artist
+name and a `private_versions` row are written.
+
+**A library project is never written in place.** `flow.open_edit` copies it into the vault
+(`bundle.duplicate_project`; `basedOn` and `origin: {"editOf": id}`), or answers the copy already
+open. **Replace the version** (`flow.save(replace=True)`) writes the audio of the copy again,
+keeps the library project's state in its history (`flow.snapshot`), writes the copy's
+`project.json` fields and its parts' files into it (`_write_into`: the library project keeps its id
+and the ids of its parts, by position; a missing part is added, an extra one removed), clears its
+cache and the hand split cache of its parts, and deletes the copy.
+
+```text
+history/<projectId>/v<N>/
+  project.json                 as it was
+  snapshot.json                {"version": N, "savedAt": "...", "reason": "replaced" | "restored"}
+  parts/<partId>/notes.pmn  sheet.json  timeline.json  (audio-mismatches.json, needs-rederivation.json)
+```
+
+`flow.restore(projectId, N)` keeps the current state as the next `v<N>` first, then writes `v<N>`'s
+files back the same way. No audio is copied: the snapshot's timelines name stored files, which
+`audio_refs` counts for the project (`bundle._history_hashes` reads every `timeline.json` under
+`history/<projectId>/`). Deleting a version (`flow.delete_version`) deletes its project, its whole
+history and the audio no other project uses; its edit copy becomes an ordinary vault project.
+
 ---
 
 ## 5. `tmp/<userId>/<partId>/video/`: a video
@@ -323,8 +370,8 @@ empty until their phase.
 |---|---|---|
 | Users | `users` (`id`, `username`, `password_hash`, `role`: `master` or `user`, `disabled`), `sessions` | The master user on the first start (`db/users.py`, `AITU_MASTER_USERNAME`); passwords and sessions in Phase 4 |
 | Projects | `projects` (`id`, `owner_id`, `layer`: `vault`, `private`, `public`, `kind`, `title`, `based_on`, `public_source_id`, `created_at`, `updated_at`, `step`), `parts` (`id`, `project_id`, `position`), `audio_files`, `audio_refs` | Phase 3 |
-| Music library | `artists`, `artist_names` (several per artist, one default), `albums`, `songs` (`title`, `year`, `popularity`, `default_version`), `song_artists` (a song points to an **artist name**), `song_albums`. Each row has `scope` (`private`, `public`), `owner_id`, `public_id`, and `external_key` for the import of Phase 12 | The migration (private rows of the seed list); Phases 6, 12, 13 |
-| Versions | `song_versions` (fixed versions of a public song), `user_versions` (`user_versions/<user>/<name>/`), `private_versions` | The migration (`original`); Phases 6, 14 |
+| Music library | `artists`, `artist_names` (several per artist, one default), `albums`, `songs` (`title`, `year`, `popularity`, `default_version`), `song_artists` (a song points to an **artist name**), `song_albums`. Each row has `scope` (`private`, `public`), `owner_id`, `public_id`, and `external_key` for the import of Phase 12 | The migration (private rows of the seed list); **Save to library** and `/library` (Phase 6, `library/rows.py`: names compared ignoring case and spaces); Phases 12, 13 |
+| Versions | `song_versions` (fixed versions of a public song), `user_versions` (`user_versions/<user>/<name>/`), `private_versions` (a private song's version: a free name, unique in the song ignoring case, and its project) | The migration (`original`); Phase 6; Phase 14 |
 | Metadata of a public song | `genres` (13, fixed), `song_genres`, `tag_categories` (4, fixed), `tag_values`, `song_tags`, `regions` (`worldwide`), `song_regions`, `chart_sources`, `chart_entries` | Phases 12, 13 |
 | Playlists | `playlists`, `playlist_items` | Phase 10 |
 | Social | `likes`, `library_shares` | Phases 13, 14 |

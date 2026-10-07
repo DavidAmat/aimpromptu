@@ -16,6 +16,7 @@
     "check:notes": "tsx scripts/check-notes.ts",
     "check:flow": "node scripts/check-flow.mjs",
     "check:projects": "node scripts/check-projects.mjs",
+    "check:library": "node scripts/check-library.mjs",
     "screenshot": "node scripts/screenshot.mjs",
     "bench:roll": "node scripts/bench-roll.mjs",
     "bench:sheet": "node scripts/bench-sheet.mjs",

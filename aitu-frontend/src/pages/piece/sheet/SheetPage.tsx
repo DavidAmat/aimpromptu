@@ -132,9 +132,18 @@ export interface SheetStep {
   state: StepState;
   reason: string | null;
   onChanged: () => void;
+  /**
+   * A version of the library, opened to look at (Phase 6): the sheet draws and plays and prints;
+   * nothing on it opens a toolbox, and there is no Save. It changes through **Edit**.
+   */
+  readOnly?: boolean;
 }
 
+/** In place of a handler on a sheet that only shows. */
+const ignore = () => undefined;
+
 export function SheetPage({ step }: { step?: SheetStep } = {}) {
+  const readOnly = step?.readOnly ?? false;
   const { artifact } = useWorkingArtifact();
   const audioUuid = step ? step.audioUuid : artifact.audioUuid;
   const pieceLabel = step ? step.label : artifact.label;
@@ -1750,7 +1759,9 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
           }
         >
           {score
-            ? "Drawn from the current notes and hands. Save to keep it."
+            ? readOnly
+              ? "Drawn from the current notes and hands."
+              : "Drawn from the current notes and hands. Save to keep it."
             : "The notes or the hands changed since this sheet was saved."}
         </Alert>
       ) : null}
@@ -1765,9 +1776,11 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         <EmptyState
           message="Nothing to write yet."
           action={
-            <PillButton kind="primary" onClick={() => setRecordOpen(true)}>
-              Record a passage
-            </PillButton>
+            readOnly ? undefined : (
+              <PillButton kind="primary" onClick={() => setRecordOpen(true)}>
+                Record a passage
+              </PillButton>
+            )
           }
         />
       ) : null}
@@ -1801,6 +1814,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
             onPlaying={setPlaying}
           />
           <SheetFloatingBar
+            readOnly={readOnly}
             playing={playing}
             onTogglePlay={() => player.current?.toggle()}
             undo={{
@@ -1869,16 +1883,16 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
               lineSpacing={lineSpacing}
               noteSpacing={noteSpacing}
               staffGaps={staffGaps}
-              onStaffGapsChange={setStaffGaps}
-              onSelectNotes={pickNotes}
-              onSelectRange={pickRange}
-              onSelectMarkedRange={pickMarkedRange}
-              onOttavaResize={stretchOttava}
+              onStaffGapsChange={readOnly ? ignore : setStaffGaps}
+              onSelectNotes={readOnly ? ignore : pickNotes}
+              onSelectRange={readOnly ? ignore : pickRange}
+              onSelectMarkedRange={readOnly ? ignore : pickMarkedRange}
+              onOttavaResize={readOnly ? ignore : stretchOttava}
               renderOverrides={renderOverrides}
               fingers={drawnMarks.fingers}
               trills={trills}
               lyrics={lyrics}
-              onLyricLayoutChange={placeLyric}
+              onLyricLayoutChange={readOnly ? ignore : placeLyric}
               zoom={sheetZoom}
               onZoomChange={setSheetZoom}
               cueRanges={cueRanges}

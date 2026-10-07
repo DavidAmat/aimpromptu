@@ -130,7 +130,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/audio/{uuid}/edits/{session}/preview` | Scale it into the window and draw that stretch. |
 | GET | `/audio/{uuid}/edits/{session}/confirmation` | What accepting would change. |
 | POST | `/audio/{uuid}/edits/{session}/accept` | Write it into the piece. |
-| **Projects** | `api/projects.py` | Implementation 02, Phase 5 (duplicate since Phase 3) |
+| **Projects** | `api/projects.py` | Implementation 02, Phase 5 (duplicate since Phase 3; library since Phase 6) |
 | GET | `/projects` | The current user's projects, newest change first, with the step each reached. `?layer=` repeats. |
 | POST | `/projects` | An empty project: no audio, no notes. |
 | POST | `/projects/import` | A `.aitu` file made into a new project of the Personal Vault. |
@@ -139,6 +139,19 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | DELETE | `/projects/{id}` | Delete, with its history, its temporary files and the audio no other project uses. |
 | POST | `/projects/{id}/duplicate` | A copy in the Personal Vault, with new ids. |
 | GET | `/projects/{id}/export` | The `.aitu` file: the bundle and the audio files it uses. |
+| POST | `/projects/{id}/library` | **Save to library**: the project becomes a version of a song of the Private Library; or an edit copy replaces its version. |
+| POST | `/projects/{id}/edit` | **Edit** a version of the Private Library: its copy in the Personal Vault. |
+| **Library** | `api/library.py` | Implementation 02, Phase 6: the user's Private Library |
+| GET | `/library/songs` | The user's songs, with their artists and how many versions. |
+| GET, PATCH, DELETE | `/library/songs/{id}` | One song with its versions; rename it or give it its artists; delete it with every version. |
+| PATCH, DELETE | `/library/versions/{id}` | Rename a version; delete it with its project. |
+| GET | `/library/versions/{id}/history` | The earlier states of a version. |
+| POST | `/library/versions/{id}/history/{n}/restore` | Make an earlier state the version again. |
+| GET | `/library/artists` | The user's artists, each with every name it has. |
+| GET, DELETE | `/library/artists/{id}` | One artist with its names and its songs; delete one with no song. |
+| POST | `/library/artists/{id}/names` | Another name of the artist. |
+| PATCH, DELETE | `/library/artists/{id}/names/{nameId}` | Rename a name or make it the default; remove a name. |
+| POST | `/library/artists/{id}/merge` | Every name of this artist becomes a name of another one. |
 | **YouTube** | `api/youtube.py` | |
 | POST | `/youtube/probe` | Title and length, without downloading. |
 | POST | `/youtube/download` | Download the audio as mp3, in the request. |
@@ -146,7 +159,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/youtube/batch` | Queue several. |
 The text-notation MVP routes (`GET /scores`, `POST /sequence`) were deleted in implementation 02,
 Phase 1. See [§9](#9-the-text-notation-mvp-routes). The old Piano Library router (`/library`) was
-deleted in Phase 3. See [§7](#7-projects-the-personal-vault).
+deleted in Phase 3; `/library` is the Private Library since Phase 6 ([§7.1](#71-library-the-private-library)).
 
 The video reader's routers (`/video` in `api/video.py`, `/frame-examples` in
 `api/frame_examples.py`, implementations 04 to 07) are not described on this page. Their reasoning
@@ -259,8 +272,9 @@ adds the audio at the end, named after the video, instead of making a project.
 the Private Library (since implementation 02, Phase 4). `GET /audio/` and `GET /audio/{uuid}` answer
 the `AudioMetadata` shape. Since Phase 3 there is no
 `metadata.json`: `audio/store.py` builds that shape from `project.json` and `timeline.json`. The
-routes add five computed fields: `hasNotes`, `hasVideo` (the part has a video: its Audio step is the
-Video step, Phase 5),
+routes add computed fields: `hasNotes`, `hasVideo` (the part has a video: its Audio step is the
+Video step, Phase 5), `projectId`, `layer` and `basedOn` (the part's project, its layer, and the
+library project an edit copy edits: a part of the Private Library opens read only, Phase 6),
 `needsRederivation`, `originalDurationSeconds`, and `updatedAt` (the newest modification time of the
 part's files and of `project.json`, one `stat` per file; the Projects page sorts by it and shows
 it; added in implementation 02, Phase 1). Once cuts are saved, `durationSeconds` is the
@@ -899,9 +913,11 @@ not use the GPU queue.
 
 `api/projects.py`, implementation 02 plan sections 8.3, 8.8 and 10.1. A project's id is the id of
 its first part, the uuid the step routes take. Every route checks the rights of the project it
-names (`404` for one the user may not read); the list is scoped by owner. The old `/library` router
-(playground versions, `.npz` matrices, promotions, tags, playlists) was **deleted in Phase 3**; the
-path answers `404` until the Private Library of Phase 6 uses it again.
+names (`404` for one the user may not read); the list is scoped by owner. A project of the Private
+Library is **read only** to its owner (`403` on a write, Phase 6): it changes through `POST
+/projects/{id}/edit` and `POST /projects/{copy}/library`. The old `/library` router (playground
+versions, `.npz` matrices, promotions, tags, playlists) was **deleted in Phase 3**; `/library` is
+the Private Library since Phase 6 (§7.1).
 
 **The row** (`GET /projects`, `GET /projects/{id}`, and the answer of create, rename and import):
 
@@ -913,7 +929,9 @@ path answers `404` until the Private Library of Phase 6 uses it again.
 | `parts` | The ids of the parts, in order |
 | `source` | Where the first part's audio came from (`upload`, `youtube`, `recording` ...) |
 | `hasVideo`, `hasNotes` | The first part has a video; it has notes |
-| `basedOn`, `createdAt`, `updatedAt` | `updatedAt` is the newest file of the parts and `project.json` |
+| `basedOn`, `createdAt`, `updatedAt` | `basedOn`: the library project an edit copy edits. `updatedAt` is the newest file of the parts and `project.json` |
+| `library` | A project of the Private Library: `{songId, songTitle, artists, versionId, versionName, projectId}` of its song and version (Phase 6), else `null` |
+| `editing` | An edit copy (`basedOn` set): the same fields for the version it edits, else `null` |
 
 - `GET /projects?layer=vault&layer=private`: the current user's projects of those layers (default
   `vault`), newest change first.
@@ -936,8 +954,53 @@ path answers `404` until the Private Library of Phase 6 uses it again.
   the name this route expects (a name in the zip never becomes a path), each part file must read as
   what it is, and each audio file is hashed again and must match its name. `422` with the reason
   otherwise, and nothing is left behind.
+- `POST /projects/{id}/library` (Phase 6, plan sections 8.5, 10.2 and 10.6), body
+  `{ "songId": int | null, "song": string, "artist": string, "version": string, "replace": bool }`.
+  **Save to library**: the project, which must be in the asker's Personal Vault with every part's
+  Sheet step `ready`, moves to their Private Library as the version `version` of the song `songId`,
+  or of their song titled `song` by `artist` (found ignoring case and spaces, made when missing; a
+  new artist name makes a new artist). On the way each audio file the timeline uses only in part is
+  written again with only the ranges in use (FLAC, `audioRevision` unchanged, so the notes stay
+  current), the old file is deleted when no project uses it, and the video, its frames, the edit
+  sessions and the history of the parts are deleted. With `replace: true` an edit copy (`basedOn`
+  set) gives its content to the version it edits instead: the library project keeps its ids, its
+  previous content goes to `history/<projectId>/v<N>/`, and the copy is deleted. `201` with
+  `{songId, versionId, projectId}`. `409` with the reason: the piano sheet is not saved, a job is
+  writing the notes, the song already has a version of that name, or the version an edit copy
+  edits was deleted.
+- `POST /projects/{id}/edit` (Phase 6): the copy in the asker's Personal Vault that edits this
+  version of their Private Library, with `basedOn` pointing at it and `origin: {"editOf": id}`; the
+  copy already open is answered instead of a second one. No audio bytes are copied. A read for the
+  rights check (the version does not change); `409` for a version of another user's library. Answers
+  the copy's row. Deleting the copy (`DELETE /projects/{copy}`) discards the changes.
 
 Storage layout in [`paths-and-data.md`](paths-and-data.md).
+
+<a id="71-library-the-private-library"></a>
+
+### 7.1 `/library`: the Private Library
+
+`api/library.py` and `library/` (`rows.py`, `flow.py`), implementation 02 Phase 6, plan sections 15.1
+and 15.2. Every route works on the current user's rows only and answers `404` for another user's,
+`409` for a change the library refuses (with the reason), `422` for an empty or too long name.
+
+| Route | Answer |
+|---|---|
+| `GET /library/songs` | `[{id, title, artists: [{artistId, nameId, name}], versions, editing, updatedAt}]`, by title. `editing`: a version has an edit copy open |
+| `GET /library/songs/{id}` | `{id, title, artists, versions: [{id, name, projectId, parts, step, createdAt, updatedAt, editCopy, history}]}`. `editCopy`: the open edit copy's id; `history`: how many earlier states |
+| `PATCH /library/songs/{id}` | Body `{title?, artists?: [string]}`: rename; the artists by name, in order (an unknown name makes a new artist) |
+| `DELETE /library/songs/{id}` | `204`: every version and its project, then the song |
+| `PATCH /library/versions/{id}` | Body `{name}`: 1 to 60 characters, unique in the song ignoring case (`409`) |
+| `DELETE /library/versions/{id}` | `204`: the version, its project, its history, the audio no other project uses. An edit copy of it stays as an ordinary project |
+| `GET /library/versions/{id}/history` | `[{number, savedAt, reason}]`, newest first. `reason`: "Replaced by an edit" or "Replaced by a restore" |
+| `POST /library/versions/{id}/history/{n}/restore` | The state `n` becomes the version's content; the state it replaces is kept first. Answers the song |
+| `GET /library/artists` | `[{id, name, names: [{id, name, isDefault}], songs}]`, by default name |
+| `GET /library/artists/{id}` | The same, with `songList: [{id, title, versions}]` |
+| `POST /library/artists/{id}/names` | Body `{name}`: another name. `409` when another artist has it (merge them instead) |
+| `PATCH /library/artists/{id}/names/{nameId}` | Body `{name?, isDefault?}` |
+| `DELETE /library/artists/{id}/names/{nameId}` | Not the default (`409`); songs saved with it point at the default name |
+| `POST /library/artists/{id}/merge` | Body `{into}`: every name moves to `into`, which keeps its default; answers `into` |
+| `DELETE /library/artists/{id}` | `204`; `409` while the artist has songs |
 
 ---
 
