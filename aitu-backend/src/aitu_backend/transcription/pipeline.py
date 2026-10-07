@@ -427,6 +427,27 @@ def split_of(
     return split_cache.get((audio_uuid, float(frame_ms), stamp), compute)
 
 
+def split_events(
+    stored: TranscribedEvents,
+    events: list[NoteEvent],
+    frame_ms: float = DEFAULT_FRAME_MS,
+) -> TimeHands:
+    """The hand split of notes that are not on disk, the way :func:`split_of` splits stored ones.
+
+    For a sheet drawn from notes the reader has not accepted yet: the preview of a notes
+    transposition (implementation 02, Phase 7). ``stored`` gives the length, the title and the
+    engine the notes came from. Not cached: a preview is asked for once.
+    """
+    filters = filters_for(stored.header.engine)
+    duration = max(stored.duration_seconds, frame_ms / 1000.0)
+    placed = saved_hands.placed_ids(
+        events, stored.duration_seconds, frame_ms=frame_ms, **filters  # type: ignore[arg-type]
+    )
+    complete = saved_hands.hands_complete(events, placed)
+    split = saved_hands.split_with_saved_hands if complete else impose_granularity_and_split
+    return split(events, duration, frame_ms=frame_ms, title=stored.title, **filters)
+
+
 def placed_note_ids(audio_uuid: str, frame_ms: float = DEFAULT_FRAME_MS) -> set[int]:
     """The ids of the live notes the piano sheet places (:func:`saved_hands.placed_ids`), cached
     until ``events.json`` changes. Raises ``FileNotFoundError`` when the piece has no notes."""

@@ -174,14 +174,15 @@ export interface LyricLine {
    * Where the reader dragged the block, in pixels from where the page would have put it.
    *
    * The columns are still what the words belong to, so a re-wrap carries them to wherever that
-   * music went and this offset with them. Absent is a block nobody has moved.
+   * music went and this offset with them. Absent (or `null`, as the backend answers) is a block
+   * nobody has moved.
    */
-  offsetX?: number;
-  offsetY?: number;
+  offsetX?: number | null;
+  offsetY?: number | null;
   /** How wide the block is drawn, in pixels. The words wrap inside it. */
-  width?: number;
+  width?: number | null;
   /** How large the words are drawn, in pixels. Absent is the page's own size. */
-  fontSize?: number;
+  fontSize?: number | null;
 }
 
 /** A stretch printed smaller than the rest of the page. Asked for, never inferred. */
@@ -336,6 +337,12 @@ export const timeScoreApi = {
        * written in its place (D-16).
        */
       dropDecorative?: boolean;
+      /**
+       * Draw the sheet as if every note were moved by this many semitones, writing nothing: the
+       * preview of a notes transposition. The hidden notes and trills are then addressed on the
+       * moved notes.
+       */
+      transpose?: number;
     },
     signal?: AbortSignal,
   ) {
@@ -350,7 +357,28 @@ export const timeScoreApi = {
         hiddenNotes: query.hiddenNotes ?? [],
         trills: query.trills ?? [],
         dropDecorative: query.dropDecorative ?? false,
+        transpose: query.transpose ?? 0,
       },
+      signal,
+    });
+  },
+
+  /**
+   * Move every note of the part by `semitones` (sheet toolbox, Transpose → Notes). Written onto
+   * the recording: the notes change, no time moves, each note keeps its hand. A note that would
+   * leave the 88 keys is taken off the page and stays on its key; `outside` counts them.
+   *
+   * Taken back by the same call with the opposite `semitones`, `hold` set to the answer's `held`
+   * and `restore` to its `takenOff`. `preview` counts and writes nothing.
+   */
+  transpose(
+    audioUuid: string,
+    body: { semitones: number; preview?: boolean; hold?: number[]; restore?: number[] },
+    signal?: AbortSignal,
+  ) {
+    return request<TransposeResult>(`/time/${audioUuid}/transpose`, {
+      method: "POST",
+      body,
       signal,
     });
   },
@@ -475,6 +503,18 @@ export const timeScoreApi = {
     });
   },
 };
+
+/** What a notes transposition did, or would do. */
+export interface TransposeResult {
+  /** Notes on the page that moved to their new key. */
+  moved: number;
+  /** Notes that would leave the 88 keys: taken off the page, left on their key. */
+  outside: number;
+  /** Ids of the notes that stayed on their key, and of the ones taken off: what an undo sends. */
+  held: number[];
+  takenOff: number[];
+  putBack: number;
+}
 
 /** Where the piece changes speed, and what a gap is worth from there on. */
 export interface SpeedChange {
@@ -615,8 +655,16 @@ export interface SavedRhythm {
   trills?: Trill[];
   /** Small notes leaning on a note of the music. */
   graceNotes?: GraceNote[];
-  /** Lines of words written under the staff. */
+  /**
+   * The lyrics pieces on the sheet: each a line of words over a stretch of frames, drawn above the
+   * right hand. Its start and end are frames; `offsetY` lifts or lowers it; a line break is a
+   * newline in `text`.
+   */
   lyrics?: LyricLine[];
+  /** The lyrics pasted in the Lyrics tab and not placed yet, one piece each, in order. */
+  lyricsPool?: string[];
+  /** The figure the next figures transposition starts from: the last one it went to. */
+  figuresFrom?: FigureName | null;
   /** Stretches printed smaller than the rest of the page. */
   cueRanges?: CueRange[];
   /** Stretches the reader set wider or narrower than the page would set them. */

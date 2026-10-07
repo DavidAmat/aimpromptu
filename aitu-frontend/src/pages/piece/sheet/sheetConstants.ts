@@ -89,6 +89,8 @@ export const FINGERS: FingerNumber[] = [1, 2, 3, 4, 5];
 
 /**
  * What a stretch of columns can carry. One pill each, and only that one's controls on screen.
+ * The lyrics left this list in implementation 02, Phase 7: they are pieces of the sheet toolbox's
+ * Lyrics tab, placed by dragging.
  *
  * Two of them left. **Trill** and **Small** are statements about notes, not about columns — "these
  * notes are a shake", "these notes are decoration" — so they moved to the note toolbox, where the
@@ -98,7 +100,6 @@ export const FRAME_TABS = [
   { id: "key" as const, label: "Key" },
   { id: "clef" as const, label: "Clef" },
   { id: "octave" as const, label: "Octave" },
-  { id: "lyrics" as const, label: "Lyrics" },
   { id: "spacing" as const, label: "Spacing" },
   { id: "speed" as const, label: "Speed" },
   { id: "rerecord" as const, label: "Re-record" },
@@ -117,7 +118,6 @@ export const MARKER_TABS: Readonly<Record<string, FrameTab | undefined>> = {
   ottava: "octave",
   clef: "clef",
   key: "key",
-  lyric: "lyrics",
 };
 
 /**

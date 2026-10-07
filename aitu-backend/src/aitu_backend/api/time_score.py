@@ -43,6 +43,7 @@ from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN
 from aitu_backend.notation.trills import MIN_PAIR_REPEATS, detect_trills
 from aitu_backend.schemas.rhythm import HiddenNote, SavedRhythm, Trill
 from aitu_backend.notation.decorative import decorative_notes
+from aitu_backend.notation.transpose import transpose_events
 from aitu_backend.schemas.time_matrix import FigureLadder, FigureName, TimeScorePayload
 from aitu_backend.transcription import pipeline, saved_hands, split_cache
 from aitu_backend.transcription.engine import NoteEvent
@@ -727,6 +728,81 @@ def _put_added_notes(audio_uuid: str, body: AddNotesRequest) -> AddNotesResult:
     return AddNotesResult(added=added, duplicate=duplicate)
 
 
+class TransposeRequest(BaseModel):
+    """Move every note of the part by a number of semitones (sheet toolbox, Transpose → Notes)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    semitones: int = Field(..., ge=-87, le=87)
+    #: Count what would happen and write nothing.
+    preview: bool = False
+    #: Notes that stay on their key, by id: the ``held`` of the transposition an undo takes back.
+    hold: list[int] = Field(default_factory=list)
+    #: Notes to put back on the page, by id: the ``takenOff`` of the transposition an undo takes
+    #: back.
+    restore: list[int] = Field(default_factory=list)
+
+
+class TransposeResult(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    #: Notes on the page that moved to their new key.
+    moved: int
+    #: Notes that would leave the 88 keys: taken off the page and left on their key.
+    outside: int
+    #: Ids of every note that stayed on its key, and of the notes taken off. An undo sends them
+    #: back as ``hold`` and ``restore``.
+    held: list[int]
+    taken_off: list[int] = Field(..., alias="takenOff")
+    #: Notes put back on the page (an undo).
+    put_back: int = Field(..., alias="putBack")
+
+
+@router.post(
+    "/{audio_uuid}/transpose", response_model=TransposeResult, response_model_by_alias=True
+)
+def post_transpose(audio_uuid: str, body: TransposeRequest = Body(...)) -> TransposeResult:
+    """Move every note of the part by ``semitones`` (implementation 02, plan section 11.4).
+
+    A notes edit: the notes revision goes up, the hands stay (each note keeps the hand it has), and
+    no time moves, so every mark keyed by a column stays on its music. A note that would leave the
+    88 keys is taken off the page and left on its key; the answer counts them. The page that asks
+    draws the result at once, so a saved sheet that was current stays current, as a hand move does.
+
+    Taking it back is the same route with the opposite ``semitones``, ``hold`` set to the answer's
+    ``held`` and ``restore`` to its ``takenOff``: every note is then where it was. ``preview``
+    counts and writes nothing.
+    """
+    if body.semitones == 0:
+        raise HTTPException(status_code=422, detail="Pick two different keys to transpose.")
+    with pipeline.piece_lock(audio_uuid):
+        stored = _events_or_error(audio_uuid)
+        done = transpose_events(
+            stored.events,
+            body.semitones,
+            hold=frozenset(body.hold),
+            restore=frozenset(body.restore),
+        )
+        if not body.preview:
+            pipeline.save_edit(
+                audio_uuid,
+                done.events,
+                stored.duration_seconds,
+                stored.title,
+                before=stored.header,
+                notes_changed=True,
+                hands_changed=True,
+                sheet_follows=True,
+            )
+    return TransposeResult(
+        moved=done.moved,
+        outside=len(done.taken_off),
+        held=done.held,
+        taken_off=done.taken_off,
+        put_back=len(done.put_back),
+    )
+
+
 class ScoreRequest(BaseModel):
     """A sheet to draw: the ladder, the passage boundaries, and the reader's page edits.
 
@@ -749,6 +825,10 @@ class ScoreRequest(BaseModel):
     #: Leave the ornaments off: a sixteenth or shorter printed right before an eighth or
     #: longer in the same hand is taken off the page, and the note before it runs on.
     drop_decorative: bool = Field(False, alias="dropDecorative")
+    #: Draw the sheet as if every note were moved by this many semitones, without writing
+    #: anything: the preview of a notes transposition (implementation 02, Phase 7). The hidden
+    #: notes and trills above are addressed on the moved notes.
+    transpose: int = Field(0, ge=-87, le=87)
 
 
 #: How many more times the figures are named after ornaments are taken off. Taking one off
@@ -872,7 +952,12 @@ def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> Response
     Same answer as the GET for a piece with no edits. See `_with_page_edits` for why the edits have
     to be applied on this side rather than in the browser.
     """
-    hands = trim_to_music(_hands(audio_uuid, body.frame_ms))
+    if body.transpose:
+        stored = _events_or_error(audio_uuid)
+        moved = transpose_events(stored.events, body.transpose).events
+        hands = trim_to_music(pipeline.split_events(stored, moved, body.frame_ms))
+    else:
+        hands = trim_to_music(_hands(audio_uuid, body.frame_ms))
     ladder = build_ladder(body.anchor_figure, body.anchor_ms)
     passages = _passages_from_query(
         hands,

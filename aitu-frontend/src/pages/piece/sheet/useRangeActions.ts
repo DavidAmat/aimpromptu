@@ -28,7 +28,6 @@ export function useRangeActions({
   chords,
   state,
   set,
-  lyricDraft,
   passageDraft,
 }: {
   range: FrameRange | null;
@@ -36,10 +35,9 @@ export function useRangeActions({
   chords: ReadonlyMap<string, number[]>;
   state: SheetEdits;
   set: EditHistory<SheetEdits>["set"];
-  lyricDraft: { forRange: string; text: string } | null;
   passageDraft: { forRange: string; value: KeySignatureName } | null;
 }) {
-  const { keySignature, keyChanges, clefChanges, ottavas, lyrics, spacings, stretches } = state;
+  const { keySignature, keyChanges, clefChanges, ottavas, spacings, stretches } = state;
   const { spacings: setSpacings } = set;
 
   // Which stretch the toolbox is about, and what it will write. The signature offered is whatever
@@ -125,12 +123,6 @@ export function useRangeActions({
           (side) => ottavaAtFrame(ottavas, side, range.fromColumn) !== undefined,
         )
       : false,
-    lyrics: range
-      ? lyrics.some(
-          (line) =>
-            line.fromColumn < range.toColumn && line.toColumn > range.fromColumn,
-        )
-      : false,
     spacing: range
       ? spacings.some(
           (stretch) =>
@@ -145,21 +137,6 @@ export function useRangeActions({
       : false,
     rerecord: false,
   };
-
-  /**
-   * What the lyric tab needs to know about the stretch now open.
-   *
-   * Read from the marks themselves rather than kept in state: a panel that could disagree with
-   * what is on the page is worse than a panel that has to look it up.
-   */
-  const lyricHere = range
-    ? (lyrics.find(
-        (line) =>
-          line.fromColumn < range.toColumn && line.toColumn > range.fromColumn,
-      ) ?? null)
-    : null;
-  const lyricText =
-    lyricDraft?.forRange === rangeKey ? lyricDraft.text : (lyricHere?.text ?? "");
 
   const passageKey: KeySignatureName =
     passageDraft?.forRange === rangeKey
@@ -204,8 +181,6 @@ export function useRangeActions({
     clearSpacingRange,
     handsInScope,
     editedHere,
-    lyricHere,
-    lyricText,
     passageKey,
     notesUnderRange,
   };

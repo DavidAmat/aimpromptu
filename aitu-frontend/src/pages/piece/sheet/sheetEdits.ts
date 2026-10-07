@@ -107,8 +107,18 @@ export interface SheetEdits {
    * after the run, and only the backend measures that.
    */
   trills: readonly Trill[];
-  /** Lines of words under the staff, over a stretch of columns. */
+  /**
+   * The lyrics pieces placed on the sheet: each a line of words from one frame to another, drawn
+   * above the right hand (plan section 11.5). A line break is a newline in its text.
+   */
   lyrics: readonly LyricLine[];
+  /** The lyrics pasted in the Lyrics tab and not placed yet, one piece each, in order. */
+  lyricsPool: readonly string[];
+  /**
+   * The figure the next figures transposition starts from: the last one it went to. `null` is the
+   * first time, which starts from negra (plan section 11.4).
+   */
+  figuresFrom: FigureName | null;
   /** Stretches printed smaller than the rest of the page. */
   cueRanges: readonly CueRange[];
   /** Stretches the reader set wider or narrower than the page would set them. */
@@ -229,7 +239,9 @@ export const EDIT_LABELS: Readonly<Record<keyof SheetEdits, string>> = {
   clefChanges: "Clef of a stretch",
   ottavas: "Octave bracket",
   trills: "Trill",
-  lyrics: "Words",
+  lyrics: "Lyrics",
+  lyricsPool: "Lyrics pool",
+  figuresFrom: "Figures",
   cueRanges: "Small stretch",
   spacings: "Spacing",
   evenSpacings: "Even spacing",
@@ -259,6 +271,8 @@ export const NO_EDITS: SheetEdits = {
   ottavas: [],
   trills: [],
   lyrics: [],
+  lyricsPool: [],
+  figuresFrom: null,
   cueRanges: [],
   spacings: [],
   evenSpacings: [],
@@ -311,7 +325,18 @@ export function editsFromSaved(found: SavedRhythm): SheetEdits {
       hidden: span.hidden ?? false,
     })),
     trills: found.trills ?? [],
-    lyrics: found.lyrics ?? [],
+    // The backend answers `null` for a placement nobody gave; the page holds it as absent.
+    lyrics: (found.lyrics ?? []).map((line) => ({
+      fromColumn: line.fromColumn,
+      toColumn: line.toColumn,
+      text: line.text,
+      ...(line.offsetX == null ? {} : { offsetX: line.offsetX }),
+      ...(line.offsetY == null ? {} : { offsetY: line.offsetY }),
+      ...(line.width == null ? {} : { width: line.width }),
+      ...(line.fontSize == null ? {} : { fontSize: line.fontSize }),
+    })),
+    lyricsPool: found.lyricsPool ?? [],
+    figuresFrom: found.figuresFrom ?? null,
     cueRanges: found.cueRanges ?? [],
     spacings: found.spacings ?? [],
     evenSpacings: (found.evenSpacings ?? []).map((run) => ({
@@ -453,6 +478,8 @@ export function savedRhythmOf(reading: {
     })),
     trills: [...edits.trills],
     lyrics: [...edits.lyrics],
+    lyricsPool: [...edits.lyricsPool],
+    figuresFrom: edits.figuresFrom,
     cueRanges: [...edits.cueRanges],
     graceNotes: [...edits.graceNotes],
     annotationScale: edits.annotationScale,
