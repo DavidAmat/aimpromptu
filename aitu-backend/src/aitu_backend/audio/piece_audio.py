@@ -40,7 +40,7 @@ from aitu_backend.audio import formats, store
 from aitu_backend.audio.frames import FADE_MS, FRAME_MS, FrameTable, frame_count, join_kept
 from aitu_backend.audio.store import StoredAudio
 
-__all__ = ["PieceAudio", "ensure", "join_samples"]
+__all__ = ["PieceAudio", "ensure", "join_samples", "write_joined"]
 
 _locks: dict[str, threading.Lock] = {}
 _locks_lock = threading.Lock()
@@ -134,7 +134,7 @@ def _probe(path: Path) -> tuple[int, int]:
     return int(stream["sample_rate"]), int(stream["channels"])
 
 
-def _write_listen(original: Path, target: Path, table: FrameTable) -> None:
+def write_joined(original: Path, target: Path, table: FrameTable) -> None:
     """Decode ``original`` at its own rate and channels, join the kept frames, encode as FLAC."""
     rate, channels = _probe(original)
     decoded = subprocess.run(
@@ -189,5 +189,5 @@ def ensure(audio_uuid: str) -> PieceAudio | None:
                 # Nothing better to offer than the engine's own audio of the piece.
                 listen = normalized
             else:
-                _write_listen(original, listen, table)
+                write_joined(original, listen, table)
         return PieceAudio(listen, normalized, table)

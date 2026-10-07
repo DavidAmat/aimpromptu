@@ -27,7 +27,8 @@ database. Every path in the folder is built by one module, `aitu_backend/storage
   tmp/<userId>/<partId>/video/   temporary files of a user: a video, its frames, its reading
   lab/frame-examples/            the video reader's example records (Lab)
   history/<projectId>/           earlier states: parts/<partId>/v<N>/ before a splice or a new
-                                 transcription replaced them
+                                 transcription replaced them; v<N>/ of a Private Library project
+                                 before **Replace the version** or a restore replaced it (Phase 6)
   jobs/                          reserved
 ```
 
@@ -74,8 +75,11 @@ file is deleted only when no project uses it, and nothing deletes one from the P
 now the gap between two **segments** of the part's timeline (one stored file, several ranges of
 it), with the `audioRevision` beside them. **Add audio** (Phase 5) puts another file at the end:
 the timeline then lists its files in order (`sources`), the Audio step shows them end to end, and a
-cut may cross the join. When a project is saved to the Private Library (Phase 6), the audio is
-written again with only the ranges in use (Q-3).
+cut may cross the join. When a project is saved to the Private Library (Phase 6), each file it
+uses only in part is written again with only the ranges in use (a new FLAC file of the kept ranges;
+the timeline then has no cut, and nothing the user hears or reads moves), and the old file is
+deleted once no project uses it (Q-3). In the Personal Vault nothing is deleted, so every cut can
+be undone.
 
 **A project moves as one file.** **Export** writes `<title>.aitu`: a zip of the bundle (without
 its cache, staging, history or video) and the audio files it uses. **Import** makes a new project
@@ -83,7 +87,15 @@ in the importer's Personal Vault from it, checking every audio file against the 
 The format: [`paths-and-data.md`](../documentation/services/backend/paths-and-data.md) section 2.5.
 
 **Every user's projects are under their own folder**, and every query is scoped by owner: a
-request acts as the user of its session (Phase 4, [08-security.md](08-security.md)). The master user
+request acts as the user of its session (Phase 4, [08-security.md](08-security.md)).
+
+**Saving to the Private Library moves the bundle** from `users/<id>/vault/` to
+`users/<id>/library/` with the same ids (Phase 6), deletes its temporary files (the video, the edit
+sessions, the history of its parts) and files it under a song as a version (`private_versions`). A
+library project is never written in place: **Edit** copies it into the vault (`basedOn` pointing
+at it), and **Replace the version** writes the copy's files into it, keeping its ids, after keeping
+its previous state in `history/<projectId>/v<N>/`
+([music-library/private-library.md](music-library/private-library.md)). The master user
 is made on the first start from `AITU_MASTER_USERNAME` (default `master`).
 
 ## Versions

@@ -53,6 +53,11 @@ export interface AudioItem {
   needsRederivation?: string | null;
   /** The project has a video: its Audio step is the Video step. */
   hasVideo?: boolean;
+  /** The project of this part, and its layer: a project of the library opens read only. */
+  projectId?: string | null;
+  layer?: "vault" | "private" | "public" | null;
+  /** The library project this project edits, when it is a copy made by **Edit**. */
+  basedOn?: string | null;
 }
 
 /** Min/max peak pairs, one per bucket — computed backend-side. */

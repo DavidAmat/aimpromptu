@@ -52,8 +52,10 @@ valid session the answer is **401**; then the rights below apply to the project 
 | A request | Its author and the master user | Its author until reviewed; the master user (the decision) |
 | Users, Lab | The master user | The master user |
 
-(*) The plan writes a library project through a copy in the vault (Phase 6); until then the owner
-edits it in place.
+(*) Since Phase 6 a library project is never written in place: its owner reads it (a write answers
+**403**), and changes it through **Edit** (a copy in the vault) and **Save to library** (which
+replaces the version). Those flows, and the `/library` routes, check the owner themselves. Until
+Phase 6 the owner edited it in place.
 
 - A project the user may not read answers **404**, the same as a project that does not exist, so
   an address tells nothing about another user's work. One the user may read but not write answers
@@ -65,8 +67,9 @@ edits it in place.
   read member by member by the names the app expects (a name in it never becomes a path on the
   disk), its size and number of entries are capped, and each audio file must match the hash in its
   name.
-- Lists are the user's own: `GET /projects` and `GET /audio/` list the user's projects; Lab lists every video for the
-  master user only.
+- Lists are the user's own: `GET /projects` and `GET /audio/` list the user's projects, and
+  `/library` the user's songs and artists (another user's answers `404`); Lab lists every video for
+  the master user only.
 - A background job (a transcription, a download) records its owner, runs as them (a project it
   makes is theirs), and is followed only by them and the master user.
 - `/health` and `POST /auth/login` are the only routes open without a session.

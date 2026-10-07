@@ -163,7 +163,7 @@ export type EditorStep = "notes" | "hands";
 
 export function NotesEditor({ step }: { step: EditorStep }) {
   const navigate = useNavigate();
-  const { uuid, audio, status, refresh } = usePiece();
+  const { uuid, audio, status, refresh, readOnly } = usePiece();
   const { artifact } = useWorkingArtifact();
   const here = stepStatus(status, "notes");
   const hands = stepStatus(status, "hands");
@@ -227,7 +227,8 @@ export function NotesEditor({ step }: { step: EditorStep }) {
   }, [uuid, needLoad, resetHistory]);
 
   const base = current?.base ?? null;
-  const mode: RollMode = running || !base ? "live" : here?.state === "stale" ? "view" : "edit";
+  // A version of the library is looked at, not edited: the roll draws it and the audio plays.
+  const mode: RollMode = running || !base ? "live" : here?.state === "stale" || readOnly ? "view" : "edit";
   const durationMs = base?.durationMs ?? (feed.durationMs || (audio?.durationSeconds ?? 0) * 1000);
 
   // The saved notes, with the page's changes, take the place of what the stream drew.
@@ -237,7 +238,7 @@ export function NotesEditor({ step }: { step: EditorStep }) {
 
   // ------------------------------------------------------------------ playback
 
-  const playable = mode === "edit";
+  const playable = mode === "edit" || (readOnly && mode === "view");
   const totalFrames = Math.max(1, Math.round(durationMs / FRAME_MS));
   const audioUrl = useMemo(() => (uuid && playable ? audioApi.fileUrl(uuid) : null), [uuid, playable]);
   const player = useCutPlayer(audioUrl, NO_CUTS, totalFrames);
@@ -611,15 +612,17 @@ export function NotesEditor({ step }: { step: EditorStep }) {
         {/* The main action of the Hands step, in words beside Continue (the user's review of
             Phase 5): the wand of the floating toolbox alone was not found. Primary until the
             hands are there. */}
-        <PillButton
-          kind={hasHands ? "secondary" : "primary"}
-          startIcon={<AutoFixHighIcon fontSize="small" />}
-          busy={predicting !== null}
-          disabled={busy}
-          onClick={() => void predict(false)}
-        >
-          Predict hands
-        </PillButton>
+        {readOnly ? null : (
+          <PillButton
+            kind={hasHands ? "secondary" : "primary"}
+            startIcon={<AutoFixHighIcon fontSize="small" />}
+            busy={predicting !== null}
+            disabled={busy}
+            onClick={() => void predict(false)}
+          >
+            Predict hands
+          </PillButton>
+        )}
         <Tooltip title={sheet?.enabled ? "" : (sheet?.reason ?? "Save the hands first")}>
           <span>
             <PillButton kind="primary" disabled={!sheet?.enabled} onClick={() => navigate(ROUTES.project(uuid, "sheet"))}>
@@ -748,7 +751,10 @@ export function NotesEditor({ step }: { step: EditorStep }) {
       />
 
       {/* The editor's toolbox, floating so it stays at hand along the whole piece. */}
-      <FloatingBar open={editing} label={onHands ? "the hands toolbox" : "the editing toolbar"}>
+      <FloatingBar
+        open={editing || (readOnly && mode === "view")}
+        label={onHands ? "the hands toolbox" : "the editing toolbar"}
+      >
         {player.playing ? (
           <IconAction title="Pause" shortcut="Space" icon={<PauseIcon />} onClick={player.pause} />
         ) : (
@@ -761,32 +767,36 @@ export function NotesEditor({ step }: { step: EditorStep }) {
           active={follow}
           onClick={() => setFollow((value) => !value)}
         />
-        <IconAction
-          title={history.canUndo ? `Undo ${history.undoLabel ?? ""}`.trim() : "Nothing to undo"}
-          shortcut="⌘Z"
-          icon={<UndoIcon fontSize="small" />}
-          disabled={!history.canUndo}
-          onClick={() => void history.undo()}
-        />
-        <IconAction
-          title={history.canRedo ? `Redo ${history.redoLabel ?? ""}`.trim() : "Nothing to redo"}
-          shortcut="⇧⌘Z"
-          icon={<RedoIcon fontSize="small" />}
-          disabled={!history.canRedo}
-          onClick={() => void history.redo()}
-        />
-        <IconAction
-          title="Delete the selected notes"
-          shortcut="Delete"
-          disabledTitle="Select notes first"
-          icon={<DeleteIcon fontSize="small" />}
-          disabled={selection.size === 0}
-          onClick={deleteSelection}
-        />
+        {readOnly ? null : (
+          <>
+            <IconAction
+              title={history.canUndo ? `Undo ${history.undoLabel ?? ""}`.trim() : "Nothing to undo"}
+              shortcut="⌘Z"
+              icon={<UndoIcon fontSize="small" />}
+              disabled={!history.canUndo}
+              onClick={() => void history.undo()}
+            />
+            <IconAction
+              title={history.canRedo ? `Redo ${history.redoLabel ?? ""}`.trim() : "Nothing to redo"}
+              shortcut="⇧⌘Z"
+              icon={<RedoIcon fontSize="small" />}
+              disabled={!history.canRedo}
+              onClick={() => void history.redo()}
+            />
+            <IconAction
+              title="Delete the selected notes"
+              shortcut="Delete"
+              disabledTitle="Select notes first"
+              icon={<DeleteIcon fontSize="small" />}
+              disabled={selection.size === 0}
+              onClick={deleteSelection}
+            />
+          </>
+        )}
         {onHands ? (
           <>
             <Divider orientation="vertical" flexItem />
-            {hasHands ? (
+            {hasHands && !readOnly ? (
               <IconAction
                 title="Predict every note again, also the ones you placed"
                 icon={<ReplayIcon fontSize="small" />}
@@ -804,40 +814,44 @@ export function NotesEditor({ step }: { step: EditorStep }) {
                 { value: "left", label: "Left", tooltip: "Show the left hand only" },
               ]}
             />
-            <Tooltip title="Give the selected notes to the right hand (R)">
-              <span>
-                <PillButton kind="quiet" size="small" disabled={selection.size === 0} onClick={() => giveHand("r")}>
-                  To right
-                </PillButton>
-              </span>
-            </Tooltip>
-            <Tooltip title="Give the selected notes to the left hand (L)">
-              <span>
-                <PillButton kind="quiet" size="small" disabled={selection.size === 0} onClick={() => giveHand("l")}>
-                  To left
-                </PillButton>
-              </span>
-            </Tooltip>
-            {handless.length > 0 && hasHands ? (
+            {readOnly ? null : (
               <>
-                <Tooltip title={`Select the ${plural(handless.length, "note")} without a hand, then give each a hand (L, R) or delete it`}>
-                  <IconButton size="small" color="error" onClick={selectHandless} aria-label="Select the notes without a hand">
-                    <Badge badgeContent={handless.length} color="error" max={999}>
-                      <BackHandIcon fontSize="small" />
-                    </Badge>
-                  </IconButton>
+                <Tooltip title="Give the selected notes to the right hand (R)">
+                  <span>
+                    <PillButton kind="quiet" size="small" disabled={selection.size === 0} onClick={() => giveHand("r")}>
+                      To right
+                    </PillButton>
+                  </span>
                 </Tooltip>
-                {reviewShown ? (
+                <Tooltip title="Give the selected notes to the left hand (L)">
+                  <span>
+                    <PillButton kind="quiet" size="small" disabled={selection.size === 0} onClick={() => giveHand("l")}>
+                      To left
+                    </PillButton>
+                  </span>
+                </Tooltip>
+                {handless.length > 0 && hasHands ? (
                   <>
-                    <IconAction title="Previous note without a hand" icon={<ChevronLeftIcon fontSize="small" />} onClick={() => stepHandless(-1)} />
-                    <Typography variant="body2" sx={{ ...timestampSx, minWidth: 44, textAlign: "center" }} data-review>
-                      {reviewIndex >= 0 ? `${reviewIndex + 1} / ${handless.length}` : `– / ${handless.length}`}
-                    </Typography>
-                    <IconAction title="Next note without a hand" icon={<ChevronRightIcon fontSize="small" />} onClick={() => stepHandless(1)} />
+                    <Tooltip title={`Select the ${plural(handless.length, "note")} without a hand, then give each a hand (L, R) or delete it`}>
+                      <IconButton size="small" color="error" onClick={selectHandless} aria-label="Select the notes without a hand">
+                        <Badge badgeContent={handless.length} color="error" max={999}>
+                          <BackHandIcon fontSize="small" />
+                        </Badge>
+                      </IconButton>
+                    </Tooltip>
+                    {reviewShown ? (
+                      <>
+                        <IconAction title="Previous note without a hand" icon={<ChevronLeftIcon fontSize="small" />} onClick={() => stepHandless(-1)} />
+                        <Typography variant="body2" sx={{ ...timestampSx, minWidth: 44, textAlign: "center" }} data-review>
+                          {reviewIndex >= 0 ? `${reviewIndex + 1} / ${handless.length}` : `– / ${handless.length}`}
+                        </Typography>
+                        <IconAction title="Next note without a hand" icon={<ChevronRightIcon fontSize="small" />} onClick={() => stepHandless(1)} />
+                      </>
+                    ) : null}
                   </>
                 ) : null}
               </>
-            ) : null}
+            )}
           </>
         ) : null}
         {selectionName ? (
@@ -845,22 +859,26 @@ export function NotesEditor({ step }: { step: EditorStep }) {
             {selectionName}
           </Typography>
         ) : null}
-        <Divider orientation="vertical" flexItem />
-        <Tooltip title={summary ?? "Nothing to save"}>
-          <span>
-            <PillButton
-              size="small"
-              kind={summary === null ? "quiet" : "primary"}
-              startIcon={<SaveIcon fontSize="small" />}
-              busy={saving}
-              disabled={summary === null || busy}
-              onClick={() => void save()}
-              data-unsaved={summary ?? ""}
-            >
-              Save
-            </PillButton>
-          </span>
-        </Tooltip>
+        {readOnly ? null : (
+          <>
+            <Divider orientation="vertical" flexItem />
+            <Tooltip title={summary ?? "Nothing to save"}>
+              <span>
+                <PillButton
+                  size="small"
+                  kind={summary === null ? "quiet" : "primary"}
+                  startIcon={<SaveIcon fontSize="small" />}
+                  busy={saving}
+                  disabled={summary === null || busy}
+                  onClick={() => void save()}
+                  data-unsaved={summary ?? ""}
+                >
+                  Save
+                </PillButton>
+              </span>
+            </Tooltip>
+          </>
+        )}
       </FloatingBar>
 
       <Snackbar

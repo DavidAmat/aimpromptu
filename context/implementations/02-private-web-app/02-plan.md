@@ -210,7 +210,7 @@ its walkthrough under DECISIONS.
 |---|---|---|
 | Q-5 | The worldwide source is chosen: `musicchartsarchive.com`, downloaded by the parallel work (section 15.5). Still open: the sources for the `spain` and `catalan` regions, and anything that source does not give (genres, tags) | Phase 12, after the reconciliation |
 | Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12 |
-| Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production) |
+| Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). *Raised in the Phase 6 walkthrough* |
 | Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report |
 
 ---
@@ -621,6 +621,14 @@ renumbered to point into the new file. A file that no project uses any more is d
 file of the project (a video, its frames, an upload before its cuts) is deleted. In the Personal Vault
 nothing is deleted, so every cut can still be undone.
 
+*As built in Phase 6* (`audio/compact.py`): each file used only in part becomes a new FLAC of its
+kept ranges, joined with the 5 ms fade of a cut, and its 16 kHz copy is the old one with the same
+frames joined; the timeline points at each file whole and keeps its `audioRevision`, so the notes
+stay current and nothing the user hears or reads moves. A part of several files keeps its files and
+their names. The temporary files deleted are the video and its frames, the open edit sessions, and
+the history of the parts (its timelines name the audio just replaced). Measured on a copy of
+Elefants (two cuts): 23,335 kept frames before and after, the notes unchanged.
+
 **Deleting audio.** A file in `audio/` is deleted only when no project in any layer uses it. The table
 `audio_refs` (section 8.6) counts the uses; `make db-check` compares it with the bundles.
 
@@ -737,7 +745,9 @@ router-level check reads the session, then applies the table to the project the 
 path parameter. A project the user may not read answers 404, like a project that does not exist; one
 they may read but not write answers 403. The master user has no right over another user's private
 projects. **One change for now:** the owner writes a Private Library project in place, as before;
-the copy in the vault of section 10.6 arrives in Phase 6, which changes that one line.
+the copy in the vault of section 10.6 arrives in Phase 6, which changes that one line. *As built in
+Phase 6:* the owner reads a library project (a write answers 403) and changes it only through
+**Edit** and **Save to library**, which check the owner themselves.
 
 ## 9.4 Access on the home network
 
@@ -773,7 +783,10 @@ Empty state: "No projects yet" and the **New project** button.
 *As built in Phase 5:* the menu shows **From scratch** and **From other projects** disabled ("Not
 available yet") until Phases 8 and 10. The row menu also has **Rename** and **Notes Falling**. Until
 Phase 6 gives the Private Library its pages, its projects are listed on this page too, in a group
-**In my library** under the vault, so the 30 migrated songs stay one click away.
+**In my library** under the vault, so the 30 migrated songs stay one click away. *As built in Phase
+6:* that group is gone (the songs are in My library); an edit copy says **Editing** (the tooltip
+names the version and the song), its menu adds **Open the song**, and its Delete is **Discard
+changes**.
 
 ## 10.2 From source
 
@@ -818,6 +831,13 @@ until Phase 6 deletes it on save.
 over the user's Private Library, with "Create …" when the name is not there, and suggestions from the
 Public Library), and **Version name** (free text, for example "easy", "acoustic"). Saving moves the
 project to the Private Library (section 8.5 says what happens to the audio) and opens the song.
+
+*As built in Phase 6:* the dialog's Artist and Song take a known name or a new one as typed (a new
+name makes a new artist or song; names are compared ignoring case and spaces), choosing a known song
+fills its artist, and the version name starts as "original" and is unique in its song. The
+suggestions from the Public Library come with Phase 13, when it exists. The button is disabled while
+a step has unsaved edits, and the backend refuses (409) a project whose Sheet step is not `ready`
+or whose notes a job is writing.
 
 ## 10.3 From scratch
 
@@ -876,6 +896,17 @@ with `basedOn` pointing at the library project. The library copy does not change
 **Save to library** then offers **Replace the version** (the library project gets the new content; its
 previous content goes to `history/`) or **Save as a new version**. **Discard** deletes the vault copy.
 A song whose version is being edited shows "Editing" beside that version.
+
+*As built in Phase 6:* a version opens on the project page **read only** (every step shows what it
+holds and offers no change; the sheet draws, plays and prints; the header goes back to the song and
+its one action is **Edit**), because Play mode (Phase 11) does not exist yet and the user needs to
+see a version before editing it. **Edit** answers the copy already open instead of a second one.
+The save dialog of a copy opens on **Replace “<version>”**, with **New version** beside it. The
+library project keeps its id and its parts' ids on Replace. Its history is
+`history/<projectId>/v<N>/` (`project.json`, `snapshot.json`, the parts' files); **History** on a
+version lists the earlier states, each with **Restore**, which keeps the state it replaces too. The
+song page's version menu is Open, Edit, Duplicate, Export, Rename, History, Delete; an artist has
+**Add a name**, **Make default**, **Remove**, and **Merge into another artist**.
 
 ---
 

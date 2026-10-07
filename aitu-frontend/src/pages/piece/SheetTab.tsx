@@ -11,7 +11,7 @@ import SheetPage, { type SheetStep } from "./sheet/SheetPage";
 import { stepStatus, usePiece } from "./pieceContext";
 
 export function SheetTab() {
-  const { uuid, audio, status, refresh } = usePiece();
+  const { uuid, audio, status, refresh, readOnly } = usePiece();
   const here = stepStatus(status, "sheet");
   const state = here?.state ?? null;
   const reason = here?.reason ?? null;
@@ -20,9 +20,9 @@ export function SheetTab() {
   const step = useMemo<SheetStep | null>(
     () =>
       uuid && state
-        ? { audioUuid: uuid, label, state, reason, onChanged: () => void refresh() }
+        ? { audioUuid: uuid, label, state, reason, readOnly, onChanged: () => void refresh() }
         : null,
-    [uuid, label, state, reason, refresh],
+    [uuid, label, state, reason, readOnly, refresh],
   );
 
   if (!step) return null;

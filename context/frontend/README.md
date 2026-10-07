@@ -26,11 +26,12 @@ project. A section appears only once it is built:
 | Section | What it is for |
 |---|---|
 | **Projects** | The user's own projects; each one goes from its audio to its piano sheet, one step at a time |
+| **Songs**, **Artists** (under My library) | The user's Private Library: songs with their versions, artists with their names ([music-library/private-library.md](../music-library/private-library.md)) |
 | **Users** (under Admin, master user only) | Every user: **New user**, **Reset password**, **Disable** / **Enable** |
 | **Lab** (under Admin, master user only) | The video reader's pages: the video, its calibration, the detection, its notes, the examples |
 
-Another user sees no Admin group, and an Admin address shows them "Page not found". The libraries,
-Requests and Admin's other pages appear in the phases that build them. `/` goes to `/projects`.
+Another user sees no Admin group, and an Admin address shows them "Page not found". Playlists,
+Shared, the Public Library, Requests and Admin's other pages appear in the phases that build them. `/` goes to `/projects`.
 
 The user menu at the bottom shows the username and the role (Master user or User), then
 **Change password** (a dialog: the current password and a new one of at least 8 characters), the

@@ -20,6 +20,11 @@ export interface PieceContextValue {
   uuid: string | null;
   audio: AudioItem | null;
   status: PieceStatus | null;
+  /**
+   * A version of the library, opened to look at: the steps show it and offer no change (no cut,
+   * no edit, no Save, no Transcribe). It changes through **Edit**, a copy in Projects (Phase 6).
+   */
+  readOnly: boolean;
   /** Ask the backend again, after anything that may change a step. Resolves to the new status. */
   refresh: () => Promise<PieceStatus | null>;
   /** Called by the tab on each render with its current handlers. */

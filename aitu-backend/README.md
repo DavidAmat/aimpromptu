@@ -34,7 +34,9 @@ src/aitu_backend/
   api/            # FastAPI routers, one file per section (also /auth and /admin)
   auth/           # the session cookie, Argon2id passwords, the slow-down after wrong passwords,
                   # the rights table and the check every route runs
-  audio/          # upload, recording ingest, waveform, youtube, cuts and the frame table
+  audio/          # upload, recording ingest, waveform, youtube, cuts and the frame table; the
+                  # audio written again with only the ranges in use on Save to library
+  library/        # the Private Library: artists, names, songs, versions; save, edit, history
   transcription/  # engines (MuScriptor first), the GPU queue, the live stream, the lag
                   # correction, filters, events -> the wall-clock matrix, jobs, saved hands
   pieces/         # the state of each step of a piece; the note operations

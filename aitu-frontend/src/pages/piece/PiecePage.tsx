@@ -16,13 +16,24 @@
  * **Unsaved edits.** A tab with unsaved edits tells the page through `useUnsavedChanges`. Leaving
  * it by any link then asks the reader to save or discard first, and closing the browser tab shows
  * the browser's own warning (plan section 7.3).
+ *
+ * **The library** (Phase 6, plan sections 10.2 and 10.6). A project of the Personal Vault shows
+ * **Save to library** once its Sheet step is ready. A version of the Private Library opens **read
+ * only**: every step shows what it holds and nothing changes it (`readOnly` in the context), the
+ * back arrow goes to its song, and the one action is **Edit**, which opens the copy that changes it.
+ * That copy is an ordinary project with **Save to library** (replace the version, or a new one)
+ * and, in its `⋯`, **Discard changes**.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Skeleton from "@mui/material/Skeleton";
+import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import DownloadIcon from "@mui/icons-material/FileDownloadOutlined";
+import EditIcon from "@mui/icons-material/EditOutlined";
+import LibraryAddIcon from "@mui/icons-material/LibraryAddOutlined";
+import Tooltip from "@mui/material/Tooltip";
 import WaterfallIcon from "@mui/icons-material/WaterfallChartOutlined";
 import {
   Navigate,
@@ -41,6 +52,7 @@ import {
   projectsApi,
   type AudioItem,
   type PieceStatus,
+  type ProjectRow,
   type PieceStep,
   type StepStatus,
 } from "../../api";
@@ -50,6 +62,8 @@ import { useWorkingArtifact } from "../../state/useWorkingArtifact";
 import { ConfirmDialog, EmptyState, PageHeader, PillButton, RowMenu, StepTabs } from "../../ui";
 
 const NOT_FOUND = "There is no project of yours at this address.";
+import SaveToLibraryDialog from "./SaveToLibraryDialog";
+import { said } from "../library/shared";
 import {
   PieceContext,
   SAVED_NAVIGATION,
@@ -79,10 +93,12 @@ interface Loaded {
   uuid: string | null;
   audio: AudioItem | null;
   status: PieceStatus | null;
+  /** The project's row: its layer, and the song and version it is or edits. */
+  project: ProjectRow | null;
   error: string | null;
 }
 
-const EMPTY: Loaded = { uuid: null, audio: null, status: null, error: null };
+const EMPTY: Loaded = { uuid: null, audio: null, status: null, project: null, error: null };
 
 export function PiecePage() {
   const { id: uuid } = useParams();
@@ -98,8 +114,10 @@ export function PiecePage() {
     if (!uuid) return;
     const controller = new AbortController();
     Promise.all([piecesApi.status(uuid, controller.signal), audioApi.get(uuid, controller.signal)])
-      .then(([status, audio]) => {
-        setLoaded({ uuid, audio, status, error: null });
+      .then(async ([status, audio]) => {
+        const project = await projectsApi.get(audio.projectId ?? uuid, controller.signal).catch(() => null);
+        if (controller.signal.aborted) return;
+        setLoaded({ uuid, audio, status, project, error: null });
         // The Playground tabs read the working piece; opening a piece here makes it theirs too.
         update({ audioUuid: uuid, artifactId: undefined, label: audio.alias });
       })
@@ -109,6 +127,7 @@ export function PiecePage() {
           uuid,
           audio: null,
           status: null,
+          project: null,
           // 404: no project here, or one of another user, which the backend does not tell apart.
           error:
             caught instanceof ApiError && caught.status === 404
@@ -181,17 +200,65 @@ export function PiecePage() {
     else blocker.reset();
   };
 
+  // A version of a library (or of the Public Library) is read only: it changes through Edit.
+  const layer = current.audio?.layer ?? null;
+  const readOnly = layer === "private" || layer === "public";
+
   const context = useMemo<PieceContextValue>(
     () => ({
       uuid: uuid ?? null,
       audio: current.audio,
       status: current.status,
+      readOnly,
       refresh,
       registerUnsaved,
       setUnsavedSummary: setUnsaved,
     }),
-    [uuid, current.audio, current.status, refresh, registerUnsaved],
+    [uuid, current.audio, current.status, readOnly, refresh, registerUnsaved],
   );
+
+  // ------------------------------------------------------------------ the library
+
+  const project = current.project;
+  const library = project?.library ?? null;
+  const editing = project?.editing ?? null;
+  const [saving, setSaving] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
+  const [libraryBusy, setLibraryBusy] = useState(false);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+
+  const openEdit = async () => {
+    if (!project) return;
+    setLibraryBusy(true);
+    setLibraryError(null);
+    try {
+      const copy = await projectsApi.edit(project.id);
+      navigate(ROUTES.project(copy.parts[0] ?? copy.id, step ?? undefined));
+    } catch (caught) {
+      setLibraryError(said(caught, "The version could not be opened for editing."));
+    } finally {
+      setLibraryBusy(false);
+    }
+  };
+
+  const discard = async () => {
+    if (!project) return;
+    setLibraryBusy(true);
+    setLibraryError(null);
+    try {
+      await projectsApi.remove(project.id);
+      handlersRef.current?.discard();
+      navigate(editing ? ROUTES.librarySong(editing.songId) : ROUTES.projects, {
+        replace: true,
+        state: SAVED_NAVIGATION,
+      });
+    } catch (caught) {
+      setLibraryError(said(caught, "The changes could not be discarded."));
+      setDiscarding(false);
+    } finally {
+      setLibraryBusy(false);
+    }
+  };
 
   // ------------------------------------------------------------------ render
 
@@ -209,38 +276,84 @@ export function PiecePage() {
 
   const audio = current.audio;
   const blockedTab = step ? STEP_LABELS[step] : "This step";
-  const title = uuid ? (audio?.alias ?? "") : "New project";
+  const title = !uuid
+    ? "New project"
+    : library
+      ? `${library.songTitle} (${library.versionName})`
+      : (audio?.alias ?? "");
   const hasNotes = stepStatus(status, "notes")?.state === "ready";
+  const sheetReady = stepStatus(status, "sheet")?.state === "ready";
+  const back = library
+    ? { to: ROUTES.librarySong(library.songId), label: `Back to ${library.songTitle}` }
+    : { to: ROUTES.projects, label: "Back to Projects" };
+
+  const menu = uuid
+    ? [
+        {
+          label: "Notes Falling",
+          icon: <WaterfallIcon fontSize="small" />,
+          onClick: () => navigate(ROUTES.projectNotesFalling(uuid)),
+          disabled: !hasNotes,
+        },
+        {
+          label: "Export",
+          icon: <DownloadIcon fontSize="small" />,
+          onClick: () => {
+            const link = document.createElement("a");
+            link.href = projectsApi.exportUrl(project?.id ?? uuid);
+            link.download = "";
+            link.click();
+          },
+        },
+        ...(editing
+          ? [
+              {
+                label: "Discard changes",
+                icon: <DeleteIcon fontSize="small" />,
+                onClick: () => setDiscarding(true),
+                danger: true,
+              },
+            ]
+          : []),
+      ]
+    : [];
+
+  let primary = null;
+  if (uuid && readOnly && layer === "private") {
+    primary = (
+      <PillButton kind="primary" startIcon={<EditIcon />} busy={libraryBusy} onClick={() => void openEdit()}>
+        Edit
+      </PillButton>
+    );
+  } else if (uuid && layer === "vault" && project && sheetReady) {
+    primary = (
+      <Tooltip title={unsaved !== null ? "Save your changes first" : ""}>
+        <span>
+          <PillButton
+            kind="primary"
+            startIcon={<LibraryAddIcon />}
+            disabled={unsaved !== null}
+            onClick={() => setSaving(true)}
+          >
+            Save to library
+          </PillButton>
+        </span>
+      </Tooltip>
+    );
+  }
 
   return (
     <PieceContext value={context}>
       <Box sx={{ px: { xs: 2, md: 3 }, pt: 1, pb: 4 }}>
         <PageHeader
           title={title}
-          back={{ to: ROUTES.projects, label: "Back to Projects" }}
+          back={back}
           actions={
             uuid ? (
-              <RowMenu
-                title="Project actions"
-                items={[
-                  {
-                    label: "Notes Falling",
-                    icon: <WaterfallIcon fontSize="small" />,
-                    onClick: () => navigate(ROUTES.projectNotesFalling(uuid)),
-                    disabled: !hasNotes,
-                  },
-                  {
-                    label: "Export",
-                    icon: <DownloadIcon fontSize="small" />,
-                    onClick: () => {
-                      const link = document.createElement("a");
-                      link.href = projectsApi.exportUrl(uuid);
-                      link.download = "";
-                      link.click();
-                    },
-                  },
-                ]}
-              />
+              <>
+                {primary}
+                <RowMenu title="Project actions" items={menu} />
+              </>
             ) : undefined
           }
         >
@@ -249,7 +362,7 @@ export function PiecePage() {
               steps={steps.map((item) => ({
                 key: item.step,
                 // A video project's second step is its video (plan section 10.2).
-                label: item.step === "audio" && audio?.hasVideo ? "Video" : STEP_LABELS[item.step],
+                label: item.step === "audio" && audio?.hasVideo && !readOnly ? "Video" : STEP_LABELS[item.step],
                 state: item.state,
                 enabled: item.enabled,
                 reason: item.reason,
@@ -278,8 +391,38 @@ export function PiecePage() {
           </Alert>
         ) : null}
 
+        {libraryError ? (
+          <Alert severity="error" onClose={() => setLibraryError(null)} sx={{ my: 2 }}>
+            {libraryError}
+          </Alert>
+        ) : null}
+
         <Box sx={{ pt: 2 }}>{!uuid || status ? <Outlet /> : null}</Box>
       </Box>
+
+      {saving && project ? (
+        <SaveToLibraryDialog
+          projectId={project.id}
+          title={project.title}
+          editing={editing}
+          onClose={() => setSaving(false)}
+          onSaved={(saved) => {
+            setSaving(false);
+            navigate(ROUTES.librarySong(saved.songId), { state: SAVED_NAVIGATION });
+          }}
+        />
+      ) : null}
+
+      <ConfirmDialog
+        open={discarding}
+        title={editing ? `Discard your changes to “${editing.versionName}”?` : "Discard this project?"}
+        message="This copy is deleted. The version in your library stays as it is."
+        confirmLabel="Discard changes"
+        danger
+        busy={libraryBusy}
+        onCancel={() => setDiscarding(false)}
+        onConfirm={() => void discard()}
+      />
 
       <ConfirmDialog
         open={blocker.state === "blocked"}

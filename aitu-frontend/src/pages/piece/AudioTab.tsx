@@ -89,8 +89,9 @@ interface Loaded {
 }
 
 export function AudioTab() {
-  const { audio } = usePiece();
-  return audio?.hasVideo ? <VideoStep /> : <AudioOfProject />;
+  const { audio, readOnly } = usePiece();
+  // A version of the library shows its audio: fitting the piano and reading notes are edits.
+  return audio?.hasVideo && !readOnly ? <VideoStep /> : <AudioOfProject />;
 }
 
 function AudioOfProject() {
@@ -165,7 +166,7 @@ function describe(cuts: readonly Cut[]): string {
 
 function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps) {
   const navigate = useNavigate();
-  const { status, refresh } = usePiece();
+  const { status, refresh, readOnly } = usePiece();
   const { artifact } = useWorkingArtifact();
   const total = initial.totalFrames;
 
@@ -248,9 +249,9 @@ function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps)
   const canRestore = hasSelection && overlapsCut(cuts, selection[0], selection[1]);
 
   const deleteSelection = useCallback(() => {
-    if (!selection || selection[1] <= selection[0]) return;
+    if (readOnly || !selection || selection[1] <= selection[0]) return;
     setCuts((current) => addCut(current, selection[0], selection[1], total));
-  }, [selection, setCuts, total]);
+  }, [readOnly, selection, setCuts, total]);
 
   const restoreSelection = useCallback(() => {
     if (!selection) return;
@@ -425,9 +426,11 @@ function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps)
           </Stack>
         ) : null}
         <Box sx={{ flexGrow: 1 }} />
-        <PillButton kind="primary" busy={starting} disabled={saving} onClick={onTranscribe} startIcon={<PlayArrowIcon />}>
-          {transcribeLabel}
-        </PillButton>
+        {readOnly ? null : (
+          <PillButton kind="primary" busy={starting} disabled={saving} onClick={onTranscribe} startIcon={<PlayArrowIcon />}>
+            {transcribeLabel}
+          </PillButton>
+        )}
       </Stack>
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ alignItems: "flex-start" }}>
@@ -437,7 +440,7 @@ function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps)
             cuts={cuts}
             selection={selection}
             onSelect={selectFile}
-            onAdd={() => addInput.current?.click()}
+            onAdd={readOnly ? undefined : () => addInput.current?.click()}
             adding={adding !== null}
           />
         ) : null}
@@ -472,36 +475,40 @@ function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps)
           disabled={!hasSelection}
           onClick={() => selection && player.playSelection(selection)}
         />
-        <Divider orientation="vertical" flexItem />
-        <IconAction
-          title="Cut the selection"
-          shortcut="Delete"
-          disabledTitle="Select a part of the waveform first"
-          icon={<ContentCutIcon fontSize="small" />}
-          disabled={!hasSelection}
-          onClick={deleteSelection}
-        />
-        <IconAction
-          title="Restore the cuts in the selection"
-          disabledTitle="Click a cut to select it"
-          icon={<RestoreIcon fontSize="small" />}
-          disabled={!canRestore}
-          onClick={restoreSelection}
-        />
-        <IconAction
-          title={history.canUndo ? `Undo ${history.undoLabel ?? ""}`.trim() : "Nothing to undo"}
-          shortcut="⌘Z"
-          icon={<UndoIcon fontSize="small" />}
-          disabled={!history.canUndo}
-          onClick={() => void history.undo()}
-        />
-        <IconAction
-          title={history.canRedo ? `Redo ${history.redoLabel ?? ""}`.trim() : "Nothing to redo"}
-          shortcut="⇧⌘Z"
-          icon={<RedoIcon fontSize="small" />}
-          disabled={!history.canRedo}
-          onClick={() => void history.redo()}
-        />
+        {readOnly ? null : (
+          <>
+            <Divider orientation="vertical" flexItem />
+            <IconAction
+              title="Cut the selection"
+              shortcut="Delete"
+              disabledTitle="Select a part of the waveform first"
+              icon={<ContentCutIcon fontSize="small" />}
+              disabled={!hasSelection}
+              onClick={deleteSelection}
+            />
+            <IconAction
+              title="Restore the cuts in the selection"
+              disabledTitle="Click a cut to select it"
+              icon={<RestoreIcon fontSize="small" />}
+              disabled={!canRestore}
+              onClick={restoreSelection}
+            />
+            <IconAction
+              title={history.canUndo ? `Undo ${history.undoLabel ?? ""}`.trim() : "Nothing to undo"}
+              shortcut="⌘Z"
+              icon={<UndoIcon fontSize="small" />}
+              disabled={!history.canUndo}
+              onClick={() => void history.undo()}
+            />
+            <IconAction
+              title={history.canRedo ? `Redo ${history.redoLabel ?? ""}`.trim() : "Nothing to redo"}
+              shortcut="⇧⌘Z"
+              icon={<RedoIcon fontSize="small" />}
+              disabled={!history.canRedo}
+              onClick={() => void history.redo()}
+            />
+          </>
+        )}
         <Divider orientation="vertical" flexItem />
         <IconAction title="Zoom out" icon={<ZoomOutIcon fontSize="small" />} onClick={() => zoom(2)} />
         <IconAction title="Zoom in" icon={<ZoomInIcon fontSize="small" />} onClick={() => zoom(0.5)} />
@@ -513,43 +520,47 @@ function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps)
           onClick={zoomToSelection}
         />
         <IconAction title="Show the whole audio" icon={<FitScreenIcon fontSize="small" />} onClick={() => setView(wholeView(total))} />
-        <Divider orientation="vertical" flexItem />
-        <IconAction
-          title="Add audio at the end"
-          icon={<AddCircleIcon fontSize="small" />}
-          disabled={adding !== null || saving || starting}
-          onClick={() => addInput.current?.click()}
-        />
-        <input
-          ref={addInput}
-          type="file"
-          hidden
-          accept={SUPPORTED_AUDIO_SUFFIXES.join(",")}
-          aria-label="Choose an audio file to add"
-          onChange={(event) => {
-            void addAudio(event.target.files?.[0]);
-            event.target.value = "";
-          }}
-        />
-        <Divider orientation="vertical" flexItem />
-        {unsaved ? (
-          <IconAction title="Discard the changes" icon={<CloseIcon fontSize="small" />} onClick={discard} disabled={saving} />
-        ) : null}
-        <Tooltip title={summary ?? "Nothing to save"}>
-          <span>
-            <PillButton
-              kind={unsaved ? "primary" : "quiet"}
-              size="small"
-              startIcon={<SaveIcon fontSize="small" />}
-              disabled={!unsaved || starting}
-              busy={saving}
-              onClick={() => void save()}
-              data-unsaved={summary ?? ""}
-            >
-              Save
-            </PillButton>
-          </span>
-        </Tooltip>
+        {readOnly ? null : (
+          <>
+            <Divider orientation="vertical" flexItem />
+            <IconAction
+              title="Add audio at the end"
+              icon={<AddCircleIcon fontSize="small" />}
+              disabled={adding !== null || saving || starting}
+              onClick={() => addInput.current?.click()}
+            />
+            <input
+              ref={addInput}
+              type="file"
+              hidden
+              accept={SUPPORTED_AUDIO_SUFFIXES.join(",")}
+              aria-label="Choose an audio file to add"
+              onChange={(event) => {
+                void addAudio(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
+            <Divider orientation="vertical" flexItem />
+            {unsaved ? (
+              <IconAction title="Discard the changes" icon={<CloseIcon fontSize="small" />} onClick={discard} disabled={saving} />
+            ) : null}
+            <Tooltip title={summary ?? "Nothing to save"}>
+              <span>
+                <PillButton
+                  kind={unsaved ? "primary" : "quiet"}
+                  size="small"
+                  startIcon={<SaveIcon fontSize="small" />}
+                  disabled={!unsaved || starting}
+                  busy={saving}
+                  onClick={() => void save()}
+                  data-unsaved={summary ?? ""}
+                >
+                  Save
+                </PillButton>
+              </span>
+            </Tooltip>
+          </>
+        )}
       </FloatingBar>
 
       <ConfirmDialog
@@ -580,7 +591,8 @@ function FilePanel({
   cuts: readonly Cut[];
   selection: Cut | null;
   onSelect: (file: AxisFile) => void;
-  onAdd: () => void;
+  /** Absent on a version of the library, which changes only through Edit. */
+  onAdd?: () => void;
   adding: boolean;
 }) {
   useScheme();
@@ -641,16 +653,18 @@ function FilePanel({
           </ButtonBase>
         );
       })}
-      <PillButton
-        kind="quiet"
-        size="small"
-        startIcon={<AddCircleIcon fontSize="small" />}
-        onClick={onAdd}
-        disabled={adding}
-        sx={{ mt: 0.5 }}
-      >
-        Add audio
-      </PillButton>
+      {onAdd ? (
+        <PillButton
+          kind="quiet"
+          size="small"
+          startIcon={<AddCircleIcon fontSize="small" />}
+          onClick={onAdd}
+          disabled={adding}
+          sx={{ mt: 0.5 }}
+        >
+          Add audio
+        </PillButton>
+      ) : null}
     </Box>
   );
 }

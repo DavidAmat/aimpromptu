@@ -29,7 +29,7 @@ How the AImpromptu (aitu) documentation system works and where to put new materi
 **The app and the language:**
 - `context/app/` — [01-app-context.md](app/01-app-context.md), the app being built, in the user's words; its glossary is the vocabulary of every new page
 - `context/language/` — how to write ([communication-style.md](language/communication-style.md)) and how to report on a plan ([communication-implementation-plans.md](language/communication-implementation-plans.md))
-- `context/music-library/` — planned: the music library, its ontology and popularity (implementation 02, Phases 12 to 14)
+- `context/music-library/` — the music library: the Private Library (implementation 02, Phase 6); its ontology, popularity and requests come with Phases 12 to 14
 
 **Service overviews:**
 - `context/backend/` — aitu-backend: parsing, API, notation entry points

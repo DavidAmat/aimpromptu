@@ -92,7 +92,8 @@ Step by step, with the reason for each ordering:
 ## The screens
 
 A sign-in page first (**Username**, **Password**, **Sign in**). Then a left sidebar with **Search**
-(`⌘K`), **Projects**, and for the master user an **Admin** group with **Users** and **Lab**, in black,
+(`⌘K`), **Projects**, **My library** (**Songs**, **Artists**), and for the master user an **Admin**
+group with **Users** and **Lab**, in black,
 white and grey with colour only on the music (implementation 02, Phase 1;
 [frontend/README.md](frontend/README.md)). The user menu at the bottom changes the password, chooses
 the theme (**Light**, **Dark** or **System**; the piano sheet stays white paper) and signs out.
@@ -109,6 +110,14 @@ work; a step opens only when the step before it is ready ([frontend/projects.md]
 | Notes | Watch the rectangles appear live, then edit them on a canvas piano roll and play the original audio |
 | Hands | **Predict hands**, check the colours along the song, move notes between the hands, **Save** |
 | **Sheet** | The product: the staff drawn on arrival (the highest pile of gaps is a negra), the floating bar, the sheet, note and range toolboxes |
+
+**My library** — finished work (implementation 02, Phase 6;
+[music-library/private-library.md](music-library/private-library.md)). **Save to library** on a
+project with its sheet saved asks the artist, the song and a version name, moves it there (its audio
+written again with only the ranges in use, its temporary files deleted), and opens the song. A
+version opens read only; **Edit** makes a copy in Projects, which then **replaces the version** (its
+earlier state kept in a history that can be restored) or becomes a new version. Artists have
+several names and can be merged.
 
 **Notes Falling** opens from a project's `⋯` menu. **Lab** (master user only) holds the video
 reader's pages: it reads a Synthesia-style video into a piece. **Users** (master user only) makes
