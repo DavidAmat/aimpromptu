@@ -199,6 +199,17 @@ places are held for the pool they were picked in, so any change of the pool lets
 place never names another piece. `check:lyrics` merges the two halves of the scissors split back
 (shot 10c).
 
+**Seventh review: a tick box per piece, consecutive only, Merge by the title.** Command-click was
+not discoverable. A pool piece is now a small row of its own (MUI's chip has room for one icon on
+the right): the green tick when on the sheet, the words (a click edits them), a **tick box**, and
+the cross. The ticked pieces are always one run of consecutive pieces: with some ticked, only the
+piece just before or after the run can be ticked and only an end unticked; the other boxes are
+disabled and say why in their tooltip. **Merge** is beside "Pool (n)", disabled until two are
+ticked. A defect found by `check:lyrics`: the tooltip of one button covered the button beside it,
+because MUI tooltips are interactive (they catch the pointer); `IconAction` tooltips are now
+`disableInteractive` across the app, and `check:projects`, `check:library`, `check:flow` and the
+whole toolbox script pass again.
+
 # 4. Story 7.3: keys and clefs of passages
 
 ## 4.1 Key for this passage

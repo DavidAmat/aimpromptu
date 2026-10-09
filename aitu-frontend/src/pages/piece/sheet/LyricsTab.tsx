@@ -1,8 +1,9 @@
 /**
  * The **Lyrics** tab of the sheet toolbox (plan section 11.5).
  *
- * Command-click (Control-click) picks pieces of the pool; **Merge** joins the picked ones, in pool
- * order, in the place of the first (the way back from a split made by mistake).
+ * The box beside a pool piece's cross picks it; only consecutive pieces can be picked, and
+ * **Merge**, beside the pool's title, joins them in the place of the first (the way back from a split
+ * made by mistake).
  * A piece of the pool is edited in place by clicking it: Enter (or the scissors at the end of the
  * field) splits it where the cursor is into two pieces in the same place and closes the field.
  *
@@ -17,12 +18,14 @@
 
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import Box from "@mui/material/Box";
-import Chip from "@mui/material/Chip";
 import InputAdornment from "@mui/material/InputAdornment";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ArchiveIcon from "@mui/icons-material/ArchiveOutlined";
+import CancelIcon from "@mui/icons-material/Cancel";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CallMergeIcon from "@mui/icons-material/CallMergeOutlined";
 import ContentCutIcon from "@mui/icons-material/ContentCutOutlined";
@@ -101,13 +104,28 @@ export function LyricsTab({
     at: [],
   });
   const pickedInPool = poolPicked.forPool === pool ? poolPicked.at : [];
-  const togglePoolPick = (index: number) =>
+  /**
+   * The picked pieces are always one run of consecutive pieces, because only those can be merged:
+   * with nothing picked any piece can be; then only the piece just before or just after the run is
+   * added, and only an end of the run is let go.
+   */
+  const pickLow = pickedInPool.length > 0 ? Math.min(...pickedInPool) : -1;
+  const pickHigh = pickedInPool.length > 0 ? Math.max(...pickedInPool) : -1;
+  const canTogglePick = (index: number) =>
+    pickedInPool.length === 0 ||
+    index === pickLow ||
+    index === pickHigh ||
+    index === pickLow - 1 ||
+    index === pickHigh + 1;
+  const togglePoolPick = (index: number) => {
+    if (!canTogglePick(index)) return;
     setPoolPicked({
       forPool: pool,
       at: pickedInPool.includes(index)
         ? pickedInPool.filter((at) => at !== index)
         : [...pickedInPool, index],
     });
+  };
 
   /** Keep `text` as the piece's words: each line a piece of its own, in the same place. */
   const commitPoolEdit = (text = poolEdit?.text) => {
@@ -211,105 +229,91 @@ export function LyricsTab({
 
       {pool.length > 0 ? (
         <Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
-            Pool ({pool.length}
-            {placed.some(Boolean) ? `, ${placed.filter(Boolean).length} on the sheet` : ""})
-          </Typography>
-          {pickedInPool.length > 0 ? (
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 0.75 }}>
-              <PillButton
-                kind="primary"
-                size="small"
-                disabled={pickedInPool.length < 2}
-                startIcon={<CallMergeIcon fontSize="small" />}
-                onClick={() => setPool((current) => mergePoolPieces(current, pickedInPool))}
-                data-lyrics-pool-merge
-              >
-                {pickedInPool.length < 2 ? "Pick another to merge" : `Merge ${pickedInPool.length} pieces`}
-              </PillButton>
-              <PillButton
-                kind="quiet"
-                size="small"
-                onClick={() => setPoolPicked({ forPool: pool, at: [] })}
-              >
-                Cancel
-              </PillButton>
-            </Stack>
-          ) : null}
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 0.75, minHeight: 30 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+              Pool ({pool.length}
+              {placed.some(Boolean) ? `, ${placed.filter(Boolean).length} on the sheet` : ""})
+            </Typography>
+            {/* Joins the picked pieces; it needs two, next to each other. */}
+            <PillButton
+              kind={pickedInPool.length >= 2 ? "primary" : "secondary"}
+              size="small"
+              disabled={pickedInPool.length < 2}
+              startIcon={<CallMergeIcon fontSize="small" />}
+              title={
+                pickedInPool.length < 2
+                  ? "Tick the boxes of two or more pieces next to each other"
+                  : `Join the ${pickedInPool.length} ticked pieces into one`
+              }
+              onClick={() => setPool((current) => mergePoolPieces(current, pickedInPool))}
+              data-lyrics-pool-merge
+            >
+              Merge
+            </PillButton>
+          </Stack>
           <Stack
             spacing={0.5}
-            sx={{ maxHeight: 220, overflowY: "auto", pr: 0.5 }}
+            sx={{ maxHeight: 260, overflowY: "auto", pr: 0.5 }}
             data-lyrics-pool={pool.length}
           >
-            {pool.map((text, index) =>
-              poolEdit?.index === index ? (
-                <TextField
-                  key={`${index}:editing`}
-                  size="small"
-                  autoFocus
-                  value={poolEdit.text}
-                  inputRef={poolInput}
-                  onChange={(event) => setPoolEdit({ index, text: event.target.value })}
-                  onBlur={() => commitPoolEdit()}
-                  onKeyDown={(event) => {
-                    // Enter splits where the cursor is and closes the field; leaving the field
-                    // keeps the words as typed; Escape drops the change.
-                    if (event.key === "Escape") {
-                      event.stopPropagation();
-                      poolEditClosed.current = true;
-                      setPoolEdit(null);
-                    } else if (event.key === "Enter") {
-                      event.preventDefault();
-                      splitPoolEdit();
-                    }
-                  }}
-                  slotProps={{
-                    htmlInput: {
-                      "aria-label": "Words of this piece; Enter splits it where the cursor is",
-                      "data-lyrics-pool-edit": index,
-                    },
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          {/*
-                            A press here would blur the field (and keep the words unsplit) before
-                            the click; keeping the focus keeps the cursor where the split goes.
-                          */}
-                          <span onMouseDown={(event) => event.preventDefault()}>
-                            <IconAction
-                              title="Split here"
-                              shortcut="Enter"
-                              icon={<ContentCutIcon fontSize="small" />}
-                              onClick={splitPoolEdit}
-                              data-testid="lyrics-pool-split"
-                            />
-                          </span>
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-              ) : (
-                <Chip
+            {pool.map((text, index) => {
+              if (poolEdit?.index === index) {
+                return (
+                  <TextField
+                    key={`${index}:editing`}
+                    size="small"
+                    autoFocus
+                    value={poolEdit.text}
+                    inputRef={poolInput}
+                    onChange={(event) => setPoolEdit({ index, text: event.target.value })}
+                    onBlur={() => commitPoolEdit()}
+                    onKeyDown={(event) => {
+                      // Enter splits where the cursor is and closes the field; leaving the field
+                      // keeps the words as typed; Escape drops the change.
+                      if (event.key === "Escape") {
+                        event.stopPropagation();
+                        poolEditClosed.current = true;
+                        setPoolEdit(null);
+                      } else if (event.key === "Enter") {
+                        event.preventDefault();
+                        splitPoolEdit();
+                      }
+                    }}
+                    slotProps={{
+                      htmlInput: {
+                        "aria-label": "Words of this piece; Enter splits it where the cursor is",
+                        "data-lyrics-pool-edit": index,
+                      },
+                      input: {
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            {/*
+                              A press here would blur the field (and keep the words unsplit)
+                              before the click; keeping the focus keeps the cursor where the split
+                              goes.
+                            */}
+                            <span onMouseDown={(event) => event.preventDefault()}>
+                              <IconAction
+                                title="Split here"
+                                shortcut="Enter"
+                                icon={<ContentCutIcon fontSize="small" />}
+                                onClick={splitPoolEdit}
+                                data-testid="lyrics-pool-split"
+                              />
+                            </span>
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                  />
+                );
+              }
+              const ticked = pickedInPool.includes(index);
+              const free = canTogglePick(index);
+              return (
+                <Box
                   // Two pieces may have the same words, so the place is part of the key.
                   key={`${index}:${text}`}
-                  label={text}
-                  title={`${text} — ${placed[index] ? "on the sheet; drag to place it again" : "drag onto the sheet"}, or click to edit, Command-click to pick for a merge`}
-                  icon={
-                    placed[index] ? (
-                      <CheckCircleIcon fontSize="small" sx={{ color: "success.main" }} />
-                    ) : undefined
-                  }
-                  onClick={(event) => {
-                    if (event.metaKey || event.ctrlKey) {
-                      togglePoolPick(index);
-                      return;
-                    }
-                    poolEditClosed.current = false;
-                    setPoolEdit({ index, text });
-                  }}
-                  color={pickedInPool.includes(index) ? "primary" : "default"}
-                  variant={pickedInPool.includes(index) ? "outlined" : "filled"}
                   draggable
                   onDragStart={(event) => {
                     event.dataTransfer.setData(POOL_DRAG_TYPE, String(index));
@@ -317,26 +321,71 @@ export function LyricsTab({
                     onPoolDrag(index);
                   }}
                   onDragEnd={() => onPoolDrag(null)}
-                  onDelete={() => setPool((current) => current.filter((_, at) => at !== index))}
                   sx={{
-                    justifyContent: "space-between",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    minHeight: 32,
+                    pl: placed[index] ? 0.75 : 1.5,
+                    pr: 0.25,
+                    borderRadius: 4,
+                    bgcolor: ticked ? "action.selected" : "action.hover",
+                    outline: ticked ? 1 : 0,
+                    outlineColor: "text.primary",
                     cursor: "grab",
-                    borderRadius: 2,
-                    "& .MuiChip-label": {
-                      flex: 1,
-                      textAlign: "left",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    },
-                    // The tick of a piece on the sheet, green whatever colour the chip gives icons.
-                    "& .MuiChip-icon": { color: "success.main" },
                   }}
                   data-lyrics-piece={index}
                   data-placed={placed[index] ? "yes" : "no"}
-                  data-pool-picked={pickedInPool.includes(index) ? "yes" : "no"}
-                />
-              ),
-            )}
+                  data-pool-picked={ticked ? "yes" : "no"}
+                >
+                  {placed[index] ? (
+                    <CheckCircleIcon
+                      fontSize="small"
+                      sx={{ color: "success.main" }}
+                    />
+                  ) : null}
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    title={`${text}: ${placed[index] ? "on the sheet; drag to place it again" : "drag onto the sheet"}, or click to edit`}
+                    onClick={() => {
+                      poolEditClosed.current = false;
+                      setPoolEdit({ index, text });
+                    }}
+                    sx={{ flex: 1, cursor: "text", py: 0.5 }}
+                  >
+                    {text}
+                  </Typography>
+                  <IconAction
+                    title={ticked ? "Untick" : "Tick to merge it with the pieces next to it"}
+                    disabledTitle={
+                      ticked
+                        ? "Untick the pieces at the ends first"
+                        : "Only a piece next to the ticked ones can be merged with them"
+                    }
+                    icon={
+                      ticked ? (
+                        <CheckBoxIcon fontSize="small" />
+                      ) : (
+                        <CheckBoxOutlineBlankIcon fontSize="small" />
+                      )
+                    }
+                    active={ticked}
+                    disabled={!free}
+                    onClick={() => togglePoolPick(index)}
+                    placement="top"
+                    data-testid={`lyrics-pool-pick-${index}`}
+                  />
+                  <IconAction
+                    title="Remove from the pool"
+                    icon={<CancelIcon fontSize="small" />}
+                    onClick={() => setPool((current) => current.filter((_, at) => at !== index))}
+                    placement="top"
+                    data-testid={`lyrics-pool-remove-${index}`}
+                  />
+                </Box>
+              );
+            })}
           </Stack>
         </Box>
       ) : null}

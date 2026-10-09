@@ -435,10 +435,14 @@ try {
     check('and so does the scissors at the end of the field, the order kept',
       JSON.stringify(poolNow.slice(4)) === JSON.stringify(['third line', 'here'])
         && (await toolbox().locator('[data-lyrics-pool-edit]').count()) === 0, JSON.stringify(poolNow));
-    // Picked with Command-click, the two halves are merged back into one piece, in their place.
-    await toolbox().locator('[data-lyrics-piece="4"]').click({ modifiers: ['ControlOrMeta'] });
-    await toolbox().locator('[data-lyrics-piece="5"]').click({ modifiers: ['ControlOrMeta'] });
-    check('Command-click picks pieces of the pool without editing them',
+    // Ticked with the box beside each cross, the two halves are merged back into one piece, in
+    // their place. Only pieces next to each other can be ticked together.
+    check('Merge waits for two ticked pieces', await toolbox().locator('[data-lyrics-pool-merge]').isDisabled());
+    await page.getByTestId('lyrics-pool-pick-4').click();
+    check('with one piece ticked, only its neighbours can be ticked',
+      (await page.getByTestId('lyrics-pool-pick-2').isDisabled()) && !(await page.getByTestId('lyrics-pool-pick-5').isDisabled()));
+    await page.getByTestId('lyrics-pool-pick-5').click();
+    check('the boxes tick pieces without opening them',
       (await toolbox().locator('[data-pool-picked="yes"]').count()) === 2
         && (await toolbox().locator('[data-lyrics-pool-edit]').count()) === 0);
     await shot('10c-lyrics-pool-picked');

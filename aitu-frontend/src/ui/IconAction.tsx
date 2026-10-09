@@ -45,7 +45,14 @@ export function IconAction({
 }: IconActionProps) {
   const label = shortcut ? `${title} (${shortcut})` : title;
   return (
-    <Tooltip title={disabled && disabledTitle ? disabledTitle : label} placement={placement} describeChild>
+    // Not interactive: a tooltip never catches the pointer, so it cannot cover the button beside its
+    // own (the tick and the cross of a lyrics piece sit side by side).
+    <Tooltip
+      title={disabled && disabledTitle ? disabledTitle : label}
+      placement={placement}
+      describeChild
+      disableInteractive
+    >
       <span style={{ display: "inline-flex" }}>
         <IconButton
           size={size}

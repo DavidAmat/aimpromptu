@@ -357,7 +357,7 @@ so the same job looks the same everywhere.
 | `Sidebar` | Open (260 px, words) or closed (64 px, icons with tooltips); groups with a heading; the footer |
 | `PageHeader` | The title on the left, the primary action on the right, an optional back arrow and a middle row (the step tabs). No subtitle |
 | `Section` | A group inside a page: an optional small title and its controls, no description, no border (it replaced `SectionCard`) |
-| `IconAction` | An icon button with its tooltip, which is also its name; the shortcut after the title; a tooltip that says why when disabled |
+| `IconAction` | An icon button with its tooltip, which is also its name; the shortcut after the title; a tooltip that says why when disabled; tooltips never catch the pointer, so one never covers the button beside it |
 | `PillButton` | `primary` (black), `secondary` (white, grey border), `quiet`, `danger`; `busy` shows a spinner |
 | `Segmented` | One of 2 to 4 options, as one rounded group |
 | `ListRow`, `RowMenu` | A row: title (truncated, full on hover), status and meta in fixed columns, the `⋯` menu |
