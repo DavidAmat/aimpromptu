@@ -52,7 +52,9 @@ pointer and is held for about as long as its words take (120 ms a character), ne
 piece. On the sheet, drag a piece to move it (its left edge snaps to the nearest frame, on any line,
 and it keeps its length), drag up or down to lift it over high notes, and pull its right edge to the
 frame it should end on. A piece always starts and ends on a frame, which is what Play mode shows it
-by. Two pieces never share a frame; a move onto another piece is refused and said.
+by. A piece is drawn as words in a serif italic (Lora, self-hosted; Times Italic in the
+PDF) in a soft charcoal on a light gray block with no border; a picked piece is a shade darker with
+a thin slate outline. Two pieces never share a frame; a move onto another piece is refused and said.
 
 While the tab is open, a click on a piece picks it, Command-click adds one, and marking a stretch
 above the staves picks every piece over it. For the picked pieces:

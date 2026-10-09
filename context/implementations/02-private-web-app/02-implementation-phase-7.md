@@ -129,6 +129,17 @@ ask for keeps the outline. Clicking a piece, or its corner mark, opens the toolb
 handlers the sheet keeps read the mode and the list through refs, so they keep their identity and
 the sheet is not rebuilt.
 
+## 3.5 The look, after the user's review (2026-10-09)
+
+The user asked for the lyric blocks to sit in the page: no border, a light gray background, a font
+made for lyrics, and a text colour that feels clean. In the package (still 0.43.0, not pushed):
+`LYRIC_BOX_FILL` `#f1f2f4` with no stroke, the words in `LYRIC_FONT` (Lora, then Georgia, Times),
+italic, weight 500, in `LYRIC_TEXT_FILL` `#3b3f46`. Lora italic (SIL OFL 1.1, the Latin subset,
+which covers Spanish and Catalan) is self-hosted in `public/fonts/lora-italic.woff2`, declared in
+`src/index.css` like Geist and Montserrat. The PDF writer maps a serif family to Times, so a printed
+sheet shows the words in Times Italic. A picked piece is `#e5e8ec` with a 1.5 px `#5b6b82` outline
+(the `<style>` rule of `TimeScoreView`). `check:lyrics` passes again; shots 07 to 12 are retaken.
+
 # 4. Story 7.3: keys and clefs of passages
 
 ## 4.1 Key for this passage

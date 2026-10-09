@@ -1389,7 +1389,7 @@ export function TimeScoreView({
               {selectedLyrics
                 .map(
                   (column) =>
-                    `.grid-lyric[data-from-column="${column}"] .grid-lyric-box{stroke:${ui.text};stroke-width:2}`,
+                    `.grid-lyric[data-from-column="${column}"] .grid-lyric-box{fill:#e5e8ec;stroke:#5b6b82;stroke-width:1.5}`,
                 )
                 .join("")}
             </style>
