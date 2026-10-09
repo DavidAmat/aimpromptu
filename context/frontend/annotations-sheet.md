@@ -48,7 +48,10 @@ many. Command-Z brings them back exactly.
 
 **Paste the lyrics**, then **Save lyrics**: the words are kept with the part (in `project.json`,
 so they outlive **Remove all** and a new transcription) and the field opens with them every time.
-**Add to the pool** makes each line a **lyrics piece** in the pool, listed in the tab. A piece is **dragged from the pool onto the sheet**: it starts on the frame under the
+**Add to the pool** makes each line a **lyrics piece** in the pool, listed in the tab. Click a
+piece of the pool to edit its words: Enter makes a new line, and when the field is left (or with
+Command-Enter) each line becomes a piece of its own in the same place, so a long line is broken in
+two and the order is kept; Escape drops the change. A piece is **dragged from the pool onto the sheet**: it starts on the frame under the
 pointer and is held for about as long as its words take (120 ms a character), never past the next
 piece. On the sheet, drag a piece to move it (its left edge snaps to the nearest frame, on any line,
 and it keeps its length), drag up or down to lift it over high notes, and pull its right edge to the

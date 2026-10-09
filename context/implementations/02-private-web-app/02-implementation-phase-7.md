@@ -158,6 +158,12 @@ outlives a change of tab. Not an edit of the sheet: no undo, and the sheet's **S
 it. A backend test checks the save, the trim, `null` for an empty text, and that the words outlive
 `DELETE /time/{uuid}/rhythm`.
 
+**Editing a piece of the pool** (third review): a click on a piece of the pool turns it into a
+field; Enter makes a new line; leaving the field (or Command-Enter) replaces the piece by one piece
+per line in the same place (`lyricsPieces.editPoolPiece`), one undo step; Escape drops the change;
+no words left removes the piece. `check:lyrics` breaks "of words second line" into two pieces and
+checks the order (shot 10b).
+
 # 4. Story 7.3: keys and clefs of passages
 
 ## 4.1 Key for this passage

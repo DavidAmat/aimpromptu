@@ -186,6 +186,15 @@ export function resizePieces(
   );
 }
 
+/**
+ * A piece of the pool, with its words edited: each line of the new words is a piece of its own, in
+ * the same place in the pool, so a line break splits it and the order is kept. No words left
+ * removes it.
+ */
+export function editPoolPiece(pool: readonly string[], index: number, text: string): string[] {
+  return [...pool.slice(0, index), ...piecesFromText(text), ...pool.slice(index + 1)];
+}
+
 /** The pieces that cover any frame of a stretch: what a stretch marked in Lyrics mode picks. */
 export function piecesIn(
   lyrics: readonly LyricLine[],

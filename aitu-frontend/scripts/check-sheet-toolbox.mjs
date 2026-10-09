@@ -371,6 +371,16 @@ try {
     await page.getByTestId('lyrics-pool').click();
     await page.waitForTimeout(800);
     check('Back to the pool takes it off the sheet', (await toolbox().locator('[data-lyrics-piece]').count()) === 2);
+    // Edit a piece of the pool: a line break makes two pieces, in the same place.
+    await toolbox().locator('[data-lyrics-piece="0"]').click();
+    const poolField = toolbox().locator('[data-lyrics-pool-edit="0"]');
+    await poolField.fill('of words\nsecond line');
+    await toolbox().getByText(/^Pool/).click();
+    await page.waitForTimeout(500);
+    const poolNow = await toolbox().locator('[data-lyrics-piece]').allTextContents();
+    check('a line break in a piece of the pool makes two pieces, the order kept',
+      JSON.stringify(poolNow) === JSON.stringify(['of words', 'second line', 'third line here']), JSON.stringify(poolNow));
+    await shot('10b-lyrics-pool-edited');
     await (await lyricNamed('first line')).locator('.grid-lyric-box').click();
     await page.getByTestId('lyrics-delete').click();
     await page.waitForTimeout(800);
@@ -381,7 +391,7 @@ try {
 
     await saveSheet();
     const after = await json(`${api}/time/${id}/rhythm`);
-    check('Save keeps the pieces and the pool', after.lyrics.some((line) => line.text === 'first line') && (after.lyricsPool ?? []).length === 2,
+    check('Save keeps the pieces and the pool', after.lyrics.some((line) => line.text === 'first line') && (after.lyricsPool ?? []).length === 3,
       `${after.lyrics.length} pieces, ${(after.lyricsPool ?? []).length} in the pool`);
     check('every saved piece starts and ends on a frame', after.lyrics.every((line) => Number.isInteger(line.fromColumn) && Number.isInteger(line.toColumn) && line.toColumn > line.fromColumn));
 

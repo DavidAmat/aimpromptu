@@ -1,6 +1,9 @@
 /**
  * The **Lyrics** tab of the sheet toolbox (plan section 11.5).
  *
+ * A piece of the pool is edited in place by clicking it: each line of its words then becomes a
+ * piece of its own, in the same place, so a line break splits it.
+ *
  * Paste the lyrics and **Save lyrics**: they are kept with the part and the field opens with them
  * every time. **Add to the pool** makes each line a **lyrics piece** in the **pool**. A piece is dragged from
  * the pool and dropped on the sheet, where it snaps to the frame under it; on the sheet it is
@@ -28,6 +31,7 @@ import { IconAction, PillButton } from "../../../ui";
 import {
   backToPool,
   breakLine,
+  editPoolPiece,
   mergePieces,
   piecesFromText,
   resizePieces,
@@ -70,6 +74,15 @@ export function LyricsTab({
 }) {
   const unsavedText = pasted.trim() !== (savedText ?? "").trim();
   const [draft, setDraft] = useState<{ forFrom: number; text: string } | null>(null);
+  /** The piece of the pool whose words are being edited, and what they are now. */
+  const [poolEdit, setPoolEdit] = useState<{ index: number; text: string } | null>(null);
+  const commitPoolEdit = () => {
+    if (!poolEdit) return;
+    const { index, text } = poolEdit;
+    setPoolEdit(null);
+    if (text === pool[index]) return;
+    setPool((current) => editPoolPiece(current, index, text));
+  };
   const field = useRef<HTMLTextAreaElement | null>(null);
 
   const chosen = lyrics.filter((line) => picked.includes(line.fromColumn));
@@ -162,27 +175,57 @@ export function LyricsTab({
             sx={{ maxHeight: 220, overflowY: "auto", pr: 0.5 }}
             data-lyrics-pool={pool.length}
           >
-            {pool.map((text, index) => (
-              <Chip
-                // Two pieces may have the same words, so the place is part of the key.
-                key={`${index}:${text}`}
-                label={text}
-                title={`${text} — drag onto the sheet`}
-                draggable
-                onDragStart={(event) => {
-                  event.dataTransfer.setData(POOL_DRAG_TYPE, String(index));
-                  event.dataTransfer.effectAllowed = "move";
-                }}
-                onDelete={() => setPool((current) => current.filter((_, at) => at !== index))}
-                sx={{
-                  justifyContent: "space-between",
-                  cursor: "grab",
-                  borderRadius: 2,
-                  "& .MuiChip-label": { overflow: "hidden", textOverflow: "ellipsis" },
-                }}
-                data-lyrics-piece={index}
-              />
-            ))}
+            {pool.map((text, index) =>
+              poolEdit?.index === index ? (
+                <TextField
+                  key={`${index}:editing`}
+                  size="small"
+                  multiline
+                  autoFocus
+                  value={poolEdit.text}
+                  onChange={(event) => setPoolEdit({ index, text: event.target.value })}
+                  onBlur={commitPoolEdit}
+                  onKeyDown={(event) => {
+                    // Enter makes a new line (a new piece); Command-Enter or leaving the field keeps
+                    // the change, Escape drops it.
+                    if (event.key === "Escape") {
+                      event.stopPropagation();
+                      setPoolEdit(null);
+                    } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                      event.preventDefault();
+                      commitPoolEdit();
+                    }
+                  }}
+                  slotProps={{
+                    htmlInput: {
+                      "aria-label": "Words of this piece; a new line makes a new piece",
+                      "data-lyrics-pool-edit": index,
+                    },
+                  }}
+                />
+              ) : (
+                <Chip
+                  // Two pieces may have the same words, so the place is part of the key.
+                  key={`${index}:${text}`}
+                  label={text}
+                  title={`${text} — drag onto the sheet, or click to edit`}
+                  onClick={() => setPoolEdit({ index, text })}
+                  draggable
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData(POOL_DRAG_TYPE, String(index));
+                    event.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDelete={() => setPool((current) => current.filter((_, at) => at !== index))}
+                  sx={{
+                    justifyContent: "space-between",
+                    cursor: "grab",
+                    borderRadius: 2,
+                    "& .MuiChip-label": { overflow: "hidden", textOverflow: "ellipsis" },
+                  }}
+                  data-lyrics-piece={index}
+                />
+              ),
+            )}
           </Stack>
         </Box>
       ) : null}
