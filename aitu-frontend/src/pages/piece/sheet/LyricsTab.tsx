@@ -7,7 +7,8 @@
  * A piece of the pool is edited in place by clicking it: Enter (or the scissors at the end of the
  * field) splits it where the cursor is into two pieces in the same place and closes the field.
  *
- * Paste the lyrics and **Save lyrics**: they are kept with the part and the field opens with them
+ * Paste the lyrics and **Save lyrics**: the words and the pool are kept with the part (any change of
+ * either offers the button again) and the tab opens with them
  * every time. **Add to the pool** makes each line a **lyrics piece** in the **pool**. A piece is dragged from
  * the pool and dropped on the sheet, where it snaps to the frame under it; on the sheet it is
  * moved (it snaps again) and its right edge pulled to the frame it should end on. While this tab
@@ -63,6 +64,7 @@ export function LyricsTab({
   pasted,
   setPasted,
   savedText,
+  poolUnsaved,
   savingText,
   onSaveText,
 }: {
@@ -81,10 +83,13 @@ export function LyricsTab({
   setPasted: (text: string) => void;
   /** The lyrics saved with the part, or `null` when none are. */
   savedText: string | null;
+  /** The pool is not the one saved. */
+  poolUnsaved: boolean;
   savingText: boolean;
   onSaveText: (text: string) => void;
 }) {
-  const unsavedText = pasted.trim() !== (savedText ?? "").trim();
+  /** The words or the pool are not the ones saved: **Save lyrics** saves both. */
+  const unsavedText = pasted.trim() !== (savedText ?? "").trim() || poolUnsaved;
   const [draft, setDraft] = useState<{ forFrom: number; text: string } | null>(null);
   /** The piece of the pool whose words are being edited, and what they are now. */
   const [poolEdit, setPoolEdit] = useState<{ index: number; text: string } | null>(null);
@@ -211,7 +216,7 @@ export function LyricsTab({
             onClick={() => onSaveText(pasted)}
             data-lyrics-save
           >
-            {unsavedText || savedText === null ? "Save lyrics" : "Lyrics saved"}
+            {unsavedText || (savedText === null && pool.length === 0) ? "Save lyrics" : "Lyrics saved"}
           </PillButton>
           <PillButton
             size="small"

@@ -363,19 +363,24 @@ export const timeScoreApi = {
     });
   },
 
-  /** The lyrics saved with the part (the Lyrics tab's **Save lyrics**), or `null`. */
+  /**
+   * The lyrics and the pool saved with the part (the Lyrics tab's **Save lyrics**). `pool` is
+   * `null` until saved there; a pool saved before may still be in the saved sheet.
+   */
   lyrics(audioUuid: string, signal?: AbortSignal) {
-    return request<{ text: string | null }>(`/time/${audioUuid}/lyrics`, { signal });
+    return request<{ text: string | null; pool: string[] | null }>(`/time/${audioUuid}/lyrics`, {
+      signal,
+    });
   },
 
   /**
    * Save the pasted lyrics with the part (`project.json`, not `sheet.json`, so they outlive Remove
    * all and a new transcription). An empty text removes them.
    */
-  saveLyrics(audioUuid: string, text: string, signal?: AbortSignal) {
-    return request<{ text: string | null }>(`/time/${audioUuid}/lyrics`, {
+  saveLyrics(audioUuid: string, text: string, pool: readonly string[], signal?: AbortSignal) {
+    return request<{ text: string | null; pool: string[] | null }>(`/time/${audioUuid}/lyrics`, {
       method: "PUT",
-      body: { text },
+      body: { text, pool },
       signal,
     });
   },

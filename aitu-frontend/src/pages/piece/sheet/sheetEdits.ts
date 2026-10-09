@@ -370,6 +370,17 @@ export function editsFromSaved(found: SavedRhythm): SheetEdits {
   };
 }
 
+/**
+ * Whether two sets of edits are the same sheet, the lyrics pool aside: what the sheet's **Save**
+ * keeps. Every edit makes a new value for the field it changes, so comparing the fields by identity
+ * is exactly "nothing changed". The pool has its own save (**Save lyrics**).
+ */
+export function sameSheet(left: SheetEdits, right: SheetEdits): boolean {
+  return (Object.keys(left) as (keyof SheetEdits)[]).every(
+    (key) => key === "lyricsPool" || Object.is(left[key], right[key]),
+  );
+}
+
 /** The marks that still have a note under them: what is drawn, and what is saved. */
 export interface LiveMarks {
   ottavas: OttavaAnnotation[];
@@ -478,7 +489,8 @@ export function savedRhythmOf(reading: {
     })),
     trills: [...edits.trills],
     lyrics: [...edits.lyrics],
-    lyricsPool: [...edits.lyricsPool],
+    // The pool is saved by **Save lyrics** of the Lyrics tab (with the words, in project.json), not
+    // by the sheet's Save; left out, the backend keeps a pool an older page saved in sheet.json.
     figuresFrom: edits.figuresFrom,
     cueRanges: [...edits.cueRanges],
     graceNotes: [...edits.graceNotes],

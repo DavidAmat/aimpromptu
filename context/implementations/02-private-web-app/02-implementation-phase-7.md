@@ -210,6 +210,17 @@ because MUI tooltips are interactive (they catch the pointer); `IconAction` tool
 `disableInteractive` across the app, and `check:projects`, `check:library`, `check:flow` and the
 whole toolbox script pass again.
 
+**Eighth review: Save lyrics saves the pool too.** The pool was saved by the sheet's **Save**
+(`sheet.json`); now **Save lyrics** saves it with the words: `parts[].lyricsPool` in `project.json`,
+through `PUT /time/{uuid}/lyrics` (`pool`; absent keeps the saved one). The button is offered when
+the words or the pool differ from what is saved. The page reads the reading and the saved lyrics
+in one `Promise.all`, so neither overwrites the other's pool; the pool saved by **Save lyrics**
+wins, a pool an older sheet saved in `sheet.json` is the fallback, and `PUT /time/{uuid}/rhythm`
+without `lyricsPool` keeps that older pool (so nothing saved in the last days is lost). The sheet's
+unsaved dot ignores the pool (`sameSheet`), its Save no longer sends it, and **Remove all** keeps it.
+One backend test (the pool saved, absent keeps it, a sheet saved without it keeps the older one);
+`check:lyrics` checks the button comes back after a pool change and the pool after a reload.
+
 # 4. Story 7.3: keys and clefs of passages
 
 ## 4.1 Key for this passage

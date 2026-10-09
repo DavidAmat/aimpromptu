@@ -259,6 +259,12 @@ try {
     check('and the button says so', ((await toolbox().locator('[data-lyrics-save]').textContent()) ?? '').includes('Lyrics saved'));
     await toolbox().locator('[data-lyrics-add]').click();
     check('each pasted line is a piece of the pool', (await toolbox().locator('[data-lyrics-piece]').count()) === 3);
+    check('a new pool offers Save lyrics again', !(await toolbox().locator('[data-lyrics-save]').isDisabled()));
+    await toolbox().locator('[data-lyrics-save]').click();
+    await page.waitForTimeout(800);
+    check('Save lyrics keeps the pool with the words',
+      JSON.stringify((await json(`${api}/time/${id}/lyrics`)).pool) === JSON.stringify(['first line of words', 'second line', 'third line here'])
+        && (await toolbox().locator('[data-lyrics-save]').isDisabled()));
     await shot('07-lyrics-pool');
 
     // Drop the first piece with the pointer on a notehead of the right hand, near the middle of
@@ -461,10 +467,14 @@ try {
     await page.waitForTimeout(1200);
     check('undo brings it back', await hasLyric('first line'));
 
+    check('a changed pool offers Save lyrics again', !(await toolbox().locator('[data-lyrics-save]').isDisabled()));
+    await toolbox().locator('[data-lyrics-save]').click();
+    await page.waitForTimeout(800);
     await saveSheet();
     const after = await json(`${api}/time/${id}/rhythm`);
-    check('Save keeps the pieces and the pool', after.lyrics.some((line) => line.text === 'first line') && (after.lyricsPool ?? []).length === 5,
-      `${after.lyrics.length} pieces, ${(after.lyricsPool ?? []).length} in the pool`);
+    const savedPool = (await json(`${api}/time/${id}/lyrics`)).pool ?? [];
+    check('Save keeps the pieces, and Save lyrics the pool', after.lyrics.some((line) => line.text === 'first line') && savedPool.length === 5,
+      `${after.lyrics.length} pieces, ${savedPool.length} in the pool`);
     check('every saved piece starts and ends on a frame', after.lyrics.every((line) => Number.isInteger(line.fromColumn) && Number.isInteger(line.toColumn) && line.toColumn > line.fromColumn));
 
     // Narrow and dark.
@@ -479,7 +489,8 @@ try {
     const reread = await lyricNamed('first line');
     check('read back after a reload, a saved piece draws as it did (one line)', reread !== null && (await reread.getAttribute('data-lines')) === '1');
     await openTab('Lyrics');
-    check('opened again, the Lyrics tab shows the saved lyrics', (await page.locator('[data-lyrics-paste]').inputValue()) === pastedLyrics);
+    check('opened again, the Lyrics tab shows the saved lyrics and pool', (await page.locator('[data-lyrics-paste]').inputValue()) === pastedLyrics
+      && (await toolbox().locator('[data-lyrics-piece]').count()) === 5 && (await toolbox().locator('[data-lyrics-save]').isDisabled()));
     await shot('12-lyrics-dark');
     await page.evaluate(() => localStorage.removeItem('mui-mode'));
   }

@@ -106,6 +106,8 @@ export function SheetToolbox({
     pasted: string;
     setPasted: (text: string) => void;
     savedText: string | null;
+    /** The pool is not the one saved: **Save lyrics** saves it with the words. */
+    poolUnsaved: boolean;
     saving: boolean;
     onSave: (text: string) => void;
   };
@@ -147,6 +149,7 @@ export function SheetToolbox({
             pasted={lyricsField.pasted}
             setPasted={lyricsField.setPasted}
             savedText={lyricsField.savedText}
+            poolUnsaved={lyricsField.poolUnsaved}
             savingText={lyricsField.saving}
             onSaveText={lyricsField.onSave}
           />

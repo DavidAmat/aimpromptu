@@ -103,6 +103,7 @@ import {
   editsFromSaved,
   hiddenNotesOut,
   NO_EDITS,
+  sameSheet,
   savedRhythmOf,
   type SheetEdits,
   type Stretch,
@@ -471,7 +472,12 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    * as it is being edited (`null` until it is touched: it shows the saved words), and the save.
    * Not an edit of the sheet: no undo, and the sheet's own Save does not carry it.
    */
-  const [songLyrics, setSongLyrics] = useState<{ forPart: string; text: string | null } | null>(null);
+  const [songLyrics, setSongLyrics] = useState<{
+    forPart: string;
+    text: string | null;
+    /** The pool as saved: what **Save lyrics** compares the pool on the page with. */
+    pool: readonly string[];
+  } | null>(null);
   const [lyricsDraft, setLyricsDraft] = useState<{ forPart: string; text: string } | null>(null);
   const [savingLyrics, setSavingLyrics] = useState(false);
 
@@ -534,7 +540,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     : (reading?.endSeconds ?? 0);
   const pieceIsEmpty = reading !== null && reading.attackCount === 0;
   /** Unsaved: nothing saved yet, or the page is not what was saved, or the saved one is stale. */
-  const unsaved = cleanEdits === null || edits.state !== cleanEdits || stale;
+  // The lyrics pool aside: it has its own save, **Save lyrics**.
+  const unsaved = cleanEdits === null || !sameSheet(edits.state, cleanEdits) || stale;
 
   const renderOverrides = useMemo(
     () => ({ hidden: hiddenNotes, hands: NO_HANDS }),
@@ -691,9 +698,15 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     keyDecided.current = false;
     clefsDecided.current = false;
     const controller = new AbortController();
-    timeScoreApi
-      .rhythm(audioUuid, controller.signal)
-      .then((found) => {
+    // The saved lyrics and pool come with the reading, in one answer, so neither overwrites the
+    // other's pool. The pool saved by **Save lyrics** wins; one saved by an older sheet is the
+    // fallback. A failure to read the lyrics leaves them empty.
+    Promise.all([
+      timeScoreApi.rhythm(audioUuid, controller.signal),
+      timeScoreApi.lyrics(audioUuid, controller.signal).catch(() => null),
+    ])
+      .then(([found, song]) => {
+        const pool = song?.pool ?? found?.lyricsPool ?? [];
         if (found) {
           setHand(found.hand);
           // A saved reading decided its key. A reading that carries a list of brackets — even an
@@ -701,10 +714,13 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
           keyDecided.current = true;
           clefsDecided.current = true;
           ottavasDecided.current = Array.isArray(found.ottavas);
-          const next = editsFromSaved(found);
+          const next = { ...editsFromSaved(found), lyricsPool: pool };
           resetEdits(next);
           setCleanEdits(next);
+        } else if (pool.length > 0) {
+          resetEdits((current) => ({ ...current, lyricsPool: pool }));
         }
+        setSongLyrics({ forPart: audioUuid, text: song?.text ?? null, pool });
         setRhythmCheckedFor(editsKey);
       })
       .catch(() => {
@@ -716,19 +732,12 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     return () => controller.abort();
   }, [audioUuid, editsKey, resetEdits]);
 
-  // The lyrics saved with the part, once per part. A failure leaves the field empty.
-  useEffect(() => {
-    if (!audioUuid || readOnly) return;
-    const controller = new AbortController();
-    timeScoreApi
-      .lyrics(audioUuid, controller.signal)
-      .then((found) => setSongLyrics({ forPart: audioUuid, text: found.text }))
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, [audioUuid, readOnly]);
-
   const savedLyricsText =
     songLyrics && songLyrics.forPart === audioUuid ? songLyrics.text : null;
+  const savedPool = songLyrics && songLyrics.forPart === audioUuid ? songLyrics.pool : [];
+  /** The pool on the page is not the one saved: **Save lyrics** is offered for it too. */
+  const poolUnsaved =
+    lyricsPool.length !== savedPool.length || lyricsPool.some((text, at) => text !== savedPool[at]);
   const lyricsFieldText =
     lyricsDraft && lyricsDraft.forPart === audioUuid ? lyricsDraft.text : (savedLyricsText ?? "");
   const saveSongLyrics = useCallback(
@@ -736,8 +745,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       if (!audioUuid) return;
       setSavingLyrics(true);
       try {
-        const saved = await timeScoreApi.saveLyrics(audioUuid, text);
-        setSongLyrics({ forPart: audioUuid, text: saved.text });
+        const saved = await timeScoreApi.saveLyrics(audioUuid, text, lyricsPool);
+        setSongLyrics({ forPart: audioUuid, text: saved.text, pool: saved.pool ?? [] });
         setLyricsDraft({ forPart: audioUuid, text: saved.text ?? "" });
       } catch (caught) {
         setMoveRefused(readable(caught, "Could not save the lyrics."));
@@ -745,7 +754,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         setSavingLyrics(false);
       }
     },
-    [audioUuid],
+    [audioUuid, lyricsPool],
   );
 
   /**
@@ -1990,7 +1999,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     keyDecided.current = false;
     ottavasDecided.current = false;
     clefsDecided.current = false;
-    resetEdits(NO_EDITS);
+    // The pool is the song's words, saved apart from the sheet: Remove all leaves it.
+    resetEdits((current) => ({ ...NO_EDITS, lyricsPool: current.lyricsPool }));
     setCleanEdits(null);
     setTrillSuggestions(null);
     setPickedLyrics([]);
@@ -2538,6 +2548,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
           pasted: lyricsFieldText,
           setPasted: (text) => setLyricsDraft({ forPart: audioUuid, text }),
           savedText: savedLyricsText,
+          poolUnsaved,
           saving: savingLyrics,
           onSave: (text) => void saveSongLyrics(text),
         }}

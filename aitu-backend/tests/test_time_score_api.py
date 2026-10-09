@@ -764,11 +764,39 @@ def test_a_transposition_by_nothing_is_refused(client, transcribed):
 
 def test_the_lyrics_are_saved_with_the_part_and_outlive_remove_all(client, transcribed):
     """**Save lyrics** (Phase 7): the pasted words are kept in project.json, not in sheet.json."""
-    assert client.get(f"/time/{transcribed}/lyrics").json() == {"text": None}
+    assert client.get(f"/time/{transcribed}/lyrics").json() == {"text": None, "pool": None}
     words = "Tinc un cel\ni un infern a dins"
     saved = client.put(f"/time/{transcribed}/lyrics", json={"text": f"  {words}\n"})
     assert saved.status_code == 200
-    assert saved.json() == {"text": words}
+    assert saved.json() == {"text": words, "pool": None}
     client.delete(f"/time/{transcribed}/rhythm")
-    assert client.get(f"/time/{transcribed}/lyrics").json() == {"text": words}
-    assert client.put(f"/time/{transcribed}/lyrics", json={"text": "  "}).json() == {"text": None}
+    assert client.get(f"/time/{transcribed}/lyrics").json()["text"] == words
+    assert client.put(f"/time/{transcribed}/lyrics", json={"text": "  "}).json()["text"] is None
+
+
+def test_the_pool_is_saved_with_the_lyrics_and_a_sheet_save_leaves_an_older_one(
+    client, transcribed
+):
+    """**Save lyrics** keeps the pool too; a sheet saved without a pool keeps the one sheet.json had."""
+    saved = client.put(
+        f"/time/{transcribed}/lyrics", json={"text": "a b\nc", "pool": ["a b", " ", "c"]}
+    ).json()
+    assert saved == {"text": "a b\nc", "pool": ["a b", "c"]}
+    assert client.get(f"/time/{transcribed}/lyrics").json()["pool"] == ["a b", "c"]
+    # Only the words: the pool stays as saved.
+    client.put(f"/time/{transcribed}/lyrics", json={"text": "a b"})
+    assert client.get(f"/time/{transcribed}/lyrics").json()["pool"] == ["a b", "c"]
+
+    reading = {
+        "hand": "right",
+        "frameMs": 40,
+        "anchorFigure": "negra",
+        "anchorMs": 337.0,
+        "speedChanges": [],
+        "overrides": [],
+        "beamBreaks": [],
+        "lyricsPool": ["older"],
+    }
+    assert client.put(f"/time/{transcribed}/rhythm", json=reading).status_code == 200
+    without = {key: value for key, value in reading.items() if key != "lyricsPool"}
+    assert client.put(f"/time/{transcribed}/rhythm", json=without).json()["lyricsPool"] == ["older"]

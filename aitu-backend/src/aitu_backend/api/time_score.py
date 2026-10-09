@@ -811,18 +811,21 @@ class PartLyrics(BaseModel):
 
     #: ``None`` or an empty text: no lyrics saved.
     text: str | None = Field(None, max_length=20000)
+    #: The lyrics pieces of the pool, in order. ``None``: never saved here (a pool saved before may
+    #: still be in ``sheet.json``); on a ``PUT``, absent leaves the saved pool as it is.
+    pool: list[str] | None = None
 
 
 @router.get("/{audio_uuid}/lyrics", response_model=PartLyrics, response_model_by_alias=True)
 def get_part_lyrics(audio_uuid: str) -> PartLyrics:
-    """The lyrics saved with this part, so the Lyrics tab opens with them (Phase 7)."""
-    project = _project_of_part(audio_uuid)
-    return PartLyrics(text=project.part(audio_uuid).lyrics)
+    """The lyrics and the pool saved with this part, so the Lyrics tab opens with them (Phase 7)."""
+    part = _project_of_part(audio_uuid).part(audio_uuid)
+    return PartLyrics(text=part.lyrics, pool=part.lyrics_pool)
 
 
 @router.put("/{audio_uuid}/lyrics", response_model=PartLyrics, response_model_by_alias=True)
 def put_part_lyrics(audio_uuid: str, body: PartLyrics = Body(...)) -> PartLyrics:
-    """Save the pasted lyrics with the part, in ``project.json``: **Save lyrics** of the Lyrics tab.
+    """Save the pasted lyrics and the pool with the part, in ``project.json``: **Save lyrics**.
 
     The song's words, not a reading of the page, so they are kept apart from ``sheet.json`` and
     outlive **Remove all** and a new transcription. Nothing else of the project changes; the
@@ -832,9 +835,12 @@ def put_part_lyrics(audio_uuid: str, body: PartLyrics = Body(...)) -> PartLyrics
     project = _project_of_part(audio_uuid)
     with bundle.project_lock(project.id):
         project = bundle.read_project(project.id)
-        project.part(audio_uuid).lyrics = text
+        part = project.part(audio_uuid)
+        part.lyrics = text
+        if "pool" in body.model_fields_set:
+            part.lyrics_pool = [piece.strip() for piece in body.pool or [] if piece.strip()]
         bundle.write_project(project)
-    return PartLyrics(text=text)
+    return PartLyrics(text=text, pool=part.lyrics_pool)
 
 
 def _project_of_part(audio_uuid: str):
@@ -1194,7 +1200,13 @@ def put_rhythm(audio_uuid: str, rhythm: SavedRhythm) -> SavedRhythm:
                     "rhythm to describe."
                 ),
             )
-        rhythm = rhythm.model_copy(update={"hands_revision": stored.header.hands_revision})
+        update: dict[str, object] = {"hands_revision": stored.header.hands_revision}
+        # The pool is saved by **Save lyrics** now (project.json); a page that does not send it
+        # leaves the pool an older page saved here as it was, so nothing saved is lost.
+        if "lyrics_pool" not in rhythm.model_fields_set:
+            before = pipeline.load_rhythm(audio_uuid)
+            update["lyrics_pool"] = before.lyrics_pool if before is not None else []
+        rhythm = rhythm.model_copy(update=update)
         pipeline.save_rhythm(audio_uuid, rhythm)
     return rhythm
 

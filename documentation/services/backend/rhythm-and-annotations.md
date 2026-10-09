@@ -63,7 +63,7 @@ numbers it is holding still refer to what they referred to.
 | `annotation_scale` | `annotationScale` | `0.3 < f ≤ 2.0` | How large marks over and under the staff are drawn. |
 | `line_spacing` | `lineSpacing` | `0 ≤ f ≤ 240`, optional | White space between the staves of one line and the staves of the next, in pixels. |
 | `note_spacing` | `noteSpacing` | `0 ≤ f ≤ 48`, optional | Extra pixels charged to every column carrying a note, and to no silence. The twin of `line_spacing`, one axis over. |
-| `lyrics_pool` | `lyricsPool` | `string[]` | The lyrics pieces of the Lyrics tab, one line each, in order (plan section 11.5). Added in Phase 3, filled since Phase 7: **Add to the pool** appends; a piece dropped on the sheet stays (the page ticks the pieces whose words are placed); **Back to the pool** adds at the top only words the pool does not have. |
+| `lyrics_pool` | `lyricsPool` | `string[]` | The lyrics pieces of the Lyrics tab, one line each, in order (plan section 11.5). Added in Phase 3 and filled by the sheet's Save early in Phase 7; the pool is now saved with the words by **Save lyrics** (`project.json`, `parts[].lyricsPool`), the page no longer sends it here, a save without it keeps what is here, and the page reads it only for a part with no pool of its own. |
 | `figures_from` | `figuresFrom` | `FigureName?` | The figure the next figures transposition starts from: the last one it went to (plan section 11.4). `null` starts from negra. Added in Phase 3, set since Phase 7 by **Transpose → Figures**. |
 | `saved_at` | `savedAt` | datetime | |
 

@@ -46,8 +46,10 @@ many. Command-Z brings them back exactly.
 
 ## Lyrics
 
-**Paste the lyrics**, then **Save lyrics**: the words are kept with the part (in `project.json`,
-so they outlive **Remove all** and a new transcription) and the field opens with them every time.
+**Paste the lyrics**, then **Save lyrics**: the words and the pool are kept with the part (in
+`project.json`, so they outlive **Remove all** and a new transcription), and the tab opens with them
+every time. Any change of the words or of the pool (a piece added, edited, split, merged or
+removed) offers **Save lyrics** again; the sheet's own **Save** does not keep the pool.
 **Add to the pool** makes each line a **lyrics piece** in the pool, listed in the tab. The pool
 keeps every piece: one on the sheet carries a **green tick** (a line placed twice, twice), so the
 list shows what is in and what is not. Click a piece of the pool to edit its words in a one-line field:

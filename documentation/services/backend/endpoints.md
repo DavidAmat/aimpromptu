@@ -710,9 +710,12 @@ rises, the hands stay complete, and a saved sheet that was current stays current
 
 ### GET / PUT /time/{uuid}/lyrics
 
-The words of the song as the reader pasted them in the Lyrics tab and pressed **Save lyrics**
-(implementation 02, Phase 7). Body and answer: `{"text": "…"}`, at most 20,000 characters, trimmed;
-an empty text saves `null`. Stored as `parts[].lyrics` in `project.json`, not in `sheet.json`, so
+The words of the song as the reader pasted them in the Lyrics tab, and the lyrics pieces of its
+pool, saved by **Save lyrics** (implementation 02, Phase 7). Body and answer:
+`{"text": "…", "pool": ["…", "…"]}`; the text at most 20,000 characters, trimmed, an empty text saves
+`null`; the pool's empty pieces are dropped, and a `PUT` without `pool` leaves the saved pool as it
+is. `GET` answers `pool: null` until a pool was saved here. Stored as `parts[].lyrics` and
+`parts[].lyricsPool` in `project.json`, not in `sheet.json`, so
 they outlive **Remove all** (`DELETE /time/{uuid}/rhythm`) and a new transcription, and travel with
 a duplicate, an edit copy, a Replace and an export. Nothing else of the project changes. `PUT` is a
 write: a version of the Private Library answers `403`.
@@ -729,8 +732,9 @@ ignored. A later edit of the notes or the hands outside the Sheet tab makes the 
 the Sheet tab asks the reader to press **Write the sheet** again. `409` when the piece has no notes.
 Since implementation 02, Phase 2 the reading also carries `title`, `subtitle` and `artist` (each
 optional, at most 200 characters): what the sheet prints above the music. Since Phase 7 the page
-fills `lyricsPool` (the pasted lyrics not placed yet) and `figuresFrom` (where the next figures
-transposition starts), and `lyrics` holds the lyrics pieces, each starting and ending on a frame.
+filled `lyricsPool` (the lyrics pieces of the pool; since **Save lyrics** saves the pool, a `PUT`
+without it keeps the one saved here, and the page reads it only when the part has no pool of its
+own) and `figuresFrom` (where the next figures transposition starts), and `lyrics` holds the lyrics pieces, each starting and ending on a frame.
 
 `DELETE` answers `204` and is what **Remove all** calls.
 
