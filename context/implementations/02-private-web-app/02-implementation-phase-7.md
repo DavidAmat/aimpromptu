@@ -192,6 +192,13 @@ cursor is still where the split goes. A ref stops the blur of the closing field 
 change twice, or one that Escape dropped. `check:lyrics` splits with Enter and with the scissors
 (shot 10a).
 
+**Sixth review: merge pieces of the pool.** Command-click picks pieces of the pool (a plain click
+still edits); a row above the list offers **Merge n pieces** (from two) and **Cancel**.
+`mergePoolPieces` joins them with a space, in pool order, in the place of the first. The picked
+places are held for the pool they were picked in, so any change of the pool lets them go and a
+place never names another piece. `check:lyrics` merges the two halves of the scissors split back
+(shot 10c).
+
 # 4. Story 7.3: keys and clefs of passages
 
 ## 4.1 Key for this passage

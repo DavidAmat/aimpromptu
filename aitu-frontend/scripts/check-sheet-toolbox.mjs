@@ -435,6 +435,19 @@ try {
     check('and so does the scissors at the end of the field, the order kept',
       JSON.stringify(poolNow.slice(4)) === JSON.stringify(['third line', 'here'])
         && (await toolbox().locator('[data-lyrics-pool-edit]').count()) === 0, JSON.stringify(poolNow));
+    // Picked with Command-click, the two halves are merged back into one piece, in their place.
+    await toolbox().locator('[data-lyrics-piece="4"]').click({ modifiers: ['ControlOrMeta'] });
+    await toolbox().locator('[data-lyrics-piece="5"]').click({ modifiers: ['ControlOrMeta'] });
+    check('Command-click picks pieces of the pool without editing them',
+      (await toolbox().locator('[data-pool-picked="yes"]').count()) === 2
+        && (await toolbox().locator('[data-lyrics-pool-edit]').count()) === 0);
+    await shot('10c-lyrics-pool-picked');
+    await toolbox().locator('[data-lyrics-pool-merge]').click();
+    await page.waitForTimeout(500);
+    poolNow = await toolbox().locator('[data-lyrics-piece]').allTextContents();
+    check('Merge joins the picked pieces in their place',
+      JSON.stringify(poolNow) === JSON.stringify(['of words', 'second line', 'first line of words', 'second line', 'third line here'])
+        && (await toolbox().locator('[data-pool-picked="yes"]').count()) === 0, JSON.stringify(poolNow));
     await shot('10b-lyrics-pool-edited');
     await (await lyricNamed('first line')).locator('.grid-lyric-box').click();
     await page.getByTestId('lyrics-delete').click();
@@ -446,7 +459,7 @@ try {
 
     await saveSheet();
     const after = await json(`${api}/time/${id}/rhythm`);
-    check('Save keeps the pieces and the pool', after.lyrics.some((line) => line.text === 'first line') && (after.lyricsPool ?? []).length === 6,
+    check('Save keeps the pieces and the pool', after.lyrics.some((line) => line.text === 'first line') && (after.lyricsPool ?? []).length === 5,
       `${after.lyrics.length} pieces, ${(after.lyricsPool ?? []).length} in the pool`);
     check('every saved piece starts and ends on a frame', after.lyrics.every((line) => Number.isInteger(line.fromColumn) && Number.isInteger(line.toColumn) && line.toColumn > line.fromColumn));
 

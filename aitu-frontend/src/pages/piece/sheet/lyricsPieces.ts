@@ -238,6 +238,19 @@ export function editPoolPiece(pool: readonly string[], index: number, text: stri
   return [...pool.slice(0, index), ...piecesFromText(text), ...pool.slice(index + 1)];
 }
 
+/**
+ * Pieces of the pool joined into one, in pool order, in the place of the first: the way back from
+ * a split made by mistake. Their words are joined with a space.
+ */
+export function mergePoolPieces(pool: readonly string[], indexes: readonly number[]): string[] {
+  const chosen = [...new Set(indexes)].filter((at) => at >= 0 && at < pool.length).sort((a, b) => a - b);
+  if (chosen.length < 2) return [...pool];
+  const merged = chosen.map((at) => pool[at]!).join(" ");
+  return pool.flatMap((text, at) =>
+    at === chosen[0] ? [merged] : chosen.includes(at) ? [] : [text],
+  );
+}
+
 /** The pieces that cover any frame of a stretch: what a stretch marked in Lyrics mode picks. */
 export function piecesIn(
   lyrics: readonly LyricLine[],

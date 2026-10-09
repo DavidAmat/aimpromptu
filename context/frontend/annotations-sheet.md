@@ -53,7 +53,9 @@ keeps every piece: one on the sheet carries a **green tick** (a line placed twic
 list shows what is in and what is not. Click a piece of the pool to edit its words in a one-line field:
 **Enter** (or the scissors at the end of the field) splits it where the cursor is into two pieces in
 the same place and closes the field, so a long line is broken in two and the order is kept; leaving
-the field keeps the words as typed; Escape drops the change.
+the field keeps the words as typed; Escape drops the change. **Command-click** (Control-click)
+picks pieces of the pool, and **Merge n pieces** joins them in pool order, in the place of the
+first: the way back from a split made by mistake (one undo step, like every change of the pool).
 
 A piece is **dragged from the pool onto the sheet**: it starts on **the frame under the pointer**
 (the column that holds it, as a click above the staves reads it; drop it on the note it starts on)

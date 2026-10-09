@@ -1,6 +1,8 @@
 /**
  * The **Lyrics** tab of the sheet toolbox (plan section 11.5).
  *
+ * Command-click (Control-click) picks pieces of the pool; **Merge** joins the picked ones, in pool
+ * order, in the place of the first (the way back from a split made by mistake).
  * A piece of the pool is edited in place by clicking it: Enter (or the scissors at the end of the
  * field) splits it where the cursor is into two pieces in the same place and closes the field.
  *
@@ -34,6 +36,7 @@ import {
   backToPool,
   breakLine,
   editPoolPiece,
+  mergePoolPieces,
   placedInPool,
   mergePieces,
   piecesFromText,
@@ -88,6 +91,24 @@ export function LyricsTab({
    * not keep the change a second time (or keep one that Escape dropped).
    */
   const poolEditClosed = useRef(false);
+  /**
+   * The pieces of the pool picked with Command-click, by place, for the pool they were picked in:
+   * any change of the pool (an edit, a merge, a new piece) lets them go, so a place never names
+   * another piece.
+   */
+  const [poolPicked, setPoolPicked] = useState<{ forPool: readonly string[]; at: number[] }>({
+    forPool: pool,
+    at: [],
+  });
+  const pickedInPool = poolPicked.forPool === pool ? poolPicked.at : [];
+  const togglePoolPick = (index: number) =>
+    setPoolPicked({
+      forPool: pool,
+      at: pickedInPool.includes(index)
+        ? pickedInPool.filter((at) => at !== index)
+        : [...pickedInPool, index],
+    });
+
   /** Keep `text` as the piece's words: each line a piece of its own, in the same place. */
   const commitPoolEdit = (text = poolEdit?.text) => {
     if (!poolEdit || poolEditClosed.current || text === undefined) return;
@@ -194,6 +215,27 @@ export function LyricsTab({
             Pool ({pool.length}
             {placed.some(Boolean) ? `, ${placed.filter(Boolean).length} on the sheet` : ""})
           </Typography>
+          {pickedInPool.length > 0 ? (
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 0.75 }}>
+              <PillButton
+                kind="primary"
+                size="small"
+                disabled={pickedInPool.length < 2}
+                startIcon={<CallMergeIcon fontSize="small" />}
+                onClick={() => setPool((current) => mergePoolPieces(current, pickedInPool))}
+                data-lyrics-pool-merge
+              >
+                {pickedInPool.length < 2 ? "Pick another to merge" : `Merge ${pickedInPool.length} pieces`}
+              </PillButton>
+              <PillButton
+                kind="quiet"
+                size="small"
+                onClick={() => setPoolPicked({ forPool: pool, at: [] })}
+              >
+                Cancel
+              </PillButton>
+            </Stack>
+          ) : null}
           <Stack
             spacing={0.5}
             sx={{ maxHeight: 220, overflowY: "auto", pr: 0.5 }}
@@ -252,16 +294,22 @@ export function LyricsTab({
                   // Two pieces may have the same words, so the place is part of the key.
                   key={`${index}:${text}`}
                   label={text}
-                  title={`${text} — ${placed[index] ? "on the sheet; drag to place it again" : "drag onto the sheet"}, or click to edit`}
+                  title={`${text} — ${placed[index] ? "on the sheet; drag to place it again" : "drag onto the sheet"}, or click to edit, Command-click to pick for a merge`}
                   icon={
                     placed[index] ? (
                       <CheckCircleIcon fontSize="small" sx={{ color: "success.main" }} />
                     ) : undefined
                   }
-                  onClick={() => {
+                  onClick={(event) => {
+                    if (event.metaKey || event.ctrlKey) {
+                      togglePoolPick(index);
+                      return;
+                    }
                     poolEditClosed.current = false;
                     setPoolEdit({ index, text });
                   }}
+                  color={pickedInPool.includes(index) ? "primary" : "default"}
+                  variant={pickedInPool.includes(index) ? "outlined" : "filled"}
                   draggable
                   onDragStart={(event) => {
                     event.dataTransfer.setData(POOL_DRAG_TYPE, String(index));
@@ -285,6 +333,7 @@ export function LyricsTab({
                   }}
                   data-lyrics-piece={index}
                   data-placed={placed[index] ? "yes" : "no"}
+                  data-pool-picked={pickedInPool.includes(index) ? "yes" : "no"}
                 />
               ),
             )}
