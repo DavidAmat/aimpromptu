@@ -20,8 +20,8 @@ The plan's section 3.
 - [x] **Q-4** Video into From source, Notes Falling into Play mode, the video development pages into Lab; the Playground, the old `.npz` library and the text-notation MVP deleted. Answered 2026-10-05.
 - [p] **Q-5** The sources of the Public Library. Worldwide: `musicchartsarchive.com`, downloaded by the parallel work (`public-library-build/`). The `spain` and `catalan` regions and the fields that site does not give: raised in Phase 12.
 - [ ] **Q-6** The popularity weights. Raised in Phase 12.
-- [p] **Q-7** Offline downloads per project, now or in the production version. Raised in the Phase 6 walkthrough (recommended: leave it for the production version), not answered yet.
-- [p] **Q-8** Live notes from the video reader. Measured in Phase 5 (61 s for a 3:09 video, notes only at the end); raised with three options (recommended: keep one job with its stages), asked again in the Phase 6 walkthrough, not answered yet.
+- [p] **Q-7** Offline downloads per project, now or in the production version. Raised in the Phase 6 walkthrough (recommended: leave it for the production version), asked again in the Phase 7 walkthrough, not answered yet.
+- [p] **Q-8** Live notes from the video reader. Measured in Phase 5 (61 s for a 3:09 video, notes only at the end); raised with three options (recommended: keep one job with its stages), asked again in the Phase 6 and Phase 7 walkthroughs, not answered yet.
 
 # [x] Phase 0: The documentation repaired, and a baseline
 
@@ -142,23 +142,23 @@ The plan's section 3.
 ## [x] Story 6.3: Documentation
 - [x] Task 6.3.1 `context/music-library/` started; `projects.md`, `endpoints.md`.
 
-# [ ] Phase 7: The sheet toolbox: transposition, lyrics, keys and clefs of passages
+# [x] Phase 7: The sheet toolbox: transposition, lyrics, keys and clefs of passages
 
-## [ ] Story 7.1: Transposition
-- [ ] Task 7.1.1 `MiniPiano` and `FigurePicker`.
-- [ ] Task 7.1.2 Notes transposition (preview, counts, undo).
-- [ ] Task 7.1.3 Figures transposition (preview, beams and overrides removed and restored by undo, the next **From**).
+## [x] Story 7.1: Transposition
+- [x] Task 7.1.1 `MiniPiano` and `FigurePicker` (built in Phase 1), in the **Transpose** tab.
+- [x] Task 7.1.2 Notes transposition (preview, counts, undo): `POST /time/{id}/transpose`, exact undo; the key and the marks of a key move with the notes.
+- [x] Task 7.1.3 Figures transposition (preview, beams and overrides removed and restored by undo, the next **From**).
 
-## [ ] Story 7.2: Lyrics
-- [ ] Task 7.2.1 The pool, drag and drop, frame snapping, offset, size, width, line breaks.
-- [ ] Task 7.2.2 The edit toolbar (select, merge, split, back to pool, delete); old words read as placed pieces.
+## [x] Story 7.2: Lyrics
+- [x] Task 7.2.1 The pool, drag and drop, frame snapping (`vexflow-v2` 0.43.0), offset, size, width (its frames), line breaks.
+- [x] Task 7.2.2 The edit toolbar (select, merge, split, line break, size, back to pool, delete); old words read as placed pieces.
 
-## [ ] Story 7.3: Passages
-- [ ] Task 7.3.1 **Key for this passage**.
-- [ ] Task 7.3.2 The automatic clef rule in `vexflow-v2`, its constants, screenshots, `npm test`.
+## [x] Story 7.3: Passages
+- [x] Task 7.3.1 **Key for this passage**.
+- [x] Task 7.3.2 The automatic clef rule in `vexflow-v2` (0.43.0, not pushed), its constants measured on the 38 pieces, screenshots, `npm test` (515).
 
-## [ ] Story 7.4: Documentation
-- [ ] Task 7.4.1 `annotations.md` pages, `rendering.md`, `rhythm-and-annotations.md` (`sheet.json`).
+## [x] Story 7.4: Documentation
+- [x] Task 7.4.1 `annotations.md` pages, `rendering.md`, `rhythm-and-annotations.md` (`sheet.json`); `endpoints.md`, `components.md`, `projects.md`.
 
 # [ ] Phase 8: Copy and paste, and From scratch
 

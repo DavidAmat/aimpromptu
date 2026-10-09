@@ -210,8 +210,8 @@ its walkthrough under DECISIONS.
 |---|---|---|
 | Q-5 | The worldwide source is chosen: `musicchartsarchive.com`, downloaded by the parallel work (section 15.5). Still open: the sources for the `spain` and `catalan` regions, and anything that source does not give (genres, tags) | Phase 12, after the reconciliation |
 | Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12 |
-| Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). *Raised in the Phase 6 walkthrough* |
-| Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report |
+| Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). *Raised in the Phase 6 walkthrough, and again in Phase 7's* |
+| Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report; asked again in the Phase 6 and Phase 7 walkthroughs |
 
 ---
 
@@ -992,6 +992,16 @@ tab opens, **From** is pressed on the last **To** (stored in `sheet.json`).
 Both transpositions use one dialog: a preview of the result, the counts of what is removed, and the
 buttons **Transpose** and **Cancel**.
 
+*As built in Phase 7:* notes transposition is `POST /time/{id}/transpose`; the preview is that
+route with `preview` (the counts) and `POST /time/{id}/score` with `transpose` (the sheet), and
+nothing is written before **Transpose**. A note that would leave the 88 keys is taken off the page
+and left on its key, so the undo (the same route with the opposite interval, the notes that stayed
+and the notes taken off) is exact. Besides the key signature, the key changes of passages and the
+marks addressed by a key (fingering, notes taken off the page, trills, grace notes) move with the
+notes. Figures transposition shifts a figure set by hand with the rest and removes it only when it
+has nothing to become; the dotted negra and blanca stay dotted where a dotted figure exists. The
+keyboards start on Do 4.
+
 ## 11.5 Lyrics
 
 **In the Lyrics tab**: one text box. The user pastes the lyrics of the song. Each line becomes one
@@ -1023,6 +1033,17 @@ Stored in `sheet.json`: the pool (ordered text pieces), and each placed piece as
 `toColumn`, `offsetX/Y`, `width`, `fontSize`) is read as a placed piece, so the saved sheets keep their
 words.
 
+*As built in Phase 7:* a placed piece **is** today's `Lyric`, so no field was renamed: `fromColumn`
+and `toColumn` are its first frame and the frame after its last, the line breaks are newlines in
+`text`, `offsetY` lifts it, `fontSize` sizes it, and **its width is its frames** (the right edge is
+dragged to a frame). Two pieces never share a frame, so the first frame names a piece and no `id` is
+stored. `offsetX` and a pixel `width` are kept only on words saved before, until they are moved. The
+pool is a list in the Lyrics tab of the sheet toolbox (the toolbox floats on the right of the sheet)
+rather than a second column. "Drag a box over several pieces" is a stretch marked above the staves
+while the tab is open: it picks every piece over it. The drawing package snaps the pieces
+(`onLyricPlace`, 0.43.0). Dragging from the pool is the browser's own drag and drop, which a touch
+screen does not do.
+
 ## 11.6 Selections
 
 Unchanged in what they can do, which already matches the app context: a range of frames with **Both /
@@ -1037,6 +1058,11 @@ the left hand. Restyled as icon actions with tooltips, and with one addition per
   passage** (section 13).
 - **The note toolbox** gains **Copy** of the frames those notes cover.
 
+*As built in Phase 7:* **Key for this passage** asks the drawing (`suggestKeyFor`) and shows the
+button only when another key prints fewer accidentals over the stretch than the one in force; the
+button names the major key in English, as the key picker does ("Use Bb major here"). The range
+toolbox's Lyrics tab is gone (section 11.5).
+
 ## 11.7 Clefs and octave brackets for the left hand
 
 A new rule in `@aimpromptu/grid-notation` (`suggestClefChanges`, beside `suggestOttavas`), applied
@@ -1050,6 +1076,14 @@ when the sheet is first written and offered again in the range toolbox:
 
 The numbers (how high, how many figures) are constants in one place, set by Phase 7 on the pieces of
 the library and shown to the user in screenshots.
+
+*As built in Phase 7:* `suggestClefRanges` and `suggestClefChanges` with `DEFAULT_CLEF_RULE`
+(vexflow-v2 0.43.0): **high** is a chord whose lowest note is two ledger lines or more above the bass
+staff (E4); a run is four high chords or more; one lower chord is held inside a run only when it
+reads no worse on the treble staff. Measured on the 38 pieces with notes: 10 get runs, 28 none
+(rendering.md has the comparison). A proposed bracket is cut where a clef change begins. A run at
+frame 0 cannot change clef (each hand starts on its own clef). The Clef tab of the range toolbox
+offers the rule again for the stretch.
 
 ## 11.8 Undo
 

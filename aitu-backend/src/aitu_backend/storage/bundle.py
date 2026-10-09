@@ -136,6 +136,13 @@ class PartEntry(_Camel):
     #: The title drawn above the part in an integrated playlist (section 8.4).
     subheader: str | None = None
     source: PartSource = Field(default_factory=PartSource)
+    #: The words of the song as the reader pasted and saved them in the Lyrics tab of the Sheet step
+    #: (implementation 02, Phase 7): one line per lyrics piece. Kept here rather than in
+    #: ``sheet.json`` so they survive **Remove all** and a new transcription, which delete it.
+    lyrics: str | None = Field(None, max_length=20000)
+    #: The lyrics pieces of the pool, in order, saved with the words by the same **Save lyrics**.
+    #: ``None`` until saved; an older pool may still sit in ``sheet.json`` (``lyricsPool``).
+    lyrics_pool: list[str] | None = Field(None, alias="lyricsPool")
 
 
 class ProjectFile(_Camel):

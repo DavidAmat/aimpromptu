@@ -1,11 +1,12 @@
 /**
  * The range toolbox: what a marked stretch of frames can carry, one tab each (plan section 11.6).
  *
- * Key, clef and octave bracket of the stretch, its lyrics, its spacing, where the piece changes
- * speed, and Re-record. Each control is an icon action with a tooltip or a labelled field; what a
- * control does is said in its tooltip, not in a caption under it (the 09 guidelines). The tabs
- * carry a dot when this stretch already has that setting, so what was edited here shows before it
- * is opened.
+ * Key, clef and octave bracket of the stretch, its spacing, where the piece changes speed, and
+ * Re-record. The Key tab offers the key with the fewest accidentals over the stretch, and the Clef
+ * tab the clef rule over it (implementation 02, Phase 7); the lyrics are in the sheet toolbox.
+ * Each control is an icon action with a tooltip or a labelled field; what a control does is said in
+ * its tooltip, not in a caption under it (the 09 guidelines). The tabs carry a dot when this
+ * stretch already has that setting, so what was edited here shows before it is opened.
  */
 
 import { useState, type Dispatch, type SetStateAction } from "react";
@@ -33,10 +34,8 @@ import {
   clearKeySignatureRange,
   clearOttavaRange,
   clefAtFrame,
-  LYRIC_FONT_SIZE,
-  MAX_LYRIC_FONT_SIZE,
-  MIN_LYRIC_FONT_SIZE,
   ottavaAtFrame,
+  type ClefRange,
   type KeySignature,
 } from "@aimpromptu/grid-notation";
 import {
@@ -86,7 +85,8 @@ export function RangeToolbox({
   setFrameTab,
   rangeActions,
   setPassageDraft,
-  setLyricDraft,
+  passageKeyHint,
+  clefRunsHere,
   score,
   state,
   set,
@@ -111,7 +111,13 @@ export function RangeToolbox({
   setPassageDraft: Dispatch<
     SetStateAction<{ forRange: string; value: KeySignatureName } | null>
   >;
-  setLyricDraft: Dispatch<SetStateAction<{ forRange: string; text: string } | null>>;
+  /**
+   * The key with the fewest accidentals over the stretch, when it is not the one in force there:
+   * **Key for this passage** (plan section 11.6).
+   */
+  passageKeyHint: KeySignatureName | null;
+  /** The left hand's high runs inside the stretch the clef rule writes in the treble clef. */
+  clefRunsHere: readonly ClefRange[];
   score: TimeScorePayload | null;
   state: SheetEdits;
   set: EditHistory<SheetEdits>["set"];
@@ -128,8 +134,6 @@ export function RangeToolbox({
     clearSpacingRange,
     handsInScope,
     editedHere,
-    lyricHere,
-    lyricText,
     passageKey,
     notesUnderRange,
   } = rangeActions;
@@ -138,7 +142,6 @@ export function RangeToolbox({
     keyChanges: setKeyChanges,
     clefChanges: setClefChanges,
     ottavas: setOttavas,
-    lyrics: setLyrics,
     stretches: setStretches,
   } = set;
   const frameCount = score?.envelope.frameCount;
@@ -213,6 +216,30 @@ export function RangeToolbox({
           ))}
         </Box>
 
+        {frameTab === "key" && passageKeyHint && range && frameCount !== undefined ? (
+          <Box>
+            <PillButton
+              size="small"
+              onClick={() =>
+                setKeyChanges(
+                  applyKeySignatureRange(
+                    keyChanges,
+                    {
+                      fromFrame: range.fromColumn,
+                      toFrame: range.toColumn,
+                      keySignature: passageKeyHint as KeySignature,
+                    },
+                    keySignature as KeySignature,
+                    frameCount,
+                  ),
+                )
+              }
+              data-passage-key={passageKeyHint}
+            >
+              Use {KEY_LABELS[passageKeyHint].split(" / ")[0]} here
+            </PillButton>
+          </Box>
+        ) : null}
         {frameTab === "key" ? (
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
             <TextField
@@ -429,6 +456,25 @@ export function RangeToolbox({
                 </Stack>
               );
             })}
+            {/* The clef rule of a first write (plan section 11.7), offered again for this stretch. */}
+            {clefRunsHere.length > 0 && frameCount !== undefined ? (
+              <Box>
+                <PillButton
+                  size="small"
+                  onClick={() =>
+                    setClefChanges(
+                      clefRunsHere.reduce(
+                        (changes, run) => applyClefRange(changes, run, frameCount),
+                        clefChanges,
+                      ),
+                    )
+                  }
+                  data-clef-rule={clefRunsHere.length}
+                >
+                  Treble clef for the high left-hand notes ({clefRunsHere.length})
+                </PillButton>
+              </Box>
+            ) : null}
           </Stack>
         ) : null}
 
@@ -473,98 +519,6 @@ export function RangeToolbox({
             stretches={stretches}
             setStretches={setStretches}
           />
-        ) : null}
-
-        {frameTab === "lyrics" && range ? (
-          <Stack spacing={1.5}>
-            <TextField
-              size="small"
-              label="Lyrics"
-              multiline
-              maxRows={3}
-              value={lyricText}
-              onChange={(event) => setLyricDraft({ forRange: rangeKey, text: event.target.value })}
-            />
-            {lyricHere ? (
-              <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 36 }}>
-                  Size
-                </Typography>
-                <Slider
-                  size="small"
-                  value={lyricHere.fontSize ?? LYRIC_FONT_SIZE}
-                  min={MIN_LYRIC_FONT_SIZE}
-                  max={MAX_LYRIC_FONT_SIZE}
-                  step={1}
-                  valueLabelDisplay="auto"
-                  aria-label="Text size of these words"
-                  onChange={(_event, value) =>
-                    setLyrics((current) =>
-                      current.map((line) =>
-                        line === lyricHere ? { ...line, fontSize: value as number } : line,
-                      ),
-                    )
-                  }
-                  sx={{ flex: 1 }}
-                />
-                <IconAction
-                  title="Put the words back over their stretch"
-                  icon={<RestartAltIcon fontSize="small" />}
-                  disabled={
-                    lyricHere.offsetX === undefined &&
-                    lyricHere.offsetY === undefined &&
-                    lyricHere.width === undefined
-                  }
-                  onClick={() =>
-                    setLyrics((current) =>
-                      // Built back up rather than picked apart, because "no answer" here is the
-                      // field being absent and not a number meaning nothing.
-                      current.map((line) =>
-                        line === lyricHere
-                          ? {
-                              fromColumn: line.fromColumn,
-                              toColumn: line.toColumn,
-                              text: line.text,
-                              ...(line.fontSize === undefined ? {} : { fontSize: line.fontSize }),
-                            }
-                          : line,
-                      ),
-                    )
-                  }
-                />
-              </Stack>
-            ) : null}
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <PillButton
-                kind="primary"
-                size="small"
-                disabled={lyricText.trim().length === 0}
-                onClick={() => {
-                  const text = lyricText.trim();
-                  setLyrics((current) => [
-                    ...current.filter(
-                      (line) => line.fromColumn >= range.toColumn || line.toColumn <= range.fromColumn,
-                    ),
-                    { fromColumn: range.fromColumn, toColumn: range.toColumn, text },
-                  ]);
-                  setLyricDraft(null);
-                }}
-              >
-                {lyricHere ? "Change the words" : "Add the words"}
-              </PillButton>
-              {lyricHere ? (
-                <IconAction
-                  title="Remove these words"
-                  icon={<DeleteOutlineIcon fontSize="small" />}
-                  danger
-                  onClick={() => {
-                    setLyrics((current) => current.filter((line) => line !== lyricHere));
-                    setLyricDraft(null);
-                  }}
-                />
-              ) : null}
-            </Stack>
-          </Stack>
         ) : null}
 
         {frameTab === "rerecord" && range && audioUuid ? (

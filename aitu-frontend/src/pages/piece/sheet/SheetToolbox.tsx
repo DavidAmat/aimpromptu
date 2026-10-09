@@ -1,11 +1,12 @@
 /**
- * The sheet toolbox: everything about the whole piano sheet, in four tabs (plan section 11.4).
+ * The sheet toolbox: everything about the whole piano sheet, in five tabs (plan section 11.4).
  *
  * **Title** (what the sheet prints above the music), **Key** (the key signature of the piece),
- * **Figures** (what the highest pile of gaps is called) and **Layout** (spacing, mark size, zoom,
- * frame numbers). Every change in it is one undo step, because every value is an edit of the
- * sheet; zoom and the frame numbers are how the page is looked at and are not saved. Phase 7 turns
- * **Figures** into **Transpose** (notes and figures) and adds **Lyrics**.
+ * **Transpose** (notes and figures, with a preview), **Lyrics** (the pool and the lyrics pieces)
+ * and **Layout** (spacing, mark size, zoom, frame numbers). Every change in it is one undo step,
+ * because every value is an edit of the sheet; zoom and the frame numbers are how the page is
+ * looked at and are not saved. Implementation 02, Phase 7 replaced the **Figures** tab of Phase 2
+ * by **Transpose** and added **Lyrics**.
  */
 
 import { useState, type Dispatch, type SetStateAction } from "react";
@@ -36,22 +37,22 @@ import {
   MIN_ZOOM,
 } from "../../../components/time/TimeScoreView";
 import type { EditHistory } from "../../../hooks/useEditHistory";
-import { FigurePicker, Segmented, Toolbox } from "../../../ui";
+import { Segmented, Toolbox } from "../../../ui";
+import { LyricsTab } from "./LyricsTab";
 import type { SheetEdits } from "./sheetEdits";
+import { TransposeTab } from "./TransposeTab";
 
-export type SheetTab = "title" | "key" | "figures" | "layout";
+export type SheetTab = "title" | "key" | "transpose" | "lyrics" | "layout";
 
 const TABS = [
   { value: "title" as const, label: "Title" },
   { value: "key" as const, label: "Key" },
-  { value: "figures" as const, label: "Figures" },
+  { value: "transpose" as const, label: "Transpose" },
+  { value: "lyrics" as const, label: "Lyrics" },
   { value: "layout" as const, label: "Layout" },
 ];
 
-/** The figures the main figure can be: the plain rungs a piano sheet is mostly written in. */
-const MAIN_FIGURES: readonly FigureName[] = ["blanca", "negra", "corchea", "semicorchea"];
-
-const WIDTH = 360;
+const WIDTH = 400;
 
 export function SheetToolbox({
   open,
@@ -68,6 +69,13 @@ export function SheetToolbox({
   setFrameLabelsOn,
   sheetZoom,
   setSheetZoom,
+  transposing,
+  onPreviewNotes,
+  onPreviewFigures,
+  pickedLyrics,
+  setPickedLyrics,
+  onRefused,
+  lyricsField,
 }: {
   open: boolean;
   onClose: () => void;
@@ -84,6 +92,25 @@ export function SheetToolbox({
   setFrameLabelsOn: Dispatch<SetStateAction<boolean>>;
   sheetZoom: number;
   setSheetZoom: Dispatch<SetStateAction<number>>;
+  /** A preview of a transposition is being written. */
+  transposing: boolean;
+  onPreviewNotes: (semitones: number, from: number, to: number) => void;
+  onPreviewFigures: (from: FigureName, to: FigureName) => void;
+  pickedLyrics: readonly number[];
+  setPickedLyrics: Dispatch<SetStateAction<readonly number[]>>;
+  /** Something asked of a lyrics piece could not be done: said once, in words. */
+  onRefused: (why: string) => void;
+  /** The lyrics field of the Lyrics tab and the lyrics saved with the part. */
+  lyricsField: {
+    onPoolDrag: (index: number | null) => void;
+    pasted: string;
+    setPasted: (text: string) => void;
+    savedText: string | null;
+    /** The pool is not the one saved: **Save lyrics** saves it with the words. */
+    poolUnsaved: boolean;
+    saving: boolean;
+    onSave: (text: string) => void;
+  };
 }) {
   return (
     <Toolbox
@@ -100,12 +127,31 @@ export function SheetToolbox({
         <Segmented<SheetTab> label="Sheet toolbox tab" value={tab} options={TABS} onChange={onTab} />
         {tab === "title" ? <TitleTab state={state} set={set} pieceLabel={pieceLabel} /> : null}
         {tab === "key" ? <KeyTab state={state} set={set} keyHint={keyHint} /> : null}
-        {tab === "figures" ? (
-          <FigurePicker
-            label="Main figure"
-            value={state.anchorFigure}
-            figures={MAIN_FIGURES}
-            onChange={(figure) => set.anchorFigure(figure)}
+        {tab === "transpose" ? (
+          <TransposeTab
+            figuresFrom={state.figuresFrom}
+            anchorFigure={state.anchorFigure}
+            busy={transposing}
+            onPreviewNotes={onPreviewNotes}
+            onPreviewFigures={onPreviewFigures}
+          />
+        ) : null}
+        {tab === "lyrics" ? (
+          <LyricsTab
+            lyrics={state.lyrics}
+            pool={state.lyricsPool}
+            picked={pickedLyrics}
+            setLyrics={set.lyrics}
+            setPool={set.lyricsPool}
+            setPicked={setPickedLyrics}
+            onRefused={onRefused}
+            onPoolDrag={lyricsField.onPoolDrag}
+            pasted={lyricsField.pasted}
+            setPasted={lyricsField.setPasted}
+            savedText={lyricsField.savedText}
+            poolUnsaved={lyricsField.poolUnsaved}
+            savingText={lyricsField.saving}
+            onSaveText={lyricsField.onSave}
           />
         ) : null}
         {tab === "layout" ? (

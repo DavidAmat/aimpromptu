@@ -63,8 +63,8 @@ numbers it is holding still refer to what they referred to.
 | `annotation_scale` | `annotationScale` | `0.3 < f ≤ 2.0` | How large marks over and under the staff are drawn. |
 | `line_spacing` | `lineSpacing` | `0 ≤ f ≤ 240`, optional | White space between the staves of one line and the staves of the next, in pixels. |
 | `note_spacing` | `noteSpacing` | `0 ≤ f ≤ 48`, optional | Extra pixels charged to every column carrying a note, and to no silence. The twin of `line_spacing`, one axis over. |
-| `lyrics_pool` | `lyricsPool` | `string[]` | The lyrics pasted in the Lyrics tab and not placed on the sheet yet, one line per piece, in order (plan section 11.5). Added in Phase 3, filled from Phase 7. |
-| `figures_from` | `figuresFrom` | `FigureName?` | The figure the next figures transposition starts from: the last one it went to (plan section 11.4). `null` starts from negra. Added in Phase 3, set from Phase 7. |
+| `lyrics_pool` | `lyricsPool` | `string[]` | The lyrics pieces of the Lyrics tab, one line each, in order (plan section 11.5). Added in Phase 3 and filled by the sheet's Save early in Phase 7; the pool is now saved with the words by **Save lyrics** (`project.json`, `parts[].lyricsPool`), the page no longer sends it here, a save without it keeps what is here, and the page reads it only for a part with no pool of its own. |
+| `figures_from` | `figuresFrom` | `FigureName?` | The figure the next figures transposition starts from: the last one it went to (plan section 11.4). `null` starts from negra. Added in Phase 3, set since Phase 7 by **Transpose → Figures**. |
 | `saved_at` | `savedAt` | datetime | |
 
 `hand` is not part of the sheet; it says which hand's piles the ladder is measured from, so a
@@ -256,7 +256,14 @@ An **acciaccatura** is crushed, as fast as possible, and prints with a slash thr
 | `font_size` | `fontSize` | `float \| null`, 7 … 36 — how large the words are, in pixels |
 
 A line of words written across a stretch of columns, **drawn above the right hand** in a block of
-its own at the top of the system.
+its own at the top of the system. Since implementation 02, Phase 7 each one is a **lyrics piece**
+of the sheet toolbox's Lyrics tab: dropped from the pool onto a frame, moved and resized by
+dragging, and both ends always land on a frame (`fromColumn`, `toColumn`), so Play mode can show it
+from the time of its first frame to the time of its last. A piece the page writes has `offsetY`
+(raised or lowered over its frames) and `fontSize` at most; `offsetX` and `width` are kept and
+drawn for words saved before Phase 7, and dropped the first time such a piece is moved. A line
+break is a newline in `text`. Two pieces never share a frame. The backend answers an unset field as
+`null`; the page reads `null` as absent.
 
 **Hand-independent**: words belong to the piece rather than to a staff. They sit above everything
 that hangs off a staff, because an octave bracket's height comes from the highest note it covers

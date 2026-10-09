@@ -26,6 +26,7 @@ from fastapi import APIRouter, Body, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import store
+from aitu_backend.storage import bundle, locate
 from aitu_backend.matrix.intervals import intervals_ms
 from aitu_backend.matrix.keys import KEY_COUNT, LOWEST_MIDI
 from aitu_backend.matrix.ladder import (
@@ -43,6 +44,7 @@ from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN
 from aitu_backend.notation.trills import MIN_PAIR_REPEATS, detect_trills
 from aitu_backend.schemas.rhythm import HiddenNote, SavedRhythm, Trill
 from aitu_backend.notation.decorative import decorative_notes
+from aitu_backend.notation.transpose import transpose_events
 from aitu_backend.schemas.time_matrix import FigureLadder, FigureName, TimeScorePayload
 from aitu_backend.transcription import pipeline, saved_hands, split_cache
 from aitu_backend.transcription.engine import NoteEvent
@@ -727,6 +729,129 @@ def _put_added_notes(audio_uuid: str, body: AddNotesRequest) -> AddNotesResult:
     return AddNotesResult(added=added, duplicate=duplicate)
 
 
+class TransposeRequest(BaseModel):
+    """Move every note of the part by a number of semitones (sheet toolbox, Transpose → Notes)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    semitones: int = Field(..., ge=-87, le=87)
+    #: Count what would happen and write nothing.
+    preview: bool = False
+    #: Notes that stay on their key, by id: the ``held`` of the transposition an undo takes back.
+    hold: list[int] = Field(default_factory=list)
+    #: Notes to put back on the page, by id: the ``takenOff`` of the transposition an undo takes
+    #: back.
+    restore: list[int] = Field(default_factory=list)
+
+
+class TransposeResult(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    #: Notes on the page that moved to their new key.
+    moved: int
+    #: Notes that would leave the 88 keys: taken off the page and left on their key.
+    outside: int
+    #: Ids of every note that stayed on its key, and of the notes taken off. An undo sends them
+    #: back as ``hold`` and ``restore``.
+    held: list[int]
+    taken_off: list[int] = Field(..., alias="takenOff")
+    #: Notes put back on the page (an undo).
+    put_back: int = Field(..., alias="putBack")
+
+
+@router.post(
+    "/{audio_uuid}/transpose", response_model=TransposeResult, response_model_by_alias=True
+)
+def post_transpose(audio_uuid: str, body: TransposeRequest = Body(...)) -> TransposeResult:
+    """Move every note of the part by ``semitones`` (implementation 02, plan section 11.4).
+
+    A notes edit: the notes revision goes up, the hands stay (each note keeps the hand it has), and
+    no time moves, so every mark keyed by a column stays on its music. A note that would leave the
+    88 keys is taken off the page and left on its key; the answer counts them. The page that asks
+    draws the result at once, so a saved sheet that was current stays current, as a hand move does.
+
+    Taking it back is the same route with the opposite ``semitones``, ``hold`` set to the answer's
+    ``held`` and ``restore`` to its ``takenOff``: every note is then where it was. ``preview``
+    counts and writes nothing.
+    """
+    if body.semitones == 0:
+        raise HTTPException(status_code=422, detail="Pick two different keys to transpose.")
+    with pipeline.piece_lock(audio_uuid):
+        stored = _events_or_error(audio_uuid)
+        done = transpose_events(
+            stored.events,
+            body.semitones,
+            hold=frozenset(body.hold),
+            restore=frozenset(body.restore),
+        )
+        if not body.preview:
+            pipeline.save_edit(
+                audio_uuid,
+                done.events,
+                stored.duration_seconds,
+                stored.title,
+                before=stored.header,
+                notes_changed=True,
+                hands_changed=True,
+                sheet_follows=True,
+            )
+    return TransposeResult(
+        moved=done.moved,
+        outside=len(done.taken_off),
+        held=done.held,
+        taken_off=done.taken_off,
+        put_back=len(done.put_back),
+    )
+
+
+class PartLyrics(BaseModel):
+    """The words of the song attached to a part (sheet toolbox, Lyrics tab)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    #: ``None`` or an empty text: no lyrics saved.
+    text: str | None = Field(None, max_length=20000)
+    #: The lyrics pieces of the pool, in order. ``None``: never saved here (a pool saved before may
+    #: still be in ``sheet.json``); on a ``PUT``, absent leaves the saved pool as it is.
+    pool: list[str] | None = None
+
+
+@router.get("/{audio_uuid}/lyrics", response_model=PartLyrics, response_model_by_alias=True)
+def get_part_lyrics(audio_uuid: str) -> PartLyrics:
+    """The lyrics and the pool saved with this part, so the Lyrics tab opens with them (Phase 7)."""
+    part = _project_of_part(audio_uuid).part(audio_uuid)
+    return PartLyrics(text=part.lyrics, pool=part.lyrics_pool)
+
+
+@router.put("/{audio_uuid}/lyrics", response_model=PartLyrics, response_model_by_alias=True)
+def put_part_lyrics(audio_uuid: str, body: PartLyrics = Body(...)) -> PartLyrics:
+    """Save the pasted lyrics and the pool with the part, in ``project.json``: **Save lyrics**.
+
+    The song's words, not a reading of the page, so they are kept apart from ``sheet.json`` and
+    outlive **Remove all** and a new transcription. Nothing else of the project changes; the
+    notes, the hands and the sheet stay current. A version of the Private Library answers ``403``.
+    """
+    text = (body.text or "").strip() or None
+    project = _project_of_part(audio_uuid)
+    with bundle.project_lock(project.id):
+        project = bundle.read_project(project.id)
+        part = project.part(audio_uuid)
+        part.lyrics = text
+        if "pool" in body.model_fields_set:
+            part.lyrics_pool = [piece.strip() for piece in body.pool or [] if piece.strip()]
+        bundle.write_project(project)
+    return PartLyrics(text=text, pool=part.lyrics_pool)
+
+
+def _project_of_part(audio_uuid: str):
+    if not store.exists(audio_uuid):
+        raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
+    try:
+        return bundle.read_project(locate.part(audio_uuid).project_id)
+    except locate.NotFound:
+        raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'") from None
+
+
 class ScoreRequest(BaseModel):
     """A sheet to draw: the ladder, the passage boundaries, and the reader's page edits.
 
@@ -749,6 +874,10 @@ class ScoreRequest(BaseModel):
     #: Leave the ornaments off: a sixteenth or shorter printed right before an eighth or
     #: longer in the same hand is taken off the page, and the note before it runs on.
     drop_decorative: bool = Field(False, alias="dropDecorative")
+    #: Draw the sheet as if every note were moved by this many semitones, without writing
+    #: anything: the preview of a notes transposition (implementation 02, Phase 7). The hidden
+    #: notes and trills above are addressed on the moved notes.
+    transpose: int = Field(0, ge=-87, le=87)
 
 
 #: How many more times the figures are named after ornaments are taken off. Taking one off
@@ -872,7 +1001,12 @@ def post_time_score(audio_uuid: str, body: ScoreRequest = Body(...)) -> Response
     Same answer as the GET for a piece with no edits. See `_with_page_edits` for why the edits have
     to be applied on this side rather than in the browser.
     """
-    hands = trim_to_music(_hands(audio_uuid, body.frame_ms))
+    if body.transpose:
+        stored = _events_or_error(audio_uuid)
+        moved = transpose_events(stored.events, body.transpose).events
+        hands = trim_to_music(pipeline.split_events(stored, moved, body.frame_ms))
+    else:
+        hands = trim_to_music(_hands(audio_uuid, body.frame_ms))
     ladder = build_ladder(body.anchor_figure, body.anchor_ms)
     passages = _passages_from_query(
         hands,
@@ -1066,7 +1200,13 @@ def put_rhythm(audio_uuid: str, rhythm: SavedRhythm) -> SavedRhythm:
                     "rhythm to describe."
                 ),
             )
-        rhythm = rhythm.model_copy(update={"hands_revision": stored.header.hands_revision})
+        update: dict[str, object] = {"hands_revision": stored.header.hands_revision}
+        # The pool is saved by **Save lyrics** now (project.json); a page that does not send it
+        # leaves the pool an older page saved here as it was, so nothing saved is lost.
+        if "lyrics_pool" not in rhythm.model_fields_set:
+            before = pipeline.load_rhythm(audio_uuid)
+            update["lyrics_pool"] = before.lyrics_pool if before is not None else []
+        rhythm = rhythm.model_copy(update=update)
         pipeline.save_rhythm(audio_uuid, rhythm)
     return rhythm
 

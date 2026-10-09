@@ -686,3 +686,117 @@ def test_a_key_already_struck_in_that_column_is_refused_rather_than_doubled(clie
     )
     assert result.status_code == 200
     assert result.json() == {"added": 0, "duplicate": 1}
+
+
+# --------------------------------------------------------------------------- transposition
+
+
+def _notes_by_id(audio_uuid: str) -> dict[int, tuple[int, bool, str | None]]:
+    stored = pipeline.load_note_events(audio_uuid)
+    assert stored is not None
+    return {event.id: (event.midi_note, event.removed, event.hand) for event in stored.events}
+
+
+def test_a_notes_transposition_moves_every_note_and_nothing_in_time(client, transcribed):
+    """Transpose → Notes (implementation 02, plan section 11.4): every key moves, no column does."""
+    before = _notes_by_id(transcribed)
+    plain = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
+    header = pipeline.load_note_events(transcribed).header
+
+    preview = client.post(f"/time/{transcribed}/transpose", json={"semitones": 2, "preview": True})
+    assert preview.status_code == 200
+    assert preview.json()["moved"] == len(before)
+    assert _notes_by_id(transcribed) == before
+
+    done = client.post(f"/time/{transcribed}/transpose", json={"semitones": 2}).json()
+    assert done == {"moved": len(before), "outside": 0, "held": [], "takenOff": [], "putBack": 0}
+    after = _notes_by_id(transcribed)
+    assert {
+        key: (midi - 2, removed, hand) for key, (midi, removed, hand) in after.items()
+    } == before
+    assert pipeline.load_note_events(transcribed).header.notes_revision == header.notes_revision + 1
+
+    moved = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
+    assert sorted((note["startFrame"], note["row"] - 2) for note in moved["notes"]) == sorted(
+        (note["startFrame"], note["row"]) for note in plain["notes"]
+    )
+
+
+def test_notes_that_would_leave_the_keyboard_are_taken_off_and_the_undo_is_exact(
+    client, transcribed
+):
+    """The two bass notes (C2) cannot go down 20 semitones: they stay on their key, taken off."""
+    before = _notes_by_id(transcribed)
+    done = client.post(f"/time/{transcribed}/transpose", json={"semitones": -20}).json()
+    assert done["outside"] == 2
+    assert sorted(done["held"]) == sorted(done["takenOff"])
+    after = _notes_by_id(transcribed)
+    for note_id in done["takenOff"]:
+        assert after[note_id] == (before[note_id][0], True, before[note_id][2])
+
+    back = client.post(
+        f"/time/{transcribed}/transpose",
+        json={"semitones": 20, "hold": done["held"], "restore": done["takenOff"]},
+    ).json()
+    assert back["putBack"] == 2
+    assert _notes_by_id(transcribed) == before
+
+
+def test_the_preview_sheet_draws_the_moved_notes_and_writes_nothing(client, transcribed):
+    before = _notes_by_id(transcribed)
+    plain = client.post(f"/time/{transcribed}/score", json={"anchorMs": 337.0}).json()
+    preview = client.post(
+        f"/time/{transcribed}/score", json={"anchorMs": 337.0, "transpose": 12}
+    ).json()
+    assert sorted((note["startFrame"], note["row"] - 12) for note in preview["notes"]) == sorted(
+        (note["startFrame"], note["row"]) for note in plain["notes"]
+    )
+    assert _notes_by_id(transcribed) == before
+
+
+def test_a_transposition_by_nothing_is_refused(client, transcribed):
+    answer = client.post(f"/time/{transcribed}/transpose", json={"semitones": 0})
+    assert answer.status_code == 422
+
+
+# --------------------------------------------------------------------------- the song's lyrics
+
+
+def test_the_lyrics_are_saved_with_the_part_and_outlive_remove_all(client, transcribed):
+    """**Save lyrics** (Phase 7): the pasted words are kept in project.json, not in sheet.json."""
+    assert client.get(f"/time/{transcribed}/lyrics").json() == {"text": None, "pool": None}
+    words = "Tinc un cel\ni un infern a dins"
+    saved = client.put(f"/time/{transcribed}/lyrics", json={"text": f"  {words}\n"})
+    assert saved.status_code == 200
+    assert saved.json() == {"text": words, "pool": None}
+    client.delete(f"/time/{transcribed}/rhythm")
+    assert client.get(f"/time/{transcribed}/lyrics").json()["text"] == words
+    assert client.put(f"/time/{transcribed}/lyrics", json={"text": "  "}).json()["text"] is None
+
+
+def test_the_pool_is_saved_with_the_lyrics_and_a_sheet_save_leaves_an_older_one(
+    client, transcribed
+):
+    """**Save lyrics** keeps the pool too; a sheet saved without a pool keeps the one sheet.json had."""
+    saved = client.put(
+        f"/time/{transcribed}/lyrics", json={"text": "a b\nc", "pool": ["a b", " ", "c"]}
+    ).json()
+    assert saved == {"text": "a b\nc", "pool": ["a b", "c"]}
+    assert client.get(f"/time/{transcribed}/lyrics").json()["pool"] == ["a b", "c"]
+    # Only the words: the pool stays as saved.
+    client.put(f"/time/{transcribed}/lyrics", json={"text": "a b"})
+    assert client.get(f"/time/{transcribed}/lyrics").json()["pool"] == ["a b", "c"]
+
+    reading = {
+        "hand": "right",
+        "frameMs": 40,
+        "anchorFigure": "negra",
+        "anchorMs": 337.0,
+        "speedChanges": [],
+        "overrides": [],
+        "beamBreaks": [],
+        "lyricsPool": ["older"],
+    }
+    assert client.put(f"/time/{transcribed}/rhythm", json=reading).status_code == 200
+    without = {key: value for key, value in reading.items() if key != "lyricsPool"}
+    assert client.put(f"/time/{transcribed}/rhythm", json=without).json()["lyricsPool"] == ["older"]

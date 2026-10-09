@@ -191,8 +191,10 @@ byte for byte), then redesigned it to plan section 11. What it does for the read
 | `sheetConstants.ts` | The colours of the keyboards, the tabs of the range toolbox, the figure ladder, small helpers |
 | `toolboxPlacement.ts` | Where a toolbox opens, measured from what is drawn |
 | `useNoteActions.ts`, `NoteToolbox.tsx` | What the note toolbox knows about the picked notes and its actions; the panel |
-| `useRangeActions.ts`, `RangeToolbox.tsx` | The same for a marked stretch; the panel with its tabs, Speed among them |
-| `SheetToolbox.tsx` | The sheet toolbox: Title, Key, Figures, Layout |
+| `useRangeActions.ts`, `RangeToolbox.tsx` | The same for a marked stretch; the panel with its tabs, Speed among them; **Key for this passage** and the clef rule offered again (Phase 7) |
+| `SheetToolbox.tsx` | The sheet toolbox: Title, Key, Transpose, Lyrics, Layout |
+| `TransposeTab.tsx`, `TransposeDialog.tsx` | **Transpose** (Phase 7): Notes (two `MiniPiano`s) and Figures (two `FigurePicker`s), each with **Preview**; the one dialog both use: a read-only `TimeScoreView` of the result, the facts, **Transpose** or **Cancel**. The page's `previewNotes`, `previewFigures` and `confirmTranspose` do the requests and the undo step |
+| `LyricsTab.tsx`, `lyricsPieces.ts` | **Lyrics** (Phase 7): paste, the pool (each piece draggable onto the sheet, `POOL_DRAG_TYPE`), the picked pieces' **Words** field and edit toolbar; the pure functions on the list of pieces (place, move, merge, split, line break, back to the pool, size), each returning the new list or the reason it could not |
 | `SheetFloatingBar.tsx` | Play, undo, redo, sheet toolbox, Record, Print, Save with its unsaved dot, `⋯`; the messages of a refused save and a refused move |
 | `PianoToolboxes.tsx` | The keyboard under the playhead, and the decoration keyboard |
 
@@ -355,7 +357,7 @@ so the same job looks the same everywhere.
 | `Sidebar` | Open (260 px, words) or closed (64 px, icons with tooltips); groups with a heading; the footer |
 | `PageHeader` | The title on the left, the primary action on the right, an optional back arrow and a middle row (the step tabs). No subtitle |
 | `Section` | A group inside a page: an optional small title and its controls, no description, no border (it replaced `SectionCard`) |
-| `IconAction` | An icon button with its tooltip, which is also its name; the shortcut after the title; a tooltip that says why when disabled |
+| `IconAction` | An icon button with its tooltip, which is also its name; the shortcut after the title; a tooltip that says why when disabled; tooltips never catch the pointer, so one never covers the button beside it |
 | `PillButton` | `primary` (black), `secondary` (white, grey border), `quiet`, `danger`; `busy` shows a spinner |
 | `Segmented` | One of 2 to 4 options, as one rounded group |
 | `ListRow`, `RowMenu` | A row: title (truncated, full on hover), status and meta in fixed columns, the `⋯` menu |
@@ -369,7 +371,10 @@ so the same job looks the same everywhere.
 | `Pill`, `TabBar` | A small toggle chip; a tab strip that follows the address (the Lab tabs) |
 | `timestamps.ts`, `progress.ts`, `relativeTime.ts` | Tabular figures that never wrap; the 520 px width of a progress bar on its own; "2 h ago", "yesterday", "3 Oct" |
 
-`MiniPiano` and `FigurePicker` are built in Phase 1 and used from Phase 7 (transposition).
+`MiniPiano` and `FigurePicker` are built in Phase 1 and used by the Transpose tab since Phase 7.
+`music/transpose.ts` holds what moves with a transposition: `transposeKey` (of two names for one key,
+the one with fewer accidentals), `transposeKeyChanges`, `transposeRowMarks` (fingering, notes taken
+off, trills, grace notes), `figureSteps`, `shiftFigure`, `intervalWords`.
 
 **The tokens** are in `tokens.ts`: the colours of the page, light and dark, the type scale (13, 14,
 16, 20, 28 px), the radii (12 for inputs, 16 for floating things, a pill for buttons) and the one
@@ -454,7 +459,7 @@ npm run check:notes       # the Notes tab's typed arrays, live feed and edits
 
 These need the running app (`make up` from the repository root). Each works on temporary copies or
 uploads and deletes them at the end, so the library is never changed. `check:flow`,
-`check:projects`, `check:library`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
+`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
 user with `AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env` at the repository root (or
 `AITU_CHECK_USERNAME` and `AITU_CHECK_PASSWORD` from the environment), makes every `fetch` of the
 script send the cookie (`signIn(base)`), and gives every Playwright page the same cookie
@@ -465,6 +470,9 @@ Phase 3 a temporary copy is made by `POST /projects/{id}/duplicate` (new ids, th
 npm run check:flow    # a project walked in a headless Chromium, every step, live transcription included
 npm run check:projects  # the Projects page: New project, Add audio, Duplicate, Export, Import, Rename, Delete, a video file
 npm run check:library   # My library on a copy of Elefants: Save to library, a version read only, Edit, Replace, History, New version, Artists
+npm run check:transpose # the Transpose tab on a copy of Elefants: notes and figures, preview, undo, redo; Key for this passage
+npm run check:lyrics    # the Lyrics tab on a copy of Elefants: pool, drag onto the sheet, snapping, merge, split, line break, Save
+node scripts/check-sheet-toolbox.mjs --only clefs  # the clef rule on a first write of a copy of Superestrella's tutorial
 npm run time:flow     # the whole flow timed on three temporary pieces (upload, a duplicated library piece, YouTube)
 npm run bench:roll    # the Notes tab at 10,000 rectangles and at 100 stream messages per second
 npm run bench:sheet   # a hand move on the Sheet tab, timed part by part

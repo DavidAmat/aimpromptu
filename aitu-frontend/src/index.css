@@ -37,6 +37,20 @@
   font-display: swap;
 }
 
+/*
+ * Lora italic, self-hosted, for the lyrics pieces on the piano sheet only: a serif made for screens,
+ * readable at the small sizes words take over a staff, and an italic that reads as sung words rather
+ * than as one more marking of the music. The PDF prints it as Times Italic. Latin subset (Spanish and
+ * Catalan included). SIL OFL 1.1, see `public/fonts/lora-LICENSE.txt`.
+ */
+@font-face {
+  font-family: "Lora";
+  src: url("/fonts/lora-italic.woff2") format("woff2-variations");
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root[data-scheme="dark"] {
   color-scheme: dark;
 }

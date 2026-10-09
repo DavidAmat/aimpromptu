@@ -44,6 +44,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import {
   timeScoreApi,
   type DefaultReading,
+  type FigureName,
   type HandChoice,
   type KeySignatureName,
   type SavedRhythm,
@@ -51,13 +52,25 @@ import {
   type TrillSuggestion,
 } from "../../../api";
 import {
+  clefAtFrame,
   ottavaAtFrame,
   resizeOttava,
+  suggestClefRanges,
+  type ClefChangeAnnotation,
+  type ClefRange,
   type GridNotationRenderer,
-  type LyricLayoutChange,
+  type KeySignature,
+  type LyricPlaceChange,
   type OttavaAnnotation,
   type OttavaResizeChange,
 } from "@aimpromptu/grid-notation";
+import {
+  figureSteps,
+  shiftFigure,
+  transposeKey,
+  transposeKeyChanges,
+  transposeRowMarks,
+} from "../../../music/transpose";
 import {
   frameOf,
   groupKeyOf,
@@ -69,6 +82,8 @@ import {
 import { useEditHistory } from "../../../hooks/useEditHistory";
 import { useWorkingArtifact } from "../../../state/useWorkingArtifact";
 import {
+  BEAMABLE_FIGURES,
+  DEFAULT_CLEF,
   formatSeconds,
   HAND_COLOUR,
   HELD_COLOUR,
@@ -85,6 +100,7 @@ import {
   editsFromSaved,
   hiddenNotesOut,
   NO_EDITS,
+  sameSheet,
   savedRhythmOf,
   type SheetEdits,
   type Stretch,
@@ -103,6 +119,9 @@ import { RangeToolbox } from "./RangeToolbox";
 import { DecorationToolbox, PianoToolbox } from "./PianoToolboxes";
 import { SheetFloatingBar } from "./SheetFloatingBar";
 import { SheetToolbox, type SheetTab } from "./SheetToolbox";
+import { TransposeDialog, type PreviewSheet } from "./TransposeDialog";
+import { landingOf, movePiece, piecesIn, placePiece } from "./lyricsPieces";
+import { POOL_DRAG_TYPE } from "./LyricsTab";
 
 /**
  * Everything read for one (piece, hand, resolution), kept together under the key it belongs to:
@@ -141,6 +160,50 @@ export interface SheetStep {
 
 /** In place of a handler on a sheet that only shows. */
 const ignore = () => undefined;
+
+/**
+ * The octave brackets a hand can take where it reads its own clef.
+ *
+ * A passage takes a clef change or a bracket, never both (the drawing package refuses the pair):
+ * a left-hand run the clef rule wrote in the treble clef is already where it sounds. A bracket
+ * that starts on the hand's own clef and runs into a clef change is cut where the clef changes.
+ */
+function clearOfClefChanges(
+  spans: readonly OttavaAnnotation[],
+  clefChanges: readonly ClefChangeAnnotation[],
+): OttavaAnnotation[] {
+  return spans.flatMap((span) => {
+    if (clefAtFrame(span.fromColumn, span.hand, clefChanges) !== DEFAULT_CLEF[span.hand]) return [];
+    const next = clefChanges.find(
+      (change) =>
+        change.hand === span.hand &&
+        change.fromColumn > span.fromColumn &&
+        change.fromColumn < span.toColumn,
+    );
+    return [next ? { ...span, toColumn: next.fromColumn } : span];
+  });
+}
+
+/** A transposition waiting in its preview dialog for **Transpose** or **Cancel**. */
+type TransposePreview =
+  | {
+      kind: "notes";
+      semitones: number;
+      facts: string[];
+      sheet: PreviewSheet | null;
+      error: string | null;
+    }
+  | {
+      kind: "figures";
+      to: FigureName;
+      anchorFigure: FigureName;
+      overrides: Record<string, FigureName>;
+      beamBreaks: ReadonlySet<string>;
+      beamJoins: ReadonlySet<string>;
+      facts: string[];
+      sheet: PreviewSheet | null;
+      error: string | null;
+    };
 
 export function SheetPage({ step }: { step?: SheetStep } = {}) {
   const readOnly = step?.readOnly ?? false;
@@ -186,6 +249,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     ottavas,
     trills,
     lyrics,
+    lyricsPool,
     cueRanges,
     spacings,
     evenSpacings,
@@ -202,6 +266,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     staffGaps,
     stretches,
   } = edits.state;
+  const set = edits.set;
   const {
     ottavas: setOttavas,
     trills: setTrills,
@@ -241,6 +306,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    * or by the default taken on the first write (plan section 11.3).
    */
   const keyDecided = useRef(false);
+  /** Whether the clefs of this sheet have been decided: by a saved reading, or by the first write. */
+  const clefsDecided = useRef(false);
   /**
    * The first write has just replaced the key, so the octave brackets that same build proposed
    * were measured in the old key. The next build proposes them again in the new one.
@@ -317,11 +384,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     readonly TrillSuggestion[] | null
   >(null);
   const [findingTrills, setFindingTrills] = useState(false);
-  /** What is being typed for the stretch now open, so the field survives a redraw. */
-  const [lyricDraft, setLyricDraft] = useState<{
-    forRange: string;
-    text: string;
-  } | null>(null);
   /** Numbers pressed for the selection now open, so a chord can be given several at once. */
   const [fingerDraft, setFingerDraft] = useState<FingerDraft | null>(null);
   /** A move that could not be made, said once, in words. */
@@ -393,6 +455,25 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   const [recordOpen, setRecordOpen] = useState(false);
   /** The Trills toolbox: what **Find trills** found, each one a press away from being written. */
   const [trillsOpen, setTrillsOpen] = useState(false);
+  /** A transposition in its preview dialog, the preview being written, and the write. */
+  const [transposePreview, setTransposePreview] = useState<TransposePreview | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [transposing, setTransposing] = useState(false);
+  /** The lyrics pieces picked in the Lyrics tab, by their first frame. */
+  const [pickedLyrics, setPickedLyrics] = useState<readonly number[]>([]);
+  /**
+   * The words of the song saved with the part (**Save lyrics**, `project.json`), the lyrics field
+   * as it is being edited (`null` until it is touched: it shows the saved words), and the save.
+   * Not an edit of the sheet: no undo, and the sheet's own Save does not carry it.
+   */
+  const [songLyrics, setSongLyrics] = useState<{
+    forPart: string;
+    text: string | null;
+    /** The pool as saved: what **Save lyrics** compares the pool on the page with. */
+    pool: readonly string[];
+  } | null>(null);
+  const [lyricsDraft, setLyricsDraft] = useState<{ forPart: string; text: string } | null>(null);
+  const [savingLyrics, setSavingLyrics] = useState(false);
 
   /**
    * Everything read for one (piece, hand, resolution), kept together under the key it belongs to.
@@ -453,7 +534,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     : (reading?.endSeconds ?? 0);
   const pieceIsEmpty = reading !== null && reading.attackCount === 0;
   /** Unsaved: nothing saved yet, or the page is not what was saved, or the saved one is stale. */
-  const unsaved = cleanEdits === null || edits.state !== cleanEdits || stale;
+  // The lyrics pool aside: it has its own save, **Save lyrics**.
+  const unsaved = cleanEdits === null || !sameSheet(edits.state, cleanEdits) || stale;
 
   const renderOverrides = useMemo(
     () => ({ hidden: hiddenNotes, hands: NO_HANDS }),
@@ -506,7 +588,26 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       setOttavaHint(spans);
       if (keyMoving.current || ottavasDecided.current || spans.length === 0) return;
       ottavasDecided.current = true;
-      resetEdits((current) => ({ ...current, ottavas: spans }));
+      // After the clefs of the same build, so a run the clef rule wrote in the treble clef does
+      // not take a bracket as well.
+      resetEdits((current) => ({
+        ...current,
+        ottavas: clearOfClefChanges(spans, current.clefChanges),
+      }));
+    },
+    [resetEdits],
+  );
+  /**
+   * The clef rule of a first write (plan section 11.7): the left hand's high runs of four figures
+   * or more in the treble clef. Taken as the baseline once, measured in the key just chosen, like
+   * the brackets; after that the Clef tab of the range toolbox offers it again per stretch.
+   */
+  const takeClefHint = useCallback(
+    (changes: ClefChangeAnnotation[]) => {
+      if (keyMoving.current || clefsDecided.current) return;
+      clefsDecided.current = true;
+      if (changes.length === 0) return;
+      resetEdits((current) => ({ ...current, clefChanges: changes }));
     },
     [resetEdits],
   );
@@ -589,20 +690,31 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     // different piece has not been asked yet and may take the page's own defaults.
     ottavasDecided.current = false;
     keyDecided.current = false;
+    clefsDecided.current = false;
     const controller = new AbortController();
-    timeScoreApi
-      .rhythm(audioUuid, controller.signal)
-      .then((found) => {
+    // The saved lyrics and pool come with the reading, in one answer, so neither overwrites the
+    // other's pool. The pool saved by **Save lyrics** wins; one saved by an older sheet is the
+    // fallback. A failure to read the lyrics leaves them empty.
+    Promise.all([
+      timeScoreApi.rhythm(audioUuid, controller.signal),
+      timeScoreApi.lyrics(audioUuid, controller.signal).catch(() => null),
+    ])
+      .then(([found, song]) => {
+        const pool = song?.pool ?? found?.lyricsPool ?? [];
         if (found) {
           setHand(found.hand);
           // A saved reading decided its key. A reading that carries a list of brackets — even an
           // empty one — decided those too; one saved before brackets existed did not.
           keyDecided.current = true;
+          clefsDecided.current = true;
           ottavasDecided.current = Array.isArray(found.ottavas);
-          const next = editsFromSaved(found);
+          const next = { ...editsFromSaved(found), lyricsPool: pool };
           resetEdits(next);
           setCleanEdits(next);
+        } else if (pool.length > 0) {
+          resetEdits((current) => ({ ...current, lyricsPool: pool }));
         }
+        setSongLyrics({ forPart: audioUuid, text: song?.text ?? null, pool });
         setRhythmCheckedFor(editsKey);
       })
       .catch(() => {
@@ -613,6 +725,31 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       });
     return () => controller.abort();
   }, [audioUuid, editsKey, resetEdits]);
+
+  const savedLyricsText =
+    songLyrics && songLyrics.forPart === audioUuid ? songLyrics.text : null;
+  const savedPool = songLyrics && songLyrics.forPart === audioUuid ? songLyrics.pool : [];
+  /** The pool on the page is not the one saved: **Save lyrics** is offered for it too. */
+  const poolUnsaved =
+    lyricsPool.length !== savedPool.length || lyricsPool.some((text, at) => text !== savedPool[at]);
+  const lyricsFieldText =
+    lyricsDraft && lyricsDraft.forPart === audioUuid ? lyricsDraft.text : (savedLyricsText ?? "");
+  const saveSongLyrics = useCallback(
+    async (text: string) => {
+      if (!audioUuid) return;
+      setSavingLyrics(true);
+      try {
+        const saved = await timeScoreApi.saveLyrics(audioUuid, text, lyricsPool);
+        setSongLyrics({ forPart: audioUuid, text: saved.text, pool: saved.pool ?? [] });
+        setLyricsDraft({ forPart: audioUuid, text: saved.text ?? "" });
+      } catch (caught) {
+        setMoveRefused(readable(caught, "Could not save the lyrics."));
+      } finally {
+        setSavingLyrics(false);
+      }
+    },
+    [audioUuid, lyricsPool],
+  );
 
   /**
    * Both of these have to keep the same identity between renders.
@@ -626,6 +763,13 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       picked: { fromColumn: number; toColumn: number },
       options?: { adjusting?: boolean },
     ) => {
+      // In the Lyrics tab a stretch picks the lyrics pieces over it: the box a reader drags over
+      // several pieces at once.
+      if (lyricsModeNow.current) {
+        setPickedLyrics(piecesIn(lyricsNow.current, picked));
+        setClearedAt((at) => at + 1);
+        return;
+      }
       setRange(picked);
       setFramesToolbox(true);
       // Only when the stretch is a new one.
@@ -831,25 +975,50 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   const drawnMarks = useMemo(() => live, [liveContent]);
 
   /**
-   * A lyric's block was dragged somewhere, or its right edge pulled in. Keep where it was put.
+   * Whether the Lyrics tab is open: then a click on a piece picks it, and a stretch marked above the
+   * staves picks the pieces over it instead of opening the range toolbox.
    *
-   * The columns it is stored against never change, so the words stay with their music through a
-   * re-wrap and this is only how far from it the reader moved them. Reported once when the pointer
-   * is let go, which is what makes it one step of Command-Z rather than one per pixel.
+   * Held in refs as well, so the handlers the sheet keeps stay the same functions: a new handler
+   * would rebuild every note of the sheet.
+   */
+  const lyricsMode = sheetToolbox && sheetTab === "lyrics";
+  const lyricsModeNow = useRef(lyricsMode);
+  const lyricsNow = useRef(lyrics);
+  useEffect(() => {
+    lyricsModeNow.current = lyricsMode;
+    lyricsNow.current = lyrics;
+  }, [lyricsMode, lyrics]);
+
+  /** A press on the sheet but not on a lyrics piece, or Escape: every piece is plain text again. */
+  const clearPickedLyrics = useCallback(() => setPickedLyrics([]), []);
+
+  /** A lyrics piece was clicked: the Lyrics tab opens on it, picked (Command-click adds it). */
+  const pickLyric = useCallback((fromColumn: number, additive: boolean) => {
+    setSheetToolbox(true);
+    setSheetTab("lyrics");
+    setPickedLyrics((current) =>
+      additive
+        ? current.includes(fromColumn)
+          ? current.filter((one) => one !== fromColumn)
+          : [...current, fromColumn]
+        : [fromColumn],
+    );
+  }, []);
+
+  /**
+   * A lyrics piece was dragged on the sheet and let go: it snaps to the frames under its edges.
+   * Refused, with the reason, where it would cover another piece.
    */
   const placeLyric = useCallback(
-    (change: LyricLayoutChange) => {
-      setLyrics((current) =>
-        current.map((line) =>
-          line.fromColumn === change.fromColumn && line.toColumn === change.toColumn
-            ? {
-                ...line,
-                offsetX: change.offsetX,
-                offsetY: change.offsetY,
-                width: change.width,
-              }
-            : line,
-        ),
+    (change: LyricPlaceChange) => {
+      const outcome = movePiece(lyricsNow.current, change);
+      if ("refused" in outcome) {
+        setMoveRefused(outcome.refused);
+        return;
+      }
+      setLyrics(outcome.ok);
+      setPickedLyrics((current) =>
+        current.map((one) => (one === change.fromColumn ? change.nextFromColumn : one)),
       );
     },
     [setLyrics],
@@ -876,6 +1045,11 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    */
   const pickMarkedRange = useCallback(
     (marker: { kind: string; hand: string; fromColumn: number; toColumn: number }) => {
+      // A lyrics piece is a piece of the Lyrics tab, not a stretch of the range toolbox.
+      if (marker.kind === "lyric") {
+        pickLyric(marker.fromColumn, false);
+        return;
+      }
       setRange({ fromColumn: marker.fromColumn, toColumn: marker.toColumn });
       // The stretch arrives with its own answers to the two questions the panel asks first: which
       // staff it is about, and which kind of markup it carries. Filling both in is the difference
@@ -888,7 +1062,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       setFramesAt(clearOfRange(pressedAt.current));
       setFramesOpenedAt((at) => at + 1);
     },
-    [],
+    [pickLyric],
   );
 
   /**
@@ -1023,7 +1197,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     chords,
     state: edits.state,
     set: edits.set,
-    lyricDraft,
     passageDraft,
   });
   const { notesUnderRange } = rangeActions;
@@ -1179,6 +1352,12 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         hideSelected();
         return;
       }
+      if (lyricsMode && pickedLyrics.length > 0) {
+        event.preventDefault();
+        setLyrics((current) => current.filter((line) => !pickedLyrics.includes(line.fromColumn)));
+        setPickedLyrics([]);
+        return;
+      }
       if (!range) return;
       const hands: PrintedHand[] = rangeHand === "both" ? ["right", "left"] : [rangeHand];
       // Only the ones that are actually drawn. With every bracket here already hidden, Delete has
@@ -1193,7 +1372,17 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedNotes, hideSelected, range, rangeHand, ottavas, setOttavaHidden]);
+  }, [
+    selectedNotes,
+    hideSelected,
+    range,
+    rangeHand,
+    ottavas,
+    setOttavaHidden,
+    lyricsMode,
+    pickedLyrics,
+    setLyrics,
+  ]);
 
   // Escape drops whatever is picked, which is what it does everywhere else.
   useEffect(() => {
@@ -1201,6 +1390,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       if (event.key !== "Escape") return;
       closeFrames();
       closeNotes();
+      // A picked lyrics piece goes back to plain text.
+      setPickedLyrics([]);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1384,6 +1575,380 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   }, [apply]);
 
   /**
+   * The sheet as the preview dialog draws it: everything the page draws, with the changes of the
+   * transposition on top. Built from the marks that still have a note under them.
+   */
+  const previewSheetOf = useCallback(
+    (previewScore: TimeScorePayload, changes: Partial<PreviewSheet>): PreviewSheet => ({
+      score: previewScore,
+      overrides: drawnMarks.overrides,
+      beamBreaks: drawnMarks.beamBreaks,
+      beamJoins: drawnMarks.beamJoins,
+      keySignature,
+      keyChanges,
+      clefChanges,
+      ottavas: drawnMarks.ottavas,
+      fingers: drawnMarks.fingers,
+      trills,
+      lyrics,
+      cueRanges,
+      graceNotes,
+      spacings,
+      evenSpacings: drawnMarks.evenSpacings,
+      lineSpacing,
+      noteSpacing,
+      staffGaps,
+      annotationScale,
+      renderOverrides,
+      ...changes,
+    }),
+    [
+      drawnMarks,
+      keySignature,
+      keyChanges,
+      clefChanges,
+      trills,
+      lyrics,
+      cueRanges,
+      graceNotes,
+      spacings,
+      lineSpacing,
+      noteSpacing,
+      staffGaps,
+      annotationScale,
+      renderOverrides,
+    ],
+  );
+
+  /** What moves with the notes when every key moves by `semitones` (plan section 11.4). */
+  const notesMarksMoved = useCallback(
+    (semitones: number) => ({
+      keySignature: transposeKey(keySignature, semitones),
+      keyChanges: transposeKeyChanges(keyChanges, semitones),
+      ...transposeRowMarks({ fingers, hiddenNotes, trills, graceNotes }, semitones),
+    }),
+    [keySignature, keyChanges, fingers, hiddenNotes, trills, graceNotes],
+  );
+
+  /**
+   * **Preview** of a notes transposition: the backend counts what would move and what would leave
+   * the keyboard, and draws the sheet with the notes moved, writing nothing.
+   */
+  const previewNotes = useCallback(
+    async (semitones: number) => {
+      if (!audioUuid || anchorMs === null) return;
+      const moved = notesMarksMoved(semitones);
+      // The sheet says what changes. A line is added only where it changes the decision: notes the
+      // keyboard cannot hold (below).
+      setTransposePreview({ kind: "notes", semitones, facts: [], sheet: null, error: null });
+      setPreviewing(true);
+      try {
+        const [counts, previewScore] = await Promise.all([
+          timeScoreApi.transpose(audioUuid, { semitones, preview: true }),
+          timeScoreApi.score(audioUuid, {
+            anchorFigure,
+            anchorMs,
+            frameMs,
+            boundaries: stretches.map((stretch) => stretch.startFrame),
+            boundaryMs: [anchorMs, ...stretches.map((stretch) => stretch.anchorMs)],
+            hiddenNotes: hiddenNotesOut(moved.hiddenNotes),
+            trills: moved.trills,
+            dropDecorative,
+            transpose: semitones,
+          }),
+        ]);
+        const counted = [
+          ...(counts.outside > 0
+            ? [
+                `${counts.outside} note${counts.outside === 1 ? "" : "s"} would leave the keyboard and ${
+                  counts.outside === 1 ? "is" : "are"
+                } taken off the page.`,
+              ]
+            : []),
+        ];
+        setTransposePreview((current) =>
+          current?.kind === "notes" && current.semitones === semitones
+            ? {
+                ...current,
+                facts: [...current.facts, ...counted],
+                sheet: previewSheetOf(previewScore, {
+                  keySignature: moved.keySignature,
+                  keyChanges: moved.keyChanges,
+                  fingers: Object.fromEntries(
+                    Object.entries(moved.fingers).filter(([key]) => {
+                      const [hand, frame] = key.split(":");
+                      return previewScore.notes.some(
+                        (note) => note.hand === hand && note.startFrame === Number(frame),
+                      );
+                    }),
+                  ) as typeof drawnMarks.fingers,
+                  trills: moved.trills,
+                  graceNotes: moved.graceNotes,
+                  renderOverrides: { hidden: moved.hiddenNotes, hands: NO_HANDS },
+                }),
+              }
+            : current,
+        );
+      } catch (caught) {
+        setTransposePreview((current) =>
+          current ? { ...current, error: readable(caught, "Could not write the preview.") } : current,
+        );
+      } finally {
+        setPreviewing(false);
+      }
+    },
+    [
+      audioUuid,
+      anchorMs,
+      anchorFigure,
+      frameMs,
+      stretches,
+      dropDecorative,
+      notesMarksMoved,
+      previewSheetOf,
+      drawnMarks,
+    ],
+  );
+
+  /**
+   * **Preview** of a figures transposition: every figure moved the same number of steps (the
+   * figure shift of D-18). A figure set by hand moves with them; one that has no figure to become,
+   * and a beam mark on notes that can no longer be beamed (a negra or longer), is removed, and
+   * the dialog says how many. Undo brings them back exactly: they are page edits.
+   */
+  const previewFigures = useCallback(
+    async (from: FigureName, to: FigureName) => {
+      if (!audioUuid || anchorMs === null) return;
+      const steps = figureSteps(from, to);
+      const nextAnchor = shiftFigure(anchorFigure, steps);
+      if (!nextAnchor) return;
+      const nextOverrides: Record<string, FigureName> = {};
+      let overridesRemoved = 0;
+      for (const [key, figure] of Object.entries(overrides)) {
+        const moved = shiftFigure(figure, steps);
+        if (moved) nextOverrides[key] = moved;
+        else overridesRemoved += 1;
+      }
+      setTransposePreview({
+        kind: "figures",
+        to,
+        anchorFigure: nextAnchor,
+        overrides: nextOverrides,
+        beamBreaks,
+        beamJoins,
+        facts: [],
+        sheet: null,
+        error: null,
+      });
+      setPreviewing(true);
+      try {
+        const previewScore = await timeScoreApi.score(audioUuid, {
+          anchorFigure: nextAnchor,
+          anchorMs,
+          frameMs,
+          boundaries: stretches.map((stretch) => stretch.startFrame),
+          boundaryMs: [anchorMs, ...stretches.map((stretch) => stretch.anchorMs)],
+          ...pageEdits,
+        });
+        // What each chord prints as after the change: its figure set by hand, or the new name.
+        const printed = new Map<string, FigureName>();
+        for (const note of previewScore.notes) {
+          const key = `${note.hand}:${note.startFrame}`;
+          if (!printed.has(key)) printed.set(key, nextOverrides[key] ?? note.figure);
+        }
+        const beamable = (key: string) => {
+          const figure = printed.get(key);
+          return figure === undefined || BEAMABLE_FIGURES.has(figure);
+        };
+        const keptBreaks = new Set([...beamBreaks].filter(beamable));
+        const keptJoins = new Set([...beamJoins].filter(beamable));
+        const beamsRemoved = beamBreaks.size - keptBreaks.size + (beamJoins.size - keptJoins.size);
+        const removed = [
+          ...(beamsRemoved > 0
+            ? [`${beamsRemoved} beam mark${beamsRemoved === 1 ? "" : "s"}`]
+            : []),
+          ...(overridesRemoved > 0
+            ? [`${overridesRemoved} figure${overridesRemoved === 1 ? "" : "s"} set by hand`]
+            : []),
+        ];
+        setTransposePreview((current) =>
+          current?.kind === "figures" && current.to === to
+            ? {
+                ...current,
+                beamBreaks: keptBreaks,
+                beamJoins: keptJoins,
+                facts: [
+                  ...current.facts,
+                  ...(removed.length > 0
+                    ? [`Removed, because they no longer fit: ${removed.join(", ")}.`]
+                    : []),
+                ],
+                sheet: previewSheetOf(previewScore, {
+                  overrides: nextOverrides,
+                  beamBreaks: keptBreaks,
+                  beamJoins: keptJoins,
+                }),
+              }
+            : current,
+        );
+      } catch (caught) {
+        setTransposePreview((current) =>
+          current ? { ...current, error: readable(caught, "Could not write the preview.") } : current,
+        );
+      } finally {
+        setPreviewing(false);
+      }
+    },
+    [
+      audioUuid,
+      anchorMs,
+      anchorFigure,
+      frameMs,
+      stretches,
+      pageEdits,
+      overrides,
+      beamBreaks,
+      beamJoins,
+      previewSheetOf,
+    ],
+  );
+
+  /**
+   * **Transpose** in the dialog. One step of the history either way.
+   *
+   * Notes: written onto the recording first, then the key and the marks addressed by a key move
+   * with them, in the same step; the step carries the call that moves every note back (with the
+   * notes that stayed and the notes taken off, so the undo is exact) and the call that moves them
+   * again. Figures: a page edit, the main figure, the figures set by hand, the beam marks and the
+   * **From** of the next time.
+   */
+  const confirmTranspose = useCallback(async () => {
+    const chosen = transposePreview;
+    if (!chosen || !audioUuid) return;
+    if (chosen.kind === "figures") {
+      stageEdit("Transpose figures");
+      set.anchorFigure(chosen.anchorFigure);
+      set.figuresFrom(chosen.to);
+      set.overrides(chosen.overrides);
+      set.beamBreaks(chosen.beamBreaks);
+      set.beamJoins(chosen.beamJoins);
+      setTransposePreview(null);
+      return;
+    }
+    const { semitones } = chosen;
+    setTransposing(true);
+    try {
+      const done = await timeScoreApi.transpose(audioUuid, { semitones });
+      const back = { semitones: -semitones, hold: done.held, restore: done.takenOff };
+      const moved = notesMarksMoved(semitones);
+      stageEdit("Transpose notes", {
+        undo: async () => {
+          await timeScoreApi.transpose(audioUuid, back);
+          await applyRef.current();
+        },
+        redo: async () => {
+          await timeScoreApi.transpose(audioUuid, { semitones });
+          await applyRef.current();
+        },
+      });
+      set.keySignature(moved.keySignature);
+      set.keyChanges(moved.keyChanges);
+      set.fingers(moved.fingers as typeof fingers);
+      set.hiddenNotes(moved.hiddenNotes);
+      set.trills(moved.trills);
+      set.graceNotes(moved.graceNotes);
+      setTransposePreview(null);
+      await apply();
+    } catch (caught) {
+      setTransposePreview((current) =>
+        current ? { ...current, error: readable(caught, "Could not transpose the notes.") } : current,
+      );
+    } finally {
+      setTransposing(false);
+    }
+  }, [transposePreview, audioUuid, stageEdit, set, notesMarksMoved, apply]);
+
+  /**
+   * **Key for this passage** (plan section 11.6): the key that prints the fewest accidentals over
+   * the marked stretch, measured by the drawing itself, when it is not the one in force there.
+   */
+  const passageKeyHint = useMemo<KeySignatureName | null>(() => {
+    if (!range || !sheetRenderer) return null;
+    const found = sheetRenderer.suggestKeyFor(range.fromColumn, range.toColumn);
+    const inForce = sheetRenderer.keySignatureAt(range.fromColumn);
+    return found?.best && found.best !== inForce && (found.savedAgainstActive ?? 0) > 0
+      ? (found.best as KeySignatureName)
+      : null;
+  }, [range, sheetRenderer]);
+
+  /** The clef rule (plan section 11.7) over the marked stretch, for the Clef tab to offer again. */
+  const clefRunsHere = useMemo<ClefRange[]>(() => {
+    const music = sheetRenderer?.getMusic();
+    if (!range || !music) return [];
+    return suggestClefRanges(music, { keySignature: keySignature as KeySignature })
+      .map((run) => ({
+        ...run,
+        fromFrame: Math.max(run.fromFrame, range.fromColumn),
+        toFrame: Math.min(run.toFrame, range.toColumn),
+      }))
+      .filter(
+        (run) =>
+          run.toFrame > run.fromFrame &&
+          run.fromFrame > 0 &&
+          clefAtFrame(run.fromFrame, "left", clefChanges) !== "treble",
+      );
+  }, [range, sheetRenderer, keySignature, clefChanges]);
+
+  /**
+   * A lyrics piece dropped from the pool onto the sheet: it starts on the frame under the pointer
+   * (the column that holds it, as a click above the staves reads it), in one step. It stays in the
+   * pool, ticked. Refused where another piece already covers that frame.
+   */
+  const dropFromPool = useCallback(
+    (index: number, clientX: number, clientY: number) => {
+      sheetRenderer?.showLyricGuide(undefined);
+      const text = lyricsPool[index];
+      const at = sheetRenderer?.frameAtClientPoint(clientX, clientY);
+      if (text === undefined || !at || !score) return;
+      const outcome = placePiece(lyrics, text, at.frame, frameMs, score.envelope.frameCount);
+      if ("refused" in outcome) {
+        setMoveRefused(outcome.refused);
+        return;
+      }
+      set.lyrics(outcome.ok);
+      setPickedLyrics([at.frame]);
+    },
+    [lyricsPool, sheetRenderer, score, lyrics, frameMs, set],
+  );
+
+  /**
+   * The piece of the pool being dragged, and the frame its guide was last drawn for. While it is
+   * over the sheet, the sheet shades every placed piece's frames and the frames it would cover:
+   * green where it may land, red where another piece is.
+   */
+  const poolDrag = useRef<{ index: number; frame: number | null } | null>(null);
+  const onPoolDrag = useCallback(
+    (index: number | null) => {
+      poolDrag.current = index === null ? null : { index, frame: null };
+      if (index === null) sheetRenderer?.showLyricGuide(undefined);
+    },
+    [sheetRenderer],
+  );
+  const guidePoolDrag = useCallback(
+    (clientX: number, clientY: number) => {
+      const dragging = poolDrag.current;
+      const text = dragging ? lyricsPool[dragging.index] : undefined;
+      if (!dragging || text === undefined || !sheetRenderer || !score) return;
+      const at = sheetRenderer.frameAtClientPoint(clientX, clientY);
+      if (!at || at.frame === dragging.frame) return;
+      dragging.frame = at.frame;
+      const landing = landingOf(lyrics, text, at.frame, frameMs, score.envelope.frameCount);
+      sheetRenderer.showLyricGuide({ fromColumn: landing.fromColumn, toColumn: landing.toColumn });
+    },
+    [lyricsPool, sheetRenderer, score, lyrics, frameMs],
+  );
+
+  /**
    * Throw away every decision made about this piece, on screen and on disk.
    *
    * Everything cleared here is something a person chose and nothing the recording knows: the key
@@ -1420,10 +1985,12 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     // with the fewest accidentals and the brackets of the high passages (plan section 11.3).
     keyDecided.current = false;
     ottavasDecided.current = false;
-    resetEdits(NO_EDITS);
+    clefsDecided.current = false;
+    // The pool is the song's words, saved apart from the sheet: Remove all leaves it.
+    resetEdits((current) => ({ ...NO_EDITS, lyricsPool: current.lyricsPool }));
     setCleanEdits(null);
     setTrillSuggestions(null);
-    setLyricDraft(null);
+    setPickedLyrics([]);
     setSelectedNotes([]);
     setPassageDraft(null);
     setFingerDraft(null);
@@ -1865,6 +2432,21 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
             onPointerDownCapture={(event) => {
               pressedAt.current = pressedBox(event);
             }}
+            // A lyrics piece dragged from the pool lands on the frame under the pointer.
+            onDragOver={(event) => {
+              if (!readOnly && event.dataTransfer.types.includes(POOL_DRAG_TYPE)) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "copy";
+                guidePoolDrag(event.clientX, event.clientY);
+              }
+            }}
+            onDrop={(event) => {
+              const index = event.dataTransfer.getData(POOL_DRAG_TYPE);
+              if (readOnly || index === "") return;
+              event.preventDefault();
+              dropFromPool(Number(index), event.clientX, event.clientY);
+            }}
+            data-sheet-drop
           >
             <TimeScoreView
               score={score}
@@ -1876,6 +2458,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
               clefChanges={clefChanges}
               ottavas={drawnMarks.ottavas}
               onKeySuggestion={takeKeyHint}
+              onClefSuggestion={readOnly ? undefined : takeClefHint}
               onOttavaSuggestion={takeOttavaHint}
               showFrameLabels={frameLabelsOn}
               spacings={spacings}
@@ -1892,7 +2475,10 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
               fingers={drawnMarks.fingers}
               trills={trills}
               lyrics={lyrics}
-              onLyricLayoutChange={readOnly ? ignore : placeLyric}
+              onLyricPlace={readOnly ? undefined : placeLyric}
+              onLyricSelect={readOnly ? undefined : pickLyric}
+              selectedLyrics={lyricsMode ? pickedLyrics : undefined}
+              onLyricsClear={readOnly ? undefined : clearPickedLyrics}
               zoom={sheetZoom}
               onZoomChange={setSheetZoom}
               cueRanges={cueRanges}
@@ -1932,12 +2518,39 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         ottavaHint={ottavaHint}
         onTakeOttavaHint={() => {
           ottavasDecided.current = true;
-          setOttavas(ottavaHint);
+          setOttavas(clearOfClefChanges(ottavaHint, clefChanges));
         }}
         frameLabelsOn={frameLabelsOn}
         setFrameLabelsOn={setFrameLabelsOn}
         sheetZoom={sheetZoom}
         setSheetZoom={setSheetZoom}
+        transposing={previewing}
+        onPreviewNotes={(semitones) => void previewNotes(semitones)}
+        onPreviewFigures={(from, to) => void previewFigures(from, to)}
+        pickedLyrics={pickedLyrics}
+        setPickedLyrics={setPickedLyrics}
+        onRefused={setMoveRefused}
+        lyricsField={{
+          onPoolDrag,
+          pasted: lyricsFieldText,
+          setPasted: (text) => setLyricsDraft({ forPart: audioUuid, text }),
+          savedText: savedLyricsText,
+          poolUnsaved,
+          saving: savingLyrics,
+          onSave: (text) => void saveSongLyrics(text),
+        }}
+      />
+
+      <TransposeDialog
+        open={transposePreview !== null}
+        title={transposePreview?.kind === "figures" ? "Transpose the figures" : "Transpose the notes"}
+        facts={transposePreview?.facts ?? []}
+        sheet={transposePreview?.sheet ?? null}
+        loading={previewing}
+        error={transposePreview?.error ?? null}
+        confirming={transposing}
+        onConfirm={() => void confirmTranspose()}
+        onCancel={() => setTransposePreview(null)}
       />
 
       {/*
@@ -2074,7 +2687,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         setFrameTab={setFrameTab}
         rangeActions={rangeActions}
         setPassageDraft={setPassageDraft}
-        setLyricDraft={setLyricDraft}
+        passageKeyHint={passageKeyHint}
+        clefRunsHere={clefRunsHere}
         score={score}
         state={edits.state}
         set={edits.set}

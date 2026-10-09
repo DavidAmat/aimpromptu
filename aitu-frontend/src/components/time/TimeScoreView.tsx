@@ -20,6 +20,7 @@ import {
   frameAtPoint,
   GridNotationRenderer,
   placeCursor,
+  suggestClefChanges,
   suggestKeySignature,
   suggestOttavas,
   GRAND_STAFF_TOP_PADDING,
@@ -38,6 +39,7 @@ import {
   type OttavaResizeChange,
   type PassageAnnotation,
   type LyricLayoutChange,
+  type LyricPlaceChange,
   type SparseMatrix,
   type TrillAnnotation,
 } from "@aimpromptu/grid-notation";
@@ -370,6 +372,25 @@ export interface TimeScoreViewProps {
    * cannot be moved, which is what a printed view wants.
    */
   onLyricLayoutChange?: (change: LyricLayoutChange) => void;
+  /**
+   * The lyrics pieces snap to frames (implementation 02, Phase 7): a moved or resized block is
+   * reported here, in frames, instead of through `onLyricLayoutChange`.
+   */
+  onLyricPlace?: (change: LyricPlaceChange) => void;
+  /** A lyrics piece was clicked; `additive` when Command (Control) was held. */
+  onLyricSelect?: (fromColumn: number, additive: boolean) => void;
+  /**
+   * The lyrics pieces picked, by their first frame. A piece is plain text on the page; a picked one
+   * shows its block (a background, an outline and the grip of its right edge) to move or resize.
+   */
+  selectedLyrics?: readonly number[];
+  /** A press on the sheet anywhere but on a lyrics piece: the pieces are let go. */
+  onLyricsClear?: () => void;
+  /**
+   * The clef changes the left hand's high runs ask for (the clef rule of the drawing package,
+   * plan section 11.7), reported on every build and never applied here.
+   */
+  onClefSuggestion?: (changes: ClefChangeAnnotation[]) => void;
   /** Stretches printed smaller than the rest of the page. */
   cueRanges?: readonly CueRange[];
   /**
@@ -454,6 +475,11 @@ export function TimeScoreView({
   showLyrics = true,
   annotationScale = 1,
   onLyricLayoutChange,
+  onLyricPlace,
+  onLyricSelect,
+  selectedLyrics,
+  onLyricsClear,
+  onClefSuggestion,
   zoom = MIN_ZOOM,
   onZoomChange,
 }: TimeScoreViewProps) {
@@ -502,6 +528,26 @@ export function TimeScoreView({
   useEffect(() => {
     reportLyricLayout.current = onLyricLayoutChange;
   }, [onLyricLayoutChange]);
+  const reportLyricPlace = useRef(onLyricPlace);
+  useEffect(() => {
+    reportLyricPlace.current = onLyricPlace;
+  }, [onLyricPlace]);
+  const reportLyricSelect = useRef(onLyricSelect);
+  useEffect(() => {
+    reportLyricSelect.current = onLyricSelect;
+  }, [onLyricSelect]);
+  const reportLyricsClear = useRef(onLyricsClear);
+  useEffect(() => {
+    reportLyricsClear.current = onLyricsClear;
+  }, [onLyricsClear]);
+  const reportClefSuggestion = useRef(onClefSuggestion);
+  useEffect(() => {
+    reportClefSuggestion.current = onClefSuggestion;
+  }, [onClefSuggestion]);
+  /** Whether Command (Control) was down on the last press, for a click that adds to a selection. */
+  const pressAdds = useRef(false);
+  /** Whether the lyrics snap: decided once per build, so it is not a dependency of the build. */
+  const lyricsSnap = Boolean(onLyricPlace);
   // Held in a ref rather than listed as a dependency: a page that passes an inline function would
   // otherwise rebuild every note on every one of its own renders.
   const reportRenderer = useRef(onRendererChange);
@@ -677,11 +723,12 @@ export function TimeScoreView({
       },
       text: line.text,
       // Where the reader put the block, how wide they left it and how large the words are. All
-      // three are left out where nobody has said, which is the drawing package's own default.
-      ...(line.offsetX === undefined ? {} : { offsetX: line.offsetX }),
-      ...(line.offsetY === undefined ? {} : { offsetY: line.offsetY }),
-      ...(line.width === undefined ? {} : { width: line.width }),
-      ...(line.fontSize === undefined ? {} : { fontSize: line.fontSize }),
+      // three are left out where nobody has said, which is the drawing package's own default. The
+      // backend says "nobody has said" as `null`, which must not reach the package as a number.
+      ...(line.offsetX == null ? {} : { offsetX: line.offsetX }),
+      ...(line.offsetY == null ? {} : { offsetY: line.offsetY }),
+      ...(line.width == null ? {} : { width: line.width }),
+      ...(line.fontSize == null ? {} : { fontSize: line.fontSize }),
     }));
 
     const cuePassages: PassageAnnotation[] = (cueRanges ?? []).map((cue) => ({
@@ -809,9 +856,18 @@ export function TimeScoreView({
       // gone from the package, not switched off here, so nothing can bring it back by accident.
       // A lyric's block is dragged in the drawing itself and reported here once, when the pointer
       // is let go — so a reader moving one is not rebuilding the page on every pixel of it.
-      onLyricLayout: readOnly
+      ...(readOnly
+        ? {}
+        : lyricsSnap
+          ? { onLyricPlace: (change: LyricPlaceChange) => reportLyricPlace.current?.(change) }
+          : { onLyricLayout: (change: LyricLayoutChange) => reportLyricLayout.current?.(change) }),
+      onAnnotationSelect: readOnly
         ? undefined
-        : (change) => reportLyricLayout.current?.(change),
+        : (selection) => {
+            if (selection.kind === "lyric") {
+              reportLyricSelect.current?.(selection.fromColumn, pressAdds.current);
+            }
+          },
       onRangeMarkerSelect: readOnly
         ? undefined
         : (marker) =>
@@ -856,6 +912,12 @@ export function TimeScoreView({
     // reader starts counting instead of reading, and a run of three or more chords up there is a
     // passage worth one bracket; a single stray note is read faster as a note. The page takes the
     // proposal when the reader has never decided about brackets, or when asked to.
+    // The left hand's high runs, written in the treble clef (plan section 11.7). Reported the same
+    // way, and taken by the page on a first write only.
+    if (music && reportClefSuggestion.current) {
+      reportClefSuggestion.current(suggestClefChanges(music, { keySignature }));
+    }
+
     if (music && onOttavaSuggestion) {
       onOttavaSuggestion(
         suggestOttavas(music, { keySignature, minLedgerLines: 3, minRunLength: 3 }),
@@ -887,6 +949,7 @@ export function TimeScoreView({
     availableWidth,
     placeRangeHandles,
     readOnly,
+    lyricsSnap,
     showGuides,
     showFrameLabels,
     trills,
@@ -1320,7 +1383,34 @@ export function TimeScoreView({
             userSelect: "none",
           }}
         >
-          <Box ref={host} sx={readOnly ? { pointerEvents: "none" } : undefined} />
+          <Box
+            ref={host}
+            onPointerDownCapture={(event) => {
+              pressAdds.current = event.metaKey || event.ctrlKey;
+              if (!(event.target as Element | null)?.closest?.(".grid-lyric")) {
+                reportLyricsClear.current?.();
+              }
+            }}
+            sx={readOnly ? { pointerEvents: "none" } : undefined}
+          />
+          {/*
+            A lyrics piece is plain text. Pointing at it shows its block faintly, so it reads as
+            something to take hold of; a picked piece shows the block, a thin outline and the grip
+            of its right edge, to move or resize it. Its corner marks are left off: the words are
+            what a reader clicks. Styles rather than attributes on the drawing, so a redraw the
+            page did not ask for (a re-wrap) keeps them.
+          */}
+          <style>
+            {`.grid-range-marker-layer [data-kind="lyric"]{display:none}` +
+              (readOnly ? "" : `.grid-lyric:hover .grid-lyric-box{fill:#f4f5f7}`) +
+              (selectedLyrics ?? [])
+                .map(
+                  (column) =>
+                    `.grid-lyric[data-from-column="${column}"] .grid-lyric-box{fill:#f1f2f4;stroke:#8592a6;stroke-width:1}` +
+                    `.grid-lyric[data-from-column="${column}"] .grid-lyric-grip{fill:#8592a6;fill-opacity:0.45}`,
+                )
+                .join("")}
+          </style>
 
           {/*
             The two ends of the marked stretch, as things you can take hold of.

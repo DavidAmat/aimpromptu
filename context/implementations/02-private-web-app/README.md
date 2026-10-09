@@ -11,7 +11,8 @@ deleted after the user's check (its committed `README.md` and Lab records stay).
 checked by the user 2026-10-07** ([`02-implementation-phase-5.md`](02-implementation-phase-5.md)),
 merged at the start of Phase 6. **Phase 6 done and checked by the user 2026-10-07**
 ([`02-implementation-phase-6.md`](02-implementation-phase-6.md)), merged at the start of Phase 7.
-Q-7 and Q-8 are open.
+**Phase 7 done 2026-10-07** ([`02-implementation-phase-7.md`](02-implementation-phase-7.md)), on
+`feat/phase-7`, waiting for the user's check. Q-7 and Q-8 are open.
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)
@@ -31,6 +32,7 @@ and the status lookup is [`02-checklist.md`](02-checklist.md). Phase reports go 
 | [`02-implementation-phase-4.md`](02-implementation-phase-4.md) | Phase 4: users, sign in, the rights table with a test per row, Admin → Users, the dark theme, the app on the home network (screenshots in [`screenshots/phase-4/`](screenshots/phase-4/)) |
 | [`02-implementation-phase-5.md`](02-implementation-phase-5.md) | Phase 5: the `/projects` routes and the Projects page, **add audio**, the video as a step of the project, the `.aitu` export and import, Q-8 measured (screenshots in [`screenshots/phase-5/`](screenshots/phase-5/)) |
 | [`02-implementation-phase-6.md`](02-implementation-phase-6.md) | Phase 6: the Private Library: **Save to library** with the audio written again, My library's Songs and Artists, read-only versions, Edit, Replace, history (screenshots in [`screenshots/phase-6/`](screenshots/phase-6/)) |
+| [`02-implementation-phase-7.md`](02-implementation-phase-7.md) | Phase 7: the sheet toolbox's Transpose (notes and figures, with a preview and an exact undo) and Lyrics (the pool, pieces snapped to frames), Key for this passage, the clef rule for the left hand (screenshots in [`screenshots/phase-7/`](screenshots/phase-7/)) |
 | [`public-library-build/`](public-library-build/) | A parallel piece of work: downloading `musicchartsarchive.com` into `data/music-library/` (next to the repository) to build the data of the Public Library. Phase 12 reconciles it with this plan |
 
 ## What it is for

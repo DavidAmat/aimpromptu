@@ -151,8 +151,10 @@ changes), **To right** and **To left** (keys R and L), the filter (**Both**, **R
 and a counter that goes through the notes the split could not place. **Save** enables the Sheet tab.
 
 **5. Sheet.** The piano sheet (`pages/piece/sheet/SheetPage`), drawn as the step opens: the highest
-pile of gaps is a negra, and a first write takes the key with the fewest accidentals and the octave
-brackets of high passages ([annotations.md](annotations.md)). A stale sheet opens with a banner and
+pile of gaps is a negra, and a first write takes the key with the fewest accidentals, the treble
+clef for the left hand's high runs and the octave brackets of high passages
+([annotations.md](annotations.md)). Its sheet toolbox transposes the notes or the figures and places
+the lyrics ([annotations-sheet.md](annotations-sheet.md)). A stale sheet opens with a banner and
 is not drawn until **Write the sheet**; **Save** makes it current again.
 
 **Then, Save to library.** Once the sheet is saved, **Save to library** asks **Artist**, **Song** and
