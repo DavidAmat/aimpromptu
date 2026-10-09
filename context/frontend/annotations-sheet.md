@@ -48,18 +48,27 @@ many. Command-Z brings them back exactly.
 
 **Paste the lyrics**, then **Save lyrics**: the words are kept with the part (in `project.json`,
 so they outlive **Remove all** and a new transcription) and the field opens with them every time.
-**Add to the pool** makes each line a **lyrics piece** in the pool, listed in the tab. Click a
-piece of the pool to edit its words: Enter makes a new line, and when the field is left (or with
-Command-Enter) each line becomes a piece of its own in the same place, so a long line is broken in
-two and the order is kept; Escape drops the change. A piece is **dragged from the pool onto the sheet**: it starts on the frame under the
-pointer and is held for about as long as its words take (120 ms a character), never past the next
-piece. On the sheet, drag a piece to move it (its left edge snaps to the nearest frame, on any line,
-and it keeps its length), drag up or down to lift it over high notes, and pull its right edge to the
-frame it should end on. A piece always starts and ends on a frame, which is what Play mode shows it
-by. A piece is **plain text** on the page: a serif italic (Lora, self-hosted; Times Italic
-in the PDF) in a soft charcoal, with no block and no corner marks. Pointing at it shows its block
-faintly; a picked piece shows the block, a thin outline and a grip on its right edge, to move or
-resize it. Escape, or a click elsewhere on the sheet, lets it go and it is plain text again. Two pieces never share a frame; a move onto another piece is refused and said.
+**Add to the pool** makes each line a **lyrics piece** in the pool, listed in the tab. The pool
+keeps every piece: one on the sheet carries a **green tick** (a line placed twice, twice), so the
+list shows what is in and what is not. Click a piece of the pool to edit its words: Enter makes a
+new line, and when the field is left (or with Command-Enter) each line becomes a piece of its own in
+the same place, so a long line is broken in two and the order is kept; Escape drops the change.
+
+A piece is **dragged from the pool onto the sheet**: it starts on **the frame under the pointer**
+(the column that holds it, as a click above the staves reads it; drop it on the note it starts on)
+and is held for about as long as its words take (120 ms a character), never past the next piece;
+pull its right edge afterwards to where it ends. On the sheet, drag a piece to move it (it starts on
+the frame under its left edge, on any line, and keeps its length), up or down to lift it over high
+notes, or pull its right edge to the frame it should end on (never into the next piece). **Two
+pieces never share a frame.** While a piece is dragged, the strip above the staves shades every
+other piece's frames in gray with a line at each end, and the frames the dragged one would cover in
+green, or in red where they would cover another; a drop on red is refused (a moved piece goes back
+where it was). A piece always starts and ends on a frame, which is what Play mode shows it by.
+
+A piece is **plain text** on the page: a serif italic (Lora, self-hosted; Times Italic in the PDF)
+in a soft charcoal, with no block and no corner marks. Pointing at it shows its block faintly; a
+picked piece shows the block, a thin outline and a grip on its right edge, to move or resize it.
+Escape, or a click elsewhere on the sheet, lets it go and it is plain text again.
 
 While the tab is open, a click on a piece picks it, Command-click adds one, and marking a stretch
 above the staves picks every piece over it. For the picked pieces:
@@ -71,7 +80,7 @@ above the staves picks every piece over it. For the picked pieces:
 | Split | Two pieces at the cursor; the frames are shared in proportion to the words |
 | New line | A line break inside the piece, at the cursor |
 | Smaller, Larger | The font size, one pixel at a time |
-| Back to the pool | Takes them off the sheet, to the top of the pool |
+| Back to the pool | Takes them off the sheet; their pool pieces lose the tick (words the pool does not have, from a merge or a split, join it at the top) |
 | Delete | Deletes them (also the Delete key) |
 
 Clicking a piece with the toolbox closed opens it on this tab. Words saved before Phase 7 (a line

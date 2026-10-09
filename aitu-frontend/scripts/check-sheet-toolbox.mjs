@@ -261,10 +261,22 @@ try {
     check('each pasted line is a piece of the pool', (await toolbox().locator('[data-lyrics-piece]').count()) === 3);
     await shot('07-lyrics-pool');
 
-    // Drop the first piece on the sheet, about a third of the way along the first line.
+    // Drop the first piece with the pointer on a notehead of the right hand, near the middle of
+    // the first line: it must start on that note's frame, not on one to the right of it.
     const ruler = page.locator('.grid-frame-ruler').first();
     const rulerBox = await ruler.boundingBox();
-    const dropAt = { x: rulerBox.x + rulerBox.width * 0.45, y: rulerBox.y + rulerBox.height + 40 };
+    const aimed = await page.evaluate((line) => {
+      for (const target of document.querySelectorAll('.grid-note-target[data-hand="right"]')) {
+        const box = target.getBoundingClientRect();
+        const x = box.left + box.width / 2;
+        if (box.top > line.y && box.top < line.y + 220 && x > line.x + line.width * 0.42) {
+          return { x, frame: Number(target.getAttribute('data-onset-frame')) };
+        }
+      }
+      return null;
+    }, rulerBox);
+    if (!aimed) throw new Error('no right-hand note near the middle of the first line');
+    const dropAt = { x: aimed.x, y: rulerBox.y + rulerBox.height + 40 };
     const sheetBox = await page.locator('[data-sheet-drop]').boundingBox();
     await toolbox().locator('[data-lyrics-piece="0"]').dragTo(page.locator('[data-sheet-drop]'), {
       targetPosition: { x: dropAt.x - sheetBox.x, y: dropAt.y - sheetBox.y },
@@ -273,9 +285,11 @@ try {
     const placed = await lyricNamed('first line of words');
     check('a piece dragged from the pool lands on the sheet', placed !== null);
     if (!placed) throw new Error('the dropped piece is not on the sheet');
-    check('and leaves the pool', (await toolbox().locator('[data-lyrics-piece]').count()) === 2);
+    check('and stays in the pool, with a green tick', (await toolbox().locator('[data-lyrics-piece]').count()) === 3
+      && (await toolbox().locator('[data-lyrics-piece="0"]').getAttribute('data-placed')) === 'yes'
+      && (await toolbox().locator('[data-placed="yes"]').count()) === 1);
     const from0 = Number(await placed.getAttribute('data-from-column'));
-    check('it starts on a frame', Number.isInteger(from0), String(from0));
+    check('it starts on the frame of the note it was dropped on', from0 === aimed.frame, `dropped on f${aimed.frame}, starts at f${from0}`);
     await shot('08-lyrics-placed');
 
     // Move it to the right: it snaps to another frame and keeps its length.
@@ -304,7 +318,7 @@ try {
     // A second piece, after the first, then pick both and merge.
     // On the next line, near its start: clear of the toolbox floating on the right.
     const nextRuler = await page.locator('.grid-frame-ruler').nth(1).boundingBox();
-    await toolbox().locator('[data-lyrics-piece="0"]').dragTo(page.locator('[data-sheet-drop]'), {
+    await toolbox().locator('[data-lyrics-piece="1"]').dragTo(page.locator('[data-sheet-drop]'), {
       targetPosition: {
         x: nextRuler.x + nextRuler.width * 0.1 - sheetBox.x,
         y: nextRuler.y + nextRuler.height + 40 - sheetBox.y,
@@ -313,6 +327,34 @@ try {
     await page.waitForTimeout(1200);
     check('a second piece goes after it, on one line', await hasLyric('second line')
       && (await (await lyricNamed('second line')).getAttribute('data-lines')) === '1');
+
+    // No overlap: a pool piece dragged over a placed one shows red and is refused; a placed piece
+    // moved onto another goes back.
+    const firstBox = await (await lyricNamed('first line of words')).locator('.grid-lyric-box').boundingBox();
+    const chip = await toolbox().locator('[data-lyrics-piece="2"]').boundingBox();
+    const piecesBefore = await page.locator('.grid-lyric').count();
+    await page.mouse.move(chip.x + 20, chip.y + chip.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(firstBox.x + 15, firstBox.y + firstBox.height / 2, { steps: 12 });
+    await page.mouse.move(firstBox.x + 18, firstBox.y + firstBox.height / 2, { steps: 2 });
+    const guideRed = (await page.locator('.grid-lyric-guide').getAttribute('data-free').catch(() => null)) === 'false';
+    await shot('08b-lyrics-guide-busy');
+    await page.mouse.up();
+    await page.waitForTimeout(800);
+    check('dragged over a placed piece, the frames show red', guideRed);
+    check('and the drop is refused', (await page.locator('.grid-lyric').count()) === piecesBefore
+      && (await page.locator('.grid-lyric-guide').count()) === 0);
+    const secondBefore = await (await lyricNamed('second line')).getAttribute('data-from-column');
+    const secondBox = await (await lyricNamed('second line')).locator('.grid-lyric-box').boundingBox();
+    await page.mouse.move(secondBox.x + 8, secondBox.y + secondBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(firstBox.x + 10, firstBox.y + firstBox.height / 2, { steps: 10 });
+    const moveRed = (await page.locator('.grid-lyric-guide').getAttribute('data-free').catch(() => null)) === 'false';
+    await page.mouse.up();
+    await page.waitForTimeout(1000);
+    check('a placed piece moved onto another shows red and goes back', moveRed
+      && (await (await lyricNamed('second line')).getAttribute('data-from-column')) === secondBefore);
+
     await (await lyricNamed('first line of words')).locator('.grid-lyric-box').click();
     await (await lyricNamed('second line')).locator('.grid-lyric-box').click({ modifiers: ['ControlOrMeta'] });
     check('Command-click picks a second piece', (await toolbox().locator('[data-lyrics-picked]').getAttribute('data-lyrics-picked')) === '2');
@@ -370,7 +412,9 @@ try {
     await shot('10-lyrics-edited');
     await page.getByTestId('lyrics-pool').click();
     await page.waitForTimeout(800);
-    check('Back to the pool takes it off the sheet', (await toolbox().locator('[data-lyrics-piece]').count()) === 2);
+    // Its words ("of words second line") were not in the pool, so they join it at the top.
+    check('Back to the pool takes it off the sheet', (await toolbox().locator('[data-lyrics-piece]').count()) === 4
+      && !(await hasLyric('of words second line')));
     // Edit a piece of the pool: a line break makes two pieces, in the same place.
     await toolbox().locator('[data-lyrics-piece="0"]').click();
     const poolField = toolbox().locator('[data-lyrics-pool-edit="0"]');
@@ -379,7 +423,7 @@ try {
     await page.waitForTimeout(500);
     const poolNow = await toolbox().locator('[data-lyrics-piece]').allTextContents();
     check('a line break in a piece of the pool makes two pieces, the order kept',
-      JSON.stringify(poolNow) === JSON.stringify(['of words', 'second line', 'third line here']), JSON.stringify(poolNow));
+      JSON.stringify(poolNow) === JSON.stringify(['of words', 'second line', 'first line of words', 'second line', 'third line here']), JSON.stringify(poolNow));
     await shot('10b-lyrics-pool-edited');
     await (await lyricNamed('first line')).locator('.grid-lyric-box').click();
     await page.getByTestId('lyrics-delete').click();
@@ -391,7 +435,7 @@ try {
 
     await saveSheet();
     const after = await json(`${api}/time/${id}/rhythm`);
-    check('Save keeps the pieces and the pool', after.lyrics.some((line) => line.text === 'first line') && (after.lyricsPool ?? []).length === 3,
+    check('Save keeps the pieces and the pool', after.lyrics.some((line) => line.text === 'first line') && (after.lyricsPool ?? []).length === 5,
       `${after.lyrics.length} pieces, ${(after.lyricsPool ?? []).length} in the pool`);
     check('every saved piece starts and ends on a frame', after.lyrics.every((line) => Number.isInteger(line.fromColumn) && Number.isInteger(line.toColumn) && line.toColumn > line.fromColumn));
 

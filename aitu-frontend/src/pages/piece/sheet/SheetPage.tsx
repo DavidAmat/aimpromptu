@@ -122,7 +122,7 @@ import { DecorationToolbox, PianoToolbox } from "./PianoToolboxes";
 import { SheetFloatingBar } from "./SheetFloatingBar";
 import { SheetToolbox, type SheetTab } from "./SheetToolbox";
 import { TransposeDialog, type PreviewSheet } from "./TransposeDialog";
-import { movePiece, piecesIn, placePiece } from "./lyricsPieces";
+import { landingOf, movePiece, piecesIn, placePiece } from "./lyricsPieces";
 import { POOL_DRAG_TYPE } from "./LyricsTab";
 
 /**
@@ -1905,10 +1905,12 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
 
   /**
    * A lyrics piece dropped from the pool onto the sheet: it starts on the frame under the pointer
-   * and leaves the pool, in one step. Refused where another piece already is.
+   * (the column that holds it, as a click above the staves reads it), in one step. It stays in the
+   * pool, ticked. Refused where another piece already covers that frame.
    */
   const dropFromPool = useCallback(
     (index: number, clientX: number, clientY: number) => {
+      sheetRenderer?.showLyricGuide(undefined);
       const text = lyricsPool[index];
       const at = sheetRenderer?.frameAtClientPoint(clientX, clientY);
       if (text === undefined || !at || !score) return;
@@ -1918,10 +1920,36 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         return;
       }
       set.lyrics(outcome.ok);
-      set.lyricsPool((current) => current.filter((_, place) => place !== index));
       setPickedLyrics([at.frame]);
     },
     [lyricsPool, sheetRenderer, score, lyrics, frameMs, set],
+  );
+
+  /**
+   * The piece of the pool being dragged, and the frame its guide was last drawn for. While it is
+   * over the sheet, the sheet shades every placed piece's frames and the frames it would cover:
+   * green where it may land, red where another piece is.
+   */
+  const poolDrag = useRef<{ index: number; frame: number | null } | null>(null);
+  const onPoolDrag = useCallback(
+    (index: number | null) => {
+      poolDrag.current = index === null ? null : { index, frame: null };
+      if (index === null) sheetRenderer?.showLyricGuide(undefined);
+    },
+    [sheetRenderer],
+  );
+  const guidePoolDrag = useCallback(
+    (clientX: number, clientY: number) => {
+      const dragging = poolDrag.current;
+      const text = dragging ? lyricsPool[dragging.index] : undefined;
+      if (!dragging || text === undefined || !sheetRenderer || !score) return;
+      const at = sheetRenderer.frameAtClientPoint(clientX, clientY);
+      if (!at || at.frame === dragging.frame) return;
+      dragging.frame = at.frame;
+      const landing = landingOf(lyrics, text, at.frame, frameMs, score.envelope.frameCount);
+      sheetRenderer.showLyricGuide({ fromColumn: landing.fromColumn, toColumn: landing.toColumn });
+    },
+    [lyricsPool, sheetRenderer, score, lyrics, frameMs],
   );
 
   /**
@@ -2411,7 +2439,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
             onDragOver={(event) => {
               if (!readOnly && event.dataTransfer.types.includes(POOL_DRAG_TYPE)) {
                 event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
+                event.dataTransfer.dropEffect = "copy";
+                guidePoolDrag(event.clientX, event.clientY);
               }
             }}
             onDrop={(event) => {
@@ -2505,6 +2534,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         setPickedLyrics={setPickedLyrics}
         onRefused={setMoveRefused}
         lyricsField={{
+          onPoolDrag,
           pasted: lyricsFieldText,
           setPasted: (text) => setLyricsDraft({ forPart: audioUuid, text }),
           savedText: savedLyricsText,

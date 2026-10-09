@@ -57,12 +57,51 @@ export function placePiece(
   frameMs: number,
   frameCount: number,
 ): Outcome<LyricLine[]> {
+  const landing = landingOf(lyrics, text, atFrame, frameMs, frameCount);
+  if (!landing.free) return { refused: BUSY };
+  return {
+    ok: byStart([...lyrics, { fromColumn: landing.fromColumn, toColumn: landing.toColumn, text }]),
+  };
+}
+
+/**
+ * The frames a piece dropped on `atFrame` would cover, and whether it may land there: it starts on
+ * that frame, and is free unless another piece already covers that frame. What the sheet shades
+ * while a piece of the pool is dragged over it.
+ */
+export function landingOf(
+  lyrics: readonly LyricLine[],
+  text: string,
+  atFrame: number,
+  frameMs: number,
+  frameCount: number,
+): { fromColumn: number; toColumn: number; free: boolean } {
   const from = Math.max(0, Math.min(atFrame, frameCount - 1));
-  if (overlaps(lyrics, from, from + 1)) return { refused: BUSY };
-  const next = byStart(lyrics).find((line) => line.fromColumn > from)?.fromColumn ?? frameCount;
   const wanted = Math.max(1, Math.round((text.length * MS_PER_CHARACTER) / frameMs));
-  const to = Math.min(from + wanted, next, frameCount);
-  return { ok: byStart([...lyrics, { fromColumn: from, toColumn: to, text }]) };
+  if (overlaps(lyrics, from, from + 1)) {
+    return { fromColumn: from, toColumn: Math.min(from + wanted, frameCount), free: false };
+  }
+  const next = byStart(lyrics).find((line) => line.fromColumn > from)?.fromColumn ?? frameCount;
+  return { fromColumn: from, toColumn: Math.min(from + wanted, next, frameCount), free: true };
+}
+
+/** A piece's words with its line breaks and repeated spaces as single spaces, to compare them. */
+const plain = (text: string) => text.replace(/\s+/g, " ").trim();
+
+/**
+ * Which pieces of the pool are on the sheet: the green tick of the pool. A piece is on the sheet
+ * when a placed piece has its words (line breaks aside); a line the song sings twice is ticked once
+ * per time it is placed, in pool order.
+ */
+export function placedInPool(pool: readonly string[], lyrics: readonly LyricLine[]): boolean[] {
+  const left = new Map<string, number>();
+  for (const line of lyrics) left.set(plain(line.text), (left.get(plain(line.text)) ?? 0) + 1);
+  return pool.map((text) => {
+    const count = left.get(plain(text)) ?? 0;
+    if (count === 0) return false;
+    left.set(plain(text), count - 1);
+    return true;
+  });
 }
 
 /** A placed piece moved or resized by dragging on the sheet, its edges on frames. */
@@ -153,17 +192,21 @@ export function breakLine(text: string, caret: number): string {
   return `${text.slice(0, caret).trimEnd()}\n${text.slice(caret).trimStart()}`;
 }
 
-/** The picked pieces, taken off the sheet and put back at the top of the pool in their order. */
+/** The picked pieces, taken off the sheet; their words stay in (or join) the pool. */
 export function backToPool(
   lyrics: readonly LyricLine[],
   pool: readonly string[],
   picked: readonly number[],
 ): { lyrics: LyricLine[]; pool: string[] } {
   const chosen = byStart(lyrics.filter((line) => picked.includes(line.fromColumn)));
+  // The pool keeps every piece, placed or not: a piece taken off the sheet is already there (its
+  // tick goes). Only words the pool does not have (a merged or split piece) are added, at the top,
+  // one line each: a line break was a placement decision.
+  const known = new Set(pool.map(plain));
+  const added = chosen.map((line) => plain(line.text)).filter((text) => !known.has(text));
   return {
     lyrics: lyrics.filter((line) => !chosen.includes(line)),
-    // A line break was a placement decision; in the pool a piece is one line again.
-    pool: [...chosen.map((line) => line.text.replace(/\s*\n\s*/g, " ")), ...pool],
+    pool: [...added, ...pool],
   };
 }
 

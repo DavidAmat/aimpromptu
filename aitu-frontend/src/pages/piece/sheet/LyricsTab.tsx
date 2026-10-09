@@ -20,6 +20,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ArchiveIcon from "@mui/icons-material/ArchiveOutlined";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CallMergeIcon from "@mui/icons-material/CallMergeOutlined";
 import ContentCutIcon from "@mui/icons-material/ContentCutOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
@@ -32,6 +33,7 @@ import {
   backToPool,
   breakLine,
   editPoolPiece,
+  placedInPool,
   mergePieces,
   piecesFromText,
   resizePieces,
@@ -50,6 +52,7 @@ export function LyricsTab({
   setPool,
   setPicked,
   onRefused,
+  onPoolDrag,
   pasted,
   setPasted,
   savedText,
@@ -64,6 +67,8 @@ export function LyricsTab({
   setPool: Dispatch<SetStateAction<readonly string[]>>;
   setPicked: Dispatch<SetStateAction<readonly number[]>>;
   onRefused: (why: string) => void;
+  /** A piece of the pool started (its place) or stopped (`null`) being dragged. */
+  onPoolDrag: (index: number | null) => void;
   /** What is in the lyrics field; held by the page, so a draft outlives a change of tab. */
   pasted: string;
   setPasted: (text: string) => void;
@@ -86,6 +91,8 @@ export function LyricsTab({
   const field = useRef<HTMLTextAreaElement | null>(null);
 
   const chosen = lyrics.filter((line) => picked.includes(line.fromColumn));
+  /** Which pieces of the pool are on the sheet: they keep their place, with a green tick. */
+  const placed = placedInPool(pool, lyrics);
   const only = chosen.length === 1 ? chosen[0]! : null;
   const words = only ? (draft?.forFrom === only.fromColumn ? draft.text : only.text) : "";
 
@@ -168,7 +175,8 @@ export function LyricsTab({
       {pool.length > 0 ? (
         <Box>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
-            Pool ({pool.length})
+            Pool ({pool.length}
+            {placed.some(Boolean) ? `, ${placed.filter(Boolean).length} on the sheet` : ""})
           </Typography>
           <Stack
             spacing={0.5}
@@ -208,21 +216,36 @@ export function LyricsTab({
                   // Two pieces may have the same words, so the place is part of the key.
                   key={`${index}:${text}`}
                   label={text}
-                  title={`${text} — drag onto the sheet, or click to edit`}
+                  title={`${text} — ${placed[index] ? "on the sheet; drag to place it again" : "drag onto the sheet"}, or click to edit`}
+                  icon={
+                    placed[index] ? (
+                      <CheckCircleIcon fontSize="small" sx={{ color: "success.main" }} />
+                    ) : undefined
+                  }
                   onClick={() => setPoolEdit({ index, text })}
                   draggable
                   onDragStart={(event) => {
                     event.dataTransfer.setData(POOL_DRAG_TYPE, String(index));
-                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.effectAllowed = "copy";
+                    onPoolDrag(index);
                   }}
+                  onDragEnd={() => onPoolDrag(null)}
                   onDelete={() => setPool((current) => current.filter((_, at) => at !== index))}
                   sx={{
                     justifyContent: "space-between",
                     cursor: "grab",
                     borderRadius: 2,
-                    "& .MuiChip-label": { overflow: "hidden", textOverflow: "ellipsis" },
+                    "& .MuiChip-label": {
+                      flex: 1,
+                      textAlign: "left",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    },
+                    // The tick of a piece on the sheet, green whatever colour the chip gives icons.
+                    "& .MuiChip-icon": { color: "success.main" },
                   }}
                   data-lyrics-piece={index}
+                  data-placed={placed[index] ? "yes" : "no"}
                 />
               ),
             )}

@@ -102,6 +102,7 @@ export function SheetToolbox({
   onRefused: (why: string) => void;
   /** The lyrics field of the Lyrics tab and the lyrics saved with the part. */
   lyricsField: {
+    onPoolDrag: (index: number | null) => void;
     pasted: string;
     setPasted: (text: string) => void;
     savedText: string | null;
@@ -142,6 +143,7 @@ export function SheetToolbox({
             setPool={set.lyricsPool}
             setPicked={setPickedLyrics}
             onRefused={onRefused}
+            onPoolDrag={lyricsField.onPoolDrag}
             pasted={lyricsField.pasted}
             setPasted={lyricsField.setPasted}
             savedText={lyricsField.savedText}

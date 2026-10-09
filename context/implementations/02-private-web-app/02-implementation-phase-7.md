@@ -164,6 +164,26 @@ per line in the same place (`lyricsPieces.editPoolPiece`), one undo step; Escape
 no words left removes the piece. `check:lyrics` breaks "of words second line" into two pieces and
 checks the order (shot 10b).
 
+**Fourth review: the pool keeps its pieces, no overlap, the frame under the pointer.**
+
+- The pool keeps every piece; a piece on the sheet has a green tick (`placedInPool`: words compared
+  with line breaks and spaces folded, a line placed twice ticks two pieces in pool order). A drop no
+  longer removes the piece; **Back to the pool** only removes from the sheet and adds words the pool
+  lacks (a merge or a split) at the top; Delete removes from the sheet only.
+- **"It lands to the right".** `frameAtClientPoint` and the move snapping read the **nearest frame
+  line**; a notehead is drawn just right of its line, so a drop on a note in a narrow column took
+  the next frame. Both now read the column that holds the point, as a click above the staves does
+  (`'floor'`), a move with 4 units of give. `check:lyrics` drops on a right-hand notehead and checks
+  the piece starts on that note's frame (f323 on f323).
+- **No overlap, and visible.** `showLyricGuide` in the package shades, over the strip above the
+  treble staff, every other piece's frames in gray with an end line at each side, and the frames
+  the dragged piece would cover in green or red. The package calls it during a block drag
+  (`onLyricDragging`); the page calls it during a pool drag (`guidePoolDrag`, from `dragover`, once
+  per frame). A move onto another piece is refused in the package (the block is drawn back, nothing
+  reported); a pulled edge stops at the next piece; a pool drop on a frame another piece covers is
+  refused. Tests: four in `lyric-snapping.test.ts` (519 in the package); `check:lyrics` checks the
+  red guide and both refusals (shot 08b).
+
 # 4. Story 7.3: keys and clefs of passages
 
 ## 4.1 Key for this passage
