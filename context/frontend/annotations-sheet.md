@@ -50,9 +50,10 @@ many. Command-Z brings them back exactly.
 so they outlive **Remove all** and a new transcription) and the field opens with them every time.
 **Add to the pool** makes each line a **lyrics piece** in the pool, listed in the tab. The pool
 keeps every piece: one on the sheet carries a **green tick** (a line placed twice, twice), so the
-list shows what is in and what is not. Click a piece of the pool to edit its words: Enter makes a
-new line, and when the field is left (or with Command-Enter) each line becomes a piece of its own in
-the same place, so a long line is broken in two and the order is kept; Escape drops the change.
+list shows what is in and what is not. Click a piece of the pool to edit its words in a one-line field:
+**Enter** (or the scissors at the end of the field) splits it where the cursor is into two pieces in
+the same place and closes the field, so a long line is broken in two and the order is kept; leaving
+the field keeps the words as typed; Escape drops the change.
 
 A piece is **dragged from the pool onto the sheet**: it starts on **the frame under the pointer**
 (the column that holds it, as a click above the staves reads it; drop it on the note it starts on)

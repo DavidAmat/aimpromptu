@@ -1,8 +1,8 @@
 /**
  * The **Lyrics** tab of the sheet toolbox (plan section 11.5).
  *
- * A piece of the pool is edited in place by clicking it: each line of its words then becomes a
- * piece of its own, in the same place, so a line break splits it.
+ * A piece of the pool is edited in place by clicking it: Enter (or the scissors at the end of the
+ * field) splits it where the cursor is into two pieces in the same place and closes the field.
  *
  * Paste the lyrics and **Save lyrics**: they are kept with the part and the field opens with them
  * every time. **Add to the pool** makes each line a **lyrics piece** in the **pool**. A piece is dragged from
@@ -16,6 +16,7 @@
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import InputAdornment from "@mui/material/InputAdornment";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -81,12 +82,27 @@ export function LyricsTab({
   const [draft, setDraft] = useState<{ forFrom: number; text: string } | null>(null);
   /** The piece of the pool whose words are being edited, and what they are now. */
   const [poolEdit, setPoolEdit] = useState<{ index: number; text: string } | null>(null);
-  const commitPoolEdit = () => {
-    if (!poolEdit) return;
-    const { index, text } = poolEdit;
+  const poolInput = useRef<HTMLInputElement | null>(null);
+  /**
+   * Set once the field has been closed by a key or the split, so the blur its removal fires does
+   * not keep the change a second time (or keep one that Escape dropped).
+   */
+  const poolEditClosed = useRef(false);
+  /** Keep `text` as the piece's words: each line a piece of its own, in the same place. */
+  const commitPoolEdit = (text = poolEdit?.text) => {
+    if (!poolEdit || poolEditClosed.current || text === undefined) return;
+    poolEditClosed.current = true;
+    const { index } = poolEdit;
     setPoolEdit(null);
     if (text === pool[index]) return;
     setPool((current) => editPoolPiece(current, index, text));
+  };
+  /** Split the piece where the cursor is: the words before it and the words after, two pieces. */
+  const splitPoolEdit = () => {
+    if (!poolEdit) return;
+    const { text } = poolEdit;
+    const caret = poolInput.current?.selectionStart ?? text.length;
+    commitPoolEdit(`${text.slice(0, caret)}\n${text.slice(caret)}`);
   };
   const field = useRef<HTMLTextAreaElement | null>(null);
 
@@ -188,26 +204,46 @@ export function LyricsTab({
                 <TextField
                   key={`${index}:editing`}
                   size="small"
-                  multiline
                   autoFocus
                   value={poolEdit.text}
+                  inputRef={poolInput}
                   onChange={(event) => setPoolEdit({ index, text: event.target.value })}
-                  onBlur={commitPoolEdit}
+                  onBlur={() => commitPoolEdit()}
                   onKeyDown={(event) => {
-                    // Enter makes a new line (a new piece); Command-Enter or leaving the field keeps
-                    // the change, Escape drops it.
+                    // Enter splits where the cursor is and closes the field; leaving the field
+                    // keeps the words as typed; Escape drops the change.
                     if (event.key === "Escape") {
                       event.stopPropagation();
+                      poolEditClosed.current = true;
                       setPoolEdit(null);
-                    } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                    } else if (event.key === "Enter") {
                       event.preventDefault();
-                      commitPoolEdit();
+                      splitPoolEdit();
                     }
                   }}
                   slotProps={{
                     htmlInput: {
-                      "aria-label": "Words of this piece; a new line makes a new piece",
+                      "aria-label": "Words of this piece; Enter splits it where the cursor is",
                       "data-lyrics-pool-edit": index,
+                    },
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          {/*
+                            A press here would blur the field (and keep the words unsplit) before
+                            the click; keeping the focus keeps the cursor where the split goes.
+                          */}
+                          <span onMouseDown={(event) => event.preventDefault()}>
+                            <IconAction
+                              title="Split here"
+                              shortcut="Enter"
+                              icon={<ContentCutIcon fontSize="small" />}
+                              onClick={splitPoolEdit}
+                              data-testid="lyrics-pool-split"
+                            />
+                          </span>
+                        </InputAdornment>
+                      ),
                     },
                   }}
                 />
@@ -222,7 +258,10 @@ export function LyricsTab({
                       <CheckCircleIcon fontSize="small" sx={{ color: "success.main" }} />
                     ) : undefined
                   }
-                  onClick={() => setPoolEdit({ index, text })}
+                  onClick={() => {
+                    poolEditClosed.current = false;
+                    setPoolEdit({ index, text });
+                  }}
                   draggable
                   onDragStart={(event) => {
                     event.dataTransfer.setData(POOL_DRAG_TYPE, String(index));

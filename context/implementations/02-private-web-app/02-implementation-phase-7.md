@@ -184,6 +184,14 @@ checks the order (shot 10b).
   refused. Tests: four in `lyric-snapping.test.ts` (519 in the package); `check:lyrics` checks the
   red guide and both refusals (shot 08b).
 
+**Fifth review: Enter splits the pool piece at once.** The pool's edit field was multi-line: Enter
+added a line and the field stayed open, showing one piece on two lines. It is now one line; Enter,
+or the scissors at its right end, splits the piece at the cursor (`splitPoolEdit`: a newline at the
+cursor, then `editPoolPiece`) and closes the field; the scissors keep the focus on a press so the
+cursor is still where the split goes. A ref stops the blur of the closing field from keeping a
+change twice, or one that Escape dropped. `check:lyrics` splits with Enter and with the scissors
+(shot 10a).
+
 # 4. Story 7.3: keys and clefs of passages
 
 ## 4.1 Key for this passage

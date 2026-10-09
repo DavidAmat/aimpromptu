@@ -415,15 +415,26 @@ try {
     // Its words ("of words second line") were not in the pool, so they join it at the top.
     check('Back to the pool takes it off the sheet', (await toolbox().locator('[data-lyrics-piece]').count()) === 4
       && !(await hasLyric('of words second line')));
-    // Edit a piece of the pool: a line break makes two pieces, in the same place.
+    // Edit a piece of the pool: Enter splits it where the cursor is, in the same place, and closes
+    // the field; the scissors at the end of the field do the same.
     await toolbox().locator('[data-lyrics-piece="0"]').click();
     const poolField = toolbox().locator('[data-lyrics-pool-edit="0"]');
-    await poolField.fill('of words\nsecond line');
-    await toolbox().getByText(/^Pool/).click();
+    await poolField.evaluate((input) => input.setSelectionRange(8, 8));
+    await poolField.press('Enter');
     await page.waitForTimeout(500);
-    const poolNow = await toolbox().locator('[data-lyrics-piece]').allTextContents();
-    check('a line break in a piece of the pool makes two pieces, the order kept',
-      JSON.stringify(poolNow) === JSON.stringify(['of words', 'second line', 'first line of words', 'second line', 'third line here']), JSON.stringify(poolNow));
+    let poolNow = await toolbox().locator('[data-lyrics-piece]').allTextContents();
+    check('Enter in a piece of the pool splits it at the cursor and closes the field',
+      JSON.stringify(poolNow) === JSON.stringify(['of words', 'second line', 'first line of words', 'second line', 'third line here'])
+        && (await toolbox().locator('[data-lyrics-pool-edit]').count()) === 0, JSON.stringify(poolNow));
+    await toolbox().locator('[data-lyrics-piece="4"]').click();
+    await toolbox().locator('[data-lyrics-pool-edit="4"]').evaluate((input) => input.setSelectionRange(10, 10));
+    await shot('10a-lyrics-pool-editing');
+    await page.getByTestId('lyrics-pool-split').click();
+    await page.waitForTimeout(500);
+    poolNow = await toolbox().locator('[data-lyrics-piece]').allTextContents();
+    check('and so does the scissors at the end of the field, the order kept',
+      JSON.stringify(poolNow.slice(4)) === JSON.stringify(['third line', 'here'])
+        && (await toolbox().locator('[data-lyrics-pool-edit]').count()) === 0, JSON.stringify(poolNow));
     await shot('10b-lyrics-pool-edited');
     await (await lyricNamed('first line')).locator('.grid-lyric-box').click();
     await page.getByTestId('lyrics-delete').click();
@@ -435,7 +446,7 @@ try {
 
     await saveSheet();
     const after = await json(`${api}/time/${id}/rhythm`);
-    check('Save keeps the pieces and the pool', after.lyrics.some((line) => line.text === 'first line') && (after.lyricsPool ?? []).length === 5,
+    check('Save keeps the pieces and the pool', after.lyrics.some((line) => line.text === 'first line') && (after.lyricsPool ?? []).length === 6,
       `${after.lyrics.length} pieces, ${(after.lyricsPool ?? []).length} in the pool`);
     check('every saved piece starts and ends on a frame', after.lyrics.every((line) => Number.isInteger(line.fromColumn) && Number.isInteger(line.toColumn) && line.toColumn > line.fromColumn));
 
