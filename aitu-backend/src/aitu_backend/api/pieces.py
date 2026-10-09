@@ -57,6 +57,8 @@ class StatusOut(BaseModel):
     resume: str
     #: `audio`, `notes`, `notesAudio`, `hands`, `handsNotes`, `sheetHands` (plan section 8.2).
     revisions: dict[str, int | None]
+    #: Notes and no audio yet: a project made from scratch (Phase 8). The page shows only its sheet.
+    scratch: bool = False
 
 
 class NotesPatch(BaseModel):
@@ -191,6 +193,7 @@ def get_status(audio_uuid: str) -> StatusOut:
         ],
         resume=status.resume,
         revisions=status.revisions,
+        scratch=status.scratch,
     )
 
 

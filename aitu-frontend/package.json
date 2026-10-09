@@ -19,6 +19,7 @@
     "check:library": "node scripts/check-library.mjs",
     "check:transpose": "node scripts/check-sheet-toolbox.mjs --only transpose",
     "check:lyrics": "node scripts/check-sheet-toolbox.mjs --only lyrics",
+    "check:paste": "node scripts/check-paste.mjs",
     "screenshot": "node scripts/screenshot.mjs",
     "bench:roll": "node scripts/bench-roll.mjs",
     "bench:sheet": "node scripts/bench-sheet.mjs",

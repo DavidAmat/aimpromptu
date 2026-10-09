@@ -57,7 +57,7 @@ and every revision.
 
 | Step | Ready when | Otherwise |
 |---|---|---|
-| Source, Audio | The audio exists | A part with no audio and no notes (a new empty project) has Source `missing` and every later step closed: "Add an audio first" |
+| Source, Audio | The audio exists | A part with no audio and no notes (a new empty project) has Source `missing` and every later step closed: "Add an audio first". A part made **from scratch** (Phase 8: its source is `composed`, it has notes and no audio yet) is `scratch`: Source and Audio `missing`, the Audio tab closed ("Record or paste a passage first."), and it opens on the Sheet step; the page shows only the sheet until a passage brings audio |
 | Notes | `notes.pmn` exists and its `audioRevision` is the current one | `running` while a transcription job runs (for a video project, while **Read notes** runs, job key `video-read:<uuid>`); `stale` after the cuts changed or audio was added ("Transcribe again"). A video project says "Read the notes of the video" instead of "Transcribe" |
 | Hands | Every live note the piano sheet can place has a hand | `missing`, "Predict hands first", or "N notes have no hand" |
 | Sheet | `sheet.json`'s `handsRevision` equals `notes.pmn`'s | `missing` (no reading: the Sheet tab draws the sheet from the defaults, and **Save** makes it ready), or `stale`: the Sheet tab opens with a banner and asks for **Write the sheet** again |

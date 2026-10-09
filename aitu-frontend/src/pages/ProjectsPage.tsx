@@ -4,7 +4,7 @@
  *
  * Each row says the step the project reached and when it last changed; the whole row opens the
  * project on that step. The `⋯` menu has Open, Duplicate, Export, Rename, Notes Falling and Delete.
- * **New project** opens a small menu: **From source**, **From scratch** and **From other
+ * **New project** opens a small menu: **From source**, **From scratch** (Phase 8) and **From other
  * projects** (the last two are built in Phases 8 and 10), and **Import** for a `.aitu` file.
  *
  * The list is one request (`GET /projects`), with the step of every row in it. Finished work is in
@@ -173,7 +173,27 @@ export function ProjectsPage() {
   );
 
 
-  const newProject = <NewProjectButton busy={importing} onImport={(file) => void importFile(file)} />;
+  /** **From scratch** (Phase 8): a blank piano sheet, opened on its Sheet step. */
+  const fromScratch = useCallback(async () => {
+    setImporting(true);
+    setActionError(null);
+    try {
+      const made = await projectsApi.create("", true);
+      navigate(ROUTES.project(made.parts[0] ?? made.id, "sheet"));
+    } catch (caught) {
+      setActionError(message(caught, "The project could not be made."));
+    } finally {
+      setImporting(false);
+    }
+  }, [navigate]);
+
+  const newProject = (
+    <NewProjectButton
+      busy={importing}
+      onImport={(file) => void importFile(file)}
+      onScratch={() => void fromScratch()}
+    />
+  );
 
   const list = (items: ProjectRow[], label: string) => (
     <Box role="list" aria-label={label}>
@@ -316,7 +336,15 @@ export function ProjectsPage() {
 }
 
 /** **New project**: the three ways in, and Import. */
-function NewProjectButton({ busy, onImport }: { busy: boolean; onImport: (file: File | undefined) => void }) {
+function NewProjectButton({
+  busy,
+  onImport,
+  onScratch,
+}: {
+  busy: boolean;
+  onImport: (file: File | undefined) => void;
+  onScratch: () => void;
+}) {
   const navigate = useNavigate();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
@@ -353,11 +381,16 @@ function NewProjectButton({ busy, onImport }: { busy: boolean; onImport: (file: 
           </ListItemIcon>
           <ListItemText primary="From source" secondary="An audio, a video or a YouTube link" />
         </MenuItem>
-        <MenuItem disabled>
+        <MenuItem
+          onClick={() => {
+            close();
+            onScratch();
+          }}
+        >
           <ListItemIcon>
             <EditNoteIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="From scratch" secondary="Not available yet" />
+          <ListItemText primary="From scratch" secondary="A blank sheet: record or paste" />
         </MenuItem>
         <MenuItem disabled>
           <ListItemIcon>

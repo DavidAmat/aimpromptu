@@ -20,8 +20,8 @@ The plan's section 3.
 - [x] **Q-4** Video into From source, Notes Falling into Play mode, the video development pages into Lab; the Playground, the old `.npz` library and the text-notation MVP deleted. Answered 2026-10-05.
 - [p] **Q-5** The sources of the Public Library. Worldwide: `musicchartsarchive.com`, downloaded by the parallel work (`public-library-build/`). The `spain` and `catalan` regions and the fields that site does not give: raised in Phase 12.
 - [ ] **Q-6** The popularity weights. Raised in Phase 12.
-- [p] **Q-7** Offline downloads per project, now or in the production version. Raised in the Phase 6 walkthrough (recommended: leave it for the production version), asked again in the Phase 7 walkthrough, not answered yet.
-- [p] **Q-8** Live notes from the video reader. Measured in Phase 5 (61 s for a 3:09 video, notes only at the end); raised with three options (recommended: keep one job with its stages), asked again in the Phase 6 and Phase 7 walkthroughs, not answered yet.
+- [p] **Q-7** Offline downloads per project, now or in the production version. Raised in the Phase 6 walkthrough (recommended: leave it for the production version), asked again in the Phase 7 and Phase 8 walkthroughs, not answered yet.
+- [p] **Q-8** Live notes from the video reader. Measured in Phase 5 (61 s for a 3:09 video, notes only at the end); raised with three options (recommended: keep one job with its stages), asked again in the Phase 6, Phase 7 and Phase 8 walkthroughs, not answered yet.
 
 # [x] Phase 0: The documentation repaired, and a baseline
 
@@ -160,19 +160,19 @@ The plan's section 3.
 ## [x] Story 7.4: Documentation
 - [x] Task 7.4.1 `annotations.md` pages, `rendering.md`, `rhythm-and-annotations.md` (`sheet.json`); `endpoints.md`, `components.md`, `projects.md`.
 
-# [ ] Phase 8: Copy and paste, and From scratch
+# [x] Phase 8: Copy and paste, and From scratch
 
-## [ ] Story 8.1: Copy and paste
-- [ ] Task 8.1.1 The clipboard reference; the backend paste (notes, metadata, audio segments, the insert); undo.
-- [ ] Task 8.1.2 Across projects and layers, with the read check.
-- [ ] Task 8.1.3 The note under rule 2 in `wall-clock-rewrite.md`.
+## [x] Story 8.1: Copy and paste
+- [x] Task 8.1.1 The clipboard reference; the backend paste (notes, metadata, audio segments, the insert); undo.
+- [x] Task 8.1.2 Across projects and layers, with the read check.
+- [x] Task 8.1.3 The note under rule 2 in `wall-clock-rewrite.md`.
 
-## [ ] Story 8.2: From scratch
-- [ ] Task 8.2.1 The empty project, Record and Paste on a blank sheet.
-- [ ] Task 8.2.2 Playback across several audio files, checked at every join.
+## [x] Story 8.2: From scratch
+- [x] Task 8.2.1 The empty project, Record and Paste on a blank sheet.
+- [x] Task 8.2.2 Playback across several audio files, checked at every join.
 
-## [ ] Story 8.3: Documentation
-- [ ] Task 8.3.1 `editing.md`, `editing-and-compose.md`.
+## [x] Story 8.3: Documentation
+- [x] Task 8.3.1 `editing.md`, `editing-and-compose.md`.
 
 # [ ] Phase 9: Recording in Sheet
 

@@ -26,6 +26,7 @@ from __future__ import annotations
 import math
 
 from aitu_backend.audio import store
+from aitu_backend.editing import marks
 from aitu_backend.editing.splice import last_release_seconds, scale_take
 from aitu_backend.matrix.time_grid import (
     DEFAULT_FRAME_MS,
@@ -229,90 +230,10 @@ def shift_marks(
 
     frame_ms = validate_frame_ms(rhythm.frame_ms)
     at_frame = frame_at_or_after(at_seconds, frame_ms)
-    shift = int(round(passage_seconds * 1000.0 / frame_ms))
-    if shift <= 0:
+    columns = int(round(passage_seconds * 1000.0 / frame_ms))
+    if columns <= 0:
         return rhythm, MovedMarks()
-
-    moved = 0
-
-    def start_of(frame: int) -> int:
-        """A mark's own column: it moves when the moment is at or before it."""
-        return frame + shift if frame >= at_frame else frame
-
-    def end_of(frame: int) -> int:
-        """The exclusive end of a range: it moves as soon as the moment is inside the range."""
-        return frame + shift if frame > at_frame else frame
-
-    def one(item, **fields):
-        """Apply the new columns, and count the mark once however many of them changed."""
-        nonlocal moved
-        changed = {name: value for name, value in fields.items() if getattr(item, name) != value}
-        if not changed:
-            return item
-        moved += 1
-        return item.model_copy(update=changed)
-
-    updated = rhythm.model_copy(
-        update={
-            "key_changes": [
-                one(item, from_column=start_of(item.from_column)) for item in rhythm.key_changes
-            ],
-            "speed_changes": [
-                one(item, start_frame=start_of(item.start_frame)) for item in rhythm.speed_changes
-            ],
-            "overrides": [
-                one(item, start_frame=start_of(item.start_frame)) for item in rhythm.overrides
-            ],
-            "beam_breaks": [
-                one(item, start_frame=start_of(item.start_frame)) for item in rhythm.beam_breaks
-            ],
-            "hidden_notes": [
-                one(item, start_frame=start_of(item.start_frame)) for item in rhythm.hidden_notes
-            ],
-            "fingers": [
-                one(item, start_frame=start_of(item.start_frame)) for item in rhythm.fingers
-            ],
-            "grace_notes": [
-                one(item, start_frame=start_of(item.start_frame)) for item in rhythm.grace_notes
-            ],
-            "trills": [
-                one(
-                    item,
-                    start_frame=start_of(item.start_frame),
-                    end_frame=end_of(item.end_frame),
-                )
-                for item in rhythm.trills
-            ],
-            "lyrics": [
-                one(
-                    item,
-                    from_column=start_of(item.from_column),
-                    to_column=end_of(item.to_column),
-                )
-                for item in rhythm.lyrics
-            ],
-            "cue_ranges": [
-                one(
-                    item,
-                    from_column=start_of(item.from_column),
-                    to_column=end_of(item.to_column),
-                )
-                for item in rhythm.cue_ranges
-            ],
-            # ``None`` is "never asked", and an insertion does not answer the question, so it has
-            # to survive as ``None`` rather than become an empty list.
-            "ottavas": (
-                None
-                if rhythm.ottavas is None
-                else [
-                    one(
-                        item,
-                        from_column=start_of(item.from_column),
-                        to_column=end_of(item.to_column),
-                    )
-                    for item in rhythm.ottavas
-                ]
-            ),
-        }
-    )
-    return updated, MovedMarks(total=moved, frames=shift)
+    # Every kind of mark, from the one list of them (implementation 02, Phase 8: the clef changes,
+    # the beam joins, the spacings and the staff gaps did not move before).
+    shifted, moved = marks.shift(rhythm, at_frame, columns, straddle="widen")
+    return shifted, MovedMarks(total=moved, frames=columns)

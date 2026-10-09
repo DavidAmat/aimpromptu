@@ -4,7 +4,8 @@ section 8.5, **add audio**).
 A part of one file needs nothing here: its file is the original, and ``normalized.wav`` is that
 file at 16 kHz mono, as since implementation 08. A part of several files (``timeline.sources``)
 has no single original, so two derived files stand in for it, both in the part's ``cache/`` folder
-and both written again when they are missing:
+and both written again when they are missing. An entry may stand for a range of its file (Phase 8,
+a pasted passage): it then gives only the frames of that range.
 
 * ``normalized.wav``: each file's own 16 kHz mono copy (``src-<hash>.wav``), padded with silence to
   a whole number of 10 ms frames and joined. File ``i`` therefore starts exactly at the frame where
@@ -109,15 +110,18 @@ def write_normalized(part_id: str, timeline: Timeline, target: Path) -> Path:
     pieces: list[np.ndarray] = []
     starts: list[int] = []
     position = 0
-    for content_hash, frames in timeline.axis():
-        extension = timeline.audio[content_hash].format
-        rate, samples = formats.read_wav(source_wav(part_id, content_hash, extension))
-        if rate != SAMPLE_RATE:
-            raise formats.ConversionFailed(f"src-{content_hash}.wav is {rate} Hz")
+    read: dict[str, np.ndarray] = {}
+    for content_hash, first, last in timeline.items():
+        if content_hash not in read:
+            extension = timeline.audio[content_hash].format
+            rate, samples = formats.read_wav(source_wav(part_id, content_hash, extension))
+            if rate != SAMPLE_RATE:
+                raise formats.ConversionFailed(f"src-{content_hash}.wav is {rate} Hz")
+            read[content_hash] = samples
         if position:
             starts.append(position)
-        length = frames * SAMPLES_PER_FRAME
-        pieces.append(_fit(samples, length))
+        length = (last - first) * SAMPLES_PER_FRAME
+        pieces.append(_fit(read[content_hash][first * SAMPLES_PER_FRAME :], length))
         position += length
     joined = _fade_joins(np.concatenate(pieces).astype(np.float32), starts, SAMPLE_RATE)
     pcm = np.clip(np.round(joined * 32767.0), -32768, 32767).astype(np.int16)
@@ -129,7 +133,7 @@ def write_normalized(part_id: str, timeline: Timeline, target: Path) -> Path:
 
 
 def _key(timeline: Timeline) -> str:
-    body = json.dumps(timeline.axis())
+    body = json.dumps(timeline.items())
     return hashlib.sha256(body.encode("utf-8")).hexdigest()[:16]
 
 
@@ -174,21 +178,25 @@ def ensure_listen(part_id: str, timeline: Timeline) -> Path:
         if not formats.ffmpeg_available():
             raise formats.FfmpegMissing()
         files = [
-            (audio_files.file_path(content_hash, timeline.audio[content_hash].format), frames)
-            for content_hash, frames in timeline.axis()
+            (audio_files.file_path(content_hash, timeline.audio[content_hash].format), first, last)
+            for content_hash, first, last in timeline.items()
         ]
-        probes = [_probe(path) for path, _ in files]
-        rate = 44_100 if max(found for found, _ in probes) <= 44_100 else 48_000
-        channels = max(count for _, count in probes)
+        probes = {path: _probe(path) for path, _, _ in files}
+        rate = 44_100 if max(found for found, _ in probes.values()) <= 44_100 else 48_000
+        channels = max(count for _, count in probes.values())
         per_frame = rate * FRAME_MS // 1000
         pieces: list[np.ndarray] = []
         starts: list[int] = []
         position = 0
-        for path, frames in files:
+        decoded: dict[Path, np.ndarray] = {}
+        for path, first, last in files:
+            if path not in decoded:
+                decoded[path] = _decode(path, rate, channels)
             if position:
                 starts.append(position)
-            pieces.append(_fit(_decode(path, rate, channels), frames * per_frame))
-            position += frames * per_frame
+            length = (last - first) * per_frame
+            pieces.append(_fit(decoded[path][first * per_frame :], length))
+            position += length
         joined = _fade_joins(np.concatenate(pieces), starts, rate)
         temporary = target.with_name(f".{target.stem}.tmp.flac")
         encoded = subprocess.run(

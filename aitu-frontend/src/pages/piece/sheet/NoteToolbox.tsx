@@ -23,6 +23,7 @@ import DragHandleIcon from "@mui/icons-material/DragHandle";
 import LinkIcon from "@mui/icons-material/LinkOutlined";
 import PianoIcon from "@mui/icons-material/PianoOutlined";
 import RemoveIcon from "@mui/icons-material/Remove";
+import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHorizOutlined";
 import TextDecreaseIcon from "@mui/icons-material/TextDecreaseOutlined";
 import {
@@ -66,6 +67,7 @@ export function NoteToolbox({
   frameMs,
   onClose: closeNotes,
   onSelectFrames: selectRangeOfNotes,
+  onCopy,
   notes,
   fingers,
   setFingerDraft,
@@ -80,6 +82,8 @@ export function NoteToolbox({
   frameMs: number;
   onClose: () => void;
   onSelectFrames: () => void;
+  /** **Copy** the frames these notes cover (Phase 8). */
+  onCopy: () => void;
   notes: NoteActions;
   fingers: Record<string, FingerNumber>;
   setFingerDraft: Dispatch<SetStateAction<FingerDraft | null>>;
@@ -144,11 +148,20 @@ export function NoteToolbox({
       initialPosition={notesAt ?? { x: 420, y: 140 }}
       onClose={closeNotes}
       headerAction={
-        <IconAction
-          title="Select the frames of these notes"
-          icon={<SwapHorizIcon fontSize="small" />}
-          onClick={selectRangeOfNotes}
-        />
+        <>
+          <IconAction
+            title="Copy the frames of these notes"
+            shortcut="⌘C"
+            icon={<ContentCopyIcon fontSize="small" />}
+            onClick={onCopy}
+            data-testid="notes-copy"
+          />
+          <IconAction
+            title="Select the frames of these notes"
+            icon={<SwapHorizIcon fontSize="small" />}
+            onClick={selectRangeOfNotes}
+          />
+        </>
       }
     >
       <Stack spacing={1.25}>

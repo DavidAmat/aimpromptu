@@ -15,7 +15,7 @@ export function SheetTab() {
   const here = stepStatus(status, "sheet");
   const state = here?.state ?? null;
   const reason = here?.reason ?? null;
-  const label = audio?.alias;
+  const label = audio ? audio.alias || "Untitled project" : undefined;
 
   const step = useMemo<SheetStep | null>(
     () =>

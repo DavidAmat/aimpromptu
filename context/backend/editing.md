@@ -1,7 +1,9 @@
-# Editing a piece: re-record, and compose
+# Editing a piece: re-record, compose, and paste
 
-Two ways a recording changes after it has been transcribed. They share one session model and differ
-in exactly one thing: whether the piece is allowed to get longer.
+Three ways a recording changes after it has been transcribed. Re-record and compose share one
+session model and differ in exactly one thing: whether the piece is allowed to get longer. Paste
+(implementation 02, Phase 8) is the third, and it uses the same rule as compose: everything after
+the insertion point moves.
 
 ## Re-record a passage — the length never changes
 
@@ -28,7 +30,7 @@ Marks anchored **inside** the replaced window are dropped, because the notes the
 there any more. The count is reported by kind before the button is pressed, because a fingering that
 has silently gone looks exactly like one that was never there.
 
-## Compose a piece — the one place length may change
+## Compose a piece — length may change
 
 **Compose** on Upload / Input starts a piece with nothing in it: an empty `notes.pmn`, a column
 length, and no audio file at all. The first accepted passage is what creates a recording.
@@ -62,6 +64,34 @@ is a few milliseconds before the moment but which rounds into that same column w
 inside the new passage, visibly in the middle of the new music, with its fingering gone on ahead
 without it.
 
+Since implementation 02, Phase 8 the take goes into the part's **audio timeline** as one more file
+(a range of the axis, like a pasted passage), instead of the whole part being written again as one
+16 kHz file: the files already there keep their own quality, and the notes stay current with the
+audio.
+
+## Paste a passage — length changes, notes, marks and audio together
+
+**Copy** (the range toolbox, the note toolbox, ⌘C) keeps a reference to a stretch of a part: the
+part and the stretch in milliseconds. No notes and no audio travel with it. **Paste** (the
+floating bar, ⌘V) asks the backend to put that stretch in at the cursor, or in place of the marked
+stretch, in one write:
+
+- **the notes** whose onset is inside the stretch, cut where it ends, with new ids and their hand;
+- **the marks** of the sheet inside it, at their new columns; the key, each hand's clef and the
+  speed in force where the copy starts are written where the passage starts, so it reads as it did
+  in its song, and what the target had is written again after it;
+- **the audio**: the ranges of stored files the stretch plays become entries of the target's
+  timeline. No audio byte is copied; a file the passage lands inside is split in two around it;
+- **everything after** moves by the passage's length, which is a whole number of columns.
+
+The source can be any part the user may read: their own work, their library, a library shared with
+them, the Public Library. A stretch pasted over is taken out first: its notes and marks go, and its
+audio becomes cuts that the Audio step can restore.
+
+**Undo is exact.** The paste keeps the part as it was (notes, sheet, timeline, the names of its
+files) as an earlier state of its history first. Undo puts that state back, keeping the pasted one,
+which redo puts back.
+
 ## The preview always draws the passage, not the page
 
 While re-recording, the preview shows the take fitted into the window, so you can compare it against
@@ -79,24 +109,28 @@ derived from them is stored — there is still no BPM anywhere.
 
 ## History
 
-Accepting snapshots the previous `notes.pmn`, `sheet.json` and `timeline.json` into
+Accepting snapshots the previous `notes.pmn`, `sheet.json` and `timeline.json` (and since Phase 8
+the part's entry of `project.json`, the names of its files) into
 `.database/history/<projectId>/parts/<partId>/v<N>/` and advances a version counter. A version here
-means *the music changed*. Since implementation 02, Phase 3 the new recording is a new file of the
+means *the music changed*. A paste snapshots the same way, and its undo restores the snapshot. Since implementation 02, Phase 3 the new recording is a new file of the
 audio store and the timeline points at it, so the snapshot never copies audio.
 
 If the audio splice fails, the window is recorded as not matching the sheet rather than failing the
 edit: the notes were written correctly and only the sound is behind, so saying so is more useful
 than rolling back a correct result.
 
-## Known gap
+## Every mark moves
 
-Octave brackets are not shifted by an insertion, because they live in the renderer's own state
-rather than in the saved rhythm. An insert on a piece with brackets leaves them where they were.
+One module, `editing/marks.py`, lists every mark of `sheet.json` by the column or the range it is
+keyed by, and moves, cuts out and copies them. A composed passage widens a range it lands inside; a
+pasted one tears it (it ends where the passage starts, and goes on after it), because the pasted
+music is not part of it. Before Phase 8 the clef changes, the beam joins, the spacings and the
+staff gaps did not move on an insert.
 
 ## Where to look deeper
 
 - [`documentation/services/backend/editing-and-compose.md`](../../documentation/services/backend/editing-and-compose.md)
-  — the modules, the routes and every rule
+  — the modules, the routes and every rule, copy and paste included
 - [`documentation/services/backend/rhythm-and-annotations.md`](../../documentation/services/backend/rhythm-and-annotations.md)
   — the marks that are dropped or moved
 - [time-model.md](time-model.md) — why the length rule matters

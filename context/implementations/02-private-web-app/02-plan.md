@@ -615,6 +615,14 @@ has a name (`project.json` `parts[].source.files`), and the Source step lists th
 reorder by dragging (each file keeps its cuts), remove, and add by file or YouTube link; the Audio
 step shows each file on its own band and a panel of the files that selects one file's part.
 
+*As built in Phase 8* (`audio/timeline.py`): an entry of `sources` may be a **range** of its file
+(`ranges`, `[fromFrame, toFrame)` in 10 ms frames, `null` for the whole file). A pasted passage is
+one entry per range of stored file it plays; a file the passage lands inside comes twice, once on
+each side of it; a stretch pasted over becomes cuts. So the general timeline of the table above is
+still the axis of the Audio step with its cuts, and every reader of it (the joined audio, the cuts,
+Save to library, the export) works on it. A recorded passage (the Record panel) is one more entry
+too, instead of the whole part written again at 16 kHz.
+
 **Writing the audio on save (Q-3).** When a project is saved to the Private Library, each audio file
 that the timeline uses only in part is written again with only the ranges in use, and the segments are
 renumbered to point into the new file. A file that no project uses any more is deleted. A temporary
@@ -851,6 +859,13 @@ open on a blank piano sheet. Two ways to fill it, both in the sheet's floating b
 The steps Source, Audio, Notes and Hands are hidden for a project made from scratch until it has
 audio; then they work as usual.
 
+*As built in Phase 8:* **New project → From scratch** is `POST /projects` with `scratch`: "Untitled
+project", its part's source `composed`, an empty `notes.pmn` at 40 ms. Its status is `scratch` and
+opens on the Sheet step, and the page hides the step tabs, so the blank sheet's empty state is the
+page: **Record a passage** (today's Record panel until Phase 9) and **Paste the copied passage**.
+The first paste into it takes the source's sheet settings (key, figures, spacing). A passage that
+brings audio ends `scratch`.
+
 ## 10.4 From other projects
 
 The page `/projects/:id/compose`, in three moves (the app context's list):
@@ -945,7 +960,8 @@ the `⋯` (a save hidden in a menu is the "hidden action" of the 09 guidelines).
 the keyboard*, *Find trills*, *Bring back N notes taken off* and *Remove all* (with a confirmation).
 The frame numbers are in the **Layout** tab. **Paste** joins the bar in Phase 8. **Record** opens
 today's compose panel (play a passage and put it in) until Phase 9. A thin scrub bar stays above the
-sheet.
+sheet. *As built in Phase 8:* **Paste** is beside Record, ⌘V too; its tooltip names what was copied
+and says whether it goes at the cursor or over the marked frames.
 
 **Line wrapping.** The prompt says the line wrap of `vexflow-v2` may have stopped working. The survey
 found the renderer wraps to the container width on each draw. Phase 2 checks it on three widths and on
@@ -1094,6 +1110,13 @@ as the hand swap does today. The two exceptions of today (an accepted re-record 
 passage could not be undone) end: the previous state is kept in the session until the next save, so
 undo restores it.
 
+*As built in Phase 8 (paste):* the previous state is kept as a snapshot of the part's history
+(`history/<projectId>/parts/<partId>/v<N>/`, with the names of its files), and undo is
+`POST /time/{uuid}/versions/{n}/restore`, which keeps the pasted state as the next snapshot for the
+redo. The page records the paste as one step (`useEditHistory.commit`). The re-record and the
+placed passage of the Record panel stay out of reach of undo until Phase 9 moves them onto the same
+snapshots.
+
 ---
 
 # 12. Copy and paste
@@ -1124,6 +1147,28 @@ What a paste writes, in one save:
 
 The source can be any project the user can read: their vault, their library, a library shared with
 them, the Public Library. The backend checks the read right on paste.
+
+*As built in Phase 8* (`editing/paste.py`, `editing/marks.py`, `audio/timeline.py`;
+`POST /time/{uuid}/paste`; [`../../backend/editing.md`](../../backend/editing.md)):
+
+- **The clipboard** is `{"type": "aimpromptu/passage", "part", "project", "title", "fromMs",
+  "toMs"}`, kept by the page in `localStorage` (so it reaches every project and tab) and put in the
+  system clipboard by ⌘C as JSON text; ⌘V reads it back, or the page's own when the browser sends
+  none (the app is plain HTTP, where the browser offers the system clipboard only in the copy and
+  paste events). The routes take the part, not the project: the part names the project.
+- **Copy** is in the range toolbox and the note toolbox (the frames the notes cover), and on a
+  version of My library, which opens read only, a marked stretch offers **Copy this stretch**.
+- **The marks** of the stretch are copied with every kind of mark of `sheet.json` (one list,
+  `marks.py`). A range of the target across the insertion point **tears** (it ends there and goes on
+  after the passage; a lyrics piece and a trill only end), because the pasted music is not part of
+  it. The key, each hand's clef **and the speed** (what a gap is worth, when it differs by more than
+  2 %) in force where the copy starts are written at the insertion point, and the target's again
+  after it, so the passage's figures print as in its song too.
+- **The page's unsaved edits** travel with the paste: the page sends its sheet, the backend moves
+  the marks in it and saves it. So a paste saves the sheet.
+- **Over a marked stretch**, the stretch's audio becomes cuts (restorable in the Audio step).
+- **Speed**: a paste of 12 s into a 4-minute piece took about 0.1 s on the backend (a copy of Cara de
+  cul with three files); the joined audio is written again on the next play.
 
 ---
 

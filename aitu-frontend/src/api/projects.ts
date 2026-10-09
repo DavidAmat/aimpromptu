@@ -75,8 +75,9 @@ export const projectsApi = {
 
   get: (id: string, signal?: AbortSignal) => request<ProjectRow>(`/projects/${id}`, { signal }),
 
-  /** An empty project: no audio, no notes (From scratch). */
-  create: (title = "") => request<ProjectRow>("/projects", { method: "POST", body: { title } }),
+  /** An empty project. `scratch`: a blank piano sheet, filled by Record and Paste (From scratch). */
+  create: (title = "", scratch = false) =>
+    request<ProjectRow>("/projects", { method: "POST", body: { title, scratch } }),
 
   rename: (id: string, title: string) =>
     request<ProjectRow>(`/projects/${id}`, { method: "PATCH", body: { title } }),

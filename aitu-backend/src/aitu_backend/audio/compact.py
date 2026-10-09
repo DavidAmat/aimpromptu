@@ -19,7 +19,9 @@ ranges end to end), and the new files are exactly those ranges end to end:
 
 The timeline keeps its ``audioRevision``: the audio of the part did not change, so the notes stay
 current. A part of several files is written file by file, and keeps its files, their order and
-their names; a file cut away completely leaves the list. A file used whole is not touched.
+their names; a file cut away completely leaves the list. A file used whole is not touched; an entry
+that stands for a range of its file (a pasted passage, Phase 8) is written again like a file with
+cuts, so the part keeps only what it plays.
 
 :func:`prepare` writes the new files and changes nothing of the part, so a failure (ffmpeg) leaves
 the project as it was. :func:`apply` then points the part at them.
@@ -90,7 +92,7 @@ def _cuts_inside(kept: list[tuple[int, int]], frames: int) -> list[tuple[int, in
 
 def _sixteen_k(part_id: str, timeline: Timeline, content_hash: str, frames: int) -> np.ndarray:
     """The 16 kHz copy of one file of the part, ``frames`` frames long."""
-    if len(timeline.source_list()) == 1:
+    if not timeline.joined:
         normalized = paths.normalized_path(part_id)
         if not normalized.is_file():
             formats.normalize_to_wav(
@@ -112,9 +114,15 @@ def prepare(part_id: str, project: bundle.ProjectFile) -> Plan | None:
     """Write the new files of a part that has cuts. ``None`` when every file is used whole."""
     timeline = bundle.read_timeline(part_id)
     hashes = timeline.source_list()
-    if not hashes or not bundle.cuts_of(timeline):
+    if not hashes:
         return None
-    axis = timeline.axis()
+    items = timeline.items()
+    whole = all(
+        first == 0 and last == timeline.audio[content_hash].frames
+        for content_hash, first, last in items
+    )
+    if whole and not bundle.cuts_of(timeline):
+        return None
     groups: list[list[Segment]] = [[] for _ in hashes]
     for segment in timeline.segments:
         groups[segment.source if segment.source is not None else 0].append(segment)
@@ -126,7 +134,8 @@ def prepare(part_id: str, project: bundle.ProjectFile) -> Plan | None:
     audio: dict[str, AudioEntry] = {}
     lengths: list[int] = []
     try:
-        for index, (content_hash, frames) in enumerate(axis):
+        for index, (content_hash, _, last) in enumerate(items):
+            frames = timeline.audio[content_hash].frames or last
             kept = _kept_of(groups[index], frames)
             if not kept:
                 continue  # cut away completely: the file leaves the part
@@ -170,6 +179,7 @@ def prepare(part_id: str, project: bundle.ProjectFile) -> Plan | None:
         update={
             "audio": audio,
             "sources": order if several else None,
+            "ranges": None,
             "segments": [
                 Segment(
                     audio=content_hash,

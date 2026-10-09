@@ -13,8 +13,14 @@ from __future__ import annotations
 import json
 import shutil
 
+from aitu_backend.audio import sources
 from aitu_backend.storage import bundle, locate, paths
-from aitu_backend.transcription import pipeline
+from aitu_backend.storage.bundle import PartSource
+from aitu_backend.transcription import pipeline, split_cache
+
+#: The part's entry of ``project.json`` (where its audio came from, the names of its files), kept
+#: with a snapshot so a restore gives the files their names back (Phase 8).
+SOURCE_FILE = "source.json"
 
 
 def current_version(audio_uuid: str) -> int:
@@ -46,7 +52,12 @@ def snapshot_current(audio_uuid: str) -> int:
     ):
         if source.is_file():
             shutil.copy2(source, dest / source.name)
-    bundle.sync_audio_refs(locate.part(audio_uuid).project_id)
+    project_id = locate.part(audio_uuid).project_id
+    part = bundle.read_project(project_id).part(audio_uuid)
+    (dest / SOURCE_FILE).write_text(
+        part.source.model_dump_json(by_alias=True, exclude_none=True) + "\n", encoding="utf-8"
+    )
+    bundle.sync_audio_refs(project_id)
     nxt = version + 1
     _write_version(audio_uuid, nxt)
     return nxt
@@ -92,3 +103,58 @@ def add_mismatch(audio_uuid: str, start_seconds: float, end_seconds: float) -> N
     path = paths.audio_mismatches_path(audio_uuid)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"windows": windows}, indent=2) + "\n", encoding="utf-8")
+
+
+class NoSuchVersion(LookupError):
+    """No snapshot of that number, or one that cannot be put back whole."""
+
+
+def restore(audio_uuid: str, version: int) -> int:
+    """Put snapshot ``version`` of the part back: its notes, its sheet, its audio timeline and the
+    names of its files. The current state is kept first as the next snapshot, and its number is
+    returned, so the same call takes the restore back (an undo, then a redo, Phase 8).
+
+    Only a snapshot of :func:`snapshot_current` (it has a timeline) can be put back whole. A file
+    the snapshot did not have (no sheet saved then) is deleted. The caller holds
+    :func:`pipeline.piece_lock`.
+    """
+    folder = paths.history_version_dir(audio_uuid, version)
+    if not (folder / "timeline.json").is_file():
+        raise NoSuchVersion(f"This part has no earlier state {version} to go back to.")
+    kept = current_version(audio_uuid)
+    snapshot_current(audio_uuid)
+    targets = (
+        pipeline.events_path(audio_uuid),
+        pipeline.rhythm_path(audio_uuid),
+        paths.part_timeline_path(audio_uuid),
+    )
+    for target in targets:
+        saved = folder / target.name
+        if saved.is_file():
+            # A new modification time: the hand split is cached by the notes file's time.
+            shutil.copyfile(saved, target)
+        else:
+            target.unlink(missing_ok=True)
+    project_id = locate.part(audio_uuid).project_id
+    source = folder / SOURCE_FILE
+    if source.is_file():
+        with bundle.project_lock(project_id):
+            project = bundle.read_project(project_id)
+            project.part(audio_uuid).source = PartSource.model_validate_json(
+                source.read_text(encoding="utf-8")
+            )
+            bundle.write_project(project)
+    forget_derived(audio_uuid)
+    bundle.sync_audio_refs(project_id)
+    bundle.step_changed(audio_uuid)
+    return kept
+
+
+def forget_derived(audio_uuid: str) -> None:
+    """The derived files of the part's audio and notes, which no longer match: written again on
+    the next request. Each file's own 16 kHz copy is kept; it does not change."""
+    cache = paths.part_cache_dir(audio_uuid)
+    for stale in [*cache.glob("piece-r*.*"), cache / "waveform.json", cache / "normalized.wav"]:
+        stale.unlink(missing_ok=True)
+    sources.clear(audio_uuid)
+    split_cache.forget(audio_uuid)

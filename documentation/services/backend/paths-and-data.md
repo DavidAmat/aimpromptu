@@ -97,7 +97,7 @@ The functions that read and write a bundle are in `storage/bundle.py`: `create_p
 | `parts[].subheader` | The title between the parts of an integrated playlist |
 | `parts[].lyrics`, `parts[].lyricsPool` | The words of the song and the lyrics pieces of the pool, saved together in the Lyrics tab of the Sheet step (**Save lyrics**, Phase 7); absent until saved. Here rather than in `sheet.json` so they outlive **Remove all** and a new transcription |
 | `parts[].source` | Where the part's audio came from: `kind` (`upload`, `recording`, `youtube`, `segment`, `composed`), the extension of the file, its original name, its length and rate after normalization, the YouTube link, the lineage of a segment. These describe the **first** file |
-| `parts[].source.files` | Every file of the part's audio in the order of the axis (Phase 5): `audio` (the hash), `name` (what the Source step shows; the file's name or the video's title at first), `kind`, `format`, `originalFilename`, `durationSeconds`, `url`. Written once a file is added, named, moved or removed; absent before, when the one file is described by the fields above (`bundle.source_files`) |
+| `parts[].source.files` | Every file of the part's audio in the order of the axis (Phase 5): `audio` (the hash), `name` (what the Source step shows; the file's name or the video's title at first), `kind`, `format`, `originalFilename`, `durationSeconds`, `url`. Written once a file is added, named, moved or removed; absent before, when the one file is described by the fields above (`bundle.source_files`). Since Phase 8 an entry may be a pasted passage (`kind` `passage`, named `"<title> m:ss–m:ss"`), a recorded passage (`recording`, `"Recording N"`) or silence (`silence`) |
 
 **What the API answers.** `GET /audio/` and `GET /audio/{uuid}` still answer the
 `AudioMetadata` shape of implementation 08: `alias` is `title`, the source fields come from
@@ -147,6 +147,30 @@ A part of several files has no single original; two derived files of its cache s
 to whole frames and joined, and `sources-<key>.flac` is the files decoded at 44.1 kHz (48 kHz when a
 file is above it) and joined, which the Audio step plays (`?original=true`) and the joined audio of
 the cuts is cut from. Each join of two files gets the 5 ms fade of a cut.
+
+**Ranges of files** (Phase 8, copy and paste, `audio/timeline.py`):
+
+```json
+{"schemaVersion": 1, "audioRevision": 2,
+ "audio": {"bb93…": {"format": "mp3", "frames": 25039}, "f30f…": {"format": "mp3", "frames": 24940}},
+ "sources": ["bb93…", "f30f…", "bb93…"],
+ "ranges": [[0, 3000], [3049, 4249], [3000, 25039]],
+ "segments": [{"audio": "bb93…", "fromMs": 0, "toMs": 30000, "source": 0},
+              {"audio": "f30f…", "fromMs": 30490, "toMs": 42490, "source": 1},
+              {"audio": "bb93…", "fromMs": 30000, "toMs": 250390, "source": 2}]}
+```
+
+`ranges` gives, for each entry of `sources`, the range of its file the entry stands for
+(`[fromFrame, toFrame)` in 10 ms frames of the file), or `null` for the whole file; it is absent when
+every entry is a whole file, so every timeline written before reads unchanged. Above, a passage of
+12 s of another file was pasted at 0:30 of a part of one file: the file is split around it, and its
+second half starts at its frame 3000. The **axis** is the entries laid end to end (each as long as
+its range), and the cuts are ranges of it as before (`Timeline.items`, `segments_for_axis`,
+`cuts_of`). A part is **joined** (`Timeline.joined`) when it has several entries or one entry that is
+a range; its `normalized.wav` and its played file are then made from each entry's range
+(`audio/sources.py`). `audio_timeline.insert_with_origins` puts entries in at a moment of the piece
+(splitting the entry it falls inside, moving every cut after it), `remove` makes a stretch of the
+piece cuts, and `passage_pieces` reads which ranges of which files a stretch of the piece plays.
 
 `replace_original` gives a part a new stored file and points every segment at it, keeping the cuts.
 The joined audio and the peaks of the old file are deleted from the cache then. A part of several
@@ -222,7 +246,8 @@ calls it, and so does **Save to library** for the files it replaced (below); not
 audio. The Personal Vault never deletes a file, so every cut can be undone.
 
 **Writing the audio again on save** (Phase 6, Q-3, `audio/compact.py`). When a project is saved to
-the Private Library, each file a part's timeline uses only in part becomes a new file of the store:
+the Private Library, each file a part's timeline uses only in part (cut, or an entry that is a range
+of it, Phase 8) becomes a new file of the store:
 the old file decoded at its own rate and channels, its kept frames joined with the 5 ms fade of a
 cut (`piece_audio.write_joined`, as `piece-r<N>.flac` is made), FLAC, `<sha256>.flac`. Its 16 kHz
 copy is the old 16 kHz copy with the same frames joined, so the engine's audio is the one the notes
@@ -298,11 +323,18 @@ Two events copy the **previous** state of a part into
 
 | When | Function (`editing/history.py`) | What is copied |
 |---|---|---|
-| Accepting a range edit or a composed passage | `snapshot_current` | `notes.pmn`, `sheet.json`, `timeline.json` |
+| Accepting a range edit or a composed passage; a paste (Phase 8) | `snapshot_current` | `notes.pmn`, `sheet.json`, `timeline.json`, and `source.json` (the part's entry of `project.json`: the names of its files, since Phase 8) |
 | A new transcription of a part that already has notes | `snapshot_notes` | `notes.pmn`, `sheet.json`, and a `snapshot.json` with the reason |
 
 No audio is copied: the snapshot's `timeline.json` names the stored files, and `audio_refs` counts
 them as used by the project, so they are never deleted under it.
+
+**Putting a snapshot back** (`history.restore`, `POST /time/{uuid}/versions/{n}/restore`, Phase 8:
+the undo and the redo of a paste): the current state is kept first as the next snapshot, then
+`v<n>`'s files are copied back (`copyfile`, so the notes get a new modification time and the hand
+split cache cannot serve the old split; a file the snapshot did not have is deleted), its
+`source.json` is written into `project.json`, and the derived audio of the cache is forgotten. Only
+a snapshot with a `timeline.json` can be put back.
 
 ### 4.6 `audio-mismatches.json`
 

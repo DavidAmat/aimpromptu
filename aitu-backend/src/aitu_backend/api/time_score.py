@@ -26,6 +26,8 @@ from fastapi import APIRouter, Body, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import store
+from aitu_backend.auth.dependencies import require_part
+from aitu_backend.editing import history, paste
 from aitu_backend.storage import bundle, locate
 from aitu_backend.matrix.intervals import intervals_ms
 from aitu_backend.matrix.keys import KEY_COUNT, LOWEST_MIDI
@@ -802,6 +804,104 @@ def post_transpose(audio_uuid: str, body: TransposeRequest = Body(...)) -> Trans
         taken_off=done.taken_off,
         put_back=len(done.put_back),
     )
+
+
+class PassageRef(BaseModel):
+    """What **Copy** put in the clipboard: a part and a stretch of it, in milliseconds."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    part: str
+    from_ms: float = Field(..., alias="fromMs", ge=0)
+    to_ms: float = Field(..., alias="toMs", gt=0)
+
+
+class PasteRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    source: PassageRef
+    #: Where the passage goes, in milliseconds of this part: the cursor, or the start of the marked
+    #: stretch it replaces.
+    at_ms: float = Field(..., alias="atMs", ge=0)
+    #: The end of the marked stretch the passage replaces; absent to put it in at ``atMs``.
+    replace_to_ms: float | None = Field(None, alias="replaceToMs", gt=0)
+    #: The sheet as the page holds it, unsaved edits included. Its marks move with the paste and
+    #: it is saved with it. Absent: the saved sheet.
+    sheet: SavedRhythm | None = None
+
+
+class PasteResult(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    #: The earlier state of the part the paste kept: ``POST …/versions/{n}/restore`` puts it back.
+    before_version: int = Field(..., alias="beforeVersion")
+    at_ms: float = Field(..., alias="atMs")
+    length_ms: float = Field(..., alias="lengthMs")
+    notes_in: int = Field(..., alias="notesIn")
+    notes_moved: int = Field(..., alias="notesMoved")
+    notes_removed: int = Field(..., alias="notesRemoved")
+    duration_seconds: float = Field(..., alias="durationSeconds")
+    #: The part's sheet after the paste, saved; ``None`` when it has none.
+    sheet: SavedRhythm | None = None
+
+
+@router.post("/{audio_uuid}/paste", response_model=PasteResult, response_model_by_alias=True)
+def post_paste(audio_uuid: str, body: PasteRequest = Body(...)) -> PasteResult:
+    """Put a copied passage into this part (implementation 02, plan section 12): its notes, its
+    marks and its audio, at ``atMs`` or in place of ``[atMs, replaceToMs)``; everything after moves
+    by its length. One write; the part as it was is kept as an earlier state for the undo.
+
+    The source is any part the user may read (their Personal Vault, their library, a library shared
+    with them, the Public Library); another one answers ``404``, as if it did not exist.
+    """
+    require_part(body.source.part, write=False)
+    try:
+        passage = paste.read_passage(body.source.part, body.source.from_ms, body.source.to_ms)
+        done = paste.paste(
+            audio_uuid,
+            passage,
+            at_ms=body.at_ms,
+            replace_to_ms=body.replace_to_ms,
+            sheet=body.sheet,
+        )
+    except locate.NotFound:
+        raise HTTPException(status_code=404, detail="The copied passage is not there any more.")
+    except paste.PasteError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return PasteResult(
+        before_version=done.before_version,
+        at_ms=done.at_ms,
+        length_ms=done.length_ms,
+        notes_in=done.notes_in,
+        notes_moved=done.notes_moved,
+        notes_removed=done.notes_removed,
+        duration_seconds=done.duration_seconds,
+        sheet=done.sheet,
+    )
+
+
+class RestoreResult(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    #: The state the part had just before, kept: restoring it is the redo.
+    kept_version: int = Field(..., alias="keptVersion")
+    sheet: SavedRhythm | None = None
+
+
+@router.post(
+    "/{audio_uuid}/versions/{version}/restore",
+    response_model=RestoreResult,
+    response_model_by_alias=True,
+)
+def post_restore_version(audio_uuid: str, version: int) -> RestoreResult:
+    """Put an earlier state of the part back (its notes, sheet, audio timeline and file names):
+    the undo of a paste, and with the answer's ``keptVersion`` its redo."""
+    with pipeline.piece_lock(audio_uuid):
+        try:
+            kept = history.restore(audio_uuid, version)
+        except history.NoSuchVersion as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return RestoreResult(kept_version=kept, sheet=pipeline.load_rhythm(audio_uuid))
 
 
 class PartLyrics(BaseModel):

@@ -7,6 +7,8 @@ selections and undo is [annotations.md](annotations.md). Code:
 ## The title
 
 **Pick one note and the panel is titled with its name**, in solfège: `Do 4`, `Do-# 3`, `Re-b 5`.
+The title bar has **Copy the frames of these notes** (⌘C, Phase 8: from the first note's onset to
+the end of the longest, for a **Paste**) and *Select the frames of these notes*.
 Middle C is `Do 4`, the reckoning the keyboard, the roll and every tooltip use. Pick several and the
 title counts them; the keyboard panel is where a chord is read. Under the title is the time of the
 notes in the recording.

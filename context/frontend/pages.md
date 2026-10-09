@@ -12,7 +12,7 @@ is plan section 6.3 of [implementation 02](../implementations/02-private-web-app
 |---|---|---|
 | `/login` | `LoginPage` | **Sign in**: Username, Password. Outside the shell and open to all. Returns to `?next=` (an address of this app only) |
 | `/` | | Redirects to `/projects` |
-| `/projects` | `ProjectsPage` | The Personal Vault, newest change first; **New project** (From source, Import; From scratch and From other projects later); per row Duplicate, Export, Rename, Delete (**Discard changes** and **Open the song** on an edit copy, which says **Editing**) |
+| `/projects` | `ProjectsPage` | The Personal Vault, newest change first; **New project** (From source, From scratch, Import; From other projects later); per row Duplicate, Export, Rename, Delete (**Discard changes** and **Open the song** on an edit copy, which says **Editing**) |
 | `/projects/new` | `PiecePage` | A new project, with only the Source step |
 | `/projects/:id` | `PiecePage` | Opens the project on the furthest step that is ready |
 | `/projects/:id/<step>` | `PiecePage` | One step: `source`, `audio`, `notes`, `hands` or `sheet`. **Save to library** once the Sheet step is ready; a version of My library opens read only, with **Edit** |

@@ -120,6 +120,8 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | PUT | `/time/{uuid}/notes` | Add notes to the recording, by column and row. |
 | GET PUT | `/time/{uuid}/lyrics` | The song's words saved with the part (`project.json`), for the Lyrics tab (Phase 7). |
 | POST | `/time/{uuid}/transpose` | Move every note of the part by a number of semitones; a preview counts, an undo is exact (Phase 7). |
+| POST | `/time/{uuid}/paste` | Put a copied passage (notes, marks, audio) into the part at a moment, or over a stretch; everything after moves (Phase 8). |
+| POST | `/time/{uuid}/versions/{n}/restore` | Put an earlier state of the part back: the undo and the redo of a paste (Phase 8). |
 | GET PUT DELETE | `/time/{uuid}/rhythm` | The saved reading. |
 | **Editing and composing** | `api/editing.py` | |
 | POST | `/audio/{uuid}/edits` | Open a disposable session. |
@@ -134,7 +136,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/audio/{uuid}/edits/{session}/accept` | Write it into the piece. |
 | **Projects** | `api/projects.py` | Implementation 02, Phase 5 (duplicate since Phase 3; library since Phase 6) |
 | GET | `/projects` | The current user's projects, newest change first, with the step each reached. `?layer=` repeats. |
-| POST | `/projects` | An empty project: no audio, no notes. |
+| POST | `/projects` | An empty project: no audio; with `scratch`, a blank sheet that opens on the Sheet step (From scratch, Phase 8). |
 | POST | `/projects/import` | A `.aitu` file made into a new project of the Personal Vault. |
 | GET | `/projects/{id}` | One project, as the list shows it. |
 | PATCH | `/projects/{id}` | Rename. |
@@ -708,6 +710,37 @@ note is then as it was, note for note (`tests/test_time_score_api.py`). A write 
 rises, the hands stay complete, and a saved sheet that was current stays current. `422` for
 `semitones` 0; it is a write, so a version of the Private Library answers `403`.
 
+### POST /time/{uuid}/paste
+
+**Paste** of the Sheet step (implementation 02, plan section 12, Phase 8). Body:
+
+```json
+{"source": {"part": "…", "fromMs": 20000, "toMs": 32000},
+ "atMs": 30000, "replaceToMs": null, "sheet": { …SavedRhythm… }}
+```
+
+Puts the stretch `[fromMs, toMs)` of the source part (snapped to whole columns of its sheet) into
+this part at `atMs` (snapped to a column of this part's sheet), or in place of `[atMs, replaceToMs)`
+when `replaceToMs` is given: its notes, its marks and its audio; every note, mark and second of
+audio after the insertion point moves by the passage's length. `sheet` is the sheet as the page
+holds it, unsaved edits included: the marks move in it, and it is saved by the paste; without it the
+saved sheet is used. Answers `{beforeVersion, atMs, lengthMs, notesIn, notesMoved, notesRemoved,
+durationSeconds, sheet}`: `beforeVersion` is the earlier state the paste kept (the undo), `sheet` the
+part's sheet as saved (or `null`). The rules: [`editing-and-compose.md`](editing-and-compose.md)
+section 9.
+
+The source is read with the rights of section 9.3 of the plan (`require_part(write=False)`): any
+part the user may read; another one answers `404`, the same as one that does not exist. The target
+is written: a version of the Private Library answers `403`. `409` for an empty stretch, a stretch
+pasted over that does not come after `atMs`, and a target with audio but no notes yet.
+
+### POST /time/{uuid}/versions/{n}/restore
+
+Puts the snapshot `v<n>` of the part's history back (notes, sheet, audio timeline, the names of its
+files) after keeping the current state as the next snapshot. Answers `{keptVersion, sheet}`:
+restoring `keptVersion` is the redo. `404` when the part has no such snapshot, or one that cannot be
+put back whole (a snapshot taken before a new transcription has no timeline). A write.
+
 ### GET / PUT /time/{uuid}/lyrics
 
 The words of the song as the reader pasted them in the Lyrics tab, and the lyrics pieces of its
@@ -807,7 +840,8 @@ chain is described in
             "details": {"noteCount": 1351, "engine": "muscriptor-large"}}, …],
  "resume": "sheet",
  "revisions": {"audio": 0, "notes": 1, "notesAudio": 0, "hands": 2,
-               "handsNotes": 1, "sheetHands": 2}}
+               "handsNotes": 1, "sheetHands": 2},
+ "scratch": false}
 ```
 
 - `steps` holds `source`, `audio`, `notes`, `hands`, `sheet`, in that order.
@@ -823,6 +857,10 @@ chain is described in
   opens on.
 - `revisions` are the numbers the states are computed from: `audio` (`timeline.json`), `notes`,
   `notesAudio`, `hands`, `handsNotes` (`notes.pmn`), and `sheetHands` (`sheet.json`).
+- `scratch` (Phase 8): a part made from scratch (its source is `composed`) with no audio yet. Its
+  Source and Audio steps are `missing` and the Audio tab closed ("Record or paste a passage first."),
+  `resume` is `sheet`, and the page shows only the sheet. A paste or a recorded passage that brings
+  audio ends it.
 
 The Notes step is `stale` when `notesAudio` differs from `audio` (a cut was saved after the
 transcription). The Hands step is `ready` when every live note the piano sheet places at 40 ms has a
@@ -973,8 +1011,10 @@ the Private Library since Phase 6 (§7.1).
 
 - `GET /projects?layer=vault&layer=private`: the current user's projects of those layers (default
   `vault`), newest change first.
-- `POST /projects`, body `{ "title": string }`: an empty project in the Personal Vault (no audio, no
-  notes; its status opens on Source). For From scratch (Phase 8).
+- `POST /projects`, body `{ "title": string, "scratch": bool }`: an empty project in the Personal
+  Vault, with no audio. Without `scratch` it has no notes either and its status opens on Source.
+  With `scratch` (**From scratch**, Phase 8) its part's source is `composed`, it has an empty
+  `notes.pmn` at `frameMs` 40, and its status is `scratch` and opens on the Sheet step.
 - `PATCH /projects/{id}`, body `{ "title": string }` (1 to 300 characters, trimmed; `422` when
   empty).
 - `DELETE /projects/{id}` answers `204`. The bundle, the history, the temporary files (a video and its

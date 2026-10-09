@@ -85,7 +85,8 @@ try {
   await fromSource.waitFor();
   const scratchDisabled = await page.getByRole('menuitem', { name: /From scratch/ }).getAttribute('aria-disabled');
   const otherDisabled = await page.getByRole('menuitem', { name: /From other projects/ }).getAttribute('aria-disabled');
-  check('New project offers From source, and From scratch and From other projects not yet', scratchDisabled === 'true' && otherDisabled === 'true');
+  // From scratch since Phase 8 (its own walk is `check:paste`); From other projects in Phase 10.
+  check('New project offers From source and From scratch, and From other projects not yet', scratchDisabled !== 'true' && otherDisabled === 'true');
   check('New project offers Import', (await page.getByRole('menuitem', { name: /Import/ }).count()) === 1);
   await shot('01-new-project-menu');
   await fromSource.click();

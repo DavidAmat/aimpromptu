@@ -75,7 +75,9 @@ file is deleted only when no project uses it, and nothing deletes one from the P
 now the gap between two **segments** of the part's timeline (one stored file, several ranges of
 it), with the `audioRevision` beside them. **Add audio** (Phase 5) puts another file at the end:
 the timeline then lists its files in order (`sources`), the Audio step shows them end to end, and a
-cut may cross the join. When a project is saved to the Private Library (Phase 6), each file it
+cut may cross the join. A pasted passage (Phase 8) is one more entry of that list: a range of
+another stored file, put in where it was pasted (a file it lands inside comes twice, once on each
+side of it), so a paste copies no audio. When a project is saved to the Private Library (Phase 6), each file it
 uses only in part is written again with only the ranges in use (a new FLAC file of the kept ranges;
 the timeline then has no cut, and nothing the user hears or reads moves), and the old file is
 deleted once no project uses it (Q-3). In the Personal Vault nothing is deleted, so every cut can

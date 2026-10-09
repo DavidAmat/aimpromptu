@@ -31,6 +31,7 @@ from aitu_backend.db.database import session
 from aitu_backend.db.models import Project
 from aitu_backend.db.users import current_user_id
 from aitu_backend.library import flow, rows
+from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.storage import bundle, exchange, locate
 from aitu_backend.transcription import jobs, pipeline
 from aitu_backend.video import store as video_store
@@ -97,6 +98,9 @@ class DuplicateIn(_Camel):
 
 class CreateIn(_Camel):
     title: str = Field("", max_length=300)
+    #: **From scratch** (section 10.3): a blank piano sheet, with no notes and no audio yet, that
+    #: opens on the Sheet step. Without it the project waits for its source.
+    scratch: bool = False
 
 
 class RenameIn(_Camel):
@@ -214,8 +218,20 @@ def list_projects(
 
 @router.post("", response_model=ProjectRow, response_model_by_alias=True, status_code=201)
 def create_project(body: CreateIn | None = None) -> ProjectRow:
-    """An empty project in the Personal Vault: no audio, no notes (From scratch, section 10.3)."""
-    project = bundle.create_project(owner_id=current_user_id(), title=(body.title if body else ""))
+    """An empty project in the Personal Vault: no audio. With ``scratch`` it is **From scratch**
+    (section 10.3): an empty ``notes.pmn`` at the default frame length, so it opens on a blank
+    piano sheet, filled by Record and Paste."""
+    title = body.title if body else ""
+    if body is not None and body.scratch:
+        project = bundle.create_project(
+            owner_id=current_user_id(),
+            title=title,
+            source=bundle.PartSource(kind="composed", format="wav"),
+            frame_ms=DEFAULT_FRAME_MS,
+        )
+        pipeline.save_note_events(project.parts[0].id, [], 0.0, title)
+    else:
+        project = bundle.create_project(owner_id=current_user_id(), title=title)
     return _row(_project_or_404(project.id))
 
 
