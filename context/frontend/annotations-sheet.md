@@ -25,8 +25,9 @@ main figure) by **Transpose**, and added **Lyrics**.
 ## Transpose
 
 Two kinds, chosen at the top of the tab. Neither changes anything until the dialog's **Transpose**:
-**Preview** opens one dialog with the piano sheet as it would be, a few lines saying what changes,
-and **Transpose** or **Cancel**. Each transposition is then one undo step.
+**Preview** opens one dialog with the piano sheet as it would be and **Transpose** or **Cancel**;
+a line of text is added only when it changes the decision (notes that would leave the keyboard,
+marks that would be removed). Each transposition is then one undo step.
 
 **Notes.** Two small keyboards, **From** and **To** (both on Do 4 at first; the name of a key is on
 its tooltip, in Spanish). The interval between the two keys ("Up 2 semitones") moves **every note

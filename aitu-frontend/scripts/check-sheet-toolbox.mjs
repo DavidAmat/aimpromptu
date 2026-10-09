@@ -135,7 +135,7 @@ try {
     await toolbox().locator('[data-transpose-preview=notes]').click();
     await page.locator('[data-transpose-dialog] [data-transpose-sheet] .grid-onset-group').first().waitFor({ timeout: 60000 });
     const facts = await page.locator('[data-transpose-fact]').allTextContents();
-    check('the preview says what moves and how the key moves', facts.some((fact) => fact.includes('note')) && facts.some((fact) => fact.startsWith('The key moves')), facts.join(' | '));
+    check('the preview is the sheet alone, with no line of text when nothing leaves the keyboard', facts.length === 0, facts.join(' | '));
     check('the preview writes nothing', JSON.stringify(await notesOf(id)) === JSON.stringify(notesBefore));
     await shot('01-transpose-notes-preview');
     await page.locator('[data-transpose-confirm]').click();
@@ -167,7 +167,7 @@ try {
     await page.locator('[data-transpose-dialog] [data-transpose-sheet] .grid-onset-group').first().waitFor({ timeout: 60000 });
     await shot('03-transpose-figures-preview');
     const figureFacts = await page.locator('[data-transpose-fact]').allTextContents();
-    check('the figures preview says every figure becomes shorter', figureFacts.some((fact) => fact.includes('one step shorter')), figureFacts.join(' | '));
+    check('the figures preview is the sheet alone when nothing is removed', figureFacts.length === 0, figureFacts.join(' | '));
     await page.locator('[data-transpose-confirm]').click();
     await page.waitForTimeout(2000);
     await saveSheet();

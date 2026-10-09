@@ -42,7 +42,6 @@ import ScorePdfDialog from "../../../components/time/ScorePdfDialog";
 import ComposePassagePanel from "../../../components/editing/ComposePassagePanel";
 import CheckIcon from "@mui/icons-material/Check";
 import {
-  KEY_LABELS,
   timeScoreApi,
   type DefaultReading,
   type FigureName,
@@ -65,10 +64,8 @@ import {
   type OttavaAnnotation,
   type OttavaResizeChange,
 } from "@aimpromptu/grid-notation";
-import { spanishNoteShort } from "../../../music/noteNames";
 import {
   figureSteps,
-  intervalWords,
   shiftFigure,
   transposeKey,
   transposeKeyChanges,
@@ -186,9 +183,6 @@ function clearOfClefChanges(
     return [next ? { ...span, toColumn: next.fromColumn } : span];
   });
 }
-
-/** The major key a signature is named by: "D major". */
-const majorName = (key: KeySignatureName) => KEY_LABELS[key].split(" / ")[0]!;
 
 /** A transposition waiting in its preview dialog for **Transpose** or **Cancel**. */
 type TransposePreview =
@@ -1641,14 +1635,12 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    * the keyboard, and draws the sheet with the notes moved, writing nothing.
    */
   const previewNotes = useCallback(
-    async (semitones: number, from: number, to: number) => {
+    async (semitones: number) => {
       if (!audioUuid || anchorMs === null) return;
       const moved = notesMarksMoved(semitones);
-      const facts = [
-        `${intervalWords(semitones)}: ${spanishNoteShort(from)} becomes ${spanishNoteShort(to)}.`,
-        `The key moves from ${majorName(keySignature)} to ${majorName(moved.keySignature)}.`,
-      ];
-      setTransposePreview({ kind: "notes", semitones, facts, sheet: null, error: null });
+      // The sheet says what changes. A line is added only where it changes the decision: notes the
+      // keyboard cannot hold (below).
+      setTransposePreview({ kind: "notes", semitones, facts: [], sheet: null, error: null });
       setPreviewing(true);
       try {
         const [counts, previewScore] = await Promise.all([
@@ -1666,7 +1658,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
           }),
         ]);
         const counted = [
-          `${counts.moved} note${counts.moved === 1 ? "" : "s"} move.`,
           ...(counts.outside > 0
             ? [
                 `${counts.outside} note${counts.outside === 1 ? "" : "s"} would leave the keyboard and ${
@@ -1713,7 +1704,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       frameMs,
       stretches,
       dropDecorative,
-      keySignature,
       notesMarksMoved,
       previewSheetOf,
       drawnMarks,
@@ -1739,9 +1729,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         if (moved) nextOverrides[key] = moved;
         else overridesRemoved += 1;
       }
-      const words = `${Math.abs(steps) === 1 ? "one step" : `${Math.abs(steps)} steps`} ${
-        steps < 0 ? "shorter" : "longer"
-      }`;
       setTransposePreview({
         kind: "figures",
         to,
@@ -1749,7 +1736,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         overrides: nextOverrides,
         beamBreaks,
         beamJoins,
-        facts: [`Every figure becomes ${words}. No note moves.`],
+        facts: [],
         sheet: null,
         error: null,
       });
@@ -2538,7 +2525,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         sheetZoom={sheetZoom}
         setSheetZoom={setSheetZoom}
         transposing={previewing}
-        onPreviewNotes={(semitones, from, to) => void previewNotes(semitones, from, to)}
+        onPreviewNotes={(semitones) => void previewNotes(semitones)}
         onPreviewFigures={(from, to) => void previewFigures(from, to)}
         pickedLyrics={pickedLyrics}
         setPickedLyrics={setPickedLyrics}

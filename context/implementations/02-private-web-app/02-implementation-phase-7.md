@@ -221,6 +221,13 @@ unsaved dot ignores the pool (`sameSheet`), its Save no longer sends it, and **R
 One backend test (the pool saved, absent keeps it, a sheet saved without it keeps the older one);
 `check:lyrics` checks the button comes back after a pool change and the pool after a reload.
 
+**Ninth review: the preview is the sheet.** The user found the dialog's lines ("Down 1 semitone: Do#
+4 becomes Do 4.", "The key moves from Db major to C major.", "1292 notes move.") of no use to a
+reader, who sees all of it on the sheet. They are gone, and "Every figure becomes one step shorter"
+of the figures preview too. A line is shown only where it changes the decision: notes that would
+leave the keyboard (taken off the page), and marks a figures transposition would remove.
+`check:transpose` checks the dialog holds no text when neither applies (shot 01).
+
 # 4. Story 7.3: keys and clefs of passages
 
 ## 4.1 Key for this passage
