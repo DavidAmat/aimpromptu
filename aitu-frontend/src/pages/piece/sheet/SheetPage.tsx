@@ -466,6 +466,14 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   const [transposing, setTransposing] = useState(false);
   /** The lyrics pieces picked in the Lyrics tab, by their first frame. */
   const [pickedLyrics, setPickedLyrics] = useState<readonly number[]>([]);
+  /**
+   * The words of the song saved with the part (**Save lyrics**, `project.json`), the lyrics field
+   * as it is being edited (`null` until it is touched: it shows the saved words), and the save.
+   * Not an edit of the sheet: no undo, and the sheet's own Save does not carry it.
+   */
+  const [songLyrics, setSongLyrics] = useState<{ forPart: string; text: string | null } | null>(null);
+  const [lyricsDraft, setLyricsDraft] = useState<{ forPart: string; text: string } | null>(null);
+  const [savingLyrics, setSavingLyrics] = useState(false);
 
   /**
    * Everything read for one (piece, hand, resolution), kept together under the key it belongs to.
@@ -708,6 +716,38 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     return () => controller.abort();
   }, [audioUuid, editsKey, resetEdits]);
 
+  // The lyrics saved with the part, once per part. A failure leaves the field empty.
+  useEffect(() => {
+    if (!audioUuid || readOnly) return;
+    const controller = new AbortController();
+    timeScoreApi
+      .lyrics(audioUuid, controller.signal)
+      .then((found) => setSongLyrics({ forPart: audioUuid, text: found.text }))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [audioUuid, readOnly]);
+
+  const savedLyricsText =
+    songLyrics && songLyrics.forPart === audioUuid ? songLyrics.text : null;
+  const lyricsFieldText =
+    lyricsDraft && lyricsDraft.forPart === audioUuid ? lyricsDraft.text : (savedLyricsText ?? "");
+  const saveSongLyrics = useCallback(
+    async (text: string) => {
+      if (!audioUuid) return;
+      setSavingLyrics(true);
+      try {
+        const saved = await timeScoreApi.saveLyrics(audioUuid, text);
+        setSongLyrics({ forPart: audioUuid, text: saved.text });
+        setLyricsDraft({ forPart: audioUuid, text: saved.text ?? "" });
+      } catch (caught) {
+        setMoveRefused(readable(caught, "Could not save the lyrics."));
+      } finally {
+        setSavingLyrics(false);
+      }
+    },
+    [audioUuid],
+  );
+
   /**
    * Both of these have to keep the same identity between renders.
    *
@@ -945,6 +985,9 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     lyricsModeNow.current = lyricsMode;
     lyricsNow.current = lyrics;
   }, [lyricsMode, lyrics]);
+
+  /** A press on the sheet but not on a lyrics piece, or Escape: every piece is plain text again. */
+  const clearPickedLyrics = useCallback(() => setPickedLyrics([]), []);
 
   /** A lyrics piece was clicked: the Lyrics tab opens on it, picked (Command-click adds it). */
   const pickLyric = useCallback((fromColumn: number, additive: boolean) => {
@@ -1344,6 +1387,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       if (event.key !== "Escape") return;
       closeFrames();
       closeNotes();
+      // A picked lyrics piece goes back to plain text.
+      setPickedLyrics([]);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -2407,6 +2452,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
               onLyricPlace={readOnly ? undefined : placeLyric}
               onLyricSelect={readOnly ? undefined : pickLyric}
               selectedLyrics={lyricsMode ? pickedLyrics : undefined}
+              onLyricsClear={readOnly ? undefined : clearPickedLyrics}
               zoom={sheetZoom}
               onZoomChange={setSheetZoom}
               cueRanges={cueRanges}
@@ -2458,6 +2504,13 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         pickedLyrics={pickedLyrics}
         setPickedLyrics={setPickedLyrics}
         onRefused={setMoveRefused}
+        lyricsField={{
+          pasted: lyricsFieldText,
+          setPasted: (text) => setLyricsDraft({ forPart: audioUuid, text }),
+          savedText: savedLyricsText,
+          saving: savingLyrics,
+          onSave: (text) => void saveSongLyrics(text),
+        }}
       />
 
       <TransposeDialog

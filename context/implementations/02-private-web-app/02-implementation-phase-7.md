@@ -140,6 +140,24 @@ which covers Spanish and Catalan) is self-hosted in `public/fonts/lora-italic.wo
 sheet shows the words in Times Italic. A picked piece is `#e5e8ec` with a 1.5 px `#5b6b82` outline
 (the `<style>` rule of `TimeScoreView`). `check:lyrics` passes again; shots 07 to 12 are retaken.
 
+**Second review, the same day.** The user asked for the words alone: no block at rest, the block
+(and what resizes it) only while a piece is picked, and plain text again on Escape or a click
+elsewhere. So `LYRIC_BOX_FILL` is now `transparent` (the block still takes the pointer); the page
+draws, by CSS, a faint `#f4f5f7` block under a pointer resting on a piece, and for a picked piece
+`#f1f2f4` with a 1 px `#8592a6` outline and the grip of the right edge shown as a bar. The corner
+marks of a lyric are left off (`[data-kind="lyric"]`): the words are what a reader clicks. Escape
+and a press on the sheet anywhere but a piece (`onLyricsClear`) let the pieces go. `check:lyrics`
+checks the four states.
+
+**Save lyrics** (asked in the same review): the Lyrics tab's field is the song's words, saved with
+the part by `PUT /time/{uuid}/lyrics` into `parts[].lyrics` of `project.json` (not `sheet.json`,
+which **Remove all** and a new transcription delete), read back by `GET` when the page opens. The
+button is first, beside **Add to the pool**; it reads **Lyrics saved** when the field holds what is
+saved. **Add to the pool** no longer empties the field. The draft is held by the page, so it
+outlives a change of tab. Not an edit of the sheet: no undo, and the sheet's **Save** does not carry
+it. A backend test checks the save, the trim, `null` for an empty text, and that the words outlive
+`DELETE /time/{uuid}/rhythm`.
+
 # 4. Story 7.3: keys and clefs of passages
 
 ## 4.1 Key for this passage

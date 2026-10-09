@@ -363,6 +363,23 @@ export const timeScoreApi = {
     });
   },
 
+  /** The lyrics saved with the part (the Lyrics tab's **Save lyrics**), or `null`. */
+  lyrics(audioUuid: string, signal?: AbortSignal) {
+    return request<{ text: string | null }>(`/time/${audioUuid}/lyrics`, { signal });
+  },
+
+  /**
+   * Save the pasted lyrics with the part (`project.json`, not `sheet.json`, so they outlive Remove
+   * all and a new transcription). An empty text removes them.
+   */
+  saveLyrics(audioUuid: string, text: string, signal?: AbortSignal) {
+    return request<{ text: string | null }>(`/time/${audioUuid}/lyrics`, {
+      method: "PUT",
+      body: { text },
+      signal,
+    });
+  },
+
   /**
    * Move every note of the part by `semitones` (sheet toolbox, Transpose → Notes). Written onto
    * the recording: the notes change, no time moves, each note keeps its hand. A note that would

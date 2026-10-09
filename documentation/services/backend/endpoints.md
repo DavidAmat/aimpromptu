@@ -118,6 +118,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | PUT | `/time/{uuid}/hands` | Correct which hand plays a note. Written by note id since implementation 08. |
 | PUT | `/time/{uuid}/removed` | Mark notes as removed from the page, by column and row. |
 | PUT | `/time/{uuid}/notes` | Add notes to the recording, by column and row. |
+| GET PUT | `/time/{uuid}/lyrics` | The song's words saved with the part (`project.json`), for the Lyrics tab (Phase 7). |
 | POST | `/time/{uuid}/transpose` | Move every note of the part by a number of semitones; a preview counts, an undo is exact (Phase 7). |
 | GET PUT DELETE | `/time/{uuid}/rhythm` | The saved reading. |
 | **Editing and composing** | `api/editing.py` | |
@@ -706,6 +707,15 @@ note is then as it was, note for note (`tests/test_time_score_api.py`). A write 
 `pipeline.save_edit` with `notes_changed`, `hands_changed` and `sheet_follows`: the notes revision
 rises, the hands stay complete, and a saved sheet that was current stays current. `422` for
 `semitones` 0; it is a write, so a version of the Private Library answers `403`.
+
+### GET / PUT /time/{uuid}/lyrics
+
+The words of the song as the reader pasted them in the Lyrics tab and pressed **Save lyrics**
+(implementation 02, Phase 7). Body and answer: `{"text": "…"}`, at most 20,000 characters, trimmed;
+an empty text saves `null`. Stored as `parts[].lyrics` in `project.json`, not in `sheet.json`, so
+they outlive **Remove all** (`DELETE /time/{uuid}/rhythm`) and a new transcription, and travel with
+a duplicate, an edit copy, a Replace and an export. Nothing else of the project changes. `PUT` is a
+write: a version of the Private Library answers `403`.
 
 ### GET / PUT / DELETE /time/{uuid}/rhythm
 

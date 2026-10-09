@@ -711,7 +711,9 @@ def test_a_notes_transposition_moves_every_note_and_nothing_in_time(client, tran
     done = client.post(f"/time/{transcribed}/transpose", json={"semitones": 2}).json()
     assert done == {"moved": len(before), "outside": 0, "held": [], "takenOff": [], "putBack": 0}
     after = _notes_by_id(transcribed)
-    assert {key: (midi - 2, removed, hand) for key, (midi, removed, hand) in after.items()} == before
+    assert {
+        key: (midi - 2, removed, hand) for key, (midi, removed, hand) in after.items()
+    } == before
     assert pipeline.load_note_events(transcribed).header.notes_revision == header.notes_revision + 1
 
     moved = client.get(f"/time/{transcribed}/score", params={"anchorMs": 337.0}).json()
@@ -755,3 +757,18 @@ def test_the_preview_sheet_draws_the_moved_notes_and_writes_nothing(client, tran
 def test_a_transposition_by_nothing_is_refused(client, transcribed):
     answer = client.post(f"/time/{transcribed}/transpose", json={"semitones": 0})
     assert answer.status_code == 422
+
+
+# --------------------------------------------------------------------------- the song's lyrics
+
+
+def test_the_lyrics_are_saved_with_the_part_and_outlive_remove_all(client, transcribed):
+    """**Save lyrics** (Phase 7): the pasted words are kept in project.json, not in sheet.json."""
+    assert client.get(f"/time/{transcribed}/lyrics").json() == {"text": None}
+    words = "Tinc un cel\ni un infern a dins"
+    saved = client.put(f"/time/{transcribed}/lyrics", json={"text": f"  {words}\n"})
+    assert saved.status_code == 200
+    assert saved.json() == {"text": words}
+    client.delete(f"/time/{transcribed}/rhythm")
+    assert client.get(f"/time/{transcribed}/lyrics").json() == {"text": words}
+    assert client.put(f"/time/{transcribed}/lyrics", json={"text": "  "}).json() == {"text": None}

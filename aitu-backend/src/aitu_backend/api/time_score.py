@@ -26,6 +26,7 @@ from fastapi import APIRouter, Body, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import store
+from aitu_backend.storage import bundle, locate
 from aitu_backend.matrix.intervals import intervals_ms
 from aitu_backend.matrix.keys import KEY_COUNT, LOWEST_MIDI
 from aitu_backend.matrix.ladder import (
@@ -801,6 +802,48 @@ def post_transpose(audio_uuid: str, body: TransposeRequest = Body(...)) -> Trans
         taken_off=done.taken_off,
         put_back=len(done.put_back),
     )
+
+
+class PartLyrics(BaseModel):
+    """The words of the song attached to a part (sheet toolbox, Lyrics tab)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    #: ``None`` or an empty text: no lyrics saved.
+    text: str | None = Field(None, max_length=20000)
+
+
+@router.get("/{audio_uuid}/lyrics", response_model=PartLyrics, response_model_by_alias=True)
+def get_part_lyrics(audio_uuid: str) -> PartLyrics:
+    """The lyrics saved with this part, so the Lyrics tab opens with them (Phase 7)."""
+    project = _project_of_part(audio_uuid)
+    return PartLyrics(text=project.part(audio_uuid).lyrics)
+
+
+@router.put("/{audio_uuid}/lyrics", response_model=PartLyrics, response_model_by_alias=True)
+def put_part_lyrics(audio_uuid: str, body: PartLyrics = Body(...)) -> PartLyrics:
+    """Save the pasted lyrics with the part, in ``project.json``: **Save lyrics** of the Lyrics tab.
+
+    The song's words, not a reading of the page, so they are kept apart from ``sheet.json`` and
+    outlive **Remove all** and a new transcription. Nothing else of the project changes; the
+    notes, the hands and the sheet stay current. A version of the Private Library answers ``403``.
+    """
+    text = (body.text or "").strip() or None
+    project = _project_of_part(audio_uuid)
+    with bundle.project_lock(project.id):
+        project = bundle.read_project(project.id)
+        project.part(audio_uuid).lyrics = text
+        bundle.write_project(project)
+    return PartLyrics(text=text)
+
+
+def _project_of_part(audio_uuid: str):
+    if not store.exists(audio_uuid):
+        raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
+    try:
+        return bundle.read_project(locate.part(audio_uuid).project_id)
+    except locate.NotFound:
+        raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'") from None
 
 
 class ScoreRequest(BaseModel):

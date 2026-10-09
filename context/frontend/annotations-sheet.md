@@ -46,15 +46,17 @@ many. Command-Z brings them back exactly.
 
 ## Lyrics
 
-**Paste the lyrics**, then **Add to the pool**: each line is a **lyrics piece** in the pool, listed
-in the tab. A piece is **dragged from the pool onto the sheet**: it starts on the frame under the
+**Paste the lyrics**, then **Save lyrics**: the words are kept with the part (in `project.json`,
+so they outlive **Remove all** and a new transcription) and the field opens with them every time.
+**Add to the pool** makes each line a **lyrics piece** in the pool, listed in the tab. A piece is **dragged from the pool onto the sheet**: it starts on the frame under the
 pointer and is held for about as long as its words take (120 ms a character), never past the next
 piece. On the sheet, drag a piece to move it (its left edge snaps to the nearest frame, on any line,
 and it keeps its length), drag up or down to lift it over high notes, and pull its right edge to the
 frame it should end on. A piece always starts and ends on a frame, which is what Play mode shows it
-by. A piece is drawn as words in a serif italic (Lora, self-hosted; Times Italic in the
-PDF) in a soft charcoal on a light gray block with no border; a picked piece is a shade darker with
-a thin slate outline. Two pieces never share a frame; a move onto another piece is refused and said.
+by. A piece is **plain text** on the page: a serif italic (Lora, self-hosted; Times Italic
+in the PDF) in a soft charcoal, with no block and no corner marks. Pointing at it shows its block
+faintly; a picked piece shows the block, a thin outline and a grip on its right edge, to move or
+resize it. Escape, or a click elsewhere on the sheet, lets it go and it is plain text again. Two pieces never share a frame; a move onto another piece is refused and said.
 
 While the tab is open, a click on a piece picks it, Command-click adds one, and marking a stretch
 above the staves picks every piece over it. For the picked pieces:

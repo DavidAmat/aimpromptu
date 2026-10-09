@@ -379,8 +379,13 @@ export interface TimeScoreViewProps {
   onLyricPlace?: (change: LyricPlaceChange) => void;
   /** A lyrics piece was clicked; `additive` when Command (Control) was held. */
   onLyricSelect?: (fromColumn: number, additive: boolean) => void;
-  /** The lyrics pieces picked, by their first frame: drawn with a stronger outline. */
+  /**
+   * The lyrics pieces picked, by their first frame. A piece is plain text on the page; a picked one
+   * shows its block (a background, an outline and the grip of its right edge) to move or resize.
+   */
   selectedLyrics?: readonly number[];
+  /** A press on the sheet anywhere but on a lyrics piece: the pieces are let go. */
+  onLyricsClear?: () => void;
   /**
    * The clef changes the left hand's high runs ask for (the clef rule of the drawing package,
    * plan section 11.7), reported on every build and never applied here.
@@ -473,6 +478,7 @@ export function TimeScoreView({
   onLyricPlace,
   onLyricSelect,
   selectedLyrics,
+  onLyricsClear,
   onClefSuggestion,
   zoom = MIN_ZOOM,
   onZoomChange,
@@ -530,6 +536,10 @@ export function TimeScoreView({
   useEffect(() => {
     reportLyricSelect.current = onLyricSelect;
   }, [onLyricSelect]);
+  const reportLyricsClear = useRef(onLyricsClear);
+  useEffect(() => {
+    reportLyricsClear.current = onLyricsClear;
+  }, [onLyricsClear]);
   const reportClefSuggestion = useRef(onClefSuggestion);
   useEffect(() => {
     reportClefSuggestion.current = onClefSuggestion;
@@ -1377,23 +1387,30 @@ export function TimeScoreView({
             ref={host}
             onPointerDownCapture={(event) => {
               pressAdds.current = event.metaKey || event.ctrlKey;
+              if (!(event.target as Element | null)?.closest?.(".grid-lyric")) {
+                reportLyricsClear.current?.();
+              }
             }}
             sx={readOnly ? { pointerEvents: "none" } : undefined}
           />
           {/*
-            The picked lyrics pieces, outlined by a rule on their first frame. A style rather than
-            an attribute on the drawing, so a redraw the page did not ask for (a re-wrap) keeps it.
+            A lyrics piece is plain text. Pointing at it shows its block faintly, so it reads as
+            something to take hold of; a picked piece shows the block, a thin outline and the grip
+            of its right edge, to move or resize it. Its corner marks are left off: the words are
+            what a reader clicks. Styles rather than attributes on the drawing, so a redraw the
+            page did not ask for (a re-wrap) keeps them.
           */}
-          {selectedLyrics && selectedLyrics.length > 0 ? (
-            <style>
-              {selectedLyrics
+          <style>
+            {`.grid-range-marker-layer [data-kind="lyric"]{display:none}` +
+              (readOnly ? "" : `.grid-lyric:hover .grid-lyric-box{fill:#f4f5f7}`) +
+              (selectedLyrics ?? [])
                 .map(
                   (column) =>
-                    `.grid-lyric[data-from-column="${column}"] .grid-lyric-box{fill:#e5e8ec;stroke:#5b6b82;stroke-width:1.5}`,
+                    `.grid-lyric[data-from-column="${column}"] .grid-lyric-box{fill:#f1f2f4;stroke:#8592a6;stroke-width:1}` +
+                    `.grid-lyric[data-from-column="${column}"] .grid-lyric-grip{fill:#8592a6;fill-opacity:0.45}`,
                 )
                 .join("")}
-            </style>
-          ) : null}
+          </style>
 
           {/*
             The two ends of the marked stretch, as things you can take hold of.

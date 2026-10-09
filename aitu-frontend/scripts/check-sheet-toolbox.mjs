@@ -250,7 +250,13 @@ try {
     check('words saved before are read as a placed piece', await hasLyric('old words'));
 
     await openTab('Lyrics');
-    await page.locator('[data-lyrics-paste]').fill('first line of words\nsecond line\n\nthird line here');
+    const pastedLyrics = 'first line of words\nsecond line\n\nthird line here';
+    await page.locator('[data-lyrics-paste]').fill(pastedLyrics);
+    await toolbox().locator('[data-lyrics-save]').click();
+    await page.waitForTimeout(800);
+    const savedLyrics = await json(`${api}/time/${id}/lyrics`);
+    check('Save lyrics keeps them with the part', savedLyrics.text === pastedLyrics, JSON.stringify(savedLyrics.text));
+    check('and the button says so', ((await toolbox().locator('[data-lyrics-save]').textContent()) ?? '').includes('Lyrics saved'));
     await toolbox().locator('[data-lyrics-add]').click();
     check('each pasted line is a piece of the pool', (await toolbox().locator('[data-lyrics-piece]').count()) === 3);
     await shot('07-lyrics-pool');
@@ -311,6 +317,27 @@ try {
     await (await lyricNamed('second line')).locator('.grid-lyric-box').click({ modifiers: ['ControlOrMeta'] });
     check('Command-click picks a second piece', (await toolbox().locator('[data-lyrics-picked]').getAttribute('data-lyrics-picked')) === '2');
     await shot('09-lyrics-picked');
+    // The browser reports a transparent fill as `rgba(0, 0, 0, 0)`.
+    const boxFill = async (words) =>
+      (await lyricNamed(words)).locator('.grid-lyric-box').evaluate((box) => {
+        const fill = getComputedStyle(box).fill;
+        return fill === 'rgba(0, 0, 0, 0)' || fill === 'none' ? 'transparent' : fill;
+      });
+    check('a piece not picked is plain text, with no block drawn', (await boxFill('old words')) === 'transparent', await boxFill('old words'));
+    check('a picked piece shows its block', (await boxFill('second line')) !== 'transparent', await boxFill('second line'));
+    await page.keyboard.press('Escape');
+    // Off the piece, so the faint hint drawn under a pointer resting on it does not count.
+    await page.mouse.move(5, 5);
+    await page.waitForTimeout(300);
+    check('Escape lets the pieces go, back to plain text',
+      (await toolbox().locator('[data-lyrics-picked]').count()) === 0 && (await boxFill('second line')) === 'transparent');
+    await (await lyricNamed('first line of words')).locator('.grid-lyric-box').click();
+    const staff = await page.locator('.grid-frame-ruler').nth(1).boundingBox();
+    await page.mouse.click(staff.x + staff.width * 0.6, staff.y + staff.height + 120);
+    await page.waitForTimeout(300);
+    check('a click elsewhere on the sheet lets it go too', (await boxFill('first line of words')) === 'transparent');
+    await (await lyricNamed('first line of words')).locator('.grid-lyric-box').click();
+    await (await lyricNamed('second line')).locator('.grid-lyric-box').click({ modifiers: ['ControlOrMeta'] });
     await page.getByTestId('lyrics-merge').click();
     await page.waitForTimeout(1200);
     const merged = await lyricNamed('first line of words second line');
@@ -370,6 +397,7 @@ try {
     const reread = await lyricNamed('first line');
     check('read back after a reload, a saved piece draws as it did (one line)', reread !== null && (await reread.getAttribute('data-lines')) === '1');
     await openTab('Lyrics');
+    check('opened again, the Lyrics tab shows the saved lyrics', (await page.locator('[data-lyrics-paste]').inputValue()) === pastedLyrics);
     await shot('12-lyrics-dark');
     await page.evaluate(() => localStorage.removeItem('mui-mode'));
   }

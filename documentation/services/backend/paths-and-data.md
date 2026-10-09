@@ -95,6 +95,7 @@ The functions that read and write a bundle are in `storage/bundle.py`: `create_p
 | `origin` | What it was made from: `{"duplicateOf": id}`, `{"importedFrom": id}`, later the passages of From other projects |
 | `basedOn` | The library project a vault project edits (plan section 10.6) |
 | `parts[].subheader` | The title between the parts of an integrated playlist |
+| `parts[].lyrics` | The words of the song saved in the Lyrics tab of the Sheet step (**Save lyrics**, Phase 7), one line per lyrics piece; absent until saved. Here rather than in `sheet.json` so they outlive **Remove all** and a new transcription |
 | `parts[].source` | Where the part's audio came from: `kind` (`upload`, `recording`, `youtube`, `segment`, `composed`), the extension of the file, its original name, its length and rate after normalization, the YouTube link, the lineage of a segment. These describe the **first** file |
 | `parts[].source.files` | Every file of the part's audio in the order of the axis (Phase 5): `audio` (the hash), `name` (what the Source step shows; the file's name or the video's title at first), `kind`, `format`, `originalFilename`, `durationSeconds`, `url`. Written once a file is added, named, moved or removed; absent before, when the one file is described by the fields above (`bundle.source_files`) |
 

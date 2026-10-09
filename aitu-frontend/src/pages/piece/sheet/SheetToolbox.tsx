@@ -75,6 +75,7 @@ export function SheetToolbox({
   pickedLyrics,
   setPickedLyrics,
   onRefused,
+  lyricsField,
 }: {
   open: boolean;
   onClose: () => void;
@@ -99,6 +100,14 @@ export function SheetToolbox({
   setPickedLyrics: Dispatch<SetStateAction<readonly number[]>>;
   /** Something asked of a lyrics piece could not be done: said once, in words. */
   onRefused: (why: string) => void;
+  /** The lyrics field of the Lyrics tab and the lyrics saved with the part. */
+  lyricsField: {
+    pasted: string;
+    setPasted: (text: string) => void;
+    savedText: string | null;
+    saving: boolean;
+    onSave: (text: string) => void;
+  };
 }) {
   return (
     <Toolbox
@@ -133,6 +142,11 @@ export function SheetToolbox({
             setPool={set.lyricsPool}
             setPicked={setPickedLyrics}
             onRefused={onRefused}
+            pasted={lyricsField.pasted}
+            setPasted={lyricsField.setPasted}
+            savedText={lyricsField.savedText}
+            savingText={lyricsField.saving}
+            onSaveText={lyricsField.onSave}
           />
         ) : null}
         {tab === "layout" ? (

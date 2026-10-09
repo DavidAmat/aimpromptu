@@ -1,7 +1,8 @@
 /**
  * The **Lyrics** tab of the sheet toolbox (plan section 11.5).
  *
- * Paste the lyrics; each line becomes a **lyrics piece** in the **pool**. A piece is dragged from
+ * Paste the lyrics and **Save lyrics**: they are kept with the part and the field opens with them
+ * every time. **Add to the pool** makes each line a **lyrics piece** in the **pool**. A piece is dragged from
  * the pool and dropped on the sheet, where it snaps to the frame under it; on the sheet it is
  * moved (it snaps again) and its right edge pulled to the frame it should end on. While this tab
  * is open a click on a piece picks it (Command-click adds one), and marking a stretch above the
@@ -45,6 +46,11 @@ export function LyricsTab({
   setPool,
   setPicked,
   onRefused,
+  pasted,
+  setPasted,
+  savedText,
+  savingText,
+  onSaveText,
 }: {
   lyrics: readonly LyricLine[];
   pool: readonly string[];
@@ -54,8 +60,15 @@ export function LyricsTab({
   setPool: Dispatch<SetStateAction<readonly string[]>>;
   setPicked: Dispatch<SetStateAction<readonly number[]>>;
   onRefused: (why: string) => void;
+  /** What is in the lyrics field; held by the page, so a draft outlives a change of tab. */
+  pasted: string;
+  setPasted: (text: string) => void;
+  /** The lyrics saved with the part, or `null` when none are. */
+  savedText: string | null;
+  savingText: boolean;
+  onSaveText: (text: string) => void;
 }) {
-  const [pasted, setPasted] = useState("");
+  const unsavedText = pasted.trim() !== (savedText ?? "").trim();
   const [draft, setDraft] = useState<{ forFrom: number; text: string } | null>(null);
   const field = useRef<HTMLTextAreaElement | null>(null);
 
@@ -114,20 +127,29 @@ export function LyricsTab({
           onChange={(event) => setPasted(event.target.value)}
           slotProps={{ htmlInput: { "data-lyrics-paste": true } }}
         />
-        <Box>
+        <Stack direction="row" spacing={1}>
+          <PillButton
+            kind={unsavedText ? "primary" : "secondary"}
+            size="small"
+            disabled={!unsavedText}
+            busy={savingText}
+            onClick={() => onSaveText(pasted)}
+            data-lyrics-save
+          >
+            {unsavedText || savedText === null ? "Save lyrics" : "Lyrics saved"}
+          </PillButton>
           <PillButton
             size="small"
             disabled={piecesFromText(pasted).length === 0}
             onClick={() => {
               const pieces = piecesFromText(pasted);
               setPool((current) => [...current, ...pieces]);
-              setPasted("");
             }}
             data-lyrics-add
           >
             Add to the pool
           </PillButton>
-        </Box>
+        </Stack>
       </Stack>
 
       {pool.length > 0 ? (
