@@ -14,14 +14,17 @@ is plan section 6.3 of [implementation 02](../implementations/02-private-web-app
 | `/` | | Redirects to `/projects` |
 | `/projects` | `ProjectsPage` | The Personal Vault, newest change first; **New project** (From source, From scratch, Import; From other projects later); per row Duplicate, Export, Rename, Delete (**Discard changes** and **Open the song** on an edit copy, which says **Editing**) |
 | `/projects/new` | `PiecePage` | A new project, with only the Source step |
+| `/projects/compose` | `ComposePage` (`pages/compose/`) | **From other projects** (Phase 10): choose passages, then **Save as song** or **Save as integrated playlist** ([playlists.md](playlists.md)) |
 | `/projects/:id` | `PiecePage` | Opens the project on the furthest step that is ready |
-| `/projects/:id/<step>` | `PiecePage` | One step: `source`, `audio`, `notes`, `hands` or `sheet`. **Save to library** once the Sheet step is ready; a version of My library opens read only, with **Edit** |
+| `/projects/:id/<step>` | `PiecePage` | One step: `source`, `audio`, `notes`, `hands` or `sheet`. **Save to library** once the Sheet step is ready; a version of My library opens read only, with **Edit**. `:id` may be any part of a project of several parts, whose Sheet step lists them (Phase 10) |
 | `/projects/:id/notes-falling` | `NotesFallingPage` | Inside the project's page, from its `⋯` menu |
 | `/projects/:id/passages/:passageId` | `PassagePage` | Recording in Sheet (Phase 9): the Current and the Proposal of a passage, **Promote** ([recording-in-sheet.md](recording-in-sheet.md)) |
 | `/library/songs` | `SongsPage` (`pages/library/`) | My library (Phase 6): the songs, a table with a filter |
 | `/library/songs/:id` | `SongPage` | One song: its artists and its versions (Open, Edit, Duplicate, Export, Rename, History, Delete) |
 | `/library/artists` | `ArtistsPage` | The artists with their other names, a table with a filter |
 | `/library/artists/:id` | `ArtistPage` | One artist: its names (Add a name, Make default, Rename, Remove) and its songs; Merge, Delete |
+| `/library/playlists` | `PlaylistsPage` | The songs playlists and the integrated playlists of My library (Phase 10), **New playlist** |
+| `/library/playlists/:id` | `PlaylistPage` | One songs playlist: its songs with their version and stretch, **Add a song** |
 | `/admin/users` | `UsersPage` (`pages/admin/`) | Master user only. Every user; **New user**, **Reset password**, **Disable** / **Enable** |
 | `/admin/lab/<tab>` | `LabLayout` | Master user only. `video`, `calibration`, `detection`, `notes`, `examples` (and `examples/:slug`) |
 | `/dev/roll-bench` | `RollBenchPage` | Development builds only: the Notes step's measurements |
@@ -53,7 +56,8 @@ does not exist, and the project page shows "There is no project of yours at this
 ## The shell
 
 `layout/AppLayout.tsx` puts the sidebar (`ui/Sidebar.tsx`) beside the page (`ui/AppShell.tsx`). The
-sidebar shows **Projects**, a **My library** group with **Songs** and **Artists** (Phase 6), and for
+sidebar shows **Projects**, a **My library** group with **Songs**, **Artists** (Phase 6) and
+**Playlists** (Phase 10), and for
 the master user an **Admin** group with **Users** and **Lab**.
 The user menu at its foot shows the username and the role, then **Change password**
 (`layout/PasswordDialog.tsx`), the theme (**Light**, **Dark** or **System**), **Keyboard shortcuts**

@@ -596,10 +596,12 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
 
   const { reading, score, error } = view;
   /**
-   * The length of the highest pile of gaps, which every figure is named from. On the page of a
-   * passage, the song's at the passage instead, so its two sheets are named alike.
+   * The length of the highest pile of gaps, which every figure is named from: the saved sheet's
+   * (Phase 10: a paste, a cut or a split changes the notes, and measuring the pile again would
+   * rename every figure), else the pile measured on the notes. On the page of a passage, the song's
+   * at the passage instead, so its two sheets are named alike.
    */
-  const anchorMs = passageView?.anchorMs ?? reading?.anchorMs ?? null;
+  const anchorMs = passageView?.anchorMs ?? edits.state.savedAnchorMs ?? reading?.anchorMs ?? null;
 
   /**
    * How long the piece is, and whether there is anything in it.

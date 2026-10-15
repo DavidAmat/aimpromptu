@@ -3,7 +3,7 @@
 The Private Library is layer 2 of the app context: each user's own library of finished work, the
 "main branch" that work in progress (the Personal Vault, layer 1) is saved into. Nobody else reads
 it, unless the owner shares it (Phase 14). Built in implementation 02, Phase 6. The pages are
-**My library → Songs** and **Artists** in the sidebar.
+**My library → Songs**, **Artists** and (Phase 10) **Playlists** in the sidebar.
 
 ## 1. What it holds
 
@@ -20,7 +20,12 @@ owner:
   song ignoring case, pointing at one project of the Private Library
   (`users/<id>/library/<projectId>/`).
 
-Names are compared ignoring case and repeated spaces, so "aitana" finds "Aitana".
+- **Songs playlists** (Phase 10, `playlists`, `playlist_items`): songs of the library in order, each
+  on a version and maybe a stretch of it; references, never copies
+  ([frontend/playlists.md](../frontend/playlists.md) section 3).
+
+Names are compared ignoring case and repeated spaces, so "aitana" finds "Aitana". An integrated
+playlist is a project, so it is saved as a version of a song like any project.
 
 ## 2. Save to library
 
@@ -73,10 +78,12 @@ replaces too, so nothing is lost by trying one.
 
 | Page | Address | What is on it |
 |---|---|---|
-| Songs | `/library/songs` | A table (title, artist, versions, changed) with a filter by title or artist; a row opens the song |
-| A song | `/library/songs/:id` | The title, its artists (each a link), and its versions. A version row opens it read only; its `⋯`: Open, Edit, Duplicate, Export, Rename, History, Delete. The header's `⋯`: Rename song, Artists, Delete song |
+| Songs | `/library/songs` | A table (title, artist, versions, changed) with a filter by title or artist; a row opens the song. Songs ticked by their checkbox make a playlist (**Make a playlist of N**, Phase 10) |
+| A song | `/library/songs/:id` | The title, its artists (each a link), and its versions. A version row opens it read only; its `⋯`: Open, Edit, Duplicate, Export, **Add to a playlist** (Phase 10), Rename, History, Delete. The header's `⋯`: Rename song, Artists, Delete song |
 | Artists | `/library/artists` | A table (name, other names, songs) with a filter |
 | An artist | `/library/artists/:id` | Its names (Make default, Rename, Remove; **Add a name**) and its songs. The header's `⋯`: Merge into another artist, Delete artist (once it has no song) |
+| Playlists | `/library/playlists` | The songs playlists and the integrated playlists (Phase 10), **New playlist** |
+| A playlist | `/library/playlists/:id` | Its songs with their version and stretch; **Add a song**, reorder, another version, remove; Rename, Delete |
 
 **Duplicate** of a version makes an independent project in Projects; **Export** saves its `.aitu`
 file. **Search** (`⌘K`) finds songs by title and artist, and projects by title.
@@ -92,10 +99,9 @@ library project in place: the step routes answer `403`, and the changes go throu
 
 | Thing | When |
 |---|---|
-| Playlists of My library | Phase 10 |
 | **Shared** (a library another user shares with you) | Phase 14 |
 | Suggestions from the Public Library in the dialog, and **Add to my library** from it | Phase 13 |
-| Play mode for a version (**Play**) | Phase 11 |
+| Play mode for a version and a playlist (**Play**) | Phase 11 |
 | Offline downloads per project | Q-7 (raised in Phase 6) |
 
 The 30 songs the migration of Phase 3 put in the master user's library were saved before Phase 6:
@@ -103,11 +109,11 @@ their cuts are still ranges, and their audio is written again the first time eac
 
 ## Where to look deeper
 
-- The routes: [`endpoints.md`](../../documentation/services/backend/endpoints.md) §7 and §7.1
+- The routes: [`endpoints.md`](../../documentation/services/backend/endpoints.md) §7, §7.1 and §7.2
 - The folders and tables: [`paths-and-data.md`](../../documentation/services/backend/paths-and-data.md)
 - The steps of a project: [frontend/projects.md](../frontend/projects.md)
 - The plan: [implementations/02-private-web-app/02-plan.md](../implementations/02-private-web-app/02-plan.md)
   sections 8.5, 10.2, 10.6, 15.1 and 15.2
-- The code: `aitu-backend/src/aitu_backend/library/` (`rows.py`, `flow.py`),
+- The code: `aitu-backend/src/aitu_backend/library/` (`rows.py`, `flow.py`, `playlists.py`),
   `audio/compact.py`, `api/library.py`; `aitu-frontend/src/pages/library/`,
   `pages/piece/SaveToLibraryDialog.tsx`

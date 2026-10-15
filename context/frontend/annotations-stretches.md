@@ -9,8 +9,9 @@ selections and undo is [annotations.md](annotations.md). Code:
 The panel is titled *Frames*, with the time of the stretch under it. Its title bar has **Copy this
 stretch** (⌘C, Phase 8: its notes, marks and audio, for a **Paste** in this sheet or any other; see
 [projects.md](projects.md) section 5), **Record this passage** (Phase 9: the page where the stretch
-is recorded again and promoted, [recording-in-sheet.md](recording-in-sheet.md)) and *Select the
-notes in this stretch*. Its first row says
+is recorded again and promoted, [recording-in-sheet.md](recording-in-sheet.md)), **Start a new
+part here** (Phase 10: what follows the start of the stretch becomes a new part of the project,
+[playlists.md](playlists.md) section 2) and *Select the notes in this stretch*. Its first row says
 which staff the stretch is about (**Both / Right / Left**). With a stretch marked, **Paste** on the
 floating bar (⌘V) puts the copied passage **in place of** the stretch. Then one tab per thing a stretch can carry; a tab
 with a dot means this stretch already carries that setting.

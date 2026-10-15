@@ -51,6 +51,10 @@ and an ordinary edit after that:
 | **The left hand's clef** | The treble clef over every run of four or more left-hand chords written two ledger lines or more above the bass staff (the clef rule, [rendering.md](rendering.md)) | Range toolbox, **Clef** |
 | **Octave brackets** | Over every run of three or more chords written three ledger lines or more outside its staff, measured in the key just chosen, never over a passage the clef rule moved | Range toolbox, **Octave**; again with *Group high notes under 8va* in **Layout** |
 
+The pile is measured once, when the sheet is first written, and its length is saved with the
+sheet: a sheet opened again is drawn from the saved length, not from a pile measured again on the
+notes, so a paste, a cut or a split of a part (Phase 10) does not rename its figures.
+
 The negra is a convention, not a measurement: statistics cannot tell a negra from a corchea, so a
 piece can come out twice too fast or too slow. One **Transpose → Figures** renames every note and moves
 nothing.

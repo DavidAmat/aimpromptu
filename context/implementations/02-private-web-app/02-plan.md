@@ -369,7 +369,7 @@ one OpenAI uses.
 | `/projects/:id/:step` | The flow: `source`, `audio`, `notes`, `hands`, `sheet` | 1, 5 |
 | `/projects/:id/notes-falling` | Notes Falling of a project, until Play mode | 1 (removed in 11) |
 | `/projects/:id/passages/:passageId` | Recording in Sheet | 9 |
-| `/projects/:id/compose` | From other projects | 10 |
+| `/projects/:id/compose` | From other projects (*as built in Phase 10:* `/projects/compose`, no id: the passages are chosen before the project exists) | 10 |
 | `/library/songs`, `/library/songs/:id` | My songs, one song with its versions | 6 |
 | `/library/artists`, `/library/artists/:id` | My artists | 6 |
 | `/library/playlists`, `/library/playlists/:id` | My playlists | 10 |
@@ -899,6 +899,18 @@ notes and the metadata of each range are copied, and the audio segments are adde
 Taking a whole project is the same as **Duplicate**, which also exists as a row action everywhere a
 project is listed.
 
+*As built in Phase 10* (`editing/parts.py`, `POST /projects/compose`, `pages/compose/ComposePage.tsx`;
+[`../../frontend/playlists.md`](../../frontend/playlists.md)): the page is `/projects/compose`, and
+the chosen passages are kept in the browser until saved (references only), so no project exists
+before **Save**. The picker lists the projects with notes of Projects and My library (the Public
+Library comes in Phase 13); one with no sheet yet can only be added whole. A stretch is marked on
+the read-only sheet and added with **Add this stretch**; **Add the whole sheet** otherwise. A
+subheader join has a **Title** field (the source's title when empty). **Save** asks a title; the
+backend puts each passage in by the paste of Phase 8 at the end of its part, so the parts take the
+key, clefs and speed of each source, the audio is ranges of the stored files, and every step is
+ready at once. **Save as song** keeps the subheader joins as parts too: the two kinds differ only
+in `kind`, which Play mode reads. `origin` is `{"composedFrom": [...]}`.
+
 ## 10.5 Steps and revisions
 
 Unchanged from implementation 08, per part: `GET /pieces/{partId}/status` answers the state of each
@@ -1285,6 +1297,16 @@ with:
 - every editing tool, Recording in Sheet included, on any passage, because each part is an ordinary
   part.
 
+*As built in Phase 10* (`pages/piece/PartsPanel.tsx`, `/projects/{id}/parts`): the Sheet step of a
+project of more than one part (of any kind) shows the parts on its left, and **one part's sheet at a
+time**, titled by its subheader; a click opens another part (`/projects/<partId>/sheet`, so every
+step follows it). Drawing the parts one after the other, and a mark at the end of a sub-song, is
+left to Play mode's continuous page (Phase 11): each part keeps its own toolboxes, undo and player.
+The panel renames, moves (drag, Move up, Move down), and **joins** a part to the one before it (a
+paste at its end); **Start a new part here** in the range toolbox **splits** a part (a paste of the
+rest into a new part, then `paste.cut`, new). The id of the project is always one of its parts.
+Joins and splits are not on the sheet's undo.
+
 ## 14.2 Songs playlist
 
 A row in `playlists` with ordered items. Each item is a song, the version chosen for it (a project),
@@ -1296,6 +1318,14 @@ and optionally a range. Nothing in a songs playlist can be edited, only chosen.
 - **Play** opens Play mode on the first song (section 17).
 
 Public playlists exist in the Public Library and follow the requests of section 16 like a song.
+
+*As built in Phase 10* (`library/playlists.py`, `/playlists`, `pages/library/PlaylistsPage.tsx`,
+`PlaylistPage.tsx`): **My library → Playlists** lists the songs playlists and the integrated
+playlists of the library; **New playlist**; **Make a playlist of N** from songs ticked on Songs;
+**Add to a playlist** from a version's `⋯` and, for a stretch, from the *Frames* panel of its
+read-only sheet. A playlist's songs are reordered by dragging; a row's `⋯` chooses another version,
+takes the stretch away or removes it. A deleted version leaves its rows on the song's first
+version; a deleted song takes its rows. **Play** waits for Phase 11.
 
 ---
 
@@ -1660,6 +1690,7 @@ The compose page of section 10.4 (picker, read-only sheet, passages, sequential 
 **Save as song** and **Save as integrated playlist** with parts. The integrated playlist on the Sheet
 step (section 14.1: subheaders, the sub-song panel, reorder, join and split parts). Songs playlists
 (section 14.2): the tables in use, My library → Playlists, **Make a playlist** from a selection.
+*Built 2026-10-15* ([`02-implementation-phase-10.md`](02-implementation-phase-10.md)).
 
 ## Phase 11: Play mode
 

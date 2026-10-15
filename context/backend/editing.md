@@ -1,10 +1,11 @@
-# Editing a piece: paste, and Recording in Sheet
+# Editing a piece: paste, Recording in Sheet, and parts
 
 Two ways a part changes after it has been transcribed, other than a note edit on its Notes, Hands or
 Sheet step. **Paste** (implementation 02, Phase 8) puts a stretch of any part the user may read into
 it. **Recording in Sheet** (Phase 9) re-records a stretch of it, or records a new passage into it,
 on a page of its own. Both write in one go, with one rule for the length, and both are one step of
-the sheet's undo.
+the sheet's undo. **From other projects** and the joins and splits of the parts of a project (Phase
+10) are made of the same paste.
 
 Until Phase 9 a re-record (Epic 11) and a recorded passage (Epic 13) were two panels of the sheet
 over a staged session (`/audio/{uuid}/edits`), and neither could be undone. The page of a passage
@@ -74,6 +75,20 @@ The marks of the passage are dropped (the dialog names them by kind); the marks 
 Proposal come with the take, and a figure renamed there is kept as a speed change. Back on the whole
 sheet nothing shows that the passage was re-recorded.
 
+## From other projects, and the parts of a project
+
+**From other projects** makes a new project from passages of other projects: each passage is pasted
+at the end of its part, so it arrives with its notes, its marks, its key, clefs and speed, and ranges
+of the stored audio (no audio byte copied). A **Subheader** between two passages starts a new
+**part**; **Sequential** keeps them in one. The passages are copies: the sources never change.
+
+A project of several parts lists them beside its sheet. A part is renamed (its subheader), moved,
+**joined** to the one before it (one part: the second is pasted at the end of the first) or
+**split** (from a frame to the end becomes a new part: pasted into an empty part, then cut out of
+the first, its audio becoming cuts). The id of the project is always one of its parts, because the
+step routes take it. Joins and splits are not on the sheet's undo. The pages:
+[`../frontend/playlists.md`](../frontend/playlists.md).
+
 ## Undo
 
 **A paste and a promotion are one step of the sheet's undo.** Before writing, the part is kept as a
@@ -95,4 +110,5 @@ part of it. A new kind of mark is added there, or no length change moves it.
 - [`documentation/services/backend/rhythm-and-annotations.md`](../../documentation/services/backend/rhythm-and-annotations.md)
   — the marks that are moved
 - [`../frontend/projects.md`](../frontend/projects.md) — the pages: Copy and Paste, the page of a passage
+- [`../frontend/playlists.md`](../frontend/playlists.md) — From other projects, the parts, the playlists
 - [time-model.md](time-model.md) — why the length rule matters
