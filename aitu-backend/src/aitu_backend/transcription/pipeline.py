@@ -377,7 +377,9 @@ def filters_for(engine: str | None) -> dict[str, None]:
     as before, for every other piece (plan section 9.1). The answer is keyword arguments for
     :func:`impose_granularity_and_split`: empty means its defaults.
     """
-    if engine and engine.startswith("muscriptor"):
+    if engine and (engine.startswith("muscriptor") or engine == "midi"):
+        # Notes played on a MIDI piano (Recording in Sheet, Phase 9) are the keys as played: no
+        # engine artefact to remove.
         return {"leakage": None, "artifacts": None}
     return {}
 

@@ -30,13 +30,15 @@ from __future__ import annotations
 import json
 import subprocess
 import threading
+from collections.abc import Iterable, Iterator
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 from scipy.io import wavfile
 
-from aitu_backend.audio import formats, store
+from aitu_backend.audio import formats, sources, store
 from aitu_backend.audio.frames import FADE_MS, FRAME_MS, FrameTable, frame_count, join_kept
 from aitu_backend.audio.store import StoredAudio
 
@@ -49,6 +51,19 @@ _locks_lock = threading.Lock()
 def _lock(audio_uuid: str) -> threading.Lock:
     with _locks_lock:
         return _locks.setdefault(audio_uuid, threading.Lock())
+
+
+@contextmanager
+def held(part_ids: Iterable[str]) -> Iterator[None]:
+    """No joined audio of these parts is being written while this holds: a write in progress
+    finishes first, and the next waits. For a move of the folder the files are written in (**Save
+    to library**): a request that plays the piece meanwhile would write into the folder as it goes.
+    The locks are taken in the order :func:`ensure` takes them (the part's, then its sources')."""
+    with ExitStack() as stack:
+        for part_id in part_ids:
+            stack.enter_context(_lock(part_id))
+            stack.enter_context(sources.writing(part_id))
+        yield
 
 
 @dataclass(frozen=True)

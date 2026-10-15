@@ -1,6 +1,6 @@
-"""Snapshots of a part taken before an accepted splice or a new transcription replaced it.
+"""Snapshots of a part taken before a paste, a promotion or a new transcription replaced it.
 
-Accepting an edit copies the previous musical state of the part into
+A paste or a promotion of a re-recorded passage copies the previous musical state of the part into
 ``.database/history/<projectId>/parts/<partId>/vN/`` and advances a counter in the part's folder
 (``music-version.json``). A snapshot holds ``notes.pmn``, ``sheet.json`` and ``timeline.json``. The
 audio is not copied: the timeline names the stored files (``.database/audio/``), which never
@@ -84,25 +84,6 @@ def snapshot_notes(audio_uuid: str) -> int:
     nxt = version + 1
     _write_version(audio_uuid, nxt)
     return nxt
-
-
-def load_mismatches(audio_uuid: str) -> list[dict]:
-    path = paths.audio_mismatches_path(audio_uuid)
-    if not path.is_file():
-        return []
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        return list(payload.get("windows", []))
-    except (ValueError, OSError):
-        return []
-
-
-def add_mismatch(audio_uuid: str, start_seconds: float, end_seconds: float) -> None:
-    windows = load_mismatches(audio_uuid)
-    windows.append({"startSeconds": start_seconds, "endSeconds": end_seconds})
-    path = paths.audio_mismatches_path(audio_uuid)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"windows": windows}, indent=2) + "\n", encoding="utf-8")
 
 
 class NoSuchVersion(LookupError):

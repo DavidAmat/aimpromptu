@@ -25,7 +25,7 @@ properties and the reasons for them are in [`context/08-security.md`](../../../c
 | Group | Routers | Check before the handler (`auth/dependencies.py`) |
 |---|---|---|
 | `OPEN_ROUTERS` | `/auth` | None for `POST /auth/login` and `POST /auth/logout`; `GET /auth/me` and `PUT /auth/password` ask for the session themselves |
-| `USER_ROUTERS` | `/audio`, `/audio/{uuid}/edits`, `/matrix`, `/pieces`, `/time`, `/projects`, `/youtube`, `/video` | `signed_in`, then `project_rights` |
+| `USER_ROUTERS` | `/audio`, `/matrix`, `/passages`, `/pieces`, `/time`, `/projects`, `/youtube`, `/video` | `signed_in`, then `project_rights` |
 | `MASTER_ROUTERS` | `/frame-examples`, `/admin` | `signed_in`, then `master_only` |
 
 The answers of these checks:
@@ -78,7 +78,6 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | GET | `/audio/` | Every ingested audio of the current user's projects. |
 | POST | `/audio/upload` | Upload a file; ffmpeg normalises it. |
 | POST | `/audio/recording` | Store a browser recording. |
-| POST | `/audio/compose` | Start a piece with **nothing in it** (Epic 13). |
 | GET | `/audio/{uuid}` | One entry. |
 | PATCH | `/audio/{uuid}` | Rename. |
 | DELETE | `/audio/{uuid}` | Delete the project of this part, with its whole bundle. |
@@ -121,19 +120,16 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | GET PUT | `/time/{uuid}/lyrics` | The song's words saved with the part (`project.json`), for the Lyrics tab (Phase 7). |
 | POST | `/time/{uuid}/transpose` | Move every note of the part by a number of semitones; a preview counts, an undo is exact (Phase 7). |
 | POST | `/time/{uuid}/paste` | Put a copied passage (notes, marks, audio) into the part at a moment, or over a stretch; everything after moves (Phase 8). |
-| POST | `/time/{uuid}/versions/{n}/restore` | Put an earlier state of the part back: the undo and the redo of a paste (Phase 8). |
+| POST | `/time/{uuid}/versions/{n}/restore` | Put an earlier state of the part back: the undo and the redo of a paste (Phase 8) and of a promotion (Phase 9). |
 | GET PUT DELETE | `/time/{uuid}/rhythm` | The saved reading. |
-| **Editing and composing** | `api/editing.py` | |
-| POST | `/audio/{uuid}/edits` | Open a disposable session. |
-| GET PATCH DELETE | `/audio/{uuid}/edits/{session}` | Read, adjust, discard. |
-| POST | `/audio/{uuid}/edits/{session}/take` | Upload the take. |
-| GET | `/audio/{uuid}/edits/{session}/take` | The take, as played or scaled. |
-| GET | `/audio/{uuid}/edits/{session}/waveform` | Peaks of the untrimmed take. |
-| GET | `/audio/{uuid}/edits/{session}/window` | The original window, optionally slowed. |
-| POST | `/audio/{uuid}/edits/{session}/transcribe` | Transcribe the take as played (GPU queue). |
-| POST | `/audio/{uuid}/edits/{session}/preview` | Scale it into the window and draw that stretch. |
-| GET | `/audio/{uuid}/edits/{session}/confirmation` | What accepting would change. |
-| POST | `/audio/{uuid}/edits/{session}/accept` | Write it into the piece. |
+| **Recording in Sheet** | `api/passages.py` | Implementation 02, Phase 9 |
+| POST | `/passages` | **Record this passage**: a passage of a part (a stretch, or a moment for a new passage); its Current is made. |
+| GET PATCH DELETE | `/passages/{id}` | The passage; the take on show, the speed, the window; discard it. |
+| POST | `/passages/{id}/takes` | A recording (multipart `file`) kept as a new take. |
+| DELETE | `/passages/{id}/takes/{take}` | Delete a take. |
+| POST | `/passages/{id}/takes/{take}/read` | **Write the proposal**: keep a stretch of the take, transcribe it, split the hands, write its sheet (a job). |
+| POST | `/passages/{id}/promotion` | What a promotion would do, without writing. |
+| POST | `/passages/{id}/promote` | **Promote**: the take into the part in one write; the passage is closed. |
 | **Projects** | `api/projects.py` | Implementation 02, Phase 5 (duplicate since Phase 3; library since Phase 6) |
 | GET | `/projects` | The current user's projects, newest change first, with the step each reached. `?layer=` repeats. |
 | POST | `/projects` | An empty project: no audio; with `scratch`, a blank sheet that opens on the Sheet step (From scratch, Phase 8). |
@@ -246,10 +242,6 @@ source, rather than remembering a range. A named segment survives the parent bei
 itself be trimmed again. A piece with cuts is refused with `422`, because the seconds of the range
 selector are those of the piece and the file's are not: such a piece is cut on the Audio tab of the
 flow page instead.
-
-`POST /audio/compose` is the odd one out: it creates a piece with no audio file at all. It writes an
-empty `notes.pmn` (`durationMs: 0`) and a `frameMs` in `project.json`, and the first accepted
-passage is what creates a recording. Body: `{ "name": string, "frameMs": number }`.
 
 `POST /audio/{uuid}/add` (multipart `file`, the formats of the upload) is **add audio**
 (implementation 02, Phase 5): the file is stored once by its content, normalized to its own 16 kHz
@@ -419,7 +411,8 @@ called: the figures are chosen afterwards, from a ladder the reader names (D-01,
 - **The GPU queue.** A job that runs the model goes into the GPU queue of `transcription/jobs.py`:
   one worker thread, in order of arrival. While another transcription runs, the job's status is
   `waiting` and its stream sends a `waiting` stage ("Waiting for 1 other transcription to finish").
-  The range-edit take (`POST /audio/{uuid}/edits/{session}/transcribe`) uses the same queue.
+  **Write the proposal** of a take (`POST /passages/{id}/takes/{take}/read`, Phase 9) uses the
+  same queue.
 - **One job per piece.** The job carries the key `transcribe:<uuid>`. While a job of the same user
   with that key is waiting or running, this route returns that job instead of starting a second one,
   so a double click or a second browser tab cannot transcribe the same piece twice.
@@ -773,50 +766,61 @@ own) and `figuresFrom` (where the next figures transposition starts), and `lyric
 
 ---
 
-<a id="5-audiouuidedits--staged-editing-and-composing"></a>
+<a id="5-passages--recording-in-sheet"></a>
 
-## 5. `/audio/{uuid}/edits`: staged editing and composing
+## 5. `/passages`: Recording in Sheet
 
-A disposable session holds the take. Cancel deletes the folder and nothing else; nothing reaches the
-piece until accept.
+Implementation 02, Phase 9 (plan section 13). A passage is a stretch of a part being re-recorded,
+or a moment of it where a new passage goes. It and its takes are projects of the user's Personal
+Vault, hidden from every list (`kind = 'passage'`); their parts answer every route of a part
+(`/time`, `/audio`, `/pieces`), which is how the page draws them. The path names the passage's
+project, so the rights of a project apply; opening one checks the user may write the part (a
+version of the library answers `403`).
 
-Accept does one of two things, and which one is the session's `placement`:
+**`POST /passages`** `{part, fromMs, toMs}` (`toMs == fromMs`: a new passage) answers `201` and the
+passage:
 
-- **`replace`** (Epic 11) splices the take into exactly the window it replaces. The piece keeps its
-  length, which is what lets every mark after the window keep its address.
-- **`append`** and **`insert`** (Epic 13) put a new passage in and make the piece longer. This is the
-  one place in the product where that is allowed, because a piece being composed has nothing after
-  the insertion point to protect.
-
-`POST /audio/{uuid}/edits` takes the placement plus either a window (`startFrame`/`endFrame` or
-`startSeconds`/`endSeconds`), a moment (for `insert`), or nothing but `gapSeconds` (for `append`),
-along with `frameMs`, `slowdown` (1, 2 or 4), `spliceAudio` and an optional `clickIntervalMs` for
-the metronome.
-
-The flow is fixed and each step is its own route, so a reader can stop at any of them:
-
-```
-POST …/take        store the untrimmed recording
-POST …/transcribe  run the model on the take AS PLAYED, never on stretched audio
-POST …/preview     scale it into the window and draw that stretch alone
-GET  …/confirmation  what accepting would change, counted by kind
-POST …/accept      splice, snapshot to history/, advance the version
+```json
+{"id": "…", "part": "…", "projectId": "…", "title": "Elefants", "current": "…",
+ "fromMs": 9000, "toMs": 16960, "anchorMs": 440.0, "anchorFigure": "negra",
+ "takes": [{"id": "…", "name": "Take 1", "state": "ready", "seconds": 16.2,
+            "fromSeconds": 0.0, "toSeconds": 15.92, "jobId": null, "audioRevision": 2}],
+ "take": "…", "speed": 2.0, "windowMs": 0.0, "takeMs": 15920}
 ```
 
-Transcribing the take as played rather than after stretching is essential: a time-stretched
-recording is a different sound, and the model would be reading an artefact instead of the playing.
-The take is transcribed by MuScriptor through the GPU queue, like a whole piece.
+`current` is the part holding the copy of the stretch. A take's `state` is `recorded`, `reading`
+(its `jobId` is followed on `GET /matrix/progress/{jobId}`) or `ready`.
 
-`GET …/confirmation` reports dropped marks (`figureOverrides`, `beamBreaks`, `hiddenNotes`,
-`fingerings`) for a replace, and moved marks with the column shift for an insert. A fingering that
-has silently moved looks exactly like a fingering that has silently stayed, so the count is shown
-before the button is pressed.
+**`PATCH /passages/{id}`** `{take?, speed?, windowMs?}`: the speed goes from ×0.25 to ×4 (`409`
+otherwise); a take of another passage is `404`. **`DELETE`** discards it with its takes (`204`).
 
-Errors: `404` for a missing session or audio, `409` for an operation the session's placement does
-not allow (asking to fit a composed passage to a window, for instance), `503` when ffmpeg is
-missing, `422` when a conversion fails.
+**`POST …/takes`** (multipart `file`, any audio the upload takes, and/or `notes`, the JSON list of
+the keys played on a MIDI piano, `[{midiNote, start, end, velocity}]` in seconds from the start of the
+recording) adds a take and shows it; a take has `midi: true` when it has keys.
+**`POST …/takes/{take}/read`** `{fromSeconds, toSeconds}` answers `202` with `{jobId, status}`: the
+stretch becomes the take's cuts, then the transcription, the hand split and the first sheet run as
+one job of the GPU queue (key `take:<id>`).
 
-Detail in [`editing-and-compose.md`](editing-and-compose.md).
+**`POST …/promotion`** and **`POST …/promote`** take `{mode, audio, sheet?}`: `mode` is `window`
+(the take under the window, fitted into the passage) or `whole` (the whole take in place of the
+passage); `audio` is `original` (a window only: the notes change, the audio does not) or
+`recording`; `sheet` is the Proposal's sheet as the page holds it. The first answers what would
+happen:
+
+```json
+{"mode": "whole", "audio": "recording", "notesOut": 6, "notesIn": 9,
+ "marksDropped": {"fingers": 1}, "lengthChangeMs": 4480, "durationSeconds": 239.91}
+```
+
+The second writes, deletes the passage, and answers `{part, projectId, beforeVersion, atMs,
+lengthMs, sheet}`: `POST /time/{part}/versions/{beforeVersion}/restore` is its undo.
+
+Errors: `404` for a passage or take that is not there, `409` for a promotion that cannot be made
+(no take read yet, a window on a new passage, the original audio with another length), `503` when
+ffmpeg is missing, `422` when a conversion fails.
+
+Detail in [`editing-and-compose.md`](editing-and-compose.md) section 3. The staged session of
+Epics 11 and 13 (`/audio/{uuid}/edits`, `POST /audio/compose`) was removed in Phase 9.
 
 ---
 

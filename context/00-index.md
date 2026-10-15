@@ -45,7 +45,7 @@ assumes.
 | [backend/piano-matrix-notation.md](backend/piano-matrix-notation.md) | The piano matrix notation: the sparse form, `events.json` with ids and header, the wire columns, every adapter (`pmn/`) |
 | [backend/muscriptor.md](backend/muscriptor.md) | **The transcription engine.** MuScriptor's settings and why, the GPU queue, the live stream of notes, the lag correction |
 | [backend/pieces-and-revisions.md](backend/pieces-and-revisions.md) | The steps of a piece, the revisions, what makes a step stale, the `/pieces` routes, the saved hands |
-| [backend/editing.md](backend/editing.md) | Re-recording a passage, and composing a piece from nothing |
+| [backend/editing.md](backend/editing.md) | Paste, and Recording in Sheet: the length rule, the promotions, the undo |
 | [backend/api.md](backend/api.md) | The HTTP surface: the routers, the session and rights check every route runs, and the shape of a working session |
 | [notation-and-parsing.md](../documentation/deprecated/notation-and-parsing.md) | Deprecated: the text-notation MVP path, deleted in implementation 02, Phase 1 |
 
@@ -62,11 +62,12 @@ assumes.
 |------|-------------|
 | [frontend/README.md](frontend/README.md) | aitu-frontend entry: the sections, the tabs, the data flow |
 | [frontend/projects.md](frontend/projects.md) | **Projects and the steps of a project**: the five steps from the audio to the piano sheet, the editor's gestures, the timings |
+| [frontend/recording-in-sheet.md](frontend/recording-in-sheet.md) | **Recording in Sheet**: the page of a passage, its Current and Proposal, the takes, the speed and the window, Promote |
 | [frontend/pages.md](frontend/pages.md) | Routes, the shell, and the "position has one home" rule |
 | [frontend/rendering.md](frontend/rendering.md) | How the sheet is drawn, what the app does *not* decide, the stale-`dist` trap |
 | [frontend/annotations.md](frontend/annotations.md) | **The Sheet step**: the page, the defaults of a first write, the two selections, undo, saving |
 | [frontend/annotations-notes.md](frontend/annotations-notes.md) | The note toolbox: figures, fingers, hand, beams, even spacing, decorations |
-| [frontend/annotations-stretches.md](frontend/annotations-stretches.md) | The range toolbox (key and Key for this passage, clef and the clef rule, octave, spacing, speed, re-record) and brackets on the page |
+| [frontend/annotations-stretches.md](frontend/annotations-stretches.md) | The range toolbox (key and Key for this passage, clef and the clef rule, octave, spacing, speed, Record this passage) and brackets on the page |
 | [frontend/annotations-sheet.md](frontend/annotations-sheet.md) | The sheet toolbox (title, key, transpose, lyrics, layout), the keyboard panel, Find trills |
 | [frontend/printing.md](frontend/printing.md) | The PDF export: re-wrap to the paper, never scale; the margin is the control |
 | [frontend/timestamps.md](frontend/timestamps.md) | UI rule: `mm:ss.cc`, frame labelled by start only, never wraps |

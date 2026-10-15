@@ -32,6 +32,7 @@ import {
   type EvenSpacingAnnotation,
   type FingerAnnotation,
   type FingerNumber,
+  type FrameWindow,
   type KeyChangeAnnotation,
   type GraceNoteAnnotation,
   type LyricAnnotation,
@@ -428,6 +429,14 @@ export interface TimeScoreViewProps {
    * The number is held by the page rather than here, so the page can show it and put it back.
    */
   onZoomChange?: (zoom: number) => void;
+  /**
+   * A window over frames, drawn over the sheet with a grip to drag it by (Record in Sheet,
+   * Phase 9: the stretch of a take that will be fitted into the passage). Changing it moves the
+   * drawn window without building the sheet again.
+   */
+  frameWindow?: FrameWindow;
+  /** The window was dragged: the frame it starts on, while it moves and where it was let go. */
+  onFrameWindowMove?: (fromColumn: number, done: boolean) => void;
 }
 
 export function TimeScoreView({
@@ -482,6 +491,8 @@ export function TimeScoreView({
   onClefSuggestion,
   zoom = MIN_ZOOM,
   onZoomChange,
+  frameWindow,
+  onFrameWindowMove,
 }: TimeScoreViewProps) {
   const host = useRef<HTMLDivElement | null>(null);
   // The box the sheet scrolls inside. The wheel is listened for here and the horizontal scroll is
@@ -565,6 +576,17 @@ export function TimeScoreView({
   useEffect(() => {
     reportOttavaResize.current = onOttavaResize;
   }, [onOttavaResize]);
+  // The window over frames: read by the build from a ref, and moved by the effect further down
+  // without a rebuild, so a drag of it never draws the notes again.
+  const windowNow = useRef(frameWindow);
+  const reportWindowMove = useRef(onFrameWindowMove);
+  useEffect(() => {
+    reportWindowMove.current = onFrameWindowMove;
+  }, [onFrameWindowMove]);
+  useEffect(() => {
+    windowNow.current = frameWindow;
+    renderer.current?.setFrameWindow(frameWindow);
+  }, [frameWindow]);
   const system = useRef<number | null>(null);
   // The gap the sheet should be drawn with, readable from the build effect without being a
   // dependency of it. The effect below is what applies a change to it.
@@ -884,6 +906,8 @@ export function TimeScoreView({
       onOttavaResize: readOnly
         ? undefined
         : (change) => reportOttavaResize.current?.(change),
+      ...(windowNow.current ? { frameWindow: windowNow.current } : {}),
+      onFrameWindowMove: (fromColumn, done) => reportWindowMove.current?.(fromColumn, done),
     });
 
     renderer.current = drawn;

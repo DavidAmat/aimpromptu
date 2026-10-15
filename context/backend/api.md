@@ -16,7 +16,7 @@ session cookie `aitu_session` that the sign in sets. `main.py` includes the rout
 | Group | Routers | Check |
 |---|---|---|
 | Open | `/auth` | none for the sign in |
-| User | `/audio`, `/audio/{uuid}/edits`, `/matrix`, `/pieces`, `/time`, `/projects`, `/youtube`, `/video` | a session, then the rights of the project the route names |
+| User | `/audio`, `/matrix`, `/passages`, `/pieces`, `/time`, `/projects`, `/youtube`, `/video` | a session, then the rights of the project the route names |
 | Master | `/admin`, `/frame-examples` (Lab) | a session of the master user |
 
 The rights check reads the project from the path (`audio_uuid`, the id of a part, or `project_id`)
@@ -40,7 +40,7 @@ the master user can follow it.
 | `/matrix` | `api/matrix.py` | Run the model, follow it (the notes arrive live on the stream), read back the notes it heard |
 | `/pieces` | `api/pieces.py` | The state of each step, the notes as columns, note operations, predict the hands ([pieces-and-revisions.md](pieces-and-revisions.md)) |
 | `/time` | `api/time_score.py` | The score: peaks, the ladder, the drawable payload, the saved reading |
-| `/audio/{uuid}/edits` | `api/editing.py` | Staged range editing and composing |
+| `/passages` | `api/passages.py` | Recording in Sheet (implementation 02, Phase 9): a passage of a part, its takes, the promotion ([editing.md](editing.md)) |
 | `/projects` | `api/projects.py` | The Personal Vault: list (with the step of each project), create, rename, delete, duplicate (new ids, the same audio files), export and import a `.aitu` file (implementation 02, Phase 5); **Save to library** and **Edit** (Phase 6) |
 | `/library` | `api/library.py` | The Private Library (Phase 6): songs and their versions, artists and their names, the history of a version ([music-library/private-library.md](../music-library/private-library.md)) |
 | `/youtube` | `api/youtube.py` | Downloads via yt-dlp, also as a job with progress |
@@ -60,7 +60,7 @@ The flow page, from signing in to a saved piano sheet:
 
 ```
 POST /auth/login              the cookie aitu_session; every request after sends it
-POST /audio/upload            or /youtube/jobs, /audio/recording, /audio/compose
+POST /audio/upload            or /youtube/jobs, /audio/recording; POST /projects for From scratch
 GET  /pieces/{id}/status      which steps are ready; the tabs follow it
 PUT  /audio/{id}/cuts         the selected region (optional)
 POST /matrix/transcribe       202 + a job id
@@ -109,4 +109,4 @@ download and **Predict hands** are jobs on the same stream.
 - [08-security.md](../08-security.md): the users, the session cookie, the rights table
 - `http://127.0.0.1:8765/docs` — the generated, always-current field reference
 - [time-model.md](time-model.md) — why `/time` looks the way it does
-- [editing.md](editing.md) — the session flow behind `/audio/{uuid}/edits`
+- [editing.md](editing.md) — paste and Recording in Sheet, behind `/time/{uuid}/paste` and `/passages`

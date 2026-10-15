@@ -10,7 +10,6 @@
  */
 
 import { useState, type Dispatch, type SetStateAction } from "react";
-import Alert from "@mui/material/Alert";
 import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
@@ -24,6 +23,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
+import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecordOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHorizOutlined";
 import VisibilityIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOffOutlined";
@@ -45,7 +45,6 @@ import {
   type KeySignatureName,
   type TimeScorePayload,
 } from "../../../api";
-import RangeRerecordPanel from "../../../components/editing/RangeRerecordPanel";
 import type { EditHistory } from "../../../hooks/useEditHistory";
 import type { PrintedHand } from "../../../music/renderOverrides";
 import { IconAction, PillButton, Segmented, Toolbox } from "../../../ui";
@@ -74,7 +73,6 @@ const HAND_OPTIONS = [
 export function RangeToolbox({
   open: framesToolbox,
   range,
-  setRange,
   frameMs,
   framesAt,
   onClose: closeFrames,
@@ -93,13 +91,12 @@ export function RangeToolbox({
   state,
   set,
   setOttavaHidden,
-  audioUuid,
   anchorMs,
-  onRerecordAccepted,
+  onRecordPassage,
+  recordingPassage = false,
 }: {
   open: boolean;
   range: FrameRange | null;
-  setRange: Dispatch<SetStateAction<FrameRange | null>>;
   frameMs: number;
   framesAt: { x: number; y: number } | undefined;
   onClose: () => void;
@@ -126,10 +123,14 @@ export function RangeToolbox({
   state: SheetEdits;
   set: EditHistory<SheetEdits>["set"];
   setOttavaHidden: (hands: readonly PrintedHand[], atColumn: number, hidden: boolean) => void;
-  audioUuid: string;
   /** The length of the highest pile of gaps, which the whole piece is named from. */
   anchorMs: number | null;
-  onRerecordAccepted: (range: FrameRange) => void;
+  /**
+   * **Record this passage** (Phase 9): the page of the stretch, to record it again. Absent on the
+   * Proposal of a passage, which is already that page.
+   */
+  onRecordPassage?: (range: FrameRange) => void;
+  recordingPassage?: boolean;
 }) {
   const {
     rangeKey,
@@ -169,6 +170,15 @@ export function RangeToolbox({
           holds no notes on the staves in scope, so the tooltip can say so.
         */
         <>
+          {onRecordPassage && range ? (
+            <IconAction
+              title="Record this passage"
+              icon={<FiberManualRecordIcon fontSize="small" />}
+              onClick={() => onRecordPassage(range)}
+              disabled={recordingPassage}
+              data-testid="range-record"
+            />
+          ) : null}
           <IconAction
             title="Copy this stretch"
             shortcut="⌘C"
@@ -534,39 +544,6 @@ export function RangeToolbox({
           />
         ) : null}
 
-        {frameTab === "rerecord" && range && audioUuid ? (
-          <Stack spacing={1.5}>
-            {/* A warning that applies every time: this edit is the one undo cannot reach. */}
-            <Alert severity="warning" variant="outlined">
-              Accepting writes over the recording. Undo cannot take it back.
-            </Alert>
-            <RangeRerecordPanel
-              audioUuid={audioUuid}
-              frameMs={frameMs}
-              fromColumn={range.fromColumn}
-              toColumn={range.toColumn}
-              anchorFigure={anchorFigure}
-              anchorMs={anchorMs ?? undefined}
-              speedChanges={stretches.map((stretch) => ({
-                startFrame: stretch.startFrame,
-                anchorMs: stretch.anchorMs,
-              }))}
-              clickIntervalMs={((): number => {
-                let ms = anchorMs ?? 480;
-                for (const stretch of stretches) {
-                  if (stretch.startFrame <= range.fromColumn) ms = stretch.anchorMs;
-                }
-                return ms;
-              })()}
-              onRangeChange={(start, end) => {
-                const fromColumn = Math.max(0, Math.round((start * 1000) / frameMs));
-                const toColumn = Math.max(fromColumn + 1, Math.round((end * 1000) / frameMs));
-                setRange({ fromColumn, toColumn });
-              }}
-              onAccepted={() => onRerecordAccepted(range)}
-            />
-          </Stack>
-        ) : null}
       </Stack>
     </Toolbox>
   );

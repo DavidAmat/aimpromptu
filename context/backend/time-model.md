@@ -45,7 +45,9 @@ the shape the code works in.
 
 **2. A column never moves.** Anything keyed by frame stays valid as long as the piece's wall-clock
 length does not change. This is what makes editorial marks survive edits, and it is why a
-re-recorded passage is scaled back into exactly the window it replaces.
+re-recorded passage fitted into its window keeps the length. Where the length changes on purpose (a
+paste, a whole take put in place of a passage, implementation 02), every note and mark after it
+moves in the same write.
 
 **3. No BPM, no bar lines, no time signature, no metre.** A metronome is still allowed as a *sound
 in the player's ears* — clicks every X milliseconds — but nothing derived from it is stored. The

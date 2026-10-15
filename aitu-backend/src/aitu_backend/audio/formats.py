@@ -12,6 +12,7 @@ rest of the system never has to care that the user uploaded an m4a.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -104,6 +105,55 @@ def normalize_to_wav(
         tail = "\n".join(result.stderr.strip().splitlines()[-5:])
         raise ConversionFailed(f"ffmpeg failed converting {source.name}:\n{tail}")
     return target
+
+
+#: Where a recorded take's loudest moment is put (:func:`louder`), in dB below full scale.
+TAKE_PEAK_DB = -1.0
+#: The most a take is raised: past this it is silence, and raising it only raises its hiss.
+TAKE_MAX_GAIN_DB = 40.0
+
+
+def louder(source: Path, target: Path, *, peak_db: float = TAKE_PEAK_DB) -> float:
+    """Write ``source`` as FLAC raised so its loudest sample is at ``peak_db``, at its own rate and
+    channels, and return the gain in dB (0 when it is already that loud).
+
+    A take recorded in the browser has the browser's automatic gain off (it pumps a piano), so a
+    microphone set low gives a take too quiet to read on its waveform. One gain for the whole take
+    keeps its dynamics. Never lowered, never raised by more than :data:`TAKE_MAX_GAIN_DB`.
+    """
+    if not ffmpeg_available():
+        raise FfmpegMissing()
+    measured = subprocess.run(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-hide_banner",
+            "-i",
+            str(source),
+            "-af",
+            "volumedetect",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if measured.returncode != 0:
+        raise ConversionFailed(f"ffmpeg could not read {source.name}")
+    found = re.search(r"max_volume:\s*(-?[0-9.]+|-inf) dB", measured.stderr)
+    peak = float(found.group(1)) if found and found.group(1) != "-inf" else None
+    gain = 0.0 if peak is None else min(TAKE_MAX_GAIN_DB, max(0.0, peak_db - peak))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    written = subprocess.run(
+        ["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(source)]
+        + ["-af", f"volume={gain:.2f}dB", "-c:a", "flac", str(target)],
+        capture_output=True,
+        text=True,
+    )
+    if written.returncode != 0:
+        raise ConversionFailed(f"ffmpeg could not write {target.name}")
+    return gain
 
 
 def read_wav(path: Path) -> tuple[int, np.ndarray]:

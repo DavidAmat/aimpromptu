@@ -204,7 +204,10 @@ def list_projects(
         found = list(
             db.scalars(
                 select(Project).where(
-                    Project.owner_id == current_user_id(), Project.layer.in_(layers)
+                    Project.owner_id == current_user_id(),
+                    Project.layer.in_(layers),
+                    # A passage being re-recorded and its takes are work of the Sheet step.
+                    Project.kind != "passage",
                 )
             )
         )

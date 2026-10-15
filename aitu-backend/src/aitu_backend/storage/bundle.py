@@ -6,7 +6,6 @@ A bundle has the same layout in the three layers and in an export (Phase 5)::
     <projectId>/
       project.json
       parts/<partId>/notes.pmn, sheet.json, timeline.json
-      staging/<sessionId>/
       cache/<partId>/
 
 **project.json** holds the project's own metadata: ``id``, ``kind``, ``title``, ``subtitle``,
@@ -636,8 +635,13 @@ def part_ids_of(project_id: str) -> list[str]:
 
 
 def list_parts(owner_id: int | None = None, layers: Iterable[str] | None = None) -> list[str]:
-    """Every part id, of one owner and some layers when asked, newest project first."""
-    query = select(Part.id).join(Project, Part.project_id == Project.id)
+    """Every part id, of one owner and some layers when asked, newest project first. The parts of
+    a passage being re-recorded and of its takes (Phase 9) are not listed."""
+    query = (
+        select(Part.id)
+        .join(Project, Part.project_id == Project.id)
+        .where(Project.kind != PASSAGE_KIND)
+    )
     if owner_id is not None:
         query = query.where(Project.owner_id == owner_id)
     if layers is not None:
@@ -684,9 +688,44 @@ def sync_audio_refs(project_id: str) -> None:
             db.add(AudioRef(project_id=project_id, hash=content_hash))
 
 
+#: The kind of a passage being re-recorded and of its takes (implementation 02, Phase 9): hidden
+#: projects of the owner's Personal Vault. ``origin`` names what each belongs to: ``passageOf`` a
+#: part, ``takeOf`` a passage.
+PASSAGE_KIND = "passage"
+
+
+def dependents(project_id: str) -> list[str]:
+    """The passages open on the parts of a project, or the takes of a passage: the hidden projects
+    that go when it goes."""
+    where = locate.project(project_id)
+    parts = set(part_ids_of(project_id))
+    with session() as db:
+        hidden = list(
+            db.scalars(
+                select(Project.id).where(
+                    Project.owner_id == where.owner_id,
+                    Project.layer == "vault",
+                    Project.kind == PASSAGE_KIND,
+                    Project.id != project_id,
+                )
+            )
+        )
+    found: list[str] = []
+    for other in hidden:
+        try:
+            origin = read_project(other).origin or {}
+        except (locate.NotFound, OSError, ValueError):
+            continue
+        if origin.get("passageOf") in parts or origin.get("takeOf") == project_id:
+            found.append(other)
+    return found
+
+
 def delete_project(project_id: str) -> None:
     """Delete a project everywhere: its folder, its temporary files, its history, its rows, and
-    the audio files no other project uses."""
+    the audio files no other project uses. The passages open on it (and their takes) go too."""
+    for other in dependents(project_id):
+        delete_project(other)
     where = locate.project(project_id)
     part_ids = part_ids_of(project_id)
     hashes = used_hashes(project_id)

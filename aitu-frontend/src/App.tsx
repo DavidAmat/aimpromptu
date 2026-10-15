@@ -17,6 +17,7 @@ import {
   LEGACY_REDIRECTS,
   LIBRARY_ARTIST_PATTERN,
   LIBRARY_SONG_PATTERN,
+  PASSAGE_PATTERN,
   PROJECT_PATTERN,
   ROUTES,
 } from "./layout/routes";
@@ -32,6 +33,7 @@ import AudioTab from "./pages/piece/AudioTab";
 import HandsTab from "./pages/piece/HandsTab";
 import NotesFallingPage from "./pages/piece/NotesFallingPage";
 import NotesTab from "./pages/piece/NotesTab";
+import PassagePage from "./pages/piece/passage/PassagePage";
 import PiecePage from "./pages/piece/PiecePage";
 import PieceResume from "./pages/piece/PieceResume";
 import SheetTab from "./pages/piece/SheetTab";
@@ -89,6 +91,8 @@ export default function App() {
         <Route path={ROUTES.projectNew} element={<PiecePage />}>
           <Route index element={<SourceTab />} />
         </Route>
+        {/* Recording in Sheet (Phase 9): a passage of a project, its Current and its Proposal. */}
+        <Route path={PASSAGE_PATTERN} element={<PassagePage />} />
         <Route path={PROJECT_PATTERN} element={<PiecePage />}>
           <Route index element={<PieceResume />} />
           <Route path="source" element={<SourceTab />} />

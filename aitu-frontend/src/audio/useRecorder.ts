@@ -29,7 +29,8 @@ export interface RecorderState {
   /** The finished take, ready to upload. */
   blob: Blob | null;
   error: string | null;
-  start: () => Promise<void>;
+  /** Record from this input (`MediaDeviceInfo.deviceId`), or the system's default one. */
+  start: (deviceId?: string) => Promise<void>;
   stop: () => void;
   reset: () => void;
 }
@@ -95,7 +96,7 @@ export function useRecorder(): RecorderState {
 
   useEffect(() => teardown, [teardown]);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (deviceId?: string) => {
     if (typeof MediaRecorder === "undefined") {
       setError("This browser does not support MediaRecorder.");
       setStatus("error");
@@ -122,7 +123,16 @@ export function useRecorder(): RecorderState {
     });
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Music, not speech: the browser's voice processing (echo cancellation, noise suppression and
+      // automatic gain) would cut and pump a piano.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
       streamRef.current = stream;
 
       const context = new AudioContext();

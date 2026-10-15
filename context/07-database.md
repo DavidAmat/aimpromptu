@@ -43,7 +43,6 @@ database. Every path in the folder is built by one module, `aitu_backend/storage
     notes.pmn                    THE NOTES: the piano matrix notation of the part
     sheet.json                   what the reader decided on the piano sheet
     timeline.json                the audio timeline: which stored files, which ranges, in order
-  staging/<sessionId>/           disposable edit sessions
   cache/<partId>/                derived, safe to delete: normalized.wav, waveform.json,
                                  piece-r<N>.flac/.wav (the joined audio of a part with cuts)
 ```
@@ -128,7 +127,9 @@ again by the next list (Phase 5).
 
 The tables change only through Alembic revisions in `aitu_backend/db/migrations/versions/`. The app
 brings the database to the newest revision when it starts. Revision `0001` makes every table of plan
-section 8.6, so the later phases fill tables instead of adding revisions.
+section 8.6, so the later phases fill tables. Revision `0002` (Phase 9) lets a project be a
+`passage`: a passage being re-recorded, or one of its takes, kept as a hidden project of the
+Personal Vault ([backend/editing.md](backend/editing.md)).
 
 The pieces of the old store (`aitu-backend/data/audio/<uuid>/`) were moved once, in Phase 3, by
 `scripts/migrate/to_database.py`: every note checked against the old file, safe to run twice, never

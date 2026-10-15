@@ -210,8 +210,8 @@ its walkthrough under DECISIONS.
 |---|---|---|
 | Q-5 | The worldwide source is chosen: `musicchartsarchive.com`, downloaded by the parallel work (section 15.5). Still open: the sources for the `spain` and `catalan` regions, and anything that source does not give (genres, tags) | Phase 12, after the reconciliation |
 | Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12 |
-| Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). *Raised in the Phase 6 walkthrough, and again in Phase 7's* |
-| Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report; asked again in the Phase 6 and Phase 7 walkthroughs |
+| Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). **Answered 2026-10-15: left for the production version** |
+| Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report. **Answered 2026-10-15: one job with its stages; the notes arrive at the end** |
 
 ---
 
@@ -268,7 +268,7 @@ when no other project uses it (section 8.5). The app context asks for this to sa
 | The figure shift | `SHIFT_LADDER` in RhythmPage, D-18 | Figures transposition |
 | The figure icons | `components/time/FigureGlyph.tsx` | Figures transposition, the note toolbox |
 | The words under the staff | `Lyric` in `schemas/rhythm.py`, the Lyrics tab | The new lyrics (section 11.5) |
-| Recording, metronome, slowed playing | `audio/useRecorder.ts`, `components/editing/useClickTrack.ts` | Recording in Sheet, From scratch |
+| Recording, metronome, slowed playing | `audio/useRecorder.ts`, `components/editing/useClickTrack.ts` (the metronome removed in Phase 9) | Recording in Sheet, From scratch |
 | The PDF writer | `src/print/` | Unchanged |
 | The read-only performance page | `pages/PerformancePage.tsx`, deleted in Phase 1 with the old Piano Library it read; its loader `library/loadPerformanceScore.ts` is kept | The base of Play mode (git history keeps the page) |
 | Notes Falling | `pages/piece/NotesFallingPage.tsx` (moved in Phase 1) | A view of Play mode (Q-4) |
@@ -1117,6 +1117,12 @@ redo. The page records the paste as one step (`useEditHistory.commit`). The re-r
 placed passage of the Record panel stay out of reach of undo until Phase 9 moves them onto the same
 snapshots.
 
+*As built in Phase 9:* the two panels are gone; a promotion of a re-recorded passage is written
+through the paste (one snapshot, `beforeVersion`), and the sheet opens after it with the promotion
+as its last step: the page of the passage passes the result and the sheet as it was before, the
+sheet page resets its history to that sheet and commits the promotion over it, so undo puts the
+marks back on the page too.
+
 ---
 
 # 12. Copy and paste
@@ -1223,6 +1229,45 @@ shows that a passage was re-recorded (app context). Undo works on the whole shee
 This reuses the staged session of `editing/` (`/audio/{id}/edits`), generalised from one window of one
 audio to a passage of a part, and its two panels (`RangeRerecordPanel`, `ComposePassagePanel`) become
 this page.
+
+*As built in Phase 9* (`editing/passages.py`, `api/passages.py`, `pages/piece/passage/PassagePage.tsx`;
+[`../../backend/editing.md`](../../backend/editing.md), [`../../frontend/recording-in-sheet.md`](../../frontend/recording-in-sheet.md)):
+
+- **The session is generalised differently than written above: as hidden projects, not as a staging
+  folder.** The passage is a project of the Personal Vault of `kind = 'passage'` (Alembic `0002`),
+  whose one part, the **Current**, is a paste of the stretch into an empty part; each take is one
+  more such project of one part. So a take goes through the steps of any project (its audio, its
+  stretch as cuts, the transcription with live progress, the hand split, a sheet), and the Proposal
+  is drawn by the whole sheet page (`SheetPage` with `step.passage`), every toolbox included. The
+  staged session (`/audio/{uuid}/edits`, `POST /audio/compose`) is removed with its two panels.
+  Hidden projects go with their song (deleted with it, and on **Save to library**); the same stretch
+  of an unchanged song opens its passage again.
+- **The route** is `/projects/:id/passages/:passageId` as planned; the header carries the song's
+  title and **Promote**, the Current its times. **Record a passage** (the bar, a blank sheet) opens
+  a new passage at the end of the piece: one choice, **Put it in**.
+- **The condensed steps** are one job, **Write the proposal**: the take's stretch becomes its cuts,
+  then MuScriptor, the hand split (every note given a hand) and a first sheet with the song's key and
+  figure where the passage starts. The figures follow the speed: the Proposal is named with the
+  passage's `anchorMs` × the speed, so a take played twice as slowly reads like the Current at ×2.
+- **The speed** is a slider, ×0.25 to ×4 on a log scale; **Fit** sets the speed at which the whole
+  take fills the window. **The window** is a new option of the drawing package (0.44.0,
+  `frameWindow`, a grip to drag it).
+- **The promotion** is `paste.paste` with two new options (`keep_audio`, `columns`); the take's
+  passage is read in the song's time (times and columns divided by the speed; its figure named with
+  the song's, so a figure renamed on the Proposal becomes a speed change); at a speed other than ×1
+  its audio is played faster or slower at its own rate and channels and stored as a new file. The
+  dialog shows only what changes the decision: the length ("The song gets 3.2 s longer.") and the
+  marks of the passage that go, when there are.
+- **The microphone needs a secure page**: from `http://ubuntu:5173` **Record** is disabled and says
+  so; **Add a take from a file** is the way there (or `localhost` through the tunnel).
+- **No metronome** (removed after the user's review: its clicks were recorded with the take). The
+  recorder picks the microphone, with the browser's voice processing off.
+- **A MIDI piano** (asked in the user's review): **Notes from: MIDI piano** takes the keys played as
+  the notes (no transcription), with the microphone's sound or none. Note lengths are the keys'; the
+  sustain pedal is not read.
+- **The page is a recording mode** (the user's review): a full-window frame with **Close the
+  recording**, the Current and the takes in a left panel (each with a bin), a take in two tabs,
+  **Audio** and **Sheet** (the Current above the Proposal).
 
 ---
 

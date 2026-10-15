@@ -69,7 +69,8 @@ LAYERS = ("vault", "private", "public")
 #: The two scopes of the music library (plan section 15.1).
 SCOPES = ("private", "public")
 ROLES = ("master", "user")
-PROJECT_KINDS = ("song", "integratedPlaylist")
+#: ``passage``: a passage being re-recorded and its takes (Phase 9), hidden from every list.
+PROJECT_KINDS = ("song", "integratedPlaylist", "passage")
 STEPS = ("source", "audio", "notes", "hands", "sheet")
 REQUEST_KINDS = ("metadata", "userVersion", "fixedVersion")
 REQUEST_STATUSES = (

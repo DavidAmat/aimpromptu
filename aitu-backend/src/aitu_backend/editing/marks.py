@@ -24,7 +24,7 @@ from typing import Any, Literal
 
 from aitu_backend.schemas.rhythm import SavedRhythm
 
-__all__ = ["POINTS", "RANGES", "count", "cut_out", "extract", "put_in", "shift"]
+__all__ = ["POINTS", "RANGES", "count", "cut_out", "dropped", "extract", "put_in", "shift"]
 
 #: The marks on one column: ``(field, the column's attribute)``.
 POINTS: tuple[tuple[str, str], ...] = (
@@ -65,6 +65,33 @@ def count(rhythm: SavedRhythm | None) -> int:
         return 0
     fields = [field for field, _ in POINTS] + [field for field, _, _ in RANGES]
     return sum(len(_items(rhythm, field) or []) for field in fields)
+
+
+def dropped(rhythm: SavedRhythm | None, start: int, stop: int) -> dict[str, int]:
+    """How many marks of each kind :func:`cut_out` would take away with columns ``[start, stop)``:
+    a mark on one of them, a range wholly inside them. A range that only reaches into them is
+    shortened, not dropped. Kinds with none are left out. The key, clef and speed changes are
+    transitions, not marks a reader would miss, and are not counted."""
+    if rhythm is None or stop <= start:
+        return {}
+    out: dict[str, int] = {}
+    for field, attr in POINTS:
+        if field in ("key_changes", "clef_changes", "speed_changes"):
+            continue
+        found = sum(
+            1 for item in _items(rhythm, field) or [] if start <= getattr(item, attr) < stop
+        )
+        if found:
+            out[field] = found
+    for field, first, end in RANGES:
+        found = sum(
+            1
+            for item in _items(rhythm, field) or []
+            if getattr(item, first) >= start and getattr(item, end) <= stop
+        )
+        if found:
+            out[field] = found
+    return out
 
 
 def shift(

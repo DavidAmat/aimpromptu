@@ -430,37 +430,3 @@ def test_a_pasted_project_exports_and_imports_with_its_ranges(
     assert imported.status_code == 201, imported.text
     copy = imported.json()["parts"][0]
     assert bundle.read_timeline(copy).items() == bundle.read_timeline(target).items()
-
-
-def test_a_recorded_passage_after_a_paste_keeps_the_pasted_audio(
-    client: TestClient, two_parts: tuple[str, str], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Record (the compose panel) puts its take into the timeline too, instead of writing the whole
-    part again as one 16 kHz file."""
-    from aitu_backend.editing.session import accept, start, transcribe_take
-    from aitu_backend.storage import staging
-
-    source, target = two_parts
-    client.post(f"/time/{target}/paste", json=paste_body(source, 2000, 4000, 3000))
-    record = start(target, placement="append", gap_seconds=0.5, frame_ms=FRAME_MS, slowdown=1)
-    session = record.session_uuid
-    shutil.copyfile(
-        tone(paths.part_cache_dir(target), 1.0, 660.0, "take.wav"),
-        staging.untrimmed_path(target, session),
-    )
-    record.untrimmed_duration_seconds = 1.0
-    staging.write(record)
-    monkeypatch.setattr(pipeline, "transcribe_file", lambda path, **kw: [note(80, 0.0, 0.9)])
-    transcribe_take(target, session)
-    result = accept(target, session)
-    assert result.audio_spliced is True
-    timeline = bundle.read_timeline(target)
-    names = [file.name for file in bundle.read_project(target).part(target).source.files]
-    assert names[:3] == ["Target", "Source 0:02–0:04", "Target"]
-    assert "Recording 4" in names
-    # The notes still match the audio: the Notes step is not stale.
-    states = {s["step"]: s["state"] for s in client.get(f"/pieces/{target}/status").json()["steps"]}
-    assert states["notes"] == "ready"
-    rate, samples = formats.read_wav(store.get(target).normalized_path)
-    assert pitch_at(samples, rate, 3.5) == pytest.approx(440, abs=12)
-    assert timeline.joined

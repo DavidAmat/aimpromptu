@@ -85,7 +85,7 @@ See [04-local-development.md](../04-local-development.md).
 - [muscriptor.md](muscriptor.md) — the transcription engine, the GPU queue and the live stream
 - [pieces-and-revisions.md](pieces-and-revisions.md) — the steps of a piece, the revisions, the `/pieces` routes
 - [piano-matrix-notation.md](piano-matrix-notation.md) — the stored form, the wire form, the adapters
-- [editing.md](editing.md) — re-recording a passage, and composing a piece from nothing
+- [editing.md](editing.md) — paste, and Recording in Sheet (a passage re-recorded and promoted)
 - [api.md](api.md) — the HTTP surface
 - [08-security.md](../08-security.md): the users, the session, the rights table
 - [notation-and-parsing.md](../../documentation/deprecated/notation-and-parsing.md) — deprecated: the text-notation MVP, deleted in implementation 02, Phase 1

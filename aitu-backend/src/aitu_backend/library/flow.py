@@ -31,7 +31,7 @@ from pathlib import Path
 
 from sqlalchemy import select, update
 
-from aitu_backend.audio import compact
+from aitu_backend.audio import compact, piece_audio
 from aitu_backend.db.database import session
 from aitu_backend.db.models import Part, PrivateVersion, Project, Song
 from aitu_backend.library import rows
@@ -117,7 +117,10 @@ def _apply(plans: list[compact.Plan]) -> list[str]:
 
 
 def _drop_temporary(project_id: str, owner: int, part_ids: list[str]) -> None:
-    """The video and its frames, the open edit sessions, and the history of the parts."""
+    """The video and its frames, the open edit sessions, the passages open on it (Phase 9), and
+    the history of the parts."""
+    for other in bundle.dependents(project_id):
+        bundle.delete_project(other)
     for part_id in part_ids:
         shutil.rmtree(paths.tmp_dir() / str(owner) / part_id, ignore_errors=True)
     shutil.rmtree(paths.project_dir(project_id) / "staging", ignore_errors=True)
@@ -178,13 +181,15 @@ def save(
                 compact.discard(plan)
             raise Refused("The library already has a project with this id")
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(source), str(target))
-        with session() as db:
-            row = db.get(Project, project_id)
-            assert row is not None
-            row.layer = "private"
-            row.based_on = None
-        locate.forget(project_id)
+        # A page that plays the piece may be writing its joined audio into the folder being moved.
+        with piece_audio.held(part_ids):
+            shutil.move(str(source), str(target))
+            with session() as db:
+                row = db.get(Project, project_id)
+                assert row is not None
+                row.layer = "private"
+                row.based_on = None
+            locate.forget(project_id)
 
         replaced = _apply(plans)
         project = bundle.read_project(project_id)
@@ -236,7 +241,9 @@ def _replace(copy: ProjectFile, owner: int) -> Saved:
             [paths.part_cache_dir(entry.id) for entry in copy.parts],
         )
         bundle.sync_audio_refs(library_id)
-    bundle.delete_project(copy.id)
+    # A page that plays the copy may be writing its joined audio into the folder being deleted.
+    with piece_audio.held(bundle.part_ids_of(copy.id)):
+        bundle.delete_project(copy.id)
     audio_files.delete_unused(replaced)
     return saved
 

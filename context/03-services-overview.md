@@ -37,7 +37,7 @@ is not on the network. Who can sign in and what each user can open: [08-security
 | `schemas/` | Pydantic contracts, camelCase on the wire, mirrored in TypeScript |
 
 **Endpoints:** `/health`, `/auth`, `/admin`, `/audio`, `/matrix`, `/pieces`, `/time`,
-`/audio/{uuid}/edits`, `/projects`, `/youtube`, `/video`, `/frame-examples`. Every route needs a
+`/passages`, `/projects`, `/youtube`, `/video`, `/frame-examples`. Every route needs a
 session except `/health` and `POST /auth/login`. (The text-notation MVP `/scores` and `/sequence` was deleted
 in implementation 02, Phase 1, and the old Piano Library router `/library` in Phase 3.) Table in
 [backend/api.md](backend/api.md), detail in

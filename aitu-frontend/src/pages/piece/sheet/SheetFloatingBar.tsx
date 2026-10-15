@@ -28,10 +28,13 @@ import RedoIcon from "@mui/icons-material/RedoOutlined";
 import RestoreIcon from "@mui/icons-material/RestoreOutlined";
 import TuneIcon from "@mui/icons-material/TuneOutlined";
 import UndoIcon from "@mui/icons-material/UndoOutlined";
+import type { ReactNode } from "react";
 import { FloatingBar, IconAction, PillButton, RowMenu, type RowMenuItem } from "../../../ui";
 
 export function SheetFloatingBar({
   readOnly = false,
+  passageActions,
+  recording = false,
   playing,
   onTogglePlay,
   undo,
@@ -61,6 +64,13 @@ export function SheetFloatingBar({
 }: {
   /** A version of the library: Play and Print only (Phase 6). */
   readOnly?: boolean;
+  /**
+   * The Proposal of a passage (Phase 9): its own actions in place of Record, Paste, Print and Save
+   * (it keeps itself), after Play, Undo, Redo and the sheet toolbox.
+   */
+  passageActions?: ReactNode;
+  /** **Record a passage** is opening the page of the passage. */
+  recording?: boolean;
   playing: boolean;
   onTogglePlay: () => void;
   undo: { can: boolean; label: string | null; busy: boolean; run: () => void };
@@ -107,13 +117,17 @@ export function SheetFloatingBar({
           },
         ]
       : []),
-    {
-      label: "Remove all",
-      icon: <DeleteSweepIcon fontSize="small" />,
-      onClick: onRemoveAll,
-      danger: true,
-      disabled: saving || clearing,
-    },
+    ...(passageActions !== undefined
+      ? []
+      : [
+          {
+            label: "Remove all",
+            icon: <DeleteSweepIcon fontSize="small" />,
+            onClick: onRemoveAll,
+            danger: true,
+            disabled: saving || clearing,
+          },
+        ]),
   ];
   if (readOnly) {
     return (
@@ -192,11 +206,20 @@ export function SheetFloatingBar({
           active={toolboxOpen}
           placement="top"
         />
+        {passageActions !== undefined ? (
+          <>
+            {passageActions}
+            <RowMenu items={more} title="More sheet actions" />
+          </>
+        ) : (
+          <>
         <IconAction
-          title="Record a passage"
+          title="Record a passage at the end"
           icon={<FiberManualRecordIcon />}
           onClick={onRecord}
+          disabled={recording}
           placement="top"
+          data-testid="sheet-record"
         />
         <IconAction
           title={paste.title}
@@ -250,6 +273,8 @@ export function SheetFloatingBar({
           </span>
         </Tooltip>
         <RowMenu items={more} title="More sheet actions" />
+          </>
+        )}
       </FloatingBar>
     </>
   );

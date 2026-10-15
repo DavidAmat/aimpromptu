@@ -27,11 +27,11 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { audioApi } from "../../api";
+import { useNavigate } from "react-router-dom";
+import { audioApi, passagesApi } from "../../api";
+import { ROUTES } from "../../layout/routes";
 import NoteSelectionToolbox from "../../components/notes/NoteSelectionToolbox";
 import PendingRemovalsBar from "../../components/notes/PendingRemovalsBar";
-import { Toolbox } from "../../ui";
-import RangeRerecordPanel from "../../components/editing/RangeRerecordPanel";
 import { useElementSize } from "../../hooks/useElementSize";
 import { useStagedRemovals } from "../../hooks/useStagedRemovals";
 import { useNoteSelection } from "../../hooks/useNoteSelection";
@@ -80,9 +80,7 @@ export function NotesFallingPage() {
     [working.frameMs, uuid, audio?.alias],
   );
   const removal = useStagedRemovals(artifact.audioUuid ?? null);
-  const [editRevision, setEditRevision] = useState(0);
-  const [rerecordOpen, setRerecordOpen] = useState(false);
-  const data = usePlayedNotes(artifact, removal.revision + editRevision);
+  const data = usePlayedNotes(artifact, removal.revision);
   const selection = useNoteSelection(data.notes);
 
   const [source, setSource] = useState<PlaybackSource>("piano");
@@ -101,6 +99,20 @@ export function NotesFallingPage() {
     rangeStart,
     Math.min(data.durationSeconds, rangeEndOverride ?? data.durationSeconds),
   );
+
+  const navigate = useNavigate();
+  const [opening, setOpening] = useState(false);
+  /** **Record this stretch**: the page of the passage (Record in Sheet, Phase 9). */
+  const recordStretch = async () => {
+    if (!uuid) return;
+    setOpening(true);
+    try {
+      const opened = await passagesApi.open(uuid, rangeStart * 1000, rangeEnd * 1000);
+      navigate(ROUTES.passage(opened.projectId, opened.id));
+    } finally {
+      setOpening(false);
+    }
+  };
 
   // `removal.isRemoved` and not `note.removed`: a staged decision has to read as
   // if it had already happened, or the reader cannot see what they are about to
@@ -289,10 +301,10 @@ export function NotesFallingPage() {
           <Button
             size="small"
             variant="outlined"
-            disabled={rangeEnd - rangeStart < 0.04}
-            onClick={() => setRerecordOpen(true)}
+            disabled={rangeEnd - rangeStart < 0.04 || opening}
+            onClick={() => void recordStretch()}
           >
-            Re-record this stretch ({formatTime(rangeStart)} → {formatTime(rangeEnd)})
+            Record this stretch ({formatTime(rangeStart)} → {formatTime(rangeEnd)})
           </Button>
         </Stack>
       </Section>
@@ -484,26 +496,6 @@ export function NotesFallingPage() {
         onStageRestore={stageRestore}
         onClose={selection.clear}
       />
-
-      {artifact.audioUuid ? (
-        <Toolbox
-          open={rerecordOpen}
-          title="Re-record"
-          subtitle={`${formatTime(rangeStart)} → ${formatTime(rangeEnd)}`}
-          onClose={() => setRerecordOpen(false)}
-        >
-          <RangeRerecordPanel
-            audioUuid={artifact.audioUuid}
-            frameMs={artifact.frameMs}
-            startSeconds={rangeStart}
-            endSeconds={rangeEnd}
-            onAccepted={() => {
-              setEditRevision((current) => current + 1);
-              setRerecordOpen(false);
-            }}
-          />
-        </Toolbox>
-      ) : null}
 
       <PendingRemovalsBar
         removing={removal.counts.removing}

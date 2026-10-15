@@ -37,7 +37,7 @@ __all__ = [
 LAYOUT_VERSION = "1"
 #: The newest Alembic revision in ``db/migrations/versions``. A database already at this revision
 #: is opened without loading Alembic (each test opens a new one).
-HEAD_REVISION = "0001"
+HEAD_REVISION = "0002"
 
 #: A database at :data:`HEAD_REVISION`, copied instead of migrated. The tests set it once per run.
 template_path: Path | None = None

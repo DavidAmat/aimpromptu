@@ -1,18 +1,11 @@
-"""Building a piece out of nothing, one passage at a time (Epic 13).
+"""Putting a passage into a part: everything from a column on moves later (implementation 08,
+Epic 13; implementation 02, plan section 4, rule 2 as changed by Q-3).
 
-Epic 11 replaces a passage and is forbidden to change the piece's length: everything after the
-window keeps its column, so every mark after it keeps its address. This module is the one place
-that restriction is lifted, and it is lifted for the reason the restriction existed — when you are
-composing there is nothing after the insertion point to protect, or when there is, moving it is
-precisely what you asked for.
-
-Three placements:
-
-* **append** — the passage goes after the last note, at a silence given in seconds.
-* **insert** — the passage opens at a moment and everything from that moment on moves later by the
-  passage's length. Marks move with the notes, in the same operation, and the caller is told how
-  many.
-* **replace** — not here. That is :mod:`aitu_backend.editing.splice`, unchanged.
+The one operation that changes a part's length. A paste (:mod:`aitu_backend.editing.paste`, Phase 8)
+and a promotion of a re-recorded passage (:mod:`aitu_backend.editing.passages`, Phase 9) put their
+notes in with :func:`insert_events`; their marks move with :mod:`aitu_backend.editing.marks` in the
+same write. The staged session of Epics 11 and 13 (Record, Re-record) that used it first was
+replaced in Phase 9 by the page of a passage.
 
 **A passage occupies a whole number of columns.** Its length is rounded *up* to the next frame
 before anything is written. That is what makes an insertion exact rather than nearly exact: every
@@ -25,42 +18,12 @@ from __future__ import annotations
 
 import math
 
-from aitu_backend.audio import store
-from aitu_backend.editing import marks
-from aitu_backend.editing.splice import last_release_seconds, scale_take
 from aitu_backend.matrix.time_grid import (
     DEFAULT_FRAME_MS,
     frame_of_seconds,
     validate_frame_ms,
 )
-from aitu_backend.schemas.editing import MovedMarks
-from aitu_backend.schemas.metadata import AudioMetadata, AudioSource
-from aitu_backend.schemas.rhythm import SavedRhythm
-from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.engine import NoteEvent
-
-# ------------------------------------------------------------------ the empty piece
-
-
-def create_empty_piece(name: str, frame_ms: float = DEFAULT_FRAME_MS) -> AudioMetadata:
-    """A new piece with nothing in it: an empty ``events.json`` and a ``frameMs``.
-
-    There is no BPM to choose and no granularity to choose (wall-clock rewrite §5). The only
-    question at creation is the name, and the column length, which is a view and can be changed
-    later like any other view.
-
-    No audio file is written. The first accepted passage creates one; until then the piece is
-    silence of length zero, which is what an empty ``events.json`` says.
-    """
-    alias = name.strip()
-    if not alias:
-        raise ValueError("A piece needs a name.")
-    frame_ms = validate_frame_ms(frame_ms)
-    entry = store.create(alias, AudioSource.COMPOSED, "wav")
-    metadata = store.update(entry.uuid, duration_seconds=0.0, frame_ms=frame_ms)
-    pipeline.save_note_events(entry.uuid, [], 0.0, alias)
-    return metadata
-
 
 # ---------------------------------------------------------------- where it goes
 
@@ -83,54 +46,6 @@ def frame_at_or_after(seconds: float, frame_ms: float) -> int:
     if seconds <= 0:
         return 0
     return math.ceil(seconds / step - 1e-9)
-
-
-def append_anchor(events: list[NoteEvent], gap_seconds: float, frame_ms: float) -> float:
-    """Where an appended passage starts: after the last note, plus the silence asked for.
-
-    An empty piece starts at zero whatever the gap is. A gap is the distance between two passages,
-    and there is no first passage to be distant from; a piece that opened with a second of silence
-    nobody asked for would be a small lie about what was played.
-
-    Notes the reader has taken off the page do not count as the last note: they are not heard and
-    not drawn, so measuring from them would leave a silence whose reason is invisible.
-    """
-    sounding = [event for event in events if not event.removed]
-    last = last_release_seconds(sounding)
-    if last is None:
-        return 0.0
-    gap = max(0.0, float(gap_seconds))
-    step = validate_frame_ms(frame_ms) / 1000.0
-    return frame_at_or_after(last + gap, frame_ms) * step
-
-
-def passage_bounds(
-    prepared: list[NoteEvent],
-    *,
-    at_seconds: float,
-    factor: float,
-    frame_ms: float,
-) -> tuple[float, list[NoteEvent]]:
-    """How long the passage is once scaled, and its notes already placed at ``at_seconds``.
-
-    The length is measured from the take's last release rather than from the notes that survive
-    scaling, so dropping a sub-frame note (D-05) never shortens the passage under the reader's
-    feet. Rounded up to a whole number of columns, so nothing the take played is cut.
-    """
-    if factor <= 0:
-        raise ValueError(f"factor must be a positive number, got {factor}")
-    raw = (last_release_seconds(prepared) or 0.0) * factor
-    length = quantise_up(raw, frame_ms)
-    if length <= 0:
-        return 0.0, []
-    arriving = scale_take(
-        prepared,
-        factor=factor,
-        start_seconds=at_seconds,
-        end_seconds=at_seconds + length,
-        frame_ms=frame_ms,
-    )
-    return length, arriving
 
 
 # --------------------------------------------------------------------- the splice
@@ -199,41 +114,3 @@ def insert_events(
 
     result = sorted(kept + arriving, key=lambda item: (item.start, item.midi_note))
     return result, moved, new_duration
-
-
-# ----------------------------------------------------------------------- the marks
-
-
-def shift_marks(
-    rhythm: SavedRhythm | None,
-    *,
-    at_seconds: float,
-    passage_seconds: float,
-    placement: str,
-) -> tuple[SavedRhythm | None, MovedMarks]:
-    """Move every mark at or after the insertion point by the passage's length.
-
-    Every editorial mark is anchored to a frame, so an insertion has to move those frames or the
-    marks stop pointing at the notes they were put on. Doing it here, in the same operation as the
-    splice, is the point of Subtask 13.1.1.3: a reader must never find their fingering on the wrong
-    note and have to work out why.
-
-    Columns are counted at the rhythm's **own** ``frameMs``, which is the length the numbers in it
-    were written at and is not necessarily the length of the view the passage was recorded in.
-
-    A range that straddles the moment — a lyric line, a cue-size stretch, a trill — widens rather
-    than tears: its end moves and its start does not, so it still covers exactly the notes it
-    covered before. Appending moves nothing, because there is nothing after the last note to move.
-    """
-    if rhythm is None or placement == "append" or passage_seconds <= 0:
-        return rhythm, MovedMarks()
-
-    frame_ms = validate_frame_ms(rhythm.frame_ms)
-    at_frame = frame_at_or_after(at_seconds, frame_ms)
-    columns = int(round(passage_seconds * 1000.0 / frame_ms))
-    if columns <= 0:
-        return rhythm, MovedMarks()
-    # Every kind of mark, from the one list of them (implementation 02, Phase 8: the clef changes,
-    # the beam joins, the spacings and the staff gaps did not move before).
-    shifted, moved = marks.shift(rhythm, at_frame, columns, straddle="widen")
-    return shifted, MovedMarks(total=moved, frames=columns)

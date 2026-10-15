@@ -594,8 +594,14 @@ def stream_audio(audio_uuid: str, normalized: bool = False, original: bool = Fal
     if not original:
         try:
             piece = piece_audio.ensure(audio_uuid)
-        except ConversionFailed as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        except (ConversionFailed, FileNotFoundError):
+            # A write of the part's audio (an undo, a redo, a paste, Save to library) may have just
+            # forgotten the derived files this request was writing: they are written again from
+            # the timeline now in place.
+            try:
+                piece = piece_audio.ensure(audio_uuid)
+            except (ConversionFailed, FileNotFoundError) as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
         if piece is not None:
             path = piece.normalized if normalized else piece.listen
             media = "audio/flac" if path.suffix == ".flac" else "audio/wav"
@@ -610,8 +616,12 @@ def stream_audio(audio_uuid: str, normalized: bool = False, original: bool = Fal
         )
 
     try:
-        original_path = store.original_file(entry)
-    except (ConversionFailed, FfmpegMissing) as exc:
+        try:
+            original_path = store.original_file(entry)
+        except FileNotFoundError:
+            # The joined files of a part of several files were forgotten mid-write: once more.
+            original_path = store.original_file(entry)
+    except (ConversionFailed, FfmpegMissing, FileNotFoundError) as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     if original_path is None:
         raise HTTPException(status_code=404, detail="This audio has no stored original file")
