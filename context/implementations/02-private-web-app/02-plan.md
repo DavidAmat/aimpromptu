@@ -268,7 +268,7 @@ when no other project uses it (section 8.5). The app context asks for this to sa
 | The figure shift | `SHIFT_LADDER` in RhythmPage, D-18 | Figures transposition |
 | The figure icons | `components/time/FigureGlyph.tsx` | Figures transposition, the note toolbox |
 | The words under the staff | `Lyric` in `schemas/rhythm.py`, the Lyrics tab | The new lyrics (section 11.5) |
-| Recording, metronome, slowed playing | `audio/useRecorder.ts`, `components/editing/useClickTrack.ts` | Recording in Sheet, From scratch |
+| Recording, metronome, slowed playing | `audio/useRecorder.ts`, `components/editing/useClickTrack.ts` (the metronome removed in Phase 9) | Recording in Sheet, From scratch |
 | The PDF writer | `src/print/` | Unchanged |
 | The read-only performance page | `pages/PerformancePage.tsx`, deleted in Phase 1 with the old Piano Library it read; its loader `library/loadPerformanceScore.ts` is kept | The base of Play mode (git history keeps the page) |
 | Notes Falling | `pages/piece/NotesFallingPage.tsx` (moved in Phase 1) | A view of Play mode (Q-4) |
@@ -1260,6 +1260,8 @@ this page.
   marks of the passage that go, when there are.
 - **The microphone needs a secure page**: from `http://ubuntu:5173` **Record** is disabled and says
   so; **Add a take from a file** is the way there (or `localhost` through the tunnel).
+- **No metronome** (removed after the user's review: its clicks were recorded with the take). The
+  recorder picks the microphone, with the browser's voice processing off.
 
 ---
 

@@ -55,7 +55,6 @@ import LiveLevelBars from "../../../components/audio/LiveLevelBars";
 import WaveformRangeSelector, {
   type AudioRange,
 } from "../../../components/audio/WaveformRangeSelector";
-import { useClickTrack } from "../../../components/editing/useClickTrack";
 import ProgressBanner from "../../../components/ProgressBanner";
 import type { ScorePlayerControls } from "../../../components/time/ScorePlayer";
 import { useProgress } from "../../../hooks/useProgress";
@@ -117,6 +116,8 @@ function marksWords(dropped: Record<string, number>): string | null {
 }
 
 /** The browser lets a page use the microphone only on a secure address (HTTPS or localhost). */
+/** Where the chosen microphone is remembered, in this browser only. */
+const INPUT_KEY = "aitu.recorder.input";
 const MICROPHONE = typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
 
 export function PassagePage() {
@@ -216,26 +217,52 @@ export function PassagePage() {
   // ------------------------------------------------------------------ recording
 
   const recorder = useRecorder();
-  const clicks = useClickTrack();
   const playAlong = useRef<HTMLAudioElement | null>(null);
   const [recorderOpen, setRecorderOpen] = useState(false);
   /** The waveform of the take on show, to choose the stretch of it again. */
   const [editingRange, setEditingRange] = useState(false);
   const [withOriginal, setWithOriginal] = useState(false);
-  const [withClick, setWithClick] = useState(false);
-  const [clickText, setClickText] = useState<string | null>(null);
-  const clickMs = Number(clickText ?? Math.round((passage?.anchorMs ?? 500) * speed)) || 0;
+  /** The microphones of this computer, and the one chosen (kept in this browser). */
+  const [inputs, setInputs] = useState<MediaDeviceInfo[]>([]);
+  const [input, setInput] = useState<string>(() => {
+    try {
+      return localStorage.getItem(INPUT_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const chooseInput = (deviceId: string) => {
+    setInput(deviceId);
+    try {
+      localStorage.setItem(INPUT_KEY, deviceId);
+    } catch {
+      // A private window: the choice lasts this page.
+    }
+  };
+  // Their names are known once the page may use the microphone, so they are read again after a
+  // take and whenever a device comes or goes.
+  useEffect(() => {
+    if (!recorderOpen || !MICROPHONE) return;
+    const read = () =>
+      void navigator.mediaDevices
+        .enumerateDevices()
+        .then((found) => setInputs(found.filter((one) => one.kind === "audioinput" && one.deviceId)))
+        .catch(() => setInputs([]));
+    read();
+    navigator.mediaDevices.addEventListener("devicechange", read);
+    return () => navigator.mediaDevices.removeEventListener("devicechange", read);
+  }, [recorderOpen, recorder.status]);
+  const inputChosen = inputs.some((one) => one.deviceId === input) ? input : "";
   const [sending, setSending] = useState(false);
   const fileInput = useRef<HTMLInputElement | null>(null);
 
   const stopAlong = () => {
     playAlong.current?.pause();
     playAlong.current = null;
-    clicks.stop();
   };
   const beginRecording = async () => {
     setRefused(null);
-    await recorder.start();
+    await recorder.start(inputChosen || undefined);
     if (withOriginal && passage && !isNew) {
       // The passage as it sounds, slowed (or hurried) to the speed the take is played at.
       const along = new Audio(audioApi.fileUrl(passage.current));
@@ -244,13 +271,12 @@ export function PassagePage() {
       playAlong.current = along;
       void along.play();
     }
-    if (withClick && clickMs > 0) clicks.start(clickMs);
   };
   const endRecording = () => {
     stopAlong();
     recorder.stop();
   };
-  useEffect(() => () => stopAlong(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => stopAlong(), []);
 
   const sendTake = useCallback(
     async (file: File) => {
@@ -699,23 +725,24 @@ export function PassagePage() {
               label={speed === 1 ? "Play the passage along" : `Play the passage along at ×${(1 / speed).toFixed(2)}`}
             />
           )}
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-            <FormControlLabel
-              control={<Checkbox size="small" checked={withClick} onChange={(event) => setWithClick(event.target.checked)} />}
-              label="Metronome tick"
-            />
+          {inputs.length > 1 ? (
             <TextField
+              select
               size="small"
-              value={clickText ?? String(clickMs)}
-              onChange={(event) => setClickText(event.target.value)}
-              disabled={!withClick}
-              sx={{ width: 90 }}
-              slotProps={{ htmlInput: { inputMode: "numeric", "aria-label": "Milliseconds between clicks" } }}
-            />
-            <Typography variant="body2" color="text.secondary">
-              ms
-            </Typography>
-          </Stack>
+              label="Microphone"
+              value={inputChosen}
+              onChange={(event) => chooseInput(event.target.value)}
+              disabled={recorder.status === "recording"}
+              slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+            >
+              <MenuItem value="">The computer's default</MenuItem>
+              {inputs.map((one, index) => (
+                <MenuItem key={one.deviceId} value={one.deviceId}>
+                  {one.label || `Microphone ${index + 1}`}
+                </MenuItem>
+              ))}
+            </TextField>
+          ) : null}
           {recorder.error ? <Alert severity="error">{recorder.error}</Alert> : null}
           <LiveLevelBars levels={recorder.levels} active={recorder.status === "recording"} height={40} />
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>

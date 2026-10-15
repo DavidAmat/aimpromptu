@@ -9,7 +9,7 @@ package `vexflow-v2` moved to 0.44.0 (section 6).
 
 | Story | Result |
 |---|---|
-| 9.1 The page | `/projects/:id/passages/:passageId`: **Current** (a copy of the marked frames, read only, with its own play button) and **Proposal** (a take, drawn by the whole sheet page with its toolboxes and undo). Takes are recorded in the browser (with the passage played along, slowed to the speed, and a metronome) or added from a file; **Write the proposal** keeps the chosen stretch of the take and runs the transcription, the hand split and a first sheet **in the passage's key and figure**, as one GPU job |
+| 9.1 The page | `/projects/:id/passages/:passageId`: **Current** (a copy of the marked frames, read only, with its own play button) and **Proposal** (a take, drawn by the whole sheet page with its toolboxes and undo). Takes are recorded in the browser (with the passage played along, slowed to the speed, from a chosen microphone) or added from a file; **Write the proposal** keeps the chosen stretch of the take and runs the transcription, the hand split and a first sheet **in the passage's key and figure**, as one GPU job |
 | 9.2 Promote | The speed (×0.25 to ×4) and the window (as long as the Current, dragged by a grip; **Fit** finds the speed at which the take fills it). **Fit to the window** with **Keep the original audio** or **Use my recording** keeps the song's length; **Replace the whole passage** changes it and says by how much. One write through the Phase 8 paste; the sheet opens with the promotion as its last step, so undo and redo work on it. The staged session is generalised as hidden projects of the vault; the two old panels and the session layer are removed |
 | 9.3 Documentation | `context/backend/editing.md` and `documentation/.../editing-and-compose.md` rewritten; `context/frontend/recording-in-sheet.md` (new), `projects.md`, `annotations.md`, `annotations-stretches.md`, `pages.md`, `07-database.md`, `endpoints.md`, `paths-and-data.md`, `components.md`, `aitu-frontend/README.md`, the overviews; the plan's "as built in Phase 9" notes; the package's `04-editing.md` |
 
@@ -272,7 +272,16 @@ user wants to record from the Mac (section 3.2: `localhost` through the tunnel, 
 - **Abandoned passages** stay hidden until their song is deleted or saved to the library (they are
   reopened by marking the same stretch while the song is unchanged).
 
-# 12. Learnings for later phases
+# 12. After the user's first review (2026-10-15)
+
+- **The metronome is removed.** Its clicks came out of the speakers into the take. `useClickTrack` is
+  deleted; nothing else used it.
+- **The recorder asks for the microphone with the browser's voice processing off** (echo
+  cancellation, noise suppression, automatic gain): they are made for speech, and they cut and pump a
+  piano. A **Microphone** list (shown when the computer has more than one input, the choice kept in
+  this browser) picks the input; until now the system's default was used.
+
+# 13. Learnings for later phases
 
 - **A media address must change with the audio, and a page's own counter restarts when it opens
   again.** Put the audio revision in the address, taken when the page opens.

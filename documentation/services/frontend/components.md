@@ -261,7 +261,7 @@ resuming does not jump.
 | **Current · m:ss – m:ss** | `SheetPage` with `passage.role = "current"` on the passage's `current` part, its play button driving the sheet's player (`playerRef`); starting one sheet stops the other |
 | **Proposal** | No take: **Record** and **Add a take from a file** (a hidden file field). A take not read, or **Choose the stretch of the take**: `WaveformRangeSelector` of the take (its `initialRange` is the stretch kept), **Write the proposal** (`passagesApi.readTake`, followed with `useProgress` and `ProgressBanner`), **Record again**. A take read: `SheetPage` with `passage.role = "proposal"`, keyed by the take and its audio revision, `anchorMs` = the passage's × the speed, the window (`frameWindow`, columns of the take) and the bar's actions (Record a take, the stretch, **Fit**) |
 | Beside **Proposal** | The take (a select when there are several) and the speed: a slider on a log scale, ×0.25 to ×4, sent on release (`PATCH /passages/{id}`) |
-| The recorder | A `Toolbox`: **Play the passage along** (an `Audio` of the Current at `playbackRate = 1 / speed`, pitch kept), **Metronome tick … ms** (`useClickTrack`, a negra of the take by default), `LiveLevelBars`, Record / Stop (`useRecorder`); a take is sent (`passagesApi.addTake`) as soon as it stops. **Record** is disabled with its reason where the page cannot use the microphone (`navigator.mediaDevices` is missing off a secure address) |
+| The recorder | A `Toolbox`: **Play the passage along** (an `Audio` of the Current at `playbackRate = 1 / speed`, pitch kept), **Microphone** (the `audioinput` devices, shown when there are several, the choice kept in `localStorage`), `LiveLevelBars`, Record / Stop (`useRecorder`, which asks for the device with echo cancellation, noise suppression and automatic gain off: they are made for speech and cut a piano); a take is sent (`passagesApi.addTake`) as soon as it stops. **Record** is disabled with its reason where the page cannot use the microphone (`navigator.mediaDevices` is missing off a secure address) |
 | The promotion dialog | `passagesApi.facts` for the mode and the audio (**Keep the original audio** / **Use my recording**, a `Segmented`, for the window), the length change and the marks that go, only when there are; **Promote** reads the saved sheet of the song first (the undo's sheet), then `passagesApi.promote` with the Proposal's held sheet, then the song's Sheet step with `promoted` in the navigation state |
 
 `data-passage-page`, `data-passage-current`, `data-passage-proposal`, `data-passage-range` and
@@ -310,7 +310,6 @@ box now: one unit is one pixel, text is undistorted, and a 2 px border is 2 px.
 | Directory | Contents |
 |---|---|
 | `components/audio/` | `LiveLevelBars`, `WaveformView`, `WaveformRangeSelector` (the stretch of a take, on the page of a passage); `CutWaveform` and `waveformPaint` (the Audio step, section 2.2) |
-| `components/editing/` | `useClickTrack` (the metronome of the recorder) |
 | `audio/` | `useRecorder` (MediaRecorder), `time.ts` (`mm:ss.cc`); `cuts.ts`, `frameView.ts`, `useCutPlayer.ts` (the Audio step) |
 | `components/ProgressBanner.tsx` | The progress of **Write the proposal** on the page of a passage |
 
@@ -435,7 +434,7 @@ Timestamps are `mm:ss.cc` everywhere and never wrap:
 Stated so nobody looks for them.
 
 **In implementation 02, Phase 9**: `components/editing/RangeRerecordPanel.tsx` (Epic 11),
-`ComposePassagePanel.tsx` (Epic 13), `components/time/PeakPlot.tsx` and `api/editing.ts`: the page
+`ComposePassagePanel.tsx` (Epic 13), `components/editing/useClickTrack.ts` (the metronome, removed after the user's review: its clicks were recorded with the take), `components/time/PeakPlot.tsx` and `api/editing.ts`: the page
 of a passage (section 3.1) replaced the two panels, the sheet's Re-record tab and its Record panel,
 and Notes Falling's **Re-record this stretch** (now **Record this stretch**, which opens that page).
 

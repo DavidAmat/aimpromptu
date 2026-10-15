@@ -121,7 +121,6 @@ src/
     notes/    # PianoRollCanvas, rollPaint, RollTimeBar; the Notes Falling toolbox and removals bar
     time/     # TimeScoreView (the ONLY file that touches the renderer), ScorePlayer, FigureGlyph
     audio/    # waveforms (CutWaveform for the Audio step), range selection, level bars
-    editing/  # the metronome of the recorder (the page of a passage is pages/piece/passage/)
     video/    # the Lab views: player, calibration, detection, overlay
 ```
 
