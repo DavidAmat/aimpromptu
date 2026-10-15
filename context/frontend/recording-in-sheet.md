@@ -28,6 +28,14 @@ The page shows the song's title, **Promote**, and two sheets:
   drawn with every tool of the sheet and its own undo (its sheet toolbox has Key, Transpose and
   Layout); its edits are kept by themselves.
 
+**A MIDI piano.** A piano with a MIDI connector, plugged into the computer, can play the take
+instead: in the recorder, **Notes from: MIDI piano** (shown when the browser has Web MIDI; it asks
+for MIDI once). The keys played are the notes, exactly, with no transcription: **Write the
+proposal** keeps those of the chosen stretch, splits the hands and writes the sheet. **Sound**
+chooses the microphone that records the take's sound at the same time, or **No sound** (the take
+is then silent, as long as its keys). While recording the panel counts the keys played. A note ends
+when its key comes up: the sustain pedal is not read.
+
 ## 2. The speed and the window
 
 Beside **Proposal**: the take on show, and **the speed** (×0.25 to ×4): how many times as fast the

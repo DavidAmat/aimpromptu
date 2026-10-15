@@ -8,7 +8,7 @@
  */
 
 import type { SavedRhythm } from "./timeScore";
-import { request, upload } from "./client";
+import { postForm, request } from "./client";
 
 export interface PassageTake {
   id: string;
@@ -21,6 +21,8 @@ export interface PassageTake {
   toSeconds: number;
   /** The job of **Write the proposal**, while it runs. */
   jobId: string | null;
+  /** Played on a MIDI piano: its notes are the keys played, not a transcription. */
+  midi: boolean;
   /** Rises when the stretch kept changes: the take is played at a new address then. */
   audioRevision: number;
 }
@@ -47,6 +49,14 @@ export interface OpenPassage {
   windowMs: number;
   /** The kept length of the take on show, in ms. */
   takeMs: number | null;
+}
+
+/** A key played on a MIDI piano during a take, in seconds from the start of its recording. */
+export interface PlayedNote {
+  midiNote: number;
+  start: number;
+  end: number;
+  velocity: number;
 }
 
 export type PromotionMode = "window" | "whole";
@@ -87,7 +97,13 @@ export const passagesApi = {
   update: (id: string, body: { take?: string; speed?: number; windowMs?: number }) =>
     request<OpenPassage>(`/passages/${id}`, { method: "PATCH", body }),
   discard: (id: string) => request<void>(`/passages/${id}`, { method: "DELETE" }),
-  addTake: (id: string, file: File) => upload<OpenPassage>(`/passages/${id}/takes`, file),
+  /** A take: a recording, the keys played on a MIDI piano, or both. */
+  addTake: (id: string, file: File | null, notes?: readonly PlayedNote[]) => {
+    const form = new FormData();
+    if (file) form.append("file", file);
+    if (notes) form.append("notes", JSON.stringify(notes));
+    return postForm<OpenPassage>(`/passages/${id}/takes`, form);
+  },
   deleteTake: (id: string, take: string) =>
     request<OpenPassage>(`/passages/${id}/takes/${take}`, { method: "DELETE" }),
   /** **Write the proposal**: a job; follow it on `matrixApi.progressUrl(jobId)`. */

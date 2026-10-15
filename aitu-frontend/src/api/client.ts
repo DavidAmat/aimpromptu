@@ -154,7 +154,11 @@ export async function upload<T>(
   const form = new FormData();
   form.append("file", file);
   for (const [key, value] of Object.entries(fields)) form.append(key, value);
+  return postForm<T>(path, form);
+}
 
+/** A multipart form, with or without a file (a take played on a MIDI piano with no recording). */
+export async function postForm<T>(path: string, form: FormData): Promise<T> {
   const response = await fetchOrExplain(buildUrl(path), { method: "POST", body: form });
   if (!response.ok) {
     noticeSignedOut(path, response);

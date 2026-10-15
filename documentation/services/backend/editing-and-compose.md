@@ -88,12 +88,18 @@ state (`PassageState`):
 **A take** is one more hidden project of one part (`origin.takeOf` names the passage), titled
 `"Take N"`: `add_take` raises the upload so its loudest sample is at -1 dB (`formats.louder`, one
 gain for the whole take, at most +40 dB, never lowered; the browser's automatic gain is off), stores
-it as FLAC at its own rate and channels (`store.save_original`) and normalizes it (`ingest.finalize`). Its state: `recorded` (audio only), `reading` (its job runs, key
+it as FLAC at its own rate and channels (`store.save_original`) and normalizes it (`ingest.finalize`).
+A take played on a MIDI piano also carries its keys (`notes`: `MidiNote` `{midiNote, start, end,
+velocity}`, seconds from the start of the recording), kept as `parts/<takeId>/midi.json`; with no
+recording its audio is silence as long as the keys and a second more. Its state: `recorded` (audio only), `reading` (its job runs, key
 `take:<id>`), `ready` (notes of the current cuts, and a hand for every note).
 
 **The condensed steps** (`read_take`, the job of **Write the proposal**, on the GPU queue): the
 stretch of the take to keep becomes its cuts (`store.set_cuts`, the Audio step's rule); then
-`pipeline.transcribe_audio` (its live notes go to the job's stream); then the hand split
+`pipeline.transcribe_audio` (its live notes go to the job's stream), or, for a take played on a MIDI
+piano, the same call with `_PlayedNotes` as the engine (`name = "midi"`): the keys whose onset is in
+the stretch, in its time, so the notes get a transcription's header and history without the model
+(`filters_for("midi")` turns off the filters tuned for ByteDance, as for MuScriptor); then the hand split
 (`inferred_split`, every note given a hand, unplaced ones by the quick rule) written by
 `save_edit(hands_changed=True)`; then its first sheet (`_first_sheet`): the song's settings where the
 stretch starts (key, figure, spacing, `paste._first_sheet`), none of its marks, `anchorMs` = the

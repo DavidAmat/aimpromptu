@@ -5,7 +5,7 @@
 
 import { request } from "./client";
 
-export { API_BASE, ApiError, buildUrl, request, SIGNED_OUT_EVENT, upload } from "./client";
+export { API_BASE, ApiError, buildUrl, postForm, request, SIGNED_OUT_EVENT, upload } from "./client";
 export type { RequestOptions } from "./client";
 
 export { authApi } from "./auth";
@@ -40,6 +40,7 @@ export { passagesApi } from "./passages";
 export type {
   OpenPassage,
   PassageTake,
+  PlayedNote,
   Promoted,
   PromotionAudio,
   PromotionFacts,

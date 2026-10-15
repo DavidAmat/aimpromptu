@@ -65,6 +65,30 @@ const browser = await chromium.launch({
 });
 useSession(browser);
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+// A MIDI piano for the page, played by the check (`window.__playMidi`): Web MIDI with one input.
+await page.addInitScript(() => {
+  const input = new EventTarget();
+  Object.assign(input, { id: 'check-piano', name: 'Check piano', type: 'input', state: 'connected' });
+  const access = { inputs: new Map([['check-piano', input]]), outputs: new Map(), onstatechange: null };
+  navigator.requestMIDIAccess = async () => access;
+  const send = (bytes) => {
+    const event = new Event('midimessage');
+    Object.defineProperty(event, 'data', { value: new Uint8Array(bytes) });
+    Object.defineProperty(event, 'timeStamp', { value: performance.now() });
+    input.dispatchEvent(event);
+  };
+  /** Play `[key, startMs, endMs]` notes, in real time from now; resolves when the last key is up. */
+  window.__playMidi = (notes) =>
+    new Promise((resolve) => {
+      let last = 0;
+      for (const [key, start, end] of notes) {
+        setTimeout(() => send([0x90, key, 90]), start);
+        setTimeout(() => send([0x80, key, 0]), end);
+        last = Math.max(last, end);
+      }
+      setTimeout(resolve, last + 50);
+    });
+});
 const problems = [];
 page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
 page.on('pageerror', (e) => problems.push(`page error: ${e.message}`));
@@ -318,8 +342,25 @@ try {
   await page.waitForURL(/\/passages\/[0-9a-f-]+$/, { timeout: 20000 });
   passages.add(passageId());
   check('a blank sheet opens a new passage, with no Current', (await page.locator('[data-passage-current]').count()) === 0);
-  await addFileTake(slow);
+  // Played on a MIDI piano, with no sound: the keys are the notes.
+  await page.getByTestId('passage-first-record').click();
+  await page.locator('[data-passage-recorder]').waitFor();
+  await page.getByRole('button', { name: 'MIDI piano' }).click();
+  await page.getByLabel('Sound').click();
+  await page.getByRole('option', { name: 'No sound' }).click();
+  await page.getByTestId('passage-start').click();
+  await page.getByTestId('passage-stop').waitFor({ timeout: 10000 });
+  await page.evaluate(() => window.__playMidi([[60, 200, 600], [64, 700, 1100], [67, 1200, 1900]]));
+  check('the keys played are counted while recording', (await page.getByTestId('passage-keys').textContent()) === '3 keys', await page.getByTestId('passage-keys').textContent());
+  await shot('12a-midi');
+  await page.getByTestId('passage-stop').click();
+  await page.locator('[data-passage-range]').waitFor({ timeout: 60000 });
+  const midiTake = (await json(`${api}/passages/${passageId()}`)).takes[0];
+  check('a take played on a MIDI piano with no sound is kept, silent, as long as its keys', midiTake.midi === true && midiTake.seconds > 2 && midiTake.seconds < 4, `${midiTake.seconds} s`);
   await writeProposal();
+  const midiNotes = (await json(`${api}/pieces/${midiTake.id}/notes`)).id.length;
+  const midiPitches = (await json(`${api}/matrix/${midiTake.id}/events`)).events?.map((one) => one.midiNote ?? one.midi_note) ?? [];
+  check('Write the proposal keeps the keys played, not a transcription', midiNotes === 3, `${midiNotes} notes ${JSON.stringify(midiPitches)}`);
   await shot('12-new-passage');
   await page.getByTestId('passage-promote').click();
   await page.getByTestId('promotion-confirm').click();
@@ -339,6 +380,24 @@ try {
   const third = passageId();
   passages.add(third);
   await page.locator('[data-passage-current] .grid-note-target').first().waitFor({ timeout: 60000 });
+  // A MIDI piano with the (fake) microphone: the keys are the notes, the microphone the sound.
+  await page.getByTestId('passage-first-record').click();
+  await page.locator('[data-passage-recorder]').waitFor();
+  await page.getByRole('button', { name: 'MIDI piano' }).click();
+  await page.getByLabel('Sound').click();
+  await page.getByRole('option', { name: "The computer's default" }).click();
+  await page.getByTestId('passage-start').click();
+  await page.getByTestId('passage-stop').waitFor({ timeout: 10000 });
+  await page.evaluate(() => window.__playMidi([[62, 300, 900], [65, 1000, 1500]]));
+  await page.getByTestId('passage-stop').click();
+  await page.locator('[data-passage-range]').waitFor({ timeout: 60000 });
+  const withSoundTake = (await json(`${api}/passages/${third}`)).takes[0];
+  const level = await page.evaluate(async (url) => {
+    const audio = new Audio(url);
+    await new Promise((resolve, reject) => { audio.addEventListener('loadedmetadata', resolve, { once: true }); audio.addEventListener('error', reject, { once: true }); });
+    return audio.duration;
+  }, `${api}/audio/${withSoundTake.id}/file?original=true`);
+  check('a take played on a MIDI piano with a microphone keeps both: its keys and its sound', withSoundTake.midi === true && level > 1, `${level.toFixed(2)} s of sound`);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(800);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

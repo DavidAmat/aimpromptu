@@ -1262,6 +1262,9 @@ this page.
   so; **Add a take from a file** is the way there (or `localhost` through the tunnel).
 - **No metronome** (removed after the user's review: its clicks were recorded with the take). The
   recorder picks the microphone, with the browser's voice processing off.
+- **A MIDI piano** (asked in the user's review): **Notes from: MIDI piano** takes the keys played as
+  the notes (no transcription), with the microphone's sound or none. Note lengths are the keys'; the
+  sustain pedal is not read.
 
 ---
 

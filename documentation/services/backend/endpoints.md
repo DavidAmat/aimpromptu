@@ -794,7 +794,9 @@ passage:
 **`PATCH /passages/{id}`** `{take?, speed?, windowMs?}`: the speed goes from ×0.25 to ×4 (`409`
 otherwise); a take of another passage is `404`. **`DELETE`** discards it with its takes (`204`).
 
-**`POST …/takes`** (multipart `file`, any audio the upload takes) adds a take and shows it.
+**`POST …/takes`** (multipart `file`, any audio the upload takes, and/or `notes`, the JSON list of
+the keys played on a MIDI piano, `[{midiNote, start, end, velocity}]` in seconds from the start of the
+recording) adds a take and shows it; a take has `midi: true` when it has keys.
 **`POST …/takes/{take}/read`** `{fromSeconds, toSeconds}` answers `202` with `{jobId, status}`: the
 stretch becomes the take's cuts, then the transcription, the hand split and the first sheet run as
 one job of the GPU queue (key `take:<id>`).

@@ -13,9 +13,10 @@ undo (`POST /time/{uuid}/versions/{n}/restore`).
 
 from __future__ import annotations
 
+import json
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Body, File, HTTPException, UploadFile
+from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -171,12 +172,31 @@ def discard_passage(project_id: str) -> Response:
 
 
 @router.post("/{project_id}/takes", status_code=201)
-def add_take(project_id: str, file: Annotated[UploadFile, File()]) -> Response:
-    """A recording of the passage, stored as a new take: the one on show."""
-    if not file.filename:
+def add_take(
+    project_id: str,
+    file: Annotated[UploadFile | None, File()] = None,
+    notes: Annotated[str | None, Form()] = None,
+) -> Response:
+    """A take of the passage, the one on show: a recording (multipart ``file``), the keys played on
+    a MIDI piano (``notes``, a JSON list of ``{midiNote, start, end, velocity}`` in seconds from the
+    start of the recording), or both."""
+    if file is not None and not file.filename:
         raise HTTPException(status_code=422, detail="The uploaded file has no name")
     try:
-        passages.add_take(project_id, file.file, file.filename)
+        played = (
+            [passages.MidiNote.model_validate(item) for item in json.loads(notes)]
+            if notes
+            else None
+        )
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=f"The notes are not readable: {exc}") from exc
+    try:
+        passages.add_take(
+            project_id,
+            file.file if file is not None else None,
+            file.filename if file is not None else None,
+            played,
+        )
     except (locate.NotFound, passages.PassageError, FfmpegMissing, ConversionFailed) as exc:
         raise _refused(exc) from exc
     return _answer(project_id, 201)

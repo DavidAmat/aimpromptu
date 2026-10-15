@@ -44,11 +44,13 @@ import {
   passagesApi,
   timeScoreApi,
   type OpenPassage,
+  type PlayedNote,
   type PromotionAudio,
   type PromotionFacts,
   type PromotionMode,
   type SavedRhythm,
 } from "../../../api";
+import { useMidiInput } from "../../../audio/useMidiInput";
 import { fileNameFor, useRecorder } from "../../../audio/useRecorder";
 import { formatTime } from "../../../audio/time";
 import LiveLevelBars from "../../../components/audio/LiveLevelBars";
@@ -118,6 +120,28 @@ function marksWords(dropped: Record<string, number>): string | null {
 /** The browser lets a page use the microphone only on a secure address (HTTPS or localhost). */
 /** Where the chosen microphone is remembered, in this browser only. */
 const INPUT_KEY = "aitu.recorder.input";
+/** Where the source of a take's notes is remembered: the microphone or a MIDI piano. */
+const SOURCE_KEY = "aitu.recorder.source";
+/** The microphone list's choice for a take played on a MIDI piano with no sound recorded. */
+const NO_SOUND = "none";
+
+type NotesFrom = "microphone" | "midi";
+
+function remembered(key: string, fallback: string): string {
+  try {
+    return localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function remember(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // A private window: the choice lasts this page.
+  }
+}
 const MICROPHONE = typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
 
 export function PassagePage() {
@@ -224,21 +248,37 @@ export function PassagePage() {
   const [withOriginal, setWithOriginal] = useState(false);
   /** The microphones of this computer, and the one chosen (kept in this browser). */
   const [inputs, setInputs] = useState<MediaDeviceInfo[]>([]);
-  const [input, setInput] = useState<string>(() => {
-    try {
-      return localStorage.getItem(INPUT_KEY) ?? "";
-    } catch {
-      return "";
-    }
-  });
+  const [input, setInput] = useState<string>(() => remembered(INPUT_KEY, ""));
   const chooseInput = (deviceId: string) => {
     setInput(deviceId);
-    try {
-      localStorage.setItem(INPUT_KEY, deviceId);
-    } catch {
-      // A private window: the choice lasts this page.
-    }
+    remember(INPUT_KEY, deviceId);
   };
+  /** A MIDI piano: its keys are the take's notes; the microphone, if any, records its sound. */
+  const midi = useMidiInput();
+  const [notesFrom, setNotesFrom] = useState<NotesFrom>(() =>
+    midi.supported && remembered(SOURCE_KEY, "microphone") === "midi" ? "midi" : "microphone",
+  );
+  const chooseNotesFrom = (next: NotesFrom) => {
+    setNotesFrom(next);
+    remember(SOURCE_KEY, next);
+    if (next === "midi") void midi.request();
+  };
+  const { request: requestMidi } = midi;
+  useEffect(() => {
+    if (recorderOpen && notesFrom === "midi") void requestMidi();
+  }, [recorderOpen, notesFrom, requestMidi]);
+  const [piano, setPiano] = useState("");
+  const pianoChosen = midi.inputs.some((one) => one.id === piano) ? piano : "";
+  /** The keys of the take being recorded, kept until its sound arrives. */
+  const playedNow = useRef<PlayedNote[] | null>(null);
+  /** A take played on a MIDI piano with no sound: its start, while it is recorded. */
+  const [silentSince, setSilentSince] = useState<number | null>(null);
+  const [silentSeconds, setSilentSeconds] = useState(0);
+  useEffect(() => {
+    if (silentSince === null) return;
+    const timer = window.setInterval(() => setSilentSeconds((performance.now() - silentSince) / 1000), 250);
+    return () => window.clearInterval(timer);
+  }, [silentSince]);
   // Their names are known once the page may use the microphone, so they are read again after a
   // take and whenever a device comes or goes.
   useEffect(() => {
@@ -252,7 +292,15 @@ export function PassagePage() {
     navigator.mediaDevices.addEventListener("devicechange", read);
     return () => navigator.mediaDevices.removeEventListener("devicechange", read);
   }, [recorderOpen, recorder.status]);
-  const inputChosen = inputs.some((one) => one.deviceId === input) ? input : "";
+  const inputChosen =
+    input === NO_SOUND && notesFrom === "midi"
+      ? NO_SOUND
+      : inputs.some((one) => one.deviceId === input)
+        ? input
+        : "";
+  const withMidi = notesFrom === "midi";
+  const withSound = MICROPHONE && !(withMidi && inputChosen === NO_SOUND);
+  const recording = recorder.status === "recording" || silentSince !== null;
   const [sending, setSending] = useState(false);
   const fileInput = useRef<HTMLInputElement | null>(null);
 
@@ -262,7 +310,17 @@ export function PassagePage() {
   };
   const beginRecording = async () => {
     setRefused(null);
-    await recorder.start(inputChosen || undefined);
+    playedNow.current = null;
+    if (withSound) await recorder.start(inputChosen && inputChosen !== NO_SOUND ? inputChosen : undefined);
+    if (withMidi) {
+      // The keys are timed from the moment the sound starts recording, so the two line up.
+      const zero = performance.now();
+      midi.start(pianoChosen, zero);
+      if (!withSound) {
+        setSilentSeconds(0);
+        setSilentSince(zero);
+      }
+    }
     if (withOriginal && passage && !isNew) {
       // The passage as it sounds, slowed (or hurried) to the speed the take is played at.
       const along = new Audio(audioApi.fileUrl(passage.current));
@@ -274,16 +332,30 @@ export function PassagePage() {
   };
   const endRecording = () => {
     stopAlong();
+    if (withMidi) {
+      playedNow.current = midi.stop();
+      if (silentSince !== null) {
+        setSilentSince(null);
+        const notes = playedNow.current;
+        playedNow.current = null;
+        if (notes.length === 0) {
+          setRefused("No key was played on the MIDI piano.");
+          return;
+        }
+        void sendTake(null, notes);
+        return;
+      }
+    }
     recorder.stop();
   };
   useEffect(() => () => stopAlong(), []);
 
   const sendTake = useCallback(
-    async (file: File) => {
+    async (file: File | null, notes?: readonly PlayedNote[]) => {
       setSending(true);
       setRefused(null);
       try {
-        setPassage(await passagesApi.addTake(passageId, file));
+        setPassage(await passagesApi.addTake(passageId, file, notes));
         setRecorderOpen(false);
         setEditingRange(true);
       } catch (caught) {
@@ -303,7 +375,10 @@ export function PassagePage() {
         setRefused("This browser recorded a format the app does not read.");
         return;
       }
-      await sendTake(new File([recorded], name, { type: recorded.type }));
+      // With the keys of a MIDI piano when they were played with it.
+      const notes = playedNow.current ?? undefined;
+      playedNow.current = null;
+      await sendTake(new File([recorded], name, { type: recorded.type }), notes);
     },
     [sendTake],
   );
@@ -714,27 +789,63 @@ export function PassagePage() {
         title="Record a take"
         initialPosition={{ x: 24, y: 140 }}
         onClose={() => {
-          if (recorder.status !== "recording") setRecorderOpen(false);
+          if (!recording) setRecorderOpen(false);
         }}
         width={340}
       >
         <Stack spacing={1.5} data-passage-recorder>
+          {midi.supported ? (
+            <Segmented<NotesFrom>
+              label="Notes from"
+              value={notesFrom}
+              options={[
+                { value: "microphone", label: "Microphone" },
+                { value: "midi", label: "MIDI piano" },
+              ]}
+              onChange={chooseNotesFrom}
+            />
+          ) : null}
+          {withMidi && midi.error ? <Alert severity="warning">{midi.error}</Alert> : null}
+          {withMidi && !midi.error && midi.inputs.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No MIDI piano is connected.
+            </Typography>
+          ) : null}
+          {withMidi && midi.inputs.length > 1 ? (
+            <TextField
+              select
+              size="small"
+              label="MIDI piano"
+              value={pianoChosen}
+              onChange={(event) => setPiano(event.target.value)}
+              disabled={recording}
+              slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+            >
+              <MenuItem value="">Every one connected</MenuItem>
+              {midi.inputs.map((one) => (
+                <MenuItem key={one.id} value={one.id}>
+                  {one.name}
+                </MenuItem>
+              ))}
+            </TextField>
+          ) : null}
           {isNew ? null : (
             <FormControlLabel
               control={<Checkbox size="small" checked={withOriginal} onChange={(event) => setWithOriginal(event.target.checked)} />}
               label={speed === 1 ? "Play the passage along" : `Play the passage along at ×${(1 / speed).toFixed(2)}`}
             />
           )}
-          {inputs.length > 1 ? (
+          {MICROPHONE && (inputs.length > 1 || withMidi) ? (
             <TextField
               select
               size="small"
-              label="Microphone"
+              label={withMidi ? "Sound" : "Microphone"}
               value={inputChosen}
               onChange={(event) => chooseInput(event.target.value)}
-              disabled={recorder.status === "recording"}
+              disabled={recording}
               slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
             >
+              {withMidi ? <MenuItem value={NO_SOUND}>No sound</MenuItem> : null}
               <MenuItem value="">The computer's default</MenuItem>
               {inputs.map((one, index) => (
                 <MenuItem key={one.deviceId} value={one.deviceId}>
@@ -744,29 +855,40 @@ export function PassagePage() {
             </TextField>
           ) : null}
           {recorder.error ? <Alert severity="error">{recorder.error}</Alert> : null}
-          <LiveLevelBars levels={recorder.levels} active={recorder.status === "recording"} height={40} />
+          {withSound ? (
+            <LiveLevelBars levels={recorder.levels} active={recorder.status === "recording"} height={40} />
+          ) : null}
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-            {recorder.status === "recording" ? (
+            {recording ? (
               <PillButton kind="danger" startIcon={<StopIcon />} onClick={endRecording} data-testid="passage-stop">
-                Stop {formatTime(recorder.elapsedSeconds)}
+                Stop {formatTime(silentSince !== null ? silentSeconds : recorder.elapsedSeconds)}
               </PillButton>
             ) : (
               <PillButton
                 kind="primary"
                 startIcon={<FiberManualRecordIcon />}
                 busy={sending || recorder.status === "requesting"}
-                disabled={!MICROPHONE}
-                title={MICROPHONE ? undefined : "This address cannot use the microphone: open the app at localhost, or add a take from a file"}
+                disabled={withMidi ? midi.inputs.length === 0 : !MICROPHONE}
+                title={
+                  withMidi || MICROPHONE
+                    ? undefined
+                    : "This address cannot use the microphone: open the app at localhost, or add a take from a file"
+                }
                 onClick={() => void beginRecording()}
                 data-testid="passage-start"
               >
                 Record
               </PillButton>
             )}
+            {recording && withMidi ? (
+              <Typography variant="body2" color="text.secondary" data-testid="passage-keys">
+                {midi.heard} {midi.heard === 1 ? "key" : "keys"}
+              </Typography>
+            ) : null}
             <IconAction
               title="Add a take from a file"
               icon={<FileUploadIcon />}
-              disabled={recorder.status === "recording" || sending}
+              disabled={recording || sending}
               onClick={() => fileInput.current?.click()}
             />
           </Stack>

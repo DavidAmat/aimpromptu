@@ -36,6 +36,7 @@ sheet's undo puts it back (:func:`aitu_backend.editing.history.restore`), as for
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import shutil
 import tempfile
@@ -43,7 +44,9 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, BinaryIO, Literal
 
+import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
+from scipy.io import wavfile
 
 from aitu_backend.audio import formats, ingest, sources, store, timeline as audio_timeline
 from aitu_backend.db.users import current_user_id
@@ -52,9 +55,10 @@ from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.progress import BaseProgress
 from aitu_backend.schemas.rhythm import SavedRhythm
 from aitu_backend.schemas.time_matrix import FIGURE_NEGRAS, FigureName
-from aitu_backend.storage import audio_files, bundle, locate
+from aitu_backend.storage import audio_files, bundle, locate, paths
 from aitu_backend.storage.bundle import PartSource
 from aitu_backend.transcription import jobs, pipeline, saved_hands
+from aitu_backend.transcription.engine import NoteEvent
 
 __all__ = [
     "Facts",
@@ -121,6 +125,8 @@ class Take:
     from_seconds: float
     to_seconds: float
     job_id: str | None
+    #: Played on a MIDI piano: its notes are the keys played, not a transcription.
+    midi: bool
     #: Changes with the stretch kept: the page plays the take at a new address then.
     audio_revision: int
 
@@ -299,6 +305,7 @@ def _take(take_id: str) -> Take:
         from_seconds=lo,
         to_seconds=hi,
         job_id=job.id if job is not None else None,
+        midi=_midi_path(take_id).is_file(),
         audio_revision=timeline.audio_revision,
     )
 
@@ -348,8 +355,72 @@ def discard(passage_id: str) -> None:
 # ------------------------------------------------------------------ the takes
 
 
-def add_take(passage_id: str, stream: BinaryIO, filename: str) -> str:
-    """A recording of the passage: a new take, the one on show. Returns its id."""
+#: The notes of a take played on a MIDI piano, beside its part's other files.
+MIDI_FILE = "midi.json"
+#: The name a take's notes are written under when they come from a MIDI piano, not a transcription.
+MIDI_ENGINE = "midi"
+
+
+class MidiNote(BaseModel):
+    """A key played on a MIDI piano during a take, in seconds from the start of its recording."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    midi_note: int = Field(..., alias="midiNote", ge=21, le=108)
+    start: float = Field(..., ge=0)
+    end: float = Field(..., gt=0)
+    velocity: int = Field(64, ge=1, le=127)
+
+
+class _PlayedNotes:
+    """The transcription of a take played on a MIDI piano: the keys it heard, already exact.
+
+    Given to :func:`pipeline.transcribe_audio` in place of the model, so the notes are written with
+    the header, the revisions and the history of a transcription; the audio is not read."""
+
+    name = MIDI_ENGINE
+
+    def __init__(self, events: list[NoteEvent]) -> None:
+        self.events = events
+
+    def transcribe(self, wav_path: Path) -> list[NoteEvent]:
+        return [event.model_copy() for event in self.events]
+
+
+def _midi_path(take_id: str) -> Path:
+    return paths.part_dir(take_id) / MIDI_FILE
+
+
+def midi_notes(take_id: str) -> list[MidiNote] | None:
+    """The notes a take was played with on a MIDI piano, or ``None`` for a take recorded only."""
+    path = _midi_path(take_id)
+    if not path.is_file():
+        return None
+    return [MidiNote.model_validate(item) for item in json.loads(path.read_text(encoding="utf-8"))]
+
+
+def _silence(seconds: float, folder: Path) -> Path:
+    """A silent WAV, the audio of a take played on a MIDI piano with no microphone."""
+    rate = 16_000
+    path = folder / "silence.wav"
+    wavfile.write(path, rate, np.zeros(max(rate, int(rate * seconds)), dtype=np.int16))
+    return path
+
+
+def add_take(
+    passage_id: str,
+    stream: BinaryIO | None,
+    filename: str | None,
+    notes: list[MidiNote] | None = None,
+) -> str:
+    """A take of the passage: a new take, the one on show. Returns its id.
+
+    A recording (``stream``), the notes played on a MIDI piano (``notes``, in seconds from the
+    start of the recording), or both: the recording is the take's audio and the notes are what
+    **Write the proposal** keeps instead of transcribing it. Notes with no recording get silence as
+    long as them."""
+    if stream is None and not notes:
+        raise PassageError("Record a take, or play one on a MIDI piano.")
     passage = load(passage_id)
     names = []
     for take_id in passage.takes:
@@ -365,7 +436,7 @@ def add_take(passage_id: str, stream: BinaryIO, filename: str) -> str:
         ]
         or [0]
     )
-    extension = formats.detect_extension(filename)
+    extension = formats.detect_extension(filename) if stream is not None and filename else "wav"
     project = bundle.create_project(
         owner_id=current_user_id(),
         title=f"Take {number}",
@@ -379,16 +450,24 @@ def add_take(passage_id: str, stream: BinaryIO, filename: str) -> str:
             project = bundle.read_project(take_id)
             project.origin = {"takeOf": passage_id}
             bundle.write_project(project)
-        # Raised to a level that reads: the browser's automatic gain is off (it pumps a piano).
         with tempfile.TemporaryDirectory(prefix="aitu-take-") as folder:
-            received = Path(folder) / f"received.{extension}"
-            with received.open("wb") as handle:
-                shutil.copyfileobj(stream, handle)
+            if stream is not None:
+                received = Path(folder) / f"received.{extension}"
+                with received.open("wb") as handle:
+                    shutil.copyfileobj(stream, handle)
+            else:
+                received = _silence(max(note.end for note in notes or []) + 1.0, Path(folder))
+            # Raised to a level that reads: the browser's automatic gain is off (it pumps a piano).
             raised = Path(folder) / "take.flac"
             formats.louder(received, raised)
             with raised.open("rb") as handle:
                 store.save_original(take_id, handle, "flac")
         ingest.finalize(take_id)
+        if notes:
+            _midi_path(take_id).write_text(
+                json.dumps([note.model_dump(by_alias=True) for note in notes]) + "\n",
+                encoding="utf-8",
+            )
     except Exception:
         bundle.delete_project(take_id)
         raise
@@ -454,7 +533,23 @@ def read_take(
     cuts = [cut for cut in ((0, lo), (hi, frames)) if cut[1] > cut[0]]
     store.set_cuts(take_id, cuts)
 
-    pipeline.transcribe_audio(take_id, reporter=reporter)
+    played = midi_notes(take_id)
+    if played is not None:
+        # Played on a MIDI piano: the keys of the kept stretch, in its time, are the notes.
+        first, last = lo * AUDIO_FRAME_MS / 1000.0, hi * AUDIO_FRAME_MS / 1000.0
+        kept = [
+            NoteEvent(
+                midi_note=note.midi_note,
+                start=note.start - first,
+                end=max(min(note.end, last) - first, note.start - first + 0.001),
+                velocity=note.velocity,
+            )
+            for note in played
+            if first <= note.start < last
+        ]
+        pipeline.transcribe_audio(take_id, engine=_PlayedNotes(kept), reporter=reporter)
+    else:
+        pipeline.transcribe_audio(take_id, reporter=reporter)
     stored = pipeline.load_note_events(take_id)
     if stored is None:
         raise PassageError("The take could not be transcribed.")
@@ -481,10 +576,10 @@ def read_take(
             notes_changed=False,
             hands_changed=True,
         )
-        first = _first_sheet(passage, frame_ms)
-        if first is not None:
+        sheet = _first_sheet(passage, frame_ms)
+        if sheet is not None:
             pipeline.save_rhythm(
-                take_id, first.model_copy(update={"hands_revision": written.header.hands_revision})
+                take_id, sheet.model_copy(update={"hands_revision": written.header.hands_revision})
             )
         else:
             pipeline.clear_rhythm(take_id)
@@ -733,6 +828,7 @@ def describe(passage_id: str) -> dict[str, Any]:
                 "fromSeconds": take.from_seconds,
                 "toSeconds": take.to_seconds,
                 "jobId": take.job_id,
+                "midi": take.midi,
                 "audioRevision": take.audio_revision,
             }
             for take in takes

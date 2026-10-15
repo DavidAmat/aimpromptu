@@ -10,6 +10,7 @@ the whole take that changes the length), and that the sheet's undo gives the par
 from __future__ import annotations
 
 import io
+import json
 from pathlib import Path
 
 import numpy as np
@@ -248,6 +249,63 @@ def test_a_quiet_take_is_raised_to_a_level_that_reads(client: TestClient, tmp_pa
     peak = float(np.max(np.abs(samples)))
     assert 0.8 < peak <= 1.0
     assert bundle.read_project(take).part(take).source.format == "flac"
+
+
+def midi_notes(*notes: tuple[int, float, float]) -> str:
+    return json.dumps(
+        [{"midiNote": key, "start": start, "end": end, "velocity": 90} for key, start, end in notes]
+    )
+
+
+@needs_ffmpeg
+def test_a_take_played_on_a_midi_piano_keeps_the_keys_played(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The keys are the notes: no transcription, only those of the stretch kept, in its time."""
+    part = song(tmp_path)
+    passage = client.post("/passages", json={"part": part, "fromMs": 2000, "toMs": 4000}).json()
+
+    def no_model(*args: object, **kwargs: object) -> None:
+        raise AssertionError("A take played on a MIDI piano is not transcribed")
+
+    monkeypatch.setattr(pipeline, "shared_engine", no_model)
+    sent = client.post(
+        f"/passages/{passage['id']}/takes",
+        files={"file": ("take.wav", io.BytesIO(recording(tmp_path, 4.0, 440.0)), "audio/wav")},
+        data={"notes": midi_notes((60, 0.2, 0.7), (64, 1.2, 1.6), (67, 3.5, 3.9))},
+    )
+    assert sent.status_code == 201, sent.text
+    body = sent.json()
+    take = body["take"]
+    assert body["takes"][0]["midi"] is True
+    passages.read_take(passage["id"], take, 1.0, 3.0)
+    stored = pipeline.load_note_events(take)
+    assert stored is not None and stored.header.engine == "midi"
+    # Only the key inside the kept stretch [1, 3) s, counted from its start.
+    assert [(e.midi_note, round(e.start, 3), round(e.end, 3)) for e in stored.events] == [
+        (64, 0.2, 0.6)
+    ]
+    assert all(event.hand for event in stored.events)
+    assert client.get(f"/passages/{passage['id']}").json()["takes"][0]["state"] == "ready"
+
+
+@needs_ffmpeg
+def test_a_take_played_on_a_midi_piano_with_no_microphone_is_silent(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    part = song(tmp_path)
+    passage = client.post("/passages", json={"part": part, "fromMs": 2000, "toMs": 4000}).json()
+    sent = client.post(
+        f"/passages/{passage['id']}/takes",
+        data={"notes": midi_notes((60, 0.0, 0.5), (62, 1.0, 1.5))},
+    )
+    assert sent.status_code == 201, sent.text
+    take = sent.json()["takes"][0]
+    # As long as the notes, and a second more.
+    assert take["seconds"] == pytest.approx(2.5, abs=0.02)
+    rate, samples = formats.read_wav(store.get(take["id"]).normalized_path)
+    assert float(np.max(np.abs(samples))) == 0.0
+    assert client.post(f"/passages/{passage['id']}/takes").status_code == 409
 
 
 # ------------------------------------------------------------------ the promotions

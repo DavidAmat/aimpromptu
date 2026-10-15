@@ -13,7 +13,7 @@ package `vexflow-v2` moved to 0.44.0 (section 6).
 | 9.2 Promote | The speed (×0.25 to ×4) and the window (as long as the Current, dragged by a grip; **Fit** finds the speed at which the take fills it). **Fit to the window** with **Keep the original audio** or **Use my recording** keeps the song's length; **Replace the whole passage** changes it and says by how much. One write through the Phase 8 paste; the sheet opens with the promotion as its last step, so undo and redo work on it. The staged session is generalised as hidden projects of the vault; the two old panels and the session layer are removed |
 | 9.3 Documentation | `context/backend/editing.md` and `documentation/.../editing-and-compose.md` rewritten; `context/frontend/recording-in-sheet.md` (new), `projects.md`, `annotations.md`, `annotations-stretches.md`, `pages.md`, `07-database.md`, `endpoints.md`, `paths-and-data.md`, `components.md`, `aitu-frontend/README.md`, the overviews; the plan's "as built in Phase 9" notes; the package's `04-editing.md` |
 
-Checks at the end (section 8): backend 1,078 tests on the CPU, 1,074 passed, the 3 known CPU failures,
+Checks at the end (section 8): backend 1,081 tests on the CPU, 1,077 passed, the 3 known CPU failures,
 1 skip; the package 522 tests; every frontend check passes, the new `check:passage` too.
 
 # 2. The design, and why it differs from the plan's wording
@@ -181,7 +181,7 @@ run after each change.
 
 | File | Tests | What |
 |---|---|---|
-| `test_passages.py` (new) | 13 | The Current is a copy of the stretch, hidden from every list; the same stretch of an unchanged song opens the passage again, a changed one does not; deleting the song deletes its passages and takes; discarding leaves the song to the byte; a take read in the passage's key and figure (×2: `anchorMs` 1000), every note with a hand, the Sheet step ready; the window with the original audio (the timeline to the byte, the marks after on their columns, undo to the byte); the window with the recording at ×2 (the notes, the take's 440 Hz at the passage, 220 Hz around it, the same length); the whole take (+1 s, notes and the mark after moved by 25 columns, the audio as long as the notes, undo to the byte); a renamed figure kept as a speed change; a new passage on a blank sheet; a version of the library refused; a take of another passage not found, a speed out of range refused; a passage project in no list |
+| `test_passages.py` (new) | 16 | The Current is a copy of the stretch, hidden from every list; the same stretch of an unchanged song opens the passage again, a changed one does not; deleting the song deletes its passages and takes; discarding leaves the song to the byte; a take read in the passage's key and figure (×2: `anchorMs` 1000), every note with a hand, the Sheet step ready; the window with the original audio (the timeline to the byte, the marks after on their columns, undo to the byte); the window with the recording at ×2 (the notes, the take's 440 Hz at the passage, 220 Hz around it, the same length); the whole take (+1 s, notes and the mark after moved by 25 columns, the audio as long as the notes, undo to the byte); a renamed figure kept as a speed change; a new passage on a blank sheet; a version of the library refused; a take of another passage not found, a speed out of range refused; a passage project in no list; a quiet take raised; a take played on a MIDI piano keeps the keys of its stretch (no transcription), and with no microphone is silent |
 | `test_compose.py` (new) | 7 | `insert_events` and `atempo_chain`, kept from the removed files |
 | `vexflow-v2/tests/frame-window.test.ts` | 3 | The band, its ends and its grip; the drag (a start that follows the frame, the length kept, stopped at the end of the sheet); drawn again by a render, taken away |
 | Removed | 57 | `test_range_edit.py` (20), `test_compose_live.py` (36), one of `test_paste.py`: they drove the removed session |
@@ -190,12 +190,12 @@ run after each change.
 
 | Check | Result |
 |---|---|
-| Backend, full run **on the CPU** (another project held the GPU) | 1,078 tests: 1,074 passed, 1 skipped (the real-model test), 3 failed: the known `test_the_worked_example_at_00_46_prints_three_equal_corcheas` and the two Transkun tests that fail only without a GPU. Phase 8: 1,115 tests (57 removed, 20 added) |
+| Backend, full run **on the CPU** (another project held the GPU) | 1,081 tests: 1,077 passed, 1 skipped (the real-model test), 3 failed: the known `test_the_worked_example_at_00_46_prints_three_equal_corcheas` and the two Transkun tests that fail only without a GPU. Phase 8: 1,115 tests (57 removed, 23 added) |
 | `black`, `flake8`, `mypy` on the new and changed modules | clean (one `E402` in `events_to_matrix.py`, older than this phase) |
 | `vexflow-v2`: `npm test`, lint, build | 522 passed (0.43.0: 519); clean |
 | `tsc -b`, `npm run lint`, `npm run build` | clean; the chunk-size warning of Phase 0 |
 | `check:render`, `check:history`, `check:note-names`, `check:geometry`, `check:cuts`, `check:notes` | 60, all, 15, all, all, all passed |
-| `check:passage` (new), signed in | 32 checks passed, no console error, nothing left behind (projects and passages), two clean runs in a row |
+| `check:passage` (new), signed in | 36 checks passed, no console error, nothing left behind (projects and passages), two clean runs in a row |
 | `check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `--only clefs`, signed in | every check passed (27, 18, 39, 29 and 3), no console error, nothing left behind. `check:paste` now expects the player's address `v=<revision>.<n>` |
 | `check:flow`, signed in, with the live transcription | every check passed, no console error |
 | `bench:sheet`, median of a hand move | Elefants 215 ms, Superestrella tutorial 266 ms, The Other Side 494 ms (Phase 8: 217, 268, 489) |
@@ -284,6 +284,17 @@ user wants to record from the Mac (section 3.2: `localhost` through the tunnel, 
   a take whose waveform was nearly flat. `formats.louder` puts its loudest sample at -1 dB (one gain,
   at most +40 dB, never lowered) and the take is stored as FLAC. Test: a take at 1 % of full scale is
   kept above 80 %.
+- **A MIDI piano as a source of a take** (asked by the user, who will test with a piano later). The
+  browser's Web MIDI (`audio/useMidiInput.ts`) hears the keys from the moment the sound starts
+  recording; **Notes from: Microphone / MIDI piano** in the recorder, **Sound** (a microphone or **No
+  sound**), the keys counted while recording. The backend keeps them (`midi.json` of the take) and
+  **Write the proposal** passes them to `pipeline.transcribe_audio` as an engine named `midi`, so the
+  notes are the keys of the kept stretch with a transcription's header and history. Two choices made
+  without the user, easy to change: a note ends when its key comes up (the sustain pedal is not
+  read), and the sound is the microphone's, recorded at the same time (none with **No sound**: the
+  take is silence as long as its keys). Checked with a simulated MIDI piano in `check:passage` (three
+  keys, no sound: the Proposal has exactly those three notes; two keys with the fake microphone) and
+  two backend tests. Not checked with a real piano.
 
 # 13. Learnings for later phases
 
