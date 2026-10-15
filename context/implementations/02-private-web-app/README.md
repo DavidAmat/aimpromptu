@@ -14,8 +14,9 @@ merged at the start of Phase 6. **Phase 6 done and checked by the user 2026-10-0
 **Phase 7 done and checked by the user 2026-10-09** ([`02-implementation-phase-7.md`](02-implementation-phase-7.md)),
 merged at the start of Phase 8 (with `vexflow-v2` 0.43.0 pushed). **Phase 8 done 2026-10-09 and checked by the user 2026-10-15**
 ([`02-implementation-phase-8.md`](02-implementation-phase-8.md)), merged into `master`. **Phase 9 done
-2026-10-15** ([`02-implementation-phase-9.md`](02-implementation-phase-9.md)) on `feat/phase-9`,
-waiting for the user's check. Q-7 and Q-8 are open.
+and checked by the user 2026-10-15** ([`02-implementation-phase-9.md`](02-implementation-phase-9.md)),
+merged into `master` (with `vexflow-v2` 0.44.0 pushed). Q-7 (left for the production version) and
+Q-8 (one job with its stages) are answered.
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)

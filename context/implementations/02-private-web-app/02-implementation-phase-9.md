@@ -3,7 +3,8 @@
 Plan: [`02-plan.md`](02-plan.md) sections 11.8 and 13, and section 20, Phase 9. Checklist:
 [`02-checklist.md`](02-checklist.md). Branch `feat/phase-9`, made from `master` at `ab28550` (Phase 8
 merged and pushed, after the user's check). Done 2026-10-15 on the Ubuntu machine. The drawing
-package `vexflow-v2` moved to 0.44.0 (section 6).
+package `vexflow-v2` moved to 0.44.0 (section 6), committed and pushed on `plan-resume`. Checked by the user
+in the browser on 2026-10-15 and merged into `master`.
 
 # 1. Summary
 
@@ -256,9 +257,14 @@ Asked too: whether to commit and push `vexflow-v2` 0.44.0 (as for 0.43.0 in Phas
 user wants to record from the Mac (section 3.2: `localhost` through the tunnel, a browser flag for
 `http://ubuntu:5173`, or HTTPS, which is production work).
 
+**Answered 2026-10-15:** Q-7 is left for the production version; Q-8 keeps one job with its stages;
+`vexflow-v2` 0.44.0 is committed and pushed; recording from the Mac goes through the SSH tunnel at
+`http://localhost:5173` (HTTPS stays production work).
+
 # 11. Open points
 
-- **The microphone on `http://ubuntu:5173`** (section 3.2).
+- **The microphone and MIDI on `http://ubuntu:5173`** (section 3.2): recorded through the tunnel, as
+  the user decided; HTTPS is production work.
 - **A read of the joined audio can still meet a move**: **Save to library** pressed within a second
   of opening the sheet, while its player's first request is being answered, can make that request
   fail once (the page is being left anyway). Fixing it needs the file opened before the move; not

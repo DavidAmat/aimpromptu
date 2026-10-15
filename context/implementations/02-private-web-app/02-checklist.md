@@ -20,8 +20,8 @@ The plan's section 3.
 - [x] **Q-4** Video into From source, Notes Falling into Play mode, the video development pages into Lab; the Playground, the old `.npz` library and the text-notation MVP deleted. Answered 2026-10-05.
 - [p] **Q-5** The sources of the Public Library. Worldwide: `musicchartsarchive.com`, downloaded by the parallel work (`public-library-build/`). The `spain` and `catalan` regions and the fields that site does not give: raised in Phase 12.
 - [ ] **Q-6** The popularity weights. Raised in Phase 12.
-- [p] **Q-7** Offline downloads per project, now or in the production version. Raised in the Phase 6 walkthrough (recommended: leave it for the production version), asked again in the Phase 7, 8 and 9 walkthroughs, not answered yet.
-- [p] **Q-8** Live notes from the video reader. Measured in Phase 5 (61 s for a 3:09 video, notes only at the end); raised with three options (recommended: keep one job with its stages), asked again in the Phase 6 to Phase 9 walkthroughs, not answered yet.
+- [x] **Q-7** Offline downloads per project: **left for the production version**. Answered 2026-10-15 (raised in Phase 6).
+- [x] **Q-8** Live notes from the video reader: **one job with its stages**, the notes at the end (61 s for a 3:09 video, measured in Phase 5). Answered 2026-10-15.
 
 # [x] Phase 0: The documentation repaired, and a baseline
 
