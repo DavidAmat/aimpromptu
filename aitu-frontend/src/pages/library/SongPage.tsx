@@ -10,12 +10,14 @@
  * - **Duplicate** adds an independent copy to Projects; **Export** saves its `.aitu` file.
  * - **History** lists the earlier states the version kept when it was replaced, each with
  *   **Restore** (the state it replaces is kept too, so nothing is lost).
+ * - **Add to a playlist** puts the version at the end of a songs playlist (Phase 10).
  * - **Rename** and **Delete**.
  *
  * The header's `⋯` renames the song, changes its artists, or deletes it with every version.
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { AddToPlaylistDialog } from "./AddToPlaylistDialog";
 import Alert from "@mui/material/Alert";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
@@ -35,6 +37,7 @@ import DownloadIcon from "@mui/icons-material/FileDownloadOutlined";
 import DriveFileRenameIcon from "@mui/icons-material/DriveFileRenameOutline";
 import EditIcon from "@mui/icons-material/EditOutlined";
 import HistoryIcon from "@mui/icons-material/HistoryOutlined";
+import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import LaunchIcon from "@mui/icons-material/Launch";
 import PersonIcon from "@mui/icons-material/PersonOutlined";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
@@ -78,6 +81,7 @@ export function SongPage() {
   const [renaming, setRenaming] = useState<Renaming | null>(null);
   const [deleting, setDeleting] = useState<Deleting | null>(null);
   const [history, setHistory] = useState<VersionRow | null>(null);
+  const [toPlaylist, setToPlaylist] = useState<VersionRow | null>(null);
   const [artists, setArtists] = useState(false);
 
   useEffect(() => {
@@ -266,6 +270,11 @@ export function SongPage() {
                             onClick: () => download(projectsApi.exportUrl(version.projectId)),
                           },
                           {
+                            label: "Add to a playlist",
+                            icon: <PlaylistAddIcon fontSize="small" />,
+                            onClick: () => setToPlaylist(version),
+                          },
+                          {
                             label: "Rename",
                             icon: <DriveFileRenameIcon fontSize="small" />,
                             onClick: () => setRenaming({ kind: "version", version }),
@@ -355,6 +364,14 @@ export function SongPage() {
           }
         }}
       />
+
+      {toPlaylist && song ? (
+        <AddToPlaylistDialog
+          projectId={toPlaylist.projectId}
+          songId={song.id}
+          onClose={() => setToPlaylist(null)}
+        />
+      ) : null}
 
       {history && song ? (
         <HistoryDialog

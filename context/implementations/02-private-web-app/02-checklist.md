@@ -188,20 +188,20 @@ The plan's section 3.
 ## [x] Story 9.3: Documentation
 - [x] Task 9.3.1 `editing.md`, `editing-and-compose.md`, `projects.md` (and `recording-in-sheet.md`, new).
 
-# [ ] Phase 10: From other projects, and the playlists
+# [x] Phase 10: From other projects, and the playlists
 
-## [ ] Story 10.1: From other projects
-- [ ] Task 10.1.1 The compose page: picker, read-only sheet, passages, sequential or subheader, reorder.
-- [ ] Task 10.1.2 **Save as song** and **Save as integrated playlist** with parts.
+## [x] Story 10.1: From other projects
+- [x] Task 10.1.1 The compose page: picker, read-only sheet, passages, sequential or subheader, reorder (`/projects/compose`; the list kept in the browser until saved).
+- [x] Task 10.1.2 **Save as song** and **Save as integrated playlist** with parts (`POST /projects/compose`, each passage a paste of Phase 8).
 
-## [ ] Story 10.2: Integrated playlist
-- [ ] Task 10.2.1 Parts on the Sheet step, subheaders, the sub-song panel, reorder, join and split.
+## [x] Story 10.2: Integrated playlist
+- [x] Task 10.2.1 Parts on the Sheet step, subheaders, the sub-song panel, reorder, join and split (one part's sheet at a time; the continuous drawing is Play mode's, Phase 11).
 
-## [ ] Story 10.3: Songs playlist
-- [ ] Task 10.3.1 My library → Playlists; **Make a playlist** from a selection.
+## [x] Story 10.3: Songs playlist
+- [x] Task 10.3.1 My library → Playlists; **Make a playlist** from a selection (and **Add to a playlist** from a version or a stretch of it).
 
-## [ ] Story 10.4: Documentation
-- [ ] Task 10.4.1 `projects.md` (playlists), `endpoints.md`.
+## [x] Story 10.4: Documentation
+- [x] Task 10.4.1 `projects.md` (playlists: `context/frontend/playlists.md`, new), `endpoints.md`; `editing.md`, `editing-and-compose.md`, `paths-and-data.md`, `07-database.md`, `private-library.md`, `pages.md`, `annotations-stretches.md`, `components.md`, `aitu-frontend/README.md`.
 
 # [ ] Phase 11: Play mode
 

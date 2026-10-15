@@ -21,6 +21,7 @@
     "check:lyrics": "node scripts/check-sheet-toolbox.mjs --only lyrics",
     "check:paste": "node scripts/check-paste.mjs",
     "check:passage": "node scripts/check-passage.mjs",
+    "check:compose": "node scripts/check-compose.mjs",
     "screenshot": "node scripts/screenshot.mjs",
     "bench:roll": "node scripts/bench-roll.mjs",
     "bench:sheet": "node scripts/bench-sheet.mjs",

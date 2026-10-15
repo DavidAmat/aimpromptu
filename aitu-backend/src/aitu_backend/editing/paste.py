@@ -48,12 +48,17 @@ from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.engine import NoteEvent
 
 __all__ = [
+    "CutResult",
     "Passage",
     "PasteError",
     "PasteResult",
     "apply_audio",
     "audio_with",
+    "cut",
+    "part_length_ms",
     "paste",
+    "sheet_frame_ms_of",
+    "whole_ms",
     "read_passage",
 ]
 
@@ -145,7 +150,40 @@ def anchor_at(rhythm: SavedRhythm | None, column: int) -> float | None:
     return anchor
 
 
+@dataclass
+class CutResult:
+    #: The snapshot that holds the part as it was: the undo.
+    before_version: int
+    from_ms: float
+    to_ms: float
+    notes_removed: int
+    duration_seconds: float
+    #: The part's sheet after the cut, or ``None`` when it has none.
+    sheet: SavedRhythm | None
+
+
 # ------------------------------------------------------------------ the source
+
+
+def part_length_ms(part_id: str) -> float:
+    """How long the piece of a part is: its notes or its audio, whichever is longer."""
+    stored = pipeline.load_note_events(part_id)
+    notes_ms = stored.duration_seconds * 1000.0 if stored else 0.0
+    audio_ms = audio_timeline.kept_frames(bundle.read_timeline(part_id)) * AUDIO_FRAME_MS
+    return max(notes_ms, float(audio_ms))
+
+
+def sheet_frame_ms_of(part_id: str) -> float:
+    """The column length of a part's sheet: the saved one's, or the project's."""
+    project = bundle.read_project(locate.part(part_id).project_id)
+    return _sheet_frame_ms(pipeline.load_rhythm(part_id), project)
+
+
+def whole_ms(part_id: str) -> float:
+    """The length of a part rounded up to whole columns of its sheet: the stretch that holds all
+    of it, and the moment after its last column."""
+    frame_ms = sheet_frame_ms_of(part_id)
+    return math.ceil(part_length_ms(part_id) / frame_ms - 1e-9) * frame_ms
 
 
 def _sheet_frame_ms(rhythm: SavedRhythm | None, project: bundle.ProjectFile) -> float:
@@ -327,6 +365,9 @@ def _transitions(
             "key_changes": key_changes,
             "clef_changes": clef_changes,
             "speed_changes": speed_changes,
+            # A target with no music reads at the speed the passage had where the copy starts
+            # (a stretch after a speed change of its song, Phase 10).
+            **({"anchor_ms": passage_anchor} if empty_target and passage_anchor else {}),
         }
     )
     # After it: what the target had from the insertion point on, unless a mark of its own (moved
@@ -632,6 +673,99 @@ def paste(
         notes_moved=moved,
         notes_removed=removed,
         duration_seconds=new_duration,
+        sheet=new_sheet,
+    )
+
+
+def cut(
+    part_id: str, from_ms: float, to_ms: float, *, sheet: SavedRhythm | None = None
+) -> CutResult:
+    """Take ``[from_ms, to_ms)`` out of the part, the opposite of a paste (Phase 10, a part split
+    in two): its notes go, its marks go (a key, clef or speed change inside moves to its start),
+    its audio becomes cuts (the Audio step can restore them), and everything after moves earlier.
+
+    ``sheet`` is the sheet as the page holds it; without it the saved one. The part is kept as a
+    snapshot first, so the cut is undone like a paste."""
+    project = bundle.read_project(locate.part(part_id).project_id)
+    with pipeline.piece_lock(part_id):
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise PasteError("Transcribe this project first: its notes are not there yet.")
+        saved = pipeline.load_rhythm(part_id)
+        current = sheet if sheet is not None else saved
+        frame_ms = _sheet_frame_ms(current, project)
+        start, stop = int(round(from_ms / frame_ms)), int(round(to_ms / frame_ms))
+        if stop <= start:
+            raise PasteError("The stretch to take out is empty.")
+        start_seconds, stop_seconds = start * frame_ms / 1000.0, stop * frame_ms / 1000.0
+        events, removed = _remove_events(stored.events, start_seconds, stop_seconds, frame_ms)
+        duration = stored.duration_seconds - max(
+            0.0, min(stop_seconds, stored.duration_seconds) - start_seconds
+        )
+        # A stretch that runs to the end leaves nothing after it to keep reading as before.
+        tail = stop_seconds >= stored.duration_seconds - 1e-9
+        new_sheet = (
+            None
+            if current is None
+            else (
+                marks.cut_out(current, start, stop)
+                if tail
+                else _cut_transitions(current, start, stop)
+            )
+        )
+        timeline = bundle.read_timeline(part_id)
+        audio = None
+        if timeline.source_list():
+            audio = (
+                audio_timeline.remove(
+                    timeline,
+                    int(round(start_seconds * 1000 / AUDIO_FRAME_MS)),
+                    int(round(stop_seconds * 1000 / AUDIO_FRAME_MS)),
+                ),
+                bundle.source_files(project, part_id, timeline),
+            )
+
+        before_version = history.current_version(part_id)
+        history.snapshot_current(part_id)
+        try:
+            header = stored.header
+            if audio is not None:
+                apply_audio(part_id, *audio)
+                header = replace(header, audio_revision=audio[0].audio_revision)
+            written = pipeline.save_edit(
+                part_id,
+                events,
+                max(0.0, duration),
+                stored.title or project.title,
+                before=header,
+                notes_changed=True,
+                hands_changed=True,
+            )
+            if new_sheet is not None:
+                was_current = (
+                    sheet is not None
+                    or saved is None
+                    or ((saved.hands_revision or 0) == stored.header.hands_revision)
+                )
+                new_sheet = new_sheet.model_copy(
+                    update={
+                        "hands_revision": (
+                            written.header.hands_revision
+                            if was_current
+                            else (saved.hands_revision if saved else None)
+                        )
+                    }
+                )
+                pipeline.save_rhythm(part_id, new_sheet)
+        except Exception:
+            history.restore(part_id, before_version)
+            raise
+    return CutResult(
+        before_version=before_version,
+        from_ms=start * frame_ms,
+        to_ms=stop * frame_ms,
+        notes_removed=removed,
+        duration_seconds=max(0.0, duration),
         sheet=new_sheet,
     )
 

@@ -1,19 +1,23 @@
 > Context: [context/backend/editing.md](../../../context/backend/editing.md)
 
-# Copy and paste, and Recording in Sheet
+# Copy and paste, Recording in Sheet, and the parts of a project
 
 Two writes change a transcribed part other than a note edit: a **paste** of a stretch of any part
 the user may read (implementation 02, Phase 8), and the **promotion** of a re-recorded passage
 (Phase 9). Both go through one function, `paste.paste`, so they share the length rule, the marks,
-the audio timeline and the undo.
+the audio timeline and the undo. **From other projects** and the joins and splits of the parts of a
+project (Phase 10) are pastes too, and a split uses the one write that takes a stretch out,
+`paste.cut`.
 
 Modules: `aitu-backend/src/aitu_backend/editing/`. Routes: `POST /time/{uuid}/paste`,
-`POST /time/{uuid}/versions/{n}/restore` and `/passages` ([`endpoints.md`](endpoints.md)).
+`POST /time/{uuid}/versions/{n}/restore`, `/passages`, `POST /projects/compose` and
+`/projects/{id}/parts` ([`endpoints.md`](endpoints.md)).
 
 | Module | Role |
 |---|---|
-| `paste.py` | `read_passage` (the notes, marks and audio of a stretch), `paste` (one write into a part), `audio_with` and `apply_audio` (the part's timeline with pieces put in) |
+| `paste.py` | `read_passage` (the notes, marks and audio of a stretch), `paste` (one write into a part), `cut` (a stretch taken out, Phase 10), `audio_with` and `apply_audio` (the part's timeline with pieces put in), `part_length_ms`, `whole_ms` |
 | `passages.py` | Recording in Sheet: the passage and its takes, the condensed steps, the promotion |
+| `parts.py` | From other projects (`assemble`) and the parts of a project (`facts`, `rename`, `join`, `split`), Phase 10 |
 | `compose.py` | `insert_events`: every note from a column on moves later by a passage's length; `quantise_up`, `frame_at_or_after` |
 | `marks.py` | The one list of the marks of `sheet.json`: `shift`, `cut_out`, `extract`, `put_in`, `count`, `dropped` |
 | `history.py` | `snapshot_current`, `restore`: the undo and the redo |
@@ -143,7 +147,37 @@ target's snapshot (`beforeVersion`) is the undo.
 
 ---
 
-## 4. Undo and redo
+## 4. From other projects, and the parts (`parts.py`, Phase 10)
+
+**`assemble(owner_id, title, kind, passages)`** makes a project of the Personal Vault from passages
+of other parts (plan section 10.4). Each `Chosen` is a part, a stretch of it in ms or `None` for the
+whole (`whole_ms`: its notes or its audio, whichever is longer, rounded up to whole columns), and
+how it joins the one before: `sequential` (the same part) or `subheader` (a new part). It makes the
+project (`kind` `song` or `integratedPlaylist`, one empty part, `frameMs` 40), adds a part per
+further group (`bundle.add_part`), names each part by its subheader or its first source's title
+(none when there is one part), writes `origin: {"composedFrom": [{part, fromMs, toMs, join}]}`, then
+for each passage `paste.paste(part, read_passage(...), at_ms=whole_ms(part))`: the paste of section 2
+at the end of the part. So a passage brings its notes, its marks, the key, clefs and speed it had
+where it starts, and ranges of the stored audio; the first one into an empty part takes its
+source's sheet settings, and since Phase 10 the speed in force where the copy starts (an empty part
+used to take the source's base speed). The history the pastes kept is deleted at the end (a new
+project has no earlier state, as a duplicate). A failure deletes the project.
+
+| Function | What it writes |
+|---|---|
+| `rename(project, part, subheader)` | `parts[].subheader` (whitespace folded, at most 300 characters; empty is none) |
+| `bundle.reorder_parts(project, order)` | The order of `parts` in `project.json` and `parts.position` (two passes: `(project_id, position)` is unique) |
+| `join(project, part)` | The part pasted at the end of the one before it, then removed (`bundle.remove_part`: its folders, history, row, open passages, unused audio). When the lower part carries the project's id, the upper one is pasted at its start instead, because **the project's id is always one of its parts** (the step routes take it). The kept part takes the upper one's subheader |
+| `split(project, part, at_ms, subheader, sheet)` | `at_ms` snapped to a column of the part's sheet, inside it; a new part after it (`bundle.add_part`); `paste.paste(new, read_passage(part, at, whole, sheet=sheet), at_ms=0)`, then `paste.cut(part, at, whole, sheet=sheet)`. A failure removes the new part |
+
+**`paste.cut(part, from_ms, to_ms, sheet=)`** takes a stretch out: the notes by onset column (those
+after move earlier, one sounding into it is cut where it starts), the marks (`marks.cut_out`; a key,
+clef or speed change inside moves to its start when music follows, `_cut_transitions`), the audio
+(`audio_timeline.remove`: cuts the Audio step can restore). The part is kept as a snapshot first,
+so `POST /time/{uuid}/versions/{n}/restore` undoes it exactly; the parts routes do not offer that
+undo on the page yet.
+
+## 5. Undo and redo
 
 `history.snapshot_current` keeps the target (notes, sheet, timeline, and the part's entry of
 `project.json` as `source.json`) before the first write; the answer's `beforeVersion` names it.
@@ -155,10 +189,13 @@ derived files it was writing from.
 
 ---
 
-## 5. Rules to keep
+## 6. Rules to keep
 
-- `compose.py` and `paste.py` are the **only** modules that change a part's length; a promotion
-  goes through `paste.paste`. Anything else that needs to is a new decision.
+- `compose.py` and `paste.py` are the **only** modules that change a part's length; a promotion,
+  a passage of From other projects, a join and a split go through `paste.paste` and `paste.cut`.
+  Anything else that needs to is a new decision.
+- The id of a project is always one of its parts: `bundle.remove_part` refuses it, and a join keeps
+  it.
 - A new kind of mark in `sheet.json` is added to `editing/marks.py`, or no length change moves it.
 - The quantise-up rule is load-bearing. Remove it and mark shifting stops being exact.
 - A take is played into a song at its own rate and channels (`keep_format`), never at the engine's
@@ -167,8 +204,13 @@ derived files it was writing from.
 
 ---
 
-## 6. Tests
+## 7. Tests
 
+- `tests/test_parts.py` — 7 tests (Phase 10): a project from other projects (one part per subheader,
+  the notes, key and fingering of each passage where it lands, the audio by pitch, nothing copied,
+  the sources unchanged), one part with no subheader, a failing passage leaves nothing, rename,
+  reorder, join (the project's part kept), split, the library refuses, the cut and its undo to the
+  byte
 - `tests/test_passages.py` — 12 tests (Phase 9): the Current is a copy of the stretch, hidden from
   every list; a take read in the passage's key and figure, with every hand; the window with the
   original audio (the timeline to the byte), the window with the recording at ×2 (the take's pitch
@@ -186,7 +228,7 @@ derived files it was writing from.
 
 ---
 
-## 7. Removed in Phase 9
+## 8. Removed in Phase 9
 
 The staged session of Epics 11 and 13 (`editing/session.py`, `preview.py`, `splice.py`,
 `storage/staging.py`, `schemas/editing.py`, the routes `/audio/{uuid}/edits` and `POST
@@ -199,11 +241,13 @@ it.
 
 ---
 
-## 8. Where to look deeper
+## 9. Where to look deeper
 
 - [`endpoints.md`](endpoints.md) — the routes
 - [`paths-and-data.md`](paths-and-data.md#22-timelinejson-the-audio-timeline) — the timeline and its
   ranges; the hidden projects of a passage
 - [`rhythm-and-annotations.md`](rhythm-and-annotations.md) — the marks that are moved
 - [`../frontend/components.md`](../frontend/components.md) — the page of a passage, the Paste of the
-  sheet page
+  sheet page, the page of From other projects and the parts panel
+- [`context/frontend/playlists.md`](../../../context/frontend/playlists.md) — From other projects and
+  the playlists, for the reader

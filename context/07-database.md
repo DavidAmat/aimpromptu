@@ -47,7 +47,9 @@ database. Every path in the folder is built by one module, `aitu_backend/storage
                                  piece-r<N>.flac/.wav (the joined audio of a part with cuts)
 ```
 
-A normal project has one **part**. An integrated playlist (Phase 10) has one per sub-song. The uuid
+A normal project has one **part**. An integrated playlist (Phase 10) has one per sub-song: **From
+other projects** starts a part at each subheader, and a part can be split, joined, renamed and moved
+([frontend/playlists.md](frontend/playlists.md)). The uuid
 of the routes of implementation 08 (`/audio/{uuid}`, `/pieces/{uuid}`, `/time/{uuid}`) is the id of
 a part, and a project made by this app has the id of its first part. So the routes did not change
 when the storage did ([backend/pieces-and-revisions.md](backend/pieces-and-revisions.md)).

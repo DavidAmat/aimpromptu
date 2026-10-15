@@ -2,9 +2,9 @@
  * The app's frame: the sidebar and the routed page (implementation 02, plan section 6.2).
  *
  * The sidebar shows the sections that exist: **Projects**, **My library** (**Songs**, **Artists**;
- * Phase 6), and for the master user **Admin**: **Users** and **Lab** (the video reader). The other
- * sections of the plan (Playlists, Shared, the Public Library, Requests) appear in the phases that
- * build them.
+ * Phase 6; **Playlists**, Phase 10), and for the master user **Admin**: **Users** and **Lab** (the
+ * video reader). The other sections of the plan (Shared, the Public Library, Requests) appear in the
+ * phases that build them.
  * It is open on the list pages and closed inside a project, where the piano roll and the piano
  * sheet need the width; the reader's own choice holds until they move between the two kinds of page.
  *
@@ -32,6 +32,7 @@ import LibraryMusicIcon from "@mui/icons-material/LibraryMusicOutlined";
 import KeyIcon from "@mui/icons-material/KeyOutlined";
 import LogoutIcon from "@mui/icons-material/LogoutOutlined";
 import MicIcon from "@mui/icons-material/MicExternalOnOutlined";
+import PlaylistIcon from "@mui/icons-material/QueueMusicOutlined";
 import PersonIcon from "@mui/icons-material/PersonOutlined";
 import ScienceIcon from "@mui/icons-material/ScienceOutlined";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -190,6 +191,12 @@ export function AppLayout() {
       items: [
         { label: "Songs", to: ROUTES.librarySongs, icon: <LibraryMusicIcon />, active: under(ROUTES.librarySongs) },
         { label: "Artists", to: ROUTES.libraryArtists, icon: <MicIcon />, active: under(ROUTES.libraryArtists) },
+        {
+          label: "Playlists",
+          to: ROUTES.libraryPlaylists,
+          icon: <PlaylistIcon />,
+          active: under(ROUTES.libraryPlaylists),
+        },
       ],
     },
   ];

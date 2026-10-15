@@ -67,6 +67,7 @@ import {
   EmptyState,
   IconAction,
   PillButton,
+  RailRow,
   RowMenu,
   Section,
   Segmented,
@@ -1069,60 +1070,4 @@ function TitleBar({
 }
 
 /** One line of the left panel: the Current or a take, with a bin for a take. */
-function RailRow({
-  label,
-  detail,
-  selected,
-  onClick,
-  onDelete,
-  testId,
-}: {
-  label: string;
-  detail: string;
-  selected: boolean;
-  onClick: () => void;
-  onDelete?: () => void;
-  testId?: string;
-}) {
-  return (
-    <Stack
-      direction="row"
-      sx={{
-        alignItems: "center",
-        borderRadius: 2,
-        bgcolor: selected ? "action.selected" : "transparent",
-        "&:hover": { bgcolor: selected ? "action.selected" : "action.hover" },
-      }}
-      data-testid={testId}
-      data-selected={selected ? "true" : "false"}
-    >
-      <Box
-        component="button"
-        type="button"
-        onClick={onClick}
-        aria-current={selected ? "true" : undefined}
-        sx={{
-          all: "unset",
-          cursor: "pointer",
-          flex: 1,
-          minWidth: 0,
-          px: 1.5,
-          py: 1,
-          "&:focus-visible": { outline: 2, outlineColor: "primary.main", borderRadius: 2 },
-        }}
-      >
-        <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 500 }} noWrap>
-          {label}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" noWrap component="div">
-          {detail}
-        </Typography>
-      </Box>
-      {onDelete ? (
-        <IconAction title={`Delete ${label}`} icon={<DeleteOutlineIcon fontSize="small" />} onClick={onDelete} />
-      ) : null}
-    </Stack>
-  );
-}
-
 export default PassagePage;

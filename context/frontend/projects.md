@@ -30,7 +30,7 @@ tooltip names the version and the song), and its `⋯` adds **Open the song**; i
 |---|---|
 | **From source** | `/projects/new`: the Source step of a new project |
 | **From scratch** | A blank piano sheet, "Untitled project", opened on its Sheet step (Phase 8; section 5 below) |
-| **From other projects** | Not built yet (Phase 10): shown disabled |
+| **From other projects** | `/projects/compose`: passages of other projects, saved as a song or an integrated playlist (Phase 10; [playlists.md](playlists.md)) |
 | **Import** | Takes a `.aitu` file and opens the new project it makes |
 
 The list is one request, `GET /projects`, with the step of every row in it. The backend keeps each project's step in its table and works it out again only after a part
@@ -192,7 +192,14 @@ take into the song, fitted into the window or in place of the whole passage, as 
 sheet's undo. **Record a passage** on the floating bar and on a blank sheet opens a new passage at
 the end. The whole page: [recording-in-sheet.md](recording-in-sheet.md).
 
-## 7. Timings## 7. Timings
+## 7. From other projects, and the parts
+
+**From other projects** makes a project of passages of other projects, joined **Sequential** or
+under a **Subheader**; a project of several parts lists them beside its Sheet step, where they are
+renamed, moved, joined and split. The page, the parts and the songs playlists:
+[playlists.md](playlists.md).
+
+## 8. Timings
 
 Measured with `npm run time:flow` on the RTX 4090 (implementation 08, 2026-10-01; the first piano
 sheet measured again in every phase of implementation 02):
@@ -219,4 +226,5 @@ measuring the roll takes about 37 s and reading the notes about 22 s. In the bro
   [backend/muscriptor.md](../backend/muscriptor.md)
 - The piano sheet itself: [rendering.md](rendering.md), [annotations.md](annotations.md)
 - Recording in Sheet: [recording-in-sheet.md](recording-in-sheet.md)
+- From other projects, the parts, the playlists: [playlists.md](playlists.md)
 - The plan: [`implementations/02-private-web-app/02-plan.md`](../implementations/02-private-web-app/02-plan.md) sections 8 and 10

@@ -176,6 +176,16 @@ export interface SheetStep {
   /** Drawn on the page of a passage (Record in Sheet, Phase 9): the Current or the Proposal. */
   passage?: PassageView;
   /**
+   * What a stretch marked on a read-only sheet can be used for, besides a copy (Phase 10): a
+   * passage of From other projects, a stretch of a song in a playlist.
+   */
+  stretchAction?: { label: string; onStretch: (fromMs: number, toMs: number) => void };
+  /**
+   * The parts of a project (Phase 10): **Start a new part here** in the range toolbox. Gets where
+   * the marked stretch starts and the sheet as the page holds it; `false` when it was refused.
+   */
+  onSplit?: (atMs: number, sheet: SavedRhythm | null) => Promise<boolean>;
+  /**
    * The audio revision of the part when the page opened. In the player's address with the page's
    * own reloads, so audio changed by another page (a promotion, Phase 9) is not the file the
    * browser kept under the old address (Phase 8 learning).
@@ -586,10 +596,12 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
 
   const { reading, score, error } = view;
   /**
-   * The length of the highest pile of gaps, which every figure is named from. On the page of a
-   * passage, the song's at the passage instead, so its two sheets are named alike.
+   * The length of the highest pile of gaps, which every figure is named from: the saved sheet's
+   * (Phase 10: a paste, a cut or a split changes the notes, and measuring the pile again would
+   * rename every figure), else the pile measured on the notes. On the page of a passage, the song's
+   * at the passage instead, so its two sheets are named alike.
    */
-  const anchorMs = passageView?.anchorMs ?? reading?.anchorMs ?? null;
+  const anchorMs = passageView?.anchorMs ?? edits.state.savedAnchorMs ?? reading?.anchorMs ?? null;
 
   /**
    * How long the piece is, and whether there is anything in it.
@@ -2131,6 +2143,29 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     [lyricsPool],
   );
 
+  /** The parts of a project (Phase 10): what follows the marked stretch's start becomes a new
+   * part. The page's sheet, unsaved edits included, is saved with it. */
+  const [splitting, setSplitting] = useState(false);
+  const splitHere = useCallback(
+    async (fromColumn: number) => {
+      const onSplit = step?.onSplit;
+      if (!onSplit || readOnly || splitting) return;
+      const current =
+        score && anchorMs !== null
+          ? savedRhythmOf({ hand: reading?.hand ?? hand, frameMs, anchorMs, edits: edits.state, live })
+          : null;
+      setSplitting(true);
+      setMoveRefused(null);
+      try {
+        if (await onSplit(fromColumn * frameMs, current)) closeFrames();
+      } finally {
+        setSplitting(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [step, readOnly, splitting, score, anchorMs, reading, hand, frameMs, edits.state, live],
+  );
+
   const pastePassage = useCallback(
     async (passage: CopiedPassage) => {
       if (!audioUuid || readOnly || pasting) return;
@@ -3029,16 +3064,30 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         initialPosition={framesAt ?? { x: 24, y: 140 }}
         onClose={closeFrames}
       >
-        <PillButton
-          kind="secondary"
-          size="small"
-          onClick={() => {
-            if (range) copyColumns(range.fromColumn, range.toColumn);
-          }}
-          data-testid="readonly-copy"
-        >
-          Copy this stretch
-        </PillButton>
+        <Stack direction="row" spacing={1}>
+          {step?.stretchAction ? (
+            <PillButton
+              kind="primary"
+              size="small"
+              onClick={() => {
+                if (range) step.stretchAction?.onStretch(range.fromColumn * frameMs, range.toColumn * frameMs);
+              }}
+              data-testid="readonly-stretch-action"
+            >
+              {step.stretchAction.label}
+            </PillButton>
+          ) : null}
+          <PillButton
+            kind="secondary"
+            size="small"
+            onClick={() => {
+              if (range) copyColumns(range.fromColumn, range.toColumn);
+            }}
+            data-testid="readonly-copy"
+          >
+            Copy this stretch
+          </PillButton>
+        </Stack>
       </Toolbox>
 
       <RangeToolbox
@@ -3067,6 +3116,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
           role ? undefined : (stretch) => void startPassage(stretch.fromColumn, stretch.toColumn)
         }
         recordingPassage={openingPassage}
+        onSplit={step?.onSplit && !role ? (stretch) => void splitHere(stretch.fromColumn) : undefined}
+        splitting={splitting}
       />
 
       <NoteToolbox

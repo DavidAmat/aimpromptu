@@ -57,7 +57,9 @@ made the folder, written or checked `VERSION`, and brought the tables to the new
     src-<sha256>.wav  sources-<key>.flac     only for a part of several files (§2.2)
 ```
 
-A normal project has one part. **A project made by this app has the id of its first part**, so a
+A normal project has one part. **A project made by this app has the id of its first part**, and
+that part stays when the parts are reordered, joined or split (Phase 10: `bundle.add_part`,
+`remove_part` refuses it, `reorder_parts`; `parts.position` follows the order of `project.json`), so a
 project of one part has one uuid, which is also the uuid of the routes of implementation 08
 (`/audio/{uuid}`, `/pieces/{uuid}`, `/time/{uuid}`, `/matrix/{uuid}`). Those routes take the id of
 a part (plan P-6). `storage/locate.py` finds the project, the owner and the layer of a part in the
@@ -92,9 +94,9 @@ The functions that read and write a bundle are in `storage/bundle.py`: `create_p
 | `title` | The project's name; what the API calls `alias` |
 | `subtitle`, `artistText` | The project's own lines (Phase 5); the sheet's printed title block is in `sheet.json` |
 | `frameMs` | The column length a project made from scratch is meant to be read at (a view, D-01) |
-| `origin` | What it was made from: `{"duplicateOf": id}`, `{"importedFrom": id}`, later the passages of From other projects |
+| `origin` | What it was made from: `{"duplicateOf": id}`, `{"importedFrom": id}`, `{"editOf": id}`, or the passages of From other projects (Phase 10): `{"composedFrom": [{"part", "fromMs", "toMs", "join"}]}` (`fromMs`, `toMs` `null` for a whole part; `join` `sequential` or `subheader`) |
 | `basedOn` | The library project a vault project edits (plan section 10.6) |
-| `parts[].subheader` | The title between the parts of an integrated playlist |
+| `parts[].subheader` | The title above a part of a project of several parts (an integrated playlist, Phase 10); `null` for none. A part added by From other projects or a split has the source `composed` until a paste gives it audio |
 | `parts[].lyrics`, `parts[].lyricsPool` | The words of the song and the lyrics pieces of the pool, saved together in the Lyrics tab of the Sheet step (**Save lyrics**, Phase 7); absent until saved. Here rather than in `sheet.json` so they outlive **Remove all** and a new transcription |
 | `parts[].source` | Where the part's audio came from: `kind` (`upload`, `recording`, `youtube`, `segment`, `composed`), the extension of the file, its original name, its length and rate after normalization, the YouTube link, the lineage of a segment. These describe the **first** file |
 | `parts[].source.files` | Every file of the part's audio in the order of the axis (Phase 5): `audio` (the hash), `name` (what the Source step shows; the file's name or the video's title at first), `kind`, `format`, `originalFilename`, `durationSeconds`, `url`. Written once a file is added, named, moved or removed; absent before, when the one file is described by the fields above (`bundle.source_files`). Since Phase 8 an entry may be a pasted passage (`kind` `passage`, named `"<title> m:ss–m:ss"`), a recorded passage (`recording`, `"Recording N"`) or silence (`silence`) |
@@ -410,7 +412,7 @@ empty until their phase.
 | Music library | `artists`, `artist_names` (several per artist, one default), `albums`, `songs` (`title`, `year`, `popularity`, `default_version`), `song_artists` (a song points to an **artist name**), `song_albums`. Each row has `scope` (`private`, `public`), `owner_id`, `public_id`, and `external_key` for the import of Phase 12 | The migration (private rows of the seed list); **Save to library** and `/library` (Phase 6, `library/rows.py`: names compared ignoring case and spaces); Phases 12, 13 |
 | Versions | `song_versions` (fixed versions of a public song), `user_versions` (`user_versions/<user>/<name>/`), `private_versions` (a private song's version: a free name, unique in the song ignoring case, and its project) | The migration (`original`); Phase 6; Phase 14 |
 | Metadata of a public song | `genres` (13, fixed), `song_genres`, `tag_categories` (4, fixed), `tag_values`, `song_tags`, `regions` (`worldwide`), `song_regions`, `chart_sources`, `chart_entries` | Phases 12, 13 |
-| Playlists | `playlists`, `playlist_items` | Phase 10 |
+| Playlists | `playlists` (`owner_id`, `scope`, `title`, times), `playlist_items` (`position`, `song_id`, `project_id`: the version chosen, `from_ms`, `to_ms`: an optional stretch) | Phase 10, `library/playlists.py`: the songs playlists of the Private Library. A deleted version sets `project_id` to `NULL` (read as the song's first version); a deleted song sets `song_id` to `NULL`, and the item is dropped when the playlist is next read |
 | Social | `likes`, `library_shares` | Phases 13, 14 |
 | Requests | `requests`, `request_items` (one decision each), `request_comments` | Phase 14 |
 

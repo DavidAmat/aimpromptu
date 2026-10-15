@@ -25,7 +25,7 @@ properties and the reasons for them are in [`context/08-security.md`](../../../c
 | Group | Routers | Check before the handler (`auth/dependencies.py`) |
 |---|---|---|
 | `OPEN_ROUTERS` | `/auth` | None for `POST /auth/login` and `POST /auth/logout`; `GET /auth/me` and `PUT /auth/password` ask for the session themselves |
-| `USER_ROUTERS` | `/audio`, `/matrix`, `/passages`, `/pieces`, `/time`, `/projects`, `/youtube`, `/video` | `signed_in`, then `project_rights` |
+| `USER_ROUTERS` | `/audio`, `/library`, `/matrix`, `/passages`, `/pieces`, `/playlists`, `/projects`, `/youtube`, `/time`, `/video` | `signed_in`, then `project_rights` |
 | `MASTER_ROUTERS` | `/frame-examples`, `/admin` | `signed_in`, then `master_only` |
 
 The answers of these checks:
@@ -44,7 +44,8 @@ The answers of these checks:
 
 The rights table these checks apply is in [`context/08-security.md`](../../../context/08-security.md).
 A route that names its project in the body instead of the path checks it itself
-(`require_part`): `POST /matrix/transcribe` needs write on the part of its `audioUuid`. The
+(`require_part`): `POST /matrix/transcribe` needs write on the part of its `audioUuid`, and `POST
+/projects/compose` read on the part of every passage. The
 functions below a route know the user of the request (`auth/context.py`), so a project or a job the
 route makes belongs to that user (`db/users.py`, `current_user_id`).
 
@@ -141,6 +142,11 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | GET | `/projects/{id}/export` | The `.aitu` file: the bundle and the audio files it uses. |
 | POST | `/projects/{id}/library` | **Save to library**: the project becomes a version of a song of the Private Library; or an edit copy replaces its version. |
 | POST | `/projects/{id}/edit` | **Edit** a version of the Private Library: its copy in the Personal Vault. |
+| POST | `/projects/compose` | **From other projects** (Phase 10): a new project made of passages of readable parts; a subheader join starts a new part. |
+| GET, PUT | `/projects/{id}/parts` | The parts in order, with their subheader and length; put them in another order (Phase 10). |
+| PATCH | `/projects/{id}/parts/{part}` | The subheader of a part. |
+| POST | `/projects/{id}/parts/{part}/join` | The part joined to the one before it. |
+| POST | `/projects/{id}/parts/{part}/split` | What follows `atMs` becomes a new part after it. |
 | **Library** | `api/library.py` | Implementation 02, Phase 6: the user's Private Library |
 | GET | `/library/songs` | The user's songs, with their artists and how many versions. |
 | GET, PATCH, DELETE | `/library/songs/{id}` | One song with its versions; rename it or give it its artists; delete it with every version. |
@@ -152,6 +158,11 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/library/artists/{id}/names` | Another name of the artist. |
 | PATCH, DELETE | `/library/artists/{id}/names/{nameId}` | Rename a name or make it the default; remove a name. |
 | POST | `/library/artists/{id}/merge` | Every name of this artist becomes a name of another one. |
+| **Playlists** | `api/playlists.py` | Implementation 02, Phase 10: the songs playlists of the Private Library |
+| GET, POST | `/playlists` | The user's playlists; a new one, empty or with songs. |
+| GET, PATCH, DELETE | `/playlists/{id}` | One playlist with its songs; rename it or put its songs in another order; delete it. |
+| POST | `/playlists/{id}/items` | Songs added at the end. |
+| PATCH, DELETE | `/playlists/{id}/items/{item}` | Another version or a stretch of the song; take it out. |
 | **YouTube** | `api/youtube.py` | |
 | POST | `/youtube/probe` | Title and length, without downloading. |
 | POST | `/youtube/download` | Download the audio as mp3, in the request. |
@@ -1056,6 +1067,35 @@ the Private Library since Phase 6 (§7.1).
   rights check (the version does not change); `409` for a version of another user's library. Answers
   the copy's row. Deleting the copy (`DELETE /projects/{copy}`) discards the changes.
 
+**From other projects and the parts** (Phase 10, plan sections 8.4, 10.4 and 14.1;
+`editing/parts.py`, [`editing-and-compose.md`](editing-and-compose.md) section 4):
+
+- `POST /projects/compose`, body `{ "title": string, "kind": "song" | "integratedPlaylist",
+  "passages": [{ "part", "fromMs"?, "toMs"?, "join": "sequential" | "subheader", "subheader"? }] }`
+  (1 to 200 passages; `fromMs` and `toMs` both absent for the whole part). Every `part` must be one
+  the user may read (`404` otherwise). A new project of the Personal Vault: one part per run of
+  sequential passages, a new part at each `subheader` join, titled by its `subheader` or the
+  source's title (no subheader when there is one part). Each passage is a paste at the end of its
+  part, so it brings its notes, marks and ranges of the stored audio; no audio byte is copied.
+  `origin` is `{"composedFrom": [...]}`. `201` with the row; `409` with the reason (a source with
+  nothing in it, a source with audio and no notes), and nothing is left behind.
+- `GET /projects/{id}/parts`: `{parts: [{id, subheader, durationMs}], part: null}`. A read; the other
+  routes write (`403` on a version of the library).
+- `PUT /projects/{id}/parts`, body `{ "order": [partId] }`, every part once (`422` otherwise).
+- `PATCH /projects/{id}/parts/{part}`, body `{ "subheader": string | null }` (trimmed; empty takes it
+  away).
+- `POST /projects/{id}/parts/{part}/join`: the part put at the end of the one before it, as a paste;
+  the joined part keeps the first one's subheader. The part whose id is the project's is always the
+  one kept (its music goes in at the start of the other's otherwise). `part` of the answer is the
+  part that holds both. `409` for the first part.
+- `POST /projects/{id}/parts/{part}/split`, body `{ "atMs": number, "subheader": string | null,
+  "sheet": SavedRhythm | null }`: from `atMs` (snapped to a column) to the end becomes a new part
+  right after it (a paste into an empty part), then that stretch is cut out of the first (its audio
+  becomes cuts). `sheet` is the page's sheet, saved with it. `part` of the answer is the new part.
+  `409` when `atMs` is not inside the part.
+
+The answer of the four writes is `{parts, part}` as for `GET`.
+
 Storage layout in [`paths-and-data.md`](paths-and-data.md).
 
 <a id="71-library-the-private-library"></a>
@@ -1083,6 +1123,25 @@ and 15.2. Every route works on the current user's rows only and answers `404` fo
 | `DELETE /library/artists/{id}/names/{nameId}` | Not the default (`409`); songs saved with it point at the default name |
 | `POST /library/artists/{id}/merge` | Body `{into}`: every name moves to `into`, which keeps its default; answers `into` |
 | `DELETE /library/artists/{id}` | `204`; `409` while the artist has songs |
+
+### 7.2 `/playlists`: songs playlists
+
+`api/playlists.py` and `library/playlists.py`, implementation 02 Phase 10, plan section 14.2. A songs
+playlist points at songs of the user's Private Library, each on a version and optionally a stretch;
+nothing in it is a copy. Every route works on the user's own playlists (`404` for another user's,
+and for a song or a version that is not the user's), `422` for an empty title or a stretch that ends
+before it starts.
+
+| Route | Answer |
+|---|---|
+| `GET /playlists` | `[{id, title, songs, updatedAt}]`, the newest change first |
+| `POST /playlists` | Body `{title, items?: [{songId, projectId?, fromMs?, toMs?}]}`: `201` with the playlist. `projectId` is a version of the song (its first when absent) |
+| `GET /playlists/{id}` | `{id, title, updatedAt, items: [{id, songId, songTitle, artists, projectId, versionName, parts, versions: [{projectId, name}], fromMs, toMs}]}` in order. An item whose version was deleted shows the song's first; an item whose song was deleted is dropped |
+| `PATCH /playlists/{id}` | Body `{title?, order?: [itemId]}` (every item once) |
+| `DELETE /playlists/{id}` | `204`; the songs and their versions stay |
+| `POST /playlists/{id}/items` | Body `{items: [...]}`: added at the end |
+| `PATCH /playlists/{id}/items/{item}` | Body `{projectId?, fromMs?, toMs?, whole?}`: another version, a stretch (both ends), or `whole: true` for the whole song |
+| `DELETE /playlists/{id}/items/{item}` | The playlist without it |
 
 ---
 

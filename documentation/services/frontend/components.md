@@ -20,12 +20,14 @@
 | (start) | `/` | redirects to `/projects` |
 | **Projects** | `/projects` | `pages/ProjectsPage.tsx`: `GET /projects` (the vault), the **New project** menu with **From scratch** (`POST /projects` with `scratch`, then its Sheet step; Phase 8) and Import (`POST /projects/import`), the row menu (Duplicate, Export, Rename, Notes Falling, Delete) through `api/projects.ts`; an edit copy (`row.editing`) says **Editing**, adds **Open the song**, and its Delete is **Discard changes** |
 | · new project | `/projects/new` | `pages/piece/PiecePage.tsx` with the Source step only |
+| · From other projects | `/projects/compose` | `pages/compose/ComposePage.tsx` (Phase 10, section 3.2) |
 | · a project | `/projects/:id` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the project reached |
 | · one step | `/projects/:id/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab`, `HandsTab` or `SheetTab` |
 | · Notes Falling | `/projects/:id/notes-falling` | `PiecePage.tsx` + `pages/piece/NotesFallingPage.tsx` |
 | · a passage | `/projects/:id/passages/:passageId` | `pages/piece/passage/PassagePage.tsx`, outside `PiecePage` (Phase 9, section 3.1) |
 | **Songs** (My library) | `/library/songs`, `/library/songs/:id` | `pages/library/SongsPage.tsx`, `SongPage.tsx` (Phase 6, section 10) |
 | **Artists** (My library) | `/library/artists`, `/library/artists/:id` | `pages/library/ArtistsPage.tsx`, `ArtistPage.tsx` |
+| **Playlists** (My library) | `/library/playlists`, `/library/playlists/:id` | `pages/library/PlaylistsPage.tsx`, `PlaylistPage.tsx` (Phase 10, section 1.1) |
 | **Users** (Admin) | `/admin/users` | `pages/admin/UsersPage.tsx`, inside `RequireMaster` |
 | **Lab** (Admin) | `/admin/lab/<tab>` | `layout/LabLayout.tsx` and `pages/video/`, inside `RequireMaster` |
 | (old paths) | `/piece/...`, `/video/...`, `/youtube`, `/playground/...`, `/library`, `/library/play/...` | `layout/LegacyRedirect.tsx`, until Phase 15 |
@@ -36,8 +38,8 @@
 piece.
 
 **The shell** (implementation 02, plan section 6.2): `layout/AppLayout.tsx` renders `ui/AppShell`
-with `ui/Sidebar` (the logo, **Search**, Projects, the **My library** group with **Songs** and
-**Artists**, for the master user an Admin group with **Users** and **Lab**, and the user menu at the
+with `ui/Sidebar` (the logo, **Search**, Projects, the **My library** group with **Songs**,
+**Artists** and **Playlists**, for the master user an Admin group with **Users** and **Lab**, and the user menu at the
 bottom). The sidebar is open on the list pages and closed
 inside a project and under 900 px. `⌘K` opens `layout/SearchDialog.tsx` from anywhere (the songs of
 My library and the projects of the vault, Phase 6);
@@ -78,7 +80,11 @@ sets it when it loads a project; the sheet reads its `frameMs` from it.
 | `pages/library/SongPage.tsx` | One song: its artists as links, its versions as `ListRow`s (a row opens the project read only; its `⋯`: Open, **Edit** or **Continue editing** (`POST /projects/{id}/edit`), Duplicate, Export, Rename, History, Delete); the header's `⋯`: Rename song, Artists (an `Autocomplete` of names, `PATCH /library/songs/{id}`), Delete song. `HistoryDialog` lists `GET /library/versions/{id}/history`, each with **Restore** after a confirmation. `data-testid="version-<id>"` is read by `check:library` |
 | `pages/library/ArtistsPage.tsx` | **Artists**: `GET /library/artists` as a `DataTable` (Name, Other names, Songs) with a **Filter** |
 | `pages/library/ArtistPage.tsx` | One artist: **Names** (`ListRow`s, the default marked; Make default, Rename, Remove) with **Add a name**, **Songs**; the header's `⋯`: Merge into another artist (`MergeDialog`), Delete artist (disabled while it has songs) |
-| `pages/library/TextDialog.tsx`, `shared.ts` | One field and one button (rename, add a name); `said()` (the backend's words of a refusal) and `download()` |
+| `pages/library/TextDialog.tsx`, `shared.ts` | One field and one button (rename, add a name); `said()` (the backend's words of a refusal), `download()`, `stretchLabel()` |
+| `pages/library/PlaylistsPage.tsx` | **Playlists** (Phase 10): a `DataTable` of the songs playlists (`GET /playlists`) and of the integrated playlists of the library (`GET /projects?layer=private`, `kind`), **New playlist** (a `TextDialog`) |
+| `pages/library/PlaylistPage.tsx` | One songs playlist: rows dragged by a handle (`useRowDrag`), each a `ListRow` (the song and its artists, the version, the stretch or "Whole") with **Use “<version>”**, **The whole song**, Move up/down, **Remove from the playlist**; **Add a song** (`ChooseSongDialog`); Rename, Delete. `data-playlist-items`, `data-playlist-item` are read by `check:compose` |
+| `pages/library/AddToPlaylistDialog.tsx` | **Add to a playlist**: a version (from the song page's version menu) or a stretch of it (from the read-only sheet's *Frames* panel) into a playlist or a new one |
+| `pages/library/SongsPage.tsx` (Phase 10) | Rows picked by their checkbox (`DataTable`'s `selected`), **Make a playlist of N** |
 
 ## 2. The page of a project
 
@@ -94,6 +100,7 @@ lists where the code is.
 | `pages/piece/pieceContext.ts` | What every tab shares: `usePiece()` (the piece, its status, `readOnly`, `refresh()`), `stepStatus()`, and `useUnsavedChanges(summary, {save, discard})`. `readOnly`: a version of the library, which every step shows without its changes (no handles or menus on Source; no cut, Save, Add audio or Transcribe on Audio, and no Video step; the roll in `view` mode with playback and no edit, Predict hands or Save; the sheet with Play and Print only and no toolbox) |
 | `pages/piece/SaveToLibraryDialog.tsx` | **Save to library** (Phase 6): Artist and Song as `Autocomplete` over `GET /library/artists` and `GET /library/songs` that take a new name as typed (choosing a known song sends its id and fills its artist), **Version name** ("original" at first). On an edit copy a `Segmented` **Replace “<version>”** / **New version**. `POST /projects/{id}/library`, then the song |
 | `pages/piece/PieceResume.tsx` | `/projects/:id`: follows the backend's `resume` |
+| `pages/piece/PartsPanel.tsx` | The parts of a project of several parts, beside its Sheet step (Phase 10): `RailRow`s (subheader or "Part N", length), a click opens that part's sheet, drag and Move up/down (`PUT /projects/{id}/parts`), **Rename** (`PATCH …/parts/{part}`), **Join with “…”** (`POST …/join`). Hidden for one part. `data-parts-panel`, `part-<n>` are read by `check:compose` |
 | `ui/StepTabs.tsx` | The step tabs, each with a dot for its state (filled ready, a spinner running, amber stale or unsaved, a ring missing) and the reason as a tooltip; `data-step` and `data-state` on each tab for the checks |
 | `components/piece/stepLabels.ts` | The names of the five steps |
 | `components/piece/StepProgress.tsx` | A short job in progress: label, bar, seconds taken |
@@ -170,7 +177,10 @@ them one at a time), the selection's Spanish name, **Save**.
 ### 2.4 Sheet
 
 `pages/piece/SheetTab.tsx` renders `sheet/SheetPage` (section 3) with its `step` prop (`SheetStep`:
-the piece, the Sheet step's state and reason, and `onChanged`). The piece comes from the project, a
+the piece, the Sheet step's state and reason, and `onChanged`), beside `PartsPanel` (Phase 10). It
+gives the sheet `onSplit` (`POST /projects/{id}/parts/{part}/split` with the page's sheet, then the
+panel and the sheet read again), titles a part's sheet by its subheader, and on a version of the
+library a `stretchAction` **Add to a playlist**. The piece comes from the project, a
 stale reading is loaded but not drawn until **Write the sheet** (in the stale banner), and
 `onChanged` refreshes the status after a save or **Remove all**, so the dot of the step follows.
 
@@ -188,12 +198,12 @@ byte for byte), then redesigned it to plan section 11. What it does for the read
 
 | Module | Role |
 |---|---|
-| `SheetPage.tsx` | The page: the state the modules share, the requests (default reading, saved reading, sheet, save, Remove all), the effects, the layout (title lines, scrub bar, sheet, floating bar, the toolboxes). **Record** (Phase 9): `startPassage` saves the sheet when it has changes, opens a passage (`passagesApi.open`) of the marked stretch or a new one at the end, and goes to its page; back from a promotion (the navigation's `promoted`, with the sheet before it), the promotion becomes the last step of the history (`resetEdits` to the sheet before, then `commit`), its undo and redo `POST …/versions/{n}/restore`. `step.passage` (`PassageView`) draws it on the page of a passage: `role` `current` (read only, no bar, no title lines, Space off, no copy or paste) or `proposal` (`anchorMs` given, the window and its drag, the passage's actions on the bar, only Key, Transpose and Layout in the sheet toolbox, saved by itself 1.2 s after a change, the held sheet reported by `onSheet`). The player's address is the audio revision when the page opened and `reloadAt` (`step.audioRevision`). **Copy and Paste** (Phase 8): `copyColumns` and `copySelection` (the marked stretch, or the frames of the picked notes), `pastePassage` (`POST /time/{uuid}/paste` with the page's sheet, then one history step by `edits.commit` whose undo and redo call `POST …/versions/{n}/restore`), the ⌘C, ⌘V and paste-event listeners, `reloadAt` (the ladder and the sheet read again, and the player's audio at a new address, without starting the edits again) and the cursor kept at the passage. A version of the library marks a stretch too, and gets a small *Frames* panel with **Copy this stretch** |
-| `sheetEdits.ts` | The edits model: `SheetEdits` (one value, so undo is one history), `NO_EDITS`, the undo labels, `editsFromSaved` and `savedRhythmOf` (to and from the saved reading, `sheet.json`) |
+| `SheetPage.tsx` | Phase 10: `step.stretchAction` (a button beside **Copy this stretch** in the read-only *Frames* panel: **Add this stretch** on the page of From other projects, **Add to a playlist** on a version) and `step.onSplit` (**Start a new part here** in the range toolbox, `splitHere` with the page's sheet). The page: the state the modules share, the requests (default reading, saved reading, sheet, save, Remove all), the effects, the layout (title lines, scrub bar, sheet, floating bar, the toolboxes). **Record** (Phase 9): `startPassage` saves the sheet when it has changes, opens a passage (`passagesApi.open`) of the marked stretch or a new one at the end, and goes to its page; back from a promotion (the navigation's `promoted`, with the sheet before it), the promotion becomes the last step of the history (`resetEdits` to the sheet before, then `commit`), its undo and redo `POST …/versions/{n}/restore`. `step.passage` (`PassageView`) draws it on the page of a passage: `role` `current` (read only, no bar, no title lines, Space off, no copy or paste) or `proposal` (`anchorMs` given, the window and its drag, the passage's actions on the bar, only Key, Transpose and Layout in the sheet toolbox, saved by itself 1.2 s after a change, the held sheet reported by `onSheet`). The player's address is the audio revision when the page opened and `reloadAt` (`step.audioRevision`). **Copy and Paste** (Phase 8): `copyColumns` and `copySelection` (the marked stretch, or the frames of the picked notes), `pastePassage` (`POST /time/{uuid}/paste` with the page's sheet, then one history step by `edits.commit` whose undo and redo call `POST …/versions/{n}/restore`), the ⌘C, ⌘V and paste-event listeners, `reloadAt` (the ladder and the sheet read again, and the player's audio at a new address, without starting the edits again) and the cursor kept at the passage. A version of the library marks a stretch too, and gets a small *Frames* panel with **Copy this stretch** |
+| `sheetEdits.ts` | The edits model: `SheetEdits` (one value, so undo is one history), `NO_EDITS`, the undo labels, `editsFromSaved` and `savedRhythmOf` (to and from the saved reading, `sheet.json`). `savedAnchorMs` (Phase 10): the saved sheet's pile length, which the page draws with instead of the pile measured again (`null` before the first save) |
 | `sheetConstants.ts` | The colours of the keyboards, the tabs of the range toolbox, the figure ladder, small helpers |
 | `toolboxPlacement.ts` | Where a toolbox opens, measured from what is drawn |
 | `useNoteActions.ts`, `NoteToolbox.tsx` | What the note toolbox knows about the picked notes and its actions; the panel |
-| `useRangeActions.ts`, `RangeToolbox.tsx` | The same for a marked stretch; the panel with its tabs, Speed among them; **Key for this passage** and the clef rule offered again (Phase 7); **Record this passage** in its title bar (Phase 9, `onRecordPassage`; the Re-record tab is gone) |
+| `useRangeActions.ts`, `RangeToolbox.tsx` | The same for a marked stretch; the panel with its tabs, Speed among them; **Key for this passage** and the clef rule offered again (Phase 7); **Record this passage** in its title bar (Phase 9, `onRecordPassage`; the Re-record tab is gone); **Start a new part here** (Phase 10, `onSplit`, not at frame 0) |
 | `SheetToolbox.tsx` | The sheet toolbox: Title, Key, Transpose, Lyrics, Layout |
 | `TransposeTab.tsx`, `TransposeDialog.tsx` | **Transpose** (Phase 7): Notes (two `MiniPiano`s) and Figures (two `FigurePicker`s), each with **Preview**; the one dialog both use: a read-only `TimeScoreView` of the result, the facts, **Transpose** or **Cancel**. The page's `previewNotes`, `previewFigures` and `confirmTranspose` do the requests and the undo step |
 | `LyricsTab.tsx`, `lyricsPieces.ts` | **Lyrics** (Phase 7): paste, the pool (each piece draggable onto the sheet, `POOL_DRAG_TYPE`), the picked pieces' **Words** field and edit toolbar; the pure functions on the list of pieces (place, move, merge, split, line break, back to the pool, size), each returning the new list or the reason it could not |
@@ -265,6 +275,21 @@ resuming does not jump.
 
 `data-passage-page`, `data-passage-current`, `data-passage-proposal`, `data-passage-range` and
 `data-passage-recorder` are read by `check:passage`.
+
+### 3.2 From other projects (Phase 10)
+
+`pages/compose/ComposePage.tsx` ([`context/frontend/playlists.md`](../../../context/frontend/playlists.md)
+section 1), inside the shell with the sidebar closed:
+
+| Part | How |
+|---|---|
+| The header | Back to Projects, "From other projects", **Save as integrated playlist** and **Save as song** (disabled with no passage); each opens `SaveDialog` (a title, the first passages' titles at first), then `POST /projects/compose` and the new project's Sheet step |
+| The list | `state/composeDraft.ts`: `useComposeDraft()` keeps the passages (`{key, part, project, title, fromMs, toMs, join, subheader}`) in `localStorage` (`aitu.compose.draft`), emptied on save. Drawn as `RailRow`s with `useRowDrag`, a number, the stretch or "Whole", a `⋯` (Move up, Move down, Remove); between two rows `JoinControl`: a `Segmented` **Sequential** / **Subheader** and, for a subheader, its **Title** |
+| The picker | `GET /projects?layer=vault&layer=private` with notes, as `ListRow`s (a version is "<song> (<version>)", the layer as status), a filter. A click reads the parts (`GET /projects/{id}/parts`) and the status of the part |
+| The source | Its name, a **Part** select for several parts, **Choose another project**, **Add the whole sheet** (or **Add the whole project** without a sheet); `SheetPage` read only with `stretchAction` **Add this stretch** |
+
+`data-compose-page`, `data-compose-picker`, `data-compose-source`, `data-compose-passages`,
+`data-compose-passage` are read by `check:compose`.
 
 ---
 
@@ -340,7 +365,8 @@ import { timeScoreApi, matrixApi, piecesApi } from "../api";
 | `auth.ts` | `/auth`: `login`, `logout`, `me`, `changePassword`; the type `Me` |
 | `admin.ts` | `/admin`: `users`, `createUser`, `changeUser` (disable, enable, reset the password); the type `AdminUser` |
 | `audio.ts` | `/audio`, including `list` (with `updatedAt`), `cuts`, `saveCuts`, `framePeaks`, `fileUrl`; `AudioItem` has `projectId`, `layer`, `basedOn` (Phase 6) |
-| `projects.ts` | `/projects`: `list`, `get`, `create`, `rename`, `remove`, `duplicate`, `exportUrl`, `import`, and (Phase 6) `saveToLibrary`, `edit`; `ProjectRow` with its `library` and `editing` links |
+| `projects.ts` | `/projects`: `list`, `get`, `create`, `rename`, `remove`, `duplicate`, `exportUrl`, `import`, and (Phase 6) `saveToLibrary`, `edit`; `ProjectRow` with its `library` and `editing` links; (Phase 10) `compose`, `parts`, `reorderParts`, `renamePart`, `joinPart`, `splitPart` |
+| `playlists.ts` | `/playlists` (Phase 10): `list`, `get`, `create`, `rename`, `reorder`, `remove`, `addItems`, `changeItem`, `removeItem`; `PlaylistRow`, `PlaylistDetail`, `PlaylistItem` |
 | `library.ts` | `/library` (Phase 6): songs, versions (rename, delete, history, restore), artists and their names (add, change, remove, merge) |
 | `matrix.ts` | `/matrix`, including `transcribe`, `activeJob`, `progressUrl` |
 | `pieces.ts` | `/pieces`: the status of a project's steps, its notes and hands |
@@ -378,9 +404,10 @@ so the same job looks the same everywhere.
 | `PillButton` | `primary` (black), `secondary` (white, grey border), `quiet`, `danger`; `busy` shows a spinner |
 | `Segmented` | One of 2 to 4 options, as one rounded group |
 | `ListRow`, `RowMenu` | A row: title (truncated, full on hover), status and meta in fixed columns, the `⋯` menu |
-| `DataTable` | Sticky header, sortable columns, rows per page, sized to its content |
+| `DataTable` | Sticky header, sortable columns, rows per page, sized to its content; with `selected` and `onSelectedChange`, a checkbox per row and one for all (Phase 10) |
 | `EmptyState` | One line, and the action that creates the first one |
 | `ConfirmDialog` | The confirm button repeats the action ("Delete project"); **Cancel**; an optional third choice |
+| `RailRow`, `rowDrag.ts` | A row of a side panel in order (the takes of a passage, the passages of From other projects, the parts): label, detail, shaded when on show, an optional number, `⋯`, bin and drag handle. `useRowDrag(count, onMove)` gives each row of a list its drag handlers and drop mark; `movedOrder` (Phase 10) |
 | `Toolbox`, `FloatingBar` | The draggable toolbox and the floating bar, white with the one shadow; the bar wraps on a narrow screen |
 | `MiniPiano` | 88 keys at half size, to pick one key; Spanish names on hover; arrows move by a semitone or an octave |
 | `FigurePicker` | The figure icons (`FigureGlyph`) as a `Segmented`, the Spanish name in the tooltip |
@@ -481,7 +508,7 @@ npm run check:notes       # the Notes tab's typed arrays, live feed and edits
 
 These need the running app (`make up` from the repository root). Each works on temporary copies or
 uploads and deletes them at the end, so the library is never changed. `check:flow`,
-`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
+`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
 user with `AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env` at the repository root (or
 `AITU_CHECK_USERNAME` and `AITU_CHECK_PASSWORD` from the environment), makes every `fetch` of the
 script send the cookie (`signIn(base)`), and gives every Playwright page the same cookie
@@ -496,6 +523,7 @@ npm run check:transpose # the Transpose tab on a copy of Elefants: notes and fig
 npm run check:lyrics    # the Lyrics tab on a copy of Elefants: pool, drag onto the sheet, snapping, merge, split, line break, Save
 npm run check:paste     # Copy and Paste between two copies, undo and redo, ⌘V over a stretch, From scratch, every join of the audio
 npm run check:passage   # Record this passage on a copy: a take with the fake microphone, one from a file, Write the proposal, Fit, the window, both promotions, undo and redo, a blank sheet, Discard
+npm run check:compose   # From other projects on two copies, Save as integrated playlist, the parts (rename, move, join, split), Make a playlist, Add to a playlist
 node scripts/check-sheet-toolbox.mjs --only clefs  # the clef rule on a first write of a copy of Superestrella's tutorial
 npm run time:flow     # the whole flow timed on three temporary pieces (upload, a duplicated library piece, YouTube)
 npm run bench:roll    # the Notes tab at 10,000 rectangles and at 100 stream messages per second

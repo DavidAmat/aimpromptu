@@ -61,6 +61,15 @@ export interface SheetEdits {
    * other edit. Nothing moves when it changes, only the names (D-18).
    */
   anchorFigure: FigureName;
+  /**
+   * How long that pile is, in ms, as the saved sheet says; `null` for a sheet never saved, which is
+   * written from the pile measured on the notes (implementation 02, Phase 10).
+   *
+   * The pile is measured once, when the sheet is first written, and kept: a paste, a cut or a split
+   * changes the notes, and a pile measured again on them would rename every figure of the sheet.
+   * The backend reads the speed of a sheet from this value too (a paste carries it).
+   */
+  savedAnchorMs: number | null;
   /** What the sheet prints above the music. `null` prints the project's name as the title. */
   title: string | null;
   subtitle: string | null;
@@ -231,6 +240,7 @@ export interface SheetEdits {
  */
 export const EDIT_LABELS: Readonly<Record<keyof SheetEdits, string>> = {
   anchorFigure: "Main figure",
+  savedAnchorMs: "Main figure",
   title: "Title",
   subtitle: "Subtitle",
   artist: "Artist",
@@ -262,6 +272,7 @@ export const EDIT_LABELS: Readonly<Record<keyof SheetEdits, string>> = {
 /** A piece nobody has read yet. Also what **Remove all** goes back to. */
 export const NO_EDITS: SheetEdits = {
   anchorFigure: "negra",
+  savedAnchorMs: null,
   title: null,
   subtitle: null,
   artist: null,
@@ -299,6 +310,7 @@ export const NO_EDITS: SheetEdits = {
 export function editsFromSaved(found: SavedRhythm): SheetEdits {
   return {
     anchorFigure: found.anchorFigure,
+    savedAnchorMs: found.anchorMs ?? null,
     title: found.title ?? null,
     subtitle: found.subtitle ?? null,
     artist: found.artist ?? null,

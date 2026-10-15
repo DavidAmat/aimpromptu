@@ -61,6 +61,7 @@ __all__ = [
     "SourceFile",
     "PartEntry",
     "PartSource",
+    "add_part",
     "ProjectFile",
     "Segment",
     "Timeline",
@@ -74,6 +75,8 @@ __all__ = [
     "part_ids_of",
     "read_project",
     "read_timeline",
+    "remove_part",
+    "reorder_parts",
     "default_name",
     "segments_for_axis",
     "segments_for_cuts",
@@ -835,3 +838,105 @@ def duplicate_project(
     write_project(copy, touch=False)
     sync_audio_refs(copy.id)
     return copy
+
+
+# ------------------------------------------------------------------- parts
+
+
+def _renumber(project_id: str, order: list[str]) -> None:
+    """The ``parts`` rows in ``order``. Two passes, because ``(project_id, position)`` is unique."""
+    with session() as db:
+        found = {
+            row.id: row for row in db.scalars(select(Part).where(Part.project_id == project_id))
+        }
+        for index, part_id in enumerate(order):
+            found[part_id].position = -1 - index
+        db.flush()
+        for index, part_id in enumerate(order):
+            found[part_id].position = index
+
+
+def add_part(
+    project_id: str,
+    *,
+    position: int | None = None,
+    subheader: str | None = None,
+    source: PartSource | None = None,
+) -> str:
+    """A new empty part of a project (no notes, no audio), at ``position`` of its parts (the end
+    when ``None``), with its folders and its row. Returns its id (section 8.4, Phase 10)."""
+    where = locate.project(project_id)
+    part_id = new_id()
+    with project_lock(project_id):
+        project = read_project(project_id)
+        index = (
+            len(project.parts) if position is None else max(0, min(position, len(project.parts)))
+        )
+        project.parts.insert(
+            index,
+            PartEntry(
+                id=part_id,
+                subheader=subheader,
+                source=source or PartSource(kind="composed", format="wav"),
+            ),
+        )
+        with session() as db:
+            db.add(Part(id=part_id, project_id=project_id, position=-1000 - len(project.parts)))
+        _renumber(project_id, [entry.id for entry in project.parts])
+        directory = paths.project_dir_at(project_id, where.owner_id, where.layer)
+        (directory / "parts" / part_id).mkdir(parents=True)
+        (directory / "cache" / part_id).mkdir(parents=True, exist_ok=True)
+        write_project(project)
+    write_timeline(part_id, Timeline())
+    return part_id
+
+
+def remove_part(project_id: str, part_id: str) -> None:
+    """Delete one part of a project of several: its folder, its cache, its history, its row and its
+    entry, the passages open on it (Phase 9), and the audio no project uses any more. The id of the
+    project is always one of its parts (the routes take it), so that part cannot go."""
+    where = locate.project(project_id)
+    if part_id == project_id:
+        raise ValueError("The first part of a project keeps the project's id and cannot be removed")
+    with project_lock(project_id):
+        project = read_project(project_id)
+        entry = project.part(part_id)
+        if len(project.parts) < 2:
+            raise ValueError("A project keeps at least one part")
+        project.parts = [one for one in project.parts if one.id != entry.id]
+        write_project(project)
+    for other in dependents(project_id):
+        try:
+            origin = read_project(other).origin or {}
+        except (locate.NotFound, OSError, ValueError):
+            continue
+        if origin.get("passageOf") == part_id:
+            delete_project(other)
+    hashes = used_hashes(project_id)
+    root = paths.project_dir_at(project_id, where.owner_id, where.layer)
+    shutil.rmtree(root / "parts" / part_id, ignore_errors=True)
+    shutil.rmtree(root / "cache" / part_id, ignore_errors=True)
+    shutil.rmtree(paths.tmp_dir() / str(where.owner_id) / part_id, ignore_errors=True)
+    shutil.rmtree(paths.history_dir() / project_id / "parts" / part_id, ignore_errors=True)
+    with session() as db:
+        row = db.get(Part, part_id)
+        if row is not None:
+            db.delete(row)
+    _renumber(project_id, [one.id for one in project.parts])
+    locate.forget(project_id)
+    sync_audio_refs(project_id)
+    step_changed(project_id)
+    audio_files.delete_unused(hashes)
+
+
+def reorder_parts(project_id: str, order: list[str]) -> ProjectFile:
+    """The parts of a project in a new order: ``order`` names each of them once."""
+    with project_lock(project_id):
+        project = read_project(project_id)
+        by_id = {entry.id: entry for entry in project.parts}
+        if sorted(order) != sorted(by_id):
+            raise ValueError("Name every part of the project once")
+        project.parts = [by_id[part_id] for part_id in order]
+        project = write_project(project)
+    _renumber(project_id, order)
+    return project

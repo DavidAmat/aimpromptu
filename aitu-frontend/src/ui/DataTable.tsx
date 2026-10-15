@@ -5,10 +5,14 @@
  * The table is sized by its content inside a scroll container, never stretched to the window, so
  * a wide screen does not open a hole in the middle of each row. A column that always truncates
  * (an id) gets a fixed `width`. Numbers are right-aligned with tabular figures.
+ *
+ * With `selected` and `onSelectedChange` each row starts with a checkbox, and the header's selects
+ * every row (Phase 10: **Make a playlist** from songs).
  */
 
 import { useMemo, useState, type ReactNode } from "react";
 import Box from "@mui/material/Box";
+import Checkbox from "@mui/material/Checkbox";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -38,6 +42,9 @@ export interface DataTableProps<Row> {
   rowsPerPageOptions?: number[];
   /** The height of the scroll container; the header stays visible inside it. */
   maxHeight?: number | string;
+  /** The keys of the rows picked with their checkbox; no checkboxes without it. */
+  selected?: ReadonlySet<string>;
+  onSelectedChange?: (keys: Set<string>) => void;
 }
 
 export function DataTable<Row>({
@@ -48,7 +55,19 @@ export function DataTable<Row>({
   initialSort,
   rowsPerPageOptions = [25, 50, 100],
   maxHeight = "70vh",
+  selected,
+  onSelectedChange,
 }: DataTableProps<Row>) {
+  const picking = selected !== undefined && onSelectedChange !== undefined;
+  const allKeys = rows.map(rowKey);
+  const picked = allKeys.filter((key) => selected?.has(key)).length;
+  const toggle = (key: string) => {
+    if (!picking) return;
+    const next = new Set(selected);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    onSelectedChange(next);
+  };
   const [sort, setSort] = useState(initialSort ?? null);
   const [page, setPage] = useState(0);
   const [perPage, setPerPage] = useState(rowsPerPageOptions[0]);
@@ -78,6 +97,17 @@ export function DataTable<Row>({
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
+              {picking ? (
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    size="small"
+                    checked={picked > 0 && picked === allKeys.length}
+                    indeterminate={picked > 0 && picked < allKeys.length}
+                    onChange={() => onSelectedChange(picked === allKeys.length ? new Set() : new Set(allKeys))}
+                    slotProps={{ input: { "aria-label": "Select every row" } }}
+                  />
+                </TableCell>
+              ) : null}
               {columns.map((column) => (
                 <TableCell
                   key={column.key}
@@ -113,7 +143,18 @@ export function DataTable<Row>({
                 hover
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 sx={onRowClick ? { cursor: "pointer" } : undefined}
+                selected={picking && selected.has(rowKey(row))}
               >
+                {picking ? (
+                  <TableCell padding="checkbox" onClick={(event) => event.stopPropagation()}>
+                    <Checkbox
+                      size="small"
+                      checked={selected.has(rowKey(row))}
+                      onChange={() => toggle(rowKey(row))}
+                      slotProps={{ input: { "aria-label": "Select this row" } }}
+                    />
+                  </TableCell>
+                ) : null}
                 {columns.map((column) => (
                   <TableCell
                     key={column.key}

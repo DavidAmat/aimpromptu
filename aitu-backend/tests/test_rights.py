@@ -14,7 +14,8 @@ from aitu_backend.auth import rights
 from aitu_backend.auth.context import CurrentUser
 from aitu_backend.db import users
 from aitu_backend.db.database import session
-from aitu_backend.db.models import LibraryShare, Request
+from aitu_backend.db.models import LibraryShare, PrivateVersion, Request
+from aitu_backend.library import rows
 from aitu_backend.main import create_app
 from aitu_backend.storage import bundle
 from aitu_backend.transcription import jobs, pipeline
@@ -179,6 +180,54 @@ def test_a_paste_reads_its_source_and_writes_its_target(people: dict) -> None:
     # Never into a version of a library (it changes through Edit), nor into another user's work.
     assert paste(anna, own_library, mine) == 403
     assert paste(anna, joans, mine) == 404
+
+
+def test_from_other_projects_reads_every_source(people: dict) -> None:
+    """From other projects (Phase 10): every passage is read with the rights of its row, and the
+    project made is the user's own."""
+    anna_id, anna = people["anna"]
+    joan_id, _ = people["joan"]
+
+    def compose(*sources: str) -> int:
+        body = {"title": "Mix", "passages": [{"part": one} for one in sources]}
+        return anna.post("/projects/compose", json=body).status_code
+
+    mine = project(anna_id, "vault", "Mine")
+    own_library = project(anna_id, "private", "My song")
+    joans = project(joan_id, "vault", "Joan's")
+    assert compose(mine, own_library) == 201
+    assert compose(mine, joans) == 404
+    made = [row for row in anna.get("/projects").json() if row["title"] == "Mix"]
+    assert len(made) == 1
+    # Its parts are hers to change; another user's are not even there.
+    assert anna.get(f"/projects/{made[0]['id']}/parts").status_code == 200
+    assert anna.get(f"/projects/{joans}/parts").status_code == 404
+
+
+def test_a_playlist_is_its_owners(people: dict) -> None:
+    """Songs playlists (Phase 10): only the owner's songs go in, and only the owner opens it."""
+    anna_id, anna = people["anna"]
+    joan_id, joan = people["joan"]
+    joans_project = project(joan_id, "private", "Joan's song")
+    with session() as db:
+        joans_song = rows.make_song(db, joan_id, "Joan's song", None)
+        db.add(PrivateVersion(song_id=joans_song.id, version_name="v", project_id=joans_project))
+        joans_song_id = joans_song.id
+    assert (
+        anna.post(
+            "/playlists", json={"title": "x", "items": [{"songId": joans_song_id}]}
+        ).status_code
+        == 404
+    )
+    made = joan.post(
+        "/playlists", json={"title": "Joan's set", "items": [{"songId": joans_song_id}]}
+    )
+    assert made.status_code == 201
+    playlist = made.json()["id"]
+    assert anna.get(f"/playlists/{playlist}").status_code == 404
+    assert anna.delete(f"/playlists/{playlist}").status_code == 404
+    assert anna.get("/playlists").json() == []
+    assert [row["title"] for row in joan.get("/playlists").json()] == ["Joan's set"]
 
 
 def test_the_list_of_projects_is_the_users_own(people: dict) -> None:
