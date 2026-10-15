@@ -2,7 +2,7 @@
 
 List, create, rename, delete, duplicate, export and import; **Save to library** and **Edit** (Phase
 6, sections 10.2 and 10.6), which move a project into the Private Library and copy a version out of
-it. A project made by this app has the id of
+it; **From other projects** and the parts of a project (Phase 10, sections 10.4 and 14.1). A project made by this app has the id of
 its first part, so the uuid of a piece is also the id of its project, and the routes of the steps
 (``/audio``, ``/pieces``, ``/time``, ``/matrix``) keep working on it.
 
@@ -18,7 +18,7 @@ from __future__ import annotations
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Callable, Literal
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
@@ -29,9 +29,12 @@ from starlette.background import BackgroundTask
 from aitu_backend.db import tools
 from aitu_backend.db.database import session
 from aitu_backend.db.models import Project
+from aitu_backend.auth.dependencies import require_part
 from aitu_backend.db.users import current_user_id
+from aitu_backend.editing import parts as project_parts, paste
 from aitu_backend.library import flow, rows
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
+from aitu_backend.schemas.rhythm import SavedRhythm
 from aitu_backend.storage import bundle, exchange, locate
 from aitu_backend.transcription import jobs, pipeline
 from aitu_backend.video import store as video_store
@@ -122,6 +125,53 @@ class SavedOut(_Camel):
     song_id: int = Field(..., alias="songId")
     version_id: int = Field(..., alias="versionId")
     project_id: str = Field(..., alias="projectId")
+
+
+class ChosenIn(_Camel):
+    """One passage of **From other projects**: a part the user may read and a stretch of it."""
+
+    part: str
+    #: The stretch in ms of the part; both absent for the whole of it.
+    from_ms: float | None = Field(None, alias="fromMs", ge=0)
+    to_ms: float | None = Field(None, alias="toMs", gt=0)
+    #: How it joins the passage before it: in the same part, or a new part with a title.
+    join: Literal["sequential", "subheader"] = "sequential"
+    subheader: str | None = Field(None, max_length=300)
+
+
+class ComposeIn(_Camel):
+    title: str = Field("", max_length=300)
+    kind: Literal["song", "integratedPlaylist"] = "song"
+    passages: list[ChosenIn] = Field(..., min_length=1, max_length=200)
+
+
+class PartRow(_Camel):
+    id: str
+    #: The title drawn above the part; ``None`` when it has none.
+    subheader: str | None = None
+    duration_ms: float = Field(..., alias="durationMs")
+
+
+class PartsOrderIn(_Camel):
+    order: list[str] = Field(..., min_length=1)
+
+
+class PartChangeIn(_Camel):
+    subheader: str | None = Field(None, max_length=300)
+
+
+class SplitIn(_Camel):
+    #: Where the new part starts, in ms of the part.
+    at_ms: float = Field(..., alias="atMs", gt=0)
+    subheader: str | None = Field(None, max_length=300)
+    #: The part's sheet as the page holds it, unsaved edits included; saved by the split.
+    sheet: SavedRhythm | None = None
+
+
+class PartsOut(_Camel):
+    parts: list[PartRow]
+    #: The part the change left on show: the one joined into, or the new one of a split.
+    part: str | None = None
 
 
 def _running(part_ids: list[str]) -> str | None:
@@ -235,6 +285,38 @@ def create_project(body: CreateIn | None = None) -> ProjectRow:
         pipeline.save_note_events(project.parts[0].id, [], 0.0, title)
     else:
         project = bundle.create_project(owner_id=current_user_id(), title=title)
+    return _row(_project_or_404(project.id))
+
+
+@router.post("/compose", response_model=ProjectRow, response_model_by_alias=True, status_code=201)
+def compose_project(body: ComposeIn) -> ProjectRow:
+    """**From other projects** (section 10.4): a new project of the Personal Vault made of the
+    passages, in order. A ``subheader`` join starts a new part. Every source must be a part the
+    user may read (``404`` otherwise); the passages are copies, and no audio byte is copied."""
+    for chosen in body.passages:
+        require_part(chosen.part, write=False)
+    try:
+        project = project_parts.assemble(
+            owner_id=current_user_id(),
+            title=body.title,
+            kind=body.kind,
+            passages=[
+                project_parts.Chosen(
+                    part=one.part,
+                    from_ms=one.from_ms,
+                    to_ms=one.to_ms,
+                    join=one.join,
+                    subheader=one.subheader,
+                )
+                for one in body.passages
+            ],
+        )
+    except locate.NotFound as exc:
+        raise HTTPException(
+            status_code=404, detail="A chosen passage is not there any more."
+        ) from exc
+    except (project_parts.PartsError, paste.PasteError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _row(_project_or_404(project.id))
 
 
@@ -357,3 +439,86 @@ def edit_version(project_id: str) -> ProjectRow:
     except flow.Refused as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _row(_project_or_404(copy_id))
+
+
+# ----------------------------------------------------------------------- parts
+
+
+def _parts_out(project_id: str, part: str | None = None) -> PartsOut:
+    return PartsOut(
+        parts=[
+            PartRow(id=one.id, subheader=one.subheader, duration_ms=one.duration_ms)
+            for one in project_parts.facts(project_id)
+        ],
+        part=part,
+    )
+
+
+def _part_of(project_id: str, part_id: str) -> None:
+    try:
+        if locate.part(part_id).project_id == project_id:
+            return
+    except locate.NotFound:
+        pass
+    raise HTTPException(status_code=404, detail=f"No part with id '{part_id}' in this project")
+
+
+@router.get("/{project_id}/parts", response_model=PartsOut, response_model_by_alias=True)
+def list_parts(project_id: str) -> PartsOut:
+    """The parts of a project in order (section 8.4): the sub-songs of an integrated playlist."""
+    _project_or_404(project_id)
+    return _parts_out(project_id)
+
+
+@router.put("/{project_id}/parts", response_model=PartsOut, response_model_by_alias=True)
+def reorder_parts(project_id: str, body: PartsOrderIn) -> PartsOut:
+    """The parts in a new order; ``order`` names every part once."""
+    _project_or_404(project_id)
+    try:
+        bundle.reorder_parts(project_id, body.order)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _parts_out(project_id)
+
+
+@router.patch(
+    "/{project_id}/parts/{part_id}", response_model=PartsOut, response_model_by_alias=True
+)
+def change_part(project_id: str, part_id: str, body: PartChangeIn) -> PartsOut:
+    """The title above a part (its subheader); empty takes it away."""
+    _part_of(project_id, part_id)
+    project_parts.rename(project_id, part_id, body.subheader)
+    return _parts_out(project_id, part_id)
+
+
+def _parts_answers(action: Callable[[], str]) -> str:
+    try:
+        return action()
+    except locate.NotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (project_parts.PartsError, paste.PasteError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{project_id}/parts/{part_id}/join", response_model=PartsOut, response_model_by_alias=True
+)
+def join_part(project_id: str, part_id: str) -> PartsOut:
+    """The part joined to the one before it: one part, played without a break (section 14.1)."""
+    _part_of(project_id, part_id)
+    kept = _parts_answers(lambda: project_parts.join(project_id, part_id))
+    return _parts_out(project_id, kept)
+
+
+@router.post(
+    "/{project_id}/parts/{part_id}/split", response_model=PartsOut, response_model_by_alias=True
+)
+def split_part(project_id: str, part_id: str, body: SplitIn) -> PartsOut:
+    """The part split at ``atMs``: what follows becomes a new part after it (section 14.1)."""
+    _part_of(project_id, part_id)
+    new_part = _parts_answers(
+        lambda: project_parts.split(
+            project_id, part_id, body.at_ms, subheader=body.subheader, sheet=body.sheet
+        )
+    )
+    return _parts_out(project_id, new_part)
