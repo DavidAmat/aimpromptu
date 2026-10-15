@@ -6,6 +6,9 @@
  * table, because songs are compared on the same fields: title, artist, how many versions, when one
  * last changed. The filter above it looks at the title and the artists. A song whose version is being
  * edited in Projects says so beside its title. A row opens the song and its versions.
+ *
+ * Songs picked with their checkbox are made into a songs playlist with **Make a playlist** (Phase
+ * 10, the app context's dynamic playlist), each on its first version.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -15,7 +18,7 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useNavigate } from "react-router-dom";
-import { libraryApi, type SongRow } from "../../api";
+import { libraryApi, playlistsApi, type SongRow } from "../../api";
 import { ROUTES } from "../../layout/routes";
 import {
   DataTable,
@@ -27,6 +30,7 @@ import {
   relativeTime,
   type DataColumn,
 } from "../../ui";
+import { TextDialog } from "./TextDialog";
 import { said } from "./shared";
 
 const artistsOf = (row: SongRow) => row.artists.map((artist) => artist.name).join(", ");
@@ -37,6 +41,27 @@ export function SongsPage() {
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [filter, setFilter] = useState("");
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [making, setMaking] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [makeError, setMakeError] = useState<string | null>(null);
+
+  /** The picked songs, in the order the table lists them by title. */
+  const makePlaylist = async (title: string) => {
+    const chosen = (songs ?? []).filter((row) => picked.has(String(row.id)));
+    setBusy(true);
+    setMakeError(null);
+    try {
+      const made = await playlistsApi.create(
+        title,
+        chosen.map((row) => ({ songId: row.id })),
+      );
+      navigate(ROUTES.libraryPlaylist(made.id));
+    } catch (caught) {
+      setMakeError(said(caught, "The playlist could not be made."));
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -112,7 +137,16 @@ export function SongsPage() {
 
   return (
     <PageBody>
-      <PageHeader title="Songs" />
+      <PageHeader
+        title="Songs"
+        actions={
+          picked.size > 0 ? (
+            <PillButton kind="primary" onClick={() => setMaking(true)} data-testid="make-playlist">
+              Make a playlist of {picked.size}
+            </PillButton>
+          ) : undefined
+        }
+      />
       {error ? (
         <EmptyState
           message={`The songs could not be loaded: ${error}`}
@@ -150,10 +184,23 @@ export function SongsPage() {
               rowKey={(row) => String(row.id)}
               onRowClick={(row) => navigate(ROUTES.librarySong(row.id))}
               initialSort={{ key: "title", direction: "asc" }}
+              selected={picked}
+              onSelectedChange={setPicked}
             />
           )}
         </Stack>
       )}
+      {making ? (
+        <TextDialog
+          title="Make a playlist"
+          label="Title"
+          confirmLabel="Make the playlist"
+          busy={busy}
+          error={makeError}
+          onCancel={() => setMaking(false)}
+          onConfirm={(title) => void makePlaylist(title)}
+        />
+      ) : null}
     </PageBody>
   );
 }

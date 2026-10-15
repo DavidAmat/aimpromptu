@@ -4,15 +4,16 @@
  *
  * A project's id is the id of its first part, the uuid of the backend's routes (plan P-6).
  * `/projects/new` opens the Source step of a new project (**New project → From source** on the
- * Projects page; From scratch and From other projects come in Phases 8 and 10).
+ * Projects page); `/projects/compose` is **From other projects** (Phase 10), where passages of
+ * other projects are chosen before the project is made.
  *
  * **Lab** holds the video reader's development pages: the video, its calibration, the detection,
  * its notes and the examples it is measured on. A video project fits its piano and reads its notes
  * on its own Video step (`/projects/:id/audio`, Phase 5); Lab opens the same video for the master
  * user's measurements.
  *
- * **My library** (`/library/songs`, `/library/artists`, Phase 6) is the Private Library: finished
- * work, as songs with their versions.
+ * **My library** (`/library/songs`, `/library/artists`, Phase 6; `/library/playlists`, Phase 10) is
+ * the Private Library: finished work, as songs with their versions, and the songs playlists.
  *
  * `/login` is the one page outside the shell; every other page needs a user signed in, and the
  * Admin pages (Users, Lab) the master user (Phase 4).
@@ -32,6 +33,8 @@ export const ROUTES = {
   adminUsers: "/admin/users",
   projects: "/projects",
   projectNew: "/projects/new",
+  /** **From other projects** (Phase 10): passages of other projects, then a new project. */
+  projectCompose: "/projects/compose",
   /** A project at one step, or at the step it opens on when `step` is left out. */
   project: (id: string, step?: PieceStep) => (step ? `/projects/${id}/${step}` : `/projects/${id}`),
   /** A passage of a project being re-recorded: Current and Proposal (Record in Sheet, Phase 9). */
@@ -43,6 +46,9 @@ export const ROUTES = {
   librarySong: (id: number) => `/library/songs/${id}`,
   libraryArtists: "/library/artists",
   libraryArtist: (id: number) => `/library/artists/${id}`,
+  /** The songs playlists of My library (Phase 10). */
+  libraryPlaylists: "/library/playlists",
+  libraryPlaylist: (id: number) => `/library/playlists/${id}`,
   lab: "/admin/lab",
   labVideo: "/admin/lab/video",
   labCalibration: "/admin/lab/calibration",
@@ -61,6 +67,7 @@ export const PROJECT_PATTERN = "/projects/:id";
 export const PASSAGE_PATTERN = "/projects/:id/passages/:passageId";
 export const LIBRARY_SONG_PATTERN = "/library/songs/:id";
 export const LIBRARY_ARTIST_PATTERN = "/library/artists/:id";
+export const LIBRARY_PLAYLIST_PATTERN = "/library/playlists/:id";
 export const LAB_EXAMPLE_PATTERN = "/admin/lab/examples/:slug";
 
 /** The Lab tabs, in the order of the work on a video; Examples last, because it is where a rule is measured. */

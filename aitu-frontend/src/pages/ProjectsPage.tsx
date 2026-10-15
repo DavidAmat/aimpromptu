@@ -5,7 +5,7 @@
  * Each row says the step the project reached and when it last changed; the whole row opens the
  * project on that step. The `⋯` menu has Open, Duplicate, Export, Rename, Notes Falling and Delete.
  * **New project** opens a small menu: **From source**, **From scratch** (Phase 8) and **From other
- * projects** (the last two are built in Phases 8 and 10), and **Import** for a `.aitu` file.
+ * projects** (Phase 10, its own page), and **Import** for a `.aitu` file.
  *
  * The list is one request (`GET /projects`), with the step of every row in it. Finished work is in
  * My library (Phase 6); a copy made there by **Edit** is listed here, says **Editing**, and its menu
@@ -392,11 +392,16 @@ function NewProjectButton({
           </ListItemIcon>
           <ListItemText primary="From scratch" secondary="A blank sheet: record or paste" />
         </MenuItem>
-        <MenuItem disabled>
+        <MenuItem
+          onClick={() => {
+            close();
+            navigate(ROUTES.projectCompose);
+          }}
+        >
           <ListItemIcon>
             <LibraryAddIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="From other projects" secondary="Not available yet" />
+          <ListItemText primary="From other projects" secondary="Passages of your projects and songs" />
         </MenuItem>
         <Divider />
         <MenuItem

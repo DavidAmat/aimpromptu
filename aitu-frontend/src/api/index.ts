@@ -29,13 +29,18 @@ export type {
 
 export { projectsApi } from "./projects";
 export type {
+  ChosenPassage,
   DuplicatedProject,
   LibraryLink,
+  PartRow,
+  PartsAnswer,
   ProjectLayer,
   ProjectRow,
   SavedToLibrary,
   SaveToLibrary,
 } from "./projects";
+export { playlistsApi } from "./playlists";
+export type { NewPlaylistItem, PlaylistDetail, PlaylistItem, PlaylistRow } from "./playlists";
 export { passagesApi } from "./passages";
 export type {
   OpenPassage,

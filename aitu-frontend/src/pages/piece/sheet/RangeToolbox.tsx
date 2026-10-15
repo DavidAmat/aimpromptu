@@ -23,6 +23,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
+import CallSplitIcon from "@mui/icons-material/CallSplit";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecordOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHorizOutlined";
 import VisibilityIcon from "@mui/icons-material/VisibilityOutlined";
@@ -94,6 +95,8 @@ export function RangeToolbox({
   anchorMs,
   onRecordPassage,
   recordingPassage = false,
+  onSplit,
+  splitting = false,
 }: {
   open: boolean;
   range: FrameRange | null;
@@ -131,6 +134,9 @@ export function RangeToolbox({
    */
   onRecordPassage?: (range: FrameRange) => void;
   recordingPassage?: boolean;
+  /** The parts of a project (Phase 10): a new part from where the stretch starts. */
+  onSplit?: (range: FrameRange) => void;
+  splitting?: boolean;
 }) {
   const {
     rangeKey,
@@ -177,6 +183,15 @@ export function RangeToolbox({
               onClick={() => onRecordPassage(range)}
               disabled={recordingPassage}
               data-testid="range-record"
+            />
+          ) : null}
+          {onSplit && range && range.fromColumn > 0 ? (
+            <IconAction
+              title="Start a new part here"
+              icon={<CallSplitIcon fontSize="small" />}
+              onClick={() => onSplit(range)}
+              disabled={splitting}
+              data-testid="range-split"
             />
           ) : null}
           <IconAction

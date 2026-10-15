@@ -15,3 +15,12 @@ export function download(url: string) {
   link.click();
   link.remove();
 }
+
+/** A stretch as `m:ss – m:ss`. */
+export function stretchLabel(fromMs: number, toMs: number): string {
+  const clock = (ms: number) => {
+    const seconds = Math.round(ms / 1000);
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  };
+  return `${clock(fromMs)} – ${clock(toMs)}`;
+}

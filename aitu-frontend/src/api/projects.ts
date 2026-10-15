@@ -1,12 +1,14 @@
 /**
  * `/projects` — the projects of the Personal Vault (implementation 02, plan sections 8.8 and 10.1),
- * and the way into and out of the Private Library (Phase 6, sections 10.2 and 10.6).
+ * the way into and out of the Private Library (Phase 6, sections 10.2 and 10.6), and **From other
+ * projects** with the parts of a project (Phase 10, sections 10.4 and 14.1).
  *
  * A project's id is the id of its first part, the uuid the step routes (`/audio`, `/pieces`,
  * `/time`, `/matrix`) take. Mirrors `aitu-backend/src/aitu_backend/api/projects.py`.
  */
 
 import type { PieceStep } from "./pieces";
+import type { SavedRhythm } from "./timeScore";
 import { buildUrl, request, upload } from "./client";
 
 export type ProjectLayer = "vault" | "private";
@@ -68,6 +70,29 @@ export interface DuplicatedProject {
   parts: string[];
 }
 
+/** One passage of **From other projects**: a part and a stretch of it, or all of it. */
+export interface ChosenPassage {
+  part: string;
+  fromMs?: number | null;
+  toMs?: number | null;
+  /** How it joins the passage before it: in the same part, or a new part with a title. */
+  join: "sequential" | "subheader";
+  subheader?: string | null;
+}
+
+/** One part of a project: the title above it and its length. */
+export interface PartRow {
+  id: string;
+  subheader: string | null;
+  durationMs: number;
+}
+
+export interface PartsAnswer {
+  parts: PartRow[];
+  /** The part a change left on show: the one joined into, or the new one of a split. */
+  part: string | null;
+}
+
 export const projectsApi = {
   /** The user's projects, newest change first: the Personal Vault, or the layers asked for. */
   list: (layers: readonly ProjectLayer[] = ["vault"], signal?: AbortSignal) =>
@@ -100,4 +125,25 @@ export const projectsApi = {
 
   /** The copy in Projects that edits a version of the library: the one open, or a new one. */
   edit: (id: string) => request<ProjectRow>(`/projects/${id}/edit`, { method: "POST" }),
+
+  /** **From other projects** (Phase 10): a new project made of the passages, in order. */
+  compose: (body: { title: string; kind: "song" | "integratedPlaylist"; passages: ChosenPassage[] }) =>
+    request<ProjectRow>("/projects/compose", { method: "POST", body }),
+
+  /** The parts of a project in order (the sub-songs of an integrated playlist). */
+  parts: (id: string, signal?: AbortSignal) => request<PartsAnswer>(`/projects/${id}/parts`, { signal }),
+
+  reorderParts: (id: string, order: string[]) =>
+    request<PartsAnswer>(`/projects/${id}/parts`, { method: "PUT", body: { order } }),
+
+  renamePart: (id: string, part: string, subheader: string | null) =>
+    request<PartsAnswer>(`/projects/${id}/parts/${part}`, { method: "PATCH", body: { subheader } }),
+
+  /** The part joined to the one before it, played without a break. */
+  joinPart: (id: string, part: string) =>
+    request<PartsAnswer>(`/projects/${id}/parts/${part}/join`, { method: "POST" }),
+
+  /** What follows `atMs` becomes a new part after it; the page's sheet is saved with it. */
+  splitPart: (id: string, part: string, body: { atMs: number; subheader?: string | null; sheet?: SavedRhythm | null }) =>
+    request<PartsAnswer>(`/projects/${id}/parts/${part}/split`, { method: "POST", body }),
 };
