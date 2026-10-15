@@ -13,7 +13,7 @@
  * Command-Z takes it back.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -30,7 +30,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
-import ContentCutIcon from "@mui/icons-material/ContentCutOutlined";
+import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecordOutlined";
 import FileUploadIcon from "@mui/icons-material/FileUploadOutlined";
@@ -66,7 +66,6 @@ import {
   ConfirmDialog,
   EmptyState,
   IconAction,
-  PageHeader,
   PillButton,
   RowMenu,
   Section,
@@ -243,8 +242,13 @@ export function PassagePage() {
   const recorder = useRecorder();
   const playAlong = useRef<HTMLAudioElement | null>(null);
   const [recorderOpen, setRecorderOpen] = useState(false);
-  /** The waveform of the take on show, to choose the stretch of it again. */
-  const [editingRange, setEditingRange] = useState(false);
+  /**
+   * What the main area shows: the Current, or the take on show; and for a take, its **Audio**
+   * (the waveform, the stretch to keep) or its **Sheet** (the Current above the Proposal). `null`
+   * is the natural one: a take if there is one, its Sheet once it is written.
+   */
+  const [view, setView] = useState<"current" | "take" | null>(null);
+  const [tab, setTab] = useState<"audio" | "sheet" | null>(null);
   const [withOriginal, setWithOriginal] = useState(false);
   /** The microphones of this computer, and the one chosen (kept in this browser). */
   const [inputs, setInputs] = useState<MediaDeviceInfo[]>([]);
@@ -357,7 +361,8 @@ export function PassagePage() {
       try {
         setPassage(await passagesApi.addTake(passageId, file, notes));
         setRecorderOpen(false);
-        setEditingRange(true);
+        setView("take");
+        setTab("audio");
       } catch (caught) {
         setRefused(said(caught, "Could not keep that take."));
       } finally {
@@ -398,7 +403,10 @@ export function PassagePage() {
   const [jobId, setJobId] = useState<string | null>(null);
   const followed = jobId ?? take?.jobId ?? null;
   const progress = useProgress(followed ? matrixApi.progressUrl(followed) : null);
-  const showRange = take !== null && (take.state !== "ready" || editingRange);
+  // A take when there is one and the Current was not asked for; the Current otherwise (a new
+  // passage has none).
+  const shownView = isNew || (take !== null && view !== "current") ? "take" : "current";
+  const shownTab = tab ?? (take?.state === "ready" ? "sheet" : "audio");
   const writeProposal = async () => {
     if (!take) return;
     const kept = range ?? { startSeconds: take.fromSeconds, endSeconds: take.toSeconds };
@@ -413,7 +421,7 @@ export function PassagePage() {
   const afterRead = useCallback(
     async (read: boolean) => {
       await load();
-      if (read) setEditingRange(false);
+      if (read) setTab("sheet");
       setJobId(null);
     },
     [load],
@@ -482,6 +490,23 @@ export function PassagePage() {
   };
 
   const [discarding, setDiscarding] = useState(false);
+  /** A take to delete, waiting for its confirmation. */
+  const [deleting, setDeleting] = useState<{ id: string; name: string } | null>(null);
+  const deleteTake = async () => {
+    if (!deleting) return;
+    try {
+      setPassage(await passagesApi.deleteTake(passageId, deleting.id));
+    } catch (caught) {
+      setRefused(said(caught, "Could not delete that take."));
+    } finally {
+      setDeleting(null);
+    }
+  };
+  const showTake = (takeId: string) => {
+    setView("take");
+    setTab(null);
+    if (takeId !== passage?.take) void update({ take: takeId });
+  };
   const discard = async () => {
     try {
       await passagesApi.discard(passageId);
@@ -493,32 +518,19 @@ export function PassagePage() {
 
   // ------------------------------------------------------------------ the page
 
+  const close = () => navigate(ROUTES.project(projectId, "sheet"));
   if (error) {
     return (
-      <Box sx={{ px: { xs: 2, md: 3 }, pt: 1 }}>
-        <PageHeader title="Passage" back={{ to: ROUTES.project(projectId, "sheet"), label: "Back to the sheet" }} />
+      <Box sx={FRAME_SX}>
+        <TitleBar title="Recording" onClose={close} />
         <EmptyState message={error} />
       </Box>
     );
   }
   if (!passage) return null;
 
-  const ready = take?.state === "ready" && !showRange;
-  const title = passage.title;
+  const stretch = isNew ? `new passage at ${clock(passage.fromMs)}` : `${clock(passage.fromMs)} – ${clock(passage.toMs)}`;
   const menu: RowMenuItem[] = [
-    ...(take
-      ? [
-          {
-            label: `Delete ${take.name}`,
-            icon: <DeleteOutlineIcon fontSize="small" />,
-            onClick: () =>
-              void passagesApi
-                .deleteTake(passageId, take.id)
-                .then(setPassage)
-                .catch((caught: unknown) => setRefused(said(caught, "Could not delete that take."))),
-          },
-        ]
-      : []),
     {
       label: "Discard this passage",
       icon: <DeleteOutlineIcon fontSize="small" />,
@@ -526,23 +538,14 @@ export function PassagePage() {
       onClick: () => setDiscarding(true),
     },
   ];
-  const recordAction = (
-    <IconAction
-      title="Record a take"
-      icon={<FiberManualRecordIcon />}
-      onClick={() => setRecorderOpen(true)}
-      placement="top"
-      data-testid="passage-record"
-    />
-  );
   const barActions = (
     <>
-      {recordAction}
       <IconAction
-        title="Choose the stretch of the take"
-        icon={<ContentCutIcon />}
-        onClick={() => setEditingRange(true)}
+        title="Record a take"
+        icon={<FiberManualRecordIcon />}
+        onClick={() => setRecorderOpen(true)}
         placement="top"
+        data-testid="passage-record"
       />
       {isNew ? null : (
         <IconAction
@@ -555,12 +558,64 @@ export function PassagePage() {
       )}
     </>
   );
+  const currentSheet = (
+    <Box data-passage-current>
+      <SheetPage
+        key={passage.current}
+        step={{
+          audioUuid: passage.current,
+          state: "ready",
+          reason: null,
+          onChanged: () => undefined,
+          passage: {
+            role: "current",
+            ...(passage.anchorMs !== null ? { anchorMs: passage.anchorMs } : {}),
+            playerRef: currentPlayer,
+            onPlaying: reportCurrentPlaying,
+          },
+        }}
+      />
+    </Box>
+  );
+  const playCurrent = (
+    <IconAction
+      title={currentPlaying ? "Pause" : "Play the current passage"}
+      icon={currentPlaying ? <PauseIcon /> : <PlayArrowIcon />}
+      onClick={toggleCurrent}
+    />
+  );
+  const speedControl = (
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{ alignItems: "center", width: 200 }}
+      title="How many times as fast the take goes into the song"
+    >
+      <Typography variant="body2" sx={{ fontVariantNumeric: "tabular-nums", minWidth: 44 }} data-testid="passage-speed">
+        ×{shownSpeed.toFixed(2)}
+      </Typography>
+      <Slider
+        size="small"
+        aria-label="Speed"
+        min={SPEED_STEPS.min}
+        max={SPEED_STEPS.max}
+        step={SPEED_STEPS.step}
+        value={Math.log2(shownSpeed)}
+        onChange={(_event, value) => setSpeedDraft(2 ** (value as number))}
+        onChangeCommitted={(_event, value) => {
+          const next = Math.round(2 ** (value as number) * 100) / 100;
+          void update({ speed: next }).then(() => setSpeedDraft(null));
+        }}
+      />
+    </Stack>
+  );
 
   return (
-    <Box sx={{ px: { xs: 2, md: 3 }, pt: 1, pb: 12 }} data-passage-page={passage.id}>
-      <PageHeader
-        title={title}
-        back={{ to: ROUTES.project(projectId, "sheet"), label: "Back to the sheet" }}
+    <Box sx={FRAME_SX} data-passage-page={passage.id}>
+      <TitleBar
+        title={`Recording · ${passage.title}`}
+        detail={stretch}
+        onClose={close}
         actions={
           <>
             {isNew ? (
@@ -608,169 +663,175 @@ export function PassagePage() {
         </MenuItem>
       </Menu>
 
-      {refused ? (
-        <Alert severity="warning" onClose={() => setRefused(null)} sx={{ my: 2 }}>
-          {refused}
-        </Alert>
-      ) : null}
-
-      {isNew ? null : (
-        <Section
-          title={`Current · ${clock(passage.fromMs)} – ${clock(passage.toMs)}`}
-          actions={
-            <IconAction
-              title={currentPlaying ? "Pause" : "Play the current passage"}
-              icon={currentPlaying ? <PauseIcon /> : <PlayArrowIcon />}
-              onClick={toggleCurrent}
-            />
-          }
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, flex: 1, minHeight: 0 }}>
+        {/* The takes, and what makes one. */}
+        <Box
+          component="nav"
+          aria-label="Takes"
+          sx={{
+            width: { xs: "auto", md: 248 },
+            flexShrink: 0,
+            borderRight: { md: 1 },
+            borderBottom: { xs: 1, md: 0 },
+            borderColor: "divider",
+            overflowY: "auto",
+            maxHeight: { xs: 220, md: "none" },
+            p: 1.5,
+          }}
+          data-passage-takes
         >
-          <Box data-passage-current>
-            <SheetPage
-              key={passage.current}
-              step={{
-                audioUuid: passage.current,
-                state: "ready",
-                reason: null,
-                onChanged: () => undefined,
-                passage: {
-                  role: "current",
-                  ...(passage.anchorMs !== null ? { anchorMs: passage.anchorMs } : {}),
-                  playerRef: currentPlayer,
-                  onPlaying: reportCurrentPlaying,
-                },
-              }}
-            />
-          </Box>
-        </Section>
-      )}
-
-      <Section
-        title={isNew ? `New passage at ${clock(passage.fromMs)}` : "Proposal"}
-        actions={
-          take ? (
-            <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
-              {passage.takes.length > 1 ? (
-                <TextField
-                  select
-                  size="small"
-                  value={take.id}
-                  onChange={(event) => void update({ take: event.target.value })}
-                  sx={{ minWidth: 120 }}
-                  slotProps={{ htmlInput: { "aria-label": "Take" } }}
-                >
-                  {passage.takes.map((one) => (
-                    <MenuItem key={one.id} value={one.id}>
-                      {one.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  {take.name}
-                </Typography>
-              )}
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center", width: 200 }} title="How many times as fast the take goes into the song">
-                <Typography variant="body2" sx={{ fontVariantNumeric: "tabular-nums", minWidth: 44 }} data-testid="passage-speed">
-                  ×{shownSpeed.toFixed(2)}
-                </Typography>
-                <Slider
-                  size="small"
-                  aria-label="Speed"
-                  min={SPEED_STEPS.min}
-                  max={SPEED_STEPS.max}
-                  step={SPEED_STEPS.step}
-                  value={Math.log2(shownSpeed)}
-                  onChange={(_event, value) => setSpeedDraft(2 ** (value as number))}
-                  onChangeCommitted={(_event, value) => {
-                    const next = Math.round(2 ** (value as number) * 100) / 100;
-                    void update({ speed: next }).then(() => setSpeedDraft(null));
-                  }}
-                />
-              </Stack>
-            </Stack>
-          ) : undefined
-        }
-      >
-        {!take ? (
-          <EmptyState
-            message={isNew ? "Record the new passage." : "Record the passage again."}
-            action={
-              <Stack direction="row" spacing={1}>
-                <PillButton
-                  kind="primary"
-                  startIcon={<FiberManualRecordIcon />}
-                  onClick={() => setRecorderOpen(true)}
-                  data-testid="passage-first-record"
-                >
-                  Record
-                </PillButton>
-                <PillButton
-                  kind="secondary"
-                  startIcon={<FileUploadIcon />}
-                  busy={sending}
-                  onClick={() => fileInput.current?.click()}
-                >
-                  Add a take from a file
-                </PillButton>
-              </Stack>
-            }
-          />
-        ) : showRange ? (
-          <Stack spacing={2} sx={{ maxWidth: 960 }} data-passage-range={take.id}>
-            <WaveformRangeSelector
-              key={take.id}
-              audioUrl={audioApi.originalFileUrl(take.id)}
-              loadWaveform={loadTakeWaveform}
-              durationSeconds={take.seconds}
-              initialRange={{ startSeconds: take.fromSeconds, endSeconds: take.toSeconds }}
-              onRangeChange={setRange}
-            />
-            {followed ? <ProgressBanner progress={progress} fallbackLabel="Writing the proposal" /> : null}
-            <Stack direction="row" spacing={1}>
-              <PillButton
-                kind="primary"
-                busy={followed !== null}
-                onClick={() => void writeProposal()}
-                data-testid="passage-write"
-              >
-                Write the proposal
-              </PillButton>
-              <PillButton kind="secondary" onClick={() => setRecorderOpen(true)}>
-                Record again
-              </PillButton>
-              {take.state === "ready" ? (
-                <PillButton kind="quiet" onClick={() => setEditingRange(false)}>
-                  Cancel
-                </PillButton>
-              ) : null}
-            </Stack>
+          <Stack spacing={0.5}>
+            {isNew ? null : (
+              <RailRow
+                label="Current"
+                detail={`${clock(passage.fromMs)} – ${clock(passage.toMs)}`}
+                selected={shownView === "current"}
+                onClick={() => setView("current")}
+                testId="take-current"
+              />
+            )}
+            {passage.takes.map((one) => (
+              <RailRow
+                key={one.id}
+                label={one.name}
+                detail={
+                  one.state === "reading"
+                    ? "Writing the proposal…"
+                    : one.state === "ready"
+                      ? one.midi
+                        ? "MIDI"
+                        : `${formatTime(one.toSeconds - one.fromSeconds)}`
+                      : "Not written yet"
+                }
+                selected={shownView === "take" && one.id === take?.id}
+                onClick={() => showTake(one.id)}
+                onDelete={() => setDeleting({ id: one.id, name: one.name })}
+                testId={`take-${one.name.replace(/\s+/g, "-").toLowerCase()}`}
+              />
+            ))}
           </Stack>
-        ) : ready ? (
-          <Box data-passage-proposal={take.id}>
-            <SheetPage
-              key={`${take.id}:${take.audioRevision}`}
-              step={{
-                audioUuid: take.id,
-                audioRevision: take.audioRevision,
-                state: "ready",
-                reason: null,
-                onChanged: () => undefined,
-                passage: {
-                  role: "proposal",
-                  ...(passage.anchorMs !== null ? { anchorMs: passage.anchorMs * shownSpeed } : {}),
-                  ...(frameWindow ? { frameWindow } : {}),
-                  onWindowMove: moveWindow,
-                  barActions,
-                  playerRef: proposalPlayer,
-                  onPlaying: reportProposalPlaying,
-                  onSheet: keepSheet,
-                },
-              }}
-            />
-          </Box>
-        ) : null}
-      </Section>
+          <Stack spacing={1} sx={{ mt: 2 }}>
+            <PillButton
+              kind="primary"
+              size="small"
+              startIcon={<FiberManualRecordIcon />}
+              onClick={() => setRecorderOpen(true)}
+              data-testid="passage-first-record"
+            >
+              Record
+            </PillButton>
+            <PillButton
+              kind="secondary"
+              size="small"
+              startIcon={<FileUploadIcon />}
+              busy={sending}
+              onClick={() => fileInput.current?.click()}
+            >
+              Add a take from a file
+            </PillButton>
+          </Stack>
+        </Box>
+
+        {/* What is chosen on the left. */}
+        <Box sx={{ flex: 1, minWidth: 0, overflowY: "auto", px: { xs: 2, md: 3 }, pt: 2, pb: 12 }}>
+          {refused ? (
+            <Alert severity="warning" onClose={() => setRefused(null)} sx={{ mb: 2 }}>
+              {refused}
+            </Alert>
+          ) : null}
+
+          {shownView === "current" && !isNew ? (
+            <Section title="Current" actions={playCurrent}>
+              {currentSheet}
+            </Section>
+          ) : !take ? (
+            <EmptyState message="Record the new passage." />
+          ) : (
+            <>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", rowGap: 1, mb: 2 }}
+              >
+                <Segmented<"audio" | "sheet">
+                  label={`${take.name}: audio or sheet`}
+                  value={shownTab}
+                  options={[
+                    { value: "audio", label: "Audio" },
+                    { value: "sheet", label: "Sheet" },
+                  ]}
+                  onChange={setTab}
+                />
+                {shownTab === "sheet" && take.state === "ready" ? speedControl : null}
+              </Stack>
+              {shownTab === "audio" ? (
+                <Stack spacing={2} sx={{ maxWidth: 960 }} data-passage-range={take.id}>
+                  <WaveformRangeSelector
+                    key={`${take.id}:${take.audioRevision}`}
+                    audioUrl={audioApi.originalFileUrl(take.id)}
+                    loadWaveform={loadTakeWaveform}
+                    durationSeconds={take.seconds}
+                    initialRange={{ startSeconds: take.fromSeconds, endSeconds: take.toSeconds }}
+                    onRangeChange={setRange}
+                  />
+                  {followed ? <ProgressBanner progress={progress} fallbackLabel="Writing the proposal" /> : null}
+                  <Box>
+                    <PillButton
+                      kind="primary"
+                      busy={followed !== null}
+                      onClick={() => void writeProposal()}
+                      data-testid="passage-write"
+                    >
+                      Write the proposal
+                    </PillButton>
+                  </Box>
+                </Stack>
+              ) : take.state !== "ready" ? (
+                <EmptyState
+                  message="This take has no sheet yet."
+                  action={
+                    <PillButton kind="primary" onClick={() => setTab("audio")}>
+                      Choose the stretch to keep
+                    </PillButton>
+                  }
+                />
+              ) : (
+                <>
+                  {isNew ? null : (
+                    <Section title={`Current · ${clock(passage.fromMs)} – ${clock(passage.toMs)}`} actions={playCurrent}>
+                      {currentSheet}
+                    </Section>
+                  )}
+                  <Section title={isNew ? undefined : "Proposal"}>
+                    <Box data-passage-proposal={take.id}>
+                      <SheetPage
+                        key={`${take.id}:${take.audioRevision}`}
+                        step={{
+                          audioUuid: take.id,
+                          audioRevision: take.audioRevision,
+                          state: "ready",
+                          reason: null,
+                          onChanged: () => undefined,
+                          passage: {
+                            role: "proposal",
+                            ...(passage.anchorMs !== null ? { anchorMs: passage.anchorMs * shownSpeed } : {}),
+                            ...(frameWindow ? { frameWindow } : {}),
+                            onWindowMove: moveWindow,
+                            barActions,
+                            playerRef: proposalPlayer,
+                            onPlaying: reportProposalPlaying,
+                            onSheet: keepSheet,
+                          },
+                        }}
+                      />
+                    </Box>
+                  </Section>
+                </>
+              )}
+            </>
+          )}
+        </Box>
+      </Box>
 
       <input
         ref={fileInput}
@@ -936,6 +997,15 @@ export function PassagePage() {
       </Dialog>
 
       <ConfirmDialog
+        open={deleting !== null}
+        title={`Delete ${deleting?.name ?? "the take"}?`}
+        confirmLabel="Delete the take"
+        danger
+        onConfirm={() => void deleteTake()}
+        onCancel={() => setDeleting(null)}
+      />
+
+      <ConfirmDialog
         open={discarding}
         title="Discard this passage?"
         message="Its takes are deleted. The song stays as it is."
@@ -945,6 +1015,113 @@ export function PassagePage() {
         onCancel={() => setDiscarding(false)}
       />
     </Box>
+  );
+}
+
+/**
+ * The page is a mode of its own: it covers the window, over the app's sidebar, with its own title
+ * bar and a close button back to the sheet. Below the floating bar (1200) and the toolboxes (1300),
+ * which the Proposal uses.
+ */
+const FRAME_SX = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 1100,
+  bgcolor: "background.default",
+  display: "flex",
+  flexDirection: "column",
+} as const;
+
+function TitleBar({
+  title,
+  detail,
+  actions,
+  onClose,
+}: {
+  title: string;
+  detail?: string;
+  actions?: ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <Stack
+      direction="row"
+      spacing={1.5}
+      sx={{ alignItems: "center", px: { xs: 1.5, md: 2 }, minHeight: 56, borderBottom: 1, borderColor: "divider", flexShrink: 0 }}
+    >
+      <FiberManualRecordIcon fontSize="small" sx={{ color: "error.main" }} aria-hidden />
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "baseline", flex: "1 1 auto", minWidth: 0 }}>
+        <Typography component="h1" sx={{ fontSize: 16, fontWeight: 600, minWidth: 0 }} noWrap title={title}>
+          {title}
+        </Typography>
+        {detail ? (
+          <Typography variant="body2" color="text.secondary" noWrap sx={{ flexShrink: 0, display: { xs: "none", sm: "block" } }}>
+            {detail}
+          </Typography>
+        ) : null}
+      </Stack>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexShrink: 0 }}>
+        {actions}
+      </Stack>
+      <IconAction title="Close the recording" icon={<CloseIcon />} onClick={onClose} data-testid="passage-close" />
+    </Stack>
+  );
+}
+
+/** One line of the left panel: the Current or a take, with a bin for a take. */
+function RailRow({
+  label,
+  detail,
+  selected,
+  onClick,
+  onDelete,
+  testId,
+}: {
+  label: string;
+  detail: string;
+  selected: boolean;
+  onClick: () => void;
+  onDelete?: () => void;
+  testId?: string;
+}) {
+  return (
+    <Stack
+      direction="row"
+      sx={{
+        alignItems: "center",
+        borderRadius: 2,
+        bgcolor: selected ? "action.selected" : "transparent",
+        "&:hover": { bgcolor: selected ? "action.selected" : "action.hover" },
+      }}
+      data-testid={testId}
+      data-selected={selected ? "true" : "false"}
+    >
+      <Box
+        component="button"
+        type="button"
+        onClick={onClick}
+        aria-current={selected ? "true" : undefined}
+        sx={{
+          all: "unset",
+          cursor: "pointer",
+          flex: 1,
+          minWidth: 0,
+          px: 1.5,
+          py: 1,
+          "&:focus-visible": { outline: 2, outlineColor: "primary.main", borderRadius: 2 },
+        }}
+      >
+        <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 500 }} noWrap>
+          {label}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" noWrap component="div">
+          {detail}
+        </Typography>
+      </Box>
+      {onDelete ? (
+        <IconAction title={`Delete ${label}`} icon={<DeleteOutlineIcon fontSize="small" />} onClick={onDelete} />
+      ) : null}
+    </Stack>
   );
 }
 

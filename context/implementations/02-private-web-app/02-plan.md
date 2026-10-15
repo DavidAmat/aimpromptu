@@ -1265,6 +1265,9 @@ this page.
 - **A MIDI piano** (asked in the user's review): **Notes from: MIDI piano** takes the keys played as
   the notes (no transcription), with the microphone's sound or none. Note lengths are the keys'; the
   sustain pedal is not read.
+- **The page is a recording mode** (the user's review): a full-window frame with **Close the
+  recording**, the Current and the takes in a left panel (each with a bin), a take in two tabs,
+  **Audio** and **Sheet** (the Current above the Proposal).
 
 ---
 

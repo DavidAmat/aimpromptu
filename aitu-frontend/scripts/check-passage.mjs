@@ -226,6 +226,7 @@ try {
   await addFileTake(slow);
   const withFile = await json(`${api}/passages/${first}`);
   check('a take from a file is Take 2, the one on show', withFile.takes.length === 2 && withFile.take === withFile.takes[1].id && withFile.takes[1].name === 'Take 2');
+  check('the left panel lists the Current and both takes, Take 2 chosen', (await page.locator('[data-passage-takes] [data-testid^="take-"]').count()) === 3 && (await page.getByTestId('take-take-2').getAttribute('data-selected')) === 'true');
 
   // 3. Write the proposal.
   await writeProposal();
@@ -398,6 +399,12 @@ try {
     return audio.duration;
   }, `${api}/audio/${withSoundTake.id}/file?original=true`);
   check('a take played on a MIDI piano with a microphone keeps both: its keys and its sound', withSoundTake.midi === true && level > 1, `${level.toFixed(2)} s of sound`);
+  await shot('12b-takes-panel');
+  // The bin of a take, on the left.
+  await page.getByTestId('take-take-1').getByRole('button', { name: 'Delete Take 1' }).click();
+  await page.getByRole('button', { name: 'Delete the take' }).click();
+  await becomes(async () => (await json(`${api}/passages/${third}`)).takes.length, 0, 'the bin deletes the take');
+  check('the bin of a take deletes it, after a confirmation', (await json(`${api}/passages/${third}`)).takes.length === 0);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(800);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -407,6 +414,7 @@ try {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.evaluate(() => localStorage.setItem('mui-mode', 'dark'));
   await page.reload();
+  await page.getByTestId('take-current').getByRole('button').first().click();
   await page.locator('[data-passage-current] .grid-note-target').first().waitFor({ timeout: 60000 });
   await shot('14-passage-dark');
   await page.evaluate(() => localStorage.removeItem('mui-mode'));

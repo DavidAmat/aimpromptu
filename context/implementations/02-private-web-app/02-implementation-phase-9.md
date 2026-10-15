@@ -295,6 +295,13 @@ user wants to record from the Mac (section 3.2: `localhost` through the tunnel, 
   take is silence as long as its keys). Checked with a simulated MIDI piano in `check:passage` (three
   keys, no sound: the Proposal has exactly those three notes; two keys with the fake microphone) and
   two backend tests. Not checked with a real piano.
+- **The page became a recording mode** (asked by the user, to feel it is a mode of its own): it covers
+  the window with a title bar and **Close the recording**; a left panel lists the Current and every
+  take, each with a bin (a confirmation, then `DELETE …/takes/{take}`), with **Record** and **Add a
+  take from a file** below; a take opens in two tabs, **Audio** (its waveform, **Write the proposal**)
+  and **Sheet** (the Current above the Proposal, the speed beside the tabs). The layer is 1100, under
+  the floating bar (1200) and the toolboxes (1300) the Proposal uses. `check:passage` reads the left
+  panel and deletes a take with its bin.
 
 # 13. Learnings for later phases
 
