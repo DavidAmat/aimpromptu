@@ -1690,7 +1690,9 @@ The compose page of section 10.4 (picker, read-only sheet, passages, sequential 
 **Save as song** and **Save as integrated playlist** with parts. The integrated playlist on the Sheet
 step (section 14.1: subheaders, the sub-song panel, reorder, join and split parts). Songs playlists
 (section 14.2): the tables in use, My library → Playlists, **Make a playlist** from a selection.
-*Built 2026-10-15* ([`02-implementation-phase-10.md`](02-implementation-phase-10.md)).
+*Built 2026-10-15, checked by the user and merged* ([`02-implementation-phase-10.md`](02-implementation-phase-10.md)).
+Phase 11 draws the parts of an integrated playlist one after the other (the Sheet step shows one
+at a time).
 
 ## Phase 11: Play mode
 

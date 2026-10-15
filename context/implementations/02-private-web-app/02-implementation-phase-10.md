@@ -2,7 +2,8 @@
 
 Plan: [`02-plan.md`](02-plan.md) sections 6.3, 8.4, 10.4 and 14, and section 20, Phase 10. Checklist:
 [`02-checklist.md`](02-checklist.md). Branch `feat/phase-10`, made from `master` at `24b246d` (Phase
-9 merged and pushed, after the user's check). Built 2026-10-15 on the Ubuntu machine. Q-7 and Q-8
+9 merged and pushed, after the user's check). Built 2026-10-15 on the Ubuntu machine. Checked by the
+user in the browser on 2026-10-15 and merged into `master`. Q-7 and Q-8
 are answered (Phase 9 report, section 10); Q-5 and Q-6 belong to Phase 12. `vexflow-v2` did not
 change.
 
@@ -216,6 +217,9 @@ playlist**, with the screenshots of [`screenshots/phase-10/`](screenshots/phase-
 one after the other on the one page (a larger change; each part's tools would have to be told apart).
 Recommended: keep one at a time, and draw the parts together in Play mode's continuous page (Phase
 11).
+
+**Answered 2026-10-15:** the user found the phase good as built, so the Sheet step keeps one part at a
+time; Phase 11 draws the parts one after the other in Play mode's continuous page.
 
 # 10. Open points
 
