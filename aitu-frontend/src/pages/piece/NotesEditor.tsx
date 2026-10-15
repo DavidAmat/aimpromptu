@@ -240,7 +240,11 @@ export function NotesEditor({ step }: { step: EditorStep }) {
 
   const playable = mode === "edit" || (readOnly && mode === "view");
   const totalFrames = Math.max(1, Math.round(durationMs / FRAME_MS));
-  const audioUrl = useMemo(() => (uuid && playable ? audioApi.fileUrl(uuid) : null), [uuid, playable]);
+  const revision = status?.revisions.audio ?? undefined;
+  const audioUrl = useMemo(
+    () => (uuid && playable ? audioApi.fileUrl(uuid, false, revision) : null),
+    [uuid, playable, revision],
+  );
   const player = useCutPlayer(audioUrl, NO_CUTS, totalFrames);
   const playerPosition = player.position;
   const position = useCallback(() => playerPosition() * FRAME_MS, [playerPosition]);

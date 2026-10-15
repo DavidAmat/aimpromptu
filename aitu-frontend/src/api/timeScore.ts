@@ -257,6 +257,33 @@ export interface TimeScorePayload {
   decorativeDropped?: number;
 }
 
+/** What **Copy** puts in the clipboard: a stretch of a part, in milliseconds (plan section 12). */
+export interface PassageRef {
+  part: string;
+  fromMs: number;
+  toMs: number;
+}
+
+/** `POST /time/{uuid}/paste`: what went in, and the earlier state kept for the undo. */
+export interface PasteResult {
+  /** `POST …/versions/{n}/restore` with it gives the part back as it was. */
+  beforeVersion: number;
+  atMs: number;
+  lengthMs: number;
+  notesIn: number;
+  notesMoved: number;
+  notesRemoved: number;
+  durationSeconds: number;
+  /** The part's sheet after the paste, saved; `null` when it has none. */
+  sheet: SavedRhythm | null;
+}
+
+export interface RestoreResult {
+  /** The state the part had just before, kept: restoring it is the redo. */
+  keptVersion: number;
+  sheet: SavedRhythm | null;
+}
+
 export interface PeaksQuery {
   hand?: HandChoice;
   frameMs?: number;
@@ -401,6 +428,27 @@ export const timeScoreApi = {
     return request<TransposeResult>(`/time/${audioUuid}/transpose`, {
       method: "POST",
       body,
+      signal,
+    });
+  },
+
+  /**
+   * Put a copied passage into the part (plan section 12): its notes, its marks and its audio, at
+   * `atMs` or in place of `[atMs, replaceToMs)`; everything after moves by its length. `sheet` is
+   * the sheet as the page holds it, unsaved edits included: it moves with the paste and is saved.
+   */
+  paste(
+    audioUuid: string,
+    body: { source: PassageRef; atMs: number; replaceToMs?: number; sheet?: SavedRhythm },
+    signal?: AbortSignal,
+  ) {
+    return request<PasteResult>(`/time/${audioUuid}/paste`, { method: "POST", body, signal });
+  },
+
+  /** Put an earlier state of the part back: the undo of a paste, and its redo. */
+  restoreVersion(audioUuid: string, version: number, signal?: AbortSignal) {
+    return request<RestoreResult>(`/time/${audioUuid}/versions/${version}/restore`, {
+      method: "POST",
       signal,
     });
   },

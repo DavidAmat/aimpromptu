@@ -28,6 +28,8 @@ import {
 } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Snackbar from "@mui/material/Snackbar";
+import Tooltip from "@mui/material/Tooltip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -80,6 +82,15 @@ import {
   type PrintedHand,
 } from "../../../music/renderOverrides";
 import { useEditHistory } from "../../../hooks/useEditHistory";
+import {
+  PASSAGE_TYPE,
+  passageFromText,
+  passageLength,
+  passageText,
+  readCopied,
+  usePassageClipboard,
+  type CopiedPassage,
+} from "../../../state/passageClipboard";
 import { useWorkingArtifact } from "../../../state/useWorkingArtifact";
 import {
   BEAMABLE_FIGURES,
@@ -160,6 +171,12 @@ export interface SheetStep {
 
 /** In place of a handler on a sheet that only shows. */
 const ignore = () => undefined;
+
+/** A time as `m:ss`, the way a passage is named on the Paste button. */
+function clock(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
 
 /**
  * The octave brackets a hand can take where it reads its own clef.
@@ -279,6 +296,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   } = edits.set;
   const resetEdits = edits.reset;
   const stageEdit = edits.stage;
+  const commit = edits.commit;
   /**
    * The live renderer behind the sheet, and whether the print panel is open.
    *
@@ -488,7 +506,13 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    * all about playing that has just changed, so all of them are read again rather than patched.
    */
   const [composed, setComposed] = useState(0);
-  const key = `${audioUuid ?? ""}|${hand}|${frameMs}|${composed}`;
+  /**
+   * Raised when the notes and the audio changed under the page but its edits did not have to start
+   * again: a paste, and its undo and redo (Phase 8). The ladder and the sheet are read again; the
+   * edits and their history stay, because the paste is one of their steps.
+   */
+  const [reloadAt, setReloadAt] = useState(0);
+  const key = `${audioUuid ?? ""}|${hand}|${frameMs}|${composed}|${reloadAt}`;
   const [view, setView] = useState<View>(() => emptyView(key));
   const [untranscribed, setUntranscribed] = useState(false);
   if (view.key !== key) setView(emptyView(key));
@@ -1343,6 +1367,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Delete" && event.key !== "Backspace") return;
+      if (readOnly) return;
       const on = event.target as Element | null;
       if (on?.closest?.("input, textarea, select, [contenteditable='true']")) return;
       if (selectedNotes.length > 0) {
@@ -1382,6 +1407,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     lyricsMode,
     pickedLyrics,
     setLyrics,
+    readOnly,
   ]);
 
   // Escape drops whatever is picked, which is what it does everywhere else.
@@ -2017,6 +2043,209 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   }, [audioUuid, apply, frameMs, hiddenNotes, resetEdits, step]);
 
   /**
+   * **Copy** and **Paste** (plan section 12, Phase 8).
+   *
+   * Copy keeps a reference to a stretch of this part (`passageClipboard`); Paste sends it to the
+   * backend, which puts the notes, the marks and the audio of that stretch in at the cursor, or in
+   * place of the marked stretch, and moves everything after it, in one write. The sheet as the
+   * page holds it travels with the paste, unsaved edits included, and comes back saved with its
+   * marks moved: the page takes it as one step of its history. That step carries the calls that put
+   * the part back as it was (an earlier state the paste kept) and paste it again.
+   */
+  const [copied, copyPassage] = usePassageClipboard();
+  const [pasting, setPasting] = useState(false);
+  /**
+   * Where the cursor goes once the sheet is drawn again after a paste, its undo or its redo: the
+   * start of the passage, on screen. The player is made again with the new audio, which would put
+   * it back at the start of the piece.
+   */
+  const [cursorAfterReload, setCursorAfterReload] = useState<number | null>(null);
+  /** A short line that a copy or a paste happened, then gone. */
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const copyColumns = useCallback(
+    (fromColumn: number, toColumn: number): CopiedPassage | null => {
+      if (!audioUuid || toColumn <= fromColumn) return null;
+      const passage: CopiedPassage = {
+        type: PASSAGE_TYPE,
+        part: audioUuid,
+        project: audioUuid,
+        title: title ?? pieceLabel ?? "Untitled project",
+        fromMs: fromColumn * frameMs,
+        toMs: toColumn * frameMs,
+      };
+      copyPassage(passage);
+      setNotice(`Copied ${clock(passage.fromMs)} – ${clock(passage.toMs)}`);
+      return passage;
+    },
+    [audioUuid, title, pieceLabel, frameMs, copyPassage],
+  );
+
+  /** The marked stretch, or the frames the picked notes cover (from the first onset to the end of
+   * the longest note). `null` when nothing is picked. */
+  const copySelection = useCallback((): CopiedPassage | null => {
+    if (range && framesToolbox) return copyColumns(range.fromColumn, range.toColumn);
+    if (selectedNotes.length === 0 || !score) return null;
+    const picked = new Set(selectedNotes);
+    const notesPicked = score.notes.filter((one) =>
+      picked.has(`${one.hand}:${one.startFrame}:${one.row}`),
+    );
+    if (notesPicked.length === 0) return null;
+    const first = Math.min(...notesPicked.map((one) => one.startFrame));
+    const last = Math.max(
+      ...notesPicked.map((one) => one.startFrame + Math.max(1, one.printedFrames)),
+    );
+    return copyColumns(first, last);
+  }, [range, framesToolbox, selectedNotes, score, copyColumns]);
+
+  /** The page's edits after the backend saved `saved` (or none saved). */
+  const editsOfSaved = useCallback(
+    (saved: SavedRhythm | null): SheetEdits | null =>
+      saved ? { ...editsFromSaved(saved), lyricsPool: lyricsPool } : null,
+    [lyricsPool],
+  );
+
+  const pastePassage = useCallback(
+    async (passage: CopiedPassage) => {
+      if (!audioUuid || readOnly || pasting) return;
+      const over = range && framesToolbox ? range : null;
+      const atColumn = over ? over.fromColumn : (playheadFrame ?? 0);
+      // The sheet as it is on the page, when one is drawn: its unsaved edits move with the paste.
+      const current =
+        score && anchorMs !== null
+          ? savedRhythmOf({ hand: reading?.hand ?? hand, frameMs, anchorMs, edits: edits.state, live })
+          : undefined;
+      setPasting(true);
+      setMoveRefused(null);
+      try {
+        const done = await timeScoreApi.paste(audioUuid, {
+          source: { part: passage.part, fromMs: passage.fromMs, toMs: passage.toMs },
+          atMs: atColumn * frameMs,
+          ...(over ? { replaceToMs: over.toColumn * frameMs } : {}),
+          ...(current ? { sheet: current } : {}),
+        });
+        const after = editsOfSaved(done.sheet) ?? edits.state;
+        if (done.sheet) {
+          // The sheet decided its key, clefs and brackets: no default of a first write over them.
+          keyDecided.current = true;
+          clefsDecided.current = true;
+          ottavasDecided.current = Array.isArray(done.sheet.ottavas);
+        }
+        const versions = { undo: done.beforeVersion, redo: 0 };
+        const restored = (saved: SavedRhythm | null) => {
+          setCleanEdits(editsOfSaved(saved));
+          setCursorAfterReload(done.atMs / 1000);
+          setReloadAt((at) => at + 1);
+          step?.onChanged();
+        };
+        commit("Paste", after, {
+          undo: async () => {
+            const back = await timeScoreApi.restoreVersion(audioUuid, versions.undo);
+            versions.redo = back.keptVersion;
+            restored(back.sheet);
+          },
+          redo: async () => {
+            const again = await timeScoreApi.restoreVersion(audioUuid, versions.redo);
+            versions.undo = again.keptVersion;
+            restored(again.sheet);
+          },
+        });
+        setCleanEdits(done.sheet ? after : null);
+        closeFrames();
+        setCursorAfterReload(done.atMs / 1000);
+        setReloadAt((at) => at + 1);
+        step?.onChanged();
+        setNotice(`Pasted ${passageLength({ ...passage, toMs: passage.fromMs + done.lengthMs })}`);
+      } catch (caught) {
+        setMoveRefused(readable(caught, "Could not paste that passage."));
+      } finally {
+        setPasting(false);
+      }
+    },
+    [
+      audioUuid,
+      readOnly,
+      pasting,
+      range,
+      framesToolbox,
+      playheadFrame,
+      score,
+      anchorMs,
+      reading,
+      hand,
+      frameMs,
+      edits.state,
+      live,
+      editsOfSaved,
+      commit,
+      closeFrames,
+      step,
+    ],
+  );
+
+  /**
+   * Command-C copies what is picked, Command-V pastes. Both stand down in a field, where they mean
+   * text. The copy event also puts the passage in the system clipboard as JSON text; the paste
+   * event reads one from there, and the app's own clipboard is used when the browser sends none.
+   */
+  useEffect(() => {
+    const inField = (target: EventTarget | null) =>
+      Boolean((target as Element | null)?.closest?.("input, textarea, select, [contenteditable='true']"));
+    let pasteHandled = false;
+    const onCopy = (event: ClipboardEvent) => {
+      if (inField(event.target)) return;
+      const passage = copySelection();
+      if (!passage) return;
+      event.clipboardData?.setData("text/plain", passageText(passage));
+      event.preventDefault();
+    };
+    const onPaste = (event: ClipboardEvent) => {
+      if (inField(event.target) || readOnly) return;
+      const passage = passageFromText(event.clipboardData?.getData("text/plain")) ?? readCopied();
+      pasteHandled = true;
+      if (!passage) return;
+      event.preventDefault();
+      void pastePassage(passage);
+    };
+    // Some browsers send no paste event with nothing editable focused: the key does it then.
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "v" || readOnly) return;
+      if (inField(event.target)) return;
+      pasteHandled = false;
+      window.setTimeout(() => {
+        const passage = readCopied();
+        if (!pasteHandled && passage) void pastePassage(passage);
+      }, 120);
+    };
+    document.addEventListener("copy", onCopy);
+    document.addEventListener("paste", onPaste);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("copy", onCopy);
+      document.removeEventListener("paste", onPaste);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [copySelection, pastePassage, readOnly]);
+
+  // The sheet is drawn again: its player is new, so the cursor is put back where the passage went.
+  useEffect(() => {
+    if (!score || cursorAfterReload === null) return;
+    const wait = window.setTimeout(() => {
+      player.current?.seek(cursorAfterReload);
+      scrollToCursor();
+      setCursorAfterReload(null);
+    }, 120);
+    return () => window.clearTimeout(wait);
+  }, [score, cursorAfterReload, scrollToCursor]);
+
+  /** What the Paste button says it does. */
+  const pasteTitle = copied
+    ? `Paste “${copied.title}” ${clock(copied.fromMs)} – ${clock(copied.toMs)} ${
+        range && framesToolbox ? "over the marked frames" : "at the cursor"
+      }`
+    : "Paste";
+
+  /**
    * Say which hand plays the picked notes, on the recording.
    *
    * Not a page edit. The printed length of a note is the gap to the next onset **in the same hand**,
@@ -2344,9 +2573,25 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
           message="Nothing to write yet."
           action={
             readOnly ? undefined : (
-              <PillButton kind="primary" onClick={() => setRecordOpen(true)}>
-                Record a passage
-              </PillButton>
+              <Stack direction="row" spacing={1}>
+                <PillButton kind="primary" onClick={() => setRecordOpen(true)}>
+                  Record a passage
+                </PillButton>
+                {copied ? (
+                  <Tooltip title={pasteTitle}>
+                    <span>
+                      <PillButton
+                        kind="secondary"
+                        busy={pasting}
+                        onClick={() => void pastePassage(copied)}
+                        data-testid="empty-paste"
+                      >
+                        Paste the copied passage
+                      </PillButton>
+                    </span>
+                  </Tooltip>
+                ) : null}
+              </Stack>
             )
           }
         />
@@ -2374,6 +2619,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
           <ScorePlayer
             compact
             audioUuid={audioUuid}
+            version={`${composed}.${reloadAt}`}
             scoreSeconds={(score.envelope.frameCount * score.envelope.frameMs) / 1000}
             onTime={setPlayheadSeconds}
             controlsRef={player}
@@ -2399,6 +2645,14 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
             toolboxOpen={sheetToolbox}
             onToolbox={() => setSheetToolbox((open) => !open)}
             onRecord={() => setRecordOpen(true)}
+            paste={{
+              title: pasteTitle,
+              can: copied !== null,
+              busy: pasting,
+              run: () => {
+                if (copied) void pastePassage(copied);
+              },
+            }}
             canPrint={Boolean(sheetRenderer)}
             onPrint={() => setPdfOpen(true)}
             canSave={anchorMs !== null}
@@ -2468,7 +2722,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
               staffGaps={staffGaps}
               onStaffGapsChange={readOnly ? ignore : setStaffGaps}
               onSelectNotes={readOnly ? ignore : pickNotes}
-              onSelectRange={readOnly ? ignore : pickRange}
+              onSelectRange={pickRange}
               onSelectMarkedRange={readOnly ? ignore : pickMarkedRange}
               onOttavaResize={readOnly ? ignore : stretchOttava}
               renderOverrides={renderOverrides}
@@ -2672,8 +2926,34 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         putGrace={notes.putGrace}
         noteNameAt={noteNameAt}
       />
+      {/* A version of the library is a source of a paste too: a marked stretch offers Copy. */}
+      <Toolbox
+        open={readOnly && framesToolbox && range !== null}
+        title="Frames"
+        subtitle={
+          range
+            ? `${formatSeconds((range.fromColumn * frameMs) / 1000)} – ${formatSeconds(
+                (range.toColumn * frameMs) / 1000,
+              )}`
+            : undefined
+        }
+        initialPosition={framesAt ?? { x: 24, y: 140 }}
+        onClose={closeFrames}
+      >
+        <PillButton
+          kind="secondary"
+          size="small"
+          onClick={() => {
+            if (range) copyColumns(range.fromColumn, range.toColumn);
+          }}
+          data-testid="readonly-copy"
+        >
+          Copy this stretch
+        </PillButton>
+      </Toolbox>
+
       <RangeToolbox
-        open={framesToolbox}
+        open={framesToolbox && !readOnly}
         range={range}
         setRange={setRange}
         frameMs={frameMs}
@@ -2681,6 +2961,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         onClose={closeFrames}
         onSelectNotes={selectNotesUnderRange}
         canSelectNotes={Boolean(sheetRenderer)}
+        onCopy={() => void copySelection()}
         rangeHand={rangeHand}
         setRangeHand={setRangeHand}
         frameTab={frameTab}
@@ -2705,6 +2986,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         frameMs={frameMs}
         onClose={closeNotes}
         onSelectFrames={selectRangeOfNotes}
+        onCopy={() => void copySelection()}
         notes={notes}
         fingers={fingers}
         setFingerDraft={setFingerDraft}
@@ -2723,6 +3005,15 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         busy={clearing}
         onConfirm={() => void wipe()}
         onCancel={() => setConfirmRemove(false)}
+      />
+
+      <Snackbar
+        open={notice !== null}
+        autoHideDuration={2200}
+        onClose={() => setNotice(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        message={notice}
+        data-testid="sheet-notice"
       />
 
       <ScorePdfDialog

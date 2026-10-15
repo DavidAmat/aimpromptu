@@ -1,11 +1,13 @@
 > Context: [context/backend/editing.md](../../../context/backend/editing.md)
 
-# Range editing and composing live
+# Range editing, composing live, and copy and paste
 
 Two features, one session model. **Re-record** replaces a marked stretch of a piece that already
 exists; **Compose** builds a piece one passage at a time out of nothing. They share the recorder,
 the trim, the transcription job, the peak plot and the passage sheet, and they differ in exactly one
-thing: whether the piece is allowed to get longer.
+thing: whether the piece is allowed to get longer. **Copy and paste** (implementation 02, Phase 8,
+section 9 below) is a third way in: a stretch of any part the user may read, put into a part in one
+write, with the length rule of Compose.
 
 Modules: `aitu-backend/src/aitu_backend/editing/`. Routes under `/audio/{uuid}/edits` — see
 [`endpoints.md`](endpoints.md#5-audiouuidedits--staged-editing-and-composing).
@@ -218,17 +220,30 @@ it, so it was left alone rather than changed under a shipped feature.
 
 ### The audio grows with the piece
 
-`audio_splice.insert_wav` is the twin of `splice_wav`: it opens the recording at the moment and
-writes the stretched take into the gap, padding silence up to an append and pushing the tail later
-on an insert, so the audio moves by exactly what the notes moved by. A piece with no recording yet
-gets one here.
+The stretched take is stored as a new file of the audio store and put into the part's **audio
+timeline** at the moment (`session._place_audio`, through `paste.audio_with` and
+`paste.apply_audio`, the same two functions a paste uses): an **insert** pushes the audio after the
+moment later; an **append** is written over whatever trailing audio was there (that stretch becomes
+a cut first). A moment past the end of the audio is reached with a stored file of silence. So the
+audio moves by exactly what the notes moved by, and a piece with no recording yet gets one here.
+The audio revision goes up, and the notes' header follows it, so the Notes step stays current.
+
+*Until implementation 02, Phase 8* the whole part was written again as one 16 kHz mono WAV
+(`audio_splice.insert_wav` on `normalized.wav`, then `store.replace_original`). That lost the
+quality of every file already there, a pasted passage among them, and on a part with cuts it put
+the take at the wrong place (`normalized.wav` still holds the frames cut away). `insert_wav` is
+kept, unused by the app, with its tests.
 
 ---
 
-## 6. Octave brackets move too
+## 6. Every mark moves
 
-`shift_marks` moves `ottavas` with everything else, and a bracket straddling the moment widens
-rather than tears, like any other range.
+`compose.shift_marks` moves every mark at or after the moment through `editing/marks.py`, the one
+list of the marks of `sheet.json` (`POINTS`: key, clef and speed changes, figures set by hand, beam
+breaks and joins, notes taken off the page, fingering, grace notes, staff gaps; `RANGES`: trills,
+lyrics, cue size, octave brackets, spacings, even spacings). A range straddling the moment widens
+rather than tears. Before Phase 8 the clef changes, the beam joins, the spacings and the staff gaps
+were left where they were.
 
 One case is deliberate: a rhythm whose `ottavas` is `null` stays `null`. An insertion moves columns;
 it does not answer a question the reader was never put. See
@@ -242,8 +257,11 @@ show.
 
 ## 7. Rules to keep
 
-- `editing/compose.py` is the **only** module allowed to change a piece's length. If something else
-  needs to, that is a new decision, not a reuse of this one.
+- `editing/compose.py` and `editing/paste.py` are the **only** modules allowed to change a piece's
+  length (rule 2 as changed by implementation 02, Q-3; the note under rule 2 in
+  `wall-clock-rewrite.md`). Phase 9 adds the total promotion of a re-recorded passage, through the
+  same functions. Anything else that needs to is a new decision.
+- A new kind of mark in `sheet.json` is added to `editing/marks.py`, or no length change moves it.
 - The quantise-up rule is load-bearing. Remove it and mark shifting stops being exact.
 - Membership is by onset for a replace and by column for an insert, and both are deliberate. They
   are not an inconsistency to tidy up.
@@ -257,12 +275,64 @@ show.
   the two splices, the mark shift and its counting, moving a passage without losing the take, the
   insertion-column boundary, the outrunning sustain, the audio growing, and the exit criteria end to
   end through the API
+- `tests/test_paste.py` — 17 tests (Phase 8): the timeline put into and cut (a file split around a
+  passage, cuts moved and split, silence past the end, the ranges kept by a reorder); a paste's
+  notes, marks, key at both edges and audio; the audio at every join on the engine's copy and on
+  the joined file; undo and redo to the byte; a paste over a marked stretch; the page's unsaved
+  sheet saved by the paste; whole columns; From scratch; Save to library and export of a pasted
+  project; a recorded passage after a paste
+- `tests/test_rights.py` — the source of a paste is read and its target written, row by row
 
 ---
 
-## 9. Where to look deeper
+## 9. Copy and paste
+
+`editing/paste.py`, `editing/marks.py`, `audio/timeline.py` (implementation 02, plan section 12).
+Routes: `POST /time/{uuid}/paste` and `POST /time/{uuid}/versions/{n}/restore`
+([`endpoints.md`](endpoints.md)).
+
+**The clipboard is a reference.** `{"type": "aimpromptu/passage", "part", "project", "title",
+"fromMs", "toMs"}`, kept by the page (`state/passageClipboard.ts`). The backend reads the passage
+when it is pasted (`read_passage`), after checking the user may read the source part (a `404`
+otherwise, as for any project they may not read). The stretch is snapped to whole columns of the
+source's sheet.
+
+**What a paste writes**, all of it worked out before anything is written:
+
+| | How |
+|---|---|
+| Notes | The source's notes whose onset column is inside the stretch (taken off the page or not), cut where the stretch ends, moved to the insertion point, with new ids; then `compose.insert_events` (placement `insert`): every target note from the insertion column on moves by the passage's length, a note sounding across it is cut there |
+| Marks | `marks.shift(..., straddle="tear")` on the target's sheet (the page's sheet when it sent one, unsaved edits included): a range across the insertion point ends there and goes on after the passage (a lyrics piece and a trill only end); then the source's marks of the stretch (`marks.extract`, clipped to it) are put in (`marks.put_in`). The key, each hand's clef and the speed (`anchorMs`, when they differ by more than 2 %) in force where the copy starts are written at the insertion point, and what the target had there is written again where the passage ends when music follows (a key at column 0 is the sheet's key; no clef change can be stored at column 0) |
+| Audio | `audio_timeline.passage_pieces` gives the ranges of stored files the stretch plays (across cuts and files); `paste.audio_with` puts them into the target's timeline at the insertion point (`insert_with_origins`: a file the moment falls inside is split in two, every cut after it moves, a cut across it is split), with a stored file of silence where the passage plays longer than its audio or the moment is past the end of the audio. The names of the files follow (`"<title> m:ss–m:ss"`, kind `passage`; `Silence`, kind `silence`) |
+| Revisions | The audio revision goes up; the notes are written with that revision, so the Notes step stays current; the hands follow when every note has one; the sheet is saved for the new hands revision when it was current (the page that pastes draws the result) |
+
+**Over a marked stretch** (`replaceToMs`): its notes are taken out (the notes after move earlier),
+its marks are cut out (`marks.cut_out`; a key or clef change inside moves to its start), and its
+audio becomes cuts (`audio_timeline.remove`), which the Audio step can restore. Then the passage
+goes in at its start.
+
+**A target with no music** (From scratch, or a project with no notes and no audio) takes the
+source's sheet settings (key, figures, spacing) with none of its marks outside the passage, and its
+own title lines. A target with audio and no notes is refused (`409`, "Transcribe this project
+first").
+
+**Undo and redo.** `history.snapshot_current` keeps the target (notes, sheet, timeline, and the
+part's entry of `project.json` as `source.json`) before the first write; the answer's
+`beforeVersion` names it. `history.restore(part, n)` keeps the current state as the next snapshot
+and puts `v<n>` back (`copyfile`, so the notes get a new time and the hand split cache cannot serve
+the old split), then forgets the derived audio. Its answer's `keptVersion` is the redo. A failure
+in the middle of a paste restores the snapshot.
+
+**The joined audio** of a part whose entries are ranges is made as for several files
+(`audio/sources.py`): each entry's range of its 16 kHz copy, and of its decoded file, joined with the
+5 ms fade of a cut at each join. `aitu-backend/scripts/check_joins.py <partId>` compares every entry
+of both with its own file, sample by sample away from the fades (`npm run check:paste` runs it).
+
+## 10. Where to look deeper
 
 - [`endpoints.md`](endpoints.md#5-audiouuidedits--staged-editing-and-composing) — the routes
 - [`paths-and-data.md`](paths-and-data.md#44-stagingsessionid-disposable-sessions) — the session folder
 - [`rhythm-and-annotations.md`](rhythm-and-annotations.md) — the marks that are dropped or moved
-- [`../frontend/components.md`](../frontend/components.md) — `RangeRerecordPanel` and `ComposePassagePanel`
+- [`../frontend/components.md`](../frontend/components.md) — `RangeRerecordPanel` and `ComposePassagePanel`,
+  the Paste of the sheet page
+- [`paths-and-data.md`](paths-and-data.md#22-timelinejson-the-audio-timeline) — the timeline and its ranges

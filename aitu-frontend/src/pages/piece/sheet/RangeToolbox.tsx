@@ -23,6 +23,7 @@ import Typography from "@mui/material/Typography";
 import CheckIcon from "@mui/icons-material/Check";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHorizOutlined";
 import VisibilityIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOffOutlined";
@@ -79,6 +80,7 @@ export function RangeToolbox({
   onClose: closeFrames,
   onSelectNotes: selectNotesUnderRange,
   canSelectNotes,
+  onCopy,
   rangeHand,
   setRangeHand,
   frameTab,
@@ -103,6 +105,8 @@ export function RangeToolbox({
   onClose: () => void;
   onSelectNotes: () => void;
   canSelectNotes: boolean;
+  /** **Copy** the stretch (Phase 8): its notes, its marks and its audio, for a Paste anywhere. */
+  onCopy: () => void;
   rangeHand: RangeHand;
   setRangeHand: Dispatch<SetStateAction<RangeHand>>;
   frameTab: FrameTab;
@@ -164,15 +168,24 @@ export function RangeToolbox({
           The same music, picked the other way round. Disabled rather than hidden when the stretch
           holds no notes on the staves in scope, so the tooltip can say so.
         */
-        <IconAction
-          title={`Select the ${notesUnderRange.length} note${
-            notesUnderRange.length === 1 ? "" : "s"
-          } in this stretch`}
-          disabledTitle="No notes begin inside this stretch on this staff"
-          icon={<SwapHorizIcon fontSize="small" />}
-          disabled={notesUnderRange.length === 0 || !canSelectNotes}
-          onClick={selectNotesUnderRange}
-        />
+        <>
+          <IconAction
+            title="Copy this stretch"
+            shortcut="⌘C"
+            icon={<ContentCopyIcon fontSize="small" />}
+            onClick={onCopy}
+            data-testid="range-copy"
+          />
+          <IconAction
+            title={`Select the ${notesUnderRange.length} note${
+              notesUnderRange.length === 1 ? "" : "s"
+            } in this stretch`}
+            disabledTitle="No notes begin inside this stretch on this staff"
+            icon={<SwapHorizIcon fontSize="small" />}
+            disabled={notesUnderRange.length === 0 || !canSelectNotes}
+            onClick={selectNotesUnderRange}
+          />
+        </>
       }
     >
       <Stack spacing={1.5}>

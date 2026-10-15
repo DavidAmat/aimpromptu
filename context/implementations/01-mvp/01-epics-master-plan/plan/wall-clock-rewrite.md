@@ -34,6 +34,18 @@ that one choice (D-09, D-10). There is no BPM anywhere in the product.
    frame stays valid as long as the piece's wall-clock length does not change. This is what makes
    editorial marks survive edits, and it is the reason the range splice in Epic 11 preserves
    duration.
+
+   *Changed by implementation 02 (decision Q-3, 2026-10-05; written in its Phase 8, 2026-10-09).*
+   Three edits now change the length on purpose: a passage pasted into a piece, a passage put in
+   from another project, and the total promotion of a re-recorded passage. They all use the one
+   operation Epic 13 already had for **Insert**: every note **and every mark** from the insertion
+   column on moves by the passage's length, a whole number of columns, in the same write
+   (`editing/compose.py`, `editing/paste.py`, and the list of every mark in `editing/marks.py`). So
+   the rule still holds for what a reader sees: no mark is ever left on music that moved. Every
+   other edit (a fixed-window promotion, a re-record that keeps the original audio, a cut in the
+   Audio step before a transcription) still keeps every column where it is. See
+   [`../../../02-private-web-app/02-plan.md`](../../../02-private-web-app/02-plan.md) section 4 and
+   [`../../../../backend/editing.md`](../../../../backend/editing.md).
 3. **No BPM, no bar lines, no time signature, no metre** (D-01, D-28). A metronome is still allowed
    as a sound in the player's ears — clicks every X milliseconds — but nothing derived from it is
    stored.

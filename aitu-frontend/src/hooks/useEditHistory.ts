@@ -80,6 +80,7 @@ export interface HistoryState<T> {
 export type HistoryAction<T> =
   | { kind: "edit"; key: keyof T; label: string; value: SetStateAction<T[keyof T]>; gesture: number }
   | { kind: "stage"; label: string; effects?: StepEffects; gesture: number }
+  | { kind: "commit"; label: string; value: T; effects?: StepEffects; gesture: number }
   | { kind: "walk"; to: "undo" | "redo" }
   | { kind: "reset"; value: T | ((current: T) => T) };
 
@@ -162,6 +163,14 @@ export function historyReducer<T extends object>(state: HistoryState<T>, action:
         effects: action.effects,
         rename: true,
       });
+    case "commit":
+      return record(state, {
+        label: action.label,
+        after: action.value,
+        gesture: action.gesture,
+        effects: action.effects,
+        rename: true,
+      });
     case "walk": {
       const from = action.to === "undo" ? state.past : state.future;
       const step = from[from.length - 1];
@@ -201,6 +210,12 @@ export interface EditHistory<T> {
    * and would otherwise be called "Fingering".
    */
   stage: (label: string, effects?: StepEffects) => void;
+  /**
+   * One step that replaces every edit at once: what a backend write that changed the whole sheet
+   * leaves (a paste moves every mark after it). It carries the calls that take that write back and
+   * put it again, like a staged step.
+   */
+  commit: (label: string, next: T, effects?: StepEffects) => void;
   /**
    * Replace the edits and forget every step, in one go.
    *
@@ -264,6 +279,10 @@ export function useEditHistory<T extends object>(
     dispatch({ kind: "stage", label, effects, gesture: gesture() });
   }, []);
 
+  const commit = useCallback((label: string, next: T, effects?: StepEffects) => {
+    dispatch({ kind: "commit", label, value: next, effects, gesture: gesture() });
+  }, []);
+
   const reset = useCallback((next: T | ((current: T) => T)) => {
     dispatch({ kind: "reset", value: next });
   }, []);
@@ -306,6 +325,7 @@ export function useEditHistory<T extends object>(
     state: history.present,
     set,
     stage,
+    commit,
     reset,
     undo,
     redo,

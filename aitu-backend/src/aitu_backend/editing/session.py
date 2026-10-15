@@ -8,11 +8,13 @@ that is allowed in exactly this one place.
 
 from __future__ import annotations
 
+import math
+from dataclasses import replace
 from pathlib import Path
 
-from aitu_backend.audio import formats, store
+from aitu_backend.audio import formats, store, timeline as audio_timeline
 from aitu_backend.audio.formats import ConversionFailed, FfmpegMissing
-from aitu_backend.editing import audio_splice, compose, history, preview as preview_mod
+from aitu_backend.editing import audio_splice, compose, history, paste, preview as preview_mod
 from aitu_backend.editing.splice import (
     count_marks_in_window,
     drop_marks_in_window,
@@ -35,7 +37,7 @@ from aitu_backend.schemas.editing import (
 )
 from aitu_backend.schemas.rhythm import SpeedChange
 from aitu_backend.schemas.time_matrix import FigureName
-from aitu_backend.storage import staging
+from aitu_backend.storage import audio_files, bundle, locate, staging
 from aitu_backend.storage.staging import SessionRecord
 from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.engine import NoteEvent, TranscriptionEngine
@@ -787,12 +789,35 @@ def _accept_passage(
 
     history.snapshot_current(audio_uuid)
     title = stored.title or store.read_metadata(audio_uuid).alias
+
+    # The audio first, so the notes are written knowing the audio revision they match.
+    audio_spliced = False
+    audio_mismatch = False
+    header = stored.header
+    if record.splice_audio:
+        before = bundle.read_timeline(audio_uuid).audio_revision
+        try:
+            revision = _place_audio(record, passage_seconds)
+            audio_spliced = True
+            if header.audio_revision == before:
+                header = replace(header, audio_revision=revision)
+        except (FfmpegMissing, ConversionFailed, ValueError, FileNotFoundError, OSError):
+            history.add_mismatch(
+                audio_uuid, record.start_seconds, record.start_seconds + passage_seconds
+            )
+            audio_mismatch = True
+    else:
+        history.add_mismatch(
+            audio_uuid, record.start_seconds, record.start_seconds + passage_seconds
+        )
+        audio_mismatch = True
+
     pipeline.save_edit(
         audio_uuid,
         result,
         new_duration,
         title,
-        before=stored.header,
+        before=header,
         notes_changed=True,
         hands_changed=False,
     )
@@ -808,23 +833,6 @@ def _accept_passage(
     )
     if shifted is not None and moved_marks.total:
         pipeline.save_rhythm(audio_uuid, shifted)
-
-    audio_spliced = False
-    audio_mismatch = False
-    if record.splice_audio:
-        try:
-            _place_audio(record, passage_seconds)
-            audio_spliced = True
-        except (FfmpegMissing, ConversionFailed, ValueError, FileNotFoundError, OSError):
-            history.add_mismatch(
-                audio_uuid, record.start_seconds, record.start_seconds + passage_seconds
-            )
-            audio_mismatch = True
-    else:
-        history.add_mismatch(
-            audio_uuid, record.start_seconds, record.start_seconds + passage_seconds
-        )
-        audio_mismatch = True
 
     store.update(audio_uuid, duration_seconds=new_duration)
     version = history.current_version(audio_uuid)
@@ -843,13 +851,19 @@ def _accept_passage(
     )
 
 
-def _place_audio(record: SessionRecord, passage_seconds: float) -> None:
-    """Grow the recording by the passage, so what is heard still matches what is drawn.
+def _place_audio(record: SessionRecord, passage_seconds: float) -> int:
+    """Put the take into the part's audio, so what is heard still matches what is drawn. Returns
+    the new audio revision.
 
     The take is stretched to the passage's length first — a take played twice as slowly is written
-    back at the speed the sheet says it goes — and then written into the recording at the moment
-    the notes went in. A piece with no recording yet gets one here: its first passage is what
-    creates it.
+    back at the speed the sheet says it goes — stored as a new file, and put into the audio
+    timeline at the moment the notes went in: an **insert** pushes the audio after it later, an
+    **append** is written over whatever trailing audio was there. A piece with no recording yet
+    gets one here: its first passage is what creates it.
+
+    Since implementation 02, Phase 8 the take is one more file of the timeline (a range of the
+    axis, like a pasted passage), not a new recording of the whole part at 16 kHz: the files
+    already there, a pasted passage among them, keep their own quality.
     """
     _write_trimmed_audio(record)
     trimmed = staging.trimmed_path(record.audio_uuid, record.session_uuid)
@@ -859,21 +873,38 @@ def _place_audio(record: SessionRecord, passage_seconds: float) -> None:
     source_len = formats.duration_seconds(trimmed)
     audio_splice.stretch_to_length(trimmed, stretched, source_len, passage_seconds)
 
-    entry = store.get(record.audio_uuid)
-    tmp = entry.directory / "normalized.grown.wav"
-    audio_splice.insert_wav(
-        entry.normalized_path,
-        stretched,
-        tmp,
-        record.start_seconds,
-        passage_seconds,
-        keep_tail=(record.placement == "insert"),
+    rate, samples = formats.sample_count(stretched)
+    frames = math.ceil(samples * 1000 / (rate * bundle.FRAME_MS))
+    content_hash = audio_files.add_file(stretched, "wav", duration_ms=frames * bundle.FRAME_MS)
+    at_frame = int(round(record.start_seconds * 1000 / bundle.FRAME_MS))
+    length = int(round(passage_seconds * 1000 / bundle.FRAME_MS))
+    take = audio_timeline.Piece(
+        audio=content_hash, format="wav", file_frames=frames, start=0, end=min(frames, length)
     )
-    tmp.replace(entry.normalized_path)
-    # Playback serves the stored file. A composed piece has none until now, and a piece being
-    # composed has none worth keeping: the recording is the passages, in order. The grown recording
-    # is a new file of the audio store; the previous one stays for the history.
-    store.replace_original(record.audio_uuid, entry.normalized_path, "wav")
+    count = (
+        len(
+            bundle.source_files(
+                bundle.read_project(locate.part(record.audio_uuid).project_id),
+                record.audio_uuid,
+                bundle.read_timeline(record.audio_uuid),
+            )
+        )
+        if bundle.read_timeline(record.audio_uuid).source_list()
+        else 0
+    )
+    placed = paste.audio_with(
+        record.audio_uuid,
+        [take],
+        label=f"Recording {count + 1}",
+        kind="recording",
+        at_frame=at_frame,
+        length_frames=length,
+        replace_to_frame=(at_frame + length if record.placement == "append" else None),
+    )
+    assert placed is not None
+    timeline, files = placed
+    paste.apply_audio(record.audio_uuid, timeline, files)
+    return timeline.audio_revision
 
 
 def _splice_audio(record: SessionRecord) -> None:

@@ -39,6 +39,8 @@ export interface PieceStatus {
   resume: PieceStep;
   /** `audio`, `notes`, `notesAudio`, `hands`, `handsNotes`, `sheetHands`. */
   revisions: Record<string, number | null>;
+  /** Made from scratch and no audio yet: the page shows only the sheet (Phase 8). */
+  scratch?: boolean;
 }
 
 /**

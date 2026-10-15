@@ -211,8 +211,10 @@ def test_a_new_audio_file_keeps_the_old_one_for_the_history(tmp_path: Path) -> N
     new = store.get(part).original_path
     assert new != old and old.is_file()
     snapshot = paths.history_version_dir(part, 1)
+    # The part's entry of project.json too, so a restore gives its files their names back.
     assert sorted(path.name for path in snapshot.iterdir()) == [
         "notes.pmn",
+        "source.json",
         "timeline.json",
     ]
     with session() as db:

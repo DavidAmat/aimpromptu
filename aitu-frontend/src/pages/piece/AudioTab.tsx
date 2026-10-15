@@ -181,7 +181,12 @@ function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps)
   const [error, setError] = useState<string | null>(null);
   const [confirmAgain, setConfirmAgain] = useState(false);
 
-  const player = useCutPlayer(useMemo(() => audioApi.originalFileUrl(uuid), [uuid]), cuts, total);
+  const revision = status?.revisions.audio ?? undefined;
+  const player = useCutPlayer(
+    useMemo(() => audioApi.originalFileUrl(uuid, revision), [uuid, revision]),
+    cuts,
+    total,
+  );
   const unsaved = !sameCuts(cuts, saved.cuts);
   const summary = unsaved ? `Unsaved: ${describe(cuts)}` : null;
 

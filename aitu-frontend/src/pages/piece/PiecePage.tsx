@@ -280,7 +280,9 @@ export function PiecePage() {
     ? "New project"
     : library
       ? `${library.songTitle} (${library.versionName})`
-      : (audio?.alias ?? "");
+      : audio
+        ? audio.alias || "Untitled project"
+        : "";
   const hasNotes = stepStatus(status, "notes")?.state === "ready";
   const sheetReady = stepStatus(status, "sheet")?.state === "ready";
   const back = library
@@ -357,7 +359,8 @@ export function PiecePage() {
             ) : undefined
           }
         >
-          {steps ? (
+          {/* A project made from scratch has no audio yet: its sheet is all there is (Phase 8). */}
+          {status?.scratch ? null : steps ? (
             <StepTabs
               steps={steps.map((item) => ({
                 key: item.step,

@@ -240,9 +240,15 @@ export const audioApi = {
    * The audio of the piece: once cuts are saved, the edited audio (the original with the cuts
    * removed), which is the time the notes are in. Every player uses this.
    */
-  fileUrl: (uuid: string, normalized = false) =>
-    buildUrl(`/audio/${uuid}/file`, normalized ? { normalized: true } : undefined),
+  fileUrl: (uuid: string, normalized = false, revision?: number) =>
+    buildUrl(`/audio/${uuid}/file`, {
+      ...(normalized ? { normalized: true } : {}),
+      // A new address when the audio changed (a paste, an undo): the browser keeps media files by
+      // address, and would play the old one (Phase 8).
+      ...(revision !== undefined ? { v: revision } : {}),
+    }),
 
   /** The untouched original, cuts and all. Only the Audio tab plays it, to show and restore cuts. */
-  originalFileUrl: (uuid: string) => buildUrl(`/audio/${uuid}/file`, { original: true }),
+  originalFileUrl: (uuid: string, revision?: number) =>
+    buildUrl(`/audio/${uuid}/file`, { original: true, ...(revision !== undefined ? { v: revision } : {}) }),
 };

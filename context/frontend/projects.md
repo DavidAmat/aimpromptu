@@ -29,7 +29,7 @@ tooltip names the version and the song), and its `⋯` adds **Open the song**; i
 | Choice | What it does |
 |---|---|
 | **From source** | `/projects/new`: the Source step of a new project |
-| **From scratch** | Not built yet (Phase 8): shown disabled |
+| **From scratch** | A blank piano sheet, "Untitled project", opened on its Sheet step (Phase 8; section 5 below) |
 | **From other projects** | Not built yet (Phase 10): shown disabled |
 | **Import** | Takes a `.aitu` file and opens the new project it makes |
 
@@ -163,7 +163,26 @@ use, its video and other temporary files deleted) and opens the song. On an edit
 opens on **Replace “<version>”**, with **New version** beside it. The whole flow:
 [music-library/private-library.md](../music-library/private-library.md).
 
-## 5. Timings
+## 5. Copy and paste, and From scratch
+
+**Copy** a stretch of any sheet: the copy icon of the range toolbox (titled *Frames*) or of the note
+toolbox (the frames those notes cover), or ⌘C. A version of My library, which opens read only, still
+lets a stretch be marked and offers **Copy this stretch**. **Paste** is on the sheet's floating bar
+(its tooltip names what was copied and where it goes) and ⌘V: it puts the passage in **at the
+cursor**, or **in place of the marked frames** when a stretch is marked. Its notes, its marks (with
+the key and the clefs it had) and its audio come with it; everything after moves later; the sheet is
+saved with it, and the cursor stays at the start of the passage. One **Undo** takes the whole paste
+back, notes and audio included, and **Redo** puts it again. The copied passage stays in the app's
+clipboard across projects and browser tabs. On the Source step a pasted passage is a file of its
+own ("Pasted"), between the two halves of the file it was pasted into; on the Audio step its band
+is named after where it came from. What the backend does:
+[`backend/editing.md`](../backend/editing.md).
+
+**From scratch** makes "Untitled project" and opens its blank sheet. With no audio yet the page has
+no step tabs, only the sheet's empty state: **Record a passage** (the Record panel) and **Paste the
+copied passage**. Once a passage brings audio, the steps appear and work as for any project.
+
+## 6. Timings
 
 Measured with `npm run time:flow` on the RTX 4090 (implementation 08, 2026-10-01; the first piano
 sheet measured again in every phase of implementation 02):

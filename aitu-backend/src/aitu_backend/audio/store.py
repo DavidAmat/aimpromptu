@@ -75,8 +75,8 @@ class StoredAudio:
 
     @property
     def joined(self) -> bool:
-        """Several files laid end to end (``timeline.sources``)."""
-        return self.timeline is not None and len(self.timeline.source_list()) > 1
+        """Several files laid end to end, or a range of one (``timeline.sources``)."""
+        return self.timeline is not None and self.timeline.joined
 
     @property
     def uuid(self) -> str:
@@ -108,7 +108,7 @@ def _project_of(audio_uuid: str) -> bundle.ProjectFile:
 def _metadata(project: bundle.ProjectFile, part_id: str, timeline: Timeline) -> AudioMetadata:
     source = project.part(part_id).source
     duration = source.duration_seconds
-    if len(timeline.source_list()) > 1:
+    if timeline.joined:
         frames = timeline.axis_frames()
         duration = None if frames is None else frames * bundle.FRAME_MS / 1000.0
     return AudioMetadata.model_validate(
@@ -153,7 +153,7 @@ def _original_of(part_id: str, timeline: Timeline) -> Path | None:
     files = timeline.source_list()
     if not files:
         return None
-    if len(files) > 1:
+    if timeline.joined:
         return sources.listen_path(part_id, timeline)
     return audio_files.file_path(files[0], timeline.audio[files[0]].format)
 
@@ -281,6 +281,7 @@ def _use_audio(
             update={
                 "audio": {content_hash: AudioEntry(format=extension, frames=frames)},
                 "sources": None,
+                "ranges": None,
                 "segments": bundle.segments_for_cuts(content_hash, [], None),
             }
         )
@@ -307,7 +308,7 @@ def set_audio_frames(audio_uuid: str, frames: int) -> None:
     with bundle.project_lock(project.id):
         timeline = bundle.read_timeline(audio_uuid)
         files = timeline.source_list()
-        if len(files) != 1:
+        if len(files) != 1 or timeline.joined:
             return
         content_hash = files[0]
         cuts = bundle.cuts_of(timeline)
@@ -350,7 +351,7 @@ def append(
         described = bundle.source_files(bundle.read_project(project.id), audio_uuid, timeline)
         if timeline.axis_frames() is None:
             raise ValueError("The first audio file is not measured yet. Try again in a moment.")
-        if len(files) == 1:
+        if not timeline.joined:
             # Its normalized.wav is that file's own 16 kHz copy: keep it as the first source's.
             first = cache / f"{sources.SOURCE_PREFIX}{files[0]}.wav"
             normalized = cache / "normalized.wav"
@@ -363,6 +364,7 @@ def append(
             update={
                 "audio": audio,
                 "sources": [*files, content_hash],
+                "ranges": None if timeline.ranges is None else [*timeline.ranges, None],
                 "audio_revision": timeline.audio_revision + 1,
             }
         )
@@ -441,9 +443,16 @@ def _segments_by_file(timeline: Timeline) -> list[list[Segment]]:
     return groups
 
 
-def _with_files(timeline: Timeline, order: list[str], groups: list[list[Segment]]) -> Timeline:
-    """A timeline of the files ``order`` (hashes) with their kept segments ``groups``."""
-    several = len(order) > 1
+def _with_files(
+    timeline: Timeline,
+    order: list[str],
+    groups: list[list[Segment]],
+    ranges: list[list[int] | None] | None = None,
+) -> Timeline:
+    """A timeline of the files ``order`` (hashes), each standing for its range of ``ranges`` (or
+    the whole file), with their kept segments ``groups``."""
+    ranges = ranges if ranges and any(span is not None for span in ranges) else None
+    several = len(order) > 1 or ranges is not None
     segments = [
         segment.model_copy(update={"source": index if several else None})
         for index, group in enumerate(groups)
@@ -454,10 +463,18 @@ def _with_files(timeline: Timeline, order: list[str], groups: list[list[Segment]
         update={
             "audio": audio,
             "sources": order if several else None,
+            "ranges": ranges if several else None,
             "segments": segments,
             "audio_revision": timeline.audio_revision + 1,
         }
     )
+
+
+def _ranges_of(timeline: Timeline) -> list[list[int] | None]:
+    """The range of each entry of the axis (``None``: the whole file)."""
+    count = len(timeline.source_list())
+    ranges = list(timeline.ranges or [])
+    return ranges + [None] * (count - len(ranges))
 
 
 def reorder_files(
@@ -480,7 +497,13 @@ def reorder_files(
             return files
         groups = _segments_by_file(timeline)
         hashes = timeline.source_list()
-        timeline = _with_files(timeline, [hashes[at] for at in order], [groups[at] for at in order])
+        spans = _ranges_of(timeline)
+        timeline = _with_files(
+            timeline,
+            [hashes[at] for at in order],
+            [groups[at] for at in order],
+            [spans[at] for at in order],
+        )
         bundle.write_timeline(audio_uuid, timeline)
         files = [files[at] for at in order]
         project.part(audio_uuid).source.files = files
@@ -513,7 +536,13 @@ def remove_file(
         keep = [at for at in range(len(files)) if at != index]
         if not any(groups[at] for at in keep):
             raise ValueError("The other files are cut completely: restore a part of them first")
-        timeline = _with_files(timeline, [hashes[at] for at in keep], [groups[at] for at in keep])
+        spans = _ranges_of(timeline)
+        timeline = _with_files(
+            timeline,
+            [hashes[at] for at in keep],
+            [groups[at] for at in keep],
+            [spans[at] for at in keep],
+        )
         bundle.write_timeline(audio_uuid, timeline)
         files = [files[at] for at in keep]
         source = project.part(audio_uuid).source
@@ -623,7 +652,7 @@ def write_metadata(metadata: AudioMetadata) -> AudioMetadata:
         project = bundle.read_project(project.id)
         entry = project.part(metadata.uuid)
         first_duration = entry.source.duration_seconds
-        several = len(bundle.read_timeline(metadata.uuid).source_list()) > 1
+        several = bundle.read_timeline(metadata.uuid).joined
         entry.source = _source_of(metadata, entry.source.files)
         if several:
             # The metadata's length is the axis; the source keeps its first file's own length.

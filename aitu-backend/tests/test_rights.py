@@ -149,6 +149,38 @@ def test_row_5_users_and_lab(people: dict) -> None:
 # ------------------------------------------------------------- scoped lists, owners, jobs
 
 
+def test_a_paste_reads_its_source_and_writes_its_target(people: dict) -> None:
+    """Copy and paste across projects and layers (Phase 8): the source is read, the target is
+    written, each with the rights of its row."""
+    anna_id, anna = people["anna"]
+    joan_id, joan = people["joan"]
+    master_id, _ = people["master"]
+
+    def paste(client: TestClient, target: str, source: str) -> int:
+        body = {"source": {"part": source, "fromMs": 0, "toMs": 400}, "atMs": 0}
+        return client.post(f"/time/{target}/paste", json=body).status_code
+
+    mine = project(anna_id, "vault", "Mine")
+    own_library = project(anna_id, "private", "My song")
+    public = project(master_id, "public", "Everyone's")
+    joans = project(joan_id, "vault", "Joan's")
+    joans_library = project(joan_id, "private", "Joan's song")
+    # From her own vault, her own library and the Public Library.
+    assert paste(anna, mine, mine) == 200
+    assert paste(anna, mine, own_library) == 200
+    assert paste(anna, mine, public) == 200
+    # Not from another user's work, which answers as if it did not exist.
+    assert paste(anna, mine, joans) == 404
+    assert paste(anna, mine, joans_library) == 404
+    # From a library shared with her.
+    with session() as db:
+        db.add(LibraryShare(owner_id=joan_id, shared_with_id=anna_id))
+    assert paste(anna, mine, joans_library) == 200
+    # Never into a version of a library (it changes through Edit), nor into another user's work.
+    assert paste(anna, own_library, mine) == 403
+    assert paste(anna, joans, mine) == 404
+
+
 def test_the_list_of_projects_is_the_users_own(people: dict) -> None:
     anna_id, anna = people["anna"]
     joan_id, joan = people["joan"]

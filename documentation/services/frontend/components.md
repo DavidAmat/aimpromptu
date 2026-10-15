@@ -18,7 +18,7 @@
 |---|---|---|
 | **Sign in** | `/login` | `pages/LoginPage.tsx`, outside the shell (implementation 02, Phase 4) |
 | (start) | `/` | redirects to `/projects` |
-| **Projects** | `/projects` | `pages/ProjectsPage.tsx`: `GET /projects` (the vault), the **New project** menu with Import (`POST /projects/import`), the row menu (Duplicate, Export, Rename, Notes Falling, Delete) through `api/projects.ts`; an edit copy (`row.editing`) says **Editing**, adds **Open the song**, and its Delete is **Discard changes** |
+| **Projects** | `/projects` | `pages/ProjectsPage.tsx`: `GET /projects` (the vault), the **New project** menu with **From scratch** (`POST /projects` with `scratch`, then its Sheet step; Phase 8) and Import (`POST /projects/import`), the row menu (Duplicate, Export, Rename, Notes Falling, Delete) through `api/projects.ts`; an edit copy (`row.editing`) says **Editing**, adds **Open the song**, and its Delete is **Discard changes** |
 | · new project | `/projects/new` | `pages/piece/PiecePage.tsx` with the Source step only |
 | · a project | `/projects/:id` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the project reached |
 | · one step | `/projects/:id/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab`, `HandsTab` or `SheetTab` |
@@ -52,6 +52,7 @@ least 8 characters, `PUT /auth/password`), the theme as a `Segmented` of **Light
 | File | Role |
 |---|---|
 | `pages/LoginPage.tsx` | `/login`: the logo, **Username**, **Password**, **Sign in**. Returns to `?next=` when it is an address of this app, otherwise to Projects. The button stays busy while the backend slows a try after wrong passwords |
+| `state/passageClipboard.ts` | The copied passage (Phase 8): a reference (part, `fromMs`, `toMs`, title) kept in `localStorage` so it reaches every page and tab of the app; `usePassageClipboard()`; JSON text for the system clipboard (`passageText`, `passageFromText`) |
 | `state/AuthProvider.tsx`, `state/authContext.ts` | The signed-in user (`useAuth()`: `user`, `signIn`, `signOut`). Asks `GET /auth/me` once when the page opens; forgets the user on `SIGNED_OUT_EVENT` |
 | `layout/RequireUser.tsx` | `RequireUser` (wraps the shell: nobody signed in opens `/login?next=...`) and `RequireMaster` (wraps Users and Lab: "Page not found" for another user) |
 | `pages/admin/UsersPage.tsx` | **Admin → Users**: a `DataTable` of the users, **New user** (username and first password), per row **Reset password** and **Disable** / **Enable** |
@@ -139,7 +140,7 @@ The Notes and Hands tabs are one editor. `NotesTab.tsx` and `HandsTab.tsx` are o
 | `notes/useLiveTranscription.ts` | Follows the running transcription's progress stream into the feed |
 | `notes/noteEdits.ts` | The edits as overrides on the saved notes; `toOperations` turns them into the `PATCH /pieces/{uuid}/notes` operations |
 | `hooks/followJob.ts` | Follows one job to its end from a button (**Predict hands**) |
-| `hooks/useEditHistory.ts` | Undo and redo, shared with the Audio tab and the sheet |
+| `hooks/useEditHistory.ts` | Undo and redo, shared with the Audio tab and the sheet. `commit` (Phase 8) makes one step that replaces every edit at once, with its backend undo and redo (a paste) |
 
 **Why a canvas.** The old Piano Roll was SVG, one React element per note, rebuilt many times per
 second during playback. The editor keeps the notes in typed arrays and paints them directly. React
@@ -186,7 +187,7 @@ byte for byte), then redesigned it to plan section 11. What it does for the read
 
 | Module | Role |
 |---|---|
-| `SheetPage.tsx` | The page: the state the modules share, the requests (default reading, saved reading, sheet, save, Remove all), the effects, the layout (title lines, scrub bar, sheet, floating bar, the toolboxes) |
+| `SheetPage.tsx` | The page: the state the modules share, the requests (default reading, saved reading, sheet, save, Remove all), the effects, the layout (title lines, scrub bar, sheet, floating bar, the toolboxes). **Copy and Paste** (Phase 8): `copyColumns` and `copySelection` (the marked stretch, or the frames of the picked notes), `pastePassage` (`POST /time/{uuid}/paste` with the page's sheet, then one history step by `edits.commit` whose undo and redo call `POST …/versions/{n}/restore`), the ⌘C, ⌘V and paste-event listeners, `reloadAt` (the ladder and the sheet read again, and the player's audio at a new address, without starting the edits again) and the cursor kept at the passage. A version of the library marks a stretch too, and gets a small *Frames* panel with **Copy this stretch** |
 | `sheetEdits.ts` | The edits model: `SheetEdits` (one value, so undo is one history), `NO_EDITS`, the undo labels, `editsFromSaved` and `savedRhythmOf` (to and from the saved reading, `sheet.json`) |
 | `sheetConstants.ts` | The colours of the keyboards, the tabs of the range toolbox, the figure ladder, small helpers |
 | `toolboxPlacement.ts` | Where a toolbox opens, measured from what is drawn |
@@ -195,13 +196,13 @@ byte for byte), then redesigned it to plan section 11. What it does for the read
 | `SheetToolbox.tsx` | The sheet toolbox: Title, Key, Transpose, Lyrics, Layout |
 | `TransposeTab.tsx`, `TransposeDialog.tsx` | **Transpose** (Phase 7): Notes (two `MiniPiano`s) and Figures (two `FigurePicker`s), each with **Preview**; the one dialog both use: a read-only `TimeScoreView` of the result, the facts, **Transpose** or **Cancel**. The page's `previewNotes`, `previewFigures` and `confirmTranspose` do the requests and the undo step |
 | `LyricsTab.tsx`, `lyricsPieces.ts` | **Lyrics** (Phase 7): paste, the pool (each piece draggable onto the sheet, `POOL_DRAG_TYPE`), the picked pieces' **Words** field and edit toolbar; the pure functions on the list of pieces (place, move, merge, split, line break, back to the pool, size), each returning the new list or the reason it could not |
-| `SheetFloatingBar.tsx` | Play, undo, redo, sheet toolbox, Record, Print, Save with its unsaved dot, `⋯`; the messages of a refused save and a refused move |
+| `SheetFloatingBar.tsx` | Play, undo, redo, sheet toolbox, Record, **Paste** (Phase 8: its tooltip names the passage and where it goes), Print, Save with its unsaved dot, `⋯`; the messages of a refused save and a refused move |
 | `PianoToolboxes.tsx` | The keyboard under the playhead, and the decoration keyboard |
 
 | Shared component | Role |
 |---|---|
 | `components/time/TimeScoreView.tsx` | The staff. Owns the renderer instance, the playhead, selection and the range handles |
-| `components/time/ScorePlayer.tsx` | Plays the recording; `compact` draws only the scrub bar (the Sheet step) |
+| `components/time/ScorePlayer.tsx` | Plays the recording; `compact` draws only the scrub bar (the Sheet step). `version` (Phase 8) puts the audio at a new address when it changed under the page, because the browser keeps a media file by its address; the Audio and Notes steps add the audio revision the same way (`audioApi.fileUrl(uuid, normalized, revision)`) |
 | `components/time/ScorePdfDialog.tsx` | Paper size, margins, title, and a preview of the real pages |
 | `components/time/PeakPlot.tsx` | The plot of gaps; left only in the compose and re-record panels, which Phases 8 and 9 replace |
 | `ui/Toolbox.tsx`, `ui/FloatingBar.tsx` | The draggable panel and the floating bar every step uses |
@@ -459,7 +460,7 @@ npm run check:notes       # the Notes tab's typed arrays, live feed and edits
 
 These need the running app (`make up` from the repository root). Each works on temporary copies or
 uploads and deletes them at the end, so the library is never changed. `check:flow`,
-`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
+`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
 user with `AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env` at the repository root (or
 `AITU_CHECK_USERNAME` and `AITU_CHECK_PASSWORD` from the environment), makes every `fetch` of the
 script send the cookie (`signIn(base)`), and gives every Playwright page the same cookie
@@ -472,6 +473,7 @@ npm run check:projects  # the Projects page: New project, Add audio, Duplicate, 
 npm run check:library   # My library on a copy of Elefants: Save to library, a version read only, Edit, Replace, History, New version, Artists
 npm run check:transpose # the Transpose tab on a copy of Elefants: notes and figures, preview, undo, redo; Key for this passage
 npm run check:lyrics    # the Lyrics tab on a copy of Elefants: pool, drag onto the sheet, snapping, merge, split, line break, Save
+npm run check:paste     # Copy and Paste between two copies, undo and redo, ⌘V over a stretch, From scratch, every join of the audio
 node scripts/check-sheet-toolbox.mjs --only clefs  # the clef rule on a first write of a copy of Superestrella's tutorial
 npm run time:flow     # the whole flow timed on three temporary pieces (upload, a duplicated library piece, YouTube)
 npm run bench:roll    # the Notes tab at 10,000 rectangles and at 100 stream messages per second

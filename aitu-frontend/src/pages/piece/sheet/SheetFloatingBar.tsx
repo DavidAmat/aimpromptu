@@ -1,7 +1,8 @@
 /**
  * The floating bar of the Sheet step (plan section 11.2), and the two messages that sit with it.
  *
- * Play or pause, undo, redo, the sheet toolbox, Record, Print, **Save**, and a `⋯` with the rest.
+ * Play or pause, undo, redo, the sheet toolbox, Record, Paste, Print, **Save**, and a `⋯` with the
+ * rest.
  * Save stays a visible button: nothing is written before it, and a dot on it says there are
  * changes it would keep. The bar is draggable and can be hidden (the shared `FloatingBar`).
  *
@@ -15,6 +16,7 @@ import Divider from "@mui/material/Divider";
 import Snackbar from "@mui/material/Snackbar";
 import Tooltip from "@mui/material/Tooltip";
 import CheckIcon from "@mui/icons-material/Check";
+import ContentPasteIcon from "@mui/icons-material/ContentPasteOutlined";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweepOutlined";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecordOutlined";
 import GraphicEqIcon from "@mui/icons-material/GraphicEqOutlined";
@@ -37,6 +39,7 @@ export function SheetFloatingBar({
   toolboxOpen,
   onToolbox,
   onRecord,
+  paste,
   canPrint,
   onPrint,
   canSave,
@@ -65,6 +68,8 @@ export function SheetFloatingBar({
   toolboxOpen: boolean;
   onToolbox: () => void;
   onRecord: () => void;
+  /** **Paste** (Phase 8): what its tooltip says it pastes, and where. Disabled with nothing copied. */
+  paste: { title: string; can: boolean; busy: boolean; run: () => void };
   canPrint: boolean;
   onPrint: () => void;
   canSave: boolean;
@@ -192,6 +197,16 @@ export function SheetFloatingBar({
           icon={<FiberManualRecordIcon />}
           onClick={onRecord}
           placement="top"
+        />
+        <IconAction
+          title={paste.title}
+          shortcut="⌘V"
+          icon={<ContentPasteIcon />}
+          onClick={paste.run}
+          disabled={!paste.can || paste.busy}
+          disabledTitle={paste.busy ? "Pasting…" : "Copy a passage first"}
+          placement="top"
+          data-testid="sheet-paste"
         />
         <IconAction
           title="Print to PDF"

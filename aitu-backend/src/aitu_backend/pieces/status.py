@@ -11,8 +11,9 @@ one step past the last ready one. The Sheet tab stays enabled when it is stale, 
 with a banner and asks the user to write the sheet again (plan section 8.3).
 
 **A project with no audio and no notes yet** (an empty project, section 10.3) has its Source step
-missing and every later step closed. A part with notes and no audio (a piece being composed) reads
-as before. **A video project** (its part has a video, section 10.2) gets its notes
+missing and every later step closed. **A part made from scratch with no audio yet** (From scratch,
+or a piece composed with ``POST /audio/compose``, Phase 8) is ``scratch``: it opens on the Sheet step, and its Audio step is closed
+until a passage brings audio (Record or Paste); the page shows only the sheet. **A video project** (its part has a video, section 10.2) gets its notes
 from reading the video instead of a transcription, so its Notes step says so, and is ``running``
 while the video is read.
 
@@ -57,6 +58,8 @@ class PieceStatus:
     #: The step a piece opens on: the furthest one that is ready (plan section 7.1).
     resume: str
     revisions: dict[str, int | None]
+    #: Notes and no audio: a project made from scratch, still a blank or composed sheet.
+    scratch: bool = False
 
     def step(self, name: str) -> StepStatus:
         return next(step for step in self.steps if step.step == name)
@@ -73,10 +76,14 @@ def piece_status(audio_uuid: str) -> PieceStatus:
     job = jobs.active(f"video-read:{audio_uuid}" if video else f"transcribe:{audio_uuid}")
     header = stored.header if stored is not None else None
 
-    source = StepStatus("source", "ready")
+    # Made from scratch (or composed) and with no audio yet: only its sheet is shown.
+    scratch = metadata.source.value == "composed" and not bundle.read_timeline(audio_uuid).audio
+    source = StepStatus("source", "missing" if scratch else "ready")
     audio = StepStatus(
         "audio",
-        "ready",
+        "missing" if scratch else "ready",
+        enabled=not scratch,
+        reason="Record or paste a passage first." if scratch else None,
         details={"audioRevision": metadata.audio_revision, "cuts": len(metadata.cuts)},
     )
 
@@ -190,7 +197,8 @@ def piece_status(audio_uuid: str) -> PieceStatus:
     return PieceStatus(
         audio_uuid=audio_uuid,
         steps=steps,
-        resume=_resume(steps),
+        resume="sheet" if scratch and sheet.enabled else _resume(steps),
+        scratch=scratch,
         revisions={
             "audio": metadata.audio_revision,
             "notes": header.notes_revision if header else None,

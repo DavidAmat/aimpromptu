@@ -45,9 +45,16 @@ const message = (caught: unknown, fallback: string) => (caught instanceof Error 
 
 /** "YouTube · 4:10 · 0:05 cut": where a file came from, its length and its cuts. */
 function facts(file: AxisFile): string {
-  const kind = { upload: "Audio file", youtube: "YouTube", recording: "Recording", segment: "Part of another project", composed: "Composed" }[
-    file.kind
-  ] ?? "Audio";
+  const kind =
+    {
+      upload: "Audio file",
+      youtube: "YouTube",
+      recording: "Recording",
+      segment: "Part of another project",
+      composed: "Composed",
+      passage: "Pasted",
+      silence: "Silence",
+    }[file.kind] ?? "Audio";
   const cut = file.cutFrames > 0 ? ` · ${formatTimeShort(seconds(file.cutFrames))} cut` : "";
   return `${kind} · ${formatTimeShort(seconds(file.frames))}${cut}`;
 }

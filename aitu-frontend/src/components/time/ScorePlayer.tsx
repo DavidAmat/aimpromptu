@@ -24,6 +24,9 @@ import ProgressBar from "../../playback/ProgressBar";
 
 export interface ScorePlayerProps {
   audioUuid: string;
+  /** Changes when the audio of the piece changed under the page (a paste, its undo), so the new
+   * file is loaded rather than the one the browser kept. */
+  version?: string | number;
   /** Where the sheet ends, in seconds. The recording may run on past it. */
   scoreSeconds: number;
   /**
@@ -72,6 +75,7 @@ export interface ScorePlayerControls {
 
 export function ScorePlayer({
   audioUuid,
+  version,
   scoreSeconds,
   onTime,
   controlsRef,
@@ -97,7 +101,11 @@ export function ScorePlayer({
   }, [playing, onPlaying]);
 
   useEffect(() => {
-    const element = new Audio(`${API_BASE}/audio/${audioUuid}/file`);
+    // A new address when the audio changed under the page (a paste, its undo): the browser keeps a
+    // media file by its address and would play the old one.
+    const element = new Audio(
+      `${API_BASE}/audio/${audioUuid}/file${version !== undefined ? `?v=${encodeURIComponent(version)}` : ""}`,
+    );
     audio.current = element;
     // Say where the recording is the moment there is one, not only when it moves. The line on the
     // staves is the thing a reader grabs to move the recording, so it has to be on the page before
@@ -117,7 +125,7 @@ export function ScorePlayer({
       audio.current = null;
       report.current?.(null);
     };
-  }, [audioUuid]);
+  }, [audioUuid, version]);
 
   // The line follows the recording, so it is read from the audio element rather than from a timer
   // of our own. A timer would drift against the sound within a minute and the page would be lying.

@@ -28,7 +28,10 @@ cut. ``toMs`` is ``null`` for a segment that runs to the end of a file whose len
 yet (between the upload and its normalization).
 
 **Several files** (Phase 5, **add audio**): ``sources`` lists the files of the Audio step laid end
-to end, in order (the same file may come twice). The Audio step shows that **axis**: file 1 from its
+to end, in order (the same file may come twice). Since Phase 8 an entry of ``sources`` may be a
+**range** of its file (``ranges``, ``[fromFrame, toFrame)`` in 10 ms frames of the file, ``None`` for
+the whole file): a pasted passage brings only the part of another file it uses, and a file split
+where a passage was put in comes twice, once on each side of it (:mod:`aitu_backend.audio.timeline`). The Audio step shows that **axis**: file 1 from its
 start to its end, then file 2, and so on. A cut is a range of the axis, as before, and the segments
 are the kept ranges split where one file ends and the next begins (:func:`segments_for_axis`). A
 part of one file has no ``sources`` (it reads as its one file), so every timeline written before
@@ -197,7 +200,35 @@ class Timeline(_Camel):
     audio: dict[str, AudioEntry] = Field(default_factory=dict)
     #: The files of the Audio step laid end to end (**add audio**); absent for a part of one file.
     sources: list[str] | None = None
+    #: For each entry of ``sources``, the range of its file it stands for (``[fromFrame, toFrame)``,
+    #: 10 ms frames of the file), or ``None`` for the whole file. Absent when every entry is a whole
+    #: file (Phase 8).
+    ranges: list[list[int] | None] | None = None
     segments: list[Segment] = Field(default_factory=list)
+
+    @property
+    def joined(self) -> bool:
+        """Several entries laid end to end, or one entry that is only a range of its file: the
+        part's original is then the entries joined (:mod:`aitu_backend.audio.sources`)."""
+        if self.sources is None:
+            return False
+        return len(self.sources) > 1 or any(span is not None for span in self.ranges or [])
+
+    def items(self) -> list[tuple[str, int, int]]:
+        """``(hash, fromFrame, toFrame)`` of each entry of the axis, in frames of its file. Every
+        file used whole must be measured."""
+        ranges = self.ranges or []
+        out: list[tuple[str, int, int]] = []
+        for index, content_hash in enumerate(self.source_list()):
+            span = ranges[index] if index < len(ranges) else None
+            if span is not None:
+                out.append((content_hash, int(span[0]), int(span[1])))
+                continue
+            frames = self.audio[content_hash].frames
+            if frames is None:
+                raise ValueError("The length of every audio file must be known")
+            out.append((content_hash, 0, frames))
+        return out
 
     def source_list(self) -> list[str]:
         """The files of the axis of the Audio step, in order: ``sources``, or the one file."""
@@ -218,14 +249,9 @@ class Timeline(_Camel):
         return sources[0]
 
     def axis(self) -> list[tuple[str, int]]:
-        """``(hash, frames)`` of each file of the axis, in order. Every file must be measured."""
-        out: list[tuple[str, int]] = []
-        for content_hash in self.source_list():
-            frames = self.audio[content_hash].frames
-            if frames is None:
-                raise ValueError("The length of every audio file must be known")
-            out.append((content_hash, frames))
-        return out
+        """``(hash, frames)`` of each entry of the axis, in order: its length on the axis (a whole
+        file, or the range of it the entry stands for)."""
+        return [(content_hash, end - start) for content_hash, start, end in self.items()]
 
     def axis_frames(self) -> int | None:
         """The length of the axis in 10 ms frames, or ``None`` while a file is not measured."""
@@ -271,6 +297,10 @@ def write_project(project: ProjectFile, *, touch: bool = True) -> ProjectFile:
         if not entry["source"].get("files"):
             # A part of one file keeps the shape it had before **add audio** existed.
             entry["source"].pop("files", None)
+        for name in ("lyrics", "lyricsPool"):
+            # Absent until the Lyrics tab saves them (Phase 7).
+            if entry.get(name) is None:
+                entry.pop(name, None)
     _write_json(paths.project_json_path(project.id), json.dumps(body, indent=2) + "\n")
     with session() as db:
         row = db.get(Project, project.id)
@@ -297,6 +327,8 @@ def write_timeline(part_id: str, timeline: Timeline) -> Timeline:
             segment.pop("source", None)
     if body.get("sources") is None:
         body.pop("sources", None)
+    if not any(span is not None for span in body.get("ranges") or []):
+        body.pop("ranges", None)
     _write_json(paths.part_timeline_path(part_id), json.dumps(body, indent=2) + "\n")
     sync_audio_refs(locate.part(part_id).project_id)
     step_changed(part_id)
@@ -424,11 +456,18 @@ def segments_for_cuts(
 
 
 def segments_for_axis(
-    files: list[tuple[str, int]], cuts: Iterable[tuple[int, int]]
+    files: list[tuple[str, int]] | list[tuple[str, int, int]], cuts: Iterable[tuple[int, int]]
 ) -> list[Segment]:
-    """The kept ranges of the axis of ``files`` (``(hash, frames)`` end to end) around ``cuts``
-    (normalized frames of the axis), split where one file ends and the next begins."""
-    total = sum(frames for _, frames in files)
+    """The kept ranges of the axis of ``files`` end to end around ``cuts`` (normalized frames of
+    the axis), split where one entry ends and the next begins.
+
+    An entry is ``(hash, frames)`` (a whole file) or ``(hash, fromFrame, toFrame)`` (a range of its
+    file, :meth:`Timeline.items`); a segment's times are in its file."""
+    entries = [
+        (entry[0], 0, entry[1]) if len(entry) == 2 else (entry[0], entry[1], entry[2])
+        for entry in files
+    ]
+    total = sum(end - start for _, start, end in entries)
     kept: list[tuple[int, int]] = []
     start = 0
     for cut_start, cut_end in cuts:
@@ -440,14 +479,15 @@ def segments_for_axis(
     segments: list[Segment] = []
     for keep_start, keep_end in kept:
         offset = 0
-        for index, (content_hash, frames) in enumerate(files):
+        for index, (content_hash, start, end) in enumerate(entries):
+            frames = end - start
             first, last = max(keep_start, offset), min(keep_end, offset + frames)
             if first < last:
                 segments.append(
                     Segment(
                         audio=content_hash,
-                        from_ms=(first - offset) * FRAME_MS,
-                        to_ms=(last - offset) * FRAME_MS,
+                        from_ms=(first - offset + start) * FRAME_MS,
+                        to_ms=(last - offset + start) * FRAME_MS,
                         source=index,
                     )
                 )
@@ -462,15 +502,14 @@ def segments_with_cuts(timeline: Timeline, cuts: list[tuple[int, int]]) -> list[
         if cuts:
             raise ValueError("A part with no audio has nothing to cut")
         return []
-    if len(sources) == 1:
+    if not timeline.joined:
         return segments_for_cuts(sources[0], cuts, timeline.audio[sources[0]].frames)
-    return segments_for_axis(timeline.axis(), cuts)
+    return segments_for_axis(timeline.items(), cuts)
 
 
 def cuts_of(timeline: Timeline) -> list[tuple[int, int]]:
     """The cuts of a part: the gaps between its segments, in frames of the axis."""
-    sources = timeline.source_list()
-    if len(sources) > 1:
+    if timeline.joined:
         return _cuts_of_axis(timeline)
     content_hash = timeline.single_audio
     if content_hash is None:
@@ -494,10 +533,10 @@ def cuts_of(timeline: Timeline) -> list[tuple[int, int]]:
 def _cuts_of_axis(timeline: Timeline) -> list[tuple[int, int]]:
     """:func:`cuts_of` for several files: each segment is placed on the axis by walking the files
     in order, so a file that comes twice is told apart by where the walk is."""
-    files = timeline.axis()
+    files = timeline.items()
     offsets = [0]
-    for _, frames in files[:-1]:
-        offsets.append(offsets[-1] + frames)
+    for _, first, last in files[:-1]:
+        offsets.append(offsets[-1] + last - first)
     cuts: list[tuple[int, int]] = []
     position = index = 0
     for segment in timeline.segments:
@@ -505,17 +544,20 @@ def _cuts_of_axis(timeline: Timeline) -> list[tuple[int, int]]:
         if segment.source is not None and segment.source >= index:
             index = segment.source
         while index < len(files) and not (
-            files[index][0] == segment.audio and offsets[index] + start >= position
+            files[index][0] == segment.audio
+            and files[index][1] <= start < files[index][2]
+            and offsets[index] + start - files[index][1] >= position
         ):
             index += 1
         if index == len(files):
             raise ValueError("The segments of this part do not follow its files in order")
-        end = files[index][1] if segment.to_ms is None else segment.to_ms // FRAME_MS
-        axis_start, axis_end = offsets[index] + start, offsets[index] + end
+        _, first, last = files[index]
+        end = last if segment.to_ms is None else segment.to_ms // FRAME_MS
+        axis_start, axis_end = offsets[index] + start - first, offsets[index] + end - first
         if axis_start > position:
             cuts.append((position, axis_start))
         position = max(position, axis_end)
-    total = offsets[-1] + files[-1][1]
+    total = offsets[-1] + files[-1][2] - files[-1][1]
     if position < total:
         cuts.append((position, total))
     return cuts
