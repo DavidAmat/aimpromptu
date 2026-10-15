@@ -702,7 +702,7 @@ export function PassagePage() {
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
             <FormControlLabel
               control={<Checkbox size="small" checked={withClick} onChange={(event) => setWithClick(event.target.checked)} />}
-              label="Click every"
+              label="Metronome tick"
             />
             <TextField
               size="small"

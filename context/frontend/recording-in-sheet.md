@@ -19,7 +19,7 @@ The page shows the song's title, **Promote**, and two sheets:
   are, read only. A new passage has none.
 - **Proposal**: a take. With no take yet, **Record** and **Add a take from a file**. **Record**
   opens a small panel: **Play the passage along** (the Current, slowed or hurried to the speed the
-  take is played at), **Click every … ms** (a metronome; nothing about it is stored), the level, and
+  take is played at), **Metronome tick … ms** (a click every so many milliseconds; nothing about it is stored), the level, and
   Record / Stop. A take is kept as soon as it stops ("Take 1", "Take 2"). Its waveform then shows
   with the stretch to keep, and **Write the proposal** transcribes it, splits its hands and writes
   its sheet **in the passage's key and figure**, so the two sheets read alike. The Proposal is then
