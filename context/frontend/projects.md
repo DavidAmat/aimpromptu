@@ -16,7 +16,7 @@ the `.aitu` export (Phase 5). The code is `aitu-frontend/src/pages/ProjectsPage.
 One row per project, the most recently changed first: the title ("Untitled project" until it has
 one), the step it reached ("Transcribing" or "Reading" while a job works on it), and when it
 changed. The whole row opens the project on that step. The `⋯` menu of a row has **Open**,
-**Duplicate**, **Export**, **Rename**, **Notes Falling** (once it has notes) and **Delete** (with a
+**Duplicate**, **Export**, **Rename**, **Play** (Play mode, once it reaches its Sheet step) and **Delete** (with a
 confirmation).
 
 Finished work is not here: it is in **My library** ([music-library/private-library.md](../music-library/private-library.md),
@@ -57,10 +57,10 @@ changed ([backend/pieces-and-revisions.md](../backend/pieces-and-revisions.md) s
 | `/projects/new` | The Source step alone, for a new project |
 | `/projects/<id>` | The step the project reached (`resume` of `GET /pieces/{id}/status`) |
 | `/projects/<id>/<step>` | That step: `source`, `audio`, `notes`, `hands` or `sheet` |
-| `/projects/<id>/notes-falling` | Notes Falling, from the project's `⋯` menu (until Play mode, Phase 11) |
+| `/projects/<id>/notes-falling` | Goes to Play mode on Notes Falling (`/play/<id>?view=falling`, Phase 11) |
 
 The old addresses (`/piece/...`) redirect to these. The header of a project is the back arrow to
-Projects, the title, the step tabs, the primary action, and the `⋯` menu (**Notes Falling**,
+Projects, the title, the step tabs, the primary action, and the `⋯` menu (**Play**,
 **Export**, and **Discard changes** on an edit copy). The primary action is **Save to library** once
 the Sheet step is ready (disabled while a step has unsaved edits), and nothing before.
 

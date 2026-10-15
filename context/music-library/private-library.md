@@ -101,7 +101,7 @@ library project in place: the step routes answer `403`, and the changes go throu
 |---|---|
 | **Shared** (a library another user shares with you) | Phase 14 |
 | Suggestions from the Public Library in the dialog, and **Add to my library** from it | Phase 13 |
-| Play mode for a version and a playlist (**Play**) | Phase 11 |
+| Play mode for a version and a playlist (**Play**) | Phase 11, done: [play-mode.md](../frontend/play-mode.md) |
 | Offline downloads per project | Q-7 (raised in Phase 6) |
 
 The 30 songs the migration of Phase 3 put in the master user's library were saved before Phase 6:

@@ -12,7 +12,7 @@
  * view saw it — which is exactly the rounding the wall-clock model removed.
  */
 
-import type { RawEvents, RawNoteEvent } from "../api";
+import type { RawNoteEvent } from "../api";
 
 /** Lowest key of an 88-key piano; row 0. */
 const LOWEST_MIDI = 21;
@@ -81,16 +81,4 @@ export function soundingRows(notes: PlayedNote[], seconds: number): Set<number> 
     if (note.startSeconds <= seconds && seconds < note.endSeconds) rows.add(note.row);
   }
   return rows;
-}
-
-/** How the loaded response describes itself, for the caption under a view. */
-export function describeEvents(events: RawEvents | null): string {
-  if (!events) return "";
-  const kept = events.events.length - events.artifactCount;
-  const phantoms = events.octavePhantomCount
-    ? `, ${events.octavePhantomCount} of them an octave under a struck note`
-    : "";
-  return events.artifactCount
-    ? `${kept} notes played · ${events.artifactCount} filtered as artifacts${phantoms}`
-    : `${kept} notes played`;
 }

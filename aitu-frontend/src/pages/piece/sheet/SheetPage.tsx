@@ -175,6 +175,8 @@ export interface SheetStep {
   readOnly?: boolean;
   /** Drawn on the page of a passage (Record in Sheet, Phase 9): the Current or the Proposal. */
   passage?: PassageView;
+  /** Drawn in Play mode (Phase 11): the sheet alone, read only, played from the page's own button. */
+  play?: PlayView;
   /**
    * What a stretch marked on a read-only sheet can be used for, besides a copy (Phase 10): a
    * passage of From other projects, a stretch of a song in a playlist.
@@ -213,6 +215,30 @@ export interface PassageView {
   onPlaying?: (playing: boolean) => void;
   /** The sheet as the page holds it, unsaved edits included: what a promotion carries. */
   onSheet?: (sheet: SavedRhythm | null) => void;
+}
+
+/**
+ * How a sheet is drawn in Play mode (plan section 17): no title lines, no scrub bar, no floating
+ * bar, nothing that opens a toolbox. The page plays it from its own button and its own keys, keeps
+ * the cursor in the middle of the window while it plays, and shows each lyrics piece only while its
+ * frames sound. Several sheets can be on one page (the parts of a project, a playlist), each with
+ * its own player; the page says which one plays.
+ */
+export interface PlayView {
+  /** The transport, for the page's own play button and keys. */
+  playerRef: RefObject<ScorePlayerControls | null>;
+  onPlaying?: (playing: boolean) => void;
+  /** Where the recording is, on every frame while it plays (Notes Falling reads it). */
+  onTime?: (seconds: number | null) => void;
+  /** The recording stopped by itself: at the end of the part, or of the stretch. */
+  onEnded?: () => void;
+  /** The cursor was moved on this sheet by the reader (a drag, a double-click). */
+  onSeek?: () => void;
+  /** A stretch of a playlist: where it starts and stops, in ms of the part. */
+  fromMs?: number | null;
+  toMs?: number | null;
+  /** Ask the browser for the whole audio file at once (the sheet on show), or only its length. */
+  preload?: "auto" | "metadata";
 }
 
 /** The sheet toolbox of a Proposal. */
@@ -275,7 +301,10 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   const passageView = step?.passage ?? null;
   /** On the page of a passage: which of its two sheets this is. */
   const role = passageView?.role ?? null;
-  const readOnly = (step?.readOnly ?? false) || role === "current";
+  /** In Play mode: the sheet alone, read only. */
+  const playView = step?.play ?? null;
+  const playMode = playView !== null;
+  const readOnly = (step?.readOnly ?? false) || role === "current" || playMode;
   const navigate = useNavigate();
   const location = useLocation();
   const { artifact } = useWorkingArtifact();
@@ -2250,8 +2279,9 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    * event reads one from there, and the app's own clipboard is used when the browser sends none.
    */
   useEffect(() => {
-    // The page of a passage copies and pastes nothing: its two sheets are not the song.
-    if (role) return undefined;
+    // The page of a passage copies and pastes nothing: its two sheets are not the song. Play mode
+    // only plays.
+    if (role || playMode) return undefined;
     const inField = (target: EventTarget | null) =>
       Boolean((target as Element | null)?.closest?.("input, textarea, select, [contenteditable='true']"));
     let pasteHandled = false;
@@ -2288,7 +2318,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       document.removeEventListener("paste", onPaste);
       window.removeEventListener("keydown", onKey);
     };
-  }, [copySelection, pastePassage, readOnly, role]);
+  }, [copySelection, pastePassage, readOnly, role, playMode]);
 
   // The sheet is drawn again: its player is new, so the cursor is put back where the passage went.
   useEffect(() => {
@@ -2303,8 +2333,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
 
   // ------------------------------------------------------------------ on the page of a passage
 
-  /** Whether the recording is sounding, said to the page of a passage too. */
-  const onPassagePlaying = passageView?.onPlaying;
+  /** Whether the recording is sounding, said to the page of a passage, and to Play mode, too. */
+  const onPassagePlaying = passageView?.onPlaying ?? playView?.onPlaying;
   const reportPlaying = useCallback(
     (now: boolean) => {
       setPlaying(now);
@@ -2312,6 +2342,56 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     },
     [onPassagePlaying],
   );
+
+  // ------------------------------------------------------------------ in Play mode
+
+  /** Where the recording is, said to Play mode too (Notes Falling is drawn from it). */
+  const onPlayTime = playView?.onTime;
+  const reportTime = useCallback(
+    (seconds: number | null) => {
+      setPlayheadSeconds(seconds);
+      onPlayTime?.(seconds);
+    },
+    [onPlayTime],
+  );
+  // Play mode plays this sheet from its own button and keys.
+  const playPlayer = playView?.playerRef;
+  useEffect(() => {
+    if (playPlayer) playPlayer.current = player.current;
+  });
+  /** The cursor moved by the reader: this sheet becomes the one Play mode plays. */
+  const onPlaySeek = playView?.onSeek;
+  const scrubInPlay = useCallback(
+    (seconds: number) => {
+      player.current?.seek(seconds);
+      onPlaySeek?.();
+    },
+    [onPlaySeek],
+  );
+  /** A stretch of a playlist starts where it was chosen, not at the start of the song. */
+  const playFromMs = playView?.fromMs ?? null;
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+  useEffect(() => {
+    if (!score || playFromMs === null || startedAt === `${audioUuid}:${playFromMs}`) return;
+    const wait = window.setTimeout(() => {
+      player.current?.seek(playFromMs / 1000);
+      setStartedAt(`${audioUuid}:${playFromMs}`);
+    }, 120);
+    return () => window.clearTimeout(wait);
+  }, [score, playFromMs, startedAt, audioUuid]);
+  /**
+   * The lyrics pieces whose frames are sounding, by their first frame: Play mode shows these and
+   * draws the others faint (the app context: the frames say when words are on and off).
+   */
+  const litLyrics = useMemo(() => {
+    if (!playMode || playheadSeconds === null) return [];
+    const frame = Math.floor((playheadSeconds * 1000) / frameMs + 1e-6);
+    return lyrics.filter((line) => line.fromColumn <= frame && frame < line.toColumn).map((line) => line.fromColumn);
+  }, [playMode, playheadSeconds, frameMs, lyrics]);
+  /** The same list while it holds the same pieces, so the sheet's style is written only on a change. */
+  const litKey = litLyrics.join(",");
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the same pieces keep the same array
+  const litLyricsKept = useMemo(() => litLyrics, [litKey]);
   // The page of a passage plays this sheet from its own button.
   const passagePlayer = passageView?.playerRef;
   useEffect(() => {
@@ -2755,7 +2835,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       {score ? (
         <Stack spacing={1.5}>
           {/* The title lines of the sheet, as they print. Changed in the Title tab. */}
-          <Box sx={{ px: 1, display: role ? "none" : undefined }}>
+          <Box sx={{ px: 1, display: role || playMode ? "none" : undefined }}>
             <Typography
               component="h2"
               sx={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3 }}
@@ -2776,13 +2856,17 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
             audioUuid={audioUuid}
             version={`${openedAtRevision ?? 0}.${reloadAt}`}
             scoreSeconds={(score.envelope.frameCount * score.envelope.frameMs) / 1000}
-            onTime={setPlayheadSeconds}
+            onTime={reportTime}
             controlsRef={player}
             onScrollToCursor={scrollToCursor}
             onPlaying={reportPlaying}
-            keys={role !== "current"}
+            keys={role !== "current" && !playMode}
+            headless={playMode}
+            stopAt={playView?.toMs != null ? playView.toMs / 1000 : null}
+            onEnded={playView?.onEnded}
+            preload={playView?.preload ?? "auto"}
           />
-          {role === "current" ? null : (
+          {role === "current" || playMode ? null : (
           <SheetFloatingBar
             passageActions={role === "proposal" ? (passageView?.barActions ?? null) : undefined}
             readOnly={readOnly}
@@ -2882,7 +2966,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
               staffGaps={staffGaps}
               onStaffGapsChange={readOnly ? ignore : setStaffGaps}
               onSelectNotes={readOnly ? ignore : pickNotes}
-              onSelectRange={pickRange}
+              onSelectRange={playMode ? ignore : pickRange}
               onSelectMarkedRange={readOnly ? ignore : pickMarkedRange}
               onOttavaResize={readOnly ? ignore : stretchOttava}
               renderOverrides={renderOverrides}
@@ -2908,7 +2992,11 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
               clearSelectionsAt={clearedAt}
               playheadSeconds={playheadSeconds}
               followPlayhead={playing}
-              onScrub={scrub}
+              followCentre={playMode}
+              // Play mode picks nothing on the sheet: no note, no stretch, no handle to spread a line.
+              readOnly={playMode}
+              litLyrics={playMode && playing ? litLyricsKept : null}
+              onScrub={playMode ? scrubInPlay : scrub}
               scrollCursorAt={scrollCursorAt}
               frameWindow={passageView?.frameWindow}
               onFrameWindowMove={passageView?.onWindowMove}

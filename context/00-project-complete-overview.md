@@ -119,7 +119,9 @@ version opens read only; **Edit** makes a copy in Projects, which then **replace
 earlier state kept in a history that can be restored) or becomes a new version. Artists have
 several names and can be merged.
 
-**Notes Falling** opens from a project's `⋯` menu. **Lab** (master user only) holds the video
+**Play mode** (Phase 11) shows the sheet alone and plays it: a project, a version, an integrated
+playlist nonstop, a songs playlist song by song; the page keeps the cursor in the middle of the
+window, lyrics show with their frames, and **Notes Falling** is one of its views. **Lab** (master user only) holds the video
 reader's pages: it reads a Synthesia-style video into a piece. **Users** (master user only) makes
 users, disables them and resets a password. The Playground, YouTube to Audio and the old Piano Library were
 removed in implementation 02, Phase 1 (decision Q-4).

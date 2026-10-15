@@ -34,7 +34,7 @@ import DownloadIcon from "@mui/icons-material/FileDownloadOutlined";
 import EditIcon from "@mui/icons-material/EditOutlined";
 import LibraryAddIcon from "@mui/icons-material/LibraryAddOutlined";
 import Tooltip from "@mui/material/Tooltip";
-import WaterfallIcon from "@mui/icons-material/WaterfallChartOutlined";
+import PlayIcon from "@mui/icons-material/PlayCircleOutlined";
 import {
   Navigate,
   Outlet,
@@ -81,7 +81,7 @@ const NO_PIECE: StepStatus[] = PIECE_STEPS.map((step) => ({
   details: {},
 }));
 
-/** Which step the address names, or `null` for `/projects/<id>` itself and for Notes Falling. */
+/** Which step the address names, or `null` for `/projects/<id>` itself. */
 function stepOf(pathname: string, uuid: string | undefined): PieceStep | null {
   if (!uuid) return "source";
   const last = pathname.replace(/\/$/, "").split("/").pop();
@@ -283,7 +283,10 @@ export function PiecePage() {
       : audio
         ? audio.alias || "Untitled project"
         : "";
-  const hasNotes = stepStatus(status, "notes")?.state === "ready";
+  /** Play mode draws the sheet, so it needs the Sheet step open (notes with their hands). */
+  const canPlay = stepStatus(status, "sheet")?.enabled ?? false;
+  /** The whole project plays, every part, whichever part is on show. */
+  const playId = project?.id ?? audio?.projectId ?? uuid;
   const sheetReady = stepStatus(status, "sheet")?.state === "ready";
   const back = library
     ? { to: ROUTES.librarySong(library.songId), label: `Back to ${library.songTitle}` }
@@ -292,10 +295,10 @@ export function PiecePage() {
   const menu = uuid
     ? [
         {
-          label: "Notes Falling",
-          icon: <WaterfallIcon fontSize="small" />,
-          onClick: () => navigate(ROUTES.projectNotesFalling(uuid)),
-          disabled: !hasNotes,
+          label: "Play",
+          icon: <PlayIcon fontSize="small" />,
+          onClick: () => playId && navigate(ROUTES.play(playId)),
+          disabled: !canPlay,
         },
         {
           label: "Export",
@@ -322,10 +325,22 @@ export function PiecePage() {
 
   let primary = null;
   if (uuid && readOnly && layer === "private") {
+    // Song → version → Play (plan section 17), beside Edit.
     primary = (
-      <PillButton kind="primary" startIcon={<EditIcon />} busy={libraryBusy} onClick={() => void openEdit()}>
-        Edit
-      </PillButton>
+      <>
+        <PillButton
+          kind="secondary"
+          startIcon={<PlayIcon />}
+          disabled={!canPlay || !playId}
+          onClick={() => playId && navigate(ROUTES.play(playId))}
+          data-testid="version-play"
+        >
+          Play
+        </PillButton>
+        <PillButton kind="primary" startIcon={<EditIcon />} busy={libraryBusy} onClick={() => void openEdit()}>
+          Edit
+        </PillButton>
+      </>
     );
   } else if (uuid && layer === "vault" && project && sheetReady) {
     primary = (

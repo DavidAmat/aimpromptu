@@ -11,7 +11,9 @@ export function LegacyRedirect({ to }: { to: string }) {
   const target = to
     .replace(/:([A-Za-z]+)/g, (_match, name: string) => params[name] ?? "")
     .replace(/\/\*$/, params["*"] ? `/${params["*"]}` : "");
-  return <Navigate to={`${target}${search}`} replace />;
+  // A new home with a query of its own (Notes Falling, now a view of Play mode) keeps the old one too.
+  const query = target.includes("?") && search ? `&${search.slice(1)}` : search;
+  return <Navigate to={`${target}${query}`} replace />;
 }
 
 export default LegacyRedirect;

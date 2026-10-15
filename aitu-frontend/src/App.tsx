@@ -2,13 +2,13 @@
  * The route table (implementation 02, plan section 6.3). Every path is declared in
  * `layout/routes.ts`; the router itself is created in `main.tsx`, which renders this table inside it.
  *
- * `/login` is outside the shell. My library (`/library/...`, Phase 6; its playlists, Phase 10) is the
+ * `/login` and Play mode (`/play/...`, Phase 11) are outside the shell. My library (`/library/...`, Phase 6; its playlists, Phase 10) is the
  * Private Library. Every other page needs a user signed in (`RequireUser`), and the
  * Admin pages, Users and Lab, the master user (`RequireMaster`; Phase 4).
  */
 
 import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import AppLayout from "./layout/AppLayout";
 import LabLayout from "./layout/LabLayout";
 import LegacyRedirect from "./layout/LegacyRedirect";
@@ -20,6 +20,8 @@ import {
   LIBRARY_PLAYLIST_PATTERN,
   LIBRARY_SONG_PATTERN,
   PASSAGE_PATTERN,
+  PLAY_PATTERN,
+  PLAY_PLAYLIST_PATTERN,
   PROJECT_PATTERN,
   ROUTES,
 } from "./layout/routes";
@@ -36,10 +38,10 @@ import ComposePage from "./pages/compose/ComposePage";
 import ProjectsPage from "./pages/ProjectsPage";
 import AudioTab from "./pages/piece/AudioTab";
 import HandsTab from "./pages/piece/HandsTab";
-import NotesFallingPage from "./pages/piece/NotesFallingPage";
 import NotesTab from "./pages/piece/NotesTab";
 import PassagePage from "./pages/piece/passage/PassagePage";
 import PiecePage from "./pages/piece/PiecePage";
+import PlayPage from "./pages/play/PlayPage";
 import PieceResume from "./pages/piece/PieceResume";
 import SheetTab from "./pages/piece/SheetTab";
 import SourceTab from "./pages/piece/SourceTab";
@@ -53,6 +55,12 @@ import VideoPlayerPage from "./pages/video/VideoPlayerPage";
 const RollBenchPage = import.meta.env.DEV ? lazy(() => import("./pages/dev/RollBenchPage")) : null;
 /** Every shared component on one page (implementation 02, Phase 1); only in a development build. */
 const UiGalleryPage = import.meta.env.DEV ? lazy(() => import("./pages/dev/UiGalleryPage")) : null;
+
+/** Play mode, drawn again from the start for another project or playlist. */
+function PlayRoute() {
+  const { projectId, playlistId } = useParams();
+  return <PlayPage key={playlistId ? `playlist:${playlistId}` : `project:${projectId}`} />;
+}
 
 export default function App() {
   return (
@@ -68,6 +76,26 @@ export default function App() {
           }
         />
       ) : null}
+      {/*
+        Play mode (Phase 11): the sheet alone, outside the shell. Keyed by the address's id, so
+        nothing of one song or playlist is left on the next.
+      */}
+      <Route
+        path={PLAY_PATTERN}
+        element={
+          <RequireUser>
+            <PlayRoute />
+          </RequireUser>
+        }
+      />
+      <Route
+        path={PLAY_PLAYLIST_PATTERN}
+        element={
+          <RequireUser>
+            <PlayRoute />
+          </RequireUser>
+        }
+      />
       <Route
         element={
           <RequireUser>
@@ -106,7 +134,6 @@ export default function App() {
           <Route path="notes" element={<NotesTab />} />
           <Route path="hands" element={<HandsTab />} />
           <Route path="sheet" element={<SheetTab />} />
-          <Route path="notes-falling" element={<NotesFallingPage />} />
         </Route>
 
         {/* My library: the Private Library (Phase 6). */}

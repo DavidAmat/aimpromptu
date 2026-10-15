@@ -367,7 +367,7 @@ one OpenAI uses.
 | `/projects` | The Personal Vault: the list of projects | 1 (on pieces), 5 |
 | `/projects/new` | Choose: From source, From scratch, From other projects | 5 |
 | `/projects/:id/:step` | The flow: `source`, `audio`, `notes`, `hands`, `sheet` | 1, 5 |
-| `/projects/:id/notes-falling` | Notes Falling of a project, until Play mode | 1 (removed in 11) |
+| `/projects/:id/notes-falling` | Notes Falling of a project, until Play mode | 1 (removed in 11: redirects to `/play/:id?view=falling`) |
 | `/projects/:id/passages/:passageId` | Recording in Sheet | 9 |
 | `/projects/:id/compose` | From other projects (*as built in Phase 10:* `/projects/compose`, no id: the passages are chosen before the project exists) | 10 |
 | `/library/songs`, `/library/songs/:id` | My songs, one song with its versions | 6 |
@@ -1536,6 +1536,18 @@ A white page with the piano sheet and nothing else:
 Play mode opens from any version of a song in any library (**Song → version → Play**), from a project,
 and from a playlist.
 
+*As built in Phase 11* (`pages/play/`, [`../../frontend/play-mode.md`](../../frontend/play-mode.md)):
+`/play/:projectId` and `/play/playlist/:id`, outside the shell. Each part is `SheetPage` in a play
+role (no title lines, scrub bar, floating bar or toolbox; read only), so the sheet is the one edited;
+`loadPerformanceScore.ts` was deleted unused. The parts of a project are drawn one after the other
+under their subheaders and **played on without a stop**; in a songs playlist the next song opens at
+the end of one and **waits for Play**. The **Continuous** option is **All songs** (beside **One
+song**). With Play mode closed, the songs playlist's own page is the list (the song shaded, a click
+plays from it). The arrows scroll by 40 % of the window. The buttons fade 2.5 s after the pointer
+rests while it plays. Lyrics not sounding are drawn faint, not hidden, so nothing moves. Notes
+Falling plays only the recording, on the sheet's clock; `/projects/:id/notes-falling` redirects to
+it, and its note removals and **Record this stretch** went with the old page.
+
 ---
 
 # 18. Background jobs with several users
@@ -1701,6 +1713,10 @@ the middle, the lyrics shown by their frames, the keys, Notes Falling as a view,
 song, the list when closed, the continuous page). Entry points from every place a version or a
 playlist is shown. (The old `PerformancePage` was already removed in Phase 1, with the old library
 it read; `library/loadPerformanceScore.ts` is kept for this phase.)
+*Built 2026-10-15* ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)): each part is
+the Sheet step's page in a play role; `loadPerformanceScore.ts` deleted. Found on the way: **Replace
+the version** failed on a version of one pasted file (the audio kind `passage`), fixed for the paste,
+**Save to library** and the Source step.
 
 ## Phase 12: The music library data reconciled (any time after Phase 3; the parallel data is ready)
 

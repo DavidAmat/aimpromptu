@@ -203,18 +203,20 @@ The plan's section 3.
 ## [x] Story 10.4: Documentation
 - [x] Task 10.4.1 `projects.md` (playlists: `context/frontend/playlists.md`, new), `endpoints.md`; `editing.md`, `editing-and-compose.md`, `paths-and-data.md`, `07-database.md`, `private-library.md`, `pages.md`, `annotations-stretches.md`, `components.md`, `aitu-frontend/README.md`.
 
-# [ ] Phase 11: Play mode
+# [x] Phase 11: Play mode
 
-## [ ] Story 11.1: The page
-- [ ] Task 11.1.1 Close, Next, Play and Pause, the scroll that keeps the cursor in the middle, the keys.
-- [ ] Task 11.1.2 Lyrics by their frames; Notes Falling as a view.
+Built 2026-10-15 ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)); waiting for the user's check. `check:passage` to run again once the GPU is free.
 
-## [ ] Story 11.2: Playlists
-- [ ] Task 11.2.1 The next song, the list when closed, the continuous page.
-- [ ] Task 11.2.2 Entry points everywhere (`PerformancePage` was removed in Phase 1).
+## [x] Story 11.1: The page
+- [x] Task 11.1.1 Close, Next, Play and Pause, the scroll that keeps the cursor in the middle, the keys (`/play/:projectId`, each part the Sheet step's page in a play role).
+- [x] Task 11.1.2 Lyrics by their frames; Notes Falling as a view (on the recording's clock; the old page and its address removed).
 
-## [ ] Story 11.3: Documentation
-- [ ] Task 11.3.1 `context/frontend/play-mode.md` (new).
+## [x] Story 11.2: Playlists
+- [x] Task 11.2.1 The next song, the list when closed, the continuous page (**All songs**; the parts of one song play on, a songs playlist waits at each new song).
+- [x] Task 11.2.2 Entry points everywhere (`PerformancePage` was removed in Phase 1): song, version, Projects, a project's menu, a playlist and its rows.
+
+## [x] Story 11.3: Documentation
+- [x] Task 11.3.1 `context/frontend/play-mode.md` (new); `pages.md`, `projects.md`, `playlists.md`, `components.md`, `endpoints.md`, `editing-and-compose.md` (the audio kind fix found on the way).
 
 # [ ] Phase 12: The music library data reconciled
 

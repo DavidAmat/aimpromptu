@@ -96,7 +96,10 @@ const saveDialog = () => page.getByRole('dialog', { name: 'Save to library' });
 try {
   // 0. The temporary copy.
   const vault = await json(`${api}/projects`);
-  const source = vault.find((row) => row.step === 'sheet' && row.title.includes(values.piece));
+  const source = vault
+    // The shortest title that names it: the song itself, not a playlist or a copy made of it.
+    .filter((row) => row.step === 'sheet' && row.title.includes(values.piece))
+    .sort((a, b) => a.title.length - b.title.length)[0];
   if (!source) throw new Error(`No project of the vault named ${values.piece} has its piano sheet`);
   const copy = await post(`${api}/projects/${source.id}/duplicate`, { title: `${source.title} (check-library)` });
   madeProjects.add(copy.id);

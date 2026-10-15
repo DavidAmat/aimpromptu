@@ -43,7 +43,7 @@ from typing import BinaryIO, Iterable
 
 from aitu_backend.audio import formats, sources
 from aitu_backend.db.users import current_user_id
-from aitu_backend.schemas.metadata import AudioMetadata, AudioSource, TimeRange
+from aitu_backend.schemas.metadata import AudioMetadata, AudioSource, TimeRange, source_kind
 from aitu_backend.storage import audio_files, bundle, locate, paths
 from aitu_backend.storage.bundle import AudioEntry, PartSource, Segment, SourceFile, Timeline
 
@@ -550,7 +550,7 @@ def remove_file(
         if index == 0:
             # The fields of the source describe the first file.
             first = files[0]
-            source.kind = first.kind
+            source.kind = source_kind(first.kind)
             source.format = first.format
             source.original_filename = first.original_filename
             source.duration_seconds = first.duration_seconds

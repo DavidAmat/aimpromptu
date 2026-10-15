@@ -3,8 +3,10 @@
  * Phase 10): its songs in the order they play, each with the version chosen and the stretch, if
  * any. Nothing of a song can be changed here, only chosen: a row opens its version (read only), its
  * `⋯` chooses another version, takes the stretch away, moves it or removes it; a row is dragged to
- * another place. **Add a song** puts one of the library's songs at the end. Play comes with Play
- * mode (Phase 11).
+ * another place. **Add a song** puts one of the library's songs at the end.
+ *
+ * **Play** opens Play mode on the first song, and a click on a row on that song (Phase 11). Closing
+ * Play mode comes back here with the song it was on shaded (`?at=`), to choose another or reorder.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -27,9 +29,10 @@ import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import DriveFileRenameIcon from "@mui/icons-material/DriveFileRenameOutlineOutlined";
 import LaunchIcon from "@mui/icons-material/Launch";
+import PlayIcon from "@mui/icons-material/PlayCircleOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { libraryApi, playlistsApi, type PlaylistDetail, type PlaylistItem, type SongRow } from "../../api";
 import { ROUTES } from "../../layout/routes";
 import {
@@ -52,6 +55,9 @@ export function PlaylistPage() {
   const { id } = useParams();
   const playlistId = Number(id);
   const navigate = useNavigate();
+  /** The song Play mode was on when it was closed. */
+  const [search] = useSearchParams();
+  const playedAt = search.has("at") ? Number(search.get("at")) : null;
   const [playlist, setPlaylist] = useState<PlaylistDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -108,6 +114,12 @@ export function PlaylistPage() {
 
   const menuOf = (item: PlaylistItem, index: number): RowMenuItem[] => [
     {
+      label: "Play from here",
+      icon: <PlayIcon fontSize="small" />,
+      onClick: () => navigate(ROUTES.playPlaylist(playlistId, index)),
+      disabled: item.parts.length === 0,
+    },
+    {
       label: "Open",
       icon: <LaunchIcon fontSize="small" />,
       onClick: () => item.parts[0] && navigate(ROUTES.project(item.parts[0], "sheet")),
@@ -158,8 +170,8 @@ export function PlaylistPage() {
     );
   }
 
-  const addSong = (
-    <PillButton kind="primary" startIcon={<AddIcon />} onClick={() => setAdding(true)} data-testid="playlist-add-song">
+  const addSongButton = (kind: "primary" | "secondary") => (
+    <PillButton kind={kind} startIcon={<AddIcon />} onClick={() => setAdding(true)} data-testid="playlist-add-song">
       Add a song
     </PillButton>
   );
@@ -172,7 +184,17 @@ export function PlaylistPage() {
         actions={
           playlist ? (
             <>
-              {addSong}
+              {items.length > 0 ? addSongButton("secondary") : null}
+              {items.length > 0 ? (
+                <PillButton
+                  kind="primary"
+                  startIcon={<PlayIcon />}
+                  onClick={() => navigate(ROUTES.playPlaylist(playlistId))}
+                  data-testid="playlist-play"
+                >
+                  Play
+                </PillButton>
+              ) : null}
               <RowMenu
                 title="Playlist actions"
                 items={[
@@ -196,7 +218,7 @@ export function PlaylistPage() {
           ))}
         </Stack>
       ) : items.length === 0 ? (
-        <EmptyState message="No songs yet." action={addSong} />
+        <EmptyState message="No songs yet." action={addSongButton("primary")} />
       ) : (
         <Box role="list" aria-label="The songs, in the order they play" aria-busy={busy} data-playlist-items>
           {items.map((item, index) => {
@@ -239,7 +261,8 @@ export function PlaylistPage() {
                     }
                     status={item.versionName ?? "–"}
                     meta={item.fromMs !== null && item.toMs !== null ? stretchLabel(item.fromMs, item.toMs) : "Whole"}
-                    onOpen={() => item.parts[0] && navigate(ROUTES.project(item.parts[0], "sheet"))}
+                    onOpen={() => item.parts[0] && navigate(ROUTES.playPlaylist(playlistId, index))}
+                    selected={playedAt === index}
                     menu={menuOf(item, index)}
                   />
                 </Box>

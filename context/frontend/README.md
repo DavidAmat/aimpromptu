@@ -57,8 +57,8 @@ Detail: [projects.md](projects.md).
 
 **Removed in implementation 02, Phase 1** (decision Q-4): the Playground (Upload / Input, Notes
 Falling, Piano Sheet as tabs), the YouTube to Audio page, and the old Piano Library with its
-read-only performance page. A YouTube download is the Source step, Notes Falling opens from a
-project's `⋯` menu, and the old paths redirect.
+read-only performance page. A YouTube download is the Source step, Notes Falling is a view of
+Play mode (Phase 11, [play-mode.md](play-mode.md)), and the old paths redirect.
 
 ## What a reader does on the sheet
 
@@ -80,7 +80,7 @@ GET   /audio/{id}/frames/peaks  ──▶  the Audio tab's waveform
 PUT   /audio/{id}/cuts          ◀──  the selected region
 POST  /matrix/transcribe        ◀──  Transcribe; the progress stream feeds the live Notes tab
 PATCH /pieces/{id}/notes        ◀──  the edits of the Notes and Hands tabs, as operations
-GET   /matrix/{id}/events       ──▶  Notes Falling          (seconds, as recorded)
+GET   /matrix/{id}/events       ──▶  Notes Falling of Play mode (seconds, as recorded)
 GET   /time/{id}/default-reading ─▶ the figure ladder      (the highest pile of gaps is a negra)
 GET   /time/{id}/score          ──▶  TimeScoreView ──▶ @aimpromptu/grid-notation
 PUT   /time/{id}/rhythm         ◀──  the reader's decisions on the sheet

@@ -93,9 +93,10 @@ const rowMenu = async (row, item) => {
 
 async function freshCopy(label, name) {
   const vault = await json(`${api}/projects`);
-  const original = vault.find(
-    (row) => row.step === 'sheet' && row.title.toUpperCase().includes(name.toUpperCase()) && !row.title.includes('(check-'),
-  );
+  const original = vault
+    // The shortest title that names it: the song itself, not a playlist or a copy made of it.
+    .filter((row) => row.step === 'sheet' && row.title.toUpperCase().includes(name.toUpperCase()) && !row.title.includes('(check-'))
+    .sort((a, b) => a.title.length - b.title.length)[0];
   if (!original) throw new Error(`No project of the vault named ${name} has its piano sheet`);
   const copy = await send('POST', `${api}/projects/${original.id}/duplicate`, { title: `${original.title} (${label})` });
   made.add(copy.id);

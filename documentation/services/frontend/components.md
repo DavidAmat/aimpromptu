@@ -18,19 +18,20 @@
 |---|---|---|
 | **Sign in** | `/login` | `pages/LoginPage.tsx`, outside the shell (implementation 02, Phase 4) |
 | (start) | `/` | redirects to `/projects` |
-| **Projects** | `/projects` | `pages/ProjectsPage.tsx`: `GET /projects` (the vault), the **New project** menu with **From scratch** (`POST /projects` with `scratch`, then its Sheet step; Phase 8) and Import (`POST /projects/import`), the row menu (Duplicate, Export, Rename, Notes Falling, Delete) through `api/projects.ts`; an edit copy (`row.editing`) says **Editing**, adds **Open the song**, and its Delete is **Discard changes** |
+| **Projects** | `/projects` | `pages/ProjectsPage.tsx`: `GET /projects` (the vault), the **New project** menu with **From scratch** (`POST /projects` with `scratch`, then its Sheet step; Phase 8) and Import (`POST /projects/import`), the row menu (Duplicate, Export, Rename, **Play**, Delete) through `api/projects.ts`; an edit copy (`row.editing`) says **Editing**, adds **Open the song**, and its Delete is **Discard changes** |
 | · new project | `/projects/new` | `pages/piece/PiecePage.tsx` with the Source step only |
 | · From other projects | `/projects/compose` | `pages/compose/ComposePage.tsx` (Phase 10, section 3.2) |
 | · a project | `/projects/:id` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the project reached |
 | · one step | `/projects/:id/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab`, `HandsTab` or `SheetTab` |
-| · Notes Falling | `/projects/:id/notes-falling` | `PiecePage.tsx` + `pages/piece/NotesFallingPage.tsx` |
+| · Notes Falling | `/projects/:id/notes-falling` | Redirects to `/play/:id?view=falling` (Phase 11, `LEGACY_REDIRECTS`) |
 | · a passage | `/projects/:id/passages/:passageId` | `pages/piece/passage/PassagePage.tsx`, outside `PiecePage` (Phase 9, section 3.1) |
 | **Songs** (My library) | `/library/songs`, `/library/songs/:id` | `pages/library/SongsPage.tsx`, `SongPage.tsx` (Phase 6, section 10) |
 | **Artists** (My library) | `/library/artists`, `/library/artists/:id` | `pages/library/ArtistsPage.tsx`, `ArtistPage.tsx` |
 | **Playlists** (My library) | `/library/playlists`, `/library/playlists/:id` | `pages/library/PlaylistsPage.tsx`, `PlaylistPage.tsx` (Phase 10, section 1.1) |
+| **Play mode** | `/play/:projectId`, `/play/playlist/:playlistId` | `pages/play/PlayPage.tsx`, outside the shell (`RequireUser` only), keyed by the id (`PlayRoute` in `App.tsx`; Phase 11, section 4) |
 | **Users** (Admin) | `/admin/users` | `pages/admin/UsersPage.tsx`, inside `RequireMaster` |
 | **Lab** (Admin) | `/admin/lab/<tab>` | `layout/LabLayout.tsx` and `pages/video/`, inside `RequireMaster` |
-| (old paths) | `/piece/...`, `/video/...`, `/youtube`, `/playground/...`, `/library`, `/library/play/...` | `layout/LegacyRedirect.tsx`, until Phase 15 |
+| (old paths) | `/piece/...`, `/video/...`, `/youtube`, `/playground/...`, `/library`, `/library/play/...`, `/projects/:id/notes-falling` | `layout/LegacyRedirect.tsx`, until Phase 15 |
 | (development only) | `/dev/roll-bench` | `pages/dev/RollBenchPage.tsx`, lazy, only when `import.meta.env.DEV` |
 
 `<step>` is one of `PIECE_STEPS` in `api/pieces.ts`: `source`, `audio`, `notes`, `hands`, `sheet`.
@@ -77,12 +78,12 @@ sets it when it loads a project; the sheet reads its `frameMs` from it.
 | File | Role |
 |---|---|
 | `pages/library/SongsPage.tsx` | **Songs**: `GET /library/songs` as a `DataTable` (Title with **Editing** when a copy is open, Artist, Versions, Changed), a **Filter** field on the title and the artists, the empty state with **Open Projects** |
-| `pages/library/SongPage.tsx` | One song: its artists as links, its versions as `ListRow`s (a row opens the project read only; its `⋯`: Open, **Edit** or **Continue editing** (`POST /projects/{id}/edit`), Duplicate, Export, Rename, History, Delete); the header's `⋯`: Rename song, Artists (an `Autocomplete` of names, `PATCH /library/songs/{id}`), Delete song. `HistoryDialog` lists `GET /library/versions/{id}/history`, each with **Restore** after a confirmation. `data-testid="version-<id>"` is read by `check:library` |
+| `pages/library/SongPage.tsx` | One song: **Play** in its header (Play mode on the first version, Phase 11), its artists as links, its versions as `ListRow`s (a row opens the project read only; its `⋯`: Open, **Play**, **Edit** or **Continue editing** (`POST /projects/{id}/edit`), Duplicate, Export, Rename, History, Delete); the header's `⋯`: Rename song, Artists (an `Autocomplete` of names, `PATCH /library/songs/{id}`), Delete song. `HistoryDialog` lists `GET /library/versions/{id}/history`, each with **Restore** after a confirmation. `data-testid="version-<id>"` is read by `check:library` |
 | `pages/library/ArtistsPage.tsx` | **Artists**: `GET /library/artists` as a `DataTable` (Name, Other names, Songs) with a **Filter** |
 | `pages/library/ArtistPage.tsx` | One artist: **Names** (`ListRow`s, the default marked; Make default, Rename, Remove) with **Add a name**, **Songs**; the header's `⋯`: Merge into another artist (`MergeDialog`), Delete artist (disabled while it has songs) |
 | `pages/library/TextDialog.tsx`, `shared.ts` | One field and one button (rename, add a name); `said()` (the backend's words of a refusal), `download()`, `stretchLabel()` |
 | `pages/library/PlaylistsPage.tsx` | **Playlists** (Phase 10): a `DataTable` of the songs playlists (`GET /playlists`) and of the integrated playlists of the library (`GET /projects?layer=private`, `kind`), **New playlist** (a `TextDialog`) |
-| `pages/library/PlaylistPage.tsx` | One songs playlist: rows dragged by a handle (`useRowDrag`), each a `ListRow` (the song and its artists, the version, the stretch or "Whole") with **Use “<version>”**, **The whole song**, Move up/down, **Remove from the playlist**; **Add a song** (`ChooseSongDialog`); Rename, Delete. `data-playlist-items`, `data-playlist-item` are read by `check:compose` |
+| `pages/library/PlaylistPage.tsx` | One songs playlist: **Play** (Phase 11, `ROUTES.playPlaylist`), rows dragged by a handle (`useRowDrag`), each a `ListRow` (the song and its artists, the version, the stretch or "Whole"; a click plays from it; `?at=` shades the row Play mode was closed on) with **Play from here**, Open, **Use “<version>”**, **The whole song**, Move up/down, **Remove from the playlist**; **Add a song** (`ChooseSongDialog`); Rename, Delete. `data-playlist-items`, `data-playlist-item` are read by `check:compose` |
 | `pages/library/AddToPlaylistDialog.tsx` | **Add to a playlist**: a version (from the song page's version menu) or a stretch of it (from the read-only sheet's *Frames* panel) into a playlist or a new one |
 | `pages/library/SongsPage.tsx` (Phase 10) | Rows picked by their checkbox (`DataTable`'s `selected`), **Make a playlist of N** |
 
@@ -96,7 +97,7 @@ lists where the code is.
 
 | File | Role |
 |---|---|
-| `pages/piece/PiecePage.tsx` | The page: loads the audio, `GET /pieces/{uuid}/status` and the project's row (`GET /projects/{projectId}`: its `library` or `editing` link), draws the header (back arrow, title, the step tabs with the Audio tab named **Video** for a video project, the primary action, the `⋯` menu with Notes Falling, Export, and **Discard changes** on an edit copy), redirects a step that is not enabled, holds the leave dialog (**Stay**, **Discard**, **Save and continue**, a `ConfirmDialog`) and the `beforeunload` warning. Phase 6: **Save to library** once the Sheet step is ready (`SaveToLibraryDialog`); a project of the library (`audio.layer === "private"`) is `readOnly`, titled "<song> (<version>)", goes back to its song, and has **Edit** (`POST /projects/{id}/edit`) as its action |
+| `pages/piece/PiecePage.tsx` | The page: loads the audio, `GET /pieces/{uuid}/status` and the project's row (`GET /projects/{projectId}`: its `library` or `editing` link), draws the header (back arrow, title, the step tabs with the Audio tab named **Video** for a video project, the primary action, the `⋯` menu with **Play** (the whole project, once its Sheet step is open), Export, and **Discard changes** on an edit copy), redirects a step that is not enabled, holds the leave dialog (**Stay**, **Discard**, **Save and continue**, a `ConfirmDialog`) and the `beforeunload` warning. Phase 6: **Save to library** once the Sheet step is ready (`SaveToLibraryDialog`); a project of the library (`audio.layer === "private"`) is `readOnly`, titled "<song> (<version>)", goes back to its song, and has **Edit** (`POST /projects/{id}/edit`) as its action, with **Play** beside it (Phase 11) |
 | `pages/piece/pieceContext.ts` | What every tab shares: `usePiece()` (the piece, its status, `readOnly`, `refresh()`), `stepStatus()`, and `useUnsavedChanges(summary, {save, discard})`. `readOnly`: a version of the library, which every step shows without its changes (no handles or menus on Source; no cut, Save, Add audio or Transcribe on Audio, and no Video step; the roll in `view` mode with playback and no edit, Predict hands or Save; the sheet with Play and Print only and no toolbox) |
 | `pages/piece/SaveToLibraryDialog.tsx` | **Save to library** (Phase 6): Artist and Song as `Autocomplete` over `GET /library/artists` and `GET /library/songs` that take a new name as typed (choosing a known song sends its id and fills its artist), **Version name** ("original" at first). On an edit copy a `Segmented` **Replace “<version>”** / **New version**. `POST /projects/{id}/library`, then the song |
 | `pages/piece/PieceResume.tsx` | `/projects/:id`: follows the backend's `resume` |
@@ -198,7 +199,7 @@ byte for byte), then redesigned it to plan section 11. What it does for the read
 
 | Module | Role |
 |---|---|
-| `SheetPage.tsx` | Phase 10: `step.stretchAction` (a button beside **Copy this stretch** in the read-only *Frames* panel: **Add this stretch** on the page of From other projects, **Add to a playlist** on a version) and `step.onSplit` (**Start a new part here** in the range toolbox, `splitHere` with the page's sheet). The page: the state the modules share, the requests (default reading, saved reading, sheet, save, Remove all), the effects, the layout (title lines, scrub bar, sheet, floating bar, the toolboxes). **Record** (Phase 9): `startPassage` saves the sheet when it has changes, opens a passage (`passagesApi.open`) of the marked stretch or a new one at the end, and goes to its page; back from a promotion (the navigation's `promoted`, with the sheet before it), the promotion becomes the last step of the history (`resetEdits` to the sheet before, then `commit`), its undo and redo `POST …/versions/{n}/restore`. `step.passage` (`PassageView`) draws it on the page of a passage: `role` `current` (read only, no bar, no title lines, Space off, no copy or paste) or `proposal` (`anchorMs` given, the window and its drag, the passage's actions on the bar, only Key, Transpose and Layout in the sheet toolbox, saved by itself 1.2 s after a change, the held sheet reported by `onSheet`). The player's address is the audio revision when the page opened and `reloadAt` (`step.audioRevision`). **Copy and Paste** (Phase 8): `copyColumns` and `copySelection` (the marked stretch, or the frames of the picked notes), `pastePassage` (`POST /time/{uuid}/paste` with the page's sheet, then one history step by `edits.commit` whose undo and redo call `POST …/versions/{n}/restore`), the ⌘C, ⌘V and paste-event listeners, `reloadAt` (the ladder and the sheet read again, and the player's audio at a new address, without starting the edits again) and the cursor kept at the passage. A version of the library marks a stretch too, and gets a small *Frames* panel with **Copy this stretch** |
+| `SheetPage.tsx` | Phase 11: `step.play` (`PlayView`), Play mode's role: read only (`readOnly` on `TimeScoreView` too), no title lines, no scrub bar (`ScorePlayer` `headless`), no floating bar, no copy or paste; the transport through `playerRef`, `onPlaying`, `onTime`, `onEnded` (the end of the file, or `toMs` of a stretch through `stopAt`), `onSeek` (the cursor moved by the reader); a stretch's `fromMs` sought once the sheet is drawn; `followCentre`; `litLyrics`, the lyrics pieces whose frames sound while it plays. Phase 10: `step.stretchAction` (a button beside **Copy this stretch** in the read-only *Frames* panel: **Add this stretch** on the page of From other projects, **Add to a playlist** on a version) and `step.onSplit` (**Start a new part here** in the range toolbox, `splitHere` with the page's sheet). The page: the state the modules share, the requests (default reading, saved reading, sheet, save, Remove all), the effects, the layout (title lines, scrub bar, sheet, floating bar, the toolboxes). **Record** (Phase 9): `startPassage` saves the sheet when it has changes, opens a passage (`passagesApi.open`) of the marked stretch or a new one at the end, and goes to its page; back from a promotion (the navigation's `promoted`, with the sheet before it), the promotion becomes the last step of the history (`resetEdits` to the sheet before, then `commit`), its undo and redo `POST …/versions/{n}/restore`. `step.passage` (`PassageView`) draws it on the page of a passage: `role` `current` (read only, no bar, no title lines, Space off, no copy or paste) or `proposal` (`anchorMs` given, the window and its drag, the passage's actions on the bar, only Key, Transpose and Layout in the sheet toolbox, saved by itself 1.2 s after a change, the held sheet reported by `onSheet`). The player's address is the audio revision when the page opened and `reloadAt` (`step.audioRevision`). **Copy and Paste** (Phase 8): `copyColumns` and `copySelection` (the marked stretch, or the frames of the picked notes), `pastePassage` (`POST /time/{uuid}/paste` with the page's sheet, then one history step by `edits.commit` whose undo and redo call `POST …/versions/{n}/restore`), the ⌘C, ⌘V and paste-event listeners, `reloadAt` (the ladder and the sheet read again, and the player's audio at a new address, without starting the edits again) and the cursor kept at the passage. A version of the library marks a stretch too, and gets a small *Frames* panel with **Copy this stretch** |
 | `sheetEdits.ts` | The edits model: `SheetEdits` (one value, so undo is one history), `NO_EDITS`, the undo labels, `editsFromSaved` and `savedRhythmOf` (to and from the saved reading, `sheet.json`). `savedAnchorMs` (Phase 10): the saved sheet's pile length, which the page draws with instead of the pile measured again (`null` before the first save) |
 | `sheetConstants.ts` | The colours of the keyboards, the tabs of the range toolbox, the figure ladder, small helpers |
 | `toolboxPlacement.ts` | Where a toolbox opens, measured from what is drawn |
@@ -212,8 +213,8 @@ byte for byte), then redesigned it to plan section 11. What it does for the read
 
 | Shared component | Role |
 |---|---|
-| `components/time/TimeScoreView.tsx` | The staff. Owns the renderer instance, the playhead, selection and the range handles. `frameWindow` and `onFrameWindowMove` (Phase 9): the window over a Proposal, moved without a rebuild |
-| `components/time/ScorePlayer.tsx` | Plays the recording; `compact` draws only the scrub bar (the Sheet step); `keys` (Phase 9) turns Space off for a second player on the page. `version` (Phase 8) puts the audio at a new address when it changed under the page, because the browser keeps a media file by its address; the Audio and Notes steps add the audio revision the same way (`audioApi.fileUrl(uuid, normalized, revision)`) |
+| `components/time/TimeScoreView.tsx` | The staff. Owns the renderer instance, the playhead (`data-playhead`), selection and the range handles. `frameWindow` and `onFrameWindowMove` (Phase 9): the window over a Proposal, moved without a rebuild. Phase 11: `followCentre` (a new line brought to the middle of the window), `litLyrics` (every other lyrics piece drawn faint), a style scoped to its own sheet (`data-score-view`, `useId`) so several sheets share a page, and `readOnly` hiding the handle that spreads a line |
+| `components/time/ScorePlayer.tsx` | Plays the recording; `compact` draws only the scrub bar (the Sheet step); `headless` (Phase 11) draws nothing but a refused start; `stopAt` and `onEnded` (the end of a stretch, the end of the file); `preload` (`metadata` for a part of Play mode not yet playing, changed on the element without a new one); `keys` (Phase 9) turns Space off for a second player on the page. `version` (Phase 8) puts the audio at a new address when it changed under the page, because the browser keeps a media file by its address; the Audio and Notes steps add the audio revision the same way (`audioApi.fileUrl(uuid, normalized, revision)`) |
 | `components/time/ScorePdfDialog.tsx` | Paper size, margins, title, and a preview of the real pages |
 | `ui/Toolbox.tsx`, `ui/FloatingBar.tsx` | The draggable panel and the floating bar every step uses |
 
@@ -293,14 +294,24 @@ section 1), inside the shell with the sidebar closed:
 
 ---
 
-## 4. Notes Falling
+## 4. Play mode (Phase 11)
 
-`pages/piece/NotesFallingPage.tsx`, inside the page of a project (the project in the address), drawn from `GET /matrix/{uuid}/events`: the notes in the
-engine's own seconds. **It asks for no tempo and no resolution**, and a rectangle is as long as the
-note was actually held.
+`pages/play/` ([`context/frontend/play-mode.md`](../../../context/frontend/play-mode.md)), outside the
+shell.
 
 | Module | Role |
 |---|---|
+| `PlayPage.tsx` | The page: reads what it plays, draws each song (`data-play-song`) with its title and byline and each part (`PlaySegment`, memoised, `data-play-part="<song>:<part>"`, `data-play-active`) as `SheetPage` with `step.play`; drawn when it comes within 800 px of the window (`IntersectionObserver`) and kept. One transport per part (`players`, a map kept in state); the active part (the one playing or moved last) gets Space and the button; a part that starts stops any other; `ended` starts the next part of the song (`startWhenReady`, waiting for its sheet) or, in a songs playlist, opens the next song (one song) or scrolls to it (all songs) without starting it. **Close** (`navigate(-1)`, a project's page when there is no history, the playlist with `?at=` for a playlist), **Next** (`play-next`), **Play / Pause** (`play-toggle`, `data-playing`), the menu (`data-play-menu`: **Sheet** / **Notes Falling**, **One song** / **All songs**, kept in `localStorage` `aitu.play.allSongs`). The buttons fade 2.5 s after the pointer stops while it plays. Space, the arrows (scroll by 40 % of the window), Escape. `?at`, `?view=falling`, `?all` hold the choices |
+| `playQueue.ts` | What it plays: `projectQueue` (`GET /projects/{id}`, `GET /projects/{id}/parts`: one song, its parts with their subheaders when there are several) and `playlistQueue` (`GET /playlists/{id}`; a song with a stretch plays its first part from `fromMs` to `toMs`; the parts of a version of several parts read with `GET /projects/{id}/parts`); `PlayClock`, the time of the active part for Notes Falling, read without drawing the sheets again |
+| `FallingView.tsx` | Notes Falling of the active part (`data-play-falling`): `GET /matrix/{uuid}/events` (`usePlayedNotes`), the notes of the next 3 s over the 88-key `Piano`, the keys sounding lit, drawn from `PlayClock` (`useSyncExternalStore`); no selection, no sound of its own |
+
+The modules of the old Notes Falling page that nothing else used went with it (section 9). Still
+shared: `piano/Piano.tsx` and `piano/keyPositions.ts` (also on the sheet's keyboard panel),
+`playback/playedNotes.ts`, `playback/noteVisuals.ts`, `hooks/usePlayedNotes.ts`,
+`playback/ProgressBar.tsx` (the sheet's scrub bar), `playback/useSpacebarPlay.ts` (the Audio, Notes
+and Hands steps), `hooks/useNoteSelection.ts` (the Lab's notes on a frame), `hooks/useElementSize.ts`.
+
+---|---|
 | `piano/Piano.tsx`, `piano/keyPositions.ts` | The 88-key SVG keyboard, both orientations (also on the sheet) |
 | `playback/usePlayback.ts` | The transport: original audio or synthesised piano |
 | `playback/PlaybackTransport.tsx`, `PlayerToolbar.tsx` | The controls |
@@ -339,11 +350,10 @@ box now: one unit is one pixel, text is undistorted, and a 2 px border is 2 px.
 
 ---
 
-## 6. Printing, and what Play mode will start from
+## 6. Printing
 
 | Module | Role |
 |---|---|
-| `library/loadPerformanceScore.ts` | Fetch the score payload and the saved rhythm together. Kept for Play mode (Phase 11); nothing calls it now |
 | `print/scorePdf.ts`, `drawPage.ts`, `pdf.ts`, `opentype.ts` | The PDF writer |
 
 Detail on the PDF in [score-pdf.md](score-pdf.md).
@@ -459,6 +469,12 @@ Timestamps are `mm:ss.cc` everywhere and never wrap:
 
 Stated so nobody looks for them.
 
+**In implementation 02, Phase 11** (Notes Falling became a view of Play mode):
+`pages/piece/NotesFallingPage.tsx` with its transport and synthesised piano (`playback/usePlayback.ts`,
+`PlayerToolbar.tsx`, `PlaybackTransport.tsx`), its note removals (`hooks/useStagedRemovals.ts`,
+`components/notes/NoteSelectionToolbox.tsx`, `PendingRemovalsBar.tsx`), `describeEvents`, and
+`library/loadPerformanceScore.ts` (kept for Play mode, which reuses `SheetPage` instead).
+
 **In implementation 02, Phase 9**: `components/editing/RangeRerecordPanel.tsx` (Epic 11),
 `ComposePassagePanel.tsx` (Epic 13), `components/editing/useClickTrack.ts` (the metronome, removed after the user's review: its clicks were recorded with the take), `components/time/PeakPlot.tsx` and `api/editing.ts`: the page
 of a passage (section 3.1) replaced the two panels, the sheet's Re-record tab and its Record panel,
@@ -508,7 +524,7 @@ npm run check:notes       # the Notes tab's typed arrays, live feed and edits
 
 These need the running app (`make up` from the repository root). Each works on temporary copies or
 uploads and deletes them at the end, so the library is never changed. `check:flow`,
-`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
+`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
 user with `AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env` at the repository root (or
 `AITU_CHECK_USERNAME` and `AITU_CHECK_PASSWORD` from the environment), makes every `fetch` of the
 script send the cookie (`signIn(base)`), and gives every Playwright page the same cookie
@@ -524,6 +540,7 @@ npm run check:lyrics    # the Lyrics tab on a copy of Elefants: pool, drag onto 
 npm run check:paste     # Copy and Paste between two copies, undo and redo, ⌘V over a stretch, From scratch, every join of the audio
 npm run check:passage   # Record this passage on a copy: a take with the fake microphone, one from a file, Write the proposal, Fit, the window, both promotions, undo and redo, a blank sheet, Discard
 npm run check:compose   # From other projects on two copies, Save as integrated playlist, the parts (rename, move, join, split), Make a playlist, Add to a playlist
+npm run check:play      # Play mode on copies: the page, Space, the fading buttons, the cursor in the middle, lyrics by frames, Notes Falling, an integrated playlist played on, a songs playlist (Next, a stretch, All songs)
 node scripts/check-sheet-toolbox.mjs --only clefs  # the clef rule on a first write of a copy of Superestrella's tutorial
 npm run time:flow     # the whole flow timed on three temporary pieces (upload, a duplicated library piece, YouTube)
 npm run bench:roll    # the Notes tab at 10,000 rectangles and at 100 stream messages per second

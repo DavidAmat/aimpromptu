@@ -111,9 +111,10 @@ const hasLyric = async (words) => (await lyricNamed(words)) !== null;
 async function freshCopy(label, piece = values.piece) {
   const vault = await json(`${api}/projects`);
   // Never one of this script's own copies, which carry "(check-…)" in their title.
-  const source = vault.find(
-    (row) => row.step === 'sheet' && row.title.includes(piece) && !row.title.includes('(check-'),
-  );
+  const source = vault
+    // The shortest title that names it: the song itself, not a playlist or a copy made of it.
+    .filter((row) => row.step === 'sheet' && row.title.includes(piece) && !row.title.includes('(check-'))
+    .sort((a, b) => a.title.length - b.title.length)[0];
   if (!source) throw new Error(`No project of the vault named ${piece} has its piano sheet`);
   const copy = await send('POST', `${api}/projects/${source.id}/duplicate`, { title: `${source.title} (${label})` });
   made.add(copy.id);

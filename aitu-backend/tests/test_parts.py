@@ -153,6 +153,31 @@ def test_a_song_of_one_part_has_no_subheader(client: TestClient, sources: tuple[
     ]
 
 
+def test_a_song_of_one_pasted_passage_is_saved_and_replaced_in_the_library(
+    client: TestClient, sources: tuple[str, str]
+) -> None:
+    """Found in Phase 11: a part whose one file came from a paste names it ``passage``. **Save to
+    library** writes that file again and described the part with the file's word, which the audio
+    metadata refuses, so the version could not be read and **Replace the version** answered 422."""
+    clocks, _ = sources
+    row = compose(
+        client, title="One stretch", passages=[{"part": clocks, "fromMs": 1000, "toMs": 4000}]
+    )
+    part = row["id"]
+    saved = client.post(
+        f"/projects/{part}/library",
+        json={"song": "One stretch", "artist": "Coldplay", "version": "original"},
+    )
+    assert saved.status_code == 201, saved.text
+    assert client.get(f"/audio/{part}").status_code == 200
+    assert bundle.read_project(part).part(part).source.kind == "composed"
+
+    copy = client.post(f"/projects/{part}/edit").json()["id"]
+    replaced = client.post(f"/projects/{copy}/library", json={"replace": True})
+    assert replaced.status_code == 201, replaced.text
+    assert client.get(f"/audio/{part}").status_code == 200
+
+
 def test_a_passage_that_cannot_be_put_in_leaves_nothing_behind(
     client: TestClient, sources: tuple[str, str]
 ) -> None:
