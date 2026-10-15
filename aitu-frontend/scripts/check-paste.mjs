@@ -185,7 +185,7 @@ try {
   // The audio the sheet's player loads after the paste is the new one, as long as the piece.
   const pieceSeconds = (await json(`${api}/audio/${target.id}`)).durationSeconds;
   const playerUrl = [...audioRequests].reverse().find((url) => url.includes(target.id));
-  check('the player asks for the audio at a new address after the paste', Boolean(playerUrl && /[?&]v=0\.[1-9]/.test(playerUrl)), playerUrl);
+  check('the player asks for the audio at a new address after the paste', Boolean(playerUrl && /[?&]v=\d+\.[1-9]/.test(playerUrl)), playerUrl);
   const played = await page.evaluate(async (url) => {
     const audio = new Audio(url);
     await new Promise((resolve, reject) => {

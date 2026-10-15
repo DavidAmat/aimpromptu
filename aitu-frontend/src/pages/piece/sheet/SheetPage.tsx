@@ -25,7 +25,10 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
+  type RefObject,
 } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Snackbar from "@mui/material/Snackbar";
@@ -41,11 +44,12 @@ import ScorePlayer, {
 } from "../../../components/time/ScorePlayer";
 import TimeScoreView, { MIN_ZOOM } from "../../../components/time/TimeScoreView";
 import ScorePdfDialog from "../../../components/time/ScorePdfDialog";
-import ComposePassagePanel from "../../../components/editing/ComposePassagePanel";
 import CheckIcon from "@mui/icons-material/Check";
 import {
+  passagesApi,
   timeScoreApi,
   type DefaultReading,
+  type Promoted,
   type FigureName,
   type HandChoice,
   type KeySignatureName,
@@ -60,6 +64,7 @@ import {
   suggestClefRanges,
   type ClefChangeAnnotation,
   type ClefRange,
+  type FrameWindow,
   type GridNotationRenderer,
   type KeySignature,
   type LyricPlaceChange,
@@ -82,6 +87,7 @@ import {
   type PrintedHand,
 } from "../../../music/renderOverrides";
 import { useEditHistory } from "../../../hooks/useEditHistory";
+import { ROUTES } from "../../../layout/routes";
 import {
   PASSAGE_TYPE,
   passageFromText,
@@ -124,7 +130,7 @@ import {
   screenBoxOf,
 } from "./toolboxPlacement";
 import { useNoteActions, type FingerDraft } from "./useNoteActions";
-import { useRangeActions, type FrameRange } from "./useRangeActions";
+import { useRangeActions } from "./useRangeActions";
 import { NoteToolbox } from "./NoteToolbox";
 import { RangeToolbox } from "./RangeToolbox";
 import { DecorationToolbox, PianoToolbox } from "./PianoToolboxes";
@@ -167,7 +173,40 @@ export interface SheetStep {
    * nothing on it opens a toolbox, and there is no Save. It changes through **Edit**.
    */
   readOnly?: boolean;
+  /** Drawn on the page of a passage (Record in Sheet, Phase 9): the Current or the Proposal. */
+  passage?: PassageView;
+  /**
+   * The audio revision of the part when the page opened. In the player's address with the page's
+   * own reloads, so audio changed by another page (a promotion, Phase 9) is not the file the
+   * browser kept under the old address (Phase 8 learning).
+   */
+  audioRevision?: number | undefined;
 }
+
+/**
+ * How a sheet is drawn on the page of a passage (plan section 13). The **Current** is the copy of
+ * the marked frames, read only, with no bar of its own; the **Proposal** is a take, with every tool
+ * of the sheet and its own bar, which carries the passage's actions too. Both are named with the
+ * song's figure there (`anchorMs`), so the two read alike; neither prints the title lines.
+ */
+export interface PassageView {
+  role: "current" | "proposal";
+  /** What the figure lasts, in ms of this sheet; the song's at the passage times the speed. */
+  anchorMs?: number;
+  /** The window over the take, and its drag (the Proposal). */
+  frameWindow?: FrameWindow;
+  onWindowMove?: (fromColumn: number, done: boolean) => void;
+  /** The actions of the passage, on the Proposal's bar. */
+  barActions?: ReactNode;
+  /** The transport, for the page's own play buttons, and whether it is sounding. */
+  playerRef?: RefObject<ScorePlayerControls | null>;
+  onPlaying?: (playing: boolean) => void;
+  /** The sheet as the page holds it, unsaved edits included: what a promotion carries. */
+  onSheet?: (sheet: SavedRhythm | null) => void;
+}
+
+/** The sheet toolbox of a Proposal. */
+const PROPOSAL_TABS: readonly SheetTab[] = ["key", "transpose", "layout"];
 
 /** In place of a handler on a sheet that only shows. */
 const ignore = () => undefined;
@@ -223,7 +262,12 @@ type TransposePreview =
     };
 
 export function SheetPage({ step }: { step?: SheetStep } = {}) {
-  const readOnly = step?.readOnly ?? false;
+  const passageView = step?.passage ?? null;
+  /** On the page of a passage: which of its two sheets this is. */
+  const role = passageView?.role ?? null;
+  const readOnly = (step?.readOnly ?? false) || role === "current";
+  const navigate = useNavigate();
+  const location = useLocation();
   const { artifact } = useWorkingArtifact();
   const audioUuid = step ? step.audioUuid : artifact.audioUuid;
   const pieceLabel = step ? step.label : artifact.label;
@@ -468,9 +512,9 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   const [flash, setFlash] = useState<"saved" | null>(null);
   /** The sheet toolbox, and which of its tabs is open. */
   const [sheetToolbox, setSheetToolbox] = useState(false);
-  const [sheetTab, setSheetTab] = useState<SheetTab>("title");
-  /** The Record toolbox: play a passage and put it into the piece. */
-  const [recordOpen, setRecordOpen] = useState(false);
+  const [sheetTab, setSheetTab] = useState<SheetTab>(role === "proposal" ? "key" : "title");
+  /** **Record this passage** is opening the page of the passage. */
+  const [openingPassage, setOpeningPassage] = useState(false);
   /** The Trills toolbox: what **Find trills** found, each one a press away from being written. */
   const [trillsOpen, setTrillsOpen] = useState(false);
   /** A transposition in its preview dialog, the preview being written, and the write. */
@@ -501,34 +545,32 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    * during render is how the reset happens, which keeps it out of the effect.
    */
   /**
-   * Raised whenever a passage is put into the piece (Epic 13). It is in the view key because
-   * placing one changes the music: the piles, the chosen pile, the sheet and the saved reading are
-   * all about playing that has just changed, so all of them are read again rather than patched.
-   */
-  const [composed, setComposed] = useState(0);
-  /**
    * Raised when the notes and the audio changed under the page but its edits did not have to start
-   * again: a paste, and its undo and redo (Phase 8). The ladder and the sheet are read again; the
+   * again: a paste, a promotion of a re-recorded passage, and their undo and redo (Phases 8, 9). The ladder and the sheet are read again; the
    * edits and their history stay, because the paste is one of their steps.
    */
   const [reloadAt, setReloadAt] = useState(0);
-  const key = `${audioUuid ?? ""}|${hand}|${frameMs}|${composed}|${reloadAt}`;
+  /**
+   * The audio revision when the page opened: with `reloadAt`, the player's address. Taken once, so a
+   * refresh of the steps after a paste does not load the audio a second time; a write made on
+   * another page (a promotion) opens this page again with the new one.
+   */
+  const [openedAtRevision] = useState(step?.audioRevision);
+  const key = `${audioUuid ?? ""}|${hand}|${frameMs}|${reloadAt}`;
   const [view, setView] = useState<View>(() => emptyView(key));
   const [untranscribed, setUntranscribed] = useState(false);
   if (view.key !== key) setView(emptyView(key));
 
   /**
-   * A different piece, or a passage placed into this one: start the edits and the history again.
+   * A different piece: start the edits and the history again.
    *
    * Not on a change of hand, which only changes which hand's gaps the plot is read from and leaves
-   * every decision about the sheet standing. Placing a passage is in here because it moves every
-   * mark after the insertion point, so a step from before it would put a bracket back over notes
-   * that are somewhere else now.
+   * every decision about the sheet standing.
    *
    * Compared during render, the same way the view above is, so there is no render in between
    * showing one piece's edits over another piece's notes.
    */
-  const editsKey = `${audioUuid ?? ""}|${composed}`;
+  const editsKey = audioUuid ?? "";
   const [editsFor, setEditsFor] = useState(editsKey);
   /**
    * Whether the saved reading of this piece has been asked for and answered (found or not). The
@@ -543,8 +585,11 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   }
 
   const { reading, score, error } = view;
-  /** The length of the highest pile of gaps, which every figure is named from. */
-  const anchorMs = reading?.anchorMs ?? null;
+  /**
+   * The length of the highest pile of gaps, which every figure is named from. On the page of a
+   * passage, the song's at the passage instead, so its two sheets are named alike.
+   */
+  const anchorMs = passageView?.anchorMs ?? reading?.anchorMs ?? null;
 
   /**
    * How long the piece is, and whether there is anything in it.
@@ -1225,55 +1270,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
   });
   const { notesUnderRange } = rangeActions;
 
-  /**
-   * A re-record was accepted. It writes over a window of the recording, and may splice the audio
-   * itself. Nothing brings that back, so the marks inside the window are dropped and the history is
-   * started again here rather than left holding steps that point into a passage that is not there
-   * any more. The panel says so before Accept is pressed.
-   */
-  const acceptRerecord = (accepted: FrameRange) => {
-    const from = accepted.fromColumn;
-    const to = accepted.toColumn;
-    const inside = (frame: number) => frame >= from && frame < to;
-    setOverrides((current) => {
-      const next = { ...current };
-      for (const key of Object.keys(next)) {
-        if (inside(Number(key.split(":")[1]))) delete next[key];
-      }
-      return next;
-    });
-    setBeamBreaks(
-      (current) =>
-        new Set(
-          [...current].filter(
-            (key) => !inside(Number(key.split(":")[1])),
-          ),
-        ),
-    );
-    setHiddenNotes(
-      (current) =>
-        new Set(
-          [...current].filter(
-            (ref) => !inside(Number(ref.split(":")[0])),
-          ),
-        ),
-    );
-    setFingers((current) => {
-      const next = { ...current };
-      for (const key of Object.keys(next)) {
-        if (inside(Number(key.split(":")[1]))) delete next[key];
-      }
-      return next;
-    });
-    setOttavas((current) =>
-      current.filter(
-        (span) =>
-          span.fromColumn < from || span.fromColumn >= to,
-      ),
-    );
-    resetEdits((current) => current);
-    void apply();
-  };
 
   /**
    * The two selections are one selection, said two ways, and either button hands it to the other.
@@ -1450,8 +1446,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     return () => window.removeEventListener("keydown", onKey);
   }, [undo, redo]);
 
-  const save = useCallback(async () => {
-    if (!audioUuid || anchorMs === null) return;
+  const save = useCallback(async (): Promise<boolean> => {
+    if (!audioUuid || anchorMs === null) return false;
     setSaving(true);
     setSaveProblem(null);
     const keptEdits = edits.state;
@@ -1483,7 +1479,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         await timeScoreApi.setRemoved(audioUuid, frameMs, body.hiddenNotes, true);
       }
       setCleanEdits(keptEdits);
-      setFlash("saved");
+      // The Proposal of a passage keeps itself: no "Saved" on a bar that has no Save.
+      if (role !== "proposal") setFlash("saved");
       step?.onChanged();
     } catch (caught) {
       const why = readable(caught, "Could not save this sheet.");
@@ -1497,7 +1494,36 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     } finally {
       setSaving(false);
     }
-  }, [audioUuid, anchorMs, reading, hand, frameMs, edits.state, live, step]);
+    return kept;
+  }, [audioUuid, anchorMs, reading, hand, frameMs, edits.state, live, step, role]);
+
+  /**
+   * **Record this passage** (the range toolbox) and **Record a passage** (the bar, a blank sheet):
+   * the page of a passage of this part (plan section 13). A marked stretch is re-recorded; with
+   * none, a new passage goes at the end. The sheet is saved first when it has changes, because the
+   * passage is a copy of the saved sheet and the promotion writes into it.
+   */
+  const startPassage = useCallback(
+    async (fromColumn: number | null, toColumn: number | null) => {
+      if (!audioUuid || openingPassage) return;
+      setOpeningPassage(true);
+      setMoveRefused(null);
+      try {
+        if (unsaved && score && anchorMs !== null && !(await save())) return;
+        // The end of the piece, as the notes say it (the backend puts a later moment there too).
+        const end = Math.ceil(((reading?.endSeconds ?? pieceSeconds) * 1000) / frameMs);
+        const fromMs = (fromColumn ?? end) * frameMs;
+        const toMs = (toColumn ?? end) * frameMs;
+        const opened = await passagesApi.open(audioUuid, fromMs, toMs);
+        navigate(ROUTES.passage(opened.projectId, opened.id));
+      } catch (caught) {
+        setMoveRefused(readable(caught, "Could not open the passage."));
+      } finally {
+        setOpeningPassage(false);
+      }
+    },
+    [audioUuid, openingPassage, unsaved, score, anchorMs, save, frameMs, reading, pieceSeconds, navigate],
+  );
 
   /**
    * The page edits, in the shape the sheet request takes, and a signature for them.
@@ -2189,6 +2215,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
    * event reads one from there, and the app's own clipboard is used when the browser sends none.
    */
   useEffect(() => {
+    // The page of a passage copies and pastes nothing: its two sheets are not the song.
+    if (role) return undefined;
     const inField = (target: EventTarget | null) =>
       Boolean((target as Element | null)?.closest?.("input, textarea, select, [contenteditable='true']"));
     let pasteHandled = false;
@@ -2225,7 +2253,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       document.removeEventListener("paste", onPaste);
       window.removeEventListener("keydown", onKey);
     };
-  }, [copySelection, pastePassage, readOnly]);
+  }, [copySelection, pastePassage, readOnly, role]);
 
   // The sheet is drawn again: its player is new, so the cursor is put back where the passage went.
   useEffect(() => {
@@ -2237,6 +2265,94 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     }, 120);
     return () => window.clearTimeout(wait);
   }, [score, cursorAfterReload, scrollToCursor]);
+
+  // ------------------------------------------------------------------ on the page of a passage
+
+  /** Whether the recording is sounding, said to the page of a passage too. */
+  const onPassagePlaying = passageView?.onPlaying;
+  const reportPlaying = useCallback(
+    (now: boolean) => {
+      setPlaying(now);
+      onPassagePlaying?.(now);
+    },
+    [onPassagePlaying],
+  );
+  // The page of a passage plays this sheet from its own button.
+  const passagePlayer = passageView?.playerRef;
+  useEffect(() => {
+    if (passagePlayer) passagePlayer.current = player.current;
+  });
+  /** The sheet as the page holds it, for a promotion to carry (the Proposal). */
+  const heldSheet = useMemo(
+    () =>
+      role === "proposal" && score && anchorMs !== null
+        ? savedRhythmOf({ hand: reading?.hand ?? hand, frameMs, anchorMs, edits: edits.state, live })
+        : null,
+    [role, score, anchorMs, reading, hand, frameMs, edits.state, live],
+  );
+  const onPassageSheet = passageView?.onSheet;
+  useEffect(() => {
+    onPassageSheet?.(heldSheet);
+  }, [heldSheet, onPassageSheet]);
+  // The Proposal keeps itself: a change is saved a moment after it, so it outlives a reload.
+  useEffect(() => {
+    if (role !== "proposal" || !unsaved || saving || !score || anchorMs === null || stale) return;
+    const waiting = window.setTimeout(() => void save(), 1200);
+    return () => window.clearTimeout(waiting);
+  }, [role, unsaved, saving, score, anchorMs, stale, save]);
+
+  /**
+   * Back from the page of a passage after **Promote** (plan section 13): the promotion is one step
+   * of this sheet's history, whose undo puts the part back as it was and whose redo promotes again,
+   * like a paste. The sheet before it travels with the navigation, so the step's undo puts its
+   * marks back on the page too.
+   */
+  const promoted =
+    (location.state as { promoted?: Promoted & { before: SavedRhythm | null } } | null)?.promoted ??
+    null;
+  const [promotionTaken, setPromotionTaken] = useState<number | null>(null);
+  useEffect(() => {
+    if (!promoted || !audioUuid || promoted.part !== audioUuid) return;
+    if (promotionTaken === promoted.beforeVersion || !score || !rhythmChecked) return;
+    setPromotionTaken(promoted.beforeVersion);
+    navigate(location.pathname, { replace: true, state: null });
+    const after = edits.state;
+    const before = editsOfSaved(promoted.before);
+    const versions = { undo: promoted.beforeVersion, redo: 0 };
+    const restored = (saved: SavedRhythm | null) => {
+      setCleanEdits(editsOfSaved(saved));
+      setCursorAfterReload(promoted.atMs / 1000);
+      setReloadAt((at) => at + 1);
+      step?.onChanged();
+    };
+    if (before) resetEdits(before);
+    commit("Promote the passage", after, {
+      undo: async () => {
+        const back = await timeScoreApi.restoreVersion(audioUuid, versions.undo);
+        versions.redo = back.keptVersion;
+        restored(back.sheet);
+      },
+      redo: async () => {
+        const again = await timeScoreApi.restoreVersion(audioUuid, versions.redo);
+        versions.undo = again.keptVersion;
+        restored(again.sheet);
+      },
+    });
+    setCursorAfterReload(promoted.atMs / 1000);
+  }, [
+    promoted,
+    audioUuid,
+    promotionTaken,
+    score,
+    rhythmChecked,
+    navigate,
+    location.pathname,
+    edits.state,
+    editsOfSaved,
+    resetEdits,
+    commit,
+    step,
+  ]);
 
   /** What the Paste button says it does. */
   const pasteTitle = copied
@@ -2532,7 +2648,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
 
   const sheetTitle = title ?? pieceLabel ?? "Untitled";
   const underTitle = [subtitle, artist].filter(Boolean).join(" · ");
-  const recordAt = range?.fromColumn;
 
   return (
     <Box data-sheet-page>
@@ -2572,9 +2687,14 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         <EmptyState
           message="Nothing to write yet."
           action={
-            readOnly ? undefined : (
+            readOnly || role ? undefined : (
               <Stack direction="row" spacing={1}>
-                <PillButton kind="primary" onClick={() => setRecordOpen(true)}>
+                <PillButton
+                  kind="primary"
+                  busy={openingPassage}
+                  onClick={() => void startPassage(null, null)}
+                  data-testid="empty-record"
+                >
                   Record a passage
                 </PillButton>
                 {copied ? (
@@ -2600,7 +2720,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       {score ? (
         <Stack spacing={1.5}>
           {/* The title lines of the sheet, as they print. Changed in the Title tab. */}
-          <Box sx={{ px: 1 }}>
+          <Box sx={{ px: 1, display: role ? "none" : undefined }}>
             <Typography
               component="h2"
               sx={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3 }}
@@ -2619,14 +2739,17 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
           <ScorePlayer
             compact
             audioUuid={audioUuid}
-            version={`${composed}.${reloadAt}`}
+            version={`${openedAtRevision ?? 0}.${reloadAt}`}
             scoreSeconds={(score.envelope.frameCount * score.envelope.frameMs) / 1000}
             onTime={setPlayheadSeconds}
             controlsRef={player}
             onScrollToCursor={scrollToCursor}
-            onPlaying={setPlaying}
+            onPlaying={reportPlaying}
+            keys={role !== "current"}
           />
+          {role === "current" ? null : (
           <SheetFloatingBar
+            passageActions={role === "proposal" ? (passageView?.barActions ?? null) : undefined}
             readOnly={readOnly}
             playing={playing}
             onTogglePlay={() => player.current?.toggle()}
@@ -2644,7 +2767,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
             }}
             toolboxOpen={sheetToolbox}
             onToolbox={() => setSheetToolbox((open) => !open)}
-            onRecord={() => setRecordOpen(true)}
+            onRecord={() => void startPassage(null, null)}
+            recording={openingPassage}
             paste={{
               title: pasteTitle,
               can: copied !== null,
@@ -2678,6 +2802,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
               edits.clearFailure();
             }}
           />
+          )}
           {/*
             Capture, so the press is recorded before the sheet's own handlers run and open a
             toolbox from it.
@@ -2750,6 +2875,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
               followPlayhead={playing}
               onScrub={scrub}
               scrollCursorAt={scrollCursorAt}
+              frameWindow={passageView?.frameWindow}
+              onFrameWindowMove={passageView?.onWindowMove}
             />
           </Box>
         </Stack>
@@ -2761,6 +2888,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       ) : null}
 
       <SheetToolbox
+        // A take's title and words are the song's: the Proposal offers its key, figures and layout.
+        tabs={role === "proposal" ? PROPOSAL_TABS : undefined}
         open={sheetToolbox && score !== null}
         onClose={() => setSheetToolbox(false)}
         tab={sheetTab}
@@ -2806,46 +2935,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         onConfirm={() => void confirmTranspose()}
         onCancel={() => setTransposePreview(null)}
       />
-
-      {/*
-        Record: play a passage and put it into the piece, at the start of the marked stretch or at
-        the end. Paste joins it in Phase 8 and Record in Sheet replaces it in Phase 9.
-      */}
-      <Toolbox
-        open={recordOpen}
-        title="Record a passage"
-        subtitle={
-          recordAt === undefined
-            ? "Added at the end"
-            : `Added at ${formatSeconds((recordAt * frameMs) / 1000)}`
-        }
-        initialPosition={{ x: 24, y: 120 }}
-        onClose={() => setRecordOpen(false)}
-        width={420}
-      >
-        <Stack spacing={1.5}>
-          <Alert severity="warning" variant="outlined">
-            Placing a passage writes it onto the recording. Undo cannot take it back.
-          </Alert>
-          <ComposePassagePanel
-            audioUuid={audioUuid}
-            frameMs={frameMs}
-            durationSeconds={pieceSeconds}
-            atColumn={recordAt}
-            anchorFigure={anchorFigure}
-            anchorMs={anchorMs ?? undefined}
-            speedChanges={stretches.map((stretch) => ({
-              startFrame: stretch.startFrame,
-              anchorMs: stretch.anchorMs,
-            }))}
-            clickIntervalMs={anchorMs ?? undefined}
-            onPlaced={() => {
-              setRecordOpen(false);
-              setComposed((token) => token + 1);
-            }}
-          />
-        </Stack>
-      </Toolbox>
 
       {/* What Find trills found: two notes taking turns three times or more, one row each. */}
       <Toolbox
@@ -2955,7 +3044,6 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
       <RangeToolbox
         open={framesToolbox && !readOnly}
         range={range}
-        setRange={setRange}
         frameMs={frameMs}
         framesAt={framesAt}
         onClose={closeFrames}
@@ -2974,9 +3062,11 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         state={edits.state}
         set={edits.set}
         setOttavaHidden={setOttavaHidden}
-        audioUuid={audioUuid}
         anchorMs={anchorMs}
-        onRerecordAccepted={acceptRerecord}
+        onRecordPassage={
+          role ? undefined : (stretch) => void startPassage(stretch.fromColumn, stretch.toColumn)
+        }
+        recordingPassage={openingPassage}
       />
 
       <NoteToolbox

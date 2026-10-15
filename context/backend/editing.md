@@ -1,75 +1,26 @@
-# Editing a piece: re-record, compose, and paste
+# Editing a piece: paste, and Recording in Sheet
 
-Three ways a recording changes after it has been transcribed. Re-record and compose share one
-session model and differ in exactly one thing: whether the piece is allowed to get longer. Paste
-(implementation 02, Phase 8) is the third, and it uses the same rule as compose: everything after
-the insertion point moves.
+Two ways a part changes after it has been transcribed, other than a note edit on its Notes, Hands or
+Sheet step. **Paste** (implementation 02, Phase 8) puts a stretch of any part the user may read into
+it. **Recording in Sheet** (Phase 9) re-records a stretch of it, or records a new passage into it,
+on a page of its own. Both write in one go, with one rule for the length, and both are one step of
+the sheet's undo.
 
-## Re-record a passage — the length never changes
+Until Phase 9 a re-record (Epic 11) and a recorded passage (Epic 13) were two panels of the sheet
+over a staged session (`/audio/{uuid}/edits`), and neither could be undone. The page of a passage
+replaced both; the staged session and its routes are gone.
 
-You mark a stretch of the sheet, play it again at any speed you like, look at a preview of it fitted
-into that same stretch, and accept or cancel.
-
-**A re-recorded passage is written back into exactly the window it replaces.** Mark three seconds,
-play the passage over twelve, and the take is scaled back into those three seconds on accept.
-
-The column count therefore never changes, and that one property buys everything else: the recording
-still lines up with the page, the playhead still lands where it did, and every passage boundary, key
-change, renamed figure, beam break and fingering **after** the edited window keeps working without
-renumbering.
-
-It is the same property a ladder change has (D-21) — correcting the end of a piece must never make a
-reader re-read the beginning.
-
-The underlying operation is a plain splice of a span of columns and it does not care about length.
-Fewer columns and more columns are both possible. **Range editing does not offer them, on purpose.**
-
-### What it costs
-
-Marks anchored **inside** the replaced window are dropped, because the notes they were about are not
-there any more. The count is reported by kind before the button is pressed, because a fingering that
-has silently gone looks exactly like one that was never there.
-
-## Compose a piece — length may change
-
-**Compose** on Upload / Input starts a piece with nothing in it: an empty `notes.pmn`, a column
-length, and no audio file at all. The first accepted passage is what creates a recording.
-
-**Add a passage** on Piano Sheet is the stage. Play, cut the recording the way Input does, read that
-stretch, look at the passage **on its own** with its own peak plot, play it again as often as you
-like. Nothing is written until **Put it in the piece**.
-
-Three placements:
-
-- **Append** — after the last note, at a silence you choose in seconds. Moves nothing.
-- **Insert at a moment** — everything from that column on moves later by the passage's length.
-  Notes and editorial marks in the same write, and you are told how many of each and by how many
-  columns before you press the button.
-- **Replace** — the re-record splice above, unchanged.
-
-This is allowed here for the reason the restriction existed everywhere else: when you are composing
-there is nothing after the insertion point to protect — or when there is, moving it is precisely
-what you asked for.
-
-### The rule that makes an insertion exact
+## The length rule
 
 **A passage occupies a whole number of columns.** Its length is rounded up to the next frame before
 anything is written, so every column after the insertion point moves by the same integer and a mark
-lands on the column it was shifted to rather than one either side. The cost is at most one frame of
-silence at the join — 40 ms.
+lands on the column it was shifted to. The cost is at most one frame of silence at the join (40 ms).
 
-Membership is decided by **column** rather than by onset in seconds, which is the one place
-composing departs from the replacement splice. It was found on a real engine run: a note whose onset
-is a few milliseconds before the moment but which rounds into that same column would be stranded
-inside the new passage, visibly in the middle of the new music, with its fingering gone on ahead
-without it.
+**Everything after the passage moves, notes and marks in the same write** (rule 2 as changed by
+Q-3), through one operation: `compose.insert_events` for the notes, `marks.py` for every mark. An
+edit that keeps the length (a promotion fitted into the window) moves nothing.
 
-Since implementation 02, Phase 8 the take goes into the part's **audio timeline** as one more file
-(a range of the axis, like a pasted passage), instead of the whole part being written again as one
-16 kHz file: the files already there keep their own quality, and the notes stay current with the
-audio.
-
-## Paste a passage — length changes, notes, marks and audio together
+## Paste a passage
 
 **Copy** (the range toolbox, the note toolbox, ⌘C) keeps a reference to a stretch of a part: the
 part and the stretch in milliseconds. No notes and no audio travel with it. **Paste** (the
@@ -82,55 +33,66 @@ stretch, in one write:
   in its song, and what the target had is written again after it;
 - **the audio**: the ranges of stored files the stretch plays become entries of the target's
   timeline. No audio byte is copied; a file the passage lands inside is split in two around it;
-- **everything after** moves by the passage's length, which is a whole number of columns.
+- **everything after** moves by the passage's length.
 
 The source can be any part the user may read: their own work, their library, a library shared with
 them, the Public Library. A stretch pasted over is taken out first: its notes and marks go, and its
 audio becomes cuts that the Audio step can restore.
 
-**Undo is exact.** The paste keeps the part as it was (notes, sheet, timeline, the names of its
-files) as an earlier state of its history first. Undo puts that state back, keeping the pasted one,
-which redo puts back.
+## Recording in Sheet
 
-## The preview always draws the passage, not the page
+**Record this passage** (the range toolbox) opens the page of the marked stretch; **Record a
+passage** (the floating bar, a blank sheet) opens a new passage at the end of the piece. The page
+shows two sheets ([`../frontend/projects.md`](../frontend/projects.md) section 6):
 
-While re-recording, the preview shows the take fitted into the window, so you can compare it against
-what was there.
+- **Current**: a copy of the marked frames, made by a paste into an empty part, so it has the notes,
+  the marks, the key and the clefs of the stretch, and plays its audio (ranges of the stored files).
+- **Proposal**: a take. A take is recorded in the browser (or added from a file), the stretch of it
+  to keep is chosen on its waveform, and **Write the proposal** runs the condensed steps as one job:
+  the transcription, the hand split, and a first sheet written **with the passage's key and
+  figure**, so the two sheets read alike. The whole sheet page draws it, with every toolbox.
 
-While composing there is no window to fit into and nothing to compare against, so the preview draws
-the passage **alone**. What you are deciding is whether this is the passage you meant to play; the
-piece it is going into answers a different question, on the sheet, after it is accepted.
+The passage and its takes are **projects of the user's Personal Vault, hidden from every list**
+(`kind = 'passage'`): a take is an ordinary part, so the steps of a project work on it unchanged.
+They are deleted when the passage is promoted or discarded, when the project is deleted, and when
+it is saved to the library.
 
-## Playing along
+**The speed** (×0.25 to ×4) says how many times as fast the take goes into the song. A take played
+twice as slowly reads right at ×2: the Proposal names its figures with the song's figure times the
+speed. **The window**, as long as the Current, lies over the Proposal; it is dragged by its grip,
+and **Fit** finds the speed at which the whole take fills it.
 
-The original window can be played back slowed with the pitch preserved, and a metronome can click
-while you record. Clicks every X milliseconds are a **sound in the player's ears** and nothing
-derived from them is stored — there is still no BPM anywhere.
+**Promote** writes the take into the part, through the paste, in one write:
 
-## History
+| | The audio | The length of the song |
+|---|---|---|
+| **Fit to the window**, **Keep the original audio** | Unchanged | Unchanged: only the notes and marks of the passage are replaced by the take's under the window, scaled into it |
+| **Fit to the window**, **Use my recording** | The take under the window, played at the speed with its pitch kept, replaces the passage's audio | Unchanged |
+| **Replace the whole passage** | The whole kept take, at the speed | Longer or shorter by the difference: everything after moves. The dialog says by how much |
 
-Accepting snapshots the previous `notes.pmn`, `sheet.json` and `timeline.json` (and since Phase 8
-the part's entry of `project.json`, the names of its files) into
-`.database/history/<projectId>/parts/<partId>/v<N>/` and advances a version counter. A version here
-means *the music changed*. A paste snapshots the same way, and its undo restores the snapshot. Since implementation 02, Phase 3 the new recording is a new file of the
-audio store and the timeline points at it, so the snapshot never copies audio.
+The marks of the passage are dropped (the dialog names them by kind); the marks the reader put on the
+Proposal come with the take, and a figure renamed there is kept as a speed change. Back on the whole
+sheet nothing shows that the passage was re-recorded.
 
-If the audio splice fails, the window is recorded as not matching the sheet rather than failing the
-edit: the notes were written correctly and only the sound is behind, so saying so is more useful
-than rolling back a correct result.
+## Undo
+
+**A paste and a promotion are one step of the sheet's undo.** Before writing, the part is kept as a
+snapshot of its history: its notes, sheet, timeline and the names of its files. Undo puts that state
+back, keeping the pasted or promoted one, which redo puts back. A promotion is made on another page,
+so the sheet opens with it as its last step.
 
 ## Every mark moves
 
 One module, `editing/marks.py`, lists every mark of `sheet.json` by the column or the range it is
-keyed by, and moves, cuts out and copies them. A composed passage widens a range it lands inside; a
-pasted one tears it (it ends where the passage starts, and goes on after it), because the pasted
-music is not part of it. Before Phase 8 the clef changes, the beam joins, the spacings and the
-staff gaps did not move on an insert.
+keyed by, and moves, cuts out and copies them. A pasted or promoted passage tears a range it lands
+inside (it ends where the passage starts, and goes on after it), because the music put in is not
+part of it. A new kind of mark is added there, or no length change moves it.
 
 ## Where to look deeper
 
 - [`documentation/services/backend/editing-and-compose.md`](../../documentation/services/backend/editing-and-compose.md)
-  — the modules, the routes and every rule, copy and paste included
+  — the modules, the routes and every rule
 - [`documentation/services/backend/rhythm-and-annotations.md`](../../documentation/services/backend/rhythm-and-annotations.md)
-  — the marks that are dropped or moved
+  — the marks that are moved
+- [`../frontend/projects.md`](../frontend/projects.md) — the pages: Copy and Paste, the page of a passage
 - [time-model.md](time-model.md) — why the length rule matters

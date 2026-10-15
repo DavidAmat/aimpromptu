@@ -154,8 +154,8 @@ running ten times slower on the CPU.
 The engines are shared, so only one job may use them at a time. `transcription/jobs.py` runs every
 job submitted with `gpu=True` on one worker thread, in order of arrival. A queued job has the status
 `waiting` and sends a `waiting` stage ("Waiting for N other transcriptions to finish"). Two routes
-use the queue: `POST /matrix/transcribe` (only when the model has to run) and the range-edit take
-(`POST /audio/{uuid}/edits/{session}/transcribe`). A second request for a piece that is already
+use the queue: `POST /matrix/transcribe` (only when the model has to run) and **Write the proposal**
+of a take (`POST /passages/{id}/takes/{take}/read`, Phase 9). A second request for a piece that is already
 waiting or running returns the same job.
 
 ### 3.4 The selected region

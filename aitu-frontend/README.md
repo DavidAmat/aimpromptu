@@ -67,13 +67,14 @@ both natively. Natively the page listens on `localhost` only.
 | `npm run check:library` | My library in a headless Chromium, on a copy of Elefants under a song of its own: **Save to library** (the audio written again), a version read only, **Edit**, Replace, History and Restore, a new version, Songs and Artists; all deleted at the end |
 | `npm run check:transpose` | The sheet toolbox's **Transpose** in a headless Chromium, on a copy of Elefants: notes (the notes moved on the backend, the key with them, undo and redo exact) and figures (the main figure, the next **From**), the preview dialog; **Key for this passage** and the Clef tab of the range toolbox (`scripts/check-sheet-toolbox.mjs --only transpose`) |
 | `npm run check:paste` | **Copy** and **Paste** (Phase 8), on copies of Superestrella's tutorial and Elefants: a stretch copied, pasted at the cursor (its notes, its audio as a file of its own, the saved sheet, the cursor kept), undo and redo exact, ⌘V over a marked stretch, a reload; **From scratch** (no step tabs, Paste fills it); a stretch of a version of My library pasted across layers; every join of the audio checked sample by sample by `aitu-backend/scripts/check_joins.py` in the backend container (`scripts/check-paste.mjs`) |
+| `npm run check:passage` | **Record this passage** (Phase 9), on a copy of Elefants: the page of a stretch, a take recorded with Chromium's fake microphone and one added from a file (the passage's own audio twice as slow), **Write the proposal** (the GPU job), **Fit** (×2) and the window dragged, **Fit to the window** with the recording (the length kept, every join checked), undo and redo, **Replace the whole passage** (the song as much longer as the dialog said), a blank sheet's new passage, **Discard**, 390 px and dark (`scripts/check-passage.mjs`) |
 | `npm run check:lyrics` | The **Lyrics** tab, on a copy of Elefants: words saved before read as a piece, the pool, a piece dragged onto the sheet, moved and resized on frames, merge, split, line break, larger, back to the pool, delete, undo, Save and a reload. `--only clefs` of the same script checks the clef rule on a first write |
 | `npm run time:flow` | The whole flow timed on three temporary pieces (an upload, a copy opened from Projects, a YouTube URL) |
 | `npm run bench:roll` | The Notes tab at 10,000 rectangles and at 100 stream messages per second |
 | `npm run bench:sheet` | A hand move on the Sheet step's piano sheet, timed part by part, on copies |
 | `npm run screenshot -- <path>` | A screenshot of a page in a headless Chromium, for a machine with no screen. Options: `--piece <uuid>`, `--wait <selector>`, `--delay <ms>`, `--out <file.png>`, `--width`, `--height`, `--full`, `--base <url>`, `--theme dark` (the dark scheme), `--signed-out` (the sign-in page, without signing in) |
 
-**These need the running app** (`make up`): `check:flow`, `check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `time:flow`,
+**These need the running app** (`make up`): `check:flow`, `check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `time:flow`,
 `bench:roll`, `bench:sheet` and `screenshot`. They open `http://localhost:5173` (`--base` changes
 it). All but `bench:roll` and `screenshot` work on temporary pieces and delete them at the end, so the library is never
 changed. `bench:roll` opens
@@ -81,7 +82,7 @@ changed. `bench:roll` opens
 need no browser and no backend.
 
 **Signing in.** Every page and every route of the backend need a session, so `check:flow`,
-`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `time:flow`, `bench:sheet` and
+`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `time:flow`, `bench:sheet` and
 `screenshot` sign in first through `scripts/session.mjs`. Once the master user's password was changed in the app (as on the Ubuntu
 machine since 2026-10-06), the line of `.env` no longer signs in: give `AITU_CHECK_PASSWORD` (and
 `AITU_CHECK_USERNAME` for another user) in the environment of the command. They act as
@@ -118,9 +119,9 @@ src/
   components/
     piece/    # step names, step progress
     notes/    # PianoRollCanvas, rollPaint, RollTimeBar; the Notes Falling toolbox and removals bar
-    time/     # TimeScoreView (the ONLY file that touches the renderer), ScorePlayer, FigureGlyph, PeakPlot (compose panels)
+    time/     # TimeScoreView (the ONLY file that touches the renderer), ScorePlayer, FigureGlyph
     audio/    # waveforms (CutWaveform for the Audio step), range selection, level bars
-    editing/  # re-record a passage, add a passage
+    editing/  # the metronome of the recorder (the page of a passage is pages/piece/passage/)
     video/    # the Lab views: player, calibration, detection, overlay
 ```
 

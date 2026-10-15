@@ -16,13 +16,22 @@ export function SheetTab() {
   const state = here?.state ?? null;
   const reason = here?.reason ?? null;
   const label = audio ? audio.alias || "Untitled project" : undefined;
+  const audioRevision = status?.revisions.audio ?? undefined;
 
   const step = useMemo<SheetStep | null>(
     () =>
       uuid && state
-        ? { audioUuid: uuid, label, state, reason, readOnly, onChanged: () => void refresh() }
+        ? {
+            audioUuid: uuid,
+            label,
+            state,
+            reason,
+            readOnly,
+            audioRevision,
+            onChanged: () => void refresh(),
+          }
         : null,
-    [uuid, label, state, reason, readOnly, refresh],
+    [uuid, label, state, reason, readOnly, audioRevision, refresh],
   );
 
   if (!step) return null;

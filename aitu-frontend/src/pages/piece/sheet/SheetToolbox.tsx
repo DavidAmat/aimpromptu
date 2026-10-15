@@ -59,6 +59,7 @@ export function SheetToolbox({
   onClose,
   tab,
   onTab,
+  tabs,
   state,
   set,
   pieceLabel,
@@ -81,6 +82,8 @@ export function SheetToolbox({
   onClose: () => void;
   tab: SheetTab;
   onTab: (tab: SheetTab) => void;
+  /** The tabs offered, when not all of them (a passage's Proposal). */
+  tabs?: readonly SheetTab[];
   state: SheetEdits;
   set: EditHistory<SheetEdits>["set"];
   /** The project's name: what the sheet prints as its title until one is written here. */
@@ -124,7 +127,12 @@ export function SheetToolbox({
       width={WIDTH}
     >
       <Stack spacing={2} data-sheet-toolbox={tab}>
-        <Segmented<SheetTab> label="Sheet toolbox tab" value={tab} options={TABS} onChange={onTab} />
+        <Segmented<SheetTab>
+          label="Sheet toolbox tab"
+          value={tab}
+          options={tabs ? TABS.filter((one) => tabs.includes(one.value)) : TABS}
+          onChange={onTab}
+        />
         {tab === "title" ? <TitleTab state={state} set={set} pieceLabel={pieceLabel} /> : null}
         {tab === "key" ? <KeyTab state={state} set={set} keyHint={keyHint} /> : null}
         {tab === "transpose" ? (

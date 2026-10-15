@@ -44,6 +44,8 @@ export interface WaveformRangeSelectorProps {
   durationSeconds?: number;
   /** Emitted whenever the range changes. */
   onRangeChange?: (range: AudioRange) => void;
+  /** The range to start with once the waveform is in, instead of the whole of it. */
+  initialRange?: AudioRange;
   points?: number;
   height?: number;
   /** A persisted segment is already physically trimmed, so it has no handles. */
@@ -65,6 +67,7 @@ export function WaveformRangeSelector({
   loadWaveform,
   durationSeconds,
   onRangeChange,
+  initialRange,
   points = 1000,
   height = 120,
   readOnly = false,
@@ -81,6 +84,8 @@ export function WaveformRangeSelector({
   const [scope, setScope] = useState<"range" | "all">("range");
 
   const trackRef = useRef<HTMLDivElement | null>(null);
+  // Read when the waveform arrives, not a reason to load it again.
+  const initialStart = useRef(initialRange);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const frameRef = useRef<number | null>(null);
 
@@ -106,10 +111,16 @@ export function WaveformRangeSelector({
     loader(points, controller.signal)
       .then((fetched) => {
         setLoaded({ key: requestKey, peaks: fetched, error: null });
-        const next = { startSeconds: 0, endSeconds: fetched.durationSeconds };
+        const whole = { startSeconds: 0, endSeconds: fetched.durationSeconds };
+        const next =
+          initialStart.current &&
+          initialStart.current.endSeconds > initialStart.current.startSeconds &&
+          initialStart.current.endSeconds <= fetched.durationSeconds + 0.05
+            ? initialStart.current
+            : whole;
         setRange(next);
-        setStartText(formatTime(0));
-        setEndText(formatTime(fetched.durationSeconds));
+        setStartText(formatTime(next.startSeconds));
+        setEndText(formatTime(next.endSeconds));
         onRangeChange?.(next);
       })
       .catch((caught: unknown) => {

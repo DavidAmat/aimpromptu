@@ -12,7 +12,7 @@ with a banner and asks the user to write the sheet again (plan section 8.3).
 
 **A project with no audio and no notes yet** (an empty project, section 10.3) has its Source step
 missing and every later step closed. **A part made from scratch with no audio yet** (From scratch,
-or a piece composed with ``POST /audio/compose``, Phase 8) is ``scratch``: it opens on the Sheet step, and its Audio step is closed
+or a piece whose first passage was not put in yet, Phases 8 and 9) is ``scratch``: it opens on the Sheet step, and its Audio step is closed
 until a passage brings audio (Record or Paste); the page shows only the sheet. **A video project** (its part has a video, section 10.2) gets its notes
 from reading the video instead of a transcription, so its Notes step says so, and is ``running``
 while the video is read.

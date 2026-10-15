@@ -65,8 +65,8 @@ project's `⋯` menu, and the old paths redirect.
 Read the sheet drawn on arrival · change the main figure · title the sheet · say the piece changes speed · rename one
 note or a whole passage · choose the key · correct which hand plays a note · fingering · break or
 join a beam · octave brackets · take a note off the page · accept a suggested trill · words under
-the staff · print a stretch small · a grace note leaning on a note · re-record a passage · add a
-passage to a piece being composed · save the reading · print to PDF · play it and follow along.
+the staff · print a stretch small · a grace note leaning on a note · re-record a passage on its own
+page and promote it · copy and paste a passage · save the reading · print to PDF · play it and follow along.
 
 Detail: [annotations.md](annotations.md).
 

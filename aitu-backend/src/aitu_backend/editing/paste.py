@@ -40,6 +40,7 @@ from aitu_backend.audio import sources, timeline as audio_timeline
 from aitu_backend.audio.timeline import Piece
 from aitu_backend.editing import compose, history, marks
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS, frame_of_seconds, validate_frame_ms
+from aitu_backend.schemas.metadata import AudioSource
 from aitu_backend.schemas.rhythm import ClefChange, KeyChange, SavedRhythm, SpeedChange
 from aitu_backend.storage import bundle, locate, paths
 from aitu_backend.storage.bundle import SourceFile
@@ -153,10 +154,15 @@ def _sheet_frame_ms(rhythm: SavedRhythm | None, project: bundle.ProjectFile) -> 
     return validate_frame_ms(project.frame_ms or DEFAULT_FRAME_MS)
 
 
-def read_passage(part_id: str, from_ms: float, to_ms: float) -> Passage:
-    """The notes, marks and audio of ``[from_ms, to_ms)`` of a part, snapped to its columns."""
+def read_passage(
+    part_id: str, from_ms: float, to_ms: float, *, sheet: SavedRhythm | None = None
+) -> Passage:
+    """The notes, marks and audio of ``[from_ms, to_ms)`` of a part, snapped to its columns.
+
+    ``sheet`` is the part's sheet as a page holds it (a Proposal of Record in Sheet, Phase 9);
+    without it the saved one is read."""
     project = bundle.read_project(locate.part(part_id).project_id)
-    rhythm = pipeline.load_rhythm(part_id)
+    rhythm = sheet if sheet is not None else pipeline.load_rhythm(part_id)
     frame_ms = _sheet_frame_ms(rhythm, project)
     first = int(round(from_ms / frame_ms))
     last = int(round(to_ms / frame_ms))
@@ -439,7 +445,10 @@ def apply_audio(part_id: str, timeline: bundle.Timeline, files: list[SourceFile]
             source.files = []
             if files:
                 first = files[0]
-                source.kind = first.kind
+                # A part of one file says where it came from in the words of an upload; a pasted
+                # whole file or a stretch of silence is a segment of something else.
+                known = {kind.value for kind in AudioSource}
+                source.kind = first.kind if first.kind in known else AudioSource.SEGMENT.value
                 source.format = first.format
                 source.original_filename = first.original_filename
                 source.duration_seconds = first.duration_seconds
@@ -477,11 +486,22 @@ def paste(
     at_ms: float,
     replace_to_ms: float | None = None,
     sheet: SavedRhythm | None = None,
+    keep_audio: bool = False,
+    columns: int | None = None,
+    audio_name: str | None = None,
+    audio_kind: str = "passage",
 ) -> PasteResult:
     """Put ``passage`` into the part at ``at_ms`` (or in place of ``[at_ms, replace_to_ms)``).
 
     ``sheet`` is the sheet as the page holds it, unsaved edits included: it is what the marks are
     moved in, and it is saved by the paste. Without it the saved sheet is used.
+
+    Two options of a promotion of Record in Sheet (Phase 9): ``keep_audio`` leaves the part's
+    audio as it is (only the notes and marks change, so the length must not), and ``columns`` is
+    the passage's length in columns of the part, instead of its own length rounded up (a take
+    fitted into the window it replaces is exactly as long as the window). ``audio_name`` and
+    ``audio_kind`` are what the Source step calls the file put in (a take: ``"Take 2"``,
+    ``recording``); by default the copied passage's title and stretch, ``passage``.
     """
     project = bundle.read_project(locate.part(part_id).project_id)
     with pipeline.piece_lock(part_id):
@@ -500,7 +520,10 @@ def paste(
         cut_to = None if replace_to_ms is None else int(round(replace_to_ms / frame_ms))
         if cut_to is not None and cut_to <= at:
             raise PasteError("Mark a stretch to paste over, or none to paste at the cursor.")
-        columns = max(1, math.ceil(passage.length_ms / frame_ms - 1e-9))
+        if columns is None:
+            columns = max(1, math.ceil(passage.length_ms / frame_ms - 1e-9))
+        if keep_audio and (cut_to is None or cut_to - at != columns):
+            raise PasteError("Only a passage as long as the one it replaces keeps the audio.")
         at_seconds = at * frame_ms / 1000.0
         length_seconds = columns * frame_ms / 1000.0
         live_before = [event for event in stored.events if not event.removed]
@@ -546,16 +569,21 @@ def paste(
             empty_target=empty_target,
         )
 
-        audio = audio_with(
-            part_id,
-            passage.pieces,
-            label=f"{passage.title} {_clock(passage.from_ms)}–{_clock(passage.to_ms)}",
-            kind="passage",
-            at_frame=int(round(at_seconds * 1000 / AUDIO_FRAME_MS)),
-            replace_to_frame=(
-                None if cut_to is None else int(round(cut_to * frame_ms / AUDIO_FRAME_MS))
-            ),
-            length_frames=int(round(length_seconds * 1000 / AUDIO_FRAME_MS)),
+        audio = (
+            None
+            if keep_audio
+            else audio_with(
+                part_id,
+                passage.pieces,
+                label=audio_name
+                or f"{passage.title} {_clock(passage.from_ms)}–{_clock(passage.to_ms)}",
+                kind=audio_kind,
+                at_frame=int(round(at_seconds * 1000 / AUDIO_FRAME_MS)),
+                replace_to_frame=(
+                    None if cut_to is None else int(round(cut_to * frame_ms / AUDIO_FRAME_MS))
+                ),
+                length_frames=int(round(length_seconds * 1000 / AUDIO_FRAME_MS)),
+            )
         )
 
         # Everything is worked out: keep the part as it is, then write.

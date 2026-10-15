@@ -7,7 +7,7 @@ Code-level detail per service. Overviews in [context/backend/](../../context/bac
 
 | File | Topic |
 |------|-------|
-| [endpoints.md](backend/endpoints.md) | The whole HTTP surface: `/audio`, `/matrix`, `/pieces`, `/time`, `/audio/{uuid}/edits`, `/projects`, `/youtube` |
+| [endpoints.md](backend/endpoints.md) | The whole HTTP surface: `/audio`, `/matrix`, `/pieces`, `/time`, `/passages`, `/projects`, `/youtube` |
 | [time-matrix.md](backend/time-matrix.md) | Schema 2.0 field reference: the envelope, the figure ladder, passages, printed notes |
 | [events-to-sheet.md](backend/events-to-sheet.md) | The derivation path: one stored file to a drawn staff, and why the steps are in that order |
 | [transcription-pipeline.md](backend/transcription-pipeline.md) | Engines, thresholds, the artifact and leakage filters, the measurement behind each number |

@@ -17,6 +17,7 @@ is plan section 6.3 of [implementation 02](../implementations/02-private-web-app
 | `/projects/:id` | `PiecePage` | Opens the project on the furthest step that is ready |
 | `/projects/:id/<step>` | `PiecePage` | One step: `source`, `audio`, `notes`, `hands` or `sheet`. **Save to library** once the Sheet step is ready; a version of My library opens read only, with **Edit** |
 | `/projects/:id/notes-falling` | `NotesFallingPage` | Inside the project's page, from its `⋯` menu |
+| `/projects/:id/passages/:passageId` | `PassagePage` | Recording in Sheet (Phase 9): the Current and the Proposal of a passage, **Promote** ([recording-in-sheet.md](recording-in-sheet.md)) |
 | `/library/songs` | `SongsPage` (`pages/library/`) | My library (Phase 6): the songs, a table with a filter |
 | `/library/songs/:id` | `SongPage` | One song: its artists and its versions (Open, Edit, Duplicate, Export, Rename, History, Delete) |
 | `/library/artists` | `ArtistsPage` | The artists with their other names, a table with a filter |

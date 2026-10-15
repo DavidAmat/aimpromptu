@@ -135,7 +135,6 @@ export function useRangeActions({
             stretch.startFrame >= range.fromColumn && stretch.startFrame < range.toColumn,
         )
       : false,
-    rerecord: false,
   };
 
   const passageKey: KeySignatureName =

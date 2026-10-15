@@ -36,6 +36,15 @@ export type {
   SavedToLibrary,
   SaveToLibrary,
 } from "./projects";
+export { passagesApi } from "./passages";
+export type {
+  OpenPassage,
+  PassageTake,
+  Promoted,
+  PromotionAudio,
+  PromotionFacts,
+  PromotionMode,
+} from "./passages";
 export { libraryApi } from "./library";
 export type {
   ArtistDetail,
@@ -99,19 +108,6 @@ export type {
   RemovedNote,
   TranscribeRequest,
 } from "./matrix";
-
-export { editingApi } from "./editing";
-export type {
-  AcceptResult,
-  Confirmation,
-  DroppedMarks,
-  EditPreview,
-  EditSession,
-  MovedMarks,
-  Placement,
-  SlowdownChoice,
-  StartEditBody,
-} from "./editing";
 
 export { videoApi } from "./video";
 export type {

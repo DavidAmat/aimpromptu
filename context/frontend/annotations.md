@@ -7,7 +7,7 @@ toolbox is on its own page:
 - [annotations-notes.md](annotations-notes.md): the **note toolbox** (figures, fingers, hand, beams,
   even spacing, decoration, small print, trill, taking a note off the page).
 - [annotations-stretches.md](annotations-stretches.md): the **range toolbox** (key, clef, octave
-  brackets, lyrics, spacing, speed, re-record) and what can be done to a bracket on the page.
+  brackets, spacing, speed, Record this passage) and what can be done to a bracket on the page.
 - [annotations-sheet.md](annotations-sheet.md): the **sheet toolbox** (title, key, transpose,
   lyrics, layout), the keyboard panel, and **Find trills**.
 
@@ -26,7 +26,7 @@ The page is the sheet (plan section 11.2 of implementation 02). From top to bott
 - **The piano sheet**. It wraps to the width of the window, and wraps again when the window is
   made wider or narrower.
 - **The floating bar** (draggable, can be hidden): play or pause (also Space), undo, redo, the
-  **sheet toolbox**, **Record a passage**, **Paste** (⌘V, Phase 8), **Print to PDF**, **Save**, and
+  **sheet toolbox**, **Record a passage at the end** (Phase 9), **Paste** (⌘V, Phase 8), **Print to PDF**, **Save**, and
   `⋯` with *Show the keyboard*, *Find trills*, *Bring back N notes taken off* (when some are) and
   *Remove all*.
 
@@ -95,11 +95,11 @@ Six edits are written onto the **recording** rather than onto this page:
 | **A hand swap** | Yes. The hand each note had before is written back, and the sheet is drawn again |
 | **A notes transposition** | Yes. Every note moves back by the same interval, the notes it took off the keyboard come back, and the key and the marks move back with them |
 | **A paste** (Phase 8) | Yes. The part is put back as it was before the paste, notes, audio and saved sheet; Redo pastes it again ([projects.md](projects.md) section 5) |
-| **A re-record** | No. It writes over a window of the recording; its tab says so. Accepting it also forgets the steps taken until then |
-| **Placing a passage** (Record) | No, for the same reason, and it moves every mark after the insertion point |
+| **A promotion of a re-recorded passage** (Phase 9) | Yes. The part is put back as it was before the promotion, notes, audio and saved sheet; Redo promotes again ([recording-in-sheet.md](recording-in-sheet.md)). The sheet opens with it as its last step |
 | **Remove all** | No. It asks first, deletes the saved sheet and puts the notes taken off back on the recording |
 
-Phase 9 of implementation 02 makes the re-record and the placed passage undoable.
+Until Phase 9 a re-record and a recorded passage were two panels of this page that undo could not
+reach; the page of a passage replaced both.
 
 ## Keeping it
 
@@ -117,8 +117,9 @@ clears the file on purpose: its column numbers point at the notes that were ther
 
 Every mark is keyed by column (a frame), and **a column never moves** as long as the piece's
 wall-clock length does not change. That is what lets a fingering survive a change of figures, a
-re-recorded passage, a change of key, and a reload. The places length does change are composing, pasting and
-inserting a passage, and there marks move with their notes in the same write; see
+passage re-recorded into its window, a change of key, and a reload. The places length does change are
+a paste and a re-recorded passage put in whole, and there marks move with their notes in the same
+write; see
 [`../backend/editing.md`](../backend/editing.md).
 
 ## Where to look deeper

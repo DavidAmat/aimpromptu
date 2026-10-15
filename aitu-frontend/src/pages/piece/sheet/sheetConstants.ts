@@ -102,7 +102,6 @@ export const FRAME_TABS = [
   { id: "octave" as const, label: "Octave" },
   { id: "spacing" as const, label: "Spacing" },
   { id: "speed" as const, label: "Speed" },
-  { id: "rerecord" as const, label: "Re-record" },
 ];
 
 export type FrameTab = (typeof FRAME_TABS)[number]["id"];
@@ -111,8 +110,8 @@ export type FrameTab = (typeof FRAME_TABS)[number]["id"];
  * Which pill a marked stretch opens when the reader clicks one of its corners, or its bracket.
  *
  * The drawing package names its kinds after the notation; the panel names its pills after what a
- * reader is about to change. `Re-record` and `Spacing` are not in the list because neither draws a
- * corner: nothing about them is a stretch of markup you can lose the edges of.
+ * reader is about to change. `Spacing` is not in the list because it draws no corner: nothing about
+ * it is a stretch of markup you can lose the edges of.
  */
 export const MARKER_TABS: Readonly<Record<string, FrameTab | undefined>> = {
   ottava: "octave",

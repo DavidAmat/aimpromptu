@@ -157,7 +157,8 @@ def test_the_same_audio_is_stored_once(tmp_path: Path) -> None:
 
 def test_a_duplicate_has_new_ids_and_shares_the_audio(tmp_path: Path) -> None:
     part = a_part(tmp_path)
-    paths.staging_session_dir(part, "s1").mkdir(parents=True)
+    # A folder of the old edit sessions (before Phase 9): a copy starts without it.
+    (paths.project_dir(part) / "staging" / "s1").mkdir(parents=True)
     history.snapshot_notes(part)
     store.write_waveform(part, {"points": 1})
 
@@ -168,8 +169,8 @@ def test_a_duplicate_has_new_ids_and_shares_the_audio(tmp_path: Path) -> None:
     assert store.get(copy_part).original_path == store.get(part).original_path
     assert store.get(copy_part).has_normalized()
     assert pipeline.load_note_events(copy_part).events[0].midi_note == 60
-    assert not paths.staging_root(copy_part).exists() or not any(
-        paths.staging_root(copy_part).iterdir()
+    assert not (paths.project_dir(copy_part) / "staging").exists() or not any(
+        (paths.project_dir(copy_part) / "staging").iterdir()
     )
     assert not paths.part_history_dir(copy_part).exists()
     assert len(list(paths.audio_store_dir().iterdir())) == 1

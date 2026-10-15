@@ -72,6 +72,20 @@ const shot = async (name) => {
   await page.screenshot({ path: path.join(out, `${name}.png`) });
 };
 const idFromUrl = (url) => /\/projects\/([0-9a-f-]{36})/.exec(url)?.[1] ?? null;
+/**
+ * Open a project's Sheet step and wait for its player's audio, as a reader who opened it would:
+ * **Save to library** moves (or deletes) the folder that audio is written and read in, and a file
+ * caught half-sent then fails (a race recorded in the Phase 9 report).
+ */
+const openSheet = async (id) => {
+  const heard = page.waitForResponse(
+    (r) => r.url().includes(`/audio/${id}/file`) && r.status() < 400,
+    { timeout: 120000 },
+  );
+  await page.goto(`${base}/projects/${id}/sheet`);
+  await page.waitForSelector('[data-sheet-title]', { timeout: 60000 });
+  await heard;
+};
 const songFromUrl = (url) => Number(/\/library\/songs\/(\d+)/.exec(url)?.[1] ?? NaN);
 const versionRows = () => page.locator('[data-testid^=version-]');
 const versionMenu = async (index) => {
@@ -92,10 +106,9 @@ try {
   const notesBefore = await json(`${api}/pieces/${copy.id}/notes`);
 
   // 1. Save to library from the project page.
-  await page.goto(`${base}/projects/${copy.id}/sheet`);
+  await openSheet(copy.id);
   const saveButton = page.getByRole('button', { name: 'Save to library' });
   await saveButton.waitFor({ timeout: 60000 });
-  await page.waitForSelector('[data-sheet-title]', { timeout: 60000 });
   check('a project with its sheet ready offers Save to library', true);
   await saveButton.click();
   await saveDialog().waitFor();
@@ -164,8 +177,7 @@ try {
   check('the version says Editing', (await versionRows().first().getByText('Editing').count()) === 1);
 
   // 4. Replace the version.
-  await page.goto(`${base}/projects/${editId}/sheet`);
-  await page.waitForSelector('[data-sheet-title]', { timeout: 60000 });
+  await openSheet(editId);
   await page.getByRole('button', { name: 'Save to library' }).click();
   await saveDialog().waitFor();
   check('a copy opens the dialog on Replace', (await saveDialog().getByRole('button', { name: 'Replace the version' }).count()) === 1);
@@ -198,8 +210,7 @@ try {
   await page.waitForURL('**/projects/**');
   const secondEdit = idFromUrl(page.url());
   madeProjects.add(secondEdit);
-  await page.goto(`${base}/projects/${secondEdit}/sheet`);
-  await page.waitForSelector('[data-sheet-title]', { timeout: 60000 });
+  await openSheet(secondEdit);
   await page.getByRole('button', { name: 'Save to library' }).click();
   await saveDialog().waitFor();
   await saveDialog().getByRole('button', { name: 'New version' }).click();

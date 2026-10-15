@@ -23,6 +23,7 @@
 | · a project | `/projects/:id` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the project reached |
 | · one step | `/projects/:id/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab`, `HandsTab` or `SheetTab` |
 | · Notes Falling | `/projects/:id/notes-falling` | `PiecePage.tsx` + `pages/piece/NotesFallingPage.tsx` |
+| · a passage | `/projects/:id/passages/:passageId` | `pages/piece/passage/PassagePage.tsx`, outside `PiecePage` (Phase 9, section 3.1) |
 | **Songs** (My library) | `/library/songs`, `/library/songs/:id` | `pages/library/SongsPage.tsx`, `SongPage.tsx` (Phase 6, section 10) |
 | **Artists** (My library) | `/library/artists`, `/library/artists/:id` | `pages/library/ArtistsPage.tsx`, `ArtistPage.tsx` |
 | **Users** (Admin) | `/admin/users` | `pages/admin/UsersPage.tsx`, inside `RequireMaster` |
@@ -187,24 +188,23 @@ byte for byte), then redesigned it to plan section 11. What it does for the read
 
 | Module | Role |
 |---|---|
-| `SheetPage.tsx` | The page: the state the modules share, the requests (default reading, saved reading, sheet, save, Remove all), the effects, the layout (title lines, scrub bar, sheet, floating bar, the toolboxes). **Copy and Paste** (Phase 8): `copyColumns` and `copySelection` (the marked stretch, or the frames of the picked notes), `pastePassage` (`POST /time/{uuid}/paste` with the page's sheet, then one history step by `edits.commit` whose undo and redo call `POST …/versions/{n}/restore`), the ⌘C, ⌘V and paste-event listeners, `reloadAt` (the ladder and the sheet read again, and the player's audio at a new address, without starting the edits again) and the cursor kept at the passage. A version of the library marks a stretch too, and gets a small *Frames* panel with **Copy this stretch** |
+| `SheetPage.tsx` | The page: the state the modules share, the requests (default reading, saved reading, sheet, save, Remove all), the effects, the layout (title lines, scrub bar, sheet, floating bar, the toolboxes). **Record** (Phase 9): `startPassage` saves the sheet when it has changes, opens a passage (`passagesApi.open`) of the marked stretch or a new one at the end, and goes to its page; back from a promotion (the navigation's `promoted`, with the sheet before it), the promotion becomes the last step of the history (`resetEdits` to the sheet before, then `commit`), its undo and redo `POST …/versions/{n}/restore`. `step.passage` (`PassageView`) draws it on the page of a passage: `role` `current` (read only, no bar, no title lines, Space off, no copy or paste) or `proposal` (`anchorMs` given, the window and its drag, the passage's actions on the bar, only Key, Transpose and Layout in the sheet toolbox, saved by itself 1.2 s after a change, the held sheet reported by `onSheet`). The player's address is the audio revision when the page opened and `reloadAt` (`step.audioRevision`). **Copy and Paste** (Phase 8): `copyColumns` and `copySelection` (the marked stretch, or the frames of the picked notes), `pastePassage` (`POST /time/{uuid}/paste` with the page's sheet, then one history step by `edits.commit` whose undo and redo call `POST …/versions/{n}/restore`), the ⌘C, ⌘V and paste-event listeners, `reloadAt` (the ladder and the sheet read again, and the player's audio at a new address, without starting the edits again) and the cursor kept at the passage. A version of the library marks a stretch too, and gets a small *Frames* panel with **Copy this stretch** |
 | `sheetEdits.ts` | The edits model: `SheetEdits` (one value, so undo is one history), `NO_EDITS`, the undo labels, `editsFromSaved` and `savedRhythmOf` (to and from the saved reading, `sheet.json`) |
 | `sheetConstants.ts` | The colours of the keyboards, the tabs of the range toolbox, the figure ladder, small helpers |
 | `toolboxPlacement.ts` | Where a toolbox opens, measured from what is drawn |
 | `useNoteActions.ts`, `NoteToolbox.tsx` | What the note toolbox knows about the picked notes and its actions; the panel |
-| `useRangeActions.ts`, `RangeToolbox.tsx` | The same for a marked stretch; the panel with its tabs, Speed among them; **Key for this passage** and the clef rule offered again (Phase 7) |
+| `useRangeActions.ts`, `RangeToolbox.tsx` | The same for a marked stretch; the panel with its tabs, Speed among them; **Key for this passage** and the clef rule offered again (Phase 7); **Record this passage** in its title bar (Phase 9, `onRecordPassage`; the Re-record tab is gone) |
 | `SheetToolbox.tsx` | The sheet toolbox: Title, Key, Transpose, Lyrics, Layout |
 | `TransposeTab.tsx`, `TransposeDialog.tsx` | **Transpose** (Phase 7): Notes (two `MiniPiano`s) and Figures (two `FigurePicker`s), each with **Preview**; the one dialog both use: a read-only `TimeScoreView` of the result, the facts, **Transpose** or **Cancel**. The page's `previewNotes`, `previewFigures` and `confirmTranspose` do the requests and the undo step |
 | `LyricsTab.tsx`, `lyricsPieces.ts` | **Lyrics** (Phase 7): paste, the pool (each piece draggable onto the sheet, `POOL_DRAG_TYPE`), the picked pieces' **Words** field and edit toolbar; the pure functions on the list of pieces (place, move, merge, split, line break, back to the pool, size), each returning the new list or the reason it could not |
-| `SheetFloatingBar.tsx` | Play, undo, redo, sheet toolbox, Record, **Paste** (Phase 8: its tooltip names the passage and where it goes), Print, Save with its unsaved dot, `⋯`; the messages of a refused save and a refused move |
+| `SheetFloatingBar.tsx` | Play, undo, redo, sheet toolbox, **Record a passage at the end** (Phase 9), **Paste** (Phase 8: its tooltip names the passage and where it goes), Print, Save with its unsaved dot, `⋯`; the messages of a refused save and a refused move. `passageActions`: the Proposal's bar, with the passage's actions in place of Record, Paste, Print, Save and Remove all |
 | `PianoToolboxes.tsx` | The keyboard under the playhead, and the decoration keyboard |
 
 | Shared component | Role |
 |---|---|
-| `components/time/TimeScoreView.tsx` | The staff. Owns the renderer instance, the playhead, selection and the range handles |
-| `components/time/ScorePlayer.tsx` | Plays the recording; `compact` draws only the scrub bar (the Sheet step). `version` (Phase 8) puts the audio at a new address when it changed under the page, because the browser keeps a media file by its address; the Audio and Notes steps add the audio revision the same way (`audioApi.fileUrl(uuid, normalized, revision)`) |
+| `components/time/TimeScoreView.tsx` | The staff. Owns the renderer instance, the playhead, selection and the range handles. `frameWindow` and `onFrameWindowMove` (Phase 9): the window over a Proposal, moved without a rebuild |
+| `components/time/ScorePlayer.tsx` | Plays the recording; `compact` draws only the scrub bar (the Sheet step); `keys` (Phase 9) turns Space off for a second player on the page. `version` (Phase 8) puts the audio at a new address when it changed under the page, because the browser keeps a media file by its address; the Audio and Notes steps add the audio revision the same way (`audioApi.fileUrl(uuid, normalized, revision)`) |
 | `components/time/ScorePdfDialog.tsx` | Paper size, margins, title, and a preview of the real pages |
-| `components/time/PeakPlot.tsx` | The plot of gaps; left only in the compose and re-record panels, which Phases 8 and 9 replace |
 | `ui/Toolbox.tsx`, `ui/FloatingBar.tsx` | The draggable panel and the floating bar every step uses |
 
 **The sheet is drawn on arrival.** `SheetPage` asks for the saved reading and for
@@ -249,6 +249,24 @@ line through a hundred staves in a second, and the page chasing it made the gest
 finish. `followPlayhead` gates it; the stave index is still recorded while not following, so
 resuming does not jump.
 
+### 3.1 The page of a passage (Phase 9)
+
+`pages/piece/passage/PassagePage.tsx`, Recording in Sheet
+([`context/frontend/recording-in-sheet.md`](../../../context/frontend/recording-in-sheet.md)). It reads
+`GET /passages/{id}` and draws:
+
+| Part | How |
+|---|---|
+| Header | The song's title, **Promote** (a menu: **Fit to the window**, **Replace the whole passage**; **Put it in** for a new passage), `⋯` (**Delete** the take on show, **Discard this passage** with a confirmation) |
+| **Current · m:ss – m:ss** | `SheetPage` with `passage.role = "current"` on the passage's `current` part, its play button driving the sheet's player (`playerRef`); starting one sheet stops the other |
+| **Proposal** | No take: **Record** and **Add a take from a file** (a hidden file field). A take not read, or **Choose the stretch of the take**: `WaveformRangeSelector` of the take (its `initialRange` is the stretch kept), **Write the proposal** (`passagesApi.readTake`, followed with `useProgress` and `ProgressBanner`), **Record again**. A take read: `SheetPage` with `passage.role = "proposal"`, keyed by the take and its audio revision, `anchorMs` = the passage's × the speed, the window (`frameWindow`, columns of the take) and the bar's actions (Record a take, the stretch, **Fit**) |
+| Beside **Proposal** | The take (a select when there are several) and the speed: a slider on a log scale, ×0.25 to ×4, sent on release (`PATCH /passages/{id}`) |
+| The recorder | A `Toolbox`: **Play the passage along** (an `Audio` of the Current at `playbackRate = 1 / speed`, pitch kept), **Click every … ms** (`useClickTrack`, a negra of the take by default), `LiveLevelBars`, Record / Stop (`useRecorder`); a take is sent (`passagesApi.addTake`) as soon as it stops. **Record** is disabled with its reason where the page cannot use the microphone (`navigator.mediaDevices` is missing off a secure address) |
+| The promotion dialog | `passagesApi.facts` for the mode and the audio (**Keep the original audio** / **Use my recording**, a `Segmented`, for the window), the length change and the marks that go, only when there are; **Promote** reads the saved sheet of the song first (the undo's sheet), then `passagesApi.promote` with the Proposal's held sheet, then the song's Sheet step with `promoted` in the navigation state |
+
+`data-passage-page`, `data-passage-current`, `data-passage-proposal`, `data-passage-range` and
+`data-passage-recorder` are read by `check:passage`.
+
 ---
 
 ## 4. Notes Falling
@@ -291,10 +309,10 @@ box now: one unit is one pixel, text is undistorted, and a 2 px border is 2 px.
 
 | Directory | Contents |
 |---|---|
-| `components/audio/` | `LiveLevelBars`, `WaveformView`, `WaveformRangeSelector` (the re-record and compose panels); `CutWaveform` and `waveformPaint` (the Audio step, section 2.2) |
-| `components/editing/` | `RangeRerecordPanel` (Epic 11), `ComposePassagePanel` (Epic 13), `useClickTrack` |
+| `components/audio/` | `LiveLevelBars`, `WaveformView`, `WaveformRangeSelector` (the stretch of a take, on the page of a passage); `CutWaveform` and `waveformPaint` (the Audio step, section 2.2) |
+| `components/editing/` | `useClickTrack` (the metronome of the recorder) |
 | `audio/` | `useRecorder` (MediaRecorder), `time.ts` (`mm:ss.cc`); `cuts.ts`, `frameView.ts`, `useCutPlayer.ts` (the Audio step) |
-| `components/ProgressBanner.tsx` | The progress of a long job of the re-record and compose panels |
+| `components/ProgressBanner.tsx` | The progress of **Write the proposal** on the page of a passage |
 
 ---
 
@@ -329,7 +347,7 @@ import { timeScoreApi, matrixApi, piecesApi } from "../api";
 | `matrix.ts` | `/matrix`, including `transcribe`, `activeJob`, `progressUrl` |
 | `pieces.ts` | `/pieces`: the status of a project's steps, its notes and hands |
 | `timeScore.ts` | `/time`, the largest, and the mirror of `schemas/time_matrix.py` |
-| `editing.ts` | `/audio/{uuid}/edits` |
+| `passages.ts` | `/passages` (Phase 9): `open`, `get`, `update`, `discard`, `addTake`, `deleteTake`, `readTake`, `facts`, `promote`; the types `OpenPassage`, `PassageTake`, `PromotionFacts`, `Promoted` |
 | `youtube.ts` | `/youtube`, including `startDownload` (`POST /youtube/jobs`) |
 | `video.ts`, `frameExamples.ts` | `/video`, `/frame-examples` (Lab) |
 
@@ -416,6 +434,11 @@ Timestamps are `mm:ss.cc` everywhere and never wrap:
 
 Stated so nobody looks for them.
 
+**In implementation 02, Phase 9**: `components/editing/RangeRerecordPanel.tsx` (Epic 11),
+`ComposePassagePanel.tsx` (Epic 13), `components/time/PeakPlot.tsx` and `api/editing.ts`: the page
+of a passage (section 3.1) replaced the two panels, the sheet's Re-record tab and its Record panel,
+and Notes Falling's **Re-record this stretch** (now **Record this stretch**, which opens that page).
+
 **In implementation 02, Phase 1** (decision Q-4): the Playground (`layout/PlaygroundLayout.tsx`,
 `pages/playground/InputPage.tsx`; Notes Falling and the sheet moved to `pages/piece/`), the YouTube
 to Audio page (`pages/YouTubePage.tsx`), the old Piano Library (`pages/LibraryPage.tsx`,
@@ -460,7 +483,7 @@ npm run check:notes       # the Notes tab's typed arrays, live feed and edits
 
 These need the running app (`make up` from the repository root). Each works on temporary copies or
 uploads and deletes them at the end, so the library is never changed. `check:flow`,
-`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
+`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
 user with `AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env` at the repository root (or
 `AITU_CHECK_USERNAME` and `AITU_CHECK_PASSWORD` from the environment), makes every `fetch` of the
 script send the cookie (`signIn(base)`), and gives every Playwright page the same cookie
@@ -474,6 +497,7 @@ npm run check:library   # My library on a copy of Elefants: Save to library, a v
 npm run check:transpose # the Transpose tab on a copy of Elefants: notes and figures, preview, undo, redo; Key for this passage
 npm run check:lyrics    # the Lyrics tab on a copy of Elefants: pool, drag onto the sheet, snapping, merge, split, line break, Save
 npm run check:paste     # Copy and Paste between two copies, undo and redo, ⌘V over a stretch, From scratch, every join of the audio
+npm run check:passage   # Record this passage on a copy: a take with the fake microphone, one from a file, Write the proposal, Fit, the window, both promotions, undo and redo, a blank sheet, Discard
 node scripts/check-sheet-toolbox.mjs --only clefs  # the clef rule on a first write of a copy of Superestrella's tutorial
 npm run time:flow     # the whole flow timed on three temporary pieces (upload, a duplicated library piece, YouTube)
 npm run bench:roll    # the Notes tab at 10,000 rectangles and at 100 stream messages per second

@@ -24,6 +24,8 @@ import ProgressBar from "../../playback/ProgressBar";
 
 export interface ScorePlayerProps {
   audioUuid: string;
+  /** Space plays and pauses. Off for a second player on the same page (a passage's Current). */
+  keys?: boolean;
   /** Changes when the audio of the piece changed under the page (a paste, its undo), so the new
    * file is loaded rather than the one the browser kept. */
   version?: string | number;
@@ -82,6 +84,7 @@ export function ScorePlayer({
   onScrollToCursor,
   onPlaying,
   compact = false,
+  keys = true,
 }: ScorePlayerProps) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const report = useRef(onTime);
@@ -122,6 +125,10 @@ export function ScorePlayer({
       element.removeEventListener("timeupdate", tick);
       element.removeEventListener("ended", stop);
       element.removeEventListener("pause", stop);
+      // A paused element still downloads its file: without a source it stops, so a page that has
+      // gone asks nothing more of a part that may be gone too (an edit copy saved, Phase 9).
+      element.removeAttribute("src");
+      element.load();
       audio.current = null;
       report.current?.(null);
     };
@@ -200,6 +207,7 @@ export function ScorePlayer({
    * left alone — the button already toggles on space by being a button.
    */
   useEffect(() => {
+    if (!keys) return undefined;
     const onKey = (event: KeyboardEvent) => {
       if (event.code !== "Space" && event.key !== " ") return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -218,7 +226,7 @@ export function ScorePlayer({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onScrollToCursor, toggle]);
+  }, [onScrollToCursor, toggle, keys]);
 
   const restart = () => {
     seekTo(0);

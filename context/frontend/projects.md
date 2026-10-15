@@ -179,10 +179,20 @@ is named after where it came from. What the backend does:
 [`backend/editing.md`](../backend/editing.md).
 
 **From scratch** makes "Untitled project" and opens its blank sheet. With no audio yet the page has
-no step tabs, only the sheet's empty state: **Record a passage** (the Record panel) and **Paste the
-copied passage**. Once a passage brings audio, the steps appear and work as for any project.
+no step tabs, only the sheet's empty state: **Record a passage** (the page of a new passage,
+section 6) and **Paste the copied passage**. Once a passage brings audio, the steps appear and work
+as for any project.
 
-## 6. Timings
+## 6. Recording in Sheet
+
+**Record this passage** (the record icon of the range toolbox) opens the page of the marked stretch,
+`/projects/<id>/passages/<passageId>`: the **Current** (the stretch as it is) and the **Proposal** (a
+take recorded or added from a file, written in the passage's key and figure). **Promote** puts the
+take into the song, fitted into the window or in place of the whole passage, as one step of the
+sheet's undo. **Record a passage** on the floating bar and on a blank sheet opens a new passage at
+the end. The whole page: [recording-in-sheet.md](recording-in-sheet.md).
+
+## 7. Timings## 7. Timings
 
 Measured with `npm run time:flow` on the RTX 4090 (implementation 08, 2026-10-01; the first piano
 sheet measured again in every phase of implementation 02):
@@ -208,4 +218,5 @@ measuring the roll takes about 37 s and reading the notes about 22 s. In the bro
 - The backend side of the steps: [backend/pieces-and-revisions.md](../backend/pieces-and-revisions.md),
   [backend/muscriptor.md](../backend/muscriptor.md)
 - The piano sheet itself: [rendering.md](rendering.md), [annotations.md](annotations.md)
+- Recording in Sheet: [recording-in-sheet.md](recording-in-sheet.md)
 - The plan: [`implementations/02-private-web-app/02-plan.md`](../implementations/02-private-web-app/02-plan.md) sections 8 and 10

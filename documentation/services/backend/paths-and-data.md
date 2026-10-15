@@ -51,7 +51,7 @@ made the folder, written or checked `VERSION`, and brought the tables to the new
     music-version.json                       the number of the next history snapshot (§4.5)
     audio-mismatches.json                    windows where the recording no longer matches (§4.6)
     needs-rederivation.json                  only on a piece nothing could rebuild (pre-08)
-  staging/<sessionId>/                       disposable edit sessions (§4.4)
+  staging/                                   the edit sessions until Phase 9; no longer written
   cache/<partId>/                            derived, safe to delete (§4.1)
     normalized.wav  waveform.json  piece-r<N>.flac  piece-r<N>.wav  scratch clips
     src-<sha256>.wav  sources-<key>.flac     only for a part of several files (§2.2)
@@ -88,7 +88,7 @@ The functions that read and write a bundle are in `storage/bundle.py`: `create_p
 
 | Field | Meaning |
 |---|---|
-| `kind` | `song` or `integratedPlaylist` (Phase 10) |
+| `kind` | `song`, `integratedPlaylist` (Phase 10), or `passage`: a passage being re-recorded or one of its takes, hidden from every list (Phase 9, §4.4) |
 | `title` | The project's name; what the API calls `alias` |
 | `subtitle`, `artistText` | The project's own lines (Phase 5); the sheet's printed title block is in `sheet.json` |
 | `frameMs` | The column length a project made from scratch is meant to be read at (a view, D-01) |
@@ -295,25 +295,26 @@ Unchanged in what they do since implementation 08; only the files moved. A new t
 part with notes first copies `notes.pmn` and `sheet.json` into history (`snapshot_notes`) and
 deletes `sheet.json`, whose marks are column numbers over the old notes.
 
-### 4.4 `staging/<sessionId>/`: disposable sessions
+### 4.4 A passage being re-recorded: hidden projects (Phase 9)
 
-Epic 11 range editing and Epic 13 composing. **Nothing outside this folder changes until the reader
-accepts**, and cancel deletes the folder and nothing else. The sessions of every part of a project
-share the project's `staging/` (the session id is unique).
+**Record this passage** (Recording in Sheet, `editing/passages.py`) keeps its work in projects of
+the user's Personal Vault with `kind = 'passage'`, which `GET /projects` and `bundle.list_parts`
+(and so `GET /audio/`) leave out. They are ordinary bundles, so every step of a project works on
+them:
 
-| File | What it is |
-|---|---|
-| `session.json` | The window or the moment, the placement, the speed, the trim, the part (`audioUuid`) |
-| `upload.<ext>` | The take as it arrived from the browser |
-| `untrimmed.wav` | The take, converted |
-| `selected.wav`, `trimmed.wav` | What the reader kept of it |
-| `scaled.wav` | The take stretched into the window |
-| `take_events.json` | The take transcribed, **as played** |
-| `window.wav`, `window_slow.wav` | The original window, and a pitch-preserved slow copy to play along with |
+| Project | Its part | `origin` |
+|---|---|---|
+| The passage, `"<song> m:ss–m:ss"` | The **Current**: a paste of the stretch into an empty part (its notes, its marks, ranges of the song's stored files) | `passageOf` (the part), `fromMs`, `toMs`, `anchorMs`, `anchorFigure`, `takes`, `take`, `speed`, `windowMs` |
+| A take, `"Take N"` | The recording, stored like an upload; the stretch kept is its cuts; its notes, hands and first sheet are written by **Write the proposal** | `takeOf` (the passage) |
 
-Accepting a passage that changes the recording (a splice, a passage put in) writes the new
-`normalized.wav` and stores it as a **new file** of the audio store (`store.replace_original`);
-the old file stays for the history. Detail in [`editing-and-compose.md`](editing-and-compose.md).
+`bundle.dependents(projectId)` finds the passages open on a project's parts and the takes of a
+passage; `bundle.delete_project` deletes them first, and **Save to library** deletes the passages
+of the project it saves. A promotion deletes its passage once it is written; the take's audio stays
+in the store as long as the song (or its history) uses it (`audio_refs`).
+
+Until Phase 9 the edit sessions of Epics 11 and 13 were folders `staging/<sessionId>/` of the project
+(`session.json`, the take, its trims and its transcription); they are no longer written, and a
+folder left from before is deleted by **Save to library** and not copied by a duplicate or an export.
 
 ### 4.5 `music-version.json` and the history
 
@@ -323,7 +324,7 @@ Two events copy the **previous** state of a part into
 
 | When | Function (`editing/history.py`) | What is copied |
 |---|---|---|
-| Accepting a range edit or a composed passage; a paste (Phase 8) | `snapshot_current` | `notes.pmn`, `sheet.json`, `timeline.json`, and `source.json` (the part's entry of `project.json`: the names of its files, since Phase 8) |
+| A paste (Phase 8); a promotion of a re-recorded passage (Phase 9) | `snapshot_current` | `notes.pmn`, `sheet.json`, `timeline.json`, and `source.json` (the part's entry of `project.json`: the names of its files, since Phase 8) |
 | A new transcription of a part that already has notes | `snapshot_notes` | `notes.pmn`, `sheet.json`, and a `snapshot.json` with the reason |
 
 No audio is copied: the snapshot's `timeline.json` names the stored files, and `audio_refs` counts
@@ -338,8 +339,9 @@ a snapshot with a `timeline.json` can be put back.
 
 ### 4.6 `audio-mismatches.json`
 
-Windows where the recording no longer matches the sheet, after an audio splice failed. Recorded
-rather than raised: the notes were written correctly and only the sound is behind.
+Windows where the recording no longer matched the sheet, after an audio splice of the old staged
+session failed (Epics 11 and 13). Not written since Phase 9; a file from before is kept with the
+part (and its library history).
 
 ### 4.7 A project of the Private Library, and `history/<projectId>/v<N>/`
 
@@ -394,8 +396,10 @@ A video belongs to the part whose audio came out of it (V-03) and is a temporary
 
 ## 6. `aitu.sqlite`: the tables
 
-SQLAlchemy 2 models in `aitu_backend/db/models.py`, one Alembic revision so far
-(`db/migrations/versions/0001_initial.py`, which also writes the fixed lists). SQLite runs with
+SQLAlchemy 2 models in `aitu_backend/db/models.py`, and two Alembic revisions:
+`db/migrations/versions/0001_initial.py` (every table, and the fixed lists) and
+`0002_passage_projects.py` (Phase 9: `projects.kind` may be `passage`; the table is copied by
+Alembic's batch mode, which runs with foreign keys off, so no part is deleted). SQLite runs with
 foreign keys on and in WAL mode. Every table of plan section 8.6 exists from Phase 3; most stay
 empty until their phase.
 
@@ -522,6 +526,6 @@ piece through the API only: they find it in `GET /audio/`, copy it with
 - [`context/backend/pieces-and-revisions.md`](../../../context/backend/pieces-and-revisions.md):
   parts, steps and staleness
 - [`rhythm-and-annotations.md`](rhythm-and-annotations.md): `sheet.json` field by field
-- [`editing-and-compose.md`](editing-and-compose.md): staging, history and the splice
+- [`editing-and-compose.md`](editing-and-compose.md): paste, the passages, history and the undo
 - [`transcription-pipeline.md`](transcription-pipeline.md): what writes `notes.pmn`
 - [`endpoints.md`](endpoints.md): the routes that read and write all of it

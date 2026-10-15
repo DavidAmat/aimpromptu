@@ -44,6 +44,7 @@ __all__ = [
     "measure",
     "source_wav",
     "write_normalized",
+    "write_ranges",
 ]
 
 LISTEN_PREFIX = "sources-"
@@ -56,6 +57,11 @@ _guard = threading.Lock()
 def _lock(key: str) -> threading.Lock:
     with _guard:
         return _locks.setdefault(key, threading.Lock())
+
+
+def writing(part_id: str) -> threading.Lock:
+    """The lock the joined files of a part are written under (:func:`ensure_listen`)."""
+    return _lock(f"{part_id}:listen")
 
 
 def _cache(part_id: str) -> Path:
@@ -210,6 +216,42 @@ def ensure_listen(part_id: str, timeline: Timeline) -> Path:
             temporary.unlink(missing_ok=True)
             raise formats.ConversionFailed(f"ffmpeg could not write {target.name}")
         temporary.replace(target)
+    return target
+
+
+def write_ranges(ranges: list[tuple[str, str, int, int]], target: Path) -> Path:
+    """Ranges of stored files (``(hash, extension, fromFrame, toFrame)`` in 10 ms frames of each
+    file) decoded at one rate and channels, as for the joined audio, and written end to end as a
+    16-bit WAV with the 5 ms fade at each join: a recorded take's kept stretch, before it is played
+    faster or slower into a song (Record in Sheet, Phase 9)."""
+    if not ranges:
+        raise ValueError("No audio to write")
+    if not formats.ffmpeg_available():
+        raise formats.FfmpegMissing()
+    files = [
+        (audio_files.file_path(content_hash, extension), first, last)
+        for content_hash, extension, first, last in ranges
+    ]
+    probes = {path: _probe(path) for path, _, _ in files}
+    rate = 44_100 if max(found for found, _ in probes.values()) <= 44_100 else 48_000
+    channels = max(count for _, count in probes.values())
+    per_frame = rate * FRAME_MS // 1000
+    decoded: dict[Path, np.ndarray] = {}
+    pieces: list[np.ndarray] = []
+    starts: list[int] = []
+    position = 0
+    for path, first, last in files:
+        if path not in decoded:
+            decoded[path] = _decode(path, rate, channels)
+        if position:
+            starts.append(position)
+        length = (last - first) * per_frame
+        pieces.append(_fit(decoded[path][first * per_frame :], length))
+        position += length
+    joined = _fade_joins(np.concatenate(pieces), starts, rate)
+    pcm = np.clip(np.round(joined * 32767.0), -32768, 32767).astype(np.int16)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    wavfile.write(target, rate, pcm)
     return target
 
 

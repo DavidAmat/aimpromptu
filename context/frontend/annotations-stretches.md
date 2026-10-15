@@ -8,7 +8,9 @@ selections and undo is [annotations.md](annotations.md). Code:
 
 The panel is titled *Frames*, with the time of the stretch under it. Its title bar has **Copy this
 stretch** (⌘C, Phase 8: its notes, marks and audio, for a **Paste** in this sheet or any other; see
-[projects.md](projects.md) section 5) and *Select the notes in this stretch*. Its first row says
+[projects.md](projects.md) section 5), **Record this passage** (Phase 9: the page where the stretch
+is recorded again and promoted, [recording-in-sheet.md](recording-in-sheet.md)) and *Select the
+notes in this stretch*. Its first row says
 which staff the stretch is about (**Both / Right / Left**). With a stretch marked, **Paste** on the
 floating bar (⌘V) puts the copied passage **in place of** the stretch. Then one tab per thing a stretch can carry; a tab
 with a dot means this stretch already carries that setting.
@@ -20,7 +22,6 @@ with a dot means this stretch already carries that setting.
 | **Octave** | **Yes** | The four brackets (`8va`, `15ma`, `8vb`, `15mb`) per hand; the eye hides one, the bin removes it. Pressing the bracket already on removes it |
 | **Spacing** | No | How much room the stretch takes, from 25 % to 400 % of what the page measured. The sheet redraws as the handle moves |
 | **Speed** | No | Where the piece changes speed (below) |
-| **Re-record** | No | Play the stretch again, over the recording. Undo cannot reach it, and the tab says so |
 
 **Trill** and **Small** are in the note toolbox: they are statements about notes, so a selection
 answers the hand and the columns at once.

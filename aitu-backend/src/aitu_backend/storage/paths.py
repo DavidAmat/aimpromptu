@@ -26,7 +26,7 @@ A project bundle (section 8.3), the same in every layer::
         sheet.json                   the metadata of the part's piano sheet
         timeline.json                the audio timeline of the part (section 8.5)
         music-version.json, audio-mismatches.json, needs-rederivation.json   when they apply
-      staging/<sessionId>/           disposable edit sessions
+      staging/                       the edit sessions until Phase 9; no longer written
       cache/<partId>/                derived, safe to delete: normalized.wav (the engine's 16 kHz
                                      mono audio), waveform.json, piece-r<N>.flac/.wav (the joined
                                      audio of a part with cuts), scratch clips
@@ -207,19 +207,6 @@ def normalized_path(part_id: str) -> Path:
 
 def waveform_path(part_id: str) -> Path:
     return part_cache_dir(part_id) / "waveform.json"
-
-
-# -------------------------------------------------------- range-edit staging
-
-
-def staging_root(part_id: str) -> Path:
-    """`<project>/staging/` — disposable edit sessions of every part of the project."""
-    return _part_project_dir(part_id) / "staging"
-
-
-def staging_session_dir(part_id: str, session_uuid: str) -> Path:
-    """`<project>/staging/<sessionId>/`."""
-    return staging_root(part_id) / session_uuid
 
 
 # ------------------------------------------------------------------- history

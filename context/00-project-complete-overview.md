@@ -130,7 +130,7 @@ Name the beat · write the whole piece one step longer or shorter · say the pie
 rename one note or a whole passage · choose the key, for the piece or a stretch · correct which hand
 plays a note · fingering 1–5 · break or join a beam · octave brackets · take a note off the page ·
 accept a suggested trill · words under the staff · print a stretch cue-sized · a grace note leaning
-on a note · re-record a marked passage at any speed · add a passage to a piece being composed ·
+on a note · re-record a marked passage at any speed on its own page, and promote it · copy and paste a passage ·
 save the reading with the piece · export a vector PDF · play the recording and follow the line.
 
 Detail: [frontend/annotations.md](frontend/annotations.md). Click by click:
@@ -146,7 +146,7 @@ Detail: [frontend/annotations.md](frontend/annotations.md). Click by click:
 | `/matrix` | Run the model, follow it (with the notes, live), read back the notes it heard |
 | `/pieces` | Which steps of a piece are ready; the notes as columns and their edits; predict the hands |
 | `/time` | The score: peaks, the ladder, the payload, the saved reading |
-| `/audio/{uuid}/edits` | Staged re-recording and composing |
+| `/passages` | Recording in Sheet: a passage, its takes, the promotion (implementation 02, Phase 9) |
 | `/projects` | The Personal Vault: list, create, rename, delete, duplicate, export and import a project |
 | `/youtube` | Downloads, as jobs |
 | `/auth`, `/admin` | Sign in, sign out, change one's password; the users (master user only) |

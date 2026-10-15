@@ -34,6 +34,8 @@ export const ROUTES = {
   projectNew: "/projects/new",
   /** A project at one step, or at the step it opens on when `step` is left out. */
   project: (id: string, step?: PieceStep) => (step ? `/projects/${id}/${step}` : `/projects/${id}`),
+  /** A passage of a project being re-recorded: Current and Proposal (Record in Sheet, Phase 9). */
+  passage: (projectId: string, passageId: string) => `/projects/${projectId}/passages/${passageId}`,
   /** Notes Falling of a project, until Play mode makes it a view of its own (Phase 11). */
   projectNotesFalling: (id: string) => `/projects/${id}/notes-falling`,
   /** My library (the Private Library, Phase 6): songs with their versions, artists. */
@@ -56,6 +58,7 @@ export const ROUTES = {
 
 /** Pattern forms for `<Route path>`. */
 export const PROJECT_PATTERN = "/projects/:id";
+export const PASSAGE_PATTERN = "/projects/:id/passages/:passageId";
 export const LIBRARY_SONG_PATTERN = "/library/songs/:id";
 export const LIBRARY_ARTIST_PATTERN = "/library/artists/:id";
 export const LAB_EXAMPLE_PATTERN = "/admin/lab/examples/:slug";
