@@ -12,10 +12,13 @@ from __future__ import annotations
 import io
 from pathlib import Path
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
+from scipy.io import wavfile
 
 from aitu_backend.audio import formats, piece_audio, store, timeline as audio_timeline
+from aitu_backend.audio.frames import SAMPLE_RATE
 from aitu_backend.db import users
 from aitu_backend.editing import passages
 from aitu_backend.main import create_app
@@ -223,6 +226,28 @@ def test_a_take_is_read_with_the_passages_key_and_figure(
     assert {step["step"]: step["state"] for step in status["steps"]}["sheet"] == "ready"
     stored = pipeline.load_note_events(take)
     assert stored is not None and all(event.hand for event in stored.events)
+
+
+@needs_ffmpeg
+def test_a_quiet_take_is_raised_to_a_level_that_reads(client: TestClient, tmp_path: Path) -> None:
+    """A microphone set low, with the browser's automatic gain off: the take is kept louder."""
+    part = song(tmp_path)
+    passage = client.post("/passages", json={"part": part, "fromMs": 2000, "toMs": 4000}).json()
+    quiet = tmp_path / "quiet.wav"
+    seconds = np.arange(int(SAMPLE_RATE * 2.0)) / SAMPLE_RATE
+    wavfile.write(
+        quiet, SAMPLE_RATE, (0.01 * np.sin(2 * np.pi * 440 * seconds) * 32767).astype(np.int16)
+    )
+    sent = client.post(
+        f"/passages/{passage['id']}/takes",
+        files={"file": ("take.wav", io.BytesIO(quiet.read_bytes()), "audio/wav")},
+    )
+    assert sent.status_code == 201, sent.text
+    take = sent.json()["take"]
+    rate, samples = formats.read_wav(store.get(take).normalized_path)
+    peak = float(np.max(np.abs(samples)))
+    assert 0.8 < peak <= 1.0
+    assert bundle.read_project(take).part(take).source.format == "flac"
 
 
 # ------------------------------------------------------------------ the promotions

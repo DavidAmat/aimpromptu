@@ -280,6 +280,10 @@ user wants to record from the Mac (section 3.2: `localhost` through the tunnel, 
   cancellation, noise suppression, automatic gain): they are made for speech, and they cut and pump a
   piano. A **Microphone** list (shown when the computer has more than one input, the choice kept in
   this browser) picks the input; until now the system's default was used.
+- **A take is raised to a level that reads.** With the automatic gain off, the camera microphone gave
+  a take whose waveform was nearly flat. `formats.louder` puts its loudest sample at -1 dB (one gain,
+  at most +40 dB, never lowered) and the take is stored as FLAC. Test: a take at 1 % of full scale is
+  kept above 80 %.
 
 # 13. Learnings for later phases
 

@@ -21,7 +21,8 @@ The page shows the song's title, **Promote**, and two sheets:
   opens a small panel: **Play the passage along** (the Current, slowed or hurried to the speed the
   take is played at), **Microphone** (when the computer has more than one; remembered in this
   browser), the level, and
-  Record / Stop. A take is kept as soon as it stops ("Take 1", "Take 2"). Its waveform then shows
+  Record / Stop. A take is kept as soon as it stops ("Take 1", "Take 2"), raised to a level that reads (a
+  microphone set low gives a quiet take). Its waveform then shows
   with the stretch to keep, and **Write the proposal** transcribes it, splits its hands and writes
   its sheet **in the passage's key and figure**, so the two sheets read alike. The Proposal is then
   drawn with every tool of the sheet and its own undo (its sheet toolbox has Key, Transpose and

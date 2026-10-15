@@ -86,8 +86,9 @@ state (`PassageState`):
 | `windowMs` | Where the window starts over the take, in ms of the take as played |
 
 **A take** is one more hidden project of one part (`origin.takeOf` names the passage), titled
-`"Take N"`: `add_take` stores the upload in the audio store (`store.save_original`) and normalizes
-it (`ingest.finalize`). Its state: `recorded` (audio only), `reading` (its job runs, key
+`"Take N"`: `add_take` raises the upload so its loudest sample is at -1 dB (`formats.louder`, one
+gain for the whole take, at most +40 dB, never lowered; the browser's automatic gain is off), stores
+it as FLAC at its own rate and channels (`store.save_original`) and normalizes it (`ingest.finalize`). Its state: `recorded` (audio only), `reading` (its job runs, key
 `take:<id>`), `ready` (notes of the current cuts, and a hand for every note).
 
 **The condensed steps** (`read_take`, the job of **Write the proposal**, on the GPU queue): the

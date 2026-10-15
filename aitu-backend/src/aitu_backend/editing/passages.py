@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import shutil
 import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -378,7 +379,15 @@ def add_take(passage_id: str, stream: BinaryIO, filename: str) -> str:
             project = bundle.read_project(take_id)
             project.origin = {"takeOf": passage_id}
             bundle.write_project(project)
-        store.save_original(take_id, stream, extension)
+        # Raised to a level that reads: the browser's automatic gain is off (it pumps a piano).
+        with tempfile.TemporaryDirectory(prefix="aitu-take-") as folder:
+            received = Path(folder) / f"received.{extension}"
+            with received.open("wb") as handle:
+                shutil.copyfileobj(stream, handle)
+            raised = Path(folder) / "take.flac"
+            formats.louder(received, raised)
+            with raised.open("rb") as handle:
+                store.save_original(take_id, handle, "flac")
         ingest.finalize(take_id)
     except Exception:
         bundle.delete_project(take_id)
