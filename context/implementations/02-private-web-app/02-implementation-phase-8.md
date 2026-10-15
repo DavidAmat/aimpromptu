@@ -4,7 +4,7 @@ Plan: [`02-plan.md`](02-plan.md) sections 4 (rule 2), 8.5, 10.3, 11.2, 11.8 and 
 Phase 8. Checklist: [`02-checklist.md`](02-checklist.md). Branch `feat/phase-8`, made from `master`
 at `4731842` (Phase 7 merged and pushed at the start of this session, after the user's check;
 `vexflow-v2` `plan-resume` pushed with its five commits, package 0.43.0). Done 2026-10-09 on the
-Ubuntu machine.
+Ubuntu machine. Checked by the user in the browser on 2026-10-15 and merged into `master`.
 
 # 1. Summary
 
