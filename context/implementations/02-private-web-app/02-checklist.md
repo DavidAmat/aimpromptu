@@ -220,7 +220,7 @@ Built 2026-10-15 ([`02-implementation-phase-11.md`](02-implementation-phase-11.m
 
 # [x] Phase 12: The music library data reconciled
 
-Built 2026-10-16 ([`02-implementation-phase-12.md`](02-implementation-phase-12.md)). Q-6 answered;
+Built 2026-10-16 ([`02-implementation-phase-12.md`](02-implementation-phase-12.md)); merged into `master` after the user's ok (2026-10-16). Q-6 answered;
 Q-5 keeps its recommendations for later work. Starts any time after Phase 3. The parallel data is ready: `data/music-library/library.sqlite` next to the repository (on this machine `/home/david/Documents/projects/music/data/music-library/library.sqlite`). Writes nothing into that folder or its scripts.
 
 ## [x] Story 12.1: The reconciliation

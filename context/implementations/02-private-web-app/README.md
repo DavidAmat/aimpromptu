@@ -19,7 +19,9 @@ merged into `master` (with `vexflow-v2` 0.44.0 pushed). Q-7 (left for the produc
 Q-8 (one job with its stages) are answered. **Phase 10 done and checked by the user 2026-10-15**
 ([`02-implementation-phase-10.md`](02-implementation-phase-10.md)), merged into `master`. **Phase 11
 done and checked by the user 2026-10-16** ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)),
-merged into `master`.
+merged into `master`. **Phase 12 done 2026-10-16** ([`02-implementation-phase-12.md`](02-implementation-phase-12.md)),
+merged into `master` after the user's ok; Q-6 is answered (objective criteria, `week_power` 8), Q-5
+keeps its recommendations for later work.
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)
@@ -44,6 +46,7 @@ and the status lookup is [`02-checklist.md`](02-checklist.md). Phase reports go 
 | [`02-implementation-phase-9.md`](02-implementation-phase-9.md) | Phase 9: Recording in Sheet: the page of a passage (Current and Proposal, takes recorded or from a file, the condensed steps in one job), the speed and the window, the promotions (fit to the window with either audio, the whole passage with the length change) as one undoable write through the paste, the staged session removed (screenshots in [`screenshots/phase-9/`](screenshots/phase-9/)) |
 | [`02-implementation-phase-10.md`](02-implementation-phase-10.md) | Phase 10: From other projects (passages of other projects saved as a song or an integrated playlist), the parts of a project (rename, move, join, split), songs playlists (screenshots in [`screenshots/phase-10/`](screenshots/phase-10/)) |
 | [`02-implementation-phase-11.md`](02-implementation-phase-11.md) | Phase 11: Play mode: the sheet alone, Close, Next, Play, the cursor kept in the middle, lyrics by their frames, Notes Falling as a view, an integrated playlist played on, a songs playlist song by song, the entry points; the audio kind fix of Replace the version (screenshots in [`screenshots/phase-11/`](screenshots/phase-11/)) |
+| [`02-implementation-phase-12.md`](02-implementation-phase-12.md) | Phase 12: the downloaded music library reconciled with the tables (`reconciliation.md`, revision `0003`, the import script tried on copies), the popularity formula and its weights chosen by objective criteria (Q-6), every library version with its piano sheet |
 | [`public-library-build/`](public-library-build/) | A parallel piece of work: downloading `musicchartsarchive.com` into `data/music-library/` (next to the repository) to build the data of the Public Library. Phase 12 reconciles it with this plan |
 
 ## What it is for

@@ -1761,6 +1761,7 @@ keeps them), and tune it on a list the user ranks by hand. Q-5 (the regions not 
 raised with a recommendation each. This phase writes nothing into `data/music-library/` or into the
 parallel work's scripts. Those scripts are on `feat/02-a-public-library` until that branch is merged.
 The database is already in the folder next to the repository, so this phase can read it from here.
+*Built 2026-10-16 and merged after the user's ok* ([`02-implementation-phase-12.md`](02-implementation-phase-12.md)).
 
 ## Phase 13: The Public Library
 
