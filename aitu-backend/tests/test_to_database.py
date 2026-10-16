@@ -138,7 +138,13 @@ def test_every_piece_is_moved_and_the_broken_one_is_reported(
     assert report["counts"]["privateLibrary"] == 1 and report["counts"]["vault"] == 2
     assert report["examples"] == 1
     assert (paths.frame_examples_root() / "7years.json").is_file()
-    assert check().problems == []
+    assert check().problems == NO_SHEET
+
+
+#: The migration filed the seed list's songs with their notes and no hands or sheet; since
+#: 2026-10-16 a version of the library must have its sheet, so the check reports it (the 30 real
+#: songs got theirs through ``aitu-frontend/scripts/sheet-library.mjs``).
+NO_SHEET = [f"project {SEED}: a version of the library without a ready piano sheet"]
 
 
 def test_a_piece_keeps_its_notes_cuts_sheet_and_history(
@@ -233,7 +239,7 @@ def test_reindex_writes_the_rows_again_from_the_bundles(tree: tuple[Path, Path])
             db.delete(row)
     assert check().problems  # three bundles with no row
     reindex()
-    assert check().problems == []
+    assert check().problems == NO_SHEET
     with session() as db:
         assert {row.id: row.step for row in db.scalars(select(Project))} == steps
         assert db.get(Project, SEED).layer == "private"

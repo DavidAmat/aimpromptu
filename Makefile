@@ -38,7 +38,7 @@
 
 .PHONY: serve stop restart status logs-native logs-web logs-api _start _report \
 	up down logs ps build test-backend shell-backend _database db-backup db-restore db-check db-reindex \
-	public-import popularity-tune
+	public-import popularity-check
 
 WEB_PORT ?= 5173
 API_HOST ?= $(or $(AITU_HOST),127.0.0.1)
@@ -225,7 +225,7 @@ db-reindex:
 public-import:
 	cd aitu-backend && uv run --no-sync python -m aitu_backend.library.public_import $(ARGS)
 
-# The popularity weights fitted to the hand ranking of library/hand_ranking.json (Q-6); writes
-# nothing. `ORDER=` the letters, most popular first.
-popularity-tune:
-	cd aitu-backend && uv run --no-sync python -m aitu_backend.library.popularity tune $(if $(ORDER),--order "$(ORDER)",)
+# The objective criteria of the popularity (Q-6), for the plan's weights and the app's, measured on
+# the downloaded chart history; writes nothing.
+popularity-check:
+	cd aitu-backend && uv run --no-sync python -m aitu_backend.library.popularity check

@@ -129,32 +129,46 @@ higher score). A time range is applied to the weeks before the sum: the populari
 for the 80s takes 46 ms, for all weeks 212 ms (2,179 and 9,041 songs), so a filter by decade can
 work it out on each request.
 
-**What the real data shows about the first weights:**
+**What the real data showed about the plan's weights:**
 
 - **The top is flat.** 218 songs score 95 or more, and 2 songs and 44 albums score 100.0. A sort
   by popularity cannot tell the biggest hits apart.
-- **A long run beats many weeks at number 1.** "Lose Control" (Teddy Swims: 1 week at number 1, 112
-  weeks on the chart) scores 100.0; "Last Night" (16 weeks at number 1, 60 weeks) 99.7. The app
-  context says that many weeks at number 1 is what comes near 100.
-- **Recent songs stay longer on the chart.** A big hit of the 2020s runs 60 to 112 weeks; one of
-  the 80s about 25. With the same weights, the recent hit wins.
+- **A long run counts as much as many weeks at number 1.** "Lose Control" (Teddy Swims: 1 week at
+  number 1, 112 weeks on the chart) scores 100.0; "Last Night" (16 weeks at number 1) 99.7.
 - **Held between 10 and 30.** Place 20 for 20 weeks scores 65, number 1 for one week 46; the app
   context puts the first one close to, perhaps a little below, the second.
 
-No other set of weights fixes all four alone (three variants were tried in the phase report), so
-the weights are tuned on the user's own sense, as the plan says: a list of 20 well-known songs with
-different chart shapes (`library/hand_ranking.json`), which the user puts in order by hand.
-`python -m aitu_backend.library.popularity tune --order <letters>` then tries 480 sets of weights
-and keeps those whose order agrees best with the user's (Kendall's tau: 1 is the same order). This
-is Q-6.
+**The weights the app uses (Q-6).** The plan asked to tune the weights on a list the user ranks by
+hand. The user chose objective criteria instead (2026-10-16). The criteria come from the app
+context, and each is measured on the chart history (`make popularity-check`):
 
-## 6. What is still open (Q-5 and Q-6)
+| Criterion | Plan's weights | App's weights |
+|---|---|---|
+| Number 1 for 30 weeks near 100, clearly above 10 weeks | 97.0 and 77.9 | 97.0 and 77.9 |
+| Place 20 for 20 weeks close to, at most, number 1 for one week (45.7) | 65.1 | 39.8 |
+| Place 80 for 3 weeks near 0 | 1.2 | 0.4 |
+| At most 1 % of the songs at 95 or more | 218 of 9,107 | 44 |
+| Among the songs that reached number 1, the score follows the weeks at number 1 (Spearman, 1 = same order) | 0.48 | 0.58 |
+| Billboard's all-time Hot 100 top 10 (November 2021; the 8 in the download), places with the weeks up to then | 1, 8, 5, 28, 4, 14, 24, 3 | 1, 8, 4, 17, 15, 22, 23, 3 |
+
+The app's weights differ from the plan's in **one number**: the power of a week's points is 8, not
+2. Place 1 is still worth 1.0 a week; place 10 is worth 0.47 (was 0.83), place 20 0.18 (was 0.66),
+place 40 0.02. Both sets place Billboard's own all-time top 10 near the top, so the order of the
+biggest hits agrees with the chart's owner; only the app's weights meet the app context's examples
+and leave the top spread.
+
+**What stays.** Recent hits stay on the chart much longer (a 2020s hit runs 60 to 112 weeks, one of
+the 80s about 25), so they lead the all-time order: Billboard's ranking does the same ("Blinding
+Lights" is its first). A popularity inside a time range (a decade filter) compares songs of the
+same years.
+
+## 6. What is still open (Q-5)
 
 - **Q-5**: the sources of the `spain` and `catalan` regions, the genres, and the eight seed songs
   that are not on the chart. Spain has an official weekly singles chart (PROMUSICAE, top 50 from
   2008, top 100 from 2015); Catalan music has no weekly chart of its own. Genres could come from
   Wikidata, mapped to the 13 genres of the app.
-- **Q-6**: the weights, from the user's hand ranking.
+- **Q-6** is answered: the app's weights, by the criteria of section 5.
 
 The options and the recommendations are in the
 [Phase 12 report](../implementations/02-private-web-app/02-implementation-phase-12.md).
@@ -196,6 +210,6 @@ rows made, the same counts.
 - The download: [`public-library-build/`](../implementations/02-private-web-app/public-library-build/)
 - The plan: [02-plan.md](../implementations/02-private-web-app/02-plan.md) sections 8.6, 15.3, 15.5 and 15.6
 - The Private Library, the other scope of the same tables: [private-library.md](private-library.md)
-- The code: `aitu-backend/src/aitu_backend/library/public_import.py`, `popularity.py`,
-  `hand_ranking.json`; `db/migrations/versions/0003_public_library_fields.py`; the tests
+- The code: `aitu-backend/src/aitu_backend/library/public_import.py`, `popularity.py`;
+  `db/migrations/versions/0003_public_library_fields.py`; the tests
   `test_public_import.py`, `test_popularity.py`

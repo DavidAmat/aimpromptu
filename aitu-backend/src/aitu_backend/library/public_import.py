@@ -327,7 +327,7 @@ def import_library(
     db: DbSession,
     source: Source,
     seed: Path | None = None,
-    weights: popularity.Weights = popularity.PLAN,
+    weights: popularity.Weights = popularity.DEFAULT,
 ) -> Report:
     """Write ``source`` into the public rows of ``db`` (one transaction: the caller commits)."""
     started = time.monotonic()

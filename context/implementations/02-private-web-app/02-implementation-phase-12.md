@@ -16,12 +16,12 @@ into the parallel work's worktree or scripts.
 | Story | Result |
 |---|---|
 | 12.1 The reconciliation | `reconciliation.md`: the mapping table by table, the gaps both ways, the identity rule, the re-entries, the seed list. Revision `0003` adds only `song_lyrics`, `album_artists`, `album_chart_entries`, `albums.release_date`, `albums.popularity`. `library/public_import.py` (`make public-import`): the whole download in 2.5 s, a second run makes nothing; 23 of the 31 seed songs found, 8 added from the seed list. Run on copies only: the real import is Phase 13 |
-| 12.2 Popularity | `library/popularity.py`: the formula of section 15.6 with every weight a parameter, time ranges, the chart's size and weight; it matches the parallel work's 17,454 stored scores where the songs are the same. On the real data the top is flat and long runs win (section 5). **Task 12.2.2 waits for the user**: the hand ranking of 20 songs (`library/hand_ranking.json`), then `make popularity-tune` |
+| 12.2 Popularity | `library/popularity.py`: the formula of section 15.6 with every weight a parameter, time ranges, the chart's size and weight; it matches the parallel work's 17,454 stored scores where the songs are the same. On the real data the plan's weights leave the top flat (section 5). **Task 12.2.2, changed by the user**: no hand ranking; the weights are chosen by objective criteria (section 5.3): the power of a week's points goes from 2 to 8, nothing else changes (`DEFAULT`, `make popularity-check`) |
 | 12.3 Decisions | Q-5 and Q-6 raised with a recommendation each (section 9) |
 | Asked during the phase | A version of the library always has its piano sheet: Restore refuses a state without one, `make db-check` reports one; the 30 migrated songs got their hands and sheet through the real pages (section 10) |
 
 Checks (section 7): backend 1,107 tests on the CPU (the GPU was in use), the 3 known CPU failures
-and 1 skip; the 13 new tests pass; the migration matches the models; `check-links.py` passes.
+and 1 skip; the new tests pass; the migration matches the models; `check-links.py` passes.
 
 # 2. What the download is, read from it
 
@@ -117,9 +117,8 @@ is now in `07-database.md`.
 `library/popularity.py`: `points`, `score` (a list of `Week(rank, size, weight)`), `Weights` (the
 five numbers of the formula; `PLAN` is the plan's), `song_scores` and `album_scores` (from the tables,
 with an optional `start..end`, both ends included), `store_all_time` (the public rows' all-time
-value; 0.0 for a public row with no week), `kendall_tau` and `tune` (a grid of 480 weights: the peak
-weight 0.2 to 0.6, the saturation 5 to 40, the two powers 1 to 4; ties broken by the distance to the
-plan's weights). With several charts, each week counts with its chart's weight and the peak is the
+value; 0.0 for a public row with no week), and `criteria` with `spearman` (the objective check of
+section 5.3). `PLAN` is the plan's weights, `DEFAULT` the app's. With several charts, each week counts with its chart's weight and the peak is the
 best weighted peak (only one chart exists today).
 
 Measured on the copy: all weeks, 9,041 songs, 212 ms; the 80s, 2,179 songs, 46 ms; the last two
@@ -143,21 +142,53 @@ joined; the 66 joined songs score higher (Dakiti 85.1 → 85.4, Into The Night 6
 keeps Lose Control, Blinding Lights and A Bar Song first: the length of the run decides, and recent
 songs run longer (median weeks per charting song: 14 in the 70s, 20 in the 90s to the 2010s, 7 in
 the 2020s, where many songs chart one week; but a 2020s hit runs 60 to 112 weeks). So the weights
-cannot be chosen from the data alone. The list for the user's ranking is
-`library/hand_ranking.json`: 20 songs of different shapes (19 weeks at number 1, a 112-week run with
-one week at 1, a top-10 peak of a few weeks, a 79-week run whose best place is 17, 12 weeks peaking at 35),
-lettered by title so the letters suggest nothing.
+cannot be chosen from the shape of the data alone.
 
-**Needed later, when the user answers:** `make popularity-tune ORDER="..."`, then the chosen weights
-become `PLAN` in `popularity.py` (and the values of plan section 15.6), and the tests of the plan's
-examples change with them.
+## 5.3 The weights chosen by objective criteria (Q-6)
+
+The plan asked for a list the user ranks by hand; the list of 20 songs was made (19 weeks at
+number 1, a 112-week run with one week at 1, a long run whose best place is 17 ...). The user then
+asked not to rank by hand, and to choose by objective criteria in a simple way (2026-10-16). The
+criteria are the app context's own words, each measured, plus one outside benchmark:
+
+1. number 1 for 30 weeks near 100 (at least 95), and at least 8 above number 1 for 10 weeks;
+2. place 20 for 20 weeks between 80 % and 100 % of number 1 for one week ("close in popularity",
+   "maybe not that much");
+3. place 80 for 3 weeks under 1 (a song that was not popular adds nothing);
+4. at most 1 % of the songs at 95 or more (a sort must tell the biggest hits apart);
+5. among the songs that reached number 1, the score follows the weeks at number 1 (Spearman);
+6. Billboard's Greatest of All Time Hot 100 Songs (November 2021; "Blinding Lights" first,
+   counting weeks and positions) places its top 10 near the top of ours, scored with the weeks up to
+   that date. The eight in the download: Blinding Lights, Smooth, Uptown Funk!, How Do I Live,
+   Party Rock Anthem, I Gotta Feeling, Macarena, Shape Of You.
+
+A grid of 840 weights (the peak weight 0.2 to 0.6, the saturation 5 to 60, the power of a week 1
+to 8, the power of the peak 1 to 4) was measured with numpy on the imported copy. Four meet 1 to 4;
+of those, the one that follows the weeks at number 1 best (tied with another) is also the closest to
+the plan: **the power of a week's points 8 instead of 2, nothing else**. It keeps the plan's
+examples at number 1 exactly.
+
+| `make popularity-check` | Plan's weights | App's weights (`DEFAULT`) |
+|---|---|---|
+| 1 x 30, 1 x 10, 1 x 1 weeks | 97.0, 77.9, 45.7 | 97.0, 77.9, 45.7 |
+| Place 20 x 20 weeks | 65.1 (above number 1 once) | 39.8 |
+| Place 80 x 3 weeks | 1.2 | 0.4 |
+| Songs at 95 or more (9,107 songs of the download) | 218 | 44 |
+| Follows the weeks at number 1 | 0.484 | 0.583 |
+| Billboard's top 10, places | 1, 8, 5, 28, 4, 14, 24, 3 | 1, 8, 4, 17, 15, 22, 23, 3 |
+| Meets the criteria | no | yes |
+
+Both sets agree with Billboard on the order of the biggest hits; only the app's meets the app
+context's examples and spreads the top. Recent hits still lead the all-time order, as in Billboard's
+own ranking; a decade filter compares songs of the same years. `hand_ranking.json` and the tuner by
+hand order were removed.
 
 # 6. Tests
 
 | File | Tests | What |
 |---|---|---|
 | `test_public_import.py` (new) | 6 | A small download in the parallel work's schema: every row becomes a public row with no owner; artists in order, through default names; a song with no artist; an album's artist, release date, chart history and popularity; the song-album links with their track numbers; the region; the two charts. A re-entry joins its song (one Billie Jean, weeks of both, the re-entry's lyrics); one with no earlier row loses its bracket. A second run makes nothing, keeps a changed title, a renamed artist, a removed credit, fills an empty year and lyrics, writes the chart weeks again. The seed list: found by title and artist, by title alone, by a second artist; the missing ones added once, with a new artist, no year, no region, popularity 0. The source file unchanged, nothing beside it. The compared forms |
-| `test_popularity.py` (new) | 7 | The examples of the plan (97.0, 77.9, 65, 45.7, 41, 1); a position outside the chart; the chart's size and weight; other weights reorder two songs; a time range and the stored all-time value (a private song untouched); Kendall's tau; the tuning finds weights that follow a hand ranking the plan's weights do not |
+| `test_popularity.py` (new) | 8 | The examples of the plan (97.0, 77.9, 65, 45.7, 41, 1); the app's weights (number 1 unchanged, 20 x 20 at 39.8, below number 1 once); a position outside the chart; the chart's size and weight; other weights reorder two songs; a time range and the stored all-time value (a private song untouched); Spearman; the criteria tell the plan's weights from the app's on a small history |
 | `test_database.py` | 1 changed | The three new tables |
 
 # 7. The checks
@@ -197,10 +228,12 @@ examples change with them.
 | Seed songs | **A (recommended, built)**: added with title and artist only | All 31 are in the Public Library; they get a chart later if a region's chart has them |
 | | B: left out until another chart brings them (`make public-import ARGS=--no-seed`) | 8 of the user's own songs are missing from the Public Library |
 
-**Q-6. The popularity weights.** The plan's weights make the top flat and favour long runs (section
-5.2). Recommended: the user ranks the 20 songs of `hand_ranking.json`; the weights that follow that
-order best replace the plan's, if they agree clearly better (Kendall's tau at least 0.1 higher);
-otherwise keep the plan's and add a weight for the weeks at number 1.
+**Q-6. The popularity weights.** **Answered 2026-10-16:** no hand ranking; objective criteria in a
+simple approach. Chosen: the plan's formula with the power of a week's points at 8 (section 5.3).
+
+**Q-5 after the user's "proceed" (2026-10-16):** the seed songs follow option A (built). The regions
+and the genres keep the recommendations as the plan for later work (each is a separate download, not
+part of Phase 12); Phase 13 does not depend on them, and the user can still choose otherwise.
 
 # 10. Asked during the phase: a version of the library always has its piano sheet
 

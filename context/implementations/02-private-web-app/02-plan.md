@@ -209,7 +209,7 @@ its walkthrough under DECISIONS.
 | # | Question | Raised in |
 |---|---|---|
 | Q-5 | The worldwide source is chosen: `musicchartsarchive.com`, downloaded by the parallel work (section 15.5). Still open: the sources for the `spain` and `catalan` regions, and anything that source does not give (genres, tags) | Phase 12, after the reconciliation |
-| Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12 |
+| Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12. **Answered 2026-10-16: objective criteria instead of a hand ranking; `week_power` 8** (section 15.6) |
 | Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). **Answered 2026-10-15: left for the production version** |
 | Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report. **Answered 2026-10-15: one job with its stages; the notes arrive at the end** |
 
@@ -1484,8 +1484,11 @@ that region's charts; the one shown by default is `worldwide`.
 parameter, the chart's size and weight read from `chart_sources`; it gives the parallel work's
 stored scores to the decimal. On the real chart history the top is flat (218 songs at 95 or more)
 and a long run beats many weeks at number 1, because recent hits stay on the chart 60 to 112 weeks.
-The weights are tuned on 20 songs the user ranks by hand (`library/hand_ranking.json`,
-`make popularity-tune`). The popularity of one decade is worked out in about 50 ms.
+**Q-6 answered 2026-10-16**: no hand ranking; objective criteria (this section's examples, a spread
+top, more weeks at number 1 scoring higher, Billboard's all-time top 10). The app uses this formula
+with `week_power` 8 instead of 2 (`popularity.DEFAULT`; place 10 worth 0.47 a week, place 20 0.18):
+number 1 keeps 97, 78 and 46, place 20 for 20 weeks scores 40, songs at 95 or more fall from 218 to
+44 (`make popularity-check`). The popularity of one decade is worked out in about 50 ms.
 
 ---
 

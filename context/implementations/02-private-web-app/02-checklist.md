@@ -19,7 +19,7 @@ The plan's section 3.
 - [x] **Q-3** A total promotion may change the length (everything after moves); cuts stay ranges in the Personal Vault, and the audio is written again on save to the Private Library. Answered 2026-10-05.
 - [x] **Q-4** Video into From source, Notes Falling into Play mode, the video development pages into Lab; the Playground, the old `.npz` library and the text-notation MVP deleted. Answered 2026-10-05.
 - [p] **Q-5** The sources of the Public Library. Worldwide: `musicchartsarchive.com`, downloaded by the parallel work (`public-library-build/`; in fact the US chart). The `spain` and `catalan` regions, the genres and the 8 seed songs not on that chart: raised in Phase 12 with a recommendation ([report](02-implementation-phase-12.md) section 9).
-- [p] **Q-6** The popularity weights. Raised in Phase 12; waits for the user's hand ranking of 20 songs.
+- [x] **Q-6** The popularity weights. **Answered 2026-10-16:** objective criteria instead of a hand ranking; the plan's formula with the power of a week's points at 8 ([report](02-implementation-phase-12.md) section 5.3).
 - [x] **Q-7** Offline downloads per project: **left for the production version**. Answered 2026-10-15 (raised in Phase 6).
 - [x] **Q-8** Live notes from the video reader: **one job with its stages**, the notes at the end (61 s for a 3:09 video, measured in Phase 5). Answered 2026-10-15.
 
@@ -218,10 +218,10 @@ Built 2026-10-15 ([`02-implementation-phase-11.md`](02-implementation-phase-11.m
 ## [x] Story 11.3: Documentation
 - [x] Task 11.3.1 `context/frontend/play-mode.md` (new); `pages.md`, `projects.md`, `playlists.md`, `components.md`, `endpoints.md`, `editing-and-compose.md` (the audio kind fix found on the way).
 
-# [p] Phase 12: The music library data reconciled
+# [x] Phase 12: The music library data reconciled
 
-Built 2026-10-16 ([`02-implementation-phase-12.md`](02-implementation-phase-12.md)); waits for the
-user's hand ranking (Task 12.2.2) and the answers to Q-5 and Q-6. Starts any time after Phase 3. The parallel data is ready: `data/music-library/library.sqlite` next to the repository (on this machine `/home/david/Documents/projects/music/data/music-library/library.sqlite`). Writes nothing into that folder or its scripts.
+Built 2026-10-16 ([`02-implementation-phase-12.md`](02-implementation-phase-12.md)). Q-6 answered;
+Q-5 keeps its recommendations for later work. Starts any time after Phase 3. The parallel data is ready: `data/music-library/library.sqlite` next to the repository (on this machine `/home/david/Documents/projects/music/data/music-library/library.sqlite`). Writes nothing into that folder or its scripts.
 
 ## [x] Story 12.1: The reconciliation
 - [x] Task 12.1.1 Read `public-library-build/02-a-public-library-build-implementation.md`, then `library.sqlite`. There is no response file.
@@ -229,9 +229,9 @@ user's hand ranking (Task 12.2.2) and the answers to Q-5 and Q-6. Starts any tim
 - [x] Task 12.1.3 Only the missing fields added to section 8.6 and its Alembic migration (revision `0003`: `song_lyrics`, `album_artists`, `album_chart_entries`, `albums.release_date`, `albums.popularity`).
 - [x] Task 12.1.4 The import script the Phase 13 import starts from (`library/public_import.py`, `make public-import`; run on copies only); the 31 seed songs checked (23 on the chart, 8 added from the seed list).
 
-## [p] Story 12.2: Popularity
+## [x] Story 12.2: Popularity
 - [x] Task 12.2.1 The formula of plan section 15.6 run on the downloaded chart history (songs and albums; `library/popularity.py`).
-- [ ] Task 12.2.2 Tuned on a list the user ranks by hand (human step: `library/hand_ranking.json`, then `make popularity-tune`).
+- [x] Task 12.2.2 Tuned: the user chose objective criteria instead of a hand ranking (2026-10-16); `DEFAULT` weights, `make popularity-check`.
 
 ## [x] Story 12.3: Decisions
 - [x] Task 12.3.1 Q-5 (the regions not covered, the missing fields) and Q-6 raised with a recommendation each.
