@@ -132,11 +132,17 @@ try {
       page.evaluate(() => {
         const one = document.querySelector('.grid-lyric[data-from-column="25"]');
         const two = document.querySelector('.grid-lyric[data-from-column="400"]');
-        return Boolean(one && two && getComputedStyle(one).opacity === '1' && Number(getComputedStyle(two).opacity) < 0.5);
+        const ink = one?.querySelector('.grid-lyric-text');
+        return Boolean(
+          one && two && ink &&
+            getComputedStyle(one).opacity === '1' &&
+            getComputedStyle(ink).fill === 'rgb(0, 0, 0)' &&
+            Number(getComputedStyle(two).opacity) < 0.5,
+        );
       }),
     8000,
   );
-  check('the lyrics piece of the frames sounding is shown, the other faint', lit);
+  check('the lyrics piece of the frames sounding is shown in black, the other faint', lit);
   await shot('02-lyrics-by-frames');
   const faded = await until(
     async () => (await page.locator('[data-play-menu]').evaluate((node) => getComputedStyle(node).opacity)) === '0',

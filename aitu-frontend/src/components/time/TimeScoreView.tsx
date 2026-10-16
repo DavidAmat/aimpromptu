@@ -319,6 +319,11 @@ export interface TimeScoreViewProps {
    */
   litLyrics?: readonly number[] | null;
   /**
+   * The colour of the words, in place of the drawing package's dark grey (Play mode: black, so the
+   * words sounding read as clearly as the notes).
+   */
+  lyricsInk?: string;
+  /**
    * The cursor was dragged to a new moment, in seconds. Move the recording there.
    *
    * Leave it out and the cursor is not draggable, which is what a printed view wants.
@@ -483,6 +488,7 @@ export function TimeScoreView({
   followPlayhead = false,
   followCentre = false,
   litLyrics = null,
+  lyricsInk,
   onScrub,
   scrollCursorAt,
   onRendererChange,
@@ -1458,6 +1464,7 @@ export function TimeScoreView({
                     `.grid-lyric[data-from-column="${column}"] .grid-lyric-grip{fill:#8592a6;fill-opacity:0.45}`,
                 )
                 .join("") +
+              (lyricsInk ? `[data-score-view="${scope}"] .grid-lyric-text{fill:${lyricsInk}}` : "") +
               (litLyrics
                 ? `[data-score-view="${scope}"] .grid-lyric{opacity:0.18;transition:opacity 160ms linear}` +
                   litLyrics

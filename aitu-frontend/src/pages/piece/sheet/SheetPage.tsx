@@ -2996,6 +2996,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
               // Play mode picks nothing on the sheet: no note, no stretch, no handle to spread a line.
               readOnly={playMode}
               litLyrics={playMode && playing ? litLyricsKept : null}
+              lyricsInk={playMode ? "#000000" : undefined}
               onScrub={playMode ? scrubInPlay : scrub}
               scrollCursorAt={scrollCursorAt}
               frameWindow={passageView?.frameWindow}

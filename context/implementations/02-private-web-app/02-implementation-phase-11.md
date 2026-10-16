@@ -205,7 +205,14 @@ Run on Play mode (a project, an integrated playlist, a songs playlist, Notes Fal
 - **Play mode needs the Sheet step open** (notes with their hands): **Play** is disabled before.
 - Offline playing is left for the production version (Q-7).
 
-# 10. Learnings for later phases
+# 10. After the user's first look (2026-10-16)
+
+- **The words did not look black.** The drawing package prints lyrics in a dark grey
+  (`LYRIC_TEXT_FILL`, `#3b3f46`), so a piece "shown in full" still read as grey beside the notes.
+  In Play mode the words are now black (`TimeScoreView` `lyricsInk`, a style scoped to the sheet);
+  the Sheet step keeps the grey. `check:play` now checks the colour of the piece sounding (shot 02).
+
+# 11. Learnings for later phases
 
 - **A style a component writes into the page must be scoped to the component** when two of them can
   share a page: `useId` and an attribute on its root.
