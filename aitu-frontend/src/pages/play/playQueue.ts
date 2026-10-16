@@ -9,7 +9,7 @@
  *   playlist keeps no part: Phase 10).
  */
 
-import { playlistsApi, projectsApi, type PartRow, type ProjectRow } from "../../api";
+import { playlistsApi, projectsApi, publicApi, type PartRow, type ProjectRow } from "../../api";
 
 export interface PlayPart {
   /** The uuid of the part, the one the step routes take. */
@@ -63,9 +63,12 @@ export async function projectQueue(projectId: string, signal?: AbortSignal): Pro
   return { title, songs: [{ projectId: row.id, title, byline, parts: partsOf(parts.parts) }] };
 }
 
-/** One songs playlist, its songs in order on their versions. A song with no version is left out. */
-export async function playlistQueue(playlistId: number, signal?: AbortSignal): Promise<PlayQueue> {
-  const playlist = await playlistsApi.get(playlistId, signal);
+/**
+ * One songs playlist, its songs in order on their versions. A song with no version is left out.
+ * `fromPublic`: a playlist of the Public Library (Phase 13), whose items have the same fields.
+ */
+export async function playlistQueue(playlistId: number, signal?: AbortSignal, fromPublic = false): Promise<PlayQueue> {
+  const playlist = fromPublic ? await publicApi.playlist(playlistId, signal) : await playlistsApi.get(playlistId, signal);
   const songs = await Promise.all(
     playlist.items
       .filter((item) => item.projectId !== null && item.parts.length > 0)

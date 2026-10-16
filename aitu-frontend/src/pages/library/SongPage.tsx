@@ -17,6 +17,9 @@
  * - **Rename** and **Delete**.
  *
  * The header's `⋯` renames the song, changes its artists, or deletes it with every version.
+ *
+ * A song that stands for a public song (pulled from the Public Library, or saved on a public song:
+ * Phase 13) links to it under its title.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -224,6 +227,17 @@ export function SongPage() {
                     </Link>
                   </Box>
                 ))}
+            {song.publicId !== null ? (
+              <Link
+                component={RouterLink}
+                to={ROUTES.publicSong(song.publicId)}
+                color="inherit"
+                data-testid="song-public-link"
+                sx={{ ml: 2 }}
+              >
+                In the Public library
+              </Link>
+            ) : null}
           </Typography>
 
           {actionError && !renaming && !deleting && !history && !artists ? (

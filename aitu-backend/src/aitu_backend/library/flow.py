@@ -153,13 +153,22 @@ def save(
     song_title: str | None = None,
     artist: str | None = None,
     replace: bool = False,
+    public_song_id: int | None = None,
+    public_artist_id: int | None = None,
 ) -> Saved:
     """Save a project of the Personal Vault to the Private Library (section 10.2).
 
     The song is ``song_id``, or the owner's song called ``song_title`` by ``artist``, made when it
     does not exist. ``replace`` saves an edit copy over the version it was made from (section
     10.6); the song and the version name are then that version's.
+
+    A public song or artist chosen in the dialog (Phase 13) is the owner's song or artist that
+    stands for it, found or made by :mod:`aitu_backend.library.pull` and linked to it
+    (``public_id``), so the Private Library and the Public Library name the same song.
     """
+    # pull imports this module (for its refusals), so it is imported here.
+    from aitu_backend.library import pull  # noqa: PLC0415
+
     where = locate.project(project_id)
     if where.layer != "vault" or where.owner_id != owner:
         raise Refused("Only a project of your Projects can be saved to the library")
@@ -174,6 +183,8 @@ def save(
             found: Song | None
             if song_id is not None:
                 found = rows.song(db, owner, song_id)
+            elif public_song_id is not None:
+                found = pull.find_private_song(db, owner, public_song_id)
             else:
                 title = rows.clean(song_title, "A song's title")
                 found = rows.find_song(db, owner, title, artist)
@@ -215,9 +226,13 @@ def save(
         audio_files.delete_unused(replaced)
 
         with session() as db:
-            if known_song is not None:
+            if public_song_id is not None:
+                song = pull.private_song_for(db, owner, public_song_id)
+            elif known_song is not None:
                 song = rows.song(db, owner, known_song)
             else:
+                if public_artist_id is not None:
+                    artist = pull.private_artist_for(db, owner, public_artist_id).name
                 song = rows.make_song(db, owner, title or "", artist)
             version = PrivateVersion(song_id=song.id, version_name=name, project_id=project_id)
             db.add(version)

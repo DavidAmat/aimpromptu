@@ -67,6 +67,8 @@ class SongDetail(_Camel):
     title: str
     artists: list[Credit]
     versions: list[VersionRow]
+    #: The public song this one stands for (pulled from it, or saved on it: Phase 13).
+    public_id: int | None = Field(None, alias="publicId")
 
 
 class NameRow(_Camel):
@@ -174,9 +176,13 @@ def _song(owner: int, song_id: int) -> SongDetail:
         song = rows.song(db, owner, song_id)
         credits = rows.credits_of(db, [song.id])[song.id]
         versions = rows.versions_of(db, [song.id])[song.id]
-        title = song.title
+        title, public_id = song.title, song.public_id
     return SongDetail(
-        id=song_id, title=title, artists=_credits(credits), versions=_versions(owner, versions)
+        id=song_id,
+        title=title,
+        artists=_credits(credits),
+        versions=_versions(owner, versions),
+        public_id=public_id,
     )
 
 

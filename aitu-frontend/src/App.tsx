@@ -23,6 +23,9 @@ import {
   PLAY_PATTERN,
   PLAY_PLAYLIST_PATTERN,
   PROJECT_PATTERN,
+  PUBLIC_ARTIST_PATTERN,
+  PUBLIC_PLAYLIST_PATTERN,
+  PUBLIC_SONG_PATTERN,
   ROUTES,
 } from "./layout/routes";
 import UsersPage from "./pages/admin/UsersPage";
@@ -32,6 +35,12 @@ import PlaylistPage from "./pages/library/PlaylistPage";
 import PlaylistsPage from "./pages/library/PlaylistsPage";
 import SongPage from "./pages/library/SongPage";
 import SongsPage from "./pages/library/SongsPage";
+import PublicArtistPage from "./pages/public/PublicArtistPage";
+import PublicArtistsPage from "./pages/public/PublicArtistsPage";
+import PublicPlaylistPage from "./pages/public/PublicPlaylistPage";
+import PublicPlaylistsPage from "./pages/public/PublicPlaylistsPage";
+import PublicSongPage from "./pages/public/PublicSongPage";
+import PublicSongsPage from "./pages/public/PublicSongsPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import ComposePage from "./pages/compose/ComposePage";
@@ -143,6 +152,12 @@ export default function App() {
         <Route path={LIBRARY_ARTIST_PATTERN} element={<ArtistPage />} />
         <Route path={ROUTES.libraryPlaylists} element={<PlaylistsPage />} />
         <Route path={LIBRARY_PLAYLIST_PATTERN} element={<PlaylistPage />} />
+        <Route path={ROUTES.publicSongs} element={<PublicSongsPage />} />
+        <Route path={PUBLIC_SONG_PATTERN} element={<PublicSongPage />} />
+        <Route path={ROUTES.publicArtists} element={<PublicArtistsPage />} />
+        <Route path={PUBLIC_ARTIST_PATTERN} element={<PublicArtistPage />} />
+        <Route path={ROUTES.publicPlaylists} element={<PublicPlaylistsPage />} />
+        <Route path={PUBLIC_PLAYLIST_PATTERN} element={<PublicPlaylistPage />} />
 
         <Route
           path={ROUTES.adminUsers}

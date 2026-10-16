@@ -23,6 +23,10 @@ is plan section 6.3 of [implementation 02](../implementations/02-private-web-app
 | `/library/artists` | `ArtistsPage` | The artists with their other names, a table with a filter |
 | `/library/artists/:id` | `ArtistPage` | One artist: its names (Add a name, Make default, Rename, Remove) and its songs; Merge, Delete |
 | `/library/playlists` | `PlaylistsPage` | The songs playlists and the integrated playlists of My library (Phase 10), **New playlist** |
+| `/public/songs` | `PublicSongsPage` (`pages/public/`) | The Public Library (Phase 13): a search, the filter chips (Decade, Region, Genre, Tag), a table sorted by popularity, year or title, one page at a time; the address keeps it all |
+| `/public/songs/:id` | `PublicSongPage` | One public song: byline, facts, **On the chart** (the line of its places), **Versions** and **Other versions** (Play, like, Add to my library), Lyrics; **Play**, **Add to my library**, **Open in My library** |
+| `/public/artists`, `/public/artists/:id` | `PublicArtistsPage`, `PublicArtistPage` | The public artists (search, sort); one with its songs and albums by popularity, **Add to my library** |
+| `/public/playlists`, `/public/playlists/:id` | `PublicPlaylistsPage`, `PublicPlaylistPage` | The public songs playlists; one with **Play** (Play mode with `?from=public`) and **Add to my library** |
 | `/library/playlists/:id` | `PlaylistPage` | One songs playlist: **Play**, its songs with their version and stretch (a click plays from that song; `?at=` shades the song Play mode was closed on), **Add a song** |
 | `/play/:projectId` | `PlayPage` (`pages/play/`) | **Play mode** (Phase 11), outside the shell: a project or a version, every part; `?view=falling` is Notes Falling ([play-mode.md](play-mode.md)) |
 | `/play/playlist/:id` | `PlayPage` | Play mode on a songs playlist: `?at=` the song, `?all=1` every song on one page |
@@ -59,7 +63,8 @@ does not exist, and the project page shows "There is no project of yours at this
 
 `layout/AppLayout.tsx` puts the sidebar (`ui/Sidebar.tsx`) beside the page (`ui/AppShell.tsx`). The
 sidebar shows **Projects**, a **My library** group with **Songs**, **Artists** (Phase 6) and
-**Playlists** (Phase 10), and for
+**Playlists** (Phase 10), a **Public library** group with **Songs**, **Artists** and **Playlists**
+(Phase 13), and for
 the master user an **Admin** group with **Users** and **Lab**. **Play mode** (`/play/...`, Phase 11)
 is outside the shell, like the sign-in page: the sheet alone, with no sidebar
 ([play-mode.md](play-mode.md)).
@@ -69,7 +74,8 @@ and **Sign out**. The sidebar is open on the list pages and closed inside a proj
 they move between the two kinds of page. Under 900 px it stays closed, as a rail of icons with
 their names in tooltips. `⌘K` (`Ctrl+K`) opens **Search** from anywhere (`layout/SearchDialog.tsx`):
 it filters the songs of My library (by title and artist) and the projects (by title) as the reader
-types, the arrows move through the results, and Enter opens one.
+types, then lists the most popular public songs and artists that match (Phase 13); the arrows move
+through the results, and Enter opens one.
 
 ## The steps of a project
 

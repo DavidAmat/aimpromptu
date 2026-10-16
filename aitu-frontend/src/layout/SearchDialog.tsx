@@ -3,9 +3,10 @@
  * 6.2).
  *
  * It looks at the songs of the Private Library (by title and artist) and the projects of Projects
- * (by title). The Public Library joins it in Phase 13. The lists load when the dialog opens, and
- * filtering is live because it is cheap: the arrows move through the results and Enter opens the
- * one marked.
+ * (by title), which load when the dialog opens and are filtered live. Under them come the Public
+ * Library's most popular songs and artists that match (Phase 13), asked of the backend after a
+ * pause in the typing (it has about 9,000 songs). The arrows move through the results and Enter
+ * opens the one marked.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,7 +20,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate } from "react-router-dom";
-import { libraryApi, projectsApi } from "../api";
+import { libraryApi, projectsApi, publicApi } from "../api";
 import { ROUTES } from "./routes";
 import { relativeTime } from "../ui";
 
@@ -47,6 +48,7 @@ export function SearchDialog({ open, onClose }: SearchDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [marked, setMarked] = useState(0);
+  const [found, setFound] = useState<{ query: string; items: Found[] } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -81,12 +83,50 @@ export function SearchDialog({ open, onClose }: SearchDialogProps) {
     return () => controller.abort();
   }, [open]);
 
+  // The Public Library: its most popular matches, once the typing pauses.
+  useEffect(() => {
+    const typed = query.trim();
+    if (!open || typed.length < 2) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      publicApi
+        .suggest(typed, { limit: 6 }, controller.signal)
+        .then((answer) =>
+          setFound({
+            query: typed,
+            items: [
+              ...answer.songs.map((song) => ({
+                key: `public-song-${song.id}`,
+                title: song.title,
+                detail: `${song.artists.map((artist) => artist.name).join(", ") || "Song"}, Public library`,
+                text: "",
+                to: ROUTES.publicSong(song.id),
+              })),
+              ...answer.artists.map((artist) => ({
+                key: `public-artist-${artist.id}`,
+                title: artist.name,
+                detail: "Artist, Public library",
+                text: "",
+                to: ROUTES.publicArtist(artist.id),
+              })),
+            ],
+          }),
+        )
+        .catch(() => undefined);
+    }, 200);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [open, query]);
+
   const results = useMemo(() => {
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const all = items ?? [];
     const matching = words.length === 0 ? all : all.filter((item) => words.every((word) => item.text.includes(word)));
-    return matching.slice(0, MAX_RESULTS);
-  }, [items, query]);
+    const fromPublic = found && found.query === query.trim() && words.length > 0 ? found.items : [];
+    return [...matching.slice(0, MAX_RESULTS), ...fromPublic];
+  }, [items, query, found]);
 
   const close = () => {
     setQuery("");
@@ -113,7 +153,7 @@ export function SearchDialog({ open, onClose }: SearchDialogProps) {
         <InputBase
           autoFocus
           fullWidth
-          placeholder="Search songs and projects"
+          placeholder="Search songs, artists and projects"
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -131,7 +171,7 @@ export function SearchDialog({ open, onClose }: SearchDialogProps) {
               openItem(results[marked]);
             }
           }}
-          inputProps={{ "aria-label": "Search songs and projects" }}
+          inputProps={{ "aria-label": "Search songs, artists and projects" }}
           sx={{ fontSize: 16 }}
         />
       </Stack>

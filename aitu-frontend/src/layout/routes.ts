@@ -15,6 +15,9 @@
  * **My library** (`/library/songs`, `/library/artists`, Phase 6; `/library/playlists`, Phase 10) is
  * the Private Library: finished work, as songs with their versions, and the songs playlists.
  *
+ * **Public library** (`/public/songs`, `/public/artists`, `/public/playlists`, Phase 13) is the Public
+ * Library: every user's catalogue of songs, artists and playlists, with the versions published to it.
+ *
  * **Play mode** (`/play/:projectId`, `/play/playlist/:id`, Phase 11) is the sheet alone, outside the
  * shell: a project or a version of the library, or a songs playlist. Notes Falling is one of its views
  * (`?view=falling`); its old address `/projects/:id/notes-falling` goes there.
@@ -50,6 +53,8 @@ export const ROUTES = {
     `/play/${projectId}${options?.falling ? "?view=falling" : ""}`,
   /** Play mode on a songs playlist, from its song `at` (0 is the first). */
   playPlaylist: (id: number, at = 0) => `/play/playlist/${id}${at > 0 ? `?at=${at}` : ""}`,
+  /** Play mode on a playlist of the Public Library (Phase 13). */
+  playPublicPlaylist: (id: number, at = 0) => `/play/playlist/${id}?from=public${at > 0 ? `&at=${at}` : ""}`,
   /** My library (the Private Library, Phase 6): songs with their versions, artists. */
   librarySongs: "/library/songs",
   librarySong: (id: number) => `/library/songs/${id}`,
@@ -58,6 +63,13 @@ export const ROUTES = {
   /** The songs playlists of My library (Phase 10). */
   libraryPlaylists: "/library/playlists",
   libraryPlaylist: (id: number) => `/library/playlists/${id}`,
+  /** The Public Library (Phase 13): songs, artists, playlists. */
+  publicSongs: "/public/songs",
+  publicSong: (id: number) => `/public/songs/${id}`,
+  publicArtists: "/public/artists",
+  publicArtist: (id: number) => `/public/artists/${id}`,
+  publicPlaylists: "/public/playlists",
+  publicPlaylist: (id: number) => `/public/playlists/${id}`,
   lab: "/admin/lab",
   labVideo: "/admin/lab/video",
   labCalibration: "/admin/lab/calibration",
@@ -77,6 +89,9 @@ export const PASSAGE_PATTERN = "/projects/:id/passages/:passageId";
 export const LIBRARY_SONG_PATTERN = "/library/songs/:id";
 export const LIBRARY_ARTIST_PATTERN = "/library/artists/:id";
 export const LIBRARY_PLAYLIST_PATTERN = "/library/playlists/:id";
+export const PUBLIC_SONG_PATTERN = "/public/songs/:id";
+export const PUBLIC_ARTIST_PATTERN = "/public/artists/:id";
+export const PUBLIC_PLAYLIST_PATTERN = "/public/playlists/:id";
 export const PLAY_PATTERN = "/play/:projectId";
 export const PLAY_PLAYLIST_PATTERN = "/play/playlist/:playlistId";
 export const LAB_EXAMPLE_PATTERN = "/admin/lab/examples/:slug";

@@ -119,6 +119,10 @@ class SaveIn(_Camel):
     artist: str | None = Field(None, max_length=300)
     version: str = Field("", max_length=200)
     replace: bool = False
+    #: A song or an artist of the Public Library chosen in the dialog (Phase 13): the private song
+    #: or artist that stands for it is used, or made with a link to it.
+    public_song_id: int | None = Field(None, alias="publicSongId")
+    public_artist_id: int | None = Field(None, alias="publicArtistId")
 
 
 class SavedOut(_Camel):
@@ -419,6 +423,8 @@ def save_to_library(project_id: str, body: SaveIn) -> SavedOut:
             song_title=body.song,
             artist=body.artist,
             replace=body.replace,
+            public_song_id=body.public_song_id,
+            public_artist_id=body.public_artist_id,
         )
     except rows.NotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

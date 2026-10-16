@@ -158,6 +158,17 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/library/artists/{id}/names` | Another name of the artist. |
 | PATCH, DELETE | `/library/artists/{id}/names/{nameId}` | Rename a name or make it the default; remove a name. |
 | POST | `/library/artists/{id}/merge` | Every name of this artist becomes a name of another one. |
+| **Public library** | `api/public.py` | Implementation 02, Phase 13: the Public Library, read by every user ([§7.3](#73-public-the-public-library)) |
+| GET | `/public/songs` | The public songs, searched, filtered (decade, region, genre, tag), sorted and paged, with the count of each filter value. |
+| GET | `/public/songs/{id}` | One public song: metadata, chart history, fixed versions, Other versions by user. |
+| GET | `/public/songs/{id}/lyrics` | Its words. |
+| POST | `/public/songs/{id}/pull` | **Add to my library** with the chosen versions. |
+| GET | `/public/artists`, `/public/artists/{id}` | The public artists, searched and sorted; one with its songs and albums. |
+| POST | `/public/artists/{id}/pull` | **Add to my library**: its songs that have a version. |
+| GET | `/public/playlists`, `/public/playlists/{id}` | The public songs playlists; one with its songs. |
+| POST | `/public/playlists/{id}/pull` | **Add to my library**: a songs playlist of the user's own. |
+| PUT, DELETE | `/public/likes/{project}` | Like a public version, or take the like back. |
+| GET | `/public/suggest` | The most popular matching songs and artists (Save to library, Search). |
 | **Playlists** | `api/playlists.py` | Implementation 02, Phase 10: the songs playlists of the Private Library |
 | GET, POST | `/playlists` | The user's playlists; a new one, empty or with songs. |
 | GET, PATCH, DELETE | `/playlists/{id}` | One playlist with its songs; rename it or put its songs in another order; delete it. |
@@ -1050,7 +1061,12 @@ the Private Library since Phase 6 (§7.1).
   what it is, and each audio file is hashed again and must match its name. `422` with the reason
   otherwise, and nothing is left behind.
 - `POST /projects/{id}/library` (Phase 6, plan sections 8.5, 10.2 and 10.6), body
-  `{ "songId": int | null, "song": string, "artist": string, "version": string, "replace": bool }`.
+  `{ "songId": int | null, "song": string, "artist": string, "version": string, "replace": bool,
+  "publicSongId": int | null, "publicArtistId": int | null }`. *Phase 13:* `publicSongId` files the
+  project under the user's song that stands for that public song (linked by `public_id`, or the
+  user's song of the same title and first artist, linked now, or a new one made with the public
+  song's title, year and artists); `publicArtistId` with `song` makes a new song by the user's
+  artist that stands for that public artist (found or made the same way).
   **Save to library**: the project, which must be in the asker's Personal Vault with every part's
   Sheet step `ready`, moves to their Private Library as the version `version` of the song `songId`,
   or of their song titled `song` by `artist` (found ignoring case and spaces, made when missing; a
@@ -1111,7 +1127,7 @@ and 15.2. Every route works on the current user's rows only and answers `404` fo
 | Route | Answer |
 |---|---|
 | `GET /library/songs` | `[{id, title, artists: [{artistId, nameId, name}], versions, editing, updatedAt}]`, by title. `editing`: a version has an edit copy open |
-| `GET /library/songs/{id}` | `{id, title, artists, versions: [{id, name, projectId, parts, step, createdAt, updatedAt, editCopy, history}]}`. `editCopy`: the open edit copy's id; `history`: how many earlier states |
+| `GET /library/songs/{id}` | `{id, title, artists, versions: [{id, name, projectId, parts, step, createdAt, updatedAt, editCopy, history}], publicId}`. `editCopy`: the open edit copy's id; `history`: how many earlier states; `publicId`: the public song it stands for (Phase 13) |
 | `PATCH /library/songs/{id}` | Body `{title?, artists?: [string]}`: rename; the artists by name, in order (an unknown name makes a new artist) |
 | `DELETE /library/songs/{id}` | `204`: every version and its project, then the song |
 | `PATCH /library/versions/{id}` | Body `{name}`: 1 to 60 characters, unique in the song ignoring case (`409`) |
@@ -1144,6 +1160,34 @@ before it starts.
 | `POST /playlists/{id}/items` | Body `{items: [...]}`: added at the end |
 | `PATCH /playlists/{id}/items/{item}` | Body `{projectId?, fromMs?, toMs?, whole?}`: another version, a stretch (both ends), or `whole: true` for the whole song |
 | `DELETE /playlists/{id}/items/{item}` | The playlist without it |
+
+<a id="73-public-the-public-library"></a>
+
+### 7.3 `/public`: the Public Library
+
+`api/public.py` and `library/` (`catalogue.py`, `public.py`, `pull.py`), implementation 02 Phase 13,
+plan sections 15.1 to 15.3 and 15.6. Every signed-in user reads it; nothing here changes a public
+row. A pull or a like changes only the user's own rows. `404` for a row that is not public, `409`
+with the reason for a pull that cannot be done, `422` for an unknown region.
+
+| Route | Answer |
+|---|---|
+| `GET /public/songs` | Query `q` (words in any order, title and artists, accents ignored), `decade` (its first year: `1980`), `region` (a code), `genre`, `tag` (ids), `sort` (`popularity`, `year`, `title`), `dir` (`asc`, `desc`), `offset`, `limit` (at most 200). `{total, rows: [{id, title, artists: [{artistId, name}], year, popularity, versions}], facets: {decades, regions, genres, tags: [{value, label, count, group}]}}`. With a `decade`, `popularity` is the one of that decade's chart weeks, worked out on the request; a facet counts what each value would leave given the other filters. A song with no year sorts last both ways |
+| `GET /public/songs/{id}` | `{id, title, year, decade, popularity, artists, albums: [{id, title, year, track}], genres, regions, tags: [[category, value]], charts: [{name, best, weeks, first, last, history: [[week, rank]]}], hasLyrics, defaultVersion, fixed: [version], others: [{username, versions: [version]}], inLibrary}`; a version is `{projectId, parts, name, creator, likes, liked, createdAt, ready, inLibrary}`. `inLibrary`: the user's song (or, on a version, the user's copy) |
+| `GET /public/songs/{id}/lyrics` | `{text}`; `404` when it has none |
+| `POST /public/songs/{id}/pull` | Body `{projects: [id]}` (the default version when empty): `201` `{id, songs, versions, already}`, `id` the user's song. `409` "This song has no version yet"; `404` for a project that is not a version of the song. A version already pulled is not pulled again |
+| `GET /public/artists` | Query `q`, `sort` (`popularity`: the artist's most popular song; `name`; `songs`), `dir`, `offset`, `limit`. `{total, rows: [{id, name, otherNames, songs, popularity, withVersions}]}` |
+| `GET /public/artists/{id}` | `{id, name, otherNames, songs: [{id, title, year, popularity, versions}], albums: [{id, title, year, popularity}], withVersions, inLibrary}`, songs and albums by popularity |
+| `POST /public/artists/{id}/pull` | `201` `{id, songs, versions, already}`, `id` the user's artist; each song with a version, on its default version. `409` when none has one |
+| `GET /public/playlists` | `[{id, title, songs, updatedAt}]` by title |
+| `GET /public/playlists/{id}` | As `GET /playlists/{id}`, without `versions` on an item |
+| `POST /public/playlists/{id}/pull` | `201` `{id, ...}`, `id` the user's new songs playlist (the one made before, when pulled again); songs with no version left out. `409` when none has one |
+| `PUT`, `DELETE /public/likes/{project}` | `{likes, liked}`. Once per user; `404` for a project that is not a public version. The path parameter is not named `project_id`, so the router's rights check does not read a like as a write of the public project |
+| `GET /public/suggest` | Query `q`, `artist`, `limit` (8): `{songs, artists}`, the most popular songs whose title matches `q` by an artist matching `artist`, and the artists whose names match `q` |
+
+A public version is a project of `.database/public/`, placed by `library/public.place_version`
+(Phase 14's acceptance; until then the browser check's fixture, `library/public_fixture.py`). Every
+user reads it through the step routes and Play mode; only the master user may write it.
 
 ---
 
