@@ -152,7 +152,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | GET, PATCH, DELETE | `/library/songs/{id}` | One song with its versions; rename it or give it its artists; delete it with every version. |
 | PATCH, DELETE | `/library/versions/{id}` | Rename a version; delete it with its project. |
 | GET | `/library/versions/{id}/history` | The earlier states of a version. |
-| POST | `/library/versions/{id}/history/{n}/restore` | Make an earlier state the version again. |
+| POST | `/library/versions/{id}/history/{n}/restore` | Make an earlier state the version again. `409` when that state has no ready piano sheet (a version of the library always has one); the version is then unchanged and no history entry is added. |
 | GET | `/library/artists` | The user's artists, each with every name it has. |
 | GET, DELETE | `/library/artists/{id}` | One artist with its names and its songs; delete one with no song. |
 | POST | `/library/artists/{id}/names` | Another name of the artist. |

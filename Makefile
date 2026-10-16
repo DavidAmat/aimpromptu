@@ -37,7 +37,8 @@
 # loudly is better; run `make stop` or `make serve WEB_PORT=5174`.
 
 .PHONY: serve stop restart status logs-native logs-web logs-api _start _report \
-	up down logs ps build test-backend shell-backend _database db-backup db-restore db-check db-reindex
+	up down logs ps build test-backend shell-backend _database db-backup db-restore db-check db-reindex \
+	public-import popularity-check
 
 WEB_PORT ?= 5173
 API_HOST ?= $(or $(AITU_HOST),127.0.0.1)
@@ -215,3 +216,16 @@ db-check:
 
 db-reindex:
 	$(DB_TOOLS) reindex
+
+# ------------------------------------------------------------- the Public Library
+
+# The downloaded music library into public rows (implementation 02, Phase 12; run for real in
+# Phase 13). On the host: the download is beside the repository, not in the containers.
+# `ARGS="--database DIR"` writes into another .database/ folder (a copy); `--no-seed`.
+public-import:
+	cd aitu-backend && uv run --no-sync python -m aitu_backend.library.public_import $(ARGS)
+
+# The objective criteria of the popularity (Q-6), for the plan's weights and the app's, measured on
+# the downloaded chart history; writes nothing.
+popularity-check:
+	cd aitu-backend && uv run --no-sync python -m aitu_backend.library.popularity check

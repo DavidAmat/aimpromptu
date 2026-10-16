@@ -16,9 +16,10 @@ from scipy.io import wavfile
 from sqlalchemy import select
 
 from aitu_backend.audio import formats
-from aitu_backend.db import users
+from aitu_backend.db import tools, users
 from aitu_backend.db.database import session
 from aitu_backend.db.models import Project
+from aitu_backend.library import flow
 from aitu_backend.main import create_app
 from aitu_backend.pmn.events_file import PieceHeader
 from aitu_backend.storage import audio_files, bundle, paths
@@ -67,7 +68,11 @@ def make_ready(part: str, seconds: float, on: TestClient = client) -> None:
     assert predicted.status_code == 200, predicted.text
     body = predicted.json()
     ops = [
-        {"op": "hand", "ids": [i for i, h in zip(body["id"], body["hand"]) if h == hand], "hand": hand}
+        {
+            "op": "hand",
+            "ids": [i for i, h in zip(body["id"], body["hand"]) if h == hand],
+            "hand": hand,
+        }
         for hand in ("r", "l")
     ]
     saved = on.patch(f"/pieces/{part}/notes", json={"baseRevision": base["revision"], "ops": ops})
@@ -118,9 +123,9 @@ def test_save_moves_the_project_into_the_library_under_a_song() -> None:
     # The steps still open, with every step ready, and the notes are the same.
     assert sheet_state(part) == "ready"
     songs = client.get("/library/songs").json()
-    assert [(row["title"], [a["name"] for a in row["artists"]], row["versions"]) for row in songs] == [
-        ("Superestrella", ["Aitana"], 1)
-    ]
+    assert [
+        (row["title"], [a["name"] for a in row["artists"]], row["versions"]) for row in songs
+    ] == [("Superestrella", ["Aitana"], 1)]
     song = client.get(f"/library/songs/{saved['songId']}").json()
     assert [(v["name"], v["projectId"], v["step"]) for v in song["versions"]] == [
         ("original", part, "sheet")
@@ -168,7 +173,9 @@ def test_the_audio_is_written_again_with_only_the_ranges_in_use(tmp_path: Path) 
     part = uploaded(8.0)
     original = bundle.read_timeline(part).single_audio
     # Cut 1 s at the start and 2 s in the middle (frames of 10 ms).
-    assert client.put(f"/audio/{part}/cuts", json={"cuts": [[0, 100], [400, 600]]}).status_code == 200
+    assert (
+        client.put(f"/audio/{part}/cuts", json={"cuts": [[0, 100], [400, 600]]}).status_code == 200
+    )
     revision = bundle.read_timeline(part).audio_revision
     _, before = formats.read_wav(paths.normalized_path(part))
     kept_before = np.concatenate([before[100 * 160 : 400 * 160], before[600 * 160 :]])
@@ -286,7 +293,11 @@ def test_replace_the_version_keeps_the_ids_and_the_history_restores() -> None:
     assert after_edit != before
 
     replaced = save(copy, replace=True)
-    assert replaced == {"songId": saved["songId"], "versionId": saved["versionId"], "projectId": part}
+    assert replaced == {
+        "songId": saved["songId"],
+        "versionId": saved["versionId"],
+        "projectId": part,
+    }
     assert notes_of(part) == after_edit
     assert sheet_state(part) == "ready"
     assert client.get(f"/projects/{copy}").status_code == 404  # the copy is gone
@@ -300,6 +311,37 @@ def test_replace_the_version_keeps_the_ids_and_the_history_restores() -> None:
     history = client.get(f"/library/versions/{saved['versionId']}/history").json()
     assert [row["number"] for row in history] == [2, 1]
     assert restored.json()["versions"][0]["history"] == 2
+
+
+def test_a_version_never_loses_its_piano_sheet_by_a_restore() -> None:
+    """A version of the library always has its piano sheet (2026-10-16): an earlier state without
+    one (a song the Phase 3 migration filed) stays in the history but cannot come back, and
+    ``make db-check`` reports a version without one."""
+    part = ready_project()
+    saved = save(part, song="Superestrella", artist="Aitana", version="original")
+    before = notes_of(part)
+    reading = pipeline.load_rhythm(part)
+    assert reading is not None
+
+    def unready() -> list[str]:
+        return [p for p in tools.check().problems if "without a ready piano sheet" in p]
+
+    assert unready() == []
+    pipeline.clear_rhythm(part)  # the state of a song the migration filed
+    assert sheet_state(part) == "missing"
+    assert unready() == [f"project {part}: a version of the library without a ready piano sheet"]
+    assert flow.snapshot(part, "replaced") == 1
+    pipeline.save_rhythm(part, reading)
+    assert sheet_state(part) == "ready"
+
+    refused = client.post(f"/library/versions/{saved['versionId']}/history/1/restore")
+    assert refused.status_code == 409, refused.text
+    assert "no piano sheet" in refused.json()["detail"]
+    assert sheet_state(part) == "ready"
+    assert notes_of(part) == before
+    history = client.get(f"/library/versions/{saved['versionId']}/history").json()
+    assert [row["number"] for row in history] == [1]
+    assert unready() == []
 
 
 def test_save_as_a_new_version_from_an_edit_copy() -> None:
@@ -346,7 +388,10 @@ def test_rename_a_song_and_a_version_and_give_the_song_its_artists() -> None:
     assert [a["name"] for a in both.json()["artists"]] == ["Aitana", "Lola Índigo"]
     version = client.patch(f"/library/versions/{first['versionId']}", json={"name": "Acoustic"})
     assert version.json()["versions"][0]["name"] == "Acoustic"
-    assert client.patch(f"/library/versions/{first['versionId']}", json={"name": " "}).status_code == 422
+    assert (
+        client.patch(f"/library/versions/{first['versionId']}", json={"name": " "}).status_code
+        == 422
+    )
 
 
 # -------------------------------------------------------------------- artists
@@ -354,7 +399,9 @@ def test_rename_a_song_and_a_version_and_give_the_song_its_artists() -> None:
 
 def test_an_artist_has_several_names_and_two_artists_merge() -> None:
     one = save(ready_project(), song="ABC", artist="The Jackson 5", version="original")
-    two = save(ready_project(name="b.wav"), song="I want you back", artist="Jackson Five", version="v")
+    two = save(
+        ready_project(name="b.wav"), song="I want you back", artist="Jackson Five", version="v"
+    )
     artists = client.get("/library/artists").json()
     assert [row["name"] for row in artists] == ["Jackson Five", "The Jackson 5"]
     keep = next(row["id"] for row in artists if row["name"] == "The Jackson 5")
@@ -363,7 +410,10 @@ def test_an_artist_has_several_names_and_two_artists_merge() -> None:
     merged = client.post(f"/library/artists/{other}/merge", json={"into": keep}).json()
     assert merged["name"] == "The Jackson 5"
     assert sorted(n["name"] for n in merged["names"]) == ["Jackson Five", "The Jackson 5"]
-    assert merged["songs"] == 2 and [s["title"] for s in merged["songList"]] == ["ABC", "I want you back"]
+    assert merged["songs"] == 2 and [s["title"] for s in merged["songList"]] == [
+        "ABC",
+        "I want you back",
+    ]
     assert client.get(f"/library/artists/{other}").status_code == 404
     # A song still shows the name it was saved with.
     song = client.get(f"/library/songs/{two['songId']}").json()
@@ -399,7 +449,10 @@ def test_another_user_sees_nothing_of_the_library() -> None:
 
     def signed(name: str, password: str) -> TestClient:
         one = TestClient(create_app())
-        assert one.post("/auth/login", json={"username": name, "password": password}).status_code == 200
+        assert (
+            one.post("/auth/login", json={"username": name, "password": password}).status_code
+            == 200
+        )
         return one
 
     master = signed("master", "master-password")

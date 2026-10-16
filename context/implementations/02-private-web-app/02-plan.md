@@ -209,7 +209,7 @@ its walkthrough under DECISIONS.
 | # | Question | Raised in |
 |---|---|---|
 | Q-5 | The worldwide source is chosen: `musicchartsarchive.com`, downloaded by the parallel work (section 15.5). Still open: the sources for the `spain` and `catalan` regions, and anything that source does not give (genres, tags) | Phase 12, after the reconciliation |
-| Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12 |
+| Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12. **Answered 2026-10-16: objective criteria instead of a hand ranking; `week_power` 8** (section 15.6) |
 | Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). **Answered 2026-10-15: left for the production version** |
 | Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report. **Answered 2026-10-15: one job with its stages; the notes arrive at the end** |
 
@@ -664,6 +664,10 @@ lists are written by the revision: 13 genres, 4 tag categories, the region `worl
 `projects.step` is filled by the migration and `db-reindex`; Phase 5 keeps it current. *As built in
 Phase 5:* a write of a part's notes, sheet or timeline clears it, and the list of projects works it
 out again for the cleared rows only (working it out reads every part: 0.9 s for 39 projects).
+*As built in Phase 12* (revision `0003`): `song_lyrics`, `album_artists`, `album_chart_entries`,
+`albums.release_date` and `albums.popularity`, the fields the downloaded library gives and this
+section had no place for ([`../../music-library/reconciliation.md`](../../music-library/reconciliation.md)
+section 3). Public rows have no owner (`owner_id` empty); the master user manages them.
 
 ## 8.7 Moving, backing up, the cloud
 
@@ -934,6 +938,14 @@ library project keeps its id and its parts' ids on Replace. Its history is
 version lists the earlier states, each with **Restore**, which keeps the state it replaces too. The
 song page's version menu is Open, Edit, Duplicate, Export, Rename, History, Delete; an artist has
 **Add a name**, **Make default**, **Remove**, and **Merge into another artist**.
+
+**A version of the library always has its piano sheet** (the user, 2026-10-16, during Phase 12):
+every part's Sheet step is ready. **Save to library** already refused a project without a saved
+sheet (Phase 6); **Restore** now refuses an earlier state without one, and `make db-check` reports a
+version that breaks the rule. The 30 songs the Phase 3 migration filed with no hands and no sheet
+got both through the real pages (`aitu-frontend/scripts/sheet-library.mjs`: Edit, Predict hands,
+Save, the Sheet step's Save, Replace the version). Phase 13 and 14 keep the rule for the Public
+Library: a version pulled or published has its sheet.
 
 ---
 
@@ -1425,6 +1437,15 @@ work:
 The import writes public rows owned by the master user, and can run again to add songs without
 creating duplicates.
 
+*As built in Phase 12* ([`../../music-library/reconciliation.md`](../../music-library/reconciliation.md)):
+the chart is in fact one country's (it matches the US Hot 100), kept under the region `worldwide`.
+A row's `external_key` is `musicchartsarchive.com` + its source path; a second run makes nothing
+again and writes again only the chart weeks, the popularity and the fields still empty. The 134
+re-entries ("[re-release]", "[seasonal]") are one song with the song they repeat (66) or keep their
+row without the bracket (68). The import is `aitu_backend/library/public_import.py`
+(`make public-import`), 2.5 s for the whole download; it was run on copies only. 23 of the 31 seed
+songs are on the chart; the other 8 are added from the seed list (Q-5).
+
 ## 15.6 Popularity
 
 A first formula, to be tuned in Phase 12 on a list of songs the user ranks by hand (Q-6). Only
@@ -1458,6 +1479,16 @@ The app context says a song held at places 10 to 30 for many weeks should be clo
 top 10 for one week. With these weights it is above it, so the weights (0.6 and 0.4, the 10 of the
 saturation, the squares) are exactly what Phase 12 tunes. A popularity is computed per region from
 that region's charts; the one shown by default is `worldwide`.
+
+*As built in Phase 12*: the formula is `aitu_backend/library/popularity.py`, every weight a
+parameter, the chart's size and weight read from `chart_sources`; it gives the parallel work's
+stored scores to the decimal. On the real chart history the top is flat (218 songs at 95 or more)
+and a long run beats many weeks at number 1, because recent hits stay on the chart 60 to 112 weeks.
+**Q-6 answered 2026-10-16**: no hand ranking; objective criteria (this section's examples, a spread
+top, more weeks at number 1 scoring higher, Billboard's all-time top 10). The app uses this formula
+with `week_power` 8 instead of 2 (`popularity.DEFAULT`; place 10 worth 0.47 a week, place 20 0.18):
+number 1 keeps 97, 78 and 46, place 20 for 20 weeks scores 40, songs at 95 or more fall from 218 to
+44 (`make popularity-check`). The popularity of one decade is worked out in about 50 ms.
 
 ---
 
@@ -1730,6 +1761,7 @@ keeps them), and tune it on a list the user ranks by hand. Q-5 (the regions not 
 raised with a recommendation each. This phase writes nothing into `data/music-library/` or into the
 parallel work's scripts. Those scripts are on `feat/02-a-public-library` until that branch is merged.
 The database is already in the folder next to the repository, so this phase can read it from here.
+*Built 2026-10-16 and merged after the user's ok* ([`02-implementation-phase-12.md`](02-implementation-phase-12.md)).
 
 ## Phase 13: The Public Library
 

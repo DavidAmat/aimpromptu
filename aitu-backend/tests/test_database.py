@@ -50,7 +50,7 @@ def test_every_table_of_section_8_6_exists(_temporary_database: Path) -> None:
         "user_versions", "private_versions", "genres", "song_genres", "tag_categories",
         "tag_values", "song_tags", "regions", "song_regions", "chart_sources", "chart_entries",
         "playlists", "playlist_items", "likes", "library_shares", "requests", "request_items",
-        "request_comments",
+        "request_comments", "song_lyrics", "album_artists", "album_chart_entries",
     }  # fmt: skip
     assert expected <= tables
 
