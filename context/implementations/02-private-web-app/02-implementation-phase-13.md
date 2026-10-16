@@ -3,7 +3,7 @@
 Plan: [`02-plan.md`](02-plan.md) sections 6.1, 6.3, 15.1 to 15.6 and 17, and section 20, Phase 13.
 Checklist: [`02-checklist.md`](02-checklist.md). Branch `feat/phase-13`, made from `master` at
 `81affa9` (Phase 12 merged and pushed after the user's ok, 2026-10-16). Built 2026-10-16 on the
-Ubuntu machine, while another process held 11 GB of the GPU: the backend tests ran on the CPU and no
+Ubuntu machine, while the GPU held 11 GB (the app's own backend kept the transcription model loaded; the backend was stopped at the user's request at the end, freeing it): the backend tests ran on the CPU and no
 check that transcribes was run (none was needed: nothing of the transcription changed).
 
 The pages this phase writes are [`../../music-library/ontology.md`](../../music-library/ontology.md)
@@ -144,7 +144,7 @@ public version is Play mode on any project (Phase 11: 650 to 765 ms to the first
 
 | Check | Result |
 |---|---|
-| Backend, full run **on the CPU** (another process held 11 GB of the GPU) | 1,120 tests: 3 failed, the known `test_the_worked_example_at_00_46_prints_three_equal_corcheas` and the two Transkun tests that fail only without a GPU; the real-model test skips itself on the CPU; every other test passed. Phase 12: 1,107 |
+| Backend, full run **on the CPU** (the GPU was held) | 1,120 tests: 3 failed, the known `test_the_worked_example_at_00_46_prints_three_equal_corcheas` and the two Transkun tests that fail only without a GPU; the real-model test skips itself on the CPU; every other test passed. Phase 12: 1,107 |
 | `test_public.py` (new) | 11 passed |
 | `black`, `flake8`, `mypy` on the new and changed backend modules | clean |
 | `tsc -b`, `npm run lint`, `npm run build` | clean; the chunk-size warning of Phase 0 |
