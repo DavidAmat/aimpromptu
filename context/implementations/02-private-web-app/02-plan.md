@@ -373,7 +373,7 @@ one OpenAI uses.
 | `/library/songs`, `/library/songs/:id` | My songs, one song with its versions | 6 |
 | `/library/artists`, `/library/artists/:id` | My artists | 6 |
 | `/library/playlists`, `/library/playlists/:id` | My playlists | 10 |
-| `/library/shared` | Libraries shared with me | 14 |
+| `/library/shared` | Libraries shared with me (*as built:* `?from=<owner>`; one song at `/library/shared/songs/:id`) | 14 |
 | `/public/songs`, `/public/songs/:id` | Public songs, one public song | 13 |
 | `/public/artists`, `/public/artists/:id` | Public artists | 13 |
 | `/public/playlists`, `/public/playlists/:id` | Public playlists | 13 |
@@ -668,6 +668,9 @@ out again for the cleared rows only (working it out reads every part: 0.9 s for 
 `albums.release_date` and `albums.popularity`, the fields the downloaded library gives and this
 section had no place for ([`../../music-library/reconciliation.md`](../../music-library/reconciliation.md)
 section 3). Public rows have no owner (`owner_id` empty); the master user manages them.
+*As built in Phase 14* (revision `0004`): `projects.layer` may be `request` (the copy a request
+sends, `.database/requests/<projectId>/`) and `requests.kind` may be `playlist`; nothing else
+changed. A request item keeps its proposal as JSON (`payload`), with what it made once accepted.
 
 ## 8.7 Moving, backing up, the cloud
 
@@ -751,6 +754,10 @@ the scripts that work on copies (`bench:sheet`, `time:flow`) could no longer cop
 
 One function per route checks this before anything else, and tests check each row of this table
 with two users.
+
+*As built in Phase 14*: one more row. The copy of a project a request sends (layer `request`) is
+read by its author and the master user, and written by nobody; a library shared with a user is read
+by them through the same check (`library_shares`).
 
 *As built in Phase 4* (`auth/dependencies.py`, `auth/rights.py`, `context/08-security.md`): one
 router-level check reads the session, then applies the table to the project the route names by its
@@ -1407,6 +1414,12 @@ The owner shares their whole Private Library with another user (read only) from 
 other user sees it under **My library → Shared**, can play from it, copy passages from it, and add
 its songs to their own library (the same pull as from the Public Library).
 
+*As built in Phase 14* ([`../../music-library/requests.md`](../../music-library/requests.md) section
+6): **Share my library** (the user menu, and the Shared page) lists the other users with a switch
+each. **Add to my library** from a shared song copies the chosen versions, named "<version>
+(<owner>)", under the reader's own song for it (the same public song, or the same title and first
+artist). A shared version opens read only, with Play and no Edit.
+
 ## 15.5 Filling the Public Library
 
 **The data is built by a parallel piece of work**, not by this plan: the brief
@@ -1514,6 +1527,13 @@ A request is made of **items**, one per proposed change (a new artist, a new son
 the project, the version pointer). This is what makes a **partial acceptance** possible: the master
 user can accept the new artist and the new song, and refuse the project.
 
+*As built in Phase 14* ([`../../music-library/requests.md`](../../music-library/requests.md)): a
+fourth kind, **Playlist** (the user, 2026-10-16: the app context promotes "a given private song or
+a given private playlist"): a songs playlist of My library becomes a public playlist with its songs
+that have a public version. A metadata request also proposes a new song alone (**Propose a song**
+on Public songs). What is accepted in a decision is written at once; an item cannot be accepted
+without the item it needs (a song without its new artist).
+
 ## 16.2 Opening a request
 
 From a song of the Private Library: **Publish** opens one dialog:
@@ -1529,6 +1549,13 @@ The project is copied when the request is sent, so later edits in the user's lib
 what the master user reviews. A request with changes asked can be updated by the author and sent
 again.
 
+*As built in Phase 14*: the copy is in its own layer, `request`, read by the author and the master
+user and written by nobody (section 9.3), and kept with the request. **Publish** is in a version's
+`⋯` (and a playlist's); the version name is offered in its simple form. **Change and send again**
+opens the same dialog, filled as sent; the items not accepted are replaced. **Suggest a change**
+(a public song or artist) and **Ask for a fixed version** (the user's own version) send the other
+kinds. The sidebar's **Requests** counts the user's requests with changes asked.
+
 ## 16.3 The Admin panel
 
 - **Review**: the list of open requests, oldest first, with their kind and author.
@@ -1541,6 +1568,15 @@ again.
   that version.
 - **Users**: create, disable, reset a password (Phase 4).
 - **Lab**: the video reader's development pages (Phase 1).
+
+*As built in Phase 14*: **Admin → Review** (`/admin/requests`, its count in the sidebar), **Waiting**
+or **All**. On a request, each waiting item gets **Accept** (with its name changeable: "will
+either accept it or change it"), **Ask for a change** or **Refuse**, and **Send decision** writes
+the accepted items in one transaction: the project copy is made first and deleted again if the
+rows fail. Side by side uses the Sheet step's page in the role of a passage's Current (Phase 9),
+both sides read only with their own Play; under 1200 px one under the other. A fixed version
+points at the same project as the user version it comes from. The author's own song and artists
+named in an accepted request get their `public_id`.
 
 ---
 
@@ -1797,6 +1833,11 @@ The three kinds of request with their items (section 16), the Publish dialog, My
 pages with side by side, partial acceptance, changes asked and resent, the transaction that publishes,
 the creator's username on the version. Library sharing (section 15.4) and **Shared**. The counts in the
 sidebar.
+
+*Built 2026-10-16* ([`02-implementation-phase-14.md`](02-implementation-phase-14.md)), with a fourth
+kind, **Playlist** (the user's answer at the start). Revision `0004` moved the real database after
+`make db-backup`. `check:requests` walks it with a temporary second user and removes everything it
+made.
 
 ## Phase 15: The checks, the documentation, and closing
 

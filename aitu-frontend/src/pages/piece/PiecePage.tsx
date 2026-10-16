@@ -200,9 +200,10 @@ export function PiecePage() {
     else blocker.reset();
   };
 
-  // A version of a library (or of the Public Library) is read only: it changes through Edit.
+  // A version of a library (or of the Public Library) is read only: it changes through Edit. So is
+  // the copy a request sent (Phase 14), which nobody changes.
   const layer = current.audio?.layer ?? null;
-  const readOnly = layer === "private" || layer === "public";
+  const readOnly = layer === "private" || layer === "public" || layer === "request";
 
   const context = useMemo<PieceContextValue>(
     () => ({
@@ -288,9 +289,18 @@ export function PiecePage() {
   /** The whole project plays, every part, whichever part is on show. */
   const playId = project?.id ?? audio?.projectId ?? uuid;
   const sheetReady = stepStatus(status, "sheet")?.state === "ready";
-  const back = library
-    ? { to: ROUTES.librarySong(library.songId), label: `Back to ${library.songTitle}` }
-    : { to: ROUTES.projects, label: "Back to Projects" };
+  /** A version of a library another user shares with this one (Phase 14): read, never edited. */
+  const shared = project !== null && project.layer === "private" && !project.mine;
+  const back =
+    library && shared
+      ? { to: ROUTES.librarySharedSong(library.songId), label: `Back to ${library.songTitle}` }
+      : library
+        ? { to: ROUTES.librarySong(library.songId), label: `Back to ${library.songTitle}` }
+        : layer === "request"
+          ? project?.mine
+            ? { to: ROUTES.requests, label: "Back to Requests" }
+            : { to: ROUTES.adminRequests, label: "Back to Review" }
+          : { to: ROUTES.projects, label: "Back to Projects" };
 
   const menu = uuid
     ? [
@@ -324,7 +334,19 @@ export function PiecePage() {
     : [];
 
   let primary = null;
-  if (uuid && readOnly && layer === "private") {
+  if (uuid && readOnly && layer === "private" && shared) {
+    primary = (
+      <PillButton
+        kind="primary"
+        startIcon={<PlayIcon />}
+        disabled={!canPlay || !playId}
+        onClick={() => playId && navigate(ROUTES.play(playId))}
+        data-testid="version-play"
+      >
+        Play
+      </PillButton>
+    );
+  } else if (uuid && readOnly && layer === "private") {
     // Song → version → Play (plan section 17), beside Edit.
     primary = (
       <>

@@ -11,9 +11,18 @@ this command, and removes it at the end. Nothing of a library is touched::
     python -m aitu_backend.library.public_fixture remove --project <public project id>
     python -m aitu_backend.library.public_fixture playlist --title <title> --item <song>[:<project>] ...
     python -m aitu_backend.library.public_fixture remove-playlist --id <public playlist id>
+    python -m aitu_backend.library.public_fixture remove-song --id <public song id>
+    python -m aitu_backend.library.public_fixture remove-artist --id <public artist id>
+    python -m aitu_backend.library.public_fixture remove-user --username <name>
 
 ``place`` prints the id of the public project it made. It runs on the host, like ``make db-*``,
 with ``AITU_DATABASE_DIR`` set.
+
+``check:requests`` (Phase 14) makes a temporary user, its requests, and the public rows its
+accepted requests make; ``remove-song``, ``remove-artist`` and ``remove-user`` delete them again:
+a public song with its versions, a public artist with no song left, and a user with every project,
+request, row and like of theirs (their public versions first). They refuse a row that is not
+public, and ``remove-user`` refuses the master user.
 """
 
 from __future__ import annotations
@@ -38,7 +47,23 @@ def main(argv: list[str] | None = None) -> int:
     playlist.add_argument("--item", action="append", default=[])
     remove_playlist = commands.add_parser("remove-playlist")
     remove_playlist.add_argument("--id", type=int, required=True)
+    remove_song = commands.add_parser("remove-song")
+    remove_song.add_argument("--id", type=int, required=True)
+    remove_artist = commands.add_parser("remove-artist")
+    remove_artist.add_argument("--id", type=int, required=True)
+    remove_user = commands.add_parser("remove-user")
+    remove_user.add_argument("--username", required=True)
     args = parser.parse_args(argv)
+
+    if args.command == "remove-song":
+        _remove_song(args.id)
+        return 0
+    if args.command == "remove-artist":
+        _remove_artist(args.id)
+        return 0
+    if args.command == "remove-user":
+        _remove_user(args.username)
+        return 0
 
     from aitu_backend.db import users  # noqa: PLC0415 - after the arguments
     from aitu_backend.db.database import session  # noqa: PLC0415
@@ -81,6 +106,88 @@ def main(argv: list[str] | None = None) -> int:
             if found is not None and found.scope == "public":
                 db.delete(found)
     return 0
+
+
+def _remove_song(song_id: int) -> None:
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from aitu_backend.db.database import session  # noqa: PLC0415
+    from aitu_backend.db.models import Song, SongVersion, UserVersion  # noqa: PLC0415
+    from aitu_backend.library import public  # noqa: PLC0415
+
+    with session() as db:
+        song = db.get(Song, song_id)
+        if song is None or song.scope != "public":
+            raise SystemExit(f"No public song {song_id}")
+        projects = set(
+            db.scalars(select(SongVersion.project_id).where(SongVersion.song_id == song_id))
+        ) | set(db.scalars(select(UserVersion.project_id).where(UserVersion.song_id == song_id)))
+    for project_id in projects:
+        if project_id:
+            public.remove_version(project_id)
+    with session() as db:
+        found = db.get(Song, song_id)
+        if found is not None:
+            db.delete(found)
+
+
+def _remove_artist(artist_id: int) -> None:
+    from aitu_backend.db.database import session  # noqa: PLC0415
+    from aitu_backend.db.models import Artist  # noqa: PLC0415
+    from aitu_backend.library import rows  # noqa: PLC0415
+
+    with session() as db:
+        artist = db.get(Artist, artist_id)
+        if artist is None or artist.scope != "public":
+            raise SystemExit(f"No public artist {artist_id}")
+        if rows.song_ids_of_artist(db, artist_id):
+            raise SystemExit(f"The public artist {artist_id} still has songs")
+        db.delete(artist)
+
+
+def _remove_user(username: str) -> None:
+    from sqlalchemy import delete, select  # noqa: PLC0415
+
+    from aitu_backend.db.database import session  # noqa: PLC0415
+    from aitu_backend.db.models import (  # noqa: PLC0415
+        Artist,
+        Playlist,
+        Project,
+        Request,
+        RequestComment,
+        Song,
+        SongVersion,
+        User,
+    )
+    from aitu_backend.library import public  # noqa: PLC0415
+    from aitu_backend.storage import bundle  # noqa: PLC0415
+
+    with session() as db:
+        user = db.scalar(select(User).where(User.username == username))
+        if user is None:
+            raise SystemExit(f"No user {username}")
+        if user.role == "master":
+            raise SystemExit("The master user is never removed")
+        user_id = user.id
+        projects = list(
+            db.execute(select(Project.id, Project.layer).where(Project.owner_id == user_id))
+        )
+    for project_id, layer in projects:
+        if layer == "public":
+            public.remove_version(project_id)
+        else:
+            bundle.delete_project(project_id)
+    with session() as db:
+        db.execute(delete(RequestComment).where(RequestComment.author_id == user_id))
+        db.execute(delete(Request).where(Request.author_id == user_id))
+        db.execute(delete(Playlist).where(Playlist.owner_id == user_id))
+        db.execute(delete(Song).where(Song.owner_id == user_id))
+        db.execute(delete(Artist).where(Artist.owner_id == user_id))
+        for fixed in db.scalars(select(SongVersion).where(SongVersion.creator_id == user_id)):
+            fixed.creator_id = None
+        found = db.get(User, user_id)
+        if found is not None:
+            db.delete(found)
 
 
 if __name__ == "__main__":

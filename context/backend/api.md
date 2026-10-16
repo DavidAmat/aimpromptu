@@ -16,7 +16,7 @@ session cookie `aitu_session` that the sign in sets. `main.py` includes the rout
 | Group | Routers | Check |
 |---|---|---|
 | Open | `/auth` | none for the sign in |
-| User | `/audio`, `/matrix`, `/passages`, `/pieces`, `/time`, `/projects`, `/youtube`, `/video` | a session, then the rights of the project the route names |
+| User | `/audio`, `/matrix`, `/passages`, `/pieces`, `/time`, `/projects`, `/library`, `/playlists`, `/public`, `/requests`, `/shares` and `/shared`, `/youtube`, `/video` | a session, then the rights of the project the route names |
 | Master | `/admin`, `/frame-examples` (Lab) | a session of the master user |
 
 The rights check reads the project from the path (`audio_uuid`, the id of a part, or `project_id`)
@@ -35,7 +35,7 @@ the master user can follow it.
 | Prefix | Module | What it is for |
 |---|---|---|
 | `/auth` | `api/auth.py` | Sign in, sign out, who is signed in, change one's own password |
-| `/admin` | `api/admin.py` | The users: list, make, disable, reset a password (master user only) |
+| `/admin` | `api/admin.py` | The users: list, make, disable, reset a password; **Review**: the requests to decide, and the decision (Phase 14). Master user only |
 | `/audio` | `api/audio.py` | The working store: bring a recording in, trim it, stream it |
 | `/matrix` | `api/matrix.py` | Run the model, follow it (the notes arrive live on the stream), read back the notes it heard |
 | `/pieces` | `api/pieces.py` | The state of each step, the notes as columns, note operations, predict the hands ([pieces-and-revisions.md](pieces-and-revisions.md)) |
@@ -43,6 +43,10 @@ the master user can follow it.
 | `/passages` | `api/passages.py` | Recording in Sheet (implementation 02, Phase 9): a passage of a part, its takes, the promotion ([editing.md](editing.md)) |
 | `/projects` | `api/projects.py` | The Personal Vault: list (with the step of each project), create, rename, delete, duplicate (new ids, the same audio files), export and import a `.aitu` file (implementation 02, Phase 5); **Save to library** and **Edit** (Phase 6) |
 | `/library` | `api/library.py` | The Private Library (Phase 6): songs and their versions, artists and their names, the history of a version ([music-library/private-library.md](../music-library/private-library.md)) |
+| `/playlists` | `api/playlists.py` | The songs playlists of the Private Library (Phase 10) |
+| `/public` | `api/public.py` | The Public Library (Phase 13): songs, artists, playlists, likes, **Add to my library**, the suggestions ([music-library/ontology.md](../music-library/ontology.md)) |
+| `/requests` | `api/requests.py` | Requests to the Public Library (Phase 14): send, send again, withdraw, read ([music-library/requests.md](../music-library/requests.md)) |
+| `/shares`, `/shared` | `api/shares.py` | A Private Library shared read only (Phase 14): who the user shares with; the libraries shared with the user, **Add to my library** |
 | `/youtube` | `api/youtube.py` | Downloads via yt-dlp, also as a job with progress |
 | `/video`, `/frame-examples` | `api/video.py`, `api/frame_examples.py` | Reading a Synthesia-style video into a piece (implementations 04 and 05). `/frame-examples` is the master user's (Lab) |
 

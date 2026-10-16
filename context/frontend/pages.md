@@ -19,12 +19,16 @@ is plan section 6.3 of [implementation 02](../implementations/02-private-web-app
 | `/projects/:id/<step>` | `PiecePage` | One step: `source`, `audio`, `notes`, `hands` or `sheet`. **Save to library** once the Sheet step is ready; a version of My library opens read only, with **Edit**. `:id` may be any part of a project of several parts, whose Sheet step lists them (Phase 10) |
 | `/projects/:id/passages/:passageId` | `PassagePage` | Recording in Sheet (Phase 9): the Current and the Proposal of a passage, **Promote** ([recording-in-sheet.md](recording-in-sheet.md)) |
 | `/library/songs` | `SongsPage` (`pages/library/`) | My library (Phase 6): the songs, a table with a filter |
-| `/library/songs/:id` | `SongPage` | One song: **Play** (its first version), its artists and its versions (Open, Play, Edit, Duplicate, Export, Add to a playlist, Rename, History, Delete) |
+| `/library/songs/:id` | `SongPage` | One song: **Play** (its first version), its artists and its versions (Open, Play, Edit, Duplicate, Export, Add to a playlist, **Publish** (Phase 14), Rename, History, Delete) |
 | `/library/artists` | `ArtistsPage` | The artists with their other names, a table with a filter |
 | `/library/artists/:id` | `ArtistPage` | One artist: its names (Add a name, Make default, Rename, Remove) and its songs; Merge, Delete |
+| `/library/shared` | `SharedPage` | The libraries other users share with the user (Phase 14): the songs of one owner (`?from=`), **Share my library** |
+| `/library/shared/songs/:id` | `SharedSongPage` | One shared song: its versions (open read only, Play), **Add to my library** |
+| `/requests`, `/requests/:id` | `RequestsPage`, `RequestPage` (`pages/requests/`) | The user's requests to the Public Library (Phase 14); one with its items, side by side for a piano sheet, **Withdraw**, **Change and send again** |
+| `/admin/requests`, `/admin/requests/:id` | `ReviewPage`, `RequestPage` | **Review** (master user, Phase 14): the open requests oldest first (or **All**); one with a decision per item and **Send decision** |
 | `/library/playlists` | `PlaylistsPage` | The songs playlists and the integrated playlists of My library (Phase 10), **New playlist** |
-| `/public/songs` | `PublicSongsPage` (`pages/public/`) | The Public Library (Phase 13): a search, the filter chips (Decade, Region, Genre, Tag), a table sorted by popularity, year or title, one page at a time; the address keeps it all |
-| `/public/songs/:id` | `PublicSongPage` | One public song: byline, facts, **On the chart** (the line of its places), **Versions** and **Other versions** (Play, like, Add to my library), Lyrics; **Play**, **Add to my library**, **Open in My library** |
+| `/public/songs` | `PublicSongsPage` (`pages/public/`) | The Public Library (Phase 13): a search, the filter chips (Decade, Region, Genre, Tag), a table sorted by popularity, year or title, one page at a time; the address keeps it all; **Propose a song** (Phase 14) |
+| `/public/songs/:id` | `PublicSongPage` | One public song: byline, facts, **On the chart** (the line of its places), **Versions** and **Other versions** (Play, like, Add to my library; **Ask for a fixed version** on the user's own, Phase 14), Lyrics; **Play**, **Add to my library**, **Open in My library**; **Suggest a change** (Phase 14) |
 | `/public/artists`, `/public/artists/:id` | `PublicArtistsPage`, `PublicArtistPage` | The public artists (search, sort); one with its songs and albums by popularity, **Add to my library** |
 | `/public/playlists`, `/public/playlists/:id` | `PublicPlaylistsPage`, `PublicPlaylistPage` | The public songs playlists; one with **Play** (Play mode with `?from=public`) and **Add to my library** |
 | `/library/playlists/:id` | `PlaylistPage` | One songs playlist: **Play**, its songs with their version and stretch (a click plays from that song; `?at=` shades the song Play mode was closed on), **Add a song** |
@@ -63,13 +67,15 @@ does not exist, and the project page shows "There is no project of yours at this
 
 `layout/AppLayout.tsx` puts the sidebar (`ui/Sidebar.tsx`) beside the page (`ui/AppShell.tsx`). The
 sidebar shows **Projects**, a **My library** group with **Songs**, **Artists** (Phase 6) and
-**Playlists** (Phase 10), a **Public library** group with **Songs**, **Artists** and **Playlists**
-(Phase 13), and for
-the master user an **Admin** group with **Users** and **Lab**. **Play mode** (`/play/...`, Phase 11)
+**Playlists** (Phase 10) and **Shared** (Phase 14), a **Public library** group with **Songs**,
+**Artists** and **Playlists** (Phase 13), **Requests** (Phase 14), and for the master user an
+**Admin** group with **Review** (Phase 14), **Users** and **Lab**. The number beside **Requests** is
+the user's requests with changes asked, and beside **Review** the requests waiting for a review;
+both are counted again on every move between pages and when a request changes. **Play mode** (`/play/...`, Phase 11)
 is outside the shell, like the sign-in page: the sheet alone, with no sidebar
 ([play-mode.md](play-mode.md)).
 The user menu at its foot shows the username and the role, then **Change password**
-(`layout/PasswordDialog.tsx`), the theme (**Light**, **Dark** or **System**), **Keyboard shortcuts**
+(`layout/PasswordDialog.tsx`), **Share my library** (`layout/ShareDialog.tsx`, Phase 14), the theme (**Light**, **Dark** or **System**), **Keyboard shortcuts**
 and **Sign out**. The sidebar is open on the list pages and closed inside a project; the reader's own choice holds until
 they move between the two kinds of page. Under 900 px it stays closed, as a rail of icons with
 their names in tooltips. `⌘K` (`Ctrl+K`) opens **Search** from anywhere (`layout/SearchDialog.tsx`):

@@ -7,6 +7,9 @@
  *
  * **Play** opens Play mode on the first song, and a click on a row on that song (Phase 11). Closing
  * Play mode comes back here with the song it was on shaded (`?at=`), to choose another or reorder.
+ *
+ * **Publish** (the header's `⋯`, Phase 14) sends a request to make the playlist public, with its
+ * songs that have a version in the Public Library (`PublishPlaylistDialog`).
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -30,6 +33,7 @@ import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import DriveFileRenameIcon from "@mui/icons-material/DriveFileRenameOutlineOutlined";
 import LaunchIcon from "@mui/icons-material/Launch";
 import PlayIcon from "@mui/icons-material/PlayCircleOutlined";
+import PublishIcon from "@mui/icons-material/PublicOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -48,6 +52,8 @@ import {
   useRowDrag,
   type RowMenuItem,
 } from "../../ui";
+import { PublishPlaylistDialog } from "../requests/SmallRequestDialogs";
+import { COUNTS_EVENT } from "../requests/words";
 import { TextDialog } from "./TextDialog";
 import { said, stretchLabel } from "./shared";
 
@@ -65,6 +71,8 @@ export function PlaylistPage() {
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [sent, setSent] = useState<number | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -199,6 +207,12 @@ export function PlaylistPage() {
                 title="Playlist actions"
                 items={[
                   { label: "Rename", icon: <DriveFileRenameIcon fontSize="small" />, onClick: () => setRenaming(true) },
+                  {
+                    label: "Publish",
+                    icon: <PublishIcon fontSize="small" />,
+                    onClick: () => setPublishing(true),
+                    disabled: items.length === 0,
+                  },
                   { label: "Delete playlist", icon: <DeleteIcon fontSize="small" />, danger: true, onClick: () => setDeleting(true) },
                 ]}
               />
@@ -210,6 +224,32 @@ export function PlaylistPage() {
         <Alert severity="error" onClose={() => setActionError(null)} sx={{ mb: 2 }}>
           {actionError}
         </Alert>
+      ) : null}
+      {sent !== null ? (
+        <Alert
+          severity="success"
+          onClose={() => setSent(null)}
+          sx={{ mb: 2 }}
+          role="status"
+          action={
+            <PillButton kind="quiet" size="small" onClick={() => navigate(ROUTES.request(sent))}>
+              Open
+            </PillButton>
+          }
+        >
+          Request sent to the master user
+        </Alert>
+      ) : null}
+      {publishing ? (
+        <PublishPlaylistDialog
+          playlistId={playlistId}
+          onClose={() => setPublishing(false)}
+          onSent={(requestId) => {
+            setPublishing(false);
+            setSent(requestId);
+            window.dispatchEvent(new Event(COUNTS_EVENT));
+          }}
+        />
       ) : null}
       {playlist === null ? (
         <Stack spacing={1} aria-busy>

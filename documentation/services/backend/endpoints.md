@@ -25,7 +25,7 @@ properties and the reasons for them are in [`context/08-security.md`](../../../c
 | Group | Routers | Check before the handler (`auth/dependencies.py`) |
 |---|---|---|
 | `OPEN_ROUTERS` | `/auth` | None for `POST /auth/login` and `POST /auth/logout`; `GET /auth/me` and `PUT /auth/password` ask for the session themselves |
-| `USER_ROUTERS` | `/audio`, `/library`, `/matrix`, `/passages`, `/pieces`, `/playlists`, `/projects`, `/youtube`, `/time`, `/video` | `signed_in`, then `project_rights` |
+| `USER_ROUTERS` | `/audio`, `/library`, `/matrix`, `/passages`, `/pieces`, `/playlists`, `/projects`, `/public`, `/requests`, `/shares` and `/shared`, `/youtube`, `/time`, `/video` | `signed_in`, then `project_rights` |
 | `MASTER_ROUTERS` | `/frame-examples`, `/admin` | `signed_in`, then `master_only` |
 
 The answers of these checks:
@@ -169,6 +169,20 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/public/playlists/{id}/pull` | **Add to my library**: a songs playlist of the user's own. |
 | PUT, DELETE | `/public/likes/{project}` | Like a public version, or take the like back. |
 | GET | `/public/suggest` | The most popular matching songs and artists (Save to library, Search). |
+| GET | `/public/lists` | The genres, regions and tag categories a request can give a song (Phase 14). |
+| **Requests** | `api/requests.py` | Implementation 02, Phase 14: requests to the Public Library ([§7.4](#74-requests-requests-to-the-public-library)) |
+| GET, POST | `/requests` | The user's requests; send one (its kind in the body). |
+| GET | `/requests/counts` | The numbers beside **Requests** and **Review** in the sidebar. |
+| GET | `/requests/publish-info`, `/requests/playlist-info` | What the **Publish** dialog starts from, for a version or a playlist of My library. |
+| GET, PUT | `/requests/{id}` | One request, for its author and the master user; send it again after changes were asked. |
+| POST | `/requests/{id}/withdraw` | Withdraw a request not reviewed yet. |
+| GET | `/admin/requests` | **Review** (master user): the open requests, oldest first, or every one. |
+| POST | `/admin/requests/{id}/decision` | A decision for every waiting item; what is accepted is published in one transaction. |
+| **Sharing** | `api/shares.py` | Implementation 02, Phase 14: a Private Library shared read only ([§7.5](#75-shares-and-shared-a-shared-library)) |
+| GET | `/shares` | The other users, who the user shares with, and who shares with the user. |
+| PUT, DELETE | `/shares/{userId}` | Share the whole library with a user, or stop. |
+| GET | `/shared/{ownerId}/songs`, `/shared/songs/{id}` | The songs of a library shared with the user; one with its versions. |
+| POST | `/shared/songs/{id}/pull` | **Add to my library**: the chosen versions, copied. |
 | **Playlists** | `api/playlists.py` | Implementation 02, Phase 10: the songs playlists of the Private Library |
 | GET, POST | `/playlists` | The user's playlists; a new one, empty or with songs. |
 | GET, PATCH, DELETE | `/playlists/{id}` | One playlist with its songs; rename it or put its songs in another order; delete it. |
@@ -234,7 +248,8 @@ code is in `aitu_backend/auth/` (`sessions.py`, `passwords.py`, `throttle.py`).
 ### 1.2 `/admin`: the users
 
 `api/admin.py`, plan section 9.1. The whole router answers only the master user (`403` "Only the
-master user can open this." otherwise). It is the backend of **Admin → Users**.
+master user can open this." otherwise). It is the backend of **Admin → Users**, and of **Admin →
+Review** (Phase 14, [§7.4](#74-requests-requests-to-the-public-library)).
 
 | Route | Body | Answer |
 |---|---|---|
@@ -1027,7 +1042,7 @@ the Private Library since Phase 6 (§7.1).
 
 | Field | Meaning |
 |---|---|
-| `id`, `title`, `kind`, `layer` | `kind`: `song` or `integratedPlaylist`; `layer`: `vault` or `private` |
+| `id`, `title`, `kind`, `layer`, `mine` | `kind`: `song` or `integratedPlaylist`; `layer`: `vault`, `private`, `public`, or `request` (the copy a request sent, Phase 14); `mine`: the user owns it (a library project of another user is one shared with them, Phase 14) |
 | `step` | The lowest `resume` of the parts (`source`, `audio`, `notes`, `hands`, `sheet`), kept in `projects.step` and worked out again only after a part changed |
 | `running` | `transcribing` or `reading` while a job works on a part, else `null` |
 | `parts` | The ids of the parts, in order |
@@ -1185,9 +1200,70 @@ with the reason for a pull that cannot be done, `422` for an unknown region.
 | `PUT`, `DELETE /public/likes/{project}` | `{likes, liked}`. Once per user; `404` for a project that is not a public version. The path parameter is not named `project_id`, so the router's rights check does not read a like as a write of the public project |
 | `GET /public/suggest` | Query `q`, `artist`, `limit` (8): `{songs, artists}`, the most popular songs whose title matches `q` by an artist matching `artist`, and the artists whose names match `q` |
 
-A public version is a project of `.database/public/`, placed by `library/public.place_version`
-(Phase 14's acceptance; until then the browser check's fixture, `library/public_fixture.py`). Every
-user reads it through the step routes and Play mode; only the master user may write it.
+| `GET /public/lists` | `{genres, regions: [{code, name}], tagCategories}`: the fixed lists of section 15.3 (Phase 14) |
+
+A public version is a project of `.database/public/`, made by an accepted request (Phase 14,
+[§7.4](#74-requests-requests-to-the-public-library)): `library/public.copy_to_public` copies the
+project and `point_version` points the version at it, inside the review's transaction
+(`place_version` does both for the tests and the browser checks' fixture,
+`library/public_fixture.py`). Every user reads it through the step routes and Play mode; only the
+master user may write it.
+
+<a id="74-requests-requests-to-the-public-library"></a>
+
+### 7.4 `/requests`: requests to the Public Library
+
+`api/requests.py`, the review routes of `api/admin.py`, and `library/requests.py`; implementation 02
+Phase 14, plan section 16 ([`context/music-library/requests.md`](../../../context/music-library/requests.md)).
+A request is read by its author and the master user, and `404` for anyone else. The path parameter
+is `request_id`, never `project_id`, so the router's rights check leaves it alone. `404` for a row
+that is not the user's, `409` with the reason for a refusal (the same version already asked, a
+request already reviewed, an item accepted without what it needs), `422` for a field out of its
+rules (a version name that is not a simple name, three genres, nothing changed).
+
+**The body of `POST /requests` and `PUT /requests/{id}`** (a *proposal*), by `kind`:
+
+| `kind` | Fields | Items made |
+|---|---|---|
+| `userVersion` | `version` (a version of My library), `versionName` (lowercase letters, digits, hyphens, at most 24), `song`: `{publicId}` or `{new: SongFields}`, optional `privateId` (the user's own song) | `newArtist`* (one per new artist name), `newSong`?, `project` |
+| `metadata` | `song: {publicId}` with `changes: SongFields`; or `song: {new: SongFields}`; or `artist: {publicId, name?, addNames}` | `newArtist`*, then `metadata` or `newSong` |
+| `fixedVersion` | `userVersion` (the public project of the user's accepted user version), `name` (`hard`, `medium`, `easy` or a custom simple name) | `versionPointer` |
+| `playlist` | `playlist` (a songs playlist of My library), `title` | `playlist` |
+
+Every kind takes `note`, a few words for the master user. `SongFields` is `{title, year?, artists:
+[{publicId} or {newName}, privateId?], genres (at most 2 of the 13), regions (codes; `worldwide`
+when none), tags: [{category, value}]}`. A `userVersion` copies the project into the layer
+`request` when it is sent ([paths-and-data.md](paths-and-data.md)).
+
+| Route | Answer |
+|---|---|
+| `GET /requests` | `[summary]`, newest change first. A summary is `{id, kind, status, author, title, subject, createdAt, updatedAt, decidedAt, waiting, items}`; `status` is `open`, `changesAsked`, `accepted`, `partlyAccepted`, `refused` or `withdrawn` |
+| `GET /requests/counts` | `{mine, review}`: the user's requests with changes asked; the open requests (`0` unless the master user) |
+| `GET /requests/publish-info?version=` | `{versionId, versionName, suggestedName, ready, songId, songTitle, artists: [{privateId, name, publicId, publicName}], publicSongId, publicSongTitle, ownVersions, waitingRequest}` |
+| `GET /requests/playlist-info?playlist=` | `{title, items: [{songId, projectId, fromMs, toMs, title, versionName}], left: [title]}`: the songs with a public version (pulled from it, or published by the user), and the ones left out |
+| `POST /requests` | `201` `{id}` |
+| `GET /requests/{id}` | A summary with `mine`, `itemList: [{id, kind, decision, comment, payload, compare}]`, `comments: [{author, body, createdAt}]`, `proposal` (the body that would send it again). `payload` carries names (`artists: [{publicId or ref, name, isNew}]`) and, once accepted, `made` (`artistId`, `songId`, `projectId`, `playlistId`). `compare` (a `project` or `versionPointer` item): `{current, proposed}`, each `{projectId, parts, creator, name, kept}` or `null` |
+| `PUT /requests/{id}` | The author, on a request with changes asked: the items not accepted are replaced by the new proposal's (the accepted ones stay); the request is `open` again. `409` otherwise |
+| `POST /requests/{id}/withdraw` | The author, while `open` or `changesAsked`: `withdrawn`; what was accepted stays |
+| `GET /admin/requests?everything=` | The open requests, oldest first; with `everything`, every request, newest change first |
+| `POST /admin/requests/{id}/decision` | Body `{items: [{id, decision, comment?, changes?}], comment?}`: one decision (`accepted`, `refused`, `changesAsked`) for **every** waiting item. `changes` renames on accepting: `name` (`newArtist`, `versionPointer`), `title` and `year` (`newSong`), `title` (`playlist`), `versionName` (`project`). The accepted items are written in one transaction (new public rows, the project copied to `public/` and pointed at, the author as creator, the author's song and artists linked by `public_id`); `409` when an accepted item needs one that is not accepted. Answers the request as `GET /requests/{id}` |
+
+<a id="75-shares-and-shared-a-shared-library"></a>
+
+### 7.5 `/shares` and `/shared`: a shared library
+
+`api/shares.py` and `library/shares.py`, implementation 02 Phase 14, plan section 15.4. The owner
+shares their whole Private Library, read only (`library_shares`); the rights check lets the other
+user read its projects (`404` once the share ends). `404` for a library that is not shared with the
+user.
+
+| Route | Answer |
+|---|---|
+| `GET /shares` | `{people: [{id, username}], sharedWith: [userId], sharedWithMe: [{id, username, songs}]}`: the other enabled users, the ones the user shares with, the ones who share with the user |
+| `PUT /shares/{userId}`, `DELETE /shares/{userId}` | Share with a user, or stop; answers as `GET /shares`. `404` for an unknown or disabled user |
+| `GET /shared/{ownerId}/songs` | `{owner, songs: [{id, title, artists, versions}]}` by title |
+| `GET /shared/songs/{id}` | `{id, title, artists, ownerId, owner, versions: [{id, name, projectId, parts, inLibrary}], inLibrary}` |
+| `POST /shared/songs/{id}/pull` | Body `{versions: [id]}` (every version when empty): `201` `{songId, versions, already}`. Each version is copied into the user's library (no audio bytes), named `<version> (<owner>)`, under the user's own song: the one for the same public song, or the same title and first artist, or a new one. A version added before is not added again (`origin.sharedVersion`) |
 
 ---
 

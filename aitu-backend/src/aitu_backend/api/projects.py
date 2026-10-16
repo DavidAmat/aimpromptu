@@ -66,8 +66,12 @@ class ProjectRow(_Camel):
     id: str
     title: str
     kind: str
-    #: ``vault`` (Personal Vault) or ``private`` (Private Library).
+    #: ``vault`` (Personal Vault), ``private`` (Private Library), ``public``, or ``request`` (the
+    #: copy a request sent, Phase 14).
     layer: str
+    #: The user of this call owns it. A library project of another user is one shared with them
+    #: (Phase 14), which they read and never edit.
+    mine: bool = True
     #: The lowest step the parts reached: ``audio``, ``notes``, ``hands`` or ``sheet``.
     step: str | None = None
     #: ``transcribing`` or ``reading`` while a job works on a part, else ``None``.
@@ -224,6 +228,7 @@ def _row(project: Project, links: dict[str, LibraryLink] | None = None) -> Proje
         title=project.title,
         kind=project.kind,
         layer=project.layer,
+        mine=project.owner_id == current_user_id(),
         step=step,
         running=_running(part_ids),
         parts=part_ids,

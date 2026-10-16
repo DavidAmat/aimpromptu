@@ -25,6 +25,7 @@ the records and folders beside it for the audio and the project bundles. The fol
     vault/<projectId>/                       layer 1: the Personal Vault
     library/<projectId>/                     layer 2: the Private Library
   public/<projectId>/                        layer 3: the Public Library
+  requests/<projectId>/                      the copy of a project a request sent (Phase 14)
   tmp/<userId>/<partId>/video/               the video of a part (§5)
   lab/frame-examples/<slug>.json             the Lab records; cache/<slug>.jpg derived
   history/<projectId>/parts/<partId>/v<N>/   earlier states of a part (§4.5)
@@ -398,25 +399,27 @@ A video belongs to the part whose audio came out of it (V-03) and is a temporary
 
 ## 6. `aitu.sqlite`: the tables
 
-SQLAlchemy 2 models in `aitu_backend/db/models.py`, and three Alembic revisions:
+SQLAlchemy 2 models in `aitu_backend/db/models.py`, and four Alembic revisions:
 `db/migrations/versions/0001_initial.py` (every table, and the fixed lists),
 `0002_passage_projects.py` (Phase 9: `projects.kind` may be `passage`; the table is copied by
 Alembic's batch mode, which runs with foreign keys off, so no part is deleted) and
 `0003_public_library_fields.py` (Phase 12: `song_lyrics`, `album_artists`, `album_chart_entries`,
-`albums.release_date`, `albums.popularity`; only added, nothing copied). SQLite runs with
+`albums.release_date`, `albums.popularity`; only added, nothing copied) and `0004_requests.py`
+(Phase 14: `projects.layer` may be `request`, `requests.kind` may be `playlist`; the two tables are
+copied by batch mode like `0002`). SQLite runs with
 foreign keys on and in WAL mode. Every table of plan section 8.6 exists from Phase 3; most stay
 empty until their phase.
 
 | Group | Tables | Filled from |
 |---|---|---|
 | Users | `users` (`id`, `username`, `password_hash`, `role`: `master` or `user`, `disabled`), `sessions` | The master user on the first start (`db/users.py`, `AITU_MASTER_USERNAME`); passwords and sessions in Phase 4 |
-| Projects | `projects` (`id`, `owner_id`, `layer`: `vault`, `private`, `public`, `kind`, `title`, `based_on`, `public_source_id`, `created_at`, `updated_at`, `step`), `parts` (`id`, `project_id`, `position`), `audio_files`, `audio_refs` | Phase 3. `public_source_id` from Phase 13: the public version a project of a Private Library was pulled from (`library/pull.py`) |
+| Projects | `projects` (`id`, `owner_id`, `layer`: `vault`, `private`, `public`, `request`, `kind`, `title`, `based_on`, `public_source_id`, `created_at`, `updated_at`, `step`), `parts` (`id`, `project_id`, `position`), `audio_files`, `audio_refs` | Phase 3. `public_source_id` from Phase 13: the public version a project of a Private Library was pulled from (`library/pull.py`). The layer `request` from Phase 14: the copy a `userVersion` request sends, in `requests/<projectId>/`, owned by its author, read by the author and the master user, written by nobody; kept with the request as the record of the review |
 | Music library | `artists`, `artist_names` (several per artist, one default), `albums`, `songs` (`title`, `year`, `popularity`, `default_version`), `song_artists` (a song points to an **artist name**), `song_albums` (`track_number`: the place in the album's reading order), and from Phase 12 `song_lyrics` (`song_id`, `text`), `album_artists` (an album points to artist names too), `albums.release_date`, `albums.popularity`. Each row has `scope` (`private`, `public`), `owner_id` (empty for a public row), `public_id`, and `external_key` (a public row's identity in its source: `musicchartsarchive.com/singles/...`, or `seed:<title>\|<artist>` for a song of the seed list) | The migration (private rows of the seed list); **Save to library** and `/library` (Phase 6, `library/rows.py`: names compared ignoring case and spaces); the public rows by `library/public_import.py` (Phase 12, `make public-import`; run for real in Phase 13; [reconciliation.md](../../../context/music-library/reconciliation.md)). `public_id` from Phase 13: a private row that stands for a public one, made by **Add to my library** or by **Save to library** on a public song or artist (`library/pull.py`; [ontology.md](../../../context/music-library/ontology.md)) |
-| Versions | `song_versions` (fixed versions of a public song), `user_versions` (`user_versions/<user>/<name>/`), `private_versions` (a private song's version: a free name, unique in the song ignoring case, and its project) | The migration (`original`); Phase 6; Phase 14 (until then `library/public.place_version`, used by the tests and `check:public` on copies) |
+| Versions | `song_versions` (fixed versions of a public song), `user_versions` (`user_versions/<user>/<name>/`), `private_versions` (a private song's version: a free name, unique in the song ignoring case, and its project) | The migration (`original`); Phase 6; Phase 14: an accepted request (`library/requests.py`: `public.copy_to_public` then `point_version`; `creator_id` is the author). A user version replaced by one of the same name moves its likes and public playlist items to the new project |
 | Metadata of a public song | `genres` (13, fixed), `song_genres`, `tag_categories` (4, fixed), `tag_values`, `song_tags`, `regions` (`worldwide`), `song_regions`, `chart_sources` (`name`, `region_id`, `size`: the `N` of the popularity, `weight`), `chart_entries` (song, chart, `week`, `rank`), `album_chart_entries` (the same for an album, Phase 12) | `library/public_import.py` (Phase 12): the two charts `musicchartsarchive.com singles` and `… albums`, their weeks written again every run; genres, tags and the regions `spain` and `catalan` wait for Q-5 |
-| Playlists | `playlists` (`owner_id`, `scope`, `title`, times), `playlist_items` (`position`, `song_id`, `project_id`: the version chosen, `from_ms`, `to_ms`: an optional stretch) | Phase 10, `library/playlists.py`: the songs playlists of the Private Library. A deleted version sets `project_id` to `NULL` (read as the song's first version); a deleted song sets `song_id` to `NULL`, and the item is dropped when the playlist is next read |
-| Social | `likes` (a user likes a public version's project once, Phase 13), `library_shares` | Phase 13 (`library/public.py`), Phase 14 |
-| Requests | `requests`, `request_items` (one decision each), `request_comments` | Phase 14 |
+| Playlists | `playlists` (`owner_id`: for a public playlist, the user whose request made it, Phase 14; `scope`, `title`, times), `playlist_items` (`position`, `song_id`, `project_id`: the version chosen, `from_ms`, `to_ms`: an optional stretch) | Phase 10, `library/playlists.py`: the songs playlists of the Private Library. A deleted version sets `project_id` to `NULL` (read as the song's first version); a deleted song sets `song_id` to `NULL`, and the item is dropped when the playlist is next read |
+| Social | `likes` (a user likes a public version's project once, Phase 13), `library_shares` (`owner_id` shares their whole Private Library with `shared_with_id`, read only) | Phase 13 (`library/public.py`); Phase 14 (`library/shares.py`) |
+| Requests | `requests` (`kind`: `metadata`, `userVersion`, `fixedVersion`, `playlist`; `author_id`, `status`, times), `request_items` (`kind`: `newArtist`, `newSong`, `metadata`, `project`, `versionPointer`, `playlist`; `payload` as JSON, with `made` once accepted; `decision`, `comment`), `request_comments` (the notes of the author and of the master user) | Phase 14, `library/requests.py` ([requests.md](../../../context/music-library/requests.md)) |
 
 Two tables are not in the list of section 8.6 and follow from it: `parts` (a part must find its
 project, P-6) and `song_genres` (a song has one or two genres). `projects.step` is the lowest step

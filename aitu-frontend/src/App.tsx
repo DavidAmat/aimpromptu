@@ -3,7 +3,8 @@
  * `layout/routes.ts`; the router itself is created in `main.tsx`, which renders this table inside it.
  *
  * `/login` and Play mode (`/play/...`, Phase 11) are outside the shell. My library (`/library/...`, Phase 6; its playlists, Phase 10) is the
- * Private Library. Every other page needs a user signed in (`RequireUser`), and the
+ * Private Library, with the libraries shared with the user (`/library/shared`, Phase 14). Requests
+ * (`/requests`) and the Admin's Review (`/admin/requests`) are Phase 14's. Every other page needs a user signed in (`RequireUser`), and the
  * Admin pages, Users and Lab, the master user (`RequireMaster`; Phase 4).
  */
 
@@ -14,10 +15,12 @@ import LabLayout from "./layout/LabLayout";
 import LegacyRedirect from "./layout/LegacyRedirect";
 import { RequireMaster, RequireUser } from "./layout/RequireUser";
 import {
+  ADMIN_REQUEST_PATTERN,
   LAB_EXAMPLE_PATTERN,
   LEGACY_REDIRECTS,
   LIBRARY_ARTIST_PATTERN,
   LIBRARY_PLAYLIST_PATTERN,
+  LIBRARY_SHARED_SONG_PATTERN,
   LIBRARY_SONG_PATTERN,
   PASSAGE_PATTERN,
   PLAY_PATTERN,
@@ -26,6 +29,7 @@ import {
   PUBLIC_ARTIST_PATTERN,
   PUBLIC_PLAYLIST_PATTERN,
   PUBLIC_SONG_PATTERN,
+  REQUEST_PATTERN,
   ROUTES,
 } from "./layout/routes";
 import UsersPage from "./pages/admin/UsersPage";
@@ -33,6 +37,10 @@ import ArtistPage from "./pages/library/ArtistPage";
 import ArtistsPage from "./pages/library/ArtistsPage";
 import PlaylistPage from "./pages/library/PlaylistPage";
 import PlaylistsPage from "./pages/library/PlaylistsPage";
+import SharedPage from "./pages/library/SharedPage";
+import SharedSongPage from "./pages/library/SharedSongPage";
+import RequestPage from "./pages/requests/RequestPage";
+import RequestsPage, { ReviewPage } from "./pages/requests/RequestsPage";
 import SongPage from "./pages/library/SongPage";
 import SongsPage from "./pages/library/SongsPage";
 import PublicArtistPage from "./pages/public/PublicArtistPage";
@@ -152,6 +160,28 @@ export default function App() {
         <Route path={LIBRARY_ARTIST_PATTERN} element={<ArtistPage />} />
         <Route path={ROUTES.libraryPlaylists} element={<PlaylistsPage />} />
         <Route path={LIBRARY_PLAYLIST_PATTERN} element={<PlaylistPage />} />
+        {/* Libraries other users share with this one, read only (Phase 14). */}
+        <Route path={ROUTES.libraryShared} element={<SharedPage />} />
+        <Route path={LIBRARY_SHARED_SONG_PATTERN} element={<SharedSongPage />} />
+        {/* Requests to the Public Library (Phase 14): the user's own, and the master user's review. */}
+        <Route path={ROUTES.requests} element={<RequestsPage />} />
+        <Route path={REQUEST_PATTERN} element={<RequestPage />} />
+        <Route
+          path={ROUTES.adminRequests}
+          element={
+            <RequireMaster>
+              <ReviewPage />
+            </RequireMaster>
+          }
+        />
+        <Route
+          path={ADMIN_REQUEST_PATTERN}
+          element={
+            <RequireMaster>
+              <RequestPage />
+            </RequireMaster>
+          }
+        />
         <Route path={ROUTES.publicSongs} element={<PublicSongsPage />} />
         <Route path={PUBLIC_SONG_PATTERN} element={<PublicSongPage />} />
         <Route path={ROUTES.publicArtists} element={<PublicArtistsPage />} />

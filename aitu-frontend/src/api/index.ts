@@ -71,6 +71,7 @@ export type {
   PublicArtistRow,
   PublicChart,
   PublicCredit,
+  PublicLists,
   PublicPlaylistDetail,
   PublicPlaylistItem,
   PublicPlaylistRow,
@@ -85,6 +86,29 @@ export type {
   SortDirection,
   Suggestions,
 } from "./publicLibrary";
+export { requestsApi } from "./requests";
+export type {
+  ArtistInRequest,
+  ArtistRef,
+  ItemDecision,
+  ItemDecisionValue,
+  ItemKind,
+  Made,
+  PlaylistInfo,
+  ProjectSide,
+  Proposal,
+  PublishInfo,
+  RequestComment,
+  RequestDetail,
+  RequestItem,
+  RequestKind,
+  RequestStatus,
+  RequestSummary,
+  SongFields,
+  SongState,
+} from "./requests";
+export { sharesApi } from "./shares";
+export type { Person, SharedLibrary, SharedSong, Shares } from "./shares";
 export { piecesApi, PIECE_STEPS } from "./pieces";
 export type {
   NotesOperation,

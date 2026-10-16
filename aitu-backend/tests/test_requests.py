@@ -581,3 +581,34 @@ def test_the_simple_form_of_a_version_name() -> None:
     assert simple_name("Acústica  2") == "acustica-2"
     assert simple_name("--") == ""
     assert simple_name("a" * 40) == "a" * 24
+
+
+def test_the_check_fixture_removes_a_user_and_what_they_made(people: dict) -> None:
+    from aitu_backend.db.models import Request, User
+    from aitu_backend.library import public_fixture
+
+    anna_id, anna = people["anna"]
+    _, master = people["master"]
+    alive = song_id(ALIVE)
+    mine = published(anna, master, alive, "easy")
+    request = send(
+        anna,
+        kind="metadata",
+        song={"new": {"title": "Grace Kelly", "artists": [{"newName": "Mika"}]}},
+    )
+    done = accept_all(master, request)
+    new_song = done["itemList"][1]["payload"]["made"]["songId"]
+    new_artist = done["itemList"][0]["payload"]["made"]["artistId"]
+
+    assert public_fixture.main(["remove-song", "--id", str(new_song)]) == 0
+    assert public_fixture.main(["remove-artist", "--id", str(new_artist)]) == 0
+    assert public_fixture.main(["remove-user", "--username", "anna"]) == 0
+    with session() as db:
+        assert db.get(User, anna_id) is None
+        assert db.get(Project, mine) is None
+        assert db.scalar(select(Project.id).where(Project.owner_id == anna_id)) is None
+        assert db.scalar(select(Request.id).where(Request.author_id == anna_id)) is None
+        assert db.get(Song, new_song) is None and db.get(Artist, new_artist) is None
+    assert master.get(f"/public/songs/{alive}").json()["others"] == []
+    with pytest.raises(SystemExit):
+        public_fixture.main(["remove-user", "--username", "master"])

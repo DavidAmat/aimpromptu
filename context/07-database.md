@@ -24,6 +24,8 @@ database. Every path in the folder is built by one module, `aitu_backend/storage
     vault/<projectId>/           layer 1: the Personal Vault, work in progress
     library/<projectId>/         layer 2: the Private Library
   public/<projectId>/            layer 3: the Public Library
+  requests/<projectId>/          the copy of a project a request sent (Phase 14): read by its
+                                 author and the master user, written by nobody
   tmp/<userId>/<partId>/video/   temporary files of a user: a video, its frames, its reading
   lab/frame-examples/            the video reader's example records (Lab)
   history/<projectId>/           earlier states: parts/<partId>/v<N>/ before a splice or a new
@@ -134,7 +136,10 @@ section 8.6, so the later phases fill tables. Revision `0002` (Phase 9) lets a p
 Personal Vault ([backend/editing.md](backend/editing.md)). Revision `0003` (Phase 12) adds what the
 downloaded music library gives and section 8.6 had no place for: the lyrics of a song, the artists,
 release date, chart history and popularity of an album
-([music-library/reconciliation.md](music-library/reconciliation.md)).
+([music-library/reconciliation.md](music-library/reconciliation.md)). Revision `0004` (Phase 14)
+lets a project be in the layer `request` (the copy a request sends) and a request be of the kind
+`playlist` ([music-library/requests.md](music-library/requests.md)); the real database moved to it
+on 2026-10-16, after `make db-backup`.
 
 **The running backend migrates the real database as soon as a new revision is in `src/`**: it
 reloads on every change of a file there, and opens the database at the newest revision. Code of an
