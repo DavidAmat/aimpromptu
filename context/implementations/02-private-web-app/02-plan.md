@@ -1779,7 +1779,7 @@ title; one song with its metadata, fixed versions and Other versions by user; ar
 names; public playlists. Likes. **Add to my library** for a song, an artist or a playlist (section
 15.1). The seed list's songs present.
 
-*Built 2026-10-16* ([`02-implementation-phase-13.md`](02-implementation-phase-13.md)): the import run on
+*Built 2026-10-16 and merged after the user's ok* ([`02-implementation-phase-13.md`](02-implementation-phase-13.md)): the import run on
 the real `.database/` (after `make db-backup`); the pages `/public/songs`, `/public/songs/:id`,
 `/public/artists`, `/public/artists/:id`, `/public/playlists`, `/public/playlists/:id` (search,
 the filter chips with their counts, sort and pages done by the backend from a list kept in memory;

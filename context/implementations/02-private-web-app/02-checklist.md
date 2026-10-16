@@ -243,10 +243,10 @@ Q-5 keeps its recommendations for later work. Starts any time after Phase 3. The
 ## [x] Story 12.4: Documentation
 - [x] Task 12.4.1 `music-library/reconciliation.md` (new), `music-library/README.md`, `00-index.md`, `07-database.md` (revision `0003`, the running backend migrates), `paths-and-data.md` section 6; the plan's "as built in Phase 12" notes (sections 8.6, 15.5, 15.6).
 
-# [p] Phase 13: The Public Library
+# [x] Phase 13: The Public Library
 
-Built 2026-10-16 ([`02-implementation-phase-13.md`](02-implementation-phase-13.md)) on
-`feat/phase-13`, waiting for the user's check. Two answers of the user (2026-10-16): only a song with
+Built 2026-10-16 ([`02-implementation-phase-13.md`](02-implementation-phase-13.md)); merged into
+`master` after the user's ok (2026-10-16). Two answers of the user (2026-10-16): only a song with
 a version is added to My library; **Save to library** suggests the public songs and artists.
 
 ## [x] Story 13.1: The import

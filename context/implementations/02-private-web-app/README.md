@@ -21,9 +21,9 @@ Q-8 (one job with its stages) are answered. **Phase 10 done and checked by the u
 done and checked by the user 2026-10-16** ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)),
 merged into `master`. **Phase 12 done 2026-10-16** ([`02-implementation-phase-12.md`](02-implementation-phase-12.md)),
 merged into `master` after the user's ok; Q-6 is answered (objective criteria, `week_power` 8), Q-5
-keeps its recommendations for later work. **Phase 13 built 2026-10-16**
-([`02-implementation-phase-13.md`](02-implementation-phase-13.md)) on `feat/phase-13`, waiting for the
-user's check.
+keeps its recommendations for later work. **Phase 13 done 2026-10-16**
+([`02-implementation-phase-13.md`](02-implementation-phase-13.md)), merged into `master` after the
+user's ok.
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)
