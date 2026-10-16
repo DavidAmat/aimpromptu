@@ -40,7 +40,7 @@ from aitu_backend.audio import sources, timeline as audio_timeline
 from aitu_backend.audio.timeline import Piece
 from aitu_backend.editing import compose, history, marks
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS, frame_of_seconds, validate_frame_ms
-from aitu_backend.schemas.metadata import AudioSource
+from aitu_backend.schemas.metadata import source_kind
 from aitu_backend.schemas.rhythm import ClefChange, KeyChange, SavedRhythm, SpeedChange
 from aitu_backend.storage import bundle, locate, paths
 from aitu_backend.storage.bundle import SourceFile
@@ -487,9 +487,8 @@ def apply_audio(part_id: str, timeline: bundle.Timeline, files: list[SourceFile]
             if files:
                 first = files[0]
                 # A part of one file says where it came from in the words of an upload; a pasted
-                # whole file or a stretch of silence is a segment of something else.
-                known = {kind.value for kind in AudioSource}
-                source.kind = first.kind if first.kind in known else AudioSource.SEGMENT.value
+                # whole file or a stretch of silence makes a part built passage by passage.
+                source.kind = source_kind(first.kind)
                 source.format = first.format
                 source.original_filename = first.original_filename
                 source.duration_seconds = first.duration_seconds

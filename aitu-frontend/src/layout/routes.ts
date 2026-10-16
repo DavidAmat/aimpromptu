@@ -15,7 +15,11 @@
  * **My library** (`/library/songs`, `/library/artists`, Phase 6; `/library/playlists`, Phase 10) is
  * the Private Library: finished work, as songs with their versions, and the songs playlists.
  *
- * `/login` is the one page outside the shell; every other page needs a user signed in, and the
+ * **Play mode** (`/play/:projectId`, `/play/playlist/:id`, Phase 11) is the sheet alone, outside the
+ * shell: a project or a version of the library, or a songs playlist. Notes Falling is one of its views
+ * (`?view=falling`); its old address `/projects/:id/notes-falling` goes there.
+ *
+ * `/login` and Play mode are the pages outside the shell; every page needs a user signed in, and the
  * Admin pages (Users, Lab) the master user (Phase 4).
  *
  * The old paths (`/piece/...`, `/playground/...`, `/youtube`, `/video/...`, `/library/play/...`) redirect
@@ -39,8 +43,13 @@ export const ROUTES = {
   project: (id: string, step?: PieceStep) => (step ? `/projects/${id}/${step}` : `/projects/${id}`),
   /** A passage of a project being re-recorded: Current and Proposal (Record in Sheet, Phase 9). */
   passage: (projectId: string, passageId: string) => `/projects/${projectId}/passages/${passageId}`,
-  /** Notes Falling of a project, until Play mode makes it a view of its own (Phase 11). */
-  projectNotesFalling: (id: string) => `/projects/${id}/notes-falling`,
+  /**
+   * Play mode (Phase 11): a project or a version, from its first part. `falling` opens Notes Falling.
+   */
+  play: (projectId: string, options?: { falling?: boolean }) =>
+    `/play/${projectId}${options?.falling ? "?view=falling" : ""}`,
+  /** Play mode on a songs playlist, from its song `at` (0 is the first). */
+  playPlaylist: (id: number, at = 0) => `/play/playlist/${id}${at > 0 ? `?at=${at}` : ""}`,
   /** My library (the Private Library, Phase 6): songs with their versions, artists. */
   librarySongs: "/library/songs",
   librarySong: (id: number) => `/library/songs/${id}`,
@@ -68,6 +77,8 @@ export const PASSAGE_PATTERN = "/projects/:id/passages/:passageId";
 export const LIBRARY_SONG_PATTERN = "/library/songs/:id";
 export const LIBRARY_ARTIST_PATTERN = "/library/artists/:id";
 export const LIBRARY_PLAYLIST_PATTERN = "/library/playlists/:id";
+export const PLAY_PATTERN = "/play/:projectId";
+export const PLAY_PLAYLIST_PATTERN = "/play/playlist/:playlistId";
 export const LAB_EXAMPLE_PATTERN = "/admin/lab/examples/:slug";
 
 /** The Lab tabs, in the order of the work on a video; Examples last, because it is where a rule is measured. */
@@ -100,4 +111,6 @@ export const LEGACY_REDIRECTS: readonly (readonly [string, string])[] = [
   ["/library", ROUTES.librarySongs],
   // The old Piano Library's performance page; My library has its songs now (Phase 6).
   ["/library/play/*", ROUTES.librarySongs],
+  // Notes Falling is a view of Play mode since Phase 11.
+  ["/projects/:id/notes-falling", "/play/:id?view=falling"],
 ];

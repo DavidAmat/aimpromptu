@@ -178,9 +178,10 @@ const writeProposal = async () => {
 
 async function freshCopy(label, name) {
   const vault = await json(`${api}/projects`);
-  const original = vault.find(
-    (row) => row.step === 'sheet' && row.title.toUpperCase().includes(name.toUpperCase()) && !row.title.includes('(check-'),
-  );
+  const original = vault
+    // The shortest title that names it: the song itself, not a playlist or a copy made of it.
+    .filter((row) => row.step === 'sheet' && row.title.toUpperCase().includes(name.toUpperCase()) && !row.title.includes('(check-'))
+    .sort((a, b) => a.title.length - b.title.length)[0];
   if (!original) throw new Error(`No project of the vault named ${name} has its piano sheet`);
   const copy = await send('POST', `${api}/projects/${original.id}/duplicate`, { title: `${original.title} (${label})` });
   made.add(copy.id);
@@ -287,7 +288,10 @@ try {
   await waitForSheet();
   await page.waitForTimeout(800);
   const notesAfter = await notesOf(song.id);
-  check('the song keeps its length', Math.abs((await durationOf(song.id)) - durationBefore) < 0.001, `${durationBefore} s`);
+  // One audio frame (10 ms) of slack: a part of one file says the file's own length, a part of
+  // several files its length in whole frames (Phase 11: 233.348 s became 233.35 s, the same audio).
+  const durationAfter = await durationOf(song.id);
+  check('the song keeps its length', Math.abs(durationAfter - durationBefore) <= 0.0101, `${durationBefore} s → ${durationAfter} s`);
   check('the take’s notes are in the song', notesAfter !== notesBefore, `${notesBefore} → ${notesAfter} notes`);
   const filesAfter = await filesOf(song.id);
   check('the take is a file of the song’s audio, between the two halves', filesAfter.length === filesBefore.length + 2 && filesAfter.some((file) => file.kind === 'recording'), filesAfter.map((file) => file.name).join(' | '));

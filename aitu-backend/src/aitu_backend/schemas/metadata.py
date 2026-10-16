@@ -53,6 +53,19 @@ class AudioSource(str, Enum):
     COMPOSED = "composed"
 
 
+def source_kind(word: str) -> str:
+    """The kind a part of one file takes from that file, in the words of ``AudioSource``.
+
+    A file of a part's timeline may be named by what put it there (a pasted ``passage``, Phase 8),
+    which the audio metadata does not accept. Such a part was built passage by passage:
+    ``composed``, the word of a project made by From scratch or From other projects (a ``segment``
+    would need the file and the range it was cut from). Used wherever a part left with one file is
+    described by that file: a paste, **Save to library** writing the audio again (found in Phase
+    11), a file removed on the Source step.
+    """
+    return word if word in {kind.value for kind in AudioSource} else AudioSource.COMPOSED.value
+
+
 class TimeRange(CamelModel):
     """A closed range of the source audio, in seconds."""
 

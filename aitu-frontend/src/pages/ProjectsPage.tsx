@@ -3,7 +3,7 @@
  * changed first (implementation 02, plan section 10.1).
  *
  * Each row says the step the project reached and when it last changed; the whole row opens the
- * project on that step. The `⋯` menu has Open, Duplicate, Export, Rename, Notes Falling and Delete.
+ * project on that step. The `⋯` menu has Open, Duplicate, Export, Rename, Play (Play mode, Phase 11) and Delete.
  * **New project** opens a small menu: **From source**, **From scratch** (Phase 8) and **From other
  * projects** (Phase 10, its own page), and **Import** for a `.aitu` file.
  *
@@ -41,7 +41,7 @@ import LibraryAddIcon from "@mui/icons-material/LibraryAddOutlined";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusicOutlined";
 import MusicNoteIcon from "@mui/icons-material/MusicNoteOutlined";
 import UploadFileIcon from "@mui/icons-material/UploadFileOutlined";
-import WaterfallIcon from "@mui/icons-material/WaterfallChartOutlined";
+import PlayIcon from "@mui/icons-material/PlayCircleOutlined";
 import { useNavigate } from "react-router-dom";
 import { projectsApi, type ProjectRow } from "../api";
 import { STEP_LABELS } from "../components/piece/stepLabels";
@@ -229,10 +229,10 @@ export function ProjectsPage() {
                 { label: "Export", icon: <DownloadIcon fontSize="small" />, onClick: () => download(projectsApi.exportUrl(row.id)) },
                 { label: "Rename", icon: <DriveFileRenameIcon fontSize="small" />, onClick: () => setRenaming(row) },
                 {
-                  label: "Notes Falling",
-                  icon: <WaterfallIcon fontSize="small" />,
-                  onClick: () => navigate(ROUTES.projectNotesFalling(first)),
-                  disabled: !row.hasNotes,
+                  label: "Play",
+                  icon: <PlayIcon fontSize="small" />,
+                  onClick: () => navigate(ROUTES.play(row.id)),
+                  disabled: row.step !== "sheet",
                 },
                 ...(row.editing
                   ? [

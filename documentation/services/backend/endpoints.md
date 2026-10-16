@@ -100,8 +100,8 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | GET | `/matrix/{uuid}/job` | The waiting or running transcription of a piece (implementation 08). |
 | GET | `/matrix/progress/{jobId}` | SSE stream of any job: progress, live notes, `done`. |
 | GET | `/matrix/jobs/{jobId}` | The same state, for pollers. |
-| GET | `/matrix/{uuid}/events` | Every note the model reported, in seconds. Notes Falling draws it. |
-| PUT | `/matrix/{uuid}/events/removed` | Mark notes as removed, by pitch and second. Notes Falling uses it. |
+| GET | `/matrix/{uuid}/events` | Every note the model reported, in seconds. Notes Falling (Play mode) draws it. |
+| PUT | `/matrix/{uuid}/events/removed` | Mark notes as removed, by pitch and second. No page calls it since implementation 02, Phase 11. |
 | **The flow page** | `api/pieces.py` | |
 | GET | `/pieces/{uuid}/status` | Every step of the piece, its state, and the step it opens on (implementation 08). |
 | GET | `/pieces/{uuid}/notes` | The live notes as columns, with the revisions (implementation 08). |
@@ -520,7 +520,7 @@ Each event carries:
 The answer also carries `revision` and `handsRevision`, which a page needs to send a `PATCH`.
 `409` when the piece has no `notes.pmn`.
 
-**Notes Falling** draws this. The Playground's Piano Roll page, which also drew it, was removed in
+**Notes Falling**, a view of Play mode, draws this. The Playground's Piano Roll page, which also drew it, was removed in
 Phase 9: the Notes and Hands tabs of the flow page replace it, and they read
 `GET /pieces/{uuid}/notes` instead.
 
@@ -531,8 +531,10 @@ matched to 4 decimals). `removed: false` restores them. `removed` is a flag on t
 nothing is deleted and restoring a note returns it exactly as it was. Answers `{changed, unmatched}`.
 
 There are **two** routes that write this flag, and that is deliberate: the two screens genuinely
-hold different things. Notes Falling knows raw seconds; a reader on the sheet has clicked a notehead
+held different things. Notes Falling knew raw seconds; a reader on the sheet has clicked a notehead
 and knows a column and a row, which is `PUT /time/{uuid}/removed`. Same field, same consequences.
+Since implementation 02, Phase 11 Notes Falling is a view of Play mode that only plays, so only the
+sheet's route is called; this one stays, with its tests.
 
 Removing a note is not a filter on one screen. A note's printed length is the gap to the next onset
 in the same hand (D-14), so removing one **renames its neighbour**. That is why it is written onto
@@ -1213,8 +1215,9 @@ Implementation 08 deleted no route. It removed two choices and one page:
 - **A new model per job.** The model is loaded once per process (`transcription/models.py`), and
   only one transcription runs on the GPU at a time.
 - **The Playground's Piano Roll page**, removed in Phase 9. `/playground/piano-roll` now redirects
-  to the flow page. `GET /matrix/{uuid}/events` and `PUT /matrix/{uuid}/events/removed` stay, because
-  Notes Falling uses them.
+  to the flow page. `GET /matrix/{uuid}/events` stays, because Notes Falling (a view of Play mode
+  since implementation 02, Phase 11) draws it. `PUT /matrix/{uuid}/events/removed` stays with its
+  tests; no page has called it since Phase 11, when Notes Falling stopped taking notes off.
 
 ---
 

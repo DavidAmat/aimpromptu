@@ -11,7 +11,8 @@ what the backend writes is in [`../backend/editing.md`](../backend/editing.md).
 **Record this passage** (the record icon in the title bar of the range toolbox) opens the page of
 the marked stretch, `/projects/<id>/passages/<passageId>`. **Record a passage** on the floating bar,
 and on a blank sheet, opens a new passage at the end of the piece. The sheet is saved first when it
-has changes. Notes Falling has **Record this stretch** too.
+has changes. (Notes Falling had **Record this stretch** from Phase 9 until Phase 11, when it
+became a view of Play mode, which only plays.)
 
 The page is a **recording mode**: it covers the window with its own title bar ("Recording ·
 <song>", the passage's times, **Promote**, `⋯` with **Discard this passage**, and **Close the

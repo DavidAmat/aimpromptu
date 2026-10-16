@@ -2,7 +2,10 @@
  * **One song** (`/library/songs/:id`) of the user's Private Library: its title, its artists and its
  * versions (implementation 02, Phase 6, plan sections 10.6 and 15.2).
  *
- * Each version is a project. A row opens it, read only. Its `⋯` menu:
+ * Each version is a project. A row opens it, read only. **Play** (the header) opens Play mode on the
+ * first version (Phase 11). A version's `⋯` menu:
+ *
+ * - **Play** opens Play mode on that version.
  *
  * - **Edit** makes a copy in Projects that points at the version (no audio copied) and opens it; the
  *   version itself does not change until the copy is saved over it. While a copy is open the row
@@ -40,6 +43,7 @@ import HistoryIcon from "@mui/icons-material/HistoryOutlined";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import LaunchIcon from "@mui/icons-material/Launch";
 import PersonIcon from "@mui/icons-material/PersonOutlined";
+import PlayIcon from "@mui/icons-material/PlayCircleOutlined";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
   libraryApi,
@@ -166,23 +170,36 @@ export function SongPage() {
         back={{ to: ROUTES.librarySongs, label: "Back to Songs" }}
         actions={
           song ? (
-            <RowMenu
-              title="Song actions"
-              items={[
-                {
-                  label: "Rename song",
-                  icon: <DriveFileRenameIcon fontSize="small" />,
-                  onClick: () => setRenaming({ kind: "song" }),
-                },
-                { label: "Artists", icon: <PersonIcon fontSize="small" />, onClick: () => setArtists(true) },
-                {
-                  label: "Delete song",
-                  icon: <DeleteIcon fontSize="small" />,
-                  onClick: () => setDeleting({ kind: "song" }),
-                  danger: true,
-                },
-              ]}
-            />
+            <>
+              {/* Play mode on the song's first version (plan section 17). */}
+              {song.versions[0] ? (
+                <PillButton
+                  kind="primary"
+                  startIcon={<PlayIcon />}
+                  onClick={() => navigate(ROUTES.play(song.versions[0].projectId))}
+                  data-testid="song-play"
+                >
+                  Play
+                </PillButton>
+              ) : null}
+              <RowMenu
+                title="Song actions"
+                items={[
+                  {
+                    label: "Rename song",
+                    icon: <DriveFileRenameIcon fontSize="small" />,
+                    onClick: () => setRenaming({ kind: "song" }),
+                  },
+                  { label: "Artists", icon: <PersonIcon fontSize="small" />, onClick: () => setArtists(true) },
+                  {
+                    label: "Delete song",
+                    icon: <DeleteIcon fontSize="small" />,
+                    onClick: () => setDeleting({ kind: "song" }),
+                    danger: true,
+                  },
+                ]}
+              />
+            </>
           ) : undefined
         }
       />
@@ -254,6 +271,11 @@ export function SongPage() {
                         }
                         menu={[
                           { label: "Open", icon: <LaunchIcon fontSize="small" />, onClick: () => navigate(ROUTES.project(first)) },
+                          {
+                            label: "Play",
+                            icon: <PlayIcon fontSize="small" />,
+                            onClick: () => navigate(ROUTES.play(version.projectId)),
+                          },
                           {
                             label: version.editCopy ? "Continue editing" : "Edit",
                             icon: <EditIcon fontSize="small" />,

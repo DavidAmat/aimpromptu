@@ -16,7 +16,10 @@ merged at the start of Phase 8 (with `vexflow-v2` 0.43.0 pushed). **Phase 8 done
 ([`02-implementation-phase-8.md`](02-implementation-phase-8.md)), merged into `master`. **Phase 9 done
 and checked by the user 2026-10-15** ([`02-implementation-phase-9.md`](02-implementation-phase-9.md)),
 merged into `master` (with `vexflow-v2` 0.44.0 pushed). Q-7 (left for the production version) and
-Q-8 (one job with its stages) are answered.
+Q-8 (one job with its stages) are answered. **Phase 10 done and checked by the user 2026-10-15**
+([`02-implementation-phase-10.md`](02-implementation-phase-10.md)), merged into `master`. **Phase 11
+done and checked by the user 2026-10-16** ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)),
+merged into `master`.
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)
@@ -39,6 +42,8 @@ and the status lookup is [`02-checklist.md`](02-checklist.md). Phase reports go 
 | [`02-implementation-phase-7.md`](02-implementation-phase-7.md) | Phase 7: the sheet toolbox's Transpose (notes and figures, with a preview and an exact undo) and Lyrics (the pool, pieces snapped to frames), Key for this passage, the clef rule for the left hand (screenshots in [`screenshots/phase-7/`](screenshots/phase-7/)) |
 | [`02-implementation-phase-8.md`](02-implementation-phase-8.md) | Phase 8: copy and paste of a passage (notes, marks and audio, undo and redo exact, across projects and layers), the audio timeline with ranges of files, From scratch, the audio checked at every join (screenshots in [`screenshots/phase-8/`](screenshots/phase-8/)) |
 | [`02-implementation-phase-9.md`](02-implementation-phase-9.md) | Phase 9: Recording in Sheet: the page of a passage (Current and Proposal, takes recorded or from a file, the condensed steps in one job), the speed and the window, the promotions (fit to the window with either audio, the whole passage with the length change) as one undoable write through the paste, the staged session removed (screenshots in [`screenshots/phase-9/`](screenshots/phase-9/)) |
+| [`02-implementation-phase-10.md`](02-implementation-phase-10.md) | Phase 10: From other projects (passages of other projects saved as a song or an integrated playlist), the parts of a project (rename, move, join, split), songs playlists (screenshots in [`screenshots/phase-10/`](screenshots/phase-10/)) |
+| [`02-implementation-phase-11.md`](02-implementation-phase-11.md) | Phase 11: Play mode: the sheet alone, Close, Next, Play, the cursor kept in the middle, lyrics by their frames, Notes Falling as a view, an integrated playlist played on, a songs playlist song by song, the entry points; the audio kind fix of Replace the version (screenshots in [`screenshots/phase-11/`](screenshots/phase-11/)) |
 | [`public-library-build/`](public-library-build/) | A parallel piece of work: downloading `musicchartsarchive.com` into `data/music-library/` (next to the repository) to build the data of the Public Library. Phase 12 reconciles it with this plan |
 
 ## What it is for

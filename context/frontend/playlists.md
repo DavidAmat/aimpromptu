@@ -26,7 +26,7 @@ Other Projects" and "Playlists"). What the backend writes is in
 which opens on its Sheet step. The passages are **copies**: their notes, their marks (with the key,
 the clefs and the speed each had) and their audio (ranges of the stored files, no byte copied);
 nothing of the sources changes. The two differ only in what the project is: an integrated playlist
-plays as sub-songs in Play mode (Phase 11). Until it is saved, the list is kept in this browser, so
+plays its parts as sub-songs in Play mode ([play-mode.md](play-mode.md)). Until it is saved, the list is kept in this browser, so
 leaving the page or reloading it loses nothing.
 
 ## 2. The parts of a project
@@ -67,7 +67,11 @@ Three more ways in:
 - A version's read-only sheet: mark a stretch, then **Add to a playlist** in the *Frames* panel.
 
 A version deleted from the library leaves its rows on the song's first version; a song deleted takes
-its rows with it. **Play** comes with Play mode (Phase 11).
+its rows with it.
+
+**Play** (Phase 11) opens Play mode on the first song; a click on a row plays from that song, and so
+does **Play from here** in its `⋯` (**Open** there opens the version, read only). Closing Play mode
+comes back here with the song it was on shaded. How the songs play: [play-mode.md](play-mode.md).
 
 ## Where to look deeper
 

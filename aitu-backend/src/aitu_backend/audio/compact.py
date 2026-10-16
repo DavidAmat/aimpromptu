@@ -39,6 +39,7 @@ from scipy.io import wavfile
 
 from aitu_backend.audio import formats, piece_audio, sources
 from aitu_backend.audio.frames import SAMPLES_PER_FRAME, FrameTable, join_kept
+from aitu_backend.schemas.metadata import source_kind
 from aitu_backend.storage import audio_files, bundle, locate, paths
 from aitu_backend.storage.bundle import AudioEntry, Segment, SourceFile, Timeline
 
@@ -237,7 +238,7 @@ def apply(plan: Plan) -> None:
         # A part of one file is described by its source fields (bundle.source_files).
         first = plan.files[0]
         source.files = []
-        source.kind = first.kind
+        source.kind = source_kind(first.kind)
         source.format = first.format
         source.original_filename = first.original_filename
         source.duration_seconds = first.duration_seconds

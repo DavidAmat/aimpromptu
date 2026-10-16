@@ -66,6 +66,20 @@ export interface ScorePlayerProps {
    * the two buttons nor the paragraph under the bar (implementation 02, Phase 2).
    */
   compact?: boolean;
+  /**
+   * Nothing drawn but a refused start (Play mode, implementation 02, Phase 11): the page is the
+   * sheet alone, and the recording is moved by the cursor on the staves.
+   */
+  headless?: boolean;
+  /** Where the recording stops by itself, in seconds: the end of a stretch of a playlist. */
+  stopAt?: number | null;
+  /** The recording stopped by itself: at its end, or at `stopAt`. Not on a pause. */
+  onEnded?: () => void;
+  /**
+   * How much of the file the browser loads before it is played. Play mode draws many parts on one
+   * page and asks only for their length until one plays (a paused element keeps downloading).
+   */
+  preload?: "auto" | "metadata";
 }
 
 export interface ScorePlayerControls {
@@ -85,9 +99,25 @@ export function ScorePlayer({
   onPlaying,
   compact = false,
   keys = true,
+  headless = false,
+  stopAt = null,
+  onEnded,
+  preload = "auto",
 }: ScorePlayerProps) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const report = useRef(onTime);
+  const ended = useRef(onEnded);
+  const stopping = useRef(stopAt);
+  const loading = useRef(preload);
+  useEffect(() => {
+    ended.current = onEnded;
+    stopping.current = stopAt;
+  }, [onEnded, stopAt]);
+  // A new setting on the element itself: a new element would stop the recording and lose its place.
+  useEffect(() => {
+    loading.current = preload;
+    if (audio.current) audio.current.preload = preload;
+  }, [preload]);
   const [playing, setPlaying] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +139,7 @@ export function ScorePlayer({
     const element = new Audio(
       `${API_BASE}/audio/${audioUuid}/file${version !== undefined ? `?v=${encodeURIComponent(version)}` : ""}`,
     );
+    element.preload = loading.current;
     audio.current = element;
     // Say where the recording is the moment there is one, not only when it moves. The line on the
     // staves is the thing a reader grabs to move the recording, so it has to be on the page before
@@ -117,13 +148,17 @@ export function ScorePlayer({
     report.current?.(0);
     const tick = () => setSeconds(element.currentTime);
     const stop = () => setPlaying(false);
+    const finish = () => {
+      setPlaying(false);
+      ended.current?.();
+    };
     element.addEventListener("timeupdate", tick);
-    element.addEventListener("ended", stop);
+    element.addEventListener("ended", finish);
     element.addEventListener("pause", stop);
     return () => {
       element.pause();
       element.removeEventListener("timeupdate", tick);
-      element.removeEventListener("ended", stop);
+      element.removeEventListener("ended", finish);
       element.removeEventListener("pause", stop);
       // A paused element still downloads its file: without a source it stops, so a page that has
       // gone asks nothing more of a part that may be gone too (an edit copy saved, Phase 9).
@@ -141,7 +176,17 @@ export function ScorePlayer({
     let frame = 0;
     const step = () => {
       const element = audio.current;
-      if (element) report.current?.(element.currentTime);
+      if (element) {
+        report.current?.(element.currentTime);
+        // The end of a stretch: stop there, as the end of the file would.
+        const end = stopping.current;
+        if (end !== null && end !== undefined && element.currentTime >= end) {
+          element.pause();
+          setPlaying(false);
+          ended.current?.();
+          return;
+        }
+      }
       frame = requestAnimationFrame(step);
     };
     frame = requestAnimationFrame(step);
@@ -232,6 +277,14 @@ export function ScorePlayer({
     seekTo(0);
     onScrollToCursor?.();
   };
+
+  if (headless) {
+    return error ? (
+      <Alert severity="warning" onClose={() => setError(null)}>
+        {error}
+      </Alert>
+    ) : null;
+  }
 
   if (compact) {
     return (

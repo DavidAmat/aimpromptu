@@ -64,6 +64,7 @@ assumes.
 | [frontend/projects.md](frontend/projects.md) | **Projects and the steps of a project**: the five steps from the audio to the piano sheet, the editor's gestures, the timings |
 | [frontend/recording-in-sheet.md](frontend/recording-in-sheet.md) | **Recording in Sheet**: the page of a passage, its Current and Proposal, the takes, the speed and the window, Promote |
 | [frontend/playlists.md](frontend/playlists.md) | **From other projects and the playlists**: the page that makes a project of passages, the parts of a project (join, split), songs playlists |
+| [frontend/play-mode.md](frontend/play-mode.md) | **Play mode**: the sheet alone, Close and Next, Play and Pause, the cursor kept in the middle, lyrics by their frames, Notes Falling as a view, how parts and songs playlists play |
 | [frontend/pages.md](frontend/pages.md) | Routes, the shell, and the "position has one home" rule |
 | [frontend/rendering.md](frontend/rendering.md) | How the sheet is drawn, what the app does *not* decide, the stale-`dist` trap |
 | [frontend/annotations.md](frontend/annotations.md) | **The Sheet step**: the page, the defaults of a first write, the two selections, undo, saving |

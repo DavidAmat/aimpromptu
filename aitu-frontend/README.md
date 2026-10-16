@@ -69,13 +69,14 @@ both natively. Natively the page listens on `localhost` only.
 | `npm run check:paste` | **Copy** and **Paste** (Phase 8), on copies of Superestrella's tutorial and Elefants: a stretch copied, pasted at the cursor (its notes, its audio as a file of its own, the saved sheet, the cursor kept), undo and redo exact, ⌘V over a marked stretch, a reload; **From scratch** (no step tabs, Paste fills it); a stretch of a version of My library pasted across layers; every join of the audio checked sample by sample by `aitu-backend/scripts/check_joins.py` in the backend container (`scripts/check-paste.mjs`) |
 | `npm run check:passage` | **Record this passage** (Phase 9), on a copy of Elefants: the page of a stretch, a take recorded with Chromium's fake microphone and one added from a file (the passage's own audio twice as slow), **Write the proposal** (the GPU job), **Fit** (×2) and the window dragged, **Fit to the window** with the recording (the length kept, every join checked), undo and redo, **Replace the whole passage** (the song as much longer as the dialog said), a blank sheet's new passage played on a simulated MIDI piano with no sound (the keys are the notes), a MIDI take with the microphone, **Discard**, 390 px and dark (`scripts/check-passage.mjs`) |
 | `npm run check:compose` | **From other projects** and the playlists (Phase 10), on copies of Elefants and Superestrella's tutorial: a stretch of a read-only sheet and a whole project added, a **Subheader**, a passage moved, the list kept over a reload, **Save as integrated playlist** (two parts, the notes of each passage, the sources unchanged); the parts renamed, moved, joined and split (**Start a new part here**); on a copy saved to My library, **Make a playlist** from Songs, **Add to a playlist** from a version, a song removed, the playlist deleted; 390 px and dark (`scripts/check-compose.mjs`) |
+| `npm run check:play` | **Play mode** (Phase 11), on copies of Elefants: **Play** from Projects, the page with the sheet alone, Space, the buttons fading while it plays, the cursor kept in the middle of the window, a lyrics piece shown by its frames, the arrows, a double-click moving the cursor, **Notes Falling** as a view and its old address, Escape; an integrated playlist of two parts played on; two copies saved as songs, **Play** on a song and a version, a songs playlist with **Next**, a stretch that stops by itself, **All songs**, Close back to the playlist; 390 px and dark (`scripts/check-play.mjs`). Uses no GPU |
 | `npm run check:lyrics` | The **Lyrics** tab, on a copy of Elefants: words saved before read as a piece, the pool, a piece dragged onto the sheet, moved and resized on frames, merge, split, line break, larger, back to the pool, delete, undo, Save and a reload. `--only clefs` of the same script checks the clef rule on a first write |
 | `npm run time:flow` | The whole flow timed on three temporary pieces (an upload, a copy opened from Projects, a YouTube URL) |
 | `npm run bench:roll` | The Notes tab at 10,000 rectangles and at 100 stream messages per second |
 | `npm run bench:sheet` | A hand move on the Sheet step's piano sheet, timed part by part, on copies |
 | `npm run screenshot -- <path>` | A screenshot of a page in a headless Chromium, for a machine with no screen. Options: `--piece <uuid>`, `--wait <selector>`, `--delay <ms>`, `--out <file.png>`, `--width`, `--height`, `--full`, `--base <url>`, `--theme dark` (the dark scheme), `--signed-out` (the sign-in page, without signing in) |
 
-**These need the running app** (`make up`): `check:flow`, `check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `time:flow`,
+**These need the running app** (`make up`): `check:flow`, `check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `time:flow`,
 `bench:roll`, `bench:sheet` and `screenshot`. They open `http://localhost:5173` (`--base` changes
 it). All but `bench:roll` and `screenshot` work on temporary pieces and delete them at the end, so the library is never
 changed. `bench:roll` opens
@@ -83,7 +84,7 @@ changed. `bench:roll` opens
 need no browser and no backend.
 
 **Signing in.** Every page and every route of the backend need a session, so `check:flow`,
-`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `time:flow`, `bench:sheet` and
+`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `time:flow`, `bench:sheet` and
 `screenshot` sign in first through `scripts/session.mjs`. Once the master user's password was changed in the app (as on the Ubuntu
 machine since 2026-10-06), the line of `.env` no longer signs in: give `AITU_CHECK_PASSWORD` (and
 `AITU_CHECK_USERNAME` for another user) in the environment of the command. They act as
@@ -98,13 +99,14 @@ the script (`signIn(base)`) and to every Playwright page (`useSession(browser)`)
 ```text
 src/
   api/        # typed client, one module per backend router; no component calls fetch
-  hooks/      # useProgress (SSE), followJob, useEditHistory, selection, staged removals, element size
+  hooks/      # useProgress (SSE), followJob, useEditHistory, selection, the played notes, element size
   layout/     # AppLayout (the shell, the user menu), RequireUser and RequireMaster (the guards), PasswordDialog, LabLayout, SearchDialog, ShortcutsDialog, LegacyRedirect, routes.ts (every path lives here)
   pages/      # one component per route
     LoginPage.tsx     # Sign in
     ProjectsPage.tsx  # Projects
     admin/    #   UsersPage: Admin → Users
-    piece/    #   a project: PiecePage, the five steps, NotesEditor (Notes and Hands), sheet/ (the Sheet step, split into modules), Notes Falling
+    piece/    #   a project: PiecePage, the five steps, NotesEditor (Notes and Hands), sheet/ (the Sheet step, split into modules), passage/ (Recording in Sheet)
+    play/     #   Play mode: PlayPage, its Notes Falling view, what it plays (a project, a playlist)
     video/    #   the Lab pages: the video reader
     dev/      #   /dev/roll-bench, development builds only
   state/      # AuthProvider: the signed-in user; WorkingArtifactProvider: the working piece and its frameMs
@@ -113,13 +115,12 @@ src/
   notes/      # the piano roll visualization's data: typed arrays, view, live feed, edits
   audio/      # recorder, mm:ss.cc, the Audio step's cuts, view window and player
   piano/      # the 88-key SVG keyboard
-  playback/   # the transport, the scrub bar, how a note rectangle is drawn
+  playback/   # the scrub bar, the played notes, how a note rectangle is drawn
   print/      # the PDF writer
-  library/    # load a piece for a read-only sheet (kept for Play mode)
   video/      # the video piano overlay geometry, note placement, the selected video
   components/
     piece/    # step names, step progress
-    notes/    # PianoRollCanvas, rollPaint, RollTimeBar; the Notes Falling toolbox and removals bar
+    notes/    # PianoRollCanvas, rollPaint, RollTimeBar
     time/     # TimeScoreView (the ONLY file that touches the renderer), ScorePlayer, FigureGlyph
     audio/    # waveforms (CutWaveform for the Audio step), range selection, level bars
     video/    # the Lab views: player, calibration, detection, overlay

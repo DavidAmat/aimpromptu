@@ -10,6 +10,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -307,6 +308,27 @@ export interface TimeScoreViewProps {
    */
   followPlayhead?: boolean;
   /**
+   * Play mode (implementation 02, Phase 11): when the music moves to another line, that line is
+   * brought to the middle of the window rather than just inside it, so the line before and the line
+   * after are both on screen while the reader plays along.
+   */
+  followCentre?: boolean;
+  /**
+   * The lyrics pieces sounding now, by their first frame, while the music plays: drawn black and
+   * bold, so the reader sees which words the cursor is on. `null` draws every piece alike.
+   */
+  litLyrics?: readonly number[] | null;
+  /**
+   * Play mode: while `litLyrics` is given, every other piece is drawn faint, so words show and hide
+   * with their frames. The Sheet step leaves them as they are.
+   */
+  dimLyrics?: boolean;
+  /**
+   * The colour of the words, in place of the drawing package's dark grey (Play mode: black, so the
+   * words sounding read as clearly as the notes).
+   */
+  lyricsInk?: string;
+  /**
    * The cursor was dragged to a new moment, in seconds. Move the recording there.
    *
    * Leave it out and the cursor is not draggable, which is what a printed view wants.
@@ -469,6 +491,10 @@ export function TimeScoreView({
   availableWidth,
   playheadSeconds,
   followPlayhead = false,
+  followCentre = false,
+  litLyrics = null,
+  dimLyrics = false,
+  lyricsInk,
   onScrub,
   scrollCursorAt,
   onRendererChange,
@@ -495,6 +521,8 @@ export function TimeScoreView({
   onFrameWindowMove,
 }: TimeScoreViewProps) {
   const host = useRef<HTMLDivElement | null>(null);
+  /** This sheet's own name, so a style it writes reaches no other sheet on the page (Play mode). */
+  const scope = useId();
   // The box the sheet scrolls inside. The wheel is listened for here and the horizontal scroll is
   // put back here, so the point under the pointer stays under it while the page grows.
   const scroller = useRef<HTMLDivElement | null>(null);
@@ -1124,10 +1152,15 @@ export function TimeScoreView({
     const moved = placement.systemIndex !== system.current;
     system.current = placement.systemIndex;
     if (moved && followPlayhead) {
-      marker.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+      marker.scrollIntoView?.(
+        followCentre
+          ? { block: "center", inline: "nearest", behavior: "smooth" }
+          : { block: "nearest", inline: "nearest" },
+      );
     }
   }, [
     followPlayhead,
+    followCentre,
     playheadSeconds,
     score.envelope.frameMs,
     lineSpacing,
@@ -1384,6 +1417,7 @@ export function TimeScoreView({
       <Box sx={magnified}>
         <Box
           ref={stage}
+          data-score-view={scope}
           onDoubleClick={seekOnDoubleClick}
           sx={{
             position: "relative",
@@ -1427,13 +1461,28 @@ export function TimeScoreView({
           <style>
             {`.grid-range-marker-layer [data-kind="lyric"]{display:none}` +
               (readOnly ? "" : `.grid-lyric:hover .grid-lyric-box{fill:#f4f5f7}`) +
+              // A sheet that only shows (Play mode) has no line to spread: the handle between its staves goes.
+              (readOnly ? `[data-score-view="${scope}"] [data-staff-gap-handle="true"]{display:none}` : "") +
               (selectedLyrics ?? [])
                 .map(
                   (column) =>
                     `.grid-lyric[data-from-column="${column}"] .grid-lyric-box{fill:#f1f2f4;stroke:#8592a6;stroke-width:1}` +
                     `.grid-lyric[data-from-column="${column}"] .grid-lyric-grip{fill:#8592a6;fill-opacity:0.45}`,
                 )
-                .join("")}
+                .join("") +
+              (lyricsInk ? `[data-score-view="${scope}"] .grid-lyric-text{fill:${lyricsInk}}` : "") +
+              (litLyrics
+                ? (dimLyrics
+                    ? `[data-score-view="${scope}"] .grid-lyric{opacity:0.18;transition:opacity 160ms linear}`
+                    : "") +
+                  litLyrics
+                    .map(
+                      (column) =>
+                        `[data-score-view="${scope}"] .grid-lyric[data-from-column="${column}"]{opacity:1}` +
+                        `[data-score-view="${scope}"] .grid-lyric[data-from-column="${column}"] .grid-lyric-text{fill:#000000;font-weight:700}`,
+                    )
+                    .join("")
+                : "")}
           </style>
 
           {/*
@@ -1514,6 +1563,7 @@ export function TimeScoreView({
 
           <Box
             ref={playhead}
+            data-playhead
             onPointerDown={startDrag}
             onPointerMove={continueDrag}
             onPointerUp={endDrag}
