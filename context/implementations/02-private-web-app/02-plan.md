@@ -1713,7 +1713,7 @@ the middle, the lyrics shown by their frames, the keys, Notes Falling as a view,
 song, the list when closed, the continuous page). Entry points from every place a version or a
 playlist is shown. (The old `PerformancePage` was already removed in Phase 1, with the old library
 it read; `library/loadPerformanceScore.ts` is kept for this phase.)
-*Built 2026-10-15* ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)): each part is
+*Built 2026-10-15, checked by the user 2026-10-16 and merged* ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)): each part is
 the Sheet step's page in a play role; `loadPerformanceScore.ts` deleted. Found on the way: **Replace
 the version** failed on a version of one pasted file (the audio kind `passage`), fixed for the paste,
 **Save to library** and the Source step.

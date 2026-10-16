@@ -18,8 +18,8 @@ and checked by the user 2026-10-15** ([`02-implementation-phase-9.md`](02-implem
 merged into `master` (with `vexflow-v2` 0.44.0 pushed). Q-7 (left for the production version) and
 Q-8 (one job with its stages) are answered. **Phase 10 done and checked by the user 2026-10-15**
 ([`02-implementation-phase-10.md`](02-implementation-phase-10.md)), merged into `master`. **Phase 11
-built 2026-10-15** ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)) on
-`feat/phase-11`, waiting for the user's check.
+done and checked by the user 2026-10-16** ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)),
+merged into `master`.
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)

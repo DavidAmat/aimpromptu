@@ -4,7 +4,8 @@ Plan: [`02-plan.md`](02-plan.md) sections 6.3, 14 and 17, and section 20, Phase 
 [`02-checklist.md`](02-checklist.md). Branch `feat/phase-11`, made from `master` at `fd44bee` (Phase
 10 merged and pushed, after the user's check). Built 2026-10-15 on the Ubuntu machine, while another
 project of the user used the GPU: the user asked that the backend not use it (section 9).
-`vexflow-v2` did not change.
+`vexflow-v2` did not change. Checked by the user in the browser on 2026-10-16 and merged into
+`master`.
 
 # 1. Summary
 
@@ -203,7 +204,12 @@ Run on Play mode (a project, an integrated playlist, a songs playlist, Notes Fal
 - **A backend container can lose the GPU while it runs** (NVML "Unknown Error"): a transcription
   then fails with "No CUDA GPUs are available". Recreating the container gives it back.
 - **A songs playlist's next song waits for Play** (section 2.2), and the parts of one song play on.
-  Chosen from the app context's two kinds of playlist; easy to change.
+  **Answered 2026-10-16:** the user keeps it (option A).
+- **A test playlist** for the user's check (2026-10-16): "Test playlist" in My library, of two
+  copies saved as songs, "Hallelujah" (Pinchivi, original; from "Halleluyah - Pinchivi") and a
+  "tutorial" version of "Superestrella" (from the piano tutorial). The projects they were copied from
+  stay in Projects. None of the 30 songs of the library could be played before: their hands were
+  never predicted, so they have no piano sheet.
 - **A stretch of a version of several parts** plays on the version's first part: the playlist keeps
   no part (Phase 10). A stretch shows the whole sheet, the rest not dimmed.
 - **Play mode needs the Sheet step open** (notes with their hands): **Play** is disabled before.
