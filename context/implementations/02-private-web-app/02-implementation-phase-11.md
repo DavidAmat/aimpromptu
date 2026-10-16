@@ -16,7 +16,7 @@ project of the user used the GPU: the user asked that the backend not use it (se
 
 Also found and fixed: **Replace the version** failed (`422`) on a version made of one pasted file
 (section 5). Checks at the end (section 7): backend 1,094 tests on the CPU, the 3 known CPU failures
-and 1 skip; every frontend check passes, the new `check:play` too (30 checks), except
+and 1 skip; every frontend check passes, the new `check:play` too (30 checks, 32 after the user's first look), except
 `check:passage`, which needs the GPU and is to be run again (section 9).
 
 # 2. The design
@@ -191,6 +191,7 @@ Run on Play mode (a project, an integrated playlist, a songs playlist, Notes Fal
 | 08 | All songs |
 | 09 | Closed: the playlist with the song it was on shaded, **Play** |
 | 10, 11 | 390 px; dark |
+| 12, 13 | The Sheet step while it plays: the saved piece under the cursor black and bold; a piece placed and not saved, the same |
 
 # 9. Open points
 
@@ -211,6 +212,12 @@ Run on Play mode (a project, an integrated playlist, a songs playlist, Notes Fal
   (`LYRIC_TEXT_FILL`, `#3b3f46`), so a piece "shown in full" still read as grey beside the notes.
   In Play mode the words are now black (`TimeScoreView` `lyricsInk`, a style scoped to the sheet);
   the Sheet step keeps the grey. `check:play` now checks the colour of the piece sounding (shot 02).
+- **The Sheet step did not light the words either** (the user, on a project with a piece not yet
+  saved). The piece under the cursor is now drawn black and bold while the music plays on every
+  sheet (`litLyrics` given whenever it plays, from the lyrics on the page, so unsaved pieces count);
+  only Play mode fades the others (`dimLyrics`). Two checks in `check:play` (32 in all): on the Sheet
+  step the saved piece lights and the other is not faded (shot 12), and a piece dragged from the pool
+  and not saved lights when the cursor reaches it (shot 13). `check:lyrics` passes.
 
 # 11. Learnings for later phases
 

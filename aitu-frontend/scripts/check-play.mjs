@@ -195,6 +195,94 @@ try {
   await page.waitForURL(`**/projects/${copy.id}**`);
   check('Escape closes Play mode', true);
 
+  // The Sheet step lights the words being sung too, and fades nothing.
+  await page.goto(`${base}/projects/${copy.id}/sheet`);
+  await page.waitForSelector('[data-sheet-page] .grid-note-target', { timeout: 90000 });
+  await page.waitForTimeout(800);
+  await page.mouse.move(700, 450);
+  await page.keyboard.press('Space');
+  const litOnSheet = await until(
+    async () =>
+      page.evaluate(() => {
+        const one = document.querySelector('.grid-lyric[data-from-column="25"]');
+        const two = document.querySelector('.grid-lyric[data-from-column="400"]');
+        const ink = one?.querySelector('.grid-lyric-text');
+        return Boolean(
+          one && two && ink &&
+            getComputedStyle(ink).fill === 'rgb(0, 0, 0)' &&
+            Number(getComputedStyle(ink).fontWeight) >= 700 &&
+            getComputedStyle(two).opacity === '1',
+        );
+      }),
+    8000,
+  );
+  check('on the Sheet step the words being sung turn black and bold, the others stay', litOnSheet);
+  await shot('12-sheet-step-lyrics');
+  await page.keyboard.press('Space');
+
+  // A piece placed and not saved lights up too: the page's own lyrics, not the saved ones.
+  await page.waitForTimeout(400);
+  await page.getByRole('button', { name: 'Sheet toolbox' }).click();
+  const toolbox = page.locator('[data-sheet-toolbox]');
+  await toolbox.getByRole('button', { name: 'Lyrics', exact: true }).click();
+  await page.locator('[data-lyrics-paste]').fill('words not saved');
+  await toolbox.locator('[data-lyrics-add]').click();
+  const target = await page.evaluate(() => {
+    const ruler = document.querySelector('.grid-frame-ruler')?.getBoundingClientRect();
+    for (const note of document.querySelectorAll('.grid-note-target[data-hand="right"]')) {
+      const box = note.getBoundingClientRect();
+      if (ruler && box.top > ruler.y && box.top < ruler.y + 220 && box.left > ruler.x + ruler.width * 0.4) {
+        return { x: box.left + box.width / 2, y: ruler.y + ruler.height + 40 };
+      }
+    }
+    return null;
+  });
+  const dropBox = await page.locator('[data-sheet-drop]').boundingBox();
+  if (target && dropBox) {
+    await toolbox.locator('[data-lyrics-piece]').last().dragTo(page.locator('[data-sheet-drop]'), {
+      targetPosition: { x: target.x - dropBox.x, y: target.y - dropBox.y },
+    });
+  }
+  await page.waitForTimeout(1200);
+  const pool = await toolbox.locator('[data-lyrics-piece]').count();
+  const placed = await page.evaluate(() => {
+    for (const group of document.querySelectorAll('.grid-lyric')) {
+      if (group.textContent?.includes('words not saved')) {
+        return { from: Number(group.getAttribute('data-from-column')), to: Number(group.getAttribute('data-to-column')) };
+      }
+    }
+    return null;
+  });
+  const savedNow = await json(`${api}/time/${copy.id}/rhythm`);
+  const notSaved = placed !== null && !savedNow.lyrics.some((line) => line.text === 'words not saved');
+  let litUnsaved = false;
+  if (placed) {
+    await page.getByRole('button', { name: 'Close' }).first().click().catch(() => undefined);
+    // Move the recording to the middle of the piece with the scrub bar's keys, then play.
+    const bar = page.getByRole('slider', { name: 'Position in the piece' });
+    const want = (((placed.from + placed.to) / 2) * 40) / 1000;
+    await bar.evaluate((node) => node.focus());
+    for (let tries = 0; tries < 400; tries++) {
+      const now = Number(await bar.getAttribute('aria-valuenow'));
+      if (now >= want - 0.3) break;
+      await page.keyboard.press('ArrowRight');
+    }
+    await page.mouse.click(5, 5);
+    await page.keyboard.press('Space');
+    litUnsaved = await until(
+      async () =>
+        page.evaluate((from) => {
+          const ink = document.querySelector(`.grid-lyric[data-from-column="${from}"] .grid-lyric-text`);
+          return Boolean(ink && getComputedStyle(ink).fill === 'rgb(0, 0, 0)' && Number(getComputedStyle(ink).fontWeight) >= 700);
+        }, placed.from),
+      8000,
+    );
+    // At once: the piece is lit only while the cursor is over it.
+    await page.screenshot({ path: path.join(out, '13-sheet-step-lyrics-not-saved.png') });
+    await page.keyboard.press('Space');
+  }
+  check('a lyrics piece placed and not saved lights up too', notSaved && litUnsaved, placed ? `f${placed.from}–f${placed.to}` : `not placed: target ${JSON.stringify(target)}, ${pool} in the pool`);
+
   // 2. An integrated playlist: two parts, played on.
   const composed = await send('POST', `${api}/projects/compose`, {
     title: 'check-play integrated',

@@ -56,10 +56,11 @@ line is brought to the middle of the window**, so the line before and the line a
 screen and a reader who plays a little ahead or behind the cursor keeps the music in view.
 
 **Lyrics show and hide with their frames.** A lyrics piece is placed on a stretch of frames (the
-Lyrics tab of the sheet toolbox, [annotations-sheet.md](annotations-sheet.md)). In Play mode the
-words are black (on the Sheet step they keep the drawing's dark grey). While the music plays, the
-piece whose frames are sounding is drawn in full and every other piece is faint; paused, every piece
-is drawn in full. The layout does not move.
+Lyrics tab of the sheet toolbox, [annotations-sheet.md](annotations-sheet.md)). While the music
+plays, the piece whose frames are sounding is drawn **black and bold**; in Play mode every other piece
+is also faint. Paused, every piece is drawn alike (black in Play mode). The layout does not move.
+The Sheet step does the same while it plays, without the fading, and from the lyrics on the page,
+so a piece just placed and not saved yet lights up too.
 
 ## 4. The keys
 

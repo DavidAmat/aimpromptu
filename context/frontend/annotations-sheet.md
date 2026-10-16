@@ -72,6 +72,8 @@ pieces never share a frame.** While a piece is dragged, the strip above the stav
 other piece's frames in gray with a line at each end, and the frames the dragged one would cover in
 green, or in red where they would cover another; a drop on red is refused (a moved piece goes back
 where it was). A piece always starts and ends on a frame, which is what Play mode shows it by.
+While the recording plays, the piece under the cursor is drawn black and bold, saved or not
+(Phase 11, [play-mode.md](play-mode.md)).
 
 A piece is **plain text** on the page: a serif italic (Lora, self-hosted; Times Italic in the PDF)
 in a soft charcoal, with no block and no corner marks. Pointing at it shows its block faintly; a

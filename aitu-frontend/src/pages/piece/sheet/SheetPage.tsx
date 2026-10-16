@@ -2380,14 +2380,16 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
     return () => window.clearTimeout(wait);
   }, [score, playFromMs, startedAt, audioUuid]);
   /**
-   * The lyrics pieces whose frames are sounding, by their first frame: Play mode shows these and
-   * draws the others faint (the app context: the frames say when words are on and off).
+   * The lyrics pieces whose frames are sounding, by their first frame (the app context: the frames
+   * say when words are on and off). While the music plays they are drawn black and bold, on the
+   * Sheet step too, from the lyrics on the page (saved or not); Play mode also draws the others faint.
    */
+  const lyricsFrameMs = score?.envelope.frameMs ?? frameMs;
   const litLyrics = useMemo(() => {
-    if (!playMode || playheadSeconds === null) return [];
-    const frame = Math.floor((playheadSeconds * 1000) / frameMs + 1e-6);
+    if (playheadSeconds === null || lyrics.length === 0) return [];
+    const frame = Math.floor((playheadSeconds * 1000) / lyricsFrameMs + 1e-6);
     return lyrics.filter((line) => line.fromColumn <= frame && frame < line.toColumn).map((line) => line.fromColumn);
-  }, [playMode, playheadSeconds, frameMs, lyrics]);
+  }, [playheadSeconds, lyricsFrameMs, lyrics]);
   /** The same list while it holds the same pieces, so the sheet's style is written only on a change. */
   const litKey = litLyrics.join(",");
   // eslint-disable-next-line react-hooks/exhaustive-deps -- the same pieces keep the same array
@@ -2995,7 +2997,8 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
               followCentre={playMode}
               // Play mode picks nothing on the sheet: no note, no stretch, no handle to spread a line.
               readOnly={playMode}
-              litLyrics={playMode && playing ? litLyricsKept : null}
+              litLyrics={playing ? litLyricsKept : null}
+              dimLyrics={playMode}
               lyricsInk={playMode ? "#000000" : undefined}
               onScrub={playMode ? scrubInPlay : scrub}
               scrollCursorAt={scrollCursorAt}

@@ -314,10 +314,15 @@ export interface TimeScoreViewProps {
    */
   followCentre?: boolean;
   /**
-   * The lyrics pieces sounding now, by their first frame (Play mode). While this is given, every
-   * other piece is drawn faint: words show and hide with their frames. `null` draws them all.
+   * The lyrics pieces sounding now, by their first frame, while the music plays: drawn black and
+   * bold, so the reader sees which words the cursor is on. `null` draws every piece alike.
    */
   litLyrics?: readonly number[] | null;
+  /**
+   * Play mode: while `litLyrics` is given, every other piece is drawn faint, so words show and hide
+   * with their frames. The Sheet step leaves them as they are.
+   */
+  dimLyrics?: boolean;
   /**
    * The colour of the words, in place of the drawing package's dark grey (Play mode: black, so the
    * words sounding read as clearly as the notes).
@@ -488,6 +493,7 @@ export function TimeScoreView({
   followPlayhead = false,
   followCentre = false,
   litLyrics = null,
+  dimLyrics = false,
   lyricsInk,
   onScrub,
   scrollCursorAt,
@@ -1466,11 +1472,14 @@ export function TimeScoreView({
                 .join("") +
               (lyricsInk ? `[data-score-view="${scope}"] .grid-lyric-text{fill:${lyricsInk}}` : "") +
               (litLyrics
-                ? `[data-score-view="${scope}"] .grid-lyric{opacity:0.18;transition:opacity 160ms linear}` +
+                ? (dimLyrics
+                    ? `[data-score-view="${scope}"] .grid-lyric{opacity:0.18;transition:opacity 160ms linear}`
+                    : "") +
                   litLyrics
                     .map(
                       (column) =>
-                        `[data-score-view="${scope}"] .grid-lyric[data-from-column="${column}"]{opacity:1}`,
+                        `[data-score-view="${scope}"] .grid-lyric[data-from-column="${column}"]{opacity:1}` +
+                        `[data-score-view="${scope}"] .grid-lyric[data-from-column="${column}"] .grid-lyric-text{fill:#000000;font-weight:700}`,
                     )
                     .join("")
                 : "")}
