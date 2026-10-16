@@ -54,6 +54,9 @@ export interface SaveToLibrary {
   songId?: number;
   song?: string;
   artist?: string;
+  /** A song or an artist of the Public Library chosen in the dialog (Phase 13). */
+  publicSongId?: number;
+  publicArtistId?: number;
   version?: string;
   replace?: boolean;
 }

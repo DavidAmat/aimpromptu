@@ -86,6 +86,22 @@ sets it when it loads a project; the sheet reads its `frameMs` from it.
 | `pages/library/PlaylistPage.tsx` | One songs playlist: **Play** (Phase 11, `ROUTES.playPlaylist`), rows dragged by a handle (`useRowDrag`), each a `ListRow` (the song and its artists, the version, the stretch or "Whole"; a click plays from it; `?at=` shades the row Play mode was closed on) with **Play from here**, Open, **Use “<version>”**, **The whole song**, Move up/down, **Remove from the playlist**; **Add a song** (`ChooseSongDialog`); Rename, Delete. `data-playlist-items`, `data-playlist-item` are read by `check:compose` |
 | `pages/library/AddToPlaylistDialog.tsx` | **Add to a playlist**: a version (from the song page's version menu) or a stretch of it (from the read-only sheet's *Frames* panel) into a playlist or a new one |
 | `pages/library/SongsPage.tsx` (Phase 10) | Rows picked by their checkbox (`DataTable`'s `selected`), **Make a playlist of N** |
+| `pages/library/SongPage.tsx` (Phase 13) | "In the Public library" under the title when the song stands for a public one (`publicId`) |
+
+### 1.2 The Public Library (implementation 02, Phase 13)
+
+| File | Role |
+|---|---|
+| `api/publicLibrary.ts` | `publicApi`: the `/public` routes |
+| `pages/public/PublicSongsPage.tsx` | **Public songs**: the search (debounced 250 ms), `FilterChip`s from the answer's `facets` (a chip only when it has values), a `DataTable` in server mode (`sort`, `onSortChange`, `paging`); every setting in the address (`q`, `decade`, `region`, `genre`, `tag`, `sort`, `dir`, `page`, `per`). `data-testid`: `public-search`, `filter-decade`, `filter-region`, `public-total` |
+| `pages/public/PublicSongPage.tsx` | One public song: byline (artist links), the facts grid, `ChartHistory`, `VersionLine`s (name, Default, In My library, creator, the like button, Play, `⋯`), `AddDialog` (versions to add, the default one ticked), Lyrics on request. `data-testid`: `public-byline`, `public-version`, `like`, `public-play`, `add-to-library`, `add-confirm`, `open-mine`, `show-lyrics`, `lyrics` |
+| `pages/public/ChartHistory.tsx` | The chart line: places 1 to 100 over time, broken where the song was off the chart more than three weeks, the best place marked; drawn at its real width up to 640 px (a `ResizeObserver`), so its words keep their size. `data-testid="chart-history"` |
+| `pages/public/PublicArtistsPage.tsx`, `PublicArtistPage.tsx` | The artists (server mode); one artist's songs and albums (`DataTable`s by popularity), **Add to my library** (`data-testid="add-artist"`) |
+| `pages/public/PublicPlaylistsPage.tsx`, `PublicPlaylistPage.tsx` | The public playlists; one with `ListRow`s (a click plays from that song), **Play** (`ROUTES.playPublicPlaylist`), **Add to my library** |
+| `pages/public/shared.ts` | `popularityText` (one decimal), `versionLabel`, `monthYear`, `defaultVersion` |
+| `pages/piece/SaveToLibraryDialog.tsx` (Phase 13) | The Artist and Song fields add `publicApi.suggest` answers under "Public library" (`groupBy`); a public song sends `publicSongId`, a public artist `publicArtistId` |
+| `layout/SearchDialog.tsx` (Phase 13) | After 200 ms of no typing, the public songs and artists that match, under the user's own results |
+| `pages/play/playQueue.ts`, `PlayPage.tsx` (Phase 13) | `?from=public` on `/play/playlist/:id` reads a public playlist; **Close** goes back to it |
 
 ## 2. The page of a project
 
@@ -408,13 +424,14 @@ so the same job looks the same everywhere.
 |---|---|
 | `AppShell`, `PageBody` | The sidebar beside the page; the side gutters and the 960 px width of a list page (`wide` for a canvas) |
 | `Sidebar` | Open (260 px, words) or closed (64 px, icons with tooltips); groups with a heading; the footer |
-| `PageHeader` | The title on the left, the primary action on the right, an optional back arrow and a middle row (the step tabs). No subtitle |
+| `PageHeader` | The title on the left, the primary action on the right, an optional back arrow and a middle row (the step tabs). No subtitle. Under 900 px the title keeps at least 160 px, so wide actions go to the next line instead of hiding it (Phase 13) |
 | `Section` | A group inside a page: an optional small title and its controls, no description, no border (it replaced `SectionCard`) |
 | `IconAction` | An icon button with its tooltip, which is also its name; the shortcut after the title; a tooltip that says why when disabled; tooltips never catch the pointer, so one never covers the button beside it |
 | `PillButton` | `primary` (black), `secondary` (white, grey border), `quiet`, `danger`; `busy` shows a spinner |
 | `Segmented` | One of 2 to 4 options, as one rounded group |
 | `ListRow`, `RowMenu` | A row: title (truncated, full on hover), status and meta in fixed columns, the `⋯` menu |
-| `DataTable` | Sticky header, sortable columns, rows per page, sized to its content; with `selected` and `onSelectedChange`, a checkbox per row and one for all (Phase 10) |
+| `DataTable` | Sticky header, sortable columns, rows per page, sized to its content; with `selected` and `onSelectedChange`, a checkbox per row and one for all (Phase 10). **Server mode** (Phase 13): `sort` and `onSortChange` (the rows come sorted), `paging` (`{count, page, perPage, onPage, onPerPage}`: the rows are one page); a column's `firstDirection` is the direction of its first click (`desc` for a popularity). Under 600 px the page controls keep only the range and the arrows |
+| `FilterChip` | A filter as a chip (Phase 13): its name with a down arrow; a click opens its values with their counts (grouped under a heading when they have one), the first entry takes it off; chosen, it is filled, shows the value, and has a cross |
 | `EmptyState` | One line, and the action that creates the first one |
 | `ConfirmDialog` | The confirm button repeats the action ("Delete project"); **Cancel**; an optional third choice |
 | `RailRow`, `rowDrag.ts` | A row of a side panel in order (the takes of a passage, the passages of From other projects, the parts): label, detail, shaded when on show, an optional number, `⋯`, bin and drag handle. `useRowDrag(count, onMove)` gives each row of a list its drag handlers and drop mark; `movedOrder` (Phase 10) |
@@ -524,7 +541,7 @@ npm run check:notes       # the Notes tab's typed arrays, live feed and edits
 
 These need the running app (`make up` from the repository root). Each works on temporary copies or
 uploads and deletes them at the end, so the library is never changed. `check:flow`,
-`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
+`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
 user with `AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env` at the repository root (or
 `AITU_CHECK_USERNAME` and `AITU_CHECK_PASSWORD` from the environment), makes every `fetch` of the
 script send the cookie (`signIn(base)`), and gives every Playwright page the same cookie

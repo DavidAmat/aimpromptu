@@ -8,6 +8,10 @@
  *
  * With `selected` and `onSelectedChange` each row starts with a checkbox, and the header's selects
  * every row (Phase 10: **Make a playlist** from songs).
+ *
+ * **Server mode** (Phase 13: the Public Library's 9,000 songs): with `onSortChange` the sort is the
+ * caller's and the rows come sorted; with `paging` they come one page at a time, and the page
+ * controls say the whole count. The caller asks the backend again on each change.
  */
 
 import { useMemo, useState, type ReactNode } from "react";
@@ -31,6 +35,19 @@ export interface DataColumn<Row> {
   align?: "left" | "right";
   /** A fixed width in pixels, for a column that always truncates. */
   width?: number;
+  /** The direction of the first click on the header: `desc` for a popularity, `asc` by default. */
+  firstDirection?: "asc" | "desc";
+}
+
+export type TableSort = { key: string; direction: "asc" | "desc" };
+
+/** One page of rows the server sorted and cut (server mode). */
+export interface TablePaging {
+  count: number;
+  page: number;
+  perPage: number;
+  onPage: (page: number) => void;
+  onPerPage: (perPage: number) => void;
 }
 
 export interface DataTableProps<Row> {
@@ -45,6 +62,11 @@ export interface DataTableProps<Row> {
   /** The keys of the rows picked with their checkbox; no checkboxes without it. */
   selected?: ReadonlySet<string>;
   onSelectedChange?: (keys: Set<string>) => void;
+  /** Server mode: the sort on show, and what a click on a header asks for. */
+  sort?: TableSort | null;
+  onSortChange?: (sort: TableSort) => void;
+  /** Server mode: the rows are one page of `paging.count`. */
+  paging?: TablePaging;
 }
 
 export function DataTable<Row>({
@@ -57,6 +79,9 @@ export function DataTable<Row>({
   maxHeight = "70vh",
   selected,
   onSelectedChange,
+  sort: givenSort,
+  onSortChange,
+  paging,
 }: DataTableProps<Row>) {
   const picking = selected !== undefined && onSelectedChange !== undefined;
   const allKeys = rows.map(rowKey);
@@ -68,13 +93,28 @@ export function DataTable<Row>({
     else next.add(key);
     onSelectedChange(next);
   };
-  const [sort, setSort] = useState(initialSort ?? null);
-  const [page, setPage] = useState(0);
-  const [perPage, setPerPage] = useState(rowsPerPageOptions[0]);
+  const [ownSort, setOwnSort] = useState<TableSort | null>(initialSort ?? null);
+  const [ownPage, setOwnPage] = useState(0);
+  const [ownPerPage, setOwnPerPage] = useState(rowsPerPageOptions[0]);
+  const remoteSort = onSortChange !== undefined;
+  const sort = remoteSort ? (givenSort ?? null) : ownSort;
+  const page = paging ? paging.page : ownPage;
+  const perPage = paging ? paging.perPage : ownPerPage;
+  const setPage = (next: number) => (paging ? paging.onPage(next) : setOwnPage(next));
+  const setPerPage = (next: number) => (paging ? paging.onPerPage(next) : setOwnPerPage(next));
+  const total = paging ? paging.count : rows.length;
+  const clickSort = (column: DataColumn<Row>) => {
+    const next: TableSort =
+      sort?.key === column.key
+        ? { key: column.key, direction: sort.direction === "asc" ? "desc" : "asc" }
+        : { key: column.key, direction: column.firstDirection ?? "asc" };
+    if (remoteSort) onSortChange(next);
+    else setOwnSort(next);
+  };
 
   const sorted = useMemo(() => {
     const column = sort ? columns.find((one) => one.key === sort.key) : undefined;
-    if (!sort || !column?.sortValue) return rows;
+    if (remoteSort || !sort || !column?.sortValue) return rows;
     const value = column.sortValue;
     const sign = sort.direction === "asc" ? 1 : -1;
     return [...rows].sort((a, b) => {
@@ -86,9 +126,9 @@ export function DataTable<Row>({
       if (y === null) return -1;
       return (x < y ? -1 : 1) * sign;
     });
-  }, [rows, columns, sort]);
+  }, [rows, columns, sort, remoteSort]);
 
-  const visible = sorted.slice(page * perPage, page * perPage + perPage);
+  const visible = paging ? sorted : sorted.slice(page * perPage, page * perPage + perPage);
 
   // The page controls stay under the table, at its width, not at the far edge of the page.
   return (
@@ -118,14 +158,8 @@ export function DataTable<Row>({
                   {column.sortValue ? (
                     <TableSortLabel
                       active={sort?.key === column.key}
-                      direction={sort?.key === column.key ? sort.direction : "asc"}
-                      onClick={() =>
-                        setSort((current) =>
-                          current?.key === column.key
-                            ? { key: column.key, direction: current.direction === "asc" ? "desc" : "asc" }
-                            : { key: column.key, direction: "asc" },
-                        )
-                      }
+                      direction={sort?.key === column.key ? sort.direction : (column.firstDirection ?? "asc")}
+                      onClick={() => clickSort(column)}
                     >
                       {column.label}
                     </TableSortLabel>
@@ -173,14 +207,16 @@ export function DataTable<Row>({
           </TableBody>
         </Table>
       </TableContainer>
-      {rows.length > rowsPerPageOptions[0] ? (
+      {total > rowsPerPageOptions[0] ? (
         <TablePagination
           component="div"
-          count={rows.length}
+          count={total}
           page={page}
           onPageChange={(_event, next) => setPage(next)}
           rowsPerPage={perPage}
           rowsPerPageOptions={rowsPerPageOptions}
+          // Narrow, only the range and the arrows: the rows-per-page choice would push them off the page.
+          sx={{ "& .MuiTablePagination-selectLabel, & .MuiTablePagination-input": { display: { xs: "none", sm: "flex" } } }}
           onRowsPerPageChange={(event) => {
             setPerPage(Number(event.target.value));
             setPage(0);

@@ -91,16 +91,18 @@ export function PlayPage() {
   const { projectId, playlistId } = useParams();
   const isPlaylist = playlistId !== undefined;
   const [params, setParams] = useSearchParams();
+  // A playlist of the Public Library (Phase 13): the same items, read from `/public`.
+  const isPublic = isPlaylist && params.get("from") === "public";
   const navigate = useNavigate();
   const location = useLocation();
 
   const [queue, setQueue] = useState<{ key: string; value: PlayQueue } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const queueKey = isPlaylist ? `playlist:${playlistId}` : `project:${projectId}`;
+  const queueKey = isPlaylist ? `${isPublic ? "public" : "playlist"}:${playlistId}` : `project:${projectId}`;
   useEffect(() => {
     const controller = new AbortController();
     const load = isPlaylist
-      ? playlistQueue(Number(playlistId), controller.signal)
+      ? playlistQueue(Number(playlistId), controller.signal, isPublic)
       : projectQueue(projectId ?? "", controller.signal);
     load
       .then((value) => setQueue({ key: queueKey, value }))
@@ -108,7 +110,7 @@ export function PlayPage() {
         if (!controller.signal.aborted) setError(said(caught, "This could not be opened."));
       });
     return () => controller.abort();
-  }, [isPlaylist, playlistId, projectId, queueKey]);
+  }, [isPlaylist, isPublic, playlistId, projectId, queueKey]);
   const songs = useMemo(() => (queue && queue.key === queueKey ? queue.value.songs : null), [queue, queueKey]);
 
   const lastSong = Math.max(0, (songs?.length ?? 1) - 1);
@@ -283,13 +285,14 @@ export function PlayPage() {
 
   const close = useCallback(() => {
     if (isPlaylist) {
-      navigate(`${ROUTES.libraryPlaylist(Number(playlistId))}?at=${partsOfKey(activeNow.current)[0]}`);
+      const page = isPublic ? ROUTES.publicPlaylist(Number(playlistId)) : ROUTES.libraryPlaylist(Number(playlistId));
+      navigate(`${page}?at=${partsOfKey(activeNow.current)[0]}`);
     } else if (location.key !== "default") {
       navigate(-1);
     } else {
       navigate(ROUTES.project(projectId ?? ""));
     }
-  }, [isPlaylist, playlistId, projectId, location.key, navigate]);
+  }, [isPlaylist, isPublic, playlistId, projectId, location.key, navigate]);
 
   // The buttons fade while the music plays and the pointer rests; any move brings them back.
   const [awake, setAwake] = useState(true);

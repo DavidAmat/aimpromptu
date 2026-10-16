@@ -62,6 +62,29 @@ export type {
   SongRow,
   VersionRow,
 } from "./library";
+export { publicApi } from "./publicLibrary";
+export type {
+  ArtistSort,
+  FacetValue,
+  Facets,
+  PublicArtistDetail,
+  PublicArtistRow,
+  PublicChart,
+  PublicCredit,
+  PublicPlaylistDetail,
+  PublicPlaylistItem,
+  PublicPlaylistRow,
+  PublicSongDetail,
+  PublicSongPage,
+  PublicSongRow,
+  PublicUserVersions,
+  PublicVersion,
+  Pulled,
+  SongQuery,
+  SongSort,
+  SortDirection,
+  Suggestions,
+} from "./publicLibrary";
 export { piecesApi, PIECE_STEPS } from "./pieces";
 export type {
   NotesOperation,

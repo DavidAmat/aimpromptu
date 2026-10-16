@@ -204,6 +204,10 @@ one (32 private songs, untouched): 2,995 artists, 8,341 albums, 9,047 songs and 
 list, 9,038 lyrics, 160,810 song weeks and 129,988 album weeks, in about 2.5 s. A second run: 0
 rows made, the same counts.
 
+**Run on the real `.database/` on 2026-10-16** (Phase 13, after `make db-backup`): the same counts in
+2.7 s; a second run made 0 rows; `make db-check` reports no problem. The Public Library pages read
+these rows ([ontology.md](ontology.md)).
+
 ## Where to look deeper
 
 - The tables: [`paths-and-data.md`](../../documentation/services/backend/paths-and-data.md) section 6

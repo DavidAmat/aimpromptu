@@ -2,9 +2,9 @@
  * The app's frame: the sidebar and the routed page (implementation 02, plan section 6.2).
  *
  * The sidebar shows the sections that exist: **Projects**, **My library** (**Songs**, **Artists**;
- * Phase 6; **Playlists**, Phase 10), and for the master user **Admin**: **Users** and **Lab** (the
- * video reader). The other sections of the plan (Shared, the Public Library, Requests) appear in the
- * phases that build them.
+ * Phase 6; **Playlists**, Phase 10), **Public library** (**Songs**, **Artists**, **Playlists**, Phase
+ * 13), and for the master user **Admin**: **Users** and **Lab** (the video reader). The other
+ * sections of the plan (Shared, Requests) appear in the phases that build them.
  * It is open on the list pages and closed inside a project, where the piano roll and the piano
  * sheet need the width; the reader's own choice holds until they move between the two kinds of page.
  *
@@ -34,6 +34,7 @@ import LogoutIcon from "@mui/icons-material/LogoutOutlined";
 import MicIcon from "@mui/icons-material/MicExternalOnOutlined";
 import PlaylistIcon from "@mui/icons-material/QueueMusicOutlined";
 import PersonIcon from "@mui/icons-material/PersonOutlined";
+import PublicIcon from "@mui/icons-material/PublicOutlined";
 import ScienceIcon from "@mui/icons-material/ScienceOutlined";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/authContext";
@@ -196,6 +197,19 @@ export function AppLayout() {
           to: ROUTES.libraryPlaylists,
           icon: <PlaylistIcon />,
           active: under(ROUTES.libraryPlaylists),
+        },
+      ],
+    },
+    {
+      heading: "Public library",
+      items: [
+        { label: "Songs", to: ROUTES.publicSongs, icon: <PublicIcon />, active: under(ROUTES.publicSongs) },
+        { label: "Artists", to: ROUTES.publicArtists, icon: <MicIcon />, active: under(ROUTES.publicArtists) },
+        {
+          label: "Playlists",
+          to: ROUTES.publicPlaylists,
+          icon: <PlaylistIcon />,
+          active: under(ROUTES.publicPlaylists),
         },
       ],
     },

@@ -243,21 +243,25 @@ Q-5 keeps its recommendations for later work. Starts any time after Phase 3. The
 ## [x] Story 12.4: Documentation
 - [x] Task 12.4.1 `music-library/reconciliation.md` (new), `music-library/README.md`, `00-index.md`, `07-database.md` (revision `0003`, the running backend migrates), `paths-and-data.md` section 6; the plan's "as built in Phase 12" notes (sections 8.6, 15.5, 15.6).
 
-# [ ] Phase 13: The Public Library
+# [x] Phase 13: The Public Library
 
-## [ ] Story 13.1: The import
-- [ ] Task 13.1.1 The reconciled data of Phase 12 into public rows, safe to run again; the seed songs present.
+Built 2026-10-16 ([`02-implementation-phase-13.md`](02-implementation-phase-13.md)); merged into
+`master` after the user's ok (2026-10-16). Two answers of the user (2026-10-16): only a song with
+a version is added to My library; **Save to library** suggests the public songs and artists.
 
-## [ ] Story 13.2: The pages
-- [ ] Task 13.2.1 Search, filter chips, sort.
-- [ ] Task 13.2.2 One song (metadata, fixed versions, Other versions by user), artists, public playlists.
-- [ ] Task 13.2.3 Likes.
+## [x] Story 13.1: The import
+- [x] Task 13.1.1 The reconciled data of Phase 12 into public rows, safe to run again; the seed songs present (run on the real `.database/` after `make db-backup`; a second run makes 0 rows; 23 + 8 seed songs).
 
-## [ ] Story 13.3: Pull
-- [ ] Task 13.3.1 **Add to my library** for a song, an artist, a playlist.
+## [x] Story 13.2: The pages
+- [x] Task 13.2.1 Search, filter chips, sort (the backend's in-memory list; the popularity of a decade on the request).
+- [x] Task 13.2.2 One song (metadata, chart line, fixed versions, Other versions by user), artists, public playlists (and Play mode on them).
+- [x] Task 13.2.3 Likes.
 
-## [ ] Story 13.4: Documentation
-- [ ] Task 13.4.1 `music-library/ontology.md`, `popularity.md`.
+## [x] Story 13.3: Pull
+- [x] Task 13.3.1 **Add to my library** for a song, an artist, a playlist; **Save to library** on a public song or artist (asked 2026-10-16).
+
+## [x] Story 13.4: Documentation
+- [x] Task 13.4.1 `music-library/ontology.md`, `popularity.md` (new); `music-library/README.md`, `private-library.md`, `reconciliation.md`, `00-index.md`, `pages.md`, `endpoints.md` §7.3, `paths-and-data.md`, `components.md`, `aitu-frontend/README.md`; the plan's "as built in Phase 13" notes.
 
 # [ ] Phase 14: Requests, the Admin panel and sharing
 

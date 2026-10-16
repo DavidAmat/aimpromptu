@@ -32,7 +32,10 @@ playlist is a project, so it is saved as a version of a song like any project.
 A project of Projects shows **Save to library** once its Sheet step is ready (the piano sheet is
 saved and current). The dialog asks three things, now and not before (app context, "From Source"):
 **Artist**, **Song** (each offers what the library has, and takes a new name as typed) and
-**Version name** ("original" at first). Saving:
+**Version name** ("original" at first). Since Phase 13 the two fields also suggest the Public
+Library's artists and songs, the most popular first, under "Public library": choosing one files the
+project under the user's own song or artist that stands for it, made with a link to the public one
+when there is none ([ontology.md](ontology.md) section 2). Saving:
 
 1. **moves** the project from the vault to the library (the same ids, the same bundle);
 2. **writes its audio again with only the ranges in use** (decision Q-3): each audio file the
@@ -100,7 +103,7 @@ library project in place: the step routes answer `403`, and the changes go throu
 | Thing | When |
 |---|---|
 | **Shared** (a library another user shares with you) | Phase 14 |
-| Suggestions from the Public Library in the dialog, and **Add to my library** from it | Phase 13 |
+| Suggestions from the Public Library in the dialog, and **Add to my library** from it | Phase 13, done: [ontology.md](ontology.md) sections 2 and 5 |
 | Play mode for a version and a playlist (**Play**) | Phase 11, done: [play-mode.md](../frontend/play-mode.md) |
 | Offline downloads per project | Q-7 (raised in Phase 6) |
 

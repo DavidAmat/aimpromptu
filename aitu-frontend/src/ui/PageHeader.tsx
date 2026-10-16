@@ -33,7 +33,8 @@ export function PageHeader({ title, back, actions, children }: PageHeaderProps) 
       spacing={2}
       sx={{ alignItems: "center", minHeight: 52, flexWrap: { xs: "wrap", md: "nowrap" }, rowGap: 1 }}
     >
-      <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", minWidth: 0, flex: { xs: "1 1 0", md: "0 1 auto" } }}>
+      {/* Narrow, the title keeps some width: wide actions go under it rather than hide it. */}
+      <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", minWidth: { xs: 160, md: 0 }, flex: { xs: "1 1 0", md: "0 1 auto" } }}>
         {back ? <IconAction title={back.label} icon={<ArrowBackIcon fontSize="small" />} onClick={() => navigate(back.to)} /> : null}
         <Typography
           variant="h1"

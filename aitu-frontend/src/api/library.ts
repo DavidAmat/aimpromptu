@@ -46,6 +46,8 @@ export interface SongDetail {
   title: string;
   artists: Credit[];
   versions: VersionRow[];
+  /** The public song this one stands for (pulled from it, or saved on it: Phase 13). */
+  publicId: number | null;
 }
 
 export interface ArtistNameRow {

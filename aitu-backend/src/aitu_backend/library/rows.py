@@ -38,6 +38,7 @@ __all__ = [
     "NotFound",
     "clean",
     "edit_copies",
+    "find_name",
     "find_or_make_name",
     "find_song",
     "same",
@@ -86,6 +87,11 @@ def _name_row(db: DbSession, owner: int, name: str) -> ArtistName | None:
         .order_by(ArtistName.is_default.desc(), ArtistName.id)
     )
     return next((row for row in rows if same(row.name) == wanted), None)
+
+
+def find_name(db: DbSession, owner: int, name: str) -> ArtistName | None:
+    """The owner's artist name equal to ``name``, ignoring case and spaces, if there is one."""
+    return _name_row(db, owner, name)
 
 
 def find_or_make_name(db: DbSession, owner: int, name: str) -> ArtistName:

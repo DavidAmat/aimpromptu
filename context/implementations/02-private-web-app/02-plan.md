@@ -1358,6 +1358,12 @@ or on a playlist copies the entities into private rows (with `public_id` kept) a
 version projects into the user's Private Library (no audio bytes copied). After that there is no sync:
 the private metadata is the user's own.
 
+*As built in Phase 13* ([`../../music-library/ontology.md`](../../music-library/ontology.md)): only
+songs with a version are pulled (the user, 2026-10-16); an artist pulls its songs that have one, on
+their default version; a private row already standing for the public one (by `public_id`, or the
+same title and first artist) is used again; a version pulled twice is not copied twice. **Save to
+library** makes the same link when a public song or artist is chosen in its dialog.
+
 ## 15.2 Versions
 
 As the app context lists them:
@@ -1772,6 +1778,18 @@ search, the filter chips (decade, genre, region, tag category and value), sort b
 title; one song with its metadata, fixed versions and Other versions by user; artists with their
 names; public playlists. Likes. **Add to my library** for a song, an artist or a playlist (section
 15.1). The seed list's songs present.
+
+*Built 2026-10-16 and merged after the user's ok* ([`02-implementation-phase-13.md`](02-implementation-phase-13.md)): the import run on
+the real `.database/` (after `make db-backup`); the pages `/public/songs`, `/public/songs/:id`,
+`/public/artists`, `/public/artists/:id`, `/public/playlists`, `/public/playlists/:id` (search,
+the filter chips with their counts, sort and pages done by the backend from a list kept in memory;
+the popularity of a decade worked out on the request; the chart line of a song); likes; **Add to my
+library** for a song, an artist and a playlist. **The user's answers of 2026-10-16:** only a song
+with a version is added (a song of My library has its piano sheet), and **Save to library** suggests
+the public songs and artists, linking the private row to the public one (`public_id`). Public
+playlists play in Play mode (`?from=public`). No public version exists before Phase 14:
+`library/public.place_version` is the step Phase 14's acceptance uses, tried by the tests and by
+`check:public` on copies ([`../../music-library/ontology.md`](../../music-library/ontology.md)).
 
 ## Phase 14: Requests, the Admin panel and sharing
 
