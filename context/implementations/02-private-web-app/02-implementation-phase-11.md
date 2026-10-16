@@ -16,8 +16,9 @@ project of the user used the GPU: the user asked that the backend not use it (se
 
 Also found and fixed: **Replace the version** failed (`422`) on a version made of one pasted file
 (section 5). Checks at the end (section 7): backend 1,094 tests on the CPU, the 3 known CPU failures
-and 1 skip; every frontend check passes, the new `check:play` too (30 checks, 32 after the user's first look), except
-`check:passage`, which needs the GPU and is to be run again (section 9).
+and 1 skip; every frontend check passes, the new `check:play` too (30 checks, 32 after the user's first look). `check:passage`,
+`check:flow` with the live transcription and `time:flow` ran on 2026-10-16, once the GPU was free
+(section 7).
 
 # 2. The design
 
@@ -150,8 +151,9 @@ Measured in the browser on copies, the machine loaded by another project (load a
 | `check:render`, `check:history`, `check:note-names`, `check:geometry`, `check:cuts`, `check:notes` | 60, all, 15, all, all, all passed |
 | `check:play` (new), signed in | 30 checks passed, no console error, nothing left behind |
 | `check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:compose`, `--only clefs`, `check:flow --no-transcribe`, signed in | every check passed, no console error, nothing left behind (`check:library` after the fix of section 5; `check:lyrics` after the source fix of section 4) |
-| `check:passage` | **Not passed in this phase**: one run (by mistake, section 9) failed only "the song keeps its length" (233.348 s → 233.35 s, the same audio counted in frames); the check now allows one audio frame. To run again when the GPU is free |
-| `time:flow`, `check:flow` with the live transcription | Not run: they transcribe on the GPU |
+| `check:passage` | 38 checks passed on 2026-10-16, with the GPU (the length: 233.348 s → 233.35 s, within one audio frame). A first run on 2026-10-15, by mistake (section 9), had failed only on that 1 ms tolerance. The first run of 2026-10-16 stopped at **Write the proposal**: the backend container had lost the GPU ("Failed to initialize NVML: Unknown Error", "No CUDA GPUs are available"); `docker compose up -d --force-recreate --no-deps backend` gave it back |
+| `check:flow` with the live transcription | every check passed (2026-10-16) |
+| `time:flow`, the first piano sheet | 0.6 s, 1.0 s, 0.5 s (Phase 10: 0.8, 1.0, 0.5); notes saved 27.4 s, 51.5 s, 21.4 s (2026-10-16) |
 | `make db-check` on the real `.database/` | no problem, after every script |
 | `scripts/docs/check-links.py` | passes |
 
@@ -195,10 +197,11 @@ Run on Play mode (a project, an integrated playlist, a songs playlist, Notes Fal
 
 # 9. Open points
 
-- **`check:passage` is to be run again** with the GPU: its **Write the proposal** is a transcription.
-  It ran once in this phase by mistake, after the user had asked that the backend not use the GPU;
-  the running backend then kept the model in 11 GB of GPU memory until it was restarted (done at
-  once; the GPU showed 41 MB used after). Nothing of Phase 11 touches the passage page.
+- **The GPU while the user's other job ran**: `check:passage` ran once by mistake after the user
+  had asked that the backend not use the GPU; the backend then kept the model in 11 GB of GPU memory
+  until it was restarted (done at once). Run again on 2026-10-16 with the user's leave: it passes.
+- **A backend container can lose the GPU while it runs** (NVML "Unknown Error"): a transcription
+  then fails with "No CUDA GPUs are available". Recreating the container gives it back.
 - **A songs playlist's next song waits for Play** (section 2.2), and the parts of one song play on.
   Chosen from the app context's two kinds of playlist; easy to change.
 - **A stretch of a version of several parts** plays on the version's first part: the playlist keeps
@@ -231,5 +234,7 @@ Run on Play mode (a project, an integrated playlist, a songs playlist, Notes Fal
 - **When the GPU is reserved, a browser check that writes a proposal or transcribes uses it through
   the running backend**, which then keeps the model loaded: skip those checks, and restart the
   backend if one ran.
+- **"No CUDA GPUs are available" in a running backend** that had the GPU before: Docker took the
+  devices away from the container. `docker compose up -d --force-recreate --no-deps backend`.
 - **A media element's settings change on the element**: a prop in the effect that creates it makes
   a new element and stops the music.

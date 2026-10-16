@@ -205,7 +205,7 @@ The plan's section 3.
 
 # [x] Phase 11: Play mode
 
-Built 2026-10-15 ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)); waiting for the user's check. `check:passage` to run again once the GPU is free.
+Built 2026-10-15 ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)); every check passes (`check:passage`, `check:flow` and `time:flow` with the GPU on 2026-10-16); waiting for the user's check.
 
 ## [x] Story 11.1: The page
 - [x] Task 11.1.1 Close, Next, Play and Pause, the scroll that keeps the cursor in the middle, the keys (`/play/:projectId`, each part the Sheet step's page in a play role).
