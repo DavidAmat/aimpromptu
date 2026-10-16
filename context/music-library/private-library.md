@@ -104,8 +104,16 @@ library project in place: the step routes answer `403`, and the changes go throu
 | Play mode for a version and a playlist (**Play**) | Phase 11, done: [play-mode.md](../frontend/play-mode.md) |
 | Offline downloads per project | Q-7 (raised in Phase 6) |
 
-The 30 songs the migration of Phase 3 put in the master user's library were saved before Phase 6:
-their cuts are still ranges, and their audio is written again the first time each is replaced.
+**A version always has its piano sheet** (the user's rule of 2026-10-16): every part's Sheet step
+is ready. **Save to library** refuses a project whose sheet is not saved ("Save the piano sheet
+first"), **Restore** refuses an earlier state that had none, and `make db-check` reports a version
+without one.
+
+The 30 songs the migration of Phase 3 put in the master user's library had notes but no hands and
+no sheet. On 2026-10-16 each got them through the real pages, as a user would
+(`aitu-frontend/scripts/sheet-library.mjs`: **Edit**, **Predict hands** and **Save**, the Sheet
+step's **Save**, **Replace the version**), so their cuts were written away then, and their earlier
+state (without a sheet) stays in their history, where it cannot be restored.
 
 ## Where to look deeper
 

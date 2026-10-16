@@ -168,6 +168,12 @@ def _bundles_on_disk() -> dict[str, tuple[int, str, Path]]:
     return found
 
 
+def _sheet_ready(project: bundle.ProjectFile) -> bool:
+    from aitu_backend.library.flow import sheet_ready  # noqa: PLC0415 - heavy, and a cycle
+
+    return sheet_ready(project)
+
+
 def check(*, hashes: bool = False) -> Report:
     report = Report()
     database.engine()  # checks VERSION and the revision
@@ -219,6 +225,10 @@ def check(*, hashes: bool = False) -> Report:
                     report.problems.append(f"part {part_id}: audio {content_hash[:12]} has no row")
                 if not paths.audio_file_path(content_hash, entry.format).is_file():
                     report.problems.append(f"part {part_id}: audio {content_hash[:12]} is missing")
+        if layer == "private" and project.kind != "passage" and not _sheet_ready(project):
+            report.problems.append(
+                f"project {project_id}: a version of the library without a ready piano sheet"
+            )
         wanted = bundle.used_hashes(project_id)
         used |= wanted
         if wanted != refs.get(project_id, set()):

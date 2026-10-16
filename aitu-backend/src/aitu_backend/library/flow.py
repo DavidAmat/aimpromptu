@@ -16,6 +16,12 @@ the copy's content and keeps its ids; its previous content goes to its history) 
 version**. Deleting the copy discards the changes. A version's history can be restored: the state
 it replaces goes to the history first, so nothing is lost.
 
+**A version of the library always has its piano sheet** (the user's rule of 2026-10-16): every
+part's Sheet step is ready. **Save to library** (a new version or **Replace**) refuses a project
+whose sheet is not saved, and **Restore** refuses an earlier state that had none (the 30 songs the
+Phase 3 migration filed had no hands and no sheet; their state before they got one stays in their
+history, but cannot come back). ``make db-check`` reports a version that breaks the rule.
+
 The history of a version is ``.database/history/<projectId>/v<N>/``: ``project.json``,
 ``snapshot.json`` (when and why) and each part's files. Its audio stays in the store because
 ``audio_refs`` counts the files a history names.
@@ -86,12 +92,20 @@ def _now() -> datetime:
 # --------------------------------------------------------------------- checks
 
 
+def sheet_ready(project: ProjectFile) -> bool:
+    """Every part's Sheet step is ready: what a version of the library must have."""
+    return all(
+        piece_status.piece_status(entry.id).step("sheet").state == "ready"
+        for entry in project.parts
+    )
+
+
 def _check_ready(project: ProjectFile) -> None:
     for entry in project.parts:
         if jobs.active(f"transcribe:{entry.id}") or jobs.active(f"video-read:{entry.id}"):
             raise Refused("The notes are being written: save to the library when they are done")
-        if piece_status.piece_status(entry.id).step("sheet").state != "ready":
-            raise Refused("Save the piano sheet first")
+    if not sheet_ready(project):
+        raise Refused("Save the piano sheet first")
 
 
 def _compact(project: ProjectFile) -> list[compact.Plan]:
@@ -385,14 +399,32 @@ def restore(project_id: str, number: int) -> None:
         raise rows.NotFound(f"No earlier state {number}")
     with bundle.project_lock(project_id):
         source = ProjectFile.model_validate_json((folder / "project.json").read_text("utf-8"))
-        snapshot(project_id, "restored")
-        _write_into(
-            project_id,
-            source,
-            [folder / "parts" / entry.id for entry in source.parts],
-            [None] * len(source.parts),
-        )
+        kept = snapshot(project_id, "restored")
+        _write_state(project_id, folder, source)
+        if not sheet_ready(bundle.read_project(project_id)):
+            # Put back the state it replaced, and forget that copy of it: nothing changed.
+            kept_folder = paths.saved_version_dir(project_id, kept)
+            _write_state(
+                project_id,
+                kept_folder,
+                ProjectFile.model_validate_json((kept_folder / "project.json").read_text("utf-8")),
+            )
+            shutil.rmtree(kept_folder)
+            bundle.sync_audio_refs(project_id)
+            raise Refused(
+                "This earlier state has no piano sheet, and a version of the library must have one"
+            )
         bundle.sync_audio_refs(project_id)
+
+
+def _write_state(project_id: str, folder: Path, source: ProjectFile) -> None:
+    """The state kept in ``folder`` (one of the history) becomes the library project's."""
+    _write_into(
+        project_id,
+        source,
+        [folder / "parts" / entry.id for entry in source.parts],
+        [None] * len(source.parts),
+    )
 
 
 # ----------------------------------------------------------------- edit copies

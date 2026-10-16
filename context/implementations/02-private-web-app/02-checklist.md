@@ -236,6 +236,10 @@ user's hand ranking (Task 12.2.2) and the answers to Q-5 and Q-6. Starts any tim
 ## [x] Story 12.3: Decisions
 - [x] Task 12.3.1 Q-5 (the regions not covered, the missing fields) and Q-6 raised with a recommendation each.
 
+## [x] Story 12.5: A version of the library always has its piano sheet (asked 2026-10-16)
+- [x] Task 12.5.1 The rule: Save already refused; Restore refuses a state without a sheet; `make db-check` reports one; a test.
+- [x] Task 12.5.2 The 30 songs of the Phase 3 migration given their hands and sheet through the real pages (`scripts/sheet-library.mjs`, after `make db-backup`); 30 of 30.
+
 ## [x] Story 12.4: Documentation
 - [x] Task 12.4.1 `music-library/reconciliation.md` (new), `music-library/README.md`, `00-index.md`, `07-database.md` (revision `0003`, the running backend migrates), `paths-and-data.md` section 6; the plan's "as built in Phase 12" notes (sections 8.6, 15.5, 15.6).
 

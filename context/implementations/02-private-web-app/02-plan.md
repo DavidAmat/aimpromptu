@@ -939,6 +939,14 @@ version lists the earlier states, each with **Restore**, which keeps the state i
 song page's version menu is Open, Edit, Duplicate, Export, Rename, History, Delete; an artist has
 **Add a name**, **Make default**, **Remove**, and **Merge into another artist**.
 
+**A version of the library always has its piano sheet** (the user, 2026-10-16, during Phase 12):
+every part's Sheet step is ready. **Save to library** already refused a project without a saved
+sheet (Phase 6); **Restore** now refuses an earlier state without one, and `make db-check` reports a
+version that breaks the rule. The 30 songs the Phase 3 migration filed with no hands and no sheet
+got both through the real pages (`aitu-frontend/scripts/sheet-library.mjs`: Edit, Predict hands,
+Save, the Sheet step's Save, Replace the version). Phase 13 and 14 keep the rule for the Public
+Library: a version pulled or published has its sheet.
+
 ---
 
 # 11. The sheet

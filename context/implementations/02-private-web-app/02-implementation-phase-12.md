@@ -18,6 +18,7 @@ into the parallel work's worktree or scripts.
 | 12.1 The reconciliation | `reconciliation.md`: the mapping table by table, the gaps both ways, the identity rule, the re-entries, the seed list. Revision `0003` adds only `song_lyrics`, `album_artists`, `album_chart_entries`, `albums.release_date`, `albums.popularity`. `library/public_import.py` (`make public-import`): the whole download in 2.5 s, a second run makes nothing; 23 of the 31 seed songs found, 8 added from the seed list. Run on copies only: the real import is Phase 13 |
 | 12.2 Popularity | `library/popularity.py`: the formula of section 15.6 with every weight a parameter, time ranges, the chart's size and weight; it matches the parallel work's 17,454 stored scores where the songs are the same. On the real data the top is flat and long runs win (section 5). **Task 12.2.2 waits for the user**: the hand ranking of 20 songs (`library/hand_ranking.json`), then `make popularity-tune` |
 | 12.3 Decisions | Q-5 and Q-6 raised with a recommendation each (section 9) |
+| Asked during the phase | A version of the library always has its piano sheet: Restore refuses a state without one, `make db-check` reports one; the 30 migrated songs got their hands and sheet through the real pages (section 10) |
 
 Checks (section 7): backend 1,107 tests on the CPU (the GPU was in use), the 3 known CPU failures
 and 1 skip; the 13 new tests pass; the migration matches the models; `check-links.py` passes.
@@ -201,7 +202,44 @@ examples change with them.
 order best replace the plan's, if they agree clearly better (Kendall's tau at least 0.1 higher);
 otherwise keep the plan's and add a weight for the weeks at number 1.
 
-# 10. Learnings for later phases
+# 10. Asked during the phase: a version of the library always has its piano sheet
+
+The user (2026-10-16): a song in My library must already have its sheet produced in Projects, and
+the songs of the Private Library that have none must get their hands and sheet now.
+
+**The rule.** Save to library already refused a project without a saved sheet (Phase 6,
+`flow._check_ready`). Two gaps were left: the 30 songs the Phase 3 migration filed (notes, no
+hands, no sheet: every one read `ready / missing / missing` for notes, hands, sheet), and
+**Restore**, which could bring back such a state. Now:
+
+- `flow.sheet_ready(project)`: every part's Sheet step is ready; used by Save and by Restore;
+- **Restore** writes the earlier state, and when it has no ready sheet puts back the state it
+  replaced, deletes the history entry it had just made and answers `409` ("This earlier state has
+  no piano sheet, and a version of the library must have one");
+- `make db-check` reports a library project whose sheet is not ready;
+- a test (`test_a_version_never_loses_its_piano_sheet_by_a_restore`).
+
+**The 30 songs.** `make db-backup` first (`/mnt/ssd2/aimpromptu/.database-20261016-135809.tar.zst`,
+1.26 GB). Then `aitu-frontend/scripts/sheet-library.mjs` drove the real pages for each version: **Edit**
+(a copy in Projects), the Hands step's **Predict hands** and **Save**, the Sheet step drawn from the
+defaults and **Save**, then **Save to library → Replace the version**. The first sheet is decided
+partly in the browser (the key, the clefs, the figure names), so the pages were used rather than a
+backend script. One song first ("7 Years", checked by its screenshot, its steps and its history),
+then the other 29: every one done, 3 to 5 s each (hands 1.6 to 3.2 s, sheet 1.3 to 1.8 s), no page
+error. Afterwards: no version without a ready sheet, no edit copy left in Projects, `make db-check`
+with no problem. Each version keeps its earlier state (without a sheet) as history entry 1, which
+the rule now refuses to restore. Replace also wrote each song's audio again with only the ranges in
+use (Q-3), as it does for any version.
+
+1,617 notes of the 30 songs got no hand (the notes the sheet cannot place, left off it and red on
+the Hands step, as for any project); the most in Superestrella (193 of 1,343) and Moonlight Shadow
+(176 of 2,384). The sheets are the app's default first sheets and need the user's usual review.
+Screenshots of the 30 sheets: `.run/screenshots/sheet-library/`.
+
+Checks after the change: `test_library.py` and its neighbours (86 tests) pass on the CPU;
+`check:library` passes (its Restore of a state with a sheet still works).
+
+# 11. Learnings for later phases
 
 - **The running backend migrates the real database** as soon as a revision file is in `src/`
   (`--reload`). Write a migration only when it is ready, and say in the report that the real
