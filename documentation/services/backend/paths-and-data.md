@@ -398,10 +398,12 @@ A video belongs to the part whose audio came out of it (V-03) and is a temporary
 
 ## 6. `aitu.sqlite`: the tables
 
-SQLAlchemy 2 models in `aitu_backend/db/models.py`, and two Alembic revisions:
-`db/migrations/versions/0001_initial.py` (every table, and the fixed lists) and
+SQLAlchemy 2 models in `aitu_backend/db/models.py`, and three Alembic revisions:
+`db/migrations/versions/0001_initial.py` (every table, and the fixed lists),
 `0002_passage_projects.py` (Phase 9: `projects.kind` may be `passage`; the table is copied by
-Alembic's batch mode, which runs with foreign keys off, so no part is deleted). SQLite runs with
+Alembic's batch mode, which runs with foreign keys off, so no part is deleted) and
+`0003_public_library_fields.py` (Phase 12: `song_lyrics`, `album_artists`, `album_chart_entries`,
+`albums.release_date`, `albums.popularity`; only added, nothing copied). SQLite runs with
 foreign keys on and in WAL mode. Every table of plan section 8.6 exists from Phase 3; most stay
 empty until their phase.
 
@@ -409,9 +411,9 @@ empty until their phase.
 |---|---|---|
 | Users | `users` (`id`, `username`, `password_hash`, `role`: `master` or `user`, `disabled`), `sessions` | The master user on the first start (`db/users.py`, `AITU_MASTER_USERNAME`); passwords and sessions in Phase 4 |
 | Projects | `projects` (`id`, `owner_id`, `layer`: `vault`, `private`, `public`, `kind`, `title`, `based_on`, `public_source_id`, `created_at`, `updated_at`, `step`), `parts` (`id`, `project_id`, `position`), `audio_files`, `audio_refs` | Phase 3 |
-| Music library | `artists`, `artist_names` (several per artist, one default), `albums`, `songs` (`title`, `year`, `popularity`, `default_version`), `song_artists` (a song points to an **artist name**), `song_albums`. Each row has `scope` (`private`, `public`), `owner_id`, `public_id`, and `external_key` for the import of Phase 12 | The migration (private rows of the seed list); **Save to library** and `/library` (Phase 6, `library/rows.py`: names compared ignoring case and spaces); Phases 12, 13 |
+| Music library | `artists`, `artist_names` (several per artist, one default), `albums`, `songs` (`title`, `year`, `popularity`, `default_version`), `song_artists` (a song points to an **artist name**), `song_albums` (`track_number`: the place in the album's reading order), and from Phase 12 `song_lyrics` (`song_id`, `text`), `album_artists` (an album points to artist names too), `albums.release_date`, `albums.popularity`. Each row has `scope` (`private`, `public`), `owner_id` (empty for a public row), `public_id`, and `external_key` (a public row's identity in its source: `musicchartsarchive.com/singles/...`, or `seed:<title>\|<artist>` for a song of the seed list) | The migration (private rows of the seed list); **Save to library** and `/library` (Phase 6, `library/rows.py`: names compared ignoring case and spaces); the public rows by `library/public_import.py` (Phase 12, `make public-import`; run for real in Phase 13; [reconciliation.md](../../../context/music-library/reconciliation.md)) |
 | Versions | `song_versions` (fixed versions of a public song), `user_versions` (`user_versions/<user>/<name>/`), `private_versions` (a private song's version: a free name, unique in the song ignoring case, and its project) | The migration (`original`); Phase 6; Phase 14 |
-| Metadata of a public song | `genres` (13, fixed), `song_genres`, `tag_categories` (4, fixed), `tag_values`, `song_tags`, `regions` (`worldwide`), `song_regions`, `chart_sources`, `chart_entries` | Phases 12, 13 |
+| Metadata of a public song | `genres` (13, fixed), `song_genres`, `tag_categories` (4, fixed), `tag_values`, `song_tags`, `regions` (`worldwide`), `song_regions`, `chart_sources` (`name`, `region_id`, `size`: the `N` of the popularity, `weight`), `chart_entries` (song, chart, `week`, `rank`), `album_chart_entries` (the same for an album, Phase 12) | `library/public_import.py` (Phase 12): the two charts `musicchartsarchive.com singles` and `… albums`, their weeks written again every run; genres, tags and the regions `spain` and `catalan` wait for Q-5 |
 | Playlists | `playlists` (`owner_id`, `scope`, `title`, times), `playlist_items` (`position`, `song_id`, `project_id`: the version chosen, `from_ms`, `to_ms`: an optional stretch) | Phase 10, `library/playlists.py`: the songs playlists of the Private Library. A deleted version sets `project_id` to `NULL` (read as the song's first version); a deleted song sets `song_id` to `NULL`, and the item is dropped when the playlist is next read |
 | Social | `likes`, `library_shares` | Phases 13, 14 |
 | Requests | `requests`, `request_items` (one decision each), `request_comments` | Phase 14 |

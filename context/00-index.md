@@ -54,6 +54,7 @@ assumes.
 | File | Description |
 |------|-------------|
 | [music-library/README.md](music-library/README.md) | The catalogue in two scopes (Private and Public Library), and the pages of this folder |
+| [music-library/reconciliation.md](music-library/reconciliation.md) | The downloaded music library (`library.sqlite`) mapped onto the public rows: gaps, identity, re-entries, popularity, the seed list, `make public-import` (implementation 02, Phase 12) |
 | [music-library/private-library.md](music-library/private-library.md) | **My library**: songs, artists and their names, versions; **Save to library** (the audio written again, the temporary files deleted), **Edit** through a copy, Replace, history (implementation 02, Phase 6) |
 
 ## Frontend overview (`context/frontend/`)

@@ -9,6 +9,10 @@ Two additions to the list of section 8.6, both needed by what the section alread
 * ``parts``: the routes keyed by a uuid work on a part (P-6), so a part must find its project.
 * ``song_genres``: a song has one or two genres, and that needs a link between the two tables.
 
+Phase 12 (revision ``0003``) adds what the downloaded music library gives and section 8.6 had no
+place for (``context/music-library/reconciliation.md``): ``song_lyrics``, ``album_artists``,
+``album_chart_entries``, and ``albums.release_date`` and ``albums.popularity``.
+
 The column names are snake_case here and camelCase on the wire. Times are UTC.
 """
 
@@ -225,7 +229,25 @@ class Album(Base):
     external_key: Mapped[str | None] = mapped_column(String(300), index=True)
     title: Mapped[str] = mapped_column(String(300))
     year: Mapped[int | None] = mapped_column(Integer)
+    #: The day the album came out, when the source gives it (Phase 12).
+    release_date: Mapped[date | None] = mapped_column(Date)
+    #: 0 to 100 from the album charts, worldwide, all time (section 15.6, Phase 12).
+    popularity: Mapped[float | None] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+
+
+class AlbumArtist(Base):
+    """An album points to an **artist name**, as a song does (Phase 12)."""
+
+    __tablename__ = "album_artists"
+
+    album_id: Mapped[int] = mapped_column(
+        ForeignKey("albums.id", ondelete="CASCADE"), primary_key=True
+    )
+    artist_name_id: Mapped[int] = mapped_column(
+        ForeignKey("artist_names.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    position: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class Song(Base):
@@ -271,6 +293,17 @@ class SongAlbum(Base):
         ForeignKey("albums.id", ondelete="CASCADE"), primary_key=True, index=True
     )
     track_number: Mapped[int | None] = mapped_column(Integer)
+
+
+class SongLyrics(Base):
+    """The words of a song, as plain lines (Phase 12): the text the Lyrics tab can start from."""
+
+    __tablename__ = "song_lyrics"
+
+    song_id: Mapped[int] = mapped_column(
+        ForeignKey("songs.id", ondelete="CASCADE"), primary_key=True
+    )
+    text: Mapped[str] = mapped_column(Text)
 
 
 # -------------------------------------------------------------------- versions
@@ -410,6 +443,19 @@ class ChartEntry(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     song_id: Mapped[int] = mapped_column(ForeignKey("songs.id", ondelete="CASCADE"), index=True)
+    chart_source_id: Mapped[int] = mapped_column(ForeignKey("chart_sources.id"))
+    week: Mapped[date] = mapped_column(Date, index=True)
+    rank: Mapped[int] = mapped_column(Integer)
+
+
+class AlbumChartEntry(Base):
+    """An album at a rank of an album chart in one week (Phase 12)."""
+
+    __tablename__ = "album_chart_entries"
+    __table_args__ = (UniqueConstraint("album_id", "chart_source_id", "week"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    album_id: Mapped[int] = mapped_column(ForeignKey("albums.id", ondelete="CASCADE"), index=True)
     chart_source_id: Mapped[int] = mapped_column(ForeignKey("chart_sources.id"))
     week: Mapped[date] = mapped_column(Date, index=True)
     rank: Mapped[int] = mapped_column(Integer)

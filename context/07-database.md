@@ -131,7 +131,15 @@ The tables change only through Alembic revisions in `aitu_backend/db/migrations/
 brings the database to the newest revision when it starts. Revision `0001` makes every table of plan
 section 8.6, so the later phases fill tables. Revision `0002` (Phase 9) lets a project be a
 `passage`: a passage being re-recorded, or one of its takes, kept as a hidden project of the
-Personal Vault ([backend/editing.md](backend/editing.md)).
+Personal Vault ([backend/editing.md](backend/editing.md)). Revision `0003` (Phase 12) adds what the
+downloaded music library gives and section 8.6 had no place for: the lyrics of a song, the artists,
+release date, chart history and popularity of an album
+([music-library/reconciliation.md](music-library/reconciliation.md)).
+
+**The running backend migrates the real database as soon as a new revision is in `src/`**: it
+reloads on every change of a file there, and opens the database at the newest revision. Code of an
+older branch then refuses that database (Alembic cannot find the newer revision), until the branch
+with the revision is merged, or the database is brought back with `alembic downgrade`.
 
 The pieces of the old store (`aitu-backend/data/audio/<uuid>/`) were moved once, in Phase 3, by
 `scripts/migrate/to_database.py`: every note checked against the old file, safe to run twice, never

@@ -664,6 +664,10 @@ lists are written by the revision: 13 genres, 4 tag categories, the region `worl
 `projects.step` is filled by the migration and `db-reindex`; Phase 5 keeps it current. *As built in
 Phase 5:* a write of a part's notes, sheet or timeline clears it, and the list of projects works it
 out again for the cleared rows only (working it out reads every part: 0.9 s for 39 projects).
+*As built in Phase 12* (revision `0003`): `song_lyrics`, `album_artists`, `album_chart_entries`,
+`albums.release_date` and `albums.popularity`, the fields the downloaded library gives and this
+section had no place for ([`../../music-library/reconciliation.md`](../../music-library/reconciliation.md)
+section 3). Public rows have no owner (`owner_id` empty); the master user manages them.
 
 ## 8.7 Moving, backing up, the cloud
 
@@ -1425,6 +1429,15 @@ work:
 The import writes public rows owned by the master user, and can run again to add songs without
 creating duplicates.
 
+*As built in Phase 12* ([`../../music-library/reconciliation.md`](../../music-library/reconciliation.md)):
+the chart is in fact one country's (it matches the US Hot 100), kept under the region `worldwide`.
+A row's `external_key` is `musicchartsarchive.com` + its source path; a second run makes nothing
+again and writes again only the chart weeks, the popularity and the fields still empty. The 134
+re-entries ("[re-release]", "[seasonal]") are one song with the song they repeat (66) or keep their
+row without the bracket (68). The import is `aitu_backend/library/public_import.py`
+(`make public-import`), 2.5 s for the whole download; it was run on copies only. 23 of the 31 seed
+songs are on the chart; the other 8 are added from the seed list (Q-5).
+
 ## 15.6 Popularity
 
 A first formula, to be tuned in Phase 12 on a list of songs the user ranks by hand (Q-6). Only
@@ -1458,6 +1471,13 @@ The app context says a song held at places 10 to 30 for many weeks should be clo
 top 10 for one week. With these weights it is above it, so the weights (0.6 and 0.4, the 10 of the
 saturation, the squares) are exactly what Phase 12 tunes. A popularity is computed per region from
 that region's charts; the one shown by default is `worldwide`.
+
+*As built in Phase 12*: the formula is `aitu_backend/library/popularity.py`, every weight a
+parameter, the chart's size and weight read from `chart_sources`; it gives the parallel work's
+stored scores to the decimal. On the real chart history the top is flat (218 songs at 95 or more)
+and a long run beats many weeks at number 1, because recent hits stay on the chart 60 to 112 weeks.
+The weights are tuned on 20 songs the user ranks by hand (`library/hand_ranking.json`,
+`make popularity-tune`). The popularity of one decade is worked out in about 50 ms.
 
 ---
 
