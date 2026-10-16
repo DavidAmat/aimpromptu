@@ -7,8 +7,9 @@ A project in a Personal Vault              its owner                          it
 A project in a Private Library             its owner; users it is shared      its owner, through a copy
                                            with (``library_shares``)          in the vault (*)
 The Public Library                         every user                         the master user
-A request                                  its author and the master user     its author until it is reviewed;
-                                                                              the master user (the decision)
+A request, and the copy of a project it    its author and the master user     its author until it is reviewed;
+sent (layer ``request``)                                                      the master user (the decision);
+                                                                              nobody writes the copy
 Users, Lab                                 the master user                    the master user
 =========================================  =================================  ==================================
 
@@ -66,6 +67,9 @@ def _shared_with(owner_id: int, user_id: int) -> bool:
 def _access(user: CurrentUser, where: locate.Location) -> Access:
     if where.layer == "public":
         return Access.WRITE if user.is_master else Access.READ
+    if where.layer == "request":
+        # The copy a request sent (Phase 14): what the master user reviews. Nobody changes it.
+        return Access.READ if user.is_master or where.owner_id == user.id else Access.NONE
     if where.owner_id == user.id:
         return Access.READ if where.layer == "private" else Access.WRITE
     if where.layer == "private" and _shared_with(where.owner_id, user.id):

@@ -68,15 +68,17 @@ class Base(DeclarativeBase):
     pass
 
 
-#: The three storage layers (plan section 8.2).
-LAYERS = ("vault", "private", "public")
+#: The three storage layers (plan section 8.2), and ``request``: the copy of a project sent with a
+#: request, which its author and the master user read (Phase 14, revision ``0004``).
+LAYERS = ("vault", "private", "public", "request")
 #: The two scopes of the music library (plan section 15.1).
 SCOPES = ("private", "public")
 ROLES = ("master", "user")
 #: ``passage``: a passage being re-recorded and its takes (Phase 9), hidden from every list.
 PROJECT_KINDS = ("song", "integratedPlaylist", "passage")
 STEPS = ("source", "audio", "notes", "hands", "sheet")
-REQUEST_KINDS = ("metadata", "userVersion", "fixedVersion")
+#: ``playlist`` was added in Phase 14 (revision ``0004``): a songs playlist made public.
+REQUEST_KINDS = ("metadata", "userVersion", "fixedVersion", "playlist")
 REQUEST_STATUSES = (
     "open",
     "changesAsked",
@@ -465,7 +467,10 @@ class AlbumChartEntry(Base):
 
 
 class Playlist(Base):
-    """A songs playlist (section 14.2). An integrated playlist is a project, not a row here."""
+    """A songs playlist (section 14.2). An integrated playlist is a project, not a row here.
+
+    A public playlist's ``owner_id`` is the user whose request made it (Phase 14), shown as its
+    creator; only the master user changes it."""
 
     __tablename__ = "playlists"
     __table_args__ = (_one_of("scope", SCOPES),)
@@ -552,9 +557,9 @@ class RequestItem(Base):
         ForeignKey("requests.id", ondelete="CASCADE"), index=True
     )
     position: Mapped[int] = mapped_column(Integer, default=0)
-    #: ``newArtist``, ``newSong``, ``metadata``, ``project``, ``versionPointer``.
+    #: ``newArtist``, ``newSong``, ``metadata``, ``project``, ``versionPointer``, ``playlist``.
     kind: Mapped[str] = mapped_column(String(32))
-    #: The proposed change, as JSON text.
+    #: The proposed change, as JSON text; once accepted, also what it made (``made``).
     payload: Mapped[str] = mapped_column(Text, default="{}")
     decision: Mapped[str | None] = mapped_column(String(16))
     comment: Mapped[str | None] = mapped_column(Text)

@@ -158,13 +158,14 @@ def _bundles_on_disk() -> dict[str, tuple[int, str, Path]]:
                     layer,
                     project_json.parent,
                 )
-    for project_json in sorted(paths.public_dir().glob("*/project.json")):
-        project = json.loads(project_json.read_text(encoding="utf-8"))
-        found[project_json.parent.name] = (
-            int(project["ownerId"]),
-            "public",
-            project_json.parent,
-        )
+    for layer, root in (("public", paths.public_dir()), ("request", paths.requests_dir())):
+        for project_json in sorted(root.glob("*/project.json")):
+            project = json.loads(project_json.read_text(encoding="utf-8"))
+            found[project_json.parent.name] = (
+                int(project["ownerId"]),
+                layer,
+                project_json.parent,
+            )
     return found
 
 
