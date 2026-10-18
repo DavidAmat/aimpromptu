@@ -99,7 +99,7 @@ The implementations, all under [implementations/](implementations/README.md):
 | | |
 |---|---|
 | **01-mvp** (01 to 09) | One audio file to one piano sheet, for one person: the epics master plan, the own renderer, the wall-clock refactor, the video reader, MuScriptor and the move to the Ubuntu machine, the minimal UI guidelines. All closed |
-| **02-private-web-app** | The app of the app context: the design system and the sidebar, `.database/`, users on the home network, projects, the Private and Public Libraries, the sheet toolbox, copy and paste, Recording in Sheet, playlists, Play mode, requests and the review, sharing. Sixteen phases, **complete 2026-10-18** |
+| **02-private-web-app** | The app of the app context: the design system and the sidebar, `.database/`, users on the home network, projects, the Private and Public Libraries, the sheet toolbox, copy and paste, Recording in Sheet, playlists, Play mode, requests and the review, sharing. Phases 0 to 15 complete 2026-10-18; Phases 16 and 17 (the `spain` and `catalan` regions, a popularity inferred from YouTube views) added the same day |
 
 The wall-clock refactor (01-mvp/03) replaced the model the first epics were built on;
 [`wall-clock-rewrite.md`](implementations/01-mvp/01-epics-master-plan/plan/wall-clock-rewrite.md)

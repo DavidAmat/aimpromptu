@@ -22,6 +22,8 @@ The plan's section 3.
 - [x] **Q-6** The popularity weights. **Answered 2026-10-16:** objective criteria instead of a hand ranking; the plan's formula with the power of a week's points at 8 ([report](02-implementation-phase-12.md) section 5.3).
 - [x] **Q-7** Offline downloads per project: **left for the production version**. Answered 2026-10-15 (raised in Phase 6).
 - [x] **Q-8** Live notes from the video reader: **one job with its stages**, the notes at the end (61 s for a 3:09 video, measured in Phase 5). Answered 2026-10-15.
+- [ ] **Q-9** The sources of the `spain` and `catalan` regions, from the 60s to today (takes over the region part of Q-5). Raised in Phase 16, after the research.
+- [ ] **Q-10** Spotify for the inferred popularity: its API gives no play count (only its own `popularity`), and its Developer Policy forbids feeding its content to a machine learning model. Raised 2026-10-18; answered before Phase 17.
 
 # [x] Phase 0: The documentation repaired, and a baseline
 
@@ -297,3 +299,39 @@ Built 2026-10-18 ([`02-implementation-phase-15.md`](02-implementation-phase-15.m
 
 ## [x] Story 15.3: Documentation
 - [x] Task 15.3.1 `00-project-complete-overview.md`, `01-project.md`, `05-deployment.md` rewritten; run instructions in one place (`04-local-development.md`; the root and service READMEs, `02b-local-setup.md` and the area READMEs link to it); the folder README marked complete.
+
+# [ ] Phase 16: The `spain` and `catalan` regions, from the 60s to today
+
+Added 2026-10-18 at the user's ask (plan section 20).
+
+## [ ] Story 16.1: The research
+- [ ] Task 16.1.1 A deep research on the internet: the Spanish and Catalan charts and radio lists of each decade from the 60s, with their years, what they give, licence, format and pace; MusicBrainz and Wikidata for artists and identifiers.
+- [ ] Task 16.1.2 `context/music-library/regional-sources.md` with the recommendation; Q-9 raised before any download.
+
+## [ ] Story 16.2: The data
+- [ ] Task 16.2.1 The download of the chosen sources into `data/music-library-regions/<source>/`, paced and resumable.
+- [ ] Task 16.2.2 The import into public rows (the Phase 12 identity rule; existing songs get the region; new songs and artists), on copies, then on the real `.database/` after `make db-backup`.
+
+## [ ] Story 16.3: Popularity per region
+- [ ] Task 16.3.1 The formula per region (an adapted one for sources with no weekly places); one popularity per song and region.
+- [ ] Task 16.3.2 The pages: the Region chip with `spain` and `catalan`, the region's popularity, the charts of a song.
+
+## [ ] Story 16.4: Documentation
+- [ ] Task 16.4.1 `regional-sources.md` (new), `reconciliation.md`, `popularity.md`, `ontology.md`, `07-database.md`, `paths-and-data.md`.
+
+# [ ] Phase 17: A popularity inferred from YouTube views
+
+Added 2026-10-18 at the user's ask (plan section 20). Needs Q-10, and a YouTube Data API key at its start.
+
+## [ ] Story 17.1: The sample
+- [ ] Task 17.1.1 Songs with a chart popularity across scores, decades and regions; their official video (Wikidata and MusicBrainz first, then a search within the quota); views and upload date.
+- [ ] Task 17.1.2 Spotify, as Q-10 decides.
+
+## [ ] Story 17.2: The fit
+- [ ] Task 17.2.1 Scatter plots (popularity against views, views per year); candidate relations measured on songs left out; the user chooses.
+
+## [ ] Story 17.3: The inferred popularity
+- [ ] Task 17.3.1 Stored with its source and date for songs with no chart data, shown as inferred; a chart popularity wins; a command within the day's quota.
+
+## [ ] Story 17.4: Documentation
+- [ ] Task 17.4.1 `popularity.md`, `ontology.md`, `endpoints.md`, `07-database.md`, `paths-and-data.md`, `.env.example`.

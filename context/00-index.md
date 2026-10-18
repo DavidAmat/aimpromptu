@@ -100,17 +100,18 @@ assumes.
 |------|-------------|
 | [implementations/README.md](implementations/README.md) | **Start here.** The two groups (`01-mvp/`, `02-private-web-app/`), every implementation with its state, and the numbering rule |
 
-### 02 — The private web app — COMPLETE 2026-10-18
+### 02 — The private web app — LIVE (Phases 16 and 17 added 2026-10-18)
 
 The app of [app/01-app-context.md](app/01-app-context.md): users, projects, the three storage layers,
-the music library, playlists, Play mode, requests. Opened 2026-10-05; sixteen phases, the last
-(Phase 15) the whole journey checked with two users, the cleanup and these pages.
+the music library, playlists, Play mode, requests. Opened 2026-10-05; Phases 0 to 15 complete on
+2026-10-18; Phases 16 (the `spain` and `catalan` regions) and 17 (a popularity inferred from YouTube
+views) added the same day.
 
 | File | Description |
 |------|-------------|
 | [implementations/02-private-web-app/README.md](implementations/02-private-web-app/README.md) | What it is, and every file in the folder |
 | [implementations/02-private-web-app/02-prompt.md](implementations/02-private-web-app/02-prompt.md) | The brief, in the user's own words |
-| [implementations/02-private-web-app/02-plan.md](implementations/02-private-web-app/02-plan.md) | **The plan.** The structure of the app, the design system, `.database/`, users, projects, the sheet, the music library, sixteen phases |
+| [implementations/02-private-web-app/02-plan.md](implementations/02-private-web-app/02-plan.md) | **The plan.** The structure of the app, the design system, `.database/`, users, projects, the sheet, the music library, eighteen phases |
 | [implementations/02-private-web-app/02-checklist.md](implementations/02-private-web-app/02-checklist.md) | THE status lookup for this implementation, and the decisions Q-1 to Q-8 |
 | `implementations/02-private-web-app/02-implementation-phase-N.md` | One report per finished phase |
 | [implementations/02-private-web-app/public-library-build/README.md](implementations/02-private-web-app/public-library-build/README.md) | 02-a, the parallel work: the data of the Public Library from `musicchartsarchive.com` |

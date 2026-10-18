@@ -59,7 +59,7 @@ How the AImpromptu (aitu) documentation system works and where to put new materi
 ## Implementation folders
 
 Planned work lives in `context/implementations/`, in groups: `01-mvp/` (closed) and
-`02-private-web-app/` (complete 2026-10-18). Each implementation keeps its brief (`NN-prompt.md`), its plan, its
+`02-private-web-app/` (live: Phases 16 and 17 added 2026-10-18). Each implementation keeps its brief (`NN-prompt.md`), its plan, its
 checklist (the status lookup) and one report per phase (`NN-implementation-phase-N.md`) in its own
 folder, with a `README.md` that says its state. The numbering rule is in
 [implementations/README.md](implementations/README.md). Phase reports and walkthroughs follow

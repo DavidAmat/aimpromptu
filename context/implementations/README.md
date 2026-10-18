@@ -8,8 +8,8 @@ numbered folder:
   new work.
 - **`02-private-web-app/`** built the app of
   [`../app/01-app-context.md`](../app/01-app-context.md), with users, projects, the three storage
-  layers, the music library, requests and Play mode. It is complete (2026-10-18); the next group
-  is `03-`.
+  layers, the music library, requests and Play mode. Phases 0 to 15 are complete (2026-10-18);
+  Phases 16 and 17 were added the same day.
 
 **Open a folder's own `README.md` first**, when it has one. It says whether that work is live or
 closed.
@@ -32,15 +32,15 @@ closed.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 02 | [`02-private-web-app/`](02-private-web-app/README.md) | The app of the app context: the design system and the sidebar shell, `.database/`, users and login on the home network, projects and the Personal Vault, the Private and Public Libraries, the sheet toolbox, copy and paste, Recording in Sheet, playlists, Play mode, requests and the Admin panel | 2026-10-05 | **Complete 2026-10-18.** Sixteen phases, 0 to 15; Phase 15 walked the whole journey with two users. [`02-checklist.md`](02-private-web-app/02-checklist.md) is the status lookup; decision Q-5 (the `spain` and `catalan` regions, genres) is left for later work |
+| 02 | [`02-private-web-app/`](02-private-web-app/README.md) | The app of the app context: the design system and the sidebar shell, `.database/`, users and login on the home network, projects and the Personal Vault, the Private and Public Libraries, the sheet toolbox, copy and paste, Recording in Sheet, playlists, Play mode, requests and the Admin panel | 2026-10-05 | **Live again.** Phases 0 to 15 complete 2026-10-18 (Phase 15 walked the whole journey with two users); **Phases 16 and 17 added the same day** at the user's ask: the `spain` and `catalan` regions, and a popularity inferred from YouTube views. [`02-checklist.md`](02-private-web-app/02-checklist.md) is the status lookup |
 | 02-a | [`02-private-web-app/public-library-build/`](02-private-web-app/public-library-build/README.md) | A parallel piece of work: the data of the Public Library, downloaded from `musicchartsarchive.com` into `data/music-library/` (next to the repository) | 2026-10-05 | **Done**: the download is in `data/music-library/`; 02 Phase 12 reconciled it and Phase 13 imported it |
 
 ## How to read this folder
 
-- **"What is being built now?"** → nothing: 02 is complete. A new piece of work opens
-  `03-<short-title>/` with its brief. What 02 left open: its checklist
-  [`02-checklist.md`](02-private-web-app/02-checklist.md) (Q-5) and the open points of
-  [`02-implementation-phase-15.md`](02-private-web-app/02-implementation-phase-15.md).
+- **"What is being built now?"** → Phases 16 and 17 of
+  [`02-private-web-app/02-plan.md`](02-private-web-app/02-plan.md) (section 20) and its checklist
+  [`02-checklist.md`](02-private-web-app/02-checklist.md). The other open points of 02 are in
+  [`02-implementation-phase-15.md`](02-private-web-app/02-implementation-phase-15.md) section 7.
 - **"What must a new task respect?"** →
   [`01-mvp/01-epics-master-plan/plan/wall-clock-rewrite.md`](01-mvp/01-epics-master-plan/plan/wall-clock-rewrite.md)
   (five rules, written after the refactor),
@@ -62,7 +62,8 @@ A path here is `NN-group/NN-implementation/`.
 
 - **A group** is a large stage of the product. It gets the next free number at this level:
   `01-mvp/`, `02-private-web-app/`, then `03-<short-title>/`. A group is closed when its work is
-  complete; it is not reopened.
+  complete; it is not reopened (02 is the one exception: the user added Phases 16 and 17 on
+  2026-10-18, after its Phase 15).
 - **An implementation** inside a group gets the next free number in that group. `01-mvp/` holds
   `01` to `09`. When a group is one implementation, as `02-private-web-app/` is, its files sit at the
   top of the group folder.

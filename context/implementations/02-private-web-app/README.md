@@ -1,6 +1,8 @@
 # 02: The private web app
 
-**State: complete, 2026-10-18** (opened 2026-10-05). Sixteen phases, 0 to 15, each built on its own
+**State: live again: Phases 0 to 15 complete (2026-10-18); Phases 16 and 17 added the same day at the
+user's ask** (the `spain` and `catalan` regions; a popularity inferred from YouTube views). Opened
+2026-10-05. Each phase is built on its own
 `feat/phase-N` branch and merged into `master` after the user's check; each has its report below.
 Seven of the eight decisions are answered (Q-1 to Q-4 before the plan, Q-6 to Q-8 on the way).
 **Q-5** (the sources of the `spain` and `catalan` regions, genres and tags) keeps the recommendation
@@ -19,7 +21,7 @@ and the status lookup is [`02-checklist.md`](02-checklist.md). Phase reports go 
 | File | What it is |
 |---|---|
 | [`02-prompt.md`](02-prompt.md) | The brief, in the user's own words |
-| [`02-plan.md`](02-plan.md) | The plan: the structure of the app, the design system, `.database/`, users, projects, the sheet, copy and paste, Recording in Sheet, playlists, the music library, requests, Play mode, sixteen phases |
+| [`02-plan.md`](02-plan.md) | The plan: the structure of the app, the design system, `.database/`, users, projects, the sheet, copy and paste, Recording in Sheet, playlists, the music library, requests, Play mode, eighteen phases |
 | [`02-checklist.md`](02-checklist.md) | The status lookup, and the decisions |
 | [`02-implementation-phase-0.md`](02-implementation-phase-0.md) | Phase 0: the links repaired, the leftovers archived, the baseline (screenshots in [`screenshots/phase-0/`](screenshots/phase-0/), test counts) |
 | [`02-implementation-phase-1.md`](02-implementation-phase-1.md) | Phase 1: the design system, the sidebar shell, Projects and the restyled steps, the removed pages (screenshots in [`screenshots/phase-1/`](screenshots/phase-1/)) |

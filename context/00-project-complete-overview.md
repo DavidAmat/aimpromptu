@@ -24,7 +24,8 @@ home opens the page at `http://ubuntu:5173`. Everything the app knows is in one 
 | `../vexflow-v2` | `@aimpromptu/grid-notation` — the notation renderer, installed from disk |
 
 How it was built: the MVP (implementations 01 to 09), then implementation 02, the private web app
-(Phases 0 to 15, closed 2026-10-18): [implementations/README.md](implementations/README.md).
+(Phases 0 to 15 complete 2026-10-18; Phases 16 and 17, the Spanish and Catalan regions and an
+inferred popularity, added the same day): [implementations/README.md](implementations/README.md).
 
 ## Users
 

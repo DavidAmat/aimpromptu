@@ -212,6 +212,8 @@ its walkthrough under DECISIONS.
 | Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12. **Answered 2026-10-16: objective criteria instead of a hand ranking; `week_power` 8** (section 15.6) |
 | Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). **Answered 2026-10-15: left for the production version** |
 | Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report. **Answered 2026-10-15: one job with its stages; the notes arrive at the end** |
+| Q-9 | Which sources fill the `spain` and `catalan` regions, from the 60s to today: charts and radio lists that are open to reuse and keep their history. Takes over the region part of Q-5 (its genre part stays Q-5) | Phase 16, after the research (added 2026-10-18) |
+| Q-10 | Spotify for the inferred popularity. The official Web API gives no play count, only its own `popularity` (0 to 100, weighted towards recent plays), and the Spotify Developer Policy forbids using Spotify content to train or feed a machine learning model, which a fitted formula may be. Use it, show it only, or leave it out? | Raised 2026-10-18 when Phase 17 was added; to be answered before Phase 17 |
 
 ---
 
@@ -1510,6 +1512,12 @@ with `week_power` 8 instead of 2 (`popularity.DEFAULT`; place 10 worth 0.47 a we
 number 1 keeps 97, 78 and 46, place 20 for 20 weeks scores 40, songs at 95 or more fall from 218 to
 44 (`make popularity-check`). The popularity of one decade is worked out in about 50 ms.
 
+**Added 2026-10-18 (Phases 16 and 17).** A popularity is relative to its region: a song at 99 in
+`catalan` is a hit in Catalonia that the world may not know. Phase 16 computes it per region from
+the Spanish and Catalan sources (where a source has no weekly places, an adapted formula); Phase 17
+infers a popularity from the official YouTube views for a song with no chart data, marked
+*inferred* (section 20).
+
 ---
 
 # 16. Requests and the Admin panel
@@ -1671,6 +1679,8 @@ phase owns which page.
 | `context/frontend/play-mode.md` (new), `playlists` in `projects.md` | Play mode, playlists | 10, 11 |
 | `context/00-project-complete-overview.md`, `01-project.md`, `05-deployment.md` | Rewritten for the new app; `01-project.md` becomes the product page and points at `app/01-app-context.md` | 15 |
 | Run instructions in five places | One home (`04-local-development.md`), the others link to it | 15 |
+| `context/music-library/regional-sources.md` (new); `reconciliation.md`, `popularity.md`, `ontology.md` | The Spanish and Catalan sources, their import, popularity per region | 16 |
+| `popularity.md`, `ontology.md`, `endpoints.md`, `.env.example`, `07-database.md`, `paths-and-data.md` | The inferred popularity: the sample, the fit, where it is stored and shown | 17 |
 | `backend/notation-and-parsing.md`, `documentation/.../schemas.md`, `sequence-logic.md` | To `documentation/deprecated/` with the text-notation MVP; the COO part of `02-notation-spec.md` stays | 1 |
 
 ---
@@ -1862,6 +1872,84 @@ its times match (all notes on screen in about 22 s, every later step under a sec
 are a test fixture. `00-project-complete-overview.md`, `01-project.md`, `05-deployment.md` and the
 root `README.md` are rewritten; `04-local-development.md` is the one home of the run instructions.
 Q-5 stays open, for later work.
+
+**Phases 16 and 17 were added on 2026-10-18, at the user's ask**, after Phase 15 closed the
+implementation: the Spanish and Catalan regions, and a popularity for the songs no chart has. They
+are two phases, not one, because each is a session of its own: Phase 16 depends on what the
+research finds (Q-9), and Phase 17 on keys and quotas of outside services (Q-10).
+
+## Phase 16: The `spain` and `catalan` regions, from the 60s to today
+
+**Why.** The Public Library has one chart, the US one, under `worldwide` (Phase 12). The app context
+asks for regions "from very local music to very worldwide music": `spain` and `catalan`, where a
+song counts when it was popular there, whatever the artist's country ("Dragostea Din Tei" in Spain).
+Q-5 left those regions for later; this phase fills them.
+
+1. **The research** (a deep research on the internet, with the `deep-research` skill): for each
+   region and each decade from the 60s to today, the charts and radio lists that exist, and for
+   each source: the years it covers, what it gives (weekly places, year-end lists, number ones
+   only), its size, its licence or terms of reuse (open data, a site's terms, `robots.txt`, a
+   paywall, a book), its format and how to get it, and the pace a download must keep. Candidates
+   to check, not chosen: the Los 40 Principales lists (since 1966), the official Spanish charts of
+   Promusicae (since the 2000s), the year-by-year lists of the 60s to the 2000s, and for Catalan the
+   lists of Catalan radios and magazines (Catalunya Ràdio, Ràdio Flaixbac, Enderrock). Also the open
+   catalogues that tie a song to its artists and to its videos: MusicBrainz and Wikidata (both CC0),
+   whose YouTube and Spotify identifiers Phase 17 can use. The result is
+   `context/music-library/regional-sources.md`: a table of the sources, the gaps per decade, and a
+   recommendation. **Q-9 is raised then, before any download.**
+2. **The download** of the chosen sources into `data/music-library-regions/<source>/`, next to the
+   repository (not inside it, and not into the parallel work's `data/music-library/`): the raw pages
+   and one database per source, paced and resumable, as the parallel work did.
+3. **The import** into public rows, with the identity rule of Phase 12 (titles and names compared
+   without case or accents, an `external_key` per source): a song already public (from the US chart)
+   gets the region and its regional chart weeks; a new song and its artists become public rows with
+   the region. Safe to run again; run on copies first, then on the real `.database/` after
+   `make db-backup`. A new Alembic revision only for what the tables cannot hold (for example a
+   popularity per region), written with `database.HEAD_REVISION` (Phase 14's learning).
+4. **Popularity per region**: the formula of section 15.6 on each region's weekly places, each chart
+   with its size and weight. For a source with no weekly places, an adapted formula, chosen by
+   objective criteria as Q-6 was. A song has one popularity per region it charted in; `worldwide`
+   stays the one shown by default, and with the Region chip the list sorts by that region's
+   popularity. The song page shows each popularity with its region.
+5. **The pages**: the Region chip offers `spain` and `catalan` with their counts; **On the chart**
+   shows each chart of the song; nothing else changes.
+6. **Documentation**: `regional-sources.md` (new), `reconciliation.md`, `popularity.md`,
+   `ontology.md`, `07-database.md`, `paths-and-data.md`.
+
+Checks: the import's tests on a small fixture of each source; the counts per region and decade in
+the report; `check:public` with the region chip; `make db-check`.
+
+## Phase 17: A popularity inferred from YouTube views (and Spotify, if Q-10 allows)
+
+**Why.** Popularity comes from chart weeks. A song with no chart data (a song proposed by request,
+a regional song of a source with no places) has none. The official video's view count is a signal
+every song has, so a formula fitted on the songs that have both can give the others an
+approximate score.
+
+1. **The sample.** Songs with a chart popularity, spread over the whole range of scores, the
+   decades and the regions (a few hundred to a thousand, sized to the quota). Their official video:
+   first from the identifiers of Wikidata (YouTube video ID) and MusicBrainz, which cost no quota;
+   else one YouTube search (100 of the 10,000 daily units of the YouTube Data API v3), kept only
+   when it is the official upload (the artist's channel, its "Topic" channel, Vevo). The views and
+   the upload date come from `videos.list` (1 unit for up to 50 videos). Every answer is kept with
+   the date it was read, so nothing is asked twice.
+2. **Spotify**, as Q-10 decides.
+3. **The fit.** A scatter of popularity against the views (on a log scale), and against the views
+   per year since the upload (an old song had less time on YouTube, a recent one more). Candidate
+   relations: linear on the log of the views, piecewise or monotonic, with a term for the decade or
+   the region. Each is measured on songs left out of the fit (the mean error in points). The plots
+   and the errors go in the report; the user chooses with them.
+4. **The inferred popularity**: the chosen formula in `library/popularity.py`, run for the public
+   songs with no chart data in a region, kept with its source and date, and shown as inferred
+   ("≈ 72", "Inferred from YouTube views" on hover). A chart popularity always wins over an inferred
+   one. A command infers it for a list of songs within the day's quota (for example the songs a
+   request adds).
+5. **Documentation**: `popularity.md`, `ontology.md`, `endpoints.md`, `07-database.md`,
+   `paths-and-data.md`, `.env.example` (the key).
+
+Needed from the user at the start of Phase 17 (not before): a Google Cloud project with the
+YouTube Data API v3 turned on, and its key in `.env` (`YOUTUBE_API_KEY`); a Spotify app's client id
+and secret only if Q-10 says so.
 
 ---
 
