@@ -565,8 +565,22 @@ class RequestItem(Base):
     comment: Mapped[str | None] = mapped_column(Text)
 
 
+#: What a line of a request's conversation is (Phase 14, revision ``0005``): a comment (on the
+#: request, or on a stretch of its sheet), or an event of its timeline.
+COMMENT_KINDS = ("comment", "review", "sentAgain", "withdrawn")
+
+
 class RequestComment(Base):
+    """One line of a request's conversation, like a pull request's (Phase 14).
+
+    ``comment``: a note of the author or of the master user; on a stretch of the proposed sheet
+    when ``details`` says which (``partId``, ``fromMs``, ``toMs``, and ``excerpt``: a project of
+    just that stretch, drawn beside the comment). ``parent_id``: a reply to a comment. The events:
+    ``review`` (the master user's decision, each item's in ``details``), ``sentAgain``,
+    ``withdrawn``."""
+
     __tablename__ = "request_comments"
+    __table_args__ = (_one_of("kind", COMMENT_KINDS),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     request_id: Mapped[int] = mapped_column(
@@ -575,6 +589,14 @@ class RequestComment(Base):
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     body: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+    kind: Mapped[str] = mapped_column(String(16), default="comment", server_default="comment")
+    #: The item a comment is about (a piano sheet), if any.
+    item_id: Mapped[int | None] = mapped_column(ForeignKey("request_items.id", ondelete="SET NULL"))
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("request_comments.id", ondelete="CASCADE"), index=True
+    )
+    #: JSON: the stretch of a comment, or the decisions of a review.
+    details: Mapped[str | None] = mapped_column(Text)
 
 
 #: The fixed lists written by the first migration (section 15.3).

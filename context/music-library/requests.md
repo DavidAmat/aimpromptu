@@ -58,21 +58,50 @@ or one the user published from that project. The dialog names the songs left out
 **Admin → Review** lists the open requests, oldest first, with their kind and who sent them; **All**
 shows every request. The number beside **Review** in the sidebar is the open requests.
 
-A request's page shows each item with what it proposes:
+A request's page is laid out like a pull request (the user, 2026-10-18): the title, the status as
+a pill, one line saying who asks for what, and two tabs, each with its own address.
 
-| Item | What the page shows |
+**Conversation** (`/requests/:id`) is the request's timeline, on one line down the left:
+
+- the first box is the request as it was sent: the author's note, then what each item proposes;
+- each **comment** is a box with its author, "Author" or "Reviewer", and its time; the author and
+  the master user both write, at any time, in the box at the end;
+- a comment **on a stretch of the sheet** draws that stretch above its words, as it was when the
+  comment was written, with its own Play. It is a project of just that stretch (a copy of its
+  notes, marks and audio ranges, no audio bytes), kept with the request. Once the request is sent
+  again with another sheet, the comment says "Outdated";
+- each comment takes **replies** (one level, as on a pull request): **Reply…** under it;
+- the events: a **review** (a box with each item's decision and its words, and the master user's
+  note: "asked for changes", "accepted", "refused", "reviewed"), "sent it again" (with the
+  author's note), "withdrew it".
+
+Beside it, a narrow column lists the items with their decisions, the kind and the dates.
+
+**Sheet** (`/requests/:id/sheet`) is the whole proposed sheet at the page's width, read only, with
+its player. When the Public Library has a version it would replace (the user's own version of that
+name, or the fixed version of that name), **Proposed** and **Now** switch between the two. A
+project of several parts shows one part at a time. **Mark a stretch** of the proposed sheet, then
+**Comment on this stretch**: the comment goes to the Conversation. A request with no piano sheet
+(metadata, a playlist) has **Changes** there instead:
+
+| Item | What it shows |
 |---|---|
 | New artist | Its name |
 | New song | Its fields; a new artist marked "(new)" |
 | Metadata of a song | Each field now and proposed, the changed ones in bold |
 | Metadata of an artist | The name now and proposed; the names to add |
-| Piano sheet, fixed version | **Side by side**: on the left the version the Public Library has now (the user's version of that name, or the fixed version of that name), or "Nothing yet"; on the right the proposal. Both are read-only piano sheets that play, each with its own Play (one stops the other) and **Open in Play mode**. Under 1200 px the two are one under the other |
 | Playlist | Its songs and versions; the songs left out |
 
-Each item waiting gets **Accept**, **Ask for a change** (with what to change) or **Refuse** (with a
-reason, if wanted). On **Accept** the master user can change the name ("will either accept it or
-change it", app context): an artist's name, a song's title, a version name, a playlist's title.
-**Send decision** needs a decision for every item waiting, and writes what is accepted.
+The master user's **Review** (on a request waiting for review) opens **Finish your review**, as a
+pull request's "Review changes": each item waiting gets **Accept**, **Ask for a change** (with what
+to change) or **Refuse** (with a reason, if wanted). On **Accept** the master user can change the
+name ("will either accept it or change it", app context): an artist's name, a song's title, a
+version name, a playlist's title. **Send decision** needs a decision for every item waiting, and
+writes what is accepted; the review then appears in the Conversation.
+
+The first layout (Phase 14, 2026-10-16) put the version now and the proposal side by side in two
+columns under each item. The user found the empty column and the plain list of notes wasteful, and
+asked for the pull request's layout instead (2026-10-18).
 
 **An item cannot be accepted without what it needs**: a new song without its new artist, a piano
 sheet without its new song. The backend refuses the decision and says which.

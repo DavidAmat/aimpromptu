@@ -90,6 +90,7 @@ export { requestsApi } from "./requests";
 export type {
   ArtistInRequest,
   ArtistRef,
+  CommentInput,
   ItemDecision,
   ItemDecisionValue,
   ItemKind,
@@ -104,8 +105,10 @@ export type {
   RequestKind,
   RequestStatus,
   RequestSummary,
+  ReviewDetails,
   SongFields,
   SongState,
+  StretchDetails,
 } from "./requests";
 export { sharesApi } from "./shares";
 export type { Person, SharedLibrary, SharedSong, Shares } from "./shares";

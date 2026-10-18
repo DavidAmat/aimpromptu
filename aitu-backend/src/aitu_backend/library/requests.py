@@ -729,11 +729,40 @@ def _add_items(db: DbSession, request_id: int, plan: _Plan, start: int) -> None:
 
 
 def _note(db: DbSession, request_id: int, author: int, text: str | None) -> None:
-    body = " ".join((text or "").split())
+    """The author's note when they send a request: the first comment of its conversation."""
+    body = _text(text)
     if body:
         db.add(
             RequestComment(request_id=request_id, author_id=author, body=body, created_at=_now())
         )
+
+
+def _text(text: str | None) -> str:
+    """A comment as typed: its lines kept, the spaces at their ends and the empty edges removed."""
+    lines = [line.rstrip() for line in (text or "").strip().splitlines()]
+    return "\n".join(lines).strip()
+
+
+def _event(
+    db: DbSession,
+    request_id: int,
+    author: int,
+    kind: str,
+    text: str | None = None,
+    details: dict[str, Any] | None = None,
+) -> None:
+    """An event of the request's timeline (``review``, ``sentAgain``, ``withdrawn``), with the
+    words that came with it."""
+    db.add(
+        RequestComment(
+            request_id=request_id,
+            author_id=author,
+            kind=kind,
+            body=_text(text),
+            details=json.dumps(details) if details is not None else None,
+            created_at=_now(),
+        )
+    )
 
 
 # ---------------------------------------------------------------------- send
@@ -795,7 +824,7 @@ def resend(request_id: int, author: int, proposal: Proposal) -> None:
             _add_items(db, request_id, plan, start)
             request.status = "open"
             request.updated_at = _now()
-            _note(db, request_id, author, proposal.note)
+            _event(db, request_id, author, "sentAgain", proposal.note)
     except BaseException:
         if snapshot is not None:
             bundle.delete_project(snapshot)
@@ -822,6 +851,7 @@ def withdraw(request_id: int, author: int) -> None:
             raise rows.Conflict("This request is already reviewed")
         request.status = "withdrawn"
         request.updated_at = request.decided_at = _now()
+        _event(db, request_id, author, "withdrawn")
 
 
 # -------------------------------------------------------------------- review
@@ -995,7 +1025,7 @@ def _apply(
     for item in order:
         decision = given[item.id]
         item.decision = decision.decision
-        item.comment = " ".join((decision.comment or "").split()) or None
+        item.comment = _text(decision.comment) or None
         payload = payloads[item.id]
         if decision.decision == "accepted":
             payload["made"] = _accept(db, item, payload, context)
@@ -1008,7 +1038,24 @@ def _apply(
     request.updated_at = _now()
     if status not in WAITING:
         request.decided_at = request.updated_at
-    _note(db, request_id, master_id, comment)
+    _event(
+        db,
+        request_id,
+        master_id,
+        "review",
+        comment,
+        {
+            "items": [
+                {
+                    "id": item.id,
+                    "kind": item.kind,
+                    "decision": item.decision,
+                    "comment": item.comment,
+                }
+                for item in sorted(order, key=lambda one: one.position)
+            ]
+        },
+    )
     return context.replaced, status
 
 
@@ -1236,9 +1283,18 @@ class ItemView:
 
 @dataclass
 class Comment:
+    id: int
+    #: ``comment``, ``review``, ``sentAgain``, ``withdrawn``.
+    kind: str
     author: str
     body: str
     created_at: datetime
+    item_id: int | None = None
+    #: The comment a reply answers.
+    parent_id: int | None = None
+    #: A comment on a stretch: ``partId``, ``fromMs``, ``toMs``, ``excerpt`` (the project of just
+    #: that stretch) and ``excerptPart``, ``anchorMs``; a review: ``items`` (each decision).
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -1542,16 +1598,7 @@ def detail(request_id: int) -> Detail:
             summary=_summary(db, request),
             author_id=request.author_id,
             items=[_view(db, item, by_ref, request.author_id, name) for item in items],
-            comments=[
-                Comment(
-                    author=_username(db, one.author_id), body=one.body, created_at=one.created_at
-                )
-                for one in db.scalars(
-                    select(RequestComment)
-                    .where(RequestComment.request_id == request_id)
-                    .order_by(RequestComment.created_at, RequestComment.id)
-                )
-            ],
+            comments=_conversation(db, request, items),
             proposal=_proposal_of(request, items),
         )
 
@@ -1652,3 +1699,178 @@ def publish_info(author: int, version_id: int) -> PublishInfo:
             own_versions=own_versions,
             waiting_request=waiting,
         )
+
+
+# -------------------------------------------------------------- the conversation
+
+
+def _conversation(db: DbSession, request: Request, items: list[RequestItem]) -> list[Comment]:
+    """Every line of the request's conversation, oldest first.
+
+    A request decided before the conversation existed (revision ``0005``) has no ``review`` event;
+    one is drawn from its items' decisions, at the time of its last change."""
+    rows_found = list(
+        db.scalars(
+            select(RequestComment)
+            .where(RequestComment.request_id == request.id)
+            .order_by(RequestComment.created_at, RequestComment.id)
+        )
+    )
+    out = [
+        Comment(
+            id=one.id,
+            kind=one.kind,
+            author=_username(db, one.author_id),
+            body=one.body,
+            created_at=one.created_at,
+            item_id=one.item_id,
+            parent_id=one.parent_id,
+            details=json.loads(one.details) if one.details else {},
+        )
+        for one in rows_found
+    ]
+    decided = [item for item in items if item.decision is not None]
+    if decided and not any(one.kind == "review" for one in rows_found):
+        master = db.scalar(select(User.username).where(User.role == "master")) or ""
+        out.append(
+            Comment(
+                id=0,
+                kind="review",
+                author=master,
+                body="",
+                created_at=request.decided_at or request.updated_at,
+                details={
+                    "items": [
+                        {
+                            "id": item.id,
+                            "kind": item.kind,
+                            "decision": item.decision,
+                            "comment": item.comment,
+                        }
+                        for item in decided
+                    ]
+                },
+            )
+        )
+        out.sort(key=lambda one: one.created_at)
+    return out
+
+
+def _proposed_parts(db: DbSession, item: RequestItem) -> list[str]:
+    """The parts of the project an item proposes (a piano sheet, a fixed version)."""
+    payload = _loads(item)
+    project_id = payload.get("projectId")
+    if item.kind not in ("project", "versionPointer") or not project_id:
+        return []
+    try:
+        return bundle.part_ids_of(project_id)
+    except locate.NotFound:
+        return []
+
+
+def _excerpt(part_id: str, from_ms: float, to_ms: float, owner: int) -> dict[str, Any]:
+    """A project of just ``[from_ms, to_ms)`` of a part, its notes, marks and audio (no bytes
+    copied), so the conversation can draw the stretch a comment is about, as it was then. It is in
+    the layer ``request``, owned by the request's author, hidden from every list."""
+    from aitu_backend.editing import paste  # noqa: PLC0415 - heavy; only a comment needs it
+    from aitu_backend.transcription import pipeline  # noqa: PLC0415
+
+    passage = paste.read_passage(part_id, from_ms, to_ms)
+    rhythm = pipeline.load_rhythm(part_id)
+    excerpt = bundle.create_project(
+        owner_id=owner,
+        title=passage.title,
+        source=bundle.PartSource(kind="composed", format="wav"),
+        kind=bundle.PASSAGE_KIND,
+        layer="request",
+        frame_ms=passage.frame_ms,
+    )
+    try:
+        paste.paste(excerpt.parts[0].id, passage, at_ms=0.0)
+    except Exception:
+        bundle.delete_project(excerpt.id)
+        raise
+    first = int(round(passage.from_ms / passage.frame_ms))
+    return {
+        "partId": part_id,
+        "fromMs": passage.from_ms,
+        "toMs": passage.to_ms,
+        "excerpt": excerpt.id,
+        "excerptPart": excerpt.parts[0].id,
+        "anchorMs": paste.anchor_at(rhythm, first),
+    }
+
+
+#: The longest stretch a comment is about: a comment points at a passage, not the whole song.
+MAX_STRETCH_MS = 120_000
+
+
+def add_comment(
+    request_id: int,
+    user_id: int,
+    is_master: bool,
+    body: str,
+    *,
+    parent_id: int | None = None,
+    item_id: int | None = None,
+    part_id: str | None = None,
+    from_ms: float | None = None,
+    to_ms: float | None = None,
+) -> int:
+    """A comment of the author or the master user: on the request, as a reply to a comment, or on
+    a stretch of the proposed sheet (``item_id``, ``part_id``, ``from_ms``, ``to_ms``). Answers its
+    id."""
+    text = _text(body)
+    if not text:
+        raise ValueError("Write a comment first")
+    if len(text) > 4000:
+        raise ValueError("A comment is at most 4,000 characters")
+    with session() as db:
+        request = _request(db, request_id)
+        if not is_master and request.author_id != user_id:
+            raise rows.NotFound(f"No request with id {request_id}")
+        author = request.author_id
+        if parent_id is not None:
+            parent = db.get(RequestComment, parent_id)
+            if parent is None or parent.request_id != request_id or parent.kind != "comment":
+                raise rows.NotFound("No comment to reply to")
+            # One level of replies, as on a pull request: a reply to a reply joins the thread.
+            parent_id = parent.parent_id or parent.id
+        stretch = part_id is not None or from_ms is not None or to_ms is not None
+        if stretch:
+            item = db.get(RequestItem, item_id) if item_id is not None else None
+            if item is None or item.request_id != request_id:
+                raise rows.NotFound("No item of this request with a piano sheet")
+            if part_id not in _proposed_parts(db, item):
+                raise rows.NotFound("That part is not in the proposed piano sheet")
+            if from_ms is None or to_ms is None or to_ms <= from_ms:
+                raise ValueError("Mark a stretch of the sheet first")
+            if to_ms - from_ms > MAX_STRETCH_MS:
+                raise ValueError("A comment is about a stretch of at most two minutes")
+        elif item_id is not None:
+            item = db.get(RequestItem, item_id)
+            if item is None or item.request_id != request_id:
+                raise rows.NotFound("No item of this request")
+    details = None
+    if stretch:
+        assert part_id is not None and from_ms is not None and to_ms is not None
+        details = _excerpt(part_id, from_ms, to_ms, author)
+    try:
+        with session() as db:
+            made = RequestComment(
+                request_id=request_id,
+                author_id=user_id,
+                kind="comment",
+                body=text,
+                item_id=item_id,
+                parent_id=parent_id,
+                details=json.dumps(details) if details else None,
+                created_at=_now(),
+            )
+            db.add(made)
+            db.flush()
+            return made.id
+    except BaseException:
+        if details:
+            _drop_snapshot(details["excerpt"])
+        raise

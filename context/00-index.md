@@ -56,7 +56,7 @@ assumes.
 | [music-library/README.md](music-library/README.md) | The catalogue in two scopes (Private and Public Library), and the pages of this folder |
 | [music-library/ontology.md](music-library/ontology.md) | The music library's entities in two scopes, a private row standing for a public one, a public song's metadata and versions, **Add to my library**, the Public Library pages (implementation 02, Phase 13) |
 | [music-library/popularity.md](music-library/popularity.md) | Popularity: the formula and the weights chosen by objective criteria, the popularity of a decade, how the pages show it (implementation 02, Phases 12 and 13) |
-| [music-library/requests.md](music-library/requests.md) | Requests to the Public Library (version, metadata, fixed version, playlist), the review with side by side and partial acceptance, a shared Private Library (implementation 02, Phase 14) |
+| [music-library/requests.md](music-library/requests.md) | Requests to the Public Library (version, metadata, fixed version, playlist), the review laid out like a pull request (Conversation, comments on a stretch of the sheet, Sheet) with partial acceptance, a shared Private Library (implementation 02, Phase 14) |
 | [music-library/reconciliation.md](music-library/reconciliation.md) | The downloaded music library (`library.sqlite`) mapped onto the public rows: gaps, identity, re-entries, popularity, the seed list, `make public-import` (implementation 02, Phase 12) |
 | [music-library/private-library.md](music-library/private-library.md) | **My library**: songs, artists and their names, versions; **Save to library** (the audio written again, the temporary files deleted), **Edit** through a copy, Replace, history (implementation 02, Phase 6) |
 

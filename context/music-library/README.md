@@ -24,7 +24,7 @@ work lives in a library, under a song, as a version.
 | [private-library.md](private-library.md) | The Private Library: songs, artists and names, versions, **Save to library**, **Edit**, the history of a version |
 | [ontology.md](ontology.md) | The entities, the two scopes and how a private row stands for a public one, the metadata of a public song, its versions, **Add to my library**, the Public Library pages |
 | [popularity.md](popularity.md) | The popularity of a song: the formula and its weights, the popularity of a decade worked out on the request, how the pages show it |
-| [requests.md](requests.md) | The four kinds of request and their items, **Publish**, the review with side by side and partial acceptance, what an accepted request writes, changes asked and sent again; sharing a library |
+| [requests.md](requests.md) | The four kinds of request and their items, **Publish**, the review laid out like a pull request (Conversation with comments on a stretch of the sheet, Sheet) and partial acceptance, what an accepted request writes, changes asked and sent again; sharing a library |
 | [reconciliation.md](reconciliation.md) | The downloaded music library mapped onto the app's tables: the gaps, the identity of a row across runs, the re-entries, the popularity on the real data, the seed list, the import |
 
 ## Where to look deeper

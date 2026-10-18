@@ -23,7 +23,8 @@
  *
  * **Requests** (`/requests`, Phase 14) are the user's requests to the Public Library; **Review**
  * (`/admin/requests`) is the master user's list of the requests to decide. One request opens at
- * `/requests/:id` for its author and at `/admin/requests/:id` for the review.
+ * `/requests/:id` for its author and at `/admin/requests/:id` for the review; `/sheet` after either
+ * is its Sheet tab.
  *
  * **Play mode** (`/play/:projectId`, `/play/playlist/:id`, Phase 11) is the sheet alone, outside the
  * shell: a project or a version of the library, or a songs playlist. Notes Falling is one of its views
@@ -109,6 +110,9 @@ export const LIBRARY_PLAYLIST_PATTERN = "/library/playlists/:id";
 export const LIBRARY_SHARED_SONG_PATTERN = "/library/shared/songs/:id";
 export const REQUEST_PATTERN = "/requests/:id";
 export const ADMIN_REQUEST_PATTERN = "/admin/requests/:id";
+/** The Sheet tab of a request: its whole proposed sheet. */
+export const REQUEST_SHEET_PATTERN = "/requests/:id/sheet";
+export const ADMIN_REQUEST_SHEET_PATTERN = "/admin/requests/:id/sheet";
 export const PUBLIC_SONG_PATTERN = "/public/songs/:id";
 export const PUBLIC_ARTIST_PATTERN = "/public/artists/:id";
 export const PUBLIC_PLAYLIST_PATTERN = "/public/playlists/:id";

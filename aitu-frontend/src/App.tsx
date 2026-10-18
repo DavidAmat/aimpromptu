@@ -16,6 +16,7 @@ import LegacyRedirect from "./layout/LegacyRedirect";
 import { RequireMaster, RequireUser } from "./layout/RequireUser";
 import {
   ADMIN_REQUEST_PATTERN,
+  ADMIN_REQUEST_SHEET_PATTERN,
   LAB_EXAMPLE_PATTERN,
   LEGACY_REDIRECTS,
   LIBRARY_ARTIST_PATTERN,
@@ -30,6 +31,7 @@ import {
   PUBLIC_PLAYLIST_PATTERN,
   PUBLIC_SONG_PATTERN,
   REQUEST_PATTERN,
+  REQUEST_SHEET_PATTERN,
   ROUTES,
 } from "./layout/routes";
 import UsersPage from "./pages/admin/UsersPage";
@@ -166,6 +168,7 @@ export default function App() {
         {/* Requests to the Public Library (Phase 14): the user's own, and the master user's review. */}
         <Route path={ROUTES.requests} element={<RequestsPage />} />
         <Route path={REQUEST_PATTERN} element={<RequestPage />} />
+        <Route path={REQUEST_SHEET_PATTERN} element={<RequestPage />} />
         <Route
           path={ROUTES.adminRequests}
           element={
@@ -176,6 +179,14 @@ export default function App() {
         />
         <Route
           path={ADMIN_REQUEST_PATTERN}
+          element={
+            <RequireMaster>
+              <RequestPage />
+            </RequireMaster>
+          }
+        />
+        <Route
+          path={ADMIN_REQUEST_SHEET_PATTERN}
           element={
             <RequireMaster>
               <RequestPage />

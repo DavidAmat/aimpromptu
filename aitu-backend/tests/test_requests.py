@@ -177,7 +177,11 @@ def test_a_user_version_is_sent_copied_reviewed_and_published(people: dict) -> N
     assert joan.get(f"/projects/{made['projectId']}").status_code == 200
     assert anna.get(f"/projects/{snapshot}").status_code == 200
     assert master.get("/admin/requests").json() == []
-    assert [c["body"] for c in done["comments"]] == ["My first one"]
+    assert [(c["kind"], c["body"]) for c in done["comments"]] == [
+        ("comment", "My first one"),
+        ("review", ""),
+    ]
+    assert done["comments"][1]["details"]["items"][0]["decision"] == "accepted"
 
 
 def test_a_better_user_version_replaces_the_own_one_and_keeps_its_likes(people: dict) -> None:
@@ -328,7 +332,17 @@ def test_changes_asked_are_made_and_the_request_sent_again(people: dict) -> None
     assert [v["name"] for v in song["others"][0]["versions"]] == ["hard-left"]
     # The author's song now stands for the public one.
     assert anna.get(f"/library/songs/{own_song}").json()["publicId"] == made_song
-    assert [c["body"] for c in final["comments"]] == ["Nearly there", "Year added"]
+    assert [(c["kind"], c["body"]) for c in final["comments"]] == [
+        ("review", "Nearly there"),
+        ("sentAgain", "Year added"),
+        ("review", ""),
+    ]
+    first_review = final["comments"][0]["details"]["items"]
+    assert [(one["kind"], one["decision"]) for one in first_review] == [
+        ("newArtist", "accepted"),
+        ("newSong", "changesAsked"),
+        ("project", "changesAsked"),
+    ]
 
 
 def test_a_request_is_withdrawn_until_it_is_reviewed(people: dict) -> None:
@@ -612,3 +626,84 @@ def test_the_check_fixture_removes_a_user_and_what_they_made(people: dict) -> No
     assert master.get(f"/public/songs/{alive}").json()["others"] == []
     with pytest.raises(SystemExit):
         public_fixture.main(["remove-user", "--username", "master"])
+
+
+def test_the_conversation_of_a_request(people: dict) -> None:
+    anna_id, anna = people["anna"]
+    _, joan = people["joan"]
+    _, master = people["master"]
+    alive = song_id(ALIVE)
+    _, version, _ = saved(anna, publicSongId=alive, version="easy")
+    request = send(
+        anna,
+        kind="userVersion",
+        version=version,
+        versionName="easy",
+        song={"publicId": alive},
+        note="First line\n\nSecond line",
+    )
+    item = items(master, request)[0]
+    part = item["compare"]["proposed"]["parts"][0]
+
+    # A comment on a stretch of the proposed sheet keeps a project of just that stretch.
+    on = master.post(
+        f"/requests/{request}/comments",
+        json={
+            "body": "The left hand here",
+            "itemId": item["id"],
+            "partId": part,
+            "fromMs": 1000,
+            "toMs": 3000,
+        },
+    )
+    assert on.status_code == 201, on.text
+    stretch = on.json()["comments"][-1]
+    details = stretch["details"]
+    assert (stretch["kind"], stretch["itemId"], details["partId"]) == ("comment", item["id"], part)
+    assert details["fromMs"] <= 1000 and details["toMs"] >= 2960
+    with session() as db:
+        excerpt = db.get(Project, details["excerpt"])
+        assert excerpt is not None
+        assert (excerpt.layer, excerpt.owner_id, excerpt.kind) == ("request", anna_id, "passage")
+    status = anna.get(f"/pieces/{details['excerptPart']}/status").json()
+    sheet = next(one for one in status["steps"] if one["step"] == "sheet")
+    assert sheet["state"] == "ready", status
+    assert master.get(f"/projects/{details['excerpt']}").status_code == 200
+    assert joan.get(f"/projects/{details['excerpt']}").status_code == 404
+
+    # The author replies; a reply to a reply joins the same thread.
+    reply = anna.post(
+        f"/requests/{request}/comments", json={"body": "Fixed it", "parentId": stretch["id"]}
+    ).json()["comments"][-1]
+    assert reply["parentId"] == stretch["id"]
+    again = master.post(
+        f"/requests/{request}/comments", json={"body": "Thanks", "parentId": reply["id"]}
+    ).json()["comments"][-1]
+    assert again["parentId"] == stretch["id"]
+    # The note keeps its lines.
+    assert (
+        anna.get(f"/requests/{request}").json()["comments"][0]["body"]
+        == "First line\n\nSecond line"
+    )
+
+    # Refused: another user, an empty comment, a part that is not proposed, a long stretch.
+    assert joan.post(f"/requests/{request}/comments", json={"body": "hi"}).status_code == 404
+    assert anna.post(f"/requests/{request}/comments", json={"body": "  "}).status_code == 422
+    assert (
+        master.post(
+            f"/requests/{request}/comments",
+            json={"body": "x", "itemId": item["id"], "partId": "nope", "fromMs": 0, "toMs": 1000},
+        ).status_code
+        == 404
+    )
+    assert (
+        master.post(
+            f"/requests/{request}/comments",
+            json={"body": "x", "itemId": item["id"], "partId": part, "fromMs": 0, "toMs": 200_000},
+        ).status_code
+        == 422
+    )
+    # The timeline's events: withdrawn.
+    anna.post(f"/requests/{request}/withdraw")
+    kinds = [c["kind"] for c in anna.get(f"/requests/{request}").json()["comments"]]
+    assert kinds == ["comment", "comment", "comment", "comment", "withdrawn"]

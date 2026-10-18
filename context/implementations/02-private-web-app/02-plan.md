@@ -1569,12 +1569,18 @@ kinds. The sidebar's **Requests** counts the user's requests with changes asked.
 - **Users**: create, disable, reset a password (Phase 4).
 - **Lab**: the video reader's development pages (Phase 1).
 
-*As built in Phase 14*: **Admin → Review** (`/admin/requests`, its count in the sidebar), **Waiting**
+*As built in Phase 14*, then changed at the user's ask (2026-10-18): a request's page is laid out
+like a pull request, with a **Conversation** tab (the timeline of comments, reviews and events; a
+comment on a marked stretch of the sheet draws that stretch, from a project of just that stretch;
+replies) and a **Sheet** tab (the whole proposed sheet; **Proposed** and **Now** switch instead of
+the side by side first built). **Review** opens **Finish your review**. Revision `0005` adds the
+conversation's columns to `request_comments`
+([`../../music-library/requests.md`](../../music-library/requests.md) section 3).
+**Admin → Review** (`/admin/requests`, its count in the sidebar), **Waiting**
 or **All**. On a request, each waiting item gets **Accept** (with its name changeable: "will
 either accept it or change it"), **Ask for a change** or **Refuse**, and **Send decision** writes
 the accepted items in one transaction: the project copy is made first and deleted again if the
-rows fail. Side by side uses the Sheet step's page in the role of a passage's Current (Phase 9),
-both sides read only with their own Play; under 1200 px one under the other. A fixed version
+rows fail. A fixed version
 points at the same project as the user version it comes from. The author's own song and artists
 named in an accepted request get their `public_id`.
 

@@ -274,7 +274,7 @@ request, **Playlist**. Revision `0004` moved the real `.database/` (after `make 
 - [x] Task 14.1.2 Changes asked and resent; withdraw.
 
 ## [x] Story 14.2: Review
-- [x] Task 14.2.1 The review list and page, side by side, partial acceptance.
+- [x] Task 14.2.1 The review list and page, side by side, partial acceptance (the page laid out like a pull request at the user's ask of 2026-10-18: Conversation with comments on a stretch, Sheet with Proposed and Now; revision `0005`).
 - [x] Task 14.2.2 The publishing transaction; the creator's username on the version.
 
 ## [x] Story 14.3: Sharing

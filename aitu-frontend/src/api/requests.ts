@@ -80,10 +80,43 @@ export interface RequestItem {
   compare: { current: ProjectSide | null; proposed: ProjectSide | null } | null;
 }
 
+/** A comment on a stretch of the proposed sheet: where, and the project of just that stretch. */
+export interface StretchDetails {
+  partId: string;
+  fromMs: number;
+  toMs: number;
+  /** A project of just that stretch, as it was when the comment was written. */
+  excerpt: string;
+  excerptPart: string;
+  anchorMs: number | null;
+}
+
+/** The decisions of a review, one per item decided. */
+export interface ReviewDetails {
+  items: { id: number; kind: ItemKind; decision: ItemDecisionValue; comment: string | null }[];
+}
+
+/** One line of a request's conversation: a comment, or an event of its timeline. */
 export interface RequestComment {
+  id: number;
+  kind: "comment" | "review" | "sentAgain" | "withdrawn";
   author: string;
   body: string;
   createdAt: string;
+  itemId: number | null;
+  /** The comment a reply answers. */
+  parentId: number | null;
+  details: Partial<StretchDetails & ReviewDetails>;
+}
+
+export interface CommentInput {
+  body: string;
+  parentId?: number;
+  /** On a stretch of the proposed sheet of an item. */
+  itemId?: number;
+  partId?: string;
+  fromMs?: number;
+  toMs?: number;
 }
 
 export interface RequestDetail extends RequestSummary {
@@ -172,6 +205,9 @@ export const requestsApi = {
   sendAgain: (id: number, proposal: Proposal) =>
     request<RequestDetail>(`/requests/${id}`, { method: "PUT", body: proposal }),
   withdraw: (id: number) => request<RequestDetail>(`/requests/${id}/withdraw`, { method: "POST" }),
+  /** A comment of the author or the master user: on the request, a reply, or on a stretch. */
+  comment: (id: number, comment: CommentInput) =>
+    request<RequestDetail>(`/requests/${id}/comments`, { method: "POST", body: comment }),
 
   /** The master user: the open requests, oldest first; or every request. */
   review: (everything: boolean, signal?: AbortSignal) =>

@@ -14,12 +14,12 @@ this report is the detail behind it.
 | Story | Result |
 |---|---|
 | 14.1 Requests | Four kinds (the plan's three and **Playlist**, the user's answer), each made of items with their own decision. **Publish** on a version of My library (and on a playlist), **Suggest a change** on a public song or artist, **Propose a song** on Public songs, **Ask for a fixed version** on the user's own version. The project is copied when sent, into a layer of its own (`request`). **Requests** lists them; **Withdraw**; **Change and send again** |
-| 14.2 Review | **Admin → Review** (open requests, oldest first; **All**). A request's page: each item with what it proposes (the fields now and proposed for a change of metadata), **side by side** read-only sheets that play for a piano sheet or a fixed version, a decision per item (Accept, with the name changeable; Ask for a change; Refuse). **Send decision** writes what is accepted in one transaction; the author is the creator of the version |
+| 14.2 Review | **Admin → Review** (open requests, oldest first; **All**). A request's page is laid out like a pull request (the user's ask of 2026-10-18, section 11): **Conversation** (the timeline; comments of the author and the master user; a comment on a marked stretch of the sheet draws that stretch; replies; the reviews) and **Sheet** (the whole proposed sheet; **Proposed** and **Now**). **Review** opens **Finish your review**: a decision per item (Accept, with the name changeable; Ask for a change; Refuse). What is accepted is written in one transaction; the author is the creator of the version |
 | 14.3 Sharing | **Share my library** (user menu, Shared page), **My library → Shared**, a shared song (Play, open read only, **Add to my library**). The counts beside **Requests** and **Review** |
 | 14.4 Documentation | `requests.md` (new); the other pages of section 9 |
 
-Checks (section 7): backend 1,132 tests on the CPU, only the 3 known CPU failures; the 12 new tests
-pass; `check:requests` (new, 35 checks) and the browser checks of the pages it touches pass; lint,
+Checks (section 7): backend 1,132 tests on the CPU, only the 3 known CPU failures; the 13 new tests
+pass; `check:requests` (new, 40 checks) and the browser checks of the pages it touches pass; lint,
 build and `check-links.py` pass; `make db-check` reports no problem.
 
 # 2. The decision asked at the start
@@ -152,7 +152,7 @@ It walks: **Share my library**; **Shared**, the song, **Add to my library**, the
 a new artist; **Review** (the count, oldest first); the artist accepted and a change asked on the
 song; the user's count; **Change and send again**; accepted; the version request (the proposed sheet
 drawn, **Play**), accepted; **Ask for a fixed version**, accepted; a change withdrawn; the rights;
-390 px and dark. **35 checks passed**, no console error and no failed request; nothing left behind
+390 px and dark. **35 checks passed** in the first layout, no console error and no failed request; nothing left behind
 (the user, the public rows, the share). Run seven times in all; the last two into
 [`screenshots/phase-14/`](screenshots/phase-14/). One run of the seven failed at "the proposal plays":
 Play answers once the browser has enough of the 4-minute recording, and on the busy machine that
@@ -170,11 +170,11 @@ The two sheets of side by side load like a passage page's two sheets (Phase 9).
 | Check | Result |
 |---|---|
 | Backend, full run **on the CPU** (another project held the GPU) | 1,132 tests: the 3 known CPU failures (`test_the_worked_example_at_00_46_prints_three_equal_corcheas` and the two Transkun tests that fail only without a GPU); every other test passed. Phase 13: 1,120 |
-| `test_requests.py` (new) | 12 passed |
+| `test_requests.py` (new) | 13 passed (12, and the conversation's after section 11), with `test_public`, `test_library`, `test_rights`, `test_database`, `test_passages`, `test_paste` after the change of section 11 |
 | `black`, `flake8`, `mypy` on the new and changed backend modules | clean |
 | The migration against the models; down to `0003` and up | no difference |
 | `tsc -b`, `npm run lint`, `npm run build` | clean |
-| `check:requests` (new) | 35 checks passed, nothing left behind |
+| `check:requests` (new) | 35 checks passed in the first layout; **40** in the layout of section 11, twice, into [`screenshots/phase-14/`](screenshots/phase-14/); nothing left behind |
 | `check:library`, `check:public`, `check:play`, `check:projects`, `check:compose` (the library song and playlist pages, the public pages, the project page and Play mode changed) | 27, 38, 32, 26, 24 checks passed, run one at a time |
 | `make db-check` on the real `.database/` | no problem (45 projects, as before the checks), after the migration and after every check |
 | `scripts/docs/check-links.py` | passes |
@@ -189,8 +189,8 @@ Run on the new pages and dialogs, with the screenshots of [`screenshots/phase-14
 | 1 | One sentence | Send your work to the Public Library, and let the master user decide each part of it |
 | 2 | Every sentence a label, control or fact | Only the empty states, the left-out songs of a playlist, and the confirmation of **Withdraw** |
 | 3 | Words above the first content | A request: its title, then one line (status in words, kind, who, when) |
-| 4 | Very wide | Text items at most 960 px; only the side by side takes the window (shot 11); the tables are sized by their content (shot 07) |
-| 5 | Narrow (390 px, shots 15, 16) | 0 px of sideways scroll; the two sheets one under the other; the creator's line cut with "…" |
+| 4 | Very wide | The conversation at most 1,180 px with its items column; the Sheet tab takes the window (shot 11); the tables are sized by their content (shot 07) |
+| 5 | Narrow (390 px, shots 16, 17) | 0 px of sideways scroll; the items column above the timeline; a stretch's sheet wraps its lines |
 | 6 | Longest, shortest, none | Long titles cut (full on hover); "Nothing yet: this is a new version" on the empty side; "Nobody shares a library with you yet"; "Nothing to review"; a project no longer kept says so |
 | 7 | Buttons say what happens | "Publish", "Send request", "Send again", "Send decision", "Withdraw request", "Change and send again", "Accept", "Ask for a change", "Refuse", "Propose this song", "Add an artist" |
 | 8 | Helper lines | "From the Public Library" / "A new artist" under an artist; "One or two" under Genres; "Replaces your “easy”…"; the name rule only when a name breaks it |
@@ -205,20 +205,24 @@ Run on the new pages and dialogs, with the screenshots of [`screenshots/phase-14
 | 01 | Share my library |
 | 02, 03 | Shared; the shared song added |
 | 04 | **Publish** |
-| 05 | The request sent: side by side with nothing on the left |
+| 05 | The request sent: its Conversation |
 | 06 | **Propose a song** |
-| 07, 08 | Review; the decisions on a request |
+| 07, 08 | Review; **Finish your review** |
 | 09, 10 | My requests with changes asked; **Change and send again** |
-| 11 | Side by side, the proposal playing |
-| 12 | **Ask for a fixed version** |
-| 13 | The public song with Hard and Other versions by the user |
-| 14 | A request withdrawn |
-| 15, 16, 17 | 390 px (a request, Review); dark |
+| 11 | The Sheet tab: **Comment on this stretch** |
+| 12 | The Conversation: the request as sent, the comment on a stretch with the stretch drawn and a reply, a comment |
+| 13 | **Ask for a fixed version** |
+| 14 | The public song with Hard and Other versions by the user |
+| 15 | A request withdrawn |
+| 16, 17, 18 | 390 px (a request, Review); dark |
 
 # 9. Open points
 
-- **The side by side sheets draw the sheet's passage header** ("negra = 176 ms · ≈342 BPM") and its
-  scrub bar, as every Sheet step and the passage page do since Phases 2 and 9. Not changed here.
+- **A sheet on the request page draws the sheet's passage header** ("negra = 176 ms · ≈342 BPM") and
+  its scrub bar, as every Sheet step and the passage page do since Phases 2 and 9; the read-only
+  sheet of the Sheet tab shows its title line ("Untitled" when the sheet has none). Not changed here.
+- **The full backend run** (1,132) was before section 11; after it, the request tests and their
+  neighbours were run (all pass), not the whole suite again.
 - **A merge of public artists or songs by request** is not built (section 16.1 does not name it), so
   Phase 12's open point (a merge must keep both import keys) stays open.
 - **New regions by request** (`spain`, `catalan`) wait for Q-5: a request chooses among the regions
@@ -228,6 +232,10 @@ Run on the new pages and dialogs, with the screenshots of [`screenshots/phase-14
   `public_fixture remove-user`, which is a host command, not a page.
 
 # 10. Learnings for later phases
+
+- **The user reads a review page as a pull request**: a timeline of comments and events, the
+  changes in a tab of their own, comments anchored to a stretch. Two columns with one often empty
+  waste the page (section 11).
 
 - **`database.HEAD_REVISION` decides whether the backend migrates**: a new revision file is not
   enough, the constant must name it. Write both together, after `make db-backup`.
@@ -239,3 +247,36 @@ Run on the new pages and dialogs, with the screenshots of [`screenshots/phase-14
   busy machine (60 s here), or it fails while the page is right.
 - **Escape after choosing in a multiple Autocomplete closes the dialog**, because the list already
   closed on the choice: a script should not press it.
+
+# 11. The request page laid out like a pull request (asked 2026-10-18)
+
+**What the user saw.** The first layout put, under each item, the version now and the proposal in
+two columns, and the notes as a plain list at the end. For a new version the left column was empty,
+so half the page was white, and the notes did not read like a conversation.
+
+**What the user asked.** The page should read like a pull request on GitHub: a **Conversation** tab
+with the timeline, the comments and the decisions, and a tab with the full sheet. The reviewer
+should be able to mark a stretch of the sheet and comment on it, and the conversation should show
+that stretch with the comment, as GitHub shows the lines a comment is about.
+
+**What was built.**
+
+| Part | How |
+|---|---|
+| Conversation (`/requests/:id`) | `Conversation.tsx`: one line down the left; the first box is the request as sent (the note, then what each item proposes, `ItemBody`); comment boxes with the author, "Author" or "Reviewer", the time; review boxes with each item's decision and words; "sent it again" and "withdrew it" as events; **Comment** at the end for the author and the master user. Beside it, the items with their decisions, the kind and the dates |
+| A comment on a stretch | On the Sheet tab, marking a stretch offers **Comment on this stretch** (the read-only sheet's `stretchAction`, Phase 10). The backend keeps a project of just that stretch (`requests._excerpt`: `paste.read_passage` then `paste.paste` into a project of kind `passage` in the layer `request`, owned by the author; no audio bytes), so the Conversation draws it as it was, with its own Play, even after the request is sent again ("Outdated" then). At most two minutes |
+| Replies | One level, as on a pull request: a reply to a reply joins the thread |
+| Sheet (`/requests/:id/sheet`) | `RequestSheet.tsx`: the whole proposed sheet at the page's width, read only; **Proposed** and **Now** switch when the Public Library has a version it would replace; one part at a time. A request with no piano sheet has **Changes** there |
+| Review | **Review** in the header opens **Finish your review** (`ReviewDialog.tsx`), the decisions as before |
+| Revision `0005` | `request_comments.kind` (`comment`, `review`, `sentAgain`, `withdrawn`), `item_id`, `parent_id`, `details` (JSON). Added only; the real database moved after `make db-backup` (`/mnt/ssd2/aimpromptu/.database-20261018-111419.tar.zst`), checked read only afterwards (revision `0005`, the one comment of anna's request kept as a `comment`, integrity ok). A request decided before `0005` has no review row: the conversation draws one from its items' decisions |
+| Route | `POST /requests/{id}/comments` (`endpoints.md` §7.4) |
+| Removed | `CompareSheets.tsx` (the two columns) |
+
+**Choices made without asking**, each the pull request's own way: a comment on a stretch is posted
+at once (GitHub's "Add single comment"; a batch of pending comments would add a state to explain);
+the author and the master user both comment and reply at any time; one level of replies.
+
+**Checks.** `test_requests.py` has one more test (the conversation: a comment on a stretch and its
+project, its rights, replies, refusals, the events), and two tests read the events. `check:requests`
+now walks the Conversation and Sheet tabs, a comment on a marked stretch, its drawing and Play, a
+reply and a comment by the author, and **Finish your review**: 40 checks, twice.

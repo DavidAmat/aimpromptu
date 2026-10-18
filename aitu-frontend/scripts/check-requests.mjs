@@ -10,11 +10,13 @@
  *
  * 1. Sharing: **Share my library** from the user menu; the user's **Shared**, the song, **Add to my
  *    library**; the shared version opens read only.
- * 2. **Publish** a version: the dialog, the public song chosen, the request page (side by side).
+ * 2. **Publish** a version: the dialog, the public song chosen, the request page (Conversation, Sheet).
  * 3. **Propose a song** with a new artist; the master user's **Review** (the count, oldest first);
  *    the artist accepted, a change asked on the song; the user's count; **Change and send again**;
  *    accepted.
- * 4. The version request: the two sheets, Play, accepted; the version on the public song by the user.
+ * 4. The version request: the Sheet tab, a comment on a marked stretch, the stretch drawn in the
+ *    Conversation and played, the author's reply and comment; accepted; the version on the public
+ *    song by the user.
  * 5. **Ask for a fixed version** (Hard), accepted; **Suggest a change**, withdrawn.
  * 6. Rights: the user cannot open Review; sharing stopped, the shared song is gone.
  * 7. 390 px and dark.
@@ -115,11 +117,28 @@ const sidebarCount = async (page, label) => {
   const text = await page.getByRole('navigation', { name: 'Sections' }).getByRole('link', { name: new RegExp(`^${label}`) }).innerText();
   return Number(text.replace(/[^0-9]/g, '') || 0);
 };
-/** Decide one item on the review page: a decision, and a comment when it is not an acceptance. */
+/** **Review** on a request's page opens Finish your review. */
+const openReview = async () => {
+  await master.getByTestId('review').click();
+  await master.getByRole('dialog').getByText('Finish your review').waitFor();
+};
+/** Decide one item in Finish your review: a decision, and a comment when it is not an acceptance. */
 const decideItem = async (itemId, decision, comment) => {
   const box = master.getByTestId(`decide-${itemId}`);
   await box.getByRole('button', { name: decision }).click();
   if (comment) await box.getByRole('textbox').last().fill(comment);
+};
+/** Mark a stretch on the first line's frame ruler, from `from` to `to` of its width. */
+const markStretch = async (page, from, to) => {
+  await page.locator('.grid-frame-ruler').first().scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  const box = await page.locator('.grid-frame-ruler').first().boundingBox();
+  await page.mouse.click(box.x + box.width * from, box.y + box.height / 2);
+  await page.waitForTimeout(300);
+  await page.keyboard.down('Shift');
+  await page.mouse.click(box.x + box.width * to, box.y + box.height / 2);
+  await page.keyboard.up('Shift');
+  await page.waitForTimeout(400);
 };
 
 try {
@@ -189,9 +208,11 @@ try {
   await user.getByRole('button', { name: 'Open' }).click();
   await user.getByTestId('request-status').waitFor();
   check('the request waits for review', (await user.getByTestId('request-status').innerText()) === 'Waiting for review');
-  check('the request shows the proposal beside an empty side', await until(user, async () => (await user.getByTestId('compare-proposed').locator('svg').count()) > 0, 60000));
+  check('the conversation opens on the request as sent', (await user.getByTestId('opening').innerText()).includes('Piano sheet'));
   await shot(user, '05-request-sent');
-  const versionRequest = Number(user.url().split('/').pop());
+  await user.getByRole('tab', { name: 'Sheet' }).click();
+  check('the Sheet tab draws the proposal, its own address', await until(user, async () => (await user.getByTestId('request-sheet-proposed').locator('svg').count()) > 0, 60000) && user.url().endsWith('/sheet'));
+  const versionRequest = Number(/requests\/(\d+)/.exec(user.url())?.[1]);
 
   // 3. Propose a song with a new artist.
   await user.goto(`${base}/public/songs`);
@@ -216,7 +237,7 @@ try {
   await shot(master, '07-review');
   await master.goto(`${base}/admin/requests/${songRequest}`);
   const songItems = (await json(`${api}/requests/${songRequest}`)).itemList;
-  await master.getByTestId(`decide-${songItems[0].id}`).waitFor();
+  await openReview();
   await decideItem(songItems[0].id, 'Accept');
   await decideItem(songItems[1].id, 'Ask for a change', 'Add its year, please');
   await shot(master, '08-review-decisions');
@@ -242,7 +263,8 @@ try {
 
   await master.goto(`${base}/admin/requests/${songRequest}`);
   const songItemsAgain = (await json(`${api}/requests/${songRequest}`)).itemList.filter((one) => one.decision === null);
-  await master.getByTestId(`decide-${songItemsAgain[0].id}`).waitFor();
+  check('the conversation shows the review and the sending again', await until(master, async () => (await master.getByTestId('review-event').count()) === 1 && (await master.getByText('sent it again').count()) === 1));
+  await openReview();
   await decideItem(songItemsAgain[0].id, 'Accept');
   await master.getByTestId('send-decision').click();
   check('the song is accepted', await until(master, async () => (await master.getByTestId('request-status').innerText()) === 'Accepted'));
@@ -251,16 +273,37 @@ try {
   const publicSong = newSong ? await json(`${api}/public/songs/${newSong}`) : null;
   check('the new song is in the Public library with its year and artist', publicSong?.year === 2026 && publicSong.artists[0]?.name === artistName && publicSong.genres[0] === 'pop');
 
-  // 4. The version request, side by side.
-  await master.goto(`${base}/admin/requests/${versionRequest}`);
-  check('the review draws the proposed sheet', await until(master, async () => (await master.getByTestId('compare-proposed').locator('svg').count()) > 0, 60000));
-  check('the current side says it is a new version', (await master.getByTestId('compare-current').innerText()).includes('new version'));
-  await master.getByTestId('compare-play-proposed').click();
+  // 4. The version request: a comment on a stretch of its sheet, a reply, then accepted.
+  await master.goto(`${base}/admin/requests/${versionRequest}/sheet`);
+  check('the review draws the proposed sheet', await until(master, async () => (await master.getByTestId('request-sheet-proposed').locator('svg').count()) > 0, 60000));
+  await markStretch(master, 0.2, 0.45);
+  await master.getByTestId('readonly-stretch-action').click();
+  const stretchDialog = master.getByRole('dialog');
+  await stretchDialog.getByRole('textbox', { name: 'Comment' }).fill('The left hand is too low here');
+  await shot(master, '11-comment-on-a-stretch');
+  await stretchDialog.getByTestId('send-stretch-comment').click();
+  check('a comment on a marked stretch is added', await until(master, async () => (await master.getByText('Comment added').count()) > 0, 60000));
+  await master.getByRole('button', { name: 'Open the conversation' }).click();
+  check('the conversation draws the stretch above the comment', await until(master, async () => (await master.getByTestId('stretch-comment').locator('svg').count()) > 0, 60000));
+  await master.getByTestId('stretch-comment').getByRole('button', { name: 'Play this stretch' }).click();
   // Play answers once the browser has enough of the recording: slower while the machine is busy.
-  check('the proposal plays', await until(master, async () => (await master.getByRole('button', { name: 'Pause' }).count()) > 0, 60000));
-  await shot(master, '11-side-by-side');
-  await master.getByRole('button', { name: 'Pause' }).click();
+  check('the stretch plays', await until(master, async () => (await master.getByTestId('stretch-comment').getByRole('button', { name: 'Pause' }).count()) > 0, 60000));
+  await master.getByTestId('stretch-comment').getByRole('button', { name: 'Pause' }).click();
+  await user.goto(`${base}/requests/${versionRequest}`);
+  const threadId = (await asReader(`/requests/${versionRequest}`)).body.comments.find((one) => one.details.excerpt)?.id;
+  await user.getByTestId(`reply-${threadId}-open`).click();
+  await user.getByTestId(`reply-${threadId}`).getByRole('textbox').fill('I will raise it');
+  await user.getByTestId(`reply-${threadId}`).getByRole('button', { name: 'Reply' }).click();
+  check('the author replies in the thread', await until(user, async () => (await user.getByTestId('reply').count()) === 1));
+  await user.getByTestId('comment-box').getByRole('textbox').fill('Thanks for looking at it');
+  await user.getByTestId('comment-box').getByRole('button', { name: 'Comment' }).click();
+  check('the author comments on the request', await until(user, async () => (await user.getByTestId('comment').count()) === 1));
+  await master.reload();
+  await master.getByTestId('stretch-thread').waitFor();
+  await until(master, async () => (await master.getByTestId('stretch-comment').locator('svg').count()) > 0, 60000);
+  await shot(master, '12-conversation');
   const versionItem = (await json(`${api}/requests/${versionRequest}`)).itemList[0];
+  await openReview();
   await decideItem(versionItem.id, 'Accept');
   await master.getByTestId('send-decision').click();
   check('the version is accepted', await until(master, async () => (await master.getByTestId('request-status').innerText()) === 'Accepted', 30000));
@@ -272,13 +315,13 @@ try {
   await user.goto(`${base}/public/songs/${target.id}`);
   await user.getByTestId('public-version').last().getByRole('button', { name: 'Version actions' }).click();
   await user.getByRole('menuitem', { name: 'Ask for a fixed version' }).click();
-  await shot(user, '12-ask-fixed-version');
+  await shot(user, '13-ask-fixed-version');
   await user.getByRole('dialog').getByTestId('send-request').click();
   await user.getByText('Request sent to the master user').waitFor();
   const fixedRequest = (await asReader('/requests')).body.find((one) => one.kind === 'fixedVersion')?.id;
   await master.goto(`${base}/admin/requests/${fixedRequest}`);
   const fixedItem = (await json(`${api}/requests/${fixedRequest}`)).itemList[0];
-  await master.getByTestId(`decide-${fixedItem.id}`).waitFor();
+  await openReview();
   await decideItem(fixedItem.id, 'Accept');
   await master.getByTestId('send-decision').click();
   check('the fixed version is accepted', await until(master, async () => (await master.getByTestId('request-status').innerText()) === 'Accepted', 30000));
@@ -286,7 +329,7 @@ try {
   check('Hard is the user\'s version, by the user', fixed[0]?.name === 'hard' && fixed[0].creator === reader.username && fixed[0].projectId === userVersion?.projectId);
   await master.goto(`${base}/public/songs/${target.id}`);
   await master.getByTestId('public-play').waitFor();
-  await shot(master, '13-public-song-with-versions');
+  await shot(master, '14-public-song-with-versions');
 
   await user.goto(`${base}/public/songs/${newSong}`);
   await user.getByRole('button', { name: 'Song actions' }).click();
@@ -300,7 +343,7 @@ try {
   await user.getByTestId('withdraw').click();
   await user.getByRole('dialog').getByRole('button', { name: 'Withdraw request' }).click();
   check('a waiting request is withdrawn', await until(user, async () => (await user.getByTestId('request-status').innerText()) === 'Withdrawn'));
-  await shot(user, '14-withdrawn');
+  await shot(user, '15-withdrawn');
 
   // 6. Rights.
   check('the user cannot open Review', (await asReader('/admin/requests')).status === 403);
@@ -313,21 +356,22 @@ try {
   await master.setViewportSize({ width: 390, height: 844 });
   await master.goto(`${base}/admin/requests/${versionRequest}`);
   await master.getByTestId('request-status').waitFor();
-  await until(master, async () => (await master.getByTestId('compare-proposed').locator('svg').count()) > 0, 60000);
+  await until(master, async () => (await master.getByTestId('stretch-comment').locator('svg').count()) > 0, 60000);
   check('390 px: no sideways scroll on a request', await master.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
-  await shot(master, '15-narrow-request');
+  await shot(master, '16-narrow-request');
   await master.goto(`${base}/admin/requests`);
   await master.getByRole('heading', { name: 'Review' }).waitFor();
   await master.getByRole('button', { name: 'All' }).click();
   await master.locator('tbody tr').first().waitFor();
   check('390 px: no sideways scroll on Review', await master.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
-  await shot(master, '16-narrow-review');
+  await shot(master, '17-narrow-review');
   await master.setViewportSize({ width: 1440, height: 900 });
   await master.emulateMedia({ colorScheme: 'dark' });
   await master.evaluate(() => localStorage.setItem('mui-mode', 'dark'));
-  await master.goto(`${base}/admin/requests/${songRequest}`);
+  await master.goto(`${base}/admin/requests/${versionRequest}`);
   await master.getByTestId('request-status').waitFor();
-  await shot(master, '17-dark-request');
+  await until(master, async () => (await master.getByTestId('stretch-comment').locator('svg').count()) > 0, 60000);
+  await shot(master, '18-dark-request');
   await master.evaluate(() => localStorage.removeItem('mui-mode'));
   check('the counts are back to none', (await json(`${api}/requests/counts`)).review === 0);
 } catch (error) {

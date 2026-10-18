@@ -139,7 +139,9 @@ release date, chart history and popularity of an album
 ([music-library/reconciliation.md](music-library/reconciliation.md)). Revision `0004` (Phase 14)
 lets a project be in the layer `request` (the copy a request sends) and a request be of the kind
 `playlist` ([music-library/requests.md](music-library/requests.md)); the real database moved to it
-on 2026-10-16, after `make db-backup`.
+on 2026-10-16, after `make db-backup`. Revision `0005` (2026-10-18) gives a request a conversation
+like a pull request's: a comment's kind, its item, the comment it replies to, and its stretch of
+the sheet (`request_comments`); the real database moved to it after `make db-backup`.
 
 **The running backend migrates the real database as soon as a new revision is in `src/`**: it
 reloads on every change of a file there, and opens the database at the newest revision. Code of an

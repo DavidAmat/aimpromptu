@@ -69,9 +69,28 @@ class ItemOut(_Camel):
 
 
 class CommentOut(_Camel):
+    id: int
+    #: ``comment``, or an event: ``review``, ``sentAgain``, ``withdrawn``.
+    kind: str
     author: str
     body: str
     created_at: datetime = Field(..., alias="createdAt")
+    item_id: int | None = Field(None, alias="itemId")
+    parent_id: int | None = Field(None, alias="parentId")
+    #: A comment on a stretch: ``partId``, ``fromMs``, ``toMs``, ``excerpt``, ``excerptPart``,
+    #: ``anchorMs``. A review: ``items``, each ``{id, kind, decision, comment}``.
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class CommentIn(_Camel):
+    body: str = Field(..., max_length=4000)
+    #: A reply to this comment.
+    parent_id: int | None = Field(None, alias="parentId")
+    #: A comment on a stretch of the proposed sheet of this item: its part and its stretch.
+    item_id: int | None = Field(None, alias="itemId")
+    part_id: str | None = Field(None, alias="partId")
+    from_ms: float | None = Field(None, alias="fromMs", ge=0)
+    to_ms: float | None = Field(None, alias="toMs", gt=0)
 
 
 class DetailOut(SummaryOut):
@@ -191,7 +210,16 @@ def detail_out(request_id: int) -> DetailOut:
             for one in found.items
         ],
         comments=[
-            CommentOut(author=one.author, body=one.body, created_at=one.created_at)
+            CommentOut(
+                id=one.id,
+                kind=one.kind,
+                author=one.author,
+                body=one.body,
+                created_at=one.created_at,
+                item_id=one.item_id,
+                parent_id=one.parent_id,
+                details=one.details,
+            )
             for one in found.comments
         ],
         proposal=found.proposal,
@@ -274,4 +302,32 @@ def send_again(request_id: int, body: library_requests.Proposal) -> DetailOut:
 def withdraw(request_id: int) -> DetailOut:
     with _answers():
         library_requests.withdraw(request_id, current_user_id())
+        return detail_out(request_id)
+
+
+@router.post(
+    "/{request_id}/comments",
+    response_model=DetailOut,
+    response_model_by_alias=True,
+    status_code=201,
+)
+def comment(request_id: int, body: CommentIn) -> DetailOut:
+    """A comment of the author or the master user: on the request, a reply, or on a stretch of
+    the proposed sheet (a project of just that stretch is kept beside it, so the conversation
+    draws it as it was)."""
+    user = context.current()
+    if user is None:
+        raise HTTPException(status_code=401, detail="Sign in first.")
+    with _answers():
+        library_requests.add_comment(
+            request_id,
+            user.id,
+            user.is_master,
+            body.body,
+            parent_id=body.parent_id,
+            item_id=body.item_id,
+            part_id=body.part_id,
+            from_ms=body.from_ms,
+            to_ms=body.to_ms,
+        )
         return detail_out(request_id)
