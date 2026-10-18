@@ -18,7 +18,7 @@ The plan's section 3.
 - [x] **Q-2** The app on the home network, with a password login and a master user from `.env`. Answered 2026-10-05.
 - [x] **Q-3** A total promotion may change the length (everything after moves); cuts stay ranges in the Personal Vault, and the audio is written again on save to the Private Library. Answered 2026-10-05.
 - [x] **Q-4** Video into From source, Notes Falling into Play mode, the video development pages into Lab; the Playground, the old `.npz` library and the text-notation MVP deleted. Answered 2026-10-05.
-- [p] **Q-5** The sources of the Public Library. Worldwide: `musicchartsarchive.com`, downloaded by the parallel work (`public-library-build/`; in fact the US chart). The `spain` and `catalan` regions, the genres and the 8 seed songs not on that chart: raised in Phase 12 with a recommendation ([report](02-implementation-phase-12.md) section 9).
+- [p] **Q-5** The sources of the Public Library (left open when the implementation closed, for later work). Worldwide: `musicchartsarchive.com`, downloaded by the parallel work (`public-library-build/`; in fact the US chart). The `spain` and `catalan` regions, the genres and the 8 seed songs not on that chart: raised in Phase 12 with a recommendation ([report](02-implementation-phase-12.md) section 9).
 - [x] **Q-6** The popularity weights. **Answered 2026-10-16:** objective criteria instead of a hand ranking; the plan's formula with the power of a week's points at 8 ([report](02-implementation-phase-12.md) section 5.3).
 - [x] **Q-7** Offline downloads per project: **left for the production version**. Answered 2026-10-15 (raised in Phase 6).
 - [x] **Q-8** Live notes from the video reader: **one job with its stages**, the notes at the end (61 s for a 3:09 video, measured in Phase 5). Answered 2026-10-15.
@@ -284,13 +284,16 @@ request, **Playlist**. Revision `0004` moved the real `.database/` (after `make 
 ## [x] Story 14.4: Documentation
 - [x] Task 14.4.1 `music-library/requests.md` (new), `08-security.md` (rights), `endpoints.md` (§7.4, §7.5); `ontology.md`, `private-library.md`, `music-library/README.md`, `00-index.md`, `07-database.md`, `paths-and-data.md`, `backend/api.md`, `frontend/pages.md`, `aitu-frontend/README.md`; the plan's "as built in Phase 14" notes.
 
-# [ ] Phase 15: The checks, the documentation, and closing
+# [x] Phase 15: The checks, the documentation, and closing
 
-## [ ] Story 15.1: The journey
-- [ ] Task 15.1.1 The whole journey with two users on temporary copies, with timings.
+Built 2026-10-18 ([`02-implementation-phase-15.md`](02-implementation-phase-15.md)); merged into
+`master` after the user's ok (2026-10-18). Q-5 stays open for later work.
 
-## [ ] Story 15.2: The cleanup
-- [ ] Task 15.2.1 Old redirects and the code that read `aitu-backend/data/` removed.
+## [x] Story 15.1: The journey
+- [x] Task 15.1.1 The whole journey with two users on temporary copies, with timings (`npm run check:journey`: two temporary users and the master user, 21 checks, passed twice; the times of 16 steps).
 
-## [ ] Story 15.3: Documentation
-- [ ] Task 15.3.1 `00-project-complete-overview.md`, `01-project.md`, `05-deployment.md` rewritten; run instructions in one place; the folder README marked complete.
+## [x] Story 15.2: The cleanup
+- [x] Task 15.2.1 Old redirects and the code that read `aitu-backend/data/` removed (`LEGACY_REDIRECTS`, `LegacyRedirect.tsx`; `scripts/migrate/`, its test, `paths.data_dir()`, `AITU_DATA_DIR`; the Lab records moved to `tests/fixtures/frame-examples/`).
+
+## [x] Story 15.3: Documentation
+- [x] Task 15.3.1 `00-project-complete-overview.md`, `01-project.md`, `05-deployment.md` rewritten; run instructions in one place (`04-local-development.md`; the root and service READMEs, `02b-local-setup.md` and the area READMEs link to it); the folder README marked complete.

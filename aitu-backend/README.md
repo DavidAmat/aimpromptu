@@ -12,12 +12,9 @@ the model: [time-model.md](../context/backend/time-model.md) ·
 the engine: [muscriptor.md](../context/backend/muscriptor.md) ·
 the steps: [pieces-and-revisions.md](../context/backend/pieces-and-revisions.md)
 
-In the container (the usual way, from the repository root): `make up`, and `make test-backend` for
-the tests. Natively:
-
-```bash
-uv sync --extra muscriptor && make serve   # http://127.0.0.1:8765
-```
+It runs in a container from the repository root (`make up`; the tests with `make test-backend`).
+Every way to run and test it, natively too, is in
+[context/04-local-development.md](../context/04-local-development.md).
 
 Interactive API docs: `/docs`.
 
@@ -36,7 +33,8 @@ src/aitu_backend/
                   # the rights table and the check every route runs
   audio/          # upload, recording ingest, waveform, youtube, cuts and the frame table; the
                   # audio written again with only the ranges in use on Save to library
-  library/        # the Private Library: artists, names, songs, versions; save, edit, history
+  library/        # the music library: private and public rows, save, edit, history, playlists, the
+                  # public import, popularity, pull, requests, shares
   transcription/  # engines (MuScriptor first), the GPU queue, the live stream, the lag
                   # correction, filters, events -> the wall-clock matrix, jobs, saved hands
   pieces/         # the state of each step of a piece; the note operations
@@ -61,8 +59,8 @@ which is why the column length is a query parameter rather than a migration.
 Everything the app stores is in `.database/` at the repository root (`AITU_DATABASE_DIR` moves it):
 the SQLite file `aitu.sqlite`, the project bundles, and the audio store `audio/<sha256>.<ext>`.
 Layout and the `make db-backup`, `db-restore`, `db-check` and `db-reindex` targets:
-[context/07-database.md](../context/07-database.md). `data/` is the store before implementation 02,
-Phase 3, read only by the migration ([data/README.md](data/README.md)).
+[context/07-database.md](../context/07-database.md). The store before implementation 02, Phase 3
+(`data/`) is gone, with the migration that read it (Phase 15).
 
 ## Development
 

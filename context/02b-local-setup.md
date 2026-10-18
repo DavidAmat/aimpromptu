@@ -542,39 +542,30 @@ Implementation 08 moved AImpromptu from the Mac to Ubuntu, because its transcrip
 | The repositories `aimpromptu` and `vexflow-v2` (side by side), and `muscriptor` | Ubuntu, `/home/david/Documents/projects/music/` |
 | The IDE session (Cursor) and the AI agent | Ubuntu |
 | The backend and the frontend | Ubuntu, in two Docker containers (`compose.yaml` at the repository root) |
-| Every record and every file of the app: `.database/` at the root of the repository, gitignored | Ubuntu: a link to `/mnt/ssd2/aimpromptu/.database` (implementation 02, Phase 3), mounted into the backend container at `/database`. Backups (`make db-backup`) land beside it |
-| The old piece store (`aitu-backend/data/`, gitignored) | Ubuntu, read only by the migration of Phase 3; the user deletes it after checking the app. The Mac's copy, `/Volumes/DevSSD/Documents/projects/music/aimpromptu`, is the state of 2026-09-28 and is no longer updated |
+| Every record and every file of the app: `.database/` | Ubuntu, `/mnt/ssd2/aimpromptu/.database`, named by `AITU_DATABASE_DIR` in `.env` (not a link in the repository since 2026-10-06), mounted into the backend container at `/database`. Backups (`make db-backup`) land beside it |
+| The old piece store (`aitu-backend/data/audio/`) | Gone: moved into `.database/` by the migration of implementation 02, Phase 3, then deleted by the user; Phase 15 removed the migration. The Mac's copy, `/Volumes/DevSSD/Documents/projects/music/aimpromptu`, is the state of 2026-09-28 and is no longer updated |
 | The browser | The Mac, at `http://ubuntu:5173` over the home network (implementation 02, Phase 4); the SSH tunnel is the fallback |
 | Headless screenshots and browser checks by the agent | Ubuntu (Playwright's Chromium in `~/.cache/ms-playwright`) |
 
 ### 12.2 Start the app (on Ubuntu)
 
-```bash
-cd ~/Documents/projects/music/aimpromptu
-make up        # builds the images if needed, starts both containers, waits until they answer
-make logs      # follow both
-make down      # stop both
-```
-
-The backend container reserves the GPU and loads MuScriptor `large` at start (about 3.5 GB of GPU memory). `HF_TOKEN` (the Hugging Face token of the account that accepted the MuScriptor licence) is exported in `~/.zshrc`, and Compose reads it from the shell. The frontend container publishes 5173 (the page) on every address of the Ubuntu machine (`WEB_BIND`, default `0.0.0.0`), so the Mac reaches it over the home network. The backend container publishes 8765 on `127.0.0.1` only, for `curl` on Ubuntu: the browser reaches the backend through the page's `/api`. `make up` ends by printing the address to open from the Mac.
+`make up` from the repository root builds the images if needed, starts both containers and waits
+until they answer. The backend container reserves the GPU and loads MuScriptor `large` at start
+(about 3.5 GB of GPU memory); `HF_TOKEN` (the Hugging Face token of the account that accepted the
+MuScriptor licence) is exported in `~/.zshrc`, and Compose reads it from the shell. The page
+listens on port 5173 of every address of the machine (`WEB_BIND`); the backend on `127.0.0.1:8765`
+only. Every command is in [04-local-development.md](04-local-development.md), section 1.
 
 ### 12.3 Open the app (on the Mac)
 
-Open `http://ubuntu:5173` in the browser of the Mac. The Mac's `/etc/hosts` maps the name `ubuntu` to the machine, and `http://192.168.0.112:5173` works too. One port is enough: the page's own server (Vite) passes `/api` to the backend, including the audio files and the progress stream.
+Open `http://ubuntu:5173` (the Mac's `/etc/hosts` maps `ubuntu`) or `http://192.168.0.112:5173`
+and sign in (12.4). The SSH tunnel (`ssh -N -L 5173:localhost:5173 ubuntu`, or
+`scripts/tunnel-from-mac.sh`, then `http://localhost:5173`) is the fallback, for example away from
+home; it closes when the Mac sleeps. Both ways: [04-local-development.md](04-local-development.md),
+section 2.
 
-Every page asks to sign in first. The **Username** is `master` (or `AITU_MASTER_USERNAME` of `.env`) and the **Password** is the first one, in `.env` on Ubuntu (12.4). The session lasts 30 days and is renewed on use, so the browser of the Mac rarely asks again. Who can sign in and what each user can open is in [08-security.md](08-security.md).
-
-**The SSH tunnel is the fallback**, for example away from home or with `WEB_BIND=127.0.0.1`:
-
-```bash
-ssh -N -L 5173:localhost:5173 ubuntu
-# or, from the Mac's copy of the repository:
-scripts/tunnel-from-mac.sh
-```
-
-Then open `http://localhost:5173` and sign in the same way. The tunnel stays open until Ctrl-C, and it closes when the Mac sleeps; run it again after.
-
-When an agent gives the user a URL of the app, it gives `http://ubuntu:5173`, and the tunnel command as the fallback.
+When an agent gives the user a URL of the app, it gives `http://ubuntu:5173`, and the tunnel command
+as the fallback.
 
 ### 12.4 Things to know
 

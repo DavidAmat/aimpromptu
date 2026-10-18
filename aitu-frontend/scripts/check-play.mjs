@@ -186,9 +186,9 @@ try {
   await page.waitForTimeout(400);
   check('back to the sheet', (await page.locator('[data-play-falling]').count()) === 0);
 
-  await page.goto(`${base}/projects/${copy.id}/notes-falling`);
-  await page.waitForURL(`**/play/${copy.id}?view=falling`);
-  check('the old Notes Falling address opens Play mode on Notes Falling', true);
+  await page.goto(`${base}/play/${copy.id}?view=falling`);
+  await page.waitForSelector('[data-play-falling] [data-note-id]', { timeout: 20000 });
+  check('the address of Notes Falling opens Play mode on it', true);
   await page.goto(`${base}/play/${copy.id}`);
   await waitForSheet();
   await page.keyboard.press('Escape');

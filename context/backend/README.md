@@ -71,13 +71,7 @@ deep-read them; they import `aitu_backend` to stay in sync with the package.
 ## Run
 
 In the container, from the repository root: `make up` (and `make test-backend` for the tests).
-Natively:
-
-```bash
-cd aitu-backend && uv sync --extra muscriptor && make serve
-```
-
-See [04-local-development.md](../04-local-development.md).
+Every way to run and test it, natively too: [04-local-development.md](../04-local-development.md).
 
 ## Where to look deeper
 

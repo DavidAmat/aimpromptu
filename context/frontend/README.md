@@ -58,7 +58,7 @@ Detail: [projects.md](projects.md).
 **Removed in implementation 02, Phase 1** (decision Q-4): the Playground (Upload / Input, Notes
 Falling, Piano Sheet as tabs), the YouTube to Audio page, and the old Piano Library with its
 read-only performance page. A YouTube download is the Source step, Notes Falling is a view of
-Play mode (Phase 11, [play-mode.md](play-mode.md)), and the old paths redirect.
+Play mode (Phase 11, [play-mode.md](play-mode.md)). The old paths redirected until Phase 15.
 
 ## What a reader does on the sheet
 
@@ -91,19 +91,9 @@ recorded notes.
 
 ## Run
 
-The usual way is the containers, from the repository root:
-
-```bash
-make up      # the backend (with the GPU) and the frontend; the app is at http://ubuntu:5173 from the Mac
-```
-
-Sign in as the master user with `AITU_MASTER_PASSWORD` of `.env`.
-
-Natively: `cd aitu-frontend && npm install && npm run dev`, with the backend at
-`http://127.0.0.1:8765`, or `make serve` from the repository root for both. The page calls `/api`,
-and the Vite server passes it to the backend. See
-[04-local-development.md](../04-local-development.md) and
-[aitu-frontend/README.md](../../aitu-frontend/README.md) for every npm script.
+`make up` from the repository root, then `http://ubuntu:5173` from any device at home. Every way to
+run, open and check the app: [04-local-development.md](../04-local-development.md); every npm
+script: [aitu-frontend/README.md](../../aitu-frontend/README.md).
 
 ## Where to look deeper
 

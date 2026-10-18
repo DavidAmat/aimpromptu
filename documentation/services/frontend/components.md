@@ -11,8 +11,7 @@
 
 ## 1. Routes and shell
 
-`layout/routes.ts` is the single place every URL is written (`ROUTES`, the patterns, `LAB_TABS`,
-`LEGACY_REDIRECTS`). Nothing hardcodes a path. `App.tsx` holds the route table.
+`layout/routes.ts` is the single place every URL is written (`ROUTES`, the patterns, `LAB_TABS`). Nothing hardcodes a path. `App.tsx` holds the route table.
 
 | Section | Path | Page |
 |---|---|---|
@@ -23,7 +22,6 @@
 | · From other projects | `/projects/compose` | `pages/compose/ComposePage.tsx` (Phase 10, section 3.2) |
 | · a project | `/projects/:id` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the project reached |
 | · one step | `/projects/:id/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab`, `HandsTab` or `SheetTab` |
-| · Notes Falling | `/projects/:id/notes-falling` | Redirects to `/play/:id?view=falling` (Phase 11, `LEGACY_REDIRECTS`) |
 | · a passage | `/projects/:id/passages/:passageId` | `pages/piece/passage/PassagePage.tsx`, outside `PiecePage` (Phase 9, section 3.1) |
 | **Songs** (My library) | `/library/songs`, `/library/songs/:id` | `pages/library/SongsPage.tsx`, `SongPage.tsx` (Phase 6, section 10) |
 | **Artists** (My library) | `/library/artists`, `/library/artists/:id` | `pages/library/ArtistsPage.tsx`, `ArtistPage.tsx` |
@@ -31,7 +29,6 @@
 | **Play mode** | `/play/:projectId`, `/play/playlist/:playlistId` | `pages/play/PlayPage.tsx`, outside the shell (`RequireUser` only), keyed by the id (`PlayRoute` in `App.tsx`; Phase 11, section 4) |
 | **Users** (Admin) | `/admin/users` | `pages/admin/UsersPage.tsx`, inside `RequireMaster` |
 | **Lab** (Admin) | `/admin/lab/<tab>` | `layout/LabLayout.tsx` and `pages/video/`, inside `RequireMaster` |
-| (old paths) | `/piece/...`, `/video/...`, `/youtube`, `/playground/...`, `/library`, `/library/play/...`, `/projects/:id/notes-falling` | `layout/LegacyRedirect.tsx`, until Phase 15 |
 | (development only) | `/dev/roll-bench` | `pages/dev/RollBenchPage.tsx`, lazy, only when `import.meta.env.DEV` |
 
 `<step>` is one of `PIECE_STEPS` in `api/pieces.ts`: `source`, `audio`, `notes`, `hands`, `sheet`.

@@ -57,9 +57,8 @@ changed ([backend/pieces-and-revisions.md](../backend/pieces-and-revisions.md) s
 | `/projects/new` | The Source step alone, for a new project |
 | `/projects/<id>` | The step the project reached (`resume` of `GET /pieces/{id}/status`) |
 | `/projects/<id>/<step>` | That step: `source`, `audio`, `notes`, `hands` or `sheet` |
-| `/projects/<id>/notes-falling` | Goes to Play mode on Notes Falling (`/play/<id>?view=falling`, Phase 11) |
 
-The old addresses (`/piece/...`) redirect to these. The header of a project is the back arrow to
+The old addresses (`/piece/...`) redirected to these until implementation 02, Phase 15. The header of a project is the back arrow to
 Projects, the title, the step tabs, the primary action, and the `⋯` menu (**Play**,
 **Export**, and **Discard changes** on an edit copy). The primary action is **Save to library** once
 the Sheet step is ready (disabled while a step has unsaved edits), and nothing before.

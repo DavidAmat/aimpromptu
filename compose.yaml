@@ -29,9 +29,6 @@ services:
       AITU_MUSCRIPTOR_MODEL: ${AITU_MUSCRIPTOR_MODEL:-large}
       AITU_MUSCRIPTOR_DTYPE: ${AITU_MUSCRIPTOR_DTYPE:-float16}
       AITU_PRELOAD_ENGINE: ${AITU_PRELOAD_ENGINE:-muscriptor-large}
-      # Inside the container the old data is always at the default path; AITU_DATA_DIR below
-      # chooses which folder of the host is mounted there. Only the migration reads it.
-      AITU_DATA_DIR: ""
       # `.database/` (implementation 02, plan section 8): mounted at /database, whatever the host
       # folder is. On this machine .env sets AITU_DATABASE_DIR to /mnt/ssd2/aimpromptu/.database.
       AITU_DATABASE_DIR: /database
@@ -41,7 +38,6 @@ services:
       HF_HUB_CACHE: /hf/hub
     volumes:
       - .:/work/aimpromptu
-      - ${AITU_DATA_DIR:-./aitu-backend/data}:/work/aimpromptu/aitu-backend/data
       - ${AITU_DATABASE_DIR:-./.database}:/database
       # The MuScriptor weights (5.5 GB for large), shared with the host's own Hugging Face cache.
       - ${HF_HUB_CACHE:-/mnt/ssd2/hf/data/hub}:/hf/hub

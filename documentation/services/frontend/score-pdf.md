@@ -2,7 +2,7 @@
 
 # Score PDF export
 
-The **PDF** button on the Piano Sheet tab (its route is still `/playground/rhythm`). Lays the sheet out on paper, previews it, writes a vector PDF,
+The **PDF** button of a project's Sheet step (`/projects/:id/sheet`). Lays the sheet out on paper, previews it, writes a vector PDF,
 and downloads it. No new npm dependency: the PDF is written here.
 
 ## Files

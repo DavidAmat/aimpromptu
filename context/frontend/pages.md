@@ -5,7 +5,7 @@ Every route, what lives on it, and the rules the shell enforces.
 ## Routes
 
 `src/layout/routes.ts` is the single place a URL is written. Nothing hardcodes a path: the sidebar,
-the step tabs, the Lab tabs and the redirects all read from it. The table of every path, by phase,
+the step tabs and the Lab tabs all read from it. The table of every path, by phase,
 is plan section 6.3 of [implementation 02](../implementations/02-private-web-app/02-plan.md).
 
 | Path | Page | Notes |
@@ -38,11 +38,9 @@ is plan section 6.3 of [implementation 02](../implementations/02-private-web-app
 | `/admin/lab/<tab>` | `LabLayout` | Master user only. `video`, `calibration`, `detection`, `notes`, `examples` (and `examples/:slug`) |
 | `/dev/roll-bench` | `RollBenchPage` | Development builds only: the Notes step's measurements |
 
-**Old paths** redirect to their new home, keeping the query string (`LEGACY_REDIRECTS`):
-`/piece/...` to `/projects/...`, `/video/<tab>` to `/admin/lab/<tab>`, `/youtube` to
-`/projects/new`, `/playground/...` to `/projects`, `/library` and `/library/play/...` (the old
-Piano Library) to `/library/songs`, and `/projects/:id/notes-falling` to Play mode on Notes Falling
-(Phase 11). Phase 15 removes them.
+**Old paths** (`/piece/...`, `/video/<tab>`, `/youtube`, `/playground/...`, `/library/play/...`,
+`/projects/:id/notes-falling`) redirected to their new home for the length of implementation 02.
+Phase 15 removed them: an old path now opens the page for an address that does not exist.
 
 ## Signing in and the guards
 

@@ -76,24 +76,6 @@ aitu-backend/.ruff_cache/
 aitu-backend/.dmypy.json
 aitu-backend/dmypy.json
 
-# -----------------------------------------------------------------------------
-# aitu-backend — the old file store, read only by the migration to .database/
-# (implementation 02, Phase 3; context/07-database.md)
-# Policy: metadata is small and worth versioning, payloads are heavy and
-# reproducible. So `metadata*.json` stays committed and the binaries do not.
-# -----------------------------------------------------------------------------
-# Audio: always heavy, always re-downloadable or re-recordable.
-aitu-backend/data/audio/**
-# Matrices: binary .npz anywhere under data/ ...
-aitu-backend/data/**/*.npz
-# ... except the small committed samples used by tests and demos.
-!aitu-backend/data/examples/**/*.npz
-# Frame examples: the calibration and the hand annotations of one Synthesia
-# screenshot are small, are read by hand and cannot be reproduced, so they are
-# committed. The working-resolution copy beside them is written from the
-# screenshot by one function and is not.
-aitu-backend/data/frame-examples/cache/
-
 # =============================================================================
 # aitu-frontend — Node / Vite / TypeScript
 # =============================================================================

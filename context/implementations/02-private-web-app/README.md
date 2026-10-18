@@ -1,29 +1,14 @@
 # 02: The private web app
 
-**State: live, opened 2026-10-05.** Four decisions answered (Q-1 to Q-4); four more are raised during the
-work (Q-5 to Q-8). Sixteen phases, 0 to 15, each on its own `feat/phase-N` branch. **Phase 0 done and merged
-2026-10-05** ([`02-implementation-phase-0.md`](02-implementation-phase-0.md)). **Phase 1 done and merged
-2026-10-05** ([`02-implementation-phase-1.md`](02-implementation-phase-1.md)). **Phase 2 done and merged
-2026-10-06** ([`02-implementation-phase-2.md`](02-implementation-phase-2.md)). **Phase 3 done and merged
-2026-10-06** ([`02-implementation-phase-3.md`](02-implementation-phase-3.md)); `aitu-backend/data/`
-deleted after the user's check (its committed `README.md` and Lab records stay). **Phase 4 done and merged
-2026-10-06** ([`02-implementation-phase-4.md`](02-implementation-phase-4.md)). **Phase 5 done and
-checked by the user 2026-10-07** ([`02-implementation-phase-5.md`](02-implementation-phase-5.md)),
-merged at the start of Phase 6. **Phase 6 done and checked by the user 2026-10-07**
-([`02-implementation-phase-6.md`](02-implementation-phase-6.md)), merged at the start of Phase 7.
-**Phase 7 done and checked by the user 2026-10-09** ([`02-implementation-phase-7.md`](02-implementation-phase-7.md)),
-merged at the start of Phase 8 (with `vexflow-v2` 0.43.0 pushed). **Phase 8 done 2026-10-09 and checked by the user 2026-10-15**
-([`02-implementation-phase-8.md`](02-implementation-phase-8.md)), merged into `master`. **Phase 9 done
-and checked by the user 2026-10-15** ([`02-implementation-phase-9.md`](02-implementation-phase-9.md)),
-merged into `master` (with `vexflow-v2` 0.44.0 pushed). Q-7 (left for the production version) and
-Q-8 (one job with its stages) are answered. **Phase 10 done and checked by the user 2026-10-15**
-([`02-implementation-phase-10.md`](02-implementation-phase-10.md)), merged into `master`. **Phase 11
-done and checked by the user 2026-10-16** ([`02-implementation-phase-11.md`](02-implementation-phase-11.md)),
-merged into `master`. **Phase 12 done 2026-10-16** ([`02-implementation-phase-12.md`](02-implementation-phase-12.md)),
-merged into `master` after the user's ok; Q-6 is answered (objective criteria, `week_power` 8), Q-5
-keeps its recommendations for later work. **Phase 13 done 2026-10-16**
-([`02-implementation-phase-13.md`](02-implementation-phase-13.md)), merged into `master` after the
-user's ok.
+**State: complete, 2026-10-18** (opened 2026-10-05). Sixteen phases, 0 to 15, each built on its own
+`feat/phase-N` branch and merged into `master` after the user's check; each has its report below.
+Seven of the eight decisions are answered (Q-1 to Q-4 before the plan, Q-6 to Q-8 on the way).
+**Q-5** (the sources of the `spain` and `catalan` regions, genres and tags) keeps the recommendation
+of Phase 12 for later work. The old store `aitu-backend/data/` is gone: its pieces moved into
+`.database/` in Phase 3, the user deleted it after checking the app, and Phase 15 removed the code
+that read it (its Lab records are now a test fixture). **Phase 15** walked the whole journey with two
+users and closed the documentation ([`02-implementation-phase-15.md`](02-implementation-phase-15.md));
+merged into `master` after the user's ok (2026-10-18).
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)
@@ -50,7 +35,9 @@ and the status lookup is [`02-checklist.md`](02-checklist.md). Phase reports go 
 | [`02-implementation-phase-11.md`](02-implementation-phase-11.md) | Phase 11: Play mode: the sheet alone, Close, Next, Play, the cursor kept in the middle, lyrics by their frames, Notes Falling as a view, an integrated playlist played on, a songs playlist song by song, the entry points; the audio kind fix of Replace the version (screenshots in [`screenshots/phase-11/`](screenshots/phase-11/)) |
 | [`02-implementation-phase-12.md`](02-implementation-phase-12.md) | Phase 12: the downloaded music library reconciled with the tables (`reconciliation.md`, revision `0003`, the import script tried on copies), the popularity formula and its weights chosen by objective criteria (Q-6), every library version with its piano sheet |
 | [`02-implementation-phase-13.md`](02-implementation-phase-13.md) | Phase 13: the Public Library: the import on the real database, the songs (search, filter chips, sort, the popularity of a decade), one song (its chart line, versions, likes), artists, playlists, **Add to my library**, public suggestions in **Save to library** and **Search** (screenshots in [`screenshots/phase-13/`](screenshots/phase-13/)) |
-| [`public-library-build/`](public-library-build/) | A parallel piece of work: downloading `musicchartsarchive.com` into `data/music-library/` (next to the repository) to build the data of the Public Library. Phase 12 reconciles it with this plan |
+| [`02-implementation-phase-14.md`](02-implementation-phase-14.md) | Phase 14: requests (four kinds with their items), the review laid out like a pull request (Conversation with comments on a stretch, Sheet with Proposed and Now, Finish your review), the publishing transaction, sharing a Private Library, the counts in the sidebar (screenshots in [`screenshots/phase-14/`](screenshots/phase-14/)) |
+| [`02-implementation-phase-15.md`](02-implementation-phase-15.md) | Phase 15: the whole journey with two temporary users and its timings (`check:journey`), the old redirects and the code of the old store removed, the platform pages rewritten, run instructions in one place (screenshots in [`screenshots/phase-15/`](screenshots/phase-15/)) |
+| [`public-library-build/`](public-library-build/) | A parallel piece of work, finished 2026-10-07: downloading `musicchartsarchive.com` into `data/music-library/` (next to the repository) to build the data of the Public Library. Phase 12 reconciled it with this plan and Phase 13 imported it |
 
 ## What it is for
 

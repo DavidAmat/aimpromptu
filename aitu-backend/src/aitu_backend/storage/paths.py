@@ -35,9 +35,6 @@ A project bundle (section 8.3), the same in every layer::
 The functions of a part take the part's id, the uuid of today's routes (P-6). The folder of its
 project comes from :mod:`aitu_backend.storage.locate`.
 
-``aitu-backend/data/`` is the store before Phase 3. Only the migration
-(``scripts/migrate/to_database.py``) reads it, through :func:`data_dir`.
-
 No path literal lives outside this module.
 """
 
@@ -59,14 +56,6 @@ def backend_root() -> Path:
 def repo_root() -> Path:
     """The repository root — the folder holding `aitu-backend/` and `context/`."""
     return backend_root().parent
-
-
-def data_dir() -> Path:
-    """`aitu-backend/data/`, the store before Phase 3, unless `AITU_DATA_DIR` says otherwise.
-
-    Read by the migration only. The app writes nothing here.
-    """
-    return config.data_dir_override() or backend_root() / "data"
 
 
 def database_dir() -> Path:
@@ -353,11 +342,6 @@ def frame_examples_source_dir() -> Path:
         / "04-synthesia-to-notes"
         / "examples"
     )
-
-
-def frame_examples_seed_dir() -> Path:
-    """`aitu-backend/data/frame-examples/` — the committed records the Lab copy started from."""
-    return data_dir() / "frame-examples"
 
 
 def frame_examples_root() -> Path:
