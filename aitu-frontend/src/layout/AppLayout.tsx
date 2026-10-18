@@ -2,16 +2,18 @@
  * The app's frame: the sidebar and the routed page (implementation 02, plan section 6.2).
  *
  * The sidebar shows the sections that exist: **Projects**, **My library** (**Songs**, **Artists**;
- * Phase 6; **Playlists**, Phase 10), **Public library** (**Songs**, **Artists**, **Playlists**, Phase
- * 13), and for the master user **Admin**: **Users** and **Lab** (the video reader). The other
- * sections of the plan (Shared, Requests) appear in the phases that build them.
+ * Phase 6; **Playlists**, Phase 10; **Shared**, Phase 14), **Public library** (**Songs**, **Artists**,
+ * **Playlists**, Phase 13), **Requests** (Phase 14), and for the master user **Admin**: **Review**
+ * (Phase 14), **Users** and **Lab** (the video reader). The number beside **Requests** is the user's
+ * requests with changes asked, and beside **Review** the requests waiting for a review: counted
+ * again on every move between pages and when a request changes.
  * It is open on the list pages and closed inside a project, where the piano roll and the piano
  * sheet need the width; the reader's own choice holds until they move between the two kinds of page.
  *
  * `⌘K` (`Ctrl+K`) opens **Search** from anywhere.
  *
- * The user menu at the bottom (Phase 4): the username, **Change password**, the theme (Light, Dark
- * or the system's), **Keyboard shortcuts** and **Sign out**.
+ * The user menu at the bottom (Phase 4): the username, **Change password**, **Share my library**
+ * (Phase 14), the theme (Light, Dark or the system's), **Keyboard shortcuts** and **Sign out**.
  */
 
 import { useEffect, useState } from "react";
@@ -26,6 +28,10 @@ import { useColorScheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import FolderIcon from "@mui/icons-material/FolderOutlined";
+import FolderSharedIcon from "@mui/icons-material/FolderSharedOutlined";
+import InboxIcon from "@mui/icons-material/MoveToInboxOutlined";
+import OutboxIcon from "@mui/icons-material/OutboxOutlined";
+import ShareIcon from "@mui/icons-material/ShareOutlined";
 import GroupIcon from "@mui/icons-material/GroupOutlined";
 import KeyboardIcon from "@mui/icons-material/KeyboardOutlined";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusicOutlined";
@@ -37,11 +43,14 @@ import PersonIcon from "@mui/icons-material/PersonOutlined";
 import PublicIcon from "@mui/icons-material/PublicOutlined";
 import ScienceIcon from "@mui/icons-material/ScienceOutlined";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { requestsApi } from "../api";
+import { COUNTS_EVENT } from "../pages/requests/words";
 import { useAuth } from "../state/authContext";
 import { AppShell, radius, Segmented, Sidebar, type SidebarGroup } from "../ui";
 import PasswordDialog from "./PasswordDialog";
 import { ROUTES } from "./routes";
 import SearchDialog from "./SearchDialog";
+import ShareDialog from "./ShareDialog";
 import ShortcutsDialog from "./ShortcutsDialog";
 
 /** A project page (its steps, Notes Falling), where the sidebar starts closed. */
@@ -58,6 +67,7 @@ function UserMenu({ open }: { open: boolean }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [shortcuts, setShortcuts] = useState(false);
   const [password, setPassword] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const name = user?.username ?? "";
   return (
     <>
@@ -121,6 +131,17 @@ function UserMenu({ open }: { open: boolean }) {
           </ListItemIcon>
           <ListItemText>Change password</ListItemText>
         </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAnchor(null);
+            setSharing(true);
+          }}
+        >
+          <ListItemIcon>
+            <ShareIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Share my library</ListItemText>
+        </MenuItem>
         <Box sx={{ px: 2, py: 1 }}>
           <Segmented<ThemeChoice>
             label="Theme"
@@ -160,6 +181,7 @@ function UserMenu({ open }: { open: boolean }) {
       </Menu>
       <ShortcutsDialog open={shortcuts} onClose={() => setShortcuts(false)} />
       <PasswordDialog open={password} onClose={() => setPassword(false)} />
+      {sharing ? <ShareDialog onClose={() => setSharing(false)} /> : null}
     </>
   );
 }
@@ -172,6 +194,24 @@ export function AppLayout() {
   const [choice, setChoice] = useState<{ area: string; open: boolean } | null>(null);
   const [searching, setSearching] = useState(false);
   const open = !narrow && (choice?.area === area ? choice.open : area === "list");
+  const [counts, setCounts] = useState({ mine: 0, review: 0 });
+  const [recount, setRecount] = useState(0);
+
+  // The numbers beside Requests and Review: counted again on each page, and when a request changes.
+  useEffect(() => {
+    const again = () => setRecount((count) => count + 1);
+    window.addEventListener(COUNTS_EVENT, again);
+    return () => window.removeEventListener(COUNTS_EVENT, again);
+  }, []);
+  useEffect(() => {
+    if (!user) return;
+    const controller = new AbortController();
+    requestsApi
+      .counts(controller.signal)
+      .then(setCounts)
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [user, pathname, recount]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -198,6 +238,7 @@ export function AppLayout() {
           icon: <PlaylistIcon />,
           active: under(ROUTES.libraryPlaylists),
         },
+        { label: "Shared", to: ROUTES.libraryShared, icon: <FolderSharedIcon />, active: under(ROUTES.libraryShared) },
       ],
     },
     {
@@ -214,10 +255,22 @@ export function AppLayout() {
       ],
     },
   ];
+  groups.push({
+    items: [
+      { label: "Requests", to: ROUTES.requests, icon: <OutboxIcon />, active: under(ROUTES.requests), count: counts.mine },
+    ],
+  });
   if (user?.isMaster) {
     groups.push({
       heading: "Admin",
       items: [
+        {
+          label: "Review",
+          to: ROUTES.adminRequests,
+          icon: <InboxIcon />,
+          active: under(ROUTES.adminRequests),
+          count: counts.review,
+        },
         { label: "Users", to: ROUTES.adminUsers, icon: <GroupIcon />, active: under(ROUTES.adminUsers) },
         { label: "Lab", to: ROUTES.lab, icon: <ScienceIcon />, active: under(ROUTES.lab) },
       ],

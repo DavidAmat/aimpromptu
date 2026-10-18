@@ -2,8 +2,9 @@
 
 The Private Library is layer 2 of the app context: each user's own library of finished work, the
 "main branch" that work in progress (the Personal Vault, layer 1) is saved into. Nobody else reads
-it, unless the owner shares it (Phase 14). Built in implementation 02, Phase 6. The pages are
-**My library → Songs**, **Artists** and (Phase 10) **Playlists** in the sidebar.
+it, unless the owner shares it (Phase 14, [requests.md](requests.md) section 6). Built in
+implementation 02, Phase 6. The pages are **My library → Songs**, **Artists**, (Phase 10)
+**Playlists** and (Phase 14) **Shared** in the sidebar.
 
 ## 1. What it holds
 
@@ -82,11 +83,12 @@ replaces too, so nothing is lost by trying one.
 | Page | Address | What is on it |
 |---|---|---|
 | Songs | `/library/songs` | A table (title, artist, versions, changed) with a filter by title or artist; a row opens the song. Songs ticked by their checkbox make a playlist (**Make a playlist of N**, Phase 10) |
-| A song | `/library/songs/:id` | The title, its artists (each a link), and its versions. A version row opens it read only; its `⋯`: Open, Edit, Duplicate, Export, **Add to a playlist** (Phase 10), Rename, History, Delete. The header's `⋯`: Rename song, Artists, Delete song |
+| A song | `/library/songs/:id` | The title, its artists (each a link), and its versions. A version row opens it read only; its `⋯`: Open, Play, Edit, Duplicate, Export, **Add to a playlist** (Phase 10), **Publish** (Phase 14), Rename, History, Delete. The header's `⋯`: Rename song, Artists, Delete song |
 | Artists | `/library/artists` | A table (name, other names, songs) with a filter |
 | An artist | `/library/artists/:id` | Its names (Make default, Rename, Remove; **Add a name**) and its songs. The header's `⋯`: Merge into another artist, Delete artist (once it has no song) |
 | Playlists | `/library/playlists` | The songs playlists and the integrated playlists (Phase 10), **New playlist** |
-| A playlist | `/library/playlists/:id` | Its songs with their version and stretch; **Add a song**, reorder, another version, remove; Rename, Delete |
+| A playlist | `/library/playlists/:id` | Its songs with their version and stretch; **Add a song**, reorder, another version, remove; Rename, **Publish** (Phase 14), Delete |
+| Shared | `/library/shared`, `/library/shared/songs/:id` | The libraries other users share with the user (Phase 14): their songs, one song with its versions (Play, open read only), **Add to my library**; **Share my library** |
 
 **Duplicate** of a version makes an independent project in Projects; **Export** saves its `.aitu`
 file. **Search** (`⌘K`) finds songs by title and artist, and projects by title.
@@ -94,7 +96,8 @@ file. **Search** (`⌘K`) finds songs by title and artist, and projects by title
 ## 6. Who can do what
 
 Only the owner reads and changes their library: another user gets `404` for its songs, artists and
-projects (the master user too, [08-security.md](../08-security.md)). The owner never writes a
+projects (the master user too, [08-security.md](../08-security.md)), unless the owner shares it
+with them (Phase 14): then they read it, and never change it. The owner never writes a
 library project in place: the step routes answer `403`, and the changes go through **Edit** and
 **Save to library**, which check the owner themselves.
 
@@ -102,7 +105,8 @@ library project in place: the step routes answer `403`, and the changes go throu
 
 | Thing | When |
 |---|---|
-| **Shared** (a library another user shares with you) | Phase 14 |
+| **Shared** (a library another user shares with you) | Phase 14, done: [requests.md](requests.md) section 6 |
+| **Publish** a version or a playlist to the Public Library | Phase 14, done: [requests.md](requests.md) |
 | Suggestions from the Public Library in the dialog, and **Add to my library** from it | Phase 13, done: [ontology.md](ontology.md) sections 2 and 5 |
 | Play mode for a version and a playlist (**Play**) | Phase 11, done: [play-mode.md](../frontend/play-mode.md) |
 | Offline downloads per project | Q-7 (raised in Phase 6) |

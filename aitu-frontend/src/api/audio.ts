@@ -55,7 +55,7 @@ export interface AudioItem {
   hasVideo?: boolean;
   /** The project of this part, and its layer: a project of the library opens read only. */
   projectId?: string | null;
-  layer?: "vault" | "private" | "public" | null;
+  layer?: "vault" | "private" | "public" | "request" | null;
   /** The library project this project edits, when it is a copy made by **Edit**. */
   basedOn?: string | null;
 }

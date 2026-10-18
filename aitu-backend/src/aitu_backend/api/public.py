@@ -197,6 +197,19 @@ class Suggestions(_Camel):
     artists: list[ArtistRow]
 
 
+class RegionOut(_Camel):
+    code: str
+    name: str
+
+
+class ListsOut(_Camel):
+    """The fixed lists a song's metadata takes its values from (section 15.3)."""
+
+    genres: list[str]
+    regions: list[RegionOut]
+    tag_categories: list[str] = Field(..., alias="tagCategories")
+
+
 class LikeOut(_Camel):
     likes: int
     liked: bool
@@ -537,6 +550,23 @@ def like(public_project: str) -> LikeOut:
 def unlike(public_project: str) -> LikeOut:
     with _answers(), session() as db:
         return LikeOut(likes=public.unlike(db, current_user_id(), public_project), liked=False)
+
+
+# ----------------------------------------------------------------------- lists
+
+
+@router.get("/lists", response_model=ListsOut, response_model_by_alias=True)
+def lists() -> ListsOut:
+    """The genres, regions and tag categories a request can give a song (Phase 14)."""
+    with session() as db:
+        return ListsOut(
+            genres=list(db.scalars(select(Genre.name).order_by(Genre.id))),
+            regions=[
+                RegionOut(code=code, name=name)
+                for code, name in db.execute(select(Region.code, Region.name).order_by(Region.id))
+            ],
+            tag_categories=list(db.scalars(select(TagCategory.name).order_by(TagCategory.id))),
+        )
 
 
 # --------------------------------------------------------------------- suggest

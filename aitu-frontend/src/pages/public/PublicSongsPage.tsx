@@ -13,6 +13,8 @@
  * one of that decade's chart weeks, worked out again by the backend (the app context: "if we filter
  * by a given decade, and ask to sort by popularity, these popularities need to be recalculated"),
  * and its column says so. A row opens the song.
+ *
+ * **Propose a song** (Phase 14) sends a request for a song the Public Library does not have.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -21,6 +23,8 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import InputAdornment from "@mui/material/InputAdornment";
+import AddIcon from "@mui/icons-material/Add";
+import Alert from "@mui/material/Alert";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { publicApi, type PublicSongPage, type PublicSongRow, type SongSort } from "../../api";
@@ -36,6 +40,8 @@ import {
   type TableSort,
 } from "../../ui";
 import { said } from "../library/shared";
+import { SuggestChangeDialog } from "../requests/SuggestChangeDialog";
+import { COUNTS_EVENT } from "../requests/words";
 import { popularityText } from "./shared";
 
 const PER_PAGE = [50, 100, 200];
@@ -58,6 +64,8 @@ export function PublicSongsPage() {
   const perPage = PER_PAGE.includes(numberOr(params.get("per")) ?? 0) ? Number(params.get("per")) : PER_PAGE[0];
 
   const [typed, setTyped] = useState(q);
+  const [proposing, setProposing] = useState(false);
+  const [sent, setSent] = useState<number | null>(null);
   const [answered, setAnswered] = useState<{ key: string; page: PublicSongPage } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
@@ -166,7 +174,39 @@ export function PublicSongsPage() {
 
   return (
     <PageBody>
-      <PageHeader title="Public songs" />
+      <PageHeader
+        title="Public songs"
+        actions={
+          <PillButton kind="secondary" startIcon={<AddIcon />} onClick={() => setProposing(true)} data-testid="propose-a-song">
+            Propose a song
+          </PillButton>
+        }
+      />
+      {sent !== null ? (
+        <Alert
+          severity="success"
+          onClose={() => setSent(null)}
+          sx={{ mb: 1 }}
+          action={
+            <PillButton kind="quiet" size="small" onClick={() => navigate(ROUTES.request(sent))}>
+              Open
+            </PillButton>
+          }
+        >
+          Request sent to the master user
+        </Alert>
+      ) : null}
+      {proposing ? (
+        <SuggestChangeDialog
+          target={{ kind: "newSong" }}
+          onClose={() => setProposing(false)}
+          onSent={(requestId) => {
+            setProposing(false);
+            setSent(requestId);
+            window.dispatchEvent(new Event(COUNTS_EVENT));
+          }}
+        />
+      ) : null}
       <Stack spacing={1.5} sx={{ pt: 1 }}>
         <Stack direction="row" useFlexGap spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>
           <TextField

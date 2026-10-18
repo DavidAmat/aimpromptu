@@ -9,9 +9,10 @@ Private Library (**Add to my library**) is :mod:`aitu_backend.library.pull`.
 Easy, or a custom name the master user accepted; **Default** is a pointer to one of them, Hard
 unless changed) and **Other versions** (``user_versions``: one project per user and version name,
 the app context's ``user_versions/<user>/<version name>/``). Each points at a project of the public
-layer (``.database/public/<projectId>/``). They arrive by an accepted request (Phase 14);
-:func:`place_version` is the step that puts a project there, used by that acceptance and by the
-tests and browser checks of this phase, always on a copy.
+layer (``.database/public/<projectId>/``). They arrive by an accepted request (Phase 14,
+:mod:`aitu_backend.library.requests`), in two steps: :func:`copy_to_public` copies the project and
+:func:`point_version` points the version at it, inside the review's one transaction.
+:func:`place_version` does both, for the tests and the browser checks, always on a copy.
 
 **Likes** (section 15.2): a user likes a public version's project once; Other versions are sorted by
 likes, then by date.
@@ -62,8 +63,11 @@ __all__ = [
     "SongFacts",
     "VersionFacts",
     "artist_facts",
+    "copy_to_public",
+    "delete_if_unused",
     "like",
     "place_version",
+    "point_version",
     "playlist_facts",
     "playlists",
     "remove_version",
@@ -545,6 +549,91 @@ def unlike(db: DbSession, user_id: int, project_id: str) -> int:
 # ------------------------------------------------------------ public versions
 
 
+def copy_to_public(source_project_id: str, *, creator_id: int, title: str | None = None) -> str:
+    """A **copy** of a project in ``.database/public/``, owned by its creator: the first step of
+    making it a public version. The copy has new ids, so the source is never changed, and no audio
+    bytes are copied (P-3). The project must have its piano sheet (a version always has one)."""
+    source = bundle.read_project(source_project_id)
+    if not flow.sheet_ready(source):
+        raise flow.Refused("A version must have its piano sheet saved")
+    copy = bundle.duplicate_project(
+        source_project_id, owner_id=creator_id, layer="public", title=title or source.title
+    )
+    return copy.id
+
+
+def point_version(
+    db: DbSession,
+    *,
+    song_id: int,
+    name: str,
+    project_id: str,
+    creator_id: int,
+    user_version: bool,
+) -> str | None:
+    """Make a public project a version of a public song: a fixed version (``user_version=False``)
+    takes the place of the one of that name; a user version is the one project of its user and
+    name (section 15.2). Answers the project it replaced, if any, which the caller deletes once the
+    transaction is written and nothing uses it (:func:`delete_if_unused`).
+
+    A user version replaced by a better one of the same name keeps its likes and its place in the
+    public playlists: they move to the new project (Phase 14). A fixed version is a pointer the
+    master user accepted to one project, so it does not follow."""
+    name = check_public_name(name)
+    public_song(db, song_id)
+    replaced: str | None = None
+    if user_version:
+        existing_user = db.scalar(
+            select(UserVersion).where(
+                UserVersion.song_id == song_id,
+                UserVersion.user_id == creator_id,
+                UserVersion.version_name == name,
+            )
+        )
+        if existing_user is not None:
+            replaced = existing_user.project_id
+            existing_user.project_id = project_id
+            if replaced != project_id:
+                _move_uses(db, replaced, project_id)
+        else:
+            db.add(
+                UserVersion(
+                    song_id=song_id, user_id=creator_id, version_name=name, project_id=project_id
+                )
+            )
+    else:
+        existing = db.scalar(
+            select(SongVersion).where(SongVersion.song_id == song_id, SongVersion.name == name)
+        )
+        if existing is not None:
+            replaced = existing.project_id
+            existing.project_id = project_id
+            existing.creator_id = creator_id
+            existing.updated_at = datetime.now(timezone.utc)
+        else:
+            db.add(
+                SongVersion(
+                    song_id=song_id, name=name, project_id=project_id, creator_id=creator_id
+                )
+            )
+    db.flush()
+    return replaced if replaced != project_id else None
+
+
+def _move_uses(db: DbSession, old: str, new: str) -> None:
+    """The likes and the public playlist items of one project, moved to another."""
+    for one in db.scalars(select(Like).where(Like.project_id == old)).all():
+        if db.get(Like, (one.user_id, new)) is None:
+            db.add(Like(user_id=one.user_id, project_id=new, created_at=one.created_at))
+        db.delete(one)
+    for item in db.scalars(
+        select(PlaylistItem)
+        .join(Playlist, Playlist.id == PlaylistItem.playlist_id)
+        .where(Playlist.scope == "public", PlaylistItem.project_id == old)
+    ):
+        item.project_id = new
+
+
 def place_version(
     source_project_id: str,
     *,
@@ -553,70 +642,58 @@ def place_version(
     creator_id: int,
     user_version: bool,
 ) -> str:
-    """A **copy** of a project becomes a version of a public song, in ``.database/public/``.
-
-    A fixed version (``user_version=False``) takes the place of the one of that name; a user
-    version is the one project of its user and name (section 15.2). The copy has new ids, so the
-    source is never changed, and no audio bytes are copied (P-3). The project must have its piano
-    sheet (a version always has one). This is the step of Phase 14's acceptance; this phase uses it
-    in its tests and browser checks."""
+    """A **copy** of a project becomes a version of a public song, in ``.database/public/``
+    (:func:`copy_to_public`, then :func:`point_version`). The accepted requests of Phase 14 use the
+    two steps inside their own transaction; the tests and ``public_fixture`` use this."""
     name = check_public_name(name)
-    if not flow.sheet_ready(bundle.read_project(source_project_id)):
-        raise flow.Refused("A version must have its piano sheet saved")
     with session() as db:
         public_song(db, song_id)
-    source = bundle.read_project(source_project_id)
-    copy = bundle.duplicate_project(
-        source_project_id, owner_id=creator_id, layer="public", title=source.title
-    )
-    with session() as db:
-        replaced: str | None = None
-        if user_version:
-            existing_user = db.scalar(
-                select(UserVersion).where(
-                    UserVersion.song_id == song_id,
-                    UserVersion.user_id == creator_id,
-                    UserVersion.version_name == name,
-                )
+    copy = copy_to_public(source_project_id, creator_id=creator_id)
+    try:
+        with session() as db:
+            replaced = point_version(
+                db,
+                song_id=song_id,
+                name=name,
+                project_id=copy,
+                creator_id=creator_id,
+                user_version=user_version,
             )
-            if existing_user is not None:
-                replaced = existing_user.project_id
-                existing_user.project_id = copy.id
-            else:
-                db.add(
-                    UserVersion(
-                        song_id=song_id, user_id=creator_id, version_name=name, project_id=copy.id
-                    )
-                )
-        else:
-            existing = db.scalar(
-                select(SongVersion).where(SongVersion.song_id == song_id, SongVersion.name == name)
-            )
-            if existing is not None:
-                replaced = existing.project_id
-                existing.project_id = copy.id
-                existing.creator_id = creator_id
-                existing.updated_at = datetime.now(timezone.utc)
-            else:
-                db.add(
-                    SongVersion(
-                        song_id=song_id, name=name, project_id=copy.id, creator_id=creator_id
-                    )
-                )
-    if replaced is not None and not _still_used(replaced):
-        bundle.delete_project(replaced)
+    except BaseException:
+        bundle.delete_project(copy)
+        raise
+    if replaced is not None:
+        delete_if_unused(replaced)
     catalogue.forget()
-    return copy.id
+    return copy
 
 
-def _still_used(project_id: str) -> bool:
+def still_used(project_id: str) -> bool:
+    """A public project is still a fixed version, a user version, or an item of a public playlist."""
     with session() as db:
         return (
             db.scalar(select(SongVersion.id).where(SongVersion.project_id == project_id))
             is not None
             or db.scalar(select(UserVersion.id).where(UserVersion.project_id == project_id))
             is not None
+            or db.scalar(
+                select(PlaylistItem.id)
+                .join(Playlist, Playlist.id == PlaylistItem.playlist_id)
+                .where(Playlist.scope == "public", PlaylistItem.project_id == project_id)
+            )
+            is not None
         )
+
+
+def delete_if_unused(project_id: str) -> None:
+    """Delete a public project nothing points at any more (a version replaced)."""
+    try:
+        if locate.project(project_id).layer != "public":
+            return
+    except locate.NotFound:
+        return
+    if not still_used(project_id):
+        bundle.delete_project(project_id)
 
 
 def remove_version(project_id: str) -> None:

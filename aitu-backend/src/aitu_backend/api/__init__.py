@@ -9,8 +9,9 @@ Phase 3.
 ``/projects`` is the Personal Vault (Phase 3: duplicate; Phase 5: the rest; Phase 6: save to the
 library, edit a version) and ``/library`` the Private Library's songs, artists and versions (Phase
 6), ``/passages`` Recording in Sheet (Phase 9), and ``/playlists`` the songs playlists of the
-Private Library (Phase 10), ``/public`` the Public Library (Phase 13). ``/auth`` signs in and
-``/admin`` is the master user's (Phase 4).
+Private Library (Phase 10), ``/public`` the Public Library (Phase 13), ``/requests`` the requests
+to it and ``/shares`` and ``/shared`` the shared libraries (Phase 14). ``/auth`` signs in and
+``/admin`` is the master user's (Phase 4; the review of requests, Phase 14).
 
 ``/video`` brings a Synthesia video in, samples its frames and reads the
 falling rectangles off them; ``/frame-examples`` is where a detection rule earns
@@ -35,6 +36,8 @@ from aitu_backend.api.pieces import router as pieces_router
 from aitu_backend.api.playlists import router as playlists_router
 from aitu_backend.api.projects import router as projects_router
 from aitu_backend.api.public import router as public_router
+from aitu_backend.api.requests import router as requests_router
+from aitu_backend.api.shares import router as shares_router
 from aitu_backend.api.time_score import router as time_score_router
 from aitu_backend.api.video import router as video_router
 from aitu_backend.api.youtube import router as youtube_router
@@ -51,6 +54,8 @@ USER_ROUTERS = [
     playlists_router,
     projects_router,
     public_router,
+    requests_router,
+    shares_router,
     youtube_router,
     time_score_router,
     video_router,
@@ -77,6 +82,8 @@ __all__ = [
     "playlists_router",
     "projects_router",
     "public_router",
+    "requests_router",
+    "shares_router",
     "time_score_router",
     "video_router",
     "youtube_router",

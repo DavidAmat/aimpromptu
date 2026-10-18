@@ -11,7 +11,8 @@ import type { PieceStep } from "./pieces";
 import type { SavedRhythm } from "./timeScore";
 import { buildUrl, request, upload } from "./client";
 
-export type ProjectLayer = "vault" | "private";
+/** `request`: the copy of a project a request sent (Phase 14), read by its author and the master user. */
+export type ProjectLayer = "vault" | "private" | "public" | "request";
 
 /** The song and version a project is, or, for a copy being edited, the one it edits. */
 export interface LibraryLink {
@@ -30,6 +31,8 @@ export interface ProjectRow {
   title: string;
   kind: "song" | "integratedPlaylist";
   layer: ProjectLayer;
+  /** The user owns it; a library project of another user is one shared with them (Phase 14). */
+  mine: boolean;
   /** The lowest step its parts reached; `null` when it could not be worked out. */
   step: PieceStep | null;
   /** A job working on a part right now. */

@@ -50,6 +50,7 @@ from aitu_backend.storage import bundle
 __all__ = [
     "Pulled",
     "find_private_song",
+    "free_name",
     "private_artist_for",
     "private_song_for",
     "pulled_copies",
@@ -173,7 +174,7 @@ def _choices(db: DbSession, song_id: int, owner: int) -> tuple[list[_Choice], st
     return found, default
 
 
-def _free_name(db: DbSession, song_id: int, name: str) -> str:
+def free_name(db: DbSession, song_id: int, name: str) -> str:
     taken = {
         rows.same(one.version_name)
         for one in db.scalars(select(PrivateVersion).where(PrivateVersion.song_id == song_id))
@@ -250,7 +251,7 @@ def pull_song(owner: int, song_id: int, project_ids: list[str] | None = None) ->
             db.add(
                 PrivateVersion(
                     song_id=song.id,
-                    version_name=_free_name(db, song.id, by_project[project_id].name),
+                    version_name=free_name(db, song.id, by_project[project_id].name),
                     project_id=copy_id,
                 )
             )

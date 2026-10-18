@@ -4,7 +4,8 @@ The music library is a catalogue of songs, artists, albums and versions, kept ap
 projects ([app context](../app/01-app-context.md), "Music Library"). This page says what each
 entity is, how the two scopes (private and public) share the same tables, how a private row stands
 for a public one, and what the Public Library pages show. Built in implementation 02: the tables in
-Phase 3, the Private Library in Phase 6, the public rows (imported) and their pages in Phase 13.
+Phase 3, the Private Library in Phase 6, the public rows (imported) and their pages in Phase 13, the
+requests that change them in Phase 14 ([requests.md](requests.md)).
 
 ## 1. The entities
 
@@ -26,7 +27,7 @@ A **project** is the work (the piano sheet, its audio); a **song** is the catalo
 Every row of the music library has a `scope`:
 
 - **public**: the Public Library, one for everyone. Its rows have no owner; the master user changes
-  them by accepting requests (Phase 14). It starts from the chart download of Phase 12
+  them by accepting requests ([requests.md](requests.md), Phase 14). It starts from the chart download of Phase 12
   ([reconciliation.md](reconciliation.md)): 9,055 songs, 2,998 artists, 8,341 albums, imported into
   the real database on 2026-10-16.
 - **private**: each user's own ontology ([private-library.md](private-library.md)). A user names
@@ -38,7 +39,8 @@ ways (Phase 13):
 - **Add to my library** on a public song, artist or playlist copies it into private rows;
 - **Save to library** on a public song or artist chosen in the dialog.
 
-Either way the private row is found before one is made: the one already linked, or else the user's
+A third way since Phase 14: an accepted request links the author's own song and artists to the
+public ones it made or named. Either way the private row is found before one is made: the one already linked, or else the user's
 own song of the same title and first artist (or artist of the same name), which gets the link. So a
 song never appears twice in a user's library because it came from two sides. After the link there
 is no sync: the private row stays the user's own, renamed as they like.
@@ -53,8 +55,8 @@ The fields of plan section 15.3, and what the Public Library has of each today:
 | Artists | Through artist names | From the chart; 7 songs have none |
 | Album | Optional | 8,581 song-album links |
 | Region | Where the song was popular, not where the artist is from | Every song `worldwide` (the chart is the US one); `spain` and `catalan` are Q-5 |
-| Genre | One or two of 13 | None yet (Q-5: Wikidata is the recommendation) |
-| Tags | Fixed categories (films, video games, TV shows, adverts), free values | None yet: they come by request |
+| Genre | One or two of 13 | None from the import (Q-5: Wikidata is the recommendation); given by request (Phase 14) |
+| Tags | Fixed categories (films, video games, TV shows, adverts), free values | Given by request (Phase 14) |
 | Rankings | The chart weeks and places | 160,810 song weeks |
 | Popularity | 0 to 100 from the rankings, in any time range | [popularity.md](popularity.md) |
 | Lyrics | The words, as the download gave them | 9,038 songs; kept for this personal version only |
@@ -69,8 +71,10 @@ As plan section 15.2 says, a public song has:
   user and version name, shown grouped by username, each group by its likes.
 
 A version's project lives in `.database/public/<projectId>/`. Every user reads it and plays it; only
-the master user writes it. Versions arrive by accepted requests (Phase 14), so today no public song
-has one. A user likes a version once; Other versions are sorted by likes, then by date.
+the master user writes it. Versions arrive by accepted requests ([requests.md](requests.md)): a user
+version by a **Version** request, then a fixed version by a **Fixed version** request that points
+at that same project. The user whose project it is shows as its creator. A user likes a version
+once; Other versions are sorted by likes, then by date.
 
 ## 5. Add to my library
 
@@ -98,7 +102,10 @@ piano sheet, and a public song with no version has none. The button says so on h
 | A public song | `/public/songs/:id` | The byline (links to the artists), the facts, **On the chart** (best place, weeks, the line of its places), **Versions**, **Other versions** (each with Play, a like, Add to my library), **Lyrics** on request. **Play** the default version; **Add to my library**; **Open in My library** once it is there |
 | Public artists | `/public/artists` | A search on every name, a table sorted by popularity (the artist's most popular song), name or number of songs |
 | A public artist | `/public/artists/:id` | Its other names, its songs and its albums by popularity, **Add to my library** |
-| Public playlists | `/public/playlists`, `/public/playlists/:id` | The public songs playlists; one with **Play** (Play mode, `?from=public`) and **Add to my library** |
+| Public playlists | `/public/playlists`, `/public/playlists/:id` | The public songs playlists (made by accepted **Playlist** requests, Phase 14); one with **Play** (Play mode, `?from=public`) and **Add to my library** |
+
+**Suggest a change** (a song's or an artist's `⋯`), **Propose a song** (Public songs) and **Ask for
+a fixed version** (the user's own version) send requests (Phase 14, [requests.md](requests.md)).
 
 **Search** (`⌘K`) also lists the most popular public songs and artists that match, and **Save to
 library** suggests them under "Public library". A song of My library that stands for a public song
@@ -110,6 +117,7 @@ links to it ("In the Public library").
 - The tables: [`paths-and-data.md`](../../documentation/services/backend/paths-and-data.md) section 6
 - The import and the identity of a public row: [reconciliation.md](reconciliation.md)
 - Popularity: [popularity.md](popularity.md)
+- Requests, the review and shared libraries: [requests.md](requests.md)
 - The Private Library: [private-library.md](private-library.md)
 - The code: `aitu-backend/src/aitu_backend/library/` (`catalogue.py`, `public.py`, `pull.py`),
   `api/public.py`; `aitu-frontend/src/pages/public/`

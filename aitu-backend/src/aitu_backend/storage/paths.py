@@ -11,6 +11,7 @@ Everything the app knows is in ``.database/``, at the root of the repository unl
         vault/<projectId>/           layer 1: the Personal Vault
         library/<projectId>/         layer 2: the Private Library
       public/<projectId>/            layer 3: the Public Library
+      requests/<projectId>/          the copy of a project sent with a request (Phase 14)
       tmp/<userId>/<partId>/video/   temporary files: a video, its frames, its reading
       lab/frame-examples/            the video reader's example data (Lab)
       history/<projectId>/           earlier states: parts/<partId>/vN/ before a splice or a
@@ -100,6 +101,12 @@ def public_dir() -> Path:
     return database_dir() / "public"
 
 
+def requests_dir() -> Path:
+    """`.database/requests/`: the copy of a project a request sends, read by its author and the
+    master user only (implementation 02, Phase 14)."""
+    return database_dir() / "requests"
+
+
 def tmp_dir() -> Path:
     return database_dir() / "tmp"
 
@@ -124,11 +131,13 @@ def layer_dir(owner_id: int, layer: str) -> Path:
     """Where the projects of one owner and one layer are."""
     if layer == "public":
         return public_dir()
+    if layer == "request":
+        return requests_dir()
     return users_dir() / str(owner_id) / LAYER_FOLDERS[layer]
 
 
 #: Created when the app starts, by :func:`ensure_database_tree`.
-TREE_ROOTS = (audio_store_dir, users_dir, public_dir, tmp_dir, history_dir, jobs_dir)
+TREE_ROOTS = (audio_store_dir, users_dir, public_dir, requests_dir, tmp_dir, history_dir, jobs_dir)
 
 
 def ensure_database_tree() -> None:

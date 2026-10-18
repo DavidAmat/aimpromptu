@@ -15,7 +15,9 @@
  *   version only) or **Open in My library** when it is there.
  * - **Lyrics**, shown on request.
  *
- * Versions arrive by accepted requests (Phase 14), so until then the list says "No version yet."
+ * Versions arrive by accepted requests (Phase 14). **Suggest a change** (the header's `⋯`) sends a
+ * request to change the song's metadata; on the user's own version among the Other versions,
+ * **Ask for a fixed version** asks for it to become Hard, Medium, Easy or a new name.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -35,7 +37,9 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import EditNoteIcon from "@mui/icons-material/EditNoteOutlined";
 import LibraryAddIcon from "@mui/icons-material/LibraryAddOutlined";
+import StarIcon from "@mui/icons-material/StarBorder";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusicOutlined";
 import PlayIcon from "@mui/icons-material/PlayArrowRounded";
 import PlayCircleIcon from "@mui/icons-material/PlayCircleOutlined";
@@ -44,6 +48,10 @@ import { publicApi, type PublicSongDetail, type PublicVersion } from "../../api"
 import { ROUTES } from "../../layout/routes";
 import { EmptyState, IconAction, PageBody, PageHeader, PillButton, RowMenu, Section } from "../../ui";
 import { said } from "../library/shared";
+import { FixedVersionDialog } from "../requests/SmallRequestDialogs";
+import { SuggestChangeDialog } from "../requests/SuggestChangeDialog";
+import { COUNTS_EVENT } from "../requests/words";
+import { useAuth } from "../../state/authContext";
 import { ChartHistory } from "./ChartHistory";
 import { defaultVersion, popularityText, versionLabel } from "./shared";
 
@@ -67,6 +75,7 @@ function VersionLine({
   onLike,
   onAdd,
   onOpenMine,
+  onAskFixed,
 }: {
   version: PublicVersion;
   title: string;
@@ -75,6 +84,8 @@ function VersionLine({
   onLike: () => void;
   onAdd: () => void;
   onOpenMine: () => void;
+  /** The user's own version: ask for it to become a fixed version (Phase 14). */
+  onAskFixed?: () => void;
 }) {
   return (
     <Stack
@@ -132,6 +143,7 @@ function VersionLine({
           version.inLibrary
             ? { label: "Open in My library", icon: <LibraryMusicIcon fontSize="small" />, onClick: onOpenMine }
             : { label: "Add to my library", icon: <LibraryAddIcon fontSize="small" />, onClick: onAdd, disabled: !version.ready },
+          ...(onAskFixed ? [{ label: "Ask for a fixed version", icon: <StarIcon fontSize="small" />, onClick: onAskFixed }] : []),
         ]}
       />
     </Stack>
@@ -233,6 +245,16 @@ export function PublicSongPage() {
   const [shown, setLyrics] = useState<{ on: number; text: string } | null>(null);
   const lyrics = shown?.on === songId ? shown.text : null;
   const [lyricsError, setLyricsError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [suggesting, setSuggesting] = useState(false);
+  const [askingFixed, setAskingFixed] = useState<PublicVersion | null>(null);
+  const [sent, setSent] = useState<number | null>(null);
+  const requestSent = (requestId: number) => {
+    setSuggesting(false);
+    setAskingFixed(null);
+    setSent(requestId);
+    window.dispatchEvent(new Event(COUNTS_EVENT));
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -336,6 +358,10 @@ export function PublicSongPage() {
                   </span>
                 </Tooltip>
               ) : null}
+              <RowMenu
+                title="Song actions"
+                items={[{ label: "Suggest a change", icon: <EditNoteIcon fontSize="small" />, onClick: () => setSuggesting(true) }]}
+              />
             </>
           ) : undefined
         }
@@ -375,6 +401,19 @@ export function PublicSongPage() {
             </Alert>
           ) : null}
           {actionError ? <Alert severity="error" onClose={() => setActionError(null)}>{actionError}</Alert> : null}
+          {sent !== null ? (
+            <Alert
+              severity="success"
+              onClose={() => setSent(null)}
+              action={
+                <PillButton kind="quiet" size="small" onClick={() => navigate(ROUTES.request(sent))}>
+                  Open
+                </PillButton>
+              }
+            >
+              Request sent to the master user
+            </Alert>
+          ) : null}
 
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", sm: "repeat(auto-fill, minmax(150px, 1fr))" }, gap: 2, maxWidth: 760 }}>
             <Fact label="Year">{song.year !== null ? `${song.year} (${song.decade})` : "Unknown"}</Fact>
@@ -433,6 +472,7 @@ export function PublicSongPage() {
                           onLike={() => void like(version)}
                           onAdd={() => void addOne(version)}
                           onOpenMine={() => song.inLibrary !== null && navigate(ROUTES.librarySong(song.inLibrary))}
+                          onAskFixed={group.username === user?.username ? () => setAskingFixed(version) : undefined}
                         />
                       ))}
                     </Stack>
@@ -468,6 +508,17 @@ export function PublicSongPage() {
         </Stack>
       )}
 
+      {suggesting && song ? (
+        <SuggestChangeDialog target={{ kind: "song", song }} onClose={() => setSuggesting(false)} onSent={requestSent} />
+      ) : null}
+      {askingFixed && song ? (
+        <FixedVersionDialog
+          songTitle={song.title}
+          version={{ projectId: askingFixed.projectId, name: askingFixed.name }}
+          onClose={() => setAskingFixed(null)}
+          onSent={requestSent}
+        />
+      ) : null}
       {adding && song ? (
         <AddDialog
           song={song}

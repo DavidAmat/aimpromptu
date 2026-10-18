@@ -47,9 +47,10 @@ valid session the answer is **401**; then the rights below apply to the project 
 | Thing | Read | Write |
 |---|---|---|
 | A project in a Personal Vault | Its owner | Its owner |
-| A project in a Private Library | Its owner; users it is shared with (Phase 14) | Its owner (*) |
+| A project in a Private Library | Its owner; the users the owner shares the library with (Phase 14) | Its owner (*) |
 | The Public Library | Every user | The master user, by accepting requests |
-| A request | Its author and the master user | Its author until reviewed; the master user (the decision) |
+| A request | Its author and the master user | Its author until reviewed (send again, withdraw); the master user (the decision) |
+| The copy of a project a request sent (layer `request`, Phase 14) | Its author and the master user | Nobody |
 | Users, Lab | The master user | The master user |
 
 (*) Since Phase 6 a library project is never written in place: its owner reads it (a write answers
@@ -61,7 +62,13 @@ Phase 6 the owner edited it in place.
   an address tells nothing about another user's work. One the user may read but not write answers
   **403**.
 - **The master user has no extra right over another user's private projects.** An Admin who could
-  read every library would make "private" a word the app does not keep.
+  read every library would make "private" a word the app does not keep. What a user sends in a
+  request is a copy they chose to show (Phase 14): only that copy is the master user's to read.
+- **Sharing** (Phase 14) is the owner's choice, per user, of their whole Private Library, read only
+  (`library_shares`, **Share my library**). It ends at once when the owner stops it; the copies the
+  other user added to their own library stay theirs. The master user reads a shared library only
+  when it is shared with them, like any user. The list of users to share with shows usernames
+  only (plan section 9.1).
 - **Export and import** (Phase 5): exporting a project is a read, so a user exports only what they
   may read. An import always makes a new project in the importer's own Personal Vault; the zip is
   read member by member by the names the app expects (a name in it never becomes a path on the
@@ -69,13 +76,16 @@ Phase 6 the owner edited it in place.
   name.
 - Lists are the user's own: `GET /projects` and `GET /audio/` list the user's projects, and
   `/library` the user's songs and artists (another user's answers `404`); Lab lists every video for
-  the master user only.
+  the master user only. `/requests` lists the user's own requests; `/admin/requests` (the review)
+  answers only the master user; `/shared` lists only the libraries shared with the user.
 - A background job (a transcription, a download) records its owner, runs as them (a project it
   makes is theirs), and is followed only by them and the master user.
 - `/health` and `POST /auth/login` are the only routes open without a session.
 
 The tests: `aitu-backend/tests/test_rights.py` checks each row of the table with two users and the
-master user; `test_auth.py` the sign in, the cookie, the slow-down and Admin → Users.
+master user; `test_auth.py` the sign in, the cookie, the slow-down and Admin → Users;
+`test_requests.py` (Phase 14) the copy a request sends, the review, and a shared library with
+three users.
 
 ## The network
 

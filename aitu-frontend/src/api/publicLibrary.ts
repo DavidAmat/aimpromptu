@@ -171,7 +171,15 @@ export interface Pulled {
   already: number;
 }
 
+/** The fixed lists a song's metadata takes its values from (section 15.3; Phase 14). */
+export interface PublicLists {
+  genres: string[];
+  regions: { code: string; name: string }[];
+  tagCategories: string[];
+}
+
 export const publicApi = {
+  lists: (signal?: AbortSignal) => request<PublicLists>("/public/lists", { signal }),
   songs: (query: SongQuery, signal?: AbortSignal) =>
     request<PublicSongPage>("/public/songs", { query: { ...query }, signal }),
   song: (id: number, signal?: AbortSignal) => request<PublicSongDetail>(`/public/songs/${id}`, { signal }),

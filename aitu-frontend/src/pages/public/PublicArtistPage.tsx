@@ -3,7 +3,8 @@
  * popularity (implementation 02, Phase 13, plan section 15.1; the app context: "sort the songs
  * within a given artist"). **Add to my library** adds every song of the artist that has a version,
  * each with its default version; with none yet, the button says why on hover. A song row opens the
- * public song.
+ * public song. **Suggest a change** (the header's `⋯`, Phase 14) sends a request for a new name or
+ * more names of the artist.
  */
 
 import { useEffect, useState } from "react";
@@ -12,12 +13,15 @@ import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import EditNoteIcon from "@mui/icons-material/EditNoteOutlined";
 import LibraryAddIcon from "@mui/icons-material/LibraryAddOutlined";
 import { useNavigate, useParams } from "react-router-dom";
 import { publicApi, type PublicArtistDetail } from "../../api";
 import { ROUTES } from "../../layout/routes";
-import { DataTable, EmptyState, PageBody, PageHeader, PillButton, Section, type DataColumn } from "../../ui";
+import { DataTable, EmptyState, PageBody, PageHeader, PillButton, RowMenu, Section, type DataColumn } from "../../ui";
 import { said } from "../library/shared";
+import { SuggestChangeDialog } from "../requests/SuggestChangeDialog";
+import { COUNTS_EVENT } from "../requests/words";
 import { popularityText } from "./shared";
 
 type SongOfArtist = PublicArtistDetail["songs"][number];
@@ -80,6 +84,8 @@ export function PublicArtistPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
+  const [suggesting, setSuggesting] = useState(false);
+  const [sent, setSent] = useState<number | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -142,6 +148,10 @@ export function PublicArtistPage() {
                   </PillButton>
                 </span>
               </Tooltip>
+              <RowMenu
+                title="Artist actions"
+                items={[{ label: "Suggest a change", icon: <EditNoteIcon fontSize="small" />, onClick: () => setSuggesting(true) }]}
+              />
             </>
           ) : undefined
         }
@@ -158,6 +168,19 @@ export function PublicArtistPage() {
             <Typography sx={{ fontSize: 15, color: "text.secondary" }}>Also {artist.otherNames.join(", ")}</Typography>
           ) : null}
           {notice ? <Alert severity="success" onClose={() => setNotice(null)}>{notice}</Alert> : null}
+          {sent !== null ? (
+            <Alert
+              severity="success"
+              onClose={() => setSent(null)}
+              action={
+                <PillButton kind="quiet" size="small" onClick={() => navigate(ROUTES.request(sent))}>
+                  Open
+                </PillButton>
+              }
+            >
+              Request sent to the master user
+            </Alert>
+          ) : null}
           {actionError ? <Alert severity="error" onClose={() => setActionError(null)}>{actionError}</Alert> : null}
           <Section title={`Songs (${artist.songs.length})`}>
             {artist.songs.length === 0 ? (
@@ -184,6 +207,17 @@ export function PublicArtistPage() {
           ) : null}
         </Stack>
       )}
+      {suggesting && artist ? (
+        <SuggestChangeDialog
+          target={{ kind: "artist", artist }}
+          onClose={() => setSuggesting(false)}
+          onSent={(requestId) => {
+            setSuggesting(false);
+            setSent(requestId);
+            window.dispatchEvent(new Event(COUNTS_EVENT));
+          }}
+        />
+      ) : null}
     </PageBody>
   );
 }

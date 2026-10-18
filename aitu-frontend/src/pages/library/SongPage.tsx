@@ -14,6 +14,8 @@
  * - **History** lists the earlier states the version kept when it was replaced, each with
  *   **Restore** (the state it replaces is kept too, so nothing is lost).
  * - **Add to a playlist** puts the version at the end of a songs playlist (Phase 10).
+ * - **Publish** sends a request to put the version in the Public Library, as the user's version of
+ *   a public song (Phase 14, `PublishDialog`).
  * - **Rename** and **Delete**.
  *
  * The header's `⋯` renames the song, changes its artists, or deletes it with every version.
@@ -47,6 +49,7 @@ import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import LaunchIcon from "@mui/icons-material/Launch";
 import PersonIcon from "@mui/icons-material/PersonOutlined";
 import PlayIcon from "@mui/icons-material/PlayCircleOutlined";
+import PublishIcon from "@mui/icons-material/PublicOutlined";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
   libraryApi,
@@ -69,6 +72,8 @@ import {
   RowMenu,
   Section,
 } from "../../ui";
+import { PublishDialog } from "../requests/PublishDialog";
+import { COUNTS_EVENT } from "../requests/words";
 import { download, said } from "./shared";
 import { TextDialog } from "./TextDialog";
 
@@ -89,6 +94,8 @@ export function SongPage() {
   const [deleting, setDeleting] = useState<Deleting | null>(null);
   const [history, setHistory] = useState<VersionRow | null>(null);
   const [toPlaylist, setToPlaylist] = useState<VersionRow | null>(null);
+  const [publishing, setPublishing] = useState<VersionRow | null>(null);
+  const [sent, setSent] = useState<number | null>(null);
   const [artists, setArtists] = useState(false);
 
   useEffect(() => {
@@ -261,6 +268,22 @@ export function SongPage() {
             </Alert>
           ) : null}
 
+          {sent !== null ? (
+            <Alert
+              severity="success"
+              onClose={() => setSent(null)}
+              sx={{ mb: 2 }}
+              role="status"
+              action={
+                <PillButton kind="quiet" size="small" onClick={() => navigate(ROUTES.request(sent))}>
+                  Open
+                </PillButton>
+              }
+            >
+              Request sent to the master user
+            </Alert>
+          ) : null}
+
           <Section title="Versions">
             {song.versions.length === 0 ? (
               <Typography color="text.secondary" sx={{ px: 1.5, py: 1.25 }}>
@@ -309,6 +332,11 @@ export function SongPage() {
                             label: "Add to a playlist",
                             icon: <PlaylistAddIcon fontSize="small" />,
                             onClick: () => setToPlaylist(version),
+                          },
+                          {
+                            label: "Publish",
+                            icon: <PublishIcon fontSize="small" />,
+                            onClick: () => setPublishing(version),
                           },
                           {
                             label: "Rename",
@@ -400,6 +428,18 @@ export function SongPage() {
           }
         }}
       />
+
+      {publishing ? (
+        <PublishDialog
+          versionId={publishing.id}
+          onClose={() => setPublishing(null)}
+          onSent={(id) => {
+            setPublishing(null);
+            setSent(id);
+            window.dispatchEvent(new Event(COUNTS_EVENT));
+          }}
+        />
+      ) : null}
 
       {toPlaylist && song ? (
         <AddToPlaylistDialog

@@ -263,21 +263,26 @@ a version is added to My library; **Save to library** suggests the public songs 
 ## [x] Story 13.4: Documentation
 - [x] Task 13.4.1 `music-library/ontology.md`, `popularity.md` (new); `music-library/README.md`, `private-library.md`, `reconciliation.md`, `00-index.md`, `pages.md`, `endpoints.md` §7.3, `paths-and-data.md`, `components.md`, `aitu-frontend/README.md`; the plan's "as built in Phase 13" notes.
 
-# [ ] Phase 14: Requests, the Admin panel and sharing
+# [x] Phase 14: Requests, the Admin panel and sharing
 
-## [ ] Story 14.1: Requests
-- [ ] Task 14.1.1 The three kinds with items; the Publish dialog; My requests.
-- [ ] Task 14.1.2 Changes asked and resent; withdraw.
+Built 2026-10-16, the request page laid out like a pull request 2026-10-18
+([`02-implementation-phase-14.md`](02-implementation-phase-14.md)); merged into `master` after the
+user's ok (2026-10-18). The user's answer at the start (2026-10-16): a fourth kind of
+request, **Playlist**. Revision `0004` moved the real `.database/` (after `make db-backup`).
 
-## [ ] Story 14.2: Review
-- [ ] Task 14.2.1 The review list and page, side by side, partial acceptance.
-- [ ] Task 14.2.2 The publishing transaction; the creator's username on the version.
+## [x] Story 14.1: Requests
+- [x] Task 14.1.1 The three kinds with items (and **Playlist**); the Publish dialog (and Suggest a change, Propose a song, Ask for a fixed version); My requests.
+- [x] Task 14.1.2 Changes asked and resent; withdraw.
 
-## [ ] Story 14.3: Sharing
-- [ ] Task 14.3.1 Share a Private Library; **Shared**; the counts in the sidebar.
+## [x] Story 14.2: Review
+- [x] Task 14.2.1 The review list and page, side by side, partial acceptance (the page laid out like a pull request at the user's ask of 2026-10-18: Conversation with comments on a stretch, Sheet with Proposed and Now; revision `0005`).
+- [x] Task 14.2.2 The publishing transaction; the creator's username on the version.
 
-## [ ] Story 14.4: Documentation
-- [ ] Task 14.4.1 `music-library/requests.md`, `08-security.md` (rights), `endpoints.md`.
+## [x] Story 14.3: Sharing
+- [x] Task 14.3.1 Share a Private Library; **Shared**; the counts in the sidebar.
+
+## [x] Story 14.4: Documentation
+- [x] Task 14.4.1 `music-library/requests.md` (new), `08-security.md` (rights), `endpoints.md` (§7.4, §7.5); `ontology.md`, `private-library.md`, `music-library/README.md`, `00-index.md`, `07-database.md`, `paths-and-data.md`, `backend/api.md`, `frontend/pages.md`, `aitu-frontend/README.md`; the plan's "as built in Phase 14" notes.
 
 # [ ] Phase 15: The checks, the documentation, and closing
 
