@@ -23,6 +23,10 @@ from aitu_backend.video import examples, images, scoring
 
 client = TestClient(create_app())
 
+#: The committed Lab records: each screenshot's calibration and hand annotations, as they were when
+#: the migration of implementation 02, Phase 3 copied them into `.database/lab/frame-examples/`.
+SEED = Path(__file__).parent / "fixtures" / "frame-examples"
+
 #: The two Phase 1 read by hand off a label sheet, applying V-18 word for word.
 HAND_READ = ["derulo", "shut-up-and-dance"]
 
@@ -31,7 +35,7 @@ def _seeded(slug: str) -> bool:
     """The screenshot is checked out and its committed record has an overlay. Read from the
     committed record, not from Lab: this runs when the tests are collected, before each test has its
     own `.database/` (implementation 02, Phase 3)."""
-    record = paths.frame_examples_seed_dir() / f"{slug}.json"
+    record = SEED / f"{slug}.json"
     if not examples.exists(slug) or not record.is_file():
         return False
     return json.loads(record.read_text()).get("calibration") is not None
@@ -39,10 +43,10 @@ def _seeded(slug: str) -> bool:
 
 @pytest.fixture(autouse=True)
 def _lab(_temporary_database: Path) -> None:
-    """Each test's Lab starts with the committed records, as the migration leaves the real one."""
+    """Each test's Lab starts with the committed records, as the migration left the real one."""
     target = paths.frame_examples_root()
     target.mkdir(parents=True, exist_ok=True)
-    for record in paths.frame_examples_seed_dir().glob("*.json"):
+    for record in SEED.glob("*.json"):
         shutil.copy2(record, target / record.name)
 
 

@@ -149,9 +149,9 @@ older branch then refuses that database (Alembic cannot find the newer revision)
 with the revision is merged, or the database is brought back with `alembic downgrade`.
 
 The pieces of the old store (`aitu-backend/data/audio/<uuid>/`) were moved once, in Phase 3, by
-`scripts/migrate/to_database.py`: every note checked against the old file, safe to run twice, never
-writing into the old store. Only that script reads `aitu-backend/data/`, which the user deletes
-after checking the app; Phase 15 removes the code.
+`scripts/migrate/to_database.py`, every note checked against the old file. The user deleted the old
+store after checking the app, and Phase 15 removed the script; nothing reads `aitu-backend/data/`
+any more.
 
 ## Backup, restore, check
 

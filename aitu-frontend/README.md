@@ -20,33 +20,21 @@ rendering: [rendering.md](../context/frontend/rendering.md)
 
 ## Run
 
-**In containers** (the usual way), from the repository root:
+The app runs in a container from the repository root (`make up`), and every way to run it, open it
+and check it is in [context/04-local-development.md](../context/04-local-development.md). What is
+particular to this app:
 
-```bash
-make up      # builds if needed, starts the backend (GPU) and this app; open http://ubuntu:5173 from the Mac
-make logs    # follow both
-make down    # stop both
-```
-
-The frontend container runs the Vite development server on the mounted source folder, so an edit
-shows in the browser at once. It listens on every address of the machine (`WEB_BIND`, default
-`0.0.0.0`) and answers only to the host names of `allowedHosts` in `vite.config.ts` (`localhost`,
-`ubuntu`, `david-ubuntu`, `david-ubuntu.local`, plus `AITU_ALLOWED_HOSTS`) and to IP addresses. Sign
-in as the master user with `AITU_MASTER_PASSWORD` of `.env`. After a change of `package-lock.json` or of `../../vexflow-v2`, run
-`make build` (or `make up`, which rebuilds).
-
-**Natively**, without containers:
-
-```bash
-npm install && npm run dev
-```
-
-with the backend running on `http://127.0.0.1:8765`. `make serve` from the repository root starts
-both natively. Natively the page listens on `localhost` only.
-
-**The backend address.** The page calls `/api`, and the Vite server passes it to
-`http://127.0.0.1:8765`, or to `AITU_API_PROXY`, which the container sets to the backend service
-(`vite.config.ts`). `VITE_AITU_API_URL` points the page at a backend directly instead.
+- The container runs the Vite development server on the mounted source folder, so an edit shows in
+  the browser at once. It listens on every address of the machine (`WEB_BIND`, default `0.0.0.0`)
+  and answers only to the host names of `allowedHosts` in `vite.config.ts` (`localhost`, `ubuntu`,
+  `david-ubuntu`, `david-ubuntu.local`, plus `AITU_ALLOWED_HOSTS`) and to IP addresses.
+- After a change of `package-lock.json` or of `../../vexflow-v2`, run `make build` (or `make up`,
+  which rebuilds).
+- Natively (`npm install && npm run dev`, with the backend on `http://127.0.0.1:8765`) the page
+  listens on `localhost` only.
+- **The backend address.** The page calls `/api`, and the Vite server passes it to
+  `http://127.0.0.1:8765`, or to `AITU_API_PROXY`, which the container sets to the backend service
+  (`vite.config.ts`). `VITE_AITU_API_URL` points the page at a backend directly instead.
 
 ## npm scripts
 
@@ -71,6 +59,7 @@ both natively. Natively the page listens on `localhost` only.
 | `npm run check:compose` | **From other projects** and the playlists (Phase 10), on copies of Elefants and Superestrella's tutorial: a stretch of a read-only sheet and a whole project added, a **Subheader**, a passage moved, the list kept over a reload, **Save as integrated playlist** (two parts, the notes of each passage, the sources unchanged); the parts renamed, moved, joined and split (**Start a new part here**); on a copy saved to My library, **Make a playlist** from Songs, **Add to a playlist** from a version, a song removed, the playlist deleted; 390 px and dark (`scripts/check-compose.mjs`) |
 | `npm run check:play` | **Play mode** (Phase 11), on copies of Elefants: **Play** from Projects, the page with the sheet alone, Space, the buttons fading while it plays, the cursor kept in the middle of the window, a lyrics piece shown by its frames, the arrows, a double-click moving the cursor, **Notes Falling** as a view and its old address, Escape; an integrated playlist of two parts played on; two copies saved as songs, **Play** on a song and a version, a songs playlist with **Next**, a stretch that stops by itself, **All songs**, Close back to the playlist; 390 px and dark (`scripts/check-play.mjs`). Uses no GPU |
 | `npm run check:requests` | **Requests, the review and sharing** (Phase 14), with a temporary user the check makes and removes: **Share my library**, the user's **Shared** and **Add to my library**, **Publish** a version on the public “7 Years”, **Propose a song** with a new artist, the master user's **Review** (counts, oldest first), a change asked and **Change and send again**, the request's Conversation and Sheet tabs, a comment on a marked stretch drawn and played in the Conversation, a reply and a comment, the accepted version and **Ask for a fixed version**, a withdrawn change, the rights; 390 px and dark; everything public it made removed (`aitu_backend.library.public_fixture`), and the user with all of theirs (`scripts/check-requests.mjs`). Uses no GPU |
+| `npm run check:journey` | **The whole journey** (Phase 15), timed, with two temporary users the check makes and removes, the master user reviewing: **New project** from a YouTube link, **Transcribe** followed live, **Predict hands**, the Sheet step, **Save to library**; **Publish** with **Propose this song** (a new song and artist); **Review**, every item accepted; the second user finds the song on Public songs, **Add to my library**, **Play** in Play mode, **From other projects** and **Save as song**; the rights between the three. Prints the time of each step (`--json` writes them). Uses the GPU (`scripts/check-journey.mjs`) |
 | `npm run check:public` | **The Public Library** (Phase 13): a copy of a version of My library placed as two public versions of “Stayin' Alive” (`aitu_backend.library.public_fixture`, on the host); Public songs (the count, a search, the Decade chip and its popularity, a sort), one song (byline, chart line, versions, a like, lyrics, **Play**), **Add to my library** and the song in My library with its link back, a song with no version, an artist, the artists, a public playlist (**Add to my library**, **Play**, Close), **Search**, **Save to library** on a public song; 390 px and dark; everything it made deleted (`scripts/check-public.mjs`). Uses no GPU |
 | `npm run check:lyrics` | The **Lyrics** tab, on a copy of Elefants: words saved before read as a piece, the pool, a piece dragged onto the sheet, moved and resized on frames, merge, split, line break, larger, back to the pool, delete, undo, Save and a reload. `--only clefs` of the same script checks the clef rule on a first write |
 | `npm run time:flow` | The whole flow timed on three temporary pieces (an upload, a copy opened from Projects, a YouTube URL) |
@@ -78,7 +67,7 @@ both natively. Natively the page listens on `localhost` only.
 | `npm run bench:sheet` | A hand move on the Sheet step's piano sheet, timed part by part, on copies |
 | `npm run screenshot -- <path>` | A screenshot of a page in a headless Chromium, for a machine with no screen. Options: `--piece <uuid>`, `--wait <selector>`, `--delay <ms>`, `--out <file.png>`, `--width`, `--height`, `--full`, `--base <url>`, `--theme dark` (the dark scheme), `--signed-out` (the sign-in page, without signing in) |
 
-**These need the running app** (`make up`): `check:flow`, `check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `time:flow`,
+**These need the running app** (`make up`): `check:flow`, `check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `check:journey`, `time:flow`,
 `bench:roll`, `bench:sheet` and `screenshot`. They open `http://localhost:5173` (`--base` changes
 it). All but `bench:roll` and `screenshot` work on temporary pieces and delete them at the end, so the library is never
 changed. `bench:roll` opens
@@ -86,7 +75,7 @@ changed. `bench:roll` opens
 need no browser and no backend.
 
 **Signing in.** Every page and every route of the backend need a session, so `check:flow`,
-`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `time:flow`, `bench:sheet` and
+`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `check:journey`, `time:flow`, `bench:sheet` and
 `screenshot` sign in first through `scripts/session.mjs`. Once the master user's password was changed in the app (as on the Ubuntu
 machine since 2026-10-06), the line of `.env` no longer signs in: give `AITU_CHECK_PASSWORD` (and
 `AITU_CHECK_USERNAME` for another user) in the environment of the command. They act as
@@ -102,7 +91,7 @@ the script (`signIn(base)`) and to every Playwright page (`useSession(browser)`)
 src/
   api/        # typed client, one module per backend router; no component calls fetch
   hooks/      # useProgress (SSE), followJob, useEditHistory, selection, the played notes, element size
-  layout/     # AppLayout (the shell, the user menu), RequireUser and RequireMaster (the guards), PasswordDialog, LabLayout, SearchDialog, ShortcutsDialog, LegacyRedirect, routes.ts (every path lives here)
+  layout/     # AppLayout (the shell, the user menu), RequireUser and RequireMaster (the guards), PasswordDialog, LabLayout, SearchDialog, ShareDialog, ShortcutsDialog, routes.ts (every path lives here)
   pages/      # one component per route
     LoginPage.tsx     # Sign in
     ProjectsPage.tsx  # Projects

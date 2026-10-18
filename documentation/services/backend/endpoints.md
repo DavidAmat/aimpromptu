@@ -1336,8 +1336,8 @@ Implementation 08 deleted no route. It removed two choices and one page:
   code with their tests, and pieces they transcribed keep their filters.
 - **A new model per job.** The model is loaded once per process (`transcription/models.py`), and
   only one transcription runs on the GPU at a time.
-- **The Playground's Piano Roll page**, removed in Phase 9. `/playground/piano-roll` now redirects
-  to the flow page. `GET /matrix/{uuid}/events` stays, because Notes Falling (a view of Play mode
+- **The Playground's Piano Roll page**, removed in Phase 9. `/playground/piano-roll` redirected
+  to the flow page until implementation 02, Phase 15. `GET /matrix/{uuid}/events` stays, because Notes Falling (a view of Play mode
   since implementation 02, Phase 11) draws it. `PUT /matrix/{uuid}/events/removed` stays with its
   tests; no page has called it since Phase 11, when Notes Falling stopped taking notes off.
 

@@ -1,6 +1,6 @@
 /**
  * Every route path in one place (implementation 02, plan section 6.3). Nothing hardcodes a URL
- * string: navigation, the sidebar, the step tabs and the redirects all read from here.
+ * string: navigation, the sidebar and the step tabs all read from here.
  *
  * A project's id is the id of its first part, the uuid of the backend's routes (plan P-6).
  * `/projects/new` opens the Source step of a new project (**New project → From source** on the
@@ -28,13 +28,13 @@
  *
  * **Play mode** (`/play/:projectId`, `/play/playlist/:id`, Phase 11) is the sheet alone, outside the
  * shell: a project or a version of the library, or a songs playlist. Notes Falling is one of its views
- * (`?view=falling`); its old address `/projects/:id/notes-falling` goes there.
+ * (`?view=falling`).
  *
  * `/login` and Play mode are the pages outside the shell; every page needs a user signed in, and the
  * Admin pages (Users, Lab) the master user (Phase 4).
  *
- * The old paths (`/piece/...`, `/playground/...`, `/youtube`, `/video/...`, `/library/play/...`) redirect
- * to their new home (`LEGACY_REDIRECTS`) until Phase 15 removes them.
+ * The old paths (`/piece/...`, `/playground/...`, `/youtube`, `/video/...`, `/library/play/...`,
+ * `/projects/:id/notes-falling`) redirected to their new home until Phase 15 removed them.
  */
 
 import type { PieceStep } from "../api/pieces";
@@ -127,29 +127,4 @@ export const LAB_TABS = [
   { label: "Detection", to: ROUTES.labDetection },
   { label: "Notes", to: ROUTES.labNotes },
   { label: "Examples", to: ROUTES.labExamples },
-];
-
-/**
- * The old paths and where they go now: `[old pattern, new path]`, where `:name` in the new path is
- * taken from the old one and `*` is the rest of the old path. The query string is kept, so a link
- * to `/video/notes?video=<uuid>` still opens that video.
- */
-export const LEGACY_REDIRECTS: readonly (readonly [string, string])[] = [
-  ["/piece", ROUTES.projects],
-  ["/piece/new", ROUTES.projectNew],
-  ["/piece/:id/*", "/projects/:id/*"],
-  ["/playground/*", ROUTES.projects],
-  ["/youtube", ROUTES.projectNew],
-  ["/video", ROUTES.labVideo],
-  ["/video/player", ROUTES.labVideo],
-  ["/video/calibration", ROUTES.labCalibration],
-  ["/video/detection", ROUTES.labDetection],
-  ["/video/notes", ROUTES.labNotes],
-  ["/video/examples", ROUTES.labExamples],
-  ["/video/examples/:slug", "/admin/lab/examples/:slug"],
-  ["/library", ROUTES.librarySongs],
-  // The old Piano Library's performance page; My library has its songs now (Phase 6).
-  ["/library/play/*", ROUTES.librarySongs],
-  // Notes Falling is a view of Play mode since Phase 11.
-  ["/projects/:id/notes-falling", "/play/:id?view=falling"],
 ];

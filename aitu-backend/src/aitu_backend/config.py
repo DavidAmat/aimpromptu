@@ -9,8 +9,6 @@ Variable               Default                             Meaning
 =====================  ==================================  =========================================
 ``AITU_DATABASE_DIR``  ``<repository>/.database``           Every record and every file of the app
                                                            (implementation 02, plan section 8)
-``AITU_DATA_DIR``      ``aitu-backend/data``               The old file store, read only by the
-                                                           migration to ``.database/`` (Phase 3)
 ``AITU_MASTER_         ``master``                          The username of the master user, made on
 USERNAME``                                                 the first start (plan section 9.1)
 ``AITU_MASTER_         empty                               Its password, set while it has none
@@ -44,12 +42,6 @@ MUSCRIPTOR_DTYPES = ("float32", "float16", "bfloat16")
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
-
-
-def data_dir_override() -> Path | None:
-    """``AITU_DATA_DIR`` as a path, or ``None`` when it is unset or empty."""
-    value = os.environ.get("AITU_DATA_DIR", "").strip()
-    return Path(value).expanduser().resolve() if value else None
 
 
 def database_dir_override() -> Path | None:

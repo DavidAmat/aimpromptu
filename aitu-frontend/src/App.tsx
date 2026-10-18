@@ -12,13 +12,11 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import AppLayout from "./layout/AppLayout";
 import LabLayout from "./layout/LabLayout";
-import LegacyRedirect from "./layout/LegacyRedirect";
 import { RequireMaster, RequireUser } from "./layout/RequireUser";
 import {
   ADMIN_REQUEST_PATTERN,
   ADMIN_REQUEST_SHEET_PATTERN,
   LAB_EXAMPLE_PATTERN,
-  LEGACY_REDIRECTS,
   LIBRARY_ARTIST_PATTERN,
   LIBRARY_PLAYLIST_PATTERN,
   LIBRARY_SHARED_SONG_PATTERN,
@@ -224,10 +222,6 @@ export default function App() {
           <Route path="examples" element={<ExamplesPage />} />
           <Route path={LAB_EXAMPLE_PATTERN.replace(`${ROUTES.lab}/`, "")} element={<ExamplesPage />} />
         </Route>
-
-        {LEGACY_REDIRECTS.map(([from, to]) => (
-          <Route key={from} path={from} element={<LegacyRedirect to={to} />} />
-        ))}
 
         <Route path="*" element={<NotFoundPage />} />
       </Route>

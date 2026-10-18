@@ -386,7 +386,8 @@ one OpenAI uses.
 | `/dev/ui`, `/dev/roll-bench` | Development builds only: every shared component on one page; the Notes step's measurements | 1 |
 
 Every old path (`/piece/...`, `/playground/...`, `/youtube`, `/video/...`, `/library/play/...`)
-redirects to its new home for one implementation, then is removed in Phase 15.
+redirects to its new home for one implementation, then is removed in Phase 15. *Removed in Phase 15*
+(with `/projects/:id/notes-falling`): an old path now opens the page of an unknown address.
 
 ---
 
@@ -1852,6 +1853,15 @@ to a piano sheet, saved to the library, published, reviewed and accepted, pulled
 played in Play mode, copied into a project from other projects. Timings. The documentation of section
 19 that is still open, the old redirects removed, the code that read `aitu-backend/data/` removed. The
 folder README marked complete.
+
+*Built 2026-10-18* ([`02-implementation-phase-15.md`](02-implementation-phase-15.md)): the journey is
+`npm run check:journey`, with two temporary users (the author and the reader) and the master user
+reviewing, everything they made removed at the end; on the same YouTube song as implementation 08
+its times match (all notes on screen in about 22 s, every later step under a second). The migration
+(`scripts/migrate/`), `paths.data_dir()` and `AITU_DATA_DIR` are removed; the committed Lab records
+are a test fixture. `00-project-complete-overview.md`, `01-project.md`, `05-deployment.md` and the
+root `README.md` are rewritten; `04-local-development.md` is the one home of the run instructions.
+Q-5 stays open, for later work.
 
 ---
 

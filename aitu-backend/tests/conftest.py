@@ -26,14 +26,11 @@ os.environ["AITU_DATABASE_DIR"] = tempfile.mkdtemp(prefix="aitu-collect-database
 
 
 @pytest.fixture(autouse=True)
-def _no_data_dir_override(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Keep ``AITU_DATA_DIR`` out of the tests.
+def _no_master_user_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the master user of ``.env`` out of the tests.
 
-    Some tests move the old data folder by patching ``paths.backend_root`` to a temporary folder. A
-    data folder set in the environment would win over that patch. A test of the variable itself
-    sets it again with ``monkeypatch.setenv``.
+    A test of a variable sets it again with ``monkeypatch.setenv``.
     """
-    monkeypatch.delenv("AITU_DATA_DIR", raising=False)
     monkeypatch.delenv("AITU_MASTER_USERNAME", raising=False)
     monkeypatch.delenv("AITU_MASTER_PASSWORD", raising=False)
 

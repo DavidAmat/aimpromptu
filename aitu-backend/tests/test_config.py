@@ -13,16 +13,8 @@ from aitu_backend.storage import paths
 def test_the_defaults_are_the_old_behaviour(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in ("AITU_DEVICE", "AITU_HOST", "AITU_PORT"):
         monkeypatch.delenv(name, raising=False)
-    assert config.data_dir_override() is None
-    assert paths.data_dir() == paths.backend_root() / "data"
     assert config.device() == "cpu"
     assert (config.host(), config.port()) == ("127.0.0.1", 8765)
-
-
-def test_the_data_folder_moves(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("AITU_DATA_DIR", str(tmp_path))
-    assert paths.data_dir() == tmp_path.resolve()
-    assert paths.frame_examples_seed_dir() == tmp_path.resolve() / "frame-examples"
 
 
 def test_the_database_folder_moves(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -41,9 +33,9 @@ def test_the_master_username(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_an_empty_variable_is_unset(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AITU_DATA_DIR", "  ")
+    monkeypatch.setenv("AITU_DATABASE_DIR", "  ")
     monkeypatch.setenv("AITU_DEVICE", "")
-    assert paths.data_dir() == paths.backend_root() / "data"
+    assert paths.database_dir() == paths.repo_root() / ".database"
     assert config.device() == "cpu"
 
 

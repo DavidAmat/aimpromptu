@@ -16,8 +16,8 @@ project, a version of My library, an integrated playlist or a songs playlist. Th
 | A songs playlist | **Play** in its header; a click on a row; **Play from here** in a row's `⋯` | The playlist, on its first song or on that one |
 
 The addresses are `/play/<projectId>` and `/play/playlist/<id>`. Play mode is outside the app's
-shell: no sidebar. Notes Falling, which was a page of a project until Phase 11, is one of its views,
-and its old address `/projects/<id>/notes-falling` opens Play mode on it.
+shell: no sidebar. Notes Falling, which was a page of a project until Phase 11, is one of its views
+(`/play/<id>?view=falling`).
 
 ## 2. The page
 

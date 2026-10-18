@@ -97,7 +97,7 @@ Root `.claude/` is **gitignored** today (see root `.gitignore`). Local inventory
 
 | Command | Purpose |
 |---------|---------|
-| `/start-local` | Run `uv sync && make serve` in `aitu-backend` and `npm run dev` in `aitu-frontend` (two terminals or a small script). |
+| `/start-local` | `make up` from the repository root ([04-local-development.md](04-local-development.md)). |
 | `/lint-frontend` | `cd aitu-frontend && npm run lint` |
 | `/verify-backend` | `cd aitu-backend && uv sync && curl -s http://127.0.0.1:8765/health` |
 

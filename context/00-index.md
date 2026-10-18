@@ -25,12 +25,12 @@ assumes.
 | [00-documentation-instructions.md](00-documentation-instructions.md) | Where to put new docs; the two-folder model; cross-linking rules |
 | [00-index.md](00-index.md) | This file — map of all documentation |
 | [00-project-complete-overview.md](00-project-complete-overview.md) | One-shot orientation for a fresh reader or LLM |
-| [01-project.md](01-project.md) | What AImpromptu is, who uses it, the problem it solves |
+| [01-project.md](01-project.md) | The product page: what AImpromptu is (pointing at the app context), who uses it, the problem it solves, how it was built |
 | [02-tech-stack.md](02-tech-stack.md) | Locked versions from lockfiles, the containers, and the standing technical decisions |
 | [02b-local-setup.md](02b-local-setup.md) | The Mac mini and the Ubuntu machine; section 12: AImpromptu on Ubuntu, the browser on the Mac at `http://ubuntu:5173` (the tunnel as the fallback) |
 | [03-services-overview.md](03-services-overview.md) | The two services and the renderer: roles, ports, how they connect |
 | [04-local-development.md](04-local-development.md) | Run it in containers or natively, open it from the Mac, the checks, the troubleshooting table |
-| [05-deployment.md](05-deployment.md) | STUB: POC local-only; no deploy flow yet |
+| [05-deployment.md](05-deployment.md) | What runs today on the one machine at home, moving it, and what a production version needs |
 | *(skipped)* `06-*-infrastructure.md` | No cloud provider; POC is local-only |
 | [07-database.md](07-database.md) | `.database/`: SQLite and the project bundles, the audio store by hash, what is kept and why so little, backup and check |
 | [08-security.md](08-security.md) | **Security**: the users, the sign in and the session cookie, the rights table, the home network, and what this setup does not protect (implementation 02, Phase 4) |
@@ -100,10 +100,11 @@ assumes.
 |------|-------------|
 | [implementations/README.md](implementations/README.md) | **Start here.** The two groups (`01-mvp/`, `02-private-web-app/`), every implementation with its state, and the numbering rule |
 
-### 02 — The private web app — LIVE
+### 02 — The private web app — COMPLETE 2026-10-18
 
 The app of [app/01-app-context.md](app/01-app-context.md): users, projects, the three storage layers,
-the music library, playlists, Play mode, requests. Opened 2026-10-05.
+the music library, playlists, Play mode, requests. Opened 2026-10-05; sixteen phases, the last
+(Phase 15) the whole journey checked with two users, the cleanup and these pages.
 
 | File | Description |
 |------|-------------|
@@ -250,7 +251,7 @@ Reading a piano roll video into the same `events.json` the transcription model w
 | [../documentation/services/backend/hand-inference-second-pass.md](../documentation/services/backend/hand-inference-second-pass.md) | The gated repair pass over the hand split |
 | [../documentation/services/backend/rhythm-and-annotations.md](../documentation/services/backend/rhythm-and-annotations.md) | `sheet.json` (once `rhythm.json`) field by field: everything a reader decided, the lyrics pieces and pool |
 | [../documentation/services/backend/editing-and-compose.md](../documentation/services/backend/editing-and-compose.md) | The replacement splice, and the one place a piece may change length |
-| [../documentation/services/backend/paths-and-data.md](../documentation/services/backend/paths-and-data.md) | `.database/`: every path, the bundle, the timeline, every table, the migration, backup and check |
+| [../documentation/services/backend/paths-and-data.md](../documentation/services/backend/paths-and-data.md) | `.database/`: every path, the bundle, the timeline, every table, backup and check |
 | [../documentation/deprecated/schemas.md](../documentation/deprecated/schemas.md) | Deprecated: the models of the deleted text-notation MVP |
 | [../documentation/deprecated/sequence-logic.md](../documentation/deprecated/sequence-logic.md) | Deprecated: `matrix/text_notation.py`, now only a builder of test matrices |
 

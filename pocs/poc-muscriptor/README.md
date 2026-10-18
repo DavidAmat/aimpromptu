@@ -65,7 +65,8 @@ uv run python $P/13_speed_quality.py
 ## Layout
 
 - `scripts/`: the code above.
-- `data/`: empty; the audio is read in place from `aitu-backend/data/audio/`.
+- `data/`: empty; the audio was read in place from `aitu-backend/data/audio/`, which is gone since
+  implementation 02 (the pieces are in `.database/`); the scripts were not changed for it.
 - `out/format/`: the raw events of task 1.3.1, one JSON line per event, as they arrived.
 - `out/speed/`: one row per configuration (`index.json`), the notes of each, and `quality.json`.
 - `out/conditioning/`, `out/full/`, `out/compare/`, `out/lag/`, `out/filters/`: one folder per task.

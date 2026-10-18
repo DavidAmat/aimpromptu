@@ -29,7 +29,7 @@ How the AImpromptu (aitu) documentation system works and where to put new materi
 **The app and the language:**
 - `context/app/` — [01-app-context.md](app/01-app-context.md), the app being built, in the user's words; its glossary is the vocabulary of every new page
 - `context/language/` — how to write ([communication-style.md](language/communication-style.md)) and how to report on a plan ([communication-implementation-plans.md](language/communication-implementation-plans.md))
-- `context/music-library/` — the music library: the Private Library (implementation 02, Phase 6); its ontology, popularity and requests come with Phases 12 to 14
+- `context/music-library/` — the music library: the Private Library, the ontology of both scopes, the reconciliation of the downloaded data, popularity, requests and sharing (implementation 02, Phases 6 and 12 to 14)
 
 **Service overviews:**
 - `context/backend/` — aitu-backend: parsing, API, notation entry points
@@ -59,7 +59,7 @@ How the AImpromptu (aitu) documentation system works and where to put new materi
 ## Implementation folders
 
 Planned work lives in `context/implementations/`, in groups: `01-mvp/` (closed) and
-`02-private-web-app/` (live). Each implementation keeps its brief (`NN-prompt.md`), its plan, its
+`02-private-web-app/` (complete 2026-10-18). Each implementation keeps its brief (`NN-prompt.md`), its plan, its
 checklist (the status lookup) and one report per phase (`NN-implementation-phase-N.md`) in its own
 folder, with a `README.md` that says its state. The numbering rule is in
 [implementations/README.md](implementations/README.md). Phase reports and walkthroughs follow

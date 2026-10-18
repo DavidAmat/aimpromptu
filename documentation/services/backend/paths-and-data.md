@@ -10,7 +10,7 @@ the records and folders beside it for the audio and the project bundles. The fol
 (`aitu_backend/config.py`); on the Ubuntu machine `.env` names `/mnt/ssd2/aimpromptu/.database` (§7). Every path is built in one module,
 `aitu-backend/src/aitu_backend/storage/paths.py`; its module docstring repeats the tree below.
 
-`aitu-backend/data/` is the store before Phase 3. Only the migration (§9) reads it.
+`aitu-backend/data/` was the store before Phase 3; it is gone, and nothing reads it (§9).
 
 ---
 
@@ -452,7 +452,6 @@ if it is missing, because Docker would make it as root.
 |---|---|---|
 | The repository (`.`) | `/work/aimpromptu` | The code is the host's, so uvicorn (`--reload --reload-dir src`) and Vite reload on every edit; the tests also read `pocs/`, `context/` and `scripts/` |
 | `${AITU_DATABASE_DIR:-./.database}` (on this machine `/mnt/ssd2/aimpromptu/.database`, from `.env`) | `/database` | Every record and every file of the app |
-| `${AITU_DATA_DIR:-./aitu-backend/data}` | `/work/aimpromptu/aitu-backend/data` | The old store, for the migration only |
 | `${HF_HUB_CACHE:-/mnt/ssd2/hf/data/hub}` | `/hf/hub` (`HF_HUB_CACHE`) | The MuScriptor weights (5.5 GB for `large`) |
 | `${AITU_CACHE_DIR:-/mnt/ssd2/aimpromptu/home}` | `/home/app` | The ByteDance checkpoint and the torch cache |
 | `./aitu-frontend` | `/work/aimpromptu/aitu-frontend` | The frontend code; an anonymous volume keeps the image's `node_modules` |
@@ -486,25 +485,14 @@ new folder passes `db-check` with every hash.
 
 ## 9. The migration of `aitu-backend/data/`
 
-`scripts/migrate/to_database.py` (plan section 8.9), run once in Phase 3:
-
-    cd aitu-backend
-    AITU_DATABASE_DIR=/tmp/aitu-trial uv run --no-sync python ../scripts/migrate/to_database.py \
-        --report /tmp/aitu-trial-report.json        # on a throwaway folder first
-    uv run --no-sync python ../scripts/migrate/to_database.py --report ../migration-report.json
-
-For each `data/audio/<uuid>/`: a project of one part with the same id; the audio file into the
-store; `metadata.json` into `project.json` and the timeline; `matrices/events.json` into
-`notes.pmn`, checked note by note (every id, key, time, hand, flag, the header, the length and the
-title read back equal, or the piece fails); `rhythm.json` into `sheet.json` unchanged; the cache
-files; `history/v<N>/` with a timeline instead of a copy of the audio; the video into `tmp/`. A piece
-of the seed list (`scripts/seed/youtube-library/seed-state.json` and `library.json`) goes to the
-master user's Private Library under a private song and artist, version `original`; the others to
-the Personal Vault. `data/frame-examples/*.json` goes to `lab/frame-examples/`. The new files keep
-the modification times of the old ones, so "when it changed" on the Projects page is unchanged.
-
-It never writes into `data/`, skips a piece whose project exists (safe to run twice), and deletes
-the partial project of a piece that fails, which the report names with the reason.
+`scripts/migrate/to_database.py` (plan section 8.9) moved the old store into `.database/` once, in
+Phase 3: each `data/audio/<uuid>/` became a project of one part with the same id, its notes checked
+note by note, its audio in the store, the seed list's pieces in the master user's Private Library
+(the report: [02-implementation-phase-3.md](../../../context/implementations/02-private-web-app/02-implementation-phase-3.md)).
+The user then deleted `data/audio/`, and Phase 15 removed the script, its test, `paths.data_dir()`
+and `AITU_DATA_DIR`; git history keeps them. The committed Lab records it copied
+(`data/frame-examples/*.json`) are now the fixture of `tests/test_video_examples.py`,
+`tests/fixtures/frame-examples/`.
 
 ---
 

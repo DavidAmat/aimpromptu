@@ -6,9 +6,10 @@ numbered folder:
 - **`01-mvp/`** holds the nine implementations that built the MVP: one audio file to one piano
   sheet, for one person. All of them are closed or complete. Their decisions and rules still bind
   new work.
-- **`02-private-web-app/`** is the work being built now: the app of
+- **`02-private-web-app/`** built the app of
   [`../app/01-app-context.md`](../app/01-app-context.md), with users, projects, the three storage
-  layers, the music library and Play mode.
+  layers, the music library, requests and Play mode. It is complete (2026-10-18); the next group
+  is `03-`.
 
 **Open a folder's own `README.md` first**, when it has one. It says whether that work is live or
 closed.
@@ -27,17 +28,19 @@ closed.
 | 08 | [`08-new-algorithm-notes-detection-muscriptor/`](01-mvp/08-new-algorithm-notes-detection-muscriptor/README.md) | MuScriptor as the only transcription engine, the live piano roll and its editor, the hand split as a visible step, one flow page from audio to piano sheet, and the move to the Ubuntu machine with containers and one SSH tunnel | 2026-09-28 | **Complete 2026-10-01.** Ten phases. [`08-checklist.md`](01-mvp/08-new-algorithm-notes-detection-muscriptor/08-checklist.md) is the status lookup |
 | 09 | [`09-minimal-ui/`](01-mvp/09-minimal-ui/09-minimal-ui-guidelines.md) | The rules for a minimal UI, and a brief to clean every page | 2026-10-04 | **Folded into 02.** The brief was never built on its own; 02 Phase 1 and every later UI phase apply [`09-minimal-ui-guidelines.md`](01-mvp/09-minimal-ui/09-minimal-ui-guidelines.md) and its pass of 13 checks |
 
-## 02-private-web-app: the app being built now
+## 02-private-web-app: the private web app
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 02 | [`02-private-web-app/`](02-private-web-app/README.md) | The app of the app context: the design system and the sidebar shell, `.database/`, users and login on the home network, projects and the Personal Vault, the Private and Public Libraries, the sheet toolbox, copy and paste, Recording in Sheet, playlists, Play mode, requests and the Admin panel | 2026-10-05 | **Live.** Sixteen phases, 0 to 15. [`02-checklist.md`](02-private-web-app/02-checklist.md) is the status lookup |
-| 02-a | [`02-private-web-app/public-library-build/`](02-private-web-app/public-library-build/README.md) | A parallel piece of work: the data of the Public Library, downloaded from `musicchartsarchive.com` into `data/music-library/` (next to the repository) | 2026-10-05 | **Live**, run by another agent. 02 Phase 12 reconciles it |
+| 02 | [`02-private-web-app/`](02-private-web-app/README.md) | The app of the app context: the design system and the sidebar shell, `.database/`, users and login on the home network, projects and the Personal Vault, the Private and Public Libraries, the sheet toolbox, copy and paste, Recording in Sheet, playlists, Play mode, requests and the Admin panel | 2026-10-05 | **Complete 2026-10-18.** Sixteen phases, 0 to 15; Phase 15 walked the whole journey with two users. [`02-checklist.md`](02-private-web-app/02-checklist.md) is the status lookup; decision Q-5 (the `spain` and `catalan` regions, genres) is left for later work |
+| 02-a | [`02-private-web-app/public-library-build/`](02-private-web-app/public-library-build/README.md) | A parallel piece of work: the data of the Public Library, downloaded from `musicchartsarchive.com` into `data/music-library/` (next to the repository) | 2026-10-05 | **Done**: the download is in `data/music-library/`; 02 Phase 12 reconciled it and Phase 13 imported it |
 
 ## How to read this folder
 
-- **"What is being built now?"** → [`02-private-web-app/02-plan.md`](02-private-web-app/02-plan.md)
-  and its checklist [`02-checklist.md`](02-private-web-app/02-checklist.md).
+- **"What is being built now?"** → nothing: 02 is complete. A new piece of work opens
+  `03-<short-title>/` with its brief. What 02 left open: its checklist
+  [`02-checklist.md`](02-private-web-app/02-checklist.md) (Q-5) and the open points of
+  [`02-implementation-phase-15.md`](02-private-web-app/02-implementation-phase-15.md).
 - **"What must a new task respect?"** →
   [`01-mvp/01-epics-master-plan/plan/wall-clock-rewrite.md`](01-mvp/01-epics-master-plan/plan/wall-clock-rewrite.md)
   (five rules, written after the refactor),
