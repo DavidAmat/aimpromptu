@@ -286,8 +286,8 @@ request, **Playlist**. Revision `0004` moved the real `.database/` (after `make 
 
 # [x] Phase 15: The checks, the documentation, and closing
 
-Built 2026-10-18 ([`02-implementation-phase-15.md`](02-implementation-phase-15.md)); its merge into
-`master` waits for the user's check. Q-5 stays open for later work.
+Built 2026-10-18 ([`02-implementation-phase-15.md`](02-implementation-phase-15.md)); merged into
+`master` after the user's ok (2026-10-18). Q-5 stays open for later work.
 
 ## [x] Story 15.1: The journey
 - [x] Task 15.1.1 The whole journey with two users on temporary copies, with timings (`npm run check:journey`: two temporary users and the master user, 21 checks, passed twice; the times of 16 steps).

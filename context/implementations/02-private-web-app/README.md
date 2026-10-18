@@ -8,7 +8,7 @@ of Phase 12 for later work. The old store `aitu-backend/data/` is gone: its piec
 `.database/` in Phase 3, the user deleted it after checking the app, and Phase 15 removed the code
 that read it (its Lab records are now a test fixture). **Phase 15** walked the whole journey with two
 users and closed the documentation ([`02-implementation-phase-15.md`](02-implementation-phase-15.md));
-its merge waits for the user's check.
+merged into `master` after the user's ok (2026-10-18).
 
 The brief is [`02-prompt.md`](02-prompt.md), the app it builds is
 [`../../app/01-app-context.md`](../../app/01-app-context.md), the plan is [`02-plan.md`](02-plan.md)
