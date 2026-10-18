@@ -22,7 +22,7 @@ The plan's section 3.
 - [x] **Q-6** The popularity weights. **Answered 2026-10-16:** objective criteria instead of a hand ranking; the plan's formula with the power of a week's points at 8 ([report](02-implementation-phase-12.md) section 5.3).
 - [x] **Q-7** Offline downloads per project: **left for the production version**. Answered 2026-10-15 (raised in Phase 6).
 - [x] **Q-8** Live notes from the video reader: **one job with its stages**, the notes at the end (61 s for a 3:09 video, measured in Phase 5). Answered 2026-10-15.
-- [ ] **Q-9** The sources of the `spain` and `catalan` regions, from the 60s to today (takes over the region part of Q-5). Raised in Phase 16, after the research.
+- [p] **Q-9** The sources of the `spain` and `catalan` regions, from the 60s to today (takes over the region part of Q-5). **Raised 2026-10-18** after the research ([`regional-sources.md`](../../music-library/regional-sources.md) section 6).
 - [ ] **Q-10** Spotify for the inferred popularity: its API gives no play count (only its own `popularity`), and its Developer Policy forbids feeding its content to a machine learning model. Raised 2026-10-18; answered before Phase 17.
 
 # [x] Phase 0: The documentation repaired, and a baseline
@@ -300,13 +300,13 @@ Built 2026-10-18 ([`02-implementation-phase-15.md`](02-implementation-phase-15.m
 ## [x] Story 15.3: Documentation
 - [x] Task 15.3.1 `00-project-complete-overview.md`, `01-project.md`, `05-deployment.md` rewritten; run instructions in one place (`04-local-development.md`; the root and service READMEs, `02b-local-setup.md` and the area READMEs link to it); the folder README marked complete.
 
-# [ ] Phase 16: The `spain` and `catalan` regions, from the 60s to today
+# [p] Phase 16: The `spain` and `catalan` regions, from the 60s to today
 
 Added 2026-10-18 at the user's ask (plan section 20).
 
-## [ ] Story 16.1: The research
-- [ ] Task 16.1.1 A deep research on the internet: the Spanish and Catalan charts and radio lists of each decade from the 60s, with their years, what they give, licence, format and pace; MusicBrainz and Wikidata for artists and identifiers.
-- [ ] Task 16.1.2 `context/music-library/regional-sources.md` with the recommendation; Q-9 raised before any download.
+## [p] Story 16.1: The research
+- [x] Task 16.1.1 A deep research on the internet: the Spanish and Catalan charts and radio lists of each decade from the 60s, with their years, what they give, licence, format and pace; MusicBrainz and Wikidata for artists and identifiers.
+- [p] Task 16.1.2 `context/music-library/regional-sources.md` with the recommendation; Q-9 raised before any download.
 
 ## [ ] Story 16.2: The data
 - [ ] Task 16.2.1 The download of the chosen sources into `data/music-library-regions/<source>/`, paced and resumable.
