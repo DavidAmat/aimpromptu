@@ -1840,7 +1840,7 @@ pages with side by side, partial acceptance, changes asked and resent, the trans
 the creator's username on the version. Library sharing (section 15.4) and **Shared**. The counts in the
 sidebar.
 
-*Built 2026-10-16* ([`02-implementation-phase-14.md`](02-implementation-phase-14.md)), with a fourth
+*Built 2026-10-16, merged after the user's ok 2026-10-18* ([`02-implementation-phase-14.md`](02-implementation-phase-14.md)), with a fourth
 kind, **Playlist** (the user's answer at the start). Revision `0004` moved the real database after
 `make db-backup`. `check:requests` walks it with a temporary second user and removes everything it
 made.

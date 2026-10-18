@@ -265,8 +265,9 @@ a version is added to My library; **Save to library** suggests the public songs 
 
 # [x] Phase 14: Requests, the Admin panel and sharing
 
-Built 2026-10-16 ([`02-implementation-phase-14.md`](02-implementation-phase-14.md)); waits for the
-user's check before the merge. The user's answer at the start (2026-10-16): a fourth kind of
+Built 2026-10-16, the request page laid out like a pull request 2026-10-18
+([`02-implementation-phase-14.md`](02-implementation-phase-14.md)); merged into `master` after the
+user's ok (2026-10-18). The user's answer at the start (2026-10-16): a fourth kind of
 request, **Playlist**. Revision `0004` moved the real `.database/` (after `make db-backup`).
 
 ## [x] Story 14.1: Requests
