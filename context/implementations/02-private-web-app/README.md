@@ -1,7 +1,8 @@
 # 02: The private web app
 
-**State: live again: Phases 0 to 15 complete (2026-10-18); Phases 16 and 17 added the same day at the
-user's ask** (the `spain` and `catalan` regions; a popularity inferred from YouTube views). Opened
+**State: complete: Phases 0 to 17 done** (0 to 15 on 2026-10-18; 16 and 17, added at the user's ask
+on 2026-10-18, on 2026-10-19: the `spain` and `catalan` regions; a popularity inferred from YouTube
+views). Opened
 2026-10-05. Each phase is built on its own
 `feat/phase-N` branch and merged into `master` after the user's check; each has its report below.
 Nine of the ten decisions are answered (Q-1 to Q-4 before the plan, Q-6 to Q-10 on the way).
@@ -10,7 +11,7 @@ Nine of the ten decisions are answered (Q-1 to Q-4 before the plan, Q-6 to Q-10 
 `spain` and `catalan` regions) was built 2026-10-19 ([`02-implementation-phase-16.md`](02-implementation-phase-16.md))
 and merged into `master` after the user's ok (2026-10-19). **Phase 17** (a popularity inferred from
 YouTube views) was built 2026-10-19 ([`02-implementation-phase-17.md`](02-implementation-phase-17.md))
-and waits for the user's ok to merge. The old store `aitu-backend/data/` is gone: its pieces moved into
+and merged into `master` after the user's ok (2026-10-19). The old store `aitu-backend/data/` is gone: its pieces moved into
 `.database/` in Phase 3, the user deleted it after checking the app, and Phase 15 removed the code
 that read it (its Lab records are now a test fixture). **Phase 15** walked the whole journey with two
 users and closed the documentation ([`02-implementation-phase-15.md`](02-implementation-phase-15.md));

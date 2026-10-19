@@ -325,8 +325,8 @@ user's ok (2026-10-19). Q-9 answered 2026-10-18. Revision `0006` moved the real 
 # [x] Phase 17: A popularity inferred from YouTube views
 
 Added 2026-10-18 at the user's ask (plan section 20). Built 2026-10-19
-([`02-implementation-phase-17.md`](02-implementation-phase-17.md)) on `feat/phase-17`, waiting for
-the user's ok to merge. Q-10 answered 2026-10-19; the formula chosen by the user the same day.
+([`02-implementation-phase-17.md`](02-implementation-phase-17.md)) on `feat/phase-17`; merged into
+`master` after the user's ok (2026-10-19). Q-10 answered 2026-10-19; the formula chosen by the user the same day.
 Revision `0007` moved the real `.database/` (after `make db-backup`).
 
 ## [x] Story 17.1: The sample
