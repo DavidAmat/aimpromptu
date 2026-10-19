@@ -32,14 +32,14 @@ closed.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 02 | [`02-private-web-app/`](02-private-web-app/README.md) | The app of the app context: the design system and the sidebar shell, `.database/`, users and login on the home network, projects and the Personal Vault, the Private and Public Libraries, the sheet toolbox, copy and paste, Recording in Sheet, playlists, Play mode, requests and the Admin panel | 2026-10-05 | **Complete.** Phases 0 to 15 complete 2026-10-18 (Phase 15 walked the whole journey with two users); Phases 16 and 17, added the same day at the user's ask, complete 2026-10-19: the `spain` and `catalan` regions, and a popularity inferred from YouTube views. [`02-checklist.md`](02-private-web-app/02-checklist.md) is the status lookup |
+| 02 | [`02-private-web-app/`](02-private-web-app/README.md) | The app of the app context: the design system and the sidebar shell, `.database/`, users and login on the home network, projects and the Personal Vault, the Private and Public Libraries, the sheet toolbox, copy and paste, Recording in Sheet, playlists, Play mode, requests and the Admin panel | 2026-10-05 | **Live again.** Phases 0 to 15 complete 2026-10-18 (Phase 15 walked the whole journey with two users); Phases 16 and 17, added the same day at the user's ask, complete 2026-10-19: the `spain` and `catalan` regions, and a popularity inferred from YouTube views. **Phase 18** (genres and tags from Wikidata) added 2026-10-19, next. [`02-checklist.md`](02-private-web-app/02-checklist.md) is the status lookup |
 | 02-a | [`02-private-web-app/public-library-build/`](02-private-web-app/public-library-build/README.md) | A parallel piece of work: the data of the Public Library, downloaded from `musicchartsarchive.com` into `data/music-library/` (next to the repository) | 2026-10-05 | **Done**: the download is in `data/music-library/`; 02 Phase 12 reconciled it and Phase 13 imported it |
 
 ## How to read this folder
 
-- **"What is being built now?"** → Nothing: implementation 02 is complete (its last phases, 16 and
-  17, in [`02-private-web-app/02-plan.md`](02-private-web-app/02-plan.md) section 20 and
-  [`02-checklist.md`](02-private-web-app/02-checklist.md)). The other open points of 02 are in
+- **"What is being built now?"** → Phase 18 of
+  [`02-private-web-app/02-plan.md`](02-private-web-app/02-plan.md) (section 20) and its checklist
+  [`02-checklist.md`](02-private-web-app/02-checklist.md). The other open points of 02 are in
   [`02-implementation-phase-15.md`](02-private-web-app/02-implementation-phase-15.md) section 7.
 - **"What must a new task respect?"** →
   [`01-mvp/01-epics-master-plan/plan/wall-clock-rewrite.md`](01-mvp/01-epics-master-plan/plan/wall-clock-rewrite.md)

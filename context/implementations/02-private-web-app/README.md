@@ -1,11 +1,12 @@
 # 02: The private web app
 
-**State: complete: Phases 0 to 17 done** (0 to 15 on 2026-10-18; 16 and 17, added at the user's ask
-on 2026-10-18, on 2026-10-19: the `spain` and `catalan` regions; a popularity inferred from YouTube
-views). Opened
+**State: live again: Phases 0 to 17 done** (0 to 15 on 2026-10-18; 16 and 17, added at the user's
+ask on 2026-10-18, on 2026-10-19: the `spain` and `catalan` regions; a popularity inferred from
+YouTube views). **Phase 18** (the genres and tags of Q-5, from Wikidata) was added on 2026-10-19 at
+the user's ask and is next. Opened
 2026-10-05. Each phase is built on its own
 `feat/phase-N` branch and merged into `master` after the user's check; each has its report below.
-Nine of the ten decisions are answered (Q-1 to Q-4 before the plan, Q-6 to Q-10 on the way).
+Nine of the eleven decisions are answered (Q-1 to Q-4 before the plan, Q-6 to Q-10 on the way).
 **Q-5** keeps genres and tags for later work (its region part became Q-9, answered 2026-10-18);
 **Q-10** (Spotify) was answered 2026-10-19 (kworb's streams as a second signal). **Phase 16** (the
 `spain` and `catalan` regions) was built 2026-10-19 ([`02-implementation-phase-16.md`](02-implementation-phase-16.md))

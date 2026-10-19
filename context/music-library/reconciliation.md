@@ -164,7 +164,7 @@ same years.
 
 ## 6. What is still open (Q-5)
 
-- **Q-5**: the genres, and the tags. Genres could come from Wikidata, mapped to the 13 genres of
+- **Q-5**: the genres, and the tags (Phase 18, added 2026-10-19). Genres could come from Wikidata, mapped to the 13 genres of
   the app.
 - **The regions** (the region part of Q-5, then Q-9) are Phase 16: five Spanish and Catalan sources,
   imported by the same identity rule, each source keeping its own key in `song_keys`

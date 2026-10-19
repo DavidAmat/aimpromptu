@@ -208,12 +208,13 @@ its walkthrough under DECISIONS.
 
 | # | Question | Raised in |
 |---|---|---|
-| Q-5 | The worldwide source is chosen: `musicchartsarchive.com`, downloaded by the parallel work (section 15.5). Still open: the sources for the `spain` and `catalan` regions, and anything that source does not give (genres, tags) | Phase 12, after the reconciliation |
+| Q-5 | The worldwide source is chosen: `musicchartsarchive.com`, downloaded by the parallel work (section 15.5). Still open: the sources for the `spain` and `catalan` regions, and anything that source does not give (genres, tags) | Phase 12, after the reconciliation. Its region part became Q-9 (Phase 16); **its genre and tag part became Phase 18** (added 2026-10-19), with Phase 12's recommendation: Wikidata |
 | Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12. **Answered 2026-10-16: objective criteria instead of a hand ranking; `week_power` 8** (section 15.6) |
 | Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). **Answered 2026-10-15: left for the production version** |
 | Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report. **Answered 2026-10-15: one job with its stages; the notes arrive at the end** |
 | Q-9 | Which sources fill the `spain` and `catalan` regions, from the 60s to today: charts and radio lists that are open to reuse and keep their history. Takes over the region part of Q-5 (its genre part stays Q-5) | Phase 16, after the research (added 2026-10-18). **Answered 2026-10-18: the recommendations of [`regional-sources.md`](../../music-library/regional-sources.md)**: spanishcharts.com, los40.com, kworb.net, the APECAT PDFs and Wikipedia; both APECAT top 30s count as `catalan` |
 | Q-10 | Spotify for the inferred popularity. The official Web API gives no play count, only its own `popularity` (0 to 100, weighted towards recent plays), and the Spotify Developer Policy forbids using Spotify content to train or feed a machine learning model, which a fitted formula may be. Use it, show it only, or leave it out? | Raised 2026-10-18 when Phase 17 was added. *Checked 2026-10-19 with the keys in `.env`:* the API gives no `popularity` and no followers any more, only identifiers and the ISRC; kworb.net lists each artist's songs with their all-time Spotify streams, for some artists only (2 of 5 Catalan artists tried). **Answered 2026-10-19: kworb's streams as a second signal**: the API only finds the Spotify id of an artist (a cross-reference key), the streams come from kworb's page of that artist, and the fit keeps them only if they lower the error on songs left out |
+| Q-11 | The genres and tags from Wikidata: the map of Wikidata's genres (hundreds: "electropop", "synthwave") onto the 13 of section 15.3, and where a song with no genre of its own takes one (its performer's genres, or none); which tag categories are worth importing, given how many songs Wikidata links to a film, a video game, a TV show or an advert | Phase 18, after the measure, before any row is written (added 2026-10-19) |
 
 ---
 
@@ -1884,7 +1885,9 @@ Q-5 stays open, for later work.
 **Phases 16 and 17 were added on 2026-10-18, at the user's ask**, after Phase 15 closed the
 implementation: the Spanish and Catalan regions, and a popularity for the songs no chart has. They
 are two phases, not one, because each is a session of its own: Phase 16 depends on what the
-research finds (Q-9), and Phase 17 on keys and quotas of outside services (Q-10).
+research finds (Q-9), and Phase 17 on keys and quotas of outside services (Q-10). **Phase 18
+was added on 2026-10-19, at the user's ask**, after Phase 17: the genres and tags of Q-5, from
+Wikidata.
 
 ## Phase 16: The `spain` and `catalan` regions, from the 60s to today
 
@@ -1980,6 +1983,43 @@ fit and the inferred values `library/inferred.py` (`make popularity-collect`, `-
 on songs left out the best formula is 21.0 points from the chart value (the region's median 24.3),
 rank correlation 0.43. The user chose the line with the streams (`popularity.INFERRED`). The views
 are read again within 30 days (`make popularity-refresh`).
+
+## Phase 18: Genres and tags from Wikidata
+
+**Why.** The Public Library has no genre and no tag: the Genre and Tag chips of Public songs show
+only what accepted requests gave (Phase 14), which today is nothing. Q-5 kept them for later, with
+Phase 12's recommendation: Wikidata, open data (CC0) that gives a song's genre (P136) and its
+performer's (Phase 12 report, section 9). Phase 17 already reads Wikidata and matches its items to
+the public songs; this phase reuses that. Added 2026-10-19 at the user's ask.
+
+1. **The measure.** One query for every Wikidata item that is a song or a single with a performer
+   (P175), with its genres (P136), and the genres of each performer; the answers kept with their
+   date, as Phase 17's (`library/signals.py`, its `Answers` and `Client`). Matched to the public
+   songs by the identity rule of Phases 12 and 16 (title and one credited artist), the item's id
+   kept as a song key (`wikidata.org:Q...` in `song_keys`). Then the counts: how many public songs
+   have genres of their own, how many only through their performer, per region and decade; every
+   Wikidata genre found, with how many songs carry it. **The tags**: find the properties that tie a
+   song to a film, a video game, a TV show or an advert (in either direction: the song's item or
+   the film's), and count the songs each gives. No row is written yet.
+2. **Q-11 is raised then**, with the measure: a proposed map of the most frequent Wikidata genres
+   onto the 13 (one of them, or none: "Christmas music" is not a genre of the list), for the user to
+   review; whether a song with no genre of its own takes its performer's; which tag categories to
+   import (a category that tags a few dozen songs may not be worth a chip).
+3. **The import**, as Q-11 decides: at most two genres per song (the most frequent of its own after
+   the map), and the tags chosen, as public rows (`song_genres`, `tag_values`, `song_tags`). Safe to
+   run again; run on a copy first, then on the real `.database/` after `make db-backup`; **a genre
+   or tag given by an accepted request is never removed or overwritten**. A new Alembic revision only
+   if the tables cannot hold what is needed (for example where a genre came from).
+4. **The pages**: the Genre and Tag chips of Public songs offer their values with counts (they show
+   as soon as they have values, Phase 13); the song page shows the genres and tags (it does).
+   `check:public` with the Genre chip, and the Tag chip if tags are imported.
+5. **Documentation**: `context/music-library/genres.md` (new: the source, the map, the counts),
+   `ontology.md` (the Genre and Tags rows), `reconciliation.md` (Q-5), `07-database.md` and
+   `paths-and-data.md` (if a revision), `endpoints.md` (if a route changes).
+
+Checks: the import's tests on a small fixture of Wikidata answers (no network); the counts per
+region and decade in the report; `check:public`; `make db-check`. Needed from the user at the start:
+nothing (Wikidata needs no key); the review of Q-11 halfway.
 
 ---
 
