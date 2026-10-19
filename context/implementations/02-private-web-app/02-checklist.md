@@ -23,7 +23,7 @@ The plan's section 3.
 - [x] **Q-7** Offline downloads per project: **left for the production version**. Answered 2026-10-15 (raised in Phase 6).
 - [x] **Q-8** Live notes from the video reader: **one job with its stages**, the notes at the end (61 s for a 3:09 video, measured in Phase 5). Answered 2026-10-15.
 - [x] **Q-9** The sources of the `spain` and `catalan` regions, from the 60s to today (takes over the region part of Q-5). **Answered 2026-10-18: the recommendations**: spanishcharts.com, los40.com, kworb.net (Spotify Spain), the APECAT PDFs and Wikipedia; both APECAT top 30s (songs in Catalan, and Catalan labels) count as `catalan` ([`regional-sources.md`](../../music-library/regional-sources.md) section 6).
-- [ ] **Q-10** Spotify for the inferred popularity: its API gives no play count (only its own `popularity`), and its Developer Policy forbids feeding its content to a machine learning model. Raised 2026-10-18; answered before Phase 17.
+- [x] **Q-10** Spotify for the inferred popularity: its API gives no play count, and since 2026 no `popularity` either (checked 2026-10-19); its Developer Policy forbids feeding its content to a machine learning model. Raised 2026-10-18. **Answered 2026-10-19: kworb.net's all-time streams as a second signal** (the API only finds the artist's Spotify id); the fit keeps them only if they lower the error.
 
 # [x] Phase 0: The documentation repaired, and a baseline
 
@@ -322,13 +322,14 @@ user's ok (2026-10-19). Q-9 answered 2026-10-18. Revision `0006` moved the real 
 ## [x] Story 16.4: Documentation
 - [x] Task 16.4.1 `regional-sources.md` (new), `reconciliation.md`, `popularity.md`, `ontology.md`, `07-database.md`, `paths-and-data.md` (and `endpoints.md`, `music-library/README.md`, `00-index.md`, the scripts' README).
 
-# [ ] Phase 17: A popularity inferred from YouTube views
+# [p] Phase 17: A popularity inferred from YouTube views
 
-Added 2026-10-18 at the user's ask (plan section 20). Needs Q-10, and a YouTube Data API key at its start.
+Added 2026-10-18 at the user's ask (plan section 20). Q-10 answered 2026-10-19; the YouTube and
+Spotify keys are in `.env`. Branch `feat/phase-17`.
 
 ## [ ] Story 17.1: The sample
 - [ ] Task 17.1.1 Songs with a chart popularity across scores, decades and regions; their official video (Wikidata and MusicBrainz first, then a search within the quota); views and upload date.
-- [ ] Task 17.1.2 Spotify, as Q-10 decides.
+- [ ] Task 17.1.2 Spotify, as Q-10 decides: the artist's Spotify id, then kworb's all-time streams per song.
 
 ## [ ] Story 17.2: The fit
 - [ ] Task 17.2.1 Scatter plots (popularity against views, views per year); candidate relations measured on songs left out; the user chooses.

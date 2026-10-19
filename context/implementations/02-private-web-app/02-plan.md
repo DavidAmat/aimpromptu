@@ -213,7 +213,7 @@ its walkthrough under DECISIONS.
 | Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). **Answered 2026-10-15: left for the production version** |
 | Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report. **Answered 2026-10-15: one job with its stages; the notes arrive at the end** |
 | Q-9 | Which sources fill the `spain` and `catalan` regions, from the 60s to today: charts and radio lists that are open to reuse and keep their history. Takes over the region part of Q-5 (its genre part stays Q-5) | Phase 16, after the research (added 2026-10-18). **Answered 2026-10-18: the recommendations of [`regional-sources.md`](../../music-library/regional-sources.md)**: spanishcharts.com, los40.com, kworb.net, the APECAT PDFs and Wikipedia; both APECAT top 30s count as `catalan` |
-| Q-10 | Spotify for the inferred popularity. The official Web API gives no play count, only its own `popularity` (0 to 100, weighted towards recent plays), and the Spotify Developer Policy forbids using Spotify content to train or feed a machine learning model, which a fitted formula may be. Use it, show it only, or leave it out? | Raised 2026-10-18 when Phase 17 was added; to be answered before Phase 17 |
+| Q-10 | Spotify for the inferred popularity. The official Web API gives no play count, only its own `popularity` (0 to 100, weighted towards recent plays), and the Spotify Developer Policy forbids using Spotify content to train or feed a machine learning model, which a fitted formula may be. Use it, show it only, or leave it out? | Raised 2026-10-18 when Phase 17 was added. *Checked 2026-10-19 with the keys in `.env`:* the API gives no `popularity` and no followers any more, only identifiers and the ISRC; kworb.net lists each artist's songs with their all-time Spotify streams, for some artists only (2 of 5 Catalan artists tried). **Answered 2026-10-19: kworb's streams as a second signal**: the API only finds the Spotify id of an artist (a cross-reference key), the streams come from kworb's page of that artist, and the fit keeps them only if they lower the error on songs left out |
 
 ---
 
@@ -1947,7 +1947,10 @@ approximate score.
    when it is the official upload (the artist's channel, its "Topic" channel, Vevo). The views and
    the upload date come from `videos.list` (1 unit for up to 50 videos). Every answer is kept with
    the date it was read, so nothing is asked twice.
-2. **Spotify**, as Q-10 decides.
+2. **Spotify**, as Q-10 decides. *Answered 2026-10-19*: for each artist of the sample, one search of
+   the Spotify Web API for its Spotify id, then kworb.net's page of that artist
+   (`/spotify/artist/<id>_songs.html`): each song's all-time streams, matched to the public song by
+   title. Paced like Phase 16; a missing page (a small artist) means no streams.
 3. **The fit.** A scatter of popularity against the views (on a log scale), and against the views
    per year since the upload (an old song had less time on YouTube, a recent one more). Candidate
    relations: linear on the log of the views, piecewise or monotonic, with a term for the decade or
