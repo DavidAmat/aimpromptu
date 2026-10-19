@@ -39,14 +39,30 @@ class Credit(_Camel):
     name: str
 
 
+class RegionPopularity(_Camel):
+    """A song's popularity in a region other than worldwide (Phase 16), and what it rests on:
+    ``weeks`` (a chart's places), ``number_ones`` (a list of number ones only), ``estimated``
+    (Spotify's totals, for a song no chart lists) or ``inferred`` (Phase 17: the views of its
+    official video, for a song no chart of the region lists; the only kind for worldwide)."""
+
+    region: str
+    popularity: float
+    basis: str
+
+
 class SongRow(_Camel):
     id: int
     title: str
     artists: list[Credit]
     year: int | None = None
-    #: All time, or in the decade the list is filtered by.
-    popularity: float
+    #: All time, or in the decade the list is filtered by; None when the song has no value in the
+    #: region shown (a Spain-only song worldwide).
+    popularity: float | None
     versions: int
+    #: The song's all-time popularity in each region other than worldwide (Phases 16 and 17).
+    region_popularity: list[RegionPopularity] = Field(
+        default_factory=list, alias="regionPopularity"
+    )
 
 
 class FacetValue(_Camel):
@@ -107,17 +123,6 @@ class ChartOut(_Camel):
     last: date
     #: ``[week, rank]``, oldest first.
     history: list[tuple[date, int]]
-
-
-class RegionPopularity(_Camel):
-    """A song's popularity in a region other than worldwide (Phase 16), and what it rests on:
-    ``weeks`` (a chart's places), ``number_ones`` (a list of number ones only), ``estimated``
-    (Spotify's totals, for a song no chart lists) or ``inferred`` (Phase 17: the views of its
-    official video, for a song no chart of the region lists; the only kind for worldwide)."""
-
-    region: str
-    popularity: float
-    basis: str
 
 
 class SongDetail(_Camel):
@@ -255,14 +260,22 @@ def _answers() -> Iterator[None]:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-def _song_row(song: catalogue.CatalogueSong, score: float | None = None) -> SongRow:
+def _song_row(
+    song: catalogue.CatalogueSong, score: float | None, regions: dict[int, tuple[str, str]]
+) -> SongRow:
+    """``regions``: region id -> (code, name); the song's values in each other than worldwide."""
     return SongRow(
         id=song.id,
         title=song.title,
         artists=[Credit(artist_id=one.artist_id, name=one.name) for one in song.credits],
         year=song.year,
-        popularity=song.popularity if score is None else score,
+        popularity=score,
         versions=song.versions,
+        regionPopularity=[
+            RegionPopularity(region=regions[region_id][1], popularity=value, basis=basis)
+            for region_id, value, basis in song.region_scores
+            if region_id in regions and regions[region_id][0] != "worldwide"
+        ],
     )
 
 
@@ -349,7 +362,9 @@ def list_songs(
         ],
     )
     return SongPage(
-        total=page.total, rows=[_song_row(one, score) for one, score in page.rows], facets=facets
+        total=page.total,
+        rows=[_song_row(one, score, code_of) for one, score in page.rows],
+        facets=facets,
     )
 
 
@@ -601,5 +616,6 @@ def suggest(q: str = "", artist: str = "", limit: int = Query(8, ge=1, le=50)) -
     with session() as db:
         songs, artists = catalogue.suggest(db, q, artist_text=artist, limit=limit)
     return Suggestions(
-        songs=[_song_row(one) for one in songs], artists=[_artist_row(one) for one in artists]
+        songs=[_song_row(one, one.popularity, {}) for one in songs],
+        artists=[_artist_row(one) for one in artists],
     )

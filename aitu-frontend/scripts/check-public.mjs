@@ -178,6 +178,23 @@ try {
   const horitzo = (await json(`${api}/public/songs?q=agafant%20horitzo&region=catalan`)).rows[0];
   check('a Catalan song on no chart has an inferred popularity', horitzo !== undefined && horitzo.popularity > 0, horitzo && `${horitzo.title}: ${horitzo.popularity}`);
   if (horitzo) {
+    // With no region, the song has no worldwide value ("–") and its Catalan one in its own column.
+    await page.goto(`${base}/public/songs?q=agafant%20horitzo`);
+    const listRow = page.locator('tbody tr').first();
+    check('with no region, a song with no worldwide value shows "–" and its value by region', await until(async () => {
+      const text = (await listRow.innerText()).replace(/\s+/g, ' ');
+      return text.includes('–') && /Catalan ≈ \d+\.\d/.test(text);
+    }), (await listRow.innerText()).replace(/\s+/g, ' '));
+    check('the column says what it is', (await page.locator('thead').innerText()).replace(/\s+/g, ' ').includes('Popularity by region'));
+    await shot('02e-by-region-column');
+    // The whole list, with its longest titles and credits: the six columns fit at 1440 px.
+    await page.goto(`${base}/public/songs?per=100`);
+    await page.locator('tbody tr').nth(20).waitFor();
+    check('the six columns fit the page', await page.evaluate(() => {
+      const box = document.querySelector('table')?.parentElement;
+      return box !== null && box !== undefined && box.scrollWidth <= box.clientWidth + 1;
+    }));
+    await shot('02f-by-region-wide');
     await page.goto(`${base}/public/songs/${horitzo.id}`);
     await page.getByTestId('public-byline').waitFor();
     const inferredFact = page.locator('[title^="Inferred from YouTube views"]');

@@ -19,9 +19,12 @@ export interface PublicSongRow {
   title: string;
   artists: PublicCredit[];
   year: number | null;
-  /** 0 to 100: all time, or in the decade the list is filtered by. */
-  popularity: number;
+  /** 0 to 100: all time, or in the decade the list is filtered by; null when the song has no value
+   * in the region shown (a Spain-only song worldwide). */
+  popularity: number | null;
   versions: number;
+  /** The song's all-time popularity in each region other than worldwide (Phases 16 and 17). */
+  regionPopularity: PublicRegionPopularity[];
 }
 
 export interface FacetValue {

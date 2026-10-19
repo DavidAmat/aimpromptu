@@ -44,7 +44,7 @@ import LibraryMusicIcon from "@mui/icons-material/LibraryMusicOutlined";
 import PlayIcon from "@mui/icons-material/PlayArrowRounded";
 import PlayCircleIcon from "@mui/icons-material/PlayCircleOutlined";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
-import { publicApi, type PublicRegionPopularity, type PublicSongDetail, type PublicVersion } from "../../api";
+import { publicApi, type PublicSongDetail, type PublicVersion } from "../../api";
 import { ROUTES } from "../../layout/routes";
 import { EmptyState, IconAction, PageBody, PageHeader, PillButton, RowMenu, Section } from "../../ui";
 import { said } from "../library/shared";
@@ -53,15 +53,7 @@ import { SuggestChangeDialog } from "../requests/SuggestChangeDialog";
 import { COUNTS_EVENT } from "../requests/words";
 import { useAuth } from "../../state/authContext";
 import { ChartHistory } from "./ChartHistory";
-import { defaultVersion, popularityText, versionLabel } from "./shared";
-
-/** Why a region's popularity is shown as "≈" (Phases 16 and 17), on hover. */
-const BASIS_HINT: Record<PublicRegionPopularity["basis"], string | undefined> = {
-  weeks: undefined,
-  number_ones: "From its weeks at number 1 only: the list of those years names no other place",
-  estimated: "Estimated from Spotify's totals: no chart of the region lists it",
-  inferred: "Inferred from YouTube views: no chart of the region lists it",
-};
+import { BASIS_HINT, defaultVersion, popularityText, versionLabel } from "./shared";
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (

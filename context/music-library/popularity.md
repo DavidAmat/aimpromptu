@@ -71,7 +71,10 @@ decade filter compares songs of the same years.
 
 - **Public songs**: a column, with one decimal (the biggest hits differ in the decimal: 99.8, 99.7).
   With a decade chosen, the column is "Popularity in the 80s"; with a region, "Popularity in
-  Spain"; with both, "Popularity in Spain in the 80s" (on two lines). The list sorts by it.
+  Spain"; with both, "Popularity in Spain in the 80s" (on two lines). The list sorts by it. A song
+  with no value in the region shown (a Spain-only song worldwide) shows "–" and comes last. With no
+  region chosen, a column **Popularity by region** gives each of the song's regional values
+  ("Spain 74.9", "Catalan ≈ 64.6"; the user, 2026-10-19).
 - **A public song**: "83.3 of 100", all time ("Popularity worldwide" when it has a regional one too),
   one fact per region ("Popularity in Spain", "≈ 96.5 of 100" when it rests on number ones only, on
   an estimate or on YouTube views (section 6), with why on hover), and **On the charts**: each chart named with its region, its

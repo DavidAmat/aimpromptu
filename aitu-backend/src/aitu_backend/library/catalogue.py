@@ -105,9 +105,11 @@ class CatalogueSong:
     popularity: float
     credits: tuple[Credit, ...]
     region_ids: frozenset[int]
-    #: ``(region id, popularity)`` in each region other than worldwide (Phase 16), and worldwide
-    #: for a song with an inferred value there (Phase 17).
-    region_scores: tuple[tuple[int, float], ...]
+    #: ``(region id, popularity, basis)`` in each region other than worldwide (Phase 16), and
+    #: worldwide for a song with an inferred value there (Phase 17).
+    region_scores: tuple[tuple[int, float, str], ...]
+    #: Whether the song has a worldwide value: the US chart lists it, or one is inferred.
+    worldwide: bool
     genre_ids: frozenset[int]
     tag_value_ids: frozenset[int]
     #: Fixed versions with a project, and user versions.
@@ -121,11 +123,13 @@ class CatalogueSong:
     def decade(self) -> int | None:
         return decade_of(self.year)
 
-    def popularity_in(self, region_id: int | None) -> float:
-        """The popularity in a region; worldwide (the stored one) when none is given."""
+    def popularity_in(self, region_id: int | None) -> float | None:
+        """The popularity in a region, worldwide when none is given; None when the song has no
+        value there (a Spain-only song worldwide, a Catalan song no chart lists nor a value is
+        inferred for)."""
         if region_id is None:
-            return self.popularity
-        return next((value for one, value in self.region_scores if one == region_id), 0.0)
+            return self.popularity if self.worldwide else None
+        return next((value for one, value, _ in self.region_scores if one == region_id), None)
 
 
 @dataclass(frozen=True)
@@ -209,15 +213,16 @@ def _read(db: DbSession, fingerprint: tuple[object, ...]) -> _Catalogue:
         return found
 
     regions = links(SongRegion, "region_id")
-    region_scores: dict[int, list[tuple[int, float]]] = {}
-    for song_id, region_id, value in db.execute(
+    region_scores: dict[int, list[tuple[int, float, str]]] = {}
+    for song_id, region_id, value, basis in db.execute(
         select(
             SongRegionPopularity.song_id,
             SongRegionPopularity.region_id,
             SongRegionPopularity.popularity,
-        )
+            SongRegionPopularity.basis,
+        ).order_by(SongRegionPopularity.region_id)
     ):
-        region_scores.setdefault(song_id, []).append((region_id, float(value)))
+        region_scores.setdefault(song_id, []).append((region_id, float(value), str(basis)))
     genres = links(SongGenre, "genre_id")
     tags = links(SongTag, "tag_value_id")
     versions: dict[int, int] = {}
@@ -232,7 +237,8 @@ def _read(db: DbSession, fingerprint: tuple[object, ...]) -> _Catalogue:
     by_id: dict[int, CatalogueSong] = {}
     for song_id, title, year, score in songs:
         # Only an inferred value is stored for worldwide: the song is on no chart (Phase 17).
-        inferred = next((v for r, v in region_scores.get(song_id, ()) if r == worldwide), None)
+        inferred = next((v for r, v, _ in region_scores.get(song_id, ()) if r == worldwide), None)
+        in_regions = frozenset(regions.get(song_id, ()))
         credited = tuple(credits.get(song_id, ()))
         by_id[song_id] = CatalogueSong(
             id=song_id,
@@ -240,8 +246,9 @@ def _read(db: DbSession, fingerprint: tuple[object, ...]) -> _Catalogue:
             year=year,
             popularity=float(score or 0.0) if inferred is None else inferred,
             credits=credited,
-            region_ids=frozenset(regions.get(song_id, ())),
+            region_ids=in_regions,
             region_scores=tuple(region_scores.get(song_id, ())),
+            worldwide=worldwide in in_regions or inferred is not None,
             genre_ids=frozenset(genres.get(song_id, ())),
             tag_value_ids=frozenset(tags.get(song_id, ())),
             versions=versions.get(song_id, 0),
@@ -333,8 +340,9 @@ class Facets:
 @dataclass
 class SongPage:
     total: int
-    #: ``(song, the popularity it is sorted and shown by)``.
-    rows: list[tuple[CatalogueSong, float]]
+    #: ``(song, the popularity it is sorted and shown by)``; None when the song has no value in the
+    #: region shown (it sorts last, both ways).
+    rows: list[tuple[CatalogueSong, float | None]]
     facets: Facets
 
 
@@ -381,30 +389,37 @@ def songs_page(
 ) -> SongPage:
     """One page of the public songs that match, sorted. The popularity shown and sorted by is the
     region's when a region is chosen (Phase 16), worldwide otherwise; with a decade, it is worked
-    out from that region's chart weeks of the decade."""
+    out from that region's chart weeks of the decade. A song with no value in that region (a
+    Spain-only song worldwide) has None and sorts last."""
     catalogue = _catalogue(db)
     query = fold(wanted.query).split()
     kept = [one for one in catalogue.songs.values() if _keep(one, wanted, query)]
     code = catalogue.region_codes.get(wanted.region) if wanted.region is not None else None
     regional = code is not None and code != popularity.WORLDWIDE
+    shown = {one.id: one.popularity_in(wanted.region if regional else None) for one in kept}
     if wanted.decade is not None:
-        scores = _range_scores(db, catalogue, wanted.decade, code or popularity.WORLDWIDE)
-    else:
-        scores = {one.id: one.popularity_in(wanted.region if regional else None) for one in kept}
+        decade = _range_scores(db, catalogue, wanted.decade, code or popularity.WORLDWIDE)
+        shown = {
+            key: None if value is None else decade.get(key, 0.0) for key, value in shown.items()
+        }
 
-    def popularity_of(one: CatalogueSong) -> float:
-        return scores.get(one.id, 0.0)
+    def popularity_of(one: CatalogueSong) -> float | None:
+        return shown.get(one.id)
 
     if sort == "title":
         kept.sort(key=lambda one: (one.title_words, one.id), reverse=descending)
     elif sort == "year":
         # Within a year the most popular first, both ways; a song with no year last.
-        kept.sort(key=lambda one: -popularity_of(one))
+        kept.sort(key=lambda one: -(popularity_of(one) or -1.0))
         dated = [one for one in kept if one.year is not None]
         dated.sort(key=lambda one: one.year or 0, reverse=descending)
         kept = dated + [one for one in kept if one.year is None]
     else:
-        kept.sort(key=lambda one: (popularity_of(one), -one.id), reverse=descending)
+        valued = [one for one in kept if popularity_of(one) is not None]
+        valued.sort(key=lambda one: (popularity_of(one) or 0.0, -one.id), reverse=descending)
+        kept = valued + sorted(
+            (one for one in kept if popularity_of(one) is None), key=lambda one: one.id
+        )
     rows = [(one, popularity_of(one)) for one in kept[offset : offset + limit]]
     return SongPage(
         total=len(kept), rows=rows, facets=_facets(catalogue.songs.values(), wanted, query)

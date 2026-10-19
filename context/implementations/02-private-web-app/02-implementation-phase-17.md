@@ -137,7 +137,7 @@ decade filter still works from chart weeks only.
 arribi l'alba", Els Catarres, 63.1; "Tanca els ulls" 61.7; "Yo Sigo Iual" 61.3, all from
 Enderrock), 53 waiting: the day's searches were spent. `make db-check`: no problem.
 
-## 5.4 The page
+## 5.4 The pages
 
 The song page shows "Popularity in Catalan ≈ 64.6 of 100" with "Inferred from YouTube views: no
 chart of the region lists it" on hover; a `Worldwide` entry is labelled "Popularity worldwide"
@@ -145,15 +145,23 @@ chart of the region lists it" on hover; a `Worldwide` entry is labelled "Popular
 the 09 guidelines: one fact changed, no new control, no sentence added (the hover), no internal
 name on screen ("≈" and the hover), the 390 px check still passes.
 
+**Asked by the user after the first check (2026-10-19)**: the list showed 0.0 for "Agafant
+l'horitzó" with no region chosen (its value is Catalan, not worldwide; the same for every Spain-only
+song since Phase 16). Now `popularity` is `null` for a song with no value in the region shown
+("–", sorted last both ways: the user's choice), and with no region chosen a column **Popularity
+by region** lists each regional value ("Spain 74.9 · Catalan ≈ 64.6", cut at 140 px, whole on
+hover). The six columns did not fit at 1440 px (the Versions column was cut); the title and artist
+columns are at most 230 and 160 px with no region chosen (screenshots `01`, `02e`, `02f`).
+
 # 6. The checks
 
 | Check | Result |
 |---|---|
 | Backend, full run **on the CPU** (another project held 20 GB of the GPU) | 1,140 tests: 1,136 passed, 1 skipped (the real-model test), 3 failed: the known `test_the_worked_example_at_00_46_prints_three_equal_corcheas` and the two Transkun tests that fail only without a GPU. Phase 16: 1,130 |
 | `test_signals.py` (new, 10) | The official rule, the kworb reader, the 30 days, the day's searches, a song's video and streams collected and stored (nothing asked twice), the import keeping an inferred value until a chart gives one, a song on no chart listed by its inferred worldwide value, the candidates measured on songs left out, `infer` and `refresh` (a video gone, a chart replacing the value), the formula against its fit |
-| `test_regional_import.py`, `test_public.py`, `test_public_import.py`, `test_popularity.py`, `test_database.py` | pass |
+| `test_regional_import.py` (a Spain-only song has no worldwide value and sorts last), `test_public.py`, `test_public_import.py`, `test_popularity.py`, `test_database.py` | pass |
 | `black`, `flake8`, `mypy` on the changed backend modules; `tsc -b`, `npm run lint` | clean |
-| `check:public` (2 new checks: a Catalan song with an inferred value, its page with "≈" and the hover) | 49 passed, twice, nothing left behind |
+| `check:public` (5 new checks: a Catalan song with an inferred value, its page with "≈" and the hover, "–" and the column by region in the list, the column's name, the six columns fitting at 1440 px) | 52 passed, twice, nothing left behind |
 | `make db-check` on the real `.database/` | no problem |
 | `scripts/docs/check-links.py` | passes |
 

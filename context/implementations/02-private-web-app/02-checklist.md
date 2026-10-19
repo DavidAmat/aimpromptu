@@ -337,7 +337,7 @@ Revision `0007` moved the real `.database/` (after `make db-backup`).
 - [x] Task 17.2.1 Scatter plots (popularity against views, views per year, streams); seven candidates measured on songs left out (best formula 21.0 points, the median 24.3); the user chose the line with the streams (2026-10-19).
 
 ## [x] Story 17.3: The inferred popularity
-- [x] Task 17.3.1 Stored with its source and date for songs with no chart data, shown as inferred; a chart popularity wins; a command within the day's quota (revision `0007`; `make popularity-infer`, `make popularity-refresh`; `check:public` 49; 4 `catalan` songs today, 53 waiting for searches).
+- [x] Task 17.3.1 Stored with its source and date for songs with no chart data, shown as inferred; a chart popularity wins; a command within the day's quota (revision `0007`; `make popularity-infer`, `make popularity-refresh`; `check:public` 49; 4 `catalan` songs today, 53 waiting for searches; asked after the first check: "–" for a song with no value in the region shown, and a **Popularity by region** column; `check:public` 52).
 
 ## [x] Story 17.4: Documentation
 - [x] Task 17.4.1 `popularity.md` (section 6, new), `ontology.md`, `endpoints.md`, `07-database.md`, `paths-and-data.md`, `.env.example` (and `regional-sources.md`, `music-library/README.md`, `00-index.md`, the READMEs of the implementations).
