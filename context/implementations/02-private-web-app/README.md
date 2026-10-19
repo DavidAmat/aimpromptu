@@ -1,13 +1,14 @@
 # 02: The private web app
 
-**State: live again: Phases 0 to 17 done** (0 to 15 on 2026-10-18; 16 and 17, added at the user's
+**State: live again: Phases 0 to 18 done** (0 to 15 on 2026-10-18; 16 and 17, added at the user's
 ask on 2026-10-18, on 2026-10-19: the `spain` and `catalan` regions; a popularity inferred from
-YouTube views). **Phase 18** (the genres and tags of Q-5, from Wikidata) was added on 2026-10-19 at
-the user's ask and is next. Opened
+YouTube views). **Phase 18** (the genres and tags of Q-5, from Wikidata), added on 2026-10-19 at
+the user's ask, was built the same day ([`02-implementation-phase-18.md`](02-implementation-phase-18.md))
+and merged into `master` after the user's ok (2026-10-19). Opened
 2026-10-05. Each phase is built on its own
 `feat/phase-N` branch and merged into `master` after the user's check; each has its report below.
-Nine of the eleven decisions are answered (Q-1 to Q-4 before the plan, Q-6 to Q-10 on the way).
-**Q-5** keeps genres and tags for later work (its region part became Q-9, answered 2026-10-18);
+Every decision is answered (Q-1 to Q-4 before the plan, the others on the way). **Q-5** is closed
+by Phases 16 and 18 (its region part became Q-9, its genre and tag part Q-11, answered 2026-10-19);
 **Q-10** (Spotify) was answered 2026-10-19 (kworb's streams as a second signal). **Phase 16** (the
 `spain` and `catalan` regions) was built 2026-10-19 ([`02-implementation-phase-16.md`](02-implementation-phase-16.md))
 and merged into `master` after the user's ok (2026-10-19). **Phase 17** (a popularity inferred from
@@ -47,6 +48,7 @@ and the status lookup is [`02-checklist.md`](02-checklist.md). Phase reports go 
 | [`02-implementation-phase-15.md`](02-implementation-phase-15.md) | Phase 15: the whole journey with two temporary users and its timings (`check:journey`), the old redirects and the code of the old store removed, the platform pages rewritten, run instructions in one place (screenshots in [`screenshots/phase-15/`](screenshots/phase-15/)) |
 | [`research/phase-16-spanish-and-catalan-charts.md`](research/phase-16-spanish-and-catalan-charts.md) | Phase 16: the research on the charts and lists of Spain and Catalonia, from the 60s to today, with a source for every fact (summed up in [`regional-sources.md`](../../music-library/regional-sources.md)) |
 | [`02-implementation-phase-16.md`](02-implementation-phase-16.md) | Phase 16: the `spain` and `catalan` regions: the research, the download of five sources, revision `0006`, the import, the popularity per region chosen by the Q-6 criteria, the Region chip and the song page (screenshots in [`screenshots/phase-16/`](screenshots/phase-16/)) |
+| [`02-implementation-phase-18.md`](02-implementation-phase-18.md) | Phase 18: genres and tags from Wikidata through QLever: the measure (counts per region and decade, 514 genres, the tag links), Q-11, the map onto the 13 genres with corrections by hand, `make genres-import`, the Genre and Tag chips (the genre list in [`research/phase-18/`](research/phase-18/)) |
 | [`02-implementation-phase-17.md`](02-implementation-phase-17.md) | Phase 17: a popularity inferred from YouTube views: Q-10 (kworb's streams), the official videos (Los 40, Wikidata, Enderrock, searches), the fit measured on songs left out (plots in [`research/phase-17/`](research/phase-17/)), revision `0007`, `make popularity-infer` and `-refresh`, the song page (screenshots in [`screenshots/phase-17/`](screenshots/phase-17/)) |
 | [`public-library-build/`](public-library-build/) | A parallel piece of work, finished 2026-10-07: downloading `musicchartsarchive.com` into `data/music-library/` (next to the repository) to build the data of the Public Library. Phase 12 reconciled it with this plan and Phase 13 imported it |
 

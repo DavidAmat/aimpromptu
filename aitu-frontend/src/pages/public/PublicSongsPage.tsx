@@ -6,8 +6,8 @@
  * asked in its address (`?q=…&decade=1980&sort=year&page=2`), so **Back** comes back to the same
  * list. The search looks at titles and artists, words in any order, accents ignored. The filter
  * chips are the song metadata of section 15.3: **Decade**, **Region**, **Genre** and **Tag**; a chip
- * shows only when it has values (genres and tags come by request, Phase 14). Each value says how
- * many songs it would leave.
+ * shows only when it has values (genres and film tags from Wikidata, Phase 18, and by request). Each
+ * value says how many songs it would leave.
  *
  * The table sorts by popularity (first), year or title. With a decade chosen, the popularity is the
  * one of that decade's chart weeks, worked out again by the backend (the app context: "if we filter
@@ -43,7 +43,7 @@ import {
 import { said } from "../library/shared";
 import { SuggestChangeDialog } from "../requests/SuggestChangeDialog";
 import { COUNTS_EVENT } from "../requests/words";
-import { popularityText } from "./shared";
+import { popularityText, tagCategoryLabel } from "./shared";
 
 const PER_PAGE = [50, 100, 200];
 const SORTS: readonly SongSort[] = ["popularity", "year", "title"];
@@ -290,6 +290,7 @@ export function PublicSongsPage() {
           ) : null}
           {facets && (facets.genres.length > 0 || genre !== undefined) ? (
             <FilterChip
+              data-testid="filter-genre"
               label="Genre"
               anyLabel="Any genre"
               options={facets.genres}
@@ -299,9 +300,10 @@ export function PublicSongsPage() {
           ) : null}
           {facets && (facets.tags.length > 0 || tag !== undefined) ? (
             <FilterChip
+              data-testid="filter-tag"
               label="Tag"
               anyLabel="Any tag"
-              options={facets.tags}
+              options={facets.tags.map((one) => ({ ...one, group: one.group ? tagCategoryLabel(one.group) : one.group }))}
               value={tag !== undefined ? String(tag) : null}
               onChange={(value) => change({ tag: value })}
             />

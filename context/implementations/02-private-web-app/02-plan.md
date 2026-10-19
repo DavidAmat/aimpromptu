@@ -208,13 +208,13 @@ its walkthrough under DECISIONS.
 
 | # | Question | Raised in |
 |---|---|---|
-| Q-5 | The worldwide source is chosen: `musicchartsarchive.com`, downloaded by the parallel work (section 15.5). Still open: the sources for the `spain` and `catalan` regions, and anything that source does not give (genres, tags) | Phase 12, after the reconciliation. Its region part became Q-9 (Phase 16); **its genre and tag part became Phase 18** (added 2026-10-19), with Phase 12's recommendation: Wikidata |
+| Q-5 | The worldwide source is chosen: `musicchartsarchive.com`, downloaded by the parallel work (section 15.5). Still open: the sources for the `spain` and `catalan` regions, and anything that source does not give (genres, tags) | Phase 12, after the reconciliation. Its region part became Q-9 (Phase 16); **its genre and tag part became Phase 18** (added 2026-10-19), with Phase 12's recommendation: Wikidata. **Closed 2026-10-19** by Phases 16 and 18 |
 | Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12. **Answered 2026-10-16: objective criteria instead of a hand ranking; `week_power` 8** (section 15.6) |
 | Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). **Answered 2026-10-15: left for the production version** |
 | Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report. **Answered 2026-10-15: one job with its stages; the notes arrive at the end** |
 | Q-9 | Which sources fill the `spain` and `catalan` regions, from the 60s to today: charts and radio lists that are open to reuse and keep their history. Takes over the region part of Q-5 (its genre part stays Q-5) | Phase 16, after the research (added 2026-10-18). **Answered 2026-10-18: the recommendations of [`regional-sources.md`](../../music-library/regional-sources.md)**: spanishcharts.com, los40.com, kworb.net, the APECAT PDFs and Wikipedia; both APECAT top 30s count as `catalan` |
 | Q-10 | Spotify for the inferred popularity. The official Web API gives no play count, only its own `popularity` (0 to 100, weighted towards recent plays), and the Spotify Developer Policy forbids using Spotify content to train or feed a machine learning model, which a fitted formula may be. Use it, show it only, or leave it out? | Raised 2026-10-18 when Phase 17 was added. *Checked 2026-10-19 with the keys in `.env`:* the API gives no `popularity` and no followers any more, only identifiers and the ISRC; kworb.net lists each artist's songs with their all-time Spotify streams, for some artists only (2 of 5 Catalan artists tried). **Answered 2026-10-19: kworb's streams as a second signal**: the API only finds the Spotify id of an artist (a cross-reference key), the streams come from kworb's page of that artist, and the fit keeps them only if they lower the error on songs left out |
-| Q-11 | The genres and tags from Wikidata: the map of Wikidata's genres (hundreds: "electropop", "synthwave") onto the 13 of section 15.3, and where a song with no genre of its own takes one (its performer's genres, or none); which tag categories are worth importing, given how many songs Wikidata links to a film, a video game, a TV show or an advert | Phase 18, after the measure, before any row is written (added 2026-10-19) |
+| Q-11 | The genres and tags from Wikidata: the map of Wikidata's genres (hundreds: "electropop", "synthwave") onto the 13 of section 15.3, and where a song with no genre of its own takes one (its performer's genres, or none); which tag categories are worth importing, given how many songs Wikidata links to a film, a video game, a TV show or an advert | Phase 18, after the measure, before any row is written (added 2026-10-19). **Raised 2026-10-19** with the measure: 514 Wikidata genres, a proposed map (a walk up "subclass of" plus corrections by hand), and the tags (films 119 songs, TV 24, games 1, adverts 0). **Answered 2026-10-19: every recommendation**: the map with the corrections (flamenco latin), a song's own genres else its matched performer's, films only |
 
 ---
 
@@ -2020,6 +2020,22 @@ the public songs; this phase reuses that. Added 2026-10-19 at the user's ask.
 Checks: the import's tests on a small fixture of Wikidata answers (no network); the counts per
 region and decade in the report; `check:public`; `make db-check`. Needed from the user at the start:
 nothing (Wikidata needs no key); the review of Q-11 halfway.
+
+*Measured 2026-10-19* ([`02-implementation-phase-18.md`](02-implementation-phase-18.md)): the Wikidata
+query service limited every client to 1 query a minute, so the queries go to QLever's copy of
+Wikidata (`library/genres.py`, `make genres-measure`). 229,348 Wikidata songs; 6,242 public songs
+matched. Genres of their own for 24 % of the public songs, through their performer for 32 % more,
+by a unique name for 19 % more (`catalan`: 76 % none). The tags are thin: 119 songs in 88 films, 24
+in TV programmes, 1 in a video game, none in adverts. No new revision is needed: the import leaves
+alone the songs an accepted request named. Q-11 raised the same day.
+
+*Built 2026-10-19*: Q-11 answered with every recommendation (the walk up "subclass of" with
+corrections by hand, `genres.HAND`; a song's own genres, else its performer's when a matched song
+ties the performer to the artist; films only, from the soundtrack links). `make genres-import` on
+the real `.database/` after `make db-backup`: 11,717 of 21,069 public songs with a genre, 119 songs
+in 87 films. After the first run a second genre must count at least half as often as the first, and
+a tie goes to the commoner genre (the narrow-first rule made The Black Eyed Peas latin). The page is
+[`genres.md`](../../music-library/genres.md).
 
 ---
 

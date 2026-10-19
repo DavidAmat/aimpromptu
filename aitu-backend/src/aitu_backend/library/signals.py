@@ -88,6 +88,7 @@ _QUOTA_DAY = ZoneInfo("America/Los_Angeles")
 #: The least time between two requests to one host, in seconds.
 PACE = {
     "query.wikidata.org": 1.0,
+    "qlever.dev": 5.0,  # it answered 429 after 59 queries one second apart
     "www.googleapis.com": 0.2,
     "accounts.spotify.com": 1.0,
     "api.spotify.com": 1.0,
@@ -110,6 +111,9 @@ ENDERROCK = {
 MAX_WAIT = 300
 #: The labels and the items asked for in one Wikidata query.
 _WIKIDATA_BLOCK = 2000
+#: QLever's copy of Wikidata (University of Freiburg): the same data, for queries too large for the
+#: Wikidata query service, which also limited every client to 1 query a minute on 2026-10-19.
+QLEVER = "https://qlever.dev/api/wikidata"
 
 
 def default_folder() -> Path:
@@ -332,6 +336,25 @@ class Client:
                     found[qid].append(row["l"]["value"])
         return found
 
+    def qlever(self, query: str) -> list[list[str]]:
+        """The rows of a SPARQL query to :data:`QLEVER` (Phase 18), each value an item's id
+        ("Q42"), a literal's text, or "" when unbound. A refused or timed-out query is not kept."""
+        key = "qlever:" + hashlib.sha256(query.encode()).hexdigest()[:32]
+        found = self.answers.get(key)
+        if found is None:
+            found = self._fetch(
+                QLEVER,
+                data=urllib.parse.urlencode({"query": query}).encode(),
+                headers={
+                    "Accept": "text/tab-separated-values",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+            )
+            if found[0] != 200 or found[1].startswith("{"):
+                raise RuntimeError(f"QLever answered {found[0]}: {found[1][:300]}")
+            self.answers.put(key, *found)
+        return [[_tsv_value(one) for one in line.split("\t")] for line in found[1].splitlines()[1:]]
+
     # --- YouTube
 
     def videos(self, ids: Iterable[str], days: int = STATS_DAYS) -> dict[str, Video]:
@@ -457,6 +480,17 @@ class Client:
             if status == 200:
                 found += [one for one in _EMBED.findall(body) if one not in found]
         return found
+
+
+def _tsv_value(value: str) -> str:
+    """One value of a SPARQL TSV answer: ``<http://www.wikidata.org/entity/Q42>`` is ``Q42``,
+    ``"Stayin' Alive"@en`` is its text."""
+    if value.startswith("<") and value.endswith(">"):
+        return value[1:-1].rsplit("/", 1)[-1]
+    if value.startswith('"'):
+        text = value[1 : value.rindex('"')] if value.count('"') > 1 else value[1:]
+        return re.sub(r"\\(.)", lambda m: {"t": "\t", "n": "\n"}.get(m[1], m[1]), text)
+    return value
 
 
 _EMBED = re.compile(r"youtube(?:-nocookie)?\.com/embed/([A-Za-z0-9_-]{11})")

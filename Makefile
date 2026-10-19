@@ -39,7 +39,7 @@
 .PHONY: serve stop restart status logs-native logs-web logs-api _start _report \
 	up down logs ps build test-backend shell-backend _database db-backup db-restore db-check db-reindex \
 	public-import popularity-check regional-download regional-build regional-import \
-	popularity-collect popularity-fit popularity-infer popularity-refresh
+	popularity-collect popularity-fit popularity-infer popularity-refresh genres-measure genres-import
 
 WEB_PORT ?= 5173
 API_HOST ?= $(or $(AITU_HOST),127.0.0.1)
@@ -262,6 +262,17 @@ popularity-infer:
 popularity-refresh:
 	cd aitu-backend && set -a && . ../.env && set +a && \
 		uv run --no-sync python -m aitu_backend.library.inferred $(ARGS) refresh
+
+# The genres and tags from Wikidata (Phase 18, context/music-library/genres.md): the measure reads
+# QLever's copy of Wikidata (every answer kept in data/music-library-genres/) and prints the counts
+# and the proposed map; writes nothing. The import writes at most two genres a song and the film
+# tags as public rows, safe to run again; a song an accepted request named is left alone
+# (`ARGS="--database DIR"`: a copy). On the host.
+genres-measure:
+	cd aitu-backend && uv run --no-sync python -m aitu_backend.library.genres $(ARGS) measure $(if $(OUT),--out $(OUT))
+
+genres-import:
+	cd aitu-backend && uv run --no-sync python -m aitu_backend.library.genres $(ARGS) import
 
 # The objective criteria of the popularity (Q-6), for the plan's weights and the app's, measured on
 # the downloaded chart history; writes nothing.

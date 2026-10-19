@@ -57,8 +57,8 @@ The fields of plan section 15.3, and what the Public Library has of each today:
 | Artists | Through artist names | From the chart; 7 songs have none |
 | Album | Optional | 8,581 song-album links |
 | Region | Where the song was popular, not where the artist is from | `worldwide`: the 9,047 songs of the US chart (the 8 seed songs have no region). `spain`: 12,870 songs of the Spanish lists (Phase 16). `catalan`: 960 songs of the APECAT top 30 and the Catalan Spotify table, in practice songs in Catalan or from Catalan labels |
-| Genre | One or two of 13 | None from the import (Q-5: Wikidata is the recommendation); given by request (Phase 14) |
-| Tags | Fixed categories (films, video games, TV shows, adverts), free values | Given by request (Phase 14) |
+| Genre | One or two of 13 | From Wikidata (Phase 18, [genres.md](genres.md)): 11,717 songs, their own genres or their performer's, mapped onto the 13; given or changed by request (Phase 14), which the import never undoes |
+| Tags | Fixed categories (films, video games, TV shows, adverts), free values | Films from Wikidata's soundtrack links (Phase 18): 119 songs in 87 films; the other categories by request (Phase 14) |
 | Rankings | The chart weeks and places | 160,810 song weeks |
 | Popularity | 0 to 100 from the rankings, in any time range, one per region; inferred from YouTube views where no chart of the region lists the song (Phase 17) | [popularity.md](popularity.md) |
 | Lyrics | The words, as the download gave them | 9,038 songs; kept for this personal version only |
@@ -119,6 +119,7 @@ links to it ("In the Public library").
 - The tables: [`paths-and-data.md`](../../documentation/services/backend/paths-and-data.md) section 6
 - The import and the identity of a public row: [reconciliation.md](reconciliation.md)
 - Popularity: [popularity.md](popularity.md)
+- Genres and tags: [genres.md](genres.md)
 - Requests, the review and shared libraries: [requests.md](requests.md)
 - The Private Library: [private-library.md](private-library.md)
 - The code: `aitu-backend/src/aitu_backend/library/` (`catalogue.py`, `public.py`, `pull.py`),

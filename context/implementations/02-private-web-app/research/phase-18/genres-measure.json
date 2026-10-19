@@ -1,0 +1,3986 @@
+{
+ "Q37073": {
+  "label": "pop music",
+  "own": 774,
+  "performer": 2366,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q850412": {
+  "label": "contemporary R&B",
+  "own": 435,
+  "performer": 1594,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q202930": {
+  "label": "reguetón",
+  "own": 154,
+  "performer": 1823,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q11401": {
+  "label": "hip-hop",
+  "own": 426,
+  "performer": 1294,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q54329757": {
+  "label": "Latin trap",
+  "own": 27,
+  "performer": 1291,
+  "proposed": [
+   "latin",
+   "hip hop"
+  ]
+ },
+ "Q484641": {
+  "label": "pop rock",
+  "own": 347,
+  "performer": 897,
+  "proposed": [
+   "rock",
+   "pop"
+  ]
+ },
+ "Q547137": {
+  "label": "Latin pop",
+  "own": 71,
+  "performer": 1070,
+  "proposed": [
+   "latin",
+   "pop"
+  ]
+ },
+ "Q2913982": {
+  "label": "trap music",
+  "own": 156,
+  "performer": 855,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q11399": {
+  "label": "rock music",
+  "own": 308,
+  "performer": 679,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q83440": {
+  "label": "country music",
+  "own": 304,
+  "performer": 621,
+  "proposed": [
+   "country"
+  ]
+ },
+ "Q2572585": {
+  "label": "pop rap",
+  "own": 69,
+  "performer": 643,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q211756": {
+  "label": "dance-pop",
+  "own": 209,
+  "performer": 415,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q85775929": {
+  "label": "Latin R&B",
+  "own": 4,
+  "performer": 596,
+  "proposed": [
+   "latin",
+   "r&b and soul"
+  ]
+ },
+ "Q131272": {
+  "label": "soul",
+  "own": 89,
+  "performer": 400,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q11366": {
+  "label": "alternative rock",
+  "own": 155,
+  "performer": 334,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q45981": {
+  "label": "rhythm and blues",
+  "own": 115,
+  "performer": 363,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q1253172": {
+  "label": "Southern hip-hop",
+  "own": 17,
+  "performer": 424,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q188450": {
+  "label": "electropop",
+  "own": 106,
+  "performer": 249,
+  "proposed": [
+   "electronic and dance",
+   "pop"
+  ]
+ },
+ "Q474027": {
+  "label": "dancehall",
+  "own": 34,
+  "performer": 315,
+  "proposed": []
+ },
+ "Q2529400": {
+  "label": "urban contemporary",
+  "own": 7,
+  "performer": 326,
+  "proposed": []
+ },
+ "Q1298934": {
+  "label": "synth-pop",
+  "own": 181,
+  "performer": 147,
+  "proposed": [
+   "electronic and dance",
+   "pop"
+  ]
+ },
+ "Q3827483": {
+  "label": "Latin hip-hop",
+  "own": 0,
+  "performer": 324,
+  "proposed": [
+   "latin",
+   "hip hop"
+  ]
+ },
+ "Q851213": {
+  "label": "electronic dance music",
+  "own": 73,
+  "performer": 242,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q316930": {
+  "label": "dance music",
+  "own": 48,
+  "performer": 264,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q217191": {
+  "label": "soft rock",
+  "own": 170,
+  "performer": 134,
+  "proposed": [
+   "rock",
+   "pop"
+  ]
+ },
+ "Q753679": {
+  "label": "gangsta rap",
+  "own": 28,
+  "performer": 275,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q966564": {
+  "label": "hardcore hip-hop",
+  "own": 17,
+  "performer": 283,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q43343": {
+  "label": "folk music",
+  "own": 22,
+  "performer": 265,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q8341": {
+  "label": "jazz",
+  "own": 3,
+  "performer": 277,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q187760": {
+  "label": "new wave",
+  "own": 123,
+  "performer": 146,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q83270": {
+  "label": "hard rock",
+  "own": 143,
+  "performer": 110,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q164444": {
+  "label": "funk",
+  "own": 63,
+  "performer": 187,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q9048261": {
+  "label": "urbano music",
+  "own": 0,
+  "performer": 249,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q438503": {
+  "label": "alternative hip-hop",
+  "own": 29,
+  "performer": 199,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q58339": {
+  "label": "disco",
+  "own": 115,
+  "performer": 101,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q2280497": {
+  "label": "country pop",
+  "own": 83,
+  "performer": 116,
+  "proposed": [
+   "country",
+   "pop"
+  ]
+ },
+ "Q9764": {
+  "label": "flamenco",
+  "own": 8,
+  "performer": 191,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q186472": {
+  "label": "folk rock",
+  "own": 36,
+  "performer": 163,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q876171": {
+  "label": "East Coast hip-hop",
+  "own": 13,
+  "performer": 186,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q20502": {
+  "label": "house music",
+  "own": 63,
+  "performer": 136,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q9778": {
+  "label": "electronic music",
+  "own": 27,
+  "performer": 157,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q7118426": {
+  "label": "alternative R&B",
+  "own": 11,
+  "performer": 159,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q840065": {
+  "label": "New jack swing",
+  "own": 41,
+  "performer": 127,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q30638997": {
+  "label": "mumble rap",
+  "own": 0,
+  "performer": 144,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q180268": {
+  "label": "gospel music",
+  "own": 18,
+  "performer": 111,
+  "proposed": []
+ },
+ "Q429264": {
+  "label": "West Coast hip-hop",
+  "own": 12,
+  "performer": 114,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q16829781": {
+  "label": "cloud rap",
+  "own": 4,
+  "performer": 114,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q2706919": {
+  "label": "country rap",
+  "own": 6,
+  "performer": 112,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q141459": {
+  "label": "conscious hip-hop",
+  "own": 8,
+  "performer": 108,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q373342": {
+  "label": "popular music",
+  "own": 110,
+  "performer": 6,
+  "proposed": []
+ },
+ "Q25094849": {
+  "label": "arte pop (música)",
+  "own": 4,
+  "performer": 111,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q107572242": {
+  "label": "progressive rap",
+  "own": 5,
+  "performer": 109,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q47074428": {
+  "label": "SoundCloud rap",
+  "own": 0,
+  "performer": 113,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q378988": {
+  "label": "adult contemporary music",
+  "own": 3,
+  "performer": 109,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q842324": {
+  "label": "indie pop",
+  "own": 38,
+  "performer": 71,
+  "proposed": [
+   "indie"
+  ]
+ },
+ "Q208239": {
+  "label": "salsa",
+  "own": 1,
+  "performer": 106,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q877693": {
+  "label": "rap rock",
+  "own": 25,
+  "performer": 79,
+  "proposed": [
+   "hip hop",
+   "rock"
+  ]
+ },
+ "Q3053954": {
+  "label": "new flamenco",
+  "own": 6,
+  "performer": 97,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q487914": {
+  "label": "pop-punk",
+  "own": 39,
+  "performer": 62,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q121667432": {
+  "label": "psychedelic rap",
+  "own": 1,
+  "performer": 100,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q9794": {
+  "label": "reggae",
+  "own": 17,
+  "performer": 81,
+  "proposed": []
+ },
+ "Q8560269": {
+  "label": "Dirty south",
+  "own": 10,
+  "performer": 87,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q12362064": {
+  "label": "emo rap",
+  "own": 14,
+  "performer": 83,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q936573": {
+  "label": "crunk",
+  "own": 23,
+  "performer": 70,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q2106887": {
+  "label": "psychedelic hip-hop",
+  "own": 0,
+  "performer": 93,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q837837": {
+  "label": "power pop",
+  "own": 37,
+  "performer": 56,
+  "proposed": [
+   "rock",
+   "pop"
+  ]
+ },
+ "Q206159": {
+  "label": "psychedelic rock",
+  "own": 3,
+  "performer": 89,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q6496560": {
+  "label": "Latin ballad",
+  "own": 10,
+  "performer": 79,
+  "proposed": [
+   "latin",
+   "pop"
+  ]
+ },
+ "Q216961": {
+  "label": "Eurodance",
+  "own": 68,
+  "performer": 21,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q835891": {
+  "label": "funk rock",
+  "own": 11,
+  "performer": 77,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q739138": {
+  "label": "teen pop",
+  "own": 14,
+  "performer": 71,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q613408": {
+  "label": "country rock",
+  "own": 36,
+  "performer": 48,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q65089257": {
+  "label": "Punk rap",
+  "own": 1,
+  "performer": 83,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q18345375": {
+  "label": "Latin music",
+  "own": 16,
+  "performer": 65,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q2517263": {
+  "label": "Midwest hip-hop",
+  "own": 2,
+  "performer": 79,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q11700058": {
+  "label": "folk-pop",
+  "own": 22,
+  "performer": 57,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q627906": {
+  "label": "electro house",
+  "own": 19,
+  "performer": 58,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q3709211": {
+  "label": "Dirty rap",
+  "own": 36,
+  "performer": 40,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q183504": {
+  "label": "indie rock",
+  "own": 28,
+  "performer": 46,
+  "proposed": [
+   "indie"
+  ]
+ },
+ "Q255406": {
+  "label": "jazz rap",
+  "own": 3,
+  "performer": 70,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q76092": {
+  "label": "glam rock",
+  "own": 5,
+  "performer": 68,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q2256407": {
+  "label": "Hip hop soul",
+  "own": 4,
+  "performer": 65,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q268253": {
+  "label": "neo soul",
+  "own": 4,
+  "performer": 65,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q15697534": {
+  "label": "drill",
+  "own": 6,
+  "performer": 61,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q185162": {
+  "label": "Latin rock",
+  "own": 3,
+  "performer": 63,
+  "proposed": [
+   "latin",
+   "rock"
+  ]
+ },
+ "Q16954055": {
+  "label": "bro-country",
+  "own": 0,
+  "performer": 66,
+  "proposed": [
+   "country",
+   "pop"
+  ]
+ },
+ "Q885561": {
+  "label": "blue-eyed soul",
+  "own": 16,
+  "performer": 50,
+  "proposed": [
+   "r&b and soul",
+   "pop"
+  ]
+ },
+ "Q40461": {
+  "label": "bachata",
+  "own": 18,
+  "performer": 45,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q213665": {
+  "label": "K-pop",
+  "own": 9,
+  "performer": 51,
+  "proposed": []
+ },
+ "Q19358266": {
+  "label": "electro latino",
+  "own": 0,
+  "performer": 59,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q205049": {
+  "label": "world music",
+  "own": 3,
+  "performer": 56,
+  "proposed": []
+ },
+ "Q96395212": {
+  "label": "neoperreo",
+  "own": 0,
+  "performer": 58,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q18342587": {
+  "label": "tropical house",
+  "own": 30,
+  "performer": 27,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q49451": {
+  "label": "progressive rock",
+  "own": 30,
+  "performer": 26,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1139136": {
+  "label": "horrorcore",
+  "own": 7,
+  "performer": 49,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q846119": {
+  "label": "psychedelic music",
+  "own": 7,
+  "performer": 47,
+  "proposed": []
+ },
+ "Q217467": {
+  "label": "art rock",
+  "own": 8,
+  "performer": 45,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q235858": {
+  "label": "traditional folk music",
+  "own": 6,
+  "performer": 44,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q3071": {
+  "label": "punk",
+  "own": 6,
+  "performer": 41,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q263734": {
+  "label": "nu metal",
+  "own": 4,
+  "performer": 43,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q102932": {
+  "label": "avant-garde",
+  "own": 0,
+  "performer": 46,
+  "proposed": []
+ },
+ "Q4949812": {
+  "label": "música bounce",
+  "own": 4,
+  "performer": 40,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q38848": {
+  "label": "heavy metal music",
+  "own": 22,
+  "performer": 22,
+  "proposed": [
+   "metal"
+  ]
+ },
+ "Q6010": {
+  "label": "rapping",
+  "own": 11,
+  "performer": 32,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q1045541": {
+  "label": "G-funk",
+  "own": 14,
+  "performer": 29,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q383982": {
+  "label": "psychedelic pop",
+  "own": 9,
+  "performer": 33,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q438476": {
+  "label": "alternative country",
+  "own": 1,
+  "performer": 40,
+  "proposed": [
+   "country"
+  ]
+ },
+ "Q3321920": {
+  "label": "rumba flamenca",
+  "own": 1,
+  "performer": 40,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q193355": {
+  "label": "rock blues",
+  "own": 22,
+  "performer": 19,
+  "proposed": [
+   "jazz and blues",
+   "rock"
+  ]
+ },
+ "Q188539": {
+  "label": "glam metal",
+  "own": 27,
+  "performer": 13,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q817138": {
+  "label": "electronica",
+  "own": 10,
+  "performer": 30,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q3437832": {
+  "label": "Spanish rock",
+  "own": 0,
+  "performer": 40,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q379671": {
+  "label": "Post-grunge",
+  "own": 30,
+  "performer": 9,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1074569": {
+  "label": "chipmunk soul",
+  "own": 4,
+  "performer": 35,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q861823": {
+  "label": "electroclash",
+  "own": 5,
+  "performer": 34,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q11700065": {
+  "label": "pop soul",
+  "own": 5,
+  "performer": 33,
+  "proposed": [
+   "r&b and soul",
+   "pop"
+  ]
+ },
+ "Q217597": {
+  "label": "electro",
+  "own": 22,
+  "performer": 15,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q7749": {
+  "label": "rock and roll",
+  "own": 10,
+  "performer": 27,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q20378": {
+  "label": "alternative metal",
+  "own": 11,
+  "performer": 26,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q852767": {
+  "label": "Southern rock",
+  "own": 11,
+  "performer": 25,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q325504": {
+  "label": "electronic rock",
+  "own": 16,
+  "performer": 20,
+  "proposed": [
+   "electronic and dance",
+   "rock"
+  ]
+ },
+ "Q2963337": {
+  "label": "Chicago hip-hop",
+  "own": 0,
+  "performer": 36,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q517415": {
+  "label": "Europop",
+  "own": 16,
+  "performer": 20,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q1640319": {
+  "label": "experimental music",
+  "own": 1,
+  "performer": 34,
+  "proposed": []
+ },
+ "Q7309098": {
+  "label": "regional Mexican",
+  "own": 10,
+  "performer": 24,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q1196752": {
+  "label": "traditional pop",
+  "own": 2,
+  "performer": 32,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q874038": {
+  "label": "deep house",
+  "own": 16,
+  "performer": 17,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q9759": {
+  "label": "blues",
+  "own": 7,
+  "performer": 26,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q727781": {
+  "label": "music of Latin America",
+  "own": 4,
+  "performer": 29,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q61340552": {
+  "label": "stage and screen",
+  "own": 33,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q388296": {
+  "label": "Afrobeat",
+  "own": 3,
+  "performer": 29,
+  "proposed": []
+ },
+ "Q30632022": {
+  "label": "synth funk",
+  "own": 1,
+  "performer": 30,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q3422697": {
+  "label": "red dirt",
+  "own": 0,
+  "performer": 31,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1190485": {
+  "label": "post-disco",
+  "own": 18,
+  "performer": 12,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q6868046": {
+  "label": "Minneapolis sound",
+  "own": 0,
+  "performer": 30,
+  "proposed": [
+   "r&b and soul",
+   "rock"
+  ]
+ },
+ "Q189045": {
+  "label": "Britpop",
+  "own": 6,
+  "performer": 23,
+  "proposed": [
+   "rock",
+   "pop"
+  ]
+ },
+ "Q111133884": {
+  "label": "rage",
+  "own": 2,
+  "performer": 27,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q6431989": {
+  "label": "Korean hip-hop",
+  "own": 0,
+  "performer": 28,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q592330": {
+  "label": "dream pop",
+  "own": 9,
+  "performer": 18,
+  "proposed": [
+   "indie"
+  ]
+ },
+ "Q602646": {
+  "label": "comedy hip-hop",
+  "own": 12,
+  "performer": 15,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q934451": {
+  "label": "Emo subculture",
+  "own": 0,
+  "performer": 27,
+  "proposed": []
+ },
+ "Q9302696": {
+  "label": "Mafioso rap",
+  "own": 2,
+  "performer": 25,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q16836684": {
+  "label": "Electropop",
+  "own": 0,
+  "performer": 27,
+  "proposed": []
+ },
+ "Q205560": {
+  "label": "trip hop",
+  "own": 4,
+  "performer": 22,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1606591": {
+  "label": "reggae fusion",
+  "own": 18,
+  "performer": 8,
+  "proposed": []
+ },
+ "Q108665706": {
+  "label": "corridos tumbados",
+  "own": 4,
+  "performer": 22,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q969663": {
+  "label": "political hip-hop",
+  "own": 6,
+  "performer": 20,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q3328778": {
+  "label": "tropical music",
+  "own": 2,
+  "performer": 24,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q182659": {
+  "label": "ballad",
+  "own": 12,
+  "performer": 14,
+  "proposed": []
+ },
+ "Q2281409": {
+  "label": "Dance rock",
+  "own": 14,
+  "performer": 12,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q915152": {
+  "label": "progressive house",
+  "own": 11,
+  "performer": 14,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q115691081": {
+  "label": "Chicago drill",
+  "own": 0,
+  "performer": 25,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q193207": {
+  "label": "ambient music",
+  "own": 2,
+  "performer": 22,
+  "proposed": []
+ },
+ "Q1641839": {
+  "label": "experimental rock",
+  "own": 0,
+  "performer": 24,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q46046": {
+  "label": "baroque pop",
+  "own": 10,
+  "performer": 14,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q856872": {
+  "label": "rap metal",
+  "own": 0,
+  "performer": 24,
+  "proposed": [
+   "hip hop",
+   "rock"
+  ]
+ },
+ "Q95469495": {
+  "label": "alternative pop",
+  "own": 7,
+  "performer": 16,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q4816198": {
+  "label": "Atlanta hip-hop",
+  "own": 0,
+  "performer": 23,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q4789437": {
+  "label": "Argentine cumbia",
+  "own": 0,
+  "performer": 22,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q9730": {
+  "label": "classical music",
+  "own": 2,
+  "performer": 19,
+  "proposed": [
+   "classical"
+  ]
+ },
+ "Q854451": {
+  "label": "Celtic music",
+  "own": 1,
+  "performer": 20,
+  "proposed": []
+ },
+ "Q1931130": {
+  "label": "funk carioca",
+  "own": 6,
+  "performer": 14,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q170611": {
+  "label": "techno",
+  "own": 9,
+  "performer": 11,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q790188": {
+  "label": "avant-garde jazz",
+  "own": 0,
+  "performer": 20,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q21092": {
+  "label": "moombahton",
+  "own": 11,
+  "performer": 9,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q6010117": {
+  "label": "Memphis rap",
+  "own": 0,
+  "performer": 20,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q104847359": {
+  "label": "Brooklyn drill",
+  "own": 1,
+  "performer": 19,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q213121": {
+  "label": "new age music",
+  "own": 1,
+  "performer": 19,
+  "proposed": []
+ },
+ "Q744417": {
+  "label": "italo disco",
+  "own": 8,
+  "performer": 11,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q546264": {
+  "label": "beat music",
+  "own": 2,
+  "performer": 17,
+  "proposed": [
+   "rock",
+   "pop"
+  ]
+ },
+ "Q55644985": {
+  "label": "trap metal",
+  "own": 1,
+  "performer": 18,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q379033": {
+  "label": "arena rock",
+  "own": 8,
+  "performer": 10,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q54365": {
+  "label": "ska",
+  "own": 4,
+  "performer": 14,
+  "proposed": []
+ },
+ "Q747717": {
+  "label": "Heartland rock",
+  "own": 10,
+  "performer": 8,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q601235": {
+  "label": "hip house",
+  "own": 14,
+  "performer": 3,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q11365": {
+  "label": "grunge",
+  "own": 8,
+  "performer": 9,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q105527": {
+  "label": "jazz fusion",
+  "own": 7,
+  "performer": 10,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q831354": {
+  "label": "Smooth jazz",
+  "own": 6,
+  "performer": 11,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q6581097": {
+  "label": "male",
+  "own": 0,
+  "performer": 17,
+  "proposed": []
+ },
+ "Q16491869": {
+  "label": "Dominican dembow",
+  "own": 2,
+  "performer": 15,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q5421158": {
+  "label": "experimental hip-hop",
+  "own": 0,
+  "performer": 16,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q546359": {
+  "label": "doo wop",
+  "own": 7,
+  "performer": 9,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q655514": {
+  "label": "freestyle music",
+  "own": 13,
+  "performer": 3,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q5794682": {
+  "label": "cumbia norteña mexicana",
+  "own": 2,
+  "performer": 14,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q2407862": {
+  "label": "Americana",
+  "own": 3,
+  "performer": 13,
+  "proposed": []
+ },
+ "Q130392790": {
+  "label": "Gothic pop",
+  "own": 0,
+  "performer": 16,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q723418": {
+  "label": "cumbia",
+  "own": 4,
+  "performer": 12,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q1443316": {
+  "label": "Christmas music",
+  "own": 15,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q837389": {
+  "label": "Latin jazz",
+  "own": 0,
+  "performer": 15,
+  "proposed": [
+   "latin",
+   "jazz and blues"
+  ]
+ },
+ "Q848399": {
+  "label": "easy listening",
+  "own": 5,
+  "performer": 10,
+  "proposed": []
+ },
+ "Q116985035": {
+  "label": "electronic pop",
+  "own": 2,
+  "performer": 13,
+  "proposed": [
+   "electronic and dance",
+   "pop"
+  ]
+ },
+ "Q598929": {
+  "label": "post-punk",
+  "own": 6,
+  "performer": 9,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q4736555": {
+  "label": "alternative reggaeton",
+  "own": 0,
+  "performer": 14,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q341364": {
+  "label": "acid house",
+  "own": 0,
+  "performer": 14,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1317816": {
+  "label": "indie folk",
+  "own": 12,
+  "performer": 2,
+  "proposed": [
+   "indie"
+  ]
+ },
+ "Q10286515": {
+  "label": "funk melody",
+  "own": 0,
+  "performer": 14,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q1490170": {
+  "label": "slowcore",
+  "own": 0,
+  "performer": 13,
+  "proposed": [
+   "indie"
+  ]
+ },
+ "Q2043175": {
+  "label": "hyphy",
+  "own": 7,
+  "performer": 6,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q485395": {
+  "label": "gothic rock",
+  "own": 10,
+  "performer": 3,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q7397641": {
+  "label": "Sadcore",
+  "own": 0,
+  "performer": 13,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q19938910": {
+  "label": "synthwave",
+  "own": 4,
+  "performer": 9,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q65937954": {
+  "label": "contemporary country",
+  "own": 0,
+  "performer": 13,
+  "proposed": [
+   "country"
+  ]
+ },
+ "Q1228230": {
+  "label": "Dutch house",
+  "own": 0,
+  "performer": 12,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q25099840": {
+  "label": "Afrobeats",
+  "own": 7,
+  "performer": 5,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q1133657": {
+  "label": "traditional heavy metal",
+  "own": 4,
+  "performer": 8,
+  "proposed": [
+   "metal"
+  ]
+ },
+ "Q131578": {
+  "label": "J-pop",
+  "own": 1,
+  "performer": 11,
+  "proposed": []
+ },
+ "Q22908553": {
+  "label": "future bass",
+  "own": 5,
+  "performer": 7,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q3056538": {
+  "label": "Latin house",
+  "own": 0,
+  "performer": 12,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q28746819": {
+  "label": "bedroom pop",
+  "own": 3,
+  "performer": 8,
+  "proposed": [
+   "indie"
+  ]
+ },
+ "Q104695865": {
+  "label": "Hyperpop",
+  "own": 4,
+  "performer": 7,
+  "proposed": [
+   "electronic and dance",
+   "pop"
+  ]
+ },
+ "Q3724735": {
+  "label": "emo pop",
+  "own": 0,
+  "performer": 11,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q10926": {
+  "label": "emo",
+  "own": 7,
+  "performer": 4,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q101440473": {
+  "label": "sierreña",
+  "own": 5,
+  "performer": 5,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q1435509": {
+  "label": "folktronica",
+  "own": 6,
+  "performer": 4,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q4045538": {
+  "label": "Nu-disco",
+  "own": 6,
+  "performer": 4,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q38656": {
+  "label": "jazz-funk",
+  "own": 1,
+  "performer": 9,
+  "proposed": [
+   "jazz and blues",
+   "r&b and soul"
+  ]
+ },
+ "Q997481": {
+  "label": "bubblegum music",
+  "own": 9,
+  "performer": 1,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q484179": {
+  "label": "folk metal",
+  "own": 1,
+  "performer": 9,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q469343": {
+  "label": "UK rap",
+  "own": 2,
+  "performer": 8,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q1374731": {
+  "label": "Eurodisco",
+  "own": 5,
+  "performer": 5,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q858579": {
+  "label": "Big beat",
+  "own": 3,
+  "performer": 7,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q606393": {
+  "label": "Hi-NRG",
+  "own": 5,
+  "performer": 5,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q2187392": {
+  "label": "alternative dance",
+  "own": 4,
+  "performer": 6,
+  "proposed": [
+   "electronic and dance",
+   "rock"
+  ]
+ },
+ "Q264289": {
+  "label": "sophisti-pop",
+  "own": 4,
+  "performer": 6,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q1062400": {
+  "label": "chanson",
+  "own": 4,
+  "performer": 5,
+  "proposed": []
+ },
+ "Q203775": {
+  "label": "swing",
+  "own": 0,
+  "performer": 9,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q106298881": {
+  "label": "contemporary folk music",
+  "own": 9,
+  "performer": 0,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q47781397": {
+  "label": "EDM trap music",
+  "own": 3,
+  "performer": 6,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q2994332": {
+  "label": "rock en español",
+  "own": 1,
+  "performer": 8,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q203720": {
+  "label": "rockabilly",
+  "own": 7,
+  "performer": 2,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1780056": {
+  "label": "norteño",
+  "own": 2,
+  "performer": 7,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q7308175": {
+  "label": "reggae rock",
+  "own": 4,
+  "performer": 4,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1089050": {
+  "label": "Latin alternative",
+  "own": 0,
+  "performer": 8,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q105756581": {
+  "label": "big band music",
+  "own": 1,
+  "performer": 7,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q188994": {
+  "label": "drum and bass",
+  "own": 6,
+  "performer": 2,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1507298": {
+  "label": "lo-fi music",
+  "own": 1,
+  "performer": 7,
+  "proposed": []
+ },
+ "Q783243": {
+  "label": "Australian hip-hop",
+  "own": 0,
+  "performer": 8,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q286080": {
+  "label": "acoustic music",
+  "own": 6,
+  "performer": 2,
+  "proposed": []
+ },
+ "Q97265899": {
+  "label": "lofi hip-hop",
+  "own": 2,
+  "performer": 6,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q2746831": {
+  "label": "quiet storm",
+  "own": 4,
+  "performer": 4,
+  "proposed": [
+   "r&b and soul",
+   "pop"
+  ]
+ },
+ "Q20474": {
+  "label": "dubstep",
+  "own": 4,
+  "performer": 4,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q10922": {
+  "label": "hardcore punk",
+  "own": 0,
+  "performer": 7,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q15300817": {
+  "label": "big room house",
+  "own": 0,
+  "performer": 7,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q2991840": {
+  "label": "snap music",
+  "own": 3,
+  "performer": 4,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q22991878": {
+  "label": "Chamber pop",
+  "own": 6,
+  "performer": 1,
+  "proposed": [
+   "indie"
+  ]
+ },
+ "Q123907465": {
+  "label": "Michigan rap",
+  "own": 0,
+  "performer": 7,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q703778": {
+  "label": "neo-psychedelia",
+  "own": 1,
+  "performer": 6,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q251192": {
+  "label": "Downtempo",
+  "own": 3,
+  "performer": 4,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q805130": {
+  "label": "ballade",
+  "own": 3,
+  "performer": 4,
+  "proposed": [
+   "classical"
+  ]
+ },
+ "Q869210": {
+  "label": "corrido",
+  "own": 0,
+  "performer": 7,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q221772": {
+  "label": "acid jazz",
+  "own": 3,
+  "performer": 4,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q65943851": {
+  "label": "UK drill",
+  "own": 1,
+  "performer": 6,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q384181": {
+  "label": "freestyle rap",
+  "own": 0,
+  "performer": 7,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q170435": {
+  "label": "trance",
+  "own": 4,
+  "performer": 3,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q9162904": {
+  "label": "Avant-pop",
+  "own": 0,
+  "performer": 7,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q282131": {
+  "label": "merengue",
+  "own": 2,
+  "performer": 4,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q4965901": {
+  "label": "Jersey club",
+  "own": 2,
+  "performer": 4,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1077388": {
+  "label": "sentimental ballad",
+  "own": 6,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q2662148": {
+  "label": "Celtic rock",
+  "own": 2,
+  "performer": 4,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q2238236": {
+  "label": "Christian hip-hop",
+  "own": 4,
+  "performer": 2,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q486415": {
+  "label": "symphonic metal",
+  "own": 5,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1929352": {
+  "label": "Roots Rock",
+  "own": 3,
+  "performer": 3,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q483352": {
+  "label": "thrash metal",
+  "own": 5,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q2812726": {
+  "label": "banda music",
+  "own": 1,
+  "performer": 5,
+  "proposed": [
+   "latin",
+   "classical"
+  ]
+ },
+ "Q573484": {
+  "label": "rocksteady",
+  "own": 2,
+  "performer": 4,
+  "proposed": []
+ },
+ "Q846833": {
+  "label": "crossover jazz",
+  "own": 0,
+  "performer": 6,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q208494": {
+  "label": "industrial metal",
+  "own": 6,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1141081": {
+  "label": "lounge music",
+  "own": 0,
+  "performer": 6,
+  "proposed": []
+ },
+ "Q11403": {
+  "label": "samba",
+  "own": 2,
+  "performer": 3,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q212688": {
+  "label": "dub music",
+  "own": 3,
+  "performer": 2,
+  "proposed": []
+ },
+ "Q377910": {
+  "label": "Post-hardcore",
+  "own": 0,
+  "performer": 5,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q2420447": {
+  "label": "trova",
+  "own": 0,
+  "performer": 5,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q4490991": {
+  "label": "progressive country",
+  "own": 0,
+  "performer": 5,
+  "proposed": [
+   "country"
+  ]
+ },
+ "Q3791697": {
+  "label": "chopper",
+  "own": 0,
+  "performer": 5,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q964658": {
+  "label": "Outlaw country",
+  "own": 0,
+  "performer": 5,
+  "proposed": [
+   "country"
+  ]
+ },
+ "Q254890": {
+  "label": "nova cançó",
+  "own": 0,
+  "performer": 5,
+  "proposed": []
+ },
+ "Q1162954": {
+  "label": "French pop",
+  "own": 0,
+  "performer": 5,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q23301960": {
+  "label": "dark pop",
+  "own": 3,
+  "performer": 2,
+  "proposed": [
+   "electronic and dance",
+   "pop"
+  ]
+ },
+ "Q661651": {
+  "label": "show tune",
+  "own": 5,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q1455292": {
+  "label": "French house",
+  "own": 2,
+  "performer": 3,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q28401124": {
+  "label": "yacht rock",
+  "own": 2,
+  "performer": 3,
+  "proposed": [
+   "rock",
+   "pop"
+  ]
+ },
+ "Q56351111": {
+  "label": "classic rock",
+  "own": 1,
+  "performer": 4,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q428656": {
+  "label": "album-oriented rock",
+  "own": 1,
+  "performer": 4,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q2707994": {
+  "label": "Catalan rumba",
+  "own": 2,
+  "performer": 3,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q598593": {
+  "label": "tech house",
+  "own": 3,
+  "performer": 2,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q835919": {
+  "label": "crunk&B",
+  "own": 5,
+  "performer": 0,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q2702280": {
+  "label": "Italo house",
+  "own": 3,
+  "performer": 2,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1190565": {
+  "label": "jangle pop",
+  "own": 4,
+  "performer": 1,
+  "proposed": [
+   "rock",
+   "pop"
+  ]
+ },
+ "Q211573": {
+  "label": "garage rock",
+  "own": 3,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q784310": {
+  "label": "Electro hop",
+  "own": 4,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance",
+   "pop"
+  ]
+ },
+ "Q57143": {
+  "label": "power metal",
+  "own": 4,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q4942839": {
+  "label": "boogie",
+  "own": 2,
+  "performer": 2,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q7067688": {
+  "label": "nu-funk",
+  "own": 0,
+  "performer": 4,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q5151495": {
+  "label": "comedy music",
+  "own": 0,
+  "performer": 4,
+  "proposed": []
+ },
+ "Q1051735": {
+  "label": "soca music",
+  "own": 4,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q20903": {
+  "label": "brostep",
+  "own": 0,
+  "performer": 4,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1091056": {
+  "label": "funktronica",
+  "own": 0,
+  "performer": 4,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q3397882": {
+  "label": "progressive pop",
+  "own": 4,
+  "performer": 0,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q109382160": {
+  "label": "plugg music",
+  "own": 0,
+  "performer": 4,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q1643549": {
+  "label": "dance-punk",
+  "own": 4,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q20021059": {
+  "label": "future house",
+  "own": 2,
+  "performer": 2,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q7293809": {
+  "label": "DMV hip-hop",
+  "own": 0,
+  "performer": 4,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q124352838": {
+  "label": "Bronx drill",
+  "own": 0,
+  "performer": 4,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q727634": {
+  "label": "ranchera",
+  "own": 2,
+  "performer": 2,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q460674": {
+  "label": "ska punk",
+  "own": 2,
+  "performer": 2,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1132127": {
+  "label": "hip hop culture",
+  "own": 3,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q339906": {
+  "label": "happy hardcore",
+  "own": 2,
+  "performer": 1,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q898709": {
+  "label": "música rave",
+  "own": 2,
+  "performer": 1,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q320592": {
+  "label": "Krautrock",
+  "own": 0,
+  "performer": 3,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q2090023": {
+  "label": "piano rock",
+  "own": 3,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q968730": {
+  "label": "industrial rock",
+  "own": 2,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q11787389": {
+  "label": "club/dance music",
+  "own": 0,
+  "performer": 3,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q48834745": {
+  "label": "orchestral pop",
+  "own": 3,
+  "performer": 0,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q1695023": {
+  "label": "alternative music",
+  "own": 0,
+  "performer": 3,
+  "proposed": []
+ },
+ "Q492264": {
+  "label": "film score",
+  "own": 3,
+  "performer": 0,
+  "proposed": [
+   "soundtrack"
+  ]
+ },
+ "Q486263": {
+  "label": "bossa nova",
+  "own": 2,
+  "performer": 1,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q113493820": {
+  "label": "French electro",
+  "own": 0,
+  "performer": 3,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q16250593": {
+  "label": "pub rock",
+  "own": 1,
+  "performer": 2,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q529742": {
+  "label": "boom bap",
+  "own": 0,
+  "performer": 3,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q105334717": {
+  "label": "progressive soul",
+  "own": 1,
+  "performer": 2,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q2336819": {
+  "label": "operatic pop",
+  "own": 3,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q19708376": {
+  "label": "frat rap",
+  "own": 0,
+  "performer": 3,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q829147": {
+  "label": "protest song",
+  "own": 2,
+  "performer": 1,
+  "proposed": []
+ },
+ "Q972634": {
+  "label": "African popular music",
+  "own": 1,
+  "performer": 2,
+  "proposed": []
+ },
+ "Q1546028": {
+  "label": "Philadelphia soul",
+  "own": 2,
+  "performer": 1,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q3029796": {
+  "label": "disco-funk",
+  "own": 3,
+  "performer": 0,
+  "proposed": [
+   "r&b and soul",
+   "electronic and dance"
+  ]
+ },
+ "Q1548170": {
+  "label": "musical comedy",
+  "own": 0,
+  "performer": 3,
+  "proposed": []
+ },
+ "Q28102012": {
+  "label": "disco-pop",
+  "own": 3,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q2697917": {
+  "label": "go-go",
+  "own": 0,
+  "performer": 3,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q743934": {
+  "label": "sketch comedy",
+  "own": 0,
+  "performer": 3,
+  "proposed": []
+ },
+ "Q226901": {
+  "label": "ribaldry",
+  "own": 0,
+  "performer": 3,
+  "proposed": []
+ },
+ "Q1151663": {
+  "label": "novelty music",
+  "own": 3,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q4209421": {
+  "label": "observational comedy",
+  "own": 0,
+  "performer": 3,
+  "proposed": []
+ },
+ "Q223840": {
+  "label": "hardstyle",
+  "own": 1,
+  "performer": 2,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q641066": {
+  "label": "girl group",
+  "own": 0,
+  "performer": 3,
+  "proposed": []
+ },
+ "Q854844": {
+  "label": "bhangra",
+  "own": 1,
+  "performer": 2,
+  "proposed": []
+ },
+ "Q99470350": {
+  "label": "Campirano",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q976634": {
+  "label": "sevillanas",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q7050752": {
+  "label": "Nordic folk music",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q1899347": {
+  "label": "post-punk revival",
+  "own": 1,
+  "performer": 1,
+  "proposed": [
+   "indie"
+  ]
+ },
+ "Q116690325": {
+  "label": "power ballad",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1136047": {
+  "label": "torch song",
+  "own": 2,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q1615483": {
+  "label": "soul jazz",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "jazz and blues",
+   "r&b and soul"
+  ]
+ },
+ "Q476983": {
+  "label": "synth-punk",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance",
+   "rock"
+  ]
+ },
+ "Q846784": {
+  "label": "music of Sweden",
+  "own": 0,
+  "performer": 2,
+  "proposed": []
+ },
+ "Q21684437": {
+  "label": "rumba",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q1165777": {
+  "label": "UK Garage",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q4797": {
+  "label": "conjunto",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q1413061": {
+  "label": "tropicália",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q6452410": {
+  "label": "Christian music",
+  "own": 2,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q1574985": {
+  "label": "Vallenato",
+  "own": 1,
+  "performer": 1,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q1541229": {
+  "label": "American folk music",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q1391336": {
+  "label": "comedy rock",
+  "own": 1,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1751409": {
+  "label": "2-step garage",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1890098": {
+  "label": "New beat",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q2332751": {
+  "label": "avant-garde music",
+  "own": 1,
+  "performer": 1,
+  "proposed": [
+   "classical"
+  ]
+ },
+ "Q930592": {
+  "label": "Italo dance",
+  "own": 1,
+  "performer": 1,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q15042720": {
+  "label": "copla",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q98909757": {
+  "label": "norteño-banda",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q2087267": {
+  "label": "laïko",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q2743": {
+  "label": "musical play",
+  "own": 0,
+  "performer": 2,
+  "proposed": []
+ },
+ "Q85755605": {
+  "label": "dancehall pop",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q1102161": {
+  "label": "jungle",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q106368518": {
+  "label": "pandeireteiras",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q726239": {
+  "label": "noise music",
+  "own": 0,
+  "performer": 2,
+  "proposed": []
+ },
+ "Q2743435": {
+  "label": "psychedelic soul",
+  "own": 1,
+  "performer": 1,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q101109587": {
+  "label": "future rave",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q2004156": {
+  "label": "industrial hip-hop",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q646679": {
+  "label": "Neue Deutsche Welle",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q4971454": {
+  "label": "British soul",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q484344": {
+  "label": "progressive metal",
+  "own": 1,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q106130091": {
+  "label": "post-dubstep",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q141593679": {
+  "label": "HT-Pop",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q2064394": {
+  "label": "worldbeat",
+  "own": 2,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q1046768": {
+  "label": "música popular brasileira",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q1552806": {
+  "label": "guaracha",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q85741139": {
+  "label": "amapiano",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q185298": {
+  "label": "a capela",
+  "own": 2,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q105697907": {
+  "label": "swingbeat",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q546206": {
+  "label": "Miami bass",
+  "own": 1,
+  "performer": 1,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q464129": {
+  "label": "mariachi",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q3327514": {
+  "label": "Galician folk music",
+  "own": 0,
+  "performer": 2,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q828243": {
+  "label": "Futurepop",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q30917612": {
+  "label": "Eurohouse",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q663519": {
+  "label": "Breakbeat",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1958273": {
+  "label": "sertanejo",
+  "own": 2,
+  "performer": 0,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q2956148": {
+  "label": "charity record",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q928825": {
+  "label": "garage house",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1437709": {
+  "label": "canción",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q122143484": {
+  "label": "scam rap",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q108297241": {
+  "label": "flamenco pop",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q108301602": {
+  "label": "erotic audio recording",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q1583807": {
+  "label": "art music",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "classical"
+  ]
+ },
+ "Q325397": {
+  "label": "indietronica",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "indie"
+  ]
+ },
+ "Q823560": {
+  "label": "musique concrète",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "classical",
+   "electronic and dance"
+  ]
+ },
+ "Q178145": {
+  "label": "gothic metal",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q744327": {
+  "label": "yoik",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q1339027": {
+  "label": "dream trance",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q775614": {
+  "label": "neofolk",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q1537056": {
+  "label": "light music",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "classical"
+  ]
+ },
+ "Q828305": {
+  "label": "skate punk",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q236913": {
+  "label": "space rock",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q53094": {
+  "label": "black comedy",
+  "own": 0,
+  "performer": 1,
+  "proposed": []
+ },
+ "Q213714": {
+  "label": "bluegrass music",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "country"
+  ]
+ },
+ "Q97278139": {
+  "label": "Brega funky",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q2302695": {
+  "label": "tech trance",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q21192427": {
+  "label": "crossover fiction",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q1627155": {
+  "label": "Honky tonk",
+  "own": 0,
+  "performer": 1,
+  "proposed": []
+ },
+ "Q97277483": {
+  "label": "New Jersey sound",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q124357128": {
+  "label": "gabberpop",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q21006644": {
+  "label": "fusion music genre",
+  "own": 0,
+  "performer": 1,
+  "proposed": []
+ },
+ "Q834959": {
+  "label": "samba rock",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q2461933": {
+  "label": "Sunshine pop",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q107736421": {
+  "label": "soundtrack",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q110592306": {
+  "label": "alté",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q898530": {
+  "label": "Wagnerian rock",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q533946": {
+  "label": "Lambada",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q719927": {
+  "label": "symphonic rock",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q85740017": {
+  "label": "Afroswing",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q1325963": {
+  "label": "electro funk",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q370515": {
+  "label": "new wave of British heavy metal",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "metal"
+  ]
+ },
+ "Q1931555": {
+  "label": "microhouse",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q125687720": {
+  "label": "road rap",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q15830404": {
+  "label": "bolero",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q115200681": {
+  "label": "electro-R&B",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "r&b and soul",
+   "electronic and dance"
+  ]
+ },
+ "Q115890848": {
+  "label": "epadunk",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1550501": {
+  "label": "muñeira",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q487965": {
+  "label": "industrial music",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q24862": {
+  "label": "short film",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q109941986": {
+  "label": "ratchet music",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q612024": {
+  "label": "contemporary classical music",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "classical"
+  ]
+ },
+ "Q221438": {
+  "label": "rhumba",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q202925": {
+  "label": "tribal house",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q33160145": {
+  "label": "ambient pop",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q1136331": {
+  "label": "nu jazz",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q2551540": {
+  "label": "punk blues",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q830325": {
+  "label": "horror punk",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q740911": {
+  "label": "raggamuffin",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q9165": {
+  "label": "soul",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q104842028": {
+  "label": "satirical music",
+  "own": 0,
+  "performer": 1,
+  "proposed": []
+ },
+ "Q8361": {
+  "label": "Baroque music",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "classical"
+  ]
+ },
+ "Q2296495": {
+  "label": "garage punk",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q98528149": {
+  "label": "electro-disco",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q128758": {
+  "label": "satire",
+  "own": 0,
+  "performer": 1,
+  "proposed": []
+ },
+ "Q209498": {
+  "label": "2 tone",
+  "own": 0,
+  "performer": 1,
+  "proposed": []
+ },
+ "Q102189017": {
+  "label": "Canción contra la guerra",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q481900": {
+  "label": "acid trance",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1431327": {
+  "label": "pub rock",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q574651": {
+  "label": "anti-folk",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q3630966": {
+  "label": "avant-prog",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "classical",
+   "rock"
+  ]
+ },
+ "Q535402": {
+  "label": "tropipop",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "latin",
+   "pop"
+  ]
+ },
+ "Q1003594": {
+  "label": "bulería",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q1344": {
+  "label": "opera",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "classical"
+  ]
+ },
+ "Q1432934": {
+  "label": "Paisley Underground",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "indie"
+  ]
+ },
+ "Q1646666": {
+  "label": "Mambo",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q1636684": {
+  "label": "yé-yé",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q283405": {
+  "label": "punta",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q7482056": {
+  "label": "Irish folk music",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q503354": {
+  "label": "Christmas carol",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q2835456": {
+  "label": "Nigerian hip hop",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q1379958": {
+  "label": "contemporary Christian music",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q27190": {
+  "label": "proto-punk",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q11319210": {
+  "label": "tecno-pop",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance",
+   "pop"
+  ]
+ },
+ "Q3328774": {
+  "label": "symphonic music",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "classical"
+  ]
+ },
+ "Q108616106": {
+  "label": "Appalachian folk music",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q2266376": {
+  "label": "boogie rock",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "jazz and blues",
+   "rock"
+  ]
+ },
+ "Q170539": {
+  "label": "parody",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q11307326": {
+  "label": "city pop",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q3855113": {
+  "label": "merenhouse",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q284543": {
+  "label": "Wave etéreo",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q34168": {
+  "label": "trapping",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q2084353": {
+  "label": "elecronicore",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q98528253": {
+  "label": "pop reggae",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q1092837": {
+  "label": "post-bop",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q499042": {
+  "label": "diss",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q5110298": {
+  "label": "Christian alternative rock",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1936659": {
+  "label": "Nederpop",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "pop"
+  ]
+ },
+ "Q640097": {
+  "label": "electric blues",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q211781": {
+  "label": "free jazz",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "jazz and blues"
+  ]
+ },
+ "Q1200012": {
+  "label": "potpourri",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q173844": {
+  "label": "vocal house",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q40831": {
+  "label": "comedy",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q868855": {
+  "label": "old-school hip-hop",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q3231749": {
+  "label": "post-Britpop",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q842256": {
+  "label": "musical film",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q3963051": {
+  "label": "smooth soul",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "r&b and soul"
+  ]
+ },
+ "Q1428637": {
+  "label": "spoken word",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q753520": {
+  "label": "Christian rock",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q1650296": {
+  "label": "instrumental rock",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q16011695": {
+  "label": "vocal surf",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "rock",
+   "pop"
+  ]
+ },
+ "Q9364028": {
+  "label": "UK funky",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q16502": {
+  "label": "world",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q606089": {
+  "label": "Skiffle",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q253137": {
+  "label": "rock opera",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q135637": {
+  "label": "chiptune",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1500364": {
+  "label": "psychedelic folk",
+  "own": 0,
+  "performer": 1,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q1195630": {
+  "label": "canzone napoletana",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q220830": {
+  "label": "surf music",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "rock"
+  ]
+ },
+ "Q185676": {
+  "label": "fado",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q2076779": {
+  "label": "bubblegum dance",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q2715398": {
+  "label": "plena",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q107486984": {
+  "label": "electro-folk",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance",
+   "folk and singer-songwriter"
+  ]
+ },
+ "Q3048168": {
+  "label": "mákina",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q2626684": {
+  "label": "Chillwave",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q76825003": {
+  "label": "folk, world and country",
+  "own": 0,
+  "performer": 1,
+  "proposed": []
+ },
+ "Q360596": {
+  "label": "disco house",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q10286190": {
+  "label": "full-on",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q1092460": {
+  "label": "surreal humour",
+  "own": 0,
+  "performer": 1,
+  "proposed": []
+ },
+ "Q752785": {
+  "label": "calypso",
+  "own": 1,
+  "performer": 0,
+  "proposed": []
+ },
+ "Q1683348": {
+  "label": "Japanese hip-hop",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "hip hop"
+  ]
+ },
+ "Q455686": {
+  "label": "samba reggae",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "latin"
+  ]
+ },
+ "Q602561": {
+  "label": "electro swing",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "electronic and dance"
+  ]
+ },
+ "Q24189851": {
+  "label": "epic music",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "soundtrack"
+  ]
+ },
+ "Q458480": {
+  "label": "neotraditional country",
+  "own": 1,
+  "performer": 0,
+  "proposed": [
+   "country"
+  ]
+ }
+}

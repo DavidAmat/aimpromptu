@@ -13,6 +13,15 @@ export const BASIS_HINT: Record<PublicRegionPopularity["basis"], string | undefi
 /** 0 to 100 with its one decimal ("99.8"): the top songs differ in the decimal; "–" for none. */
 export const popularityText = (value: number | null) => (value === null ? "–" : value.toFixed(1));
 
+/** A tag category as read on screen (Phase 18): `tv_shows` → "TV shows". */
+const TAG_CATEGORIES: Record<string, string> = {
+  films: "Films",
+  tv_shows: "TV shows",
+  video_games: "Video games",
+  adverts: "Adverts",
+};
+export const tagCategoryLabel = (category: string) => TAG_CATEGORIES[category] ?? category;
+
 /** `hard` → "Hard"; a custom name stays as it is. */
 export const versionLabel = (name: string) =>
   ["hard", "medium", "easy"].includes(name) ? name[0].toUpperCase() + name.slice(1) : name;

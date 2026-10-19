@@ -59,6 +59,7 @@ assumes.
 | [music-library/requests.md](music-library/requests.md) | Requests to the Public Library (version, metadata, fixed version, playlist), the review laid out like a pull request (Conversation, comments on a stretch of the sheet, Sheet) with partial acceptance, a shared Private Library (implementation 02, Phase 14) |
 | [music-library/reconciliation.md](music-library/reconciliation.md) | The downloaded music library (`library.sqlite`) mapped onto the public rows: gaps, identity, re-entries, popularity, the seed list, `make public-import` (implementation 02, Phase 12) |
 | [music-library/regional-sources.md](music-library/regional-sources.md) | The sources of the `spain` and `catalan` regions from the 60s to today: the charts and lists, their terms, the gaps per decade, the recommendation (implementation 02, Phase 16) |
+| [music-library/genres.md](music-library/genres.md) | The genres and film tags of the public songs from Wikidata: the map onto the 13 genres, a song's own or its performer's, `make genres-import` (implementation 02, Phase 18) |
 | [music-library/private-library.md](music-library/private-library.md) | **My library**: songs, artists and their names, versions; **Save to library** (the audio written again, the temporary files deleted), **Edit** through a copy, Replace, history (implementation 02, Phase 6) |
 
 ## Frontend overview (`context/frontend/`)

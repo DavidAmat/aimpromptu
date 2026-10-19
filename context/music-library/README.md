@@ -26,6 +26,7 @@ work lives in a library, under a song, as a version.
 | [popularity.md](popularity.md) | The popularity of a song: the formula and its weights, the popularity of a decade worked out on the request, per region, inferred from YouTube views for a song no chart lists (Phase 17), how the pages show it |
 | [requests.md](requests.md) | The four kinds of request and their items, **Publish**, the review laid out like a pull request (Conversation with comments on a stretch of the sheet, Sheet) and partial acceptance, what an accepted request writes, changes asked and sent again; sharing a library |
 | [reconciliation.md](reconciliation.md) | The downloaded music library mapped onto the app's tables: the gaps, the identity of a row across runs, the re-entries, the popularity on the real data, the seed list, the import |
+| [genres.md](genres.md) | The genres and film tags of the public songs from Wikidata: the source (QLever), the match, the map onto the 13 genres, the import that never undoes a request (Phase 18, Q-11) |
 | [regional-sources.md](regional-sources.md) | The charts and lists of Spain and Catalonia from the 60s to today: what each gives, its terms, the gaps per decade, the recommendation (Phase 16, Q-9) |
 
 ## Where to look deeper
