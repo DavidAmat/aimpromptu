@@ -38,7 +38,8 @@
 
 .PHONY: serve stop restart status logs-native logs-web logs-api _start _report \
 	up down logs ps build test-backend shell-backend _database db-backup db-restore db-check db-reindex \
-	public-import popularity-check regional-download regional-build regional-import
+	public-import popularity-check regional-download regional-build regional-import \
+	popularity-collect popularity-fit popularity-infer popularity-refresh
 
 WEB_PORT ?= 5173
 API_HOST ?= $(or $(AITU_HOST),127.0.0.1)
@@ -237,6 +238,30 @@ regional-build:
 
 regional-import:
 	cd aitu-backend && uv run --no-sync python -m aitu_backend.library.regional_import $(ARGS)
+
+# The inferred popularity (Phase 17, context/music-library/popularity.md section 6), on the host,
+# with the keys of `.env`. Collect reads each song's official video and Spotify streams into
+# song_signals (`SONGS="12 34"`, else every song with a free video id; within the day's quota);
+# fit measures the candidate relations and writes the plots (`OUT=DIR`), and writes nothing else.
+# infer gives every song with no chart value in a region its inferred popularity (`SONGS="..."`:
+# only those; the searches it needs stop at the day's 100, run it again the next day); refresh
+# reads every kept view count again before 30 days pass (the YouTube policy): run it monthly.
+# `ARGS="--database DIR"`: a copy.
+popularity-collect:
+	cd aitu-backend && set -a && . ../.env && set +a && \
+		uv run --no-sync python -m aitu_backend.library.inferred $(ARGS) collect $(if $(SONGS),--songs $(SONGS))
+
+popularity-fit:
+	cd aitu-backend && set -a && . ../.env && set +a && \
+		uv run --no-sync python -m aitu_backend.library.inferred $(ARGS) fit $(if $(OUT),--out $(OUT))
+
+popularity-infer:
+	cd aitu-backend && set -a && . ../.env && set +a && \
+		uv run --no-sync python -m aitu_backend.library.inferred $(ARGS) infer $(if $(SONGS),--songs $(SONGS))
+
+popularity-refresh:
+	cd aitu-backend && set -a && . ../.env && set +a && \
+		uv run --no-sync python -m aitu_backend.library.inferred $(ARGS) refresh
 
 # The objective criteria of the popularity (Q-6), for the plan's weights and the app's, measured on
 # the downloaded chart history; writes nothing.

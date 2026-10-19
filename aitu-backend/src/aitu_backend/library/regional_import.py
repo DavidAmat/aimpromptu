@@ -670,9 +670,11 @@ def _store_regions(
 ) -> None:
     kind = {chart_ids[code]: charts[code].period for code in chart_ids}
     regional = [code for code in regions if code != popularity.WORLDWIDE]
+    # An inferred value (Phase 17) is kept, unless a chart now gives the song one (below).
     db.execute(
         delete(SongRegionPopularity).where(
-            SongRegionPopularity.region_id.in_([regions[c] for c in regional])
+            SongRegionPopularity.region_id.in_([regions[c] for c in regional]),
+            SongRegionPopularity.basis != "inferred",
         )
     )
     for region in regional:
@@ -720,6 +722,14 @@ def _store_regions(
             }
             for s, (v, b, c) in best.items()
         ]
+        charted = list(best)
+        for start in range(0, len(charted), 500):
+            db.execute(
+                delete(SongRegionPopularity).where(
+                    SongRegionPopularity.region_id == regions[region],
+                    SongRegionPopularity.song_id.in_(charted[start : start + 500]),
+                )
+            )
         if rows:
             db.execute(insert(SongRegionPopularity), rows)
         count = db.scalar(

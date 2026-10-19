@@ -273,14 +273,12 @@ def test_the_list_and_the_song_page_by_region(folder: Path) -> None:
             dict((one.id, score) for one, score in page.rows)[star.id]
             == db.get(SongRegionPopularity, (star.id, spain)).popularity
         )
-        # With no region, the worldwide popularity: a song only on Spanish charts has none.
-        assert (
-            dict(
-                (one.id, score)
-                for one, score in catalogue.songs_page(db, catalogue.SongFilter()).rows
-            ).get(star.id, 0.0)
-            == 0.0
-        )
+        # With no region, the worldwide popularity: a song only on Spanish charts has none
+        # (None, shown "–"), and it sorts after every song with a value (the user, 2026-10-19).
+        worldwide = catalogue.songs_page(db, catalogue.SongFilter(), limit=200).rows
+        assert dict((one.id, score) for one, score in worldwide)[star.id] is None
+        scores = [score for _, score in worldwide]
+        assert all(score is None for score in scores[scores.index(None) :])
         facts = public.song_facts(db, star.id, 1)
         assert [(r, b) for r, _, b in facts.region_popularity] == [("Spain", "weeks")]
         assert {(c.name, c.region, c.size) for c in facts.charts} == {

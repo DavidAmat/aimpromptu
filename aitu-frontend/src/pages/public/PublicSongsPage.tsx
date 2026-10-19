@@ -18,6 +18,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import Box from "@mui/material/Box";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -131,7 +132,7 @@ export function PublicSongsPage() {
         label: "Title",
         sortValue: (row) => row.title,
         render: (row) => (
-          <Typography noWrap title={row.title} sx={{ fontSize: 14, fontWeight: 500, maxWidth: 300 }}>
+          <Typography noWrap title={row.title} sx={{ fontSize: 14, fontWeight: 500, maxWidth: regionLabel ? 300 : 230 }}>
             {row.title}
           </Typography>
         ),
@@ -140,7 +141,7 @@ export function PublicSongsPage() {
         key: "artist",
         label: "Artist",
         render: (row) => (
-          <Typography noWrap title={artistsOf(row)} sx={{ fontSize: 14, color: "text.secondary", maxWidth: 210 }}>
+          <Typography noWrap title={artistsOf(row)} sx={{ fontSize: 14, color: "text.secondary", maxWidth: regionLabel ? 210 : 160 }}>
             {artistsOf(row) || "–"}
           </Typography>
         ),
@@ -164,6 +165,37 @@ export function PublicSongsPage() {
         sortValue: (row) => row.popularity,
         render: (row) => popularityText(row.popularity),
       },
+      // With no region chosen, the song's popularity in each region it has one in (the user,
+      // 2026-10-19): a Catalan song with no worldwide value still shows how big it was there.
+      ...(regionLabel
+        ? []
+        : [
+            {
+              key: "regions",
+              label: "Popularity\nby region",
+              width: 150,
+              render: (row: PublicSongRow) =>
+                row.regionPopularity.length === 0 ? (
+                  "–"
+                ) : (
+                  <Typography
+                    noWrap
+                    title={row.regionPopularity
+                      .map((one) => `${one.region} ${one.basis === "weeks" ? "" : "≈ "}${popularityText(one.popularity)}`)
+                      .join(" · ")}
+                    sx={{ fontSize: 14, color: "text.secondary", maxWidth: 140 }}
+                  >
+                    {row.regionPopularity.map((one, index) => (
+                      <Box component="span" key={one.region}>
+                        {index > 0 ? " · " : ""}
+                        {one.region} {one.basis === "weeks" ? "" : "≈ "}
+                        {popularityText(one.popularity)}
+                      </Box>
+                    ))}
+                  </Typography>
+                ),
+            } satisfies DataColumn<PublicSongRow>,
+          ]),
       {
         key: "versions",
         label: "Versions",
@@ -172,7 +204,7 @@ export function PublicSongsPage() {
         render: (row) => (row.versions > 0 ? row.versions : "–"),
       },
     ],
-    [popularityLabel],
+    [popularityLabel, regionLabel],
   );
 
   const facets = answer?.facets;

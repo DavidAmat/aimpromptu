@@ -6,7 +6,9 @@ It sorts the Public Library's songs, an artist's songs and an artist's albums. T
 section 15.6; its weights were chosen in implementation 02, Phase 12, by objective criteria (Q-6,
 [reconciliation.md](reconciliation.md) section 5); Phase 13 shows it on the pages. **A popularity
 is relative to its region** (Phase 16): a song has one for `worldwide` (the US chart) and one for
-each of `spain` and `catalan` it was on ([regional-sources.md](regional-sources.md)).
+each of `spain` and `catalan` it was on ([regional-sources.md](regional-sources.md)). A song no
+chart of a region lists gets a popularity **inferred** from its official video's YouTube views
+(Phase 17, section 6), always shown as approximate.
 
 ## 1. What the app context asks
 
@@ -52,6 +54,7 @@ a hand ranking (2026-10-16), and the power 8 meets them all:
 | When | What | How long |
 |---|---|---|
 | The import (`make public-import`) | `songs.popularity` and `albums.popularity` of every public row, all time | Part of the 2.5 s import |
+| `make popularity-infer` (Phase 17) | `song_region_popularity` (`inferred`) of every song with no chart value in a region, from `song_signals` | Seconds, plus the signals it reads |
 | The regional import (`make regional-import`, Phase 16) | `song_region_popularity` of every song of `spain` and `catalan`, all time; the weights of the number-ones lists | Part of the 5 s import |
 | A list filtered by a decade | Every song's popularity from that decade's weeks only (1980-01-01 to 1989-12-31) | About 65 ms the first time, then kept with the list until a public row changes |
 | One song's page | The stored all-time value | Nothing to work out |
@@ -68,10 +71,13 @@ decade filter compares songs of the same years.
 
 - **Public songs**: a column, with one decimal (the biggest hits differ in the decimal: 99.8, 99.7).
   With a decade chosen, the column is "Popularity in the 80s"; with a region, "Popularity in
-  Spain"; with both, "Popularity in Spain in the 80s" (on two lines). The list sorts by it.
+  Spain"; with both, "Popularity in Spain in the 80s" (on two lines). The list sorts by it. A song
+  with no value in the region shown (a Spain-only song worldwide) shows "–" and comes last. With no
+  region chosen, a column **Popularity by region** gives each of the song's regional values
+  ("Spain 74.9", "Catalan ≈ 64.6"; the user, 2026-10-19).
 - **A public song**: "83.3 of 100", all time ("Popularity worldwide" when it has a regional one too),
-  one fact per region ("Popularity in Spain", "≈ 96.5 of 100" when it rests on number ones only or
-  on an estimate, with why on hover), and **On the charts**: each chart named with its region, its
+  one fact per region ("Popularity in Spain", "≈ 96.5 of 100" when it rests on number ones only, on
+  an estimate or on YouTube views (section 6), with why on hover), and **On the charts**: each chart named with its region, its
   line, best place, weeks ("Weeks at number 1" for a list of number ones), when.
 - **An artist**: its songs and its albums by popularity; an artist's own popularity, in the list
   of artists, is its most popular song's.
@@ -96,20 +102,53 @@ With a region chosen, the Public songs list sorts by that region's popularity; w
 decade, by its charts' weeks of that decade, worked out on the request
 (`popularity.song_scores(start, end, region=...)`).
 
-## 6. Not yet
+## 6. Inferred from YouTube views (Phase 17)
+
+A song no chart of a region lists (a Catalan song with no place on the APECAT lists, a song a
+request adds) has no chart value there. Its official video's views are a signal every song has, so
+a relation fitted on the songs that have both gives it an approximate one.
+
+**The signals** (`song_signals`, one row per public song, `make popularity-collect`): the official
+video, its views and upload date, and the song's all-time Spotify streams where kworb.net lists
+its artist (Q-10: the Spotify API gives no play count; it only finds the artist's Spotify id). The
+video id comes free first: Los 40's links, Wikidata (YouTube video id P1651), Enderrock's yearly
+top 100 of Catalan videos; else a YouTube search, 100 a day. Only an official upload counts: the
+artist's channel, its "Topic" or Vevo channel, or a record label's channel when the title names the
+artist and the song. Every answer is kept in `data/music-library-views/answers.sqlite` beside the
+repository; **a view count is never kept more than 30 days** (the YouTube API Developer Policies):
+`make popularity-refresh` reads them again (1 unit of the 10,000 a day per 50 videos), monthly.
+
+**The relation** (`popularity.INFERRED`, chosen by the user on 2026-10-19 from the measures of
+the [Phase 17 report](../implementations/02-private-web-app/02-implementation-phase-17.md)): a line
+on the log of the views per year online, with a term per region, per decade of the song, per kind
+of channel, the years between the song and the upload, and the log of the streams. On songs left
+out of the fit it is **21 points from the chart value on average** (a guess of the region's median:
+24), and keeps the charts' order only loosely (a rank correlation of 0.43). The values gather in the
+middle (26 to 65 for nine songs in ten, where chart values run from 6 to 89): an inferred song is
+never shown as a huge hit or as a flop.
+
+| Rule | How |
+|---|---|
+| Who gets one | A song of `spain` or `catalan` that no chart of the region scores; `worldwide` for a song on no chart at all |
+| A chart wins | The regional import replaces an inferred value when a chart lists the song; `make popularity-infer` removes one no longer wanted |
+| Shown | "≈ 64.6 of 100", "Inferred from YouTube views: no chart of the region lists it" on hover; the lists sort by it; a decade filter does not use it (no weeks) |
+| No video | No value (the song stays at 0) until a search finds one, another day |
+
+## 7. Not yet
 
 - A time range other than a decade (the last two years): the backend works it out
   (`popularity.song_scores(start, end)`); no page asks for it yet.
 - An artist's popularity is its most popular song's worldwide one: a Spanish-only artist is at 0 in
   the artists list.
-- An inferred popularity for a song with no chart at all (most Catalan songs before 2018): Phase 17,
-  from YouTube views.
+- An inferred value in a decade filter: it has no weeks, so "Popularity in the 10s" leaves it at 0.
 
 ## Where to look deeper
 
 - The code: `aitu-backend/src/aitu_backend/library/popularity.py` (the formula, `DEFAULT`, the
-  criteria), `catalogue.py` (the lists, the decade's popularity) and `regional_import.py` (the
-  regions: the weights, the month, the estimate)
+  criteria, `INFERRED`), `catalogue.py` (the lists, the decade's popularity), `regional_import.py`
+  (the regions: the weights, the month, the estimate), `signals.py` and `inferred.py` (Phase 17:
+  the videos and streams, the fit, the inferred values)
+- The fit's plots: [`research/phase-17/`](../implementations/02-private-web-app/research/phase-17/)
 - The regions' sources and their gaps: [regional-sources.md](regional-sources.md)
 - The tuning on the real data: [reconciliation.md](reconciliation.md) section 5 and the
   [Phase 12 report](../implementations/02-private-web-app/02-implementation-phase-12.md) section 5

@@ -19,9 +19,12 @@ export interface PublicSongRow {
   title: string;
   artists: PublicCredit[];
   year: number | null;
-  /** 0 to 100: all time, or in the decade the list is filtered by. */
-  popularity: number;
+  /** 0 to 100: all time, or in the decade the list is filtered by; null when the song has no value
+   * in the region shown (a Spain-only song worldwide). */
+  popularity: number | null;
   versions: number;
+  /** The song's all-time popularity in each region other than worldwide (Phases 16 and 17). */
+  regionPopularity: PublicRegionPopularity[];
 }
 
 export interface FacetValue {
@@ -98,12 +101,13 @@ export interface PublicChart {
 
 /**
  * `weeks`: a chart's places; `number_ones`: a list of number ones only, so an approximation;
- * `estimated`: Spotify's totals, for a song no chart lists.
+ * `estimated`: Spotify's totals, for a song no chart lists; `inferred` (Phase 17): the views of its
+ * official video, for a song no chart of the region lists (the only kind for Worldwide).
  */
 export interface PublicRegionPopularity {
   region: string;
   popularity: number;
-  basis: "weeks" | "number_ones" | "estimated";
+  basis: "weeks" | "number_ones" | "estimated" | "inferred";
 }
 
 export interface PublicSongDetail {

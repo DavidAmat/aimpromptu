@@ -44,14 +44,17 @@ from aitu_backend.db.models import (
 
 __all__ = [
     "DEFAULT",
+    "INFERRED",
     "PLAN",
     "Criteria",
+    "InferredWeights",
     "Week",
     "Weights",
     "WORLDWIDE",
     "album_scores",
     "chart_scores",
     "criteria",
+    "inferred",
     "points",
     "score",
     "song_scores",
@@ -126,6 +129,74 @@ def score(weeks: Iterable[Week], weights: Weights = DEFAULT) -> float:
         + weights.peak_weight * peak
     )
     return round(value, 1)
+
+
+# ------------------------------------------------------------- inferred (Phase 17)
+
+
+@dataclass(frozen=True)
+class InferredWeights:
+    """The relation between a song's signals and its popularity, for a song no chart of the region
+    lists (Phase 17; ``library/inferred.py`` fits it, ``context/music-library/popularity.md``
+    section 6). A straight line on the log of the official video's views per year online, with a
+    term per region, per decade of the song (the 70s and before are the base; a song with no year
+    counts in its video's decade), per kind of channel (the artist's own is the base), the years
+    between the song and the upload, and the log of its Spotify streams where kworb lists them."""
+
+    intercept: float
+    per_year: float
+    spain: float
+    catalan: float
+    decades: tuple[tuple[int, float], ...]
+    channels: tuple[tuple[str, float], ...]
+    delay: float
+    streams: float
+    no_streams: float
+
+
+#: The weights the user chose on 2026-10-19 (Story 17.2, the line with the streams), fitted on the
+#: 6,664 pairs of a song and a region that have a chart value and an official video (3,764 with
+#: streams). Measured on songs left out: 21.0 points from the chart value on average (the
+#: region's median: 24.3), order 0.43; worldwide 19.8, spain 22.6, catalan 18.2. A Catalan song
+#: needs far fewer views for the same value (+34), a song of the 2010s or 2020s far more (-17, -18).
+INFERRED = InferredWeights(
+    intercept=-92.636,
+    per_year=10.095,
+    spain=5.255,
+    catalan=34.112,
+    decades=((1980, 5.011), (1990, 4.689), (2000, -1.356), (2010, -17.467), (2020, -18.063)),
+    channels=(("vevo", 0.81), ("topic", 3.167), ("label", 3.435)),
+    delay=0.037,
+    streams=8.461,
+    no_streams=78.036,
+)
+
+
+def inferred(
+    *,
+    region: str,
+    year: int | None,
+    views: int,
+    published: date,
+    read_on: date,
+    channel: str | None,
+    streams: int | None,
+    weights: InferredWeights = INFERRED,
+) -> float:
+    """The inferred popularity, 0 to 100, one decimal."""
+    online = max(0.25, (read_on - published).days / 365.25)
+    known = year or published.year
+    decade = min(known - known % 10, weights.decades[-1][0])
+    value = weights.intercept + weights.per_year * math.log10(max(views, 1) / online)
+    value += {"spain": weights.spain, "catalan": weights.catalan}.get(region, 0.0)
+    value += dict(weights.decades).get(decade, 0.0)
+    value += dict(weights.channels).get(channel or "artist", 0.0)
+    value += weights.delay * min(max(0.0, float(published.year - year)) if year else 0.0, 30.0)
+    if streams:
+        value += weights.streams * math.log10(streams)
+    else:
+        value += weights.no_streams
+    return round(min(100.0, max(0.0, value)), 1)
 
 
 # ---------------------------------------------------------------- from the tables

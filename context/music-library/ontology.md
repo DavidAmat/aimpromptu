@@ -60,7 +60,7 @@ The fields of plan section 15.3, and what the Public Library has of each today:
 | Genre | One or two of 13 | None from the import (Q-5: Wikidata is the recommendation); given by request (Phase 14) |
 | Tags | Fixed categories (films, video games, TV shows, adverts), free values | Given by request (Phase 14) |
 | Rankings | The chart weeks and places | 160,810 song weeks |
-| Popularity | 0 to 100 from the rankings, in any time range, one per region | [popularity.md](popularity.md) |
+| Popularity | 0 to 100 from the rankings, in any time range, one per region; inferred from YouTube views where no chart of the region lists the song (Phase 17) | [popularity.md](popularity.md) |
 | Lyrics | The words, as the download gave them | 9,038 songs; kept for this personal version only |
 
 ## 4. Versions of a public song
@@ -100,7 +100,7 @@ piano sheet, and a public song with no version has none. The button says so on h
 
 | Page | Address | What is on it |
 |---|---|---|
-| Public songs | `/public/songs` | A search (title and artists, accents ignored), the filter chips Decade, Region, Genre and Tag (a chip shows only when it has values; each value says how many songs it leaves), a table sorted by popularity, year or title, one page at a time. With a region, the popularity column is that region's; with a decade, that decade's (of the region, when one is chosen). The address keeps all of it |
+| Public songs | `/public/songs` | A search (title and artists, accents ignored), the filter chips Decade, Region, Genre and Tag (a chip shows only when it has values; each value says how many songs it leaves), a table sorted by popularity, year or title, one page at a time. With a region, the popularity column is that region's; with a decade, that decade's (of the region, when one is chosen). A song with no value in the region shown has "–" and comes last; with no region, **Popularity by region** lists the song's value in each of its regions. The address keeps all of it |
 | A public song | `/public/songs/:id` | The byline (links to the artists), the facts (a popularity per region), **On the charts** (each chart named with its region: best place, weeks, the line of its places), **Versions**, **Other versions** (each with Play, a like, Add to my library), **Lyrics** on request. **Play** the default version; **Add to my library**; **Open in My library** once it is there |
 | Public artists | `/public/artists` | A search on every name, a table sorted by popularity (the artist's most popular song), name or number of songs |
 | A public artist | `/public/artists/:id` | Its other names, its songs and its albums by popularity, **Add to my library** |

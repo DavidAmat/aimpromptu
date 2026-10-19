@@ -1,9 +1,17 @@
 /** What the Public Library pages share: how a popularity, a version name and a date read. */
 
-import type { PublicSongDetail, PublicVersion } from "../../api";
+import type { PublicRegionPopularity, PublicSongDetail, PublicVersion } from "../../api";
 
-/** 0 to 100 with its one decimal ("99.8"): the top songs differ in the decimal. */
-export const popularityText = (value: number) => value.toFixed(1);
+/** Why a region's popularity is shown as "≈" (Phases 16 and 17), on hover. */
+export const BASIS_HINT: Record<PublicRegionPopularity["basis"], string | undefined> = {
+  weeks: undefined,
+  number_ones: "From its weeks at number 1 only: the list of those years names no other place",
+  estimated: "Estimated from Spotify's totals: no chart of the region lists it",
+  inferred: "Inferred from YouTube views: no chart of the region lists it",
+};
+
+/** 0 to 100 with its one decimal ("99.8"): the top songs differ in the decimal; "–" for none. */
+export const popularityText = (value: number | null) => (value === null ? "–" : value.toFixed(1));
 
 /** `hard` → "Hard"; a custom name stays as it is. */
 export const versionLabel = (name: string) =>
