@@ -24,7 +24,7 @@ The plan's section 3.
 - [x] **Q-8** Live notes from the video reader: **one job with its stages**, the notes at the end (61 s for a 3:09 video, measured in Phase 5). Answered 2026-10-15.
 - [x] **Q-9** The sources of the `spain` and `catalan` regions, from the 60s to today (takes over the region part of Q-5). **Answered 2026-10-18: the recommendations**: spanishcharts.com, los40.com, kworb.net (Spotify Spain), the APECAT PDFs and Wikipedia; both APECAT top 30s (songs in Catalan, and Catalan labels) count as `catalan` ([`regional-sources.md`](../../music-library/regional-sources.md) section 6).
 - [x] **Q-10** Spotify for the inferred popularity: its API gives no play count, and since 2026 no `popularity` either (checked 2026-10-19); its Developer Policy forbids feeding its content to a machine learning model. Raised 2026-10-18. **Answered 2026-10-19: kworb.net's all-time streams as a second signal** (the API only finds the artist's Spotify id); the fit keeps them only if they lower the error.
-- [ ] **Q-11** The genres and tags from Wikidata: the map of its genres onto the 13, a song with no genre of its own (its performer's, or none), which tag categories to import. Added 2026-10-19; raised in Phase 18 after the measure, before any row is written.
+- [p] **Q-11** The genres and tags from Wikidata: the map of its genres onto the 13, a song with no genre of its own (its performer's, or none), which tag categories to import. Added 2026-10-19; **raised 2026-10-19** after the measure, before any row is written ([report](02-implementation-phase-18.md) section 8).
 
 # [x] Phase 0: The documentation repaired, and a baseline
 
@@ -343,15 +343,17 @@ Revision `0007` moved the real `.database/` (after `make db-backup`).
 ## [x] Story 17.4: Documentation
 - [x] Task 17.4.1 `popularity.md` (section 6, new), `ontology.md`, `endpoints.md`, `07-database.md`, `paths-and-data.md`, `.env.example` (and `regional-sources.md`, `music-library/README.md`, `00-index.md`, the READMEs of the implementations).
 
-# [ ] Phase 18: Genres and tags from Wikidata
+# [p] Phase 18: Genres and tags from Wikidata
 
 Added 2026-10-19 at the user's ask (plan section 20): the genre and tag part of Q-5. Needs no key;
-Q-11 is raised halfway.
+Q-11 is raised halfway. Started 2026-10-19 on `feat/phase-18`
+([`02-implementation-phase-18.md`](02-implementation-phase-18.md)); the measure is done, Q-11 waits
+for the user.
 
-## [ ] Story 18.1: The measure
-- [ ] Task 18.1.1 Every Wikidata song or single with a performer, its genres and its performers' genres (the answers kept, as Phase 17's); matched to the public songs by the identity rule, the item's id kept in `song_keys`.
-- [ ] Task 18.1.2 The counts: songs with genres of their own or only through their performer, per region and decade; every Wikidata genre and its songs; the properties that tie a song to a film, a video game, a TV show or an advert, and the songs each gives.
-- [ ] Task 18.1.3 Q-11 raised with a proposed map of the most frequent genres onto the 13, before any row is written.
+## [x] Story 18.1: The measure
+- [x] Task 18.1.1 Every Wikidata song or single with a performer, its genres and its performers' genres (the answers kept, as Phase 17's); matched to the public songs by the identity rule, the item's id kept in `song_keys` (`library/genres.py`, `make genres-measure`; through QLever, the Wikidata query service limited every client to 1 query a minute; 229,348 items, 6,242 public songs matched; the key is written by the import).
+- [x] Task 18.1.2 The counts: songs with genres of their own or only through their performer, per region and decade; every Wikidata genre and its songs; the properties that tie a song to a film, a video game, a TV show or an advert, and the songs each gives (own 24 %, through the performer 32 %, by a unique name 19 %, none 25 %; `catalan` 76 % none; 514 genres; 119 songs in 88 films, 24 in TV, 1 game, 0 adverts).
+- [x] Task 18.1.3 Q-11 raised with a proposed map of the most frequent genres onto the 13, before any row is written.
 
 ## [ ] Story 18.2: The import
 - [ ] Task 18.2.1 At most two genres per song and the tags chosen, as public rows; safe to run again; a request's genre or tag never removed; on a copy, then on the real `.database/` after `make db-backup`.
