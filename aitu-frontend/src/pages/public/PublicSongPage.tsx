@@ -53,7 +53,7 @@ import { SuggestChangeDialog } from "../requests/SuggestChangeDialog";
 import { COUNTS_EVENT } from "../requests/words";
 import { useAuth } from "../../state/authContext";
 import { ChartHistory } from "./ChartHistory";
-import { BASIS_HINT, defaultVersion, popularityText, versionLabel } from "./shared";
+import { BASIS_HINT, defaultVersion, popularityText, tagCategoryLabel, versionLabel } from "./shared";
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -437,7 +437,7 @@ export function PublicSongPage() {
             ) : null}
             {song.regions.length > 0 ? <Fact label="Region">{song.regions.join(", ")}</Fact> : null}
             {song.genres.length > 0 ? <Fact label="Genre">{song.genres.join(", ")}</Fact> : null}
-            {song.tags.length > 0 ? <Fact label="Tags">{song.tags.map(([category, value]) => `${value} (${category.replace("_", " ")})`).join(", ")}</Fact> : null}
+            {song.tags.length > 0 ? <Fact label="Tags">{song.tags.map(([category, value]) => `${tagCategoryLabel(category)}: ${value}`).join(", ")}</Fact> : null}
           </Box>
 
           {song.charts.length > 0 ? (

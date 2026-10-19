@@ -18,13 +18,13 @@ The plan's section 3.
 - [x] **Q-2** The app on the home network, with a password login and a master user from `.env`. Answered 2026-10-05.
 - [x] **Q-3** A total promotion may change the length (everything after moves); cuts stay ranges in the Personal Vault, and the audio is written again on save to the Private Library. Answered 2026-10-05.
 - [x] **Q-4** Video into From source, Notes Falling into Play mode, the video development pages into Lab; the Playground, the old `.npz` library and the text-notation MVP deleted. Answered 2026-10-05.
-- [p] **Q-5** The sources of the Public Library (left open when the implementation closed, for later work). Worldwide: `musicchartsarchive.com`, downloaded by the parallel work (`public-library-build/`; in fact the US chart). The `spain` and `catalan` regions, the genres and the 8 seed songs not on that chart: raised in Phase 12 with a recommendation ([report](02-implementation-phase-12.md) section 9). The regions became Q-9 (Phase 16); the genres and tags became **Phase 18** (added 2026-10-19), from Wikidata.
+- [x] **Q-5** The sources of the Public Library (left open when the implementation closed; closed by Phases 16 and 18). Worldwide: `musicchartsarchive.com`, downloaded by the parallel work (`public-library-build/`; in fact the US chart). The `spain` and `catalan` regions, the genres and the 8 seed songs not on that chart: raised in Phase 12 with a recommendation ([report](02-implementation-phase-12.md) section 9). The regions became Q-9 (Phase 16); the genres and tags became **Phase 18** (added 2026-10-19), from Wikidata, built 2026-10-19 (Q-11).
 - [x] **Q-6** The popularity weights. **Answered 2026-10-16:** objective criteria instead of a hand ranking; the plan's formula with the power of a week's points at 8 ([report](02-implementation-phase-12.md) section 5.3).
 - [x] **Q-7** Offline downloads per project: **left for the production version**. Answered 2026-10-15 (raised in Phase 6).
 - [x] **Q-8** Live notes from the video reader: **one job with its stages**, the notes at the end (61 s for a 3:09 video, measured in Phase 5). Answered 2026-10-15.
 - [x] **Q-9** The sources of the `spain` and `catalan` regions, from the 60s to today (takes over the region part of Q-5). **Answered 2026-10-18: the recommendations**: spanishcharts.com, los40.com, kworb.net (Spotify Spain), the APECAT PDFs and Wikipedia; both APECAT top 30s (songs in Catalan, and Catalan labels) count as `catalan` ([`regional-sources.md`](../../music-library/regional-sources.md) section 6).
 - [x] **Q-10** Spotify for the inferred popularity: its API gives no play count, and since 2026 no `popularity` either (checked 2026-10-19); its Developer Policy forbids feeding its content to a machine learning model. Raised 2026-10-18. **Answered 2026-10-19: kworb.net's all-time streams as a second signal** (the API only finds the artist's Spotify id); the fit keeps them only if they lower the error.
-- [p] **Q-11** The genres and tags from Wikidata: the map of its genres onto the 13, a song with no genre of its own (its performer's, or none), which tag categories to import. Added 2026-10-19; **raised 2026-10-19** after the measure, before any row is written ([report](02-implementation-phase-18.md) section 8).
+- [x] **Q-11** The genres and tags from Wikidata: the map of its genres onto the 13, a song with no genre of its own (its performer's, or none), which tag categories to import. Added 2026-10-19; raised 2026-10-19 after the measure, before any row is written ([report](02-implementation-phase-18.md) section 8). **Answered 2026-10-19: every recommendation**: the walk up "subclass of" with corrections by hand (flamenco stays latin); a song's own genres, else its performer's when a matched song ties the performer to the artist; films only, from the soundtrack links.
 
 # [x] Phase 0: The documentation repaired, and a baseline
 
@@ -343,23 +343,24 @@ Revision `0007` moved the real `.database/` (after `make db-backup`).
 ## [x] Story 17.4: Documentation
 - [x] Task 17.4.1 `popularity.md` (section 6, new), `ontology.md`, `endpoints.md`, `07-database.md`, `paths-and-data.md`, `.env.example` (and `regional-sources.md`, `music-library/README.md`, `00-index.md`, the READMEs of the implementations).
 
-# [p] Phase 18: Genres and tags from Wikidata
+# [x] Phase 18: Genres and tags from Wikidata
 
 Added 2026-10-19 at the user's ask (plan section 20): the genre and tag part of Q-5. Needs no key;
-Q-11 is raised halfway. Started 2026-10-19 on `feat/phase-18`
-([`02-implementation-phase-18.md`](02-implementation-phase-18.md)); the measure is done, Q-11 waits
-for the user.
+Q-11 is raised halfway. Built 2026-10-19 on `feat/phase-18`
+([`02-implementation-phase-18.md`](02-implementation-phase-18.md)); Q-11 answered the same day. No
+revision; the real `.database/` was written after `make db-backup`. Waits for the user's check
+before the merge.
 
 ## [x] Story 18.1: The measure
 - [x] Task 18.1.1 Every Wikidata song or single with a performer, its genres and its performers' genres (the answers kept, as Phase 17's); matched to the public songs by the identity rule, the item's id kept in `song_keys` (`library/genres.py`, `make genres-measure`; through QLever, the Wikidata query service limited every client to 1 query a minute; 229,348 items, 6,242 public songs matched; the key is written by the import).
 - [x] Task 18.1.2 The counts: songs with genres of their own or only through their performer, per region and decade; every Wikidata genre and its songs; the properties that tie a song to a film, a video game, a TV show or an advert, and the songs each gives (own 24 %, through the performer 32 %, by a unique name 19 %, none 25 %; `catalan` 76 % none; 514 genres; 119 songs in 88 films, 24 in TV, 1 game, 0 adverts).
 - [x] Task 18.1.3 Q-11 raised with a proposed map of the most frequent genres onto the 13, before any row is written.
 
-## [ ] Story 18.2: The import
-- [ ] Task 18.2.1 At most two genres per song and the tags chosen, as public rows; safe to run again; a request's genre or tag never removed; on a copy, then on the real `.database/` after `make db-backup`.
+## [x] Story 18.2: The import
+- [x] Task 18.2.1 At most two genres per song and the tags chosen, as public rows; safe to run again; a request's genre or tag never removed; on a copy, then on the real `.database/` after `make db-backup` (`make genres-import`: 11,717 songs with a genre, 119 songs in 87 films, 8,297 keys; a second run writes nothing; a song an accepted request named is left alone, no revision; the second genre corrected after the first run: at least half as frequent as the first, a tie to the commoner genre).
 
-## [ ] Story 18.3: The pages
-- [ ] Task 18.3.1 The Genre (and Tag) chips with their counts; `check:public`; the 13-check pass.
+## [x] Story 18.3: The pages
+- [x] Task 18.3.1 The Genre (and Tag) chips with their counts; `check:public`; the 13-check pass (`check:public` 58, 6 new; the category reads "Films", not `films`).
 
-## [ ] Story 18.4: Documentation
-- [ ] Task 18.4.1 `music-library/genres.md` (new), `ontology.md`, `reconciliation.md` (Q-5), `07-database.md` and `paths-and-data.md` (if a revision), `endpoints.md` (if a route changes).
+## [x] Story 18.4: Documentation
+- [x] Task 18.4.1 `music-library/genres.md` (new), `ontology.md`, `reconciliation.md` (Q-5), `07-database.md` and `paths-and-data.md` (if a revision), `endpoints.md` (if a route changes) (no revision and no route: `paths-and-data.md` for the writer and the key; and `requests.md`, `music-library/README.md`, `00-index.md`, `00-documentation-instructions.md`).

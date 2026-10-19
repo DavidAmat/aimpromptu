@@ -6,11 +6,24 @@ is written in the test)."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
+from sqlalchemy import select
 
 from aitu_backend.db.database import session
+from aitu_backend.db.models import (
+    Genre,
+    Request,
+    RequestItem,
+    SongGenre,
+    SongKey,
+    SongTag,
+    TagCategory,
+    TagValue,
+    User,
+)
 from aitu_backend.library import genres, signals
 from aitu_backend.library.genres import Item, Link, Wikidata
 from tests.test_regional_import import folder, run, song_titled  # noqa: F401 - the fixture
@@ -68,22 +81,30 @@ def _graph() -> Wikidata:
 
 def test_a_wikidata_genre_is_proposed_as_the_genres_of_its_nearest_roots() -> None:
     mapped = genres.map_genres(_graph())
-    assert mapped["Qelectropop"] == ["electronic and dance", "pop"]
+    assert mapped["Qelectropop"] == ["pop", "electronic and dance"]
     assert mapped["Q183504"] == ["indie"]  # a root itself: nearer than rock music above it
     assert mapped["Qdeep"] == ["rock"]
     assert mapped["Qchristmas"] == [] and mapped["Qloop1"] == []
     assert mapped["Q37073"] == ["pop"]
 
 
-def test_a_song_keeps_its_two_most_frequent_genres_the_narrow_one_first_on_a_tie() -> None:
-    mapped = {"Qpop": ["pop"], "Qelectropop": ["electronic and dance", "pop"], "Qrock": ["rock"]}
-    assert genres.chosen(["Qpop", "Qelectropop", "Qrock"], mapped) == [
-        "pop",
-        "electronic and dance",
-    ]
-    assert genres.chosen(["Qrock", "Qpop"], mapped) == ["rock", "pop"]
+def test_a_song_keeps_its_two_most_frequent_genres_the_commoner_first_on_a_tie() -> None:
+    mapped = {
+        "Qpop": ["pop"],
+        "Qelectropop": ["pop", "electronic and dance"],
+        "Qrock": ["rock"],
+        "Qhiphop": ["hip hop"],
+        "Qpoprap": ["hip hop"],
+        "Qtrap": ["hip hop"],
+        "Qlatinhiphop": ["latin", "hip hop"],
+    }
+    assert genres.chosen(["Qpop", "Qelectropop", "Qrock"], mapped) == ["pop", "rock"]
+    assert genres.chosen(["Qrock", "Qpop"], mapped) == ["pop", "rock"]
     assert genres.chosen(["Qpop", "Qpop"], mapped) == ["pop"]  # a genre counts once
     assert genres.chosen(["Qchristmas"], mapped) == []
+    # The Black Eyed Peas: hip hop four times, latin and pop once each: hip hop alone.
+    bep = ["Qhiphop", "Qpoprap", "Qtrap", "Qlatinhiphop", "Qpop"]
+    assert genres.chosen(bep, mapped) == ["hip hop"]
 
 
 def _wikidata() -> Wikidata:
@@ -165,3 +186,102 @@ def test_the_measure_counts_own_genres_a_performers_and_the_tags(
     assert result.tags["films"] == {"<P406": (1, 1), "P406+album": (1, 1)}
     assert result.top_works["films"] == [("Saturday Night Fever", 1)]
     assert result.tag_totals["tv_shows"] == (1, 1) and result.tag_totals["adverts"] == (0, 0)
+
+
+def _genres_of(db, title: str) -> list[str]:  # type: ignore[no-untyped-def]
+    song = song_titled(db, title)
+    return sorted(
+        db.scalars(
+            select(Genre.name)
+            .join(SongGenre, SongGenre.genre_id == Genre.id)
+            .where(SongGenre.song_id == song.id)
+        )
+    )
+
+
+def _tags_of(db, title: str) -> list[tuple[str, str]]:  # type: ignore[no-untyped-def]
+    song = song_titled(db, title)
+    return sorted(
+        (str(c), str(v))
+        for c, v in db.execute(
+            select(TagCategory.name, TagValue.value)
+            .join(TagValue, TagValue.category_id == TagCategory.id)
+            .join(SongTag, SongTag.tag_value_id == TagValue.id)
+            .where(SongTag.song_id == song.id)
+        )
+    )
+
+
+def test_the_import_writes_genres_and_film_tags_and_a_second_run_changes_nothing(
+    folder: Path,  # noqa: F811
+) -> None:
+    run(folder)
+    data = _wikidata()
+    with session() as db:
+        report = genres.import_genres(db, data)
+    assert report.sources["own"] == 1 and report.sources["performer"] == 1
+    assert report.keys_made == 3 and report.tags["films"] == (1, 1)
+    with session() as db:
+        # Its own genres (two items); its performer's (disco); the name alone gives nothing.
+        assert _genres_of(db, "Give Me Everything") == ["hip hop", "r&b and soul"]
+        assert _genres_of(db, "Stayin' Alive") == ["electronic and dance"]
+        assert _genres_of(db, "Superestrella") == []
+        assert _tags_of(db, "Stayin' Alive") == [("films", "Saturday Night Fever")]
+        assert _tags_of(db, "Give Me Everything") == []  # TV programmes are not imported
+        keys = set(db.scalars(select(SongKey.key).where(SongKey.key.like("wikidata.org:%"))))
+        assert keys == {"wikidata.org:Qgive", "wikidata.org:Qgive-single", "wikidata.org:Qstayin"}
+    with session() as db:
+        again = genres.import_genres(db, data)
+    assert again.genre_rows == (0, 0) and again.tag_rows == (0, 0)
+    assert again.tag_values == (0, 0) and again.keys_made == 0
+
+
+def test_a_corrected_map_or_a_lost_link_applies_on_the_next_run(
+    folder: Path,  # noqa: F811
+) -> None:
+    run(folder)
+    data = _wikidata()
+    with session() as db:
+        genres.import_genres(db, data)
+    # Wikidata now calls the Bee Gees salsa (latin by HAND), and the film's link is gone.
+    data.performer_genres["Qbeegees"] = ["Q208239"]
+    data.links = [one for one in data.links if one.work != "Qfever"]
+    with session() as db:
+        report = genres.import_genres(db, data)
+        assert _genres_of(db, "Stayin' Alive") == ["latin"]
+        assert _tags_of(db, "Stayin' Alive") == []
+        assert db.scalar(select(TagValue).where(TagValue.value == "Saturday Night Fever")) is None
+    assert report.genre_rows == (1, 1) and report.tag_rows == (0, 1) and report.tag_values == (0, 1)
+
+
+def test_a_song_an_accepted_request_wrote_is_left_alone(folder: Path) -> None:  # noqa: F811
+    run(folder)
+    with session() as db:
+        song = song_titled(db, "Give Me Everything")
+        made = song_titled(db, "Stayin' Alive")  # stands for a song a request made
+        author = User(username="anna", role="user")
+        db.add(author)
+        db.flush()
+        request = Request(kind="metadata", author_id=author.id, status="accepted")
+        db.add(request)
+        db.flush()
+        payloads = [
+            ("metadata", {"target": "song", "songId": song.id}),
+            ("newSong", {"ref": "s1", "made": {"songId": made.id}}),
+        ]
+        for kind, payload in payloads:
+            db.add(
+                RequestItem(
+                    request_id=request.id,
+                    kind=kind,
+                    payload=json.dumps(payload),
+                    decision="accepted",
+                )
+            )
+        pop = db.scalar(select(Genre.id).where(Genre.name == "pop"))
+        db.add(SongGenre(song_id=song.id, genre_id=pop))
+    with session() as db:
+        report = genres.import_genres(db, _wikidata())
+        assert report.left_alone == 2
+        assert _genres_of(db, "Give Me Everything") == ["pop"]
+        assert _genres_of(db, "Stayin' Alive") == [] and _tags_of(db, "Stayin' Alive") == []

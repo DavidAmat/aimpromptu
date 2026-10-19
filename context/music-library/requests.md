@@ -112,6 +112,8 @@ Everything accepted in one decision is written **in one transaction** (plan sect
 
 - a new artist: a public artist with its one name; a new song: a public song with its artists,
   year, genres, regions (`worldwide` when none), tags, popularity 0 until a chart has it;
+  the genres and tags of a song a request wrote are never changed by the Wikidata import
+  ([genres.md](genres.md));
 - a metadata change: the song's or artist's fields as proposed; an artist keeps the name a song is
   credited with;
 - a piano sheet: the copy that was reviewed is copied again into `public/`, and becomes the

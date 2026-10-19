@@ -63,8 +63,8 @@ Each table of the download, the app table it goes to, and what is not kept.
 
 | Missing | Count | What happens |
 |---|---|---|
-| Genre | every song | Empty. A source is Q-5 (section 6) |
-| Tags (films, video games, TV shows, adverts) | every song | Empty. The app context says the values come by request (Phase 14) |
+| Genre | every song | From Wikidata since Phase 18 ([genres.md](genres.md)): 11,717 of the 21,069 public songs |
+| Tags (films, video games, TV shows, adverts) | every song | The values come by request (Phase 14); since Phase 18 the films also from Wikidata (119 songs, [genres.md](genres.md)) |
 | Regions `spain` and `catalan` | every song | Not created yet. Q-5 |
 | A year | 3 songs, 157 albums | Empty; the decade is then empty too. Nothing is invented |
 | An artist | 7 songs, 3 albums | No artist: the source credited a page that is not an artist page. Fixed by request |
@@ -164,8 +164,9 @@ same years.
 
 ## 6. What is still open (Q-5)
 
-- **Q-5**: the genres, and the tags (Phase 18, added 2026-10-19). Genres could come from Wikidata, mapped to the 13 genres of
-  the app.
+- **Q-5** is closed: its genre and tag part became Phase 18 (Q-11, answered 2026-10-19). The
+  genres come from Wikidata, mapped onto the 13 genres of the app; the tags are the films of
+  Wikidata's soundtrack links ([genres.md](genres.md)).
 - **The regions** (the region part of Q-5, then Q-9) are Phase 16: five Spanish and Catalan sources,
   imported by the same identity rule, each source keeping its own key in `song_keys`
   ([regional-sources.md](regional-sources.md)). 1,104 songs of the Spanish sales chart are songs

@@ -174,7 +174,31 @@ try {
   await page.getByTestId('public-byline').waitFor();
   check('a song known from number ones only says so', await until(async () => (await page.getByText('Weeks at number 1').count()) >= 1 && (await page.getByText(/≈ \d/).count()) >= 1));
   await shot('03c-number-ones-song');
-  // Phase 17: a song no chart of the region lists has a popularity inferred from YouTube views.
+  // Phase 18: the genres and the film tags from Wikidata.
+  const every = await json(`${api}/public/songs?limit=1`);
+  const genreNames = every.facets.genres.map((one) => one.label);
+  check('the Genre chip offers the genres, each with its songs', genreNames.includes('pop') && genreNames.includes('latin') && every.facets.genres.every((one) => one.count > 0), genreNames.join(', '));
+  check('the Tag chip offers the films', every.facets.tags.length > 50 && every.facets.tags.every((one) => one.group === 'films'), `${every.facets.tags.length} values`);
+  await page.goto(`${base}/public/songs`);
+  await page.getByTestId('public-total').waitFor();
+  await page.getByTestId('filter-genre').click();
+  await page.getByRole('menuitem', { name: /^latin/ }).click();
+  const latin = every.facets.genres.find((one) => one.label === 'latin');
+  check('the Genre chip filters', await until(async () => page.url().includes(`genre=${latin?.value}`) && (await page.getByTestId('public-total').innerText()).includes((latin?.count ?? 0).toLocaleString('en'))));
+  await shot('02g-genre-latin');
+  await page.goto(`${base}/public/songs`);
+  await page.getByTestId('public-total').waitFor();
+  await page.getByTestId('filter-tag').click();
+  check('the Tag menu names its category', (await page.getByRole('menu').getByText('Films', { exact: true }).count()) === 1);
+  await shot('02h-tag-menu');
+  await page.getByRole('menuitem', { name: /^Saturday Night Fever/ }).click();
+  check('a film lists its songs', await until(async () => (await rowTitles()).includes("Stayin' Alive")));
+  await shot('02i-tag-film');
+  const fever = (await json(`${api}/public/songs?q=stayin%20alive%20bee%20gees`)).rows[0];
+  await page.goto(`${base}/public/songs/${fever.id}`);
+  await page.getByTestId('public-byline').waitFor();
+  check('a song shows its genre and its film', await until(async () => (await page.getByText('Films: Saturday Night Fever').count()) === 1 && (await page.getByText('Genre', { exact: true }).count()) === 1));
+  await shot('03e-genre-and-tag');
   const horitzo = (await json(`${api}/public/songs?q=agafant%20horitzo&region=catalan`)).rows[0];
   check('a Catalan song on no chart has an inferred popularity', horitzo !== undefined && horitzo.popularity > 0, horitzo && `${horitzo.title}: ${horitzo.popularity}`);
   if (horitzo) {

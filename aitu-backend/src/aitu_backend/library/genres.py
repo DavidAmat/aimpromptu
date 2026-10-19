@@ -32,26 +32,45 @@ import argparse
 import json
 import os
 import sys
+import time
 from collections import Counter, defaultdict, deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
-from sqlalchemy import select
+from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session as DbSession
 
-from aitu_backend.db.models import ArtistName, Region, Song, SongArtist, SongRegion
-from aitu_backend.library import signals
+from aitu_backend.db.models import (
+    ArtistName,
+    Genre,
+    Region,
+    RequestItem,
+    Song,
+    SongArtist,
+    SongGenre,
+    SongKey,
+    SongRegion,
+    SongTag,
+    TagCategory,
+    TagValue,
+)
+from aitu_backend.library import catalogue, signals
 from aitu_backend.library.public_import import plain
 from aitu_backend.library.regional_import import Index, SourceSong
 
 __all__ = [
     "CATEGORIES",
+    "HAND",
     "ROOTS",
+    "TAG_CATEGORIES",
+    "TAG_LINKS",
+    "ImportReport",
     "SONG_CLASSES",
     "Measure",
     "Wikidata",
     "default_folder",
+    "import_genres",
     "map_genres",
     "match",
     "measure",
@@ -105,21 +124,45 @@ ROOTS: dict[str, str] = {
     "Q217199": "soundtrack",  # soundtrack
     "Q38848": "metal",  # heavy metal
 }
-#: The order a tie between two genres of a song is broken in: the narrow genres first, pop last.
+#: The map corrected by hand where Wikidata's "subclass of" says something the app does not mean
+#: (Q-11, the user's ok of 2026-10-19). An empty list: no genre of the app.
+HAND: dict[str, list[str]] = {
+    "Q208239": ["latin"],  # salsa (Wikidata files it under dance music)
+    "Q40461": ["latin"],  # bachata (the same)
+    "Q19358266": ["latin", "electronic and dance"],  # electro latino
+    "Q263734": ["metal"],  # nu metal (walked to rock)
+    "Q20378": ["metal"],  # alternative metal
+    "Q188539": ["metal"],  # glam metal
+    "Q487914": ["rock", "pop"],  # pop-punk (walked to pop only)
+    "Q1045541": ["hip hop"],  # G-funk (walked to r&b and soul)
+    "Q211756": ["electronic and dance", "pop"],  # dance-pop (walked to pop only)
+    "Q2529400": ["r&b and soul"],  # urban contemporary (no root above it)
+    "Q180268": ["r&b and soul"],  # gospel music
+    "Q213665": ["pop"],  # K-pop
+    "Q254890": ["folk and singer-songwriter"],  # nova cançó
+    "Q2407862": ["country"],  # Americana
+    "Q854451": ["folk and singer-songwriter"],  # Celtic music
+    "Q193207": ["electronic and dance"],  # ambient music
+    "Q16836684": ["electronic and dance", "pop"],  # Electropop, a second item of electropop
+    "Q6581097": [],  # "male": a statement made by mistake
+}
+#: The order a tie between two genres of a song is broken in: the commoner first, as the songs with
+#: genres of their own have them (the measure of 2026-10-19). A first rule put the narrow genres
+#: first, and made The Black Eyed Peas latin from one "Latin hip-hop" among five genres.
 _ORDER = (
-    "metal",
+    "pop",
+    "rock",
+    "electronic and dance",
+    "hip hop",
+    "r&b and soul",
     "country",
     "latin",
-    "hip hop",
+    "indie",
     "jazz and blues",
+    "folk and singer-songwriter",
+    "metal",
     "classical",
     "soundtrack",
-    "r&b and soul",
-    "electronic and dance",
-    "folk and singer-songwriter",
-    "indie",
-    "rock",
-    "pop",
 )
 #: The deepest "subclass of" walk from a genre to a root.
 _DEPTH = 8
@@ -136,6 +179,15 @@ SONG_LINKS = ("P1441", "P361", "P144", "P4969", "P5059", "P2550", "P366", "P921"
 #: Properties from a work to a song: theme music, soundtrack release, tracklist, featured tracks,
 #: recording or performance of, based on, derivative work, present in work.
 WORK_LINKS = ("P942", "P406", "P658", "P10664", "P2550", "P144", "P4969", "P1441")
+#: The links that put a song **in** a work (Q-11): the work's soundtrack release is the song or
+#: lists it, the song is its theme music, the song is present in it. "Recording or performance of"
+#: is left out: it ties a concert film to every song the concert plays.
+TAG_LINKS = ("<P406", "P406+album", "<P942", "P1441>")
+#: The tag categories the import writes (Q-11: films only; TV programmes gave 24 songs, video games
+#: 1, adverts none). The others come by request.
+TAG_CATEGORIES = ("films",)
+#: The key a matched Wikidata song keeps in ``song_keys``: ``wikidata.org:Q…``.
+KEY_PREFIX = "wikidata.org:"
 LANGUAGES = ("en", "es", "ca", "mul")
 _BLOCK = 2000
 
@@ -339,10 +391,13 @@ def _read_links(client: signals.Client, data: Wikidata) -> None:
 # ------------------------------------------------------------------------- the map
 
 
-def map_genres(data: Wikidata, roots: dict[str, str] | None = None) -> dict[str, list[str]]:
+def map_genres(
+    data: Wikidata, roots: dict[str, str] | None = None, hand: dict[str, list[str]] | None = None
+) -> dict[str, list[str]]:
     """Each Wikidata genre -> the genres of the app at the nearest roots above it (none when no root
-    is within :data:`_DEPTH` steps of "subclass of")."""
+    is within :data:`_DEPTH` steps of "subclass of"), then :data:`HAND`'s corrections."""
     roots = ROOTS if roots is None else roots
+    hand = HAND if hand is None else hand
     found: dict[str, list[str]] = {}
     every = set(data.labels) | set(data.parents)
     every |= {one for item in data.items.values() for one in item.genres}
@@ -367,6 +422,7 @@ def map_genres(data: Wikidata, roots: dict[str, str] | None = None) -> dict[str,
                     depth[parent] = depth[one] + 1
                     queue.append(parent)
         found[genre] = [one for one in _ORDER if one in targets]
+    found.update({genre: list(targets) for genre, targets in hand.items()})
     return found
 
 
@@ -374,11 +430,13 @@ def chosen(
     wikidata_genres: Iterable[str], mapped: dict[str, list[str]], most: int = 2
 ) -> list[str]:
     """At most ``most`` genres of the app: the most frequent after the map, a tie broken by
-    :data:`_ORDER` (the narrow genres first)."""
+    :data:`_ORDER` (the commoner first). A second genre must count at least half as often as the
+    first: hip hop four times and latin once is hip hop alone."""
     counts: Counter[str] = Counter()
     for genre in dict.fromkeys(wikidata_genres):
         counts.update(mapped.get(genre, []))
-    return sorted(counts, key=lambda one: (-counts[one], _ORDER.index(one)))[:most]
+    ranked = sorted(counts, key=lambda one: (-counts[one], _ORDER.index(one)))
+    return [one for one in ranked[:most] if 2 * counts[one] >= counts[ranked[0]]]
 
 
 # ------------------------------------------------------------------------- the match
@@ -423,6 +481,33 @@ def match(db: DbSession, data: Wikidata, index: Index | None = None) -> Matched:
         if artist_id not in out.performers and len(holders.get(name, ())) == 1:
             out.by_name[artist_id] = next(iter(holders[name]))
     return out
+
+
+def song_genres(
+    found: Matched,
+    data: Wikidata,
+    mapped: dict[str, list[str]],
+    artists: dict[int, list[int]],
+    song_id: int,
+) -> tuple[list[str], str]:
+    """The genres of the app a public song gets, and from where: ``own`` (its matched items'),
+    else ``performer`` (the genres of a performer a matched item ties to one of its artists: Q-11),
+    else ``none``. The weaker match by a name alone is only measured."""
+    own = chosen(
+        (g for qid in found.items.get(song_id, []) for g in data.items[qid].genres), mapped
+    )
+    if own:
+        return own, "own"
+    through = chosen(
+        (
+            g
+            for artist in artists.get(song_id, [])
+            for performer in sorted(found.performers.get(artist, ()))
+            for g in data.performer_genres.get(performer, [])
+        ),
+        mapped,
+    )
+    return through, ("performer" if through else "none")
 
 
 # ------------------------------------------------------------------------- the measure
@@ -591,6 +676,175 @@ def _lines(result: Measure, data: Wikidata, mapped: dict[str, list[str]], top: i
     return out
 
 
+# ------------------------------------------------------------------------- the import
+
+
+@dataclass
+class ImportReport:
+    songs: int = 0
+    #: public songs an accepted request named: their genres and tags are the request's
+    left_alone: int = 0
+    #: "own", "performer", "none" -> songs
+    sources: Counter[str] = field(default_factory=Counter)
+    #: genre of the app -> songs
+    genres: Counter[str] = field(default_factory=Counter)
+    genre_rows: tuple[int, int] = (0, 0)
+    tag_rows: tuple[int, int] = (0, 0)
+    tag_values: tuple[int, int] = (0, 0)
+    #: category -> (songs, values)
+    tags: dict[str, tuple[int, int]] = field(default_factory=dict)
+    keys_made: int = 0
+    seconds: float = 0.0
+
+    def lines(self) -> list[str]:
+        return [
+            f"public songs: {self.songs}; left alone (an accepted request named them):"
+            f" {self.left_alone}",
+            "genres from: " + ", ".join(f"{k} {v}" for k, v in sorted(self.sources.items())),
+            "songs per genre: " + ", ".join(f"{k} {v}" for k, v in self.genres.most_common()),
+            f"genre rows: {self.genre_rows[0]} written, {self.genre_rows[1]} removed",
+            f"tag rows: {self.tag_rows[0]} written, {self.tag_rows[1]} removed; tag values:"
+            f" {self.tag_values[0]} made, {self.tag_values[1]} removed",
+            *(f"{c}: {n} songs, {v} values" for c, (n, v) in self.tags.items()),
+            f"keys made: {self.keys_made}",
+            f"time: {self.seconds:.1f} s",
+        ]
+
+
+def request_songs(db: DbSession) -> set[int]:
+    """The public songs an accepted request wrote: a metadata change of a song, or a new song.
+    Their genres and tags are the request's, never the import's."""
+    found: set[int] = set()
+    for kind, text in db.execute(
+        select(RequestItem.kind, RequestItem.payload).where(
+            RequestItem.decision == "accepted", RequestItem.kind.in_(("metadata", "newSong"))
+        )
+    ):
+        payload = json.loads(text or "{}")
+        if kind == "metadata" and payload.get("target") == "song" and payload.get("songId"):
+            found.add(int(payload["songId"]))
+        made = payload.get("made") or {}
+        if kind == "newSong" and made.get("songId"):
+            found.add(int(made["songId"]))
+    return found
+
+
+def import_genres(db: DbSession, data: Wikidata) -> ImportReport:
+    """The genres (at most two a song) and the tags of :data:`TAG_CATEGORIES` as public rows, in
+    the session's transaction. The import owns the genre and tag rows of every public song that no
+    accepted request named, and writes them again on each run: a second run changes nothing, a
+    corrected map applies. The item's key goes into ``song_keys``."""
+    start = time.monotonic()
+    report = ImportReport()
+    index = Index(db)
+    found = match(db, data, index)
+    mapped = map_genres(data)
+    _, years, artists = _song_rows(db)
+    kept = request_songs(db) & set(years)
+    report.songs, report.left_alone = len(years), len(kept)
+    genre_ids = {str(name): int(one) for name, one in db.execute(select(Genre.name, Genre.id))}
+
+    wanted: set[tuple[int, int]] = set()
+    for song_id in years:
+        if song_id in kept:
+            continue
+        names, source = song_genres(found, data, mapped, artists, song_id)
+        report.sources[source] += 1
+        report.genres.update(names)
+        wanted |= {(song_id, genre_ids[name]) for name in names}
+    have = {
+        (int(s), int(g))
+        for s, g in db.execute(
+            select(SongGenre.song_id, SongGenre.genre_id)
+            .join(Song, Song.id == SongGenre.song_id)
+            .where(Song.scope == "public")
+        )
+        if int(s) not in kept
+    }
+    for song_id, genre_id in have - wanted:
+        db.execute(
+            delete(SongGenre).where(SongGenre.song_id == song_id, SongGenre.genre_id == genre_id)
+        )
+    if wanted - have:
+        db.execute(
+            insert(SongGenre),
+            [{"song_id": s, "genre_id": g} for s, g in sorted(wanted - have)],
+        )
+    report.genre_rows = (len(wanted - have), len(have - wanted))
+
+    # The tags: each work a value of its category, named by its label.
+    categories = {
+        str(name): int(one) for name, one in db.execute(select(TagCategory.name, TagCategory.id))
+    }
+    values = {
+        (int(c), str(v)): int(one)
+        for one, c, v in db.execute(select(TagValue.id, TagValue.category_id, TagValue.value))
+    }
+    song_of: dict[str, list[int]] = defaultdict(list)
+    for song_id, qids in found.items.items():
+        for qid in qids:
+            song_of[qid].append(song_id)
+    wanted_tags: set[tuple[int, tuple[int, str]]] = set()
+    for link in data.links:
+        label = data.works.get(link.work, "").strip()[:200]
+        if link.category not in TAG_CATEGORIES or link.via not in TAG_LINKS or not label:
+            continue
+        for song_id in song_of.get(link.song, []):
+            if song_id not in kept:
+                wanted_tags.add((song_id, (categories[link.category], label)))
+    made = 0
+    for value in sorted({one for _, one in wanted_tags} - set(values)):
+        tag = TagValue(category_id=value[0], value=value[1])
+        db.add(tag)
+        db.flush()
+        values[value] = tag.id
+        made += 1
+    wanted_rows = {(song_id, values[value]) for song_id, value in wanted_tags}
+    have_tags = {
+        (int(s), int(t))
+        for s, t in db.execute(
+            select(SongTag.song_id, SongTag.tag_value_id)
+            .join(Song, Song.id == SongTag.song_id)
+            .where(Song.scope == "public")
+        )
+        if int(s) not in kept
+    }
+    for song_id, value_id in have_tags - wanted_rows:
+        db.execute(
+            delete(SongTag).where(SongTag.song_id == song_id, SongTag.tag_value_id == value_id)
+        )
+    if wanted_rows - have_tags:
+        db.execute(
+            insert(SongTag),
+            [{"song_id": s, "tag_value_id": t} for s, t in sorted(wanted_rows - have_tags)],
+        )
+    report.tag_rows = (len(wanted_rows - have_tags), len(have_tags - wanted_rows))
+    db.flush()
+    used = set(db.scalars(select(SongTag.tag_value_id)))
+    unused = [one for one in values.values() if one not in used]
+    if unused:
+        db.execute(delete(TagValue).where(TagValue.id.in_(unused)))
+    report.tag_values = (made, len(unused))
+    for category in TAG_CATEGORIES:
+        rows = [(s, v) for s, v in wanted_tags if v[0] == categories[category]]
+        report.tags[category] = (len({s for s, _ in rows}), len({v for _, v in rows}))
+
+    # The keys: a later run finds each song by its item first.
+    keys = [
+        {"key": KEY_PREFIX + qid, "song_id": song_id}
+        for song_id, qids in sorted(found.items.items())
+        for qid in qids
+        if KEY_PREFIX + qid not in index.by_key
+    ]
+    if keys:
+        db.execute(insert(SongKey), keys)
+    report.keys_made = len(keys)
+    db.flush()
+    catalogue.forget()
+    report.seconds = time.monotonic() - start
+    return report
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
     parser.add_argument("--database", type=Path, default=None, help="another .database/ folder")
@@ -598,6 +852,7 @@ def main(argv: list[str] | None = None) -> int:
     measure_ = commands.add_parser("measure", help="read Wikidata and count; write nothing")
     measure_.add_argument("--top", type=int, default=80)
     measure_.add_argument("--out", type=Path, default=None, help="a JSON file of every genre")
+    commands.add_parser("import", help="write the genres and tags as public rows")
     args = parser.parse_args(argv)
     if args.database is not None:
         os.environ["AITU_DATABASE_DIR"] = str(args.database.resolve())
@@ -607,6 +862,12 @@ def main(argv: list[str] | None = None) -> int:
     answers = signals.Answers(default_folder() / "answers.sqlite")
     client = signals.Client(answers)
     data = read(client)
+    if args.command == "import":
+        with session() as db:
+            report = import_genres(db, data)
+        print("\n".join(report.lines()) + f"\nasked {dict(client.asked)}")
+        answers.close()
+        return 0
     mapped = map_genres(data)
     with session() as db:
         result = measure(db, data)

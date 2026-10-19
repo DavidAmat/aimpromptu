@@ -2,12 +2,14 @@
 
 Plan: [`02-plan.md`](02-plan.md) sections 3.3 (Q-5, Q-11), 15.3 and 20, Phase 18. Checklist:
 [`02-checklist.md`](02-checklist.md). Branch `feat/phase-18`, made from `master` at `d200126`.
-Started 2026-10-19 on the Ubuntu machine; the app was running (`make up`, the backend reloads on
-`src/` changes), so nothing that migrates went into `src/`.
+Built 2026-10-19 on the Ubuntu machine; the app was running (`make up`, the backend reloads on
+`src/` changes), and no revision was needed. Another project held the GPU, so the backend tests ran
+on the CPU; nothing of the transcription changed.
 
-**State: the measure is done (Story 18.1); Q-11 is raised and waits for the user.** No genre or tag
-row has been written. The full list of the Wikidata genres found, with their counts and the
-proposed map, is [`research/phase-18/genres-measure.json`](research/phase-18/genres-measure.json).
+The page this phase writes is [`../../music-library/genres.md`](../../music-library/genres.md); this
+report is the detail behind it. The full list of the Wikidata genres found, with their counts and
+the proposed map, is [`research/phase-18/genres-measure.json`](research/phase-18/genres-measure.json)
+(the walk before the corrections by hand).
 
 # 1. Summary
 
@@ -15,8 +17,11 @@ proposed map, is [`research/phase-18/genres-measure.json`](research/phase-18/gen
 |---|---|
 | 18.1.1 The read | `library/genres.py` (`make genres-measure`): every Wikidata song, single or musical work with a performer (229,348 items, 119,000 with genres of their own), each performer's labels and genres, each genre's "subclass of" links up to the roots, the links to films, TV programmes, video games and adverts. 72 queries to QLever, every answer kept in `data/music-library-genres/answers.sqlite` (120 MB). Matched by the identity rule: 6,242 public songs (8,297 items); 2,016 public artists through a matched item, 2,003 more by a name only one performer has |
 | 18.1.2 The counts | 24 % of the public songs have genres of their own, 32 % more through their performer, 19 % more by the weaker name match; 25 % none (section 4). 514 Wikidata genres reach the public songs. Tags: 119 songs in 88 films, 24 in 20 TV programmes, 1 in a video game, 0 in adverts (section 6) |
-| 18.1.3 Q-11 | Raised with the proposed map (section 5) and three questions (section 8) |
-| `song_keys` | The item's key (`wikidata.org:Q…`) is kept by the import, not by the measure: the measure writes no row (plan step 1). `Index.find` already looks a key up first, so a second run finds the song by it |
+| 18.1.3 Q-11 | Raised with the proposed map (section 5) and three questions (section 8). **Answered 2026-10-19: every recommendation** |
+| 18.2 The import | `make genres-import`: 11,717 public songs with a genre (5,010 their own, 6,707 their performer's), 119 songs in 87 film values, 8,297 keys in `song_keys`; on a copy, then on the real `.database/` after `make db-backup`; a second run writes nothing; `make db-check` no problem. No revision (section 7) |
+| 18.3 The pages | The Genre and Tag chips with their counts; the Tag menu's heading and a song's tags read "Films" (they showed the code `films`); `check:public` 58 (6 new) |
+| 18.4 Documentation | `music-library/genres.md` (new), `ontology.md`, `reconciliation.md` (Q-5 closed), `requests.md`, `paths-and-data.md`, `music-library/README.md`, `00-index.md`, `00-documentation-instructions.md`; no route changed (`endpoints.md` unchanged), no revision (`07-database.md` unchanged) |
+| `song_keys` | The item's key (`wikidata.org:Q…`) is kept by the import, not by the measure: the measure writes no row (plan step 1). `Index.find` looks a key up first, so a second run finds the song by it |
 
 # 2. Where the data comes from
 
@@ -114,7 +119,8 @@ music, jazz, blues, classical music, art music, film score, soundtrack, heavy me
 the smallest distance all count: "electropop" is under pop music and electronic music, so it is
 proposed as both; "indie rock" is a root itself, so it is indie only. A song keeps at most two:
 the most frequent after the map, a tie broken by the narrow genres first (metal, country, latin,
-hip hop … rock, pop last), `genres.chosen`.
+hip hop … rock, pop last), `genres.chosen`. *Changed after the first real run* (section 7.1): a
+second genre must count at least half as often as the first, and a tie goes to the commoner genre.
 
 The 40 most frequent Wikidata genres (public songs with it as their own / through their performer
 only) and what the walk proposes:
@@ -219,7 +225,7 @@ editions. Counting only the links that mean the song is **in** the work (`<P406`
 The Tag chip of Public songs lists every value in one menu, grouped by category, with no search
 inside ([`FilterChip.tsx`](../../../aitu-frontend/src/ui/FilterChip.tsx)); 88 films fit it.
 
-# 7. The import, as designed (Story 18.2, after Q-11)
+# 7. The import (Story 18.2)
 
 - **No new revision.** `song_genres` and `song_tags` hold what is needed; where a genre came from is
   told by the requests instead of a column: an accepted request writes a song's genres and tags as
@@ -229,9 +235,53 @@ inside ([`FilterChip.tsx`](../../../aitu-frontend/src/ui/FilterChip.tsx)); 88 fi
   them again on each run, so a second run changes nothing and a corrected map applies.
 - A tag value is made when a song needs it; a value no song uses any more is deleted.
 - The item's key `wikidata.org:Q…` goes into `song_keys` for each matched song (Task 18.1.1).
-- Run on a copy of `.database/`, then on the real one after `make db-backup`; `make db-check`.
+- `genres.import_genres`, one transaction: the genre rows wanted against those there (only the
+  difference is written), the film values made as needed, the keys. `HAND` holds the corrections of
+  section 5; `TAG_LINKS` (`<P406`, `P406+album`, `<P942`, `P1441>`) and `TAG_CATEGORIES`
+  (`films`) hold the tag answers of Q-11. The weaker match by a unique name is measured, never
+  imported.
 
-# 8. Q-11, raised 2026-10-19
+## 7.1 The second genre, corrected after the first real run
+
+The first run used the tie rule of section 5 ("the narrow genres first"). The latin list of Public
+songs then showed The Black Eyed Peas ("I Gotta Feeling", "Boom Boom Pow", "My Humps"): their five
+Wikidata genres give hip hop 4 times, latin once ("Latin hip-hop") and pop once, and the tie
+between latin and pop went to latin. That breaks "the most frequent". Now (`genres.chosen`):
+
+- **a second genre counts at least half as often as the first** (hip hop 4, latin 1: hip hop alone);
+- **a tie goes to the commoner genre**, in the order of the songs with genres of their own: pop,
+  rock, electronic and dance, hip hop, r&b and soul, country, latin, indie, jazz and blues, folk and
+  singer-songwriter, metal, classical, soundtrack.
+
+The import ran again on a copy, then on the real database: 1,121 rows written, 2,612 removed (fewer
+songs with two genres; latin 2,745 songs before, 2,494 after). Examples after: "Despacito" latin;
+"Havana" pop and latin; "Billie Jean" r&b and soul and electronic and dance; "Bohemian Rhapsody" pop
+and rock; "Stayin' Alive" electronic and dance (the Bee Gees' disco); "Superestrella" pop and
+electronic and dance.
+
+## 7.2 The runs
+
+| Run | Result |
+|---|---|
+| A copy (SQLite's backup of the real file into the scratchpad) | 11,717 songs with a genre, 18,375 genre rows, 121 tag rows, 87 values, 8,297 keys, 2.4 s; a second run 0 |
+| `make db-backup` | `/mnt/ssd2/aimpromptu/.database-20261019-183058.tar.zst` (1.3 GB) |
+| The real `.database/` | the same counts, 2.5 s; a second run 0; `make db-check` no problem |
+| The corrected rule (section 7.1), a copy then the real one | 1,121 written, 2,612 removed; again 0; `make db-check` no problem |
+
+Final counts on the real database: songs with a genre per region `worldwide` 6,754 of 9,047,
+`spain` 6,414 of 12,870, `catalan` 105 of 960; 5,167 songs have two genres. Songs per genre: pop
+4,465, rock 2,753, hip hop 2,742, latin 2,494, electronic and dance 1,720, r&b and soul 1,507,
+country 819, folk and singer-songwriter 108, indie 106, jazz and blues 84, metal 73, classical 10,
+soundtrack 3.
+
+**A stray `.database/` at the root of the repository** (an empty SQLite file, 0 songs, 0 users,
+ignored by git) was made at 20:33 by a trace script run without `.env`. The agent was not allowed
+to delete it; the user can delete it.
+
+# 8. Q-11, raised and answered 2026-10-19
+
+**Answered 2026-10-19 ("all recommended"): 1 A, 2 A, 3 A.** Flamenco and rumba stay latin, as the
+walk proposed (the first of the two choices).
 
 1. **The map**: the walk with the corrections of section 5 (recommended), or a review of the whole
    list ([`genres-measure.json`](research/phase-18/genres-measure.json), 514 genres). And flamenco:
@@ -243,15 +293,44 @@ inside ([`FilterChip.tsx`](../../../aitu-frontend/src/ui/FilterChip.tsx)); 88 fi
 3. **The tags**: A films only, from the soundtrack links (recommended: 119 songs, 88 films); B films
    and TV programmes (143 songs); C none for now, all by request.
 
-# 9. Checks so far
+# 9. The pages (Story 18.3)
+
+The backend already offered both chips with counts (Phase 13); nothing in the routes changed.
+Two changes on screen: the Tag menu's heading read `films` and a song's tags "Saturday Night Fever
+(films)" (the category's code); both now read "Films" (`tagCategoryLabel` in
+`pages/public/shared.ts`; "Films: Saturday Night Fever" on the song page). The chips have the test
+ids `filter-genre` and `filter-tag`. Screenshots: `.run/screenshots/public/02g-genre-latin`,
+`02h-tag-menu`, `02i-tag-film`, `03e-genre-and-tag`.
+
+The 13 checks of the 09 guidelines on the changed pages: no new control and no sentence added; the
+chip menus are Phase 13's; the internal names `films` and `tv_shows` no longer reach the screen;
+the genres keep their lowercase names of section 15.3 ("electronic and dance"), as the request
+dialog already shows them; the 390 px check passes.
+
+# 10. Checks
 
 | Check | Result |
 |---|---|
-| `test_genres.py` (new, 5) | A QLever answer read and kept, a refusal and a timeout not kept; the map to the nearest roots (both at a tie, a root itself first, a loop, none); the two genres a song keeps; the match of items and performers (two items of one song, a cover by another performer left out, a shared name not matched); the measure's counts and tags |
+| `test_genres.py` (new, 8) | A QLever answer read and kept, a refusal and a timeout not kept; the map to the nearest roots (both at a tie, a root itself first, a loop, none); the two genres a song keeps (a second at least half as frequent, the commoner on a tie, The Black Eyed Peas' case); the match of items and performers (two items of one song, a cover by another performer left out, a shared name not matched); the measure's counts and tags; the import (own and performer genres, the film tag, not the TV one, the keys, a second run writes nothing); a corrected map and a lost link applied on the next run (the unused film value deleted); a song an accepted request wrote (a metadata change, a new song) left alone |
+| Backend, full run **on the CPU** (another project held the GPU) | 1,148 tests: the 3 known failures only (`test_the_worked_example_at_00_46_prints_three_equal_corcheas` and the two Transkun tests that fail without a GPU), as in Phase 17 (1,140) |
+| `check:public` (6 new: the Genre chip's genres, the Tag chip's films, the Genre chip filters, the "Films" heading, a film lists its songs, a song shows its genre and its film) | 58 passed, after the import and again after the correction; nothing left behind |
+| `tsc -b`, `npm run lint` | clean |
+| `make db-check` on the real `.database/` | no problem |
+| `scripts/docs/check-links.py` | passes |
 | `test_signals.py` | passes (the client changed) |
 | `black`, `flake8`, `mypy` on `genres.py`, `signals.py`, the test | clean |
 
-# 10. Learnings so far
+# 11. Open points
+
+- **Catalan songs have almost no genre** (105 of 960): Wikidata has few of their items, and many
+  Catalan artists have none. A request is the way for now.
+- **Wikidata changes**: `make genres-import` after a new `make genres-measure` with fresh answers
+  (delete `data/music-library-genres/answers.sqlite`, or its `qlever:` rows) brings the new genres;
+  nothing runs it by itself.
+- **QLever is a university's public service** with no stated terms beyond fair use; the import asks
+  it about 70 queries, once.
+
+# 12. Learnings
 
 - **The Wikidata query service can limit everyone at once** (1 query a minute during an outage);
   QLever serves the same data, much faster, with a 30 s limit and a rate limit of its own.
@@ -259,3 +338,7 @@ inside ([`FilterChip.tsx`](../../../aitu-frontend/src/ui/FilterChip.tsx)); 88 fi
   machine instead of joining them with `P31/P279*`.
 - **A property can mean the opposite of what it looks like**: "recording or performance of" ties a
   concert film to each song it plays.
+- **Look at a filtered list after an import**: the tie rule looked right in the tests and put The
+  Black Eyed Peas under latin; the first screenshot of the Genre chip showed it.
+- **Load `.env` in every script run on the host**: without it the app's database is the default
+  `.database/` of the repository, which the session then makes empty.
