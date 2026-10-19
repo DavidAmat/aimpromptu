@@ -23,8 +23,8 @@ import argparse
 import math
 import os
 import sys
-from dataclasses import dataclass
-from datetime import date
+from dataclasses import dataclass, field
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -33,13 +33,16 @@ from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session as DbSession
 
 from aitu_backend.db.models import Region, Song, SongRegion, SongRegionPopularity, SongSignal
+from aitu_backend.library import popularity
 from aitu_backend.library import signals as signals_module
 
 __all__ = ["CANDIDATES", "Candidate", "Row", "evaluate", "plots", "sample_rows", "store_signals"]
 
 REGIONS = ("worldwide", "spain", "catalan")
-#: The decades a song's year falls in; a song with no year has its own column.
-DECADES = (1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020)
+#: The decades with a term of their own; earlier ones are the base, later ones count as the 2020s.
+TERM_DECADES = (1980, 1990, 2000, 2010, 2020)
+#: The kinds of official channel with a term of their own; ``artist`` is the base.
+TERM_CHANNELS = ("vevo", "topic", "label")
 
 
 @dataclass(frozen=True)
@@ -89,17 +92,22 @@ def _design(rows: Sequence[Row], feature: str, terms: bool, streams: bool) -> np
     if terms:
         for region in REGIONS[1:]:
             columns.append([1.0 if r.region == region else 0.0 for r in rows])
-        for decade in DECADES[1:]:
-            columns.append([1.0 if r.year and r.year >= decade else 0.0 for r in rows])
-        columns.append([1.0 if r.year is None else 0.0 for r in rows])
-    if terms:
-        for kind in ("vevo", "topic", "label"):
+        # One term per decade from the 80s; the 70s and before (no song of the sample is older)
+        # are the base. A song with no year counts in its video's decade.
+        for decade in TERM_DECADES:
+            columns.append([1.0 if _decade(r) == decade else 0.0 for r in rows])
+        for kind in TERM_CHANNELS:
             columns.append([1.0 if r.channel == kind else 0.0 for r in rows])
         columns.append([min(r.upload_delay, 30.0) for r in rows])
     if streams:
         columns.append([r.log_streams or 0.0 for r in rows])
         columns.append([0.0 if r.log_streams else 1.0 for r in rows])
     return np.array(columns, dtype=float).T
+
+
+def _decade(row: Row) -> int:
+    year = row.year or row.published.year
+    return min(max(year - year % 10, TERM_DECADES[0] - 10), TERM_DECADES[-1])
 
 
 @dataclass(frozen=True)
@@ -225,6 +233,28 @@ CANDIDATES = (
         _boosted(True),
     ),
 )
+
+
+#: The candidate the user chose on 2026-10-19 (Story 17.2): its weights are ``popularity.INFERRED``.
+CHOSEN = "streams"
+
+
+def chosen_weights(rows: Sequence[Row]) -> popularity.InferredWeights:
+    """The weights of :data:`CHOSEN` fitted on every row, as ``popularity.inferred`` reads them."""
+    apply = next(one for one in CANDIDATES if one.key == CHOSEN).fit(rows)
+    c = [round(float(v), 3) for v in apply.coefficients]  # type: ignore[attr-defined]
+    decades = len(TERM_DECADES)
+    return popularity.InferredWeights(
+        intercept=c[0],
+        per_year=c[1],
+        spain=c[2],
+        catalan=c[3],
+        decades=tuple(zip(TERM_DECADES, c[4 : 4 + decades])),
+        channels=tuple(zip(TERM_CHANNELS, c[4 + decades : 7 + decades])),
+        delay=c[7 + decades],
+        streams=c[8 + decades],
+        no_streams=c[9 + decades],
+    )
 
 
 # --------------------------------------------------------------------------- measuring
@@ -466,6 +496,188 @@ def report_lines(results: list[dict], rows: Sequence[Row]) -> list[str]:
     return lines
 
 
+# --------------------------------------------------------------------------- inferring
+
+
+#: Signals read longer ago than this are read again before a value is worked out from them, so no
+#: view count is kept past the 30 days of the YouTube API Developer Policies.
+FRESH_DAYS = signals_module.STATS_DAYS - 5
+
+
+@dataclass
+class Report:
+    pairs: int = 0
+    read: int = 0
+    written: dict[str, int] = field(default_factory=dict)
+    without_video: int = 0
+    removed: int = 0
+    refreshed: int = 0
+    gone: int = 0
+
+    def lines(self) -> list[str]:
+        return [
+            f"{self.pairs} songs and regions with no chart value; signals read for {self.read}",
+            f"inferred values written: {self.written}; {self.without_video} with no official video",
+            f"inferred values removed (a chart lists the song now, or no video): {self.removed}",
+            f"views read again: {self.refreshed}; videos no longer on YouTube: {self.gone}",
+        ]
+
+
+def targets(db: DbSession) -> list[tuple[int, str]]:
+    """Every public song and region with no chart value: a song of `spain` or `catalan` that no
+    chart of the region scores, and ``worldwide`` for a song on no chart at all (no region)."""
+    regions = dict(db.execute(select(Region.code, Region.id)).all())
+    codes = {v: k for k, v in regions.items()}
+    charted = {
+        (int(song_id), codes[region_id])
+        for song_id, region_id in db.execute(
+            select(SongRegionPopularity.song_id, SongRegionPopularity.region_id).where(
+                SongRegionPopularity.basis != "inferred"
+            )
+        )
+    }
+    listed: dict[int, set[str]] = {}
+    for song_id, region_id in db.execute(select(SongRegion.song_id, SongRegion.region_id)):
+        listed.setdefault(int(song_id), set()).add(codes[region_id])
+    found = [
+        (song_id, region)
+        for song_id, regions_of in listed.items()
+        for region in sorted(regions_of)
+        if region != popularity.WORLDWIDE and (song_id, region) not in charted
+    ]
+    for (song_id,) in db.execute(select(Song.id).where(Song.scope == "public")):
+        if int(song_id) not in listed:
+            found.append((int(song_id), popularity.WORLDWIDE))
+    return sorted(found)
+
+
+def _write(db: DbSession, pairs: list[tuple[int, str]], report: Report, today: date) -> None:
+    """Work out the value of each pair from its stored signals; a pair with no official video
+    has none."""
+    regions = dict(db.execute(select(Region.code, Region.id)).all())
+    stored = {
+        one.song_id: one
+        for one in db.scalars(
+            select(SongSignal).where(SongSignal.song_id.in_({s for s, _ in pairs}))
+        )
+    }
+    years = dict(
+        db.execute(select(Song.id, Song.year).where(Song.id.in_({s for s, _ in pairs}))).all()
+    )
+    for song_id, region in pairs:
+        one = stored.get(song_id)
+        db.execute(
+            delete(SongRegionPopularity).where(
+                SongRegionPopularity.song_id == song_id,
+                SongRegionPopularity.region_id == regions[region],
+                SongRegionPopularity.basis == "inferred",
+            )
+        )
+        if one is None or one.views is None or one.published_on is None:
+            report.without_video += 1
+            continue
+        value = popularity.inferred(
+            region=region,
+            year=years.get(song_id),
+            views=int(one.views),
+            published=one.published_on,
+            read_on=one.read_on,
+            channel=one.channel,
+            streams=int(one.streams) if one.streams else None,
+        )
+        db.add(
+            SongRegionPopularity(
+                song_id=song_id,
+                region_id=regions[region],
+                popularity=value,
+                basis="inferred",
+                inferred_on=today,
+            )
+        )
+        report.written[region] = report.written.get(region, 0) + 1
+
+
+def infer(
+    db: DbSession,
+    client: signals_module.Client,
+    song_ids: list[int] | None = None,
+    search: bool = True,
+    streams: bool = True,
+    today: date | None = None,
+) -> Report:
+    """Give every song with no chart value in a region (or only these songs) its inferred value:
+    its signals read first when it has none or they are older than :data:`FRESH_DAYS` (free
+    video ids, then a search while the day's searches last), then the formula. An inferred value
+    no longer wanted (a chart lists the song now) is removed."""
+    today = today or date.today()
+    report = Report()
+    pairs = targets(db)
+    if song_ids is None:
+        wanted = set(pairs)
+        for song_id, region_id, code in db.execute(
+            select(SongRegionPopularity.song_id, SongRegionPopularity.region_id, Region.code)
+            .join(Region, Region.id == SongRegionPopularity.region_id)
+            .where(SongRegionPopularity.basis == "inferred")
+        ):
+            if (int(song_id), str(code)) not in wanted:
+                db.execute(
+                    delete(SongRegionPopularity).where(
+                        SongRegionPopularity.song_id == song_id,
+                        SongRegionPopularity.region_id == region_id,
+                    )
+                )
+                report.removed += 1
+    else:
+        chosen = set(song_ids)
+        pairs = [pair for pair in pairs if pair[0] in chosen]
+    report.pairs = len(pairs)
+    stale = today - timedelta(days=FRESH_DAYS)
+    fresh = {
+        int(song_id)
+        for (song_id,) in db.execute(select(SongSignal.song_id).where(SongSignal.read_on >= stale))
+    }
+    unread = sorted({s for s, _ in pairs} - fresh)
+    if unread:
+        found = signals_module.collect(db, client, unread, search, streams)
+        store_signals(db, found)
+        report.read = len(unread)
+    db.flush()
+    _write(db, pairs, report, today)
+    return report
+
+
+def refresh(db: DbSession, client: signals_module.Client, today: date | None = None) -> Report:
+    """Read again the views of every kept video read more than :data:`FRESH_DAYS` days ago (1 unit
+    for 50 videos), forget those no longer on YouTube, and work out the inferred values again."""
+    today = today or date.today()
+    report = Report()
+    stale = list(
+        db.scalars(
+            select(SongSignal).where(
+                SongSignal.video_id.is_not(None),
+                SongSignal.read_on < today - timedelta(days=FRESH_DAYS),
+            )
+        )
+    )
+    videos = client.videos((str(one.video_id) for one in stale), days=0)
+    for one in stale:
+        video = videos.get(str(one.video_id))
+        if video is None:
+            one.video_id = one.found_by = one.channel = None
+            one.views = None
+            one.published_on = None
+            report.gone += 1
+        else:
+            one.views = video.views
+            report.refreshed += 1
+        one.read_on = today
+    db.flush()
+    pairs = [pair for pair in targets(db)]
+    report.pairs = len(pairs)
+    _write(db, pairs, report, today)
+    return report
+
+
 # --------------------------------------------------------------------------- command
 
 
@@ -479,6 +691,11 @@ def main(argv: list[str] | None = None) -> int:
     collect.add_argument("--no-streams", action="store_true")
     fit = commands.add_parser("fit", help="measure the candidates, write the plots")
     fit.add_argument("--out", type=Path, default=Path("phase-17-fit"))
+    infer_ = commands.add_parser("infer", help="give the songs with no chart value theirs")
+    infer_.add_argument("--songs", type=int, nargs="*", default=None)
+    infer_.add_argument("--no-search", action="store_true")
+    infer_.add_argument("--no-streams", action="store_true")
+    commands.add_parser("refresh", help="read the views again before 30 days pass")
     args = parser.parse_args(argv)
     if args.database is not None:
         os.environ["AITU_DATABASE_DIR"] = str(args.database.resolve())
@@ -503,12 +720,24 @@ def main(argv: list[str] | None = None) -> int:
         )
         answers.close()
         return 0
+    if args.command in ("infer", "refresh"):
+        answers = signals_module.Answers(signals_module.default_folder() / "answers.sqlite")
+        client = signals_module.Client(answers)
+        with session() as db:
+            if args.command == "infer":
+                report = infer(db, client, args.songs, not args.no_search, not args.no_streams)
+            else:
+                report = refresh(db, client)
+        print("\n".join(report.lines()) + f"\nasked {dict(client.asked)}")
+        answers.close()
+        return 0
     with session() as db:
         rows = sample_rows(db)
     results = evaluate(rows)
     print("\n".join(report_lines(results, rows)))
     for path in plots(rows, results, args.out):
         print(f"  {path}")
+    print(f"the weights of {CHOSEN!r} on every row: {chosen_weights(rows)}")
     return 0
 
 

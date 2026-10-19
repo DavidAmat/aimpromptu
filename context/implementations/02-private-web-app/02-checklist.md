@@ -322,20 +322,22 @@ user's ok (2026-10-19). Q-9 answered 2026-10-18. Revision `0006` moved the real 
 ## [x] Story 16.4: Documentation
 - [x] Task 16.4.1 `regional-sources.md` (new), `reconciliation.md`, `popularity.md`, `ontology.md`, `07-database.md`, `paths-and-data.md` (and `endpoints.md`, `music-library/README.md`, `00-index.md`, the scripts' README).
 
-# [p] Phase 17: A popularity inferred from YouTube views
+# [x] Phase 17: A popularity inferred from YouTube views
 
-Added 2026-10-18 at the user's ask (plan section 20). Q-10 answered 2026-10-19; the YouTube and
-Spotify keys are in `.env`. Branch `feat/phase-17`.
+Added 2026-10-18 at the user's ask (plan section 20). Built 2026-10-19
+([`02-implementation-phase-17.md`](02-implementation-phase-17.md)) on `feat/phase-17`, waiting for
+the user's ok to merge. Q-10 answered 2026-10-19; the formula chosen by the user the same day.
+Revision `0007` moved the real `.database/` (after `make db-backup`).
 
-## [ ] Story 17.1: The sample
-- [ ] Task 17.1.1 Songs with a chart popularity across scores, decades and regions; their official video (Wikidata and MusicBrainz first, then a search within the quota); views and upload date.
-- [ ] Task 17.1.2 Spotify, as Q-10 decides: the artist's Spotify id, then kworb's all-time streams per song.
+## [x] Story 17.1: The sample
+- [x] Task 17.1.1 Songs with a chart popularity across scores, decades and regions; their official video (Los 40, Wikidata and Enderrock first; MusicBrainz left out, it rarely links these videos; then 100 searches on low-scored `catalan` songs); views and upload date (`library/signals.py`; 6,664 pairs of a song and a region, 166 `catalan`).
+- [x] Task 17.1.2 Spotify, as Q-10 decides: the artist's Spotify id, then kworb's all-time streams per song (694 artists before Spotify asked for a 23-hour wait; 3,764 pairs with streams).
 
-## [ ] Story 17.2: The fit
-- [ ] Task 17.2.1 Scatter plots (popularity against views, views per year); candidate relations measured on songs left out; the user chooses.
+## [x] Story 17.2: The fit
+- [x] Task 17.2.1 Scatter plots (popularity against views, views per year, streams); seven candidates measured on songs left out (best formula 21.0 points, the median 24.3); the user chose the line with the streams (2026-10-19).
 
-## [ ] Story 17.3: The inferred popularity
-- [ ] Task 17.3.1 Stored with its source and date for songs with no chart data, shown as inferred; a chart popularity wins; a command within the day's quota.
+## [x] Story 17.3: The inferred popularity
+- [x] Task 17.3.1 Stored with its source and date for songs with no chart data, shown as inferred; a chart popularity wins; a command within the day's quota (revision `0007`; `make popularity-infer`, `make popularity-refresh`; `check:public` 49; 4 `catalan` songs today, 53 waiting for searches).
 
-## [ ] Story 17.4: Documentation
-- [ ] Task 17.4.1 `popularity.md`, `ontology.md`, `endpoints.md`, `07-database.md`, `paths-and-data.md`, `.env.example`.
+## [x] Story 17.4: Documentation
+- [x] Task 17.4.1 `popularity.md` (section 6, new), `ontology.md`, `endpoints.md`, `07-database.md`, `paths-and-data.md`, `.env.example` (and `regional-sources.md`, `music-library/README.md`, `00-index.md`, the READMEs of the implementations).

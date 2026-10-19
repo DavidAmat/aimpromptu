@@ -17,7 +17,7 @@ from sqlalchemy import select
 
 from aitu_backend.db.database import session
 from aitu_backend.db.models import Region, Song, SongRegion, SongRegionPopularity, SongSignal
-from aitu_backend.library import catalogue, inferred, signals
+from aitu_backend.library import catalogue, inferred, popularity, signals
 from tests.test_regional_import import folder, run, song_titled  # noqa: F401 - the fixture
 
 PAGE = """<table class="addpos sortable"><tr><th>Song Title</th><th>Streams</th></tr>
@@ -246,3 +246,122 @@ def test_a_relation_is_measured_on_the_songs_left_out() -> None:
     results = {one["key"]: one for one in inferred.evaluate(rows, inferred.CANDIDATES[:2])}
     assert results["views"]["error"] < 4 < results["median"]["error"]
     assert results["views"]["order"] > 0.9
+
+
+def test_a_song_on_no_chart_gets_an_inferred_value_until_a_chart_lists_it(
+    folder: Path, tmp_path: Path  # noqa: F811 - the fixture
+) -> None:
+    run(folder)
+    today = date(2026, 10, 19)
+    with session() as db:
+        regions = dict(db.execute(select(Region.code, Region.id)).all())
+        catalan_song = Song(scope="public", title="Cançó nova", year=2021)
+        lonely = Song(scope="public", title="Proposed by request", year=2024)
+        db.add_all([catalan_song, lonely])
+        db.flush()
+        db.add(SongRegion(song_id=catalan_song.id, region_id=regions["catalan"]))
+        for song, views in ((catalan_song, 200_000), (lonely, 5_000_000)):
+            db.add(
+                SongSignal(
+                    song_id=song.id,
+                    video_id=f"VIDEO{song.id:06d}",
+                    found_by="search",
+                    channel="artist",
+                    published_on=date(2021, 3, 1),
+                    views=views,
+                    read_on=today,
+                )
+            )
+        ids = (catalan_song.id, lonely.id)
+    client = Offline(signals.Answers(tmp_path / "answers.sqlite"), {})
+    with session() as db:
+        assert (ids[0], "catalan") in inferred.targets(db)
+        assert (ids[1], "worldwide") in inferred.targets(db)
+        report = inferred.infer(db, client, today=today)
+    assert client.urls == []  # fresh signals are not read again
+    with session() as db:
+        values = {
+            (row.song_id, row.region_id): (row.popularity, row.basis, row.inferred_on)
+            for row in db.scalars(
+                select(SongRegionPopularity).where(SongRegionPopularity.song_id.in_(ids))
+            )
+        }
+    expected = popularity.inferred(
+        region="catalan",
+        year=2021,
+        views=200_000,
+        published=date(2021, 3, 1),
+        read_on=today,
+        channel="artist",
+        streams=None,
+    )
+    assert values[(ids[0], regions["catalan"])] == (expected, "inferred", today)
+    assert values[(ids[1], regions["worldwide"])][1] == "inferred"
+    assert report.written["catalan"] >= 1 and report.written["worldwide"] >= 1
+
+    # 40 days later the views are read again (one video is gone), and the values follow.
+    later = today + timedelta(days=40)
+    client.pages[f"video:VIDEO{ids[0]:06d}"] = video(f"VIDEO{ids[0]:06d}", "x", 900_000)
+    with session() as db:
+        report = inferred.refresh(db, client, today=later)
+        assert (report.refreshed, report.gone) == (1, 1)
+        rows = {
+            row.song_id: row.popularity
+            for row in db.scalars(
+                select(SongRegionPopularity).where(SongRegionPopularity.song_id.in_(ids))
+            )
+        }
+    assert rows[ids[0]] > expected and ids[1] not in rows
+
+    # A chart lists the lonely song now: its worldwide inferred value goes.
+    with session() as db:
+        db.add(SongRegion(song_id=ids[1], region_id=regions["spain"]))
+        db.add(
+            SongRegionPopularity(
+                song_id=ids[1], region_id=regions["spain"], popularity=50.0, basis="weeks"
+            )
+        )
+    with session() as db:
+        inferred.infer(db, client, today=later)
+        assert db.get(SongRegionPopularity, (ids[1], regions["worldwide"])) is None
+
+
+def test_the_formula_gives_what_its_fit_gives() -> None:
+    rng = np.random.default_rng(3)
+    rows = []
+    for n in range(600):
+        views = int(10 ** rng.uniform(3, 9))
+        streams = int(10 ** rng.uniform(5, 9)) if n % 2 else None
+        year = int(rng.integers(1970, 2026)) if n % 7 else None
+        published = date(int(rng.integers(2007, 2026)), 6, 1)
+        value = float(np.clip(10 * np.log10(views) - 30 + rng.normal(0, 8), 0, 100))
+        rows.append(
+            inferred.Row(
+                n,
+                ("worldwide", "spain", "catalan")[n % 3],
+                value,
+                "weeks",
+                year,
+                views,
+                published,
+                date(2026, 10, 19),
+                streams,
+                ("artist", "vevo", "topic", "label")[n % 4],
+            )
+        )
+    weights = inferred.chosen_weights(rows)
+    fitted = next(c for c in inferred.CANDIDATES if c.key == inferred.CHOSEN).fit(rows)(rows)
+    formula = [
+        popularity.inferred(
+            region=r.region,
+            year=r.year,
+            views=r.views,
+            published=r.published,
+            read_on=r.read_on,
+            channel=r.channel,
+            streams=r.streams,
+            weights=weights,
+        )
+        for r in rows
+    ]
+    assert float(np.abs(np.array(formula) - fitted).max()) < 0.2

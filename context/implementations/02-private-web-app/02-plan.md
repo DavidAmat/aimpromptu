@@ -1520,7 +1520,11 @@ infers a popularity from the official YouTube views for a song with no chart dat
 (`Weights.reference`), so the size of a chart only says which places it lists; the popularity of a
 region is stored in `song_region_popularity` with what it rests on (`weeks`, `number_ones`,
 `estimated`), and `songs.popularity` stays the worldwide one
-([`../../music-library/popularity.md`](../../music-library/popularity.md) section 5).
+([`../../music-library/popularity.md`](../../music-library/popularity.md) section 5). *As built in
+Phase 17*: the basis `inferred` (a line on the log of the views per year online, with terms for
+region, decade, channel and the streams; `popularity.INFERRED`), for a song no chart of the region
+lists, and for `worldwide` a song on no chart at all; a chart value always wins (section 6 of the
+same page).
 
 ---
 
@@ -1967,6 +1971,15 @@ approximate score.
 Needed from the user at the start of Phase 17 (not before): a Google Cloud project with the
 YouTube Data API v3 turned on, and its key in `.env` (`YOUTUBE_API_KEY`); a Spotify app's client id
 and secret only if Q-10 says so.
+
+*Built 2026-10-19* ([`02-implementation-phase-17.md`](02-implementation-phase-17.md)): the signals
+are `library/signals.py` (free video ids from Los 40, Wikidata and, added, Enderrock's yearly Catalan
+top 100s; an official channel rule that also counts a label's channel; kworb's streams, Q-10), the
+fit and the inferred values `library/inferred.py` (`make popularity-collect`, `-fit`, `-infer`,
+`-refresh`); revision `0007` adds `song_signals` and the basis `inferred`. The views say little:
+on songs left out the best formula is 21.0 points from the chart value (the region's median 24.3),
+rank correlation 0.43. The user chose the line with the streams (`popularity.INFERRED`). The views
+are read again within 30 days (`make popularity-refresh`).
 
 ---
 

@@ -154,7 +154,8 @@ chart or the seed list; `spain` 12,870 songs, `catalan` 960; 158,709 chart weeks
 
 Left as they are, for later: an artist written two ways becomes two artists ("Aitana", "Aitana
 Ocaña"); merging is a request (Phase 14). The 100 songs of the Catalan Spotify table have the
-region and no popularity (no places), like the Catalan songs before 2018: Phase 17.
+region and no popularity (no places), like the Catalan songs before 2018: Phase 17 infers one from
+YouTube views ([popularity.md](popularity.md) section 6).
 
 ## Where to look deeper
 

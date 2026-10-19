@@ -60,7 +60,7 @@ The fields of plan section 15.3, and what the Public Library has of each today:
 | Genre | One or two of 13 | None from the import (Q-5: Wikidata is the recommendation); given by request (Phase 14) |
 | Tags | Fixed categories (films, video games, TV shows, adverts), free values | Given by request (Phase 14) |
 | Rankings | The chart weeks and places | 160,810 song weeks |
-| Popularity | 0 to 100 from the rankings, in any time range, one per region | [popularity.md](popularity.md) |
+| Popularity | 0 to 100 from the rankings, in any time range, one per region; inferred from YouTube views where no chart of the region lists the song (Phase 17) | [popularity.md](popularity.md) |
 | Lyrics | The words, as the download gave them | 9,038 songs; kept for this personal version only |
 
 ## 4. Versions of a public song

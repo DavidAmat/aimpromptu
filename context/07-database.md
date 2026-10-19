@@ -146,7 +146,10 @@ the sheet (`request_comments`); the real database moved to it after `make db-bac
 (`song_region_popularity`, with what it rests on), and more than one key per public song or artist
 (`song_keys`, `artist_keys`: one per regional source that names it)
 ([music-library/regional-sources.md](music-library/regional-sources.md)); the real database moved
-to it on 2026-10-19, after `make db-backup`.
+to it on 2026-10-19, after `make db-backup`. Revision `0007` (Phase 17) adds `song_signals` (a
+public song's official video, its views and its Spotify streams, with the day they were read) and a
+fourth basis of a regional popularity, `inferred`, with the day it was worked out
+([music-library/popularity.md](music-library/popularity.md) section 6).
 
 **The running backend migrates the real database as soon as a new revision is in `src/`**: it
 reloads on every change of a file there, and opens the database at the newest revision. Code of an

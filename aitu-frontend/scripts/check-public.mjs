@@ -174,6 +174,16 @@ try {
   await page.getByTestId('public-byline').waitFor();
   check('a song known from number ones only says so', await until(async () => (await page.getByText('Weeks at number 1').count()) >= 1 && (await page.getByText(/≈ \d/).count()) >= 1));
   await shot('03c-number-ones-song');
+  // Phase 17: a song no chart of the region lists has a popularity inferred from YouTube views.
+  const horitzo = (await json(`${api}/public/songs?q=agafant%20horitzo&region=catalan`)).rows[0];
+  check('a Catalan song on no chart has an inferred popularity', horitzo !== undefined && horitzo.popularity > 0, horitzo && `${horitzo.title}: ${horitzo.popularity}`);
+  if (horitzo) {
+    await page.goto(`${base}/public/songs/${horitzo.id}`);
+    await page.getByTestId('public-byline').waitFor();
+    const inferredFact = page.locator('[title^="Inferred from YouTube views"]');
+    check('its page shows it with ≈ and says why on hover', await until(async () => (await inferredFact.count()) === 1 && /^≈ \d/.test((await inferredFact.innerText()).trim())));
+    await shot('03d-inferred-song');
+  }
 
   // 2. One song.
   await page.goto(`${base}/public/songs/${alive.id}`);

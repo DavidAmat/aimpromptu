@@ -61,7 +61,6 @@ from aitu_backend.library.regional_import import (
     Index,
     SourceSong,
     default_folder as regions_folder,
-    matching_names,
     title_forms,
 )
 
@@ -107,6 +106,8 @@ ENDERROCK = {
     2024: "29008/top-100-videoclips-catala-youtube-2024",
     2025: "30609/top-100-videoclips-catala-youtube-2025",
 }
+#: The longest wait a refusal is waited out, in seconds; a longer one closes the host for the run.
+MAX_WAIT = 300
 #: The labels and the items asked for in one Wikidata query.
 _WIKIDATA_BLOCK = 2000
 
@@ -217,11 +218,15 @@ class Client:
         self._last: dict[str, float] = {}
         self._token: tuple[str, float] | None = None
         self.asked: dict[str, int] = defaultdict(int)
+        #: Hosts that asked for a wait longer than :data:`MAX_WAIT`: not asked again in this run.
+        self.closed: set[str] = set()
 
     def _fetch(
         self, url: str, data: bytes | None = None, headers: dict[str, str] | None = None
     ) -> tuple[int, str]:
         host = urllib.parse.urlsplit(url).netloc
+        if host in self.closed:
+            raise OutOfQuota(f"{host} asked to wait; not asked again in this run")
         for wait in (60, 120, 240, None):
             gap = PACE.get(host, 1.0) - (time.monotonic() - self._last.get(host, 0.0))
             if gap > 0:
@@ -244,6 +249,10 @@ class Client:
                     raise
                 retry = error.headers.get("Retry-After")
                 pause = int(retry) if retry and retry.isdigit() else wait
+                if pause > MAX_WAIT:
+                    # Spotify answered 429 with a wait of 23 hours after about 700 searches.
+                    self.closed.add(host)
+                    raise OutOfQuota(f"{host} asks to wait {pause} s") from error
             except (urllib.error.URLError, TimeoutError):
                 if wait is None:
                     raise
@@ -325,12 +334,11 @@ class Client:
 
     # --- YouTube
 
-    def videos(self, ids: Iterable[str]) -> dict[str, Video]:
-        """Each video's channel, upload date and views; a deleted or private video is absent."""
+    def videos(self, ids: Iterable[str], days: int = STATS_DAYS) -> dict[str, Video]:
+        """Each video's channel, upload date and views; a deleted or private video is absent. An
+        answer older than ``days`` is asked again (0: always)."""
         wanted = list(dict.fromkeys(ids))
-        missing = [
-            one for one in wanted if self.answers.get(f"youtube:video:{one}", STATS_DAYS) is None
-        ]
+        missing = [one for one in wanted if self.answers.get(f"youtube:video:{one}", days) is None]
         if missing and not self.youtube_key:
             raise OutOfQuota("YOUTUBE_API_KEY is not set")
         for start in range(0, len(missing), 50):
@@ -698,22 +706,14 @@ def _streams(
         best: int | None = None
         for artist_id, names in credits.get(song_id, []):
             if artist_id not in pages:
-                spotify_id = client.spotify_artist(names[0]) if names else None
-                pages[artist_id] = client.kworb_songs(spotify_id) if spotify_id else None
+                try:
+                    spotify_id = client.spotify_artist(names[0]) if names else None
+                    pages[artist_id] = client.kworb_songs(spotify_id) if spotify_id else None
+                except OutOfQuota:
+                    pages[artist_id] = None  # the answers already kept still count
             for title, streams in pages[artist_id] or []:
                 if title_forms(title) & wanted and (best is None or streams > best):
                     best = streams
         if best is not None:
             signal.streams = best
             signal.streams_read_at = _now()
-
-
-def artists_names(db: DbSession, song_ids: Iterable[int]) -> set[str]:
-    """Every compared name of the songs' artists (for a report)."""
-    return {
-        form
-        for credits in _credits(db, song_ids).values()
-        for _, names in credits
-        for name in names
-        for form in matching_names(name)
-    }
