@@ -98,12 +98,13 @@ export interface PublicChart {
 
 /**
  * `weeks`: a chart's places; `number_ones`: a list of number ones only, so an approximation;
- * `estimated`: Spotify's totals, for a song no chart lists.
+ * `estimated`: Spotify's totals, for a song no chart lists; `inferred` (Phase 17): the views of its
+ * official video, for a song no chart of the region lists (the only kind for Worldwide).
  */
 export interface PublicRegionPopularity {
   region: string;
   popularity: number;
-  basis: "weeks" | "number_ones" | "estimated";
+  basis: "weeks" | "number_ones" | "estimated" | "inferred";
 }
 
 export interface PublicSongDetail {

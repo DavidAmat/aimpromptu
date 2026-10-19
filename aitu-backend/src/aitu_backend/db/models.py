@@ -21,6 +21,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     Date,
@@ -465,8 +466,9 @@ class AlbumChartEntry(Base):
 
 #: What a region's popularity rests on (Phase 16): ``weeks``, a chart's weekly (or monthly) places;
 #: ``number_ones``, a list of each week's number one only; ``estimated``, a source of totals (the
-#: weeks, the peak) with no week by week places.
-POPULARITY_BASES = ("weeks", "number_ones", "estimated")
+#: weeks, the peak) with no week by week places; ``inferred`` (Phase 17), from the views of the
+#: song's official video (and its streams) for a song no chart of the region lists.
+POPULARITY_BASES = ("weeks", "number_ones", "estimated", "inferred")
 
 
 class SongRegionPopularity(Base):
@@ -486,6 +488,29 @@ class SongRegionPopularity(Base):
     basis: Mapped[str] = mapped_column(String(16))
     #: The chart the value comes from.
     chart_source_id: Mapped[int | None] = mapped_column(ForeignKey("chart_sources.id"))
+    #: The day an ``inferred`` value was worked out (Phase 17); None for a chart's.
+    inferred_on: Mapped[date | None] = mapped_column(Date)
+
+
+class SongSignal(Base):
+    """What a public song has outside the charts (Phase 17): its official video on YouTube and its
+    all-time Spotify streams (kworb.net), with the day they were read. The views are read again
+    within 30 days, as the YouTube API Developer Policies ask."""
+
+    __tablename__ = "song_signals"
+
+    song_id: Mapped[int] = mapped_column(
+        ForeignKey("songs.id", ondelete="CASCADE"), primary_key=True
+    )
+    video_id: Mapped[str | None] = mapped_column(String(16))
+    #: Where the video id came from: ``los40``, ``wikidata``, ``enderrock`` or ``search``.
+    found_by: Mapped[str | None] = mapped_column(String(16))
+    #: ``artist``, ``topic``, ``vevo`` or ``label`` (``library/signals.channel_kind``).
+    channel: Mapped[str | None] = mapped_column(String(8))
+    published_on: Mapped[date | None] = mapped_column(Date)
+    views: Mapped[int | None] = mapped_column(BigInteger)
+    streams: Mapped[int | None] = mapped_column(BigInteger)
+    read_on: Mapped[date] = mapped_column(Date)
 
 
 class SongKey(Base):

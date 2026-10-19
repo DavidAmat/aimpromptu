@@ -111,8 +111,9 @@ class ChartOut(_Camel):
 
 class RegionPopularity(_Camel):
     """A song's popularity in a region other than worldwide (Phase 16), and what it rests on:
-    ``weeks`` (a chart's places), ``number_ones`` (a list of number ones only) or ``estimated``
-    (Spotify's totals, for a song no chart lists)."""
+    ``weeks`` (a chart's places), ``number_ones`` (a list of number ones only), ``estimated``
+    (Spotify's totals, for a song no chart lists) or ``inferred`` (Phase 17: the views of its
+    official video, for a song no chart of the region lists; the only kind for worldwide)."""
 
     region: str
     popularity: float

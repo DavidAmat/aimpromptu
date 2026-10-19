@@ -55,11 +55,12 @@ import { useAuth } from "../../state/authContext";
 import { ChartHistory } from "./ChartHistory";
 import { defaultVersion, popularityText, versionLabel } from "./shared";
 
-/** Why a region's popularity is shown as "≈" (Phase 16), on hover. */
+/** Why a region's popularity is shown as "≈" (Phases 16 and 17), on hover. */
 const BASIS_HINT: Record<PublicRegionPopularity["basis"], string | undefined> = {
   weeks: undefined,
   number_ones: "From its weeks at number 1 only: the list of those years names no other place",
   estimated: "Estimated from Spotify's totals: no chart of the region lists it",
+  inferred: "Inferred from YouTube views: no chart of the region lists it",
 };
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
@@ -430,7 +431,7 @@ export function PublicSongPage() {
               </Fact>
             ) : null}
             {song.regionPopularity.map((one) => (
-              <Fact key={one.region} label={`Popularity in ${one.region}`}>
+              <Fact key={one.region} label={one.region === "Worldwide" ? "Popularity worldwide" : `Popularity in ${one.region}`}>
                 <Box component="span" title={BASIS_HINT[one.basis]}>
                   {one.basis === "weeks" ? "" : "≈ "}
                   {popularityText(one.popularity)} of 100

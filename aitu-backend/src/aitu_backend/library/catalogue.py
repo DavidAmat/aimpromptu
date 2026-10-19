@@ -101,11 +101,12 @@ class CatalogueSong:
     id: int
     title: str
     year: int | None
-    #: All time, as stored.
+    #: All time, as stored; for a song no chart lists anywhere, its inferred worldwide one (Phase 17).
     popularity: float
     credits: tuple[Credit, ...]
     region_ids: frozenset[int]
-    #: ``(region id, popularity)`` in each region other than worldwide (Phase 16).
+    #: ``(region id, popularity)`` in each region other than worldwide (Phase 16), and worldwide
+    #: for a song with an inferred value there (Phase 17).
     region_scores: tuple[tuple[int, float], ...]
     genre_ids: frozenset[int]
     tag_value_ids: frozenset[int]
@@ -227,14 +228,17 @@ def _read(db: DbSession, fingerprint: tuple[object, ...]) -> _Catalogue:
     for (song_id,) in db.execute(select(UserVersion.song_id)):
         versions[song_id] = versions.get(song_id, 0) + 1
 
+    worldwide = db.scalar(select(Region.id).where(Region.code == popularity.WORLDWIDE))
     by_id: dict[int, CatalogueSong] = {}
     for song_id, title, year, score in songs:
+        # Only an inferred value is stored for worldwide: the song is on no chart (Phase 17).
+        inferred = next((v for r, v in region_scores.get(song_id, ()) if r == worldwide), None)
         credited = tuple(credits.get(song_id, ()))
         by_id[song_id] = CatalogueSong(
             id=song_id,
             title=title,
             year=year,
-            popularity=float(score or 0.0),
+            popularity=float(score or 0.0) if inferred is None else inferred,
             credits=credited,
             region_ids=frozenset(regions.get(song_id, ())),
             region_scores=tuple(region_scores.get(song_id, ())),
