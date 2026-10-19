@@ -300,11 +300,11 @@ Built 2026-10-18 ([`02-implementation-phase-15.md`](02-implementation-phase-15.m
 ## [x] Story 15.3: Documentation
 - [x] Task 15.3.1 `00-project-complete-overview.md`, `01-project.md`, `05-deployment.md` rewritten; run instructions in one place (`04-local-development.md`; the root and service READMEs, `02b-local-setup.md` and the area READMEs link to it); the folder README marked complete.
 
-# [p] Phase 16: The `spain` and `catalan` regions, from the 60s to today
+# [x] Phase 16: The `spain` and `catalan` regions, from the 60s to today
 
 Added 2026-10-18 at the user's ask (plan section 20). Built 2026-10-19
-([`02-implementation-phase-16.md`](02-implementation-phase-16.md)); waiting for the user's check
-before the merge. Q-9 answered 2026-10-18. Revision `0006` moved the real `.database/` (after
+([`02-implementation-phase-16.md`](02-implementation-phase-16.md)); merged into `master` after the
+user's ok (2026-10-19). Q-9 answered 2026-10-18. Revision `0006` moved the real `.database/` (after
 `make db-backup`).
 
 ## [x] Story 16.1: The research

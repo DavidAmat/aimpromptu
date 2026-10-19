@@ -7,8 +7,8 @@ user's ask** (the `spain` and `catalan` regions; a popularity inferred from YouT
 Eight of the ten decisions are answered (Q-1 to Q-4 before the plan, Q-6 to Q-9 on the way).
 **Q-5** keeps genres and tags for later work (its region part became Q-9, answered 2026-10-18);
 **Q-10** (Spotify) is answered before Phase 17. **Phase 16** (the `spain` and `catalan` regions) was
-built 2026-10-19 ([`02-implementation-phase-16.md`](02-implementation-phase-16.md)) and waits for
-the user's check. The old store `aitu-backend/data/` is gone: its pieces moved into
+built 2026-10-19 ([`02-implementation-phase-16.md`](02-implementation-phase-16.md)) and merged
+into `master` after the user's ok (2026-10-19). Phase 17 is next. The old store `aitu-backend/data/` is gone: its pieces moved into
 `.database/` in Phase 3, the user deleted it after checking the app, and Phase 15 removed the code
 that read it (its Lab records are now a test fixture). **Phase 15** walked the whole journey with two
 users and closed the documentation ([`02-implementation-phase-15.md`](02-implementation-phase-15.md));
