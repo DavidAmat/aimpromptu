@@ -348,8 +348,8 @@ Revision `0007` moved the real `.database/` (after `make db-backup`).
 Added 2026-10-19 at the user's ask (plan section 20): the genre and tag part of Q-5. Needs no key;
 Q-11 is raised halfway. Built 2026-10-19 on `feat/phase-18`
 ([`02-implementation-phase-18.md`](02-implementation-phase-18.md)); Q-11 answered the same day. No
-revision; the real `.database/` was written after `make db-backup`. Waits for the user's check
-before the merge.
+revision; the real `.database/` was written after `make db-backup`. Merged into `master` after the
+user's ok (2026-10-19).
 
 ## [x] Story 18.1: The measure
 - [x] Task 18.1.1 Every Wikidata song or single with a performer, its genres and its performers' genres (the answers kept, as Phase 17's); matched to the public songs by the identity rule, the item's id kept in `song_keys` (`library/genres.py`, `make genres-measure`; through QLever, the Wikidata query service limited every client to 1 query a minute; 229,348 items, 6,242 public songs matched; the key is written by the import).

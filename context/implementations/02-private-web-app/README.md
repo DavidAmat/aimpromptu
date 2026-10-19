@@ -1,9 +1,10 @@
 # 02: The private web app
 
-**State: live again: Phases 0 to 17 done** (0 to 15 on 2026-10-18; 16 and 17, added at the user's
+**State: live again: Phases 0 to 18 done** (0 to 15 on 2026-10-18; 16 and 17, added at the user's
 ask on 2026-10-18, on 2026-10-19: the `spain` and `catalan` regions; a popularity inferred from
 YouTube views). **Phase 18** (the genres and tags of Q-5, from Wikidata), added on 2026-10-19 at
-the user's ask, was built the same day on `feat/phase-18` and waits for the user's check. Opened
+the user's ask, was built the same day ([`02-implementation-phase-18.md`](02-implementation-phase-18.md))
+and merged into `master` after the user's ok (2026-10-19). Opened
 2026-10-05. Each phase is built on its own
 `feat/phase-N` branch and merged into `master` after the user's check; each has its report below.
 Every decision is answered (Q-1 to Q-4 before the plan, the others on the way). **Q-5** is closed
