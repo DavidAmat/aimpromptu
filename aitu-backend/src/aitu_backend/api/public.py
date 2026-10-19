@@ -98,12 +98,25 @@ class AlbumRef(_Camel):
 
 class ChartOut(_Camel):
     name: str
+    region: str | None = None
+    #: How many places the chart lists; 1 is a list of number ones only.
+    size: int = 100
     best: int
     weeks: int
     first: date
     last: date
     #: ``[week, rank]``, oldest first.
     history: list[tuple[date, int]]
+
+
+class RegionPopularity(_Camel):
+    """A song's popularity in a region other than worldwide (Phase 16), and what it rests on:
+    ``weeks`` (a chart's places), ``number_ones`` (a list of number ones only) or ``estimated``
+    (Spotify's totals, for a song no chart lists)."""
+
+    region: str
+    popularity: float
+    basis: str
 
 
 class SongDetail(_Camel):
@@ -117,6 +130,7 @@ class SongDetail(_Camel):
     genres: list[str]
     regions: list[str]
     tags: list[tuple[str, str]]
+    region_popularity: list[RegionPopularity] = Field(..., alias="regionPopularity")
     charts: list[ChartOut]
     has_lyrics: bool = Field(..., alias="hasLyrics")
     default_version: str = Field(..., alias="defaultVersion")
@@ -378,9 +392,15 @@ def get_song(song_id: int) -> SongDetail:
         genres=found.genres,
         regions=[one.name for one in found.regions],
         tags=found.tags,
+        region_popularity=[
+            RegionPopularity(region=region, popularity=value, basis=basis)
+            for region, value, basis in found.region_popularity
+        ],
         charts=[
             ChartOut(
                 name=one.name,
+                region=one.region,
+                size=one.size,
                 best=one.best,
                 weeks=one.weeks,
                 first=one.first,

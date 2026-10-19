@@ -463,6 +463,51 @@ class AlbumChartEntry(Base):
     rank: Mapped[int] = mapped_column(Integer)
 
 
+#: What a region's popularity rests on (Phase 16): ``weeks``, a chart's weekly (or monthly) places;
+#: ``number_ones``, a list of each week's number one only; ``estimated``, a source of totals (the
+#: weeks, the peak) with no week by week places.
+POPULARITY_BASES = ("weeks", "number_ones", "estimated")
+
+
+class SongRegionPopularity(Base):
+    """The all-time popularity of a song in a region other than ``worldwide`` (Phase 16).
+
+    ``songs.popularity`` stays the worldwide one. A region's value is the largest of its charts'
+    scores (the charts overlap), kept with what it rests on."""
+
+    __tablename__ = "song_region_popularity"
+    __table_args__ = (_one_of("basis", POPULARITY_BASES),)
+
+    song_id: Mapped[int] = mapped_column(
+        ForeignKey("songs.id", ondelete="CASCADE"), primary_key=True
+    )
+    region_id: Mapped[int] = mapped_column(ForeignKey("regions.id"), primary_key=True)
+    popularity: Mapped[float] = mapped_column(Float)
+    basis: Mapped[str] = mapped_column(String(16))
+    #: The chart the value comes from.
+    chart_source_id: Mapped[int | None] = mapped_column(ForeignKey("chart_sources.id"))
+
+
+class SongKey(Base):
+    """One more identity of a public song in a downloaded source (Phase 16): a song found on four
+    regional lists has four keys, beside its own ``external_key``. A later import finds it by any.
+    """
+
+    __tablename__ = "song_keys"
+
+    key: Mapped[str] = mapped_column(String(400), primary_key=True)
+    song_id: Mapped[int] = mapped_column(ForeignKey("songs.id", ondelete="CASCADE"), index=True)
+
+
+class ArtistKey(Base):
+    """One more identity of a public artist in a downloaded source (Phase 16)."""
+
+    __tablename__ = "artist_keys"
+
+    key: Mapped[str] = mapped_column(String(400), primary_key=True)
+    artist_id: Mapped[int] = mapped_column(ForeignKey("artists.id", ondelete="CASCADE"), index=True)
+
+
 # ------------------------------------------------------------------- playlists
 
 
@@ -616,5 +661,7 @@ GENRES = (
     "metal",
 )
 TAG_CATEGORIES = ("films", "video_games", "tv_shows", "adverts")
-#: ``spain`` and ``catalan`` come with Q-5 (Phase 12).
+#: The region of the first migration; ``spain`` and ``catalan`` are written by revision 0006 (Phase 16,
+#: Q-9): :data:`REGIONAL`.
 REGIONS = (("worldwide", "Worldwide"),)
+REGIONAL = (("spain", "Spain"), ("catalan", "Catalan"))

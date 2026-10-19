@@ -44,7 +44,7 @@ import LibraryMusicIcon from "@mui/icons-material/LibraryMusicOutlined";
 import PlayIcon from "@mui/icons-material/PlayArrowRounded";
 import PlayCircleIcon from "@mui/icons-material/PlayCircleOutlined";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
-import { publicApi, type PublicSongDetail, type PublicVersion } from "../../api";
+import { publicApi, type PublicRegionPopularity, type PublicSongDetail, type PublicVersion } from "../../api";
 import { ROUTES } from "../../layout/routes";
 import { EmptyState, IconAction, PageBody, PageHeader, PillButton, RowMenu, Section } from "../../ui";
 import { said } from "../library/shared";
@@ -54,6 +54,13 @@ import { COUNTS_EVENT } from "../requests/words";
 import { useAuth } from "../../state/authContext";
 import { ChartHistory } from "./ChartHistory";
 import { defaultVersion, popularityText, versionLabel } from "./shared";
+
+/** Why a region's popularity is shown as "≈" (Phase 16), on hover. */
+const BASIS_HINT: Record<PublicRegionPopularity["basis"], string | undefined> = {
+  weeks: undefined,
+  number_ones: "From its weeks at number 1 only: the list of those years names no other place",
+  estimated: "Estimated from Spotify's totals: no chart of the region lists it",
+};
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -417,7 +424,19 @@ export function PublicSongPage() {
 
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", sm: "repeat(auto-fill, minmax(150px, 1fr))" }, gap: 2, maxWidth: 760 }}>
             <Fact label="Year">{song.year !== null ? `${song.year} (${song.decade})` : "Unknown"}</Fact>
-            <Fact label="Popularity">{popularityText(song.popularity)} of 100</Fact>
+            {song.regionPopularity.length === 0 || song.regions.includes("Worldwide") ? (
+              <Fact label={song.regionPopularity.length > 0 ? "Popularity worldwide" : "Popularity"}>
+                {popularityText(song.popularity)} of 100
+              </Fact>
+            ) : null}
+            {song.regionPopularity.map((one) => (
+              <Fact key={one.region} label={`Popularity in ${one.region}`}>
+                <Box component="span" title={BASIS_HINT[one.basis]}>
+                  {one.basis === "weeks" ? "" : "≈ "}
+                  {popularityText(one.popularity)} of 100
+                </Box>
+              </Fact>
+            ))}
             {song.albums.length > 0 ? (
               <Fact label={song.albums.length > 1 ? "Albums" : "Album"}>
                 {song.albums.map((album) => album.title).join(", ")}
@@ -428,11 +447,15 @@ export function PublicSongPage() {
             {song.tags.length > 0 ? <Fact label="Tags">{song.tags.map(([category, value]) => `${value} (${category.replace("_", " ")})`).join(", ")}</Fact> : null}
           </Box>
 
-          {song.charts.map((chart) => (
-            <Section key={chart.name} title="On the chart">
-              <ChartHistory chart={chart} />
+          {song.charts.length > 0 ? (
+            <Section title={song.charts.length > 1 ? "On the charts" : "On the chart"}>
+              <Stack spacing={3}>
+                {song.charts.map((chart) => (
+                  <ChartHistory key={chart.name} chart={chart} named={song.charts.length > 1 || chart.region !== "Worldwide"} />
+                ))}
+              </Stack>
             </Section>
-          ))}
+          ) : null}
 
           <Section title="Versions">
             {song.fixed.length === 0 ? (

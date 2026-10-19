@@ -47,6 +47,7 @@ from aitu_backend.db.models import (
     SongGenre,
     SongLyrics,
     SongRegion,
+    SongRegionPopularity,
     SongTag,
     SongVersion,
     TagCategory,
@@ -131,6 +132,10 @@ class AlbumOfSong:
 @dataclass
 class Chart:
     name: str
+    #: The region the chart counts in (``Worldwide``, ``Spain``, ``Catalan``).
+    region: str | None
+    #: How many places it lists; 1 is a list of number ones only.
+    size: int
     best: int
     weeks: int
     first: date
@@ -151,6 +156,8 @@ class SongFacts:
     regions: list[Named]
     #: ``(category, value)``.
     tags: list[tuple[str, str]]
+    #: ``(region name, popularity, basis)`` in each region other than worldwide (Phase 16).
+    region_popularity: list[tuple[str, float, str]]
     charts: list[Chart]
     has_lyrics: bool
     #: The fixed version Default points at.
@@ -271,16 +278,23 @@ def versions_of(
 
 def _charts(db: DbSession, song_id: int) -> list[Chart]:
     found: dict[str, list[tuple[date, int]]] = {}
-    for name, week, rank in db.execute(
-        select(ChartSource.name, ChartEntry.week, ChartEntry.rank)
+    region_of: dict[str, str | None] = {}
+    size_of: dict[str, int] = {}
+    for name, region, size, week, rank in db.execute(
+        select(ChartSource.name, Region.name, ChartSource.size, ChartEntry.week, ChartEntry.rank)
         .join(ChartSource, ChartSource.id == ChartEntry.chart_source_id)
+        .outerjoin(Region, Region.id == ChartSource.region_id)
         .where(ChartEntry.song_id == song_id)
         .order_by(ChartEntry.week)
     ):
         found.setdefault(name, []).append((week, rank))
+        region_of[name] = region
+        size_of[name] = size
     return [
         Chart(
             name=name,
+            region=region_of[name],
+            size=size_of[name],
             best=min(rank for _, rank in weeks),
             weeks=len(weeks),
             first=weeks[0][0],
@@ -336,6 +350,15 @@ def song_facts(db: DbSession, song_id: int, user_id: int) -> SongFacts:
             .order_by(TagCategory.name, TagValue.value)
         )
     ]
+    region_popularity = [
+        (str(name), float(value), str(basis))
+        for name, value, basis in db.execute(
+            select(Region.name, SongRegionPopularity.popularity, SongRegionPopularity.basis)
+            .join(Region, Region.id == SongRegionPopularity.region_id)
+            .where(SongRegionPopularity.song_id == song_id)
+            .order_by(Region.id)
+        )
+    ]
     fixed, others = versions_of(db, song_id, user_id)
     return SongFacts(
         id=song.id,
@@ -347,6 +370,7 @@ def song_facts(db: DbSession, song_id: int, user_id: int) -> SongFacts:
         genres=genres,
         regions=regions,
         tags=tags,
+        region_popularity=region_popularity,
         charts=_charts(db, song_id),
         has_lyrics=db.get(SongLyrics, song_id) is not None,
         default_version=song.default_version,

@@ -141,7 +141,12 @@ lets a project be in the layer `request` (the copy a request sends) and a reques
 `playlist` ([music-library/requests.md](music-library/requests.md)); the real database moved to it
 on 2026-10-16, after `make db-backup`. Revision `0005` (2026-10-18) gives a request a conversation
 like a pull request's: a comment's kind, its item, the comment it replies to, and its stretch of
-the sheet (`request_comments`); the real database moved to it after `make db-backup`.
+the sheet (`request_comments`); the real database moved to it after `make db-backup`. Revision `0006`
+(Phase 16) adds the regions `spain` and `catalan`, a song's popularity in each of them
+(`song_region_popularity`, with what it rests on), and more than one key per public song or artist
+(`song_keys`, `artist_keys`: one per regional source that names it)
+([music-library/regional-sources.md](music-library/regional-sources.md)); the real database moved
+to it on 2026-10-19, after `make db-backup`.
 
 **The running backend migrates the real database as soon as a new revision is in `src/`**: it
 reloads on every change of a file there, and opens the database at the newest revision. Code of an

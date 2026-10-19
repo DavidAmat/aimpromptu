@@ -9,7 +9,9 @@
  * the end everything it made is deleted: the pulled song and artist, the playlist, the public
  * versions, the copies. No song of the library is changed.
  *
- * 1. Public songs: the count, a search, the Decade chip (the popularity of that decade), a sort.
+ * 1. Public songs: the count, a search, the Decade chip (the popularity of that decade), a sort;
+ *    the Region chip (Phase 16): spain and catalan, each with its own popularity, a Spanish song
+ *    on several charts, a song known from number ones only.
  * 2. One song: byline, facts, the chart line, the versions, a like, the lyrics, Play.
  * 3. Add to my library: the dialog, the song in My library with its link back; a song with no
  *    version cannot be added.
@@ -133,7 +135,7 @@ try {
   check('the search is kept in the address', page.url().includes('q=bee+gees'));
   await page.getByTestId('filter-decade').click();
   await page.getByRole('menuitem', { name: /^70s/ }).click();
-  check('the Decade chip filters, and the column is the decade\'s popularity', await until(async () => (await page.locator('thead').innerText()).includes('Popularity in the 70s')));
+  check('the Decade chip filters, and the column is the decade\'s popularity', await until(async () => (await page.locator('thead').innerText()).replace(/\s+/g, ' ').includes('Popularity in the 70s')));
   await shot('02-search-and-decade');
   await page.getByRole('button', { name: 'Year' }).click();
   check('the Year header sorts', await until(async () => page.url().includes('sort=year')));
@@ -141,11 +143,43 @@ try {
   await page.getByRole('button', { name: /Decade: 70s/ }).locator('svg').last().click();
   check('the chip takes its filter off', await until(async () => !page.url().includes('decade')));
 
+  // 1b. The regions (Phase 16): the Region chip, a region's popularity, a song on several charts.
+  const spain = await json(`${api}/public/songs?region=spain&limit=50`);
+  const regionCodes = spain.facets.regions.map((one) => one.value);
+  check('the Region chip offers spain and catalan', regionCodes.includes('spain') && regionCodes.includes('catalan'), regionCodes.join(', '));
+  check('spain has its songs', spain.total > 10000, `${spain.total} songs`);
+  const spainValues = spain.rows.map((row) => row.popularity);
+  check('spain is sorted by its own popularity', spainValues.every((v, i) => i === 0 || spainValues[i - 1] >= v) && spainValues[0] > 90);
+  await page.goto(`${base}/public/songs`);
+  await page.getByTestId('public-total').waitFor();
+  await page.getByTestId('filter-region').click();
+  await page.getByRole('menuitem', { name: /^Spain/ }).click();
+  check('the column is the popularity in Spain', await until(async () => (await page.locator('thead').innerText()).replace(/\s+/g, ' ').includes('Popularity in Spain')));
+  await shot('02b-region-spain');
+  await page.getByTestId('filter-decade').click();
+  await page.getByRole('menuitem', { name: /^70s/ }).click();
+  check('Spain in the 70s', await until(async () => (await page.locator('thead').innerText()).replace(/\s+/g, ' ').includes('Popularity in Spain in the 70s')));
+  await shot('02c-region-spain-70s');
+  await page.goto(`${base}/public/songs?region=catalan`);
+  check('the popularity in Catalan', await until(async () => (await page.locator('thead').innerText()).replace(/\s+/g, ' ').includes('Popularity in Catalan')));
+  await shot('02d-region-catalan');
+  const star = (await json(`${api}/public/songs?q=superestrella%20aitana`)).rows[0];
+  await page.goto(`${base}/public/songs/${star.id}`);
+  await page.getByTestId('public-byline').waitFor();
+  check('a Spanish song shows its popularity in Spain', await until(async () => (await page.getByText('Popularity in Spain').count()) === 1));
+  check('and every chart it was on, named', (await page.getByTestId('chart-history').count()) >= 2 && (await page.getByText('On the charts').count()) === 1);
+  await shot('03b-spanish-song');
+  const bravos = (await json(`${api}/public/songs?q=black%20is%20black%20bravos`)).rows[0];
+  await page.goto(`${base}/public/songs/${bravos.id}`);
+  await page.getByTestId('public-byline').waitFor();
+  check('a song known from number ones only says so', await until(async () => (await page.getByText('Weeks at number 1').count()) >= 1 && (await page.getByText(/≈ \d/).count()) >= 1));
+  await shot('03c-number-ones-song');
+
   // 2. One song.
   await page.goto(`${base}/public/songs/${alive.id}`);
   await page.getByTestId('public-byline').waitFor();
   check('the song has its byline', (await page.getByTestId('public-byline').innerText()).includes('Bee Gees'));
-  check('the chart line is drawn', (await page.getByTestId('chart-history').count()) === 1);
+  check('the chart line is drawn', (await page.getByTestId('chart-history').count()) >= 1);
   const versionRows = page.getByTestId('public-version');
   check('a fixed version and a user version', (await versionRows.count()) === 2);
   check('Hard is the Default, by master', (await versionRows.first().innerText()).includes('Default') && (await versionRows.first().innerText()).includes('by master'));
@@ -259,7 +293,7 @@ try {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.evaluate(() => localStorage.setItem('mui-mode', 'dark'));
   await page.goto(`${base}/public/songs/${alive.id}`);
-  await page.getByTestId('chart-history').waitFor();
+  await page.getByTestId('chart-history').first().waitFor();
   await shot('17-dark-song');
   await page.evaluate(() => localStorage.removeItem('mui-mode'));
 } catch (error) {

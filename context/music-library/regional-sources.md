@@ -8,7 +8,8 @@ lists exist for Spain and for Catalonia from the 60s to today, what each gives, 
 which to download first. Written in implementation 02, Phase 16, from a research on the internet
 on 2026-10-18; the full report, with a source for every fact, is
 [`phase-16-spanish-and-catalan-charts.md`](../implementations/02-private-web-app/research/phase-16-spanish-and-catalan-charts.md).
-The choice of sources is Q-9.
+The choice of sources is Q-9, answered on 2026-10-18 with the recommendation of section 6; section 7
+says what was downloaded and imported.
 
 ## 1. What the research found
 
@@ -124,6 +125,37 @@ Download first, in this order, about 2,800 requests, 6 to 8 hours, paced and res
 Later, if wanted: the top 20 PDFs of 1960 to 1965, the PROMUSICAE year-end lists, Enderrock's lists.
 Hand work (the book, the scans) stays out.
 
+## 7. What was built (2026-10-19)
+
+**The download** (`make regional-download SOURCE=<source>`, `scripts/music-library-regions/`,
+standard library only) saved every page once into `data/music-library-regions/<source>/raw/`, with
+a `manifest.sqlite` of what it asked for, so a stopped run continues. It sent
+`AImpromptuMusicLibrary/1.0 (personal local archive)` and stops on a refusal or a challenge page;
+none came.
+
+| Source | Pages | Time | What it read |
+|---|---|---|---|
+| spanishcharts.com | 1,293 weeks (2 dates answer HTTP 500) | 1 h 49 min at 5 s | 6,766 songs; top 20 to 2008, 50 to 2014, 100 from 2015 |
+| los40.com | 61 year pages and 1,190 weeks | 3 h 29 min at 10 s | 4,042 songs: 1,942 number ones 1966 to 2003, 40 places from 2004 (each row with a YouTube id) |
+| kworb.net | 1 page | 1 s | 7,459 songs with their Spotify totals and track ids |
+| APECAT | 198 PDFs | 13 min at 3 s | 183 monthly lists of 30 in two series; 3 PDFs are images with no text, 2 repeat an earlier list |
+| Wikipedia | 61 pages | 3 min at 3 s | 2,241 weekly number ones 1959 to 2001, 752 weekly top 10s 1982 to 1996, the 100 Catalan songs most played on Spotify |
+
+**The build** (`make regional-build`) reads the saved pages again into one database per source
+(`<source>/<source>.sqlite`: charts, songs, entries, totals), so a reader fix needs no download.
+
+**The import** (`make regional-import`, `aitu_backend/library/regional_import.py`) writes the public
+rows by the identity rule of Phase 12: a song is the public song with its key, else the one of the
+same compared title that credits one of its artists, else a new song with its artists found by name
+or made. Into the real `.database/` on 2026-10-19, after `make db-backup`, in 5 s: 12,014 songs and
+4,034 artists made (21,069 public songs in all); 3,406 times a source's song was a song of the US
+chart or the seed list; `spain` 12,870 songs, `catalan` 960; 158,709 chart weeks. A second run made nothing. Popularity per region:
+[popularity.md](popularity.md) section 5.
+
+Left as they are, for later: an artist written two ways becomes two artists ("Aitana", "Aitana
+Ocaña"); merging is a request (Phase 14). The 100 songs of the Catalan Spotify table have the
+region and no popularity (no places), like the Catalan songs before 2018: Phase 17.
+
 ## Where to look deeper
 
 - The full research, with its sources:
@@ -131,3 +163,6 @@ Hand work (the book, the scans) stays out.
 - The formula today: [popularity.md](popularity.md)
 - The identity rule and the US chart: [reconciliation.md](reconciliation.md)
 - The plan: [02-plan.md](../implementations/02-private-web-app/02-plan.md) section 20, Phase 16
+- The build of Phase 16, step by step: [02-implementation-phase-16.md](../implementations/02-private-web-app/02-implementation-phase-16.md)
+- The code: `scripts/music-library-regions/` (`download.py`, `parse.py`, `build.py`, `test_parse.py`);
+  `aitu-backend/src/aitu_backend/library/regional_import.py`, `tests/test_regional_import.py`

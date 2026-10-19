@@ -39,10 +39,12 @@ from sqlalchemy.orm import Session as DbSession
 from aitu_backend.db.models import (
     Artist,
     ArtistName,
+    Region,
     Song,
     SongArtist,
     SongGenre,
     SongRegion,
+    SongRegionPopularity,
     SongTag,
     SongVersion,
     UserVersion,
@@ -103,6 +105,8 @@ class CatalogueSong:
     popularity: float
     credits: tuple[Credit, ...]
     region_ids: frozenset[int]
+    #: ``(region id, popularity)`` in each region other than worldwide (Phase 16).
+    region_scores: tuple[tuple[int, float], ...]
     genre_ids: frozenset[int]
     tag_value_ids: frozenset[int]
     #: Fixed versions with a project, and user versions.
@@ -115,6 +119,12 @@ class CatalogueSong:
     @property
     def decade(self) -> int | None:
         return decade_of(self.year)
+
+    def popularity_in(self, region_id: int | None) -> float:
+        """The popularity in a region; worldwide (the stored one) when none is given."""
+        if region_id is None:
+            return self.popularity
+        return next((value for one, value in self.region_scores if one == region_id), 0.0)
 
 
 @dataclass(frozen=True)
@@ -137,8 +147,10 @@ class _Catalogue:
     fingerprint: tuple[object, ...]
     songs: dict[int, CatalogueSong]
     artists: dict[int, CatalogueArtist]
-    #: ``(start, end) -> song id -> popularity`` in that range.
-    ranges: dict[tuple[date, date], dict[int, float]] = field(default_factory=dict)
+    #: Region id -> code (``worldwide``, ``spain``, ``catalan``).
+    region_codes: dict[int, str] = field(default_factory=dict)
+    #: ``(start, end, region) -> song id -> popularity`` in that range and region.
+    ranges: dict[tuple[date, date, str], dict[int, float]] = field(default_factory=dict)
 
 
 _lock = threading.Lock()
@@ -154,6 +166,7 @@ _FINGERPRINT = text("""
       (SELECT count(*) || ':' || total(sa.position)
          FROM song_artists sa JOIN songs s ON s.id = sa.song_id WHERE s.scope = 'public'),
       (SELECT count(*) FROM song_regions),
+      (SELECT count(*) || ':' || total(popularity) FROM song_region_popularity),
       (SELECT count(*) FROM song_genres),
       (SELECT count(*) FROM song_tags),
       (SELECT count(*) FROM song_versions WHERE project_id IS NOT NULL),
@@ -195,6 +208,15 @@ def _read(db: DbSession, fingerprint: tuple[object, ...]) -> _Catalogue:
         return found
 
     regions = links(SongRegion, "region_id")
+    region_scores: dict[int, list[tuple[int, float]]] = {}
+    for song_id, region_id, value in db.execute(
+        select(
+            SongRegionPopularity.song_id,
+            SongRegionPopularity.region_id,
+            SongRegionPopularity.popularity,
+        )
+    ):
+        region_scores.setdefault(song_id, []).append((region_id, float(value)))
     genres = links(SongGenre, "genre_id")
     tags = links(SongTag, "tag_value_id")
     versions: dict[int, int] = {}
@@ -215,6 +237,7 @@ def _read(db: DbSession, fingerprint: tuple[object, ...]) -> _Catalogue:
             popularity=float(score or 0.0),
             credits=credited,
             region_ids=frozenset(regions.get(song_id, ())),
+            region_scores=tuple(region_scores.get(song_id, ())),
             genre_ids=frozenset(genres.get(song_id, ())),
             tag_value_ids=frozenset(tags.get(song_id, ())),
             versions=versions.get(song_id, 0),
@@ -249,7 +272,10 @@ def _read(db: DbSession, fingerprint: tuple[object, ...]) -> _Catalogue:
             with_versions=sum(1 for one in own if by_id[one].versions > 0),
             words=fold(" ".join(name for name, _ in found)),
         )
-    return _Catalogue(fingerprint=fingerprint, songs=by_id, artists=artists)
+    region_codes = {int(i): str(code) for i, code in db.execute(select(Region.id, Region.code))}
+    return _Catalogue(
+        fingerprint=fingerprint, songs=by_id, artists=artists, region_codes=region_codes
+    )
 
 
 def _catalogue(db: DbSession) -> _Catalogue:
@@ -261,14 +287,16 @@ def _catalogue(db: DbSession) -> _Catalogue:
         return _current
 
 
-def _range_scores(db: DbSession, catalogue: _Catalogue, decade: int) -> dict[int, float]:
-    span = (date(decade, 1, 1), date(decade + 9, 12, 31))
+def _range_scores(
+    db: DbSession, catalogue: _Catalogue, decade: int, region: str = popularity.WORLDWIDE
+) -> dict[int, float]:
+    key = (date(decade, 1, 1), date(decade + 9, 12, 31), region)
     with _lock:
-        found = catalogue.ranges.get(span)
+        found = catalogue.ranges.get(key)
     if found is None:
-        found = popularity.song_scores(db, span[0], span[1])
+        found = popularity.song_scores(db, key[0], key[1], region=region)
         with _lock:
-            catalogue.ranges[span] = found
+            catalogue.ranges[key] = found
     return found
 
 
@@ -347,16 +375,18 @@ def songs_page(
     offset: int = 0,
     limit: int = 50,
 ) -> SongPage:
-    """One page of the public songs that match, sorted; with a decade, the popularity of that
-    decade (from its chart weeks) is the one shown and sorted by."""
+    """One page of the public songs that match, sorted. The popularity shown and sorted by is the
+    region's when a region is chosen (Phase 16), worldwide otherwise; with a decade, it is worked
+    out from that region's chart weeks of the decade."""
     catalogue = _catalogue(db)
     query = fold(wanted.query).split()
     kept = [one for one in catalogue.songs.values() if _keep(one, wanted, query)]
-    scores = (
-        _range_scores(db, catalogue, wanted.decade)
-        if wanted.decade is not None
-        else {one.id: one.popularity for one in kept}
-    )
+    code = catalogue.region_codes.get(wanted.region) if wanted.region is not None else None
+    regional = code is not None and code != popularity.WORLDWIDE
+    if wanted.decade is not None:
+        scores = _range_scores(db, catalogue, wanted.decade, code or popularity.WORLDWIDE)
+    else:
+        scores = {one.id: one.popularity_in(wanted.region if regional else None) for one in kept}
 
     def popularity_of(one: CatalogueSong) -> float:
         return scores.get(one.id, 0.0)

@@ -108,7 +108,9 @@ def test_the_songs_are_searched_filtered_and_sorted(people: dict) -> None:
     assert decades == {"70s": 1, "80s": 1, "10s": 1}
     assert [f["value"] for f in seventies["facets"]["regions"]] == ["worldwide"]
     assert anna.get("/public/songs", params={"region": "worldwide"}).json()["total"] == 5
-    assert anna.get("/public/songs", params={"region": "spain"}).status_code == 422
+    # spain and catalan exist since revision 0006 (Phase 16); no song of this download is there
+    assert anna.get("/public/songs", params={"region": "spain"}).json()["total"] == 0
+    assert anna.get("/public/songs", params={"region": "mars"}).status_code == 422
     # By title, and by year with no year last both ways.
     by_title = anna.get("/public/songs", params={"sort": "title", "dir": "asc"}).json()
     assert titles(by_title)[:2] == ["Billie Jean", "Give Me Everything"]

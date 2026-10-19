@@ -29,7 +29,9 @@ Every row of the music library has a `scope`:
 - **public**: the Public Library, one for everyone. Its rows have no owner; the master user changes
   them by accepting requests ([requests.md](requests.md), Phase 14). It starts from the chart download of Phase 12
   ([reconciliation.md](reconciliation.md)): 9,055 songs, 2,998 artists, 8,341 albums, imported into
-  the real database on 2026-10-16.
+  the real database on 2026-10-16; Phase 16 added the Spanish and Catalan lists
+  ([regional-sources.md](regional-sources.md)): 21,069 songs and 7,032 artists after its import
+  (2026-10-19).
 - **private**: each user's own ontology ([private-library.md](private-library.md)). A user names
   songs and artists as they like; no other user sees them.
 
@@ -54,11 +56,11 @@ The fields of plan section 15.3, and what the Public Library has of each today:
 | Year, decade | The decade is worked out from the year (1978 is the 70s), never stored | 9,044 songs have a year (the 8 seed songs and 3 chart songs have none) |
 | Artists | Through artist names | From the chart; 7 songs have none |
 | Album | Optional | 8,581 song-album links |
-| Region | Where the song was popular, not where the artist is from | Every song `worldwide` (the chart is the US one); `spain` and `catalan` are Q-5 |
+| Region | Where the song was popular, not where the artist is from | `worldwide`: the 9,047 songs of the US chart (the 8 seed songs have no region). `spain`: 12,870 songs of the Spanish lists (Phase 16). `catalan`: 960 songs of the APECAT top 30 and the Catalan Spotify table, in practice songs in Catalan or from Catalan labels |
 | Genre | One or two of 13 | None from the import (Q-5: Wikidata is the recommendation); given by request (Phase 14) |
 | Tags | Fixed categories (films, video games, TV shows, adverts), free values | Given by request (Phase 14) |
 | Rankings | The chart weeks and places | 160,810 song weeks |
-| Popularity | 0 to 100 from the rankings, in any time range | [popularity.md](popularity.md) |
+| Popularity | 0 to 100 from the rankings, in any time range, one per region | [popularity.md](popularity.md) |
 | Lyrics | The words, as the download gave them | 9,038 songs; kept for this personal version only |
 
 ## 4. Versions of a public song
@@ -98,8 +100,8 @@ piano sheet, and a public song with no version has none. The button says so on h
 
 | Page | Address | What is on it |
 |---|---|---|
-| Public songs | `/public/songs` | A search (title and artists, accents ignored), the filter chips Decade, Region, Genre and Tag (a chip shows only when it has values; each value says how many songs it leaves), a table sorted by popularity, year or title, one page at a time. With a decade, the popularity column is that decade's. The address keeps all of it |
-| A public song | `/public/songs/:id` | The byline (links to the artists), the facts, **On the chart** (best place, weeks, the line of its places), **Versions**, **Other versions** (each with Play, a like, Add to my library), **Lyrics** on request. **Play** the default version; **Add to my library**; **Open in My library** once it is there |
+| Public songs | `/public/songs` | A search (title and artists, accents ignored), the filter chips Decade, Region, Genre and Tag (a chip shows only when it has values; each value says how many songs it leaves), a table sorted by popularity, year or title, one page at a time. With a region, the popularity column is that region's; with a decade, that decade's (of the region, when one is chosen). The address keeps all of it |
+| A public song | `/public/songs/:id` | The byline (links to the artists), the facts (a popularity per region), **On the charts** (each chart named with its region: best place, weeks, the line of its places), **Versions**, **Other versions** (each with Play, a like, Add to my library), **Lyrics** on request. **Play** the default version; **Add to my library**; **Open in My library** once it is there |
 | Public artists | `/public/artists` | A search on every name, a table sorted by popularity (the artist's most popular song), name or number of songs |
 | A public artist | `/public/artists/:id` | Its other names, its songs and its albums by popularity, **Add to my library** |
 | Public playlists | `/public/playlists`, `/public/playlists/:id` | The public songs playlists (made by accepted **Playlist** requests, Phase 14); one with **Play** (Play mode, `?from=public`) and **Add to my library** |

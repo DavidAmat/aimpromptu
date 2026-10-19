@@ -33,8 +33,13 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function ChartHistory({ chart }: { chart: PublicChart }) {
-  const [width, setWidth] = useState(MAX_WIDTH);
+/**
+ * `named`: the chart's name and region above it, when the song is on more than one chart or on a
+ * chart of a region (Phase 16). A list of number ones only (size 1) says "Weeks at number 1".
+ */
+export function ChartHistory({ chart, named = false }: { chart: PublicChart; named?: boolean }) {
+  // The first drawing already fits a narrow window; the observer then takes the real width.
+  const [width, setWidth] = useState(() => Math.min(MAX_WIDTH, Math.max(200, window.innerWidth - 120)));
   const measured = useCallback((element: HTMLDivElement | null) => {
     if (!element) return;
     const observer = new ResizeObserver(([entry]) => setWidth(Math.min(MAX_WIDTH, Math.max(200, Math.round(entry.contentRect.width)))));
@@ -59,13 +64,25 @@ export function ChartHistory({ chart }: { chart: PublicChart }) {
   const bestIndex = chart.history.findIndex(([, rank]) => rank === chart.best);
   const firstYear = Number(chart.first.slice(0, 4));
   const lastYear = Number(chart.last.slice(0, 4));
-  const label = `Best place ${chart.best}, ${chart.weeks} weeks on the chart, from ${monthYear(chart.first)} to ${monthYear(chart.last)}`;
+  const onesOnly = chart.size === 1;
+  const weeksLabel = onesOnly ? "Weeks at number 1" : "Weeks on the chart";
+  const label = `${chart.name}: best place ${chart.best}, ${chart.weeks} ${weeksLabel.toLowerCase()}, from ${monthYear(chart.first)} to ${monthYear(chart.last)}`;
 
   return (
     <Stack spacing={1.5}>
+      {named ? (
+        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+          {chart.name}
+          {chart.region ? (
+            <Typography component="span" sx={{ fontSize: 14, color: "text.secondary", fontWeight: 400 }}>
+              {` · ${chart.region}`}
+            </Typography>
+          ) : null}
+        </Typography>
+      ) : null}
       <Stack direction="row" useFlexGap spacing={4} sx={{ flexWrap: "wrap", rowGap: 1 }}>
-        <Fact label="Best place" value={String(chart.best)} />
-        <Fact label="Weeks on the chart" value={String(chart.weeks)} />
+        {onesOnly ? null : <Fact label="Best place" value={String(chart.best)} />}
+        <Fact label={weeksLabel} value={String(chart.weeks)} />
         <Fact
           label="When"
           value={chart.first === chart.last ? monthYear(chart.first) : `${monthYear(chart.first)} – ${monthYear(chart.last)}`}

@@ -28,6 +28,7 @@ import TableSortLabel from "@mui/material/TableSortLabel";
 
 export interface DataColumn<Row> {
   key: string;
+  /** The header; a line break ("Popularity\nin Spain") puts the rest on a second line. */
   label: string;
   render: (row: Row) => ReactNode;
   /** The value the column sorts by; a column without one does not sort. */
@@ -152,7 +153,13 @@ export function DataTable<Row>({
                 <TableCell
                   key={column.key}
                   align={column.align}
-                  sx={{ width: column.width, color: "text.secondary", fontWeight: 500, whiteSpace: "nowrap" }}
+                  sx={{
+                    width: column.width,
+                    color: "text.secondary",
+                    fontWeight: 500,
+                    whiteSpace: column.label.includes("\n") ? "pre-line" : "nowrap",
+                    lineHeight: 1.3,
+                  }}
                   sortDirection={sort?.key === column.key ? sort.direction : false}
                 >
                   {column.sortValue ? (

@@ -51,6 +51,7 @@ def test_every_table_of_section_8_6_exists(_temporary_database: Path) -> None:
         "tag_values", "song_tags", "regions", "song_regions", "chart_sources", "chart_entries",
         "playlists", "playlist_items", "likes", "library_shares", "requests", "request_items",
         "request_comments", "song_lyrics", "album_artists", "album_chart_entries",
+        "song_region_popularity", "song_keys", "artist_keys",
     }  # fmt: skip
     assert expected <= tables
 
@@ -61,7 +62,8 @@ def test_the_fixed_lists_are_written_by_the_first_migration(
     with session() as db:
         assert db.scalar(select(func.count()).select_from(Genre)) == len(GENRES)
         assert set(db.scalars(select(TagCategory.name))) == set(TAG_CATEGORIES)
-        assert list(db.scalars(select(Region.code))) == ["worldwide"]
+        # worldwide by the first migration, spain and catalan by revision 0006 (Phase 16)
+        assert set(db.scalars(select(Region.code))) == {"worldwide", "spain", "catalan"}
 
 
 def test_foreign_keys_and_wal_are_on(_temporary_database: Path) -> None:

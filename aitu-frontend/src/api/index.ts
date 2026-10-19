@@ -70,6 +70,7 @@ export type {
   PublicArtistDetail,
   PublicArtistRow,
   PublicChart,
+  PublicRegionPopularity,
   PublicCredit,
   PublicLists,
   PublicPlaylistDetail,

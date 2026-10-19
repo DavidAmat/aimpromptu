@@ -22,7 +22,7 @@ The plan's section 3.
 - [x] **Q-6** The popularity weights. **Answered 2026-10-16:** objective criteria instead of a hand ranking; the plan's formula with the power of a week's points at 8 ([report](02-implementation-phase-12.md) section 5.3).
 - [x] **Q-7** Offline downloads per project: **left for the production version**. Answered 2026-10-15 (raised in Phase 6).
 - [x] **Q-8** Live notes from the video reader: **one job with its stages**, the notes at the end (61 s for a 3:09 video, measured in Phase 5). Answered 2026-10-15.
-- [p] **Q-9** The sources of the `spain` and `catalan` regions, from the 60s to today (takes over the region part of Q-5). **Raised 2026-10-18** after the research ([`regional-sources.md`](../../music-library/regional-sources.md) section 6).
+- [x] **Q-9** The sources of the `spain` and `catalan` regions, from the 60s to today (takes over the region part of Q-5). **Answered 2026-10-18: the recommendations**: spanishcharts.com, los40.com, kworb.net (Spotify Spain), the APECAT PDFs and Wikipedia; both APECAT top 30s (songs in Catalan, and Catalan labels) count as `catalan` ([`regional-sources.md`](../../music-library/regional-sources.md) section 6).
 - [ ] **Q-10** Spotify for the inferred popularity: its API gives no play count (only its own `popularity`), and its Developer Policy forbids feeding its content to a machine learning model. Raised 2026-10-18; answered before Phase 17.
 
 # [x] Phase 0: The documentation repaired, and a baseline
@@ -302,22 +302,25 @@ Built 2026-10-18 ([`02-implementation-phase-15.md`](02-implementation-phase-15.m
 
 # [p] Phase 16: The `spain` and `catalan` regions, from the 60s to today
 
-Added 2026-10-18 at the user's ask (plan section 20).
+Added 2026-10-18 at the user's ask (plan section 20). Built 2026-10-19
+([`02-implementation-phase-16.md`](02-implementation-phase-16.md)); waiting for the user's check
+before the merge. Q-9 answered 2026-10-18. Revision `0006` moved the real `.database/` (after
+`make db-backup`).
 
-## [p] Story 16.1: The research
+## [x] Story 16.1: The research
 - [x] Task 16.1.1 A deep research on the internet: the Spanish and Catalan charts and radio lists of each decade from the 60s, with their years, what they give, licence, format and pace; MusicBrainz and Wikidata for artists and identifiers.
-- [p] Task 16.1.2 `context/music-library/regional-sources.md` with the recommendation; Q-9 raised before any download.
+- [x] Task 16.1.2 `context/music-library/regional-sources.md` with the recommendation; Q-9 raised before any download.
 
-## [ ] Story 16.2: The data
-- [ ] Task 16.2.1 The download of the chosen sources into `data/music-library-regions/<source>/`, paced and resumable.
-- [ ] Task 16.2.2 The import into public rows (the Phase 12 identity rule; existing songs get the region; new songs and artists), on copies, then on the real `.database/` after `make db-backup`.
+## [x] Story 16.2: The data
+- [x] Task 16.2.1 The download of the chosen sources into `data/music-library-regions/<source>/`, paced and resumable (`scripts/music-library-regions/`, `make regional-download`, `make regional-build`: five sources, no refusal; one database per source).
+- [x] Task 16.2.2 The import into public rows (the Phase 12 identity rule; existing songs get the region; new songs and artists), on copies, then on the real `.database/` after `make db-backup` (`library/regional_import.py`, `make regional-import`; revision `0006`: `song_region_popularity`, `song_keys`, `artist_keys`; 12,014 songs and 4,034 artists made; a second run made 0).
 
-## [ ] Story 16.3: Popularity per region
-- [ ] Task 16.3.1 The formula per region (an adapted one for sources with no weekly places); one popularity per song and region.
-- [ ] Task 16.3.2 The pages: the Region chip with `spain` and `catalan`, the region's popularity, the charts of a song.
+## [x] Story 16.3: Popularity per region
+- [x] Task 16.3.1 The formula per region (an adapted one for sources with no weekly places); one popularity per song and region (every place against 100; the largest of a region's charts; number ones with a fitted weight lowered for a spread top; a month as 3 weeks; Spotify's totals as an estimate only where no chart lists the song; all by the Q-6 criteria).
+- [x] Task 16.3.2 The pages: the Region chip with `spain` and `catalan`, the region's popularity, the charts of a song (`check:public`, 9 new checks; the 13-check pass).
 
-## [ ] Story 16.4: Documentation
-- [ ] Task 16.4.1 `regional-sources.md` (new), `reconciliation.md`, `popularity.md`, `ontology.md`, `07-database.md`, `paths-and-data.md`.
+## [x] Story 16.4: Documentation
+- [x] Task 16.4.1 `regional-sources.md` (new), `reconciliation.md`, `popularity.md`, `ontology.md`, `07-database.md`, `paths-and-data.md` (and `endpoints.md`, `music-library/README.md`, `00-index.md`, the scripts' README).
 
 # [ ] Phase 17: A popularity inferred from YouTube views
 

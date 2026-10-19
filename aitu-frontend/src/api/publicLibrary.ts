@@ -84,12 +84,26 @@ export interface PublicUserVersions {
 
 export interface PublicChart {
   name: string;
+  /** The region the chart counts in: "Worldwide", "Spain", "Catalan". */
+  region: string | null;
+  /** How many places it lists; 1 is a list of number ones only. */
+  size: number;
   best: number;
   weeks: number;
   first: string;
   last: string;
   /** `[week, rank]`, oldest first. */
   history: [string, number][];
+}
+
+/**
+ * `weeks`: a chart's places; `number_ones`: a list of number ones only, so an approximation;
+ * `estimated`: Spotify's totals, for a song no chart lists.
+ */
+export interface PublicRegionPopularity {
+  region: string;
+  popularity: number;
+  basis: "weeks" | "number_ones" | "estimated";
 }
 
 export interface PublicSongDetail {
@@ -104,6 +118,8 @@ export interface PublicSongDetail {
   regions: string[];
   /** `[category, value]`. */
   tags: [string, string][];
+  /** The popularity in each region other than worldwide (Phase 16), and what it rests on. */
+  regionPopularity: PublicRegionPopularity[];
   charts: PublicChart[];
   hasLyrics: boolean;
   /** The fixed version Default points at. */
