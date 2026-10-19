@@ -212,7 +212,7 @@ its walkthrough under DECISIONS.
 | Q-6 | The popularity formula: the weights of section 15.6, tuned on the downloaded chart history and on a list of songs the user ranks by hand | Phase 12. **Answered 2026-10-16: objective criteria instead of a hand ranking; `week_power` 8** (section 15.6) |
 | Q-7 | "Download offline" per project (like Netflix). On one home server the Private Library is already on the same disk as the app, so true offline needs the browser to keep files (a PWA). Build it now, or leave it for the production version? | Phase 6 (recommendation: leave it for production). **Answered 2026-10-15: left for the production version** |
 | Q-8 | Can the video reader stream its notes live, like MuScriptor? | Phase 5, after a measurement. *Measured in Phase 5:* **Read notes** takes about a third of the video's length (61 s for 3:09); only the last 22 s (the stitched roll) could send notes as they come, after about 39 s that read the whole video (frames, background, speed). Raised with the options in the Phase 5 report. **Answered 2026-10-15: one job with its stages; the notes arrive at the end** |
-| Q-9 | Which sources fill the `spain` and `catalan` regions, from the 60s to today: charts and radio lists that are open to reuse and keep their history. Takes over the region part of Q-5 (its genre part stays Q-5) | Phase 16, after the research (added 2026-10-18) |
+| Q-9 | Which sources fill the `spain` and `catalan` regions, from the 60s to today: charts and radio lists that are open to reuse and keep their history. Takes over the region part of Q-5 (its genre part stays Q-5) | Phase 16, after the research (added 2026-10-18). **Answered 2026-10-18: the recommendations of [`regional-sources.md`](../../music-library/regional-sources.md)**: spanishcharts.com, los40.com, kworb.net, the APECAT PDFs and Wikipedia; both APECAT top 30s count as `catalan` |
 | Q-10 | Spotify for the inferred popularity. The official Web API gives no play count, only its own `popularity` (0 to 100, weighted towards recent plays), and the Spotify Developer Policy forbids using Spotify content to train or feed a machine learning model, which a fitted formula may be. Use it, show it only, or leave it out? | Raised 2026-10-18 when Phase 17 was added; to be answered before Phase 17 |
 
 ---
@@ -1516,7 +1516,11 @@ number 1 keeps 97, 78 and 46, place 20 for 20 weeks scores 40, songs at 95 or mo
 `catalan` is a hit in Catalonia that the world may not know. Phase 16 computes it per region from
 the Spanish and Catalan sources (where a source has no weekly places, an adapted formula); Phase 17
 infers a popularity from the official YouTube views for a song with no chart data, marked
-*inferred* (section 20).
+*inferred* (section 20). *As built in Phase 16*: every place is scored against 100
+(`Weights.reference`), so the size of a chart only says which places it lists; the popularity of a
+region is stored in `song_region_popularity` with what it rests on (`weeks`, `number_ones`,
+`estimated`), and `songs.popularity` stays the worldwide one
+([`../../music-library/popularity.md`](../../music-library/popularity.md) section 5).
 
 ---
 
@@ -1918,6 +1922,16 @@ Q-5 left those regions for later; this phase fills them.
 
 Checks: the import's tests on a small fixture of each source; the counts per region and decade in
 the report; `check:public` with the region chip; `make db-check`.
+
+*Built 2026-10-19* ([`02-implementation-phase-16.md`](02-implementation-phase-16.md)): Q-9 took
+the recommendation (five sources: spanishcharts.com, los40.com, kworb.net, APECAT, Wikipedia; both
+APECAT top 30 count as `catalan`). The download and the build are `scripts/music-library-regions/`
+(`make regional-download`, `make regional-build`), the import `library/regional_import.py`
+(`make regional-import`); revision `0006` adds `song_region_popularity`, `song_keys` and
+`artist_keys`. `spain` has 12,870 songs, `catalan` 960. The formula scores every place against 100;
+a region's popularity is the largest of its charts'; a list of number ones only counts with a
+weight fitted on the full lists and lowered as little as Q-6's spread top needs (1.80 and 4.74); a
+month counts as 3 weeks; Spotify's totals give an estimate only to a song no chart lists.
 
 ## Phase 17: A popularity inferred from YouTube views (and Spotify, if Q-10 allows)
 

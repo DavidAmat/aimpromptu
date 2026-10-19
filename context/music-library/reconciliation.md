@@ -164,10 +164,13 @@ same years.
 
 ## 6. What is still open (Q-5)
 
-- **Q-5**: the sources of the `spain` and `catalan` regions, the genres, and the eight seed songs
-  that are not on the chart. Spain has an official weekly singles chart (PROMUSICAE, top 50 from
-  2008, top 100 from 2015); Catalan music has no weekly chart of its own. Genres could come from
-  Wikidata, mapped to the 13 genres of the app.
+- **Q-5**: the genres, and the tags. Genres could come from Wikidata, mapped to the 13 genres of
+  the app.
+- **The regions** (the region part of Q-5, then Q-9) are Phase 16: five Spanish and Catalan sources,
+  imported by the same identity rule, each source keeping its own key in `song_keys`
+  ([regional-sources.md](regional-sources.md)). 1,104 songs of the Spanish sales chart are songs
+  of the US chart; the seed songs not on the US chart got the `spain` region and a year where a
+  Spanish list has them ("Superestrella").
 - **Q-6** is answered: the app's weights, by the criteria of section 5.
 
 The options and the recommendations are in the

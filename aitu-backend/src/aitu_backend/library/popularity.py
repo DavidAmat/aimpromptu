@@ -30,7 +30,7 @@ from datetime import date
 from pathlib import Path
 from typing import Iterable
 
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session as DbSession
 
 from aitu_backend.db.models import (
@@ -38,6 +38,7 @@ from aitu_backend.db.models import (
     AlbumChartEntry,
     ChartEntry,
     ChartSource,
+    Region,
     Song,
 )
 
@@ -47,13 +48,19 @@ __all__ = [
     "Criteria",
     "Week",
     "Weights",
+    "WORLDWIDE",
     "album_scores",
+    "chart_scores",
     "criteria",
     "points",
     "score",
     "song_scores",
     "store_all_time",
 ]
+
+
+#: The default region: the one ``songs.popularity`` holds and a list shows when no region is chosen.
+WORLDWIDE = "worldwide"
 
 
 @dataclass(frozen=True)
@@ -63,14 +70,19 @@ class Weights:
     saturation: float = 10.0
     week_power: float = 2.0
     peak_power: float = 3.0
+    #: The size every place is scored against. ``None`` is the plan's rule, the chart's own size;
+    #: 100 (Phase 16) keeps place 10 worth the same in a top 20 of 2005 and a top 100 of 2016. A
+    #: chart's size then only says which places it lists.
+    reference: int | None = None
 
 
 #: The formula of plan section 15.6, as written before any tuning.
 PLAN = Weights()
 #: The weights the app uses (Phase 12, Q-6): the plan's, with the weeks near the top counting far
 #: more. Place 1 is worth 1.0 a week, place 10 0.47, place 20 0.18, place 40 0.02 (with the
-#: plan's power 2: 1.0, 0.83, 0.66, 0.37).
-DEFAULT = Weights(week_power=8.0)
+#: plan's power 2: 1.0, 0.83, 0.66, 0.37). Every place is scored against 100 (Phase 16): the
+#: Spanish chart was a top 20 until 2008 and a top 50 until 2014, the Catalan one is a top 30.
+DEFAULT = Weights(week_power=8.0, reference=100)
 
 
 @dataclass(frozen=True)
@@ -82,11 +94,17 @@ class Week:
     weight: float = 1.0
 
 
+def _share(rank: int, size: int, weights: Weights) -> float:
+    """How high ``rank`` is: 1.0 at place 1, against the reference size (or the chart's own)."""
+    against = weights.reference or size
+    return max(0.0, (against + 1 - rank) / against)
+
+
 def points(rank: int, size: int = 100, weights: Weights = DEFAULT) -> float:
     """The points of one week at ``rank``: zero outside ``1..size``."""
     if rank < 1 or rank > size:
         return 0.0
-    return float(((size + 1 - rank) / size) ** weights.week_power)
+    return float(_share(rank, size, weights) ** weights.week_power)
 
 
 def score(weeks: Iterable[Week], weights: Weights = DEFAULT) -> float:
@@ -99,7 +117,7 @@ def score(weeks: Iterable[Week], weights: Weights = DEFAULT) -> float:
             continue
         counted = True
         total += week.weight * points(week.rank, week.size, weights)
-        best = week.weight * ((week.size + 1 - week.rank) / week.size) ** weights.peak_power
+        best = week.weight * _share(week.rank, week.size, weights) ** weights.peak_power
         peak = max(peak, min(best, 1.0))
     if not counted:
         return 0.0
@@ -113,6 +131,13 @@ def score(weeks: Iterable[Week], weights: Weights = DEFAULT) -> float:
 # ---------------------------------------------------------------- from the tables
 
 
+def _in_region(region: str):  # noqa: ANN202 - a SQL condition
+    """A chart of ``region``; a chart with no region counts as worldwide, as before Phase 16."""
+    if region == WORLDWIDE:
+        return or_(ChartSource.region_id.is_(None), Region.code == region)
+    return Region.code == region
+
+
 def _scores(
     db: DbSession,
     entry: type[ChartEntry] | type[AlbumChartEntry],
@@ -120,19 +145,56 @@ def _scores(
     start: date | None,
     end: date | None,
     weights: Weights,
+    region: str,
 ) -> dict[int, float]:
+    """Each owner's score in ``region``: the largest of its charts' scores (Phase 16).
+
+    The charts of one region overlap (the Spanish sales chart and the Los 40 list name the same
+    hits), so they are not added; with one chart, as ``worldwide`` has, it is that chart's score."""
     owner = getattr(entry, owner_column)
-    query = select(owner, entry.rank, ChartSource.size, ChartSource.weight).join(
-        ChartSource, ChartSource.id == entry.chart_source_id
+    query = (
+        select(owner, entry.chart_source_id, entry.rank, ChartSource.size, ChartSource.weight)
+        .join(ChartSource, ChartSource.id == entry.chart_source_id)
+        .outerjoin(Region, Region.id == ChartSource.region_id)
+        .where(_in_region(region))
     )
     if start is not None:
         query = query.where(entry.week >= start)
     if end is not None:
         query = query.where(entry.week <= end)
-    weeks: dict[int, list[Week]] = {}
-    for owner_id, rank, size, weight in db.execute(query):
-        weeks.setdefault(owner_id, []).append(Week(rank, size, weight))
-    return {owner_id: score(found, weights) for owner_id, found in weeks.items()}
+    weeks: dict[tuple[int, int], list[Week]] = {}
+    for owner_id, chart_id, rank, size, weight in db.execute(query):
+        weeks.setdefault((owner_id, chart_id), []).append(Week(rank, size, weight))
+    best: dict[int, float] = {}
+    for (owner_id, _chart), found in weeks.items():
+        value = score(found, weights)
+        if value > best.get(owner_id, -1.0):
+            best[owner_id] = value
+    return best
+
+
+def chart_scores(
+    db: DbSession,
+    region: str,
+    weights: Weights = DEFAULT,
+) -> dict[tuple[int, int], float]:
+    """``(song, chart): score`` for every chart of ``region``, all time (the import's view)."""
+    query = (
+        select(
+            ChartEntry.song_id,
+            ChartEntry.chart_source_id,
+            ChartEntry.rank,
+            ChartSource.size,
+            ChartSource.weight,
+        )
+        .join(ChartSource, ChartSource.id == ChartEntry.chart_source_id)
+        .outerjoin(Region, Region.id == ChartSource.region_id)
+        .where(_in_region(region))
+    )
+    weeks: dict[tuple[int, int], list[Week]] = {}
+    for song_id, chart_id, rank, size, weight in db.execute(query):
+        weeks.setdefault((song_id, chart_id), []).append(Week(rank, size, weight))
+    return {pair: score(found, weights) for pair, found in weeks.items()}
 
 
 def song_scores(
@@ -140,11 +202,13 @@ def song_scores(
     start: date | None = None,
     end: date | None = None,
     weights: Weights = DEFAULT,
+    region: str = WORLDWIDE,
 ) -> dict[int, float]:
-    """The popularity of every song with a chart week inside ``start..end`` (both included).
+    """The popularity in ``region`` of every song with a chart week of it inside ``start..end``
+    (both included).
 
     This is what a filter by decade sorts by: worked out again from the weeks, not stored."""
-    return _scores(db, ChartEntry, "song_id", start, end, weights)
+    return _scores(db, ChartEntry, "song_id", start, end, weights, region)
 
 
 def album_scores(
@@ -153,12 +217,13 @@ def album_scores(
     end: date | None = None,
     weights: Weights = DEFAULT,
 ) -> dict[int, float]:
-    return _scores(db, AlbumChartEntry, "album_id", start, end, weights)
+    return _scores(db, AlbumChartEntry, "album_id", start, end, weights, WORLDWIDE)
 
 
 def store_all_time(db: DbSession, weights: Weights = DEFAULT) -> tuple[int, int]:
     """Write ``songs.popularity`` and ``albums.popularity`` of the public rows from all their
-    weeks; a public row with no week gets 0.0. Returns how many songs and albums were written."""
+    worldwide weeks; a public row with no week gets 0.0. Returns how many songs and albums were
+    written. The other regions' values are ``song_region_popularity`` (``regional_import``)."""
     written = []
     for model, found in (
         (Song, song_scores(db, weights=weights)),

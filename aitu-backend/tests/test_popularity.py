@@ -41,7 +41,7 @@ def test_the_examples_of_the_plan() -> None:
 def test_the_app_s_weights_keep_number_1_and_put_long_middle_runs_below_it() -> None:
     # One number differs from the plan: the weeks at number 1 give the same scores, and 20 weeks
     # at place 20 is now close to, a little below, one week at number 1 (the app context).
-    assert DEFAULT == Weights(week_power=8.0)
+    assert DEFAULT == Weights(week_power=8.0, reference=100)
     assert (score(weeks(1, 30)), score(weeks(1, 10)), score(weeks(1, 1))) == (97.0, 77.9, 45.7)
     assert 0.8 * score(weeks(1, 1)) <= score(weeks(20, 20)) <= score(weeks(1, 1))
     assert score(weeks(20, 20)) == 39.8
@@ -58,8 +58,12 @@ def test_a_position_outside_the_chart_adds_nothing() -> None:
 
 
 def test_the_size_and_the_weight_of_a_chart() -> None:
-    # Place 40 of a top 40 is its last place, worth almost nothing; of a top 100, more.
-    assert score(weeks(40, 5, size=40)) < score(weeks(40, 5, size=100))
+    # The plan's rule: place 40 of a top 40 is its last place, worth almost nothing.
+    assert score(weeks(40, 5, size=40), PLAN) < score(weeks(40, 5, size=100), PLAN)
+    # The app's (Phase 16): every place against 100, so place 10 is worth the same in a top 20
+    # and in a top 100; the size only says which places the chart lists.
+    assert score(weeks(10, 5, size=20)) == score(weeks(10, 5, size=100))
+    assert score(weeks(25, 5, size=20)) == 0.0
     # A chart of weight 0.5 counts half: the same weeks give a lower score.
     assert score(weeks(1, 10, weight=0.5)) < score(weeks(1, 10))
     assert score(weeks(1, 10, weight=0.0)) == 0.0

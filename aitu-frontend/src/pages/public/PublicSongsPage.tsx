@@ -118,6 +118,12 @@ export function PublicSongsPage() {
   }, [q, decade, region, genre, tag, sortKey, direction, page, perPage, reload]);
 
   const decadeLabel = decade !== undefined ? answer?.facets.decades.find((one) => Number(one.value) === decade)?.label : undefined;
+  // A region other than worldwide shows that region's popularity (Phase 16).
+  const regionLabel =
+    region !== undefined && region !== "worldwide" ? answer?.facets.regions.find((one) => one.value === region)?.label : undefined;
+  const popularityLabel = [regionLabel ? `in ${regionLabel}` : "", decadeLabel ? `in the ${decadeLabel}` : ""]
+    .filter(Boolean)
+    .join(" ");
   const columns: DataColumn<PublicSongRow>[] = useMemo(
     () => [
       {
@@ -125,7 +131,7 @@ export function PublicSongsPage() {
         label: "Title",
         sortValue: (row) => row.title,
         render: (row) => (
-          <Typography noWrap title={row.title} sx={{ fontSize: 14, fontWeight: 500, maxWidth: 360 }}>
+          <Typography noWrap title={row.title} sx={{ fontSize: 14, fontWeight: 500, maxWidth: 300 }}>
             {row.title}
           </Typography>
         ),
@@ -134,7 +140,7 @@ export function PublicSongsPage() {
         key: "artist",
         label: "Artist",
         render: (row) => (
-          <Typography noWrap title={artistsOf(row)} sx={{ fontSize: 14, color: "text.secondary", maxWidth: 260 }}>
+          <Typography noWrap title={artistsOf(row)} sx={{ fontSize: 14, color: "text.secondary", maxWidth: 210 }}>
             {artistsOf(row) || "–"}
           </Typography>
         ),
@@ -150,9 +156,10 @@ export function PublicSongsPage() {
       },
       {
         key: "popularity",
-        label: decadeLabel ? `Popularity in the ${decadeLabel}` : "Popularity",
+        // On two lines, so the five columns fit the page at 1440 px whatever the titles are.
+        label: popularityLabel ? `Popularity\n${popularityLabel}` : "Popularity",
         align: "right",
-        width: decadeLabel ? 168 : 112,
+        width: popularityLabel ? 150 : 112,
         firstDirection: "desc",
         sortValue: (row) => row.popularity,
         render: (row) => popularityText(row.popularity),
@@ -165,7 +172,7 @@ export function PublicSongsPage() {
         render: (row) => (row.versions > 0 ? row.versions : "–"),
       },
     ],
-    [decadeLabel],
+    [popularityLabel],
   );
 
   const facets = answer?.facets;

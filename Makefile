@@ -38,7 +38,7 @@
 
 .PHONY: serve stop restart status logs-native logs-web logs-api _start _report \
 	up down logs ps build test-backend shell-backend _database db-backup db-restore db-check db-reindex \
-	public-import popularity-check
+	public-import popularity-check regional-download regional-build regional-import
 
 WEB_PORT ?= 5173
 API_HOST ?= $(or $(AITU_HOST),127.0.0.1)
@@ -224,6 +224,19 @@ db-reindex:
 # `ARGS="--database DIR"` writes into another .database/ folder (a copy); `--no-seed`.
 public-import:
 	cd aitu-backend && uv run --no-sync python -m aitu_backend.library.public_import $(ARGS)
+
+# The `spain` and `catalan` regions (Phase 16, context/music-library/regional-sources.md). The
+# download is paced and resumable (`SOURCE=spanishcharts`, `los40`, `kworb`, `apecat`, `wikipedia`);
+# the build reads the saved pages into one database per source; the import writes the public rows
+# and each song's popularity per region (`ARGS="--database DIR"`: a copy). All three on the host.
+regional-download:
+	python3 scripts/music-library-regions/download.py $(SOURCE)
+
+regional-build:
+	python3 scripts/music-library-regions/build.py all
+
+regional-import:
+	cd aitu-backend && uv run --no-sync python -m aitu_backend.library.regional_import $(ARGS)
 
 # The objective criteria of the popularity (Q-6), for the plan's weights and the app's, measured on
 # the downloaded chart history; writes nothing.
