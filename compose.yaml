@@ -9,7 +9,8 @@
 # everything through one port, 5173: http://ubuntu:5173 from the Mac (implementation 02, Phase 4),
 # or the SSH tunnel `scripts/tunnel-from-mac.sh`. Every page asks to sign in.
 #
-# The values come from `.env` beside this file (copy `.env.example`). Only HF_TOKEN has no default.
+# The values come from `.env` beside this file (copy `.env.example`). Only HF_TOKEN and
+# ANTHROPIC_API_KEY have no default.
 
 name: aimpromptu
 
@@ -36,6 +37,8 @@ services:
       AITU_MASTER_PASSWORD: ${AITU_MASTER_PASSWORD:-}
       HF_TOKEN: ${HF_TOKEN:-}
       HF_HUB_CACHE: /hf/hub
+      # The LLM step of the new sheet (implementation 03, Phase 4); empty: the algorithm's sheet.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - .:/work/aimpromptu
       - ${AITU_DATABASE_DIR:-./.database}:/database

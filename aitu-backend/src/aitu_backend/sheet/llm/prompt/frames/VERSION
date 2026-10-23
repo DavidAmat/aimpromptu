@@ -1,0 +1,6 @@
+5
+instructions.md: the system prompt of the new sheet (implementation 03, Phase 4), written from version 4
+(`../instructions.md`): F1 frames in and out, no compases, tempo, puntillos or silencios; the LLM decides the
+hands, the beam groups (plan section 3.11), the clefs and 8va (the left-hand rules of version 4, unchanged), the
+ornaments, the armadura of each passage, and the reference figure (its own request). Figures, grace notes and
+spelling are rules of the app. feedback.md: the message after a rejected answer.
