@@ -388,8 +388,9 @@ has checked the gallery.
 
 ## Phase 3: The engine without compases
 
-**Built 2026-10-23** ([`03-implementation-phase-3.md`](03-implementation-phase-3.md)); waiting for the user's check of
-the gallery (the look of the spacing, and the double line at an armadura change).
+**Done 2026-10-24** ([`03-implementation-phase-3.md`](03-implementation-phase-3.md)). The user checked the gallery
+("perfect"): the spacing is approved, and an armadura change has no double line (the default; `Options.key_line`
+stays available).
 
 *Why:* the bars engine needs compases for its spacing, its accidentals and its line breaks. The new sheet has none, so
 the engine needs a new layout. The look of each element (noteheads, stems, beams, graces, clefs, Leipzig glyphs, the
@@ -562,7 +563,7 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 | Phase | Decision |
 |---|---|
 | 2 | The figure thresholds and the Do mayor spelling (agent, from songs: 0.7, and Do#, Mib, Fa#, Sol#, Sib; user checks the gallery); the cap of a figure at the next onset of its hand, and rule 4 in armaduras of one to three signs (user) |
-| 3 | The look of the spacing without compases, and a thin double line at an armadura change or none (user, in the gallery) |
+| 3 | The look of the spacing without compases (approved), and a thin double line at an armadura change or none (none, the default) (user, in the gallery) |
 | 4 | The API key (human intervention); how many songs the credits cover (information); the beam groups and the maximum of 8 (user, in the gallery) |
 | 5 | Existing projects: keep their corrections or write them again; merge to `master` early or at the end |
 | 6 | May a new LLM run change hands that the user moved; the engine in the backend or in the browser |

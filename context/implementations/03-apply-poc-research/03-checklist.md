@@ -20,7 +20,7 @@ their phase, after its study (plan section 8).
 - [x] **Phase 2**: the cap of a figure at the next onset of its hand: kept (the agent's recommendation; the user said "perfect, proceed").
 - [x] **Phase 2**: rule 4 in armaduras of one to three signs: as written, everywhere (the user did not change it; one condition in `spelling.spell_pc` if they do).
 - [x] **Phase 2**: rule 7 of the alteraciones (user, 2026-10-23): after a becuadro, the first return of that note to its armadura name prints its sostenido or bemol again, when it is in the same beam group or the next note (`frames.printed_signs`; plan section 3.4).
-- [p] **Phase 3**: the look of the spacing without compases, and a thin double line at an armadura change or none (user, in the gallery).
+- [x] **Phase 3**: the look of the spacing without compases (approved: "perfect"); no thin double line at an armadura change (the default; the user did not choose, `Options.key_line` stays available).
 - [ ] **Phase 4**: the API key (human intervention); how many songs the credits cover (information); the beam groups and the maximum of 8 notes (user, in the gallery).
 - [ ] **Phase 5**: existing projects, keep their corrections or write them again with the LLM; merge into `master` early or at the end.
 - [ ] **Phase 6**: may a new LLM run change hands that the user moved; the engine in the backend or in the browser.
@@ -55,9 +55,9 @@ Done 2026-10-23. Report: [`03-implementation-phase-2.md`](03-implementation-phas
 - [x] Task 2.6 The algorithm (`propose_frames`) writes this sheet for every library song, with the simple beam rules; its starting hands from `pipeline.starting_hands` (the saved hands and the hand split).
 - [x] Task 2.7 Gallery for the user (figures, graces, alteraciones, the unusual cases of rule 4): `gallery/phase-2/index.html`, 15 cases (case 14, rule 7, added after the check), checked by the user after two iterations (beam groups of one figure, acciaccaturas, whole groups drawn).
 
-# [p] Phase 3: The engine without compases
+# [x] Phase 3: The engine without compases
 
-Built 2026-10-23. Report: [`03-implementation-phase-3.md`](03-implementation-phase-3.md). Waiting for the user's check of the gallery.
+Done 2026-10-24. Report: [`03-implementation-phase-3.md`](03-implementation-phase-3.md).
 
 - [x] Task 3.1 Study: which parts of `engrave` depend on compases (chords, voices, rests, accidentals, columns, spacing, line breaks); the drawing of each element is reused. The new layout is `engrave/frames.py`.
 - [x] Task 3.2 Spacing: one x per onset frame for both hands, the measured model on the time to the next column, empty time beyond a blanca kept at 30 %; figures not read.
@@ -65,7 +65,7 @@ Built 2026-10-23. Report: [`03-implementation-phase-3.md`](03-implementation-pha
 - [x] Task 3.4 Accidentals by `frames.printed_signs` (rules 1 and 7); no rests, compás lines, meter or bar numbers; armadura and clef changes inside a line.
 - [x] Task 3.5 Cursor map and note ids; one segment drawn with the line breaks of the whole song (`render_frames(segment=...)`).
 - [x] Task 3.6 Speed in the container: 58 ms per song warm (median of 33), 31 ms per 10 s segment; uv's Python measured (32 % to 8 % slower than the host), the image change left to Phase 5.
-- [p] Task 3.7 Gallery: [`gallery/phase-3/index.html`](gallery/phase-3/index.html), 8 passages (vexflow-v2, the bars engine, the new engine) and one whole song. Waiting for the user's check.
+- [x] Task 3.7 Gallery: [`gallery/phase-3/index.html`](gallery/phase-3/index.html), 8 passages (vexflow-v2, the bars engine, the new engine) and one whole song, checked by the user ("perfect").
 
 # [ ] Phase 4: The LLM step for the new sheet
 

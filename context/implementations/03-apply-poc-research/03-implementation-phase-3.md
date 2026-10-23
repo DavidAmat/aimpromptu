@@ -2,8 +2,9 @@
 
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 3. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (`master` had not moved since Phase 2, so nothing was merged in). Written 2026-10-23 on the
-Ubuntu machine. No change visible in the app: no route or page uses the new engine yet. **Built; waiting for the
-user's check of the gallery** ([`gallery/phase-3/index.html`](gallery/phase-3/index.html)), which closes the phase.
+Ubuntu machine. No change visible in the app: no route or page uses the new engine yet. **Done 2026-10-24**: the
+user checked the gallery ([`gallery/phase-3/index.html`](gallery/phase-3/index.html)) and said "perfect"; the two
+decisions of section 10 were closed as section 10.3 says.
 
 # 1. Summary
 
@@ -230,6 +231,12 @@ Without compases, an armadura change in the middle of a line has no barline befo
 as an accidental of the next chord. Classical scores put a thin double line there. Options: (a) no line, only the
 room around the signs (the default now); (b) the thin double line, which is not a compás line. Gallery case 8 shows
 both. The change is one option (`Options.key_line`).
+
+## 10.3 How they were closed
+
+The user answered the gallery with "perfect" (2026-10-24) and did not choose between the options of 10.2. The
+spacing of section 3 is approved as it is, and the armadura change keeps the default (a), no line;
+`Options.key_line` stays available if the user asks for the double line later.
 
 # 11. Notes for later phases
 
