@@ -1,0 +1,22 @@
+# 03: The new sheet in aimpromptu (applying the research)
+
+**State: live. Phase 0 done (2026-10-23); Phase 1 is next.** Opened 2026-10-23 on the branch
+`feat/migrate-new-logic` (one branch for the whole migration, plan section 6.3).
+
+Research plan 01 (the folder `/home/david/Documents/projects/music/poc-aitu-research` on the Ubuntu machine) built a
+new chain for the piano sheet: an algorithm, an LLM step with Sonnet 5.5, and an engine that draws the sheet as SVG.
+This implementation replaces vexflow-v2 (`@aimpromptu/grid-notation`) with that chain, adapted to the user's
+decisions of 2026-10-23: no compases, no tempo, no puntillos and no silencios on the sheet, the Hands step removed,
+and the LLM working in the background while the algorithm's sheet is already on screen.
+
+The brief is [`03-prompt.md`](03-prompt.md), the plan is [`03-plan.md`](03-plan.md) and the status lookup is
+[`03-checklist.md`](03-checklist.md). Phase reports go beside them as `03-implementation-phase-N.md`, following
+[`../../language/communication-implementation-plans.md`](../../language/communication-implementation-plans.md).
+
+| File | What it is |
+|---|---|
+| [`03-apply-research-prompt.md`](03-apply-research-prompt.md) | The first message to the Phase 0 agent, in the user's words |
+| [`03-prompt.md`](03-prompt.md) | The brief: the user's answers of the second discussion (in Spanish), a copy of the research's `05-final-report-prompt.md` |
+| [`03-plan.md`](03-plan.md) | The plan: the decisions, the binding rules, what is reused, the method, eleven phases (0 to 10), the decision points, the risks, and the changes the phases made (section 11). A copy of the research's `05-final-report.md`, now the living plan |
+| [`03-checklist.md`](03-checklist.md) | The status lookup, and the open decisions |
+| [`03-implementation-phase-0.md`](03-implementation-phase-0.md) | Phase 0: the research folder checked on Ubuntu, the branch, the inventory of everything that uses vexflow-v2, the baseline (screenshots in [`screenshots/phase-0/`](screenshots/phase-0/), test counts) |

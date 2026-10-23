@@ -100,7 +100,20 @@ assumes.
 
 | File | Description |
 |------|-------------|
-| [implementations/README.md](implementations/README.md) | **Start here.** The two groups (`01-mvp/`, `02-private-web-app/`), every implementation with its state, and the numbering rule |
+| [implementations/README.md](implementations/README.md) | **Start here.** The three groups (`01-mvp/`, `02-private-web-app/`, `03-apply-poc-research/`), every implementation with its state, and the numbering rule |
+
+### 03 — The new sheet (applying the research) — LIVE (opened 2026-10-23)
+
+vexflow-v2 replaced by the chain of research plan 01 (the algorithm, the LLM step with Sonnet 5.5, the SVG engine),
+with no compases, tempo, puntillos or silencios on the sheet and no Hands step. On the branch `feat/migrate-new-logic`.
+
+| File | Description |
+|------|-------------|
+| [implementations/03-apply-poc-research/README.md](implementations/03-apply-poc-research/README.md) | What it is, and every file in the folder |
+| [implementations/03-apply-poc-research/03-prompt.md](implementations/03-apply-poc-research/03-prompt.md) | The brief, in the user's own words (Spanish) |
+| [implementations/03-apply-poc-research/03-plan.md](implementations/03-apply-poc-research/03-plan.md) | **The plan.** The decisions of 2026-10-23, the binding rules, eleven phases from the core in the backend to vexflow-v2 removed |
+| [implementations/03-apply-poc-research/03-checklist.md](implementations/03-apply-poc-research/03-checklist.md) | THE status lookup for this implementation, and the open decisions |
+| `implementations/03-apply-poc-research/03-implementation-phase-N.md` | One report per finished phase (Phase 0: the inventory of everything that uses vexflow-v2) |
 
 ### 02 — The private web app — LIVE (Phases 16 and 17 added 2026-10-18)
 
