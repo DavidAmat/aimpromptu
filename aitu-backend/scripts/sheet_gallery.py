@@ -179,9 +179,12 @@ def passage(sheet: Sheet, a: int, b: int) -> Sheet:
         if f <= a:
             clefs[st] = c
     inside = [replace(n) for n in sheet.notes if a <= n.frame < b]
-    cut = {n.beam for n in sheet.notes if n.beam is not None and not a <= n.frame < b}
-    for n in inside:  # a beam group that the passage cuts is not drawn
-        if n.beam in cut:
+    count: dict[int, set[int]] = defaultdict(set)
+    for n in inside:
+        if n.beam is not None:
+            count[n.beam].add(n.frame)
+    for n in inside:  # a group with one column left inside would be a beam of one note
+        if n.beam is not None and len(count[n.beam]) < 2:
             n.beam = None
     return Sheet(
         notes=inside,
@@ -191,6 +194,25 @@ def passage(sheet: Sheet, a: int, b: int) -> Sheet:
         key_changes=[k for k in sheet.key_changes if a < k[0] < b],
         quarter_ms=sheet.quarter_ms,
     ).sort()
+
+
+def whole_groups(sheet: Sheet, a: int, b: int) -> tuple[int, int]:
+    """Columns [a, b) widened so that no beam group is cut, and so that the grace notes of the first note are in."""
+    groups: dict[int, list[int]] = defaultdict(list)
+    for n in sheet.notes:
+        if n.beam is not None:
+            groups[n.beam].append(n.frame)
+    while True:
+        a0, b0 = a, b
+        for frames_of in groups.values():
+            if any(a <= f < b for f in frames_of):
+                a, b = min(a, min(frames_of)), max(b, max(frames_of) + 1)
+        before = [n for n in sheet.notes if n.frame < a]
+        last = max((n.frame for n in before), default=None)
+        if last is not None and all(n.grace for n in before if n.frame == last):
+            a = last
+        if (a, b) == (a0, b0):
+            return a, b
 
 
 def as_becuadro(sheet: Sheet) -> Sheet:
@@ -280,10 +302,12 @@ def to_mei(sheet: Sheet) -> str:
     end = max(free.values())
     layers: dict[int, list[list[str]]] = {1: [[]], 2: [[]]}
     octaves: list[tuple[int, str, str]] = []
+    # beam groups as beamSpan with the list of their notes: the invisible spaces between them are not members, so
+    # Verovio draws no short beam for a space (the floating "dash" between two stems)
+    beams: dict[tuple[int, int], tuple[int, list[str]]] = {}
     for st in (1, 2):
         cursor = 0
         pending: list[str] = []  # grace notes and clef changes before the next main note
-        beam_open = None
         run: list[str] = []
         clef_at = {f: c for f, s, c in sheet.clef_changes if s == st}
         seg = 0
@@ -295,9 +319,6 @@ def to_mei(sheet: Sheet) -> str:
 
         for f in frames_all:
             if f in bounds:
-                if beam_open is not None:
-                    layers[st][seg].append("</beam>")
-                    beam_open = None
                 layers[st][seg] += _space(tick[f] - cursor)
                 cursor = tick[f]
                 flush_run()
@@ -315,13 +336,9 @@ def to_mei(sheet: Sheet) -> str:
                 pending.append(_element(ns, key, nid))
             else:
                 b = ns[0].beam
-                if beam_open is not None and b != beam_open:
-                    layers[st][seg].append("</beam>")
-                    beam_open = None
+                if b is not None:
+                    beams.setdefault((st, b), (seg, []))[1].append(nid)
                 layers[st][seg] += _space(tick[f] - cursor)
-                if b is not None and beam_open is None:
-                    layers[st][seg].append("<beam>")
-                    beam_open = b
                 layers[st][seg] += pending + [_element(ns, key, nid)]
                 pending = []
                 cursor = tick[f] + TICKS * 4 // ns[0].figure
@@ -329,8 +346,6 @@ def to_mei(sheet: Sheet) -> str:
                 run.append(nid)
             else:
                 flush_run()
-        if beam_open is not None:
-            layers[st][seg].append("</beam>")
         layers[st][seg] += _space(end - cursor)
         flush_run()
     keys = [sheet.key or 0] + [k for _, k in sorted(sheet.key_changes)]
@@ -344,6 +359,12 @@ def to_mei(sheet: Sheet) -> str:
             f'<octave staff="{st}" dis="8" dis.place="above" startid="#{a}" endid="#{b}"/>'
             for st, a, b in octaves
             if any(a in x for x in layers[st][i])
+        )
+        oct_xml += "".join(
+            f'<beamSpan staff="{st}" startid="#{ids[0]}" endid="#{ids[-1]}" '
+            f'plist="{" ".join("#" + x for x in ids)}"/>'
+            for (st, _), (seg_of, ids) in beams.items()
+            if seg_of == i and len(ids) > 1
         )
         if i:
             measures.append(f'<scoreDef keysig="{keysig(k)}"/>')
@@ -414,7 +435,8 @@ def build(out: Path) -> None:
                 and key_alter(at(n.frame), n.step) != n.alter
             )
             start = max(0, start - 40)
-        part = passage(sheet, start, start + SPAN)
+        start, end = whole_groups(sheet, start, start + SPAN)
+        part = passage(sheet, start, end)
         drawings = [("The new sheet", render(to_mei(part)))]
         if variant == "raw":
             raw = replace(sheet, notes=[replace(n) for n in sheet.notes])
@@ -426,7 +448,7 @@ def build(out: Path) -> None:
             drawings.append(
                 (
                     "The same notes with the raw length (no cap)",
-                    render(to_mei(passage(raw, start, start + SPAN))),
+                    render(to_mei(passage(raw, start, end))),
                 )
             )
         if variant == "becuadro":
@@ -449,7 +471,7 @@ def build(out: Path) -> None:
         sections[section].append(
             f'<section id="{anchor}"><h3>{no}. {html.escape(title)}</h3>'
             f'<p class="look">{html.escape(look)}</p>'
-            f'<p class="where">{html.escape(song)}, from {when} (columns f{start} to f{start + SPAN - 1}). '
+            f'<p class="where">{html.escape(song)}, from {when} (columns f{start} to f{end - 1}). '
             f"Reference figure: {figs}.</p>{body}"
             f"<details><summary>F1 text</summary><pre>{html.escape(chr(10).join(text))}</pre></details></section>"
         )

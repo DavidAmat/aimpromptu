@@ -405,3 +405,24 @@ Library after the change (33 songs, every sheet valid, every round trip exact):
 
 Tests: `test_a_beam_group_holds_one_figure`, and `test_grace_notes_by_the_two_step_rule` with the new limits (16
 tests in `test_sheet_frames.py`).
+
+# 14. The user's review (iteration 2, 2026-10-23)
+
+Two errors the user found, both real:
+
+1. **Three semicorcheas of one group drawn without their beam** (case 6, Superestrella). The sheet had them in one
+   group (`b33`), but the gallery dropped every group its passage cut, to remove the one-note beam of iteration 1.
+   The gallery now widens each passage to whole beam groups and to the grace notes of its first note
+   (`whole_groups`); a check over the 14 cases confirms that every group touching a passage is drawn whole.
+2. **Short beams that do not touch their stem.** The MEI put the invisible spaces (the gaps in time) inside
+   `<beam>`, and Verovio drew a short beam for each space of a semicorchea or shorter, between two stems. The gallery
+   now writes each group as a `beamSpan` whose `plist` lists its notes only.
+
+The user also asked to be certain that consecutive notes of one figure are never separated without a reason. A check
+over the library took every pair of consecutive columns of one hand with the same beamable figure and no shared beam.
+It found 23 pairs separated by no rule: a turn cut left the last note of a chain alone, or a turn followed by a jump
+left one note between them. `_split` now lets only a jump leave a note alone (a note that a turn would leave alone
+stays with the group before or after it), and splits at the maximum of 8 into near-equal parts (never a lone note).
+After the fix, every such pair has a reason: a gap longer than a corchea 533, a jump of more than an octave 868, a turn
+or the maximum of 8 757, and one pair whose gap is 520 ms in whole columns but longer than the corchea limit (524 ms)
+on the real onsets. Library: 5,846 beam groups, 33 of 33 sheets valid, every round trip exact.

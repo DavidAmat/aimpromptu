@@ -166,9 +166,11 @@ def _outer(ns: list[Note], staff: int) -> int:
 
 
 def _split(chain: list[int], pitch: list[int], why: Counter) -> list[list[int]]:
-    """Cut one chain of beamable columns: jumps, turns after a run, then parts of at most ``MAX_BEAM``. ``why``
-    counts the cuts by reason."""
+    """Cut one chain of beamable columns: jumps, turns after a run, then near-equal parts of at most ``MAX_BEAM``.
+    Only a jump may leave a note alone: a note that a turn would leave alone stays with the group before it (or after
+    it). ``why`` counts the cuts by reason."""
     parts, cur = [], [chain[0]]
+    cut_by: list[str] = []  # the reason of the cut before each part after the first
     run_dir, run_len = 0, 0
     for a, b in zip(chain, chain[1:]):
         step = pitch[b] - pitch[a]
@@ -176,8 +178,8 @@ def _split(chain: list[int], pitch: list[int], why: Counter) -> list[list[int]]:
         jump = abs(step) > JUMP
         turn = d != 0 and run_dir != 0 and d != run_dir and run_len >= TURN_RUN
         if jump or turn:
-            why["cut at a jump" if jump else "cut at a turn"] += 1
             parts.append(cur)
+            cut_by.append("jump" if jump else "turn")
             cur = [b]
             run_dir, run_len = 0, 0
             continue
@@ -186,11 +188,27 @@ def _split(chain: list[int], pitch: list[int], why: Counter) -> list[list[int]]:
             run_len = run_len + 1 if d == run_dir else 1
             run_dir = d
     parts.append(cur)
+    i = 0
+    while i < len(parts):  # a lone note after or before a turn joins its neighbour
+        if len(parts[i]) == 1 and i > 0 and cut_by[i - 1] == "turn":
+            parts[i - 1] += parts.pop(i)
+            cut_by.pop(i - 1)
+            continue
+        if len(parts[i]) == 1 and i + 1 < len(parts) and cut_by[i] == "turn":
+            parts[i] += parts.pop(i + 1)
+            cut_by.pop(i)
+            continue
+        i += 1
+    for reason in cut_by:
+        why["cut at a jump" if reason == "jump" else "cut at a turn"] += 1
     out = []
     for p in parts:
         k = -(-len(p) // frames_mod.MAX_BEAM)
-        size = -(-len(p) // k)
-        out += [p[i : i + size] for i in range(0, len(p), size)]
+        sizes = [len(p) // k + (1 if j < len(p) % k else 0) for j in range(k)]
+        at = 0
+        for size in sizes:
+            out.append(p[at : at + size])
+            at += size
         why["cut at 8"] += k - 1
     return out
 

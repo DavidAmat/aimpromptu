@@ -139,6 +139,10 @@ def test_beam_groups_have_at_most_8_notes_and_cut_at_jumps_and_turns() -> None:
         [n.midi for n in sheet.notes if n.beam == b] for b in sorted({n.beam for n in sheet.notes})
     ]
     assert groups == [[60, 62, 64, 65, 67], [65, 64, 62]]  # the rise, then the fall
+    # a rise of three steps and one note back: no cut, the last note does not stay alone
+    back = [(60 + p, i * 250.0, 240.0, R) for i, p in enumerate([0, 2, 4, 5, 4])]
+    sheet = algo.propose_frames(notes_of(back), quarter_ms=q).sheet
+    assert len({n.beam for n in sheet.notes}) == 1 and None not in {n.beam for n in sheet.notes}
 
 
 def test_a_beam_group_holds_one_figure() -> None:
