@@ -4,7 +4,8 @@ Status: copied into the backend in implementation 03, Phase 1 (2026-10-23), from
 research repository (`poc-aitu-research`, git `a208a92`, version 0.1.0 of research plan 01, phase 15). Audience: the
 agents of implementation 03 (`context/implementations/03-apply-poc-research/`). Everything below is the research
 README with the names of the backend: `aitu_notation.X` of the research is `aitu_backend.sheet.X` here. The copy
-changed no logic; the golden files of section 7 prove it.
+changed no logic; the golden files of section 7 prove it. Phase 2 added the new sheet without compases (section 9):
+the bars path below is unchanged, and so are its golden files.
 
 ## 1. What it does
 
@@ -31,8 +32,8 @@ enforce it.
 
 | module | input -> output | public functions |
 |---|---|---|
-| `sheet` | - | `Note`, `Bar`, `Sheet` (`sheet.data`); `f1.read(text) -> Sheet`, `f1.write(sheet, mode="bars"/"frames", anchors=bool) -> str`, `F1Error`; `matrix.sheet_from_matrix(notes, key=) -> Sheet` (frames sheet), `matrix.cells(notes)`; `pmn.notes_from_pmn(body) -> Notes`, `pmn.key_of_sheet_json(sheet_json) -> int` |
-| `proposal` | `Notes` + hands -> F1 bars sheet | `propose(notes, *, key, key_changes=None, hand_sheet=None, track=False, quarter_ms=None, meter=None, phase_ms=None, beams="classical") -> Proposal` (`.sheet`, `.quarter_ms`, `.meter`, `.phase_ms`); `hand_sheet_of(notes, key=)` |
+| `sheet` | - | `Note`, `Bar`, `Sheet` (`sheet.data`); `f1.read(text) -> Sheet`, `f1.write(sheet, mode="bars"/"frames", anchors=bool) -> str`, `F1Error`; `matrix.sheet_from_matrix(notes, key=) -> Sheet` (frames sheet), `matrix.cells(notes)`; `pmn.notes_from_pmn(body) -> Notes`, `pmn.key_of_sheet_json(sheet_json) -> int`. The new sheet (section 9): `frames.from_notes(notes, key=) -> Sheet`, `frames.check(sheet) -> list[str]`, `frames.cells_of(sheet, notes)`, `frames.matrix_cells(notes)`, `frames.key_at(sheet)`; `figures.figure_of_ms(ms, quarter_ms, split=0.7)`; `spelling.spell(midi, key)`, `spelling.sign(step, alter, key)`, `spelling.check_rules()` |
+| `proposal` | `Notes` + hands -> F1 bars sheet | `propose(notes, *, key, key_changes=None, hand_sheet=None, track=False, quarter_ms=None, meter=None, phase_ms=None, beams="classical") -> Proposal` (`.sheet`, `.quarter_ms`, `.meter`, `.phase_ms`); `hand_sheet_of(notes, key=)`. The new sheet: `frames.propose_frames(notes, *, key=None, key_changes=None, quarter_ms=None) -> FramesProposal` (`.sheet`, `.quarter_ms`, `.info`) |
 | `llm` | `Notes` -> F1 bars sheet | `write_song(notes, complete, *, key, sid="song", hand_sheet=None, max_checks=3, guards=True, max_windows=None, on_window=None) -> SongSheet`; `windows.check(answer, target) -> (errors, sheet)`, `windows.answer_text(reply)`, `guards.guard_errors(sheet)`; `prompts.instructions()`, `prompts.window_prompt(...)`, `prompts.feedback(errors)` |
 | `engrave` | F1 bars sheet -> SVG | `engrave(sheet, Options()) -> Engraving`, `to_svg(engraving, px_per_space=10, note_ids=False, id_prefix="")`, `render(sheet)`; `cursor.render_song(text, note_ids=True) -> Rendered` |
 
@@ -117,8 +118,49 @@ The tests are in the backend's `tests/` (pytest): `test_sheet_core_golden.py` ch
 `tests/golden/sheet/` (`golden/sheet/README.md`), `test_sheet_core_chain.py` the import boundary, the frozen files and
 the chain (feedback turn, fallback). Any port (a TypeScript engine) must reproduce the golden files, and a phase that
 changes them on purpose says why in its report.
+`tests/test_sheet_frames.py` checks the new sheet of section 9 (figures, spelling, grace notes, beam groups, the
+armadura, the frames text and the round trip, the starting hands).
 
 ## 8. Licenses to check before a release
 
 `engrave/vrv.py` ports drawing rules from Verovio (LGPL-3.0); the Leipzig glyphs are SIL OFL 1.1
 (`synthesis/04-engine.md` §4.6).
+
+## 9. The new sheet without compases (implementation 03, Phase 2)
+
+The product sheet is the F1 **frames** view with the user's rules (plan section 3): no compases, no tempo, no
+puntillos, no tuplets, no silencios. Measurements and reasons: `context/implementations/03-apply-poc-research/
+03-implementation-phase-2.md`.
+
+```text
+notes.pmn + starting hands (pipeline.starting_hands: the saved hands, the hand split for the rest)
+   |
+   | proposal.frames.propose_frames (the algorithm, ~0.2 s per song)
+   v
+F1 frames sheet:  F1 frames frameMs=40 quarterMs=500
+                  key=3# clefs: R=treble L=bass
+                  f8       L: E3:4  R: C#5:8 b1
+```
+
+- **Drawn column.** Notes are grouped on raw onsets, 40 ms from the first onset of a group, both hands, no chaining
+  (D-04), and drawn at the column of the group's first onset: a note sits at its own onset cell or one column
+  before. `frames.cells_of` maps a sheet back to the onset cells (the round trip with the matrix: exact on the 33
+  songs of My library).
+- **Figures** (`figures`): the nearest plain figure to the note's own length, not past the next onset of its hand;
+  middle points from the negra up, 70 % of the way for the corchea and shorter; one figure per chord and per run of
+  even gaps. The reference figure is `Sheet.quarter_ms` (the pulse estimate of `proposal.beat` unless given).
+- **Spelling** (`spelling`): one name per key and armadura, by the user's rules 1 to 5; in Do mayor Do#, Mib, Fa#,
+  Sol#, Sib. Every note outside the armadura prints its sign every time (`spelling.sign`).
+- **The algorithm** (`proposal.frames`) also writes grace notes (two figures shorter than the next note, at most
+  100 ms before it, not the same note name), beam groups (corcheas and shorter no farther apart than a corchea; cut at
+  a jump of more than an octave, at a turn after three steps, and into parts of at most 8), the armadura of each
+  passage (fewest signs, a cost per change), clefs and 8va (the left-hand rules of the prompt, version 4).
+- **F1 additions** (both views; the bars output is unchanged): the header field `quarterMs=` of the frames view, and
+  the tag `orn` (an onset played inside the ornament of the note before it: kept for the matrix, not drawn).
+- **Data additions**: `Note.covered` (`orn`), `Note.on_ms` and `Note.len_ms` (measured, not written in F1),
+  `Sheet.quarter_ms`.
+- `frames.check(sheet)` lists what breaks the product rules (no compases, a hand and a plain figure on every note,
+  the spelling rule, one figure per chord, beam groups of 2 to 8 consecutive notes, grace notes followed by a note,
+  no 8va in the bass clef). The LLM step of Phase 4 uses it as its checker.
+- Commands: `scripts/write_sheet.py` (the sheet of parts, checked), `scripts/sheet_gallery.py` (the Phase 2
+  gallery, drawn by Verovio).

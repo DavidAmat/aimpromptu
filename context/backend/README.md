@@ -33,7 +33,7 @@ Full reasoning: [time-model.md](time-model.md).
 | The grid and its measurement | `matrix/` | Frame ↔ ms, gaps, peaks, the ladder, passages, figure bands |
 | Hands | `hands/` | Which hand plays each onset: a beam search with a gated second pass |
 | Naming notes | `notation/` | Figures, tresillos, trills |
-| The new sheet | `sheet/` | The chain of implementation 03, copied from the research core in its Phase 1: the F1 text, the algorithm (`proposal`), the LLM step (`llm`), the engine (`engrave`). No route uses it yet; `scripts/draw_sheet.py` draws parts with it. Contracts in `src/aitu_backend/sheet/README.md` |
+| The new sheet | `sheet/` | The chain of implementation 03, copied from the research core in its Phase 1: the F1 text, the algorithm (`proposal`), the LLM step (`llm`), the engine (`engrave`). Since Phase 2 also the new sheet without compases (the F1 frames view: `sheet/frames.py`, `figures.py`, `spelling.py`, `proposal/frames.py`) and `transcription/pipeline.starting_hands`. No route uses it yet; `scripts/draw_sheet.py` draws parts with the bars engine, `scripts/write_sheet.py` writes and checks the new sheet, `scripts/sheet_gallery.py` builds the Phase 2 gallery. Contracts in `src/aitu_backend/sheet/README.md` |
 | Contracts | `schemas/` | Pydantic models, camelCase on the wire, mirrored in TypeScript |
 | Editing | `editing/` | The replacement splice, composing, staging, history |
 | Persistence | `storage/` | Every path in one module (`paths.py`); the project bundle, the audio store, finding the project of a part |

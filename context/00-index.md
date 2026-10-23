@@ -113,7 +113,7 @@ with no compases, tempo, puntillos or silencios on the sheet and no Hands step. 
 | [implementations/03-apply-poc-research/03-prompt.md](implementations/03-apply-poc-research/03-prompt.md) | The brief, in the user's own words (Spanish) |
 | [implementations/03-apply-poc-research/03-plan.md](implementations/03-apply-poc-research/03-plan.md) | **The plan.** The decisions of 2026-10-23, the binding rules, eleven phases from the core in the backend to vexflow-v2 removed |
 | [implementations/03-apply-poc-research/03-checklist.md](implementations/03-apply-poc-research/03-checklist.md) | THE status lookup for this implementation, and the open decisions |
-| `implementations/03-apply-poc-research/03-implementation-phase-N.md` | One report per finished phase (Phase 0: the inventory of everything that uses vexflow-v2; Phase 1: the core in the backend) |
+| `implementations/03-apply-poc-research/03-implementation-phase-N.md` | One report per phase (Phase 0: the inventory of everything that uses vexflow-v2; Phase 1: the core in the backend; Phase 2: the new sheet without compases, and its gallery in `gallery/phase-2/`) |
 
 ### 02 — The private web app — LIVE (Phases 16 and 17 added 2026-10-18)
 

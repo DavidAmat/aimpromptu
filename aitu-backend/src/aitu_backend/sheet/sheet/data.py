@@ -80,6 +80,15 @@ class Note:
     ref: str | None = field(
         default=None, compare=False
     )  # engine: SVG ids of the note and of unisons merged into it
+    covered: bool = (
+        False  # played inside the ornament of the note before it (``orn``): kept, not drawn
+    )
+    on_ms: float | None = field(
+        default=None, compare=False
+    )  # measured onset (new sheet; not in F1)
+    len_ms: float | None = field(
+        default=None, compare=False
+    )  # measured length (new sheet; not in F1)
 
     @property
     def midi(self) -> int:
@@ -106,6 +115,7 @@ class Sheet:
     key: int | None = None  # key signature of a frames sheet (bars carry it otherwise)
     key_changes: list[tuple[int, int]] = field(default_factory=list)  # frames sheet: (frame, key)
     tempo: float | None = None  # quarter notes per minute (frames sheets; for the matrix)
+    quarter_ms: float | None = None  # the reference figure of the new sheet: one negra, in ms
 
     def sort(self) -> "Sheet":
         self.notes.sort(key=note_order)

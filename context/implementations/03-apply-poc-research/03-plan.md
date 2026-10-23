@@ -118,6 +118,10 @@ the criteria and limits of section 3.11.
   corchea: fusa, semicorchea, corchea) is drawn as a small grace note (acciaccatura or short appoggiatura), so that the
   eye goes to the main note.
 - Trills, turns (grupetto) and mordents may be written when they are clear.
+- *Phase 2 (measured on the 10 viewer songs):* the split is 0.7. The length is capped at the next onset of the same
+  hand, because under the pedal the measured length runs past it (pending the user's decision); a note followed by
+  silence keeps its own figure. Chords and runs of even gaps take one figure. A grace note is also at most 100 ms
+  before its main note and does not share its note name. Tuplets are not in the new sheet.
 
 ## 3.4 Alteraciones (the user's rules)
 
@@ -137,7 +141,10 @@ The classical rule "an accidental lasts until the end of the compás" disappears
 Rules 1 to 5 make the spelling a pure function of the pitch and the armadura of the passage. Phase 2 checks this and,
 if it holds, makes the spelling a rule of the core; the LLM then decides only the armadura of each passage (rule 6).
 This also makes transposition simple: the spelling is computed again from the new armadura. The case of Do mayor (no
-armadura, so rule 5 gives no answer) is decided in phase 2.
+armadura, so rule 5 gives no answer) is decided in phase 2. *Phase 2:* rules 1 to 5 hold as a function
+(`aitu_backend.sheet.sheet.spelling`). Rule 4 keeps the becuadro when the key has no other name with one sign (Sol, Re,
+La in Mi mayor). Do mayor: Do#, Mib, Fa#, Sol#, Sib. Rule 4 in armaduras of one to three signs (Mi# in Sol mayor, Si#
+in Re and La mayor, Dob in Fa mayor) is a decision for the user.
 
 ## 3.5 The flow of a project
 
@@ -329,6 +336,9 @@ the report. No change to the app.
 
 ## Phase 2: The new sheet without compases (format and algorithm)
 
+**In progress 2026-10-23: built and measured; waiting for the user's check of the gallery and two decisions**
+([`03-implementation-phase-2.md`](03-implementation-phase-2.md) section 10).
+
 *Why:* the product sheet is now the F1 frames sheet with the rules of section 3. The format, its reader and writer, and
 the algorithm that writes it come before the engine and the LLM, because both depend on them.
 
@@ -338,17 +348,26 @@ the algorithm that writes it come before the engine and the LLM, because both de
    passage, 8va; no rests, no compases. Reader, writer and round trip with the matrix (every onset kept).
 3. **Figures from the note's own length** with the reference figure, and the thresholds of section 3.3, tuned on the 10
    viewer songs (MuScriptor's note lengths may be noisy under the pedal: measure it). Decide one figure per chord per
-   hand when its notes have different lengths.
-4. **Grace notes** from the two-step rule (section 3.3).
+   hand when its notes have different lengths. *Done:* the split is 0.7; under the pedal 23 to 60 % of the notes sound
+   past the next onset of their hand, so the length is capped there (a decision for the user); one figure per chord
+   (the most common) and per run of even gaps. Notes struck together are grouped on raw onsets first (D-04), or the
+   first note of an uneven chord becomes a false grace note.
+4. **Grace notes** from the two-step rule (section 3.3). *Done,* with two limits measured on the songs: at most 100 ms
+   before the next note, and not the same note name as the main chord (an octave played unevenly).
 5. **Alteraciones** (section 3.4): check that rules 1 to 5 give one spelling per pitch and armadura; write it as a rule
-   of the core; decide Do mayor; the algorithm proposes the armadura of each passage with the fewest signs.
+   of the core; decide Do mayor; the algorithm proposes the armadura of each passage with the fewest signs. *Done:*
+   one name for every key and armadura (`spelling.check_rules`); Do mayor Do#, Mib, Fa#, Sol#, Sib (research
+   rulebook); rule 4 in armaduras of one to three signs is a decision for the user (95 of its 110 notes in the
+   library).
 6. The algorithm (`proposal`) writes this sheet for every library song, with the simple beam rules of section 3.11
    (at most 8 notes, a cut at a large jump or where the direction changes after a run). Its starting hands are the
    saved hands plus the beam search of `aitu_backend.hands` for the notes that have none (`hand_sheet`), as in the
    research: Phase 1 found 1,652 notes without a saved hand in 32 of the 33 library songs, and the core's default
-   (`hand_sheet_of`) gives those a hand by middle C only.
+   (`hand_sheet_of`) gives those a hand by middle C only. *Done:* `propose_frames`, `pipeline.starting_hands`,
+   `scripts/write_sheet.py`: 33 of 33 songs valid, round trip exact, about 0.2 s per song after the hands.
 7. Gallery for the user: the same passages as text and as notes for figures, graces and alteraciones, including the
    unusual cases of rule 4 (for example Mi# and Si# in Mi mayor), so that the user confirms the rules by eye.
+   *Built:* `gallery/phase-2/index.html` (14 cases, drawn by Verovio until the Phase 3 engine exists).
 
 *Done when:* every library song gets a valid F1 frames sheet from the algorithm, the round trip is exact, and the user
 has checked the gallery.
@@ -365,7 +384,9 @@ Verovio drawing rules) stays.
    in either hand; compressed width when neither hand plays. Start from the measured spacing model and tune by eye.
 3. **Line breaks** without compases (for example between beam groups, at the larger gaps); a stable rule so that a
    changed segment moves the rest of the sheet as little as possible (the piece-by-piece view of phase 5 needs this).
-4. Accidentals on every altered note (section 3.4), no rests, no compás lines, no meter, no bar numbers.
+4. Accidentals on every altered note (section 3.4: `spelling.sign`, no memory), no rests, no compás lines, no meter,
+   no bar numbers. A figure may be longer than the gap to the next note (it is rounded to the nearest figure), so the
+   spacing must not read figures as durations.
 5. Cursor map and note ids, as in the research (`render_song`), and drawing **one segment** on its own.
 6. Speed: per song and per segment, cold and warm, on the 10 viewer songs, in the backend container. Phase 1 found
    the container about 30 % slower than the host on the same code (155 ms against 118 ms per song); the likely cause
@@ -392,7 +413,10 @@ and ornaments, the armadura of each passage, and the reference figure on the fir
    change of direction and by a repeated contour), the clef rules version 4 unchanged. Windows by onsets or by time
    instead of compases.
 4. The checker and the guards (beam share, beam overlaps, and at most 8 notes per beam group) for the new format; the
-   fallback to the algorithm.
+   fallback to the algorithm. The checker is `frames.check`; an answer is mapped back to the notes
+   (`frames.cells_of`) and its figures are computed again by the rule (they need the measured lengths). Phase 2 left
+   two points for the LLM: octaves played 40 to 80 ms apart stay two columns (the LLM may join them with `arp`), and
+   tuplets are out of the product sheet unless this phase shows that the LLM's triplets read better.
 5. Test on a few windows, then the 10 viewer songs. Compare with the recorded Sonnet sheets of the research (same hands,
    beam groups). Real cost per song from `usage`, and how many songs the monthly credits cover.
 6. Gallery for the user: the algorithm and Sonnet, side by side, on the same passages.
@@ -504,7 +528,7 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 
 | Phase | Decision |
 |---|---|
-| 2 | The figure thresholds and the Do mayor spelling (agent, from songs; user checks the gallery) |
+| 2 | The figure thresholds and the Do mayor spelling (agent, from songs: 0.7, and Do#, Mib, Fa#, Sol#, Sib; user checks the gallery); the cap of a figure at the next onset of its hand, and rule 4 in armaduras of one to three signs (user) |
 | 3 | The look of the spacing without compases (user, in the gallery) |
 | 4 | The API key (human intervention); how many songs the credits cover (information); the beam groups and the maximum of 8 (user, in the gallery) |
 | 5 | Existing projects: keep their corrections or write them again; merge to `master` early or at the end |
@@ -563,3 +587,7 @@ repository."
 | 1 | Phase 1 tasks 1 and 3: the core keeps its inner layout (`aitu_backend.sheet.sheet` is the research's `aitu_notation.sheet`), its tests live in the backend's `tests/`, and the proof is a command, not a route | A one-to-one name map keeps every later comparison with the research simple; `pytest` collects only `tests/`; a route needs the rights table and gives the user nothing yet |
 | 1 | Phase 2 task 6: the algorithm's starting hands come from `aitu_backend.hands` for the notes without a saved hand | 1,652 notes of the library have none, and the core's default gives them a hand by middle C only |
 | 1 | Phase 3 task 6: the speed is measured in the container, and its Python build is looked at | The container draws about 30 % slower than the host on the same code |
+| 2 | Phase 2 tasks 3 and 4: the length is capped at the next onset of the hand (pending the user); one figure per run of even gaps; chords grouped on raw onsets (D-04); grace notes at most 100 ms early and not of the same note name | Measured: without the cap 37 % of the notes of even runs change figure inside the run; uneven chords and octaves made false grace notes |
+| 2 | Section 3.3: no tuplets in the new sheet | No beat to find a tresillo on; the figures are approximate by the user's rule |
+| 2 | Section 3.4: rule 4 keeps the becuadro when the other name needs two signs; Do mayor's table | Rules 3 and 4 meet on Sol, Re, La in Mi mayor; the research rulebook |
+| 2 | Phase 3 task 4 and Phase 4 task 4: accidentals by `spelling.sign`; figures are not durations; the LLM's answer mapped back to the notes and its figures computed by the rule; `arp` and tuplets left to Phase 4 | What the new sheet carries (`03-implementation-phase-2.md` section 12) |

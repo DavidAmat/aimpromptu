@@ -16,7 +16,9 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 The decisions of the second discussion are in plan section 3 (answered 2026-10-23). The ones still open are raised by
 their phase, after its study (plan section 8).
 
-- [ ] **Phase 2**: the figure thresholds (70/30 or 80/20 for the corchea and shorter) and the spelling in Do mayor (agent, from songs; the user checks the gallery).
+- [x] **Phase 2**: the figure thresholds (agent: 0.7, measured against 0.5, 0.6 and 0.8) and the spelling in Do mayor (agent: Do#, Mib, Fa#, Sol#, Sib, the research rulebook). The user checks them in the gallery.
+- [ ] **Phase 2**: the cap of a figure at the next onset of its hand (under the pedal the measured length runs past it); the agent recommends keeping it (user).
+- [ ] **Phase 2**: rule 4 in armaduras of one to three signs (Mi# in Sol mayor, Si# in Re and La mayor, Dob in Fa mayor): everywhere, only from four signs, or always the becuadro (user).
 - [ ] **Phase 3**: the look of the spacing without compases (user, in the gallery).
 - [ ] **Phase 4**: the API key (human intervention); how many songs the credits cover (information); the beam groups and the maximum of 8 notes (user, in the gallery).
 - [ ] **Phase 5**: existing projects, keep their corrections or write them again with the LLM; merge into `master` early or at the end.
@@ -40,15 +42,17 @@ Done 2026-10-23. Report: [`03-implementation-phase-1.md`](03-implementation-phas
 - [x] Task 1.2 The golden tests pass inside the backend container (139); the other backend tests are unchanged.
 - [x] Task 1.3 `scripts/draw_sheet.py` draws library songs with the bars engine: all 33 of My library, identical to the research core byte for byte; time per song in the report.
 
-# [ ] Phase 2: The new sheet without compases (format and algorithm)
+# [p] Phase 2: The new sheet without compases (format and algorithm)
 
-- [ ] Task 2.1 Study: what the F1 frames view carries, what the algorithm needs from the pulse estimate.
-- [ ] Task 2.2 The format: hands, plain figures, beam groups, graces, ornaments, clef changes, armadura per passage, 8va; no rests, no compases. Reader, writer, round trip with the matrix.
-- [ ] Task 2.3 Figures from the note's own length with the reference figure; thresholds tuned on the 10 viewer songs; one figure per chord per hand.
-- [ ] Task 2.4 Grace notes from the two-step rule.
-- [ ] Task 2.5 Alteraciones: rules 1 to 5 as a rule of the core; Do mayor decided; the armadura with the fewest signs per passage.
-- [ ] Task 2.6 The algorithm writes this sheet for every library song, with the simple beam rules (at most 8 notes, cuts at a jump or a change of direction); its starting hands from `aitu_backend.hands` for the notes without a saved hand.
-- [ ] Task 2.7 Gallery for the user (figures, graces, alteraciones, the unusual cases of rule 4).
+Built 2026-10-23; waiting for the user's check of the gallery and the two decisions above. Report: [`03-implementation-phase-2.md`](03-implementation-phase-2.md).
+
+- [x] Task 2.1 Study: what the F1 frames view carries, what the algorithm needs from the pulse estimate (only the reference figure); the lengths under the pedal and the uneven chords measured.
+- [x] Task 2.2 The format: hands, plain figures, beam groups, graces, ornaments (`orn`), clef changes, armadura per passage, 8va, `quarterMs=`; no rests, no compases, no tuplets. Reader, writer, `frames.check`, round trip with the matrix (33 of 33 songs exact).
+- [x] Task 2.3 Figures from the note's own length, capped at the next onset of the hand, with the reference figure; split 0.7 measured on the 10 viewer songs; one figure per chord per hand, and per run of even gaps.
+- [x] Task 2.4 Grace notes from the two-step rule, at most 100 ms before the main note, not of the same note name.
+- [x] Task 2.5 Alteraciones: rules 1 to 5 as a rule of the core (`spelling`); Do mayor decided; the armadura with the fewest signs per passage.
+- [x] Task 2.6 The algorithm (`propose_frames`) writes this sheet for every library song, with the simple beam rules; its starting hands from `pipeline.starting_hands` (the saved hands and the hand split).
+- [p] Task 2.7 Gallery for the user (figures, graces, alteraciones, the unusual cases of rule 4): built (`gallery/phase-2/index.html`, 14 cases); the user's check is pending.
 
 # [ ] Phase 3: The engine without compases
 

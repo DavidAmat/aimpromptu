@@ -13,8 +13,10 @@ chord, ``A2,C#3,E3:8``. Lower-case tags after a note describe it: ``b3`` beam gr
 beam carries the number of its group), ``t3`` triplet (``t5:4`` = 5 in the time of 4; ``(t3`` on the first note of each tuplet group, as
 ABC's ``(3``), ``grace`` /
 ``grace/`` (slashed) grace note, ``arp`` rolled chord, ``tr`` trill, ``trem``, ``ferm``, ``mord``,
-``turn``, ``8va`` / ``8vb`` (written an octave lower / higher than it sounds). ``clef=treble`` before
-the notes of a hand changes the clef of that hand at this time. Example::
+``turn``, ``8va`` / ``8vb`` (written an octave lower / higher than it sounds), ``orn`` (an onset played inside
+the ornament of the note before it: kept for the matrix, not drawn). ``clef=treble`` before the notes of a hand
+changes the clef of that hand at this time. The frames header may carry the reference figure of the new sheet,
+``F1 frames frameMs=40 quarterMs=500`` (one negra lasts 500 ms; implementation 03, Phase 2). Example::
 
     F1 bars
     clefs: R=treble L=bass
@@ -75,6 +77,8 @@ def _note_text(pitches: list[str], n: Note, beam_no: dict[int, int], tstart: boo
     if n.grace:
         tags.append("grace/" if n.grace == "acc" else "grace")
     tags += [ORN_NAMES.get(o, o) for o in n.ornaments]
+    if n.covered:
+        tags.append("orn")
     if n.ottava:
         tags.append(_OTTAVA[n.ottava])
     return " ".join([head] + tags)
@@ -91,6 +95,7 @@ def _attrs(n: Note, starts: set[int]) -> tuple:
         n.ornaments,
         n.ottava,
         n.tgroup,
+        n.covered,
         id(n) in starts,
     )
 
@@ -241,6 +246,8 @@ def _write_frames(sheet: Sheet) -> str:
     key_at = dict(sheet.key_changes)
     frames = sorted(set(slices) | set(clef_at) | set(key_at))
     head = "F1 frames frameMs=40"
+    if sheet.quarter_ms is not None:
+        head += f" quarterMs={round(sheet.quarter_ms, 1):g}"
     lines = [
         head,
         f"key={key_text(sheet.key or 0)} clefs: R={CLEF_NAMES.get(sheet.clefs.get(1), sheet.clefs.get(1))} "
@@ -276,6 +283,10 @@ def read(text: str) -> Sheet:
         raise F1Error("the text must start with 'F1 bars' or 'F1 frames'")
     mode = "frames" if "frames" in lines[0] else "bars"
     sheet = Sheet(notes=[])
+    for word in lines[0].split()[2:]:
+        name, _, value = word.partition("=")
+        if name == "quarterMs":
+            sheet.quarter_ms = float(value)
     bar: Bar | None = None
     meter: str | None = None
     key: int | None = None
@@ -441,5 +452,7 @@ def _apply_tag(n: Note, tok: str) -> None:
         n.ornaments = tuple(sorted(n.ornaments + (ORN_CODES[tok],)))
     elif tok in _OTTAVA_CODES:
         n.ottava = _OTTAVA_CODES[tok]
+    elif tok == "orn":
+        n.covered = True
     else:
         raise F1Error(f"unknown tag {tok!r}")
