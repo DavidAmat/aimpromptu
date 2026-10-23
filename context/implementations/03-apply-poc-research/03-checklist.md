@@ -17,8 +17,8 @@ The decisions of the second discussion are in plan section 3 (answered 2026-10-2
 their phase, after its study (plan section 8).
 
 - [x] **Phase 2**: the figure thresholds (agent: 0.7, measured against 0.5, 0.6 and 0.8) and the spelling in Do mayor (agent: Do#, Mib, Fa#, Sol#, Sib, the research rulebook). The user checks them in the gallery.
-- [ ] **Phase 2**: the cap of a figure at the next onset of its hand (under the pedal the measured length runs past it); the agent recommends keeping it (user).
-- [ ] **Phase 2**: rule 4 in armaduras of one to three signs (Mi# in Sol mayor, Si# in Re and La mayor, Dob in Fa mayor): everywhere, only from four signs, or always the becuadro (user).
+- [x] **Phase 2**: the cap of a figure at the next onset of its hand: kept (the agent's recommendation; the user said "perfect, proceed").
+- [x] **Phase 2**: rule 4 in armaduras of one to three signs: as written, everywhere (the user did not change it; one condition in `spelling.spell_pc` if they do).
 - [ ] **Phase 3**: the look of the spacing without compases (user, in the gallery).
 - [ ] **Phase 4**: the API key (human intervention); how many songs the credits cover (information); the beam groups and the maximum of 8 notes (user, in the gallery).
 - [ ] **Phase 5**: existing projects, keep their corrections or write them again with the LLM; merge into `master` early or at the end.
@@ -42,9 +42,9 @@ Done 2026-10-23. Report: [`03-implementation-phase-1.md`](03-implementation-phas
 - [x] Task 1.2 The golden tests pass inside the backend container (139); the other backend tests are unchanged.
 - [x] Task 1.3 `scripts/draw_sheet.py` draws library songs with the bars engine: all 33 of My library, identical to the research core byte for byte; time per song in the report.
 
-# [p] Phase 2: The new sheet without compases (format and algorithm)
+# [x] Phase 2: The new sheet without compases (format and algorithm)
 
-Built 2026-10-23; waiting for the user's check of the gallery and the two decisions above. Report: [`03-implementation-phase-2.md`](03-implementation-phase-2.md).
+Done 2026-10-23. Report: [`03-implementation-phase-2.md`](03-implementation-phase-2.md).
 
 - [x] Task 2.1 Study: what the F1 frames view carries, what the algorithm needs from the pulse estimate (only the reference figure); the lengths under the pedal and the uneven chords measured.
 - [x] Task 2.2 The format: hands, plain figures, beam groups, graces, ornaments (`orn`), clef changes, armadura per passage, 8va, `quarterMs=`; no rests, no compases, no tuplets. Reader, writer, `frames.check`, round trip with the matrix (33 of 33 songs exact).
@@ -52,7 +52,7 @@ Built 2026-10-23; waiting for the user's check of the gallery and the two decisi
 - [x] Task 2.4 Grace notes from the two-step rule: a semicorchea or shorter that sounds just before its main note (after the user's review). Beam groups of one figure (one odd note at an edge at most).
 - [x] Task 2.5 Alteraciones: rules 1 to 5 as a rule of the core (`spelling`); Do mayor decided; the armadura with the fewest signs per passage.
 - [x] Task 2.6 The algorithm (`propose_frames`) writes this sheet for every library song, with the simple beam rules; its starting hands from `pipeline.starting_hands` (the saved hands and the hand split).
-- [p] Task 2.7 Gallery for the user (figures, graces, alteraciones, the unusual cases of rule 4): built (`gallery/phase-2/index.html`, 14 cases); the user's check is pending.
+- [x] Task 2.7 Gallery for the user (figures, graces, alteraciones, the unusual cases of rule 4): `gallery/phase-2/index.html`, 14 cases, checked by the user after two iterations (beam groups of one figure, acciaccaturas, whole groups drawn).
 
 # [ ] Phase 3: The engine without compases
 

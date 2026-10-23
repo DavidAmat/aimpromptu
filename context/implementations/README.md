@@ -42,7 +42,7 @@ closed.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 03 | [`03-apply-poc-research/`](03-apply-poc-research/README.md) | vexflow-v2 replaced by the chain of research plan 01: the core in the backend, the sheet without compases, the new engine, Sonnet 5.5 in the background, every editing tool and screen moved, the saved data migrated, vexflow-v2 removed. One branch, `feat/migrate-new-logic` | 2026-10-23 | **Live.** Phases 0 and 1 done 2026-10-23; Phase 2 built, waiting for the user's check. [`03-checklist.md`](03-apply-poc-research/03-checklist.md) is the status lookup |
+| 03 | [`03-apply-poc-research/`](03-apply-poc-research/README.md) | vexflow-v2 replaced by the chain of research plan 01: the core in the backend, the sheet without compases, the new engine, Sonnet 5.5 in the background, every editing tool and screen moved, the saved data migrated, vexflow-v2 removed. One branch, `feat/migrate-new-logic` | 2026-10-23 | **Live.** Phases 0, 1 and 2 done 2026-10-23. [`03-checklist.md`](03-apply-poc-research/03-checklist.md) is the status lookup |
 
 ## How to read this folder
 

@@ -119,7 +119,7 @@ the criteria and limits of section 3.11.
   eye goes to the main note.
 - Trills, turns (grupetto) and mordents may be written when they are clear.
 - *Phase 2 (measured on the 10 viewer songs):* the split is 0.7. The length is capped at the next onset of the same
-  hand, because under the pedal the measured length runs past it (pending the user's decision); a note followed by
+  hand, because under the pedal the measured length runs past it (kept when Phase 2 closed); a note followed by
   silence keeps its own figure. Chords and runs of even gaps take one figure. A grace note is a semicorchea or
   shorter that sounds just before its main note. Tuplets are not in the new sheet.
 - *Phase 2, the user's review of the gallery:* a beam group holds one figure. One single note of another figure may
@@ -146,8 +146,8 @@ if it holds, makes the spelling a rule of the core; the LLM then decides only th
 This also makes transposition simple: the spelling is computed again from the new armadura. The case of Do mayor (no
 armadura, so rule 5 gives no answer) is decided in phase 2. *Phase 2:* rules 1 to 5 hold as a function
 (`aitu_backend.sheet.sheet.spelling`). Rule 4 keeps the becuadro when the key has no other name with one sign (Sol, Re,
-La in Mi mayor). Do mayor: Do#, Mib, Fa#, Sol#, Sib. Rule 4 in armaduras of one to three signs (Mi# in Sol mayor, Si#
-in Re and La mayor, Dob in Fa mayor) is a decision for the user.
+La in Mi mayor). Do mayor: Do#, Mib, Fa#, Sol#, Sib. Rule 4 applies in every armadura, also with one to three signs
+(Mi# in Sol mayor, Si# in Re and La mayor, Dob in Fa mayor): the user did not change it when Phase 2 closed.
 
 ## 3.5 The flow of a project
 
@@ -339,8 +339,8 @@ the report. No change to the app.
 
 ## Phase 2: The new sheet without compases (format and algorithm)
 
-**In progress 2026-10-23: built and measured; waiting for the user's check of the gallery and two decisions**
-([`03-implementation-phase-2.md`](03-implementation-phase-2.md) section 10).
+**Done 2026-10-23** ([`03-implementation-phase-2.md`](03-implementation-phase-2.md)). The user checked the gallery
+after two review iterations (beam groups of one figure, acciaccaturas by the two-step rule).
 
 *Why:* the product sheet is now the F1 frames sheet with the rules of section 3. The format, its reader and writer, and
 the algorithm that writes it come before the engine and the LLM, because both depend on them.
@@ -361,7 +361,7 @@ the algorithm that writes it come before the engine and the LLM, because both de
 5. **Alteraciones** (section 3.4): check that rules 1 to 5 give one spelling per pitch and armadura; write it as a rule
    of the core; decide Do mayor; the algorithm proposes the armadura of each passage with the fewest signs. *Done:*
    one name for every key and armadura (`spelling.check_rules`); Do mayor Do#, Mib, Fa#, Sol#, Sib (research
-   rulebook); rule 4 in armaduras of one to three signs is a decision for the user (95 of its 110 notes in the
+   rulebook); rule 4 in every armadura, as written (95 of its 110 notes in the
    library).
 6. The algorithm (`proposal`) writes this sheet for every library song, with the simple beam rules of section 3.11
    (at most 8 notes, a cut at a large jump or where the direction changes after a run). Its starting hands are the
@@ -591,7 +591,7 @@ repository."
 | 1 | Phase 1 tasks 1 and 3: the core keeps its inner layout (`aitu_backend.sheet.sheet` is the research's `aitu_notation.sheet`), its tests live in the backend's `tests/`, and the proof is a command, not a route | A one-to-one name map keeps every later comparison with the research simple; `pytest` collects only `tests/`; a route needs the rights table and gives the user nothing yet |
 | 1 | Phase 2 task 6: the algorithm's starting hands come from `aitu_backend.hands` for the notes without a saved hand | 1,652 notes of the library have none, and the core's default gives them a hand by middle C only |
 | 1 | Phase 3 task 6: the speed is measured in the container, and its Python build is looked at | The container draws about 30 % slower than the host on the same code |
-| 2 | Phase 2 tasks 3 and 4: the length is capped at the next onset of the hand (pending the user); one figure per run of even gaps; chords grouped on raw onsets (D-04); grace notes at most 100 ms early and not of the same note name | Measured: without the cap 37 % of the notes of even runs change figure inside the run; uneven chords and octaves made false grace notes |
+| 2 | Phase 2 tasks 3 and 4: the length is capped at the next onset of the hand (kept); one figure per run of even gaps; chords grouped on raw onsets (D-04); grace notes at most 100 ms early and not of the same note name | Measured: without the cap 37 % of the notes of even runs change figure inside the run; uneven chords and octaves made false grace notes |
 | 2 | Section 3.3 and Phase 2 task 4: beam groups of one figure; the acciaccatura limits reduced to "a semicorchea or shorter, sounding just before" | The user's review of the gallery (2026-10-23) |
 | 2 | Section 3.3: no tuplets in the new sheet | No beat to find a tresillo on; the figures are approximate by the user's rule |
 | 2 | Section 3.4: rule 4 keeps the becuadro when the other name needs two signs; Do mayor's table | Rules 3 and 4 meet on Sol, Re, La in Mi mayor; the research rulebook |

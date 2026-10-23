@@ -2,8 +2,9 @@
 
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 2. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (`master` had not moved since Phase 1, so nothing was merged in). Written 2026-10-23 on the
-Ubuntu machine. No change visible in the app: no route, page or stored file uses the new sheet yet. The phase waits
-for the user's check of the gallery and two decisions (section 10).
+Ubuntu machine. No change visible in the app: no route, page or stored file uses the new sheet yet. **Done
+2026-10-23**: the user checked the gallery after two review iterations (sections 13 and 14) and said "perfect,
+proceed"; the two decisions of section 10 were closed as section 10.3 says.
 
 # 1. Summary
 
@@ -15,7 +16,7 @@ for the user's check of the gallery and two decisions (section 10).
 | 2.4 Grace notes | The two-step rule on semicorcheas and shorter that sound just before their note (the user's review, section 13 replaced the first limits). 1,712 grace columns in the library (4.4 % of the columns) |
 | 2.5 Alteraciones | `sheet/spelling.py`: rules 1 to 5 give one name for each of the 12 keys in each of the 15 armaduras (`check_rules`, a test). Do mayor: Do#, Mib, Fa#, Sol#, Sib (the research rulebook). The armadura of each passage: fewest signs, 12 signs per change |
 | 2.6 The algorithm | `proposal/frames.py`, `propose_frames`. 33 of 33 songs of My library: a valid sheet (`frames.check` empty), the round trip exact; about 0.2 s per song (median) after 0.76 s for the starting hands (`pipeline.starting_hands`). Beam groups of one figure (section 13). `scripts/write_sheet.py` |
-| 2.7 Gallery | 14 cases in [`gallery/phase-2/index.html`](gallery/phase-2/index.html), drawn by Verovio (`scripts/sheet_gallery.py`). **Waiting for the user's check** |
+| 2.7 Gallery | 14 cases in [`gallery/phase-2/index.html`](gallery/phase-2/index.html), drawn by Verovio (`scripts/sheet_gallery.py`). Checked by the user after two iterations |
 
 # 2. The study
 
@@ -341,6 +342,13 @@ mayor chord is Si#-Mi-Sol), and Si as Dob in Fa mayor (a Sol mayor chord is Sol-
 library are in these armaduras. Options: (a) rule 4 everywhere, as written; (b) rule 4 only in armaduras of four signs
 or more, a becuadro below (the user's own example, Mi mayor, is four); (c) always the becuadro. Gallery cases 7 to 10
 show each rule 4 passage and its becuadro version. The change for (b) or (c) is one condition in `spell_pc`.
+
+## 10.3 How they were closed
+
+The user answered the gallery with "perfect, proceed" and did not choose between the options. The phase closed with
+the agent's recommendation for 10.1 (the cap stays) and the user's rule as written for 10.2 (rule 4 everywhere, option
+a). Either can still change with one condition: the cap in `proposal.frames.assign_figures` (`cap=`), rule 4 in
+`spelling.spell_pc`. Phase 4 shows rule 4 again in its gallery (the LLM's armaduras change how often it prints).
 
 # 11. Documentation
 
