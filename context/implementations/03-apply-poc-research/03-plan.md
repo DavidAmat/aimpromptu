@@ -98,6 +98,10 @@ the criteria and limits of section 3.11.
 - When **neither** hand plays for a while (for example after a redonda), the gap is drawn shorter than its time would
   ask. Empty time does not need empty width.
 - The consequence is that the playback cursor moves at different speeds in different passages. This is expected.
+- *Phase 3 (the engine):* one x per drawn column; the gap after a column follows the measured spacing model of the
+  time to the next column in either hand (the reference figure as its negra), so many short notes in one hand widen
+  the stretch for both. Empty time is the time beyond a blanca between two columns (no hand starts a note in it,
+  also after a redonda: the user's example); it keeps 30 % of the width it would add. Figures are not read.
 
 ## 3.3 Figures and the reference figure
 
@@ -384,25 +388,41 @@ has checked the gallery.
 
 ## Phase 3: The engine without compases
 
+**Built 2026-10-23** ([`03-implementation-phase-3.md`](03-implementation-phase-3.md)); waiting for the user's check of
+the gallery (the look of the spacing, and the double line at an armadura change).
+
 *Why:* the bars engine needs compases for its spacing, its accidentals and its line breaks. The new sheet has none, so
 the engine needs a new layout. The look of each element (noteheads, stems, beams, graces, clefs, Leipzig glyphs, the
 Verovio drawing rules) stays.
 
 1. Study: which parts of `engrave` depend on compases (spacing, justification, line breaks, accidentals, rests, bar
-   numbers) and which parts are reused unchanged.
+   numbers) and which parts are reused unchanged. *Done:* the chords, voices, rests, accidentals, columns, spacing
+   and line breaks of `layout` work per compás; every function that draws one chord, beam, grace note, ornament,
+   8va, ledger line, clef or the brace is reused as it is. The new layout is `engrave/frames.py`; the bars engine and
+   its golden files did not change.
 2. **Spacing** (section 3.2): one x per onset frame for both hands; the width of a stretch from the notes that need room
    in either hand; compressed width when neither hand plays. Start from the measured spacing model and tune by eye.
+   *Done:* section 3.2, the Phase 3 note.
 3. **Line breaks** without compases (for example between beam groups, at the larger gaps); a stable rule so that a
    changed segment moves the rest of the sheet as little as possible (the piece-by-piece view of phase 5 needs this).
+   *Done:* never inside a beam group when a free place exists; the break after the longest pause once the line is
+   80 % full. A changed 10 s window moved no later line in 27 of 30 windows (fill to the end: 24 of 30).
 4. Accidentals on every altered note (section 3.4: `frames.printed_signs`, rules 1 and 7), no rests, no compás lines, no meter,
    no bar numbers. A figure may be longer than the gap to the next note (it is rounded to the nearest figure), so the
-   spacing must not read figures as durations.
-5. Cursor map and note ids, as in the research (`render_song`), and drawing **one segment** on its own.
+   spacing must not read figures as durations. *Done*, and armadura changes inside a line (cancelling becuadros,
+   optionally a thin double line), clef changes (between a grace note and its note when it sounds before the
+   change).
+5. Cursor map and note ids, as in the research (`render_song`), and drawing **one segment** on its own. *Done:*
+   `render_frames(segment=(a, b))` draws the systems that hold the segment with the line breaks of the whole song,
+   so that the page can replace them in place.
 6. Speed: per song and per segment, cold and warm, on the 10 viewer songs, in the backend container. Phase 1 found
    the container about 30 % slower than the host on the same code (155 ms against 118 ms per song); the likely cause
    is the image's Python build (Debian's, shared `libpython`), and uv's Python in the image is the first thing to
-   try.
+   try. *Done:* 58 ms per song warm in the container (median of 33), 31 ms per 10 s segment; uv's Python in a test
+   image takes the container from 32 % to about 8 % slower than the host. The image is not changed yet (a rebuild
+   restarts the app); Phase 5 does it when the engine is served.
 7. Gallery: the same passages drawn by vexflow-v2, by the bars engine and by the new engine, side by side.
+   *Built:* [`gallery/phase-3/index.html`](gallery/phase-3/index.html), 8 passages and one whole song.
 
 *Done when:* the 32 library songs draw without error, the speed table is in the report, and the user has approved the
 look and the spacing in the gallery.
@@ -445,7 +465,10 @@ checked the gallery.
 2. The flow: Hands step removed; Notes Falling playable without hands; the negra choice removed.
 3. The Sheet step draws the algorithm's sheet at once, then starts the LLM job of the part in the background. Each
    segment being improved looks grey or transparent; a finished segment appears little by little while the next one
-   is at the LLM; no text.
+   is at the LLM; no text. *From Phase 3:* `render_frames(segment=(a, b))` gives the systems of a segment with the
+   line breaks of the whole song (about 30 ms), and the cursor map gives the x of every column for a reveal column by
+   column. Before the engine is served, the backend image takes uv's Python (Phase 3 measured the Debian build 32 %
+   slower than the host, uv's 8 %).
 4. The LLM's hands are saved in `notes.pmn` (Hands colours in Notes Falling and Play mode follow them).
 5. The new sheet is saved beside `sheet.json`; reopening a part does not call the LLM again.
 6. Playback: the cursor from the audio time, lit notes, click to seek (from `viewer/index.html`).
@@ -539,7 +562,7 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 | Phase | Decision |
 |---|---|
 | 2 | The figure thresholds and the Do mayor spelling (agent, from songs: 0.7, and Do#, Mib, Fa#, Sol#, Sib; user checks the gallery); the cap of a figure at the next onset of its hand, and rule 4 in armaduras of one to three signs (user) |
-| 3 | The look of the spacing without compases (user, in the gallery) |
+| 3 | The look of the spacing without compases, and a thin double line at an armadura change or none (user, in the gallery) |
 | 4 | The API key (human intervention); how many songs the credits cover (information); the beam groups and the maximum of 8 (user, in the gallery) |
 | 5 | Existing projects: keep their corrections or write them again; merge to `master` early or at the end |
 | 6 | May a new LLM run change hands that the user moved; the engine in the backend or in the browser |
@@ -602,3 +625,6 @@ repository."
 | 2 | Section 3.3: no tuplets in the new sheet | No beat to find a tresillo on; the figures are approximate by the user's rule |
 | 2 | Section 3.4: rule 4 keeps the becuadro when the other name needs two signs; Do mayor's table | Rules 3 and 4 meet on Sol, Re, La in Mi mayor; the research rulebook |
 | 2 | Phase 3 task 4 and Phase 4 task 4: accidentals by `frames.printed_signs` (rule 7 added by the user when Phase 2 closed); figures are not durations; the LLM's answer mapped back to the notes and its figures computed by the rule; `arp` and tuplets left to Phase 4 | What the new sheet carries (`03-implementation-phase-2.md` section 12) |
+| 3 | Section 3.2: empty time is the time beyond a blanca between two columns, whatever still sounds; figures are not read by the spacing | The user's example is the gap after a redonda; a rule on the sounding figure left that gap at full width |
+| 3 | Phase 3 task 5: one segment is drawn as the systems of the whole song that hold it, not as a sheet of its own | The page of Phase 5 replaces systems in place; a segment drawn alone would have other line breaks |
+| 3 | Phase 3 task 6 and Phase 5 task 3: uv's Python in the backend image is measured, and done in Phase 5 | It removes most of the container's cost (32 % to 8 %), but a rebuild restarts the running app, and 10 ms per song do not matter before the engine is served |

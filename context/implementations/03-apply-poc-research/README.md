@@ -1,6 +1,6 @@
 # 03: The new sheet in aimpromptu (applying the research)
 
-**State: live. Phases 0, 1 and 2 done (2026-10-23); Phase 3 is next.** Opened 2026-10-23 on the branch
+**State: live. Phases 0, 1 and 2 done (2026-10-23); Phase 3 built, waiting for the user's check of its gallery.** Opened 2026-10-23 on the branch
 `feat/migrate-new-logic` (one branch for the whole migration, plan section 6.3).
 
 Research plan 01 (the folder `/home/david/Documents/projects/music/poc-aitu-research` on the Ubuntu machine) built a
@@ -23,3 +23,5 @@ The brief is [`03-prompt.md`](03-prompt.md), the plan is [`03-plan.md`](03-plan.
 | [`03-implementation-phase-1.md`](03-implementation-phase-1.md) | Phase 1: the research core copied into the backend as `aitu_backend/sheet/`, its golden tests in the container, `scripts/draw_sheet.py` and the time per song of My library |
 | [`03-implementation-phase-2.md`](03-implementation-phase-2.md) | Phase 2: the new sheet without compases (the F1 frames view), the figure, grace note and spelling rules measured on the songs, the algorithm on all of My library, two decisions for the user |
 | [`gallery/phase-2/index.html`](gallery/phase-2/index.html) | The Phase 2 gallery: 15 passages as F1 text and as notes (built by `aitu-backend/scripts/sheet_gallery.py`) |
+| [`03-implementation-phase-3.md`](03-implementation-phase-3.md) | Phase 3: the engine without compases (`engrave/frames.py`): spacing, line breaks, one segment, speed in the container, the gallery |
+| [`gallery/phase-3/index.html`](gallery/phase-3/index.html) | The Phase 3 gallery: 8 passages drawn by vexflow-v2, the bars engine and the new engine, and one whole song (built by `aitu-backend/scripts/frames_gallery.py` and `aitu-frontend/scripts/vexflow-passages.mjs`) |
