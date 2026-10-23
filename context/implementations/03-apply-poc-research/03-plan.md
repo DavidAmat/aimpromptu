@@ -140,6 +140,12 @@ The classical rule "an accidental lasts until the end of the compás" disappears
 5. In an armadura with sostenidos, the black keys are written with sostenidos; with bemoles, with bemoles.
 6. When a passage has many alteraciones, the LLM may change the armadura for that passage to the one with the fewest
    signs.
+7. **A courtesy sign after a becuadro** (user, 2026-10-23, after Phase 2): when a note of the armadura gets a
+   becuadro, the first time the same note (the same name and octave, in the same hand) comes back to its armadura
+   name, it prints its sostenido or bemol again, if it is in the same beam group as the becuadro or is the next note
+   of the hand. It is redundant on purpose, the only exception to "no sign for a note of the armadura": it says that
+   the becuadro no longer applies. Later returns print nothing. Rule 7 changes only the printed signs, not the
+   names (`frames.printed_signs`).
 
 Rules 1 to 5 make the spelling a pure function of the pitch and the armadura of the passage. Phase 2 checks this and,
 if it holds, makes the spelling a rule of the core; the LLM then decides only the armadura of each passage (rule 6).
@@ -371,7 +377,7 @@ the algorithm that writes it come before the engine and the LLM, because both de
    `scripts/write_sheet.py`: 33 of 33 songs valid, round trip exact, about 0.2 s per song after the hands.
 7. Gallery for the user: the same passages as text and as notes for figures, graces and alteraciones, including the
    unusual cases of rule 4 (for example Mi# and Si# in Mi mayor), so that the user confirms the rules by eye.
-   *Built:* `gallery/phase-2/index.html` (14 cases, drawn by Verovio until the Phase 3 engine exists).
+   *Built:* `gallery/phase-2/index.html` (15 cases, drawn by Verovio until the Phase 3 engine exists).
 
 *Done when:* every library song gets a valid F1 frames sheet from the algorithm, the round trip is exact, and the user
 has checked the gallery.
@@ -388,7 +394,7 @@ Verovio drawing rules) stays.
    in either hand; compressed width when neither hand plays. Start from the measured spacing model and tune by eye.
 3. **Line breaks** without compases (for example between beam groups, at the larger gaps); a stable rule so that a
    changed segment moves the rest of the sheet as little as possible (the piece-by-piece view of phase 5 needs this).
-4. Accidentals on every altered note (section 3.4: `spelling.sign`, no memory), no rests, no compás lines, no meter,
+4. Accidentals on every altered note (section 3.4: `frames.printed_signs`, rules 1 and 7), no rests, no compás lines, no meter,
    no bar numbers. A figure may be longer than the gap to the next note (it is rounded to the nearest figure), so the
    spacing must not read figures as durations.
 5. Cursor map and note ids, as in the research (`render_song`), and drawing **one segment** on its own.
@@ -595,4 +601,4 @@ repository."
 | 2 | Section 3.3 and Phase 2 task 4: beam groups of one figure; the acciaccatura limits reduced to "a semicorchea or shorter, sounding just before" | The user's review of the gallery (2026-10-23) |
 | 2 | Section 3.3: no tuplets in the new sheet | No beat to find a tresillo on; the figures are approximate by the user's rule |
 | 2 | Section 3.4: rule 4 keeps the becuadro when the other name needs two signs; Do mayor's table | Rules 3 and 4 meet on Sol, Re, La in Mi mayor; the research rulebook |
-| 2 | Phase 3 task 4 and Phase 4 task 4: accidentals by `spelling.sign`; figures are not durations; the LLM's answer mapped back to the notes and its figures computed by the rule; `arp` and tuplets left to Phase 4 | What the new sheet carries (`03-implementation-phase-2.md` section 12) |
+| 2 | Phase 3 task 4 and Phase 4 task 4: accidentals by `frames.printed_signs` (rule 7 added by the user when Phase 2 closed); figures are not durations; the LLM's answer mapped back to the notes and its figures computed by the rule; `arp` and tuplets left to Phase 4 | What the new sheet carries (`03-implementation-phase-2.md` section 12) |

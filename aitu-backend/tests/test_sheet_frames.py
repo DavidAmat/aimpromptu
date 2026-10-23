@@ -357,3 +357,37 @@ def test_starting_hands_keep_the_saved_hands_and_split_the_rest(data_dir: Path) 
     assert (notes.hand[saved & (notes.key + 21 < 50)] == L).all()
     with pytest.raises(FileNotFoundError):
         pipeline.starting_hands("no-such-piece")
+
+
+def test_a_courtesy_sign_after_a_becuadro() -> None:
+    # Mi mayor (Re# in the armadura): Re becuadro, then Re# again (rule 7, the user 2026-10-23)
+    def n(frame, alter, beam=None, step="D", octave=5) -> Note:
+        return Note(
+            time=None,
+            staff=1,
+            step=step,
+            alter=alter,
+            octave=octave,
+            frame=frame,
+            figure=8,
+            beam=beam,
+        )
+
+    def signs(notes: list[Note]) -> list[str | None]:
+        sheet = Sheet(notes=notes, key=4)
+        printed = frames.printed_signs(sheet)
+        return [printed.get(id(x)) for x in notes]
+
+    # in the same beam group: the sostenido is printed again, only the first time
+    assert signs([n(0, 0, 1), n(5, 0, 1, "E"), n(10, 1, 1), n(15, 1, 1)]) == ["n", None, "#", None]
+    # the next note of the hand, not beamed
+    assert signs([n(0, 0), n(10, 1)]) == ["n", "#"]
+    # later and in another group: no courtesy sign
+    assert signs([n(0, 0, 1), n(5, 0, 1, "E"), n(10, 1, 2), n(15, 0, 2, "E")]) == [
+        "n",
+        None,
+        None,
+        None,
+    ]
+    # another octave is another note
+    assert signs([n(0, 0), n(10, 1, octave=4)]) == ["n", None]

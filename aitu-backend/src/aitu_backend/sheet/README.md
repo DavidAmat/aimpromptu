@@ -32,7 +32,7 @@ enforce it.
 
 | module | input -> output | public functions |
 |---|---|---|
-| `sheet` | - | `Note`, `Bar`, `Sheet` (`sheet.data`); `f1.read(text) -> Sheet`, `f1.write(sheet, mode="bars"/"frames", anchors=bool) -> str`, `F1Error`; `matrix.sheet_from_matrix(notes, key=) -> Sheet` (frames sheet), `matrix.cells(notes)`; `pmn.notes_from_pmn(body) -> Notes`, `pmn.key_of_sheet_json(sheet_json) -> int`. The new sheet (section 9): `frames.from_notes(notes, key=) -> Sheet`, `frames.check(sheet) -> list[str]`, `frames.cells_of(sheet, notes)`, `frames.matrix_cells(notes)`, `frames.key_at(sheet)`; `figures.figure_of_ms(ms, quarter_ms, split=0.7)`; `spelling.spell(midi, key)`, `spelling.sign(step, alter, key)`, `spelling.check_rules()` |
+| `sheet` | - | `Note`, `Bar`, `Sheet` (`sheet.data`); `f1.read(text) -> Sheet`, `f1.write(sheet, mode="bars"/"frames", anchors=bool) -> str`, `F1Error`; `matrix.sheet_from_matrix(notes, key=) -> Sheet` (frames sheet), `matrix.cells(notes)`; `pmn.notes_from_pmn(body) -> Notes`, `pmn.key_of_sheet_json(sheet_json) -> int`. The new sheet (section 9): `frames.from_notes(notes, key=) -> Sheet`, `frames.check(sheet) -> list[str]`, `frames.cells_of(sheet, notes)`, `frames.matrix_cells(notes)`, `frames.key_at(sheet)`, `frames.printed_signs(sheet)`; `figures.figure_of_ms(ms, quarter_ms, split=0.7)`; `spelling.spell(midi, key)`, `spelling.sign(step, alter, key)`, `spelling.check_rules()` |
 | `proposal` | `Notes` + hands -> F1 bars sheet | `propose(notes, *, key, key_changes=None, hand_sheet=None, track=False, quarter_ms=None, meter=None, phase_ms=None, beams="classical") -> Proposal` (`.sheet`, `.quarter_ms`, `.meter`, `.phase_ms`); `hand_sheet_of(notes, key=)`. The new sheet: `frames.propose_frames(notes, *, key=None, key_changes=None, quarter_ms=None) -> FramesProposal` (`.sheet`, `.quarter_ms`, `.info`) |
 | `llm` | `Notes` -> F1 bars sheet | `write_song(notes, complete, *, key, sid="song", hand_sheet=None, max_checks=3, guards=True, max_windows=None, on_window=None) -> SongSheet`; `windows.check(answer, target) -> (errors, sheet)`, `windows.answer_text(reply)`, `guards.guard_errors(sheet)`; `prompts.instructions()`, `prompts.window_prompt(...)`, `prompts.feedback(errors)` |
 | `engrave` | F1 bars sheet -> SVG | `engrave(sheet, Options()) -> Engraving`, `to_svg(engraving, px_per_space=10, note_ids=False, id_prefix="")`, `render(sheet)`; `cursor.render_song(text, note_ids=True) -> Rendered` |
@@ -150,7 +150,9 @@ F1 frames sheet:  F1 frames frameMs=40 quarterMs=500
   middle points from the negra up, 70 % of the way for the corchea and shorter; one figure per chord and per run of
   even gaps. The reference figure is `Sheet.quarter_ms` (the pulse estimate of `proposal.beat` unless given).
 - **Spelling** (`spelling`): one name per key and armadura, by the user's rules 1 to 5; in Do mayor Do#, Mib, Fa#,
-  Sol#, Sib. Every note outside the armadura prints its sign every time (`spelling.sign`).
+  Sol#, Sib. Every note outside the armadura prints its sign every time (`spelling.sign`), and after a becuadro the
+  first return of that note (same name and octave, same hand) to its armadura name prints its sostenido or bemol
+  again when it is in the same beam group or the next note (rule 7, `frames.printed_signs`: what the engine prints).
 - **The algorithm** (`proposal.frames`) also writes grace notes (a semicorchea or shorter, two figures shorter than
   the next note and sounding just before it), beam groups (corcheas and shorter no farther apart than a corchea, of one
   figure with at most one odd note at an edge; cut at a jump of more than an octave, at a turn after three steps, and

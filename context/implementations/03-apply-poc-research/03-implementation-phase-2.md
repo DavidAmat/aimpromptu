@@ -16,7 +16,7 @@ proceed"; the two decisions of section 10 were closed as section 10.3 says.
 | 2.4 Grace notes | The two-step rule on semicorcheas and shorter that sound just before their note (the user's review, section 13 replaced the first limits). 1,712 grace columns in the library (4.4 % of the columns) |
 | 2.5 Alteraciones | `sheet/spelling.py`: rules 1 to 5 give one name for each of the 12 keys in each of the 15 armaduras (`check_rules`, a test). Do mayor: Do#, Mib, Fa#, Sol#, Sib (the research rulebook). The armadura of each passage: fewest signs, 12 signs per change |
 | 2.6 The algorithm | `proposal/frames.py`, `propose_frames`. 33 of 33 songs of My library: a valid sheet (`frames.check` empty), the round trip exact; about 0.2 s per song (median) after 0.76 s for the starting hands (`pipeline.starting_hands`). Beam groups of one figure (section 13). `scripts/write_sheet.py` |
-| 2.7 Gallery | 14 cases in [`gallery/phase-2/index.html`](gallery/phase-2/index.html), drawn by Verovio (`scripts/sheet_gallery.py`). Checked by the user after two iterations |
+| 2.7 Gallery | 15 cases (14 checked by the user, case 14 on rule 7 added after) in [`gallery/phase-2/index.html`](gallery/phase-2/index.html), drawn by Verovio (`scripts/sheet_gallery.py`). Checked by the user after two iterations |
 
 # 2. The study
 
@@ -364,7 +364,7 @@ a). Either can still change with one condition: the cap in `proposal.frames.assi
 - **Phase 3 (the engine).** It draws the frames sheet: `Note.frame` is the drawn column (both hands share it), grace
   notes sit at their own earlier column, `covered` notes are not drawn, `Note.ottava` marks the 8va notes (the pitch is
   sounding), clef changes are `(frame, staff, clef)`, armadura changes `(frame, key)`. Every note outside the armadura
-  prints `spelling.sign` (no memory). The figures can be longer than the gap to the next note (up to the boundary of
+  prints its sign from `frames.printed_signs` (rule 1, and the courtesy sign of rule 7, section 15). The figures can be longer than the gap to the next note (up to the boundary of
   their figure), so the spacing must not take a figure as a duration.
 - **Phase 4 (the LLM).** The LLM's text must be mapped back to the notes (`frames.cells_of`) to recompute the
   figures, which are a rule (they need `on_ms` and `len_ms`). The reference figure is the LLM's choice; the pulse
@@ -434,3 +434,29 @@ stays with the group before or after it), and splits at the maximum of 8 into ne
 After the fix, every such pair has a reason: a gap longer than a corchea 533, a jump of more than an octave 868, a turn
 or the maximum of 8 757, and one pair whose gap is 520 ms in whole columns but longer than the corchea limit (524 ms)
 on the real onsets. Library: 5,846 beam groups, 33 of 33 sheets valid, every round trip exact.
+
+# 15. Rule 7: a courtesy sign after a becuadro (the user, 2026-10-23)
+
+After the phase closed, the user added one rule to the alteraciones (plan section 3.4, rule 7). When a note of the
+armadura gets a becuadro, the next time that note is played at its armadura name it was an alteration, and the
+becuadro no longer applies; to say so, its sostenido or bemol is printed again, although the armadura already gives
+it. This is a deliberate abuse of notation, kept to two cases: the return is in the same beam group as the becuadro,
+or it is the next note of the hand.
+
+How it is read in the code (`frames.printed_signs(sheet)`, used by the gallery and, from Phase 3, by the engine):
+
+- "the same note" is the same name and octave (the same line or space of the staff), in the same hand;
+- only the first return after a becuadro counts; a later return prints nothing, and a new becuadro starts again;
+- the return must be at the armadura's own alteration (Re# in Si mayor), after a becuadro of the same name and octave;
+- the names do not change (`spelling.spell` is still a pure function); only the printed signs do, so F1 carries
+  nothing new and `frames.check` is unchanged.
+
+Library: 15 courtesy signs in 5 songs (Poker Face 9, Can't Stop the Feeling 2, 99 Red Balloons 2, Party in the USA 1,
+Moonlight Shadow 1); `scripts/write_sheet.py` counts them as `courtesy`. Gallery case 14 (Poker Face, from 0:38) shows
+both cases, and case 11 shows one inside a beam group. Test: `test_a_courtesy_sign_after_a_becuadro`.
+
+The gallery also changed how it chooses a passage: each end moves at most 2 seconds to a column that cuts no beam
+group, or else to one that leaves no group with a lone note (the earlier rule, "widen until no group is cut", grew
+case 14 to 18 seconds because the groups of the two hands overlap). 12 of the 15 cases cut no group; in cases 10 and
+14 a group goes on past an edge with two notes or more inside, beamed.
+

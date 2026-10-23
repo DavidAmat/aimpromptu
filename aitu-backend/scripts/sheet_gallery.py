@@ -30,7 +30,7 @@ from aitu_backend.sheet.proposal import frames as algo
 from aitu_backend.sheet.sheet import f1, frames
 from aitu_backend.sheet.sheet.data import Note, Sheet
 from aitu_backend.sheet.sheet.figures import NAMES
-from aitu_backend.sheet.sheet.spelling import key_alter, sign
+from aitu_backend.sheet.sheet.spelling import key_alter
 from aitu_backend.storage import bundle, paths
 from aitu_backend.transcription.pipeline import starting_hands
 
@@ -157,6 +157,16 @@ CASES = [
     ),
     (
         "Alteraciones",
+        "2ed0f379",
+        960,
+        "After a becuadro, the sostenido is printed again (rule 7)",
+        "Re is in the armadura (Si mayor). After a Re becuadro, the first Re# that follows in the same beam "
+        "group, or as the next note, prints its sostenido again, to say that the becuadro no longer applies. "
+        "Later Re# notes print nothing.",
+        None,
+    ),
+    (
+        "Alteraciones",
         "56543911",
         525,
         "A new armadura for a passage",
@@ -196,23 +206,34 @@ def passage(sheet: Sheet, a: int, b: int) -> Sheet:
     ).sort()
 
 
-def whole_groups(sheet: Sheet, a: int, b: int) -> tuple[int, int]:
-    """Columns [a, b) widened so that no beam group is cut, and so that the grace notes of the first note are in."""
+def whole_groups(sheet: Sheet, a: int, b: int, reach: int = 50) -> tuple[int, int]:
+    """Columns [a, b) moved, each end by at most ``reach`` columns (2 s), to the nearest column that cuts no beam group;
+    where every column cuts one (the groups of the two hands overlap), to one that leaves no group with a lone note
+    on either side. The grace notes of the first note come in too."""
     groups: dict[int, list[int]] = defaultdict(list)
     for n in sheet.notes:
         if n.beam is not None:
             groups[n.beam].append(n.frame)
-    while True:
-        a0, b0 = a, b
-        for frames_of in groups.values():
-            if any(a <= f < b for f in frames_of):
-                a, b = min(a, min(frames_of)), max(b, max(frames_of) + 1)
-        before = [n for n in sheet.notes if n.frame < a]
-        last = max((n.frame for n in before), default=None)
-        if last is not None and all(n.grace for n in before if n.frame == last):
-            a = last
-        if (a, b) == (a0, b0):
-            return a, b
+
+    def cost(c: int) -> tuple[int, int]:
+        cut = lone = 0
+        for fs in groups.values():
+            left = sum(f < c for f in fs)
+            if 0 < left < len(fs):
+                cut += 1
+                lone += left == 1 or len(fs) - left == 1
+        return (lone, cut)
+
+    def best(candidates: range) -> int:
+        return min(candidates, key=lambda c: (cost(c), abs(c - candidates[0])))
+
+    a = best(range(a, max(0, a - reach) - 1, -1))
+    b = best(range(b, b + reach + 1))
+    before = [n for n in sheet.notes if n.frame < a]
+    last = max((n.frame for n in before), default=None)
+    if last is not None and all(n.grace for n in before if n.frame == last):
+        a = last
+    return a, b
 
 
 def as_becuadro(sheet: Sheet) -> Sheet:
@@ -246,11 +267,11 @@ _ACCID = {"#": "s", "b": "f", "n": "n"}
 _ACCID_GES = {1: "s", -1: "f"}
 
 
-def _note_xml(n: Note, key: int, nid: str | None = None) -> str:
+def _note_xml(n: Note, printed: dict[int, str], nid: str | None = None) -> str:
     attrs = [f'pname="{n.step.lower()}"', f'oct="{n.octave - n.ottava}"']
     if n.ottava:
         attrs.append(f'oct.ges="{n.octave}"')
-    s = sign(n.step, n.alter, key)
+    s = printed.get(id(n))  # rules 1 and 7 (frames.printed_signs)
     if s:
         attrs.append(f'accid="{_ACCID[s]}"')
     elif n.alter:
@@ -260,14 +281,14 @@ def _note_xml(n: Note, key: int, nid: str | None = None) -> str:
     return f"<note {' '.join(attrs)}/>"
 
 
-def _element(ns: list[Note], key: int, nid: str) -> str:
+def _element(ns: list[Note], printed: dict[int, str], nid: str) -> str:
     n0 = ns[0]
     grace = ""
     if n0.grace:
         grace = f' grace="{"acc" if n0.grace == "acc" else "unacc"}"'
     if len(ns) == 1:
-        return _note_xml(n0, key, nid).replace("<note ", f'<note dur="{n0.figure}"{grace} ', 1)
-    inner = "".join(_note_xml(n, key) for n in sorted(ns, key=lambda n: n.midi))
+        return _note_xml(n0, printed, nid).replace("<note ", f'<note dur="{n0.figure}"{grace} ', 1)
+    inner = "".join(_note_xml(n, printed) for n in sorted(ns, key=lambda n: n.midi))
     return f'<chord xml:id="{nid}" dur="{n0.figure}"{grace}>{inner}</chord>'
 
 
@@ -277,7 +298,7 @@ _CLEF = {"G2": ("G", 2), "F4": ("F", 4)}
 def to_mei(sheet: Sheet) -> str:
     """One passage as MEI: one measure per armadura, both hands, the gaps as invisible space."""
     q = sheet.quarter_ms
-    at = frames.key_at(sheet)
+    printed = frames.printed_signs(sheet)
     cols: dict[int, dict[int, list[Note]]] = defaultdict(lambda: defaultdict(list))
     for n in sheet.notes:
         if not n.covered:
@@ -327,19 +348,18 @@ def to_mei(sheet: Sheet) -> str:
             ns = cols.get(f, {}).get(st)
             if not ns:
                 continue
-            key = at(f)
             nid = f"n{st}_{f}"
             if f in clef_at:
                 shape, line = _CLEF[clef_at[f]]
                 pending.append(f'<clef shape="{shape}" line="{line}"/>')
             if ns[0].grace:
-                pending.append(_element(ns, key, nid))
+                pending.append(_element(ns, printed, nid))
             else:
                 b = ns[0].beam
                 if b is not None:
                     beams.setdefault((st, b), (seg, []))[1].append(nid)
                 layers[st][seg] += _space(tick[f] - cursor)
-                layers[st][seg] += pending + [_element(ns, key, nid)]
+                layers[st][seg] += pending + [_element(ns, printed, nid)]
                 pending = []
                 cursor = tick[f] + TICKS * 4 // ns[0].figure
             if ns[0].ottava:
@@ -503,7 +523,8 @@ summary { cursor: pointer; color: var(--soft); font-size: 13px; } ol { columns: 
 <h1>The new sheet: figures, grace notes and alteraciones</h1>
 <p>Implementation 03, Phase 2. Passages of My library written by the algorithm of the new sheet: no compases, no
 tempo, no puntillos, no silencios. The notes are drawn by Verovio only to check the names, figures and grace notes:
-the engine and the spacing of the new sheet come in Phase 3. Hands come from the saved hands and the hand split;
+the engine and the spacing of the new sheet come in Phase 3. A passage ends where no beam group is cut when it can;
+otherwise a group that goes on past its edge is drawn with its notes inside the passage. Hands come from the saved hands and the hand split;
 the LLM decides them in Phase 4.</p>
 <ol>{{INDEX}}</ol>
 {{SECTIONS}}

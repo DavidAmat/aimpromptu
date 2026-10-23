@@ -60,8 +60,11 @@ def write(part_id: str, out: Path | None) -> dict[str, Any]:
     exact = got == frames.matrix_cells(notes) and lost == 0
     at = frames.key_at(back)
     signs: Counter = Counter()
+    printed = frames.printed_signs(back)
     for n in back.notes:
-        s = sign(n.step, n.alter, at(n.frame))
+        s = printed.get(id(n))
+        if s and sign(n.step, n.alter, at(n.frame)) is None:
+            signs["courtesy"] += 1  # rule 7: the sign again after a becuadro
         if s:
             signs[s] += 1
             white_name = (n.step, n.alter) in (("E", 1), ("B", 1), ("C", -1), ("F", -1))

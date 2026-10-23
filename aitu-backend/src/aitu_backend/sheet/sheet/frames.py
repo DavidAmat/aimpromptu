@@ -26,7 +26,7 @@ from aitu_backend.pmn.dense import columns_of
 from aitu_backend.pmn.notes import HAND_LEFT, HAND_RIGHT, Notes
 from aitu_backend.sheet.sheet.data import FRAME_MS, Note, Sheet
 from aitu_backend.sheet.sheet.figures import FIGURES
-from aitu_backend.sheet.sheet.spelling import spell
+from aitu_backend.sheet.sheet.spelling import key_alter, sign, spell
 
 __all__ = [
     "GROUP_MS",
@@ -37,6 +37,7 @@ __all__ = [
     "from_notes",
     "key_at",
     "matrix_cells",
+    "printed_signs",
 ]
 
 GROUP_MS = 40.0  # D-04
@@ -144,6 +145,47 @@ def key_at(sheet: Sheet):
         return k
 
     return at
+
+
+def printed_signs(sheet: Sheet) -> dict[int, str]:
+    """The sign printed before each note, ``id(note) -> "#" | "b" | "n"`` (notes with no sign are left out).
+
+    Rule 1 (plan section 3.4, :func:`spelling.sign`): every note outside the armadura, every time. Rule 7 (the user,
+    2026-10-23, a courtesy sign): when a note of the armadura got a becuadro, the first time the same note (the same
+    name and octave, in the same hand) comes back to its armadura name, it prints its sostenido or bemol again, if it
+    is in the same beam group as the becuadro or is the next note of the hand. The sign is redundant on purpose: it
+    says that the becuadro no longer applies."""
+    at = key_at(sheet)
+    out: dict[int, str] = {}
+    for staff in (1, 2):
+        cols: dict[int, list[Note]] = defaultdict(list)
+        for n in sheet.notes:
+            if n.staff == staff and not n.covered:
+                cols[n.frame].append(n)
+        becuadro: dict[tuple[str, int], tuple[int | None, int]] = (
+            {}
+        )  # (step, octave) -> (beam, column index)
+        for ci, (f, ns) in enumerate(sorted(cols.items())):
+            key = at(f)
+            for n in ns:
+                s = sign(n.step, n.alter, key)
+                if s:
+                    out[id(n)] = s
+            for n in ns:
+                if out.get(id(n)) == "n":
+                    continue
+                seen = becuadro.pop((n.step, n.octave), None)  # only the first return counts
+                back = n.alter != 0 and n.alter == key_alter(key, n.step)
+                if (
+                    seen
+                    and back
+                    and ((seen[0] is not None and seen[0] == n.beam) or ci == seen[1] + 1)
+                ):
+                    out[id(n)] = "#" if n.alter > 0 else "b"
+            for n in ns:
+                if out.get(id(n)) == "n":
+                    becuadro[(n.step, n.octave)] = (n.beam, ci)
+    return out
 
 
 def check(sheet: Sheet) -> list[str]:
