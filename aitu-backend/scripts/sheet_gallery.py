@@ -72,8 +72,8 @@ CASES = [
         "c0edc9b0",
         500,
         "Very short notes just before a longer note become small grace notes",
-        "A note two figures or more shorter than the next note of its hand, played at most 100 ms before it, "
-        "is drawn small (a slashed grace note, two unslashed when there are two).",
+        "A semicorchea or shorter, two figures or more shorter than the next note of its hand and sounding just "
+        "before it, is drawn small (a slashed grace note, two unslashed when there are two).",
         None,
     ),
     (
@@ -88,9 +88,9 @@ CASES = [
         "Grace notes",
         "f4c4de9a",
         775,
-        "Not a grace note: an octave played a little unevenly",
-        "The lower note of the octave sounds 80 ms before the upper one. It has the same name, so it is not "
-        "a grace note: it stays a written note.",
+        "An octave played a little unevenly",
+        "The lower note of the octave sounds 80 ms before the upper one and is two figures shorter, so it is "
+        "drawn as an acciaccatura of the upper note.",
         None,
     ),
     (
@@ -178,8 +178,13 @@ def passage(sheet: Sheet, a: int, b: int) -> Sheet:
     for f, st, c in sorted(sheet.clef_changes, key=lambda c: c[0]):
         if f <= a:
             clefs[st] = c
+    inside = [replace(n) for n in sheet.notes if a <= n.frame < b]
+    cut = {n.beam for n in sheet.notes if n.beam is not None and not a <= n.frame < b}
+    for n in inside:  # a beam group that the passage cuts is not drawn
+        if n.beam in cut:
+            n.beam = None
     return Sheet(
-        notes=[replace(n) for n in sheet.notes if a <= n.frame < b],
+        notes=inside,
         clefs=clefs,
         clef_changes=[c for c in sheet.clef_changes if a < c[0] < b],
         key=at(a),

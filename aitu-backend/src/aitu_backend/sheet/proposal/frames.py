@@ -9,13 +9,13 @@ its chord (:func:`aitu_backend.sheet.sheet.frames.from_notes`); then, per hand:
    lengths under the pedal: without this cap 37 % of the notes of a run of even gaps changed figure inside the run),
    as the nearest plain figure (:func:`figures.figure_of_ms`); one figure per chord, the one most of its notes have
    (ties: the longer); and one figure per run of three or more even gaps, the one most of the run has.
-3. **Grace notes**: one or two notes, each two figures or more shorter than the note after them, played as quickly
-   and at most ``GRACE_MS`` before the next onset of the hand, become grace notes of that note (a longer run of such
-   notes stays written). A note with the name of a note of the main chord is an octave played unevenly or a repeated
-   note, not a grace note.
+3. **Grace notes**: one or two semicorcheas or shorter, each two figures or more shorter than the note after them and
+   sounding just before it (the gap is shorter than the main note's figure), become acciaccaturas of that note (a
+   longer run of such notes stays written). An octave played unevenly or a quick repeated note is an acciaccatura
+   too.
 4. **Beam groups** (plan section 3.11, the simple rules): consecutive corcheas or shorter of one hand, not farther
-   apart than a corchea; cut at a jump of more than an octave, where the direction turns after a run of three steps,
-   and into near-equal parts of at most 8.
+   apart than a corchea, of one figure (a single note one figure away may open or close a group); cut at a jump of
+   more than an octave, where the direction turns after a run of three steps, and into near-equal parts of at most 8.
 5. **Armadura** of each passage: the armadura that prints the fewest signs, with a cost for each change
    (:func:`choose_keys`), unless the armadura is given; then every note is spelled by the user's rules
    (:mod:`aitu_backend.sheet.sheet.spelling`).
@@ -36,7 +36,7 @@ from aitu_backend.pmn.notes import Notes
 from aitu_backend.sheet.proposal import beat
 from aitu_backend.sheet.sheet import frames as frames_mod
 from aitu_backend.sheet.sheet.data import Note, Sheet
-from aitu_backend.sheet.sheet.figures import SPLIT, figure_of_ms
+from aitu_backend.sheet.sheet.figures import SPLIT, figure_of_ms, steps
 from aitu_backend.sheet.sheet.pitch import STEPS
 from aitu_backend.sheet.sheet.spelling import sign, spell, spell_pc
 
@@ -54,9 +54,7 @@ __all__ = [
 RUN_TOLERANCE = 0.12  # gaps within 12 % of the run's first gap are even
 RUN_MIN = 3  # columns
 MAX_GRACES = 2
-GRACE_MS = (
-    100.0  # a grace note is played quickly: at most this long before the next onset of its hand
-)
+GRACE_FIGURE = 16  # a grace note is a semicorchea or shorter
 JUMP = 12  # semitones: a beam is cut at a jump of more than an octave
 TURN_RUN = 3  # steps in one direction before a turn cuts the beam
 KEY_SWITCH = 12.0  # signs: the cost of one armadura change
@@ -133,10 +131,9 @@ def assign_figures(
                 n.figure, n.dots, n.tuplet, n.tgroup = fig, 0, None, None
 
 
-def find_graces(
-    sheet: Sheet, quarter_ms: float, split: float = SPLIT, grace_ms: float = GRACE_MS
-) -> int:
-    """Step 3: grace notes by the two-step rule (plan section 3.3). Returns how many columns became grace notes."""
+def find_graces(sheet: Sheet, quarter_ms: float, split: float = SPLIT) -> int:
+    """Step 3: grace notes by the two-step rule (plan section 3.3; the user, Phase 2 review). Returns how many
+    columns became grace notes."""
     count = 0
     for staff in (1, 2):
         cols = _columns(sheet, staff)
@@ -145,16 +142,11 @@ def find_graces(
         k = 1
         while k < len(cols):
             main = fig[k]
-            names = {n.midi % 12 for n in cols[k][1]}
             chain = []
             j = k - 1
-            while j >= 0 and fig[j] >= 4 * main and not cols[j][1][0].grace:
-                gap = starts[j + 1] - starts[j]
-                if gap > grace_ms or figure_of_ms(gap, quarter_ms, split) < 4 * main:
-                    break
-                if names & {
-                    n.midi % 12 for n in cols[j][1]
-                }:  # an octave or a repeated note, not a grace
+            while j >= 0 and fig[j] >= max(GRACE_FIGURE, 4 * main) and not cols[j][1][0].grace:
+                # it sounds just before the next note: the gap is shorter than the main note's figure
+                if figure_of_ms(starts[j + 1] - starts[j], quarter_ms, split) <= main:
                     break
                 chain.append(j)
                 j -= 1
@@ -203,6 +195,39 @@ def _split(chain: list[int], pitch: list[int], why: Counter) -> list[list[int]]:
     return out
 
 
+def _uniform(chain: list[int], fig: list[int], why: Counter) -> list[list[int]]:
+    """Cut a chain into groups of one figure (the user, Phase 2 review). A single note one figure away may close a
+    group or open the next one when the group has two notes or more of its own figure, never sit inside it, so a
+    group never holds two sub-groups of another figure."""
+    runs: list[list[int]] = []
+    for i in chain:
+        if runs and fig[runs[-1][0]] == fig[i]:
+            runs[-1].append(i)
+        else:
+            runs.append([i])
+    groups: list[tuple[list[int], int, bool]] = (
+        []
+    )  # (columns, figure of the group, holds an odd note)
+    for run in runs:
+        f = fig[run[0]]
+        if groups:
+            members, gf, odd = groups[-1]
+            near = abs(steps(f, gf)) == 1
+            if (
+                not odd and near and len(run) == 1 and len(members) >= 2
+            ):  # one odd note closes the group
+                groups[-1] = (members + run, gf, True)
+                continue
+            if (
+                not odd and near and len(members) == 1 and len(run) >= 2
+            ):  # one odd note opens this run
+                groups[-1] = (members + run, f, True)
+                continue
+            why["cut at a figure change"] += 1
+        groups.append((run, f, False))
+    return [g[0] for g in groups]
+
+
 def beam_groups(sheet: Sheet, quarter_ms: float, split: float = SPLIT) -> dict:
     """Step 4: beam groups by the simple rules of plan section 3.11. Returns the counts (groups, cuts by reason)."""
     for n in sheet.notes:
@@ -229,8 +254,9 @@ def beam_groups(sheet: Sheet, quarter_ms: float, split: float = SPLIT) -> dict:
             cur = [i] if beamable else []
         if len(cur) > 1:
             chains.append(cur)
+        fig = [ns[0].figure for _, ns in cols]
         for chain in chains:
-            for part in _split(chain, pitch, why):
+            for part in (p for u in _uniform(chain, fig, why) for p in _split(u, pitch, why)):
                 if len(part) < 2:
                     continue
                 counter += 1

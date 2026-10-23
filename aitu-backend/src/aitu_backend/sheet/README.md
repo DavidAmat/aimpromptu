@@ -151,10 +151,11 @@ F1 frames sheet:  F1 frames frameMs=40 quarterMs=500
   even gaps. The reference figure is `Sheet.quarter_ms` (the pulse estimate of `proposal.beat` unless given).
 - **Spelling** (`spelling`): one name per key and armadura, by the user's rules 1 to 5; in Do mayor Do#, Mib, Fa#,
   Sol#, Sib. Every note outside the armadura prints its sign every time (`spelling.sign`).
-- **The algorithm** (`proposal.frames`) also writes grace notes (two figures shorter than the next note, at most
-  100 ms before it, not the same note name), beam groups (corcheas and shorter no farther apart than a corchea; cut at
-  a jump of more than an octave, at a turn after three steps, and into parts of at most 8), the armadura of each
-  passage (fewest signs, a cost per change), clefs and 8va (the left-hand rules of the prompt, version 4).
+- **The algorithm** (`proposal.frames`) also writes grace notes (a semicorchea or shorter, two figures shorter than
+  the next note and sounding just before it), beam groups (corcheas and shorter no farther apart than a corchea, of one
+  figure with at most one odd note at an edge; cut at a jump of more than an octave, at a turn after three steps, and
+  into parts of at most 8), the armadura of each passage (fewest signs, a cost per change), clefs and 8va (the
+  left-hand rules of the prompt, version 4).
 - **F1 additions** (both views; the bars output is unchanged): the header field `quarterMs=` of the frames view, and
   the tag `orn` (an onset played inside the ornament of the note before it: kept for the matrix, not drawn).
 - **Data additions**: `Note.covered` (`orn`), `Note.on_ms` and `Note.len_ms` (measured, not written in F1),

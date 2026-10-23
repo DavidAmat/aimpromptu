@@ -120,8 +120,11 @@ the criteria and limits of section 3.11.
 - Trills, turns (grupetto) and mordents may be written when they are clear.
 - *Phase 2 (measured on the 10 viewer songs):* the split is 0.7. The length is capped at the next onset of the same
   hand, because under the pedal the measured length runs past it (pending the user's decision); a note followed by
-  silence keeps its own figure. Chords and runs of even gaps take one figure. A grace note is also at most 100 ms
-  before its main note and does not share its note name. Tuplets are not in the new sheet.
+  silence keeps its own figure. Chords and runs of even gaps take one figure. A grace note is a semicorchea or
+  shorter that sounds just before its main note. Tuplets are not in the new sheet.
+- *Phase 2, the user's review of the gallery:* a beam group holds one figure. One single note of another figure may
+  open or close it, never sit inside it, and a group never holds several sub-groups. Any note two figures shorter
+  than the next one (a fusa before a corchea) is an acciaccatura.
 
 ## 3.4 Alteraciones (the user's rules)
 
@@ -352,8 +355,9 @@ the algorithm that writes it come before the engine and the LLM, because both de
    past the next onset of their hand, so the length is capped there (a decision for the user); one figure per chord
    (the most common) and per run of even gaps. Notes struck together are grouped on raw onsets first (D-04), or the
    first note of an uneven chord becomes a false grace note.
-4. **Grace notes** from the two-step rule (section 3.3). *Done,* with two limits measured on the songs: at most 100 ms
-   before the next note, and not the same note name as the main chord (an octave played unevenly).
+4. **Grace notes** from the two-step rule (section 3.3). *Done:* a semicorchea or shorter, two figures or more shorter
+   than the next note and sounding just before it (the gap is shorter than that note's figure). After the user's review
+   of the gallery, beam groups hold one figure (one single odd note at an edge at most).
 5. **Alteraciones** (section 3.4): check that rules 1 to 5 give one spelling per pitch and armadura; write it as a rule
    of the core; decide Do mayor; the algorithm proposes the armadura of each passage with the fewest signs. *Done:*
    one name for every key and armadura (`spelling.check_rules`); Do mayor Do#, Mib, Fa#, Sol#, Sib (research
@@ -588,6 +592,7 @@ repository."
 | 1 | Phase 2 task 6: the algorithm's starting hands come from `aitu_backend.hands` for the notes without a saved hand | 1,652 notes of the library have none, and the core's default gives them a hand by middle C only |
 | 1 | Phase 3 task 6: the speed is measured in the container, and its Python build is looked at | The container draws about 30 % slower than the host on the same code |
 | 2 | Phase 2 tasks 3 and 4: the length is capped at the next onset of the hand (pending the user); one figure per run of even gaps; chords grouped on raw onsets (D-04); grace notes at most 100 ms early and not of the same note name | Measured: without the cap 37 % of the notes of even runs change figure inside the run; uneven chords and octaves made false grace notes |
+| 2 | Section 3.3 and Phase 2 task 4: beam groups of one figure; the acciaccatura limits reduced to "a semicorchea or shorter, sounding just before" | The user's review of the gallery (2026-10-23) |
 | 2 | Section 3.3: no tuplets in the new sheet | No beat to find a tresillo on; the figures are approximate by the user's rule |
 | 2 | Section 3.4: rule 4 keeps the becuadro when the other name needs two signs; Do mayor's table | Rules 3 and 4 meet on Sol, Re, La in Mi mayor; the research rulebook |
 | 2 | Phase 3 task 4 and Phase 4 task 4: accidentals by `spelling.sign`; figures are not durations; the LLM's answer mapped back to the notes and its figures computed by the rule; `arp` and tuplets left to Phase 4 | What the new sheet carries (`03-implementation-phase-2.md` section 12) |

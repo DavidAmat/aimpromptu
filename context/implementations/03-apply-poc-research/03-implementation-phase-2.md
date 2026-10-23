@@ -12,9 +12,9 @@ for the user's check of the gallery and two decisions (section 10).
 | 2.1 Study | The F1 frames view already carries hands, figures and tags per column; nothing in it depends on bars. The algorithm needs the pulse only for the reference figure. Two measurements changed the plan's rules: note lengths under the pedal (section 2.2) and chords played unevenly (section 2.3) |
 | 2.2 The format | The product sheet is F1 frames (`sheet/frames.py`): `quarterMs=` in the header, the tag `orn`, no bars, puntillos or tuplets; `frames.check` lists what breaks the rules; the round trip maps every note back to its onset cell (exact on 33 of 33 songs) |
 | 2.3 Figures | `sheet/figures.py`: middle points from the negra up, **70 %** for the corchea and shorter (measured against 50, 60 and 80 %); the length is **capped at the next onset of the hand** (a decision for the user, section 10.1); one figure per chord (the most common, ties to the longer) and per run of even gaps |
-| 2.4 Grace notes | The two-step rule, plus two limits found on the songs: at most 100 ms before the next onset, and not the same note name as the main chord. 327 grace columns in the library (0.8 % of the columns) |
+| 2.4 Grace notes | The two-step rule on semicorcheas and shorter that sound just before their note (the user's review, section 13 replaced the first limits). 1,712 grace columns in the library (4.4 % of the columns) |
 | 2.5 Alteraciones | `sheet/spelling.py`: rules 1 to 5 give one name for each of the 12 keys in each of the 15 armaduras (`check_rules`, a test). Do mayor: Do#, Mib, Fa#, Sol#, Sib (the research rulebook). The armadura of each passage: fewest signs, 12 signs per change |
-| 2.6 The algorithm | `proposal/frames.py`, `propose_frames`. 33 of 33 songs of My library: a valid sheet (`frames.check` empty), the round trip exact; about 0.2 s per song (median) after 0.76 s for the starting hands (`pipeline.starting_hands`). `scripts/write_sheet.py` |
+| 2.6 The algorithm | `proposal/frames.py`, `propose_frames`. 33 of 33 songs of My library: a valid sheet (`frames.check` empty), the round trip exact; about 0.2 s per song (median) after 0.76 s for the starting hands (`pipeline.starting_hands`). Beam groups of one figure (section 13). `scripts/write_sheet.py` |
 | 2.7 Gallery | 14 cases in [`gallery/phase-2/index.html`](gallery/phase-2/index.html), drawn by Verovio (`scripts/sheet_gallery.py`). **Waiting for the user's check** |
 
 # 2. The study
@@ -161,6 +161,8 @@ On the 33 songs (64,744 notes): corchea 51 %, negra 21 %, semicorchea 17 %, fusa
 redonda 1 % (grace notes not counted).
 
 # 5. Grace notes (task 2.4)
+
+The user's review replaced the limits of this section (section 13); the numbers below are the first version.
 
 The two-step rule alone made many false grace notes: a corchea 480 ms before a blanca is two steps shorter, and so is
 a note 160 ms before a corchea when the reference is long (7 Years: 151 grace columns, 14 % of its columns). A grace
@@ -312,7 +314,7 @@ The page is served on the machine with `python3 -m http.server 8715 --bind 0.0.0
 
 | Check | Result |
 |---|---|
-| Backend, full run in the image **on the CPU** (the app's backend holds the GPU) | 1,302 tests (Phase 1: 1,287, plus the 15 of `test_sheet_frames.py`): 1,298 passed, 1 skipped, the same 3 failures as in Phases 0 and 1 (`test_the_worked_example_at_00_46_prints_three_equal_corcheas`, and the two Transkun tests that fail only without a GPU); 114 s |
+| Backend, full run in the image **on the CPU** (the app's backend holds the GPU) | 1,303 tests after the review (Phase 1: 1,287, plus the 16 of `test_sheet_frames.py`): 1,299 passed, 1 skipped, the same 3 failures as in Phases 0 and 1 (`test_the_worked_example_at_00_46_prints_three_equal_corcheas`, and the two Transkun tests that fail only without a GPU); 114 s |
 | The golden files of the core | 139 of 139, unchanged (`test_sheet_core_golden.py`, `test_sheet_core_chain.py`): the bars path did not change; the import boundary allows the new modules |
 | `flake8` on `src/aitu_backend/sheet`, `pipeline.py`, `scripts`, the new test | clean |
 | `black` | the changed files formatted |
@@ -367,3 +369,39 @@ show each rule 4 passage and its becuadro version. The change for (b) or (c) is 
   chose its key should pass it (`key=`), which also disables the armadura changes unless `key_changes` are given.
 - The scratch study scripts (lengths, splits, grace limits, the passage finder) are not kept; their numbers are in
   sections 2, 4 and 5. `scripts/write_sheet.py --layer private --json` reproduces section 7.
+
+# 13. The user's review of the gallery (iteration 1, 2026-10-23)
+
+The user looked at the left hand of gallery case 1 (Bonfire Heart, 2:20) and asked for three changes:
+
+1. **A beam group is uniform.** A group holds one figure; when the figures differ, the group is cut. One single note
+   of another figure is allowed, but only one, and the group must not hold several sub-groups (the first version
+   beamed two pairs of semicorcheas and a corchea under one beam).
+2. **Two figures apart is an acciaccatura**, without the extra limits: a fusa before a corchea must not stay written.
+3. Fusas inside a beam group drew badly (partial beams).
+
+What changed in `proposal/frames.py`:
+
+- `_uniform` cuts each chain of beamable columns into runs of one figure. A single note one figure away may close a
+  group or open the next one, never sit inside it, and only next to two notes or more of the group's own figure (an
+  octave split as a semifusa and a fusa was drawn as a group of two notes under four beams). The jump, turn and
+  maximum of 8 cuts then apply inside each group.
+- `find_graces`: a semicorchea or shorter, two figures or more shorter than the next note of its hand, whose gap to
+  that note is shorter than the note's own figure (it sounds just before it); one or two such columns, a longer chain
+  stays written. The 100 ms limit and the note-name rule (octaves played unevenly, repeated notes) were removed, as
+  the user asked: an octave played unevenly is now an acciaccatura of the upper note. The semicorchea limit and the
+  gap condition keep the false grace notes of section 5 away (a corchea 480 ms before a blanca).
+- The gallery leaves out a beam group that its passage cuts (case 1 drew a one-note beam at its start).
+
+Library after the change (33 songs, every sheet valid, every round trip exact):
+
+| Count | Before | After |
+|---|---|---|
+| Grace columns | 327 | 1,712 (4.4 % of 38,966 columns; Can't Stop the Feeling 171, 7 Years 143, Raise Your Glass 116) |
+| Beam groups | 5,891 | 5,845 |
+| Group sizes 2 / 3 / 4 / 5 / 6 / 7 / 8 | 1,283 / 803 / 728 / 829 / 766 / 680 / 802 | 1,490 / 1,466 / 919 / 671 / 461 / 385 / 453 |
+| Cuts: figure change / jump / 8 notes / turn | - / 1,420 / 1,277 / 504 | 4,290 / 1,010 / 603 / 194 |
+| Algorithm, median per song | 194 ms | 165 ms |
+
+Tests: `test_a_beam_group_holds_one_figure`, and `test_grace_notes_by_the_two_step_rule` with the new limits (16
+tests in `test_sheet_frames.py`).

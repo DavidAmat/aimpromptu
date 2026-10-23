@@ -49,7 +49,7 @@ Built 2026-10-23; waiting for the user's check of the gallery and the two decisi
 - [x] Task 2.1 Study: what the F1 frames view carries, what the algorithm needs from the pulse estimate (only the reference figure); the lengths under the pedal and the uneven chords measured.
 - [x] Task 2.2 The format: hands, plain figures, beam groups, graces, ornaments (`orn`), clef changes, armadura per passage, 8va, `quarterMs=`; no rests, no compases, no tuplets. Reader, writer, `frames.check`, round trip with the matrix (33 of 33 songs exact).
 - [x] Task 2.3 Figures from the note's own length, capped at the next onset of the hand, with the reference figure; split 0.7 measured on the 10 viewer songs; one figure per chord per hand, and per run of even gaps.
-- [x] Task 2.4 Grace notes from the two-step rule, at most 100 ms before the main note, not of the same note name.
+- [x] Task 2.4 Grace notes from the two-step rule: a semicorchea or shorter that sounds just before its main note (after the user's review). Beam groups of one figure (one odd note at an edge at most).
 - [x] Task 2.5 Alteraciones: rules 1 to 5 as a rule of the core (`spelling`); Do mayor decided; the armadura with the fewest signs per passage.
 - [x] Task 2.6 The algorithm (`propose_frames`) writes this sheet for every library song, with the simple beam rules; its starting hands from `pipeline.starting_hands` (the saved hands and the hand split).
 - [p] Task 2.7 Gallery for the user (figures, graces, alteraciones, the unusual cases of rule 4): built (`gallery/phase-2/index.html`, 14 cases); the user's check is pending.

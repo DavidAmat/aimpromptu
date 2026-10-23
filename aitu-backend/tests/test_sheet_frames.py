@@ -95,12 +95,22 @@ def test_grace_notes_by_the_two_step_rule() -> None:
     sheet = algo.propose_frames(one, quarter_ms=q).sheet
     grace = [n for n in sheet.notes if n.grace]
     assert [(n.midi, n.grace, n.figure) for n in grace] == [(74, "acc", 8)]
-    # the same note 300 ms before: too slow to be a grace note
-    slow = notes_of([(74, 1000.0, 50.0, R), (72, 1300.0, 500.0, R), (60, 3000.0, 500.0, R)])
-    assert not any(n.grace for n in algo.propose_frames(slow, quarter_ms=q).sheet.notes)
-    # an octave played unevenly: the same name, not a grace note
+    # a fusa-length note 300 ms before the negra: still two figures shorter and sounding just before it
+    near = notes_of([(74, 1000.0, 50.0, R), (72, 1300.0, 500.0, R), (60, 3000.0, 500.0, R)])
+    assert [n.midi for n in algo.propose_frames(near, quarter_ms=q).sheet.notes if n.grace] == [74]
+    # 700 ms before it: the gap is as long as the negra itself, the note stays written
+    far = notes_of([(74, 1000.0, 50.0, R), (72, 1700.0, 500.0, R), (60, 3000.0, 500.0, R)])
+    assert not any(n.grace for n in algo.propose_frames(far, quarter_ms=q).sheet.notes)
+    # a fusa inside a run of corcheas: an acciaccatura of the corchea after it
+    run8 = [(72, 0.0, 240.0, R), (74, 250.0, 240.0, R), (76, 500.0, 40.0, R), (77, 560.0, 240.0, R)]
+    run8 += [(79, 810.0, 240.0, R), (60, 3000.0, 500.0, R)]
+    sheet = algo.propose_frames(notes_of(run8), quarter_ms=q).sheet
+    assert [n.midi for n in sheet.notes if n.grace] == [76]
+    # an octave played unevenly: the lower note is an acciaccatura too (the user, Phase 2 review)
     octave = notes_of([(60, 1000.0, 50.0, R), (72, 1060.0, 500.0, R), (60, 3000.0, 500.0, R)])
-    assert not any(n.grace for n in algo.propose_frames(octave, quarter_ms=q).sheet.notes)
+    assert [n.midi for n in algo.propose_frames(octave, quarter_ms=q).sheet.notes if n.grace] == [
+        60
+    ]
     # four fast notes before the main note: a written run, not grace notes
     run = [(74 + i, 1000.0 + i * 50, 40.0, R) for i in range(4)] + [(72, 1200.0, 500.0, R)]
     assert not any(n.grace for n in algo.propose_frames(notes_of(run), quarter_ms=q).sheet.notes)
@@ -129,6 +139,33 @@ def test_beam_groups_have_at_most_8_notes_and_cut_at_jumps_and_turns() -> None:
         [n.midi for n in sheet.notes if n.beam == b] for b in sorted({n.beam for n in sheet.notes})
     ]
     assert groups == [[60, 62, 64, 65, 67], [65, 64, 62]]  # the rise, then the fall
+
+
+def test_a_beam_group_holds_one_figure() -> None:
+    q = 500.0
+    # semicorcheas, semicorcheas, a corchea, semicorcheas: no group holds two sub-groups
+    rows, t = [], 0.0
+    for p, length in [(60, 120), (62, 120), (64, 240), (65, 120), (67, 120), (69, 120), (71, 120)]:
+        rows.append((p, t, float(length), R))
+        t += length + 5
+    sheet = algo.propose_frames(notes_of(rows + [(48, 3000.0, 500.0, R)]), quarter_ms=q).sheet
+    groups = [
+        [n.figure for n in sheet.notes if n.beam == b]
+        for b in sorted({n.beam for n in sheet.notes if n.beam is not None})
+    ]
+    assert groups == [
+        [16, 16, 8],
+        [16, 16, 16, 16],
+    ]  # one odd note may close a group, never sit inside it
+    # one corchea then semicorcheas: the corchea opens the group; two corcheas then semicorcheas: two groups
+    one = [(60, 0.0, 240.0, R)] + [(62 + i, 250.0 + i * 125, 120.0, R) for i in range(4)]
+    sheet = algo.propose_frames(notes_of(one + [(48, 3000.0, 500.0, R)]), quarter_ms=q).sheet
+    assert len({n.beam for n in sheet.notes if n.beam is not None}) == 1
+    two = [(60, 0.0, 240.0, R), (61, 250.0, 240.0, R)] + [
+        (62 + i, 500.0 + i * 125, 120.0, R) for i in range(4)
+    ]
+    sheet = algo.propose_frames(notes_of(two + [(48, 3000.0, 500.0, R)]), quarter_ms=q).sheet
+    assert len({n.beam for n in sheet.notes if n.beam is not None}) == 2
 
 
 def test_no_beam_across_a_gap() -> None:
