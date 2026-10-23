@@ -32,11 +32,13 @@ Done 2026-10-23. Report: [`03-implementation-phase-0.md`](03-implementation-phas
 - [x] Task 0.3 The inventory, high level: every screen and tool that uses vexflow-v2 or `TimeScorePayload`, with the phase that moves it.
 - [x] Task 0.4 The baseline screenshots of every screen that shows a sheet (`scripts/baseline-sheets.mjs`, 22 screens), and the counts of the checks.
 
-# [ ] Phase 1: The core inside the backend
+# [x] Phase 1: The core inside the backend
 
-- [ ] Task 1.1 `aitu_notation` copied into the backend (`aitu_backend/sheet/`), with its frozen files and golden tests; `sheet.pmn` replaced by `aitu_backend.pmn` and `aitu_backend.matrix.keys` (identical on 2026-10-23, checked again).
-- [ ] Task 1.2 The golden tests pass inside the backend container; the backend tests are unchanged.
-- [ ] Task 1.3 A small route or command draws one library song with the bars engine; time per song in the report.
+Done 2026-10-23. Report: [`03-implementation-phase-1.md`](03-implementation-phase-1.md).
+
+- [x] Task 1.1 `aitu_notation` copied into the backend (`aitu_backend/sheet/`), with its frozen files; golden tests in `tests/` (`test_sheet_core_*.py`, `tests/golden/sheet/`); `sheet.pmn` replaced by `aitu_backend.pmn` and `aitu_backend.matrix.keys` (identical, checked again).
+- [x] Task 1.2 The golden tests pass inside the backend container (139); the other backend tests are unchanged.
+- [x] Task 1.3 `scripts/draw_sheet.py` draws library songs with the bars engine: all 33 of My library, identical to the research core byte for byte; time per song in the report.
 
 # [ ] Phase 2: The new sheet without compases (format and algorithm)
 
@@ -45,7 +47,7 @@ Done 2026-10-23. Report: [`03-implementation-phase-0.md`](03-implementation-phas
 - [ ] Task 2.3 Figures from the note's own length with the reference figure; thresholds tuned on the 10 viewer songs; one figure per chord per hand.
 - [ ] Task 2.4 Grace notes from the two-step rule.
 - [ ] Task 2.5 Alteraciones: rules 1 to 5 as a rule of the core; Do mayor decided; the armadura with the fewest signs per passage.
-- [ ] Task 2.6 The algorithm writes this sheet for every library song, with the simple beam rules (at most 8 notes, cuts at a jump or a change of direction).
+- [ ] Task 2.6 The algorithm writes this sheet for every library song, with the simple beam rules (at most 8 notes, cuts at a jump or a change of direction); its starting hands from `aitu_backend.hands` for the notes without a saved hand.
 - [ ] Task 2.7 Gallery for the user (figures, graces, alteraciones, the unusual cases of rule 4).
 
 # [ ] Phase 3: The engine without compases
@@ -55,7 +57,7 @@ Done 2026-10-23. Report: [`03-implementation-phase-0.md`](03-implementation-phas
 - [ ] Task 3.3 Line breaks without compases, stable when one segment changes.
 - [ ] Task 3.4 Accidentals on every altered note; no rests, compás lines, meter or bar numbers.
 - [ ] Task 3.5 Cursor map and note ids; one segment drawn on its own.
-- [ ] Task 3.6 Speed per song and per segment, cold and warm, on the 10 viewer songs.
+- [ ] Task 3.6 Speed per song and per segment, cold and warm, on the 10 viewer songs, in the container (its Python build: Phase 1 measured it about 30 % slower than the host).
 - [ ] Task 3.7 Gallery: vexflow-v2, the bars engine and the new engine side by side.
 
 # [ ] Phase 4: The LLM step for the new sheet

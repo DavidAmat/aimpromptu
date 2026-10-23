@@ -313,14 +313,17 @@ the report. No change to the app.
 
 ## Phase 1: The core inside the backend
 
+**Done 2026-10-23** ([`03-implementation-phase-1.md`](03-implementation-phase-1.md)).
+
 *Why:* before changing anything, the research code must run inside the backend exactly as it ran in the research.
 
-1. Copy `aitu_notation` into the backend (proposal: `aitu_backend/sheet/`), with its frozen files and its golden tests.
+1. Copy `aitu_notation` into the backend (`aitu_backend/sheet/`: `aitu_notation.X` is `aitu_backend.sheet.X`), with
+   its frozen files; the golden tests go to the backend's `tests/` (`test_sheet_core_*.py`, `tests/golden/sheet/`).
    Replace the core's `sheet.pmn` with imports of `aitu_backend.pmn` and `aitu_backend.matrix.keys`, after checking
    again that they did not change.
 2. The golden tests pass inside the backend container; the backend tests are unchanged.
-3. A small backend route or command that draws one library song with the bars engine, to prove the chain runs in the
-   container (time per song in the report).
+3. A small backend command (`scripts/draw_sheet.py`) that draws library songs with the bars engine, to prove the
+   chain runs in the container (time per song in the report).
 
 *Done when:* the golden files are reproduced in the backend; no change visible to the user.
 
@@ -340,7 +343,10 @@ the algorithm that writes it come before the engine and the LLM, because both de
 5. **Alteraciones** (section 3.4): check that rules 1 to 5 give one spelling per pitch and armadura; write it as a rule
    of the core; decide Do mayor; the algorithm proposes the armadura of each passage with the fewest signs.
 6. The algorithm (`proposal`) writes this sheet for every library song, with the simple beam rules of section 3.11
-   (at most 8 notes, a cut at a large jump or where the direction changes after a run).
+   (at most 8 notes, a cut at a large jump or where the direction changes after a run). Its starting hands are the
+   saved hands plus the beam search of `aitu_backend.hands` for the notes that have none (`hand_sheet`), as in the
+   research: Phase 1 found 1,652 notes without a saved hand in 32 of the 33 library songs, and the core's default
+   (`hand_sheet_of`) gives those a hand by middle C only.
 7. Gallery for the user: the same passages as text and as notes for figures, graces and alteraciones, including the
    unusual cases of rule 4 (for example Mi# and Si# in Mi mayor), so that the user confirms the rules by eye.
 
@@ -361,7 +367,10 @@ Verovio drawing rules) stays.
    changed segment moves the rest of the sheet as little as possible (the piece-by-piece view of phase 5 needs this).
 4. Accidentals on every altered note (section 3.4), no rests, no compás lines, no meter, no bar numbers.
 5. Cursor map and note ids, as in the research (`render_song`), and drawing **one segment** on its own.
-6. Speed: per song and per segment, cold and warm, on the 10 viewer songs.
+6. Speed: per song and per segment, cold and warm, on the 10 viewer songs, in the backend container. Phase 1 found
+   the container about 30 % slower than the host on the same code (155 ms against 118 ms per song); the likely cause
+   is the image's Python build (Debian's, shared `libpython`), and uv's Python in the image is the first thing to
+   try.
 7. Gallery: the same passages drawn by vexflow-v2, by the bars engine and by the new engine, side by side.
 
 *Done when:* the 32 library songs draw without error, the speed table is in the report, and the user has approved the
@@ -551,3 +560,6 @@ repository."
 | 0 | Phase 5 tasks 7 to 9: the switch inside `SheetPage`; the browser checks move to `data-*` hooks; no line naming the figure and a tempo | The inventory: six screens draw through `SheetPage`; 16 scripts select vexflow-v2 classes; the line is on every sheet today |
 | 0 | Phase 8 task 1 names the Transpose preview, From other projects and the requests review | Found by the inventory of imports, not in the first list |
 | 0 | Phase 10 task 1: `aitu_backend/hands/` stays; two routes already have no caller | The algorithm and the LLM step start from its split |
+| 1 | Phase 1 tasks 1 and 3: the core keeps its inner layout (`aitu_backend.sheet.sheet` is the research's `aitu_notation.sheet`), its tests live in the backend's `tests/`, and the proof is a command, not a route | A one-to-one name map keeps every later comparison with the research simple; `pytest` collects only `tests/`; a route needs the rights table and gives the user nothing yet |
+| 1 | Phase 2 task 6: the algorithm's starting hands come from `aitu_backend.hands` for the notes without a saved hand | 1,652 notes of the library have none, and the core's default gives them a hand by middle C only |
+| 1 | Phase 3 task 6: the speed is measured in the container, and its Python build is looked at | The container draws about 30 % slower than the host on the same code |

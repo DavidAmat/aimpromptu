@@ -1,0 +1,29 @@
+F1 bars
+clefs: R=treble L=treble
+bar 175 meter=4/4 key=1b
+1 f0           L: A3:8 b1  R: C#6:4
+1+1/2 f19      L: A4:8 b1
+2 f38          L: E4,G4:8 b1
+2+1/2 f56      L: A4:8 b1
+3 f75          L: Bb4:8 b2
+3+1/2 f94      L: A4:8 b2
+4 f113         L: E4,G4:8 b2  R: E6:8 b3
+4+1/2 f131     L: A4:8 b2  R: C#6:8 b3
+bar 176
+1 f150         L: A3:8 b4  R: A5:8 b5
+1+1/2 f169     L: A4:8 b4  R: Bb5:8 b5
+2 f188         L: G4:8 b4  R: Bb5:8 b6
+2+1/2 f206     L: A4:8 b4  R: G5:8 b6
+3 f225         L: Bb4:8 b7
+3+1/2 f244     L: A4:8 b7
+4 f263         L: E4,G4:8 b7  R: E6:8 b8
+4+1/2 f281     L: A4:8 b7  R: C#6:8 b8
+bar 177
+1 f300         L: A3:8 b9  R: A5:8 b10
+1+1/2 f319     L: A4:8 b9  R: Bb5:8 b10
+2 f338         L: E4,G4:8 b9  R: Bb5:8 b11
+2+1/2 f356     L: A4:8 b9  R: G5:8 b11
+3 f375         L: Bb4:8 b12
+3+1/2 f394     L: A4:8 b12
+4 f413         L: E4,G4:8 b12  R: E6:8 b13
+4+1/2 f431     L: A4:8 b12  R: C#6:8 b13

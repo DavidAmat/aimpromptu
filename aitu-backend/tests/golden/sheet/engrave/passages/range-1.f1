@@ -1,0 +1,23 @@
+F1 bars
+clefs: R=treble L=bass
+bar 30 meter=3/4 key=4b
+1 f0           L: Eb3:4  R: Eb5:4 Eb5:8 b1
+1+1/2 f8       R: B4:8 b1
+2 f15          L: Ab3,C4,Eb4:4  R: C5:8 b1
+2+1/2 f23      R: Ab5:4 Ab5:8 b1
+3 f30          L: Ab3,C4,Eb4:4  R: B4:8 b1
+3+1/2 f38      R: C5:8 b1
+bar 31
+1 f45          L: Eb2:4  R: Eb5:4 Eb5:8 b2
+1+1/2 f53      R: C5:8 b2
+2 f60          L: clef=treble Bb3,Eb4,G4:4  R: Db5:8 b2
+2+1/2 f68      R: Bb5:4 Bb5:8 b2
+3 f75          L: Bb3,Eb4,G4:4  R: C5:8 b2
+3+1/2 f83      R: Db5:8 b2
+bar 32
+1 f90          L: clef=bass Ab3:4  R: Eb5:4 Eb5:8 b3
+1+1/2 f98      R: B4:8 b3
+2 f105         L: clef=treble Eb4,Ab4:4  R: C5:8 b3
+2+1/2 f113     R: C6:4 C6:8 b3
+3 f120         L: Eb4,Ab4:4  R: D5:8 b3
+3+1/2 f128     R: Eb5:8 b3

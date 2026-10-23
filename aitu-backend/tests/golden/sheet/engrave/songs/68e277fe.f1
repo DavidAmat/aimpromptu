@@ -1,0 +1,983 @@
+F1 bars
+clefs: R=treble L=bass
+bar 0 meter=4/4 key=5b len=2
+1 f5           L: Ab1,Ab2:4  R: Eb4,G4:16 b1
+1+1/4 f8       R: C4:16 b1
+1+1/2 f10      R: G3:8 b1
+2 f14          L: Bb1,Bb2:4  R: F3,Ab3,D4:4
+bar 1
+1 f24          L: C2,C3,G3:1  R: C4,C5:1
+bar 2
+bar 3
+1 f112         L: Db3,F3,Ab3:4.  R: F4:8 b1
+1+1/2 f118     R: Ab4:8 b1
+2 f123         R: Db5:8 b1
+2+1/2 f129     L: Db3,Gb3,Ab3:2  R: Gb4:8 b1
+3 f135         R: Ab4:8 b2
+3+1/2 f141     R: Db5:8 b2
+4 f147         R: Gb4:8 b2
+4+1/2 f153     R: Ab4:8 b2
+bar 4
+1 f159         L: Db3,F3,Ab3:4.  R: F4:8 b3
+1+1/2 f164     R: Ab4:8 b3
+2 f170         R: Db5:8 b3
+2+1/2 f176     L: Db3,Eb3:2  R: Eb4:8 b3
+3 f182         R: Ab4:8 b4
+3+1/2 f188     R: Db4:8 b4
+4 f194         R: Db5:8 b4
+4+1/2 f199     R: Db5:8 b4
+bar 5
+1 f205         L: Db3,F3,Ab3:4.  R: Db5:8.
+1+3/4 f214     R: Db5:8.
+2+1/2 f223     L: Db3,Gb3,Ab3:2  R: Db5:4
+3+1/2 f235     R: Db5:8 b5
+4 f241         R: Db5:8 b5
+4+1/2 f246     R: Db5:8 b5
+bar 6
+1 f252         L: Db3,F3,Ab3:4.  R: Db5:8.
+1+3/4 f261     R: Db5:8.
+2+1/2 f270     L: Db3,Eb3,Ab3:2  R: Eb5:4
+3+1/2 f282     R: Db5:8 b6
+4 f287         R: Db5:8 b6
+4+1/2 f293     R: Db5:8 b6
+bar 7
+1 f299         L: Db3,F3,Ab3:4.  R: Db5:8.
+1+3/4 f308     R: Db5:8.
+2+1/2 f317     L: Db3,Gb3,Ab3:2  R: Db5:4
+3+1/2 f328     R: Db5:8 b7
+4 f334         R: Db5:8 b7
+4+1/2 f340     R: Ab5:8 b7
+bar 8
+1 f346         L: Db3,F3:4.  R: F5,Ab5:4
+2 f358         R: F5:8 b8
+2+1/2 f364     L: Ab2,Db3,Eb3:2  R: F5:8 b8
+3 f369         R: Eb5:4
+4 f381         R: Db5:8 b9
+4+1/2 f387     R: Db5:8 b9
+bar 9
+1 f393         L: Db3,F3,Ab3:4.
+1+1/2 f399     R: Db5:4
+2+1/2 f410     L: Db3,Gb3:2
+2+1/2 f411     R: Bb4:4
+3+1/2 f422     R: Db5:8 b10
+4 f428         R: Db5:8 b10
+4+1/2 f434     R: Eb5:8 b10
+bar 10
+1 f440         L: Db3,F3,Ab3:4.  R: F5:8.
+1+3/4 f449     R: Db5:8.
+2+1/2 f457     L: Db3,Eb3,Ab3:2  R: Eb5:4
+3+1/2 f469     R: Db5:8
+4 f475         R: Db5:4
+bar 11
+1 f487         L: Db3,F3,Ab3:4.  R: Ab5:4
+2 f498         R: F5:8
+2+1/2 f504     L: Db3,Gb3:2  R: Bb5,Bb6:2
+4+1/2 f528     R: Ab5:8
+bar 12
+1 f533         L: Db3:4  R: Ab5:4
+1 f534         L: F3,Bb3:4
+2 f545         L: Db3,F3,Bb3:4  R: F5:4
+3 f557         L: C3,Eb3,Ab3:4  R: Ab4,Eb5:8.
+3+3/4 f566     R: Eb5:16
+4 f569         L: Ab2,C3,Eb3,Ab3:4  R: Db5:8 b11
+4+1/2 f574     R: Db5:8 b11
+bar 13
+1 f580         L: Gb2,Gb3:8
+1+1/2 f586     L: Gb2:8.  R: Db4,Bb4,Db5:8.
+2+1/4 f595     L: Db4:8.  R: Db5:8.
+3 f604         L: Ab2:8  R: Db4,Db5:4.
+3+1/2 f610     L: Ab2:16
+3+3/4 f613     L: Db4:8.
+4+1/2 f621     L: Db4:16  R: Db5:16
+4+3/4 f624     L: Db4:8.  R: Db5:8.
+bar 14
+1+1/2 f633     L: Db4:8  R: Db5:2.
+2 f639         L: Bb2:16
+2+1/4 f642     L: Db4:16
+2+1/2 f645     L: Bb2:8
+3 f651         L: Ab2:8  R: Db4:4.
+3+1/2 f657     L: Ab2:16
+3+3/4 f659     L: Db4:8.
+4+1/2 f668     L: Ab2:16  R: Db4,Db5:8
+4+3/4 f671     L: Db4:16
+bar 15
+1 f674         L: Gb2:8  R: Db4,Gb4:8
+1+1/2 f680     L: Gb1,Gb2:8.  R: Db4,Db5:4.
+2+1/4 f689     L: Db4:8.
+3 f698         L: Ab2:8  R: Db4,Db5:8
+3+1/2 f703     L: Ab2:16  R: Ab6:4
+3+3/4 f706     L: Db4:8.
+4+1/2 f715     L: Ab2:8  R: Db4,Db5:16
+4+3/4 f718     R: Db4,Db5:16
+bar 16
+1+1/2 f727     R: Db4,Db5:8.
+2 f733         L: Db3:8 b12
+2+1/4 f736     R: Db4,Db5:8.
+2+1/2 f739     L: Db3:8 b12
+3 f744         L: C3:8 b13  R: Db4,Db5:4
+3+1/2 f750     L: C3:8 b13
+4 f756         L: Ab2:8 b13  R: Db5:8 b14
+4+1/2 f762     L: Ab2:8 b13  R: Db5:8 b14
+bar 17
+1 f768         L: Gb2:8 b15  R: Db5:4
+1+1/2 f774     L: Gb2:8 b15
+2 f780         L: Db3:8 b15  R: Bb4:4
+2+1/2 f785     L: Gb2:8 b15
+3 f791         L: Ab2:8 b16  R: Ab4:4
+3+1/2 f797     L: Ab2:8 b16
+4 f803         L: Eb3:8 b16  R: Bb4:8 b17
+4+1/2 f809     L: Ab2:8 b16  R: Db4:8 b17
+bar 18
+1 f815         L: Bb2:8 b18
+1+1/2 f821     L: Bb2:8 b18
+2 f826         L: F3:8 b18
+2+1/2 f832     L: Bb2:8 b18  R: Db5:8
+3 f838         L: Ab2:8 b19  R: Db5:8 b20
+3+1/2 f844     L: Ab2:8 b19  R: Db5:8 b20
+4 f850         L: Eb3:8 b19  R: Bb4:4
+4+1/2 f856     L: Ab2:8 b19
+bar 19
+1 f862         L: Gb2:8 b21  R: Db5:8 b22
+1+1/2 f867     L: Gb2:8 b21  R: Db5:8 b22
+2 f873         L: Db3:8 b21  R: Bb4:4
+2+1/2 f879     L: Gb2:8 b21
+3 f885         L: Ab2:8 b23  R: Db5:8.
+3+1/2 f891     L: Ab2:8 b23
+3+3/4 f894     R: Eb5:8.
+4 f897         L: Eb3:8 b23
+4+1/2 f903     L: Ab2:8 b23  R: F5:8
+bar 20
+1 f908         L: Bb2:8 b24
+1+1/2 f914     L: Bb2:8 b24
+2 f920         L: Db3:8 b24
+2+1/2 f926     L: Db3:8 b24  R: Db5:4
+3 f932         L: C3:8 b25
+3+1/2 f938     L: C3:8 b25  R: Bb4:8 b26
+4 f944         L: Ab2:8 b25  R: Db5:8 b26
+4+1/2 f950     L: Ab2:8 b25  R: Bb4,Bb5:8 b26
+bar 21
+1 f955         L: Gb2:8 b27  R: Db5:4
+1+1/2 f961     L: Gb2:8 b27
+2 f967         L: Db3:8 b27  R: Bb4:4
+2+1/2 f973     L: Gb2:8 b27
+3 f979         L: Ab2:8 b28  R: Ab4:4
+3+1/2 f985     L: Ab2:8 b28
+4 f991         L: Eb3:8 b28  R: Bb4,Bb5:8 b29
+4+1/2 f996     L: Ab2:8 b28  R: Db4:8 b29
+bar 22
+1 f1002        L: Bb2:8 b30
+1+1/2 f1008    L: Bb2:8 b30
+2 f1014        L: F3:8 b30
+2+1/2 f1020    L: Bb2:8 b30  R: Db5:4
+3 f1026        L: Ab2:8 b31
+3+1/2 f1032    L: Ab2:8 b31  R: Db5:8 b32
+4 f1037        L: Eb3:8 b31  R: Db5:8 b32
+4+1/2 f1043    L: Ab2:8 b31  R: Ab5:8 b32
+bar 23
+1 f1049        L: Gb2:8 b33  R: Ab5:8 b34
+1+1/2 f1055    L: Gb2:8 b33  R: F5:8 b34
+2 f1061        L: Db3:8 b33  R: F5:8 b34
+2+1/2 f1067    L: Gb2:8 b33  R: Eb5:8 b34
+3 f1072        L: Ab2:8 b35
+3 f1073        R: Eb5,Eb6:8
+3+1/2 f1078    L: Ab2:8 b35  R: Db5:8
+3+1/2 f1079    R: Eb5:4
+4 f1084        L: Eb3:8 b35
+4+1/2 f1090    L: Ab2:8 b35  R: Ab5:8
+bar 24
+1 f1096        L: Bb2:8 b36
+1+1/2 f1102    L: Bb2:8 b36  R: F5:8 b37
+2 f1108        L: Db3:8 b36  R: F5:8 b37
+2+1/2 f1113    L: Db3:8 b36
+2+1/2 f1114    R: Eb5:8 b37
+3 f1119        L: C3:8 b38  R: Eb5,Eb6:8
+3+1/2 f1125    L: C3:8 b38  R: Db5,Eb5:4
+4 f1131        L: Ab2:8 b38
+4+1/2 f1137    L: Ab2:8 b38
+bar 25
+1+1/2 f1149    L: F2,Db3:8 b39  R: Db5:8 b40
+2 f1155        L: F2,Db3:8 b39  R: Db5:8 b40
+2+1/2 f1160    L: Gb2,Db3:8 b39  R: Eb5:8 b40
+2+1/2 f1161    R: Gb4:8
+3 f1166        L: Gb2,Db3:4  R: Eb5:2
+4 f1178        L: Gb2,Db3:4
+bar 26
+1+1/2 f1196    L: Db3,Ab3:8 b41  R: F5:8 b42
+2 f1201        L: Db3,Ab3:8 b41  R: F5:8 b42
+2+1/2 f1207    L: C3,Ab3:8 b41  R: F5:8 b42
+3 f1213        L: C3,Ab3:8 b43  R: Gb5:8 b44
+3+1/2 f1219    L: Ab2,Eb3:8 b43  R: F5:8 b44
+4 f1225        L: Ab2,Eb3:8 b43  R: Eb5:8 b44
+4+1/2 f1231    L: Gb2,Db3:8 b43  R: Db5:8 b44
+bar 27
+1+1/2 f1242    L: F2,Db3:8 b45  R: Db5:8 b46
+2 f1248        L: F2,Db3:8 b45  R: Db5:8 b46
+2+1/2 f1254    L: Gb2,Db3:8 b45  R: Eb5:8 b46
+3 f1260        L: Gb2,Db3:4  R: Eb5:8 b47
+3+1/2 f1266    R: Db5:16 b47
+3+3/4 f1268    R: Eb5:16 b47
+4 f1272        L: Gb2,Db3:8 b48  R: Db5:8 b49
+4+1/2 f1278    L: Ab2,Eb3:8 b48  R: Ab5:8 b49
+bar 28
+1+1/2 f1289    L: Ab2,Eb3:8 b50
+2 f1295        L: Ab2,Eb3:8 b50
+2+1/2 f1301    L: Ab2,Eb3:8 b50
+3 f1307        L: Ab2,Eb3:8 b51
+3+1/2 f1313    L: Ab2,Eb3:8 b51  R: Db5:8 b52
+4 f1319        L: Ab2,Eb3:8 b51  R: Db5:8 b52
+4+1/2 f1324    L: Ab2,Eb3:8 b51  R: Db5:8 b52
+bar 29
+1 f1330        L: Db3,Ab3:8 b53  R: Db5:8.
+1+1/2 f1336    L: Db3,Ab3:8 b53
+1+3/4 f1339    R: Db5:8.
+2 f1342        L: Db3,Ab3:8 b53
+2+1/2 f1348    L: Gb2,Db3:8 b53  R: Db5:4
+3 f1354        L: Gb2,Db3:8 b54
+3+1/2 f1360    L: Gb2,Db3:8 b54  R: Db5:8
+4 f1365        L: Db3:8  R: Db5:8
+4 f1366        L: Gb2:8  R: Bb4:8
+4+1/2 f1371    L: Db3:8  R: Db5:8
+bar 30
+1 f1377        L: Bb2,F3:8 b55  R: Db5:8.
+1+1/2 f1383    L: Bb2,F3:8 b55
+1+3/4 f1386    R: Db5:8.
+2 f1389        L: Bb2,F3:8 b55
+2+1/2 f1395    L: Ab2,Eb3:8 b55  R: Eb5:4
+3 f1401        L: Ab2,Eb3:8 b56
+3+1/2 f1406    L: Ab2,Eb3:8 b56  R: Db5:8 b57
+4 f1412        L: Ab2,Eb3:8 b56  R: Db5:8 b57
+4+1/2 f1418    L: Ab2,Eb3:8 b56  R: Db5:8 b57
+bar 31
+1 f1424        L: Db3,Ab3:8 b58  R: Db5:8.
+1+1/2 f1430    L: Db3,Ab3:8 b58
+1+3/4 f1433    R: Db5:16 b59
+2 f1436        L: Db3,Ab3:8 b58  R: Db5:8 b59
+2+1/2 f1442    L: Gb2,Db3:8 b58  R: Db5:8 b59
+3 f1448        L: Gb2,Db3:8 b60  R: Db5:8 b61
+3+1/2 f1453    L: Gb2,Db3:8 b60  R: Db5:8 b61
+4 f1459        L: Gb2,Db3:8 b60  R: Bb4,Db5:8 b61
+4+1/2 f1465    L: Gb2,Db3:8 b60  R: Db5,Ab5:8 b61
+bar 32
+1 f1471        L: Bb2,F3:8 b62  R: Ab5:4
+1+1/2 f1477    L: Bb2,F3:8 b62
+2 f1483        L: Bb2,F3:8 b62  R: F5:4
+2+1/2 f1489    L: Bb2,F3:8 b62
+3 f1494        L: Ab2,Eb3:8 b63  R: Eb5:4
+3+1/2 f1500    L: Ab2,Eb3:8 b63
+4 f1506        L: Ab2,Eb3:8 b63  R: Db5:8 b64
+4+1/2 f1512    L: Ab2,Eb3:8 b63  R: Db5:8 b64
+bar 33
+1 f1518        L: Db3,Ab3:8 b65
+1+1/2 f1524    L: Db3,Ab3:8 b65  R: Db5:4
+2 f1530        L: Db3,Ab3:8 b65
+2+1/2 f1535    L: Gb2,Db3:8 b65  R: Bb4:4
+3 f1541        L: Gb2,Db3:8 b66
+3+1/2 f1547    L: Gb2,Db3:8 b66  R: Db5:8 b67
+4 f1553        L: Gb2,Db3:8 b66  R: Db5:8 b67
+4+1/2 f1559    L: Gb2,Db3:8 b66  R: Eb5:8 b67
+bar 34
+1 f1565        L: Bb2,F3:8 b68  R: F5:8.
+1+1/2 f1571    L: Bb2,F3:8 b68
+1+3/4 f1573    R: Db5:8.
+2 f1576        L: Bb2,F3:8 b68
+2+1/2 f1582    L: Ab2,Eb3:8 b68  R: Eb5:4
+3 f1588        L: Ab2,Eb3:8 b69
+3+1/2 f1594    L: Ab2,Eb3:8 b69  R: Db5:8
+4 f1600        L: Ab2,Eb3:8 b69  R: Db5:4
+4+1/2 f1606    L: Ab2,Eb3:8 b69
+bar 35
+1 f1612        L: Db3,Ab3:8 b70  R: Ab5:4
+1+1/2 f1617    L: Ab2,Db3,Ab3:8 b70
+2 f1623        L: Db3,Ab3:8 b70  R: F5:8
+2+1/2 f1629    L: Gb2,Db3:8 b70  R: Bb5:2
+3 f1635        L: Gb2,Db3:8 b71
+3+1/2 f1641    L: Gb2,Db3:8 b71
+4 f1647        L: Gb2,Db3,Gb3:8 b71
+4+1/2 f1653    L: Gb2,Db3:8 b71  R: F5,Ab5:8
+bar 36
+1 f1658        L: Bb2,F3:8 b72  R: Ab5:4
+1+1/2 f1664    L: Bb2,F3:8 b72
+2 f1670        L: Bb2,F3:8 b72  R: F5:4
+2+1/2 f1676    L: Bb2,F3:8 b72
+3 f1682        L: Ab2,Eb3:8 b73  R: Eb5:4
+3+1/2 f1688    L: Ab2,Eb3:8 b73
+4 f1694        L: Ab2,Eb3:8 b73  R: Db5:8 b74
+4+1/2 f1699    L: Ab2,Eb3:8 b73  R: Db5:8 b74
+bar 37
+1 f1705        L: Gb2:8  R: Bb4:8
+1 f1706        L: Ab2:8
+1+1/2 f1711    L: Gb2:8  R: Db4,Db5:4
+2 f1717        L: Db3:16 b75
+2+1/4 f1720    L: Db4:16 b75
+2+1/2 f1723    L: Gb2:8 b75
+3 f1729        L: Ab2:8  R: Db4:4
+3+1/2 f1735    L: Ab2:16 b76
+3+3/4 f1738    L: Db4:16 b76
+4 f1741        L: Eb3:8
+4+1/2 f1746    L: Ab2:16 b77  R: Db4:8
+4+3/4 f1749    L: Db4:16 b77
+bar 38
+1 f1752        L: Bb2:8 b78
+1+1/2 f1758    L: Bb2:8 b78  R: Db4,Db5:4
+2 f1764        L: F3:8 b78
+2+1/2 f1770    L: Bb2:8 b78  R: Db5:8
+3 f1776        L: Ab2:8 b79  R: Db5:4
+3+1/2 f1782    L: Ab2:8 b79
+4 f1787        L: Eb3:8 b79  R: Eb5:4
+4+1/2 f1793    L: Ab2:8 b79
+bar 39
+1 f1799        L: Gb2:8 b80  R: Db5:4
+1+1/2 f1805    L: Gb2:8 b80
+2 f1811        L: Db3:8 b80  R: Bb4:8 b81
+2+1/2 f1817    L: Gb2:8 b80  R: Ab4:8 b81
+3 f1823        L: Ab2:8 b82  R: Ab4:8 b83
+3+1/2 f1828    L: Ab2:8 b82  R: Bb4,Bb5:8 b83
+4 f1834        L: Eb3:8 b82  R: Bb4:8 b83
+4+1/2 f1840    L: Ab2:8 b82  R: Db4:8 b83
+bar 40
+1 f1846        L: Bb2:8 b84
+1+1/2 f1852    L: Bb2:8 b84
+2 f1858        L: F3:8 b84
+2+1/2 f1864    L: Bb2:8 b84  R: Db5:8
+3 f1869        L: Ab2:8 b85  R: Db5:8 b86
+3+1/2 f1875    L: Ab2:8 b85  R: Db5:8 b86
+4 f1881        L: Eb3:8 b85  R: Bb4:4
+4+1/2 f1887    L: Ab2:8 b85
+bar 41
+1 f1893        L: Gb2:8 b87  R: Db5:8 b88
+1+1/2 f1899    L: Gb2:8 b87  R: Db5:8 b88
+2 f1905        L: Db3:8 b87  R: Bb4:4
+2+1/2 f1911    L: Gb2:8 b87
+3 f1916        L: Ab2:8 b89  R: Db5:8.
+3+1/2 f1922    L: Ab2:8 b89
+3+3/4 f1925    R: Eb5:8.
+4 f1928        L: Eb3:8 b89
+4+1/2 f1934    L: Ab2:8 b89  R: F5:8
+bar 42
+1 f1940        L: Bb2:8 b90
+1+1/2 f1946    L: Bb2:8 b90
+2 f1952        L: F3:8 b90
+2+1/2 f1957    L: Bb2:8 b90  R: Db5:8
+3 f1963        L: Ab2:8 b91  R: Db5:8 b92
+3+1/2 f1969    L: Ab2:8 b91  R: Db5:8 b92
+4 f1975        L: Eb3:8 b91  R: Db5:8 b92
+4+1/2 f1981    L: Ab2:8 b91  R: Db5:8 b92
+bar 43
+1 f1987        L: Gb2:8 b93  R: Db5:4
+1+1/2 f1993    L: Gb2:8 b93
+2 f1998        L: Db3:8 b93  R: Bb4:8 b94
+2+1/2 f2004    L: Gb2:8 b93  R: Ab4:8 b94
+3 f2010        L: Ab2:8 b95  R: Ab4:4
+3+1/2 f2016    L: Ab2:8 b95
+4 f2022        L: Eb3:8 b95  R: Bb4,Bb5:8 b96
+4+1/2 f2028    L: Ab2:8 b95  R: Db4:8 b96
+bar 44
+1 f2033        L: Bb2:8 b97
+1+1/2 f2039    L: Bb2:8 b97
+2 f2045        L: F3:8 b97  R: Db5:8
+2+1/2 f2051    L: Bb2:8 b97  R: Db5:4
+3 f2057        L: Ab2:8 b98
+3+1/2 f2063    L: Ab2:8 b98  R: Db5:8 b99
+4 f2069        L: Eb3:8 b98  R: Db5:8 b99
+4+1/2 f2075    L: Ab2:8 b98  R: Ab5:8 b99
+bar 45
+1 f2080        L: Gb2:8 b100
+1+1/2 f2086    L: Gb2:8 b100  R: F5:8 b101
+2 f2092        L: Db3:8 b100  R: F5:8 b101
+2+1/2 f2098    L: Gb2:8 b100  R: Eb5:8 b101
+3 f2104        L: Ab2:8 b102  R: Eb5:8
+3+1/2 f2110    L: Ab2:8 b102  R: Db5,F5:4
+4 f2116        L: Eb3:8 b102
+4+1/2 f2121    L: Ab2:8 b102  R: Ab5:8
+bar 46
+1 f2127        L: Bb2:8 b103
+1+1/2 f2133    L: Bb2:8 b103  R: F5:8 b104
+2 f2139        L: F3:8 b103  R: F5:8 b104
+2+1/2 f2145    L: Bb2:8 b103  R: Eb5,F5:8 b104
+3 f2151        L: Ab2:8 b105  R: Eb5:8
+3+1/2 f2156    L: Ab2:8 b105  R: Db5:4.
+4 f2162        L: Eb3:8 b105
+4+1/2 f2168    L: Ab2:8 b105
+bar 47
+1+1/2 f2180    L: F2,Db3:8 b106  R: Ab4,Db5:8 b107
+2 f2186        L: F2,Db3:8 b106  R: Db5:8 b107
+2+1/2 f2192    L: Gb2,Db3:8 b106  R: Gb4,Eb5:8 b107
+3 f2198        L: Db3:4  R: Eb5:2
+4 f2209        L: Gb2,Db3:4
+bar 48
+1+1/2 f2227    L: Db3,Ab3:8 b108  R: F5:8 b109
+2 f2233        L: Db3,Ab3:8 b108  R: F5:8 b109
+2+1/2 f2239    L: C3,Ab3:8 b108  R: F5:8 b109
+3 f2244        L: C3,Ab3:8 b110  R: Gb5:8 b111
+3+1/2 f2250    L: Ab2,Eb3:8 b110  R: F5:8 b111
+4 f2256        L: Ab2,Eb3:8 b110  R: Eb5:8 b111
+4+1/2 f2262    L: Gb2,Db3:8 b110  R: Bb4,Db5:8 b111
+bar 49
+1+1/2 f2274    L: F2,Db3:8 b112  R: Db5:8 b113
+2 f2279        L: Db3:8 b112
+2 f2280        L: F2:8 b112  R: Db5:8 b113
+2+1/2 f2285    L: Gb2,Db3:8 b112  R: Eb5:8 b113
+3 f2291        L: Gb2,Db3:4  R: Eb5:8 b114
+3+1/2 f2297    R: Db5:8 b114
+4 f2303        L: Gb2,Db3:8 b115  R: Bb4,Db5:8 b114
+4+1/2 f2309    L: Ab2,Eb3:8 b115  R: Ab5:8 b114
+bar 50
+1+1/2 f2321    L: Ab2,Eb3:8 b116
+2 f2326        L: Eb3:8 b116
+2 f2327        L: Ab2:8 b116
+2+1/2 f2332    L: Ab2,Eb3:8 b116
+3 f2338        L: Ab2,Eb3:8 b117
+3+1/2 f2344    L: Ab2,Eb3:8 b117  R: Db5:8 b118
+4 f2350        L: Ab2,Eb3:8 b117  R: Db5:8 b118
+4+1/2 f2356    L: Ab2,Eb3:8 b117  R: Db5:8 b118
+bar 51
+1 f2362        L: Db3,Ab3:8 b119  R: Db5:8.
+1+1/2 f2367    L: Db3,Ab3:8 b119
+1+3/4 f2370    R: Db5:8.
+2 f2373        L: Db3,Ab3:8 b119
+2+1/2 f2379    L: Gb2,Db3:8 b119  R: Db5:4
+3 f2385        L: Db3:8 b120
+3+1/2 f2391    L: Db3:8 b120  R: Db5:8 b121
+4 f2397        L: Gb2,Db3:8 b120  R: Bb4,Db5:8 b121
+4+1/2 f2403    L: Db3:8 b120  R: Db5:8 b121
+bar 52
+1 f2408        L: Bb2,F3:8 b122  R: Db5:8.
+1+1/2 f2414    L: Bb2,F3:8 b122
+1+3/4 f2417    R: Db5:8.
+2 f2420        L: Bb2,F3:8 b122
+2+1/2 f2426    L: Ab2,Eb3:8 b122  R: Eb5:4
+3 f2432        L: Ab2,Eb3:8 b123
+3+1/2 f2438    L: Ab2,Eb3:8 b123  R: Db5:8 b124
+4 f2444        L: Ab2,Eb3:8 b123  R: Db5:8 b124
+4+1/2 f2449    L: Ab2,Eb3:8 b123  R: Db5:8 b124
+bar 53
+1 f2455        L: Db3,Ab3:8 b125  R: Db5:8.
+1+1/2 f2461    L: Db3,Ab3:8 b125
+1+3/4 f2464    R: Db5:8.
+2 f2467        L: Db3,Ab3:8 b125
+2+1/2 f2473    L: Gb2,Db3:8 b125  R: Db5:4
+3 f2479        L: Gb2,Db3:8 b126
+3+1/2 f2485    L: Gb2,Db3:8 b126  R: Db5:8
+4 f2490        L: Db3:8 b126  R: Db5:8
+4 f2491        L: Gb2:8 b126  R: Bb4:8
+4+1/2 f2496    L: Gb2,Db3,Gb3:8 b126  R: Ab5:8
+bar 54
+1 f2502        L: Bb2,F3:8 b127  R: Ab5:4
+1+1/2 f2508    L: Bb2,F3:8 b127
+2 f2514        L: Bb2,F3:8 b127  R: F5:4
+2+1/2 f2520    L: Bb2,F3:8 b127
+3 f2526        L: Ab2,Eb3:8 b128  R: Eb5:4
+3+1/2 f2531    L: Ab2,Eb3:8 b128
+4 f2537        L: Ab2,Eb3:8 b128  R: Db5:8 b129
+4+1/2 f2543    L: Ab2,Eb3:8 b128  R: Db5:8 b129
+bar 55
+1 f2549        L: Db3,Ab3:8 b130
+1+1/2 f2555    L: Db3,Ab3:8 b130  R: Db5:8 b131
+2 f2561        L: Db3,Ab3:8 b130  R: Db5:8 b131
+2+1/2 f2567    L: Gb2,Db3:8 b130  R: Bb4:8 b131
+3 f2573        L: Gb2,Db3:8 b132  R: Bb4:8 b133
+3+1/2 f2578    L: Gb2,Db3:8 b132  R: Db5:8 b133
+4 f2584        L: Gb2,Db3:8 b132  R: Db5:8 b133
+4+1/2 f2590    L: Gb2,Db3:8 b132  R: Eb5:8 b133
+bar 56
+1 f2596        L: Bb2,Db3,F3:8 b134  R: F5:8
+1+1/2 f2602    L: Bb2,F3:8 b134  R: F5:16
+1+3/4 f2605    R: Db5:8.
+2 f2608        L: Bb2,F3:8 b134
+2+1/2 f2613    L: Ab2,Eb3:8 b134
+2+1/2 f2614    R: Eb5:4
+3 f2619        L: Ab2,Eb3:8 b135
+3+1/2 f2625    L: Ab2,Eb3:8 b135  R: Db5:8
+4 f2631        L: Ab2,Eb3:8 b135  R: Db5:4
+4+1/2 f2637    L: Ab2,Eb3:8 b135
+bar 57
+1 f2643        L: Db3,Ab3:8 b136  R: Ab5:4
+1+1/2 f2649    L: Db3,Ab3:8 b136
+2 f2655        L: Db3,Ab3:8 b136  R: F5:8
+2+1/2 f2660    L: Gb2,Db3:8 b136  R: Bb5,Bb6:2
+3 f2666        L: Gb2,Db3:8 b137
+3+1/2 f2672    L: Gb2,Db3:8 b137
+4 f2678        L: Gb2,Db3,Gb3:8 b137
+4+1/2 f2684    L: Gb2,Db3:8 b137  R: F5,Ab5:8
+bar 58
+1 f2690        L: Bb2,F3:8 b138  R: Ab5:4
+1+1/2 f2696    L: Bb2,F3:8 b138
+2 f2701        L: Bb2,F3:8 b138  R: F5:8 b139
+2+1/2 f2707    L: Bb2,F3:8 b138  R: F5:8 b139
+3 f2713        L: Ab2,Eb3:8 b140  R: Eb5:4
+3+1/2 f2719    L: Ab2,Eb3:8 b140
+4 f2725        L: Ab2,Eb3:8 b140  R: Db5:8 b141
+4+1/2 f2731    L: Ab2,Eb3:8 b140  R: Db5:8 b141
+bar 59
+1 f2737        L: Gb2,Db3:1  R: Db4,Gb4:1
+bar 60
+1 f2784        L: Gb2,Db3:8 b142
+1+1/2 f2789    L: Gb2,Db3:8 b142
+2 f2795        L: Gb2,Db3:8 b142
+2+1/2 f2801    L: Gb2,Db3:8 b142
+3 f2807        L: Gb2,Db3:8 b143
+3+1/2 f2813    L: Gb2,Db3:8 b143  R: Db4,Bb4:8 b144
+4 f2819        L: Gb2,Db3,Gb3:8 b143  R: Ab4:8 b144
+4+1/2 f2824    L: Db3:8 b143
+4+1/2 f2825    L: Gb2:8 b143  R: F4:8 b144
+bar 61
+1 f2830        L: Bb2,Db3,F3:8 b145
+1+1/2 f2836    L: Bb2,F3:8 b145
+2 f2842        L: Bb2,F3:8 b145
+2+1/2 f2848    L: Db3,Ab3:4
+3+1/2 f2860    L: Db3,Ab3:8 b146
+4 f2866        L: Db3,Ab3:8 b146
+4+1/2 f2871    L: Db3,Ab3:8 b146
+bar 62
+1 f2877        L: Gb2,Db3:8 b147  R: Ab4,Bb4:8 b148
+1+1/2 f2883    L: Gb2,Db3:8 b147  R: Bb4:8 b148
+2 f2889        L: Gb2,Db3:8 b147  R: Ab4:8 b148
+2+1/2 f2895    L: Ab2,Eb3:8 b147  R: F4:8 b148
+3 f2901        L: Ab2:8 b149  R: Gb4:8 b150
+3+1/2 f2907    L: Ab2,Eb3:8 b149  R: F4:8 b150
+4 f2912        L: Ab2,Eb3:8 b149  R: Eb4:8 b150
+4+1/2 f2918    L: Ab2,Eb3:8 b149  R: Db4,F4:8 b150
+bar 63
+1 f2924        L: Bb2,F3:8 b151
+1+1/2 f2930    L: Bb2,F3:8 b151
+2 f2936        L: Bb2,F3:8 b151  R: Ab4:8
+2+1/2 f2942    L: Db3,Ab3:4  R: F4:2
+3+1/2 f2953    L: Db3,Ab3:8 b152
+4 f2959        L: Db3,Ab3:8 b152
+4+1/2 f2965    L: Db3,Ab3:8 b152
+bar 64
+1 f2971        L: Gb2,Db3:8 b153  R: Ab4:8 b154
+1+1/2 f2977    L: Gb2,Db3:8 b153  R: Bb4:8 b154
+2 f2983        L: Gb2,Db3:8 b153  R: Ab4:8 b154
+2+1/2 f2989    L: Ab2,Eb3:4  R: Db5:2
+3+1/2 f3000    L: Ab2,Eb3:8 b155
+4 f3006        L: Ab2,Eb3:8 b155
+4+1/2 f3012    L: Ab2,Eb3:8 b155
+bar 65
+1 f3018        L: Bb2,F3:8 b156
+1+1/4 f3021    R: F4:8.
+1+1/2 f3024    L: Bb2,F3:8 b156
+2 f3030        L: Bb2,F3:8 b156  R: Ab4:8.
+2+1/2 f3035    L: Db3,Ab3:4
+2+3/4 f3038    R: Bb4:8.
+3+1/2 f3047    L: Db3,Ab3:8 b157  R: Db5:8.
+4 f3053        L: Db3,Ab3:8 b157
+4+1/4 f3056    R: Eb5:8.
+4+1/2 f3059    L: Db3,Ab3:8 b157
+bar 66
+1 f3065        L: Gb2,Db3:8 b158  R: F5:8.
+1+1/2 f3071    L: Gb2,Db3:8 b158
+1+3/4 f3073    R: Ab5:8.
+2 f3077        L: Gb2,Db3:8 b158
+2+1/2 f3082    L: Ab2,Eb3:8 b158  R: Bb5:8
+3 f3088        L: Ab2:8 b159  R: Db6,Db7:2 8va
+3+1/2 f3094    L: Ab2,Eb3:8 b159
+4 f3100        L: Ab2,Eb3:8 b159
+4+1/2 f3106    L: Ab2,Eb3:8 b159
+bar 67
+1 f3112        L: Bb2,F3:8  R: Eb5:8
+1+1/2 f3117    L: Bb2,F3:4  R: Eb5:8.
+2+1/4 f3126    R: Eb5:16
+2+1/2 f3129    L: Db3,Ab3:8  R: F5:8
+3 f3135        L: Db3,Ab3:4  R: F5:4
+4 f3147        L: Gb2,Db3:8 b160  R: Gb5:8 b161
+4+1/2 f3153    L: Db3:8 b160  R: Gb5:8 b161
+bar 68
+1+1/2 f3164    L: Ab2,Eb3:8  R: Ab5:8 b162
+2 f3170        L: Ab2,Eb3:4  R: Ab5:8 b162
+2+1/2 f3176    R: Ab5:2
+3 f3182        L: Ab2,Eb3:4
+4 f3194        L: Ab2,Eb3:4
+bar 69
+1+1/2 f3211    L: F2,Db3:8 b163  R: Db5:8 b164
+2 f3217        L: F2,Db3:8 b163  R: Db5:8 b164
+2+1/2 f3223    L: Gb2,Bb2,Db3:4  R: Gb4,Eb5:8
+3 f3229        L: Gb2,Db3:4  R: Eb5:4
+4 f3241        L: Gb2,Db3:8 b165  R: Bb4:4
+4+1/2 f3248    L: Db3:8 b165
+bar 70
+1+1/2 f3258    L: Db3,Ab3:8 b166  R: F5:8 b167
+2 f3264        L: Db3,Ab3:8 b166  R: F5:8 b167
+2+1/2 f3270    L: C3,Ab3:8 b166  R: F5:8 b167
+3 f3276        L: C3,Ab3:8 b168  R: Gb5:8 b169
+3+1/2 f3281    L: Eb3:8 b168  R: F5:8 b169
+3+1/2 f3282    L: Ab2:8 b168
+4 f3287        L: Ab2,Eb3:8 b168  R: Eb5:8 b169
+4+1/2 f3293    L: Gb2,Db3:8 b168  R: Db5:8 b169
+bar 71
+1+1/2 f3305    L: F2,Db3:8 b170  R: Db5:8 b171
+2 f3311        L: F2,Db3:8 b170  R: Db5:8 b171
+2+1/2 f3317    L: Gb2,Db3:8 b170  R: Eb5:8 b171
+3 f3323        L: Gb2,Db3:4  R: Eb5,Eb6:4
+4 f3334        L: Gb2,Db3,Gb3:4  R: Bb4:4
+bar 72
+1+1/2 f3352    L: Db3,Ab3:8 b172  R: F5:8 b173
+2 f3358        L: Db3,Ab3:8 b172  R: F5:8 b173
+2+1/2 f3363    L: C3:8 b172
+2+1/2 f3364    L: Ab3:8 b172  R: F5:8 b173
+3 f3369        L: C3,Ab3:8 b174  R: Ab5:4
+3+1/2 f3375    L: Ab2,Eb3:8 b174
+4 f3381        L: Ab2,Eb3:8 b174  R: F5,Ab5:4
+4+1/2 f3387    L: Gb2,Db3:8 b174
+bar 73
+1+1/2 f3399    L: F2,Db3:8 b175  R: Db5:8 b176
+2 f3404        L: F2,Db3:8 b175  R: Db5:8 b176
+2+1/2 f3410    L: Gb2,Bb2,Db3:8 b175  R: Eb5:8 b176
+3 f3416        L: Gb2,Db3:4  R: Eb5:2
+4 f3428        L: Gb2,Db3:4
+bar 74
+1+1/2 f3446    L: Db3,Ab3:8 b177  R: F5:8 b178
+2 f3451        L: Db3,Ab3:8 b177  R: F5,F6:8 b178
+2+1/2 f3457    L: C3,Ab3:8 b177  R: F5,F6:8 b178
+3 f3463        L: C3,Ab3:8 b179  R: Gb5:8 b180
+3+1/2 f3469    L: Ab2,Eb3:8 b179  R: F5,F6:8 b180
+4 f3475        L: Ab2,Eb3:8 b179  R: Eb5,Eb6:8 b180
+4+1/2 f3481    L: Gb2,Db3:8 b179  R: Bb4,Db5:8 b180
+bar 75
+1+1/4 f3489    R: F5:16 b181
+1+1/2 f3492    L: Db3:8 b182  R: Db5,Db6:8 b181
+1+1/2 f3493    L: F2:8 b182
+2 f3498        L: F2,Db3:8 b182  R: Db5:8 b181
+2+1/2 f3504    L: Gb2,Db3:8 b182  R: Eb5,Eb6:8 b181
+3 f3510        L: Gb2,Db3:4  R: Eb5,Eb6:8 b183
+3+1/2 f3516    R: Db5:8 b183
+4 f3522        L: Gb2,Db3,Gb3:8 b184  R: Db5,Db6:8 b183
+4+1/2 f3528    L: Ab2,Eb3:8 b184  R: Ab5:8 b183
+bar 76
+1+1/2 f3539    L: Ab2,Eb3:8 b185
+2 f3545        L: Ab2,Eb3:8 b185
+2+1/2 f3551    L: Ab2,Eb3:8 b185
+3 f3557        L: Ab2,Eb3:8 b186
+3+1/2 f3563    L: Ab2,Eb3:8 b186
+4 f3569        L: Ab2,Eb3:8 b186
+4+1/2 f3574    L: Eb3:8 b186
+4+1/2 f3575    L: Ab2:8 b186
+bar 77
+1 f3580        L: Db3,Ab3:8 b187  R: F4:8 b188
+1+1/2 f3586    L: Db3,Ab3:8 b187  R: Ab4:8 b188
+2 f3592        L: Db3,Ab3:8 b187  R: Db5:8 b188
+2+1/2 f3598    L: Gb2,Db3:8 b187  R: Gb4:8 b188
+3 f3604        L: Db3:8 b189  R: Ab4:8 b190
+3+1/2 f3610    L: Db3:8 b189  R: Db5:8 b190
+4 f3615        L: Db3:8 b189
+4 f3616        L: Gb2:8 b189  R: Gb4,Bb4:8 b190
+4+1/2 f3621    L: Gb2,Db3:8 b189  R: Ab4:8 b190
+bar 78
+1 f3627        L: Bb2,F3:8 b191  R: F4:8 b192
+1+1/2 f3633    L: Bb2,F3:8 b191  R: Ab4:8 b192
+2 f3639        L: Bb2,F3:8 b191  R: Db5:8 b192
+2+1/2 f3645    L: Ab2,Eb3:8 b191  R: Eb4:8 b192
+3 f3651        L: Ab2,Eb3:8 b193  R: Ab4:8 b194
+3+1/2 f3656    L: Ab2,Eb3:8 b193  R: Db5:8 b194
+4 f3662        L: Ab2,Eb3:8 b193  R: Eb4:8 b194
+4+1/2 f3668    L: Ab2,Eb3:8 b193  R: Ab4:8 b194
+bar 79
+1 f3674        L: Db3,Ab3:8 b195  R: F4:8 b196
+1+1/2 f3680    L: Db3,Ab3:8 b195  R: Ab4:8 b196
+2 f3686        L: Db3,Ab3:8 b195  R: Db5:8 b196
+2+1/2 f3692    L: Gb2,Db3:8 b195  R: Gb4,Bb4:8 b196
+3 f3698        L: Db3:8 b197  R: Ab4:8 b198
+3+1/2 f3703    L: Gb2,Db3:8 b197  R: Db5:8 b198
+4 f3709        L: Gb2,Db3:8 b197  R: Gb4,Bb4:8 b198
+4+1/2 f3715    L: Gb2,Db3,Gb3:8 b197  R: Ab4:8 b198
+bar 80
+1 f3721        L: Bb2,F3:8 b199  R: F4:8 b200
+1+1/2 f3727    L: Bb2,F3:8 b199  R: Ab4:8 b200
+2 f3733        L: Bb2,F3:8 b199  R: Db5:8 b200
+2+1/2 f3739    L: Bb2,F3:8 b199  R: Eb4:4
+3 f3744        L: Ab2,Eb3:8 b201
+3+1/2 f3750    L: Ab2,Eb3:8 b201  R: Db5:8 b202
+4 f3756        L: Ab2,Eb3:8 b201  R: Db5:8 b202
+4+1/2 f3762    L: Ab2,Eb3:8 b201  R: Db5:8 b202
+bar 81
+1 f3768        L: Db3,Ab3:8 b203  R: Db5:8.
+1+1/2 f3774    L: Db3,Ab3:8 b203
+1+3/4 f3777    R: Db5:16
+2 f3780        L: Db3,Ab3:8 b203  R: Db5:8 b204
+2+1/2 f3785    L: Gb2,Db3:8 b203  R: Db5:8 b204
+3 f3791        L: Gb2,Db3:8 b205  R: Db5:8 b206
+3+1/2 f3797    L: Gb2,Db3:8 b205  R: Bb4,Db5:8 b206
+4 f3803        L: Gb2,Db3:8 b205  R: Bb4,Db5:8 b206
+4+1/2 f3809    L: Gb2,Db3:8 b205  R: Bb4,Db5:8 b206
+bar 82
+1 f3815        L: Bb2,F3:8 b207  R: Db5:8.
+1+1/2 f3821    L: Bb2,F3:8 b207
+1+3/4 f3823    R: Ab4:8.
+2 f3826        L: Bb2,F3:8 b207
+2+1/2 f3832    L: Ab2,Eb3:8 b207  R: Ab4:4
+3 f3838        L: Ab2,Eb3:8 b208
+3+1/2 f3844    L: Ab2,Eb3:8 b208  R: Db5:8 b209
+4 f3850        L: Ab2,Eb3:8 b208  R: Db5:8 b209
+4+1/2 f3856    L: Ab2,Eb3:8 b208  R: Db5:8 b209
+bar 83
+1 f3862        L: Db3,Ab3:8 b210  R: Db5:8.
+1+1/2 f3867    L: Db3,Ab3:8 b210
+1+3/4 f3870    R: Db5:16
+2 f3873        L: Db3,Ab3:8 b210  R: Db5:8
+2+1/2 f3879    L: Gb2,Db3:8 b210  R: Db5:4
+3 f3885        L: Gb2,Db3:8 b211
+3+1/2 f3891    L: Gb2,Db3:8 b211  R: Bb4,Db5:8
+4 f3897        L: Gb2,Db3:8 b211  R: Db5:8
+4+1/2 f3903    L: Gb2,Db3:8 b211  R: F5,Ab5:8
+bar 84
+1 f3908        L: Bb2,F3:8 b212  R: Ab5:4
+1+1/2 f3914    L: Bb2,F3:8 b212
+2 f3920        L: Bb2,F3:8 b212  R: F5:8 b213
+2+1/2 f3926    L: Bb2,F3:8 b212  R: F5:8 b213
+3 f3932        L: Ab2,Eb3:8 b214  R: Eb5:4
+3+1/2 f3938    L: Ab2,Eb3:8 b214
+4 f3944        L: Ab2,Eb3:8 b214  R: Db5:8 b215
+4+1/2 f3949    L: Ab2,Eb3:8 b214  R: Db5:8 b215
+bar 85
+1 f3955        L: Db3,Ab3:8 b216
+1+1/2 f3961    L: Db3,Ab3:8 b216  R: Db5:4
+2 f3967        L: Db3,Ab3:8 b216
+2+1/2 f3973    L: Gb2,Db3:8 b216  R: Bb4:4
+3 f3979        L: Gb2,Db3:8 b217
+3+1/2 f3985    L: Gb2,Db3:8 b217  R: Db5:8 b218
+4 f3990        L: Db3:8 b217  R: Db5:8 b218
+4 f3991        L: Gb2:8 b217
+4+1/2 f3996    L: Gb2,Db3:8 b217  R: Eb5:8 b218
+bar 86
+1 f4002        L: Bb2,F3:8 b219  R: F5:8
+1+1/2 f4008    L: Bb2,F3:8 b219  R: F5:16
+1+3/4 f4011    R: Db5:8.
+2 f4014        L: Bb2,F3:8 b219
+2+1/2 f4020    L: Ab2,Eb3:8 b219  R: Eb5:4
+3 f4026        L: Ab2,Eb3:8 b220
+3+1/2 f4031    L: Ab2,Eb3:8 b220  R: Db5:8
+4 f4037        L: Ab2,Eb3:8 b220  R: Db5:4
+4+1/2 f4043    L: Ab2,Eb3:8 b220
+bar 87
+1 f4049        L: Db3,Ab3:8 b221  R: Ab5:4
+1+1/2 f4055    L: Db3,Ab3:8 b221
+2 f4061        L: Db3,Ab3:8 b221  R: F5:8
+2+1/2 f4067    L: Gb2,Db3:8 b221  R: Bb5:2
+3 f4073        L: Gb2,Db3:8 b222
+3+1/2 f4078    L: Gb2,Db3:8 b222
+4 f4084        L: Gb2,Db3:4
+4+1/2 f4090    R: Ab4,F5,Ab5:8
+bar 88
+1 f4096        R: Ab4,F5,Ab5:4
+2 f4108        R: Ab4,Ab5:4
+3 f4119        R: Ab4,Ab5:4
+4 f4131        R: Db5:8 b223
+4+1/2 f4137    R: Db5:8 b223
+bar 89
+1 f4143        L: Db3,Ab3:8 b224  R: Db5:8.
+1+1/2 f4149    L: Db3,Ab3:8 b224
+1+3/4 f4152    R: Db5:16
+2 f4155        L: Db3,Ab3:8 b224  R: Db5:8 b225
+2+1/2 f4160    L: Gb2,Db3:8 b224  R: Db5:8 b225
+3 f4166        L: Gb2,Db3:8 b226  R: Db5:8 b227
+3+1/2 f4172    L: Db3:8 b226  R: Db5:8 b227
+4 f4178        L: Gb2,Db3:8 b226  R: Db5:8 b227
+4+1/2 f4184    L: Gb2,Db3:8 b226  R: Bb4,Db5:8 b227
+bar 90
+1 f4190        L: Bb2,F3:8 b228  R: Db5:8.
+1+1/2 f4196    L: Bb2,Db3,F3:8 b228
+1+3/4 f4198    R: Db5:8.
+2 f4201        L: Bb2,F3:8 b228
+2+1/2 f4207    L: Ab2,Eb3:8 b228  R: Eb5:4
+3 f4213        L: Ab2,Eb3:8 b229
+3+1/2 f4219    L: Ab2,Eb3:8 b229  R: Db5:8 b230
+4 f4225        L: Ab2,Eb3:8 b229  R: Db5:8 b230
+4+1/2 f4231    L: Ab2,Eb3:8 b229  R: Db5:8 b230
+bar 91
+1 f4237        L: Db3,Ab3:8 b231  R: Db5:8
+1+1/2 f4242    L: Db3,Ab3:8 b231
+1+3/4 f4245    R: Db5:8.
+2 f4248        L: Db3,Ab3:8 b231
+2+1/2 f4254    L: Gb2,Db3:8 b231  R: Db5:8
+3 f4260        L: Gb2,Db3:8 b232  R: Db5:8 b233
+3+1/2 f4266    L: Db3:8 b232  R: Db5:8 b233
+4 f4272        L: Gb2,Db3:8 b232  R: Db5:8 b233
+4+1/2 f4278    L: Gb2,Db3:8 b232  R: Ab5:8 b233
+bar 92
+1 f4283        L: Bb2,F3:8 b234  R: Ab5:4
+1+1/2 f4289    L: Bb2,Db3,F3:8 b234
+2 f4295        L: Bb2,F3:8 b234  R: F5:4
+2+1/2 f4301    L: Bb2,F3:8 b234
+3 f4307        L: Ab2,Eb3:8 b235  R: Eb5:4
+3+1/2 f4313    L: Ab2,Bb2,Eb3:8 b235
+4 f4319        L: Ab2,Eb3:8 b235  R: Db5:8 b236
+4+1/2 f4324    L: Ab2,Eb3:8 b235  R: Db5:8 b236
+bar 93
+1 f4330        L: Db3,Ab3:8 b237
+1+1/2 f4336    L: Db3,Ab3:8 b237  R: Db5:8 b238
+2 f4342        L: Db3,Ab3:8 b237  R: Db5:8 b238
+2+1/2 f4348    L: Gb2,Db3:8 b237  R: Bb4:4
+3 f4354        L: Gb2,Db3:8 b239
+3+1/2 f4360    L: Db3:8 b239  R: Db5:8 b240
+4 f4365        L: Db3:8 b239  R: Db5:8 b240
+4 f4366        L: Gb2:8 b239
+4+1/2 f4371    L: Gb2,Db3:8 b239  R: Eb5:8 b240
+bar 94
+1 f4377        L: Bb2,F3:8 b241  R: F5:8.
+1+1/2 f4383    L: Bb2,F3:8 b241
+1+3/4 f4386    R: Db5:8.
+2 f4389        L: Bb2,F3:8 b241
+2+1/2 f4395    L: Ab2,Eb3:8 b241  R: Eb5:4
+3 f4401        L: Ab2,Eb3:8 b242
+3+1/2 f4406    L: Eb3:8 b242
+3+1/2 f4407    L: Ab2:8 b242  R: Db5:8
+4 f4412        L: Ab2,Eb3:8 b242  R: Db5:4
+4+1/2 f4418    L: Ab2,Eb3:8 b242
+bar 95
+1 f4424        L: Db3,Ab3:8 b243  R: Ab5:4
+1+1/2 f4430    L: Db3,Ab3:8 b243
+2 f4436        L: Db3,Ab3:8 b243  R: F5:8
+2+1/2 f4442    L: Gb2,Db3:8 b243  R: Bb5:2
+3 f4448        L: Gb2,Db3:8 b244
+3+1/2 f4453    L: Gb2,Db3:8 b244
+4 f4459        L: Gb2,Db3:8 b244
+4+1/2 f4465    L: Gb2,Db3:8 b244  R: Ab5:8
+bar 96
+1 f4471        L: Bb2,F3:8 b245  R: Ab5:4
+1+1/2 f4477    L: Bb2,F3:8 b245
+2 f4483        L: Bb2,F3:8 b245  R: F5:4
+2+1/2 f4489    L: Bb2,F3:8 b245
+3 f4494        L: Ab2,Eb3:8 b246  R: Eb5:4
+3+1/2 f4500    L: Ab2,Bb2,Eb3:8 b246
+4 f4506        L: Ab2,Eb3:8 b246  R: Db5:8 b247
+4+1/2 f4512    L: Ab2,Eb3:8 b246  R: Db5:8 b247
+bar 97
+1 f4518        L: Db3,Ab3:8 b248
+1+1/2 f4524    L: Db3,Ab3:8 b248  R: Db4,Db5:8 b249
+2 f4530        L: Db3,Ab3:8 b248  R: Ab4:8 b249
+2+1/2 f4535    L: Gb2,Db3:8 b248  R: F4:2
+3 f4541        L: Gb2,Db3:8 b250
+3+1/2 f4547    L: Gb2,Db3:8 b250
+4 f4553        L: Gb2,Db3:8 b250
+4+1/2 f4559    L: Gb2,Db3:8 b250
+bar 98
+1 f4565        L: Bb2,F3:8 b251  R: Ab4:8 b252
+1+1/2 f4571    L: Bb2,F3:8 b251  R: Bb4:8 b252
+2 f4576        L: Bb2:8 b251  R: Ab4:8 b252
+2 f4577        L: F3:8 b251
+2+1/2 f4582    L: Ab2,Eb3:8 b251  R: Gb4:4
+3 f4588        L: Ab2,Eb3:8 b253
+3+1/2 f4594    L: Ab2,Eb3:8 b253  R: F4:8 b254
+4 f4600        L: Ab2,Eb3:8 b253  R: Eb4:8 b254
+4+1/2 f4606    L: Ab2,Eb3:8 b253  R: Db4:8 b254
+bar 99
+1 f4612        L: Db3,Ab3:8 b255  R: Ab4:8 b256
+1+1/2 f4617    L: Db3,Ab3:8 b255
+1+1/2 f4618    R: Ab4:8 b256
+2 f4623        L: Db3,Ab3:8 b255  R: F4:8 b256
+2+1/2 f4629    L: Gb2,Db3:8 b255  R: Gb4,Bb4:2
+3 f4635        L: Gb2,Db3:8 b257
+3+1/2 f4641    L: Gb2,Db3:8 b257
+4 f4647        L: Gb2,Db3:8 b257
+4+1/2 f4653    L: Gb2,Db3:8 b257  R: F5,Ab5:8
+bar 100
+1 f4658        L: Bb2,F3:8 b258  R: Ab5:4
+1+1/2 f4664    L: Bb2,F3:8 b258
+2 f4670        L: Bb2,F3:8 b258  R: F5:4
+2+1/2 f4676    L: Bb2,F3:8 b258
+3 f4682        L: Ab2,Eb3:8 b259  R: Eb5:4
+3+1/2 f4688    L: Ab2,Eb3:8 b259
+4 f4694        L: Ab2,Eb3:8 b259  R: Db5:8 b260
+4+1/2 f4699    L: Eb3:8 b259  R: Db5:8 b260
+4+1/2 f4700    L: Ab2:8 b259
+bar 101
+1 f4705        L: Db3,Ab3:8 b261
+1+1/2 f4711    L: Db3:8 b261  R: Db4:8 b262
+2 f4717        L: Db3,Ab3:8 b261  R: Ab4:8 b262
+2+1/2 f4723    L: Gb2,Db3:8 b261  R: F4:2
+3 f4729        L: Gb2,Db3:8 b263
+3+1/2 f4735    L: Gb2,Db3:8 b263
+4 f4741        L: Gb2,Db3:8 b263
+4+1/2 f4746    L: Gb2,Db3:8 b263
+bar 102
+1 f4752        L: Bb2,F3:8 b264  R: Ab4:8 b265
+1+1/2 f4758    L: Bb2,F3:8 b264  R: Bb4:8 b265
+2 f4764        L: Bb2,F3:8 b264  R: Ab4:8 b265
+2+1/2 f4770    L: Ab2,Eb3:8 b264  R: Gb4:4
+3 f4776        L: Ab2,Eb3:8 b266
+3+1/2 f4782    L: Ab2,Eb3:8 b266  R: F4:8 b267
+4 f4787        L: Ab2,Eb3:8 b266  R: Eb4:8 b267
+4+1/2 f4793    L: Ab2,Eb3:8 b266  R: Db4:8 b267
+bar 103
+1 f4799        L: Db3,Ab3:8 b268  R: Ab4:4
+1+1/2 f4805    L: Db3,Ab3:8 b268
+2 f4811        L: Db3,Ab3:8 b268  R: F4:8
+2+1/2 f4817    L: Gb2,Db3:8 b268  R: Bb4:2
+3 f4823        L: Db3:8 b269
+3+1/2 f4828    L: Db3:8 b269
+3+1/2 f4829    L: Gb2:8 b269
+4 f4834        L: Gb2,Db3:8 b269
+4+1/2 f4840    L: Gb2,Db3:8 b269  R: F5,Ab5:8
+bar 104
+1 f4846        L: Bb2,F3:4  R: Ab5:4
+2 f4858        L: Bb2,F3:4  R: F5:4
+3 f4869        L: Ab2,Eb3:4  R: Eb5:8
+3 f4870        R: Eb6:8
+3+3/4 f4877    R: Eb5:16
+4 f4881        L: Db2,Ab2:8 b270  R: Db5:16
+4+1/2 f4887    L: Db2,Ab2:8 b270  R: Db5:8
+bar 105
+bar 106
+1 f4937        L: Db3,F3,Ab3:4.  R: F4:8 b271
+1+1/2 f4943    R: Ab4:8 b271
+2 f4949        R: Db5:8 b271
+2+1/2 f4955    L: Db3,Gb3,Ab3:2  R: Gb4:8 b271
+3 f4961        R: Ab4:8 b272
+3+1/2 f4966    R: Db5:8 b272
+4 f4972        R: Gb4:8 b272
+4+1/2 f4978    R: Ab4:8 b272
+bar 107
+1 f4984        L: Db3,F3,Ab3:4.  R: F4:8 b273
+1+1/2 f4990    R: Ab4:8 b273
+2 f4996        R: Db5:8 b273
+2+1/2 f5002    L: Db3,Eb3:2  R: Eb4:8 b273
+3 f5007        R: Ab4:8 b274
+3+1/2 f5013    R: Db4:8 b274
+4 f5019        R: Db5:8 b274
+4+1/2 f5025    R: Db5:8 b274
+bar 108
+1 f5031        L: Db3,F3,Ab3:4.  R: Db5:8.
+1+3/4 f5040    R: Db5:8.
+2+1/2 f5048    L: Db3,Gb3,Ab3:2  R: Db5:4
+3+1/2 f5060    R: Db5:8 b275
+4 f5066        R: Db5:8 b275
+4+1/2 f5072    R: Db5:8 b275
+bar 109
+1 f5078        L: Db3,F3,Ab3:4.  R: Db5:8.
+1+3/4 f5086    R: Db5:8.
+2+1/2 f5095    L: Db3,Eb3,Ab3:2  R: Eb5:4
+3+1/2 f5107    R: Db5:8 b276
+4 f5113        R: Db5:8 b276
+4+1/2 f5119    R: Db5:8 b276
+bar 110
+1 f5125        L: Db3,F3,Ab3:4.  R: Db5:8.
+1+3/4 f5133    R: Db5:8.
+2+1/2 f5142    L: Db3,Gb3,Ab3:2  R: Db5:4
+3+1/2 f5154    R: Db5:8 b277
+4 f5160        R: Db5:8 b277
+4+1/2 f5166    R: Ab5:8 b277
+bar 111
+1 f5171        L: F3,Ab3:4.  R: Ab5:4
+1 f5172        L: Db3:4.
+2 f5183        R: F5:8 b278
+2+1/2 f5189    L: Ab2,Db3,Eb3:2  R: F5:8 b278
+3 f5195        R: Eb5:4
+4 f5207        R: Db5:8 b279
+4+1/2 f5212    R: Db5:8 b279
+bar 112
+1 f5218        L: Db3,F3,Ab3:4.
+1+1/2 f5224    R: Db5:4
+2+1/2 f5236    L: Db3,Gb3,Ab3:2  R: Bb4:4
+3+1/2 f5248    R: Db5:8 b280
+4 f5253        R: Db5:8 b280
+4+1/2 f5259    R: Eb5:8 b280
+bar 113
+1 f5265        L: Db3,F3,Ab3:4.  R: F5:8.
+1+3/4 f5274    R: Db5:8.
+2+1/2 f5283    L: Db3,Eb3,Ab3:2  R: Eb5:4
+3+1/2 f5294    R: Db5:8
+4 f5300        R: Db5:4
+bar 114
+1 f5312        L: Db3,F3,Ab3:4.  R: Ab5:4
+2 f5324        R: F5:8
+2+1/2 f5330    L: Db3,Gb3:8  R: Bb5:8

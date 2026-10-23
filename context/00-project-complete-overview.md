@@ -196,7 +196,8 @@ run and the troubleshooting are in one place: [04-local-development.md](04-local
 passwords, the rights check), `audio/` (cuts, the frame table, the audio written again on save),
 `transcription/` (engines, the GPU queue, the live stream, filters, jobs, saved hands), `pieces/`,
 `pmn/` (the piano matrix notation and its adapters), `matrix/` (frame ↔ ms, gaps, peaks, figure
-bands), `hands/`, `notation/`, `editing/` (splice, compose, paste, passages, history), `library/`
+bands), `hands/`, `notation/`, `sheet/` (the new sheet chain of implementation 03, not yet used by
+any route), `editing/` (splice, compose, paste, passages, history), `library/`
 (the private and public rows, the import, popularity, pull, requests, shares), `storage/` (every
 path in one module, the project bundle, the audio store), `db/` (the tables, the Alembic revisions,
 the backup and check tools), `schemas/`, `main.py`.

@@ -1,6 +1,6 @@
 # 03: The new sheet in aimpromptu (applying the research)
 
-**State: live. Phase 0 done (2026-10-23); Phase 1 is next.** Opened 2026-10-23 on the branch
+**State: live. Phases 0 and 1 done (2026-10-23); Phase 2 is next.** Opened 2026-10-23 on the branch
 `feat/migrate-new-logic` (one branch for the whole migration, plan section 6.3).
 
 Research plan 01 (the folder `/home/david/Documents/projects/music/poc-aitu-research` on the Ubuntu machine) built a
@@ -20,3 +20,4 @@ The brief is [`03-prompt.md`](03-prompt.md), the plan is [`03-plan.md`](03-plan.
 | [`03-plan.md`](03-plan.md) | The plan: the decisions, the binding rules, what is reused, the method, eleven phases (0 to 10), the decision points, the risks, and the changes the phases made (section 11). A copy of the research's `05-final-report.md`, now the living plan |
 | [`03-checklist.md`](03-checklist.md) | The status lookup, and the open decisions |
 | [`03-implementation-phase-0.md`](03-implementation-phase-0.md) | Phase 0: the research folder checked on Ubuntu, the branch, the inventory of everything that uses vexflow-v2, the baseline (screenshots in [`screenshots/phase-0/`](screenshots/phase-0/), test counts) |
+| [`03-implementation-phase-1.md`](03-implementation-phase-1.md) | Phase 1: the research core copied into the backend as `aitu_backend/sheet/`, its golden tests in the container, `scripts/draw_sheet.py` and the time per song of My library |

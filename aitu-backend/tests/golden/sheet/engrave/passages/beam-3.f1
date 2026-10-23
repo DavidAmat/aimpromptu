@@ -1,0 +1,16 @@
+F1 bars
+clefs: R=treble L=bass
+bar 1 meter=3/4 key=1#
+1 f0           L: E2,B2,G3:4 arp  R: D#4,B4:16 b1
+1+1/4 f3       R: E4:8. b1
+2 f10          R: F#4,E5:16 b2
+2+1/4 f13      R: G4:8. b2
+3 f20          L: G2,E3,B3:4 arp  R: A#4,G5:16 b3
+3+1/4 f23      R: B4:8. b3
+bar 2
+1 f30          L: A2,E3,C4:4 arp  R: B4,G5:16 b4
+1+1/4 f33      R: A4:8. b4
+2 f41          R: G#4,F#5:16 b5
+2+1/4 f43      R: A4:8. b5
+3 f51          L: C3,A3,E4:4 arp  R: C5,A5:16 b6
+3+1/4 f53      R: B4:8. b6

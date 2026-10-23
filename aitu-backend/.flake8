@@ -5,6 +5,10 @@ max-line-length = 100
 # E203 whitespace before ':' — black's slice style.
 # W503 line break before binary operator — black's preferred style.
 extend-ignore = E501,E203,W503
+# E741/E743 ambiguous name 'l' — the sheet core ports Verovio's C++ and keeps its names
+# (``l`` for a layer or a last element), so a reader can follow the original.
+per-file-ignores =
+    src/aitu_backend/sheet/engrave/*.py: E741,E743
 exclude =
     .venv,
     .git,

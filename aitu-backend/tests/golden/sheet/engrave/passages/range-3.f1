@@ -1,0 +1,36 @@
+F1 bars
+clefs: R=treble L=bass
+bar 19 meter=2/4 key=1#
+1 f0           L: G2:16
+1+1/8 f4       R: B3:32 b1
+1+1/4 f8       L: clef=treble C#5:8 b2  R: D4:32 b1
+1+3/8 f11      R: G4:32 b1
+1+1/2 f15      R: A4:32 b3
+1+5/8 f19      R: G4:32 b3
+1+3/4 f23      L: D5:16 b2  R: B3:32 b3
+1+7/8 f26      R: G4:32 b3
+2 f30          L: clef=bass B2:16
+2+1/8 f34      R: B3:32 b4
+2+1/4 f38      L: clef=treble F#5:8 b5  R: D4:32 b4
+2+3/8 f41      R: G4:32 b4
+2+1/2 f45      R: A4:32 b6
+2+5/8 f49      R: G4:32 b6
+2+3/4 f53      L: G5:16 b5  R: B3:32 b6
+2+7/8 f56      R: G4:32 b6
+bar 20
+1 f60          L: clef=bass C3:16
+1+1/8 f64      R: A3:32 b7
+1+1/4 f68      L: clef=treble D#5:8 b8  R: E4:32 b7
+1+3/8 f71      R: G4:32 b7
+1+1/2 f75      R: A4:32 b9
+1+5/8 f79      R: G4:32 b9
+1+3/4 f83      L: E5:16 b8  R: A3:32 b9
+1+7/8 f86      R: G4:32 b9
+2 f90          L: clef=bass C#3:16
+2+1/8 f94      R: A3:32 b10
+2+1/4 f98      L: clef=treble D#6:8 b11  R: E4:32 b10
+2+3/8 f101     R: G4:32 b10
+2+1/2 f105     R: A4:32 b12
+2+5/8 f109     R: G4:32 b12
+2+3/4 f113     L: E6:16 b11  R: A3:32 b12
+2+7/8 f116     R: G4:32 b12

@@ -31,6 +31,7 @@ is not on the network. Who can sign in and what each user can open: [08-security
 | `matrix/` | Frame ↔ ms, gaps, peaks, the figure ladder, passages, figure bands |
 | `hands/` | Which hand plays each onset: a beam search with a gated second pass |
 | `notation/` | Figures, tresillos, trills |
+| `sheet/` | The new piano sheet chain of implementation 03 (the F1 text, the algorithm, the LLM step, the engine); no route uses it yet |
 | `editing/` | The replacement splice, composing, staging, history |
 | `storage/` | Every filesystem path in one module; the project bundle, the audio store |
 | `db/` | The SQLite tables, the Alembic migrations, the users (the master user and the others), the backup, check and reindex tools |
