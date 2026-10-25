@@ -73,10 +73,13 @@ __all__ = [
     "instructions",
     "read_reference",
     "reference_prompt",
+    "splice",
+    "stretch_request",
     "trim_beams",
     "window_prompt",
     "windows_of",
     "write_frames",
+    "write_stretch",
 ]
 
 Complete = Callable[[str, list[dict]], str]
@@ -293,14 +296,21 @@ def window_prompt(
     target: Sheet,
     lookahead: Sheet,
     context: Sheet | None,
+    request: str | None = None,
 ) -> str:
     """The prompt of window ``index`` (0 = first) of ``count``. ``context`` = the end of the previous answer (with
-    its hands and tags), or ``None``."""
+    its hands and tags), or ``None``. ``request`` = the user's request for one stretch (:func:`write_stretch`): the
+    stretch is the target, the sheet before it the context."""
     lo, hi = min(n.frame for n in target.notes), max(n.frame for n in target.notes)
-    out = [f"# Window {index + 1} of {count} of song {sid} (frames f{lo}-f{hi})"]
+    if request is None:
+        out = [f"# Window {index + 1} of {count} of song {sid} (frames f{lo}-f{hi})"]
+        before = "the end of the previous window, as you wrote it"
+    else:
+        out = [f"# A stretch of song {sid} to write again (frames f{lo}-f{hi})"]
+        before = "the sheet just before the stretch, as it is now"
     if context is not None and context.notes:
         out.append(
-            "## Decided context (the end of the previous window, as you wrote it)\n\n```\n"
+            f"## Decided context ({before})\n\n```\n"
             + f1.write(context, mode="frames").strip()
             + "\n```\n\nRange of each hand in it: "
             + "; ".join(_ranges(context))
@@ -324,6 +334,8 @@ def window_prompt(
             + f1.write(lookahead, mode="frames").strip()
             + "\n```"
         )
+    if request is not None:
+        out.append(request)
     out.append(
         "## Answer\n\nWrite the target in F1 frames with hands, as one block in triple backticks. Start with the "
         "two header lines of the target; the second line may change `key=` or `clefs:` when the passage starts "
@@ -671,11 +683,15 @@ def join_ottavas(sheet: Sheet) -> int:
     return joined
 
 
-def assemble(algo: FramesProposal, parts: list[Part], *, clefs: str = "llm") -> tuple[Sheet, dict]:
+def assemble(
+    algo: FramesProposal, parts: list[Part], *, clefs: str = "llm", join: bool = True
+) -> tuple[Sheet, dict]:
     """The sheet from the decisions of every window (``parts`` in order, covering the song), then the rules:
     figures, grace notes, beam groups cut by the figures, spelling. ``clefs="rule"`` replaces the windows' clefs
-    and 8va by the algorithm's rule on the decided hands (``proposal.frames.clefs_and_ottavas``). Returns the
-    sheet and the counts.
+    and 8va by the algorithm's rule on the decided hands (``proposal.frames.clefs_and_ottavas``). ``join=False``
+    keeps the 8va lines as decided (a stored sheet laid again: its lines were joined when it was written, and a
+    line the user took away must not come back). The user's marks of a decided note (implementation 03, Phase 7:
+    a finger, a figure set by hand, the grace note switch) are kept. Returns the sheet and the counts.
     """
     base = algo.sheet
     quarter_ms = algo.quarter_ms
@@ -704,13 +720,16 @@ def assemble(algo: FramesProposal, parts: list[Part], *, clefs: str = "llm") -> 
                 replace(
                     n,
                     staff=d.staff,
-                    figure=None,
+                    figure=d.figure if d.fixed else None,
                     grace=None,
                     gslot=0,
                     beam=b,
                     ornaments=tuple(d.ornaments),
                     covered=d.covered,
                     ottava=d.ottava,
+                    finger=d.finger,
+                    fixed=d.fixed,
+                    grace_rule=d.grace_rule,
                 )
             )
     # one note per hand, key and column (two notes that moved into one hand), the longer kept
@@ -745,7 +764,7 @@ def assemble(algo: FramesProposal, parts: list[Part], *, clefs: str = "llm") -> 
     respell(sheet)
     if clefs == "rule":
         info.update({f"clefs: {k}": v for k, v in clefs_and_ottavas(sheet).items()})
-    else:
+    elif join:
         info["8va lines joined"] = join_ottavas(sheet)
     for n in sheet.notes:
         n.hand_known = True
@@ -975,3 +994,209 @@ def write_frames(
         info=info,
         parts=parts,
     )
+
+
+# ------------------------------------------------------------------ one stretch, with the user's request (Phase 7)
+
+#: The user's words in a stretch request, at most (the page limits the field to the same).
+REQUEST_CHARS = 1000
+#: Picked notes named one by one in the request, at most; more are counted.
+PICKED_NAMED = 40
+
+
+def stretch_request(
+    instruction: str, *, staff: int | None = None, picked: list[str] | None = None
+) -> str:
+    """The section of a stretch prompt that says what the user asked (implementation 03, Phase 7, plan task 7.5):
+    their words, and what they picked (one hand's staff of the stretch, or some of its notes, named ``f120 C5``).
+    """
+    if picked:
+        named = ", ".join(picked[:PICKED_NAMED]) + (
+            f" and {len(picked) - PICKED_NAMED} more" if len(picked) > PICKED_NAMED else ""
+        )
+        what = f"The user picked these notes of the target: {named}."
+    elif staff in (1, 2):
+        what = (
+            f"The user picked the notes of the target that are now in the {'right' if staff == 1 else 'left'} "
+            f"hand ({'R' if staff == 1 else 'L'}:)."
+        )
+    else:
+        what = "The user picked the whole target, both hands."
+    words = " ".join(instruction.split())[:REQUEST_CHARS]
+    said = (
+        f"Their words:\n\n> {words}\n\nDo what they ask in the target as far as your rules allow: the format, "
+        "the onsets of the target, the limits of a beam group and of the ledger lines stay hard rules. Where the "
+        "words say nothing, decide as you always do."
+        if words
+        else "They wrote no words: write the target as you always do."
+    )
+    return (
+        "## The user's request\n\nThe user asked you to write this stretch of the sheet again. "
+        f"{what} {said} The hands and tags you write replace the ones of the whole target."
+    )
+
+
+def _strip_marks(n: Note) -> Note:
+    """A note as the LLM may read it: without the user's marks, which the format of the prompt does not have."""
+    return replace(n, grace=None, gslot=0, finger=None, fixed=False, grace_rule=None)
+
+
+def write_stretch(
+    current: Sheet,
+    notes: Notes,
+    complete: Complete,
+    *,
+    start: int,
+    end: int,
+    instruction: str = "",
+    staff: int | None = None,
+    picked: list[tuple[int, int]] | None = None,
+    sid: str = "song",
+    max_checks: int = MAX_CHECKS,
+    guards: bool = True,
+) -> tuple[Sheet | None, WindowLog]:
+    """Write the columns ``[start, end)`` of ``current`` again with the user's ``instruction`` (implementation 03,
+    Phase 7, plan task 7.5): one window conversation whose target is the stretch, both hands, with the hands of
+    ``current`` shown as a suggestion; the sheet before it is the decided context and the music after it the
+    look-ahead. ``notes`` carry the hands of ``current``. ``staff`` (1 or 2) or ``picked`` (``(frame, midi)`` of
+    the notes picked) say what the user selected. Returns the sheet with the stretch spliced in (:func:`splice`;
+    not settled: lay it on the notes to run the rules) or ``None`` when no reply was accepted, and the window log.
+    A ``complete`` that raises stops at once (the log says why)."""
+    quarter_ms = current.quarter_ms or 500.0
+    algo = propose_frames(
+        notes, key=current.key or 0, key_changes=list(current.key_changes), quarter_ms=quarter_ms
+    )
+    base = algo.sheet
+    target_notes = _part(base, start, end)
+    if not target_notes:
+        raise ValueError("The stretch holds no notes.")
+    clefs, key = _state_at(
+        current.clefs, current.clef_changes, current.key or 0, current.key_changes, start
+    )
+    shown = dict(
+        key=key,
+        clefs=clefs,
+        quarter_ms=quarter_ms,
+        hands=True,
+        figures=_own_figures(notes, quarter_ms),
+    )
+    target = _shown(target_notes, **shown)
+    look = _shown(_part(base, end, end + int(LOOKAHEAD_MS / FRAME_MS)), **shown)
+    cut = max(0, start - int(CONTEXT_MS / FRAME_MS))
+    before_clefs, before_key = _state_at(
+        current.clefs, current.clef_changes, current.key or 0, current.key_changes, cut
+    )
+    context = Sheet(
+        notes=[_strip_marks(n) for n in current.notes if cut <= n.frame < start],
+        clefs=before_clefs,
+        key=before_key,
+        clef_changes=[c for c in current.clef_changes if cut < c[0] < start],
+        key_changes=[k for k in current.key_changes if cut < k[0] < start],
+        quarter_ms=quarter_ms,
+    ).sort()
+    names = {
+        (n.frame, n.midi): f"f{n.frame} {spn(n.step, n.alter, n.octave)}" for n in target.notes
+    }
+    request = stretch_request(
+        instruction,
+        staff=staff,
+        picked=[names[p] for p in sorted(set(picked or [])) if p in names] or None,
+    )
+    messages = [
+        {
+            "role": "user",
+            "content": window_prompt(
+                sid=sid,
+                index=0,
+                count=1,
+                target=target,
+                lookahead=look,
+                context=context,
+                request=request,
+            ),
+        }
+    ]
+    system = instructions()
+    log = WindowLog(k=0, start=start, end=end)
+    errs, answer = ["no reply"], None
+    try:
+        while log.replies < max_checks:
+            reply = complete(system, messages)
+            log.replies += 1
+            errs, answer = check_answer(reply, target)
+            if not errs and guards:
+                sheet, _ = assemble(algo, [_answer_part(start, end, base, answer)])
+                errs = beam_floor(sheet)
+            if not errs:
+                break
+            log.errors.append(errs)
+            messages += [
+                {"role": "assistant", "content": reply},
+                {"role": "user", "content": feedback(errs)},
+            ]
+        log.status = "failed" if errs else "ok"
+    except SkipWindow as exc:
+        log.status, log.note = "failed", str(exc)
+    except Exception as exc:  # noqa: BLE001 (no credits, no network: the sheet stays as it is)
+        log.status, log.note = "error", f"{type(exc).__name__}: {exc}"
+    if log.status != "ok" or answer is None:
+        return None, log
+    return splice(current, answer, start, end), log
+
+
+def splice(current: Sheet, answer: Sheet, start: int, end: int) -> Sheet:
+    """``current`` with its columns ``[start, end)`` taken from ``answer``: the notes (hands and tags), the clefs
+    and the armadura there; the clefs and the armadura in force at ``end`` come back after it. The user's marks of
+    a note (a finger, a figure set by hand, the grace note switch) stay on it: the AI never writes them. Not
+    settled: the figures, grace notes and spelling are the rule's work (``part_sheet.build.reapply``).
+    """
+    marks = {(n.frame, n.midi): n for n in current.notes if start <= n.frame < end}
+    top = max((n.beam for n in current.notes if n.beam is not None), default=0)
+    inside = []
+    for n in answer.notes:
+        if not start <= n.frame < end:
+            continue
+        own = marks.get((n.frame, n.midi))
+        inside.append(
+            replace(
+                n,
+                beam=None if n.beam is None else n.beam + top,
+                finger=own.finger if own else None,
+                fixed=own.fixed if own else False,
+                figure=own.figure if own is not None and own.fixed else n.figure,
+                grace_rule=own.grace_rule if own else None,
+                on_ms=own.on_ms if own else n.on_ms,
+                len_ms=own.len_ms if own else n.len_ms,
+            )
+        )
+    frames = sorted(n.frame for n in current.notes)
+    first = frames[0] if frames else start
+    after = any(f >= end for f in frames)
+    clefs_end, key_end = _state_at(
+        current.clefs, current.clef_changes, current.key or 0, current.key_changes, end
+    )
+    clefs, key = dict(current.clefs), current.key or 0
+    clef_changes = [c for c in current.clef_changes if not start <= c[0] < end]
+    key_changes = [k for k in current.key_changes if not start <= k[0] < end]
+    if start <= first:
+        clefs, key = {**clefs, **answer.clefs}, answer.key or 0
+    else:
+        clef_changes += [(start, st, c) for st, c in sorted(answer.clefs.items())]
+        key_changes.append((start, answer.key or 0))
+    clef_changes += [c for c in answer.clef_changes if start < c[0] < end]
+    key_changes += [k for k in answer.key_changes if start < k[0] < end]
+    if after:
+        for st, c in clefs_end.items():
+            if not any(f == end and s == st for f, s, _ in clef_changes):
+                clef_changes.append((end, st, c))
+        if not any(f == end for f, _ in key_changes):
+            key_changes.append((end, key_end))
+    out = Sheet(
+        notes=[n for n in current.notes if not start <= n.frame < end] + inside,
+        clefs=clefs,
+        clef_changes=_collapse(clef_changes, clefs),
+        key=key,
+        key_changes=_collapse_keys(key_changes, key),
+        quarter_ms=current.quarter_ms,
+    )
+    return out.sort()

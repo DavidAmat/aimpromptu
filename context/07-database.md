@@ -45,10 +45,12 @@ database. Every path in the folder is built by one module, `aitu_backend/storage
     notes.pmn                    THE NOTES: the piano matrix notation of the part
     sheet.json                   what the reader decided on the old piano sheet (vexflow-v2)
     sheet.f1                     the new piano sheet: F1 frames text and a record of how it was written
-                                 (Sonnet or the algorithm, implementation 03, Phase 5); the hands stay in notes.pmn
+                                 (Sonnet or the algorithm, implementation 03, Phase 5; since Phase 7 also edited by
+                                 the user, and the stretches the AI wrote again); the hands stay in notes.pmn
     sheet.pending                a new transcription asks Sonnet to write the sheet (removed when it starts)
     sheet.edits.json             the steps of undo and redo of the new sheet (implementation 03, Phase 6): each
-                                 note's hand before and after, the lines of sheet.f1 changed; not copied with the part
+                                 note's hand before and after, the notes taken off the page (Phase 7), the lines of
+                                 sheet.f1 changed; not copied with the part
     timeline.json                the audio timeline: which stored files, which ranges, in order
   cache/<partId>/                derived, safe to delete: normalized.wav, waveform.json,
                                  piece-r<N>.flac/.wav (the joined audio of a part with cuts),

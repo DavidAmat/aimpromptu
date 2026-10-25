@@ -9,10 +9,13 @@
  *
  * An edit (Phase 6) is one request whose answer is the sheet drawn again: `edit` puts it on the page in place of the
  * one it had, and holds further edits until it is back.
+ *
+ * A stretch the AI writes again with the user's words (Phase 7) is a job like a whole run: the page follows it the
+ * same way, and the job's last message says when no answer was accepted (`notice`: the stretch stays as it was).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { sheetApi, type FramesSheet, type SheetEdited } from "../../../../api";
+import { sheetApi, type FramesSheet, type SheetEdited, type StretchRequest } from "../../../../api";
 import { said } from "../../../library/shared";
 
 /** Messages closer than this are read as one. */
@@ -30,6 +33,10 @@ export interface FramesSheetState {
   editing: boolean;
   /** What went wrong with the last edit, said for the page; cleared by the next one. */
   editError: string | null;
+  /** Ask the AI to write a stretch again with the user's words (Phase 7). */
+  enhanceStretch: (stretch: StretchRequest) => Promise<void>;
+  /** A quiet word after the AI could not write a stretch again; cleared by the next edit or request. */
+  notice: string | null;
 }
 
 export function useFramesSheet(
@@ -52,6 +59,7 @@ export function useFramesSheet(
   const [starting, setStarting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const changed = useRef(onChanged);
   useEffect(() => {
     changed.current = onChanged;
@@ -88,10 +96,17 @@ export function useFramesSheet(
       }, JOIN_MS);
     };
     source.addEventListener("sheet", again);
-    source.addEventListener("done", () => {
+    source.addEventListener("done", (event) => {
       source.close();
       again();
       changed.current?.();
+      try {
+        const summary = JSON.parse((event as MessageEvent<string>).data ?? "{}") as { stretch?: string };
+        if (summary.stretch === "failed") setNotice("The AI could not write this stretch again. It stays as it was.");
+        if (summary.stretch === "stale") setNotice("The notes changed while the AI worked. The stretch stays as it was.");
+      } catch {
+        // A message without a summary: nothing to say.
+      }
     });
     return () => {
       source.close();
@@ -121,11 +136,27 @@ export function useFramesSheet(
     void run();
   }, [auto, audioUuid, run]);
 
+  const enhanceStretch = useCallback(
+    async (stretch: StretchRequest) => {
+      setNotice(null);
+      setEditError(null);
+      try {
+        await sheetApi.enhanceStretch(audioUuid, stretch);
+        setReload((value) => value + 1);
+        changed.current?.();
+      } catch (caught) {
+        setEditError(said(caught, "The AI could not be asked."));
+      }
+    },
+    [audioUuid],
+  );
+
   const edit = useCallback(
     async (call: () => Promise<SheetEdited>) => {
       if (editing) return null;
       setEditing(true);
       setEditError(null);
+      setNotice(null);
       try {
         const answer = await call();
         setLoaded({ uuid: audioUuid, sheet: answer });
@@ -140,5 +171,5 @@ export function useFramesSheet(
     [audioUuid, editing],
   );
 
-  return { sheet, error, run, starting, edit, editing, editError };
+  return { sheet, error, run, starting, edit, editing, editError, enhanceStretch, notice };
 }

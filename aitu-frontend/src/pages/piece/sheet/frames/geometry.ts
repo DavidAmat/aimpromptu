@@ -86,8 +86,11 @@ export function boxesOf(
   return out;
 }
 
-/** The indices of the columns of a segment: `[first, end)`. */
-export function columnsOf(segment: SheetSegment, columns: readonly SheetColumn[]): [number, number] {
+/** The indices of the columns of a segment or a marked stretch: `[first, end)`. */
+export function columnsOf(
+  segment: Pick<SheetSegment, "start" | "end">,
+  columns: readonly SheetColumn[],
+): [number, number] {
   let first = columns.findIndex((column) => column.frame >= segment.start);
   if (first < 0) first = columns.length;
   let end = columns.findIndex((column) => column.frame >= segment.end);

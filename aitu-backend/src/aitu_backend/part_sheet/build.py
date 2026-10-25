@@ -7,8 +7,10 @@ Three cases, in order (:func:`current`):
 2. **Stored, but the notes or the hands changed since** (a notes edit, a hand moved in the vexflow-v2 editor, a
    Sonnet run that ended after an edit): the stored decisions are laid again on the current notes
    (:func:`reapply`). The hand of a note is always the one of ``notes.pmn`` (plan section 3.7); a note that kept its
-   hand and its column keeps its beam group, ornaments and 8va; the clefs and the armaduras stay. The rules
-   (figures, grace notes, beam groups cut by the figures, spelling) run again.
+   hand and its column keeps its beam group, ornaments, 8va and the user's marks (Phase 7); the clefs and the
+   armaduras stay. The rules (figures, grace notes, beam groups cut by the figures, spelling) run again. This holds
+   for a sheet the AI wrote and for one the user edited (``Record.decided``); a plain stored algorithm sheet is
+   computed again.
 3. **Never written**: the algorithm (``propose_frames``) on the starting hands (the saved hands, the hand split for
    the rest). A part that has a ``sheet.json`` from vexflow-v2 keeps two of its decisions (the user's answer of
    Phase 5, "keep all the data"): the armadura (``keySignature``, ``keyChanges``) and, when the user renamed it with
@@ -42,7 +44,7 @@ from aitu_backend.sheet.proposal.frames import (
 )
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet.common import spn
-from aitu_backend.sheet.sheet.data import FRAME_MS, Sheet
+from aitu_backend.sheet.sheet.data import CLEF_NAMES, FRAME_MS, Sheet
 from aitu_backend.sheet.sheet.frames import STAFF_OF, drawn_columns
 from aitu_backend.sheet.sheet.pmn import KEYS
 from aitu_backend.storage import locate, paths
@@ -60,8 +62,11 @@ __all__ = [
     "fit_clefs",
     "hands_of_sheet",
     "reading_of",
+    "reading_summary",
     "reapply",
+    "user_marks",
     "windows",
+    "with_marks",
 ]
 
 #: The staff width the page asks for, in staff spaces: its own width over the size it draws at.
@@ -259,9 +264,40 @@ def reapply(stored: Sheet, notes: Notes) -> Sheet:
         clef_changes=list(stored.clef_changes),
         key_changes=list(stored.key_changes),
     )
-    sheet, _ = assemble(algo, [part])
+    sheet, _ = assemble(algo, [part], join=False)
     fit_clefs(sheet, changed)
     return sheet
+
+
+def user_marks(sheet: Sheet) -> dict[tuple[int, int], Any]:
+    """The notes of a sheet that carry a mark only the user writes (Phase 7: a finger, a figure set by hand, the
+    grace note switch), by ``(frame, midi)``. A new AI run keeps them (the user's answer of Phase 7).
+    """
+    return {(n.frame, n.midi): n for n in sheet.notes if n.finger or n.fixed or n.grace_rule}
+
+
+def with_marks(parts: list[Part], marks: dict[tuple[int, int], Any]) -> list[Part]:
+    """The decisions of ``parts`` with the user's marks put back on their notes: ``assemble`` keeps them."""
+    if not marks:
+        return parts
+    out = []
+    for p in parts:
+        notes = {}
+        for i, d in p.notes.items():
+            m = marks.get((d.frame, d.midi))
+            notes[i] = (
+                d
+                if m is None
+                else replace(
+                    d,
+                    finger=m.finger,
+                    fixed=m.fixed,
+                    figure=m.figure if m.fixed else d.figure,
+                    grace_rule=m.grace_rule,
+                )
+            )
+        out.append(replace(p, notes=notes))
+    return out
 
 
 def hands_of_sheet(sheet: Sheet, notes: Notes) -> dict[int, str]:
@@ -344,7 +380,7 @@ def _compute(part_id: str) -> Drawn:
                 sheet.quarter_ms or record.quarter_ms,
                 record,
             )
-        if record.source != "algorithm":
+        if record.decided:
             sheet = reapply(f1.read(stored.text), pipeline.starting_hands(part_id))
             return Drawn(
                 f1.write(sheet, mode="frames"),
@@ -367,19 +403,53 @@ def forget(part_id: str) -> None:
         _cache.pop(part_id, None)
 
 
-def drawn_notes(sheet: Sheet) -> list[dict[str, str]]:
+def drawn_notes(sheet: Sheet) -> list[dict[str, Any]]:
     """Each drawn note as its notehead names it (``ref`` = ``"<frame>:<midi>"``, the ``data-note`` of the SVG), with
-    its hand and the name the sheet prints (the sounding pitch, spelled: ``C#5``), for the note toolbox (Phase 6).
+    its hand and the name the sheet prints (the sounding pitch, spelled: ``C#5``), for the note toolbox (Phase 6);
+    and what the toolbox of Phase 7 shows pressed: the figure (``4`` a negra), the beam group (a number unique in
+    the sheet, or ``null``), a grace note, the user's marks (a figure set by hand, the grace note switch, the
+    finger), the ornaments and the 8va (``1`` 8va, ``2`` 15ma, ``-1`` 8vb, ``-2`` 15mb).
     """
     return [
         {
             "ref": f"{n.frame}:{n.midi}",
             "hand": "right" if n.staff == 1 else "left",
             "pitch": spn(n.step, n.alter, n.octave),
+            "figure": n.figure,
+            "beam": n.beam,
+            "grace": n.grace is not None,
+            "fixed": n.fixed,
+            "graceRule": n.grace_rule,
+            "finger": n.finger,
+            "ornaments": list(n.ornaments),
+            "ottava": n.ottava,
         }
         for n in sheet.notes
         if n.frame is not None and not n.covered and n.staff in (1, 2)
     ]
+
+
+HAND_NAMES = {1: "right", 2: "left"}
+
+
+def reading_summary(sheet: Sheet) -> dict[str, Any]:
+    """The armaduras and clefs of a sheet, for the range toolbox (Phase 7): the armadura of the piece (fifths:
+    ``3`` is three sostenidos, ``-2`` two bemoles) and where it changes, the clef each hand starts with and where it
+    changes (``treble`` or ``bass``)."""
+    return {
+        "key": sheet.key or 0,
+        "keyChanges": [[f, k] for f, k in sorted(sheet.key_changes)],
+        "clefs": {
+            HAND_NAMES[st]: CLEF_NAMES.get(c, c)
+            for st, c in sheet.clefs.items()
+            if st in HAND_NAMES
+        },
+        "clefChanges": [
+            [f, HAND_NAMES[st], CLEF_NAMES.get(c, c)]
+            for f, st, c in sorted(sheet.clef_changes, key=lambda c: (c[0], c[1]))
+            if st in HAND_NAMES
+        ],
+    }
 
 
 def draw(text: str, width: float) -> dict[str, Any]:
@@ -398,5 +468,6 @@ def draw(text: str, width: float) -> dict[str, Any]:
         "width": rendered.width,
         "height": rendered.height,
         "notes": notes,
+        "reading": reading_summary(sheet),
         "timings": {k: round(v, 1) for k, v in rendered.timings.items()},
     }

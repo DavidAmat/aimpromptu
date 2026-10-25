@@ -10,6 +10,12 @@
   `POST /sheet/{uuid}/undo` and `/redo` — walk the steps of the part's log. Each answers the sheet drawn again, as
   `GET` does, so one edit is one request. Refused (409) while the AI writes the sheet: the segments still waiting
   cannot be edited, and its hands would replace the ones moved meanwhile.
+* `POST /sheet/{uuid}/reading?width=N` — one reading edit of the toolboxes (Phase 7, `part_sheet.reading`):
+  figures, fingers, beams, the grace note switch, ornaments, and the armadura, clefs and 8va of a stretch.
+  `POST /sheet/{uuid}/remove` takes notes off the page. A refused edit answers 400 with the reason.
+* `GET /sheet/{uuid}/stretch?start=A&end=B` — the armadura in force at a stretch and the one with the fewest signs
+  over it. `POST /sheet/{uuid}/llm/stretch` — the AI writes a stretch again with the user's words (one request,
+  in the background; the page follows the job as for a whole run).
 
 The sheet is never stale for the page: a sheet stored for older notes is laid again on the current ones
 (`part_sheet.build`). What the old Sheet step saved (`sheet.json`, vexflow-v2) is not read here, except the armadura
@@ -27,8 +33,9 @@ from pydantic import BaseModel, Field
 
 from aitu_backend.audio import store as audio_store
 from aitu_backend.auth import context, rights
-from aitu_backend.part_sheet import build, edits, job
+from aitu_backend.part_sheet import build, edits, job, reading
 from aitu_backend.part_sheet import store as new_sheet_store
+from aitu_backend.sheet.sheet import f1
 from aitu_backend.storage import locate
 from aitu_backend.transcription import pipeline
 
@@ -104,6 +111,7 @@ def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
             "width": width + 8,
             "height": 0,
             "notes": [],
+            "reading": {"key": 0, "keyChanges": [], "clefs": {}, "clefChanges": []},
             "segments": [],
             "source": "algorithm",
             "stale": False,
@@ -129,7 +137,10 @@ def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
     if run is not None:
         text, segments = run.text(), run.segments()
     else:
-        text, segments = drawn.text, drawn.windows
+        # The stretches the AI wrote again (Phase 7) after the windows: the page reveals the one that came back.
+        stretches = drawn.record.stretches if drawn.record is not None else []
+        text = drawn.text
+        segments = list(drawn.windows) + [(int(a), int(b), "llm") for a, b, *_ in stretches]
     try:
         picture = build.draw(text, width)
     except Exception as exc:  # pragma: no cover - a sheet the engine cannot draw is a bug to see
@@ -170,6 +181,104 @@ def move_hands(
     _not_running(audio_uuid)
     done = edits.move_hands(audio_uuid, body.notes, body.hand)
     return {**_answer(audio_uuid, width), "moved": done.moved, "unmatched": done.unmatched}
+
+
+class ReadingRequest(BaseModel):
+    action: Literal[reading.ACTIONS]  # type: ignore[valid-type]
+    #: The notes picked, as their noteheads name them (the note toolbox).
+    notes: list[str] = Field(default_factory=list, max_length=20000)
+    #: The stretch marked, in frames, ``end`` excluded (the range toolbox).
+    start: int | None = Field(default=None, ge=0)
+    end: int | None = Field(default=None, ge=0)
+    staff: Literal["both", "right", "left"] = "both"
+    #: The figure (``8``), the fingers (``[1, 3, 5]``), the grace switch (``"on"``, ``"off"``), the ornament
+    #: (``"trill"``), the armadura (fifths), the clef (``"treble"``), the octave line (``1``, ``2``, ``-1``,
+    #: ``-2``, ``0``); ``null`` gives the notes back to the rule (or the stretch its piece's armadura, the hand's
+    #: own clef).
+    value: Any = None
+
+
+@router.post("/{audio_uuid}/reading")
+def edit_reading(
+    audio_uuid: str,
+    body: ReadingRequest = Body(...),
+    width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH),
+) -> dict[str, Any]:
+    """One reading edit of the toolboxes (one step of undo); the sheet drawn again."""
+    _notes_or_404(audio_uuid)
+    _not_running(audio_uuid)
+    try:
+        change, holds = reading.plan(
+            body.action,
+            notes=body.notes,
+            start=body.start,
+            end=body.end,
+            staff=body.staff,
+            value=body.value,
+        )
+        label = edits.edit_reading(audio_uuid, change, holds)
+    except (reading.Refused, ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {**_answer(audio_uuid, width), "edited": label}
+
+
+class NotesRequest(BaseModel):
+    notes: list[str] = Field(default_factory=list, max_length=20000)
+
+
+@router.post("/{audio_uuid}/remove")
+def remove_notes(
+    audio_uuid: str,
+    body: NotesRequest = Body(...),
+    width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH),
+) -> dict[str, Any]:
+    """Take notes off the page: marked removed in `notes.pmn` (one step of undo); the sheet drawn again."""
+    _notes_or_404(audio_uuid)
+    _not_running(audio_uuid)
+    done = edits.remove_notes(audio_uuid, body.notes)
+    return {**_answer(audio_uuid, width), "moved": done.moved, "unmatched": done.unmatched}
+
+
+@router.get("/{audio_uuid}/stretch")
+def stretch_keys(
+    audio_uuid: str, start: int = Query(..., ge=0), end: int = Query(..., ge=0)
+) -> dict[str, int]:
+    """The armadura in force at the start of a stretch and the one that prints the fewest signs over it."""
+    _notes_or_404(audio_uuid)
+    return reading.fewest_signs(f1.read(build.current(audio_uuid).text), start, end)
+
+
+class StretchRequest(BaseModel):
+    start: int = Field(ge=0)
+    end: int = Field(ge=1)
+    staff: Literal["both", "right", "left"] = "both"
+    #: The notes picked, when the stretch comes from the note toolbox.
+    notes: list[str] = Field(default_factory=list, max_length=2000)
+    instruction: str = Field(default="", max_length=1000)
+
+
+@router.post("/{audio_uuid}/llm/stretch", status_code=202)
+def run_llm_stretch(audio_uuid: str, body: StretchRequest = Body(...)) -> dict[str, str]:
+    """The AI writes the stretch again with the user's words, in the background; the page follows the job."""
+    _notes_or_404(audio_uuid)
+    if not job.available():
+        raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
+    if body.end <= body.start:
+        raise HTTPException(status_code=400, detail="The stretch is empty.")
+    if not _writes(audio_uuid):
+        raise HTTPException(status_code=403, detail="This sheet cannot be changed here.")
+    try:
+        started = job.start_stretch(
+            audio_uuid,
+            start=body.start,
+            end=body.end,
+            instruction=body.instruction,
+            staff={"right": 1, "left": 2}.get(body.staff),
+            picked=body.notes or None,
+        )
+    except job.Busy as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"jobId": started.id, "status": started.status}
 
 
 @router.post("/{audio_uuid}/undo")

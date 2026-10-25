@@ -4,6 +4,9 @@ What the Sheet step can say about a marked stretch of frames. The overview of th
 selections and undo is [annotations.md](annotations.md). Code:
 `aitu-frontend/src/pages/piece/sheet/RangeToolbox.tsx` and `useRangeActions.ts`.
 
+The range toolbox of the **new sheet** (implementation 03, Phase 7: Key, Clef, Octave) is described in
+[annotations.md](annotations.md), section "The new sheet"; this page is the old sheet's.
+
 ## The tabs
 
 The panel is titled *Frames*, with the time of the stretch under it. Its title bar has **Copy this

@@ -36,7 +36,7 @@ from aitu_backend.pmn.notes import Notes
 from aitu_backend.sheet.proposal import beat
 from aitu_backend.sheet.sheet import frames as frames_mod
 from aitu_backend.sheet.sheet.data import Note, Sheet
-from aitu_backend.sheet.sheet.figures import SPLIT, figure_of_ms, steps
+from aitu_backend.sheet.sheet.figures import FIGURES, SPLIT, figure_of_ms, steps
 from aitu_backend.sheet.sheet.pitch import STEPS
 from aitu_backend.sheet.sheet.spelling import sign, spell, spell_pc
 
@@ -93,9 +93,14 @@ def assign_figures(
     sheet: Sheet, quarter_ms: float, split: float = SPLIT, *, cap: bool = True
 ) -> None:
     """Step 2: the figure of every note from its measured length (``Note.len_ms``) and onset (``Note.on_ms``).
-    ``cap=False`` takes the raw length (the gallery's comparison)."""
+    ``cap=False`` takes the raw length (the gallery's comparison). A chord whose figure the user set (``fix``,
+    implementation 03, Phase 7) keeps it: rule 5 of the time model, the reader's answer beats the rule.
+    """
     for staff in (1, 2):
         cols = _columns(sheet, staff)
+        fixed = [
+            next((n.figure for n in ns if n.fixed and n.figure in FIGURES), None) for _, ns in cols
+        ]
         starts = [ns[0].on_ms for _, ns in cols]
         gaps = [b - a for a, b in zip(starts, starts[1:])] + [None]
         figs = []
@@ -126,31 +131,47 @@ def assign_figures(
                 i = j + 1
             else:
                 i += 1
+        figs = [own if own is not None else fig for own, fig in zip(fixed, figs)]
         for (_, ns), fig in zip(cols, figs):
             for n in ns:
                 n.figure, n.dots, n.tuplet, n.tgroup = fig, 0, None, None
 
 
 def find_graces(sheet: Sheet, quarter_ms: float, split: float = SPLIT) -> int:
-    """Step 3: grace notes by the two-step rule (plan section 3.3; the user, Phase 2 review). Returns how many
+    """Step 3: grace notes by the two-step rule (plan section 3.3; the user, Phase 2 review). The user's switch
+    (implementation 03, Phase 7) wins: a column marked ``asgrace`` is a grace note of the next note of its hand
+    whatever its figure, one marked ``nograce`` or with a figure the user set (``fix``) never is. Returns how many
     columns became grace notes."""
     count = 0
     for staff in (1, 2):
         cols = _columns(sheet, staff)
         starts = [ns[0].on_ms for _, ns in cols]
         fig = [ns[0].figure for _, ns in cols]
+        never = [any(n.fixed or n.grace_rule == "off" for n in ns) for _, ns in cols]
+        forced = [
+            not never[i] and any(n.grace_rule == "on" for n in ns) for i, (_, ns) in enumerate(cols)
+        ]
         k = 1
         while k < len(cols):
+            if forced[k]:  # a grace note is never the main note of another one
+                k += 1
+                continue
             main = fig[k]
             chain = []
             j = k - 1
-            while j >= 0 and fig[j] >= max(GRACE_FIGURE, 4 * main) and not cols[j][1][0].grace:
+            while j >= 0 and not cols[j][1][0].grace:
+                if forced[j]:
+                    chain.append(j)
+                    j -= 1
+                    continue
+                if never[j] or fig[j] < max(GRACE_FIGURE, 4 * main):
+                    break
                 # it sounds just before the next note: the gap is shorter than the main note's figure
                 if figure_of_ms(starts[j + 1] - starts[j], quarter_ms, split) <= main:
                     break
                 chain.append(j)
                 j -= 1
-            if 1 <= len(chain) <= MAX_GRACES:
+            if chain and (len(chain) <= MAX_GRACES or any(forced[j] for j in chain)):
                 for j in chain:
                     for n in cols[j][1]:
                         n.grace = "acc" if len(chain) == 1 else "unacc"

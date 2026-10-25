@@ -128,6 +128,10 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/sheet/{uuid}/llm` | Start Sonnet on the part (or answer the run already going); follow `GET /matrix/progress/{jobId}`. |
 | POST | `/sheet/{uuid}/hands` | Phase 6: give notes to one hand, in `notes.pmn` (one step of undo); the sheet drawn again (section 4.1). |
 | POST | `/sheet/{uuid}/undo`, `/sheet/{uuid}/redo` | Phase 6: walk the part's steps back or forward; the sheet drawn again. |
+| POST | `/sheet/{uuid}/reading` | Phase 7: one reading edit of the toolboxes (figure, finger, beam, grace note switch, ornament; armadura, clef, clef rules, octave line of a stretch); the sheet drawn again (section 4.1). |
+| POST | `/sheet/{uuid}/remove` | Phase 7: take notes off the page (marked removed in `notes.pmn`, one step of undo); the sheet drawn again. |
+| GET | `/sheet/{uuid}/stretch?start=A&end=B` | Phase 7: the armadura in force at a stretch and the one with the fewest signs over it. |
+| POST | `/sheet/{uuid}/llm/stretch` | Phase 7: the AI writes a stretch again with the user's words, in the background; follow `GET /matrix/progress/{jobId}`. |
 | **Recording in Sheet** | `api/passages.py` | Implementation 02, Phase 9 |
 | POST | `/passages` | **Record this passage**: a passage of a part (a stretch, or a moment for a new passage); its Current is made. |
 | GET PATCH DELETE | `/passages/{id}` | The passage; the take on show, the speed, the window; discard it. |
@@ -817,7 +821,7 @@ own) and `figuresFrom` (where the next figures transposition starts), and `lyric
 
 <a id="5-passages--recording-in-sheet"></a>
 
-### 4.1 `/sheet`: the new sheet (implementation 03, Phases 5 and 6)
+### 4.1 `/sheet`: the new sheet (implementation 03, Phases 5 to 7)
 
 `GET /sheet/{uuid}?width=130` (60 to 320 staff spaces, the staff width; the SVG adds 8 of margins) answers:
 
@@ -826,7 +830,10 @@ own) and `figuresFrom` (where the next figures transposition starts), and `lyric
  "columns": [{"system": 0, "frame": 177, "x": 10.97, "ms": 7080.0}, …],
  "systems": [{"index": 0, "first": 177, "last": 552, "top": 3.0, "bottom": 20.2,
               "staff_top": 5.03, "staff_bottom": 19.68, "left": 3.0, "right": 135.0}, …],
- "notes": [{"ref": "177:62", "hand": "right", "pitch": "D4"}, …],
+ "notes": [{"ref": "177:62", "hand": "right", "pitch": "D4", "figure": 8, "beam": 3, "grace": false,
+            "fixed": false, "graceRule": null, "finger": null, "ornaments": [], "ottava": 0}, …],
+ "reading": {"key": -2, "keyChanges": [[602, -1], [700, -2]], "clefs": {"right": "treble", "left": "bass"},
+             "clefChanges": [[1002, "left", "treble"]]},
  "segments": [{"start": 177, "end": 577, "state": "llm"}, …],
  "source": "llm", "stale": false,
  "llm": {"state": "done", "jobId": null, "available": true, "auto": false, "canRun": false,
@@ -848,7 +855,10 @@ own) and `figuresFrom` (where the next figures transposition starts), and `lyric
 - `notes` (Phase 6): each drawn note as its notehead names it (`ref` is the `data-note` of the SVG,
   `"<frame>:<midi>"`, the drawn column and the sounding key), its hand and the name the sheet prints. `editable`:
   the user may change the part and the AI is not writing it. `history`: what the next undo and redo of the part's
-  steps are about (`null`: none).
+  steps are about (`null`: none). Since Phase 7 each note also says its figure (4 a negra), its beam group, whether
+  it is a grace note, the user's marks (`fixed`: a figure set by hand; `graceRule`; `finger`), its ornaments and its
+  octave line (1 8va, 2 15ma, -1 8vb, -2 15mb); `reading` gives the armaduras (fifths) and the clefs of the sheet;
+  `segments` lists after the windows the stretches the AI wrote again with the user's words (`llm`).
 - `409` before the notes exist; the usual `404` of the rights.
 
 `POST /sheet/{uuid}/llm` answers `202 {"jobId", "status"}` (`409` when no API key or SDK is set up). The job's
@@ -873,6 +883,30 @@ and need the right to write the part (a version of My library answers `403`: it 
   changed since is laid again on the hands instead of patched. The answer adds `walked`, the step's label (`null`
   when there was none). The log keeps 50 steps; an AI run that writes the sheet and a new transcription start it
   again.
+
+**The tools (Phase 7, `part_sheet.reading`).** Same rules as above (one write, one step, the sheet drawn again,
+`409` while the AI writes, the right to write the part). A refused edit answers `400` with the reason in words.
+
+- `POST /sheet/{uuid}/reading?width=130` `{"action", "notes": [refs], "start", "end", "staff": "both" | "right" |
+  "left", "value"}`. With notes: `figure` (`value` 1 to 64, or `null` back to the rule), `finger` (`[3]`, or one
+  number per note of a single chord; `[]` removes them), `beam-join` (the picked chords as one group; on one group
+  already, the beam goes away), `beam-break` (a new group at the first picked chord, or joined to the group before),
+  `grace` (`"on"`, `"off"`, `null`), `ornament` (`trill`, `mordent`, `turn`: over onsets of one hand that follow
+  one another; `arpeggio`, `fermata`: on chords; pressed again, off). With a stretch `[start, end)`: `key` (fifths,
+  or `null`: the armadura of the piece), `clef` (one `staff`; `treble`, `bass`, or `null`: the hand's own),
+  `clef-rule` (the clef rules over the stretch), `ottava` (one `staff`; 1, 2, -1, -2, or 0). The edit is laid on
+  the notes so the rules run; it is refused when the result would not hold what was asked or would break a rule of
+  the sheet. An algorithm sheet is then stored (record `edited`). The answer adds `edited`, the step's label.
+- `POST /sheet/{uuid}/remove?width=130` `{"notes": [refs]}`: the notes are marked removed in `notes.pmn`; the
+  answer adds `moved` and `unmatched`. Undo puts them back.
+- `GET /sheet/{uuid}/stretch?start=A&end=B`: `{"key", "signs", "fewest", "fewestSigns"}`.
+- `POST /sheet/{uuid}/llm/stretch` `{"start", "end", "staff", "notes": [refs], "instruction"}` (at most 1,000
+  characters): `202 {"jobId", "status"}`; `409` while the AI already works on the part or when it is not set up,
+  `403` without the right to write. One window request whose target is the stretch (both hands), the current hands
+  shown as a suggestion and the user's words added to the prompt; the stretch is the `working` segment meanwhile.
+  The answer is stored as one step (hands and sheet; an algorithm sheet becomes `mixed`). The job's `event: done`
+  carries `stretch`: `ok`, `failed` (no reply accepted: nothing changes) or `stale` (the notes changed meanwhile),
+  and `usd`.
 
 ## 5. `/passages`: Recording in Sheet
 

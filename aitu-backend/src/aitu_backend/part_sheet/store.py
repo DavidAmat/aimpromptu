@@ -22,6 +22,10 @@ The record (:class:`Record`):
 * ``runs``: how many AI runs wrote this sheet. A sheet whose ``source`` is ``llm`` or ``mixed`` was **enhanced with
   AI**, and stays marked so through every later change of the notes or the hands (the user's rule of 2026-10-25:
   running it again is at the user's own risk of the same result). Only a new transcription (new notes) forgets it.
+* ``edited``: the user changed the reading (Phase 7: a figure, a finger, a beam, a clef, ...). An ``algorithm``
+  sheet is then kept and laid again on new notes, as the AI's is, instead of being computed again.
+* ``stretches``: the stretches the AI wrote again with the user's words (Phase 7), ``[first frame, end frame,
+  words, usd, written]``, oldest first. Their cost is in ``usd`` and ``requests`` too.
 """
 
 from __future__ import annotations
@@ -64,11 +68,20 @@ class Record:
     written: str | None = None
     note: str | None = None
     runs: int = 0
+    edited: bool = False
+    stretches: list[list[Any]] = field(default_factory=list)
 
     @property
     def enhanced(self) -> bool:
         """The AI wrote this sheet, or part of it."""
         return self.source in ("llm", "mixed")
+
+    @property
+    def decided(self) -> bool:
+        """The stored reading holds decisions (the AI's or the user's): laid again on new notes, never computed
+        again. A plain ``algorithm`` sheet (an AI run that wrote no window) is only the rule's result.
+        """
+        return self.enhanced or self.edited
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -84,6 +97,8 @@ class Record:
             "written": self.written,
             "note": self.note,
             "runs": self.runs,
+            "edited": self.edited,
+            "stretches": self.stretches,
         }
 
     @classmethod
@@ -104,6 +119,8 @@ class Record:
             runs=int(
                 payload.get("runs") or (1 if payload.get("source") in ("llm", "mixed") else 0)
             ),
+            edited=bool(payload.get("edited")),
+            stretches=list(payload.get("stretches") or []),
         )
 
 

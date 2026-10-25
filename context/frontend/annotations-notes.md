@@ -4,6 +4,9 @@ What the Sheet step can say about the notes picked on the sheet. The overview of
 selections and undo is [annotations.md](annotations.md). Code:
 `aitu-frontend/src/pages/piece/sheet/NoteToolbox.tsx` and `useNoteActions.ts`.
 
+The note toolbox of the **new sheet** (implementation 03, Phase 7) is described in
+[annotations.md](annotations.md), section "The new sheet"; this page is the old sheet's.
+
 ## The title
 
 **Pick one note and the panel is titled with its name**, in solfège: `Do 4`, `Do-# 3`, `Re-b 5`.

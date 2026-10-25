@@ -192,6 +192,9 @@ La in Mi mayor). Do mayor: Do#, Mib, Fa#, Sol#, Sib. Rule 4 applies in every arm
   sheet the AI enhanced, the input shows every current hand as a suggestion (one line of the window prompt says so).
   A first run reads the notes without hands (the hands are then the hand split's). Nothing can be edited while the
   AI writes the sheet.
+- *Phase 7 (the user's answer, 2026-10-25):* a run again on the whole sheet keeps the marks only the user writes
+  (fingers, a figure set by hand, the grace note switch) and writes the AI's own kinds again (beams, clefs, 8va,
+  armaduras, ornaments), as it does the hands.
 
 ## 3.8 Access to Sonnet 5.5
 
@@ -254,7 +257,7 @@ songs 1,888 of 2,046 groups stay as written, mostly of 2 to 4 notes.
 | 5. The reader's answer beats the rule | time model | kept: every automatic choice keeps a manual override, applied last |
 | D-09: the app presents the gaps and the reader names the negra | 03 decisions | **changed**: the LLM (or the algorithm) names it; transpose figures is the override |
 | D-31: the saved hands | 03 decisions | kept, but written first by the LLM instead of **Predict hands** |
-| The left-hand clef rules, version 4 (bass, then treble, then treble + 8va; never 8va in the bass clef) | research phase 14 | kept: already in the frozen prompt |
+| The left-hand clef rules, version 4 (bass, then treble, then treble + 8va; never 8va in the bass clef) | research phase 14 | kept: already in the frozen prompt. Phase 7: the product check (`frames.check`) forbids 8va and 15ma in the bass clef, not an 8vb that the user puts under very low notes |
 | One notehead for one pitch at one time in one hand | research phase 11 | kept (`merge_unisons`) |
 | Minimal UI (`09-minimal-ui-guidelines.md`) | aimpromptu | kept: no text for the LLM progress, only the visual sign |
 
@@ -576,22 +579,39 @@ range selection and Enhance with AI of a stretch went to Phase 7 (tasks 4 and 5)
 
 ## Phase 7: The note and range tools
 
+**Built 2026-10-25** ([`03-implementation-phase-7.md`](03-implementation-phase-7.md)); waiting for the user's check in
+the browser and in the gallery ([`gallery/phase-7/index.html`](gallery/phase-7/index.html)).
+
 *Why:* the note toolbox and the range toolbox of the Sheet step hold most of the editing tools (`annotations-notes.md`,
 `annotations-stretches.md`).
 
 1. Study and inventory: every tool, what it changes today, and its place in the new sheet. Some tools may no longer
    make sense without compases or with the measured spacing (for example the spacing sliders, the anchors and speed
-   changes): the list of those goes to the user before anything is dropped.
+   changes): the list of those goes to the user before anything is dropped. *Done* (report section 2): the user's
+   answers of 2026-10-25 drop even spacing, the room of a stretch, speed changes, print smaller, the decoration that
+   is not played (replaced by a grace note switch), and hiding or dragging an 8va bracket. Transpose figures and the
+   transposition of notes are in the sheet toolbox, so they move to Phase 8 with it; so do the title-bar actions
+   Copy, Record this passage and Start a new part.
 2. Build them on the edit model: figures, transpose figures, fingers, beam joins and breaks, decorations and trills,
    clef changes, 8va brackets, armadura of a passage, transposition of notes, and the others the inventory finds.
    *From Phase 6:* an edit is a function of `part_sheet/edits.py` that changes `notes.pmn` or `sheet.f1` under the
    part's lock and records one step (`_Step`: hands before and after, a line patch of `sheet.f1`); a route of
    `api/sheet.py` answers the sheet drawn again; a row of `FramesNoteToolbox.tsx` calls it through `useFramesSheet`'s
    `edit`. A reading edit on a sheet the algorithm wrote must store it (today an `algorithm` record is computed
-   again, not read), so the record needs a source for "the algorithm's, edited by the user".
-3. Engine features the tools need (for example fingers, octave brackets over a range), kept light.
+   again, not read), so the record needs a source for "the algorithm's, edited by the user". *Done:* `part_sheet/reading.py` and `edits.edit_reading` (the
+   sheet drawn now is changed, laid again on the notes so the rules run, checked to hold what was asked and to break
+   no rule, stored with `Record.edited`); figures (set by hand, `fix`), fingers (`fg3`; on one chord from the thumb
+   in the right hand and from the little finger in the left), beams (join, take away, cut, join to the group
+   before), the grace note switch (`asgrace`, `nograce`), ornaments (trill, mordent, turn over onsets; rolled chord,
+   fermata), notes taken off the page (`edits.remove_notes`, undone), and over a stretch the armadura (with the one
+   of fewest signs offered), the clef of each hand, the clef rules and the octave lines.
+3. Engine features the tools need (for example fingers, octave brackets over a range), kept light. *Done:* none
+   was needed: the engine already drew fingers (the research's phase 10), ornaments, 15ma and 15mb; the core gained
+   the user's marks in the format and the rules, and `assemble(join=False)` for a sheet laid again.
 4. **The range selection on the new sheet** (the user, 2026-10-25): a stretch of time frames picked on the sheet,
    with **Both / Right / Left** to limit it to one hand's staff, opening the range toolbox, as in the old sheet.
+   *Done:* the strip above the upper staff of each line (click, drag, Shift-click), a lavender band over the staves
+   in scope; each toolbox hands its selection to the other.
 5. **Enhance with AI, with the user's own instruction** (the user, 2026-10-25), from **both selections**: the notes
    picked (the note toolbox) and a range of time frames (the range toolbox, Both / Right / Left). The user writes a
    short instruction (for example "all these notes are in the left hand: share them between the two hands"); the AI
@@ -599,7 +619,9 @@ range selection and Enhance with AI of a stretch went to Phase 7 (tasks 4 and 5)
    context and look-ahead, the current hands shown, and the instruction added to the window prompt. The answer
    goes through the checker and is written into the stored sheet and the hands for that stretch only, as one step
    of undo (the edit model of Phase 6). No text while it works, only the pale veil on the stretch (plan section
-   3.6). A few cents and about half a minute a request.
+   3.6). A few cents and about half a minute a request. *Done:* `llm.frames.write_stretch` and `splice`,
+   `job.start_stretch`, `POST /sheet/{uuid}/llm/stretch`, the ✨ of both toolboxes and its dialog; a real request on
+   7 Years: 9 s, $0.0144.
 
 *Done when:* every tool of the two toolboxes works on the new sheet or the user agreed to drop it, and a stretch can
 be enhanced with AI with the user's instruction from either selection.
@@ -614,7 +636,10 @@ be enhanced with AI with the user's instruction from either selection.
    found besides: the Transpose preview dialog (it draws the sheet on its own, `TransposeDialog.tsx`), From other
    projects (`ComposePage.tsx`), and the requests review (`Conversation.tsx` and `RequestSheet.tsx`, Proposed and
    Now). The database held no request on 2026-10-23, so the review was not in the phase 0 screenshots; this phase
-   makes one with temporary users, as `check:requests` does.
+   makes one with temporary users, as `check:requests` does. *From Phase 7:* the sheet toolbox of the new sheet
+   carries Transpose (figures: the reference figure `quarterMs`, which the spacing also reads; notes: every midi
+   moves, so the stored sheet must move with it, since `build.reapply` matches notes by column and key) and Find
+   trills; the range toolbox gains Copy, Record this passage and Start a new part.
 2. **Lyrics** in the format and in the engine (they are keyed by frames, which fits the new sheet).
 3. Each screen moved to the new engine; vexflow-v2 is no longer used anywhere for drawing or editing.
 
@@ -655,7 +680,8 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 | 4 | The API key (human intervention; done); how many songs the credits cover (information: about 110 a month); the beam groups and the maximum of 8 (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user: approved; both rules kept as written) |
 | 5 | Existing projects: keep their data, the AI's sheet for the 10 songs it wrote, a button for the rest (user, 2026-10-25); merge to `master`: now (user, 2026-10-25) |
 | 6 | May a new LLM run change hands that the user moved (user, 2026-10-25: yes, it reads them as a suggestion); the engine in the backend or in the browser (agent, from the time of one edit: the backend) |
-| 7, 8 | Tools that no longer make sense without compases: keep, change or drop |
+| 7 | Tools that no longer make sense (user, 2026-10-25): drop even spacing, the room of a stretch and speed changes; replace print smaller and the unplayed decoration by a grace note switch; drop hiding and dragging an 8va bracket. A new AI run keeps the user's fingers, figures and grace switches and writes its own kinds again |
+| 8 | Tools of the sheet toolbox and the other screens that no longer make sense: keep, change or drop |
 
 # 9. Risks
 
@@ -734,3 +760,8 @@ repository."
 | 6 | Phase 6 task 4: the engine stays in the backend | One edit takes about 0.25 s to the page; the drawing is about a third of the backend's part |
 | 6 | Playback of a part without cuts: a compressed file plays as a lossless FLAC copy | A jump inside a variable-bitrate MP3 landed up to 0.6 s away from the time the player reported, so the music did not match the notes after moving the cursor (the user's report; measured in Chromium) |
 | 6 | Phase 7 tasks 4 and 5: the range selection (Both / Right / Left) on the new sheet, and **Enhance with AI** of a stretch with the user's own instruction, from the notes picked or from a range | The user's requests of 2026-10-25, during the Phase 6 check |
+| 7 | Phase 7 task 2: transpose figures and the transposition of notes move to Phase 8, with the sheet toolbox that holds them; so do Copy, Record this passage and Start a new part | They are in the sheet toolbox and the range toolbox's title bar, which belong to the screens of Phase 8; the plan listed them in both phases |
+| 7 | Phase 7 tasks 1 and 2: even spacing, the room of a stretch, speed changes, print smaller, the unplayed decoration, hiding and dragging an 8va bracket are dropped; a grace note switch is added | The user's answers of 2026-10-25 (report section 3) |
+| 7 | Section 3.7: a new AI run keeps the marks only the user writes and writes the AI's kinds again | The user's answer of 2026-10-25 |
+| 7 | Section 4: an 8vb in the bass clef is allowed (`frames.check`) | The old sheet's data has 139 8vb and 65 15mb brackets, and the clef rule forbids only 8va there |
+| 7 | Fingers on one chord: from the thumb in the right hand, from the little finger in the left | The old sheet gave the lowest note the smallest number in both hands, which is wrong for the left hand |

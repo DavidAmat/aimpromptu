@@ -30,13 +30,17 @@ export type {
 export { sheetApi } from "./sheet";
 export type {
   FramesSheet,
+  ReadingEdit,
   SheetColumn,
   SheetEdited,
   SheetHistory,
   SheetLlm,
   SheetNote,
+  SheetReading,
   SheetSegment,
   SheetSystem,
+  StretchKeys,
+  StretchRequest,
 } from "./sheet";
 export { projectsApi } from "./projects";
 export type {

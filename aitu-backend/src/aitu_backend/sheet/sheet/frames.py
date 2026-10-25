@@ -215,7 +215,9 @@ def check(sheet: Sheet) -> list[str]:
                 f"{where}: {n.step}{n.alter:+d}{n.octave} is written {step}{alter:+d}{octave} "
                 f"in the armadura {key(n.frame)}"
             )
-        if n.ottava and _clef_at(sheet, n.staff, n.frame) == "F4":
+        # The clef rules (version 4): never 8va (or 15ma) in the bass clef; an 8vb under very low notes is allowed
+        # (implementation 03, Phase 7: the user's octave lines of a stretch).
+        if n.ottava > 0 and _clef_at(sheet, n.staff, n.frame) == "F4":
             problems.append(f"{where}: 8va in the bass clef")
         by_hand[n.staff].append(n)
     for staff, ns in by_hand.items():

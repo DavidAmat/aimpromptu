@@ -18,6 +18,17 @@ touches only what is still as it left it: a note whose hand something else chang
 a file, so it survives a reload and another page; it keeps :data:`LIMIT` steps. An AI run that writes the sheet
 again and a new transcription start it again (:func:`forget`). It is not copied with the part (duplicate, export,
 Save to library): a copy starts without steps.
+
+Phase 7 adds the other edits, each one step:
+
+* **reading edits** (:func:`edit_reading`, the functions of :mod:`.reading`: figures, fingers, beams, the grace
+  note switch, ornaments, the armadura, clefs and 8va of a stretch): the sheet drawn now is changed, laid again on
+  the notes (``build.reapply``, so the rules run and keep the decisions), checked to still hold what was asked, and
+  stored. A sheet the algorithm wrote is then stored too, marked ``edited`` (``store.Record``);
+* **notes taken off the page** (:func:`remove_notes`): marked removed in ``notes.pmn``, as the Notes step does; the
+  step keeps which notes, and undo puts them back;
+* **a stretch the AI wrote again** with the user's words (:func:`apply_stretch`, from ``job.start_stretch``): its
+  hands and its sheet, as one step.
 """
 
 from __future__ import annotations
@@ -25,21 +36,33 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Callable
 
 import numpy as np
 
 from aitu_backend.matrix.keys import LOWEST_MIDI
 from aitu_backend.pmn import events_file
-from aitu_backend.sheet.sheet import f1
-from aitu_backend.sheet.sheet.data import FRAME_MS
+from aitu_backend.sheet.sheet import f1, frames
+from aitu_backend.sheet.sheet.data import FRAME_MS, Sheet
 from aitu_backend.sheet.sheet.frames import drawn_columns
 from aitu_backend.storage import locate, paths
 from aitu_backend.transcription import pipeline, saved_hands
 
-from . import build, store
+from . import build, reading, store
 
-__all__ = ["LIMIT", "Moved", "forget", "history", "move_hands", "redo", "undo"]
+__all__ = [
+    "LIMIT",
+    "Moved",
+    "apply_stretch",
+    "edit_reading",
+    "forget",
+    "history",
+    "move_hands",
+    "redo",
+    "remove_notes",
+    "undo",
+]
 
 #: Steps kept in the log: far more than anyone walks back (the old sheet keeps 100 in the page).
 LIMIT = 50
@@ -62,12 +85,15 @@ class _Step:
     hands: dict[int, tuple[str | None, bool, str | None, bool]] = field(default_factory=dict)
     #: The change of ``sheet.f1``: the hash of the text before and after, and the line patches both ways.
     sheet: dict[str, Any] | None = None
+    #: ``note id -> (removed before, removed after)``: notes taken off the page (Phase 7).
+    removed: dict[int, tuple[bool, bool]] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
         return {
             "label": self.label,
             "hands": [[i, *change] for i, change in self.hands.items()],
             "sheet": self.sheet,
+            "removed": [[i, *change] for i, change in self.removed.items()],
         }
 
     @classmethod
@@ -79,6 +105,9 @@ class _Step:
                 for row in payload.get("hands") or []
             },
             sheet=payload.get("sheet"),
+            removed={
+                int(row[0]): (bool(row[1]), bool(row[2])) for row in payload.get("removed") or []
+            },
         )
 
 
@@ -203,19 +232,43 @@ def _ref(ref: str) -> tuple[int, int] | None:
         return None
 
 
-def _write_hands(part_id: str, stored: Any, *, before: Any) -> Any:
+def _write_hands(
+    part_id: str, stored: Any, *, before: Any, hands: bool = True, notes: bool = False
+) -> Any:
     return pipeline.save_edit(
         part_id,
         stored.events,
         stored.duration_seconds,
         stored.title,
         before=before,
-        notes_changed=False,
-        hands_changed=True,
+        notes_changed=notes,
+        hands_changed=hands,
         # The old sheet (vexflow-v2) draws from the same hands: a hand moved here does not make it stale, as a hand
         # moved there does not (``PUT /time/{uuid}/hands``).
         sheet_follows=True,
     )
+
+
+def _record(step: _Step, part_id: str) -> None:
+    log = _load(part_id)
+    log.done.append(step)
+    log.undone.clear()
+    _save(part_id, log)
+
+
+def _ids_of(events: list, refs: list[str]) -> tuple[set[int], int]:
+    """The live note ids that ``refs`` name, and how many refs named none."""
+    at = _notes_at(events)
+    wanted: set[int] = set()
+    unmatched = 0
+    for ref in refs:
+        place = _ref(ref)
+        ids = at.get(place) if place is not None else None
+        if not ids:
+            unmatched += 1
+            continue
+        wanted.update(ids)
+    return wanted, unmatched
 
 
 def move_hands(part_id: str, refs: list[str], hand: str) -> Moved:
@@ -227,16 +280,7 @@ def move_hands(part_id: str, refs: list[str], hand: str) -> Moved:
         if stored is None:
             raise FileNotFoundError("This part has no notes.")
         drawn = build.current(part_id)
-        at = _notes_at(stored.events)
-        wanted: set[int] = set()
-        unmatched = 0
-        for ref in refs:
-            place = _ref(ref)
-            ids = at.get(place) if place is not None else None
-            if not ids:
-                unmatched += 1
-                continue
-            wanted.update(ids)
+        wanted, unmatched = _ids_of(stored.events, refs)
 
         by_id = {event.id: event for event in stored.events if event.id is not None}
         was = {i: (e.hand, e.hand_guessed) for i, e in by_id.items()}
@@ -264,7 +308,7 @@ def move_hands(part_id: str, refs: list[str], hand: str) -> Moved:
 
         sheet_change = None
         kept = store.load(part_id)
-        if kept is not None and kept.record.source != "algorithm":
+        if kept is not None and kept.record.decided:
             # The reading the user sees now, laid on the new hands and stored for them: the moved notes leave their
             # beam groups, the figures of their neighbours follow the new hands (``build.reapply``).
             after = f1.write(
@@ -276,11 +320,149 @@ def move_hands(part_id: str, refs: list[str], hand: str) -> Moved:
         build.forget(part_id)
 
         label = f"Move {'a note' if moved == 1 else f'{moved} notes'} to the {hand} hand"
-        log = _load(part_id)
-        log.done.append(_Step(label, changes, sheet_change))
-        log.undone.clear()
-        _save(part_id, log)
+        _record(_Step(label, changes, sheet_change), part_id)
         return Moved(moved, unmatched)
+
+
+def remove_notes(part_id: str, refs: list[str]) -> Moved:
+    """Take the notes ``refs`` off the page: marked removed in ``notes.pmn`` (a transcriber's note made of a pedal
+    blur, for example), as the Notes step does; one step, which puts them back. ``Moved.moved`` counts them.
+    """
+    with pipeline.piece_lock(part_id):
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise FileNotFoundError("This part has no notes.")
+        drawn = build.current(part_id)
+        wanted, unmatched = _ids_of(stored.events, refs)
+        by_id = {event.id: event for event in stored.events if event.id is not None}
+        gone = {i: (False, True) for i in wanted if not by_id[i].removed}
+        if not gone:
+            return Moved(0, unmatched)
+        for i in gone:
+            by_id[i].removed = True
+        saved = _write_hands(part_id, stored, before=stored.header, hands=False, notes=True)
+        sheet_change = None
+        kept = store.load(part_id)
+        if kept is not None and kept.record.decided:
+            after = f1.write(
+                build.reapply(f1.read(drawn.text), pipeline.starting_hands(part_id)), mode="frames"
+            )
+            kept.record.hands_revision = saved.header.hands_revision
+            store.save(part_id, after, kept.record)
+            sheet_change = _sheet_change(drawn.text, after)
+        build.forget(part_id)
+        k = len(gone)
+        label = f"Take {'a note' if k == 1 else f'{k} notes'} off the page"
+        _record(_Step(label, {}, sheet_change, gone), part_id)
+        return Moved(k, unmatched)
+
+
+def edit_reading(
+    part_id: str,
+    change: Callable[[Sheet], str],
+    holds: Callable[[Sheet], str | None] | None = None,
+) -> str | None:
+    """One reading edit (Phase 7): ``change`` changes the sheet drawn now and returns the step's label (or raises
+    ``reading.Refused``). The result is laid again on the notes, so the rules run with the new decision, and
+    ``holds`` says why the settled sheet does not hold what was asked (``None``: it does); then it is stored, the
+    record marked ``edited``, and the step written. Returns the label, or ``None`` when nothing changed.
+    """
+    with pipeline.piece_lock(part_id):
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise FileNotFoundError("This part has no notes.")
+        drawn = build.current(part_id)
+        sheet = f1.read(drawn.text)
+        known = set(frames.check(sheet))
+        label = change(sheet)
+        settled = build.reapply(sheet, pipeline.starting_hands(part_id))
+        why = holds(settled) if holds is not None else None
+        if why:
+            raise reading.Refused(why)
+        # A safety net: an edit never leaves the sheet breaking a rule of the product it did not break before.
+        broken = [p for p in frames.check(settled) if p not in known]
+        if broken:
+            raise reading.Refused(f"The sheet would break one of its rules: {broken[0]}.")
+        after = f1.write(settled, mode="frames")
+        if after == drawn.text:
+            return None
+        kept = store.load(part_id)
+        record = (
+            kept.record
+            if kept is not None
+            else store.Record(source="algorithm", quarter_ms=drawn.quarter_ms)
+        )
+        record.edited = True
+        record.hands_revision = stored.header.hands_revision
+        store.save(part_id, after, record)
+        build.forget(part_id)
+        _record(_Step(label, {}, _sheet_change(drawn.text, after)), part_id)
+        return label
+
+
+def apply_stretch(
+    part_id: str,
+    spliced: Sheet,
+    *,
+    notes_revision: int,
+    start: int,
+    end: int,
+    words: str,
+    usd: float,
+    requests: int,
+    model: str | None,
+) -> bool:
+    """Store a stretch the AI wrote again (Phase 7, ``job.start_stretch``): the hands of ``spliced`` into
+    ``notes.pmn`` and the sheet, settled on them, into ``sheet.f1``, as one step. A sheet the algorithm wrote
+    becomes ``mixed`` (the AI wrote part of it: **Enhanced with AI**). Returns ``False`` without writing when the
+    notes changed while the AI worked."""
+    with pipeline.piece_lock(part_id):
+        stored = pipeline.load_note_events(part_id)
+        if stored is None or stored.header.notes_revision != notes_revision:
+            return False
+        drawn = build.current(part_id)
+        notes = events_file.notes_from_events(stored.events)
+        hands = build.hands_of_sheet(spliced, notes)
+        by_id = {event.id: event for event in stored.events if event.id is not None}
+        was = {i: (e.hand, e.hand_guessed) for i, e in by_id.items()}
+        complete = saved_hands.hands_complete(stored.events)
+        for note_id, side in hands.items():
+            event = by_id.get(note_id)
+            if event is None:
+                continue
+            # Every note the sheet holds gets its hand when the hands were never saved as a whole; else the
+            # changed ones.
+            if not complete or event.hand != side or event.hand_guessed:
+                event.hand, event.hand_guessed = side, False
+        changes = {
+            i: (*was[i], e.hand, e.hand_guessed)
+            for i, e in by_id.items()
+            if (e.hand, e.hand_guessed) != was[i]
+        }
+        revision = stored.header.hands_revision
+        if changes:
+            revision = _write_hands(part_id, stored, before=stored.header).header.hands_revision
+        after = f1.write(build.reapply(spliced, pipeline.starting_hands(part_id)), mode="frames")
+        kept = store.load(part_id)
+        record = (
+            kept.record
+            if kept is not None
+            else store.Record(source="algorithm", quarter_ms=drawn.quarter_ms)
+        )
+        if record.source == "algorithm":
+            record.source = "mixed"
+        record.usd += usd
+        record.requests += requests
+        record.model = model or record.model
+        written = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        record.stretches.append([start, end, words, round(usd, 4), written])
+        record.hands_revision = revision
+        store.save(part_id, after, record)
+        build.forget(part_id)
+        _record(
+            _Step("Enhance a stretch with AI", changes, _sheet_change(drawn.text, after)), part_id
+        )
+        return True
 
 
 def _saved(hand: str | None, guessed: bool) -> str | None:
@@ -312,9 +494,19 @@ def _walk(part_id: str, to: str) -> str | None:
                 continue
             event.hand, event.hand_guessed = then
             changed = True
+        put_back = False
+        for note_id, (removed_before, removed_after) in step.removed.items():
+            event = by_id.get(note_id)
+            now_removed = removed_after if back else removed_before
+            if event is None or bool(event.removed) != now_removed:
+                continue
+            event.removed = removed_before if back else removed_after
+            put_back = True
         revision = header.hands_revision
-        if changed:
-            revision = _write_hands(part_id, stored, before=header).header.hands_revision
+        if changed or put_back:
+            revision = _write_hands(
+                part_id, stored, before=header, hands=changed, notes=put_back
+            ).header.hands_revision
 
         kept = store.load(part_id)
         change = step.sheet

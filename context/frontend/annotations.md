@@ -15,28 +15,54 @@ The code is `aitu-frontend/src/pages/piece/sheet/` (implementation 02, Phase 2 s
 5,328-line `RhythmPage.tsx` into it; see
 [`documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md)).
 
-## The new sheet (implementation 03, Phase 6)
+## The new sheet (implementation 03, Phases 6 and 7)
 
 Since implementation 03, Phase 5 the Sheet step opens on the **new sheet** (without compases, drawn by the
 backend; [rendering.md](rendering.md)). Everything below this section is the **old sheet**, which opens from
-**Edit in the old sheet** and keeps every tool until the tools move to the new sheet (Phases 7 and 8). On the new
-sheet, so far:
+**Edit in the old sheet** and keeps the tools that have not moved yet (the sheet toolbox, lyrics, copy and paste,
+Record a passage: Phase 8). On the new sheet:
 
 - **Pick notes**: click a notehead (the recording goes there), ⌘-click or Shift-click to add or take one away, or
   drag a box across the staves. Escape drops the pick. The note toolbox opens beside the notes, titled with the
   name the sheet prints (`Do-# 5`) or the number of notes, with their time under it.
-- **Hand: Right / Left** writes the hand of the notes into the notes themselves (`notes.pmn`, the numeric truth):
-  a note's figure is its length up to the next note of its hand, so its neighbours may change figure too. A note
-  that changes staff gets the clefs and 8va of the clef rules around it where they are needed (a high note moved to
-  the left hand gets a treble clef rather than five ledger lines); the rest of the sheet keeps its clefs. The sheet
-  keeps its **Enhanced with AI** mark.
+- **Mark a stretch**: in the strip above the upper staff of a line (it shows faintly under the pointer), click for
+  one column, drag across columns (on to the next lines too), Shift-click to extend. The stretch is a lavender
+  band; the range toolbox (*Frames*) opens to the left of it. Its first row, **Both / Right / Left**, narrows the
+  band and the Clef and Octave tabs to one hand. One selection at a time: picking notes drops the stretch, and the
+  other way round. Each toolbox hands its selection to the other from its title bar.
+- **The note toolbox**: the seven **figures** (pressing one sets the figure by hand: the rule keeps it, and it is
+  never a grace note; ⌫ gives the chords back the rule's figure; a beam the new figure broke comes back with Undo,
+  not with ⌫); **Finger** 1 to 5 (on a single chord one number per note, from the thumb in the right hand and from
+  the little finger in the left); **Hand: Right / Left** (written into the notes, `notes.pmn`); **Beam** (join the
+  picked notes as one group, pressed again to take the beam away; cut the group in front of the first one, or join
+  it to the group before); **Grace** (write as grace notes of the next note of their hand, or as normal notes,
+  whatever the grace rule says; ⌫ back to the rule); **Marks** (*tr*, *mord*, *turn* over onsets of one hand that
+  follow one another: the first is written with the ornament, the others are played inside it and not drawn;
+  *arp* rolls a chord; *ferm* a fermata; pressed again, each goes away); 🗑 or **Delete** takes the notes off the
+  page (they leave the notes; Undo brings them back).
+- **The range toolbox**: **Key** (the armadura of the stretch on both clefs, ✓; 🗑 back to the armadura of the
+  piece; *Use D major here* when another armadura prints fewer signs over the stretch), **Clef** (treble or bass for
+  each hand in scope, the hand's own clef again after the stretch; **Clefs by the rule** writes the clefs and 8va of
+  the clef rules over the stretch), **Octave** (8va, 15ma, 8vb, 15mb over each hand in scope; a bass clef takes no
+  8va or 15ma). A tab with a dot means the stretch already carries that setting.
+- **Enhance with AI** of a stretch, with your own words: the ✨ in the title bar of either toolbox (the stretch of
+  the notes picked, or the stretch marked). A short instruction ("all these notes are in the left hand: share them
+  between the two hands"), or none. The AI writes the hands, beams, clefs and ornaments of that stretch again
+  (about 10 seconds and one or two cents); the stretch has the pale veil meanwhile and then appears column by
+  column. The answer is one step of Undo. When no answer is accepted, a quiet line says the stretch stays as it was.
 - **Undo and Redo**: the arrows of the floating bar, ⌘Z and ⇧⌘Z (Control-Z and Control-Y on Windows). The
   backend keeps the steps, so they survive a reload and another page; the last 50 are kept. A new AI run on the
-  sheet, or a new transcription, starts them again.
+  whole sheet, or a new transcription, starts them again.
 - **No Save button**: each change is written at once.
-- **Nothing can be changed while the AI writes the sheet**: the toolbox and the arrows say why.
-- **Enhance it again with AI** reads the current hands, the ones you moved among them, as a suggestion, and may
-  change any of them (the user's answer of Phase 6). A first run reads the notes without hands.
+- **Nothing can be changed while the AI writes the sheet** (the whole sheet or a stretch): the toolboxes and the
+  arrows say why.
+- **Enhance it again with AI** (the whole sheet) reads the current hands, the ones you moved among them, as a
+  suggestion, and may change any of them (the user's answer of Phase 6). It keeps your fingers, your figures set by
+  hand and your grace note switches; it writes the beams, clefs, 8va, armaduras and ornaments again (the user's
+  answer of Phase 7). A first run reads the notes without hands.
+- **Not on the new sheet** (the user's answer of Phase 7): even spacing of a run, the room of a stretch (Spacing),
+  speed changes (Speed), print smaller, a decoration that is not played (the grace note switch replaces both), and
+  hiding or dragging an 8va bracket.
 
 ## The page
 
