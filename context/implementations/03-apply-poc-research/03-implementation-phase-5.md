@@ -2,8 +2,9 @@
 
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 5. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (`master` was already contained in the branch, nothing to merge). Written 2026-10-25 on the
-Ubuntu machine. **State: built; the user's check in the browser is pending**, and the question of task 5.10 (merge
-into `master` now or at the end) is asked in the walkthrough.
+Ubuntu machine. **Done 2026-10-25**: the user checked it in the browser ("perfect"); the review added the wording "AI", the
+Enhanced with AI mark and the AI mark on Projects and My library (section 8); task 5.10: the branch was merged into
+`master` at the end of the phase (the user's answer).
 
 # 1. Summary
 
@@ -18,7 +19,7 @@ into `master` now or at the end) is asked in the walkthrough.
 | 5.7 The switch | Inside `SheetPage`: the new sheet first on the Sheet step, a version of My library and Play mode; **Edit in the old sheet** and **Back to the new sheet** on the floating bars; closed while Sonnet writes |
 | 5.8 Browser checks | `check:frames-sheet` (new; `--live` spends a few cents); `check:play` on the new hooks; the old sheet's checks press the switch (`session.oldSheet`); `check:flow`, `check:journey`, `time:flow` rewritten for the new flow, not run (section 9) |
 | 5.9 No tempo line | The new sheet has none |
-| 5.10 Merge question | Asked in the walkthrough |
+| 5.10 Merge question | Answered: merge now; merged into `master` at the end of the phase |
 
 # 2. The study (task 5.1)
 

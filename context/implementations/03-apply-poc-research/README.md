@@ -1,7 +1,6 @@
 # 03: The new sheet in aimpromptu (applying the research)
 
-**State: live. Phases 0 to 4 done (Phase 4 on 2026-10-25); Phase 5 built (2026-10-25), waiting for the user's check
-in the browser.** Opened 2026-10-23 on the branch
+**State: live. Phases 0 to 5 done (Phase 5 on 2026-10-25, merged into `master`); Phase 6 is next.** Opened 2026-10-23 on the branch
 `feat/migrate-new-logic` (one branch for the whole migration, plan section 6.3).
 
 Research plan 01 (the folder `/home/david/Documents/projects/music/poc-aitu-research` on the Ubuntu machine) built a

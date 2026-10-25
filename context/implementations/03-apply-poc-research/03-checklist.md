@@ -23,7 +23,7 @@ their phase, after its study (plan section 8).
 - [x] **Phase 3**: the look of the spacing without compases (approved: "perfect"); no thin double line at an armadura change (the default; the user did not choose, `Options.key_line` stays available).
 - [x] **Phase 4**: the API key (done 2026-10-25); how many songs the credits cover (about 110 a month, $0.89 per song on average); the beam groups and the maximum of 8 notes (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user, report section 11): the gallery approved ("all good"); clef.L4 and the staccato figures kept as written.
 - [x] **Phase 5**: existing projects (user, 2026-10-25): the songs Sonnet already wrote (the 10 viewer songs) show Sonnet's sheet; every other song keeps its data and the algorithm's sheet, with **Enhance with AI**; new transcriptions go to Sonnet by themselves.
-- [ ] **Phase 5**: merge into `master` now or at the end (asked in the Phase 5 walkthrough).
+- [x] **Phase 5**: merge into `master`: now (user, 2026-10-25); merged at the end of Phase 5.
 - [ ] **Phase 6**: may a new LLM run change hands that the user moved; the engine in the backend or in the browser.
 - [ ] **Phases 7 and 8**: the tools that no longer make sense without compases: keep, change or drop.
 
@@ -79,9 +79,9 @@ Done 2026-10-25. Report: [`03-implementation-phase-4.md`](03-implementation-phas
 - [x] Task 4.5 A few windows, then the 10 viewer songs; comparison with the recorded Sonnet sheets; cost per song: 150 of 150 windows, $8.86, same hand as the research's Sonnet on 96.3 to 99.8 % of the notes.
 - [p] Task 4.6 Gallery: the algorithm and Sonnet side by side: [`gallery/phase-4/index.html`](gallery/phase-4/index.html), 10 passages, checked by the user ("all good").
 
-# [p] Phase 5: The new Sheet step (to see and to hear)
+# [x] Phase 5: The new Sheet step (to see and to hear)
 
-Built 2026-10-25; the user's check in the browser is pending. Report: [`03-implementation-phase-5.md`](03-implementation-phase-5.md).
+Done 2026-10-25 after the user's check in the browser. Report: [`03-implementation-phase-5.md`](03-implementation-phase-5.md).
 
 - [x] Task 5.1 Study; question to the user on existing projects (answered: keep the data, Sonnet's sheet for the 10 songs it wrote, a button for the rest).
 - [x] Task 5.2 The flow: Hands step removed (four steps); Notes Falling without hand colours until the hands exist; the negra choice not on the new sheet.
@@ -92,7 +92,8 @@ Built 2026-10-25; the user's check in the browser is pending. Report: [`03-imple
 - [x] Task 5.7 The switch inside `SheetPage` (**Edit in the old sheet** / **Back to the new sheet**); closed while Sonnet writes. The passage page, From other projects and the requests review keep the old sheet until Phase 8.
 - [x] Task 5.8 `check:frames-sheet` (new) and `check:play` on the `data-*` hooks; the old sheet's checks press the switch.
 - [x] Task 5.9 No line naming the figure and a tempo on the new sheet.
-- [ ] Task 5.10 Question to the user: merge into `master` now or at the end.
+- [x] Task 5.10 Question to the user: merge into `master` now (answered 2026-10-25; merged).
+- [x] After the user's review: the wording "AI" (**Enhance with AI**, the green **Enhanced with AI** badge, **Enhance it again with AI**), the mark kept for good, the AI mark and the job spinner on Projects and My library.
 
 # [ ] Phase 6: Editing the new sheet (the edit model, hands, undo)
 

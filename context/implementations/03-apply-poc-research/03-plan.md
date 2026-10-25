@@ -479,6 +479,11 @@ checked the gallery.
 
 ## Phase 5: The new Sheet step (to see and to hear)
 
+**Done 2026-10-25** ([`03-implementation-phase-5.md`](03-implementation-phase-5.md)). The user checked it in the browser
+("perfect"), asked for the wording "AI" (**Enhance with AI**, the green **Enhanced with AI** badge, **Enhance it again
+with AI**) and for the AI mark on Projects and My library; the branch was merged into `master` (the user's answer to
+task 10).
+
 *Why:* this is the first time the user sees the new sheet inside the app, with the new flow of sections 3.5 and 3.6.
 
 1. Study: the project steps, the Sheet step page, the jobs and progress stream of the transcription, how parts are
@@ -527,7 +532,8 @@ checked the gallery.
    they transcribe on the GPU and start Sonnet).
 9. The line above each passage of the sheet that names the main figure and a tempo (`corchea = 217 ms · ≈138 BPM`,
    `matrix/ladder.header_label`) is not drawn on the new sheet (section 3.1). *Done* by the new sheet.
-10. **Question to the user at the end**: merge the branch into `master` now, or at the end.
+10. **Question to the user at the end**: merge the branch into `master` now, or at the end. *Answered:* now
+    (2026-10-25); later phases go on on `feat/migrate-new-logic` and merge again at their end.
 
 *Done when:* a new project goes from audio to the new sheet with the piece-by-piece view, and the user has checked it
 in the browser on a few songs.
@@ -609,7 +615,7 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 | 2 | The figure thresholds and the Do mayor spelling (agent, from songs: 0.7, and Do#, Mib, Fa#, Sol#, Sib; user checks the gallery); the cap of a figure at the next onset of its hand, and rule 4 in armaduras of one to three signs (user) |
 | 3 | The look of the spacing without compases (approved), and a thin double line at an armadura change or none (none, the default) (user, in the gallery) |
 | 4 | The API key (human intervention; done); how many songs the credits cover (information: about 110 a month); the beam groups and the maximum of 8 (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user: approved; both rules kept as written) |
-| 5 | Existing projects: keep their data, Sonnet's sheet for the 10 songs it wrote, a button for the rest (user, 2026-10-25); merge to `master` early or at the end |
+| 5 | Existing projects: keep their data, the AI's sheet for the 10 songs it wrote, a button for the rest (user, 2026-10-25); merge to `master`: now (user, 2026-10-25) |
 | 6 | May a new LLM run change hands that the user moved; the engine in the backend or in the browser |
 | 7, 8 | Tools that no longer make sense without compases: keep, change or drop |
 
@@ -682,3 +688,5 @@ repository."
 | 5 | Phase 5 task 7: the passage page, From other projects and the requests review keep the old sheet until Phase 8; Play mode has no lyrics until Phase 8 | Their work is a marked stretch; the new engine has no lyrics yet (4 parts had lyrics) |
 | 5 | Phase 5 task 2: an old `sheet.json` keeps its key and a figure renamed by the user; the default negra is replaced by the pulse estimate | "Keep all the data"; the default negra was not a choice (36 of 43 sheets) |
 | 5 | Phase 6: a stored sheet is laid again on changed notes by column and key (`build.reapply`); a paste moves the columns after it, so those decisions are lost there until notes are matched by id | What the study found about the edit model |
+| 5 | The page says "AI", never the model's name; a sheet the AI enhanced keeps its **Enhanced with AI** mark through every later change, and a failed rerun keeps the earlier AI sheet; the AI mark on Projects and My library | The user's review of 2026-10-25: the model may change, and the user must know which sheets the AI wrote |
+| 5 | Section 6.3: the branch was merged into `master` at the end of Phase 5 | The user's answer |
