@@ -202,8 +202,8 @@ export interface SheetStep {
    * review) keep the old sheet until Phase 8: their work is a marked stretch.
    */
   newSheet?: boolean;
-  /** A version of My library: **Write with Sonnet** opens the copy that edits it and starts there. */
-  writeWithSonnetInCopy?: () => void;
+  /** A version of My library: **Enhance with AI** opens the copy that edits it and starts there. */
+  enhanceInCopy?: () => void;
 }
 
 /**

@@ -1,2 +1,2 @@
-/** Navigation state: the edit copy of a library version opened by **Write with Sonnet** starts Sonnet there. */
-export const WRITE_WITH_SONNET = { writeWithSonnet: true } as const;
+/** Navigation state: the edit copy of a library version opened by **Enhance with AI** starts the AI there. */
+export const ENHANCE_WITH_AI = { enhanceWithAi: true } as const;

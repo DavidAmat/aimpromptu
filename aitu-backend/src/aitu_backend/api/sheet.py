@@ -52,7 +52,6 @@ def _llm_state(audio_uuid: str, drawn: build.Drawn, running: Any) -> dict[str, A
         not writes and user is not None and where.layer == "private" and where.owner_id == user.id
     )
     available = job.available()
-    whole = drawn.source == "llm"
     # A new transcription asked for Sonnet (``sheet.pending``); the parts made before Phase 5 never did.
     fresh = drawn.record is None and new_sheet_store.asked(audio_uuid)
     return {
@@ -62,8 +61,11 @@ def _llm_state(audio_uuid: str, drawn: build.Drawn, running: Any) -> dict[str, A
         "jobId": running.id if running is not None else None,
         "available": available,
         "auto": available and writes and running is None and fresh,
-        "canRun": available and writes and running is None and not whole,
-        "viaEdit": available and via_edit and not whole,
+        # Always offered: **Enhance with AI**, or **Enhance it again with AI** on a sheet it enhanced.
+        "canRun": available and writes and running is None,
+        "viaEdit": available and via_edit,
+        "enhanced": drawn.record is not None and drawn.record.enhanced,
+        "runs": drawn.record.runs if drawn.record is not None else 0,
         "usd": drawn.record.usd if drawn.record is not None else None,
         "written": drawn.record.written if drawn.record is not None else None,
     }
@@ -95,6 +97,8 @@ def get_sheet(
                 "auto": False,
                 "canRun": False,
                 "viaEdit": False,
+                "enhanced": False,
+                "runs": 0,
                 "usd": None,
                 "written": None,
             },
@@ -125,6 +129,6 @@ def run_llm(audio_uuid: str) -> dict[str, str]:
     """Sonnet writes the sheet of the part in the background (the hands and the reading); the page follows it."""
     _notes_or_404(audio_uuid)
     if not job.available():
-        raise HTTPException(status_code=409, detail="Sonnet is not set up on this machine.")
+        raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
     started = job.start(audio_uuid)
     return {"jobId": started.id, "status": started.status}

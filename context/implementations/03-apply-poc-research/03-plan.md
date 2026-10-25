@@ -677,8 +677,8 @@ repository."
 | 4 | Section 3.11: a written group keeps a sixteenth beamed to its eighth (one odd note next to one note) | The algorithm's limit (two notes of the group's figure) removed 410 of Sonnet's 2,044 groups; the user's rule allows one odd note |
 | 4 | Phase 4 task 4: no note four or more ledger lines above its staff in the checker; nearby 8va notes joined | The first run left 244 notes of one song far above the staff, and then one 8va bracket per note |
 | 4 | Phase 5 task 3: the segments are the LLM's windows; the reference request redraws the algorithm's sheet first | What the LLM step gives |
-| 5 | Phase 5 task 1: existing songs keep their data and get **Write with Sonnet**; the 10 viewer songs show Sonnet's sheet; new transcriptions go to Sonnet by themselves (marked `sheet.pending`) | The user's answer of 2026-10-25 |
-| 5 | Phase 5 task 3: on a version of My library, **Write with Sonnet** opens the edit copy and starts there | The rights table: a library version is never written in place |
+| 5 | Phase 5 task 1: existing songs keep their data and get **Enhance with AI**; the 10 viewer songs show Sonnet's sheet; new transcriptions go to Sonnet by themselves (marked `sheet.pending`) | The user's answer of 2026-10-25 |
+| 5 | Phase 5 task 3: on a version of My library, **Enhance with AI** opens the edit copy and starts there | The rights table: a library version is never written in place |
 | 5 | Phase 5 task 7: the passage page, From other projects and the requests review keep the old sheet until Phase 8; Play mode has no lyrics until Phase 8 | Their work is a marked stretch; the new engine has no lyrics yet (4 parts had lyrics) |
 | 5 | Phase 5 task 2: an old `sheet.json` keeps its key and a figure renamed by the user; the default negra is replaced by the pulse estimate | "Keep all the data"; the default negra was not a choice (36 of 43 sheets) |
 | 5 | Phase 6: a stored sheet is laid again on changed notes by column and key (`build.reapply`); a paste moves the columns after it, so those decisions are lost there until notes are matched by id | What the study found about the edit model |

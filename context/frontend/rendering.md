@@ -11,7 +11,7 @@ Verovio's drawing rules). The page asks `GET /sheet/{part}?width=N` for the widt
 space) and gets one SVG and a cursor map: one row per drawn column (its line, its x, its time) and one box per
 line. The code is `pages/piece/sheet/frames/`:
 
-- `FramesSheetPage.tsx`: the page (title lines, the player, the floating bar with **Write with Sonnet** and
+- `FramesSheetPage.tsx`: the page (title lines, the player, the floating bar with **Enhance with AI** and
   **Edit in the old sheet**);
 - `FramesSheetView.tsx`: the SVG as the backend wrote it, scaled to the page, and an overlay in the same units:
   the cursor (a line between two columns by their times), the lit noteheads of its column, the pale veil on the

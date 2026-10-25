@@ -232,6 +232,16 @@ def commit(part_id: str, sheet: Any, text: str, record: store.Record, notes_revi
         if stored is None:
             return
         header = stored.header
+        before = store.load(part_id)
+        earlier = before.record if before is not None and before.record.enhanced else None
+        if earlier is not None and record.source != "llm":
+            # Enhanced again, and the run did not finish every window (no credits, no network): the sheet the AI
+            # wrote before stays whole, with its mark, rather than a sheet with some windows of the algorithm.
+            earlier.note = record.note or "The new run did not finish; the earlier one is kept."
+            store.save(part_id, before.text, earlier)
+            build.forget(part_id)
+            return
+        record.runs = (earlier.runs if earlier is not None else 0) + (1 if record.enhanced else 0)
         if header.notes_revision != notes_revision:
             # The notes changed while Sonnet worked: keep its reading, lay it on the new notes when drawn.
             record.hands_revision = None
@@ -249,7 +259,7 @@ def commit(part_id: str, sheet: Any, text: str, record: store.Record, notes_revi
                 if header.hands_notes_revision > 0:
                     # The saved hands were decided before (Predict hands and the user's corrections): kept.
                     history.snapshot_notes(
-                        part_id, reason="Sonnet wrote the hands of the sheet again"
+                        part_id, reason="The AI wrote the hands of the sheet again"
                     )
                 for event in changed:
                     event.hand = hands[event.id]

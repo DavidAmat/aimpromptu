@@ -62,7 +62,7 @@ import {
 const RUNNING_WORDS: Record<NonNullable<ProjectRow["running"]>, string> = {
   transcribing: "Transcribing",
   reading: "Reading the video",
-  writing: "Sonnet is writing the sheet",
+  writing: "The AI is enhancing the sheet",
 };
 
 /** What a row says about the step the project reached. */
@@ -112,7 +112,7 @@ export function ProjectsPage() {
     return () => controller.abort();
   }, [reload]);
 
-  // A running transcription, reading or Sonnet run changes the row when it ends: look again now and then.
+  // A running transcription, reading or AI run changes the row when it ends: look again now and then.
   const anyRunning = rows?.some((row) => row.running !== null) ?? false;
   useEffect(() => {
     if (!anyRunning) return;
@@ -214,7 +214,7 @@ export function ProjectsPage() {
             <ListRow
               data-testid={`project-${row.id}`}
               title={title}
-              // A job working on the project now (Sonnet writing its sheet, above all: minutes, in the
+              // A job working on the project now (the AI enhancing its sheet, above all: minutes, in the
               // background): a small spinner beside the name says it is changing.
               leading={
                 row.running ? (

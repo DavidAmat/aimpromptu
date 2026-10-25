@@ -22,7 +22,7 @@ their phase, after its study (plan section 8).
 - [x] **Phase 2**: rule 7 of the alteraciones (user, 2026-10-23): after a becuadro, the first return of that note to its armadura name prints its sostenido or bemol again, when it is in the same beam group or the next note (`frames.printed_signs`; plan section 3.4).
 - [x] **Phase 3**: the look of the spacing without compases (approved: "perfect"); no thin double line at an armadura change (the default; the user did not choose, `Options.key_line` stays available).
 - [x] **Phase 4**: the API key (done 2026-10-25); how many songs the credits cover (about 110 a month, $0.89 per song on average); the beam groups and the maximum of 8 notes (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user, report section 11): the gallery approved ("all good"); clef.L4 and the staccato figures kept as written.
-- [x] **Phase 5**: existing projects (user, 2026-10-25): the songs Sonnet already wrote (the 10 viewer songs) show Sonnet's sheet; every other song keeps its data and the algorithm's sheet, with **Write with Sonnet**; new transcriptions go to Sonnet by themselves.
+- [x] **Phase 5**: existing projects (user, 2026-10-25): the songs Sonnet already wrote (the 10 viewer songs) show Sonnet's sheet; every other song keeps its data and the algorithm's sheet, with **Enhance with AI**; new transcriptions go to Sonnet by themselves.
 - [ ] **Phase 5**: merge into `master` now or at the end (asked in the Phase 5 walkthrough).
 - [ ] **Phase 6**: may a new LLM run change hands that the user moved; the engine in the backend or in the browser.
 - [ ] **Phases 7 and 8**: the tools that no longer make sense without compases: keep, change or drop.

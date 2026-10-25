@@ -18,7 +18,10 @@ The record (:class:`Record`):
   notes or the hands changed since: the sheet is then laid again on the current notes (:mod:`.build`);
 * ``windows``: the segments of the piece-by-piece view, ``[first frame, end frame, "llm" | "algorithm"]``;
 * ``quarterMs`` and ``reference`` (who chose the reference figure), ``model``, ``prompt``, ``usd``, ``requests``,
-  ``written`` (UTC), and ``note`` when the requests stopped (no credits, no network).
+  ``written`` (UTC), and ``note`` when the requests stopped (no credits, no network);
+* ``runs``: how many AI runs wrote this sheet. A sheet whose ``source`` is ``llm`` or ``mixed`` was **enhanced with
+  AI**, and stays marked so through every later change of the notes or the hands (the user's rule of 2026-10-25:
+  running it again is at the user's own risk of the same result). Only a new transcription (new notes) forgets it.
 """
 
 from __future__ import annotations
@@ -49,6 +52,12 @@ class Record:
     requests: int = 0
     written: str | None = None
     note: str | None = None
+    runs: int = 0
+
+    @property
+    def enhanced(self) -> bool:
+        """The AI wrote this sheet, or part of it."""
+        return self.source in ("llm", "mixed")
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -63,6 +72,7 @@ class Record:
             "requests": self.requests,
             "written": self.written,
             "note": self.note,
+            "runs": self.runs,
         }
 
     @classmethod
@@ -79,6 +89,10 @@ class Record:
             requests=int(payload.get("requests") or 0),
             written=payload.get("written"),
             note=payload.get("note"),
+            # A record written before the count existed: one run if the AI wrote it.
+            runs=int(
+                payload.get("runs") or (1 if payload.get("source") in ("llm", "mixed") else 0)
+            ),
         )
 
 

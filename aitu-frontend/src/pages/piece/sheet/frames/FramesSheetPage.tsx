@@ -3,11 +3,14 @@
  * to see and to hear. It is what `SheetPage` shows first on the Sheet step, a version of My library and in Play
  * mode; the old vexflow-v2 sheet stays one press away for editing until Phase 8 (`onOldSheet`).
  *
- * - **At once**: the sheet as it is now: Sonnet's, or the algorithm's on a part Sonnet has not written.
- * - **Sonnet in the background** (plan section 3.6): a new transcription is sent by itself; any other part offers
- *   **Write with Sonnet** (on a version of My library, the button opens the copy that edits it, as **Edit** does,
- *   and starts there). The segment at Sonnet looks pale, a segment that comes back appears column by column, and
- *   no text says any of it. The old sheet cannot be opened while Sonnet writes: the segments still waiting cannot
+ * - **At once**: the sheet as it is now: the AI's (Sonnet 5.5 today), or the algorithm's on a part it has not
+ *   enhanced. A sheet the AI enhanced carries the green badge **Enhanced with AI** for good, whatever changes later
+ *   (the user's rule of 2026-10-25): a new run is then **Enhance it again with AI**, at the user's own risk of the
+ *   same result. The page says "AI", not the model's name: the model may change.
+ * - **The AI in the background** (plan section 3.6): a new transcription is sent by itself; any other part offers
+ *   **Enhance with AI** (on a version of My library, the button opens the copy that edits it, as **Edit** does,
+ *   and starts there). The segment at the AI looks pale, a segment that comes back appears column by column, and
+ *   no text says any of it. The old sheet cannot be opened while the AI writes: the segments still waiting cannot
  *   be edited.
  * - **To hear**: the recording plays with a cursor, the notes it reaches lit, and a click on the sheet moves the
  *   recording there.
@@ -28,10 +31,10 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import { timeScoreApi, type SavedRhythm } from "../../../../api";
 import ScorePlayer, { type ScorePlayerControls } from "../../../../components/time/ScorePlayer";
 import { useElementSize } from "../../../../hooks/useElementSize";
-import { ConfirmDialog, FloatingBar, IconAction, PillButton } from "../../../../ui";
+import { ConfirmDialog, FloatingBar, IconAction, Pill, PillButton, semantic } from "../../../../ui";
 import type { SheetStep } from "../SheetPage";
 import { FramesSheetView } from "./FramesSheetView";
-import { WRITE_WITH_SONNET } from "./navigation";
+import { ENHANCE_WITH_AI } from "./navigation";
 import { useFramesSheet } from "./useFramesSheet";
 
 /** The size the sheet is drawn at: about the old sheet's (8 px a staff space at the Sheet step's width). */
@@ -116,19 +119,22 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     return () => window.clearTimeout(wait);
   }, [sheet, fromMs, startedAt, audioUuid, player]);
 
-  // ------------------------------------------------------------------ Sonnet
+  // ------------------------------------------------------------------ the AI
 
   const running = sheet?.llm.state === "running" || starting;
-  const viaEdit = sheet?.llm.viaEdit === true && step.writeWithSonnetInCopy !== undefined;
-  const offerSonnet = !playMode && !running && (sheet?.llm.canRun === true || viaEdit);
+  const enhanced = sheet?.llm.enhanced === true;
+  const runs = sheet?.llm.runs ?? 0;
+  const viaEdit = sheet?.llm.viaEdit === true && step.enhanceInCopy !== undefined;
+  const offerAi = !playMode && !running && (sheet?.llm.canRun === true || viaEdit);
+  const enhanceLabel = enhanced ? "Enhance it again with AI" : "Enhance with AI";
   const [asking, setAsking] = useState(false);
-  const write = () => {
+  const enhance = () => {
     setAsking(false);
     if (sheet?.llm.canRun) void run();
-    else step.writeWithSonnetInCopy?.();
+    else step.enhanceInCopy?.();
   };
-  // The edit copy opened by **Write with Sonnet** on a version of My library: Sonnet starts here.
-  const askedInCopy = (location.state as typeof WRITE_WITH_SONNET | null)?.writeWithSonnet === true;
+  // The edit copy opened by **Enhance with AI** on a version of My library: the AI starts here.
+  const askedInCopy = (location.state as typeof ENHANCE_WITH_AI | null)?.enhanceWithAi === true;
   useEffect(() => {
     if (!askedInCopy || !sheet) return;
     navigate(location.pathname, { replace: true, state: null });
@@ -153,9 +159,21 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
       <Stack spacing={1.5}>
         {playMode ? null : (
           <Box sx={{ px: 1 }}>
-            <Typography component="h2" sx={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3 }} noWrap title={title} data-sheet-title>
-              {title}
-            </Typography>
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", minWidth: 0 }}>
+              <Typography component="h2" sx={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3, minWidth: 0 }} noWrap title={title} data-sheet-title>
+                {title}
+              </Typography>
+              {enhanced ? (
+                <Box data-enhanced-badge sx={{ flexShrink: 0 }}>
+                  <Pill
+                    label="Enhanced with AI"
+                    selected
+                    color={semantic.status.success}
+                    title={runs > 1 ? `The AI enhanced this sheet ${runs} times` : "The AI enhanced this sheet"}
+                  />
+                </Box>
+              ) : null}
+            </Stack>
             {underTitle ? (
               <Typography variant="body2" color="text.secondary" noWrap title={underTitle}>
                 {underTitle}
@@ -199,15 +217,15 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
             onClick={() => player.current?.toggle()}
             placement="top"
           />
-          {offerSonnet ? (
+          {offerAi ? (
             <PillButton
               kind="secondary"
               size="small"
               startIcon={<AutoAwesomeIcon fontSize="small" />}
               onClick={() => setAsking(true)}
-              data-testid="write-with-sonnet"
+              data-testid="enhance-with-ai"
             >
-              Write with Sonnet
+              {enhanceLabel}
             </PillButton>
           ) : null}
           <Divider orientation="vertical" flexItem />
@@ -216,7 +234,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
             icon={<EditNoteIcon />}
             onClick={onOldSheet}
             disabled={running}
-            disabledTitle="Sonnet is writing this sheet"
+            disabledTitle="The AI is enhancing this sheet"
             placement="top"
             data-testid="old-sheet"
           />
@@ -225,14 +243,16 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
 
       <ConfirmDialog
         open={asking}
-        title="Write this sheet with Sonnet?"
+        title={enhanced ? "Enhance this sheet again with AI?" : "Enhance this sheet with AI?"}
         message={
-          sheet?.llm.canRun
-            ? "Sonnet writes the hands and the sheet again, part by part, in a few minutes. It uses about $1 of the monthly credits. The hands you have now are kept in the history."
-            : "This opens a copy in Projects, as Edit does, and Sonnet writes it there in a few minutes (about $1 of the monthly credits). Save it to your library when it is done."
+          !sheet?.llm.canRun
+            ? "This opens a copy in Projects, as Edit does, and the AI enhances it there in a few minutes (about $1 of the monthly credits). Save it to your library when it is done."
+            : enhanced
+              ? "The AI already enhanced this sheet. A new run may give much the same result, and it uses about $1 of the monthly credits. If it does not finish, the sheet you have now stays."
+              : "The AI writes the hands and the reading of the sheet, part by part, in a few minutes. It uses about $1 of the monthly credits. The hands you have now are kept in the history."
         }
-        confirmLabel="Write with Sonnet"
-        onConfirm={write}
+        confirmLabel={enhanceLabel}
+        onConfirm={enhance}
         onCancel={() => setAsking(false)}
       />
     </Box>

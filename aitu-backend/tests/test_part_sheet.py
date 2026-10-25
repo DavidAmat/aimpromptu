@@ -128,11 +128,10 @@ def test_sonnet_writes_the_sheet_window_by_window_and_its_hands_into_the_notes(
     body = sheet(client, part)
     assert body["source"] == "llm" and body["stale"] is False
     assert [s["state"] for s in body["segments"]] == ["llm"] * len(windows)
-    assert (
-        body["llm"]["state"] == "done"
-        and body["llm"]["auto"] is False
-        and body["llm"]["canRun"] is False
-    )
+    assert body["llm"]["state"] == "done" and body["llm"]["auto"] is False
+    # Enhanced with AI, and offered again (at the user's own risk of the same result).
+    assert body["llm"]["enhanced"] is True and body["llm"]["runs"] == 1
+    assert body["llm"]["canRun"] is True
     status = client.get(f"/pieces/{part}/status").json()
     assert {s["step"]: s["state"] for s in status["steps"]}["sheet"] == "ready"
     events = client.get(f"/matrix/{part}/events").json()["events"]
@@ -286,3 +285,38 @@ def test_the_projects_list_says_sonnet_is_writing(client: TestClient, part: str)
     finish(started)
     row = next(row for row in client.get("/projects").json() if part in row["parts"])
     assert row["running"] is None
+
+
+def test_enhanced_again_counts_the_runs_and_a_failed_run_keeps_the_ai_sheet(
+    client: TestClient, part: str
+) -> None:
+    finish(job.start(part, complete=lambda: oracle(song(SECONDS))))
+    first = sheet_store.load(part)
+    assert first is not None and first.record.enhanced and first.record.runs == 1
+
+    def no_credits(system: str, messages_: list[dict]) -> str:
+        raise RuntimeError("credit balance is too low")
+
+    finish(job.start(part, complete=lambda: no_credits))
+    kept = sheet_store.load(part)
+    assert kept is not None and kept.text == first.text
+    assert (
+        kept.record.enhanced
+        and kept.record.runs == 1
+        and "credit balance" in (kept.record.note or "")
+    )
+
+    # A hand moved later: the sheet is laid on the new hands and keeps its mark.
+    current = client.get(f"/pieces/{part}/notes").json()
+    client.patch(
+        f"/pieces/{part}/notes",
+        json={
+            "baseRevision": current["revision"],
+            "ops": [{"op": "hand", "ids": current["id"][:3], "hand": "l"}],
+        },
+    )
+    body = sheet(client, part)
+    assert body["stale"] is True and body["llm"]["enhanced"] is True
+
+    finish(job.start(part, complete=lambda: oracle(song(SECONDS))))
+    assert sheet_store.load(part).record.runs == 2

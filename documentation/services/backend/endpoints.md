@@ -833,7 +833,9 @@ own) and `figuresFrom` (where the next figures transposition starts), and `lyric
 - `segments`: Sonnet's windows (`working`: at Sonnet now; `waiting`; `llm`; `algorithm`: a window that failed);
   empty on a sheet Sonnet never wrote.
 - `llm.auto`: a new transcription asked for Sonnet (`sheet.pending`) and the user may change the part: the page
-  starts it. `canRun`: **Write with Sonnet** is offered (not on a sheet Sonnet wrote whole). `viaEdit`: the owner's
+  starts it. `canRun`: **Enhance with AI** is offered (on a sheet the AI enhanced, as **Enhance it again with AI**).
+  `enhanced`: the AI wrote this sheet or part of it (`sheet.f1` with source `llm` or `mixed`); it stays through
+  every later change of the notes or the hands. `runs`: how many AI runs wrote it. `viaEdit`: the owner's
   version of My library, which changes through its edit copy.
 - `409` before the notes exist; the usual `404` of the rights.
 

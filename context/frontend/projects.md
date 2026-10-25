@@ -158,10 +158,15 @@ transcription in one colour.
   pale, and a part that comes back appears column by column. No text says any of it. At the end the hands are
   saved in the notes, and the sheet is saved beside them (`sheet.f1`); opening it again calls nothing.
 - **A project made before Phase 5** keeps its saved hands and shows the algorithm's sheet from them (with the
-  key and a renamed figure of its old sheet), and offers **Write with Sonnet** on the floating bar (a
+  key and a renamed figure of its old sheet), and offers **Enhance with AI** on the floating bar (a
   confirmation says it costs about $1 of the monthly credits). On a version of My library the button opens the
   copy that edits it, as **Edit** does, and starts there. The 10 songs Sonnet wrote in implementation 03,
   Phase 4 show Sonnet's sheet.
+- **Enhanced with AI.** A sheet the AI wrote (or part of it) carries the green badge **Enhanced with AI** beside
+  its title, for good: later changes of the notes or the hands do not remove it, only a new transcription does.
+  Its button then reads **Enhance it again with AI**, and the confirmation says a new run may give much the same
+  result; a new run that does not finish leaves the sheet the AI wrote before. The page says "AI", not the
+  model's name (Sonnet 5.5 today), because the model may change.
 - **To hear it**: Play (or Space) plays the recording with a cursor; the notes the cursor reaches are lit; a
   click on the sheet moves the recording there.
 - **The old sheet** (vexflow-v2), with every editing tool of [annotations.md](annotations.md), is one press

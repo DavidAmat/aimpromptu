@@ -18,7 +18,7 @@ const JOIN_MS = 250;
 export interface FramesSheetState {
   sheet: FramesSheet | null;
   error: string | null;
-  /** Start Sonnet on the part: **Write with Sonnet**. */
+  /** Start the AI on the part: **Enhance with AI**. */
   run: () => Promise<void>;
   starting: boolean;
 }
@@ -95,7 +95,7 @@ export function useFramesSheet(
       setReload((value) => value + 1);
       changed.current?.();
     } catch (caught) {
-      setError(said(caught, "Sonnet could not be started."));
+      setError(said(caught, "The AI could not be started."));
     } finally {
       setStarting(false);
     }

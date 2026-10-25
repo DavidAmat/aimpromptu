@@ -62,7 +62,7 @@ will show the default one." What was built:
 - **Every other part** draws the algorithm's sheet from its saved hands, with two decisions of its `sheet.json`
   kept: the key (and key changes), and the reference figure only when the user renamed it (a corchea; the default
   negra is replaced by the pulse estimate, plan section 3.3). The rest of `sheet.json` is Phase 9's.
-- **The button**, **Write with Sonnet**, on the floating bar of the Sheet step of a part the user may change, with a
+- **The button**, **Enhance with AI**, on the floating bar of the Sheet step of a part the user may change, with a
   confirmation (about $1 of the monthly credits; the hands now are kept in the history). On the owner's version of
   My library the button opens the edit copy (as **Edit**) and Sonnet starts there: the rights table forbids
   writing a library version in place, and **Save to library** then replaces the version.
@@ -147,7 +147,7 @@ on 2026-10-25 restarted the app with it and with `ANTHROPIC_API_KEY` from `.env`
 
 - `api/sheet.ts` (`sheetApi`), `api/pieces.ts` (four steps).
 - `pages/piece/sheet/frames/`: `FramesSheetPage` (title lines from `sheet.json` when it has them, the player, the
-  floating bar: Play, **Write with Sonnet**, **Edit in the old sheet**), `FramesSheetView` (the SVG scaled to the
+  floating bar: Play, **Enhance with AI**, **Edit in the old sheet**), `FramesSheetView` (the SVG scaled to the
   page, and an overlay SVG in the same units: the pale veil of `working` segments, breathing between 55 and 72 %
   white; the reveal masks with the engine's staff lines, 13/180 of a staff space; the cursor; `[data-lit]` on the
   noteheads of the cursor's column), `geometry.ts` (from `viewer/index.html`), `useFramesSheet.ts` (the loads at the
@@ -156,7 +156,7 @@ on 2026-10-25 restarted the app with it and with `ANTHROPIC_API_KEY` from `.env`
 - `SheetPage` is now the switch: `step.newSheet` (set by `SheetTab` and `PlayPage`) shows `FramesSheetPage`; the old
   page (`VexflowSheetPage`, unchanged otherwise) gets **Back to the new sheet** on its bars, and a bar with only
   that button while its sheet is not drawn (the stale banner).
-- `SheetTab`: `newSheet`, the old sheet's state from `details.legacy`, **Write with Sonnet** through the edit copy on
+- `SheetTab`: `newSheet`, the old sheet's state from `details.legacy`, **Enhance with AI** through the edit copy on
   a version of My library (`WRITE_WITH_SONNET` in the navigation state starts Sonnet in the copy).
 - `NotesEditor`: **Continue to Sheet**; `App.tsx`: `/hands` redirects to `/sheet`; `PiecePage`: the amber dot of
   unsaved notes on the Notes tab.
@@ -206,6 +206,12 @@ on 2026-10-25 restarted the app with it and with `ANTHROPIC_API_KEY` from `.env`
   happened once in this phase: an edit of `api/projects.py` reloaded the backend 4 minutes into the user's run on the
   edit copy of 99 Red Balloons, and the windows already paid for were lost. Fix to consider: write each decided
   window to disk and let a new run start from the first window not decided.
+- **Enhanced with AI** (the user's request of 2026-10-25): the page says "AI", not "Sonnet" (the model may change).
+  A sheet whose record source is `llm` or `mixed` shows the green badge **Enhanced with AI** beside its title, for
+  good (a stale sheet laid on new notes keeps it; only a new transcription clears `sheet.f1`), and its button reads
+  **Enhance it again with AI**, with a confirmation that a new run may give much the same result. The record counts
+  the runs (`runs`). A new run on an enhanced sheet that does not finish every window keeps the earlier AI sheet
+  whole (`job.commit`), so the mark and the AI's decisions are never lost to a failed run.
 - **The Projects page** shows a spinner before the title of a project while a job works on it (`running`:
   `transcribing`, `reading`, `writing`), added after the user's request of 2026-10-25.
 - **Checks that transcribe** (`check:flow`, `check:journey`, `time:flow`) now start Sonnet. `check:flow` and

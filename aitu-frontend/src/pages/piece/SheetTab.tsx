@@ -18,7 +18,7 @@ import Box from "@mui/material/Box";
 import { projectsApi, type PartRow, type SavedRhythm, type StepState } from "../../api";
 import { ROUTES } from "../../layout/routes";
 import SheetPage, { type SheetStep } from "./sheet/SheetPage";
-import { WRITE_WITH_SONNET } from "./sheet/frames/navigation";
+import { ENHANCE_WITH_AI } from "./sheet/frames/navigation";
 import { PartsPanel } from "./PartsPanel";
 import { AddToPlaylistDialog } from "../library/AddToPlaylistDialog";
 import { said } from "../library/shared";
@@ -72,12 +72,12 @@ export function SheetTab() {
     [uuid, projectId, refresh],
   );
 
-  /** A version of My library changes through its edit copy: Sonnet writes there (as **Edit**, then the button). */
+  /** A version of My library changes through its edit copy: the AI enhances it there (as **Edit**, then the button). */
   const writeInCopy = useCallback(async () => {
     if (!projectId) return;
     try {
       const copy = await projectsApi.edit(projectId);
-      navigate(ROUTES.project(copy.parts[0] ?? copy.id, "sheet"), { state: WRITE_WITH_SONNET });
+      navigate(ROUTES.project(copy.parts[0] ?? copy.id, "sheet"), { state: ENHANCE_WITH_AI });
     } catch (caught) {
       setError(said(caught, "The version could not be opened for editing."));
     }
@@ -95,7 +95,7 @@ export function SheetTab() {
             audioRevision,
             onChanged: () => void refresh(),
             newSheet: true,
-            ...(library ? { writeWithSonnetInCopy: () => void writeInCopy() } : {}),
+            ...(library ? { enhanceInCopy: () => void writeInCopy() } : {}),
             ...(readOnly ? {} : { onSplit: split }),
             ...(library
               ? {

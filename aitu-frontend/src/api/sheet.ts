@@ -43,6 +43,13 @@ export interface SheetSegment {
 }
 
 export interface SheetLlm {
+  /**
+   * The AI wrote this sheet, or part of it: the page shows **Enhanced with AI** for good, whatever changes later.
+   * Only a new transcription (new notes) forgets it.
+   */
+  enhanced: boolean;
+  /** How many AI runs wrote it. */
+  runs: number;
   /** `none`: never written by Sonnet; `running`: a run is going; `done`: a run ended (it may have failed). */
   state: "none" | "running" | "done";
   jobId: string | null;
@@ -50,7 +57,7 @@ export interface SheetLlm {
   available: boolean;
   /** A new transcription: the page starts Sonnet by itself. */
   auto: boolean;
-  /** The page may offer **Write with Sonnet** (the user may change this part). */
+  /** The page may offer **Enhance with AI**, or **Enhance it again with AI** (the user may change this part). */
   canRun: boolean;
   /** The owner's own version of My library: the button opens the edit copy and starts there. */
   viaEdit: boolean;
