@@ -23,7 +23,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
-import { signIn, useSession } from './session.mjs';
+import { oldSheet, signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { values } = parseArgs({
@@ -84,6 +84,7 @@ const openSheet = async (id) => {
   );
   await page.goto(`${base}/projects/${id}/sheet`);
   await page.waitForSelector('[data-sheet-title]', { timeout: 60000 });
+  await oldSheet(page);
   await heard;
 };
 const songFromUrl = (url) => Number(/\/library\/songs\/(\d+)/.exec(url)?.[1] ?? NaN);
@@ -158,11 +159,12 @@ try {
   await page.waitForSelector('[data-audio]');
   check('the Audio step has no cut and no Transcribe', (await page.getByRole('button', { name: 'Cut the selection' }).count()) === 0
     && (await page.getByRole('button', { name: /Transcribe/ }).count()) === 0);
-  await page.getByRole('tab', { name: 'Hands', exact: true }).click();
+  // No Hands step since implementation 03, Phase 5: the Notes step is the last one before the sheet.
+  check('a version has no Hands step', (await page.getByRole('tab', { name: 'Hands', exact: true }).count()) === 0);
+  await page.getByRole('tab', { name: 'Notes', exact: true }).click();
   await page.waitForTimeout(800);
-  check('the Hands step has no Predict hands and no Save', (await page.getByRole('button', { name: 'Predict hands' }).count()) === 0
-    && (await page.locator('[data-unsaved]').count()) === 0);
-  await shot('04-version-hands-read-only');
+  check('the Notes step has no Save', (await page.locator('[data-unsaved]').count()) === 0);
+  await shot('04-version-notes-read-only');
 
   // 3. Edit: a copy in Projects.
   await page.getByRole('button', { name: 'Edit', exact: true }).click();

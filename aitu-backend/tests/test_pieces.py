@@ -120,7 +120,7 @@ def ready(client: TestClient, piece: str) -> str:
     predict_and_save(client, piece)
     write_sheet(client, piece)
     body = status(client, piece)
-    assert [step["state"] for step in body["steps"]] == ["ready"] * 5
+    assert [step["state"] for step in body["steps"]] == ["ready"] * 4
     return piece
 
 
@@ -147,7 +147,6 @@ def test_a_piece_with_no_notes_opens_on_the_audio_tab(client: TestClient, data_d
         "source": ("ready", True),
         "audio": ("ready", True),
         "notes": ("missing", True),
-        "hands": ("missing", False),
         "sheet": ("missing", False),
     }
     assert body["resume"] == "audio"
@@ -155,20 +154,20 @@ def test_a_piece_with_no_notes_opens_on_the_audio_tab(client: TestClient, data_d
     assert client.get("/pieces/nope/status").status_code == 404
 
 
-def test_a_transcribed_piece_opens_on_the_notes_tab_and_asks_for_the_hands(
+def test_a_transcribed_piece_opens_on_the_notes_tab_and_its_sheet_step_is_open(
     client: TestClient, piece: str
 ) -> None:
+    """No Hands step since implementation 03, Phase 5: the Sheet step opens once the notes are ready."""
     body = status(client, piece)
+    assert [step["step"] for step in body["steps"]] == ["source", "audio", "notes", "sheet"]
     assert body["by"]["notes"]["state"] == "ready"
     assert body["by"]["notes"]["details"]["noteCount"] == 37
-    assert body["by"]["hands"]["state"] == "missing"
-    assert body["by"]["hands"]["enabled"] is True
     assert body["by"]["sheet"] == {
         "step": "sheet",
         "state": "missing",
-        "enabled": False,
-        "reason": "Predict hands first.",
-        "details": {},
+        "enabled": True,
+        "reason": "Not written yet.",
+        "details": {"newSheet": False, "legacy": "missing"},
     }
     assert body["resume"] == "notes"
 
@@ -268,8 +267,6 @@ def test_a_note_the_sheet_cannot_place_does_not_keep_the_hands_from_being_ready(
 
     predict_and_save(client, uuid)
     body = status(client, uuid)
-    assert body["by"]["hands"]["state"] == "ready"
-    assert body["by"]["hands"]["details"]["unplaced"] == 1
     assert body["by"]["sheet"]["enabled"]
     assert events_file.read_header(pipeline.events_path(uuid)).hands_notes_revision == 1
 
@@ -308,13 +305,6 @@ def test_saved_hands_make_the_step_ready_and_the_sheet_uses_them_without_inferen
     assert header.hands_notes_revision == 1
 
     body = status(client, piece)
-    assert body["by"]["hands"]["state"] == "ready"
-    assert body["by"]["hands"]["details"] == {
-        "withoutHand": 0,
-        "unplaced": 0,
-        "guessed": 0,
-        "saved": True,
-    }
     assert body["by"]["sheet"]["state"] == "missing" and body["by"]["sheet"]["enabled"] is True
 
     def no_inference(*args, **kwargs):
@@ -357,7 +347,6 @@ def test_row_1_a_new_selected_region_makes_every_later_step_stale(
     store.set_cuts(ready, [(100, 200)])
     body = status(client, ready)
     assert body["by"]["notes"]["state"] == "stale"
-    assert body["by"]["hands"]["state"] == "stale" and body["by"]["hands"]["enabled"] is False
     assert body["by"]["sheet"]["state"] == "stale" and body["by"]["sheet"]["enabled"] is False
     assert body["resume"] == "audio"
     assert notes(client, ready)["stale"] is True
@@ -402,7 +391,6 @@ def test_row_2_a_new_transcription_makes_the_hands_missing_and_keeps_the_old_she
     assert after.hands_notes_revision == 0
     body = status(client, uuid)
     assert body["by"]["notes"]["state"] == "ready"
-    assert body["by"]["hands"]["state"] == "missing"
     # The old reading points at columns of the old notes, so it is not kept beside the new ones:
     # the Sheet tab asks for a new one, and the old one is in history (plan section 8.3).
     assert body["by"]["sheet"]["state"] == "missing"
@@ -417,7 +405,6 @@ def test_row_3_a_moved_or_resized_rectangle_keeps_the_hands_and_makes_the_sheet_
     assert result["revision"] == 2 and result["handsRevision"] == 2
     assert result["sheetStale"] is True
     body = status(client, ready)
-    assert body["by"]["hands"]["state"] == "ready"
     assert body["by"]["sheet"]["state"] == "stale" and body["by"]["sheet"]["enabled"] is True
     assert body["resume"] == "sheet"
     moved = notes(client, ready)
@@ -443,8 +430,6 @@ def test_row_4_an_added_rectangle_gets_a_guessed_hand_and_makes_the_sheet_stale(
     assert result["changed"]["guessed"] == [37]
 
     body = status(client, ready)
-    assert body["by"]["hands"]["state"] == "ready"
-    assert body["by"]["hands"]["details"]["guessed"] == 1
     assert body["by"]["sheet"]["state"] == "stale"
     assert notes(client, ready)["guessed"] == [37]
 
@@ -462,7 +447,7 @@ def test_row_4_without_saved_hands_an_added_rectangle_has_no_hand(
         [{"op": "add", "tempId": -7, "key": 40, "onMs": 2100, "lenMs": 250}],
     )
     assert result["changed"]["hand"] == "-"
-    assert status(client, piece)["by"]["hands"]["state"] == "missing"
+    assert "hands" not in status(client, piece)["by"]
 
 
 def test_row_5_a_deleted_rectangle_keeps_the_hands_and_makes_the_sheet_stale(
@@ -472,7 +457,6 @@ def test_row_5_a_deleted_rectangle_keeps_the_hands_and_makes_the_sheet_stale(
     patch(client, ready, [{"op": "delete", "ids": [note_id]}])
     assert note_id not in notes(client, ready)["id"]
     body = status(client, ready)
-    assert body["by"]["hands"]["state"] == "ready"
     assert body["by"]["sheet"]["state"] == "stale"
 
     patch(client, ready, [{"op": "restore", "ids": [note_id]}])
@@ -488,7 +472,6 @@ def test_row_6_a_hand_changed_on_the_hands_tab_makes_the_sheet_stale(
     assert result["revision"] == 1, "a hand is not a notes change"
     assert result["handsRevision"] == 2
     body = status(client, ready)
-    assert body["by"]["hands"]["state"] == "ready"
     assert body["by"]["sheet"]["state"] == "stale"
 
 
@@ -663,9 +646,6 @@ def test_an_old_piece_with_a_sheet_keeps_opening_on_the_sheet(
     client: TestClient, old_piece: str
 ) -> None:
     body = status(client, old_piece)
-    assert body["by"]["hands"]["state"] == "ready"
-    assert body["by"]["hands"]["details"]["saved"] is False
-    assert "Predict hands" in body["by"]["hands"]["reason"]
     assert body["by"]["sheet"]["state"] == "ready"
     assert body["resume"] == "sheet"
 

@@ -27,6 +27,8 @@ export type {
   WaveformPeaks,
 } from "./audio";
 
+export { sheetApi } from "./sheet";
+export type { FramesSheet, SheetColumn, SheetLlm, SheetSegment, SheetSystem } from "./sheet";
 export { projectsApi } from "./projects";
 export type {
   ChosenPassage,

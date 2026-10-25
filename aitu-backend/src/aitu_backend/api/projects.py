@@ -10,7 +10,8 @@ its first part, so the uuid of a piece is also the id of its project, and the ro
 ``projects.step``. Computing it reads the notes and the sheet of every part (about 25 ms a part), so
 it is stored: a write of a part's notes, sheet or timeline clears it
 (:func:`aitu_backend.storage.bundle.step_changed`), and the list works out again only the rows it
-finds cleared. A part whose transcription or video reading is running says so instead.
+finds cleared. A part whose transcription or video reading is running says so instead, and so does a part whose sheet Sonnet is
+writing.
 """
 
 from __future__ import annotations
@@ -34,6 +35,8 @@ from aitu_backend.db.users import current_user_id
 from aitu_backend.editing import parts as project_parts, paste
 from aitu_backend.library import flow, rows
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
+from aitu_backend.part_sheet import job as sheet_job
+from aitu_backend.part_sheet import store as sheet_store
 from aitu_backend.schemas.rhythm import SavedRhythm
 from aitu_backend.storage import bundle, exchange, locate
 from aitu_backend.transcription import jobs, pipeline
@@ -74,8 +77,11 @@ class ProjectRow(_Camel):
     mine: bool = True
     #: The lowest step the parts reached: ``audio``, ``notes``, ``hands`` or ``sheet``.
     step: str | None = None
-    #: ``transcribing`` or ``reading`` while a job works on a part, else ``None``.
+    #: ``transcribing`` or ``reading`` while a job works on a part, ``writing`` while Sonnet writes the sheet of a
+    #: part (implementation 03, Phase 5), else ``None``.
     running: str | None = None
+    #: The AI wrote the sheet of a part of it (implementation 03, Phase 5): the list shows its badge.
+    enhanced: bool = False
     #: The ids of the parts, in order. The first one is the uuid the step routes take.
     parts: list[str]
     #: Where the audio of the first part came from: ``upload``, ``youtube``, ``recording`` ...
@@ -188,6 +194,9 @@ def _running(part_ids: list[str]) -> str | None:
             return "transcribing"
         if jobs.active(f"video-read:{part_id}") is not None:
             return "reading"
+    for part_id in part_ids:
+        if sheet_job.job_of(part_id) is not None:
+            return "writing"
     return None
 
 
@@ -213,7 +222,8 @@ def _links(projects: list[Project]) -> dict[str, LibraryLink]:
 def _row(project: Project, links: dict[str, LibraryLink] | None = None) -> ProjectRow:
     part_ids = bundle.part_ids_of(project.id)
     step = project.step
-    if step is None:
+    # "hands" is a step that no longer exists (implementation 03, Phase 5): worked out again like a cleared one.
+    if step is None or step == "hands":
         step = tools.refresh_step(project.id)
     source = None
     try:
@@ -231,6 +241,7 @@ def _row(project: Project, links: dict[str, LibraryLink] | None = None) -> Proje
         mine=project.owner_id == current_user_id(),
         step=step,
         running=_running(part_ids),
+        enhanced=any(sheet_store.enhanced(part_id) for part_id in part_ids),
         parts=part_ids,
         source=source,
         has_video=bool(first and video_store.exists(first)),

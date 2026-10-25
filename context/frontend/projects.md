@@ -3,7 +3,8 @@
 A **project** is the work of turning a song into a piano sheet: the bundle of its audio, its piano
 matrix notation and its metadata ([app context](../app/01-app-context.md)). Work in progress lives
 in the user's **Personal Vault**, which is the **Projects** page; a project takes a song from its
-audio to its piano sheet in five steps: **Source, Audio, Notes, Hands, Sheet**.
+audio to its piano sheet in four steps: **Source, Audio, Notes, Sheet**. The fifth step, Hands, was removed by
+implementation 03, Phase 5: Sonnet decides the hands with the sheet.
 
 The steps were built in implementation 08 as the "flow page". Implementation 02 moved them to
 `/projects/:id/:step` (Phase 1), gave projects their own storage (Phase 3, the project bundle of
@@ -15,7 +16,13 @@ the `.aitu` export (Phase 5). The code is `aitu-frontend/src/pages/ProjectsPage.
 
 One row per project, the most recently changed first: the title ("Untitled project" until it has
 one), the step it reached ("Transcribing" or "Reading" while a job works on it), and when it
-changed. The whole row opens the project on that step. The `⋯` menu of a row has **Open**,
+changed. While a job works on a project (a transcription, a video read, or Sonnet writing its sheet,
+implementation 03, Phase 5) a small spinner stands before the title; its tooltip says which, and the
+list looks again every 5 s until it ends. A project whose sheet the AI enhanced has the green AI mark there
+(the icon of **Enhance with AI**, tooltip "Enhanced with AI"); a project with notes the AI has not enhanced
+has the same mark faint and hollow ("Not enhanced with AI yet"). The same mark stands before each song of My library (green when the AI
+enhanced one of its versions) and each version of a song (`components/piece/AiMark.tsx`). The status **Editing** is not about the AI: it is
+the edit copy of a version of My library, until **Save to library** or **Discard changes**. The whole row opens the project on that step. The `⋯` menu of a row has **Open**,
 **Duplicate**, **Export**, **Rename**, **Play** (Play mode, once it reaches its Sheet step) and **Delete** (with a
 confirmation).
 
@@ -56,7 +63,7 @@ changed ([backend/pieces-and-revisions.md](../backend/pieces-and-revisions.md) s
 | `/projects` | The Personal Vault (above) |
 | `/projects/new` | The Source step alone, for a new project |
 | `/projects/<id>` | The step the project reached (`resume` of `GET /pieces/{id}/status`) |
-| `/projects/<id>/<step>` | That step: `source`, `audio`, `notes`, `hands` or `sheet` |
+| `/projects/<id>/<step>` | That step: `source`, `audio`, `notes` or `sheet` (an old `hands` address opens `sheet`) |
 
 The old addresses (`/piece/...`) redirected to these until implementation 02, Phase 15. The header of a project is the back arrow to
 Projects, the title, the step tabs, the primary action, and the `⋯` menu (**Play**,
@@ -67,13 +74,13 @@ the Sheet step is ready (disabled while a step has unsaved edits), and nothing b
 and the version ("Superestrella (original)"), the back arrow goes to the song, and the one action is
 **Edit**. Each step shows what it holds and offers no change: the Source step lists the files
 without handles, menus or Add audio; the Audio step plays and zooms (no cut, no Save, no
-Transcribe); Notes and Hands draw the roll and play it (no edit, no Predict hands, no Save); the
+Transcribe); Notes draws the roll and plays it (no edit, no Save); the
 Sheet draws, plays and prints, and nothing on it opens a toolbox. A version with a video shows its
 audio, not the Video step. The tabs are
 enabled from the backend's status answer, never from the page's own guess. Each tab has a small dot
 for its state: filled when ready, a spinner while running, amber when out of date or unsaved, an
 empty ring when not done. A tab that is not enabled is grey, and its tooltip says what is missing
-("Predict hands first"). A step typed in the address that is not enabled opens the step reached
+("Transcribe first."). A step typed in the address that is not enabled opens the step reached
 instead. A project with no audio yet opens on Source, with every other step closed.
 
 Nothing is written before the user presses **Save**. A step with unsaved edits shows an amber dot,
@@ -127,7 +134,7 @@ stay in **Lab**, for the master user.
 **3. Notes.** The piano roll on a canvas: a vertical keyboard on the left, one row per key, the
 rectangles on a time axis. While MuScriptor runs, the rectangles appear and grow as the notes
 arrive, with a progress bar. After it, the audio plays with the playhead, and the notes can be
-edited. The floating bar has play, **Follow the playhead** (on by default: the roll scrolls with the playhead; moving the view by hand turns it off, and Play turns it on again), undo, redo, delete and **Save**; **Continue to Hands** is on the
+edited. The floating bar has play, **Follow the playhead** (on by default: the roll scrolls with the playhead; moving the view by hand turns it off, and Play turns it on again), undo, redo, delete and **Save**; **Continue to Sheet** is on the
 top row:
 
 | Gesture | Effect |
@@ -144,19 +151,37 @@ top row:
 One key sounds one note at a time: a note moved into the next onset of its key is shortened to it.
 The page stays at 60 frames per second with 10,000 rectangles.
 
-**4. Hands.** The same editor, coloured by hand (right hand blue, left hand green), with a floating
-toolbox. **Predict hands** is the button beside **Continue to Sheet** (a real progress bar, about 1 s for a 3-minute piece, shown as unsaved
-changes), **To right** and **To left** (keys R and L), the filter (**Both**, **Right**, **Left**),
-and a counter that goes through the notes the split could not place. **Save** enables the Sheet tab.
+Until Sonnet decides them, the notes have no hand colours: the Notes step and Notes Falling show a new
+transcription in one colour.
 
-**5. Sheet.** The piano sheet (`pages/piece/sheet/SheetPage`), drawn as the step opens: the highest
-pile of gaps is a negra, and a first write takes the key with the fewest accidentals, the treble
-clef for the left hand's high runs and the octave brackets of high passages
-([annotations.md](annotations.md)). Its sheet toolbox transposes the notes or the figures and places
-the lyrics ([annotations-sheet.md](annotations-sheet.md)). A stale sheet opens with a banner and
-is not drawn until **Write the sheet**; **Save** makes it current again.
+**4. Sheet** (implementation 03, Phase 5). The new piano sheet, without compases, drawn by the backend
+(`pages/piece/sheet/frames/`, [rendering.md](rendering.md) section "The new sheet"). It is on screen at once:
 
-**Then, Save to library.** Once the sheet is saved, **Save to library** asks **Artist**, **Song** and
+- **A new transcription** goes to Sonnet by itself. The algorithm's sheet is drawn first; Sonnet writes the
+  hands and the reading in the background, part by part (about half a minute each). The part at Sonnet looks
+  pale, and a part that comes back appears column by column. No text says any of it. At the end the hands are
+  saved in the notes, and the sheet is saved beside them (`sheet.f1`); opening it again calls nothing.
+- **A project made before Phase 5** keeps its saved hands and shows the algorithm's sheet from them (with the
+  key and a renamed figure of its old sheet), and offers **Enhance with AI** on the floating bar (a
+  confirmation says it costs about $1 of the monthly credits). On a version of My library the button opens the
+  copy that edits it, as **Edit** does, and starts there. The 10 songs Sonnet wrote in implementation 03,
+  Phase 4 show Sonnet's sheet.
+- **Enhanced with AI.** A sheet the AI wrote (or part of it) carries the green badge **Enhanced with AI** beside
+  its title, for good: later changes of the notes or the hands do not remove it, only a new transcription does.
+  Its button then reads **Enhance it again with AI**, and the confirmation says a new run may give much the same
+  result; a new run that does not finish leaves the sheet the AI wrote before. The page says "AI", not the
+  model's name (Sonnet 5.5 today), because the model may change.
+- **To hear it**: Play (or Space) plays the recording with a cursor; the notes the cursor reaches are lit; a
+  click on the sheet moves the recording there.
+- **The old sheet** (vexflow-v2), with every editing tool of [annotations.md](annotations.md), is one press
+  away on the floating bar (**Edit in the old sheet**; **Back to the new sheet** returns) until
+  implementation 03, Phase 8. It cannot be opened while Sonnet writes. Its saved sheet (`sheet.json`) opens
+  with its stale banner when Sonnet changed the hands it was saved for.
+
+The Sheet step is *running* while Sonnet writes, and *ready* once a new sheet is stored (or the old sheet still
+matches the notes).
+
+**Then, Save to library.** Once the sheet is ready, **Save to library** asks **Artist**, **Song** and
 **Version name**, moves the project into My library (its audio written again with only the ranges in
 use, its video and other temporary files deleted) and opens the song. On an edit copy the dialog
 opens on **Replace “<version>”**, with **New version** beside it. The whole flow:
@@ -203,11 +228,16 @@ renamed, moved, joined and split. The page, the parts and the songs playlists:
 Measured with `npm run time:flow` on the RTX 4090 (implementation 08, 2026-10-01; the first piano
 sheet measured again in every phase of implementation 02):
 
-| Piece | Length | Piece in | First note | Notes saved | Predict hands | First piano sheet |
+| Piece | Length | Piece in | First note | Notes saved | Predict hands (gone since implementation 03, Phase 5) | First piano sheet |
 |---|---|---|---|---|---|---|
 | Superestrella, uploaded | 3:09 | 0.2 s | 0.3 s | 27 s | 0.9 s | 0.6 s |
 | The Winner Takes It All, from the library | 5:56 | 0.2 s | 0.2 s | 52 s | 2.4 s | 1.0 s |
 | A new YouTube URL | 2:21 | 3.8 s (download) | 0.3 s | 21 s | 1.4 s | 0.6 s |
+
+The Hands step and its column are gone since implementation 03, Phase 5. On the new Sheet step
+(`npm run check:frames-sheet -- --live`, 2026-10-25, a 40 s clip of 7 Years): the algorithm's sheet on screen
+0.9 s after the step opened, Sonnet's first part back after about 19 s, the whole clip written in 91 s for
+$0.18. A whole song takes 4 to 17 minutes and $0.5 to $1.7 (implementation 03, Phase 4).
 
 **Read notes** of a video, measured with `aitu-backend/scripts/bench_video_read.py` (Phase 5) on a
 copy of Superestrella's tutorial video (3:09, 1,892 frames, 1,495 notes): 61 s in all, of which

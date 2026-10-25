@@ -123,6 +123,9 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/time/{uuid}/paste` | Put a copied passage (notes, marks, audio) into the part at a moment, or over a stretch; everything after moves (Phase 8). |
 | POST | `/time/{uuid}/versions/{n}/restore` | Put an earlier state of the part back: the undo and the redo of a paste (Phase 8) and of a promotion (Phase 9). |
 | GET PUT DELETE | `/time/{uuid}/rhythm` | The saved reading. |
+| **The new sheet** | `api/sheet.py` | Implementation 03, Phase 5 |
+| GET | `/sheet/{uuid}?width=N` | The new sheet of a part drawn for a page `N` staff spaces wide: the SVG, the cursor map, the segments of Sonnet's windows and their state, and what the page may do with Sonnet (section 4.1). |
+| POST | `/sheet/{uuid}/llm` | Start Sonnet on the part (or answer the run already going); follow `GET /matrix/progress/{jobId}`. |
 | **Recording in Sheet** | `api/passages.py` | Implementation 02, Phase 9 |
 | POST | `/passages` | **Record this passage**: a passage of a part (a stretch, or a moment for a new passage); its Current is made. |
 | GET PATCH DELETE | `/passages/{id}` | The passage; the take on show, the speed, the window; discard it. |
@@ -539,9 +542,9 @@ rest of the system chose not to use: a filter that can be checked instead of tak
 Each event carries:
 
 - `id`, the stable note id of `notes.pmn`, which `PATCH /pieces/{uuid}/notes` names it by;
-- `hand`: the saved hand when there is one, otherwise the hand of the standard split at `frameMs`,
-  read from the shared split cache. It is a label and nothing else: the times are untouched, and a
-  split that fails leaves the notes uncoloured rather than failing the request;
+- `hand`: the saved hand, or `null` (since implementation 03, Phase 5 the hand split is no longer shown before
+  Sonnet decides the hands: a new transcription plays in Notes Falling without hand colours; `frameMs` is kept
+  for the pages that send it);
 - `removed`, `artifact`, `octaveBelow`.
 
 The answer also carries `revision` and `handsRevision`, which a page needs to send a `PATCH`.
@@ -808,6 +811,38 @@ own) and `figuresFrom` (where the next figures transposition starts), and `lyric
 
 <a id="5-passages--recording-in-sheet"></a>
 
+### 4.1 `/sheet`: the new sheet (implementation 03, Phase 5)
+
+`GET /sheet/{uuid}?width=130` (60 to 320 staff spaces, the staff width; the SVG adds 8 of margins) answers:
+
+```json
+{"svg": "<svg …>", "width": 138, "height": 444.2,
+ "columns": [{"system": 0, "frame": 177, "x": 10.97, "ms": 7080.0}, …],
+ "systems": [{"index": 0, "first": 177, "last": 552, "top": 3.0, "bottom": 20.2,
+              "staff_top": 5.03, "staff_bottom": 19.68, "left": 3.0, "right": 135.0}, …],
+ "segments": [{"start": 177, "end": 577, "state": "llm"}, …],
+ "source": "llm", "stale": false,
+ "llm": {"state": "done", "jobId": null, "available": true, "auto": false, "canRun": false,
+         "viaEdit": false, "usd": 0.68, "written": "2026-10-25T15:40:00+00:00"},
+ "timings": {"parse_ms": 6.1, "plan_ms": 18.0, "draw_ms": 12.9, "svg_ms": 4.7, "cursor_ms": 0.1, "total_ms": 41.8}}
+```
+
+- The sheet is the stored one (`sheet.f1`) when it was written for the current `handsRevision`; laid again on the
+  current notes when they or the hands changed (`stale: true`); the algorithm's on the starting hands when none
+  is stored. While Sonnet writes it is the sheet of that moment.
+- `segments`: Sonnet's windows (`working`: at Sonnet now; `waiting`; `llm`; `algorithm`: a window that failed);
+  empty on a sheet Sonnet never wrote.
+- `llm.auto`: a new transcription asked for Sonnet (`sheet.pending`) and the user may change the part: the page
+  starts it. `canRun`: **Enhance with AI** is offered (on a sheet the AI enhanced, as **Enhance it again with AI**).
+  `enhanced`: the AI wrote this sheet or part of it (`sheet.f1` with source `llm` or `mixed`); it stays through
+  every later change of the notes or the hands. `runs`: how many AI runs wrote it. `viaEdit`: the owner's
+  version of My library, which changes through its edit copy.
+- `409` before the notes exist; the usual `404` of the rights.
+
+`POST /sheet/{uuid}/llm` answers `202 {"jobId", "status"}` (`409` when no API key or SDK is set up). The job's
+stream sends `event: sheet` with `{"phase": "reference" | "windows" | "window" | "saved", "done", "total"}`, then
+`event: done` with `source`, `windows`, `usd`. The job stops asking Sonnet when the part is deleted.
+
 ## 5. `/passages`: Recording in Sheet
 
 Implementation 02, Phase 9 (plan section 13). A passage is a stretch of a part being re-recorded,
@@ -867,7 +902,7 @@ Epics 11 and 13 (`/audio/{uuid}/edits`, `POST /audio/compose`) was removed in Ph
 ## 6. `/pieces`: the steps of a project
 
 The page of a project (`/projects/:id/:step` in the frontend, the "flow page" of implementation 08)
-has five steps: Source, Audio, Notes, Hands, Sheet.
+has four steps: Source, Audio, Notes, Sheet (the Hands step was removed by implementation 03, Phase 5).
 Before implementation 08 nothing on the backend could say which of these steps a piece had
 completed, and the notes could only be edited through the sheet's columns and rows. The `/pieces`
 router (`api/pieces.py`, Phase 5) gives the page one status answer to enable its tabs from, the notes
@@ -888,15 +923,15 @@ chain is described in
  "scratch": false}
 ```
 
-- `steps` holds `source`, `audio`, `notes`, `hands`, `sheet`, in that order.
+- `steps` holds `source`, `audio`, `notes`, `sheet`, in that order.
 - `state` is `missing` (never made), `running` (a transcription is working on it), `stale` (made
   from an older revision of an earlier step) or `ready`.
 - `enabled` is true when every step before it is ready. A stale Sheet tab stays enabled, because it
   opens with a banner that asks the reader to write the sheet again.
 - `reason` is a sentence the page shows as it is, as the tab's tooltip or a banner.
 - `details`: `audio` gives `audioRevision` and `cuts` (a count); `notes` gives `noteCount` and
-  `engine`, plus `jobId` and `jobStatus` while running; `hands` gives `withoutHand`, `unplaced`,
-  `guessed` and `saved`.
+  `engine`, plus `jobId` and `jobStatus` while running; `sheet` gives `newSheet` (a `sheet.f1` is stored),
+  `legacy` (the state of the old `sheet.json`) and, while Sonnet writes, `jobId` and `jobStatus`.
 - `resume` is the furthest enabled step that is ready or running (or a stale Sheet): the tab a piece
   opens on.
 - `revisions` are the numbers the states are computed from: `audio` (`timeline.json`), `notes`,
@@ -907,11 +942,9 @@ chain is described in
   audio ends it.
 
 The Notes step is `stale` when `notesAudio` differs from `audio` (a cut was saved after the
-transcription). The Hands step is `ready` when every live note the piano sheet places at 40 ms has a
-hand. A note the sheet cannot place (shorter than one column, or sharing its column with another
-note of its key) stays without a hand, is counted in `unplaced`, and does not keep the step from
-being ready. A piece transcribed before Phase 5 that already has a saved sheet reads its Hands step
-as `ready` with `saved: false`. The Sheet step is `stale` when `sheetHands` differs from `hands`.
+transcription). The Sheet step is enabled once the notes are ready, `running` while Sonnet writes, `ready` with a
+stored new sheet or a current `sheet.json`, and `stale` when only a `sheet.json` is left and `sheetHands` differs
+from `hands`.
 
 `404` for an unknown uuid. The answer takes 5 to 24 ms.
 
@@ -1045,7 +1078,8 @@ the Private Library since Phase 6 (§7.1).
 |---|---|
 | `id`, `title`, `kind`, `layer`, `mine` | `kind`: `song` or `integratedPlaylist`; `layer`: `vault`, `private`, `public`, or `request` (the copy a request sent, Phase 14); `mine`: the user owns it (a library project of another user is one shared with them, Phase 14) |
 | `step` | The lowest `resume` of the parts (`source`, `audio`, `notes`, `hands`, `sheet`), kept in `projects.step` and worked out again only after a part changed |
-| `running` | `transcribing` or `reading` while a job works on a part, else `null` |
+| `running` | `transcribing` or `reading` while a job works on a part, `writing` while Sonnet writes the sheet of a part (implementation 03, Phase 5), else `null` |
+| `enhanced` | The AI wrote the sheet of a part of it (its `sheet.f1` record says `llm` or `mixed`; implementation 03, Phase 5) |
 | `parts` | The ids of the parts, in order |
 | `source` | Where the first part's audio came from (`upload`, `youtube`, `recording` ...) |
 | `hasVideo`, `hasNotes` | The first part has a video; it has notes |

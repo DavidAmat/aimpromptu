@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
+from aitu_backend.part_sheet import store as sheet_store
 from aitu_backend.db import tools
 from aitu_backend.db.database import session
 from aitu_backend.db.models import Artist, ArtistName, PrivateVersion, Project, Song, SongArtist
@@ -44,6 +45,8 @@ class SongRow(_Camel):
     versions: int
     #: A version of the song is being edited in Projects.
     editing: bool = False
+    #: The AI enhanced the sheet of a version of the song (implementation 03, Phase 5).
+    enhanced: bool = False
     updated_at: datetime | None = Field(None, alias="updatedAt")
 
 
@@ -60,6 +63,8 @@ class VersionRow(_Camel):
     edit_copy: str | None = Field(None, alias="editCopy")
     #: How many earlier states the version keeps.
     history: int = 0
+    #: The AI enhanced the sheet of a part of the version (implementation 03, Phase 5).
+    enhanced: bool = False
 
 
 class SongDetail(_Camel):
@@ -142,6 +147,14 @@ def _credits(found: list[rows.Credit]) -> list[Credit]:
     return [Credit(artist_id=one.artist_id, name_id=one.name_id, name=one.name) for one in found]
 
 
+def _enhanced(project_id: str) -> bool:
+    """The AI enhanced the sheet of a part of the project (the record line of its ``sheet.f1``)."""
+    try:
+        return any(sheet_store.enhanced(part_id) for part_id in bundle.part_ids_of(project_id))
+    except Exception:  # noqa: BLE001 - a project that cannot be read has no mark
+        return False
+
+
 def _versions(owner: int, versions: list[PrivateVersion]) -> list[VersionRow]:
     project_ids = [one.project_id for one in versions]
     with session() as db:
@@ -153,7 +166,7 @@ def _versions(owner: int, versions: list[PrivateVersion]) -> list[VersionRow]:
     out: list[VersionRow] = []
     for one in versions:
         step, updated = projects.get(one.project_id, (None, None))
-        if step is None:
+        if step is None or step == "hands":
             step = tools.refresh_step(one.project_id)
         out.append(
             VersionRow(
@@ -166,6 +179,7 @@ def _versions(owner: int, versions: list[PrivateVersion]) -> list[VersionRow]:
                 updated_at=bundle.last_change(one.project_id) or updated,
                 edit_copy=copies.get(one.project_id),
                 history=len(flow.history(one.project_id)),
+                enhanced=_enhanced(one.project_id),
             )
         )
     return out
@@ -235,6 +249,7 @@ def list_songs() -> list[SongRow]:
                 artists=_credits(credits[one.id]),
                 versions=len(versions[one.id]),
                 editing=any(v.project_id in copies for v in versions[one.id]),
+                enhanced=any(_enhanced(v.project_id) for v in versions[one.id]),
                 updated_at=max(
                     (times[v.project_id] for v in versions[one.id] if v.project_id in times),
                     default=one.created_at,

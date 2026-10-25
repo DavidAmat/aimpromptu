@@ -1,0 +1,29 @@
+F1 bars
+clefs: R=treble L=treble
+bar 60 meter=4/4 key=3b
+1 f0           L: Ab3,C4,Ab4:8  R: Ab5:8 (t3 b1 8va
+1+1/3 f5       R: Eb4:8 t3 b1
+1+2/3 f10      R: Ab4:8 t3 b1
+2 f15          R: C5:8 t3 b2
+2+1/3 f20      R: Ab4:8 t3 b2
+2+2/3 f25      R: Eb4:8 t3 b2
+3 f30          R: Eb5:8 t3 b3
+3+1/3 f35      R: C5:8 t3 b3
+3+2/3 f40      R: Ab4:8 t3 b3
+4 f45          L: clef=bass Ab3:8. b4  R: Ab4:8 t3 b5
+4+1/3 f50      R: C5:8 t3 b5
+4+2/3 f55      R: Eb5:8 t3 b5
+4+3/4 f56      L: C4:16 b4
+bar 61
+1 f60          L: Eb4:4  R: Eb5:8 (t3 b6
+1+1/3 f65      R: Bb4:8 t3 b6
+1+2/3 f70      R: G4:8 t3 b6
+2 f75          L: Eb4:4  R: Eb5:8 t3 b7
+2+1/3 f80      R: Bb4:8 t3 b7
+2+2/3 f85      R: G4:8 t3 b7
+3 f90          L: Eb4:4  R: Eb5:8 t3 b8
+3+1/3 f95      R: Bb4:8 t3 b8
+3+2/3 f100     R: Ab4:8 t3 b8
+4 f105         L: Eb4:4  R: Bb4:8 t3 b9
+4+1/3 f110     R: Eb5:8 t3 b9
+4+2/3 f115     R: G5:8 t3 b9

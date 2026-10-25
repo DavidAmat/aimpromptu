@@ -1,0 +1,31 @@
+F1 bars
+clefs: R=treble L=bass
+bar 59 meter=3/4 key=4b
+1        L: Eb3,Eb4:4  R: Eb5:4
+2        L: clef=treble C4,Eb4,Ab4,C5:4  R: Eb5,Eb6:8 b1
+2+1/2    R: Eb5,Eb6:8 b1
+3        L: C4,Eb4,Ab4,C5:4  R: Eb5,Eb6:4
+bar 60
+1        L: clef=bass Eb3,Eb4:4  R: Eb6:4 mord 8va
+2        L: clef=treble Db4,Eb4,G4,Db5:4  R: D6:8 b2 8va
+2+1/2    R: Eb6:8 b2 8va
+3        L: Db4,Eb4,G4,Db5:4  R: Ab5,Ab6:8 b2 8va
+3+1/2    R: Bb5,Bb6:8 b2 8va
+bar 61
+1        L: clef=bass Ab2,Ab3:4  R: C6,Ab6,C7:4. 8va
+2        L: clef=treble C4,Eb4,Ab4,C5:4
+2+1/2    R: C6,Ab6,C7:8 8va
+3        R: C6,Ab6,C7:8 b3 8va
+3+3/4    R: C6,Ab6,C7:16 b3 8va
+bar 62
+1        L: Bb3,Bb4:4  R: C6,Ab6,C7:4 8va
+2        L: Db5,F5,G5,Bb5:4
+2+1/2    R: Bb5,G6,Bb6:8 8va
+3        L: Db5,F5,G5,Bb5:4  R: Bb5,G6,Bb6:8 b4 8va
+3+3/4    R: Bb5,G6,Bb6:16 b4 8va
+bar 63
+1        L: Ab3,Bb3,Db4,Ab4:4  R: Ab5,F6,Ab6:4 8va
+2        L: Ab3,Bb3,Db4,Ab4:4
+2+1/2    R: G5,Eb6,G6:8 8va
+3        L: clef=bass F3,Ab3,Bb3,Db4:4  R: G5,Eb6,G6:8 b5 8va
+3+3/4    R: F5,Db6,F6:16 b5 8va

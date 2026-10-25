@@ -23,6 +23,7 @@
     "check:passage": "node scripts/check-passage.mjs",
     "check:compose": "node scripts/check-compose.mjs",
     "check:play": "node scripts/check-play.mjs",
+    "check:frames-sheet": "node scripts/check-frames-sheet.mjs",
     "check:public": "node scripts/check-public.mjs",
     "check:requests": "node scripts/check-requests.mjs",
     "check:journey": "node scripts/check-journey.mjs",

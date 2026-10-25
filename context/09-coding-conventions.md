@@ -13,7 +13,7 @@ Grounded in existing configs and visible patterns across the codebase. Do not in
 
 | Convention | Detail |
 |------------|--------|
-| Layout | `src/aitu_backend/` package; hatchling wheel. Feature packages: `api/`, `matrix/`, `audio/`, `transcription/`, `storage/`, `notation/`, `schemas/` |
+| Layout | `src/aitu_backend/` package; hatchling wheel. Feature packages: `api/`, `matrix/`, `audio/`, `transcription/`, `storage/`, `notation/`, `sheet/`, `schemas/`. `sheet/` (the new sheet chain, implementation 03) is copied from the research core: black and flake8 apply, mypy skips it until it is typed |
 | Dependencies | `uv` + `uv.lock`; `uv sync` to install (runtime deps + the `dev` group) |
 | Notation logic | Single source of truth: `matrix/text_notation.py` — do not duplicate parsing elsewhere |
 | Key tables | Single source of truth: `matrix/keys.py` (88-key order, EN/ES names, MIDI) |

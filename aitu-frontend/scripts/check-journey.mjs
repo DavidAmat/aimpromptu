@@ -11,7 +11,8 @@
  * removes the two users with everything they made, then the public song and artist.
  *
  * 1. The author: **New project**, a YouTube link, **Download the audio**; **Transcribe**, followed
- *    live; **Predict hands**, Save; the Sheet step, Save; **Save to library**.
+ *    live; the Sheet step (no Hands step since implementation 03, Phase 5): the new sheet at once, Sonnet
+ *    writes it in the background (it costs about $1 of the monthly credits for a song); **Save to library**.
  * 2. The author: **Publish** the version, **Propose this song** (a new song, a new artist).
  * 3. The master user: **Review**, every item accepted.
  * 4. The reader: the song on Public songs, **Add to my library**; **Play** in Play mode, playing.
@@ -187,31 +188,17 @@ try {
   const notes = (await as('author', `/pieces/${projectId}/notes`)).body;
   check('the transcription gives notes', notes?.id?.length > 100, `${notes?.id?.length} notes, ${engine.engine ?? JSON.stringify(engine)}`);
 
-  await author.getByRole('tab', { name: 'Hands', exact: true }).click();
-  await author.waitForURL('**/hands');
-  await author.getByRole('button', { name: 'Predict hands', exact: true }).waitFor();
-  await timed('Predict hands', 'the hands on screen', async () => {
-    await author.getByRole('button', { name: 'Predict hands', exact: true }).click();
-    await author.waitForSelector('[data-predicted]', { timeout: 120000 });
-  });
-  await shot(author, '03-hands');
-  await timed('Save the hands', 'saved', async () => {
-    await author.getByRole('button', { name: 'Save', exact: true }).first().click();
-    await saved(author);
-  });
-
   await author.waitForFunction(() => {
     const tab = document.querySelector('[role=tab][data-step=sheet]');
     return tab && tab.getAttribute('aria-disabled') !== 'true';
   }, null, { timeout: 15000 });
   await timed('The Sheet step', 'the first notehead drawn', async () => {
     await author.getByRole('tab', { name: 'Sheet', exact: true }).click();
-    await author.waitForSelector('.grid-notehead', { timeout: 120000 });
+    await author.waitForSelector('[data-frames-sheet] [data-note]', { timeout: 120000 });
   });
   await shot(author, '04-sheet');
-  await timed('Save the sheet', 'saved', async () => {
-    await author.getByRole('button', { name: 'Save', exact: true }).click();
-    await saved(author);
+  await timed('Sonnet writes the sheet', 'the last segment back', async () => {
+    await author.waitForSelector('[data-frames-sheet][data-llm="done"]:not([data-working])', { timeout: 1800000 });
   });
   const status = (await as('author', `/pieces/${projectId}/status`)).body;
   check('every step of the project is ready', status.steps.every((one) => one.state === 'ready'), status.steps.map((one) => one.state).join(' '));
@@ -304,7 +291,7 @@ try {
   await timed('Play', 'Play mode, the first notehead drawn', async () => {
     await reader.getByTestId('song-play').click();
     await reader.waitForURL('**/play/**');
-    await reader.locator('[data-play-page] .grid-notehead').first().waitFor({ timeout: 120000 });
+    await reader.locator('[data-play-page] [data-frames-sheet] [data-note]').first().waitFor({ timeout: 120000 });
   });
   await timed('Play and Pause', 'the recording playing', async () => {
     await reader.getByTestId('play-toggle').click();
@@ -344,7 +331,7 @@ try {
     await reader.waitForURL(/\/projects\/[0-9a-f-]+\/sheet$/, { timeout: 120000 });
     // The compose page's own sheet is gone before the new project's first notehead counts.
     await reader.locator('[data-compose-source]').waitFor({ state: 'detached', timeout: 30000 });
-    await reader.waitForSelector('.grid-notehead', { timeout: 120000 });
+    await reader.waitForSelector('[data-frames-sheet] [data-note]', { timeout: 120000 });
   });
   const composed = /\/projects\/([0-9a-f-]+)\/sheet/.exec(reader.url())[1];
   const composedNotes = (await as('reader', `/pieces/${composed}/notes`)).body;

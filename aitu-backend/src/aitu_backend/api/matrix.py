@@ -22,7 +22,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import store
 from aitu_backend.audio.store import AudioNotFound
-from aitu_backend.matrix.keys import LOWEST_MIDI
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend import config
 from aitu_backend.auth.dependencies import require_job, require_part
@@ -162,34 +161,6 @@ class RawEvents(BaseModel):
 def _audio_or_404(audio_uuid: str) -> None:
     if not store.exists(audio_uuid):
         raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
-
-
-def _hand_labels(audio_uuid: str, frame_ms: float) -> dict[tuple[int, int], str]:
-    """``(row, column) -> "right" | "left"`` for every onset, or an empty map.
-
-    The split runs on a grid and the events do not, so this is a lookup keyed by
-    where each onset landed on that grid rather than a value carried on the note.
-    Nothing here is stored: the answer is re-derived per request from the same
-    ``events.json`` the sheet is drawn from, which is what stops a colour on this
-    page from disagreeing with a stem direction on the other one.
-
-    A failure is swallowed on purpose. This is a decoration on an endpoint whose
-    job is to show the transcription verbatim, and a piece that cannot be split
-    still has notes worth looking at.
-    """
-    try:
-        hands = pipeline.hands_of(audio_uuid, frame_ms=frame_ms)
-    except Exception:  # pragma: no cover - the split is advisory here
-        return {}
-    if hands is None:
-        return {}
-
-    labels: dict[tuple[int, int], str] = {}
-    for name, matrix in (("left", hands.left), ("right", hands.right)):
-        for column in range(matrix.frame_count):
-            for row in matrix.onsets_in_column(column):
-                labels[(row, column)] = name
-    return labels
 
 
 @router.get("/engines")
@@ -352,9 +323,10 @@ def get_raw_events(
     the response, because the point of this route is to show what the rest of the
     system chose not to use.
 
-    ``frameMs`` decides nothing about the times below. It is the column length the
-    hand split is run at, and it is here so that a view colouring left against
-    right colours it the same way the sheet does.
+    ``frameMs`` decides nothing about the times below. It was the column length the
+    hand split ran at, to colour each note by hand; since implementation 03, Phase 5
+    a note carries only its saved hand, and the parameter is kept for the pages that
+    send it.
     """
     _audio_or_404(audio_uuid)
     stored = pipeline.load_note_events(audio_uuid)
@@ -375,24 +347,14 @@ def get_raw_events(
         report = drop_artifacts(stored.events)
         dropped_events, octave_phantoms = report.dropped, report.octave_phantoms
     discarded = {id(dropped.event): dropped for dropped in dropped_events}
-    labels = _hand_labels(audio_uuid, frame_ms)
-    seconds_per_column = frame_ms / 1000.0
 
     events = []
     for event in stored.events:
         dropped = discarded.get(id(event))
-        row = event.midi_note - LOWEST_MIDI
-        column = int(event.start / seconds_per_column)
-        # The onset is looked for in the neighbouring columns too. Rounding a
-        # boundary onset the other way than the grid builder did would otherwise
-        # lose the label, and an unlabelled note is drawn in the wrong colour
-        # rather than merely uncoloured.
-        hand = (
-            event.hand
-            or labels.get((row, column))
-            or labels.get((row, column + 1))
-            or labels.get((row, column - 1))
-        )
+        # Only the saved hands (implementation 03, Phase 5, plan section 3.5): the hand split is no longer shown
+        # before Sonnet decides the hands, so Notes Falling plays new notes without hand colours. Every part of the
+        # database had saved hands when the split's labels stopped (2026-10-25).
+        hand = event.hand
 
         events.append(
             RawNoteEvent(

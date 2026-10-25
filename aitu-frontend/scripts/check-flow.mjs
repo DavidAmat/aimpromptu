@@ -13,8 +13,11 @@
  *   grow, the progress bar moves), then the editor: select, move, undo and redo, resize, add,
  *   delete, a band, Save (checked against `GET /pieces/{uuid}/notes`), undo after the save, and
  *   playback from the ruler;
- * - the Hands tab (Predict hands, the filter, R and L, Save) and the Sheet tab (drawn on arrival with
- *   the defaults, Save; a notes edit makes it stale, its banner, Write the sheet, Save).
+ * - no Hands step (implementation 03, Phase 5): the Notes step goes on to the Sheet step, and has no hand
+ *   colours before Sonnet decides the hands; the Sheet step draws the new sheet at once and starts Sonnet by
+ *   itself (a pale segment while it works). The walk deletes its upload at the end, which stops Sonnet at its
+ *   next request: a run costs one or two requests (a few cents). The old sheet's tools are walked by
+ *   `check:sheet-toolbox` and `check:paste`.
  *
  *     npm run check:flow
  *     npm run check:flow -- --audio ../some.mp3 --out /tmp/flow --no-transcribe
@@ -106,15 +109,16 @@ try {
   await page.goto(`${base}/projects/a585f9eb-36a1-49a0-9f0c-2626f3d292da`);
   await page.waitForURL('**/notes');
   check('a transcribed piece opens on the Notes tab', page.url().endsWith('/notes'));
-  await page.goto(`${base}/projects/a585f9eb-36a1-49a0-9f0c-2626f3d292da/sheet`);
-  await page.waitForURL('**/notes');
-  check('a disabled tab in the address goes to the resume step', page.url().endsWith('/notes'));
+  // The new upload has no notes yet: its Sheet tab cannot be opened, and says why.
+  await page.goto(`${base}/projects/${uuid}/sheet`);
+  await page.waitForURL('**/audio');
+  check('a disabled tab in the address goes to the resume step', page.url().endsWith('/audio'));
   const sheetTab = page.getByRole('tab', { name: 'Sheet', exact: true });
   await sheetTab.hover();
   await page.waitForSelector('[role=tooltip]');
   const tip = await page.locator('[role=tooltip]').textContent();
-  check('the disabled Sheet tab says why', /Predict hands first/.test(tip ?? ''), tip);
-  await shot('02-notes-tooltip');
+  check('the disabled Sheet tab says why', /Transcribe first/.test(tip ?? ''), tip);
+  await shot('02-sheet-tooltip');
 
   // 3. The new upload opens on Audio.
   await page.goto(`${base}/projects/${uuid}`);
@@ -457,173 +461,26 @@ try {
   check('Play starts from the playhead', first >= rested && first < rested + 300, `started after ${startedAfter} ms, at ${first} ms`);
   check('the playhead keeps the pace of the audio', Math.abs((to - from) - wall) < 150, `${to - from} ms of audio in ${wall} ms`);
 
-  // 14. The Hands tab: Predict hands with its progress, the filter, a note to the other hand, Save,
-  //     and the hand colours on the Notes tab.
-  await page.getByRole('tab', { name: 'Hands', exact: true }).click();
-  await page.waitForURL('**/hands');
-  const predictButton = page.getByRole('button', { name: 'Predict hands', exact: true });
-  await predictButton.waitFor();
-  await page.waitForTimeout(400);
-  await shot('16-hands-before');
-  await predictButton.click();
-  let sawProgress = false;
-  for (let i = 0; i < 100 && !sawProgress; i += 1) {
-    sawProgress = (await page.locator('[role=status]').count()) > 0;
-    if (!sawProgress) await page.waitForTimeout(10);
-  }
-  if (sawProgress) await shot('17-predicting');
-  check('Predict hands shows a progress bar while it runs', sawProgress);
-  const predictedText = (await page.locator('[data-predicted]').textContent({ timeout: 30000 })) ?? '';
-  check('Predict hands says what it found', /^\d+ notes? changed hand/.test(predictedText), predictedText);
-  const progressWidth = await page.evaluate(() => document.querySelector('[role=status]')?.getBoundingClientRect().width ?? 0);
-  check('the progress bar is gone at the end', progressWidth === 0, String(progressWidth));
-  await page.waitForTimeout(300);
-  await shot('18-predicted');
-  check('the prediction is an unsaved change', /^Unsaved: \d+ notes with another hand$/.test((await unsaved()) ?? ''), await unsaved());
-  const handsTab = page.getByRole('tab', { name: 'Hands', exact: true });
-  check('while it is unsaved, the Hands step shows an amber dot', (await handsTab.getAttribute('data-state')) === 'unsaved', await handsTab.getAttribute('data-state'));
-  const coloured = await page.evaluate(() => {
-    const canvas = document.querySelector('canvas[data-roll=base]');
-    const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
-    let blue = 0;
-    let green = 0;
-    for (let i = 0; i < data.length; i += 16) {
-      if (data[i] < 190 && data[i + 1] > 170 && data[i + 2] > 230) blue += 1; // light blue
-      if (data[i] < 180 && data[i + 1] > 215 && data[i + 2] > 190 && data[i + 2] < 225) green += 1; // light green
-    }
-    return { blue, green };
-  });
-  check('the rectangles take the colours of the two hands', coloured.blue > 50 && coloured.green > 50, JSON.stringify(coloured));
-  await page.getByRole('button', { name: 'Right', exact: true }).click();
-  await page.waitForTimeout(250);
-  await shot('19-right-only');
-  await page.getByRole('button', { name: 'Both', exact: true }).click();
-  // One note to the other hand, by its key: the note the walk moved earlier.
-  const g2 = await geometry();
-  const box2 = await top.boundingBox();
-  const rows2 = (box2.height - 24) / (g2.high - g2.low + 1);
-  const at2 = (ms) => box2.x + 46 + ((ms - g2.start) * g2.pxPerSec) / 1000;
-  const handsNow = (await (await fetch(`${api}/pieces/${uuid}/notes`)).json());
-  const visible = handsNow.id.map((id, i) => ({ id, key: handsNow.key[i], on: handsNow.onMs[i], len: handsNow.lenMs[i] }))
-    .find((note) => note.len >= 200 && note.on > g2.start + 300 && at2(note.on + note.len) < box2.x + box2.width - 20 && note.key > g2.low && note.key < g2.high);
-  if (visible) {
-    await page.mouse.click(at2(visible.on + visible.len / 2), box2.y + 24 + (g2.high - visible.key + 0.5) * rows2);
-    await page.keyboard.press('r');
-    await page.keyboard.press('l');
-    await page.waitForTimeout(150);
-  }
-  check('R and L move the selected note between the hands', Boolean(visible));
-  // The notes without a hand: select them, then go through them with the arrows.
-  const handlessButton = page.getByRole('button', { name: 'Select the notes without a hand' });
-  if (await handlessButton.count()) {
-    await handlessButton.click();
-    await page.getByRole('button', { name: 'Next note without a hand' }).click();
-    await page.waitForTimeout(250);
-    const reviewText = (await page.locator('[data-review]').first().textContent().catch(() => '')) ?? '';
-    check('the arrows go to one note without a hand at a time', /^1 \/ \d+$/.test(reviewText) && /^(Do|Re|Mi|Fa|Sol|La|Si)#? \d$/.test(await selectionName()), `${reviewText}, ${await selectionName()}`);
-    await shot('19b-review');
-    await page.keyboard.press('Escape');
-  }
-  await page.getByRole('button', { name: 'Save', exact: true }).first().click();
-  await page.waitForFunction(() => document.querySelector('[data-unsaved]')?.getAttribute('data-unsaved') === '', null, { timeout: 10000 });
-  await page.waitForTimeout(500);
-  const afterHands = await (await fetch(`${api}/pieces/${uuid}/notes`)).json();
-  const withHand = [...afterHands.hand].filter((h) => h !== '-').length;
-  check('Save writes the hands', withHand > afterHands.id.length * 0.9, `${withHand} of ${afterHands.id.length} notes have a hand`);
-  if (visible) check('the note given to the left hand is saved as left', afterHands.hand[afterHands.id.indexOf(visible.id)] === 'l');
-  const handsStatus = (await (await fetch(`${api}/pieces/${uuid}/status`)).json()).steps[3];
-  const handlessLeft = [...afterHands.hand].filter((h) => h === '-').length;
-  check('after Save the Hands step is ready, even with notes the sheet cannot place', handsStatus.state === 'ready' && handsStatus.details.unplaced === handlessLeft, `${handsStatus.state}, ${handlessLeft} without a hand`);
-  await page.waitForTimeout(300);
-  check('and the Hands step shows its dot as done again', (await handsTab.getAttribute('data-state')) === 'ready');
-  check('and the Sheet tab can be opened', (await page.getByRole('tab', { name: 'Sheet', exact: true }).getAttribute('aria-disabled')) !== 'true');
-  await shot('20-hands-saved');
-  await page.getByRole('tab', { name: 'Notes', exact: true }).click();
-  await page.waitForURL('**/notes');
+  // 14. No Hands step (implementation 03, Phase 5): Sonnet decides the hands with the sheet.
+  const tabs = await page.locator('[role=tab]').allInnerTexts();
+  check('the steps are Source, Audio, Notes, Sheet', !tabs.some((tab) => /Hands/.test(tab)), tabs.join(' | '));
   const handSwitch = page.getByLabel('Hand colours');
-  await handSwitch.waitFor();
-  check('the Notes tab colours by hand once the piece has hands', await handSwitch.isChecked());
-  await page.waitForTimeout(300);
-  await shot('21-notes-with-hands');
-  await handSwitch.click();
-  await page.waitForTimeout(300);
-  check('Hand colours can be turned off', !(await handSwitch.isChecked()));
-  await shot('22-notes-without-hands');
-  await handSwitch.click();
+  check('the Notes step has no hand colours before the sheet', (await handSwitch.count()) === 0 || (await handSwitch.isDisabled()));
+  const continueButton = page.getByRole('button', { name: 'Continue to Sheet', exact: true });
+  check('the Notes step goes on to the Sheet step', (await continueButton.count()) === 1);
 
-  // 15. The Sheet tab: the piano sheet inside the flow page. A new piece is drawn on arrival from the
-  //     defaults (implementation 02, Phase 2) and Save ticks the tab. A notes edit made elsewhere
-  //     makes it stale: the page waits with its banner until Write the sheet, then Save.
-  const sheetTabNow = page.getByRole('tab', { name: 'Sheet', exact: true });
-  const sheetState = async () => (await (await fetch(`${api}/pieces/${uuid}/status`)).json()).steps[4].state;
-  await sheetTabNow.click();
+  // 15. The Sheet step: the new sheet at once, and Sonnet started by itself on the new transcription.
+  await continueButton.click();
   await page.waitForURL('**/sheet');
-  await page.waitForSelector('[data-sheet-page]');
-  check('the Sheet tab opens the piano sheet in the project', (await page.locator('[data-sheet-page]').count()) === 1);
-  await page.waitForSelector('.grid-notehead', { timeout: 60000 });
-  check('a new piece is drawn without a button to press', (await page.getByRole('button', { name: 'Write the sheet' }).count()) === 0);
-  check('and its Save carries the unsaved dot', (await page.locator('[data-unsaved]').getAttribute('data-unsaved')) === 'unsaved');
-  check('undo has nothing to take back on arrival (the defaults are the baseline)', !(await page.getByRole('button', { name: /^Undo/ }).isEnabled()));
-  const writeSheet = page.getByRole('button', { name: 'Write the sheet', exact: true });
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.waitForFunction(() => document.querySelector('[data-sheet-banner]') === null, null, { timeout: 15000 });
-  await page.waitForTimeout(400);
-  check('Save makes the Sheet step ready, and its tab is ticked', (await sheetState()) === 'ready' && (await sheetTabNow.getAttribute('data-state')) === 'ready', await sheetState());
-  await shot('23-sheet-saved');
-  const sheetNotes = await (await fetch(`${api}/pieces/${uuid}/notes`)).json();
-  const edited = await fetch(`${api}/pieces/${uuid}/notes`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      baseRevision: sheetNotes.revision,
-      baseHandsRevision: sheetNotes.handsRevision,
-      ops: [{ op: 'move', id: sheetNotes.id[20], onMs: sheetNotes.onMs[20] + 30, lenMs: sheetNotes.lenMs[20] }],
-    }),
-  });
-  check('a notes edit made elsewhere makes the sheet stale', edited.ok && (await sheetState()) === 'stale', await sheetState());
-  await page.reload();
-  await page.waitForSelector('[data-sheet-banner=stale]');
-  await page.waitForTimeout(2500);
-  check('the stale sheet opens with its banner and is not drawn until Write the sheet', (await page.locator('.grid-notehead').count()) === 0);
-  check('and it cannot be saved before Write the sheet', (await page.getByRole('button', { name: /^Save/ }).count()) === 0);
-  await shot('24-sheet-stale');
-  await writeSheet.click();
-  await page.waitForSelector('.grid-notehead', { timeout: 60000 });
-  const afterWrite = (await page.locator('[data-sheet-banner=stale]').textContent()) ?? '';
-  check('after Write the sheet the banner asks for Save', /Save to keep it/.test(afterWrite), afterWrite);
-  check('and the step is still stale until Save', (await sheetState()) === 'stale');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.waitForFunction(() => document.querySelector('[data-sheet-banner]') === null, null, { timeout: 15000 });
-  await page.waitForTimeout(400);
-  check('Save makes the stale sheet ready again', (await sheetState()) === 'ready' && (await sheetTabNow.getAttribute('data-state')) === 'ready', await sheetState());
-  await shot('25-sheet-ready-again');
-
-  // 16. A hand move on a zoomed sheet (Command and the wheel, or a pinch). The rebuild used to read
-  //     the emptied, content-sized box as 0 wide, and the whole page fell over.
-  const firstHead = await page.locator('.grid-notehead').first().boundingBox();
-  await page.mouse.move(firstHead.x, firstHead.y);
-  await page.keyboard.down('Control');
-  for (let i = 0; i < 3; i += 1) { await page.mouse.wheel(0, -100); await page.waitForTimeout(100); }
-  await page.keyboard.up('Control');
-  await page.waitForTimeout(600);
-  const pick = await page.locator('.grid-note-target[data-hand=right]').nth(30);
-  const pickKey = await pick.getAttribute('data-note-key');
-  await pick.evaluate((node) => node.scrollIntoView({ block: 'center', inline: 'center' }));
-  await page.waitForTimeout(200);
-  const pickBox = await pick.boundingBox();
-  // Sent to the note itself: the playhead line may stand on it and take a real click.
-  await pick.evaluate((node, [x, y]) => {
-    for (const type of ['pointerdown', 'pointerup', 'click']) {
-      const Ctor = type === 'click' ? MouseEvent : PointerEvent;
-      node.dispatchEvent(new Ctor(type, { bubbles: true, clientX: x, clientY: y, button: 0, buttons: type === 'pointerdown' ? 1 : 0, pointerId: 1, isPrimary: true }));
-    }
-  }, [pickBox.x + pickBox.width / 2, pickBox.y + pickBox.height / 2]);
-  await page.getByRole('button', { name: 'Left', exact: true }).click();
-  const movedKey = `left:${pickKey.split(':').slice(1).join(':')}`;
-  await page.waitForSelector(`.grid-note-target[data-note-key="${movedKey}"]`, { timeout: 15000 }).catch(() => null);
-  check('a hand move on a zoomed sheet redraws it without an error',
-    (await page.locator('text=Unexpected Application Error').count()) === 0 && (await page.locator(`.grid-note-target[data-note-key="${movedKey}"]`).count()) === 1);
-  await shot('26-sheet-zoomed-move');
+  const begin = Date.now();
+  await page.locator('[data-frames-sheet] [data-note]').first().waitFor({ timeout: 60000 });
+  check('the Sheet step draws the new sheet at once', true, `${Date.now() - begin} ms`);
+  const working = await page.locator("[data-segment-state='working']").first().waitFor({ timeout: 30000 }).then(() => true, () => false);
+  check('Sonnet starts by itself, and the segment it works on looks pale', working);
+  check('the old sheet cannot be opened while Sonnet writes', await page.getByTestId('old-sheet').isDisabled());
+  await shot('16-sheet-sonnet-working');
+  const sheetStep = (await (await fetch(`${api}/pieces/${uuid}/status`)).json()).steps.find((step) => step.step === 'sheet');
+  check('the Sheet step is running while Sonnet writes', sheetStep.state === 'running', sheetStep.state);
   }
 } catch (caught) {
   check('the walk finished', false, caught instanceof Error ? caught.message.split('\n')[0] : String(caught));

@@ -25,7 +25,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
-import { signIn, useSession } from './session.mjs';
+import { oldSheet, signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { values } = parseArgs({
@@ -85,6 +85,7 @@ const notesOf = async (id) => {
 };
 const waitForSheet = async () => {
   await page.waitForSelector('[data-sheet-title]', { timeout: 60000 });
+  await oldSheet(page, { timeout: 60000, drawn: false });
   await page.waitForSelector('.grid-note-target', { timeout: 60000 });
   await page.waitForTimeout(800);
 };

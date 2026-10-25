@@ -1,0 +1,5 @@
+2026-10-23
+instructions.md: the measured phase 7 prompt (Opus, 64 / 64 pop windows accepted), with the user's left-hand clef
+rules of phase 14 (version 4: bass -> treble -> treble + 8va, never 8va in the bass clef), the hand rule for an
+isolated high left-hand note (hand.7), and the API answer section. Built by aitu_research.llm.prompts.product_instructions.
+feedback.md: the message after a rejected answer; {errors} = one "- problem" line per problem.

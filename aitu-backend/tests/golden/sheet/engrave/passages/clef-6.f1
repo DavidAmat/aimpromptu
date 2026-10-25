@@ -1,0 +1,47 @@
+F1 bars
+clefs: R=treble L=bass
+bar 289 meter=2/4 key=4b
+1 f0           L: C4:16 b1  R: Ab4:16 b2
+1+1/4 f3       L: Db4:16 b1  R: Bb4:16 b2
+1+1/2 f5       L: C4:16 b1  R: Ab4:16 b2
+1+3/4 f8       L: Bb3:16 b1  R: G4:16 b2
+2 f10          L: Ab3:16 b3  R: F4:16 b4
+2+1/4 f13      L: G3:16 b3  R: Eb4:16 b4
+2+1/2 f16      L: F3:16 b3  R: Db4:16 b4
+2+3/4 f18      L: Eb3:16 b3  R: C4:16 b4
+bar 290
+1 f21          L: Db3:16 b5  R: clef=bass Bb3:16 b6
+1+1/4 f23      L: C3:16 b5  R: Ab3:16 b6
+1+1/2 f26      L: Bb2:16 b5  R: G3:16 b6
+1+3/4 f29      L: Ab2:16 b5  R: F3:16 b6
+2 f31          L: G2:16 b7  R: E3:8
+2+1/4 f34      L: Ab2:16 b7
+2+1/2 f36      L: Bb2:16 b7  R: C3,E3,G3,C4:8
+2+3/4 f39      L: Ab2:16 b7
+bar 291
+1 f42          L: G2:16 b8  R: C3,E3,Bb3,C4:8 b9
+1+1/4 f44      L: F2:16 b8
+1+1/2 f47      L: E2:16 b8  R: C3,E3,Bb3,C4:8 b9
+1+3/4 f49      L: D2:16 b8
+2 f52          L: C2:16 b10  R: C3,E3,Bb3,C4:8 b9
+2+1/4 f55      L: Bb1:16 b10
+2+1/2 f57      L: Ab1:16 b10  R: C3,E3,Bb3,C4:8 b9
+2+3/4 f60      L: G1:16 b10
+bar 292
+1 f63          L: F1,Ab1,C2,F2:8  R: C3,F3,Ab3,C4:16
+1+1/4 f65      R: clef=treble C5:16 b11
+1+1/2 f68      R: F5:16 b11
+1+3/4 f70      R: Ab5:16 b11
+2 f73          L: clef=treble  R: C6:16 b12
+2+1/4 f76      L: C4:16 b13  R: Db6:16 b12
+2+1/2 f78      L: F4:16 b13  R: C6:16 b12
+2+3/4 f81      L: Ab4:16 b13  R: Bb5:16 b12
+bar 293
+1 f83          L: C5:16 b14  R: Ab5:16 b15
+1+1/4 f86      L: Db5:16 b14  R: Bb5:16 b15
+1+1/2 f89      L: C5:16 b14  R: Ab5:16 b15
+1+3/4 f91      L: Bb4:16 b14  R: G5:16 b15
+2 f94          L: Ab4:16 b16  R: F5:16 b17
+2+1/4 f96      L: G4:16 b16  R: Eb5:16 b17
+2+1/2 f99      L: F4:16 b16  R: Db5:16 b17
+2+3/4 f102     L: Eb4:16 b16  R: C5:16 b17

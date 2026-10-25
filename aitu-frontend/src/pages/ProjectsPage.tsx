@@ -27,6 +27,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import CircularProgress from "@mui/material/CircularProgress";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
@@ -44,6 +45,7 @@ import UploadFileIcon from "@mui/icons-material/UploadFileOutlined";
 import PlayIcon from "@mui/icons-material/PlayCircleOutlined";
 import { useNavigate } from "react-router-dom";
 import { projectsApi, type ProjectRow } from "../api";
+import { AiMark } from "../components/piece/AiMark";
 import { STEP_LABELS } from "../components/piece/stepLabels";
 import { ROUTES } from "../layout/routes";
 import {
@@ -56,6 +58,13 @@ import {
   PillButton,
   relativeTime,
 } from "../ui";
+
+/** What a job working on a project now is doing, in the words of the spinner's tooltip. */
+const RUNNING_WORDS: Record<NonNullable<ProjectRow["running"]>, string> = {
+  transcribing: "Transcribing",
+  reading: "Reading the video",
+  writing: "The AI is enhancing the sheet",
+};
 
 /** What a row says about the step the project reached. */
 function stepWords(row: ProjectRow): string {
@@ -104,7 +113,7 @@ export function ProjectsPage() {
     return () => controller.abort();
   }, [reload]);
 
-  // A running transcription or reading changes the row's step when it ends: look again now and then.
+  // A running transcription, reading or AI run changes the row when it ends: look again now and then.
   const anyRunning = rows?.some((row) => row.running !== null) ?? false;
   useEffect(() => {
     if (!anyRunning) return;
@@ -206,6 +215,23 @@ export function ProjectsPage() {
             <ListRow
               data-testid={`project-${row.id}`}
               title={title}
+              // One small slot before every name, so the names stay aligned: a spinner while a job works
+              // on the project (the AI enhancing its sheet, above all: minutes, in the background), else the
+              // green AI mark once the AI has enhanced it (the icon of Enhance with AI), the same mark faint and
+              // hollow on a project with notes the AI has not enhanced yet, else nothing.
+              leading={
+                <AiMark
+                  enhanced={row.enhanced}
+                  could={row.step === "notes" || row.step === "sheet"}
+                  busy={
+                    row.running ? (
+                      <Tooltip title={RUNNING_WORDS[row.running]}>
+                        <CircularProgress size={14} thickness={5} aria-label={RUNNING_WORDS[row.running]} data-running={row.running} />
+                      </Tooltip>
+                    ) : undefined
+                  }
+                />
+              }
               onOpen={() => navigate(ROUTES.project(first))}
               status={
                 row.editing ? (

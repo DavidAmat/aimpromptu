@@ -251,7 +251,8 @@ def test_a_run_stores_the_recorded_notes_and_nothing_else(scale_audio: str) -> N
     assert hands.frame_count == round(5.0 * 1000 / DEFAULT_FRAME_MS)
 
     written = sorted(path.name for path in paths.part_dir(scale_audio).iterdir())
-    assert written == ["notes.pmn", "timeline.json"]
+    # `sheet.pending`: the new notes ask Sonnet to write their sheet (implementation 03, Phase 5).
+    assert written == ["notes.pmn", "sheet.pending", "timeline.json"]
 
 
 @needs_ffmpeg

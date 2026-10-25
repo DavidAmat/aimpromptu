@@ -32,13 +32,19 @@ ARG UID=1000
 ARG GID=1000
 RUN groupadd --gid "${GID}" app \
     && useradd --uid "${UID}" --gid "${GID}" --create-home --home-dir /home/app app \
-    && install -d -o app -g app /opt/venv /work/aimpromptu/aitu-backend
+    && install -d -o app -g app /opt/venv /opt/python /work/aimpromptu/aitu-backend
 
 # The environment lives outside the mounted folder, so the host's own `.venv` (built for the host)
 # is never used in here and the other way round.
+#
+# The Python of the environment is uv's (python-build-standalone), not Debian's: the new sheet engine draws about
+# 30 % faster on it (implementation 03, Phase 3 section 7.2: the container went from 32 % slower than the host to
+# about 8 %). It is downloaded once, in its own layer, into /opt/python; every later uv call stays offline.
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_INSTALL_DIR=/opt/python \
+    UV_PYTHON_PREFERENCE=only-managed \
     UV_PYTHON_DOWNLOADS=never \
     UV_FROZEN=1 \
     PATH=/opt/venv/bin:$PATH \
@@ -46,6 +52,8 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
 
 USER app
 WORKDIR /work/aimpromptu/aitu-backend
+
+RUN UV_PYTHON_DOWNLOADS=automatic uv python install 3.12
 
 # Every engine and the dev tools (pytest, black, flake8, mypy). Only the two files that decide the
 # environment are needed here, so a code change never rebuilds this layer.

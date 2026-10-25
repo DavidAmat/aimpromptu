@@ -555,6 +555,8 @@ const PlaySegment = memo(function PlaySegment({
       onChanged: () => undefined,
       readOnly: true,
       play,
+      // The new sheet (implementation 03, Phase 5): Play mode draws what the Sheet step shows first.
+      newSheet: true,
     }),
     [part.id, part.title, play],
   );

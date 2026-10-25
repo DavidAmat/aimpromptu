@@ -1,0 +1,50 @@
+[
+ {
+  "case": 1,
+  "part": "4cb9cb38-f6a6-4ef9-bd11-9021b5e10e22",
+  "first": 1240,
+  "end": 1420
+ },
+ {
+  "case": 2,
+  "part": "1a16a836-62b9-483b-af46-d89d0ab1b2d8",
+  "first": 177,
+  "end": 420
+ },
+ {
+  "case": 3,
+  "part": "3c8d4cfa-6888-4fce-8e48-23ba778570c1",
+  "first": 1960,
+  "end": 2180
+ },
+ {
+  "case": 4,
+  "part": "2ed0f379-401b-4102-a102-a3655fa83296",
+  "first": 960,
+  "end": 1100
+ },
+ {
+  "case": 5,
+  "part": "c0edc9b0-cd26-41a4-b53e-de8de001c470",
+  "first": 480,
+  "end": 640
+ },
+ {
+  "case": 6,
+  "part": "f4c4de9a-b52a-490f-bb3a-0a4baaf6816b",
+  "first": 30,
+  "end": 220
+ },
+ {
+  "case": 7,
+  "part": "56543911-f14e-4936-92e4-ed1bdd278c54",
+  "first": 3020,
+  "end": 3120
+ },
+ {
+  "case": 8,
+  "part": "56543911-f14e-4936-92e4-ed1bdd278c54",
+  "first": 480,
+  "end": 680
+ }
+]

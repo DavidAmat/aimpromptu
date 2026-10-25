@@ -9,9 +9,10 @@
  *   tab), or a library piece opened from Projects (the click to the step it resumes on);
  * - `transcribe`: Transcribe to the first note received in the live view (`firstNote`), and to the saved notes on screen
  *   (`notes`); `backend` is no longer on screen (implementation 02, Phase 1) and stays empty;
- * - `hands`: Predict hands to its answer on screen (`predict`), then Save (`save`);
- * - `sheet`: the Sheet tab to the page (`open`), the Sheet tab to the first
- *   notehead drawn (`firstSheet`), then Save (`save`).
+ * - `sheet`: the Sheet tab to the page (`open`), the Sheet tab to the first notehead of the new sheet
+ *   (`firstSheet`), and to the first segment written by Sonnet (`firstSonnet`). There is no Hands step and no
+ *   Save since implementation 03, Phase 5: Sonnet decides the hands with the sheet, in the background. The pieces
+ *   are deleted at the end, which stops Sonnet at its next request (a few cents a piece).
  *
  * The three pieces, all temporary, deleted at the end, so the library is never changed:
  *
@@ -158,31 +159,6 @@ async function walk(name, arrive) {
     await page.waitForTimeout(500);
     await shot('2-notes');
 
-    // 3. Predict hands, then Save.
-    await page.getByRole('tab', { name: 'Hands', exact: true }).click();
-    await page.waitForURL('**/hands');
-    const predict = page.getByRole('button', { name: 'Predict hands', exact: true });
-    await predict.waitFor();
-    const predictPressed = Date.now();
-    await predict.click();
-    // What the prediction changed, said on the page (`data-predicted`) once it has answered.
-    await page.waitForSelector('[data-predicted]', { timeout: 120000 });
-    const predicted = (await page.locator('[data-predicted]').textContent()) ?? '';
-    const predictTime = Date.now() - predictPressed;
-    await page.waitForTimeout(300);
-    await shot('3-hands');
-    const savePressed = Date.now();
-    await page.getByRole('button', { name: 'Save', exact: true }).first().click();
-    await page.waitForFunction(() => document.querySelector('[data-unsaved]')?.getAttribute('data-unsaved') === '', null, { timeout: 30000 });
-    const handsSaved = Date.now() - savePressed;
-    const afterHands = await (await fetch(`${api}/pieces/${arrived.uuid}/notes`)).json();
-    row.hands = {
-      predict: predictTime,
-      page: predicted,
-      save: handsSaved,
-      withoutHand: [...afterHands.hand].filter((h) => h === '-').length,
-    };
-
     // 4. The Sheet tab: the first piano sheet, drawn on arrival (implementation 02, Phase 2), then
     //    Save. `open` is the tab press to the page, `firstSheet` the tab press to the first notehead
     //    (in implementation 08 it was the press of Write the sheet, a separate step after `open`).
@@ -197,20 +173,19 @@ async function walk(name, arrive) {
     await page.waitForURL('**/sheet');
     await page.waitForSelector('[data-sheet-page]', { timeout: 60000 });
     const sheetOpen = Date.now() - tabPressed;
-    await page.waitForSelector('.grid-notehead', { timeout: 120000 });
+    await page.waitForSelector('[data-frames-sheet] [data-note]', { timeout: 120000 });
     const firstSheet = Date.now() - tabPressed;
     await page.waitForTimeout(400);
     await shot('4-sheet');
-    const sheetSavePressed = Date.now();
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await page.waitForFunction(() => document.querySelector('[data-unsaved]')?.getAttribute('data-unsaved') === '', null, { timeout: 30000 });
-    const sheetSaved = Date.now() - sheetSavePressed;
+    // The first segment back from Sonnet starts to appear column by column.
+    const back = await page.waitForSelector('[data-revealing]', { timeout: 180000 }).then(() => true, () => false);
+    const firstSonnet = back ? Date.now() - tabPressed : null;
     const finalStatus = await (await fetch(`${api}/pieces/${arrived.uuid}/status`)).json();
     row.sheet = {
       open: sheetOpen,
       firstSheet,
-      save: sheetSaved,
-      noteheads: await page.locator('.grid-notehead').count(),
+      firstSonnet,
+      noteheads: await page.locator('[data-frames-sheet] [data-note]').count(),
       steps: finalStatus.steps.map((s) => s.state).join(' '),
     };
     row.total = Date.now() - started;
@@ -253,7 +228,7 @@ const pieces = {
     await item.waitFor({ timeout: 15000 });
     const t0 = Date.now();
     await item.click();
-    await page.waitForURL(new RegExp(`/projects/${uuid}/(audio|notes|hands|sheet)$`));
+    await page.waitForURL(new RegExp(`/projects/${uuid}/(audio|notes|sheet)$`));
     await page.locator('[role=tab][aria-selected=true]').waitFor();
     row.in = { how: 'library', ms: Date.now() - t0, opensOn: page.url().split('/').pop() };
     return { uuid };
@@ -281,12 +256,12 @@ try {
 }
 
 const seconds = (ms) => (ms === null || ms === undefined ? '-' : `${(ms / 1000).toFixed(1)} s`);
-console.log('\npiece | length | in | first note | notes | hands | sheet ready | first sheet | total');
+console.log('\npiece | length | in | first note | notes | sheet ready | first sheet | first Sonnet segment | total');
 for (const r of report) {
   if (r.error) { console.log(`${r.piece} | FAILED: ${r.error}`); continue; }
   console.log([
     r.piece, `${r.durationSeconds} s`, seconds(r.in?.ms), seconds(r.transcribe.firstNote), seconds(r.transcribe.notes),
-    seconds(r.hands.predict), seconds(r.sheet.open), seconds(r.sheet.firstSheet), seconds(r.total),
+    seconds(r.sheet.open), seconds(r.sheet.firstSheet), seconds(r.sheet.firstSonnet), seconds(r.total),
   ].join(' | '));
   if (r.problems.length) console.log(`  problems: ${r.problems.join('; ')}`);
 }

@@ -1,8 +1,37 @@
 # Rendering: how the sheet is drawn
 
-The staff is drawn by `@aimpromptu/grid-notation`, a TypeScript package developed in the sibling
-`vexflow-v2` checkout and installed from disk. One file in this app touches it:
-`components/time/TimeScoreView.tsx`.
+Two sheets live side by side while implementation 03 replaces the old one (plan:
+[`implementations/03-apply-poc-research/03-plan.md`](../implementations/03-apply-poc-research/03-plan.md)).
+
+## The new sheet (implementation 03, Phase 5)
+
+The Sheet step, a version of My library and Play mode show the **new sheet** first: the sheet without compases,
+tempo, puntillos or silencios that the backend draws (`aitu_backend.sheet.engrave.frames`, the Leipzig glyphs and
+Verovio's drawing rules). The page asks `GET /sheet/{part}?width=N` for the width it has (about 8.5 px a staff
+space) and gets one SVG and a cursor map: one row per drawn column (its line, its x, its time) and one box per
+line. The code is `pages/piece/sheet/frames/`:
+
+- `FramesSheetPage.tsx`: the page (title lines, the player, the floating bar with **Enhance with AI** and
+  **Edit in the old sheet**);
+- `FramesSheetView.tsx`: the SVG as the backend wrote it, scaled to the page, and an overlay in the same units:
+  the cursor (a line between two columns by their times), the lit noteheads of its column, the pale veil on the
+  part Sonnet works on, and the blank staves that a part coming back from Sonnet is written into, column by
+  column (about two seconds);
+- `geometry.ts`: the research viewer's arithmetic (where the cursor is, the time under a click);
+- `useFramesSheet.ts`: the loads, Sonnet's job followed on its stream (`event: sheet`), and Sonnet started by
+  itself on a new transcription.
+
+Hooks for the browser checks: `[data-frames-sheet]` (`data-source`, `data-llm`, `data-working`),
+`data-note="<frame>:<midi>"` on each notehead, `[data-lit]`, `[data-frames-cursor]` (`data-ms`),
+`[data-segment-state=working]`, `[data-revealing]`. The check is `npm run check:frames-sheet` (`--live` spends a
+few cents of Sonnet on a 40 s clip).
+
+## The old sheet (vexflow-v2), until implementation 03, Phase 8
+
+The old sheet keeps every editing tool and is one press away from the new one. The passage page, From other
+projects and the requests review still open on it (their work is a marked stretch). The staff is drawn by
+`@aimpromptu/grid-notation`, a TypeScript package developed in the sibling `vexflow-v2` checkout and installed
+from disk. One file in this app touches it: `components/time/TimeScoreView.tsx`. The sections below are about it.
 
 ## Why the project has its own renderer
 

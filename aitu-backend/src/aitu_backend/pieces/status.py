@@ -17,11 +17,11 @@ until a passage brings audio (Record or Paste); the page shows only the sheet. *
 from reading the video instead of a transcription, so its Notes step says so, and is ``running``
 while the video is read.
 
-**The hands of an old piece.** A piece transcribed before Phase 5 has no saved hands: the piano
-sheet runs the hand split on each read, as it always did. When such a piece already has a saved
-sheet, its Hands step reads ``ready`` with ``saved: false``, so its Sheet tab keeps opening as
-today; **Predict hands** and **Save** then turn the computed hands into saved ones. Without a saved
-sheet it reads ``missing``, like a new transcription.
+**The hands and the sheet** (implementation 03, Phase 5). The Hands step is gone: Sonnet decides the hands with the
+sheet, and the Sheet step opens as soon as the notes are ready. It is ``running`` while Sonnet writes, ``ready`` once
+a new sheet is stored (``sheet.f1``) or the sheet vexflow-v2 saved (``sheet.json``) still matches the notes,
+``stale`` when only that old sheet is left and the notes or the hands changed, and ``missing`` otherwise. The new sheet
+itself is never stale for the page: it is laid again on the current notes (``part_sheet.build``).
 """
 
 from __future__ import annotations
@@ -30,14 +30,17 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from aitu_backend.audio import store
+from aitu_backend.part_sheet import job as new_sheet_job
+from aitu_backend.part_sheet import store as new_sheet_store
 from aitu_backend.storage import bundle
 from aitu_backend.transcription import jobs, pipeline
 from aitu_backend.video import store as video_store
 
 State = Literal["missing", "running", "stale", "ready"]
 
-#: The five steps of the flow page, in order (plan section 7.1).
-STEPS = ("source", "audio", "notes", "hands", "sheet")
+#: The steps of the flow page, in order (plan section 7.1). The Hands step was removed by implementation 03,
+#: Phase 5: Sonnet decides the hands with the sheet.
+STEPS = ("source", "audio", "notes", "sheet")
 
 
 @dataclass
@@ -119,81 +122,41 @@ def piece_status(audio_uuid: str) -> PieceStatus:
         live = [event for event in stored.events if not event.removed]
         notes.details.update({"noteCount": len(live), "engine": header.engine if header else None})
 
-    # ------------------------------------------------------------------ hands
-    hands: StepStatus
-    if notes.state != "ready":
-        hands = StepStatus(
-            "hands",
-            "stale" if notes.state == "stale" else "missing",
+    # ------------------------------------------------------------------ sheet
+    # The Hands step is gone (implementation 03, Phase 5, plan section 3.5): Sonnet decides the hands with the
+    # sheet, so the Sheet step opens as soon as the notes are ready.
+    sheet: StepStatus
+    sheet_enabled = notes.state == "ready"
+    running = new_sheet_job.job_of(audio_uuid) if sheet_enabled else None
+    written = new_sheet_store.load(audio_uuid) is not None if sheet_enabled else False
+    legacy = _legacy_sheet(rhythm, header) if sheet_enabled else "missing"
+    details = {"newSheet": written, "legacy": legacy}
+    if not sheet_enabled:
+        sheet = StepStatus(
+            "sheet",
+            "stale" if rhythm is not None else "missing",
             enabled=False,
             reason=_first_notes(notes, video),
         )
-    else:
-        assert stored is not None and header is not None
-        live = [event for event in stored.events if not event.removed]
-        without = sum(1 for event in live if not event.hand)
-        guessed = sum(1 for event in live if event.hand and event.hand_guessed)
-        # A note the piano sheet cannot place gets no hand from the split and is left out of the
-        # sheet: it stays red on the Hands tab, but it does not keep the step from being ready.
-        placed = pipeline.placed_note_ids(audio_uuid) if without else set()
-        unplaced = sum(1 for event in live if not event.hand and event.id not in placed)
-        missing = without - unplaced
-        details = {
-            "withoutHand": without,
-            "unplaced": unplaced,
-            "guessed": guessed,
-            "saved": missing == 0 and without < len(live),
-        }
-        if missing == 0 and (without < len(live) or not live):
-            hands = StepStatus("hands", "ready", details=details)
-        elif header.hands_notes_revision == 0 and rhythm is not None:
-            hands = StepStatus(
-                "hands",
-                "ready",
-                reason=(
-                    "The piano sheet computes the hands of this piece each time it opens. Press "
-                    "Predict hands and Save to keep them."
-                ),
-                details=details,
-            )
-        else:
-            hands = StepStatus(
-                "hands",
-                "missing",
-                reason=(
-                    "Predict hands first."
-                    if without == len(live)
-                    else (
-                        f"{missing} {'note has' if missing == 1 else 'notes have'} no hand. Give "
-                        "each a hand on the Hands tab, or press Predict hands."
-                    )
-                ),
-                details=details,
-            )
-
-    # ------------------------------------------------------------------ sheet
-    sheet: StepStatus
-    sheet_enabled = hands.state == "ready"
-    disabled_reason = None if sheet_enabled else _first_hands(hands, notes, video)
-    if rhythm is None:
+    elif running is not None:
         sheet = StepStatus(
             "sheet",
-            "missing",
-            enabled=sheet_enabled,
-            reason=disabled_reason or "Not saved yet.",
+            "running",
+            details={**details, "jobId": running.id, "jobStatus": running.status},
         )
-    elif not sheet_enabled:
-        sheet = StepStatus("sheet", "stale", enabled=False, reason=disabled_reason)
-    elif header is not None and (rhythm.hands_revision or 0) != header.hands_revision:
+    elif written or legacy == "ready":
+        sheet = StepStatus("sheet", "ready", details=details)
+    elif legacy == "stale":
         sheet = StepStatus(
             "sheet",
             "stale",
             reason="The notes or the hands changed since this sheet was saved.",
+            details=details,
         )
     else:
-        sheet = StepStatus("sheet", "ready")
+        sheet = StepStatus("sheet", "missing", reason="Not written yet.", details=details)
 
-    steps = [source, audio, notes, hands, sheet]
+    steps = [source, audio, notes, sheet]
     return PieceStatus(
         audio_uuid=audio_uuid,
         steps=steps,
@@ -220,10 +183,15 @@ def _first_notes(notes: StepStatus, video: bool = False) -> str:
     return "Read the notes of the video first." if video else "Transcribe first."
 
 
-def _first_hands(hands: StepStatus, notes: StepStatus, video: bool = False) -> str:
-    if notes.state != "ready":
-        return _first_notes(notes, video)
-    return "Predict hands first."
+def _legacy_sheet(rhythm: Any, header: Any) -> str:
+    """The sheet vexflow-v2 saved (``sheet.json``): ``ready`` while it matches the notes and the hands, ``stale``
+    after they changed, ``missing``. The old editor (the switch of the Sheet step) opens a stale one with its
+    banner."""
+    if rhythm is None:
+        return "missing"
+    if header is not None and (rhythm.hands_revision or 0) != header.hands_revision:
+        return "stale"
+    return "ready"
 
 
 def _no_audio(audio_uuid: str, audio_revision: int) -> PieceStatus:
@@ -233,7 +201,6 @@ def _no_audio(audio_uuid: str, audio_revision: int) -> PieceStatus:
         StepStatus("source", "missing", reason="No audio yet."),
         StepStatus("audio", "missing", enabled=False, reason=closed),
         StepStatus("notes", "missing", enabled=False, reason=closed),
-        StepStatus("hands", "missing", enabled=False, reason=closed),
         StepStatus("sheet", "missing", enabled=False, reason=closed),
     ]
     return PieceStatus(

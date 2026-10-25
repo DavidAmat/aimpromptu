@@ -40,11 +40,14 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from aitu_backend.audio import store
 from aitu_backend.audio.frames import FrameTable, frame_count, join_kept
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.pmn import events_file
 from aitu_backend.pmn.events_file import PieceHeader
+from aitu_backend.pmn.notes import HAND_LEFT, HAND_NONE, HAND_RIGHT, Notes
 from aitu_backend.progress import BaseProgress, default_reporter
 from aitu_backend.storage import bundle, locate, paths
 from aitu_backend.transcription import saved_hands, split_cache
@@ -168,6 +171,19 @@ def clear_rhythm(audio_uuid: str) -> None:
     """Forget the saved reading. Transcribing again also does this, in `transcribe_audio`."""
     rhythm_path(audio_uuid).unlink(missing_ok=True)
     bundle.step_changed(audio_uuid)
+
+
+def clear_new_sheet(audio_uuid: str) -> None:
+    """Forget the new sheet (``sheet.f1``, implementation 03, Phase 5) when a whole new set of notes replaces the old
+    one: its columns would point at other notes. The copy is in history (``history.snapshot_notes``). The new notes
+    ask Sonnet for their sheet: the Sheet step starts it by itself.
+    """
+    from aitu_backend.part_sheet import (
+        store as new_sheet,
+    )  # noqa: PLC0415 - a small module, read late
+
+    new_sheet.clear(audio_uuid)
+    new_sheet.ask_sonnet(audio_uuid)
 
 
 @dataclass(frozen=True)
@@ -519,6 +535,30 @@ def inferred_split(
     return split_cache.get(key, compute)
 
 
+def starting_hands(audio_uuid: str, frame_ms: float = DEFAULT_FRAME_MS) -> Notes:
+    """The live notes with one hand each, as the new sheet starts from them (implementation 03, Phase 2).
+
+    A saved hand that was not guessed stays; every other note takes the hand of the split
+    (:func:`inferred_split` with the saved hands kept, read back by
+    :func:`saved_hands.hands_of_split`, which gives the notes the matrix did not place the quick
+    rule's hand). The algorithm of the new sheet and the LLM step receive these hands.
+    """
+    stored = load_note_events(audio_uuid)
+    if stored is None:
+        raise FileNotFoundError(f"Audio {audio_uuid} has no readable note events")
+    notes = events_file.notes_from_events(stored.events).live()
+    kept = (notes.hand != HAND_NONE) & ~notes.hand_guessed
+    if kept.all():
+        return notes
+    split = inferred_split(audio_uuid, frame_ms, keep_saved=True)
+    hands = saved_hands.hands_of_split(split, stored.events, guess_unplaced=True)
+    code = {"right": HAND_RIGHT, "left": HAND_LEFT}
+    inferred = np.array([code.get(hands.get(int(i), ""), HAND_NONE) for i in notes.id])
+    out = notes.copy()
+    out.hand = np.where(kept, notes.hand, inferred).astype(np.int8)
+    return out
+
+
 def warm_split(audio_uuid: str, frame_ms: float = DEFAULT_FRAME_MS) -> threading.Thread:
     """Compute the hand split on a background thread, so the first sheet request finds it ready.
 
@@ -661,6 +701,7 @@ def transcribe_audio(
     # point at nothing in particular now and keeping them would be worse than
     # asking the reader to name the gap again. The copy is in history.
     clear_rhythm(audio_uuid)
+    clear_new_sheet(audio_uuid)
     # Whatever was wrong with this piece before, it now has its recorded notes.
     clear_needs_rederivation(audio_uuid)
     return TranscribedEvents(

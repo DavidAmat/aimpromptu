@@ -746,7 +746,13 @@ def delete_project(project_id: str) -> None:
 
 #: Copied by :func:`duplicate_project`. Staging, history and the video are not: a copy starts with
 #: no open session, no earlier states and no temporary files.
-PART_FILES = ("notes.pmn", "sheet.json", "timeline.json", "needs-rederivation.json")
+PART_FILES = (
+    "notes.pmn",
+    "sheet.json",
+    "sheet.f1",
+    "timeline.json",
+    "needs-rederivation.json",
+)
 #: The cache files worth copying: normalizing again costs a second of ffmpeg per part.
 CACHE_FILES = ("normalized.wav",)
 

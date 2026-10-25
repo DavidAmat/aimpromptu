@@ -42,6 +42,8 @@ src/aitu_backend/
   matrix/         # frame <-> ms, gaps, peaks, the figure ladder, passages, bands
   hands/          # which hand plays each onset: a beam search + a gated second pass
   notation/       # figures, tresillos, trills
+  sheet/          # the new piano sheet chain (implementation 03): the F1 text, the algorithm, the
+                  # LLM step and the engine, copied from the research; no route uses it yet
   editing/        # the replacement splice, composing, staging, history
   storage/        # every filesystem path in one module; the project bundle, the audio store
   db/             # SQLAlchemy models, Alembic migrations, the users, backup/check/reindex

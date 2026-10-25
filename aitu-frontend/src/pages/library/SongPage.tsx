@@ -59,6 +59,7 @@ import {
   type SongDetail,
   type VersionRow,
 } from "../../api";
+import { AiMark } from "../../components/piece/AiMark";
 import { ROUTES } from "../../layout/routes";
 import {
   ConfirmDialog,
@@ -299,6 +300,7 @@ export function SongPage() {
                       <ListRow
                         data-testid={`version-${version.id}`}
                         title={version.name}
+                        leading={<AiMark enhanced={version.enhanced} could={version.step === "notes" || version.step === "sheet"} />}
                         onOpen={() => navigate(ROUTES.project(first))}
                         status={version.editCopy ? "Editing" : undefined}
                         meta={
