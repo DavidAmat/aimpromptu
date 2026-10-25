@@ -34,8 +34,14 @@ from aitu_backend.pmn.notes import Notes
 from aitu_backend.schemas.time_matrix import FIGURE_NEGRAS, FigureName
 from aitu_backend.sheet.engrave.frames import Options, render_frames
 from aitu_backend.sheet.llm.frames import Part, assemble, windows_of
-from aitu_backend.sheet.proposal.frames import FramesProposal, propose_frames
+from aitu_backend.sheet.proposal.frames import (
+    FramesProposal,
+    _columns,
+    clefs_and_ottavas,
+    propose_frames,
+)
 from aitu_backend.sheet.sheet import f1
+from aitu_backend.sheet.sheet.common import spn
 from aitu_backend.sheet.sheet.data import FRAME_MS, Sheet
 from aitu_backend.sheet.sheet.frames import STAFF_OF, drawn_columns
 from aitu_backend.sheet.sheet.pmn import KEYS
@@ -50,6 +56,8 @@ __all__ = [
     "algorithm",
     "current",
     "draw",
+    "drawn_notes",
+    "fit_clefs",
     "hands_of_sheet",
     "reading_of",
     "reapply",
@@ -122,8 +130,106 @@ def windows(sheet: Sheet) -> list[tuple[int, int]]:
     return windows_of(sheet) if sheet.notes else []
 
 
+def _clef_track(sheet: Sheet, staff: int, frames: list[int]) -> list[str]:
+    """The clef of ``staff`` in force at each of ``frames`` (sorted)."""
+    changes = sorted((f, c) for f, st, c in sheet.clef_changes if st == staff)
+    clef, k, out = sheet.clefs.get(staff, "G2" if staff == 1 else "F4"), 0, []
+    for frame in frames:
+        while k < len(changes) and changes[k][0] <= frame:
+            clef, k = changes[k][1], k + 1
+        out.append(clef)
+    return out
+
+
+def fit_clefs(sheet: Sheet, changed: set[tuple[int, int, int]]) -> int:
+    """Clefs and 8va where notes changed hand (Phase 6). ``changed`` holds the notes, ``(frame, midi, staff)``, that
+    are on another staff than in the stored sheet (or new to it). Around each one, the clefs and 8va of the
+    algorithm's rule (``clefs_and_ottavas``, the clef rules version 4: the bass clef, then the treble clef, then the
+    treble clef with 8va for the left hand, never 8va in the bass clef, no note four ledger lines or more above the
+    bass staff) replace the stored ones, on the stretch of that staff where the two differ; everywhere else the
+    stored clefs and 8va stay (the AI's, or the user's). A high note moved to the left hand gets a treble clef for
+    its stretch rather than five ledger lines. Returns the number of stretches changed.
+    """
+    if not changed:
+        return 0
+    # The rule changes only the clefs and the 8va: a copy of the notes is enough (a third of a deep copy's time).
+    rule = replace(
+        sheet,
+        notes=[replace(n) for n in sheet.notes],
+        clefs=dict(sheet.clefs),
+        clef_changes=list(sheet.clef_changes),
+    )
+    clefs_and_ottavas(rule)
+    done = 0
+    for staff in (1, 2):
+        cols = [(f, ns) for f, ns in _columns(sheet, staff)]
+        if not cols or not any(k[2] == staff for k in changed):
+            continue
+        frames = [f for f, _ in cols]
+        ruled_notes = dict(_columns(rule, staff))
+        stored = list(
+            zip(_clef_track(sheet, staff, frames), (max(n.ottava for n in ns) for _, ns in cols))
+        )
+        ruled = list(
+            zip(
+                _clef_track(rule, staff, frames),
+                (max(n.ottava for n in ruled_notes[f]) for f in frames),
+            )
+        )
+        regions: list[tuple[int, int]] = []
+        for i, (f, ns) in enumerate(cols):
+            if stored[i] == ruled[i] or not any((f, n.midi, staff) in changed for n in ns):
+                continue
+            if regions and regions[-1][1] >= i:
+                continue
+            a = i
+            while a > 0 and stored[a - 1] != ruled[a - 1]:
+                a -= 1
+            b = i
+            while b + 1 < len(cols) and stored[b + 1] != ruled[b + 1]:
+                b += 1
+            regions.append((a, b))
+        for a, b in regions:
+            first = frames[a]
+            end = frames[b + 1] if b + 1 < len(frames) else None
+            for k in range(a, b + 1):
+                by_midi = {(n.midi, n.grace): n.ottava for n in ruled_notes[frames[k]]}
+                for n in cols[k][1]:
+                    n.ottava = by_midi.get((n.midi, n.grace), ruled[k][1])
+            inside = [
+                c
+                for c in sheet.clef_changes
+                if c[1] == staff and c[0] >= first and (end is None or c[0] < end)
+            ]
+            for c in inside:
+                sheet.clef_changes.remove(c)
+            before = stored[a - 1][0] if a > 0 else None
+            if a == 0:
+                sheet.clefs[staff] = ruled[a][0]
+            elif ruled[a][0] != before:
+                sheet.clef_changes.append((first, staff, ruled[a][0]))
+            for c in rule.clef_changes:
+                if c[1] == staff and first < c[0] and (end is None or c[0] < end):
+                    sheet.clef_changes.append(c)
+            if end is not None and ruled[b][0] != stored[b + 1][0]:
+                if not any(c[1] == staff and c[0] == end for c in sheet.clef_changes):
+                    sheet.clef_changes.append((end, staff, stored[b + 1][0]))
+            done += 1
+        # Ornament onsets take the 8va of the note before them, as the rule does.
+        last = 0
+        for n in sorted((n for n in sheet.notes if n.staff == staff), key=lambda n: n.frame):
+            if n.covered:
+                n.ottava = last
+            else:
+                last = n.ottava
+    sheet.clef_changes.sort(key=lambda c: (c[0], c[1]))
+    return done
+
+
 def reapply(stored: Sheet, notes: Notes) -> Sheet:
-    """The decisions of a stored sheet laid on the current notes and their hands (the case 2 of the module)."""
+    """The decisions of a stored sheet laid on the current notes and their hands (the case 2 of the module). A note
+    on another staff than in the stored sheet, or new to it, gets the clefs and 8va of the rule around it
+    (:func:`fit_clefs`)."""
     algo = propose_frames(
         notes,
         key=stored.key or 0,
@@ -133,11 +239,13 @@ def reapply(stored: Sheet, notes: Notes) -> Sheet:
     same = {(n.frame, n.midi, n.staff): n for n in stored.notes}
     near = {(n.frame, n.midi): n for n in stored.notes}
     decided = {}
+    changed: set[tuple[int, int, int]] = set()
     for i, n in enumerate(algo.sheet.notes):
         kept = same.get((n.frame, n.midi, n.staff))
         if kept is not None:
             decided[i] = kept
         else:
+            changed.add((n.frame, n.midi, n.staff))
             # Another hand now, or a note the stored sheet did not have: no beam group of its own.
             decided[i] = replace(near.get((n.frame, n.midi), n), staff=n.staff, beam=None)
     frames = [n.frame for n in algo.sheet.notes]
@@ -152,6 +260,7 @@ def reapply(stored: Sheet, notes: Notes) -> Sheet:
         key_changes=list(stored.key_changes),
     )
     sheet, _ = assemble(algo, [part])
+    fit_clefs(sheet, changed)
     return sheet
 
 
@@ -258,17 +367,36 @@ def forget(part_id: str) -> None:
         _cache.pop(part_id, None)
 
 
+def drawn_notes(sheet: Sheet) -> list[dict[str, str]]:
+    """Each drawn note as its notehead names it (``ref`` = ``"<frame>:<midi>"``, the ``data-note`` of the SVG), with
+    its hand and the name the sheet prints (the sounding pitch, spelled: ``C#5``), for the note toolbox (Phase 6).
+    """
+    return [
+        {
+            "ref": f"{n.frame}:{n.midi}",
+            "hand": "right" if n.staff == 1 else "left",
+            "pitch": spn(n.step, n.alter, n.octave),
+        }
+        for n in sheet.notes
+        if n.frame is not None and not n.covered and n.staff in (1, 2)
+    ]
+
+
 def draw(text: str, width: float) -> dict[str, Any]:
     """The drawing of a frames text for a page ``width`` staff spaces wide (the staff width; the SVG adds its
-    margins): the SVG with ``data-note`` ids, the columns (system, frame, x, ms) and the system boxes.
+    margins): the SVG with ``data-note`` ids, the columns (system, frame, x, ms), the system boxes and the drawn
+    notes (:func:`drawn_notes`).
     """
     width = min(MAX_WIDTH, max(MIN_WIDTH, float(width)))
-    rendered = render_frames(text, Options(width=width))
+    sheet = f1.read(text)
+    notes = drawn_notes(sheet)
+    rendered = render_frames(sheet, Options(width=width))
     return {
         "svg": rendered.svg,
         "columns": rendered.columns,
         "systems": rendered.systems,
         "width": rendered.width,
         "height": rendered.height,
+        "notes": notes,
         "timings": {k: round(v, 1) for k, v in rendered.timings.items()},
     }

@@ -28,7 +28,16 @@ export type {
 } from "./audio";
 
 export { sheetApi } from "./sheet";
-export type { FramesSheet, SheetColumn, SheetLlm, SheetSegment, SheetSystem } from "./sheet";
+export type {
+  FramesSheet,
+  SheetColumn,
+  SheetEdited,
+  SheetHistory,
+  SheetLlm,
+  SheetNote,
+  SheetSegment,
+  SheetSystem,
+} from "./sheet";
 export { projectsApi } from "./projects";
 export type {
   ChosenPassage,

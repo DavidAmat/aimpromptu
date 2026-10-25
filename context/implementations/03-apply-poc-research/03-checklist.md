@@ -24,7 +24,7 @@ their phase, after its study (plan section 8).
 - [x] **Phase 4**: the API key (done 2026-10-25); how many songs the credits cover (about 110 a month, $0.89 per song on average); the beam groups and the maximum of 8 notes (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user, report section 11): the gallery approved ("all good"); clef.L4 and the staccato figures kept as written.
 - [x] **Phase 5**: existing projects (user, 2026-10-25): the songs Sonnet already wrote (the 10 viewer songs) show Sonnet's sheet; every other song keeps its data and the algorithm's sheet, with **Enhance with AI**; new transcriptions go to Sonnet by themselves.
 - [x] **Phase 5**: merge into `master`: now (user, 2026-10-25); merged at the end of Phase 5.
-- [ ] **Phase 6**: may a new LLM run change hands that the user moved; the engine in the backend or in the browser.
+- [x] **Phase 6**: may a new LLM run change hands that the user moved (user, 2026-10-25: yes, it reads the current hands as a suggestion); the engine in the backend or in the browser (agent, from the time of one edit, about 0.25 s: the backend).
 - [ ] **Phases 7 and 8**: the tools that no longer make sense without compases: keep, change or drop.
 
 # [x] Phase 0: The research folder on Ubuntu, the branch, the inventory
@@ -95,12 +95,15 @@ Done 2026-10-25 after the user's check in the browser. Report: [`03-implementati
 - [x] Task 5.10 Question to the user: merge into `master` now (answered 2026-10-25; merged).
 - [x] After the user's review: the wording "AI" (**Enhance with AI**, the green **Enhanced with AI** badge, **Enhance it again with AI**), the mark kept for good, the AI mark and the job spinner on Projects and My library.
 
-# [ ] Phase 6: Editing the new sheet (the edit model, hands, undo)
+# [p] Phase 6: Editing the new sheet (the edit model, hands, undo)
 
-- [ ] Task 6.1 Study: how the vexflow-v2 editor applies a change (selections, `sheet.json` writes, undo and redo).
-- [ ] Task 6.2 The edit model, with undo and redo.
-- [ ] Task 6.3 First tool: move notes between hands; the LLM run again receives the current hands; question to the user.
-- [ ] Task 6.4 The time of one edit; the decision on where the engine runs.
+Built 2026-10-25; waiting for the user's check in the browser. Report: [`03-implementation-phase-6.md`](03-implementation-phase-6.md).
+
+- [x] Task 6.1 Study: how the vexflow-v2 editor applies a change (selections, `sheet.json` writes, undo and redo).
+- [x] Task 6.2 The edit model, with undo and redo: `part_sheet/edits.py`, one write of `notes.pmn` and `sheet.f1` per edit, the part's log `sheet.edits.json` (undo and redo in the backend, kept through a reload); `POST /sheet/{uuid}/hands`, `/undo`, `/redo` answer the sheet drawn again.
+- [x] Task 6.3 First tool: notes picked on the sheet, **Hand: Right / Left** in the note toolbox; clefs fitted around a moved note; the question (answered: a run again may change any hand); a run again on an enhanced sheet reads the current hands as a suggestion (2 real windows: 3 wrong moves put back, no other hand changed, $0.06).
+- [x] Task 6.4 The time of one edit (about 0.25 s from the click to the new drawing); the engine stays in the backend.
+- [ ] The user's check in the browser.
 
 # [ ] Phase 7: The note and range tools
 

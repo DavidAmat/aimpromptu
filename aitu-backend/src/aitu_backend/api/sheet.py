@@ -6,6 +6,10 @@
   While Sonnet writes, the answer is the sheet of that moment (`part_sheet.job.LiveRun`).
 * `POST /sheet/{uuid}/llm` — start Sonnet on the part (or answer the run already going). The page follows the job
   on `GET /matrix/progress/{jobId}`: an `event: sheet` message each time the sheet changes, then `event: done`.
+* `POST /sheet/{uuid}/hands?width=N` — give notes to one hand (Phase 6: `part_sheet.edits`), and
+  `POST /sheet/{uuid}/undo` and `/redo` — walk the steps of the part's log. Each answers the sheet drawn again, as
+  `GET` does, so one edit is one request. Refused (409) while the AI writes the sheet: the segments still waiting
+  cannot be edited, and its hands would replace the ones moved meanwhile.
 
 The sheet is never stale for the page: a sheet stored for older notes is laid again on the current ones
 (`part_sheet.build`). What the old Sheet step saved (`sheet.json`, vexflow-v2) is not read here, except the armadura
@@ -16,11 +20,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from typing import Literal
+
+from fastapi import APIRouter, Body, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from aitu_backend.audio import store as audio_store
 from aitu_backend.auth import context, rights
-from aitu_backend.part_sheet import build, job
+from aitu_backend.part_sheet import build, edits, job
 from aitu_backend.part_sheet import store as new_sheet_store
 from aitu_backend.storage import locate
 from aitu_backend.transcription import pipeline
@@ -41,11 +48,16 @@ def _notes_or_404(audio_uuid: str) -> None:
         )
 
 
+def _writes(audio_uuid: str) -> bool:
+    user = context.current()
+    access = rights.part_access(user, audio_uuid) if user is not None else rights.Access.WRITE
+    return access >= rights.Access.WRITE
+
+
 def _llm_state(audio_uuid: str, drawn: build.Drawn, running: Any) -> dict[str, Any]:
     """What the page may do with Sonnet on this part."""
     user = context.current()
-    access = rights.part_access(user, audio_uuid) if user is not None else rights.Access.WRITE
-    writes = access >= rights.Access.WRITE
+    writes = _writes(audio_uuid)
     where = locate.part(audio_uuid)
     # The owner's own version of My library changes through Edit: the button opens the copy and starts there.
     via_edit = (
@@ -77,6 +89,10 @@ def get_sheet(
 ) -> dict[str, Any]:
     """The sheet of a part now, drawn for a page of `width` staff spaces."""
     _notes_or_404(audio_uuid)
+    return _answer(audio_uuid, width)
+
+
+def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
     stored = pipeline.load_note_events(audio_uuid)
     if stored is None or not any(not event.removed for event in stored.events):
         # A blank sheet (From scratch, Phase 8 of implementation 02): nothing to draw; the page shows the old
@@ -87,6 +103,7 @@ def get_sheet(
             "systems": [],
             "width": width + 8,
             "height": 0,
+            "notes": [],
             "segments": [],
             "source": "algorithm",
             "stale": False,
@@ -102,6 +119,8 @@ def get_sheet(
                 "usd": None,
                 "written": None,
             },
+            "editable": False,
+            "history": {"undo": None, "redo": None},
             "timings": {},
         }
     running = job.job_of(audio_uuid)
@@ -121,7 +140,58 @@ def get_sheet(
         "source": drawn.source,
         "stale": drawn.stale,
         "llm": _llm_state(audio_uuid, drawn, running),
+        # The notes can be edited by a user who may change the part, when the AI is not writing it (plan 3.7).
+        "editable": running is None and _writes(audio_uuid),
+        "history": edits.history(audio_uuid),
     }
+
+
+class HandsRequest(BaseModel):
+    #: The notes as their noteheads name them: ``"<frame>:<midi>"`` (``data-note``).
+    notes: list[str] = Field(default_factory=list, max_length=20000)
+    hand: Literal["right", "left"]
+
+
+def _not_running(audio_uuid: str) -> None:
+    if job.job_of(audio_uuid) is not None:
+        raise HTTPException(
+            status_code=409, detail="The AI is enhancing this sheet: wait until it is done."
+        )
+
+
+@router.post("/{audio_uuid}/hands")
+def move_hands(
+    audio_uuid: str,
+    body: HandsRequest = Body(...),
+    width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH),
+) -> dict[str, Any]:
+    """Give the notes to one hand, in `notes.pmn` (one step of undo); the sheet drawn again."""
+    _notes_or_404(audio_uuid)
+    _not_running(audio_uuid)
+    done = edits.move_hands(audio_uuid, body.notes, body.hand)
+    return {**_answer(audio_uuid, width), "moved": done.moved, "unmatched": done.unmatched}
+
+
+@router.post("/{audio_uuid}/undo")
+def undo(
+    audio_uuid: str, width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH)
+) -> dict[str, Any]:
+    """Take the last step of the part's log back; the sheet drawn again."""
+    _notes_or_404(audio_uuid)
+    _not_running(audio_uuid)
+    label = edits.undo(audio_uuid)
+    return {**_answer(audio_uuid, width), "walked": label}
+
+
+@router.post("/{audio_uuid}/redo")
+def redo(
+    audio_uuid: str, width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH)
+) -> dict[str, Any]:
+    """Put the last step taken back again; the sheet drawn again."""
+    _notes_or_404(audio_uuid)
+    _not_running(audio_uuid)
+    label = edits.redo(audio_uuid)
+    return {**_answer(audio_uuid, width), "walked": label}
 
 
 @router.post("/{audio_uuid}/llm", status_code=202)

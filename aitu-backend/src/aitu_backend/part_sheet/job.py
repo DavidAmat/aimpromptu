@@ -43,7 +43,7 @@ from aitu_backend.sheet.proposal.frames import FramesProposal
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.transcription import jobs, pipeline
 
-from . import build, store
+from . import build, edits, store
 
 __all__ = ["LiveRun", "available", "commit", "job_of", "live", "start"]
 
@@ -156,6 +156,11 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
         store.taken(part_id)
         notes = pipeline.starting_hands(part_id)
         before = build.current(part_id)
+        # A run again on a sheet the AI enhanced shows the current hands, the user's moves among them, as a
+        # suggestion the AI may change (the user's answer of Phase 6, plan section 3.7). A first run reads the notes
+        # without hands: the hands are then the hand split's, and the research found the LLM copies the hands it is
+        # shown, errors included.
+        shown = before.record is not None and before.record.enhanced
         run = LiveRun(part_id, before.text, build.windows(f1.read(before.text)))
         with _live_lock:
             _live[part_id] = run
@@ -185,7 +190,9 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
                     raise PartGone("The part was deleted while Sonnet wrote its sheet.")
                 return ask(system, messages)
 
-            song = write_frames(notes, asked, sid=part_id[:8], on_start=on_start, on_part=on_part)
+            song = write_frames(
+                notes, asked, sid=part_id[:8], hands=shown, on_start=on_start, on_part=on_part
+            )
             if not pipeline.has_events(part_id):
                 return {
                     "source": "gone",
@@ -204,7 +211,7 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
                 quarter_ms=song.quarter_ms,
                 reference=song.reference.get("source"),
                 model=getattr(ask, "model", None),
-                prompt=PROMPT_VERSION,
+                prompt=PROMPT_VERSION + ("+hands" if shown else ""),
                 usd=float(getattr(ask, "usd", 0.0) or 0.0),
                 requests=len(calls),
                 written=datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -246,6 +253,7 @@ def commit(part_id: str, sheet: Any, text: str, record: store.Record, notes_revi
             # The notes changed while Sonnet worked: keep its reading, lay it on the new notes when drawn.
             record.hands_revision = None
             store.save(part_id, text, record)
+            edits.forget(part_id)
             return
         if record.source != "algorithm":
             notes = events_file.notes_from_events(stored.events)
@@ -276,4 +284,6 @@ def commit(part_id: str, sheet: Any, text: str, record: store.Record, notes_revi
                 header = saved.header
         record.hands_revision = header.hands_revision
         store.save(part_id, text, record)
+        # The AI wrote the hands and the sheet again: the steps of undo and redo start again.
+        edits.forget(part_id)
     build.forget(part_id)

@@ -311,6 +311,13 @@ def window_prompt(
         + f1.write(target, mode="frames").strip()
         + "\n```"
     )
+    if any(n.staff in (1, 2) for n in target.notes):
+        # A run again on the numeric truth (``write_frames(hands=True)``, implementation 03, Phase 6): the user's
+        # answer is that the LLM may change any hand, the user's moves included.
+        out.append(
+            "The target shows the current hand of each note (written in an earlier run; the user may have moved "
+            "some). Read them as a suggestion: keep the hands that follow the rules, and change any that does not."
+        )
     if lookahead.notes:
         out.append(
             "## Look-ahead (do not write these)\n\n```\n"

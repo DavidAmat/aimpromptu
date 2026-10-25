@@ -188,6 +188,10 @@ La in Mi mayor). Do mayor: Do#, Mib, Fa#, Sol#, Sib. Rule 4 applies in every arm
   right-hand matrix from it). The LLM's hands are written there; a hand moved by the user is written there too.
 - When the LLM runs again on a part, its input is built from that numeric truth, so it receives the user's changes.
   The text format is only a view made for the LLM; it is never the stored truth of the hands.
+- *Phase 6 (the user's answer, 2026-10-25):* a run again **may change any hand**, the user's moves included: on a
+  sheet the AI enhanced, the input shows every current hand as a suggestion (one line of the window prompt says so).
+  A first run reads the notes without hands (the hands are then the hand split's). Nothing can be edited while the
+  AI writes the sheet.
 
 ## 3.8 Access to Sonnet 5.5
 
@@ -540,15 +544,32 @@ in the browser on a few songs.
 
 ## Phase 6: Editing the new sheet (the edit model, hands, undo)
 
+**Built 2026-10-25** ([`03-implementation-phase-6.md`](03-implementation-phase-6.md)); waiting for the user's check in
+the browser.
+
 *Why:* every editing tool needs one common way to work on the new sheet before the tools are moved one by one.
 
-1. Study: how vexflow-v2's editor applies a change today (selections, `sheet.json` writes, undo and redo).
+1. Study: how vexflow-v2's editor applies a change today (selections, `sheet.json` writes, undo and redo). *Done:*
+   the page holds every reading decision in one value (`SheetEdits`) saved by **Save** into `sheet.json`; six edits
+   are written to the recording at once (a hand move is `PUT /time/{uuid}/hands`); one undo history in the page
+   (`useEditHistory`, one press one step, a step may carry the backend calls that take it back), lost on a reload.
 2. The edit model: an edit changes the numeric truth (hands in `notes.pmn`) or the stored sheet, then the engine draws
-   the affected segment again. Undo and redo on top of it.
+   the affected segment again. Undo and redo on top of it. *Done:* `part_sheet/edits.py`: one write under the part's
+   lock changes the hands and stores `sheet.f1` laid again on them (it stays current and keeps its AI mark); the
+   answer is the whole sheet drawn again (about 50 ms in the backend), not one segment. Every edit is a step of the
+   part's log `sheet.edits.json` (each note's hand before and after, one line patch of `sheet.f1` both ways), kept by
+   the backend: undo and redo survive a reload. No Save button on the new sheet.
 3. First tool: move notes from one hand to the other. Running the LLM again on a part sends the current hands
    (section 3.7). **Question to the user after the study**: may a new LLM run change notes that the user moved by hand?
+   *Done:* notes are picked on the sheet (click, ⌘ or Shift, a box), the note toolbox has **Hand: Right / Left**.
+   A note that changes staff gets the clefs and 8va of the clef rules around it (`build.fit_clefs`). The user's
+   answer: a run again may change any hand (section 3.7); tested on 2 windows of 7 Years with 3 notes moved to the
+   wrong hand: Sonnet moved the 3 back and changed no other of the 137 notes ($0.06).
 4. Measure the time of one edit (click, backend, new drawing in the page). **Decision with numbers**: keep the engine
-   in the backend, or port it to TypeScript in the browser (`synthesis/04-engine.md` §4.5).
+   in the backend, or port it to TypeScript in the browser (`synthesis/04-engine.md` §4.5). *Done:* about a quarter
+   of a second from the click to the new drawing (report section 6); the engine **stays in the backend**: the drawing
+   is about a third of the backend's time, and the rest (the rules that lay the sheet on the new hands) would need
+   the whole core ported.
 
 *Done when:* hand moves and undo work on the new sheet, and the engine location is decided.
 
@@ -562,6 +583,11 @@ in the browser on a few songs.
    changes): the list of those goes to the user before anything is dropped.
 2. Build them on the edit model: figures, transpose figures, fingers, beam joins and breaks, decorations and trills,
    clef changes, 8va brackets, armadura of a passage, transposition of notes, and the others the inventory finds.
+   *From Phase 6:* an edit is a function of `part_sheet/edits.py` that changes `notes.pmn` or `sheet.f1` under the
+   part's lock and records one step (`_Step`: hands before and after, a line patch of `sheet.f1`); a route of
+   `api/sheet.py` answers the sheet drawn again; a row of `FramesNoteToolbox.tsx` calls it through `useFramesSheet`'s
+   `edit`. A reading edit on a sheet the algorithm wrote must store it (today an `algorithm` record is computed
+   again, not read), so the record needs a source for "the algorithm's, edited by the user".
 3. Engine features the tools need (for example fingers, octave brackets over a range), kept light.
 
 *Done when:* every tool of the two toolboxes works on the new sheet or the user agreed to drop it.
@@ -616,7 +642,7 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 | 3 | The look of the spacing without compases (approved), and a thin double line at an armadura change or none (none, the default) (user, in the gallery) |
 | 4 | The API key (human intervention; done); how many songs the credits cover (information: about 110 a month); the beam groups and the maximum of 8 (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user: approved; both rules kept as written) |
 | 5 | Existing projects: keep their data, the AI's sheet for the 10 songs it wrote, a button for the rest (user, 2026-10-25); merge to `master`: now (user, 2026-10-25) |
-| 6 | May a new LLM run change hands that the user moved; the engine in the backend or in the browser |
+| 6 | May a new LLM run change hands that the user moved (user, 2026-10-25: yes, it reads them as a suggestion); the engine in the backend or in the browser (agent, from the time of one edit: the backend) |
 | 7, 8 | Tools that no longer make sense without compases: keep, change or drop |
 
 # 9. Risks
@@ -690,3 +716,7 @@ repository."
 | 5 | Phase 6: a stored sheet is laid again on changed notes by column and key (`build.reapply`); a paste moves the columns after it, so those decisions are lost there until notes are matched by id | What the study found about the edit model |
 | 5 | The page says "AI", never the model's name; a sheet the AI enhanced keeps its **Enhanced with AI** mark through every later change, and a failed rerun keeps the earlier AI sheet; the AI mark on Projects and My library | The user's review of 2026-10-25: the model may change, and the user must know which sheets the AI wrote |
 | 5 | Section 6.3: the branch was merged into `master` at the end of Phase 5 | The user's answer |
+| 6 | Section 3.7: a run again may change any hand; it reads the current hands as a suggestion on a sheet the AI enhanced, the notes without hands on a first run; no edit while the AI writes | The user's answer of 2026-10-25; the research found the LLM copies the hand split's errors when it is shown them; the job's hands would replace the moves made during the run |
+| 6 | Phase 6 task 2: the backend keeps undo and redo (a log per part), and the answer of an edit is the whole sheet drawn again, not one segment | A log in the backend survives a reload and checks each step against the stored truth; the whole sheet draws in about 50 ms, and a hand move can change the figures and the clefs around it |
+| 6 | Phase 6 task 3: a note that changes staff gets the algorithm's clefs and 8va on the stretch where they differ from the stored ones | A high note moved to the left hand kept the bass clef with five ledger lines, which the AI's checker forbids (clef.L3) |
+| 6 | Phase 6 task 4: the engine stays in the backend | One edit takes about 0.25 s to the page; the drawing is about a third of the backend's part |
