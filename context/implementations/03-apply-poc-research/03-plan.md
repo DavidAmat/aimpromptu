@@ -579,8 +579,8 @@ range selection and Enhance with AI of a stretch went to Phase 7 (tasks 4 and 5)
 
 ## Phase 7: The note and range tools
 
-**Built 2026-10-25** ([`03-implementation-phase-7.md`](03-implementation-phase-7.md)); waiting for the user's check in
-the browser and in the gallery ([`gallery/phase-7/index.html`](gallery/phase-7/index.html)).
+**Built 2026-10-25** ([`03-implementation-phase-7.md`](03-implementation-phase-7.md)). The user checked the gallery
+([`gallery/phase-7/index.html`](gallery/phase-7/index.html): "all good"); waiting for the check in the browser.
 
 *Why:* the note toolbox and the range toolbox of the Sheet step hold most of the editing tools (`annotations-notes.md`,
 `annotations-stretches.md`).
