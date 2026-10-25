@@ -129,6 +129,9 @@ the criteria and limits of section 3.11.
 - *Phase 2, the user's review of the gallery:* a beam group holds one figure. One single note of another figure may
   open or close it, never sit inside it, and a group never holds several sub-groups. Any note two figures shorter
   than the next one (a fusa before a corchea) is an acciaccatura.
+- *Phase 4:* the reference figure is one request before the windows: the peaks of the gaps between the measured
+  onsets in words, and the first 16 s of the song. On the 10 viewer songs Sonnet chose 420 to 700 ms. The figures,
+  grace notes and spelling stay rules of the app, computed after the LLM's hands (the cap needs the hand).
 
 ## 3.4 Alteraciones (the user's rules)
 
@@ -232,6 +235,9 @@ rule of the research stays: a left-hand pattern (an arpeggio, a bass and chord f
 hands. The algorithm, as the fallback, uses simple versions of the same rules: the maximum of 8, a cut at a large
 jump, a cut where the direction changes after a run. Phase 4 writes these criteria into the prompt and the checker
 (the maximum as a hard check, the others as instructions), and the user judges the groups by eye in the gallery.
+*Phase 4:* prompt version 5, rules beam.1 to beam.8. A group the LLM writes is cut only where the rule's figures
+break it; a semicorchea beamed to the corchea after it (two notes, one odd) is kept, by the user's rule. On the 10
+songs 1,888 of 2,046 groups stay as written, mostly of 2 to 4 notes.
 
 # 4. Binding rules
 
@@ -430,27 +436,42 @@ look and the spacing in the gallery.
 
 ## Phase 4: The LLM step for the new sheet
 
+**In progress (2026-10-25)** ([`03-implementation-phase-4.md`](03-implementation-phase-4.md)): built and run on the
+10 viewer songs; waiting for the user's check of the gallery and two decisions (clef.L4, staccato figures).
+
 *Why:* the frozen prompt asks Sonnet for F1 bars. The new sheet has no compases, and several decisions are now rules
 (figures, spelling). Sonnet must write the new format, and decide what is left: hands, beam groups, clefs, 8va, graces
 and ornaments, the armadura of each passage, and the reference figure on the first window.
 
 1. **HUMAN INTERVENTION at this phase**: the user creates the API key in the Claude Console organization linked to the
    Max 5x credits and puts it in `.env` on Ubuntu (`ANTHROPIC_API_KEY`). Three test requests: their `usage` numbers
-   and time.
+   and time. *Done:* an individual organization, no card; the cached instructions are 9,080 tokens, a cached
+   reference request costs $0.009.
 2. `complete(system, messages)` with the `anthropic` SDK, model `claude-sonnet-5-5`, prompt caching of the fixed
-   instructions, time limits and retries (the product's job, `aitu_notation/README.md` §5).
+   instructions, time limits and retries (the product's job, `aitu_notation/README.md` §5). *Done:*
+   `aitu_backend/sheet_llm.py`, streamed requests, adaptive thinking at effort `high`, the server-side fallback; a
+   refusal fails one window, any other error keeps the algorithm for the rest of the song.
 3. The new prompt (version 5) from version 4: the new format, the histogram of gaps in words for the reference figure,
    the alteraciones rules, the beam group criteria of section 3.11 (with a few examples of groups cut at a jump, at a
    change of direction and by a repeated contour), the clef rules version 4 unchanged. Windows by onsets or by time
-   instead of compases.
+   instead of compases. *Done:* `sheet/llm/prompt/frames/`; the LLM decides hands, beam groups, clefs and 8va,
+   ornaments and the armadura of passages; the input shows the rule's figures of the starting hands and no hand.
+   Windows of 12 to 16 s that end at a pause and outside the algorithm's beam groups, every answer kept whole (no
+   bar decided twice): they are known before any request, so Phase 5 can use them as its segments.
 4. The checker and the guards (beam share, beam overlaps, and at most 8 notes per beam group) for the new format; the
    fallback to the algorithm. The checker is `frames.check`; an answer is mapped back to the notes
    (`frames.cells_of`) and its figures are computed again by the rule (they need the measured lengths). Phase 2 left
    two points for the LLM: octaves played 40 to 80 ms apart stay two columns (the LLM may join them with `arp`), and
-   tuplets are out of the product sheet unless this phase shows that the LLM's triplets read better.
+   tuplets are out of the product sheet unless this phase shows that the LLM's triplets read better. *Done:*
+   `sheet/llm/frames.py` (`check_answer`, `assemble`); also no note four or more ledger lines above its staff
+   (clef.L3, clef.6), added after the first run; nearby 8va notes joined into one line. Tuplets stay out: the
+   new prompt has none, and no answer needed one; `arp` was written 94 times.
 5. Test on a few windows, then the 10 viewer songs. Compare with the recorded Sonnet sheets of the research (same hands,
-   beam groups). Real cost per song from `usage`, and how many songs the monthly credits cover.
-6. Gallery for the user: the algorithm and Sonnet, side by side, on the same passages.
+   beam groups). Real cost per song from `usage`, and how many songs the monthly credits cover. *Done:* 150 of 150
+   windows accepted, $8.86 for the 10 songs ($0.51 to $1.73, median $0.77), 4 to 17 minutes per song; about 110
+   songs a month. Same hand as the research's Sonnet on 96.3 to 99.8 % of the notes (the algorithm 88.7 to 99.1 %).
+6. Gallery for the user: the algorithm and Sonnet, side by side, on the same passages. *Built:*
+   [`gallery/phase-4/index.html`](gallery/phase-4/index.html), 10 passages.
 
 *Done when:* the 10 songs are written by Sonnet in the new format, the cost table is in the report, and the user has
 checked the gallery.
@@ -469,7 +490,9 @@ checked the gallery.
    is at the LLM; no text. *From Phase 3:* `render_frames(segment=(a, b))` gives the systems of a segment with the
    line breaks of the whole song (about 30 ms), and the cursor map gives the x of every column for a reveal column by
    column. Before the engine is served, the backend image takes uv's Python (Phase 3 measured the Debian build 32 %
-   slower than the host, uv's 8 %).
+   slower than the host, uv's 8 %). *From Phase 4:* the segments are the LLM's windows (`windows_of`, 12 to 16 s);
+   the reference request comes first (about 5 s) and changes every figure, so the algorithm's sheet is drawn again
+   whole before the first window returns (about 30 s per window); the image needs the `anthropic` package.
 4. The LLM's hands are saved in `notes.pmn` (Hands colours in Notes Falling and Play mode follow them).
 5. The new sheet is saved beside `sheet.json`; reopening a part does not call the LLM again.
 6. Playback: the cursor from the audio time, lit notes, click to seek (from `viewer/index.html`).
@@ -564,7 +587,7 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 |---|---|
 | 2 | The figure thresholds and the Do mayor spelling (agent, from songs: 0.7, and Do#, Mib, Fa#, Sol#, Sib; user checks the gallery); the cap of a figure at the next onset of its hand, and rule 4 in armaduras of one to three signs (user) |
 | 3 | The look of the spacing without compases (approved), and a thin double line at an armadura change or none (none, the default) (user, in the gallery) |
-| 4 | The API key (human intervention); how many songs the credits cover (information); the beam groups and the maximum of 8 (user, in the gallery) |
+| 4 | The API key (human intervention; done); how many songs the credits cover (information: about 110 a month); the beam groups and the maximum of 8 (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user) |
 | 5 | Existing projects: keep their corrections or write them again; merge to `master` early or at the end |
 | 6 | May a new LLM run change hands that the user moved; the engine in the backend or in the browser |
 | 7, 8 | Tools that no longer make sense without compases: keep, change or drop |
@@ -629,3 +652,7 @@ repository."
 | 3 | Section 3.2: empty time is the time beyond a blanca between two columns, whatever still sounds; figures are not read by the spacing | The user's example is the gap after a redonda; a rule on the sounding figure left that gap at full width |
 | 3 | Phase 3 task 5: one segment is drawn as the systems of the whole song that hold it, not as a sheet of its own | The page of Phase 5 replaces systems in place; a segment drawn alone would have other line breaks |
 | 3 | Phase 3 task 6 and Phase 5 task 3: uv's Python in the backend image is measured, and done in Phase 5 | It removes most of the container's cost (32 % to 8 %), but a rebuild restarts the running app, and 10 ms per song do not matter before the engine is served |
+| 4 | Phase 4 tasks 3 and 4: figures, grace notes and spelling stay rules computed after the LLM's hands; the reference figure is its own request; windows end at a pause and are kept whole | The cap of a figure needs the hand; without bars there is no last bar to decide again, and fixed windows give Phase 5 its segments |
+| 4 | Section 3.11: a written group keeps a sixteenth beamed to its eighth (one odd note next to one note) | The algorithm's limit (two notes of the group's figure) removed 410 of Sonnet's 2,044 groups; the user's rule allows one odd note |
+| 4 | Phase 4 task 4: no note four or more ledger lines above its staff in the checker; nearby 8va notes joined | The first run left 244 notes of one song far above the staff, and then one 8va bracket per note |
+| 4 | Phase 5 task 3: the segments are the LLM's windows; the reference request redraws the algorithm's sheet first | What the LLM step gives |

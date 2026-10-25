@@ -348,3 +348,46 @@ def test_claude_complete_sends_the_cached_instructions_and_records_the_cost() ->
         assert "general_harms" in str(exc)
     else:
         raise AssertionError("a refusal must skip the window")
+
+
+def test_a_written_group_keeps_a_sixteenth_beamed_to_its_eighth() -> None:
+    # a short-long pair is one group (one odd note opens it); two figures apart is never one group
+    assert llm.one_figure([0, 1], [16, 8]) == [[0, 1]]
+    assert llm.one_figure([0, 1, 2, 3], [16, 8, 16, 8]) == [[0, 1], [2, 3]]
+    assert llm.one_figure([0, 1], [32, 8]) == [[0], [1]]
+    assert llm.one_figure([0, 1, 2, 3, 4], [8, 8, 16, 8, 8]) == [
+        [0, 1, 2],
+        [3, 4],
+    ]  # never inside a group
+
+
+def test_the_checker_keeps_notes_within_four_ledger_lines_of_their_staff() -> None:
+    target = f1.read(
+        "F1 frames frameMs=40 quarterMs=500\nkey=0 clefs: R=treble L=bass\nf0 ?: B4:4\nf12 ?: B6:4\n"
+    )
+
+    def errs(head: str, a: str, b: str) -> str:
+        reply = f"```\nF1 frames frameMs=40 quarterMs=500\n{head}\nf0 {a}\nf12 {b}\n```"
+        return " | ".join(llm.check_answer(reply, target)[0])
+
+    head = "key=0 clefs: R=treble L=bass"
+    assert "B4 is four or more ledger lines above the bass staff" in errs(
+        head, "L: B4:4", "R: B6:4 8va"
+    )
+    assert "B6 is four or more ledger lines above the treble staff" in errs(
+        head, "R: B4:4", "R: B6:4"
+    )
+    assert errs(head, "L: clef=treble B4:4", "R: B6:4 8va") == ""
+    assert errs(head, "L: A4:4".replace("A4", "B4"), "R: B6:4 8va").count("clef.L3") == 1
+
+
+def test_short_8va_lines_of_one_passage_become_one() -> None:
+    sheet = f1.read(
+        "F1 frames frameMs=40 quarterMs=500\nkey=0 clefs: R=treble L=bass\n"
+        "f0 R: G6:8 8va\nf6 R: E6:8\nf12 R: A6:8 8va\nf18 R: C5:8\nf24 R: G6:8 8va\n"  # joined: C5 and up
+        "f30 R: B4:8\nf36 R: G6:8 8va\n"  # B4 between: not joined
+        "f200 R: A6:8 8va\n"  # more than 2 s later: not joined
+    )
+    assert llm.join_ottavas(sheet) == 2
+    under = [n.frame for n in sheet.notes if n.ottava]
+    assert under == [0, 6, 12, 18, 24, 36, 200]

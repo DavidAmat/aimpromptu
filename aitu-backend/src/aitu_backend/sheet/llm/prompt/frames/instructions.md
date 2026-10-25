@@ -548,5 +548,6 @@ f120     R: C5:8
 
 Reply with the F1 frames text only, as one block in triple backticks: the two header lines, then the note lines. A
 checker reads it: it checks that every onset of the target is there exactly once with a hand, that no beam group
-has more than 8 notes or skips a note of its hand, and that `8va` is never in the bass clef. If it finds a problem,
+has more than 8 notes or skips a note of its hand, that `8va` is never in the bass clef, and that no note stands
+four or more ledger lines above its staff (clef.L3; clef.L5 and clef.6: under `8va` in the treble clef). If it finds a problem,
 the next message lists the problems; then write the whole corrected answer again, in the same way.

@@ -123,6 +123,25 @@ def test_a_grace_note_keeps_the_clef_it_sounds_in() -> None:
     assert len(clefs) == 1 and xg < clefs[0] < xm
 
 
+def test_a_grace_note_between_two_clef_changes_overlaps_neither() -> None:
+    # Superestrella (cover), Phase 4: the left hand changes to the bass clef for a grace note B3, then back to the
+    # treble clef for its chord; the two clefs and the grace note stand apart, in that order
+    sheet = f1.read(
+        "F1 frames frameMs=40 quarterMs=500\nkey=5# clefs: R=treble L=treble\n"
+        "f0       L: B4,D#5:4  R: F#5:4\n"
+        "f19      L: clef=bass B3:8 grace/\n"
+        "f20      L: clef=treble B4,D#5:2  R: B5:4\n"
+    )
+    eng = engine.engrave_frames(sheet)
+    bass = [x for staff, x, _ in glyphs(eng, "fClefChange") if staff == 2]
+    treble = [x for staff, x, _ in glyphs(eng, "gClefChange") if staff == 2]
+    _, _, xg, _ = heads(eng, "19:59")[0]
+    _, _, xm, _ = heads(eng, "20:71")[0]
+    assert len(bass) == 1 and len(treble) == 1
+    width = engine.box("fClefChange").width
+    assert bass[0] + width <= xg and xg < treble[0] < xm
+
+
 def test_an_armadura_change_cancels_the_old_signs_on_both_staves() -> None:
     lay = engine.plan(f1.read(SHEET))
     col = next(c for c in lay.columns if c.frame == 120)

@@ -21,7 +21,7 @@ their phase, after its study (plan section 8).
 - [x] **Phase 2**: rule 4 in armaduras of one to three signs: as written, everywhere (the user did not change it; one condition in `spelling.spell_pc` if they do).
 - [x] **Phase 2**: rule 7 of the alteraciones (user, 2026-10-23): after a becuadro, the first return of that note to its armadura name prints its sostenido or bemol again, when it is in the same beam group or the next note (`frames.printed_signs`; plan section 3.4).
 - [x] **Phase 3**: the look of the spacing without compases (approved: "perfect"); no thin double line at an armadura change (the default; the user did not choose, `Options.key_line` stays available).
-- [ ] **Phase 4**: the API key (human intervention); how many songs the credits cover (information); the beam groups and the maximum of 8 notes (user, in the gallery).
+- [p] **Phase 4**: the API key (done 2026-10-25); how many songs the credits cover (about 110 a month, $0.89 per song on average); the beam groups and the maximum of 8 notes (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user, report section 11).
 - [ ] **Phase 5**: existing projects, keep their corrections or write them again with the LLM; merge into `master` early or at the end.
 - [ ] **Phase 6**: may a new LLM run change hands that the user moved; the engine in the backend or in the browser.
 - [ ] **Phases 7 and 8**: the tools that no longer make sense without compases: keep, change or drop.
@@ -67,14 +67,16 @@ Done 2026-10-24. Report: [`03-implementation-phase-3.md`](03-implementation-phas
 - [x] Task 3.6 Speed in the container: 58 ms per song warm (median of 33), 31 ms per 10 s segment; uv's Python measured (32 % to 8 % slower than the host), the image change left to Phase 5.
 - [x] Task 3.7 Gallery: [`gallery/phase-3/index.html`](gallery/phase-3/index.html), 8 passages (vexflow-v2, the bars engine, the new engine) and one whole song, checked by the user ("perfect").
 
-# [ ] Phase 4: The LLM step for the new sheet
+# [p] Phase 4: The LLM step for the new sheet
 
-- [ ] Task 4.1 HUMAN INTERVENTION: the API key in `.env` (`ANTHROPIC_API_KEY`); three test requests with their `usage` and time.
-- [ ] Task 4.2 `complete(system, messages)` with the `anthropic` SDK, `claude-sonnet-5-5`, prompt caching, time limits, retries.
-- [ ] Task 4.3 The prompt version 5: the new format, the histogram of gaps in words, the alteraciones rules, the beam group criteria, the clef rules version 4; windows by onsets or time.
-- [ ] Task 4.4 The checker and the guards for the new format (at most 8 notes per beam group); the fallback to the algorithm.
-- [ ] Task 4.5 A few windows, then the 10 viewer songs; comparison with the recorded Sonnet sheets; cost per song.
-- [ ] Task 4.6 Gallery: the algorithm and Sonnet side by side.
+In progress 2026-10-25: the step is built and run on the 10 viewer songs; waiting for the user's check of the gallery and two decisions. Report: [`03-implementation-phase-4.md`](03-implementation-phase-4.md).
+
+- [x] Task 4.1 HUMAN INTERVENTION: the API key in `.env` (`ANTHROPIC_API_KEY`); three test requests with their `usage` and time (9,080 cached tokens; a cached reference request $0.009).
+- [x] Task 4.2 `complete(system, messages)` with the `anthropic` SDK, `claude-sonnet-5-5`, prompt caching, time limits, retries.
+- [x] Task 4.3 The prompt version 5: the new format, the histogram of gaps in words, the alteraciones rules, the beam group criteria, the clef rules version 4; windows by onsets or time.
+- [x] Task 4.4 The checker and the guards for the new format (at most 8 notes per beam group); the fallback to the algorithm.
+- [x] Task 4.5 A few windows, then the 10 viewer songs; comparison with the recorded Sonnet sheets; cost per song: 150 of 150 windows, $8.86, same hand as the research's Sonnet on 96.3 to 99.8 % of the notes.
+- [p] Task 4.6 Gallery: the algorithm and Sonnet side by side: [`gallery/phase-4/index.html`](gallery/phase-4/index.html), 10 passages; waiting for the user's check.
 
 # [ ] Phase 5: The new Sheet step (to see and to hear)
 

@@ -327,9 +327,9 @@ def plan(sheet: Sheet, opts: Options | None = None) -> Layout:
             base = col.note_left.get(s, 0.0)
             if col.key_change:
                 base = note_left + col.key_w
-            clef = next((c for st, c in col.clef_changes if st == s), None)
-            if clef is not None:
-                base += _clef_w(clef)
+            # every clef change of the hand at this column: two when a grace note sounds in one clef and its
+            # note in another (one before the grace notes, one between them and their note)
+            base += sum(_clef_w(c) for st, c in col.clef_changes if st == s)
             if base or s in col.note_left:
                 col.lefts[s] = base
     # the gaps: the time to the next column in either hand (figures are not read); a long gap is shortened
@@ -488,8 +488,11 @@ def _draw_system(lay: Layout, si: int) -> tuple[System, list[dict]]:
             inner = next(
                 (c for c in col.chords if c.staff == s and getattr(c, "inner_clef", None)), None
             )
-            if inner is not None:  # between the grace notes and their note
+            last = [c for st, c in col.clef_changes if st == s][-1] == clef
+            if inner is not None and last:  # between the grace notes and their note
                 left = inner.main_left
+            elif inner is not None:  # before the grace notes, which moved left of the inner clef
+                left = col.note_left.get(s, 0.0) + _clef_w(inner.inner_clef) + 0.3
             else:
                 left = note_left + col.key_w if col.key_change else col.note_left.get(s, 0.0)
             pen.g(

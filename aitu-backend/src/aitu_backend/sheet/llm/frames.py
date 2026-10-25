@@ -44,9 +44,11 @@ import numpy as np
 
 from aitu_backend.pmn.notes import Notes
 from aitu_backend.sheet.proposal.frames import (
+    BASS_LIMIT,
     FramesProposal,
-    _uniform,
+    _ledger,
     assign_figures,
+    clefs_and_ottavas,
     find_graces,
     propose_frames,
     respell,
@@ -55,7 +57,7 @@ from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet import frames as frames_mod
 from aitu_backend.sheet.sheet.common import spn
 from aitu_backend.sheet.sheet.data import FRAME_MS, Note, Sheet
-from aitu_backend.sheet.sheet.figures import figure_of_ms
+from aitu_backend.sheet.sheet.figures import figure_of_ms, steps
 from aitu_backend.sheet.sheet.spelling import spell
 
 __all__ = [
@@ -115,7 +117,9 @@ def gap_peaks(
     """The peaks of the gaps between the measured onsets of consecutive drawn columns (both hands): ``[(ms, share of the gaps)]``, the
     largest share first, and the number of gaps. A peak is a local maximum of the histogram on a log scale (bins of
     a twelfth of an octave, smoothed); its share counts the gaps within 12 % of its centre."""
-    starts: dict[int, float] = {}  # the measured onset of each drawn column (40 ms steps would split a peak)
+    starts: dict[int, float] = (
+        {}
+    )  # the measured onset of each drawn column (40 ms steps would split a peak)
     for n in sheet.notes:
         on = n.on_ms if n.on_ms is not None else n.frame * FRAME_MS
         starts[n.frame] = min(starts.get(n.frame, on), on)
@@ -340,7 +344,8 @@ def _name(midi: int) -> str:
 
 def _structure(sheet: Sheet) -> list[str]:
     """Beam groups (at most ``frames.MAX_BEAM`` notes, two or more, consecutive notes of one hand), 8va in the
-    bass clef, and ``orn`` after an ornament. Grace notes are a rule of the app, so the prompt does not ask for
+    bass clef, no note four or more ledger lines above its staff (clef.L3 for the left hand in the bass clef, the
+    algorithm's hard limit; clef.L5 and clef.6 under 8va otherwise), and ``orn`` after an ornament. Grace notes are a rule of the app, so the prompt does not ask for
     them; a column tagged ``grace`` may sit inside a group, as ``frames.check`` allows."""
     errs: list[str] = []
     for staff, hand in ((1, "R"), (2, "L")):
@@ -386,6 +391,30 @@ def _structure(sheet: Sheet) -> list[str]:
                 errs.append(
                     f"{hand} at f{f}: 8va in the bass clef (never; use the treble clef first)"
                 )
+        # clef.L3 and clef.6: no note four or more ledger lines above its staff (the first two places of each)
+        high = []
+        for f in frames:
+            clef = frames_mod._clef_at(sheet, staff, f)
+            top = max(cols[f], key=lambda n: n.midi)
+            # a note already under 8va is not checked: only a 15ma line would lower it more
+            if not top.covered and not top.ottava and _ledger(top, clef, 0)[1] >= BASS_LIMIT:
+                high.append((f, top, clef))
+        for f, top, clef in high[:2]:
+            name = spn(top.step, top.alter, top.octave)
+            if clef == "F4":
+                errs.append(
+                    f"{hand} at f{f}: {name} is four or more ledger lines above the bass staff; write it in "
+                    "the treble clef (clef.L3)"
+                )
+            else:
+                errs.append(
+                    f"{hand} at f{f}: {name} is four or more ledger lines above the treble staff; write it "
+                    "under 8va (clef.L5, clef.6)"
+                )
+        if len(high) > 2:
+            errs.append(
+                f"{hand}: {len(high) - 2} more notes four or more ledger lines above their staff"
+            )
     return errs
 
 
@@ -524,11 +553,39 @@ def _algorithm_part(start: int, end: int, algo: Sheet) -> Part:
     )
 
 
+def one_figure(run: list[int], fig: list[int]) -> list[list[int]]:
+    """Cut consecutive columns of a written group into groups of one figure (the user's rule of Phase 2): one
+    single note of a figure one step away may open or close a group, never sit inside it. Unlike the algorithm's
+    ``proposal.frames._uniform``, the odd note may stand next to a single note of the group's figure, so a
+    sixteenth beamed to the eighth after it (a short-long pair, common in pop rhythms) stays one group; the
+    algorithm needed two notes of the group's figure for an octave played unevenly, which the grace rule now
+    takes."""
+    runs: list[list[int]] = []
+    for i in run:
+        if runs and fig[runs[-1][0]] == fig[i]:
+            runs[-1].append(i)
+        else:
+            runs.append([i])
+    groups: list[tuple[list[int], bool]] = []  # (columns, holds an odd note)
+    for r in runs:
+        if groups:
+            members, odd = groups[-1]
+            near = abs(steps(fig[r[0]], fig[members[-1]])) == 1
+            if not odd and near and len(r) == 1:  # one odd note closes the group
+                groups[-1] = (members + r, True)
+                continue
+            if not odd and near and len(members) == 1:  # one odd note opens this run
+                groups[-1] = (members + r, True)
+                continue
+        groups.append((r, False))
+    return [g for g, _ in groups]
+
+
 def trim_beams(sheet: Sheet) -> Counter:
     """Cut the beam groups of a sheet where the rule's figures break them: no grace note, ornament onset, or
     negra and longer in a group; consecutive notes of one hand; one figure per group with one odd note at an edge
-    at most (the user's rule of Phase 2, ``proposal.frames._uniform``); two notes or more. Group numbers become
-    unique per hand. Returns the counts."""
+    at most (:func:`one_figure`); two notes or more. Group numbers become unique per hand. Returns the counts.
+    """
     why: Counter = Counter()
     counter = 0
     for staff in (1, 2):
@@ -561,7 +618,7 @@ def trim_beams(sheet: Sheet) -> Counter:
                     runs[-1].append(i)
                 else:
                     runs.append([i])
-            parts = [p for run in runs for p in _uniform(run, fig, Counter()) if len(p) >= 2]
+            parts = [p for run in runs for p in one_figure(run, fig) if len(p) >= 2]
             if parts == [idx]:
                 why["groups kept"] += 1
             elif not parts:
@@ -578,9 +635,40 @@ def trim_beams(sheet: Sheet) -> Counter:
     return why
 
 
-def assemble(algo: FramesProposal, parts: list[Part]) -> tuple[Sheet, dict]:
+OTTAVA_JOIN_MS = 2000.0  # two 8va lines of one hand closer than this become one
+OTTAVA_LOWEST = 72  # C5: under 8va it is written C4, one ledger line below the treble staff
+
+
+def join_ottavas(sheet: Sheet) -> int:
+    """One 8va line instead of several short ones: two 8va notes of one hand less than ``OTTAVA_JOIN_MS`` apart, in
+    the treble clef, with every note between them at C5 or higher (written no lower than C4 under the line), put
+    those notes under 8va too. Sonnet marks single high notes (clef.6), which draws one bracket per note. Returns
+    how many gaps were joined."""
+    joined = 0
+    for staff in (1, 2):
+        cols: dict[int, list[Note]] = defaultdict(list)
+        for n in sheet.notes:
+            if n.staff == staff:
+                cols[n.frame].append(n)
+        frames = sorted(cols)
+        marked = [i for i, f in enumerate(frames) if any(n.ottava == 1 for n in cols[f])]
+        for a, b in zip(marked, marked[1:]):
+            if b == a + 1 or (frames[b] - frames[a]) * FRAME_MS >= OTTAVA_JOIN_MS:
+                continue
+            between = [n for f in frames[a + 1 : b] for n in cols[f]]
+            treble = all(frames_mod._clef_at(sheet, staff, f) == "G2" for f in frames[a : b + 1])
+            if treble and all(n.midi >= OTTAVA_LOWEST and n.ottava == 0 for n in between):
+                for n in between:
+                    n.ottava = 1
+                joined += 1
+    return joined
+
+
+def assemble(algo: FramesProposal, parts: list[Part], *, clefs: str = "llm") -> tuple[Sheet, dict]:
     """The sheet from the decisions of every window (``parts`` in order, covering the song), then the rules:
-    figures, grace notes, beam groups cut by the figures, spelling. Returns the sheet and the counts.
+    figures, grace notes, beam groups cut by the figures, spelling. ``clefs="rule"`` replaces the windows' clefs
+    and 8va by the algorithm's rule on the decided hands (``proposal.frames.clefs_and_ottavas``). Returns the
+    sheet and the counts.
     """
     base = algo.sheet
     quarter_ms = algo.quarter_ms
@@ -648,6 +736,10 @@ def assemble(algo: FramesProposal, parts: list[Part]) -> tuple[Sheet, dict]:
     info: dict = {"grace columns": find_graces(sheet, quarter_ms)}
     info.update({f"beams: {k}": v for k, v in trim_beams(sheet).items()})
     respell(sheet)
+    if clefs == "rule":
+        info.update({f"clefs: {k}": v for k, v in clefs_and_ottavas(sheet).items()})
+    else:
+        info["8va lines joined"] = join_ottavas(sheet)
     for n in sheet.notes:
         n.hand_known = True
     sheet.sort()

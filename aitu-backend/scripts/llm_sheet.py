@@ -147,6 +147,44 @@ class Replay:
         return "```\n" + f1.write(ans.sort(), mode="frames") + "```"
 
 
+class Logged:
+    """An offline ``complete``: the replies logged by an earlier run, in order, with their recorded cost. The chain
+    is deterministic, so the same notes give the same prompts; from the first prompt that differs from the logged
+    one (the code changed what is sent, or the checker rejects a logged reply), the requests go to ``live``, or
+    the replay stops when there is none."""
+
+    def __init__(self, folder: Path, live: Any = None, on_call: Any = None) -> None:
+        self.logs = [json.loads(p.read_text()) for p in sorted(folder.glob("request-*.json"))]
+        self.live = live
+        self.on_call = (
+            on_call  # the replayed requests are logged again, so the new run can be replayed
+        )
+        self.diverged = False
+        self.replayed = 0
+        self.calls: list = []
+
+    @property
+    def usd(self) -> float:
+        return sum(c.usd for c in self.calls)
+
+    def __call__(self, system: str, messages: list[dict]) -> str:
+        k = len(self.calls)
+        if not self.diverged and k < len(self.logs) and self.logs[k]["messages"] == messages:
+            from aitu_backend.sheet_llm import Call
+
+            self.calls.append(Call(**self.logs[k]["call"]))
+            self.replayed += 1
+            if self.on_call:
+                self.on_call(self.calls[-1], messages, self.logs[k]["reply"])
+            return self.logs[k]["reply"]
+        if self.live is None:
+            raise RuntimeError(f"request {k + 1}: the prompt differs from the logged one")
+        self.diverged = True
+        reply = self.live(system, messages)
+        self.calls.append(self.live.calls[-1])
+        return reply
+
+
 def resolve(prefixes: list[str]) -> list[str]:
     parts = bundle.list_parts(layers=["private"])
     out = []
@@ -205,10 +243,19 @@ def run(pid: str, args: argparse.Namespace, out: Path) -> dict:
             json.dumps({"call": asdict(call), "messages": messages, "reply": text}, indent=1)
         )
 
-    if args.replay:
+    if args.from_run:
+        live = None
+        if args.then_live:
+            from aitu_backend.sheet_llm import ClaudeComplete
+
+            live = ClaudeComplete(model=args.model, effort=args.effort, on_call=on_call)
+        complete: Any = Logged(
+            paths.lab_dir() / "sheet-llm" / args.from_run / pid[:8], live, on_call
+        )
+    elif args.replay:
         if rec is None:
             raise SystemExit(f"{pid[:8]}: no recorded run")
-        complete: Any = Replay(rec)
+        complete = Replay(rec)
     else:
         from aitu_backend.sheet_llm import ClaudeComplete
 
@@ -292,6 +339,12 @@ def main() -> None:
     parser.add_argument("--effort", default="high")
     parser.add_argument(
         "--replay", action="store_true", help="the recorded Sonnet sheets answer (no API)"
+    )
+    parser.add_argument("--from-run", help="replay the logged replies of this run (no API)")
+    parser.add_argument(
+        "--then-live",
+        action="store_true",
+        help="with --from-run: ask Claude from the first prompt that differs",
     )
     parser.add_argument(
         "--dry", action="store_true", help="print the reference and first window prompts"
