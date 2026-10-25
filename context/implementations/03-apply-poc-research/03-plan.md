@@ -589,8 +589,19 @@ the browser.
    `edit`. A reading edit on a sheet the algorithm wrote must store it (today an `algorithm` record is computed
    again, not read), so the record needs a source for "the algorithm's, edited by the user".
 3. Engine features the tools need (for example fingers, octave brackets over a range), kept light.
+4. **The range selection on the new sheet** (the user, 2026-10-25): a stretch of time frames picked on the sheet,
+   with **Both / Right / Left** to limit it to one hand's staff, opening the range toolbox, as in the old sheet.
+5. **Enhance with AI, with the user's own instruction** (the user, 2026-10-25), from **both selections**: the notes
+   picked (the note toolbox) and a range of time frames (the range toolbox, Both / Right / Left). The user writes a
+   short instruction (for example "all these notes are in the left hand: share them between the two hands"); the AI
+   rewrites only that stretch: one window request with the stretch as its target, the music before and after as
+   context and look-ahead, the current hands shown, and the instruction added to the window prompt. The answer
+   goes through the checker and is written into the stored sheet and the hands for that stretch only, as one step
+   of undo (the edit model of Phase 6). No text while it works, only the pale veil on the stretch (plan section
+   3.6). A few cents and about half a minute a request.
 
-*Done when:* every tool of the two toolboxes works on the new sheet or the user agreed to drop it.
+*Done when:* every tool of the two toolboxes works on the new sheet or the user agreed to drop it, and a stretch can
+be enhanced with AI with the user's instruction from either selection.
 
 ## Phase 8: The other screens and the sheet toolbox
 
@@ -721,3 +732,4 @@ repository."
 | 6 | Phase 6 task 3: a note that changes staff gets the algorithm's clefs and 8va on the stretch where they differ from the stored ones | A high note moved to the left hand kept the bass clef with five ledger lines, which the AI's checker forbids (clef.L3) |
 | 6 | Phase 6 task 4: the engine stays in the backend | One edit takes about 0.25 s to the page; the drawing is about a third of the backend's part |
 | 6 | Playback of a part without cuts: a compressed file plays as a lossless FLAC copy | A jump inside a variable-bitrate MP3 landed up to 0.6 s away from the time the player reported, so the music did not match the notes after moving the cursor (the user's report; measured in Chromium) |
+| 6 | Phase 7 tasks 4 and 5: the range selection (Both / Right / Left) on the new sheet, and **Enhance with AI** of a stretch with the user's own instruction, from the notes picked or from a range | The user's requests of 2026-10-25, during the Phase 6 check |

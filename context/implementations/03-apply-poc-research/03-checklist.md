@@ -110,6 +110,8 @@ Built 2026-10-25; waiting for the user's check in the browser. Report: [`03-impl
 - [ ] Task 7.1 Study and inventory of the two toolboxes; the list of tools that may no longer make sense goes to the user.
 - [ ] Task 7.2 The tools on the edit model.
 - [ ] Task 7.3 The engine features the tools need, kept light.
+- [ ] Task 7.4 The range selection on the new sheet: a stretch of time frames, Both / Right / Left, the range toolbox.
+- [ ] Task 7.5 Enhance with AI a stretch, with the user's own instruction, from either selection (the notes picked or a range); one step of undo.
 
 # [ ] Phase 8: The other screens and the sheet toolbox
 
