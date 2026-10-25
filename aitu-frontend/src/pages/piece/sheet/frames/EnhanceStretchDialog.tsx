@@ -40,8 +40,9 @@ export function EnhanceStretchDialog({
       <DialogTitle>Enhance {what} with AI</DialogTitle>
       <DialogContent>
         <DialogContentText sx={{ mb: 2 }}>
-          The AI writes the hands, beams, clefs and ornaments of this stretch again, both hands. Say what you want it
-          to change, or leave it empty. It takes about half a minute and a few cents of the monthly credits; undo
+          The AI writes this stretch again, both hands, following your words first: the hands, beams, clefs and
+          ornaments, and it can take notes off the sheet when you ask (for example single notes instead of octaves).
+          Leave it empty to let the AI decide. It takes a few seconds and about one cent of the monthly credits; undo
           takes it back.
         </DialogContentText>
         <TextField

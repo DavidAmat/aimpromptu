@@ -902,9 +902,10 @@ and need the right to write the part (a version of My library answers `403`: it 
 - `GET /sheet/{uuid}/stretch?start=A&end=B`: `{"key", "signs", "fewest", "fewestSigns"}`.
 - `POST /sheet/{uuid}/llm/stretch` `{"start", "end", "staff", "notes": [refs], "instruction"}` (at most 1,000
   characters): `202 {"jobId", "status"}`; `409` while the AI already works on the part or when it is not set up,
-  `403` without the right to write. One window request whose target is the stretch (both hands), the current hands
-  shown as a suggestion and the user's words added to the prompt; the stretch is the `working` segment meanwhile.
-  The answer is stored as one step (hands and sheet; an algorithm sheet becomes `mixed`). The job's `event: done`
+  `403` without the right to write. One window request whose target is the stretch as it is now (both hands, with
+  its hands, beams, clefs, 8va, ornaments) and the user's words first in the prompt; with words, the answer may leave
+  notes out. The stretch is the `working` segment meanwhile. The answer is stored as one step (hands, the notes left
+  out taken off the page in `notes.pmn`, the sheet; an algorithm sheet becomes `mixed`). The job's `event: done`
   carries `stretch`: `ok`, `failed` (no reply accepted: nothing changes) or `stale` (the notes changed meanwhile),
   and `usd`.
 

@@ -316,12 +316,13 @@ def window_prompt(
             + "; ".join(_ranges(context))
             + "."
         )
-    out.append(
-        "## Target (write all of these notes)\n\n```\n"
-        + f1.write(target, mode="frames").strip()
-        + "\n```"
+    title = (
+        "## Target (write all of these notes)"
+        if request is None
+        else "## Target (this stretch of the sheet as it is now: write it again as the user asks)"
     )
-    if any(n.staff in (1, 2) for n in target.notes):
+    out.append(title + "\n\n```\n" + f1.write(target, mode="frames").strip() + "\n```")
+    if request is None and any(n.staff in (1, 2) for n in target.notes):
         # A run again on the numeric truth (``write_frames(hands=True)``, implementation 03, Phase 6): the user's
         # answer is that the LLM may change any hand, the user's moves included.
         out.append(
@@ -437,8 +438,12 @@ def _structure(sheet: Sheet) -> list[str]:
     return errs
 
 
-def check_answer(reply: str, target: Sheet) -> tuple[list[str], Sheet | None]:
-    """The problems of a reply for a window (empty: accepted) and the parsed answer."""
+def check_answer(
+    reply: str, target: Sheet, *, drop: bool = False
+) -> tuple[list[str], Sheet | None]:
+    """The problems of a reply for a window (empty: accepted) and the parsed answer. ``drop=True`` (a stretch the
+    user asked for, Phase 7) accepts an answer that leaves notes of the target out: they are taken off the sheet.
+    """
     text = _block(reply)
     if not text.startswith("F1 frames"):
         return ["the answer must be F1 frames (first line 'F1 frames frameMs=40 ...')"], None
@@ -461,13 +466,17 @@ def check_answer(reply: str, target: Sheet) -> tuple[list[str], Sheet | None]:
             " ..." if sum(c.values()) > 8 else ""
         )
 
-    if want - got:
+    if want - got and not drop:
         errs.append(
             f"{sum((want - got).values())} onsets of the target are missing: {show(want - got)}"
         )
     if got - want:
         errs.append(
             f"{sum((got - want).values())} onsets are not in the target (wrong frame or pitch): {show(got - want)}"
+        )
+    if drop and not sheet.notes:
+        errs.append(
+            "the answer leaves out every note of the target: keep the notes the user did not ask to take off"
         )
     if not no_hand:
         errs += _structure(sheet)
@@ -1008,7 +1017,9 @@ def stretch_request(
     instruction: str, *, staff: int | None = None, picked: list[str] | None = None
 ) -> str:
     """The section of a stretch prompt that says what the user asked (implementation 03, Phase 7, plan task 7.5):
-    their words, and what they picked (one hand's staff of the stretch, or some of its notes, named ``f120 C5``).
+    their words first (the user's rule: they are of the utmost importance for this passage), what they picked (one
+    hand's notes of the stretch, or some of its notes, named ``f120 C5``), and what the answer may change: hands,
+    beams, clefs and 8va, ornaments, and which notes stay on the sheet (a note left out is taken off the page).
     """
     if picked:
         named = ", ".join(picked[:PICKED_NAMED]) + (
@@ -1023,16 +1034,30 @@ def stretch_request(
     else:
         what = "The user picked the whole target, both hands."
     words = " ".join(instruction.split())[:REQUEST_CHARS]
-    said = (
-        f"Their words:\n\n> {words}\n\nDo what they ask in the target as far as your rules allow: the format, "
-        "the onsets of the target, the limits of a beam group and of the ledger lines stay hard rules. Where the "
-        "words say nothing, decide as you always do."
-        if words
-        else "They wrote no words: write the target as you always do."
-    )
+    if not words:
+        return (
+            "## The user's request\n\nThe user asked you to write this stretch of the sheet again, with no words "
+            f"of their own. {what} Write the target as you always do; keep every note of it."
+        )
     return (
-        "## The user's request\n\nThe user asked you to write this stretch of the sheet again. "
-        f"{what} {said} The hands and tags you write replace the ones of the whole target."
+        "## The user's request: it comes before everything else\n\n"
+        "The user is editing this exact passage and wrote an instruction for it. **Their instruction is of the "
+        "utmost importance**: it says what they want here, and it overrides your usual choices and the general "
+        "rules of your instructions (the hands, the beam groups, the clefs, the ornaments, which notes are written). "
+        "Follow it exactly and completely; do not keep the target as it is when the instruction asks for a change. "
+        f"{what}\n\nTheir instruction:\n\n> {words}\n\n"
+        "What you may do to follow it:\n\n"
+        "- move notes from one hand to the other; join or cut beam groups; change clefs and 8va; add or remove "
+        "ornaments;\n"
+        "- **take notes off the sheet**: a note of the target that you leave out of your answer is taken off the "
+        "sheet (it stays in the recording, and the user can bring it back). For example, to turn octaves into "
+        "single notes, leave out one note of each octave (the one the instruction says; when it says nothing, keep "
+        "the note that reads best in its line and leave out the other).\n\n"
+        "What you cannot do: add a note that is not in the target, or move a note to another frame or pitch. The "
+        "figures come from the length of each note: keep the onsets you write and the rhythm stays. When the "
+        "instruction asks to keep something (the rhythm, the beam groups, a hand), keep it as the target has it. "
+        "Only the format of the answer and these limits stay hard rules: a beam group has at most 8 notes, no note "
+        "four or more ledger lines above its staff, no 8va in the bass clef."
     )
 
 
@@ -1067,8 +1092,7 @@ def write_stretch(
         notes, key=current.key or 0, key_changes=list(current.key_changes), quarter_ms=quarter_ms
     )
     base = algo.sheet
-    target_notes = _part(base, start, end)
-    if not target_notes:
+    if not _part(base, start, end):
         raise ValueError("The stretch holds no notes.")
     clefs, key = _state_at(
         current.clefs, current.clef_changes, current.key or 0, current.key_changes, start
@@ -1080,7 +1104,17 @@ def write_stretch(
         hands=True,
         figures=_own_figures(notes, quarter_ms),
     )
-    target = _shown(target_notes, **shown)
+    # The target is the stretch as the user sees it (hands, beam groups, clefs, 8va, ornaments): the user's words are
+    # about it ("keep the beam groups").
+    target = Sheet(
+        notes=[_strip_marks(n) for n in current.notes if start <= n.frame < end],
+        clefs=clefs,
+        key=key,
+        clef_changes=[c for c in current.clef_changes if start < c[0] < end],
+        key_changes=[k for k in current.key_changes if start < k[0] < end],
+        quarter_ms=quarter_ms,
+    ).sort()
+    drop = bool(" ".join(instruction.split()))
     look = _shown(_part(base, end, end + int(LOOKAHEAD_MS / FRAME_MS)), **shown)
     cut = max(0, start - int(CONTEXT_MS / FRAME_MS))
     before_clefs, before_key = _state_at(
@@ -1123,7 +1157,7 @@ def write_stretch(
         while log.replies < max_checks:
             reply = complete(system, messages)
             log.replies += 1
-            errs, answer = check_answer(reply, target)
+            errs, answer = check_answer(reply, target, drop=drop)
             if not errs and guards:
                 sheet, _ = assemble(algo, [_answer_part(start, end, base, answer)])
                 errs = beam_floor(sheet)

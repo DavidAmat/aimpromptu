@@ -765,3 +765,4 @@ repository."
 | 7 | Section 3.7: a new AI run keeps the marks only the user writes and writes the AI's kinds again | The user's answer of 2026-10-25 |
 | 7 | Section 4: an 8vb in the bass clef is allowed (`frames.check`) | The old sheet's data has 139 8vb and 65 15mb brackets, and the clef rule forbids only 8va there |
 | 7 | Fingers on one chord: from the thumb in the right hand, from the little finger in the left | The old sheet gave the lowest note the smallest number in both hands, which is wrong for the left hand |
+| 7 | Phase 7 task 5: the stretch request shows the stretch as it is now, puts the user's words first ("of the utmost importance") and may leave notes out, which are taken off the page in the same step | The user's first check: "make all the notes single notes instead of the current octave notes" changed nothing, because the checker demanded every note back and the AI did not see the current beams |

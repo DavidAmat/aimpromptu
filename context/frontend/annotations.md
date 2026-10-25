@@ -47,9 +47,11 @@ Record a passage: Phase 8). On the new sheet:
   8va or 15ma). A tab with a dot means the stretch already carries that setting.
 - **Enhance with AI** of a stretch, with your own words: the ✨ in the title bar of either toolbox (the stretch of
   the notes picked, or the stretch marked). A short instruction ("all these notes are in the left hand: share them
-  between the two hands"), or none. The AI writes the hands, beams, clefs and ornaments of that stretch again
-  (about 10 seconds and one or two cents); the stretch has the pale veil meanwhile and then appears column by
-  column. The answer is one step of Undo. When no answer is accepted, a quiet line says the stretch stays as it was.
+  between the two hands", "make these octaves single notes, keep the rhythm"), or none. Your words come first: the
+  AI writes the hands, beams, clefs and ornaments of that stretch again as they ask, and takes notes off the page
+  when they ask (they stay in the recording). About 10 seconds and one cent; the stretch has the pale veil
+  meanwhile and then appears column by column. The answer is one step of Undo (notes taken off come back). When no
+  answer is accepted, a quiet line says the stretch stays as it was.
 - **Undo and Redo**: the arrows of the floating bar, ⌘Z and ⇧⌘Z (Control-Z and Control-Y on Windows). The
   backend keeps the steps, so they survive a reload and another page; the last 50 are kept. A new AI run on the
   whole sheet, or a new transcription, starts them again.

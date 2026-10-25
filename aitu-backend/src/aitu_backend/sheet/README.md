@@ -336,9 +336,12 @@ the answer of GET /sheet/{part}                                        ~40-70 ms
   AI's own kinds (beams, clefs, 8va, armaduras, ornaments) are written again, as the hands are (the user's answer of
   Phase 7).
 - **A stretch with the user's words** (`llm.frames.write_stretch`): one window conversation whose target is the
-  stretch (both hands, the current hands shown as a suggestion), the sheet before it as context, the music after it
-  as look-ahead, and `stretch_request` (the user's words, what was picked) before the answer section; the reply goes
-  through `check_answer` and the beam guard, then `splice` puts it in the sheet (the clefs and armadura after it come
-  back; the user's marks stay). The product stores it as one step with its hands (`edits.apply_stretch`).
+  stretch as it is now (both hands, with its hands, beam groups, clefs, 8va and ornaments), the sheet before it as
+  context, the music after it as look-ahead, and `stretch_request` before the answer section: the user's words come
+  first ("of the utmost importance": they override the AI's usual choices; only the format and the hard limits
+  stay), what was picked, and what the answer may change, including leaving notes out (`check_answer(drop=True)`
+  when there are words). The reply goes through `check_answer` and the beam guard, then `splice` puts it in the sheet
+  (the clefs and armadura after it come back; the user's marks stay). The product stores it as one step
+  (`edits.apply_stretch`): the hands, the notes left out taken off the page (removed in `notes.pmn`), the sheet.
 - Tests: `tests/test_sheet_reading.py`. Command: `scripts/tools_gallery.py` (the Phase 7 gallery). Browser check:
   `npm run check:frames-tools` (aitu-frontend; `--live` makes one stretch request, about $0.01).

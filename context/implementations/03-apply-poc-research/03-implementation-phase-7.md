@@ -115,7 +115,8 @@ does not hold what was asked (a beam group the figure rule cut; a forced grace n
 
 ## 4.4 The stretch request
 
-One window conversation: title "A stretch of song ... to write again", the decided context = the sheet before the
+Changed after the user's check (section 9): the target is now the stretch as it is, the user's words come first,
+and the answer may leave notes out. As first built: one window conversation: title "A stretch of song ... to write again", the decided context = the sheet before the
 stretch (4 s) as it is now (user marks stripped), the target = the algorithm's notes of `[start, end)` on the current
 hands, shown with those hands (the Phase 6 suggestion line), the look-ahead (4 s), then "## The user's request" (what
 was picked: the whole target, one hand's notes, or the picked notes named `f120 C5`, at most 40; the words, at most
@@ -160,6 +161,7 @@ windows. `documentation/services/backend/endpoints.md` section 4.1.
 | The reading edits in memory on 12 stored AI sheets (40 random edits each, `build.reapply` included, no drawing) | median 39 to 70 ms per edit (clef 39, figure 49, clef rule 68, a spliced stretch 70), max 137 ms; no error; 0 rule broken once the 8vb rule was fixed |
 | One hand move, click to new drawing (`check:frames-edit`, 4 moves) | median 315 ms (backend 222, page 106); Phase 6 measured 231 ms over 10 moves. The answer grew from about 540 to 690 KB (each note now carries its reading); the machine was also busy (another project on the GPU) |
 | A stretch with words, live (`check:frames-tools --live`, 7 Years, about 4.5 s of music, both hands) | 9 s and 11 s from the click to the stretch written; $0.0144 for one request |
+| The user's stretch (left-hand octaves made single notes), two wordings (section 9) | one reply each, $0.0098 and $0.0106 |
 
 # 7. Checks
 
@@ -188,7 +190,34 @@ Found by the zoomed look and fixed: a trill kept its first note in the beam grou
 safety net refused it: `frames.check` "beam group broken"); a trilled note now leaves its group. The 8vb refusal in
 the bass clef (section 4.1).
 
-# 9. Notes for later phases
+# 9. After the user's first check: a stretch that asks to remove notes (2026-10-25)
+
+The user marked a left-hand stretch of an AI sheet (Mi 1 / Mi 2 octaves mixed with single Mi 2) and asked "simplify
+this left hand, keep the current rythm but make all the notes be single notes instead of the current octave notes".
+The run was accepted and stored ($0.036) but changed nothing visible. Two causes in the first design: the checker
+demanded every onset of the target back ("the onsets of the target stay hard rules"), so the AI could not take the
+lower notes away; and the target showed bare notes, so "keep the beam groups" had nothing to refer to.
+
+What changed (the user asked that their words be of the utmost importance):
+
+- `write_stretch`: the target is the stretch as it is now (`current`'s notes with hands, beams, clefs, 8va,
+  ornaments; the user's marks stripped). `window_prompt(request=...)` titles it "this stretch of the sheet as it is
+  now: write it again as the user asks" and leaves out the Phase 6 suggestion line.
+- `stretch_request`: "The user's request: it comes before everything else"; the instruction is "of the utmost
+  importance" and overrides the usual choices and general rules; the list of what the answer may do (hands, beams,
+  clefs, 8va, ornaments, **take notes off the sheet** by leaving them out, with the octave example) and may not do
+  (add a note, move one to another frame or pitch); only the format and three hard limits stay. Without words, the
+  request keeps every note as before.
+- `check_answer(drop=True)` (a stretch with words): missing onsets are allowed, not an empty answer.
+- `edits.apply_stretch`: the notes of the stretch the answer left out are removed in `notes.pmn` in the same step
+  (`_Step.removed`), so Undo brings them back.
+
+Tested on the user's stretch with real requests, nothing stored: with their words and with the words of their run,
+one reply each, accepted at the first check, $0.0098 and $0.0106; the AI left out the four Mi 1 of the octaves and
+kept every beam group, the hands and the rhythm. The cached instructions (version 5) did not change. Test:
+`test_a_stretch_with_words_may_leave_notes_out_and_undo_brings_them_back`.
+
+# 10. Notes for later phases
 
 - **Phase 8.** Transpose figures changes `quarterMs`, which the spacing model reads too (`gap(t / quarter_ms)`): the
   page will be wider or narrower after it, unlike the old sheet (D-18 "nothing moves"). Transpose notes changes
@@ -210,7 +239,7 @@ the bass clef (section 4.1).
 - The scratch scripts (the stress run, the finders, the screenshots) are not kept; their numbers are in sections 6
   and 8.
 
-# 10. Documentation
+# 11. Documentation
 
 - `aitu-backend/src/aitu_backend/sheet/README.md` sections 9 and 14; `part_sheet/__init__.py`, `build.py`;
   `context/backend/README.md`.

@@ -411,3 +411,61 @@ def test_chord_fingers_run_from_the_thumb_in_the_right_hand_and_from_the_little_
         sheet = chord(staff)
         assert reading.set_fingers(sheet, refs, [5, 1, 3]).startswith("Fingers")
         assert [n.finger for n in sorted(sheet.notes, key=lambda n: n.midi)] == low_to_high
+
+
+def test_a_stretch_with_words_may_leave_notes_out_and_undo_brings_them_back(
+    client: TestClient, part: str
+) -> None:
+    before = sheet(client, part)
+    chords = {}
+    for n in before["notes"]:
+        chords.setdefault((n["hand"], frame(n["ref"])), []).append(n["ref"])
+    held = sorted(f for (hand, f), refs in chords.items() if hand == "right" and len(refs) == 2)
+    a = held[0]
+    b = min(f for f in sorted({frame(n["ref"]) for n in before["notes"]}) if f > a + 40)
+    lows = [
+        min(chords[("right", f)], key=lambda r: int(r.split(":")[1])) for f in held if a <= f < b
+    ]
+    log: list[str] = []
+
+    def single_notes(system: str, messages: list[dict]) -> str:
+        text = messages[0]["content"]
+        log.append(text)
+        block = re.search(r"## Target.*?```\n(.*?)```", text, re.S).group(1)
+        target = f1.read(block)
+        drop = {tuple(int(x) for x in r.split(":")) for r in lows}
+        target.notes = [n for n in target.notes if (n.frame, n.midi) not in drop]
+        return "```\n" + f1.write(target, mode="frames") + "```\n"
+
+    finish(
+        job.start_stretch(
+            part,
+            start=a,
+            end=b,
+            instruction="make the chords single notes",
+            complete=lambda: single_notes,
+        )
+    )
+    assert "utmost importance" in log[0] and "take notes off the sheet" in log[0]
+    assert " b1" in log[0].split("## Target")[1].split("```")[1]  # the target shows its beam groups
+    after = sheet(client, part)
+    assert lows and not any(r in notes_of(after) for r in lows)
+    stored = pipeline.load_note_events(part)
+    assert stored is not None and sum(e.removed for e in stored.events) == len(lows)
+    assert after["history"]["undo"] == "Enhance a stretch with AI"
+
+    back = walk(client, part, "undo")
+    assert all(r in notes_of(back) for r in lows)
+    stored = pipeline.load_note_events(part)
+    assert stored is not None and not any(e.removed for e in stored.events)
+
+
+def test_a_window_must_keep_every_note_and_a_stretch_with_words_may_leave_some_out() -> None:
+    target = f1.read(
+        "F1 frames frameMs=40\nkey=0 clefs: R=treble L=bass\nf0 R: C4,E4:8\nf6 R: G4:8\n"
+    )
+    answer = "```\nF1 frames frameMs=40\nkey=0 clefs: R=treble L=bass\nf0 R: E4:8\nf6 R: G4:8\n```"
+    assert any("missing" in e for e in llm.check_answer(answer, target)[0])
+    assert llm.check_answer(answer, target, drop=True)[0] == []
+    empty = "```\nF1 frames frameMs=40\nkey=0 clefs: R=treble L=bass\n```"
+    assert llm.check_answer(empty, target, drop=True)[0]

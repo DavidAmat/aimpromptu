@@ -413,17 +413,34 @@ def apply_stretch(
     model: str | None,
 ) -> bool:
     """Store a stretch the AI wrote again (Phase 7, ``job.start_stretch``): the hands of ``spliced`` into
-    ``notes.pmn`` and the sheet, settled on them, into ``sheet.f1``, as one step. A sheet the algorithm wrote
-    becomes ``mixed`` (the AI wrote part of it: **Enhanced with AI**). Returns ``False`` without writing when the
-    notes changed while the AI worked."""
+    ``notes.pmn``, the notes of the stretch it left out taken off the page (removed in ``notes.pmn``, as
+    :func:`remove_notes` does: the user asked for it, for example single notes instead of octaves), and the sheet,
+    settled on them, into ``sheet.f1``, as one step. A sheet the algorithm wrote becomes ``mixed`` (the AI wrote part
+    of it: **Enhanced with AI**). Returns ``False`` without writing when the notes changed while the AI worked.
+    """
     with pipeline.piece_lock(part_id):
         stored = pipeline.load_note_events(part_id)
         if stored is None or stored.header.notes_revision != notes_revision:
             return False
         drawn = build.current(part_id)
+        by_id = {event.id: event for event in stored.events if event.id is not None}
+        kept_places = {(n.frame, n.midi) for n in spliced.notes if start <= n.frame < end}
+        left_out = {
+            (n.frame, n.midi)
+            for n in f1.read(drawn.text).notes
+            if start <= n.frame < end and (n.frame, n.midi) not in kept_places
+        }
+        at = _notes_at(stored.events)
+        gone = {
+            i: (False, True)
+            for place in left_out
+            for i in at.get(place, [])
+            if not by_id[i].removed
+        }
+        for i in gone:
+            by_id[i].removed = True
         notes = events_file.notes_from_events(stored.events)
         hands = build.hands_of_sheet(spliced, notes)
-        by_id = {event.id: event for event in stored.events if event.id is not None}
         was = {i: (e.hand, e.hand_guessed) for i, e in by_id.items()}
         complete = saved_hands.hands_complete(stored.events)
         for note_id, side in hands.items():
@@ -440,8 +457,10 @@ def apply_stretch(
             if (e.hand, e.hand_guessed) != was[i]
         }
         revision = stored.header.hands_revision
-        if changes:
-            revision = _write_hands(part_id, stored, before=stored.header).header.hands_revision
+        if changes or gone:
+            revision = _write_hands(
+                part_id, stored, before=stored.header, hands=bool(changes), notes=bool(gone)
+            ).header.hands_revision
         after = f1.write(build.reapply(spliced, pipeline.starting_hands(part_id)), mode="frames")
         kept = store.load(part_id)
         record = (
@@ -460,7 +479,8 @@ def apply_stretch(
         store.save(part_id, after, record)
         build.forget(part_id)
         _record(
-            _Step("Enhance a stretch with AI", changes, _sheet_change(drawn.text, after)), part_id
+            _Step("Enhance a stretch with AI", changes, _sheet_change(drawn.text, after), gone),
+            part_id,
         )
         return True
 
