@@ -5,8 +5,8 @@ research repository (`poc-aitu-research`, git `a208a92`, version 0.1.0 of resear
 agents of implementation 03 (`context/implementations/03-apply-poc-research/`). Everything below is the research
 README with the names of the backend: `aitu_notation.X` of the research is `aitu_backend.sheet.X` here. The copy
 changed no logic; the golden files of section 7 prove it. Phase 2 added the new sheet without compases (section 9),
-Phase 3 its engine (section 10), Phase 4 its LLM step (section 11), and Phase 5 put it in the app (section 12): the
-bars path below is unchanged, and so are its golden files.
+Phase 3 its engine (section 10), Phase 4 its LLM step (section 11), Phase 5 put it in the app (section 12), and Phase 6 made it editable
+(section 13): the bars path below is unchanged, and so are its golden files.
 
 ## 1. What it does
 
@@ -264,3 +264,34 @@ POST /sheet/{part}/llm ── part_sheet.job.start ── write_frames(on_start,
 - The hands of a sheet go back to the notes by `build.hands_of_sheet` (each live note at its drawn column and key).
 - `scripts/import_llm_sheets.py` stored the Phase 4 sheets of the 10 viewer songs (`viewer-final`) this way.
 - Tests: `tests/test_part_sheet.py`.
+
+## 13. Editing the new sheet (implementation 03, Phase 6)
+
+`aitu_backend/part_sheet/edits.py` (outside the core) and the routes `POST /sheet/{part}/hands`, `/undo`, `/redo` of
+`api/sheet.py`. Measurements and reasons: `context/implementations/03-apply-poc-research/03-implementation-phase-6.md`.
+
+```text
+POST /sheet/{part}/hands {notes: ["<frame>:<midi>", ...], hand}      (the refs are the noteheads' data-note)
+   |  under the part's lock: the refs -> note ids (drawn column D-04 + key, as build.hands_of_sheet)
+   |  notes.pmn: the hands of every note first when they were never saved as a whole, then the moved ones (save_edit)
+   |  sheet.f1 (a stored AI sheet): build.reapply on the new hands -> stored for the new handsRevision, record kept
+   |  the step -> sheet.edits.json: each note's hand before and after, one line patch of sheet.f1 both ways
+   v
+the answer of GET /sheet/{part} (the sheet drawn again)                ~0.15 s in the backend, ~0.25 s to the page
+```
+
+- **What an edit changes**: the numeric truth (the hands in `notes.pmn`, plan section 3.7) and the stored sheet.
+  A sheet the algorithm wrote is not stored: it is a function of the notes and their hands.
+- **Clefs around a moved note** (`build.fit_clefs`, inside `reapply`): a note on another staff than in the stored
+  sheet (or new to it) gets the clefs and 8va of the algorithm's rule (`proposal.frames.clefs_and_ottavas`, the
+  clef rules version 4) on the stretch of its staff where the rule and the stored sheet differ; the stored clefs and
+  8va stay everywhere else. `frames.check` holds on the result.
+- **Undo and redo** (`edits.undo`, `edits.redo`): a step touches only what is still as it left it (a guessed hand
+  counts as no hand); `sheet.f1` is patched only when it is the text the step left, for the hands it left. The log
+  keeps 50 steps; `job.commit` and `store.clear` start it again. It is not in the file lists of a copy.
+- **The LLM run again** (`job.start`): on a sheet the AI enhanced, `write_frames(hands=True)`, and the window prompt
+  says the shown hands are a suggestion the LLM may change (`llm.frames.window_prompt`); the record's prompt is
+  `5+hands`. The cached instructions (version 5) did not change.
+- `GET /sheet/{part}` also answers `notes` (`build.drawn_notes`: ref, hand, printed pitch), `editable` and
+  `history`.
+- Tests: `tests/test_sheet_edits.py`. Browser check: `npm run check:frames-edit` (aitu-frontend).

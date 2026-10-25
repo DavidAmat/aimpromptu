@@ -65,19 +65,47 @@ export interface SheetLlm {
   written: string | null;
 }
 
+/** One drawn note as its notehead names it (implementation 03, Phase 6). */
+export interface SheetNote {
+  /** `"<frame>:<midi>"`: the `data-note` of its notehead (a head of merged unisons lists several). */
+  ref: string;
+  hand: "right" | "left";
+  /** The name the sheet prints, as it sounds: `C#5`, `Bb3`. */
+  pitch: string;
+}
+
+/** What the next undo and redo of the part's steps are about (`null`: nothing). */
+export interface SheetHistory {
+  undo: string | null;
+  redo: string | null;
+}
+
 export interface FramesSheet {
   svg: string;
   columns: SheetColumn[];
   systems: SheetSystem[];
   width: number;
   height: number;
+  notes: SheetNote[];
   segments: SheetSegment[];
   /** Who decided the hands and the reading: `llm`, `mixed` or `algorithm`. */
   source: "llm" | "mixed" | "algorithm";
   /** Written for older notes or hands, and laid again on the current ones. */
   stale: boolean;
   llm: SheetLlm;
+  /** The user may change this part, and the AI is not writing it: the notes can be edited (plan section 3.7). */
+  editable: boolean;
+  history: SheetHistory;
   timings: Record<string, number>;
+}
+
+/** The answer of an edit: the sheet drawn again. */
+export interface SheetEdited extends FramesSheet {
+  /** A hand move: the notes whose hand changed, and the ones the sheet does not hold. */
+  moved?: number;
+  unmatched?: number;
+  /** An undo or a redo: the step it walked (`null`: there was none). */
+  walked?: string | null;
 }
 
 export const sheetApi = {
@@ -90,4 +118,16 @@ export const sheetApi = {
     request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm`, { method: "POST" }),
 
   progressUrl: (jobId: string) => buildUrl(`/matrix/progress/${jobId}`),
+
+  /** Give the notes to one hand, in the notes themselves (one step of undo); the sheet drawn again. */
+  moveHands: (audioUuid: string, notes: readonly string[], hand: "right" | "left", width: number) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/hands`, {
+      method: "POST",
+      query: { width: Math.round(width) },
+      body: { notes, hand },
+    }),
+
+  /** Take the last step of the part back, or put it again; the sheet drawn again. */
+  walk: (audioUuid: string, to: "undo" | "redo", width: number) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/${to}`, { method: "POST", query: { width: Math.round(width) } }),
 };

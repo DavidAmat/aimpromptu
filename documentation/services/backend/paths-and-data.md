@@ -54,7 +54,7 @@ made the folder, written or checked `VERSION`, and brought the tables to the new
     needs-rederivation.json                  only on a piece nothing could rebuild (pre-08)
   staging/                                   the edit sessions until Phase 9; no longer written
   cache/<partId>/                            derived, safe to delete (§4.1)
-    normalized.wav  waveform.json  piece-r<N>.flac  piece-r<N>.wav  scratch clips
+    normalized.wav  waveform.json  piece-r<N>.flac  piece-r<N>.wav  listen-*.flac  scratch clips
     src-<sha256>.wav  sources-<key>.flac     only for a part of several files (§2.2)
 ```
 
@@ -278,6 +278,7 @@ user knows (the original file name, or the title) with the stored extension.
 | `waveform.json` | Peaks for the waveform view | On request; deleted when the cuts or the audio change |
 | `piece-r<N>.flac` | With cuts: the stored file decoded at its own rate, kept ranges joined, lossless | `PUT /audio/{uuid}/cuts`, or on the first request (`audio/piece_audio.py`) |
 | `piece-r<N>.wav` | With cuts: `normalized.wav` with the kept ranges joined | Same |
+| `listen-<stored name>.flac` | Without cuts, a compressed stored file (MP3, M4A, a recording): a lossless copy, so that a jump in the player lands where it is asked | On the first request (`piece_audio.listen_copy`) |
 | `range_*.wav`, `transcribe_range.wav` | Scratch clips of `GET /audio/{uuid}/range` and of a range transcription | On request |
 
 The joined audio is joined exactly as the engine's input is (`frames.join_kept`): a 5 ms fade out and

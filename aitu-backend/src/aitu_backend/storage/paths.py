@@ -187,6 +187,12 @@ def part_frames_pending_path(part_id: str) -> Path:
     return part_dir(part_id) / "sheet.pending"
 
 
+def part_frames_edits_path(part_id: str) -> Path:
+    """`sheet.edits.json` — the steps of undo and redo of the new sheet (implementation 03, Phase 6). Not copied with
+    the part: a copy starts without steps."""
+    return part_dir(part_id) / "sheet.edits.json"
+
+
 def part_timeline_path(part_id: str) -> Path:
     """`timeline.json` — the audio segments the part plays one after the other."""
     return part_dir(part_id) / "timeline.json"

@@ -47,9 +47,12 @@ database. Every path in the folder is built by one module, `aitu_backend/storage
     sheet.f1                     the new piano sheet: F1 frames text and a record of how it was written
                                  (Sonnet or the algorithm, implementation 03, Phase 5); the hands stay in notes.pmn
     sheet.pending                a new transcription asks Sonnet to write the sheet (removed when it starts)
+    sheet.edits.json             the steps of undo and redo of the new sheet (implementation 03, Phase 6): each
+                                 note's hand before and after, the lines of sheet.f1 changed; not copied with the part
     timeline.json                the audio timeline: which stored files, which ranges, in order
   cache/<partId>/                derived, safe to delete: normalized.wav, waveform.json,
-                                 piece-r<N>.flac/.wav (the joined audio of a part with cuts)
+                                 piece-r<N>.flac/.wav (the joined audio of a part with cuts),
+                                 listen-<stored name>.flac (the lossless copy a compressed file plays as)
 ```
 
 A normal project has one **part**. An integrated playlist (Phase 10) has one per sub-song: **From

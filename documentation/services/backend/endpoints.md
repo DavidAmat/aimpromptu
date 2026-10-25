@@ -123,9 +123,11 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/time/{uuid}/paste` | Put a copied passage (notes, marks, audio) into the part at a moment, or over a stretch; everything after moves (Phase 8). |
 | POST | `/time/{uuid}/versions/{n}/restore` | Put an earlier state of the part back: the undo and the redo of a paste (Phase 8) and of a promotion (Phase 9). |
 | GET PUT DELETE | `/time/{uuid}/rhythm` | The saved reading. |
-| **The new sheet** | `api/sheet.py` | Implementation 03, Phase 5 |
+| **The new sheet** | `api/sheet.py` | Implementation 03, Phases 5 and 6 |
 | GET | `/sheet/{uuid}?width=N` | The new sheet of a part drawn for a page `N` staff spaces wide: the SVG, the cursor map, the segments of Sonnet's windows and their state, and what the page may do with Sonnet (section 4.1). |
 | POST | `/sheet/{uuid}/llm` | Start Sonnet on the part (or answer the run already going); follow `GET /matrix/progress/{jobId}`. |
+| POST | `/sheet/{uuid}/hands` | Phase 6: give notes to one hand, in `notes.pmn` (one step of undo); the sheet drawn again (section 4.1). |
+| POST | `/sheet/{uuid}/undo`, `/sheet/{uuid}/redo` | Phase 6: walk the part's steps back or forward; the sheet drawn again. |
 | **Recording in Sheet** | `api/passages.py` | Implementation 02, Phase 9 |
 | POST | `/passages` | **Record this passage**: a passage of a part (a stretch, or a moment for a new passage); its Current is made. |
 | GET PATCH DELETE | `/passages/{id}` | The passage; the take on show, the speed, the window; discard it. |
@@ -362,11 +364,15 @@ The audio of the piece, for every player. Two query flags, both `false` by defau
 
 | Piece | No flag | `normalized=true` | `original=true` |
 |---|---|---|---|
-| No cuts | The file the user gave (the stored file) | `normalized.wav` | The stored file |
+| No cuts, a WAV or FLAC | The file the user gave (the stored file) | `normalized.wav` | The stored file |
+| No cuts, a compressed file (MP3, M4A, a recording) | `listen-<stored name>.flac`, a lossless copy of it | `normalized.wav` | The stored file |
 | With cuts | `piece-r<N>.flac` | `piece-r<N>.wav` | The stored file |
 
 The stored file is `.database/audio/<sha256>.<ext>`, named by its content; the download keeps the
-name of the file the user gave. `normalized.wav` and `piece-r<N>.*` are in the part's `cache/` folder.
+name of the file the user gave. `normalized.wav`, `piece-r<N>.*` and `listen-*.flac` are in the part's `cache/`
+folder. The lossless copy exists because an `<audio>` element jumps inside an MP3 by guessing the byte of a time:
+on a file of variable bitrate a jump landed up to about 0.6 s away from the time the player reported, and the music
+no longer matched the notes until the next jump (measured in Chromium, 2026-10-25; `piece_audio.listen_copy`).
 
 Until Phase 6 every player played the untouched original, so on a cut piece the audio ran ahead of
 the notes by the length of the cuts before the playhead. The user's rule (2026-09-29) is that once
@@ -811,7 +817,7 @@ own) and `figuresFrom` (where the next figures transposition starts), and `lyric
 
 <a id="5-passages--recording-in-sheet"></a>
 
-### 4.1 `/sheet`: the new sheet (implementation 03, Phase 5)
+### 4.1 `/sheet`: the new sheet (implementation 03, Phases 5 and 6)
 
 `GET /sheet/{uuid}?width=130` (60 to 320 staff spaces, the staff width; the SVG adds 8 of margins) answers:
 
@@ -820,10 +826,12 @@ own) and `figuresFrom` (where the next figures transposition starts), and `lyric
  "columns": [{"system": 0, "frame": 177, "x": 10.97, "ms": 7080.0}, …],
  "systems": [{"index": 0, "first": 177, "last": 552, "top": 3.0, "bottom": 20.2,
               "staff_top": 5.03, "staff_bottom": 19.68, "left": 3.0, "right": 135.0}, …],
+ "notes": [{"ref": "177:62", "hand": "right", "pitch": "D4"}, …],
  "segments": [{"start": 177, "end": 577, "state": "llm"}, …],
  "source": "llm", "stale": false,
  "llm": {"state": "done", "jobId": null, "available": true, "auto": false, "canRun": false,
          "viaEdit": false, "usd": 0.68, "written": "2026-10-25T15:40:00+00:00"},
+ "editable": true, "history": {"undo": "Move a note to the left hand", "redo": null},
  "timings": {"parse_ms": 6.1, "plan_ms": 18.0, "draw_ms": 12.9, "svg_ms": 4.7, "cursor_ms": 0.1, "total_ms": 41.8}}
 ```
 
@@ -837,11 +845,34 @@ own) and `figuresFrom` (where the next figures transposition starts), and `lyric
   `enhanced`: the AI wrote this sheet or part of it (`sheet.f1` with source `llm` or `mixed`); it stays through
   every later change of the notes or the hands. `runs`: how many AI runs wrote it. `viaEdit`: the owner's
   version of My library, which changes through its edit copy.
+- `notes` (Phase 6): each drawn note as its notehead names it (`ref` is the `data-note` of the SVG,
+  `"<frame>:<midi>"`, the drawn column and the sounding key), its hand and the name the sheet prints. `editable`:
+  the user may change the part and the AI is not writing it. `history`: what the next undo and redo of the part's
+  steps are about (`null`: none).
 - `409` before the notes exist; the usual `404` of the rights.
 
 `POST /sheet/{uuid}/llm` answers `202 {"jobId", "status"}` (`409` when no API key or SDK is set up). The job's
 stream sends `event: sheet` with `{"phase": "reference" | "windows" | "window" | "saved", "done", "total"}`, then
-`event: done` with `source`, `windows`, `usd`. The job stops asking Sonnet when the part is deleted.
+`event: done` with `source`, `windows`, `usd`. The job stops asking Sonnet when the part is deleted. On a sheet the
+AI enhanced, the run reads the current hands (the user's moves among them) as a suggestion it may change (Phase 6);
+a first run reads the notes without hands.
+
+**Editing (Phase 6, `part_sheet.edits`).** Each route below changes the stored truth in one write under the part's
+lock, records one step in the part's log (`sheet.edits.json`), and answers the sheet drawn again, as `GET` does
+(with the same `width` query), so one edit is one request. All three answer `409` while the AI writes the sheet,
+and need the right to write the part (a version of My library answers `403`: it changes through its edit copy).
+
+- `POST /sheet/{uuid}/hands?width=130` `{"notes": ["177:62", …], "hand": "left"}`: the notes (by ref) go to that
+  hand in `notes.pmn`. A part whose hands were never saved as a whole first saves the hand the sheet draws for every
+  note. A stored sheet (`sheet.f1`) is laid again on the new hands and stored for them, so it stays current and
+  keeps its record (the AI mark); around a note that changed staff the clefs and 8va of the algorithm's rule replace
+  the stored ones where they differ (`build.fit_clefs`). The answer adds `moved` (notes whose hand changed) and
+  `unmatched` (refs the sheet does not hold).
+- `POST /sheet/{uuid}/undo?width=130` and `POST /sheet/{uuid}/redo?width=130`: walk the last step back or forward.
+  A step touches only what is still as it left it: a hand changed since by something else stays, and a `sheet.f1`
+  changed since is laid again on the hands instead of patched. The answer adds `walked`, the step's label (`null`
+  when there was none). The log keeps 50 steps; an AI run that writes the sheet and a new transcription start it
+  again.
 
 ## 5. `/passages`: Recording in Sheet
 

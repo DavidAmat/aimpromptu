@@ -586,8 +586,10 @@ def stream_audio(audio_uuid: str, normalized: bool = False, original: bool = Fal
     recognizes. `?normalized=true` serves the mono 16 kHz WAV the engine reads.
 
     **A piece with cuts plays its edited audio** (implementation 08, Phase 6): the original with
-    the cuts removed, the time the notes are in, from both forms. `?original=true` serves the
-    untouched file instead, for the Audio tab, which shows the cuts on the original to restore them.
+    the cuts removed, the time the notes are in, from both forms. **A piece without cuts whose file
+    is compressed** (an MP3) plays a lossless FLAC copy of it, so that a jump lands where it is asked
+    (implementation 03). `?original=true` serves the untouched file instead, for the Audio tab,
+    which shows the cuts on the original to restore them.
     The answer is revalidated on each play (`no-cache`), because saving other cuts changes it.
     """
     _found(audio_uuid)
@@ -606,6 +608,14 @@ def stream_audio(audio_uuid: str, normalized: bool = False, original: bool = Fal
             path = piece.normalized if normalized else piece.listen
             media = "audio/flac" if path.suffix == ".flac" else "audio/wav"
             return FileResponse(path, media_type=media, headers={"Cache-Control": "no-cache"})
+        if not normalized:
+            # A compressed original plays as a lossless copy: a jump in an MP3 lands up to half a second
+            # away from the time the player reports (``piece_audio.listen_copy``).
+            copy = piece_audio.listen_copy(audio_uuid)
+            if copy is not None:
+                return FileResponse(
+                    copy, media_type="audio/flac", headers={"Cache-Control": "no-cache"}
+                )
     entry = store.get(audio_uuid)
 
     if normalized:

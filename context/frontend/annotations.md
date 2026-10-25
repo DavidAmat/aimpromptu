@@ -15,6 +15,29 @@ The code is `aitu-frontend/src/pages/piece/sheet/` (implementation 02, Phase 2 s
 5,328-line `RhythmPage.tsx` into it; see
 [`documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md)).
 
+## The new sheet (implementation 03, Phase 6)
+
+Since implementation 03, Phase 5 the Sheet step opens on the **new sheet** (without compases, drawn by the
+backend; [rendering.md](rendering.md)). Everything below this section is the **old sheet**, which opens from
+**Edit in the old sheet** and keeps every tool until the tools move to the new sheet (Phases 7 and 8). On the new
+sheet, so far:
+
+- **Pick notes**: click a notehead (the recording goes there), ⌘-click or Shift-click to add or take one away, or
+  drag a box across the staves. Escape drops the pick. The note toolbox opens beside the notes, titled with the
+  name the sheet prints (`Do-# 5`) or the number of notes, with their time under it.
+- **Hand: Right / Left** writes the hand of the notes into the notes themselves (`notes.pmn`, the numeric truth):
+  a note's figure is its length up to the next note of its hand, so its neighbours may change figure too. A note
+  that changes staff gets the clefs and 8va of the clef rules around it where they are needed (a high note moved to
+  the left hand gets a treble clef rather than five ledger lines); the rest of the sheet keeps its clefs. The sheet
+  keeps its **Enhanced with AI** mark.
+- **Undo and Redo**: the arrows of the floating bar, ⌘Z and ⇧⌘Z (Control-Z and Control-Y on Windows). The
+  backend keeps the steps, so they survive a reload and another page; the last 50 are kept. A new AI run on the
+  sheet, or a new transcription, starts them again.
+- **No Save button**: each change is written at once.
+- **Nothing can be changed while the AI writes the sheet**: the toolbox and the arrows say why.
+- **Enhance it again with AI** reads the current hands, the ones you moved among them, as a suggestion, and may
+  change any of them (the user's answer of Phase 6). A first run reads the notes without hands.
+
 ## The page
 
 The page is the sheet (plan section 11.2 of implementation 02). From top to bottom:

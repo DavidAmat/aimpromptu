@@ -203,3 +203,5 @@ def clear(part_id: str) -> None:
     if path.is_file():
         path.unlink()
         bundle.step_changed(part_id)
+    # The steps of undo and redo name notes and lines that are gone (``edits``).
+    paths.part_frames_edits_path(part_id).unlink(missing_ok=True)

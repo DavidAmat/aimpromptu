@@ -23,6 +23,16 @@ each join a 5 ms fade out and in inside the kept samples, and a frame ``f`` of t
 The files are made when the cuts are saved (``PUT /audio/{uuid}/cuts``) and, if one is missing,
 when it is first asked for. Files of another revision are deleted, and both go away when the cuts
 are removed.
+
+**A piece without cuts plays a lossless copy of a compressed original** (:func:`listen_copy`,
+implementation 03, after Phase 6). An ``<audio>`` element jumps inside an MP3 by guessing the byte
+of a time: a file of variable bitrate has only a table of 100 points (the Xing header), so a jump
+lands up to half a second away from the time it reports, and the music no longer matches the notes
+and the cursor until the next jump (measured in Chromium on 7 Years: 30 to 576 ms late depending
+on the place, the same at every jump to that place; a FLAC copy lands where asked every time). So
+a stored file that is not WAV or FLAC is played as ``listen-<its name>.flac``: decoded by the same
+ffmpeg that made the engine's audio, at its own rate and channels, made the first time it is played
+and kept in the part's cache.
 """
 
 from __future__ import annotations
@@ -42,7 +52,7 @@ from aitu_backend.audio import formats, sources, store
 from aitu_backend.audio.frames import FADE_MS, FRAME_MS, FrameTable, frame_count, join_kept
 from aitu_backend.audio.store import StoredAudio
 
-__all__ = ["PieceAudio", "ensure", "join_samples", "write_joined"]
+__all__ = ["PieceAudio", "ensure", "join_samples", "listen_copy", "write_joined"]
 
 _locks: dict[str, threading.Lock] = {}
 _locks_lock = threading.Lock()
@@ -206,3 +216,42 @@ def ensure(audio_uuid: str) -> PieceAudio | None:
             else:
                 write_joined(original, listen, table)
         return PieceAudio(listen, normalized, table)
+
+
+#: Stored formats an audio element jumps in exactly: PCM (a time is a byte) and FLAC (its frames carry their sample).
+SEEK_EXACT = frozenset({"wav", "flac"})
+
+
+def listen_copy(audio_uuid: str) -> Path | None:
+    """The FLAC that plays a piece without cuts whose stored file is compressed (an MP3, an M4A, a recording), made
+    now if it is missing; ``None`` when the stored file plays as it is (WAV, FLAC, a part of several files, which plays
+    their joined FLAC) or cannot be converted. See the module's last paragraph."""
+    with _lock(audio_uuid):
+        entry = store.get(audio_uuid)
+        original = entry.original_path
+        if (
+            entry.joined
+            or original is None
+            or not original.is_file()
+            or original.suffix.lstrip(".").lower() in SEEK_EXACT
+            or not formats.ffmpeg_available()
+        ):
+            return None
+        target = entry.directory / f"listen-{original.stem}.flac"
+        for old in entry.directory.glob("listen-*.flac"):
+            if old != target:
+                old.unlink(missing_ok=True)
+        if target.is_file():
+            return target
+        entry.directory.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_suffix(".tmp.flac")
+        encoded = subprocess.run(
+            ["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(original), "-vn"]
+            + ["-c:a", "flac", "-sample_fmt", "s16", str(temporary)],
+            capture_output=True,
+        )
+        if encoded.returncode != 0:
+            temporary.unlink(missing_ok=True)
+            return None
+        temporary.replace(target)
+        return target

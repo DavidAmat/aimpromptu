@@ -3,7 +3,7 @@
 Two sheets live side by side while implementation 03 replaces the old one (plan:
 [`implementations/03-apply-poc-research/03-plan.md`](../implementations/03-apply-poc-research/03-plan.md)).
 
-## The new sheet (implementation 03, Phase 5)
+## The new sheet (implementation 03, Phases 5 and 6)
 
 The Sheet step, a version of My library and Play mode show the **new sheet** first: the sheet without compases,
 tempo, puntillos or silencios that the backend draws (`aitu_backend.sheet.engrave.frames`, the Leipzig glyphs and
@@ -11,20 +11,29 @@ Verovio's drawing rules). The page asks `GET /sheet/{part}?width=N` for the widt
 space) and gets one SVG and a cursor map: one row per drawn column (its line, its x, its time) and one box per
 line. The code is `pages/piece/sheet/frames/`:
 
-- `FramesSheetPage.tsx`: the page (title lines, the player, the floating bar with **Enhance with AI** and
-  **Edit in the old sheet**);
+- `FramesSheetPage.tsx`: the page (title lines, the player, the floating bar with Undo, Redo, **Enhance with AI**
+  and **Edit in the old sheet**), and since Phase 6 the notes picked and the keys (⌘Z, ⇧⌘Z, Escape);
+- `FramesNoteToolbox.tsx` (Phase 6): the note toolbox of the new sheet, beside the notes picked; its first tool is
+  **Hand** (see [annotations.md](annotations.md), "The new sheet");
 - `FramesSheetView.tsx`: the SVG as the backend wrote it, scaled to the page, and an overlay in the same units:
   the cursor (a line between two columns by their times), the lit noteheads of its column, the pale veil on the
   part Sonnet works on, and the blank staves that a part coming back from Sonnet is written into, column by
-  column (about two seconds);
+  column (about two seconds); since Phase 6 also the picking of notes (a click on a notehead, ⌘ or Shift to add,
+  a box dragged across the staves);
 - `geometry.ts`: the research viewer's arithmetic (where the cursor is, the time under a click);
-- `useFramesSheet.ts`: the loads, Sonnet's job followed on its stream (`event: sheet`), and Sonnet started by
-  itself on a new transcription.
+- `useFramesSheet.ts`: the loads, Sonnet's job followed on its stream (`event: sheet`), Sonnet started by
+  itself on a new transcription, and an edit (one request whose answer is the sheet drawn again).
 
 Hooks for the browser checks: `[data-frames-sheet]` (`data-source`, `data-llm`, `data-working`),
 `data-note="<frame>:<midi>"` on each notehead, `[data-lit]`, `[data-frames-cursor]` (`data-ms`),
-`[data-segment-state=working]`, `[data-revealing]`. The check is `npm run check:frames-sheet` (`--live` spends a
-few cents of Sonnet on a 40 s clip).
+`[data-segment-state=working]`, `[data-revealing]`; since Phase 6 `[data-selected]` on the picked noteheads,
+`[data-pick-box]`, `[data-frames-note-toolbox]`, and `sheet-undo`, `sheet-redo` (`data-testid`). The checks are
+`npm run check:frames-sheet` (`--live` spends a few cents of Sonnet on a 40 s clip) and `npm run check:frames-edit`
+(picking, the hand, undo and redo, and the time of one edit).
+
+The engine stays in the backend (implementation 03, Phase 6, task 4): one edit takes about a quarter of a second
+from the click to the new drawing on the page, most of it in the backend's rules (the stored sheet laid again on
+the new hands), which a browser port of the drawing alone would not remove.
 
 ## The old sheet (vexflow-v2), until implementation 03, Phase 8
 

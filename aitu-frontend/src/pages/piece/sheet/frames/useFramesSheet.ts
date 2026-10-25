@@ -6,10 +6,13 @@
  * (the reference figure, then each window) and `event: done` at the end; each one asks for the sheet again. A
  * stream opened late, or again after a reload, first receives every message already sent: the reads that follow
  * one another closely are joined into one.
+ *
+ * An edit (Phase 6) is one request whose answer is the sheet drawn again: `edit` puts it on the page in place of the
+ * one it had, and holds further edits until it is back.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { sheetApi, type FramesSheet } from "../../../../api";
+import { sheetApi, type FramesSheet, type SheetEdited } from "../../../../api";
 import { said } from "../../../library/shared";
 
 /** Messages closer than this are read as one. */
@@ -21,6 +24,12 @@ export interface FramesSheetState {
   /** Start the AI on the part: **Enhance with AI**. */
   run: () => Promise<void>;
   starting: boolean;
+  /** Send one edit; its answer (the sheet drawn again) replaces the sheet. `null` when it failed or another is out. */
+  edit: (call: () => Promise<SheetEdited>) => Promise<SheetEdited | null>;
+  /** An edit is on its way. */
+  editing: boolean;
+  /** What went wrong with the last edit, said for the page; cleared by the next one. */
+  editError: string | null;
 }
 
 export function useFramesSheet(
@@ -41,6 +50,8 @@ export function useFramesSheet(
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [starting, setStarting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const changed = useRef(onChanged);
   useEffect(() => {
     changed.current = onChanged;
@@ -110,5 +121,24 @@ export function useFramesSheet(
     void run();
   }, [auto, audioUuid, run]);
 
-  return { sheet, error, run, starting };
+  const edit = useCallback(
+    async (call: () => Promise<SheetEdited>) => {
+      if (editing) return null;
+      setEditing(true);
+      setEditError(null);
+      try {
+        const answer = await call();
+        setLoaded({ uuid: audioUuid, sheet: answer });
+        return answer;
+      } catch (caught) {
+        setEditError(said(caught, "The change could not be made."));
+        return null;
+      } finally {
+        setEditing(false);
+      }
+    },
+    [audioUuid, editing],
+  );
+
+  return { sheet, error, run, starting, edit, editing, editError };
 }

@@ -30,7 +30,8 @@
     "screenshot": "node scripts/screenshot.mjs",
     "bench:roll": "node scripts/bench-roll.mjs",
     "bench:sheet": "node scripts/bench-sheet.mjs",
-    "time:flow": "node scripts/time-flow.mjs"
+    "time:flow": "node scripts/time-flow.mjs",
+    "check:frames-edit": "node scripts/check-frames-edit.mjs"
   },
   "dependencies": {
     "@aimpromptu/grid-notation": "file:../../vexflow-v2",
