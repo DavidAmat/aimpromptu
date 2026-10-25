@@ -95,15 +95,15 @@ Done 2026-10-25 after the user's check in the browser. Report: [`03-implementati
 - [x] Task 5.10 Question to the user: merge into `master` now (answered 2026-10-25; merged).
 - [x] After the user's review: the wording "AI" (**Enhance with AI**, the green **Enhanced with AI** badge, **Enhance it again with AI**), the mark kept for good, the AI mark and the job spinner on Projects and My library.
 
-# [p] Phase 6: Editing the new sheet (the edit model, hands, undo)
+# [x] Phase 6: Editing the new sheet (the edit model, hands, undo)
 
-Built 2026-10-25; waiting for the user's check in the browser. Report: [`03-implementation-phase-6.md`](03-implementation-phase-6.md).
+Done 2026-10-25 after the user's check in the browser; merged into `master`. Report: [`03-implementation-phase-6.md`](03-implementation-phase-6.md).
 
 - [x] Task 6.1 Study: how the vexflow-v2 editor applies a change (selections, `sheet.json` writes, undo and redo).
 - [x] Task 6.2 The edit model, with undo and redo: `part_sheet/edits.py`, one write of `notes.pmn` and `sheet.f1` per edit, the part's log `sheet.edits.json` (undo and redo in the backend, kept through a reload); `POST /sheet/{uuid}/hands`, `/undo`, `/redo` answer the sheet drawn again.
 - [x] Task 6.3 First tool: notes picked on the sheet, **Hand: Right / Left** in the note toolbox; clefs fitted around a moved note; the question (answered: a run again may change any hand); a run again on an enhanced sheet reads the current hands as a suggestion (2 real windows: 3 wrong moves put back, no other hand changed, $0.06).
 - [x] Task 6.4 The time of one edit (about 0.25 s from the click to the new drawing); the engine stays in the backend.
-- [ ] The user's check in the browser.
+- [x] The user's check in the browser (and the fix of the audio after a jump: a compressed file plays as a lossless copy).
 
 # [ ] Phase 7: The note and range tools
 

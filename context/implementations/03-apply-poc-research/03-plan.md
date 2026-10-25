@@ -544,8 +544,9 @@ in the browser on a few songs.
 
 ## Phase 6: Editing the new sheet (the edit model, hands, undo)
 
-**Built 2026-10-25** ([`03-implementation-phase-6.md`](03-implementation-phase-6.md)); waiting for the user's check in
-the browser.
+**Done 2026-10-25** ([`03-implementation-phase-6.md`](03-implementation-phase-6.md)). The user checked everything in
+the browser; the audio after a jump was fixed during the check (report section 8), and the user's requests for the
+range selection and Enhance with AI of a stretch went to Phase 7 (tasks 4 and 5).
 
 *Why:* every editing tool needs one common way to work on the new sheet before the tools are moved one by one.
 

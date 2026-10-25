@@ -2,7 +2,8 @@
 
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 6. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (fast-forwarded to `master`'s merge commit of Phase 5; no other change on `master`).
-Written 2026-10-25 on the Ubuntu machine. **Built; waiting for the user's check in the browser.**
+Written 2026-10-25 on the Ubuntu machine. **Done 2026-10-25**: the user checked everything in the browser; the
+branch was merged into `master`.
 
 # 1. Summary
 
