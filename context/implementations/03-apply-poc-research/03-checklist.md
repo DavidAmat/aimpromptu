@@ -106,9 +106,9 @@ Done 2026-10-25 after the user's check in the browser; merged into `master`. Rep
 - [x] Task 6.4 The time of one edit (about 0.25 s from the click to the new drawing); the engine stays in the backend.
 - [x] The user's check in the browser (and the fix of the audio after a jump: a compressed file plays as a lossless copy).
 
-# [p] Phase 7: The note and range tools
+# [x] Phase 7: The note and range tools
 
-Built 2026-10-25; the gallery checked by the user ("all good"); waiting for the check in the browser ([`gallery/phase-7/index.html`](gallery/phase-7/index.html)). Report: [`03-implementation-phase-7.md`](03-implementation-phase-7.md).
+Done 2026-10-26 after the user's check of the gallery and in the browser; merged into `master` ([`gallery/phase-7/index.html`](gallery/phase-7/index.html)). Report: [`03-implementation-phase-7.md`](03-implementation-phase-7.md).
 
 - [x] Task 7.1 Study and inventory of the two toolboxes, with the use of each tool in the 46 saved sheets; the user's answers (four questions); transpose figures and notes, Copy, Record this passage and Start a new part moved to Phase 8.
 - [x] Task 7.2 The tools on the edit model (`part_sheet/reading.py`, `edits.edit_reading`, `edits.remove_notes`; `POST /sheet/{uuid}/reading`, `/remove`, `GET /sheet/{uuid}/stretch`): figures, fingers, beams, the grace note switch, ornaments, notes taken off the page; the armadura, clefs, clef rules and octave lines of a stretch.
@@ -116,7 +116,7 @@ Built 2026-10-25; the gallery checked by the user ("all good"); waiting for the 
 - [x] Task 7.4 The range selection on the new sheet: the strip above the staves, Both / Right / Left, the range toolbox (Key, Clef, Octave); each toolbox hands its selection to the other.
 - [x] Task 7.5 Enhance with AI a stretch with the user's words, from either selection (`write_stretch`, `job.start_stretch`, `POST /sheet/{uuid}/llm/stretch`): one step of undo; a real request 9 s, $0.0144.
 - [x] The gallery checked by the user (2026-10-25: "all good").
-- [ ] The user's check in the browser.
+- [x] The user's check in the browser ("all good"), after two reworks of the AI on a stretch (report section 9).
 
 # [ ] Phase 8: The other screens and the sheet toolbox
 

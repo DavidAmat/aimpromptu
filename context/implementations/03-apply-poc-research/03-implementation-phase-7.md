@@ -3,7 +3,8 @@
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 7. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (level with `master` at the start: nothing to merge). Written 2026-10-25 on the Ubuntu
 machine. **Built 2026-10-25**; the user checked the gallery ([`gallery/phase-7/index.html`](gallery/phase-7/index.html),
-served at `http://ubuntu:8715/phase-7/`): "all good". Waiting for the check in the browser.
+served at `http://ubuntu:8715/phase-7/`): "all good". **Done 2026-10-26**: the user checked the tools in the browser ("all good") after the two reworks of section 9; the
+branch was merged into `master`.
 
 # 1. Summary
 
