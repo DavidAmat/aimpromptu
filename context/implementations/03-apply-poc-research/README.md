@@ -1,6 +1,7 @@
 # 03: The new sheet in aimpromptu (applying the research)
 
-**State: live. Phases 0 to 4 done (Phase 4 on 2026-10-25); Phase 5 is next.** Opened 2026-10-23 on the branch
+**State: live. Phases 0 to 4 done (Phase 4 on 2026-10-25); Phase 5 built (2026-10-25), waiting for the user's check
+in the browser.** Opened 2026-10-23 on the branch
 `feat/migrate-new-logic` (one branch for the whole migration, plan section 6.3).
 
 Research plan 01 (the folder `/home/david/Documents/projects/music/poc-aitu-research` on the Ubuntu machine) built a
@@ -27,3 +28,4 @@ The brief is [`03-prompt.md`](03-prompt.md), the plan is [`03-plan.md`](03-plan.
 | [`gallery/phase-3/index.html`](gallery/phase-3/index.html) | The Phase 3 gallery: 8 passages drawn by vexflow-v2, the bars engine and the new engine, and one whole song (built by `aitu-backend/scripts/frames_gallery.py` and `aitu-frontend/scripts/vexflow-passages.mjs`) |
 | [`03-implementation-phase-4.md`](03-implementation-phase-4.md) | Phase 4: the LLM step for the new sheet (`sheet/llm/frames.py`, prompt version 5, `sheet_llm.py`): the design, the 10 viewer songs with Sonnet 5.5, the cost, the gallery |
 | [`gallery/phase-4/index.html`](gallery/phase-4/index.html) | The Phase 4 gallery: 10 passages written by the algorithm and by Sonnet (built by `aitu-backend/scripts/llm_gallery.py`) |
+| [`03-implementation-phase-5.md`](03-implementation-phase-5.md) | Phase 5: the new Sheet step in the app: the Hands step removed, the new sheet at once, Sonnet in the background segment by segment, the hands saved in the notes, the cursor, the switch to the old sheet, the checks |

@@ -38,6 +38,7 @@ from pydantic import ValidationError
 from aitu_backend.audio import formats
 from aitu_backend.pmn import notes_file
 from aitu_backend.schemas.rhythm import SavedRhythm
+from aitu_backend.sheet.sheet import f1
 from aitu_backend.storage import audio_files, bundle, locate, paths
 from aitu_backend.storage.bundle import ProjectFile, Timeline
 
@@ -54,7 +55,7 @@ EXPORT_FORMAT = "aimpromptu-project"
 EXPORT_VERSION = 1
 EXTENSION = ".aitu"
 #: The part files an export carries, in the order they are written.
-PART_FILES = ("notes.pmn", "sheet.json", "timeline.json")
+PART_FILES = ("notes.pmn", "sheet.json", "sheet.f1", "timeline.json")
 #: Above this, an import is refused before anything is unpacked (a long song is about 10 MB).
 MAX_TOTAL_BYTES = 2 * 1024**3
 MAX_MEMBERS = 10_000
@@ -153,6 +154,8 @@ def _validated_part(
             notes_file.from_pmn(notes)
         if "sheet.json" in files:
             SavedRhythm.model_validate_json(files["sheet.json"])
+        if "sheet.f1" in files:
+            f1.read(files["sheet.f1"].decode("utf-8"))
         bundle.cuts_of(timeline)
     except ImportRefused:
         raise

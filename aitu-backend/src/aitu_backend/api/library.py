@@ -153,7 +153,7 @@ def _versions(owner: int, versions: list[PrivateVersion]) -> list[VersionRow]:
     out: list[VersionRow] = []
     for one in versions:
         step, updated = projects.get(one.project_id, (None, None))
-        if step is None:
+        if step is None or step == "hands":
             step = tools.refresh_step(one.project_id)
         out.append(
             VersionRow(

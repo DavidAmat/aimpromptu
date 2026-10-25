@@ -63,6 +63,7 @@ __all__ = [
 VERSION_FILES = (
     "notes.pmn",
     "sheet.json",
+    "sheet.f1",
     "timeline.json",
     "needs-rederivation.json",
     "audio-mismatches.json",

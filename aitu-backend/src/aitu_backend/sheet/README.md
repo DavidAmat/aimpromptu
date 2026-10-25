@@ -5,8 +5,8 @@ research repository (`poc-aitu-research`, git `a208a92`, version 0.1.0 of resear
 agents of implementation 03 (`context/implementations/03-apply-poc-research/`). Everything below is the research
 README with the names of the backend: `aitu_notation.X` of the research is `aitu_backend.sheet.X` here. The copy
 changed no logic; the golden files of section 7 prove it. Phase 2 added the new sheet without compases (section 9),
-Phase 3 its engine (section 10), and Phase 4 its LLM step (section 11): the bars path below is unchanged, and so are
-its golden files.
+Phase 3 its engine (section 10), Phase 4 its LLM step (section 11), and Phase 5 put it in the app (section 12): the
+bars path below is unchanged, and so are its golden files.
 
 ## 1. What it does
 
@@ -236,3 +236,31 @@ assemble: decisions on the notes, then the rules: figures (capped by the new han
   `test_the_prompt_examples_pass_the_checker`), `feedback.md`, `VERSION`.
 - Tests: `tests/test_sheet_llm_frames.py`. Commands: `scripts/llm_sheet.py` (test requests, runs, replays of a
   run's logged replies or of the research's recorded sheets), `scripts/llm_gallery.py` (the Phase 4 gallery).
+
+## 12. The new sheet in the app (implementation 03, Phase 5)
+
+The core is used by `aitu_backend/part_sheet/` (outside the core) and the routes of `api/sheet.py`. Measurements and
+reasons: `context/implementations/03-apply-poc-research/03-implementation-phase-5.md`.
+
+```text
+GET /sheet/{part}?width=N ── part_sheet.build.current ──┬─ sheet.f1 current (handsRevision of notes.pmn) ── as stored
+                                                        ├─ sheet.f1 for older notes or hands ── build.reapply
+                                                        └─ none ── propose_frames on the starting hands (the key
+                                                                   and a renamed figure of an old sheet.json kept)
+                         (while Sonnet writes: job.LiveRun.text, the parts decided so far + the algorithm's)
+                         ── build.draw (engrave.frames.render_frames) ── SVG + columns + systems + segments
+
+POST /sheet/{part}/llm ── part_sheet.job.start ── write_frames(on_start, on_part) with sheet_llm.ClaudeComplete
+                         ── event: sheet on /matrix/progress/{job} at the reference figure and at each window
+                         ── commit: the hands into notes.pmn (save_edit), the sheet into sheet.f1
+```
+
+- `write_frames` has two callbacks for the page: `on_start(algo, windows)` once the reference figure is known, and
+  `on_part(log, part)` after each window; nothing else of the chain changed.
+- `sheet.f1` is the F1 frames text with one `# aitu-sheet {...}` record line on top (`part_sheet.store.Record`: the
+  source, the `handsRevision` it was written for, the windows and their source, the reference figure, the model,
+  the prompt version, the cost). `sheet.pending` marks a part whose new notes ask Sonnet to write the sheet (a
+  transcription or a video read writes it; the job removes it).
+- The hands of a sheet go back to the notes by `build.hands_of_sheet` (each live note at its drawn column and key).
+- `scripts/import_llm_sheets.py` stored the Phase 4 sheets of the 10 viewer songs (`viewer-final`) this way.
+- Tests: `tests/test_part_sheet.py`.

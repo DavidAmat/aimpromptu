@@ -30,7 +30,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
-import { signIn, useSession } from './session.mjs';
+import { oldSheet, signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { values } = parseArgs({
@@ -163,6 +163,7 @@ for (const prefix of values.piece) {
 
     // 1. The Sheet tab, made current the way a reader does it.
     await page.goto(`${base}/projects/${copy}/sheet`);
+    await oldSheet(page, { timeout: 60000, drawn: false });
     await page.waitForSelector('[data-sheet-page]');
     // Every sheet but a stale one is drawn on arrival (implementation 02, Phase 2).
     if (piece.flow.before !== 'stale') await page.waitForSelector('.grid-notehead', { timeout: 60000 });

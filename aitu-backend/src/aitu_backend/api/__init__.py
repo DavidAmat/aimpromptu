@@ -20,7 +20,8 @@ its place before it is trusted on one.
 ``/matrix`` runs the model and serves the notes it heard. ``/time`` turns those
 notes into peaks, a ladder and a drawable score. ``/pieces`` is the flow page's
 view of a piece: the state of each step, the notes as columns, their edits and
-the hand prediction (implementation 08, Phase 5). The ``/notation`` router, which
+the hand prediction (implementation 08, Phase 5). ``/sheet`` is the new piano sheet of a part and Sonnet
+writing it (implementation 03, Phase 5). The ``/notation`` router, which
 built a beats-based score document, was deleted in P4.2 together with the tab
 that read it.
 """
@@ -38,6 +39,7 @@ from aitu_backend.api.projects import router as projects_router
 from aitu_backend.api.public import router as public_router
 from aitu_backend.api.requests import router as requests_router
 from aitu_backend.api.shares import router as shares_router
+from aitu_backend.api.sheet import router as sheet_router
 from aitu_backend.api.time_score import router as time_score_router
 from aitu_backend.api.video import router as video_router
 from aitu_backend.api.youtube import router as youtube_router
@@ -56,6 +58,7 @@ USER_ROUTERS = [
     public_router,
     requests_router,
     shares_router,
+    sheet_router,
     youtube_router,
     time_score_router,
     video_router,
@@ -84,6 +87,7 @@ __all__ = [
     "public_router",
     "requests_router",
     "shares_router",
+    "sheet_router",
     "time_score_router",
     "video_router",
     "youtube_router",

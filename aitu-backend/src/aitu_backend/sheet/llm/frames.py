@@ -843,12 +843,17 @@ def write_frames(
     guards: bool = True,
     max_windows: int | None = None,
     on_window: Callable[[WindowLog], None] | None = None,
+    on_start: Callable[[FramesProposal, list[tuple[int, int]]], None] | None = None,
+    on_part: Callable[[WindowLog, Part], None] | None = None,
 ) -> FramesSong:
     """The new sheet of a part by the LLM. ``notes`` carry the starting hands (the saved hands and the hand split):
     the algorithm uses them for the input's figures and for the fallback. ``hands=True`` shows them to the LLM
     (a run again on the numeric truth, plan section 3.7); by default the LLM reads the notes without hands, as the
     research measured best. ``key`` fixes the armadura of the algorithm (the header of window 1); ``quarter_ms``
     skips the reference request. ``max_windows`` limits the requests (later windows keep the algorithm).
+    ``on_start(algo, windows)`` is called once the reference figure is known, before the first window request, and
+    ``on_part(log, part)`` after each window with its decisions (the piece-by-piece view of the Sheet step, plan
+    section 3.6: ``assemble`` of the parts so far, the algorithm's parts for the rest, is the sheet at that moment).
     """
     system = instructions()
     plain = frames_mod.from_notes(notes)
@@ -884,6 +889,8 @@ def write_frames(
     algo = propose_frames(notes, key=key, key_changes=key_changes, quarter_ms=quarter_ms)
     base = algo.sheet
     wins = windows_of(base)
+    if on_start:
+        on_start(algo, wins)
     figures = _own_figures(notes, quarter_ms)
     logs: list[WindowLog] = []
     parts: list[Part] = []
@@ -946,6 +953,8 @@ def write_frames(
         parts.append(part)
         clefs, kk = _state_at(part.clefs, part.clef_changes, part.key, part.key_changes, b)
         logs.append(log)
+        if on_part:
+            on_part(log, part)
         if on_window:
             on_window(log)
     sheet, info = assemble(algo, parts)

@@ -80,7 +80,7 @@ def test_a_new_empty_project_opens_on_its_source_step() -> None:
     assert row["step"] == "source" and row["hasNotes"] is False
     status = client.get(f"/pieces/{row['id']}/status").json()
     assert status["resume"] == "source"
-    assert [step["enabled"] for step in status["steps"]] == [True, False, False, False, False]
+    assert [step["enabled"] for step in status["steps"]] == [True, False, False, False]
 
 
 def test_the_step_is_stored_and_worked_out_again_only_after_a_change() -> None:

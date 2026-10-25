@@ -12,10 +12,13 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import { projectsApi, type PartRow, type SavedRhythm } from "../../api";
+import { projectsApi, type PartRow, type SavedRhythm, type StepState } from "../../api";
+import { ROUTES } from "../../layout/routes";
 import SheetPage, { type SheetStep } from "./sheet/SheetPage";
+import { WRITE_WITH_SONNET } from "./sheet/frames/navigation";
 import { PartsPanel } from "./PartsPanel";
 import { AddToPlaylistDialog } from "../library/AddToPlaylistDialog";
 import { said } from "../library/shared";
@@ -24,7 +27,11 @@ import { stepStatus, usePiece } from "./pieceContext";
 export function SheetTab() {
   const { uuid, audio, status, refresh, readOnly } = usePiece();
   const here = stepStatus(status, "sheet");
-  const state = here?.state ?? null;
+  // The old sheet (vexflow-v2, the switch of the page) opens with its own state: its banner when the notes or the
+  // hands changed after it was saved. The new sheet is never stale (implementation 03, Phase 5).
+  const legacy = here?.details.legacy as StepState | undefined;
+  const state = here ? (legacy ?? here.state) : null;
+  const navigate = useNavigate();
   const reason = here?.reason ?? null;
   /** In a project of several parts, a part's sheet is titled by its subheader. */
   const [partTitle, setPartTitle] = useState<string | null>(null);
@@ -65,6 +72,17 @@ export function SheetTab() {
     [uuid, projectId, refresh],
   );
 
+  /** A version of My library changes through its edit copy: Sonnet writes there (as **Edit**, then the button). */
+  const writeInCopy = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const copy = await projectsApi.edit(projectId);
+      navigate(ROUTES.project(copy.parts[0] ?? copy.id, "sheet"), { state: WRITE_WITH_SONNET });
+    } catch (caught) {
+      setError(said(caught, "The version could not be opened for editing."));
+    }
+  }, [projectId, navigate]);
+
   const step = useMemo<SheetStep | null>(
     () =>
       uuid && state
@@ -76,6 +94,8 @@ export function SheetTab() {
             readOnly,
             audioRevision,
             onChanged: () => void refresh(),
+            newSheet: true,
+            ...(library ? { writeWithSonnetInCopy: () => void writeInCopy() } : {}),
             ...(readOnly ? {} : { onSplit: split }),
             ...(library
               ? {
@@ -87,7 +107,7 @@ export function SheetTab() {
               : {}),
           }
         : null,
-    [uuid, label, state, reason, readOnly, audioRevision, refresh, split, library],
+    [uuid, label, state, reason, readOnly, audioRevision, refresh, split, library, writeInCopy],
   );
 
   if (!step || !projectId) return null;

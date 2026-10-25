@@ -213,7 +213,8 @@ def _links(projects: list[Project]) -> dict[str, LibraryLink]:
 def _row(project: Project, links: dict[str, LibraryLink] | None = None) -> ProjectRow:
     part_ids = bundle.part_ids_of(project.id)
     step = project.step
-    if step is None:
+    # "hands" is a step that no longer exists (implementation 03, Phase 5): worked out again like a cleared one.
+    if step is None or step == "hands":
         step = tools.refresh_step(project.id)
     source = None
     try:

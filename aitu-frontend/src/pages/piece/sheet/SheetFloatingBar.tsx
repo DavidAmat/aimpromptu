@@ -15,6 +15,7 @@ import Badge from "@mui/material/Badge";
 import Divider from "@mui/material/Divider";
 import Snackbar from "@mui/material/Snackbar";
 import Tooltip from "@mui/material/Tooltip";
+import AutoStoriesIcon from "@mui/icons-material/AutoStoriesOutlined";
 import CheckIcon from "@mui/icons-material/Check";
 import ContentPasteIcon from "@mui/icons-material/ContentPasteOutlined";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweepOutlined";
@@ -33,6 +34,7 @@ import { FloatingBar, IconAction, PillButton, RowMenu, type RowMenuItem } from "
 
 export function SheetFloatingBar({
   readOnly = false,
+  onNewSheet,
   passageActions,
   recording = false,
   playing,
@@ -64,6 +66,8 @@ export function SheetFloatingBar({
 }: {
   /** A version of the library: Play and Print only (Phase 6). */
   readOnly?: boolean;
+  /** Back to the new sheet (implementation 03, Phase 5): this one is the old sheet, kept for editing. */
+  onNewSheet?: (() => void) | undefined;
   /**
    * The Proposal of a passage (Phase 9): its own actions in place of Record, Paste, Print and Save
    * (it keeps itself), after Play, Undo, Redo and the sheet toolbox.
@@ -129,6 +133,18 @@ export function SheetFloatingBar({
           },
         ]),
   ];
+  const newSheet = onNewSheet ? (
+    <>
+      <Divider orientation="vertical" flexItem />
+      <IconAction
+        title="Back to the new sheet"
+        icon={<AutoStoriesIcon />}
+        onClick={onNewSheet}
+        placement="top"
+        data-testid="new-sheet"
+      />
+    </>
+  ) : null;
   if (readOnly) {
     return (
       <FloatingBar open label="sheet buttons">
@@ -140,6 +156,7 @@ export function SheetFloatingBar({
           placement="top"
         />
         <IconAction title="Print to PDF" icon={<PrintIcon />} onClick={onPrint} disabled={!canPrint} placement="top" />
+        {newSheet}
       </FloatingBar>
     );
   }
@@ -275,6 +292,7 @@ export function SheetFloatingBar({
         <RowMenu items={more} title="More sheet actions" />
           </>
         )}
+        {newSheet}
       </FloatingBar>
     </>
   );

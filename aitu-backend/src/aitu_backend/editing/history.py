@@ -2,7 +2,8 @@
 
 A paste or a promotion of a re-recorded passage copies the previous musical state of the part into
 ``.database/history/<projectId>/parts/<partId>/vN/`` and advances a counter in the part's folder
-(``music-version.json``). A snapshot holds ``notes.pmn``, ``sheet.json`` and ``timeline.json``. The
+(``music-version.json``). A snapshot holds ``notes.pmn``, ``sheet.json``, ``sheet.f1`` (the new sheet,
+implementation 03) and ``timeline.json``. The
 audio is not copied: the timeline names the stored files (``.database/audio/``), which never
 change, and ``audio_refs`` counts the snapshot's files as used by the project, so they are never
 deleted under it (implementation 02, plan section 8.5).
@@ -48,6 +49,7 @@ def snapshot_current(audio_uuid: str) -> int:
     for source in (
         pipeline.events_path(audio_uuid),
         pipeline.rhythm_path(audio_uuid),
+        paths.part_frames_path(audio_uuid),
         paths.part_timeline_path(audio_uuid),
     ):
         if source.is_file():
@@ -63,22 +65,29 @@ def snapshot_current(audio_uuid: str) -> int:
     return nxt
 
 
-def snapshot_notes(audio_uuid: str) -> int:
-    """Copy ``notes.pmn`` and ``sheet.json`` into ``vN/`` and return the new version.
+def snapshot_notes(
+    audio_uuid: str, reason: str = "a new transcription replaced these notes"
+) -> int:
+    """Copy ``notes.pmn``, ``sheet.json`` and ``sheet.f1`` into ``vN/`` and return the new version.
 
     Called before a new transcription replaces them (implementation 08, plan section 8.3): before
     this, a new transcription deleted the saved sheet with no copy. The audio is not copied, unlike
     :func:`snapshot_current`, because a transcription does not change it. The version counter is
-    the same, so the two kinds of snapshot never share a folder.
+    the same, so the two kinds of snapshot never share a folder. Sonnet writing the hands of a part that had
+    saved hands takes one too (implementation 03, Phase 5), with its own ``reason``.
     """
     version = current_version(audio_uuid)
     dest = paths.history_version_dir(audio_uuid, version)
     dest.mkdir(parents=True, exist_ok=True)
-    for source in (pipeline.events_path(audio_uuid), pipeline.rhythm_path(audio_uuid)):
+    for source in (
+        pipeline.events_path(audio_uuid),
+        pipeline.rhythm_path(audio_uuid),
+        paths.part_frames_path(audio_uuid),
+    ):
         if source.is_file():
             shutil.copy2(source, dest / source.name)
     (dest / "snapshot.json").write_text(
-        json.dumps({"reason": "a new transcription replaced these notes"}) + "\n",
+        json.dumps({"reason": reason}) + "\n",
         encoding="utf-8",
     )
     nxt = version + 1
@@ -107,6 +116,7 @@ def restore(audio_uuid: str, version: int) -> int:
     targets = (
         pipeline.events_path(audio_uuid),
         pipeline.rhythm_path(audio_uuid),
+        paths.part_frames_path(audio_uuid),
         paths.part_timeline_path(audio_uuid),
     )
     for target in targets:

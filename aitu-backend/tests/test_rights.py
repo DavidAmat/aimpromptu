@@ -74,6 +74,7 @@ def test_row_1_a_project_in_a_personal_vault(people: dict) -> None:
     for other in (joan, master):
         assert (reads(other, part), writes(other, part)) == (404, 404)
         assert other.get(f"/time/{part}/rhythm").status_code == 404
+        assert other.get(f"/sheet/{part}").status_code == 404
         assert other.delete(f"/audio/{part}").status_code == 404
 
 
@@ -84,6 +85,9 @@ def test_row_2_a_project_in_a_private_library(people: dict) -> None:
     part = project(anna_id, "private")
     # Anna reads her library and changes it only through a copy in her vault (Phase 6).
     assert (reads(anna, part), writes(anna, part)) == (200, 403)
+    # The new sheet (implementation 03, Phase 5): drawn for her; Sonnet writes it only in a copy.
+    assert anna.get(f"/sheet/{part}").status_code == 200
+    assert anna.post(f"/sheet/{part}/llm").status_code == 403
     edit = anna.post(f"/projects/{part}/edit")
     assert edit.status_code == 200 and edit.json()["basedOn"] == part
     assert writes(anna, edit.json()["id"]) == 200

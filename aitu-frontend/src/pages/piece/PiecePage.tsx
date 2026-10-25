@@ -264,8 +264,8 @@ export function PiecePage() {
   // ------------------------------------------------------------------ render
 
   const status = current.status;
-  // Unsaved edits of the notes or of the hands: the Hands step is not done until they are saved.
-  const unsavedStep = unsaved !== null && (step === "notes" || step === "hands") ? "hands" : null;
+  // Unsaved edits of the notes: the Notes step is not done until they are saved.
+  const unsavedStep = unsaved !== null && step === "notes" ? "notes" : null;
   const steps = uuid ? status?.steps ?? null : NO_PIECE;
   const here = step ? stepStatus(status, step) : null;
 

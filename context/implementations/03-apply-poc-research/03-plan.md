@@ -484,8 +484,14 @@ checked the gallery.
 1. Study: the project steps, the Sheet step page, the jobs and progress stream of the transcription, how parts are
    stored, and how existing projects (with saved hands and `sheet.json` corrections) should open. **Question to the
    user after the study**: what happens to existing projects (redo them with the LLM, or keep their corrections; see
-   phase 9).
-2. The flow: Hands step removed; Notes Falling playable without hands; the negra choice removed.
+   phase 9). *Answered 2026-10-25:* the songs Sonnet already wrote (the 10 viewer songs of Phase 4) show Sonnet's
+   sheet; every other song keeps its data and shows the algorithm's sheet from its saved hands, with a button that
+   runs Sonnet on the whole piece; new transcriptions go to Sonnet by themselves.
+2. The flow: Hands step removed; Notes Falling playable without hands; the negra choice removed. *Done:* four
+   steps; the Sheet step opens once the notes are ready; the events route gives only saved hands; the negra choice
+   is not on the new sheet (the old sheet keeps it until Phase 8). A part of a version keeps the key and, when the
+   user renamed it with Transpose figures, the reference figure of its `sheet.json` (the negra of the highest pile
+   was vexflow-v2's default, and the pulse estimate replaces it).
 3. The Sheet step draws the algorithm's sheet at once, then starts the LLM job of the part in the background. Each
    segment being improved looks grey or transparent; a finished segment appears little by little while the next one
    is at the LLM; no text. *From Phase 3:* `render_frames(segment=(a, b))` gives the systems of a segment with the
@@ -494,19 +500,33 @@ checked the gallery.
    slower than the host, uv's 8 %). *From Phase 4:* the segments are the LLM's windows (`windows_of`, 12 to 16 s);
    the reference request comes first (about 5 s) and changes every figure, so the algorithm's sheet is drawn again
    whole before the first window returns (about 30 s per window); the image needs the `anthropic` package.
-4. The LLM's hands are saved in `notes.pmn` (Hands colours in Notes Falling and Play mode follow them).
-5. The new sheet is saved beside `sheet.json`; reopening a part does not call the LLM again.
-6. Playback: the cursor from the audio time, lit notes, click to seek (from `viewer/index.html`).
+   *Done:* `part_sheet/` and `api/sheet.py` in the backend, `pages/piece/sheet/frames/` in the frontend; the page
+   reads the whole sheet again at each window (about 40 ms to draw) and covers the segment that came back with blank
+   staves that move away column by column; the segment at Sonnet has a pale veil. A new transcription is marked
+   (`sheet.pending`) and its Sheet step starts Sonnet; a part made before stays as it is and offers **Write with
+   Sonnet** (on a version of My library, through its edit copy: the library is never written in place). A deleted
+   part stops the requests. The backend image runs uv's Python with `anthropic`.
+4. The LLM's hands are saved in `notes.pmn` (Hands colours in Notes Falling and Play mode follow them). *Done:*
+   at the end of the run; hands saved before go to the part's history.
+5. The new sheet is saved beside `sheet.json`; reopening a part does not call the LLM again. *Done:* `sheet.f1`,
+   carried by duplicate, export, Save to library and the history; laid again on the notes after a notes or hand
+   edit. The 10 viewer songs got the sheets Phase 4 paid for (`scripts/import_llm_sheets.py`).
+6. Playback: the cursor from the audio time, lit notes, click to seek (from `viewer/index.html`). *Done*, in the
+   Sheet step and in Play mode (the cursor's line kept in the middle; no lyrics until Phase 8).
 7. vexflow-v2 stays reachable for editing (a switch) until phase 8. Segments still waiting for the LLM cannot be edited.
    The switch belongs inside `SheetPage`: six screens draw their sheet through it (Phase 0 inventory), so the new view
    reaches them all at once, and each screen-specific part (Play mode, the passage page, the requests review) is
-   checked in phase 8.
+   checked in phase 8. *Done:* the new sheet is first on the Sheet step, a version of My library and Play mode; the
+   passage page, From other projects and the requests review keep the old sheet until Phase 8 (their work is a
+   marked stretch, which the new sheet has not yet).
 8. The browser checks (`check:*`, `bench-sheet`, `time:flow`: 16 scripts) find the sheet by the classes of vexflow-v2
    (`.grid-note-target`, `.grid-frame-ruler`, `.grid-onset-group`, and others). The new view gives the same hooks as
    `data-*` attributes, and each check moves to them with its screen (the Sheet step checks here, the others in
-   phases 6 to 8).
+   phases 6 to 8). *Done:* `check:frames-sheet` (new); `check:play` on the new hooks; the old sheet's checks press
+   the switch first (`session.oldSheet`); `check:flow`, `check:journey` and `time:flow` walk the new flow (not run:
+   they transcribe on the GPU and start Sonnet).
 9. The line above each passage of the sheet that names the main figure and a tempo (`corchea = 217 ms · ≈138 BPM`,
-   `matrix/ladder.header_label`) is not drawn on the new sheet (section 3.1).
+   `matrix/ladder.header_label`) is not drawn on the new sheet (section 3.1). *Done* by the new sheet.
 10. **Question to the user at the end**: merge the branch into `master` now, or at the end.
 
 *Done when:* a new project goes from audio to the new sheet with the piece-by-piece view, and the user has checked it
@@ -589,7 +609,7 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 | 2 | The figure thresholds and the Do mayor spelling (agent, from songs: 0.7, and Do#, Mib, Fa#, Sol#, Sib; user checks the gallery); the cap of a figure at the next onset of its hand, and rule 4 in armaduras of one to three signs (user) |
 | 3 | The look of the spacing without compases (approved), and a thin double line at an armadura change or none (none, the default) (user, in the gallery) |
 | 4 | The API key (human intervention; done); how many songs the credits cover (information: about 110 a month); the beam groups and the maximum of 8 (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user: approved; both rules kept as written) |
-| 5 | Existing projects: keep their corrections or write them again; merge to `master` early or at the end |
+| 5 | Existing projects: keep their data, Sonnet's sheet for the 10 songs it wrote, a button for the rest (user, 2026-10-25); merge to `master` early or at the end |
 | 6 | May a new LLM run change hands that the user moved; the engine in the backend or in the browser |
 | 7, 8 | Tools that no longer make sense without compases: keep, change or drop |
 
@@ -657,3 +677,8 @@ repository."
 | 4 | Section 3.11: a written group keeps a sixteenth beamed to its eighth (one odd note next to one note) | The algorithm's limit (two notes of the group's figure) removed 410 of Sonnet's 2,044 groups; the user's rule allows one odd note |
 | 4 | Phase 4 task 4: no note four or more ledger lines above its staff in the checker; nearby 8va notes joined | The first run left 244 notes of one song far above the staff, and then one 8va bracket per note |
 | 4 | Phase 5 task 3: the segments are the LLM's windows; the reference request redraws the algorithm's sheet first | What the LLM step gives |
+| 5 | Phase 5 task 1: existing songs keep their data and get **Write with Sonnet**; the 10 viewer songs show Sonnet's sheet; new transcriptions go to Sonnet by themselves (marked `sheet.pending`) | The user's answer of 2026-10-25 |
+| 5 | Phase 5 task 3: on a version of My library, **Write with Sonnet** opens the edit copy and starts there | The rights table: a library version is never written in place |
+| 5 | Phase 5 task 7: the passage page, From other projects and the requests review keep the old sheet until Phase 8; Play mode has no lyrics until Phase 8 | Their work is a marked stretch; the new engine has no lyrics yet (4 parts had lyrics) |
+| 5 | Phase 5 task 2: an old `sheet.json` keeps its key and a figure renamed by the user; the default negra is replaced by the pulse estimate | "Keep all the data"; the default negra was not a choice (36 of 43 sheets) |
+| 5 | Phase 6: a stored sheet is laid again on changed notes by column and key (`build.reapply`); a paste moves the columns after it, so those decisions are lost there until notes are matched by id | What the study found about the edit model |

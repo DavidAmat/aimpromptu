@@ -36,7 +36,8 @@ import Tooltip from "@mui/material/Tooltip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { ConfirmDialog, EmptyState, IconAction, PillButton, Toolbox } from "../../../ui";
+import { ConfirmDialog, EmptyState, FloatingBar, IconAction, PillButton, Toolbox } from "../../../ui";
+import AutoStoriesIcon from "@mui/icons-material/AutoStoriesOutlined";
 import type { StepState } from "../../../api";
 import { noteName } from "../../../music/noteNames";
 import ScorePlayer, {
@@ -139,6 +140,7 @@ import { SheetToolbox, type SheetTab } from "./SheetToolbox";
 import { TransposeDialog, type PreviewSheet } from "./TransposeDialog";
 import { landingOf, movePiece, piecesIn, placePiece } from "./lyricsPieces";
 import { POOL_DRAG_TYPE } from "./LyricsTab";
+import { FramesSheetPage } from "./frames/FramesSheetPage";
 
 /**
  * Everything read for one (piece, hand, resolution), kept together under the key it belongs to:
@@ -193,6 +195,15 @@ export interface SheetStep {
    * browser kept under the old address (Phase 8 learning).
    */
   audioRevision?: number | undefined;
+  /**
+   * The new sheet (implementation 03, Phase 5) is shown first, and the old one is a press away
+   * (`frames/FramesSheetPage`). Set by the screens that only show and play: the Sheet step, a
+   * version of My library, Play mode. The others (a passage, From other projects, the requests
+   * review) keep the old sheet until Phase 8: their work is a marked stretch.
+   */
+  newSheet?: boolean;
+  /** A version of My library: **Write with Sonnet** opens the copy that edits it and starts there. */
+  writeWithSonnetInCopy?: () => void;
 }
 
 /**
@@ -297,7 +308,22 @@ type TransposePreview =
       error: string | null;
     };
 
+/**
+ * The switch between the two sheets (implementation 03, Phase 5, plan task 5.7): the new sheet to see
+ * and to hear, and the old vexflow-v2 sheet, which keeps every editing tool until Phases 6 to 8.
+ * Six screens draw their sheet through this page, so the switch reaches them all at once.
+ */
 export function SheetPage({ step }: { step?: SheetStep } = {}) {
+  const [engine, setEngine] = useState<"frames" | "vexflow">("frames");
+  if (step?.newSheet && engine === "frames") {
+    return <FramesSheetPage step={step} onOldSheet={() => setEngine("vexflow")} />;
+  }
+  return (
+    <VexflowSheetPage step={step} onNewSheet={step?.newSheet ? () => setEngine("frames") : undefined} />
+  );
+}
+
+function VexflowSheetPage({ step, onNewSheet }: { step?: SheetStep; onNewSheet?: () => void }) {
   const passageView = step?.passage ?? null;
   /** On the page of a passage: which of its two sheets this is. */
   const role = passageView?.role ?? null;
@@ -2872,6 +2898,7 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
           <SheetFloatingBar
             passageActions={role === "proposal" ? (passageView?.barActions ?? null) : undefined}
             readOnly={readOnly}
+            onNewSheet={onNewSheet}
             playing={playing}
             onTogglePlay={() => player.current?.toggle()}
             undo={{
@@ -3012,6 +3039,19 @@ export function SheetPage({ step }: { step?: SheetStep } = {}) {
         <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }} data-sheet-loading>
           <CircularProgress size={22} />
         </Box>
+      ) : null}
+
+      {/* The old sheet waiting for Write the sheet has no bar of its own: the way back stays. */}
+      {onNewSheet && !score ? (
+        <FloatingBar open label="sheet buttons">
+          <IconAction
+            title="Back to the new sheet"
+            icon={<AutoStoriesIcon />}
+            onClick={onNewSheet}
+            placement="top"
+            data-testid="new-sheet"
+          />
+        </FloatingBar>
       ) : null}
 
       <SheetToolbox

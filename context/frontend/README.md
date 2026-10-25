@@ -46,11 +46,12 @@ piano sheet stays white paper in both: see [`../colors/color-palette.md`](../col
 
 Implementation 08 built one page that walks a piece through five steps in order: **Source** (bring
 the audio in), **Audio** (choose the selected region with cuts), **Notes** (watch the live
-transcription, then edit the rectangles of the piano roll visualization), **Hands** (the hand split,
-then reassign notes to the right hand or the left hand) and **Sheet** (the piano sheet).
+transcription, then edit the rectangles of the piano roll visualization) and **Sheet** (the piano sheet: the
+new sheet at once, and Sonnet writing the hands and the reading in the background). The **Hands** step was
+removed by implementation 03, Phase 5.
 Implementation 02 made it the page of a project (`/projects/:id/:step`). A step opens only when the
-step before it is ready, and a step whose input changed is marked stale. Nothing on the Audio, Notes
-and Hands steps is written before **Save**. A project of another user, or one that does not exist,
+step before it is ready, and a step whose input changed is marked stale. Nothing on the Audio and Notes
+steps is written before **Save**. A project of another user, or one that does not exist,
 shows "There is no project of yours at this address." with **Open Projects**.
 
 Detail: [projects.md](projects.md).

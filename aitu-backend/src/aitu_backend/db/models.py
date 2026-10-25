@@ -77,6 +77,8 @@ SCOPES = ("private", "public")
 ROLES = ("master", "user")
 #: ``passage``: a passage being re-recorded and its takes (Phase 9), hidden from every list.
 PROJECT_KINDS = ("song", "integratedPlaylist", "passage")
+#: ``hands`` is no longer written (implementation 03, Phase 5: the Hands step was removed); it stays in the check of
+#: the column, and a row that still holds it is worked out again when it is listed.
 STEPS = ("source", "audio", "notes", "hands", "sheet")
 #: ``playlist`` was added in Phase 14 (revision ``0004``): a songs playlist made public.
 REQUEST_KINDS = ("metadata", "userVersion", "fixedVersion", "playlist")

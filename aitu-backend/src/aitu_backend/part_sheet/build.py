@@ -1,0 +1,274 @@
+"""The new sheet of a part at any moment, and its drawing (implementation 03, Phase 5).
+
+Three cases, in order (:func:`current`):
+
+1. **Stored and current**: ``sheet.f1`` was written for the ``handsRevision`` that ``notes.pmn`` has now. It is drawn
+   as it is.
+2. **Stored, but the notes or the hands changed since** (a notes edit, a hand moved in the vexflow-v2 editor, a
+   Sonnet run that ended after an edit): the stored decisions are laid again on the current notes
+   (:func:`reapply`). The hand of a note is always the one of ``notes.pmn`` (plan section 3.7); a note that kept its
+   hand and its column keeps its beam group, ornaments and 8va; the clefs and the armaduras stay. The rules
+   (figures, grace notes, beam groups cut by the figures, spelling) run again.
+3. **Never written**: the algorithm (``propose_frames``) on the starting hands (the saved hands, the hand split for
+   the rest). A part that has a ``sheet.json`` from vexflow-v2 keeps two of its decisions (the user's answer of
+   Phase 5, "keep all the data"): the armadura (``keySignature``, ``keyChanges``) and, when the user renamed it with
+   Transpose figures, the reference figure (``anchorMs`` and ``anchorFigure``; the negra of the highest pile of gaps
+   was vexflow-v2's default, and the pulse estimate replaces it). The other marks are mapped in Phase 9.
+
+The answers are cached by the modification times of the three files, so a page that draws the sheet again at
+another width does not run the algorithm again.
+"""
+
+from __future__ import annotations
+
+import threading
+from collections import OrderedDict, defaultdict
+from dataclasses import dataclass, field, replace
+from typing import Any
+
+import numpy as np
+
+from aitu_backend.matrix.keys import LOWEST_MIDI
+from aitu_backend.pmn import events_file
+from aitu_backend.pmn.notes import Notes
+from aitu_backend.schemas.time_matrix import FIGURE_NEGRAS, FigureName
+from aitu_backend.sheet.engrave.frames import Options, render_frames
+from aitu_backend.sheet.llm.frames import Part, assemble, windows_of
+from aitu_backend.sheet.proposal.frames import FramesProposal, propose_frames
+from aitu_backend.sheet.sheet import f1
+from aitu_backend.sheet.sheet.data import FRAME_MS, Sheet
+from aitu_backend.sheet.sheet.frames import STAFF_OF, drawn_columns
+from aitu_backend.sheet.sheet.pmn import KEYS
+from aitu_backend.storage import locate, paths
+from aitu_backend.transcription import pipeline
+
+from . import store
+
+__all__ = [
+    "Drawn",
+    "Reading",
+    "algorithm",
+    "current",
+    "draw",
+    "hands_of_sheet",
+    "reading_of",
+    "reapply",
+    "windows",
+]
+
+#: The staff width the page asks for, in staff spaces: its own width over the size it draws at.
+MIN_WIDTH, MAX_WIDTH = 60.0, 320.0
+
+
+@dataclass(frozen=True)
+class Reading:
+    """What a vexflow-v2 ``sheet.json`` decided that the new sheet keeps."""
+
+    key: int | None = None
+    key_changes: list[tuple[int, int]] | None = None
+    quarter_ms: float | None = None
+
+
+@dataclass
+class Drawn:
+    """The sheet of a part as the page draws it."""
+
+    text: str
+    #: ``llm``, ``mixed`` or ``algorithm`` (who decided the hands and the reading).
+    source: str
+    #: The segments of the piece-by-piece view, ``(first frame, end frame, "llm" | "algorithm")``; empty for a sheet
+    #: Sonnet never wrote.
+    windows: list[tuple[int, int, str]] = field(default_factory=list)
+    #: Stored for older notes or hands, and laid again on the current ones.
+    stale: bool = False
+    quarter_ms: float | None = None
+    record: store.Record | None = None
+
+
+def reading_of(part_id: str) -> Reading:
+    rhythm = pipeline.load_rhythm(part_id)
+    if rhythm is None:
+        return Reading()
+    key = KEYS.get(rhythm.key_signature or "C")
+    changes = [
+        (int(round(change.from_column * rhythm.frame_ms / FRAME_MS)), KEYS[change.key_signature])
+        for change in rhythm.key_changes
+        if change.key_signature in KEYS
+    ]
+    # The pile of gaps named a negra was vexflow-v2's default (D-09), not a choice: the pulse estimate decides then.
+    # Another name (Transpose figures) is the user's override, and it stays (rule 5).
+    negras = FIGURE_NEGRAS.get(rhythm.anchor_figure)
+    named = rhythm.anchor_figure != FigureName.NEGRA or rhythm.figures_from is not None
+    quarter = rhythm.anchor_ms / negras if negras and named else None
+    return Reading(key=key, key_changes=changes or None, quarter_ms=quarter)
+
+
+def algorithm(
+    part_id: str, notes: Notes | None = None, *, quarter_ms: float | None = None
+) -> FramesProposal:
+    """The algorithm's sheet of a part, with the decisions an old ``sheet.json`` keeps."""
+    notes = pipeline.starting_hands(part_id) if notes is None else notes
+    reading = reading_of(part_id)
+    return propose_frames(
+        notes,
+        key=reading.key,
+        key_changes=reading.key_changes,
+        quarter_ms=quarter_ms if quarter_ms is not None else reading.quarter_ms,
+    )
+
+
+def windows(sheet: Sheet) -> list[tuple[int, int]]:
+    """The segments of a sheet (the LLM's windows): known before any request."""
+    return windows_of(sheet) if sheet.notes else []
+
+
+def reapply(stored: Sheet, notes: Notes) -> Sheet:
+    """The decisions of a stored sheet laid on the current notes and their hands (the case 2 of the module)."""
+    algo = propose_frames(
+        notes,
+        key=stored.key or 0,
+        key_changes=list(stored.key_changes),
+        quarter_ms=stored.quarter_ms,
+    )
+    same = {(n.frame, n.midi, n.staff): n for n in stored.notes}
+    near = {(n.frame, n.midi): n for n in stored.notes}
+    decided = {}
+    for i, n in enumerate(algo.sheet.notes):
+        kept = same.get((n.frame, n.midi, n.staff))
+        if kept is not None:
+            decided[i] = kept
+        else:
+            # Another hand now, or a note the stored sheet did not have: no beam group of its own.
+            decided[i] = replace(near.get((n.frame, n.midi), n), staff=n.staff, beam=None)
+    frames = [n.frame for n in algo.sheet.notes]
+    part = Part(
+        start=min(frames, default=0),
+        end=max(frames, default=0) + 1,
+        source="llm",
+        notes=decided,
+        clefs=dict(stored.clefs),
+        key=stored.key or 0,
+        clef_changes=list(stored.clef_changes),
+        key_changes=list(stored.key_changes),
+    )
+    sheet, _ = assemble(algo, [part])
+    return sheet
+
+
+def hands_of_sheet(sheet: Sheet, notes: Notes) -> dict[int, str]:
+    """The hand of each live note in a frames sheet, by note id: its staff at its drawn column. Two notes of one key
+    and column are one note of the sheet; a note the sheet does not hold is left out (it keeps its hand).
+    """
+    live = notes.live()
+    if len(live) == 0:
+        return {}
+    _, start = drawn_columns(live.on_ms)
+    column = np.floor(np.round(start / FRAME_MS, 9) + 0.5).astype(np.int64)
+    at: dict[tuple[int, int], set[int]] = defaultdict(set)
+    for n in sheet.notes:
+        if n.staff in (1, 2):
+            at[(n.frame, n.midi)].add(n.staff)
+    out: dict[int, str] = {}
+    for i in range(len(live)):
+        staffs = at.get((int(column[i]), int(live.key[i]) + LOWEST_MIDI))
+        if not staffs:
+            continue
+        now = STAFF_OF.get(int(live.hand[i]))
+        staff = now if now in staffs else min(staffs)
+        out[int(live.id[i])] = "right" if staff == 1 else "left"
+    return out
+
+
+# ------------------------------------------------------------------ the sheet now
+
+_cache: OrderedDict[str, tuple[tuple[int, int, int], Drawn]] = OrderedDict()
+_cache_lock = threading.Lock()
+CACHE_SIZE = 24
+
+
+def _mtime(path_of: Any, part_id: str) -> int:
+    try:
+        path = path_of(part_id)
+        return path.stat().st_mtime_ns if path.is_file() else 0
+    except (locate.NotFound, OSError):
+        return 0
+
+
+def _stamp(part_id: str) -> tuple[int, int, int]:
+    return (
+        _mtime(paths.part_notes_path, part_id),
+        _mtime(paths.part_sheet_path, part_id),
+        _mtime(paths.part_frames_path, part_id),
+    )
+
+
+def current(part_id: str) -> Drawn:
+    """The sheet of a part as it is stored now (no running job). Raises ``FileNotFoundError`` without notes."""
+    stamp = _stamp(part_id)
+    with _cache_lock:
+        hit = _cache.get(part_id)
+        if hit is not None and hit[0] == stamp:
+            _cache.move_to_end(part_id)
+            return hit[1]
+    drawn = _compute(part_id)
+    with _cache_lock:
+        _cache[part_id] = (stamp, drawn)
+        _cache.move_to_end(part_id)
+        while len(_cache) > CACHE_SIZE:
+            _cache.popitem(last=False)
+    return drawn
+
+
+def _compute(part_id: str) -> Drawn:
+    header = events_file.read_header(paths.part_notes_path(part_id))
+    stored = store.load(part_id)
+    if stored is not None:
+        record = stored.record
+        segments = [(int(a), int(b), str(s)) for a, b, s in record.windows]
+        if record.hands_revision is not None and record.hands_revision == header.hands_revision:
+            sheet = f1.read(stored.text)
+            return Drawn(
+                stored.text,
+                record.source,
+                segments,
+                False,
+                sheet.quarter_ms or record.quarter_ms,
+                record,
+            )
+        if record.source != "algorithm":
+            sheet = reapply(f1.read(stored.text), pipeline.starting_hands(part_id))
+            return Drawn(
+                f1.write(sheet, mode="frames"),
+                record.source,
+                segments,
+                True,
+                sheet.quarter_ms,
+                record,
+            )
+        algo = algorithm(part_id, quarter_ms=record.quarter_ms)
+        return Drawn(
+            f1.write(algo.sheet, mode="frames"), "algorithm", [], True, algo.quarter_ms, record
+        )
+    algo = algorithm(part_id)
+    return Drawn(f1.write(algo.sheet, mode="frames"), "algorithm", [], False, algo.quarter_ms, None)
+
+
+def forget(part_id: str) -> None:
+    with _cache_lock:
+        _cache.pop(part_id, None)
+
+
+def draw(text: str, width: float) -> dict[str, Any]:
+    """The drawing of a frames text for a page ``width`` staff spaces wide (the staff width; the SVG adds its
+    margins): the SVG with ``data-note`` ids, the columns (system, frame, x, ms) and the system boxes.
+    """
+    width = min(MAX_WIDTH, max(MIN_WIDTH, float(width)))
+    rendered = render_frames(text, Options(width=width))
+    return {
+        "svg": rendered.svg,
+        "columns": rendered.columns,
+        "systems": rendered.systems,
+        "width": rendered.width,
+        "height": rendered.height,
+        "timings": {k: round(v, 1) for k, v in rendered.timings.items()},
+    }

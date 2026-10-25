@@ -383,7 +383,6 @@ def test_from_scratch_opens_on_a_blank_sheet_and_a_paste_fills_it(
         "source": "ready",
         "audio": "ready",
         "notes": "ready",
-        "hands": "ready",
         "sheet": "ready",
     }
     timeline = bundle.read_timeline(blank)

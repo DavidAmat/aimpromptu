@@ -173,6 +173,19 @@ def clear_rhythm(audio_uuid: str) -> None:
     bundle.step_changed(audio_uuid)
 
 
+def clear_new_sheet(audio_uuid: str) -> None:
+    """Forget the new sheet (``sheet.f1``, implementation 03, Phase 5) when a whole new set of notes replaces the old
+    one: its columns would point at other notes. The copy is in history (``history.snapshot_notes``). The new notes
+    ask Sonnet for their sheet: the Sheet step starts it by itself.
+    """
+    from aitu_backend.part_sheet import (
+        store as new_sheet,
+    )  # noqa: PLC0415 - a small module, read late
+
+    new_sheet.clear(audio_uuid)
+    new_sheet.ask_sonnet(audio_uuid)
+
+
 @dataclass(frozen=True)
 class TranscribedEvents:
     """The model's output in seconds, plus the length of what it listened to.
@@ -688,6 +701,7 @@ def transcribe_audio(
     # point at nothing in particular now and keeping them would be worse than
     # asking the reader to name the gap again. The copy is in history.
     clear_rhythm(audio_uuid)
+    clear_new_sheet(audio_uuid)
     # Whatever was wrong with this piece before, it now has its recorded notes.
     clear_needs_rederivation(audio_uuid)
     return TranscribedEvents(

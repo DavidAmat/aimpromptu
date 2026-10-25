@@ -244,7 +244,7 @@ try {
   await shot('04-public-song-lyrics');
   await page.getByTestId('public-play').click();
   await page.waitForURL('**/play/**');
-  check('Play opens Play mode on the public version', await until(async () => (await page.locator('[data-play-page] .grid-note-target').count()) > 0, 90000));
+  check('Play opens Play mode on the public version', await until(async () => (await page.locator('[data-play-page] [data-frames-sheet] [data-note]').count()) > 0, 90000));
   await shot('05-play-public-version');
   await page.getByTestId('play-close').click();
   await page.waitForURL(`**/public/songs/${alive.id}`);
@@ -302,7 +302,7 @@ try {
   check('the playlist is in My library', pulledPlaylist !== undefined);
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   await page.waitForURL('**/play/playlist/**');
-  check('Play mode plays the public playlist', await until(async () => (await page.locator('[data-play-page] .grid-note-target').count()) > 0, 90000));
+  check('Play mode plays the public playlist', await until(async () => (await page.locator('[data-play-page] [data-frames-sheet] [data-note]').count()) > 0, 90000));
   await page.getByTestId('play-close').click();
   check('Close comes back to the public playlist', await until(async () => page.url().includes(`/public/playlists/${playlistId}`)));
 

@@ -8,8 +8,11 @@
 
 import { request } from "./client";
 
-/** The five steps of the flow page, in order. */
-export const PIECE_STEPS = ["source", "audio", "notes", "hands", "sheet"] as const;
+/**
+ * The steps of the flow page, in order. The Hands step was removed by implementation 03, Phase 5: Sonnet decides
+ * the hands with the sheet.
+ */
+export const PIECE_STEPS = ["source", "audio", "notes", "sheet"] as const;
 export type PieceStep = (typeof PIECE_STEPS)[number];
 
 /**
@@ -27,7 +30,8 @@ export interface StepStatus {
   reason: string | null;
   /**
    * What else the backend says about the step. Notes: `noteCount`, `engine`, and `jobId` while a
-   * transcription runs. Hands: `withoutHand`, `guessed`, `saved`. Audio: `audioRevision`, `cuts`.
+   * transcription runs. Sheet: `newSheet` (a new sheet is stored), `legacy` (the state of the sheet vexflow-v2
+   * saved), and `jobId` while Sonnet writes. Audio: `audioRevision`, `cuts`.
    */
   details: Record<string, unknown>;
 }

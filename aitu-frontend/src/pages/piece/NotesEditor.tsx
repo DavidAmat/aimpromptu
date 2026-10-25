@@ -166,7 +166,6 @@ export function NotesEditor({ step }: { step: EditorStep }) {
   const { uuid, audio, status, refresh, readOnly } = usePiece();
   const { artifact } = useWorkingArtifact();
   const here = stepStatus(status, "notes");
-  const hands = stepStatus(status, "hands");
   const sheet = stepStatus(status, "sheet");
   const onHands = step === "hands";
   const running = here?.state === "running";
@@ -606,9 +605,10 @@ export function NotesEditor({ step }: { step: EditorStep }) {
 
   const next =
     mode === "live" ? null : !onHands ? (
-      hands?.enabled ? (
-        <PillButton kind="primary" onClick={() => navigate(ROUTES.project(uuid, "hands"))}>
-          Continue to Hands
+      // The Hands step is gone (implementation 03, Phase 5): Sonnet decides the hands with the sheet.
+      sheet?.enabled ? (
+        <PillButton kind="primary" onClick={() => navigate(ROUTES.project(uuid, "sheet"))}>
+          Continue to Sheet
         </PillButton>
       ) : null
     ) : (
@@ -692,7 +692,7 @@ export function NotesEditor({ step }: { step: EditorStep }) {
         ) : null}
 
         {!onHands && editing ? (
-          <Tooltip title={hasHands ? "Colour the notes by hand: blue right, green left, red no hand" : "Predict hands on the Hands step first"}>
+          <Tooltip title={hasHands ? "Colour the notes by hand: blue right, green left, red no hand" : "The hands are written with the sheet"}>
             <FormControlLabel
               sx={{ ml: 0, mr: 1 }}
               control={<Switch size="small" checked={hasHands && handColours} disabled={!hasHands} onChange={toggleHandColours} />}

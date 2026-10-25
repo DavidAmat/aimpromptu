@@ -16,6 +16,10 @@
  *    stops by itself, **All songs**, Close back to the playlist with its song shaded;
  * 4. 390 px and dark.
  *
+ * Implementation 03, Phase 5: Play mode draws the new sheet (`[data-frames-sheet]`, its cursor
+ * `[data-frames-cursor]`), which has no lyrics until Phase 8; the lyrics of the Sheet step are checked on the old
+ * sheet (the switch of its floating bar).
+ *
  *     npm run check:play
  *     npm run check:play -- --name Elefants --out /tmp/play
  */
@@ -68,7 +72,7 @@ const shot = async (name) => {
   await page.screenshot({ path: path.join(out, `${name}.png`) });
 };
 const waitForSheet = async () => {
-  await page.waitForSelector('[data-play-page] .grid-note-target', { timeout: 90000 });
+  await page.waitForSelector('[data-play-page] [data-frames-sheet] [data-note]', { timeout: 90000 });
   await page.waitForTimeout(800);
 };
 const playing = () => page.getByTestId('play-toggle').getAttribute('data-playing');
@@ -121,29 +125,14 @@ try {
   check('the page has no sidebar', (await page.locator('nav').count()) === 0);
   check('Close and Play are on the page, Next is not', (await page.getByTestId('play-close').isVisible()) && (await page.getByTestId('play-toggle').isVisible()) && (await page.getByTestId('play-next').count()) === 0);
   check('nothing on the sheet opens a toolbox', (await page.locator('[data-sheet-page] [data-testid=sheet-floating-bar], [role=toolbar]').count()) === 0);
-  check('the lyrics are drawn', (await page.locator('.grid-lyric').count()) === 2);
+  // The new sheet draws no lyrics until implementation 03, Phase 8 (plan task 8.2).
+  console.log('skip  the lyrics of Play mode: the new sheet draws them from Phase 8');
   await shot('01-play-mode');
 
   await page.mouse.move(700, 450);
   await page.keyboard.press('Space');
   check('Space plays', await until(async () => (await playing()) === 'true', 8000));
-  const lit = await until(
-    async () =>
-      page.evaluate(() => {
-        const one = document.querySelector('.grid-lyric[data-from-column="25"]');
-        const two = document.querySelector('.grid-lyric[data-from-column="400"]');
-        const ink = one?.querySelector('.grid-lyric-text');
-        return Boolean(
-          one && two && ink &&
-            getComputedStyle(one).opacity === '1' &&
-            getComputedStyle(ink).fill === 'rgb(0, 0, 0)' &&
-            Number(getComputedStyle(two).opacity) < 0.5,
-        );
-      }),
-    8000,
-  );
-  check('the lyrics piece of the frames sounding is shown in black, the other faint', lit);
-  await shot('02-lyrics-by-frames');
+  await shot('02-playing');
   const faded = await until(
     async () => (await page.locator('[data-play-menu]').evaluate((node) => getComputedStyle(node).opacity)) === '0',
     6000,
@@ -155,7 +144,7 @@ try {
   const scrolled = await until(async () => (await page.evaluate(() => window.scrollY)) > 0, 40000);
   await page.waitForTimeout(1200);
   const place = await page.evaluate(() => {
-    const line = document.querySelector('[data-play-active="true"] [data-playhead]');
+    const line = document.querySelector('[data-play-active="true"] [data-frames-cursor]');
     const box = line?.getBoundingClientRect();
     return box ? (box.top + box.height / 2) / window.innerHeight : -1;
   });
@@ -169,12 +158,12 @@ try {
   check('the arrows scroll', (await page.evaluate(() => window.scrollY)) > before);
   const cursorAt = () =>
     page.evaluate(() => {
-      const box = document.querySelector('[data-play-active="true"] [data-playhead]')?.getBoundingClientRect();
+      const box = document.querySelector('[data-play-active="true"] [data-frames-cursor]')?.getBoundingClientRect();
       return box ? Math.round(box.top + window.scrollY) : null;
     });
   const firstLine = await cursorAt();
   // A line further down: below the cursor's own line, by more than a line's height.
-  const line = await page.locator('[data-play-active="true"] [data-playhead]').boundingBox();
+  const line = await page.locator('[data-play-active="true"] [data-frames-cursor]').boundingBox();
   if (line) await page.mouse.dblclick(720, Math.min(860, line.y + line.height + 220));
   check('a double-click on the sheet moves the cursor there', await until(async () => (await cursorAt()) !== firstLine, 3000));
 
@@ -197,6 +186,7 @@ try {
 
   // The Sheet step lights the words being sung too, and fades nothing.
   await page.goto(`${base}/projects/${copy.id}/sheet`);
+  await page.getByTestId('old-sheet').click({ timeout: 90000 });
   await page.waitForSelector('[data-sheet-page] .grid-note-target', { timeout: 90000 });
   await page.waitForTimeout(800);
   await page.mouse.move(700, 450);
@@ -295,7 +285,7 @@ try {
   made.add(composed.id);
   await page.goto(`${base}/play/${composed.id}`);
   await waitForSheet();
-  await page.locator('[data-play-part="0:1"] .grid-note-target').first().waitFor({ timeout: 60000 });
+  await page.locator('[data-play-part="0:1"] [data-frames-sheet] [data-note]').first().waitFor({ timeout: 60000 });
   check('an integrated playlist draws its parts one after the other, with their subheaders', (await page.locator('[data-play-part]').count()) === 2 && (await page.getByRole('heading', { name: 'Coda' }).count()) === 1);
   await shot('06-integrated-playlist');
   await page.keyboard.press('Space');

@@ -170,6 +170,7 @@ def write(audio_uuid: str) -> Written:
         new_notes=True,
     )
     pipeline.clear_rhythm(audio_uuid)
+    pipeline.clear_new_sheet(audio_uuid)
     pipeline.clear_needs_rederivation(audio_uuid)
     return Written(
         audio_uuid=audio_uuid,

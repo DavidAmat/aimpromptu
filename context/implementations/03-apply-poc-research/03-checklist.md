@@ -22,7 +22,8 @@ their phase, after its study (plan section 8).
 - [x] **Phase 2**: rule 7 of the alteraciones (user, 2026-10-23): after a becuadro, the first return of that note to its armadura name prints its sostenido or bemol again, when it is in the same beam group or the next note (`frames.printed_signs`; plan section 3.4).
 - [x] **Phase 3**: the look of the spacing without compases (approved: "perfect"); no thin double line at an armadura change (the default; the user did not choose, `Options.key_line` stays available).
 - [x] **Phase 4**: the API key (done 2026-10-25); how many songs the credits cover (about 110 a month, $0.89 per song on average); the beam groups and the maximum of 8 notes (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user, report section 11): the gallery approved ("all good"); clef.L4 and the staccato figures kept as written.
-- [ ] **Phase 5**: existing projects, keep their corrections or write them again with the LLM; merge into `master` early or at the end.
+- [x] **Phase 5**: existing projects (user, 2026-10-25): the songs Sonnet already wrote (the 10 viewer songs) show Sonnet's sheet; every other song keeps its data and the algorithm's sheet, with **Write with Sonnet**; new transcriptions go to Sonnet by themselves.
+- [ ] **Phase 5**: merge into `master` now or at the end (asked in the Phase 5 walkthrough).
 - [ ] **Phase 6**: may a new LLM run change hands that the user moved; the engine in the backend or in the browser.
 - [ ] **Phases 7 and 8**: the tools that no longer make sense without compases: keep, change or drop.
 
@@ -78,17 +79,19 @@ Done 2026-10-25. Report: [`03-implementation-phase-4.md`](03-implementation-phas
 - [x] Task 4.5 A few windows, then the 10 viewer songs; comparison with the recorded Sonnet sheets; cost per song: 150 of 150 windows, $8.86, same hand as the research's Sonnet on 96.3 to 99.8 % of the notes.
 - [p] Task 4.6 Gallery: the algorithm and Sonnet side by side: [`gallery/phase-4/index.html`](gallery/phase-4/index.html), 10 passages, checked by the user ("all good").
 
-# [ ] Phase 5: The new Sheet step (to see and to hear)
+# [p] Phase 5: The new Sheet step (to see and to hear)
 
-- [ ] Task 5.1 Study; question to the user on existing projects.
-- [ ] Task 5.2 The flow: Hands step removed; Notes Falling playable without hands; the negra choice removed.
-- [ ] Task 5.3 The algorithm's sheet at once; the LLM job in the background; grey segments; a finished segment appears little by little; no text.
-- [ ] Task 5.4 The LLM's hands saved in `notes.pmn`.
-- [ ] Task 5.5 The new sheet saved beside `sheet.json`; reopening does not call the LLM again.
-- [ ] Task 5.6 Playback: cursor, lit notes, click to seek.
-- [ ] Task 5.7 vexflow-v2 reachable for editing (a switch inside `SheetPage`) until Phase 8; waiting segments not editable.
-- [ ] Task 5.8 The browser checks of the Sheet step moved to `data-*` hooks of the new view.
-- [ ] Task 5.9 No line naming the figure and a tempo above the passages.
+Built 2026-10-25; the user's check in the browser is pending. Report: [`03-implementation-phase-5.md`](03-implementation-phase-5.md).
+
+- [x] Task 5.1 Study; question to the user on existing projects (answered: keep the data, Sonnet's sheet for the 10 songs it wrote, a button for the rest).
+- [x] Task 5.2 The flow: Hands step removed (four steps); Notes Falling without hand colours until the hands exist; the negra choice not on the new sheet.
+- [x] Task 5.3 The algorithm's sheet at once; Sonnet's job in the background (`part_sheet.job`, `POST /sheet/{uuid}/llm`); the segment at Sonnet pale; a segment that comes back appears column by column; no text. Backend image on uv's Python with `anthropic`.
+- [x] Task 5.4 Sonnet's hands saved in `notes.pmn` at the end of the run (the hands before go to the history).
+- [x] Task 5.5 `sheet.f1` beside `sheet.json`, carried by duplicate, export, library and history; reopening calls nothing. The 10 viewer songs imported from the Phase 4 run.
+- [x] Task 5.6 Playback: cursor, lit notes, click to seek; Play mode on the new sheet (lyrics in Phase 8).
+- [x] Task 5.7 The switch inside `SheetPage` (**Edit in the old sheet** / **Back to the new sheet**); closed while Sonnet writes. The passage page, From other projects and the requests review keep the old sheet until Phase 8.
+- [x] Task 5.8 `check:frames-sheet` (new) and `check:play` on the `data-*` hooks; the old sheet's checks press the switch.
+- [x] Task 5.9 No line naming the figure and a tempo on the new sheet.
 - [ ] Task 5.10 Question to the user: merge into `master` now or at the end.
 
 # [ ] Phase 6: Editing the new sheet (the edit model, hands, undo)

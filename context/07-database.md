@@ -43,7 +43,10 @@ database. Every path in the folder is built by one module, `aitu_backend/storage
                                  source of each part's audio
   parts/<partId>/
     notes.pmn                    THE NOTES: the piano matrix notation of the part
-    sheet.json                   what the reader decided on the piano sheet
+    sheet.json                   what the reader decided on the old piano sheet (vexflow-v2)
+    sheet.f1                     the new piano sheet: F1 frames text and a record of how it was written
+                                 (Sonnet or the algorithm, implementation 03, Phase 5); the hands stay in notes.pmn
+    sheet.pending                a new transcription asks Sonnet to write the sheet (removed when it starts)
     timeline.json                the audio timeline: which stored files, which ranges, in order
   cache/<partId>/                derived, safe to delete: normalized.wav, waveform.json,
                                  piece-r<N>.flac/.wav (the joined audio of a part with cuts)
@@ -109,7 +112,7 @@ Two different axes, and they are easy to confuse.
 
 | | Means | Where |
 |---|---|---|
-| `music-version.json` + `history/<projectId>/parts/<partId>/v<N>/` | **The music changed**: a splice was accepted, or a new transcription replaced the notes. A snapshot keeps `notes.pmn`, `sheet.json` and `timeline.json`; the audio it names stays in the store | The part's folder; `.database/history/` |
+| `music-version.json` + `history/<projectId>/parts/<partId>/v<N>/` | **The music changed**: a splice was accepted, or a new transcription replaced the notes. A snapshot keeps `notes.pmn`, `sheet.json`, `sheet.f1` and `timeline.json`; the audio it names stays in the store | The part's folder; `.database/history/` |
 | `audioRevision`, `notesRevision`, `handsRevision` | **One step changed**, so the later steps may be stale | `timeline.json`, the `notes.pmn` header, `sheet.json` |
 | `alembic_version` | The tables changed shape | `aitu.sqlite` |
 

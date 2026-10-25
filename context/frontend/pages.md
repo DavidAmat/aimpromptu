@@ -118,7 +118,7 @@ inferred.
 
 The steps of a project follow the same idea. On the Audio step, the playhead is moved in the **time ruler**
 at the top of the waveform (press or drag) or with a double-click; a drag in the waveform selects.
-On the Notes and Hands steps, the playhead is moved in the time ruler and on the bar under the piano
+On the Notes step, the playhead is moved in the time ruler and on the bar under the piano
 roll visualization. There a double-click on empty space adds a note, so it does not move the
 playhead.
 
@@ -139,7 +139,8 @@ through a hundred staves in a second; the page chasing it made the gesture impos
 
 `hooks/useProgress.ts` consumes a job's Server-Sent Events stream (a connection on which the backend
 keeps sending progress messages), so a run that takes tens of seconds reports real progress rather
-than a spinner. The transcription, the YouTube download and **Predict hands** all run as jobs. On the
+than a spinner. The transcription, the YouTube download and Sonnet writing the sheet (implementation 03, Phase 5) all run as
+jobs. On the
 Notes tab the same stream also carries the notes, so the rectangles appear while the piece is
 transcribed.
 

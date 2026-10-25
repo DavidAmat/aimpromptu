@@ -14,7 +14,7 @@
 import { mkdirSync, readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
-import { signIn, useSession } from './session.mjs';
+import { oldSheet, signIn, useSession } from './session.mjs';
 
 const { values } = parseArgs({
   options: {
@@ -38,6 +38,7 @@ async function sheetOf(part) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: SCALE });
   await page.addInitScript(() => window.localStorage.setItem('mui-mode', 'light'));
   await page.goto(`${values.base}/projects/${part}/sheet`);
+  await oldSheet(page, { drawn: false });
   await page.locator('.grid-note-target').first().waitFor({ timeout: 90000 });
   await page.waitForTimeout(1500);
   pages.set(part, page);

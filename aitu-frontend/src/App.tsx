@@ -54,7 +54,6 @@ import NotFoundPage from "./pages/NotFoundPage";
 import ComposePage from "./pages/compose/ComposePage";
 import ProjectsPage from "./pages/ProjectsPage";
 import AudioTab from "./pages/piece/AudioTab";
-import HandsTab from "./pages/piece/HandsTab";
 import NotesTab from "./pages/piece/NotesTab";
 import PassagePage from "./pages/piece/passage/PassagePage";
 import PiecePage from "./pages/piece/PiecePage";
@@ -149,7 +148,8 @@ export default function App() {
           <Route path="source" element={<SourceTab />} />
           <Route path="audio" element={<AudioTab />} />
           <Route path="notes" element={<NotesTab />} />
-          <Route path="hands" element={<HandsTab />} />
+          {/* The Hands step was removed (implementation 03, Phase 5): an old address opens the Sheet step. */}
+          <Route path="hands" element={<Navigate to="../sheet" replace />} />
           <Route path="sheet" element={<SheetTab />} />
         </Route>
 

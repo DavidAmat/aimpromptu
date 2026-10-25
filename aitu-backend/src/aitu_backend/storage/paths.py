@@ -25,6 +25,7 @@ A project bundle (section 8.3), the same in every layer::
       parts/<partId>/
         notes.pmn                    the piano matrix notation of the part (P-5)
         sheet.json                   the metadata of the part's piano sheet
+        sheet.f1                     the new piano sheet (implementation 03, Phase 5): F1 frames text
         timeline.json                the audio timeline of the part (section 8.5)
         music-version.json, audio-mismatches.json, needs-rederivation.json   when they apply
       staging/                       the edit sessions until Phase 9; no longer written
@@ -172,6 +173,18 @@ def part_notes_path(part_id: str) -> Path:
 def part_sheet_path(part_id: str) -> Path:
     """`sheet.json` — the reader's decisions on the piano sheet (was `rhythm.json`)."""
     return part_dir(part_id) / "sheet.json"
+
+
+def part_frames_path(part_id: str) -> Path:
+    """`sheet.f1` — the new piano sheet of the part: F1 frames text, written by Sonnet or the algorithm
+    (implementation 03, Phase 5). The hands stay in `notes.pmn` (plan section 3.7)."""
+    return part_dir(part_id) / "sheet.f1"
+
+
+def part_frames_pending_path(part_id: str) -> Path:
+    """`sheet.pending` — a new transcription asks Sonnet to write the sheet: the Sheet step starts it by itself
+    (implementation 03, Phase 5). Removed when Sonnet starts."""
+    return part_dir(part_id) / "sheet.pending"
 
 
 def part_timeline_path(part_id: str) -> Path:
