@@ -36,6 +36,7 @@ from aitu_backend.editing import parts as project_parts, paste
 from aitu_backend.library import flow, rows
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.part_sheet import job as sheet_job
+from aitu_backend.part_sheet import store as sheet_store
 from aitu_backend.schemas.rhythm import SavedRhythm
 from aitu_backend.storage import bundle, exchange, locate
 from aitu_backend.transcription import jobs, pipeline
@@ -79,6 +80,8 @@ class ProjectRow(_Camel):
     #: ``transcribing`` or ``reading`` while a job works on a part, ``writing`` while Sonnet writes the sheet of a
     #: part (implementation 03, Phase 5), else ``None``.
     running: str | None = None
+    #: The AI wrote the sheet of a part of it (implementation 03, Phase 5): the list shows its badge.
+    enhanced: bool = False
     #: The ids of the parts, in order. The first one is the uuid the step routes take.
     parts: list[str]
     #: Where the audio of the first part came from: ``upload``, ``youtube``, ``recording`` ...
@@ -238,6 +241,7 @@ def _row(project: Project, links: dict[str, LibraryLink] | None = None) -> Proje
         mine=project.owner_id == current_user_id(),
         step=step,
         running=_running(part_ids),
+        enhanced=any(sheet_store.enhanced(part_id) for part_id in part_ids),
         parts=part_ids,
         source=source,
         has_video=bool(first and video_store.exists(first)),

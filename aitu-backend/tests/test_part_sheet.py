@@ -320,3 +320,12 @@ def test_enhanced_again_counts_the_runs_and_a_failed_run_keeps_the_ai_sheet(
 
     finish(job.start(part, complete=lambda: oracle(song(SECONDS))))
     assert sheet_store.load(part).record.runs == 2
+
+
+def test_the_projects_list_marks_a_project_the_ai_enhanced(client: TestClient, part: str) -> None:
+    def row() -> dict:
+        return next(row for row in client.get("/projects").json() if part in row["parts"])
+
+    assert row()["enhanced"] is False
+    finish(job.start(part, complete=lambda: oracle(song(SECONDS))))
+    assert row()["enhanced"] is True

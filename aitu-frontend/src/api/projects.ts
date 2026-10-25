@@ -37,6 +37,8 @@ export interface ProjectRow {
   step: PieceStep | null;
   /** A job working on a part right now: a transcription, a video read, or Sonnet writing the sheet. */
   running: "transcribing" | "reading" | "writing" | null;
+  /** The AI enhanced the sheet of a part of it (implementation 03, Phase 5). */
+  enhanced: boolean;
   /** The ids of the parts, in order. */
   parts: string[];
   /** Where the audio of the first part came from. */

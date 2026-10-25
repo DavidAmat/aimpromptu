@@ -1079,6 +1079,7 @@ the Private Library since Phase 6 (§7.1).
 | `id`, `title`, `kind`, `layer`, `mine` | `kind`: `song` or `integratedPlaylist`; `layer`: `vault`, `private`, `public`, or `request` (the copy a request sent, Phase 14); `mine`: the user owns it (a library project of another user is one shared with them, Phase 14) |
 | `step` | The lowest `resume` of the parts (`source`, `audio`, `notes`, `hands`, `sheet`), kept in `projects.step` and worked out again only after a part changed |
 | `running` | `transcribing` or `reading` while a job works on a part, `writing` while Sonnet writes the sheet of a part (implementation 03, Phase 5), else `null` |
+| `enhanced` | The AI wrote the sheet of a part of it (its `sheet.f1` record says `llm` or `mixed`; implementation 03, Phase 5) |
 | `parts` | The ids of the parts, in order |
 | `source` | Where the first part's audio came from (`upload`, `youtube`, `recording` ...) |
 | `hasVideo`, `hasNotes` | The first part has a video; it has notes |

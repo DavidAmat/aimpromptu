@@ -28,6 +28,7 @@ import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
@@ -56,6 +57,7 @@ import {
   PageHeader,
   PillButton,
   relativeTime,
+  semantic,
 } from "../ui";
 
 /** What a job working on a project now is doing, in the words of the spinner's tooltip. */
@@ -214,14 +216,21 @@ export function ProjectsPage() {
             <ListRow
               data-testid={`project-${row.id}`}
               title={title}
-              // A job working on the project now (the AI enhancing its sheet, above all: minutes, in the
-              // background): a small spinner beside the name says it is changing.
+              // One small slot before every name, so the names stay aligned: a spinner while a job works
+              // on the project (the AI enhancing its sheet, above all: minutes, in the background), else the
+              // green AI mark once the AI has enhanced it (the icon of Enhance with AI), else nothing.
               leading={
-                row.running ? (
-                  <Tooltip title={RUNNING_WORDS[row.running]}>
-                    <CircularProgress size={14} thickness={5} aria-label={RUNNING_WORDS[row.running]} data-running={row.running} />
-                  </Tooltip>
-                ) : undefined
+                <Box sx={{ width: 18, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                  {row.running ? (
+                    <Tooltip title={RUNNING_WORDS[row.running]}>
+                      <CircularProgress size={14} thickness={5} aria-label={RUNNING_WORDS[row.running]} data-running={row.running} />
+                    </Tooltip>
+                  ) : row.enhanced ? (
+                    <Tooltip title="Enhanced with AI">
+                      <AutoAwesomeIcon sx={{ fontSize: 18, color: semantic.status.success }} aria-label="Enhanced with AI" data-enhanced />
+                    </Tooltip>
+                  ) : null}
+                </Box>
               }
               onOpen={() => navigate(ROUTES.project(first))}
               status={

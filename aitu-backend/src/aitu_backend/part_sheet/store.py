@@ -33,7 +33,18 @@ from typing import Any
 
 from aitu_backend.storage import bundle, locate, paths
 
-__all__ = ["MARK", "Record", "Stored", "ask_sonnet", "asked", "clear", "load", "save", "taken"]
+__all__ = [
+    "MARK",
+    "Record",
+    "Stored",
+    "ask_sonnet",
+    "asked",
+    "clear",
+    "enhanced",
+    "load",
+    "save",
+    "taken",
+]
 
 #: The first word of the comment line that holds the record.
 MARK = "# aitu-sheet "
@@ -125,6 +136,26 @@ def load(part_id: str) -> Stored | None:
             pass
         lines = lines[1:]
     return Stored(text="".join(lines), record=record, stamp=stamp)
+
+
+def enhanced(part_id: str) -> bool:
+    """Whether the AI wrote the stored sheet of a part (or part of it), from the record line alone: the list of
+    projects asks it for every part."""
+    try:
+        path = paths.part_frames_path(part_id)
+    except locate.NotFound:
+        return False
+    try:
+        with path.open(encoding="utf-8") as handle:
+            first = handle.readline()
+    except OSError:
+        return False
+    if not first.startswith(MARK):
+        return False
+    try:
+        return Record.from_json(json.loads(first[len(MARK) :])).enhanced
+    except (ValueError, TypeError):
+        return False
 
 
 def save(part_id: str, text: str, record: Record) -> None:
