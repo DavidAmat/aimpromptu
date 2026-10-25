@@ -13,13 +13,17 @@ line. The code is `pages/piece/sheet/frames/`:
 
 - `FramesSheetPage.tsx`: the page (title lines, the player, the floating bar with Undo, Redo, **Enhance with AI**
   and **Edit in the old sheet**), and since Phase 6 the notes picked and the keys (⌘Z, ⇧⌘Z, Escape);
-- `FramesNoteToolbox.tsx` (Phase 6): the note toolbox of the new sheet, beside the notes picked; its first tool is
-  **Hand** (see [annotations.md](annotations.md), "The new sheet");
+- `FramesNoteToolbox.tsx` (Phase 6): the note toolbox of the new sheet, beside the notes picked: **Hand** since
+  Phase 6, every other note tool since Phase 7 (see [annotations.md](annotations.md), "The new sheet");
+- `FramesRangeToolbox.tsx` (Phase 7): the range toolbox (*Frames*: Both / Right / Left, Key, Clef, Octave);
+  `EnhanceStretchDialog.tsx`: **Enhance with AI** of a stretch with the user's words; `readingTools.ts`: what the
+  two toolboxes share;
 - `FramesSheetView.tsx`: the SVG as the backend wrote it, scaled to the page, and an overlay in the same units:
   the cursor (a line between two columns by their times), the lit noteheads of its column, the pale veil on the
   part Sonnet works on, and the blank staves that a part coming back from Sonnet is written into, column by
   column (about two seconds); since Phase 6 also the picking of notes (a click on a notehead, ⌘ or Shift to add,
-  a box dragged across the staves);
+  a box dragged across the staves), and since Phase 7 the marking of a stretch in the strip above the upper staff
+  of a line, drawn as a lavender band over the staves in scope;
 - `geometry.ts`: the research viewer's arithmetic (where the cursor is, the time under a click);
 - `useFramesSheet.ts`: the loads, Sonnet's job followed on its stream (`event: sheet`), Sonnet started by
   itself on a new transcription, and an edit (one request whose answer is the sheet drawn again).
@@ -27,9 +31,13 @@ line. The code is `pages/piece/sheet/frames/`:
 Hooks for the browser checks: `[data-frames-sheet]` (`data-source`, `data-llm`, `data-working`),
 `data-note="<frame>:<midi>"` on each notehead, `[data-lit]`, `[data-frames-cursor]` (`data-ms`),
 `[data-segment-state=working]`, `[data-revealing]`; since Phase 6 `[data-selected]` on the picked noteheads,
-`[data-pick-box]`, `[data-frames-note-toolbox]`, and `sheet-undo`, `sheet-redo` (`data-testid`). The checks are
-`npm run check:frames-sheet` (`--live` spends a few cents of Sonnet on a 40 s clip) and `npm run check:frames-edit`
-(picking, the hand, undo and redo, and the time of one edit).
+`[data-pick-box]`, `[data-frames-note-toolbox]`, and `sheet-undo`, `sheet-redo` (`data-testid`); since Phase 7
+`[data-range-strip]`, `[data-range-band]` (`data-start`, `data-end`), `[data-frames-range-toolbox]`, and the
+`data-testid` of each tool (`figure-4`, `beam-join`, `grace`, `ornament-trill`, `notes-remove`, `range-enhance`,
+`stretch-words`, ...). The checks are `npm run check:frames-sheet` (`--live` spends a few cents of Sonnet on a 40 s
+clip), `npm run check:frames-edit` (picking, the hand, undo and redo, and the time of one edit) and
+`npm run check:frames-tools` (every tool of the two toolboxes and the range selection; `--live` makes one stretch
+request, about $0.01).
 
 The engine stays in the backend (implementation 03, Phase 6, task 4): one edit takes about a quarter of a second
 from the click to the new drawing on the page, most of it in the backend's rules (the stored sheet laid again on

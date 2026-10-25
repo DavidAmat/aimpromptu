@@ -27,8 +27,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable
 
+import numpy as np
+
 from aitu_backend.editing import history
 from aitu_backend.pmn import events_file
+from aitu_backend.pmn.notes import HAND_LEFT, HAND_RIGHT
 from aitu_backend.progress import BaseProgress
 from aitu_backend.sheet.llm.frames import (
     PROMPT_VERSION,
@@ -38,6 +41,7 @@ from aitu_backend.sheet.llm.frames import (
     _algorithm_part,
     assemble,
     write_frames,
+    write_stretch,
 )
 from aitu_backend.sheet.proposal.frames import FramesProposal
 from aitu_backend.sheet.sheet import f1
@@ -45,7 +49,7 @@ from aitu_backend.transcription import jobs, pipeline
 
 from . import build, edits, store
 
-__all__ = ["LiveRun", "available", "commit", "job_of", "live", "start"]
+__all__ = ["Busy", "LiveRun", "available", "commit", "job_of", "live", "start", "start_stretch"]
 
 #: The job key of a part: one Sonnet run at a time per part.
 KEY = "sheet-llm:{}"
@@ -80,6 +84,9 @@ class LiveRun:
     algo: FramesProposal | None = None
     windows: list[tuple[int, int]] = field(default_factory=list)
     parts: list[Part] = field(default_factory=list)
+    #: The user's own marks of the sheet before the run (fingers, figures set by hand, the grace note switch):
+    #: kept on the sheet the AI writes (Phase 7).
+    marks: dict = field(default_factory=dict)
     _text: tuple[int, str] | None = None
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
@@ -101,7 +108,7 @@ class LiveRun:
         if cached is not None and cached[0] == len(parts):
             return cached[1]
         rest = [_algorithm_part(a, b, algo.sheet) for a, b in windows[len(parts) :]]
-        sheet, _ = assemble(algo, parts + rest)
+        sheet, _ = assemble(algo, build.with_marks(parts + rest, self.marks))
         text = f1.write(sheet, mode="frames")
         with self._lock:
             self._text = (len(parts), text)
@@ -161,7 +168,9 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
         # without hands: the hands are then the hand split's, and the research found the LLM copies the hands it is
         # shown, errors included.
         shown = before.record is not None and before.record.enhanced
-        run = LiveRun(part_id, before.text, build.windows(f1.read(before.text)))
+        drawn_before = f1.read(before.text)
+        marks = build.user_marks(drawn_before)
+        run = LiveRun(part_id, before.text, build.windows(drawn_before), marks=marks)
         with _live_lock:
             _live[part_id] = run
         try:
@@ -201,6 +210,11 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
                 }
             calls = getattr(ask, "calls", [])  # the requests made, with their cost
             sources = [part.source for part in song.parts]
+            sheet, text = song.sheet, song.text
+            if marks:
+                # The user's own marks stay (the user's answer of Phase 7); the AI's kinds are its new ones.
+                sheet, _ = assemble(song.algo, build.with_marks(song.parts, marks))
+                text = f1.write(sheet, mode="frames")
             record = store.Record(
                 source=(
                     "llm"
@@ -217,8 +231,9 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
                 written=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 note=next((w.note for w in song.windows if w.note), None)
                 or song.reference.get("note"),
+                edited=bool(marks),
             )
-            commit(part_id, song.sheet, song.text, record, header.notes_revision)
+            commit(part_id, sheet, text, record, header.notes_revision)
             reporter.send(EVENT, {"phase": "saved", "source": record.source})
             return {
                 "source": record.source,
@@ -287,3 +302,98 @@ def commit(part_id: str, sheet: Any, text: str, record: store.Record, notes_revi
         # The AI wrote the hands and the sheet again: the steps of undo and redo start again.
         edits.forget(part_id)
     build.forget(part_id)
+
+
+class Busy(RuntimeError):
+    """The AI already works on this part (a whole run, or another stretch)."""
+
+
+def start_stretch(
+    part_id: str,
+    *,
+    start: int,
+    end: int,
+    instruction: str = "",
+    staff: int | None = None,
+    picked: list[str] | None = None,
+    complete: Callable[[], Complete] | None = None,
+) -> jobs.Job:
+    """The AI writes the columns ``[start, end)`` of the part's sheet again with the user's words (Phase 7, plan
+    task 7.5): one window request (``sheet.llm.frames.write_stretch``), the hands of the sheet now shown as a
+    suggestion. While it works the stretch is the one ``working`` segment of the page (its pale veil) and nothing can
+    be edited (same job key as a whole run); its answer is stored as one step (``edits.apply_stretch``), or nothing
+    when no reply was accepted (the summary of the job's ``done`` message says ``failed``). ``staff`` (1 or 2) or
+    ``picked`` (the refs ``"<frame>:<midi>"`` of the notes picked) say what the user selected."""
+    if job_of(part_id) is not None:
+        raise Busy("The AI is already enhancing this sheet.")
+
+    def work(reporter: BaseProgress) -> dict[str, Any]:
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise FileNotFoundError("This part has no notes.")
+        notes_revision = stored.header.notes_revision
+        drawn = build.current(part_id)
+        current = f1.read(drawn.text)
+        notes = pipeline.starting_hands(part_id)
+        side = build.hands_of_sheet(current, notes)
+        code = {"right": HAND_RIGHT, "left": HAND_LEFT}
+        notes.hand = np.array(
+            [code.get(side.get(int(i), ""), h) for i, h in zip(notes.id, notes.hand)], dtype=np.int8
+        )
+        run = LiveRun(part_id, drawn.text, [(start, end)])
+        with _live_lock:
+            _live[part_id] = run
+        try:
+            ask = (complete or _complete)()
+            reporter.send(EVENT, {"phase": "stretch", "start": start, "end": end})
+
+            def asked(system: str, messages: list[dict]) -> str:
+                if not pipeline.has_events(part_id):
+                    raise PartGone(
+                        "The part was deleted while the AI wrote a stretch of its sheet."
+                    )
+                return ask(system, messages)
+
+            places = [p for p in (_place(ref) for ref in picked or []) if p is not None]
+            sheet, log = write_stretch(
+                current,
+                notes,
+                asked,
+                start=start,
+                end=end,
+                instruction=instruction,
+                staff=staff,
+                picked=places or None,
+                sid=part_id[:8],
+            )
+            usd = float(getattr(ask, "usd", 0.0) or 0.0)
+            requests = len(getattr(ask, "calls", []))
+            if sheet is None:
+                return {"stretch": "failed", "usd": round(usd, 4), "note": log.note or None}
+            words = " ".join(instruction.split())
+            done = edits.apply_stretch(
+                part_id,
+                sheet,
+                notes_revision=notes_revision,
+                start=start,
+                end=end,
+                words=words,
+                usd=usd,
+                requests=requests,
+                model=getattr(ask, "model", None),
+            )
+            reporter.send(EVENT, {"phase": "saved"})
+            return {"stretch": "ok" if done else "stale", "usd": round(usd, 4)}
+        finally:
+            with _live_lock:
+                _live.pop(part_id, None)
+
+    return jobs.submit(work, key=KEY.format(part_id), describe=lambda result: dict(result or {}))
+
+
+def _place(ref: str) -> tuple[int, int] | None:
+    try:
+        frame, midi = ref.split(":")
+        return int(frame), int(midi)
+    except ValueError:
+        return None

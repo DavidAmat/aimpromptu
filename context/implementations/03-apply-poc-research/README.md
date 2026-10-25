@@ -1,6 +1,6 @@
 # 03: The new sheet in aimpromptu (applying the research)
 
-**State: live. Phases 0 to 5 done (Phase 5 on 2026-10-25, merged into `master`); Phase 6 done (2026-10-25, merged into `master`); Phase 7 is next.** Opened 2026-10-23 on the branch
+**State: live. Phases 0 to 5 done (Phase 5 on 2026-10-25, merged into `master`); Phase 6 done (2026-10-25, merged into `master`); Phase 7 done (2026-10-26, merged into `master`); Phase 8 is next.** Opened 2026-10-23 on the branch
 `feat/migrate-new-logic` (one branch for the whole migration, plan section 6.3).
 
 Research plan 01 (the folder `/home/david/Documents/projects/music/poc-aitu-research` on the Ubuntu machine) built a
@@ -29,3 +29,5 @@ The brief is [`03-prompt.md`](03-prompt.md), the plan is [`03-plan.md`](03-plan.
 | [`gallery/phase-4/index.html`](gallery/phase-4/index.html) | The Phase 4 gallery: 10 passages written by the algorithm and by Sonnet (built by `aitu-backend/scripts/llm_gallery.py`) |
 | [`03-implementation-phase-5.md`](03-implementation-phase-5.md) | Phase 5: the new Sheet step in the app: the Hands step removed, the new sheet at once, Sonnet in the background segment by segment, the hands saved in the notes, the cursor, the switch to the old sheet, the checks |
 | [`03-implementation-phase-6.md`](03-implementation-phase-6.md) | Phase 6: editing the new sheet: the edit model (hands in the notes, the stored sheet laid again), undo and redo kept by the backend, the hand tool, the clefs around a moved note, the AI run again on the current hands, the time of one edit (the engine stays in the backend) |
+| [`03-implementation-phase-7.md`](03-implementation-phase-7.md) | Phase 7: the note and range tools of the new sheet: the inventory and the user's answers (the tools dropped), the reading edits on the edit model, the user's marks in the format, the range selection, Enhance with AI of a stretch with the user's words, the gallery |
+| [`gallery/phase-7/index.html`](gallery/phase-7/index.html) | The Phase 7 gallery: 13 tools on passages of 7 Years, before and after (built by `aitu-backend/scripts/tools_gallery.py`) |

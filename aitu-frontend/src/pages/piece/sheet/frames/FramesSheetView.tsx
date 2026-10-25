@@ -14,11 +14,16 @@
  *   recording there), ⌘ or Shift adds it to the notes already picked, and a box dragged across the staves picks
  *   every notehead in it. A click off the notes drops the pick and moves the recording, as before. A head is found
  *   within a few pixels of the click: a notehead is about 8 pixels wide.
+ * - **A stretch can be marked** (Phase 7, when the page gives `onRange`), as in the old sheet: in the strip above the
+ *   upper staff of a line (it shows faintly under the pointer), a click marks one column, a drag marks every column
+ *   it crosses (on to the next lines too), and Shift-click extends the stretch marked. The stretch is a lavender
+ *   band over the staves in scope (both, or the one hand's staff of **Both / Right / Left**).
  *
  * Hooks for the browser checks: `data-frames-sheet` on the root (with `data-source`, `data-llm`, `data-working`),
  * `data-note="<frame>:<midi>"` on each notehead, `data-lit` on the lit ones, `data-selected` on the picked ones,
  * `data-frames-cursor` (with `data-ms`), `data-segment-state="working"` on the veil, `data-revealing` while a
- * segment appears and `data-pick-box` while a box is dragged.
+ * segment appears, `data-pick-box` while a box is dragged, `data-range-band` on the marked stretch (one per line,
+ * with `data-start` and `data-end`) and `data-range-strip` on the strip under the pointer.
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from "react";
@@ -42,6 +47,18 @@ const DRAG_PX = 5;
 /** How a pick joins the notes already picked: `only` replaces them, `add` adds (or takes away) the ones named. */
 export type PickHow = "only" | "add";
 
+/** A marked stretch of frames (`end` excluded), and the staff it is about. */
+export interface MarkedRange {
+  start: number;
+  end: number;
+}
+export type RangeScope = "both" | "right" | "left";
+
+/** The strip above the upper staff where a stretch is marked: from this far above its top line, in staff spaces. */
+const STRIP_SPACES = 3.5;
+/** The band of a stretch reaches this far beyond the staff lines it covers, in staff spaces. */
+const BAND_PAD = 1.5;
+
 /** The refs a notehead names (merged unisons name several). */
 function refsOf(element: Element): string[] {
   return (element.getAttribute("data-note") ?? "").split(" ").filter(Boolean);
@@ -62,6 +79,13 @@ function headAt(root: ParentNode, x: number, y: number): Element | null {
     }
   }
   return best;
+}
+
+/** A stretch being dragged in the strip: the column indices where it began and where the pointer is. */
+interface RangeDrag {
+  from: number;
+  to: number;
+  extend: boolean;
 }
 
 interface Drag {
@@ -97,6 +121,9 @@ export function FramesSheetView({
   onSeek,
   selected,
   onPick,
+  range = null,
+  rangeScope = "both",
+  onRange,
 }: {
   sheet: FramesSheet;
   playheadSeconds: number | null;
@@ -109,6 +136,11 @@ export function FramesSheetView({
   selected?: ReadonlySet<string>;
   /** Notes can be picked: called with the refs of a click or of a box; `[]` with `only` drops the pick. */
   onPick?: (refs: string[], how: PickHow) => void;
+  /** The stretch marked, and the staff it is about. */
+  range?: MarkedRange | null;
+  rangeScope?: RangeScope;
+  /** A stretch can be marked: called with its frames when a click or a drag in the strip ends. */
+  onRange?: (range: MarkedRange) => void;
 }) {
   const host = useRef<HTMLDivElement | null>(null);
   const overlay = useRef<SVGSVGElement | null>(null);
@@ -153,12 +185,19 @@ export function FramesSheetView({
   if (seen !== sheet.segments) {
     setSeen(sheet.segments);
     const earlier = new Map(seen.map((segment) => [segment.start, segment.state]));
-    // The segment that was at Sonnet (or waiting) and is decided now.
-    const back = sheet.segments.find(
-      (segment) =>
-        (segment.state === "llm" || segment.state === "algorithm") &&
-        (earlier.get(segment.start) === "working" || earlier.get(segment.start) === "waiting"),
-    );
+    const wasWorking = seen.find((segment) => segment.state === "working");
+    const decided = (segment: (typeof sheet.segments)[number]) => segment.state === "llm" || segment.state === "algorithm";
+    // The segment that was at Sonnet (or waiting) and is decided now: the same stretch first (a stretch the AI wrote
+    // again with the user's words, Phase 7, ends where it ended), else a window with the same start.
+    const back =
+      sheet.segments.find(
+        (segment) => decided(segment) && wasWorking && segment.start === wasWorking.start && segment.end === wasWorking.end,
+      ) ??
+      sheet.segments.find(
+        (segment) =>
+          decided(segment) &&
+          (earlier.get(segment.start) === "working" || earlier.get(segment.start) === "waiting"),
+      );
     if (back) {
       const [from, to] = columnsOf(back, columns);
       if (to > from) setReveal({ from, to, shown: 0 });
@@ -229,6 +268,69 @@ export function FramesSheetView({
     if (ms !== null) onSeek(ms / 1000);
   };
 
+  // ------------------------------------------------------------------ marking a stretch (Phase 7)
+
+  /** A point of the screen in the sheet's units (staff spaces). */
+  const toSheet = (clientX: number, clientY: number) => {
+    const matrix = overlay.current?.getScreenCTM();
+    return matrix ? new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse()) : null;
+  };
+  /** The line whose strip (above its upper staff) holds the point, or `-1`. */
+  const stripAt = (x: number, y: number) =>
+    sheet.systems.findIndex((system, i) => {
+      const above = Math.min(system.staff_top - STRIP_SPACES, system.top - 0.5);
+      const floor = i > 0 ? Math.max(above, sheet.systems[i - 1].bottom + 0.2) : above;
+      return y >= floor && y <= system.staff_top - 0.3 && x >= system.left - 1 && x <= system.right + 1;
+    });
+  /** The column under `x` on a line (the nearest one of that line). */
+  const columnAt = (system: number, x: number) => {
+    let best = -1;
+    let distance = Infinity;
+    columns.forEach((column, i) => {
+      if (column.system !== system) return;
+      const [left, right] = edges[i];
+      const d = x < left ? left - x : x > right ? x - right : 0;
+      if (d < distance) {
+        distance = d;
+        best = i;
+      }
+    });
+    return best;
+  };
+  /** The line nearest a point (for a drag that leaves the strip). */
+  const lineAt = (y: number) => {
+    let best = 0;
+    let distance = Infinity;
+    sheet.systems.forEach((system, i) => {
+      const d = y < system.top ? system.top - y : y > system.bottom ? y - system.bottom : 0;
+      if (d < distance) {
+        distance = d;
+        best = i;
+      }
+    });
+    return best;
+  };
+  const framesOf = (from: number, to: number): MarkedRange => {
+    const [a, b] = from <= to ? [from, to] : [to, from];
+    const next = columns[b + 1];
+    return { start: columns[a].frame, end: next ? next.frame : columns[b].frame + 1 };
+  };
+  const [rangeDrag, setRangeDrag] = useState<RangeDrag | null>(null);
+  const [strip, setStrip] = useState(-1);
+  const marking = rangeDrag ? framesOf(rangeDrag.from, rangeDrag.to) : null;
+  const shown = marking ?? range;
+  const bands = useMemo(() => {
+    if (!shown) return [];
+    const [from, to] = columnsOf(shown, columns);
+    return boxesOf(from, to, columns, edges, sheet.systems).map((box) => {
+      const system = sheet.systems[box.system];
+      const top =
+        rangeScope === "left" ? system.staff_bottom - 4 - BAND_PAD : system.staff_top - BAND_PAD;
+      const bottom = rangeScope === "right" ? system.staff_top + 4 + BAND_PAD : system.staff_bottom + BAND_PAD;
+      return { ...box, y: top, height: bottom - top, stripY: system.staff_top - STRIP_SPACES };
+    });
+  }, [shown, rangeScope, columns, edges, sheet.systems]);
+
   // ------------------------------------------------------------------ picking notes
 
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -253,19 +355,49 @@ export function FramesSheetView({
   };
 
   const press = (event: PointerEvent<HTMLDivElement>) => {
-    if (!onPick || event.button !== 0) return;
+    if (event.button !== 0) return;
+    if (onRange && host.current && !headAt(host.current, event.clientX, event.clientY)) {
+      const point = toSheet(event.clientX, event.clientY);
+      const line = point ? stripAt(point.x, point.y) : -1;
+      if (point && line >= 0) {
+        const at = columnAt(line, point.x);
+        if (at >= 0) {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          const from = event.shiftKey && range ? columnsOf(range, columns)[0] : at;
+          setRangeDrag({ from, to: at, extend: event.shiftKey });
+          return;
+        }
+      }
+    }
+    if (!onPick) return;
     const add = event.metaKey || event.ctrlKey || event.shiftKey;
     const { left, top } = event.currentTarget.getBoundingClientRect();
     const [x, y] = [event.clientX, event.clientY];
     setDrag({ left, top, x0: x, y0: y, x1: x, y1: y, add, moved: false });
   };
   const pull = (event: PointerEvent<HTMLDivElement>) => {
+    if (onRange) {
+      const point = toSheet(event.clientX, event.clientY);
+      if (rangeDrag && point) {
+        const at = columnAt(lineAt(point.y), point.x);
+        if (at >= 0 && at !== rangeDrag.to) setRangeDrag({ ...rangeDrag, to: at });
+        return;
+      }
+      const line = point && host.current && !headAt(host.current, event.clientX, event.clientY) ? stripAt(point.x, point.y) : -1;
+      if (line !== strip) setStrip(line);
+    }
     if (!drag) return;
     const moved = drag.moved || Math.hypot(event.clientX - drag.x0, event.clientY - drag.y0) > DRAG_PX;
     if (moved && !drag.moved) event.currentTarget.setPointerCapture(event.pointerId);
     setDrag({ ...drag, x1: event.clientX, y1: event.clientY, moved });
   };
   const release = () => {
+    if (rangeDrag) {
+      setRangeDrag(null);
+      dragged.current = true;
+      onRange?.(framesOf(rangeDrag.from, rangeDrag.to));
+      return;
+    }
     if (!drag) return;
     setDrag(null);
     if (!drag.moved || !onPick || !host.current) return;
@@ -300,13 +432,17 @@ export function FramesSheetView({
       onPointerDown={press}
       onPointerMove={pull}
       onPointerUp={release}
-      onPointerCancel={() => setDrag(null)}
+      onPointerCancel={() => {
+        setDrag(null);
+        setRangeDrag(null);
+      }}
+      onPointerLeave={() => setStrip(-1)}
       sx={{
         position: "relative",
         backgroundColor: "#fff",
         borderRadius: 1,
         overflow: "hidden",
-        cursor: onSeek || onPick ? "pointer" : "default",
+        cursor: strip >= 0 || rangeDrag ? "col-resize" : onSeek || onPick ? "pointer" : "default",
         userSelect: "none",
         touchAction: onPick ? "pan-y" : undefined,
         "& [data-selected]": { fill: palette.dark.Lavender },
@@ -346,6 +482,40 @@ export function FramesSheetView({
             </g>
           );
         })}
+        {strip >= 0 && !rangeDrag && sheet.systems[strip] ? (
+          <rect
+            data-range-strip
+            x={sheet.systems[strip].left}
+            y={sheet.systems[strip].staff_top - STRIP_SPACES}
+            width={sheet.systems[strip].right - sheet.systems[strip].left}
+            height={STRIP_SPACES - 0.3}
+            fill={palette.dark.Lavender}
+            opacity={0.07}
+          />
+        ) : null}
+        {bands.map((band) => (
+          <g key={`b${band.system}:${band.x}`}>
+            <rect
+              data-range-band
+              data-start={shown?.start}
+              data-end={shown?.end}
+              x={band.x}
+              y={band.y}
+              width={band.width}
+              height={band.height}
+              fill={palette.dark.Lavender}
+              opacity={0.12}
+            />
+            <rect
+              x={band.x}
+              y={band.stripY}
+              width={band.width}
+              height={0.7}
+              fill={palette.dark.Lavender}
+              opacity={0.55}
+            />
+          </g>
+        ))}
         {place && line ? (
           <line
             ref={cursor}

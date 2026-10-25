@@ -9,7 +9,8 @@ a sheet keeps:
 * the **clefs** (first clef of each staff and every change).
 
 Left out by design: rests, ties, voices, stems, printed accidentals (the engine derives them from the spelling and
-the bars), fingering (``Note.finger`` is drawn but not written in F1).
+the bars). Fingering (``Note.finger``) is drawn; implementation 03, Phase 7 writes it in F1 (``fg3``) with the
+user's two other marks of the new sheet (``fix``, ``asgrace`` / ``nograce``).
 
 Times are quarters from the start of the sheet (exact fractions). A frames sheet (the matrix as text) has no bars
 and no beats: its notes carry ``frame`` (40 ms columns of the piano matrix notation) and ``time`` is ``None``.
@@ -89,6 +90,12 @@ class Note:
     len_ms: float | None = field(
         default=None, compare=False
     )  # measured length (new sheet; not in F1)
+    fixed: bool = (
+        False  # the figure was set by the user (``fix``): the figure rule keeps it (implementation 03, Phase 7)
+    )
+    grace_rule: str | None = (
+        None  # the user's grace note switch: "on" (``asgrace``) or "off" (``nograce``)
+    )
 
     @property
     def midi(self) -> int:

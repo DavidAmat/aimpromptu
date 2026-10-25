@@ -14,7 +14,9 @@ beam carries the number of its group), ``t3`` triplet (``t5:4`` = 5 in the time 
 ABC's ``(3``), ``grace`` /
 ``grace/`` (slashed) grace note, ``arp`` rolled chord, ``tr`` trill, ``trem``, ``ferm``, ``mord``,
 ``turn``, ``8va`` / ``8vb`` (written an octave lower / higher than it sounds), ``orn`` (an onset played inside
-the ornament of the note before it: kept for the matrix, not drawn). ``clef=treble`` before the notes of a hand
+the ornament of the note before it: kept for the matrix, not drawn). The user's marks of the new sheet
+(implementation 03, Phase 7; never in an LLM prompt): ``fg3`` finger 3, ``fix`` the figure was set by the user,
+``asgrace`` / ``nograce`` written as a grace note / as a normal note whatever the grace rule says. ``clef=treble`` before the notes of a hand
 changes the clef of that hand at this time. The frames header may carry the reference figure of the new sheet,
 ``F1 frames frameMs=40 quarterMs=500`` (one negra lasts 500 ms; implementation 03, Phase 2). Example::
 
@@ -81,6 +83,13 @@ def _note_text(pitches: list[str], n: Note, beam_no: dict[int, int], tstart: boo
         tags.append("orn")
     if n.ottava:
         tags.append(_OTTAVA[n.ottava])
+    # The user's marks of the new sheet (implementation 03, Phase 7): never in an LLM prompt.
+    if n.finger:
+        tags.append(f"fg{n.finger}")
+    if n.fixed:
+        tags.append("fix")
+    if n.grace_rule:
+        tags.append("asgrace" if n.grace_rule == "on" else "nograce")
     return " ".join([head] + tags)
 
 
@@ -96,6 +105,9 @@ def _attrs(n: Note, starts: set[int]) -> tuple:
         n.ottava,
         n.tgroup,
         n.covered,
+        n.finger,
+        n.fixed,
+        n.grace_rule,
         id(n) in starts,
     )
 
@@ -454,5 +466,11 @@ def _apply_tag(n: Note, tok: str) -> None:
         n.ottava = _OTTAVA_CODES[tok]
     elif tok == "orn":
         n.covered = True
+    elif re.fullmatch(r"fg[1-5]", tok):
+        n.finger = int(tok[2:])
+    elif tok == "fix":
+        n.fixed = True
+    elif tok in ("asgrace", "nograce"):
+        n.grace_rule = "on" if tok == "asgrace" else "off"
     else:
         raise F1Error(f"unknown tag {tok!r}")

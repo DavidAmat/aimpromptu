@@ -25,7 +25,8 @@ their phase, after its study (plan section 8).
 - [x] **Phase 5**: existing projects (user, 2026-10-25): the songs Sonnet already wrote (the 10 viewer songs) show Sonnet's sheet; every other song keeps its data and the algorithm's sheet, with **Enhance with AI**; new transcriptions go to Sonnet by themselves.
 - [x] **Phase 5**: merge into `master`: now (user, 2026-10-25); merged at the end of Phase 5.
 - [x] **Phase 6**: may a new LLM run change hands that the user moved (user, 2026-10-25: yes, it reads the current hands as a suggestion); the engine in the backend or in the browser (agent, from the time of one edit, about 0.25 s: the backend).
-- [ ] **Phases 7 and 8**: the tools that no longer make sense without compases: keep, change or drop.
+- [x] **Phase 7**: the tools that no longer make sense (user, 2026-10-25): even spacing, the room of a stretch, speed changes, print smaller, the unplayed decoration and hiding or dragging an 8va bracket are dropped; a grace note switch replaces the two small-note tools; a new AI run keeps the user's fingers, figures and grace switches and writes its own kinds again.
+- [ ] **Phase 8**: the tools of the sheet toolbox and the other screens that no longer make sense: keep, change or drop.
 
 # [x] Phase 0: The research folder on Ubuntu, the branch, the inventory
 
@@ -105,17 +106,21 @@ Done 2026-10-25 after the user's check in the browser; merged into `master`. Rep
 - [x] Task 6.4 The time of one edit (about 0.25 s from the click to the new drawing); the engine stays in the backend.
 - [x] The user's check in the browser (and the fix of the audio after a jump: a compressed file plays as a lossless copy).
 
-# [ ] Phase 7: The note and range tools
+# [x] Phase 7: The note and range tools
 
-- [ ] Task 7.1 Study and inventory of the two toolboxes; the list of tools that may no longer make sense goes to the user.
-- [ ] Task 7.2 The tools on the edit model.
-- [ ] Task 7.3 The engine features the tools need, kept light.
-- [ ] Task 7.4 The range selection on the new sheet: a stretch of time frames, Both / Right / Left, the range toolbox.
-- [ ] Task 7.5 Enhance with AI a stretch, with the user's own instruction, from either selection (the notes picked or a range); one step of undo.
+Done 2026-10-26 after the user's check of the gallery and in the browser; merged into `master` ([`gallery/phase-7/index.html`](gallery/phase-7/index.html)). Report: [`03-implementation-phase-7.md`](03-implementation-phase-7.md).
+
+- [x] Task 7.1 Study and inventory of the two toolboxes, with the use of each tool in the 46 saved sheets; the user's answers (four questions); transpose figures and notes, Copy, Record this passage and Start a new part moved to Phase 8.
+- [x] Task 7.2 The tools on the edit model (`part_sheet/reading.py`, `edits.edit_reading`, `edits.remove_notes`; `POST /sheet/{uuid}/reading`, `/remove`, `GET /sheet/{uuid}/stretch`): figures, fingers, beams, the grace note switch, ornaments, notes taken off the page; the armadura, clefs, clef rules and octave lines of a stretch.
+- [x] Task 7.3 The engine needed nothing new; the core gained the user's marks (`fg3`, `fix`, `asgrace`, `nograce`) in the format and the rules, and an 8vb is allowed in the bass clef.
+- [x] Task 7.4 The range selection on the new sheet: the strip above the staves, Both / Right / Left, the range toolbox (Key, Clef, Octave); each toolbox hands its selection to the other.
+- [x] Task 7.5 Enhance with AI a stretch with the user's words, from either selection (`write_stretch`, `job.start_stretch`, `POST /sheet/{uuid}/llm/stretch`): one step of undo; a real request 9 s, $0.0144.
+- [x] The gallery checked by the user (2026-10-25: "all good").
+- [x] The user's check in the browser ("all good"), after two reworks of the AI on a stretch (report section 9).
 
 # [ ] Phase 8: The other screens and the sheet toolbox
 
-- [ ] Task 8.1 Study and inventory (the sheet toolbox, the keyboard panel, Find trills, Play mode, Recording in Sheet, copy and paste, parts and playlists, the PDF, the Transpose preview, From other projects, the requests review).
+- [ ] Task 8.1 Study and inventory (the sheet toolbox with Transpose figures and notes, the keyboard panel, Find trills, Play mode, Recording in Sheet, copy and paste, parts and playlists, the PDF, the Transpose preview, From other projects, the requests review; the range toolbox's Copy, Record this passage, Start a new part).
 - [ ] Task 8.2 Lyrics in the format and in the engine.
 - [ ] Task 8.3 Each screen on the new engine; vexflow-v2 no longer draws or edits anywhere; its browser checks moved.
 

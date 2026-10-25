@@ -5,8 +5,9 @@ research repository (`poc-aitu-research`, git `a208a92`, version 0.1.0 of resear
 agents of implementation 03 (`context/implementations/03-apply-poc-research/`). Everything below is the research
 README with the names of the backend: `aitu_notation.X` of the research is `aitu_backend.sheet.X` here. The copy
 changed no logic; the golden files of section 7 prove it. Phase 2 added the new sheet without compases (section 9),
-Phase 3 its engine (section 10), Phase 4 its LLM step (section 11), Phase 5 put it in the app (section 12), and Phase 6 made it editable
-(section 13): the bars path below is unchanged, and so are its golden files.
+Phase 3 its engine (section 10), Phase 4 its LLM step (section 11), Phase 5 put it in the app (section 12), Phase 6 made it editable
+(section 13), and Phase 7 added the note and range tools (section 14): the bars path below is unchanged, and so are its
+golden files.
 
 ## 1. What it does
 
@@ -160,12 +161,15 @@ F1 frames sheet:  F1 frames frameMs=40 quarterMs=500
   into parts of at most 8), the armadura of each passage (fewest signs, a cost per change), clefs and 8va (the
   left-hand rules of the prompt, version 4).
 - **F1 additions** (both views; the bars output is unchanged): the header field `quarterMs=` of the frames view, and
-  the tag `orn` (an onset played inside the ornament of the note before it: kept for the matrix, not drawn).
+  the tag `orn` (an onset played inside the ornament of the note before it: kept for the matrix, not drawn). Phase 7
+  adds the user's marks (section 14): `fg3` (finger), `fix` (a figure set by hand), `asgrace` / `nograce` (the grace
+  note switch); they are never in an LLM prompt.
 - **Data additions**: `Note.covered` (`orn`), `Note.on_ms` and `Note.len_ms` (measured, not written in F1),
   `Sheet.quarter_ms`.
 - `frames.check(sheet)` lists what breaks the product rules (no compases, a hand and a plain figure on every note,
   the spelling rule, one figure per chord, beam groups of 2 to 8 consecutive notes, grace notes followed by a note,
-  no 8va in the bass clef). The LLM step of Phase 4 uses it as its checker.
+  no 8va or 15ma in the bass clef; an 8vb is allowed since Phase 7). The LLM step of Phase 4 uses it as its checker,
+  with its own stricter rules (`llm.frames._structure`: no octave line at all in the bass clef).
 - Commands: `scripts/write_sheet.py` (the sheet of parts, checked), `scripts/sheet_gallery.py` (the Phase 2
   gallery, drawn by Verovio).
 
@@ -295,3 +299,54 @@ the answer of GET /sheet/{part} (the sheet drawn again)                ~0.15 s i
 - `GET /sheet/{part}` also answers `notes` (`build.drawn_notes`: ref, hand, printed pitch), `editable` and
   `history`.
 - Tests: `tests/test_sheet_edits.py`. Browser check: `npm run check:frames-edit` (aitu-frontend).
+
+## 14. The note and range tools (implementation 03, Phase 7)
+
+`aitu_backend/part_sheet/reading.py` (the edits, pure functions on a frames sheet), `edits.edit_reading`,
+`edits.remove_notes`, `edits.apply_stretch`, `job.start_stretch`, and the routes `POST /sheet/{part}/reading`,
+`/remove`, `GET /sheet/{part}/stretch`, `POST /sheet/{part}/llm/stretch`. Measurements and reasons:
+`context/implementations/03-apply-poc-research/03-implementation-phase-7.md`.
+
+```text
+POST /sheet/{part}/reading {action, notes | start, end, staff, value}
+   |  reading.plan -> change(sheet drawn now) -> the step's label, or Refused (400 with the reason)
+   |  build.reapply(changed sheet, notes): the rules run again and keep the decisions
+   |  holds(settled) and frames.check: what was asked must still hold, and no new rule may break
+   |  sheet.f1 stored (an algorithm sheet: record "edited"), one step of sheet.edits.json
+   v
+the answer of GET /sheet/{part}                                        ~40-70 ms of rules + ~50 ms of drawing
+```
+
+- **The user's marks in the core.** `Note.finger` (written `fg3`), `Note.fixed` (`fix`: the figure was set by the
+  user; `assign_figures` keeps it and `find_graces` never makes it a grace note) and `Note.grace_rule` (`asgrace`:
+  a grace note of the next note of its hand whatever the rule says; `nograce`: never one). `assemble` carries them
+  from the decided notes; `assemble(join=False)` (used by `build.reapply`) keeps the 8va lines as decided, so a line
+  the user removed is not joined again.
+- **The edits** (`reading`): a figure (on whole chords of one hand), fingers (on one chord from the lowest note: the
+  smallest numbers first in the right hand, the largest in the left), a beam joined (or taken away when the picked
+  notes are already one group) and cut (or joined to the group before), the grace note switch, an ornament (`trill`,
+  `mordent`, `turn` over onsets of one hand that follow one another: the first carries it, the others are `orn`;
+  `arpeggio` and `fermata` on chords), and over a stretch `[start, end)`: the armadura, the clef of one hand, the clef
+  rules (`clef_rule`: `clefs_and_ottavas` on the stretch only) and an octave line (`8va`, `15ma`, `8vb`, `15mb`). The
+  armadura, clef and 8va in force after the stretch come back at its end. `fewest_signs` is the armadura with the
+  fewest signs over a stretch.
+- **Stored.** An edit on an algorithm sheet stores it with `Record.edited` (`Record.decided`: laid again on new notes
+  instead of computed again). `Record.stretches` lists the stretches the AI wrote again.
+- **A new AI run** keeps the user's marks (`build.user_marks`, `build.with_marks` on the parts before `assemble`); the
+  AI's own kinds (beams, clefs, 8va, armaduras, ornaments) are written again, as the hands are (the user's answer of
+  Phase 7).
+- **A stretch with the user's words** (`llm.frames.write_stretch`): one window conversation whose target is the
+  stretch as it is now (both hands, with its hands, beam groups, clefs, 8va and ornaments), the sheet before it as
+  context, the music after it as look-ahead, and `stretch_request` before the answer section: the user's words come
+  first ("of the utmost importance": they override the AI's usual choices; only the format and the hard limits
+  stay), the purpose behind them (a sheet simpler to read and to play: uniform patterns, the same pitch for the same
+  role, a named figure applied everywhere), what was picked, and what the answer may change: hands, beams, clefs,
+  8va, ornaments, and with words also which notes stay, their pitches, added notes and figures
+  (`check_answer(drop=True, free=(start, end))`). The reply goes through `check_answer` and the beam guard, then
+  `splice` puts it in the sheet (the clefs and armadura after it come back; the user's marks stay). The product
+  stores it as one step (`edits.apply_stretch`): the hands, the notes left out removed in `notes.pmn`, the notes
+  added written there (at the onset of the column they join, as long as their figure), the sheet, and every figure
+  the AI wrote that the rule would print otherwise set as by hand (`fix`). `build.reapply` finds a stored note whose
+  drawn column moved by a frame or two (the first note of its chord taken off).
+- Tests: `tests/test_sheet_reading.py`. Command: `scripts/tools_gallery.py` (the Phase 7 gallery). Browser check:
+  `npm run check:frames-tools` (aitu-frontend; `--live` makes one stretch request, about $0.01).

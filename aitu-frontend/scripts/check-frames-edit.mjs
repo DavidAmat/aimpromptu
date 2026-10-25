@@ -159,7 +159,8 @@ try {
   const svg = await page.locator('[data-frames-sheet] svg').first().boundingBox();
   const scale = svg.width / first.width;
   await page.keyboard.press('Escape');
-  await page.mouse.move(svg.x + (system.left + 4) * scale, svg.y + (system.top - 1) * scale);
+  // Inside the upper staff: above it is the strip that marks a stretch (Phase 7).
+  await page.mouse.move(svg.x + (system.left + 4) * scale, svg.y + (system.staff_top + 0.3) * scale);
   await page.mouse.down();
   await page.mouse.move(svg.x + (system.left + 30) * scale, svg.y + (system.bottom + 1) * scale, { steps: 6 });
   await page.mouse.up();
