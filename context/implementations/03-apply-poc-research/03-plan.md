@@ -436,8 +436,9 @@ look and the spacing in the gallery.
 
 ## Phase 4: The LLM step for the new sheet
 
-**In progress (2026-10-25)** ([`03-implementation-phase-4.md`](03-implementation-phase-4.md)): built and run on the
-10 viewer songs; waiting for the user's check of the gallery and two decisions (clef.L4, staccato figures).
+**Done 2026-10-25** ([`03-implementation-phase-4.md`](03-implementation-phase-4.md)). The user checked the gallery
+("all good"): the beam groups and the hands are approved; rule clef.L4 and the staccato figures stay as written
+(the user did not choose another option).
 
 *Why:* the frozen prompt asks Sonnet for F1 bars. The new sheet has no compases, and several decisions are now rules
 (figures, spelling). Sonnet must write the new format, and decide what is left: hands, beam groups, clefs, 8va, graces
@@ -587,7 +588,7 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 |---|---|
 | 2 | The figure thresholds and the Do mayor spelling (agent, from songs: 0.7, and Do#, Mib, Fa#, Sol#, Sib; user checks the gallery); the cap of a figure at the next onset of its hand, and rule 4 in armaduras of one to three signs (user) |
 | 3 | The look of the spacing without compases (approved), and a thin double line at an armadura change or none (none, the default) (user, in the gallery) |
-| 4 | The API key (human intervention; done); how many songs the credits cover (information: about 110 a month); the beam groups and the maximum of 8 (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user) |
+| 4 | The API key (human intervention; done); how many songs the credits cover (information: about 110 a month); the beam groups and the maximum of 8 (user, in the gallery); the left hand's clef changes of rule clef.L4, and the figures of staccato notes (user: approved; both rules kept as written) |
 | 5 | Existing projects: keep their corrections or write them again; merge to `master` early or at the end |
 | 6 | May a new LLM run change hands that the user moved; the engine in the backend or in the browser |
 | 7, 8 | Tools that no longer make sense without compases: keep, change or drop |

@@ -2,9 +2,9 @@
 
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 4. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (`master` had not moved since Phase 3, so nothing was merged in). Written 2026-10-25 on the
-Ubuntu machine. No change visible in the app: no route or page uses the LLM step yet. **State: waiting for the
-user's check of the gallery** ([`gallery/phase-4/index.html`](gallery/phase-4/index.html)) and two decisions
-(section 11).
+Ubuntu machine. No change visible in the app: no route or page uses the LLM step yet. **Done 2026-10-25**: the
+user checked the gallery ([`gallery/phase-4/index.html`](gallery/phase-4/index.html)) and said "all good"; the two
+decisions of section 11 were closed as section 11.3 says.
 
 # 1. Summary
 
@@ -325,3 +325,11 @@ with three or four beams (Shut Up and Dance, 7 Years). Options: (a) keep the rul
 every note sounds shorter than the gap, the notes take the figure of the gap (classical scores write staccato
 corcheas as corcheas). Option (b) is one change in `proposal.frames.assign_figures` and applies to the algorithm
 and to Sonnet's sheets alike.
+
+## 11.3 How they were closed
+
+The user answered the gallery with "all good" (2026-10-25) and did not choose between the options. As in Phases 2
+and 3, what the gallery showed stays: rule clef.L4 as written (11.1 a) and the figures of staccato notes from their
+own length (11.2 a). Either can change later with one change: a passage that alternates kept in one clef is a cost
+in the prompt's clef rules (or `assemble(clefs="rule")`), the staccato figures one condition in
+`proposal.frames.assign_figures`.
