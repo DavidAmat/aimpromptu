@@ -383,3 +383,37 @@ def test_once_cuts_are_saved_every_player_gets_the_edited_audio(
         2,
     )
     assert not list((data_dir / "audio" / uuid).glob("piece-r*"))
+
+
+@needs_ffmpeg
+def test_a_compressed_original_plays_as_a_lossless_copy_and_downloads_as_it_is(
+    data_dir: Path, tmp_path: Path
+) -> None:
+    """An audio element jumps inside an MP3 by guessing the byte of a time (up to half a second off on 7 Years), so
+    a piece without cuts whose file is compressed plays a FLAC copy of it; `?original=true` keeps the MP3.
+    """
+    import subprocess
+
+    client = TestClient(create_app())
+    rate = 44_100
+    time = np.arange(rate * 4) / rate
+    wav = tmp_path / "tone.wav"
+    wavfile.write(wav, rate, (0.3 * np.sin(2 * np.pi * 220 * time) * 32767).astype(np.int16))
+    mp3 = tmp_path / "tone.mp3"
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-i", str(wav), "-q:a", "4", str(mp3)], check=True
+    )
+    with mp3.open("rb") as handle:
+        uuid = ingest.ingest_file(handle, "tone.mp3", AudioSource.UPLOAD).uuid
+
+    played = client.get(f"/audio/{uuid}/file")
+    assert played.headers["content-type"] == "audio/flac"
+    got_rate, samples = _decode(played.content, tmp_path, "played.flac")
+    assert got_rate == rate and abs(len(samples) - rate * 4) < rate // 10
+    assert client.get(f"/audio/{uuid}/file").content == played.content, "made once, then kept"
+    assert client.get(f"/audio/{uuid}/file?original=true").headers["content-type"] == "audio/mpeg"
+
+    # A WAV plays as it is.
+    with wav.open("rb") as handle:
+        plain = ingest.ingest_file(handle, "tone.wav", AudioSource.UPLOAD).uuid
+    assert client.get(f"/audio/{plain}/file").headers["content-type"] == "audio/wav"

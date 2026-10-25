@@ -193,7 +193,25 @@ stretch (`render_frames(segment=...)`) and replace them in the page.
 | A real AI run with the hands shown | 2 windows of 7 Years, section 3: accepted at the first check, $0.0624 |
 | `scripts/docs/check-links.py` | 413 files checked, 0 broken links |
 
-# 8. Notes for later phases
+# 8. The audio after a jump (the user's report during the check)
+
+The user found that on 7 Years, after moving the cursor and playing, a passage sometimes did not match the notes,
+while playing from the start matched everywhere. The notes and the cursor were right: the audio element landed in
+the wrong place. A part without cuts played its stored file, here an MP3 of variable bitrate (frames of 32 to
+320 kbps) whose only seek table is a Xing header of 100 points; Chromium jumps inside it by guessing the byte of a
+time. Measured in Chromium (an audio element captured after each jump and matched to an exact decode of the file):
+the MP3 landed 28 to 659 ms behind the time it reported, depending on the place (150 s: 533 ms at both jumps there;
+30 s: 28 ms); a constant-bitrate MP3, within one frame (24 ms); a FLAC, exactly where asked at every jump (the same
+83 ms of measuring delay everywhere).
+
+The fix (`audio/piece_audio.listen_copy`, `GET /audio/{uuid}/file`): a part without cuts whose stored file is not
+WAV or FLAC plays a lossless FLAC copy (`cache/<part>/listen-<stored name>.flac`, 16-bit, its own rate and channels),
+decoded by the same ffmpeg that wrote the engine's audio; made on the first play (0.4 s for 7 Years, 12.6 MB against
+the MP3's 7.3 MB) and kept. `?original=true` (the Audio tab, downloads) still serves the stored file. Every player
+reads this address (the new and old sheets, Play mode, the Notes step, the video pages). The same measurement on the
+file the app now serves: 10 of 10 jumps exact. Test: `test_a_compressed_original_plays_as_a_lossless_copy_and_downloads_as_it_is`.
+
+# 9. Notes for later phases
 
 - **Phase 7 (the tools).** A tool is a function of `part_sheet/edits.py` that changes `notes.pmn` or `sheet.f1` under
   the part's lock and records one `_Step` (hands before and after, a line patch of `sheet.f1`), a route of
@@ -215,7 +233,7 @@ stretch (`render_frames(segment=...)`) and replace them in the page.
 - The scratch scripts (the timing of each step, the AI run with the hands shown) are not kept; their numbers are in
   sections 3 and 6.
 
-# 9. Documentation
+# 10. Documentation
 
 - `aitu-backend/src/aitu_backend/sheet/README.md` section 13; `part_sheet/__init__.py`; `context/backend/README.md`.
 - `documentation/services/backend/endpoints.md` (the routes table and section 4.1); `context/07-database.md`

@@ -94,7 +94,9 @@ among the notes that start within 1 s or still sound at its onset (`transcriptio
 
 The cuts have their own routes, `GET` and `PUT /audio/{uuid}/cuts`, with `baseRevision` too. Once
 cuts are saved, `GET /audio/{uuid}/file` serves the edited audio (`piece-r<N>.flac` in the part's
-cache), which is in the time of the notes; the stored file stays unchanged for the Audio tab.
+cache), which is in the time of the notes; the stored file stays unchanged for the Audio tab. A part
+without cuts whose stored file is compressed (an MP3) plays a lossless copy of it (`listen-<name>.flac`), because
+a jump inside an MP3 can land up to about 0.6 s away from the time the player reports.
 
 ## 5. The saved hands (decision D-31, changed)
 

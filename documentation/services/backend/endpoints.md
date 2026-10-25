@@ -364,11 +364,15 @@ The audio of the piece, for every player. Two query flags, both `false` by defau
 
 | Piece | No flag | `normalized=true` | `original=true` |
 |---|---|---|---|
-| No cuts | The file the user gave (the stored file) | `normalized.wav` | The stored file |
+| No cuts, a WAV or FLAC | The file the user gave (the stored file) | `normalized.wav` | The stored file |
+| No cuts, a compressed file (MP3, M4A, a recording) | `listen-<stored name>.flac`, a lossless copy of it | `normalized.wav` | The stored file |
 | With cuts | `piece-r<N>.flac` | `piece-r<N>.wav` | The stored file |
 
 The stored file is `.database/audio/<sha256>.<ext>`, named by its content; the download keeps the
-name of the file the user gave. `normalized.wav` and `piece-r<N>.*` are in the part's `cache/` folder.
+name of the file the user gave. `normalized.wav`, `piece-r<N>.*` and `listen-*.flac` are in the part's `cache/`
+folder. The lossless copy exists because an `<audio>` element jumps inside an MP3 by guessing the byte of a time:
+on a file of variable bitrate a jump landed up to about 0.6 s away from the time the player reported, and the music
+no longer matched the notes until the next jump (measured in Chromium, 2026-10-25; `piece_audio.listen_copy`).
 
 Until Phase 6 every player played the untouched original, so on a cut piece the audio ran ahead of
 the notes by the length of the cuts before the playhead. The user's rule (2026-09-29) is that once
