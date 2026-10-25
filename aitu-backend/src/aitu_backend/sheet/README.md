@@ -339,9 +339,14 @@ the answer of GET /sheet/{part}                                        ~40-70 ms
   stretch as it is now (both hands, with its hands, beam groups, clefs, 8va and ornaments), the sheet before it as
   context, the music after it as look-ahead, and `stretch_request` before the answer section: the user's words come
   first ("of the utmost importance": they override the AI's usual choices; only the format and the hard limits
-  stay), what was picked, and what the answer may change, including leaving notes out (`check_answer(drop=True)`
-  when there are words). The reply goes through `check_answer` and the beam guard, then `splice` puts it in the sheet
-  (the clefs and armadura after it come back; the user's marks stay). The product stores it as one step
-  (`edits.apply_stretch`): the hands, the notes left out taken off the page (removed in `notes.pmn`), the sheet.
+  stay), the purpose behind them (a sheet simpler to read and to play: uniform patterns, the same pitch for the same
+  role, a named figure applied everywhere), what was picked, and what the answer may change: hands, beams, clefs,
+  8va, ornaments, and with words also which notes stay, their pitches, added notes and figures
+  (`check_answer(drop=True, free=(start, end))`). The reply goes through `check_answer` and the beam guard, then
+  `splice` puts it in the sheet (the clefs and armadura after it come back; the user's marks stay). The product
+  stores it as one step (`edits.apply_stretch`): the hands, the notes left out removed in `notes.pmn`, the notes
+  added written there (at the onset of the column they join, as long as their figure), the sheet, and every figure
+  the AI wrote that the rule would print otherwise set as by hand (`fix`). `build.reapply` finds a stored note whose
+  drawn column moved by a frame or two (the first note of its chord taken off).
 - Tests: `tests/test_sheet_reading.py`. Command: `scripts/tools_gallery.py` (the Phase 7 gallery). Browser check:
   `npm run check:frames-tools` (aitu-frontend; `--live` makes one stretch request, about $0.01).

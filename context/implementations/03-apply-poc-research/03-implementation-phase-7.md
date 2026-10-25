@@ -217,6 +217,33 @@ one reply each, accepted at the first check, $0.0098 and $0.0106; the AI left ou
 kept every beam group, the hands and the rhythm. The cached instructions (version 5) did not change. Test:
 `test_a_stretch_with_words_may_leave_notes_out_and_undo_brings_them_back`.
 
+## 9.1 The second check: simpler, with pitches and figures (2026-10-26)
+
+With the first fix the AI made every octave a single Mi 2 but left a lone low Mi 1 as it was, because it could not
+change a pitch; and it could not change figures at all. The user: the purpose of an edit is almost always a sheet
+simpler to read and to play, so the AI must favour uniform solutions (a "single note" is the same note everywhere),
+and it must be able to change figures ("make all the octaves negras").
+
+- `stretch_request` adds "The purpose behind it": simpler to read and to play, uniform repeating patterns, the
+  instruction applied to every note it is about, the same pitch for the same role (the Mi 1 / Mi 2 example), a
+  named figure written everywhere it applies. With words the answer may also change a pitch (a note left out and
+  one written at the same frame), add notes anywhere in `[start, end)` (`check_answer(free=...)`), and set figures
+  (the figure written is the one printed).
+- `edits.apply_stretch`: an added note becomes a `NoteEvent` (a new id; the onset of the drawn column it joins, or
+  its frame; a length of its figure at the reference figure; the median velocity of the stretch; its hand), in the
+  same step (`removed` before `True`, after `False`, so Undo takes it off). After settling, every figure the AI
+  wrote that the rule would print otherwise is set as by hand (`fix`), even against the grace rule unless the note
+  was a grace note already; notes are looked up a frame or two away.
+- `build.reapply`: a stored note whose drawn column moved by one or two frames is found there (the first note of an
+  uneven octave taken off moves the column to the other note's onset); before, it lost its beam group.
+- Measured with real requests on the user's stretch (in memory, then end to end on two temporary copies, deleted):
+  the user's words: every note Mi 2 (the lone Mi 1 too), the same figures and beam groups, $0.0316 in memory; the
+  wording given to the user: the same, $0.0071; "Mi 1 + Mi 2 octaves as negras, one on each beat": six octave
+  negras, 15 frames apart, $0.0127. Each accepted at the first check. The first end-to-end run showed two faults
+  the unit tests had not (figures of single notes shortened by the rule, a moved column losing its beam), fixed
+  above. Tests: `test_a_stretch_with_words_may_change_pitches_add_notes_and_set_figures`,
+  `test_a_stretch_answer_may_add_notes_only_inside_the_stretch`.
+
 # 10. Notes for later phases
 
 - **Phase 8.** Transpose figures changes `quarterMs`, which the spacing model reads too (`gap(t / quarter_ms)`): the

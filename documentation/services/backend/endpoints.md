@@ -904,8 +904,9 @@ and need the right to write the part (a version of My library answers `403`: it 
   characters): `202 {"jobId", "status"}`; `409` while the AI already works on the part or when it is not set up,
   `403` without the right to write. One window request whose target is the stretch as it is now (both hands, with
   its hands, beams, clefs, 8va, ornaments) and the user's words first in the prompt; with words, the answer may leave
-  notes out. The stretch is the `working` segment meanwhile. The answer is stored as one step (hands, the notes left
-  out taken off the page in `notes.pmn`, the sheet; an algorithm sheet becomes `mixed`). The job's `event: done`
+  notes out, change pitches, add notes inside the stretch and set figures. The stretch is the `working` segment
+  meanwhile. The answer is stored as one step (hands; notes left out removed and notes added in `notes.pmn`; the
+  sheet, with the AI's figures set by hand where the rule differs; an algorithm sheet becomes `mixed`). The job's `event: done`
   carries `stretch`: `ok`, `failed` (no reply accepted: nothing changes) or `stale` (the notes changed meanwhile),
   and `usd`.
 

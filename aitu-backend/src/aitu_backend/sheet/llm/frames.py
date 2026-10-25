@@ -439,10 +439,12 @@ def _structure(sheet: Sheet) -> list[str]:
 
 
 def check_answer(
-    reply: str, target: Sheet, *, drop: bool = False
+    reply: str, target: Sheet, *, drop: bool = False, free: tuple[int, int] | None = None
 ) -> tuple[list[str], Sheet | None]:
     """The problems of a reply for a window (empty: accepted) and the parsed answer. ``drop=True`` (a stretch the
     user asked for, Phase 7) accepts an answer that leaves notes of the target out: they are taken off the sheet.
+    ``free=(start, end)`` also accepts notes that are not in the target, at a frame of ``[start, end)`` and a key of
+    the piano: they are added to the notes (a changed pitch is a note left out and a note added).
     """
     text = _block(reply)
     if not text.startswith("F1 frames"):
@@ -470,10 +472,22 @@ def check_answer(
         errs.append(
             f"{sum((want - got).values())} onsets of the target are missing: {show(want - got)}"
         )
-    if got - want:
-        errs.append(
-            f"{sum((got - want).values())} onsets are not in the target (wrong frame or pitch): {show(got - want)}"
+    extra = got - want
+    if free is not None:
+        extra = Counter(
+            {
+                (f, m): k
+                for (f, m), k in extra.items()
+                if not (free[0] <= f < free[1] and 21 <= m <= 108)
+            }
         )
+    if extra:
+        where = (
+            "outside the stretch"
+            if free is not None
+            else "not in the target (wrong frame or pitch)"
+        )
+        errs.append(f"{sum(extra.values())} onsets are {where}: {show(extra)}")
     if drop and not sheet.notes:
         errs.append(
             "the answer leaves out every note of the target: keep the notes the user did not ask to take off"
@@ -554,7 +568,10 @@ def _answer_part(start: int, end: int, base: Sheet, answer: Sheet) -> Part:
             pool[(n.frame, n.midi)].append(i)
     notes = {}
     for n in sorted(answer.notes, key=lambda n: (n.frame, n.midi, n.staff)):
-        notes[pool[(n.frame, n.midi)].pop(0)] = n
+        if pool[
+            (n.frame, n.midi)
+        ]:  # a note the answer added (a stretch, Phase 7) has no place in the base
+            notes[pool[(n.frame, n.midi)].pop(0)] = n
     return Part(
         start=start,
         end=end,
@@ -1014,13 +1031,18 @@ PICKED_NAMED = 40
 
 
 def stretch_request(
-    instruction: str, *, staff: int | None = None, picked: list[str] | None = None
+    instruction: str,
+    *,
+    staff: int | None = None,
+    picked: list[str] | None = None,
+    start: int | None = None,
+    end: int | None = None,
 ) -> str:
     """The section of a stretch prompt that says what the user asked (implementation 03, Phase 7, plan task 7.5):
-    their words first (the user's rule: they are of the utmost importance for this passage), what they picked (one
-    hand's notes of the stretch, or some of its notes, named ``f120 C5``), and what the answer may change: hands,
-    beams, clefs and 8va, ornaments, and which notes stay on the sheet (a note left out is taken off the page).
-    """
+    their words first (the user's rule: they are of the utmost importance for this passage), the purpose behind them
+    (a sheet simpler to read and to play, with uniform patterns), what they picked (one hand's notes of the stretch,
+    or some of its notes, named ``f120 C5``), and what the answer may change: hands, beams, clefs and 8va, ornaments,
+    which notes stay, their pitches, added notes and the figures."""
     if picked:
         named = ", ".join(picked[:PICKED_NAMED]) + (
             f" and {len(picked) - PICKED_NAMED} more" if len(picked) > PICKED_NAMED else ""
@@ -1039,25 +1061,37 @@ def stretch_request(
             "## The user's request\n\nThe user asked you to write this stretch of the sheet again, with no words "
             f"of their own. {what} Write the target as you always do; keep every note of it."
         )
+    inside = f"f{start} to f{end - 1}" if start is not None and end is not None else "the stretch"
     return (
         "## The user's request: it comes before everything else\n\n"
         "The user is editing this exact passage and wrote an instruction for it. **Their instruction is of the "
         "utmost importance**: it says what they want here, and it overrides your usual choices and the general "
-        "rules of your instructions (the hands, the beam groups, the clefs, the ornaments, which notes are written). "
-        "Follow it exactly and completely; do not keep the target as it is when the instruction asks for a change. "
-        f"{what}\n\nTheir instruction:\n\n> {words}\n\n"
-        "What you may do to follow it:\n\n"
+        "rules of your instructions (the hands, the beam groups, the clefs, the ornaments, which notes are written, "
+        "their pitches and their figures). Follow it exactly and completely; do not keep the target as it is when "
+        f"the instruction asks for a change. {what}\n\nTheir instruction:\n\n> {words}\n\n"
+        "**The purpose behind it.** A user who edits a passage almost always wants it **simpler to read and to "
+        "play**. Before you write, decide which notes and figures make this passage simplest to read and to play "
+        "while doing exactly what the instruction says, and prefer uniform, repeating patterns:\n\n"
+        "- apply the instruction to every note of the passage it is about, not only where it is easy;\n"
+        "- keep the same pitch for the same role: when octaves become single notes, every note of that line takes "
+        "the pitch the octaves keep (if Mi 1 + Mi 2 octaves become Mi 2, a lone Mi 1 of the same line becomes Mi 2 "
+        "too), unless the instruction says otherwise;\n"
+        '- when the instruction names a figure ("negras"), write that figure everywhere it applies, and leave out '
+        "the notes it no longer needs.\n\n"
+        "**What you may do to follow it:**\n\n"
         "- move notes from one hand to the other; join or cut beam groups; change clefs and 8va; add or remove "
         "ornaments;\n"
-        "- **take notes off the sheet**: a note of the target that you leave out of your answer is taken off the "
-        "sheet (it stays in the recording, and the user can bring it back). For example, to turn octaves into "
-        "single notes, leave out one note of each octave (the one the instruction says; when it says nothing, keep "
-        "the note that reads best in its line and leave out the other).\n\n"
-        "What you cannot do: add a note that is not in the target, or move a note to another frame or pitch. The "
-        "figures come from the length of each note: keep the onsets you write and the rhythm stays. When the "
-        "instruction asks to keep something (the rhythm, the beam groups, a hand), keep it as the target has it. "
-        "Only the format of the answer and these limits stay hard rules: a beam group has at most 8 notes, no note "
-        "four or more ledger lines above its staff, no 8va in the bass clef."
+        "- take notes off the sheet: a note of the target that you leave out of your answer is taken off the "
+        "sheet;\n"
+        f"- change a pitch or add notes: write a note at any frame from {inside} with the pitch you want; it is "
+        "added to the notes of the part (the audio does not change). A changed pitch is the old note left out and "
+        "the new one written at the same frame;\n"
+        "- set figures: the figure you write for a note is the figure the sheet prints. When a note keeps its "
+        "figure, write the one the target shows.\n\n"
+        f"What you cannot do: write a note outside {inside}. When the instruction asks to keep something (the "
+        "rhythm, the figures, the beam groups, a hand), keep it as the target has it. Only the format of the answer "
+        "and these limits stay hard rules: a beam group has at most 8 notes, no note four or more ledger lines "
+        "above its staff, no 8va in the bass clef."
     )
 
 
@@ -1135,6 +1169,8 @@ def write_stretch(
         instruction,
         staff=staff,
         picked=[names[p] for p in sorted(set(picked or [])) if p in names] or None,
+        start=start,
+        end=end,
     )
     messages = [
         {
@@ -1157,7 +1193,9 @@ def write_stretch(
         while log.replies < max_checks:
             reply = complete(system, messages)
             log.replies += 1
-            errs, answer = check_answer(reply, target, drop=drop)
+            errs, answer = check_answer(
+                reply, target, drop=drop, free=(start, end) if drop else None
+            )
             if not errs and guards:
                 sheet, _ = assemble(algo, [_answer_part(start, end, base, answer)])
                 errs = beam_floor(sheet)

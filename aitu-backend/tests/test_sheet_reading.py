@@ -469,3 +469,74 @@ def test_a_window_must_keep_every_note_and_a_stretch_with_words_may_leave_some_o
     assert llm.check_answer(answer, target, drop=True)[0] == []
     empty = "```\nF1 frames frameMs=40\nkey=0 clefs: R=treble L=bass\n```"
     assert llm.check_answer(empty, target, drop=True)[0]
+
+
+def test_a_stretch_with_words_may_change_pitches_add_notes_and_set_figures(
+    client: TestClient, part: str
+) -> None:
+    before = sheet(client, part)
+    held = sorted(
+        {frame(n["ref"]) for n in before["notes"] if n["hand"] == "right" and n["figure"] <= 4}
+    )
+    a = held[0]
+    b = min(f for f in sorted({frame(n["ref"]) for n in before["notes"]}) if f > a + 40)
+    low = min(
+        (n for n in before["notes"] if n["hand"] == "right" and frame(n["ref"]) == a),
+        key=lambda n: int(n["ref"].split(":")[1]),
+    )["ref"]
+    added = (a + 3, 72)
+
+    def simpler(system: str, messages: list[dict]) -> str:
+        block = re.search(r"## Target.*?```\n(.*?)```", messages[0]["content"], re.S).group(1)
+        target = f1.read(block)
+        target.notes = [n for n in target.notes if f"{n.frame}:{n.midi}" != low]
+        for n in target.notes:
+            if n.frame == a and n.staff == 1:
+                n.figure = 4  # a negra (the target shows a redonda), whatever its length says
+        target.notes.append(
+            Note(time=None, staff=1, step="C", alter=0, octave=5, figure=4, frame=added[0])
+        )
+        return "```\n" + f1.write(target.sort(), mode="frames") + "```\n"
+
+    finish(
+        job.start_stretch(
+            part, start=a, end=b, instruction="simpler, please", complete=lambda: simpler
+        )
+    )
+    after = sheet(client, part)
+    drawn = notes_of(after)
+    assert low not in drawn and f"{added[0]}:{added[1]}" in drawn
+    assert drawn[f"{added[0]}:{added[1]}"]["figure"] == 4
+    kept = [n for n in after["notes"] if n["hand"] == "right" and frame(n["ref"]) == a]
+    assert kept and all(n["figure"] == 4 and n["fixed"] and not n["grace"] for n in kept)
+    stored = pipeline.load_note_events(part)
+    assert stored is not None
+    new = [
+        e
+        for e in stored.events
+        if e.midi_note == 72 and not e.removed and a * 0.04 <= e.start < b * 0.04
+    ]
+    assert len(new) == 1 and abs(new[0].start - added[0] * 0.04) < 0.041
+
+    back = walk(client, part, "undo")
+    assert low in notes_of(back) and f"{added[0]}:{added[1]}" not in notes_of(back)
+    assert {n["ref"]: n["figure"] for n in back["notes"]} == {
+        n["ref"]: n["figure"] for n in before["notes"]
+    }
+    again = walk(client, part, "redo")
+    assert f"{added[0]}:{added[1]}" in notes_of(again)
+
+
+def test_a_stretch_answer_may_add_notes_only_inside_the_stretch() -> None:
+    target = f1.read(
+        "F1 frames frameMs=40\nkey=0 clefs: R=treble L=bass\nf10 R: C4:8\nf16 R: G4:8\n"
+    )
+    head = "```\nF1 frames frameMs=40\nkey=0 clefs: R=treble L=bass\n"
+    inside = head + "f10 R: C4:8\nf13 R: E4:8\nf16 R: G4:8\n```"
+    outside = head + "f10 R: C4:8\nf16 R: G4:8\nf30 R: E4:8\n```"
+    assert llm.check_answer(inside, target, drop=True, free=(10, 20))[0] == []
+    assert any(
+        "outside the stretch" in e
+        for e in llm.check_answer(outside, target, drop=True, free=(10, 20))[0]
+    )
+    assert any("not in the target" in e for e in llm.check_answer(inside, target)[0])

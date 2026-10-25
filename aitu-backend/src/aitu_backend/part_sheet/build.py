@@ -243,10 +243,19 @@ def reapply(stored: Sheet, notes: Notes) -> Sheet:
     )
     same = {(n.frame, n.midi, n.staff): n for n in stored.notes}
     near = {(n.frame, n.midi): n for n in stored.notes}
+    here = {(n.frame, n.midi, n.staff) for n in algo.sheet.notes}
     decided = {}
     changed: set[tuple[int, int, int]] = set()
     for i, n in enumerate(algo.sheet.notes):
         kept = same.get((n.frame, n.midi, n.staff))
+        if kept is None:
+            # A note whose drawn column moved by a frame or two: the first note of its chord, played a little
+            # before it, was taken off (Phase 7), so the chord's column is now this note's own onset.
+            for d in (-1, -2, 1, 2):
+                place = (n.frame + d, n.midi, n.staff)
+                if place in same and place not in here:
+                    kept = same[place]
+                    break
         if kept is not None:
             decided[i] = kept
         else:

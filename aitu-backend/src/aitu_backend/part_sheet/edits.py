@@ -45,6 +45,8 @@ from aitu_backend.matrix.keys import LOWEST_MIDI
 from aitu_backend.pmn import events_file
 from aitu_backend.sheet.sheet import f1, frames
 from aitu_backend.sheet.sheet.data import FRAME_MS, Sheet
+from aitu_backend.sheet.sheet.figures import FIGURES, nominal_ms
+from aitu_backend.transcription.engine import NoteEvent
 from aitu_backend.sheet.sheet.frames import drawn_columns
 from aitu_backend.storage import locate, paths
 from aitu_backend.transcription import pipeline, saved_hands
@@ -425,20 +427,45 @@ def apply_stretch(
         drawn = build.current(part_id)
         by_id = {event.id: event for event in stored.events if event.id is not None}
         kept_places = {(n.frame, n.midi) for n in spliced.notes if start <= n.frame < end}
-        left_out = {
-            (n.frame, n.midi)
-            for n in f1.read(drawn.text).notes
-            if start <= n.frame < end and (n.frame, n.midi) not in kept_places
+        shown = {
+            (n.frame, n.midi): n.figure for n in f1.read(drawn.text).notes if start <= n.frame < end
         }
+        now_places = set(shown)
         at = _notes_at(stored.events)
         gone = {
             i: (False, True)
-            for place in left_out
+            for place in now_places - kept_places
             for i in at.get(place, [])
             if not by_id[i].removed
         }
         for i in gone:
             by_id[i].removed = True
+        # Notes the AI added (a changed pitch is a note left out and one added): into the notes, at the onset of the
+        # column they join (or of their frame), as long as their figure. Undo takes them off again.
+        onset: dict[int, float] = {}
+        for (column, _), ids in at.items():
+            onset[column] = min([onset.get(column, float("inf"))] + [by_id[i].start for i in ids])
+        inside = [by_id[i] for (column, _), ids in at.items() if start <= column < end for i in ids]
+        velocity = int(np.median([e.velocity for e in inside])) if inside else 64
+        quarter = spliced.quarter_ms or drawn.quarter_ms or 500.0
+        next_id = max([stored.header.next_id, *(i + 1 for i in by_id)])
+        for n in sorted(spliced.notes, key=lambda n: (n.frame, n.midi)):
+            if not start <= n.frame < end or (n.frame, n.midi) in now_places:
+                continue
+            begin = onset.get(n.frame, n.frame * FRAME_MS / 1000)
+            event = NoteEvent(
+                id=next_id,
+                midi_note=n.midi,
+                start=begin,
+                end=begin + nominal_ms(n.figure if n.figure in FIGURES else 8, quarter) / 1000,
+                velocity=velocity,
+                hand="right" if n.staff == 1 else "left",
+            )
+            stored.events.append(event)
+            by_id[next_id] = event
+            gone[next_id] = (True, False)
+            next_id += 1
+        stored.events.sort(key=lambda event: (event.start, event.midi_note))
         notes = events_file.notes_from_events(stored.events)
         hands = build.hands_of_sheet(spliced, notes)
         was = {i: (e.hand, e.hand_guessed) for i, e in by_id.items()}
@@ -461,7 +488,44 @@ def apply_stretch(
             revision = _write_hands(
                 part_id, stored, before=stored.header, hands=bool(changes), notes=bool(gone)
             ).header.hands_revision
-        after = f1.write(build.reapply(spliced, pipeline.starting_hands(part_id)), mode="frames")
+        notes_now = pipeline.starting_hands(part_id)
+        settled = build.reapply(spliced, notes_now)
+        # The figures the AI wrote are the ones the sheet prints, as set by hand, where the rule now gives another
+        # one: the notes may have changed under them (a chord without its octave is shorter), and the user's words
+        # may ask to keep the figures or to set others. A note the AI wrote that the rule makes a grace note is
+        # written as the AI wrote it, unless it was a grace note already. Notes are found a frame or two away too
+        # (the drawn column of a chord moves when its first note is taken off).
+        wrote = {
+            (n.frame, n.midi): n.figure
+            for n in spliced.notes
+            if start <= n.frame < end and n.figure in FIGURES
+        }
+        graces = {
+            (n.frame, n.midi)
+            for n in f1.read(drawn.text).notes
+            if n.grace and start <= n.frame < end
+        }
+
+        def written(place: tuple[int, int]) -> tuple[int | None, tuple[int, int]]:
+            for d in (0, -1, -2, 1, 2):
+                near = (place[0] + d, place[1])
+                if near in wrote:
+                    return wrote[near], near
+            return None, place
+
+        fixed = 0
+        for n in settled.notes:
+            if n.covered or n.frame is None:
+                continue
+            figure, place = written((n.frame, n.midi))
+            if figure is None or (n.grace and place in graces):
+                continue
+            if n.grace or n.figure != figure:
+                n.figure, n.fixed, n.grace_rule = figure, True, None
+                fixed += 1
+        if fixed:
+            settled = build.reapply(settled, notes_now)
+        after = f1.write(settled, mode="frames")
         kept = store.load(part_id)
         record = (
             kept.record
@@ -470,6 +534,7 @@ def apply_stretch(
         )
         if record.source == "algorithm":
             record.source = "mixed"
+        record.edited = record.edited or fixed > 0
         record.usd += usd
         record.requests += requests
         record.model = model or record.model
