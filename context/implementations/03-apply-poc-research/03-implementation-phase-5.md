@@ -202,6 +202,12 @@ on 2026-10-25 restarted the app with it and with `ANTHROPIC_API_KEY` from `.env`
 - **Running Sonnet again** on a part it wrote is not offered (Phase 6 question). The job input shows no hands
   (`write_frames(hands=False)`, the research's best); Phase 6 decides `hands=True` for a run on the user's hands.
 - **Cost** is recorded per run in `sheet.f1` (`usd`); the live clip cost $0.18 for 40 s.
+- **A backend restart stops a run and loses it** (the job lives in memory; `sheet.f1` is written at the end). It
+  happened once in this phase: an edit of `api/projects.py` reloaded the backend 4 minutes into the user's run on the
+  edit copy of 99 Red Balloons, and the windows already paid for were lost. Fix to consider: write each decided
+  window to disk and let a new run start from the first window not decided.
+- **The Projects page** shows a spinner before the title of a project while a job works on it (`running`:
+  `transcribing`, `reading`, `writing`), added after the user's request of 2026-10-25.
 - **Checks that transcribe** (`check:flow`, `check:journey`, `time:flow`) now start Sonnet. `check:flow` and
   `time:flow` delete their pieces at the end, which stops Sonnet at its next request; `check:journey` waits for
   Sonnet to finish before **Save to library** (about $1 a run).
