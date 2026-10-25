@@ -29,6 +29,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
@@ -218,7 +219,8 @@ export function ProjectsPage() {
               title={title}
               // One small slot before every name, so the names stay aligned: a spinner while a job works
               // on the project (the AI enhancing its sheet, above all: minutes, in the background), else the
-              // green AI mark once the AI has enhanced it (the icon of Enhance with AI), else nothing.
+              // green AI mark once the AI has enhanced it (the icon of Enhance with AI), the same mark faint and
+              // hollow on a project with notes the AI has not enhanced yet, else nothing.
               leading={
                 <Box sx={{ width: 18, display: "grid", placeItems: "center", flexShrink: 0 }}>
                   {row.running ? (
@@ -228,6 +230,11 @@ export function ProjectsPage() {
                   ) : row.enhanced ? (
                     <Tooltip title="Enhanced with AI">
                       <AutoAwesomeIcon sx={{ fontSize: 18, color: semantic.status.success }} aria-label="Enhanced with AI" data-enhanced />
+                    </Tooltip>
+                  ) : row.step === "notes" || row.step === "sheet" ? (
+                    // Notes the AI could enhance, and has not: the same mark, faint and hollow.
+                    <Tooltip title="Not enhanced with AI yet">
+                      <AutoAwesomeOutlinedIcon sx={{ fontSize: 18, color: "text.disabled" }} aria-label="Not enhanced with AI yet" data-not-enhanced />
                     </Tooltip>
                   ) : null}
                 </Box>
