@@ -16,7 +16,9 @@ the `.aitu` export (Phase 5). The code is `aitu-frontend/src/pages/ProjectsPage.
 
 One row per project, the most recently changed first: the title ("Untitled project" until it has
 one), the step it reached ("Transcribing" or "Reading" while a job works on it), and when it
-changed. The whole row opens the project on that step. The `⋯` menu of a row has **Open**,
+changed. While a job works on a project (a transcription, a video read, or Sonnet writing its sheet,
+implementation 03, Phase 5) a small spinner stands before the title; its tooltip says which, and the
+list looks again every 5 s until it ends. The whole row opens the project on that step. The `⋯` menu of a row has **Open**,
 **Duplicate**, **Export**, **Rename**, **Play** (Play mode, once it reaches its Sheet step) and **Delete** (with a
 confirmation).
 

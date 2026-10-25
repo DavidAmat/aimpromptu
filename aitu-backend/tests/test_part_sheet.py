@@ -6,6 +6,7 @@ in the background with a stand-in ``complete`` (no request leaves the machine), 
 from __future__ import annotations
 
 import json
+import threading
 import time
 from pathlib import Path
 
@@ -265,3 +266,23 @@ def test_a_blank_part_answers_an_empty_sheet(client: TestClient) -> None:
     pipeline.save_note_events(uuid, [], 0.0)
     body = sheet(client, uuid)
     assert body["columns"] == [] and body["svg"] == "" and body["llm"]["auto"] is False
+
+
+def test_the_projects_list_says_sonnet_is_writing(client: TestClient, part: str) -> None:
+    good = oracle(song(SECONDS))
+    release = threading.Event()
+
+    def held(system: str, messages_: list[dict]) -> str:
+        release.wait(30)
+        return good(system, messages_)
+
+    started = job.start(part, complete=lambda: held)
+    try:
+        rows = client.get("/projects").json()
+        row = next(row for row in rows if part in row["parts"])
+        assert row["running"] == "writing"
+    finally:
+        release.set()
+    finish(started)
+    row = next(row for row in client.get("/projects").json() if part in row["parts"])
+    assert row["running"] is None

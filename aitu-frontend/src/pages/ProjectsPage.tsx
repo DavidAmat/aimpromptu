@@ -27,6 +27,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import CircularProgress from "@mui/material/CircularProgress";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
@@ -56,6 +57,13 @@ import {
   PillButton,
   relativeTime,
 } from "../ui";
+
+/** What a job working on a project now is doing, in the words of the spinner's tooltip. */
+const RUNNING_WORDS: Record<NonNullable<ProjectRow["running"]>, string> = {
+  transcribing: "Transcribing",
+  reading: "Reading the video",
+  writing: "Sonnet is writing the sheet",
+};
 
 /** What a row says about the step the project reached. */
 function stepWords(row: ProjectRow): string {
@@ -104,7 +112,7 @@ export function ProjectsPage() {
     return () => controller.abort();
   }, [reload]);
 
-  // A running transcription or reading changes the row's step when it ends: look again now and then.
+  // A running transcription, reading or Sonnet run changes the row when it ends: look again now and then.
   const anyRunning = rows?.some((row) => row.running !== null) ?? false;
   useEffect(() => {
     if (!anyRunning) return;
@@ -206,6 +214,15 @@ export function ProjectsPage() {
             <ListRow
               data-testid={`project-${row.id}`}
               title={title}
+              // A job working on the project now (Sonnet writing its sheet, above all: minutes, in the
+              // background): a small spinner beside the name says it is changing.
+              leading={
+                row.running ? (
+                  <Tooltip title={RUNNING_WORDS[row.running]}>
+                    <CircularProgress size={14} thickness={5} aria-label={RUNNING_WORDS[row.running]} data-running={row.running} />
+                  </Tooltip>
+                ) : undefined
+              }
               onOpen={() => navigate(ROUTES.project(first))}
               status={
                 row.editing ? (
