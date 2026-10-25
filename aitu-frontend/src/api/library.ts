@@ -23,6 +23,8 @@ export interface SongRow {
   versions: number;
   /** A version of the song is being edited in Projects. */
   editing: boolean;
+  /** The AI enhanced the sheet of a version of the song (implementation 03, Phase 5). */
+  enhanced: boolean;
   updatedAt: string | null;
 }
 
@@ -39,6 +41,8 @@ export interface VersionRow {
   editCopy: string | null;
   /** How many earlier states the version keeps. */
   history: number;
+  /** The AI enhanced the sheet of a part of the version (implementation 03, Phase 5). */
+  enhanced: boolean;
 }
 
 export interface SongDetail {

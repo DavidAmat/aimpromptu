@@ -28,8 +28,6 @@ import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
@@ -47,6 +45,7 @@ import UploadFileIcon from "@mui/icons-material/UploadFileOutlined";
 import PlayIcon from "@mui/icons-material/PlayCircleOutlined";
 import { useNavigate } from "react-router-dom";
 import { projectsApi, type ProjectRow } from "../api";
+import { AiMark } from "../components/piece/AiMark";
 import { STEP_LABELS } from "../components/piece/stepLabels";
 import { ROUTES } from "../layout/routes";
 import {
@@ -58,7 +57,6 @@ import {
   PageHeader,
   PillButton,
   relativeTime,
-  semantic,
 } from "../ui";
 
 /** What a job working on a project now is doing, in the words of the spinner's tooltip. */
@@ -222,22 +220,17 @@ export function ProjectsPage() {
               // green AI mark once the AI has enhanced it (the icon of Enhance with AI), the same mark faint and
               // hollow on a project with notes the AI has not enhanced yet, else nothing.
               leading={
-                <Box sx={{ width: 18, display: "grid", placeItems: "center", flexShrink: 0 }}>
-                  {row.running ? (
-                    <Tooltip title={RUNNING_WORDS[row.running]}>
-                      <CircularProgress size={14} thickness={5} aria-label={RUNNING_WORDS[row.running]} data-running={row.running} />
-                    </Tooltip>
-                  ) : row.enhanced ? (
-                    <Tooltip title="Enhanced with AI">
-                      <AutoAwesomeIcon sx={{ fontSize: 18, color: semantic.status.success }} aria-label="Enhanced with AI" data-enhanced />
-                    </Tooltip>
-                  ) : row.step === "notes" || row.step === "sheet" ? (
-                    // Notes the AI could enhance, and has not: the same mark, faint and hollow.
-                    <Tooltip title="Not enhanced with AI yet">
-                      <AutoAwesomeOutlinedIcon sx={{ fontSize: 18, color: "text.disabled" }} aria-label="Not enhanced with AI yet" data-not-enhanced />
-                    </Tooltip>
-                  ) : null}
-                </Box>
+                <AiMark
+                  enhanced={row.enhanced}
+                  could={row.step === "notes" || row.step === "sheet"}
+                  busy={
+                    row.running ? (
+                      <Tooltip title={RUNNING_WORDS[row.running]}>
+                        <CircularProgress size={14} thickness={5} aria-label={RUNNING_WORDS[row.running]} data-running={row.running} />
+                      </Tooltip>
+                    ) : undefined
+                  }
+                />
               }
               onOpen={() => navigate(ROUTES.project(first))}
               status={

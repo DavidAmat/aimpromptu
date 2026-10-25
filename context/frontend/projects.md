@@ -20,7 +20,8 @@ changed. While a job works on a project (a transcription, a video read, or Sonne
 implementation 03, Phase 5) a small spinner stands before the title; its tooltip says which, and the
 list looks again every 5 s until it ends. A project whose sheet the AI enhanced has the green AI mark there
 (the icon of **Enhance with AI**, tooltip "Enhanced with AI"); a project with notes the AI has not enhanced
-has the same mark faint and hollow ("Not enhanced with AI yet"). The status **Editing** is not about the AI: it is
+has the same mark faint and hollow ("Not enhanced with AI yet"). The same mark stands before each song of My library (green when the AI
+enhanced one of its versions) and each version of a song (`components/piece/AiMark.tsx`). The status **Editing** is not about the AI: it is
 the edit copy of a version of My library, until **Save to library** or **Discard changes**. The whole row opens the project on that step. The `⋯` menu of a row has **Open**,
 **Duplicate**, **Export**, **Rename**, **Play** (Play mode, once it reaches its Sheet step) and **Delete** (with a
 confirmation).
