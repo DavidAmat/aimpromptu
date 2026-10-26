@@ -3,8 +3,8 @@
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 8. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (level with `master` at the start: nothing to merge). Written 2026-10-26 on the Ubuntu
 machine. **In progress**: the study and 8A are built; the user asked for a keyboard in the note toolbox (built
-2026-10-26, section 8.1) and for free lyrics blocks with a lyrics toolbox (section 8.2) before checking 8A in the
-browser; 8B is next.
+2026-10-26, section 8.1) for free lyrics blocks with a lyrics toolbox (section 8.2) and for a denser PDF (section 8.3)
+before checking 8A in the browser; 8B is next.
 
 # 1. Summary
 
@@ -175,7 +175,7 @@ In the image, on the CPU (another project holds the GPU): 1,378 tests; 3 failed,
 `test_transcription_transkun.py` tests, which load a checkpoint saved on CUDA. Every other test passed (one skips
 itself without a GPU).
 
-# 8. The user's two requests, then 8B
+# 8. The user's three requests, then 8B
 
 ## 8.1 The keyboard of the note toolbox (8A+, built 2026-10-26)
 
@@ -245,7 +245,26 @@ study: how a block stays with its music when the lines re-wrap (anchored to its 
 with a table of character widths), which font families, and how Play mode lights a block that no longer spans its
 frames.
 
-## 8.3 Then 8B
+## 8.3 A denser PDF (8A+++)
+
+The user's third request (2026-10-26). Even with the page's Zoom at its smallest, the PDF is very large, there is no
+control of the size, and the space between lines cannot go below the slider's minimum, so the pages carry much white
+space. A printed piano score has about five lines (two staves each) a page: that is the default to reach.
+
+What exists: `FramesPdfDialog.tsx` asks `GET /sheet/{uuid}/pages` for a staff width of `(paper - margins) / 1.75 mm
+- 8` staff spaces and a gap of the sheet's own line space (5 staff spaces, or the user's View setting) plus the
+dialog's extra (0 to 8); the page's Zoom is not used. On the engine's side (`engrave/frames.py`), `render_pages`
+deals whole lines; each line's height is its ink (`ymin` to `ymax`: ledger lines, 8va, lyrics) plus the gap between
+the two staves (`Options.min_staff_gap` 6, more when the ink between them asks), and `draw` puts `gap` between two
+lines' ink. Measured once on 7 Years (A4 portrait, margins 14 and 16 mm): 5 pages, 6 lines on page one under the
+title.
+
+Points for the study: a "size of the music" control (a printed staff of about 5.5 to 8 mm; printed piano editions
+use about 6.5 to 7 mm), a smaller least space between lines (also below the sheet's own), perhaps a tighter gap
+between the two staves on paper, and defaults that give about five lines on an A4 page on the 10 viewer songs.
+Measure lines per page before and after, and show the user the pages.
+
+## 8.4 Then 8B
 
 1. `sheet.f1` through every change of a part's length: an F1 version of `editing/marks.py` (`shift`, `cut_out`,
    `extract`, `put_in`, the key and clef in force at the edges), used by paste, promotion, split, join, From other
