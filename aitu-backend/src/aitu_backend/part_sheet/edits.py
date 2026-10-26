@@ -29,6 +29,11 @@ Phase 7 adds the other edits, each one step:
   step keeps which notes, and undo puts them back;
 * **a stretch the AI wrote again** with the user's words (:func:`apply_stretch`, from ``job.start_stretch``): its
   hands and its sheet, as one step.
+
+Phase 8B adds **a paste** (:func:`paste_passage`): a copied passage put in at a frame, or over a marked stretch, with
+its notes, its sheet and its audio, everything after it moved (``editing.paste``). The paste keeps the part as it was
+as a snapshot of its history, so its step holds two versions, not changes: undo puts the snapshot back (which keeps
+the pasted state as the next one), redo puts that one back. The steps before it stay valid after its undo.
 """
 
 from __future__ import annotations
@@ -41,6 +46,8 @@ from typing import Any, Callable
 
 import numpy as np
 
+from aitu_backend.editing import history as part_history
+from aitu_backend.editing import paste
 from aitu_backend.matrix.keys import KEY_COUNT, LOWEST_MIDI
 from aitu_backend.pmn import events_file
 from aitu_backend.sheet.sheet import f1, frames
@@ -56,6 +63,7 @@ from . import build, reading, store
 __all__ = [
     "LIMIT",
     "Moved",
+    "Pasted",
     "Transposed",
     "add_note",
     "apply_stretch",
@@ -64,7 +72,9 @@ __all__ = [
     "history",
     "move_hands",
     "note_ends",
+    "paste_passage",
     "preview_reading",
+    "record_version",
     "redo",
     "remove_notes",
     "transpose_notes",
@@ -99,6 +109,9 @@ class _Step:
     removed: dict[int, tuple[bool, bool]] = field(default_factory=dict)
     #: ``note id -> (key before, key after)`` (MIDI): notes transposed (Phase 8).
     keys: dict[int, tuple[int, int]] = field(default_factory=dict)
+    #: A paste (Phase 8B): ``[the snapshot undo puts back, the one redo puts back]`` of the part's history (the
+    #: second is known after the first undo). Each walk puts one back and keeps the other state as a new snapshot.
+    versions: list[int] | None = None
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -107,6 +120,7 @@ class _Step:
             "sheet": self.sheet,
             "removed": [[i, *change] for i, change in self.removed.items()],
             "keys": [[i, *change] for i, change in self.keys.items()],
+            "versions": self.versions,
         }
 
     @classmethod
@@ -122,6 +136,7 @@ class _Step:
                 int(row[0]): (bool(row[1]), bool(row[2])) for row in payload.get("removed") or []
             },
             keys={int(row[0]): (int(row[1]), int(row[2])) for row in payload.get("keys") or []},
+            versions=[int(v) for v in payload["versions"]] if payload.get("versions") else None,
         )
 
 
@@ -730,6 +745,15 @@ def _walk(part_id: str, to: str) -> str | None:
         if not steps:
             return None
         step = steps.pop()
+        if step.versions is not None:
+            # A paste: the snapshot of the other side put back; the state left is kept as the next one.
+            undo_to, redo_to = step.versions
+            kept = part_history.restore(part_id, undo_to if back else redo_to)
+            step.versions = [undo_to, kept] if back else [kept, redo_to]
+            build.forget(part_id)
+            (log.undone if back else log.done).append(step)
+            _save(part_id, log)
+            return step.label
         stored = pipeline.load_note_events(part_id)
         if stored is None:
             raise FileNotFoundError("This part has no notes.")
@@ -788,6 +812,49 @@ def _walk(part_id: str, to: str) -> str | None:
         (log.undone if back else log.done).append(step)
         _save(part_id, log)
         return step.label
+
+
+@dataclass(frozen=True)
+class Pasted:
+    label: str
+    #: Where the passage went and how long it is, in ms of the part.
+    at_ms: float
+    length_ms: float
+    #: The notes it put in, the notes after it that moved, the notes of a stretch pasted over that went.
+    notes_in: int = 0
+    notes_moved: int = 0
+    notes_removed: int = 0
+
+
+def paste_passage(
+    part_id: str,
+    source: str,
+    from_ms: float,
+    to_ms: float,
+    *,
+    at_ms: float,
+    replace_to_ms: float | None = None,
+) -> Pasted:
+    """Paste ``[from_ms, to_ms)`` of the part ``source`` into this part at ``at_ms`` (or over ``[at_ms,
+    replace_to_ms)``): one step, whose undo puts the part back as it was. Raises ``paste.PasteError``.
+    """
+    passage = paste.read_passage(source, from_ms, to_ms)
+    done = paste.paste(part_id, passage, at_ms=at_ms, replace_to_ms=replace_to_ms)
+    build.forget(part_id)
+    seconds = done.length_ms / 1000
+    length = f"{seconds:.1f} s" if seconds < 10 else f"{round(seconds)} s"
+    label = f"Paste {length} over a stretch" if replace_to_ms is not None else f"Paste {length}"
+    record_version(part_id, label, done.before_version)
+    return Pasted(
+        label, done.at_ms, done.length_ms, done.notes_in, done.notes_moved, done.notes_removed
+    )
+
+
+def record_version(part_id: str, label: str, before_version: int) -> None:
+    """One step for a change that kept the part as it was as a snapshot of its history (a paste, a promotion of
+    Record in Sheet): its undo puts that snapshot back."""
+    with pipeline.piece_lock(part_id):
+        _record(_Step(label, versions=[before_version, 0]), part_id)
 
 
 def undo(part_id: str) -> str | None:

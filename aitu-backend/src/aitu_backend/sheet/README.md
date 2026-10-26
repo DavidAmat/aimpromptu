@@ -7,7 +7,8 @@ README with the names of the backend: `aitu_notation.X` of the research is `aitu
 changed no logic; the golden files of section 7 prove it. Phase 2 added the new sheet without compases (section 9),
 Phase 3 its engine (section 10), Phase 4 its LLM step (section 11), Phase 5 put it in the app (section 12), Phase 6 made it editable
 (section 13), Phase 7 added the note and range tools (section 14), and Phase 8 the sheet toolbox, lyrics and the sheet
-on paper (section 15): the bars path below is unchanged, and so are its golden files.
+on paper (section 15), and Phase 8B the sheet through every change of a part's length (section 16): the bars path below
+is unchanged, and so are its golden files.
 
 ## 1. What it does
 
@@ -401,3 +402,35 @@ step that carries `sheet.f1` carries it too). Measurements and reasons:
   `spaceMs`, `lineSpace`, and each note's `end` frame.
 - Tests: `tests/test_sheet_toolbox.py` (the blocks: format, wrapping, drawing, a piece over a line break, the
   route). Browser check: `npm run check:frames-toolbox` (aitu-frontend).
+
+## 16. The sheet through a change of a part's length (implementation 03, Phase 8B)
+
+`aitu_backend/part_sheet/lengths.py` (outside the core) is the new sheet's version of `editing/marks.py`; every change
+of a part's length goes through `editing/paste.py` (`paste`, `cut`), which calls it in the same write. Measurements and
+reasons: `context/implementations/03-apply-poc-research/03-implementation-phase-8.md` section 10.
+
+```text
+read_passage(source, a, b) ── lengths.read: the source's sheet as its page draws it, extract(a, b)
+                              (+ the hand each note is drawn in, + the AI's segments inside)
+paste(target, at, length)  ── lengths.target (before), then after the notes are written:
+                              lengths.store_after: cut_out(the stretch pasted over) -> put_in(passage, at, length)
+                              -> build.reapply on the new notes -> sheet.f1 for the new handsRevision
+promotion at a speed       ── lengths.scaled(passage, speed, window): frames and reference figures / speed
+```
+
+- **The four moves** (pure, on a copy): `shift` (a beam group across the frame is cut in two, a lyrics piece ends
+  there), `cut_out` (the armadura and clefs in force after the stretch are kept from its start; the header when no note
+  is before it), `extract` (counted from 0, with the armadura and clefs in force at its start as its own), `put_in` (the
+  passage's armadura and clefs from `at`, the target's again after it when music follows). Covered onsets whose
+  ornament note is on the other side are drawn again; a beam group of one note is no group; the changes are tidied
+  (one per frame and staff, none that changes nothing).
+- **When it stores**: the target's sheet holds decisions (`Record.decided`), or the passage's does, or the target had
+  no music (a blank sheet, a new part: its first sheet is stored, so its Sheet step is written). Two algorithm sheets
+  store nothing: they are computed from the notes. The record's windows and stretches move too; an AI passage in an
+  algorithm sheet makes it `mixed`.
+- **Record in Sheet**: the Current and each take are written with the song's reference figure (the take's at its
+  speed) and the song's armadura where the passage starts (`keep_figure`: an algorithm record with `reference: song`
+  and `key`; `build.algorithm(key=)`; an AI run keeps a `song` reference as it keeps a `user` one).
+- **Undo**: `edits.paste_passage` and a promotion record one step whose undo restores the history version the paste
+  kept (`_Step.versions`), as the old page did.
+- Tests: `tests/test_sheet_lengths.py`. Browser checks: `check:paste`, `check:compose`, `check:passage -- --played`.

@@ -42,7 +42,6 @@ import {
   audioApi,
   matrixApi,
   passagesApi,
-  timeScoreApi,
   type OpenPassage,
   type PlayedNote,
   type PromotionAudio,
@@ -475,14 +474,13 @@ export function PassagePage() {
     setWriting(true);
     setRefused(null);
     try {
-      const before = await timeScoreApi.rhythm(passage.part).catch(() => null);
       const done = await passagesApi.promote(passageId, {
         mode: promoting,
         audio: askedAudio,
         ...(proposalSheet.current ? { sheet: proposalSheet.current } : {}),
       });
       navigate(ROUTES.project(done.projectId, "sheet"), {
-        state: { promoted: { ...done, before } },
+        state: { promoted: done },
       });
     } catch (caught) {
       setRefused(said(caught, "Could not promote the take."));
@@ -806,7 +804,7 @@ export function PassagePage() {
                   <Section title={isNew ? undefined : "Proposal"}>
                     <Box data-passage-proposal={take.id}>
                       <SheetPage
-                        key={`${take.id}:${take.audioRevision}`}
+                        key={`${take.id}:${take.audioRevision}:${speed}`}
                         step={{
                           audioUuid: take.id,
                           audioRevision: take.audioRevision,

@@ -11,6 +11,9 @@ passage can be as long as a song, and writes them into the target part in one wr
   key signature in force where the copy starts becomes a key change at the insertion point, so the
   passage reads as it did in its song; the clef of each hand and the speed (what a gap is worth)
   the same way; and after the passage the target goes back to what it had there;
+* **the new sheet** (``sheet.f1``, implementation 03, Phase 8B): the stretch of the source's sheet as its page draws
+  it, put into the target's at the same place, with the same rules for the armadura and the clefs at its edges
+  (:mod:`aitu_backend.part_sheet.lengths`); the notes the source's sheet gives a hand carry that hand;
 * **the audio**: the ranges of stored files the stretch plays, put into the target's timeline (no
   audio byte is copied, plan P-3), with silence where the passage plays longer than its audio;
 * **everything after the insertion point** moves later by the passage's length, notes and marks
@@ -40,6 +43,7 @@ from aitu_backend.audio import sources, timeline as audio_timeline
 from aitu_backend.audio.timeline import Piece
 from aitu_backend.editing import compose, history, marks
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS, frame_of_seconds, validate_frame_ms
+from aitu_backend.part_sheet import lengths
 from aitu_backend.schemas.metadata import source_kind
 from aitu_backend.schemas.rhythm import ClefChange, KeyChange, SavedRhythm, SpeedChange
 from aitu_backend.storage import bundle, locate, paths
@@ -96,6 +100,8 @@ class Passage:
     rhythm: SavedRhythm | None
     #: Its marks inside the stretch, counted from its first column.
     marks: dict[str, list[Any]] = field(default_factory=dict)
+    #: The stretch of its new sheet (implementation 03, Phase 8B), or ``None`` when it has no notes.
+    frames: lengths.Copied | None = None
 
     @property
     def length_ms(self) -> float:
@@ -208,6 +214,7 @@ def read_passage(
         raise PasteError("The copied stretch is empty.")
     start, stop = first * frame_ms / 1000.0, last * frame_ms / 1000.0
 
+    frames = lengths.read(part_id, first * frame_ms, last * frame_ms)
     stored = pipeline.load_note_events(part_id)
     events: list[NoteEvent] = []
     for event in stored.events if stored else []:
@@ -217,7 +224,12 @@ def read_passage(
         end = min(event.end, stop) - start
         if end <= begin:
             end = begin + 0.001
-        events.append(event.model_copy(update={"id": None, "start": begin, "end": end}))
+        update: dict[str, Any] = {"id": None, "start": begin, "end": end}
+        drawn = frames.hands.get(event.id) if frames is not None and event.id is not None else None
+        if drawn is not None and (event.hand is None or event.hand_guessed):
+            # The hand the source's sheet draws: the passage reads in the target as it did there.
+            update.update({"hand": drawn, "hand_guessed": False})
+        events.append(event.model_copy(update=update))
 
     timeline = bundle.read_timeline(part_id)
     pieces = audio_timeline.passage_pieces(
@@ -235,6 +247,7 @@ def read_passage(
         pieces=pieces,
         rhythm=rhythm,
         marks=marks.extract(rhythm, first, last) if rhythm else {},
+        frames=frames,
     )
 
 
@@ -626,6 +639,8 @@ def paste(
             )
         )
 
+        frames_before, frames_kept = lengths.target(part_id)
+
         # Everything is worked out: keep the part as it is, then write.
         before_version = history.current_version(part_id)
         history.snapshot_current(part_id)
@@ -661,6 +676,21 @@ def paste(
                     }
                 )
                 pipeline.save_rhythm(part_id, new_sheet)
+            lengths.store_after(
+                part_id,
+                frames_before,
+                frames_kept,
+                revision=written.header.hands_revision,
+                cut=(
+                    None
+                    if cut_to is None
+                    else (lengths.frame_of(at * frame_ms), lengths.frame_of(cut_to * frame_ms))
+                ),
+                copied=passage.frames,
+                at=lengths.frame_of(at * frame_ms),
+                length=lengths.frame_of(columns * frame_ms),
+                music_after=music_after,
+            )
         except Exception:
             history.restore(part_id, before_version)
             raise
@@ -712,6 +742,7 @@ def cut(
                 else _cut_transitions(current, start, stop)
             )
         )
+        frames_before, frames_kept = lengths.target(part_id)
         timeline = bundle.read_timeline(part_id)
         audio = None
         if timeline.source_list():
@@ -756,6 +787,14 @@ def cut(
                     }
                 )
                 pipeline.save_rhythm(part_id, new_sheet)
+            lengths.store_after(
+                part_id,
+                frames_before,
+                frames_kept,
+                revision=written.header.hands_revision,
+                cut=(lengths.frame_of(start * frame_ms), lengths.frame_of(stop * frame_ms)),
+                tail=tail,
+            )
         except Exception:
             history.restore(part_id, before_version)
             raise

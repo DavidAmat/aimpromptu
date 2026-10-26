@@ -24,7 +24,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
-import { oldSheet, signIn, useSession } from './session.mjs';
+import { markStretch as markOnSheet, waitForFrames, watchSheets } from './frames-page.mjs';
+import { signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { values } = parseArgs({
@@ -59,6 +60,7 @@ const playlists = new Set();
 const browser = await chromium.launch();
 useSession(browser);
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+watchSheets(page);
 const problems = [];
 page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
 page.on('pageerror', (e) => problems.push(`page error: ${e.message}`));
@@ -68,23 +70,14 @@ const shot = async (name) => {
   await page.screenshot({ path: path.join(out, `${name}.png`) });
 };
 const waitForSheet = async () => {
-  await oldSheet(page, { drawn: false });
-  await page.waitForSelector('.grid-note-target', { timeout: 90000 });
-  await page.waitForTimeout(800);
+  await waitForFrames(page);
+  await page.waitForTimeout(300);
 };
 const notesOf = async (id) => (await json(`${api}/pieces/${id}/notes`)).id.length;
 const partsOf = async (id) => (await json(`${api}/projects/${id}/parts`)).parts;
-/** Mark a stretch on the first line's frame ruler, from `from` to `to` of its width. */
+/** Mark a stretch of the first line of the new sheet, from `from` to `to` of its columns. */
 const markStretch = async (from, to) => {
-  await page.locator('.grid-frame-ruler').first().scrollIntoViewIfNeeded();
-  await page.waitForTimeout(300);
-  const box = await page.locator('.grid-frame-ruler').first().boundingBox();
-  await page.mouse.click(box.x + box.width * from, box.y + box.height / 2);
-  await page.waitForTimeout(300);
-  await page.keyboard.down('Shift');
-  await page.mouse.click(box.x + box.width * to, box.y + box.height / 2);
-  await page.keyboard.up('Shift');
-  await page.waitForTimeout(400);
+  await markOnSheet(page, api, { from, to });
 };
 const rowMenu = async (row, item) => {
   await row.getByRole('button', { name: /more actions/i }).click();

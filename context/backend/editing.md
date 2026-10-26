@@ -103,6 +103,14 @@ keyed by, and moves, cuts out and copies them. A pasted or promoted passage tear
 inside (it ends where the passage starts, and goes on after it), because the music put in is not
 part of it. A new kind of mark is added there, or no length change moves it.
 
+The new sheet (`sheet.f1`, implementation 03) moves the same way since Phase 8B: `part_sheet/lengths.py` is its
+version of `marks.py` (`shift`, `cut_out`, `extract`, `put_in` on a frames sheet: its notes and their decisions,
+its clef and armadura changes, its lyrics, and the AI's segments of the record). `editing/paste.py` reads the
+source's sheet with the passage (`read_passage`) and stores the target's after the paste or the cut
+(`lengths.store_after`), so every length change above carries it. The target's sheet is stored when either side
+holds decisions (the AI's or the user's), or when the target had no music; two algorithm sheets stay computed from
+the notes. A promotion scales the take's sheet by its speed (`lengths.scaled`).
+
 ## Where to look deeper
 
 - [`documentation/services/backend/editing-and-compose.md`](../../documentation/services/backend/editing-and-compose.md)

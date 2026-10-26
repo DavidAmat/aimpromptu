@@ -5,8 +5,9 @@ Plan: [`03-plan.md`](03-plan.md) section 7, Phase 8. Checklist: [`03-checklist.m
 machine. **In progress**: the study and 8A are built, with the user's three requests of 2026-10-26 (a keyboard in
 the note toolbox, section 8.1; free lyrics blocks with a lyrics toolbox, section 8.2; a denser PDF, section 8.3).
 **8A was checked by the user in the browser on 2026-10-26 ("all good")**, after two faults found on the way were
-fixed (two clefs on one spot, the print preview's edges). 8B is next (section 8.4); the branch is merged into
-`master` at the end of the phase, after the user's check of 8B.
+fixed (two clefs on one spot, the print preview's edges). **8B was built on 2026-10-26** (section 10): every screen
+draws the new sheet, the switch to the old one is gone; the user's check of 8B in the browser is next, then the
+branch is merged into `master`.
 
 # 1. Summary
 
@@ -18,7 +19,7 @@ fixed (two clefs on one spot, the print preview's edges). 8B is next (section 8.
 | 8.3, 8A+ | The user's request: a keyboard in the note toolbox for the picked column (section 8.1). Built, frontend only; `check:frames-toolbox` covers it |
 | 8.3, 8A++ | The user's second request: lyrics as free blocks, a lyrics toolbox (section 8.2). Built: blocks put anywhere, wrapped by the engine to their width, scaled, styled; the bar of their frames; a piece over a line break shared between the lines; `check:frames-toolbox` covers it |
 | 8.3, 8A+++ | The user's third request: a denser PDF (section 8.3). Built: **Size of the music** (a 5 to 8 mm staff, 6.5 mm by default) and **Space between lines** on paper (1 to 20 mm, 6 mm by default, no longer the screen's) in the print dialog, kept in the browser |
-| 8.3, half 8B | Not started: `sheet.f1` through every change of a part's length, copy and paste, Start a new part, the read-only stretch actions, the requests review, Recording in Sheet, the blank sheet; then the switch removed (section 8) |
+| 8.3, half 8B | Built (section 10): `sheet.f1` through every change of a part's length (`part_sheet/lengths.py`), copy and paste as a step of undo, Record this passage, Start a new part, the read-only stretch panel (playlists, From other projects, the requests review), Recording in Sheet on the new sheet (the window over the take, the song's figure and armadura), the blank sheet; the switch removed and every browser check moved. The user's check is next |
 
 # 2. The study (task 8.1)
 
@@ -402,7 +403,7 @@ columns shared it equally, so the preview had about 414 px for a page drawn 460 
 the preview column is as wide as a page of the preview plus its padding and a scrollbar (502 px on A4).
 `check:frames-toolbox` checks that both edges of the page are inside the preview.
 
-## 8.4 Then 8B
+## 8.4 Then 8B (built: section 10)
 
 1. `sheet.f1` through every change of a part's length: an F1 version of `editing/marks.py` (`shift`, `cut_out`,
    `extract`, `put_in`, the key and clef in force at the edges), used by paste, promotion, split, join, From other
@@ -416,7 +417,7 @@ the preview column is as wide as a page of the preview plus its padding and a sc
    Paste).
 5. The switch removed (`SheetPage` draws only the new sheet); the old sheet's browser checks moved to the new hooks.
 
-# 9. Documentation
+# 9. Documentation (8A)
 
 - `aitu-backend/src/aitu_backend/sheet/README.md` section 15.
 - `context/frontend/annotations.md` ("The new sheet"), `annotations-sheet.md`, `play-mode.md`, `printing.md`,
@@ -424,3 +425,139 @@ the preview column is as wide as a page of the preview plus its padding and a sc
 - `documentation/services/backend/endpoints.md` (routes table, section 4.1),
   `documentation/services/frontend/score-pdf.md`.
 - [`03-plan.md`](03-plan.md) Phase 8, sections 8 and 11; [`03-checklist.md`](03-checklist.md).
+
+# 10. Half 8B (built 2026-10-26)
+
+## 10.1 `sheet.f1` through every change of a part's length
+
+Section 2.2 found that a paste, a promotion, a split, a join, From other projects and a comment's excerpt changed
+`notes.pmn` and `sheet.json` but never `sheet.f1`: the stored sheet was then laid on the moved notes by column and key,
+so every decision after the change was lost (the AI's beam groups, clefs and armaduras, the user's fingers and
+figures), and its clef and armadura changes stayed at the old frames. All of these go through `editing/paste.py`
+(`paste`, `cut`), so one module serves them all.
+
+`part_sheet/lengths.py` has the old sheet's four moves on a frames sheet, each on a copy: `shift` (everything from a
+frame moves later; a beam group across it is cut in two, a lyrics piece across it ends there), `cut_out` (the armadura
+and clefs in force after the stretch are kept from its start), `extract` (a stretch counted from 0 with the armadura
+and clefs in force at its start as its own) and `put_in` (the passage's armadura and clefs from the insertion frame,
+the target's again after it). Covered onsets whose ornament note ends up on the other side are drawn again, a beam
+group left with one note is no group, and the changes are tidied. The record's windows and stretches move with the
+same rules (`shift_spans`, `cut_spans`, `clip_spans`).
+
+`paste.read_passage` now also reads the source's sheet as its page draws it (`lengths.read`), and gives the notes
+with no decided hand the hand that sheet draws (the passage reads in the target as it did in its song).
+`paste.paste` and `paste.cut` read the target's sheet before writing (`lengths.target`) and store the result after the
+notes (`lengths.store_after`: cut, put in, `build.reapply` on the new notes, `sheet.f1` for the new `handsRevision`).
+It stores when the target's sheet or the passage's holds decisions, or when the target had no music (a blank sheet,
+a new part); two algorithm sheets store nothing. An AI passage pasted into an algorithm sheet makes it `mixed`
+(**Enhanced with AI**). A promotion at another speed scales the take's sheet into the song's time
+(`lengths.scaled`: frames and reference figures divided by the speed, what starts after the window left out).
+
+The last case (a target with no music) was added after `check:passage`: a take played into a blank song left its Sheet
+step "missing", because nothing was stored where the old page used to save its first `sheet.json`.
+
+## 10.2 Copy and paste, one step of undo
+
+`POST /sheet/{uuid}/paste` (`edits.paste_passage`) runs the paste and records one step of the log whose undo restores
+the history version the paste kept and whose redo the pasted state (`_Step.versions`, updated at each walk: each
+restore keeps the other side as a new snapshot). The steps before it stay valid (a test moves a hand, pastes, undoes
+both). A promotion of Record in Sheet records the same kind of step on the song ("Promote the passage"), so the sheet
+opens with it as its last step, as the old page did. Every answer of `/sheet/{uuid}` carries `audioRevision`; the page
+counts its changes into the player's address (`v=<opened>.<loads>`), so the new audio is loaded, and the cursor goes to
+the start of the pasted passage.
+
+The page (`FramesSheetPage.tsx`): **Copy this stretch** (range toolbox), **Copy the frames of these notes** (note
+toolbox, to the end of the longest note) and ⌘C write the app's clipboard (`state/passageClipboard.ts`, shared with the
+old page's format); **Paste** on the floating bar and ⌘V paste at the cursor, or over the marked stretch. A short line
+says "Copied 0:04 – 0:10" or "Pasted 5.8 s" (`sheet-flash`).
+
+## 10.3 Record a passage, Start a new part, the read-only stretch panel, the blank sheet
+
+- The range toolbox's title bar gains **Record this passage** and **Start a new part here** (`step.onSplit`, the old
+  route; the sheet it sends is `null`), the floating bar **Record a passage at the end** (the end is the last note's
+  end frame). The new sheet is always stored: nothing is saved first.
+- On a read-only sheet (a version of My library, a source of From other projects, the requests review) the strip marks
+  a stretch, and a small *Frames* panel offers the screen's action (`step.stretchAction`: **Add to a playlist**,
+  **Add this stretch**, **Comment on this stretch**) and **Copy this stretch**; Escape lets it go.
+- A blank sheet shows *Nothing to write yet.* with **Record a passage** and **Paste the copied passage** (the blank
+  answer of `GET /sheet` is editable now), and no sheet title over it.
+
+## 10.4 Recording in Sheet on the new sheet
+
+`SheetStep.passage` is read by the new page: the **Current** is read only, with no title and no bar, played by the
+page's own button (`playerRef`); the **Proposal** has every tool, a bar with the passage's actions (Record a take, Fit)
+in place of Record, Paste and Print, the sheet toolbox with Key, Transpose and View, and **the window** over the take
+(`FramesSheetView` `frameWindow`, `onWindowMove`): a blue band per line from the edge of the first column at or after
+its first frame (never over the armadura: at most 1.6 staff spaces before the column) to the same edge of its end, and
+a grip above the ink of its first line, dragged by frames. Copy and paste keys do nothing on this page (its sheets are
+not the song).
+
+The reading of the two sheets: the old page named the Proposal with the song's figure (`anchorMs`). Here the passage
+keeps the song's reference figure and its armadura where the passage starts (`PassageState.quarter_ms`, `key`), and
+`lengths.keep_figure` stores an algorithm record with `reference: song` and `key` on the Current and on each take
+when it is read (and again on every ready take when the speed changes; the Proposal is drawn again with the speed in
+its key). `build.algorithm(key=)` and `_compute` use them; an AI run keeps a `song` reference, as it keeps a `user`
+one. The take's transcription no longer asks the AI by itself (`store.taken`; the page does not start it either): the
+take's sheet is the algorithm's, with **Enhance with AI** as a button (the user's answer of section 3). **Promote**
+needs nothing from the page: the take's stored sheet goes with the paste (section 10.1).
+
+## 10.5 The switch removed, the checks moved
+
+`SheetPage` draws only `FramesSheetPage`; the old page is `VexflowSheetPage`, exported and drawn nowhere (Phase 10
+removes it with `@aimpromptu/grid-notation`). The **Edit in the old sheet** button is gone. `PassagePage` no longer asks
+`/time/{uuid}/rhythm` before a promotion.
+
+The browser checks: `scripts/frames-page.mjs` (new) holds the helpers of the new sheet (`watchSheets`, `waitForFrames`,
+`markStretch` in the strip, `sheetNow`); the page tags its part (`data-part`). Moved to it: `check:paste` (the paste
+route, the undo label "Paste 5.8 s", the step kept through a reload, the live notes of the stretch counted),
+`check:compose`, `check:library` (with the version's *Frames* panel: Add to a playlist and Copy), `check:requests`
+(its default song is now "Bonfire Heart": 7 Years has a real user's public version since 2026-10-18, and the check
+refuses to touch it), `check:passage` (the new hooks `[data-frame-window]`, `[data-frame-window-grip]`; the Proposal in
+the armadura and figure of the Current; the figure at the take's speed; `--played` sends the takes' keys with the file,
+so no GPU is needed), `check:play` (the Sheet step's lyrics on the new sheet), `check:frames-sheet` (no switch on the
+bar), `check:flow` (nothing can be pasted while the AI writes). Removed with the old sheet: `check-sheet-toolbox.mjs`
+(`check:transpose`, `check:lyrics`: `check:frames-toolbox` covers Transpose and Lyrics), `bench-sheet.mjs`
+(`bench:sheet`) and `vexflow-passages.mjs`; `session.oldSheet` is gone.
+
+## 10.6 Checks
+
+| Check | Result |
+|---|---|
+| `tests/test_sheet_lengths.py` (new, 9 tests) | the four moves (beam groups cut, lyrics ended, armadura and clefs at the edges, an empty target); a paste on the AI's sheet (fingers, armadura changes, lyrics and segments moved by 100 frames; the copied stretch brings its own fingers) and its undo exact; a split then a join; an AI passage into an algorithm sheet (`mixed`, hands carried); two algorithm sheets store nothing; the paste route as one step (with a hand move before it: undo twice gives the first drawing back), over a stretch, a source nobody has (404); Record in Sheet (the song's figure and armadura on the take, the figure at ×2, a finger of the take promoted at half speed to frame 75, the song's own finger kept, undo of the promotion) |
+| `test_paste`, `test_parts`, `test_compose`, `test_passages`, `test_part_sheet`, `test_sheet_toolbox` | pass unchanged |
+| Backend, full run on the CPU | 1,393 tests; the same 3 failures as in Phases 7 and 8A (section 7.1), every other test passed |
+| `npx tsc -b`, `npx eslint` on the changed files | clean |
+| `check:paste` | all 28 passed |
+| `check:compose` | all 24 passed |
+| `check:library` | all passed |
+| `check:requests -- --name "Bonfire Heart"` | all passed (the default since) |
+| `check:passage -- --played` | all passed, after the blank-sheet store (section 10.1) and two expectations of the check itself (the fitted speed is ×1.99, not ×2; with played keys the note count does not change, so the ids are compared) |
+| `check:play` | passed on the second run (the first timed out twice waiting for a page under load, as in the memory of flaky runs) |
+| `check:frames-sheet`, `check:frames-edit`, `check:frames-tools`, `check:frames-toolbox`, `check:projects`, `check:public` | all passed |
+| Not run | `check:flow`, `check:journey`, `time:flow`: they transcribe on the GPU, which another process holds; `check:passage` without `--played` for the same reason |
+| The drawings | the Proposal's window and grip zoomed in (2×) on a copy: first the grip sat on a stem and the band started at the middle of the first notehead; then the edge crossed the armadura's last bemol; now the band starts clear of the armadura, the grip is above the ink, and every note of the take is inside (the old drawing left its last chord out); the read-only panel and the blank sheet looked at |
+
+## 10.7 Notes for later phases
+
+- **Phase 10**: `scripts/baseline-sheets.mjs` still selects the old sheet's hooks (`.grid-note-target`,
+  `.grid-frame-ruler`, the Transpose dialog's drawing); it must move to `frames-page.mjs` before the final screenshots.
+  `VexflowSheetPage`, `SheetFloatingBar`, `NoteToolbox`, `RangeToolbox`, `SheetToolbox`, `TransposeDialog` and the old
+  paste route's page code are drawn nowhere now.
+- **Phase 9**: the old `sheet.json` marks are still moved by `editing/marks.py` in every paste (kept until they are
+  mapped); a promotion no longer receives the Proposal's `sheet.json` from the page, so a take's old marks come from its
+  stored `sheet.json` only.
+- A paste of a passage whose reference figure differs from the target's is read with the target's figure (the new
+  sheet has one reference figure; the old sheet's speed changes were dropped in Phase 7); figures set by hand stay.
+- A passage's sheets read with the song's figure only while they hold no decisions: a take edited before a speed
+  change keeps its figure (`keep_figure` leaves a decided sheet alone).
+
+## 10.8 Documentation (8B)
+
+- `aitu-backend/src/aitu_backend/sheet/README.md` section 16; `part_sheet/__init__.py`; `context/backend/README.md`,
+  `context/backend/editing.md` ("Every mark moves").
+- `context/frontend/annotations.md` ("The new sheet": copy and paste, the read-only panel, the page of a passage; the
+  old sheet's sections kept as the record), `context/frontend/recording-in-sheet.md`.
+- `documentation/services/backend/endpoints.md` (routes table, section 4.1: `POST /sheet/{uuid}/paste`,
+  `audioRevision`, length changes carry the new sheet).
+- `aitu-frontend/README.md`, `context/04-local-development.md` (the checks moved and removed, `--played`).
+- [`03-plan.md`](03-plan.md) Phase 8 and section 11; [`03-checklist.md`](03-checklist.md).

@@ -175,8 +175,9 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
         shown = before.record is not None and before.record.enhanced
         drawn_before = f1.read(before.text)
         marks = build.user_marks(drawn_before)
-        # A reference figure the user named with Transpose figures stays (rule 5): no reference request then.
-        named = before.record is not None and before.record.reference == "user"
+        # A reference figure the user named with Transpose figures stays (rule 5): no reference request then. So does
+        # the song's on the sheets of a passage of it (Record in Sheet, Phase 8B: the Current and the takes read alike).
+        named = before.record is not None and before.record.reference in ("user", "song")
         run = LiveRun(
             part_id, before.text, build.windows(drawn_before), marks=marks, extras=drawn_before
         )
@@ -240,7 +241,11 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
                 ),
                 windows=[[p.start, p.end, p.source] for p in song.parts],
                 quarter_ms=song.quarter_ms,
-                reference="user" if named else song.reference.get("source"),
+                reference=(
+                    before.record.reference
+                    if named and before.record
+                    else song.reference.get("source")
+                ),
                 model=getattr(ask, "model", None),
                 prompt=PROMPT_VERSION + ("+hands" if shown else ""),
                 usd=float(getattr(ask, "usd", 0.0) or 0.0),

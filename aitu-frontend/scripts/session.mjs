@@ -75,18 +75,3 @@ export function useSession(browser) {
   };
   return browser;
 }
-
-/**
- * The Sheet step, a version of My library and Play mode open on the new sheet (implementation 03, Phase 5); the
- * old one (vexflow-v2), which keeps the editing tools until Phase 8, is a press away on the floating bar. A check
- * of those tools calls this after it opens a Sheet step: it presses the switch when the new sheet is on show, and
- * returns once the old sheet is drawn (or its stale banner is up). A page that shows the old sheet already (a
- * passage, From other projects, the requests review) is left as it is.
- */
-export async function oldSheet(page, { timeout = 90000, drawn = true } = {}) {
-  const either = page.locator('.grid-note-target, [data-sheet-banner="stale"], [data-testid="old-sheet"]').first();
-  await either.waitFor({ timeout });
-  const button = page.getByTestId('old-sheet');
-  if ((await page.locator('.grid-note-target').count()) === 0 && (await button.count()) > 0) await button.click();
-  if (drawn) await page.locator('.grid-note-target, [data-sheet-banner="stale"]').first().waitFor({ timeout });
-}

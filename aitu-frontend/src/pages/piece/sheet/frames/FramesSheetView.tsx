@@ -199,6 +199,12 @@ interface Drag {
   moved: boolean;
 }
 
+/** The window over a take (Record in Sheet): the old sheet's blue, and the grip it is dragged by, in staff spaces. */
+const WINDOW_COLOUR = "#2563eb";
+const WINDOW_GRIP = { width: 3, height: 0.9 } as const;
+/** The window's edge before a column: room for an accidental of its notes, in staff spaces. */
+const WINDOW_LEAD = 1.6;
+
 const breathe = keyframes`
   from { opacity: 0.55; }
   to { opacity: 0.72; }
@@ -225,6 +231,8 @@ export function FramesSheetView({
   onRange,
   lyrics,
   playing = false,
+  frameWindow = null,
+  onWindowMove,
 }: {
   sheet: FramesSheet;
   playheadSeconds: number | null;
@@ -246,6 +254,10 @@ export function FramesSheetView({
   lyrics?: LyricsOnSheet;
   /** The recording plays: the lyrics piece that sounds is lit (and in Play mode, `centre`, the others faint). */
   playing?: boolean;
+  /** The window over a take (Record in Sheet, Phase 8B): the frames of the take that go into the song. */
+  frameWindow?: MarkedRange | null;
+  /** The window is dragged by its grip: its first frame now, and `done` when it is let go. */
+  onWindowMove?: (start: number, done: boolean) => void;
 }) {
   const host = useRef<HTMLDivElement | null>(null);
   const overlay = useRef<SVGSVGElement | null>(null);
@@ -653,6 +665,50 @@ export function FramesSheetView({
     });
   }, [shown, rangeScope, columns, edges, sheet.systems]);
 
+  // The window over a take (Record in Sheet): a band on each line it covers, and a grip on its first line.
+  const [windowDrag, setWindowDrag] = useState<{ grab: number; start: number } | null>(null);
+  const windowStart = frameWindow ? (windowDrag?.start ?? frameWindow.start) : null;
+  const windowLength = frameWindow ? frameWindow.end - frameWindow.start : 0;
+  const windowNow = windowStart === null ? null : { start: windowStart, end: windowStart + windowLength };
+  const windowBoxes = useMemo(() => {
+    if (windowStart === null || windowLength <= 0 || columns.length === 0) return [];
+    // A frame is drawn before the first column at or after it: the notes from it on are inside the window (or after
+    // it, for its end); past the last column, at the end of the last line.
+    const edgeOf = (frame: number) => {
+      const i = columns.findIndex((column) => column.frame >= frame);
+      // Never further left than the room of the column's own accidentals: at the start of a line, the armadura.
+      if (i >= 0) return { x: Math.max(edges[i]![0], columns[i]!.x - WINDOW_LEAD), system: columns[i]!.system };
+      const last = columns[columns.length - 1]!;
+      return { x: sheet.systems[last.system]?.right ?? last.x, system: last.system };
+    };
+    const a = edgeOf(windowStart);
+    const b = edgeOf(windowStart + windowLength);
+    if (!a || !b) return [];
+    const out: { system: number; x: number; width: number; first: boolean; last: boolean }[] = [];
+    for (let line = a.system; line <= b.system; line += 1) {
+      const system = sheet.systems[line];
+      if (!system) continue;
+      const x0 = line === a.system ? a.x : system.left;
+      const x1 = line === b.system ? b.x : system.right;
+      if (x1 > x0) out.push({ system: line, x: x0, width: x1 - x0, first: line === a.system, last: line === b.system });
+    }
+    return out;
+  }, [windowStart, windowLength, columns, edges, sheet.systems]);
+  /** The grip of the window, in sheet units: in the middle of its first line's band, at the top. */
+  const grip = windowBoxes[0] && onWindowMove
+    ? {
+        x: Math.max(windowBoxes[0].x + 0.4, windowBoxes[0].x + windowBoxes[0].width / 2 - WINDOW_GRIP.width / 2),
+        // Above the ink of the line, clear of stems and beams.
+        y: Math.max(0.1, (sheet.systems[windowBoxes[0].system]?.top ?? 0) - WINDOW_GRIP.height - 0.3),
+      }
+    : null;
+  const onGrip = (point: { x: number; y: number }) =>
+    grip !== null &&
+    point.x >= grip.x - 0.4 &&
+    point.x <= grip.x + WINDOW_GRIP.width + 0.4 &&
+    point.y >= grip.y - 0.4 &&
+    point.y <= grip.y + WINDOW_GRIP.height + 0.4;
+
   // ------------------------------------------------------------------ picking notes
 
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -679,6 +735,16 @@ export function FramesSheetView({
 
   const press = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
+    if (frameWindow && onWindowMove) {
+      const point = toSheet(event.clientX, event.clientY);
+      const frame = point && onGrip(point) ? frameAt(point.x, point.y) : null;
+      if (frame !== null) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setWindowDrag({ grab: frame - frameWindow.start, start: frameWindow.start });
+        dragged.current = true;
+        return;
+      }
+    }
     if (lyrics && host.current) {
       const point = toSheet(event.clientX, event.clientY);
       const handle = point ? handleAt(point) : null;
@@ -728,6 +794,17 @@ export function FramesSheetView({
     setDrag({ left, top, x0: x, y0: y, x1: x, y1: y, add, moved: false });
   };
   const pull = (event: PointerEvent<HTMLDivElement>) => {
+    if (windowDrag && onWindowMove) {
+      const point = toSheet(event.clientX, event.clientY);
+      const frame = point ? frameAt(point.x, point.y) : null;
+      if (frame === null) return;
+      const start = Math.max(0, frame - windowDrag.grab);
+      if (start !== windowDrag.start) {
+        setWindowDrag({ ...windowDrag, start });
+        onWindowMove(start, false);
+      }
+      return;
+    }
     if (lyricDrag) {
       const point = toSheet(event.clientX, event.clientY);
       if (!point) return;
@@ -766,6 +843,12 @@ export function FramesSheetView({
     setDrag({ ...drag, x1: event.clientX, y1: event.clientY, moved });
   };
   const release = (event: PointerEvent<HTMLDivElement>) => {
+    if (windowDrag) {
+      setWindowDrag(null);
+      dragged.current = true;
+      onWindowMove?.(windowDrag.start, true);
+      return;
+    }
     if (lyricDrag) {
       const drag = lyricDrag;
       setLyricDrag(null);
@@ -823,6 +906,7 @@ export function FramesSheetView({
         setDrag(null);
         setRangeDrag(null);
         setLyricDrag(null);
+        setWindowDrag(null);
       }}
       onPointerLeave={() => {
         setStrip(-1);
@@ -853,7 +937,9 @@ export function FramesSheetView({
         borderRadius: 1,
         overflow: "hidden",
         cursor:
-          hoverHandle === "scale" || lyricDrag?.mode === "scale"
+          windowDrag
+            ? "grabbing"
+            : hoverHandle === "scale" || lyricDrag?.mode === "scale"
             ? "nwse-resize"
             : hoverHandle || (lyricDrag && lyricDrag.mode !== "move")
               ? "ew-resize"
@@ -908,6 +994,45 @@ export function FramesSheetView({
             </g>
           );
         })}
+        {windowBoxes.length > 0 && windowNow ? (
+          <g data-frame-window data-start={windowNow.start} data-end={windowNow.end}>
+            {windowBoxes.map((box) => {
+              const system = sheet.systems[box.system]!;
+              return (
+                <g key={`fw${box.system}`}>
+                  <rect x={box.x} y={system.top} width={box.width} height={system.bottom - system.top} fill={WINDOW_COLOUR} opacity={0.07} />
+                  {box.first ? (
+                    // From the grip down: the edge the window is dragged by.
+                    <line
+                      x1={box.x}
+                      x2={box.x}
+                      y1={Math.max(0.1, system.top - WINDOW_GRIP.height - 0.3)}
+                      y2={system.bottom}
+                      stroke={WINDOW_COLOUR}
+                      strokeWidth={0.18}
+                    />
+                  ) : null}
+                  {box.last ? (
+                    <line x1={box.x + box.width} x2={box.x + box.width} y1={system.top} y2={system.bottom} stroke={WINDOW_COLOUR} strokeWidth={0.18} />
+                  ) : null}
+                </g>
+              );
+            })}
+            {grip ? (
+              <rect
+                data-frame-window-grip
+                x={grip.x}
+                y={grip.y}
+                width={WINDOW_GRIP.width}
+                height={WINDOW_GRIP.height}
+                rx={WINDOW_GRIP.height / 2}
+                fill={WINDOW_COLOUR}
+              >
+                <title>Drag: the stretch of the take that goes into the song</title>
+              </rect>
+            ) : null}
+          </g>
+        ) : null}
         {strip >= 0 && !rangeDrag && sheet.systems[strip] ? (
           <rect
             data-range-strip

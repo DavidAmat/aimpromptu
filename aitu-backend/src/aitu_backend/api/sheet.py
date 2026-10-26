@@ -13,6 +13,8 @@
 * `POST /sheet/{uuid}/reading?width=N` — one reading edit of the toolboxes (Phase 7, `part_sheet.reading`):
   figures, fingers, beams, the grace note switch, ornaments, and the armadura, clefs and 8va of a stretch.
   `POST /sheet/{uuid}/remove` takes notes off the page. A refused edit answers 400 with the reason.
+* `POST /sheet/{uuid}/paste?width=N` — a copied passage put in at the cursor or over a marked stretch (Phase 8B,
+  `part_sheet.edits.paste_passage`): its notes, its sheet and its audio; one step of undo.
 * `GET /sheet/{uuid}/stretch?start=A&end=B` — the armadura in force at a stretch and the one with the fewest signs
   over it. `POST /sheet/{uuid}/llm/stretch` — the AI writes a stretch again with the user's words (one request,
   in the background; the page follows the job as for a whole run).
@@ -33,6 +35,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import store as audio_store
 from aitu_backend.auth import context, rights
+from aitu_backend.auth.dependencies import require_part
+from aitu_backend.editing import paste as passage_paste
 from aitu_backend.part_sheet import build, edits, job, reading
 from aitu_backend.part_sheet import store as new_sheet_store
 from aitu_backend.sheet.engrave import frames as frames_engine
@@ -103,8 +107,8 @@ def get_sheet(
 def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
     stored = pipeline.load_note_events(audio_uuid)
     if stored is None or not any(not event.removed for event in stored.events):
-        # A blank sheet (From scratch, Phase 8 of implementation 02): nothing to draw; the page shows the old
-        # sheet's empty state, with Record a passage and Paste.
+        # A blank sheet (From scratch, Phase 8 of implementation 02): nothing to draw; the page shows its empty
+        # state, with Record a passage and Paste (Phase 8B), and Undo after a paste.
         return {
             "svg": "",
             "columns": [],
@@ -133,8 +137,9 @@ def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
                 "usd": None,
                 "written": None,
             },
-            "editable": False,
-            "history": {"undo": None, "redo": None},
+            "editable": job.job_of(audio_uuid) is None and _writes(audio_uuid),
+            "history": edits.history(audio_uuid),
+            "audioRevision": stored.header.audio_revision if stored is not None else 0,
             "timings": {},
         }
     running = job.job_of(audio_uuid)
@@ -163,6 +168,8 @@ def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
         # The notes can be edited by a user who may change the part, when the AI is not writing it (plan 3.7).
         "editable": running is None and _writes(audio_uuid),
         "history": edits.history(audio_uuid),
+        # A paste and its undo change the audio too: the page's player loads it again when this changes.
+        "audioRevision": stored.header.audio_revision,
     }
 
 
@@ -285,6 +292,61 @@ def add_note(
     except (reading.Refused, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {**_answer(audio_uuid, width), "edited": label}
+
+
+class PasteSource(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    part: str
+    from_ms: float = Field(alias="fromMs", ge=0)
+    to_ms: float = Field(alias="toMs", gt=0)
+
+
+class PasteRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    source: PasteSource
+    #: Where the passage goes, in ms of this part: the cursor, or the start of the marked stretch it replaces.
+    at_ms: float = Field(alias="atMs", ge=0)
+    #: The end of the marked stretch the passage replaces; absent to put it in at ``atMs``.
+    replace_to_ms: float | None = Field(default=None, alias="replaceToMs", gt=0)
+
+
+@router.post("/{audio_uuid}/paste")
+def paste_passage(
+    audio_uuid: str,
+    body: PasteRequest = Body(...),
+    width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH),
+) -> dict[str, Any]:
+    """Paste a copied passage (Phase 8B): its notes, its sheet and its audio, at ``atMs`` or over ``[atMs,
+    replaceToMs)``; everything after moves by its length. One step of undo; the sheet drawn again. The source is any
+    part the user may read; another one answers 404."""
+    if not audio_store.exists(audio_uuid):
+        raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
+    _not_running(audio_uuid)
+    require_part(body.source.part, write=False)
+    try:
+        done = edits.paste_passage(
+            audio_uuid,
+            body.source.part,
+            body.source.from_ms,
+            body.source.to_ms,
+            at_ms=body.at_ms,
+            replace_to_ms=body.replace_to_ms,
+        )
+    except locate.NotFound:
+        raise HTTPException(status_code=404, detail="The copied passage is not there any more.")
+    except passage_paste.PasteError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {
+        **_answer(audio_uuid, width),
+        "edited": done.label,
+        "atMs": done.at_ms,
+        "lengthMs": done.length_ms,
+        "notesIn": done.notes_in,
+        "notesMoved": done.notes_moved,
+        "notesRemoved": done.notes_removed,
+    }
 
 
 @router.get("/{audio_uuid}/pages")

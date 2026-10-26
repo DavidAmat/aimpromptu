@@ -134,6 +134,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/sheet/{uuid}/llm/stretch` | Phase 7: the AI writes a stretch again with the user's words, in the background; follow `GET /matrix/progress/{jobId}`. |
 | POST | `/sheet/{uuid}/transpose` | Phase 8: Transpose notes, every note of the part and the sheet with them (one step of undo); `preview=true` stores nothing (section 4.1). |
 | POST | `/sheet/{uuid}/add` | Phase 8: a note added on the keyboard panel, into `notes.pmn` (one step of undo). |
+| POST | `/sheet/{uuid}/paste` | Phase 8B: a copied passage put in at a moment or over a stretch, its new sheet with it; one step of undo (the history version the paste kept). |
 | GET | `/sheet/{uuid}/pages` | Phase 8: the sheet on paper, whole lines dealt onto pages (Print to PDF). |
 | **Recording in Sheet** | `api/passages.py` | Implementation 02, Phase 9 |
 | POST | `/passages` | **Record this passage**: a passage of a part (a stretch, or a moment for a new passage); its Current is made. |
@@ -934,6 +935,17 @@ and need the right to write the part (a version of My library answers `403`: it 
   `outside`. With `preview=true` nothing is written and the answer is the drawing of the result.
 - `POST /sheet/{uuid}/add?width=130` `{"frame", "midi", "hand", "lengthMs"}`: a note at the onset of the drawn column
   `frame` (`lengthMs` absent: a negra of the reference figure); `400` when that key is already struck there.
+- `POST /sheet/{uuid}/paste?width=130` `{"source": {"part", "fromMs", "toMs"}, "atMs", "replaceToMs"}` (Phase 8B):
+  the paste of `POST /time/{uuid}/paste` (notes, audio, everything after moved), and the new sheet with it: the
+  stretch of the source's sheet as its page draws it, the target's sheet moved out of the way, the armadura and clefs
+  of each side at the edges (`part_sheet.lengths`). One step of the part's log, whose undo puts back the history
+  version the paste kept and whose redo the pasted one. The answer is the sheet drawn again, with `edited` ("Paste
+  4.0 s", "Paste 2.0 s over a stretch"), `atMs`, `lengthMs`, `notesIn`, `notesMoved`, `notesRemoved`. `404` for a
+  source the user may not read, `409` for a paste the old route refuses too. Every answer of `/sheet/{uuid}` also
+  carries `audioRevision` (a paste and its undo change the audio; the page's player loads it again).
+- Every change of a part's length (`/time/{uuid}/paste`, a promotion of Record in Sheet, a split, a join, From other
+  projects, a comment's excerpt) carries the new sheet in the same write since Phase 8B; a promotion is a step of
+  the target's log too ("Promote the passage").
 - `GET /sheet/{uuid}/pages?width=W&height=H&first=F&gap=G` (staff spaces: the staff width, the page's room, page
   one's room under its title, the space between lines): `{"pages": [{"svg", "width", "height", "first", "last"}]}`,
   whole lines on each page.

@@ -118,15 +118,20 @@ def reading_of(part_id: str) -> Reading:
 
 
 def algorithm(
-    part_id: str, notes: Notes | None = None, *, quarter_ms: float | None = None
+    part_id: str,
+    notes: Notes | None = None,
+    *,
+    quarter_ms: float | None = None,
+    key: int | None = None,
 ) -> FramesProposal:
-    """The algorithm's sheet of a part, with the decisions an old ``sheet.json`` keeps."""
+    """The algorithm's sheet of a part, with the decisions an old ``sheet.json`` keeps; ``key`` (fifths) is an
+    armadura chosen elsewhere (the song's, on a passage of it: Record in Sheet)."""
     notes = pipeline.starting_hands(part_id) if notes is None else notes
     reading = reading_of(part_id)
     return propose_frames(
         notes,
-        key=reading.key,
-        key_changes=reading.key_changes,
+        key=key if key is not None else reading.key,
+        key_changes=None if key is not None else reading.key_changes,
         quarter_ms=quarter_ms if quarter_ms is not None else reading.quarter_ms,
     )
 
@@ -401,7 +406,7 @@ def _compute(part_id: str) -> Drawn:
                 sheet.quarter_ms,
                 record,
             )
-        algo = algorithm(part_id, quarter_ms=record.quarter_ms)
+        algo = algorithm(part_id, quarter_ms=record.quarter_ms, key=record.key)
         return Drawn(
             f1.write(algo.sheet, mode="frames"), "algorithm", [], True, algo.quarter_ms, record
         )

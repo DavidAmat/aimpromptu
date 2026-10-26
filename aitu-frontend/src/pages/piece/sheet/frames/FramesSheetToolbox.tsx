@@ -64,6 +64,7 @@ export function FramesSheetToolbox({
   zoom,
   setZoom,
   lyrics,
+  tabs,
 }: {
   open: boolean;
   onClose: () => void;
@@ -99,8 +100,11 @@ export function FramesSheetToolbox({
     saving: boolean;
     onSave: (text: string) => void;
   };
+  /** The tabs shown (a take's sheet, Record in Sheet: Key, Transpose and View); all of them by default. */
+  tabs?: readonly FramesSheetTab[];
 }) {
   const disabled = busy || locked !== null;
+  const shownTabs = tabs ? TABS.filter((one) => tabs.includes(one.value)) : TABS;
   return (
     <Toolbox
       open={open}
@@ -111,7 +115,7 @@ export function FramesSheetToolbox({
       width={WIDTH}
     >
       <Stack spacing={2} data-sheet-toolbox={tab} data-frames-sheet-toolbox>
-        <Segmented<FramesSheetTab> label="Sheet toolbox tab" value={tab} options={TABS} onChange={onTab} />
+        <Segmented<FramesSheetTab> label="Sheet toolbox tab" value={tab} options={shownTabs} onChange={onTab} />
         {tab === "title" ? (
           <TitleTab titles={sheet.titles} pieceLabel={pieceLabel} disabled={disabled} onEdit={onEdit} />
         ) : null}

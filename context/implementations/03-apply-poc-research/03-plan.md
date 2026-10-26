@@ -703,6 +703,15 @@ dialog now has **Size of the music** (a 5 to 8 mm staff, 6.5 mm by default) and 
 to 20 mm, 6 mm by default), kept in the browser: 5 to 7 lines on a full A4 page (median 6), 44 pages for the 10 songs
 instead of 51.
 
+*8B built 2026-10-26* (report section 10): every change of a part's length carries `sheet.f1`
+(`part_sheet/lengths.py`, the old `marks.py` moves on a frames sheet, called by `editing/paste.py`; stored when either
+side holds decisions or the target had no music); a paste is one step of the new log whose undo restores the history
+version (a promotion too); Copy, Paste, Record this passage, Record a passage at the end, Start a new part; a read-only
+*Frames* panel with the screen's action; the passage page on the new sheet (the window over the take, the Current and
+the takes written with the song's reference figure at the take's speed and its armadura, the take's AI only on the
+button); the blank sheet's empty state. `SheetPage` draws only the new sheet; the old sheet's browser checks moved to
+`scripts/frames-page.mjs`, and the three scripts that only served the old sheet removed. The user's check is next.
+
 *Done when:* every screen of the inventory uses the new engine, checked in the browser by the user.
 
 ## Phase 9: The saved data
@@ -836,3 +845,6 @@ repository."
 | 8 | Phase 8A gains a denser PDF: a size of the music in the print dialog, less space between lines than today, about five lines a page by default | The user's third request of 2026-10-26: the PDF was too large and too spread out |
 | 8 | Phase 8A+++: the PDF's space between lines is its own (in millimetres, 6 by default), not the screen's; the music has a size (a 6.5 mm staff by default) | The screen's space was the PDF's least, so a wider space on screen spread the pages; measured: about 6 lines on a full A4 page with the new defaults |
 | 8 | Transpose figures renames the figures and keeps the page's widths | D-18 ("nothing moves"); the spacing model reads the reference figure, so a rename alone would widen or narrow the page |
+| 8 | Phase 8B: a paste stores the target's new sheet when either side holds decisions, or when the target had no music (a blank sheet, a new part) | Two algorithm sheets are a function of the notes; a blank song whose take was promoted kept a Sheet step "missing" (`check:passage`) |
+| 8 | Phase 8B: the Current and the takes of a passage are written with the song's reference figure (at the take's speed) and its armadura where the passage starts; the take's AI only on its button | The old page named the Proposal with the song's figure so the two read alike; the user's answer of Phase 8 (a take's sheet is the algorithm's) |
+| 8 | Phase 8B: `check:requests` uses "Bonfire Heart"; `check:passage --played` runs without the GPU; `check:transpose`, `check:lyrics`, `bench:sheet` removed | 7 Years has a real public version since 2026-10-18; the GPU is often held by another project; the old sheet is gone and `check:frames-toolbox` covers Transpose and Lyrics |

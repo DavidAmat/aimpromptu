@@ -6,6 +6,15 @@ read into a sheet like the song's, compared with the stretch, and **promoted** i
 step that **Undo** takes back. The code is `aitu-frontend/src/pages/piece/passage/PassagePage.tsx`;
 what the backend writes is in [`../backend/editing.md`](../backend/editing.md).
 
+**Since implementation 03, Phase 8B** both sheets of the page are the new sheet (the old one is gone): the Current
+is read only with no bar, the Proposal has the new sheet's tools, its own bar (the passage's actions, the sheet
+toolbox with Key, Transpose and View) and the window over the take, a blue band with a grip above its first line.
+The take is written with the song's reference figure at its speed and the song's armadura where the passage starts
+(`passages.PassageState.quarter_ms`, `key`; a speed change writes the takes again with it); its sheet is the
+algorithm's, with **Enhance with AI** as a button (the user's answer of Phase 8: no AI run by itself). **Promote**
+carries the take's new sheet into the song (`part_sheet.lengths`, scaled to the speed), and the song's sheet opens
+with "Promote the passage" as the last step of its log. Below, "the sheet" and its marks describe the old page.
+
 ## 1. The page
 
 **Record this passage** (the record icon in the title bar of the range toolbox) opens the page of

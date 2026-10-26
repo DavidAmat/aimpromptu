@@ -220,6 +220,8 @@ export interface FramesSheet {
   quarterMs: number | null;
   spaceMs: number | null;
   lineSpace: number | null;
+  /** The audio's revision: a paste, or its undo, changes the audio too, and the player loads it again. */
+  audioRevision: number;
   timings: Record<string, number>;
 }
 
@@ -255,6 +257,9 @@ export interface SheetEdited extends FramesSheet {
   walked?: string | null;
   /** A reading edit: the step it made (`null`: nothing changed). */
   edited?: string | null;
+  /** A paste: where the passage went and how long it is, in ms of the part. */
+  atMs?: number;
+  lengthMs?: number;
 }
 
 export const sheetApi = {
@@ -345,6 +350,18 @@ export const sheetApi = {
         gap: Math.round(paper.gap * 10) / 10,
       },
       signal,
+    }),
+
+  /** Paste a copied passage at `atMs`, or over `[atMs, replaceToMs)`: its notes, sheet and audio (one step of undo). */
+  paste: (
+    audioUuid: string,
+    body: { source: { part: string; fromMs: number; toMs: number }; atMs: number; replaceToMs?: number },
+    width: number,
+  ) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/paste`, {
+      method: "POST",
+      query: { width: Math.round(width) },
+      body,
     }),
 
   /** Take the last step of the part back, or put it again; the sheet drawn again. */

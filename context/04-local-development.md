@@ -143,13 +143,13 @@ Playwright's Chromium, installed once with `npx playwright install chromium`):
 | `npm run check:cuts`, `check:notes` | The Audio tab's cuts; the Notes tab's arrays, edits and operations |
 | `npm run check:flow` | A project walked in a headless Chromium on a temporary upload (about 2 minutes with the transcription) |
 | `npm run check:projects`, `check:library` | The Projects page, New project, export and import; Save to library, a version, Edit, Replace, history |
-| `npm run check:transpose`, `check:lyrics`, `check:paste` | The sheet toolbox's Transpose and Lyrics; copy and paste of a passage |
-| `npm run check:passage` | Recording in Sheet: Current and Proposal, a take written and promoted (it transcribes) |
+| `npm run check:paste` | Copy and paste of a passage on the new sheet (the sheet toolbox's Transpose and Lyrics: `check:frames-toolbox`) |
+| `npm run check:passage` | Recording in Sheet: Current and Proposal, a take written and promoted (it transcribes; `-- --played` sends the takes' keys instead and needs no GPU) |
 | `npm run check:compose`, `check:play` | From other projects, the parts, songs playlists; Play mode |
 | `npm run check:public`, `check:requests` | The Public Library and Add to my library; requests, the review and sharing, with a temporary second user |
 | `npm run check:journey` | **The whole journey**, timed: a YouTube link to a piano sheet, saved, published, reviewed and accepted, then pulled, played and composed by a second user (two temporary users; it transcribes) |
 | `npm run time:flow` | The whole flow, timed, on three temporary pieces (an upload, a copied library piece, a new YouTube download) |
-| `npm run bench:roll`, `bench:sheet` | The Notes tab's frame rate; a hand move on the piano sheet, part by part |
+| `npm run bench:roll` | The Notes tab's frame rate |
 | `npm run screenshot -- <path> [--piece <uuid>] [--theme dark] [--signed-out]` | One screenshot of the app, in the light or the dark scheme, signed in or on the sign-in page |
 
 Run the browser checks one at a time, and not while the backend tests run on the CPU: under load a
@@ -159,7 +159,7 @@ that transcribe (`check:flow` without `--no-transcribe`, `check:passage`, `check
 
 **The scripts that open the app sign in** as the master user (`scripts/session.mjs`), with
 `AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env`, or with `AITU_CHECK_USERNAME` and
-`AITU_CHECK_PASSWORD` when these are set: every `check:*` that opens a browser, `bench:sheet`,
+`AITU_CHECK_PASSWORD` when these are set: every `check:*` that opens a browser,
 `time:flow` and `screenshot`. Without a password they stop at once and say so.
 
 **Every script that clicks or writes in the app works on temporary copies** (of a project, or a

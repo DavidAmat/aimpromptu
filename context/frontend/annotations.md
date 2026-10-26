@@ -18,9 +18,9 @@ The code is `aitu-frontend/src/pages/piece/sheet/` (implementation 02, Phase 2 s
 ## The new sheet (implementation 03, Phases 6 and 7)
 
 Since implementation 03, Phase 5 the Sheet step opens on the **new sheet** (without compases, drawn by the
-backend; [rendering.md](rendering.md)). Everything below this section is the **old sheet**, which opens from
-**Edit in the old sheet** and keeps the tools that have not moved yet (copy and paste, Record a passage, Start a new
-part: implementation 03, Phase 8B). On the new sheet:
+backend; [rendering.md](rendering.md)). Since implementation 03, Phase 8B it is the only sheet: the switch to the
+**old sheet** is gone, and everything below this section describes the old sheet, kept as the record of what was
+moved (Phase 10 removes its code). On the new sheet:
 
 - **Pick notes**: click a notehead (the recording goes there), ⌘-click or Shift-click to add or take one away, or
   drag a box across the staves. Escape drops the pick. The note toolbox opens beside the notes, titled with the
@@ -95,6 +95,23 @@ part: implementation 03, Phase 8B). On the new sheet:
   ([printing.md](printing.md)).
 - **The keyboard panel** (`⋯` → *Show the keyboard*): the keys sounding under the cursor, as on the old sheet; a lit
   key takes that note off the page, a dark one adds a note to the hand of **Add to** (one step of Undo).
+- **Copy and paste** (Phase 8B): **Copy this stretch** (the range toolbox), **Copy the frames of these notes** (the
+  note toolbox) or ⌘C keep a reference to the stretch in the app's clipboard (every tab, and the system clipboard as
+  text); **Paste** (the floating bar, ⌘V) puts it in at the cursor, or over the marked stretch: its notes, its audio
+  and its sheet (the AI's or your decisions in it come along, read in their own armadura and clefs, and yours again
+  after it); everything after it moves later. One step of undo: Undo puts the part back as it was, audio included.
+  The range toolbox also has **Record this passage** and **Start a new part here** (a project of parts), the floating
+  bar **Record a passage at the end**; a blank sheet (From scratch) says *Nothing to write yet.* with **Record a
+  passage** and **Paste the copied passage**.
+- **A read-only sheet** (a version of My library, a source of From other projects, the requests review): a stretch
+  marked in the strip opens a small *Frames* panel with **Copy this stretch** and the screen's own action (**Add to
+  a playlist**, **Add this stretch**, **Comment on this stretch**).
+- **The page of a passage** (Record in Sheet, [recording-in-sheet.md](recording-in-sheet.md)): the Current is read
+  only, with no bar; the Proposal (a take) has every tool, its own bar with the passage's actions, and the window
+  over the take (a blue band, dragged by its grip above the first line). Both read with the song's reference figure
+  (the take's at its speed) and the song's armadura where the passage starts. The take's sheet is the algorithm's,
+  with **Enhance with AI** as a button. **Promote** carries the Proposal's sheet into the song, and the song's sheet
+  opens with the promotion as its last step of undo.
 - **Not on the new sheet** (the user's answers of Phase 8): space between notes, size of marks, frame numbers, hide
   decorative notes, group high notes under 8va (Layout); Find trills, Remove all and Bring back N notes taken off.
 - **Not on the new sheet** (the user's answer of Phase 7): even spacing of a run, the room of a stretch (Spacing),

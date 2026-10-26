@@ -38,6 +38,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import BackspaceIcon from "@mui/icons-material/BackspaceOutlined";
+import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
 import ContentCutIcon from "@mui/icons-material/ContentCutOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import LinkIcon from "@mui/icons-material/LinkOutlined";
@@ -157,6 +158,7 @@ export function FramesNoteToolbox({
   onChordKey,
   onSelectFrames,
   onEnhance,
+  onCopy,
   busy,
   locked,
 }: {
@@ -178,6 +180,8 @@ export function FramesNoteToolbox({
   onSelectFrames: () => void;
   /** Ask the AI to write the stretch of these notes again (`null`: the AI cannot be asked here). */
   onEnhance: (() => void) | null;
+  /** **Copy** the frames these notes cover, for a Paste anywhere (Phase 8B). */
+  onCopy: () => void;
   /** An edit is on its way. */
   busy: boolean;
   /** Why the notes cannot be changed now (the AI is writing the sheet), or `null`. */
@@ -246,6 +250,13 @@ export function FramesNoteToolbox({
               data-testid="notes-enhance"
             />
           ) : null}
+          <IconAction
+            title="Copy the frames of these notes"
+            shortcut="⌘C"
+            icon={<ContentCopyIcon fontSize="small" />}
+            onClick={onCopy}
+            data-testid="notes-copy"
+          />
           <IconAction
             title="Select the frames of these notes"
             icon={<SwapHorizIcon fontSize="small" />}

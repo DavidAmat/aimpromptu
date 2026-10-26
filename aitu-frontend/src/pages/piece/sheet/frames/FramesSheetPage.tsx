@@ -1,7 +1,7 @@
 /**
- * The Sheet step with the new sheet (implementation 03, Phase 5): the sheet the backend draws without compases,
- * to see and to hear. It is what `SheetPage` shows first on the Sheet step, a version of My library and in Play
- * mode; the old vexflow-v2 sheet stays one press away for editing until Phase 8 (`onOldSheet`).
+ * The new sheet (implementation 03, Phase 5): the sheet the backend draws without compases, to see, to hear and to
+ * edit. Since Phase 8B it is the only sheet `SheetPage` draws: the Sheet step, a version of My library, Play mode,
+ * the two sheets of a passage (Record in Sheet), the sources of From other projects and the requests review.
  *
  * - **At once**: the sheet as it is now: the AI's (Sonnet 5.5 today), or the algorithm's on a part it has not
  *   enhanced. A sheet the AI enhanced carries the green badge **Enhanced with AI** for good, whatever changes later
@@ -12,6 +12,11 @@
  *   and starts there). The segment at the AI looks pale, a segment that comes back appears column by column, and
  *   no text says any of it. The old sheet cannot be opened while the AI writes: the segments still waiting cannot
  *   be edited.
+ * - **Copy and paste** (Phase 8B): a marked stretch or the picked notes are copied (⌘C, or the toolboxes' title
+ *   bars; on a read-only sheet the small Frames panel, with the screen's own action for a stretch); **Paste** (⌘V,
+ *   the floating bar) puts the copied passage in at the cursor or over the marked stretch: one step of undo. The
+ *   range toolbox also opens **Record this passage** and **Start a new part here**, the bar **Record a passage at
+ *   the end**, and a blank sheet offers both in its empty state.
  * - **To hear**: the recording plays with a cursor, the notes it reaches lit, and a click on the sheet moves the
  *   recording there.
  * - **To edit** (Phase 6): notes are picked on the sheet (a click, ⌘ or Shift to add, a box dragged across the
@@ -42,7 +47,8 @@ import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
-import EditNoteIcon from "@mui/icons-material/EditNoteOutlined";
+import ContentPasteIcon from "@mui/icons-material/ContentPasteOutlined";
+import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecordOutlined";
 import PauseIcon from "@mui/icons-material/Pause";
 import PianoIcon from "@mui/icons-material/PianoOutlined";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
@@ -53,6 +59,7 @@ import UndoIcon from "@mui/icons-material/UndoOutlined";
 import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import {
+  passagesApi,
   sheetApi,
   type FramesSheet,
   type LyricLine,
@@ -63,12 +70,22 @@ import {
 } from "../../../../api";
 import ScorePlayer, { type ScorePlayerControls } from "../../../../components/time/ScorePlayer";
 import { useElementSize } from "../../../../hooks/useElementSize";
+import { ROUTES } from "../../../../layout/routes";
 import { noteName } from "../../../../music/noteNames";
 import { intervalWords } from "../../../../music/transpose";
-import { ConfirmDialog, FloatingBar, IconAction, Pill, PillButton, RowMenu, semantic } from "../../../../ui";
+import {
+  PASSAGE_TYPE,
+  passageFromText,
+  passageLength,
+  passageText,
+  readCopied,
+  usePassageClipboard,
+  type CopiedPassage,
+} from "../../../../state/passageClipboard";
+import { ConfirmDialog, EmptyState, FloatingBar, IconAction, Pill, PillButton, RowMenu, Toolbox, semantic } from "../../../../ui";
 import { piecesIn } from "../lyricsPieces";
 import { PianoToolbox } from "../PianoToolboxes";
-import { HAND_COLOUR, HELD_COLOUR, type SoundingNote } from "../sheetConstants";
+import { HAND_COLOUR, HELD_COLOUR, formatSeconds, type SoundingNote } from "../sheetConstants";
 import type { SheetStep } from "../SheetPage";
 import { besideOnScreen, clearOfRange, firstLineBoxOf, screenBoxOf } from "../toolboxPlacement";
 import { EnhanceStretchDialog } from "./EnhanceStretchDialog";
@@ -105,6 +122,12 @@ function rememberedZoom(): number {
   }
 }
 
+/** A time as `m:ss`, the way a copied passage is named. */
+function clock(ms: number): string {
+  const total = Math.round(ms / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
 /** A transposition waiting in its preview for **Transpose** or **Cancel**. */
 interface Previewing {
   kind: "notes" | "figures";
@@ -116,11 +139,18 @@ interface Previewing {
   error: string | null;
 }
 
-export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSheet: () => void }) {
+/** The sheet toolbox of a take (the Proposal of Record in Sheet): what reads the take, not the song's title or words. */
+const PROPOSAL_TABS: readonly FramesSheetTab[] = ["key", "transpose", "view"];
+
+export function FramesSheetPage({ step }: { step: SheetStep }) {
   const audioUuid = step.audioUuid;
   const playView = step.play ?? null;
   const playMode = playView !== null;
-  const readOnly = (step.readOnly ?? false) || playMode;
+  // The page of a passage (Record in Sheet, Phase 8B): the Current, read only with no bar of its own, and the
+  // Proposal (a take), with every tool, its own bar carrying the passage's actions and the window over it.
+  const passageView = step.passage ?? null;
+  const role = passageView?.role ?? null;
+  const readOnly = (step.readOnly ?? false) || playMode || role === "current";
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -140,10 +170,20 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     return Math.min(320, Math.max(60, Math.round(spaces / WIDTH_STEP) * WIDTH_STEP));
   }, [size.width, zoom]);
 
+  // A paste, and its undo or redo, change the audio too (Phase 8B): the player loads it again under a new address,
+  // and the cursor goes back where it was asked to be (the start of the passage), or where it was.
+  const [audioLoads, setAudioLoads] = useState<{ revision: number | null; loads: number }>({ revision: null, loads: 0 });
+  const seekAfterLoad = useRef<number | null>(null);
   const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, notice } = useFramesSheet(audioUuid, width, {
-    autoStart: !readOnly,
+    // A take's sheet is the algorithm's, with Enhance with AI as a button (the user's answer of Phase 8).
+    autoStart: !readOnly && role === null,
     onChanged: step.onChanged,
   });
+  const audioRevision = sheet?.audioRevision ?? null;
+  if (audioRevision !== null && audioRevision !== audioLoads.revision) {
+    // Set while drawing (React's pattern for state that follows a value): the first answer only notes the revision.
+    setAudioLoads((now) => ({ revision: audioRevision, loads: now.revision === null ? now.loads : now.loads + 1 }));
+  }
 
   // The title lines of the sheet toolbox (Phase 8; the old sheet's Title tab was never used: none to carry over).
   const titles = sheet?.titles ?? {};
@@ -154,7 +194,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
 
   const ownPlayer = useRef<ScorePlayerControls | null>(null);
   // Play mode plays this sheet from its own button and keys: the player fills its handle directly.
-  const player = playView?.playerRef ?? ownPlayer;
+  const player = playView?.playerRef ?? passageView?.playerRef ?? ownPlayer;
   const [seconds, setSeconds] = useState<number | null>(0);
   const [playing, setPlaying] = useState(false);
   const [openedAtRevision] = useState(step.audioRevision);
@@ -166,7 +206,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     },
     [onPlayTime],
   );
-  const onPlayPlaying = playView?.onPlaying;
+  const onPlayPlaying = playView?.onPlaying ?? passageView?.onPlaying;
   const reportPlaying = useCallback(
     (now: boolean) => {
       setPlaying(now);
@@ -174,6 +214,16 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     },
     [onPlayPlaying],
   );
+  useEffect(() => {
+    if (audioLoads.loads === 0) return;
+    const to = seekAfterLoad.current ?? seconds;
+    seekAfterLoad.current = null;
+    if (to === null) return;
+    const wait = window.setTimeout(() => player.current?.seek(to), 150);
+    return () => window.clearTimeout(wait);
+    // Only when the audio was loaded again: the time it had is read once then.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioLoads.loads]);
   const onPlaySeek = playView?.onSeek;
   const seek = (to: number) => {
     player.current?.seek(to);
@@ -190,6 +240,14 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     }, 120);
     return () => window.clearTimeout(wait);
   }, [sheet, fromMs, startedAt, audioUuid, player]);
+
+  // A take just promoted (Record in Sheet): the cursor goes where it went in. Its undo is the last step of the log.
+  const promoted = (location.state as { promoted?: { part: string; atMs: number } } | null)?.promoted ?? null;
+  useEffect(() => {
+    if (!promoted || promoted.part !== audioUuid || !sheet) return;
+    navigate(location.pathname, { replace: true, state: null });
+    window.setTimeout(() => player.current?.seek(promoted.atMs / 1000), 150);
+  }, [promoted, audioUuid, sheet, navigate, location.pathname, player]);
 
   // ------------------------------------------------------------------ the AI
 
@@ -216,6 +274,9 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
   // ------------------------------------------------------------------ editing (Phase 6)
 
   const canEdit = !readOnly && sheet !== null;
+  // A stretch can be marked on a read-only sheet too (a version of My library, a source of From other projects, the
+  // requests review): it can be copied, and the screen may offer one more action for it (`step.stretchAction`).
+  const canMark = !playMode && role !== "current" && sheet !== null;
   const locked = !sheet || sheet.editable ? null : running ? "The AI is enhancing this sheet" : "This sheet cannot be changed here";
   const notes = useMemo(() => new Map<string, SheetNote>((sheet?.notes ?? []).map((note) => [note.ref, note])), [sheet?.notes]);
   const [pick, setPick] = useState<{ uuid: string; refs: string[] }>({ uuid: audioUuid, refs: [] });
@@ -303,7 +364,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
   // ------------------------------------------------------------------ the sheet toolbox (Phase 8)
 
   const [toolboxOpen, setToolboxOpen] = useState(false);
-  const [toolboxTab, setToolboxTab] = useState<FramesSheetTab>("title");
+  const [toolboxTab, setToolboxTab] = useState<FramesSheetTab>(role === "proposal" ? "key" : "title");
   const lyrics = useFramesLyrics(audioUuid, sheet, apply, setRefused);
   // The lyrics toolbox opens beside the piece clicked (Phase 8A++); one selection at a time: notes, a stretch or lyrics.
   const [lyricsAt, setLyricsAt] = useState<{ x: number; y: number } | undefined>(undefined);
@@ -523,6 +584,156 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     setPick({ uuid: audioUuid, refs });
   };
 
+  // ------------------------------------------------------------------ copy, paste, record, a new part (Phase 8B)
+
+  /**
+   * **Copy** keeps a reference to a stretch of this part in the app's clipboard (`passageClipboard`, shared with the
+   * old sheet and every tab); **Paste** sends it to the backend, which puts its notes, sheet and audio in at the
+   * cursor, or in place of the marked stretch, and moves everything after it: one step of undo.
+   */
+  const [copied, copyPassage] = usePassageClipboard();
+  /** A short line that a copy or a paste happened. */
+  const [flash, setFlash] = useState<string | null>(null);
+  const copyFrames = useCallback(
+    (start: number, end: number): CopiedPassage | null => {
+      if (end <= start) return null;
+      const passage: CopiedPassage = {
+        type: PASSAGE_TYPE,
+        part: audioUuid,
+        project: audioUuid,
+        title,
+        fromMs: start * 40,
+        toMs: end * 40,
+      };
+      copyPassage(passage);
+      setFlash(`Copied ${clock(passage.fromMs)} – ${clock(passage.toMs)}`);
+      return passage;
+    },
+    [audioUuid, title, copyPassage],
+  );
+  /** The marked stretch, or the frames the picked notes cover (to the end of the longest one). */
+  const copySelection = useCallback((): CopiedPassage | null => {
+    if (range) return copyFrames(range.start, range.end);
+    if (!sheet || picked.length === 0) return null;
+    const frames = picked.map(frameOf);
+    const last = Math.max(...frames);
+    const next = sheet.columns.find((column) => column.frame > last)?.frame ?? last + 1;
+    const ends = picked.map((ref) => notes.get(ref)?.end ?? 0);
+    return copyFrames(Math.min(...frames), Math.max(next, ...ends));
+  }, [range, sheet, picked, notes, copyFrames]);
+
+  const [pasting, setPasting] = useState(false);
+  const pastePassage = useCallback(
+    async (passage: CopiedPassage) => {
+      if (width === null || readOnly || pasting || !sheet?.editable) return;
+      const over = range;
+      const atMs = over ? over.start * 40 : Math.round(((seconds ?? 0) * 1000) / 40) * 40;
+      setPasting(true);
+      try {
+        const done = await edit(() =>
+          sheetApi.paste(
+            audioUuid,
+            {
+              source: { part: passage.part, fromMs: passage.fromMs, toMs: passage.toMs },
+              atMs,
+              ...(over ? { replaceToMs: over.end * 40 } : {}),
+            },
+            width,
+          ),
+        );
+        if (!done) return;
+        setMark(null);
+        setPick({ uuid: audioUuid, refs: [] });
+        seekAfterLoad.current = (done.atMs ?? atMs) / 1000;
+        setFlash(`Pasted ${passageLength({ ...passage, toMs: passage.fromMs + (done.lengthMs ?? 0) })}`);
+        step.onChanged();
+      } finally {
+        setPasting(false);
+      }
+    },
+    [width, readOnly, pasting, sheet?.editable, range, seconds, edit, audioUuid, step],
+  );
+  const pasteTitle = copied
+    ? `Paste “${copied.title}” ${clock(copied.fromMs)} – ${clock(copied.toMs)} ${range ? "over the marked frames" : "at the cursor"}`
+    : "Paste";
+
+  // ⌘C copies what is picked, ⌘V pastes; both stand down in a text field. The copy event also puts the passage in the
+  // system clipboard as text, and the paste event reads one from there (the old sheet's way).
+  useEffect(() => {
+    // The page of a passage copies and pastes nothing: its two sheets are not the song.
+    if (playMode || role) return undefined;
+    const inField = (target: EventTarget | null) =>
+      Boolean((target as Element | null)?.closest?.("input, textarea, select, [contenteditable='true']"));
+    let pasteHandled = false;
+    const onCopy = (event: ClipboardEvent) => {
+      if (inField(event.target)) return;
+      const passage = copySelection();
+      if (!passage) return;
+      event.clipboardData?.setData("text/plain", passageText(passage));
+      event.preventDefault();
+    };
+    const onPaste = (event: ClipboardEvent) => {
+      if (inField(event.target) || readOnly) return;
+      const passage = passageFromText(event.clipboardData?.getData("text/plain")) ?? readCopied();
+      pasteHandled = true;
+      if (!passage) return;
+      event.preventDefault();
+      void pastePassage(passage);
+    };
+    // Some browsers send no paste event with nothing editable focused: the key does it then.
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "v" || readOnly) return;
+      if (inField(event.target)) return;
+      pasteHandled = false;
+      window.setTimeout(() => {
+        const passage = readCopied();
+        if (!pasteHandled && passage) void pastePassage(passage);
+      }, 120);
+    };
+    document.addEventListener("copy", onCopy);
+    document.addEventListener("paste", onPaste);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("copy", onCopy);
+      document.removeEventListener("paste", onPaste);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [copySelection, pastePassage, readOnly, playMode, role]);
+
+  /**
+   * **Record this passage** (the range toolbox) and **Record a passage at the end** (the floating bar, a blank sheet):
+   * the page of a passage of this part, where it is recorded again. The sheet is always saved: nothing to save first.
+   */
+  const [openingPassage, setOpeningPassage] = useState(false);
+  const startPassage = async (startFrame: number | null, endFrame: number | null) => {
+    if (openingPassage) return;
+    const lastEnd = Math.max(0, ...(sheet?.notes ?? []).map((note) => note.end ?? frameOf(note.ref) + 1));
+    const fromMs = (startFrame ?? lastEnd) * 40;
+    const toMs = (endFrame ?? lastEnd) * 40;
+    setOpeningPassage(true);
+    try {
+      const opened = await passagesApi.open(audioUuid, fromMs, toMs);
+      navigate(ROUTES.passage(opened.projectId, opened.id));
+    } catch (caught) {
+      setRefused(caught instanceof Error ? caught.message : "The passage could not be opened.");
+    } finally {
+      setOpeningPassage(false);
+    }
+  };
+
+  /** **Start a new part here** (the parts of a project): what follows the marked stretch's start is a new part. */
+  const [splitting, setSplitting] = useState(false);
+  const splitHere = async () => {
+    const onSplit = step.onSplit;
+    if (!onSplit || !range || splitting) return;
+    setSplitting(true);
+    try {
+      if (await onSplit(range.start * 40, null)) setMark(null);
+    } finally {
+      setSplitting(false);
+    }
+  };
+
   // **Enhance with AI** of one stretch, with the user's words (plan task 7.5).
   const aiHere = sheet?.llm.canRun === true;
   const [asked, setAsked] = useState<{ stretch: Omit<StretchRequest, "instruction">; what: string } | null>(null);
@@ -556,7 +767,8 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
 
   // ⌘Z, ⇧⌘Z (and Control-Z, Control-Y), and Escape to drop the pick. A text field keeps its own keys.
   useEffect(() => {
-    if (!canEdit) return;
+    // A read-only sheet marks a stretch too: Escape lets it go.
+    if (!canEdit && !canMark) return;
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
@@ -566,6 +778,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
         unpickLyrics();
         return;
       }
+      if (!canEdit) return;
       if ((event.key === "Delete" || event.key === "Backspace") && !(event.metaKey || event.ctrlKey)) {
         if (lyrics.picked.length > 0 && sheet?.editable && !editing) {
           event.preventDefault();
@@ -587,18 +800,16 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [canEdit, walk, unpick, unmark, unpickLyrics, picked.length, sheet?.editable, editing, removePicked, lyrics]);
+  }, [canEdit, canMark, walk, unpick, unmark, unpickLyrics, picked.length, sheet?.editable, editing, removePicked, lyrics]);
 
-  // A blank sheet (From scratch): the old page has its empty state, with Record a passage and Paste.
+  // A blank sheet (From scratch, or a part whose notes were all taken out): its empty state, with Record a passage
+  // and Paste.
   const empty = sheet !== null && sheet.columns.length === 0;
-  useEffect(() => {
-    if (empty && !playMode) onOldSheet();
-  }, [empty, playMode, onOldSheet]);
 
   const scoreSeconds = sheet && sheet.columns.length > 0 ? sheet.columns[sheet.columns.length - 1].ms / 1000 + 1 : 1;
 
   return (
-    <Box data-sheet-page data-sheet-engine="frames">
+    <Box data-sheet-page data-sheet-engine="frames" data-part={audioUuid}>
       {error ? (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
@@ -615,7 +826,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
         </Alert>
       ) : null}
       <Stack spacing={1.5}>
-        {playMode ? null : (
+        {playMode || role || empty ? null : (
           <Box sx={{ px: 1 }}>
             <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", minWidth: 0 }}>
               <Typography component="h2" sx={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3, minWidth: 0 }} noWrap title={title} data-sheet-title>
@@ -639,16 +850,41 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
             ) : null}
           </Box>
         )}
-        {sheet ? (
+        {empty ? (
+          <EmptyState
+            message="Nothing to write yet."
+            action={
+              readOnly || role ? undefined : (
+                <Stack direction="row" spacing={1}>
+                  <PillButton kind="primary" busy={openingPassage} onClick={() => void startPassage(null, null)} data-testid="empty-record">
+                    Record a passage
+                  </PillButton>
+                  {copied ? (
+                    <PillButton
+                      kind="secondary"
+                      busy={pasting}
+                      title={pasteTitle}
+                      onClick={() => void pastePassage(copied)}
+                      data-testid="empty-paste"
+                    >
+                      Paste the copied passage
+                    </PillButton>
+                  ) : null}
+                </Stack>
+              )
+            }
+          />
+        ) : null}
+        {sheet && !empty ? (
           <ScorePlayer
             compact
             audioUuid={audioUuid}
-            version={`${openedAtRevision ?? 0}`}
+            version={`${openedAtRevision ?? 0}.${audioLoads.loads}`}
             scoreSeconds={scoreSeconds}
             onTime={reportTime}
             controlsRef={player}
             onPlaying={reportPlaying}
-            keys={!playMode}
+            keys={!playMode && role !== "current"}
             headless={playMode}
             stopAt={playView?.toMs != null ? playView.toMs / 1000 : null}
             onEnded={playView?.onEnded}
@@ -656,7 +892,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
           />
         ) : null}
         <Box ref={sizeRef}>
-          {sheet ? (
+          {sheet && !empty ? (
             <FramesSheetView
               sheet={sheet}
               playheadSeconds={seconds}
@@ -665,10 +901,16 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
               onSeek={seek}
               selected={canEdit ? pickedSet : undefined}
               onPick={canEdit ? onPick : undefined}
-              range={canEdit ? range : null}
+              range={canMark ? range : null}
               rangeScope={rangeHand}
-              onRange={canEdit ? onRange : undefined}
+              onRange={canMark ? onRange : undefined}
               playing={playing}
+              frameWindow={
+                passageView?.frameWindow
+                  ? { start: passageView.frameWindow.fromColumn, end: passageView.frameWindow.toColumn }
+                  : null
+              }
+              onWindowMove={passageView?.onWindowMove}
               {...(canEdit && sheet.editable
                 ? {
                     lyrics: {
@@ -687,7 +929,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
                   }
                 : {})}
             />
-          ) : !error ? (
+          ) : !error && !empty ? (
             <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }} data-sheet-loading>
               <CircularProgress size={22} />
             </Box>
@@ -695,7 +937,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
         </Box>
       </Stack>
 
-      {playMode || !sheet ? null : (
+      {playMode || role === "current" || !sheet || empty ? null : (
         <FloatingBar open label="sheet buttons">
           <IconAction
             title={playing ? "Pause" : "Play"}
@@ -704,7 +946,35 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
             onClick={() => player.current?.toggle()}
             placement="top"
           />
-          <IconAction title="Print to PDF" icon={<PrintIcon />} onClick={() => setPdfOpen(true)} placement="top" data-testid="sheet-print" />
+          {role === "proposal" ? passageView?.barActions : null}
+          {readOnly || role ? null : (
+            <>
+              <IconAction
+                title="Record a passage at the end"
+                icon={<FiberManualRecordIcon />}
+                onClick={() => void startPassage(null, null)}
+                disabled={openingPassage || locked !== null}
+                disabledTitle={locked ?? "Opening the passage…"}
+                placement="top"
+                data-testid="sheet-record"
+              />
+              <IconAction
+                title={pasteTitle}
+                shortcut="⌘V"
+                icon={<ContentPasteIcon />}
+                onClick={() => {
+                  if (copied) void pastePassage(copied);
+                }}
+                disabled={!copied || pasting || editing || locked !== null}
+                disabledTitle={locked ?? (pasting ? "Pasting…" : "Copy a passage first")}
+                placement="top"
+                data-testid="sheet-paste"
+              />
+            </>
+          )}
+          {role ? null : (
+            <IconAction title="Print to PDF" icon={<PrintIcon />} onClick={() => setPdfOpen(true)} placement="top" data-testid="sheet-print" />
+          )}
           {readOnly ? null : (
             <>
               <IconAction
@@ -759,16 +1029,6 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
               {enhanceLabel}
             </PillButton>
           ) : null}
-          <Divider orientation="vertical" flexItem />
-          <IconAction
-            title={readOnly ? "Open the old sheet (print, copy a stretch)" : "Edit in the old sheet"}
-            icon={<EditNoteIcon />}
-            onClick={onOldSheet}
-            disabled={running}
-            disabledTitle="The AI is enhancing this sheet"
-            placement="top"
-            data-testid="old-sheet"
-          />
         </FloatingBar>
       )}
 
@@ -784,6 +1044,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
           onChordKey={pressChordKey}
           onSelectFrames={selectFrames}
           onEnhance={aiHere ? askNotes : null}
+          onCopy={() => void copySelection()}
           busy={editing}
           locked={locked}
         />
@@ -818,9 +1079,37 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
           onEdit={editRange}
           onSelectNotes={selectNotes}
           onEnhance={aiHere ? askRange : null}
+          onCopy={() => void copySelection()}
+          onRecordPassage={role ? null : () => void startPassage(range.start, range.end)}
+          onSplit={step.onSplit && !role && range.start > 0 && !splitting ? () => void splitHere() : null}
           busy={editing}
           locked={locked}
         />
+      ) : null}
+      {readOnly && !playMode && !role && range ? (
+        <Toolbox
+          open
+          title="Frames"
+          subtitle={`${formatSeconds((range.start * 40) / 1000)} – ${formatSeconds((range.end * 40) / 1000)}`}
+          initialPosition={rangeAt ?? { x: 24, y: 140 }}
+          onClose={unmark}
+        >
+          <Stack direction="row" spacing={1} data-frames-stretch-panel>
+            {step.stretchAction ? (
+              <PillButton
+                kind="primary"
+                size="small"
+                onClick={() => step.stretchAction?.onStretch(range.start * 40, range.end * 40)}
+                data-testid="readonly-stretch-action"
+              >
+                {step.stretchAction.label}
+              </PillButton>
+            ) : null}
+            <PillButton kind="secondary" size="small" onClick={() => void copyFrames(range.start, range.end)} data-testid="readonly-copy">
+              Copy this stretch
+            </PillButton>
+          </Stack>
+        </Toolbox>
       ) : null}
       {canEdit && sheet ? (
         <FramesSheetToolbox
@@ -839,6 +1128,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
           onPreviewFigures={previewFigures}
           zoom={zoom}
           setZoom={setZoom}
+          {...(role === "proposal" ? { tabs: PROPOSAL_TABS } : {})}
           lyrics={{
             lines: lyrics.lines,
             pool: lyrics.pool,
@@ -898,6 +1188,14 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         message={refused}
         data-testid="sheet-refused"
+      />
+      <Snackbar
+        open={flash !== null}
+        autoHideDuration={2500}
+        onClose={() => setFlash(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        message={flash}
+        data-testid="sheet-flash"
       />
       <EnhanceStretchDialog
         open={asked !== null}
