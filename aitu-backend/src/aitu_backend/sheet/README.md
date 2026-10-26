@@ -201,7 +201,11 @@ Layout ---- frames.draw (all systems, or some: one segment) ---> Engraving --- s
   the one after the longest time between two columns; a break never cuts a beam group when a free place exists
   (otherwise the fewest groups, never leaving a part of one note).
 - **Armadura and clef changes** inside a line: the cancelling becuadros and the new armadura before the column
-  (`Options.key_line` adds a thin double line before it), a small clef before the chord of that hand.
+  (`Options.key_line` adds a thin double line before it), a small clef before the chord of that hand. Changes that
+  fall where that hand plays nothing meet before its next chord: only the last is drawn, and none when it gives back
+  the clef in force (two clefs on one spot in 7 Years, the user's report of 2026-10-26); a line starts with the clef
+  drawn before its first column (`Column.clef_in`). Two clefs at one column remain only around grace notes read in
+  another clef than their note.
 - **Rendered** (`render_frames`): `svg`, `columns` (one row per drawn column: `system`, `frame`, `x` in SVG units
   with the margin, `ms` = frame x 40), `systems` (`index` in the whole song, `first` and `last` frame, `top`,
   `bottom`, `staff_top`, `staff_bottom`, `left`, `right`), `width`, `height`, `lines` (systems of the whole song),

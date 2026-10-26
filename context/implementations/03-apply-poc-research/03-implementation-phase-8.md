@@ -245,6 +245,17 @@ frontend only:
 - `check:frames-toolbox`: the note added is the one picked (its key dotted); ⌘-click on another lit key picks it too
   and changes nothing else; **Hand: Left** moves only those two notes; Undo gives their hand back. All 46 passed.
 
+**A fault the user found (2026-10-26): two clefs on one spot.** On the user's copy of 7 Years a bass clef and a
+treble clef were drawn on top of each other before a left-hand chord. The stored sheet changes the left hand to the
+treble clef at frame 264, where it plays nothing, and back to the bass clef at frame 302; the engine draws a clef
+change before the next chord of that hand, so both landed before the chord at 302. Read only over the stored sheets:
+the same fault nowhere else in the library (the 5 other columns with two clefs, in one song, are grace notes read in
+the bass clef before a treble note: correct). Fixed in the engine (`frames.plan`): changes that meet before one chord
+are one, the last, and none when it gives back the clef in force; the clef at the start of a line is the one drawn
+before its first column (`Column.clef_in`), so a dropped change cannot leave a line in the wrong clef. The golden
+files and every sheet test pass unchanged; test `test_clef_changes_where_the_hand_plays_nothing_are_one_clef_or_none`;
+the spot drawn again and looked at zoomed in: the chord in the bass clef, no clef before it.
+
 ## 8.2 Lyrics as free blocks and a lyrics toolbox (8A++, built 2026-10-26)
 
 **The user's second request (2026-10-26):** lyrics pieces as free blocks, and a lyrics toolbox. Today a piece's width

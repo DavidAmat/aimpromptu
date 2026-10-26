@@ -103,6 +103,9 @@ class Column:
     clef_changes: list[tuple[int, str]] = field(
         default_factory=list
     )  # (staff, clef) drawn before the column
+    clef_in: dict[int, str] = field(
+        default_factory=dict
+    )  # per staff, the clef drawn before the column
     key_change: tuple[int, int] | None = None  # (old, new) armadura drawn before the column
     key_w: float = 0.0
     accidental: bool = False
@@ -329,16 +332,48 @@ def plan(sheet: Sheet, opts: Options | None = None) -> Layout:
     frames = [col.frame for col in columns]
     # clef changes: before the first column of that hand at or after the change; when grace notes of that column
     # sound before the change, the clef goes between them and their note (they keep the clef they sound in)
+    placed: dict[tuple[int, int], tuple[list[str], list[str]]] = (
+        {}
+    )  # (column, staff) -> (before, inner)
     for f, s, clef in sorted(sheet.clef_changes, key=lambda c: c[0]):
-        target = next((col for col in columns if col.frame >= f and s in col.note_left), None)
-        if target is None or (target is columns[0] and not _graces_before(target, s, f)):
+        k = next(
+            (k for k, col in enumerate(columns) if col.frame >= f and s in col.note_left), None
+        )
+        if k is None or (k == 0 and not _graces_before(columns[0], s, f)):
             continue
-        chord = next(c for c in target.chords if c.staff == s)
-        if _graces_before(target, s, f):
-            chord.inner_clef = clef
-            chord.main_left = _main_left(chord)
-            chord.left += 0.3
-        target.clef_changes.append((s, clef))
+        placed.setdefault((k, s), ([], []))[1 if _graces_before(columns[k], s, f) else 0].append(
+            clef
+        )
+    # What the reader sees: changes that fall where that hand plays nothing meet before its next chord, and only the
+    # last of them is drawn; a change that gives back the clef in force is not drawn (two clefs on one spot, a bass
+    # and a treble, was the user's report on 7 Years). The clef before each column is kept for the line starts.
+    now = (
+        {
+            s: next(
+                (c.clef for c in columns[0].chords if c.staff == s),
+                sheet.clefs.get(s, L.DEFAULT_CLEF[s]),
+            )
+            for s in (1, 2)
+        }
+        if columns
+        else {}
+    )
+    for k, col in enumerate(columns):
+        col.clef_in = dict(now)
+        for s in (1, 2):
+            before, inner = placed.get((k, s), ([], []))
+            if before and before[-1] != now[s]:
+                col.clef_changes.append((s, before[-1]))
+            if before:
+                now[s] = before[-1]
+            if inner and inner[-1] != now[s]:
+                chord = next(c for c in col.chords if c.staff == s)
+                chord.inner_clef = inner[-1]
+                chord.main_left = _main_left(chord)
+                chord.left += 0.3
+                col.clef_changes.append((s, inner[-1]))
+            if inner:
+                now[s] = inner[-1]
     # armadura changes: before the first column at or after the change
     for f, k in sorted(sheet.key_changes):
         target = next((col for col in columns if col.frame >= f), None)
@@ -474,7 +509,7 @@ def _draw_system(lay: Layout, si: int) -> tuple[System, list[dict]]:
     sysm = System([], opts.width, header)
     pen = Pen()
     for staff in (1, 2):
-        clef = _clef_at(lay.clefs_at, staff, first.frame)
+        clef = first.clef_in.get(staff) or _clef_at(lay.clefs_at, staff, first.frame)
         if staff in first.note_left:  # a clef change at the first column is the header's clef
             clef = next((c.clef for c in first.chords if c.staff == staff), clef)
         if clef == "F4":
