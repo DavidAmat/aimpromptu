@@ -46,13 +46,31 @@ export interface DrawnPage {
 }
 
 /** Which PDF font a drawn run is written with. `notation` is the embedded one. */
-type FontChoice = "notation" | "sans" | "sansBold" | "serif" | "serifItalic" | "symbol";
+type FontChoice =
+  | "notation"
+  | "sans"
+  | "sansBold"
+  | "sansItalic"
+  | "sansBoldItalic"
+  | "serif"
+  | "serifBold"
+  | "serifItalic"
+  | "serifBoldItalic"
+  | "symbol";
 
+/**
+ * The base fonts every PDF reader has. A serif face prints as Times and any other as Helvetica, each in its four
+ * looks: the lyrics blocks of the new sheet can be bold or italic in any of their fonts (implementation 03, 8A++).
+ */
 export const PDF_BASE_FONTS: Record<Exclude<FontChoice, "notation">, string> = {
   sans: "Helvetica",
   sansBold: "Helvetica-Bold",
+  sansItalic: "Helvetica-Oblique",
+  sansBoldItalic: "Helvetica-BoldOblique",
   serif: "Times-Roman",
+  serifBold: "Times-Bold",
   serifItalic: "Times-Italic",
+  serifBoldItalic: "Times-BoldItalic",
   symbol: "Symbol",
 };
 
@@ -146,14 +164,26 @@ class PageWriter {
   ): void {
     const ctm = element.getCTM();
     const local: Matrix = ctm ? [ctm.a, ctm.b, ctm.c, ctm.d, ctm.e, ctm.f] : IDENTITY;
-    const matrix = multiply(offset, local);
+    let matrix = multiply(offset, local);
 
     if (element instanceof SVGTextElement) {
       this.drawSvgText(element, style, matrix, alpha);
       return;
     }
 
-    const path = pathOf(element);
+    // A glyph of the new sheet (implementation 03, Phase 8): a `<use>` of a path in `<defs>`, drawn with the use's
+    // transform and the path's own (the glyphs are written upside down and turned over with `scale(1,-1)`).
+    let shape: SVGGraphicsElement = element;
+    if (element instanceof SVGUseElement) {
+      const href = element.href.baseVal || element.getAttribute("xlink:href") || "";
+      const target = href.startsWith("#") ? element.ownerSVGElement?.getElementById(href.slice(1)) : null;
+      if (!(target instanceof SVGPathElement)) return;
+      const own = target.transform.baseVal.consolidate()?.matrix;
+      if (own) matrix = multiply(matrix, [own.a, own.b, own.c, own.d, own.e, own.f]);
+      shape = target;
+    }
+
+    const path = pathOf(shape);
     if (!path) return;
     const fill = colourOf(style.fill);
     const stroke = colourOf(style.stroke);
@@ -195,6 +225,7 @@ class PageWriter {
 
     const runs = new Runs();
     const total = element.getNumberOfChars();
+    let lineY: number | null = null;
     for (let index = 0; index < total; index += 1) {
       const character = text[index];
       if (character === undefined) continue;
@@ -208,6 +239,9 @@ class PageWriter {
       } catch {
         continue;
       }
+      // Words on two lines (`tspan`s of the new sheet's lyrics): a new line is a new run.
+      if (lineY !== null && Math.abs(point.y - lineY) > 1e-3) runs.break();
+      lineY = point.y;
       const placed = this.encode(character, style);
       if (!placed) continue;
       runs.add(placed.choice, placed.code, point.x, point.y);
@@ -285,13 +319,8 @@ class PageWriter {
     const serif = family.includes("serif") && !family.includes("sans-serif");
     const italic = style.fontStyle === "italic" || style.fontStyle === "oblique";
     const bold = numberOf(style.fontWeight, 400) >= 600 || style.fontWeight === "bold";
-    const choice: FontChoice = serif
-      ? italic
-        ? "serifItalic"
-        : "serif"
-      : bold
-        ? "sansBold"
-        : "sans";
+    const look = bold ? (italic ? "BoldItalic" : "Bold") : italic ? "Italic" : "";
+    const choice = `${serif ? "serif" : "sans"}${look}` as FontChoice;
     return { choice, code: winAnsi };
   }
 
@@ -385,8 +414,12 @@ export const FONT_KEY: Record<FontChoice, string> = {
   notation: "FN",
   sans: "FS",
   sansBold: "FB",
+  sansItalic: "FO",
+  sansBoldItalic: "FQ",
   serif: "FR",
+  serifBold: "FT",
   serifItalic: "FI",
+  serifBoldItalic: "FJ",
   symbol: "FY",
 };
 
@@ -447,6 +480,11 @@ function pathOf(element: SVGGraphicsElement): string | null {
     return r > 0 ? roundedRect(cx - r, cy - r, 2 * r, 2 * r, r) : null;
   }
   if (element instanceof SVGPathElement) return convertPath(element.getAttribute("d") ?? "");
+  if (element instanceof SVGPolygonElement) {
+    const points = Array.from(element.points);
+    if (points.length < 2) return null;
+    return `${points.map((point, at) => `${n(point.x)} ${n(point.y)} ${at === 0 ? "m" : "l"}`).join(" ")} h`;
+  }
   return null;
 }
 
@@ -481,6 +519,10 @@ function convertPath(d: string): string | null {
   let startY = 0;
   let command = "";
   const next = () => Number(tokens[at++]);
+  // The last control point of a cubic and of a quadratic, for the smooth curves (`S`, `T`) that reflect it: the new
+  // sheet's clefs are written with `s` (implementation 03, Phase 8).
+  let cubic: [number, number] | null = null;
+  let quad: [number, number] | null = null;
 
   while (at < tokens.length) {
     const token = tokens[at]!;
@@ -489,7 +531,12 @@ function convertPath(d: string): string | null {
       at += 1;
     }
     const relative = command === command.toLowerCase();
-    switch (command.toUpperCase()) {
+    const kind = command.toUpperCase();
+    const lastCubic: [number, number] | null = kind === "S" || kind === "C" ? cubic : null;
+    const lastQuad: [number, number] | null = kind === "T" || kind === "Q" ? quad : null;
+    cubic = null;
+    quad = null;
+    switch (kind) {
       case "M": {
         const dx = next();
         const dy = next();
@@ -529,13 +576,29 @@ function convertPath(d: string): string | null {
         x = relative ? x + next() : next();
         y = relative ? y + next() : next();
         out.push(`${n(x1)} ${n(y1)} ${n(x2)} ${n(y2)} ${n(x)} ${n(y)} c`);
+        cubic = [x2, y2];
         break;
       }
-      case "Q": {
-        const qx = relative ? x + next() : next();
-        const qy = relative ? y + next() : next();
+      case "S": {
+        // The first control point is the reflection of the last cubic's second one (or the current point).
+        const x1 = lastCubic ? 2 * x - lastCubic[0] : x;
+        const y1 = lastCubic ? 2 * y - lastCubic[1] : y;
+        const x2 = relative ? x + next() : next();
+        const y2 = relative ? y + next() : next();
+        x = relative ? x + next() : next();
+        y = relative ? y + next() : next();
+        out.push(`${n(x1)} ${n(y1)} ${n(x2)} ${n(y2)} ${n(x)} ${n(y)} c`);
+        cubic = [x2, y2];
+        break;
+      }
+      case "Q":
+      case "T": {
+        const smooth = kind === "T";
+        const qx: number = smooth ? (lastQuad ? 2 * x - lastQuad[0] : x) : relative ? x + next() : next();
+        const qy: number = smooth ? (lastQuad ? 2 * y - lastQuad[1] : y) : relative ? y + next() : next();
         const ex = relative ? x + next() : next();
         const ey = relative ? y + next() : next();
+        quad = [qx, qy];
         // A quadratic is an exact cubic with the control point pulled two thirds of the way out.
         out.push(
           `${n(x + (2 / 3) * (qx - x))} ${n(y + (2 / 3) * (qy - y))} ${n(

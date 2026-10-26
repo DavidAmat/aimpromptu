@@ -23,7 +23,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
-import { oldSheet, signIn, useSession } from './session.mjs';
+import { markStretch, waitForFrames, watchSheets } from './frames-page.mjs';
+import { signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { values } = parseArgs({
@@ -62,6 +63,7 @@ const madeArtists = new Set();
 const browser = await chromium.launch();
 useSession(browser);
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+watchSheets(page);
 const problems = [];
 page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
 page.on('pageerror', (e) => problems.push(`page error: ${e.message}`));
@@ -84,7 +86,7 @@ const openSheet = async (id) => {
   );
   await page.goto(`${base}/projects/${id}/sheet`);
   await page.waitForSelector('[data-sheet-title]', { timeout: 60000 });
-  await oldSheet(page);
+  await waitForFrames(page);
   await heard;
 };
 const songFromUrl = (url) => Number(/\/library\/songs\/(\d+)/.exec(url)?.[1] ?? NaN);
@@ -155,6 +157,17 @@ try {
   check('the sheet has no Save and no toolbox', (await page.locator('[data-unsaved]').count()) === 0
     && (await page.getByRole('button', { name: 'Sheet toolbox' }).count()) === 0);
   check('the header goes back to the song', (await page.getByRole('button', { name: `Back to ${SONG}` }).count()) === 1);
+  // A stretch marked on a version can be copied and added to a playlist (the small Frames panel, Phase 8B).
+  await waitForFrames(page);
+  const marked = await markStretch(page, api, { from: 0.2, to: 0.5 });
+  const action = page.getByTestId('readonly-stretch-action');
+  await action.waitFor({ timeout: 10000 });
+  check('a stretch of a version offers Add to a playlist', (await action.textContent()) === 'Add to a playlist');
+  await shot('03b-version-stretch');
+  await page.getByTestId('readonly-copy').click();
+  const copiedRef = await page.evaluate(() => JSON.parse(window.localStorage.getItem('aitu.clipboard.passage') ?? 'null'));
+  check('Copy this stretch keeps the version’s stretch', copiedRef?.part === copy.id && copiedRef.fromMs === marked.start * 40, copiedRef ? `${copiedRef.fromMs}–${copiedRef.toMs} ms` : 'nothing');
+  await page.keyboard.press('Escape');
   await page.getByRole('tab', { name: 'Audio', exact: true }).click();
   await page.waitForSelector('[data-audio]');
   check('the Audio step has no cut and no Transcribe', (await page.getByRole('button', { name: 'Cut the selection' }).count()) === 0

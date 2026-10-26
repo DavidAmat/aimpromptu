@@ -281,7 +281,9 @@ class BarLayout:
 
 @dataclass
 class Prim:
-    kind: str  # "g" glyph (name, x, y, scale, rotate), "l" line (x1, y1, x2, y2, w, dash), "p" polygon (points)
+    kind: str  # "g" glyph (name, x, y, scale, rotate), "l" line (x1, y1, x2, y2, w, dash), "p" polygon (points),
+    # "t" a lyrics piece of the frames engine (x, y, lines, size, index, first frame, end frame; Phase 8A++ adds
+    #     its style: font, bold, italic, width, part), its lines already wrapped
     staff: int  # 1 / 2: y relative to that staff's top line; 0: system y (treble top line = 0)
     data: tuple
     cls: str = ""
@@ -1153,6 +1155,9 @@ def _prim_yrange(p: Prim) -> tuple[float, float]:
     if p.kind == "z":
         ys = [v for seg in p.data[0] for v in seg[2::2]]
         return min(ys), max(ys)
+    if p.kind == "t":  # a lyrics piece (the frames engine): its first line's baseline is y
+        _, y, lines, size = p.data[:4]
+        return y - 0.75 * size, y + (len(lines) - 1) * 1.2 * size + 0.25 * size
     ys = [pt[1] for pt in p.data]
     return min(ys), max(ys)
 

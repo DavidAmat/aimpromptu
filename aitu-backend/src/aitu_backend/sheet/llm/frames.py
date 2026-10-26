@@ -56,7 +56,7 @@ from aitu_backend.sheet.proposal.frames import (
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet import frames as frames_mod
 from aitu_backend.sheet.sheet.common import spn
-from aitu_backend.sheet.sheet.data import FRAME_MS, Note, Sheet
+from aitu_backend.sheet.sheet.data import FRAME_MS, Note, Sheet, carry_extras
 from aitu_backend.sheet.sheet.figures import figure_of_ms, steps
 from aitu_backend.sheet.sheet.spelling import spell
 
@@ -1271,4 +1271,4 @@ def splice(current: Sheet, answer: Sheet, start: int, end: int) -> Sheet:
         key_changes=_collapse_keys(key_changes, key),
         quarter_ms=current.quarter_ms,
     )
-    return out.sort()
+    return carry_extras(current, out).sort()

@@ -22,10 +22,25 @@ from dataclasses import replace
 from typing import Callable
 
 from aitu_backend.sheet.llm.frames import one_figure
-from aitu_backend.sheet.proposal.frames import _SIGNS, KEYS, clefs_and_ottavas
-from aitu_backend.sheet.sheet.data import Note, Sheet
+from aitu_backend.sheet.proposal.frames import (
+    _SIGNS,
+    BASS_LIMIT,
+    KEYS,
+    _ledger,
+    clefs_and_ottavas,
+)
+from aitu_backend.sheet.sheet.data import (
+    LYRIC_FONTS,
+    LYRIC_MAX,
+    LYRIC_MIN,
+    TITLE_FIELDS,
+    Lyric,
+    Note,
+    Sheet,
+)
 from aitu_backend.sheet.sheet.figures import FIGURES, NAMES
 from aitu_backend.sheet.sheet.frames import MAX_BEAM
+from aitu_backend.sheet.sheet.spelling import spell
 
 __all__ = [
     "ACTIONS",
@@ -45,6 +60,14 @@ __all__ = [
     "set_ornament",
     "set_ottava",
     "unwrap_ornament",
+    "far_notes",
+    "moved_key",
+    "rename_figures",
+    "transpose_sheet",
+    "set_line_space",
+    "set_lyrics",
+    "set_piece_key",
+    "set_titles",
 ]
 
 #: The clef each hand reads when nothing changes it.
@@ -55,6 +78,8 @@ SPANS = ("trill", "mordent", "turn")
 #: The ornaments of one chord.
 MARKS = ("arpeggio", "fermata")
 OTTAVA_NAMES = {1: "8va", 2: "15ma", -1: "8vb", -2: "15mb"}
+#: The space between lines the sheet toolbox offers, in staff spaces (the engine's own is 5).
+LINE_SPACE = (2.0, 16.0)
 
 
 class Refused(ValueError):
@@ -486,6 +511,160 @@ def set_ottava(sheet: Sheet, start: int, end: int, staff: int, ottava: int) -> s
     return f"{OTTAVA_NAMES[ottava]} over a stretch of the {hand} hand"
 
 
+# ------------------------------------------------------------------ the whole sheet (Phase 8: the sheet toolbox)
+
+
+def set_titles(sheet: Sheet, titles: dict[str, object]) -> str:
+    """The title lines printed above the sheet (``title``, ``subtitle``, ``artist``); an empty one is left out (the
+    title is then the project's name)."""
+    unknown = set(titles) - set(TITLE_FIELDS)
+    if unknown:
+        raise Refused(f"No title line {sorted(unknown)[0]!r}.")
+    for name, value in titles.items():
+        text = " ".join(str(value or "").split())[:200]
+        if text:
+            sheet.titles[name] = text
+        else:
+            sheet.titles.pop(name, None)
+    names = [name for name in TITLE_FIELDS if name in titles]
+    return "Title" if names == ["title"] else "Title lines"
+
+
+def set_piece_key(sheet: Sheet, key: int) -> str:
+    """The armadura of the piece (the one the sheet starts with); the armaduras of passages stay. Spelling only:
+    no note moves."""
+    if key not in range(-7, 8):
+        raise Refused("An armadura has at most seven signs.")
+    sheet.key = key
+    return f"Armadura of the piece: {key_name(key)}"
+
+
+def set_line_space(sheet: Sheet, space: float | None) -> str:
+    """The space between lines, in staff spaces (``None``: the engine's own)."""
+    if space is not None and not LINE_SPACE[0] <= space <= LINE_SPACE[1]:
+        raise Refused(
+            f"The space between lines is {LINE_SPACE[0]:g} to {LINE_SPACE[1]:g} staff spaces."
+        )
+    sheet.line_space = None if space is None else round(float(space), 2)
+    return "Space between lines"
+
+
+#: How far a lyrics block may be put from its column and from the top staff line, in staff spaces.
+LYRIC_REACH = 40.0
+
+
+def set_lyrics(sheet: Sheet, pieces: list[dict], label: str | None) -> str:
+    """The lyrics pieces of the sheet, all of them (the page works out the list: a piece placed, moved, made
+    longer, split, merged, its words, its size, its lift; since Phase 8A++ a block put anywhere, its width, font,
+    bold and italic). Two pieces never share a frame."""
+    lyrics = []
+    for piece in pieces:
+        try:
+            dy = piece.get("dy")
+            width = piece.get("width")
+            one = Lyric(
+                start=int(piece["start"]),
+                end=int(piece["end"]),
+                text=str(piece.get("text") or "").strip("\n")[:500],
+                size=None if piece.get("size") is None else float(piece["size"]),
+                lift=float(piece.get("lift") or 0.0),
+                at=None if dy is None or piece.get("at") is None else int(piece["at"]),
+                dx=0.0 if dy is None else float(piece.get("dx") or 0.0),
+                dy=None if dy is None else float(dy),
+                width=None if width is None else float(width),
+                font=str(piece.get("font") or "lora"),
+                bold=bool(piece.get("bold", False)),
+                italic=bool(piece.get("italic", True)),
+            )
+        except (KeyError, TypeError, ValueError):
+            raise Refused("A lyrics piece needs its first and last frames and its words.") from None
+        if one.start < 0 or one.end <= one.start:
+            raise Refused("A lyrics piece ends after it starts.")
+        if not one.text.strip():
+            raise Refused("A lyrics piece has words.")
+        if one.size is not None:
+            one.size = round(min(LYRIC_MAX, max(LYRIC_MIN, one.size)), 2)
+        one.lift = round(min(20.0, max(-4.0, one.lift)), 2)
+        if one.font not in LYRIC_FONTS:
+            raise Refused(f"No lyrics font {one.font!r}.")
+        if one.dy is not None:
+            one.dx = round(min(LYRIC_REACH, max(-LYRIC_REACH, one.dx)), 2)
+            one.dy = round(min(LYRIC_REACH, max(-LYRIC_REACH, one.dy)), 2)
+            if one.at is not None and one.at < 0:
+                one.at = None
+        if one.width is not None:
+            one.width = round(min(200.0, max(2.0, one.width)), 2)
+        lyrics.append(one)
+    lyrics.sort(key=lambda one: one.start)
+    for a, b in zip(lyrics, lyrics[1:]):
+        if b.start < a.end:
+            raise Refused("Another lyrics piece is already over those frames.")
+    sheet.lyrics = lyrics
+    return (label or "Lyrics")[:80]
+
+
+def rename_figures(sheet: Sheet, steps: int) -> str:
+    """Transpose figures: every figure ``steps`` figures shorter (negative: longer), the user's override of the
+    reference figure (rule 5; D-18). No note moves: the spacing keeps the figure it was measured with
+    (``Sheet.space_ms``). A figure set by hand moves with the others; one that has no figure to become goes back to
+    the rule."""
+    if not steps:
+        raise Refused("Choose two different figures.")
+    quarter = sheet.quarter_ms
+    if quarter is None:
+        raise Refused("This sheet has no reference figure yet.")
+    if sheet.space_ms is None:
+        sheet.space_ms = quarter
+    sheet.quarter_ms = quarter * 2.0**steps
+    if abs(sheet.quarter_ms - sheet.space_ms) < 0.05:
+        sheet.space_ms = None
+    for n in sheet.notes:
+        if n.fixed and n.figure is not None:
+            moved = int(n.figure * 2.0**steps) if steps > 0 else n.figure // 2 ** (-steps)
+            if moved in FIGURES and n.figure * 2.0**steps == moved:
+                n.figure = moved
+            else:
+                n.fixed = False
+    k = abs(steps)
+    return (
+        f"Every figure {k} {'step' if k == 1 else 'steps'} {'shorter' if steps > 0 else 'longer'}"
+    )
+
+
+def moved_key(key: int, semitones: int) -> int:
+    """An armadura moved by ``semitones``: of the two names of one key, the one with fewer signs (Db mayor up two
+    semitones is Eb mayor, 3 bemoles; six signs either way keep the side they had)."""
+    k = (key + 7 * semitones + 6) % 12 - 6
+    if k == -6 and key > 0:
+        k = 6
+    return k
+
+
+def transpose_sheet(sheet: Sheet, semitones: int) -> None:
+    """Every note of a stored sheet ``semitones`` higher, and its armaduras with them (Transpose notes, Phase 8):
+    the decisions stay on their notes. The spelling is the rule's (``build.reapply`` writes it again); the clefs are
+    fitted afterwards where a note reads too far from its staff (:func:`far_notes`)."""
+    sheet.key = moved_key(sheet.key or 0, semitones)
+    sheet.key_changes = [(f, moved_key(k, semitones)) for f, k in sheet.key_changes]
+    for n in sheet.notes:
+        at = sheet.key
+        for f, k in sorted(sheet.key_changes):
+            if n.frame is not None and f <= n.frame:
+                at = k
+        n.step, n.alter, n.octave = spell(n.midi + semitones, at)
+
+
+def far_notes(sheet: Sheet) -> set[tuple[int, int, int]]:
+    """The notes four ledger lines or more from their staff, in the clef and 8va they are written in: where the
+    clef rules should decide again (``build.fit_clefs``)."""
+    out = set()
+    for n in _drawn(sheet):
+        below, above = _ledger(n, _clef_at(sheet, n.staff, n.frame), n.ottava)
+        if max(below, above) >= BASS_LIMIT:
+            out.add((n.frame, n.midi, n.staff))
+    return out
+
+
 # ------------------------------------------------------------------ one request of the page
 
 
@@ -501,6 +680,11 @@ ACTIONS = (
     "clef",
     "clef-rule",
     "ottava",
+    "titles",
+    "piece-key",
+    "line-space",
+    "lyrics",
+    "figures",
 )
 
 
@@ -516,6 +700,21 @@ def plan(
     """The change of one request of the toolboxes, and what the settled sheet must hold afterwards (``None``: the
     rules cannot undo it). Raises :class:`Refused` for a request that names nothing to change."""
     refs = list(notes or [])
+    # The whole sheet (Phase 8): no notes, no stretch.
+    if action == "titles":
+        if not isinstance(value, dict):
+            raise Refused("Say which title lines to write.")
+        return (lambda s: set_titles(s, value)), None
+    if action == "piece-key":
+        return (lambda s: set_piece_key(s, int(value or 0))), None
+    if action == "line-space":
+        return (lambda s: set_line_space(s, None if value is None else float(value))), None
+    if action == "lyrics":
+        if not isinstance(value, dict) or not isinstance(value.get("pieces"), list):
+            raise Refused("Send the lyrics pieces.")
+        return (lambda s: set_lyrics(s, value["pieces"], value.get("label"))), None
+    if action == "figures":
+        return (lambda s: rename_figures(s, int(value or 0))), None
     staffs = STAFFS.get(staff)
     if staffs is None:
         raise Refused(f"No staff {staff!r}.")

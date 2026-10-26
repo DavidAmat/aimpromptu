@@ -5,7 +5,7 @@
  *
  * Nothing of a real library changes: the temporary user gets its version by **Add to my library**
  * from the master user's library shared with it (a copy), and everything public the check accepts
- * (a user version and a fixed version of the public "7 Years", a new song and a new artist) is
+ * (a user version and a fixed version of the public song, "Bonfire Heart" by default, a new song and a new artist) is
  * removed by `aitu_backend.library.public_fixture` at the end.
  *
  * 1. Sharing: **Share my library** from the user menu; the user's **Shared**, the song, **Add to my
@@ -31,6 +31,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
+import { markStretch as markOnSheet, waitForFrames, watchSheets } from './frames-page.mjs';
 import { signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -39,7 +40,8 @@ const { values } = parseArgs({
   options: {
     out: { type: 'string', default: path.join(repository, '.run', 'screenshots', 'requests') },
     base: { type: 'string', default: 'http://localhost:5173' },
-    name: { type: 'string', default: '7 Years' },
+    // A song of My library that is public with no version yet (7 Years has one of a real user's since 2026-10-18).
+    name: { type: 'string', default: 'Bonfire Heart' },
   },
 });
 const base = values.base;
@@ -100,6 +102,7 @@ const watch = (page, who) => {
 };
 const master = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 watch(master, 'master');
+watchSheets(master);
 let user = null;
 const shot = async (page, name) => {
   await page.waitForTimeout(400);
@@ -128,17 +131,11 @@ const decideItem = async (itemId, decision, comment) => {
   await box.getByRole('button', { name: decision }).click();
   if (comment) await box.getByRole('textbox').last().fill(comment);
 };
-/** Mark a stretch on the first line's frame ruler, from `from` to `to` of its width. */
+/** Mark a stretch of the first line of the proposed sheet (the new sheet), from `from` to `to` of its columns. */
 const markStretch = async (page, from, to) => {
-  await page.locator('.grid-frame-ruler').first().scrollIntoViewIfNeeded();
-  await page.waitForTimeout(300);
-  const box = await page.locator('.grid-frame-ruler').first().boundingBox();
-  await page.mouse.click(box.x + box.width * from, box.y + box.height / 2);
-  await page.waitForTimeout(300);
-  await page.keyboard.down('Shift');
-  await page.mouse.click(box.x + box.width * to, box.y + box.height / 2);
-  await page.keyboard.up('Shift');
-  await page.waitForTimeout(400);
+  const scope = '[data-testid=request-sheet-proposed]';
+  await waitForFrames(page, { scope });
+  await markOnSheet(page, api, { scope, from, to });
 };
 
 try {

@@ -26,6 +26,8 @@ The record (:class:`Record`):
   sheet is then kept and laid again on new notes, as the AI's is, instead of being computed again.
 * ``stretches``: the stretches the AI wrote again with the user's words (Phase 7), ``[first frame, end frame,
   words, usd, written]``, oldest first. Their cost is in ``usd`` and ``requests`` too.
+* ``key``: the armadura the algorithm writes this sheet with (fifths), when something other than the notes chose it:
+  the song's, on the sheets of a passage of it (Record in Sheet, Phase 8B, with ``reference: song``).
 """
 
 from __future__ import annotations
@@ -70,6 +72,7 @@ class Record:
     runs: int = 0
     edited: bool = False
     stretches: list[list[Any]] = field(default_factory=list)
+    key: int | None = None
 
     @property
     def enhanced(self) -> bool:
@@ -99,6 +102,7 @@ class Record:
             "runs": self.runs,
             "edited": self.edited,
             "stretches": self.stretches,
+            **({"key": self.key} if self.key is not None else {}),
         }
 
     @classmethod
@@ -121,6 +125,7 @@ class Record:
             ),
             edited=bool(payload.get("edited")),
             stretches=list(payload.get("stretches") or []),
+            key=payload.get("key"),
         )
 
 

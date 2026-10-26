@@ -630,6 +630,9 @@ be enhanced with AI with the user's instruction from either selection.
 
 ## Phase 8: The other screens and the sheet toolbox
 
+**Done 2026-10-26** ([`03-implementation-phase-8.md`](03-implementation-phase-8.md)). The user checked 8A ("all good")
+and 8B ("works amazingly"; a few user-experience points are left for later) in the browser; merged into `master`.
+
 *Why:* the sheet is also drawn outside the Sheet step, and the sheet toolbox has its own features.
 
 1. Study and inventory: the sheet toolbox (title, key, transpose, lyrics, layout), the keyboard panel, Find trills,
@@ -644,6 +647,74 @@ be enhanced with AI with the user's instruction from either selection.
    trills; the range toolbox gains Copy, Record this passage and Start a new part.
 2. **Lyrics** in the format and in the engine (they are keyed by frames, which fits the new sheet).
 3. Each screen moved to the new engine; vexflow-v2 is no longer used anywhere for drawing or editing.
+
+*8A checked by the user in the browser on 2026-10-26, with its three requests.* *After the study (2026-10-26, report section 2):* the phase is built in two halves, each checked by the user in the
+browser. **8A, the Sheet step's own tools:** the sheet toolbox (Title, Key, Transpose notes and figures with their
+preview, Lyrics, and a View tab with Zoom and Space between lines), the keyboard panel, Print to PDF from the new
+engine, Play mode's lyrics. **8B, the screens of a stretch:** `sheet.f1` follows every change of a part's length
+(paste, promotion, split, join, From other projects, a comment's excerpt: today its decisions after that point are
+lost), copy and paste, Start a new part, the read-only stretch actions (Add to a playlist, Add this stretch, Comment on
+this stretch), the requests review, Recording in Sheet, the blank sheet of From scratch; then the switch to the old
+sheet is removed and its browser checks move. The user's answers (2026-10-26): Layout keeps only Zoom and Space between
+lines; lyrics stay above the upper staff with the whole editor (pool, drag onto frames, split, merge, words, size,
+lift); a take's sheet is the algorithm's, with Enhance with AI as a button, and Promote carries its reading into the
+song; Find trills, Remove all and Bring back N notes taken off are dropped. The agent's choices: Transpose figures only
+renames the figures and the page keeps its widths (D-18, nothing moves); the old `sheet.json` marks stay stored when
+the switch goes, and Phase 9 maps them.
+
+*The user's request of 2026-10-26, after 8A was built (part of 8A, before 8B):* **a keyboard in the note toolbox.**
+When notes are picked (one note, or a chord: the notes of one column), the note toolbox shows a small piano (the
+mini piano of the sheet toolbox's Transpose tab, `ui/MiniPiano.tsx`, or the keyboard panel's `piano/Piano.tsx`) with
+the keys of the picked column lit in their hand's colour. On it the user changes the chord: a dark key adds a note to
+that column (`POST /sheet/{uuid}/add`, in the hand of the picked chord, as long as the chord), a lit key takes that
+note off (`POST /sheet/{uuid}/remove`); each press one step of undo. The study of the session decides what it shows
+when notes of several columns are picked, and asks the user only if no answer follows from the old keyboard panel.
+*Built 2026-10-26* (report section 8.1): notes of several columns show no keyboard (the keyboard panel is one moment
+too); both hands of the column are lit; a key added goes to the picked hand (both picked: the nearest note's), as long
+as that hand's chord, and needs no figure set by hand (the chord's figure and beam group hold, measured); the chord
+stays picked after each press.
+
+*The user's second request of 2026-10-26 (part of 8A, before 8B):* **lyrics as free blocks, with a lyrics toolbox.**
+Shaping a lyrics piece is cumbersome today: its width follows its frames, so the words cannot be wrapped onto two or
+three lines by narrowing it. A click on a piece highlights its block; the block can then be moved freely anywhere
+(not snapped to the frame under its edge) and resized narrower, wider, taller or shorter, and the words wrap inside
+it; none of this touches the time frames. While a piece is picked or dragged, the strip above the staves does not
+light up under the pointer and does not mark a stretch. A **lyrics toolbox** beside the picked pieces offers the size,
+several fonts, and normal, bold and italic (and the old toolbar's actions: words, merge, split, line break, back to the
+pool, delete). The session's study decides, from the code and the PDF writer: how a block stays with its music when
+the lines re-wrap (still anchored to its first frame, with a free offset), where the words are wrapped (in the page,
+which can measure text, or in the engine), and which fonts (the PDF writes the base fonts Helvetica, Times and Courier
+with their bold and italic, so families that map onto them print the same). It asks the user only what the study
+cannot settle. *Built 2026-10-26* (report section 8.2), with the user's answers: the corner handle scales the words
+and the side handle sets the width (the words wrap); the frames of a block are a bar in the strip with an end on
+each side; the fonts are Lora, Geist and Montserrat; and (the user's note) a piece whose frames cross a line break
+shares its words between the lines by the width its frames take on each. The engine wraps the words with the widths
+of the app's own font files, so the page, the line heights and the PDF print the same lines; a block keeps the
+column under its left edge (`at`) and an offset, so it stays with its music when the lines change.
+
+*The user's third request of 2026-10-26 (part of 8A, before 8B):* **a denser PDF.** The printed music is too large
+and the lines too far apart: much white space, few lines a page. A printed piano score carries about **five lines a
+page** (a line is the two staves, right and left hand), and that is the default to reach. The print dialog needs a
+control of the size of the music (today the printed staff space is fixed at 1.75 mm, and the page's Zoom does not
+reach the PDF), and the space between lines must go below what it is now (today the dialog only adds space on top of
+the sheet's own 5 staff spaces, and each line also keeps the room of its own ink). The study measures where the room
+goes on real songs (the staff size, the gap between the two staves, the ink above and below each line, the space
+between lines) and chooses defaults that give about five lines on an A4 page, then shows them to the user. *Built
+2026-10-26* (report section 8.3): the library songs already printed 5 to 6 lines a page; the white space came from the
+screen's space between lines, which the PDF used as its least (10.5 staff spaces on the user's copy of 7 Years). The
+dialog now has **Size of the music** (a 5 to 8 mm staff, 6.5 mm by default) and **Space between lines** on paper (1
+to 20 mm, 6 mm by default), kept in the browser: 5 to 7 lines on a full A4 page (median 6), 44 pages for the 10 songs
+instead of 51.
+
+*8B built 2026-10-26* (report section 10): every change of a part's length carries `sheet.f1`
+(`part_sheet/lengths.py`, the old `marks.py` moves on a frames sheet, called by `editing/paste.py`; stored when either
+side holds decisions or the target had no music); a paste is one step of the new log whose undo restores the history
+version (a promotion too); Copy, Paste, Record this passage, Record a passage at the end, Start a new part; a read-only
+*Frames* panel with the screen's action; the passage page on the new sheet (the window over the take, the Current and
+the takes written with the song's reference figure at the take's speed and its armadura, the take's AI only on the
+button); the blank sheet's empty state. `SheetPage` draws only the new sheet; the old sheet's browser checks moved to
+`scripts/frames-page.mjs`, and the three scripts that only served the old sheet removed. Checked by the user in the
+browser.
 
 *Done when:* every screen of the inventory uses the new engine, checked in the browser by the user.
 
@@ -683,7 +754,7 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 | 5 | Existing projects: keep their data, the AI's sheet for the 10 songs it wrote, a button for the rest (user, 2026-10-25); merge to `master`: now (user, 2026-10-25) |
 | 6 | May a new LLM run change hands that the user moved (user, 2026-10-25: yes, it reads them as a suggestion); the engine in the backend or in the browser (agent, from the time of one edit: the backend) |
 | 7 | Tools that no longer make sense (user, 2026-10-25): drop even spacing, the room of a stretch and speed changes; replace print smaller and the unplayed decoration by a grace note switch; drop hiding and dragging an 8va bracket. A new AI run keeps the user's fingers, figures and grace switches and writes its own kinds again |
-| 8 | Tools of the sheet toolbox and the other screens that no longer make sense: keep, change or drop |
+| 8 | Tools of the sheet toolbox and the other screens that no longer make sense (user, 2026-10-26): Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's with Enhance with AI as a button; Find trills, Remove all and Bring back are dropped |
 
 # 9. Risks
 
@@ -769,3 +840,15 @@ repository."
 | 7 | Fingers on one chord: from the thumb in the right hand, from the little finger in the left | The old sheet gave the lowest note the smallest number in both hands, which is wrong for the left hand |
 | 7 | Phase 7 task 5: the stretch request shows the stretch as it is now, puts the user's words first ("of the utmost importance") and may leave notes out, which are taken off the page in the same step | The user's first check: "make all the notes single notes instead of the current octave notes" changed nothing, because the checker demanded every note back and the AI did not see the current beams |
 | 7 | Phase 7 task 5: with the user's words a stretch request aims at a sheet simpler to read and to play (uniform patterns) and may change pitches, add notes and set figures; those go into `notes.pmn` and the sheet in the same undo step | The user's second check: a lone low note stayed when the octaves became single notes, and figures could not be asked for |
+| 8 | Phase 8 is built in two halves (8A the Sheet step's tools, 8B the screens of a stretch), each checked in the browser; 8B starts with `sheet.f1` following every change of a part's length | The study: the phase holds more than Phase 7, and paste, promotion, split, join and From other projects lose the new sheet's decisions after the change today |
+| 8 | Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's; Find trills, Remove all and Bring back are dropped | The user's answers of 2026-10-26 |
+| 8 | Phase 8A gains a keyboard in the note toolbox: the picked chord's keys lit; a key adds or takes off a note of that column | The user's request of 2026-10-26, after seeing 8A |
+| 8 | Phase 8A gains free lyrics blocks (moved and resized, the words wrapped inside) and a lyrics toolbox (size, font, bold, italic); the stretch strip is off while a piece is picked | The user's second request of 2026-10-26: narrowing a piece to wrap its words was not possible |
+| 8 | Phase 8A+: ⌘-click on a lit key of the chord keyboard picks that note, and a note added is the one picked | The user's request on first use: give a hand to some notes of a chord of both hands, a new note most of all |
+| 8 | Phase 8A++: the engine wraps the words of a lyrics block (a table of the fonts' widths measured in the browser), not the page; a block is anchored to the column under its left edge | One wrap for the page, the line heights and the PDF; the music it belongs to moves with the line breaks |
+| 8 | Phase 8A gains a denser PDF: a size of the music in the print dialog, less space between lines than today, about five lines a page by default | The user's third request of 2026-10-26: the PDF was too large and too spread out |
+| 8 | Phase 8A+++: the PDF's space between lines is its own (in millimetres, 6 by default), not the screen's; the music has a size (a 6.5 mm staff by default) | The screen's space was the PDF's least, so a wider space on screen spread the pages; measured: about 6 lines on a full A4 page with the new defaults |
+| 8 | Transpose figures renames the figures and keeps the page's widths | D-18 ("nothing moves"); the spacing model reads the reference figure, so a rename alone would widen or narrow the page |
+| 8 | Phase 8B: a paste stores the target's new sheet when either side holds decisions, or when the target had no music (a blank sheet, a new part) | Two algorithm sheets are a function of the notes; a blank song whose take was promoted kept a Sheet step "missing" (`check:passage`) |
+| 8 | Phase 8B: the Current and the takes of a passage are written with the song's reference figure (at the take's speed) and its armadura where the passage starts; the take's AI only on its button | The old page named the Proposal with the song's figure so the two read alike; the user's answer of Phase 8 (a take's sheet is the algorithm's) |
+| 8 | Phase 8B: `check:requests` uses "Bonfire Heart"; `check:passage --played` runs without the GPU; `check:transpose`, `check:lyrics`, `bench:sheet` removed | 7 Years has a real public version since 2026-10-18; the GPU is often held by another project; the old sheet is gone and `check:frames-toolbox` covers Transpose and Lyrics |

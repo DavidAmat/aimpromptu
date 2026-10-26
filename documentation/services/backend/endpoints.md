@@ -132,6 +132,10 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/sheet/{uuid}/remove` | Phase 7: take notes off the page (marked removed in `notes.pmn`, one step of undo); the sheet drawn again. |
 | GET | `/sheet/{uuid}/stretch?start=A&end=B` | Phase 7: the armadura in force at a stretch and the one with the fewest signs over it. |
 | POST | `/sheet/{uuid}/llm/stretch` | Phase 7: the AI writes a stretch again with the user's words, in the background; follow `GET /matrix/progress/{jobId}`. |
+| POST | `/sheet/{uuid}/transpose` | Phase 8: Transpose notes, every note of the part and the sheet with them (one step of undo); `preview=true` stores nothing (section 4.1). |
+| POST | `/sheet/{uuid}/add` | Phase 8: a note added on the keyboard panel, into `notes.pmn` (one step of undo). |
+| POST | `/sheet/{uuid}/paste` | Phase 8B: a copied passage put in at a moment or over a stretch, its new sheet with it; one step of undo (the history version the paste kept). |
+| GET | `/sheet/{uuid}/pages` | Phase 8: the sheet on paper, whole lines dealt onto pages (Print to PDF). |
 | **Recording in Sheet** | `api/passages.py` | Implementation 02, Phase 9 |
 | POST | `/passages` | **Record this passage**: a passage of a part (a stretch, or a moment for a new passage); its Current is made. |
 | GET PATCH DELETE | `/passages/{id}` | The passage; the take on show, the speed, the window; discard it. |
@@ -858,7 +862,11 @@ own) and `figuresFrom` (where the next figures transposition starts), and `lyric
   steps are about (`null`: none). Since Phase 7 each note also says its figure (4 a negra), its beam group, whether
   it is a grace note, the user's marks (`fixed`: a figure set by hand; `graceRule`; `finger`), its ornaments and its
   octave line (1 8va, 2 15ma, -1 8vb, -2 15mb); `reading` gives the armaduras (fifths) and the clefs of the sheet;
-  `segments` lists after the windows the stretches the AI wrote again with the user's words (`llm`).
+  `segments` lists after the windows the stretches the AI wrote again with the user's words (`llm`). Since Phase 8
+  each note says the frame it stops sounding at (`end`, from `notes.pmn`), and the answer carries what the user wrote
+  about the whole sheet: `titles` (`title`, `subtitle`, `artist`), `lyrics` (`[{start, end, text, size, lift}]`, in
+  the order of the SVG's `data-lyric`), `quarterMs` (the reference figure), `spaceMs` (the spacing's figure after
+  Transpose figures, or `null`), `lineSpace` (`null`: the engine's own 5 staff spaces).
 - `409` before the notes exist; the usual `404` of the rights.
 
 `POST /sheet/{uuid}/llm` answers `202 {"jobId", "status"}` (`409` when no API key or SDK is set up). The job's
@@ -909,6 +917,38 @@ and need the right to write the part (a version of My library answers `403`: it 
   sheet, with the AI's figures set by hand where the rule differs; an algorithm sheet becomes `mixed`). The job's `event: done`
   carries `stretch`: `ok`, `failed` (no reply accepted: nothing changes) or `stale` (the notes changed meanwhile),
   and `usd`.
+
+**The sheet toolbox (Phase 8).** The same rules again.
+
+- `POST /sheet/{uuid}/reading` takes the sheet's own actions too, with no notes and no stretch: `titles` (`value`:
+  `{"title": "…"}`, an empty one removed), `piece-key` (fifths), `line-space` (2 to 16 staff spaces, or `null`),
+  `lyrics` (`value`: `{"pieces": [{start, end, text, size, lift}], "label"}`: the whole list; two pieces never share
+  a frame; since Phase 8A++ each piece may also carry `at`, `dx`, `dy` (a block put anywhere: the frame of the
+  column under its left edge, how far right of it, its last baseline below the top staff line; `dy: null` is the
+  line of words), `width` (its words wrap to it, in staff spaces), `font` (`lora`, `geist`, `montserrat`; another is
+  refused), `bold` and `italic`; `GET /sheet/{uuid}` answers them in `lyrics`), `figures` (Transpose figures: `value` steps, positive toward shorter figures; the spacing keeps its
+  figure, and a new AI run keeps the user's). With `preview=true` nothing is stored and the answer is the drawing
+  of the result (`svg`, `columns`, `systems`, `width`, `height`, `edited`).
+- `POST /sheet/{uuid}/transpose?width=130` `{"semitones": 2}`: every note moved in `notes.pmn`, the stored sheet
+  with them (armaduras renamed with fewer signs, decisions kept, clefs fitted where a note reads four ledger lines
+  or more from its staff); notes that would leave the 88 keys are taken off. The answer adds `edited`, `moved`,
+  `outside`. With `preview=true` nothing is written and the answer is the drawing of the result.
+- `POST /sheet/{uuid}/add?width=130` `{"frame", "midi", "hand", "lengthMs"}`: a note at the onset of the drawn column
+  `frame` (`lengthMs` absent: a negra of the reference figure); `400` when that key is already struck there.
+- `POST /sheet/{uuid}/paste?width=130` `{"source": {"part", "fromMs", "toMs"}, "atMs", "replaceToMs"}` (Phase 8B):
+  the paste of `POST /time/{uuid}/paste` (notes, audio, everything after moved), and the new sheet with it: the
+  stretch of the source's sheet as its page draws it, the target's sheet moved out of the way, the armadura and clefs
+  of each side at the edges (`part_sheet.lengths`). One step of the part's log, whose undo puts back the history
+  version the paste kept and whose redo the pasted one. The answer is the sheet drawn again, with `edited` ("Paste
+  4.0 s", "Paste 2.0 s over a stretch"), `atMs`, `lengthMs`, `notesIn`, `notesMoved`, `notesRemoved`. `404` for a
+  source the user may not read, `409` for a paste the old route refuses too. Every answer of `/sheet/{uuid}` also
+  carries `audioRevision` (a paste and its undo change the audio; the page's player loads it again).
+- Every change of a part's length (`/time/{uuid}/paste`, a promotion of Record in Sheet, a split, a join, From other
+  projects, a comment's excerpt) carries the new sheet in the same write since Phase 8B; a promotion is a step of
+  the target's log too ("Promote the passage").
+- `GET /sheet/{uuid}/pages?width=W&height=H&first=F&gap=G` (staff spaces: the staff width, the page's room, page
+  one's room under its title, the space between lines): `{"pages": [{"svg", "width", "height", "first", "last"}]}`,
+  whole lines on each page.
 
 ## 5. `/passages`: Recording in Sheet
 

@@ -41,6 +41,8 @@ function loadNotationFont(): Promise<EmbeddableFont> {
 export interface ScorePdfOptions {
   /** Printed in the document's properties. */
   title?: string;
+  /** The page elements inside the host (the old sheet's `.grid-page`, the new sheet's `[data-pdf-page]`). */
+  selector?: string;
   /** Called with a fraction between 0 and 1 as the pages are written. */
   onProgress?: (done: number, total: number) => void;
 }
@@ -53,9 +55,9 @@ export interface ScorePdfOptions {
  */
 export async function scoreToPdf(
   host: HTMLElement,
-  { title, onProgress }: ScorePdfOptions = {},
+  { title, onProgress, selector = ".grid-page" }: ScorePdfOptions = {},
 ): Promise<Blob> {
-  const pages = Array.from(host.querySelectorAll<HTMLElement>(".grid-page"));
+  const pages = Array.from(host.querySelectorAll<HTMLElement>(selector));
   if (pages.length === 0) throw new Error("There are no pages to write.");
   const font = await loadNotationFont();
 
@@ -113,7 +115,13 @@ export async function scoreToPdf(
     onProgress?.(index + 1, pages.length);
   }
 
-  await writeNotationFont(pdf, notationRef, font, glyphs);
+  if (glyphs.size > 0) {
+    await writeNotationFont(pdf, notationRef, font, glyphs);
+  } else {
+    // No music glyph is text (the new sheet draws its glyphs as paths): Bravura stays out of the file, and the
+    // name its pages carry points at a base font that nothing uses.
+    pdf.putDict(notationRef, { Type: "/Font", Subtype: "/Type1", BaseFont: "/Helvetica" });
+  }
   for (const [key, ref] of Object.entries(baseRefs)) {
     pdf.putDict(ref, {
       Type: "/Font",

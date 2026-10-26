@@ -309,21 +309,16 @@ type TransposePreview =
     };
 
 /**
- * The switch between the two sheets (implementation 03, Phase 5, plan task 5.7): the new sheet to see
- * and to hear, and the old vexflow-v2 sheet, which keeps every editing tool until Phases 6 to 8.
- * Six screens draw their sheet through this page, so the switch reaches them all at once.
+ * The piano sheet of a part. Since implementation 03, Phase 8B, every screen draws the new sheet
+ * (`frames/FramesSheetPage`): the switch to the old vexflow-v2 sheet is gone. The old page below is
+ * no longer drawn anywhere; Phase 10 removes it with `@aimpromptu/grid-notation`.
  */
-export function SheetPage({ step }: { step?: SheetStep } = {}) {
-  const [engine, setEngine] = useState<"frames" | "vexflow">("frames");
-  if (step?.newSheet && engine === "frames") {
-    return <FramesSheetPage step={step} onOldSheet={() => setEngine("vexflow")} />;
-  }
-  return (
-    <VexflowSheetPage step={step} onNewSheet={step?.newSheet ? () => setEngine("frames") : undefined} />
-  );
+export function SheetPage({ step }: { step: SheetStep }) {
+  return <FramesSheetPage step={step} />;
 }
 
-function VexflowSheetPage({ step, onNewSheet }: { step?: SheetStep; onNewSheet?: () => void }) {
+/** The old vexflow-v2 sheet (implementation 02), drawn nowhere since implementation 03, Phase 8B. */
+export function VexflowSheetPage({ step, onNewSheet }: { step?: SheetStep; onNewSheet?: () => void }) {
   const passageView = step?.passage ?? null;
   /** On the page of a passage: which of its two sheets this is. */
   const role = passageView?.role ?? null;

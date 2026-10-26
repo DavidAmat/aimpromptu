@@ -1,5 +1,16 @@
 # Printing the sheet — the PDF export
 
+*The new sheet (implementation 03, Phase 8) keeps the rule of this page: the music is laid out again for the paper,
+never scaled. The backend draws the sheet for the paper's width at the printed size of the dialog's **Size of the
+music** (a staff of 5 to 8 mm; 6.5 mm by default) and deals whole lines onto the pages (`GET /sheet/{part}/pages`)
+with the dialog's **Space between lines** (1 to 20 mm of white between one line's ink and the next; 6 mm by default,
+whatever the screen's space between lines). Both are kept in the browser. The page shows the pages and writes the
+same vector PDF (`FramesPdfDialog.tsx`, `print/scorePdf.ts`). Its glyphs are paths, so no music font travels with the
+file (about 60 kB for 7 Years, 4 A4 pages). Phase 8A+++ (the user's request of a denser PDF) measured the defaults on
+the 10 viewer songs on A4: 5 to 7 lines a page (median 6) and 44 pages, where a 7 mm staff with the screen's space
+gave 51; the user's copy of 7 Years, whose screen space was 10.5 staff spaces, went from 6 pages to 4. The sections
+below describe the old sheet's renderer.*
+
 A window is as wide as the reader dragged it. A sheet of A4 is 210 mm. The two can never show the
 same line breaks, so a printed score is not a picture of the screen: it is the same music laid out
 again for a different width.

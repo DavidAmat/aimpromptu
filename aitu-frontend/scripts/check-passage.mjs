@@ -1,5 +1,6 @@
 /**
- * Recording in Sheet (implementation 02, Phase 9), walked in a headless Chromium.
+ * Recording in Sheet (implementation 02, Phase 9; on the new sheet since implementation 03, Phase 8B), walked in a
+ * headless Chromium.
  *
  * Drives the real page through the running app (`make up`), signed in (`session.mjs`), on
  * **temporary copies** only, deleted at the end with every passage open on them:
@@ -18,17 +19,22 @@
  * 7. a blank sheet's **Record a passage** puts a take in: the steps appear;
  * 8. **Discard this passage** leaves the song as it was; narrow and dark screenshots.
  *
+ * With `--played` the takes from a file are sent with the keys of the stretch as played notes (the song's notes at
+ * the take's speed), so **Write the proposal** reads them without the transcription model: the check runs while the
+ * GPU is busy (the GPU job of step 3 is then not walked).
+ *
  *     npm run check:passage
- *     npm run check:passage -- --song Elefants --out /tmp/passage
+ *     npm run check:passage -- --song Elefants --out /tmp/passage [--played]
  */
 
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
+import { markStretch as markOnSheet, waitForFrames, watchSheets } from './frames-page.mjs';
 import { signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -37,6 +43,7 @@ const { values } = parseArgs({
     out: { type: 'string', default: path.join(here, '..', '..', '.run', 'screenshots', 'passage') },
     base: { type: 'string', default: 'http://localhost:5173' },
     song: { type: 'string', default: 'Elefants' },
+    played: { type: 'boolean', default: false },
   },
 });
 const base = values.base;
@@ -65,6 +72,7 @@ const browser = await chromium.launch({
 });
 useSession(browser);
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+watchSheets(page);
 // A MIDI piano for the page, played by the check (`window.__playMidi`): Web MIDI with one input.
 await page.addInitScript(() => {
   const input = new EventTarget();
@@ -101,16 +109,20 @@ const shot = async (name) => {
 };
 const waitForSheet = async () => {
   await page.waitForSelector('[data-sheet-title]', { timeout: 90000 });
-  await page.waitForSelector('.grid-note-target', { timeout: 90000 });
-  await page.waitForTimeout(800);
+  await waitForFrames(page);
+  await page.waitForTimeout(300);
 };
+/** The noteheads of the new sheet of the Current, or of the Proposal. */
+const CURRENT_NOTE = '[data-passage-current] [data-frames-sheet] [data-note]';
+const PROPOSAL_NOTE = '[data-passage-proposal] [data-frames-sheet] [data-note]';
 const notesOf = async (id) => (await json(`${api}/pieces/${id}/notes`)).id.length;
 const filesOf = async (id) => (await json(`${api}/audio/${id}/files`)).files;
 const durationOf = async (id) => (await json(`${api}/audio/${id}`)).durationSeconds;
 const statusOf = async (id) => json(`${api}/pieces/${id}/status`);
-const rhythmOf = async (id) => {
-  const answer = await fetch(`${api}/time/${id}/rhythm`);
-  return answer.ok ? answer.json() : null;
+/** The new sheet of a part: its reference figure and its armadura. */
+const readingOf = async (id) => {
+  const sheet = await json(`${api}/sheet/${id}?width=130`);
+  return { quarterMs: sheet.quarterMs, key: sheet.reading.key };
 };
 const undoButton = () => page.getByRole('button', { name: /^Undo/ }).first();
 const redoButton = () => page.getByRole('button', { name: /^Redo/ }).first();
@@ -122,17 +134,10 @@ const becomes = async (read, wanted, label) => {
   check(label, false, `${await read()}, wanted ${wanted}`);
   return false;
 };
-/** Mark a stretch on the first line's frame ruler, from `from` to `to` of its width. */
+/** Mark a stretch of the first line of the song's sheet, from `from` to `to` of its columns: the range toolbox opens. */
 const markStretch = async (from, to) => {
-  await page.locator('.grid-frame-ruler').first().scrollIntoViewIfNeeded();
-  await page.waitForTimeout(300);
-  const box = await page.locator('.grid-frame-ruler').first().boundingBox();
-  await page.mouse.click(box.x + box.width * from, box.y + box.height / 2);
-  await page.locator('[role=tablist][aria-label="What this stretch carries"]').waitFor({ timeout: 10000 });
-  await page.keyboard.down('Shift');
-  await page.mouse.click(box.x + box.width * to, box.y + box.height / 2);
-  await page.keyboard.up('Shift');
-  await page.waitForTimeout(400);
+  await markOnSheet(page, api, { from, to });
+  await page.locator('[data-frames-range-toolbox]').waitFor({ timeout: 10000 });
 };
 const joins = (ids) => {
   try {
@@ -163,16 +168,38 @@ const takeOf = async (part, fromMs, toMs, atempo, name) => {
   return take;
 };
 const passageId = () => /\/passages\/([0-9a-f-]+)$/.exec(page.url())?.[1] ?? null;
-/** **Add a take from a file**: the page's file field, the one its buttons open. */
-const addFileTake = async (file) => {
+/** The song's notes of `[fromMs, toMs)` as keys played `atempo` times as fast (`--played`). */
+const playedNotes = async (part, fromMs, toMs, atempo) => {
+  const notes = await json(`${api}/pieces/${part}/notes`);
+  return notes.onMs
+    .map((on, i) => ({ on, len: notes.lenMs[i], key: notes.key[i] }))
+    .filter((one) => one.on >= fromMs && one.on < toMs)
+    .map((one) => {
+      const start = (one.on - fromMs) / 1000 / atempo;
+      const end = Math.min((toMs - fromMs) / 1000 / atempo, start + one.len / 1000 / atempo);
+      return { midiNote: one.key + 21, start, end: Math.max(end, start + 0.05), velocity: 80 };
+    });
+};
+/** **Add a take from a file**: the page's file field, the one its buttons open; with `--played`, through the API
+ * with the keys of the stretch, and the page read again. */
+const addFileTake = async (file, played = null) => {
   const before = (await json(`${api}/passages/${passageId()}`)).takes.length;
-  await page.locator('input[type=file]').setInputFiles(file);
+  if (values.played && played) {
+    const form = new FormData();
+    form.append('file', new Blob([readFileSync(file)], { type: 'audio/wav' }), path.basename(file));
+    form.append('notes', JSON.stringify(played));
+    const sent = await fetch(`${api}/passages/${passageId()}/takes`, { method: 'POST', body: form });
+    if (!sent.ok) throw new Error(`POST take: ${sent.status} ${await sent.text()}`);
+    await page.reload();
+  } else {
+    await page.locator('input[type=file]').setInputFiles(file);
+  }
   await becomes(async () => (await json(`${api}/passages/${passageId()}`)).takes.length, before + 1, 'the take from a file is kept');
   await page.locator('[data-passage-range]').waitFor({ timeout: 60000 });
 };
 const writeProposal = async () => {
   await page.getByTestId('passage-write').click();
-  await page.locator('[data-passage-proposal] .grid-note-target').first().waitFor({ timeout: 240000 });
+  await page.locator(PROPOSAL_NOTE).first().waitFor({ timeout: 240000 });
   await page.waitForTimeout(1200);
 };
 
@@ -201,7 +228,7 @@ try {
   await page.waitForURL(/\/passages\/[0-9a-f-]+$/, { timeout: 20000 });
   const first = passageId();
   passages.add(first);
-  await page.locator('[data-passage-current] .grid-note-target').first().waitFor({ timeout: 60000 });
+  await page.locator(CURRENT_NOTE).first().waitFor({ timeout: 60000 });
   const opened = await json(`${api}/passages/${first}`);
   const lengthMs = opened.toMs - opened.fromMs;
   check('Record this passage opens the page of the stretch', opened.part === song.id && lengthMs > 0, `${opened.fromMs}–${opened.toMs} ms`);
@@ -224,7 +251,7 @@ try {
   check('a take recorded in the browser is kept as Take 1', recorded.takes.length === 1 && recorded.takes[0].name === 'Take 1' && recorded.takes[0].seconds > 1.5, `${recorded.takes[0]?.seconds?.toFixed(2)} s`);
   await shot('04-take-range');
   const slow = await takeOf(song.id, opened.fromMs, opened.toMs, 0.5, 'slow');
-  await addFileTake(slow);
+  await addFileTake(slow, await playedNotes(song.id, opened.fromMs, opened.toMs, 0.5));
   const withFile = await json(`${api}/passages/${first}`);
   check('a take from a file is Take 2, the one on show', withFile.takes.length === 2 && withFile.take === withFile.takes[1].id && withFile.takes[1].name === 'Take 2');
   check('the left panel lists the Current and both takes, Take 2 chosen', (await page.locator('[data-passage-takes] [data-testid^="take-"]').count()) === 3 && (await page.getByTestId('take-take-2').getAttribute('data-selected')) === 'true');
@@ -234,9 +261,13 @@ try {
   const read = await json(`${api}/passages/${first}`);
   const take = read.takes.find((one) => one.id === read.take);
   check('Write the proposal reads the take', take?.state === 'ready', take?.state);
-  const currentSheet = await rhythmOf(opened.current);
-  const takeSheet = await rhythmOf(take.id);
-  check('the Proposal is written in the key and figure of the Current', takeSheet?.keySignature === currentSheet?.keySignature && takeSheet?.anchorFigure === currentSheet?.anchorFigure, `${takeSheet?.keySignature} / ${currentSheet?.keySignature}`);
+  const currentSheet = await readingOf(opened.current);
+  const takeSheet = await readingOf(take.id);
+  check(
+    'the Proposal is written in the armadura and figure of the Current',
+    takeSheet.key === currentSheet.key && Math.abs(takeSheet.quarterMs - currentSheet.quarterMs) < 0.5,
+    `${takeSheet.key} / ${currentSheet.key}, ${takeSheet.quarterMs} / ${currentSheet.quarterMs} ms`,
+  );
   check('the Proposal’s hands are all given', (await statusOf(take.id)).steps.find((one) => one.step === 'sheet')?.state === 'ready');
   await shot('05-proposal');
 
@@ -246,15 +277,21 @@ try {
   const fitted = await json(`${api}/passages/${first}`);
   check('Fit finds the speed the take fills the window at (played twice as slowly: ×2)', Math.abs(fitted.speed - 2) < 0.1, `×${fitted.speed}`);
   check('the speed is shown', ((await page.getByTestId('passage-speed').textContent()) ?? '').startsWith('×'), await page.getByTestId('passage-speed').textContent());
-  const windowBox = page.locator('[data-passage-proposal] .grid-frame-window');
-  check('the window lies over the take, from its start', (await windowBox.getAttribute('data-from')) === '0', `${await windowBox.getAttribute('data-from')}–${await windowBox.getAttribute('data-to')}`);
+  const windowBox = page.locator('[data-passage-proposal] [data-frame-window]');
+  check('the window lies over the take, from its start', (await windowBox.getAttribute('data-start')) === '0', `${await windowBox.getAttribute('data-start')}–${await windowBox.getAttribute('data-end')}`);
+  const fittedTake = await readingOf(fitted.take);
+  check(
+    'at the take’s speed the take reads with the song’s figure as much longer',
+    Math.abs(fittedTake.quarterMs - fitted.speed * currentSheet.quarterMs) < 1,
+    `${fittedTake.quarterMs} ms at ×${fitted.speed}`,
+  );
   await shot('06-window');
   // At ×1 the window is half the take, and can be moved over it.
   await send('PATCH', `${api}/passages/${first}`, { speed: 1, windowMs: 0 });
   await page.reload();
-  await page.locator('[data-passage-proposal] .grid-note-target').first().waitFor({ timeout: 60000 });
+  await page.locator(PROPOSAL_NOTE).first().waitFor({ timeout: 60000 });
   await page.waitForTimeout(1200);
-  const grip = page.locator('[data-passage-proposal] .grid-frame-window-grip').first();
+  const grip = page.locator('[data-passage-proposal] [data-frame-window-grip]').first();
   await grip.scrollIntoViewIfNeeded();
   const gripBox = await grip.boundingBox();
   await page.mouse.move(gripBox.x + gripBox.width / 2, gripBox.y + gripBox.height / 2);
@@ -269,12 +306,13 @@ try {
   // The Proposal's toolbox offers what a take can change.
   await page.getByRole('button', { name: 'Sheet toolbox' }).click();
   const tabs = await page.locator('[data-sheet-toolbox] [role=tab], [data-sheet-toolbox] button[role=radio], [data-sheet-toolbox] [aria-label="Sheet toolbox tab"] button').allTextContents();
-  check('the Proposal’s sheet toolbox: Key, Transpose, Layout', tabs.join(',') === 'Key,Transpose,Layout', tabs.join(','));
+  check('the Proposal’s sheet toolbox: Key, Transpose, View', tabs.join(',') === 'Key,Transpose,View', tabs.join(','));
   await shot('07-proposal-toolbox');
   await page.getByRole('button', { name: 'Sheet toolbox' }).click();
 
   // 5. Promote: fit to the window, with the recording.
   const notesBefore = await notesOf(song.id);
+  const idsBefore = JSON.stringify((await json(`${api}/pieces/${song.id}/notes`)).id);
   const filesBefore = await filesOf(song.id);
   const durationBefore = await durationOf(song.id);
   await page.getByTestId('passage-promote').click();
@@ -292,7 +330,9 @@ try {
   // several files its length in whole frames (Phase 11: 233.348 s became 233.35 s, the same audio).
   const durationAfter = await durationOf(song.id);
   check('the song keeps its length', Math.abs(durationAfter - durationBefore) <= 0.0101, `${durationBefore} s → ${durationAfter} s`);
-  check('the take’s notes are in the song', notesAfter !== notesBefore, `${notesBefore} → ${notesAfter} notes`);
+  // New ids: the take's notes, in place of the passage's (as many with `--played`, which plays the passage's keys).
+  const idsAfter = JSON.stringify((await json(`${api}/pieces/${song.id}/notes`)).id);
+  check('the take’s notes are in the song', idsAfter !== idsBefore, `${notesBefore} → ${notesAfter} notes`);
   const filesAfter = await filesOf(song.id);
   check('the take is a file of the song’s audio, between the two halves', filesAfter.length === filesBefore.length + 2 && filesAfter.some((file) => file.kind === 'recording'), filesAfter.map((file) => file.name).join(' | '));
   check('the passage is closed', (await fetch(`${api}/passages/${first}`)).status === 404);
@@ -320,8 +360,11 @@ try {
   const second = passageId();
   passages.add(second);
   const secondOpened = await json(`${api}/passages/${second}`);
-  await page.locator('[data-passage-current] .grid-note-target').first().waitFor({ timeout: 60000 });
-  await addFileTake(await takeOf(song.id, secondOpened.fromMs, secondOpened.toMs, 0.5, 'slow-2'));
+  await page.locator(CURRENT_NOTE).first().waitFor({ timeout: 60000 });
+  await addFileTake(
+    await takeOf(song.id, secondOpened.fromMs, secondOpened.toMs, 0.5, 'slow-2'),
+    await playedNotes(song.id, secondOpened.fromMs, secondOpened.toMs, 0.5),
+  );
   await writeProposal();
   const longer = await durationOf(song.id);
   await page.getByTestId('passage-promote').click();
@@ -384,7 +427,7 @@ try {
   await page.waitForURL(/\/passages\/[0-9a-f-]+$/, { timeout: 20000 });
   const third = passageId();
   passages.add(third);
-  await page.locator('[data-passage-current] .grid-note-target').first().waitFor({ timeout: 60000 });
+  await page.locator(CURRENT_NOTE).first().waitFor({ timeout: 60000 });
   // A MIDI piano with the (fake) microphone: the keys are the notes, the microphone the sound.
   await page.getByTestId('passage-first-record').click();
   await page.locator('[data-passage-recorder]').waitFor();
@@ -419,7 +462,7 @@ try {
   await page.evaluate(() => localStorage.setItem('mui-mode', 'dark'));
   await page.reload();
   await page.getByTestId('take-current').getByRole('button').first().click();
-  await page.locator('[data-passage-current] .grid-note-target').first().waitFor({ timeout: 60000 });
+  await page.locator(CURRENT_NOTE).first().waitFor({ timeout: 60000 });
   await shot('14-passage-dark');
   await page.evaluate(() => localStorage.removeItem('mui-mode'));
   await page.emulateMedia({ colorScheme: 'light' });
@@ -443,7 +486,6 @@ try {
 const unexpected = problems.filter(
   (line) =>
     !/401 .*\/auth\/me/.test(line) &&
-    !/404 .*\/time\/[0-9a-f-]+\/rhythm$/.test(line) &&
     !/404 .*\/passages\/[0-9a-f-]+$/.test(line) &&
     !/Failed to load resource: .* 404/.test(line),
 );

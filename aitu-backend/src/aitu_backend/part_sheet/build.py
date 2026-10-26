@@ -44,7 +44,7 @@ from aitu_backend.sheet.proposal.frames import (
 )
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet.common import spn
-from aitu_backend.sheet.sheet.data import CLEF_NAMES, FRAME_MS, Sheet
+from aitu_backend.sheet.sheet.data import CLEF_NAMES, FRAME_MS, Sheet, carry_extras
 from aitu_backend.sheet.sheet.frames import STAFF_OF, drawn_columns
 from aitu_backend.sheet.sheet.pmn import KEYS
 from aitu_backend.storage import locate, paths
@@ -64,6 +64,7 @@ __all__ = [
     "reading_of",
     "reading_summary",
     "reapply",
+    "sheet_settings",
     "user_marks",
     "windows",
     "with_marks",
@@ -117,15 +118,20 @@ def reading_of(part_id: str) -> Reading:
 
 
 def algorithm(
-    part_id: str, notes: Notes | None = None, *, quarter_ms: float | None = None
+    part_id: str,
+    notes: Notes | None = None,
+    *,
+    quarter_ms: float | None = None,
+    key: int | None = None,
 ) -> FramesProposal:
-    """The algorithm's sheet of a part, with the decisions an old ``sheet.json`` keeps."""
+    """The algorithm's sheet of a part, with the decisions an old ``sheet.json`` keeps; ``key`` (fifths) is an
+    armadura chosen elsewhere (the song's, on a passage of it: Record in Sheet)."""
     notes = pipeline.starting_hands(part_id) if notes is None else notes
     reading = reading_of(part_id)
     return propose_frames(
         notes,
-        key=reading.key,
-        key_changes=reading.key_changes,
+        key=key if key is not None else reading.key,
+        key_changes=None if key is not None else reading.key_changes,
         quarter_ms=quarter_ms if quarter_ms is not None else reading.quarter_ms,
     )
 
@@ -275,7 +281,8 @@ def reapply(stored: Sheet, notes: Notes) -> Sheet:
     )
     sheet, _ = assemble(algo, [part], join=False)
     fit_clefs(sheet, changed)
-    return sheet
+    # What the user wrote about the whole sheet (Phase 8: titles, lyrics, the spacing's figure, the line space).
+    return carry_extras(stored, sheet)
 
 
 def user_marks(sheet: Sheet) -> dict[tuple[int, int], Any]:
@@ -399,7 +406,7 @@ def _compute(part_id: str) -> Drawn:
                 sheet.quarter_ms,
                 record,
             )
-        algo = algorithm(part_id, quarter_ms=record.quarter_ms)
+        algo = algorithm(part_id, quarter_ms=record.quarter_ms, key=record.key)
         return Drawn(
             f1.write(algo.sheet, mode="frames"), "algorithm", [], True, algo.quarter_ms, record
         )
@@ -478,5 +485,35 @@ def draw(text: str, width: float) -> dict[str, Any]:
         "height": rendered.height,
         "notes": notes,
         "reading": reading_summary(sheet),
+        **sheet_settings(sheet),
         "timings": {k: round(v, 1) for k, v in rendered.timings.items()},
+    }
+
+
+def sheet_settings(sheet: Sheet) -> dict[str, Any]:
+    """What the user wrote about the whole sheet (Phase 8), for the sheet toolbox: the title lines, the lyrics pieces
+    in the order of the drawing's ``data-lyric`` (by start), the reference figure and the one of the spacing, the
+    space between lines (``None``: the engine's own)."""
+    return {
+        "titles": dict(sheet.titles),
+        "lyrics": [
+            {
+                "start": one.start,
+                "end": one.end,
+                "text": one.text,
+                "size": one.size,
+                "lift": one.lift,
+                "at": one.at,
+                "dx": one.dx,
+                "dy": one.dy,
+                "width": one.width,
+                "font": one.font,
+                "bold": one.bold,
+                "italic": one.italic,
+            }
+            for one in sorted(sheet.lyrics, key=lambda one: (one.start, one.end))
+        ],
+        "quarterMs": sheet.quarter_ms,
+        "spaceMs": sheet.space_ms,
+        "lineSpace": sheet.line_space,
     }

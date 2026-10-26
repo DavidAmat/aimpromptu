@@ -87,6 +87,48 @@ export interface SheetNote {
   ornaments: string[];
   /** The octave line over it: 1 8va, 2 15ma, -1 8vb, -2 15mb, 0 none. */
   ottava: number;
+  /** The frame it stops sounding at (Phase 8: the keyboard panel lights the keys still held). */
+  end?: number | null;
+}
+
+/**
+ * A lyrics piece of the new sheet (implementation 03, Phase 8): its words (`\n` breaks a line) over the frames
+ * `[start, end)`, drawn above the upper staff from `start`; `size` in staff spaces (`null`: the sheet's own),
+ * `lift` in staff spaces above the line of words of its system. The drawing names it `data-lyric` by its place
+ * in this list.
+ *
+ * Phase 8A++ (the user's request): a block moved by hand sits where it was put, whatever its frames: `at` is the
+ * frame of the column under its left edge, `dx` how far right of that column it starts, `dy` its last line's
+ * baseline below the top staff line (`null`: in the line of words, as before), all in staff spaces. `width` wraps its
+ * words (the backend wraps them); `font`, `bold` and `italic` are its style. The frames say only when it sounds.
+ */
+export interface SheetLyric extends SheetLyricBlock {
+  start: number;
+  end: number;
+  text: string;
+  size: number | null;
+  lift: number;
+}
+
+/** The fonts of a lyrics block (the backend's `LYRIC_FONTS`). */
+export type LyricFont = "lora" | "geist" | "montserrat";
+
+/** Where a lyrics block was put, how wide it is and its style (all optional: absent is the default). */
+export interface SheetLyricBlock {
+  at?: number | null;
+  dx?: number;
+  dy?: number | null;
+  width?: number | null;
+  font?: LyricFont;
+  bold?: boolean;
+  italic?: boolean;
+}
+
+/** The title lines printed above the new sheet. */
+export interface SheetTitles {
+  title?: string;
+  subtitle?: string;
+  artist?: string;
 }
 
 /** The armaduras and clefs of the sheet (Phase 7, the range toolbox). An armadura is in fifths: 3 is three
@@ -110,12 +152,24 @@ export interface ReadingEdit {
     | "key"
     | "clef"
     | "clef-rule"
-    | "ottava";
+    | "ottava"
+    // The sheet toolbox (Phase 8): the whole sheet.
+    | "titles"
+    | "piece-key"
+    | "line-space"
+    | "lyrics"
+    | "figures";
   notes?: readonly string[];
   start?: number;
   end?: number;
   staff?: "both" | "right" | "left";
-  value?: number | number[] | string | null;
+  value?:
+    | number
+    | number[]
+    | string
+    | null
+    | SheetTitles
+    | { pieces: readonly SheetLyric[]; label?: string };
 }
 
 /** The armadura in force at a stretch, and the one that prints the fewest signs over it. */
@@ -158,7 +212,40 @@ export interface FramesSheet {
   /** The user may change this part, and the AI is not writing it: the notes can be edited (plan section 3.7). */
   editable: boolean;
   history: SheetHistory;
+  /** What the user wrote about the whole sheet (Phase 8): the title lines, the lyrics pieces, the reference figure
+   * (one negra, in ms) and the one the spacing keeps after Transpose figures, the space between lines (`null`: the
+   * engine's own, 5 staff spaces). */
+  titles: SheetTitles;
+  lyrics: SheetLyric[];
+  quarterMs: number | null;
+  spaceMs: number | null;
+  lineSpace: number | null;
+  /** The audio's revision: a paste, or its undo, changes the audio too, and the player loads it again. */
+  audioRevision: number;
   timings: Record<string, number>;
+}
+
+/** A sheet as an edit would leave it (a preview: nothing stored), with what it would do. */
+export interface SheetPreview {
+  svg: string;
+  columns: SheetColumn[];
+  systems: SheetSystem[];
+  width: number;
+  height: number;
+  edited: string;
+  /** Transpose notes: the notes moved, and those that would leave the keyboard. */
+  moved?: number;
+  outside?: number;
+}
+
+/** One page of the sheet on paper (Print to PDF): an SVG in staff spaces, and the frames of its first and last
+ * columns. */
+export interface SheetPage {
+  svg: string;
+  width: number;
+  height: number;
+  first: number;
+  last: number;
 }
 
 /** The answer of an edit: the sheet drawn again. */
@@ -170,6 +257,9 @@ export interface SheetEdited extends FramesSheet {
   walked?: string | null;
   /** A reading edit: the step it made (`null`: nothing changed). */
   edited?: string | null;
+  /** A paste: where the passage went and how long it is, in ms of the part. */
+  atMs?: number;
+  lengthMs?: number;
 }
 
 export const sheetApi = {
@@ -216,6 +306,62 @@ export const sheetApi = {
     request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm/stretch`, {
       method: "POST",
       body: stretch,
+    }),
+
+  /** What a reading edit would leave, without storing it (the preview of Transpose figures). */
+  previewRead: (audioUuid: string, edit: ReadingEdit, width: number) =>
+    request<SheetPreview>(`/sheet/${audioUuid}/reading`, {
+      method: "POST",
+      query: { width: Math.round(width), preview: true },
+      body: edit,
+    }),
+
+  /** Transpose notes: every note of the part moved, the sheet with it (one step of undo); `preview` writes nothing. */
+  transpose: (audioUuid: string, semitones: number, width: number, preview = false) =>
+    request<SheetEdited & SheetPreview>(`/sheet/${audioUuid}/transpose`, {
+      method: "POST",
+      query: { width: Math.round(width), ...(preview ? { preview: true } : {}) },
+      body: { semitones },
+    }),
+
+  /** A note added on the keyboard panel, into the notes (one step of undo); the sheet drawn again. */
+  addNote: (
+    audioUuid: string,
+    note: { frame: number; midi: number; hand: "right" | "left"; lengthMs?: number },
+    width: number,
+  ) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/add`, {
+      method: "POST",
+      query: { width: Math.round(width) },
+      body: note,
+    }),
+
+  /** The sheet on paper: whole lines dealt onto pages `height` staff spaces high (`first` for page one). */
+  pages: (
+    audioUuid: string,
+    paper: { width: number; height: number; first: number; gap: number },
+    signal?: AbortSignal,
+  ) =>
+    request<{ pages: SheetPage[] }>(`/sheet/${audioUuid}/pages`, {
+      query: {
+        width: Math.round(paper.width * 10) / 10,
+        height: Math.round(paper.height * 10) / 10,
+        first: Math.round(paper.first * 10) / 10,
+        gap: Math.round(paper.gap * 10) / 10,
+      },
+      signal,
+    }),
+
+  /** Paste a copied passage at `atMs`, or over `[atMs, replaceToMs)`: its notes, sheet and audio (one step of undo). */
+  paste: (
+    audioUuid: string,
+    body: { source: { part: string; fromMs: number; toMs: number }; atMs: number; replaceToMs?: number },
+    width: number,
+  ) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/paste`, {
+      method: "POST",
+      query: { width: Math.round(width) },
+      body,
     }),
 
   /** Take the last step of the part back, or put it again; the sheet drawn again. */

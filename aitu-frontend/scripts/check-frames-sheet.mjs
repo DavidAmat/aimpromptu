@@ -103,13 +103,8 @@ try {
   const later = Number(await page.locator('[data-frames-cursor]').getAttribute('data-ms'));
   check('Play moves the cursor', later > ms + 500, `${ms} -> ${later} ms`);
 
-  // The old sheet draws, or (after Sonnet changed the hands its sheet.json was saved for) opens with its banner.
-  await page.getByTestId('old-sheet').click();
-  await page.locator('.grid-note-target, [data-sheet-banner="stale"]').first().waitFor({ timeout: 90000 });
-  check('the old sheet opens from the bar', true);
-  await page.getByTestId('new-sheet').first().click();
-  await drawn(page);
-  check('and the new one comes back', true);
+  // The old sheet is gone (Phase 8B): no switch on the bar.
+  check('the bar has no switch to the old sheet', (await page.getByTestId('old-sheet').count()) === 0);
 
   await page.goto(`${base}/projects/${part}/hands`);
   await page.waitForURL('**/sheet');

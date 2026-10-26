@@ -15,7 +15,8 @@
  *
  * The spacing of a stretch, its speed and the hidden or dragged octave lines of the old sheet are not here: the user
  * dropped them (Phase 7). The title bar hands the stretch to the note toolbox (*Select the notes in this stretch*)
- * and asks the AI to write the stretch again with the user's words.
+ * and asks the AI to write the stretch again with the user's words; Phase 8B adds the old title bar's actions:
+ * **Record this passage**, **Start a new part here** (the parts of a project) and **Copy this stretch**.
  */
 
 import { useEffect, useState } from "react";
@@ -28,8 +29,11 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
+import CallSplitIcon from "@mui/icons-material/CallSplitOutlined";
 import CheckIcon from "@mui/icons-material/Check";
+import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecordOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHorizOutlined";
 import { sheetApi, type ReadingEdit, type SheetNote, type SheetReading, type StretchKeys } from "../../../../api";
 import { IconAction, PillButton, Segmented, Toolbox } from "../../../../ui";
@@ -93,6 +97,9 @@ export function FramesRangeToolbox({
   onEdit,
   onSelectNotes,
   onEnhance,
+  onCopy,
+  onRecordPassage,
+  onSplit,
   busy,
   locked,
 }: {
@@ -111,6 +118,12 @@ export function FramesRangeToolbox({
   onSelectNotes: () => void;
   /** Ask the AI to write the stretch again (`null`: the AI cannot be asked here). */
   onEnhance: (() => void) | null;
+  /** **Copy this stretch**: its notes, sheet and audio, for a Paste anywhere. */
+  onCopy: () => void;
+  /** **Record this passage**: the page of the stretch, to record it again (`null`: not here). */
+  onRecordPassage: (() => void) | null;
+  /** **Start a new part here** (the parts of a project; `null`: not here, or the stretch starts the part). */
+  onSplit: (() => void) | null;
   busy: boolean;
   locked: string | null;
 }) {
@@ -167,6 +180,33 @@ export function FramesRangeToolbox({
       onClose={onClose}
       headerAction={
         <>
+          {onRecordPassage ? (
+            <IconAction
+              title="Record this passage"
+              icon={<FiberManualRecordIcon fontSize="small" />}
+              onClick={onRecordPassage}
+              disabled={off}
+              disabledTitle={why}
+              data-testid="range-record"
+            />
+          ) : null}
+          {onSplit ? (
+            <IconAction
+              title="Start a new part here"
+              icon={<CallSplitIcon fontSize="small" />}
+              onClick={onSplit}
+              disabled={off}
+              disabledTitle={why}
+              data-testid="range-split"
+            />
+          ) : null}
+          <IconAction
+            title="Copy this stretch"
+            shortcut="⌘C"
+            icon={<ContentCopyIcon fontSize="small" />}
+            onClick={onCopy}
+            data-testid="range-copy"
+          />
           {onEnhance ? (
             <IconAction
               title="Enhance this stretch with AI, with your own words"

@@ -10,8 +10,13 @@
  * the refusal and change nothing.
  */
 
-import { LYRIC_FONT_SIZE, MAX_LYRIC_FONT_SIZE, MIN_LYRIC_FONT_SIZE } from "@aimpromptu/grid-notation";
 import type { LyricLine } from "../../../api";
+
+/** The size of the words, in pixels: the default and the limits (the drawing package's values, kept here so the
+ * new sheet needs nothing of it). */
+export const LYRIC_FONT_SIZE = 12;
+export const MIN_LYRIC_FONT_SIZE = 7;
+export const MAX_LYRIC_FONT_SIZE = 36;
 
 export type Outcome<T> = { ok: T } | { refused: string };
 
@@ -128,6 +133,8 @@ export function movePiece(
     text: piece.text,
     ...(change.offsetY === 0 ? {} : { offsetY: change.offsetY }),
     ...(piece.fontSize === undefined ? {} : { fontSize: piece.fontSize }),
+    // A block of the new sheet keeps where it was put and its style: there the frames say only when it sounds.
+    ...(piece.block === undefined ? {} : { block: piece.block }),
   };
   return { ok: byStart(lyrics.map((line) => (line === piece ? moved : line))) };
 }
@@ -183,6 +190,8 @@ export function splitPiece(
     text: after,
     ...(piece.offsetY === undefined ? {} : { offsetY: piece.offsetY }),
     ...(piece.fontSize === undefined ? {} : { fontSize: piece.fontSize }),
+    // The second half of a block of the new sheet keeps its width and style, and starts in the line of words.
+    ...(piece.block === undefined ? {} : { block: { ...piece.block, at: null, dx: 0, dy: null } }),
   };
   return { ok: byStart([...lyrics.filter((line) => line !== piece), first, second]) };
 }

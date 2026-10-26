@@ -17,8 +17,8 @@
  * 4. 390 px and dark.
  *
  * Implementation 03, Phase 5: Play mode draws the new sheet (`[data-frames-sheet]`, its cursor
- * `[data-frames-cursor]`), which has no lyrics until Phase 8; the lyrics of the Sheet step are checked on the old
- * sheet (the switch of its floating bar).
+ * `[data-frames-cursor]`); Phase 8 gave it lyrics (`[data-lyric]`, lit while they sound), and since Phase 8B the Sheet
+ * step's lyrics are checked on the new sheet too (the old one is gone; a piece placed is stored at once).
  *
  *     npm run check:play
  *     npm run check:play -- --name Elefants --out /tmp/play
@@ -114,6 +114,16 @@ try {
       { fromColumn: 400, toColumn: 450, text: 'check words two' },
     ],
   });
+  // The same two pieces on the new sheet (implementation 03, Phase 8: lyrics are lines of the sheet itself).
+  await send('POST', `${api}/sheet/${copy.id}/reading?width=130`, {
+    action: 'lyrics',
+    value: {
+      pieces: [
+        { start: 25, end: 100, text: 'check words one', size: null, lift: 0 },
+        { start: 400, end: 450, text: 'check words two', size: null, lift: 0 },
+      ],
+    },
+  });
 
   await page.goto(`${base}/projects`);
   await page.getByText(copy.title).first().waitFor({ timeout: 20000 });
@@ -125,13 +135,29 @@ try {
   check('the page has no sidebar', (await page.locator('nav').count()) === 0);
   check('Close and Play are on the page, Next is not', (await page.getByTestId('play-close').isVisible()) && (await page.getByTestId('play-toggle').isVisible()) && (await page.getByTestId('play-next').count()) === 0);
   check('nothing on the sheet opens a toolbox', (await page.locator('[data-sheet-page] [data-testid=sheet-floating-bar], [role=toolbar]').count()) === 0);
-  // The new sheet draws no lyrics until implementation 03, Phase 8 (plan task 8.2).
-  console.log('skip  the lyrics of Play mode: the new sheet draws them from Phase 8');
+  // Counted by piece: a piece whose frames cross a line break is drawn in parts (implementation 03, Phase 8A++).
+  const drawnPieces = await page.locator('[data-play-active="true"] [data-lyric]').evaluateAll((all) => new Set(all.map((one) => one.getAttribute('data-lyric'))).size);
+  check('the lyrics pieces are drawn on the sheet', drawnPieces === 2, `${drawnPieces} pieces`);
   await shot('01-play-mode');
 
   await page.mouse.move(700, 450);
   await page.keyboard.press('Space');
   check('Space plays', await until(async () => (await playing()) === 'true', 8000));
+  const litInPlay = await until(
+    async () =>
+      page.evaluate(() => {
+        const one = document.querySelector('[data-play-active="true"] [data-lyric][data-start="25"]');
+        const two = document.querySelector('[data-play-active="true"] [data-lyric][data-start="400"]');
+        return Boolean(
+          one?.hasAttribute('data-lyric-lit') &&
+            getComputedStyle(one).fontWeight === '700' &&
+            two &&
+            Number(getComputedStyle(two).opacity) < 0.6,
+        );
+      }),
+    8000,
+  );
+  check('while it plays, the lyrics piece of the frames sounding is lit and the others are faint', litInPlay);
   await shot('02-playing');
   const faded = await until(
     async () => (await page.locator('[data-play-menu]').evaluate((node) => getComputedStyle(node).opacity)) === '0',
@@ -184,94 +210,24 @@ try {
   await page.waitForURL(`**/projects/${copy.id}**`);
   check('Escape closes Play mode', true);
 
-  // The Sheet step lights the words being sung too, and fades nothing.
+  // The Sheet step lights the words being sung too, and fades nothing (the new sheet).
   await page.goto(`${base}/projects/${copy.id}/sheet`);
-  await page.getByTestId('old-sheet').click({ timeout: 90000 });
-  await page.waitForSelector('[data-sheet-page] .grid-note-target', { timeout: 90000 });
+  await page.locator('[data-sheet-page] [data-frames-sheet] [data-note]').first().waitFor({ timeout: 90000 });
   await page.waitForTimeout(800);
   await page.mouse.move(700, 450);
   await page.keyboard.press('Space');
   const litOnSheet = await until(
     async () =>
       page.evaluate(() => {
-        const one = document.querySelector('.grid-lyric[data-from-column="25"]');
-        const two = document.querySelector('.grid-lyric[data-from-column="400"]');
-        const ink = one?.querySelector('.grid-lyric-text');
-        return Boolean(
-          one && two && ink &&
-            getComputedStyle(ink).fill === 'rgb(0, 0, 0)' &&
-            Number(getComputedStyle(ink).fontWeight) >= 700 &&
-            getComputedStyle(two).opacity === '1',
-        );
+        const one = document.querySelector('[data-sheet-page] [data-lyric][data-start="25"]');
+        const two = document.querySelector('[data-sheet-page] [data-lyric][data-start="400"]');
+        return Boolean(one && two && one.hasAttribute('data-lyric-lit') && getComputedStyle(two).opacity === '1');
       }),
     8000,
   );
-  check('on the Sheet step the words being sung turn black and bold, the others stay', litOnSheet);
+  check('on the Sheet step the words being sung are lit, the others stay', litOnSheet);
   await shot('12-sheet-step-lyrics');
   await page.keyboard.press('Space');
-
-  // A piece placed and not saved lights up too: the page's own lyrics, not the saved ones.
-  await page.waitForTimeout(400);
-  await page.getByRole('button', { name: 'Sheet toolbox' }).click();
-  const toolbox = page.locator('[data-sheet-toolbox]');
-  await toolbox.getByRole('button', { name: 'Lyrics', exact: true }).click();
-  await page.locator('[data-lyrics-paste]').fill('words not saved');
-  await toolbox.locator('[data-lyrics-add]').click();
-  const target = await page.evaluate(() => {
-    const ruler = document.querySelector('.grid-frame-ruler')?.getBoundingClientRect();
-    for (const note of document.querySelectorAll('.grid-note-target[data-hand="right"]')) {
-      const box = note.getBoundingClientRect();
-      if (ruler && box.top > ruler.y && box.top < ruler.y + 220 && box.left > ruler.x + ruler.width * 0.4) {
-        return { x: box.left + box.width / 2, y: ruler.y + ruler.height + 40 };
-      }
-    }
-    return null;
-  });
-  const dropBox = await page.locator('[data-sheet-drop]').boundingBox();
-  if (target && dropBox) {
-    await toolbox.locator('[data-lyrics-piece]').last().dragTo(page.locator('[data-sheet-drop]'), {
-      targetPosition: { x: target.x - dropBox.x, y: target.y - dropBox.y },
-    });
-  }
-  await page.waitForTimeout(1200);
-  const pool = await toolbox.locator('[data-lyrics-piece]').count();
-  const placed = await page.evaluate(() => {
-    for (const group of document.querySelectorAll('.grid-lyric')) {
-      if (group.textContent?.includes('words not saved')) {
-        return { from: Number(group.getAttribute('data-from-column')), to: Number(group.getAttribute('data-to-column')) };
-      }
-    }
-    return null;
-  });
-  const savedNow = await json(`${api}/time/${copy.id}/rhythm`);
-  const notSaved = placed !== null && !savedNow.lyrics.some((line) => line.text === 'words not saved');
-  let litUnsaved = false;
-  if (placed) {
-    await page.getByRole('button', { name: 'Close' }).first().click().catch(() => undefined);
-    // Move the recording to the middle of the piece with the scrub bar's keys, then play.
-    const bar = page.getByRole('slider', { name: 'Position in the piece' });
-    const want = (((placed.from + placed.to) / 2) * 40) / 1000;
-    await bar.evaluate((node) => node.focus());
-    for (let tries = 0; tries < 400; tries++) {
-      const now = Number(await bar.getAttribute('aria-valuenow'));
-      if (now >= want - 0.3) break;
-      await page.keyboard.press('ArrowRight');
-    }
-    await page.mouse.click(5, 5);
-    await page.keyboard.press('Space');
-    litUnsaved = await until(
-      async () =>
-        page.evaluate((from) => {
-          const ink = document.querySelector(`.grid-lyric[data-from-column="${from}"] .grid-lyric-text`);
-          return Boolean(ink && getComputedStyle(ink).fill === 'rgb(0, 0, 0)' && Number(getComputedStyle(ink).fontWeight) >= 700);
-        }, placed.from),
-      8000,
-    );
-    // At once: the piece is lit only while the cursor is over it.
-    await page.screenshot({ path: path.join(out, '13-sheet-step-lyrics-not-saved.png') });
-    await page.keyboard.press('Space');
-  }
-  check('a lyrics piece placed and not saved lights up too', notSaved && litUnsaved, placed ? `f${placed.from}–f${placed.to}` : `not placed: target ${JSON.stringify(target)}, ${pool} in the pool`);
 
   // 2. An integrated playlist: two parts, played on.
   const composed = await send('POST', `${api}/projects/compose`, {

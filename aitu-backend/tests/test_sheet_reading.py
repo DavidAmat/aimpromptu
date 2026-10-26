@@ -391,9 +391,22 @@ def test_the_stretch_request_names_what_the_user_picked() -> None:
 
 
 def test_every_action_of_the_page_is_planned() -> None:
+    # The sheet's own actions (Phase 8: the sheet toolbox) name no notes and no stretch.
+    whole = {"titles", "piece-key", "line-space", "lyrics", "figures"}
     for action in reading.ACTIONS:
+        if action in whole:
+            continue
         with pytest.raises(reading.Refused):
             reading.plan(action)
+    for action, value in (
+        ("titles", {"title": "T"}),
+        ("piece-key", 2),
+        ("line-space", None),
+        ("lyrics", {"pieces": []}),
+        ("figures", 1),
+    ):
+        change, holds = reading.plan(action, value=value)
+        assert callable(change) and holds is None
 
 
 def test_chord_fingers_run_from_the_thumb_in_the_right_hand_and_from_the_little_finger_in_the_left() -> (

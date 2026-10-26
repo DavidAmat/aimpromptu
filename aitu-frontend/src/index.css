@@ -51,6 +51,37 @@
   font-display: swap;
 }
 
+/*
+ * The other faces of a lyrics block (implementation 03, Phase 8A++: the lyrics toolbox's Font, Bold and Italic):
+ * Lora upright, and the italics of Geist and Montserrat, so every font of a block has its four looks. Variable
+ * weight, Latin subsets, from @fontsource-variable 5.3.0; SIL OFL 1.1, as the files above. The backend wraps the
+ * words of a block with the widths of these same files (`sheet/engrave/lyric_fonts.json`,
+ * `scripts/measure-lyric-fonts.mjs`).
+ */
+@font-face {
+  font-family: "Lora";
+  src: url("/fonts/lora.woff2") format("woff2-variations");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/geist-italic.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/montserrat-italic.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root[data-scheme="dark"] {
   color-scheme: dark;
 }

@@ -26,7 +26,8 @@ their phase, after its study (plan section 8).
 - [x] **Phase 5**: merge into `master`: now (user, 2026-10-25); merged at the end of Phase 5.
 - [x] **Phase 6**: may a new LLM run change hands that the user moved (user, 2026-10-25: yes, it reads the current hands as a suggestion); the engine in the backend or in the browser (agent, from the time of one edit, about 0.25 s: the backend).
 - [x] **Phase 7**: the tools that no longer make sense (user, 2026-10-25): even spacing, the room of a stretch, speed changes, print smaller, the unplayed decoration and hiding or dragging an 8va bracket are dropped; a grace note switch replaces the two small-note tools; a new AI run keeps the user's fingers, figures and grace switches and writes its own kinds again.
-- [ ] **Phase 8**: the tools of the sheet toolbox and the other screens that no longer make sense: keep, change or drop.
+- [x] **Phase 8**: the tools of the sheet toolbox and the other screens that no longer make sense (user, 2026-10-26): Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's, with Enhance with AI as a button; Find trills, Remove all and Bring back are dropped.
+- [x] **Phase 8A++**: lyrics blocks (user, 2026-10-26): the corner handle scales the words and the side handle sets the width; the frames of a block on a bar in the strip; the fonts Lora, Geist and Montserrat; a piece over a line break shares its words by the width on each line.
 
 # [x] Phase 0: The research folder on Ubuntu, the branch, the inventory
 
@@ -118,11 +119,20 @@ Done 2026-10-26 after the user's check of the gallery and in the browser; merged
 - [x] The gallery checked by the user (2026-10-25: "all good").
 - [x] The user's check in the browser ("all good"), after two reworks of the AI on a stretch (report section 9).
 
-# [ ] Phase 8: The other screens and the sheet toolbox
+# [x] Phase 8: The other screens and the sheet toolbox
 
-- [ ] Task 8.1 Study and inventory (the sheet toolbox with Transpose figures and notes, the keyboard panel, Find trills, Play mode, Recording in Sheet, copy and paste, parts and playlists, the PDF, the Transpose preview, From other projects, the requests review; the range toolbox's Copy, Record this passage, Start a new part).
-- [ ] Task 8.2 Lyrics in the format and in the engine.
-- [ ] Task 8.3 Each screen on the new engine; vexflow-v2 no longer draws or edits anywhere; its browser checks moved.
+Done 2026-10-26 after the user's check of 8B in the browser ("works amazingly"); merged into `master`. Report: [`03-implementation-phase-8.md`](03-implementation-phase-8.md).
+
+- [x] Task 8.1 Study and inventory (the sheet toolbox with Transpose figures and notes, the keyboard panel, Find trills, Play mode, Recording in Sheet, copy and paste, parts and playlists, the PDF, the Transpose preview, From other projects, the requests review; the range toolbox's Copy, Record this passage, Start a new part); the user's answers (four questions); the phase in two halves.
+- [x] Task 8.2 Lyrics in the format and in the engine (`lyric` lines of `sheet.f1`, `<text data-lyric>`; picked, dragged and lit on the page).
+- [x] Task 8.3 Each screen on the new engine; vexflow-v2 no longer draws or edits anywhere; its browser checks moved.
+  - [x] 8A The sheet toolbox (Title, Key, Transpose notes and figures with the preview, Lyrics, View: Zoom and Space between lines), the keyboard panel, Print to PDF, Play mode's lyrics: built, `check:frames-toolbox` passes; checked by the user in the browser (2026-10-26, "all good").
+  - [x] 8A+ The user's request (2026-10-26): a small piano in the note toolbox with the picked chord's keys lit; a dark key adds a note to that column, a lit key takes it off (one step of undo each). Built 2026-10-26 (report section 8.1): one column picked shows its keys, both hands; the note added takes its chord's hand, length, figure and beam group; the chord stays picked; `check:frames-toolbox` covers it.
+  - [x] 8A+ again (2026-10-26, the user's next request): ⌘-click on a lit key of the chord keyboard picks that note (full colour and a dot; the others pale), so **Hand** moves only the notes picked; a note added is the one picked after (report section 8.1).
+  - [x] 8A++ The user's second request (2026-10-26): lyrics pieces as free blocks (a click highlights the block; moved anywhere and resized, the words wrapping inside, without touching the frames; no stretch strip while one is picked) and a lyrics toolbox (size, several fonts, normal, bold, italic, and the old toolbar's actions). Built 2026-10-26 (report section 8.2) with the user's answers: the corner scales the words, the side sets the width; the frames on a bar in the strip; Lora, Geist, Montserrat; a piece over a line break shared by width. The engine wraps the words (a width table measured from the app's fonts), so the page and the PDF print the same lines; `check:frames-toolbox` covers it.
+  - [x] 8A+++ The user's third request (2026-10-26): a denser PDF: a control of the size of the music in the print dialog, the space between lines able to go below today's minimum, about five lines (two staves each) on an A4 page by default. Built 2026-10-26 (report section 8.3): **Size of the music** (5 to 8 mm staff, 6.5 mm by default) and **Space between lines** on paper (1 to 20 mm, 6 mm by default, no longer the screen's); 5 to 7 lines on a full A4 page (median 6) on the 10 viewer songs, 44 pages instead of 51.
+  - [x] The user checks 8A in the browser with the three requests (2026-10-26: "all good", after two fixes found on the way: two clefs on one spot, the print preview's edges; report section 8).
+  - [x] 8B `sheet.f1` follows every change of a part's length; copy and paste; Start a new part; the read-only stretch actions; the requests review; Recording in Sheet; the blank sheet; the switch removed and the browser checks moved; the user's check in the browser. Built 2026-10-26 (report section 10): `part_sheet/lengths.py` in every paste and cut, `POST /sheet/{uuid}/paste` one step of undo (a promotion too), the read-only *Frames* panel, the passage page on the new sheet (the window, the song's figure and armadura), the blank sheet; `SheetPage` draws only the new sheet; every browser check that can run without the GPU passes on the new hooks (`scripts/frames-page.mjs`). Checked by the user in the browser (2026-10-26: "works amazingly"; a few user-experience points left for later), after the recorder says why **Record** is off on an address without the microphone (report section 10.9).
 
 # [ ] Phase 9: The saved data
 

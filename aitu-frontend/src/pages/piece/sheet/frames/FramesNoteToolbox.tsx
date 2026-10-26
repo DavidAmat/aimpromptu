@@ -14,12 +14,20 @@
  * - **Marks**: a trill, a mordent or a turn over picked onsets that follow one another (the first one is written,
  *   the others are played inside it); a rolled chord; a fermata. Pressed again, the mark goes away.
  * - 🗑 takes the notes off the page (Delete): they leave the notes, and undo brings them back.
+ * - **The keyboard** (the user's request of 2026-10-26, Phase 8A), when the picked notes are in one column: the
+ *   column's keys lit in their hand's colour, both hands. A dark key adds a note to the column, in the picked hand
+ *   and as long as its chord; a lit key takes that note off. Each press is one step of undo. Notes picked in several
+ *   columns show no keyboard: like the keyboard panel, it is the chord of one moment. ⌘ (or Control, or Shift) and
+ *   a click on a lit key picks that note or lets it go (the user's request of 2026-10-26): the picked notes' keys
+ *   keep their full colour with a dot (the other lit keys turn pale), and **Hand** then moves only them. A note added
+ *   on the keyboard is the one picked after.
  *
  * The title bar hands the selection to the range toolbox (*Select the frames of these notes*) and asks the AI to write
  * the stretch of these notes again with the user's words. The panel is the old one's: titled with the note's printed
  * name (`Do-# 5`) or the number of notes, the time under it, dragged by its title bar.
  */
 
+import { useEffect, useRef } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
@@ -30,6 +38,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import BackspaceIcon from "@mui/icons-material/BackspaceOutlined";
+import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
 import ContentCutIcon from "@mui/icons-material/ContentCutOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import LinkIcon from "@mui/icons-material/LinkOutlined";
@@ -37,10 +46,22 @@ import SwapHorizIcon from "@mui/icons-material/SwapHorizOutlined";
 import type { ReadingEdit, SheetNote } from "../../../../api";
 import FigureGlyph from "../../../../components/time/FigureGlyph";
 import { FIGURE_SHORT } from "../../../../music/figures";
-import { spanishNoteName } from "../../../../music/noteNames";
-import { IconAction, Segmented, Toolbox } from "../../../../ui";
-import { formatSeconds } from "../sheetConstants";
-import { CHORD_ORNAMENTS, FIGURES, FINGERS, SPAN_ORNAMENTS, chordOf, frameOf, handColumns } from "./readingTools";
+import { spanishNoteName, spanishNoteShort } from "../../../../music/noteNames";
+import { keepKeyInView } from "../../../../piano/keyPositions";
+import { IconAction, MiniKeys, Segmented, Toolbox } from "../../../../ui";
+import { HAND_COLOUR, formatSeconds } from "../sheetConstants";
+import {
+  CHORD_ORNAMENTS,
+  FIGURES,
+  FINGERS,
+  SPAN_ORNAMENTS,
+  chordOf,
+  frameOf,
+  handColumns,
+  handForKey,
+  midiOf,
+  oneColumn,
+} from "./readingTools";
 
 type Hand = SheetNote["hand"];
 
@@ -73,6 +94,58 @@ function printedName(pitch: string): string {
   return spanishNoteName({ letter, accidental: sign === "#" ? 1 : sign === "b" ? -1 : 0, octave: Number(octave) });
 }
 
+/**
+ * The picked column's chord on a small keyboard: a dark key adds a note there, a lit key takes it off, and ⌘ and a
+ * click on a lit key picks that note or lets it go (the picked ones dotted).
+ */
+function ChordKeys({
+  picked,
+  column,
+  onKey,
+  disabled,
+  why,
+}: {
+  picked: readonly SheetNote[];
+  /** Every note of the picked column, both hands. */
+  column: readonly SheetNote[];
+  onKey: (midi: number, add: boolean) => void;
+  disabled: boolean;
+  why: string | undefined;
+}) {
+  const scroller = useRef<HTMLDivElement | null>(null);
+  const keys = column.map((note) => midiOf(note.ref));
+  const middle = keys.length > 0 ? Math.round((Math.min(...keys) + Math.max(...keys)) / 2) : null;
+  const frame = column.length > 0 ? frameOf(column[0]!.ref) : null;
+  // The chord in view when another column is picked (a key pressed keeps the place: the chord stays in view).
+  useEffect(() => keepKeyInView(scroller.current, middle, 0.5), [frame, middle]);
+  const colours: Record<number, string> = {};
+  for (const note of column) colours[midiOf(note.ref)] = HAND_COLOUR[note.hand];
+  const title = (midi: number) => {
+    if (why) return `${spanishNoteShort(midi)}. ${why}`;
+    const lit = column.find((note) => midiOf(note.ref) === midi);
+    if (lit) return `${spanishNoteShort(midi)}, ${lit.hand} hand: take it off. ⌘-click: pick it or let it go`;
+    return `${spanishNoteShort(midi)}: add it to the ${handForKey(midi, picked, column)} hand`;
+  };
+  return (
+    <Box
+      ref={scroller}
+      role="group"
+      aria-label="The keys of this chord"
+      sx={{ overflowX: "auto", maxWidth: "100%", borderRadius: 1, opacity: disabled ? 0.5 : 1 }}
+      data-chord-keys
+    >
+      <MiniKeys
+        colours={colours}
+        picked={new Set(picked.map((note) => midiOf(note.ref)))}
+        onPress={onKey}
+        title={title}
+        disabled={disabled}
+        octaves
+      />
+    </Box>
+  );
+}
+
 export function FramesNoteToolbox({
   picked,
   notes,
@@ -82,8 +155,10 @@ export function FramesNoteToolbox({
   onMoveHand,
   onEdit,
   onRemove,
+  onChordKey,
   onSelectFrames,
   onEnhance,
+  onCopy,
   busy,
   locked,
 }: {
@@ -99,10 +174,14 @@ export function FramesNoteToolbox({
   /** One reading edit on the picked notes (the refs are added by the page). */
   onEdit: (edit: Omit<ReadingEdit, "notes">) => void;
   onRemove: () => void;
+  /** A key of the chord keyboard pressed: add that key to the picked column, or take it off; with `add`, pick it. */
+  onChordKey: (midi: number, add: boolean) => void;
   /** Hand the selection to the range toolbox: the frames these notes cover. */
   onSelectFrames: () => void;
   /** Ask the AI to write the stretch of these notes again (`null`: the AI cannot be asked here). */
   onEnhance: (() => void) | null;
+  /** **Copy** the frames these notes cover, for a Paste anywhere (Phase 8B). */
+  onCopy: () => void;
   /** An edit is on its way. */
   busy: boolean;
   /** Why the notes cannot be changed now (the AI is writing the sheet), or `null`. */
@@ -148,6 +227,10 @@ export function FramesNoteToolbox({
   const anyGraceRule = known.some((note) => note.graceRule !== null);
   const hasMark = (kind: string) => heads.length > 0 && heads.every((note) => note.ornaments.includes(kind));
 
+  // The keyboard: the picked notes' one column, both hands.
+  const columnFrame = oneColumn(known);
+  const columnNotes = columnFrame === null ? [] : all.filter((note) => frameOf(note.ref) === columnFrame);
+
   return (
     <Toolbox
       open={known.length > 0}
@@ -168,6 +251,13 @@ export function FramesNoteToolbox({
             />
           ) : null}
           <IconAction
+            title="Copy the frames of these notes"
+            shortcut="⌘C"
+            icon={<ContentCopyIcon fontSize="small" />}
+            onClick={onCopy}
+            data-testid="notes-copy"
+          />
+          <IconAction
             title="Select the frames of these notes"
             icon={<SwapHorizIcon fontSize="small" />}
             onClick={onSelectFrames}
@@ -177,6 +267,13 @@ export function FramesNoteToolbox({
       }
     >
       <Stack spacing={1.25} data-frames-note-toolbox>
+        {columnFrame !== null ? (
+          <>
+            <ChordKeys picked={known} column={columnNotes} onKey={onChordKey} disabled={off} why={why} />
+            <Divider />
+          </>
+        ) : null}
+
         {/* The figures, as the shapes they print as; nothing moves in time. */}
         <Stack direction="row" spacing={0.25} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 0.5 }}>
           {FIGURES.map(({ figure, name }) => (
@@ -346,7 +443,11 @@ export function FramesNoteToolbox({
           />
           {known.length > 1 ? (
             <Typography variant="body2" color="text.secondary">
-              {oneChord ? `One chord of ${oneChord.length}` : `${chords.length} chords`}
+              {oneChord
+                ? oneChord.length > known.length
+                  ? `${known.length} notes of a chord of ${oneChord.length}`
+                  : `One chord of ${oneChord.length}`
+                : `${chords.length} chords`}
             </Typography>
           ) : null}
         </Stack>

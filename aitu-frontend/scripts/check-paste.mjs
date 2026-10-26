@@ -1,13 +1,14 @@
 /**
- * Copy and paste, and From scratch (implementation 02, Phase 8), walked in a headless Chromium.
+ * Copy and paste, and From scratch (implementation 02, Phase 8; on the new sheet since implementation 03, Phase 8B),
+ * walked in a headless Chromium.
  *
  * Drives the real page through the running app (`make up`), signed in (`session.mjs`), on
  * **temporary copies** only, deleted at the end, so no project of a library is changed:
  *
  * 1. a stretch of one copy is marked and copied (**Copy** in the range toolbox);
  * 2. it is pasted into another copy at the cursor (**Paste** on the floating bar): its notes, its
- *    audio (a file of its own between the two halves of the target's) and the saved sheet;
- * 3. undo and redo give the notes and the files back exactly;
+ *    audio (a file of its own between the two halves of the target's) and its sheet, one step of undo;
+ * 3. undo and redo give the notes and the files back exactly, and the step survives a reload;
  * 4. Command-V pastes over a marked stretch, which becomes cuts of the audio;
  * 5. **New project → From scratch** opens a blank sheet with no step tabs; **Paste** fills it and
  *    the steps appear; a stretch of a version of My library is pasted into it too (across layers);
@@ -24,7 +25,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
-import { oldSheet, signIn, useSession } from './session.mjs';
+import { markStretch as markOnSheet, waitForFrames, watchSheets } from './frames-page.mjs';
+import { signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { values } = parseArgs({
@@ -57,6 +59,7 @@ const made = new Set();
 const browser = await chromium.launch();
 useSession(browser);
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+watchSheets(page);
 const problems = [];
 page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
 page.on('pageerror', (e) => problems.push(`page error: ${e.message}`));
@@ -70,9 +73,8 @@ const shot = async (name) => {
 };
 const waitForSheet = async () => {
   await page.waitForSelector('[data-sheet-title]', { timeout: 90000 });
-  await oldSheet(page, { drawn: false });
-  await page.waitForSelector('.grid-note-target', { timeout: 90000 });
-  await page.waitForTimeout(800);
+  await waitForFrames(page);
+  await page.waitForTimeout(300);
 };
 const notesOf = async (id) => (await json(`${api}/pieces/${id}/notes`)).id.length;
 const filesOf = async (id) => (await json(`${api}/audio/${id}/files`)).files;
@@ -80,7 +82,6 @@ const statusOf = async (id) => json(`${api}/pieces/${id}/status`);
 const stateOf = async (id, step) => (await statusOf(id)).steps.find((one) => one.step === step)?.state;
 const undoButton = () => page.getByRole('button', { name: /^Undo/ }).first();
 const redoButton = () => page.getByRole('button', { name: /^Redo/ }).first();
-const unsavedDot = () => page.locator('[data-unsaved]').first().getAttribute('data-unsaved');
 /** Wait until the notes of a part are `count`: a paste, an undo, a redo has landed. */
 const notesBecome = async (id, count, label) => {
   for (let tries = 0; tries < 60; tries += 1) {
@@ -90,17 +91,10 @@ const notesBecome = async (id, count, label) => {
   check(label, false, `notes ${await notesOf(id)}, wanted ${count}`);
   return false;
 };
-/** Mark a stretch on the first line's frame ruler, from `from` to `to` of its width. */
+/** Mark a stretch of the first line, from `from` to `to` of its columns: the range toolbox opens. */
 const markStretch = async (from, to) => {
-  await page.locator('.grid-frame-ruler').first().scrollIntoViewIfNeeded();
-  await page.waitForTimeout(300);
-  const box = await page.locator('.grid-frame-ruler').first().boundingBox();
-  await page.mouse.click(box.x + box.width * from, box.y + box.height / 2);
-  await page.locator('[role=tablist][aria-label="What this stretch carries"]').waitFor({ timeout: 10000 });
-  await page.keyboard.down('Shift');
-  await page.mouse.click(box.x + box.width * to, box.y + box.height / 2);
-  await page.keyboard.up('Shift');
-  await page.waitForTimeout(400);
+  await markOnSheet(page, api, { from, to });
+  await page.locator('[data-frames-range-toolbox]').waitFor({ timeout: 10000 });
 };
 const joins = (ids) => {
   try {
@@ -147,7 +141,7 @@ try {
   await page.getByTestId('range-copy').click();
   const copied = await page.evaluate(() => JSON.parse(window.localStorage.getItem('aitu.clipboard.passage') ?? 'null'));
   check('Copy keeps a reference to the stretch, not its notes', copied?.part === source.id && copied.toMs > copied.fromMs && !('notes' in (copied ?? {})), copied ? `${copied.fromMs}–${copied.toMs} ms` : 'nothing');
-  check('Copy says it copied', (await page.getByTestId('sheet-notice').textContent().catch(() => '')).startsWith('Copied'));
+  check('Copy says it copied', ((await page.getByTestId('sheet-flash').textContent().catch(() => '')) ?? '').startsWith('Copied'));
   await page.keyboard.press('Escape');
 
   // 2. Paste it into the target, at the cursor.
@@ -162,26 +156,29 @@ try {
   await shot('02-paste-tooltip');
   const pasteTitle = await page.getByTestId('sheet-paste').getAttribute('aria-label');
   check('Paste names what it pastes and where', /^Paste “.+” \d+:\d\d – \d+:\d\d at the cursor$/.test(pasteTitle ?? ''), pasteTitle);
-  const pasting = page.waitForResponse((r) => r.url().includes('/paste') && r.request().method() === 'POST');
+  const pasting = page.waitForResponse((r) => /\/sheet\/[^/]+\/paste/.test(r.url()) && r.request().method() === 'POST');
   await page.getByTestId('sheet-paste').click();
   const pasted = await (await pasting).json();
   await waitForSheet();
   const notesAfter = await notesOf(target.id);
-  check('the passage’s notes are in the target', notesAfter === notesBefore + pasted.notesIn && pasted.notesIn > 0, `${pasted.notesIn} in, ${pasted.notesMoved} moved`);
+  // The live notes of the copied stretch (a note taken off the page travels too, still off the page).
+  const sourceNotes = await json(`${api}/pieces/${source.id}/notes`);
+  const [fromColumn, toColumn] = [Math.round(copied.fromMs / 40), Math.round(copied.toMs / 40)];
+  const live = sourceNotes.onMs.filter((ms) => Math.round(ms / 40) >= fromColumn && Math.round(ms / 40) < toColumn).length;
+  check('the passage’s notes are in the target', notesAfter === notesBefore + live && live > 0, `${live} live of ${pasted.notesIn} in, ${pasted.notesMoved} moved`);
   const filesAfter = await filesOf(target.id);
   check(
     'its audio is a file of its own between the two halves of the target’s',
     filesAfter.length === filesBefore.length + 2 && filesAfter[1].kind === 'passage',
     filesAfter.map((file) => `${file.name} (${file.frames})`).join(' | '),
   );
-  check('the pasted sheet is saved: no unsaved dot', (await unsavedDot()) === '');
   check('the Sheet step keeps the state it had', (await stateOf(target.id, 'sheet')) === sheetBefore, `${sheetBefore}`);
   check('the Notes step is not made stale by the new audio', (await stateOf(target.id, 'notes')) === 'ready');
   await page.waitForTimeout(600);
   const cursorAt = Number(await page.getByRole('slider', { name: 'Position in the piece' }).getAttribute('aria-valuenow'));
   check('the cursor stays at the start of the pasted passage', Math.abs(cursorAt - pasted.atMs / 1000) < 0.05, `${cursorAt.toFixed(2)} s, pasted at ${(pasted.atMs / 1000).toFixed(2)} s`);
   const undoTitle = await undoButton().getAttribute('aria-label');
-  check('one step of the history, called Paste', undoTitle === 'Undo: Paste', undoTitle);
+  check('one step of the history, called Paste', /^Undo: Paste \d+(\.\d)? s$/.test(undoTitle ?? ''), undoTitle);
   await shot('03-pasted');
 
   // The audio the sheet's player loads after the paste is the new one, as long as the piece.
@@ -213,7 +210,7 @@ try {
 
   // 4. Command-V over a marked stretch.
   await markStretch(0.6, 0.8);
-  const over = page.waitForResponse((r) => r.url().includes('/paste') && r.request().method() === 'POST');
+  const over = page.waitForResponse((r) => /\/sheet\/[^/]+\/paste/.test(r.url()) && r.request().method() === 'POST');
   await page.keyboard.press('ControlOrMeta+V');
   const overAnswer = await (await over).json();
   await waitForSheet();
@@ -223,7 +220,8 @@ try {
   await shot('05-paste-over');
   await page.reload();
   await waitForSheet();
-  check('after a reload the sheet is the saved one', (await unsavedDot()) === '');
+  const afterReload = await undoButton().getAttribute('aria-label');
+  check('after a reload the paste is still the step to undo', /^Undo: Paste .* over a stretch$/.test(afterReload ?? ''), afterReload);
 
   // 5. From scratch.
   await page.goto(`${base}/projects`);
@@ -259,13 +257,13 @@ try {
   }
   if (libraryPart) {
     const end = (await json(`${api}/audio/${scratch}`)).durationSeconds * 1000;
-    const fromLibrary = await fetch(`${api}/time/${scratch}/paste`, {
+    const fromLibrary = await fetch(`${api}/sheet/${scratch}/paste`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ source: { part: libraryPart, fromMs: 10000, toMs: 14000 }, atMs: Math.round(end / 40) * 40 }),
     });
     check('a stretch of a version of My library pastes into a project', fromLibrary.ok, `${fromLibrary.status}`);
-    const into = await fetch(`${api}/time/${libraryPart}/paste`, {
+    const into = await fetch(`${api}/sheet/${libraryPart}/paste`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ source: { part: scratch, fromMs: 0, toMs: 1000 }, atMs: 0 }),
@@ -316,13 +314,11 @@ try {
   await browser.close();
 }
 
-// A sheet with no saved reading answers 404 for it (the blank project), which the page reads as
-// "nothing saved"; the browser logs that 404 as a console error too.
+// The page asks who is signed in before it is; a version of My library refuses a paste (the check asks for it).
 const unexpected = problems.filter(
   (line) =>
     !/401 .*\/auth\/me/.test(line) &&
-    !/404 .*\/time\/[0-9a-f-]+\/rhythm$/.test(line) &&
-    !/403 .*\/paste$/.test(line) &&
+    !/403 .*\/paste(\?|$)/.test(line) &&
     !/Failed to load resource: .* (403|404)/.test(line),
 );
 console.log(results.join('\n'));

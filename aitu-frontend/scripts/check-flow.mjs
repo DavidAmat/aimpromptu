@@ -477,7 +477,7 @@ try {
   check('the Sheet step draws the new sheet at once', true, `${Date.now() - begin} ms`);
   const working = await page.locator("[data-segment-state='working']").first().waitFor({ timeout: 30000 }).then(() => true, () => false);
   check('Sonnet starts by itself, and the segment it works on looks pale', working);
-  check('the old sheet cannot be opened while Sonnet writes', await page.getByTestId('old-sheet').isDisabled());
+  check('nothing can be pasted while Sonnet writes', await page.getByTestId('sheet-paste').isDisabled());
   await shot('16-sheet-sonnet-working');
   const sheetStep = (await (await fetch(`${api}/pieces/${uuid}/status`)).json()).steps.find((step) => step.step === 'sheet');
   check('the Sheet step is running while Sonnet writes', sheetStep.state === 'running', sheetStep.state);

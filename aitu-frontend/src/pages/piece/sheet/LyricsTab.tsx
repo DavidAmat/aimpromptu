@@ -67,6 +67,7 @@ export function LyricsTab({
   poolUnsaved,
   savingText,
   onSaveText,
+  pickedTools = true,
 }: {
   lyrics: readonly LyricLine[];
   pool: readonly string[];
@@ -87,6 +88,11 @@ export function LyricsTab({
   poolUnsaved: boolean;
   savingText: boolean;
   onSaveText: (text: string) => void;
+  /**
+   * The edit toolbar of the picked pieces, under the pool. The new sheet has a lyrics toolbox beside the pieces
+   * instead (implementation 03, Phase 8A++).
+   */
+  pickedTools?: boolean;
 }) {
   /** The words or the pool are not the ones saved: **Save lyrics** saves both. */
   const unsavedText = pasted.trim() !== (savedText ?? "").trim() || poolUnsaved;
@@ -395,7 +401,7 @@ export function LyricsTab({
         </Box>
       ) : null}
 
-      {chosen.length > 0 ? (
+      {pickedTools && chosen.length > 0 ? (
         <Stack spacing={1} data-lyrics-picked={chosen.length}>
           <Typography variant="body2" color="text.secondary">
             {chosen.length === 1 ? "1 piece picked" : `${chosen.length} pieces picked`}

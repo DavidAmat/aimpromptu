@@ -18,9 +18,9 @@ The code is `aitu-frontend/src/pages/piece/sheet/` (implementation 02, Phase 2 s
 ## The new sheet (implementation 03, Phases 6 and 7)
 
 Since implementation 03, Phase 5 the Sheet step opens on the **new sheet** (without compases, drawn by the
-backend; [rendering.md](rendering.md)). Everything below this section is the **old sheet**, which opens from
-**Edit in the old sheet** and keeps the tools that have not moved yet (the sheet toolbox, lyrics, copy and paste,
-Record a passage: Phase 8). On the new sheet:
+backend; [rendering.md](rendering.md)). Since implementation 03, Phase 8B it is the only sheet: the switch to the
+**old sheet** is gone, and everything below this section describes the old sheet, kept as the record of what was
+moved (Phase 10 removes its code). On the new sheet:
 
 - **Pick notes**: click a notehead (the recording goes there), ⌘-click or Shift-click to add or take one away, or
   drag a box across the staves. Escape drops the pick. The note toolbox opens beside the notes, titled with the
@@ -40,6 +40,12 @@ Record a passage: Phase 8). On the new sheet:
   follow one another: the first is written with the ornament, the others are played inside it and not drawn;
   *arp* rolls a chord; *ferm* a fermata; pressed again, each goes away); 🗑 or **Delete** takes the notes off the
   page (they leave the notes; Undo brings them back).
+- **The keyboard of the note toolbox** (the user's request of Phase 8A): when the notes picked are in one column, the
+  toolbox opens with a small keyboard (scrolled to the chord; the octave number on each Do) where that column's keys
+  are lit in their hand's colour, both hands. A dark key adds a note to the column, in the hand of the notes picked
+  (both hands picked: the hand of the nearest lit key) and as long as that hand's chord, so it prints the chord's
+  figure and stays in its beam group; a lit key takes that note off. Each press is one step of Undo, and the chord
+  stays picked. Notes of several columns show no keyboard.
 - **The range toolbox**: **Key** (the armadura of the stretch on both clefs, ✓; 🗑 back to the armadura of the
   piece; *Use D major here* when another armadura prints fewer signs over the stretch), **Clef** (treble or bass for
   each hand in scope, the hand's own clef again after the stretch; **Clefs by the rule** writes the clefs and 8va of
@@ -64,6 +70,50 @@ Record a passage: Phase 8). On the new sheet:
   suggestion, and may change any of them (the user's answer of Phase 6). It keeps your fingers, your figures set by
   hand and your grace note switches; it writes the beams, clefs, 8va, armaduras and ornaments again (the user's
   answer of Phase 7). A first run reads the notes without hands.
+- **The sheet toolbox** (the sliders icon of the floating bar; implementation 03, Phase 8): **Title** (title,
+  subtitle and artist above the sheet and on the PDF, written when the field is left), **Key** (the armadura of the
+  piece; *Use D major (n fewer signs)* when another prints fewer signs over the piece), **Transpose** (**Notes**:
+  every note moved by the interval of two keyboards, the sheet with them, the armaduras renamed with fewer signs, a
+  note off the 88 keys taken off; **Figures**: every figure renamed by the same number of steps, the page keeps its
+  spacing; each with **Preview** and **Transpose**), **Lyrics** (as on the old sheet: paste, **Save lyrics**, the
+  pool; a piece is dragged from the pool onto the sheet, on the frame under it), and
+  **View** (**Zoom**, kept in this browser; **Space between lines**, kept with the sheet). Every change is one step
+  of Undo.
+- **Lyrics blocks** (implementation 03, Phase 8A++, the user's request): a click on a piece on the sheet picks it
+  (⌘ or Shift adds one) and opens the **lyrics toolbox** beside it: the **Words** (Enter splits the piece where the
+  cursor is), **Font** (Lora, Geist, Montserrat), **Size**, **Normal**, **Bold**, **Italic**, *Back in the line of
+  words*, merge, split, a new line, back to the pool, delete (also the Delete key). On the sheet a picked piece is a
+  block with an outline: drag it anywhere (it keeps its frames), drag its side handle to make it narrower or wider
+  (the words wrap as the pointer moves), drag its corner to make the words larger or smaller. Its frames, when the
+  words sound in Play mode, are a bar in the strip above the staves, with an end on each side to drag. While a piece
+  is picked the strip marks no stretch; a click off the pieces lets them go. A piece whose frames cross a line break
+  shares its words between the lines by the width its frames take on each (60 % of the width, about 60 % of the
+  words), so a narrower window splits it again. Every change is one step of Undo.
+- **Print to PDF** (the printer icon): the paper, the margins, the size of the music (a 6.5 mm staff by default) and
+  the space between lines on paper (6 mm by default), both kept in this browser, the title and page numbers;
+  the lines are laid out again for the paper (never shrunk) and never split across a page turn
+  ([printing.md](printing.md)).
+- **The keyboard panel** (`⋯` → *Show the keyboard*): the keys sounding under the cursor, as on the old sheet; a lit
+  key takes that note off the page, a dark one adds a note to the hand of **Add to** (one step of Undo).
+- **Copy and paste** (Phase 8B): **Copy this stretch** (the range toolbox), **Copy the frames of these notes** (the
+  note toolbox) or ⌘C keep a reference to the stretch in the app's clipboard (every tab, and the system clipboard as
+  text); **Paste** (the floating bar, ⌘V) puts it in at the cursor, or over the marked stretch: its notes, its audio
+  and its sheet (the AI's or your decisions in it come along, read in their own armadura and clefs, and yours again
+  after it); everything after it moves later. One step of undo: Undo puts the part back as it was, audio included.
+  The range toolbox also has **Record this passage** and **Start a new part here** (a project of parts), the floating
+  bar **Record a passage at the end**; a blank sheet (From scratch) says *Nothing to write yet.* with **Record a
+  passage** and **Paste the copied passage**.
+- **A read-only sheet** (a version of My library, a source of From other projects, the requests review): a stretch
+  marked in the strip opens a small *Frames* panel with **Copy this stretch** and the screen's own action (**Add to
+  a playlist**, **Add this stretch**, **Comment on this stretch**).
+- **The page of a passage** (Record in Sheet, [recording-in-sheet.md](recording-in-sheet.md)): the Current is read
+  only, with no bar; the Proposal (a take) has every tool, its own bar with the passage's actions, and the window
+  over the take (a blue band, dragged by its grip above the first line). Both read with the song's reference figure
+  (the take's at its speed) and the song's armadura where the passage starts. The take's sheet is the algorithm's,
+  with **Enhance with AI** as a button. **Promote** carries the Proposal's sheet into the song, and the song's sheet
+  opens with the promotion as its last step of undo.
+- **Not on the new sheet** (the user's answers of Phase 8): space between notes, size of marks, frame numbers, hide
+  decorative notes, group high notes under 8va (Layout); Find trills, Remove all and Bring back N notes taken off.
 - **Not on the new sheet** (the user's answer of Phase 7): even spacing of a run, the room of a stretch (Spacing),
   speed changes (Speed), print smaller, a decoration that is not played (the grace note switch replaces both), and
   hiding or dragging an 8va bracket.

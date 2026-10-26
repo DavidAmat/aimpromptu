@@ -45,6 +45,7 @@ from aitu_backend.sheet.llm.frames import (
 )
 from aitu_backend.sheet.proposal.frames import FramesProposal
 from aitu_backend.sheet.sheet import f1
+from aitu_backend.sheet.sheet.data import carry_extras
 from aitu_backend.transcription import jobs, pipeline
 
 from . import build, edits, store
@@ -87,6 +88,8 @@ class LiveRun:
     #: The user's own marks of the sheet before the run (fingers, figures set by hand, the grace note switch):
     #: kept on the sheet the AI writes (Phase 7).
     marks: dict = field(default_factory=dict)
+    #: The sheet before the run: its titles, lyrics and settings stay on the sheet of the moment (Phase 8).
+    extras: Any = None
     _text: tuple[int, str] | None = None
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
@@ -109,6 +112,8 @@ class LiveRun:
             return cached[1]
         rest = [_algorithm_part(a, b, algo.sheet) for a, b in windows[len(parts) :]]
         sheet, _ = assemble(algo, build.with_marks(parts + rest, self.marks))
+        if self.extras is not None:
+            carry_extras(self.extras, sheet)
         text = f1.write(sheet, mode="frames")
         with self._lock:
             self._text = (len(parts), text)
@@ -170,7 +175,12 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
         shown = before.record is not None and before.record.enhanced
         drawn_before = f1.read(before.text)
         marks = build.user_marks(drawn_before)
-        run = LiveRun(part_id, before.text, build.windows(drawn_before), marks=marks)
+        # A reference figure the user named with Transpose figures stays (rule 5): no reference request then. So does
+        # the song's on the sheets of a passage of it (Record in Sheet, Phase 8B: the Current and the takes read alike).
+        named = before.record is not None and before.record.reference in ("user", "song")
+        run = LiveRun(
+            part_id, before.text, build.windows(drawn_before), marks=marks, extras=drawn_before
+        )
         with _live_lock:
             _live[part_id] = run
         try:
@@ -200,7 +210,13 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
                 return ask(system, messages)
 
             song = write_frames(
-                notes, asked, sid=part_id[:8], hands=shown, on_start=on_start, on_part=on_part
+                notes,
+                asked,
+                sid=part_id[:8],
+                hands=shown,
+                quarter_ms=drawn_before.quarter_ms if named else None,
+                on_start=on_start,
+                on_part=on_part,
             )
             if not pipeline.has_events(part_id):
                 return {
@@ -214,7 +230,9 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
             if marks:
                 # The user's own marks stay (the user's answer of Phase 7); the AI's kinds are its new ones.
                 sheet, _ = assemble(song.algo, build.with_marks(song.parts, marks))
-                text = f1.write(sheet, mode="frames")
+            # So do the titles, the lyrics and the sheet's own settings (Phase 8).
+            sheet = carry_extras(drawn_before, sheet)
+            text = f1.write(sheet, mode="frames")
             record = store.Record(
                 source=(
                     "llm"
@@ -223,7 +241,11 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
                 ),
                 windows=[[p.start, p.end, p.source] for p in song.parts],
                 quarter_ms=song.quarter_ms,
-                reference=song.reference.get("source"),
+                reference=(
+                    before.record.reference
+                    if named and before.record
+                    else song.reference.get("source")
+                ),
                 model=getattr(ask, "model", None),
                 prompt=PROMPT_VERSION + ("+hands" if shown else ""),
                 usd=float(getattr(ask, "usd", 0.0) or 0.0),
@@ -231,7 +253,7 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
                 written=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 note=next((w.note for w in song.windows if w.note), None)
                 or song.reference.get("note"),
-                edited=bool(marks),
+                edited=bool(marks) or named,
             )
             commit(part_id, sheet, text, record, header.notes_revision)
             reporter.send(EVENT, {"phase": "saved", "source": record.source})

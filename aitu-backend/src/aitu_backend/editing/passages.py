@@ -52,6 +52,8 @@ from aitu_backend.audio import formats, ingest, sources, store, timeline as audi
 from aitu_backend.db.users import current_user_id
 from aitu_backend.editing import audio_splice, marks, paste
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
+from aitu_backend.part_sheet import edits, lengths
+from aitu_backend.part_sheet import store as new_sheet_store
 from aitu_backend.progress import BaseProgress
 from aitu_backend.schemas.rhythm import SavedRhythm
 from aitu_backend.schemas.time_matrix import FIGURE_NEGRAS, FigureName
@@ -109,6 +111,11 @@ class PassageState(BaseModel):
     #: The part as it was when the passage opened (its notes, hands, audio and sheet): the same
     #: stretch of an unchanged part opens this passage again, with its takes.
     source_revision: str | None = Field(None, alias="sourceRevision")
+    #: The reference figure of the song's new sheet (one negra, in ms; implementation 03, Phase 8B) and its armadura
+    #: where the passage starts (fifths): the takes are written with them (the figure at the take's speed), so they
+    #: read as the song. ``None`` for a blank song.
+    quarter_ms: float | None = Field(None, alias="quarterMs")
+    key: int | None = None
 
     @property
     def length_ms(self) -> float:
@@ -256,9 +263,11 @@ def open_passage(part_id: str, from_ms: float, to_ms: float) -> str:
         frame_ms=frame_ms,
     )
     current = passage.parts[0].id
+    quarter, key = lengths.song_reading(part_id, start)
     try:
         if last > first:
             paste.paste(current, paste.read_passage(part_id, start, stop), at_ms=0.0)
+            lengths.keep_figure(current, quarter, key)
         else:
             pipeline.save_note_events(current, [], 0.0, passage.title)
         state = PassageState(
@@ -268,6 +277,8 @@ def open_passage(part_id: str, from_ms: float, to_ms: float) -> str:
             anchor_ms=paste.anchor_at(rhythm, first),
             anchor_figure=rhythm.anchor_figure if rhythm else FigureName.NEGRA,
             source_revision=revision,
+            quarter_ms=quarter,
+            key=key,
         )
         _save(passage.id, state)
     except Exception:
@@ -340,6 +351,11 @@ def update(
         if not low - 1e-9 <= speed <= high + 1e-9:
             raise PassageError(f"The speed goes from ×{low:g} to ×{high:g}.")
         passage.speed = float(speed)
+        if passage.quarter_ms is not None:
+            # The takes read with the song's figure at the new speed.
+            for one in passage.takes:
+                if _take(one).state == "ready":
+                    lengths.keep_figure(one, passage.quarter_ms * passage.speed, passage.key)
     if window_ms is not None:
         passage.window_ms = max(0.0, float(window_ms))
     _save(passage_id, passage)
@@ -583,6 +599,11 @@ def read_take(
             )
         else:
             pipeline.clear_rhythm(take_id)
+    # The take's sheet is the algorithm's, with the song's figure at the take's speed; the AI only on the button
+    # (the user's answer of Phase 8): the mark of a new transcription is taken off.
+    new_sheet_store.taken(take_id)
+    if passage.quarter_ms is not None:
+        lengths.keep_figure(take_id, passage.quarter_ms * passage.speed, passage.key)
 
 
 # ------------------------------------------------------------------ the promotion
@@ -696,6 +717,10 @@ def _song_passage(plan: _Plan, pieces: list[audio_timeline.Piece] | None) -> pas
                 continue
             end = min(end, limit)
         events.append(event.model_copy(update={"start": start, "end": max(end, start + 0.001)}))
+    frames = raw.frames
+    if frames is not None and (abs(speed - 1.0) > 1e-9 or plan.limit_ms is not None):
+        # The take's new sheet in the song's time too (implementation 03, Phase 8B).
+        frames = lengths.scaled(frames, speed, plan.limit_ms)
     return replace(
         raw,
         frame_ms=raw.frame_ms / speed,
@@ -704,6 +729,7 @@ def _song_passage(plan: _Plan, pieces: list[audio_timeline.Piece] | None) -> pas
         events=events,
         pieces=raw.pieces if pieces is None else pieces,
         rhythm=rhythm,
+        frames=frames,
     )
 
 
@@ -789,6 +815,8 @@ def promote(
             audio_name=bundle.read_project(plan.take_id).title,
             audio_kind="recording",
         )
+    # The sheet opens with the promotion as its last step: ⌘Z takes it back (the new sheet's log, Phase 8B).
+    edits.record_version(target, "Promote the passage", done.before_version)
     project_id = locate.part(target).project_id
     bundle.delete_project(passage_id)
     return Promotion(

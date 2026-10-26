@@ -142,6 +142,33 @@ def test_a_grace_note_between_two_clef_changes_overlaps_neither() -> None:
     assert bass[0] + width <= xg and xg < treble[0] < xm
 
 
+def test_clef_changes_where_the_hand_plays_nothing_are_one_clef_or_none() -> None:
+    # 7 Years, the user's copy (2026-10-26): the left hand changes to the treble clef where it plays nothing and back
+    # to the bass clef at its next chord; both clefs were drawn on one spot. They give back the clef in force: none.
+    back = engine.engrave_frames(
+        f1.read(
+            "F1 frames frameMs=40 quarterMs=500\nkey=0 clefs: R=treble L=bass\n"
+            "f0       L: C3:4  R: E5:4\n"
+            "f10      L: clef=treble  R: F5:4\n"
+            "f20      L: clef=bass E3,G3:4  R: G5:4\n"
+        )
+    )
+    assert not glyphs(back, "gClefChange") and not glyphs(back, "fClefChange")
+    # Two changes that lead somewhere else are one clef, the last.
+    on = engine.engrave_frames(
+        f1.read(
+            "F1 frames frameMs=40 quarterMs=500\nkey=0 clefs: R=treble L=bass\n"
+            "f0       L: C3:4  R: E5:4\n"
+            "f10      L: clef=treble  R: F5:4\n"
+            "f15      L: clef=bass  R: A5:4\n"
+            "f20      L: clef=treble E4,G4:4  R: G5:4\n"
+        )
+    )
+    assert len([g for g in glyphs(on, "gClefChange") if g[0] == 2]) == 1 and not glyphs(
+        on, "fClefChange"
+    )
+
+
 def test_an_armadura_change_cancels_the_old_signs_on_both_staves() -> None:
     lay = engine.plan(f1.read(SHEET))
     col = next(c for c in lay.columns if c.frame == 120)

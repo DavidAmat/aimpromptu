@@ -6,8 +6,9 @@ agents of implementation 03 (`context/implementations/03-apply-poc-research/`). 
 README with the names of the backend: `aitu_notation.X` of the research is `aitu_backend.sheet.X` here. The copy
 changed no logic; the golden files of section 7 prove it. Phase 2 added the new sheet without compases (section 9),
 Phase 3 its engine (section 10), Phase 4 its LLM step (section 11), Phase 5 put it in the app (section 12), Phase 6 made it editable
-(section 13), and Phase 7 added the note and range tools (section 14): the bars path below is unchanged, and so are its
-golden files.
+(section 13), Phase 7 added the note and range tools (section 14), and Phase 8 the sheet toolbox, lyrics and the sheet
+on paper (section 15), and Phase 8B the sheet through every change of a part's length (section 16): the bars path below
+is unchanged, and so are its golden files.
 
 ## 1. What it does
 
@@ -111,6 +112,7 @@ raises stops the chain with that error (the product decides retries and time lim
 | `llm/prompt/feedback.md` | the message after a rejected reply | by hand |
 | `engrave/leipzig.json` | the Leipzig glyphs (SIL OFL 1.1) | `aitu_research.engrave.glyphs.export_bundle` |
 | `engrave/spacing_model.json` | the spacing model (12 numbers measured on printed editions) | `aitu_research.engrave.spacing.fit` |
+| `engrave/lyric_fonts.json` | the advance widths of the lyrics fonts (Lora, Geist, Montserrat; four looks each), implementation 03 Phase 8A++ | `aitu-frontend/scripts/measure-lyric-fonts.mjs` (this repository) |
 | `proposal/beat_weights.json`, `meter_weights.json` | the quarter and meter estimates | `aitu_research.proposal.beat.fit`, `meter.fit` |
 | `proposal/spelling_tables.json` | the spelling tables (`sig_then_local2`) | `aitu_research.baseline.rules.learn_tables` |
 
@@ -200,7 +202,11 @@ Layout ---- frames.draw (all systems, or some: one segment) ---> Engraving --- s
   the one after the longest time between two columns; a break never cuts a beam group when a free place exists
   (otherwise the fewest groups, never leaving a part of one note).
 - **Armadura and clef changes** inside a line: the cancelling becuadros and the new armadura before the column
-  (`Options.key_line` adds a thin double line before it), a small clef before the chord of that hand.
+  (`Options.key_line` adds a thin double line before it), a small clef before the chord of that hand. Changes that
+  fall where that hand plays nothing meet before its next chord: only the last is drawn, and none when it gives back
+  the clef in force (two clefs on one spot in 7 Years, the user's report of 2026-10-26); a line starts with the clef
+  drawn before its first column (`Column.clef_in`). Two clefs at one column remain only around grace notes read in
+  another clef than their note.
 - **Rendered** (`render_frames`): `svg`, `columns` (one row per drawn column: `system`, `frame`, `x` in SVG units
   with the margin, `ms` = frame x 40), `systems` (`index` in the whole song, `first` and `last` frame, `top`,
   `bottom`, `staff_top`, `staff_bottom`, `left`, `right`), `width`, `height`, `lines` (systems of the whole song),
@@ -350,3 +356,81 @@ the answer of GET /sheet/{part}                                        ~40-70 ms
   drawn column moved by a frame or two (the first note of its chord taken off).
 - Tests: `tests/test_sheet_reading.py`. Command: `scripts/tools_gallery.py` (the Phase 7 gallery). Browser check:
   `npm run check:frames-tools` (aitu-frontend; `--live` makes one stretch request, about $0.01).
+
+## 15. The sheet toolbox, lyrics and the sheet on paper (implementation 03, Phase 8A)
+
+What the user writes about the whole sheet, stored in the sheet itself (so every copy, history snapshot and undo
+step that carries `sheet.f1` carries it too). Measurements and reasons:
+`context/implementations/03-apply-poc-research/03-implementation-phase-8.md`.
+
+- **The format** (`sheet.f1`, frames view only; written only when set, so every older sheet and golden file is
+  unchanged; never in an LLM prompt, whose sheets are built anew): `spaceMs=` and `lineSpace=` in the header, then
+  after the clefs line `title "..."`, `subtitle "..."`, `artist "..."` and one `lyric f<start> f<end> "words"
+  [size=..] [lift=..]` per lyrics piece (`\n` breaks a line; size and lift in staff spaces).
+- **The data**: `Sheet.titles`, `Sheet.lyrics` (`Lyric`: start, end, text, size, lift), `Sheet.space_ms`,
+  `Sheet.line_space`; `carry_extras(source, target)` copies them onto a sheet made from another: `build.reapply`,
+  `llm.frames.splice`, and the AI job (its live sheet and its commit) call it.
+- **The engine**: the spacing reads `Sheet.space_ms` before `quarter_ms`, so Transpose figures renames figures and
+  keeps the spacing's figure (D-18; the rules that read names, grace notes and flags, may still move some columns);
+  `Sheet.line_space` is the gap between systems; a lyrics piece is a text primitive (`Prim` kind `"t"`) above the
+  upper staff of the line that holds its first column, all pieces of a line on one baseline above the ink under
+  them, `lift` raising one further. The SVG writes `<text class="lyric" data-lyric data-start data-end>` (Lora
+  italic, a soft charcoal) with one `tspan` per line. `render_pages(sheet, opts, page_height=, first_height=, gap=)`
+  draws the song once at the paper's width and deals whole lines onto pages (Print to PDF).
+- **The edits** (`part_sheet.reading`, through `edits.edit_reading`, one step each): `titles`, `piece-key` (the
+  armadura the sheet starts with), `line-space`, `lyrics` (the whole list, checked: no two pieces share a frame),
+  `figures` (Transpose figures: `quarter_ms` x 2^steps, `space_ms` kept, figures set by hand moved; the record's
+  `reference` becomes `user`, and a new AI run keeps the named figure: no reference request).
+  `edits.preview_reading` answers the result without storing it.
+- **Transpose notes** (`edits.transpose_notes`): every note of `notes.pmn` moved, the stored sheet with it
+  (`reading.transpose_sheet`: pitches and armaduras moved, so `reapply` keeps every decision; clefs fitted where a
+  note reads four ledger lines or more from its staff, `reading.far_notes` and `build.fit_clefs`); notes leaving the
+  88 keys taken off; one step (`_Step.keys`: each note's key before and after). A preview stores nothing.
+- **A note added** on the keyboard panel (`edits.add_note`): at the onset of the drawn column, one step.
+- **Lyrics blocks** (Phase 8A++, the user's request): a `lyric` line may also carry `at=f<frame> dx= dy=` (a block
+  put anywhere: drawn from the column of `at` plus `dx`, its last baseline `dy` below the top staff line, whatever
+  its frames; a block put on another line than its first frame's stays whole there), `width=` (its words wrap to
+  it), `font=` (`lora`, `geist`, `montserrat`), `bold=1`, `italic=0`; all left out at their defaults, so older sheets
+  write as before. The engine wraps the words with `engrave/lyric_text.py` and the advance widths of the app's own
+  font files (`engrave/lyric_fonts.json`, measured in the browser by `aitu-frontend/scripts/measure-lyric-fonts.mjs`),
+  so the page, the line heights and the PDF print the same lines. A piece in the line of words whose frames cross a
+  line break is drawn in one part per line (`data-part`), its words shared by the width its frames take on each line
+  (`lyric_parts`, `_share_words`). No block passes the end of its line. The SVG `<text>` adds `data-base` (its last
+  baseline, from which the page places a dragged block), `data-width`, `font-weight` and `font-style`.
+- Routes: `POST /sheet/{part}/reading?preview=true`, `POST /sheet/{part}/transpose` (`preview`),
+  `POST /sheet/{part}/add`, `GET /sheet/{part}/pages`; `GET /sheet/{part}` answers `titles`, `lyrics`, `quarterMs`,
+  `spaceMs`, `lineSpace`, and each note's `end` frame.
+- Tests: `tests/test_sheet_toolbox.py` (the blocks: format, wrapping, drawing, a piece over a line break, the
+  route). Browser check: `npm run check:frames-toolbox` (aitu-frontend).
+
+## 16. The sheet through a change of a part's length (implementation 03, Phase 8B)
+
+`aitu_backend/part_sheet/lengths.py` (outside the core) is the new sheet's version of `editing/marks.py`; every change
+of a part's length goes through `editing/paste.py` (`paste`, `cut`), which calls it in the same write. Measurements and
+reasons: `context/implementations/03-apply-poc-research/03-implementation-phase-8.md` section 10.
+
+```text
+read_passage(source, a, b) ── lengths.read: the source's sheet as its page draws it, extract(a, b)
+                              (+ the hand each note is drawn in, + the AI's segments inside)
+paste(target, at, length)  ── lengths.target (before), then after the notes are written:
+                              lengths.store_after: cut_out(the stretch pasted over) -> put_in(passage, at, length)
+                              -> build.reapply on the new notes -> sheet.f1 for the new handsRevision
+promotion at a speed       ── lengths.scaled(passage, speed, window): frames and reference figures / speed
+```
+
+- **The four moves** (pure, on a copy): `shift` (a beam group across the frame is cut in two, a lyrics piece ends
+  there), `cut_out` (the armadura and clefs in force after the stretch are kept from its start; the header when no note
+  is before it), `extract` (counted from 0, with the armadura and clefs in force at its start as its own), `put_in` (the
+  passage's armadura and clefs from `at`, the target's again after it when music follows). Covered onsets whose
+  ornament note is on the other side are drawn again; a beam group of one note is no group; the changes are tidied
+  (one per frame and staff, none that changes nothing).
+- **When it stores**: the target's sheet holds decisions (`Record.decided`), or the passage's does, or the target had
+  no music (a blank sheet, a new part: its first sheet is stored, so its Sheet step is written). Two algorithm sheets
+  store nothing: they are computed from the notes. The record's windows and stretches move too; an AI passage in an
+  algorithm sheet makes it `mixed`.
+- **Record in Sheet**: the Current and each take are written with the song's reference figure (the take's at its
+  speed) and the song's armadura where the passage starts (`keep_figure`: an algorithm record with `reference: song`
+  and `key`; `build.algorithm(key=)`; an AI run keeps a `song` reference as it keeps a `user` one).
+- **Undo**: `edits.paste_passage` and a promotion record one step whose undo restores the history version the paste
+  kept (`_Step.versions`), as the old page did.
+- Tests: `tests/test_sheet_lengths.py`. Browser checks: `check:paste`, `check:compose`, `check:passage -- --played`.

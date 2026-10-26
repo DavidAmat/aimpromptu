@@ -1,6 +1,7 @@
 /**
  * What the two toolboxes of the new sheet share (implementation 03, Phase 7): the figures as the backend numbers
- * them, the armaduras as fifths, the ornaments, and how a note's ref names its column.
+ * them, the armaduras as fifths, the ornaments, how a note's ref names its column and key, and (Phase 8A) the column
+ * and the hand of the note toolbox's chord keyboard.
  */
 
 import { KEY_LABELS, KEY_SIGNATURES, type FigureName, type SheetNote } from "../../../../api";
@@ -51,6 +52,32 @@ export function keyName(fifths: number): string {
 
 export function frameOf(ref: string): number {
   return Number(ref.split(":")[0]);
+}
+
+export function midiOf(ref: string): number {
+  return Number(ref.split(":")[1]);
+}
+
+/** The one drawn column the notes are in (both hands share it), or `null` when they are in several or none. */
+export function oneColumn(notes: readonly SheetNote[]): number | null {
+  const frames = new Set(notes.map((note) => frameOf(note.ref)));
+  return frames.size === 1 ? [...frames][0]! : null;
+}
+
+/**
+ * The hand a key added to the chord keyboard goes to: the hand of the picked notes, or, with both hands picked,
+ * the hand of the column's note nearest to the key (the right hand on a tie).
+ */
+export function handForKey(midi: number, picked: readonly SheetNote[], column: readonly SheetNote[]): SheetNote["hand"] {
+  const hands = new Set(picked.map((note) => note.hand));
+  if (hands.size === 1) return [...hands][0]!;
+  let best: SheetNote | null = null;
+  for (const note of column) {
+    const away = Math.abs(midiOf(note.ref) - midi);
+    const bestAway = best === null ? Infinity : Math.abs(midiOf(best.ref) - midi);
+    if (away < bestAway || (away === bestAway && note.hand === "right")) best = note;
+  }
+  return best?.hand ?? "right";
 }
 
 /** A chord of one hand: its notes share the column and the hand. */

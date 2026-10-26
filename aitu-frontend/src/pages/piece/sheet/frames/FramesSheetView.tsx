@@ -19,19 +19,35 @@
  *   it crosses (on to the next lines too), and Shift-click extends the stretch marked. The stretch is a lavender
  *   band over the staves in scope (both, or the one hand's staff of **Both / Right / Left**).
  *
+ * - **Lyrics** (Phase 8): the engine draws each piece above the upper staff (`data-lyric`, its place in the sheet's
+ *   lyrics; `data-part` when its frames cross a line break and its words are shared between the lines). While the
+ *   music plays, the piece whose frames sound is black and bold; in Play mode the others are faint meanwhile. When
+ *   the page gives `lyrics` (an editable sheet), a click on a piece picks it (⌘ or Shift adds it), and a piece of the
+ *   pool dragged over the sheet shows where it would land: the frames of the other pieces in grey, its own in green,
+ *   or red where it would cover another.
+ * - **Lyrics blocks** (Phase 8A++, the user's request): a picked piece is a block with an outline and two handles.
+ *   A drag of the block puts it anywhere (not on a frame); the side handle makes it narrower or wider and its words
+ *   wrap again as the pointer moves; the corner handle makes the words larger or smaller. Its frames (when it
+ *   sounds) are a bar in the strip above the staves, with an end at each side to drag. None of this changes the
+ *   other: a block moved keeps its frames. While a piece is picked, the strip marks no stretch.
+ *
  * Hooks for the browser checks: `data-frames-sheet` on the root (with `data-source`, `data-llm`, `data-working`),
  * `data-note="<frame>:<midi>"` on each notehead, `data-lit` on the lit ones, `data-selected` on the picked ones,
  * `data-frames-cursor` (with `data-ms`), `data-segment-state="working"` on the veil, `data-revealing` while a
  * segment appears, `data-pick-box` while a box is dragged, `data-range-band` on the marked stretch (one per line,
- * with `data-start` and `data-end`) and `data-range-strip` on the strip under the pointer.
+ * with `data-start` and `data-end`) and `data-range-strip` on the strip under the pointer; `data-lyric-lit` and
+ * `data-lyric-picked` on the lyrics pieces, `data-lyric-landing` (`data-free`) while one is dragged;
+ * `data-lyric-handle="width" | "scale"` on a picked block's handles, `data-lyric-frames` on its bar of frames (its
+ * ends `data-lyric-handle="start" | "end"`), `data-lyric-preview` on the words wrapped while a side handle moves.
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import Box from "@mui/material/Box";
 import { keyframes } from "@mui/material/styles";
-import type { FramesSheet } from "../../../../api";
+import type { FramesSheet, LyricFont } from "../../../../api";
 import { palette, semantic } from "../../../../ui";
 import { boxesOf, columnEdges, columnsOf, headsByColumn, msAtPoint, placeAt, steadyColumns } from "./geometry";
+import { LYRIC_LEADING, LYRIC_MAX, LYRIC_MIN, familyOf, wrapWords } from "./lyricsText";
 
 /** The reveal of a segment takes about this long, whatever its number of columns. */
 const REVEAL_MS = 1800;
@@ -58,6 +74,8 @@ export type RangeScope = "both" | "right" | "left";
 const STRIP_SPACES = 3.5;
 /** The band of a stretch reaches this far beyond the staff lines it covers, in staff spaces. */
 const BAND_PAD = 1.5;
+/** The bar of a picked lyrics piece's frames: this far below the top of the strip, in staff spaces. */
+const BAR_Y = 0.9;
 
 /** The refs a notehead names (merged unisons name several). */
 function refsOf(element: Element): string[] {
@@ -81,6 +99,87 @@ function headAt(root: ParentNode, x: number, y: number): Element | null {
   return best;
 }
 
+/** A drawn lyrics block: its piece (`data-lyric`) and part (`data-part`, 0 for the first). */
+function blockKey(element: Element): string {
+  return `${element.getAttribute("data-lyric")}:${element.getAttribute("data-part") ?? 0}`;
+}
+
+/** The lyrics block under a point of the screen (a few pixels around its words), by its key. */
+function lyricAt(root: ParentNode, x: number, y: number): string | null {
+  for (const element of root.querySelectorAll("[data-lyric]")) {
+    const box = element.getBoundingClientRect();
+    if (x >= box.left - 3 && x <= box.right + 3 && y >= box.top - 3 && y <= box.bottom + 3) return blockKey(element);
+  }
+  return null;
+}
+
+/** What the page does with the lyrics pieces on the sheet (Phase 8). */
+export interface LyricsOnSheet {
+  /** The pieces picked, by their first frame. */
+  picked: ReadonlySet<number>;
+  onPick: (start: number, add: boolean) => void;
+  /** A press off the picked pieces lets them go. */
+  onUnpick: () => void;
+  /**
+   * A block put somewhere by hand: the frame of the column under its left edge, how far right of that column it
+   * starts, and its last line's baseline below the top staff line (staff spaces).
+   */
+  onPlace: (start: number, place: { at: number; dx: number; dy: number }) => Promise<boolean>;
+  /** A side handle let go: the width its words wrap to, in staff spaces. */
+  onWidth: (start: number, width: number) => Promise<boolean>;
+  /** A corner handle let go: the size of its words, and its width scaled with them (if it has one). */
+  onScale: (start: number, size: number, width: number | null) => Promise<boolean>;
+  /** The bar of its frames: when its words sound (`[start, end)`); refused (`false`) over another piece. */
+  onFrames: (start: number, next: { start: number; end: number }) => Promise<boolean>;
+  /** A piece of the pool is dragged: where it would land on a frame (its frames, free or over another). */
+  landing: ((frame: number) => { start: number; end: number; free: boolean }) | null;
+  onDropPool: (frame: number) => void;
+}
+
+/** A drawn lyrics block, in sheet units, measured when the drawing goes in. */
+interface LyricBlock {
+  index: number;
+  part: number;
+  /** Its ink. */
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** Where its lines start, its last line's baseline, its size and the width its words wrap to. */
+  left: number;
+  base: number;
+  size: number;
+  wrap: number | null;
+  font: LyricFont;
+  bold: boolean;
+  italic: boolean;
+  /** Its words as drawn (the lines joined by spaces). */
+  words: string;
+}
+
+/** What a drag of a lyrics block does: moves it, sets its width, scales its words, or moves an end of its frames. */
+type LyricDragMode = "move" | "width" | "scale" | "start" | "end";
+
+/** A lyrics block being dragged on the sheet: the press and the pointer now, in sheet units. */
+interface LyricDrag {
+  key: string;
+  mode: LyricDragMode;
+  x0: number;
+  y0: number;
+  x: number;
+  y: number;
+  moved: boolean;
+  /** Its frames now, while an end of the bar is dragged. */
+  nextStart: number;
+  nextEnd: number;
+}
+
+/** The font of a drawn lyrics block, from its family. */
+function fontOf(family: string): LyricFont {
+  const name = family.toLowerCase();
+  return name.startsWith("geist") ? "geist" : name.startsWith("montserrat") ? "montserrat" : "lora";
+}
+
 /** A stretch being dragged in the strip: the column indices where it began and where the pointer is. */
 interface RangeDrag {
   from: number;
@@ -99,6 +198,12 @@ interface Drag {
   add: boolean;
   moved: boolean;
 }
+
+/** The window over a take (Record in Sheet): the old sheet's blue, and the grip it is dragged by, in staff spaces. */
+const WINDOW_COLOUR = "#2563eb";
+const WINDOW_GRIP = { width: 3, height: 0.9 } as const;
+/** The window's edge before a column: room for an accidental of its notes, in staff spaces. */
+const WINDOW_LEAD = 1.6;
 
 const breathe = keyframes`
   from { opacity: 0.55; }
@@ -124,6 +229,10 @@ export function FramesSheetView({
   range = null,
   rangeScope = "both",
   onRange,
+  lyrics,
+  playing = false,
+  frameWindow = null,
+  onWindowMove,
 }: {
   sheet: FramesSheet;
   playheadSeconds: number | null;
@@ -141,6 +250,14 @@ export function FramesSheetView({
   rangeScope?: RangeScope;
   /** A stretch can be marked: called with its frames when a click or a drag in the strip ends. */
   onRange?: (range: MarkedRange) => void;
+  /** The lyrics pieces can be picked and dragged (the Lyrics tab), and pieces of the pool dropped. */
+  lyrics?: LyricsOnSheet;
+  /** The recording plays: the lyrics piece that sounds is lit (and in Play mode, `centre`, the others faint). */
+  playing?: boolean;
+  /** The window over a take (Record in Sheet, Phase 8B): the frames of the take that go into the song. */
+  frameWindow?: MarkedRange | null;
+  /** The window is dragged by its grip: its first frame now, and `done` when it is let go. */
+  onWindowMove?: (start: number, done: boolean) => void;
 }) {
   const host = useRef<HTMLDivElement | null>(null);
   const overlay = useRef<SVGSVGElement | null>(null);
@@ -149,6 +266,9 @@ export function FramesSheetView({
   const edges = useMemo(() => columnEdges(columns, sheet.systems), [columns, sheet.systems]);
   /** The noteheads of each column of the drawing on the page (`data-note`). */
   const heads = useRef<Element[][]>([]);
+
+  /** The lyrics blocks of the drawing, in sheet units, by key (`"<data-lyric>:<part>"`). */
+  const [lyricBlocks, setLyricBlocks] = useState<{ svg: string; boxes: Record<string, LyricBlock> }>({ svg: "", boxes: {} });
 
   // The drawing itself, put in as the backend wrote it; it scales to the page's width.
   useLayoutEffect(() => {
@@ -164,6 +284,29 @@ export function FramesSheetView({
       svg.style.height = "auto";
     }
     heads.current = headsByColumn(element, columns);
+    const boxes: Record<string, LyricBlock> = {};
+    for (const text of element.querySelectorAll<SVGTextElement>("[data-lyric]")) {
+      const box = text.getBBox();
+      const spans = [...text.querySelectorAll("tspan")];
+      const wrap = text.getAttribute("data-width");
+      boxes[blockKey(text)] = {
+        index: Number(text.getAttribute("data-lyric")),
+        part: Number(text.getAttribute("data-part") ?? 0),
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+        left: Number(spans[0]?.getAttribute("x") ?? box.x),
+        base: Number(text.getAttribute("data-base") ?? box.y + box.height),
+        size: Number(text.getAttribute("font-size") ?? 1.4),
+        wrap: wrap === null ? null : Number(wrap),
+        font: fontOf(text.getAttribute("font-family") ?? ""),
+        bold: text.getAttribute("font-weight") === "700",
+        italic: text.getAttribute("font-style") === "italic",
+        words: spans.map((span) => span.textContent ?? "").join(" "),
+      };
+    }
+    setLyricBlocks({ svg: sheet.svg, boxes });
   }, [sheet.svg, columns]);
 
   // ------------------------------------------------------------------ segments: at Sonnet, and coming back
@@ -245,6 +388,32 @@ export function FramesSheetView({
     };
   }, [selected, sheet.svg]);
 
+  // The lyrics piece that sounds, lit while the music plays; the picked pieces marked.
+  const sounding = playing && playheadSeconds !== null ? Math.floor((playheadSeconds * 1000) / 40) : null;
+  const litLyric = sounding === null ? -1 : sheet.lyrics.findIndex((one) => one.start <= sounding && sounding < one.end);
+  useEffect(() => {
+    const elements = [...(host.current?.querySelectorAll(`[data-lyric="${litLyric}"]`) ?? [])];
+    for (const element of elements) element.setAttribute("data-lyric-lit", "");
+    return () => {
+      for (const element of elements) element.removeAttribute("data-lyric-lit");
+    };
+  }, [litLyric, sheet.svg]);
+  const pickedLyrics = lyrics?.picked;
+  useEffect(() => {
+    const element = host.current;
+    if (!element || !pickedLyrics || pickedLyrics.size === 0) return;
+    const marked: Element[] = [];
+    for (const text of element.querySelectorAll("[data-lyric]")) {
+      if (pickedLyrics.has(Number(text.getAttribute("data-start")))) {
+        text.setAttribute("data-lyric-picked", "");
+        marked.push(text);
+      }
+    }
+    return () => {
+      for (const text of marked) text.removeAttribute("data-lyric-picked");
+    };
+  }, [pickedLyrics, sheet.svg]);
+
   const line = place ? sheet.systems[place.system] : null;
   const lastLine = useRef<number | null>(null);
   useEffect(() => {
@@ -315,6 +484,171 @@ export function FramesSheetView({
     const next = columns[b + 1];
     return { start: columns[a].frame, end: next ? next.frame : columns[b].frame + 1 };
   };
+  /** The frame under a point of the sheet (between columns by time, as a click moves the recording). */
+  const frameAt = (x: number, y: number) => {
+    const ms = msAtPoint(columns, sheet.systems, x, y);
+    return ms === null ? null : Math.max(0, Math.round(ms / 40));
+  };
+  /** Where a frame is drawn: its x and line (the cursor's rule). */
+  const placeOf = (frame: number) => placeAt(columns, sheet.systems, frame * 40);
+
+  // ------------------------------------------------------------------ lyrics pieces and blocks (Phase 8, 8A++)
+
+  const [lyricDrag, setLyricDrag] = useState<LyricDrag | null>(null);
+  /** A drag let go: its preview stays until the new drawing comes (or the edit is refused). */
+  const [settle, setSettle] = useState<{ svg: string; drag: LyricDrag } | null>(null);
+  const [poolLanding, setPoolLanding] = useState<{ start: number; end: number; free: boolean } | null>(null);
+  const [hoverHandle, setHoverHandle] = useState<LyricDragMode | null>(null);
+  const blocks = lyricBlocks.svg === sheet.svg ? lyricBlocks.boxes : {};
+  const startOf = (block: LyricBlock) => sheet.lyrics[block.index]?.start ?? -1;
+  /** The blocks of the picked pieces (every part of each). */
+  const pickedBlocks = lyrics ? Object.entries(blocks).filter(([, block]) => lyrics.picked.has(startOf(block))) : [];
+  /** One piece picked: its frames are a bar in the strip. */
+  const onePicked = lyrics && lyrics.picked.size === 1 ? sheet.lyrics.findIndex((one) => lyrics.picked.has(one.start)) : -1;
+  /** The drag that shows now: the one under the pointer, or the one let go until the new drawing. */
+  const active = lyricDrag?.moved ? lyricDrag : settle && settle.svg === sheet.svg ? settle.drag : null;
+  const activeBlock = active ? (blocks[active.key] ?? null) : null;
+  /** The frames a dragged piece would cover, free or over another piece. */
+  const busyOver = (start: number, end: number, except: number) =>
+    sheet.lyrics.some((one, k) => k !== except && one.start < end && one.end > start);
+  /** The frames of the bar now: dragged, or the picked piece's own. */
+  const barFrames =
+    onePicked < 0
+      ? null
+      : active && (active.mode === "start" || active.mode === "end")
+        ? { start: active.nextStart, end: active.nextEnd }
+        : { start: sheet.lyrics[onePicked]!.start, end: sheet.lyrics[onePicked]!.end };
+  /** Boxes of frames `[start, end)` in the strip, one per line (a thin one where no column falls inside). */
+  const stripBoxes = (start: number, end: number) => {
+    const [from, to] = columnsOf({ start, end }, columns);
+    const boxes = to > from ? boxesOf(from, to, columns, edges, sheet.systems) : [];
+    if (boxes.length === 0) {
+      const at = placeOf(start);
+      if (!at) return [];
+      return [{ system: at.system, x: at.x - 0.4, width: 0.8, y: sheet.systems[at.system].staff_top - STRIP_SPACES }];
+    }
+    return boxes.map((box) => ({ system: box.system, x: box.x, width: box.width, y: sheet.systems[box.system].staff_top - STRIP_SPACES }));
+  };
+  /** Shades of the frames of lyrics pieces on the strip, while frames are dragged: `[start, end)` and its colour. */
+  const lyricShades = (() => {
+    const out: { start: number; end: number; fill: string; landing: boolean; free?: boolean }[] = [];
+    const framing = active && (active.mode === "start" || active.mode === "end") && onePicked >= 0;
+    if (!framing && !poolLanding) return out;
+    sheet.lyrics.forEach((one, k) => {
+      if (framing && k === onePicked) return;
+      out.push({ start: one.start, end: one.end, fill: "#9e9e9e", landing: false });
+    });
+    const target =
+      framing && barFrames ? { ...barFrames, free: !busyOver(barFrames.start, barFrames.end, onePicked) } : poolLanding;
+    if (target) out.push({ ...target, fill: target.free ? "#2e7d32" : "#c62828", landing: true });
+    return out;
+  })();
+  const shadeBoxes = lyricShades.flatMap((shade) => stripBoxes(shade.start, shade.end).map((box) => ({ ...shade, ...box })));
+  const bar = barFrames ? stripBoxes(barFrames.start, barFrames.end) : [];
+
+  /** The handles of a picked block: its width at the middle of its right side, its size at its lower right corner. */
+  const handlesOf = (block: LyricBlock) => {
+    const right = Math.max(block.x + block.width, block.left + (block.wrap ?? 0)) + 0.35;
+    return { width: { x: right, y: block.y + block.height / 2 }, scale: { x: right, y: block.y + block.height + 0.3 } };
+  };
+  const near = (point: { x: number; y: number }, at: { x: number; y: number }) =>
+    Math.abs(point.x - at.x) <= 0.7 && Math.abs(point.y - at.y) <= 0.7;
+  /** A handle of the picked blocks or of the bar under a point of the sheet. */
+  const handleAt = (point: { x: number; y: number }): { key: string; mode: LyricDragMode } | null => {
+    for (const [key, block] of pickedBlocks) {
+      const handles = handlesOf(block);
+      if (near(point, handles.scale)) return { key, mode: "scale" };
+      if (near(point, handles.width)) return { key, mode: "width" };
+    }
+    if (onePicked >= 0 && bar.length > 0) {
+      const key = Object.keys(blocks).find((one) => blocks[one]!.index === onePicked);
+      const first = bar[0]!;
+      const last = bar[bar.length - 1]!;
+      const y = first.y + BAR_Y + 0.4;
+      if (key && Math.abs(point.x - first.x) <= 0.6 && Math.abs(point.y - y) <= 0.9) return { key, mode: "start" };
+      const lastY = last.y + BAR_Y + 0.4;
+      if (key && Math.abs(point.x - (last.x + last.width)) <= 0.6 && Math.abs(point.y - lastY) <= 0.9) return { key, mode: "end" };
+    }
+    return null;
+  };
+  /** The scale of the words while a corner handle is dragged (their size kept within its limits). */
+  const scaleOf = (drag: LyricDrag, block: LyricBlock) => {
+    const was = Math.max(0.5, block.x + block.width - block.left);
+    const ratio = Math.max(0.1, (drag.x - block.left) / was);
+    return Math.min(LYRIC_MAX, Math.max(LYRIC_MIN, block.size * ratio)) / block.size;
+  };
+  /** The width a side handle sets, in staff spaces. */
+  const widthOf = (drag: LyricDrag, block: LyricBlock) => Math.max(2, Math.round((drag.x - block.left) * 10) / 10);
+  /** Where a block moved to lands: its line (the one whose staves are under its baseline), the column under its left edge. */
+  const placeFor = (left: number, base: number) => {
+    let line = sheet.systems.findIndex((system) => base <= system.staff_bottom);
+    if (line < 0) line = sheet.systems.length - 1;
+    const inLine = columns.filter((column) => column.system === line);
+    const column = inLine.filter((one) => one.x <= left).pop() ?? inLine[0];
+    if (!column) return null;
+    const round = (value: number) => Math.round(value * 100) / 100;
+    return { at: column.frame, dx: round(left - column.x), dy: round(base - sheet.systems[line]!.staff_top) };
+  };
+
+  // The block under the pointer follows it: moved, or its words scaled from the start of its last line; while a side
+  // handle moves, the words wrapped again are drawn over it (the block itself hidden).
+  useEffect(() => {
+    if (!active || !activeBlock || !host.current) return;
+    const elements = [...host.current.querySelectorAll(`[data-lyric="${activeBlock.index}"]`)].filter(
+      (element) => blockKey(element) === active.key,
+    );
+    let transform: string | null = null;
+    if (active.mode === "move") transform = `translate(${active.x - active.x0} ${active.y - active.y0})`;
+    if (active.mode === "scale") {
+      const ratio = scaleOf(active, activeBlock);
+      const { left, base } = activeBlock;
+      transform = `translate(${left} ${base}) scale(${ratio}) translate(${-left} ${-base})`;
+    }
+    for (const element of elements) {
+      if (transform) element.setAttribute("transform", transform);
+      if (active.mode === "width") element.setAttribute("opacity", "0");
+    }
+    return () => {
+      for (const element of elements) {
+        element.removeAttribute("transform");
+        element.removeAttribute("opacity");
+      }
+    };
+  }, [active, activeBlock, sheet.svg]);
+  const widthPreview = (() => {
+    if (!active || active.mode !== "width" || !activeBlock) return null;
+    const block = activeBlock;
+    const piece = sheet.lyrics[block.index];
+    const split = Object.values(blocks).filter((one) => one.index === block.index).length > 1;
+    const width = widthOf(active, block);
+    const lines = wrapWords(split || !piece ? block.words : piece.text, width, block.size, block.font, block.bold, block.italic);
+    return { block, width, lines, top: block.base - (lines.length - 1) * block.size * LYRIC_LEADING };
+  })();
+
+  /** A drag of a lyrics block let go: what it changes, sent to the page. */
+  const letGo = (drag: LyricDrag) => {
+    const block = blocks[drag.key];
+    if (!lyrics || !block) return;
+    const start = startOf(block);
+    let sent: Promise<boolean> | null = null;
+    if (drag.mode === "move") {
+      const place = placeFor(block.left + drag.x - drag.x0, block.base + drag.y - drag.y0);
+      if (place) sent = lyrics.onPlace(start, place);
+    } else if (drag.mode === "width") {
+      sent = lyrics.onWidth(start, widthOf(drag, block));
+    } else if (drag.mode === "scale") {
+      const size = Math.round(block.size * scaleOf(drag, block) * 100) / 100;
+      sent = lyrics.onScale(start, size, block.wrap === null ? null : Math.round((block.wrap * size * 10) / block.size) / 10);
+    } else if (drag.nextStart !== start || drag.nextEnd !== sheet.lyrics[block.index]?.end) {
+      sent = lyrics.onFrames(start, { start: drag.nextStart, end: drag.nextEnd });
+    }
+    if (!sent) return;
+    setSettle({ svg: sheet.svg, drag });
+    void sent.then((done) => {
+      if (!done) setSettle(null);
+    });
+  };
+
   const [rangeDrag, setRangeDrag] = useState<RangeDrag | null>(null);
   const [strip, setStrip] = useState(-1);
   const marking = rangeDrag ? framesOf(rangeDrag.from, rangeDrag.to) : null;
@@ -331,6 +665,50 @@ export function FramesSheetView({
     });
   }, [shown, rangeScope, columns, edges, sheet.systems]);
 
+  // The window over a take (Record in Sheet): a band on each line it covers, and a grip on its first line.
+  const [windowDrag, setWindowDrag] = useState<{ grab: number; start: number } | null>(null);
+  const windowStart = frameWindow ? (windowDrag?.start ?? frameWindow.start) : null;
+  const windowLength = frameWindow ? frameWindow.end - frameWindow.start : 0;
+  const windowNow = windowStart === null ? null : { start: windowStart, end: windowStart + windowLength };
+  const windowBoxes = useMemo(() => {
+    if (windowStart === null || windowLength <= 0 || columns.length === 0) return [];
+    // A frame is drawn before the first column at or after it: the notes from it on are inside the window (or after
+    // it, for its end); past the last column, at the end of the last line.
+    const edgeOf = (frame: number) => {
+      const i = columns.findIndex((column) => column.frame >= frame);
+      // Never further left than the room of the column's own accidentals: at the start of a line, the armadura.
+      if (i >= 0) return { x: Math.max(edges[i]![0], columns[i]!.x - WINDOW_LEAD), system: columns[i]!.system };
+      const last = columns[columns.length - 1]!;
+      return { x: sheet.systems[last.system]?.right ?? last.x, system: last.system };
+    };
+    const a = edgeOf(windowStart);
+    const b = edgeOf(windowStart + windowLength);
+    if (!a || !b) return [];
+    const out: { system: number; x: number; width: number; first: boolean; last: boolean }[] = [];
+    for (let line = a.system; line <= b.system; line += 1) {
+      const system = sheet.systems[line];
+      if (!system) continue;
+      const x0 = line === a.system ? a.x : system.left;
+      const x1 = line === b.system ? b.x : system.right;
+      if (x1 > x0) out.push({ system: line, x: x0, width: x1 - x0, first: line === a.system, last: line === b.system });
+    }
+    return out;
+  }, [windowStart, windowLength, columns, edges, sheet.systems]);
+  /** The grip of the window, in sheet units: in the middle of its first line's band, at the top. */
+  const grip = windowBoxes[0] && onWindowMove
+    ? {
+        x: Math.max(windowBoxes[0].x + 0.4, windowBoxes[0].x + windowBoxes[0].width / 2 - WINDOW_GRIP.width / 2),
+        // Above the ink of the line, clear of stems and beams.
+        y: Math.max(0.1, (sheet.systems[windowBoxes[0].system]?.top ?? 0) - WINDOW_GRIP.height - 0.3),
+      }
+    : null;
+  const onGrip = (point: { x: number; y: number }) =>
+    grip !== null &&
+    point.x >= grip.x - 0.4 &&
+    point.x <= grip.x + WINDOW_GRIP.width + 0.4 &&
+    point.y >= grip.y - 0.4 &&
+    point.y <= grip.y + WINDOW_GRIP.height + 0.4;
+
   // ------------------------------------------------------------------ picking notes
 
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -341,6 +719,7 @@ export function FramesSheetView({
       dragged.current = false;
       return;
     }
+    if (lyrics && host.current && lyricAt(host.current, event.clientX, event.clientY) !== null) return;
     const add = event.metaKey || event.ctrlKey || event.shiftKey;
     const head = onPick && host.current ? headAt(host.current, event.clientX, event.clientY) : null;
     if (head && onPick) {
@@ -356,6 +735,45 @@ export function FramesSheetView({
 
   const press = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
+    if (frameWindow && onWindowMove) {
+      const point = toSheet(event.clientX, event.clientY);
+      const frame = point && onGrip(point) ? frameAt(point.x, point.y) : null;
+      if (frame !== null) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setWindowDrag({ grab: frame - frameWindow.start, start: frameWindow.start });
+        dragged.current = true;
+        return;
+      }
+    }
+    if (lyrics && host.current) {
+      const point = toSheet(event.clientX, event.clientY);
+      const handle = point ? handleAt(point) : null;
+      const key = handle?.key ?? lyricAt(host.current, event.clientX, event.clientY);
+      const block = key ? blocks[key] : undefined;
+      const piece = block ? sheet.lyrics[block.index] : undefined;
+      if (point && key && piece) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setSettle(null);
+        setLyricDrag({
+          key,
+          mode: handle?.mode ?? "move",
+          x0: point.x,
+          y0: point.y,
+          x: point.x,
+          y: point.y,
+          moved: false,
+          nextStart: piece.start,
+          nextEnd: piece.end,
+        });
+        return;
+      }
+      // A press off the picked pieces lets them go, and does nothing else: the strip marks no stretch meanwhile.
+      if (lyrics.picked.size > 0) {
+        dragged.current = true;
+        lyrics.onUnpick();
+        return;
+      }
+    }
     if (onRange && host.current && !headAt(host.current, event.clientX, event.clientY)) {
       const point = toSheet(event.clientX, event.clientY);
       const line = point ? stripAt(point.x, point.y) : -1;
@@ -376,6 +794,39 @@ export function FramesSheetView({
     setDrag({ left, top, x0: x, y0: y, x1: x, y1: y, add, moved: false });
   };
   const pull = (event: PointerEvent<HTMLDivElement>) => {
+    if (windowDrag && onWindowMove) {
+      const point = toSheet(event.clientX, event.clientY);
+      const frame = point ? frameAt(point.x, point.y) : null;
+      if (frame === null) return;
+      const start = Math.max(0, frame - windowDrag.grab);
+      if (start !== windowDrag.start) {
+        setWindowDrag({ ...windowDrag, start });
+        onWindowMove(start, false);
+      }
+      return;
+    }
+    if (lyricDrag) {
+      const point = toSheet(event.clientX, event.clientY);
+      if (!point) return;
+      const moved = lyricDrag.moved || Math.hypot(point.x - lyricDrag.x0, point.y - lyricDrag.y0) > 0.4;
+      const next = { ...lyricDrag, moved, x: point.x, y: point.y };
+      const piece = blocks[lyricDrag.key] ? sheet.lyrics[blocks[lyricDrag.key]!.index] : undefined;
+      if (piece && (lyricDrag.mode === "start" || lyricDrag.mode === "end")) {
+        const frame = frameAt(point.x, point.y);
+        if (frame !== null && lyricDrag.mode === "start") next.nextStart = Math.min(frame, piece.end - 1);
+        if (frame !== null && lyricDrag.mode === "end") next.nextEnd = Math.max(piece.start + 1, frame);
+      }
+      setLyricDrag(next);
+      return;
+    }
+    if (lyrics && lyrics.picked.size > 0) {
+      // A picked block: its handles say what a press there does; the strip stays off.
+      const point = toSheet(event.clientX, event.clientY);
+      const mode = point ? (handleAt(point)?.mode ?? null) : null;
+      if (mode !== hoverHandle) setHoverHandle(mode);
+      if (strip !== -1) setStrip(-1);
+      return;
+    }
     if (onRange) {
       const point = toSheet(event.clientX, event.clientY);
       if (rangeDrag && point) {
@@ -391,7 +842,26 @@ export function FramesSheetView({
     if (moved && !drag.moved) event.currentTarget.setPointerCapture(event.pointerId);
     setDrag({ ...drag, x1: event.clientX, y1: event.clientY, moved });
   };
-  const release = () => {
+  const release = (event: PointerEvent<HTMLDivElement>) => {
+    if (windowDrag) {
+      setWindowDrag(null);
+      dragged.current = true;
+      onWindowMove?.(windowDrag.start, true);
+      return;
+    }
+    if (lyricDrag) {
+      const drag = lyricDrag;
+      setLyricDrag(null);
+      dragged.current = true;
+      const block = blocks[drag.key];
+      if (!lyrics || !block) return;
+      if (!drag.moved) {
+        if (drag.mode === "move") lyrics.onPick(startOf(block), event.metaKey || event.ctrlKey || event.shiftKey);
+        return;
+      }
+      letGo(drag);
+      return;
+    }
     if (rangeDrag) {
       setRangeDrag(null);
       dragged.current = true;
@@ -435,19 +905,61 @@ export function FramesSheetView({
       onPointerCancel={() => {
         setDrag(null);
         setRangeDrag(null);
+        setLyricDrag(null);
+        setWindowDrag(null);
       }}
-      onPointerLeave={() => setStrip(-1)}
+      onPointerLeave={() => {
+        setStrip(-1);
+        setHoverHandle(null);
+      }}
+      onDragOver={(event) => {
+        if (!lyrics?.landing) return;
+        event.preventDefault();
+        const point = toSheet(event.clientX, event.clientY);
+        const frame = point ? frameAt(point.x, point.y) : null;
+        const next = frame === null ? null : lyrics.landing(frame);
+        if (next?.start !== poolLanding?.start || next?.end !== poolLanding?.end || next?.free !== poolLanding?.free) {
+          setPoolLanding(next);
+        }
+      }}
+      onDragLeave={() => setPoolLanding(null)}
+      onDrop={(event) => {
+        if (!lyrics?.landing) return;
+        event.preventDefault();
+        setPoolLanding(null);
+        const point = toSheet(event.clientX, event.clientY);
+        const frame = point ? frameAt(point.x, point.y) : null;
+        if (frame !== null) lyrics.onDropPool(frame);
+      }}
       sx={{
         position: "relative",
         backgroundColor: "#fff",
         borderRadius: 1,
         overflow: "hidden",
-        cursor: strip >= 0 || rangeDrag ? "col-resize" : onSeek || onPick ? "pointer" : "default",
+        cursor:
+          windowDrag
+            ? "grabbing"
+            : hoverHandle === "scale" || lyricDrag?.mode === "scale"
+            ? "nwse-resize"
+            : hoverHandle || (lyricDrag && lyricDrag.mode !== "move")
+              ? "ew-resize"
+              : lyricDrag?.moved
+                ? "grabbing"
+                : strip >= 0 || rangeDrag
+                  ? "col-resize"
+                  : onSeek || onPick
+                    ? "pointer"
+                    : "default",
         userSelect: "none",
         touchAction: onPick ? "pan-y" : undefined,
         "& [data-selected]": { fill: palette.dark.Lavender },
         "& [data-lit]": { fill: semantic.pressedKey },
         "& [data-segment-state='working']": { animation: `${breathe} 1.6s ease-in-out infinite alternate` },
+        "& [data-lyric]": { cursor: lyrics ? "grab" : undefined, transition: "opacity 0.2s" },
+        "& [data-lyric][data-lyric-lit]": { fill: "#000", fontWeight: 700 },
+        ...(centre ? { "& [data-lyric]": { fill: "#000" } } : {}),
+        ...(centre && playing ? { "& [data-lyric]:not([data-lyric-lit])": { opacity: 0.4 } } : {}),
+
       }}
     >
       <div ref={host} />
@@ -482,6 +994,45 @@ export function FramesSheetView({
             </g>
           );
         })}
+        {windowBoxes.length > 0 && windowNow ? (
+          <g data-frame-window data-start={windowNow.start} data-end={windowNow.end}>
+            {windowBoxes.map((box) => {
+              const system = sheet.systems[box.system]!;
+              return (
+                <g key={`fw${box.system}`}>
+                  <rect x={box.x} y={system.top} width={box.width} height={system.bottom - system.top} fill={WINDOW_COLOUR} opacity={0.07} />
+                  {box.first ? (
+                    // From the grip down: the edge the window is dragged by.
+                    <line
+                      x1={box.x}
+                      x2={box.x}
+                      y1={Math.max(0.1, system.top - WINDOW_GRIP.height - 0.3)}
+                      y2={system.bottom}
+                      stroke={WINDOW_COLOUR}
+                      strokeWidth={0.18}
+                    />
+                  ) : null}
+                  {box.last ? (
+                    <line x1={box.x + box.width} x2={box.x + box.width} y1={system.top} y2={system.bottom} stroke={WINDOW_COLOUR} strokeWidth={0.18} />
+                  ) : null}
+                </g>
+              );
+            })}
+            {grip ? (
+              <rect
+                data-frame-window-grip
+                x={grip.x}
+                y={grip.y}
+                width={WINDOW_GRIP.width}
+                height={WINDOW_GRIP.height}
+                rx={WINDOW_GRIP.height / 2}
+                fill={WINDOW_COLOUR}
+              >
+                <title>Drag: the stretch of the take that goes into the song</title>
+              </rect>
+            ) : null}
+          </g>
+        ) : null}
         {strip >= 0 && !rangeDrag && sheet.systems[strip] ? (
           <rect
             data-range-strip
@@ -516,6 +1067,112 @@ export function FramesSheetView({
             />
           </g>
         ))}
+        {shadeBoxes.map((shade) => (
+          <rect
+            key={`l${shade.system}:${shade.x}:${shade.start}`}
+            {...(shade.landing ? { "data-lyric-landing": "", "data-free": shade.free ? "true" : "false" } : {})}
+            x={shade.x}
+            y={shade.y}
+            width={shade.width}
+            height={STRIP_SPACES - 0.3}
+            fill={shade.fill}
+            opacity={shade.landing ? 0.25 : 0.15}
+          />
+        ))}
+        {bar.map((box, k) => (
+          <g key={`f${box.system}:${box.x}`} data-lyric-frames={k === 0 ? "" : undefined}>
+            <rect x={box.x} y={box.y + BAR_Y} width={box.width} height={0.8} fill={palette.dark.Lavender} opacity={0.35} rx={0.2} />
+            {k === 0 ? (
+              <rect data-lyric-handle="start" pointerEvents="all" x={box.x - 0.25} y={box.y + BAR_Y - 0.3} width={0.5} height={1.4} fill={palette.dark.Lavender} rx={0.15}>
+                <title>Drag: when the words start to sound</title>
+              </rect>
+            ) : null}
+            {k === bar.length - 1 ? (
+              <rect
+                data-lyric-handle="end" pointerEvents="all"
+                x={box.x + box.width - 0.25}
+                y={box.y + BAR_Y - 0.3}
+                width={0.5}
+                height={1.4}
+                fill={palette.dark.Lavender}
+                rx={0.15}
+              >
+                <title>Drag: when the words stop sounding</title>
+              </rect>
+            ) : null}
+          </g>
+        ))}
+        {pickedBlocks.map(([key, block]) => {
+          // The outline follows the drag: moved, scaled, or as wide as the words wrapped now.
+          let { x, y, width: wide, height } = block;
+          if (active?.key === key && active.mode === "move") {
+            x += active.x - active.x0;
+            y += active.y - active.y0;
+          } else if (active?.key === key && active.mode === "scale") {
+            const ratio = scaleOf(active, block);
+            [x, y, wide, height] = [block.left + (x - block.left) * ratio, block.base + (y - block.base) * ratio, wide * ratio, height * ratio];
+          } else if (active?.key === key && widthPreview) {
+            const rows = widthPreview.lines.length;
+            [wide, y, height] = [widthPreview.width, widthPreview.top - block.size * 0.85, rows * block.size * LYRIC_LEADING];
+          }
+          const right = Math.max(x + wide, block.wrap !== null && active?.key !== key ? block.left + block.wrap : 0);
+          const handles = handlesOf({ ...block, x, y, width: right - x, height, wrap: null });
+          return (
+            <g key={`p${key}`}>
+              <rect
+                x={x - 0.3}
+                y={y - 0.2}
+                width={right - x + 0.6}
+                height={height + 0.4}
+                fill={palette.dark.Lavender}
+                fillOpacity={0.08}
+                stroke={palette.dark.Lavender}
+                strokeWidth={0.08}
+                rx={0.3}
+              />
+              <rect
+                data-lyric-handle="width" pointerEvents="all"
+                x={handles.width.x - 0.18}
+                y={handles.width.y - 0.6}
+                width={0.36}
+                height={1.2}
+                fill={palette.dark.Lavender}
+                rx={0.12}
+              >
+                <title>Drag: narrower or wider (the words wrap)</title>
+              </rect>
+              <rect
+                data-lyric-handle="scale" pointerEvents="all"
+                x={handles.scale.x - 0.3}
+                y={handles.scale.y - 0.3}
+                width={0.6}
+                height={0.6}
+                fill="#fff"
+                stroke={palette.dark.Lavender}
+                strokeWidth={0.12}
+                rx={0.1}
+              >
+                <title>Drag: larger or smaller words</title>
+              </rect>
+            </g>
+          );
+        })}
+        {widthPreview ? (
+          <text
+            data-lyric-preview
+            fontSize={widthPreview.block.size}
+            fontFamily={familyOf(widthPreview.block.font)}
+            fontWeight={widthPreview.block.bold ? 700 : 400}
+            fontStyle={widthPreview.block.italic ? "italic" : "normal"}
+            fill="#3a3a3a"
+          >
+            {widthPreview.lines.map((text, k) => (
+              <tspan key={k} x={widthPreview.block.left} y={widthPreview.top + k * widthPreview.block.size * LYRIC_LEADING}>
+                {text}
+              </tspan>
+            ))}
+          </text>
+        ) : null}
         {place && line ? (
           <line
             ref={cursor}
