@@ -65,6 +65,8 @@ const SVG_MARGINS = 8;
 const TITLE_MM = 14;
 const SUBTITLE_MM = 6;
 const PREVIEW_WIDTH = 460;
+/** The room around a page of the preview: its padding (12 px a side) and a scrollbar. */
+const PREVIEW_ROOM = 24 + 18;
 const PAPERS = { a4: [210, 297], letter: [215.9, 279.4] } as const;
 
 export function FramesPdfDialog({
@@ -172,7 +174,7 @@ export function FramesPdfDialog({
   }, [pages, title, pieceName]);
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth data-frames-pdf>
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth data-frames-pdf>
       <DialogTitle>Download the sheet as a PDF</DialogTitle>
       <DialogContent dividers>
         <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
@@ -262,7 +264,19 @@ export function FramesPdfDialog({
             />
             {failed ? <Alert severity="error">{failed}</Alert> : null}
           </Stack>
-          <Box sx={{ flex: 1, minWidth: 0, maxHeight: 520, overflowY: "auto", bgcolor: "grey.100", borderRadius: 1, p: 1.5 }}>
+          {/* As wide as a page of the preview, its padding and a scrollbar: both edges of the paper in view. */}
+          <Box
+            sx={{
+              flex: "0 0 auto",
+              width: { xs: "100%", md: Math.ceil(pagePx * scale) + PREVIEW_ROOM },
+              maxHeight: 520,
+              overflow: "auto",
+              bgcolor: "grey.100",
+              borderRadius: 1,
+              p: 1.5,
+            }}
+            data-pdf-preview
+          >
             <Box
               ref={frame}
               sx={{

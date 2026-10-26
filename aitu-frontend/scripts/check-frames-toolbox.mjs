@@ -409,6 +409,13 @@ try {
   const pages = await laidOut();
   const labels = await page.locator('[data-frames-pdf]').innerText();
   check('Print to PDF lays the sheet out on pages', pages >= 2, `${pages} pages`);
+  const previewBox = await page.locator('[data-pdf-preview]').boundingBox();
+  const paperBox = await page.locator('[data-pdf-page]').first().boundingBox();
+  check(
+    'the preview shows both edges of the page',
+    paperBox.x >= previewBox.x && paperBox.x + paperBox.width <= previewBox.x + previewBox.width,
+    `page ${Math.round(paperBox.x - previewBox.x)} to ${Math.round(paperBox.x + paperBox.width - previewBox.x)} px of ${Math.round(previewBox.width)}`,
+  );
   check('a 6.5 mm staff and 6 mm between lines by default', labels.includes('6.5 mm staff') && labels.includes('Space between lines: 6 mm'));
   // A denser PDF (8A+++): larger music takes more pages, smaller music and less space fewer.
   const larger = await slide('pdf-staff', ['End']);

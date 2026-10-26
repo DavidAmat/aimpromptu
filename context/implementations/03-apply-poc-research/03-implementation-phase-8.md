@@ -396,6 +396,11 @@ lines, 4 or 5 lines a page), and the music had one fixed size (7 mm).
   4 and 3 pages), 1 mm between lines never more; back at the defaults the same pages; the PDF has one page per
   page. The first page of the PDF rendered by poppler and looked at zoomed in: the title and 6 lines.
 
+**After the user's look (2026-10-26): the preview cut its edges.** The dialog was 900 px wide (`md`) and its two
+columns shared it equally, so the preview had about 414 px for a page drawn 460 px wide. The dialog is now `lg`, and
+the preview column is as wide as a page of the preview plus its padding and a scrollbar (502 px on A4).
+`check:frames-toolbox` checks that both edges of the page are inside the preview.
+
 ## 8.4 Then 8B
 
 1. `sheet.f1` through every change of a part's length: an F1 version of `editing/marks.py` (`shift`, `cut_out`,
