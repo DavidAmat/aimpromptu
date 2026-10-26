@@ -27,6 +27,7 @@ their phase, after its study (plan section 8).
 - [x] **Phase 6**: may a new LLM run change hands that the user moved (user, 2026-10-25: yes, it reads the current hands as a suggestion); the engine in the backend or in the browser (agent, from the time of one edit, about 0.25 s: the backend).
 - [x] **Phase 7**: the tools that no longer make sense (user, 2026-10-25): even spacing, the room of a stretch, speed changes, print smaller, the unplayed decoration and hiding or dragging an 8va bracket are dropped; a grace note switch replaces the two small-note tools; a new AI run keeps the user's fingers, figures and grace switches and writes its own kinds again.
 - [x] **Phase 8**: the tools of the sheet toolbox and the other screens that no longer make sense (user, 2026-10-26): Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's, with Enhance with AI as a button; Find trills, Remove all and Bring back are dropped.
+- [x] **Phase 9**: the old clefs and octave lines of `sheet.json` (user, 2026-10-26): the new clef rules everywhere, every old one dropped.
 - [x] **Phase 8A++**: lyrics blocks (user, 2026-10-26): the corner handle scales the words and the side handle sets the width; the frames of a block on a bar in the strip; the fonts Lora, Geist and Montserrat; a piece over a line break shares its words by the width on each line.
 
 # [x] Phase 0: The research folder on Ubuntu, the branch, the inventory
@@ -134,11 +135,14 @@ Done 2026-10-26 after the user's check of 8B in the browser ("works amazingly");
   - [x] The user checks 8A in the browser with the three requests (2026-10-26: "all good", after two fixes found on the way: two clefs on one spot, the print preview's edges; report section 8).
   - [x] 8B `sheet.f1` follows every change of a part's length; copy and paste; Start a new part; the read-only stretch actions; the requests review; Recording in Sheet; the blank sheet; the switch removed and the browser checks moved; the user's check in the browser. Built 2026-10-26 (report section 10): `part_sheet/lengths.py` in every paste and cut, `POST /sheet/{uuid}/paste` one step of undo (a promotion too), the read-only *Frames* panel, the passage page on the new sheet (the window, the song's figure and armadura), the blank sheet; `SheetPage` draws only the new sheet; every browser check that can run without the GPU passes on the new hooks (`scripts/frames-page.mjs`). Checked by the user in the browser (2026-10-26: "works amazingly"; a few user-experience points left for later), after the recorder says why **Record** is off on an address without the microphone (report section 10.9).
 
-# [ ] Phase 9: The saved data
+# [p] Phase 9: The saved data
 
-- [ ] Task 9.1 Study of `.database/`: parts, correction fields in use, how often.
-- [ ] Task 9.2 The corrections mapped onto the new sheet, or written again by the LLM, or both (the user's answer of Phase 5).
-- [ ] Task 9.3 The migration: `make db-backup` first, a dry run, a count of what moved and what could not.
+Built and migrated 2026-10-26. Report: [`03-implementation-phase-9.md`](03-implementation-phase-9.md).
+
+- [x] Task 9.1 Study of `.database/`: 53 parts, 47 `sheet.json` (36 written by a script from the old automatic rules), the fields in use; the question to the user (answered 2026-10-26: the new clef rules everywhere).
+- [x] Task 9.2 The corrections mapped onto the new sheet (`part_sheet/legacy.py`, `build.with_legacy`): titles, lyrics, space between lines, figures, fingers, beams (not onto an AI sheet); old clefs and octave lines dropped; a part with no stored sheet is drawn with them.
+- [x] Task 9.3 The migration (`scripts/migrate_sheets.py`): `make db-backup` first, a dry run, then 5 parts stored (AITANA and Halleluyah, project and library version each, one untitled project), 40 with nothing to carry; 359 octave lines and 92 clef changes dropped (report section 5).
+- [ ] The user's check in the browser.
 
 # [ ] Phase 10: vexflow-v2 removed, documentation, closing
 

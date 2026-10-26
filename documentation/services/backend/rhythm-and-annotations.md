@@ -3,6 +3,14 @@
 
 # `sheet.json` — the reader's own decisions
 
+> **The old sheet's file.** Since implementation 03 the app draws the new sheet, whose reading is stored in
+> `sheet.f1` (`aitu-backend/src/aitu_backend/sheet/README.md` sections 12 to 17). This file is read only for what the
+> new sheet keeps of it: the key and a renamed main figure (Phase 5), and the titles, lyrics, line spacing, figure
+> overrides, fingers, beam breaks and joins (Phase 9, `part_sheet/legacy.py`; `scripts/migrate_sheets.py` stored them
+> in `sheet.f1` on 2026-10-26). Clef changes and octave brackets are not carried (the user's answer: the new clef
+> rules everywhere), nor the spacing fields, cue ranges, decorations and trills. The sections below describe the file
+> as the old sheet wrote it.
+
 Everything else about a score is derived. The columns come from the recorded notes, the figures come
 from the ladder, the beams come from the figures. This file holds the only things that are **not**
 derived, because a person chose them and nothing in the recording implies them.

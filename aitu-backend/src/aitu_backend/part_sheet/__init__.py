@@ -1,4 +1,4 @@
-"""The new piano sheet of a part in the app (implementation 03, Phases 5 to 7).
+"""The new piano sheet of a part in the app (implementation 03, Phases 5 to 9).
 
 * :mod:`.store`: ``sheet.f1``, the sheet as it was last written, with a record of how;
 * :mod:`.build`: the sheet of a part at any moment (stored, laid again on changed notes, or the algorithm) and its
@@ -9,7 +9,9 @@
   wrote again;
 * :mod:`.reading` (Phase 7): the reading edits of the two toolboxes, as functions on a frames sheet;
 * :mod:`.lengths` (Phase 8B): ``sheet.f1`` through every change of a part's length (a paste, a promotion, a split, a
-  join), the new sheet's version of ``editing.marks``; :mod:`.edits` makes a paste one step of undo.
+  join), the new sheet's version of ``editing.marks``; :mod:`.edits` makes a paste one step of undo;
+* :mod:`.legacy` (Phase 9): the marks of an old ``sheet.json`` (vexflow-v2) the new sheet keeps (titles, lyrics, space
+  between lines, figures set by hand, fingers, beam marks); ``scripts/migrate_sheets.py`` stores them.
 
 The routes are ``api/sheet.py``. The modules are imported one by one (``aitu_backend.part_sheet.store``): the
 transcription pipeline clears the stored sheet, and :mod:`.build` reads the pipeline.

@@ -720,6 +720,9 @@ browser.
 
 ## Phase 9: The saved data
 
+**Built and migrated 2026-10-26** ([`03-implementation-phase-9.md`](03-implementation-phase-9.md)); the user's check in
+the browser is next.
+
 *Why:* existing projects and library versions hold `sheet.json` corrections made for vexflow-v2 (hands, overrides,
 beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new sheet.
 
@@ -727,6 +730,19 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 2. With the user's answer of phase 5: map the corrections onto the new sheet (`synthesis/06-modules.md` §6.6), or
    write the new sheet again with the LLM (credits), or both.
 3. A migration with a backup first (`make db-backup`), a dry run, a count of what moved and what could not move.
+
+*After the study (2026-10-26, report section 2):* 53 parts outside the histories, 47 with a `sheet.json`, 14 with a
+`sheet.f1`. 36 of the 47 `sheet.json` were written by a script on 2026-10-16 (`sheet-library.mjs`, implementation 02
+Phase 12) from the old page's automatic first write, so their clefs and octave lines are the old rules, not the user's;
+11 come from the user's own work. The old marks the user wrote by hand are few: lyrics (4 parts), figures set by hand
+and beam marks (the AITANA tutorial), a smaller space between lines (3 parts); the notes taken off the page are
+already removed in `notes.pmn` (14 of 14); fingers, trills, grace marks and titles are used nowhere, histories
+included. **The user's answer (2026-10-26): the new clef rules everywhere**: every old clef change and octave line is
+dropped. What is carried (`part_sheet/legacy.py`): the titles, the lyrics, the space between lines, the figures set by
+hand and the fingers on every sheet; the beam marks only on a sheet the AI did not write (beams are the AI's kind,
+plan section 3.7). The armadura and a renamed reference figure were already kept (Phase 5). A part with no stored
+sheet gets them when it is drawn; the migration (`scripts/migrate_sheets.py`) stores the result, so the marks no
+longer depend on `sheet.json`.
 
 *Done when:* every part of the database opens in the new sheet, and the report says what could not be mapped.
 
@@ -755,6 +771,7 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 | 6 | May a new LLM run change hands that the user moved (user, 2026-10-25: yes, it reads them as a suggestion); the engine in the backend or in the browser (agent, from the time of one edit: the backend) |
 | 7 | Tools that no longer make sense (user, 2026-10-25): drop even spacing, the room of a stretch and speed changes; replace print smaller and the unplayed decoration by a grace note switch; drop hiding and dragging an 8va bracket. A new AI run keeps the user's fingers, figures and grace switches and writes its own kinds again |
 | 8 | Tools of the sheet toolbox and the other screens that no longer make sense (user, 2026-10-26): Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's with Enhance with AI as a button; Find trills, Remove all and Bring back are dropped |
+| 9 | The old clefs and octave lines of `sheet.json` (user, 2026-10-26): the new clef rules everywhere, every old one dropped |
 
 # 9. Risks
 
@@ -852,3 +869,4 @@ repository."
 | 8 | Phase 8B: a paste stores the target's new sheet when either side holds decisions, or when the target had no music (a blank sheet, a new part) | Two algorithm sheets are a function of the notes; a blank song whose take was promoted kept a Sheet step "missing" (`check:passage`) |
 | 8 | Phase 8B: the Current and the takes of a passage are written with the song's reference figure (at the take's speed) and its armadura where the passage starts; the take's AI only on its button | The old page named the Proposal with the song's figure so the two read alike; the user's answer of Phase 8 (a take's sheet is the algorithm's) |
 | 8 | Phase 8B: `check:requests` uses "Bonfire Heart"; `check:passage --played` runs without the GPU; `check:transpose`, `check:lyrics`, `bench:sheet` removed | 7 Years has a real public version since 2026-10-18; the GPU is often held by another project; the old sheet is gone and `check:frames-toolbox` covers Transpose and Lyrics |
+| 9 | Phase 9 task 2: the old clefs and octave lines are dropped, not mapped; the user's marks (titles, lyrics, space between lines, figures, fingers, beams) are carried, beams only onto a sheet the AI did not write; the same function draws an unstored part and feeds the migration | The study: 36 of 47 `sheet.json` were written by a script from the old automatic rules; the user's answer of 2026-10-26; a history restore or an old `.aitu` brings a `sheet.json` back with no `sheet.f1` |
