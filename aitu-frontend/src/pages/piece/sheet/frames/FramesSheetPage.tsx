@@ -24,7 +24,10 @@
  *   hands over to the other from its title bar, and either one can be sent to the AI with the user's own words
  *   (**Enhance with AI**: the stretch gets the pale veil while the AI writes it, then appears column by column).
  * - **The sheet toolbox** (Phase 8): Title, Key, Transpose (notes and figures, with their preview), Lyrics (the
- *   pieces placed on the sheet are dragged there) and View (zoom, space between lines); **Print to PDF**; and in
+ *   words pasted and the pool, whose pieces are dragged onto the sheet) and View (zoom, space between lines). A
+ *   click on a lyrics piece on the sheet picks it and opens the lyrics toolbox beside it (Phase 8A++, the user's
+ *   request: its words, font, size, bold and italic); the block is moved and resized on the sheet itself, and the
+ *   bar of its frames in the strip says when it sounds. **Print to PDF**; and in
  *   the `⋯` the keyboard panel (the keys sounding under the cursor; a click takes a note off or adds one). The note
  *   toolbox has a keyboard of its own for the picked column (the user's request): a key adds a note to the chord or
  *   takes one off, and the chord stays picked.
@@ -68,6 +71,7 @@ import { HAND_COLOUR, HELD_COLOUR, type SoundingNote } from "../sheetConstants";
 import type { SheetStep } from "../SheetPage";
 import { besideOnScreen, clearOfRange, firstLineBoxOf, screenBoxOf } from "../toolboxPlacement";
 import { EnhanceStretchDialog } from "./EnhanceStretchDialog";
+import { FramesLyricsToolbox } from "./FramesLyricsToolbox";
 import { FramesNoteToolbox } from "./FramesNoteToolbox";
 import { FramesRangeToolbox, type RangeHand } from "./FramesRangeToolbox";
 import { FramesSheetView, type MarkedRange, type PickHow } from "./FramesSheetView";
@@ -90,6 +94,8 @@ const WIDTH_STEP = 4;
 const ZOOM_KEY = "aitu.framesSheet.zoom";
 /** The engine's own space between lines, in staff spaces. */
 const OWN_LINE_SPACE = 5;
+/** The lyrics toolbox keeps this many pixels clear on each side of the blocks it opens for. */
+const BLOCK_ROOM = 120;
 
 function rememberedZoom(): number {
   try {
@@ -248,6 +254,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
       if (!range) placeRange();
       setMark({ uuid: audioUuid, range: next });
       setPick({ uuid: audioUuid, refs: [] });
+      lyricsPickRef.current([]);
     },
     [audioUuid, range, placeRange],
   );
@@ -257,7 +264,10 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
       if (picked.length === 0 && refs.length > 0) {
         setToolboxAt(besideOnScreen(screenBoxOf(refs.map((ref) => `[data-frames-sheet] [data-note~="${ref}"]`).join(","))));
       }
-      if (refs.length > 0) setMark(null);
+      if (refs.length > 0) {
+        setMark(null);
+        lyricsPickRef.current([]);
+      }
       setPick((current) => {
         const now = current.uuid === audioUuid ? current.refs : [];
         if (how === "only") return { uuid: audioUuid, refs: [...new Set(refs)] };
@@ -296,21 +306,37 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
   const [toolboxOpen, setToolboxOpen] = useState(false);
   const [toolboxTab, setToolboxTab] = useState<FramesSheetTab>("title");
   const lyrics = useFramesLyrics(audioUuid, sheet, apply, setRefused);
+  // The lyrics toolbox opens beside the piece clicked (Phase 8A++); one selection at a time: notes, a stretch or lyrics.
+  const [lyricsAt, setLyricsAt] = useState<{ x: number; y: number } | undefined>(undefined);
+  /** Beside the blocks with room around them: a block is moved and widened there, and its handles must stay free. */
+  const besideBlocks = (starts: readonly number[]) => {
+    const box = screenBoxOf(starts.map((start) => `[data-frames-sheet] [data-lyric][data-start="${start}"]`).join(","));
+    return besideOnScreen(box && new DOMRect(box.left - BLOCK_ROOM, box.top, box.width + 2 * BLOCK_ROOM, box.height));
+  };
   const lyricsMode = toolboxOpen && toolboxTab === "lyrics";
   const pickedLyrics = useMemo(() => new Set(lyrics.picked), [lyrics.picked]);
   useEffect(() => {
     lyricsModeRef.current = lyricsMode;
-    lyricsPickRef.current = (starts) => lyrics.setPicked(starts);
+    lyricsPickRef.current = (starts) => {
+      if (starts.length > 0 && lyrics.picked.length === 0) {
+        setLyricsAt(besideBlocks(starts));
+      }
+      if (starts.length > 0 || lyrics.picked.length > 0) lyrics.setPicked(starts);
+    };
     lyricsLinesRef.current = lyrics.lines;
   }, [lyricsMode, lyrics]);
   const pickLyric = useCallback(
     (start: number, add: boolean) => {
-      setToolboxOpen(true);
-      setToolboxTab("lyrics");
+      if (lyrics.picked.length === 0) {
+        setLyricsAt(besideBlocks([start]));
+      }
+      setPick({ uuid: audioUuid, refs: [] });
+      setMark(null);
       lyrics.setPicked((now) => (add ? (now.includes(start) ? now.filter((one) => one !== start) : [...now, start]) : [start]));
     },
-    [lyrics],
+    [lyrics, audioUuid, setLyricsAt],
   );
+  const unpickLyrics = useCallback(() => lyrics.setPicked([]), [lyrics]);
 
   // Transpose, with its preview: nothing is written until **Transpose**.
   const [previewing, setPreviewing] = useState<Previewing | null>(null);
@@ -530,10 +556,11 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
       if (event.key === "Escape") {
         unpick();
         unmark();
+        unpickLyrics();
         return;
       }
       if ((event.key === "Delete" || event.key === "Backspace") && !(event.metaKey || event.ctrlKey)) {
-        if (lyricsMode && lyrics.picked.length > 0 && sheet?.editable && !editing) {
+        if (lyrics.picked.length > 0 && sheet?.editable && !editing) {
           event.preventDefault();
           lyrics.removePicked();
           return;
@@ -553,7 +580,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [canEdit, walk, unpick, unmark, picked.length, sheet?.editable, editing, removePicked, lyricsMode, lyrics]);
+  }, [canEdit, walk, unpick, unmark, unpickLyrics, picked.length, sheet?.editable, editing, removePicked, lyrics]);
 
   // A blank sheet (From scratch): the old page has its empty state, with Record a passage and Paste.
   const empty = sheet !== null && sheet.columns.length === 0;
@@ -640,7 +667,13 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
                     lyrics: {
                       picked: pickedLyrics,
                       onPick: pickLyric,
-                      onMove: lyrics.move,
+                      onUnpick: unpickLyrics,
+                      onPlace: (start: number, place: { at: number; dx: number; dy: number }) =>
+                        lyrics.shape([start], place, "Move a lyrics block"),
+                      onWidth: (start: number, wide: number) => lyrics.shape([start], { width: wide }, "Width of a lyrics block"),
+                      onScale: (start: number, size: number, wide: number | null) =>
+                        lyrics.shape([start], { size, ...(wide === null ? {} : { width: wide }) }, "Size of a lyrics block"),
+                      onFrames: lyrics.setFrames,
                       landing: lyrics.landing,
                       onDropPool: lyrics.dropPool,
                     },
@@ -744,6 +777,23 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
           onChordKey={pressChordKey}
           onSelectFrames={selectFrames}
           onEnhance={aiHere ? askNotes : null}
+          busy={editing}
+          locked={locked}
+        />
+      ) : null}
+      {canEdit && sheet ? (
+        <FramesLyricsToolbox
+          lines={lyrics.lines}
+          pool={lyrics.pool}
+          picked={lyrics.picked}
+          at={lyricsAt}
+          sizeOf={lyrics.sizeOf}
+          onClose={unpickLyrics}
+          setLines={lyrics.setLines}
+          setPool={lyrics.setPool}
+          setPicked={lyrics.setPicked}
+          onShape={(change, label) => void lyrics.shape(lyrics.picked, change, label)}
+          onRefused={setRefused}
           busy={editing}
           locked={locked}
         />

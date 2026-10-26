@@ -922,7 +922,10 @@ and need the right to write the part (a version of My library answers `403`: it 
 - `POST /sheet/{uuid}/reading` takes the sheet's own actions too, with no notes and no stretch: `titles` (`value`:
   `{"title": "…"}`, an empty one removed), `piece-key` (fifths), `line-space` (2 to 16 staff spaces, or `null`),
   `lyrics` (`value`: `{"pieces": [{start, end, text, size, lift}], "label"}`: the whole list; two pieces never share
-  a frame), `figures` (Transpose figures: `value` steps, positive toward shorter figures; the spacing keeps its
+  a frame; since Phase 8A++ each piece may also carry `at`, `dx`, `dy` (a block put anywhere: the frame of the
+  column under its left edge, how far right of it, its last baseline below the top staff line; `dy: null` is the
+  line of words), `width` (its words wrap to it, in staff spaces), `font` (`lora`, `geist`, `montserrat`; another is
+  refused), `bold` and `italic`; `GET /sheet/{uuid}` answers them in `lyrics`), `figures` (Transpose figures: `value` steps, positive toward shorter figures; the spacing keeps its
   figure, and a new AI run keeps the user's). With `preview=true` nothing is stored and the answer is the drawing
   of the result (`svg`, `columns`, `systems`, `width`, `height`, `edited`).
 - `POST /sheet/{uuid}/transpose?width=130` `{"semitones": 2}`: every note moved in `notes.pmn`, the stored sheet

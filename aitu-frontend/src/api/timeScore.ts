@@ -9,6 +9,7 @@
  */
 
 import { ApiError, request } from "./client";
+import type { SheetLyricBlock } from "./sheet";
 
 export type FigureName =
   | "redonda"
@@ -183,6 +184,11 @@ export interface LyricLine {
   width?: number | null;
   /** How large the words are drawn, in pixels. Absent is the page's own size. */
   fontSize?: number | null;
+  /**
+   * The new sheet only (implementation 03, Phase 8A++): where the block was put, its width and style, in the new
+   * sheet's units, carried as they are through every change of the list.
+   */
+  block?: SheetLyricBlock;
 }
 
 /** A stretch printed smaller than the rest of the page. Asked for, never inferred. */

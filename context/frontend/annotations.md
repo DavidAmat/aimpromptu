@@ -76,10 +76,19 @@ part: implementation 03, Phase 8B). On the new sheet:
   every note moved by the interval of two keyboards, the sheet with them, the armaduras renamed with fewer signs, a
   note off the 88 keys taken off; **Figures**: every figure renamed by the same number of steps, the page keeps its
   spacing; each with **Preview** and **Transpose**), **Lyrics** (as on the old sheet: paste, **Save lyrics**, the
-  pool, the picked pieces' toolbar; a piece is dragged from the pool onto the sheet, then on the sheet moved to the
-  frame under its left edge, lifted up or down, its right edge pulled; Delete takes the picked pieces off), and
+  pool; a piece is dragged from the pool onto the sheet, on the frame under it), and
   **View** (**Zoom**, kept in this browser; **Space between lines**, kept with the sheet). Every change is one step
   of Undo.
+- **Lyrics blocks** (implementation 03, Phase 8A++, the user's request): a click on a piece on the sheet picks it
+  (⌘ or Shift adds one) and opens the **lyrics toolbox** beside it: the **Words** (Enter splits the piece where the
+  cursor is), **Font** (Lora, Geist, Montserrat), **Size**, **Normal**, **Bold**, **Italic**, *Back in the line of
+  words*, merge, split, a new line, back to the pool, delete (also the Delete key). On the sheet a picked piece is a
+  block with an outline: drag it anywhere (it keeps its frames), drag its side handle to make it narrower or wider
+  (the words wrap as the pointer moves), drag its corner to make the words larger or smaller. Its frames, when the
+  words sound in Play mode, are a bar in the strip above the staves, with an end on each side to drag. While a piece
+  is picked the strip marks no stretch; a click off the pieces lets them go. A piece whose frames cross a line break
+  shares its words between the lines by the width its frames take on each (60 % of the width, about 60 % of the
+  words), so a narrower window splits it again. Every change is one step of Undo.
 - **Print to PDF** (the printer icon): the paper, the margins, extra space between lines, the title and page numbers;
   the lines are laid out again for the paper (never shrunk) and never split across a page turn
   ([printing.md](printing.md)).

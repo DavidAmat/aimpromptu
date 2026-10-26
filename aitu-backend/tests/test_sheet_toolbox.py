@@ -1,6 +1,7 @@
 """The sheet toolbox of the new sheet (implementation 03, Phase 8A): the title lines, the armadura of the piece, the
 space between lines, the lyrics pieces, Transpose figures and Transpose notes (with their previews), a note added on
-the keyboard panel, and the sheet on paper. Each edit is one step of undo; Sonnet is a stand-in.
+the keyboard panel, and the sheet on paper; Phase 8A++: lyrics blocks put anywhere, wrapped to their width, styled,
+and shared between lines when their frames cross a line break. Each edit is one step of undo; Sonnet is a stand-in.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from aitu_backend.part_sheet import build
 from aitu_backend.sheet.engrave.frames import Options, render_frames
+from aitu_backend.sheet.engrave.lyric_text import text_width, wrap
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet.data import Lyric, Sheet, carry_extras
 from aitu_backend.transcription import pipeline
@@ -257,3 +259,111 @@ def test_the_sheet_on_paper_is_whole_lines_on_pages(client: TestClient, part: st
     assert pages[-1]["last"] == drawn["columns"][-1]["frame"]
     assert 'class="lyric"' in "".join(p["svg"] for p in pages)
     assert answer.json()["lyrics"][0]["text"] == "words"
+
+
+# ------------------------------------------------------------------ lyrics blocks (Phase 8A++)
+
+
+def _long_sheet(columns: int = 48) -> str:
+    """One right-hand negra every 6 frames: enough columns for several lines at a narrow width."""
+    rows = ["F1 frames frameMs=40 quarterMs=240", "key=0 clefs: R=treble L=bass"]
+    for k in range(columns):
+        rows.append(f"f{6 * k:<7d} R: {'CDEFGAB'[k % 7]}5:4")
+        if k + 1 < columns:
+            rows.append("[]x5")
+    return "\n".join(rows) + "\n"
+
+
+def test_a_lyrics_block_keeps_its_place_width_and_style_through_the_format() -> None:
+    plain = f1.read(SHEET)
+    plain.lyrics = [
+        Lyric(
+            0, 10, "Me ve", at=6, dx=1.5, dy=-3.0, width=12.0, font="geist", bold=True, italic=False
+        ),
+        Lyric(12, 30, "plain"),
+    ]
+    text = f1.write(plain, mode="frames")
+    assert 'lyric f0 f10 "Me ve" at=f6 dx=1.5 dy=-3 width=12 font=geist bold=1 italic=0' in text
+    # A piece nobody shaped writes as before.
+    assert 'lyric f12 f30 "plain"\n' in text
+    again = f1.read(text)
+    assert again.lyrics == plain.lyrics and again.lyrics[0].free and not again.lyrics[1].free
+
+
+def test_the_words_of_a_block_wrap_to_its_width_with_the_widths_of_its_font() -> None:
+    words = "my mama told me go make yourself some friends"
+    assert wrap(words, None, 1.4) == [words]
+    lines = wrap(words, 10.0, 1.4)
+    assert len(lines) > 1 and " ".join(lines) == words
+    assert all(text_width(line, 1.4) <= 10.0 for line in lines)
+    # A word wider than the block keeps a line of its own; a line break of the words stays.
+    assert wrap("supercalifragilistic is long", 3.0, 1.4)[0] == "supercalifragilistic"
+    assert wrap("one\ntwo three", 50.0, 1.4) == ["one", "two three"]
+    # Each face has its own widths: Montserrat is wider than Geist, bold wider than normal.
+    assert text_width("friends", 1.4, "montserrat") > text_width("friends", 1.4, "geist")
+    assert text_width("friends", 1.4, "lora", bold=True, italic=False) > text_width(
+        "friends", 1.4, "lora", italic=False
+    )
+
+
+def test_the_engine_draws_a_block_where_it_was_put_wrapped_and_styled() -> None:
+    plain = f1.read(_long_sheet(12))
+    before = render_frames(plain, Options(width=120))
+    words = "my mama told me go make yourself some friends"
+    plain.lyrics = [
+        Lyric(0, 20, words, at=18, dx=0.5, dy=-4.0, width=8.0, font="montserrat", bold=True)
+    ]
+    drawn = render_frames(plain, Options(width=120))
+    tag = re.search(r'<text class="lyric"[^>]*>', drawn.svg).group(0)
+    assert (
+        'font-family="Montserrat' in tag and 'font-weight="700"' in tag and 'data-width="8"' in tag
+    )
+    spans = re.findall(r'<tspan x="([\d.]+)" y="([\d.-]+)">([^<]*)</tspan>', drawn.svg)
+    assert len(spans) > 2 and " ".join(s[2] for s in spans) == words
+    # From the column of frame 18 plus dx; its last line's baseline 4 staff spaces above the top staff line.
+    column = next(c for c in drawn.columns if c["frame"] == 18)
+    assert abs(float(spans[0][0]) - (column["x"] + 0.5)) < 0.01
+    last = float(spans[-1][1])
+    assert abs(last - (drawn.systems[0]["staff_top"] - 4.0)) < 0.01
+    assert 'data-base="' in tag
+    # The words take no width: no column moves.
+    assert [c["x"] for c in drawn.columns] == [c["x"] for c in before.columns]
+
+
+def test_a_piece_over_a_line_break_shares_its_words_by_the_width_on_each_line() -> None:
+    plain = f1.read(_long_sheet())
+    words = "my mama told me go make yourself some friends or you will be lonely"
+    plain.lyrics = [Lyric(60, 220, words)]
+    narrow = render_frames(plain, Options(width=60))
+    assert narrow.lines > 2
+    parts = re.findall(r'<text class="lyric" data-lyric="0"[^>]*>(.*?)</text>', narrow.svg)
+    texts = [" ".join(re.findall(r">([^<]*)</tspan>", one)) for one in parts]
+    assert len(texts) > 1 and " ".join(texts) == words
+    assert 'data-part="1"' in narrow.svg
+    # Each part starts on its own line, and no part passes the end of its line.
+    systems = {s["index"]: s for s in narrow.systems}
+    for one in re.finditer(r'<tspan x="([\d.]+)"', narrow.svg):
+        assert float(one.group(1)) < max(s["right"] for s in systems.values())
+    wide = render_frames(plain, Options(width=320))
+    assert wide.svg.count('data-lyric="0"') == 1 and "data-part" not in wide.svg
+
+
+def test_a_lyrics_block_is_placed_through_the_toolbox_and_a_bad_font_refused(
+    client: TestClient, part: str
+) -> None:
+    sheet(client, part)
+    block = {"start": 50, "end": 80, "text": "first words here", "at": 60, "dx": 1, "dy": -5}
+    shaped = {**block, "width": 6, "font": "geist", "bold": True, "italic": False}
+    placed = edit(
+        client, part, action="lyrics", value={"pieces": [shaped], "label": "Move a block"}
+    )
+    one = placed["lyrics"][0]
+    assert (one["at"], one["dx"], one["dy"], one["width"]) == (60, 1, -5, 6)
+    assert (one["font"], one["bold"], one["italic"]) == ("geist", True, False)
+    assert 'font-family="Geist' in placed["svg"] and 'data-width="6"' in placed["svg"]
+    bad = edit(client, part, 400, action="lyrics", value={"pieces": [{**block, "font": "comic"}]})
+    assert bad["detail"] == "No lyrics font 'comic'."
+    # Back in the line of words: no place, no width; the style stays.
+    back = {**shaped, "dy": None, "width": None}
+    again = edit(client, part, action="lyrics", value={"pieces": [back]})
+    assert again["lyrics"][0]["dy"] is None and again["lyrics"][0]["font"] == "geist"

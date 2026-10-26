@@ -28,7 +28,8 @@ lines, in staff spaces) in the header, and after the clefs line one line per tit
     lyric f356 f373 "Me ve" size=1.6 lift=0.5
 
 (the words as a JSON string, ``\n`` breaks a line; ``size`` and ``lift`` in staff spaces, left out at their
-defaults). Example::
+defaults). Phase 8A++ adds a block moved by hand and its style, also left out at their defaults:
+``at=f412 dx=1.5 dy=-3 width=12 font=geist bold=1 italic=0`` (``data.Lyric``). Example::
 
     F1 bars
     clefs: R=treble L=bass
@@ -58,6 +59,7 @@ from aitu_backend.sheet.sheet.data import (
     CLEF_NAMES,
     TITLE_FIELDS,
     Bar,
+    LYRIC_FONTS,
     Lyric,
     Note,
     Sheet,
@@ -308,6 +310,17 @@ def _extras_lines(sheet: Sheet) -> list[str]:
             line += f" size={round(lyric.size, 2):g}"
         if lyric.lift:
             line += f" lift={round(lyric.lift, 2):g}"
+        if lyric.dy is not None:
+            line += f" at=f{lyric.at if lyric.at is not None else lyric.start}"
+            line += f" dx={round(lyric.dx, 2):g} dy={round(lyric.dy, 2):g}"
+        if lyric.width is not None:
+            line += f" width={round(lyric.width, 2):g}"
+        if lyric.font != "lora":
+            line += f" font={lyric.font}"
+        if lyric.bold:
+            line += " bold=1"
+        if not lyric.italic:
+            line += " italic=0"
         out.append(line)
     return out
 
@@ -428,6 +441,20 @@ def _read_lyric(line: str) -> Lyric:
             lyric.size = float(value)
         elif name == "lift":
             lyric.lift = float(value)
+        elif name == "at" and value.startswith("f"):
+            lyric.at = int(value[1:])
+        elif name == "dx":
+            lyric.dx = float(value)
+        elif name == "dy":
+            lyric.dy = float(value)
+        elif name == "width":
+            lyric.width = float(value)
+        elif name == "font" and value in LYRIC_FONTS:
+            lyric.font = value
+        elif name == "bold":
+            lyric.bold = value == "1"
+        elif name == "italic":
+            lyric.italic = value != "0"
         else:
             raise F1Error(f"unknown lyric field {field!r}")
     if lyric.end <= lyric.start:

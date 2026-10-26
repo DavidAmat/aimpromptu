@@ -29,6 +29,7 @@ from aitu_backend.sheet.sheet.pitch import STEPS, pitch_to_midi  # noqa: F401 (r
 
 __all__ = [
     "Bar",
+    "LYRIC_FONTS",
     "LYRIC_MAX",
     "LYRIC_MIN",
     "LYRIC_SIZE",
@@ -120,6 +121,9 @@ class Bar:
 #: The size of a lyrics piece, in staff spaces: the default and the limits (the old sheet's 12 px, 7 to 36 px, at
 #: about 8.5 px a staff space).
 LYRIC_SIZE, LYRIC_MIN, LYRIC_MAX = 1.4, 0.8, 4.2
+#: The fonts of a lyrics piece (the user's answer of Phase 8A++); the PDF prints Lora as Times, the others as
+#: Helvetica.
+LYRIC_FONTS = ("lora", "geist", "montserrat")
 
 
 @dataclass
@@ -127,6 +131,13 @@ class Lyric:
     """A lyrics piece on the new sheet (implementation 03, Phase 8): its words (``\\n`` breaks a line) over the
     columns ``[start, end)``, drawn above the upper staff from ``start``; ``size`` in staff spaces (``None``: the
     sheet's own), ``lift`` in staff spaces above where the line of words of its system would put it.
+
+    A block moved by hand (Phase 8A++, the user's request) is drawn where it was put, whatever its frames: ``at`` is
+    the frame of the column under its left edge (its line, and the music it stays with when the lines change),
+    ``dx`` how far right of that column it starts and ``dy`` the baseline of its last line below the top line of the
+    upper staff, in staff spaces (``dy`` ``None``: the block sits in the line of words, as before). ``width`` in
+    staff spaces wraps the words (the engine wraps them with the widths of the fonts, ``engrave.lyric_text``);
+    ``font``, ``bold`` and ``italic`` are its style. The frames say only when the words sound.
     """
 
     start: int
@@ -134,6 +145,18 @@ class Lyric:
     text: str
     size: float | None = None
     lift: float = 0.0
+    at: int | None = None
+    dx: float = 0.0
+    dy: float | None = None
+    width: float | None = None
+    font: str = "lora"
+    bold: bool = False
+    italic: bool = True
+
+    @property
+    def free(self) -> bool:
+        """Moved by hand: drawn at ``at``, ``dx``, ``dy``."""
+        return self.dy is not None
 
 
 #: The title lines of the new sheet (implementation 03, Phase 8).

@@ -30,6 +30,7 @@ from aitu_backend.sheet.proposal.frames import (
     clefs_and_ottavas,
 )
 from aitu_backend.sheet.sheet.data import (
+    LYRIC_FONTS,
     LYRIC_MAX,
     LYRIC_MIN,
     TITLE_FIELDS,
@@ -548,18 +549,32 @@ def set_line_space(sheet: Sheet, space: float | None) -> str:
     return "Space between lines"
 
 
+#: How far a lyrics block may be put from its column and from the top staff line, in staff spaces.
+LYRIC_REACH = 40.0
+
+
 def set_lyrics(sheet: Sheet, pieces: list[dict], label: str | None) -> str:
     """The lyrics pieces of the sheet, all of them (the page works out the list: a piece placed, moved, made
-    longer, split, merged, its words, its size, its lift). Two pieces never share a frame."""
+    longer, split, merged, its words, its size, its lift; since Phase 8A++ a block put anywhere, its width, font,
+    bold and italic). Two pieces never share a frame."""
     lyrics = []
     for piece in pieces:
         try:
+            dy = piece.get("dy")
+            width = piece.get("width")
             one = Lyric(
                 start=int(piece["start"]),
                 end=int(piece["end"]),
                 text=str(piece.get("text") or "").strip("\n")[:500],
                 size=None if piece.get("size") is None else float(piece["size"]),
                 lift=float(piece.get("lift") or 0.0),
+                at=None if dy is None or piece.get("at") is None else int(piece["at"]),
+                dx=0.0 if dy is None else float(piece.get("dx") or 0.0),
+                dy=None if dy is None else float(dy),
+                width=None if width is None else float(width),
+                font=str(piece.get("font") or "lora"),
+                bold=bool(piece.get("bold", False)),
+                italic=bool(piece.get("italic", True)),
             )
         except (KeyError, TypeError, ValueError):
             raise Refused("A lyrics piece needs its first and last frames and its words.") from None
@@ -570,6 +585,15 @@ def set_lyrics(sheet: Sheet, pieces: list[dict], label: str | None) -> str:
         if one.size is not None:
             one.size = round(min(LYRIC_MAX, max(LYRIC_MIN, one.size)), 2)
         one.lift = round(min(20.0, max(-4.0, one.lift)), 2)
+        if one.font not in LYRIC_FONTS:
+            raise Refused(f"No lyrics font {one.font!r}.")
+        if one.dy is not None:
+            one.dx = round(min(LYRIC_REACH, max(-LYRIC_REACH, one.dx)), 2)
+            one.dy = round(min(LYRIC_REACH, max(-LYRIC_REACH, one.dy)), 2)
+            if one.at is not None and one.at < 0:
+                one.at = None
+        if one.width is not None:
+            one.width = round(min(200.0, max(2.0, one.width)), 2)
         lyrics.append(one)
     lyrics.sort(key=lambda one: one.start)
     for a, b in zip(lyrics, lyrics[1:]):

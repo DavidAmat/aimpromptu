@@ -145,6 +145,7 @@ export function FramesSheetToolbox({
               poolUnsaved={lyrics.poolUnsaved}
               savingText={lyrics.saving}
               onSaveText={lyrics.onSave}
+              pickedTools={false}
             />
           </Box>
         ) : null}

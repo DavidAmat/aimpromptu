@@ -12,6 +12,12 @@ __all__ = ["to_svg"]
 
 #: The colour of the lyrics: a soft charcoal, as the old sheet printed them.
 LYRIC_COLOR = "#3a3a3a"
+#: The fonts of the lyrics pieces (``data.LYRIC_FONTS``), as the page loads them (`index.css`).
+LYRIC_FAMILIES = {
+    "lora": "Lora, Georgia, serif",
+    "geist": "Geist, system-ui, sans-serif",
+    "montserrat": "Montserrat, system-ui, sans-serif",
+}
 
 
 def _f(v: float) -> str:
@@ -83,14 +89,26 @@ def to_svg(
                     f'<path d="{d}" stroke-width="{_f(w)}" stroke-linejoin="round" stroke-linecap="round"/>'
                 )
             elif p.kind == "t":
-                x, y, lines, size, index, first, end = p.data
+                x, y, lines, size, index, first, end = p.data[:7]
+                style = p.data[7] if len(p.data) > 7 else {}
                 spans = "".join(
                     f'<tspan x="{_f(x + m)}" y="{_f(y + dy + k * 1.2 * size)}">{escape(line)}</tspan>'
                     for k, line in enumerate(lines)
                 )
+                family = LYRIC_FAMILIES.get(style.get("font", "lora"), LYRIC_FAMILIES["lora"])
+                face = (' font-weight="700"' if style.get("bold") else "") + (
+                    ' font-style="italic"' if style.get("italic", True) else ""
+                )
+                # The last line's baseline: a block dragged by hand is placed from it (``Lyric.dy``); ``data-width``
+                # is the width its words were wrapped to.
+                extra = f' data-base="{_f(y + dy + (len(lines) - 1) * 1.2 * size)}"'
+                if style.get("width"):
+                    extra += f' data-width="{_f(style["width"])}"'
+                if style.get("part"):
+                    extra += f' data-part="{style["part"]}"'
                 body.append(
-                    f'<text class="lyric" data-lyric="{index}" data-start="{first}" data-end="{end}" '
-                    f'font-size="{_f(size)}" font-family="Lora, Georgia, serif" font-style="italic" '
+                    f'<text class="lyric" data-lyric="{index}" data-start="{first}" data-end="{end}"{extra} '
+                    f'font-size="{_f(size)}" font-family="{family}"{face} '
                     f'fill="{LYRIC_COLOR}" stroke="none">{spans}</text>'
                 )
             elif p.kind == "b":

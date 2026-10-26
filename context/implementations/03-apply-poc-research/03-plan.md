@@ -682,7 +682,12 @@ pool, delete). The session's study decides, from the code and the PDF writer: ho
 the lines re-wrap (still anchored to its first frame, with a free offset), where the words are wrapped (in the page,
 which can measure text, or in the engine), and which fonts (the PDF writes the base fonts Helvetica, Times and Courier
 with their bold and italic, so families that map onto them print the same). It asks the user only what the study
-cannot settle.
+cannot settle. *Built 2026-10-26* (report section 8.2), with the user's answers: the corner handle scales the words
+and the side handle sets the width (the words wrap); the frames of a block are a bar in the strip with an end on
+each side; the fonts are Lora, Geist and Montserrat; and (the user's note) a piece whose frames cross a line break
+shares its words between the lines by the width its frames take on each. The engine wraps the words with the widths
+of the app's own font files, so the page, the line heights and the PDF print the same lines; a block keeps the
+column under its left edge (`at`) and an offset, so it stays with its music when the lines change.
 
 *The user's third request of 2026-10-26 (part of 8A, before 8B):* **a denser PDF.** The printed music is too large
 and the lines too far apart: much white space, few lines a page. A printed piano score carries about **five lines a
@@ -821,5 +826,6 @@ repository."
 | 8 | Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's; Find trills, Remove all and Bring back are dropped | The user's answers of 2026-10-26 |
 | 8 | Phase 8A gains a keyboard in the note toolbox: the picked chord's keys lit; a key adds or takes off a note of that column | The user's request of 2026-10-26, after seeing 8A |
 | 8 | Phase 8A gains free lyrics blocks (moved and resized, the words wrapped inside) and a lyrics toolbox (size, font, bold, italic); the stretch strip is off while a piece is picked | The user's second request of 2026-10-26: narrowing a piece to wrap its words was not possible |
+| 8 | Phase 8A++: the engine wraps the words of a lyrics block (a table of the fonts' widths measured in the browser), not the page; a block is anchored to the column under its left edge | One wrap for the page, the line heights and the PDF; the music it belongs to moves with the line breaks |
 | 8 | Phase 8A gains a denser PDF: a size of the music in the print dialog, less space between lines than today, about five lines a page by default | The user's third request of 2026-10-26: the PDF was too large and too spread out |
 | 8 | Transpose figures renames the figures and keeps the page's widths | D-18 ("nothing moves"); the spacing model reads the reference figure, so a rename alone would widen or narrow the page |

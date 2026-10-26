@@ -111,6 +111,7 @@ raises stops the chain with that error (the product decides retries and time lim
 | `llm/prompt/feedback.md` | the message after a rejected reply | by hand |
 | `engrave/leipzig.json` | the Leipzig glyphs (SIL OFL 1.1) | `aitu_research.engrave.glyphs.export_bundle` |
 | `engrave/spacing_model.json` | the spacing model (12 numbers measured on printed editions) | `aitu_research.engrave.spacing.fit` |
+| `engrave/lyric_fonts.json` | the advance widths of the lyrics fonts (Lora, Geist, Montserrat; four looks each), implementation 03 Phase 8A++ | `aitu-frontend/scripts/measure-lyric-fonts.mjs` (this repository) |
 | `proposal/beat_weights.json`, `meter_weights.json` | the quarter and meter estimates | `aitu_research.proposal.beat.fit`, `meter.fit` |
 | `proposal/spelling_tables.json` | the spelling tables (`sig_then_local2`) | `aitu_research.baseline.rules.learn_tables` |
 
@@ -381,7 +382,18 @@ step that carries `sheet.f1` carries it too). Measurements and reasons:
   note reads four ledger lines or more from its staff, `reading.far_notes` and `build.fit_clefs`); notes leaving the
   88 keys taken off; one step (`_Step.keys`: each note's key before and after). A preview stores nothing.
 - **A note added** on the keyboard panel (`edits.add_note`): at the onset of the drawn column, one step.
+- **Lyrics blocks** (Phase 8A++, the user's request): a `lyric` line may also carry `at=f<frame> dx= dy=` (a block
+  put anywhere: drawn from the column of `at` plus `dx`, its last baseline `dy` below the top staff line, whatever
+  its frames; a block put on another line than its first frame's stays whole there), `width=` (its words wrap to
+  it), `font=` (`lora`, `geist`, `montserrat`), `bold=1`, `italic=0`; all left out at their defaults, so older sheets
+  write as before. The engine wraps the words with `engrave/lyric_text.py` and the advance widths of the app's own
+  font files (`engrave/lyric_fonts.json`, measured in the browser by `aitu-frontend/scripts/measure-lyric-fonts.mjs`),
+  so the page, the line heights and the PDF print the same lines. A piece in the line of words whose frames cross a
+  line break is drawn in one part per line (`data-part`), its words shared by the width its frames take on each line
+  (`lyric_parts`, `_share_words`). No block passes the end of its line. The SVG `<text>` adds `data-base` (its last
+  baseline, from which the page places a dragged block), `data-width`, `font-weight` and `font-style`.
 - Routes: `POST /sheet/{part}/reading?preview=true`, `POST /sheet/{part}/transpose` (`preview`),
   `POST /sheet/{part}/add`, `GET /sheet/{part}/pages`; `GET /sheet/{part}` answers `titles`, `lyrics`, `quarterMs`,
   `spaceMs`, `lineSpace`, and each note's `end` frame.
-- Tests: `tests/test_sheet_toolbox.py`. Browser check: `npm run check:frames-toolbox` (aitu-frontend).
+- Tests: `tests/test_sheet_toolbox.py` (the blocks: format, wrapping, drawing, a piece over a line break, the
+  route). Browser check: `npm run check:frames-toolbox` (aitu-frontend).

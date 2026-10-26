@@ -498,6 +498,13 @@ def sheet_settings(sheet: Sheet) -> dict[str, Any]:
                 "text": one.text,
                 "size": one.size,
                 "lift": one.lift,
+                "at": one.at,
+                "dx": one.dx,
+                "dy": one.dy,
+                "width": one.width,
+                "font": one.font,
+                "bold": one.bold,
+                "italic": one.italic,
             }
             for one in sorted(sheet.lyrics, key=lambda one: (one.start, one.end))
         ],

@@ -3,8 +3,8 @@
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 8. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (level with `master` at the start: nothing to merge). Written 2026-10-26 on the Ubuntu
 machine. **In progress**: the study and 8A are built; the user asked for a keyboard in the note toolbox (built
-2026-10-26, section 8.1) for free lyrics blocks with a lyrics toolbox (section 8.2) and for a denser PDF (section 8.3)
-before checking 8A in the browser; 8B is next.
+2026-10-26, section 8.1), for free lyrics blocks with a lyrics toolbox (built 2026-10-26, section 8.2) and for a
+denser PDF (section 8.3) before checking 8A in the browser; 8B is next.
 
 # 1. Summary
 
@@ -14,7 +14,7 @@ before checking 8A in the browser; 8B is next.
 | 8.2 Lyrics in the format and in the engine | `lyric` lines in `sheet.f1`, a text primitive of the engine (`<text data-lyric>`), picked, dragged and lit on the page (section 4) |
 | 8.3, half 8A | The sheet toolbox (Title, Key, Transpose notes and figures with their preview, Lyrics, View), the keyboard panel, Print to PDF from the new engine, the lyrics in Play mode (sections 4 and 5). Built; the user's check is next |
 | 8.3, 8A+ | The user's request: a keyboard in the note toolbox for the picked column (section 8.1). Built, frontend only; `check:frames-toolbox` covers it |
-| 8.3, 8A++ | The user's second request: lyrics as free blocks, a lyrics toolbox (section 8.2). Not started |
+| 8.3, 8A++ | The user's second request: lyrics as free blocks, a lyrics toolbox (section 8.2). Built: blocks put anywhere, wrapped by the engine to their width, scaled, styled; the bar of their frames; a piece over a line break shared between the lines; `check:frames-toolbox` covers it |
 | 8.3, half 8B | Not started: `sheet.f1` through every change of a part's length, copy and paste, Start a new part, the read-only stretch actions, the requests review, Recording in Sheet, the blank sheet; then the switch removed (section 8) |
 
 # 2. The study (task 8.1)
@@ -227,7 +227,7 @@ chord's figure set by hand (`fix`).
   on a note of another column hides the keyboard. The toolbox pictures were looked at zoomed: Re 5 and La# 5 lit,
   then Si 5 too, "One chord of 3".
 
-## 8.2 Lyrics as free blocks and a lyrics toolbox (8A++)
+## 8.2 Lyrics as free blocks and a lyrics toolbox (8A++, built 2026-10-26)
 
 **The user's second request (2026-10-26):** lyrics pieces as free blocks, and a lyrics toolbox. Today a piece's width
 follows its frames, so narrowing it to wrap the words onto two or three lines is not possible, and the strip above
@@ -244,6 +244,75 @@ study: how a block stays with its music when the lines re-wrap (anchored to its 
 `dy` and a `width`?), where the words wrap (in the page, which measures text, sending the lines; or in the engine
 with a table of character widths), which font families, and how Play mode lights a block that no longer spans its
 frames.
+
+**How the work went (2026-10-26).** Three sessions were open on the branch at once. The keyboard session (8A+)
+studied this request after its commit, asked the user three questions, and started the backend; the user also sent
+it a note about a piece cut by a line break. A second session started the same request with another design (the
+engine wrapping the words with a table of letter widths, other fonts). Both stopped when they saw each other, and
+the third (8A+++) stopped at once. The user then moved all the work into one session, which built 8A++ from the first
+session's backend and answers, and took the second session's measuring script for the wrapping.
+
+**The user's answers (2026-10-26, in the keyboard session):**
+
+1. **Taller or shorter**: the corner handle scales the words (the block grows or shrinks with them); the side handle
+   sets the width, and the words wrap again. No empty space in a block.
+2. **The frames of a moved block**: a bar in the strip above the staves while the piece is picked, with an end on
+   each side to drag; the strip marks no stretch meanwhile.
+3. **Fonts**: Lora, Geist and Montserrat (the app's own); the PDF prints Lora as Times, the others as Helvetica.
+4. **The user's note**: when a line break falls inside a piece's frames (a narrower window, for example), the piece is
+   split between the lines, its words shared by the width its frames take on each line (60 % of the width, about
+   60 % of the words).
+
+**The agent's choices:**
+
+- **The engine wraps the words**, not the page. The first session planned the page to wrap (it can measure text);
+  then the engine only estimates the height of a block (for the room of its line), and the PDF writer must wrap
+  again with other fonts. A table of advance widths, measured in the browser from the app's own font files
+  (`aitu-frontend/scripts/measure-lyric-fonts.mjs` writes `sheet/engrave/lyric_fonts.json`: 204 characters, 3
+  fonts, 4 looks), lets the engine wrap once: the page, the height of each line and the PDF print the same lines.
+  While a side handle is dragged, the page wraps the words itself with a canvas (`lyricsText.wrapWords`, the same
+  greedy rule) so they follow the pointer; the drawing that comes back has the same lines.
+- **A block's place**: `at` (the frame of the column under its left edge, so it stays with that music when the lines
+  change), `dx` (how far right of that column), `dy` (its last line's baseline below the top staff line). A block
+  dropped on another line than its first frame's is drawn whole there; one on its own line is still shared between
+  lines if its frames cross a break. No block passes the end of its line (it is pushed left).
+- **The missing faces**: Lora upright and the italics of Geist and Montserrat, from `@fontsource-variable` 5.3.0
+  (SIL OFL 1.1, Latin subsets, variable weight), so each font has its four looks without the browser faking them.
+- **The PDF** writes all eight base faces (Times and Helvetica, each normal, bold, italic, bold italic); before, a
+  serif was Times Roman or Italic and a sans Helvetica or Helvetica-Bold.
+- **The lyrics toolbox** floats beside the picked blocks (the note toolbox's panel), with 120 px kept clear on each
+  side so moving or widening a block does not run under it. A click on a piece opens it in any tab (before, only the
+  Lyrics tab picked pieces); the tab keeps the pasted words and the pool, and its old toolbar of the picked pieces is
+  hidden on the new sheet (`LyricsTab pickedTools={false}`; the old sheet keeps it until 8B). One selection at a
+  time: picking notes or a stretch lets the pieces go, and a click off the pieces lets them go without doing
+  anything else. Hints are tooltips on the handles (the minimal UI guidelines: no paragraph beside a control).
+
+**What was built:**
+
+- Core: `Lyric.at`, `dx`, `dy`, `width`, `font`, `bold`, `italic` (`free` when `dy` is set); F1 `at=f.. dx= dy=
+  width= font= bold=1 italic=0`, left out at their defaults (every older sheet and golden file unchanged);
+  `engrave/lyric_text.py` (`text_width`, `wrap`); `engrave/frames.py` `lyric_parts` (the parts of each line,
+  `_share_words`, `_column_xs`, `_x_in`) and `_lyrics` (wrapped lines, the block's place, kept inside its line);
+  the SVG `<text>` writes the family, `font-weight`, `font-style`, `data-base`, `data-width`, `data-part`.
+- `part_sheet`: `reading.set_lyrics` checks the new fields (a font outside the three refused; `dx`, `dy` within 40
+  staff spaces; width 2 to 200); `build.sheet_settings` answers them.
+- Frontend: `api/sheet.ts` (`SheetLyric` with `SheetLyricBlock`, `LyricFont`); `LyricLine.block` carries a block
+  through the old piece helpers (`movePiece` keeps it, the second half of a split keeps its width and style);
+  `useFramesLyrics` (`shape`, `setFrames`, `sizeOf`); `lyricsText.ts`; `FramesLyricsToolbox.tsx`;
+  `FramesSheetView.tsx` (blocks measured per part, the outline, the side and corner handles, the bar of frames, the
+  previews of a drag, the strip off while a piece is picked); `FramesSheetPage.tsx` (the callbacks, the toolbox,
+  Delete and Escape); `print/drawPage.ts` (the eight faces); `index.css` (the three faces).
+
+**Checks:**
+
+| Check | Result |
+|---|---|
+| `tests/test_sheet_toolbox.py` (5 new tests, 13 in all) | the format round trip of a block; wrapping and the widths of each face; a block drawn where it was put (its column plus `dx`, its last baseline `dy`), wrapped and styled, no column moved; a piece over a line break shared by width at width 60 and whole at width 320; the route keeps the block, refuses a font, goes back in the line of words |
+| The sheet tests of Phases 1 to 8A and the golden files | pass unchanged (host environment) |
+| `npm run check:frames-toolbox` | all 42 passed; the lyrics steps now: a click picks the block and opens the lyrics toolbox, the bar of frames shows, the strip stays off, a drag puts the block 50 px to the right with its frames unchanged, the side handle wraps it onto 3 lines (width 7.1), the corner makes the words larger (1.4 to 2.18) on the same lines, Geist and Bold from the toolbox, the end of the bar moved (f305 to f331) without moving the block, back in the line of words, Delete and Undo |
+| `check:frames-sheet`, `check:frames-edit`, `check:frames-tools`, `check:play` | all passed; `check:play` now counts lyrics pieces, not drawn elements (a piece over a line break is two elements) |
+| `npx tsc -b`, `npx eslint` on the changed files | clean |
+| The drawings | the shaped block (3 lines, Geist bold italic, its outline, handles and bar) looked at zoomed in |
 
 ## 8.3 A denser PDF (8A+++)
 

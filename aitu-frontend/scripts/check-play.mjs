@@ -135,7 +135,9 @@ try {
   check('the page has no sidebar', (await page.locator('nav').count()) === 0);
   check('Close and Play are on the page, Next is not', (await page.getByTestId('play-close').isVisible()) && (await page.getByTestId('play-toggle').isVisible()) && (await page.getByTestId('play-next').count()) === 0);
   check('nothing on the sheet opens a toolbox', (await page.locator('[data-sheet-page] [data-testid=sheet-floating-bar], [role=toolbar]').count()) === 0);
-  check('the lyrics pieces are drawn on the sheet', (await page.locator('[data-play-active="true"] [data-lyric]').count()) === 2);
+  // Counted by piece: a piece whose frames cross a line break is drawn in parts (implementation 03, Phase 8A++).
+  const drawnPieces = await page.locator('[data-play-active="true"] [data-lyric]').evaluateAll((all) => new Set(all.map((one) => one.getAttribute('data-lyric'))).size);
+  check('the lyrics pieces are drawn on the sheet', drawnPieces === 2, `${drawnPieces} pieces`);
   await shot('01-play-mode');
 
   await page.mouse.move(700, 450);

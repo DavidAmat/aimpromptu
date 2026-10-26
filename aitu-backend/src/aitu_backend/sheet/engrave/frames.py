@@ -31,6 +31,7 @@ lines, clefs, armaduras, the brace: Verovio's drawing rules and the Leipzig glyp
 
 from __future__ import annotations
 
+import re
 import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field, replace
@@ -39,11 +40,12 @@ from fractions import Fraction
 from aitu_backend.sheet.engrave import layout as L
 from aitu_backend.sheet.engrave.glyphs import box
 from aitu_backend.sheet.engrave.layout import Chord, Engraving, Head, Pen, System
+from aitu_backend.sheet.engrave.lyric_text import text_width, wrap
 from aitu_backend.sheet.engrave.spacing import SpacingModel, load
 from aitu_backend.sheet.engrave.svg import to_svg
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet import frames as frames_mod
-from aitu_backend.sheet.sheet.data import FRAME_MS, LYRIC_SIZE, Note, Sheet
+from aitu_backend.sheet.sheet.data import FRAME_MS, LYRIC_SIZE, Lyric, Note, Sheet
 
 __all__ = [
     "Options",
@@ -133,6 +135,9 @@ class Layout:
     clefs_at: dict[int, list[tuple[int, str]]]  # staff -> [(frame, clef)]
     key_at: object
     opts: Options
+    parts: dict | None = (
+        None  # the lyrics parts of each line (lyric_parts), made when the first line is drawn
+    )
 
 
 # ------------------------------------------------------------------ the chords
@@ -477,17 +482,11 @@ def _draw_system(lay: Layout, si: int) -> tuple[System, list[dict]]:
         else:
             pen.g(staff, "gClef", 0.8, L.y_of(2))
         L._draw_key(pen, staff, clef, key, 0.8 + box("gClef").width + 0.8)
-    x = header + _first_lead(first)
-    for k, col in enumerate(cols):
+    xs, end_x = _column_xs(lay, si)
+    for col, x in zip(cols, xs):
         col.x = x
         for c in col.chords:
             c.x = x
-        if k + 1 < len(cols):
-            x += max(lay.nat[i + k] + e, lay.mins[i + k])
-        else:
-            x += max(lay.ends[i + k][0] + e, lay.ends[i + k][1])
-    last = j == len(lay.columns)
-    end_x = x if (e == 0.0 and last and not opts.justify_last) else max(x, opts.width)
     sysm.width = end_x
     sys_chords = [c for col in cols for c in col.chords]
     # armadura and clef changes inside the line
@@ -593,6 +592,22 @@ def _draw_system(lay: Layout, si: int) -> tuple[System, list[dict]]:
     return sysm, rows
 
 
+def _column_xs(lay: Layout, si: int) -> tuple[list[float], float]:
+    """The x of each column of a line and the x where the line ends, without drawing it."""
+    i, j, e = lay.lines[si]
+    x = _header(lay, i) + _first_lead(lay.columns[i])
+    xs = []
+    for k in range(i, j):
+        xs.append(x)
+        if k + 1 < j:
+            x += max(lay.nat[k] + e, lay.mins[k])
+        else:
+            x += max(lay.ends[k][0] + e, lay.ends[k][1])
+    last = j == len(lay.columns)
+    end_x = x if (e == 0.0 and last and not lay.opts.justify_last) else max(x, lay.opts.width)
+    return xs, end_x
+
+
 def _x_of(lay: Layout, si: int, cols: list[Column], end_x: float, frame: int) -> float:
     """The x of a frame in a system: the column's own, or between two columns by time (the cursor's rule); after the
     last column, towards the end of the line by the time to the next line's first column."""
@@ -621,40 +636,167 @@ def _ink_x(p: L.Prim) -> tuple[float, float] | None:
     return None
 
 
-def _lyrics(lay: Layout, si: int, cols: list[Column], end_x: float, pen: L.Pen) -> None:
-    """The lyrics pieces whose first column is in this line, above the upper staff (module notes)."""
-    lyrics = sorted(lay.sheet.lyrics, key=lambda one: (one.start, one.end))
-    if not lyrics:
-        return
+@dataclass
+class _LyricPart:
+    """The words of a lyrics piece drawn in one line: the whole piece, or its share of the words when its frames
+    cross a line break (the user's request of Phase 8A++)."""
+
+    index: int  # the piece's place in the sheet's lyrics, by start (the drawing's ``data-lyric``)
+    piece: Lyric
+    text: str
+    part: int  # 0 for the piece's first part (the one moved by hand), then 1, 2 ...
+
+
+def _line_of(lay: Layout, frame: int) -> int:
+    """The line that holds a frame: the last line starting at or before it (the first line for an earlier one)."""
+    found = 0
+    for si, (i, _, _) in enumerate(lay.lines):
+        if lay.columns[i].frame <= frame:
+            found = si
+    return found
+
+
+def _x_in(lay: Layout, si: int, xs: list[float], end_x: float, frame: int) -> float:
+    """``_x_of`` for a line that is not drawn now (its column x from :func:`_column_xs`)."""
     i, j, _ = lay.lines[si]
-    first = lay.columns[i].frame if i > 0 else None
+    frames = [c.frame for c in lay.columns[i:j]]
+    if frame <= frames[0]:
+        return xs[0]
+    for (fa, xa), (fb, xb) in zip(zip(frames, xs), zip(frames[1:], xs[1:])):
+        if fa <= frame < fb:
+            return xa + (xb - xa) * (frame - fa) / (fb - fa)
     nxt = lay.columns[j].frame if j < len(lay.columns) else None
-    mine = [
-        (k, one)
-        for k, one in enumerate(lyrics)
-        if (first is None or one.start >= first) and (nxt is None or one.start < nxt)
-    ]
+    if nxt is None or nxt <= frames[-1]:
+        return xs[-1]
+    return xs[-1] + (end_x - xs[-1]) * min(1.0, (frame - frames[-1]) / (nxt - frames[-1]))
+
+
+def _share_words(text: str, shares: list[float]) -> list[str]:
+    """The words of ``text`` dealt in order into parts of about ``shares`` (fractions summing to 1) of its letters:
+    each cut at the space nearest to its share."""
+    words = [(m.start(), m.end()) for m in re.finditer(r"\S+", text)]
+    if len(shares) == 1 or len(words) < 2:
+        return [text] + [""] * (len(shares) - 1)
+    total = sum(b - a + 1 for a, b in words)
+    cuts, done, at = [], 0.0, 0
+    for share in shares[:-1]:
+        done += share * total
+        # The word boundary whose letters before it come nearest to the share so far.
+        best, best_d, run = at, abs(done), 0
+        for w, (a, b) in enumerate(words):
+            run += b - a + 1
+            if w + 1 >= at and abs(run - done) < best_d:
+                best, best_d = w + 1, abs(run - done)
+        at = max(at, best)
+        cuts.append(at)
+    parts, prev = [], 0
+    for cut in cuts + [len(words)]:
+        if cut <= prev:
+            parts.append("")
+            continue
+        parts.append(text[words[prev][0] : words[cut - 1][1]])
+        prev = cut
+    return parts
+
+
+def lyric_parts(lay: Layout) -> dict[int, list[_LyricPart]]:
+    """The parts of the lyrics pieces each line draws. A piece whose frames cross line breaks is drawn in one part
+    per line, its words shared by the width its frames take in each line (60 % of the width, about 60 % of the
+    letters); a block moved by hand to another line than its first frame's stays whole there."""
+    out: dict[int, list[_LyricPart]] = {}
+    if not lay.lines:
+        return out
+    xs_of: dict[int, tuple[list[float], float]] = {}
+
+    def x_at(si: int, frame: int) -> float:
+        if si not in xs_of:
+            xs_of[si] = _column_xs(lay, si)
+        xs, end_x = xs_of[si]
+        return _x_in(lay, si, xs, end_x, frame)
+
+    lyrics = sorted(lay.sheet.lyrics, key=lambda one: (one.start, one.end))
+    for k, one in enumerate(lyrics):
+        first = _line_of(lay, one.start)
+        if one.free and _line_of(lay, one.at if one.at is not None else one.start) != first:
+            out.setdefault(_line_of(lay, one.at), []).append(_LyricPart(k, one, one.text, 0))
+            continue
+        last = _line_of(lay, max(one.start, one.end - 1))
+        if last == first:
+            out.setdefault(first, []).append(_LyricPart(k, one, one.text, 0))
+            continue
+        widths = []
+        for si in range(first, last + 1):
+            i, j, _ = lay.lines[si]
+            a = one.start if si == first else lay.columns[i].frame
+            nxt = lay.columns[j].frame if j < len(lay.columns) else one.end
+            b = min(one.end, nxt)
+            if si < last and b >= nxt:
+                left = x_at(si, a)
+                widths.append(max(0.0, xs_of[si][1] - left))
+            else:
+                widths.append(max(0.0, x_at(si, b) - x_at(si, a)))
+        total = sum(widths) or 1.0
+        texts = _share_words(one.text, [w / total for w in widths])
+        part = 0
+        for si, text in zip(range(first, last + 1), texts):
+            if text.strip():
+                out.setdefault(si, []).append(_LyricPart(k, one, text, part))
+                part += 1
+    return out
+
+
+def _lyrics(lay: Layout, si: int, cols: list[Column], end_x: float, pen: L.Pen) -> None:
+    """The lyrics of this line, above the upper staff (module notes): the pieces in the line of words share one
+    baseline above the ink under them; a block moved by hand sits where it was put (``Lyric.at``, ``dx``, ``dy``).
+    A block with a width has its words wrapped to it (:mod:`lyric_text`); no block passes the end of its line.
+    """
+    if not lay.sheet.lyrics:
+        return
+    if lay.parts is None:
+        lay.parts = lyric_parts(lay)
+    mine = lay.parts.get(si, [])
     if not mine:
         return
     placed = []
-    for k, one in mine:
+    for p in mine:
+        one = p.piece
         size = one.size or LYRIC_SIZE
-        x = _x_of(lay, si, cols, end_x, one.start)
-        wide = max(len(line) for line in one.text.split("\n")) * 0.5 * size
-        placed.append((k, one, size, x, x + max(wide, 1.0)))
+        lines = wrap(p.text, one.width, size, one.font, one.bold, one.italic)
+        wide = max(
+            1.0, max(text_width(line, size, one.font, one.bold, one.italic) for line in lines)
+        )
+        if p.part == 0 and one.free:
+            x = _x_of(lay, si, cols, end_x, one.at if one.at is not None else one.start) + one.dx
+        elif p.part == 0:
+            x = _x_of(lay, si, cols, end_x, one.start)
+        else:
+            x = cols[0].x
+        x = max(0.0, min(x, end_x - wide))
+        placed.append((p, size, tuple(lines), x, x + wide))
     tops = []
-    for p in pen.prims:
-        if p.staff != 1:
+    in_line = [(x, right) for p, _, _, x, right in placed if not p.piece.free]
+    for prim in pen.prims:
+        if prim.staff != 1:
             continue
-        span = _ink_x(p)
-        if span is None or not any(span[1] >= a and span[0] <= b for _, _, _, a, b in placed):
+        span = _ink_x(prim)
+        if span is None or not any(span[1] >= a and span[0] <= b for a, b in in_line):
             continue
-        tops.append(L._prim_yrange(p)[0])
+        tops.append(L._prim_yrange(prim)[0])
     base = min([LYRIC_BASE] + [t - LYRIC_CLEAR for t in tops])
-    for k, one, size, x, _ in placed:
-        lines = tuple(one.text.split("\n"))
-        y = base - one.lift - (len(lines) - 1) * size * LYRIC_LEADING
-        pen.prims.append(L.Prim("t", 1, (x, y, lines, size, k, one.start, one.end), "lyric"))
+    for p, size, lines, x, _ in placed:
+        one = p.piece
+        last = one.dy if one.free else base - one.lift
+        style = {
+            "font": one.font,
+            "bold": one.bold,
+            "italic": one.italic,
+            "width": one.width,
+            "part": p.part,
+        }
+        y = last - (len(lines) - 1) * size * LYRIC_LEADING
+        pen.prims.append(
+            L.Prim("t", 1, (x, y, lines, size, p.index, one.start, one.end, style), "lyric")
+        )
 
 
 def draw(lay: Layout, systems: list[int] | None = None) -> Engraving:

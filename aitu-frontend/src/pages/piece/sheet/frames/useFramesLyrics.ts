@@ -10,21 +10,32 @@
  */
 
 import { useCallback, useEffect, useMemo, useState, type SetStateAction } from "react";
-import { timeScoreApi, type FramesSheet, type LyricLine, type ReadingEdit, type SheetLyric } from "../../../../api";
+import {
+  timeScoreApi,
+  type FramesSheet,
+  type LyricFont,
+  type LyricLine,
+  type ReadingEdit,
+  type SheetLyric,
+  type SheetLyricBlock,
+} from "../../../../api";
 import { said } from "../../../library/shared";
 import { backToPool, landingOf, movePiece, placePiece } from "../lyricsPieces";
+import { LYRIC_MAX, LYRIC_MIN, LYRIC_SIZE } from "./lyricsText";
 
 /** Pixels of the old sheet's words per staff space of the new one: its 12 px default is the new 1.4. */
 const PX_PER_SPACE = 12 / 1.4;
 const FRAME_MS = 40;
 
 function toLine(piece: SheetLyric): LyricLine {
+  const { at, dx, dy, width, font, bold, italic } = piece;
   return {
     fromColumn: piece.start,
     toColumn: piece.end,
     text: piece.text,
-    ...(piece.size === null ? {} : { fontSize: Math.round(piece.size * PX_PER_SPACE) }),
+    ...(piece.size === null ? {} : { fontSize: piece.size * PX_PER_SPACE }),
     ...(piece.lift ? { offsetY: -piece.lift * PX_PER_SPACE } : {}),
+    block: { at, dx, dy, width, font, bold, italic },
   };
 }
 
@@ -33,10 +44,14 @@ function toPiece(line: LyricLine): SheetLyric {
     start: line.fromColumn,
     end: line.toColumn,
     text: line.text,
-    size: line.fontSize == null ? null : line.fontSize / PX_PER_SPACE,
+    size: line.fontSize == null ? null : Math.round((line.fontSize / PX_PER_SPACE) * 100) / 100,
     lift: line.offsetY ? Math.round((-line.offsetY / PX_PER_SPACE) * 2) / 2 : 0,
+    ...line.block,
   };
 }
+
+/** What a lyrics block can be told: its place, width, size (staff spaces) and style. */
+export type BlockChange = Omit<SheetLyricBlock, "font"> & { font?: LyricFont; size?: number };
 
 /** What a change of the pieces did, for the step's label. */
 function describe(before: readonly LyricLine[], after: readonly LyricLine[]): string {
@@ -128,7 +143,7 @@ export function useFramesLyrics(
 
   /** The pieces as the tab wants them now: one edit of the sheet, named by what changed. */
   const write = useCallback(
-    async (after: readonly LyricLine[], label?: string) => {
+    async (after: readonly LyricLine[], label?: string): Promise<boolean> => {
       const pieces = after.map(toPiece);
       return apply({ action: "lyrics", value: { pieces, label: label ?? describe(lines, after) } });
     },
@@ -142,27 +157,53 @@ export function useFramesLyrics(
     [lines, write],
   );
 
-  /** A piece dragged on the sheet: moved, made longer or shorter, lifted. */
-  const move = useCallback(
-    (change: { start: number; nextStart: number; nextEnd: number; lift: number }) => {
-      const piece = lines.find((line) => line.fromColumn === change.start);
-      if (!piece) return;
-      const lift = Math.max(-4, (piece.offsetY ? -piece.offsetY / PX_PER_SPACE : 0) + change.lift);
+  /** The frames of a piece changed on its bar in the strip (when its words sound); its block stays where it is. */
+  const setFrames = useCallback(
+    async (start: number, next: { start: number; end: number }) => {
+      const piece = lines.find((line) => line.fromColumn === start);
+      if (!piece) return false;
       const moved = movePiece(lines, {
-        fromColumn: change.start,
+        fromColumn: start,
         toColumn: piece.toColumn,
-        nextFromColumn: Math.max(0, change.nextStart),
-        nextToColumn: Math.max(change.nextStart + 1, change.nextEnd),
-        offsetY: -lift * PX_PER_SPACE,
+        nextFromColumn: Math.max(0, next.start),
+        nextToColumn: Math.max(next.start + 1, next.end),
+        offsetY: piece.offsetY ?? 0,
       });
       if ("refused" in moved) {
         onRefused(moved.refused);
-        return;
+        return false;
       }
-      void write(moved.ok, change.lift !== 0 && change.nextStart === change.start ? "Lift a lyrics piece" : "Move a lyrics piece");
-      setPicked([Math.max(0, change.nextStart)]);
+      const done = await write(moved.ok, "When a lyrics piece sounds");
+      if (done) setPicked([Math.max(0, next.start)]);
+      return done;
     },
     [lines, write, onRefused, setPicked],
+  );
+
+  /**
+   * Lyrics blocks told something (Phase 8A++): moved anywhere, made narrower or wider, scaled, given a font, bold or
+   * italic, or put back in the line of words. Their frames do not change. One edit, named by `label`.
+   */
+  const shape = useCallback(
+    (starts: readonly number[], change: BlockChange, label: string) => {
+      const after = lines.map((line) => {
+        if (!starts.includes(line.fromColumn)) return line;
+        const { size, ...block } = change;
+        const sized =
+          size === undefined ? {} : { fontSize: Math.min(LYRIC_MAX, Math.max(LYRIC_MIN, size)) * PX_PER_SPACE };
+        return { ...line, ...sized, block: { ...line.block, ...block } };
+      });
+      return write(after, label);
+    },
+    [lines, write],
+  );
+  /** The size of a picked block now, in staff spaces. */
+  const sizeOf = useCallback(
+    (start: number) => {
+      const line = lines.find((one) => one.fromColumn === start);
+      return line?.fontSize == null ? LYRIC_SIZE : line.fontSize / PX_PER_SPACE;
+    },
+    [lines],
   );
 
   /** The piece of the pool being dragged, by its place in the pool. */
@@ -217,7 +258,9 @@ export function useFramesLyrics(
     onPoolDrag: setDragging,
     landing,
     dropPool,
-    move,
+    setFrames,
+    shape,
+    sizeOf,
     removePicked,
   };
 }

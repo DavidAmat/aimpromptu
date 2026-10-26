@@ -96,13 +96,32 @@ export interface SheetNote {
  * `[start, end)`, drawn above the upper staff from `start`; `size` in staff spaces (`null`: the sheet's own),
  * `lift` in staff spaces above the line of words of its system. The drawing names it `data-lyric` by its place
  * in this list.
+ *
+ * Phase 8A++ (the user's request): a block moved by hand sits where it was put, whatever its frames: `at` is the
+ * frame of the column under its left edge, `dx` how far right of that column it starts, `dy` its last line's
+ * baseline below the top staff line (`null`: in the line of words, as before), all in staff spaces. `width` wraps its
+ * words (the backend wraps them); `font`, `bold` and `italic` are its style. The frames say only when it sounds.
  */
-export interface SheetLyric {
+export interface SheetLyric extends SheetLyricBlock {
   start: number;
   end: number;
   text: string;
   size: number | null;
   lift: number;
+}
+
+/** The fonts of a lyrics block (the backend's `LYRIC_FONTS`). */
+export type LyricFont = "lora" | "geist" | "montserrat";
+
+/** Where a lyrics block was put, how wide it is and its style (all optional: absent is the default). */
+export interface SheetLyricBlock {
+  at?: number | null;
+  dx?: number;
+  dy?: number | null;
+  width?: number | null;
+  font?: LyricFont;
+  bold?: boolean;
+  italic?: boolean;
 }
 
 /** The title lines printed above the new sheet. */

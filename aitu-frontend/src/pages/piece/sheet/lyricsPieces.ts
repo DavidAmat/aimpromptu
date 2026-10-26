@@ -133,6 +133,8 @@ export function movePiece(
     text: piece.text,
     ...(change.offsetY === 0 ? {} : { offsetY: change.offsetY }),
     ...(piece.fontSize === undefined ? {} : { fontSize: piece.fontSize }),
+    // A block of the new sheet keeps where it was put and its style: there the frames say only when it sounds.
+    ...(piece.block === undefined ? {} : { block: piece.block }),
   };
   return { ok: byStart(lyrics.map((line) => (line === piece ? moved : line))) };
 }
@@ -188,6 +190,8 @@ export function splitPiece(
     text: after,
     ...(piece.offsetY === undefined ? {} : { offsetY: piece.offsetY }),
     ...(piece.fontSize === undefined ? {} : { fontSize: piece.fontSize }),
+    // The second half of a block of the new sheet keeps its width and style, and starts in the line of words.
+    ...(piece.block === undefined ? {} : { block: { ...piece.block, at: null, dx: 0, dy: null } }),
   };
   return { ok: byStart([...lyrics.filter((line) => line !== piece), first, second]) };
 }

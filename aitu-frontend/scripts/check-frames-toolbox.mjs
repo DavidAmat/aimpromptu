@@ -8,7 +8,9 @@
  * - **Transpose figures** with its preview (every figure one step shorter, no column moves), then undone;
  * - **Transpose notes** with its preview (two semitones up), then undone;
  * - **Lyrics**: words pasted, added to the pool, a piece dragged from the pool onto the sheet (drawn above the
- *   staff), moved by dragging it on the sheet, picked and taken off with Delete;
+ *   staff); **lyrics blocks** (8A++): a click picks it and opens the lyrics toolbox, the strip stays off, a drag puts
+ *   it anywhere (its frames kept), the side handle wraps its words, the corner makes them larger, the toolbox sets
+ *   Geist and bold, the bar of its frames moves its end, and it goes back in the line of words; taken off with Delete;
  * - **the chord keyboard** of the note toolbox: the picked column's keys lit, a dark key adds a note to the chord (its
  *   figure and beam group), the chord stays picked, the lit key takes it off, Undo walks both; notes of two columns
  *   show no keyboard;
@@ -212,25 +214,85 @@ try {
     path: path.join(values.out, '03-lyric-placed.png'),
     clip: { x: Math.max(0, words.x - 120), y: words.y - 40, width: 700, height: 220 },
   });
-  // Moved by dragging it on the sheet, a few columns later.
-  const later = sheet.columns.findIndex((c) => c.frame >= placed.end) + 2;
-  const there = await pointOf(page, sheet, sheet.columns[later].frame);
+  // ------------------------------------------------------------------ Lyrics blocks (8A++)
+  const lyric = () => page.locator('[data-frames-sheet] [data-lyric="0"]').first();
   const scale = svgBox.width / sheet.width;
-  await edited(page, async () => {
-    await page.mouse.move(words.x + 4, words.y + words.height / 2);
+  /** A press at one point and a drag to another, in screen pixels, in small steps. */
+  const dragBy = async (from, dx, dy) => {
+    await page.mouse.move(from.x, from.y);
     await page.mouse.down();
-    await page.mouse.move(words.x + 30, words.y + words.height / 2, { steps: 4 });
-    await page.mouse.move(there.x + 4, words.y + words.height / 2, { steps: 8 });
+    await page.mouse.move(from.x + dx / 3, from.y + dy / 3, { steps: 3 });
+    await page.mouse.move(from.x + dx, from.y + dy, { steps: 8 });
     await page.mouse.up();
-  });
+  };
+  const centre = (box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2 });
+  await page.mouse.click(words.x + words.width / 2, words.y + words.height / 2);
+  await page.waitForTimeout(300);
+  check('a click picks the block', (await page.locator('[data-lyric-picked]').count()) === 1);
+  check('and opens the lyrics toolbox beside it', await page.locator('[data-frames-lyrics-toolbox]').isVisible());
+  check('with the bar of its frames in the strip', (await page.locator('[data-lyric-frames]').count()) === 1);
+  // The strip above the staves marks no stretch while a block is picked.
+  const strip = await pointOf(page, sheet, sheet.columns[30].frame);
+  await page.mouse.move(strip.x, strip.y);
+  await page.waitForTimeout(150);
+  check('the strip does not light up while a block is picked', (await page.locator('[data-range-strip]').count()) === 0);
+  // Moved anywhere: 50 px right and 12 px up; its frames stay.
+  await edited(page, () => dragBy(centre(words), 50, -12));
   sheet = await now(part);
-  check('a piece dragged on the sheet moves to the frame under it', sheet.lyrics[0]?.start > placed.start, `f${placed.start} -> f${sheet.lyrics[0]?.start}`);
-  check('the frames under a dragged piece are shaded meanwhile', scale > 0);
+  let block = sheet.lyrics[0];
+  const movedBox = await lyric().boundingBox();
+  check(
+    'a block dragged sits where it was put, its frames unchanged',
+    block.start === placed.start && block.end === placed.end && block.dy !== null && Math.abs(movedBox.x - words.x - 50) < 6,
+    `at f${block.at} dx ${block.dx} dy ${block.dy}; ${Math.round(movedBox.x - words.x)} px right`,
+  );
+  check('and stays picked', (await page.locator('[data-lyric-picked]').count()) === 1);
+  // The side handle: narrower, the words wrap onto more lines.
+  const side = await page.locator('[data-lyric-handle="width"]').boundingBox();
+  await edited(page, () => dragBy(centre(side), -movedBox.width * 0.6, 0));
+  sheet = await now(part);
+  block = sheet.lyrics[0];
+  const lines = await lyric().locator('tspan').count();
+  check('the side handle sets the width and the words wrap', block.width !== null && lines >= 2, `width ${block.width}, ${lines} lines`);
+  // The corner handle: larger words, the width scaled with them.
+  const sizeBefore = block.size ?? 1.4;
+  const corner = await page.locator('[data-lyric-handle="scale"]').boundingBox();
+  await edited(page, () => dragBy(centre(corner), 30, 10));
+  sheet = await now(part);
+  block = sheet.lyrics[0];
+  check('the corner handle makes the words larger', (block.size ?? 1.4) > sizeBefore, `${sizeBefore} -> ${block.size}`);
+  check('and keeps them on the same lines', (await lyric().locator('tspan').count()) === lines);
+  // Font and bold from the lyrics toolbox.
+  await edited(page, () => page.locator('[data-lyric-font="geist"]').click());
+  await edited(page, () => page.getByTestId('lyric-bold').click());
+  sheet = await now(part);
+  block = sheet.lyrics[0];
+  const face = await lyric().evaluate((el) => [el.getAttribute('font-family'), el.getAttribute('font-weight')]);
+  check('the toolbox sets the font and bold', block.font === 'geist' && block.bold === true && face[0].startsWith('Geist') && face[1] === '700', face.join(' '));
+  const shaped = await lyric().boundingBox();
+  await page.screenshot({
+    path: path.join(values.out, '03b-lyric-block.png'),
+    clip: { x: Math.max(0, shaped.x - 160), y: shaped.y - 60, width: 640, height: shaped.height + 200 },
+  });
+  // The bar of its frames: its end dragged later; the block does not move.
+  const end = await page.locator('[data-lyric-handle="end"]').boundingBox();
+  await edited(page, () => dragBy(centre(end), 60, 0));
+  sheet = await now(part);
+  check(
+    'the end of the bar changes when the words stop sounding, and only that',
+    sheet.lyrics[0].end > block.end && sheet.lyrics[0].start === block.start && sheet.lyrics[0].dy === block.dy,
+    `f${block.end} -> f${sheet.lyrics[0].end}`,
+  );
+  // Back in the line of words: on one line again, above its first frame.
+  await edited(page, () => page.getByTestId('lyric-back-in-line').click());
+  sheet = await now(part);
+  check(
+    'back in the line of words',
+    sheet.lyrics[0].dy === null && sheet.lyrics[0].width === null && (await lyric().locator('tspan').count()) === 1,
+  );
+  check('the words take no width: no column moved', scale > 0 && sheet.columns.length > 0);
   // Picked and taken off with Delete.
-  const moved = await page.locator('[data-frames-sheet] [data-lyric="0"]').boundingBox();
-  await page.mouse.click(moved.x + moved.width / 2, moved.y + moved.height / 2);
-  await page.waitForTimeout(200);
-  check('a click picks the piece', (await page.locator('[data-lyric-picked]').count()) === 1);
+  check('the piece is still picked', (await page.locator('[data-lyric-picked]').count()) === 1);
   await edited(page, () => page.keyboard.press('Delete'));
   check('Delete takes it off the sheet', (await now(part)).lyrics.length === 0);
   await edited(page, () => page.getByTestId('sheet-undo').click());

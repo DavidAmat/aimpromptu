@@ -33,7 +33,8 @@
     "time:flow": "node scripts/time-flow.mjs",
     "check:frames-edit": "node scripts/check-frames-edit.mjs",
     "check:frames-tools": "node scripts/check-frames-tools.mjs",
-    "check:frames-toolbox": "node scripts/check-frames-toolbox.mjs"
+    "check:frames-toolbox": "node scripts/check-frames-toolbox.mjs",
+    "measure:lyric-fonts": "node scripts/measure-lyric-fonts.mjs"
   },
   "dependencies": {
     "@aimpromptu/grid-notation": "file:../../vexflow-v2",

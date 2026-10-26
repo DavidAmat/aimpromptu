@@ -63,7 +63,7 @@ stylesheet and the brace is drawn inside a scaled group.
 | `opacity`, `fill-opacity`, `stroke-opacity` | one `ExtGState` per distinct alpha |
 | element transforms | `q … cm … Q` from `getCTM()` |
 | `text` in Bravura | the embedded font, one glyph per `Tj`, at `getStartPositionOfChar(i)` |
-| `text` in a sans/serif face | Helvetica / Helvetica-Bold / Times-Italic / Symbol, **one word per `Tj`** |
+| `text` in a sans/serif face | Helvetica or Times, each normal, bold, italic (oblique) or both, or Symbol, **one word per `Tj`** |
 | the page's HTML title, running head and folio | measured with a `Range` per character; baseline from the font's ascent plus the browser's half-leading |
 
 Two decisions worth knowing:
@@ -85,8 +85,10 @@ Bravura is embedded whole (512 kB, Flate-compressed) as `Type0` / `Identity-H` /
 private-use code points that mean nothing outside the font, so there is no encoding worth
 pretending to. `/W` lists only the glyphs the piece used. Verified against poppler and pdf.js.
 
-The four text faces are the PDF built-ins, so they cost nothing: Helvetica, Helvetica-Bold,
-Times-Roman and Times-Italic in `WinAnsiEncoding`, plus `Symbol` for the few mathematical signs the
+The eight text faces are the PDF built-ins, so they cost nothing: Helvetica, Helvetica-Bold,
+Helvetica-Oblique, Helvetica-BoldOblique, Times-Roman, Times-Bold, Times-Italic and Times-BoldItalic in
+`WinAnsiEncoding` (a serif face prints as Times, any other as Helvetica: the lyrics blocks of the new sheet can be
+bold or italic in Lora, Geist or Montserrat, implementation 03 Phase 8A++), plus `Symbol` for the few mathematical signs the
 labels use (`≈` in the passage header is the one that matters) which WinAnsi has no slot for.
 
 ## Checking a file

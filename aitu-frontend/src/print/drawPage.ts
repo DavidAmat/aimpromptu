@@ -46,13 +46,31 @@ export interface DrawnPage {
 }
 
 /** Which PDF font a drawn run is written with. `notation` is the embedded one. */
-type FontChoice = "notation" | "sans" | "sansBold" | "serif" | "serifItalic" | "symbol";
+type FontChoice =
+  | "notation"
+  | "sans"
+  | "sansBold"
+  | "sansItalic"
+  | "sansBoldItalic"
+  | "serif"
+  | "serifBold"
+  | "serifItalic"
+  | "serifBoldItalic"
+  | "symbol";
 
+/**
+ * The base fonts every PDF reader has. A serif face prints as Times and any other as Helvetica, each in its four
+ * looks: the lyrics blocks of the new sheet can be bold or italic in any of their fonts (implementation 03, 8A++).
+ */
 export const PDF_BASE_FONTS: Record<Exclude<FontChoice, "notation">, string> = {
   sans: "Helvetica",
   sansBold: "Helvetica-Bold",
+  sansItalic: "Helvetica-Oblique",
+  sansBoldItalic: "Helvetica-BoldOblique",
   serif: "Times-Roman",
+  serifBold: "Times-Bold",
   serifItalic: "Times-Italic",
+  serifBoldItalic: "Times-BoldItalic",
   symbol: "Symbol",
 };
 
@@ -301,13 +319,8 @@ class PageWriter {
     const serif = family.includes("serif") && !family.includes("sans-serif");
     const italic = style.fontStyle === "italic" || style.fontStyle === "oblique";
     const bold = numberOf(style.fontWeight, 400) >= 600 || style.fontWeight === "bold";
-    const choice: FontChoice = serif
-      ? italic
-        ? "serifItalic"
-        : "serif"
-      : bold
-        ? "sansBold"
-        : "sans";
+    const look = bold ? (italic ? "BoldItalic" : "Bold") : italic ? "Italic" : "";
+    const choice = `${serif ? "serif" : "sans"}${look}` as FontChoice;
     return { choice, code: winAnsi };
   }
 
@@ -401,8 +414,12 @@ export const FONT_KEY: Record<FontChoice, string> = {
   notation: "FN",
   sans: "FS",
   sansBold: "FB",
+  sansItalic: "FO",
+  sansBoldItalic: "FQ",
   serif: "FR",
+  serifBold: "FT",
   serifItalic: "FI",
+  serifBoldItalic: "FJ",
   symbol: "FY",
 };
 
