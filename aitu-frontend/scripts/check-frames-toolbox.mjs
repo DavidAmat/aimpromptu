@@ -12,7 +12,8 @@
  *   it anywhere (its frames kept), the side handle wraps its words, the corner makes them larger, the toolbox sets
  *   Geist and bold, the bar of its frames moves its end, and it goes back in the line of words; taken off with Delete;
  * - **the chord keyboard** of the note toolbox: the picked column's keys lit, a dark key adds a note to the chord (its
- *   figure and beam group), the chord stays picked, the lit key takes it off, Undo walks both; notes of two columns
+ *   figure and beam group) and is the note picked after, ⌘-click on a lit key picks that note too and Hand moves only
+ *   the notes picked, the lit key takes it off, Undo walks each step; notes of two columns
  *   show no keyboard;
  * - **the keyboard panel**: a dark key adds a note under the cursor, the lit key takes it off again;
  * - **Print to PDF**: the pages of the paper (a 6.5 mm staff and 6 mm between lines by default; the size of the music
@@ -334,8 +335,23 @@ try {
     `${addedNote?.hand} ${addedNote?.figure} ${addedNote?.beam}; the chord ${rightChord[0].figure} ${rightChord[0].beam}`,
   );
   check('it is one step of undo', sheet.history.undo === 'Add a note');
-  check('the chord stays picked, with the new key lit', (await keys.count()) === 1 && (await litKeys()).includes(extra));
+  check('the keyboard stays, with the new key lit', (await keys.count()) === 1 && (await litKeys()).includes(extra));
+  const pickedKeys = async () => (await keys.locator('[data-picked]').evaluateAll((els) => els.map((e) => Number(e.getAttribute('data-midi'))))).sort((a, b) => a - b);
+  check('the note added is the one picked (its key dotted)', JSON.stringify(await pickedKeys()) === JSON.stringify([extra]), `${await pickedKeys()}`);
   await page.locator('[data-frames-note-toolbox]').screenshot({ path: path.join(values.out, '03c-chord-key-added.png') });
+  // ⌘ and a click on a lit key picks that note too; Hand then moves only the notes picked.
+  const second = midiOfRef(rightChord[0].ref);
+  await keys.locator(`[data-midi="${second}"]`).click({ modifiers: ['ControlOrMeta'] });
+  await page.waitForTimeout(200);
+  check('⌘-click on a lit key picks that note too, nothing else changes', JSON.stringify(await pickedKeys()) === JSON.stringify([second, extra].sort((a, b) => a - b)) && (await now(part)).history.undo === 'Add a note');
+  await page.locator('[data-frames-note-toolbox]').screenshot({ path: path.join(values.out, '03d-chord-keys-picked.png') });
+  await edited(page, () => page.locator('[data-frames-note-toolbox]').getByRole('button', { name: 'Left', exact: true }).click(), /\/sheet\/[^/]+\/hands/);
+  sheet = await now(part);
+  const handOf = (midi) => sheet.notes.find((n) => n.ref === `${chordFrame}:${midi}`)?.hand;
+  const others = rightChord.filter((n) => midiOfRef(n.ref) !== second).map((n) => handOf(midiOfRef(n.ref)));
+  check('Hand: Left moves only the notes picked on the keyboard', handOf(extra) === 'left' && handOf(second) === 'left' && others.every((h) => h === 'right'), `${handOf(extra)} ${handOf(second)}; the rest ${others}`);
+  await edited(page, () => page.getByTestId('sheet-undo').click());
+  check('and Undo gives them back their hand', (await now(part)).notes.filter((n) => frameOfRef(n.ref) === chordFrame && [extra, second].includes(midiOfRef(n.ref))).every((n) => n.hand === 'right'));
   await edited(page, () => keys.locator(`[data-midi="${extra}"]`).click());
   sheet = await now(part);
   check('the lit key takes it off again', !sheet.notes.some((n) => n.ref === `${chordFrame}:${extra}`) && sheet.history.undo === 'Take a note off the page');

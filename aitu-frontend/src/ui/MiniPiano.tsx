@@ -8,10 +8,12 @@
  * arrows move by a semitone (left, right) or an octave (up, down).
  *
  * `MiniKeys` is the drawing alone, with any keys lit in colours of their own: the chord keyboard of
- * the new sheet's note toolbox draws with it too (implementation 03, Phase 8A).
+ * the new sheet's note toolbox draws with it too (implementation 03, Phase 8A). There some keys can
+ * also be picked (⌘, Control or Shift and a click): a picked key keeps its full colour and carries a
+ * dark dot, and the lit keys not picked turn pale.
  */
 
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from "react";
 import Box from "@mui/material/Box";
 import { spanishNoteShort } from "../music/noteNames";
 import { keepKeyInView, pianoKeyPositions, PIANO_HEIGHT, PIANO_WIDTH } from "../piano/keyPositions";
@@ -28,7 +30,10 @@ const HEIGHT = PIANO_HEIGHT * SCALE * 0.7;
 export interface MiniKeysProps {
   /** The keys lit, by MIDI number, each in its own colour. */
   colours: Readonly<Record<number, string>>;
-  onPress: (midi: number) => void;
+  /** A key pressed; `add` when ⌘, Control or Shift was held. */
+  onPress: (midi: number, add: boolean) => void;
+  /** The keys picked: full colour and a dot; the other lit keys pale. */
+  picked?: ReadonlySet<number>;
   /** What a key says on hover (its Spanish name by default). */
   title?: (midi: number) => string;
   disabled?: boolean;
@@ -36,10 +41,29 @@ export interface MiniKeysProps {
   octaves?: boolean;
 }
 
-export function MiniKeys({ colours, onPress, title = spanishNoteShort, disabled, octaves }: MiniKeysProps) {
+export function MiniKeys({ colours, onPress, picked, title = spanishNoteShort, disabled, octaves }: MiniKeysProps) {
   const whites = pianoKeyPositions.filter((key) => key.type === "white");
   const blacks = pianoKeyPositions.filter((key) => key.type === "black");
   const fill = (midi: number, black: boolean) => colours[midi] ?? (black ? grays.charcoal : ui.paper);
+  const press = (midi: number) => (event: MouseEvent) => {
+    if (!disabled) onPress(midi, event.metaKey || event.ctrlKey || event.shiftKey);
+  };
+  /** A lit key not picked, while some are: pale. */
+  const pale = (midi: number) => (picked && picked.size > 0 && colours[midi] && !picked.has(midi) ? 0.35 : 1);
+  /** The dot of a picked key, near its lower end (it takes no click). */
+  const dot = (key: (typeof pianoKeyPositions)[number], height: number) =>
+    picked?.has(key.midi) ? (
+      <circle
+        key={`picked-${key.midi}`}
+        cx={(key.x + key.width / 2) * SCALE}
+        cy={height - (key.type === "white" ? 13 : 6)}
+        r={2.6}
+        fill={grays.white}
+        stroke={ui.text}
+        strokeWidth={1.6}
+        style={{ pointerEvents: "none" }}
+      />
+    ) : null;
   return (
     <svg width={WIDTH} height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} style={{ display: "block" }}>
       {whites.map((key) => (
@@ -51,16 +75,19 @@ export function MiniKeys({ colours, onPress, title = spanishNoteShort, disabled,
           height={HEIGHT - 1}
           rx={1.5}
           fill={fill(key.midi, false)}
+          fillOpacity={pale(key.midi)}
           stroke={ui.lineStrong}
           strokeWidth={1}
           style={{ cursor: disabled ? "default" : "pointer" }}
-          onClick={() => !disabled && onPress(key.midi)}
+          onClick={press(key.midi)}
           data-midi={key.midi}
           data-lit={colours[key.midi] ? "" : undefined}
+          data-picked={picked?.has(key.midi) ? "" : undefined}
         >
           <title>{title(key.midi)}</title>
         </rect>
       ))}
+      {whites.map((key) => dot(key, HEIGHT))}
       {octaves
         ? whites
             .filter((key) => key.midi % 12 === 0)
@@ -88,16 +115,19 @@ export function MiniKeys({ colours, onPress, title = spanishNoteShort, disabled,
           height={HEIGHT * 0.62 - 1}
           rx={1.5}
           fill={fill(key.midi, true)}
+          fillOpacity={pale(key.midi)}
           stroke={grays.charcoal}
           strokeWidth={1}
           style={{ cursor: disabled ? "default" : "pointer" }}
-          onClick={() => !disabled && onPress(key.midi)}
+          onClick={press(key.midi)}
           data-midi={key.midi}
           data-lit={colours[key.midi] ? "" : undefined}
+          data-picked={picked?.has(key.midi) ? "" : undefined}
         >
           <title>{title(key.midi)}</title>
         </rect>
       ))}
+      {blacks.map((key) => dot(key, HEIGHT * 0.62))}
     </svg>
   );
 }
@@ -148,7 +178,7 @@ export function MiniPiano({ value, onChange, label, disabled }: MiniPianoProps) 
     >
       <MiniKeys
         colours={value === null ? {} : { [value]: semantic.rightHand.onset }}
-        onPress={onChange}
+        onPress={(midi) => onChange(midi)}
         disabled={disabled}
       />
     </Box>

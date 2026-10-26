@@ -229,6 +229,22 @@ chord's figure set by hand (`fix`).
   on a note of another column hides the keyboard. The toolbox pictures were looked at zoomed: Re 5 and La# 5 lit,
   then Si 5 too, "One chord of 3".
 
+**The user's next request (2026-10-26, on first use): pick notes on the keyboard.** With a chord of both hands, the
+user wanted to pick some of its keys with ⌘ and give only those notes a hand (a note just added most of all). Built,
+frontend only:
+
+- ⌘, Control or Shift and a click on a lit key picks that note or lets it go (the last one picked stays: the toolbox
+  would close). It is the page's own pick, so every row of the toolbox, **Hand** among them, applies to the notes
+  picked. A plain click works as before (a dark key adds, a lit key takes off).
+- The picked keys keep their full hand colour with a dark-ringed dot; the lit keys not picked turn pale (35 %). A
+  lavender ring was tried first and dropped: on the right hand's blue it hardly showed (looked at zoomed in).
+- **A note added on the keyboard is the one note picked after**, so **Hand** applies to it at once (before, the whole
+  chord stayed picked with it). Taking a note off keeps the others picked, as before.
+- The last line of the toolbox says "2 notes of a chord of 3" when only some of a chord's notes are picked.
+- `MiniKeys` gained `picked` and passes `add` with a press (`MiniPiano`, the Transpose tab, ignores it).
+- `check:frames-toolbox`: the note added is the one picked (its key dotted); ⌘-click on another lit key picks it too
+  and changes nothing else; **Hand: Left** moves only those two notes; Undo gives their hand back. All 46 passed.
+
 ## 8.2 Lyrics as free blocks and a lyrics toolbox (8A++, built 2026-10-26)
 
 **The user's second request (2026-10-26):** lyrics pieces as free blocks, and a lyrics toolbox. Today a piece's width

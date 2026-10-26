@@ -29,8 +29,9 @@
  *   request: its words, font, size, bold and italic); the block is moved and resized on the sheet itself, and the
  *   bar of its frames in the strip says when it sounds. **Print to PDF**; and in
  *   the `⋯` the keyboard panel (the keys sounding under the cursor; a click takes a note off or adds one). The note
- *   toolbox has a keyboard of its own for the picked column (the user's request): a key adds a note to the chord or
- *   takes one off, and the chord stays picked.
+ *   toolbox has a keyboard of its own for the picked column (the user's request): a key adds a note to the chord (the
+ *   note added is then the one picked) or takes one off, and ⌘ and a click on a lit key picks that note or lets it go,
+ *   so **Hand** moves only the notes picked.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -434,10 +435,11 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     );
   };
 
-  // The keyboard of the note toolbox (the user's request of 2026-10-26): the picked column's chord, key by key.
+  // The keyboard of the note toolbox (the user's requests of 2026-10-26): the picked column's chord, key by key.
   /**
-   * After a key: the same notes picked, plus the one added, found again a frame or two away when the column moved
-   * (its first note was taken off); when none of them is left, the notes of those hands still in the column.
+   * After a key: the notes still picked (the one added alone, so **Hand** applies to it at once), found again a frame
+   * or two away when the column moved (its first note was taken off); when none of them is left, the notes of those
+   * hands still in the column.
    */
   const repick = (answer: FramesSheet, column: number, refs: readonly string[], hands: ReadonlySet<SheetNote["hand"]>) => {
     const there = new Set(answer.notes.map((note) => note.ref));
@@ -451,13 +453,20 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     }
     setPick({ uuid: audioUuid, refs: [] });
   };
-  const pressChordKey = (midi: number) => {
+  const pressChordKey = (midi: number, add: boolean) => {
     const pickedNotes = picked.map((ref) => notes.get(ref)).filter((note): note is SheetNote => note !== undefined);
     const column = oneColumn(pickedNotes);
     if (width === null || !sheet || column === null) return;
     const here = sheet.notes.filter((note) => frameOf(note.ref) === column);
     const hands = new Set(pickedNotes.map((note) => note.hand));
     const lit = here.find((note) => midiOf(note.ref) === midi);
+    if (lit && add) {
+      // ⌘ and a click picks that note or lets it go: the keyboard picks within its chord, as ⌘ on the sheet does.
+      // The last note picked stays (the toolbox would close).
+      const kept = picked.includes(lit.ref) ? picked.filter((ref) => ref !== lit.ref) : [...picked, lit.ref];
+      if (kept.length > 0) setPick({ uuid: audioUuid, refs: kept });
+      return;
+    }
     if (lit) {
       void edit(() => sheetApi.remove(audioUuid, [lit.ref], width)).then((answer) => {
         if (answer) repick(answer, column, picked.filter((ref) => ref !== lit.ref), hands);
@@ -470,7 +479,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     const lengthMs = ends.length > 0 ? (Math.max(...ends) - column) * 40 : undefined;
     void edit(() => sheetApi.addNote(audioUuid, { frame: column, midi, hand, ...(lengthMs ? { lengthMs } : {}) }, width)).then(
       (answer) => {
-        if (answer) repick(answer, column, [...picked, `${column}:${midi}`], hands);
+        if (answer) repick(answer, column, [`${column}:${midi}`], new Set([hand]));
       },
     );
   };

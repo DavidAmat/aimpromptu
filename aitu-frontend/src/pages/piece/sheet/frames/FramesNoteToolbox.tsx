@@ -17,7 +17,10 @@
  * - **The keyboard** (the user's request of 2026-10-26, Phase 8A), when the picked notes are in one column: the
  *   column's keys lit in their hand's colour, both hands. A dark key adds a note to the column, in the picked hand
  *   and as long as its chord; a lit key takes that note off. Each press is one step of undo. Notes picked in several
- *   columns show no keyboard: like the keyboard panel, it is the chord of one moment.
+ *   columns show no keyboard: like the keyboard panel, it is the chord of one moment. ⌘ (or Control, or Shift) and
+ *   a click on a lit key picks that note or lets it go (the user's request of 2026-10-26): the picked notes' keys
+ *   keep their full colour with a dot (the other lit keys turn pale), and **Hand** then moves only them. A note added
+ *   on the keyboard is the one picked after.
  *
  * The title bar hands the selection to the range toolbox (*Select the frames of these notes*) and asks the AI to write
  * the stretch of these notes again with the user's words. The panel is the old one's: titled with the note's printed
@@ -90,7 +93,10 @@ function printedName(pitch: string): string {
   return spanishNoteName({ letter, accidental: sign === "#" ? 1 : sign === "b" ? -1 : 0, octave: Number(octave) });
 }
 
-/** The picked column's chord on a small keyboard: a dark key adds a note there, a lit key takes it off. */
+/**
+ * The picked column's chord on a small keyboard: a dark key adds a note there, a lit key takes it off, and ⌘ and a
+ * click on a lit key picks that note or lets it go (the picked ones dotted).
+ */
 function ChordKeys({
   picked,
   column,
@@ -101,7 +107,7 @@ function ChordKeys({
   picked: readonly SheetNote[];
   /** Every note of the picked column, both hands. */
   column: readonly SheetNote[];
-  onKey: (midi: number) => void;
+  onKey: (midi: number, add: boolean) => void;
   disabled: boolean;
   why: string | undefined;
 }) {
@@ -116,7 +122,7 @@ function ChordKeys({
   const title = (midi: number) => {
     if (why) return `${spanishNoteShort(midi)}. ${why}`;
     const lit = column.find((note) => midiOf(note.ref) === midi);
-    if (lit) return `${spanishNoteShort(midi)}, ${lit.hand} hand: take it off`;
+    if (lit) return `${spanishNoteShort(midi)}, ${lit.hand} hand: take it off. ⌘-click: pick it or let it go`;
     return `${spanishNoteShort(midi)}: add it to the ${handForKey(midi, picked, column)} hand`;
   };
   return (
@@ -127,7 +133,14 @@ function ChordKeys({
       sx={{ overflowX: "auto", maxWidth: "100%", borderRadius: 1, opacity: disabled ? 0.5 : 1 }}
       data-chord-keys
     >
-      <MiniKeys colours={colours} onPress={onKey} title={title} disabled={disabled} octaves />
+      <MiniKeys
+        colours={colours}
+        picked={new Set(picked.map((note) => midiOf(note.ref)))}
+        onPress={onKey}
+        title={title}
+        disabled={disabled}
+        octaves
+      />
     </Box>
   );
 }
@@ -159,8 +172,8 @@ export function FramesNoteToolbox({
   /** One reading edit on the picked notes (the refs are added by the page). */
   onEdit: (edit: Omit<ReadingEdit, "notes">) => void;
   onRemove: () => void;
-  /** A key of the chord keyboard pressed: add that key to the picked column, or take it off. */
-  onChordKey: (midi: number) => void;
+  /** A key of the chord keyboard pressed: add that key to the picked column, or take it off; with `add`, pick it. */
+  onChordKey: (midi: number, add: boolean) => void;
   /** Hand the selection to the range toolbox: the frames these notes cover. */
   onSelectFrames: () => void;
   /** Ask the AI to write the stretch of these notes again (`null`: the AI cannot be asked here). */
@@ -419,7 +432,11 @@ export function FramesNoteToolbox({
           />
           {known.length > 1 ? (
             <Typography variant="body2" color="text.secondary">
-              {oneChord ? `One chord of ${oneChord.length}` : `${chords.length} chords`}
+              {oneChord
+                ? oneChord.length > known.length
+                  ? `${known.length} notes of a chord of ${oneChord.length}`
+                  : `One chord of ${oneChord.length}`
+                : `${chords.length} chords`}
             </Typography>
           ) : null}
         </Stack>
