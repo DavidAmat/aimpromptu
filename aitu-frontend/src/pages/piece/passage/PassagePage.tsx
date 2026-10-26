@@ -116,7 +116,6 @@ function marksWords(dropped: Record<string, number>): string | null {
   return parts.length === 1 ? parts[0]! : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
 }
 
-/** The browser lets a page use the microphone only on a secure address (HTTPS or localhost). */
 /** Where the chosen microphone is remembered, in this browser only. */
 const INPUT_KEY = "aitu.recorder.input";
 /** Where the source of a take's notes is remembered: the microphone or a MIDI piano. */
@@ -141,6 +140,7 @@ function remember(key: string, value: string): void {
     // A private window: the choice lasts this page.
   }
 }
+/** The browser lets a page use the microphone only on a secure address (HTTPS or localhost). */
 const MICROPHONE = typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
 
 export function PassagePage() {
@@ -913,6 +913,13 @@ export function PassagePage() {
                 </MenuItem>
               ))}
             </TextField>
+          ) : null}
+          {!MICROPHONE && !withMidi ? (
+            // A disabled button shows no tooltip: the reason is said here (the browser gives a page the microphone
+            // and a MIDI piano only on a secure address: HTTPS, or localhost).
+            <Typography variant="body2" color="text.secondary" data-testid="passage-no-microphone">
+              This address cannot use the microphone. Open the app at localhost, or add a take from a file.
+            </Typography>
           ) : null}
           {recorder.error ? <Alert severity="error">{recorder.error}</Alert> : null}
           {withSound ? (

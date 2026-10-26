@@ -561,3 +561,14 @@ bar), `check:flow` (nothing can be pasted while the AI writes). Removed with the
   `audioRevision`, length changes carry the new sheet).
 - `aitu-frontend/README.md`, `context/04-local-development.md` (the checks moved and removed, `--played`).
 - [`03-plan.md`](03-plan.md) Phase 8 and section 11; [`03-checklist.md`](03-checklist.md).
+
+## 10.9 The user's check of 8B (2026-10-26)
+
+**Record a take could not be pressed.** The user opened the app at `http://ubuntu:5173`. A browser gives a page the
+microphone (`navigator.mediaDevices`) and a MIDI piano (Web MIDI) only on a secure address (HTTPS or `localhost`), so
+the recorder disabled **Record** (and hid the Microphone / MIDI piano choice), as it has since implementation 02,
+Phase 9; the checks run at `localhost` and never met it. The reason was only the tooltip of the disabled button, which
+a disabled button does not show. The panel now says it in one line (`passage-no-microphone`: "This address cannot use
+the microphone. Open the app at localhost, or add a take from a file."), checked at the machine's LAN address
+(`isSecureContext` false). The ways to record from another computer: an SSH tunnel to `localhost:5173`, or the
+browser's setting that treats `http://ubuntu:5173` as secure.
