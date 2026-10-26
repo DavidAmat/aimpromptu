@@ -666,6 +666,10 @@ the keys of the picked column lit in their hand's colour. On it the user changes
 that column (`POST /sheet/{uuid}/add`, in the hand of the picked chord, as long as the chord), a lit key takes that
 note off (`POST /sheet/{uuid}/remove`); each press one step of undo. The study of the session decides what it shows
 when notes of several columns are picked, and asks the user only if no answer follows from the old keyboard panel.
+*Built 2026-10-26* (report section 8.1): notes of several columns show no keyboard (the keyboard panel is one moment
+too); both hands of the column are lit; a key added goes to the picked hand (both picked: the nearest note's), as long
+as that hand's chord, and needs no figure set by hand (the chord's figure and beam group hold, measured); the chord
+stays picked after each press.
 
 *The user's second request of 2026-10-26 (part of 8A, before 8B):* **lyrics as free blocks, with a lyrics toolbox.**
 Shaping a lyrics piece is cumbersome today: its width follows its frames, so the words cannot be wrapped onto two or

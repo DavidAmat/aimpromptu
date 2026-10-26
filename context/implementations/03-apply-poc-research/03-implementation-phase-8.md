@@ -2,8 +2,9 @@
 
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 8. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (level with `master` at the start: nothing to merge). Written 2026-10-26 on the Ubuntu
-machine. **In progress**: the study and 8A are built; the user asked for a keyboard in the note toolbox and for free lyrics blocks with a lyrics
-toolbox (section 8) before checking 8A in the browser; 8B is next.
+machine. **In progress**: the study and 8A are built; the user asked for a keyboard in the note toolbox (built
+2026-10-26, section 8.1) and for free lyrics blocks with a lyrics toolbox (section 8.2) before checking 8A in the
+browser; 8B is next.
 
 # 1. Summary
 
@@ -12,6 +13,8 @@ toolbox (section 8) before checking 8A in the browser; 8B is next.
 | 8.1 Study and inventory | Section 2: what the old sheet still does outside the two toolboxes, in two groups (the Sheet step's own tools; the screens built on a marked stretch), with its use in the database. Four questions (section 3), all answered. The phase is built in two halves, each checked in the browser |
 | 8.2 Lyrics in the format and in the engine | `lyric` lines in `sheet.f1`, a text primitive of the engine (`<text data-lyric>`), picked, dragged and lit on the page (section 4) |
 | 8.3, half 8A | The sheet toolbox (Title, Key, Transpose notes and figures with their preview, Lyrics, View), the keyboard panel, Print to PDF from the new engine, the lyrics in Play mode (sections 4 and 5). Built; the user's check is next |
+| 8.3, 8A+ | The user's request: a keyboard in the note toolbox for the picked column (section 8.1). Built, frontend only; `check:frames-toolbox` covers it |
+| 8.3, 8A++ | The user's second request: lyrics as free blocks, a lyrics toolbox (section 8.2). Not started |
 | 8.3, half 8B | Not started: `sheet.f1` through every change of a part's length, copy and paste, Start a new part, the read-only stretch actions, the requests review, Recording in Sheet, the blank sheet; then the switch removed (section 8) |
 
 # 2. The study (task 8.1)
@@ -160,8 +163,8 @@ The last line is a limit of D-18 on the new sheet: the spacing stays, but the ru
 | The sheet tests of Phases 1 to 7 and the golden files | pass unchanged |
 | Backend, full run on the CPU | 1,378 tests, the 3 known failures (section 7.1) |
 | `npx tsc -b`, `npx eslint` on the changed files | clean |
-| `npm run check:frames-toolbox` (new) | all 22 passed (section 6 for the figures) |
-| `npm run check:frames-sheet`, `check:frames-edit`, `check:frames-tools` | all passed |
+| `npm run check:frames-toolbox` (new) | all 22 passed (section 6 for the figures); with the chord keyboard (section 8.1), all 31 |
+| `npm run check:frames-sheet`, `check:frames-edit`, `check:frames-tools` | all passed (`check:frames-edit` and `check:frames-tools` again after the chord keyboard) |
 | `npm run check:play` | all passed; its lyrics step moved to the new sheet (lit and faint) |
 | The drawings | the lyric above the staff, Play mode's lit lyric, and the PDF's first page rendered by poppler, zoomed in: the first PDF had broken clefs (the `s` curve), fixed in `drawPage.ts` |
 
@@ -172,9 +175,11 @@ In the image, on the CPU (another project holds the GPU): 1,378 tests; 3 failed,
 `test_transcription_transkun.py` tests, which load a checkpoint saved on CUDA. Every other test passed (one skips
 itself without a GPU).
 
-# 8. Next: the user's request, then 8B
+# 8. The user's two requests, then 8B
 
-**The user's request (2026-10-26), before the check of 8A:** a small piano in the note toolbox. When notes are
+## 8.1 The keyboard of the note toolbox (8A+, built 2026-10-26)
+
+**The request (2026-10-26), before the check of 8A:** a small piano in the note toolbox. When notes are
 picked (a single note or a chord), the toolbox shows a keyboard with the keys of the picked column lit in their
 hand's colour; a dark key adds a note to that column (in the chord's hand, as long as the chord), a lit key takes
 that note off; each press is one step of undo. The backend routes exist (`POST /sheet/{uuid}/add`, which today puts
@@ -184,6 +189,45 @@ a note at the onset of a drawn column, and `/remove`); each drawn note carries i
 `HELD_COLOUR`), and the keyboard panel's `pressKey` in `FramesSheetPage.tsx`. Open points for the session's study:
 what the keyboard shows when notes of several columns are picked, and whether a note added there should get the
 chord's figure set by hand (`fix`).
+
+**The answers, from the code and the old keyboard panel (no question to the user):**
+
+- **Several columns picked: no keyboard.** The keyboard panel shows one moment (the cursor's column); a keyboard of
+  two columns would light keys that do not sound together, and a press would not say which column it adds to.
+- **Both hands of the column lit**, each in its colour (`HAND_COLOUR`, as the keyboard panel): the user sees the whole
+  chord of that moment, and a key the other hand already plays is not added twice (the backend refuses it anyway).
+  Notes still held from earlier columns are not lit: the keyboard is about the notes struck in this column.
+- **The hand of a key added**: the hand of the notes picked; with both hands picked, the hand of the column's note
+  nearest to the key (the right hand on a tie) (`readingTools.handForKey`).
+- **No `fix` for the note added.** Measured with a scratch test on the stand-in part (the algorithm's sheet and the
+  AI's): a note added to a beamed right-hand chord of corcheas came back with the chord's figure and beam group,
+  because `assign_figures` gives one figure per chord and `assemble` keeps the chord in its group (the new note has
+  no beam of its own in `build.reapply`, but its chord does). A chord with a figure set by hand keeps it for every
+  note of the chord. The length sent is the longest note of that hand in the column (`end` minus the column, in 40 ms
+  frames), so the note sounds as long as its chord.
+- **The chord stays picked after each press** (`FramesSheetPage.repick`): the notes picked, plus the one added, minus
+  the one taken off, found again in the answer; when the column moved by a frame or two (its first note was taken
+  off: Phase 7's `reapply` case), the same keys there; when none of the picked notes is left, the notes of the same
+  hands still in the column. The toolbox closes only when the column is empty.
+
+**What was built (frontend only; the routes of 8A did not change):**
+
+- `ui/MiniPiano.tsx`: the drawing is now `MiniKeys` (any keys lit in their own colours, `data-midi` and `data-lit` on
+  each key, the octave number on each Do when asked); `MiniPiano` (the Transpose tab) draws with it and looks as
+  before. `piano/keyPositions.keepKeyInView` scrolls a key into view (shared by both).
+- `FramesNoteToolbox.tsx`: `ChordKeys` at the top of the toolbox (`data-chord-keys`, role `group`), scrolled to the
+  chord when another column is picked; each key's tooltip says what a press does ("Sol 5: add it to the right hand",
+  "Re 5, right hand: take it off"), or why it is locked.
+- `FramesSheetPage.tsx`: `pressChordKey` (a lit key: `POST /sheet/{uuid}/remove`; a dark key: `POST
+  /sheet/{uuid}/add` with the hand and the length), then `repick`.
+- `readingTools.ts`: `midiOf`, `oneColumn`, `handForKey`.
+- `check:frames-toolbox`: a right-hand beamed chord of two notes on the copy of 7 Years: both keys lit; a dark key
+  adds Si 5 with the chord's figure (corchea) and beam group, one step "Add a note", the chord still picked with the
+  new key lit; the lit key takes it off ("Take a note off the page"), the chord still picked; Undo twice; Shift-click
+  on a note of another column hides the keyboard. The toolbox pictures were looked at zoomed: Re 5 and La# 5 lit,
+  then Si 5 too, "One chord of 3".
+
+## 8.2 Lyrics as free blocks and a lyrics toolbox (8A++)
 
 **The user's second request (2026-10-26):** lyrics pieces as free blocks, and a lyrics toolbox. Today a piece's width
 follows its frames, so narrowing it to wrap the words onto two or three lines is not possible, and the strip above
@@ -201,7 +245,7 @@ study: how a block stays with its music when the lines re-wrap (anchored to its 
 with a table of character widths), which font families, and how Play mode lights a block that no longer spans its
 frames.
 
-**Then 8B:**
+## 8.3 Then 8B
 
 1. `sheet.f1` through every change of a part's length: an F1 version of `editing/marks.py` (`shift`, `cut_out`,
    `extract`, `put_in`, the key and clef in force at the edges), used by paste, promotion, split, join, From other

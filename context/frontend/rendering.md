@@ -14,7 +14,8 @@ line. The code is `pages/piece/sheet/frames/`:
 - `FramesSheetPage.tsx`: the page (title lines, the player, the floating bar with Undo, Redo, **Enhance with AI**
   and **Edit in the old sheet**), and since Phase 6 the notes picked and the keys (⌘Z, ⇧⌘Z, Escape);
 - `FramesNoteToolbox.tsx` (Phase 6): the note toolbox of the new sheet, beside the notes picked: **Hand** since
-  Phase 6, every other note tool since Phase 7 (see [annotations.md](annotations.md), "The new sheet");
+  Phase 6, every other note tool since Phase 7, and since Phase 8A the keyboard of the picked column (drawn by
+  `ui/MiniPiano.tsx`'s `MiniKeys`; see [annotations.md](annotations.md), "The new sheet");
 - `FramesRangeToolbox.tsx` (Phase 7): the range toolbox (*Frames*: Both / Right / Left, Key, Clef, Octave);
   `EnhanceStretchDialog.tsx`: **Enhance with AI** of a stretch with the user's words; `readingTools.ts`: what the
   two toolboxes share;

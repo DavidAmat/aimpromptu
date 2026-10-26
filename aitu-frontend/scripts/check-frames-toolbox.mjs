@@ -9,6 +9,9 @@
  * - **Transpose notes** with its preview (two semitones up), then undone;
  * - **Lyrics**: words pasted, added to the pool, a piece dragged from the pool onto the sheet (drawn above the
  *   staff), moved by dragging it on the sheet, picked and taken off with Delete;
+ * - **the chord keyboard** of the note toolbox: the picked column's keys lit, a dark key adds a note to the chord (its
+ *   figure and beam group), the chord stays picked, the lit key takes it off, Undo walks both; notes of two columns
+ *   show no keyboard;
  * - **the keyboard panel**: a dark key adds a note under the cursor, the lit key takes it off again;
  * - **Print to PDF**: the pages of the paper, and the file (vector, no notation font needed);
  * - **Play mode**: the lyrics piece that sounds is lit.
@@ -82,6 +85,18 @@ async function edited(page, action, pattern = /\/sheet\/[^/]+\/(reading|transpos
   ]);
   await page.waitForTimeout(300);
   return response;
+}
+/** Pick the note `ref` with a click on its head (Shift adds it to the notes picked). */
+async function clickHead(page, ref, modifiers = []) {
+  const head = page.locator(`[data-frames-sheet] [data-note~="${ref}"]`).first();
+  await head.scrollIntoViewIfNeeded();
+  const box = await head.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  for (const key of modifiers) await page.keyboard.down(key);
+  await page.mouse.down();
+  await page.mouse.up();
+  for (const key of modifiers) await page.keyboard.up(key);
+  await page.waitForTimeout(200);
 }
 /** The point of the screen where a frame is drawn on the sheet, on the upper staff's strip of its line. */
 async function pointOf(page, sheet, frame, above = 2) {
@@ -220,6 +235,57 @@ try {
   check('Delete takes it off the sheet', (await now(part)).lyrics.length === 0);
   await edited(page, () => page.getByTestId('sheet-undo').click());
   check('and Undo brings it back', (await now(part)).lyrics.length === 1);
+
+  // ------------------------------------------------------------------ the chord keyboard of the note toolbox
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  sheet = await now(part);
+  const frameOfRef = (ref) => Number(ref.split(':')[0]);
+  const midiOfRef = (ref) => Number(ref.split(':')[1]);
+  // A right-hand chord of two or more notes, not a grace note, in a column whose keys are all different.
+  const byColumn = new Map();
+  for (const n of sheet.notes) byColumn.set(frameOfRef(n.ref), [...(byColumn.get(frameOfRef(n.ref)) ?? []), n]);
+  const [chordFrame, columnNotes] = [...byColumn.entries()].find(
+    ([, ns]) =>
+      ns.filter((n) => n.hand === 'right' && !n.grace && n.figure >= 8 && n.beam !== null).length >= 2 &&
+      new Set(ns.map((n) => midiOfRef(n.ref))).size === ns.length,
+  );
+  const rightChord = columnNotes.filter((n) => n.hand === 'right');
+  const countBefore = sheet.notes.length;
+  const pickedRef = rightChord[0].ref;
+  await clickHead(page, pickedRef);
+  const keys = page.locator('[data-frames-note-toolbox] [data-chord-keys]');
+  await keys.waitFor({ timeout: 5000 });
+  const litKeys = async () => (await keys.locator('[data-lit]').evaluateAll((els) => els.map((e) => Number(e.getAttribute('data-midi'))))).sort((a, b) => a - b);
+  const columnKeys = columnNotes.map((n) => midiOfRef(n.ref)).sort((a, b) => a - b);
+  check('picking a note shows its column on the keyboard, both hands lit', JSON.stringify(await litKeys()) === JSON.stringify(columnKeys), `${columnKeys}`);
+  await page.locator('[data-frames-note-toolbox]').screenshot({ path: path.join(values.out, '03b-chord-keys.png') });
+  const top = Math.max(...rightChord.map((n) => midiOfRef(n.ref)));
+  const extra = [top + 1, top + 2, top + 3, top + 4].find((midi) => !columnKeys.includes(midi) && midi <= 108);
+  await edited(page, () => keys.locator(`[data-midi="${extra}"]`).click());
+  sheet = await now(part);
+  const addedNote = sheet.notes.find((n) => n.ref === `${chordFrame}:${extra}`);
+  check(
+    'a dark key adds a note to the chord, in its hand, with its figure and beam group',
+    addedNote?.hand === 'right' && addedNote.figure === rightChord[0].figure && addedNote.beam === rightChord[0].beam,
+    `${addedNote?.hand} ${addedNote?.figure} ${addedNote?.beam}; the chord ${rightChord[0].figure} ${rightChord[0].beam}`,
+  );
+  check('it is one step of undo', sheet.history.undo === 'Add a note');
+  check('the chord stays picked, with the new key lit', (await keys.count()) === 1 && (await litKeys()).includes(extra));
+  await page.locator('[data-frames-note-toolbox]').screenshot({ path: path.join(values.out, '03c-chord-key-added.png') });
+  await edited(page, () => keys.locator(`[data-midi="${extra}"]`).click());
+  sheet = await now(part);
+  check('the lit key takes it off again', !sheet.notes.some((n) => n.ref === `${chordFrame}:${extra}`) && sheet.history.undo === 'Take a note off the page');
+  check('and the chord is still picked', JSON.stringify(await litKeys()) === JSON.stringify(columnKeys));
+  await edited(page, () => page.getByTestId('sheet-undo').click());
+  check('Undo brings the note back', (await now(part)).notes.some((n) => n.ref === `${chordFrame}:${extra}`));
+  await edited(page, () => page.getByTestId('sheet-undo').click());
+  sheet = await now(part);
+  check('a second Undo takes it away', !sheet.notes.some((n) => n.ref === `${chordFrame}:${extra}`) && sheet.notes.length === countBefore);
+  const otherRef = sheet.notes.find((n) => frameOfRef(n.ref) > chordFrame && n.hand === 'right').ref;
+  await clickHead(page, otherRef, ['Shift']);
+  check('notes of two columns show no keyboard', (await keys.count()) === 0);
+  await page.keyboard.press('Escape');
 
   // ------------------------------------------------------------------ the keyboard panel
   await page.keyboard.press('Escape');

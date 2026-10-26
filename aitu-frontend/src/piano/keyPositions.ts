@@ -91,3 +91,11 @@ export function nearestPianoKey(x: number): PianoKeyPosition {
       : nearest,
   );
 }
+
+/** Scroll `box` so the key `midi` of a keyboard drawn at `scale` is in view, when it is not already. */
+export function keepKeyInView(box: HTMLElement | null, midi: number | null, scale = 1) {
+  const key = pianoKeyPositions.find((one) => one.midi === midi);
+  if (!box || !key) return;
+  const x = key.x * scale;
+  if (x < box.scrollLeft || x > box.scrollLeft + box.clientWidth - 20) box.scrollLeft = x - box.clientWidth / 2;
+}

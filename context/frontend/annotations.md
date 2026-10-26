@@ -40,6 +40,12 @@ part: implementation 03, Phase 8B). On the new sheet:
   follow one another: the first is written with the ornament, the others are played inside it and not drawn;
   *arp* rolls a chord; *ferm* a fermata; pressed again, each goes away); 🗑 or **Delete** takes the notes off the
   page (they leave the notes; Undo brings them back).
+- **The keyboard of the note toolbox** (the user's request of Phase 8A): when the notes picked are in one column, the
+  toolbox opens with a small keyboard (scrolled to the chord; the octave number on each Do) where that column's keys
+  are lit in their hand's colour, both hands. A dark key adds a note to the column, in the hand of the notes picked
+  (both hands picked: the hand of the nearest lit key) and as long as that hand's chord, so it prints the chord's
+  figure and stays in its beam group; a lit key takes that note off. Each press is one step of Undo, and the chord
+  stays picked. Notes of several columns show no keyboard.
 - **The range toolbox**: **Key** (the armadura of the stretch on both clefs, ✓; 🗑 back to the armadura of the
   piece; *Use D major here* when another armadura prints fewer signs over the stretch), **Clef** (treble or bass for
   each hand in scope, the hand's own clef again after the stretch; **Clefs by the rule** writes the clefs and 8va of

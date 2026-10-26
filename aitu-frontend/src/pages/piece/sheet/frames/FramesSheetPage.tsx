@@ -25,7 +25,9 @@
  *   (**Enhance with AI**: the stretch gets the pale veil while the AI writes it, then appears column by column).
  * - **The sheet toolbox** (Phase 8): Title, Key, Transpose (notes and figures, with their preview), Lyrics (the
  *   pieces placed on the sheet are dragged there) and View (zoom, space between lines); **Print to PDF**; and in
- *   the `⋯` the keyboard panel (the keys sounding under the cursor; a click takes a note off or adds one).
+ *   the `⋯` the keyboard panel (the keys sounding under the cursor; a click takes a note off or adds one). The note
+ *   toolbox has a keyboard of its own for the picked column (the user's request): a key adds a note to the chord or
+ *   takes one off, and the chord stays picked.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -48,6 +50,7 @@ import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import {
   sheetApi,
+  type FramesSheet,
   type LyricLine,
   type ReadingEdit,
   type SheetNote,
@@ -72,7 +75,7 @@ import { FramesPdfDialog } from "./FramesPdfDialog";
 import { FramesPreviewDialog } from "./FramesPreviewDialog";
 import { FramesSheetToolbox, MAX_ZOOM, MIN_ZOOM, type FramesSheetTab } from "./FramesSheetToolbox";
 import { placeAt, steadyColumns } from "./geometry";
-import { frameOf } from "./readingTools";
+import { frameOf, handForKey, midiOf, oneColumn } from "./readingTools";
 import { ENHANCE_WITH_AI } from "./navigation";
 import { useFramesLyrics } from "./useFramesLyrics";
 import { useFramesSheet } from "./useFramesSheet";
@@ -407,6 +410,47 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     );
   };
 
+  // The keyboard of the note toolbox (the user's request of 2026-10-26): the picked column's chord, key by key.
+  /**
+   * After a key: the same notes picked, plus the one added, found again a frame or two away when the column moved
+   * (its first note was taken off); when none of them is left, the notes of those hands still in the column.
+   */
+  const repick = (answer: FramesSheet, column: number, refs: readonly string[], hands: ReadonlySet<SheetNote["hand"]>) => {
+    const there = new Set(answer.notes.map((note) => note.ref));
+    for (const near of [0, -1, 1, -2, 2]) {
+      const found = refs.map((ref) => `${column + near}:${midiOf(ref)}`).filter((ref) => there.has(ref));
+      if (found.length > 0) return setPick({ uuid: audioUuid, refs: found });
+    }
+    for (const near of [0, -1, 1, -2, 2]) {
+      const found = answer.notes.filter((note) => frameOf(note.ref) === column + near && hands.has(note.hand));
+      if (found.length > 0) return setPick({ uuid: audioUuid, refs: found.map((note) => note.ref) });
+    }
+    setPick({ uuid: audioUuid, refs: [] });
+  };
+  const pressChordKey = (midi: number) => {
+    const pickedNotes = picked.map((ref) => notes.get(ref)).filter((note): note is SheetNote => note !== undefined);
+    const column = oneColumn(pickedNotes);
+    if (width === null || !sheet || column === null) return;
+    const here = sheet.notes.filter((note) => frameOf(note.ref) === column);
+    const hands = new Set(pickedNotes.map((note) => note.hand));
+    const lit = here.find((note) => midiOf(note.ref) === midi);
+    if (lit) {
+      void edit(() => sheetApi.remove(audioUuid, [lit.ref], width)).then((answer) => {
+        if (answer) repick(answer, column, picked.filter((ref) => ref !== lit.ref), hands);
+      });
+      return;
+    }
+    // In the picked hand, as long as that hand's chord here.
+    const hand = handForKey(midi, pickedNotes, here);
+    const ends = here.filter((note) => note.hand === hand && note.end != null).map((note) => note.end!);
+    const lengthMs = ends.length > 0 ? (Math.max(...ends) - column) * 40 : undefined;
+    void edit(() => sheetApi.addNote(audioUuid, { frame: column, midi, hand, ...(lengthMs ? { lengthMs } : {}) }, width)).then(
+      (answer) => {
+        if (answer) repick(answer, column, [...picked, `${column}:${midi}`], hands);
+      },
+    );
+  };
+
   const [pdfOpen, setPdfOpen] = useState(false);
   const removePicked = useCallback(() => {
     if (width === null || picked.length === 0) return;
@@ -697,6 +741,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
           onMoveHand={moveHand}
           onEdit={editNotes}
           onRemove={removePicked}
+          onChordKey={pressChordKey}
           onSelectFrames={selectFrames}
           onEnhance={aiHere ? askNotes : null}
           busy={editing}
