@@ -720,8 +720,8 @@ browser.
 
 ## Phase 9: The saved data
 
-**Built and migrated 2026-10-26** ([`03-implementation-phase-9.md`](03-implementation-phase-9.md)); the user's check in
-the browser is next.
+**Done 2026-10-27** ([`03-implementation-phase-9.md`](03-implementation-phase-9.md)): built and migrated 2026-10-26,
+checked by the user in the browser ("all good"), merged into `master`.
 
 *Why:* existing projects and library versions hold `sheet.json` corrections made for vexflow-v2 (hands, overrides,
 beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new sheet.
