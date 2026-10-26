@@ -684,6 +684,15 @@ which can measure text, or in the engine), and which fonts (the PDF writes the b
 with their bold and italic, so families that map onto them print the same). It asks the user only what the study
 cannot settle.
 
+*The user's third request of 2026-10-26 (part of 8A, before 8B):* **a denser PDF.** The printed music is too large
+and the lines too far apart: much white space, few lines a page. A printed piano score carries about **five lines a
+page** (a line is the two staves, right and left hand), and that is the default to reach. The print dialog needs a
+control of the size of the music (today the printed staff space is fixed at 1.75 mm, and the page's Zoom does not
+reach the PDF), and the space between lines must go below what it is now (today the dialog only adds space on top of
+the sheet's own 5 staff spaces, and each line also keeps the room of its own ink). The study measures where the room
+goes on real songs (the staff size, the gap between the two staves, the ink above and below each line, the space
+between lines) and chooses defaults that give about five lines on an A4 page, then shows them to the user.
+
 *Done when:* every screen of the inventory uses the new engine, checked in the browser by the user.
 
 ## Phase 9: The saved data
@@ -812,4 +821,5 @@ repository."
 | 8 | Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's; Find trills, Remove all and Bring back are dropped | The user's answers of 2026-10-26 |
 | 8 | Phase 8A gains a keyboard in the note toolbox: the picked chord's keys lit; a key adds or takes off a note of that column | The user's request of 2026-10-26, after seeing 8A |
 | 8 | Phase 8A gains free lyrics blocks (moved and resized, the words wrapped inside) and a lyrics toolbox (size, font, bold, italic); the stretch strip is off while a piece is picked | The user's second request of 2026-10-26: narrowing a piece to wrap its words was not possible |
+| 8 | Phase 8A gains a denser PDF: a size of the music in the print dialog, less space between lines than today, about five lines a page by default | The user's third request of 2026-10-26: the PDF was too large and too spread out |
 | 8 | Transpose figures renames the figures and keeps the page's widths | D-18 ("nothing moves"); the spacing model reads the reference figure, so a rename alone would widen or narrow the page |
