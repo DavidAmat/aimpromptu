@@ -2,10 +2,15 @@
  * Print to PDF of the new sheet (implementation 03, Phase 8): choose the paper, look at the pages, take the PDF.
  *
  * The rule of the old sheet's panel stays (`context/frontend/printing.md`): the music is laid out again for the
- * paper, never shrunk. The backend draws the sheet for the paper's width at a printed staff space of 1.75 mm (a staff
- * of 7 mm, the size of printed piano music) and deals whole lines onto the pages (`GET /sheet/{uuid}/pages`): a line
- * is never split across a page turn. The pages shown here are the pages the PDF is written from
- * (`print/scorePdf.ts`), with the title on page one and the page numbers.
+ * paper, never shrunk. The backend draws the sheet for the paper's width at the printed size chosen here and deals
+ * whole lines onto the pages (`GET /sheet/{uuid}/pages`): a line is never split across a page turn. The pages shown
+ * here are the pages the PDF is written from (`print/scorePdf.ts`), with the title on page one and the page numbers.
+ *
+ * **A denser PDF** (Phase 8A+++, the user's request): **Size of the music** is the height of a printed staff (5 to
+ * 8 mm; 6.5 mm by default, the size of many printed piano editions), and **Space between lines** is the white
+ * between one line's ink and the next, in millimetres on paper (6 mm by default), whatever the space between lines on
+ * the screen. Measured on the 10 viewer songs on A4: 5 to 7 lines a page (median 6), 44 pages instead of 51 with a
+ * 7 mm staff and the screen's space. Both are kept in this browser.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -28,8 +33,30 @@ import { sheetApi, type SheetPage } from "../../../../api";
 import { pdfFilenameFor, saveBlob, scoreToPdf } from "../../../../print/scorePdf";
 import { said } from "../../../library/shared";
 
-/** A printed staff space, in millimetres: a staff of 7 mm. */
-const SPACE_MM = 1.75;
+/** The printed staff, in millimetres: the default and the limits (a staff space is a quarter of it). */
+const STAFF_MM = 6.5;
+const STAFF_MIN = 5;
+const STAFF_MAX = 8;
+/** The white between two lines on paper, in millimetres: the default and the limits. */
+const BETWEEN_MM = 6;
+const BETWEEN_MIN = 1;
+const BETWEEN_MAX = 20;
+/** The size and the space are kept in this browser (how this reader prints, not part of the sheet). */
+const PRINT_KEY = "aitu.framesPdf.print";
+
+function rememberedPrint(): { staff: number; between: number } {
+  try {
+    const kept = JSON.parse(window.localStorage.getItem(PRINT_KEY) ?? "null") as { staff?: unknown; between?: unknown } | null;
+    const staff = Number(kept?.staff);
+    const between = Number(kept?.between);
+    return {
+      staff: staff >= STAFF_MIN && staff <= STAFF_MAX ? staff : STAFF_MM,
+      between: between >= BETWEEN_MIN && between <= BETWEEN_MAX ? between : BETWEEN_MM,
+    };
+  } catch {
+    return { staff: STAFF_MM, between: BETWEEN_MM };
+  }
+}
 /** CSS pixels per millimetre. */
 const PX_PER_MM = 96 / 25.4;
 /** The SVG adds this many staff spaces to the staff width (its margins). */
@@ -46,7 +73,6 @@ export function FramesPdfDialog({
   audioUuid,
   pieceName,
   subtitle: firstSubtitle,
-  lineSpace,
 }: {
   open: boolean;
   onClose: () => void;
@@ -54,14 +80,21 @@ export function FramesPdfDialog({
   /** The title on page one and the file's name, until the reader types another. */
   pieceName: string;
   subtitle: string;
-  /** The sheet's own space between lines, in staff spaces. */
-  lineSpace: number;
 }) {
   const [paper, setPaper] = useState<"a4" | "letter">("a4");
   const [landscape, setLandscape] = useState(false);
   const [sideMargin, setSideMargin] = useState(14);
   const [endMargin, setEndMargin] = useState(16);
-  const [extra, setExtra] = useState(0);
+  const [printing, setPrinting] = useState(rememberedPrint);
+  const keep = (next: { staff: number; between: number }) => {
+    setPrinting(next);
+    try {
+      window.localStorage.setItem(PRINT_KEY, JSON.stringify(next));
+    } catch {
+      // A browser that keeps nothing: the choice lasts while the page is open.
+    }
+  };
+  const spaceMm = printing.staff / 4;
   const [title, setTitle] = useState(pieceName);
   const [subtitle, setSubtitle] = useState(firstSubtitle);
   const [pageNumbers, setPageNumbers] = useState(true);
@@ -76,12 +109,12 @@ export function FramesPdfDialog({
   const head = (title.trim() ? TITLE_MM : 0) + (subtitle.trim() ? SUBTITLE_MM : 0);
   const asked = useMemo(
     () => ({
-      width: (width - 2 * sideMargin) / SPACE_MM - SVG_MARGINS,
-      height: (height - 2 * endMargin) / SPACE_MM,
-      first: (height - 2 * endMargin - head) / SPACE_MM,
-      gap: lineSpace + extra,
+      width: (width - 2 * sideMargin) / spaceMm - SVG_MARGINS,
+      height: (height - 2 * endMargin) / spaceMm,
+      first: (height - 2 * endMargin - head) / spaceMm,
+      gap: printing.between / spaceMm,
     }),
-    [width, height, sideMargin, endMargin, head, lineSpace, extra],
+    [width, height, sideMargin, endMargin, head, spaceMm, printing.between],
   );
   const key = JSON.stringify(asked);
   const [drawn, setDrawn] = useState<{ key: string; pages: SheetPage[] } | null>(null);
@@ -189,9 +222,31 @@ export function FramesPdfDialog({
             </Box>
             <Box>
               <Typography variant="body2" gutterBottom>
-                Extra space between lines: {extra} staff spaces
+                Size of the music: {printing.staff} mm staff
               </Typography>
-              <Slider size="small" min={0} max={8} step={0.5} value={extra} onChange={(_, value) => setExtra(value as number)} />
+              <Slider
+                size="small"
+                min={STAFF_MIN}
+                max={STAFF_MAX}
+                step={0.25}
+                value={printing.staff}
+                onChange={(_, value) => keep({ ...printing, staff: value as number })}
+                slotProps={{ input: { "data-pdf-staff": true } as object }}
+              />
+            </Box>
+            <Box>
+              <Typography variant="body2" gutterBottom>
+                Space between lines: {printing.between} mm
+              </Typography>
+              <Slider
+                size="small"
+                min={BETWEEN_MIN}
+                max={BETWEEN_MAX}
+                step={0.5}
+                value={printing.between}
+                onChange={(_, value) => keep({ ...printing, between: value as number })}
+                slotProps={{ input: { "data-pdf-between": true } as object }}
+              />
             </Box>
             <TextField
               size="small"
@@ -264,7 +319,7 @@ export function FramesPdfDialog({
                     ) : null}
                     {index === 0 && head > 0 ? <Box sx={{ height: `${head * 0.25}mm` }} /> : null}
                     <Box
-                      sx={{ "& svg": { display: "block", width: `${page.width * SPACE_MM}mm`, height: `${page.height * SPACE_MM}mm` } }}
+                      sx={{ "& svg": { display: "block", width: `${page.width * spaceMm}mm`, height: `${page.height * spaceMm}mm` } }}
                       dangerouslySetInnerHTML={{ __html: page.svg }}
                     />
                     {pageNumbers && pages && pages.length > 1 ? (

@@ -15,7 +15,8 @@
  *   figure and beam group), the chord stays picked, the lit key takes it off, Undo walks both; notes of two columns
  *   show no keyboard;
  * - **the keyboard panel**: a dark key adds a note under the cursor, the lit key takes it off again;
- * - **Print to PDF**: the pages of the paper, and the file (vector, no notation font needed);
+ * - **Print to PDF**: the pages of the paper (a 6.5 mm staff and 6 mm between lines by default; the size of the music
+ *   and the space between lines change the pages, 8A+++), and the file (vector, no notation font needed);
  * - **Play mode**: the lyrics piece that sounds is lit.
  *
  * Zoomed pictures go to `--out`.
@@ -377,8 +378,33 @@ try {
   // ------------------------------------------------------------------ Print to PDF
   await page.getByTestId('sheet-print').click();
   await page.locator('[data-pdf-page]').first().waitFor({ timeout: 30000 });
-  const pages = await page.locator('[data-pdf-page]').count();
+  /** The pages after a change of the dialog: laid out again (a short wait, then the summary says how many). */
+  const laidOut = async () => {
+    await page.waitForTimeout(450);
+    await page.waitForFunction(() => !/Laying/.test(document.querySelector('[data-pdf-summary]')?.textContent ?? 'Laying'), null, { timeout: 30000 });
+    return page.locator('[data-pdf-page]').count();
+  };
+  const slide = async (name, keys) => {
+    const input = page.locator(`[data-${name}]`);
+    await input.focus();
+    for (const key of keys) await page.keyboard.press(key);
+    return laidOut();
+  };
+  const pages = await laidOut();
+  const labels = await page.locator('[data-frames-pdf]').innerText();
   check('Print to PDF lays the sheet out on pages', pages >= 2, `${pages} pages`);
+  check('a 6.5 mm staff and 6 mm between lines by default', labels.includes('6.5 mm staff') && labels.includes('Space between lines: 6 mm'));
+  // A denser PDF (8A+++): larger music takes more pages, smaller music and less space fewer.
+  const larger = await slide('pdf-staff', ['End']);
+  const smaller = await slide('pdf-staff', ['Home']);
+  const tight = await slide('pdf-between', ['Home']);
+  check('the size of the music changes the pages', larger > pages && smaller < pages, `8 mm ${larger}, 6.5 mm ${pages}, 5 mm ${smaller}`);
+  check('less space between lines never takes more pages', tight <= smaller, `5 mm staff, 1 mm between: ${tight}`);
+  await page.screenshot({ path: path.join(values.out, '05b-pdf-dense.png') });
+  // Back to the defaults for the file.
+  await slide('pdf-staff', ['ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight']);
+  const back = await slide('pdf-between', Array(10).fill('ArrowRight'));
+  check('and back to the defaults, the same pages', back === pages, `${back} pages`);
   await page.screenshot({ path: path.join(values.out, '05-pdf-dialog.png') });
   const [download] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.getByTestId('pdf-download').click()]);
   const file = path.join(values.out, 'sheet.pdf');

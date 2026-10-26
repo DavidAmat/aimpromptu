@@ -89,7 +89,8 @@ part: implementation 03, Phase 8B). On the new sheet:
   is picked the strip marks no stretch; a click off the pieces lets them go. A piece whose frames cross a line break
   shares its words between the lines by the width its frames take on each (60 % of the width, about 60 % of the
   words), so a narrower window splits it again. Every change is one step of Undo.
-- **Print to PDF** (the printer icon): the paper, the margins, extra space between lines, the title and page numbers;
+- **Print to PDF** (the printer icon): the paper, the margins, the size of the music (a 6.5 mm staff by default) and
+  the space between lines on paper (6 mm by default), both kept in this browser, the title and page numbers;
   the lines are laid out again for the paper (never shrunk) and never split across a page turn
   ([printing.md](printing.md)).
 - **The keyboard panel** (`⋯` → *Show the keyboard*): the keys sounding under the cursor, as on the old sheet; a lit

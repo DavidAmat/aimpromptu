@@ -696,7 +696,12 @@ control of the size of the music (today the printed staff space is fixed at 1.75
 reach the PDF), and the space between lines must go below what it is now (today the dialog only adds space on top of
 the sheet's own 5 staff spaces, and each line also keeps the room of its own ink). The study measures where the room
 goes on real songs (the staff size, the gap between the two staves, the ink above and below each line, the space
-between lines) and chooses defaults that give about five lines on an A4 page, then shows them to the user.
+between lines) and chooses defaults that give about five lines on an A4 page, then shows them to the user. *Built
+2026-10-26* (report section 8.3): the library songs already printed 5 to 6 lines a page; the white space came from the
+screen's space between lines, which the PDF used as its least (10.5 staff spaces on the user's copy of 7 Years). The
+dialog now has **Size of the music** (a 5 to 8 mm staff, 6.5 mm by default) and **Space between lines** on paper (1
+to 20 mm, 6 mm by default), kept in the browser: 5 to 7 lines on a full A4 page (median 6), 44 pages for the 10 songs
+instead of 51.
 
 *Done when:* every screen of the inventory uses the new engine, checked in the browser by the user.
 
@@ -828,4 +833,5 @@ repository."
 | 8 | Phase 8A gains free lyrics blocks (moved and resized, the words wrapped inside) and a lyrics toolbox (size, font, bold, italic); the stretch strip is off while a piece is picked | The user's second request of 2026-10-26: narrowing a piece to wrap its words was not possible |
 | 8 | Phase 8A++: the engine wraps the words of a lyrics block (a table of the fonts' widths measured in the browser), not the page; a block is anchored to the column under its left edge | One wrap for the page, the line heights and the PDF; the music it belongs to moves with the line breaks |
 | 8 | Phase 8A gains a denser PDF: a size of the music in the print dialog, less space between lines than today, about five lines a page by default | The user's third request of 2026-10-26: the PDF was too large and too spread out |
+| 8 | Phase 8A+++: the PDF's space between lines is its own (in millimetres, 6 by default), not the screen's; the music has a size (a 6.5 mm staff by default) | The screen's space was the PDF's least, so a wider space on screen spread the pages; measured: about 6 lines on a full A4 page with the new defaults |
 | 8 | Transpose figures renames the figures and keeps the page's widths | D-18 ("nothing moves"); the spacing model reads the reference figure, so a rename alone would widen or narrow the page |

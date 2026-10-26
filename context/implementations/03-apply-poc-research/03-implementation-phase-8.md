@@ -4,7 +4,8 @@ Plan: [`03-plan.md`](03-plan.md) section 7, Phase 8. Checklist: [`03-checklist.m
 `feat/migrate-new-logic` (level with `master` at the start: nothing to merge). Written 2026-10-26 on the Ubuntu
 machine. **In progress**: the study and 8A are built; the user asked for a keyboard in the note toolbox (built
 2026-10-26, section 8.1), for free lyrics blocks with a lyrics toolbox (built 2026-10-26, section 8.2) and for a
-denser PDF (section 8.3) before checking 8A in the browser; 8B is next.
+denser PDF (built 2026-10-26, section 8.3) before checking 8A in the browser; the user's check of 8A is next, then
+8B.
 
 # 1. Summary
 
@@ -15,6 +16,7 @@ denser PDF (section 8.3) before checking 8A in the browser; 8B is next.
 | 8.3, half 8A | The sheet toolbox (Title, Key, Transpose notes and figures with their preview, Lyrics, View), the keyboard panel, Print to PDF from the new engine, the lyrics in Play mode (sections 4 and 5). Built; the user's check is next |
 | 8.3, 8A+ | The user's request: a keyboard in the note toolbox for the picked column (section 8.1). Built, frontend only; `check:frames-toolbox` covers it |
 | 8.3, 8A++ | The user's second request: lyrics as free blocks, a lyrics toolbox (section 8.2). Built: blocks put anywhere, wrapped by the engine to their width, scaled, styled; the bar of their frames; a piece over a line break shared between the lines; `check:frames-toolbox` covers it |
+| 8.3, 8A+++ | The user's third request: a denser PDF (section 8.3). Built: **Size of the music** (a 5 to 8 mm staff, 6.5 mm by default) and **Space between lines** on paper (1 to 20 mm, 6 mm by default, no longer the screen's) in the print dialog, kept in the browser |
 | 8.3, half 8B | Not started: `sheet.f1` through every change of a part's length, copy and paste, Start a new part, the read-only stretch actions, the requests review, Recording in Sheet, the blank sheet; then the switch removed (section 8) |
 
 # 2. The study (task 8.1)
@@ -314,7 +316,7 @@ session's backend and answers, and took the second session's measuring script fo
 | `npx tsc -b`, `npx eslint` on the changed files | clean |
 | The drawings | the shaped block (3 lines, Geist bold italic, its outline, handles and bar) looked at zoomed in |
 
-## 8.3 A denser PDF (8A+++)
+## 8.3 A denser PDF (8A+++, built 2026-10-26)
 
 The user's third request (2026-10-26). Even with the page's Zoom at its smallest, the PDF is very large, there is no
 control of the size, and the space between lines cannot go below the slider's minimum, so the pages carry much white
@@ -332,6 +334,40 @@ Points for the study: a "size of the music" control (a printed staff of about 5.
 use about 6.5 to 7 mm), a smaller least space between lines (also below the sheet's own), perhaps a tighter gap
 between the two staves on paper, and defaults that give about five lines on an A4 page on the 10 viewer songs.
 Measure lines per page before and after, and show the user the pages.
+
+**The study (2026-10-26).** Measured read only on the stored sheets of the 10 viewer songs (the library versions),
+A4 portrait, the dialog's margins (14 and 16 mm), whole lines dealt onto pages as the dialog does (counts of full
+pages, the last page of each song left out):
+
+| Printed staff | Space between lines | Pages (10 songs) | Lines on a full page | The user's 7 Years copy |
+|---|---|---|---|---|
+| 7 mm (today) | the screen's (5 staff spaces, 8.75 mm) | 51 | 5 to 6 (median 6) | 4, 5, 5, 5, 4, 2 (its screen space is 10.5: 18.4 mm) |
+| 7 mm | 5 mm | 48 | 5 to 6 | 6, 6, 6, 6, 1 |
+| 6.5 mm | 6 mm | 44 | 5 to 7 (median 6) | 6, 6, 6, 5 |
+| 6.5 mm | 4 mm | 42 | 6 to 7 (median 7) | 6, 7, 7, 3 |
+| 6 mm | 5 mm | 35 | 6 to 7 (median 7) | 7, 7, 7 |
+
+Where the height of a line goes (7 mm staff): about 20 staff spaces of ink on average (two staves of 4, the gap
+between them 6.7 on average, the rule's least is 6; 2.5 above the upper staff and 2.6 below the lower one), then the
+space between lines. The pages are 85 to 100 % full. Two findings: the library songs already printed 5 to 6 lines a
+page; the white space the user saw comes from the space between lines of the screen, which the PDF used as its
+least (the user's copy of 7 Years had 10.5 staff spaces, set in View at 11:03 that day: 18 mm of white between
+lines, 4 or 5 lines a page), and the music had one fixed size (7 mm).
+
+**What was built (frontend only; the route already took the width, the heights and the gap):**
+
+- `FramesPdfDialog.tsx`: **Size of the music** (the printed staff, 5 to 8 mm in steps of 0.25; a staff space is a
+  quarter of it) and **Space between lines** (1 to 20 mm in steps of 0.5, the white between one line's ink and the
+  next), replacing *Extra space between lines*; both kept in this browser (`aitu.framesPdf.print`). The screen's
+  space between lines (View) no longer reaches the paper.
+- **Defaults: a 6.5 mm staff and 6 mm between lines.** About 6 lines on a full A4 page (5 to 7), which is the density
+  the user asked for (five lines or more, less white space), and 14 % fewer pages than today. A 6.5 mm staff is the
+  size of many printed piano editions; 6 mm between lines keeps the lines apart where a line has little ink above
+  or below. The gap between the two staves of a line is kept (6 staff spaces at least): a smaller one would put the
+  two hands' notes on each other.
+- `check:frames-toolbox`: the defaults are shown; an 8 mm staff takes more pages and a 5 mm one fewer (7 Years: 6,
+  4 and 3 pages), 1 mm between lines never more; back at the defaults the same pages; the PDF has one page per
+  page. The first page of the PDF rendered by poppler and looked at zoomed in: the title and 6 lines.
 
 ## 8.4 Then 8B
 

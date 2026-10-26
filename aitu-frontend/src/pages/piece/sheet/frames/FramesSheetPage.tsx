@@ -92,8 +92,6 @@ const MARGINS = 8;
 const WIDTH_STEP = 4;
 /** The zoom of the page is kept in this browser (it is how the page is looked at, not part of the sheet). */
 const ZOOM_KEY = "aitu.framesSheet.zoom";
-/** The engine's own space between lines, in staff spaces. */
-const OWN_LINE_SPACE = 5;
 /** The lyrics toolbox keeps this many pixels clear on each side of the blocks it opens for. */
 const BLOCK_ROOM = 120;
 
@@ -882,7 +880,6 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
           audioUuid={audioUuid}
           pieceName={title}
           subtitle={underTitle}
-          lineSpace={sheet.lineSpace ?? OWN_LINE_SPACE}
         />
       ) : null}
       <Snackbar
