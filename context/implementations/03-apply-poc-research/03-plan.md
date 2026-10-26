@@ -659,6 +659,14 @@ song; Find trills, Remove all and Bring back N notes taken off are dropped. The 
 renames the figures and the page keeps its widths (D-18, nothing moves); the old `sheet.json` marks stay stored when
 the switch goes, and Phase 9 maps them.
 
+*The user's request of 2026-10-26, after 8A was built (part of 8A, before 8B):* **a keyboard in the note toolbox.**
+When notes are picked (one note, or a chord: the notes of one column), the note toolbox shows a small piano (the
+mini piano of the sheet toolbox's Transpose tab, `ui/MiniPiano.tsx`, or the keyboard panel's `piano/Piano.tsx`) with
+the keys of the picked column lit in their hand's colour. On it the user changes the chord: a dark key adds a note to
+that column (`POST /sheet/{uuid}/add`, in the hand of the picked chord, as long as the chord), a lit key takes that
+note off (`POST /sheet/{uuid}/remove`); each press one step of undo. The study of the session decides what it shows
+when notes of several columns are picked, and asks the user only if no answer follows from the old keyboard panel.
+
 *Done when:* every screen of the inventory uses the new engine, checked in the browser by the user.
 
 ## Phase 9: The saved data
@@ -785,4 +793,5 @@ repository."
 | 7 | Phase 7 task 5: with the user's words a stretch request aims at a sheet simpler to read and to play (uniform patterns) and may change pitches, add notes and set figures; those go into `notes.pmn` and the sheet in the same undo step | The user's second check: a lone low note stayed when the octaves became single notes, and figures could not be asked for |
 | 8 | Phase 8 is built in two halves (8A the Sheet step's tools, 8B the screens of a stretch), each checked in the browser; 8B starts with `sheet.f1` following every change of a part's length | The study: the phase holds more than Phase 7, and paste, promotion, split, join and From other projects lose the new sheet's decisions after the change today |
 | 8 | Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's; Find trills, Remove all and Bring back are dropped | The user's answers of 2026-10-26 |
+| 8 | Phase 8A gains a keyboard in the note toolbox: the picked chord's keys lit; a key adds or takes off a note of that column | The user's request of 2026-10-26, after seeing 8A |
 | 8 | Transpose figures renames the figures and keeps the page's widths | D-18 ("nothing moves"); the spacing model reads the reference figure, so a rename alone would widen or narrow the page |

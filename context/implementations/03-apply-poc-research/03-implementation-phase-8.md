@@ -2,7 +2,8 @@
 
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 8. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (level with `master` at the start: nothing to merge). Written 2026-10-26 on the Ubuntu
-machine. **In progress**: the study and 8A are done and wait for the user's check in the browser; 8B is next.
+machine. **In progress**: the study and 8A are built; the user asked for a keyboard in the note toolbox (section 8) before
+checking 8A in the browser; 8B is next.
 
 # 1. Summary
 
@@ -171,7 +172,20 @@ In the image, on the CPU (another project holds the GPU): 1,378 tests; 3 failed,
 `test_transcription_transkun.py` tests, which load a checkpoint saved on CUDA. Every other test passed (one skips
 itself without a GPU).
 
-# 8. Next: 8B
+# 8. Next: the user's request, then 8B
+
+**The user's request (2026-10-26), before the check of 8A:** a small piano in the note toolbox. When notes are
+picked (a single note or a chord), the toolbox shows a keyboard with the keys of the picked column lit in their
+hand's colour; a dark key adds a note to that column (in the chord's hand, as long as the chord), a lit key takes
+that note off; each press is one step of undo. The backend routes exist (`POST /sheet/{uuid}/add`, which today puts
+a note at the onset of a drawn column, and `/remove`); each drawn note carries its `end` frame. Pieces to reuse:
+`ui/MiniPiano.tsx` (the Transpose tab's keyboards: `role="slider"`, keys with `data-midi`) or `piano/Piano.tsx`
+(the keyboard panel: `keyColours`, `onKeyPress`, `data-key-row`), `PianoToolbox`'s colours (`HAND_COLOUR`,
+`HELD_COLOUR`), and the keyboard panel's `pressKey` in `FramesSheetPage.tsx`. Open points for the session's study:
+what the keyboard shows when notes of several columns are picked, and whether a note added there should get the
+chord's figure set by hand (`fix`).
+
+**Then 8B:**
 
 1. `sheet.f1` through every change of a part's length: an F1 version of `editing/marks.py` (`shift`, `cut_out`,
    `extract`, `put_in`, the key and clef in force at the edges), used by paste, promotion, split, join, From other
