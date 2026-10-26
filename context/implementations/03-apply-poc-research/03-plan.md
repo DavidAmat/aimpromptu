@@ -667,6 +667,19 @@ that column (`POST /sheet/{uuid}/add`, in the hand of the picked chord, as long 
 note off (`POST /sheet/{uuid}/remove`); each press one step of undo. The study of the session decides what it shows
 when notes of several columns are picked, and asks the user only if no answer follows from the old keyboard panel.
 
+*The user's second request of 2026-10-26 (part of 8A, before 8B):* **lyrics as free blocks, with a lyrics toolbox.**
+Shaping a lyrics piece is cumbersome today: its width follows its frames, so the words cannot be wrapped onto two or
+three lines by narrowing it. A click on a piece highlights its block; the block can then be moved freely anywhere
+(not snapped to the frame under its edge) and resized narrower, wider, taller or shorter, and the words wrap inside
+it; none of this touches the time frames. While a piece is picked or dragged, the strip above the staves does not
+light up under the pointer and does not mark a stretch. A **lyrics toolbox** beside the picked pieces offers the size,
+several fonts, and normal, bold and italic (and the old toolbar's actions: words, merge, split, line break, back to the
+pool, delete). The session's study decides, from the code and the PDF writer: how a block stays with its music when
+the lines re-wrap (still anchored to its first frame, with a free offset), where the words are wrapped (in the page,
+which can measure text, or in the engine), and which fonts (the PDF writes the base fonts Helvetica, Times and Courier
+with their bold and italic, so families that map onto them print the same). It asks the user only what the study
+cannot settle.
+
 *Done when:* every screen of the inventory uses the new engine, checked in the browser by the user.
 
 ## Phase 9: The saved data
@@ -794,4 +807,5 @@ repository."
 | 8 | Phase 8 is built in two halves (8A the Sheet step's tools, 8B the screens of a stretch), each checked in the browser; 8B starts with `sheet.f1` following every change of a part's length | The study: the phase holds more than Phase 7, and paste, promotion, split, join and From other projects lose the new sheet's decisions after the change today |
 | 8 | Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's; Find trills, Remove all and Bring back are dropped | The user's answers of 2026-10-26 |
 | 8 | Phase 8A gains a keyboard in the note toolbox: the picked chord's keys lit; a key adds or takes off a note of that column | The user's request of 2026-10-26, after seeing 8A |
+| 8 | Phase 8A gains free lyrics blocks (moved and resized, the words wrapped inside) and a lyrics toolbox (size, font, bold, italic); the stretch strip is off while a piece is picked | The user's second request of 2026-10-26: narrowing a piece to wrap its words was not possible |
 | 8 | Transpose figures renames the figures and keeps the page's widths | D-18 ("nothing moves"); the spacing model reads the reference figure, so a rename alone would widen or narrow the page |

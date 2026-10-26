@@ -126,7 +126,8 @@ Report: [`03-implementation-phase-8.md`](03-implementation-phase-8.md).
 - [x] Task 8.2 Lyrics in the format and in the engine (`lyric` lines of `sheet.f1`, `<text data-lyric>`; picked, dragged and lit on the page).
 - [p] Task 8.3 Each screen on the new engine; vexflow-v2 no longer draws or edits anywhere; its browser checks moved.
   - [p] 8A The sheet toolbox (Title, Key, Transpose notes and figures with the preview, Lyrics, View: Zoom and Space between lines), the keyboard panel, Print to PDF, Play mode's lyrics: built, `check:frames-toolbox` passes; waiting for the user's check in the browser.
-  - [ ] 8A+ The user's request (2026-10-26): a small piano in the note toolbox with the picked chord's keys lit; a dark key adds a note to that column, a lit key takes it off (one step of undo each). Then the user checks 8A with it.
+  - [ ] 8A+ The user's request (2026-10-26): a small piano in the note toolbox with the picked chord's keys lit; a dark key adds a note to that column, a lit key takes it off (one step of undo each).
+  - [ ] 8A++ The user's second request (2026-10-26): lyrics pieces as free blocks (a click highlights the block; moved anywhere and resized, the words wrapping inside, without touching the frames; no stretch strip while one is picked) and a lyrics toolbox (size, several fonts, normal, bold, italic, and the old toolbar's actions). Then the user checks 8A with both requests.
   - [ ] 8B `sheet.f1` follows every change of a part's length; copy and paste; Start a new part; the read-only stretch actions; the requests review; Recording in Sheet; the blank sheet; the switch removed and the browser checks moved; the user's check in the browser.
 
 # [ ] Phase 9: The saved data

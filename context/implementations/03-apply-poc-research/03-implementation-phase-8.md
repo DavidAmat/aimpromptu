@@ -2,8 +2,8 @@
 
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 8. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (level with `master` at the start: nothing to merge). Written 2026-10-26 on the Ubuntu
-machine. **In progress**: the study and 8A are built; the user asked for a keyboard in the note toolbox (section 8) before
-checking 8A in the browser; 8B is next.
+machine. **In progress**: the study and 8A are built; the user asked for a keyboard in the note toolbox and for free lyrics blocks with a lyrics
+toolbox (section 8) before checking 8A in the browser; 8B is next.
 
 # 1. Summary
 
@@ -184,6 +184,22 @@ a note at the onset of a drawn column, and `/remove`); each drawn note carries i
 `HELD_COLOUR`), and the keyboard panel's `pressKey` in `FramesSheetPage.tsx`. Open points for the session's study:
 what the keyboard shows when notes of several columns are picked, and whether a note added there should get the
 chord's figure set by hand (`fix`).
+
+**The user's second request (2026-10-26):** lyrics pieces as free blocks, and a lyrics toolbox. Today a piece's width
+follows its frames, so narrowing it to wrap the words onto two or three lines is not possible, and the strip above
+the staves lights up and marks a stretch while the user works on a piece. Wanted: a click highlights the block; the
+block is moved anywhere and resized freely (narrower, wider, taller, shorter), the words wrap inside it, and none of
+this touches the frames; no stretch strip while a piece is picked or dragged; a lyrics toolbox beside the picked
+pieces with the size, several fonts, normal, bold and italic, and the old toolbar's actions. What exists: the `lyric`
+lines (`start`, `end`, `text`, `size`, `lift`; `sheet/sheet/f1.py`, `data.Lyric`), the engine's text primitive
+(`engrave/frames.py` `_lyrics`, `svg.py` kind `"t"`: one baseline per line of music, no wrapping, the backend has no
+text metrics), the page's drag code (`FramesSheetView.tsx`, `LyricDrag`; the strip in `stripAt`, `pull`, `press`),
+the old tab (`LyricsTab.tsx`) and its adapter (`useFramesLyrics.ts`), and the PDF writer, which maps a serif font to
+Times, other text to Helvetica (`print/drawPage.ts` `encode`; Courier is a base font too). Open points for the
+study: how a block stays with its music when the lines re-wrap (anchored to its first frame with a free offset `dx`,
+`dy` and a `width`?), where the words wrap (in the page, which measures text, sending the lines; or in the engine
+with a table of character widths), which font families, and how Play mode lights a block that no longer spans its
+frames.
 
 **Then 8B:**
 
