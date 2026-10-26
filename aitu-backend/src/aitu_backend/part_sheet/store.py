@@ -28,6 +28,8 @@ The record (:class:`Record`):
   words, usd, written]``, oldest first. Their cost is in ``usd`` and ``requests`` too.
 * ``key``: the armadura the algorithm writes this sheet with (fifths), when something other than the notes chose it:
   the song's, on the sheets of a passage of it (Record in Sheet, Phase 8B, with ``reference: song``).
+* ``legacy``: what the migration of Phase 9 (``scripts/migrate_sheets.py``) carried from the old ``sheet.json``, by
+  kind (``{"lyrics": 2, "figures": 6}``); a sheet that has it is not migrated again.
 """
 
 from __future__ import annotations
@@ -73,6 +75,7 @@ class Record:
     edited: bool = False
     stretches: list[list[Any]] = field(default_factory=list)
     key: int | None = None
+    legacy: dict[str, int] | None = None
 
     @property
     def enhanced(self) -> bool:
@@ -103,6 +106,7 @@ class Record:
             "edited": self.edited,
             "stretches": self.stretches,
             **({"key": self.key} if self.key is not None else {}),
+            **({"legacy": self.legacy} if self.legacy is not None else {}),
         }
 
     @classmethod
@@ -126,6 +130,7 @@ class Record:
             edited=bool(payload.get("edited")),
             stretches=list(payload.get("stretches") or []),
             key=payload.get("key"),
+            legacy=payload.get("legacy"),
         )
 
 

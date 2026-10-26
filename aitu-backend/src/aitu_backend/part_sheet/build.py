@@ -15,7 +15,9 @@ Three cases, in order (:func:`current`):
    the rest). A part that has a ``sheet.json`` from vexflow-v2 keeps two of its decisions (the user's answer of
    Phase 5, "keep all the data"): the armadura (``keySignature``, ``keyChanges``) and, when the user renamed it with
    Transpose figures, the reference figure (``anchorMs`` and ``anchorFigure``; the negra of the highest pile of gaps
-   was vexflow-v2's default, and the pulse estimate replaces it). The other marks are mapped in Phase 9.
+   was vexflow-v2's default, and the pulse estimate replaces it). Its other marks the new sheet keeps (Phase 9: the
+   titles, lyrics, space between lines, figures set by hand, fingers, beam marks) are laid on the algorithm's sheet
+   (:func:`with_legacy`); ``scripts/migrate_sheets.py`` stored them for the parts of 2026-10-26.
 
 The answers are cached by the modification times of the three files, so a page that draws the sheet again at
 another width does not run the algorithm again.
@@ -24,7 +26,8 @@ another width does not run the algorithm again.
 from __future__ import annotations
 
 import threading
-from collections import OrderedDict, defaultdict
+from collections import Counter, OrderedDict, defaultdict
+from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from typing import Any
 
@@ -45,12 +48,12 @@ from aitu_backend.sheet.proposal.frames import (
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet.common import spn
 from aitu_backend.sheet.sheet.data import CLEF_NAMES, FRAME_MS, Sheet, carry_extras
-from aitu_backend.sheet.sheet.frames import STAFF_OF, drawn_columns
+from aitu_backend.sheet.sheet.frames import STAFF_OF, check, drawn_columns
 from aitu_backend.sheet.sheet.pmn import KEYS
 from aitu_backend.storage import locate, paths
 from aitu_backend.transcription import pipeline
 
-from . import store
+from . import legacy, store
 
 __all__ = [
     "Drawn",
@@ -67,6 +70,7 @@ __all__ = [
     "sheet_settings",
     "user_marks",
     "windows",
+    "with_legacy",
     "with_marks",
 ]
 
@@ -285,6 +289,22 @@ def reapply(stored: Sheet, notes: Notes) -> Sheet:
     return carry_extras(stored, sheet)
 
 
+def with_legacy(sheet: Sheet, notes: Notes, rhythm: Any, *, ai: bool) -> tuple[Sheet, Counter[str]]:
+    """``sheet`` with the marks of an old ``sheet.json`` (``rhythm``) laid on it (Phase 9, :mod:`.legacy`) and the
+    rules run again (:func:`reapply`), as an edit does; what was carried, by kind. Beam marks that would make the
+    sheet break one of its rules are left out (``"beams left out"``)."""
+    known = set(check(sheet))
+    out: Counter[str] = Counter()
+    for beams in (True, False):
+        changed = deepcopy(sheet)
+        out = legacy.carry(changed, rhythm, notes, ai=ai, beams=beams)
+        settled = reapply(changed, notes)
+        if not [p for p in check(settled) if p not in known]:
+            return settled, out
+        out["beams left out"] += 1
+    return sheet, Counter()
+
+
 def user_marks(sheet: Sheet) -> dict[tuple[int, int], Any]:
     """The notes of a sheet that carry a mark only the user writes (Phase 7: a finger, a figure set by hand, the
     grace note switch), by ``(frame, midi)``. A new AI run keeps them (the user's answer of Phase 7).
@@ -406,12 +426,23 @@ def _compute(part_id: str) -> Drawn:
                 sheet.quarter_ms,
                 record,
             )
-        algo = algorithm(part_id, quarter_ms=record.quarter_ms, key=record.key)
-        return Drawn(
-            f1.write(algo.sheet, mode="frames"), "algorithm", [], True, algo.quarter_ms, record
-        )
-    algo = algorithm(part_id)
-    return Drawn(f1.write(algo.sheet, mode="frames"), "algorithm", [], False, algo.quarter_ms, None)
+        sheet, quarter_ms = _algorithm_sheet(part_id, quarter_ms=record.quarter_ms, key=record.key)
+        return Drawn(f1.write(sheet, mode="frames"), "algorithm", [], True, quarter_ms, record)
+    sheet, quarter_ms = _algorithm_sheet(part_id)
+    return Drawn(f1.write(sheet, mode="frames"), "algorithm", [], False, quarter_ms, None)
+
+
+def _algorithm_sheet(
+    part_id: str, *, quarter_ms: float | None = None, key: int | None = None
+) -> tuple[Sheet, float]:
+    """The algorithm's sheet of a part with the marks of its old ``sheet.json`` (Phase 9)."""
+    notes = pipeline.starting_hands(part_id)
+    algo = algorithm(part_id, notes, quarter_ms=quarter_ms, key=key)
+    rhythm = pipeline.load_rhythm(part_id)
+    if not legacy.has_marks(rhythm):
+        return algo.sheet, algo.quarter_ms
+    sheet, _ = with_legacy(algo.sheet, notes, rhythm, ai=False)
+    return sheet, algo.quarter_ms
 
 
 def forget(part_id: str) -> None:

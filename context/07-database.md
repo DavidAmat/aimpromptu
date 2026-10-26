@@ -43,7 +43,8 @@ database. Every path in the folder is built by one module, `aitu_backend/storage
                                  source of each part's audio
   parts/<partId>/
     notes.pmn                    THE NOTES: the piano matrix notation of the part
-    sheet.json                   what the reader decided on the old piano sheet (vexflow-v2)
+    sheet.json                   what the reader decided on the old piano sheet (vexflow-v2); since implementation
+                                 03, Phase 9, its marks the new sheet keeps are in sheet.f1 (part_sheet/legacy.py)
     sheet.f1                     the new piano sheet: F1 frames text and a record of how it was written
                                  (Sonnet or the algorithm, implementation 03, Phase 5; since Phase 7 also edited by
                                  the user, and the stretches the AI wrote again); the hands stay in notes.pmn

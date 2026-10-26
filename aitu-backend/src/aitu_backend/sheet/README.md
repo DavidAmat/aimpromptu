@@ -7,8 +7,8 @@ README with the names of the backend: `aitu_notation.X` of the research is `aitu
 changed no logic; the golden files of section 7 prove it. Phase 2 added the new sheet without compases (section 9),
 Phase 3 its engine (section 10), Phase 4 its LLM step (section 11), Phase 5 put it in the app (section 12), Phase 6 made it editable
 (section 13), Phase 7 added the note and range tools (section 14), and Phase 8 the sheet toolbox, lyrics and the sheet
-on paper (section 15), and Phase 8B the sheet through every change of a part's length (section 16): the bars path below
-is unchanged, and so are its golden files.
+on paper (section 15), Phase 8B the sheet through every change of a part's length (section 16), and Phase 9 the marks
+of the old sheets (section 17): the bars path below is unchanged, and so are its golden files.
 
 ## 1. What it does
 
@@ -434,3 +434,33 @@ promotion at a speed       ── lengths.scaled(passage, speed, window): frames
 - **Undo**: `edits.paste_passage` and a promotion record one step whose undo restores the history version the paste
   kept (`_Step.versions`), as the old page did.
 - Tests: `tests/test_sheet_lengths.py`. Browser checks: `check:paste`, `check:compose`, `check:passage -- --played`.
+
+## 17. The marks of the old sheets (implementation 03, Phase 9)
+
+`aitu_backend/part_sheet/legacy.py` (outside the core) lays the marks of an old `sheet.json` (vexflow-v2) on a frames
+sheet; `build.with_legacy` settles the result (`reapply`) and keeps the beam marks only when no rule of `frames.check`
+breaks. Measurements and reasons: `context/implementations/03-apply-poc-research/03-implementation-phase-9.md`.
+
+```text
+sheet.json ── reading_of (Phase 5): the armadura, a renamed reference figure ──> propose_frames
+           ── legacy.carry: titles, lyrics, space between lines   (when the sheet has none of that kind)
+                            figures set by hand (fix), fingers     (every sheet: the user's marks)
+                            beam breaks and joins                  (not on a sheet the AI wrote: the AI's kind)
+           ── not carried: clef changes, octave lines (the user's answer of 2026-10-26: the new clef rules
+                            everywhere), spacing, even spacing, print smaller, decorations, trills
+```
+
+- **Where the marks land.** An old mark names a note by its onset cell (`startFrame`, `fromColumn`: the 40 ms column of
+  its onset); `legacy.Cells` gives the drawn column of its chord (D-04). A figure override names a chord of one hand
+  (its `row` is 0); a finger names one note. A lyrics piece keeps its frames, its size and lift converted as the page
+  converts them (12 px = 1.4 staff spaces), its old `width` as the width its words wrap to; a piece over the frames of
+  the one before it is left out. The space between lines keeps its ratio to the default (72 px = 5 staff spaces).
+- **Beams.** A break starts a new group where the new sheet has the chord inside a group; a join puts a chord with the
+  group of the chord before it (`reading.break_beam`, so a group still holds one figure and at most 8 notes). A mark
+  the new sheet's groups already follow is `held`; one that cannot hold is `lost`.
+- **When.** `build._compute` draws a part with no stored sheet (or a plain algorithm record) with its old marks, so a
+  history version or an old `.aitu` that brings back a `sheet.json` keeps them; nothing is stored by drawing.
+  `scripts/migrate_sheets.py` (a dry run unless `--write`, after `make db-backup`) stores them: an algorithm sheet as
+  edited by the user (`Record.edited`, `reference: user` for a renamed figure), a stored sheet with the kinds it lacks;
+  `Record.legacy` says what was carried, and a part that has it is skipped.
+- Tests: `tests/test_sheet_legacy.py`.
