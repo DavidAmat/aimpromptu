@@ -2,10 +2,11 @@
 
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 8. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (level with `master` at the start: nothing to merge). Written 2026-10-26 on the Ubuntu
-machine. **In progress**: the study and 8A are built; the user asked for a keyboard in the note toolbox (built
-2026-10-26, section 8.1), for free lyrics blocks with a lyrics toolbox (built 2026-10-26, section 8.2) and for a
-denser PDF (built 2026-10-26, section 8.3) before checking 8A in the browser; the user's check of 8A is next, then
-8B.
+machine. **In progress**: the study and 8A are built, with the user's three requests of 2026-10-26 (a keyboard in
+the note toolbox, section 8.1; free lyrics blocks with a lyrics toolbox, section 8.2; a denser PDF, section 8.3).
+**8A was checked by the user in the browser on 2026-10-26 ("all good")**, after two faults found on the way were
+fixed (two clefs on one spot, the print preview's edges). 8B is next (section 8.4); the branch is merged into
+`master` at the end of the phase, after the user's check of 8B.
 
 # 1. Summary
 

@@ -645,7 +645,7 @@ be enhanced with AI with the user's instruction from either selection.
 2. **Lyrics** in the format and in the engine (they are keyed by frames, which fits the new sheet).
 3. Each screen moved to the new engine; vexflow-v2 is no longer used anywhere for drawing or editing.
 
-*After the study (2026-10-26, report section 2):* the phase is built in two halves, each checked by the user in the
+*8A checked by the user in the browser on 2026-10-26, with its three requests.* *After the study (2026-10-26, report section 2):* the phase is built in two halves, each checked by the user in the
 browser. **8A, the Sheet step's own tools:** the sheet toolbox (Title, Key, Transpose notes and figures with their
 preview, Lyrics, and a View tab with Zoom and Space between lines), the keyboard panel, Print to PDF from the new
 engine, Play mode's lyrics. **8B, the screens of a stretch:** `sheet.f1` follows every change of a part's length
