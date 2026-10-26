@@ -630,6 +630,9 @@ be enhanced with AI with the user's instruction from either selection.
 
 ## Phase 8: The other screens and the sheet toolbox
 
+**Done 2026-10-26** ([`03-implementation-phase-8.md`](03-implementation-phase-8.md)). The user checked 8A ("all good")
+and 8B ("works amazingly"; a few user-experience points are left for later) in the browser; merged into `master`.
+
 *Why:* the sheet is also drawn outside the Sheet step, and the sheet toolbox has its own features.
 
 1. Study and inventory: the sheet toolbox (title, key, transpose, lyrics, layout), the keyboard panel, Find trills,
@@ -710,7 +713,8 @@ version (a promotion too); Copy, Paste, Record this passage, Record a passage at
 *Frames* panel with the screen's action; the passage page on the new sheet (the window over the take, the Current and
 the takes written with the song's reference figure at the take's speed and its armadura, the take's AI only on the
 button); the blank sheet's empty state. `SheetPage` draws only the new sheet; the old sheet's browser checks moved to
-`scripts/frames-page.mjs`, and the three scripts that only served the old sheet removed. The user's check is next.
+`scripts/frames-page.mjs`, and the three scripts that only served the old sheet removed. Checked by the user in the
+browser.
 
 *Done when:* every screen of the inventory uses the new engine, checked in the browser by the user.
 

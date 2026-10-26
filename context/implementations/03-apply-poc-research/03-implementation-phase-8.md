@@ -6,8 +6,9 @@ machine. **In progress**: the study and 8A are built, with the user's three requ
 the note toolbox, section 8.1; free lyrics blocks with a lyrics toolbox, section 8.2; a denser PDF, section 8.3).
 **8A was checked by the user in the browser on 2026-10-26 ("all good")**, after two faults found on the way were
 fixed (two clefs on one spot, the print preview's edges). **8B was built on 2026-10-26** (section 10): every screen
-draws the new sheet, the switch to the old one is gone; the user's check of 8B in the browser is next, then the
-branch is merged into `master`.
+draws the new sheet, the switch to the old one is gone. **Done 2026-10-26**: the user checked 8B in the browser ("works
+amazingly"; a few user-experience points are left for a later session, not named yet), and the branch was merged
+into `master`.
 
 # 1. Summary
 
@@ -19,7 +20,7 @@ branch is merged into `master`.
 | 8.3, 8A+ | The user's request: a keyboard in the note toolbox for the picked column (section 8.1). Built, frontend only; `check:frames-toolbox` covers it |
 | 8.3, 8A++ | The user's second request: lyrics as free blocks, a lyrics toolbox (section 8.2). Built: blocks put anywhere, wrapped by the engine to their width, scaled, styled; the bar of their frames; a piece over a line break shared between the lines; `check:frames-toolbox` covers it |
 | 8.3, 8A+++ | The user's third request: a denser PDF (section 8.3). Built: **Size of the music** (a 5 to 8 mm staff, 6.5 mm by default) and **Space between lines** on paper (1 to 20 mm, 6 mm by default, no longer the screen's) in the print dialog, kept in the browser |
-| 8.3, half 8B | Built (section 10): `sheet.f1` through every change of a part's length (`part_sheet/lengths.py`), copy and paste as a step of undo, Record this passage, Start a new part, the read-only stretch panel (playlists, From other projects, the requests review), Recording in Sheet on the new sheet (the window over the take, the song's figure and armadura), the blank sheet; the switch removed and every browser check moved. The user's check is next |
+| 8.3, half 8B | Built and checked by the user (section 10): `sheet.f1` through every change of a part's length (`part_sheet/lengths.py`), copy and paste as a step of undo, Record this passage, Start a new part, the read-only stretch panel (playlists, From other projects, the requests review), Recording in Sheet on the new sheet (the window over the take, the song's figure and armadura), the blank sheet; the switch removed and every browser check moved |
 
 # 2. The study (task 8.1)
 
