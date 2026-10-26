@@ -1,5 +1,11 @@
 # Printing the sheet — the PDF export
 
+*The new sheet (implementation 03, Phase 8) keeps the rule of this page: the music is laid out again for the paper,
+never scaled. The backend draws the sheet for the paper's width at a printed staff space of 1.75 mm (a staff of 7 mm)
+and deals whole lines onto the pages (`GET /sheet/{part}/pages`); the page shows them and writes the same vector PDF
+(`FramesPdfDialog.tsx`, `print/scorePdf.ts`). Its glyphs are paths, so no music font travels with the file (about
+50 kB for 7 Years, 5 A4 pages). The sections below describe the old sheet's renderer.*
+
 A window is as wide as the reader dragged it. A sheet of A4 is 210 mm. The two can never show the
 same line breaks, so a printed score is not a picture of the screen: it is the same music laid out
 again for a different width.

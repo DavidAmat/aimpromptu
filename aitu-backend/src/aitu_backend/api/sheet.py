@@ -29,12 +29,13 @@ from typing import Any
 from typing import Literal
 
 from fastapi import APIRouter, Body, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from aitu_backend.audio import store as audio_store
 from aitu_backend.auth import context, rights
 from aitu_backend.part_sheet import build, edits, job, reading
 from aitu_backend.part_sheet import store as new_sheet_store
+from aitu_backend.sheet.engrave import frames as frames_engine
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.storage import locate
 from aitu_backend.transcription import pipeline
@@ -112,6 +113,11 @@ def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
             "height": 0,
             "notes": [],
             "reading": {"key": 0, "keyChanges": [], "clefs": {}, "clefChanges": []},
+            "titles": {},
+            "lyrics": [],
+            "quarterMs": None,
+            "spaceMs": None,
+            "lineSpace": None,
             "segments": [],
             "source": "algorithm",
             "stale": False,
@@ -145,6 +151,9 @@ def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
         picture = build.draw(text, width)
     except Exception as exc:  # pragma: no cover - a sheet the engine cannot draw is a bug to see
         raise HTTPException(status_code=500, detail=f"The sheet could not be drawn: {exc}") from exc
+    ends = edits.note_ends(stored.events)
+    for note in picture["notes"]:
+        note["end"] = ends.get(note["ref"])
     return {
         **picture,
         "segments": [{"start": a, "end": b, "state": s} for a, b, s in segments],
@@ -203,8 +212,10 @@ def edit_reading(
     audio_uuid: str,
     body: ReadingRequest = Body(...),
     width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH),
+    preview: bool = Query(False),
 ) -> dict[str, Any]:
-    """One reading edit of the toolboxes (one step of undo); the sheet drawn again."""
+    """One reading edit of the toolboxes (one step of undo); the sheet drawn again. ``preview`` stores nothing and
+    answers the sheet as the edit would leave it (Transpose figures, Phase 8)."""
     _notes_or_404(audio_uuid)
     _not_running(audio_uuid)
     try:
@@ -216,10 +227,93 @@ def edit_reading(
             staff=body.staff,
             value=body.value,
         )
+        if preview:
+            label, text = edits.preview_reading(audio_uuid, change, holds)
+            return {**build.draw(text, width), "edited": label}
         label = edits.edit_reading(audio_uuid, change, holds)
     except (reading.Refused, ValueError, TypeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {**_answer(audio_uuid, width), "edited": label}
+
+
+class TransposeRequest(BaseModel):
+    semitones: int = Field(ge=-48, le=48)
+
+
+@router.post("/{audio_uuid}/transpose")
+def transpose(
+    audio_uuid: str,
+    body: TransposeRequest = Body(...),
+    width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH),
+    preview: bool = Query(False),
+) -> dict[str, Any]:
+    """Transpose notes (Phase 8): every note of the part moved, the stored sheet with it (one step of undo).
+    ``preview`` writes nothing and answers the sheet as it would be."""
+    _notes_or_404(audio_uuid)
+    _not_running(audio_uuid)
+    try:
+        done = edits.transpose_notes(audio_uuid, body.semitones, preview=preview)
+    except reading.Refused as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    facts = {"edited": done.label, "moved": done.moved, "outside": done.outside}
+    if preview:
+        return {**build.draw(done.text, width), **facts}
+    return {**_answer(audio_uuid, width), **facts}
+
+
+class AddNoteRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    frame: int = Field(ge=0)
+    midi: int = Field(ge=0, le=127)
+    hand: Literal["right", "left"]
+    #: How long it sounds; absent: a negra of the sheet's reference figure.
+    length_ms: float | None = Field(default=None, alias="lengthMs", gt=0)
+
+
+@router.post("/{audio_uuid}/add")
+def add_note(
+    audio_uuid: str,
+    body: AddNoteRequest = Body(...),
+    width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH),
+) -> dict[str, Any]:
+    """A note added on the keyboard panel (Phase 8), into `notes.pmn` (one step of undo); the sheet drawn again."""
+    _notes_or_404(audio_uuid)
+    _not_running(audio_uuid)
+    try:
+        label = edits.add_note(audio_uuid, body.frame, body.midi, body.hand, body.length_ms)
+    except (reading.Refused, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {**_answer(audio_uuid, width), "edited": label}
+
+
+@router.get("/{audio_uuid}/pages")
+def pages(
+    audio_uuid: str,
+    width: float = Query(..., ge=40.0, le=build.MAX_WIDTH),
+    height: float = Query(..., ge=20.0, le=1000.0),
+    first: float | None = Query(None, ge=10.0, le=1000.0),
+    gap: float | None = Query(None, ge=0.0, le=40.0),
+) -> dict[str, Any]:
+    """The sheet on paper (Print to PDF, Phase 8): whole lines dealt onto pages ``height`` staff spaces high (the
+    first one ``first``, under its title), drawn ``width`` staff spaces wide; ``gap`` between two lines.
+    """
+    _notes_or_404(audio_uuid)
+    stored = pipeline.load_note_events(audio_uuid)
+    if stored is None or not any(not event.removed for event in stored.events):
+        return {"pages": []}
+    text = build.current(audio_uuid).text
+    sheet = f1.read(text)
+    return {
+        "pages": frames_engine.render_pages(
+            sheet,
+            frames_engine.Options(width=width),
+            page_height=height,
+            first_height=first,
+            gap=gap,
+        ),
+        **build.sheet_settings(sheet),
+    }
 
 
 class NotesRequest(BaseModel):

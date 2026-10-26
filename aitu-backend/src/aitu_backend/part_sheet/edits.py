@@ -41,7 +41,7 @@ from typing import Any, Callable
 
 import numpy as np
 
-from aitu_backend.matrix.keys import LOWEST_MIDI
+from aitu_backend.matrix.keys import KEY_COUNT, LOWEST_MIDI
 from aitu_backend.pmn import events_file
 from aitu_backend.sheet.sheet import f1, frames
 from aitu_backend.sheet.sheet.data import FRAME_MS, Sheet
@@ -56,15 +56,23 @@ from . import build, reading, store
 __all__ = [
     "LIMIT",
     "Moved",
+    "Transposed",
+    "add_note",
     "apply_stretch",
     "edit_reading",
     "forget",
     "history",
     "move_hands",
+    "note_ends",
+    "preview_reading",
     "redo",
     "remove_notes",
+    "transpose_notes",
     "undo",
 ]
+
+#: The highest key of the piano (MIDI).
+HIGHEST_MIDI = LOWEST_MIDI + KEY_COUNT - 1
 
 #: Steps kept in the log: far more than anyone walks back (the old sheet keeps 100 in the page).
 LIMIT = 50
@@ -89,6 +97,8 @@ class _Step:
     sheet: dict[str, Any] | None = None
     #: ``note id -> (removed before, removed after)``: notes taken off the page (Phase 7).
     removed: dict[int, tuple[bool, bool]] = field(default_factory=dict)
+    #: ``note id -> (key before, key after)`` (MIDI): notes transposed (Phase 8).
+    keys: dict[int, tuple[int, int]] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -96,6 +106,7 @@ class _Step:
             "hands": [[i, *change] for i, change in self.hands.items()],
             "sheet": self.sheet,
             "removed": [[i, *change] for i, change in self.removed.items()],
+            "keys": [[i, *change] for i, change in self.keys.items()],
         }
 
     @classmethod
@@ -110,6 +121,7 @@ class _Step:
             removed={
                 int(row[0]): (bool(row[1]), bool(row[2])) for row in payload.get("removed") or []
             },
+            keys={int(row[0]): (int(row[1]), int(row[2])) for row in payload.get("keys") or []},
         )
 
 
@@ -224,6 +236,18 @@ def _notes_at(events: list) -> dict[tuple[int, int], list[int]]:
     for i in range(len(live)):
         at.setdefault((int(column[i]), int(live.key[i]) + LOWEST_MIDI), []).append(int(live.id[i]))
     return at
+
+
+def note_ends(events: list) -> dict[str, int]:
+    """The frame each drawn note stops sounding at, by its notehead's ref ``"<frame>:<midi>"`` (the keyboard panel of
+    Phase 8 lights the keys still held under the cursor); two notes of one key and column: the longer.
+    """
+    at = _notes_at(events)
+    by_id = {event.id: event for event in events if event.id is not None}
+    return {
+        f"{frame}:{midi}": int(round(max(by_id[i].end for i in ids) * 1000 / FRAME_MS))
+        for (frame, midi), ids in at.items()
+    }
 
 
 def _ref(ref: str) -> tuple[int, int] | None:
@@ -373,19 +397,7 @@ def edit_reading(
         stored = pipeline.load_note_events(part_id)
         if stored is None:
             raise FileNotFoundError("This part has no notes.")
-        drawn = build.current(part_id)
-        sheet = f1.read(drawn.text)
-        known = set(frames.check(sheet))
-        label = change(sheet)
-        settled = build.reapply(sheet, pipeline.starting_hands(part_id))
-        why = holds(settled) if holds is not None else None
-        if why:
-            raise reading.Refused(why)
-        # A safety net: an edit never leaves the sheet breaking a rule of the product it did not break before.
-        broken = [p for p in frames.check(settled) if p not in known]
-        if broken:
-            raise reading.Refused(f"The sheet would break one of its rules: {broken[0]}.")
-        after = f1.write(settled, mode="frames")
+        drawn, label, settled, after = _settled(part_id, change, holds)
         if after == drawn.text:
             return None
         kept = store.load(part_id)
@@ -396,10 +408,42 @@ def edit_reading(
         )
         record.edited = True
         record.hands_revision = stored.header.hands_revision
+        if settled.quarter_ms != drawn.quarter_ms:
+            # Transpose figures (Phase 8): the user named the reference figure; a new AI run keeps it.
+            record.quarter_ms, record.reference = settled.quarter_ms, "user"
         store.save(part_id, after, record)
         build.forget(part_id)
         _record(_Step(label, {}, _sheet_change(drawn.text, after)), part_id)
         return label
+
+
+def preview_reading(
+    part_id: str,
+    change: Callable[[Sheet], str],
+    holds: Callable[[Sheet], str | None] | None = None,
+) -> tuple[str, str]:
+    """What :func:`edit_reading` would store, without storing it (the preview of Transpose figures, Phase 8): the
+    step's label and the sheet's text."""
+    _, label, _, after = _settled(part_id, change, holds)
+    return label, after
+
+
+def _settled(
+    part_id: str, change: Callable[[Sheet], str], holds: Callable[[Sheet], str | None] | None
+) -> tuple[Any, str, Sheet, str]:
+    drawn = build.current(part_id)
+    sheet = f1.read(drawn.text)
+    known = set(frames.check(sheet))
+    label = change(sheet)
+    settled = build.reapply(sheet, pipeline.starting_hands(part_id))
+    why = holds(settled) if holds is not None else None
+    if why:
+        raise reading.Refused(why)
+    # A safety net: an edit never leaves the sheet breaking a rule of the product it did not break before.
+    broken = [p for p in frames.check(settled) if p not in known]
+    if broken:
+        raise reading.Refused(f"The sheet would break one of its rules: {broken[0]}.")
+    return drawn, label, settled, f1.write(settled, mode="frames")
 
 
 def apply_stretch(
@@ -550,6 +594,128 @@ def apply_stretch(
         return True
 
 
+@dataclass(frozen=True)
+class Transposed:
+    label: str
+    #: Notes moved, and notes that would leave the 88 keys (taken off the page).
+    moved: int
+    outside: int
+    #: The sheet as it is (or would be, for a preview) after the move.
+    text: str
+
+
+def transpose_notes(part_id: str, semitones: int, *, preview: bool = False) -> Transposed:
+    """Transpose notes (Phase 8, the sheet toolbox): every note of the part ``semitones`` higher, in ``notes.pmn``,
+    and the stored sheet with it (its armaduras moved, the decisions kept on their notes, the clefs fitted where a
+    note reads four ledger lines or more from its staff). No time moves and each note keeps its hand. A note that
+    would leave the 88 keys is taken off the page. One step; ``preview`` writes nothing."""
+    if not semitones:
+        raise reading.Refused("Choose two different keys.")
+    with pipeline.piece_lock(part_id):
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise FileNotFoundError("This part has no notes.")
+        drawn = build.current(part_id)
+        keys: dict[int, tuple[int, int]] = {}
+        gone: dict[int, tuple[bool, bool]] = {}
+        moved = 0
+        for event in stored.events:
+            if event.id is None:
+                continue
+            target = event.midi_note + semitones
+            if LOWEST_MIDI <= target <= HIGHEST_MIDI:
+                keys[event.id] = (event.midi_note, target)
+                event.midi_note = target
+                moved += not event.removed
+            elif not event.removed:
+                gone[event.id] = (False, True)
+                event.removed = True
+        sheet = f1.read(drawn.text)
+        reading.transpose_sheet(sheet, semitones)
+        notes = events_file.notes_from_events(stored.events)
+        settled = build.reapply(sheet, _starting(part_id, notes))
+        build.fit_clefs(settled, reading.far_notes(settled))
+        after = f1.write(settled, mode="frames")
+        steps = abs(semitones)
+        label = f"Transpose {steps} semitone{'' if steps == 1 else 's'} {'up' if semitones > 0 else 'down'}"
+        if preview:
+            return Transposed(label, moved, len(gone), after)
+        saved = _write_hands(part_id, stored, before=stored.header, hands=False, notes=True)
+        kept = store.load(part_id)
+        record = (
+            kept.record
+            if kept is not None
+            else store.Record(source="algorithm", quarter_ms=drawn.quarter_ms)
+        )
+        record.edited = True
+        record.hands_revision = saved.header.hands_revision
+        store.save(part_id, after, record)
+        build.forget(part_id)
+        _record(_Step(label, {}, _sheet_change(drawn.text, after), gone, keys), part_id)
+        return Transposed(label, moved, len(gone), after)
+
+
+def _starting(part_id: str, notes: Any) -> Any:
+    """The starting hands of the part (the saved hands, the hand split for the rest) for ``notes`` not yet saved:
+    the same ids, so the hands of the notes as they are now are laid on them."""
+    now = pipeline.starting_hands(part_id)
+    by_id = {int(i): h for i, h in zip(now.id, now.hand)}
+    notes.hand = np.array(
+        [by_id.get(int(i), h) for i, h in zip(notes.id, notes.hand)], dtype=np.int8
+    )
+    return notes.live()
+
+
+def add_note(part_id: str, frame: int, midi: int, hand: str, length_ms: float | None) -> str:
+    """A note added on the keyboard panel (Phase 8): into ``notes.pmn`` at the onset of the drawn column ``frame``
+    (or at the frame itself when no column is there), in ``hand``, ``length_ms`` long (``None``: a negra of the
+    reference figure). One step; undo takes it off again."""
+    if hand not in HANDS:
+        raise ValueError(f"No hand {hand!r}")
+    if not LOWEST_MIDI <= midi <= HIGHEST_MIDI:
+        raise reading.Refused("That key is not on the piano.")
+    with pipeline.piece_lock(part_id):
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise FileNotFoundError("This part has no notes.")
+        drawn = build.current(part_id)
+        at = _notes_at(stored.events)
+        by_id = {event.id: event for event in stored.events if event.id is not None}
+        if at.get((frame, midi)):
+            raise reading.Refused("That key is already struck there.")
+        column = [by_id[i].start for (f, _), ids in at.items() if f == frame for i in ids]
+        begin = min(column) if column else frame * FRAME_MS / 1000
+        quarter = drawn.quarter_ms or 500.0
+        length = (length_ms if length_ms and length_ms > 0 else quarter) / 1000
+        inside = [e.velocity for e in stored.events if not e.removed and abs(e.start - begin) < 4.0]
+        next_id = max([stored.header.next_id, *(i + 1 for i in by_id)])
+        stored.events.append(
+            NoteEvent(
+                id=next_id,
+                midi_note=midi,
+                start=begin,
+                end=begin + length,
+                velocity=int(np.median(inside)) if inside else 64,
+                hand=hand,
+            )
+        )
+        stored.events.sort(key=lambda event: (event.start, event.midi_note))
+        saved = _write_hands(part_id, stored, before=stored.header, hands=True, notes=True)
+        sheet_change = None
+        kept = store.load(part_id)
+        if kept is not None and kept.record.decided:
+            after = f1.write(
+                build.reapply(f1.read(drawn.text), pipeline.starting_hands(part_id)), mode="frames"
+            )
+            kept.record.hands_revision = saved.header.hands_revision
+            store.save(part_id, after, kept.record)
+            sheet_change = _sheet_change(drawn.text, after)
+        build.forget(part_id)
+        label = "Add a note"
+        _record(_Step(label, {}, sheet_change, {next_id: (True, False)}), part_id)
+        return label
+
+
 def _saved(hand: str | None, guessed: bool) -> str | None:
     """The hand a person or the AI decided, or ``None``: a guessed hand (``save_edit``'s quick rule fills the notes
     without one once the hands were saved as a whole) is no decision, the split decides it."""
@@ -580,6 +746,12 @@ def _walk(part_id: str, to: str) -> str | None:
             event.hand, event.hand_guessed = then
             changed = True
         put_back = False
+        for note_id, (key_before, key_after) in step.keys.items():
+            event = by_id.get(note_id)
+            if event is None or event.midi_note != (key_after if back else key_before):
+                continue
+            event.midi_note = key_before if back else key_after
+            put_back = True
         for note_id, (removed_before, removed_after) in step.removed.items():
             event = by_id.get(note_id)
             now_removed = removed_after if back else removed_before

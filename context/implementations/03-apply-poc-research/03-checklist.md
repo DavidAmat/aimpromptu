@@ -26,7 +26,7 @@ their phase, after its study (plan section 8).
 - [x] **Phase 5**: merge into `master`: now (user, 2026-10-25); merged at the end of Phase 5.
 - [x] **Phase 6**: may a new LLM run change hands that the user moved (user, 2026-10-25: yes, it reads the current hands as a suggestion); the engine in the backend or in the browser (agent, from the time of one edit, about 0.25 s: the backend).
 - [x] **Phase 7**: the tools that no longer make sense (user, 2026-10-25): even spacing, the room of a stretch, speed changes, print smaller, the unplayed decoration and hiding or dragging an 8va bracket are dropped; a grace note switch replaces the two small-note tools; a new AI run keeps the user's fingers, figures and grace switches and writes its own kinds again.
-- [ ] **Phase 8**: the tools of the sheet toolbox and the other screens that no longer make sense: keep, change or drop.
+- [x] **Phase 8**: the tools of the sheet toolbox and the other screens that no longer make sense (user, 2026-10-26): Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's, with Enhance with AI as a button; Find trills, Remove all and Bring back are dropped.
 
 # [x] Phase 0: The research folder on Ubuntu, the branch, the inventory
 
@@ -118,11 +118,15 @@ Done 2026-10-26 after the user's check of the gallery and in the browser; merged
 - [x] The gallery checked by the user (2026-10-25: "all good").
 - [x] The user's check in the browser ("all good"), after two reworks of the AI on a stretch (report section 9).
 
-# [ ] Phase 8: The other screens and the sheet toolbox
+# [p] Phase 8: The other screens and the sheet toolbox
 
-- [ ] Task 8.1 Study and inventory (the sheet toolbox with Transpose figures and notes, the keyboard panel, Find trills, Play mode, Recording in Sheet, copy and paste, parts and playlists, the PDF, the Transpose preview, From other projects, the requests review; the range toolbox's Copy, Record this passage, Start a new part).
-- [ ] Task 8.2 Lyrics in the format and in the engine.
-- [ ] Task 8.3 Each screen on the new engine; vexflow-v2 no longer draws or edits anywhere; its browser checks moved.
+Report: [`03-implementation-phase-8.md`](03-implementation-phase-8.md).
+
+- [x] Task 8.1 Study and inventory (the sheet toolbox with Transpose figures and notes, the keyboard panel, Find trills, Play mode, Recording in Sheet, copy and paste, parts and playlists, the PDF, the Transpose preview, From other projects, the requests review; the range toolbox's Copy, Record this passage, Start a new part); the user's answers (four questions); the phase in two halves.
+- [x] Task 8.2 Lyrics in the format and in the engine (`lyric` lines of `sheet.f1`, `<text data-lyric>`; picked, dragged and lit on the page).
+- [p] Task 8.3 Each screen on the new engine; vexflow-v2 no longer draws or edits anywhere; its browser checks moved.
+  - [p] 8A The sheet toolbox (Title, Key, Transpose notes and figures with the preview, Lyrics, View: Zoom and Space between lines), the keyboard panel, Print to PDF, Play mode's lyrics: built, `check:frames-toolbox` passes; waiting for the user's check in the browser.
+  - [ ] 8B `sheet.f1` follows every change of a part's length; copy and paste; Start a new part; the read-only stretch actions; the requests review; Recording in Sheet; the blank sheet; the switch removed and the browser checks moved; the user's check in the browser.
 
 # [ ] Phase 9: The saved data
 

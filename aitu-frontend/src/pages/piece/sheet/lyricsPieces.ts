@@ -10,8 +10,13 @@
  * the refusal and change nothing.
  */
 
-import { LYRIC_FONT_SIZE, MAX_LYRIC_FONT_SIZE, MIN_LYRIC_FONT_SIZE } from "@aimpromptu/grid-notation";
 import type { LyricLine } from "../../../api";
+
+/** The size of the words, in pixels: the default and the limits (the drawing package's values, kept here so the
+ * new sheet needs nothing of it). */
+export const LYRIC_FONT_SIZE = 12;
+export const MIN_LYRIC_FONT_SIZE = 7;
+export const MAX_LYRIC_FONT_SIZE = 36;
 
 export type Outcome<T> = { ok: T } | { refused: string };
 

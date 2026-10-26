@@ -6,8 +6,8 @@ agents of implementation 03 (`context/implementations/03-apply-poc-research/`). 
 README with the names of the backend: `aitu_notation.X` of the research is `aitu_backend.sheet.X` here. The copy
 changed no logic; the golden files of section 7 prove it. Phase 2 added the new sheet without compases (section 9),
 Phase 3 its engine (section 10), Phase 4 its LLM step (section 11), Phase 5 put it in the app (section 12), Phase 6 made it editable
-(section 13), and Phase 7 added the note and range tools (section 14): the bars path below is unchanged, and so are its
-golden files.
+(section 13), Phase 7 added the note and range tools (section 14), and Phase 8 the sheet toolbox, lyrics and the sheet
+on paper (section 15): the bars path below is unchanged, and so are its golden files.
 
 ## 1. What it does
 
@@ -350,3 +350,38 @@ the answer of GET /sheet/{part}                                        ~40-70 ms
   drawn column moved by a frame or two (the first note of its chord taken off).
 - Tests: `tests/test_sheet_reading.py`. Command: `scripts/tools_gallery.py` (the Phase 7 gallery). Browser check:
   `npm run check:frames-tools` (aitu-frontend; `--live` makes one stretch request, about $0.01).
+
+## 15. The sheet toolbox, lyrics and the sheet on paper (implementation 03, Phase 8A)
+
+What the user writes about the whole sheet, stored in the sheet itself (so every copy, history snapshot and undo
+step that carries `sheet.f1` carries it too). Measurements and reasons:
+`context/implementations/03-apply-poc-research/03-implementation-phase-8.md`.
+
+- **The format** (`sheet.f1`, frames view only; written only when set, so every older sheet and golden file is
+  unchanged; never in an LLM prompt, whose sheets are built anew): `spaceMs=` and `lineSpace=` in the header, then
+  after the clefs line `title "..."`, `subtitle "..."`, `artist "..."` and one `lyric f<start> f<end> "words"
+  [size=..] [lift=..]` per lyrics piece (`\n` breaks a line; size and lift in staff spaces).
+- **The data**: `Sheet.titles`, `Sheet.lyrics` (`Lyric`: start, end, text, size, lift), `Sheet.space_ms`,
+  `Sheet.line_space`; `carry_extras(source, target)` copies them onto a sheet made from another: `build.reapply`,
+  `llm.frames.splice`, and the AI job (its live sheet and its commit) call it.
+- **The engine**: the spacing reads `Sheet.space_ms` before `quarter_ms`, so Transpose figures renames figures and
+  keeps the spacing's figure (D-18; the rules that read names, grace notes and flags, may still move some columns);
+  `Sheet.line_space` is the gap between systems; a lyrics piece is a text primitive (`Prim` kind `"t"`) above the
+  upper staff of the line that holds its first column, all pieces of a line on one baseline above the ink under
+  them, `lift` raising one further. The SVG writes `<text class="lyric" data-lyric data-start data-end>` (Lora
+  italic, a soft charcoal) with one `tspan` per line. `render_pages(sheet, opts, page_height=, first_height=, gap=)`
+  draws the song once at the paper's width and deals whole lines onto pages (Print to PDF).
+- **The edits** (`part_sheet.reading`, through `edits.edit_reading`, one step each): `titles`, `piece-key` (the
+  armadura the sheet starts with), `line-space`, `lyrics` (the whole list, checked: no two pieces share a frame),
+  `figures` (Transpose figures: `quarter_ms` x 2^steps, `space_ms` kept, figures set by hand moved; the record's
+  `reference` becomes `user`, and a new AI run keeps the named figure: no reference request).
+  `edits.preview_reading` answers the result without storing it.
+- **Transpose notes** (`edits.transpose_notes`): every note of `notes.pmn` moved, the stored sheet with it
+  (`reading.transpose_sheet`: pitches and armaduras moved, so `reapply` keeps every decision; clefs fitted where a
+  note reads four ledger lines or more from its staff, `reading.far_notes` and `build.fit_clefs`); notes leaving the
+  88 keys taken off; one step (`_Step.keys`: each note's key before and after). A preview stores nothing.
+- **A note added** on the keyboard panel (`edits.add_note`): at the onset of the drawn column, one step.
+- Routes: `POST /sheet/{part}/reading?preview=true`, `POST /sheet/{part}/transpose` (`preview`),
+  `POST /sheet/{part}/add`, `GET /sheet/{part}/pages`; `GET /sheet/{part}` answers `titles`, `lyrics`, `quarterMs`,
+  `spaceMs`, `lineSpace`, and each note's `end` frame.
+- Tests: `tests/test_sheet_toolbox.py`. Browser check: `npm run check:frames-toolbox` (aitu-frontend).

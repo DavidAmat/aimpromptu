@@ -19,8 +19,8 @@ The code is `aitu-frontend/src/pages/piece/sheet/` (implementation 02, Phase 2 s
 
 Since implementation 03, Phase 5 the Sheet step opens on the **new sheet** (without compases, drawn by the
 backend; [rendering.md](rendering.md)). Everything below this section is the **old sheet**, which opens from
-**Edit in the old sheet** and keeps the tools that have not moved yet (the sheet toolbox, lyrics, copy and paste,
-Record a passage: Phase 8). On the new sheet:
+**Edit in the old sheet** and keeps the tools that have not moved yet (copy and paste, Record a passage, Start a new
+part: implementation 03, Phase 8B). On the new sheet:
 
 - **Pick notes**: click a notehead (the recording goes there), ⌘-click or Shift-click to add or take one away, or
   drag a box across the staves. Escape drops the pick. The note toolbox opens beside the notes, titled with the
@@ -64,6 +64,23 @@ Record a passage: Phase 8). On the new sheet:
   suggestion, and may change any of them (the user's answer of Phase 6). It keeps your fingers, your figures set by
   hand and your grace note switches; it writes the beams, clefs, 8va, armaduras and ornaments again (the user's
   answer of Phase 7). A first run reads the notes without hands.
+- **The sheet toolbox** (the sliders icon of the floating bar; implementation 03, Phase 8): **Title** (title,
+  subtitle and artist above the sheet and on the PDF, written when the field is left), **Key** (the armadura of the
+  piece; *Use D major (n fewer signs)* when another prints fewer signs over the piece), **Transpose** (**Notes**:
+  every note moved by the interval of two keyboards, the sheet with them, the armaduras renamed with fewer signs, a
+  note off the 88 keys taken off; **Figures**: every figure renamed by the same number of steps, the page keeps its
+  spacing; each with **Preview** and **Transpose**), **Lyrics** (as on the old sheet: paste, **Save lyrics**, the
+  pool, the picked pieces' toolbar; a piece is dragged from the pool onto the sheet, then on the sheet moved to the
+  frame under its left edge, lifted up or down, its right edge pulled; Delete takes the picked pieces off), and
+  **View** (**Zoom**, kept in this browser; **Space between lines**, kept with the sheet). Every change is one step
+  of Undo.
+- **Print to PDF** (the printer icon): the paper, the margins, extra space between lines, the title and page numbers;
+  the lines are laid out again for the paper (never shrunk) and never split across a page turn
+  ([printing.md](printing.md)).
+- **The keyboard panel** (`⋯` → *Show the keyboard*): the keys sounding under the cursor, as on the old sheet; a lit
+  key takes that note off the page, a dark one adds a note to the hand of **Add to** (one step of Undo).
+- **Not on the new sheet** (the user's answers of Phase 8): space between notes, size of marks, frame numbers, hide
+  decorative notes, group high notes under 8va (Layout); Find trills, Remove all and Bring back N notes taken off.
 - **Not on the new sheet** (the user's answer of Phase 7): even spacing of a run, the room of a stretch (Spacing),
   speed changes (Speed), print smaller, a decoration that is not played (the grace note switch replaces both), and
   hiding or dragging an 8va bracket.

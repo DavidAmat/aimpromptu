@@ -23,6 +23,9 @@
  *   the strip above the staves opens the range toolbox (**Both / Right / Left**, Key, Clef, Octave). Either selection
  *   hands over to the other from its title bar, and either one can be sent to the AI with the user's own words
  *   (**Enhance with AI**: the stretch gets the pale veil while the AI writes it, then appears column by column).
+ * - **The sheet toolbox** (Phase 8): Title, Key, Transpose (notes and figures, with their preview), Lyrics (the
+ *   pieces placed on the sheet are dragged there) and View (zoom, space between lines); **Print to PDF**; and in
+ *   the `⋯` the keyboard panel (the keys sounding under the cursor; a click takes a note off or adds one).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -35,29 +38,43 @@ import Typography from "@mui/material/Typography";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import EditNoteIcon from "@mui/icons-material/EditNoteOutlined";
 import PauseIcon from "@mui/icons-material/Pause";
+import PianoIcon from "@mui/icons-material/PianoOutlined";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PrintIcon from "@mui/icons-material/PrintOutlined";
 import RedoIcon from "@mui/icons-material/RedoOutlined";
+import TuneIcon from "@mui/icons-material/TuneOutlined";
 import UndoIcon from "@mui/icons-material/UndoOutlined";
 import Alert from "@mui/material/Alert";
+import Snackbar from "@mui/material/Snackbar";
 import {
   sheetApi,
-  timeScoreApi,
+  type LyricLine,
   type ReadingEdit,
-  type SavedRhythm,
   type SheetNote,
+  type SheetPreview,
   type StretchRequest,
 } from "../../../../api";
 import ScorePlayer, { type ScorePlayerControls } from "../../../../components/time/ScorePlayer";
 import { useElementSize } from "../../../../hooks/useElementSize";
-import { ConfirmDialog, FloatingBar, IconAction, Pill, PillButton, semantic } from "../../../../ui";
+import { noteName } from "../../../../music/noteNames";
+import { intervalWords } from "../../../../music/transpose";
+import { ConfirmDialog, FloatingBar, IconAction, Pill, PillButton, RowMenu, semantic } from "../../../../ui";
+import { piecesIn } from "../lyricsPieces";
+import { PianoToolbox } from "../PianoToolboxes";
+import { HAND_COLOUR, HELD_COLOUR, type SoundingNote } from "../sheetConstants";
 import type { SheetStep } from "../SheetPage";
 import { besideOnScreen, clearOfRange, firstLineBoxOf, screenBoxOf } from "../toolboxPlacement";
 import { EnhanceStretchDialog } from "./EnhanceStretchDialog";
 import { FramesNoteToolbox } from "./FramesNoteToolbox";
 import { FramesRangeToolbox, type RangeHand } from "./FramesRangeToolbox";
 import { FramesSheetView, type MarkedRange, type PickHow } from "./FramesSheetView";
+import { FramesPdfDialog } from "./FramesPdfDialog";
+import { FramesPreviewDialog } from "./FramesPreviewDialog";
+import { FramesSheetToolbox, MAX_ZOOM, MIN_ZOOM, type FramesSheetTab } from "./FramesSheetToolbox";
+import { placeAt, steadyColumns } from "./geometry";
 import { frameOf } from "./readingTools";
 import { ENHANCE_WITH_AI } from "./navigation";
+import { useFramesLyrics } from "./useFramesLyrics";
 import { useFramesSheet } from "./useFramesSheet";
 
 /** The size the sheet is drawn at: about the old sheet's (8 px a staff space at the Sheet step's width). */
@@ -66,6 +83,30 @@ const PX_PER_SPACE = 8.5;
 const MARGINS = 8;
 /** The width asked for moves in steps of this many staff spaces, so a small resize draws nothing again. */
 const WIDTH_STEP = 4;
+/** The zoom of the page is kept in this browser (it is how the page is looked at, not part of the sheet). */
+const ZOOM_KEY = "aitu.framesSheet.zoom";
+/** The engine's own space between lines, in staff spaces. */
+const OWN_LINE_SPACE = 5;
+
+function rememberedZoom(): number {
+  try {
+    const value = Number(window.localStorage.getItem(ZOOM_KEY));
+    return value >= MIN_ZOOM && value <= MAX_ZOOM ? value : 1;
+  } catch {
+    return 1;
+  }
+}
+
+/** A transposition waiting in its preview for **Transpose** or **Cancel**. */
+interface Previewing {
+  kind: "notes" | "figures";
+  /** Semitones (notes) or steps (figures: positive is shorter). */
+  value: number;
+  title: string;
+  facts: string[];
+  preview: SheetPreview | null;
+  error: string | null;
+}
 
 export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSheet: () => void }) {
   const audioUuid = step.audioUuid;
@@ -76,30 +117,30 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
   const location = useLocation();
 
   const [sizeRef, size] = useElementSize<HTMLDivElement>();
+  const [zoom, setZoomNow] = useState(rememberedZoom);
+  const setZoom = useCallback((next: number) => {
+    setZoomNow(next);
+    try {
+      window.localStorage.setItem(ZOOM_KEY, String(next));
+    } catch {
+      // A browser that keeps nothing: the zoom lasts for this page.
+    }
+  }, []);
   const width = useMemo(() => {
     if (size.width <= 0) return null;
-    const spaces = size.width / PX_PER_SPACE - MARGINS;
+    const spaces = size.width / (PX_PER_SPACE * zoom) - MARGINS;
     return Math.min(320, Math.max(60, Math.round(spaces / WIDTH_STEP) * WIDTH_STEP));
-  }, [size.width]);
+  }, [size.width, zoom]);
 
   const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, notice } = useFramesSheet(audioUuid, width, {
     autoStart: !readOnly,
     onChanged: step.onChanged,
   });
 
-  // The title lines the old sheet saved (its Title tab): kept on the page.
-  const [titles, setTitles] = useState<SavedRhythm | null>(null);
-  useEffect(() => {
-    if (playMode) return;
-    const controller = new AbortController();
-    timeScoreApi
-      .rhythm(audioUuid, controller.signal)
-      .then((found) => setTitles(found))
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, [audioUuid, playMode]);
-  const title = titles?.title ?? step.label ?? "Untitled";
-  const underTitle = [titles?.subtitle, titles?.artist].filter(Boolean).join(" · ");
+  // The title lines of the sheet toolbox (Phase 8; the old sheet's Title tab was never used: none to carry over).
+  const titles = sheet?.titles ?? {};
+  const title = titles.title || step.label || "Untitled";
+  const underTitle = [titles.subtitle, titles.artist].filter(Boolean).join(" · ");
 
   // ------------------------------------------------------------------ the recording
 
@@ -185,6 +226,10 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
   const [rangeAt, setRangeAt] = useState<{ x: number; y: number } | undefined>(undefined);
   // The range toolbox opens to the left of where the stretch starts (the old sheet's place), measured once the band
   // is drawn (two frames later).
+  // What the stretch's handler reads of the Lyrics tab, declared below (the handler is made once per stretch).
+  const lyricsModeRef = useRef(false);
+  const lyricsPickRef = useRef<(starts: number[]) => void>(() => undefined);
+  const lyricsLinesRef = useRef<readonly LyricLine[]>([]);
   const placeRange = useCallback(() => {
     window.requestAnimationFrame(() =>
       window.requestAnimationFrame(() => setRangeAt(clearOfRange(firstLineBoxOf("[data-frames-sheet] [data-range-band]")))),
@@ -192,6 +237,11 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
   }, []);
   const onRange = useCallback(
     (next: MarkedRange) => {
+      if (lyricsModeRef.current) {
+        // In the Lyrics tab a stretch picks every lyrics piece over it, as on the old sheet.
+        lyricsPickRef.current(piecesIn(lyricsLinesRef.current, { fromColumn: next.start, toColumn: next.end }));
+        return;
+      }
       if (!range) placeRange();
       setMark({ uuid: audioUuid, range: next });
       setPick({ uuid: audioUuid, refs: [] });
@@ -222,16 +272,142 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     if (width === null || picked.length === 0) return;
     void edit(() => sheetApi.moveHands(audioUuid, picked, hand, width));
   };
-  const apply = (change: ReadingEdit) => {
-    if (width === null) return;
-    void edit(() => sheetApi.read(audioUuid, change, width));
-  };
+  const apply = useCallback(
+    async (change: ReadingEdit) => {
+      if (width === null) return false;
+      return (await edit(() => sheetApi.read(audioUuid, change, width))) !== null;
+    },
+    [width, edit, audioUuid],
+  );
+  /** Something asked of the lyrics could not be done: said once, in words, at the foot of the window. */
+  const [refused, setRefused] = useState<string | null>(null);
   const editNotes = (change: Omit<ReadingEdit, "notes">) => {
-    if (picked.length > 0) apply({ ...change, notes: picked });
+    if (picked.length > 0) void apply({ ...change, notes: picked });
   };
   const editRange = (change: Omit<ReadingEdit, "start" | "end">) => {
-    if (range) apply({ staff: rangeHand, ...change, start: range.start, end: range.end });
+    if (range) void apply({ staff: rangeHand, ...change, start: range.start, end: range.end });
   };
+
+  // ------------------------------------------------------------------ the sheet toolbox (Phase 8)
+
+  const [toolboxOpen, setToolboxOpen] = useState(false);
+  const [toolboxTab, setToolboxTab] = useState<FramesSheetTab>("title");
+  const lyrics = useFramesLyrics(audioUuid, sheet, apply, setRefused);
+  const lyricsMode = toolboxOpen && toolboxTab === "lyrics";
+  const pickedLyrics = useMemo(() => new Set(lyrics.picked), [lyrics.picked]);
+  useEffect(() => {
+    lyricsModeRef.current = lyricsMode;
+    lyricsPickRef.current = (starts) => lyrics.setPicked(starts);
+    lyricsLinesRef.current = lyrics.lines;
+  }, [lyricsMode, lyrics]);
+  const pickLyric = useCallback(
+    (start: number, add: boolean) => {
+      setToolboxOpen(true);
+      setToolboxTab("lyrics");
+      lyrics.setPicked((now) => (add ? (now.includes(start) ? now.filter((one) => one !== start) : [...now, start]) : [start]));
+    },
+    [lyrics],
+  );
+
+  // Transpose, with its preview: nothing is written until **Transpose**.
+  const [previewing, setPreviewing] = useState<Previewing | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const previewNotes = (semitones: number) => {
+    if (width === null) return;
+    setPreviewing({ kind: "notes", value: semitones, title: `Transpose the notes: ${intervalWords(semitones).toLowerCase()}`, facts: [], preview: null, error: null });
+    sheetApi
+      .transpose(audioUuid, semitones, width, true)
+      .then((found) =>
+        setPreviewing((now) =>
+          now && now.kind === "notes" && now.value === semitones
+            ? {
+                ...now,
+                preview: found,
+                facts: found.outside
+                  ? [`${found.outside} note${found.outside === 1 ? "" : "s"} would leave the keyboard: taken off the page.`]
+                  : [],
+              }
+            : now,
+        ),
+      )
+      .catch((caught: unknown) =>
+        setPreviewing((now) => (now ? { ...now, error: caught instanceof Error ? caught.message : "The preview could not be drawn." } : now)),
+      );
+  };
+  const previewFigures = (steps: number) => {
+    if (width === null || steps === 0) return;
+    const k = Math.abs(steps);
+    setPreviewing({
+      kind: "figures",
+      value: steps,
+      title: `Transpose the figures: every figure ${k} step${k === 1 ? "" : "s"} ${steps > 0 ? "shorter" : "longer"}`,
+      facts: ["No note moves: the figures are named again."],
+      preview: null,
+      error: null,
+    });
+    sheetApi
+      .previewRead(audioUuid, { action: "figures", value: steps }, width)
+      .then((found) => setPreviewing((now) => (now && now.kind === "figures" && now.value === steps ? { ...now, preview: found } : now)))
+      .catch((caught: unknown) =>
+        setPreviewing((now) => (now ? { ...now, error: caught instanceof Error ? caught.message : "The preview could not be drawn." } : now)),
+      );
+  };
+  const confirmPreview = async () => {
+    if (!previewing || width === null) return;
+    setConfirming(true);
+    const done =
+      previewing.kind === "notes"
+        ? (await edit(() => sheetApi.transpose(audioUuid, previewing.value, width))) !== null
+        : await apply({ action: "figures", value: previewing.value });
+    setConfirming(false);
+    if (done) setPreviewing(null);
+  };
+
+  // The keyboard panel: the keys sounding under the cursor; a click takes one off, or adds one to a hand.
+  const [pianoOpen, setPianoOpen] = useState(false);
+  const [addHand, setAddHand] = useState<SheetNote["hand"]>("right");
+  const steady = useMemo(() => steadyColumns(sheet?.columns ?? []), [sheet?.columns]);
+  const cursorAt = sheet && seconds !== null ? placeAt(steady, sheet.systems, seconds * 1000) : null;
+  const cursorFrame = cursorAt && cursorAt.column >= 0 ? (steady[cursorAt.column]?.frame ?? null) : null;
+  const sounding = useMemo(() => {
+    if (!sheet || cursorFrame === null) return [] as (SoundingNote & { ref: string; end: number })[];
+    return sheet.notes
+      .filter((note) => {
+        const frame = frameOf(note.ref);
+        return frame === cursorFrame || (frame < cursorFrame && (note.end ?? frame) > cursorFrame);
+      })
+      .map((note) => ({
+        row: Number(note.ref.split(":")[1]) - 21,
+        hand: note.hand,
+        onsetFrame: frameOf(note.ref),
+        ref: note.ref,
+        end: note.end ?? frameOf(note.ref) + 1,
+      }));
+  }, [sheet, cursorFrame]);
+  const soundingColours = useMemo(() => {
+    const out: Record<number, string> = {};
+    for (const note of sounding) out[note.row] = note.onsetFrame === cursorFrame ? HAND_COLOUR[note.hand] : HELD_COLOUR[note.hand];
+    return out;
+  }, [sounding, cursorFrame]);
+  const pressKey = (row: number) => {
+    if (width === null || cursorFrame === null) return;
+    const lit = sounding.find((note) => note.row === row);
+    if (lit) {
+      void edit(() => sheetApi.remove(audioUuid, [lit.ref], width));
+      return;
+    }
+    // The length that hand is already holding there, as on the old sheet.
+    const held = sounding.find((note) => note.hand === addHand);
+    void edit(() =>
+      sheetApi.addNote(
+        audioUuid,
+        { frame: cursorFrame, midi: row + 21, hand: addHand, ...(held ? { lengthMs: (held.end - held.onsetFrame) * 40 } : {}) },
+        width,
+      ),
+    );
+  };
+
+  const [pdfOpen, setPdfOpen] = useState(false);
   const removePicked = useCallback(() => {
     if (width === null || picked.length === 0) return;
     void edit(() => sheetApi.remove(audioUuid, picked, width)).then((done) => {
@@ -313,6 +489,11 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
         return;
       }
       if ((event.key === "Delete" || event.key === "Backspace") && !(event.metaKey || event.ctrlKey)) {
+        if (lyricsMode && lyrics.picked.length > 0 && sheet?.editable && !editing) {
+          event.preventDefault();
+          lyrics.removePicked();
+          return;
+        }
         if (picked.length > 0 && sheet?.editable && !editing) {
           event.preventDefault();
           removePicked();
@@ -328,7 +509,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [canEdit, walk, unpick, unmark, picked.length, sheet?.editable, editing, removePicked]);
+  }, [canEdit, walk, unpick, unmark, picked.length, sheet?.editable, editing, removePicked, lyricsMode, lyrics]);
 
   // A blank sheet (From scratch): the old page has its empty state, with Record a passage and Paste.
   const empty = sheet !== null && sheet.columns.length === 0;
@@ -409,6 +590,18 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
               range={canEdit ? range : null}
               rangeScope={rangeHand}
               onRange={canEdit ? onRange : undefined}
+              playing={playing}
+              {...(canEdit && sheet.editable
+                ? {
+                    lyrics: {
+                      picked: pickedLyrics,
+                      onPick: pickLyric,
+                      onMove: lyrics.move,
+                      landing: lyrics.landing,
+                      onDropPool: lyrics.dropPool,
+                    },
+                  }
+                : {})}
             />
           ) : !error ? (
             <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }} data-sheet-loading>
@@ -427,6 +620,7 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
             onClick={() => player.current?.toggle()}
             placement="top"
           />
+          <IconAction title="Print to PDF" icon={<PrintIcon />} onClick={() => setPdfOpen(true)} placement="top" data-testid="sheet-print" />
           {readOnly ? null : (
             <>
               <IconAction
@@ -448,6 +642,25 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
                 disabledTitle={locked ?? "Nothing to redo"}
                 placement="top"
                 data-testid="sheet-redo"
+              />
+              <Divider orientation="vertical" flexItem />
+              <IconAction
+                title="Sheet toolbox"
+                icon={<TuneIcon />}
+                onClick={() => setToolboxOpen((open) => !open)}
+                active={toolboxOpen}
+                placement="top"
+                data-testid="sheet-toolbox"
+              />
+              <RowMenu
+                title="More sheet actions"
+                items={[
+                  {
+                    label: pianoOpen ? "Hide the keyboard" : "Show the keyboard",
+                    icon: <PianoIcon fontSize="small" />,
+                    onClick: () => setPianoOpen((open) => !open),
+                  },
+                ]}
               />
             </>
           )}
@@ -507,6 +720,84 @@ export function FramesSheetPage({ step, onOldSheet }: { step: SheetStep; onOldSh
           locked={locked}
         />
       ) : null}
+      {canEdit && sheet ? (
+        <FramesSheetToolbox
+          open={toolboxOpen}
+          onClose={() => setToolboxOpen(false)}
+          tab={toolboxTab}
+          onTab={setToolboxTab}
+          audioUuid={audioUuid}
+          sheet={sheet}
+          pieceLabel={step.label}
+          onEdit={(change) => void apply(change)}
+          busy={editing}
+          locked={locked}
+          transposing={previewing !== null && previewing.preview === null && previewing.error === null}
+          onPreviewNotes={previewNotes}
+          onPreviewFigures={previewFigures}
+          zoom={zoom}
+          setZoom={setZoom}
+          lyrics={{
+            lines: lyrics.lines,
+            pool: lyrics.pool,
+            picked: lyrics.picked,
+            setLines: lyrics.setLines,
+            setPool: lyrics.setPool,
+            setPicked: lyrics.setPicked,
+            onRefused: setRefused,
+            onPoolDrag: lyrics.onPoolDrag,
+            pasted: lyrics.pasted,
+            setPasted: lyrics.setPasted,
+            savedText: lyrics.savedText,
+            poolUnsaved: lyrics.poolUnsaved,
+            saving: lyrics.saving,
+            onSave: (text) => void lyrics.save(text),
+          }}
+        />
+      ) : null}
+      {canEdit ? (
+        <PianoToolbox
+          open={pianoOpen}
+          onClose={() => setPianoOpen(false)}
+          playheadFrame={cursorFrame}
+          frameMs={40}
+          addHand={addHand}
+          setAddHand={setAddHand}
+          addingNote={editing}
+          soundingColours={soundingColours}
+          soundingNow={sounding}
+          onKeyPress={pressKey}
+          noteNameAt={(row) => noteName(row + 21)}
+        />
+      ) : null}
+      <FramesPreviewDialog
+        open={previewing !== null}
+        title={previewing?.title ?? ""}
+        facts={previewing?.facts ?? []}
+        preview={previewing?.preview ?? null}
+        error={previewing?.error ?? null}
+        confirming={confirming}
+        onConfirm={() => void confirmPreview()}
+        onCancel={() => setPreviewing(null)}
+      />
+      {sheet && !playMode ? (
+        <FramesPdfDialog
+          open={pdfOpen}
+          onClose={() => setPdfOpen(false)}
+          audioUuid={audioUuid}
+          pieceName={title}
+          subtitle={underTitle}
+          lineSpace={sheet.lineSpace ?? OWN_LINE_SPACE}
+        />
+      ) : null}
+      <Snackbar
+        open={refused !== null}
+        autoHideDuration={4000}
+        onClose={() => setRefused(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        message={refused}
+        data-testid="sheet-refused"
+      />
       <EnhanceStretchDialog
         open={asked !== null}
         what={asked?.what ?? "this stretch"}

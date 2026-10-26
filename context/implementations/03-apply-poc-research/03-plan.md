@@ -645,6 +645,20 @@ be enhanced with AI with the user's instruction from either selection.
 2. **Lyrics** in the format and in the engine (they are keyed by frames, which fits the new sheet).
 3. Each screen moved to the new engine; vexflow-v2 is no longer used anywhere for drawing or editing.
 
+*After the study (2026-10-26, report section 2):* the phase is built in two halves, each checked by the user in the
+browser. **8A, the Sheet step's own tools:** the sheet toolbox (Title, Key, Transpose notes and figures with their
+preview, Lyrics, and a View tab with Zoom and Space between lines), the keyboard panel, Print to PDF from the new
+engine, Play mode's lyrics. **8B, the screens of a stretch:** `sheet.f1` follows every change of a part's length
+(paste, promotion, split, join, From other projects, a comment's excerpt: today its decisions after that point are
+lost), copy and paste, Start a new part, the read-only stretch actions (Add to a playlist, Add this stretch, Comment on
+this stretch), the requests review, Recording in Sheet, the blank sheet of From scratch; then the switch to the old
+sheet is removed and its browser checks move. The user's answers (2026-10-26): Layout keeps only Zoom and Space between
+lines; lyrics stay above the upper staff with the whole editor (pool, drag onto frames, split, merge, words, size,
+lift); a take's sheet is the algorithm's, with Enhance with AI as a button, and Promote carries its reading into the
+song; Find trills, Remove all and Bring back N notes taken off are dropped. The agent's choices: Transpose figures only
+renames the figures and the page keeps its widths (D-18, nothing moves); the old `sheet.json` marks stay stored when
+the switch goes, and Phase 9 maps them.
+
 *Done when:* every screen of the inventory uses the new engine, checked in the browser by the user.
 
 ## Phase 9: The saved data
@@ -683,7 +697,7 @@ beam breaks, clefs, ottavas, keys, lyrics). They must open correctly in the new 
 | 5 | Existing projects: keep their data, the AI's sheet for the 10 songs it wrote, a button for the rest (user, 2026-10-25); merge to `master`: now (user, 2026-10-25) |
 | 6 | May a new LLM run change hands that the user moved (user, 2026-10-25: yes, it reads them as a suggestion); the engine in the backend or in the browser (agent, from the time of one edit: the backend) |
 | 7 | Tools that no longer make sense (user, 2026-10-25): drop even spacing, the room of a stretch and speed changes; replace print smaller and the unplayed decoration by a grace note switch; drop hiding and dragging an 8va bracket. A new AI run keeps the user's fingers, figures and grace switches and writes its own kinds again |
-| 8 | Tools of the sheet toolbox and the other screens that no longer make sense: keep, change or drop |
+| 8 | Tools of the sheet toolbox and the other screens that no longer make sense (user, 2026-10-26): Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's with Enhance with AI as a button; Find trills, Remove all and Bring back are dropped |
 
 # 9. Risks
 
@@ -769,3 +783,6 @@ repository."
 | 7 | Fingers on one chord: from the thumb in the right hand, from the little finger in the left | The old sheet gave the lowest note the smallest number in both hands, which is wrong for the left hand |
 | 7 | Phase 7 task 5: the stretch request shows the stretch as it is now, puts the user's words first ("of the utmost importance") and may leave notes out, which are taken off the page in the same step | The user's first check: "make all the notes single notes instead of the current octave notes" changed nothing, because the checker demanded every note back and the AI did not see the current beams |
 | 7 | Phase 7 task 5: with the user's words a stretch request aims at a sheet simpler to read and to play (uniform patterns) and may change pitches, add notes and set figures; those go into `notes.pmn` and the sheet in the same undo step | The user's second check: a lone low note stayed when the octaves became single notes, and figures could not be asked for |
+| 8 | Phase 8 is built in two halves (8A the Sheet step's tools, 8B the screens of a stretch), each checked in the browser; 8B starts with `sheet.f1` following every change of a part's length | The study: the phase holds more than Phase 7, and paste, promotion, split, join and From other projects lose the new sheet's decisions after the change today |
+| 8 | Layout keeps Zoom and Space between lines; lyrics stay above the staff with the whole editor; a take's sheet is the algorithm's; Find trills, Remove all and Bring back are dropped | The user's answers of 2026-10-26 |
+| 8 | Transpose figures renames the figures and keeps the page's widths | D-18 ("nothing moves"); the spacing model reads the reference figure, so a rename alone would widen or narrow the page |

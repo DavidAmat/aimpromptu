@@ -185,6 +185,7 @@ export function Piano({
               style={{ cursor: "pointer" }}
               role="button"
               tabIndex={-1}
+              data-key-row={key.row}
               aria-label={keyTitle?.(key.row) ?? key.en}
               onClick={(event) => {
                 event.stopPropagation();

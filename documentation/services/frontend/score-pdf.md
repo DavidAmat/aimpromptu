@@ -5,6 +5,14 @@
 The **PDF** button of a project's Sheet step (`/projects/:id/sheet`). Lays the sheet out on paper, previews it, writes a vector PDF,
 and downloads it. No new npm dependency: the PDF is written here.
 
+**The new sheet (implementation 03, Phase 8)** uses the same writer: `pages/piece/sheet/frames/FramesPdfDialog.tsx`
+asks the backend for the pages (`GET /sheet/{uuid}/pages`, whole lines at a printed staff space of 1.75 mm), puts
+each one in a `[data-pdf-page]` element with its title and number, and `scoreToPdf(host, { selector:
+"[data-pdf-page]" })` writes them. `drawPage.ts` reads the engine's SVG: a glyph is a `<use>` of a `<path>` in
+`<defs>` (the path's own `scale(1,-1)` applied), beams are `<polygon>`s, and lyrics are `<text>` with one `tspan`
+per line (a new line is a new run). The clefs use the smooth curve `s`, now converted (`S`, `T`). No glyph is text,
+so Bravura is not embedded (a base font stands in its unused slot): 7 Years on 5 A4 pages is about 50 kB.
+
 ## Files
 
 | File | Does |

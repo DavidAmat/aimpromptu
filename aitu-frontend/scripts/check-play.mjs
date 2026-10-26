@@ -114,6 +114,16 @@ try {
       { fromColumn: 400, toColumn: 450, text: 'check words two' },
     ],
   });
+  // The same two pieces on the new sheet (implementation 03, Phase 8: lyrics are lines of the sheet itself).
+  await send('POST', `${api}/sheet/${copy.id}/reading?width=130`, {
+    action: 'lyrics',
+    value: {
+      pieces: [
+        { start: 25, end: 100, text: 'check words one', size: null, lift: 0 },
+        { start: 400, end: 450, text: 'check words two', size: null, lift: 0 },
+      ],
+    },
+  });
 
   await page.goto(`${base}/projects`);
   await page.getByText(copy.title).first().waitFor({ timeout: 20000 });
@@ -125,13 +135,27 @@ try {
   check('the page has no sidebar', (await page.locator('nav').count()) === 0);
   check('Close and Play are on the page, Next is not', (await page.getByTestId('play-close').isVisible()) && (await page.getByTestId('play-toggle').isVisible()) && (await page.getByTestId('play-next').count()) === 0);
   check('nothing on the sheet opens a toolbox', (await page.locator('[data-sheet-page] [data-testid=sheet-floating-bar], [role=toolbar]').count()) === 0);
-  // The new sheet draws no lyrics until implementation 03, Phase 8 (plan task 8.2).
-  console.log('skip  the lyrics of Play mode: the new sheet draws them from Phase 8');
+  check('the lyrics pieces are drawn on the sheet', (await page.locator('[data-play-active="true"] [data-lyric]').count()) === 2);
   await shot('01-play-mode');
 
   await page.mouse.move(700, 450);
   await page.keyboard.press('Space');
   check('Space plays', await until(async () => (await playing()) === 'true', 8000));
+  const litInPlay = await until(
+    async () =>
+      page.evaluate(() => {
+        const one = document.querySelector('[data-play-active="true"] [data-lyric][data-start="25"]');
+        const two = document.querySelector('[data-play-active="true"] [data-lyric][data-start="400"]');
+        return Boolean(
+          one?.hasAttribute('data-lyric-lit') &&
+            getComputedStyle(one).fontWeight === '700' &&
+            two &&
+            Number(getComputedStyle(two).opacity) < 0.6,
+        );
+      }),
+    8000,
+  );
+  check('while it plays, the lyrics piece of the frames sounding is lit and the others are faint', litInPlay);
   await shot('02-playing');
   const faded = await until(
     async () => (await page.locator('[data-play-menu]').evaluate((node) => getComputedStyle(node).opacity)) === '0',

@@ -26,7 +26,11 @@ line. The code is `pages/piece/sheet/frames/`:
   of a line, drawn as a lavender band over the staves in scope;
 - `geometry.ts`: the research viewer's arithmetic (where the cursor is, the time under a click);
 - `useFramesSheet.ts`: the loads, Sonnet's job followed on its stream (`event: sheet`), Sonnet started by
-  itself on a new transcription, and an edit (one request whose answer is the sheet drawn again).
+  itself on a new transcription, and an edit (one request whose answer is the sheet drawn again);
+- since Phase 8: `FramesSheetToolbox.tsx` (Title, Key, Transpose, Lyrics, View), `FramesPreviewDialog.tsx` (the
+  preview of a transposition), `FramesPdfDialog.tsx` (Print to PDF), `useFramesLyrics.ts` (the old Lyrics tab and
+  its piece helpers on the sheet's `lyric` lines); the lyrics are drawn by the backend (`<text data-lyric>`), and
+  the view picks, drags and lights them.
 
 Hooks for the browser checks: `[data-frames-sheet]` (`data-source`, `data-llm`, `data-working`),
 `data-note="<frame>:<midi>"` on each notehead, `[data-lit]`, `[data-frames-cursor]` (`data-ms`),
@@ -34,10 +38,13 @@ Hooks for the browser checks: `[data-frames-sheet]` (`data-source`, `data-llm`, 
 `[data-pick-box]`, `[data-frames-note-toolbox]`, and `sheet-undo`, `sheet-redo` (`data-testid`); since Phase 7
 `[data-range-strip]`, `[data-range-band]` (`data-start`, `data-end`), `[data-frames-range-toolbox]`, and the
 `data-testid` of each tool (`figure-4`, `beam-join`, `grace`, `ornament-trill`, `notes-remove`, `range-enhance`,
-`stretch-words`, ...). The checks are `npm run check:frames-sheet` (`--live` spends a few cents of Sonnet on a 40 s
+`stretch-words`, ...); since Phase 8 `[data-lyric]` (`data-lyric-lit`, `data-lyric-picked`), `[data-lyric-landing]`,
+`[data-frames-sheet-toolbox]`, `[data-pdf-page]`, and `sheet-toolbox`, `sheet-print`, `line-space`, `piece-key`,
+`pdf-download` (`data-testid`). The checks are `npm run check:frames-sheet` (`--live` spends a few cents of Sonnet on a 40 s
 clip), `npm run check:frames-edit` (picking, the hand, undo and redo, and the time of one edit) and
 `npm run check:frames-tools` (every tool of the two toolboxes and the range selection; `--live` makes one stretch
-request, about $0.01).
+request, about $0.01) and `npm run check:frames-toolbox` (Phase 8: the sheet toolbox, lyrics, the keyboard panel,
+Print to PDF, the lyrics in Play mode).
 
 The engine stays in the backend (implementation 03, Phase 6, task 4): one edit takes about a quarter of a second
 from the click to the new drawing on the page, most of it in the backend's rules (the stored sheet laid again on

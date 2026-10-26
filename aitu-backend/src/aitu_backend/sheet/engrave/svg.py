@@ -3,10 +3,15 @@ per glyph, lines and beam polygons; user units are staff spaces."""
 
 from __future__ import annotations
 
+from xml.sax.saxutils import escape
+
 from aitu_backend.sheet.engrave.glyphs import UNITS, box, path_d
 from aitu_backend.sheet.engrave.layout import Engraving
 
 __all__ = ["to_svg"]
+
+#: The colour of the lyrics: a soft charcoal, as the old sheet printed them.
+LYRIC_COLOR = "#3a3a3a"
 
 
 def _f(v: float) -> str:
@@ -76,6 +81,17 @@ def to_svg(
                 )
                 body.append(
                     f'<path d="{d}" stroke-width="{_f(w)}" stroke-linejoin="round" stroke-linecap="round"/>'
+                )
+            elif p.kind == "t":
+                x, y, lines, size, index, first, end = p.data
+                spans = "".join(
+                    f'<tspan x="{_f(x + m)}" y="{_f(y + dy + k * 1.2 * size)}">{escape(line)}</tspan>'
+                    for k, line in enumerate(lines)
+                )
+                body.append(
+                    f'<text class="lyric" data-lyric="{index}" data-start="{first}" data-end="{end}" '
+                    f'font-size="{_f(size)}" font-family="Lora, Georgia, serif" font-style="italic" '
+                    f'fill="{LYRIC_COLOR}" stroke="none">{spans}</text>'
                 )
             elif p.kind == "b":
                 x, y0, y1 = p.data

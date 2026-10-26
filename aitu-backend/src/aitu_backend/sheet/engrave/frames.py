@@ -16,6 +16,12 @@ lines, clefs, armaduras, the brace: Verovio's drawing rules and the Leipzig glyp
 * **Accidentals**: the signs of :func:`aitu_backend.sheet.sheet.frames.printed_signs` (rule 1, every note outside
   the armadura every time; rule 7, the courtesy sign after a becuadro). An armadura change prints the cancelling
   becuadros and the new armadura before its column; a clef change prints a small clef before its column.
+* **Lyrics** (implementation 03, Phase 8): each piece is drawn above the upper staff of the line that holds its first
+  column, from the x of that column (between two drawn columns, by time, as the cursor), on one line of words per
+  system just above the highest ink of the upper staff under the pieces; ``Lyric.lift`` raises a piece further.
+  The text carries ``data-lyric`` (its place in the sheet's lyrics, by start), so a page can pick and light it.
+* **The sheet's own settings** (Phase 8): ``Sheet.space_ms`` is the reference figure of the spacing when Transpose
+  figures renamed the figures (the page keeps its widths), ``Sheet.line_space`` the space between lines.
 * **Line breaks** only where no beam group is cut; from the columns that fill a line to at least ``Options.fill``,
   the one after the longest pause (time between two columns). A line starts at a pause again when a change moved
   the lines before it, so a changed segment moves the rest of the sheet little (Phase 5 redraws one segment).
@@ -37,9 +43,18 @@ from aitu_backend.sheet.engrave.spacing import SpacingModel, load
 from aitu_backend.sheet.engrave.svg import to_svg
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet import frames as frames_mod
-from aitu_backend.sheet.sheet.data import FRAME_MS, Note, Sheet
+from aitu_backend.sheet.sheet.data import FRAME_MS, LYRIC_SIZE, Note, Sheet
 
-__all__ = ["Options", "Layout", "Rendered", "draw", "engrave_frames", "plan", "render_frames"]
+__all__ = [
+    "Options",
+    "Layout",
+    "Rendered",
+    "draw",
+    "engrave_frames",
+    "plan",
+    "render_frames",
+    "render_pages",
+]
 
 SIGN_ALTER = {"#": 1, "b": -1, "n": 0}
 KEY_PAD = (
@@ -47,6 +62,11 @@ KEY_PAD = (
 )
 KEY_AFTER = 1.0
 LONG_GAP = 2.0  # reference negras (a blanca): time beyond it between two columns is empty time
+LYRIC_BASE = (
+    -2.0
+)  # the highest baseline of a line of words: this far above the top staff line, in staff spaces
+LYRIC_CLEAR = 0.8  # and at least this far above the ink of the upper staff under the pieces
+LYRIC_LEADING = 1.2  # the distance between two lines of one piece, in its size
 CLEF_PAD = 0.3  # staff spaces before a clef change inside a line
 CLEF_AFTER = 0.6  # and between it and the notes it changes
 DEFAULT_QUARTER_MS = 500.0
@@ -277,7 +297,7 @@ def plan(sheet: Sheet, opts: Options | None = None) -> Layout:
         sheet = merge_unisons(sheet)
     model = opts.model or load()
     clearance = opts.clearance if opts.clearance is not None else model.clearance
-    quarter = opts.quarter_ms or sheet.quarter_ms or DEFAULT_QUARTER_MS
+    quarter = opts.quarter_ms or sheet.space_ms or sheet.quarter_ms or DEFAULT_QUARTER_MS
     signs = frames_mod.printed_signs(sheet)
     tl = _clef_timeline(sheet)
     key_at = frames_mod.key_at(sheet)
@@ -535,6 +555,7 @@ def _draw_system(lay: Layout, si: int) -> tuple[System, list[dict]]:
             L._ornaments(pen, c)
             L._fingers(pen, c)
     L._ottavas(pen, sys_chords)
+    _lyrics(lay, si, cols, end_x, pen)
     below, above = 4.0, 0.0
     for p in pen.prims:
         lo, hi = L._prim_yrange(p)
@@ -572,6 +593,70 @@ def _draw_system(lay: Layout, si: int) -> tuple[System, list[dict]]:
     return sysm, rows
 
 
+def _x_of(lay: Layout, si: int, cols: list[Column], end_x: float, frame: int) -> float:
+    """The x of a frame in a system: the column's own, or between two columns by time (the cursor's rule); after the
+    last column, towards the end of the line by the time to the next line's first column."""
+    if frame <= cols[0].frame:
+        return cols[0].x
+    for a, b in zip(cols, cols[1:]):
+        if a.frame <= frame < b.frame:
+            return a.x + (b.x - a.x) * (frame - a.frame) / (b.frame - a.frame)
+    last = cols[-1]
+    i, j, _ = lay.lines[si]
+    nxt = lay.columns[j].frame if j < len(lay.columns) else None
+    if nxt is None or nxt <= last.frame:
+        return last.x
+    return last.x + (end_x - last.x) * min(1.0, (frame - last.frame) / (nxt - last.frame))
+
+
+def _ink_x(p: L.Prim) -> tuple[float, float] | None:
+    if p.kind == "g":
+        name, x, _, s, _ = p.data
+        return x, x + box(name).width * s
+    if p.kind == "l":
+        return min(p.data[0], p.data[2]), max(p.data[0], p.data[2])
+    if p.kind == "p":
+        xs = [pt[0] for pt in p.data]
+        return min(xs), max(xs)
+    return None
+
+
+def _lyrics(lay: Layout, si: int, cols: list[Column], end_x: float, pen: L.Pen) -> None:
+    """The lyrics pieces whose first column is in this line, above the upper staff (module notes)."""
+    lyrics = sorted(lay.sheet.lyrics, key=lambda one: (one.start, one.end))
+    if not lyrics:
+        return
+    i, j, _ = lay.lines[si]
+    first = lay.columns[i].frame if i > 0 else None
+    nxt = lay.columns[j].frame if j < len(lay.columns) else None
+    mine = [
+        (k, one)
+        for k, one in enumerate(lyrics)
+        if (first is None or one.start >= first) and (nxt is None or one.start < nxt)
+    ]
+    if not mine:
+        return
+    placed = []
+    for k, one in mine:
+        size = one.size or LYRIC_SIZE
+        x = _x_of(lay, si, cols, end_x, one.start)
+        wide = max(len(line) for line in one.text.split("\n")) * 0.5 * size
+        placed.append((k, one, size, x, x + max(wide, 1.0)))
+    tops = []
+    for p in pen.prims:
+        if p.staff != 1:
+            continue
+        span = _ink_x(p)
+        if span is None or not any(span[1] >= a and span[0] <= b for _, _, _, a, b in placed):
+            continue
+        tops.append(L._prim_yrange(p)[0])
+    base = min([LYRIC_BASE] + [t - LYRIC_CLEAR for t in tops])
+    for k, one, size, x, _ in placed:
+        lines = tuple(one.text.split("\n"))
+        y = base - one.lift - (len(lines) - 1) * size * LYRIC_LEADING
+        pen.prims.append(L.Prim("t", 1, (x, y, lines, size, k, one.start, one.end), "lyric"))
+
+
 def draw(lay: Layout, systems: list[int] | None = None) -> Engraving:
     """The systems of a plan (all, or the given ones, stacked from the top) as an :class:`Engraving`; its
     ``columns`` are one row per drawn column: system, frame, x (notehead left edge), ms."""
@@ -582,11 +667,12 @@ def draw(lay: Layout, systems: list[int] | None = None) -> Engraving:
         drawn.append(sysm)
         rows += r
     margin = 3.0
+    gap = lay.sheet.line_space if lay.sheet.line_space is not None else lay.opts.system_gap
     y = margin
     for sysm in drawn:
         sysm.top = y - sysm.ymin
-        y = sysm.top + sysm.ymax + lay.opts.system_gap
-    height = y - lay.opts.system_gap + margin if drawn else 2 * margin
+        y = sysm.top + sysm.ymax + gap
+    height = y - gap + margin if drawn else 2 * margin
     width = max((s.width for s in drawn), default=lay.opts.width) + 2 * margin + 2.0
     return Engraving(drawn, width, height, rows, [], margin)
 
@@ -674,3 +760,62 @@ def render_frames(
         lines=len(lay.lines),
         timings={k: round(v, 2) for k, v in ms.items()},
     )
+
+
+def render_pages(
+    text: str | Sheet,
+    opts: Options,
+    *,
+    page_height: float,
+    first_height: float | None = None,
+    gap: float | None = None,
+    px_per_space: float = 10.0,
+) -> list[dict]:
+    """The sheet on paper (Print to PDF, implementation 03, Phase 8): drawn once at the paper's staff width
+    (``opts.width``), then dealt out as whole lines onto pages ``page_height`` staff spaces high (the first page
+    ``first_height``, under its title). A line never splits across a page turn; a line taller than a page has a page
+    of its own. ``gap`` is the space between two lines on paper (default: the sheet's own). Returns one
+    ``{"svg", "width", "height", "first", "last"}`` per page (the frames of its first and last columns).
+    """
+    sheet = f1.read(text) if isinstance(text, str) else text
+    lay = plan(sheet, opts)
+    eng = draw(lay)
+    between = (
+        gap
+        if gap is not None
+        else (sheet.line_space if sheet.line_space is not None else opts.system_gap)
+    )
+    margin = eng.margin
+    pages: list[list[int]] = []
+    room = first_height if first_height is not None else page_height
+    used = 0.0
+    for si, sysm in enumerate(eng.systems):
+        tall = sysm.ymax - sysm.ymin
+        need = tall if not pages or not pages[-1] or used == 0.0 else tall + between
+        if pages and pages[-1] and used + need > room - 2 * margin:
+            pages.append([])
+            room, used, need = page_height, 0.0, tall
+        if not pages:
+            pages.append([])
+        pages[-1].append(si)
+        used += need
+    out = []
+    for picked in pages:
+        drawn = [eng.systems[si] for si in picked]
+        y = margin
+        for sysm in drawn:
+            sysm.top = y - sysm.ymin
+            y = sysm.top + sysm.ymax + between
+        height = y - between + margin
+        page = Engraving(drawn, eng.width, height, [], [], margin)
+        i, j = lay.lines[picked[0]][0], lay.lines[picked[-1]][1]
+        out.append(
+            {
+                "svg": to_svg(page, px_per_space=px_per_space, note_ids=False),
+                "width": round(eng.width, 3),
+                "height": round(height, 3),
+                "first": lay.columns[i].frame,
+                "last": lay.columns[j - 1].frame,
+            }
+        )
+    return out

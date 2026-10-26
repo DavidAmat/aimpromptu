@@ -29,9 +29,15 @@ from aitu_backend.sheet.sheet.pitch import STEPS, pitch_to_midi  # noqa: F401 (r
 
 __all__ = [
     "Bar",
+    "LYRIC_MAX",
+    "LYRIC_MIN",
+    "LYRIC_SIZE",
+    "Lyric",
     "Note",
     "Sheet",
+    "TITLE_FIELDS",
     "beat_unit",
+    "carry_extras",
     "compare",
     "frame_of_ms",
     "frames_from_times",
@@ -111,6 +117,29 @@ class Bar:
     key: int
 
 
+#: The size of a lyrics piece, in staff spaces: the default and the limits (the old sheet's 12 px, 7 to 36 px, at
+#: about 8.5 px a staff space).
+LYRIC_SIZE, LYRIC_MIN, LYRIC_MAX = 1.4, 0.8, 4.2
+
+
+@dataclass
+class Lyric:
+    """A lyrics piece on the new sheet (implementation 03, Phase 8): its words (``\\n`` breaks a line) over the
+    columns ``[start, end)``, drawn above the upper staff from ``start``; ``size`` in staff spaces (``None``: the
+    sheet's own), ``lift`` in staff spaces above where the line of words of its system would put it.
+    """
+
+    start: int
+    end: int
+    text: str
+    size: float | None = None
+    lift: float = 0.0
+
+
+#: The title lines of the new sheet (implementation 03, Phase 8).
+TITLE_FIELDS = ("title", "subtitle", "artist")
+
+
 @dataclass
 class Sheet:
     notes: list[Note]
@@ -123,10 +152,29 @@ class Sheet:
     key_changes: list[tuple[int, int]] = field(default_factory=list)  # frames sheet: (frame, key)
     tempo: float | None = None  # quarter notes per minute (frames sheets; for the matrix)
     quarter_ms: float | None = None  # the reference figure of the new sheet: one negra, in ms
+    # What the user writes about the whole sheet (implementation 03, Phase 8; frames sheets, never in an LLM
+    # prompt): the title lines, the lyrics pieces, the reference figure of the spacing when Transpose figures
+    # renamed the figures (``None``: ``quarter_ms``; the page keeps its widths, D-18), and the space between lines
+    # in staff spaces (``None``: the engine's own). :func:`carry_extras` copies them onto a sheet made from this one.
+    titles: dict[str, str] = field(default_factory=dict)
+    lyrics: list[Lyric] = field(default_factory=list)
+    space_ms: float | None = None
+    line_space: float | None = None
 
     def sort(self) -> "Sheet":
         self.notes.sort(key=note_order)
         return self
+
+
+def carry_extras(source: Sheet, target: Sheet) -> Sheet:
+    """``target`` with what the user wrote about the whole of ``source`` (its titles, lyrics, the reference figure
+    of the spacing and the space between lines): a sheet laid again on the notes, or written again by the AI,
+    keeps them."""
+    target.titles = dict(source.titles)
+    target.lyrics = [replace(lyric) for lyric in source.lyrics]
+    target.space_ms = source.space_ms
+    target.line_space = source.line_space
+    return target
 
 
 def note_order(n: Note) -> tuple:

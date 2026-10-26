@@ -18,7 +18,17 @@ the ornament of the note before it: kept for the matrix, not drawn). The user's 
 (implementation 03, Phase 7; never in an LLM prompt): ``fg3`` finger 3, ``fix`` the figure was set by the user,
 ``asgrace`` / ``nograce`` written as a grace note / as a normal note whatever the grace rule says. ``clef=treble`` before the notes of a hand
 changes the clef of that hand at this time. The frames header may carry the reference figure of the new sheet,
-``F1 frames frameMs=40 quarterMs=500`` (one negra lasts 500 ms; implementation 03, Phase 2). Example::
+``F1 frames frameMs=40 quarterMs=500`` (one negra lasts 500 ms; implementation 03, Phase 2). Implementation 03, Phase 8
+adds what the user writes about the whole new sheet (frames view only; never in an LLM prompt): ``spaceMs=`` (the
+reference figure of the spacing, when Transpose figures renamed the figures) and ``lineSpace=`` (the space between
+lines, in staff spaces) in the header, and after the clefs line one line per title field and per lyrics piece::
+
+    title "Superestrella"
+    artist "Aitana"
+    lyric f356 f373 "Me ve" size=1.6 lift=0.5
+
+(the words as a JSON string, ``\n`` breaks a line; ``size`` and ``lift`` in staff spaces, left out at their
+defaults). Example::
 
     F1 bars
     clefs: R=treble L=bass
@@ -30,6 +40,7 @@ changes the clef of that hand at this time. The frames header may carry the refe
 
 from __future__ import annotations
 
+import json
 import re
 from fractions import Fraction
 
@@ -45,7 +56,9 @@ from aitu_backend.sheet.sheet.common import (
 from aitu_backend.sheet.sheet.data import (
     CLEF_CODES,
     CLEF_NAMES,
+    TITLE_FIELDS,
     Bar,
+    Lyric,
     Note,
     Sheet,
     meter_quarters,
@@ -260,11 +273,16 @@ def _write_frames(sheet: Sheet) -> str:
     head = "F1 frames frameMs=40"
     if sheet.quarter_ms is not None:
         head += f" quarterMs={round(sheet.quarter_ms, 1):g}"
+    if sheet.space_ms is not None:
+        head += f" spaceMs={round(sheet.space_ms, 1):g}"
+    if sheet.line_space is not None:
+        head += f" lineSpace={round(sheet.line_space, 2):g}"
     lines = [
         head,
         f"key={key_text(sheet.key or 0)} clefs: R={CLEF_NAMES.get(sheet.clefs.get(1), sheet.clefs.get(1))} "
         f"L={CLEF_NAMES.get(sheet.clefs.get(2), sheet.clefs.get(2))}",
     ]
+    lines += _extras_lines(sheet)
     prev = -1
     for f in frames:
         if f - prev - 1 > 0:
@@ -277,7 +295,26 @@ def _write_frames(sheet: Sheet) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _extras_lines(sheet: Sheet) -> list[str]:
+    """The title lines and the lyrics pieces of a frames sheet (implementation 03, Phase 8)."""
+    out = [
+        f"{name} {json.dumps(sheet.titles[name], ensure_ascii=False)}"
+        for name in TITLE_FIELDS
+        if sheet.titles.get(name)
+    ]
+    for lyric in sorted(sheet.lyrics, key=lambda one: (one.start, one.end)):
+        line = f"lyric f{lyric.start} f{lyric.end} {json.dumps(lyric.text, ensure_ascii=False)}"
+        if lyric.size is not None:
+            line += f" size={round(lyric.size, 2):g}"
+        if lyric.lift:
+            line += f" lift={round(lyric.lift, 2):g}"
+        out.append(line)
+    return out
+
+
 # ------------------------------------------------------------------ reading
+
+_LYRIC = re.compile(r'^lyric f(\d+) f(\d+) ("(?:[^"\\]|\\.)*")((?: [a-z]+=\S+)*)$')
 
 _HAND_SPLIT = re.compile(r"(?:(?<=\s)|^)([LR?]):")
 _POS = re.compile(r"^\d+(\+\d+/\d+)?$")
@@ -299,6 +336,10 @@ def read(text: str) -> Sheet:
         name, _, value = word.partition("=")
         if name == "quarterMs":
             sheet.quarter_ms = float(value)
+        elif name == "spaceMs":
+            sheet.space_ms = float(value)
+        elif name == "lineSpace":
+            sheet.line_space = float(value)
     bar: Bar | None = None
     meter: str | None = None
     key: int | None = None
@@ -316,6 +357,13 @@ def read(text: str) -> Sheet:
                 continue
             if s.startswith("[]x"):
                 int(s[3:])
+                continue
+            word = s.split(" ", 1)[0]
+            if word in TITLE_FIELDS:
+                sheet.titles[word] = json.loads(s[len(word) :].strip())
+                continue
+            if word == "lyric":
+                sheet.lyrics.append(_read_lyric(s))
                 continue
             if s.startswith("bar "):
                 words = s.split()
@@ -367,6 +415,24 @@ def read(text: str) -> Sheet:
             raise F1Error(f"line {no}: {exc} :: {ln}") from None
     _tuplet_groups(sheet.notes, starts)
     return sheet.sort()
+
+
+def _read_lyric(line: str) -> Lyric:
+    match = _LYRIC.match(line)
+    if match is None:
+        raise F1Error('a lyric line is: lyric f<start> f<end> "words" [size=..] [lift=..]')
+    lyric = Lyric(start=int(match[1]), end=int(match[2]), text=json.loads(match[3]))
+    for field in match[4].split():
+        name, _, value = field.partition("=")
+        if name == "size":
+            lyric.size = float(value)
+        elif name == "lift":
+            lyric.lift = float(value)
+        else:
+            raise F1Error(f"unknown lyric field {field!r}")
+    if lyric.end <= lyric.start:
+        raise F1Error("a lyric ends after it starts")
+    return lyric
 
 
 def _read_hands(rest: str, time, frame, sheet: Sheet, grace_slots: dict, starts: dict) -> None:

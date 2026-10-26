@@ -99,8 +99,8 @@ The two kinds of playlist of the app context play differently, as they are meant
 Each part is the Sheet step's own page, `SheetPage`, in a **play** role (`step.play`): the same
 drawing, with no title lines, no scrub bar, no floating bar and nothing that opens a toolbox. Since
 implementation 03, Phase 5 the drawing is the new sheet ([rendering.md](rendering.md), "The new sheet"): a click
-on it moves the cursor, and the page keeps the cursor's line in the middle while it plays. The new sheet has no
-lyrics yet: they come back in implementation 03, Phase 8 (4 parts of the database had lyrics on 2026-10-25). Reusing the page means the sheet in Play mode is exactly the
+on it moves the cursor, and the page keeps the cursor's line in the middle while it plays. Since implementation 03,
+Phase 8 the new sheet draws the lyrics pieces too, and lights them as section 3 says. Reusing the page means the sheet in Play mode is exactly the
 sheet that was edited. Every part has its own player; the page says which one plays, and starting
 one stops any other. A part is drawn when it comes near the window (and kept after), so a long
 playlist on one page does not draw every song at once; only the part playing and the next one load
