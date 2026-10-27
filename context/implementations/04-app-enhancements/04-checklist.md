@@ -26,12 +26,12 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] Task 1.6 The cursor is dragged and dropped, also across lines; `grab` and `grabbing`; the recording seeks on release.
 - [x] Task 1.7 Checks: a browser check of the new hooks on a temporary copy, the existing checks, screenshots; the user checks in the browser.
 
-# [p] Phase 2: The decoration-note rule
+# [x] Phase 2: The decoration-note rule
 
 - [x] Task 2.1 Study: the decoration notes of My library today and what the new rule makes of them; the passages of the two images in 7 Years.
 - [x] Task 2.2 The rule (`find_graces`) and the lengthening step (`lengthen_lone`), the user's marks winning; unit tests for each row of plan section 3.1; golden files unchanged (bars path). Also: a stored pair of decoration notes, now written, gets one beam.
 - [x] Task 2.3 The rule on every sheet, also the stored ones (case 1 of `part_sheet.build`): nothing else changes, time of one drawing measured.
-- [p] Task 2.4 Gallery `gallery/phase-2/` (old and new, checked zoomed in); the user checks it and 7 Years in the browser.
+- [x] Task 2.4 Gallery `gallery/phase-2/` (old and new, checked zoomed in); the user checks it and 7 Years in the browser.
 
 # [ ] Phase 3: Simplicity in the AI's sheet, and 7 Years
 

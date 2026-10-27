@@ -1,6 +1,6 @@
 # 04: App enhancements (the sheet page and the AI's sheet)
 
-**State: Phase 1 done (2026-10-27, checked by the user in the browser). Phase 2 built, waiting for the user's check of its gallery and of 7 Years.** One branch per phase, `feat/04-phase-N` (plan section 6.3).
+**State: Phase 1 done (2026-10-27, checked by the user in the browser). Phase 2 done (2026-10-27, gallery and 7 Years checked by the user). Next: Phase 3.** One branch per phase, `feat/04-phase-N` (plan section 6.3).
 
 Polish after implementation 03: on the sheet page, Command + scroll zoom, the AI symbol instead of the green badge,
 the floating toolbox's buttons also in the header, a cursor that can be dragged, and a hidden floating toolbox that

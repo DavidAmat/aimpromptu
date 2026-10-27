@@ -12,7 +12,7 @@ database change, no stored file written.
 | 2.2 The rule | `proposal/frames.py`: `find_graces` (fusas or shorter) and the new `lengthen_lone`, in both paths (`propose_frames`, `llm/frames.py` `assemble`); 4 new unit tests and 2 new tests of the part's sheet (section 3) |
 | 2.3 Every sheet | `part_sheet/build.py` case 1: a stored sheet whose hands are current is laid again on its notes (`reapply`), as case 2 already was; the stored file is not written (section 4) |
 | (new) Pairs beamed | `llm/frames.py` `beam_pairs`: two written notes that a stored sheet held as decoration notes get one beam (section 5) |
-| 2.4 Gallery | [`gallery/phase-2/index.html`](gallery/phase-2/index.html), 9 cases, each checked zoomed in against the data (section 6); the user's check is pending |
+| 2.4 Gallery | [`gallery/phase-2/index.html`](gallery/phase-2/index.html), 9 cases, each checked zoomed in against the data (section 6); checked by the user (2026-10-27) |
 
 # 2. Study (task 2.1)
 
