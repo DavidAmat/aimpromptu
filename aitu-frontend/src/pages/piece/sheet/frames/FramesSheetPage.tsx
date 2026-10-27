@@ -14,8 +14,10 @@
  *   it: the drawing scales at once, and at a pause of the wheel the backend lays it out again for the window's
  *   width, with the line under the pointer kept where it was.
  * - **The AI in the background** (plan section 3.6): a new transcription is sent by itself; any other part offers
- *   **Enhance with AI** (on a version of My library, the button opens the copy that edits it, as **Edit** does,
- *   and starts there). The segment at the AI looks pale, a segment that comes back appears column by column, and
+ *   **Enhance with AI**, which opens one dialog (implementation 04, Phase 4, `EnhanceDialog`): **A stretch** of the
+ *   selection (both hands or one, with the user's words) or **The whole song** (**Simplify** the left hand, the right
+ *   hand or both, or **Write it all again**). On a version of My library the whole song runs in the copy that edits
+ *   it, as **Edit** opens it. The segment at the AI looks pale, a segment that comes back appears column by column, and
  *   no text says any of it. Nothing can be edited while the AI writes: the segments still waiting cannot be edited.
  * - **Copy and paste** (Phase 8B): a marked stretch or the picked notes are copied (⌘C, or the toolboxes' title
  *   bars; on a read-only sheet the small Frames panel, with the screen's own action for a stretch); **Paste** (⌘V,
@@ -32,7 +34,8 @@
  *   fingers, hand, beams, the grace note switch, ornaments, taking notes off the page: Delete); a stretch marked in
  *   the strip above the staves opens the range toolbox (**Both / Right / Left**, Key, Clef, Octave). Either selection
  *   hands over to the other from its title bar, and either one can be sent to the AI with the user's own words
- *   (**Enhance with AI**: the stretch gets the pale veil while the AI writes it, then appears column by column).
+ *   (**Enhance with AI**, the dialog's **A stretch**: the stretch gets the pale veil while the AI writes it, then
+ *   appears column by column).
  * - **The sheet toolbox** (Phase 8): Title, Key, Transpose (notes and figures, with their preview), Lyrics (the
  *   words pasted and the pool, whose pieces are dragged onto the sheet) and View (zoom, space between lines). A
  *   click on a lyrics piece on the sheet picks it and opens the lyrics toolbox beside it (Phase 8A++, the user's
@@ -72,6 +75,7 @@ import {
   type ReadingEdit,
   type SheetNote,
   type SheetPreview,
+  type SongRun,
   type StretchRequest,
 } from "../../../../api";
 import { AiMark } from "../../../../components/piece/AiMark";
@@ -89,13 +93,13 @@ import {
   usePassageClipboard,
   type CopiedPassage,
 } from "../../../../state/passageClipboard";
-import { ConfirmDialog, EmptyState, FloatingBar, IconAction, Logo, PillButton, RowMenu, Toolbox } from "../../../../ui";
+import { EmptyState, FloatingBar, IconAction, Logo, PillButton, RowMenu, Toolbox } from "../../../../ui";
 import { piecesIn } from "../lyricsPieces";
 import { PianoToolbox } from "../PianoToolboxes";
 import { HAND_COLOUR, HELD_COLOUR, formatSeconds, type SoundingNote } from "../sheetConstants";
 import type { SheetStep } from "../SheetPage";
 import { besideOnScreen, clearOfRange, firstLineBoxOf, screenBoxOf } from "../toolboxPlacement";
-import { EnhanceStretchDialog } from "./EnhanceStretchDialog";
+import { EnhanceDialog, type EnhanceTab, type StretchHand } from "./EnhanceDialog";
 import { FramesLyricsToolbox } from "./FramesLyricsToolbox";
 import { FramesNoteToolbox } from "./FramesNoteToolbox";
 import { FramesRangeToolbox, type RangeHand } from "./FramesRangeToolbox";
@@ -105,7 +109,7 @@ import { FramesPreviewDialog } from "./FramesPreviewDialog";
 import { FramesSheetToolbox, MAX_ZOOM, MIN_ZOOM, type FramesSheetTab } from "./FramesSheetToolbox";
 import { msAtPoint, placeAt, steadyColumns } from "./geometry";
 import { frameOf, handForKey, midiOf, oneColumn } from "./readingTools";
-import { ENHANCE_WITH_AI } from "./navigation";
+import { songRunOf } from "./navigation";
 import { useFramesLyrics } from "./useFramesLyrics";
 import { useFramesSheet } from "./useFramesSheet";
 
@@ -113,6 +117,21 @@ import { useFramesSheet } from "./useFramesSheet";
 const PX_PER_SPACE = 8.5;
 /** The SVG adds this much margin to the staff width, in staff spaces. */
 const MARGINS = 8;
+/** The Enhance with AI dialog as it opens: its tab and the selection a stretch writes again. */
+interface Enhancing {
+  tab: EnhanceTab;
+  stretch: { request: Omit<StretchRequest, "instruction" | "staff">; what: string; hand: StretchHand } | null;
+  /** A new dialog each time it opens. */
+  key: number;
+}
+
+/** The hand each Simplify run of the dialog works on. */
+const SIMPLIFY_HANDS: Record<Exclude<SongRun, "all">, "left" | "right" | "both"> = {
+  "simplify-left": "left",
+  "simplify-right": "right",
+  "simplify-both": "both",
+};
+
 /** The width asked for moves in steps of this many staff spaces, so a small resize draws nothing again. */
 const WIDTH_STEP = 4;
 /** The zoom of the page is kept in this browser (it is how the page is looked at, not part of the sheet). */
@@ -206,7 +225,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   // and the cursor goes back where it was asked to be (the start of the passage), or where it was.
   const [audioLoads, setAudioLoads] = useState<{ revision: number | null; loads: number }>({ revision: null, loads: 0 });
   const seekAfterLoad = useRef<number | null>(null);
-  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, notice } = useFramesSheet(audioUuid, width, {
+  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, notice } = useFramesSheet(audioUuid, width, {
     // A take's sheet is the algorithm's, with Enhance with AI as a button (the user's answer of Phase 8).
     autoStart: !readOnly && role === null,
     onChanged: step.onChanged,
@@ -388,19 +407,28 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   const viaEdit = sheet?.llm.viaEdit === true && step.enhanceInCopy !== undefined;
   const offerAi = !playMode && !running && (sheet?.llm.canRun === true || viaEdit);
   const enhanceLabel = enhanced ? "Enhance it again with AI" : "Enhance with AI";
-  const [asking, setAsking] = useState(false);
-  const enhance = () => {
-    setAsking(false);
-    if (sheet?.llm.canRun) void run();
-    else step.enhanceInCopy?.();
+  // The Enhance with AI dialog (implementation 04, Phase 4), opened on a stretch or on the whole song (below).
+  const [enhancing, setEnhancing] = useState<Enhancing | null>(null);
+  /** A run over the whole song: here, or in the edit copy of a version of My library. */
+  const startSong = useCallback(
+    (choice: SongRun) => {
+      if (choice === "all") void run();
+      else void simplify(SIMPLIFY_HANDS[choice]);
+    },
+    [run, simplify],
+  );
+  const runSong = (choice: SongRun) => {
+    setEnhancing(null);
+    if (sheet?.llm.canRun) startSong(choice);
+    else step.enhanceInCopy?.(choice);
   };
-  // The edit copy opened by **Enhance with AI** on a version of My library: the AI starts here.
-  const askedInCopy = (location.state as typeof ENHANCE_WITH_AI | null)?.enhanceWithAi === true;
+  // The edit copy opened by **Enhance with AI** on a version of My library: the run chosen starts here.
+  const askedInCopy = songRunOf(location.state);
   useEffect(() => {
     if (!askedInCopy || !sheet) return;
     navigate(location.pathname, { replace: true, state: null });
-    if (sheet.llm.canRun) void run();
-  }, [askedInCopy, sheet, navigate, location.pathname, run]);
+    if (sheet.llm.canRun) startSong(askedInCopy);
+  }, [askedInCopy, sheet, navigate, location.pathname, startSong]);
 
   // ------------------------------------------------------------------ editing (Phase 6)
 
@@ -865,27 +893,29 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
     }
   };
 
-  // **Enhance with AI** of one stretch, with the user's words (plan task 7.5).
+  // **Enhance with AI** (implementation 04, Phase 4): one dialog. With notes or a stretch selected it opens on that
+  // stretch (both hands, or the hand of the selection; the user's words); with nothing selected, on the whole song.
   const aiHere = sheet?.llm.canRun === true;
-  const [asked, setAsked] = useState<{ stretch: Omit<StretchRequest, "instruction">; what: string } | null>(null);
-  const askNotes = () => {
-    const stretch = framesOfPicked();
+  const stretchOfSelection = (): Enhancing["stretch"] => {
+    if (!aiHere) return null;
+    const frames = picked.length > 0 ? framesOfPicked() : null;
+    if (frames) {
+      const hand: StretchHand = pickedHands.size === 1 ? ([...pickedHands][0] as StretchHand) : "both";
+      return { request: { ...frames, notes: picked }, what: picked.length === 1 ? "this note" : `these ${picked.length} notes`, hand };
+    }
+    return range ? { request: { ...range }, what: "this stretch", hand: rangeHand } : null;
+  };
+  const openEnhance = () => {
+    const stretch = stretchOfSelection();
+    setEnhancing({ tab: stretch ? "stretch" : "song", stretch, key: Date.now() });
+  };
+  const sendStretch = (hand: StretchHand, instruction: string) => {
+    const stretch = enhancing?.stretch;
+    setEnhancing(null);
     if (!stretch) return;
-    const what = picked.length === 1 ? "this note" : `these ${picked.length} notes`;
-    setAsked({ stretch: { ...stretch, staff: "both", notes: picked }, what });
-  };
-  const askRange = () => {
-    if (!range) return;
-    const what = rangeHand === "both" ? "this stretch" : `this stretch of the ${rangeHand} hand`;
-    setAsked({ stretch: { ...range, staff: rangeHand }, what });
-  };
-  const sendStretch = (instruction: string) => {
-    if (!asked) return;
-    const stretch = asked.stretch;
-    setAsked(null);
     unpick();
     unmark();
-    void enhanceStretch({ ...stretch, instruction });
+    void enhanceStretch({ ...stretch.request, staff: hand, instruction });
   };
   const history = sheet?.history ?? { undo: null, redo: null };
   const walk = useCallback(
@@ -1055,7 +1085,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
             kind="secondary"
             size="small"
             startIcon={<Logo height={18} />}
-            onClick={() => setAsking(true)}
+            onClick={openEnhance}
             data-testid={id("enhance-with-ai")}
           >
             {enhanceLabel}
@@ -1237,7 +1267,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           onRemove={removePicked}
           onChordKey={pressChordKey}
           onSelectFrames={selectFrames}
-          onEnhance={aiHere ? askNotes : null}
+          onEnhance={aiHere ? openEnhance : null}
           onCopy={() => void copySelection()}
           busy={editing}
           locked={locked}
@@ -1272,7 +1302,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           onClose={unmark}
           onEdit={editRange}
           onSelectNotes={selectNotes}
-          onEnhance={aiHere ? askRange : null}
+          onEnhance={aiHere ? openEnhance : null}
           onCopy={() => void copySelection()}
           onRecordPassage={role ? null : () => void startPassage(range.start, range.end)}
           onSplit={step.onSplit && !role && range.start > 0 && !splitting ? () => void splitHere() : null}
@@ -1391,27 +1421,20 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
         message={flash}
         data-testid="sheet-flash"
       />
-      <EnhanceStretchDialog
-        open={asked !== null}
-        what={asked?.what ?? "this stretch"}
-        onConfirm={sendStretch}
-        onCancel={() => setAsked(null)}
-      />
-
-      <ConfirmDialog
-        open={asking}
-        title={enhanced ? "Enhance this sheet again with AI?" : "Enhance this sheet with AI?"}
-        message={
-          !sheet?.llm.canRun
-            ? "This opens a copy in Projects, as Edit does, and the AI enhances it there in a few minutes (about $1 of the monthly credits). Save it to your library when it is done."
-            : enhanced
-              ? "The AI already enhanced this sheet. A new run may give much the same result, and it uses about $1 of the monthly credits. If it does not finish, the sheet you have now stays."
-              : "The AI writes the hands and the reading of the sheet, part by part, in a few minutes. It uses about $1 of the monthly credits. The hands you have now are kept in the history."
-        }
-        confirmLabel={enhanceLabel}
-        onConfirm={enhance}
-        onCancel={() => setAsking(false)}
-      />
+      {enhancing ? (
+        <EnhanceDialog
+          key={enhancing.key}
+          open
+          audioUuid={audioUuid}
+          tab={enhancing.tab}
+          stretch={enhancing.stretch ? { what: enhancing.stretch.what, hand: enhancing.stretch.hand } : null}
+          enhanced={enhanced}
+          viaEdit={!aiHere}
+          onStretch={sendStretch}
+          onSong={runSong}
+          onCancel={() => setEnhancing(null)}
+        />
+      ) : null}
     </Box>
   );
 }

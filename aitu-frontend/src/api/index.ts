@@ -52,6 +52,9 @@ export type {
   SheetWords,
   StretchKeys,
   StretchRequest,
+  SongRun,
+  LlmCost,
+  LlmCosts,
 } from "./sheet";
 export { projectsApi } from "./projects";
 export type {

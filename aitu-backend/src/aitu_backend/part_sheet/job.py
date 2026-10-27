@@ -15,6 +15,10 @@
    window was written by Sonnet (no credits, no network), the hands stay as they were and ``sheet.f1`` keeps the
    algorithm's sheet, so the page does not start again by itself; it says nothing alarming (plan section 3.8).
 
+:func:`start_stretch` writes one stretch again with the user's words (implementation 03, Phase 7), of both hands or
+of one (implementation 04, Phase 4: the other hand fixed). :func:`start_simplify` simplifies one hand, or both, over
+the whole song, batch after batch (implementation 04, Phase 4): the notes it leaves out and adds are one step of undo.
+
 The notes may change while Sonnet works (the Notes step). The job then stores what it wrote for the notes it read,
 without touching the hands, and the page lays it on the current notes (``build.reapply``). A part deleted while Sonnet
 works stops the requests at the next one (:class:`PartGone`): no credits are spent on a project that is gone.
@@ -43,7 +47,10 @@ from aitu_backend.sheet.llm.frames import (
     WindowLog,
     _algorithm_part,
     assemble,
+    simplify_windows,
+    windows_of,
     write_frames,
+    write_simplify,
     write_stretch,
 )
 from aitu_backend.sheet.proposal.frames import FramesProposal
@@ -53,12 +60,30 @@ from aitu_backend.transcription import jobs, pipeline
 
 from . import build, edits, store
 
-__all__ = ["Busy", "LiveRun", "available", "commit", "job_of", "live", "start", "start_stretch"]
+__all__ = [
+    "Busy",
+    "LiveRun",
+    "available",
+    "commit",
+    "costs",
+    "job_of",
+    "live",
+    "start",
+    "start_simplify",
+    "start_stretch",
+]
 
 #: The job key of a part: one Sonnet run at a time per part.
 KEY = "sheet-llm:{}"
 #: The name of the stream's messages (an ``EventSource`` listener of that name receives them).
 EVENT = "sheet"
+#: US dollars, measured (implementation 04, Phases 3 and 4), for the cost the dialog shows before a run: the first
+#: request of a run writes the instructions into the cache, then each window of a whole run (the reference request
+#: too), each batch of Simplify (most of a batch reads the cache, and its answer is a few lines), a stretch.
+USD_CACHE = 0.04
+USD_WINDOW = 0.038
+USD_BATCH = 0.008
+USD_STRETCH = 0.02
 
 
 def available() -> bool:
@@ -93,8 +118,15 @@ class LiveRun:
     marks: dict = field(default_factory=dict)
     #: The sheet before the run: its titles, lyrics and settings stay on the sheet of the moment (Phase 8).
     extras: Any = None
+    #: Simplify (implementation 04, Phase 4): the batches done; the others are ``working`` and ``waiting``.
+    done: int = 0
     _text: tuple[int, str] | None = None
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+
+    def advanced(self, text: str) -> None:
+        """One more batch of Simplify is done: ``text`` is the sheet now."""
+        with self._lock:
+            self.before, self.done = text, self.done + 1
 
     def started(self, algo: FramesProposal, windows: list[tuple[int, int]]) -> None:
         with self._lock:
@@ -127,7 +159,7 @@ class LiveRun:
         with self._lock:
             if self.algo is None:
                 return [
-                    (a, b, "working" if k == 0 else "waiting")
+                    (a, b, "llm" if k < self.done else "working" if k == self.done else "waiting")
                     for k, (a, b) in enumerate(self.provisional)
                 ]
             out = []
@@ -380,7 +412,8 @@ def start_stretch(
     suggestion. While it works the stretch is the one ``working`` segment of the page (its pale veil) and nothing can
     be edited (same job key as a whole run); its answer is stored as one step (``edits.apply_stretch``), or nothing
     when no reply was accepted (the summary of the job's ``done`` message says ``failed``). ``staff`` (1 or 2) or
-    ``picked`` (the refs ``"<frame>:<midi>"`` of the notes picked) say what the user selected."""
+    ``picked`` (the refs ``"<frame>:<midi>"`` of the notes picked) say what the user selected; with ``staff`` the
+    stretch is of that hand only, and the other hand stays as it is (implementation 04, Phase 4)."""
     if job_of(part_id) is not None:
         raise Busy("The AI is already enhancing this sheet.")
 
@@ -389,14 +422,7 @@ def start_stretch(
         if stored is None:
             raise FileNotFoundError("This part has no notes.")
         notes_revision = stored.header.notes_revision
-        drawn = build.current(part_id)
-        current = f1.read(drawn.text)
-        notes = pipeline.starting_hands(part_id)
-        side = build.hands_of_sheet(current, notes)
-        code = {"right": HAND_RIGHT, "left": HAND_LEFT}
-        notes.hand = np.array(
-            [code.get(side.get(int(i), ""), h) for i, h in zip(notes.id, notes.hand)], dtype=np.int8
-        )
+        drawn, current, notes = _as_drawn(part_id)
         run = LiveRun(part_id, drawn.text, [(start, end)])
         with _live_lock:
             _live[part_id] = run
@@ -438,6 +464,7 @@ def start_stretch(
                 usd=usd,
                 requests=requests,
                 model=getattr(ask, "model", None),
+                staff=staff,
             )
             reporter.send(EVENT, {"phase": "saved"})
             return {"stretch": "ok" if done else "stale", "usd": round(usd, 4)}
@@ -446,6 +473,123 @@ def start_stretch(
                 _live.pop(part_id, None)
 
     return jobs.submit(work, key=KEY.format(part_id), describe=lambda result: dict(result or {}))
+
+
+def _as_drawn(part_id: str) -> tuple[build.Drawn, Any, Any]:
+    """The sheet drawn now, read, and the notes with the hands it draws (what the AI is shown)."""
+    drawn = build.current(part_id)
+    current = f1.read(drawn.text)
+    notes = pipeline.starting_hands(part_id)
+    side = build.hands_of_sheet(current, notes)
+    code = {"right": HAND_RIGHT, "left": HAND_LEFT}
+    notes.hand = np.array(
+        [code.get(side.get(int(i), ""), h) for i, h in zip(notes.id, notes.hand)], dtype=np.int8
+    )
+    return drawn, current, notes
+
+
+HANDS = {"right": 1, "left": 2, "both": None}
+
+
+def start_simplify(
+    part_id: str, *, hand: str, complete: Callable[[], Complete] | None = None
+) -> jobs.Job:
+    """The AI simplifies the ``hand`` (``right``, ``left`` or ``both``) of the part's sheet over the whole song
+    (implementation 04, Phase 4; plan section 3.5): the rules of simplicity only, batch after batch, each batch seeing
+    the changes made before it (``sheet.llm.frames.write_simplify``). While it works the page shows the sheet of the
+    moment, its batches as segments (done, ``working``, ``waiting``), and nothing can be edited (same job key as a
+    whole run). The notes it left out and added are stored at the end as one step (``edits.apply_simplify``). The
+    summary of the job's ``done`` message: ``simplify`` (``ok``, ``none`` when nothing changed, ``stale`` when the
+    notes changed meanwhile, ``failed`` when no batch was answered), ``hand``, ``added``, ``leftOut``, ``usd``.
+    """
+    if hand not in HANDS:
+        raise ValueError(f"No hand {hand!r}.")
+    if job_of(part_id) is not None:
+        raise Busy("The AI is already enhancing this sheet.")
+    if not simplify_windows(f1.read(build.current(part_id).text), HANDS[hand]):
+        raise ValueError("This hand has no notes.")
+
+    def work(reporter: BaseProgress) -> dict[str, Any]:
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise FileNotFoundError("This part has no notes.")
+        notes_revision = stored.header.notes_revision
+        drawn, current, notes = _as_drawn(part_id)
+        staff = HANDS[hand]
+        run = LiveRun(part_id, drawn.text, simplify_windows(current, staff))
+        with _live_lock:
+            _live[part_id] = run
+        try:
+            ask = (complete or _complete)()
+
+            def asked(system: str, messages: list[dict]) -> str:
+                if not pipeline.has_events(part_id):
+                    raise PartGone("The part was deleted while the AI simplified its sheet.")
+                return ask(system, messages)
+
+            def on_batch(log: WindowLog, sheet: Any) -> None:
+                run.advanced(f1.write(sheet, mode="frames"))
+                reporter.send(
+                    EVENT,
+                    {
+                        "phase": "batch",
+                        "done": log.k + 1,
+                        "total": len(run.provisional),
+                        "status": log.status,
+                    },
+                )
+
+            reporter.send(EVENT, {"phase": "simplify", "total": len(run.provisional)})
+            out = write_simplify(
+                current, notes, asked, staff=staff, sid=part_id[:8], on_batch=on_batch
+            )
+            usd = float(getattr(ask, "usd", 0.0) or 0.0)
+            summary: dict[str, Any] = {"hand": hand, "usd": round(usd, 4), "added": 0, "leftOut": 0}
+            note = next((w.note for w in out.windows if w.note), None)
+            if note:
+                summary["note"] = note
+            if not pipeline.has_events(part_id):
+                return {**summary, "simplify": "gone"}
+            if out.windows and not any(w.status == "ok" for w in out.windows):
+                return {**summary, "simplify": "failed"}
+            counts = edits.apply_simplify(
+                part_id,
+                out.sheet,
+                notes_revision=notes_revision,
+                hand=hand,
+                left={(c.frame, c.midi) for c in out.changes if not c.added},
+                added=out.added,
+                usd=usd,
+                requests=len(getattr(ask, "calls", [])),
+                model=getattr(ask, "model", None),
+                lines=[c.line() for c in out.changes],
+            )
+            reporter.send(EVENT, {"phase": "saved"})
+            if counts is None:
+                return {**summary, "simplify": "stale"}
+            changed = counts["added"] + counts["leftOut"]
+            return {**summary, **counts, "simplify": "ok" if changed else "none"}
+        finally:
+            with _live_lock:
+                _live.pop(part_id, None)
+
+    return jobs.submit(work, key=KEY.format(part_id), describe=lambda result: dict(result or {}))
+
+
+def costs(part_id: str) -> dict[str, Any]:
+    """What each run of the Enhance with AI dialog would cost, about, before it starts (the dialog shows it): the
+    windows of a whole run, the batches of Simplify for each hand, in US dollars."""
+    current = f1.read(build.current(part_id).text)
+    whole = len(windows_of(current))
+    out: dict[str, Any] = {
+        "all": {"requests": whole + 1, "usd": round(USD_CACHE + (whole + 1) * USD_WINDOW, 2)},
+        "stretch": {"requests": 1, "usd": round(USD_CACHE + USD_STRETCH, 2)},
+    }
+    for hand, staff in HANDS.items():
+        batches = len(simplify_windows(current, staff))
+        usd = USD_CACHE + batches * USD_BATCH * (2 if staff is None else 1)
+        out[f"simplify-{hand}"] = {"requests": batches, "usd": round(usd, 2)}
+    return out
 
 
 def _place(ref: str) -> tuple[int, int] | None:

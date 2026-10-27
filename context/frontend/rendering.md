@@ -24,8 +24,9 @@ line. The code is `pages/piece/sheet/frames/`:
   Phase 6, every other note tool since Phase 7, and since Phase 8A the keyboard of the picked column (drawn by
   `ui/MiniPiano.tsx`'s `MiniKeys`; see [annotations.md](annotations.md), "The new sheet");
 - `FramesRangeToolbox.tsx` (Phase 7): the range toolbox (*Frames*: Both / Right / Left, Key, Clef, Octave);
-  `EnhanceStretchDialog.tsx`: **Enhance with AI** of a stretch with the user's words; `readingTools.ts`: what the
-  two toolboxes share;
+  `EnhanceDialog.tsx` (implementation 04, Phase 4): **Enhance with AI**, one dialog with two tabs, **A stretch**
+  (both hands or one, the other then fixed; the user's words) and **The whole song** (**Simplify** the left hand, the
+  right hand or both; **Write it all again**), each with its cost; `readingTools.ts`: what the two toolboxes share;
 - `FramesSheetView.tsx`: the SVG as the backend wrote it, scaled to the page, and an overlay in the same units:
   the cursor (a line between two columns by their times), the lit noteheads of its column, the pale veil on the
   part Sonnet works on, and the blank staves that a part coming back from Sonnet is written into, column by

@@ -29,6 +29,13 @@ The chain, behind the same function as the bars chain::
 
 A ``complete`` that raises :class:`SkipWindow` fails that window only (a refusal); any other exception (no
 credits, no network) keeps the algorithm for that window and every later one, and is reported in the result.
+
+Two requests of the user work on the sheet as it is now: :func:`write_stretch` (implementation 03, Phase 7) writes
+one stretch again with the user's words, both hands or one (implementation 04, Phase 4: the other hand fixed), and
+:func:`write_simplify` (implementation 04, Phase 4) applies the rules of simplicity only to one hand or both, over
+the whole song, in batches about twice as long as a window. A Simplify batch answers only the notes it leaves out
+and adds, with why (:func:`check_simplify`), and sees every change made before it, the earlier passage most like it
+(:func:`like_before`) and the end of the previous batch as simplified.
 """
 
 from __future__ import annotations
@@ -70,22 +77,29 @@ __all__ = [
     "SkipWindow",
     "WindowLog",
     "assemble",
+    "Change",
+    "Simplified",
     "beam_pairs",
     "check_answer",
+    "check_simplify",
     "declared",
     "feedback",
     "gap_peaks",
     "instructions",
+    "like_before",
     "read_reference",
     "places",
     "reference_prompt",
     "simplicity",
+    "simplify_prompt",
+    "simplify_windows",
     "splice",
     "stretch_request",
     "trim_beams",
     "window_prompt",
     "windows_of",
     "write_frames",
+    "write_simplify",
     "write_stretch",
 ]
 
@@ -411,11 +425,13 @@ def window_prompt(
     context: Sheet | None,
     request: str | None = None,
     check: list[str] | None = None,
+    fixed: Sheet | None = None,
 ) -> str:
     """The prompt of window ``index`` (0 = first) of ``count``. ``context`` = the end of the previous answer (with
     its hands and tags), or ``None``. ``request`` = the user's request for one stretch (:func:`write_stretch`): the
     stretch is the target, the sheet before it the context. ``check`` = the places the rules of simplicity are
-    about (:func:`places`)."""
+    about (:func:`places`). ``fixed`` = the other hand of a stretch of one hand (implementation 04, Phase 4): shown
+    after the target, never written."""
     lo, hi = min(n.frame for n in target.notes), max(n.frame for n in target.notes)
     if request is None:
         out = [f"# Window {index + 1} of {count} of song {sid} (frames f{lo}-f{hi})"]
@@ -437,6 +453,13 @@ def window_prompt(
         else "## Target (this stretch of the sheet as it is now: write it again as the user asks)"
     )
     out.append(title + "\n\n```\n" + f1.write(target, mode="frames").strip() + "\n```")
+    if fixed is not None and fixed.notes:
+        hand = "left" if fixed.notes[0].staff == 2 else "right"
+        out.append(
+            f"## The {hand} hand in this stretch (fixed: do not write it, it stays exactly as it is)\n\n```\n"
+            + f1.write(fixed, mode="frames").strip()
+            + "\n```"
+        )
     if request is None and any(n.staff in (1, 2) for n in target.notes):
         # A run again on the numeric truth (``write_frames(hands=True)``, implementation 03, Phase 6): the user's
         # answer is that the LLM may change any hand, the user's moves included.
@@ -642,13 +665,15 @@ def check_answer(
     drop: bool = False,
     free: tuple[int, int] | None = None,
     simplify: bool = False,
+    hand: int | None = None,
 ) -> tuple[list[str], Sheet | None]:
     """The problems of a reply for a window (empty: accepted) and the parsed answer. ``drop=True`` (a stretch the
     user asked for, Phase 7) accepts an answer that leaves notes of the target out: they are taken off the sheet.
     ``free=(start, end)`` also accepts notes that are not in the target, at a frame of ``[start, end)`` and a key of
     the piano: they are added to the notes (a changed pitch is a note left out and a note added). ``simplify=True``
     (a whole-song window, prompt 6) accepts the notes the answer declares it leaves out or adds, within the limits
-    of :func:`simplicity`; a note missing or added without its comment line is still a problem.
+    of :func:`simplicity`; a note missing or added without its comment line is still a problem. ``hand`` (1 or 2:
+    a stretch of one hand, implementation 04, Phase 4) refuses a note written in the other hand, which is fixed.
     """
     text = _block(reply)
     if not text.startswith("F1 frames"):
@@ -663,6 +688,14 @@ def check_answer(
         errs.append(
             f"{len(no_hand)} notes without a hand (write them after L: or R:), first at f{no_hand[0].frame}"
         )
+    if hand in (1, 2):
+        other = [n for n in sheet.notes if n.staff in (1, 2) and n.staff != hand]
+        if other:
+            mine, theirs = ("R", "left") if hand == 1 else ("L", "right")
+            errs.append(
+                f"{len(other)} notes are written in the {theirs} hand, first at f{other[0].frame}: the {theirs} "
+                f"hand is fixed in this stretch; write only {mine}: notes"
+            )
     want = Counter((n.frame, n.midi) for n in target.notes)
     got = Counter((n.frame, n.midi) for n in sheet.notes)
 
@@ -1348,25 +1381,36 @@ def stretch_request(
     their words first (the user's rule: they are of the utmost importance for this passage), the purpose behind them
     (a sheet simpler to read and to play, with uniform patterns), what they picked (one hand's notes of the stretch,
     or some of its notes, named ``f120 C5``), and what the answer may change: hands, beams, clefs and 8va, ornaments,
-    which notes stay, their pitches, added notes and the figures."""
+    which notes stay, their pitches, added notes and the figures. ``staff`` (1 or 2) is a stretch of that hand only
+    (implementation 04, Phase 4): the target holds its notes, and the other hand is fixed."""
+    one = staff in (1, 2)
+    if one:
+        mine, other = ("right", "left") if staff == 1 else ("left", "right")
+        what = (
+            f"The user chose the {mine} hand only: the target holds its notes, and the {other} hand, shown apart, "
+            f"stays exactly as it is. Write only {'R' if staff == 1 else 'L'}: notes, and keep every note of the "
+            f"target in the {mine} hand."
+        )
+    else:
+        what = "The user picked the whole target, both hands."
     if picked:
         named = ", ".join(picked[:PICKED_NAMED]) + (
             f" and {len(picked) - PICKED_NAMED} more" if len(picked) > PICKED_NAMED else ""
         )
-        what = f"The user picked these notes of the target: {named}."
-    elif staff in (1, 2):
-        what = (
-            f"The user picked the notes of the target that are now in the {'right' if staff == 1 else 'left'} "
-            f"hand ({'R' if staff == 1 else 'L'}:)."
-        )
-    else:
-        what = "The user picked the whole target, both hands."
+        what = (what + " " if one else "") + f"The user picked these notes of the target: {named}."
     words = " ".join(instruction.split())[:REQUEST_CHARS]
     if not words:
         return (
             "## The user's request\n\nThe user asked you to write this stretch of the sheet again, with no words "
             f"of their own. {what} Write the target as you always do; keep every note of it."
         )
+    hands = (
+        f"write every note in the {mine} hand (the {other} hand is fixed); join or cut beam groups; change clefs "
+        "and 8va; add or remove ornaments;\n"
+        if one
+        else "move notes from one hand to the other; join or cut beam groups; change clefs and 8va; add or remove "
+        "ornaments;\n"
+    )
     inside = f"f{start} to f{end - 1}" if start is not None and end is not None else "the stretch"
     return (
         "## The user's request: it comes before everything else\n\n"
@@ -1385,8 +1429,7 @@ def stretch_request(
         '- when the instruction names a figure ("negras"), write that figure everywhere it applies, and leave out '
         "the notes it no longer needs.\n\n"
         "**What you may do to follow it:**\n\n"
-        "- move notes from one hand to the other; join or cut beam groups; change clefs and 8va; add or remove "
-        "ornaments;\n"
+        f"- {hands}"
         "- take notes off the sheet: a note of the target that you leave out of your answer is taken off the "
         "sheet;\n"
         f"- change a pitch or add notes: write a note at any frame from {inside} with the pitch you want; it is "
@@ -1424,7 +1467,9 @@ def write_stretch(
     Phase 7, plan task 7.5): one window conversation whose target is the stretch, both hands, with the hands of
     ``current`` shown as a suggestion; the sheet before it is the decided context and the music after it the
     look-ahead. ``notes`` carry the hands of ``current``. ``staff`` (1 or 2) or ``picked`` (``(frame, midi)`` of
-    the notes picked) say what the user selected. Returns the sheet with the stretch spliced in (:func:`splice`;
+    the notes picked) say what the user selected; with ``staff`` the stretch is of that hand only (implementation
+    04, Phase 4): the target holds its notes, the other hand is shown apart, the checker refuses a note in it, and
+    :func:`splice` keeps it as it is. Returns the sheet with the stretch spliced in (:func:`splice`;
     not settled: lay it on the notes to run the rules) or ``None`` when no reply was accepted, and the window log.
     A ``complete`` that raises stops at once (the log says why)."""
     quarter_ms = current.quarter_ms or 500.0
@@ -1445,15 +1490,25 @@ def write_stretch(
         figures=_own_figures(notes, quarter_ms),
     )
     # The target is the stretch as the user sees it (hands, beam groups, clefs, 8va, ornaments): the user's words are
-    # about it ("keep the beam groups").
-    target = Sheet(
-        notes=[_strip_marks(n) for n in current.notes if start <= n.frame < end],
-        clefs=clefs,
-        key=key,
-        clef_changes=[c for c in current.clef_changes if start < c[0] < end],
-        key_changes=[k for k in current.key_changes if start < k[0] < end],
-        quarter_ms=quarter_ms,
-    ).sort()
+    # about it ("keep the beam groups"). A stretch of one hand holds that hand; the other is shown apart.
+    one = staff if staff in (1, 2) else None
+
+    def stretch_of(keep: Callable[[int], bool]) -> Sheet:
+        return Sheet(
+            notes=[
+                _strip_marks(n) for n in current.notes if start <= n.frame < end and keep(n.staff)
+            ],
+            clefs=clefs,
+            key=key,
+            clef_changes=[c for c in current.clef_changes if start < c[0] < end and keep(c[1])],
+            key_changes=[k for k in current.key_changes if start < k[0] < end],
+            quarter_ms=quarter_ms,
+        ).sort()
+
+    target = stretch_of(lambda staff: one is None or staff == one)
+    if not target.notes:
+        raise ValueError("The stretch holds no notes of this hand.")
+    fixed = stretch_of(lambda staff: staff != one) if one is not None else None
     drop = bool(" ".join(instruction.split()))
     look = _shown(_part(base, end, end + int(LOOKAHEAD_MS / FRAME_MS)), **shown)
     cut = max(0, start - int(CONTEXT_MS / FRAME_MS))
@@ -1489,6 +1544,7 @@ def write_stretch(
                 lookahead=look,
                 context=context,
                 request=request,
+                fixed=fixed,
             ),
         }
     ]
@@ -1500,7 +1556,7 @@ def write_stretch(
             reply = complete(system, messages)
             log.replies += 1
             errs, answer = check_answer(
-                reply, target, drop=drop, free=(start, end) if drop else None
+                reply, target, drop=drop, free=(start, end) if drop else None, hand=one
             )
             if not errs and guards:
                 sheet, _ = assemble(algo, [_answer_part(start, end, base, answer)])
@@ -1519,20 +1575,24 @@ def write_stretch(
         log.status, log.note = "error", f"{type(exc).__name__}: {exc}"
     if log.status != "ok" or answer is None:
         return None, log
-    return splice(current, answer, start, end), log
+    return splice(current, answer, start, end, keep=None if one is None else 3 - one), log
 
 
-def splice(current: Sheet, answer: Sheet, start: int, end: int) -> Sheet:
+def splice(
+    current: Sheet, answer: Sheet, start: int, end: int, *, keep: int | None = None
+) -> Sheet:
     """``current`` with its columns ``[start, end)`` taken from ``answer``: the notes (hands and tags), the clefs
     and the armadura there; the clefs and the armadura in force at ``end`` come back after it. The user's marks of
-    a note (a finger, a figure set by hand, the grace note switch) stay on it: the AI never writes them. Not
-    settled: the figures, grace notes and spelling are the rule's work (``part_sheet.build.reapply``).
+    a note (a finger, a figure set by hand, the grace note switch) stay on it: the AI never writes them. ``keep``
+    (1 or 2) is a staff that stays as ``current`` has it (the fixed hand of a stretch of one hand): its notes,
+    beams and clefs. Not settled: the figures, grace notes and spelling are the rule's work
+    (``part_sheet.build.reapply``).
     """
     marks = {(n.frame, n.midi): n for n in current.notes if start <= n.frame < end}
     top = max((n.beam for n in current.notes if n.beam is not None), default=0)
     inside = []
     for n in answer.notes:
-        if not start <= n.frame < end:
+        if not start <= n.frame < end or n.staff == keep:
             continue
         own = marks.get((n.frame, n.midi))
         inside.append(
@@ -1554,14 +1614,15 @@ def splice(current: Sheet, answer: Sheet, start: int, end: int) -> Sheet:
         current.clefs, current.clef_changes, current.key or 0, current.key_changes, end
     )
     clefs, key = dict(current.clefs), current.key or 0
-    clef_changes = [c for c in current.clef_changes if not start <= c[0] < end]
+    clef_changes = [c for c in current.clef_changes if not start <= c[0] < end or c[1] == keep]
     key_changes = [k for k in current.key_changes if not start <= k[0] < end]
+    written = {st: c for st, c in answer.clefs.items() if st != keep}
     if start <= first:
-        clefs, key = {**clefs, **answer.clefs}, answer.key or 0
+        clefs, key = {**clefs, **written}, answer.key or 0
     else:
-        clef_changes += [(start, st, c) for st, c in sorted(answer.clefs.items())]
+        clef_changes += [(start, st, c) for st, c in sorted(written.items())]
         key_changes.append((start, answer.key or 0))
-    clef_changes += [c for c in answer.clef_changes if start < c[0] < end]
+    clef_changes += [c for c in answer.clef_changes if start < c[0] < end and c[1] != keep]
     key_changes += [k for k in answer.key_changes if start < k[0] < end]
     if after:
         for st, c in clefs_end.items():
@@ -1570,7 +1631,7 @@ def splice(current: Sheet, answer: Sheet, start: int, end: int) -> Sheet:
         if not any(f == end for f, _ in key_changes):
             key_changes.append((end, key_end))
     out = Sheet(
-        notes=[n for n in current.notes if not start <= n.frame < end] + inside,
+        notes=[n for n in current.notes if not start <= n.frame < end or n.staff == keep] + inside,
         clefs=clefs,
         clef_changes=_collapse(clef_changes, clefs),
         key=key,
@@ -1578,3 +1639,406 @@ def splice(current: Sheet, answer: Sheet, start: int, end: int) -> Sheet:
         quarter_ms=current.quarter_ms,
     )
     return carry_extras(current, out).sort()
+
+
+# ------------------------------------------------------------------ Simplify (implementation 04, Phase 4)
+
+#: One batch of Simplify: about twice a window of a whole run (one hand is less text, and the answer is a few lines).
+SIMPLIFY_MS = (24000.0, 32000.0)
+SIMPLIFY_ONSETS = 300
+#: The end of the previous batch, as simplified, that a batch sees (a whole run sees ``CONTEXT_MS``).
+SIMPLIFY_CONTEXT_MS = 8000.0
+#: An earlier passage like the batch: columns per n-gram, and the share of the batch's columns it matches at least.
+LIKE_GRAM = 4
+LIKE_SHARE = 0.3
+HAND_NAMES = {1: "right hand", 2: "left hand", None: "both hands"}
+
+
+@dataclass
+class Change:
+    """A note Simplify left out or added, and why (the AI's words)."""
+
+    frame: int
+    midi: int
+    staff: int
+    added: bool
+    pitch: str  # as the AI wrote it
+    why: str = ""
+
+    def line(self) -> str:
+        what = "add" if self.added else "leave out"
+        why = f": {self.why}" if self.why else ""
+        return f"- f{self.frame} {what} {self.pitch} ({'R' if self.staff == 1 else 'L'}){why}"
+
+
+@dataclass
+class Simplified:
+    #: The sheet with the changes, not settled (``part_sheet.build.reapply`` lays it on the notes).
+    sheet: Sheet
+    changes: list[Change]
+    windows: list[WindowLog]
+    #: The notes added, with a length (``part_sheet.edits.change_notes``).
+    added: list[Note]
+
+
+def simplify_windows(sheet: Sheet, staff: int | None) -> list[tuple[int, int]]:
+    """The batches of Simplify over the notes of one hand (``staff``) or of both (``None``): :func:`windows_of` with
+    ``SIMPLIFY_MS``, each ending after a pause of that hand."""
+    hand = Sheet(
+        notes=[n for n in sheet.notes if staff is None or n.staff == staff],
+        clefs=dict(sheet.clefs),
+        key=sheet.key,
+    )
+    return windows_of(hand, span=SIMPLIFY_MS, max_onsets=SIMPLIFY_ONSETS) if hand.notes else []
+
+
+def like_before(
+    sheet: Sheet, staff: int | None, start: int, end: int, before: int
+) -> tuple[int, int] | None:
+    """The earlier passage most like the columns ``[start, end)`` of the hand (or both): as many columns, ending
+    before the frame ``before``, with the most columns in a run of ``LIKE_GRAM`` columns that the batch also holds
+    (the same keys); ``LIKE_SHARE`` of them at least, ties to the latest. A chorus that repeats is found; a
+    passage made of the same octave played again matches too, and that is a pattern as well. ``(first frame, end
+    frame)``, or ``None``."""
+    cols: dict[int, list[int]] = defaultdict(list)
+    for n in sheet.notes:
+        if (staff is None or n.staff == staff) and not n.covered:
+            cols[n.frame].append(n.midi)
+    frames = sorted(cols)
+    keys = [tuple(sorted(cols[f])) for f in frames]
+    i0, i1, last = (bisect_left(frames, f) for f in (start, end, before))
+    size = i1 - i0
+    if size < 2 * LIKE_GRAM or last < size:
+        return None
+    want = {tuple(keys[i : i + LIKE_GRAM]) for i in range(i0, i1 - LIKE_GRAM + 1)}
+    hit = np.zeros(last, dtype=np.int64)
+    for i in range(last - LIKE_GRAM + 1):
+        if tuple(keys[i : i + LIKE_GRAM]) in want:
+            hit[i : i + LIKE_GRAM] = 1
+    sums = np.concatenate([[0], np.cumsum(hit)])
+    best = max(range(last - size + 1), key=lambda i: (sums[i + size] - sums[i], i))
+    if sums[best + size] - sums[best] < LIKE_SHARE * size:
+        return None
+    return frames[best], frames[best + size - 1] + 1
+
+
+def _slice(sheet: Sheet, start: int, end: int, staffs: tuple[int, ...]) -> Sheet:
+    """The notes of ``staffs`` in ``[start, end)`` as the LLM reads them (no user's marks), with the clefs and the
+    armadura in force at ``start``."""
+    clefs, key = _state_at(
+        sheet.clefs, sheet.clef_changes, sheet.key or 0, sheet.key_changes, start
+    )
+    return Sheet(
+        notes=[
+            _strip_marks(n) for n in sheet.notes if start <= n.frame < end and n.staff in staffs
+        ],
+        clefs=clefs,
+        key=key,
+        clef_changes=[c for c in sheet.clef_changes if start < c[0] < end and c[1] in staffs],
+        key_changes=[k for k in sheet.key_changes if start < k[0] < end],
+        quarter_ms=sheet.quarter_ms,
+    ).sort()
+
+
+def simplify_prompt(
+    *,
+    sid: str,
+    staff: int | None,
+    index: int,
+    count: int,
+    target: Sheet,
+    context: Sheet | None,
+    lookahead: Sheet | None,
+    so_far: list[Change],
+    like: Sheet | None = None,
+    like_changes: list[Change] | None = None,
+    check: list[str] | None = None,
+) -> str:
+    """The prompt of batch ``index`` (0 = first) of ``count`` of Simplify: the rules of simplicity only, on the notes
+    of ``target`` (one hand, or both), the hands and the reading fixed. What the batch sees of the earlier ones (the
+    user's request: the batches are auto-regressive): every change so far with its reason (``so_far``), the earlier
+    passage most like this one as simplified, with its changes (``like``, :func:`like_before`), and the end of the
+    previous batch as simplified (``context``). The answer is the change lines only (:func:`check_simplify`).
+    """
+    lo, hi = min(n.frame for n in target.notes), max(n.frame for n in target.notes)
+    who = HAND_NAMES[staff]
+    stays = (
+        f" The {HAND_NAMES[3 - staff]} does not change."
+        if staff in (1, 2)
+        else " No note moves to the other hand."
+    )
+    out = [
+        f"# Simplify the {who} of song {sid}: batch {index + 1} of {count} (frames f{lo}-f{hi})",
+        f"The user asked the app to simplify the {who} of the whole song, batch after batch, by the rules of "
+        'simplicity only (section "Simplicity": simple.1 uniform patterns, simple.2 the amateur pianist, within '
+        "simple.3 and simple.4). The hands, the beam groups, the clefs and the figures are decided and stay as they "
+        f"are: you only choose the notes to leave out and to add.{stays}",
+    ]
+    if index:
+        if so_far:
+            out.append(
+                "## The simplifications so far (the earlier batches of this song)\n\n"
+                + "\n".join(c.line() for c in so_far)
+                + "\n\nMake the same choices again: where this batch repeats a passage of the song, simplify it the "
+                "same way (the same notes added or left out); where an earlier batch kept a pattern as it was, keep "
+                "it too."
+            )
+        else:
+            out.append(
+                "## The simplifications so far\n\nNone: the earlier batches of this song needed no change."
+            )
+    if like is not None and like.notes:
+        a, b = min(n.frame for n in like.notes), max(n.frame for n in like.notes)
+        done = (
+            "Its changes:\n\n" + "\n".join(c.line() for c in like_changes)
+            if like_changes
+            else "It needed no change."
+        )
+        out.append(
+            f"## An earlier passage like this one (f{a}-f{b}, as simplified)\n\n```\n"
+            + f1.write(like, mode="frames").strip()
+            + f"\n```\n\n{done}"
+        )
+    if context is not None and context.notes:
+        out.append(
+            "## Decided context (the end of the previous batch, as simplified)\n\n```\n"
+            + f1.write(context, mode="frames").strip()
+            + "\n```"
+        )
+    out.append(
+        f"## Target (the {who} of this batch, as the sheet has it now)\n\n```\n"
+        + f1.write(target, mode="frames").strip()
+        + "\n```"
+    )
+    if check:
+        out.append(
+            "## Places to check (rules of simplicity)\n\nThe app found these places in the target. Look at each one "
+            "and apply simple.1 or simple.2 when it makes the sheet simpler to read and to play; the target may "
+            "have other places too.\n\n" + "\n".join(check)
+        )
+    if lookahead is not None and lookahead.notes:
+        out.append(
+            "## Look-ahead (the next notes; do not change them)\n\n```\n"
+            + f1.write(lookahead, mode="frames").strip()
+            + "\n```"
+        )
+    out.append(
+        "## Answer\n\nWrite only the notes you change, one line each, as one block in triple backticks:\n\n"
+        "```\n# leave out f120 G2: the quick G2+G3 before Bb3+D4 makes the hand jump (simple.2)\n"
+        "# add f240 D1: D2 alone in a run of D1+D2 octaves (simple.1)\n```\n\n"
+        "Each line gives the frame and the pitch of one note, then, after a colon, why in a few words. A note left "
+        "out is a note of the target; a note added joins a column of the target where its hand plays. When the "
+        "batch needs no change, write the one line `# no change`. Do not write the notes of the target."
+    )
+    return "\n\n".join(out) + "\n"
+
+
+_CHANGE = re.compile(r"^\s*#\s*(leave out|add)\s+f(\d+)\s+([A-G][#b]*-?\d+)(.*)$", re.M)
+_NO_CHANGE = re.compile(r"#\s*no change", re.I)
+
+
+def check_simplify(reply: str, target: Sheet) -> tuple[list[str], list[Change]]:
+    """The problems of a Simplify reply (empty: accepted) and its changes. The reply is the change lines (``# leave
+    out f120 G2: why``, ``# add f240 D1: why``) or ``# no change``. A note left out is a note of the target; a note
+    added is not, and joins a column of the target, in the hand of the nearest note of that column (Simplify of
+    one hand: that hand); then the limits of prompt 6 (:func:`simplicity`)."""
+    lines = _CHANGE.findall(reply)
+    if not lines:
+        if _NO_CHANGE.search(reply):
+            return [], []
+        return [
+            "write only the change lines ('# leave out f... pitch: why', '# add f... pitch: why'), or the one line "
+            "'# no change'"
+        ], []
+    want = Counter((n.frame, n.midi) for n in target.notes)
+    staff_of = {(n.frame, n.midi): n.staff for n in target.notes}
+    key = target.key or 0
+    errs: list[str] = []
+    left, added = Counter(), Counter()
+    changes: list[Change] = []
+    read = []
+    for what, frame, pitch, rest in lines:
+        try:
+            read.append((what, int(frame), pitch, pitch_to_midi(*parse_spn(pitch)), rest))
+        except (ValueError, KeyError, IndexError):
+            errs.append(f"f{frame} {pitch}: not a pitch name")
+    for what, f, pitch, m, rest in sorted(read, key=lambda r: r[0] != "leave out"):
+        why = rest.strip().lstrip(":-–— ").strip()
+        if what == "leave out":
+            if left[(f, m)] >= want[(f, m)]:
+                errs.append(f"f{f} {pitch} is left out, but it is not a note of the target")
+                continue
+            left[(f, m)] += 1
+            changes.append(Change(f, m, staff_of[(f, m)], False, pitch, why))
+            continue
+        column = [n for n in target.notes if n.frame == f]
+        if not column:
+            errs.append(
+                f"f{f} {pitch} is added where the target has no note: an added note joins a column of the target"
+            )
+            continue
+        if added[(f, m)] or want[(f, m)] > left[(f, m)]:
+            errs.append(f"f{f} {pitch} is added, but the target already has it there")
+            continue
+        added[(f, m)] += 1
+        staff = min(column, key=lambda n: (abs(n.midi - m), n.staff)).staff
+        changes.append(Change(f, m, staff, True, pitch, why))
+    if errs:
+        return errs, []
+    gone = Counter(left)
+    notes = []
+    for n in target.notes:
+        if gone[(n.frame, n.midi)]:
+            gone[(n.frame, n.midi)] -= 1
+            continue
+        notes.append(n)
+    for c in changes:
+        if c.added:
+            step, alter, octave = spell(c.midi, key)
+            notes.append(Note(None, c.staff, step, alter, octave, frame=c.frame))
+    answer = Sheet(notes=notes, clefs=dict(target.clefs), key=key).sort()
+    errs = simplicity(target, answer, left, added)
+    return errs, ([] if errs else changes)
+
+
+def _changed(
+    sheet: Sheet, found: list[Change], lengths: dict[tuple[int, int], float | None]
+) -> Sheet:
+    """``sheet`` with the changes of one batch: each note added written like the nearest note of its hand in its
+    column (figure, beam group, 8va), as long as the longest of them (``lengths``: ``(frame, midi)`` -> ms of the
+    notes); each note left out taken off (one at its frame, key and hand)."""
+    new = []
+    for c in found:
+        column = [
+            n for n in sheet.notes if n.frame == c.frame and n.staff == c.staff and not n.covered
+        ]
+        if not c.added or not column:
+            continue
+        model = min(column, key=lambda n: abs(n.midi - c.midi))
+        _, key = _state_at(
+            sheet.clefs, sheet.clef_changes, sheet.key or 0, sheet.key_changes, c.frame
+        )
+        step, alter, octave = spell(c.midi, key)
+        length = max((lengths.get((n.frame, n.midi)) or 0 for n in column), default=0) or None
+        new.append(
+            replace(
+                model,
+                step=step,
+                alter=alter,
+                octave=octave,
+                grace=None,
+                gslot=0,
+                ornaments=(),
+                finger=None,
+                fixed=False,
+                grace_rule=None,
+                len_ms=length,
+            )
+        )
+    notes = list(sheet.notes)
+    for c in found:
+        if c.added:
+            continue
+        place = (c.frame, c.midi, c.staff)
+        i = next((i for i, n in enumerate(notes) if (n.frame, n.midi, n.staff) == place), None)
+        if i is not None:
+            notes.pop(i)
+    return replace(sheet, notes=notes + new).sort()
+
+
+def simplify_feedback(errors: list[str]) -> str:
+    """The message after a rejected Simplify reply."""
+    return (
+        "The checker did not accept your answer:\n"
+        + "\n".join(f"- {e}" for e in errors)
+        + "\n\nWrite the corrected change lines again, as one block in triple backticks."
+    )
+
+
+def write_simplify(
+    current: Sheet,
+    notes: Notes,
+    complete: Complete,
+    *,
+    staff: int | None = None,
+    sid: str = "song",
+    max_checks: int = MAX_CHECKS,
+    on_start: Callable[[list[tuple[int, int]]], None] | None = None,
+    on_batch: Callable[[WindowLog, Sheet], None] | None = None,
+) -> Simplified:
+    """Simplify the sheet ``current`` (the user's request after the Phase 3 gallery; plan section 3.5): the rules of
+    simplicity only, on one hand (``staff`` 1 or 2) or on both (``None``), batch after batch
+    (:func:`simplify_windows`). The hands, the beams, the clefs and the other hand do not change; each batch answers
+    the notes it leaves out and adds (:func:`check_simplify`), and sees every change made before it
+    (:func:`simplify_prompt`). ``notes`` carry the hands of ``current`` (the lengths of the notes added).
+    ``on_start(batches)`` once, ``on_batch(log, sheet)`` after each batch with the sheet of the moment. A batch
+    that fails keeps its notes; a ``complete`` that raises another error than :class:`SkipWindow` stops the rest.
+    """
+    staffs = (1, 2) if staff is None else (staff,)
+    quarter_ms = current.quarter_ms or 500.0
+    wins = simplify_windows(current, staff)
+    if on_start:
+        on_start(wins)
+    lengths = {(n.frame, n.midi): n.len_ms for n in frames_mod.from_notes(notes).notes}
+    system = instructions()
+    work = replace(current, notes=list(current.notes))
+    changes: list[Change] = []
+    logs: list[WindowLog] = []
+    stopped = False
+    back = int(SIMPLIFY_CONTEXT_MS / FRAME_MS)
+    for k, (a, b) in enumerate(wins):
+        log = WindowLog(k=k, start=a, end=b)
+        found: list[Change] = []
+        if stopped:
+            log.status = "skipped"
+        else:
+            target = _slice(current, a, b, staffs)
+            like = like_before(current, staff, a, b, max(0, a - back))
+            prompt = simplify_prompt(
+                sid=sid,
+                staff=staff,
+                index=k,
+                count=len(wins),
+                target=target,
+                context=_slice(work, max(0, a - back), a, staffs) if k else None,
+                lookahead=_slice(current, b, b + int(LOOKAHEAD_MS / FRAME_MS), staffs),
+                so_far=changes,
+                like=_slice(work, *like, staffs) if like else None,
+                like_changes=[c for c in changes if like and like[0] <= c.frame < like[1]],
+                check=places(
+                    [n for n in current.notes if a <= n.frame < b and n.staff in staffs], quarter_ms
+                ),
+            )
+            messages = [{"role": "user", "content": prompt}]
+            errs = ["no reply"]
+            try:
+                while log.replies < max_checks:
+                    reply = complete(system, messages)
+                    log.replies += 1
+                    errs, found = check_simplify(reply, target)
+                    if not errs:
+                        break
+                    log.errors.append(errs)
+                    messages += [
+                        {"role": "assistant", "content": reply},
+                        {"role": "user", "content": simplify_feedback(errs)},
+                    ]
+                log.status = "failed" if errs else "ok"
+            except SkipWindow as exc:
+                log.status, log.note = "failed", str(exc)
+            except Exception as exc:  # noqa: BLE001 (no credits, no network: the batches done stay)
+                log.status, log.note = "error", f"{type(exc).__name__}: {exc}"
+                stopped = True
+        if log.status == "ok" and found:
+            work = _changed(work, found, lengths)
+            changes += found
+        logs.append(log)
+        if on_batch:
+            on_batch(log, work)
+    added = {(c.frame, c.midi, c.staff) for c in changes if c.added}
+    return Simplified(
+        sheet=work,
+        changes=changes,
+        windows=logs,
+        added=[n for n in work.notes if (n.frame, n.midi, n.staff) in added],
+    )

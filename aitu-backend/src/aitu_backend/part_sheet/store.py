@@ -30,6 +30,10 @@ The record (:class:`Record`):
   the song's, on the sheets of a passage of it (Record in Sheet, Phase 8B, with ``reference: song``).
 * ``added`` and ``leftOut``: how many notes the last whole AI run added to the notes and left out of them, for the
   rules of simplicity (implementation 04, Phase 3, prompt 6); written only when not 0.
+* ``simplified``: the Simplify runs of the AI (implementation 04, Phase 4), ``[hand, added, left out, usd,
+  written, changes]``, oldest first (``hand``: ``right``, ``left`` or ``both``; ``changes``: one line per note, where
+  and why, ``- f4556 add D1 (L): D2 alone in a run of D1+D2 octaves``); written only when there is one. Their cost
+  is in ``usd`` and ``requests`` too.
 * ``legacy``: what the migration of Phase 9 (``scripts/migrate_sheets.py``) carried from the old ``sheet.json``, by
   kind (``{"lyrics": 2, "figures": 6}``); a sheet that has it is not migrated again.
 """
@@ -80,6 +84,7 @@ class Record:
     legacy: dict[str, int] | None = None
     added: int = 0
     left_out: int = 0
+    simplified: list[list[Any]] = field(default_factory=list)
 
     @property
     def enhanced(self) -> bool:
@@ -113,6 +118,7 @@ class Record:
             **({"legacy": self.legacy} if self.legacy is not None else {}),
             **({"added": self.added} if self.added else {}),
             **({"leftOut": self.left_out} if self.left_out else {}),
+            **({"simplified": self.simplified} if self.simplified else {}),
         }
 
     @classmethod
@@ -139,6 +145,7 @@ class Record:
             legacy=payload.get("legacy"),
             added=int(payload.get("added") or 0),
             left_out=int(payload.get("leftOut") or 0),
+            simplified=list(payload.get("simplified") or []),
         )
 
 

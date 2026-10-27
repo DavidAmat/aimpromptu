@@ -199,8 +199,8 @@ Spanish name, **Save**.
 the piece, the Sheet step's state and reason, and `onChanged`), beside `PartsPanel` (Phase 10). It
 gives the sheet `onSplit` (`POST /projects/{id}/parts/{part}/split` with `{atMs}`, then the panel and the
 sheet read again), titles a part's sheet by its subheader, and on a version of the library a
-`stretchAction` **Add to a playlist** and `enhanceInCopy` (**Enhance with AI** opens the edit copy and
-starts there). `onChanged` refreshes the status after a change, so the dot of the step follows.
+`stretchAction` **Add to a playlist** and `enhanceInCopy(run)` (**Enhance with AI** opens the edit copy and
+starts there the run the dialog chose: the navigation state `enhanceWithAi`, `frames/navigation.ts`). `onChanged` refreshes the status after a change, so the dot of the step follows.
 
 ---
 
@@ -225,7 +225,7 @@ sections 12 to 17.
 | `frames/FramesSheetToolbox.tsx` | The sheet toolbox: Title, Key, Transpose, Lyrics, View |
 | `frames/FramesPreviewDialog.tsx` | The preview of a transposition: the sheet as it would be, **Transpose** or **Cancel** |
 | `frames/FramesLyricsToolbox.tsx`, `useFramesLyrics.ts`, `lyricsText.ts` | The lyrics pieces on the sheet (stored in `sheet.f1`), the pasted words and the pool (`GET`/`PUT /sheet/{uuid}/words`) |
-| `frames/EnhanceStretchDialog.tsx` | **Enhance with AI** for one stretch, with the user's own words |
+| `frames/EnhanceDialog.tsx` | **Enhance with AI** (implementation 04, Phase 4): **A stretch** of the selection (Both, Right, Left; the user's words) or **The whole song** (Simplify the left hand, the right hand, both; Write it all again), each with its cost (`GET /sheet/{uuid}/llm/costs`); `data-enhance-dialog`, `song-run-*`, `song-confirm`, `stretch-words`, `stretch-confirm` |
 | `frames/FramesPdfDialog.tsx` | Print to PDF (section 6) |
 | `TransposeTab.tsx`, `LyricsTab.tsx`, `lyricsPieces.ts` | The **Transpose** and **Lyrics** tabs of the sheet toolbox, kept from the old sheet and used by the new one |
 | `sheetConstants.ts`, `toolboxPlacement.ts` | The colours of the hands on the keyboards; where a toolbox opens |

@@ -15,10 +15,10 @@ import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import { projectsApi, type PartRow } from "../../api";
+import { projectsApi, type PartRow, type SongRun } from "../../api";
 import { ROUTES } from "../../layout/routes";
 import SheetPage, { type SheetStep } from "./sheet/SheetPage";
-import { ENHANCE_WITH_AI } from "./sheet/frames/navigation";
+import { enhanceWithAi } from "./sheet/frames/navigation";
 import { PartsPanel } from "./PartsPanel";
 import { AddToPlaylistDialog } from "../library/AddToPlaylistDialog";
 import { said } from "../library/shared";
@@ -69,12 +69,12 @@ export function SheetTab() {
     [uuid, projectId, refresh],
   );
 
-  /** A version of My library changes through its edit copy: the AI enhances it there (as **Edit**, then the button). */
-  const writeInCopy = useCallback(async () => {
+  /** A version of My library changes through its edit copy: the AI runs there (as **Edit**, then the dialog's run). */
+  const writeInCopy = useCallback(async (run: SongRun) => {
     if (!projectId) return;
     try {
       const copy = await projectsApi.edit(projectId);
-      navigate(ROUTES.project(copy.parts[0] ?? copy.id, "sheet"), { state: ENHANCE_WITH_AI });
+      navigate(ROUTES.project(copy.parts[0] ?? copy.id, "sheet"), { state: enhanceWithAi(run) });
     } catch (caught) {
       setError(said(caught, "The version could not be opened for editing."));
     }
@@ -91,7 +91,7 @@ export function SheetTab() {
             readOnly,
             audioRevision,
             onChanged: () => void refresh(),
-            ...(library ? { enhanceInCopy: () => void writeInCopy() } : {}),
+            ...(library ? { enhanceInCopy: (run: SongRun) => void writeInCopy(run) } : {}),
             ...(readOnly ? {} : { onSplit: split }),
             ...(library
               ? {
