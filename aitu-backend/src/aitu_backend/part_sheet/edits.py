@@ -357,6 +357,7 @@ def move_hands(part_id: str, refs: list[str], hand: str) -> Moved:
             )
             kept.record.hands_revision = saved.header.hands_revision
             store.save(part_id, after, kept.record)
+            build.mark_settled(part_id, after)
             sheet_change = _sheet_change(drawn.text, after)
         build.forget(part_id)
 
@@ -390,6 +391,7 @@ def remove_notes(part_id: str, refs: list[str]) -> Moved:
             )
             kept.record.hands_revision = saved.header.hands_revision
             store.save(part_id, after, kept.record)
+            build.mark_settled(part_id, after)
             sheet_change = _sheet_change(drawn.text, after)
         build.forget(part_id)
         k = len(gone)
@@ -427,6 +429,7 @@ def edit_reading(
             # Transpose figures (Phase 8): the user named the reference figure; a new AI run keeps it.
             record.quarter_ms, record.reference = settled.quarter_ms, "user"
         store.save(part_id, after, record)
+        build.mark_settled(part_id, after)
         build.forget(part_id)
         _record(_Step(label, {}, _sheet_change(drawn.text, after)), part_id)
         return label
@@ -724,6 +727,7 @@ def add_note(part_id: str, frame: int, midi: int, hand: str, length_ms: float | 
             )
             kept.record.hands_revision = saved.header.hands_revision
             store.save(part_id, after, kept.record)
+            build.mark_settled(part_id, after)
             sheet_change = _sheet_change(drawn.text, after)
         build.forget(part_id)
         label = "Add a note"

@@ -20,6 +20,7 @@ from aitu_backend.part_sheet import build, job
 from aitu_backend.part_sheet import store as sheet_store
 from aitu_backend.pmn import events_file
 from aitu_backend.schemas.metadata import AudioSource
+from aitu_backend.sheet.proposal.frames import propose_frames
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.storage import paths
 from aitu_backend.transcription import jobs, pipeline, split_cache
@@ -187,6 +188,49 @@ def test_a_hand_moved_after_sonnet_lays_its_sheet_on_the_new_hands(
         sum(n.staff == 1 for n in laid.notes)
         == sum(n.staff == 1 for n in f1.read(before.text).notes) - 1
     )
+
+
+def test_a_stored_sheet_is_drawn_with_the_grace_rule_of_today(
+    client: TestClient, part: str
+) -> None:
+    # implementation 04, Phase 2: a sheet stored with an older grace rule (here a written note stored as a grace
+    # note) is drawn with today's rule; the stored file stays as it is, and nothing else of the drawing changes
+    finish(job.start(part, complete=lambda: oracle(song(SECONDS))))
+    kept = sheet_store.load(part)
+    assert kept is not None
+    drawn = build.current(part)
+    assert not drawn.stale and drawn.text == kept.text
+    old = f1.read(kept.text)
+    note = next(n for n in old.notes if n.staff == 1 and not n.grace and n.beam is None)
+    note.grace, note.figure = "acc", 8
+    older = f1.write(old, mode="frames")
+    sheet_store.save(part, older, kept.record)
+    build.forget(part)
+    again = build.current(part)
+    assert not again.stale and again.source == "llm"
+    assert again.text == kept.text
+    assert sheet_store.load(part).text == older
+
+
+def test_two_grace_notes_of_a_stored_sheet_are_written_as_one_beam_group() -> None:
+    # implementation 04, Phase 2: two semicorcheas before a blanca, stored as grace notes by the old rule and in no
+    # beam group (the AI's groups never held a grace note), are drawn as two corcheas with one beam
+    from test_sheet_frames import R, notes_of
+
+    notes = notes_of([(74, 1000.0, 120.0, R), (76, 1125.0, 120.0, R), (72, 1250.0, 1000.0, R)])
+    stored = propose_frames(notes, quarter_ms=500.0).sheet
+    pair = [n for n in stored.notes if n.midi in (74, 76)]
+    for n in pair:
+        n.grace, n.figure, n.beam = "unacc", 16, None
+    drawn = build.reapply(stored, notes)
+    pair = [n for n in drawn.notes if n.midi in (74, 76)]
+    assert [(n.grace, n.figure) for n in pair] == [(None, 8), (None, 8)]
+    assert pair[0].beam is not None and pair[0].beam == pair[1].beam
+    # a beam the user takes away afterwards stays away: the stored sheet holds written notes now
+    for n in pair:
+        n.beam = None
+    again = build.reapply(drawn, notes)
+    assert all(n.beam is None for n in again.notes if n.midi in (74, 76))
 
 
 def test_without_credits_the_algorithm_and_the_hands_stay(client: TestClient, part: str) -> None:

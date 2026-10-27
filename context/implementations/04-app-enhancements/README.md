@@ -1,6 +1,6 @@
 # 04: App enhancements (the sheet page and the AI's sheet)
 
-**State: Phase 1 done (2026-10-27, checked by the user in the browser). Next: Phase 2.** One branch per phase, `feat/04-phase-N` (plan section 6.3).
+**State: Phase 1 done (2026-10-27, checked by the user in the browser). Phase 2 built, waiting for the user's check of its gallery and of 7 Years.** One branch per phase, `feat/04-phase-N` (plan section 6.3).
 
 Polish after implementation 03: on the sheet page, Command + scroll zoom, the AI symbol instead of the green badge,
 the floating toolbox's buttons also in the header, a cursor that can be dragged, and a hidden floating toolbox that
@@ -16,4 +16,7 @@ The brief is [`04-1-prompt.md`](04-1-prompt.md), the plan is [`04-plan.md`](04-p
 | [`04-1-prompt.md`](04-1-prompt.md) | The brief, in the user's own words, with the answers of the first discussion (2026-10-27) at its end |
 | [`04-plan.md`](04-plan.md) | The plan: the decisions, the design notes, the binding rules, the method, four phases, the risks |
 | [`04-checklist.md`](04-checklist.md) | The status lookup, and the open decisions |
+| [`04-implementation-phase-1.md`](04-implementation-phase-1.md) | Phase 1: the sheet page |
+| [`04-implementation-phase-2.md`](04-implementation-phase-2.md) | Phase 2: the decoration-note rule, the study of My library |
+| [`gallery/phase-2/`](gallery/phase-2/index.html) | Phase 2: nine passages, the old rule and the new one |
 | [`images/`](images/) | The user's four examples: `abuse-decoration-notes.png`, `abuse-decoration-notes-right.png`, `left-patterns.png`, `complex-fast-notes.png` |
