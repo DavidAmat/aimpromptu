@@ -1,12 +1,13 @@
 # aitu-frontend
 
 React 19 + TypeScript + Vite app. It brings a recording in, shows how it was actually played, and
-draws the sheet with `@aimpromptu/grid-notation`, a renderer built for this project, because
-nothing off the shelf lays music out on a wall clock.
+shows the piano sheet the backend lays out and draws (`GET /sheet/{uuid}` answers an SVG). The old
+renderer, `@aimpromptu/grid-notation` from the sibling repository vexflow-v2, was removed in
+implementation 03, Phase 10 (2026-10-27).
 
 The app first asks to sign in (`/login`, implementation 02, Phase 4), then opens on **Projects**
 (`/projects`), inside a shell with a left sidebar. A project goes from
-its audio to its piano sheet in five steps (Source, Audio, Notes, Hands, Sheet), at
+its audio to its piano sheet in four steps (Source, Audio, Notes, Sheet), at
 `/projects/:id/:step`. For the master user an **Admin** group holds **Users** (make users, reset a
 password, disable a user) and **Lab** (the video reader's pages). The look is black, white and grey,
 with colour only on the music (implementation 02, plan section 7), in a light or a dark scheme chosen
@@ -28,8 +29,7 @@ particular to this app:
   the browser at once. It listens on every address of the machine (`WEB_BIND`, default `0.0.0.0`)
   and answers only to the host names of `allowedHosts` in `vite.config.ts` (`localhost`, `ubuntu`,
   `david-ubuntu`, `david-ubuntu.local`, plus `AITU_ALLOWED_HOSTS`) and to IP addresses.
-- After a change of `package-lock.json` or of `../../vexflow-v2`, run `make build` (or `make up`,
-  which rebuilds).
+- After a change of `package-lock.json`, run `make build` (or `make up`, which rebuilds).
 - Natively (`npm install && npm run dev`, with the backend on `http://127.0.0.1:8765`) the page
   listens on `localhost` only.
 - **The backend address.** The page calls `/api`, and the Vite server passes it to
@@ -44,9 +44,7 @@ particular to this app:
 | `npm run build` | Typecheck (`tsc -b`) and the production build |
 | `npm run preview` | Serve the production build |
 | `npm run lint` | ESLint over the project |
-| `npm run check:render` | Draw a real score headlessly in jsdom: layout failures are silent otherwise |
 | `npm run check:history` | Undo reverses exactly one press and returns to where it started |
-| `npm run check:note-names` | The note toolbox names a note the way the sheet spells it |
 | `npm run check:geometry` | The video piano overlay matches the backend's fixture |
 | `npm run check:cuts` | The Audio step's cuts follow the backend's rules, and playback jumps over them |
 | `npm run check:notes` | The Notes tab's typed arrays, live feed and edits (the operations a save sends) |
@@ -58,13 +56,17 @@ particular to this app:
 | `npm run check:compose` | **From other projects** and the playlists (Phase 10), on copies of Elefants and Superestrella's tutorial: a stretch of a read-only sheet and a whole project added, a **Subheader**, a passage moved, the list kept over a reload, **Save as integrated playlist** (two parts, the notes of each passage, the sources unchanged); the parts renamed, moved, joined and split (**Start a new part here**); on a copy saved to My library, **Make a playlist** from Songs, **Add to a playlist** from a version, a song removed, the playlist deleted; 390 px and dark (`scripts/check-compose.mjs`) |
 | `npm run check:play` | **Play mode** (Phase 11), on copies of Elefants: **Play** from Projects, the page with the sheet alone, Space, the buttons fading while it plays, the cursor kept in the middle of the window, a lyrics piece shown by its frames, the arrows, a double-click moving the cursor, **Notes Falling** as a view and its old address, Escape; an integrated playlist of two parts played on; two copies saved as songs, **Play** on a song and a version, a songs playlist with **Next**, a stretch that stops by itself, **All songs**, Close back to the playlist; 390 px and dark (`scripts/check-play.mjs`). Uses no GPU |
 | `npm run check:requests` | **Requests, the review and sharing** (Phase 14), with a temporary user the check makes and removes: **Share my library**, the user's **Shared** and **Add to my library**, **Publish** a version on a public song (“Bonfire Heart” by default, `--name`), **Propose a song** with a new artist, the master user's **Review** (counts, oldest first), a change asked and **Change and send again**, the request's Conversation and Sheet tabs, a comment on a marked stretch drawn and played in the Conversation, a reply and a comment, the accepted version and **Ask for a fixed version**, a withdrawn change, the rights; 390 px and dark; everything public it made removed (`aitu_backend.library.public_fixture`), and the user with all of theirs (`scripts/check-requests.mjs`). Uses no GPU |
-| `npm run check:journey` | **The whole journey** (Phase 15), timed, with two temporary users the check makes and removes, the master user reviewing: **New project** from a YouTube link, **Transcribe** followed live, **Predict hands**, the Sheet step, **Save to library**; **Publish** with **Propose this song** (a new song and artist); **Review**, every item accepted; the second user finds the song on Public songs, **Add to my library**, **Play** in Play mode, **From other projects** and **Save as song**; the rights between the three. Prints the time of each step (`--json` writes them). Uses the GPU (`scripts/check-journey.mjs`) |
+| `npm run check:journey` | **The whole journey** (Phase 15), timed, with two temporary users the check makes and removes, the master user reviewing: **New project** from a YouTube link, **Transcribe** followed live, the Sheet step (the AI writes it in the background), **Save to library**; **Publish** with **Propose this song** (a new song and artist); **Review**, every item accepted; the second user finds the song on Public songs, **Add to my library**, **Play** in Play mode, **From other projects** and **Save as song**; the rights between the three. Prints the time of each step (`--json` writes them). Uses the GPU (`scripts/check-journey.mjs`) |
 | `npm run check:public` | **The Public Library** (Phase 13): a copy of a version of My library placed as two public versions of “Stayin' Alive” (`aitu_backend.library.public_fixture`, on the host); Public songs (the count, a search, the Decade chip and its popularity, a sort), one song (byline, chart line, versions, a like, lyrics, **Play**), **Add to my library** and the song in My library with its link back, a song with no version, an artist, the artists, a public playlist (**Add to my library**, **Play**, Close), **Search**, **Save to library** on a public song; 390 px and dark; everything it made deleted (`scripts/check-public.mjs`). Uses no GPU |
+| `npm run check:frames-sheet` | The Sheet step on a copy of a library version: the sheet drawn (`[data-frames-sheet]`, a `data-note` on every notehead) and played (`--live` spends a few cents of the AI on a 40 s clip) |
+| `npm run check:frames-edit` | Picking notes, moving them to the other hand, undo and redo, the time of one edit |
+| `npm run check:frames-tools` | The note and range toolboxes, each tool checked against the backend |
+| `npm run check:frames-toolbox` | The sheet toolbox (Title, Key, Transpose, Lyrics, View), the lyrics, the keyboard panel, Print to PDF |
 | `npm run time:flow` | The whole flow timed on three temporary pieces (an upload, a copy opened from Projects, a YouTube URL) |
 | `npm run bench:roll` | The Notes tab at 10,000 rectangles and at 100 stream messages per second |
 | `npm run screenshot -- <path>` | A screenshot of a page in a headless Chromium, for a machine with no screen. Options: `--piece <uuid>`, `--wait <selector>`, `--delay <ms>`, `--out <file.png>`, `--width`, `--height`, `--full`, `--base <url>`, `--theme dark` (the dark scheme), `--signed-out` (the sign-in page, without signing in) |
 
-**These need the running app** (`make up`): `check:flow`, `check:projects`, `check:library`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `check:journey`, `time:flow`,
+**These need the running app** (`make up`): `check:flow`, `check:projects`, `check:library`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `check:journey`, the four `check:frames-*`, `time:flow`,
 `bench:roll` and `screenshot`. They open `http://localhost:5173` (`--base` changes
 it). All but `bench:roll` and `screenshot` work on temporary pieces and delete them at the end, so the library is never
 changed. `bench:roll` opens
@@ -72,7 +74,7 @@ changed. `bench:roll` opens
 need no browser and no backend.
 
 **Signing in.** Every page and every route of the backend need a session, so `check:flow`,
-`check:projects`, `check:library`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `check:journey`, `time:flow` and
+`check:projects`, `check:library`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `check:journey`, the `check:frames-*`, `time:flow` and
 `screenshot` sign in first through `scripts/session.mjs`. Once the master user's password was changed in the app (as on the Ubuntu
 machine since 2026-10-06), the line of `.env` no longer signs in: give `AITU_CHECK_PASSWORD` (and
 `AITU_CHECK_USERNAME` for another user) in the environment of the command. They act as
@@ -87,19 +89,19 @@ the script (`signIn(base)`) and to every Playwright page (`useSession(browser)`)
 ```text
 src/
   api/        # typed client, one module per backend router; no component calls fetch
-  hooks/      # useProgress (SSE), followJob, useEditHistory, selection, the played notes, element size
+  hooks/      # useProgress (SSE), followJob, useEditHistory, the played notes, element size
   layout/     # AppLayout (the shell, the user menu), RequireUser and RequireMaster (the guards), PasswordDialog, LabLayout, SearchDialog, ShareDialog, ShortcutsDialog, routes.ts (every path lives here)
   pages/      # one component per route
     LoginPage.tsx     # Sign in
     ProjectsPage.tsx  # Projects
     admin/    #   UsersPage: Admin → Users
-    piece/    #   a project: PiecePage, the five steps, NotesEditor (Notes and Hands), sheet/ (the Sheet step, split into modules), passage/ (Recording in Sheet)
+    piece/    #   a project: PiecePage, the four steps, NotesEditor (Notes), sheet/ (the Sheet step: SheetPage and frames/, the page of the sheet the backend draws), passage/ (Recording in Sheet)
     play/     #   Play mode: PlayPage, its Notes Falling view, what it plays (a project, a playlist)
     video/    #   the Lab pages: the video reader
     dev/      #   /dev/roll-bench, development builds only
   state/      # AuthProvider: the signed-in user; WorkingArtifactProvider: the working piece and its frameMs
   ui/         # the design system: tokens (light and dark), theme, scheme (SchemeSync, useScheme), palette (the colours of the music), the shared components
-  music/      # note names, figures, overrides
+  music/      # note names, figures, transposition
   notes/      # the piano roll visualization's data: typed arrays, view, live feed, edits
   audio/      # recorder, mm:ss.cc, the Audio step's cuts, view window and player
   piano/      # the 88-key SVG keyboard
@@ -109,7 +111,7 @@ src/
   components/
     piece/    # step names, step progress
     notes/    # PianoRollCanvas, rollPaint, RollTimeBar
-    time/     # TimeScoreView (the ONLY file that touches the renderer), ScorePlayer, FigureGlyph
+    time/     # ScorePlayer, FigureGlyph
     audio/    # waveforms (CutWaveform for the Audio step), range selection, level bars
     video/    # the Lab views: player, calibration, detection, overlay
 ```
@@ -125,11 +127,10 @@ src/
 - **Routes** come from `src/layout/routes.ts`. No URL string literal in a component.
 - **Components** are MUI, styled by the theme. Every functional control stays MUI so behavior is
   consistent.
-- **The renderer** is reached from `components/time/TimeScoreView.tsx` and nowhere else.
+- **The sheet** is drawn by the backend; the page shows its SVG (`pages/piece/sheet/frames/FramesSheetView.tsx`) and draws only what moves over it.
 - **No component derives a note's figure.** The printed figure comes from the backend and is
   passed through.
 
-**After pulling `../../vexflow-v2`, rebuild it** (`npm run build` there). npm does not build a
-linked dependency, and a stale `dist/` fails silently: the app keeps engraving with the old code and
-nothing warns. The container holds its own build of the package, so also run `make build` from the
-repository root.
+The app no longer needs the sibling repository `../../vexflow-v2` to build or run (implementation 03,
+Phase 10): `npm run check:render` and `npm run check:note-names`, which checked the old renderer, went
+with it.

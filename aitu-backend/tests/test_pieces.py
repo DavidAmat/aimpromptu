@@ -1,8 +1,10 @@
 """The piece API, the revisions and the hand split as a step (implementation 08, Phase 5).
 
 One test per row of the staleness table of the plan's section 8.3, then the operations of the
-piano roll visualization, the prediction, the old pieces that have no saved hands, and the quick
-rule for an added note.
+piano roll visualization, the old pieces that have no saved hands, and the quick rule for an added
+note. **Predict hands** and the old sheet's ``stale`` state went with the vexflow-v2 sheet
+(implementation 03, Phase 10): the hands are saved here as ``hand`` operations, and a stored sheet
+is laid again on changed notes, so the Sheet step stays ready.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from aitu_backend.audio import ingest, store
 from aitu_backend.main import create_app
 from aitu_backend.pmn import events_file
 from aitu_backend.schemas.metadata import AudioSource
+from aitu_backend.schemas.rhythm import SavedRhythm
 from aitu_backend.storage import paths
 from aitu_backend.transcription import pipeline, saved_hands, split_cache, time_pipeline
 from aitu_backend.transcription.engine import NoteEvent
@@ -91,13 +94,11 @@ def patch(client: TestClient, uuid: str, ops: list[dict], **extra) -> dict:
     return response.json()
 
 
-def predict_and_save(client: TestClient, uuid: str) -> dict:
+def save_hands(client: TestClient, uuid: str) -> dict:
+    """Every note given its hand (the melody from Do 5 up is the right hand), as one save."""
     base = notes(client, uuid)
-    predicted = client.post(
-        f"/pieces/{uuid}/hands/predict", json={"baseRevision": base["revision"]}
-    ).json()
-    right = [i for i, hand in zip(predicted["id"], predicted["hand"]) if hand == "r"]
-    left = [i for i, hand in zip(predicted["id"], predicted["hand"]) if hand == "l"]
+    right = [i for i, key in zip(base["id"], base["key"]) if key + 21 >= 72]
+    left = [i for i, key in zip(base["id"], base["key"]) if key + 21 < 72]
     return patch(
         client,
         uuid,
@@ -108,16 +109,15 @@ def predict_and_save(client: TestClient, uuid: str) -> dict:
     )
 
 
-def write_sheet(client: TestClient, uuid: str) -> dict:
-    response = client.put(f"/time/{uuid}/rhythm", json=READING)
-    assert response.status_code == 200, response.text
-    return response.json()
+def write_sheet(client: TestClient, uuid: str) -> None:
+    """The ``sheet.json`` the vexflow-v2 sheet saved: a part that has one counts as written."""
+    pipeline.save_rhythm(uuid, SavedRhythm.model_validate(READING))
 
 
 @pytest.fixture()
 def ready(client: TestClient, piece: str) -> str:
-    """The piece with its hands predicted and saved, and a sheet written: every step ready."""
-    predict_and_save(client, piece)
+    """The piece with its hands saved, and a sheet written: every step ready."""
+    save_hands(client, piece)
     write_sheet(client, piece)
     body = status(client, piece)
     assert [step["state"] for step in body["steps"]] == ["ready"] * 4
@@ -167,7 +167,7 @@ def test_a_transcribed_piece_opens_on_the_notes_tab_and_its_sheet_step_is_open(
         "state": "missing",
         "enabled": True,
         "reason": "Not written yet.",
-        "details": {"newSheet": False, "legacy": "missing"},
+        "details": {"newSheet": False},
     }
     assert body["resume"] == "notes"
 
@@ -181,125 +181,10 @@ def test_the_notes_travel_as_columns_with_their_revisions(client: TestClient, pi
     assert body["onMs"][:3] == [0, 0, 250] and body["lenMs"][0] in (200, 900)
 
 
-def test_predict_gives_one_hand_per_note_in_the_order_of_the_notes_and_writes_nothing(
-    client: TestClient, piece: str
-) -> None:
-    before = pipeline.events_path(piece).read_bytes()
-    base = notes(client, piece)
-    response = client.post(f"/pieces/{piece}/hands/predict", json={"baseRevision": 1})
-    assert response.status_code == 200, response.text
-    body = response.json()
-    assert body["id"] == base["id"]
-    assert len(body["hand"]) == 37 and body["changed"] == 37
-    for key, hand in zip(base["key"], body["hand"]):
-        assert hand == ("r" if key + 21 >= 72 else "l")
-    assert pipeline.events_path(piece).read_bytes() == before
-
-    old = client.post(f"/pieces/{piece}/hands/predict", json={"baseRevision": 0})
-    assert old.status_code == 409
-
-
-def test_predict_as_a_job_reports_its_progress_and_gives_the_same_answer(
-    client: TestClient, piece: str
-) -> None:
-    import time
-
-    from aitu_backend.transcription import jobs
-
-    started = client.post(f"/pieces/{piece}/hands/predict/job", json={"baseRevision": 1})
-    assert started.status_code == 202, started.text
-    job = jobs.get(started.json()["jobId"])
-    assert job is not None
-    deadline = time.monotonic() + 20
-    while not job.finished and time.monotonic() < deadline:
-        time.sleep(0.02)
-    assert job.status == "done", job.error
-
-    hands = [
-        payload
-        for name, payload in job.frames
-        if name is None and payload.get("stage") == "two-hands"
-    ]
-    assert len(hands) >= 2, "the inference reports more than its end"
-    assert [frame["current"] for frame in hands] == sorted(frame["current"] for frame in hands)
-    assert hands[-1]["current"] == hands[-1]["total"] == 100
-
-    done = job.summary  # what the `done` frame of the stream carries
-    direct = client.post(f"/pieces/{piece}/hands/predict", json={"baseRevision": 1}).json()
-    assert done["id"] == direct["id"] and done["hand"] == direct["hand"]
-    assert done["changed"] == direct["changed"] == 37
-
-    old = client.post(f"/pieces/{piece}/hands/predict/job", json={"baseRevision": 0})
-    assert old.status_code == 409
-
-
-def test_predict_leaves_a_note_it_cannot_place_without_a_hand(
-    client: TestClient, data_dir: Path
-) -> None:
-    uuid = store.create("Short note", AudioSource.UPLOAD, "wav").uuid
-    store.update(uuid, duration_seconds=DURATION)
-    # 10 ms: shorter than one column of the piano sheet (40 ms), so the split cannot place it.
-    short = NoteEvent(midi_note=60, start=3.11, end=3.12)
-    events = sorted([*music(), short], key=lambda event: (event.start, event.midi_note))
-    pipeline.save_note_events(uuid, events, DURATION, title="Short note")
-    base = notes(client, uuid)
-    answer = client.post(f"/pieces/{uuid}/hands/predict", json={"baseRevision": 1}).json()
-    unplaced = [note_id for note_id, hand in zip(answer["id"], answer["hand"]) if hand == "-"]
-    position = base["onMs"].index(3110)
-    assert unplaced == [base["id"][position]]
-    assert answer["unplaced"] == 1
-    assert answer["hand"].count("r") + answer["hand"].count("l") == len(base["id"]) - 1
-
-
-def test_a_note_the_sheet_cannot_place_does_not_keep_the_hands_from_being_ready(
-    client: TestClient, data_dir: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """The user's rule of 2026-10-01: once the prediction is saved, the Hands step is ready, even
-    when a note the split could not place has no hand. That note stays without one (red), the
-    quick rule does not guess it on a later save, and the sheet paints the saved hands.
-    """
-    uuid = store.create("Short note", AudioSource.UPLOAD, "wav").uuid
-    store.update(uuid, duration_seconds=DURATION)
-    short = NoteEvent(midi_note=60, start=3.11, end=3.12)  # 10 ms: shorter than one column
-    events = sorted([*music(), short], key=lambda event: (event.start, event.midi_note))
-    pipeline.save_note_events(uuid, events, DURATION, title="Short note")
-    short_id = notes(client, uuid)["id"][notes(client, uuid)["onMs"].index(3110)]
-
-    predict_and_save(client, uuid)
-    body = status(client, uuid)
-    assert body["by"]["sheet"]["enabled"]
-    assert events_file.read_header(pipeline.events_path(uuid)).hands_notes_revision == 1
-
-    # A later edit: the quick rule runs (the hands were saved as a whole) but leaves that note.
-    current = notes(client, uuid)
-    first = current["id"][0]
-    patch(
-        client,
-        uuid,
-        [
-            {
-                "op": "move",
-                "id": first,
-                "onMs": current["onMs"][0] + 10,
-                "lenMs": current["lenMs"][0],
-            }
-        ],
-    )
-    after = notes(client, uuid)
-    assert after["hand"][after["id"].index(short_id)] == "-"
-
-    def no_inference(*args: object, **kwargs: object) -> None:
-        raise AssertionError("the sheet must paint the saved hands, not run the inference")
-
-    monkeypatch.setattr(pipeline, "impose_granularity_and_split", no_inference)
-    split_cache.forget()
-    pipeline.split_of(uuid)
-
-
 def test_saved_hands_make_the_step_ready_and_the_sheet_uses_them_without_inference(
     client: TestClient, piece: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    saved = predict_and_save(client, piece)
+    saved = save_hands(client, piece)
     assert saved["revision"] == 1 and saved["handsRevision"] == 1
     header = events_file.read_header(pipeline.events_path(piece))
     assert header.hands_notes_revision == 1
@@ -312,19 +197,14 @@ def test_saved_hands_make_the_step_ready_and_the_sheet_uses_them_without_inferen
 
     monkeypatch.setattr(time_pipeline, "split_hands", no_inference)
     split_cache.forget()
-    score = client.get(f"/time/{piece}/score", params={"anchorMs": 500})
-    assert score.status_code == 200
-    printed = score.json()["notes"]
-    assert {note["hand"] for note in printed if note["row"] + 21 >= 72} == {"right"}
-    assert {note["hand"] for note in printed if note["row"] + 21 < 60} == {"left"}
+    split = pipeline.split_of(piece)
+    assert all(row + 21 >= 72 for row in split.right.active_rows())
+    assert all(row + 21 < 72 for row in split.left.active_rows())
 
 
-def test_writing_the_sheet_records_the_hands_revision(client: TestClient, piece: str) -> None:
-    predict_and_save(client, piece)
-    reading = write_sheet(client, piece)
-    assert reading["handsRevision"] == 1
-    reading = client.put(f"/time/{piece}/rhythm", json={**READING, "handsRevision": 99}).json()
-    assert reading["handsRevision"] == 1, "the client's value is ignored"
+def test_an_old_sheet_makes_the_sheet_step_ready(client: TestClient, piece: str) -> None:
+    save_hands(client, piece)
+    write_sheet(client, piece)
     body = status(client, piece)
     assert body["by"]["sheet"]["state"] == "ready" and body["resume"] == "sheet"
     assert body["revisions"] == {
@@ -333,7 +213,6 @@ def test_writing_the_sheet_records_the_hands_revision(client: TestClient, piece:
         "notesAudio": 0,
         "hands": 1,
         "handsNotes": 1,
-        "sheetHands": 1,
     }
 
 
@@ -375,7 +254,7 @@ def test_row_2_a_new_transcription_makes_the_hands_missing_and_keeps_the_old_she
             return music()
 
     pipeline.transcribe_audio(uuid, engine=Stub())
-    predict_and_save(client, uuid)
+    save_hands(client, uuid)
     write_sheet(client, uuid)
     before = events_file.read_header(pipeline.events_path(uuid))
     assert (
@@ -397,15 +276,15 @@ def test_row_2_a_new_transcription_makes_the_hands_missing_and_keeps_the_old_she
     assert list(paths.part_history_dir(uuid).glob("v*/sheet.json"))
 
 
-def test_row_3_a_moved_or_resized_rectangle_keeps_the_hands_and_makes_the_sheet_stale(
+def test_row_3_a_moved_or_resized_rectangle_keeps_the_hands_and_the_sheet(
     client: TestClient, ready: str
 ) -> None:
     note_id = id_of(client, ready, 72, 0)
     result = patch(client, ready, [{"op": "move", "id": note_id, "onMs": 30, "lenMs": 150}])
     assert result["revision"] == 2 and result["handsRevision"] == 2
-    assert result["sheetStale"] is True
+    assert "sheetStale" not in result
     body = status(client, ready)
-    assert body["by"]["sheet"]["state"] == "stale" and body["by"]["sheet"]["enabled"] is True
+    assert body["by"]["sheet"]["state"] == "ready" and body["by"]["sheet"]["enabled"] is True
     assert body["resume"] == "sheet"
     moved = notes(client, ready)
     index = moved["id"].index(note_id)
@@ -416,7 +295,7 @@ def test_row_3_a_moved_or_resized_rectangle_keeps_the_hands_and_makes_the_sheet_
     )
 
 
-def test_row_4_an_added_rectangle_gets_a_guessed_hand_and_makes_the_sheet_stale(
+def test_row_4_an_added_rectangle_gets_a_guessed_hand_and_keeps_the_sheet(
     client: TestClient, ready: str
 ) -> None:
     result = patch(
@@ -430,7 +309,7 @@ def test_row_4_an_added_rectangle_gets_a_guessed_hand_and_makes_the_sheet_stale(
     assert result["changed"]["guessed"] == [37]
 
     body = status(client, ready)
-    assert body["by"]["sheet"]["state"] == "stale"
+    assert body["by"]["sheet"]["state"] == "ready"
     assert notes(client, ready)["guessed"] == [37]
 
     confirmed = patch(client, ready, [{"op": "hand", "ids": [37], "hand": "r"}])
@@ -450,79 +329,42 @@ def test_row_4_without_saved_hands_an_added_rectangle_has_no_hand(
     assert "hands" not in status(client, piece)["by"]
 
 
-def test_row_5_a_deleted_rectangle_keeps_the_hands_and_makes_the_sheet_stale(
+def test_row_5_a_deleted_rectangle_keeps_the_hands_and_the_sheet(
     client: TestClient, ready: str
 ) -> None:
     note_id = id_of(client, ready, 73, 250)
     patch(client, ready, [{"op": "delete", "ids": [note_id]}])
     assert note_id not in notes(client, ready)["id"]
     body = status(client, ready)
-    assert body["by"]["sheet"]["state"] == "stale"
+    assert body["by"]["sheet"]["state"] == "ready"
 
     patch(client, ready, [{"op": "restore", "ids": [note_id]}])
     back = notes(client, ready)
     assert back["hand"][back["id"].index(note_id)] == "r"
 
 
-def test_row_6_a_hand_changed_on_the_hands_tab_makes_the_sheet_stale(
-    client: TestClient, ready: str
-) -> None:
+def test_row_6_a_hand_changed_on_the_notes_keeps_the_sheet(client: TestClient, ready: str) -> None:
     note_id = id_of(client, ready, 72, 0)
     result = patch(client, ready, [{"op": "hand", "ids": [note_id], "hand": "l"}])
     assert result["revision"] == 1, "a hand is not a notes change"
     assert result["handsRevision"] == 2
     body = status(client, ready)
-    assert body["by"]["sheet"]["state"] == "stale"
+    assert body["by"]["sheet"]["state"] == "ready"
 
 
 def test_row_7_a_hand_changed_on_the_sheet_tab_keeps_the_sheet_ready(
     client: TestClient, ready: str
 ) -> None:
     before = events_file.read_header(pipeline.events_path(ready)).hands_revision
-    response = client.put(
-        f"/time/{ready}/hands",
-        json={
-            "frameMs": 40,
-            "notes": [{"startFrame": 0, "row": 72 - 21, "hand": "left"}],
-        },
-    )
-    assert response.json() == {"assigned": 1, "unmatched": 0}
+    response = client.post(f"/sheet/{ready}/hands", json={"notes": ["0:72"], "hand": "left"})
+    assert response.status_code == 200, response.text
+    assert (response.json()["moved"], response.json()["unmatched"]) == (1, 0)
     after = events_file.read_header(pipeline.events_path(ready))
     assert after.hands_revision == before + 1
     body = status(client, ready)
     assert body["by"]["sheet"]["state"] == "ready"
-    assert body["revisions"]["sheetHands"] == after.hands_revision
     moved = notes(client, ready)
     assert moved["hand"][moved["id"].index(id_of(client, ready, 72, 0))] == "l"
-
-
-def test_a_sheet_tab_edit_does_not_make_a_stale_sheet_ready(client: TestClient, ready: str) -> None:
-    patch(client, ready, [{"op": "delete", "ids": [id_of(client, ready, 73, 250)]}])
-    client.put(
-        f"/time/{ready}/hands",
-        json={
-            "frameMs": 40,
-            "notes": [{"startFrame": 0, "row": 72 - 21, "hand": "left"}],
-        },
-    )
-    assert status(client, ready)["by"]["sheet"]["state"] == "stale"
-
-
-def test_saving_the_reading_then_taking_its_hidden_notes_off_keeps_it_ready(
-    client: TestClient, ready: str
-) -> None:
-    """The Sheet tab saves the reading and then takes the hidden notes off the recording."""
-    write_sheet(client, ready)
-    response = client.put(
-        f"/time/{ready}/removed",
-        json={
-            "frameMs": 40,
-            "notes": [{"startFrame": 6, "row": 73 - 21}],
-            "removed": True,
-        },
-    )
-    assert response.json()["changed"] == 1
-    assert status(client, ready)["by"]["sheet"]["state"] == "ready"
 
 
 # --------------------------------------------------------------------------- the operations
@@ -603,19 +445,6 @@ def test_operations_that_change_nothing_write_nothing(client: TestClient, ready:
     assert pipeline.events_path(ready).read_bytes() == before
 
 
-def test_predict_keeps_the_hands_the_user_set_unless_asked_to_replace_them(
-    client: TestClient, ready: str
-) -> None:
-    note_id = id_of(client, ready, 72, 0)
-    patch(client, ready, [{"op": "hand", "ids": [note_id], "hand": "l"}])
-    kept = client.post(f"/pieces/{ready}/hands/predict", json={"baseRevision": 1}).json()
-    assert kept["hand"][kept["id"].index(note_id)] == "l" and kept["changed"] == 0
-    fresh = client.post(
-        f"/pieces/{ready}/hands/predict", json={"baseRevision": 1, "replace": True}
-    ).json()
-    assert fresh["hand"][fresh["id"].index(note_id)] == "r" and fresh["changed"] == 1
-
-
 # --------------------------------------------------------------------------- old pieces
 
 
@@ -654,14 +483,9 @@ def test_the_first_hand_change_on_the_sheet_saves_every_hand_as_the_sheet_draws_
     client: TestClient, old_piece: str
 ) -> None:
     drawn = pipeline.split_of(old_piece, 40.0)
-    response = client.put(
-        f"/time/{old_piece}/hands",
-        json={
-            "frameMs": 40,
-            "notes": [{"startFrame": 0, "row": 72 - 21, "hand": "left"}],
-        },
-    )
-    assert response.json() == {"assigned": 1, "unmatched": 0}
+    response = client.post(f"/sheet/{old_piece}/hands", json={"notes": ["0:72"], "hand": "left"})
+    assert response.status_code == 200, response.text
+    assert (response.json()["moved"], response.json()["unmatched"]) == (1, 0)
 
     stored = pipeline.load_note_events(old_piece)
     assert stored is not None and saved_hands.hands_complete(stored.events)

@@ -1,16 +1,20 @@
 # aitu-backend
 
 FastAPI service. It runs the piano transcription model (MuScriptor `large`, on the GPU), stores the
-one file that cannot be recreated, and derives everything else from it on demand: the wall-clock
-matrix, the distribution of gaps, the figure of every note, and the score payload the browser draws.
-It also keeps a revision per step of a piece, so the flow page knows which step is out of date.
+notes (the one file that cannot be recreated), derives the wall-clock matrix and the hand split from
+them on demand, and writes and draws the piano sheet: the AI or the algorithm writes `sheet.f1`, and
+the backend draws it as SVG (`aitu_backend.sheet.engrave.frames`; implementation 03). It also keeps a
+revision per step of a piece, so the flow page knows which step is out of date.
 
-It does no drawing.
+Until implementation 03, Phase 10 (2026-10-27) it did no drawing: it derived the gaps, the figure
+of every note and a score payload that the browser drew with `@aimpromptu/grid-notation`
+(vexflow-v2). That sheet, the `/time` routes and their code were removed in that phase.
 
 **Documentation:** [context/backend/](../context/backend/README.md) ·
 the model: [time-model.md](../context/backend/time-model.md) ·
 the engine: [muscriptor.md](../context/backend/muscriptor.md) ·
-the steps: [pieces-and-revisions.md](../context/backend/pieces-and-revisions.md)
+the steps: [pieces-and-revisions.md](../context/backend/pieces-and-revisions.md) ·
+the sheet: [src/aitu_backend/sheet/README.md](src/aitu_backend/sheet/README.md)
 
 It runs in a container from the repository root (`make up`; the tests with `make test-backend`).
 Every way to run and test it, natively too, is in
@@ -39,12 +43,14 @@ src/aitu_backend/
                   # correction, filters, events -> the wall-clock matrix, jobs, saved hands
   pieces/         # the state of each step of a piece; the note operations
   pmn/            # the piano matrix notation: the sparse form and every adapter
-  matrix/         # frame <-> ms, gaps, peaks, the figure ladder, passages, bands
+  matrix/         # frame <-> ms, the matrix model, the keys, the hand split's entry point
   hands/          # which hand plays each onset: a beam search + a gated second pass
-  notation/       # figures, tresillos, trills
-  sheet/          # the new piano sheet chain (implementation 03): the F1 text, the algorithm, the
-                  # LLM step and the engine, copied from the research; no route uses it yet
-  editing/        # the replacement splice, composing, staging, history
+  sheet/          # the piano sheet's core (implementation 03): the F1 text, the algorithm, the
+                  # LLM step and the engine that draws the SVG
+  part_sheet/     # the sheet of a part in the app: sheet.f1, the AI's job, edits and their log,
+                  # the reading tools, a change of length, the old sheet.json's marks
+  sheet_llm.py    # the Claude function of the LLM step (outside the core)
+  editing/        # paste, Recording in Sheet, the parts of a project, marks, history
   storage/        # every filesystem path in one module; the project bundle, the audio store
   db/             # SQLAlchemy models, Alembic migrations, the users, backup/check/reindex
   schemas/        # Pydantic models (camelCase on the wire)
@@ -54,9 +60,10 @@ src/aitu_backend/
 ```
 
 **One file of notes is stored per part:** `parts/<partId>/notes.pmn` in the project bundle, the
-engine's notes with ids, hands and revisions. Beside it are `sheet.json`, what the reader decided,
-and `timeline.json`, which audio the part plays. Everything else is derived on every request,
-which is why the column length is a query parameter rather than a migration.
+engine's notes with ids, hands and revisions. Beside it are `sheet.f1`, the sheet (implementation
+03), and `timeline.json`, which audio the part plays; an old part may also have `sheet.json`, the
+old sheet's reading, still read for its marks. The matrix and the hand split are derived on
+request, which is why the column length is a parameter rather than a migration.
 
 Everything the app stores is in `.database/` at the repository root (`AITU_DATABASE_DIR` moves it):
 the SQLite file `aitu.sqlite`, the project bundles, and the audio store `audio/<sha256>.<ext>`.
@@ -71,9 +78,10 @@ uv sync            # install, including the dev dependency group
 make hooks         # one-time: uv run pre-commit install
 make lint          # flake8 + mypy
 make format        # black
-make test          # pytest (in the container: make test-backend from the root): 1,046 tests,
-                   # 1,045 passed and 1 known failure
-                   # (test_the_worked_example_at_00_46_prints_three_equal_corcheas)
+make test          # pytest (in the container: make test-backend from the root): 1,251 tests
+                   # collected at implementation 03, Phase 10. The one known failure of earlier
+                   # counts (test_the_worked_example_at_00_46_prints_three_equal_corcheas) went
+                   # with the old sheet's tests in that phase
 ```
 
 `pyproject.toml` sets `pythonpath = ["src", "."]`. The `"."` was needed by

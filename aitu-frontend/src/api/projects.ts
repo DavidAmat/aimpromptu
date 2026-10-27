@@ -8,7 +8,6 @@
  */
 
 import type { PieceStep } from "./pieces";
-import type { SavedRhythm } from "./timeScore";
 import { buildUrl, request, upload } from "./client";
 
 /** `request`: the copy of a project a request sent (Phase 14), read by its author and the master user. */
@@ -152,6 +151,6 @@ export const projectsApi = {
     request<PartsAnswer>(`/projects/${id}/parts/${part}/join`, { method: "POST" }),
 
   /** What follows `atMs` becomes a new part after it; the page's sheet is saved with it. */
-  splitPart: (id: string, part: string, body: { atMs: number; subheader?: string | null; sheet?: SavedRhythm | null }) =>
+  splitPart: (id: string, part: string, body: { atMs: number; subheader?: string | null }) =>
     request<PartsAnswer>(`/projects/${id}/parts/${part}/split`, { method: "POST", body }),
 };

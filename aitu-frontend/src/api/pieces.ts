@@ -30,8 +30,7 @@ export interface StepStatus {
   reason: string | null;
   /**
    * What else the backend says about the step. Notes: `noteCount`, `engine`, and `jobId` while a
-   * transcription runs. Sheet: `newSheet` (a new sheet is stored), `legacy` (the state of the sheet vexflow-v2
-   * saved), and `jobId` while Sonnet writes. Audio: `audioRevision`, `cuts`.
+   * transcription runs. Sheet: `newSheet` (a new sheet is stored), and `jobId` while the AI writes. Audio: `audioRevision`, `cuts`.
    */
   details: Record<string, unknown>;
 }
@@ -41,7 +40,7 @@ export interface PieceStatus {
   steps: StepStatus[];
   /** The step the piece opens on: the furthest one that is ready. */
   resume: PieceStep;
-  /** `audio`, `notes`, `notesAudio`, `hands`, `handsNotes`, `sheetHands`. */
+  /** `audio`, `notes`, `notesAudio`, `hands`, `handsNotes`. */
   revisions: Record<string, number | null>;
   /** Made from scratch and no audio yet: the page shows only the sheet (Phase 8). */
   scratch?: boolean;
@@ -96,25 +95,6 @@ export interface NotesPatchResult {
    * same-key rule shortened, a note the quick rule gave a hand.
    */
   changed?: { id: number[]; key: number[]; onMs: number[]; lenMs: number[]; hand: string; guessed?: number[] };
-  /** True when a saved piano sheet was current before and is stale now. */
-  sheetStale: boolean;
-}
-
-/** The answer of **Predict hands**: the `done` frame of its job, or `POST /hands/predict`. */
-export interface PredictResult {
-  /** The notes revision the prediction was made for. */
-  revision: number;
-  handsRevision: number;
-  frameMs: number;
-  /** The live notes, in the order of `GET /notes`. */
-  id: number[];
-  /** One character per note of `id`: `r`, `l`, or `-` for a note the split could not place. */
-  hand: string;
-  /** How many notes would change hand if this is saved. */
-  changed: number;
-  /** How many notes the split could not place (shorter than one column of the piano sheet). */
-  unplaced: number;
-  elapsedMs: number;
 }
 
 export const piecesApi = {
@@ -124,16 +104,6 @@ export const piecesApi = {
   /** The saved notes, as columns. */
   notes: (audioUuid: string, signal?: AbortSignal) =>
     request<PieceNotes>(`/pieces/${audioUuid}/notes`, { signal }),
-
-  /**
-   * Start **Predict hands** as a job; follow it on `matrixApi.progressUrl(jobId)`, whose `done`
-   * frame carries a {@link PredictResult}. Nothing is written. `replace: true` predicts every
-   * note again, including the hands the user set.
-   */
-  predictHands: (
-    audioUuid: string,
-    body: { baseRevision: number; frameMs?: number; replace?: boolean },
-  ) => request<{ jobId: string; status: string }>(`/pieces/${audioUuid}/hands/predict/job`, { method: "POST", body }),
 
   /**
    * Save edits of the notes. Refused with 409 when `baseRevision` (or `baseHandsRevision`) is not

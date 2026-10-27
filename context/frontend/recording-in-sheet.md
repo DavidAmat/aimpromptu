@@ -13,7 +13,8 @@ The take is written with the song's reference figure at its speed and the song's
 (`passages.PassageState.quarter_ms`, `key`; a speed change writes the takes again with it); its sheet is the
 algorithm's, with **Enhance with AI** as a button (the user's answer of Phase 8: no AI run by itself). **Promote**
 carries the take's new sheet into the song (`part_sheet.lengths`, scaled to the speed), and the song's sheet opens
-with "Promote the passage" as the last step of its log. Below, "the sheet" and its marks describe the old page.
+with "Promote the passage" as the last step of its log. Below, "the sheet" and its marks describe the old page
+(the old sheet, whose code was removed in implementation 03, Phase 10).
 
 ## 1. The page
 

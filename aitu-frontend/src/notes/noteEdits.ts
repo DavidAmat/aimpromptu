@@ -253,55 +253,6 @@ export function addNote(
 
 // ---------------------------------------------------------------------- hands
 
-/** Give `ids` to one hand: the whole rectangle moves from one hand matrix to the other. */
-export function setHands(context: EditContext, ids: Iterable<number>, hand: "r" | "l"): EditResult {
-  let next: Map<number, Note> | null = null;
-  for (const id of ids) {
-    const note = noteOf(context.base, context.over, id);
-    if (!isLive(note) || note.hand === hand) continue;
-    next ??= new Map(context.over);
-    next.set(id, { ...note, hand });
-  }
-  return next ? { over: next, refused: null } : unchanged(context);
-}
-
-/**
- * Lay the answer of **Predict hands** over the page's notes, as unsaved changes. The answer names
- * the notes by their backend id; `idMap` turns an added and saved note back into the page's id. A
- * note the split could not place (`-`) keeps the hand it has: there is nothing to save for it.
- */
-export function applyPrediction(
-  context: EditContext,
-  answer: { id: readonly number[]; hand: string },
-  idMap: ReadonlyMap<number, number>,
-): EditResult {
-  const pageId = new Map<number, number>();
-  for (const [temp, real] of idMap) pageId.set(real, temp);
-  let next: Map<number, Note> | null = null;
-  for (let index = 0; index < answer.id.length; index += 1) {
-    const hand = answer.hand[index];
-    if (hand !== "r" && hand !== "l") continue;
-    const id = pageId.get(answer.id[index]!) ?? answer.id[index]!;
-    const note = noteOf(context.base, next ?? context.over, id);
-    if (!isLive(note) || note.hand === hand) continue;
-    next ??= new Map(context.over);
-    next.set(id, { ...note, hand });
-  }
-  return next ? { over: next, refused: null } : unchanged(context);
-}
-
-/** The live notes with no hand, in onset order: the ones drawn red on the Hands tab. */
-export function idsWithoutHand(base: NotesBase, over: Overrides): number[] {
-  const found: { id: number; onMs: number }[] = [];
-  for (const [id, note] of base.notes) {
-    if (!over.has(id) && note.hand === "-") found.push({ id, onMs: note.onMs });
-  }
-  for (const [id, note] of over) {
-    if (!note.deleted && note.hand === "-") found.push({ id, onMs: note.onMs });
-  }
-  return found.sort((a, b) => a.onMs - b.onMs).map((note) => note.id);
-}
-
 /** Whether any live note has a hand: the piano roll visualization can then colour by hand. */
 export function anyHand(base: NotesBase, over: Overrides): boolean {
   for (const [id, note] of base.notes) if (!over.has(id) && note.hand !== "-") return true;

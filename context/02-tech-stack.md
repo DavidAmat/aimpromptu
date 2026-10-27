@@ -31,7 +31,7 @@ container (`compose.yaml`).
 | Runtime | React 19.2.6, react-dom 19.2.6 |
 | Language | TypeScript 6.0.3 |
 | Bundler | Vite 8.1.5, `@vitejs/plugin-react` 6.0.1. The development server proxies `/api` to the backend, and answers only to the host names of `allowedHosts` (`vite.config.ts`) and to IP addresses |
-| Notation | `@aimpromptu/grid-notation` **0.42.0**, installed from disk (`file:../../vexflow-v2`); zero runtime dependencies, Bravura inlined. **Rebuild it after pulling** — npm does not build a linked dependency and a stale `dist/` fails silently |
+| Notation | None in the browser: the sheet is an SVG drawn by the backend (`GET /sheet/{uuid}`). `@aimpromptu/grid-notation` (`file:../../vexflow-v2`) was removed in implementation 03, Phase 10 |
 | Routing | react-router-dom 7.x |
 | Components | MUI 9.x (`@mui/material`, `@mui/icons-material`, `@mui/x-data-grid`) + emotion 11.x. The theme has a light and a dark colour scheme on CSS variables; MUI keeps the user's choice in the browser (`mui-mode`) |
 | Lint | ESLint 10.4.0 flat config: `@eslint/js`, `typescript-eslint` 8.x, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `globals` |
@@ -47,7 +47,7 @@ section 5), `npm run preview`.
 |------|-------|
 | Runtime | Docker with Compose v2 and the NVIDIA Container Toolkit, on the Ubuntu machine |
 | Backend image | `python:3.12-slim-bookworm`, `uv` 0.11.3, `ffmpeg`, `deno` (for yt-dlp), the three engine extras; the GPU reserved in `compose.yaml` |
-| Frontend image | `node:22-bookworm-slim`, the Vite development server (development mode, decision Q-5), its own build of `../vexflow-v2` |
+| Frontend image | `node:22-bookworm-slim`, the Vite development server (development mode, decision Q-5). It built `../vexflow-v2` too until implementation 03, Phase 10 |
 | Code | Mounted from the host, not copied: edits reload both services |
 | GPU | NVIDIA RTX 4090, driver 595.58.03; torch reports `cuda` inside the container |
 
@@ -72,12 +72,12 @@ Locked by the organizer for `context/implementations/01-mvp/01-epics-master-plan
 | Data models | Pydantic everywhere on the backend; camelCase wire format via aliases |
 | Progress | `tqdm` for any >10 s processing, mirrored to the UI via a ProgressReporter + SSE |
 | API | Plain FastAPI endpoints; functional over best-practice. Containers since implementation 08 |
-| Matrix persistence | No matrix is stored: **only `notes.pmn` (the notes, the portable `.pmn` version 2) and `sheet.json` (the reader's decisions) are stored per part**, and every matrix is derived per request. The `.npz` files of the old Piano Library were deleted in implementation 02, Phase 3 |
+| Matrix persistence | No matrix is stored: **only `notes.pmn` (the notes, the portable `.pmn` version 2) and the sheet (`sheet.f1` since implementation 03; an old `sheet.json` is still read) are stored per part**, and every matrix is derived per request. The `.npz` files of the old Piano Library were deleted in implementation 02, Phase 3 |
 | Piano transcription | **MuScriptor `large`** since implementation 08: the only engine the user can choose, on the GPU, float16, one chunk at a time, piano only ([backend/muscriptor.md](backend/muscriptor.md)). Before it, `piano_transcription_inference` (ByteDance, onset threshold **0.5**) was the default and **Transkun** a second choice; both stay in the code behind `transcription/engine.py` and are refused by the route. Spotify Basic Pitch cannot install on Python 3.12 |
 | Audio tooling | `ffmpeg` (prerequisite) for conversion/normalization, `yt-dlp` (run as `python -m yt_dlp`) for YouTube |
 | Accepted audio | `.mp3 .aac .m4a .wav .webm .ogg` — webm/ogg for browser recordings (Chrome records only webm/opus; ffmpeg converts server-side) |
 | Frontend components | MUI (+ MUI X) standard across all pages; Aceternity UI only decorative; palette from `context/colors/color-palette.md` as `palette.ts` |
-| Notation rendering | `@aimpromptu/grid-notation` in the browser, engraving the matrix directly. Frame columns — not measures, voices or accumulated ticks — are the horizontal source of truth, so the two hands cannot drift apart. The backend chooses every note's printed figure and hands it over with the matrix; it builds no score document and draws nothing |
+| Notation rendering | The backend draws the sheet (`aitu_backend.sheet.engrave.frames`, the Leipzig glyphs and Verovio's drawing rules) as one SVG with a cursor map, and the browser shows it (`frames/FramesSheetPage`). No compases, tempo, puntillos or silencios. Until implementation 03, Phase 10 the old sheet was engraved in the browser by `@aimpromptu/grid-notation` ([deprecated/grid-notation.md](../documentation/deprecated/grid-notation.md)) |
 | Time model | A column is a fixed number of milliseconds (`frameMs`, 40 by default) and carries no rhythmic meaning. No BPM, no granularity, no bar lines. See [backend/time-model.md](backend/time-model.md) |
 | Storage | `.database/` (implementation 02, plan section 8): **SQLite** for the records (users, projects, the music library, requests), through **SQLAlchemy 2** models with **Alembic** migrations (`aitu_backend/db/`), and folders beside it for the audio files (stored once, by SHA-256) and the project bundles. On the Ubuntu machine a link to `/mnt/ssd2/aimpromptu/.database`, mounted into the backend container at `/database`. See [07-database.md](07-database.md) |
 | GPU | The RTX 4090 of the Ubuntu machine (`AITU_DEVICE=cuda` in the container); natively the default stays `cpu` |

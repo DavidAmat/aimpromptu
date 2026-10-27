@@ -66,26 +66,6 @@ export function firstLineBoxOf(selector: string): DOMRect | null {
  * with the selection and is pulled back onto the screen if that would run off the bottom.
  */
 /**
- * The box a press was on: the whole frame group or notehead if it landed on one, else the point.
- *
- * A toolbox that must not cover what it is about has to know how big that thing is, and the only
- * moment the answer is on the page is the press itself — a frame group's highlight is not painted
- * until a render later.
- */
-export function pressedBox(event: {
-  target: EventTarget | null;
-  clientX: number;
-  clientY: number;
-}): DOMRect {
-  const on = (event.target as Element | null)?.closest?.(
-    ".grid-frame-range, .grid-frame-cell, [data-note-target]",
-  );
-  const box = on?.getBoundingClientRect();
-  if (box && (box.width > 0 || box.height > 0)) return box;
-  return new DOMRect(event.clientX - 8, event.clientY - 8, 16, 16);
-}
-
-/**
  * Where to open the frames toolbox so a range that grows never ends up underneath it.
  *
  * `besideOnScreen` below puts a panel to the right of what it is about, which is right for a set of

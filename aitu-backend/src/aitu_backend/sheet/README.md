@@ -127,8 +127,24 @@ armadura, the frames text and the round trip, the starting hands).
 
 ## 8. Licenses to check before a release
 
-`engrave/vrv.py` ports drawing rules from Verovio (LGPL-3.0); the Leipzig glyphs are SIL OFL 1.1
-(`synthesis/04-engine.md` §4.6).
+The app runs on the home machines and is not distributed, so none of these is an obligation today. Before the code,
+the prompt or the app is given to anyone outside (a public repository, a package, a hosted service), each row needs its
+action. Inventory of implementation 03, Phase 10 (2026-10-27), from the research's `synthesis/05-recommendations.md`
+§5.6 checked against what this package holds.
+
+| What, where | License or source | Action before a release |
+|---|---|---|
+| `engrave/vrv.py`: stem lengths, beam slopes and partial beams ported from Verovio 6.3's C++ | LGPL-3.0 (Verovio) | a legal check of the port, or the rules written again from their description |
+| `engrave/leipzig.json`: the Leipzig glyphs (outlines of the music font) | SIL OFL 1.1 (shipped with Verovio) | keep the font's license notice beside the file |
+| `llm/prompt/frames/instructions.md`, Example 1 (the A major arpeggio) and `llm/prompt/instructions.md` (example `hand-3`) | Beethoven Op. 2 No. 2, finale, from the `craigsapp/beethoven-piano-sonatas` encoding, which has no license file | replace with a passage of a CC BY or CC0 edition, or confirm the license |
+| the same prompts, Example 2 (the waltz) and examples `beam-4`, `range-1` | NIFC Chopin first editions, CC BY 4.0 | attribution |
+| `llm/prompt/frames/instructions.md`, Examples 3 and 4 | short transcriptions of two commercial pop songs (The Other Side at 84 s, La Tortura at 196 s) | sent to the API only; before the prompt itself is published, replace them with passages written for the purpose |
+| `proposal/beat_weights.json`, `meter_weights.json` (the pulse estimate of the algorithm) | learned on the research's train split, which includes Mozart kern and ASAP (CC BY-NC-SA 4.0) | confirm, or fit again on the CC BY / CC0 part (a few dozen numbers) |
+| `engrave/lyric_fonts.json`: advance widths of Lora, Geist and Montserrat | the fonts are SIL OFL 1.1 (`aitu-frontend/public/fonts/*-LICENSE.txt`) | none: widths measured from the fonts, the notices are already shipped with the files |
+| the songs sent to Anthropic by the LLM step | the user's own transcriptions | accepted by the user for the product (implementation 03, Phase 4) |
+
+The research's difficulty and fingering models (PSyllabus, PDMX, NIFC) are not in this package. The Bravura font of
+the vexflow-v2 sheet left with it (Phase 10); the PDF writes only base fonts and the engine's own outlines.
 
 ## 9. The new sheet without compases (implementation 03, Phase 2)
 

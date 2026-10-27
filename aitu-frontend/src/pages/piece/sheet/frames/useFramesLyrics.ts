@@ -5,13 +5,13 @@
  * - **The pieces on the sheet** are stored in the sheet itself (`sheet.f1`, `lyric` lines): every change the tab or a
  *   drag on the sheet makes is one edit, written at once as one step of undo. The tab speaks the old sheet's units
  *   (frames as columns, the size and the lift in pixels); the sheet's are frames and staff spaces.
- * - **The pasted words and the pool** are kept with the part as before (`PUT /time/{uuid}/lyrics`, in
+ * - **The pasted words and the pool** are kept with the part as before (`PUT /sheet/{uuid}/words`, in
  *   `project.json`): **Save lyrics** saves them, and they outlive a new transcription.
  */
 
 import { useCallback, useEffect, useMemo, useState, type SetStateAction } from "react";
 import {
-  timeScoreApi,
+  sheetApi,
   type FramesSheet,
   type LyricFont,
   type LyricLine,
@@ -84,8 +84,8 @@ export function useFramesLyrics(
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
-    timeScoreApi
-      .lyrics(audioUuid, controller.signal)
+    sheetApi
+      .words(audioUuid, controller.signal)
       .then((found) => setSaved({ forPart: audioUuid, text: found?.text ?? null, pool: found?.pool ?? [] }))
       .catch(() => setSaved({ forPart: audioUuid, text: null, pool: [] }));
     return () => controller.abort();
@@ -111,7 +111,7 @@ export function useFramesLyrics(
     async (text: string) => {
       setSaving(true);
       try {
-        const kept = await timeScoreApi.saveLyrics(audioUuid, text, pool);
+        const kept = await sheetApi.saveWords(audioUuid, text, pool);
         setSaved({ forPart: audioUuid, text: kept.text, pool: kept.pool ?? [] });
         setPoolNow(null);
         setDraft({ forPart: audioUuid, text: kept.text ?? "" });

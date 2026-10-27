@@ -1,6 +1,7 @@
 /**
  * Screenshots of every screen that draws a piano sheet (implementation 03, Phase 0: the baseline
- * before vexflow-v2 is replaced; Phase 10 takes them again to compare).
+ * before vexflow-v2 is replaced; Phase 10 takes them again on the new sheet, with the same numbers,
+ * to compare: `--out .../screenshots/phase-10`).
  *
  * Real pieces are only opened, never clicked. Every screen that needs a click (a toolbox, a
  * dialog, the page of a passage, From other projects) works on a temporary copy of the project
@@ -18,6 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
+import { markStretch, waitForFrames, watchSheets } from './frames-page.mjs';
 import { signIn, useSession } from './session.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -78,12 +80,13 @@ async function open(route, { theme = 'light', width = 1440, height = 900 } = {})
   page.on('console', (message) => { if (message.type() === 'error') problems.push(`${route}: console: ${message.text()}`); });
   page.on('pageerror', (error) => problems.push(`${route}: page error: ${error.message}`));
   page.on('response', (response) => { if (response.status() >= 400) problems.push(`${route}: ${response.status()} ${response.url()}`); });
+  watchSheets(page);
   await page.goto(new URL(route, base).toString());
   return page;
 }
 const waitForSheet = async (page, scope = '') => {
-  await page.locator(`${scope} .grid-note-target`.trim()).first().waitFor({ timeout: 90000 });
-  await page.waitForTimeout(1200);
+  await waitForFrames(page, { scope });
+  await page.waitForTimeout(700);
 };
 async function shot(page, name, what, options = {}) {
   await page.waitForTimeout(500);
@@ -107,19 +110,20 @@ async function screen(name, what, route, prepare, options = {}) {
   }
 }
 
-/** Mark a stretch on the first line's frame ruler, from `from` to `to` of its width. */
-async function markStretch(page, from, to) {
-  await page.locator('.grid-frame-ruler').first().scrollIntoViewIfNeeded();
-  await page.waitForTimeout(300);
-  const box = await page.locator('.grid-frame-ruler').first().boundingBox();
-  await page.mouse.click(box.x + box.width * from, box.y + box.height / 2);
+/** Mark a stretch in the strip above the first line, from `from` to `to` of its columns. */
+async function markLine(page, from, to) {
+  await markStretch(page, api, { from, to });
   await page.locator('[role=tablist][aria-label="What this stretch carries"]').waitFor({ timeout: 10000 });
-  await page.keyboard.down('Shift');
-  await page.mouse.click(box.x + box.width * to, box.y + box.height / 2);
-  await page.keyboard.up('Shift');
-  await page.waitForTimeout(400);
 }
-const toolbox = (page) => page.locator('[data-sheet-toolbox]');
+/** Pick the `nth` notehead with a press on it, as the reader does. */
+async function pickNote(page, nth) {
+  const head = page.locator('[data-frames-sheet] [data-note]').nth(nth);
+  await head.scrollIntoViewIfNeeded();
+  const box = await head.boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await page.locator('[data-frames-note-toolbox]').waitFor({ timeout: 10000 });
+}
+const toolbox = (page) => page.locator('[data-frames-sheet-toolbox]');
 async function openTab(page, name) {
   if ((await toolbox(page).count()) === 0) await page.getByRole('button', { name: 'Sheet toolbox' }).click();
   await toolbox(page).getByRole('button', { name, exact: true }).click();
@@ -133,13 +137,13 @@ async function moreAction(page, item) {
 
 try {
   // The real pieces, opened only.
-  await screen('01-projects', 'Projects: the step each project reached (Hands is one of the five steps)', '/projects',
+  await screen('01-projects', 'Projects: the step each project reached (four steps: no Hands step)', '/projects',
     async (page) => { await page.locator('table, [role=table], [role=list]').first().waitFor({ timeout: 20000 }); });
   await screen('02-notes-step', 'Notes step: the piano roll with no hands', `/projects/${project}/notes`,
     async (page) => { await page.locator('canvas').first().waitFor({ timeout: 30000 }); await page.waitForTimeout(1500); });
-  await screen('03-hands-step', 'Hands step: the roll coloured by hand, Predict hands (removed by plan section 3.5)', `/projects/${project}/hands`,
-    async (page) => { await page.locator('canvas').first().waitFor({ timeout: 30000 }); await page.waitForTimeout(1500); });
-  await screen('04-sheet-step', 'Sheet step of a project: vexflow-v2 sheet, title lines, scrub bar, floating bar', `/projects/${project}/sheet`,
+  await screen('03-hands-step', 'The old address of the Hands step: it opens the Sheet step (the step is gone)', `/projects/${project}/hands`,
+    async (page) => { await page.waitForURL(/\/sheet$/, { timeout: 20000 }); await waitForSheet(page); });
+  await screen('04-sheet-step', 'Sheet step of a project: the new sheet, title lines, floating bar', `/projects/${project}/sheet`,
     (page) => waitForSheet(page));
   await screen('05-sheet-step-full', 'Sheet step of a project, the whole page', `/projects/${project}/sheet`,
     (page) => waitForSheet(page), { full: true });
@@ -167,18 +171,18 @@ try {
   const part = copy.parts[0];
   const sheet = `/projects/${copy.id}/sheet`;
 
-  await screen('11-note-toolbox', 'Note toolbox: figures, fingers, hand, beams, even spacing, marks', sheet, async (page) => {
+  await screen('11-note-toolbox', 'Note toolbox: the chord keyboard, hand, figures, fingers, beams, grace note, ornaments', sheet, async (page) => {
     await waitForSheet(page);
-    await page.locator('.grid-note-target').nth(6).click({ force: true });
+    await pickNote(page, 6);
     await page.waitForTimeout(800);
   });
-  await screen('12-range-toolbox', 'Range toolbox (Frames): Key, Clef, Octave, Spacing, Speed; Copy, Record, New part', sheet, async (page) => {
+  await screen('12-range-toolbox', 'Range toolbox (Frames): Both / Right / Left, Key, Clef, Octave; Copy, Record, New part, AI', sheet, async (page) => {
     await waitForSheet(page);
-    await markStretch(page, 0.3, 0.6);
+    await markLine(page, 0.3, 0.6);
   });
-  await screen('13-range-octave', 'Range toolbox, Octave tab: the four brackets per hand', sheet, async (page) => {
+  await screen('13-range-octave', 'Range toolbox, Octave tab: the four lines per hand', sheet, async (page) => {
     await waitForSheet(page);
-    await markStretch(page, 0.3, 0.6);
+    await markLine(page, 0.3, 0.6);
     await page.locator('[role=tablist][aria-label="What this stretch carries"]').getByRole('tab', { name: /Octave/ }).click();
   });
   await screen('14-sheet-toolbox-transpose', 'Sheet toolbox, Transpose tab (Notes and Figures)', sheet, async (page) => {
@@ -188,41 +192,41 @@ try {
   await screen('15-transpose-preview', 'Transpose figures, Preview: the sheet in a dialog (negra to corchea)', sheet, async (page) => {
     await waitForSheet(page);
     await openTab(page, 'Transpose');
-    await toolbox(page).getByRole('button', { name: 'Figures', exact: true }).click();
-    await toolbox(page).locator('[aria-label="Transpose figures to"] button[value=corchea]').click();
-    await toolbox(page).locator('[data-transpose-preview=figures]').click();
-    await page.locator('[data-transpose-dialog] [data-transpose-sheet] .grid-onset-group').first().waitFor({ timeout: 60000 });
+    await page.locator('[data-transpose-tab]').getByRole('button', { name: 'Figures' }).click();
+    await page.locator('[aria-label="Transpose figures to"] button').nth(3).click(); // corchea
+    await page.locator('[data-transpose-preview="figures"]').click();
+    await page.locator('[data-transpose-sheet] svg').first().waitFor({ timeout: 60000 });
   });
   await screen('16-sheet-toolbox-lyrics', 'Sheet toolbox, Lyrics tab', sheet, async (page) => {
     await waitForSheet(page);
     await openTab(page, 'Lyrics');
   });
-  await screen('17-sheet-toolbox-layout', 'Sheet toolbox, Layout tab: spacing, lines, marks, zoom, frame numbers, 8va', sheet, async (page) => {
+  await screen('17-sheet-toolbox-layout', 'Sheet toolbox, View tab: Zoom and Space between lines (the Layout tab before)', sheet, async (page) => {
     await waitForSheet(page);
-    await openTab(page, 'Layout');
+    await openTab(page, 'View');
   });
   await screen('18-keyboard-panel', 'The keyboard panel under the playhead', sheet, async (page) => {
     await waitForSheet(page);
     await moreAction(page, 'Show the keyboard');
   });
-  await screen('19-find-trills', 'Find trills: the suggestions panel', sheet, async (page) => {
+  await screen('19-find-trills', 'The more actions menu (Find trills was dropped in Phase 8)', sheet, async (page) => {
     await waitForSheet(page);
-    await moreAction(page, 'Find trills');
-    await page.waitForTimeout(1500);
+    await page.getByRole('button', { name: 'More sheet actions' }).first().click();
+    await page.getByRole('menuitem').first().waitFor({ timeout: 10000 });
   });
   await screen('20-print-pdf', 'Print to PDF: the A4 pages laid out again', sheet, async (page) => {
     await waitForSheet(page);
-    await page.getByRole('button', { name: 'Print to PDF' }).first().click();
-    await page.getByRole('dialog').waitFor({ timeout: 20000 });
-    await page.waitForTimeout(3000);
+    await page.getByTestId('sheet-print').click();
+    await page.locator('[data-pdf-page]').first().waitFor({ timeout: 30000 });
+    await page.waitForTimeout(2000);
   });
   await screen('21-recording-in-sheet', 'Recording in Sheet: the page of a passage, the Current drawn', sheet, async (page) => {
     await waitForSheet(page);
-    await markStretch(page, 0.05, 0.95);
+    await markLine(page, 0.05, 0.95);
     await page.getByTestId('range-record').click();
     await page.waitForURL(/\/passages\/[0-9a-f-]+$/, { timeout: 20000 });
     passages.add(/\/passages\/([0-9a-f-]+)$/.exec(page.url())[1]);
-    await page.locator('[data-passage-current] .grid-note-target').first().waitFor({ timeout: 60000 });
+    await waitForFrames(page, { scope: '[data-passage-current]' });
     await page.waitForTimeout(1200);
   });
   await screen('22-compose', 'From other projects: the sheet of the source project, to pick passages', '/projects/compose', async (page) => {

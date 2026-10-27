@@ -18,9 +18,10 @@
 > Upload / Input in P4.2, because a sheet is written from recorded onsets and text notation has
 > none. `tempoBpm` and `timeStepSeconds` below are the clearest sign of which model they belong to.
 >
-> **What the app actually uses is schema 2.0**, in `schemas/time_matrix.py` —
-> see [time-matrix.md](../services/backend/time-matrix.md). The shared sparse-COO shape lives in `schemas/matrix.py`
-> as `SparseCooMatrix` and is used by both.
+> **What replaced them was schema 2.0**, in `schemas/time_matrix.py`: see
+> [time-matrix.md](time-matrix.md), itself deprecated since implementation 03, Phase 10 (2026-10-27), when the
+> new sheet (`sheet.f1`, drawn by the backend) replaced the vexflow-v2 sheet. The shared sparse-COO shape lives in
+> `schemas/matrix.py` as `SparseCooMatrix` and is used by both.
 
 ## SparseMatrix
 

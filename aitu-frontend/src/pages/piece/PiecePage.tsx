@@ -1,10 +1,11 @@
 /**
- * A project, step by step: five steps in the order of the work (implementation 08, plan section 7;
+ * A project, step by step: four steps in the order of the work (implementation 08, plan section 7;
  * restyled by implementation 02, plan section 10.2). Until Phase 3 a project is one piece, and its
  * id is the piece's audio uuid.
  *
  * **Source** brings the audio in, **Audio** chooses the selected region, **Notes** transcribes and
- * edits the notes, **Hands** splits them between the two hands, and **Sheet** is the piano sheet.
+ * edits the notes, and **Sheet** is the piano sheet, whose hands the AI writes (the Hands step was removed by
+ * implementation 03: Phase 5 took it out of the flow, Phase 10 removed its code).
  * The page asks the backend which steps are ready (`GET /pieces/{uuid}/status`) and enables its
  * tabs from that answer only, so a tab never opens on a result made from an older version of an
  * earlier step. The reader can always go back to an earlier tab.

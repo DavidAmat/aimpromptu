@@ -28,10 +28,11 @@ development mode (decision Q-5 of implementation 08).
 | Container | Image | Port on Ubuntu | What it holds |
 |---|---|---|---|
 | `backend` | `aimpromptu-backend:dev`, 10.4 GB | `127.0.0.1:8765` | Python 3.12, `uv`, `ffmpeg`, PyTorch with CUDA, the `muscriptor`, `transcription` and `transkun` extras. Reserves the GPU and loads MuScriptor `large` at start |
-| `frontend` | `aimpromptu-frontend:dev`, 1 GB | `0.0.0.0:5173` (`WEB_BIND`), every address of the machine | Node 22, the Vite development server, and its own build of `../vexflow-v2` |
+| `frontend` | `aimpromptu-frontend:dev`, 1 GB | `0.0.0.0:5173` (`WEB_BIND`), every address of the machine | Node 22 and the Vite development server |
 
-**Run `make up` again after a change of `uv.lock`, `package-lock.json` or `../vexflow-v2`.** The
-images hold the packages, and the frontend image holds its own build of the piano sheet package.
+**Run `make up` again after a change of `uv.lock` or `package-lock.json`.** The images hold the
+packages. (Until implementation 03, Phase 10 the frontend image also built `../vexflow-v2`, the old
+sheet's renderer, so a change there needed `make build` too; the app no longer uses it.)
 `make up` builds with `--build` and renews the frontend's `node_modules` volume, so a new image is
 used at once.
 
@@ -78,7 +79,7 @@ backend itself stays on `127.0.0.1:8765` of Ubuntu.
 
 Every page first asks to sign in: **Username** `master` (or `AITU_MASTER_USERNAME`) and the
 **Password** of `AITU_MASTER_PASSWORD` in `.env`. The other users are made in **Admin → Users**.
-After signing in the page opens on **Projects**; a project goes through Source, Audio, Notes, Hands,
+After signing in the page opens on **Projects**; a project goes through Source, Audio, Notes,
 Sheet ([frontend/projects.md](frontend/projects.md)). The users, the session and what each user
 can open are in [08-security.md](08-security.md).
 
@@ -126,9 +127,9 @@ Details: [backend/muscriptor.md](backend/muscriptor.md).
 
 ## 5. Checks
 
-**Backend.** `make test-backend` (in the container): 1,046 tests, 1,045 passed and 1 known failure,
-`test_time_score_payload.py::test_the_worked_example_at_00_46_prints_three_equal_corcheas`, which
-fails on a clean checkout too. Two GPU tests run only when a GPU and the weights are present. Every
+**Backend.** `make test-backend` (in the container). The one known failure of earlier phases,
+`test_time_score_payload.py::test_the_worked_example_at_00_46_prints_three_equal_corcheas`, was
+removed with the old sheet's payload in implementation 03, Phase 10. Two GPU tests run only when a GPU and the weights are present. Every
 test acts as the master user unless it is marked `real_login`, in which case it signs in through
 `/auth`; `test_auth.py` and `test_rights.py` check the sign in and the rights table.
 
@@ -138,8 +139,7 @@ Playwright's Chromium, installed once with `npx playwright install chromium`):
 | Command | What it checks |
 |---|---|
 | `npm run build`, `npm run lint` | Types, the production build, ESLint |
-| `npm run check:render` | A real score drawn headlessly in jsdom (a renderer fails silently at layout time) |
-| `npm run check:history`, `check:note-names`, `check:geometry` | Undo and redo, Spanish note names, sheet geometry |
+| `npm run check:history`, `check:geometry` | Undo and redo; the video piano overlay against the backend's fixture |
 | `npm run check:cuts`, `check:notes` | The Audio tab's cuts; the Notes tab's arrays, edits and operations |
 | `npm run check:flow` | A project walked in a headless Chromium on a temporary upload (about 2 minutes with the transcription) |
 | `npm run check:projects`, `check:library` | The Projects page, New project, export and import; Save to library, a version, Edit, Replace, history |
@@ -147,6 +147,7 @@ Playwright's Chromium, installed once with `npx playwright install chromium`):
 | `npm run check:passage` | Recording in Sheet: Current and Proposal, a take written and promoted (it transcribes; `-- --played` sends the takes' keys instead and needs no GPU) |
 | `npm run check:compose`, `check:play` | From other projects, the parts, songs playlists; Play mode |
 | `npm run check:public`, `check:requests` | The Public Library and Add to my library; requests, the review and sharing, with a temporary second user |
+| `npm run check:frames-sheet`, `check:frames-edit`, `check:frames-tools`, `check:frames-toolbox` | The sheet on a copy of a library version: drawn and played; picking notes, the hand, undo and redo; the note and range toolboxes; the sheet toolbox, lyrics and Print to PDF (`--live` spends a few cents of the AI) |
 | `npm run check:journey` | **The whole journey**, timed: a YouTube link to a piano sheet, saved, published, reviewed and accepted, then pulled, played and composed by a second user (two temporary users; it transcribes) |
 | `npm run time:flow` | The whole flow, timed, on three temporary pieces (an upload, a copied library piece, a new YouTube download) |
 | `npm run bench:roll` | The Notes tab's frame rate |
@@ -167,10 +168,11 @@ temporary user it makes), never on a project of a library, and removes what it m
 
 ## 6. The notation renderer
 
-The piano sheet is drawn by `@aimpromptu/grid-notation`, the sibling checkout `../vexflow-v2`. npm
-does not build a linked dependency, and a stale `dist/` fails silently: the app keeps drawing with
-the old code. In the containers, `make up` rebuilds it inside the frontend image. Natively:
-`cd ../vexflow-v2 && npm run build`.
+The piano sheet is laid out and drawn by the backend (`aitu_backend/sheet/`, an SVG answered by
+`GET /sheet/{uuid}`), so there is no renderer to build on the frontend side. `npm run check:render`
+and `npm run check:note-names`, which checked the old renderer `@aimpromptu/grid-notation` (the
+sibling checkout `../vexflow-v2`), were removed with it in implementation 03, Phase 10, and
+`make build` no longer needs `../vexflow-v2`. See [frontend/rendering.md](frontend/rendering.md).
 
 ## 7. Troubleshooting
 
@@ -182,8 +184,6 @@ the old code. In the containers, `make up` rebuilds it inside the frontend image
 | The Mac cannot open `ubuntu:5173` | `make ps`; `WEB_BIND` in `.env` must not be `127.0.0.1`. A page saying the host is not allowed means a name Vite does not know: add it to `AITU_ALLOWED_HOSTS` |
 | The Mac cannot open `localhost:5173` | The tunnel closed (the Mac slept). Run it again |
 | The page keeps asking to sign in | The session ended (a password changed, the user was disabled, or 30 days passed), or the password is wrong. The master user's first password is `AITU_MASTER_PASSWORD` of `.env` |
-| A sheet feature seems missing | `../vexflow-v2` changed: `make up` (or `make build`) |
-| A test fails that you did not touch | `test_the_worked_example_at_00_46…` is the known failure |
 | Upload answers `503` | `ffmpeg` is not on `PATH` (natively) |
 | Port 5173 or 8765 already in use | `make stop` (native servers) or `make down` |
 

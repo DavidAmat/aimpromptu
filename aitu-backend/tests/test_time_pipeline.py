@@ -10,12 +10,7 @@ import pytest
 from aitu_backend.matrix.keys import midi_to_row
 from aitu_backend.schemas.matrix import ONSET
 from aitu_backend.transcription.engine import NoteEvent
-from aitu_backend.transcription.time_pipeline import (
-    attack_times_of_hand,
-    impose_granularity_and_split,
-    layout_hints_for,
-    to_time_envelope,
-)
+from aitu_backend.transcription.time_pipeline import impose_granularity_and_split
 
 BASS, TENOR, TREBLE, HIGH = 41, 48, 72, 79  # Fa-2, Do-3, Do-6, Sol-6
 
@@ -90,33 +85,17 @@ def test_running_twice_gives_the_same_answer():
     assert np.array_equal(first.left.to_array(), second.left.to_array())
 
 
-def test_a_piece_is_always_sent_as_two_hands():
-    """Issue I-02. There is no single-matrix form and no unsplit step in the stored shape."""
-    envelope = to_time_envelope(run(two_hand_events()))
-    wire = envelope.model_dump(by_alias=True)
-    assert wire["matrixProcessingStep"] == "two-hands"
-    assert "rMatrix" in wire and "lMatrix" in wire
-    assert wire["frameMs"] == 40.0
-    assert wire["frameCount"] == envelope.r_matrix.shape[1] == envelope.l_matrix.shape[1]
-
-
-def test_a_right_hand_only_piece_is_two_hands_with_an_empty_left_and_a_hidden_staff():
+def test_a_right_hand_only_piece_is_two_hands_with_an_empty_left():
+    """Issue I-02. There is no single-matrix form: a one-hand piece has an empty other hand."""
     hands = run([note(index * 200.0, TREBLE + index % 4, 180.0) for index in range(6)])
-    envelope = to_time_envelope(hands)
-    hints = layout_hints_for(hands)
-
     assert hands.is_right_hand_only
-    assert envelope.l_matrix.is_empty()
-    assert envelope.l_matrix.shape[1] == envelope.r_matrix.shape[1]
-    assert hints.hide_left_hand is True
-    assert hints.hide_right_hand is False
-    assert hints.model_dump(by_alias=True)["hideLeftHand"] is True
+    assert hands.left.is_empty()
+    assert hands.left.frame_count == hands.right.frame_count
 
 
-def test_a_left_hand_only_piece_hides_the_other_staff():
+def test_a_left_hand_only_piece_has_an_empty_right_hand():
     hands = run([note(index * 300.0, BASS + index % 3, 280.0) for index in range(6)])
     assert hands.is_left_hand_only
-    assert layout_hints_for(hands).hide_right_hand is True
 
 
 def test_the_pipeline_describes_itself_in_a_sentence():
@@ -130,26 +109,8 @@ def test_an_impossible_frame_length_is_refused_before_any_work_happens():
         run(two_hand_events(), frame_ms=0)
 
 
-def test_a_hand_measures_its_own_attack_and_not_the_other_hand_s():
-    """Grouping runs before the split, so a shared column carries the earlier hand's time.
-
-    Six right-hand notes 60 ms apart, with a left-hand note landing 20 ms before the fourth of
-    them. At 40 ms columns the two share a column, and the group's time is the left hand's. Reading
-    that back for the right hand shortens one gap to 40 ms and lengthens the next to 80 — an even
-    run printed as a ragged one, which is the failure this whole refactor removes.
-    """
-    events = [note(index * 60.0, TREBLE, 50.0) for index in range(6)]
-    events.append(note(3 * 60.0 - 20.0, BASS, 50.0))
-
-    hands = impose_granularity_and_split(events, 2.0, frame_ms=40, artifacts=None, leakage=None)
-    right = attack_times_of_hand(hands, "right")
-    gaps = [round((b - a) * 1000.0) for a, b in zip(right, right[1:])]
-
-    assert gaps == [60, 60, 60, 60, 60]
-
-
 def test_the_two_hands_still_share_the_column_they_were_played_in():
-    """The correction is to the measured time only. Where the notes are drawn does not move."""
+    """Grouping runs before the split, so a note of each hand played 20 ms apart share one column."""
     events = [note(index * 60.0, TREBLE, 50.0) for index in range(6)]
     events.append(note(3 * 60.0 - 20.0, BASS, 50.0))
 

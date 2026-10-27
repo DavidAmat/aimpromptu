@@ -2,8 +2,8 @@
 
 **A web app to catalogue songs and make their piano versions.** Bring in a recording (upload it,
 record it in the browser, or download it from YouTube) and the app transcribes it with MuScriptor on
-the GPU while you watch the notes appear, lets you correct the notes and the hands on a piano roll,
-and writes the piano sheet, which you edit, print and play from. A finished piano sheet becomes a
+the GPU while you watch the notes appear, lets you correct the notes on a piano roll, and writes the
+piano sheet (an AI decides the hands and the reading with it), which you edit, print and play from. A finished piano sheet becomes a
 version of a song in **My library**, and can be published to the **Public Library** that every user
 shares, after the master user reviews the request. The product, in the user's words:
 [context/app/01-app-context.md](context/app/01-app-context.md).
@@ -21,9 +21,10 @@ audio files. `make db-backup` copies it while the app runs ([context/07-database
 A note's **position** and a note's **name** are two separate numbers.
 
 Position is measured wall-clock time: a frame is a fixed slice of real time, 40 ms by default. The
-rhythmic figure is a name taken from the playing itself: the gaps between notes pile up around a few
-lengths, the highest pile is a negra, and every other note takes its name from it. You change that
-name in one action, and renaming a note moves nothing.
+rhythmic figure is a name taken from the playing itself: the AI (or, before it writes, an algorithm)
+names the reference figure, the length the sheet calls a negra, and every other note takes its name
+from it. You change that name in one action (**Transpose figures**), and renaming a note moves
+nothing. The sheet has no compases, no tempo, no puntillos and no silencios.
 
 There is no BPM anywhere in the product.
 
@@ -34,19 +35,19 @@ Why: [context/backend/time-model.md](context/backend/time-model.md).
 - **Musicians** who want a readable page out of their own playing, a library of their piano
   versions, and a clean page to play from.
 - **Developers** extending the transcription pipeline, the wall-clock matrix, the music library or
-  the notation renderer.
+  the sheet engine.
 
 ## Services
 
 | Service | Folder | Role |
 |---|---|---|
-| Backend | `aitu-backend/` | Run MuScriptor on the GPU, store the recorded notes, derive the piano sheet, keep the music library |
-| Frontend | `aitu-frontend/` | Every screen, and every pixel of the sheet |
-| Renderer | `../vexflow-v2` | `@aimpromptu/grid-notation`, installed from disk |
+| Backend | `aitu-backend/` | Run MuScriptor on the GPU, store the recorded notes, write the piano sheet and draw it as an SVG, keep the music library |
+| Frontend | `aitu-frontend/` | Every screen; it shows the sheet the backend draws |
 
 **Monorepo.** One git repository at the workspace root; `aitu-backend/` and `aitu-frontend/` are
-service folders, not separate repos. The renderer is a **sibling checkout** on purpose: it knows
-nothing about this app's API. On the Ubuntu machine each service runs in its own development
+service folders, not separate repos. The old renderer of the sheet, `@aimpromptu/grid-notation` in the
+sibling checkout `../vexflow-v2`, was removed from the app in implementation 03, Phase 10
+(2026-10-27). On the Ubuntu machine each service runs in its own development
 container (`compose.yaml`), with the repository mounted so edits reload.
 
 ## Run it

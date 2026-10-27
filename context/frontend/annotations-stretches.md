@@ -1,11 +1,12 @@
 # The range toolbox, and octave brackets on the page
 
 What the Sheet step can say about a marked stretch of frames. The overview of the page, the
-selections and undo is [annotations.md](annotations.md). Code:
-`aitu-frontend/src/pages/piece/sheet/RangeToolbox.tsx` and `useRangeActions.ts`.
+selections and undo is [annotations.md](annotations.md).
 
-The range toolbox of the **new sheet** (implementation 03, Phase 7: Key, Clef, Octave) is described in
-[annotations.md](annotations.md), section "The new sheet"; this page is the old sheet's.
+**This page is the record of the old vexflow-v2 sheet**, whose code (`RangeToolbox.tsx`, `useRangeActions.ts`) was
+removed in implementation 03, Phase 10 (2026-10-27). The range toolbox of the new sheet (Phase 7: Both / Right /
+Left, Key, Clef, Octave; `frames/FramesRangeToolbox.tsx`) is described in [annotations.md](annotations.md), section
+"The new sheet".
 
 ## The tabs
 

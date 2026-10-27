@@ -19,12 +19,18 @@ from aitu_backend.audio import formats, store
 from aitu_backend.db import users
 from aitu_backend.db.database import session
 from aitu_backend.db.models import Part, Project
-from aitu_backend.editing import paste
+from aitu_backend.editing import history, paste
 from aitu_backend.main import create_app
 from aitu_backend.schemas.rhythm import Fingering
 from aitu_backend.storage import bundle, paths
 from aitu_backend.transcription import pipeline
 from test_paste import note, pitch_at, sheet, tone_part
+
+
+def restore(part: str, version: int) -> int:
+    """Put an earlier state of the part back, as the undo of a paste or a promotion does."""
+    with pipeline.piece_lock(part):
+        return history.restore(part, version)
 
 
 @pytest.fixture()
@@ -319,6 +325,6 @@ def test_a_cut_takes_a_stretch_out_and_moves_what_follows(
     assert bundle.cuts_of(bundle.read_timeline(clocks)) == [(200, 400)]
     assert step_state(client, clocks, "sheet") == "ready"
     # Undone like a paste: the part comes back to the byte.
-    assert client.post(f"/time/{clocks}/versions/{done.before_version}/restore").status_code == 200
+    restore(clocks, done.before_version)
     for name, body in files.items():
         assert (paths.part_dir(clocks) / name).read_bytes() == body, name

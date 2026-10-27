@@ -50,9 +50,9 @@ Two orderings are essential and were each found by fixing a real defect:
 - **Artifacts before everything.** One phantom bass note an octave under a played octave makes the
   stack impossible to hold with one hand and forces the hand splitter into a wrong answer. Also
   before `leakage`, whose asymmetry test asks which other keys attacked alongside a suspect.
-- **Hands before anything is measured** (D-31). Gaps are measured per hand, and the gap between a
-  right-hand run and a held left-hand chord is not a rhythm: it would hide the peak the reader is
-  meant to name.
+- **Hands before anything is written** (D-31). The old sheet measured its gaps per hand; the new
+  sheet (implementation 03) starts from one hand per note (`pipeline.starting_hands`), so the hands
+  still exist before the sheet is written.
 
 **When every placed note has a saved hand** (implementation 08, Phase 5), the last two steps are
 replaced: `saved_hands.split_with_saved_hands` builds the whole keyboard with the same grouping,
@@ -76,9 +76,11 @@ The code still works in the shape of `events.json` (note rows in seconds, schema
 implementation 08) and converts at the file boundary (`pmn/events_file.py`, `read_payload` and
 `write_payload`; the version 2 file is `pmn/notes_file.py`).
 
-A new transcription of a piece that already has notes first copies `notes.pmn` and `sheet.json` to
-`.database/history/<projectId>/parts/<partId>/vN/` (`editing/history.py`, `snapshot_notes`), then writes the new notes and deletes `sheet.json`, because the reading's column
-numbers point at notes that no longer exist.
+A new transcription of a piece that already has notes first copies `notes.pmn`, `sheet.json` and
+`sheet.f1` to `.database/history/<projectId>/parts/<partId>/vN/` (`editing/history.py`,
+`snapshot_notes`), then writes the new notes and deletes `sheet.json` and `sheet.f1`
+(`clear_rhythm`, `clear_new_sheet`), because their column numbers point at notes that no longer
+exist. The new notes ask the AI for their sheet (`sheet.pending`).
 
 `raw.npz`, `raw-granularity.txt`, `raw-edited.flag`, `collapsed_<gran>.npz`, `clean_<gran>.npz`,
 `two-hands_<gran>_*.npz` and `hands_<gran>.json` are all gone. A grid that is a pure function of a
@@ -358,8 +360,9 @@ Grouping runs on raw times, before snapping, because two notes 39 ms apart can f
 column boundary. "Same frame = same chord" is therefore phase-dependent and unreliable.
 
 Since Phase 5 the build also records `event_ids`: for each onset cell `(column, row)`, the id of the
-note that owns it. Every mapping between a split and the notes uses it (the sheet's hand route,
-**Predict hands**, the saved hands), instead of matching a row and a rounded start time.
+note that owns it. Every mapping between a split and the notes uses it (`saved_hands`, which reads
+the split back as one hand per note for `pipeline.starting_hands`), instead of matching a row and a
+rounded start time.
 
 ### 4.4 Hands: `hands/`, the saved hands, and the split cache
 
@@ -399,21 +402,14 @@ Runbook for a hand printed far outside its own staff:
 
 ---
 
-## 5. Where the figure lines fall
+## 5. Where the figure lines fell (removed)
 
-`matrix/bands.py`, applied from `to_score_payload` with `weighted_figure_lines=True`.
-
-The plain halfway rule printed a bass note held 397 ms as a negra where the score has a corchea. The
-line between two figures now leans towards whichever of them the passage plays more of:
-
-```text
-line between A and B  =  A * (B/A) ** ( pileA / (pileA + pileB) )
-```
-
-With even piles the exponent is ½ and this **is** the geometric mean, to the decimal, so a balanced
-passage is drawn exactly as before. Piles are counted once inside the halfway bands (recounting
-inside the new lines ratchets: 447 ms, then 466, then the clamp), per passage, both hands pooled,
-and clamped to 80/20 so a rare figure keeps a fifth of the room on each side.
+`matrix/bands.py` leaned the line between two figures towards whichever of them the passage played
+more of, for the old sheet's `to_score_payload`. Implementation 03, Phase 10 (2026-10-27) removed it
+with the vexflow-v2 sheet. The new sheet chooses each figure by its own rule (the nearest plain
+figure to the note's own length, with middle points from the negra up and 70 % of the way for the
+corchea and shorter): see the sheet's
+[README](../../../aitu-backend/src/aitu_backend/sheet/README.md), section 9.
 
 ---
 
@@ -455,7 +451,8 @@ make test-backend
 State at the end of implementation 02, Phase 3: **1,023 passed, 1 failed** on the GPU (1,039 and 1
 at the end of implementation 08; the tests of the old Piano Library went in Phase 3). The failure,
 `test_time_score_payload.py::test_the_worked_example_at_00_46_prints_three_equal_corcheas`, existed
-before implementation 08 on a clean checkout and is unrelated to it.
+before implementation 08 on a clean checkout and is unrelated to it; that test file went with the
+old sheet in implementation 03, Phase 10.
 
 MuScriptor is tested without a GPU: `tests/test_muscriptor_engine.py` uses `ReplayModel`, which
 replays the Phase 1 events of the first 20 s of Superestrella (`tests/fixtures/pmn`). Two tests run
@@ -476,7 +473,7 @@ or writes the real one.
 ## 8. Where to look deeper
 
 - [`events-to-sheet.md`](events-to-sheet.md): why the steps are in this order
-- [`time-matrix.md`](time-matrix.md): what the two hand matrices become
+- [`time-matrix.md`](time-matrix.md): the frame and the figure names that stayed of schema 2.0
 - [`hand-inference-second-pass.md`](hand-inference-second-pass.md): the gated repair pass
 - [`context/backend/piano-matrix-notation.md`](../../../context/backend/piano-matrix-notation.md):
   the stored notes, the ids and the revisions

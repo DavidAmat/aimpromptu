@@ -67,16 +67,16 @@ assumes.
 | File | Description |
 |------|-------------|
 | [frontend/README.md](frontend/README.md) | aitu-frontend entry: the sections, the tabs, the data flow |
-| [frontend/projects.md](frontend/projects.md) | **Projects and the steps of a project**: the five steps from the audio to the piano sheet, the editor's gestures, the timings |
+| [frontend/projects.md](frontend/projects.md) | **Projects and the steps of a project**: the four steps from the audio to the piano sheet, the editor's gestures, the timings |
 | [frontend/recording-in-sheet.md](frontend/recording-in-sheet.md) | **Recording in Sheet**: the page of a passage, its Current and Proposal, the takes, the speed and the window, Promote |
 | [frontend/playlists.md](frontend/playlists.md) | **From other projects and the playlists**: the page that makes a project of passages, the parts of a project (join, split), songs playlists |
 | [frontend/play-mode.md](frontend/play-mode.md) | **Play mode**: the sheet alone, Close and Next, Play and Pause, the cursor kept in the middle, lyrics by their frames, Notes Falling as a view, how parts and songs playlists play |
 | [frontend/pages.md](frontend/pages.md) | Routes, the shell, and the "position has one home" rule |
-| [frontend/rendering.md](frontend/rendering.md) | How the sheet is drawn, what the app does *not* decide, the stale-`dist` trap |
-| [frontend/annotations.md](frontend/annotations.md) | **The Sheet step**: the page, the defaults of a first write, the two selections, undo, saving |
-| [frontend/annotations-notes.md](frontend/annotations-notes.md) | The note toolbox: figures, fingers, hand, beams, even spacing, decorations |
-| [frontend/annotations-stretches.md](frontend/annotations-stretches.md) | The range toolbox (key and Key for this passage, clef and the clef rule, octave, spacing, speed, Record this passage, Start a new part here) and brackets on the page |
-| [frontend/annotations-sheet.md](frontend/annotations-sheet.md) | The sheet toolbox (title, key, transpose, lyrics, layout), the keyboard panel, Find trills |
+| [frontend/rendering.md](frontend/rendering.md) | How the sheet is drawn: by the backend (`GET /sheet/{uuid}`, an SVG), shown by `frames/FramesSheetPage`; the old vexflow-v2 sheet, removed in implementation 03, Phase 10 |
+| [frontend/annotations.md](frontend/annotations.md) | **The Sheet step**: the new sheet's tools; the old sheet's page, defaults, selections, undo and saving kept as the record |
+| [frontend/annotations-notes.md](frontend/annotations-notes.md) | The old sheet's note toolbox (the record): figures, fingers, hand, beams, even spacing, decorations |
+| [frontend/annotations-stretches.md](frontend/annotations-stretches.md) | The old sheet's range toolbox, the record (key and Key for this passage, clef and the clef rule, octave, spacing, speed, Record this passage, Start a new part here) and brackets on the page |
+| [frontend/annotations-sheet.md](frontend/annotations-sheet.md) | The old sheet's sheet toolbox, the record (title, key, transpose, lyrics, layout), the keyboard panel, Find trills |
 | [frontend/printing.md](frontend/printing.md) | The PDF export: re-wrap to the paper, never scale; the margin is the control |
 | [frontend/timestamps.md](frontend/timestamps.md) | UI rule: `mm:ss.cc`, frame labelled by start only, never wraps |
 
@@ -113,7 +113,7 @@ with no compases, tempo, puntillos or silencios on the sheet and no Hands step. 
 | [implementations/03-apply-poc-research/03-prompt.md](implementations/03-apply-poc-research/03-prompt.md) | The brief, in the user's own words (Spanish) |
 | [implementations/03-apply-poc-research/03-plan.md](implementations/03-apply-poc-research/03-plan.md) | **The plan.** The decisions of 2026-10-23, the binding rules, eleven phases from the core in the backend to vexflow-v2 removed |
 | [implementations/03-apply-poc-research/03-checklist.md](implementations/03-apply-poc-research/03-checklist.md) | THE status lookup for this implementation, and the open decisions |
-| `implementations/03-apply-poc-research/03-implementation-phase-N.md` | One report per phase (Phase 0: the inventory of everything that uses vexflow-v2; Phase 1: the core in the backend; Phase 2: the new sheet without compases, and its gallery in `gallery/phase-2/`; Phase 3: the engine without compases, and its gallery in `gallery/phase-3/`; Phase 4: the LLM step with Sonnet 5.5, and its gallery in `gallery/phase-4/`; Phase 5: the new Sheet step in the app; Phase 6: editing the new sheet, undo and redo, the hand tool; Phase 7: the note and range tools, Enhance with AI of a stretch, and its gallery in `gallery/phase-7/`) |
+| `implementations/03-apply-poc-research/03-implementation-phase-N.md` | One report per phase (Phase 0: the inventory of everything that uses vexflow-v2; Phase 1: the core in the backend; Phase 2: the new sheet without compases, and its gallery in `gallery/phase-2/`; Phase 3: the engine without compases, and its gallery in `gallery/phase-3/`; Phase 4: the LLM step with Sonnet 5.5, and its gallery in `gallery/phase-4/`; Phase 5: the new Sheet step in the app; Phase 6: editing the new sheet, undo and redo, the hand tool; Phase 7: the note and range tools, Enhance with AI of a stretch, and its gallery in `gallery/phase-7/`; Phase 8: the other screens and the sheet toolbox; Phase 9: the marks of the old sheets and the migration; Phase 10: the old sheet and vexflow-v2 removed) |
 
 ### 02 — The private web app — LIVE (Phases 16 and 17 added 2026-10-18)
 
@@ -261,8 +261,8 @@ Reading a piano roll video into the same `events.json` the transcription model w
 | File | Description |
 |------|-------------|
 | [../documentation/services/backend/endpoints.md](../documentation/services/backend/endpoints.md) | The whole HTTP surface, route by route, and what each obeys |
-| [../documentation/services/backend/time-matrix.md](../documentation/services/backend/time-matrix.md) | Schema 2.0 field reference: envelope, ladder, passages, printed notes, layout hints |
-| [../documentation/services/backend/events-to-sheet.md](../documentation/services/backend/events-to-sheet.md) | The derivation path, step by step, with the reason for each ordering |
+| [../documentation/services/backend/time-matrix.md](../documentation/services/backend/time-matrix.md) | What stays of schema 2.0: the frame length, the figure names, the marks an old `sheet.json` holds |
+| [../documentation/services/backend/events-to-sheet.md](../documentation/services/backend/events-to-sheet.md) | The derivation path from the stored notes to the hand split the new sheet starts from, with the reason for each ordering |
 | [../documentation/services/backend/transcription-pipeline.md](../documentation/services/backend/transcription-pipeline.md) | Engines, thresholds, the artifact and leakage filters, the measurement behind each number |
 | [../documentation/services/backend/hand-inference-second-pass.md](../documentation/services/backend/hand-inference-second-pass.md) | The gated repair pass over the hand split |
 | [../documentation/services/backend/rhythm-and-annotations.md](../documentation/services/backend/rhythm-and-annotations.md) | `sheet.json` (once `rhythm.json`) field by field: everything a reader decided, the lyrics pieces and pool |
@@ -270,14 +270,15 @@ Reading a piano roll video into the same `events.json` the transcription model w
 | [../documentation/services/backend/paths-and-data.md](../documentation/services/backend/paths-and-data.md) | `.database/`: every path, the bundle, the timeline, every table, backup and check |
 | [../documentation/deprecated/schemas.md](../documentation/deprecated/schemas.md) | Deprecated: the models of the deleted text-notation MVP |
 | [../documentation/deprecated/sequence-logic.md](../documentation/deprecated/sequence-logic.md) | Deprecated: `matrix/text_notation.py`, now only a builder of test matrices |
+| [../documentation/deprecated/time-matrix.md](../documentation/deprecated/time-matrix.md) | Deprecated: the old sheet's score payload (envelope, ladder, passages, printed notes, layout hints), removed in implementation 03, Phase 10 |
+| [../documentation/deprecated/grid-notation.md](../documentation/deprecated/grid-notation.md) | Deprecated: the vexflow-v2 renderer of the old sheet (`@aimpromptu/grid-notation`, `TimeScoreView`), removed in implementation 03, Phase 10 |
 
 ### Frontend detail (`documentation/services/frontend/`)
 
 | File | Description |
 |------|-------------|
 | [../documentation/services/frontend/components.md](../documentation/services/frontend/components.md) | The component tree, the routes, and where each piece lives |
-| [../documentation/services/frontend/grid-notation.md](../documentation/services/frontend/grid-notation.md) | The renderer seam: every option passed in, and what went with the old editor |
-| [../documentation/services/frontend/score-pdf.md](../documentation/services/frontend/score-pdf.md) | The PDF writer: SVG to operators, the embedded Bravura, how to check a bad file |
+| [../documentation/services/frontend/score-pdf.md](../documentation/services/frontend/score-pdf.md) | The PDF writer: the backend's pages to PDF operators, the fonts, how to check a bad file |
 
 ### Other (`documentation/`)
 
@@ -290,13 +291,14 @@ Reading a piano roll video into the same `events.json` the transcription model w
 | [../documentation/implementations/README.md](../documentation/implementations/README.md) | Stable topic-based how-tos |
 | [../documentation/deprecated/README.md](../documentation/deprecated/README.md) | Superseded or removed features (banner required) |
 | [../documentation/archive/README.md](../documentation/archive/README.md) | Historical reference |
-| [../documentation/archive/vexflow-reference.md](../documentation/archive/vexflow-reference.md) | Archived VexFlow EasyScore notes |
+| [../documentation/archive/vexflow-reference.md](../documentation/archive/vexflow-reference.md) | Archived VexFlow EasyScore notes (history) |
 
-## The renderer's own documentation
+## The old renderer's own documentation
 
-`@aimpromptu/grid-notation` is documented in the sibling checkout, not here:
-`../vexflow-v2/documentation/` — seven numbered files from quick start through annotations,
-playback and integration.
+`@aimpromptu/grid-notation`, the renderer of the old sheet, is documented in the sibling checkout
+`../vexflow-v2/documentation/` (seven numbered files from quick start through annotations, playback
+and integration). The app no longer uses it since implementation 03, Phase 10; the new sheet's
+engine is documented in `aitu-backend/src/aitu_backend/sheet/README.md`.
 
 ## Subrepo pointers
 

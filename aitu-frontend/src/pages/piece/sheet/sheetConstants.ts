@@ -1,17 +1,15 @@
 /**
- * The fixed values of the Sheet step: the colours of the keyboard panels, the pills of the range
- * toolbox, the figure ladder, and the small helpers several of its modules share.
+ * The fixed values of the Sheet step that several of its modules share: the colours of the hands on
+ * the keyboards, and how a time is written.
  *
- * Split out of `RhythmPage.tsx` (implementation 02, Phase 2).
+ * Split out of `RhythmPage.tsx` (implementation 02, Phase 2); what only the old sheet used went with
+ * it in implementation 03, Phase 10.
  */
 
 import { palette, semantic } from "../../../ui";
-import { ApiError, type FigureName } from "../../../api";
-import type { Clef, FingerNumber, OttavaKind } from "@aimpromptu/grid-notation";
-import type { NoteRef, PrintedHand } from "../../../music/renderOverrides";
 
-/** No note is moved by hand any more: a corrected hand is written onto the recording. */
-export const NO_HANDS: ReadonlyMap<NoteRef, PrintedHand> = new Map();
+/** Which staff a printed note is on. */
+export type PrintedHand = "right" | "left";
 
 /**
  * Which hand a colour on the keyboard stands for.
@@ -63,100 +61,6 @@ export const KEY_LEGEND: { colour: string; label: string }[] = [
   { colour: HELD_COLOUR.left, label: "LH sustain" },
 ];
 
-/** What a decoration note is drawn in on the keyboard, and what the note it leans on is drawn in. */
-export const DECORATION_COLOUR = palette.dark.Pink;
-export const PRINCIPAL_COLOUR = palette.dark.Lavender;
-
-/**
- * The figures that print with flags, and so can share a beam.
- *
- * A negra and anything longer has no beam to share, which is why **Beam all** stands down on them
- * rather than drawing something that is not a beam. The dotted pair is out for the same reason a
- * dotted figure is not a rung of the ladder: neither of the two this page offers carries a flag.
- */
-export const BEAMABLE_FIGURES = new Set<FigureName>([
-  "corchea",
-  "semicorchea",
-  "fusa",
-  "semifusa",
-]);
-
-/** How much one press of the plus or the minus moves an even run, as a fraction of its own width. */
-export const EVEN_SPACING_STEP = 0.15;
-
-/** Thumb to little finger. There is no 0 and no 6. */
-export const FINGERS: FingerNumber[] = [1, 2, 3, 4, 5];
-
-/**
- * What a stretch of columns can carry. One pill each, and only that one's controls on screen.
- * The lyrics left this list in implementation 02, Phase 7: they are pieces of the sheet toolbox's
- * Lyrics tab, placed by dragging.
- *
- * Two of them left. **Trill** and **Small** are statements about notes, not about columns — "these
- * notes are a shake", "these notes are decoration" — so they moved to the note toolbox, where the
- * notes they are about are already picked and the panel does not have to ask which hand.
- */
-export const FRAME_TABS = [
-  { id: "key" as const, label: "Key" },
-  { id: "clef" as const, label: "Clef" },
-  { id: "octave" as const, label: "Octave" },
-  { id: "spacing" as const, label: "Spacing" },
-  { id: "speed" as const, label: "Speed" },
-];
-
-export type FrameTab = (typeof FRAME_TABS)[number]["id"];
-
-/**
- * Which pill a marked stretch opens when the reader clicks one of its corners, or its bracket.
- *
- * The drawing package names its kinds after the notation; the panel names its pills after what a
- * reader is about to change. `Spacing` is not in the list because it draws no corner: nothing about
- * it is a stretch of markup you can lose the edges of.
- */
-export const MARKER_TABS: Readonly<Record<string, FrameTab | undefined>> = {
-  ottava: "octave",
-  clef: "clef",
-  key: "key",
-};
-
-/**
- * Which staff a marked stretch is about: one hand, or the piece.
- *
- * The first thing the frames toolbox asks, because it changes what every pill below it means and
- * what the highlight on the page covers. A clef and an octave bracket belong to one hand; a key
- * signature is drawn on both clefs and a line of words is sung over the piece, so those ignore it.
- */
-export type RangeHand = PrintedHand | "both";
-
-/** Which clef each hand reads when nobody has said otherwise. The page's starting point. */
-export const DEFAULT_CLEF: Record<PrintedHand, Clef> = { right: "treble", left: "bass" };
-
-/** The two clefs this page prints, and what each is called. */
-export const CLEF_CHOICES: { clef: Clef; label: string; hint: string }[] = [
-  { clef: "treble", label: "Treble", hint: "the G clef — where the right hand normally reads" },
-  { clef: "bass", label: "Bass", hint: "the F clef — where the left hand normally reads" },
-];
-
-/** The four brackets, and what each does to a passage, in the order a reader meets them. */
-export const OTTAVA_CHOICES: { kind: OttavaKind; label: string; hint: string }[] = [
-  { kind: "8va", label: "8va", hint: "written an octave lower than it sounds" },
-  {
-    kind: "15ma",
-    label: "15ma",
-    hint: "written two octaves lower than it sounds",
-  },
-  {
-    kind: "8vb",
-    label: "8vb",
-    hint: "written an octave higher than it sounds",
-  },
-  {
-    kind: "15mb",
-    label: "15mb",
-    hint: "written two octaves higher than it sounds",
-  },
-];
-
 /** `mm:ss.cc`, so a column range can be read as a moment in the recording. */
 export function formatSeconds(seconds: number): string {
   const total = Math.max(0, Math.round(seconds * 100));
@@ -167,56 +71,10 @@ export function formatSeconds(seconds: number): string {
   ).padStart(2, "0")}`;
 }
 
-/**
- * The rungs a figure shift walks: the plain figures, each twice the one below it (D-18).
- *
- * The dotted pair is not here. A dot is an exception the vocabulary allows on two figures so a held
- * note can be written; it is not a rung, and stepping onto it would re-scale the ladder by 1.5
- * rather than doubling it. This mirrors `SHIFT_LADDER` in `matrix/ladder.py`, which is the same
- * list on the other side.
- */
-export const SHIFT_LADDER: FigureName[] = [
-  "semifusa",
-  "fusa",
-  "semicorchea",
-  "corchea",
-  "negra",
-  "blanca",
-  "redonda",
-];
-
-/**
- * The figure `steps` rungs away, or `null` when that runs off the end of the vocabulary. Not used
- * since the figure shift buttons went (implementation 02, Phase 2); Figures transposition (Phase 7)
- * is the figure shift of D-18 and starts from it.
- */
-export function shifted(figure: FigureName, steps: number): FigureName | null {
-  const at = SHIFT_LADDER.indexOf(figure);
-  if (at < 0) return null;
-  return SHIFT_LADDER[at + steps] ?? null;
-}
-
 /** One note the keyboard panel can point at: what it is, who holds it, and where it began. */
 export interface SoundingNote {
   row: number;
   hand: PrintedHand;
   /** The column the note was struck in, which is how every mark on this page addresses one. */
   onsetFrame: number;
-}
-
-/**
- * The backend's own sentence, without the status code in front of it.
- *
- * `ApiError.message` reads "409 — This piece was transcribed before…", which is
- * a number a reader has no use for. The `detail` behind it is written to be shown
- * as it stands, so that is what appears.
- */
-export function readable(caught: unknown, fallback: string): string {
-  if (caught instanceof ApiError) return caught.detail;
-  return caught instanceof Error ? caught.message : fallback;
-}
-
-/** A piece with no recorded notes yet: not a failure, just nothing to read. */
-export function notTranscribed(caught: unknown): boolean {
-  return caught instanceof ApiError && caught.status === 409;
 }

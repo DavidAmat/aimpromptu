@@ -62,7 +62,7 @@ over sustains and silences. Two-hand: lyrics above treble; `lyricColOffset` = wi
 
 ## Where to look deeper
 
-- [matrix-to-notation.md](../../../documentation/services/frontend/grid-notation.md)
-- [piano-sheet.md](../../../documentation/services/frontend/grid-notation.md)
-- [notes.md](../../../documentation/services/frontend/grid-notation.md)
+- [matrix-to-notation.md](../../../documentation/deprecated/grid-notation.md)
+- [piano-sheet.md](../../../documentation/deprecated/grid-notation.md)
+- [notes.md](../../../documentation/deprecated/grid-notation.md)
 - [documentation/archive/vexflow-reference.md](../../../documentation/archive/vexflow-reference.md) — legacy VexFlow notes (superseded by low-level API in PianoSheet)

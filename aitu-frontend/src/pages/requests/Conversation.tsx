@@ -183,7 +183,6 @@ function Stretch({ comment, outdated, label }: { comment: RequestComment; outdat
   const report = useCallback((now: boolean) => setPlaying(now), []);
   const details = comment.details;
   if (!details.excerptPart || details.fromMs === undefined || details.toMs === undefined) return null;
-  const anchor = details.anchorMs ?? null;
   return (
     <Box sx={{ borderBottom: 1, borderColor: "divider" }} data-testid="stretch-comment">
       <Stack direction="row" spacing={1} sx={{ alignItems: "center", px: 2, pt: 1, fontSize: 13, color: "text.secondary" }}>
@@ -212,7 +211,7 @@ function Stretch({ comment, outdated, label }: { comment: RequestComment; outdat
             state: "ready",
             reason: null,
             onChanged: () => undefined,
-            passage: { role: "current", ...(anchor !== null ? { anchorMs: anchor } : {}), playerRef: player, onPlaying: report },
+            passage: { role: "current", playerRef: player, onPlaying: report },
           }}
         />
       </Box>

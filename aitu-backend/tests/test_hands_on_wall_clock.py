@@ -14,9 +14,16 @@ music gives the same answer on every grid fine enough to hold the music.
 import pytest
 
 from aitu_backend.hands.config import DEFAULT_CONFIG
-from aitu_backend.notation.figures import onset_columns
+from aitu_backend.matrix.model import PianoMatrix
+from aitu_backend.schemas.matrix import ONSET
 from aitu_backend.transcription.engine import NoteEvent
 from aitu_backend.transcription.time_pipeline import impose_granularity_and_split
+
+
+def onset_columns(matrix: PianoMatrix) -> list[int]:
+    """Every column of this hand that has at least one struck note, in order."""
+    struck = (matrix.grid == ONSET).any(axis=0)
+    return [int(column) for column in struck.nonzero()[0]]
 
 
 #: A left hand holding low octaves under a right-hand melody that dips below

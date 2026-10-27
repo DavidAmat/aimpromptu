@@ -50,6 +50,8 @@ Here, independent of the given source, we are rendering the detected notes in th
 #### 4. Hands
 As we already do, we will allow the user to predict the hands and also modify any given hand that maybe was misplaced with a floating toolbox. Please remember to keep the buttons minimal and only show explanations whenever we hover over the buttons.
 
+*(Note added 2026-10-27, not the user's words: implementation 03 changed this step. The AI decides the hands with the sheet, and a hand is changed on the sheet's note toolbox. The Hands step left the flow in Phase 5 and its code was removed in Phase 10, so a project has four steps.)*
+
 #### 5. Sheet
 And then here, it's a final part in which we are given the sheet editor, and here you need to do a current refactor of a lot of the current UI.
 Because the first part that you showed is a lot of text and a lot of plots that we don't need. The plots were to justify what kind of histogram of the node duration there was, so that we can decide what the main node figure of any given peak of the histogram of node duration is (to associate it to a given node figure). However, we are going to make this automatically, so by default, we are going to make a "negra" Be the default one for the highest peak, and simply, in the toolbox that we will have, we will have a kind of toolbox for the general piano sheet, So that we can change, for example, the key signature of the piece. We can change the title. We can change maybe the subtitle or the artist name that we put there, We can upload the lyrics... 
@@ -74,6 +76,8 @@ In a similar way, In the left hand, normally we have notes that are very high, s
  Overall, there are a lot of extra functionalities that I didn't mention here that I want you to keep, like enlarging the spacing between the notes so that we add more padding horizontally between notes (Or, for example, in a given beam, we decide if we make this beam wider or narrower) Or also the capability that we have to make the difference in padding for the separation between the right hand and the left hand, or the separation between two different lines.
 
  There is one thing that currently the UI has missed that, in the past, we used to have: the fact that the current library that does the rendering of the piano notation called `vexflow-v2` Is a notation that allows us to produce break lines at our will. Whenever we are inside a given browser and, for whatever reason, the content is not visible because we reach one of the right edges, we will let a kind of wrapping way (like the word wrap functionality) so that the next frame will get rendered into a new line. This capability was already coded, but for whatever reason, I think that it disappeared, or maybe it's not working well, so I want you to revisit it.
+
+ *(Note added 2026-10-27, not the user's words: `vexflow-v2` no longer draws the sheet. Since implementation 03 the backend lays the sheet out and draws it, wrapping the lines to the width of the window, and the vexflow-v2 renderer was removed in Phase 10. The reference figure (the "negra" above) is named by the AI or the algorithm, and **Transpose figures** overrides it.)*
 
 
  ### From Scratch

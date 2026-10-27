@@ -1,17 +1,20 @@
-"""The reader's own decisions, saved with the piece and read back (P7.10, D-17, D-19, D-34).
+"""The old sheet's ``sheet.json``: the reader's decisions, written and read back (P7.10, D-17, D-19, D-34).
 
-Everything else about a score is derived from `events.json` on each request, so it can be thrown
-away and rebuilt. What is stored here cannot be: nothing in a recording says which pile of gaps is
-the beat, or where a phrase restarts. These tests pin that it survives a round trip, that it is one
-per piece, and that a new transcription throws it away rather than pointing it at different notes.
+The vexflow-v2 sheet that wrote it, and its ``/time/{uuid}/rhythm`` route, were removed in
+implementation 03, Phase 10. The file is still read (``pipeline.load_rhythm``: the armadura and the
+reference figure of a part with no new sheet, and the marks ``part_sheet.legacy`` carries), and the
+edits that change a part's length still write it. These tests pin that the shape validates and
+survives a write and a read, that it is one per piece, and that a new transcription throws it away.
+They go through :class:`SheetFile`, which answers as the old route did (200, 404, 422).
 """
 
+import re
 from pathlib import Path
+from typing import Any
 
 import pytest
-from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
-from aitu_backend.main import create_app
 from aitu_backend.schemas.rhythm import KeyChange, SavedRhythm, SpeedChange
 from aitu_backend.schemas.time_matrix import BeamBreak, FigureName, FigureOverride
 from aitu_backend.storage import paths
@@ -26,9 +29,50 @@ def temp_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path / "data"
 
 
+class _Answer:
+    def __init__(self, status_code: int, body: Any = None) -> None:
+        self.status_code = status_code
+        self._body = body
+
+    def json(self) -> Any:
+        return self._body
+
+
+class SheetFile:
+    """``sheet.json`` of a part written with ``pipeline.save_rhythm`` and read with ``load_rhythm``.
+
+    Takes the old route's addresses (``/time/{uuid}/rhythm``) so each test reads as before: a body
+    that does not validate is a 422, a part with nothing saved a 404.
+    """
+
+    @staticmethod
+    def _uuid(url: str) -> str:
+        found = re.fullmatch(r"/time/([^/]+)/rhythm", url)
+        assert found, url
+        return found.group(1)
+
+    def put(self, url: str, json: dict[str, Any]) -> _Answer:
+        try:
+            rhythm = SavedRhythm.model_validate(json)
+        except ValidationError:
+            return _Answer(422)
+        pipeline.save_rhythm(self._uuid(url), rhythm)
+        return _Answer(200)
+
+    def get(self, url: str) -> _Answer:
+        saved = pipeline.load_rhythm(self._uuid(url))
+        if saved is None:
+            return _Answer(404)
+        return _Answer(200, saved.model_dump(by_alias=True, mode="json"))
+
+    def delete(self, url: str) -> _Answer:
+        pipeline.clear_rhythm(self._uuid(url))
+        return _Answer(204)
+
+
 @pytest.fixture()
-def client(temp_store: Path) -> TestClient:
-    return TestClient(create_app())
+def client(temp_store: Path) -> SheetFile:
+    return SheetFile()
 
 
 def transcribed(uuid_alias: str = "Piece") -> str:
@@ -71,7 +115,7 @@ def a_reading(anchor_ms: float = 320.0) -> SavedRhythm:
 # ------------------------------------------------------------------------------- the round trip
 
 
-def test_a_reading_comes_back_exactly_as_it_was_saved(client: TestClient) -> None:
+def test_a_reading_comes_back_exactly_as_it_was_saved(client: SheetFile) -> None:
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
 
@@ -94,16 +138,14 @@ def test_a_reading_comes_back_exactly_as_it_was_saved(client: TestClient) -> Non
 
 
 def test_a_piece_with_no_saved_reading_says_so_rather_than_inventing_one(
-    client: TestClient,
+    client: SheetFile,
 ) -> None:
-    """The screen starts from the plot when it gets this, which is the right blank state."""
+    """The new sheet then starts from its own algorithm, which is the right blank state."""
     uuid = transcribed()
-    response = client.get(f"/time/{uuid}/rhythm")
-    assert response.status_code == 404
-    assert "Name a gap" in response.json()["detail"]
+    assert client.get(f"/time/{uuid}/rhythm").status_code == 404
 
 
-def test_saving_twice_replaces_rather_than_accumulating(client: TestClient) -> None:
+def test_saving_twice_replaces_rather_than_accumulating(client: SheetFile) -> None:
     """A rhythm is a decision, not a version. What a reader wants back is the last one."""
     uuid = transcribed()
     client.put(
@@ -119,37 +161,14 @@ def test_saving_twice_replaces_rather_than_accumulating(client: TestClient) -> N
     assert len(list(paths.part_dir(uuid).glob("sheet*.json"))) == 1
 
 
-def test_a_reading_can_be_forgotten(client: TestClient) -> None:
+def test_a_reading_can_be_forgotten(client: SheetFile) -> None:
     uuid = transcribed()
     client.put(f"/time/{uuid}/rhythm", json=a_reading().model_dump(by_alias=True, mode="json"))
     assert client.delete(f"/time/{uuid}/rhythm").status_code == 204
     assert client.get(f"/time/{uuid}/rhythm").status_code == 404
 
 
-# ------------------------------------------------------------------------------- the guards
-
-
-def test_a_rhythm_for_an_unknown_audio_is_a_404(client: TestClient) -> None:
-    assert client.get("/time/nope/rhythm").status_code == 404
-    assert (
-        client.put("/time/nope/rhythm", json=a_reading().model_dump(by_alias=True, mode="json"))
-    ).status_code == 404
-
-
-def test_a_rhythm_cannot_be_saved_for_a_piece_that_was_never_transcribed(
-    client: TestClient,
-) -> None:
-    """There would be nothing for the column numbers in it to refer to."""
-    from aitu_backend.audio import store
-    from aitu_backend.schemas.metadata import AudioSource
-
-    entry = store.create("Silent", AudioSource.UPLOAD, "wav")
-    response = client.put(
-        f"/time/{entry.uuid}/rhythm",
-        json=a_reading().model_dump(by_alias=True, mode="json"),
-    )
-    assert response.status_code == 409
-    assert "not been transcribed" in response.json()["detail"]
+# ------------------------------------------------------------------------------- the file
 
 
 def test_transcribing_again_throws_the_reading_away(temp_store: Path) -> None:
@@ -197,7 +216,7 @@ def test_the_reading_describes_itself_for_a_log(temp_store: Path) -> None:
     assert "1 beam break(s)" in text
 
 
-def test_a_reading_saved_before_keys_existed_still_loads(client: TestClient) -> None:
+def test_a_reading_saved_before_keys_existed_still_loads(client: SheetFile) -> None:
     """A stored file with no `keySignature` is not a broken file.
 
     The field was added after readings were already on disk, and a piece read in C is exactly what
@@ -216,7 +235,7 @@ def test_a_reading_saved_before_keys_existed_still_loads(client: TestClient) -> 
     assert read["anchorMs"] == 320.0
 
 
-def test_octave_brackets_survive_a_round_trip(client: TestClient) -> None:
+def test_octave_brackets_survive_a_round_trip(client: SheetFile) -> None:
     """Brackets the reader placed come back, which they did not before 2026-09-13.
 
     The page has always *sent* `ottavas` in the save body. The model had no field for them and
@@ -248,7 +267,7 @@ def test_octave_brackets_survive_a_round_trip(client: TestClient) -> None:
     assert read["ottavas"] == body["ottavas"]
 
 
-def test_a_hidden_bracket_comes_back_hidden(client: TestClient) -> None:
+def test_a_hidden_bracket_comes_back_hidden(client: SheetFile) -> None:
     """Hiding a bracket is a reading, so it is stored with the rest of one.
 
     The reader takes the dashed line off the page and the notes stay written an octave from where
@@ -277,7 +296,7 @@ def test_a_hidden_bracket_comes_back_hidden(client: TestClient) -> None:
 
 
 def test_a_bracket_saved_before_hiding_existed_reads_as_drawn(
-    client: TestClient,
+    client: SheetFile,
 ) -> None:
     """A reading written before the flag had no way of saying so, and it meant drawn."""
     uuid = transcribed()
@@ -289,7 +308,7 @@ def test_a_bracket_saved_before_hiding_existed_reads_as_drawn(
     assert client.get(f"/time/{uuid}/rhythm").json()["ottavas"][0]["hidden"] is False
 
 
-def test_never_asked_and_asked_none_are_different_answers(client: TestClient) -> None:
+def test_never_asked_and_asked_none_are_different_answers(client: SheetFile) -> None:
     """`null` is "this reader was never asked"; `[]` is "asked, and none".
 
     The distinction is load-bearing rather than tidy. A reading saved before brackets were stored
@@ -308,7 +327,7 @@ def test_never_asked_and_asked_none_are_different_answers(client: TestClient) ->
     assert client.get(f"/time/{uuid}/rhythm").json()["ottavas"] == []
 
 
-def test_a_bracket_that_ends_before_it_starts_is_refused(client: TestClient) -> None:
+def test_a_bracket_that_ends_before_it_starts_is_refused(client: SheetFile) -> None:
     """An inverted range reads as empty everywhere downstream, which is not a thing to store."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -317,7 +336,7 @@ def test_a_bracket_that_ends_before_it_starts_is_refused(client: TestClient) -> 
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
 
 
-def test_the_space_between_lines_survives_a_round_trip(client: TestClient) -> None:
+def test_the_space_between_lines_survives_a_round_trip(client: SheetFile) -> None:
     """How far apart the lines are drawn is a reading, so it is stored with the rest of one.
 
     A reader sets it because one fixed gap cannot be right for every piece: most sheets are mostly
@@ -334,7 +353,7 @@ def test_the_space_between_lines_survives_a_round_trip(client: TestClient) -> No
 
 
 def test_a_reading_saved_before_the_spacing_existed_leaves_it_to_the_page(
-    client: TestClient,
+    client: SheetFile,
 ) -> None:
     """Absent means nobody was asked, and the page draws it with its own default.
 
@@ -350,7 +369,7 @@ def test_a_reading_saved_before_the_spacing_existed_leaves_it_to_the_page(
 
 
 def test_a_space_between_lines_no_drawing_could_use_is_refused(
-    client: TestClient,
+    client: SheetFile,
 ) -> None:
     """Out of range is a mistake, and a stored mistake would take the sheet down on every visit."""
     uuid = transcribed()
@@ -362,7 +381,7 @@ def test_a_space_between_lines_no_drawing_could_use_is_refused(
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
 
 
-def test_a_spread_line_survives_a_round_trip(client: TestClient) -> None:
+def test_a_spread_line_survives_a_round_trip(client: SheetFile) -> None:
     """One line opened out is a reading, and readings are stored.
 
     It is per line rather than per page because the reason for wanting it is per line: one wide
@@ -378,7 +397,7 @@ def test_a_spread_line_survives_a_round_trip(client: TestClient) -> None:
     assert client.get(f"/time/{uuid}/rhythm").json()["staffGaps"] == body["staffGaps"]
 
 
-def test_a_reading_with_no_spread_line_reads_as_none(client: TestClient) -> None:
+def test_a_reading_with_no_spread_line_reads_as_none(client: SheetFile) -> None:
     """The common case, and the one every reading saved before this existed is in."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -388,7 +407,7 @@ def test_a_reading_with_no_spread_line_reads_as_none(client: TestClient) -> None
     assert client.get(f"/time/{uuid}/rhythm").json()["staffGaps"] == []
 
 
-def test_a_spread_no_drawing_could_use_is_refused(client: TestClient) -> None:
+def test_a_spread_no_drawing_could_use_is_refused(client: SheetFile) -> None:
     """The bounds are the drawing package's own, so a stored answer is always one it can draw."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -401,7 +420,7 @@ def test_a_spread_no_drawing_could_use_is_refused(client: TestClient) -> None:
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
 
 
-def test_the_tightest_line_the_page_can_draw_is_saveable(client: TestClient) -> None:
+def test_the_tightest_line_the_page_can_draw_is_saveable(client: SheetFile) -> None:
     """The floor here has to be the one the handle on the page stops at, which is 24 px.
 
     ``MIN_STAFF_GAP`` in the drawing package is ``MIN_STAFF_GAP_SPACES`` (3) staff spaces of 8 px.
@@ -424,7 +443,7 @@ def test_the_tightest_line_the_page_can_draw_is_saveable(client: TestClient) -> 
 # ----------------------------------------------------- the clef, the joins and the note spacing
 
 
-def test_a_clef_change_survives_a_round_trip(client: TestClient) -> None:
+def test_a_clef_change_survives_a_round_trip(client: SheetFile) -> None:
     """Which clef a hand prints is a reading, so it is stored with the rest of one.
 
     A left hand that spends a page above middle C reads better on a treble clef than under a stack
@@ -444,7 +463,7 @@ def test_a_clef_change_survives_a_round_trip(client: TestClient) -> None:
 
 
 def test_a_reading_with_no_clef_change_reads_as_the_two_a_piano_score_uses(
-    client: TestClient,
+    client: SheetFile,
 ) -> None:
     """The common case, and the one every reading saved before this existed is in."""
     uuid = transcribed()
@@ -455,7 +474,7 @@ def test_a_reading_with_no_clef_change_reads_as_the_two_a_piano_score_uses(
     assert client.get(f"/time/{uuid}/rhythm").json()["clefChanges"] == []
 
 
-def test_a_clef_nothing_could_print_is_refused(client: TestClient) -> None:
+def test_a_clef_nothing_could_print_is_refused(client: SheetFile) -> None:
     """Two clefs exist on this page. A stored third would take the sheet down on every visit."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -466,7 +485,7 @@ def test_a_clef_nothing_could_print_is_refused(client: TestClient) -> None:
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
 
 
-def test_beam_joins_survive_a_round_trip(client: TestClient) -> None:
+def test_beam_joins_survive_a_round_trip(client: SheetFile) -> None:
     """The other half of a beam break, and it cannot be derived any more than a break can.
 
     Where a phrase restarts is a reading of the music and is stored as a break. Where it *does not*
@@ -484,7 +503,7 @@ def test_beam_joins_survive_a_round_trip(client: TestClient) -> None:
     assert client.get(f"/time/{uuid}/rhythm").json()["beamJoins"] == body["beamJoins"]
 
 
-def test_the_space_between_notes_survives_a_round_trip(client: TestClient) -> None:
+def test_the_space_between_notes_survives_a_round_trip(client: SheetFile) -> None:
     """The twin of the space between lines, one axis over, and stored for the same reason."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -495,7 +514,7 @@ def test_the_space_between_notes_survives_a_round_trip(client: TestClient) -> No
 
 
 def test_a_reading_saved_before_the_note_spacing_existed_leaves_it_to_the_page(
-    client: TestClient,
+    client: SheetFile,
 ) -> None:
     """Absent means nobody was asked, exactly as it does for the space between lines."""
     uuid = transcribed()
@@ -507,7 +526,7 @@ def test_a_reading_saved_before_the_note_spacing_existed_leaves_it_to_the_page(
 
 
 def test_a_space_between_notes_no_drawing_could_use_is_refused(
-    client: TestClient,
+    client: SheetFile,
 ) -> None:
     """Out of range is a mistake, and a stored mistake would take the sheet down on every visit."""
     uuid = transcribed()
@@ -519,7 +538,7 @@ def test_a_space_between_notes_no_drawing_could_use_is_refused(
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
 
 
-def test_an_even_spacing_run_survives_a_round_trip(client: TestClient) -> None:
+def test_an_even_spacing_run_survives_a_round_trip(client: SheetFile) -> None:
     """A run set an equal distance apart is a reading, so it is stored with the rest of one.
 
     Nothing in a recording says whether a beam should be drawn evenly. The page measures each column
@@ -539,7 +558,7 @@ def test_an_even_spacing_run_survives_a_round_trip(client: TestClient) -> None:
 
 
 def test_an_even_spacing_tighter_than_the_page_measured_is_kept(
-    client: TestClient,
+    client: SheetFile,
 ) -> None:
     """A run closed below one is the reader saying their own hand has room to spare.
 
@@ -555,7 +574,7 @@ def test_an_even_spacing_tighter_than_the_page_measured_is_kept(
     assert client.get(f"/time/{uuid}/rhythm").json()["evenSpacings"] == body["evenSpacings"]
 
 
-def test_an_even_spacing_no_drawing_could_use_is_refused(client: TestClient) -> None:
+def test_an_even_spacing_no_drawing_could_use_is_refused(client: SheetFile) -> None:
     """The bounds are the drawing package's own, so a stored answer is always one it can draw."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -568,7 +587,7 @@ def test_an_even_spacing_no_drawing_could_use_is_refused(client: TestClient) -> 
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
 
 
-def test_a_reading_with_no_even_spacing_reads_as_none(client: TestClient) -> None:
+def test_a_reading_with_no_even_spacing_reads_as_none(client: SheetFile) -> None:
     """The common case, and the one every reading saved before this existed is in."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -578,7 +597,7 @@ def test_a_reading_with_no_even_spacing_reads_as_none(client: TestClient) -> Non
     assert client.get(f"/time/{uuid}/rhythm").json()["evenSpacings"] == []
 
 
-def test_where_a_lyric_was_placed_survives_a_round_trip(client: TestClient) -> None:
+def test_where_a_lyric_was_placed_survives_a_round_trip(client: SheetFile) -> None:
     """Where the words were dragged to, how wide the block was left and how large they print.
 
     A lyric is a block the reader moves and resizes now, so the placement is as much a decision
@@ -607,7 +626,7 @@ def test_where_a_lyric_was_placed_survives_a_round_trip(client: TestClient) -> N
 
 
 def test_a_lyric_nobody_has_moved_reads_back_with_no_placement(
-    client: TestClient,
+    client: SheetFile,
 ) -> None:
     """Absent is a block the page puts where it likes, which is what every older reading holds."""
     uuid = transcribed()
@@ -622,7 +641,7 @@ def test_a_lyric_nobody_has_moved_reads_back_with_no_placement(
     assert stored["fontSize"] is None
 
 
-def test_a_lyric_block_no_drawing_could_use_is_refused(client: TestClient) -> None:
+def test_a_lyric_block_no_drawing_could_use_is_refused(client: SheetFile) -> None:
     """The bounds are the drawing package's own, so a stored mistake cannot reach the sheet."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -633,7 +652,7 @@ def test_a_lyric_block_no_drawing_could_use_is_refused(client: TestClient) -> No
     assert client.put(f"/time/{uuid}/rhythm", json=body).status_code == 422
 
 
-def test_the_title_lines_of_the_sheet_survive_a_round_trip(client: TestClient) -> None:
+def test_the_title_lines_of_the_sheet_survive_a_round_trip(client: SheetFile) -> None:
     """The Title tab of the sheet toolbox (implementation 02, Phase 2) is part of the reading."""
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
@@ -649,7 +668,7 @@ def test_the_title_lines_of_the_sheet_survive_a_round_trip(client: TestClient) -
 
 
 def test_a_reading_without_title_lines_leaves_them_to_the_page(
-    client: TestClient,
+    client: SheetFile,
 ) -> None:
     """Absent means the page prints the project's name, as it did before the Title tab existed."""
     uuid = transcribed()
@@ -662,7 +681,7 @@ def test_a_reading_without_title_lines_leaves_them_to_the_page(
     assert back["title"] is None and back["subtitle"] is None and back["artist"] is None
 
 
-def test_a_title_longer_than_a_line_could_hold_is_refused(client: TestClient) -> None:
+def test_a_title_longer_than_a_line_could_hold_is_refused(client: SheetFile) -> None:
     uuid = transcribed()
     body = a_reading().model_dump(by_alias=True, mode="json")
     body["title"] = "x" * 201

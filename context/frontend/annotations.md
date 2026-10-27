@@ -11,16 +11,23 @@ toolbox is on its own page:
 - [annotations-sheet.md](annotations-sheet.md): the **sheet toolbox** (title, key, transpose,
   lyrics, layout), the keyboard panel, and **Find trills**.
 
-The code is `aitu-frontend/src/pages/piece/sheet/` (implementation 02, Phase 2 split the old
-5,328-line `RhythmPage.tsx` into it; see
+The three pages describe the old sheet's toolboxes, kept as the record (removed in implementation 03,
+Phase 10); the new sheet's tools are the next section. The code is `aitu-frontend/src/pages/piece/sheet/`
+(the new sheet in `frames/`; implementation 02, Phase 2 split the old 5,328-line `RhythmPage.tsx` into the
+folder; see
 [`documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md)).
 
 ## The new sheet (implementation 03, Phases 6 and 7)
 
 Since implementation 03, Phase 5 the Sheet step opens on the **new sheet** (without compases, drawn by the
 backend; [rendering.md](rendering.md)). Since implementation 03, Phase 8B it is the only sheet: the switch to the
-**old sheet** is gone, and everything below this section describes the old sheet, kept as the record of what was
-moved (Phase 10 removes its code). On the new sheet:
+**old sheet** is gone, and its code was removed in implementation 03, Phase 10 (2026-10-27). Everything below
+this section describes the old sheet, kept as the record of what was moved. On the new sheet:
+
+- **The figures**: the reference figure (the length the sheet calls a negra, `quarterMs` of `sheet.f1`) is named by
+  the AI (a reference request) or by the algorithm (`proposal.beat`), not by the reader; **Transpose → Figures** of
+  the sheet toolbox is the override. This changes D-09 (the app showed the piles of gaps and the reader named the
+  negra). The sheet has no compases, no tempo, no puntillos and no silencios.
 
 - **Pick notes**: click a notehead (the recording goes there), ⌘-click or Shift-click to add or take one away, or
   drag a box across the staves. Escape drops the pick. The note toolbox opens beside the notes, titled with the
@@ -117,6 +124,13 @@ moved (Phase 10 removes its code). On the new sheet:
 - **Not on the new sheet** (the user's answer of Phase 7): even spacing of a run, the room of a stretch (Spacing),
   speed changes (Speed), print smaller, a decoration that is not played (the grace note switch replaces both), and
   hiding or dragging an 8va bracket.
+
+## The old sheet's sections, kept as the record
+
+The sections below describe the old sheet (vexflow-v2), whose code was removed in implementation 03, Phase 10
+(2026-10-27). They are kept because they say what was moved to the new sheet and what was dropped; the routes they
+name (`/time/...`) and the `sheet.json` they save no longer exist as a way of writing (an old `sheet.json` is
+still read).
 
 ## The page
 
@@ -232,8 +246,9 @@ write; see
 ## Where to look deeper
 
 - [`documentation/services/backend/rhythm-and-annotations.md`](../../documentation/services/backend/rhythm-and-annotations.md)
-  — `sheet.json` field by field
-- [rendering.md](rendering.md) — what the renderer does with the marks
+  — `sheet.json` field by field (the old sheet's file, still read)
+- `aitu-backend/src/aitu_backend/sheet/README.md` sections 13 to 17 — the new sheet's edits and marks
+- [rendering.md](rendering.md) — how the sheet is drawn
 - [projects.md](projects.md) — the steps of a project around the Sheet step
 - [`../implementations/02-private-web-app/02-implementation-phase-2.md`](../implementations/02-private-web-app/02-implementation-phase-2.md)
   — the phase that made this page

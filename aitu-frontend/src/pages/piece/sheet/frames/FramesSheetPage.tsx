@@ -10,8 +10,7 @@
  * - **The AI in the background** (plan section 3.6): a new transcription is sent by itself; any other part offers
  *   **Enhance with AI** (on a version of My library, the button opens the copy that edits it, as **Edit** does,
  *   and starts there). The segment at the AI looks pale, a segment that comes back appears column by column, and
- *   no text says any of it. The old sheet cannot be opened while the AI writes: the segments still waiting cannot
- *   be edited.
+ *   no text says any of it. Nothing can be edited while the AI writes: the segments still waiting cannot be edited.
  * - **Copy and paste** (Phase 8B): a marked stretch or the picked notes are copied (⌘C, or the toolboxes' title
  *   bars; on a read-only sheet the small Frames panel, with the screen's own action for a stretch); **Paste** (⌘V,
  *   the floating bar) puts the copied passage in at the cursor or over the marked stretch: one step of undo. The
@@ -728,7 +727,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
     if (!onSplit || !range || splitting) return;
     setSplitting(true);
     try {
-      if (await onSplit(range.start * 40, null)) setMark(null);
+      if (await onSplit(range.start * 40)) setMark(null);
     } finally {
       setSplitting(false);
     }

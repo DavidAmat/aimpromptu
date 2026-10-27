@@ -45,7 +45,8 @@ audio. The table from one to the other is
 **Why float and not whole milliseconds.** MuScriptor times are whole milliseconds (a 10 ms grid,
 then a per-piece lag correction in whole ms). The pieces transcribed by ByteDance store 0.1 ms, and
 a column is chosen by rounding. Rounding a stored time to a whole millisecond could move an onset
-to the next column and detach the reader's marks keyed on that column (`sheet.json`). So the
+to the next column and detach the reader's marks keyed on that column (`sheet.f1`, and the old
+`sheet.json`). So the
 arrays keep what the file holds, and only the wire form (section 4) uses whole milliseconds.
 
 ## 3. On disk: `notes.pmn` (`pmn/notes_file.py`, `pmn/events_file.py`)
@@ -97,8 +98,10 @@ transcription of the same piece. What makes the revisions go up is plan section 
 - Every other writer goes through `pipeline.save_edit`: a notes edit raises `notesRevision`; any
   edit raises `handsRevision`; saving hands that leave every live note with a hand sets
   `handsNotesRevision` to the current `notesRevision`.
-- `sheet.json` records the `handsRevision` the piano sheet was saved for. A different value in
-  `notes.pmn` makes the Sheet tab stale.
+- `sheet.f1` records the `handsRevision` the sheet was written for. A different value in
+  `notes.pmn` makes the backend lay the sheet again on the current notes when it is drawn; the
+  Sheet tab is never stale. (The old `sheet.json` made the Sheet tab stale this way until
+  implementation 03, Phase 10, 2026-10-27.)
 
 **The saved hands** (D-31, changed in Phase 5). When every live note has a `hand`, the two hand
 matrices are painted from those hands and no inference runs
@@ -121,7 +124,7 @@ Only live notes, sorted by onset then key. Times are whole milliseconds: `lenMs`
 release minus the rounded onset, at least 1. `hand` has one character per note: `r`, `l`, or `-`
 for no hand yet. `guessed` lists the ids of the notes whose hand came from the quick rule. Measured
 on the 34 pieces of the library: 38 KB median (83 KB at most), 14 KB compressed, against 634 KB
-(1.5 MB at most) for the piano sheet payload.
+(1.5 MB at most) for the old piano sheet payload (removed in implementation 03, Phase 10).
 
 `GET /pieces/{uuid}/notes` sends this form, with `stale`. Edits come back as a list of operations
 (`PATCH /pieces/{uuid}/notes`, plan section 6.4), never as the whole piece.
@@ -141,7 +144,7 @@ the same way; a note always owns its onset column. Two rules keep one rectangle 
 sparse to dense gives the same cells for any valid matrix. Sparse to dense to sparse gives the same
 notes whenever the times are whole columns, which is every MuScriptor note at 10 ms.
 
-This is the plain conversion. The piano sheet is still built by `events_to_time_matrix`, which also
+This is the plain conversion. The hand split is still built by `events_to_time_matrix`, which also
 groups near-simultaneous onsets (D-04) and drops notes shorter than one column (D-05).
 
 ## 6. Every adapter
@@ -151,7 +154,7 @@ groups near-simultaneous onsets (D-04) and drops notes shorter than one column (
 | `events_file` | both | The shape of `events.json`, and the pipeline's `NoteEvent` list; the file boundary | Storage |
 | `notes_file` | both | `notes.pmn`, the `.pmn` version 2, from and to that shape | Storage |
 | `dense` | both | 88 x N `int8`, whole or per hand | The hand split |
-| `coo` | out (and back) | The COO payload of the piano sheet, with NumPy | `PianoMatrix.to_coo_payload` |
+| `coo` | out (and back) | The COO payload of a matrix, with NumPy (the old piano sheet's until implementation 03, Phase 10) | `PianoMatrix.to_coo_payload` |
 | `columns` | both | The wire form of section 4 | `GET /pieces/{uuid}/notes` and the answer of its `PATCH` |
 | `midi` | both | A Standard MIDI File | Export, and reading MIDI later |
 | `muscriptor` | in | MuScriptor's events, one at a time (`MuScriptorAssembler`) | The engine and the live stream (Phase 4) |
@@ -180,10 +183,13 @@ the page reads after the `done` frame carry the correction.
 the time frame of the shared axis of the audio and the notes (plan section 9.2). Version 1 keeps one
 decimal and only the live notes; version 2 is the stored `notes.pmn` of section 3.
 
-## 7. What the piano sheet request gained
+## 7. What the piano sheet request gained (history)
 
-The piano sheet answer (`POST /time/{uuid}/score`) keeps its shape and its content: the answers of
-the old and the new code are identical on all 34 pieces. What changed is how it is built and sent:
+This section is about the old piano sheet's answer (`POST /time/{uuid}/score`), removed with that
+sheet in implementation 03, Phase 10 (2026-10-27). The new sheet is drawn by the backend as SVG
+(`GET /sheet/{uuid}`). In implementation 08 the old answer kept its shape and its content: the
+answers of the old and the new code were identical on all 34 pieces. What changed was how it was
+built and sent:
 
 - The COO lists are built with NumPy, and the per-cell check is one array operation.
 - The route sends the payload it built instead of letting FastAPI dump it, check it again and
@@ -203,4 +209,5 @@ Measured in implementation 08, Phase 2, over the 34 pieces: a warm request went 
 - The wall-clock model this format serves: [time-model.md](time-model.md).
 - The tests, one round trip per adapter: `aitu-backend/tests/test_pmn.py`; `notes.pmn`:
   `aitu-backend/tests/test_notes_file.py`.
-- The measurement script: `aitu-backend/scripts/bench_payloads.py`.
+- The measurement script, `aitu-backend/scripts/bench_payloads.py`, was deleted in implementation 03, Phase 10
+  with the payload it measured.

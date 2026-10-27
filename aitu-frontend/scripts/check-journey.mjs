@@ -245,7 +245,7 @@ try {
   await shot(master, '08-request');
   await master.goto(`${base}/admin/requests/${requestId}/sheet`);
   await timed('The request\'s Sheet tab', 'the proposed sheet drawn', async () => {
-    await until(master, async () => (await master.getByTestId('request-sheet-proposed').locator('.grid-notehead').count()) > 0, 120000);
+    await until(master, async () => (await master.getByTestId('request-sheet-proposed').locator('[data-frames-sheet] [data-note]').count()) > 0, 120000);
   });
   await shot(master, '09-request-sheet');
   const items = (await json(`${api}/requests/${requestId}`)).itemList;
@@ -318,7 +318,7 @@ try {
   await reader.getByLabel('Filter').fill(pulledProject.title);
   await timed('From other projects', 'the chosen version\'s sheet drawn', async () => {
     await reader.locator('[data-compose-picker] [role=listitem]').first().getByRole('button').first().click();
-    await reader.waitForSelector('[data-compose-source] .grid-notehead', { timeout: 120000 });
+    await reader.waitForSelector('[data-compose-source] [data-frames-sheet] [data-note]', { timeout: 120000 });
   });
   await reader.getByTestId('compose-add-whole').click();
   await reader.locator('[data-compose-passage]').first().waitFor();

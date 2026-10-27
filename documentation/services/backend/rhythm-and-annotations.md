@@ -1,15 +1,21 @@
 > Context: [context/backend/time-model.md](../../../context/backend/time-model.md) ·
 > [context/frontend/annotations.md](../../../context/frontend/annotations.md)
 
-# `sheet.json` — the reader's own decisions
+# `sheet.json`: the old sheet's reading, still read
 
 > **The old sheet's file.** Since implementation 03 the app draws the new sheet, whose reading is stored in
 > `sheet.f1` (`aitu-backend/src/aitu_backend/sheet/README.md` sections 12 to 17). This file is read only for what the
 > new sheet keeps of it: the key and a renamed main figure (Phase 5), and the titles, lyrics, line spacing, figure
 > overrides, fingers, beam breaks and joins (Phase 9, `part_sheet/legacy.py`; `scripts/migrate_sheets.py` stored them
 > in `sheet.f1` on 2026-10-26). Clef changes and octave brackets are not carried (the user's answer: the new clef
-> rules everywhere), nor the spacing fields, cue ranges, decorations and trills. The sections below describe the file
-> as the old sheet wrote it.
+> rules everywhere), nor the spacing fields, cue ranges, decorations and trills.
+>
+> **Nothing writes a new `sheet.json` from the page any more.** Implementation 03, Phase 10 (2026-10-27) removed the
+> old sheet (vexflow-v2) and its routes, `GET`, `PUT` and `DELETE /time/{uuid}/rhythm` among them. An existing file is
+> still read (`pipeline.load_rhythm`, `schemas/rhythm.py`, `SavedRhythm`), its marks still move with a paste, a
+> promotion, a split or a join (`editing/marks.py`, which writes the moved file back), a new transcription still deletes
+> it (`pipeline.clear_rhythm`), and it travels in an export and in a history version. The sections below describe the
+> file as the old sheet wrote it.
 
 Everything else about a score is derived. The columns come from the recorded notes, the figures come
 from the ladder, the beams come from the figures. This file holds the only things that are **not**
@@ -20,13 +26,13 @@ Stored at `parts/<partId>/sheet.json` in the project bundle under `.database/` (
 routes is the part id; full layout in [`paths-and-data.md`](paths-and-data.md)). Until
 implementation 02, Phase 3 the same content was `data/audio/<uuid>/matrices/rhythm.json`; the routes
 kept the old name.
-Routes: `GET`, `PUT` and `DELETE /time/{uuid}/rhythm`.
+Routes: none since implementation 03, Phase 10 (they were `GET`, `PUT` and `DELETE /time/{uuid}/rhythm`).
 
 **One per piece.** A second reading replaces the first, because a rhythm is a decision rather than a
 version, and the thing a reader wants back is the last one they were happy with.
 
 Losing this file does not change the music. It costs a person their reading of the piece, which they
-then have to do again from the plot — and that is the whole reason it is stored.
+then have to do again, and that is the whole reason it is stored.
 
 ---
 
@@ -67,7 +73,7 @@ numbers it is holding still refer to what they referred to.
 | `title`, `subtitle`, `artist` | same | `string?`, ≤ 200 | What the sheet prints above the music (the Title tab, implementation 02 Phase 2). `null` prints the project's name as the title. |
 | `key_signature` | `keySignature` | `string?` | The piece's key, as a major key: `C`, `Bb`, `F#`. |
 | `anchor_figure` | `anchorFigure` | `FigureName` | What the highest pile of gaps is called (the main figure). `negra` until the reader changes it (D-09 as changed by implementation 02). |
-| `anchor_ms` | `anchorMs` | `float > 0` | The median gap of that pile (`GET /time/{uuid}/default-reading`). |
+| `anchor_ms` | `anchorMs` | `float > 0` | The median gap of that pile (the removed `GET /time/{uuid}/default-reading`). When `anchorFigure` is not `negra` (a renamed figure), the new sheet's reference figure is `anchorMs` divided by that figure's negras (`build.reading_of`); a plain `negra` was the old default, and the pulse estimate decides then. |
 | `annotation_scale` | `annotationScale` | `0.3 < f ≤ 2.0` | How large marks over and under the staff are drawn. |
 | `line_spacing` | `lineSpacing` | `0 ≤ f ≤ 240`, optional | White space between the staves of one line and the staves of the next, in pixels. |
 | `note_spacing` | `noteSpacing` | `0 ≤ f ≤ 48`, optional | Extra pixels charged to every column carrying a note, and to no silence. The twin of `line_spacing`, one axis over. |
@@ -174,8 +180,8 @@ absolute wall clock, so a boundary never moves when anything else about the read
 
 ### `overrides: FigureOverride[]`, `beamBreaks: BeamBreak[]`, `beamJoins: BeamBreak[]`
 
-Defined in `schemas/time_matrix.py` and described in
-[`time-matrix.md`](time-matrix.md#26-figureoverride). A renamed note (D-17) and a note the reader
+Defined in `schemas/time_matrix.py` (kept for this file) and described in
+[`deprecated/time-matrix.md`](../../deprecated/time-matrix.md). A renamed note (D-17) and a note the reader
 asked to start a new beam (D-34). Both change one glyph or one grouping and nothing else.
 
 `beamJoins` is the other half of `beamBreaks`, in the same shape. A break says *start a new group
@@ -361,29 +367,16 @@ same locality D-21 gives a ladder change.
 
 ---
 
-## 4. Taking an edit back
+## 4. Taking an edit back, and what clears it
 
-Everything above is one press of Command-Z away on the page, and none of it reaches this file until
-**Save**. The history lives entirely in the browser: it is a list of the values this file would hold,
-so there is nothing to store and nothing here to migrate.
+The old sheet kept its undo in the browser and wrote the file on **Save**; **Remove all** called
+`DELETE /time/{uuid}/rhythm`, which also put the hidden notes back on the recording. Both went with
+the old sheet in implementation 03, Phase 10. The new sheet's undo is the part's log
+(`POST /sheet/{uuid}/undo`, [`endpoints.md`](endpoints.md) section 4.1).
 
-The one route an undo calls is `PUT /time/{uuid}/hands`. A hand swap is written onto the recording
-rather than kept beside the drawing, so taking it back means writing the old hands back, and the
-route takes a hand per note, which makes it exactly symmetrical. Nothing else about undo touches the
-backend. See [`../../../context/frontend/annotations.md`](../../../context/frontend/annotations.md)
-for what Command-Z does and does not reach.
-
-## 5. What clears it
-
-`DELETE /time/{uuid}/rhythm` — what **Remove all** calls. It clears every editorial decision and
-forgets the reading saved with the piece, so a reload does not bring it back.
-
-One of those decisions reaches into the recording: hidden notes. So Remove all **puts those notes
-back on the recording before dropping the list** — clearing the list alone would leave the notes
-gone with nothing on screen remembering them.
-
-Transcribing the piece again also clears it, on purpose: a saved reading is a set of column numbers
-over the notes that were there before, and a new transcription is a different set of notes.
+Transcribing the piece again still deletes the file (`pipeline.clear_rhythm`), on purpose: a saved
+reading is a set of column numbers over the notes that were there before, and a new transcription is
+a different set of notes.
 
 ---
 
@@ -402,7 +395,7 @@ end, so it still covers exactly the notes it covered before. Detail in
 
 ## 7. Where to look deeper
 
-- [`time-matrix.md`](time-matrix.md) — `FigureOverride` and `BeamBreak`, shared with the payload
-- [`endpoints.md`](endpoints.md#4-time--the-wall-clock-score) — the three rhythm routes
-- [`editing-and-compose.md`](editing-and-compose.md) — what happens to marks across an edit
-- [`../frontend/components.md`](../frontend/components.md) — the toolboxes that write all of this
+- [`time-matrix.md`](time-matrix.md): `FigureOverride` and `BeamBreak`, kept for this file
+- [`aitu-backend/src/aitu_backend/sheet/README.md`](../../../aitu-backend/src/aitu_backend/sheet/README.md): section 17, the marks the new sheet carries
+- [`editing-and-compose.md`](editing-and-compose.md): what happens to marks across an edit
+- [`../frontend/components.md`](../frontend/components.md): the sheet's toolboxes now

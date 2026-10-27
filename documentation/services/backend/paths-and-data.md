@@ -47,7 +47,10 @@ made the folder, written or checked `VERSION`, and brought the tables to the new
   project.json                               §2.1
   parts/<partId>/
     notes.pmn                                THE NOTES of the part (§2.3). Kept forever.
-    sheet.json                               the reader's decisions (§2.4)
+    sheet.f1                                 THE SHEET: the F1 frames text the AI or the algorithm wrote, with its record (§2.4)
+    sheet.edits.json                         the sheet's log of steps, the undo and the redo (§2.4)
+    sheet.pending                            a new transcription asked for an AI run (§2.4)
+    sheet.json                               the old sheet's reading (vexflow-v2), still read (§2.4)
     timeline.json                            the audio timeline (§2.2)
     music-version.json                       the number of the next history snapshot (§4.5)
     audio-mismatches.json                    windows where the recording no longer matches (§4.6)
@@ -62,7 +65,7 @@ A normal project has one part. **A project made by this app has the id of its fi
 that part stays when the parts are reordered, joined or split (Phase 10: `bundle.add_part`,
 `remove_part` refuses it, `reorder_parts`; `parts.position` follows the order of `project.json`), so a
 project of one part has one uuid, which is also the uuid of the routes of implementation 08
-(`/audio/{uuid}`, `/pieces/{uuid}`, `/time/{uuid}`, `/matrix/{uuid}`). Those routes take the id of
+(`/audio/{uuid}`, `/pieces/{uuid}`, `/sheet/{uuid}`, `/matrix/{uuid}`). Those routes take the id of
 a part (plan P-6). `storage/locate.py` finds the project, the owner and the layer of a part in the
 `parts` and `projects` tables and keeps the answer in memory.
 
@@ -199,13 +202,23 @@ Every writer except a new transcription goes through `pipeline.save_edit`, under
 `pipeline.piece_lock(uuid)`; a new transcription writes the header itself. An empty piece
 (`POST /audio/compose`) is a `notes.pmn` with no notes and `durationMs: 0`, and no audio file.
 
-### 2.4 `sheet.json`
+### 2.4 The sheet: `sheet.f1`, and the old `sheet.json`
 
-What was `matrices/rhythm.json`: the reader's decisions, the only things about a piece that are not
-derivable. Fields in [`rhythm-and-annotations.md`](rhythm-and-annotations.md). Phase 3 adds two
-optional fields, both empty until Phase 7: `lyricsPool` (the pasted lyrics not placed yet, one line
-per piece) and `figuresFrom` (the figure the next figures transposition starts from). It records
-the `handsRevision` it was saved for; when the notes' header differs, the Sheet step is `stale`.
+**`sheet.f1`** (implementation 03, Phase 5; `part_sheet/store.py`) is the sheet as it was last
+written: the F1 frames text (`aitu_backend.sheet`), with one comment line on top, the record
+(`source` `llm`, `mixed` or `algorithm`, the `handsRevision` it was written for, the windows, the
+reference figure `quarterMs`, the cost, `edited`, `legacy`). A sheet written for an older
+`handsRevision` is laid again on the current notes when it is drawn, so it is never stale for the
+page. **`sheet.edits.json`** is the part's log of steps (`part_sheet/edits.py`, at most 50), and
+**`sheet.pending`** says a new transcription asked for an AI run. Detail in the sheet's
+[README](../../../aitu-backend/src/aitu_backend/sheet/README.md), sections 12 to 17.
+
+**`sheet.json`** (what was `matrices/rhythm.json`) is the old sheet's reading: the reader's
+decisions on the vexflow-v2 sheet. Fields in [`rhythm-and-annotations.md`](rhythm-and-annotations.md).
+Nothing in the app writes a new one since implementation 03, Phase 10 (2026-10-27), which removed
+the old sheet and its routes; an existing one is still read for its armadura, a renamed reference
+figure and its marks, its marks still move with a paste, and a new transcription deletes it. The
+Sheet step's old `stale` state, from the `handsRevision` it records, went with the old sheet.
 
 ### 2.5 The `.aitu` file: export and import
 
@@ -328,14 +341,15 @@ Two events copy the **previous** state of a part into
 
 | When | Function (`editing/history.py`) | What is copied |
 |---|---|---|
-| A paste (Phase 8); a promotion of a re-recorded passage (Phase 9) | `snapshot_current` | `notes.pmn`, `sheet.json`, `timeline.json`, and `source.json` (the part's entry of `project.json`: the names of its files, since Phase 8) |
-| A new transcription of a part that already has notes | `snapshot_notes` | `notes.pmn`, `sheet.json`, and a `snapshot.json` with the reason |
+| A paste (Phase 8); a promotion of a re-recorded passage (Phase 9) | `snapshot_current` | `notes.pmn`, `sheet.json`, `sheet.f1`, `timeline.json`, and `source.json` (the part's entry of `project.json`: the names of its files, since Phase 8) |
+| A new transcription of a part that already has notes | `snapshot_notes` | `notes.pmn`, `sheet.json`, `sheet.f1`, and a `snapshot.json` with the reason |
 
 No audio is copied: the snapshot's `timeline.json` names the stored files, and `audio_refs` counts
 them as used by the project, so they are never deleted under it.
 
-**Putting a snapshot back** (`history.restore`, `POST /time/{uuid}/versions/{n}/restore`, Phase 8:
-the undo and the redo of a paste): the current state is kept first as the next snapshot, then
+**Putting a snapshot back** (`history.restore`, Phase 8: the undo and the redo of a paste; since
+implementation 03 called by the sheet's log, `POST /sheet/{uuid}/undo` and `/redo`, the route
+`POST /time/{uuid}/versions/{n}/restore` having been removed in Phase 10): the current state is kept first as the next snapshot, then
 `v<n>`'s files are copied back (`copyfile`, so the notes get a new modification time and the hand
 split cache cannot serve the old split; a file the snapshot did not have is deleted), its
 `source.json` is written into `project.json`, and the derived audio of the cache is forgotten. Only
@@ -525,7 +539,7 @@ piece through the API only: they find it in `GET /audio/`, copy it with
   `notes.pmn` field by field, and the revision chain
 - [`context/backend/pieces-and-revisions.md`](../../../context/backend/pieces-and-revisions.md):
   parts, steps and staleness
-- [`rhythm-and-annotations.md`](rhythm-and-annotations.md): `sheet.json` field by field
+- [`rhythm-and-annotations.md`](rhythm-and-annotations.md): the old `sheet.json` field by field
 - [`editing-and-compose.md`](editing-and-compose.md): paste, the passages, history and the undo
 - [`transcription-pipeline.md`](transcription-pipeline.md): what writes `notes.pmn`
 - [`endpoints.md`](endpoints.md): the routes that read and write all of it

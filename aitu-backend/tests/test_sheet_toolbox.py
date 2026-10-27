@@ -367,3 +367,21 @@ def test_a_lyrics_block_is_placed_through_the_toolbox_and_a_bad_font_refused(
     back = {**shaped, "dy": None, "width": None}
     again = edit(client, part, action="lyrics", value={"pieces": [back]})
     assert again["lyrics"][0]["dy"] is None and again["lyrics"][0]["font"] == "geist"
+
+
+def test_the_pasted_words_and_the_pool_are_kept_with_the_part(
+    client: TestClient, part: str
+) -> None:
+    """The Lyrics tab's **Save lyrics** (moved from ``/time/{uuid}/lyrics`` in implementation 03, Phase 10)."""
+    assert client.get(f"/sheet/{part}/words").json() == {"text": None, "pool": None}
+    saved = client.put(
+        f"/sheet/{part}/words",
+        json={"text": "  first line\nsecond line  ", "pool": [" one ", "", "two"]},
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json() == {"text": "first line\nsecond line", "pool": ["one", "two"]}
+    assert client.get(f"/sheet/{part}/words").json() == saved.json()
+    # A save without a pool keeps the pool; an empty text removes the words.
+    kept = client.put(f"/sheet/{part}/words", json={"text": ""}).json()
+    assert kept == {"text": None, "pool": ["one", "two"]}
+    assert client.get("/sheet/nope/words").status_code == 404

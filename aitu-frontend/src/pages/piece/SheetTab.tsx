@@ -1,9 +1,9 @@
 /**
- * Step 5 (**Sheet**): the piano sheet of the Playground, inside the flow page (plan section 9.7).
+ * Step 4 (**Sheet**): the piano sheet of the Playground, inside the flow page (plan section 9.7).
  *
  * The page is `sheet/SheetPage`, with every tool it has. The flow page gives it the piece and
- * the state of the Sheet step, so it can open a stale reading with its banner (plan section 8.3),
- * and asks the backend again after a save or **Remove all**, so the tick of the tab follows.
+ * the state of the Sheet step, and asks the backend again after a change, so the tick of the tab
+ * follows.
  *
  * A project of several parts (implementation 02, Phase 10: an integrated playlist, or a part split
  * in two) shows its parts beside the sheet (`PartsPanel`); **Start a new part here** of the range
@@ -15,7 +15,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import { projectsApi, type PartRow, type SavedRhythm, type StepState } from "../../api";
+import { projectsApi, type PartRow } from "../../api";
 import { ROUTES } from "../../layout/routes";
 import SheetPage, { type SheetStep } from "./sheet/SheetPage";
 import { ENHANCE_WITH_AI } from "./sheet/frames/navigation";
@@ -27,10 +27,7 @@ import { stepStatus, usePiece } from "./pieceContext";
 export function SheetTab() {
   const { uuid, audio, status, refresh, readOnly } = usePiece();
   const here = stepStatus(status, "sheet");
-  // The old sheet (vexflow-v2, the switch of the page) opens with its own state: its banner when the notes or the
-  // hands changed after it was saved. The new sheet is never stale (implementation 03, Phase 5).
-  const legacy = here?.details.legacy as StepState | undefined;
-  const state = here ? (legacy ?? here.state) : null;
+  const state = here?.state ?? null;
   const navigate = useNavigate();
   const reason = here?.reason ?? null;
   /** In a project of several parts, a part's sheet is titled by its subheader. */
@@ -55,11 +52,11 @@ export function SheetTab() {
   );
 
   const split = useCallback(
-    async (atMs: number, sheet: SavedRhythm | null): Promise<boolean> => {
+    async (atMs: number): Promise<boolean> => {
       if (!uuid || !projectId) return false;
       setError(null);
       try {
-        await projectsApi.splitPart(projectId, uuid, { atMs, sheet });
+        await projectsApi.splitPart(projectId, uuid, { atMs });
         setPartsVersion((value) => value + 1);
         setSheetVersion((value) => value + 1);
         void refresh();
@@ -94,7 +91,6 @@ export function SheetTab() {
             readOnly,
             audioRevision,
             onChanged: () => void refresh(),
-            newSheet: true,
             ...(library ? { enhanceInCopy: () => void writeInCopy() } : {}),
             ...(readOnly ? {} : { onSplit: split }),
             ...(library

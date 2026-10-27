@@ -3,12 +3,12 @@
 **Record this passage** opens a passage of a part: a copy of the marked frames (the *Current*),
 and the takes recorded for it (each a *Proposal* once it is read). A passage and its takes are
 projects of the user's Personal Vault, hidden from every list; their parts answer the routes of
-any part (`/audio`, `/time`, `/pieces`), which is how the page draws and edits them.
+any part (`/audio`, `/sheet`, `/pieces`), which is how the page draws and edits them.
 
 The path names the passage's project (`project_id`), so the rights of section 9.3 apply to it as to
 any project; opening one checks the user may write the part it is about. **Promote** writes the
-take into that part in one write and closes the passage; the part keeps its earlier state for the
-undo (`POST /time/{uuid}/versions/{n}/restore`).
+take into that part in one write and closes the passage; the part keeps its earlier state in its
+history, and the promotion is one step of the sheet's log whose undo restores it (implementation 03, Phase 8B).
 """
 
 from __future__ import annotations
@@ -24,7 +24,6 @@ from aitu_backend.audio.formats import ConversionFailed, FfmpegMissing
 from aitu_backend.auth.dependencies import require_part
 from aitu_backend.editing import passages
 from aitu_backend.editing.paste import PasteError
-from aitu_backend.schemas.rhythm import SavedRhythm
 from aitu_backend.storage import locate
 from aitu_backend.transcription import jobs
 
@@ -66,8 +65,6 @@ class PromoteIn(BaseModel):
     mode: Literal["window", "whole"]
     #: ``original`` (a window only): only the notes change; ``recording``: the take's audio too.
     audio: Literal["original", "recording"] = "recording"
-    #: The Proposal's sheet as the page holds it; absent: the take's saved sheet.
-    sheet: SavedRhythm | None = None
 
 
 class FactsOut(BaseModel):
@@ -90,11 +87,10 @@ class PromotedOut(BaseModel):
 
     part: str
     project_id: str = Field(..., alias="projectId")
-    #: The earlier state of the part: ``POST /time/{part}/versions/{n}/restore`` is the undo.
+    #: The earlier state of the part, kept in its history: the undo of the promotion's step on the sheet restores it.
     before_version: int = Field(..., alias="beforeVersion")
     at_ms: float = Field(..., alias="atMs")
     length_ms: float = Field(..., alias="lengthMs")
-    sheet: SavedRhythm | None = None
 
 
 class JobHandle(BaseModel):
@@ -236,7 +232,7 @@ def promotion_facts(project_id: str, body: PromoteIn = Body(...)) -> FactsOut:
     """What **Promote** would do, without writing: the notes out and in, the marks that go, and
     how much longer or shorter the song gets."""
     try:
-        found = passages.facts(project_id, body.mode, body.audio, body.sheet)
+        found = passages.facts(project_id, body.mode, body.audio)
     except (locate.NotFound, passages.PassageError, PasteError) as exc:
         raise _refused(exc) from exc
     return FactsOut(
@@ -256,7 +252,7 @@ def promote(project_id: str, body: PromoteIn = Body(...)) -> PromotedOut:
     write; the passage is closed. The part keeps its earlier state (`beforeVersion`)."""
     try:
         require_part(passages.load(project_id).passage_of, write=True)
-        done = passages.promote(project_id, body.mode, body.audio, body.sheet)
+        done = passages.promote(project_id, body.mode, body.audio)
     except (
         locate.NotFound,
         passages.PassageError,
@@ -271,5 +267,4 @@ def promote(project_id: str, body: PromoteIn = Body(...)) -> PromotedOut:
         before_version=done.before_version,
         at_ms=done.at_ms,
         length_ms=done.length_ms,
-        sheet=done.sheet,
     )

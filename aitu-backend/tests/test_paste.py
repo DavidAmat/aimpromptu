@@ -18,6 +18,7 @@ from scipy.io import wavfile
 
 from aitu_backend.audio import formats, sources, store, timeline as audio_timeline
 from aitu_backend.audio.frames import SAMPLE_RATE
+from aitu_backend.editing import history, paste
 from aitu_backend.main import create_app
 from aitu_backend.schemas.metadata import AudioSource
 from aitu_backend.schemas.rhythm import (
@@ -192,19 +193,37 @@ def paste_body(source: str, from_ms: float, to_ms: float, at_ms: float, **more) 
     return {"source": {"part": source, "fromMs": from_ms, "toMs": to_ms}, "atMs": at_ms, **more}
 
 
+def pasted(
+    target: str, source: str, from_ms: float, to_ms: float, at_ms: float, **more
+) -> paste.PasteResult:
+    """The paste itself (``editing.paste``), as ``POST /sheet/{target}/paste`` runs it.
+
+    The route answers the sheet drawn again; the write's own result (the snapshot of the undo,
+    the old sheet's marks after it) is what these tests read.
+    """
+    passage = paste.read_passage(source, from_ms, to_ms)
+    return paste.paste(target, passage, at_ms=at_ms, **more)
+
+
+def restore(part: str, version: int) -> int:
+    """Put an earlier state of the part back, as the undo of a paste does."""
+    with pipeline.piece_lock(part):
+        return history.restore(part, version)
+
+
 def test_a_paste_puts_the_notes_the_marks_and_the_audio_in_and_moves_what_follows(
     client: TestClient, two_parts: tuple[str, str]
 ) -> None:
     source, target = two_parts
-    answer = client.post(f"/time/{target}/paste", json=paste_body(source, 2000, 4000, 3000))
+    answer = client.post(f"/sheet/{target}/paste", json=paste_body(source, 2000, 4000, 3000))
     assert answer.status_code == 200, answer.text
     done = answer.json()
     assert done["atMs"] == 3000 and done["lengthMs"] == 2000
     assert done["notesIn"] == 2 and done["notesMoved"] == 3
-    assert done["durationSeconds"] == pytest.approx(8.0)
+    assert done["edited"] == "Paste 2.0 s"
 
     events = pipeline.load_note_events(target)
-    assert events is not None
+    assert events is not None and events.duration_seconds == pytest.approx(8.0)
     starts = [(event.midi_note, round(event.start, 3)) for event in events.events]
     # The target's notes before 3 s stay, its notes from 3 s on are 2 s later, and the passage's
     # two notes (2 s and 3 s of the source) are at 3 s and 4 s.
@@ -262,7 +281,7 @@ def test_the_audio_plays_the_copied_stretch_where_its_notes_are(
     """Checked at every join, on the engine's audio and on the audio the page plays."""
     source, target = two_parts
     assert client.post(
-        f"/time/{target}/paste", json=paste_body(source, 2000, 4000, 3000)
+        f"/sheet/{target}/paste", json=paste_body(source, 2000, 4000, 3000)
     ).is_success
     entry = store.get(target)
     rate, normalized = formats.read_wav(entry.normalized_path)
@@ -283,32 +302,29 @@ def test_undo_gives_the_part_back_exactly_and_redo_pastes_again(
     source, target = two_parts
     files = ("notes.pmn", "sheet.json", "timeline.json")
     before = {name: (paths.part_dir(target) / name).read_bytes() for name in files}
-    done = client.post(f"/time/{target}/paste", json=paste_body(source, 2000, 4000, 3000)).json()
+    done = pasted(target, source, 2000, 4000, 3000)
     after = {name: (paths.part_dir(target) / name).read_bytes() for name in files}
 
-    undone = client.post(f"/time/{target}/versions/{done['beforeVersion']}/restore")
-    assert undone.status_code == 200, undone.text
+    kept = restore(target, done.before_version)
     assert {name: (paths.part_dir(target) / name).read_bytes() for name in files} == before
     assert bundle.read_project(target).part(target).source.files == []
-    assert undone.json()["sheet"]["keyChanges"] == [{"fromColumn": 125, "keySignature": "G"}]
+    saved = pipeline.load_rhythm(target)
+    assert [(c.from_column, c.key_signature) for c in saved.key_changes] == [(125, "G")]
 
-    redone = client.post(f"/time/{target}/versions/{undone.json()['keptVersion']}/restore")
-    assert redone.status_code == 200
+    restore(target, kept)
     assert {name: (paths.part_dir(target) / name).read_bytes() for name in files} == after
     assert len(bundle.read_project(target).part(target).source.files) == 3
-    assert client.post(f"/time/{target}/versions/99/restore").status_code == 404
+    with pytest.raises(history.NoSuchVersion):
+        restore(target, 99)
 
 
 def test_a_paste_over_a_marked_stretch_replaces_it(
     client: TestClient, two_parts: tuple[str, str]
 ) -> None:
     source, target = two_parts
-    done = client.post(
-        f"/time/{target}/paste",
-        json=paste_body(source, 2000, 3000, 1000, replaceToMs=3000),
-    ).json()
-    assert done["notesRemoved"] == 2 and done["notesIn"] == 1
-    assert done["durationSeconds"] == pytest.approx(5.0)
+    done = pasted(target, source, 2000, 3000, 1000, replace_to_ms=3000)
+    assert done.notes_removed == 2 and done.notes_in == 1
+    assert done.duration_seconds == pytest.approx(5.0)
     events = pipeline.load_note_events(target)
     assert [(e.midi_note, round(e.start, 3)) for e in events.events] == [
         (60, 0.0),
@@ -328,31 +344,29 @@ def test_a_paste_over_a_marked_stretch_replaces_it(
     assert audio_timeline.kept_frames(timeline) == 500
 
 
-def test_the_page_sends_its_unsaved_sheet_and_gets_it_back_saved(
-    client: TestClient, two_parts: tuple[str, str]
+def test_a_sheet_given_to_the_paste_is_the_one_its_marks_move_and_it_is_saved(
+    two_parts: tuple[str, str],
 ) -> None:
     source, target = two_parts
-    unsaved = sheet(keySignature="D", title="My title").model_dump(by_alias=True, mode="json")
-    done = client.post(
-        f"/time/{target}/paste", json=paste_body(source, 0, 1000, 0, sheet=unsaved)
-    ).json()
-    assert done["sheet"]["title"] == "My title"
+    given = sheet(keySignature="D", title="My title")
+    done = pasted(target, source, 0, 1000, 0, sheet=given)
+    assert done.sheet is not None and done.sheet.title == "My title"
     # Pasted at the start: the passage's Bb is the key of the sheet, and D comes back after it.
-    assert done["sheet"]["keySignature"] == "Bb"
-    assert done["sheet"]["keyChanges"] == [{"fromColumn": 25, "keySignature": "D"}]
+    assert done.sheet.key_signature == "Bb"
+    assert [(c.from_column, c.key_signature) for c in done.sheet.key_changes] == [(25, "D")]
     assert pipeline.load_rhythm(target).title == "My title"
 
 
 def test_a_copied_stretch_is_whole_columns(client: TestClient, two_parts: tuple[str, str]) -> None:
     source, target = two_parts
-    done = client.post(f"/time/{target}/paste", json=paste_body(source, 1990, 2510, 1010)).json()
+    done = client.post(f"/sheet/{target}/paste", json=paste_body(source, 1990, 2510, 1010)).json()
     assert done["atMs"] == 1000 and done["lengthMs"] == 520
 
 
 def test_an_empty_stretch_is_refused(client: TestClient, two_parts: tuple[str, str]) -> None:
     source, target = two_parts
     assert (
-        client.post(f"/time/{target}/paste", json=paste_body(source, 1000, 1010, 0)).status_code
+        client.post(f"/sheet/{target}/paste", json=paste_body(source, 1000, 1010, 0)).status_code
         == 409
     )
 
@@ -372,10 +386,12 @@ def test_from_scratch_opens_on_a_blank_sheet_and_a_paste_fills_it(
     enabled = {step["step"]: step["enabled"] for step in status["steps"]}
     assert enabled["audio"] is False and enabled["sheet"] is True
 
-    done = client.post(f"/time/{blank}/paste", json=paste_body(source, 2000, 4000, 0)).json()
-    assert done["notesIn"] == 2 and done["durationSeconds"] == pytest.approx(2.0)
+    done = pasted(blank, source, 2000, 4000, 0)
+    assert done.notes_in == 2 and done.duration_seconds == pytest.approx(2.0)
     # The blank sheet takes the source's settings: its key, from the start.
-    assert done["sheet"]["keySignature"] == "Bb" and done["sheet"]["keyChanges"] == []
+    assert (
+        done.sheet is not None and done.sheet.key_signature == "Bb" and done.sheet.key_changes == []
+    )
     status = client.get(f"/pieces/{blank}/status").json()
     assert status["scratch"] is False
     states = {step["step"]: step["state"] for step in status["steps"]}
@@ -405,7 +421,7 @@ def test_save_to_library_writes_a_pasted_range_as_its_own_file(
     from aitu_backend.audio import compact
 
     source, target = two_parts
-    client.post(f"/time/{target}/paste", json=paste_body(source, 2000, 4000, 3000))
+    pasted(target, source, 2000, 4000, 3000)
     plan = compact.prepare(target, bundle.read_project(target))
     assert plan is not None
     try:
@@ -420,7 +436,7 @@ def test_a_pasted_project_exports_and_imports_with_its_ranges(
     client: TestClient, two_parts: tuple[str, str]
 ) -> None:
     source, target = two_parts
-    client.post(f"/time/{target}/paste", json=paste_body(source, 2000, 4000, 3000))
+    pasted(target, source, 2000, 4000, 3000)
     exported = client.get(f"/projects/{target}/export")
     assert exported.status_code == 200
     imported = client.post(

@@ -1,6 +1,6 @@
 # 03: The new sheet in aimpromptu (applying the research)
 
-**State: live. Phases 0 to 5 done (Phase 5 on 2026-10-25, merged into `master`); Phase 6 done (2026-10-25, merged into `master`); Phase 7 done (2026-10-26, merged into `master`); Phase 8 done (2026-10-26, merged into `master`); Phase 9 done (2026-10-27, merged into `master`); Phase 10 is next.** Opened 2026-10-23 on the branch
+**State: live. Phases 0 to 5 done (Phase 5 on 2026-10-25, merged into `master`); Phase 6 done (2026-10-25, merged into `master`); Phase 7 done (2026-10-26, merged into `master`); Phase 8 done (2026-10-26, merged into `master`); Phase 9 done (2026-10-27, merged into `master`); Phase 10 built and checked by the agent (2026-10-27), waiting for the user's check and the merge.** Opened 2026-10-23 on the branch
 `feat/migrate-new-logic` (one branch for the whole migration, plan section 6.3).
 
 Research plan 01 (the folder `/home/david/Documents/projects/music/poc-aitu-research` on the Ubuntu machine) built a
@@ -31,3 +31,6 @@ The brief is [`03-prompt.md`](03-prompt.md), the plan is [`03-plan.md`](03-plan.
 | [`03-implementation-phase-6.md`](03-implementation-phase-6.md) | Phase 6: editing the new sheet: the edit model (hands in the notes, the stored sheet laid again), undo and redo kept by the backend, the hand tool, the clefs around a moved note, the AI run again on the current hands, the time of one edit (the engine stays in the backend) |
 | [`03-implementation-phase-7.md`](03-implementation-phase-7.md) | Phase 7: the note and range tools of the new sheet: the inventory and the user's answers (the tools dropped), the reading edits on the edit model, the user's marks in the format, the range selection, Enhance with AI of a stretch with the user's words, the gallery |
 | [`gallery/phase-7/index.html`](gallery/phase-7/index.html) | The Phase 7 gallery: 13 tools on passages of 7 Years, before and after (built by `aitu-backend/scripts/tools_gallery.py`) |
+| [`03-implementation-phase-8.md`](03-implementation-phase-8.md) | Phase 8: the other screens and the sheet toolbox: lyrics in the format and the engine, Transpose, the keyboard panel and the chord keyboard, free lyrics blocks, the PDF from the new engine, copy and paste, Recording in Sheet, the switch removed |
+| [`03-implementation-phase-9.md`](03-implementation-phase-9.md) | Phase 9: the saved data: the old `sheet.json` studied, the user's marks carried onto the new sheet, the old clefs and octave lines dropped, the migration |
+| [`03-implementation-phase-10.md`](03-implementation-phase-10.md) | Phase 10: vexflow-v2 removed (frontend package, old page, `/time` routes, `notation/`, the negra ladder, the Hands step code), the documentation, the checks, the screenshots in [`screenshots/phase-10/`](screenshots/phase-10/) against Phase 0's, the license inventory |

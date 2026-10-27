@@ -64,8 +64,6 @@ services:
   frontend:
     build:
       context: ./aitu-frontend
-      additional_contexts:
-        vexflow: ../vexflow-v2
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}

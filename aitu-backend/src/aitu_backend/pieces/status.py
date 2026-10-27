@@ -7,8 +7,7 @@ the transcription queue.
 A step is ``missing`` (never made), ``running`` (a transcription is working on it), ``stale`` (made
 from an older revision of an earlier step; it must be done again) or ``ready``. A tab is
 ``enabled`` when every step before it is ready, so the user can always go back and can go forward
-one step past the last ready one. The Sheet tab stays enabled when it is stale, because it opens
-with a banner and asks the user to write the sheet again (plan section 8.3).
+one step past the last ready one.
 
 **A project with no audio and no notes yet** (an empty project, section 10.3) has its Source step
 missing and every later step closed. **A part made from scratch with no audio yet** (From scratch,
@@ -19,9 +18,11 @@ while the video is read.
 
 **The hands and the sheet** (implementation 03, Phase 5). The Hands step is gone: Sonnet decides the hands with the
 sheet, and the Sheet step opens as soon as the notes are ready. It is ``running`` while Sonnet writes, ``ready`` once
-a new sheet is stored (``sheet.f1``) or the sheet vexflow-v2 saved (``sheet.json``) still matches the notes,
-``stale`` when only that old sheet is left and the notes or the hands changed, and ``missing`` otherwise. The new sheet
-itself is never stale for the page: it is laid again on the current notes (``part_sheet.build``).
+a sheet is stored (``sheet.f1``, or the ``sheet.json`` the vexflow-v2 sheet saved, whose marks the new sheet carries),
+and ``missing`` otherwise. The sheet is never stale for the page: it is laid again on the current notes
+(``part_sheet.build``), so the old sheet's ``stale`` state (its notes or hands changed since it was saved) went with
+it in implementation 03, Phase 10. While the notes are not ready (transcribed again, or the region changed), the
+Sheet step is closed: ``stale`` when a sheet is stored, ``missing`` otherwise.
 """
 
 from __future__ import annotations
@@ -129,12 +130,12 @@ def piece_status(audio_uuid: str) -> PieceStatus:
     sheet_enabled = notes.state == "ready"
     running = new_sheet_job.job_of(audio_uuid) if sheet_enabled else None
     written = new_sheet_store.load(audio_uuid) is not None if sheet_enabled else False
-    legacy = _legacy_sheet(rhythm, header) if sheet_enabled else "missing"
-    details = {"newSheet": written, "legacy": legacy}
+    details = {"newSheet": written}
     if not sheet_enabled:
+        stored_sheet = rhythm is not None or new_sheet_store.load(audio_uuid) is not None
         sheet = StepStatus(
             "sheet",
-            "stale" if rhythm is not None else "missing",
+            "stale" if stored_sheet else "missing",
             enabled=False,
             reason=_first_notes(notes, video),
         )
@@ -144,15 +145,8 @@ def piece_status(audio_uuid: str) -> PieceStatus:
             "running",
             details={**details, "jobId": running.id, "jobStatus": running.status},
         )
-    elif written or legacy == "ready":
+    elif written or rhythm is not None:
         sheet = StepStatus("sheet", "ready", details=details)
-    elif legacy == "stale":
-        sheet = StepStatus(
-            "sheet",
-            "stale",
-            reason="The notes or the hands changed since this sheet was saved.",
-            details=details,
-        )
     else:
         sheet = StepStatus("sheet", "missing", reason="Not written yet.", details=details)
 
@@ -168,7 +162,6 @@ def piece_status(audio_uuid: str) -> PieceStatus:
             "notesAudio": header.audio_revision if header else None,
             "hands": header.hands_revision if header else None,
             "handsNotes": header.hands_notes_revision if header else None,
-            "sheetHands": (rhythm.hands_revision or 0) if rhythm is not None else None,
         },
     )
 
@@ -181,17 +174,6 @@ def _first_notes(notes: StepStatus, video: bool = False) -> str:
     if notes.state == "stale":
         return "Transcribe again first: the selected region changed."
     return "Read the notes of the video first." if video else "Transcribe first."
-
-
-def _legacy_sheet(rhythm: Any, header: Any) -> str:
-    """The sheet vexflow-v2 saved (``sheet.json``): ``ready`` while it matches the notes and the hands, ``stale``
-    after they changed, ``missing``. The old editor (the switch of the Sheet step) opens a stale one with its
-    banner."""
-    if rhythm is None:
-        return "missing"
-    if header is not None and (rhythm.hands_revision or 0) != header.hands_revision:
-        return "stale"
-    return "ready"
 
 
 def _no_audio(audio_uuid: str, audio_revision: int) -> PieceStatus:
@@ -213,7 +195,6 @@ def _no_audio(audio_uuid: str, audio_revision: int) -> PieceStatus:
             "notesAudio": None,
             "hands": None,
             "handsNotes": None,
-            "sheetHands": None,
         },
     )
 

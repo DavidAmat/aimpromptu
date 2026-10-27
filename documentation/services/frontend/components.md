@@ -4,8 +4,11 @@
 
 # The component tree: where each piece lives
 
-`aitu-frontend/src/`. React 19, TypeScript, Vite, MUI. The sheet itself is drawn by
-`@aimpromptu/grid-notation`, see [grid-notation.md](grid-notation.md).
+`aitu-frontend/src/`. React 19, TypeScript, Vite, MUI. The sheet itself is laid out and drawn by the
+backend (`GET /sheet/{uuid}` answers an SVG), see
+[rendering.md](../../../context/frontend/rendering.md). The vexflow-v2 package that drew it in the
+browser before was removed in implementation 03, Phase 10 (2026-10-27), see
+[deprecated/grid-notation.md](../../deprecated/grid-notation.md).
 
 ---
 
@@ -21,7 +24,7 @@
 | · new project | `/projects/new` | `pages/piece/PiecePage.tsx` with the Source step only |
 | · From other projects | `/projects/compose` | `pages/compose/ComposePage.tsx` (Phase 10, section 3.2) |
 | · a project | `/projects/:id` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the project reached |
-| · one step | `/projects/:id/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab`, `HandsTab` or `SheetTab` |
+| · one step | `/projects/:id/<step>` | `PiecePage.tsx` + `SourceTab`, `AudioTab`, `NotesTab` or `SheetTab`; `/projects/:id/hands` (old links) redirects to `sheet` |
 | · a passage | `/projects/:id/passages/:passageId` | `pages/piece/passage/PassagePage.tsx`, outside `PiecePage` (Phase 9, section 3.1) |
 | **Songs** (My library) | `/library/songs`, `/library/songs/:id` | `pages/library/SongsPage.tsx`, `SongPage.tsx` (Phase 6, section 10) |
 | **Artists** (My library) | `/library/artists`, `/library/artists/:id` | `pages/library/ArtistsPage.tsx`, `ArtistPage.tsx` |
@@ -31,7 +34,7 @@
 | **Lab** (Admin) | `/admin/lab/<tab>` | `layout/LabLayout.tsx` and `pages/video/`, inside `RequireMaster` |
 | (development only) | `/dev/roll-bench` | `pages/dev/RollBenchPage.tsx`, lazy, only when `import.meta.env.DEV` |
 
-`<step>` is one of `PIECE_STEPS` in `api/pieces.ts`: `source`, `audio`, `notes`, `hands`, `sheet`.
+`<step>` is one of `PIECE_STEPS` in `api/pieces.ts`: `source`, `audio`, `notes`, `sheet`.
 `ROUTES.project(id, step?)` builds the address. Until Phase 3 the id of a project is the uuid of its
 piece.
 
@@ -102,7 +105,8 @@ sets it when it loads a project; the sheet reads its `frameMs` from it.
 
 ## 2. The page of a project
 
-One project, five steps in the order of the work: Source, Audio, Notes, Hands, Sheet. What each step
+One project, four steps in the order of the work: Source, Audio, Notes, Sheet (the Hands step left the
+flow in implementation 03, Phase 5, and its code was removed in Phase 10). What each step
 means for the reader is in [projects.md](../../../context/frontend/projects.md). This section
 lists where the code is.
 
@@ -111,20 +115,20 @@ lists where the code is.
 | File | Role |
 |---|---|
 | `pages/piece/PiecePage.tsx` | The page: loads the audio, `GET /pieces/{uuid}/status` and the project's row (`GET /projects/{projectId}`: its `library` or `editing` link), draws the header (back arrow, title, the step tabs with the Audio tab named **Video** for a video project, the primary action, the `⋯` menu with **Play** (the whole project, once its Sheet step is open), Export, and **Discard changes** on an edit copy), redirects a step that is not enabled, holds the leave dialog (**Stay**, **Discard**, **Save and continue**, a `ConfirmDialog`) and the `beforeunload` warning. Phase 6: **Save to library** once the Sheet step is ready (`SaveToLibraryDialog`); a project of the library (`audio.layer === "private"`) is `readOnly`, titled "<song> (<version>)", goes back to its song, and has **Edit** (`POST /projects/{id}/edit`) as its action, with **Play** beside it (Phase 11) |
-| `pages/piece/pieceContext.ts` | What every tab shares: `usePiece()` (the piece, its status, `readOnly`, `refresh()`), `stepStatus()`, and `useUnsavedChanges(summary, {save, discard})`. `readOnly`: a version of the library, which every step shows without its changes (no handles or menus on Source; no cut, Save, Add audio or Transcribe on Audio, and no Video step; the roll in `view` mode with playback and no edit, Predict hands or Save; the sheet with Play and Print only and no toolbox) |
+| `pages/piece/pieceContext.ts` | What every tab shares: `usePiece()` (the piece, its status, `readOnly`, `refresh()`), `stepStatus()`, and `useUnsavedChanges(summary, {save, discard})`. `readOnly`: a version of the library, which every step shows without its changes (no handles or menus on Source; no cut, Save, Add audio or Transcribe on Audio, and no Video step; the roll in `view` mode with playback and no edit or Save; the sheet with Play and Print only and no toolbox) |
 | `pages/piece/SaveToLibraryDialog.tsx` | **Save to library** (Phase 6): Artist and Song as `Autocomplete` over `GET /library/artists` and `GET /library/songs` that take a new name as typed (choosing a known song sends its id and fills its artist), **Version name** ("original" at first). On an edit copy a `Segmented` **Replace “<version>”** / **New version**. `POST /projects/{id}/library`, then the song |
 | `pages/piece/PieceResume.tsx` | `/projects/:id`: follows the backend's `resume` |
 | `pages/piece/PartsPanel.tsx` | The parts of a project of several parts, beside its Sheet step (Phase 10): `RailRow`s (subheader or "Part N", length), a click opens that part's sheet, drag and Move up/down (`PUT /projects/{id}/parts`), **Rename** (`PATCH …/parts/{part}`), **Join with “…”** (`POST …/join`). Hidden for one part. `data-parts-panel`, `part-<n>` are read by `check:compose` |
 | `ui/StepTabs.tsx` | The step tabs, each with a dot for its state (filled ready, a spinner running, amber stale or unsaved, a ring missing) and the reason as a tooltip; `data-step` and `data-state` on each tab for the checks |
-| `components/piece/stepLabels.ts` | The names of the five steps |
+| `components/piece/stepLabels.ts` | The names of the four steps |
 | `components/piece/StepProgress.tsx` | A short job in progress: label, bar, seconds taken |
-| `api/pieces.ts` | `piecesApi`: `status`, `notes`, `patchNotes`, `predictHands`; the types `PieceStatus`, `StepStatus`, `PieceNotes` |
+| `api/pieces.ts` | `piecesApi`: `status`, `notes`, `patchNotes`; the types `PieceStatus`, `StepStatus`, `PieceNotes` |
 
 The page enables its tabs from the status answer only. It never works out staleness itself: the
 backend compares the revisions and answers every step at once.
 
 A tab that is not enabled is greyed and ignores the press. It is not a disabled MUI tab, because a
-disabled element receives no pointer events and its tooltip ("Predict hands first.") would never
+disabled element receives no pointer events and its tooltip (the backend's reason) would never
 show.
 
 ### 2.2 Source and Audio
@@ -145,14 +149,16 @@ The waveform comes from one request, `GET /audio/{uuid}/frames/peaks`: the lowes
 sample of every 10 ms time frame. Every zoom level is then drawn from memory, and every pixel sits
 on the same axis as the cuts.
 
-### 2.3 Notes and Hands: the canvas editor
+### 2.3 Notes: the canvas editor
 
-The Notes and Hands tabs are one editor. `NotesTab.tsx` and `HandsTab.tsx` are one line each:
-`<NotesEditor step="notes" />` and `<NotesEditor step="hands" />`.
+`NotesTab.tsx` is one line: `<NotesEditor />`. The Hands tab shared this editor until implementation
+03 (`HandsTab.tsx`, the Hands mode of `NotesEditor`, **Predict hands**, **To right** / **To left**, the
+hand filter and `piecesApi.predictHands` were removed in Phase 10): the AI decides the hands with the
+sheet, and a hand is changed on the sheet.
 
 | File | Role |
 |---|---|
-| `pages/piece/NotesEditor.tsx` | The editor page: live view, playback, every gesture as an undo step, **Save**, the primary action on the top row (**Continue to Hands**, **Continue to Sheet**), and on the Hands step **Predict hands** beside **Continue to Sheet** (after the user's review of Phase 5; it was only a wand icon of the toolbox) and the floating toolbox with **Predict every note again**, the hand filter, **To right** / **To left** (keys R and L) |
+| `pages/piece/NotesEditor.tsx` | The editor page: live view, playback, every gesture as an undo step, **Save**, the primary action on the top row (**Continue to Sheet**), **Hand colours** (the rectangles coloured by hand once the piece has hands) and the floating toolbox |
 | `components/notes/PianoRollCanvas.tsx` | The piano roll visualization: the vertical keyboard, one row per key, the rectangles; modes `live`, `edit`, `view` |
 | `components/notes/rollPaint.ts` | The painters: the lower canvas (rows, grid, ruler, keyboard, rectangles of the visible range) and the upper canvas (playhead, lit keys, sounding notes, band) |
 | `components/notes/RollTimeBar.tsx` | The bar under the roll: the progress bar while the piece is transcribed, the scrub bar afterwards |
@@ -161,7 +167,7 @@ The Notes and Hands tabs are one editor. `NotesTab.tsx` and `HandsTab.tsx` are o
 | `notes/liveFeed.ts` | `LiveFeed`: the queue of stream messages, drained once per animation frame, and the frontier |
 | `notes/useLiveTranscription.ts` | Follows the running transcription's progress stream into the feed |
 | `notes/noteEdits.ts` | The edits as overrides on the saved notes; `toOperations` turns them into the `PATCH /pieces/{uuid}/notes` operations |
-| `hooks/followJob.ts` | Follows one job to its end from a button (**Predict hands**) |
+| `hooks/followJob.ts` | Follows one job to its end from a button (its one user, **Predict hands**, was removed in implementation 03, Phase 10) |
 | `hooks/useEditHistory.ts` | Undo and redo, shared with the Audio tab and the sheet. `commit` (Phase 8) makes one step that replaces every edit at once, with its backend undo and redo (a paste) |
 
 **Why a canvas.** The old Piano Roll was SVG, one React element per note, rebuilt many times per
@@ -184,94 +190,58 @@ space adds a note of 250 ms, so it does not move the playhead here.
 **Playback** uses `useCutPlayer` with no cuts. Once cuts are saved, the backend serves the edited
 audio, which is already in the time of the notes.
 
-**The floating bar is the editor's toolbar** on both steps: Play/Pause, Undo, Redo, Delete, on the
-Hands step **To Left**, **To Right** and the count of notes without a hand (with arrows to visit
-them one at a time), the selection's Spanish name, **Save**.
+**The floating bar is the editor's toolbar**: Play/Pause, Undo, Redo, Delete, the selection's
+Spanish name, **Save**.
 
 ### 2.4 Sheet
 
 `pages/piece/SheetTab.tsx` renders `sheet/SheetPage` (section 3) with its `step` prop (`SheetStep`:
 the piece, the Sheet step's state and reason, and `onChanged`), beside `PartsPanel` (Phase 10). It
-gives the sheet `onSplit` (`POST /projects/{id}/parts/{part}/split` with the page's sheet, then the
-panel and the sheet read again), titles a part's sheet by its subheader, and on a version of the
-library a `stretchAction` **Add to a playlist**. The piece comes from the project, a
-stale reading is loaded but not drawn until **Write the sheet** (in the stale banner), and
-`onChanged` refreshes the status after a save or **Remove all**, so the dot of the step follows.
-
-The page now knows whether the sheet differs from the saved one (`unsaved`, the dot on **Save**), so
-a leave dialog like the other steps' is possible; it is not wired yet.
+gives the sheet `onSplit` (`POST /projects/{id}/parts/{part}/split` with `{atMs}`, then the panel and the
+sheet read again), titles a part's sheet by its subheader, and on a version of the library a
+`stretchAction` **Add to a playlist** and `enhanceInCopy` (**Enhance with AI** opens the edit copy and
+starts there). `onChanged` refreshes the status after a change, so the dot of the step follows.
 
 ---
 
 ## 3. The sheet
 
-`pages/piece/sheet/` is the Sheet step of a project. Implementation 02, Phase 2 split the old
-`RhythmPage.tsx` (5,328 lines) into it with no change of behaviour (twelve screenshots identical
-byte for byte), then redesigned it to plan section 11. What it does for the reader is
-[`context/frontend/annotations.md`](../../../context/frontend/annotations.md) and its three sub pages.
+`pages/piece/sheet/` is the Sheet step of a project and every other place a sheet is shown. The sheet
+is laid out and drawn by the backend (`aitu_backend/sheet/`, `GET /sheet/{uuid}?width=N` answers the
+SVG with its columns, systems and segments), and the page draws that SVG with what moves over it.
+Every edit is written at once as one step of undo kept by the backend (no **Save**). What it does
+for the reader is [`context/frontend/annotations.md`](../../../context/frontend/annotations.md) and its
+sub pages; the backend side, phase by phase, is `aitu-backend/src/aitu_backend/sheet/README.md`
+sections 12 to 17.
 
 | Module | Role |
 |---|---|
-| `SheetPage.tsx` | Phase 11: `step.play` (`PlayView`), Play mode's role: read only (`readOnly` on `TimeScoreView` too), no title lines, no scrub bar (`ScorePlayer` `headless`), no floating bar, no copy or paste; the transport through `playerRef`, `onPlaying`, `onTime`, `onEnded` (the end of the file, or `toMs` of a stretch through `stopAt`), `onSeek` (the cursor moved by the reader); a stretch's `fromMs` sought once the sheet is drawn; `followCentre`; `dimLyrics`. `litLyrics`, the lyrics pieces whose frames sound, is given on every sheet while it plays. Phase 10: `step.stretchAction` (a button beside **Copy this stretch** in the read-only *Frames* panel: **Add this stretch** on the page of From other projects, **Add to a playlist** on a version) and `step.onSplit` (**Start a new part here** in the range toolbox, `splitHere` with the page's sheet). The page: the state the modules share, the requests (default reading, saved reading, sheet, save, Remove all), the effects, the layout (title lines, scrub bar, sheet, floating bar, the toolboxes). **Record** (Phase 9): `startPassage` saves the sheet when it has changes, opens a passage (`passagesApi.open`) of the marked stretch or a new one at the end, and goes to its page; back from a promotion (the navigation's `promoted`, with the sheet before it), the promotion becomes the last step of the history (`resetEdits` to the sheet before, then `commit`), its undo and redo `POST …/versions/{n}/restore`. `step.passage` (`PassageView`) draws it on the page of a passage: `role` `current` (read only, no bar, no title lines, Space off, no copy or paste) or `proposal` (`anchorMs` given, the window and its drag, the passage's actions on the bar, only Key, Transpose and Layout in the sheet toolbox, saved by itself 1.2 s after a change, the held sheet reported by `onSheet`). The player's address is the audio revision when the page opened and `reloadAt` (`step.audioRevision`). **Copy and Paste** (Phase 8): `copyColumns` and `copySelection` (the marked stretch, or the frames of the picked notes), `pastePassage` (`POST /time/{uuid}/paste` with the page's sheet, then one history step by `edits.commit` whose undo and redo call `POST …/versions/{n}/restore`), the ⌘C, ⌘V and paste-event listeners, `reloadAt` (the ladder and the sheet read again, and the player's audio at a new address, without starting the edits again) and the cursor kept at the passage. A version of the library marks a stretch too, and gets a small *Frames* panel with **Copy this stretch** |
-| `sheetEdits.ts` | The edits model: `SheetEdits` (one value, so undo is one history), `NO_EDITS`, the undo labels, `editsFromSaved` and `savedRhythmOf` (to and from the saved reading, `sheet.json`). `savedAnchorMs` (Phase 10): the saved sheet's pile length, which the page draws with instead of the pile measured again (`null` before the first save) |
-| `sheetConstants.ts` | The colours of the keyboards, the tabs of the range toolbox, the figure ladder, small helpers |
-| `toolboxPlacement.ts` | Where a toolbox opens, measured from what is drawn |
-| `useNoteActions.ts`, `NoteToolbox.tsx` | What the note toolbox knows about the picked notes and its actions; the panel |
-| `useRangeActions.ts`, `RangeToolbox.tsx` | The same for a marked stretch; the panel with its tabs, Speed among them; **Key for this passage** and the clef rule offered again (Phase 7); **Record this passage** in its title bar (Phase 9, `onRecordPassage`; the Re-record tab is gone); **Start a new part here** (Phase 10, `onSplit`, not at frame 0) |
-| `SheetToolbox.tsx` | The sheet toolbox: Title, Key, Transpose, Lyrics, Layout |
-| `TransposeTab.tsx`, `TransposeDialog.tsx` | **Transpose** (Phase 7): Notes (two `MiniPiano`s) and Figures (two `FigurePicker`s), each with **Preview**; the one dialog both use: a read-only `TimeScoreView` of the result, the facts, **Transpose** or **Cancel**. The page's `previewNotes`, `previewFigures` and `confirmTranspose` do the requests and the undo step |
-| `LyricsTab.tsx`, `lyricsPieces.ts` | **Lyrics** (Phase 7): paste, the pool (each piece draggable onto the sheet, `POOL_DRAG_TYPE`), the picked pieces' **Words** field and edit toolbar; the pure functions on the list of pieces (place, move, merge, split, line break, back to the pool, size), each returning the new list or the reason it could not |
-| `SheetFloatingBar.tsx` | Play, undo, redo, sheet toolbox, **Record a passage at the end** (Phase 9), **Paste** (Phase 8: its tooltip names the passage and where it goes), Print, Save with its unsaved dot, `⋯`; the messages of a refused save and a refused move. `passageActions`: the Proposal's bar, with the passage's actions in place of Record, Paste, Print, Save and Remove all |
-| `PianoToolboxes.tsx` | The keyboard under the playhead, and the decoration keyboard |
+| `SheetPage.tsx` | The step types (`SheetStep`, `PassageView`, `PlayView`) and `SheetPage`, which draws `frames/FramesSheetPage` |
+| `frames/FramesSheetPage.tsx` | The page: the sheet at once (the AI's or the algorithm's), **Enhance with AI**, the floating bar, the toolboxes, Copy and Paste, Record, the roles of `step.passage` and `step.play` |
+| `frames/FramesSheetView.tsx` | The SVG the backend draws, and over it, in the same staff-space units, what moves: the playhead, the picked notes, the marked stretch, the veil over a segment the AI is writing |
+| `frames/useFramesSheet.ts` | The sheet of a part as the page holds it: read for the page's width, read again at each step of the AI's job (`event: sheet` on the job's stream) |
+| `frames/geometry.ts` | The arithmetic of the page from the cursor map the backend sends (one row per drawn column, one box per system) |
+| `frames/FramesNoteToolbox.tsx`, `FramesRangeToolbox.tsx`, `readingTools.ts` | The note toolbox and the range toolbox (titled *Frames*), and what they share |
+| `frames/FramesSheetToolbox.tsx` | The sheet toolbox: Title, Key, Transpose, Lyrics, View |
+| `frames/FramesPreviewDialog.tsx` | The preview of a transposition: the sheet as it would be, **Transpose** or **Cancel** |
+| `frames/FramesLyricsToolbox.tsx`, `useFramesLyrics.ts`, `lyricsText.ts` | The lyrics pieces on the sheet (stored in `sheet.f1`), the pasted words and the pool (`GET`/`PUT /sheet/{uuid}/words`) |
+| `frames/EnhanceStretchDialog.tsx` | **Enhance with AI** for one stretch, with the user's own words |
+| `frames/FramesPdfDialog.tsx` | Print to PDF (section 6) |
+| `TransposeTab.tsx`, `LyricsTab.tsx`, `lyricsPieces.ts` | The **Transpose** and **Lyrics** tabs of the sheet toolbox, kept from the old sheet and used by the new one |
+| `sheetConstants.ts`, `toolboxPlacement.ts` | The colours of the hands on the keyboards; where a toolbox opens |
+| `PianoToolboxes.tsx` | The keyboard under the playhead |
 
 | Shared component | Role |
 |---|---|
-| `components/time/TimeScoreView.tsx` | The staff. Owns the renderer instance, the playhead (`data-playhead`), selection and the range handles. `frameWindow` and `onFrameWindowMove` (Phase 9): the window over a Proposal, moved without a rebuild. Phase 11: `followCentre` (a new line brought to the middle of the window), `litLyrics` (the pieces sounding, drawn black and bold while it plays, on every sheet, from the page's lyrics saved or not), `dimLyrics` (Play mode: every other piece faint), `lyricsInk` (the words' colour: black in Play mode), a style scoped to its own sheet (`data-score-view`, `useId`) so several sheets share a page, and `readOnly` hiding the handle that spreads a line |
 | `components/time/ScorePlayer.tsx` | Plays the recording; `compact` draws only the scrub bar (the Sheet step); `headless` (Phase 11) draws nothing but a refused start; `stopAt` and `onEnded` (the end of a stretch, the end of the file); `preload` (`metadata` for a part of Play mode not yet playing, changed on the element without a new one); `keys` (Phase 9) turns Space off for a second player on the page. `version` (Phase 8) puts the audio at a new address when it changed under the page, because the browser keeps a media file by its address; the Audio and Notes steps add the audio revision the same way (`audioApi.fileUrl(uuid, normalized, revision)`) |
-| `components/time/ScorePdfDialog.tsx` | Paper size, margins, title, and a preview of the real pages |
+| `components/time/FigureGlyph.tsx` | One figure drawn as its glyph (the figure buttons of the toolboxes) |
 | `ui/Toolbox.tsx`, `ui/FloatingBar.tsx` | The draggable panel and the floating bar every step uses |
 
-**The sheet is drawn on arrival.** `SheetPage` asks for the saved reading and for
-`GET /time/{uuid}/default-reading` (the highest pile of gaps of the reading's hand, called a negra)
-at the same time, and draws as soon as both are answered, so the defaults of a first write (the key
-with the fewest accidentals, then the octave brackets in that key, taken from the first build's
-`onKeySuggestion` / `onOttavaSuggestion`) never land on a reader's own key. After that, any change of
-the page edits, the main figure or the speed changes asks for the sheet again after 400 ms.
-
-**Unsaved is an identity.** Every edit makes a new `SheetEdits` value and undo puts the old one
-back, so `edits.state !== cleanEdits` (the value saved or loaded) is exactly "the page is not what was
-saved".
-
-**The stage of `TimeScoreView` is a block at normal zoom.** As an inline-block it took the width of
-the drawing in it, so a narrower window never reached the renderer's resize watch and the lines kept
-their length, cut off at the right. It is an inline-block only while magnified.
-
-**`TimeScoreView` passes the figures straight through.** It does not work out what a note should be
-called from how many columns it covers, because a column is a slice of time and says nothing about
-note values. That is the whole point of the model: position and figure are two separate numbers.
-
-**The floating bar exists because of a real failure.** A long piece went unsaved simply because the
-button was past every stave. The bar follows the reader down the page and can be dragged, hidden
-and shown again. It keeps itself inside the window when its width changes, and wraps into two rows
-on a phone.
-
-**Both toolboxes open beside what they are about.** Selecting notes (click, ⌘-click, or a rubber
-band) opens the note toolbox; a click above the staves opens the range toolbox (titled *Frames*),
-which is about a *stretch of time* rather than about notes. A stretch carrying an edit draws two
-corner marks in its own colour, so it can be seen without being selected.
-
-**Each toolbox can hand its selection to the other.** `Toolbox` takes a `headerAction`, one
-control in the title bar beside the close button: *Select the frames of these notes* on the note
-toolbox marks the stretch from the first picked note to the last, and *Select the notes in this
-stretch* on the range toolbox picks every note that begins inside it on the staves in scope. Both use the
-renderer's own `setSelection` / `clearSelection` rather than through page state, so the far panel
-opens, is placed and takes the cursor to the music exactly as a click would. Neither raises
-`clearSelectionsAt`, which drops *both* selections and is one half too much here.
-
-**The playhead follows the music only while the recording is sounding.** A scrub drag sweeps the
-line through a hundred staves in a second, and the page chasing it made the gesture impossible to
-finish. `followPlayhead` gates it; the stave index is still recorded while not following, so
-resuming does not jump.
+**The old sheet was removed in implementation 03, Phase 10 (2026-10-27).** Its page
+(`VexflowSheetPage` of `SheetPage.tsx`), `components/time/TimeScoreView.tsx` (the vexflow-v2
+renderer), `ScorePdfDialog.tsx`, `NoteToolbox`, `RangeToolbox`, `SheetToolbox`, `SheetFloatingBar`,
+`TransposeDialog`, `useNoteActions`, `useRangeActions`, `sheetEdits.ts` and `api/timeScore.ts` are
+gone (section 9). Since Phase 8B nothing drew them.
 
 ### 3.1 The page of a passage (Phase 9)
 
@@ -283,9 +253,9 @@ resuming does not jump.
 |---|---|
 | The frame | A recording mode: `position: fixed` over the window (layer 1100, under the floating bar and the toolboxes), a title bar ("Recording · <song>", the times, **Promote** as a menu of **Fit to the window** and **Replace the whole passage** or **Put it in** for a new passage, `⋯` with **Discard this passage**, **Close the recording** back to the sheet) |
 | The left panel | `RailRow`s: **Current** (`take-current`), then each take with what it is and a bin (`ConfirmDialog`, `passagesApi.deleteTake`); **Record** and **Add a take from a file** (a hidden file field). A click shows that one (a take becomes the one on show, `PATCH /passages/{id}`) |
-| The main area | The Current alone (`SheetPage` with `passage.role = "current"`, its play button driving the sheet's player through `playerRef`; starting one sheet stops the other). A take: a `Segmented` **Audio** / **Sheet** (`tab`; the Sheet once the take is written). **Audio**: `WaveformRangeSelector` of the take (its `initialRange` the stretch kept), **Write the proposal** (`passagesApi.readTake`, followed with `useProgress` and `ProgressBanner`). **Sheet**: the Current above the Proposal, `SheetPage` with `passage.role = "proposal"`, keyed by the take and its audio revision, `anchorMs` = the passage's × the speed, the window (`frameWindow`, columns of the take) and the bar's actions (Record a take, **Fit**); the speed beside the tabs, a slider on a log scale, ×0.25 to ×4, sent on release |
+| The main area | The Current alone (`SheetPage` with `passage.role = "current"`, its play button driving the sheet's player through `playerRef`; starting one sheet stops the other). A take: a `Segmented` **Audio** / **Sheet** (`tab`; the Sheet once the take is written). **Audio**: `WaveformRangeSelector` of the take (its `initialRange` the stretch kept), **Write the proposal** (`passagesApi.readTake`, followed with `useProgress` and `ProgressBanner`). **Sheet**: the Current above the Proposal, `SheetPage` with `passage.role = "proposal"`, keyed by the take and its audio revision, the window (`frameWindow`, columns of the take) and the bar's actions (Record a take, **Fit**); the speed beside the tabs, a slider on a log scale, ×0.25 to ×4, sent on release |
 | The recorder | A `Toolbox`: **Notes from** (**Microphone** or **MIDI piano**, `audio/useMidiInput.ts`: Web MIDI, the keys timed from the moment the sound starts recording, a key's note ending when it comes up; the piano chosen when there are several; the keys counted while recording); **Sound** for a MIDI take (a microphone or **No sound**); **Play the passage along** (an `Audio` of the Current at `playbackRate = 1 / speed`, pitch kept), **Microphone** (the `audioinput` devices, shown when there are several, the choice kept in `localStorage`), `LiveLevelBars`, Record / Stop (`useRecorder`, which asks for the device with echo cancellation, noise suppression and automatic gain off: they are made for speech and cut a piano); a take is sent (`passagesApi.addTake`) as soon as it stops. **Record** is disabled with its reason where the page cannot use the microphone (`navigator.mediaDevices` is missing off a secure address) |
-| The promotion dialog | `passagesApi.facts` for the mode and the audio (**Keep the original audio** / **Use my recording**, a `Segmented`, for the window), the length change and the marks that go, only when there are; **Promote** reads the saved sheet of the song first (the undo's sheet), then `passagesApi.promote` with the Proposal's held sheet, then the song's Sheet step with `promoted` in the navigation state |
+| The promotion dialog | `passagesApi.facts` for the mode and the audio (**Keep the original audio** / **Use my recording**, a `Segmented`, for the window), the length change and the marks that go, only when there are; **Promote** calls `passagesApi.promote` with the mode and the audio, then opens the song's Sheet step with `promoted` in the navigation state (the cursor goes where the take went in; the undo is the last step of the sheet's log) |
 
 `data-passage-page`, `data-passage-current`, `data-passage-proposal`, `data-passage-range` and
 `data-passage-recorder` are read by `check:passage`.
@@ -319,32 +289,22 @@ shell.
 | `FallingView.tsx` | Notes Falling of the active part (`data-play-falling`): `GET /matrix/{uuid}/events` (`usePlayedNotes`), the notes of the next 3 s over the 88-key `Piano`, the keys sounding lit, drawn from `PlayClock` (`useSyncExternalStore`); no selection, no sound of its own |
 
 The modules of the old Notes Falling page that nothing else used went with it (section 9). Still
-shared: `piano/Piano.tsx` and `piano/keyPositions.ts` (also on the sheet's keyboard panel),
-`playback/playedNotes.ts`, `playback/noteVisuals.ts`, `hooks/usePlayedNotes.ts`,
-`playback/ProgressBar.tsx` (the sheet's scrub bar), `playback/useSpacebarPlay.ts` (the Audio, Notes
-and Hands steps), `hooks/useNoteSelection.ts` (the Lab's notes on a frame), `hooks/useElementSize.ts`.
+shared:
 
----|---|
-| `piano/Piano.tsx`, `piano/keyPositions.ts` | The 88-key SVG keyboard, both orientations (also on the sheet) |
-| `playback/usePlayback.ts` | The transport: original audio or synthesised piano |
-| `playback/PlaybackTransport.tsx`, `PlayerToolbar.tsx` | The controls |
-| `playback/ProgressBar.tsx` | **One scrub bar** for Notes Falling and the sheet, with a draggable handle |
-| `playback/playedNotes.ts`, `noteVisuals.ts` | Which notes are sounding; how a rectangle is drawn |
-| `playback/useSpacebarPlay.ts` | Space plays and pauses, except inside a text field (also on the Notes and Hands tabs) |
-| `hooks/usePlayedNotes.ts` | Loads the notes of the working piece and the waveform of its recording |
-| `hooks/useNoteSelection.ts`, `useStagedRemovals.ts` | Picking notes; staging a deletion |
-| `components/notes/NoteSelectionToolbox.tsx` | The panel for picked notes: **Delete** and **Put back** only |
-| `components/notes/PendingRemovalsBar.tsx` | Staged deletions, with Save and Discard |
-| `hooks/useElementSize.ts` | The measured pixel box the SVG viewBox uses |
+| Module | Role |
+|---|---|
+| `piano/Piano.tsx`, `piano/keyPositions.ts` | The 88-key SVG keyboard, both orientations (Notes Falling and the sheet's keyboard panel) |
+| `playback/ProgressBar.tsx` | The scrub bar of `ScorePlayer`, with a draggable handle |
+| `playback/playedNotes.ts`, `noteVisuals.ts` | Which notes are sounding; how a falling note is drawn |
+| `playback/useSpacebarPlay.ts` | Space plays and pauses, except inside a text field (the Audio and Notes steps) |
+| `hooks/usePlayedNotes.ts` | Loads the notes of a part and the waveform of its recording (Notes Falling) |
+| `hooks/useElementSize.ts` | The measured pixel box of an element (the sheet, the roll, the waveform, Notes Falling, the video frame) |
 
-`NoteSelectionToolbox` had hand buttons and a walk through the notes without a hand while the old
-Piano Roll used it. Those moved to the Hands tab with the piano roll, so the panel now holds only
-**Delete** and **Put back**. Neither writes at once: the floating **Save** bar commits.
+`hooks/useNoteSelection.ts` (the Lab's notes on a frame) was removed in implementation 03, Phase 10,
+with no user left.
 
 **The canvas selects; the scrub bar seeks.** One surface, one meaning: that is what lets a click on
-a rectangle mean "this note" without also jumping the recording somewhere nobody asked for. On the
-sheet, a **double-click on ground that answers to nothing else** (the strip above the top stave, the
-gaps between systems, the margins) is the seek, because a single click there already means nothing.
+a rectangle mean "this note" without also jumping the recording somewhere nobody asked for.
 
 **The SVG is measured, not stretched.** It used to declare a viewBox in keyboard units and stretch
 it with `preserveAspectRatio="none"`, so the two axes scaled by different amounts and every note
@@ -367,6 +327,7 @@ box now: one unit is one pixel, text is undistorted, and a 2 px border is 2 px.
 
 | Module | Role |
 |---|---|
+| `pages/piece/sheet/frames/FramesPdfDialog.tsx` | The panel: the pages the backend lays out (`GET /sheet/{uuid}/pages`), the preview, Download |
 | `print/scorePdf.ts`, `drawPage.ts`, `pdf.ts`, `opentype.ts` | The PDF writer |
 
 Detail on the PDF in [score-pdf.md](score-pdf.md).
@@ -379,7 +340,7 @@ Detail on the PDF in [score-pdf.md](score-pdf.md).
 single import path:
 
 ```ts
-import { timeScoreApi, matrixApi, piecesApi } from "../api";
+import { sheetApi, matrixApi, piecesApi } from "../api";
 ```
 
 | Module | Router |
@@ -393,7 +354,7 @@ import { timeScoreApi, matrixApi, piecesApi } from "../api";
 | `library.ts` | `/library` (Phase 6): songs, versions (rename, delete, history, restore), artists and their names (add, change, remove, merge) |
 | `matrix.ts` | `/matrix`, including `transcribe`, `activeJob`, `progressUrl` |
 | `pieces.ts` | `/pieces`: the status of a project's steps, its notes and hands |
-| `timeScore.ts` | `/time`, the largest, and the mirror of `schemas/time_matrix.py` |
+| `sheet.ts` | `/sheet` (implementation 03): the new sheet (`FramesSheet`), its edits, undo and redo, the AI's job, the pages for the PDF, `words` and `saveWords` (`GET`/`PUT /sheet/{uuid}/words`); the shared types `FigureName`, `KEY_SIGNATURES`, `KEY_LABELS`, `KeySignatureName`, `LyricLine`, `PassageRef`. It took them from `timeScore.ts` (`/time`), removed in Phase 10 |
 | `passages.ts` | `/passages` (Phase 9): `open`, `get`, `update`, `discard`, `addTake`, `deleteTake`, `readTake`, `facts`, `promote`; the types `OpenPassage`, `PassageTake`, `PromotionFacts`, `Promoted` |
 | `youtube.ts` | `/youtube`, including `startDownload` (`POST /youtube/jobs`) |
 | `video.ts`, `frameExamples.ts` | `/video`, `/frame-examples` (Lab) |
@@ -518,7 +479,19 @@ gone, along with the `components/notation/` and `components/matrix/` folders.
 The spacing controls those needed have no equivalent: the score re-wraps at a fixed size rather than
 being scaled, and zoom lives in the renderer's own chrome.
 
-What survives under `music/` is `noteNames.ts`, `figures.ts`, `granularities.ts` and `renderOverrides.ts`.
+What survives under `music/` is `noteNames.ts`, `figures.ts` and `transpose.ts`.
+
+**With the old sheet (implementation 03, Phase 10, 2026-10-27):** the package
+`@aimpromptu/grid-notation` (the sibling repository vexflow-v2: the dependency, its build step in the
+Dockerfile, the `vexflow` build context of `compose.yaml`, the `optimizeDeps` exclusion of
+`vite.config.ts`), the page `VexflowSheetPage`, `components/time/TimeScoreView.tsx` and
+`ScorePdfDialog.tsx`, `pages/piece/sheet/{NoteToolbox,RangeToolbox,SheetToolbox,SheetFloatingBar,TransposeDialog}.tsx`,
+`{useNoteActions,useRangeActions,sheetEdits}.ts`, `music/renderOverrides.ts`, `music/granularities.ts`,
+`hooks/useNoteSelection.ts`, `pages/piece/HandsTab.tsx` and the Hands mode of `NotesEditor.tsx`
+(`piecesApi.predictHands`, `noteEdits.setHands`, `applyPrediction`, `idsWithoutHand`), the decoration
+keyboard of `PianoToolboxes.tsx`, `api/timeScore.ts`, and the scripts `check-render.mjs`,
+`check-note-names.ts` and `sheet-library.mjs`. The page of the old renderer is kept as
+[deprecated/grid-notation.md](../../deprecated/grid-notation.md).
 
 ---
 
@@ -528,37 +501,41 @@ What survives under `music/` is `noteNames.ts`, `figures.ts`, `granularities.ts`
 cd aitu-frontend
 npm run lint              # eslint .
 npm run build             # tsc -b && vite build
-npm run check:render      # draw a real score headlessly in jsdom
-npm run check:note-names  # what the note toolbox calls a note, against how the sheet spells it
 npm run check:history     # undo and redo reverse exactly one press
 npm run check:geometry    # the video piano overlay, against the backend's fixture
 npm run check:cuts        # the Audio tab's cuts follow the backend's rules; playback jumps over them
 npm run check:notes       # the Notes tab's typed arrays, live feed and edits
 ```
 
-These need the running app (`make up` from the repository root). Each works on temporary copies or
-uploads and deletes them at the end, so the library is never changed. `check:flow`,
-`check:projects`, `check:library`, `check:transpose`, `check:lyrics`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `time:flow`, `bench:sheet` and `screenshot` sign in first through `scripts/session.mjs`: it signs in as the master
-user with `AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env` at the repository root (or
+The checks that drive the browser need the running app (`make up` from the repository root). Each
+works on temporary copies or uploads and deletes them at the end, so the library is never changed.
+They sign in first through `scripts/session.mjs`: it signs in as the master user with
+`AITU_MASTER_USERNAME` and `AITU_MASTER_PASSWORD` of `.env` at the repository root (or
 `AITU_CHECK_USERNAME` and `AITU_CHECK_PASSWORD` from the environment), makes every `fetch` of the
 script send the cookie (`signIn(base)`), and gives every Playwright page the same cookie
-(`useSession(browser)`). Since implementation 02,
-Phase 3 a temporary copy is made by `POST /projects/{id}/duplicate` (new ids, the same audio files):
+(`useSession(browser)`). Since implementation 02, Phase 3 a temporary copy is made by
+`POST /projects/{id}/duplicate` (new ids, the same audio files). The checks that act on the sheet
+find it through `scripts/frames-page.mjs` (the new sheet's hooks: `[data-frames-sheet]`, a
+`data-note` on every notehead, a stretch marked in the strip above the first line):
 
 ```bash
-npm run check:flow    # a project walked in a headless Chromium, every step, live transcription included
-npm run check:projects  # the Projects page: New project, Add audio, Duplicate, Export, Import, Rename, Delete, a video file
-npm run check:library   # My library on a copy of Elefants: Save to library, a version read only, Edit, Replace, History, New version, Artists
-npm run check:transpose # the Transpose tab on a copy of Elefants: notes and figures, preview, undo, redo; Key for this passage
-npm run check:lyrics    # the Lyrics tab on a copy of Elefants: pool, drag onto the sheet, snapping, merge, split, line break, Save
-npm run check:paste     # Copy and Paste between two copies, undo and redo, ⌘V over a stretch, From scratch, every join of the audio
-npm run check:passage   # Record this passage on a copy: a take with the fake microphone, one from a file, Write the proposal, Fit, the window, both promotions, undo and redo, a blank sheet, Discard
-npm run check:compose   # From other projects on two copies, Save as integrated playlist, the parts (rename, move, join, split), Make a playlist, Add to a playlist
-npm run check:play      # Play mode on copies: the page, Space, the fading buttons, the cursor in the middle, lyrics by frames, Notes Falling, an integrated playlist played on, a songs playlist (Next, a stretch, All songs)
-node scripts/check-sheet-toolbox.mjs --only clefs  # the clef rule on a first write of a copy of Superestrella's tutorial
-npm run time:flow     # the whole flow timed on three temporary pieces (upload, a duplicated library piece, YouTube)
-npm run bench:roll    # the Notes tab at 10,000 rectangles and at 100 stream messages per second
-npm run bench:sheet   # a hand move on the Sheet tab, timed part by part
+npm run check:flow           # a project walked in a headless Chromium, every step, live transcription included
+npm run check:projects       # the Projects page: New project, Add audio, Duplicate, Export, Import, Rename, Delete, a video file
+npm run check:library        # My library on a copy: Save to library, a version read only, Edit, Replace, History, New version, Artists
+npm run check:paste          # Copy and Paste between two copies, undo and redo, ⌘V over a stretch, From scratch
+npm run check:passage        # Record this passage on a copy: takes, Write the proposal, Fit, the window, both promotions, undo and redo, Discard
+npm run check:compose        # From other projects on two copies, the parts (rename, move, join, split), playlists
+npm run check:play           # Play mode on copies: Space, the fading buttons, lyrics by frames, Notes Falling, playlists
+npm run check:public         # the Public Library on copies
+npm run check:requests       # requests, the review and sharing, with a temporary user
+npm run check:journey        # the whole journey of three users, timed
+npm run check:frames-sheet   # the new Sheet step: drawn, played (implementation 03, Phase 5)
+npm run check:frames-edit    # picking notes, moving them to the other hand, undo and redo (Phase 6)
+npm run check:frames-tools   # the note and range toolboxes (Phase 7)
+npm run check:frames-toolbox # the sheet toolbox: Title, Key, Transpose, Lyrics, View (Phase 8A)
+npm run time:flow            # the whole flow timed on three temporary pieces (upload, a duplicated library piece, YouTube)
+npm run bench:roll           # the Notes tab at 10,000 rectangles and at 100 stream messages per second
+node scripts/baseline-sheets.mjs   # screenshots of every screen that draws a sheet
 ```
 
 `npm run screenshot -- <path>` takes one picture of the app; `--theme dark` takes it in the dark
@@ -568,24 +545,16 @@ scheme, and `--signed-out` takes it without signing in (the sign-in page).
 tabs, which no unit check reaches. It takes about 2 minutes with the transcription
 (`--no-transcribe` skips it). `bench:roll` opens `/dev/roll-bench`, so it needs a development build.
 
-`check:render` exists because a notation renderer fails loudly at draw time and **silently at layout
-time**. A wrong option name throws and you see it; a score that draws no noteheads, or loses a hand,
-or stops beaming, renders a blank-looking page with no error at all. Neither typecheck nor lint can
-see either one.
-
-It draws a real schema 2.0 envelope and hands the renderer each note's printed figure, the same way
-`TimeScoreView` does, so it guards the path the app actually uses.
-
-It was broken from P6.9 until 2026-09-13: its fixture was still a 1.x `tempoBpm` / `granularity`
-envelope built for `GridNotationEditor`, and the package had refused it since the 1.x reader was
-deleted. Nothing said so, which is the failure mode this check exists to prevent, one level up.
+`check:render` (the old renderer drawn in jsdom) and `check:note-names` (the note toolbox's names
+against the old sheet's spelling) were removed with the old sheet in implementation 03, Phase 10.
 
 ---
 
 ## 11. Where to look deeper
 
 - [projects.md](../../../context/frontend/projects.md): Projects and the steps of a project
-- [grid-notation.md](grid-notation.md): how the sheet is actually drawn, and the stale-`dist` trap
+- [rendering.md](../../../context/frontend/rendering.md): how the sheet is drawn now (by the backend)
+- [deprecated/grid-notation.md](../../deprecated/grid-notation.md): the vexflow-v2 renderer of the old sheet (removed)
 - [score-pdf.md](score-pdf.md): the PDF writer
 - [../backend/endpoints.md](../backend/endpoints.md): what the API client calls
-- [../backend/rhythm-and-annotations.md](../backend/rhythm-and-annotations.md): what the toolboxes save
+- `aitu-backend/src/aitu_backend/sheet/README.md` sections 12 to 17: what the toolboxes write (`sheet.f1`)

@@ -3,7 +3,7 @@
 import NotesEditor from "./NotesEditor";
 
 export function NotesTab() {
-  return <NotesEditor step="notes" />;
+  return <NotesEditor />;
 }
 
 export default NotesTab;

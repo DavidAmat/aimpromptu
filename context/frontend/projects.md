@@ -3,8 +3,8 @@
 A **project** is the work of turning a song into a piano sheet: the bundle of its audio, its piano
 matrix notation and its metadata ([app context](../app/01-app-context.md)). Work in progress lives
 in the user's **Personal Vault**, which is the **Projects** page; a project takes a song from its
-audio to its piano sheet in four steps: **Source, Audio, Notes, Sheet**. The fifth step, Hands, was removed by
-implementation 03, Phase 5: Sonnet decides the hands with the sheet.
+audio to its piano sheet in four steps: **Source, Audio, Notes, Sheet**. A fifth step, Hands, left the flow in
+implementation 03, Phase 5 (the AI decides the hands with the sheet), and its code was removed in Phase 10.
 
 The steps were built in implementation 08 as the "flow page". Implementation 02 moved them to
 `/projects/:id/:step` (Phase 1), gave projects their own storage (Phase 3, the project bundle of
@@ -155,7 +155,7 @@ Until Sonnet decides them, the notes have no hand colours: the Notes step and No
 transcription in one colour.
 
 **4. Sheet** (implementation 03, Phase 5). The new piano sheet, without compases, drawn by the backend
-(`pages/piece/sheet/frames/`, [rendering.md](rendering.md) section "The new sheet"). It is on screen at once:
+(`pages/piece/sheet/frames/`, [rendering.md](rendering.md)). It is on screen at once:
 
 - **A new transcription** goes to Sonnet by itself. The algorithm's sheet is drawn first; Sonnet writes the
   hands and the reading in the background, part by part (about half a minute each). The part at Sonnet looks
@@ -173,13 +173,14 @@ transcription in one colour.
   model's name (Sonnet 5.5 today), because the model may change.
 - **To hear it**: Play (or Space) plays the recording with a cursor; the notes the cursor reaches are lit; a
   click on the sheet moves the recording there.
-- **The old sheet** (vexflow-v2), with every editing tool of [annotations.md](annotations.md), is one press
-  away on the floating bar (**Edit in the old sheet**; **Back to the new sheet** returns) until
-  implementation 03, Phase 8. It cannot be opened while Sonnet writes. Its saved sheet (`sheet.json`) opens
-  with its stale banner when Sonnet changed the hands it was saved for.
+- **To edit it**: the tools of [annotations.md](annotations.md); every change is written at once as one step
+  of undo.
+- **The old sheet** (vexflow-v2) was one press away on the floating bar (**Edit in the old sheet**) until
+  implementation 03, Phase 8B, and its code was removed in Phase 10. An old saved sheet (`sheet.json`) is still
+  read for its key, its renamed figure and its marks, and nothing writes a new one.
 
-The Sheet step is *running* while Sonnet writes, and *ready* once a new sheet is stored (or the old sheet still
-matches the notes).
+The Sheet step is *running* while the AI writes, *ready* once a sheet is stored (`sheet.f1`, or an old
+`sheet.json`), and *missing* otherwise; it is never *stale* any more.
 
 **Then, Save to library.** Once the sheet is ready, **Save to library** asks **Artist**, **Song** and
 **Version name**, moves the project into My library (its audio written again with only the ranges in

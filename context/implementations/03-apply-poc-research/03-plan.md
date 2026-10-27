@@ -760,6 +760,16 @@ longer depend on `sheet.json`.
 4. Licenses before any release (`synthesis/05-recommendations.md` §5.6): the Verovio rules ported in `engrave/vrv.py`
    (LGPL-3.0), the Leipzig glyphs (SIL OFL), the prompt examples.
 
+*After the study (2026-10-27, report section 2):* six frontend files still imported vexflow-v2, all reached only
+through the old page `VexflowSheetPage` (drawn nowhere since 8B) and three shared helpers; the only old route the new
+sheet still called was the pasted lyrics words (`/time/{uuid}/lyrics`), which moves to `/sheet/{uuid}/words`. No
+project holds the `hands` step (42 sheet, 5 notes, 1 audio, 5 none). No product question was needed. Three more
+removals belong to the old sheet and were added to task 1: the Sheet step's `stale` state (the old sheet's banner),
+the page's unsaved `sheet.json` in the promote and split routes, and Bravura in the PDF writer (the new sheet's
+glyphs are outlines). The hand split warmed after a transcription is now the one the new sheet reads. What stays on
+purpose: `aitu_backend/hands/`, the reader of an old `sheet.json` and `editing/marks.py` (Phase 9), and `projects.step`
+still allowing `hands` in its database check (no row holds it; no migration for a value nobody writes).
+
 # 8. Decision points (raised in the phases, after their study)
 
 | Phase | Decision |
@@ -870,3 +880,5 @@ repository."
 | 8 | Phase 8B: the Current and the takes of a passage are written with the song's reference figure (at the take's speed) and its armadura where the passage starts; the take's AI only on its button | The old page named the Proposal with the song's figure so the two read alike; the user's answer of Phase 8 (a take's sheet is the algorithm's) |
 | 8 | Phase 8B: `check:requests` uses "Bonfire Heart"; `check:passage --played` runs without the GPU; `check:transpose`, `check:lyrics`, `bench:sheet` removed | 7 Years has a real public version since 2026-10-18; the GPU is often held by another project; the old sheet is gone and `check:frames-toolbox` covers Transpose and Lyrics |
 | 9 | Phase 9 task 2: the old clefs and octave lines are dropped, not mapped; the user's marks (titles, lyrics, space between lines, figures, fingers, beams) are carried, beams only onto a sheet the AI did not write; the same function draws an unstored part and feeds the migration | The study: 36 of 47 `sheet.json` were written by a script from the old automatic rules; the user's answer of 2026-10-26; a history restore or an old `.aitu` brings a `sheet.json` back with no `sheet.f1` |
+| 10 | Phase 10 task 1 also removes the Sheet step's `stale` state, the page's unsaved `sheet.json` in the promote and split routes, and Bravura in the PDF writer; the lyrics words move to `/sheet/{uuid}/words`; the hand split warmed after a transcription is the new sheet's | The study: each served only the old sheet (its banner, its unsaved edits, its music font); the warm-up filled a cache key the new sheet never reads, so the first sheet after a transcription computed the split again |
+| 10 | Phase 10 task 1 keeps `split_of`, `hands_of` and `run_pipeline` in `transcription/pipeline.py` and the `hands` value of the `projects.step` check | No caller in the app, but the tests use them as the shared split; a database migration for a value no row holds is risk for nothing |
