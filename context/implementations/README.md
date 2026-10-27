@@ -1,6 +1,6 @@
 # context/implementations
 
-Every piece of planned work this project has run. The work is in three groups, and each group is a
+Every piece of planned work this project has run. The work is in four groups, and each group is a
 numbered folder:
 
 - **`01-mvp/`** holds the nine implementations that built the MVP: one audio file to one piano
@@ -13,6 +13,8 @@ numbered folder:
 - **`03-apply-poc-research/`** replaces the sheet's renderer, vexflow-v2, with the chain built by the
   research folder `poc-aitu-research` (an algorithm, an LLM step with Sonnet 5.5, an SVG engine), on a
   sheet with no compases, tempo, puntillos or silencios. Opened 2026-10-23, done 2026-10-27.
+- **`04-app-enhancements/`** polishes the sheet page and the sheet the AI writes, after 03. Opened
+  2026-10-27.
 
 **Open a folder's own `README.md` first**, when it has one. It says whether that work is live or
 closed.
@@ -44,9 +46,17 @@ closed.
 |---|---|---|---|---|
 | 03 | [`03-apply-poc-research/`](03-apply-poc-research/README.md) | vexflow-v2 replaced by the chain of research plan 01: the core in the backend, the sheet without compases, the new engine, Sonnet 5.5 in the background, every editing tool and screen moved, the saved data migrated, vexflow-v2 removed. One branch, `feat/migrate-new-logic` | 2026-10-23 | **Done** (2026-10-27). Phases 0 to 4 done (2026-10-23 to 25); Phase 5 done and merged into `master` (2026-10-25); Phase 6 done and merged into `master` (2026-10-25); Phase 7 done and merged into `master` (2026-10-26); Phase 8 done and merged into `master` (2026-10-26); Phase 9 done and merged into `master` (2026-10-27); Phase 10 done and merged into `master` (2026-10-27). [`03-checklist.md`](03-apply-poc-research/03-checklist.md) is the status lookup |
 
+## 04-app-enhancements: polish after the new sheet
+
+| # | Folder | What it is | Opened | State |
+|---|---|---|---|---|
+| 04 | [`04-app-enhancements/`](04-app-enhancements/README.md) | The sheet page (Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag, the hidden floating toolbox back) and the AI's sheet (a new decoration-note rule on every sheet, prompt version 6 with simplicity and the amateur pianist rule, run on 7 Years). One branch per phase, `feat/04-phase-N` | 2026-10-27 | **Planned.** No phase started. [`04-checklist.md`](04-app-enhancements/04-checklist.md) is the status lookup |
+
 ## How to read this folder
 
-- **"What is being built now?"** → nothing open: implementation 03 is done (2026-10-27); its plan is
+- **"What is being built now?"** → implementation 04 (planned 2026-10-27): its plan is
+  [`04-app-enhancements/04-plan.md`](04-app-enhancements/04-plan.md), its checklist
+  [`04-checklist.md`](04-app-enhancements/04-checklist.md). Implementation 03 is done (2026-10-27); its plan is
   [`03-apply-poc-research/03-plan.md`](03-apply-poc-research/03-plan.md), its checklist
   [`03-checklist.md`](03-apply-poc-research/03-checklist.md), and its notes for later are in
   [`03-implementation-phase-10.md`](03-apply-poc-research/03-implementation-phase-10.md). Implementation 02 is done (Phase 18, the

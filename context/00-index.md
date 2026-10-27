@@ -100,7 +100,19 @@ assumes.
 
 | File | Description |
 |------|-------------|
-| [implementations/README.md](implementations/README.md) | **Start here.** The three groups (`01-mvp/`, `02-private-web-app/`, `03-apply-poc-research/`), every implementation with its state, and the numbering rule |
+| [implementations/README.md](implementations/README.md) | **Start here.** The four groups (`01-mvp/`, `02-private-web-app/`, `03-apply-poc-research/`, `04-app-enhancements/`), every implementation with its state, and the numbering rule |
+
+### 04 — App enhancements — PLANNED (opened 2026-10-27)
+
+Polish after 03: on the sheet page, Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag; in
+the sheet, a new decoration-note rule and prompt version 6 (simplicity, the amateur pianist), run on 7 Years.
+
+| File | Description |
+|------|-------------|
+| [implementations/04-app-enhancements/README.md](implementations/04-app-enhancements/README.md) | What it is, and every file in the folder |
+| [implementations/04-app-enhancements/04-1-prompt.md](implementations/04-app-enhancements/04-1-prompt.md) | The brief, in the user's own words, with the answers of the first discussion |
+| [implementations/04-app-enhancements/04-plan.md](implementations/04-app-enhancements/04-plan.md) | **The plan.** The decisions of 2026-10-27, the design notes, four phases |
+| [implementations/04-app-enhancements/04-checklist.md](implementations/04-app-enhancements/04-checklist.md) | THE status lookup for this implementation, and the open decisions |
 
 ### 03 — The new sheet (applying the research) — LIVE (opened 2026-10-23)
 
@@ -110,6 +122,7 @@ with no compases, tempo, puntillos or silencios on the sheet and no Hands step. 
 | File | Description |
 |------|-------------|
 | [implementations/03-apply-poc-research/README.md](implementations/03-apply-poc-research/README.md) | What it is, and every file in the folder |
+| [implementations/03-apply-poc-research/03-context.md](implementations/03-apply-poc-research/03-context.md) | **Read first for any work on the sheet.** The summary of implementation 03 for later implementations, with a link to each phase report |
 | [implementations/03-apply-poc-research/03-prompt.md](implementations/03-apply-poc-research/03-prompt.md) | The brief, in the user's own words (Spanish) |
 | [implementations/03-apply-poc-research/03-plan.md](implementations/03-apply-poc-research/03-plan.md) | **The plan.** The decisions of 2026-10-23, the binding rules, eleven phases from the core in the backend to vexflow-v2 removed |
 | [implementations/03-apply-poc-research/03-checklist.md](implementations/03-apply-poc-research/03-checklist.md) | THE status lookup for this implementation, and the open decisions |
