@@ -23,8 +23,9 @@ The chain, behind the same function as the bars chain::
    model writes the whole answer again, at most ``MAX_CHECKS`` replies.
 4. **The sheet** (:func:`assemble`): the hands, beams, clefs, 8va, ornaments and armaduras of each window (the
    LLM's, or the algorithm's for a failed one) on the notes; then the rules: figures from the lengths capped at
-   the next onset of the hand (they need the LLM's hands), grace notes, beam groups cut where the figures break
-   them (one figure per group, :func:`trim_beams`), and the spelling. ``frames.check`` holds on the result.
+   the next onset of the hand (they need the LLM's hands), grace notes and lone short notes written longer
+   (implementation 04, Phase 2), beam groups cut where the figures break them (one figure per group,
+   :func:`trim_beams`), and the spelling. ``frames.check`` holds on the result.
 
 A ``complete`` that raises :class:`SkipWindow` fails that window only (a refusal); any other exception (no
 credits, no network) keeps the algorithm for that window and every later one, and is reported in the result.
@@ -50,6 +51,7 @@ from aitu_backend.sheet.proposal.frames import (
     assign_figures,
     clefs_and_ottavas,
     find_graces,
+    lengthen_lone,
     propose_frames,
     respell,
 )
@@ -67,6 +69,7 @@ __all__ = [
     "SkipWindow",
     "WindowLog",
     "assemble",
+    "beam_pairs",
     "check_answer",
     "feedback",
     "gap_peaks",
@@ -680,6 +683,33 @@ def trim_beams(sheet: Sheet) -> Counter:
     return why
 
 
+def beam_pairs(
+    sheet: Sheet, pairs: list[tuple[list[Note], list[Note]]], graces: set[tuple[int, int, int]]
+) -> int:
+    """Two short notes written just before a longer one (``proposal.frames.lengthen_lone``) that a stored sheet held
+    as grace notes (``graces``: ``(staff, midi, frame)``; the rule before implementation 04, Phase 2) and that are in
+    no beam group: beamed together, when both are corcheas or shorter of one figure or of two figures one step apart
+    (:func:`one_figure`). The AI never grouped a grace note, so they would print two flags side by side. Only once:
+    a sheet stored again holds them as written notes, and a beam the user takes away later stays away. Returns how
+    many pairs were beamed."""
+    counter = max((n.beam for n in sheet.notes if n.beam is not None), default=0)
+    done = 0
+    for first, second in pairs:
+        notes = first + second
+        figs = (first[0].figure, second[0].figure)
+        if any(n.beam is not None or n.grace for n in notes) or min(figs) < 8:
+            continue
+        if any((n.staff, n.midi, n.frame) not in graces for n in notes):
+            continue
+        if abs(steps(max(figs), min(figs))) > 1:
+            continue
+        counter += 1
+        for n in notes:
+            n.beam = counter
+        done += 1
+    return done
+
+
 OTTAVA_JOIN_MS = 2000.0  # two 8va lines of one hand closer than this become one
 OTTAVA_LOWEST = 72  # C5: under 8va it is written C4, one ledger line below the treble staff
 
@@ -713,11 +743,12 @@ def assemble(
     algo: FramesProposal, parts: list[Part], *, clefs: str = "llm", join: bool = True
 ) -> tuple[Sheet, dict]:
     """The sheet from the decisions of every window (``parts`` in order, covering the song), then the rules:
-    figures, grace notes, beam groups cut by the figures, spelling. ``clefs="rule"`` replaces the windows' clefs
-    and 8va by the algorithm's rule on the decided hands (``proposal.frames.clefs_and_ottavas``). ``join=False``
-    keeps the 8va lines as decided (a stored sheet laid again: its lines were joined when it was written, and a
-    line the user took away must not come back). The user's marks of a decided note (implementation 03, Phase 7:
-    a finger, a figure set by hand, the grace note switch) are kept. Returns the sheet and the counts.
+    figures, grace notes, lone short notes written longer, beam groups cut by the figures, spelling.
+    ``clefs="rule"`` replaces the windows' clefs and 8va by the algorithm's rule on the decided hands
+    (``proposal.frames.clefs_and_ottavas``). ``join=False`` keeps the 8va lines as decided (a stored sheet laid
+    again: its lines were joined when it was written, and a line the user took away must not come back). The
+    user's marks of a decided note (implementation 03, Phase 7: a finger, a figure set by hand, the grace note
+    switch) are kept. Returns the sheet and the counts.
     """
     base = algo.sheet
     quarter_ms = algo.quarter_ms
@@ -727,6 +758,7 @@ def assemble(
     key_changes: list[tuple[int, int]] = []
     clefs = dict(parts[0].clefs) if parts else dict(base.clefs)
     key = parts[0].key if parts else (base.key or 0)
+    graces: set[tuple[int, int, int]] = set()  # the grace notes of a stored sheet laid again
     for k, p in enumerate(parts):
         now, kk = _state_at(clefs, clef_changes, key, key_changes, p.start)
         if k:
@@ -739,6 +771,8 @@ def assemble(
         key_changes += p.key_changes
         for i, d in p.notes.items():
             n = base.notes[i]
+            if d.grace:
+                graces.add((d.staff, n.midi, n.frame))
             b = None
             if d.beam is not None and d.staff in (1, 2):
                 b = beam_id.setdefault((k, d.staff, d.beam), len(beam_id) + 1)
@@ -786,7 +820,10 @@ def assemble(
             else:
                 last = n.figure
     info: dict = {"grace columns": find_graces(sheet, quarter_ms)}
+    pairs: list[tuple[list[Note], list[Note]]] = []
+    info["lengthened columns"] = lengthen_lone(sheet, quarter_ms, pairs=pairs)
     info.update({f"beams: {k}": v for k, v in trim_beams(sheet).items()})
+    info["pairs beamed"] = beam_pairs(sheet, pairs, graces)
     respell(sheet)
     if clefs == "rule":
         info.update({f"clefs: {k}": v for k, v in clefs_and_ottavas(sheet).items()})

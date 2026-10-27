@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from aitu_backend.audio import store as audio_store
 from aitu_backend.editing import history, parts, paste
-from aitu_backend.part_sheet import lengths
+from aitu_backend.part_sheet import build, lengths
 from aitu_backend.part_sheet import store as sheet_store
 from aitu_backend.pmn import events_file
 from aitu_backend.schemas.metadata import AudioSource
@@ -110,7 +110,8 @@ def test_extract_and_put_in_carry_the_armadura_and_clefs_of_both_sides() -> None
 
 def _marked(uuid: str) -> str:
     """The AI's sheet of the part with decisions the rules never compute: fingers from 28 s and in [10.4 s, 12 s),
-    an armadura from 32 s to 36 s, a lyrics piece at 24 s. Returns the stored text."""
+    an armadura from 32 s to 36 s, a lyrics piece at 24 s, settled by the rules as an edit stores it (the page draws
+    a stored sheet laid again on its notes). Returns the stored text."""
     stored = sheet_store.load(uuid)
     assert stored is not None and stored.record.enhanced
     sheet = f1.read(stored.text)
@@ -119,7 +120,7 @@ def _marked(uuid: str) -> str:
             n.finger = 3 if n.frame >= 700 else 2
     sheet.key_changes = [(800, 2), (900, 0)]
     sheet.lyrics = [Lyric(600, 650, "after the paste")]
-    text = f1.write(sheet, mode="frames")
+    text = f1.write(build.reapply(sheet, pipeline.starting_hands(uuid)), mode="frames")
     sheet_store.save(uuid, text, stored.record)
     return text
 

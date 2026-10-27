@@ -9,10 +9,13 @@ its chord (:func:`aitu_backend.sheet.sheet.frames.from_notes`); then, per hand:
    lengths under the pedal: without this cap 37 % of the notes of a run of even gaps changed figure inside the run),
    as the nearest plain figure (:func:`figures.figure_of_ms`); one figure per chord, the one most of its notes have
    (ties: the longer); and one figure per run of three or more even gaps, the one most of the run has.
-3. **Grace notes**: one or two semicorcheas or shorter, each two figures or more shorter than the note after them and
-   sounding just before it (the gap is shorter than the main note's figure), become acciaccaturas of that note (a
-   longer run of such notes stays written). An octave played unevenly or a quick repeated note is an acciaccatura
-   too.
+3. **Grace notes** (implementation 04, Phase 2: the user's rule): one or two fusas or shorter, each two figures or
+   more shorter than the note after them and sounding just before it (the gap is shorter than the main note's
+   figure), become acciaccaturas of that note; a run of three or more semicorcheas or shorter stays written. An
+   octave played unevenly or a quick repeated note is an acciaccatura too. **Lone short notes**: one or two notes
+   more than two figures shorter than the note after them, sounding just before it and not grace notes, are written
+   two figures shorter than that note (a semicorchea before a blanca is a corchea); the last note of a longer run
+   keeps its figure.
 4. **Beam groups** (plan section 3.11, the simple rules): consecutive corcheas or shorter of one hand, not farther
    apart than a corchea, of one figure (a single note one figure away may open or close a group); cut at a jump of
    more than an octave, where the direction turns after a run of three steps, and into near-equal parts of at most 8.
@@ -47,6 +50,7 @@ __all__ = [
     "choose_keys",
     "clefs_and_ottavas",
     "find_graces",
+    "lengthen_lone",
     "propose_frames",
     "respell",
 ]
@@ -54,7 +58,8 @@ __all__ = [
 RUN_TOLERANCE = 0.12  # gaps within 12 % of the run's first gap are even
 RUN_MIN = 3  # columns
 MAX_GRACES = 2
-GRACE_FIGURE = 16  # a grace note is a semicorchea or shorter
+RUN_FIGURE = 16  # the notes of a quick run before a note: semicorcheas or shorter
+GRACE_FIGURE = 32  # a grace note is a fusa or shorter (implementation 04, Phase 2)
 JUMP = 12  # semitones: a beam is cut at a jump of more than an octave
 TURN_RUN = 3  # steps in one direction before a turn cuts the beam
 KEY_SWITCH = 12.0  # signs: the cost of one armadura change
@@ -138,10 +143,10 @@ def assign_figures(
 
 
 def find_graces(sheet: Sheet, quarter_ms: float, split: float = SPLIT) -> int:
-    """Step 3: grace notes by the two-step rule (plan section 3.3; the user, Phase 2 review). The user's switch
-    (implementation 03, Phase 7) wins: a column marked ``asgrace`` is a grace note of the next note of its hand
-    whatever its figure, one marked ``nograce`` or with a figure the user set (``fix``) never is. Returns how many
-    columns became grace notes."""
+    """Step 3: grace notes by the two-step rule (plan section 3.3; the user, Phase 2 review), only for fusas or
+    shorter (implementation 04, Phase 2). The user's switch (implementation 03, Phase 7) wins: a column marked
+    ``asgrace`` is a grace note of the next note of its hand whatever its figure, one marked ``nograce`` or with a
+    figure the user set (``fix``) never is. Returns how many columns became grace notes."""
     count = 0
     for staff in (1, 2):
         cols = _columns(sheet, staff)
@@ -164,14 +169,15 @@ def find_graces(sheet: Sheet, quarter_ms: float, split: float = SPLIT) -> int:
                     chain.append(j)
                     j -= 1
                     continue
-                if never[j] or fig[j] < max(GRACE_FIGURE, 4 * main):
+                if never[j] or fig[j] < max(RUN_FIGURE, 4 * main):
                     break
                 # it sounds just before the next note: the gap is shorter than the main note's figure
                 if figure_of_ms(starts[j + 1] - starts[j], quarter_ms, split) <= main:
                     break
                 chain.append(j)
                 j -= 1
-            if chain and (len(chain) <= MAX_GRACES or any(forced[j] for j in chain)):
+            quick = len(chain) <= MAX_GRACES and all(fig[j] >= GRACE_FIGURE for j in chain)
+            if chain and (quick or any(forced[j] for j in chain)):
                 for j in chain:
                     for n in cols[j][1]:
                         n.grace = "acc" if len(chain) == 1 else "unacc"
@@ -179,6 +185,61 @@ def find_graces(sheet: Sheet, quarter_ms: float, split: float = SPLIT) -> int:
                         n.gslot = 0
                 count += len(chain)
             k += 1
+    return count
+
+
+def lengthen_lone(
+    sheet: Sheet,
+    quarter_ms: float,
+    split: float = SPLIT,
+    *,
+    pairs: list[tuple[list[Note], list[Note]]] | None = None,
+) -> int:
+    """Step 3, after :func:`find_graces` (implementation 04, Phase 2; the user's rule): one or two notes more than two
+    figures shorter than the note after them, sounding just before it (as for a grace note), are written two figures
+    shorter than that note: a semicorchea before a blanca is a corchea, a semicorchea or a corchea before a redonda a
+    negra. The sheet has no compases, so the space between the notes already shows how quick they are; a grace note
+    is for quick ornaments only. A run of three or more stays as it is, its last note too, so its beam group stays
+    whole. A figure the user set (``fix``) is never changed. Returns how many columns were lengthened; ``pairs``
+    gets the notes of each two such columns before one note, in order (the AI's sheet beams them together,
+    :func:`aitu_backend.sheet.llm.frames.beam_pairs`)."""
+    count = 0
+    for staff in (1, 2):
+        cols = _columns(sheet, staff)
+        starts = [ns[0].on_ms for _, ns in cols]
+        fig = [ns[0].figure for _, ns in cols]
+        grace = [ns[0].grace is not None for _, ns in cols]
+        fixed = [any(n.fixed for n in ns) for _, ns in cols]
+
+        def before(k: int, short: int) -> list[int]:
+            """The columns just before column ``k`` with a figure of ``short`` or shorter, each sounding before the
+            next one by less than the figure of column ``k``."""
+            chain = []
+            j = k - 1
+            while j >= 0 and not grace[j] and not fixed[j] and fig[j] >= short:
+                if figure_of_ms(starts[j + 1] - starts[j], quarter_ms, split) <= fig[k]:
+                    break
+                chain.append(j)
+                j -= 1
+            return chain
+
+        for k in range(1, len(cols)):
+            if grace[k]:
+                continue
+            longest = 4 * fig[k]  # two figures shorter than the note
+            chain = before(k, 2 * longest)
+            # the end of a quick run (semicorcheas or shorter, as for the grace notes) is not a lone note
+            run = before(k, max(RUN_FIGURE, longest))
+            if len(chain) > MAX_GRACES or len(run) > MAX_GRACES:
+                continue
+            two = run if len(run) == 2 else chain if len(chain) == 2 else []
+            if two and pairs is not None:
+                pairs.append((cols[two[1]][1], cols[two[0]][1]))
+            for j in chain:
+                for n in cols[j][1]:
+                    n.figure = longest
+                fig[j] = longest
+            count += len(chain)
     return count
 
 
@@ -488,6 +549,7 @@ def propose_frames(
     sheet.quarter_ms = float(quarter_ms)
     assign_figures(sheet, quarter_ms, split)
     info["grace columns"] = find_graces(sheet, quarter_ms, split)
+    info["lengthened columns"] = lengthen_lone(sheet, quarter_ms, split)
     info.update(beam_groups(sheet, quarter_ms, split))
     if key is None:
         sheet.key, sheet.key_changes, kinfo = choose_keys(sheet)

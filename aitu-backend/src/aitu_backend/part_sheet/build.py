@@ -2,8 +2,11 @@
 
 Three cases, in order (:func:`current`):
 
-1. **Stored and current**: ``sheet.f1`` was written for the ``handsRevision`` that ``notes.pmn`` has now. It is drawn
-   as it is.
+1. **Stored and current**: ``sheet.f1`` was written for the ``handsRevision`` that ``notes.pmn`` has now. It is laid
+   again on the notes as in case 2 (:func:`reapply`), so the rules of the app run with today's code: a rule changed
+   later (implementation 04, Phase 2: the grace notes and the lone short notes) reaches every stored sheet when it
+   is drawn, and the stored file is not written again. Measured on the 16 stored sheets of 2026-10-27: with the
+   same rules the result is the stored sheet, note for note, in 0.03 to 0.1 s.
 2. **Stored, but the notes or the hands changed since** (a notes edit, a hand moved in the vexflow-v2 editor, a
    Sonnet run that ended after an edit): the stored decisions are laid again on the current notes
    (:func:`reapply`). The hand of a note is always the one of ``notes.pmn`` (plan section 3.7); a note that kept its
@@ -25,6 +28,7 @@ another width does not run the algorithm again.
 
 from __future__ import annotations
 
+import hashlib
 import threading
 from collections import Counter, OrderedDict, defaultdict
 from copy import deepcopy
@@ -64,6 +68,7 @@ __all__ = [
     "drawn_notes",
     "fit_clefs",
     "hands_of_sheet",
+    "mark_settled",
     "reading_of",
     "reading_summary",
     "reapply",
@@ -383,6 +388,26 @@ def _stamp(part_id: str) -> tuple[int, int, int]:
     )
 
 
+#: The texts an edit stored as ``reapply``'s own result for the notes of now (by part): case 1 draws them as they are,
+#: since laying them again gives them back (measured on every stored sheet, implementation 04, Phase 2), and an edit
+#: then draws in one ``reapply``, not two. Kept in memory: after a reload a stored sheet is laid again once.
+_settled: OrderedDict[tuple[str, str], None] = OrderedDict()
+SETTLED_SIZE = 64
+
+
+def _digest(part_id: str, text: str) -> tuple[str, str]:
+    return part_id, hashlib.sha1(text.encode("utf-8")).hexdigest()
+
+
+def mark_settled(part_id: str, text: str) -> None:
+    """``text``, just stored for ``part_id``, is ``reapply``'s result on the part's notes as they are."""
+    with _cache_lock:
+        _settled[_digest(part_id, text)] = None
+        _settled.move_to_end(_digest(part_id, text))
+        while len(_settled) > SETTLED_SIZE:
+            _settled.popitem(last=False)
+
+
 def current(part_id: str) -> Drawn:
     """The sheet of a part as it is stored now (no running job). Raises ``FileNotFoundError`` without notes."""
     stamp = _stamp(part_id)
@@ -406,7 +431,12 @@ def _compute(part_id: str) -> Drawn:
     if stored is not None:
         record = stored.record
         segments = [(int(a), int(b), str(s)) for a, b, s in record.windows]
-        if record.hands_revision is not None and record.hands_revision == header.hands_revision:
+        current = (
+            record.hands_revision is not None and record.hands_revision == header.hands_revision
+        )
+        with _cache_lock:
+            settled = _digest(part_id, stored.text) in _settled
+        if current and settled:
             sheet = f1.read(stored.text)
             return Drawn(
                 stored.text,
@@ -416,14 +446,14 @@ def _compute(part_id: str) -> Drawn:
                 sheet.quarter_ms or record.quarter_ms,
                 record,
             )
-        if record.decided:
+        if current or record.decided:
             sheet = reapply(f1.read(stored.text), pipeline.starting_hands(part_id))
             return Drawn(
                 f1.write(sheet, mode="frames"),
                 record.source,
                 segments,
-                True,
-                sheet.quarter_ms,
+                not current,
+                sheet.quarter_ms or record.quarter_ms,
                 record,
             )
         sheet, quarter_ms = _algorithm_sheet(part_id, quarter_ms=record.quarter_ms, key=record.key)

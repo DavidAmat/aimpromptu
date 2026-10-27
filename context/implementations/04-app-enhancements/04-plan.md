@@ -320,3 +320,19 @@ Prompt version 6 and the limits on note changes (sections 3.3, 3.4 and 4.3).
   pick. A drag that starts on the cursor still never picks notes or draws a box.
 - New browser check `npm run check:frames-page` (the header, the floating toolbox hidden and shown, the wheel zoom,
   the cursor dragged), listed in `context/04-local-development.md` with the others.
+
+**Phase 2** (2026-10-27; report [`04-implementation-phase-2.md`](04-implementation-phase-2.md)):
+
+- "A run of three or more" is today's chain (semicorcheas or shorter, two figures or more shorter than the next
+  note, sounding just before it). The lengthening walks back only over notes more than two figures shorter, and it
+  does nothing when that run has three columns or more, so the end of a run (semicorcheas, then a semifusa and a
+  fusa before a negra) is never lengthened. A pair that is not all fusas (a fusa and a semicorchea before a negra)
+  is written with its own figures.
+- Every sheet (section 3.2): the drawing lays every stored sheet again on its notes (`build.reapply`, case 1 as case
+  2). Measured first: with the old rule this gives every stored sheet back, note for note, in 0.04 to 0.13 s. A text
+  an edit just stored (already laid again) is drawn as it is, so one edit stays at about 0.28 s.
+- New, small: two written notes that a stored sheet held as one pair of decoration notes get one beam (the AI never
+  grouped a decoration note, so they printed two flags side by side; 27 pairs). Only once: an edit stores them as
+  written notes, and a beam the user takes away stays away.
+- The prompt's sentence on decoration notes stays as it is until prompt version 6 (Phase 3); the AI's input does not
+  change with the rule.

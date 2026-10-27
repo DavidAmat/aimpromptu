@@ -173,8 +173,11 @@ F1 frames sheet:  F1 frames frameMs=40 quarterMs=500
   Sol#, Sib. Every note outside the armadura prints its sign every time (`spelling.sign`), and after a becuadro the
   first return of that note (same name and octave, same hand) to its armadura name prints its sostenido or bemol
   again when it is in the same beam group or the next note (rule 7, `frames.printed_signs`: what the engine prints).
-- **The algorithm** (`proposal.frames`) also writes grace notes (a semicorchea or shorter, two figures shorter than
-  the next note and sounding just before it), beam groups (corcheas and shorter no farther apart than a corchea, of one
+- **The algorithm** (`proposal.frames`) also writes grace notes (one or two fusas or shorter, two figures shorter
+  than the next note and sounding just before it; implementation 04, Phase 2), lone short notes written longer
+  (`lengthen_lone`: one or two other notes more than two figures shorter than the next note, sounding just before
+  it, are written two figures shorter than it, a semicorchea before a blanca a corchea; the end of a run of three or
+  more keeps its figures), beam groups (corcheas and shorter no farther apart than a corchea, of one
   figure with at most one odd note at an edge; cut at a jump of more than an octave, at a turn after three steps, and
   into parts of at most 8), the armadura of each passage (fewest signs, a cost per change), clefs and 8va (the
   left-hand rules of the prompt, version 4).
@@ -269,8 +272,9 @@ The core is used by `aitu_backend/part_sheet/` (outside the core) and the routes
 reasons: `context/implementations/03-apply-poc-research/03-implementation-phase-5.md`.
 
 ```text
-GET /sheet/{part}?width=N ── part_sheet.build.current ──┬─ sheet.f1 current (handsRevision of notes.pmn) ── as stored
-                                                        ├─ sheet.f1 for older notes or hands ── build.reapply
+GET /sheet/{part}?width=N ── part_sheet.build.current ──┬─ sheet.f1 (current, or for older notes or hands)
+                                                        │    ── build.reapply: the rules of today on the stored
+                                                        │       decisions (the file is not written)
                                                         └─ none ── propose_frames on the starting hands (the key
                                                                    and a renamed figure of an old sheet.json kept)
                          (while Sonnet writes: job.LiveRun.text, the parts decided so far + the algorithm's)

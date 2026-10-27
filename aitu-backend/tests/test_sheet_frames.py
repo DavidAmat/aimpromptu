@@ -116,6 +116,88 @@ def test_grace_notes_by_the_two_step_rule() -> None:
     assert not any(n.grace for n in algo.propose_frames(notes_of(run), quarter_ms=q).sheet.notes)
 
 
+def lone(
+    first: float, main: float, *, before: int = 1, gap: float = 125.0
+) -> list[tuple[int, float]]:
+    """The (grace, figure) of each note of ``before`` short notes ``first`` ms long, ``gap`` ms apart, then a main
+    note ``main`` ms long, in the right hand (negra 500 ms)."""
+    rows = [(74 + i, 1000.0 + i * gap, first, R) for i in range(before)]
+    rows += [(72, 1000.0 + before * gap, main, R), (60, 8000.0, 500.0, R)]
+    sheet = algo.propose_frames(notes_of(rows), quarter_ms=500.0).sheet
+    return [(n.grace, n.figure) for n in sorted(sheet.notes, key=lambda n: n.frame)][: before + 1]
+
+
+def test_a_lone_short_note_is_written_two_figures_shorter_than_its_note() -> None:
+    # implementation 04, plan section 3.1: the user's table (negra 500 ms)
+    assert lone(120.0, 1000.0) == [(None, 8), (None, 2)]  # semicorchea, blanca: a corchea
+    assert lone(120.0, 2000.0) == [(None, 4), (None, 1)]  # semicorchea, redonda: a negra
+    assert lone(240.0, 2000.0, gap=250.0) == [(None, 4), (None, 1)]  # corchea, redonda: a negra
+    assert lone(120.0, 500.0) == [(None, 16), (None, 4)]  # semicorchea, negra: no change
+    assert lone(60.0, 500.0, gap=60.0) == [("acc", 8), (None, 4)]  # fusa, negra: a grace note
+    # two short notes: both written two figures shorter; two fusas: two grace notes
+    assert lone(120.0, 1000.0, before=2) == [(None, 8), (None, 8), (None, 2)]
+    assert lone(60.0, 500.0, before=2, gap=60.0) == [("unacc", 16)] * 2 + [(None, 4)]
+    # a fusa and a semicorchea are not all fusas: written; the semicorchea is two figures shorter than the negra,
+    # and the fusa one figure shorter than the semicorchea, so both keep their figures
+    rows = [
+        (74, 1000.0, 60.0, R),
+        (76, 1060.0, 120.0, R),
+        (72, 1185.0, 500.0, R),
+        (60, 8000.0, 500.0, R),
+    ]
+    sheet = algo.propose_frames(notes_of(rows), quarter_ms=500.0).sheet
+    assert [(n.grace, n.figure) for n in sheet.notes[:3]] == [(None, 32), (None, 16), (None, 4)]
+
+
+def test_a_run_of_three_short_notes_keeps_its_figures() -> None:
+    # plan section 3.1, point 3: the last note of a run is not lengthened, so its beam group stays whole
+    assert lone(120.0, 1000.0, before=3) == [(None, 16)] * 3 + [(None, 2)]
+    assert lone(120.0, 1000.0, before=4) == [(None, 16)] * 4 + [(None, 2)]
+    beams = {
+        n.beam
+        for n in algo.propose_frames(
+            notes_of(
+                [(74 + i, 1000.0 + i * 125, 120.0, R) for i in range(4)] + [(72, 1500.0, 1000.0, R)]
+            ),
+            quarter_ms=500.0,
+        ).sheet.notes
+        if n.midi != 72
+    }
+    assert len(beams) == 1 and None not in beams
+    # the end of a quick run is not a lone note: two semicorcheas, a semifusa and a fusa before a negra
+    rows = [
+        (74, 1000.0, 120.0, R),
+        (76, 1125.0, 120.0, R),
+        (77, 1250.0, 40.0, R),
+        (79, 1295.0, 60.0, R),
+    ]
+    rows += [(72, 1355.0, 500.0, R), (60, 8000.0, 500.0, R)]
+    sheet = algo.propose_frames(notes_of(rows), quarter_ms=500.0).sheet
+    assert [(n.grace, n.figure) for n in sheet.notes[:5]] == [
+        (None, f) for f in (16, 16, 64, 32, 4)
+    ]
+
+
+def test_the_users_marks_win_over_the_grace_rule_and_the_lengthening() -> None:
+    def marked(first: float, main: float, gap: float, **mark: object) -> tuple[str | None, int]:
+        rows = [(74, 1000.0, first, R), (72, 1000.0 + gap, main, R), (60, 8000.0, 500.0, R)]
+        sheet = frames.from_notes(notes_of(rows))
+        short = next(n for n in sheet.notes if n.midi == 74)
+        for name, value in mark.items():
+            setattr(short, name, value)
+        algo.assign_figures(sheet, 500.0)
+        algo.find_graces(sheet, 500.0)
+        algo.lengthen_lone(sheet, 500.0)
+        return short.grace, short.figure
+
+    # a figure the user set is never lengthened, nor made a grace note
+    assert marked(120.0, 1000.0, 125.0, fixed=True, figure=16) == (None, 16)
+    # always a grace note: a semicorchea before a blanca
+    assert marked(120.0, 1000.0, 125.0, grace_rule="on") == ("acc", 8)
+    # never a grace note: a fusa before a negra is written, two figures shorter than the negra
+    assert marked(60.0, 500.0, 60.0, grace_rule="off") == (None, 16)
+
+
 # ------------------------------------------------------------------ beams
 
 
