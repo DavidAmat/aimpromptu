@@ -10,7 +10,7 @@ temporary piece, measures on the copy, and deletes the copy at the end (``--keep
 1. **The whole piece.** ``POST /matrix/transcribe``, then ``GET /matrix/progress/{job}`` read frame
    by frame: when the first rectangle arrives, how many ``chunk`` messages, the longest pause
    between two of them, the total time, and what the ``done`` frame says (revision, lag
-   correction). Then the first ``GET /time/{uuid}/score``, which the job's split warm-up should
+   correction). Then the first ``GET /sheet/{uuid}``, which the job's split warm-up should
    make fast. For Superestrella the notes are compared with the Phase 1 native run.
 2. **The same piece with a 5 s cut** from ``--cut-at`` seconds (plan section 13, "the joined audio
    makes a false note at a cut"): the notes that start within 100 ms after the join, against the
@@ -137,15 +137,14 @@ def main() -> None:
     result: dict[str, Any] = {"piece": source.name, "copy": uuid, "engineBefore": engine}
     try:
         whole = transcribe(client, uuid)
-        # The job warms the split at 40 ms (the default frame length) after `done`; 20 ms is not
-        # warmed. A page that asks at once waits for the warm-up that is still running (Phase 4
-        # report); here the page asks 2 s later, as a reader who looks at the notes first would.
+        # The job warms the split at 40 ms after `done`. A page that asks at once waits for the
+        # warm-up that is still running (Phase 4 report); here the page asks 2 s later, as a reader
+        # who looks at the notes first would. The sheet is the new one (implementation 03).
         time.sleep(2.0)
-        for frame_ms in (40, 20):
-            started = time.perf_counter()
-            sheet = client.get(f"/time/{uuid}/score?anchorMs=500&frameMs={frame_ms}")
-            sheet.raise_for_status()
-            whole[f"firstSheetRequestS{frame_ms}ms"] = round(time.perf_counter() - started, 3)
+        started = time.perf_counter()
+        sheet = client.get(f"/sheet/{uuid}?width=130")
+        sheet.raise_for_status()
+        whole["firstSheetRequestS"] = round(time.perf_counter() - started, 3)
         notes = notes_of(client, uuid)
         whole["notes"] = len(notes)
         result["whole"] = whole

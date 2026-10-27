@@ -40,8 +40,8 @@ ignoring E501/E203/W503), **mypy** (pydantic plugin, permissive on missing impor
 | Color scheme | Light by default; the user chooses **Light**, **Dark** or **System** in the user menu (implementation 02, Phase 4), and MUI keeps the choice. Pages style through the theme (`text.secondary`, `divider`, ...) and follow it by themselves. Drawing code (a canvas, an SVG) reads `ui` from `src/ui/tokens.ts` and calls `useScheme()` so that it re-renders on a change. The piano sheet stays white paper in both schemes. See [colors/color-palette.md](colors/color-palette.md) |
 | Requests | Only through `src/api/` (one module per backend router); no `fetch` in a component |
 | Routes | Only from `src/layout/routes.ts`; no URL literal in a component |
-| Music logic | Isolated under `src/music/` (`types`, `noteNames`, `renderOverrides`); `types.ts` mirrors the backend `schemas/` and must stay in step with it |
-| Rendering | `@aimpromptu/grid-notation` is reached from **one** file, `components/time/TimeScoreView.tsx`. Nothing else imports it |
+| Music logic | Isolated under `src/music/` (`noteNames`, `figures`, `transpose`). The types that mirror the backend's answers live in `src/api/` (for the sheet, `api/sheet.ts`) and must stay in step with it |
+| Rendering | The sheet is an SVG the backend draws (`GET /sheet/{uuid}`); the page shows it through `pages/piece/sheet/frames/FramesSheetView.tsx` and draws only what moves over it. No notation package is installed (`@aimpromptu/grid-notation` was removed in implementation 03, Phase 10) |
 | Figures | The printed figure of a note comes from the backend and is passed through. No component derives a note value from a column count |
 | Timestamps | Format only via `src/audio/time.ts` (`mm:ss.cc`, two decimals; a frame prints its **start** only — `f:N · mm:ss.cc`). Style via `timestampSx` / `FRAME_LABEL_WIDTH` in `src/ui/timestamps.ts`; a timestamp must never wrap. See [frontend/timestamps.md](frontend/timestamps.md) |
 | Effects | Never call `setState` synchronously in an effect body (ESLint errors); derive state during render instead — see `src/hooks/useProgress.ts` |
@@ -106,7 +106,7 @@ Root `.claude/` is **gitignored** today (see root `.gitignore`). Local inventory
 | Skill topic | When to activate |
 |-------------|------------------|
 | The time model | Anything touching columns, figures or the sheet — point at [backend/time-model.md](backend/time-model.md) |
-| Notation rendering | Changes to `TimeScoreView.tsx`, or to `@aimpromptu/grid-notation` in the sibling checkout |
+| Notation rendering | Changes to `aitu_backend/sheet/engrave/` or to `pages/piece/sheet/frames/` |
 | uv / FastAPI | Backend dependency or endpoint work |
 
 To version-control agent config, remove `.claude/` from `.gitignore` and commit only non-secret files (`settings.json`, commands, skills).
@@ -114,5 +114,5 @@ To version-control agent config, remove `.claude/` from `.gitignore` and commit 
 ## Where to look deeper
 
 - ESLint config: `aitu-frontend/eslint.config.js`
-- Backend models: [../documentation/services/backend/time-matrix.md](../documentation/services/backend/time-matrix.md)
+- Backend models: [../documentation/services/backend/time-matrix.md](../documentation/services/backend/time-matrix.md) (what stays of `schemas/time_matrix.py`) and `aitu-backend/src/aitu_backend/sheet/README.md`
 - Doc placement: [00-documentation-instructions.md](00-documentation-instructions.md)

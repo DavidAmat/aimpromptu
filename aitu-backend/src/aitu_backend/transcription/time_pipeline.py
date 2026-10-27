@@ -4,7 +4,7 @@
 raw onsets and sustains (events.json, kept forever)
   -> impose the granularity   group on raw times, snap to frames, keep the full sustain
   -> split the hands          everything after this point measures one hand at a time
-  -> the two hand matrices, ready to be measured (Phase 2) and labelled (Phase 3)
+  -> the two hand matrices: the hand split the new sheet starts from (`pipeline.starting_hands`)
 ```
 
 That is the whole of it, and the order is fixed (D-31). Two properties are worth stating plainly
@@ -14,46 +14,29 @@ because every later phase depends on them.
 the same raw events go in, the grouping window follows the frame length, and the result is the same
 music on a finer or coarser grid. No step may assume 40.
 
-**The split happens here, not later.** Gaps between onsets are measured per hand, because the gaps
-between a right-hand run and a held left-hand chord are not a rhythm and would bury the peak the
-user is meant to name. So the hands have to exist before anything is measured.
+**The split happens here, not later.** The new sheet (implementation 03) starts from one hand per
+note, so the hands have to exist before anything is written.
 
 The matrix that exists between those two steps, the whole keyboard before the split, never leaves
 the backend. There is no `raw` step in the stored format: a piece is always two hands, and a
 one-hand piece is two hands with one of them empty (contract §2).
 
-Phase 4 rewires `pipeline.py` around this module and deletes the 1.x path beside it.
+Phase 4 rewires `pipeline.py` around this module and deletes the 1.x path beside it. Implementation
+03, Phase 10 removed what this module built for the vexflow-v2 sheet (the score payload, the time
+matrix envelope, the attack times of a hand).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-import numpy as np
-
 from aitu_backend.matrix.hands import split_hands
 from aitu_backend.matrix.keys import LOWEST_MIDI
 from aitu_backend.matrix.model import PianoMatrix
-from aitu_backend.matrix.passages import ladder_ranges, one_passage
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS, validate_frame_ms
 from aitu_backend.hands import progress as hand_progress
 from aitu_backend.progress import BaseProgress, default_reporter
-from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN, SparseCooMatrix
-from aitu_backend.notation.figures import (
-    bands_for_passages,
-    gaps_of_hand,
-    onset_columns,
-    printed_notes_of_hand,
-)
-from aitu_backend.schemas.time_matrix import (
-    FigureLadder,
-    FigureOverride,
-    LayoutHints,
-    Passage,
-    TimeMatrixEnvelope,
-    TimeMatrixProcessingStep,
-    TimeScorePayload,
-)
+from aitu_backend.schemas.matrix import ONSET, SILENCE, SUSTAIN
 from aitu_backend.transcription.artifacts import DEFAULT_ARTIFACTS, ArtifactConfig
 from aitu_backend.transcription.engine import NoteEvent
 from aitu_backend.transcription.events_to_matrix import TimeBuildReport, events_to_time_matrix
@@ -61,13 +44,8 @@ from aitu_backend.transcription.leakage import DEFAULT_LEAKAGE, LeakageConfig
 
 __all__ = [
     "TimeHands",
-    "attack_seconds_of_hand",
-    "attack_times_of_hand",
     "impose_granularity_and_split",
-    "layout_hints_for",
-    "to_score_payload",
-    "trim_to_music",
-    "to_time_envelope",
+    "pin_hands",
 ]
 
 
@@ -226,213 +204,3 @@ def pin_hands(
             follower += 1
     return right, left
 
-
-def to_time_envelope(
-    hands: TimeHands,
-    *,
-    duration_seconds: float | None = None,
-    title: str | None = None,
-    key_signature: str | None = None,
-) -> TimeMatrixEnvelope:
-    """The stored and transmitted form: always two hands (contract §2).
-
-    A one-hand piece is not a different shape. It is two hands with one of them empty, and the
-    renderer is told to hide that staff through :func:`layout_hints_for`. Keeping one shape means
-    every consumer, every stored file and every test stays on one code path.
-
-    Built with ``model_construct``: pydantic runs a model's "after" checks again on every model
-    instance it is given, so a normal construction would check each COO cell once more, although
-    the two payloads were just built from the arrays (:mod:`aitu_backend.pmn.coo`). The envelope's
-    own frame check still runs when the score payload receives it.
-    """
-    return TimeMatrixEnvelope.model_construct(
-        frame_ms=hands.frame_ms,
-        frame_count=hands.frame_count,
-        duration_seconds=hands.duration_seconds if duration_seconds is None else duration_seconds,
-        title=title if title is not None else hands.right.title,
-        key_signature=key_signature,
-        matrix_processing_step=TimeMatrixProcessingStep.TWO_HANDS,
-        r_matrix=_coo(hands.right),
-        l_matrix=_coo(hands.left),
-    )
-
-
-def layout_hints_for(
-    hands: TimeHands,
-    *,
-    frame_group: int = 25,
-    frame_measure: int = 100,
-    silence_group_px: float = 6.0,
-) -> LayoutHints:
-    """Which staves to draw, and the two wall-clock aggregation levels above the frame.
-
-    The defaults are one second and four seconds at 40 ms. They are frame counts rather than
-    durations, so a piece at 20 ms should halve them to keep the dashed lines in the same place on
-    the clock.
-    """
-    return LayoutHints(
-        frame_group=frame_group,
-        frame_measure=frame_measure,
-        silence_group_px=silence_group_px,
-        hide_left_hand=hands.is_right_hand_only,
-        hide_right_hand=hands.is_left_hand_only,
-    )
-
-
-def _coo(matrix: PianoMatrix) -> SparseCooMatrix:
-    return matrix.to_coo_payload()
-
-
-def attack_seconds_of_hand(hands: TimeHands, hand: str) -> dict[int, float]:
-    """Column -> when **this hand** really attacked in it, in seconds.
-
-    Not the column's group time. Grouping runs before the hand split (D-31), so a column's group
-    time is the earliest onset in it whichever hand played it. A right-hand note played 20 ms behind
-    a left-hand one shares its column and would inherit its time, which shortens the gap to the next
-    right-hand note by 20 ms — a third of a fusa, and enough to print one as a semifusa. Every gap
-    in D-14 is a gap within one hand, so it is measured from that hand's own attack.
-
-    The group time remains the fallback for a column with no per-key record, which happens for a
-    matrix loaded from disk rather than built in this run.
-    """
-    matrix = hands.right if hand == "right" else hands.left
-    rows_at: dict[int, list[int]] = {}
-    for column in onset_columns(matrix):
-        rows_at[column] = list(matrix.onsets_in_column(column))
-
-    own: dict[int, float] = {}
-    for (column, row), seconds in hands.build.event_seconds.items():
-        if row in rows_at.get(column, ()):
-            known = own.get(column)
-            own[column] = seconds if known is None else min(known, seconds)
-    return {
-        **{
-            column: hands.build.attack_seconds[column]
-            for column in rows_at
-            if column in hands.build.attack_seconds
-        },
-        **own,
-    }
-
-
-def attack_times_of_hand(hands: TimeHands, hand: str) -> list[float]:
-    """When this hand attacked, in seconds, in order.
-
-    The raw time the attack was really played at, not the start of its column. Phase 2 measures the
-    gaps between these values, which is what D-07 asks for: the snap is undone by looking the time
-    back up rather than by multiplying a column index.
-    """
-    matrix = hands.right if hand == "right" else hands.left
-    seconds = attack_seconds_of_hand(hands, hand)
-    return [
-        seconds.get(column, column * hands.frame_ms / 1000.0) for column in onset_columns(matrix)
-    ]
-
-
-def to_score_payload(
-    hands: TimeHands,
-    ladder: FigureLadder,
-    *,
-    passages: list[Passage] | None = None,
-    overrides: list[FigureOverride] | None = None,
-    layout: LayoutHints | None = None,
-    title: str | None = None,
-    key_signature: str | None = None,
-    duration_seconds: float | None = None,
-    trim_trailing_silence: bool = True,
-    weighted_figure_lines: bool = True,
-) -> TimeScorePayload:
-    """Everything the renderer draws, assembled from the two hands and one named ladder.
-
-    The figure of every note is decided here, not in the renderer (contract §6), so the ladder, the
-    proportional comparison and the closed vocabulary all live on one side. The renderer draws what
-    it is told and applies the per-note overrides on top.
-
-    ``passages`` defaults to a single passage covering the piece, which is what a user gets before
-    they have drawn any boundary.
-
-    Silence after the last note is cut off. A recording often runs on for several seconds after the
-    playing stops, and drawing that gives a page of empty staff with nothing on it. The recording is
-    untouched; only the sheet stops where the music does.
-
-    ``weighted_figure_lines`` decides where the line between two figures falls. On, each passage's
-    own gap distribution moves it towards whichever figure that passage plays more of
-    (:mod:`aitu_backend.matrix.bands`); off, every line sits at the halfway point. The two agree
-    exactly when the piles are even, so this is a refinement of D-11 rather than a departure from
-    it — but it is a parameter because it is the one place in the payload where a note's figure
-    depends on notes other than itself.
-    """
-    hands = trim_to_music(hands) if trim_trailing_silence else hands
-    tiles = passages or one_passage(hands.frame_count, ladder)
-    ranges = ladder_ranges(tiles)
-    tail = hands.duration_seconds if duration_seconds is None else duration_seconds
-
-    seconds_of = {hand: attack_seconds_of_hand(hands, hand) for hand in ("right", "left")}
-    bands_at = None
-    if weighted_figure_lines:
-        # Both hands pooled, and gathered before a single figure is chosen: the lines have to be
-        # drawn from the whole passage before any note is judged against them.
-        pooled: list[tuple[int, float]] = []
-        for hand, matrix in (("right", hands.right), ("left", hands.left)):
-            pooled += gaps_of_hand(
-                matrix,
-                attack_seconds=seconds_of[hand],
-                frame_ms=hands.frame_ms,
-                tail_seconds=tail,
-                drop_open_ended=True,
-            )
-        bands_at = bands_for_passages(pooled, ranges)
-
-    notes = []
-    tuplet_id = 0
-    for hand, matrix in (("right", hands.right), ("left", hands.left)):
-        printed = printed_notes_of_hand(
-            matrix,
-            hand,
-            ranges,
-            attack_seconds=seconds_of[hand],
-            group_id=hands.build.group_id,
-            frame_ms=hands.frame_ms,
-            tail_seconds=tail,
-            # Numbered across the whole piece, so the two hands cannot claim the same tresillo.
-            tuplet_start_id=tuplet_id,
-            bands_at=bands_at,
-        )
-        used = [note.tuplet_id for note in printed if note.tuplet_id is not None]
-        tuplet_id = max(used) + 1 if used else tuplet_id
-        notes.extend(printed)
-    notes.sort(key=lambda note: (note.start_frame, note.hand, note.row))
-
-    return TimeScorePayload(
-        envelope=to_time_envelope(
-            hands,
-            duration_seconds=duration_seconds,
-            title=title,
-            key_signature=key_signature,
-        ),
-        passages=tiles,
-        notes=notes,
-        overrides=overrides or [],
-        layout=layout or layout_hints_for(hands),
-    )
-
-
-def trim_to_music(hands: TimeHands) -> TimeHands:
-    """The same hands, ending where the last note stops sounding.
-
-    A page of empty staff is not a rest, it is a recording that kept running. The audio still knows
-    its own length, and playback still uses it; this only decides where the sheet ends.
-    """
-    sounding = np.nonzero(np.any(hands.unsplit.grid != 0, axis=0))[0]
-    if sounding.size == 0:
-        return hands
-    end = int(sounding[-1]) + 1
-    if end >= hands.frame_count:
-        return hands
-    return TimeHands(
-        frame_ms=hands.frame_ms,
-        right=hands.right.slice_frames(0, end),
-        left=hands.left.slice_frames(0, end),
-        unsplit=hands.unsplit.slice_frames(0, end),
-        build=hands.build,
-    )

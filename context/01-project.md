@@ -12,8 +12,8 @@ glossary is the vocabulary of every page here. In short:
 
 - **A project** turns a recording into a piano sheet. It starts from a source (an audio or a video
   file, or a YouTube link), from scratch (record or paste), or from passages of other projects. The
-  app transcribes the audio live, predicts the hands and writes the piano sheet, which the user
-  edits: figures, keys, clefs, lyrics, transposition, re-recorded passages.
+  app transcribes the audio live and writes the piano sheet (the AI decides the hands with it), which
+  the user edits: figures, keys, clefs, lyrics, transposition, re-recorded passages.
 - **Three storage layers.** Work in progress is in the user's **Personal Vault** (Projects). A
   finished piano sheet is saved to the user's **Private Library** as a **version** of a **song** of
   an **artist**. The **Public Library** is everyone's: a catalogue of songs imported from a chart
@@ -76,9 +76,10 @@ git repositories.
 | `scripts/` | The link checker of the docs, the seed list of 31 songs, the tunnel from the Mac |
 | `pocs/` | Measurement proofs of concept, kept for their data |
 
-The notation renderer, `@aimpromptu/grid-notation`, lives in a **sibling checkout** at
-`../vexflow-v2` and is installed from disk. It is a separate repository on purpose: it knows nothing
-about this app's API, and this app reaches it through exactly one file.
+The piano sheet is laid out and drawn by the backend (`aitu_backend/sheet/`, an SVG answered by
+`GET /sheet/{uuid}`). The old notation renderer, `@aimpromptu/grid-notation` in the sibling checkout
+`../vexflow-v2`, was installed from disk until implementation 03, Phase 10 (2026-10-27) removed it
+from the app; the sibling repository is no longer needed to build or run it.
 
 The data is outside git: `.database/` ([07-database.md](07-database.md)), on this machine at
 `/mnt/ssd2/aimpromptu/.database`. The downloaded chart history the Public Library was imported from

@@ -22,6 +22,7 @@ from aitu_backend.db.models import Project
 from aitu_backend.library import flow
 from aitu_backend.main import create_app
 from aitu_backend.pmn.events_file import PieceHeader
+from aitu_backend.schemas.rhythm import SavedRhythm
 from aitu_backend.storage import audio_files, bundle, paths
 from aitu_backend.transcription import pipeline
 from aitu_backend.transcription.engine import NoteEvent
@@ -59,25 +60,21 @@ def music(seconds: float) -> list[NoteEvent]:
 
 
 def make_ready(part: str, seconds: float, on: TestClient = client) -> None:
-    """Notes, hands predicted and saved, a piano sheet written: the Sheet step is ready."""
+    """Notes, hands saved, a piano sheet written: the Sheet step is ready."""
     # Notes made from the audio as it is now, cuts included.
     header = PieceHeader(audio_revision=bundle.read_timeline(part).audio_revision)
     pipeline.save_note_events(part, music(seconds), seconds, "Superestrella", header=header)
     base = on.get(f"/pieces/{part}/notes").json()
-    predicted = on.post(f"/pieces/{part}/hands/predict", json={"baseRevision": base["revision"]})
-    assert predicted.status_code == 200, predicted.text
-    body = predicted.json()
+    # The melody from Do 5 up is the right hand (Predict hands went in implementation 03, Phase 10).
+    hand_of = {i: ("r" if key + 21 >= 72 else "l") for i, key in zip(base["id"], base["key"])}
     ops = [
-        {
-            "op": "hand",
-            "ids": [i for i, h in zip(body["id"], body["hand"]) if h == hand],
-            "hand": hand,
-        }
+        {"op": "hand", "ids": [i for i, h in hand_of.items() if h == hand], "hand": hand}
         for hand in ("r", "l")
     ]
     saved = on.patch(f"/pieces/{part}/notes", json={"baseRevision": base["revision"], "ops": ops})
     assert saved.status_code == 200, saved.text
-    assert on.put(f"/time/{part}/rhythm", json=READING).status_code == 200
+    # The sheet.json the vexflow-v2 sheet saved: a part that has one counts as written.
+    pipeline.save_rhythm(part, SavedRhythm.model_validate(READING))
     assert sheet_state(part, on) == "ready"
 
 
@@ -287,7 +284,7 @@ def test_replace_the_version_keeps_the_ids_and_the_history_restores() -> None:
         json={"baseRevision": body["revision"], "ops": [{"op": "delete", "ids": [body["id"][0]]}]},
     )
     assert edited.status_code == 200, edited.text
-    assert client.put(f"/time/{copy}/rhythm", json=READING).status_code == 200
+    pipeline.save_rhythm(copy, SavedRhythm.model_validate(READING))
     assert sheet_state(copy) == "ready"
     after_edit = notes_of(copy)
     assert after_edit != before

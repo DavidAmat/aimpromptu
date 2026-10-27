@@ -262,6 +262,111 @@ export interface SheetEdited extends FramesSheet {
   lengthMs?: number;
 }
 
+// ------------------------------------------------------------------ the vocabulary of a reading
+
+/** The pasted lyrics of a part and its pool of pieces not placed yet. */
+export interface SheetWords {
+  text: string | null;
+  pool: string[] | null;
+}
+
+/** The plain figures, and the two dotted ones a figure set by hand on an old sheet could name. */
+export type FigureName =
+  | "redonda"
+  | "blanca"
+  | "dottedBlanca"
+  | "negra"
+  | "dottedNegra"
+  | "corchea"
+  | "semicorchea"
+  | "fusa"
+  | "semifusa";
+
+/**
+ * The fifteen signatures a staff can be written in, sharpest to flattest.
+ *
+ * A transcription arrives with no key at all: the recording says which keys were pressed and
+ * nothing about how they should be spelled. Until someone chooses, everything is written in C and
+ * every black key prints an accidental.
+ */
+export const KEY_SIGNATURES = [
+  "C",
+  "G",
+  "D",
+  "A",
+  "E",
+  "B",
+  "F#",
+  "C#",
+  "F",
+  "Bb",
+  "Eb",
+  "Ab",
+  "Db",
+  "Gb",
+  "Cb",
+] as const;
+
+export type KeySignatureName = (typeof KEY_SIGNATURES)[number];
+
+/**
+ * What each signature is called on a picker, with the major key first.
+ *
+ * Both names are shown because a reader who knows the piece is in D minor should not have to
+ * remember that D minor and F major print the same one flat.
+ */
+export const KEY_LABELS: Record<KeySignatureName, string> = {
+  C: "C major / A minor — no sharps or flats",
+  G: "G major / E minor — 1 sharp",
+  D: "D major / B minor — 2 sharps",
+  A: "A major / F# minor — 3 sharps",
+  E: "E major / C# minor — 4 sharps",
+  B: "B major / G# minor — 5 sharps",
+  "F#": "F# major / D# minor — 6 sharps",
+  "C#": "C# major / A# minor — 7 sharps",
+  F: "F major / D minor — 1 flat",
+  Bb: "Bb major / G minor — 2 flats",
+  Eb: "Eb major / C minor — 3 flats",
+  Ab: "Ab major / F minor — 4 flats",
+  Db: "Db major / Bb minor — 5 flats",
+  Gb: "Gb major / Eb minor — 6 flats",
+  Cb: "Cb major / Ab minor — 7 flats",
+};
+
+/** A line of words under the staff, over a stretch of columns. */
+export interface LyricLine {
+  fromColumn: number;
+  /** Exclusive. */
+  toColumn: number;
+  text: string;
+  /**
+   * Where the reader dragged the block, in pixels from where the page would have put it.
+   *
+   * The columns are still what the words belong to, so a re-wrap carries them to wherever that
+   * music went and this offset with them. Absent (or `null`, as the backend answers) is a block
+   * nobody has moved.
+   */
+  offsetX?: number | null;
+  offsetY?: number | null;
+  /** How wide the block is drawn, in pixels. The words wrap inside it. */
+  width?: number | null;
+  /** How large the words are drawn, in pixels. Absent is the page's own size. */
+  fontSize?: number | null;
+  /**
+   * The new sheet only (implementation 03, Phase 8A++): where the block was put, its width and style, in the new
+   * sheet's units, carried as they are through every change of the list.
+   */
+  block?: SheetLyricBlock;
+}
+
+/** What **Copy** puts in the clipboard: a stretch of a part, in milliseconds (plan section 12). */
+export interface PassageRef {
+  part: string;
+  fromMs: number;
+  toMs: number;
+}
+
+
 export const sheetApi = {
   /** The sheet now, drawn for a page `width` staff spaces wide. */
   get: (audioUuid: string, width: number, signal?: AbortSignal) =>
@@ -367,4 +472,15 @@ export const sheetApi = {
   /** Take the last step of the part back, or put it again; the sheet drawn again. */
   walk: (audioUuid: string, to: "undo" | "redo", width: number) =>
     request<SheetEdited>(`/sheet/${audioUuid}/${to}`, { method: "POST", query: { width: Math.round(width) } }),
+
+  /**
+   * The pasted lyrics and the pool of the part (the Lyrics tab's **Save lyrics**): the song's words, kept in
+   * `project.json` and not in the sheet, so they outlive a new transcription. `pool` is `null` until saved there.
+   */
+  words: (audioUuid: string, signal?: AbortSignal) =>
+    request<SheetWords>(`/sheet/${audioUuid}/words`, { signal }),
+
+  /** Save the pasted lyrics and the pool with the part. An empty text removes them. */
+  saveWords: (audioUuid: string, text: string, pool: readonly string[], signal?: AbortSignal) =>
+    request<SheetWords>(`/sheet/${audioUuid}/words`, { method: "PUT", body: { text, pool }, signal }),
 };

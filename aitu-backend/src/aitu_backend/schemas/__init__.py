@@ -52,18 +52,10 @@ from aitu_backend.schemas.naming import (
 from aitu_backend.schemas.time_matrix import (
     DEFAULT_FRAME_MS,
     FIGURE_NEGRAS,
-    MAX_PRINTED_FIGURE,
-    FigureLadder,
     FigureName,
     BeamBreak,
     FigureOverride,
-    LayoutHints,
-    Passage,
     PrintedHand,
-    PrintedNote,
-    TimeMatrixEnvelope,
-    TimeMatrixProcessingStep,
-    TimeScorePayload,
 )
 
 __all__ = [
@@ -107,16 +99,8 @@ __all__ = [
     "key_labels",
     "DEFAULT_FRAME_MS",
     "FIGURE_NEGRAS",
-    "MAX_PRINTED_FIGURE",
-    "FigureLadder",
     "FigureName",
     "BeamBreak",
     "FigureOverride",
-    "LayoutHints",
-    "Passage",
     "PrintedHand",
-    "PrintedNote",
-    "TimeMatrixEnvelope",
-    "TimeMatrixProcessingStep",
-    "TimeScorePayload",
 ]

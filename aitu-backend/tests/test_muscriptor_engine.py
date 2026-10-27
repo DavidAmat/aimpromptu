@@ -347,13 +347,11 @@ def test_the_split_is_computed_once_for_every_reader(
     uuid = ingested(tmp_path)
     pipeline.transcribe_audio(uuid)
 
-    # The job warms it, and a reader that arrives meanwhile waits instead of computing again.
+    # The job warms the split the new sheet starts from, and a reader that arrives meanwhile waits
+    # instead of computing again (implementation 03, Phase 10: it warmed the vexflow-v2 sheet's before).
     warming = pipeline.warm_split(uuid, 40)
     client = TestClient(create_app())
-    readers = [
-        threading.Thread(target=lambda: client.get(f"/time/{uuid}/score?frameMs=40"))
-        for _ in range(2)
-    ]
+    readers = [threading.Thread(target=lambda: pipeline.starting_hands(uuid, 40)) for _ in range(2)]
     for reader in readers:
         reader.start()
     warming.join(5)
@@ -368,7 +366,7 @@ def test_the_split_is_computed_once_for_every_reader(
 
     # A new transcription is a new events.json, so a new split.
     pipeline.transcribe_audio(uuid)
-    pipeline.split_of(uuid, 40)
+    pipeline.starting_hands(uuid, 40)
     assert computed == [40, 40]
 
 

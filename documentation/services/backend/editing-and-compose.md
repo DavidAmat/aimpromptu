@@ -9,9 +9,18 @@ the audio timeline and the undo. **From other projects** and the joins and split
 project (Phase 10) are pastes too, and a split uses the one write that takes a stretch out,
 `paste.cut`.
 
-Modules: `aitu-backend/src/aitu_backend/editing/`. Routes: `POST /time/{uuid}/paste`,
-`POST /time/{uuid}/versions/{n}/restore`, `/passages`, `POST /projects/compose` and
-`/projects/{id}/parts` ([`endpoints.md`](endpoints.md)).
+Modules: `aitu-backend/src/aitu_backend/editing/`. Routes: `POST /sheet/{uuid}/paste`, `/passages`,
+`POST /projects/compose` and `/projects/{id}/parts` ([`endpoints.md`](endpoints.md)). The undo of a
+paste or a promotion is a step of the sheet's log (`POST /sheet/{uuid}/undo`), which calls
+`history.restore`.
+
+**Two sheets move with a length change.** The new sheet (`sheet.f1`) is carried in the same write by
+`part_sheet.lengths` since implementation 03, Phase 8B (see the sheet's
+[README](../../../aitu-backend/src/aitu_backend/sheet/README.md), section 16). The marks this page
+calls "the marks" are those of an old `sheet.json`, which `editing/marks.py` still moves. Until
+implementation 03, Phase 10 (2026-10-27) the routes also took the old sheet as the page held it
+(`sheet`, unsaved edits included) and `/time/{uuid}/paste` and `/time/{uuid}/versions/{n}/restore`
+existed; now `paste.py`, `passages.py` and `parts.py` always read the saved `sheet.json`.
 
 | Module | Role |
 |---|---|
@@ -53,7 +62,7 @@ otherwise). The stretch is snapped to whole columns of the source's sheet.
 | | How |
 |---|---|
 | Notes | The source's notes whose onset column is inside the stretch (taken off the page or not), cut where the stretch ends, moved to the insertion point, with new ids; then `compose.insert_events` |
-| Marks | `marks.shift(..., straddle="tear")` on the target's sheet (the page's sheet when it sent one): a range across the insertion point ends there and goes on after the passage (a lyrics piece and a trill only end); then the source's marks of the stretch (`marks.extract`, clipped) are put in (`marks.put_in`), rescaled when the two sheets have another `frameMs`. The key, each hand's clef and the speed (`anchorMs`, when they differ by more than 2 %) in force where the copy starts are written at the insertion point, and what the target had there is written again where the passage ends when music follows (a key at column 0 is the sheet's key; no clef change can be stored at column 0) |
+| Marks | `marks.shift(..., straddle="tear")` on the target's saved `sheet.json`: a range across the insertion point ends there and goes on after the passage (a lyrics piece and a trill only end); then the source's marks of the stretch (`marks.extract`, clipped) are put in (`marks.put_in`), rescaled when the two sheets have another `frameMs`. The key, each hand's clef and the speed (`anchorMs`, when they differ by more than 2 %) in force where the copy starts are written at the insertion point, and what the target had there is written again where the passage ends when music follows (a key at column 0 is the sheet's key; no clef change can be stored at column 0) |
 | Audio | `audio_timeline.passage_pieces` gives the ranges of stored files the stretch plays; `audio_with` puts them into the target's timeline at the insertion point (a file the moment falls inside is split in two, every cut after it moves), with a stored file of silence where the passage plays longer than its audio or the moment is past the end of the audio. The files are named `"<title> m:ss–m:ss"` (kind `passage`), or as the caller says (`audio_name`, `audio_kind`: a take is `"Take 2"`, `recording`). A part left with one whole file takes that file's kind when it is an upload's word, `composed` otherwise (`schemas.metadata.source_kind`; `segment` until Phase 11, which the metadata refuses without the file and range it was cut from). **Save to library** writing the audio again (`audio/compact.py`) and a file removed on the Source step (`audio/store.py`) follow the same rule since Phase 11: before, a version saved from a part of one pasted file was unreadable and **Replace the version** answered `422` |
 | Revisions | The audio revision goes up; the notes are written with that revision, so the Notes step stays current; the hands follow when every note has one; the sheet is saved for the new hands revision when it was current |
 
@@ -117,8 +126,9 @@ leave them out.
 
 ### 3.2 The promotion
 
-`_plan` reads the take's passage (`paste.read_passage(take, start, stop, sheet=)`, with the
-Proposal's sheet as the page holds it):
+`_plan` reads the take's passage (`paste.read_passage(take, start, stop, sheet=)`, with the take's
+saved `sheet.json`; the routes stopped sending the Proposal's unsaved sheet in implementation 03,
+Phase 10):
 
 | Mode | The take's stretch | `columns` | `replace_to` |
 |---|---|---|---|
@@ -168,14 +178,13 @@ project has no earlier state, as a duplicate). A failure deletes the project.
 | `rename(project, part, subheader)` | `parts[].subheader` (whitespace folded, at most 300 characters; empty is none) |
 | `bundle.reorder_parts(project, order)` | The order of `parts` in `project.json` and `parts.position` (two passes: `(project_id, position)` is unique) |
 | `join(project, part)` | The part pasted at the end of the one before it, then removed (`bundle.remove_part`: its folders, history, row, open passages, unused audio). When the lower part carries the project's id, the upper one is pasted at its start instead, because **the project's id is always one of its parts** (the step routes take it). The kept part takes the upper one's subheader |
-| `split(project, part, at_ms, subheader, sheet)` | `at_ms` snapped to a column of the part's sheet, inside it; a new part after it (`bundle.add_part`); `paste.paste(new, read_passage(part, at, whole, sheet=sheet), at_ms=0)`, then `paste.cut(part, at, whole, sheet=sheet)`. A failure removes the new part |
+| `split(project, part, at_ms, subheader)` | `at_ms` snapped to a column of the part's sheet, inside it; a new part after it (`bundle.add_part`); `paste.paste(new, read_passage(part, at, whole), at_ms=0)`, then `paste.cut(part, at, whole)`. A failure removes the new part. (The `sheet` argument stays in the function; the route no longer passes it) |
 
 **`paste.cut(part, from_ms, to_ms, sheet=)`** takes a stretch out: the notes by onset column (those
 after move earlier, one sounding into it is cut where it starts), the marks (`marks.cut_out`; a key,
 clef or speed change inside moves to its start when music follows, `_cut_transitions`), the audio
 (`audio_timeline.remove`: cuts the Audio step can restore). The part is kept as a snapshot first,
-so `POST /time/{uuid}/versions/{n}/restore` undoes it exactly; the parts routes do not offer that
-undo on the page yet.
+so `history.restore` undoes it exactly; the parts routes do not offer that undo on the page yet.
 
 ## 5. Undo and redo
 
@@ -206,12 +215,12 @@ derived files it was writing from.
 
 ## 7. Tests
 
-- `tests/test_parts.py` — 7 tests (Phase 10): a project from other projects (one part per subheader,
+- `tests/test_parts.py` — 8 tests (Phase 10 of implementation 02, and later): a project from other projects (one part per subheader,
   the notes, key and fingering of each passage where it lands, the audio by pitch, nothing copied,
   the sources unchanged), one part with no subheader, a failing passage leaves nothing, rename,
   reorder, join (the project's part kept), split, the library refuses, the cut and its undo to the
   byte
-- `tests/test_passages.py` — 12 tests (Phase 9): the Current is a copy of the stretch, hidden from
+- `tests/test_passages.py` — 16 tests (Phase 9, and later): the Current is a copy of the stretch, hidden from
   every list; a take read in the passage's key and figure, with every hand; the window with the
   original audio (the timeline to the byte), the window with the recording at ×2 (the take's pitch
   at the passage, the song's after it, the same length), the whole take (+1 s, the notes and marks
@@ -220,7 +229,7 @@ derived files it was writing from.
   version of the library cannot be re-recorded; a take of another passage is not found
 - `tests/test_paste.py` — 16 tests (Phase 8): the timeline put into and cut, a paste's notes, marks,
   key at both edges and audio, every join, undo and redo to the byte, a paste over a marked stretch,
-  the page's unsaved sheet, From scratch, Save to library and export of a pasted project
+  From scratch, Save to library and export of a pasted project
 - `tests/test_compose.py` — 7 tests: `insert_events` (append moves nothing, an insert moves every
   note from the column on, a sounding note is cut, a note that rounds into the column moves) and
   `atempo_chain`
@@ -246,7 +255,7 @@ it.
 - [`endpoints.md`](endpoints.md) — the routes
 - [`paths-and-data.md`](paths-and-data.md#22-timelinejson-the-audio-timeline) — the timeline and its
   ranges; the hidden projects of a passage
-- [`rhythm-and-annotations.md`](rhythm-and-annotations.md) — the marks that are moved
+- [`rhythm-and-annotations.md`](rhythm-and-annotations.md) — the marks of the old `sheet.json` that are moved
 - [`../frontend/components.md`](../frontend/components.md) — the page of a passage, the Paste of the
   sheet page, the page of From other projects and the parts panel
 - [`context/frontend/playlists.md`](../../../context/frontend/playlists.md) — From other projects and

@@ -44,7 +44,8 @@ database. Every path in the folder is built by one module, `aitu_backend/storage
   parts/<partId>/
     notes.pmn                    THE NOTES: the piano matrix notation of the part
     sheet.json                   what the reader decided on the old piano sheet (vexflow-v2); since implementation
-                                 03, Phase 9, its marks the new sheet keeps are in sheet.f1 (part_sheet/legacy.py)
+                                 03, Phase 9, its marks the new sheet keeps are in sheet.f1 (part_sheet/legacy.py);
+                                 nothing writes a new one since Phase 10 (2026-10-27), which removed the old sheet
     sheet.f1                     the new piano sheet: F1 frames text and a record of how it was written
                                  (Sonnet or the algorithm, implementation 03, Phase 5; since Phase 7 also edited by
                                  the user, and the stretches the AI wrote again); the hands stay in notes.pmn
@@ -61,7 +62,7 @@ database. Every path in the folder is built by one module, `aitu_backend/storage
 A normal project has one **part**. An integrated playlist (Phase 10) has one per sub-song: **From
 other projects** starts a part at each subheader, and a part can be split, joined, renamed and moved
 ([frontend/playlists.md](frontend/playlists.md)). The uuid
-of the routes of implementation 08 (`/audio/{uuid}`, `/pieces/{uuid}`, `/time/{uuid}`) is the id of
+of the routes of implementation 08 (`/audio/{uuid}`, `/pieces/{uuid}`, and `/sheet/{uuid}` since implementation 03) is the id of
 a part, and a project made by this app has the id of its first part. So the routes did not change
 when the storage did ([backend/pieces-and-revisions.md](backend/pieces-and-revisions.md)).
 
@@ -71,10 +72,12 @@ Full tree, file by file, and every table:
 ## The rules
 
 **Only what cannot be recreated is stored**, as before. `notes.pmn` is the engine's notes in
-milliseconds, before any grid was involved. Everything else about the music (the matrix at any
-`frameMs`, the gap distribution, the figures, the sheet) is a function of it and is rebuilt on
-every request, so there is no state on disk that can disagree with what the screen shows.
-`sheet.json` is the exception for the same reason inverted: it holds what a person chose. The
+milliseconds, before any grid was involved. The matrix at any `frameMs` and the hand split are a
+function of it and are rebuilt on request. The sheet is the exception: `sheet.f1` is stored,
+because writing it costs an AI run and it holds what a person chose; a sheet written for older notes
+is laid again on the current ones when it is drawn, so it never disagrees with them. (Until
+implementation 03, Phase 10 the old sheet was rebuilt on every request, and only `sheet.json`, what
+a person chose, was stored.) The
 files in `cache/` are derived and are written again when they are missing.
 
 **An audio file is stored once and never changes** (plan P-3). A duplicated project, a pasted
@@ -119,12 +122,13 @@ Two different axes, and they are easy to confuse.
 | | Means | Where |
 |---|---|---|
 | `music-version.json` + `history/<projectId>/parts/<partId>/v<N>/` | **The music changed**: a splice was accepted, or a new transcription replaced the notes. A snapshot keeps `notes.pmn`, `sheet.json`, `sheet.f1` and `timeline.json`; the audio it names stays in the store | The part's folder; `.database/history/` |
-| `audioRevision`, `notesRevision`, `handsRevision` | **One step changed**, so the later steps may be stale | `timeline.json`, the `notes.pmn` header, `sheet.json` |
+| `audioRevision`, `notesRevision`, `handsRevision` | **One step changed**, so the later steps may be stale | `timeline.json`, the `notes.pmn` header, the record of `sheet.f1` |
 | `alembic_version` | The tables changed shape | `aitu.sqlite` |
 
 `projects.step` (the step a project reached, for the Projects page) is not a version: it is a copy
 of what the bundles say, cleared when a part's notes, sheet or timeline is written and worked out
-again by the next list (Phase 5).
+again by the next list (Phase 5). Its check constraint still allows `hands`, the step implementation
+03 removed; no row holds it, and no migration was made for it.
 
 ## Formats
 
@@ -187,6 +191,6 @@ Postgres (plan section 8.7).
 - Path by path, table by table: [`../documentation/services/backend/paths-and-data.md`](../documentation/services/backend/paths-and-data.md)
 - The notes file: [backend/piano-matrix-notation.md](backend/piano-matrix-notation.md)
 - Parts, revisions and staleness: [backend/pieces-and-revisions.md](backend/pieces-and-revisions.md)
-- `sheet.json` field by field: [`../documentation/services/backend/rhythm-and-annotations.md`](../documentation/services/backend/rhythm-and-annotations.md)
+- The old `sheet.json` field by field: [`../documentation/services/backend/rhythm-and-annotations.md`](../documentation/services/backend/rhythm-and-annotations.md)
 - Why so little is stored: [backend/time-model.md](backend/time-model.md)
 - The plan of the storage: [implementations/02-private-web-app/02-plan.md](implementations/02-private-web-app/02-plan.md) section 8

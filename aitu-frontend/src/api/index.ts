@@ -27,9 +27,13 @@ export type {
   WaveformPeaks,
 } from "./audio";
 
-export { sheetApi } from "./sheet";
+export { sheetApi, KEY_LABELS, KEY_SIGNATURES } from "./sheet";
 export type {
+  FigureName,
   FramesSheet,
+  KeySignatureName,
+  LyricLine,
+  PassageRef,
   ReadingEdit,
   SheetColumn,
   SheetEdited,
@@ -45,6 +49,7 @@ export type {
   SheetSegment,
   SheetSystem,
   SheetTitles,
+  SheetWords,
   StretchKeys,
   StretchRequest,
 } from "./sheet";
@@ -140,41 +145,10 @@ export type {
   NotesPatchResult,
   PieceNotes,
   PieceStatus,
-  PredictResult,
   PieceStep,
   StepState,
   StepStatus,
 } from "./pieces";
-
-export { timeScoreApi, FIGURE_LABELS, KEY_LABELS, KEY_SIGNATURES } from "./timeScore";
-export type {
-  CueRange,
-  DefaultReading,
-  FigureLadder,
-  FigureName,
-  GraceNote,
-  HandChoice,
-  KeySignatureName,
-  LabelledPeak,
-  LadderPreview,
-  LayoutHints,
-  LyricLine,
-  Passage,
-  PassageRef,
-  PasteResult,
-  Peak,
-  PeaksResponse,
-  PrintedHand,
-  PrintedNote,
-  RestoreResult,
-  SavedRhythm,
-  SpeedChange,
-  TimeMatrixEnvelope,
-  TimeScorePayload,
-  Trill,
-  TrillSuggestion,
-  TrillsResponse,
-} from "./timeScore";
 
 export { matrixApi } from "./matrix";
 export type {

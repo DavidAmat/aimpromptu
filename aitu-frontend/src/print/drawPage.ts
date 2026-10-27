@@ -1,8 +1,8 @@
 /**
  * One rendered page, read off the DOM and written out as PDF drawing operators.
  *
- * The sheet is already vector when it reaches here — the drawing package emits an SVG of lines,
- * rectangles, filled polygons and glyphs, and nothing else. So the page is not photographed and
+ * The sheet is already vector when it reaches here — the backend's engine draws an SVG of lines,
+ * filled polygons and paths (its music glyphs are outlines, not text), and the lyrics as text. So the page is not photographed and
  * pasted in: every one of those becomes the PDF operator that means the same thing, and the result
  * is as sharp as the printer is rather than as sharp as whatever resolution we chose to snapshot
  * at. It is also a fraction of the size, which matters when a piece runs to thirty pages.
@@ -11,8 +11,6 @@
  * because a colour may arrive as a stylesheet rule and a brace is drawn inside a scaled group. What
  * the browser worked out is what the page shows, so it is what gets written.
  */
-
-import type { EmbeddableFont } from "./opentype";
 
 /** A 2×3 affine matrix, in the order PDF's `cm` operator wants. */
 type Matrix = [number, number, number, number, number, number];
@@ -39,15 +37,15 @@ const n = (value: number): string =>
 export interface DrawnPage {
   /** The content stream, in CSS pixels with y running down the page. */
   ops: string;
-  /** Every glyph asked for from the embedded font, so its widths can be written. */
-  glyphs: Set<number>;
   /** Every constant alpha used, so a graphics state can be made for each. */
   alphas: Set<number>;
 }
 
-/** Which PDF font a drawn run is written with. `notation` is the embedded one. */
+/**
+ * Which PDF font a drawn run is written with. Only base fonts: the old sheet's music font (Bravura, embedded when a
+ * glyph was text) left with vexflow-v2 in implementation 03, Phase 10.
+ */
 type FontChoice =
-  | "notation"
   | "sans"
   | "sansBold"
   | "sansItalic"
@@ -62,7 +60,7 @@ type FontChoice =
  * The base fonts every PDF reader has. A serif face prints as Times and any other as Helvetica, each in its four
  * looks: the lyrics blocks of the new sheet can be bold or italic in any of their fonts (implementation 03, 8A++).
  */
-export const PDF_BASE_FONTS: Record<Exclude<FontChoice, "notation">, string> = {
+export const PDF_BASE_FONTS: Record<FontChoice, string> = {
   sans: "Helvetica",
   sansBold: "Helvetica-Bold",
   sansItalic: "Helvetica-Oblique",
@@ -75,40 +73,29 @@ export const PDF_BASE_FONTS: Record<Exclude<FontChoice, "notation">, string> = {
 };
 
 /**
- * Turn one `.grid-page` element into drawing operators.
+ * Turn one page element (`[data-pdf-page]`) into drawing operators.
  *
  * Coordinates come out relative to the page's own top-left corner and in CSS pixels, the units the
  * layout was done in. Turning those into paper millimetres is one scale, applied once, by the
  * caller — so nothing in here has to know what size the paper is.
  */
-export function drawPage(page: HTMLElement, font: EmbeddableFont): DrawnPage {
+export function drawPage(page: HTMLElement): DrawnPage {
   const origin = page.getBoundingClientRect();
   const out: string[] = [];
-  const glyphs = new Set<number>();
   const alphas = new Set<number>();
-  const state = new PageWriter(out, glyphs, alphas, font, origin);
+  const state = new PageWriter(out, alphas, origin);
   state.walk(page, 1);
-  return { ops: out.join("\n"), glyphs, alphas };
+  return { ops: out.join("\n"), alphas };
 }
 
 class PageWriter {
   private readonly out: string[];
-  private readonly glyphs: Set<number>;
   private readonly alphas: Set<number>;
-  private readonly font: EmbeddableFont;
   private readonly origin: DOMRect;
 
-  constructor(
-    out: string[],
-    glyphs: Set<number>,
-    alphas: Set<number>,
-    font: EmbeddableFont,
-    origin: DOMRect,
-  ) {
+  constructor(out: string[], alphas: Set<number>, origin: DOMRect) {
     this.out = out;
-    this.glyphs = glyphs;
     this.alphas = alphas;
-    this.font = font;
     this.origin = origin;
   }
 
@@ -305,12 +292,6 @@ class PageWriter {
     style: CSSStyleDeclaration,
   ): { choice: FontChoice; code: number } | null {
     const family = style.fontFamily.toLowerCase();
-    if (family.includes("bravura")) {
-      const gid = this.font.gidFor(character.codePointAt(0) ?? 0);
-      if (!gid) return null;
-      this.glyphs.add(gid);
-      return { choice: "notation", code: gid };
-    }
     const winAnsi = WIN_ANSI.get(character) ?? (isLatin1(character) ? character.charCodeAt(0) : 0);
     if (!winAnsi) {
       const symbol = SYMBOL.get(character);
@@ -348,10 +329,9 @@ class PageWriter {
         current = run.choice;
         this.out.push(`/${FONT_KEY[run.choice]} 1 Tf`);
       }
-      const width = run.choice === "notation" ? 4 : 2;
       this.out.push(
         `${n(size)} 0 0 ${n(-size)} ${n(run.x)} ${n(run.y)} Tm`,
-        `<${run.codes.map((code) => code.toString(16).padStart(width, "0")).join("")}> Tj`,
+        `<${run.codes.map((code) => code.toString(16).padStart(2, "0")).join("")}> Tj`,
       );
     }
     this.out.push("ET", "Q");
@@ -381,8 +361,7 @@ interface Run {
 /**
  * Characters gathered into the longest runs that can safely be drawn as one string.
  *
- * A music glyph is placed on its own, to the position the engraver computed for it. A word is not:
- * the labels are laid out in whatever sans face the reader's machine has, and the PDF writes them
+ * A word is placed once, not letter by letter: the labels are laid out in whatever sans face the reader's machine has, and the PDF writes them
  * in Helvetica, so placing each letter at the browser's position would print a word at Helvetica's
  * shapes and the other font's letter spacing — visibly gappy. Each word is placed once instead and
  * left to space itself, which is right inside the word and off by a hair at its end.
@@ -394,7 +373,7 @@ class Runs {
   add(choice: FontChoice, code: number, x: number, y: number): void {
     const last = this.runs[this.runs.length - 1];
     const joinable =
-      this.open && last !== undefined && last.choice === choice && choice !== "notation";
+      this.open && last !== undefined && last.choice === choice;
     if (joinable) last.codes.push(code);
     else this.runs.push({ choice, codes: [code], x, y });
     this.open = true;
@@ -411,7 +390,6 @@ class Runs {
 }
 
 export const FONT_KEY: Record<FontChoice, string> = {
-  notation: "FN",
   sans: "FS",
   sansBold: "FB",
   sansItalic: "FO",

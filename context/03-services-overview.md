@@ -28,24 +28,26 @@ is not on the network. Who can sign in and what each user can open: [08-security
 | `transcription/` | Engines (MuScriptor, ByteDance, Transkun), the model registry, the GPU queue, the live stream, the lag correction, the filters, events to matrix, the split cache, the saved hands |
 | `pieces/` | The state of each step of a piece, and the note operations ([backend/pieces-and-revisions.md](backend/pieces-and-revisions.md)) |
 | `pmn/` | The piano matrix notation: the sparse form and every adapter |
-| `matrix/` | Frame ↔ ms, gaps, peaks, the figure ladder, passages, figure bands |
-| `hands/` | Which hand plays each onset: a beam search with a gated second pass |
-| `notation/` | Figures, tresillos, trills |
-| `sheet/` | The new piano sheet chain of implementation 03 (the F1 text, the algorithm, the LLM step, the engine); no route uses it yet |
+| `matrix/` | Frame ↔ ms, the hand split, the 88 keys, the matrix model and its operations (the negra ladder, the gap peaks, passages and figure bands were removed in implementation 03, Phase 10) |
+| `hands/` | Which hand plays each onset: a beam search with a gated second pass; the starting hands of the sheet come from it |
+| `sheet/` | The piano sheet chain of implementation 03 (the F1 text, the algorithm, the LLM step, the engine that draws the SVG) |
+| `part_sheet/` | The sheet of a part: build, store (`sheet.f1`), edits and undo, the AI's job, the lengths through a paste or a promotion, the marks of an old `sheet.json` |
 | `editing/` | The replacement splice, composing, staging, history |
 | `storage/` | Every filesystem path in one module; the project bundle, the audio store |
 | `db/` | The SQLite tables, the Alembic migrations, the users (the master user and the others), the backup, check and reindex tools |
 | `schemas/` | Pydantic contracts, camelCase on the wire, mirrored in TypeScript |
 
-**Endpoints:** `/health`, `/auth`, `/admin`, `/audio`, `/matrix`, `/pieces`, `/time`,
-`/passages`, `/projects`, `/youtube`, `/video`, `/frame-examples`. Every route needs a
+**Endpoints:** `/health`, `/auth`, `/admin`, `/audio`, `/matrix`, `/pieces`, `/sheet`,
+`/passages`, `/projects`, `/playlists`, `/library`, `/public`, `/requests`, `/shares`, `/youtube`, `/video`,
+`/frame-examples`. Every route needs a
 session except `/health` and `POST /auth/login`. (The text-notation MVP `/scores` and `/sequence` was deleted
-in implementation 02, Phase 1, and the old Piano Library router `/library` in Phase 3.) Table in
+in implementation 02, Phase 1, the old Piano Library router `/library` in Phase 3 (the name now serves My library), and
+every `/time` route of the old sheet in implementation 03, Phase 10.) Table in
 [backend/api.md](backend/api.md), detail in
 [`documentation/services/backend/endpoints.md`](../documentation/services/backend/endpoints.md).
 
-**Does not:** draw anything, or decide how a page looks. It decides what each note is called and
-where in time it sits.
+**Does:** decide what each note is called and where in time it sits, lay the sheet out and draw it
+as an SVG (`GET /sheet/{uuid}`). It does not decide how the rest of a page looks.
 
 ## aitu-frontend
 
@@ -55,29 +57,22 @@ where in time it sits.
 | Container | `frontend` (`aimpromptu-frontend:dev`), the Vite development server, published on `0.0.0.0:5173`, every address of the machine (`WEB_BIND`) |
 | Dev server | `http://localhost:5173` (pinned with `--strictPort`); from the Mac `http://ubuntu:5173` or `http://192.168.0.112:5173`, or through the tunnel. Vite answers only to known host names and to IP addresses (`AITU_ALLOWED_HOSTS` adds names) |
 | API base | `/api`, which the Vite server passes to the backend; `VITE_AITU_API_URL` overrides it |
-| Role | Every screen, and every pixel of the sheet |
+| Role | Every screen; it shows the sheet's SVG and draws what moves over it (the cursor, the picked notes, the marked stretch) |
 
-**Sections** (a left sidebar): **Projects** (each project: Source, Audio, Notes, Hands, Sheet;
+**Sections** (a left sidebar): **Projects** (each project: Source, Audio, Notes, Sheet;
 [frontend/projects.md](frontend/projects.md)), **My library** (Songs, Artists;
 [music-library/private-library.md](music-library/private-library.md)) and, for the master user only,
 **Admin**: **Users** and **Lab** (the video reader's pages). Every page asks to sign in first (`/login`).
 
-**Does not:** decide any note's name — the figures arrive from the backend and are passed straight
-through to the renderer.
+**Does not:** decide any note's name or lay the sheet out: both come from the backend.
 
-## @aimpromptu/grid-notation
+## @aimpromptu/grid-notation (removed)
 
-| Property | Value |
-|---|---|
-| Location | The sibling checkout `../vexflow-v2` |
-| Install | `"file:../../vexflow-v2"` — npm makes it a symlink |
-| Version | 0.42.0 |
-| Role | All engraving: beams, stems, accidentals, clefs, line breaks, pagination |
-
-It exists because VexFlow lays notes out from tick arithmetic inside measures, and a wall-clock
-matrix has neither. **Rebuild it after pulling** — npm does not build a linked dependency, and a
-stale `dist/` fails silently. The frontend image builds its own copy, so `make up` after a change
-there. See [frontend/rendering.md](frontend/rendering.md).
+The old sheet was engraved in the browser by `@aimpromptu/grid-notation`, the sibling checkout
+`../vexflow-v2` installed from disk and built into the frontend image. Implementation 03, Phase 10
+(2026-10-27) removed it from the app: the dependency, the build step, the `vexflow` build context of
+`compose.yaml`. See [frontend/rendering.md](frontend/rendering.md) and
+[deprecated/grid-notation.md](../documentation/deprecated/grid-notation.md).
 
 ## How they connect
 
@@ -87,14 +82,15 @@ Browser on the Mac ──http://ubuntu:5173──▶ frontend container (Vite, :
     GET  /pieces/{id}/status      which steps are ready     → the step tabs of a project
     PUT  /audio/{id}/cuts         the selected region       → the Audio tab
     POST /matrix/transcribe       + SSE chunk messages      → the live Notes tab
-    GET/PATCH /pieces/{id}/notes  the notes, as operations  → the Notes and Hands tabs
-    GET  /time/{id}/score         the drawable payload      → the Sheet tab
+    GET/PATCH /pieces/{id}/notes  the notes, as operations  → the Notes tab
+    GET  /sheet/{id}?width=N      the sheet as an SVG       → the Sheet tab (and every other sheet)
                                       ▼
                          backend container (127.0.0.1:8765, the GPU)
     reads and writes .database/: aitu.sqlite, the project bundles (project.json,
-    parts/<id>/notes.pmn, sheet.json, timeline.json) and audio/<sha256>.<ext>
+    parts/<id>/notes.pmn, sheet.f1 (an old sheet.json is still read), timeline.json) and
+    audio/<sha256>.<ext>
                                       ▼
-TimeScorePayload ──▶ TimeScoreView ──▶ @aimpromptu/grid-notation ──▶ SVG
+notes.pmn ──▶ the algorithm, the AI (sheet.f1) ──▶ engrave.frames ──▶ SVG ──▶ FramesSheetPage
 ```
 
 Nothing is drawn from a stored grid, because there is no stored grid.
@@ -108,7 +104,7 @@ so the browser sends the cookie by itself.
 Transcription takes 20 to 50 seconds. `POST /matrix/transcribe` answers `202` with a job id, the
 job waits for the GPU (one transcription at a time), and the browser follows a Server-Sent Events
 stream that carries the notes as MuScriptor finds them ([backend/muscriptor.md](backend/muscriptor.md)).
-The YouTube download and **Predict hands** are jobs on the same stream. Anything that can exceed
+The YouTube download and the AI writing a sheet (**Enhance with AI**) are jobs on the same stream. Anything that can exceed
 about a second follows this pattern.
 
 ## Where to look deeper

@@ -445,27 +445,6 @@ def split_of(
     return split_cache.get((audio_uuid, float(frame_ms), stamp), compute)
 
 
-def split_events(
-    stored: TranscribedEvents,
-    events: list[NoteEvent],
-    frame_ms: float = DEFAULT_FRAME_MS,
-) -> TimeHands:
-    """The hand split of notes that are not on disk, the way :func:`split_of` splits stored ones.
-
-    For a sheet drawn from notes the reader has not accepted yet: the preview of a notes
-    transposition (implementation 02, Phase 7). ``stored`` gives the length, the title and the
-    engine the notes came from. Not cached: a preview is asked for once.
-    """
-    filters = filters_for(stored.header.engine)
-    duration = max(stored.duration_seconds, frame_ms / 1000.0)
-    placed = saved_hands.placed_ids(
-        events, stored.duration_seconds, frame_ms=frame_ms, **filters  # type: ignore[arg-type]
-    )
-    complete = saved_hands.hands_complete(events, placed)
-    split = saved_hands.split_with_saved_hands if complete else impose_granularity_and_split
-    return split(events, duration, frame_ms=frame_ms, title=stored.title, **filters)
-
-
 def placed_note_ids(audio_uuid: str, frame_ms: float = DEFAULT_FRAME_MS) -> set[int]:
     """The ids of the live notes the piano sheet places (:func:`saved_hands.placed_ids`), cached
     until ``events.json`` changes. Raises ``FileNotFoundError`` when the piece has no notes."""
@@ -496,13 +475,15 @@ def inferred_split(
     keep_saved: bool = True,
     reporter: BaseProgress | None = None,
 ) -> TimeHands:
-    """The split the hand inference makes, whatever hands are saved: **Predict hands**.
+    """The split the hand inference makes, whatever hands are saved: the hands the new sheet starts from
+    (:func:`starting_hands`), and a take's (``editing.passages``). It was **Predict hands** until implementation 03,
+    Phase 10 removed that button with the Hands step.
 
     ``keep_saved`` lays the saved hands that were not guessed over the inference, as the old
-    behaviour lays the reader's pins (so a hand the user set survives a new prediction); a
-    guessed hand is inferred again. Without it every note is inferred. Cached beside the ordinary
-    split under its own key, so pressing the button twice pays the inference once. ``reporter``
-    receives the progress (stages ``events`` and ``two-hands``) only when it is computed here.
+    behaviour lays the reader's pins (so a hand the user set survives); a guessed hand is inferred
+    again. Without it every note is inferred. Cached beside the ordinary split under its own key, so
+    a second reader pays nothing. ``reporter`` receives the progress (stages ``events`` and
+    ``two-hands``) only when it is computed here.
     """
     path = events_path(audio_uuid)
     try:
@@ -564,12 +545,15 @@ def warm_split(audio_uuid: str, frame_ms: float = DEFAULT_FRAME_MS) -> threading
 
     Used by the transcription job after it saves: the ``done`` frame is not delayed by the split
     (0.3 to 4.3 s), and a page that asks for the sheet right after waits for this computation
-    instead of starting a second one (:func:`split_cache.get`).
+    instead of starting a second one (:func:`split_cache.get`). It is the split the new sheet starts
+    from (:func:`starting_hands`: :func:`inferred_split` with the saved hands kept); until
+    implementation 03, Phase 10 it warmed :func:`split_of`, the vexflow-v2 sheet's, which the new
+    sheet never reads.
     """
 
     def run() -> None:
         try:
-            split_of(audio_uuid, frame_ms)
+            inferred_split(audio_uuid, frame_ms, keep_saved=True)
         except Exception:  # pragma: no cover - the reader that needs it will raise it
             pass
 

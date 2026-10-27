@@ -8,9 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check:render": "node scripts/check-render.mjs",
     "check:history": "tsx scripts/check-history.ts",
-    "check:note-names": "tsx scripts/check-note-names.ts",
     "check:geometry": "tsx scripts/check-geometry.ts",
     "check:cuts": "tsx scripts/check-cuts.ts",
     "check:notes": "tsx scripts/check-notes.ts",
@@ -34,7 +32,6 @@
     "measure:lyric-fonts": "node scripts/measure-lyric-fonts.mjs"
   },
   "dependencies": {
-    "@aimpromptu/grid-notation": "file:../../vexflow-v2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^9.2.0",

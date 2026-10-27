@@ -7,10 +7,8 @@
  *   Source, Audio, Notes, Sheet (no Hands);
  * - a click on the sheet moves the cursor there (`[data-frames-cursor]`, `data-ms`) and lights its notes
  *   (`[data-lit]`); Play moves the cursor;
- * - a sheet the AI enhanced has the badge **Enhanced with AI** and offers **Enhance it again with AI**; the old
- *   sheet opens from the bar (vexflow-v2,
- *   `.grid-note-target`, or its stale banner when Sonnet changed the hands it was saved for) and the new one comes
- *   back;
+ * - a sheet the AI enhanced has the badge **Enhanced with AI** and offers **Enhance it again with AI**; the bar has
+ *   no switch to the old vexflow-v2 sheet (removed in implementation 03, Phases 8B and 10);
  * - an old address of the Hands step opens the Sheet step.
  *
  * With `--live` (it spends Sonnet credits: a few cents), a new project from a clip of `--seconds` of that song's

@@ -1,26 +1,17 @@
 /**
- * The two keyboards of the Sheet step: what is sounding under the playhead, and the decoration of
- * one picked note.
+ * The keyboard panel of the Sheet step: what is sounding under the playhead.
  *
- * Split out of `RhythmPage.tsx` (implementation 02, Phase 2).
+ * Split out of `RhythmPage.tsx` (implementation 02, Phase 2). The decoration keyboard of the old
+ * sheet went with it in implementation 03, Phase 10 (the grace note switch replaced it in Phase 7).
  */
 
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
-import type { GraceNote } from "../../../api";
-import { rowOf, type PrintedHand } from "../../../music/renderOverrides";
 import { Piano } from "../../../piano/Piano";
-import { IconAction, Segmented, Toolbox } from "../../../ui";
-import {
-  DECORATION_COLOUR,
-  formatSeconds,
-  KEY_LEGEND,
-  PRINCIPAL_COLOUR,
-  type SoundingNote,
-} from "./sheetConstants";
+import { Segmented, Toolbox } from "../../../ui";
+import { formatSeconds, KEY_LEGEND, type PrintedHand, type SoundingNote } from "./sheetConstants";
 
 export function PianoToolbox({
   open: pianoOpen,
@@ -135,97 +126,6 @@ export function PianoToolbox({
           ariaLabel="Keys sounding under the playhead"
         />
       </Stack>
-    </Toolbox>
-  );
-}
-
-export function DecorationToolbox({
-  open,
-  onlyNote,
-  onClose,
-  graceHere,
-  clearGrace,
-  putGrace,
-  noteNameAt,
-}: {
-  open: boolean;
-  onlyNote: string | null;
-  onClose: () => void;
-  graceHere: GraceNote | null;
-  clearGrace: () => void;
-  putGrace: (noteKey: string, row: number) => void;
-  noteNameAt: (row: number) => string;
-}) {
-  return (
-    <Toolbox
-      open={open}
-      title="Piano Edit"
-      subtitle={
-        onlyNote
-          ? `The decoration played just before ${noteNameAt(rowOf(onlyNote))}`
-          : undefined
-      }
-      initialPosition={{ x: 24, y: Math.max(80, window.innerHeight - 300) }}
-      onClose={onClose}
-      width={760}
-    >
-      {onlyNote ? (
-        <Stack spacing={1}>
-          <Stack
-            direction="row"
-            spacing={1.5}
-            sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
-          >
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-              <Box
-                sx={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 0.5,
-                  bgcolor: PRINCIPAL_COLOUR,
-                }}
-              />
-              <Typography variant="caption" color="text.secondary">
-                {noteNameAt(rowOf(onlyNote))} — the note it leans on
-              </Typography>
-            </Stack>
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-              <Box
-                sx={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 0.5,
-                  bgcolor: DECORATION_COLOUR,
-                }}
-              />
-              <Typography variant="caption" color="text.secondary">
-                {graceHere
-                  ? `${noteNameAt(graceHere.row)} — the decoration`
-                  : "Click a key to choose the decoration"}
-              </Typography>
-            </Stack>
-            {graceHere ? (
-              <IconAction
-                title="Remove the decoration"
-                icon={<DeleteOutlineIcon fontSize="small" />}
-                danger
-                onClick={clearGrace}
-              />
-            ) : null}
-          </Stack>
-          <Piano
-            width="100%"
-            height="auto"
-            keyColours={{
-              [rowOf(onlyNote)]: PRINCIPAL_COLOUR,
-              ...(graceHere ? { [graceHere.row]: DECORATION_COLOUR } : {}),
-            }}
-            onKeyPress={(row) => putGrace(onlyNote, row)}
-            keyTitle={(row) => `${noteNameAt(row)} as the decoration`}
-            ariaLabel="Choose the decoration note"
-          />
-        </Stack>
-      ) : null}
     </Toolbox>
   );
 }

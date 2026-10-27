@@ -1,56 +1,35 @@
-> Context: [printing.md](../../../context/frontend/printing.md) · [grid-notation.md](grid-notation.md)
+> Context: [printing.md](../../../context/frontend/printing.md) · [rendering.md](../../../context/frontend/rendering.md)
 
 # Score PDF export
 
-The **PDF** button of a project's Sheet step (`/projects/:id/sheet`). Lays the sheet out on paper, previews it, writes a vector PDF,
-and downloads it. No new npm dependency: the PDF is written here.
+The **PDF** button of a project's Sheet step (`/projects/:id/sheet`). It lays the sheet out on paper, previews it,
+writes a vector PDF and downloads it. No npm dependency writes the PDF: the writer is this app's own code.
 
-**The new sheet (implementation 03, Phase 8)** uses the same writer: `pages/piece/sheet/frames/FramesPdfDialog.tsx`
-asks the backend for the pages (`GET /sheet/{uuid}/pages`, whole lines at the printed staff of **Size of the music**, 6.5 mm
-by default, with **Space between lines** in millimetres, 6 mm by default; Phase 8A+++), puts
-each one in a `[data-pdf-page]` element with its title and number, and `scoreToPdf(host, { selector:
-"[data-pdf-page]" })` writes them. `drawPage.ts` reads the engine's SVG: a glyph is a `<use>` of a `<path>` in
-`<defs>` (the path's own `scale(1,-1)` applied), beams are `<polygon>`s, and lyrics are `<text>` with one `tspan`
-per line (a new line is a new run). The clefs use the smooth curve `s`, now converted (`S`, `T`). No glyph is text,
-so Bravura is not embedded (a base font stands in its unused slot): 7 Years on 4 A4 pages is about 60 kB.
+The panel is `pages/piece/sheet/frames/FramesPdfDialog.tsx` (implementation 03, Phase 8). It asks the backend for
+the pages (`GET /sheet/{uuid}/pages`, whole lines at the printed staff of **Size of the music**, 6.5 mm by default,
+with **Space between lines** in millimetres, 6 mm by default; Phase 8A+++), puts each one in a `[data-pdf-page]`
+element with its title and number, and `scoreToPdf(host, { selector: "[data-pdf-page]" })` writes them.
+`drawPage.ts` reads the engine's SVG: a glyph is a `<use>` of a `<path>` in `<defs>` (the path's own
+`scale(1,-1)` applied), beams are `<polygon>`s, and lyrics are `<text>` with one `tspan` per line (a new line is
+a new run). The clefs use the smooth curve `s`, now converted (`S`, `T`). No glyph is text, so Bravura is not
+embedded (a base font stands in its unused slot): 7 Years on 4 A4 pages is about 60 kB.
+
+The old sheet's panel (`components/time/ScorePdfDialog.tsx`), which printed the pages the vexflow-v2 package drew
+(`GridNotationRenderer.renderPages()`, `.grid-page`), was removed in implementation 03, Phase 10 (2026-10-27),
+with the package; its page is [deprecated/grid-notation.md](../../deprecated/grid-notation.md). The writer
+still accepts `.grid-page` as its default selector and still embeds Bravura when a page draws music as text, so
+the sections below that mention them describe what the writer can do, not what the new sheet sends it.
 
 ## Files
 
 | File | Does |
 |---|---|
-| `src/components/time/ScorePdfDialog.tsx` | The panel: paper, orientation, margins, title, page numbers, live preview, Download |
-| `src/print/scorePdf.ts` | Walks the drawn pages, assembles the PDF, embeds the font, saves the blob |
-| `src/print/drawPage.ts` | One `.grid-page` element → PDF drawing operators |
+| `src/pages/piece/sheet/frames/FramesPdfDialog.tsx` | The panel: paper, orientation, margins, size of the music, space between lines, title, page numbers, preview, Download |
+| `src/print/scorePdf.ts` | Walks the drawn pages, assembles the PDF, embeds the font when a glyph needs it, saves the blob |
+| `src/print/drawPage.ts` | One page element to PDF drawing operators |
 | `src/print/pdf.ts` | A ~120-line PDF writer: objects, streams, `FlateDecode`, xref |
-| `src/print/opentype.ts` | Reads `head`/`hhea`/`hmtx`/`cmap` out of an OTF — enough to embed it and find a glyph |
+| `src/print/opentype.ts` | Reads `head`/`hhea`/`hmtx`/`cmap` out of an OTF, enough to embed it and find a glyph |
 | `public/fonts/bravura.otf` | Bravura, fetched only when a PDF is asked for. Licence beside it (OFL) |
-| `vexflow-v2` → `GridNotationRenderer.renderPages()` | The seam. Draws the score again as paper pages |
-
-`src/components/time/TimeScoreView.tsx` gained one prop, `onRendererChange`, which hands the live
-`GridNotationRenderer` up to the page so the panel can print from it.
-
-## The seam
-
-`renderPages()` is a thin wrapper over the package's `renderScorePages`. It exists on the renderer,
-not at the call site, so that a printed page cannot silently lose an option the screen was using.
-In particular it passes **the frame widths this renderer already measured**. `renderScorePages` will
-otherwise measure its own, and it does not know about `silenceGroupPx` or `frameGroup` — the two
-numbers that decide how much room a silence gets — so the print would be spaced differently from the
-screen.
-
-Its print defaults, all overridable by the caller:
-
-| Default | Why |
-|---|---|
-| `showTimestamps: false`, `frameCells: false`, `rangeMarkers: false` | ways of pointing at something; nothing on paper to point with |
-| `frameLabels: false` | a column number is an address and nobody can click one on paper. Also gives back the 52 px strip reserved to hold the numbers — `GRAND_STAFF_TOP_PADDING` (60) becomes `GRAND_STAFF_TOP_PADDING_BARE` (24) |
-| `runningHead: false` | the piece is named once, where it starts |
-| `systemPadding: { bottom: 20 }` | on screen the page can grow downwards so the slack under the lower staff is set generously; on paper it is the difference between four lines and five |
-
-`systemGap` (the panel's **extra space between lines**) is added on top of that padding. Together
-these take a page of this score from three lines to five, with the staff gap inside each line
-untouched. `resolveSystemPadding` is the single function both the paginator's budget and the drawing
-go through, so a page can never be planned for a system taller than the one that gets drawn.
 
 ## How a page becomes PDF
 
@@ -63,7 +42,7 @@ stylesheet and the brace is drawn inside a scaled group.
 | `fill`, `stroke`, `stroke-width`, `stroke-dasharray`, linecap/linejoin | `rg`/`RG`/`w`/`d`/`J`/`j` |
 | `opacity`, `fill-opacity`, `stroke-opacity` | one `ExtGState` per distinct alpha |
 | element transforms | `q … cm … Q` from `getCTM()` |
-| `text` in Bravura | the embedded font, one glyph per `Tj`, at `getStartPositionOfChar(i)` |
+| `text` in Bravura (the old sheet; the new sheet draws no glyph as text) | the embedded font, one glyph per `Tj`, at `getStartPositionOfChar(i)` |
 | `text` in a sans/serif face | Helvetica or Times, each normal, bold, italic (oblique) or both, or Symbol, **one word per `Tj`** |
 | the page's HTML title, running head and folio | measured with a `Range` per character; baseline from the font's ascent plus the browser's half-leading |
 
@@ -81,7 +60,7 @@ Two decisions worth knowing:
 
 ## Fonts in the file
 
-Bravura is embedded whole (512 kB, Flate-compressed) as `Type0` / `Identity-H` /
+When a page draws a glyph as text (the old sheet did; the new sheet does not), Bravura is embedded whole (512 kB, Flate-compressed) as `Type0` / `Identity-H` /
 `CIDFontType0` with `FontFile3 /Subtype /OpenType`, addressed by glyph id — the notes sit at
 private-use code points that mean nothing outside the font, so there is no encoding worth
 pretending to. `/W` lists only the glyphs the piece used. Verified against poppler and pdf.js.
@@ -90,24 +69,20 @@ The eight text faces are the PDF built-ins, so they cost nothing: Helvetica, Hel
 Helvetica-Oblique, Helvetica-BoldOblique, Times-Roman, Times-Bold, Times-Italic and Times-BoldItalic in
 `WinAnsiEncoding` (a serif face prints as Times, any other as Helvetica: the lyrics blocks of the new sheet can be
 bold or italic in Lora, Geist or Montserrat, implementation 03 Phase 8A++), plus `Symbol` for the few mathematical signs the
-labels use (`≈` in the passage header is the one that matters) which WinAnsi has no slot for.
+labels use, which WinAnsi has no slot for.
 
 ## Checking a file
 
 ```bash
 qpdf --check sheet.pdf                 # structure
-pdffonts sheet.pdf                     # Bravura should read "CID Type 0C (OT) … emb yes"
+pdffonts sheet.pdf                     # the new sheet embeds no Bravura; the text faces are base fonts
 pdftoppm -r 96 -png sheet.pdf page     # render with a second engine and look
 ```
 
 The margin check that matters: render every page and confirm the ink bounding box stays inside the
-margins. On the 8-page test piece at 14 mm sides and 16 mm ends, music ink starts at 14.6 mm from
-the left, 17.2 mm from the right and 16.9 mm from the top on every page. Exclude the bottom 15 mm
-from that measurement: the folio deliberately sits inside the bottom margin, as folios do.
-
-To check that a line that breaks carries on below, read the systems off the DOM — every
-`[data-system-index]` carries `data-start-frame` and `data-end-frame`, and they should tile the
-piece with no gap and no overlap.
+margins. Exclude the bottom 15 mm from that measurement: the folio deliberately sits inside the
+bottom margin, as folios do. (The measured figures this section used to give, and the
+`[data-system-index]` attributes it read, belonged to the old sheet's pages.)
 
 ## Limits
 
@@ -115,7 +90,5 @@ piece with no gap and no overlap.
   is one the browser measured, so the shrink is taken off the wrapper for as long as the pages are
   being read. The wrapper is a plain ref, kept apart from the box the pages go in, precisely so it
   can be mutated for that moment.
-- The panel's contents mount a render *after* it opens, so the host element is held as **state**,
-  not a ref: an effect that read a ref on the first pass found nothing and never drew.
-- Gradients, clip paths, images and filters are not translated. The drawing package emits none of
+- Gradients, clip paths, images and filters are not translated. The backend's SVG emits none of
   them; anything added later that does will need a case here.

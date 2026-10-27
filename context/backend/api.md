@@ -16,13 +16,14 @@ session cookie `aitu_session` that the sign in sets. `main.py` includes the rout
 | Group | Routers | Check |
 |---|---|---|
 | Open | `/auth` | none for the sign in |
-| User | `/audio`, `/matrix`, `/passages`, `/pieces`, `/time`, `/projects`, `/library`, `/playlists`, `/public`, `/requests`, `/shares` and `/shared`, `/youtube`, `/video` | a session, then the rights of the project the route names |
+| User | `/audio`, `/matrix`, `/passages`, `/pieces`, `/sheet`, `/projects`, `/library`, `/playlists`, `/public`, `/requests`, `/shares` and `/shared`, `/youtube`, `/video` | a session, then the rights of the project the route names |
 | Master | `/admin`, `/frame-examples` (Lab) | a session of the master user |
 
 The rights check reads the project from the path (`audio_uuid`, the id of a part, or `project_id`)
 and applies the rights table of [08-security.md](../08-security.md). A `GET` reads and every other
-method writes, except five `POST` routes that compute an answer and change nothing (the sheet with
-the page edits, the ladder preview, the hand prediction, trim, duplicate). `POST /matrix/transcribe`
+method writes, except three `POST` routes that read a project and change nothing in it (trim,
+duplicate, and the edit copy of a library version: `READ_ROUTES`). Until implementation 03, Phase 10
+the list also held the old sheet with the page edits, its ladder preview and the hand prediction. `POST /matrix/transcribe`
 names its part in the body and checks it itself.
 
 The code below a route knows the user of the request, so the lists are the user's own (`GET /audio/`
@@ -38,8 +39,8 @@ the master user can follow it.
 | `/admin` | `api/admin.py` | The users: list, make, disable, reset a password; **Review**: the requests to decide, and the decision (Phase 14). Master user only |
 | `/audio` | `api/audio.py` | The working store: bring a recording in, trim it, stream it |
 | `/matrix` | `api/matrix.py` | Run the model, follow it (the notes arrive live on the stream), read back the notes it heard |
-| `/pieces` | `api/pieces.py` | The state of each step, the notes as columns, note operations, predict the hands ([pieces-and-revisions.md](pieces-and-revisions.md)) |
-| `/time` | `api/time_score.py` | The score: peaks, the ladder, the drawable payload, the saved reading |
+| `/pieces` | `api/pieces.py` | The state of each step, the notes as columns, note operations ([pieces-and-revisions.md](pieces-and-revisions.md)) |
+| `/sheet` | `api/sheet.py` | The sheet of a part (implementation 03): drawn by the backend as SVG, the AI run, the hands, the reading tools, transpose, add, remove, paste, undo and redo, the pages for print, the song's words (`/sheet/{uuid}/words`) |
 | `/passages` | `api/passages.py` | Recording in Sheet (implementation 02, Phase 9): a passage of a part, its takes, the promotion ([editing.md](editing.md)) |
 | `/projects` | `api/projects.py` | The Personal Vault: list (with the step of each project), create, rename, delete, duplicate (new ids, the same audio files), export and import a `.aitu` file (implementation 02, Phase 5); **Save to library** and **Edit** (Phase 6) |
 | `/library` | `api/library.py` | The Private Library (Phase 6): songs and their versions, artists and their names, the history of a version ([music-library/private-library.md](../music-library/private-library.md)) |
@@ -53,9 +54,12 @@ the master user can follow it.
 Plus `GET /health`. The original text-notation MVP (`GET /scores`, `POST /sequence`) was deleted in
 implementation 02, Phase 1 (Q-4); its pages are in `documentation/deprecated/`. The old Piano
 Library router (`/library`: playground versions, promotion, tags, playlists) was deleted in Phase 3;
-`/library` is the Private Library since Phase 6.
+`/library` is the Private Library since Phase 6. The `/time` router (`api/time_score.py`: the old
+sheet's peaks, ladder, score payload, saved reading, paste, restore and lyrics) and **Predict hands**
+(`/pieces/{uuid}/hands/predict`) were deleted in implementation 03, Phase 10 (2026-10-27) with the
+vexflow-v2 sheet; the lyrics moved to `GET/PUT /sheet/{uuid}/words`.
 
-The `{uuid}` of `/audio`, `/matrix`, `/pieces` and `/time` is the id of a **part** of a project
+The `{uuid}` of `/audio`, `/matrix`, `/pieces` and `/sheet` is the id of a **part** of a project
 (plan P-6). A project made by this app has the id of its first part.
 
 ## The shape of a working session
@@ -71,17 +75,17 @@ POST /matrix/transcribe       202 + a job id
 GET  /matrix/progress/{id}    SSE: chunk messages with the notes, then done
 GET  /pieces/{id}/notes       the saved notes, as columns
 PATCH /pieces/{id}/notes      the user's edits, as operations
-POST /pieces/{id}/hands/predict/job   the hand split, then PATCH with hand operations
-GET  /time/{id}/peaks         the picture of the playing
-POST /time/{id}/score         draw it
-PUT  /time/{id}/rhythm        keep the reading
+GET  /sheet/{id}?width=N      the sheet, drawn as SVG (the algorithm's until the AI writes one)
+POST /sheet/{id}/llm          Enhance with AI: 202 + a job id, followed on /matrix/progress/{id}
+POST /sheet/{id}/reading      one edit of the toolboxes; the answer is the sheet drawn again
 ```
 
-## Nothing on the score path is stored
+## What is stored, and what is derived
 
-Every `/time` response is derived from the stored notes (`notes.pmn`) on each request. Nothing is written
-and nothing is stored, so asking for the same piece at 20 ms instead of 40 is a different query
-string rather than a migration. **Nothing on disk can disagree with what the screen shows.**
+The notes (`notes.pmn`) and the sheet (`sheet.f1`, implementation 03) are stored; the drawing is
+derived from `sheet.f1` on each request, and a sheet written for older notes is laid again on the
+current ones, so it is never stale for the page. Until implementation 03, Phase 10 the old sheet was
+derived whole from the notes on every `/time` request and only the reader's decisions were stored.
 
 Since implementation 08 one thing is kept in memory: the hand split, in `transcription/split_cache.py`,
 keyed by the piece, the column length and the time `notes.pmn` was last written, so any save makes
@@ -93,7 +97,7 @@ matrices are painted from the saved hands in about 20 ms.
 Transcription takes tens of seconds, so `POST /matrix/transcribe` answers `202` with a job id and
 the caller follows a Server-Sent Events stream that carries the progress and the notes as they are
 found ([muscriptor.md](muscriptor.md)). Transcriptions run one at a time on the GPU. The YouTube
-download and **Predict hands** are jobs on the same stream.
+download, an AI run on a sheet and **Write the proposal** of a take are jobs on the same stream.
 
 ## Error conventions
 
@@ -112,5 +116,6 @@ download and **Predict hands** are jobs on the same stream.
   every route, its parameters and what it obeys, with `/auth` and `/admin`
 - [08-security.md](../08-security.md): the users, the session cookie, the rights table
 - `http://127.0.0.1:8765/docs` — the generated, always-current field reference
-- [time-model.md](time-model.md) — why `/time` looks the way it does
-- [editing.md](editing.md) — paste and Recording in Sheet, behind `/time/{uuid}/paste` and `/passages`
+- [time-model.md](time-model.md) — the wall-clock model the sheet is built on
+- [`aitu-backend/src/aitu_backend/sheet/README.md`](../../aitu-backend/src/aitu_backend/sheet/README.md) — the sheet behind `/sheet`, sections 9 to 17
+- [editing.md](editing.md) — paste and Recording in Sheet, behind `/sheet/{uuid}/paste` and `/passages`

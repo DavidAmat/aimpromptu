@@ -16,15 +16,12 @@ opinion about what any note is called.
 | ``cleaning`` | Appendix B: a sustain dies when any other key **of that hand** is struck |
 | ``hands`` | Appendix D: split into two aligned matrices (beam inference; see ``aitu_backend.hands``) |
 | ``ops`` | transpose, insert, slice/delete/replace, validated cell edits |
-| ``intervals`` | the gaps between one hand's attacks, measured on raw times (D-07) |
-| ``peaks`` | where those gaps pile up |
-| ``ladder`` | one named peak turned into all nine figure lengths (D-10) |
-| ``passages`` | the user-drawn sections, each with its own ladder (D-19) |
 
 Pipeline order: recorded notes -> ``transcription.events_to_matrix.events_to_time_matrix``
--> ``hands.split_hands`` -> measurement. The split comes before any measurement
-(D-31), because the gaps between a right-hand run and a held left-hand chord are
-not a rhythm and would bury the peak the user is meant to name.
+-> ``hands.split_hands``: the hand split the new sheet starts from (D-31). The modules
+that measured the gaps between attacks and named the figures for the vexflow-v2 sheet
+(``intervals``, ``peaks``, ``ladder``, ``passages``, ``bands``) were removed in
+implementation 03, Phase 10: the new sheet's core (``aitu_backend.sheet``) names them.
 
 ``granularity``, ``approximation``, ``tempo_map`` and ``isochrony`` were deleted
 in Phase 4. They collapsed one grid onto another, fitted durations to a beat,

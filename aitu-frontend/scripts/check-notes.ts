@@ -15,20 +15,17 @@ import { LiveFeed, type ChunkMessage } from "../src/notes/liveFeed";
 import {
   addNote,
   anyHand,
-  applyPrediction,
   baseOf,
   countChanges,
   deleteNotes,
   describeChanges,
   fillRoll,
-  idsWithoutHand,
   mergeChanged,
   moveNotes,
   NO_OVERRIDES,
   nextTempId,
   noteOf,
   resizeNote,
-  setHands,
   toOperations,
   type EditContext,
   type Overrides,
@@ -221,16 +218,6 @@ console.log("Unsaved changes and save");
 
 console.log("Hands");
 {
-  const toLeft = setHands(context(NO_OVERRIDES), [0, 1, 2], "l");
-  check("To left hand gives the notes that hand, and leaves alone a note that has it", noteOf(base, toLeft.over, 0)?.hand === "l" && toLeft.over.size === 2);
-  check("a hand change is counted as such", describeChanges(countChanges(base, NO_OVERRIDES, toLeft.over)) === "Unsaved: 2 notes with another hand");
-  const predicted = applyPrediction(context(NO_OVERRIDES), { id: [0, 1, 2, 3], hand: "llr-" }, new Map());
-  check("a prediction is laid over the notes, unsaved", noteOf(base, predicted.over, 0)?.hand === "l" && noteOf(base, predicted.over, 2)?.hand === "r");
-  check("a note the split could not place keeps the hand it has", noteOf(base, predicted.over, 3)?.hand === "-");
-  check("the operations of a prediction are two hand operations", same(toOperations(base, NO_OVERRIDES, predicted.over, new Map()), [{ op: "hand", ids: [2], hand: "r" }, { op: "hand", ids: [0, 1], hand: "l" }]));
-  check("the notes without a hand", same(idsWithoutHand(base, predicted.over), [3]));
-  const viaMap = applyPrediction(context(addNote(context(NO_OVERRIDES), -1, 60, 5000).over), { id: [12], hand: "r" }, new Map([[-1, 12]]));
-  check("a prediction names an added and saved note by its backend id", noteOf(base, viaMap.over, -1)?.hand === "r");
   check("a piece with hands can be coloured by hand", anyHand(base, NO_OVERRIDES) && !anyHand(baseOf({ ...PIECE, hand: "----" }), NO_OVERRIDES));
 }
 

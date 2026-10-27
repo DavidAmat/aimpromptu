@@ -18,6 +18,8 @@
 * `GET /sheet/{uuid}/stretch?start=A&end=B` — the armadura in force at a stretch and the one with the fewest signs
   over it. `POST /sheet/{uuid}/llm/stretch` — the AI writes a stretch again with the user's words (one request,
   in the background; the page follows the job as for a whole run).
+* `GET` and `PUT /sheet/{uuid}/words` — the pasted lyrics of the part and its pool of pieces (the Lyrics tab), kept
+  in `project.json`, not in the sheet (moved from `/time/{uuid}/lyrics` in implementation 03, Phase 10).
 
 The sheet is never stale for the page: a sheet stored for older notes is laid again on the current ones
 (`part_sheet.build`). What the old Sheet step saved (`sheet.json`, vexflow-v2) is not read here, except the armadura
@@ -41,7 +43,7 @@ from aitu_backend.part_sheet import build, edits, job, reading
 from aitu_backend.part_sheet import store as new_sheet_store
 from aitu_backend.sheet.engrave import frames as frames_engine
 from aitu_backend.sheet.sheet import f1
-from aitu_backend.storage import locate
+from aitu_backend.storage import bundle, locate
 from aitu_backend.transcription import pipeline
 
 router = APIRouter(prefix="/sheet", tags=["sheet"])
@@ -467,3 +469,50 @@ def run_llm(audio_uuid: str) -> dict[str, str]:
         raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
     started = job.start(audio_uuid)
     return {"jobId": started.id, "status": started.status}
+
+
+class PartWords(BaseModel):
+    """The words of the song attached to a part (the sheet toolbox's Lyrics tab)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    #: ``None`` or an empty text: no lyrics saved.
+    text: str | None = Field(None, max_length=20000)
+    #: The lyrics pieces of the pool, in order. ``None``: never saved here; on a ``PUT``, absent leaves the saved pool
+    #: as it is.
+    pool: list[str] | None = None
+
+
+def _project_of_part(audio_uuid: str):
+    if not audio_store.exists(audio_uuid):
+        raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
+    try:
+        return bundle.read_project(locate.part(audio_uuid).project_id)
+    except locate.NotFound:
+        raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'") from None
+
+
+@router.get("/{audio_uuid}/words", response_model=PartWords, response_model_by_alias=True)
+def get_words(audio_uuid: str) -> PartWords:
+    """The lyrics and the pool saved with this part, so the Lyrics tab opens with them."""
+    part = _project_of_part(audio_uuid).part(audio_uuid)
+    return PartWords(text=part.lyrics, pool=part.lyrics_pool)
+
+
+@router.put("/{audio_uuid}/words", response_model=PartWords, response_model_by_alias=True)
+def put_words(audio_uuid: str, body: PartWords = Body(...)) -> PartWords:
+    """Save the pasted lyrics and the pool with the part, in ``project.json``: **Save lyrics**.
+
+    The song's words, not a reading of the page, so they are kept apart from the sheet and outlive a new
+    transcription. Nothing else of the project changes. A version of My library answers ``403``.
+    """
+    text = (body.text or "").strip() or None
+    project = _project_of_part(audio_uuid)
+    with bundle.project_lock(project.id):
+        project = bundle.read_project(project.id)
+        part = project.part(audio_uuid)
+        part.lyrics = text
+        if "pool" in body.model_fields_set:
+            part.lyrics_pool = [piece.strip() for piece in body.pool or [] if piece.strip()]
+        bundle.write_project(project)
+    return PartWords(text=text, pool=part.lyrics_pool)

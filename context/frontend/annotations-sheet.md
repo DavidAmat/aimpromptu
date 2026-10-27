@@ -2,7 +2,9 @@
 
 *This page describes the old sheet (vexflow-v2). The new sheet's sheet toolbox (implementation 03, Phase 8) keeps
 Title, Key, Transpose and Lyrics as described here, replaces Layout by **View** (Zoom and Space between lines), and
-has no Find trills: see [annotations.md](annotations.md), "The new sheet".*
+has no Find trills: see [annotations.md](annotations.md), "The new sheet". The old sheet's code (`SheetToolbox.tsx`,
+`TransposeDialog.tsx`, the `/time/...` routes named below) was removed in implementation 03, Phase 10
+(2026-10-27); this page is kept as the record.*
 
 What the Sheet step can say about the whole piece. The overview of the page, the defaults, undo and
 saving is [annotations.md](annotations.md). Code: `aitu-frontend/src/pages/piece/sheet/SheetToolbox.tsx`,

@@ -12,7 +12,7 @@ numbered folder:
   Phases 16 and 17 were added the same day.
 - **`03-apply-poc-research/`** replaces the sheet's renderer, vexflow-v2, with the chain built by the
   research folder `poc-aitu-research` (an algorithm, an LLM step with Sonnet 5.5, an SVG engine), on a
-  sheet with no compases, tempo, puntillos or silencios. Opened 2026-10-23.
+  sheet with no compases, tempo, puntillos or silencios. Opened 2026-10-23, done 2026-10-27.
 
 **Open a folder's own `README.md` first**, when it has one. It says whether that work is live or
 closed.
@@ -42,13 +42,14 @@ closed.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 03 | [`03-apply-poc-research/`](03-apply-poc-research/README.md) | vexflow-v2 replaced by the chain of research plan 01: the core in the backend, the sheet without compases, the new engine, Sonnet 5.5 in the background, every editing tool and screen moved, the saved data migrated, vexflow-v2 removed. One branch, `feat/migrate-new-logic` | 2026-10-23 | **Live.** Phases 0 to 4 done (2026-10-23 to 25); Phase 5 done and merged into `master` (2026-10-25); Phase 6 done and merged into `master` (2026-10-25); Phase 7 done and merged into `master` (2026-10-26); Phase 8 done and merged into `master` (2026-10-26); Phase 9 done and merged into `master` (2026-10-27); Phase 10 is next. [`03-checklist.md`](03-apply-poc-research/03-checklist.md) is the status lookup |
+| 03 | [`03-apply-poc-research/`](03-apply-poc-research/README.md) | vexflow-v2 replaced by the chain of research plan 01: the core in the backend, the sheet without compases, the new engine, Sonnet 5.5 in the background, every editing tool and screen moved, the saved data migrated, vexflow-v2 removed. One branch, `feat/migrate-new-logic` | 2026-10-23 | **Done** (2026-10-27). Phases 0 to 4 done (2026-10-23 to 25); Phase 5 done and merged into `master` (2026-10-25); Phase 6 done and merged into `master` (2026-10-25); Phase 7 done and merged into `master` (2026-10-26); Phase 8 done and merged into `master` (2026-10-26); Phase 9 done and merged into `master` (2026-10-27); Phase 10 done and merged into `master` (2026-10-27). [`03-checklist.md`](03-apply-poc-research/03-checklist.md) is the status lookup |
 
 ## How to read this folder
 
-- **"What is being built now?"** → implementation 03: the plan is
-  [`03-apply-poc-research/03-plan.md`](03-apply-poc-research/03-plan.md) and its checklist
-  [`03-checklist.md`](03-apply-poc-research/03-checklist.md). Implementation 02 is done (Phase 18, the
+- **"What is being built now?"** → nothing open: implementation 03 is done (2026-10-27); its plan is
+  [`03-apply-poc-research/03-plan.md`](03-apply-poc-research/03-plan.md), its checklist
+  [`03-checklist.md`](03-apply-poc-research/03-checklist.md), and its notes for later are in
+  [`03-implementation-phase-10.md`](03-apply-poc-research/03-implementation-phase-10.md). Implementation 02 is done (Phase 18, the
   last one); its open points are in
   [`02-implementation-phase-15.md`](02-private-web-app/02-implementation-phase-15.md) section 7.
 - **"What must a new task respect?"** →

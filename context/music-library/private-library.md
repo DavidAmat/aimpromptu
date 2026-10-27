@@ -120,7 +120,9 @@ The 30 songs the migration of Phase 3 put in the master user's library had notes
 no sheet. On 2026-10-16 each got them through the real pages, as a user would
 (`aitu-frontend/scripts/sheet-library.mjs`: **Edit**, **Predict hands** and **Save**, the Sheet
 step's **Save**, **Replace the version**), so their cuts were written away then, and their earlier
-state (without a sheet) stays in their history, where it cannot be restored.
+state (without a sheet) stays in their history, where it cannot be restored. That script, **Predict
+hands** and the old sheet's **Save** were removed in implementation 03, Phase 10 (2026-10-27): a sheet
+is now written by the AI or the algorithm and each edit is kept at once.
 
 ## Where to look deeper
 

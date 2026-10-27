@@ -1,8 +1,10 @@
 /**
- * Steps 3 and 4, **Notes** and **Hands**: one editor of the piano roll visualization (implementation
- * 08, plan sections 7.1, 9.5 and 9.6; restyled by implementation 02, plan section 10.2: icon actions
- * with tooltips, the primary action on the top row, the hand tools in the floating toolbox). The Notes step is the live transcription and the edits of the rectangles;
- * the Hands step is the same view coloured by hand, with **Predict hands** and the hand tools.
+ * Step 3, **Notes**: the editor of the piano roll visualization (implementation 08, plan sections
+ * 7.1 and 9.5; restyled by implementation 02, plan section 10.2: icon actions with tooltips, the
+ * primary action on the top row, the tools in the floating toolbox): the live transcription and the
+ * edits of the rectangles. The Hands step that shared this editor was removed by implementation 03
+ * (Phase 5 took it out of the flow, Phase 10 removed its code): the AI decides the hands with the
+ * sheet, and a hand is changed on the sheet.
  *
  * **While the piece is transcribed**, the rectangles appear as the engine writes them: the page
  * follows the progress stream of the running job (`status.steps.notes.details.jobId`), the view
@@ -21,50 +23,36 @@
  * before **Save**, which sends the changes as operations with the revision they were made on; a
  * change made elsewhere in the meantime is refused, not overwritten.
  *
- * **Hands.** On the Notes step the rectangles are coloured by hand as soon as the piece has hands,
- * and **Hand colours** turns that off. On the Hands step, **Predict hands** saves what is unsaved,
- * runs the hand split as a job with its progress bar, and lays the answer over the notes as
- * unsaved changes; **To right hand** and **To left hand** (R, L) move the selected rectangles, the
- * filter shows one hand alone, and the notes the split could not place are red until they are given
- * a hand or deleted. **Save** sends the hands as `hand` operations, like any other edit.
+ * **Hands.** The rectangles are coloured by hand as soon as the piece has hands, and **Hand
+ * colours** turns that off.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
-import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
-import BackHandIcon from "@mui/icons-material/BackHandOutlined";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import RedoIcon from "@mui/icons-material/Redo";
-import ReplayIcon from "@mui/icons-material/Replay";
 import SaveIcon from "@mui/icons-material/Save";
 import UndoIcon from "@mui/icons-material/Undo";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import { useNavigate } from "react-router-dom";
-import { ApiError, audioApi, matrixApi, piecesApi, type PredictResult } from "../../api";
+import { ApiError, audioApi, matrixApi, piecesApi } from "../../api";
 import { useCutPlayer } from "../../audio/useCutPlayer";
 import PianoRollCanvas, { type RollHandle, type RollMode } from "../../components/notes/PianoRollCanvas";
 import RollTimeBar from "../../components/notes/RollTimeBar";
-import type { HandFilter } from "../../components/notes/rollPaint";
-import StepProgress from "../../components/piece/StepProgress";
-import { followJob, type FollowedJob } from "../../hooks/followJob";
 import { useEditHistory } from "../../hooks/useEditHistory";
 import { ROUTES } from "../../layout/routes";
 import { noteName, spanishNoteShort } from "../../music/noteNames";
@@ -72,13 +60,11 @@ import { LiveFeed } from "../../notes/liveFeed";
 import {
   addNote,
   anyHand,
-  applyPrediction,
   baseOf,
   countChanges,
   deleteNotes,
   describeChanges,
   fillRoll,
-  idsWithoutHand,
   isLive,
   liveCount,
   mergeChanged,
@@ -87,7 +73,6 @@ import {
   NO_OVERRIDES,
   noteOf,
   resizeNote,
-  setHands,
   toOperations,
   type EditContext,
   type EditResult,
@@ -97,8 +82,7 @@ import {
 import { RollNotes } from "../../notes/rollNotes";
 import { useLiveTranscription } from "../../notes/useLiveTranscription";
 import { useSpacebarPlay } from "../../playback/useSpacebarPlay";
-import { useWorkingArtifact } from "../../state/useWorkingArtifact";
-import { EmptyState, FloatingBar, IconAction, PillButton, Segmented, timestampSx } from "../../ui";
+import { EmptyState, FloatingBar, IconAction, PillButton, timestampSx } from "../../ui";
 import { stepStatus, usePiece, useUnsavedChanges } from "./pieceContext";
 
 const FRAME_MS = 10;
@@ -144,30 +128,11 @@ function readHandColours(): boolean {
   }
 }
 
-/** **Predict hands** while it runs: its stage in words, how far, since when. */
-interface Predicting {
-  label: string;
-  percent: number | null;
-  startedAt: number;
-  now: number;
-}
-
-/** The stages of the prediction job, in words and in a share of the whole bar. */
-function predictionProgress(stage: string, fraction: number): { label: string; percent: number } {
-  if (stage === "two-hands") return { label: "Predicting the hands…", percent: 10 + fraction * 90 };
-  if (stage === "events") return { label: "Building the piano matrix notation…", percent: fraction * 10 };
-  return { label: "Starting…", percent: 0 };
-}
-
-export type EditorStep = "notes" | "hands";
-
-export function NotesEditor({ step }: { step: EditorStep }) {
+export function NotesEditor() {
   const navigate = useNavigate();
   const { uuid, audio, status, refresh, readOnly } = usePiece();
-  const { artifact } = useWorkingArtifact();
   const here = stepStatus(status, "notes");
   const sheet = stepStatus(status, "sheet");
-  const onHands = step === "hands";
   const running = here?.state === "running";
   const jobId = running && typeof here?.details.jobId === "string" ? here.details.jobId : null;
 
@@ -321,17 +286,10 @@ export function NotesEditor({ step }: { step: EditorStep }) {
     },
     [context, apply, present, current],
   );
-  /** Set by the hands part below: where to go after a delete while going through the notes without a hand. */
-  const nextAfterDelete = useRef<() => number | null>(() => null);
-  const goToRef = useRef<(id: number) => void>(() => undefined);
   const deleteSelection = useCallback(() => {
     const edit = context();
     if (!edit || selection.size === 0) return;
-    const next = nextAfterDelete.current();
-    if (apply(`delete ${plural(selection.size, "note")}`, deleteNotes(edit, selection))) {
-      setSelection(NO_SELECTION);
-      if (next !== null) goToRef.current(next);
-    }
+    if (apply(`delete ${plural(selection.size, "note")}`, deleteNotes(edit, selection))) setSelection(NO_SELECTION);
   }, [context, apply, selection]);
 
   // ------------------------------------------------------------------ save
@@ -398,9 +356,9 @@ export function NotesEditor({ step }: { step: EditorStep }) {
 
   const hasHands = base ? anyHand(base, present) : false;
   const [handColours, setHandColours] = useState(readHandColours);
-  // By hand only once the piece has hands: before the first prediction every note would be the
-  // red of "no hand", which reads as an error. On the Notes step the reader can turn it off.
-  const colourBy = hasHands && (onHands || handColours) ? "hand" : "none";
+  // By hand only once the piece has hands: before the AI writes them every note would be the red of
+  // "no hand", which reads as an error. The reader can turn it off.
+  const colourBy = hasHands && handColours ? "hand" : "none";
   const toggleHandColours = () => {
     const next = !handColours;
     setHandColours(next);
@@ -410,63 +368,6 @@ export function NotesEditor({ step }: { step: EditorStep }) {
       // A private window: the choice lasts as long as the page.
     }
   };
-  const [handFilter, setHandFilter] = useState<HandFilter>("both");
-  const handless = useMemo(() => (base && onHands ? idsWithoutHand(base, present) : []), [base, present, onHands]);
-
-  // ---- the notes without a hand: select them all, then go through them one by one.
-  const [reviewing, setReviewing] = useState(false);
-  const reviewShown = onHands && reviewing && handless.length > 0;
-  const reviewIndex = selection.size === 1 ? handless.indexOf([...selection][0]!) : -1;
-
-  const goTo = useCallback(
-    (id: number) => {
-      if (!base) return;
-      setSelection(new Set([id]));
-      const note = noteOf(base, present, id);
-      if (note) rollRef.current?.center(note.onMs + note.lenMs / 2);
-    },
-    [base, present],
-  );
-  /** The note without a hand `step` places after the current one, round the list. */
-  const stepHandless = useCallback(
-    (step: number) => {
-      if (handless.length === 0) return;
-      const at = reviewIndex < 0 ? (step > 0 ? -1 : 0) : reviewIndex;
-      goTo(handless[(at + step + handless.length) % handless.length]!);
-    },
-    [handless, reviewIndex, goTo],
-  );
-  /** While going through them, the next note without a hand once the current one has one. */
-  const afterCurrent = useCallback((): number | null => {
-    if (!reviewShown || reviewIndex < 0 || handless.length < 2) return null;
-    return handless[(reviewIndex + 1) % handless.length]!;
-  }, [reviewShown, reviewIndex, handless]);
-
-  const selectHandless = () => {
-    if (handless.length === 0 || !base) return;
-    setHandFilter("both");
-    setReviewing(true);
-    setSelection(new Set(handless));
-    const first = noteOf(base, present, handless[0]!);
-    if (first) rollRef.current?.reveal(first.onMs);
-  };
-
-  const giveHand = useCallback(
-    (hand: "r" | "l") => {
-      const edit = context();
-      if (!edit || selection.size === 0) return;
-      const next = afterCurrent();
-      if (apply(`give ${plural(selection.size, "note")} to the ${hand === "r" ? "right" : "left"} hand`, setHands(edit, selection, hand)) && next !== null) {
-        goTo(next);
-      }
-    },
-    [context, selection, apply, afterCurrent, goTo],
-  );
-
-  useLayoutEffect(() => {
-    nextAfterDelete.current = afterCurrent;
-    goToRef.current = goTo;
-  });
 
   /** The selection, in short Spanish names: "Do# 3", or "3 notes: Do 3 · Mi 3 · Sol 3". */
   const selectionName = useMemo(() => {
@@ -484,62 +385,6 @@ export function NotesEditor({ step }: { step: EditorStep }) {
     if (count === 1) return names[0]!;
     return names.length <= 4 ? `${count} notes: ${names.join(" · ")}` : `${count} notes`;
   }, [base, present, selection]);
-
-  // The prediction is an async flow (save, start, follow, apply), so it reads the latest notes
-  // from these, not from the render that started it.
-  const presentRef = useRef(present);
-  const docRef = useRef(current);
-  useLayoutEffect(() => {
-    presentRef.current = present;
-    docRef.current = current;
-  });
-  const [predicting, setPredicting] = useState<Predicting | null>(null);
-  const [predicted, setPredicted] = useState<{ result: PredictResult; applied: number } | null>(null);
-  const followedJob = useRef<FollowedJob | null>(null);
-  useEffect(() => () => followedJob.current?.close(), []);
-
-  const predict = async (replace: boolean) => {
-    if (!uuid || predicting) return;
-    setError(null);
-    setPredicted(null);
-    const startedAt = performance.now();
-    setPredicting({ label: "Saving the notes first…", percent: null, startedAt, now: startedAt });
-    try {
-      // The backend predicts the saved notes: save what is unsaved first, in the same press.
-      if (summary !== null && !(await save())) return;
-      const held = docRef.current;
-      if (!held) return;
-      setPredicting({ label: "Starting…", percent: null, startedAt, now: performance.now() });
-      const { jobId } = await piecesApi.predictHands(uuid, { baseRevision: held.revision, frameMs: artifact.frameMs, replace });
-      const job = followJob(matrixApi.progressUrl(jobId), (frame) => {
-        const shown = predictionProgress(frame.stage, frame.fraction);
-        setPredicting({ ...shown, startedAt, now: performance.now() });
-      });
-      followedJob.current = job;
-      const answer = (await job.result) as unknown as PredictResult;
-      const latest = docRef.current;
-      if (!latest || answer.revision !== latest.revision) {
-        setError("The notes changed while the hands were predicted. Press Predict hands again.");
-        return;
-      }
-      const result = applyPrediction(
-        { base: latest.base, over: presentRef.current, idsOnKey: (key) => roll.idsOnKey(key) },
-        answer,
-        latest.idMap,
-      );
-      if (result.over !== presentRef.current) {
-        stage(replace ? "predict every hand again" : "predict hands");
-        set.over(result.over);
-      }
-      setHandFilter("both");
-      setPredicted({ result: answer, applied: countChanges(latest.base, presentRef.current, result.over).hands });
-    } catch (caught) {
-      setError(caught instanceof ApiError ? caught.detail : caught instanceof Error ? caught.message : "The hands could not be predicted.");
-    } finally {
-      followedJob.current = null;
-      setPredicting(null);
-    }
-  };
 
   // ------------------------------------------------------------------ keys
 
@@ -565,9 +410,6 @@ export function NotesEditor({ step }: { step: EditorStep }) {
         deleteSelection();
       } else if (event.key === "Escape") {
         setSelection(NO_SELECTION);
-      } else if (onHands && !command && !event.altKey && (key === "r" || key === "l") && selection.size > 0) {
-        event.preventDefault();
-        giveHand(key === "r" ? "r" : "l");
       } else if (!command && selection.size > 0 && event.key.startsWith("Arrow")) {
         // Nudge the selection: one time frame (Shift: 100 ms) sideways, one key (Shift: an octave) up or down.
         event.preventDefault();
@@ -579,7 +421,7 @@ export function NotesEditor({ step }: { step: EditorStep }) {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editing, undo, redo, deleteSelection, selection, onMove, roll, onHands, giveHand]);
+  }, [editing, undo, redo, deleteSelection, selection, onMove, roll]);
 
   // ------------------------------------------------------------------ render
 
@@ -601,41 +443,14 @@ export function NotesEditor({ step }: { step: EditorStep }) {
   const waiting = stageWords(live.stage, live.message);
   const noteCount = base ? liveCount(base, present) : null;
   const cursorMs = player.cursor * FRAME_MS;
-  const busy = predicting !== null || saving;
 
+  // The Hands step is gone (implementation 03, Phase 5): the AI decides the hands with the sheet.
   const next =
-    mode === "live" ? null : !onHands ? (
-      // The Hands step is gone (implementation 03, Phase 5): Sonnet decides the hands with the sheet.
-      sheet?.enabled ? (
-        <PillButton kind="primary" onClick={() => navigate(ROUTES.project(uuid, "sheet"))}>
-          Continue to Sheet
-        </PillButton>
-      ) : null
-    ) : (
-      <Stack direction="row" spacing={1}>
-        {/* The main action of the Hands step, in words beside Continue (the user's review of
-            Phase 5): the wand of the floating toolbox alone was not found. Primary until the
-            hands are there. */}
-        {readOnly ? null : (
-          <PillButton
-            kind={hasHands ? "secondary" : "primary"}
-            startIcon={<AutoFixHighIcon fontSize="small" />}
-            busy={predicting !== null}
-            disabled={busy}
-            onClick={() => void predict(false)}
-          >
-            Predict hands
-          </PillButton>
-        )}
-        <Tooltip title={sheet?.enabled ? "" : (sheet?.reason ?? "Save the hands first")}>
-          <span>
-            <PillButton kind="primary" disabled={!sheet?.enabled} onClick={() => navigate(ROUTES.project(uuid, "sheet"))}>
-              Continue to Sheet
-            </PillButton>
-          </span>
-        </Tooltip>
-      </Stack>
-    );
+    mode !== "live" && sheet?.enabled ? (
+      <PillButton kind="primary" onClick={() => navigate(ROUTES.project(uuid, "sheet"))}>
+        Continue to Sheet
+      </PillButton>
+    ) : null;
 
   return (
     // Room under the page, so the floating toolbar can be moved clear of the piano roll.
@@ -691,7 +506,7 @@ export function NotesEditor({ step }: { step: EditorStep }) {
           </>
         ) : null}
 
-        {!onHands && editing ? (
+        {editing ? (
           <Tooltip title={hasHands ? "Colour the notes by hand: blue right, green left, red no hand" : "The hands are written with the sheet"}>
             <FormControlLabel
               sx={{ ml: 0, mr: 1 }}
@@ -705,11 +520,6 @@ export function NotesEditor({ step }: { step: EditorStep }) {
             {plural(noteCount, "note")}
           </Typography>
         ) : null}
-        {predicted && !predicting ? (
-          <Typography variant="body2" color="text.secondary" data-predicted>
-            {`${plural(predicted.applied, "note")} changed hand${predicted.result.unplaced ? ` · ${predicted.result.unplaced} without a hand` : ""}`}
-          </Typography>
-        ) : null}
 
         <Box sx={{ flexGrow: 1 }} />
 
@@ -719,9 +529,6 @@ export function NotesEditor({ step }: { step: EditorStep }) {
         {next ? <Box sx={{ pl: 1 }}>{next}</Box> : null}
       </Stack>
 
-      {predicting ? (
-        <StepProgress label={predicting.label} percent={predicting.percent} elapsedSeconds={(predicting.now - predicting.startedAt) / 1000} />
-      ) : null}
 
       <PianoRollCanvas
         ref={rollRef}
@@ -731,7 +538,7 @@ export function NotesEditor({ step }: { step: EditorStep }) {
         durationMs={durationMs}
         selection={selection}
         colourBy={colourBy}
-        handFilter={onHands ? handFilter : "both"}
+        handFilter="both"
         cursorMs={cursorMs}
         playing={player.playing !== null}
         position={position}
@@ -757,7 +564,7 @@ export function NotesEditor({ step }: { step: EditorStep }) {
       {/* The editor's toolbox, floating so it stays at hand along the whole piece. */}
       <FloatingBar
         open={editing || (readOnly && mode === "view")}
-        label={onHands ? "the hands toolbox" : "the editing toolbar"}
+        label="the editing toolbar"
       >
         {player.playing ? (
           <IconAction title="Pause" shortcut="Space" icon={<PauseIcon />} onClick={player.pause} />
@@ -797,67 +604,6 @@ export function NotesEditor({ step }: { step: EditorStep }) {
             />
           </>
         )}
-        {onHands ? (
-          <>
-            <Divider orientation="vertical" flexItem />
-            {hasHands && !readOnly ? (
-              <IconAction
-                title="Predict every note again, also the ones you placed"
-                icon={<ReplayIcon fontSize="small" />}
-                disabled={busy}
-                onClick={() => void predict(true)}
-              />
-            ) : null}
-            <Segmented<HandFilter>
-              label="Which hand to show"
-              value={handFilter}
-              onChange={setHandFilter}
-              options={[
-                { value: "both", label: "Both", tooltip: "Show both hands" },
-                { value: "right", label: "Right", tooltip: "Show the right hand only" },
-                { value: "left", label: "Left", tooltip: "Show the left hand only" },
-              ]}
-            />
-            {readOnly ? null : (
-              <>
-                <Tooltip title="Give the selected notes to the right hand (R)">
-                  <span>
-                    <PillButton kind="quiet" size="small" disabled={selection.size === 0} onClick={() => giveHand("r")}>
-                      To right
-                    </PillButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title="Give the selected notes to the left hand (L)">
-                  <span>
-                    <PillButton kind="quiet" size="small" disabled={selection.size === 0} onClick={() => giveHand("l")}>
-                      To left
-                    </PillButton>
-                  </span>
-                </Tooltip>
-                {handless.length > 0 && hasHands ? (
-                  <>
-                    <Tooltip title={`Select the ${plural(handless.length, "note")} without a hand, then give each a hand (L, R) or delete it`}>
-                      <IconButton size="small" color="error" onClick={selectHandless} aria-label="Select the notes without a hand">
-                        <Badge badgeContent={handless.length} color="error" max={999}>
-                          <BackHandIcon fontSize="small" />
-                        </Badge>
-                      </IconButton>
-                    </Tooltip>
-                    {reviewShown ? (
-                      <>
-                        <IconAction title="Previous note without a hand" icon={<ChevronLeftIcon fontSize="small" />} onClick={() => stepHandless(-1)} />
-                        <Typography variant="body2" sx={{ ...timestampSx, minWidth: 44, textAlign: "center" }} data-review>
-                          {reviewIndex >= 0 ? `${reviewIndex + 1} / ${handless.length}` : `– / ${handless.length}`}
-                        </Typography>
-                        <IconAction title="Next note without a hand" icon={<ChevronRightIcon fontSize="small" />} onClick={() => stepHandless(1)} />
-                      </>
-                    ) : null}
-                  </>
-                ) : null}
-              </>
-            )}
-          </>
-        ) : null}
         {selectionName ? (
           <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: "nowrap", px: 0.5 }} data-selection-name>
             {selectionName}
@@ -873,7 +619,7 @@ export function NotesEditor({ step }: { step: EditorStep }) {
                   kind={summary === null ? "quiet" : "primary"}
                   startIcon={<SaveIcon fontSize="small" />}
                   busy={saving}
-                  disabled={summary === null || busy}
+                  disabled={summary === null || saving}
                   onClick={() => void save()}
                   data-unsaved={summary ?? ""}
                 >

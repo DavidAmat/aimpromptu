@@ -33,11 +33,11 @@ How the AImpromptu (aitu) documentation system works and where to put new materi
 
 **Service overviews:**
 - `context/backend/` — aitu-backend: parsing, API, notation entry points
-- `context/frontend/` — aitu-frontend: app shell, loaded scores, compose panel, rendering pipeline
+- `context/frontend/` — aitu-frontend: app shell, projects and their steps, the Sheet step, how the sheet is drawn
 - `context/music/notation-logic/` — the text-notation contract (`02-notation-spec.md`), which still
   owns the sparse-COO wire format and the 88-key row order
 
-**Detail files:** `documentation/services/backend/` and `documentation/services/frontend/` mirror the above. Reference material: `documentation/archive/vexflow-reference.md`.
+**Detail files:** `documentation/services/backend/` and `documentation/services/frontend/` mirror the above. Reference material: `documentation/archive/vexflow-reference.md`, kept as history (the app has drawn no sheet with VexFlow or vexflow-v2 since implementation 03, Phase 10; the backend draws it).
 
 ## Cross-linking
 

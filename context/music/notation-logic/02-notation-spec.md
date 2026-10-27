@@ -23,9 +23,9 @@ The **sparse-COO wire format** below — parallel `rows` / `cols` / `onset` arra
 sustain, `0` silence, sorted by `(col, row)` — is unchanged and is what every matrix in the project
 travels as. The **88-key row order** is unchanged. The **onset rule** is unchanged for this parser.
 
-Do not restate either of those elsewhere; link here, or to
-[`documentation/services/backend/time-matrix.md`](../../../documentation/services/backend/time-matrix.md)
-for the schema 2.0 envelope around them.
+Do not restate either of those elsewhere; link here. The schema 2.0 envelope that carried them to the vexflow-v2
+sheet was removed in implementation 03, Phase 10; its record is
+[`documentation/deprecated/time-matrix.md`](../../../documentation/deprecated/time-matrix.md).
 
 ## Text notation
 
@@ -77,7 +77,9 @@ sustains = one long note.
 Implemented in `aitu-backend/src/aitu_backend/matrix/text_notation.py`
 (`sequence_to_sparse_payload`). The frontend decoder that used to mirror it,
 `music/matrixToNotation.ts`, was deleted with the VexFlow stack: the app no longer decodes a matrix
-in the browser, because the backend now hands over each note's printed figure directly.
+in the browser. Since implementation 03 the backend also lays the sheet out and draws it (an SVG,
+`GET /sheet/{uuid}`), and the browser renderer `@aimpromptu/grid-notation` was removed in Phase 10
+(2026-10-27).
 
 ## Sparse-COO payload
 
@@ -129,9 +131,10 @@ separators). See [compose-panel.md](../../archive/superseded/compose-panel.md).
 Optional parallel list — one entry per time frame, same order as matrix columns.
 Empty string `""` = no syllable on that frame.
 
-Lyrics are **time-indexed**, not note-indexed: the renderer draws each non-empty
+Lyrics are **time-indexed**, not note-indexed: the renderer drew each non-empty
 entry at that frame's horizontal position whether the frame is a struck note, a
-sustain, or a silence. See [piano-sheet.md](../../../documentation/services/frontend/grid-notation.md).
+sustain, or a silence. (The old renderer: [grid-notation.md](../../../documentation/deprecated/grid-notation.md).
+The new sheet keeps lyrics pieces by their frames in `sheet.f1`.)
 
 ```
 sequence  →  ["*Do-4 || *Mi-4", "*Re-4", "Re-4", "*Mi-4", "Mi-4", "Mi-4", ""]
@@ -143,6 +146,5 @@ lyrics    →  ["Ho",             "la",    "la",   "dron",  "",      "de",   ""]
 - Backend parsing: [notation-and-parsing.md](../../../documentation/deprecated/notation-and-parsing.md) →
   [sequence-logic.md](../../../documentation/deprecated/sequence-logic.md)
 - Backend schemas: [schemas.md](../../../documentation/deprecated/schemas.md)
-- Frontend decode/render: [rendering-pipeline.md](../../frontend/rendering.md) →
-  [matrix-to-notation.md](../../../documentation/services/frontend/grid-notation.md),
-  [piano-sheet.md](../../../documentation/services/frontend/grid-notation.md)
+- How the sheet is drawn now: [rendering.md](../../frontend/rendering.md); the old browser renderer:
+  [grid-notation.md](../../../documentation/deprecated/grid-notation.md)

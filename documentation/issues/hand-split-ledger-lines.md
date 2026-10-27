@@ -162,10 +162,13 @@ for item in result.assignments:
 
 ## Where the reader still overrules everything
 
-None of this replaces the note toolbox's *send to the other staff*, which writes the
-hand onto the note in `notes.pmn` (`PUT /time/{uuid}/hands`; it once wrote a `handOverride`
-into `rhythm.json`). The split is a proposal about music the algorithm cannot
-see the player's hands for; the reader has the last word, and always did.
+None of this replaces the sheet's *move to the other hand*, which writes the hand onto the note in
+`notes.pmn` (`POST /sheet/{uuid}/hands`, implementation 03, Phase 6). The old sheet did the same
+with `PUT /time/{uuid}/hands`, removed with that sheet in implementation 03, Phase 10 (2026-10-27);
+before that it wrote a `handOverride` into `rhythm.json`. Since implementation 03 the split is the
+starting point of the sheet (`pipeline.starting_hands`): the algorithm writes from it, and the AI
+reads it and may change it. The split is a proposal about music the algorithm cannot see the
+player's hands for; the reader has the last word, and always did.
 
 ## Tests
 

@@ -21,7 +21,7 @@ from scipy.io import wavfile
 from aitu_backend.audio import formats, piece_audio, store, timeline as audio_timeline
 from aitu_backend.audio.frames import SAMPLE_RATE
 from aitu_backend.db import users
-from aitu_backend.editing import passages
+from aitu_backend.editing import history, passages
 from aitu_backend.main import create_app
 from aitu_backend.schemas.rhythm import Fingering
 from aitu_backend.schemas.time_matrix import FigureName
@@ -32,6 +32,12 @@ from aitu_backend.transcription.engine import NoteEvent
 from test_paste import note, pitch_at, sheet, tone, tone_part
 
 needs_ffmpeg = pytest.mark.skipif(not formats.ffmpeg_available(), reason="needs ffmpeg")
+
+
+def restore(part: str, version: int) -> int:
+    """Put an earlier state of the part back, as the undo of a paste or a promotion does."""
+    with pipeline.piece_lock(part):
+        return history.restore(part, version)
 
 
 @pytest.fixture()
@@ -348,8 +354,7 @@ def test_the_window_with_the_original_audio_changes_only_the_notes(
     # The passage is closed, and the sheet's undo gives the part back to the byte.
     with pytest.raises(locate.NotFound):
         locate.project(passage)
-    back = client.post(f"/time/{part}/versions/{result['beforeVersion']}/restore")
-    assert back.status_code == 200
+    restore(part, result["beforeVersion"])
     assert snapshot(part) == before
 
 
@@ -422,8 +427,8 @@ def test_the_whole_take_changes_the_length_and_moves_what_follows(
     rate, samples = piece_samples(part)
     assert pitch_at(samples, rate, 3.5) == pytest.approx(440, abs=15)
     assert pitch_at(samples, rate, 6.0) == pytest.approx(220, abs=15)
-    back = client.post(f"/time/{part}/versions/{done.json()['beforeVersion']}/restore")
-    assert back.status_code == 200 and snapshot(part) == before
+    restore(part, done.json()["beforeVersion"])
+    assert snapshot(part) == before
 
 
 def test_a_proposal_named_with_other_figures_keeps_them_in_the_song(
@@ -437,15 +442,9 @@ def test_a_proposal_named_with_other_figures_keeps_them_in_the_song(
     )
     proposal = pipeline.load_rhythm(take)
     assert proposal is not None
-    edited = proposal.model_copy(update={"anchor_figure": FigureName.CORCHEA})
-    done = client.post(
-        f"/passages/{passage}/promote",
-        json={
-            "mode": "window",
-            "audio": "original",
-            "sheet": edited.model_dump(by_alias=True, mode="json"),
-        },
-    )
+    # Saved on the take, which the promotion reads (the route no longer takes the page's sheet).
+    pipeline.save_rhythm(take, proposal.model_copy(update={"anchor_figure": FigureName.CORCHEA}))
+    done = client.post(f"/passages/{passage}/promote", json={"mode": "window", "audio": "original"})
     assert done.status_code == 200, done.text
     saved = pipeline.load_rhythm(part)
     assert saved is not None

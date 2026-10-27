@@ -47,7 +47,6 @@ import {
   type PromotionAudio,
   type PromotionFacts,
   type PromotionMode,
-  type SavedRhythm,
 } from "../../../api";
 import { useMidiInput } from "../../../audio/useMidiInput";
 import { fileNameFor, useRecorder } from "../../../audio/useRecorder";
@@ -440,10 +439,6 @@ export function PassagePage() {
 
   // ------------------------------------------------------------------ promote
 
-  const proposalSheet = useRef<SavedRhythm | null>(null);
-  const keepSheet = useCallback((sheet: SavedRhythm | null) => {
-    proposalSheet.current = sheet;
-  }, []);
   const [promoteAnchor, setPromoteAnchor] = useState<HTMLElement | null>(null);
   const [promoting, setPromoting] = useState<PromotionMode | null>(null);
   const [audioChoice, setAudioChoice] = useState<PromotionAudio>("recording");
@@ -457,7 +452,6 @@ export function PassagePage() {
       .facts(passageId, {
         mode: promoting,
         audio: askedAudio,
-        ...(proposalSheet.current ? { sheet: proposalSheet.current } : {}),
       })
       .then((found) => {
         if (!gone) setFacts(found);
@@ -477,7 +471,6 @@ export function PassagePage() {
       const done = await passagesApi.promote(passageId, {
         mode: promoting,
         audio: askedAudio,
-        ...(proposalSheet.current ? { sheet: proposalSheet.current } : {}),
       });
       navigate(ROUTES.project(done.projectId, "sheet"), {
         state: { promoted: done },
@@ -568,7 +561,6 @@ export function PassagePage() {
           onChanged: () => undefined,
           passage: {
             role: "current",
-            ...(passage.anchorMs !== null ? { anchorMs: passage.anchorMs } : {}),
             playerRef: currentPlayer,
             onPlaying: reportCurrentPlaying,
           },
@@ -813,13 +805,11 @@ export function PassagePage() {
                           onChanged: () => undefined,
                           passage: {
                             role: "proposal",
-                            ...(passage.anchorMs !== null ? { anchorMs: passage.anchorMs * shownSpeed } : {}),
                             ...(frameWindow ? { frameWindow } : {}),
                             onWindowMove: moveWindow,
                             barActions,
                             playerRef: proposalPlayer,
                             onPlaying: reportProposalPlaying,
-                            onSheet: keepSheet,
                           },
                         }}
                       />

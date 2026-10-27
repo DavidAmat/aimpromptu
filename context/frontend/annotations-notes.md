@@ -5,7 +5,8 @@ selections and undo is [annotations.md](annotations.md). Code:
 `aitu-frontend/src/pages/piece/sheet/NoteToolbox.tsx` and `useNoteActions.ts`.
 
 The note toolbox of the **new sheet** (implementation 03, Phase 7) is described in
-[annotations.md](annotations.md), section "The new sheet"; this page is the old sheet's.
+[annotations.md](annotations.md), section "The new sheet"; this page is the old sheet's, kept as the record. Its
+code (`NoteToolbox.tsx`, `useNoteActions.ts`) was removed in implementation 03, Phase 10 (2026-10-27).
 
 ## The title
 
@@ -20,7 +21,7 @@ The name is **the one the sheet prints**, not one worked out from the key that w
 black key is written `Do-#` in a sharp key and `Re-b` in a flat one, so the panel spells it against
 the signature sounding at that column, through the same code the noteheads come from. An octave
 bracket or a move to the other staff does not change it: the name is what the note **sounds**.
-`npm run check:note-names` pins it.
+`npm run check:note-names` pinned it (removed with the old sheet in implementation 03, Phase 10).
 
 ## The controls
 

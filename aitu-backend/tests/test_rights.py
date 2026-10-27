@@ -73,7 +73,7 @@ def test_row_1_a_project_in_a_personal_vault(people: dict) -> None:
     # Not hers: it does not exist for her, and not even the master user reads it.
     for other in (joan, master):
         assert (reads(other, part), writes(other, part)) == (404, 404)
-        assert other.get(f"/time/{part}/rhythm").status_code == 404
+        assert other.get(f"/sheet/{part}/words").status_code == 404
         assert other.get(f"/sheet/{part}").status_code == 404
         assert other.delete(f"/audio/{part}").status_code == 404
 
@@ -115,9 +115,10 @@ def test_row_3_the_public_library(people: dict) -> None:
     part = project(master_id, "public")
     assert (reads(anna, part), writes(anna, part)) == (200, 403)
     assert (reads(master, part), writes(master, part)) == (200, 200)
-    # A read-only route that is a POST (a sheet for a reading) is open to every reader.
-    reading = {"anchorFigure": "negra", "anchorMs": 500.0, "frameMs": 40.0}
-    assert anna.post(f"/time/{part}/score", json=reading).status_code == 200
+    # The sheet is drawn for every reader; a read-only route that is a POST (a copy into her own
+    # vault) is open to them too.
+    assert anna.get(f"/sheet/{part}").status_code == 200
+    assert anna.post(f"/projects/{part}/duplicate", json={}).status_code == 201
 
 
 def test_row_4_a_request(people: dict) -> None:
@@ -163,7 +164,7 @@ def test_a_paste_reads_its_source_and_writes_its_target(people: dict) -> None:
 
     def paste(client: TestClient, target: str, source: str) -> int:
         body = {"source": {"part": source, "fromMs": 0, "toMs": 400}, "atMs": 0}
-        return client.post(f"/time/{target}/paste", json=body).status_code
+        return client.post(f"/sheet/{target}/paste", json=body).status_code
 
     mine = project(anna_id, "vault", "Mine")
     own_library = project(anna_id, "private", "My song")

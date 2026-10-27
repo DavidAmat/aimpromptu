@@ -8,8 +8,7 @@
 #   make ps             what is running
 #   make test-backend   the backend tests, inside the backend image (ARGS="-k pmn" to filter)
 #   make shell-backend  a shell in the running backend container
-#   make build          rebuild both images (after a change of uv.lock, package-lock.json or
-#                       vexflow-v2)
+#   make build          rebuild both images (after a change of uv.lock or package-lock.json)
 #
 # `.database/` (implementation 02, plan section 8.7), on the host (they need tar with zstd):
 #

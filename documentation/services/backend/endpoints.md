@@ -25,7 +25,7 @@ properties and the reasons for them are in [`context/08-security.md`](../../../c
 | Group | Routers | Check before the handler (`auth/dependencies.py`) |
 |---|---|---|
 | `OPEN_ROUTERS` | `/auth` | None for `POST /auth/login` and `POST /auth/logout`; `GET /auth/me` and `PUT /auth/password` ask for the session themselves |
-| `USER_ROUTERS` | `/audio`, `/library`, `/matrix`, `/passages`, `/pieces`, `/playlists`, `/projects`, `/public`, `/requests`, `/shares` and `/shared`, `/youtube`, `/time`, `/video` | `signed_in`, then `project_rights` |
+| `USER_ROUTERS` | `/audio`, `/library`, `/matrix`, `/passages`, `/pieces`, `/playlists`, `/projects`, `/public`, `/requests`, `/shares` and `/shared`, `/sheet`, `/youtube`, `/video` | `signed_in`, then `project_rights` |
 | `MASTER_ROUTERS` | `/frame-examples`, `/admin` | `signed_in`, then `master_only` |
 
 The answers of these checks:
@@ -36,9 +36,11 @@ The answers of these checks:
   `project_id`) and the user may not read it. The answer is the same as for a project that does not
   exist, so an address tells nothing about another user's work.
 - **403** "You can open this project but not change it.": the user may read the project but the
-  request writes. A `GET` reads; every other method writes, except five `POST` routes that compute an
-  answer and change nothing (`READ_ROUTES`): `/time/{uuid}/score`, `/time/{uuid}/ladder-preview`,
-  `/pieces/{uuid}/hands/predict`, `/audio/{uuid}/trim` and `/projects/{id}/duplicate`.
+  request writes. A `GET` reads; every other method writes, except three `POST` routes that read a
+  project and change nothing in it (`READ_ROUTES`): `/audio/{uuid}/trim`, `/projects/{id}/duplicate`
+  and `/projects/{id}/edit` (the copy each makes is the asker's). Implementation 03, Phase 10 took
+  `/time/{uuid}/score`, `/time/{uuid}/ladder-preview` and `/pieces/{uuid}/hands/predict` off this list
+  with their routes.
 - **403** "Only the master user can open this.": a route of `/frame-examples` or `/admin` asked by
   another user.
 
@@ -106,24 +108,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | GET | `/pieces/{uuid}/status` | Every step of the piece, its state, and the step it opens on (implementation 08). |
 | GET | `/pieces/{uuid}/notes` | The live notes as columns, with the revisions (implementation 08). |
 | PATCH | `/pieces/{uuid}/notes` | A list of operations on notes named by id (implementation 08). |
-| POST | `/pieces/{uuid}/hands/predict` | The hand split as one hand per note. Writes nothing (implementation 08). |
-| POST | `/pieces/{uuid}/hands/predict/job` | The same, as a job with progress (implementation 08). |
-| **The score** | `api/time_score.py` | |
-| GET | `/time/{uuid}/peaks` | Where the gaps between attacks gather into piles. |
-| GET | `/time/{uuid}/default-reading` | The figure ladder a sheet is written from by default: the highest pile is a negra. |
-| POST | `/time/{uuid}/ladder-preview` | Name one peak, see what every other becomes. |
-| GET | `/time/{uuid}/score` | The drawable score payload. |
-| POST | `/time/{uuid}/score` | The same, with the reader's page edits applied. |
-| GET | `/time/{uuid}/trills` | Alternating runs, offered as suggestions. |
-| PUT | `/time/{uuid}/hands` | Correct which hand plays a note. Written by note id since implementation 08. |
-| PUT | `/time/{uuid}/removed` | Mark notes as removed from the page, by column and row. |
-| PUT | `/time/{uuid}/notes` | Add notes to the recording, by column and row. |
-| GET PUT | `/time/{uuid}/lyrics` | The song's words saved with the part (`project.json`), for the Lyrics tab (Phase 7). |
-| POST | `/time/{uuid}/transpose` | Move every note of the part by a number of semitones; a preview counts, an undo is exact (Phase 7). |
-| POST | `/time/{uuid}/paste` | Put a copied passage (notes, marks, audio) into the part at a moment, or over a stretch; everything after moves (Phase 8). |
-| POST | `/time/{uuid}/versions/{n}/restore` | Put an earlier state of the part back: the undo and the redo of a paste (Phase 8) and of a promotion (Phase 9). |
-| GET PUT DELETE | `/time/{uuid}/rhythm` | The saved reading. |
-| **The new sheet** | `api/sheet.py` | Implementation 03, Phases 5 and 6 |
+| **The sheet** | `api/sheet.py` | Implementation 03, Phases 5 to 10 |
 | GET | `/sheet/{uuid}?width=N` | The new sheet of a part drawn for a page `N` staff spaces wide: the SVG, the cursor map, the segments of Sonnet's windows and their state, and what the page may do with Sonnet (section 4.1). |
 | POST | `/sheet/{uuid}/llm` | Start Sonnet on the part (or answer the run already going); follow `GET /matrix/progress/{jobId}`. |
 | POST | `/sheet/{uuid}/hands` | Phase 6: give notes to one hand, in `notes.pmn` (one step of undo); the sheet drawn again (section 4.1). |
@@ -136,6 +121,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/sheet/{uuid}/add` | Phase 8: a note added on the keyboard panel, into `notes.pmn` (one step of undo). |
 | POST | `/sheet/{uuid}/paste` | Phase 8B: a copied passage put in at a moment or over a stretch, its new sheet with it; one step of undo (the history version the paste kept). |
 | GET | `/sheet/{uuid}/pages` | Phase 8: the sheet on paper, whole lines dealt onto pages (Print to PDF). |
+| GET PUT | `/sheet/{uuid}/words` | Phase 10: the song's words saved with the part (`project.json`), for the Lyrics tab (formerly `/time/{uuid}/lyrics`). |
 | **Recording in Sheet** | `api/passages.py` | Implementation 02, Phase 9 |
 | POST | `/passages` | **Record this passage**: a passage of a part (a stretch, or a moment for a new passage); its Current is made. |
 | GET PATCH DELETE | `/passages/{id}` | The passage; the take on show, the speed, the window; discard it. |
@@ -422,8 +408,8 @@ loaded once, with one transcription at a time on the GPU, and the progress strea
 notes as they are heard. The engine itself is described in
 [`transcription-pipeline.md`](transcription-pipeline.md#engines).
 
-**Nothing here returns a grid.** A grid is a view of the recorded notes at a chosen frame length, so
-it is built while the request is answered and served from `/time` instead.
+**Nothing here returns a grid or a sheet.** The sheet is drawn from the stored notes by `/sheet`
+(section 4.1).
 
 ### 3.1 GET /matrix/engines and GET /matrix/engine
 
@@ -452,8 +438,9 @@ manager reloads (Phase 7 report, 6.3).
 ```
 
 There is one number in that body and it is a length of time. It does not decide what any note is
-called: the figures are chosen afterwards, from a ladder the reader names (D-01, D-09). Here
-`frameMs` only says which hand split to prepare in the cache after the save.
+called: the figures are chosen afterwards, when the sheet is written (D-01; since implementation 03
+the AI or the algorithm names the reference figure, D-09 as changed). Here `frameMs` only says which
+hand split to prepare in the cache after the save.
 
 - **The engine is forced.** `engine` is kept for older clients and defaults to `muscriptor`. Any
   other value answers `422`: "Unknown transcription engine" for a name that does not exist, and a
@@ -490,8 +477,9 @@ again, then reads every frame from the start.
 
 A Server-Sent Events stream (`text/event-stream`, `Cache-Control: no-cache`,
 `X-Accel-Buffering: no`) of **any** job of `transcription/jobs.py`: a transcription, a YouTube job
-(`POST /youtube/jobs`) or a hand prediction (`POST /pieces/{uuid}/hands/predict/job`). It has three
-kinds of frame.
+(`POST /youtube/jobs`), an AI run on a sheet (`POST /sheet/{uuid}/llm`, section 4.1) or **Write the
+proposal** of a take. It has three kinds of frame. (The hand prediction job of the Hands tab was
+removed in implementation 03, Phase 10.)
 
 **Progress frames** have no event name:
 `{stage, current, total, fraction, message, timestamp}`. A MuScriptor transcription reports the
@@ -523,7 +511,7 @@ stages `waiting` (only when queued), `transcribe` (one step per 5-second chunk, 
 |---|---|
 | Transcription | `audioUuid`, `revision` (the new `notesRevision`), `lagCorrectionMs`, `noteCount` |
 | YouTube download | `audioUuid`, `alias`, `durationSeconds` |
-| Hand prediction | every field of the `POST /pieces/{uuid}/hands/predict` answer |
+| AI run on a sheet | `source`, `windows`, `usd` (section 4.1) |
 
 **Reconnection.** Every frame except the final `done` carries an SSE `id:`, which is its index in the
 job's list of frames. A reader that connects late first receives every frame already sent, in order,
@@ -574,258 +562,36 @@ Marks notes as removed from the recording, addressed by pitch and start second (
 matched to 4 decimals). `removed: false` restores them. `removed` is a flag on the note event, so
 nothing is deleted and restoring a note returns it exactly as it was. Answers `{changed, unmatched}`.
 
-There are **two** routes that write this flag, and that is deliberate: the two screens genuinely
-held different things. Notes Falling knew raw seconds; a reader on the sheet has clicked a notehead
-and knows a column and a row, which is `PUT /time/{uuid}/removed`. Same field, same consequences.
-Since implementation 02, Phase 11 Notes Falling is a view of Play mode that only plays, so only the
-sheet's route is called; this one stays, with its tests.
+Since implementation 02, Phase 11 Notes Falling is a view of Play mode that only plays, so no page
+calls this route; it stays, with its tests. The sheet takes notes off by their notehead
+(`POST /sheet/{uuid}/remove`, section 4.1), and the Notes step by id (`PATCH /pieces/{uuid}/notes`).
+The old sheet's route by column and row (`PUT /time/{uuid}/removed`) was removed in implementation
+03, Phase 10.
 
 Removing a note is not a filter on one screen. A note's printed length is the gap to the next onset
 in the same hand (D-14), so removing one **renames its neighbour**. That is why it is written onto
 the recording rather than drawn over.
 
 Since implementation 08 the write goes through `pipeline.save_edit`: `notesRevision` and
-`handsRevision` rise by one, and a saved piano sheet becomes stale, because this page is not the
-sheet.
+`handsRevision` rise by one. A stored sheet is laid again on the new notes the next time it is drawn.
 
 ---
 
 <a id="4-time--the-wall-clock-score"></a>
 
-## 4. `/time`: the wall-clock score
+## 4. The sheet
 
-Everything here is derived from the stored notes (`notes.pmn`), so reading a piece at 20 ms instead of 40
-is a different query string rather than a migration. One thing is kept in memory: the hand split of
-each piece, in the shared split cache (`transcription/split_cache.py`), keyed by the uuid, `frameMs`
-and the modification time of `notes.pmn` in nanoseconds. Any save of `notes.pmn` is a new key, so
-an old split is never served. When every placed note has a saved hand, the split is painted from
-those hands in a few milliseconds instead of running the inference (D-31, changed in implementation
-08, Phase 5).
+**`/time` is gone.** The router `api/time_score.py` served the vexflow-v2 sheet (`@aimpromptu/grid-notation`):
+its score payload, the gap peaks, the default reading and the ladder preview, the trill suggestions, the edits by
+column and row (hands, removed, added notes), the transpose, the paste, the restore of a history version, the lyrics
+and the saved reading (`GET/PUT/DELETE /time/{uuid}/rhythm`). Implementation 03, Phase 10 (2026-10-27) removed it
+with that sheet. What each did is now done by `/sheet` (below): the words moved to `GET/PUT /sheet/{uuid}/words`,
+the paste to `POST /sheet/{uuid}/paste`, the transpose to `POST /sheet/{uuid}/transpose`, the hands to
+`POST /sheet/{uuid}/hands`, and the undo of a paste or a promotion is a step of the sheet's log
+(`POST /sheet/{uuid}/undo`), which puts the history version back (`editing/history.py`). The old routes are
+described in git history and in [`deprecated/time-matrix.md`](../../deprecated/time-matrix.md) (its payload).
 
-### GET /time/{uuid}/peaks
-
-| Query | Default | Meaning |
-|---|---|---|
-| `hand` | `right` | `right`, `left` or `both`. |
-| `frameMs` | 40 | |
-| `startSeconds` | 0 | Measure a stretch rather than the piece. |
-| `endSeconds` | none | |
-
-Returns the piles of gaps between attacks, each with its centre, median, mean, count, share and
-edges, plus `attackCount`, `gapCount` and an optional plain-language `warning`.
-
-Measured on the **raw recorded times, never on the columns** (D-07). Snapping first splits every
-pile in two: a real 337 ms gap becomes 8 or 9 frames depending on phase, so one clean spike holding
-half the data becomes two half-height spikes and the reader is asked to name a peak nobody played.
-
-Each hand is measured on its own, because the gap between a right-hand run and a held left-hand
-chord is not a rhythm and would hide the peak that matters.
-
-### GET /time/{uuid}/default-reading
-
-| Query | Default | Meaning |
-|---|---|---|
-| `hand` | `right` | The hand whose gaps are measured (the saved reading's hand, when there is one). |
-| `frameMs` | 40 | |
-
-Returns `{audioUuid, hand, frameMs, anchorFigure, anchorMs, centreMs, attackCount, gapCount,
-endSeconds}`. `anchorFigure` is always `negra` and `anchorMs` is the median gap of the pile holding
-the most gaps (`matrix/ladder.py::default_anchor`): D-09 as changed by implementation 02, Phase 2.
-When the hand asked for has no pile, both hands are measured and `hand` says `both`. `anchorMs` is
-`null` for a piece with no gaps (nothing played yet, or one chord), which is not an error. `404` for
-an unknown audio, `409` when it has no notes. The Sheet step calls it on every visit and draws the
-sheet from it; the saved reading's `anchorFigure`, when there is one, replaces the negra.
-
-### POST /time/{uuid}/ladder-preview
-
-```json
-{ "anchorFigure": "negra", "anchorMs": 480, "hand": "right",
-  "frameMs": 40, "startSeconds": 0, "endSeconds": null }
-```
-
-Returns the resulting `FigureLadder`, a `headerLabel` such as `negra = 480 ms · ≈125 BPM`, the
-equivalent `bpm`, and every detected peak labelled under that ladder with how far off it fits.
-
-This exists because the app never chooses the ladder (D-09) and the reader has to be able to judge
-a choice before committing to it (D-10). A pile at a third of the **negra** is named
-`corchea de tresillo` rather than a 33 %-wrong corchea (D-32).
-
-### GET /time/{uuid}/score
-
-| Query | Default | Meaning |
-|---|---|---|
-| `anchorFigure` | `negra` | |
-| `anchorMs` | **required** | |
-| `frameMs` | 40 | |
-| `boundaries` | `""` | Passage boundaries as frame numbers, e.g. `250,900`. |
-| `boundaryMs` | `""` | One anchor per passage: **one more value than boundaries**. |
-
-Returns a `TimeScorePayload`: the two hand matrices, the passages, every printed note with its
-figure already chosen, and the layout hints. Field detail in
-[`time-matrix.md`](time-matrix.md#29-timescorepayload).
-
-A mismatched count of boundaries and anchors is a `422` that says both numbers.
-
-Both score routes encode the payload once (`_json`, a `Response` with `model_dump_json`) instead of
-letting FastAPI validate every cell a second time. `response_model` stays on the decorators for the
-documentation (Phase 2).
-
-### POST /time/{uuid}/score
-
-The same answer, with the reader's page edits applied **before any figure is named**. Body adds
-`hiddenNotes` and `trills` to the query parameters above, and `dropDecorative`. `transpose`
-(semitones, -87 to 87, default 0) draws the sheet as if every note were moved, writing nothing: the
-preview of a notes transposition (implementation 02, Phase 7). The notes are moved by
-`notation/transpose.py` and split by `pipeline.split_events`, the way `split_of` splits stored
-notes, without the cache; `hiddenNotes` and `trills` are then addressed on the moved keys.
-
-The edits have to be applied on this side rather than in the browser for one reason: hiding a note
-changes the gap to its neighbour, and therefore that neighbour's printed figure. An overlay drawn
-after the figures were chosen would show the right noteheads with the wrong names.
-
-Each pass works on `_editable_copy`, which copies only the two hand grids and shares everything else
-with the cached split. A deep copy of the whole split used to be about two thirds of a request with
-decorative notes removed, which copies once per pass (Phase 8).
-
-### GET /time/{uuid}/trills
-
-`frameMs`, and `minPairRepeats` (2–20, default 3). Returns stretches where two notes a whole tone or
-less apart trade places at least three times, evenly, under 300 ms, measured on the raw attack times
-per hand.
-
-**A suggestion and nothing more.** Nothing is written and the sheet does not change until the reader
-accepts one: a missed trill costs a reader nothing, and a wrong one hides notes that were really
-played, so the reader has the last word.
-
-### PUT /time/{uuid}/hands
-
-Which hand plays a note is a fact about the *playing*, not about the page: it survives a change of
-column length and it decides the printed length of its neighbours. So it is written onto the note
-event rather than stored as an annotation, and everything downstream follows without coordinating.
-
-Body: `{ "frameMs": 40, "notes": [{ "startFrame", "row", "hand": "right" | "left" }] }`. Answers
-`{assigned, unmatched}`.
-
-Since implementation 08, Phase 5, the route is light, because a reader moves hands often:
-
-1. The cell (`startFrame`, `row`) is resolved to a **note id** in the cached split the page already
-   shows (`build.event_ids`). No hand split runs because of the request.
-2. When the piece has no saved hands yet, the first change first saves the hand of every live note
-   as that split draws it, then applies the change. The page looks the same, and from then on the
-   sheet is painted from the saved hands.
-3. The hand is written onto the note by id, and `hand_guessed` is cleared.
-4. `pipeline.save_edit` raises `handsRevision`. The page that made the change already draws it, so a
-   saved reading that was current moves forward with it and stays current (`sheet_follows`).
-
-Measured on Superestrella: 8 to 12 ms for the `PUT` and 33 to 36 ms for the sheet request after it,
-where it used to cost a new hand split (1.1 to 1.5 s).
-
-### PUT /time/{uuid}/removed and PUT /time/{uuid}/notes
-
-`PUT /time/{uuid}/removed` addresses notes by column and row. Restoring one cannot be resolved
-against the current matrix (the note is not in it, which is what removed means), so a restore builds
-its lookup from a split with every removal undone, which is the numbering the columns were recorded
-with. One extra split, paid only on an undo.
-
-`PUT /time/{uuid}/notes` is its opposite, and writes to the same place for the same reason. A reader
-looking at the keyboard panel can see a note missing from a chord. Drawing an extra notehead beside
-the score would be the wrong fix twice. First, the printed length of a note is the gap to the next
-onset in the same hand, so a note that appears from nowhere renames its neighbour. Second, Notes
-Falling and playback would continue to disagree with the page.
-
-The times are the column's own: a note added at f120 starts 120 column-lengths into the piece. That
-is only ever a few milliseconds from where a played note would have landed, and the whole page is
-drawn on that grid anyway. The hand travels with it, pinned the way a corrected hand is. A key
-already struck in that column is **refused and counted** rather than merged, because the matrix
-rejects a frame where both hands hold one key and merging would lose a note.
-
-`PUT /time/{uuid}/notes` answers `{"added": n, "duplicate": n}`; `PUT /time/{uuid}/removed` answers
-`{changed, unmatched}`. Both go through `pipeline.save_edit` with `sheet_follows`, like the hand
-route.
-
-### POST /time/{uuid}/transpose
-
-**Transpose → Notes** of the sheet toolbox (implementation 02, Phase 7, plan section 11.4). Body:
-`{"semitones": 2, "preview": false, "hold": [], "restore": []}`. Every note of the part (the ones
-taken off the page too) moves by `semitones`; no time moves, so every mark keyed by a column stays
-on its music, and each note keeps its hand. A note that would leave the 88 keys is **taken off**
-(`removed`) and stays on its key. Answers `{moved, outside, held, takenOff, putBack}`: the notes on
-the page that moved, the ones taken off, and the ids an undo needs. `preview` counts and writes
-nothing.
-
-**The undo is the same route**: the opposite `semitones`, `hold` set to the answer's `held` (those
-notes stay where they are) and `restore` to its `takenOff` (those are put back on the page). Every
-note is then as it was, note for note (`tests/test_time_score_api.py`). A write goes through
-`pipeline.save_edit` with `notes_changed`, `hands_changed` and `sheet_follows`: the notes revision
-rises, the hands stay complete, and a saved sheet that was current stays current. `422` for
-`semitones` 0; it is a write, so a version of the Private Library answers `403`.
-
-### POST /time/{uuid}/paste
-
-**Paste** of the Sheet step (implementation 02, plan section 12, Phase 8). Body:
-
-```json
-{"source": {"part": "…", "fromMs": 20000, "toMs": 32000},
- "atMs": 30000, "replaceToMs": null, "sheet": { …SavedRhythm… }}
-```
-
-Puts the stretch `[fromMs, toMs)` of the source part (snapped to whole columns of its sheet) into
-this part at `atMs` (snapped to a column of this part's sheet), or in place of `[atMs, replaceToMs)`
-when `replaceToMs` is given: its notes, its marks and its audio; every note, mark and second of
-audio after the insertion point moves by the passage's length. `sheet` is the sheet as the page
-holds it, unsaved edits included: the marks move in it, and it is saved by the paste; without it the
-saved sheet is used. Answers `{beforeVersion, atMs, lengthMs, notesIn, notesMoved, notesRemoved,
-durationSeconds, sheet}`: `beforeVersion` is the earlier state the paste kept (the undo), `sheet` the
-part's sheet as saved (or `null`). The rules: [`editing-and-compose.md`](editing-and-compose.md)
-section 9.
-
-The source is read with the rights of section 9.3 of the plan (`require_part(write=False)`): any
-part the user may read; another one answers `404`, the same as one that does not exist. The target
-is written: a version of the Private Library answers `403`. `409` for an empty stretch, a stretch
-pasted over that does not come after `atMs`, and a target with audio but no notes yet.
-
-### POST /time/{uuid}/versions/{n}/restore
-
-Puts the snapshot `v<n>` of the part's history back (notes, sheet, audio timeline, the names of its
-files) after keeping the current state as the next snapshot. Answers `{keptVersion, sheet}`:
-restoring `keptVersion` is the redo. `404` when the part has no such snapshot, or one that cannot be
-put back whole (a snapshot taken before a new transcription has no timeline). A write.
-
-### GET / PUT /time/{uuid}/lyrics
-
-The words of the song as the reader pasted them in the Lyrics tab, and the lyrics pieces of its
-pool, saved by **Save lyrics** (implementation 02, Phase 7). Body and answer:
-`{"text": "…", "pool": ["…", "…"]}`; the text at most 20,000 characters, trimmed, an empty text saves
-`null`; the pool's empty pieces are dropped, and a `PUT` without `pool` leaves the saved pool as it
-is. `GET` answers `pool: null` until a pool was saved here. Stored as `parts[].lyrics` and
-`parts[].lyricsPool` in `project.json`, not in `sheet.json`, so
-they outlive **Remove all** (`DELETE /time/{uuid}/rhythm`) and a new transcription, and travel with
-a duplicate, an edit copy, a Replace and an export. Nothing else of the project changes. `PUT` is a
-write: a version of the Private Library answers `403`.
-
-### GET / PUT / DELETE /time/{uuid}/rhythm
-
-The reader's saved reading: the anchor, the key, clef changes, speed changes, renamed figures, beam
-breaks and beam joins, hidden notes, fingering, trills, grace notes, lyrics, cue-size stretches and
-how far apart the notes and the lines stand. One per piece: a second reading replaces the first. See
-[`rhythm-and-annotations.md`](rhythm-and-annotations.md).
-
-`PUT` stamps `handsRevision` with the current value from `notes.pmn`; the client's value is
-ignored. A later edit of the notes or the hands outside the Sheet tab makes the reading stale, and
-the Sheet tab asks the reader to press **Write the sheet** again. `409` when the piece has no notes.
-Since implementation 02, Phase 2 the reading also carries `title`, `subtitle` and `artist` (each
-optional, at most 200 characters): what the sheet prints above the music. Since Phase 7 the page
-filled `lyricsPool` (the lyrics pieces of the pool; since **Save lyrics** saves the pool, a `PUT`
-without it keeps the one saved here, and the page reads it only when the part has no pool of its
-own) and `figuresFrom` (where the next figures transposition starts), and `lyrics` holds the lyrics pieces, each starting and ending on a frame.
-
-`DELETE` answers `204` and is what **Remove all** calls.
-
----
-
-<a id="5-passages--recording-in-sheet"></a>
-
-### 4.1 `/sheet`: the new sheet (implementation 03, Phases 5 to 7)
+### 4.1 `/sheet`: the sheet of a part (implementation 03, Phases 5 to 10)
 
 `GET /sheet/{uuid}?width=130` (60 to 320 staff spaces, the staff width; the SVG adds 8 of margins) answers:
 
@@ -936,26 +702,38 @@ and need the right to write the part (a version of My library answers `403`: it 
 - `POST /sheet/{uuid}/add?width=130` `{"frame", "midi", "hand", "lengthMs"}`: a note at the onset of the drawn column
   `frame` (`lengthMs` absent: a negra of the reference figure); `400` when that key is already struck there.
 - `POST /sheet/{uuid}/paste?width=130` `{"source": {"part", "fromMs", "toMs"}, "atMs", "replaceToMs"}` (Phase 8B):
-  the paste of `POST /time/{uuid}/paste` (notes, audio, everything after moved), and the new sheet with it: the
+  the stretch `[fromMs, toMs)` of the source part put into this part at `atMs`, or in place of
+  `[atMs, replaceToMs)` (notes, audio, everything after moved; `editing/paste.py`), and the new sheet with it: the
   stretch of the source's sheet as its page draws it, the target's sheet moved out of the way, the armadura and clefs
   of each side at the edges (`part_sheet.lengths`). One step of the part's log, whose undo puts back the history
   version the paste kept and whose redo the pasted one. The answer is the sheet drawn again, with `edited` ("Paste
   4.0 s", "Paste 2.0 s over a stretch"), `atMs`, `lengthMs`, `notesIn`, `notesMoved`, `notesRemoved`. `404` for a
-  source the user may not read, `409` for a paste the old route refuses too. Every answer of `/sheet/{uuid}` also
+  source the user may not read, `409` for an empty stretch, a stretch pasted over that does not come after `atMs`,
+  and a target with audio but no notes yet. Every answer of `/sheet/{uuid}` also
   carries `audioRevision` (a paste and its undo change the audio; the page's player loads it again).
-- Every change of a part's length (`/time/{uuid}/paste`, a promotion of Record in Sheet, a split, a join, From other
+- Every change of a part's length (a paste, a promotion of Record in Sheet, a split, a join, From other
   projects, a comment's excerpt) carries the new sheet in the same write since Phase 8B; a promotion is a step of
   the target's log too ("Promote the passage").
 - `GET /sheet/{uuid}/pages?width=W&height=H&first=F&gap=G` (staff spaces: the staff width, the page's room, page
   one's room under its title, the space between lines): `{"pages": [{"svg", "width", "height", "first", "last"}]}`,
   whole lines on each page.
 
+**The words (Phase 10).** `GET /sheet/{uuid}/words` and `PUT /sheet/{uuid}/words` (`api/sheet.py`, `PartWords`):
+the words of the song as the reader pasted them in the Lyrics tab, and the lyrics pieces of its pool, saved by
+**Save lyrics**. They moved here from `/time/{uuid}/lyrics` with the same body and answer:
+`{"text": "…", "pool": ["…", "…"]}`; the text at most 20,000 characters, trimmed, an empty text saves `null`; the
+pool's empty pieces are dropped, and a `PUT` without `pool` leaves the saved pool as it is. `GET` answers
+`pool: null` until a pool was saved. Stored as `parts[].lyrics` and `parts[].lyricsPool` in `project.json`, not in
+the sheet, so they outlive a new transcription and travel with a duplicate, an edit copy, a Replace and an export.
+Nothing else of the project changes. `404` for an unknown part; `PUT` is a write: a version of the Private Library
+answers `403`. The lyrics placed on the page are the sheet's own (`lyrics` of `POST /sheet/{uuid}/reading`).
+
 ## 5. `/passages`: Recording in Sheet
 
 Implementation 02, Phase 9 (plan section 13). A passage is a stretch of a part being re-recorded,
 or a moment of it where a new passage goes. It and its takes are projects of the user's Personal
 Vault, hidden from every list (`kind = 'passage'`); their parts answer every route of a part
-(`/time`, `/audio`, `/pieces`), which is how the page draws them. The path names the passage's
+(`/sheet`, `/audio`, `/pieces`), which is how the page draws them. The path names the passage's
 project, so the rights of a project apply; opening one checks the user may write the part (a
 version of the library answers `403`).
 
@@ -983,10 +761,11 @@ recording) adds a take and shows it; a take has `midi: true` when it has keys.
 stretch becomes the take's cuts, then the transcription, the hand split and the first sheet run as
 one job of the GPU queue (key `take:<id>`).
 
-**`POST …/promotion`** and **`POST …/promote`** take `{mode, audio, sheet?}`: `mode` is `window`
+**`POST …/promotion`** and **`POST …/promote`** take `{mode, audio}`: `mode` is `window`
 (the take under the window, fitted into the passage) or `whole` (the whole take in place of the
 passage); `audio` is `original` (a window only: the notes change, the audio does not) or
-`recording`; `sheet` is the Proposal's sheet as the page holds it. The first answers what would
+`recording`. (Until implementation 03, Phase 10 they also took `sheet`, the old sheet as the page
+held it; the new sheet is stored, so nothing unsaved is sent.) The first answers what would
 happen:
 
 ```json
@@ -995,7 +774,8 @@ happen:
 ```
 
 The second writes, deletes the passage, and answers `{part, projectId, beforeVersion, atMs,
-lengthMs, sheet}`: `POST /time/{part}/versions/{beforeVersion}/restore` is its undo.
+lengthMs}`. The promotion is a step of the part's log ("Promote the passage"), so
+`POST /sheet/{part}/undo` puts the history version `beforeVersion` back.
 
 Errors: `404` for a passage or take that is not there, `409` for a promotion that cannot be made
 (no take read yet, a window on a new passage, the original audio with another length), `503` when
@@ -1026,32 +806,33 @@ chain is described in
             "details": {"noteCount": 1351, "engine": "muscriptor-large"}}, …],
  "resume": "sheet",
  "revisions": {"audio": 0, "notes": 1, "notesAudio": 0, "hands": 2,
-               "handsNotes": 1, "sheetHands": 2},
+               "handsNotes": 1},
  "scratch": false}
 ```
 
 - `steps` holds `source`, `audio`, `notes`, `sheet`, in that order.
 - `state` is `missing` (never made), `running` (a transcription is working on it), `stale` (made
   from an older revision of an earlier step) or `ready`.
-- `enabled` is true when every step before it is ready. A stale Sheet tab stays enabled, because it
-  opens with a banner that asks the reader to write the sheet again.
+- `enabled` is true when every step before it is ready.
 - `reason` is a sentence the page shows as it is, as the tab's tooltip or a banner.
 - `details`: `audio` gives `audioRevision` and `cuts` (a count); `notes` gives `noteCount` and
-  `engine`, plus `jobId` and `jobStatus` while running; `sheet` gives `newSheet` (a `sheet.f1` is stored),
-  `legacy` (the state of the old `sheet.json`) and, while Sonnet writes, `jobId` and `jobStatus`.
-- `resume` is the furthest enabled step that is ready or running (or a stale Sheet): the tab a piece
-  opens on.
+  `engine`, plus `jobId` and `jobStatus` while running; `sheet` gives `newSheet` (a `sheet.f1` is stored)
+  and, while the AI writes, `jobId` and `jobStatus`.
+- `resume` is the furthest enabled step that is ready or running: the tab a piece opens on.
 - `revisions` are the numbers the states are computed from: `audio` (`timeline.json`), `notes`,
-  `notesAudio`, `hands`, `handsNotes` (`notes.pmn`), and `sheetHands` (`sheet.json`).
+  `notesAudio`, `hands`, `handsNotes` (`notes.pmn`).
 - `scratch` (Phase 8): a part made from scratch (its source is `composed`) with no audio yet. Its
   Source and Audio steps are `missing` and the Audio tab closed ("Record or paste a passage first."),
   `resume` is `sheet`, and the page shows only the sheet. A paste or a recorded passage that brings
   audio ends it.
 
 The Notes step is `stale` when `notesAudio` differs from `audio` (a cut was saved after the
-transcription). The Sheet step is enabled once the notes are ready, `running` while Sonnet writes, `ready` with a
-stored new sheet or a current `sheet.json`, and `stale` when only a `sheet.json` is left and `sheetHands` differs
-from `hands`.
+transcription). The Sheet step is enabled once the notes are ready, `running` while the AI writes, `ready` once a
+`sheet.f1` or an old `sheet.json` is stored, and `missing` otherwise. A sheet is never stale for the page: it is laid
+again on the current notes (`part_sheet.build`). (One leftover in `pieces/status.py`: while the notes are not ready
+the closed Sheet step still says `stale` when an old `sheet.json` is stored, and `_resume` still counts a stale
+Sheet.) The old sheet's `stale` state, `details.legacy` and
+`revisions.sheetHands` were removed in implementation 03, Phase 10 (2026-10-27).
 
 `404` for an unknown uuid. The answer takes 5 to 24 ms.
 
@@ -1110,7 +891,6 @@ the backend applies them in order (`pieces/edits.py`).
 | `saved` | False when nothing changed. |
 | `added` | `[{tempId, id}]`: the id the backend chose for each added note. |
 | `changed` | Columns (`id`, `key`, `onMs`, `lenMs`, `hand`, `guessed`) of every note the backend changed beyond the request: added notes, notes the same-key rule shortened, notes the quick rule gave a hand. The page replaces its copy of each. |
-| `sheetStale` | True when a saved piano sheet was current before this edit and is stale now. |
 
 **The revisions** (`pipeline.save_edit`): a notes operation raises `notesRevision`; any operation
 raises `handsRevision`; a hand edit that leaves every placed live note with a hand sets
@@ -1131,39 +911,12 @@ quick rule and is marked `guessed`.
 The route holds `pipeline.piece_lock(uuid)` from its read to its write, so a revision check and its
 write cannot interleave with another request.
 
-### 6.4 POST /pieces/{uuid}/hands/predict
+### 6.4 What went: Predict hands
 
-**Predict hands** on the Hands tab. The same hand split the piano sheet has always run (the inference
-on the snapped time matrix, D-31), read back as one hand per note id. **Nothing is written**: the page
-shows the answer as unsaved changes, and **Save** sends it as two `hand` operations of a `PATCH`.
-
-Body: `{ "baseRevision": n, "frameMs": 40, "replace": false }`. With `replace: false` the saved hands
-the user set are kept and only the notes without a hand, or with a guessed hand, are predicted.
-`replace: true` predicts every note again.
-
-| Field | Meaning |
-|---|---|
-| `revision`, `handsRevision`, `frameMs` | What the prediction was made from. |
-| `id` | The live notes, in the order of `GET /pieces/{uuid}/notes`. |
-| `hand` | One character per note of `id`: `r`, `l`, or `-` for a note the split could not place. |
-| `changed` | How many notes would change hand if this is saved (a note with no hand counts). |
-| `unplaced` | How many notes are `-`. They are drawn red for the user to delete or assign. |
-| `elapsedMs` | |
-
-`409` when `baseRevision` is old or the piece has not been transcribed. The inferred split is cached:
-the first prediction on Superestrella takes about 1.2 s, a second one about 9 ms.
-
-### 6.5 POST /pieces/{uuid}/hands/predict/job
-
-The same prediction as a job, so the page can show real progress. Same body; answers `202` with
-`{jobId, status}`. The checks (`404`, `409`) run before the job starts.
-
-The page follows `GET /matrix/progress/{jobId}`. The stages are `events` (building the matrix) and
-`two-hands` (the inference, in hundredths: the beam search reports 0 to 60, the refine rounds 60 to
-100). The `done` frame carries every field of the direct answer. The job key is
-`hands:<uuid>:<notesRevision>:<frameMs>:<replace>`, so a second request with the same options while
-the first runs returns the same job. When the split is already cached, the job ends at once. It does
-not use the GPU queue.
+`POST /pieces/{uuid}/hands/predict` and `POST /pieces/{uuid}/hands/predict/job` (**Predict hands** on the Hands
+tab) were removed in implementation 03, Phase 10 (2026-10-27), with the Hands mode of the Notes editor. The AI
+writes the hands with the sheet, starting from the hand split (`pipeline.starting_hands`); the user moves notes
+between hands on the sheet (`POST /sheet/{uuid}/hands`). The hand split itself stays (`aitu_backend/hands/`).
 
 ---
 
@@ -1184,7 +937,7 @@ the Private Library since Phase 6 (§7.1).
 | Field | Meaning |
 |---|---|
 | `id`, `title`, `kind`, `layer`, `mine` | `kind`: `song` or `integratedPlaylist`; `layer`: `vault`, `private`, `public`, or `request` (the copy a request sent, Phase 14); `mine`: the user owns it (a library project of another user is one shared with them, Phase 14) |
-| `step` | The lowest `resume` of the parts (`source`, `audio`, `notes`, `hands`, `sheet`), kept in `projects.step` and worked out again only after a part changed |
+| `step` | The lowest `resume` of the parts (`source`, `audio`, `notes`, `sheet`), kept in `projects.step` and worked out again only after a part changed |
 | `running` | `transcribing` or `reading` while a job works on a part, `writing` while Sonnet writes the sheet of a part (implementation 03, Phase 5), else `null` |
 | `enhanced` | The AI wrote the sheet of a part of it (its `sheet.f1` record says `llm` or `mixed`; implementation 03, Phase 5) |
 | `parts` | The ids of the parts, in order |
@@ -1263,10 +1016,11 @@ the Private Library since Phase 6 (§7.1).
   the joined part keeps the first one's subheader. The part whose id is the project's is always the
   one kept (its music goes in at the start of the other's otherwise). `part` of the answer is the
   part that holds both. `409` for the first part.
-- `POST /projects/{id}/parts/{part}/split`, body `{ "atMs": number, "subheader": string | null,
-  "sheet": SavedRhythm | null }`: from `atMs` (snapped to a column) to the end becomes a new part
-  right after it (a paste into an empty part), then that stretch is cut out of the first (its audio
-  becomes cuts). `sheet` is the page's sheet, saved with it. `part` of the answer is the new part.
+- `POST /projects/{id}/parts/{part}/split`, body `{ "atMs": number, "subheader": string | null }`:
+  from `atMs` (snapped to a column) to the end becomes a new part right after it (a paste into an
+  empty part), then that stretch is cut out of the first (its audio becomes cuts). Each part keeps
+  its stretch of the sheet. `part` of the answer is the new part. (Until implementation 03, Phase 10
+  the body also took `sheet`, the old sheet as the page held it.)
   `409` when `atMs` is not inside the part.
 
 The answer of the four writes is `{parts, part}` as for `GET`.
@@ -1470,6 +1224,9 @@ reasoning, not unfinished work.
 Implementation 02 deleted the text-notation routes in Phase 1 (§9) and the old `/library` router in
 Phase 3 (§7).
 
+Implementation 03, Phase 10 (2026-10-27) deleted the `/time` router with the vexflow-v2 sheet (§4)
+and Predict hands (§6.4). The lyrics moved to `/sheet/{uuid}/words`.
+
 Implementation 08 deleted no route. It removed two choices and one page:
 
 - **The engine choice.** `POST /matrix/transcribe` refuses every engine except `muscriptor` with
@@ -1490,10 +1247,12 @@ Implementation 08 deleted no route. It removed two choices and one page:
   table, the home network and what this setup does not protect
 - [`context/backend/piano-matrix-notation.md`](../../../context/backend/piano-matrix-notation.md):
   `notes.pmn` (and the in-memory shape of `events.json`), the columns form, the revisions
-- [`time-matrix.md`](time-matrix.md): every schema 2.0 field
-- [`events-to-sheet.md`](events-to-sheet.md): how a response is derived
+- [`aitu-backend/src/aitu_backend/sheet/README.md`](../../../aitu-backend/src/aitu_backend/sheet/README.md): the
+  sheet `/sheet` draws, sections 9 to 17
+- [`events-to-sheet.md`](events-to-sheet.md): from the stored notes to the hand split the sheet starts from
+- [`time-matrix.md`](time-matrix.md): the frame and the figure names that stayed
 - [`editing-and-compose.md`](editing-and-compose.md): the splice and the insertion
-- [`rhythm-and-annotations.md`](rhythm-and-annotations.md): `sheet.json`
+- [`rhythm-and-annotations.md`](rhythm-and-annotations.md): the old `sheet.json`, still read
 - [`transcription-pipeline.md`](transcription-pipeline.md): what happens before any of this
 - [`paths-and-data.md`](paths-and-data.md): where each file of these routes lives
 - `http://127.0.0.1:8765/docs`: the generated, always-current field reference

@@ -7,7 +7,6 @@
  * (`/time`, `/audio`, `/pieces`). Mirrors `aitu-backend/src/aitu_backend/api/passages.py`.
  */
 
-import type { SavedRhythm } from "./timeScore";
 import { postForm, request } from "./client";
 
 export interface PassageTake {
@@ -81,13 +80,11 @@ export interface Promoted {
   beforeVersion: number;
   atMs: number;
   lengthMs: number;
-  sheet: SavedRhythm | null;
 }
 
 interface PromoteBody {
   mode: PromotionMode;
   audio: PromotionAudio;
-  sheet?: SavedRhythm;
 }
 
 export const passagesApi = {

@@ -201,28 +201,23 @@ def test_corrections_survive_the_video_being_read_again(a_video_piece: str) -> N
 def test_the_piece_goes_straight_through_everything_downstream(
     a_video_piece: str,
 ) -> None:
-    """Task 4.2.1. The hand split, the matrix, the peaks, the ladder and the
-    payload, with no special case anywhere: every one of them is asked over HTTP
-    for the uuid a video wrote, and none of them is told that it was a video."""
+    """Task 4.2.1. The hand split, the matrix and the sheet, with no special case anywhere:
+    each is asked over HTTP for the uuid a video wrote, and none of them is told that it was a
+    video. (The peaks, the ladder and the payload of the vexflow-v2 sheet went in implementation
+    03, Phase 10.)"""
     piece.write(UUID)
 
     events = client.get(f"/matrix/{UUID}/events")
     assert events.status_code == 200
     assert len(events.json()["events"]) == len(DRAWN)
 
-    peaks = client.get(f"/time/{UUID}/peaks", params={"frameMs": 40, "hand": "right"})
-    assert peaks.status_code == 200
-
-    score = client.get(
-        f"/time/{UUID}/score",
-        params={"frameMs": 40, "anchorMs": 250, "anchorFigure": "negra"},
-    )
-    assert score.status_code == 200
-    payload = score.json()
-    assert payload["notes"], "the ladder printed something"
-    # Every printed note carries a hand, and the split is what decided it — not
-    # the colour of a rectangle, which the video never showed anyone (V-17).
-    assert {note["hand"] for note in payload["notes"]} <= {"left", "right"}
+    sheet = client.get(f"/sheet/{UUID}", params={"width": 130})
+    assert sheet.status_code == 200, sheet.text
+    drawn = sheet.json()["notes"]
+    assert drawn, "the sheet drew something"
+    # Every drawn note carries a hand, and the split is what decided it — not the colour of a
+    # rectangle, which the video never showed anyone (V-17).
+    assert {note["hand"] for note in drawn} <= {"left", "right"}
 
 
 # ---------------------------------------------------------- over the wire ---

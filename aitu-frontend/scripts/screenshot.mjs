@@ -5,7 +5,7 @@
  * screen, so it takes its own pictures with this before asking the user to look.
  *
  *     npm run screenshot -- /projects
- *     npm run screenshot -- /projects/<uuid>/sheet --wait .grid-notehead
+ *     npm run screenshot -- /projects/<uuid>/sheet --wait "[data-frames-sheet] [data-note]"
  *     npm run screenshot -- /admin/lab/video --out /tmp/lab.png --width 1600 --height 1000 --full
  *
  * Options:

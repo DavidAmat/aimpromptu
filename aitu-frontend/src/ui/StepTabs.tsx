@@ -4,7 +4,7 @@
  * an empty ring when not done yet.
  *
  * A step that cannot be opened yet is grey and does nothing when pressed; its tooltip says what is
- * missing ("Predict hands first."). It is not a disabled tab, because a disabled element receives
+ * missing ("Transcribe first."). It is not a disabled tab, because a disabled element receives
  * no pointer events and its tooltip would never show.
  */
 

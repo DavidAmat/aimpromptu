@@ -41,14 +41,10 @@ __all__ = [
 #: Set by the tests: every request acts as this user, with no cookie. Always ``None`` in the app.
 test_user: Callable[[], CurrentUser] | None = None
 
-#: ``POST`` routes that read a project and change nothing in it: a sheet computed for a reading, a
-#: preview, a prediction shown before it is saved, a copy made into the user's own vault (a
-#: duplicate, or the copy that edits a version of the Private Library).
+#: ``POST`` routes that read a project and change nothing in it: a preview, a copy made into the
+#: user's own vault (a duplicate, or the copy that edits a version of the Private Library).
 READ_ROUTES = frozenset(
     {
-        "/time/{audio_uuid}/score",
-        "/time/{audio_uuid}/ladder-preview",
-        "/pieces/{audio_uuid}/hands/predict",
         "/audio/{audio_uuid}/trim",
         "/projects/{project_id}/duplicate",
         "/projects/{project_id}/edit",

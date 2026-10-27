@@ -288,7 +288,7 @@ Code that is not huge lives on SSD 1 under `/home/david/Documents`.
     knowledge-base/
     music/
       aimpromptu/            # this project (git: github.com:DavidAmat/aimpromptu)
-      vexflow-v2/            # @aimpromptu/grid-notation, must sit beside aimpromptu
+      vexflow-v2/            # @aimpromptu/grid-notation, the old sheet's renderer (unused since implementation 03, Phase 10)
       muscriptor/            # MuScriptor's own repository, for reference and its tools
   utils/
     zsh-autosuggestions/
@@ -539,7 +539,7 @@ Implementation 08 moved AImpromptu from the Mac to Ubuntu, because its transcrip
 
 | What | Where |
 | --- | --- |
-| The repositories `aimpromptu` and `vexflow-v2` (side by side), and `muscriptor` | Ubuntu, `/home/david/Documents/projects/music/` |
+| The repositories `aimpromptu`, `vexflow-v2` (the old sheet's renderer, no longer built with the app since implementation 03, Phase 10) and `muscriptor` | Ubuntu, `/home/david/Documents/projects/music/` |
 | The IDE session (Cursor) and the AI agent | Ubuntu |
 | The backend and the frontend | Ubuntu, in two Docker containers (`compose.yaml` at the repository root) |
 | Every record and every file of the app: `.database/` | Ubuntu, `/mnt/ssd2/aimpromptu/.database`, named by `AITU_DATABASE_DIR` in `.env` (not a link in the repository since 2026-10-06), mounted into the backend container at `/database`. Backups (`make db-backup`) land beside it |

@@ -6,12 +6,12 @@ One-shot orientation. Paste this alone to get the whole project.
 
 **A web app to catalogue songs and make their piano versions** ([app/01-app-context.md](app/01-app-context.md),
 in the user's words). You bring in a recording (upload it, record it in the browser, or download it
-from YouTube), a model transcribes it while you watch the notes appear, you correct the notes and the
-hands on a piano roll, and the app writes it out as a piano sheet you can read, edit, print and play
-from. A finished piano sheet becomes a **version** of a **song** in your own library, and can be
+from YouTube), a model transcribes it while you watch the notes appear, you correct the notes on a
+piano roll, and the app writes it out as a piano sheet (the AI decides the hands with it) that you can
+read, edit, print and play from. A finished piano sheet becomes a **version** of a **song** in your own library, and can be
 published to the **Public Library** that every user shares, after the master user reviews it.
 
-Two services in one monorepo, plus a rendering library in a sibling checkout. **A personal version on
+Two services in one monorepo. **A personal version on
 a home network**: no cloud and no deploy pipeline ([05-deployment.md](05-deployment.md)). Both
 services run in containers on an Ubuntu machine with an RTX 4090, and the browser of any device at
 home opens the page at `http://ubuntu:5173`. Everything the app knows is in one folder,
@@ -20,12 +20,15 @@ home opens the page at `http://ubuntu:5173`. Everything the app knows is in one 
 | | |
 |---|---|
 | `aitu-backend` | Python 3.12 / FastAPI. Runs MuScriptor on the GPU, stores the recorded notes, derives everything else, keeps the music library |
-| `aitu-frontend` | React 19 + TypeScript + Vite + MUI. Every screen, every pixel of the sheet |
-| `../vexflow-v2` | `@aimpromptu/grid-notation` — the notation renderer, installed from disk |
+| `aitu-frontend` | React 19 + TypeScript + Vite + MUI. Every screen; the sheet is an SVG the backend draws (`GET /sheet/{uuid}`) |
+
+The sibling checkout `../vexflow-v2` (`@aimpromptu/grid-notation`, the renderer of the old sheet) is no
+longer used by the app since implementation 03, Phase 10 (2026-10-27).
 
 How it was built: the MVP (implementations 01 to 09), then implementation 02, the private web app
 (Phases 0 to 15 complete 2026-10-18; Phases 16 and 17, the Spanish and Catalan regions and an
-inferred popularity, added the same day): [implementations/README.md](implementations/README.md).
+inferred popularity, added the same day), then implementation 03, the new sheet (opened 2026-10-23):
+[implementations/README.md](implementations/README.md).
 
 ## Users
 
@@ -88,15 +91,19 @@ brackets, fingering, trills, grace notes, lyrics, spacing. `make db-backup`, `db
 ## The flow of a piano sheet
 
 ```
-audio in ──▶ cuts ──▶ MuScriptor (GPU, live) ──▶ notes.pmn (ms) ◀── edits, saved hands
+audio in ──▶ cuts ──▶ MuScriptor (GPU, live) ──▶ notes.pmn (ms) ◀── edits of the Notes step
                           │
-                          ├─▶ filters, chord grouping on raw times, snap to frames, split hands
-                          ├─▶ gaps → the highest pile is a negra → the figure of every note
-                          └─▶ TimeScorePayload ──▶ @aimpromptu/grid-notation ──▶ the piano sheet
+                          ├─▶ the starting hands (the beam search of hands/)
+                          ├─▶ the algorithm's sheet (proposal: the reference figure, the figures, the beams)
+                          ├─▶ the AI writes the hands and the reading (Sonnet 5.5), saved as sheet.f1
+                          └─▶ engrave.frames ──▶ SVG (GET /sheet/{uuid}) ──▶ FramesSheetPage
 ```
 
-Step by step, with the reason for each ordering:
-[`documentation/services/backend/events-to-sheet.md`](../documentation/services/backend/events-to-sheet.md).
+The sheet has no compases, no tempo, no puntillos and no silencios. Its reference figure (the length it
+calls a negra) is named by the AI or by the algorithm, and **Transpose figures** overrides it.
+
+The new sheet chain, phase by phase: `aitu-backend/src/aitu_backend/sheet/README.md`; the browser side:
+[frontend/rendering.md](frontend/rendering.md).
 
 ## The screens
 
@@ -112,7 +119,7 @@ A sign-in page, then a left sidebar in black, white and grey (colour only on the
 | **Requests** | What you asked to publish, with a number when a change is asked |
 | **Admin** (master user): Review, Users, Lab | The review of requests, the users, the video reader's pages |
 
-**A project** goes through five steps in the order of the work; a step opens only when the step
+**A project** goes through four steps in the order of the work; a step opens only when the step
 before it is ready ([frontend/projects.md](frontend/projects.md)):
 
 | Step | What you do |
@@ -120,8 +127,9 @@ before it is ready ([frontend/projects.md](frontend/projects.md)):
 | Source | Drop an audio or a video file, or paste a YouTube link (as audio, or as a piano roll video) |
 | Audio | See the waveform, play it, cut parts out, add another audio at the end, **Transcribe**. For a video: **Video**, fit the piano, **Read notes** |
 | Notes | Watch the rectangles appear live, then edit them on a canvas piano roll |
-| Hands | **Predict hands**, check the colours, move notes between the hands, **Save** |
-| **Sheet** | The piano sheet, drawn on arrival; the floating bar; the sheet toolbox (title, key, transposition, lyrics, layout), the range and note toolboxes |
+| **Sheet** | The piano sheet, drawn on arrival, then written by the AI in the background (**Enhance with AI**); the floating bar; the sheet toolbox (title, key, transposition, lyrics, view), the range and note toolboxes (the hands are changed here). Every change is written at once as one step of undo |
+
+The Hands step left the flow in implementation 03, Phase 5, and its code was removed in Phase 10.
 
 **From scratch** starts on a blank sheet, to record or paste into. **From other projects** picks
 passages of other projects, one after the other or under a subheader, and saves them as a song or as
@@ -195,9 +203,11 @@ run and the troubleshooting are in one place: [04-local-development.md](04-local
 **Backend** `src/aitu_backend/`: `api/` (one router per section), `auth/` (the session, the
 passwords, the rights check), `audio/` (cuts, the frame table, the audio written again on save),
 `transcription/` (engines, the GPU queue, the live stream, filters, jobs, saved hands), `pieces/`,
-`pmn/` (the piano matrix notation and its adapters), `matrix/` (frame ↔ ms, gaps, peaks, figure
-bands), `hands/`, `notation/`, `sheet/` (the new sheet chain of implementation 03, not yet used by
-any route), `editing/` (splice, compose, paste, passages, history), `library/`
+`pmn/` (the piano matrix notation and its adapters), `matrix/` (frame ↔ ms, the hand split, keys),
+`hands/` (the beam search the starting hands come from), `sheet/` (the new sheet chain of
+implementation 03: the algorithm, the AI step, the engine), `part_sheet/` (the sheet of a part: build,
+store, edits, the AI's job, the marks of an old `sheet.json`), `editing/` (splice, compose, paste,
+passages, history), `library/`
 (the private and public rows, the import, popularity, pull, requests, shares), `storage/` (every
 path in one module, the project bundle, the audio store), `db/` (the tables, the Alembic revisions,
 the backup and check tools), `schemas/`, `main.py`.
@@ -210,9 +220,11 @@ the backup and check tools), `schemas/`, `main.py`.
 ## What is deliberately gone
 
 Stated so nobody rediscovers it. There is **no** BPM input, **no** granularity choice, **no** Matrix
-tab, **no** editing a matrix cell by hand, **no** bar lines, time signatures or measures, **no** text
-notation as a way to create a piece, and **no** plot of gaps to click (the highest pile is a negra by
-default since implementation 02, Phase 2). The Playground, YouTube to Audio and the old Piano Library
+tab, **no** editing a matrix cell by hand, **no** bar lines, time signatures or measures (and on the
+new sheet no compases, tempo, puntillos or silencios), **no** text notation as a way to create a piece,
+**no** plot of gaps to click (the AI or the algorithm names the reference figure since implementation
+03), **no** Hands step, and **no** renderer in the browser (vexflow-v2 removed in implementation 03,
+Phase 10). The Playground, YouTube to Audio and the old Piano Library
 left in implementation 02, Phase 1 (decision Q-4); their old addresses redirected until Phase 15.
 There is **no** engine choice: MuScriptor is the only engine the user can run (ByteDance and Transkun
 stay in the code). **Offline downloads** per project are left for a production version (Q-7).

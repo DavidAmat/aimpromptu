@@ -37,7 +37,6 @@ from aitu_backend.library import flow, rows
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.part_sheet import job as sheet_job
 from aitu_backend.part_sheet import store as sheet_store
-from aitu_backend.schemas.rhythm import SavedRhythm
 from aitu_backend.storage import bundle, exchange, locate
 from aitu_backend.transcription import jobs, pipeline
 from aitu_backend.video import store as video_store
@@ -178,8 +177,6 @@ class SplitIn(_Camel):
     #: Where the new part starts, in ms of the part.
     at_ms: float = Field(..., alias="atMs", gt=0)
     subheader: str | None = Field(None, max_length=300)
-    #: The part's sheet as the page holds it, unsaved edits included; saved by the split.
-    sheet: SavedRhythm | None = None
 
 
 class PartsOut(_Camel):
@@ -539,8 +536,6 @@ def split_part(project_id: str, part_id: str, body: SplitIn) -> PartsOut:
     """The part split at ``atMs``: what follows becomes a new part after it (section 14.1)."""
     _part_of(project_id, part_id)
     new_part = _parts_answers(
-        lambda: project_parts.split(
-            project_id, part_id, body.at_ms, subheader=body.subheader, sheet=body.sheet
-        )
+        lambda: project_parts.split(project_id, part_id, body.at_ms, subheader=body.subheader)
     )
     return _parts_out(project_id, new_part)

@@ -106,15 +106,7 @@ async function freshCopy(label) {
 try {
   // 1. One project.
   const copy = await freshCopy('check-play');
-  const sheet = await json(`${api}/time/${copy.id}/rhythm`);
-  await send('PUT', `${api}/time/${copy.id}/rhythm`, {
-    ...sheet,
-    lyrics: [
-      { fromColumn: 25, toColumn: 100, text: 'check words one' },
-      { fromColumn: 400, toColumn: 450, text: 'check words two' },
-    ],
-  });
-  // The same two pieces on the new sheet (implementation 03, Phase 8: lyrics are lines of the sheet itself).
+  // Two lyrics pieces (implementation 03, Phase 8: lyrics are lines of the sheet itself).
   await send('POST', `${api}/sheet/${copy.id}/reading?width=130`, {
     action: 'lyrics',
     value: {

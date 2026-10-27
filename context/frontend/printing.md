@@ -9,7 +9,8 @@ same vector PDF (`FramesPdfDialog.tsx`, `print/scorePdf.ts`). Its glyphs are pat
 file (about 60 kB for 7 Years, 4 A4 pages). Phase 8A+++ (the user's request of a denser PDF) measured the defaults on
 the 10 viewer songs on A4: 5 to 7 lines a page (median 6) and 44 pages, where a 7 mm staff with the screen's space
 gave 51; the user's copy of 7 Years, whose screen space was 10.5 staff spaces, went from 6 pages to 4. The sections
-below describe the old sheet's renderer.*
+below describe the old sheet's renderer (vexflow-v2), whose code was removed in implementation 03, Phase 10
+(2026-10-27); they are kept as the record of the rule.*
 
 A window is as wide as the reader dragged it. A sheet of A4 is 210 mm. The two can never show the
 same line breaks, so a printed score is not a picture of the screen: it is the same music laid out
@@ -88,6 +89,6 @@ and in the right place but not quite the same letterforms as on screen.
 
 - [../../documentation/services/frontend/score-pdf.md](../../documentation/services/frontend/score-pdf.md)
   — the files, the PDF object graph, the fonts, and how to check a file that comes out wrong
-- [../../documentation/services/frontend/grid-notation.md](../../documentation/services/frontend/grid-notation.md)
-  — the drawing package and how it is installed
-- [rendering.md](rendering.md) — where frames become notation
+- [../../documentation/deprecated/grid-notation.md](../../documentation/deprecated/grid-notation.md)
+  — the old sheet's drawing package (removed in implementation 03, Phase 10)
+- [rendering.md](rendering.md) — how the sheet is drawn (by the backend)
