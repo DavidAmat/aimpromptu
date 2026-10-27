@@ -50,7 +50,7 @@ closed.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 04 | [`04-app-enhancements/`](04-app-enhancements/README.md) | The sheet page (Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag, the hidden floating toolbox back) and the AI's sheet (a new decoration-note rule on every sheet, prompt version 6 with simplicity and the amateur pianist rule, run on 7 Years). One branch per phase, `feat/04-phase-N` | 2026-10-27 | **Planned.** No phase started. [`04-checklist.md`](04-app-enhancements/04-checklist.md) is the status lookup |
+| 04 | [`04-app-enhancements/`](04-app-enhancements/README.md) | The sheet page (Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag, the hidden floating toolbox back) and the AI's sheet (a new decoration-note rule on every sheet, prompt version 6 with simplicity and the amateur pianist rule, run on 7 Years; the Enhance with AI dialog with Simplify left / right / both). One branch per phase, `feat/04-phase-N` | 2026-10-27 | **In progress.** Phases 1 to 3 done; next Phase 4. [`04-checklist.md`](04-app-enhancements/04-checklist.md) is the status lookup |
 
 ## How to read this folder
 

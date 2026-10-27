@@ -57,9 +57,10 @@ from aitu_backend.sheet.proposal.frames import (
 )
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet import frames as frames_mod
-from aitu_backend.sheet.sheet.common import spn
+from aitu_backend.sheet.sheet.common import parse_spn, spn
 from aitu_backend.sheet.sheet.data import FRAME_MS, Note, Sheet, carry_extras
-from aitu_backend.sheet.sheet.figures import figure_of_ms, steps
+from aitu_backend.sheet.sheet.figures import FIGURES, figure_of_ms, nominal_ms, steps
+from aitu_backend.sheet.sheet.pitch import pitch_to_midi
 from aitu_backend.sheet.sheet.spelling import spell
 
 __all__ = [
@@ -71,11 +72,14 @@ __all__ = [
     "assemble",
     "beam_pairs",
     "check_answer",
+    "declared",
     "feedback",
     "gap_peaks",
     "instructions",
     "read_reference",
+    "places",
     "reference_prompt",
+    "simplicity",
     "splice",
     "stretch_request",
     "trim_beams",
@@ -88,7 +92,7 @@ __all__ = [
 Complete = Callable[[str, list[dict]], str]
 
 PROMPT_DIR = Path(__file__).with_name("prompt") / "frames"
-PROMPT_VERSION = "5"  # prompt/frames/VERSION
+PROMPT_VERSION = "6"  # prompt/frames/VERSION
 WINDOW_MS = (12000.0, 16000.0)  # a window ends after the longest pause in this range
 MAX_ONSETS = 200
 LOOKAHEAD_MS = 4000.0
@@ -97,6 +101,13 @@ MAX_CHECKS = 3
 REFERENCE_MS = (150.0, 2000.0)  # a reference figure outside this range is not used
 BEAM_FLOOR = 0.3  # the phase 14 guard: at least 30 % of 20 or more beamable notes in a group
 BEAM_MIN_NOTES = 20
+# Prompt 6 (implementation 04, Phase 3): what a whole-song window may leave out and add for the rules of simplicity
+CHANGE_SHARE = 0.1  # of the target's notes, at most
+CHANGE_MIN = 4  # the limit of a small window
+NEAR = 12  # semitones: a note left out keeps a note of its column this near; a note added is this near one
+PATTERN_COLUMNS = (
+    8  # the columns of the hand before and after an added note that may give its pitch name
+)
 
 
 class SkipWindow(Exception):
@@ -291,6 +302,105 @@ def _ranges(sheet: Sheet) -> list[str]:
     return out
 
 
+# ------------------------------------------------------------------ places to check (prompt 6)
+
+RUN_COLUMNS = 6  # a run of fewer columns is no pattern
+RUN_SHARE = 0.6  # the shape of the pattern holds at least this share of the run's columns
+
+
+def _hand_columns(notes: list[Note], staff: int) -> list[tuple[int, list[Note]]]:
+    cols: dict[int, list[Note]] = defaultdict(list)
+    for n in notes:
+        if n.staff == staff and not n.covered:
+            cols[n.frame].append(n)
+    return [(f, sorted(ns, key=lambda n: n.midi)) for f, ns in sorted(cols.items())]
+
+
+def _onset(ns: list[Note]) -> float:
+    return min(n.on_ms if n.on_ms is not None else n.frame * FRAME_MS for n in ns)
+
+
+def _shape(ns: list[Note]) -> str:
+    keys = sorted({n.midi for n in ns})
+    if len(keys) == 1:
+        return "single"
+    return "octave" if len(keys) == 2 and keys[1] - keys[0] == 12 else "chord"
+
+
+def _names(ns: list[Note]) -> str:
+    return "+".join(spn(n.step, n.alter, n.octave) for n in sorted(ns, key=lambda n: n.midi))
+
+
+def far_quick(
+    notes: list[Note], quarter_ms: float
+) -> list[tuple[int, list[Note], list[Note], list[Note]]]:
+    """simple.2: the quick columns of one hand (a grace note, or a semicorchea or shorter two figures or more shorter
+    than the next column of that hand and sounding less than a corchea before it) with notes more than ``NEAR``
+    semitones from every note of that next column, and another note near it (a single quick note stays): ``(frame,
+    the quick column, its far notes, the main column)``."""
+    out = []
+    for staff in (1, 2):
+        cols = _hand_columns(notes, staff)
+        for (f, quick), (_, main) in zip(cols, cols[1:]):
+            fq, fm = quick[0].figure or 0, main[0].figure or 0
+            if not (quick[0].grace and not main[0].grace) and (
+                fq < 16 or not fm or fq < 4 * fm or _onset(main) - _onset(quick) >= quarter_ms / 2
+            ):
+                continue
+            far = [q for q in quick if min(abs(q.midi - m.midi) for m in main) > NEAR]
+            if far and len(far) < len({q.midi for q in quick}):
+                out.append((f, quick, far, main))
+    return out
+
+
+def broken_octaves(
+    notes: list[Note], quarter_ms: float
+) -> list[tuple[int, int, str, list[tuple[int, list[Note]]]]]:
+    """simple.1: the runs of one hand (``RUN_COLUMNS`` columns or more of corcheas or shorter, each less than a negra
+    after the one before) whose columns are octaves, or single notes, at ``RUN_SHARE`` or more, with columns of the
+    other of the two shapes: ``(first frame, last frame, the run's shape, the odd columns)``. Runs of chords are left
+    out: the notes of a melody over chords change from one column to the next by themselves."""
+    out = []
+    for staff in (1, 2):
+        cols = [(f, ns) for f, ns in _hand_columns(notes, staff) if not ns[0].grace]
+        runs: list[list[tuple[int, list[Note]]]] = []
+        for f, ns in cols:
+            fast = (ns[0].figure or 0) >= 8
+            if fast and runs and runs[-1] and _onset(ns) - _onset(runs[-1][-1][1]) < quarter_ms:
+                runs[-1].append((f, ns))
+            else:
+                runs.append([(f, ns)] if fast else [])
+        for run in runs:
+            if len(run) < RUN_COLUMNS:
+                continue
+            shapes = Counter(_shape(ns) for _, ns in run)
+            main, count = shapes.most_common(1)[0]
+            other = {"octave": "single", "single": "octave"}.get(main)
+            odd = [(f, ns) for f, ns in run if _shape(ns) == other]
+            if odd and count >= RUN_SHARE * len(run):
+                out.append((run[0][0], run[-1][0], main, odd))
+    return out
+
+
+def places(notes: list[Note], quarter_ms: float) -> list[str]:
+    """The places of a window the rules of simplicity are about, found by the app (:func:`far_quick`,
+    :func:`broken_octaves`), one line each for the window prompt; the hands are the ones the notes have now.
+    """
+    out = []
+    for f, quick, far, main in far_quick(notes, quarter_ms):
+        out.append(
+            f"- f{f}: {_names(quick)} is quick, just before {_names(main)} at f{main[0].frame} in the same hand; "
+            f"{_names(far)} is more than an octave from it (simple.2)"
+        )
+    for a, b, shape, odd in broken_octaves(notes, quarter_ms):
+        what = ", ".join(f"f{f} {_names(ns)}" for f, ns in odd)
+        out.append(
+            f"- f{a} to f{b}: a run of {'octaves' if shape == 'octave' else 'single notes'} in one hand, with "
+            f"{'single notes' if shape == 'octave' else 'octaves'} at {what} (simple.1)"
+        )
+    return out
+
+
 def window_prompt(
     *,
     sid: str,
@@ -300,10 +410,12 @@ def window_prompt(
     lookahead: Sheet,
     context: Sheet | None,
     request: str | None = None,
+    check: list[str] | None = None,
 ) -> str:
     """The prompt of window ``index`` (0 = first) of ``count``. ``context`` = the end of the previous answer (with
     its hands and tags), or ``None``. ``request`` = the user's request for one stretch (:func:`write_stretch`): the
-    stretch is the target, the sheet before it the context."""
+    stretch is the target, the sheet before it the context. ``check`` = the places the rules of simplicity are
+    about (:func:`places`)."""
     lo, hi = min(n.frame for n in target.notes), max(n.frame for n in target.notes)
     if request is None:
         out = [f"# Window {index + 1} of {count} of song {sid} (frames f{lo}-f{hi})"]
@@ -332,6 +444,12 @@ def window_prompt(
             "The target shows the current hand of each note (written in an earlier run; the user may have moved "
             "some). Read them as a suggestion: keep the hands that follow the rules, and change any that does not."
         )
+    if check:
+        out.append(
+            "## Places to check (rules of simplicity)\n\nThe app found these places in the target. Look at each one "
+            "and apply simple.1 or simple.2 when it makes the sheet simpler to read and to play; the target may "
+            "have other places too.\n\n" + "\n".join(check)
+        )
     if lookahead.notes:
         out.append(
             "## Look-ahead (do not write these)\n\n```\n"
@@ -344,6 +462,12 @@ def window_prompt(
         "## Answer\n\nWrite the target in F1 frames with hands, as one block in triple backticks. Start with the "
         "two header lines of the target; the second line may change `key=` or `clefs:` when the passage starts "
         "with another key signature or clef."
+        + (
+            " End with the `# leave out` and `# add` lines of the notes you change by the rules of simplicity, if "
+            "any."
+            if request is None
+            else ""
+        )
     )
     return "\n\n".join(out) + "\n"
 
@@ -441,13 +565,90 @@ def _structure(sheet: Sheet) -> list[str]:
     return errs
 
 
+_DECLARED = re.compile(r"^\s*#\s*(leave out|add)\s+f(\d+)\s+([A-G][#b]*-?\d+)", re.M)
+
+
+def declared(text: str) -> tuple[Counter, Counter]:
+    """The changes an answer declares in its comment lines (prompt 6, section "Simplicity"): the notes it leaves out
+    (``# leave out f1822 G2``) and the notes it adds (``# add f4556 D1``), as ``(frame, midi)`` counts.
+    """
+    out: dict[str, Counter] = {"leave out": Counter(), "add": Counter()}
+    for what, frame, pitch in _DECLARED.findall(text):
+        try:
+            out[what][(int(frame), pitch_to_midi(*parse_spn(pitch)))] += 1
+        except ValueError:
+            continue
+    return out["leave out"], out["add"]
+
+
+def simplicity(target: Sheet, answer: Sheet, left: Counter, added: Counter) -> list[str]:
+    """The limits of prompt 6 on the notes a whole-song window leaves out and adds (plan section 4.3), as problems.
+    A note left out keeps a note of the answer in its column within an octave (its hand still plays there). A note
+    added joins a column where its hand plays a note of the target, within an octave of one of them, with the pitch
+    name of a note of that column or of the ``PATTERN_COLUMNS`` columns of that hand before and after it. At most
+    ``CHANGE_SHARE`` of the target's notes change (``CHANGE_MIN`` at least)."""
+    errs: list[str] = []
+    for f, m in sorted(left.elements()):
+        if not any(n.frame == f and abs(n.midi - m) <= NEAR for n in answer.notes):
+            errs.append(
+                f"f{f} {_name(m)} is left out and no note of its column stays within an octave of it: leave out "
+                "only an extra note of a pattern or the far note of a quick chord, never a whole column of a hand"
+            )
+    kept = Counter((n.frame, n.midi) for n in target.notes)
+    for f, m in sorted(added.elements()):
+        note = next(n for n in answer.notes if (n.frame, n.midi) == (f, m))
+        hand = sorted(
+            {n.frame for n in answer.notes if n.staff == note.staff and kept[(n.frame, n.midi)]}
+        )
+        here = [
+            n.midi
+            for n in answer.notes
+            if n.frame == f and n.staff == note.staff and kept[(n.frame, n.midi)]
+        ]
+        if not here:
+            errs.append(
+                f"f{f} {_name(m)} is added where its hand plays no note of the target: an added note only "
+                "completes a column of its hand (the missing note of an octave or of a repeated chord)"
+            )
+            continue
+        i = bisect_left(hand, f)
+        around = set(hand[max(0, i - PATTERN_COLUMNS) : i + PATTERN_COLUMNS + 1])
+        names = {
+            n.midi % 12
+            for n in answer.notes
+            if n.staff == note.staff and n.frame in around and kept[(n.frame, n.midi)]
+        }
+        if min(abs(m - x) for x in here) > NEAR or m % 12 not in names:
+            errs.append(
+                f"f{f} {_name(m)} is added, but it is not the missing note of a pattern: an added note is within "
+                "an octave of a note of its column and has the name of a note of that column or of the same "
+                "pattern around it"
+            )
+    changed = sum(left.values()) + sum(added.values())
+    most = max(CHANGE_MIN, int(CHANGE_SHARE * len(target.notes)))
+    if changed > most:
+        errs.append(
+            f"the answer leaves out {sum(left.values())} notes and adds {sum(added.values())}, more than {most} "
+            "(a tenth of the target): change only the columns that break a pattern and the far notes of quick "
+            "chords, and write every other note as it is"
+        )
+    return errs
+
+
 def check_answer(
-    reply: str, target: Sheet, *, drop: bool = False, free: tuple[int, int] | None = None
+    reply: str,
+    target: Sheet,
+    *,
+    drop: bool = False,
+    free: tuple[int, int] | None = None,
+    simplify: bool = False,
 ) -> tuple[list[str], Sheet | None]:
     """The problems of a reply for a window (empty: accepted) and the parsed answer. ``drop=True`` (a stretch the
     user asked for, Phase 7) accepts an answer that leaves notes of the target out: they are taken off the sheet.
     ``free=(start, end)`` also accepts notes that are not in the target, at a frame of ``[start, end)`` and a key of
-    the piano: they are added to the notes (a changed pitch is a note left out and a note added).
+    the piano: they are added to the notes (a changed pitch is a note left out and a note added). ``simplify=True``
+    (a whole-song window, prompt 6) accepts the notes the answer declares it leaves out or adds, within the limits
+    of :func:`simplicity`; a note missing or added without its comment line is still a problem.
     """
     text = _block(reply)
     if not text.startswith("F1 frames"):
@@ -471,11 +672,22 @@ def check_answer(
             " ..." if sum(c.values()) > 8 else ""
         )
 
-    if want - got and not drop:
+    left, added = Counter(), Counter()
+    if simplify:
+        say_left, say_added = declared(reply)  # inside the block, or just after it
+        left, added = (want - got) & say_left, (got - want) & say_added
+        if not no_hand:
+            errs += simplicity(target, sheet, left, added)
+    if want - got - left and not drop:
         errs.append(
-            f"{sum((want - got).values())} onsets of the target are missing: {show(want - got)}"
+            f"{sum((want - got - left).values())} onsets of the target are missing: {show(want - got - left)}"
+            + (
+                " (a note left out on purpose needs its line '# leave out f... pitch')"
+                if simplify
+                else ""
+            )
         )
-    extra = got - want
+    extra = got - want - added
     if free is not None:
         extra = Counter(
             {
@@ -490,7 +702,10 @@ def check_answer(
             if free is not None
             else "not in the target (wrong frame or pitch)"
         )
-        errs.append(f"{sum(extra.values())} onsets are {where}: {show(extra)}")
+        errs.append(
+            f"{sum(extra.values())} onsets are {where}: {show(extra)}"
+            + (" (a note added on purpose needs its line '# add f... pitch')" if simplify else "")
+        )
     if drop and not sheet.notes:
         errs.append(
             "the answer leaves out every note of the target: keep the notes the user did not ask to take off"
@@ -549,6 +764,8 @@ class Part:
     key: int
     clef_changes: list[tuple[int, int, str]] = field(default_factory=list)
     key_changes: list[tuple[int, int]] = field(default_factory=list)
+    #: Notes the answer added (prompt 6, the rules of simplicity; a stretch, Phase 7): not in the base sheet.
+    added: list[Note] = field(default_factory=list)
 
 
 def _state_at(clefs, clef_changes, key, key_changes, frame: int) -> tuple[dict[int, str], int]:
@@ -569,12 +786,12 @@ def _answer_part(start: int, end: int, base: Sheet, answer: Sheet) -> Part:
     for i, n in enumerate(base.notes):
         if start <= n.frame < end:
             pool[(n.frame, n.midi)].append(i)
-    notes = {}
+    notes, added = {}, []
     for n in sorted(answer.notes, key=lambda n: (n.frame, n.midi, n.staff)):
-        if pool[
-            (n.frame, n.midi)
-        ]:  # a note the answer added (a stretch, Phase 7) has no place in the base
+        if pool[(n.frame, n.midi)]:
             notes[pool[(n.frame, n.midi)].pop(0)] = n
+        elif start <= n.frame < end and n.staff in (1, 2):
+            added.append(n)  # a note the answer added has no place in the base
     return Part(
         start=start,
         end=end,
@@ -584,6 +801,7 @@ def _answer_part(start: int, end: int, base: Sheet, answer: Sheet) -> Part:
         key=answer.key or 0,
         clef_changes=[c for c in answer.clef_changes if start <= c[0] < end],
         key_changes=[k for k in answer.key_changes if start <= k[0] < end],
+        added=added,
     )
 
 
@@ -599,6 +817,25 @@ def _algorithm_part(start: int, end: int, algo: Sheet) -> Part:
         clef_changes=[c for c in algo.clef_changes if start < c[0] < end],
         key_changes=[k for k in algo.key_changes if start < k[0] < end],
     )
+
+
+def placed(base: Sheet, part: Part, quarter_ms: float) -> list[Note]:
+    """The notes ``part`` added, with an onset and a length: the onset of the column they join (the first of its
+    notes in the base sheet; their frame when no note is there), and the length of the longest note of their hand in
+    that column (an octave or a chord completed sounds with it), or of the figure the answer wrote.
+    """
+    out = []
+    for n in part.added:
+        column = [
+            (base.notes[i], d) for i, d in part.notes.items() if base.notes[i].frame == n.frame
+        ]
+        hand = [b.len_ms for b, d in column if d.staff == n.staff and b.len_ms]
+        on = min((b.on_ms for b, _ in column if b.on_ms is not None), default=n.frame * FRAME_MS)
+        length = (
+            max(hand) if hand else nominal_ms(n.figure if n.figure in FIGURES else 8, quarter_ms)
+        )
+        out.append(replace(n, on_ms=on, len_ms=length))
+    return out
 
 
 def one_figure(run: list[int], fig: list[int]) -> list[list[int]]:
@@ -742,7 +979,9 @@ def join_ottavas(sheet: Sheet) -> int:
 def assemble(
     algo: FramesProposal, parts: list[Part], *, clefs: str = "llm", join: bool = True
 ) -> tuple[Sheet, dict]:
-    """The sheet from the decisions of every window (``parts`` in order, covering the song), then the rules:
+    """The sheet from the decisions of every window (``parts`` in order, covering the song: the notes of the base
+    sheet each part decided, and the notes it added, :func:`placed`; a note of the base no part decided was left
+    out), then the rules:
     figures, grace notes, lone short notes written longer, beam groups cut by the figures, spelling.
     ``clefs="rule"`` replaces the windows' clefs and 8va by the algorithm's rule on the decided hands
     (``proposal.frames.clefs_and_ottavas``). ``join=False`` keeps the 8va lines as decided (a stored sheet laid
@@ -792,6 +1031,11 @@ def assemble(
                     grace_rule=d.grace_rule,
                 )
             )
+        for n in placed(base, p, quarter_ms):
+            b = None
+            if n.beam is not None:
+                b = beam_id.setdefault((k, n.staff, n.beam), len(beam_id) + 1)
+            out.append(replace(n, figure=None, grace=None, gslot=0, beam=b, fixed=False))
     # one note per hand, key and column (two notes that moved into one hand), the longer kept
     keep: dict[tuple[int, int, int], Note] = {}
     for n in out:
@@ -891,6 +1135,22 @@ class FramesSong:
     info: dict
     parts: list[Part]
 
+    def changes(self) -> tuple[list[Note], list[Note]]:
+        """The notes the windows left out (of the base sheet, in a window the AI wrote) and the notes they added
+        (:func:`placed`), for ``notes.pmn`` (prompt 6, the rules of simplicity)."""
+        base = self.algo.sheet
+        left, added = [], []
+        for p in self.parts:
+            if p.source != "llm":
+                continue
+            left += [
+                n
+                for i, n in enumerate(base.notes)
+                if p.start <= n.frame < p.end and i not in p.notes
+            ]
+            added += placed(base, p, self.quarter_ms)
+        return left, added
+
     @property
     def summary(self) -> dict:
         return {
@@ -931,6 +1191,8 @@ def write_frames(
     max_checks: int = MAX_CHECKS,
     guards: bool = True,
     max_windows: int | None = None,
+    only: set[int] | None = None,
+    simplify: bool = True,
     on_window: Callable[[WindowLog], None] | None = None,
     on_start: Callable[[FramesProposal, list[tuple[int, int]]], None] | None = None,
     on_part: Callable[[WindowLog, Part], None] | None = None,
@@ -939,7 +1201,9 @@ def write_frames(
     the algorithm uses them for the input's figures and for the fallback. ``hands=True`` shows them to the LLM
     (a run again on the numeric truth, plan section 3.7); by default the LLM reads the notes without hands, as the
     research measured best. ``key`` fixes the armadura of the algorithm (the header of window 1); ``quarter_ms``
-    skips the reference request. ``max_windows`` limits the requests (later windows keep the algorithm).
+    skips the reference request. ``max_windows`` limits the requests (later windows keep the algorithm); ``only``
+    asks only the windows of those indexes (0 = first; a test of some passages). ``simplify`` lets the windows leave
+    out and add notes for the rules of simplicity (prompt 6, :func:`check_answer`; ``FramesSong.changes``).
     ``on_start(algo, windows)`` is called once the reference figure is known, before the first window request, and
     ``on_part(log, part)`` after each window with its decisions (the piece-by-piece view of the Sheet step, plan
     section 3.6: ``assemble`` of the parts so far, the algorithm's parts for the rest, is the sheet at that moment).
@@ -989,7 +1253,11 @@ def write_frames(
     for k, (a, b) in enumerate(wins):
         log = WindowLog(k=k, start=a, end=b)
         target_notes = _part(base, a, b)
-        if stopped or (max_windows is not None and k >= max_windows):
+        if (
+            stopped
+            or (max_windows is not None and k >= max_windows)
+            or (only is not None and k not in only)
+        ):
             log.status = "skipped"
         else:
             shown = dict(key=kk, clefs=clefs, quarter_ms=quarter_ms, hands=hands, figures=figures)
@@ -1005,6 +1273,7 @@ def write_frames(
                         target=target,
                         lookahead=look,
                         context=context,
+                        check=places(target_notes, quarter_ms) if simplify else None,
                     ),
                 }
             ]
@@ -1013,7 +1282,7 @@ def write_frames(
                 while log.replies < max_checks:
                     reply = complete(system, messages)
                     log.replies += 1
-                    errs, answer = check_answer(reply, target)
+                    errs, answer = check_answer(reply, target, simplify=simplify)
                     if not errs and guards:
                         trial = _answer_part(a, b, base, answer)
                         sheet, _ = assemble(algo, [trial])

@@ -41,6 +41,10 @@ At the end of this plan:
 7. The AI's prompt (version 6) has the **rules of simplicity** (uniform patterns) and the **amateur pianist** rule (no
    quick chord that forces a jump), and the AI may add and leave out notes within limits to follow them.
 8. **7 Years** (the My library version) is enhanced again with the new prompt, and the user approved the result.
+9. **Enhance with AI** opens one dialog (added in Phase 3, section 3.5): a selected stretch with both hands, the
+   right or the left, and the user's words; or, with nothing selected, **Simplify left**, **Simplify right**,
+   **Simplify both** (the rules of simplicity over the whole song, batch after batch, each batch seeing the
+   simplifications made before) and the full run of today.
 
 Not in this plan: running the AI again on any other song (credits). Every other song gets the new decoration-note
 rule at no cost; the user can run **Enhance it again with AI** on a song later.
@@ -114,6 +118,21 @@ Vault** (`477086a0-b8ac-492f-aeca-2a56805868af`, `based_on` the library version,
 2026-10-26). **Enhance it again with AI** on a library version opens the copy that edits it, so the run would most
 likely land on that copy, with its edits. The agent checks what the app does and asks the user before spending.
 
+## 3.5 The Enhance with AI dialog (user, 2026-10-27, after the Phase 3 gallery)
+
+The brief and the answers are at the end of [`04-1-prompt.md`](04-1-prompt.md).
+
+- **Enhance with AI** opens a dialog. **A stretch** (a range or notes selected): both hands, only the right or only
+  the left, and the user's words, as today's stretch. With one hand chosen, **the other hand stays exactly as it
+  is**: the AI sees it, it cannot change it.
+- **The whole song** (nothing selected): **Simplify left**, **Simplify right**, **Simplify both**, and **Write it
+  all again** (today's full run, kept).
+- **Simplify** does **the rules of simplicity only** (simple.1 uniform patterns, simple.2 the amateur pianist, the
+  limits of the prompt 6 check); the hands do not move, and the other hand is not touched.
+- **Auto-regressive**: Simplify goes over the song batch after batch (longer batches than a full run: one hand is
+  less text), and each batch sees the simplifications made before, so a pattern that repeats gets the same
+  simplification.
+
 # 4. Design notes
 
 ## 4.1 The sheet page (Phase 1)
@@ -185,6 +204,31 @@ Code: `aitu-backend/src/aitu_backend/sheet/llm/` (`prompt/frames/instructions.md
 - **Storing**: the run's left-out and added notes go into `notes.pmn` as `apply_stretch` does them, so that the next
   run, the edits and undo see one truth. The record of `sheet.f1` says how many notes the AI added and left out.
 - `VERSION` becomes 6; the record of each sheet keeps the prompt version it was written with.
+
+## 4.4 The Enhance with AI dialog and Simplify (Phase 4)
+
+Code: `FramesSheetPage.tsx`, `EnhanceStretchDialog.tsx` (becomes the dialog), the header and floating toolbox's
+Enhance button; `part_sheet/job.py` (`start_stretch`, a new `start_simplify`), `sheet/llm/frames.py`
+(`write_stretch`, a new `write_simplify`), `api/sheet.py`.
+
+- **The dialog**: two tabs. **A stretch** is open when a range or notes are selected (the hand chosen from the
+  selection when it is one hand); **The whole song** otherwise. Minimal UI; the wording says "AI".
+- **A stretch, one hand**: the target holds only that hand's notes; the other hand is shown as a fixed part of the
+  passage; the check refuses an answer that changes it (a note of it moved, left out, added); `splice` keeps it.
+- **Simplify**: windows of one hand (or of both with the hands fixed) up to about twice today's length (the study
+  measures the size of a prompt and an answer); the answer writes only the notes of the simplified hand(s) with the
+  comment lines of prompt 6; the hands and the other hand cannot change. The places to check (`places`) on every
+  batch.
+- **What each batch sees of the earlier ones** (the auto-regressive part): the end of the previous batch as it was
+  simplified (longer than the 4 s of a full run); the list of every simplification made so far in the song (where,
+  before and after: "f4556: D2 was alone in a run of D1+D2 octaves: D1 added"); and the earlier passage most like
+  this one (a chorus that repeats, found by comparing the notes' sequence) with what was done there. The study picks
+  the sizes from a test on 7 Years.
+- **Storing**: as a whole run's note changes (`edits.change_notes`); the beams of the simplified hand may change
+  where notes change, its clefs stay unless a note needs them. One step of undo per Simplify run ("Simplify the left
+  hand with AI"); the record lists each run (where, which hand, notes added and left out, cost), like `stretches`.
+- **Cost**: shown in the dialog before the run (about the cost of a full run or less); every test with the AI asks
+  the user first.
 
 # 5. Binding rules
 
@@ -283,7 +327,22 @@ Prompt version 6 and the limits on note changes (sections 3.3, 3.4 and 4.3).
    copy in the Personal Vault). About $0.70.
 7. The user checks 7 Years in the browser.
 
-## Phase 4: Documentation and closing
+## Phase 4: The Enhance with AI dialog and Simplify
+
+Sections 3.5 and 4.4. Backend and frontend.
+
+1. Study: the stretch path today (`EnhanceStretchDialog`, `start_stretch`, `write_stretch`), the size of one-hand
+   windows, how to find the earlier passage like the current one; the list of what each batch sees.
+2. The dialog: the two tabs, the hand of a stretch, the four whole-song choices, the cost.
+3. A stretch with one hand: the other hand fixed (prompt, check, splice); tests with recorded answers.
+4. Simplify: `write_simplify` batch after batch with what the earlier batches did; the check; storing, the record,
+   one step of undo; tests with recorded answers.
+5. Tests with the AI on a temporary copy (the user asked before each): a stretch of one hand, then Simplify left on
+   a song that has not been run with prompt 6; gallery `gallery/phase-4/`.
+6. Checks: a browser check of the dialog on a temporary copy (no AI request: a stand-in or the dialog only), the
+   existing checks; the user checks in the browser.
+
+## Phase 5: Documentation and closing
 
 1. The documentation made stale and not yet updated by Phases 1 to 3: the core's
    [`README.md`](../../../aitu-backend/src/aitu_backend/sheet/README.md) (the decoration-note rule, prompt version 6,
@@ -336,3 +395,25 @@ Prompt version 6 and the limits on note changes (sections 3.3, 3.4 and 4.3).
   written notes, and a beam the user takes away stays away.
 - The prompt's sentence on decoration notes stays as it is until prompt version 6 (Phase 3); the AI's input does not
   change with the rule.
+
+**Phase 3** (2026-10-27; report [`04-implementation-phase-3.md`](04-implementation-phase-3.md)):
+
+- The answer **declares** each note it leaves out or adds in a comment line (`# leave out f1822 G2`, `# add f4556
+  D1`), so the check tells a change made on purpose from a note forgotten by mistake (still an error).
+- The limits of the check (measured on My library and the test): a note left out keeps a note of its column within
+  an octave; a note added joins a column where its hand plays a note of the target, within an octave of it, with the
+  name of a note of that column or of the 8 columns of its hand around it; at most a tenth of the window's notes
+  (4 at least).
+- **Places to check** (new): the first whole-song test completed the octavas but kept the far Sol 2 that the window
+  test had left out. The app now finds the far quick chords and the broken octava runs by rule and lists them in the
+  window's prompt; the AI still decides each one. In 7 Years it finds exactly the three places of the images.
+- **Undo**: a whole run still starts the steps again, with one step, "Notes the AI added and left out": its undo
+  puts those notes back and lays the AI's sheet on them; the AI's mark, hands and reading stay. A whole run is not
+  undone as a whole.
+- A run again asks the reference figure again, as before: the test chose 500 ms (480 before), 10 figures of 1,456
+  changed.
+- The real run goes on the edit copy in the Personal Vault (`477086a0`), the user's answer of 2026-10-27; the My
+  library version changes when the user saves the copy to the library. Done: the same six notes as the test, $0.63,
+  the user's figures, lyrics and titles kept.
+- After the gallery, the user asked for the **Enhance with AI dialog** and **Simplify** (section 3.5): a new Phase 4;
+  the documentation and closing become Phase 5.

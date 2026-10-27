@@ -6,6 +6,7 @@ in the background with a stand-in ``complete`` (no request leaves the machine), 
 from __future__ import annotations
 
 import json
+import re
 import threading
 import time
 from pathlib import Path
@@ -16,7 +17,7 @@ from fastapi.testclient import TestClient
 from aitu_backend.audio import store as audio_store
 from aitu_backend.editing import history
 from aitu_backend.main import create_app
-from aitu_backend.part_sheet import build, job
+from aitu_backend.part_sheet import build, edits, job
 from aitu_backend.part_sheet import store as sheet_store
 from aitu_backend.pmn import events_file
 from aitu_backend.schemas.metadata import AudioSource
@@ -364,6 +365,53 @@ def test_enhanced_again_counts_the_runs_and_a_failed_run_keeps_the_ai_sheet(
 
     finish(job.start(part, complete=lambda: oracle(song(SECONDS))))
     assert sheet_store.load(part).record.runs == 2
+
+
+def test_the_notes_a_run_leaves_out_and_adds_go_into_the_notes_with_one_step_of_undo(
+    client: TestClient, part: str
+) -> None:
+    """Prompt 6 (implementation 04, Phase 3): the first window gives the bass A2 its octave A1 and takes E4 off the
+    right hand's E4+A4; both are written into notes.pmn, counted in the record, and undone as one step.
+    """
+    good = oracle(song(SECONDS))
+
+    def simpler(system: str, messages_: list[dict]) -> str:
+        reply = good(system, messages_)
+        first = re.search(r"^f0 .*$", reply, re.M)
+        if first is None:  # the reference request, and the later windows
+            return reply
+        line = first.group(0)
+        changed = line.replace("L: A2:", "L: A1,A2:").replace("R: E4,A4:", "R: A4:")
+        assert changed != line
+        return reply.replace(line, changed) + "\n# leave out f0 E4\n# add f0 A1\n"
+
+    finish(job.start(part, complete=lambda: simpler))
+    stored = sheet_store.load(part)
+    assert stored is not None and stored.record.source == "llm"
+    assert (stored.record.added, stored.record.left_out) == (1, 1)
+    assert '"added":1,"leftOut":1}' in paths.part_frames_path(part).read_text().splitlines()[0]
+
+    def live() -> dict[tuple[int, int], str | None]:
+        events = pipeline.load_note_events(part).events
+        return {(e.midi_note, round(e.start * 1000)): e.hand for e in events if not e.removed}
+
+    notes = live()
+    assert notes[(33, 0)] == "left" and (64, 0) not in notes and notes[(69, 0)] == "right"
+    at = {(n.frame, n.midi) for n in f1.read(stored.text).notes}
+    assert (0, 33) in at and (0, 64) not in at
+    body = sheet(client, part)
+    assert body["history"] == {"undo": edits.RUN_LABEL, "redo": None}
+
+    # undo: the notes as they were, the AI's sheet on them (its hands and beam groups), the mark kept
+    client.post(f"/sheet/{part}/undo")
+    notes = live()
+    assert (33, 0) not in notes and notes[(64, 0)] == "right"
+    back = sheet_store.load(part)
+    at = {(n.frame, n.midi) for n in f1.read(back.text).notes}
+    assert (0, 33) not in at and (0, 64) in at and back.record.enhanced
+    assert sheet(client, part)["stale"] is False
+    client.post(f"/sheet/{part}/redo")
+    assert sheet_store.load(part).text == stored.text and (33, 0) in live()
 
 
 def test_the_projects_list_marks_a_project_the_ai_enhanced(client: TestClient, part: str) -> None:

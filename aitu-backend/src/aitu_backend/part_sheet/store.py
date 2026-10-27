@@ -28,6 +28,8 @@ The record (:class:`Record`):
   words, usd, written]``, oldest first. Their cost is in ``usd`` and ``requests`` too.
 * ``key``: the armadura the algorithm writes this sheet with (fifths), when something other than the notes chose it:
   the song's, on the sheets of a passage of it (Record in Sheet, Phase 8B, with ``reference: song``).
+* ``added`` and ``leftOut``: how many notes the last whole AI run added to the notes and left out of them, for the
+  rules of simplicity (implementation 04, Phase 3, prompt 6); written only when not 0.
 * ``legacy``: what the migration of Phase 9 (``scripts/migrate_sheets.py``) carried from the old ``sheet.json``, by
   kind (``{"lyrics": 2, "figures": 6}``); a sheet that has it is not migrated again.
 """
@@ -76,6 +78,8 @@ class Record:
     stretches: list[list[Any]] = field(default_factory=list)
     key: int | None = None
     legacy: dict[str, int] | None = None
+    added: int = 0
+    left_out: int = 0
 
     @property
     def enhanced(self) -> bool:
@@ -107,6 +111,8 @@ class Record:
             "stretches": self.stretches,
             **({"key": self.key} if self.key is not None else {}),
             **({"legacy": self.legacy} if self.legacy is not None else {}),
+            **({"added": self.added} if self.added else {}),
+            **({"leftOut": self.left_out} if self.left_out else {}),
         }
 
     @classmethod
@@ -131,6 +137,8 @@ class Record:
             stretches=list(payload.get("stretches") or []),
             key=payload.get("key"),
             legacy=payload.get("legacy"),
+            added=int(payload.get("added") or 0),
+            left_out=int(payload.get("leftOut") or 0),
         )
 
 

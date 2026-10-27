@@ -41,3 +41,31 @@ Asked by the agent after reading the code; the plan ([`04-plan.md`](04-plan.md) 
    it: the notes left out are marked removed in `notes.pmn`, the notes added are written there, within limits that a
    check enforces.
 4. **Which "7 Years".** The **My library version** (`7 Years — Lukas Graham`), after a test on a temporary copy.
+
+# Request after the Phase 3 gallery (2026-10-27)
+
+In the user's words:
+
+> LOVE IT! the "Now" decisions taken by the AI agent are SUPERB! I really love them! What we should do is have a kind
+> of button. Whenever we click on "Enhance with AI," we should open a dialog in which we have the current option of
+> enhancing the given selected range and giving a prompt. We should also have the option if we don't select a given
+> range.
+> - If we select a given time range, we can select either both the right and the left hand, or only the right, or
+>   only the left.
+> - If we don't select anything and click "Enhance AI," we can have one section or one tab of this dialog box.
+>   Instead of writing the free prompt, we say something like "Simplify Left" or "Simplify Right" or "Simplify Both"
+>   and it will do the different batches and will start simplifying. It is important that whenever it does some
+>   batches, they can be more lengthy because now we are only feeding one single hand, and what we must do is to
+>   give some context of the previously converted regions so that it sees what kind of decisions we used to simplify
+>   the previous time ranges. If it detects any pattern, anything that we repeat, it uses the same simplification as
+>   we used before. It's really important to make this in a kind of auto-regressive way. Even though we do batches of
+>   time frame ranges, we do it auto-regressively so that any enhancement that we have done in the past will be
+>   visible in the context of the LLM that does the following batch.
+
+Answers (the plan, section 3.5, builds on them):
+
+1. **Order**: finish Phase 3 first (the real 7 Years run, the browser check); the dialog is a new Phase 4.
+2. **Simplify**: the rules of simplicity only (uniform patterns, the amateur pianist), as prompt 6 did on 7 Years.
+3. **Write it all again** (today's full run) stays in the dialog next to the three Simplify choices.
+4. **A stretch of one hand**: the other hand stays exactly as it is.
+

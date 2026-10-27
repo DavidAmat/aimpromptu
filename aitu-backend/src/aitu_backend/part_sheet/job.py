@@ -9,7 +9,9 @@
    window's decisions as it comes back (``assemble`` of the parts so far and the algorithm's parts for the rest);
 3. sends an ``event: sheet`` message on the job's stream at each of those moments, so the page reads the sheet again;
 4. at the end writes the hands of the sheet into ``notes.pmn`` (the numeric truth, plan section 3.7; the hands that
-   were saved before go to the part's history first) and the sheet into ``sheet.f1`` (:mod:`.store`). When no
+   were saved before go to the part's history first), with the notes the windows left out and added for the rules
+   of simplicity (implementation 04, Phase 3: one step of undo, ``edits.record_run``), and the sheet into
+   ``sheet.f1`` (:mod:`.store`). When no
    window was written by Sonnet (no credits, no network), the hands stay as they were and ``sheet.f1`` keeps the
    algorithm's sheet, so the page does not start again by itself; it says nothing alarming (plan section 3.8).
 
@@ -23,6 +25,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import threading
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable
@@ -255,7 +258,7 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
                 or song.reference.get("note"),
                 edited=bool(marks) or named,
             )
-            commit(part_id, sheet, text, record, header.notes_revision)
+            commit(part_id, sheet, text, record, header.notes_revision, changes=song.changes())
             reporter.send(EVENT, {"phase": "saved", "source": record.source})
             return {
                 "source": record.source,
@@ -269,8 +272,19 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
     return jobs.submit(work, key=KEY.format(part_id), describe=lambda result: dict(result or {}))
 
 
-def commit(part_id: str, sheet: Any, text: str, record: store.Record, notes_revision: int) -> None:
-    """Write the hands of the sheet into ``notes.pmn`` and the sheet into ``sheet.f1``, under the part's lock."""
+def commit(
+    part_id: str,
+    sheet: Any,
+    text: str,
+    record: store.Record,
+    notes_revision: int,
+    *,
+    changes: tuple[list[Any], list[Any]] | None = None,
+) -> None:
+    """Write the hands of the sheet into ``notes.pmn`` and the sheet into ``sheet.f1``, under the part's lock.
+    ``changes`` = the notes the run left out and added (``FramesSong.changes``): marked removed and written into
+    ``notes.pmn`` too (``edits.change_notes``), as one step of undo; the stored sheet is laid on the new notes.
+    """
     with pipeline.piece_lock(part_id):
         stored = pipeline.load_note_events(part_id)
         if stored is None:
@@ -292,7 +306,15 @@ def commit(part_id: str, sheet: Any, text: str, record: store.Record, notes_revi
             store.save(part_id, text, record)
             edits.forget(part_id)
             return
+        gone: dict[int, tuple[bool, bool]] = {}
+        plain = text
         if record.source != "algorithm":
+            left, added = changes or ([], [])
+            if left or added:
+                quarter = record.quarter_ms or 500.0
+                gone = edits.change_notes(stored, {(n.frame, n.midi) for n in left}, added, quarter)
+                record.left_out = sum(1 for _, now in gone.values() if now)
+                record.added = len(gone) - record.left_out
             notes = events_file.notes_from_events(stored.events)
             hands = build.hands_of_sheet(sheet, notes)
             changed = [
@@ -300,29 +322,42 @@ def commit(part_id: str, sheet: Any, text: str, record: store.Record, notes_revi
                 for event in stored.events
                 if event.id in hands and (event.hand != hands[event.id] or event.hand_guessed)
             ]
-            if changed:
+            for event in changed:
+                event.hand = hands[event.id]
+                event.hand_guessed = False
+            if changed or gone:
                 if header.hands_notes_revision > 0:
                     # The saved hands were decided before (Predict hands and the user's corrections): kept.
                     history.snapshot_notes(
                         part_id, reason="The AI wrote the hands of the sheet again"
                     )
-                for event in changed:
-                    event.hand = hands[event.id]
-                    event.hand_guessed = False
                 saved = pipeline.save_edit(
                     part_id,
                     stored.events,
                     stored.duration_seconds,
                     stored.title,
                     before=header,
-                    notes_changed=False,
-                    hands_changed=True,
+                    notes_changed=bool(gone),
+                    hands_changed=bool(changed),
                 )
                 header = saved.header
+            if gone:
+                # The sheet on the new notes (a column whose first note went may move by a frame), and, for undo, on
+                # the notes without the run's changes.
+                text = f1.write(
+                    build.reapply(sheet, pipeline.starting_hands(part_id)), mode="frames"
+                )
+                undone = deepcopy(stored.events)
+                for event in undone:
+                    if event.id in gone:
+                        event.removed = gone[event.id][0]
+                notes = edits.starting(part_id, events_file.notes_from_events(undone))
+                plain = f1.write(build.reapply(sheet, notes), mode="frames")
         record.hands_revision = header.hands_revision
         store.save(part_id, text, record)
-        # The AI wrote the hands and the sheet again: the steps of undo and redo start again.
-        edits.forget(part_id)
+        # The AI wrote the hands and the sheet again: the steps of undo and redo start again, with the notes it left
+        # out and added as the first one.
+        edits.record_run(part_id, gone, plain, text)
     build.forget(part_id)
 
 
