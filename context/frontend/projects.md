@@ -166,13 +166,24 @@ transcription in one colour.
   confirmation says it costs about $1 of the monthly credits). On a version of My library the button opens the
   copy that edits it, as **Edit** does, and starts there. The 10 songs Sonnet wrote in implementation 03,
   Phase 4 show Sonnet's sheet.
-- **Enhanced with AI.** A sheet the AI wrote (or part of it) carries the green badge **Enhanced with AI** beside
-  its title, for good: later changes of the notes or the hands do not remove it, only a new transcription does.
+- **Enhanced with AI.** A sheet the AI wrote (or part of it) carries the green sparkle of the Projects page next
+  to its title (tooltip "Enhanced with AI"; the hollow one, "Not enhanced with AI yet", before; implementation 04,
+  Phase 1, in place of a green badge), for good: later changes of the notes or the hands do not remove it, only a
+  new transcription does.
   Its button then reads **Enhance it again with AI**, and the confirmation says a new run may give much the same
   result; a new run that does not finish leaves the sheet the AI wrote before. The page says "AI", not the
   model's name (Sonnet 5.5 today), because the model may change.
+- **The header** (implementation 04, Phase 1): the title, the AI symbol and the floating bar's buttons (Play,
+  Record a passage, Paste, Print, Undo, Redo, the sheet toolbox, `⋯`, **Enhance with AI**), at the top of the
+  window while the sheet scrolls, and one more button that hides or shows the floating bar. A hidden floating bar
+  leaves a small round button with an eye where its hide button was; this browser remembers it hidden.
+- **Zoom**: ⌘ and the wheel (or a trackpad pinch) over the sheet, or **View → Zoom** in the sheet toolbox (70 %
+  to 200 %, kept in this browser). The drawing scales at once, and when the wheel pauses the sheet is laid out
+  again for the window's width, with the line under the pointer kept where it was.
 - **To hear it**: Play (or Space) plays the recording with a cursor; the notes the cursor reaches are lit; a
-  click on the sheet moves the recording there.
+  click on the sheet moves the recording there. The cursor can also be dragged and dropped (the pointer shows a
+  hand over it), to another line too; the page scrolls near the window's top and bottom, and the recording moves
+  there when it is let go, playing on if it played.
 - **To edit it**: the tools of [annotations.md](annotations.md); every change is written at once as one step
   of undo.
 - **The old sheet** (vexflow-v2) was one press away on the floating bar (**Edit in the old sheet**) until

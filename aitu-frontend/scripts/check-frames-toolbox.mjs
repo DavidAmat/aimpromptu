@@ -378,7 +378,7 @@ try {
   await page.mouse.click(headBox.x + headBox.width / 2, above.y);
   await page.waitForTimeout(400);
   // The panel opens after the cursor moved: it may cover the place clicked.
-  await page.getByRole('button', { name: 'More sheet actions' }).click();
+  await page.getByRole('button', { name: 'More sheet actions' }).first().click();
   await page.getByRole('menuitem', { name: 'Show the keyboard' }).click();
   await page.waitForTimeout(300);
   const notesBefore = sheet.notes.length;

@@ -130,7 +130,7 @@ try {
   await page.waitForTimeout(300);
   check('Left moves the note to the left hand', (await handOf(part, target.ref)) === 'left');
   check('the toolbox follows it', (await handButton(page, 'left').getAttribute('aria-pressed')) === 'true');
-  check('the sheet stays Enhanced with AI', (await page.locator('[data-enhanced-badge]').count()) === 1);
+  check('the sheet stays Enhanced with AI', (await page.locator('[data-ai-mark] [data-enhanced]').count()) === 1);
   const undoTitle = await page.getByTestId('sheet-undo').getAttribute('aria-label');
   check('Undo names the step', /Move a note to the left hand/.test(undoTitle ?? ''), undoTitle);
   await shot(page, '02-moved');

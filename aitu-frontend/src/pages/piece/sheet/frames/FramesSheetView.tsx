@@ -9,6 +9,10 @@
  * - **The cursor** follows the recording (the research viewer's arithmetic, `geometry.ts`): a line between two
  *   columns by their times, the noteheads of the column it is in lit, and a click on the sheet moves the
  *   recording there. While it plays, the page keeps the line of the cursor in view (in the middle in Play mode).
+ *   The cursor is dragged and dropped (implementation 04, Phase 1): the pointer shows `grab` over it, the line
+ *   follows the pointer over the columns of any line (the page scrolls near the window's top and bottom edges, and
+ *   stops keeping the cursor in view), and the recording moves there when it is let go, playing on if it played. A
+ *   press on the cursor that does not move is a click (a notehead under it is picked as before).
  *
  * - **Notes can be picked** (Phase 6, when the page gives `onPick`): a click on a notehead picks it (and moves the
  *   recording there), ⌘ or Shift adds it to the notes already picked, and a box dragged across the staves picks
@@ -33,7 +37,7 @@
  *
  * Hooks for the browser checks: `data-frames-sheet` on the root (with `data-source`, `data-llm`, `data-working`),
  * `data-note="<frame>:<midi>"` on each notehead, `data-lit` on the lit ones, `data-selected` on the picked ones,
- * `data-frames-cursor` (with `data-ms`), `data-segment-state="working"` on the veil, `data-revealing` while a
+ * `data-frames-cursor` (with `data-ms`; `data-dragging` while it is dragged), `data-segment-state="working"` on the veil, `data-revealing` while a
  * segment appears, `data-pick-box` while a box is dragged, `data-range-band` on the marked stretch (one per line,
  * with `data-start` and `data-end`) and `data-range-strip` on the strip under the pointer; `data-lyric-lit` and
  * `data-lyric-picked` on the lyrics pieces, `data-lyric-landing` (`data-free`) while one is dragged;
@@ -59,6 +63,12 @@ const STAFF_LINE = 13 / 180;
 const PICK_PX = 6;
 /** A press that moves farther than this drags a box, in pixels. */
 const DRAG_PX = 5;
+/** The cursor is caught this close to its line, in pixels. */
+const CURSOR_PX = 6;
+/** While the cursor is dragged, the page scrolls with the pointer this close to the window's top or bottom edge. */
+const EDGE_PX = 56;
+/** The fastest scroll at an edge, in pixels per frame. */
+const EDGE_SPEED = 18;
 
 /** How a pick joins the notes already picked: `only` replaces them, `add` adds (or takes away) the ones named. */
 export type PickHow = "only" | "add";
@@ -233,6 +243,7 @@ export function FramesSheetView({
   playing = false,
   frameWindow = null,
   onWindowMove,
+  keepClear = 0,
 }: {
   sheet: FramesSheet;
   playheadSeconds: number | null;
@@ -258,6 +269,8 @@ export function FramesSheetView({
   frameWindow?: MarkedRange | null;
   /** The window is dragged by its grip: its first frame now, and `done` when it is let go. */
   onWindowMove?: (start: number, done: boolean) => void;
+  /** Pixels at the top of the window covered by the page's header: the cursor is kept in view below them. */
+  keepClear?: number;
 }) {
   const host = useRef<HTMLDivElement | null>(null);
   const overlay = useRef<SVGSVGElement | null>(null);
@@ -362,7 +375,11 @@ export function FramesSheetView({
 
   // ------------------------------------------------------------------ the cursor and the lit notes
 
-  const place = playheadSeconds === null ? null : placeAt(columns, sheet.systems, playheadSeconds * 1000);
+  /** The cursor being dragged: the time under the pointer, and whether it moved yet (a press alone is a click). */
+  const [cursorDrag, setCursorDrag] = useState<{ ms: number; moved: boolean; x0: number; y0: number } | null>(null);
+  const [overCursor, setOverCursor] = useState(false);
+  const cursorMs = cursorDrag?.moved ? cursorDrag.ms : playheadSeconds === null ? null : playheadSeconds * 1000;
+  const place = cursorMs === null ? null : placeAt(columns, sheet.systems, cursorMs);
   const lit = place ? place.column : -1;
   useEffect(() => {
     const now = heads.current[lit] ?? [];
@@ -415,18 +432,20 @@ export function FramesSheetView({
   }, [pickedLyrics, sheet.svg]);
 
   const line = place ? sheet.systems[place.system] : null;
+  const draggingCursor = cursorDrag?.moved === true;
   const lastLine = useRef<number | null>(null);
   useEffect(() => {
     const system = place?.system ?? null;
     if (system === lastLine.current) return;
     lastLine.current = system;
     // Only while it plays, and only when the music moves to another line: scrolling on every tick fights the reader.
-    if (follow && system !== null) {
+    // Never while the cursor is dragged: the reader moves the page then.
+    if (follow && !draggingCursor && system !== null) {
       cursor.current?.scrollIntoView?.(
         centre ? { block: "center", inline: "nearest", behavior: "smooth" } : { block: "nearest", inline: "nearest" },
       );
     }
-  }, [place?.system, follow, centre]);
+  }, [place?.system, follow, centre, draggingCursor]);
 
   const seekTo = (clientX: number, clientY: number) => {
     const svg = overlay.current;
@@ -444,6 +463,52 @@ export function FramesSheetView({
     const matrix = overlay.current?.getScreenCTM();
     return matrix ? new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse()) : null;
   };
+  // ------------------------------------------------------------------ dragging the cursor (implementation 04, Phase 1)
+
+  /** The cursor's line is under a point of the screen (within a few pixels of it). */
+  const onCursor = (clientX: number, clientY: number) => {
+    const matrix = overlay.current?.getScreenCTM();
+    if (!onSeek || !place || !line || !matrix || matrix.a <= 0) return false;
+    const point = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse());
+    const reach = CURSOR_PX / matrix.a;
+    return (
+      Math.abs(point.x - place.x) <= reach &&
+      point.y >= line.staff_top - 1.5 - reach &&
+      point.y <= line.staff_bottom + 1.5 + reach
+    );
+  };
+  /** The time under a point of the screen, for the cursor dragged (as a click moves the recording). */
+  const msAtScreen = (clientX: number, clientY: number) => {
+    const point = toSheet(clientX, clientY);
+    return point ? msAtPoint(columns, sheet.systems, point.x, point.y) : null;
+  };
+  // Near the window's top (below the page's header) or bottom edge, the page scrolls while the cursor is dragged,
+  // and the cursor follows the pointer over what comes into view.
+  const pointer = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (!draggingCursor) return;
+    let frame = 0;
+    const tick = () => {
+      const at = pointer.current;
+      if (at) {
+        const top = keepClear + EDGE_PX - at.y;
+        const bottom = at.y - (window.innerHeight - EDGE_PX);
+        const by = top > 0 ? -top : bottom > 0 ? bottom : 0;
+        if (by !== 0 && overlay.current) {
+          window.scrollBy(0, Math.max(-EDGE_SPEED, Math.min(EDGE_SPEED, Math.round(by / 3))));
+          // The sheet moved under the pointer: the time under it now.
+          const matrix = overlay.current.getScreenCTM();
+          const point = matrix ? new DOMPoint(at.x, at.y).matrixTransform(matrix.inverse()) : null;
+          const ms = point ? msAtPoint(columns, sheet.systems, point.x, point.y) : null;
+          if (ms !== null) setCursorDrag((now) => (now && now.ms !== ms ? { ...now, ms } : now));
+        }
+      }
+      frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [draggingCursor, keepClear, columns, sheet.systems]);
+
   /** The line whose strip (above its upper staff) holds the point, or `-1`. */
   const stripAt = (x: number, y: number) =>
     sheet.systems.findIndex((system, i) => {
@@ -735,6 +800,14 @@ export function FramesSheetView({
 
   const press = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
+    // The cursor, unless a lyrics block is under the pointer: a drag moves it; a press alone stays a click.
+    if (onCursor(event.clientX, event.clientY) && !(lyrics && host.current && lyricAt(host.current, event.clientX, event.clientY))) {
+      const ms = msAtScreen(event.clientX, event.clientY);
+      if (ms !== null) {
+        setCursorDrag({ ms, moved: false, x0: event.clientX, y0: event.clientY });
+        return;
+      }
+    }
     if (frameWindow && onWindowMove) {
       const point = toSheet(event.clientX, event.clientY);
       const frame = point && onGrip(point) ? frameAt(point.x, point.y) : null;
@@ -794,6 +867,19 @@ export function FramesSheetView({
     setDrag({ left, top, x0: x, y0: y, x1: x, y1: y, add, moved: false });
   };
   const pull = (event: PointerEvent<HTMLDivElement>) => {
+    if (cursorDrag) {
+      const moved = cursorDrag.moved || Math.hypot(event.clientX - cursorDrag.x0, event.clientY - cursorDrag.y0) > DRAG_PX;
+      if (moved && !cursorDrag.moved) event.currentTarget.setPointerCapture(event.pointerId);
+      pointer.current = { x: event.clientX, y: event.clientY };
+      const ms = moved ? msAtScreen(event.clientX, event.clientY) : null;
+      if (moved !== cursorDrag.moved || (ms !== null && ms !== cursorDrag.ms)) {
+        setCursorDrag({ ...cursorDrag, moved, ms: ms ?? cursorDrag.ms });
+      }
+      return;
+    }
+    // The pointer says the cursor can be dragged.
+    const over = !drag?.moved && !rangeDrag && !lyricDrag && !windowDrag && onCursor(event.clientX, event.clientY);
+    if (over !== overCursor) setOverCursor(over);
     if (windowDrag && onWindowMove) {
       const point = toSheet(event.clientX, event.clientY);
       const frame = point ? frameAt(point.x, point.y) : null;
@@ -843,6 +929,15 @@ export function FramesSheetView({
     setDrag({ ...drag, x1: event.clientX, y1: event.clientY, moved });
   };
   const release = (event: PointerEvent<HTMLDivElement>) => {
+    if (cursorDrag) {
+      setCursorDrag(null);
+      pointer.current = null;
+      // Not moved: the click that follows picks a notehead or moves the recording, as anywhere on the sheet.
+      if (!cursorDrag.moved) return;
+      dragged.current = true;
+      onSeek?.(cursorDrag.ms / 1000);
+      return;
+    }
     if (windowDrag) {
       setWindowDrag(null);
       dragged.current = true;
@@ -903,6 +998,7 @@ export function FramesSheetView({
       onPointerMove={pull}
       onPointerUp={release}
       onPointerCancel={() => {
+        setCursorDrag(null);
         setDrag(null);
         setRangeDrag(null);
         setLyricDrag(null);
@@ -910,6 +1006,7 @@ export function FramesSheetView({
       }}
       onPointerLeave={() => {
         setStrip(-1);
+        setOverCursor(false);
         setHoverHandle(null);
       }}
       onDragOver={(event) => {
@@ -937,7 +1034,7 @@ export function FramesSheetView({
         borderRadius: 1,
         overflow: "hidden",
         cursor:
-          windowDrag
+          windowDrag || draggingCursor
             ? "grabbing"
             : hoverHandle === "scale" || lyricDrag?.mode === "scale"
             ? "nwse-resize"
@@ -945,7 +1042,9 @@ export function FramesSheetView({
               ? "ew-resize"
               : lyricDrag?.moved
                 ? "grabbing"
-                : strip >= 0 || rangeDrag
+                : overCursor && !cursorDrag
+                  ? "grab"
+                  : strip >= 0 || rangeDrag
                   ? "col-resize"
                   : onSeek || onPick
                     ? "pointer"
@@ -1177,7 +1276,9 @@ export function FramesSheetView({
           <line
             ref={cursor}
             data-frames-cursor
-            data-ms={Math.round((playheadSeconds ?? 0) * 1000)}
+            data-ms={Math.round(cursorMs ?? 0)}
+            data-dragging={draggingCursor ? "" : undefined}
+            style={{ scrollMarginTop: keepClear + 8 }}
             x1={place.x}
             x2={place.x}
             y1={line.staff_top - 1.5}

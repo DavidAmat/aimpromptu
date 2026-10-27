@@ -19,6 +19,7 @@ The brief is [`03-prompt.md`](03-prompt.md), the plan is [`03-plan.md`](03-plan.
 | [`03-prompt.md`](03-prompt.md) | The brief: the user's answers of the second discussion (in Spanish), a copy of the research's `05-final-report-prompt.md` |
 | [`03-plan.md`](03-plan.md) | The plan: the decisions, the binding rules, what is reused, the method, eleven phases (0 to 10), the decision points, the risks, and the changes the phases made (section 11). A copy of the research's `05-final-report.md`, now the living plan |
 | [`03-checklist.md`](03-checklist.md) | The status lookup, and the open decisions |
+| [`03-context.md`](03-context.md) | **For later implementations.** What 03 built, the decisions that bind, where the code is, which phase report tells how each part was done, the open points |
 | [`03-implementation-phase-0.md`](03-implementation-phase-0.md) | Phase 0: the research folder checked on Ubuntu, the branch, the inventory of everything that uses vexflow-v2, the baseline (screenshots in [`screenshots/phase-0/`](screenshots/phase-0/), test counts) |
 | [`03-implementation-phase-1.md`](03-implementation-phase-1.md) | Phase 1: the research core copied into the backend as `aitu_backend/sheet/`, its golden tests in the container, `scripts/draw_sheet.py` and the time per song of My library |
 | [`03-implementation-phase-2.md`](03-implementation-phase-2.md) | Phase 2: the new sheet without compases (the F1 frames view), the figure, grace note and spelling rules measured on the songs, the algorithm on all of My library, two decisions for the user |

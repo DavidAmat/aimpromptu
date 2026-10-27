@@ -4,9 +4,15 @@
  * the two sheets of a passage (Record in Sheet), the sources of From other projects and the requests review.
  *
  * - **At once**: the sheet as it is now: the AI's (Sonnet 5.5 today), or the algorithm's on a part it has not
- *   enhanced. A sheet the AI enhanced carries the green badge **Enhanced with AI** for good, whatever changes later
+ *   enhanced. A sheet the AI enhanced carries the green sparkle of the Projects page next to its title for good
+ *   (tooltip **Enhanced with AI**; implementation 04, Phase 1, in place of the green badge), whatever changes later
  *   (the user's rule of 2026-10-25): a new run is then **Enhance it again with AI**, at the user's own risk of the
  *   same result. The page says "AI", not the model's name: the model may change.
+ * - **The header** (implementation 04, Phase 1): the title, the AI symbol and the floating toolbox's buttons (one
+ *   list, drawn in both places), at the top of the window while the sheet scrolls, with one more button that hides
+ *   or shows the floating toolbox (kept in this browser). ⌘ and the wheel (or a trackpad pinch) over the sheet zoom
+ *   it: the drawing scales at once, and at a pause of the wheel the backend lays it out again for the window's
+ *   width, with the line under the pointer kept where it was.
  * - **The AI in the background** (plan section 3.6): a new transcription is sent by itself; any other part offers
  *   **Enhance with AI** (on a version of My library, the button opens the copy that edits it, as **Edit** does,
  *   and starts there). The segment at the AI looks pale, a segment that comes back appears column by column, and
@@ -17,7 +23,7 @@
  *   range toolbox also opens **Record this passage** and **Start a new part here**, the bar **Record a passage at
  *   the end**, and a blank sheet offers both in its empty state.
  * - **To hear**: the recording plays with a cursor, the notes it reaches lit, and a click on the sheet moves the
- *   recording there.
+ *   recording there; the cursor is also dragged and dropped, across lines (implementation 04, Phase 1).
  * - **To edit** (Phase 6): notes are picked on the sheet (a click, ⌘ or Shift to add, a box dragged across the
  *   staves) and the note toolbox opens beside them; its **Hand** writes the hand into the notes, and the sheet comes
  *   back drawn again. **Undo** and **Redo** (the floating bar, ⌘Z and ⇧⌘Z) walk the part's steps, which the backend
@@ -38,7 +44,7 @@
  *   so **Hand** moves only the notes picked.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -55,6 +61,8 @@ import PrintIcon from "@mui/icons-material/PrintOutlined";
 import RedoIcon from "@mui/icons-material/RedoOutlined";
 import TuneIcon from "@mui/icons-material/TuneOutlined";
 import UndoIcon from "@mui/icons-material/UndoOutlined";
+import VisibilityIcon from "@mui/icons-material/VisibilityOutlined";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOffOutlined";
 import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import {
@@ -67,6 +75,7 @@ import {
   type SheetPreview,
   type StretchRequest,
 } from "../../../../api";
+import { AiMark } from "../../../../components/piece/AiMark";
 import ScorePlayer, { type ScorePlayerControls } from "../../../../components/time/ScorePlayer";
 import { useElementSize } from "../../../../hooks/useElementSize";
 import { ROUTES } from "../../../../layout/routes";
@@ -81,7 +90,7 @@ import {
   usePassageClipboard,
   type CopiedPassage,
 } from "../../../../state/passageClipboard";
-import { ConfirmDialog, EmptyState, FloatingBar, IconAction, Pill, PillButton, RowMenu, Toolbox, semantic } from "../../../../ui";
+import { ConfirmDialog, EmptyState, FloatingBar, IconAction, PillButton, RowMenu, Toolbox } from "../../../../ui";
 import { piecesIn } from "../lyricsPieces";
 import { PianoToolbox } from "../PianoToolboxes";
 import { HAND_COLOUR, HELD_COLOUR, formatSeconds, type SoundingNote } from "../sheetConstants";
@@ -95,7 +104,7 @@ import { FramesSheetView, type MarkedRange, type PickHow } from "./FramesSheetVi
 import { FramesPdfDialog } from "./FramesPdfDialog";
 import { FramesPreviewDialog } from "./FramesPreviewDialog";
 import { FramesSheetToolbox, MAX_ZOOM, MIN_ZOOM, type FramesSheetTab } from "./FramesSheetToolbox";
-import { placeAt, steadyColumns } from "./geometry";
+import { msAtPoint, placeAt, steadyColumns } from "./geometry";
 import { frameOf, handForKey, midiOf, oneColumn } from "./readingTools";
 import { ENHANCE_WITH_AI } from "./navigation";
 import { useFramesLyrics } from "./useFramesLyrics";
@@ -111,6 +120,13 @@ const WIDTH_STEP = 4;
 const ZOOM_KEY = "aitu.framesSheet.zoom";
 /** The lyrics toolbox keeps this many pixels clear on each side of the blocks it opens for. */
 const BLOCK_ROOM = 120;
+/** Whether the floating toolbox is hidden is kept in this browser too (its buttons are also in the header). */
+const FLOATING_HIDDEN_KEY = "aitu.framesSheet.floatingHidden";
+/** ⌘ and the wheel: how much one pixel of the wheel zooms, and the most one wheel event zooms. */
+const WHEEL_RATE = 0.002;
+const WHEEL_STEP = 1.25;
+/** The sheet is laid out again when the wheel pauses this long. */
+const WHEEL_PAUSE_MS = 220;
 
 function rememberedZoom(): number {
   try {
@@ -119,6 +135,28 @@ function rememberedZoom(): number {
   } catch {
     return 1;
   }
+}
+
+/** The staff width the page asks the backend for, in staff spaces, at a page width (pixels) and a zoom. */
+function widthFor(pixels: number, zoom: number): number {
+  const spaces = pixels / (PX_PER_SPACE * zoom) - MARGINS;
+  return Math.min(320, Math.max(60, Math.round(spaces / WIDTH_STEP) * WIDTH_STEP));
+}
+
+/** A zoom by ⌘ and the wheel, shown as a scale of the drawing until the drawing at the new width comes. */
+interface WheelZoom {
+  /** The zoom the drawing on the page has, and the zoom asked for. */
+  from: number;
+  to: number;
+  /** Where the pointer was, in pixels from the top left of the sheet: the scale grows from there. */
+  x: number;
+  y: number;
+  /** What was under the pointer: its time, how far down its line (0 the top, 1 the bottom), and its screen height. */
+  ms: number | null;
+  down: number;
+  clientY: number;
+  /** Laid out again: the drawing that was on the page then (the next one is the new layout). */
+  sent: FramesSheet | null;
 }
 
 /** A time as `m:ss`, the way a copied passage is named. */
@@ -163,11 +201,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
       // A browser that keeps nothing: the zoom lasts for this page.
     }
   }, []);
-  const width = useMemo(() => {
-    if (size.width <= 0) return null;
-    const spaces = size.width / (PX_PER_SPACE * zoom) - MARGINS;
-    return Math.min(320, Math.max(60, Math.round(spaces / WIDTH_STEP) * WIDTH_STEP));
-  }, [size.width, zoom]);
+  const width = useMemo(() => (size.width <= 0 ? null : widthFor(size.width, zoom)), [size.width, zoom]);
 
   // A paste, and its undo or redo, change the audio too (Phase 8B): the player loads it again under a new address,
   // and the cursor goes back where it was asked to be (the start of the passage), or where it was.
@@ -183,6 +217,106 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
     // Set while drawing (React's pattern for state that follows a value): the first answer only notes the revision.
     setAudioLoads((now) => ({ revision: audioRevision, loads: now.revision === null ? now.loads : now.loads + 1 }));
   }
+
+  // ------------------------------------------------------------------ ⌘ and the wheel (implementation 04, Phase 1)
+
+  const sheetBox = useRef<HTMLDivElement | null>(null);
+  const holdSheetBox = useCallback(
+    (node: HTMLDivElement | null) => {
+      sizeRef(node);
+      sheetBox.current = node;
+    },
+    [sizeRef],
+  );
+  const [wheelZoom, setWheelZoom] = useState<WheelZoom | null>(null);
+  /** A zoom by the wheel whose drawing came: what was under the pointer is brought back under it. */
+  const [anchor, setAnchor] = useState<WheelZoom | null>(null);
+  // The zoom the drawing on the page was laid out for: the zoom when it came (set while drawing, as `audioLoads`).
+  const [drawn, setDrawn] = useState<{ sheet: FramesSheet | null; zoom: number }>({ sheet: null, zoom });
+  if (sheet && drawn.sheet !== sheet) {
+    setDrawn({ sheet, zoom });
+    if (wheelZoom?.sent) {
+      setWheelZoom(null);
+      setAnchor(wheelZoom);
+    }
+  }
+  const drawnZoom = drawn.zoom;
+  const wheel = useRef<WheelZoom | null>(null);
+  const wheelPause = useRef<number | null>(null);
+  // What the wheel's handler reads (it is added once).
+  const live = useRef({ zoom, drawnZoom, sheet, pixels: size.width, setZoom });
+  useEffect(() => {
+    live.current = { zoom, drawnZoom, sheet, pixels: size.width, setZoom };
+  });
+  const showWheel = (next: WheelZoom | null) => {
+    wheel.current = next;
+    setWheelZoom(next);
+  };
+  useEffect(() => {
+    const box = sheetBox.current;
+    if (!box) return;
+    const onWheel = (event: WheelEvent) => {
+      // A trackpad pinch comes as the wheel with Control.
+      if (!(event.metaKey || event.ctrlKey)) return;
+      const now = live.current;
+      if (!now.sheet || now.pixels <= 0) return;
+      event.preventDefault();
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
+      const factor = Math.min(WHEEL_STEP, Math.max(1 / WHEEL_STEP, Math.exp(-event.deltaY * unit * WHEEL_RATE)));
+      let gesture = wheel.current;
+      if (!gesture) {
+        // What is under the pointer stays where it is: its time, and how far down its line.
+        const { left, top } = box.getBoundingClientRect();
+        const scale = box.clientWidth / now.sheet.width;
+        const [x, y] = [event.clientX - left, event.clientY - top];
+        const columns = steadyColumns(now.sheet.columns);
+        const ms = msAtPoint(columns, now.sheet.systems, x / scale, y / scale);
+        const at = ms === null ? null : placeAt(columns, now.sheet.systems, ms);
+        const system = at ? now.sheet.systems[at.system] : undefined;
+        const down = system ? (y / scale - system.top) / Math.max(1e-6, system.bottom - system.top) : 0;
+        gesture = { from: now.drawnZoom, to: now.zoom, x, y, ms, down: Math.min(1, Math.max(0, down)), clientY: event.clientY, sent: null };
+      }
+      const to = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, gesture.to * factor));
+      showWheel({ ...gesture, to, sent: null });
+      if (wheelPause.current !== null) window.clearTimeout(wheelPause.current);
+      wheelPause.current = window.setTimeout(() => {
+        wheelPause.current = null;
+        const done = wheel.current;
+        const then = live.current;
+        if (!done) return;
+        const next = Math.round(done.to * 100) / 100;
+        then.setZoom(next);
+        if (widthFor(then.pixels, next) === widthFor(then.pixels, then.drawnZoom)) {
+          // The same width: the drawing on the page is already the one for this zoom.
+          setDrawn((now) => ({ ...now, zoom: next }));
+          showWheel(null);
+        } else {
+          showWheel({ ...done, sent: then.sheet });
+        }
+      }, WHEEL_PAUSE_MS);
+    };
+    box.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      box.removeEventListener("wheel", onWheel);
+      if (wheelPause.current !== null) window.clearTimeout(wheelPause.current);
+    };
+  }, []);
+  // The drawing for the new width came (the view put it in first): the page scrolls so that what was under the
+  // pointer is under it again.
+  useLayoutEffect(() => {
+    if (wheel.current?.sent) wheel.current = null;
+    const box = sheetBox.current;
+    if (!anchor || !sheet || !box || anchor.ms === null) return;
+    const columns = steadyColumns(sheet.columns);
+    const at = placeAt(columns, sheet.systems, anchor.ms);
+    const system = at ? sheet.systems[at.system] : undefined;
+    if (!system) return;
+    const scale = box.clientWidth / sheet.width;
+    const y = box.getBoundingClientRect().top + (system.top + anchor.down * (system.bottom - system.top)) * scale;
+    window.scrollBy(0, y - anchor.clientY);
+    // Once per zoom: the drawing it came with is the one on the page then.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anchor]);
 
   // The title lines of the sheet toolbox (Phase 8; the old sheet's Title tab was never used: none to carry over).
   const titles = sheet?.titles ?? {};
@@ -252,7 +386,6 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
 
   const running = sheet?.llm.state === "running" || starting;
   const enhanced = sheet?.llm.enhanced === true;
-  const runs = sheet?.llm.runs ?? 0;
   const viaEdit = sheet?.llm.viaEdit === true && step.enhanceInCopy !== undefined;
   const offerAi = !playMode && !running && (sheet?.llm.canRun === true || viaEdit);
   const enhanceLabel = enhanced ? "Enhance it again with AI" : "Enhance with AI";
@@ -807,6 +940,132 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
 
   const scoreSeconds = sheet && sheet.columns.length > 0 ? sheet.columns[sheet.columns.length - 1].ms / 1000 + 1 : 1;
 
+  // ------------------------------------------------------------------ the buttons of the floating toolbox and the header
+
+  /** The floating toolbox can be hidden: its buttons stay in the header (kept in this browser). */
+  const [floatingHidden, setFloatingHiddenNow] = useState(() => {
+    try {
+      return window.localStorage.getItem(FLOATING_HIDDEN_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setFloatingHidden = useCallback((next: boolean) => {
+    setFloatingHiddenNow(next);
+    try {
+      if (next) window.localStorage.setItem(FLOATING_HIDDEN_KEY, "1");
+      else window.localStorage.removeItem(FLOATING_HIDDEN_KEY);
+    } catch {
+      // A browser that keeps nothing: it lasts for this page.
+    }
+  }, []);
+  const [headerRef, headerSize] = useElementSize<HTMLDivElement>();
+  const header = !(playMode || role || empty);
+
+  /**
+   * The sheet's buttons, one list drawn in two places (implementation 04, Phase 1): the floating toolbox (`bar`, its
+   * tooltips above) and the header (`header`, its tooltips below; its test hooks start with `header-`).
+   */
+  const sheetButtons = (place: "bar" | "header") => {
+    const placement = place === "bar" ? "top" : "bottom";
+    const id = (name: string) => (place === "bar" ? name : `header-${name}`);
+    return (
+      <>
+        <IconAction
+          title={playing ? "Pause" : "Play"}
+          shortcut="Space"
+          icon={playing ? <PauseIcon /> : <PlayArrowIcon />}
+          onClick={() => player.current?.toggle()}
+          placement={placement}
+          data-testid={id("sheet-play")}
+        />
+        {role === "proposal" ? passageView?.barActions : null}
+        {readOnly || role ? null : (
+          <>
+            <IconAction
+              title="Record a passage at the end"
+              icon={<FiberManualRecordIcon />}
+              onClick={() => void startPassage(null, null)}
+              disabled={openingPassage || locked !== null}
+              disabledTitle={locked ?? "Opening the passage…"}
+              placement={placement}
+              data-testid={id("sheet-record")}
+            />
+            <IconAction
+              title={pasteTitle}
+              shortcut="⌘V"
+              icon={<ContentPasteIcon />}
+              onClick={() => {
+                if (copied) void pastePassage(copied);
+              }}
+              disabled={!copied || pasting || editing || locked !== null}
+              disabledTitle={locked ?? (pasting ? "Pasting…" : "Copy a passage first")}
+              placement={placement}
+              data-testid={id("sheet-paste")}
+            />
+          </>
+        )}
+        {role ? null : (
+          <IconAction title="Print to PDF" icon={<PrintIcon />} onClick={() => setPdfOpen(true)} placement={placement} data-testid={id("sheet-print")} />
+        )}
+        {readOnly ? null : (
+          <>
+            <IconAction
+              title={history.undo ? `Undo: ${history.undo}` : "Undo"}
+              shortcut="⌘Z"
+              icon={<UndoIcon />}
+              onClick={() => walk("undo")}
+              disabled={!history.undo || editing || locked !== null}
+              disabledTitle={locked ?? "Nothing to undo"}
+              placement={placement}
+              data-testid={id("sheet-undo")}
+            />
+            <IconAction
+              title={history.redo ? `Redo: ${history.redo}` : "Redo"}
+              shortcut="⇧⌘Z"
+              icon={<RedoIcon />}
+              onClick={() => walk("redo")}
+              disabled={!history.redo || editing || locked !== null}
+              disabledTitle={locked ?? "Nothing to redo"}
+              placement={placement}
+              data-testid={id("sheet-redo")}
+            />
+            <Divider orientation="vertical" flexItem />
+            <IconAction
+              title="Sheet toolbox"
+              icon={<TuneIcon />}
+              onClick={() => setToolboxOpen((open) => !open)}
+              active={toolboxOpen}
+              placement={placement}
+              data-testid={id("sheet-toolbox")}
+            />
+            <RowMenu
+              title="More sheet actions"
+              items={[
+                {
+                  label: pianoOpen ? "Hide the keyboard" : "Show the keyboard",
+                  icon: <PianoIcon fontSize="small" />,
+                  onClick: () => setPianoOpen((open) => !open),
+                },
+              ]}
+            />
+          </>
+        )}
+        {offerAi ? (
+          <PillButton
+            kind="secondary"
+            size="small"
+            startIcon={<AutoAwesomeIcon fontSize="small" />}
+            onClick={() => setAsking(true)}
+            data-testid={id("enhance-with-ai")}
+          >
+            {enhanceLabel}
+          </PillButton>
+        ) : null}
+      </>
+    );
+  };
+
   return (
     <Box data-sheet-page data-sheet-engine="frames" data-part={audioUuid}>
       {error ? (
@@ -825,21 +1084,32 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
         </Alert>
       ) : null}
       <Stack spacing={1.5}>
-        {playMode || role || empty ? null : (
-          <Box sx={{ px: 1 }}>
-            <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", minWidth: 0 }}>
-              <Typography component="h2" sx={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3, minWidth: 0 }} noWrap title={title} data-sheet-title>
-                {title}
-              </Typography>
-              {enhanced ? (
-                <Box data-enhanced-badge sx={{ flexShrink: 0 }}>
-                  <Pill
-                    label="Enhanced with AI"
-                    selected
-                    color={semantic.status.success}
-                    title={runs > 1 ? `The AI enhanced this sheet ${runs} times` : "The AI enhanced this sheet"}
-                  />
+        {header ? (
+          // At the top of the window while the sheet scrolls: the title, the AI symbol and the sheet's buttons.
+          <Box
+            ref={headerRef}
+            data-sheet-header
+            sx={{ position: "sticky", top: 0, zIndex: 3, px: 1, py: 0.75, backgroundColor: "background.default" }}
+          >
+            <Stack direction="row" sx={{ alignItems: "center", minWidth: 0, columnGap: 1, rowGap: 0.5, flexWrap: "wrap" }}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0, maxWidth: "100%" }}>
+                <Typography component="h2" sx={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3, minWidth: 0 }} noWrap title={title} data-sheet-title>
+                  {title}
+                </Typography>
+                <Box data-ai-mark sx={{ display: "flex", flexShrink: 0 }}>
+                  <AiMark enhanced={enhanced} />
                 </Box>
+              </Stack>
+              {sheet ? (
+                <Stack direction="row" sx={{ alignItems: "center", gap: 0.5, flexWrap: "wrap", ml: 1 }} data-sheet-header-buttons>
+                  {sheetButtons("header")}
+                  <IconAction
+                    title={floatingHidden ? "Show the floating toolbox" : "Hide the floating toolbox"}
+                    icon={floatingHidden ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                    onClick={() => setFloatingHidden(!floatingHidden)}
+                    data-testid="header-floating-toggle"
+                  />
+                </Stack>
               ) : null}
             </Stack>
             {underTitle ? (
@@ -848,7 +1118,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
               </Typography>
             ) : null}
           </Box>
-        )}
+        ) : null}
         {empty ? (
           <EmptyState
             message="Nothing to write yet."
@@ -890,7 +1160,16 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
             preload={playView?.preload ?? "auto"}
           />
         ) : null}
-        <Box ref={sizeRef}>
+        {/* ⌘ and the wheel scale the drawing from the pointer until it is laid out again (no page scroll sideways). */}
+        <Box ref={holdSheetBox} sx={{ overflowX: "clip" }}>
+          <Box
+            sx={
+              wheelZoom && wheelZoom.to !== drawnZoom
+                ? { transform: `scale(${wheelZoom.to / drawnZoom})`, transformOrigin: `${wheelZoom.x}px ${wheelZoom.y}px` }
+                : undefined
+            }
+            data-wheel-zoom={wheelZoom ? Math.round(wheelZoom.to * 100) : undefined}
+          >
           {sheet && !empty ? (
             <FramesSheetView
               sheet={sheet}
@@ -910,6 +1189,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
                   : null
               }
               onWindowMove={passageView?.onWindowMove}
+              keepClear={header ? headerSize.height : 0}
               {...(canEdit && sheet.editable
                 ? {
                     lyrics: {
@@ -933,101 +1213,17 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
               <CircularProgress size={22} />
             </Box>
           ) : null}
+          </Box>
         </Box>
       </Stack>
 
       {playMode || role === "current" || !sheet || empty ? null : (
-        <FloatingBar open label="sheet buttons">
-          <IconAction
-            title={playing ? "Pause" : "Play"}
-            shortcut="Space"
-            icon={playing ? <PauseIcon /> : <PlayArrowIcon />}
-            onClick={() => player.current?.toggle()}
-            placement="top"
-          />
-          {role === "proposal" ? passageView?.barActions : null}
-          {readOnly || role ? null : (
-            <>
-              <IconAction
-                title="Record a passage at the end"
-                icon={<FiberManualRecordIcon />}
-                onClick={() => void startPassage(null, null)}
-                disabled={openingPassage || locked !== null}
-                disabledTitle={locked ?? "Opening the passage…"}
-                placement="top"
-                data-testid="sheet-record"
-              />
-              <IconAction
-                title={pasteTitle}
-                shortcut="⌘V"
-                icon={<ContentPasteIcon />}
-                onClick={() => {
-                  if (copied) void pastePassage(copied);
-                }}
-                disabled={!copied || pasting || editing || locked !== null}
-                disabledTitle={locked ?? (pasting ? "Pasting…" : "Copy a passage first")}
-                placement="top"
-                data-testid="sheet-paste"
-              />
-            </>
-          )}
-          {role ? null : (
-            <IconAction title="Print to PDF" icon={<PrintIcon />} onClick={() => setPdfOpen(true)} placement="top" data-testid="sheet-print" />
-          )}
-          {readOnly ? null : (
-            <>
-              <IconAction
-                title={history.undo ? `Undo: ${history.undo}` : "Undo"}
-                shortcut="⌘Z"
-                icon={<UndoIcon />}
-                onClick={() => walk("undo")}
-                disabled={!history.undo || editing || locked !== null}
-                disabledTitle={locked ?? "Nothing to undo"}
-                placement="top"
-                data-testid="sheet-undo"
-              />
-              <IconAction
-                title={history.redo ? `Redo: ${history.redo}` : "Redo"}
-                shortcut="⇧⌘Z"
-                icon={<RedoIcon />}
-                onClick={() => walk("redo")}
-                disabled={!history.redo || editing || locked !== null}
-                disabledTitle={locked ?? "Nothing to redo"}
-                placement="top"
-                data-testid="sheet-redo"
-              />
-              <Divider orientation="vertical" flexItem />
-              <IconAction
-                title="Sheet toolbox"
-                icon={<TuneIcon />}
-                onClick={() => setToolboxOpen((open) => !open)}
-                active={toolboxOpen}
-                placement="top"
-                data-testid="sheet-toolbox"
-              />
-              <RowMenu
-                title="More sheet actions"
-                items={[
-                  {
-                    label: pianoOpen ? "Hide the keyboard" : "Show the keyboard",
-                    icon: <PianoIcon fontSize="small" />,
-                    onClick: () => setPianoOpen((open) => !open),
-                  },
-                ]}
-              />
-            </>
-          )}
-          {offerAi ? (
-            <PillButton
-              kind="secondary"
-              size="small"
-              startIcon={<AutoAwesomeIcon fontSize="small" />}
-              onClick={() => setAsking(true)}
-              data-testid="enhance-with-ai"
-            >
-              {enhanceLabel}
-            </PillButton>
-          ) : null}
+        <FloatingBar
+          open
+          label="the floating toolbox"
+          {...(role ? {} : { hidden: floatingHidden, onHiddenChange: setFloatingHidden })}
+        >
+          {sheetButtons("bar")}
         </FloatingBar>
       )}
 
