@@ -67,6 +67,7 @@ __all__ = [
     "Transposed",
     "add_note",
     "apply_stretch",
+    "change_notes",
     "edit_reading",
     "forget",
     "history",
@@ -74,6 +75,7 @@ __all__ = [
     "note_ends",
     "paste_passage",
     "preview_reading",
+    "record_run",
     "record_version",
     "redo",
     "remove_notes",
@@ -88,6 +90,9 @@ HIGHEST_MIDI = LOWEST_MIDI + KEY_COUNT - 1
 LIMIT = 50
 
 HANDS = ("right", "left")
+
+#: The step of the notes a whole AI run added and left out (implementation 04, Phase 3).
+RUN_LABEL = "Notes the AI added and left out"
 
 
 @dataclass(frozen=True)
@@ -487,47 +492,19 @@ def apply_stretch(
         if stored is None or stored.header.notes_revision != notes_revision:
             return False
         drawn = build.current(part_id)
-        by_id = {event.id: event for event in stored.events if event.id is not None}
         kept_places = {(n.frame, n.midi) for n in spliced.notes if start <= n.frame < end}
         shown = {
             (n.frame, n.midi): n.figure for n in f1.read(drawn.text).notes if start <= n.frame < end
         }
         now_places = set(shown)
-        at = _notes_at(stored.events)
-        gone = {
-            i: (False, True)
-            for place in now_places - kept_places
-            for i in at.get(place, [])
-            if not by_id[i].removed
-        }
-        for i in gone:
-            by_id[i].removed = True
-        # Notes the AI added (a changed pitch is a note left out and one added): into the notes, at the onset of the
-        # column they join (or of their frame), as long as their figure. Undo takes them off again.
-        onset: dict[int, float] = {}
-        for (column, _), ids in at.items():
-            onset[column] = min([onset.get(column, float("inf"))] + [by_id[i].start for i in ids])
-        inside = [by_id[i] for (column, _), ids in at.items() if start <= column < end for i in ids]
-        velocity = int(np.median([e.velocity for e in inside])) if inside else 64
         quarter = spliced.quarter_ms or drawn.quarter_ms or 500.0
-        next_id = max([stored.header.next_id, *(i + 1 for i in by_id)])
-        for n in sorted(spliced.notes, key=lambda n: (n.frame, n.midi)):
-            if not start <= n.frame < end or (n.frame, n.midi) in now_places:
-                continue
-            begin = onset.get(n.frame, n.frame * FRAME_MS / 1000)
-            event = NoteEvent(
-                id=next_id,
-                midi_note=n.midi,
-                start=begin,
-                end=begin + nominal_ms(n.figure if n.figure in FIGURES else 8, quarter) / 1000,
-                velocity=velocity,
-                hand="right" if n.staff == 1 else "left",
-            )
-            stored.events.append(event)
-            by_id[next_id] = event
-            gone[next_id] = (True, False)
-            next_id += 1
-        stored.events.sort(key=lambda event: (event.start, event.midi_note))
+        added = [
+            n
+            for n in spliced.notes
+            if start <= n.frame < end and (n.frame, n.midi) not in now_places
+        ]
+        gone = change_notes(stored, now_places - kept_places, added, quarter)
+        by_id = {event.id: event for event in stored.events if event.id is not None}
         notes = events_file.notes_from_events(stored.events)
         hands = build.hands_of_sheet(spliced, notes)
         was = {i: (e.hand, e.hand_guessed) for i, e in by_id.items()}
@@ -612,6 +589,57 @@ def apply_stretch(
         return True
 
 
+def change_notes(
+    stored: Any, left: set[tuple[int, int]], added: list[Any], quarter_ms: float
+) -> dict[int, tuple[bool, bool]]:
+    """Notes the AI left out and added (a stretch, Phase 7; the rules of simplicity of a whole run, implementation 04,
+    Phase 3), changed in ``stored.events`` (not written): the live notes at the drawn columns and keys ``left``
+    marked removed, as :func:`remove_notes` does; each note of ``added`` (sheet notes) a new note at the onset of the
+    column it joins (or of its frame), as long as its measured length or its figure, in the hand of its staff, as
+    loud as the notes of its column. Returns the step's ``note id -> (removed before, removed after)``: undo takes
+    the added notes off again and puts the others back."""
+    by_id = {event.id: event for event in stored.events if event.id is not None}
+    at = _notes_at(stored.events)
+    gone = {i: (False, True) for place in left for i in at.get(place, []) if not by_id[i].removed}
+    for i in gone:
+        by_id[i].removed = True
+    onset: dict[int, float] = {}
+    loud: dict[int, list[int]] = {}
+    for (column, _), ids in at.items():
+        onset[column] = min([onset.get(column, float("inf"))] + [by_id[i].start for i in ids])
+        loud.setdefault(column, []).extend(by_id[i].velocity for i in ids)
+    every = [e.velocity for e in stored.events if not e.removed]
+    next_id = max([stored.header.next_id, *(i + 1 for i in by_id)])
+    for n in sorted(added, key=lambda n: (n.frame, n.midi)):
+        begin = onset.get(n.frame, n.frame * FRAME_MS / 1000)
+        length = n.len_ms or nominal_ms(n.figure if n.figure in FIGURES else 8, quarter_ms)
+        velocity = loud.get(n.frame) or every
+        stored.events.append(
+            NoteEvent(
+                id=next_id,
+                midi_note=n.midi,
+                start=begin,
+                end=begin + length / 1000,
+                velocity=int(np.median(velocity)) if velocity else 64,
+                hand="right" if n.staff == 1 else "left",
+            )
+        )
+        gone[next_id] = (True, False)
+        next_id += 1
+    stored.events.sort(key=lambda event: (event.start, event.midi_note))
+    return gone
+
+
+def record_run(part_id: str, gone: dict[int, tuple[bool, bool]], plain: str, after: str) -> None:
+    """The steps start again after a whole AI run (it wrote the hands and the sheet again), with one step when the
+    run left out or added notes (implementation 04, Phase 3): its undo puts those notes back as they were, and the
+    sheet back to ``plain`` (the AI's sheet laid on the notes without its changes); redo makes them again.
+    """
+    forget(part_id)
+    if gone:
+        _record(_Step(RUN_LABEL, {}, _sheet_change(plain, after), gone), part_id)
+
+
 @dataclass(frozen=True)
 class Transposed:
     label: str
@@ -651,7 +679,7 @@ def transpose_notes(part_id: str, semitones: int, *, preview: bool = False) -> T
         sheet = f1.read(drawn.text)
         reading.transpose_sheet(sheet, semitones)
         notes = events_file.notes_from_events(stored.events)
-        settled = build.reapply(sheet, _starting(part_id, notes))
+        settled = build.reapply(sheet, starting(part_id, notes))
         build.fit_clefs(settled, reading.far_notes(settled))
         after = f1.write(settled, mode="frames")
         steps = abs(semitones)
@@ -673,7 +701,7 @@ def transpose_notes(part_id: str, semitones: int, *, preview: bool = False) -> T
         return Transposed(label, moved, len(gone), after)
 
 
-def _starting(part_id: str, notes: Any) -> Any:
+def starting(part_id: str, notes: Any) -> Any:
     """The starting hands of the part (the saved hands, the hand split for the rest) for ``notes`` not yet saved:
     the same ids, so the hands of the notes as they are now are laid on them."""
     now = pipeline.starting_hands(part_id)

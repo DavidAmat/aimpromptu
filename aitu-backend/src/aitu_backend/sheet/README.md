@@ -37,7 +37,7 @@ enforce it.
 |---|---|---|
 | `sheet` | - | `Note`, `Bar`, `Sheet` (`sheet.data`); `f1.read(text) -> Sheet`, `f1.write(sheet, mode="bars"/"frames", anchors=bool) -> str`, `F1Error`; `matrix.sheet_from_matrix(notes, key=) -> Sheet` (frames sheet), `matrix.cells(notes)`; `pmn.notes_from_pmn(body) -> Notes`, `pmn.key_of_sheet_json(sheet_json) -> int`. The new sheet (section 9): `frames.from_notes(notes, key=) -> Sheet`, `frames.check(sheet) -> list[str]`, `frames.cells_of(sheet, notes)`, `frames.matrix_cells(notes)`, `frames.key_at(sheet)`, `frames.printed_signs(sheet)`; `figures.figure_of_ms(ms, quarter_ms, split=0.7)`; `spelling.spell(midi, key)`, `spelling.sign(step, alter, key)`, `spelling.check_rules()` |
 | `proposal` | `Notes` + hands -> F1 bars sheet | `propose(notes, *, key, key_changes=None, hand_sheet=None, track=False, quarter_ms=None, meter=None, phase_ms=None, beams="classical") -> Proposal` (`.sheet`, `.quarter_ms`, `.meter`, `.phase_ms`); `hand_sheet_of(notes, key=)`. The new sheet: `frames.propose_frames(notes, *, key=None, key_changes=None, quarter_ms=None) -> FramesProposal` (`.sheet`, `.quarter_ms`, `.info`) |
-| `llm` | `Notes` -> F1 bars sheet | `write_song(notes, complete, *, key, sid="song", hand_sheet=None, max_checks=3, guards=True, max_windows=None, on_window=None) -> SongSheet`; `windows.check(answer, target) -> (errors, sheet)`, `windows.answer_text(reply)`, `guards.guard_errors(sheet)`; `prompts.instructions()`, `prompts.window_prompt(...)`, `prompts.feedback(errors)`. The new sheet (section 11): `frames.write_frames(notes, complete, *, sid, key=None, quarter_ms=None, hands=False, max_checks=3, guards=True, max_windows=None, on_window=None) -> FramesSong`; `frames.windows_of(sheet)`, `frames.check_answer(reply, target)`, `frames.assemble(algo, parts, clefs="llm")`, `frames.gap_peaks(sheet)`, `frames.reference_prompt(...)`, `frames.window_prompt(...)`, `frames.instructions()`, `frames.SkipWindow` |
+| `llm` | `Notes` -> F1 bars sheet | `write_song(notes, complete, *, key, sid="song", hand_sheet=None, max_checks=3, guards=True, max_windows=None, on_window=None) -> SongSheet`; `windows.check(answer, target) -> (errors, sheet)`, `windows.answer_text(reply)`, `guards.guard_errors(sheet)`; `prompts.instructions()`, `prompts.window_prompt(...)`, `prompts.feedback(errors)`. The new sheet (section 11): `frames.write_frames(notes, complete, *, sid, key=None, quarter_ms=None, hands=False, max_checks=3, guards=True, max_windows=None, on_window=None) -> FramesSong`; `frames.windows_of(sheet)`, `frames.check_answer(reply, target, *, drop=False, free=None, simplify=False)`, `frames.places(notes, quarter_ms)`, `frames.assemble(algo, parts, clefs="llm")`, `frames.gap_peaks(sheet)`, `frames.reference_prompt(...)`, `frames.window_prompt(...)`, `frames.instructions()`, `frames.SkipWindow` |
 | `engrave` | F1 bars sheet -> SVG; F1 frames sheet -> SVG | `engrave(sheet, Options()) -> Engraving`, `to_svg(engraving, px_per_space=10, note_ids=False, id_prefix="")`, `render(sheet)`; `cursor.render_song(text, note_ids=True) -> Rendered`. The new sheet (section 10): `frames.render_frames(text_or_sheet, frames.Options(), segment=None) -> frames.Rendered`, `frames.plan(sheet, opts) -> Layout`, `frames.draw(layout, systems=None) -> Engraving`, `frames.engrave_frames(sheet, opts)` |
 
 In the research, `sheet.pmn` held copies of `aitu_backend.pmn` (`notes`, `columns`, `dense`) and
@@ -261,8 +261,20 @@ assemble: decisions on the notes, then the rules: figures (capped by the new han
   whole. The decided context of window k is the end of answer k-1.
 - **Errors**: `SkipWindow` from `complete` fails one window (a refusal); any other exception keeps the algorithm for
   that window and the rest of the song (`WindowLog.status`, `.note`).
-- **Frozen files**: `llm/prompt/frames/instructions.md` (version 5, four examples checked by
+- **Frozen files**: `llm/prompt/frames/instructions.md` (version 6, five examples checked by
   `test_the_prompt_examples_pass_the_checker`), `feedback.md`, `VERSION`.
+- **Prompt 6** (implementation 04, Phase 3; `context/implementations/04-app-enhancements/04-implementation-phase-3.md`):
+  the decoration-note rule of implementation 04 (section 9), and the section "Simplicity": uniform patterns
+  (simple.1: the missing note of an octave or a repeated chord added, the extra ones left out) and the amateur
+  pianist (simple.2: a quick chord just before a main note of its hand keeps only the notes within an octave of it).
+  A whole-song window may leave out and add notes for them, each declared in a comment line of the answer
+  (`# leave out f1822 G2`, `# add f4556 D1`); `check_answer(simplify=True)` accepts them within limits (a note left
+  out keeps a note of its column within an octave; a note added joins a column where its hand plays a note of the
+  target, within an octave of it, with the name of a note of that column or of the 8 columns of its hand around it;
+  at most a tenth of the target, 4 at least); an undeclared change is the old error. The window prompt lists the
+  places the app finds (`places`: `far_quick`, `broken_octaves` on the base sheet) under "Places to check"; the AI
+  decides each one. `Part.added` holds the added notes (`placed`: the onset of their column, the length of their
+  hand's longest note there), `assemble` draws them, and `FramesSong.changes()` gives the notes left out and added.
 - Tests: `tests/test_sheet_llm_frames.py`. Commands: `scripts/llm_sheet.py` (test requests, runs, replays of a
   run's logged replies or of the research's recorded sheets), `scripts/llm_gallery.py` (the Phase 4 gallery).
 
@@ -282,7 +294,8 @@ GET /sheet/{part}?width=N ── part_sheet.build.current ──┬─ sheet.f1 
 
 POST /sheet/{part}/llm ── part_sheet.job.start ── write_frames(on_start, on_part) with sheet_llm.ClaudeComplete
                          ── event: sheet on /matrix/progress/{job} at the reference figure and at each window
-                         ── commit: the hands into notes.pmn (save_edit), the sheet into sheet.f1
+                         ── commit: the hands into notes.pmn (save_edit), with the notes the run left out and added
+                            (edits.change_notes; one step of undo, edits.record_run), the sheet into sheet.f1
 ```
 
 - `write_frames` has two callbacks for the page: `on_start(algo, windows)` once the reference figure is known, and
@@ -292,6 +305,10 @@ POST /sheet/{part}/llm ── part_sheet.job.start ── write_frames(on_start,
   the prompt version, the cost). `sheet.pending` marks a part whose new notes ask Sonnet to write the sheet (a
   transcription or a video read writes it; the job removes it).
 - The hands of a sheet go back to the notes by `build.hands_of_sheet` (each live note at its drawn column and key).
+- Prompt 6 (implementation 04, Phase 3): the notes a run left out are marked removed in `notes.pmn` and the notes it
+  added are written there, as a stretch does (`edits.change_notes`); the record counts them (`added`, `leftOut`).
+  The steps of undo start again with one step, "Notes the AI added and left out": its undo puts those notes back and
+  the sheet to the AI's sheet on them. A run whose notes changed meanwhile stores its reading only (no note change).
 - `scripts/import_llm_sheets.py` stored the Phase 4 sheets of the 10 viewer songs (`viewer-final`) this way.
 - Tests: `tests/test_part_sheet.py`.
 

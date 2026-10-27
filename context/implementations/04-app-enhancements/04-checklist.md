@@ -14,7 +14,8 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 ## Decisions
 
 - [x] **First discussion** (user, 2026-10-27; plan section 3): the decoration-note rule (only fusas or shorter are decoration notes; a lone short note before a much longer one is lengthened to two figures shorter; the last note of a run is not); the rule on every sheet now, at draw time; the notes the AI adds or leaves out kept as Enhance with AI of a stretch does; the AI run on the My library version of 7 Years, after a test on a copy.
-- [ ] **Phase 3**: the real 7 Years run, when Enhance it again with AI opens the existing edit copy in the Personal Vault (plan section 3.4).
+- [x] **Phase 3** (user, 2026-10-27): the real 7 Years run goes on the existing edit copy in the Personal Vault (`477086a0`), as the app does; the library version changes when the user saves the copy to the library (plan section 3.4).
+- [x] **After the Phase 3 gallery** (user, 2026-10-27; plan section 3.5): the Enhance with AI dialog and Simplify left / right / both, a new Phase 4; Simplify does the rules of simplicity only; Write it all again stays; a stretch of one hand leaves the other hand as it is.
 
 # [x] Phase 1: The sheet page
 
@@ -33,18 +34,27 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] Task 2.3 The rule on every sheet, also the stored ones (case 1 of `part_sheet.build`): nothing else changes, time of one drawing measured.
 - [x] Task 2.4 Gallery `gallery/phase-2/` (old and new, checked zoomed in); the user checks it and 7 Years in the browser.
 
-# [ ] Phase 3: Simplicity in the AI's sheet, and 7 Years
+# [x] Phase 3: Simplicity in the AI's sheet, and 7 Years
 
-- [ ] Task 3.1 Study: the passages of `left-patterns.png` and `complex-fast-notes.png` in 7 Years; how often a broken pattern and a far quick chord occur in My library.
-- [ ] Task 3.2 Prompt version 6: the decoration-note text, the rules of simplicity, the amateur pianist rule, an example.
-- [ ] Task 3.3 The check of note changes for a whole-song window, and its feedback; tests with recorded answers.
-- [ ] Task 3.4 The left-out and added notes stored in `notes.pmn` at the end of a whole run (as `apply_stretch`); counted in the record; undo.
-- [ ] Task 3.5 Test on a temporary copy of 7 Years: the image windows, then the whole song (the user asked before each); gallery `gallery/phase-3/`, prompt 5 against prompt 6.
-- [ ] Task 3.6 The real run on 7 Years (My library version), after the user's ok and the decision above.
-- [ ] Task 3.7 The user checks 7 Years in the browser.
+- [x] Task 3.1 Study: the passages of `left-patterns.png` and `complex-fast-notes.png` in 7 Years; how often a broken pattern and a far quick chord occur in My library.
+- [x] Task 3.2 Prompt version 6: the decoration-note text, the rules of simplicity, the amateur pianist rule, an example; the places to check listed in the window prompt.
+- [x] Task 3.3 The check of note changes for a whole-song window (declared in comment lines), and its feedback; tests with recorded answers.
+- [x] Task 3.4 The left-out and added notes stored in `notes.pmn` at the end of a whole run (as `apply_stretch`); counted in the record; undo.
+- [x] Task 3.5 Test on a temporary copy of 7 Years: the image windows, then the whole song (the user asked before each); gallery `gallery/phase-3/`, prompt 5 against prompt 6.
+- [x] Task 3.6 The real run on 7 Years (My library version), after the user's ok and the decision above: on the edit copy, the same six notes as the test, $0.63.
+- [x] Task 3.7 The user checks 7 Years in the browser (2026-10-27: ok).
 
-# [ ] Phase 4: Documentation and closing
+# [ ] Phase 4: The Enhance with AI dialog and Simplify
 
-- [ ] Task 4.1 The documentation still stale: the core's `README.md`, the frontend pages of the sheet page, `context/implementations/README.md`, `context/00-index.md`.
-- [ ] Task 4.2 `04-context.md` for later implementations; `03-context.md` section 2 pointed at it for the decoration-note rule.
-- [ ] Task 4.3 The final checks; the open points.
+- [ ] Task 4.1 Study: the stretch path today, the size of one-hand windows, finding the earlier passage like the current one, what each batch sees.
+- [ ] Task 4.2 The dialog: a stretch (both hands, right, left, the user's words) and the whole song (Simplify left, right, both; Write it all again), with the cost.
+- [ ] Task 4.3 A stretch with one hand: the other hand fixed (prompt, check, splice); tests with recorded answers.
+- [ ] Task 4.4 Simplify: batch after batch, each seeing the simplifications before; the check; storing, the record, one step of undo; tests with recorded answers.
+- [ ] Task 4.5 Tests with the AI on a temporary copy (the user asked before each); gallery `gallery/phase-4/`.
+- [ ] Task 4.6 Checks: a browser check of the dialog on a temporary copy, the existing checks; the user checks in the browser.
+
+# [ ] Phase 5: Documentation and closing
+
+- [ ] Task 5.1 The documentation still stale: the core's `README.md`, the frontend pages of the sheet page, `context/implementations/README.md`, `context/00-index.md`.
+- [ ] Task 5.2 `04-context.md` for later implementations; `03-context.md` section 2 pointed at it for the decoration-note rule.
+- [ ] Task 5.3 The final checks; the open points.

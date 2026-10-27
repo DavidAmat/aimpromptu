@@ -268,14 +268,162 @@ def test_the_prompt_examples_pass_the_checker() -> None:
     assert (
         text.startswith("# Task") and "clef.L1 Priority for the left hand" in text
     )  # version 4 clef rules
-    assert "At most 8 notes in a group" in text and llm.PROMPT_VERSION == "5"
+    assert "At most 8 notes in a group" in text and llm.PROMPT_VERSION == "6"
+    assert "Only a thirty-second or shorter" in text and "simple.2 **The amateur pianist.**" in text
     blocks = re.findall(r"Input \(target\):\n```\n(.*?)```\n\nAnswer:\n```\n(.*?)```", text, re.S)
-    assert len(blocks) == 4
+    assert len(blocks) == 5
     for given, answer in blocks:
-        errs, sheet = llm.check_answer("```\n" + answer + "```", f1.read(given))
+        errs, sheet = llm.check_answer("```\n" + answer + "```", f1.read(given), simplify=True)
         assert errs == [], errs
         assert all(n.staff in (1, 2) for n in sheet.notes)
+    # Example 5 leaves out the far note of a quick octave and adds the missing notes of two octaves
+    assert llm.declared(blocks[4][1]) == (
+        Counter({(0, 43): 1}),
+        Counter({(35, 38): 1, (50, 38): 1}),
+    )
+    assert (llm.PROMPT_DIR / "VERSION").read_text().split()[0] == llm.PROMPT_VERSION
     assert "{errors}" in (llm.PROMPT_DIR / "feedback.md").read_text()
+
+
+# ------------------------------------------------------------------ the rules of simplicity (prompt 6)
+
+SIMPLE = """F1 frames frameMs=40 quarterMs=480
+key=2b clefs: R=treble L=bass
+f0 ?: G2,G3,C5:16
+f5 ?: Bb3,D4:4 D5:8
+f17 ?: C5:4
+f29 ?: A2:16
+f32 ?: D2,D3:16 G4,A4,D5:4
+f35 ?: D3:16
+f38 ?: D2,D3:16
+f41 ?: D2,D3:16
+f44 ?: D2,D3:16 G4,A4,D5:4
+f47 ?: D2,D3:16
+f50 ?: D3:16
+f53 ?: D2,D3:16
+f56 ?: Eb2,Eb3:2 Bb4,G5:4
+"""
+
+SIMPLE_ANSWER = [
+    "f0 L: G2,G3:16  R: C5:16 b1",
+    "f5 L: Bb3,D4:4  R: D5:8 b1",
+    "f17 R: C5:4",
+    "f29 L: A2:16 b2",
+    "f32 L: D2,D3:16 b2  R: G4,A4,D5:4",
+    "f35 L: D3:16 b2",
+    "f38 L: D2,D3:16 b2",
+    "f41 L: D2,D3:16 b3",
+    "f44 L: D2,D3:16 b3  R: G4,A4,D5:4",
+    "f47 L: D2,D3:16 b3",
+    "f50 L: D3:16 b3",
+    "f53 L: D2,D3:16 b3",
+    "f56 L: Eb2,Eb3:2  R: Bb4,G5:4",
+]
+
+
+def simple_errors(changes: dict[str, str], lines: list[str]) -> list[str]:
+    """The checker's problems for the answer of SIMPLE with some note lines changed and some comment lines."""
+    body = [changes.get(line.split()[0], line) for line in SIMPLE_ANSWER]
+    reply = (
+        "```\nF1 frames frameMs=40 quarterMs=480\nkey=2b clefs: R=treble L=bass\n"
+        + "\n".join(body + lines)
+        + "\n```"
+    )
+    return llm.check_answer(reply, f1.read(SIMPLE), simplify=True)[0]
+
+
+def test_the_checker_accepts_the_declared_changes_of_simplicity_within_their_limits() -> None:
+    assert simple_errors({}, []) == []
+    good = {"f0": "f0 L: G3:16  R: C5:16 b1", "f35": "f35 L: D2,D3:16 b2"}
+    assert simple_errors(good, ["# leave out f0 G2", "# add f35 D2"]) == []
+    # a change without its comment line is the old mistake: a note missing, or not in the target
+    assert "missing: f0 G2" in " ".join(simple_errors(good, ["# add f35 D2"]))
+    assert "not in the target" in " ".join(simple_errors(good, ["# leave out f0 G2"]))
+    # a whole column of a hand left out: no note of its column within an octave stays (C5 is more than an octave
+    # above G3)
+    whole = {"f0": "f0 R: C5:16 b1"}
+    errs = simple_errors(whole, ["# leave out f0 G2", "# leave out f0 G3"])
+    assert len(errs) == 2 and "f0 G2 is left out" in errs[0] and "f0 G3 is left out" in errs[1]
+    # an added note where its hand plays nothing, far from its column, or of another name than the pattern's
+    alone = {"f17": "f17 L: D3:4  R: C5:4"}
+    assert "where its hand plays no note" in simple_errors(alone, ["# add f17 D3"])[0]
+    far = {"f35": "f35 L: D1,D3:16 b2"}
+    assert "not the missing note of a pattern" in simple_errors(far, ["# add f35 D1"])[0]
+    other = {"f35": "f35 L: D3,E3:16 b2"}
+    assert "not the missing note of a pattern" in simple_errors(other, ["# add f35 E3"])[0]
+    # at most a tenth of the target (32 notes: 4, the least)
+    octaves = {f"f{f}": f"f{f} L: D2,D3:16 b{2 if f < 41 else 3}" for f in (35, 50)}
+    singles = {"f38": "f38 L: D3:16 b2", "f41": "f41 L: D3:16 b3"}
+    lines = ["# add f35 D2", "# add f50 D2", "# leave out f38 D2", "# leave out f41 D2"]
+    assert simple_errors({**octaves, **singles}, lines) == []
+    singles["f44"] = "f44 L: D3:16 b3  R: G4,A4,D5:4"
+    errs = simple_errors({**octaves, **singles}, lines + ["# leave out f44 D2"])
+    assert len(errs) == 1 and "more than 4" in errs[0]
+
+
+def test_the_window_prompt_names_the_places_of_the_rules_of_simplicity() -> None:
+    answer = "F1 frames frameMs=40 quarterMs=480\nkey=2b clefs: R=treble L=bass\n" + "\n".join(
+        SIMPLE_ANSWER
+    )
+    notes = f1.read(answer).notes
+    for n in notes:
+        n.on_ms = n.frame * 40.0
+    check = llm.places(notes, 480.0)
+    assert check == [
+        "- f0: G2+G3 is quick, just before Bb3+D4 at f5 in the same hand; G2 is more than an octave from it "
+        "(simple.2)",
+        "- f29 to f53: a run of octaves in one hand, with single notes at f29 A2, f35 D3, f50 D3 (simple.1)",
+    ]
+    target = f1.read(SIMPLE)
+    text = llm.window_prompt(
+        sid="s",
+        index=0,
+        count=1,
+        target=target,
+        lookahead=Sheet(notes=[]),
+        context=None,
+        check=check,
+    )
+    assert "## Places to check (rules of simplicity)" in text and check[1] in text
+    assert "End with the `# leave out` and `# add` lines" in text
+    # a single quick note far from its main note stays: it is no place to check
+    single = [n for n in notes if not (n.frame == 0 and n.midi == 55)]
+    assert all("simple.2" not in line for line in llm.places(single, 480.0))
+
+
+def test_a_window_may_leave_out_and_add_notes_and_the_sheet_draws_them() -> None:
+    notes = song(20)
+    good = oracle(notes)
+
+    def simpler(system: str, messages: list[dict]) -> str:
+        reply = good(system, messages)
+        if "reference figure" in messages[0]["content"]:
+            return reply
+        # the first column: the bass A2 gets its octave A1, the right hand's E4+A4 loses E4
+        first = re.search(r"^f0 .*$", reply, re.M).group(0)
+        assert "L: A2:" in first and "R: E4,A4:" in first
+        changed = first.replace("L: A2:", "L: A1,A2:").replace("R: E4,A4:", "R: A4:")
+        head, _, tail = reply.replace(first, changed).rpartition("```")
+        return head + "# leave out f0 E4\n# add f0 A1\n```" + tail
+
+    result = llm.write_frames(notes, simpler, only={0})
+    assert [w.status for w in result.windows][:2] == ["ok", "skipped"]
+    assert result.windows[0].replies == 1 and result.info["problems"] == []
+    left, added = result.changes()
+    assert [(n.frame, n.midi) for n in left] == [(0, 64)]
+    assert [(n.frame, n.midi, n.staff) for n in added] == [(0, 33, 2)]
+    assert added[0].on_ms == 0.0 and added[0].len_ms == 240.0  # as the bass note of its column
+    at = {(n.frame, n.midi): n for n in result.sheet.notes}
+    assert (0, 64) not in at and at[(0, 33)].staff == 2 and at[(0, 33)].figure == at[(0, 45)].figure
+    # without simplify (a whole-song window before prompt 6), the same answer is refused
+    target = f1.read(
+        "F1 frames frameMs=40 quarterMs=500\nkey=0 clefs: R=treble L=bass\nf0 ?: A2:8 E4,A4:1"
+    )
+    reply = "```\nF1 frames frameMs=40 quarterMs=500\nkey=0 clefs: R=treble L=bass\nf0 L: A1,A2:8 R: A4:1\n```"
+    reply += "\n# leave out f0 E4\n# add f0 A1\n"
+    assert llm.check_answer(reply, target, simplify=True)[0] == []
+    errs = llm.check_answer(reply, target)[0]
+    assert "missing: f0 E4" in errs[0] and "not in the target" in errs[1]
 
 
 # ------------------------------------------------------------------ Claude, with a stand-in SDK client

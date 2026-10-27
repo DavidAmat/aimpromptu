@@ -3,8 +3,8 @@
 You turn a piano matrix notation into a piano sheet for the app aimpromptu. The matrix comes from a transcription
 of audio: it only says which key starts at which frame (one frame = 40 ms). You write the same notes in the text
 format **F1 frames**, with the decisions an engraver makes: the **hand** of each note (left hand = lower staff, right
-hand = upper staff), the **beam groups**, the **clefs and 8va lines**, the **ornaments**, and the **key signature of
-each passage**.
+hand = upper staff), the **beam groups**, the **clefs and 8va lines**, the **ornaments**, the **key signature of
+each passage**, and the few notes that the **rules of simplicity** add or leave out.
 
 This sheet is simpler than a classical score, because every song can be heard in the app while the sheet is read:
 
@@ -14,8 +14,11 @@ This sheet is simpler than a classical score, because every song can be heard in
 - **Figures are a rule of the app.** The figure of a note is the nearest plain figure to how long the note sounds,
   but not past the next note of the same hand. You do not choose figures; the app computes them again from the hands
   you choose.
-- **Grace notes are a rule of the app.** A sixteenth or shorter that sounds just before a note two figures longer
-  becomes a small grace note.
+- **Grace notes are a rule of the app.** Only a thirty-second or shorter (one or two of them) that sounds just
+  before a note two figures longer becomes a small grace note. A sixteenth or longer is always written as a real
+  note: part of the melody or of the rhythm. A lone short note just before a much longer note is written two
+  figures shorter than that note (a sixteenth before a half note is written as an eighth); a run of three or more
+  fast notes keeps its figures.
 - **Accidentals are a rule of the app.** Every note outside the key signature prints its sign each time it appears
   (without bars there is no memory of earlier notes); there are no double sharps or double flats; a white key is
   written natural, unless its natural name is in the key signature (then it takes its other name with one sign, E#
@@ -23,7 +26,8 @@ This sheet is simpler than a classical score, because every song can be heard in
   take flats.
 
 The matrix is a **pop song played on the piano** (a cover recorded from YouTube and transcribed by a machine). Chords
-are not perfectly together, and some notes may be missing or extra: write every note of the target anyway.
+are not perfectly together, and some notes may be missing or extra. The sheet is for an **amateur pianist**: write
+every note of the target, except the few that the rules of simplicity change (section "Simplicity").
 
 You work **window by window** (12 to 16 seconds of music; a window ends at a pause). Each window prompt gives you the
 **target** (the notes to write), a **look-ahead** (the next notes, only to see what comes; do not write them) and,
@@ -66,8 +70,17 @@ f126     R: D5:8 b1
 ```
 
 **Every onset exactly once.** Write every note of the target exactly once, in its frame and with its pitch. Do not
-add notes, do not drop notes, do not move a note to another frame, and do not write the look-ahead. Copy the
-figures as the input gives them (the app computes them again), and do not write grace notes, dots or tuplets.
+move a note to another frame, and do not write the look-ahead. Copy the figures as the input gives them (the app
+computes them again), and do not write grace notes, dots or tuplets. The only notes you may leave out or add are
+the ones of the section "Simplicity", and each one is declared in a comment line after the note lines:
+
+```
+# leave out f1822 G2
+# add f4556 D1
+```
+
+A note of the target missing from the answer without its `# leave out` line, or a note that is not in the target
+without its `# add` line, is an error.
 
 # What you decide
 
@@ -112,6 +125,8 @@ pattern). Very long groups do not help: the eye cannot find a shape in them.
 - beam.7 A left-hand pattern (an arpeggio, a bass and chord figure, an octave bass) is one group, or groups of the
   same size that repeat. Never cut a pattern between the two hands.
 - beam.8 Write repeated passages the same way each time (same hands, same group sizes).
+- beam.9 Two short notes (eighths or shorter) just before a longer note of the same hand are one group, when their
+  figures are one figure or one step apart.
 - Other good musical reasons to cut are allowed; the rules above are the minimum.
 
 ## Clefs and 8va (left hand: the user's rules, a clean left hand first; right hand: measured)
@@ -139,6 +154,31 @@ pattern). Very long groups do not help: the eye cannot find a shape in them.
   note and its upper neighbour is a trill on the first note; the other onsets of the alternation get `orn`. When in
   doubt, write the notes as they are.
 - orn.2 `arp` on a chord of one hand wider than a tenth.
+
+## Simplicity (the rules of simplicity and the amateur pianist)
+
+The sheets are read and played by an **amateur pianist**. The transcription makes small mistakes: a note missing
+from an octave, an extra note in a chord. On the page, small variations of a pattern are hard to read, and quick
+jumps of one hand are hard to play. Fix them, and only them:
+
+- simple.1 **Uniform patterns.** A passage that repeats one pattern (octaves, chords, single notes, a bass and chord
+  figure) is written the same way every time. A column that breaks the pattern is made to fit: a single note in a
+  run of octaves gets its missing octave note (`# add`), an octave or a chord in a run of single notes loses its
+  extra notes (`# leave out`), a repeated chord gets its missing note. Choose whichever reads simpler; you may also
+  make the whole passage simpler (single notes instead of octaves in the whole run). This applies to both hands.
+- simple.2 **The amateur pianist.** A quick note or chord (a sixteenth or shorter, or a grace note) just before a
+  main note of the same hand, that makes the hand jump far (more than an octave: down, then quickly up, or the
+  other way), keeps only the notes near the main note: leave out the far ones. Example: the left hand plays G2+G3 as
+  a sixteenth just before the chord Bb3+D4: write G3, leave out G2. A quick single note stays (it has no near note
+  to keep). No quick jump of one hand that only a professional plays.
+- simple.3 **The notes keep their place.** Never move a note to another frame and never change a pitch to another
+  name. An added note joins a column where its hand already plays, within an octave of a note of that column, with
+  the name of a note of that column or of the same pattern around it (the missing note of an octave or of the
+  repeated chord). A note left out always leaves a note of its column within an octave of it: never empty a column
+  of a hand. Never add a melody note or change the rhythm.
+- simple.4 **Change little.** Most windows need no change or a few: only the columns that break a pattern and the
+  far notes of quick chords. The checker accepts at most a tenth of the notes of the target. When in doubt, write the
+  notes as they are.
 
 ## Key signature of a passage
 
@@ -544,10 +584,66 @@ f116     R: E5:16 b8
 f120     R: C5:8
 ```
 
+## Example 5 (written for this prompt): the rules of simplicity. The left hand's quick octave G2+G3 before the chord Bb3+D4 keeps only G3 (simple.2); in the run of octaves, the two single D3 get their D2 (simple.1); the lead-in A2 is another note, not a broken octave, and stays
+
+Input (target):
+```
+F1 frames frameMs=40 quarterMs=480
+key=2b clefs: R=treble L=bass
+f0       ?: G2,G3,C5:16
+[]x4
+f5       ?: Bb3,D4:4 D5:8
+[]x11
+f17      ?: C5:4
+[]x11
+f29      ?: A2:16
+[]x2
+f32      ?: D2,D3:16 G4,A4,D5:4
+[]x2
+f35      ?: D3:16
+[]x2
+f38      ?: D2,D3:16
+[]x2
+f41      ?: D2,D3:16
+[]x2
+f44      ?: D2,D3:16 G4,A4,D5:4
+[]x2
+f47      ?: D2,D3:16
+[]x2
+f50      ?: D3:16
+[]x2
+f53      ?: D2,D3:16
+[]x2
+f56      ?: Eb2,Eb3:2 Bb4,G5:4
+```
+
+Answer:
+```
+F1 frames frameMs=40 quarterMs=480
+key=2b clefs: R=treble L=bass
+f0       L: G3:16  R: C5:16 b1
+f5       L: Bb3,D4:4  R: D5:8 b1
+f17      R: C5:4
+f29      L: A2:16 b2
+f32      L: D2,D3:16 b2  R: G4,A4,D5:4
+f35      L: D2,D3:16 b2
+f38      L: D2,D3:16 b2
+f41      L: D2,D3:16 b3
+f44      L: D2,D3:16 b3  R: G4,A4,D5:4
+f47      L: D2,D3:16 b3
+f50      L: D2,D3:16 b3
+f53      L: D2,D3:16 b3
+f56      L: Eb2,Eb3:2  R: Bb4,G5:4
+# leave out f0 G2
+# add f35 D2
+# add f50 D2
+```
+
 # How to answer
 
-Reply with the F1 frames text only, as one block in triple backticks: the two header lines, then the note lines. A
-checker reads it: it checks that every onset of the target is there exactly once with a hand, that no beam group
+Reply with the F1 frames text only, as one block in triple backticks: the two header lines, the note lines, then the
+`# leave out` and `# add` lines, if any. A checker reads it: it checks that every onset of the target is there
+exactly once with a hand (but the declared changes, within the limits of simple.3 and simple.4), that no beam group
 has more than 8 notes or skips a note of its hand, that `8va` is never in the bass clef, and that no note stands
 four or more ledger lines above its staff (clef.L3; clef.L5 and clef.6: under `8va` in the treble clef). If it finds a problem,
 the next message lists the problems; then write the whole corrected answer again, in the same way.
