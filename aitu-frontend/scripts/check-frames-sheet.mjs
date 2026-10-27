@@ -7,7 +7,8 @@
  *   Source, Audio, Notes, Sheet (no Hands);
  * - a click on the sheet moves the cursor there (`[data-frames-cursor]`, `data-ms`) and lights its notes
  *   (`[data-lit]`); Play moves the cursor;
- * - a sheet the AI enhanced has the badge **Enhanced with AI** and offers **Enhance it again with AI**; the bar has
+ * - a sheet the AI enhanced has the AI symbol next to its title (tooltip **Enhanced with AI**; implementation 04, Phase 1)
+ *   and offers **Enhance it again with AI**; the bar has
  *   no switch to the old vexflow-v2 sheet (removed in implementation 03, Phases 8B and 10);
  * - an old address of the Hands step opens the Sheet step.
  *
@@ -84,7 +85,7 @@ try {
   check('the steps are Source, Audio, Notes, Sheet', !tabs.some((t) => /Hands/.test(t)), tabs.join(' | '));
   const root = page.locator('[data-frames-sheet]');
   check('the copy keeps the sheet Sonnet wrote', (await root.getAttribute('data-source')) === 'llm');
-  check('a sheet the AI enhanced has its badge', (await page.locator('[data-enhanced-badge]').innerText()) === 'Enhanced with AI');
+  check('a sheet the AI enhanced has the AI symbol next to its title', (await page.locator('[data-sheet-header] [data-ai-mark] [data-enhanced]').count()) === 1);
   check('and offers Enhance it again with AI', (await page.getByTestId('enhance-with-ai').innerText()).trim() === 'Enhance it again with AI');
   await page.waitForTimeout(600);
   await shot(page, '01-sheet-step');

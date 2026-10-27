@@ -125,7 +125,7 @@ async function pickNote(page, nth) {
 }
 const toolbox = (page) => page.locator('[data-frames-sheet-toolbox]');
 async function openTab(page, name) {
-  if ((await toolbox(page).count()) === 0) await page.getByRole('button', { name: 'Sheet toolbox' }).click();
+  if ((await toolbox(page).count()) === 0) await page.getByTestId('sheet-toolbox').click();
   await toolbox(page).getByRole('button', { name, exact: true }).click();
   await page.waitForTimeout(400);
 }

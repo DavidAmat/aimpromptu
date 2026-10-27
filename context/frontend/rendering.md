@@ -15,7 +15,11 @@ space) and gets one SVG and a cursor map: one row per drawn column (its line, it
 line. The code is `pages/piece/sheet/frames/`:
 
 - `FramesSheetPage.tsx`: the page (title lines, the player, the floating bar with Undo, Redo and **Enhance with
-  AI**), and since Phase 6 the notes picked and the keys (⌘Z, ⇧⌘Z, Escape);
+  AI**), and since Phase 6 the notes picked and the keys (⌘Z, ⇧⌘Z, Escape); since implementation 04, Phase 1, the
+  header at the top of the window (the title, `AiMark`, and the floating bar's buttons: one list, `sheetButtons`,
+  drawn in both places), the floating bar's hidden state (`aitu.framesSheet.floatingHidden` in this browser), and
+  ⌘ and the wheel over the sheet (a CSS scale at once, one `GET /sheet` at a pause of 220 ms, the line under the
+  pointer kept under it);
 - `FramesNoteToolbox.tsx` (Phase 6): the note toolbox of the new sheet, beside the notes picked: **Hand** since
   Phase 6, every other note tool since Phase 7, and since Phase 8A the keyboard of the picked column (drawn by
   `ui/MiniPiano.tsx`'s `MiniKeys`; see [annotations.md](annotations.md), "The new sheet");
@@ -27,7 +31,9 @@ line. The code is `pages/piece/sheet/frames/`:
   part Sonnet works on, and the blank staves that a part coming back from Sonnet is written into, column by
   column (about two seconds); since Phase 6 also the picking of notes (a click on a notehead, ⌘ or Shift to add,
   a box dragged across the staves), and since Phase 7 the marking of a stretch in the strip above the upper staff
-  of a line, drawn as a lavender band over the staves in scope;
+  of a line, drawn as a lavender band over the staves in scope; since implementation 04, Phase 1, the cursor
+  dragged and dropped (`grab`, `grabbing`, across lines, the page scrolled near the window's edges, a seek on
+  release; a press that does not move stays a click);
 - `geometry.ts`: the research viewer's arithmetic (where the cursor is, the time under a click);
 - `useFramesSheet.ts`: the loads, Sonnet's job followed on its stream (`event: sheet`), Sonnet started by
   itself on a new transcription, and an edit (one request whose answer is the sheet drawn again);
@@ -37,7 +43,7 @@ line. The code is `pages/piece/sheet/frames/`:
   the view picks, drags and lights them.
 
 Hooks for the browser checks: `[data-frames-sheet]` (`data-source`, `data-llm`, `data-working`),
-`data-note="<frame>:<midi>"` on each notehead, `[data-lit]`, `[data-frames-cursor]` (`data-ms`),
+`data-note="<frame>:<midi>"` on each notehead, `[data-lit]`, `[data-frames-cursor]` (`data-ms`, `data-dragging`),
 `[data-segment-state=working]`, `[data-revealing]`; since Phase 6 `[data-selected]` on the picked noteheads,
 `[data-pick-box]`, `[data-frames-note-toolbox]`, and `sheet-undo`, `sheet-redo` (`data-testid`); since Phase 7
 `[data-range-strip]`, `[data-range-band]` (`data-start`, `data-end`), `[data-frames-range-toolbox]`, and the

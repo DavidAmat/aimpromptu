@@ -217,8 +217,8 @@ sections 12 to 17.
 | Module | Role |
 |---|---|
 | `SheetPage.tsx` | The step types (`SheetStep`, `PassageView`, `PlayView`) and `SheetPage`, which draws `frames/FramesSheetPage` |
-| `frames/FramesSheetPage.tsx` | The page: the sheet at once (the AI's or the algorithm's), **Enhance with AI**, the floating bar, the toolboxes, Copy and Paste, Record, the roles of `step.passage` and `step.play` |
-| `frames/FramesSheetView.tsx` | The SVG the backend draws, and over it, in the same staff-space units, what moves: the playhead, the picked notes, the marked stretch, the veil over a segment the AI is writing |
+| `frames/FramesSheetPage.tsx` | The page: the sheet at once (the AI's or the algorithm's), **Enhance with AI**, the header at the top of the window (title, `AiMark`, the floating bar's buttons from one list), the floating bar, ⌘ and the wheel zoom, the toolboxes, Copy and Paste, Record, the roles of `step.passage` and `step.play` |
+| `frames/FramesSheetView.tsx` | The SVG the backend draws, and over it, in the same staff-space units, what moves: the playhead (dragged and dropped across lines since implementation 04, Phase 1), the picked notes, the marked stretch, the veil over a segment the AI is writing |
 | `frames/useFramesSheet.ts` | The sheet of a part as the page holds it: read for the page's width, read again at each step of the AI's job (`event: sheet` on the job's stream) |
 | `frames/geometry.ts` | The arithmetic of the page from the cursor map the backend sends (one row per drawn column, one box per system) |
 | `frames/FramesNoteToolbox.tsx`, `FramesRangeToolbox.tsx`, `readingTools.ts` | The note toolbox and the range toolbox (titled *Frames*), and what they share |

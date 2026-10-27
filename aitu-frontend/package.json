@@ -29,6 +29,7 @@
     "check:frames-edit": "node scripts/check-frames-edit.mjs",
     "check:frames-tools": "node scripts/check-frames-tools.mjs",
     "check:frames-toolbox": "node scripts/check-frames-toolbox.mjs",
+    "check:frames-page": "node scripts/check-frames-page.mjs",
     "measure:lyric-fonts": "node scripts/measure-lyric-fonts.mjs"
   },
   "dependencies": {
