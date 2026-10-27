@@ -144,12 +144,12 @@ Built and migrated 2026-10-26; checked by the user in the browser (2026-10-27, "
 - [x] Task 9.3 The migration (`scripts/migrate_sheets.py`): `make db-backup` first, a dry run, then 5 parts stored (AITANA and Halleluyah, project and library version each, one untitled project), 40 with nothing to carry; 359 octave lines and 92 clef changes dropped (report section 5).
 - [x] The user's check in the browser (2026-10-27: "all good").
 
-# [p] Phase 10: vexflow-v2 removed, documentation, closing
+# [x] Phase 10: vexflow-v2 removed, documentation, closing
 
-Built and checked by the agent 2026-10-27; the user's check in the browser and the merge into `master` are next.
+Built and checked by the agent 2026-10-27; checked by the user in the browser (2026-10-27: "all good") and merged into `master`.
 Report: [`03-implementation-phase-10.md`](03-implementation-phase-10.md).
 
 - [x] Task 10.1 Removed: `@aimpromptu/grid-notation` (dependency, lock, image build, compose context, Vite), the old page and its modules, `api/timeScore.ts` (the survivors in `api/sheet.ts`), every `/time` route (the lyrics words now `/sheet/{uuid}/words`), `notation/`, the negra ladder and its helpers, the score payload, the Hands mode of the notes editor and Predict hands; also the Sheet step's `stale` state, the page's unsaved `sheet.json` in promote and split, Bravura in the PDF writer, and the hand split warmed for the new sheet (`aitu_backend/hands/` and the reader of `sheet.json` stay).
 - [x] Task 10.2 Documentation: the time model (D-09 changed, rule 3 confirmed), the project steps, the sheet pages, rendering, the API; the vexflow-v2 renderer and schema 2.0 pages moved to `documentation/deprecated/`; links pass (418 files).
-- [p] Task 10.3 All checks (backend 1,251 tests, 2 known GPU failures; 12 browser checks passed; the PDF looked at); the final screenshots in [`screenshots/phase-10/`](screenshots/phase-10/) against Phase 0's; merge into `master` after the user's ok.
+- [x] Task 10.3 All checks (backend 1,251 tests, 2 known GPU failures; 12 browser checks passed; the PDF looked at); the final screenshots in [`screenshots/phase-10/`](screenshots/phase-10/) against Phase 0's; the user's check (2026-10-27: "all good"); merged into `master`.
 - [x] Task 10.4 Licenses: the inventory and the action of each row before a release in `aitu-backend/src/aitu_backend/sheet/README.md` section 8 (nothing is owed while the app is not distributed).

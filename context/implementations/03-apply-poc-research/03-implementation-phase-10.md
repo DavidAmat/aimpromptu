@@ -2,8 +2,8 @@
 
 Plan: [`03-plan.md`](03-plan.md) section 7, Phase 10. Checklist: [`03-checklist.md`](03-checklist.md). Branch
 `feat/migrate-new-logic` (level with `master` at the start, `6280e92`: nothing to merge). Written 2026-10-27 on the
-Ubuntu machine. **Built and checked by the agent; the user's check in the browser and the merge into `master` are
-next.**
+Ubuntu machine. **Built and checked by the agent; checked by the user in the browser (2026-10-27: "all good") and
+merged into `master`.**
 
 # 1. Summary
 
