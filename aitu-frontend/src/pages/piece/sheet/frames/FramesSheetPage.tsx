@@ -51,7 +51,6 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import ContentPasteIcon from "@mui/icons-material/ContentPasteOutlined";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecordOutlined";
 import PauseIcon from "@mui/icons-material/Pause";
@@ -90,7 +89,7 @@ import {
   usePassageClipboard,
   type CopiedPassage,
 } from "../../../../state/passageClipboard";
-import { ConfirmDialog, EmptyState, FloatingBar, IconAction, PillButton, RowMenu, Toolbox } from "../../../../ui";
+import { ConfirmDialog, EmptyState, FloatingBar, IconAction, Logo, PillButton, RowMenu, Toolbox } from "../../../../ui";
 import { piecesIn } from "../lyricsPieces";
 import { PianoToolbox } from "../PianoToolboxes";
 import { HAND_COLOUR, HELD_COLOUR, formatSeconds, type SoundingNote } from "../sheetConstants";
@@ -1055,7 +1054,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           <PillButton
             kind="secondary"
             size="small"
-            startIcon={<AutoAwesomeIcon fontSize="small" />}
+            startIcon={<Logo height={18} />}
             onClick={() => setAsking(true)}
             data-testid={id("enhance-with-ai")}
           >

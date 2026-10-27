@@ -1,15 +1,13 @@
 /**
  * Whether the AI enhanced the sheet of a project or a song (implementation 03, Phase 5), as one small mark before
- * its name: the sparkle of **Enhance with AI**, green and filled once the AI enhanced it, faint and hollow when
+ * its name: the logo of AImpromptu (implementation 04, prompt 04-2), green once the AI enhanced it, faint grey when
  * it could and has not. Always the same width, so the names of a list stay aligned whatever the mark.
  */
 
 import Box from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import type { ReactNode } from "react";
-import { semantic } from "../../ui";
+import { Logo, semantic } from "../../ui";
 
 export function AiMark({
   enhanced,
@@ -17,7 +15,7 @@ export function AiMark({
   busy,
 }: {
   enhanced: boolean;
-  /** Has notes the AI could enhance: the hollow mark when it has not. */
+  /** Has notes the AI could enhance: the faint mark when it has not. */
   could?: boolean;
   /** Shown in place of the mark: a job working on it now (a spinner). */
   busy?: ReactNode;
@@ -28,11 +26,15 @@ export function AiMark({
         busy
       ) : enhanced ? (
         <Tooltip title="Enhanced with AI">
-          <AutoAwesomeIcon sx={{ fontSize: 18, color: semantic.status.success }} aria-label="Enhanced with AI" data-enhanced />
+          <Box sx={{ display: "grid", color: semantic.status.success }} aria-label="Enhanced with AI" data-enhanced>
+            <Logo height={18} />
+          </Box>
         </Tooltip>
       ) : could ? (
         <Tooltip title="Not enhanced with AI yet">
-          <AutoAwesomeOutlinedIcon sx={{ fontSize: 18, color: "text.disabled" }} aria-label="Not enhanced with AI yet" data-not-enhanced />
+          <Box sx={{ display: "grid", color: "text.disabled" }} aria-label="Not enhanced with AI yet" data-not-enhanced>
+            <Logo height={18} />
+          </Box>
         </Tooltip>
       ) : null}
     </Box>
