@@ -17,6 +17,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import ViewSidebarIcon from "@mui/icons-material/ViewSidebarOutlined";
 import { Link } from "react-router-dom";
 import IconAction from "./IconAction";
+import Logo from "./Logo";
 import { radius, size } from "./tokens";
 
 export interface SidebarItem {
@@ -142,9 +143,9 @@ export function Sidebar({ open, onToggle, onSearch, groups, home, footer }: Side
           aria-label="AImpromptu, open Projects"
           sx={{ display: "flex", alignItems: "center", gap: 1, color: "text.primary", textDecoration: "none", px: 0.5, py: 0.5, borderRadius: 1 }}
         >
-          <Box component="img" src="/favicon.svg" alt="" sx={{ width: 26, height: 26, display: "block" }} />
+          <Logo height={40} />
           {open ? (
-            <Typography sx={{ fontWeight: 600, fontSize: 16, letterSpacing: "-0.01em" }}>AImpromptu</Typography>
+            <Typography sx={{ fontWeight: 600, fontSize: 18, letterSpacing: "-0.01em" }}>AImpromptu</Typography>
           ) : null}
         </Box>
         <IconAction

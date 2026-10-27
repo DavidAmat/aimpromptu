@@ -6,6 +6,8 @@
 
 export { AppShell, PageBody } from "./AppShell";
 export type { AppShellProps } from "./AppShell";
+export { Logo } from "./Logo";
+export type { LogoProps } from "./Logo";
 export { Sidebar } from "./Sidebar";
 export type { SidebarGroup, SidebarItem, SidebarProps } from "./Sidebar";
 export { PageHeader } from "./PageHeader";

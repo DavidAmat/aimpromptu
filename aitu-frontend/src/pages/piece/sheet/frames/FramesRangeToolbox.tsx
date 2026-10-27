@@ -28,7 +28,6 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import CallSplitIcon from "@mui/icons-material/CallSplitOutlined";
 import CheckIcon from "@mui/icons-material/Check";
 import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
@@ -36,7 +35,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecordOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHorizOutlined";
 import { sheetApi, type ReadingEdit, type SheetNote, type SheetReading, type StretchKeys } from "../../../../api";
-import { IconAction, PillButton, Segmented, Toolbox } from "../../../../ui";
+import { IconAction, Logo, PillButton, Segmented, Toolbox } from "../../../../ui";
 import { formatSeconds } from "../sheetConstants";
 import { ARMADURAS, frameOf, keyName } from "./readingTools";
 
@@ -210,7 +209,7 @@ export function FramesRangeToolbox({
           {onEnhance ? (
             <IconAction
               title="Enhance this stretch with AI, with your own words"
-              icon={<AutoAwesomeIcon fontSize="small" />}
+              icon={<Logo height={20} />}
               onClick={onEnhance}
               disabled={off || inside.length === 0}
               disabledTitle={why ?? "No notes begin inside this stretch"}

@@ -36,7 +36,6 @@ import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import BackspaceIcon from "@mui/icons-material/BackspaceOutlined";
 import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
 import ContentCutIcon from "@mui/icons-material/ContentCutOutlined";
@@ -48,7 +47,7 @@ import FigureGlyph from "../../../../components/time/FigureGlyph";
 import { FIGURE_SHORT } from "../../../../music/figures";
 import { spanishNoteName, spanishNoteShort } from "../../../../music/noteNames";
 import { keepKeyInView } from "../../../../piano/keyPositions";
-import { IconAction, MiniKeys, Segmented, Toolbox } from "../../../../ui";
+import { IconAction, Logo, MiniKeys, Segmented, Toolbox } from "../../../../ui";
 import { HAND_COLOUR, formatSeconds } from "../sheetConstants";
 import {
   CHORD_ORNAMENTS,
@@ -243,7 +242,7 @@ export function FramesNoteToolbox({
           {onEnhance ? (
             <IconAction
               title="Enhance these notes with AI, with your own words"
-              icon={<AutoAwesomeIcon fontSize="small" />}
+              icon={<Logo height={20} />}
               onClick={onEnhance}
               disabled={off}
               disabledTitle={why}

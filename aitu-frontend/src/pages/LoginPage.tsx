@@ -16,7 +16,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api";
 import { ROUTES } from "../layout/routes";
 import { useAuth } from "../state/authContext";
-import { PillButton } from "../ui";
+import { Logo, PillButton } from "../ui";
 
 /** Only an address of this app: `?next=https://elsewhere` must not send anyone away. */
 function safeNext(next: string | null): string {
@@ -64,7 +64,7 @@ export function LoginPage() {
       <Box component="form" onSubmit={submit} noValidate sx={{ width: "100%", maxWidth: 340 }}>
         <Stack spacing={2.5}>
           <Stack direction="row" spacing={1.25} sx={{ mb: 1, alignItems: "center", justifyContent: "center" }}>
-            <Box component="img" src="/favicon.svg" alt="" sx={{ width: 32, height: 32 }} />
+            <Logo height={56} />
             <Typography component="h1" sx={{ fontWeight: 600, fontSize: 22, letterSpacing: "-0.01em" }}>
               AImpromptu
             </Typography>
