@@ -1,7 +1,7 @@
 # 04 · Phase 1: the sheet page
 
 Technical report, for the agents of the next phases. Plan: [`04-plan.md`](04-plan.md) section 4.1 and Phase 1.
-Branch `feat/04-phase-1` (from `master` at `57a15a2`). Frontend only: no backend file changed, no AI call, no
+Branch `feat/04-phase-1` (from `master` at `57a15a2`). Done 2026-10-27: checked by the user in the browser ("super ok"). Frontend only: no backend file changed, no AI call, no
 database change.
 
 # 1. What was done

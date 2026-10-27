@@ -16,7 +16,7 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] **First discussion** (user, 2026-10-27; plan section 3): the decoration-note rule (only fusas or shorter are decoration notes; a lone short note before a much longer one is lengthened to two figures shorter; the last note of a run is not); the rule on every sheet now, at draw time; the notes the AI adds or leaves out kept as Enhance with AI of a stretch does; the AI run on the My library version of 7 Years, after a test on a copy.
 - [ ] **Phase 3**: the real 7 Years run, when Enhance it again with AI opens the existing edit copy in the Personal Vault (plan section 3.4).
 
-# [p] Phase 1: The sheet page
+# [x] Phase 1: The sheet page
 
 - [x] Task 1.1 Study: the header, the floating toolbox and why a hidden one does not come back, the cursor and the click to seek, the zoom path.
 - [x] Task 1.2 Command + scroll (and a trackpad pinch) over the sheet zooms it; the sheet is laid out again to the window; one request per pause of the wheel.
@@ -24,7 +24,7 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] Task 1.4 The header toolbox: the floating toolbox's buttons, one list drawn in both places; the header stays at the top while scrolling.
 - [x] Task 1.5 A hidden floating toolbox comes back (the fix, and a button in the header toolbox).
 - [x] Task 1.6 The cursor is dragged and dropped, also across lines; `grab` and `grabbing`; the recording seeks on release.
-- [p] Task 1.7 Checks: a browser check of the new hooks on a temporary copy, the existing checks, screenshots; the user checks in the browser.
+- [x] Task 1.7 Checks: a browser check of the new hooks on a temporary copy, the existing checks, screenshots; the user checks in the browser.
 
 # [ ] Phase 2: The decoration-note rule
 
