@@ -87,6 +87,8 @@ __all__ = [
     "gap_peaks",
     "instructions",
     "like_before",
+    "like_columns",
+    "renamed",
     "read_reference",
     "places",
     "reference_prompt",
@@ -1651,6 +1653,8 @@ SIMPLIFY_CONTEXT_MS = 8000.0
 #: An earlier passage like the batch: columns per n-gram, and the share of the batch's columns it matches at least.
 LIKE_GRAM = 4
 LIKE_SHARE = 0.3
+#: The columns before and after a column that find the same place in the earlier passage like the batch.
+SAME_PLACE = 2
 HAND_NAMES = {1: "right hand", 2: "left hand", None: "both hands"}
 
 
@@ -1692,6 +1696,40 @@ def simplify_windows(sheet: Sheet, staff: int | None) -> list[tuple[int, int]]:
     return windows_of(hand, span=SIMPLIFY_MS, max_onsets=SIMPLIFY_ONSETS) if hand.notes else []
 
 
+def _like_columns_of(sheet: Sheet, staff: int | None) -> dict[int, list[int]]:
+    """The keys of each column of the hand (or of both), frame -> midis: the columns :func:`like_before` compares."""
+    cols: dict[int, list[int]] = defaultdict(list)
+    for n in sheet.notes:
+        if (staff is None or n.staff == staff) and not n.covered:
+            cols[n.frame].append(n.midi)
+    return cols
+
+
+def like_columns(
+    sheet: Sheet, staff: int | None, start: int, end: int, like: tuple[int, int]
+) -> dict[int, list[int]]:
+    """Each column of the batch ``[start, end)`` and the columns at the same place of the earlier passage like it
+    (``like``, from :func:`like_before`): the columns of ``like`` with the same ``SAME_PLACE`` columns before and
+    after (the same keys), frame -> frames. Found by what surrounds them, not by counting: a repeat with a column
+    more or less elsewhere still lines up."""
+    cols = _like_columns_of(sheet, staff)
+    frames = sorted(cols)
+    keys = [tuple(sorted(cols[f])) for f in frames]
+
+    def around(i: int) -> tuple:
+        return tuple(keys[i - SAME_PLACE : i] + keys[i + 1 : i + 1 + SAME_PLACE])
+
+    places: dict[tuple, list[int]] = defaultdict(list)
+    for i in range(bisect_left(frames, like[0]), bisect_left(frames, like[1])):
+        if i >= SAME_PLACE:
+            places[around(i)].append(frames[i])
+    return {
+        frames[i]: places[around(i)]
+        for i in range(bisect_left(frames, start), bisect_left(frames, end))
+        if i >= SAME_PLACE and places.get(around(i))
+    }
+
+
 def like_before(
     sheet: Sheet, staff: int | None, start: int, end: int, before: int
 ) -> tuple[int, int] | None:
@@ -1700,10 +1738,7 @@ def like_before(
     (the same keys); ``LIKE_SHARE`` of them at least, ties to the latest. A chorus that repeats is found; a
     passage made of the same octave played again matches too, and that is a pattern as well. ``(first frame, end
     frame)``, or ``None``."""
-    cols: dict[int, list[int]] = defaultdict(list)
-    for n in sheet.notes:
-        if (staff is None or n.staff == staff) and not n.covered:
-            cols[n.frame].append(n.midi)
+    cols = _like_columns_of(sheet, staff)
     frames = sorted(cols)
     keys = [tuple(sorted(cols[f])) for f in frames]
     i0, i1, last = (bisect_left(frames, f) for f in (start, end, before))
@@ -1773,6 +1808,11 @@ def simplify_prompt(
         'simplicity only (section "Simplicity": simple.1 uniform patterns, simple.2 the amateur pianist, within '
         "simple.3 and simple.4). The hands, the beam groups, the clefs and the figures are decided and stay as they "
         f"are: you only choose the notes to leave out and to add.{stays}",
+        "simple.3 asks to keep the name of each note; here that is a recommendation with one exception. A note may "
+        "change its name (one note left out and one added in the same column of a hand) when that makes this "
+        "passage the same as the earlier passage like it, which has the new note at the same place; say so in the "
+        'reason. Example: "# leave out f1200 A3: the chorus has A2+F3 here every other time" with "# add f1200 F3: '
+        'as in the earlier chorus". Without an earlier passage like this one that has it, keep the name.',
     ]
     if index:
         if so_far:
@@ -1837,11 +1877,20 @@ _CHANGE = re.compile(r"^\s*#\s*(leave out|add)\s+f(\d+)\s+([A-G][#b]*-?\d+)(.*)$
 _NO_CHANGE = re.compile(r"#\s*no change", re.I)
 
 
-def check_simplify(reply: str, target: Sheet) -> tuple[list[str], list[Change]]:
+def check_simplify(
+    reply: str,
+    target: Sheet,
+    *,
+    like: Sheet | None = None,
+    aligned: dict[int, list[int]] | None = None,
+) -> tuple[list[str], list[Change]]:
     """The problems of a Simplify reply (empty: accepted) and its changes. The reply is the change lines (``# leave
     out f120 G2: why``, ``# add f240 D1: why``) or ``# no change``. A note left out is a note of the target; a note
     added is not, and joins a column of the target, in the hand of the nearest note of that column (Simplify of
-    one hand: that hand); then the limits of prompt 6 (:func:`simplicity`)."""
+    one hand: that hand); then the limits of prompt 6 (:func:`simplicity`). A note whose name changes (a column of
+    a hand that loses a note and gains one of a name it did not have) is accepted only when the earlier passage like
+    this one (``like``, as simplified) has the new note at the same place (``aligned``: the batch's frame -> its
+    frames, :func:`like_columns`): the user's decision after the Phase 4 gallery."""
     lines = _CHANGE.findall(reply)
     if not lines:
         if _NO_CHANGE.search(reply):
@@ -1897,8 +1946,33 @@ def check_simplify(reply: str, target: Sheet) -> tuple[list[str], list[Change]]:
             step, alter, octave = spell(c.midi, key)
             notes.append(Note(None, c.staff, step, alter, octave, frame=c.frame))
     answer = Sheet(notes=notes, clefs=dict(target.clefs), key=key).sort()
-    errs = simplicity(target, answer, left, added)
+    errs = simplicity(target, answer, left, added) + renamed(target, changes, like, aligned or {})
     return errs, ([] if errs else changes)
+
+
+def renamed(
+    target: Sheet, changes: list[Change], like: Sheet | None, aligned: dict[int, list[int]]
+) -> list[str]:
+    """The notes whose name a Simplify answer changes without the earlier passage like this one to back it, as
+    problems (see :func:`check_simplify`)."""
+    out = []
+    gone = {(c.frame, c.staff) for c in changes if not c.added}
+    for c in changes:
+        if not c.added or (c.frame, c.staff) not in gone:
+            continue
+        names = {n.midi % 12 for n in target.notes if n.frame == c.frame and n.staff == c.staff}
+        if c.midi % 12 in names:
+            continue
+        same = set(aligned.get(c.frame, ()))
+        if like is not None and any(
+            n.frame in same and (n.staff, n.midi) == (c.staff, c.midi) for n in like.notes
+        ):
+            continue
+        out.append(
+            f"f{c.frame} {c.pitch} takes the place of a note of another name: keep the name of each note "
+            "(simple.3), unless the earlier passage like this one has this note at the same place"
+        )
+    return out
 
 
 def _changed(
@@ -1994,6 +2068,8 @@ def write_simplify(
         else:
             target = _slice(current, a, b, staffs)
             like = like_before(current, staff, a, b, max(0, a - back))
+            like_sheet = _slice(work, *like, staffs) if like else None
+            aligned = like_columns(current, staff, a, b, like) if like else {}
             prompt = simplify_prompt(
                 sid=sid,
                 staff=staff,
@@ -2003,7 +2079,7 @@ def write_simplify(
                 context=_slice(work, max(0, a - back), a, staffs) if k else None,
                 lookahead=_slice(current, b, b + int(LOOKAHEAD_MS / FRAME_MS), staffs),
                 so_far=changes,
-                like=_slice(work, *like, staffs) if like else None,
+                like=like_sheet,
                 like_changes=[c for c in changes if like and like[0] <= c.frame < like[1]],
                 check=places(
                     [n for n in current.notes if a <= n.frame < b and n.staff in staffs], quarter_ms
@@ -2015,7 +2091,7 @@ def write_simplify(
                 while log.replies < max_checks:
                     reply = complete(system, messages)
                     log.replies += 1
-                    errs, found = check_simplify(reply, target)
+                    errs, found = check_simplify(reply, target, like=like_sheet, aligned=aligned)
                     if not errs:
                         break
                     log.errors.append(errs)

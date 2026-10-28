@@ -44,14 +44,14 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] Task 3.6 The real run on 7 Years (My library version), after the user's ok and the decision above: on the edit copy, the same six notes as the test, $0.63.
 - [x] Task 3.7 The user checks 7 Years in the browser (2026-10-27: ok).
 
-# [p] Phase 4: The Enhance with AI dialog and Simplify
+# [x] Phase 4: The Enhance with AI dialog and Simplify
 
 - [x] Task 4.1 Study: the stretch path today, the size of one-hand windows, finding the earlier passage like the current one, what each batch sees.
 - [x] Task 4.2 The dialog: a stretch (both hands, right, left, the user's words) and the whole song (Simplify left, right, both; Write it all again), with the cost.
 - [x] Task 4.3 A stretch with one hand: the other hand fixed (prompt, check, splice); tests with recorded answers.
 - [x] Task 4.4 Simplify: batch after batch, each seeing the simplifications before (the answer is the change lines with their reasons); the check; storing, the record, one step of undo; tests with recorded answers.
 - [x] Task 4.5 Tests with the AI on temporary copies (the user agreed, $0.40): a stretch of one hand and Simplify left on 7 Years, Simplify left on Moonlight Shadow; gallery `gallery/phase-4/`.
-- [p] Task 4.6 Checks: `check:enhance-dialog` on a temporary copy, the existing checks; the user checks in the browser, and decides on a note whose name the AI changed (report section 8).
+- [x] Task 4.6 Checks: `check:enhance-dialog` on a temporary copy, the existing checks; the user checks in the browser (a run of one hand now veils only that staff), and decides on a note whose name the AI changed (report section 8: allowed only as the earlier passage like it has it).
 
 # [ ] Phase 5: Documentation and closing
 

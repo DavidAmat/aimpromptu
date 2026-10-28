@@ -432,6 +432,9 @@ Sections 3.5 and 4.4. Backend and frontend.
 - A stretch's **Right** / **Left** (the range toolbox, the dialog) now means that hand only, the other fixed; before,
   it only told the AI which hand the user had picked.
 - New browser check `npm run check:enhance-dialog` (a stand-in answers the requests that would start the AI).
-- Open, for the user: the AI changed a note's name (La 3 to Fa 3 at 2:09.56 of 7 Years) to match the four other times
-  the chorus plays; the prompt forbids a change of name and the check let it pass (report section 8).
+- The AI changed a note's name (La 3 to Fa 3 at 2:09.56 of 7 Years) to match the other times the chorus plays. The
+  user's decision (2026-10-28): keeping the name is a recommendation; Simplify may change it when the earlier passage
+  like this one has the new note at the same place (found by the 2 columns around it), and the check refuses it
+  otherwise (report section 8).
+- After the user's check: a run of one hand veils only that staff on the page (the segments carry `staff`).
 

@@ -403,7 +403,9 @@ the answer of GET /sheet/{part}                                        ~40-70 ms
   (`simplify_windows`, about twice a window: one hand is less text). The hands, the beams and the clefs are fixed:
   a batch answers only the change lines, with why (`# leave out f1822 G2: ...`, `# add f4556 D1: ...`, or `# no
   change`), read by `check_simplify` (a note left out is a note of the target; a note added joins a column of the
-  target, in the hand of the nearest note there; then the limits of `simplicity`). The batches are auto-regressive:
+  target, in the hand of the nearest note there; then the limits of `simplicity`; a note whose name changes only
+  when the earlier passage like this one has it at the same place, found by the 2 columns around it: `renamed`,
+  `like_columns`). The batches are auto-regressive:
   each sees every change made before it with its reason, the earlier passage most like it as simplified, with its
   changes (`like_before`: the most columns in runs of 4 columns with the same keys, 30 % at least, ending before
   the context), and the last 8 s of the previous batch as simplified. The run is stored at the end as one step

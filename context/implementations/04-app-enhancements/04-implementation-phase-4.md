@@ -15,7 +15,7 @@ State: built and tested (2026-10-27); waiting for the user's check in the browse
 | 4.3 A stretch of one hand | `llm/frames.py`: `window_prompt(fixed=)`, `stretch_request(staff=)`, `check_answer(hand=)`, `write_stretch(staff=)`, `splice(keep=)`; `edits.apply_stretch(staff=)` (section 4) |
 | 4.4 Simplify | `llm/frames.py`: `simplify_windows`, `like_before`, `simplify_prompt`, `check_simplify`, `write_simplify`, `Change`, `Simplified`; `part_sheet/job.py`: `start_simplify`, `costs`, `LiveRun.advanced`; `edits.apply_simplify`, `SIMPLIFY_LABELS`; `store.Record.simplified`; `api/sheet.py`: `POST /sheet/{uuid}/llm/simplify`, `GET /sheet/{uuid}/llm/costs` (section 5) |
 | 4.5 Tests with the AI | Section 6; gallery [`gallery/phase-4/index.html`](gallery/phase-4/index.html) (`aitu-backend/scripts/simplify_gallery.py`) |
-| 4.6 Checks | Section 7; new browser check `npm run check:enhance-dialog` |
+| 4.6 Checks | Section 7; new browser check `npm run check:enhance-dialog`; after the user's check, a run of one hand veils only that staff (section 5); the user's decision on a note's name (section 8: `renamed`, `like_columns`) |
 
 # 2. Study (task 4.1)
 
@@ -82,7 +82,9 @@ check** (`places`, as in prompt 6); the **look-ahead**; and the answer: change l
 reason after a colon or a dash), anywhere in the reply, or `# no change`. A note left out must be a note of the target;
 a note added must join a column of the target and not be there already; its hand is the hand of the nearest note of
 that column (one hand: that hand). Then the limits of prompt 6 (`simplicity`: a column never emptied, an added note
-within an octave and with a name of its column or of the 8 columns around, at most a tenth of the target). A reply
+within an octave and with a name of its column or of the 8 columns around, at most a tenth of the target), and the
+user's decision of section 8 (`renamed`): a note whose name changes is accepted only when the earlier passage like
+this one has it at the same place. A reply
 without lines or `# no change` is an error. A rejected reply gets `simplify_feedback` (the problems; "Write the
 corrected change lines again"), at most `MAX_CHECKS` replies; a batch that fails changes nothing; an exception that is
 not `SkipWindow` stops the later batches (the changes so far are stored).
@@ -139,7 +141,7 @@ chord at f1822; La 2 + Fa 3 at f3239; the single-note arpeggios of Moonlight Sha
 
 | Check | Result |
 |---|---|
-| `pytest` (CPU, GPU hidden) | 1,267 passed; 2 failed, the two known Transkun tests (they load their weights only on the GPU) |
+| `pytest` (CPU, GPU hidden) | 1,267 passed; 2 failed, the two known Transkun tests (they load their weights only on the GPU). After the user's check (the one-staff veil, the decision of section 8): 1,269 passed, the same 2 failed |
 | Sheet tests (`tests/test_sheet_*.py`, `test_part_sheet.py`, `test_paste.py`) | 284 passed, before the AI tests |
 | `black` | the changed files formatted |
 | `tsc -b`, `eslint .`, `vite build` | pass |
@@ -147,14 +149,24 @@ chord at f1822; La 2 + Fa 3 at f3239; the single-note arpeggios of Moonlight Sha
 | `check:frames-tools`, `check:frames-sheet`, `check:frames-page`, `check:frames-edit`, `check:frames-toolbox` | all passed |
 | `scripts/docs/check-links.py` | 428 files, 0 broken links |
 
-# 8. Open: a note that changed its name (a decision of the user)
+# 8. A note that changed its name (decided)
 
 At f3239 (2:09.56) the AI's Simplify left out A3 and added F3 in the left hand: the transcription has A2 + A3 there,
 and the four other times this chorus plays (f1839, f2039, f2239, f2439) the left hand has A2 + F3. The AI made it match
 them, which is what the user asked ("uses the same simplification"), but simple.3 says never to change a pitch to
 another name, and the check let it pass: F is a name of the 8 columns around, and the column keeps A2 within an
-octave. The walkthrough asks the user whether to allow it (formally: a name taken from the same place of the earlier
-passage like this one) or to forbid it (a note left out and one added in one column of a hand keep the name).
+octave. The walkthrough asked the user whether to allow it.
+
+**The user's decision** (2026-10-28): keeping each note's name is the recommendation; Simplify may change a name for
+a good cause, a simplification, and the cause is the earlier passage like this one. A name change is a column of a hand
+that loses a note and gains one of a name the column did not have. `renamed` (in `check_simplify`) accepts it only when
+the earlier passage like this one (as simplified) has the new note at the same place, and the AI's answer gets the
+problem back otherwise. The same place is found by what surrounds it, not by counting columns (`like_columns`: the
+columns of the earlier passage with the same 2 columns before and after, `SAME_PLACE`): counting put f3239 at f2177
+(F2 + F3), the surrounding columns at f2039, f2239 and f2439 (A2 + F3), the three chorus places. The batch prompt says
+it (simple.3 as a recommendation, with one exception and an example); the shared rules of prompt 6 do not change.
+Checked on the stored sheet of 7 Years without the AI: the change at f3239 is accepted with the chorus and refused
+without it. Test: `test_a_note_changes_its_name_only_as_the_earlier_passage_like_it_has_it`.
 
 # 9. Notes for later
 

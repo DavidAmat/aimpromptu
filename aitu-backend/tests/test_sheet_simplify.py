@@ -156,6 +156,37 @@ def test_an_earlier_passage_like_the_batch_is_found_and_a_new_one_is_not() -> No
     assert llm.like_before(sheet, 1, 200, 260, 190) is None  # no right hand
 
 
+def test_a_note_changes_its_name_only_as_the_earlier_passage_like_it_has_it() -> None:
+    # 7 Years at 2:09.56: the left hand's A2+A3 where the chorus has A2+F3 every other time.
+    def run(chords: list[str], start: int) -> str:
+        return "".join(f"f{start + 6 * i} L: {c}:8\n" for i, c in enumerate(chords))
+
+    chorus = ["A2,F3", "C3", "F3", "A2,F3", "C3", "F3", "A2,F3", "C3", "F3", "A2,F3"]
+    again = chorus[:3] + ["A2,A3"] + chorus[4:]
+    sheet = f1.read(HEAD + run(chorus, 0) + run(again, 200))
+    target = f1.read(HEAD + run(again, 200))
+    like = llm.like_before(sheet, 2, 200, 260, 190)
+    assert like == (0, 55)
+    aligned = llm.like_columns(sheet, 2, 200, 260, like)
+    assert aligned[218] == [18, 36]  # the chorus repeats every three columns
+    earlier = f1.read(HEAD + run(chorus, 0))
+    reply = "```\n# leave out f218 A3: the chorus has A2+F3 here\n# add f218 F3: as in the earlier chorus\n```"
+
+    errs, changes = llm.check_simplify(reply, target, like=earlier, aligned=aligned)
+    assert errs == [] and [(c.frame, c.midi, c.added) for c in changes] == [
+        (218, 57, False),
+        (218, 53, True),
+    ]
+    # Without the earlier passage, or when it does not have the new note there, the name stays.
+    assert any(
+        "takes the place of a note of another name" in e
+        for e in llm.check_simplify(reply, target)[0]
+    )
+    other = f1.read(HEAD + run(again[:6] + ["A2,A3"] + again[7:], 0))  # A3 at both places
+    errs = llm.check_simplify(reply, target, like=other, aligned=aligned)[0]
+    assert any("f218 F3 takes the place" in e for e in errs)
+
+
 def stand_in(prompts: list[str], *, every: bool = True):
     """A ``complete`` for Simplify: the first single note of each target (or only of the first) gets the note an
     octave below it, as the missing note of an octave."""
