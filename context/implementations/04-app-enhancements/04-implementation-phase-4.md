@@ -91,6 +91,8 @@ not `SkipWindow` stops the later batches (the changes so far are stored).
 copies the nearest note of its hand in its column: figure, beam group, 8va; its length is the longest note of its hand
 there); `LiveRun.advanced(text)` makes it the page's sheet and its segments `llm` (done), `working`, `waiting`, so the
 page veils the batch at work and reveals each one that comes back. Edits are closed meanwhile (same job key).
+With one hand (Simplify left or right, a stretch of one hand) `LiveRun.staff` names it and each segment the page
+gets carries `staff`: the veil and the reveal cover only that staff, the other hand stays as it is to see.
 
 **Storing** (`edits.apply_simplify`, under the part's lock): `change_notes` (the notes left out removed, the added ones
 written into `notes.pmn`), `save_edit(notes_changed=True, hands_changed=False)`, the working sheet laid on the new notes

@@ -2,7 +2,8 @@
 
 * `GET /sheet/{uuid}?width=N` — the sheet as it is now, drawn for a page `N` staff spaces wide: the SVG (a
   `data-note="<frame>:<midi>"` on every notehead), one row per drawn column (system, frame, x, ms: the cursor map),
-  one box per system, the segments of the piece-by-piece view and their state, and the state of Sonnet on the part.
+  one box per system, the segments of the piece-by-piece view and their state (with the staff the AI writes, when
+  it writes one hand), and the state of Sonnet on the part.
   While Sonnet writes, the answer is the sheet of that moment (`part_sheet.job.LiveRun`).
 * `POST /sheet/{uuid}/llm` — start Sonnet on the part (or answer the run already going). The page follows the job
   on `GET /matrix/progress/{jobId}`: an `event: sheet` message each time the sheet changes, then `event: done`.
@@ -150,6 +151,8 @@ def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
     running = job.job_of(audio_uuid)
     run = job.live(audio_uuid) if running is not None else None
     drawn = build.current(audio_uuid)
+    # The staff of a run of one hand: the page veils only that staff of the segment at the AI.
+    staff = run.staff if run is not None else None
     if run is not None:
         text, segments = run.text(), run.segments()
     else:
@@ -166,7 +169,10 @@ def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
         note["end"] = ends.get(note["ref"])
     return {
         **picture,
-        "segments": [{"start": a, "end": b, "state": s} for a, b, s in segments],
+        "segments": [
+            {"start": a, "end": b, "state": s, **({"staff": staff} if staff is not None else {})}
+            for a, b, s in segments
+        ],
         "source": drawn.source,
         "stale": drawn.stale,
         "llm": _llm_state(audio_uuid, drawn, running),

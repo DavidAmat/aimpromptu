@@ -618,7 +618,8 @@ described in git history and in [`deprecated/time-matrix.md`](../../deprecated/t
   current notes when they or the hands changed (`stale: true`); the algorithm's on the starting hands when none
   is stored. While Sonnet writes it is the sheet of that moment.
 - `segments`: Sonnet's windows (`working`: at Sonnet now; `waiting`; `llm`; `algorithm`: a window that failed);
-  empty on a sheet Sonnet never wrote.
+  empty on a sheet Sonnet never wrote. While the AI writes one hand only (Simplify of one hand, a stretch of one
+  hand; implementation 04, Phase 4) each segment also has `staff` (1 right, 2 left): the page veils only that staff.
 - `llm.auto`: a new transcription asked for Sonnet (`sheet.pending`) and the user may change the part: the page
   starts it. `canRun`: **Enhance with AI** is offered (on a sheet the AI enhanced, as **Enhance it again with AI**).
   `enhanced`: the AI wrote this sheet or part of it (`sheet.f1` with source `llm` or `mixed`); it stays through

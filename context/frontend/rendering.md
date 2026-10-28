@@ -30,7 +30,8 @@ line. The code is `pages/piece/sheet/frames/`:
 - `FramesSheetView.tsx`: the SVG as the backend wrote it, scaled to the page, and an overlay in the same units:
   the cursor (a line between two columns by their times), the lit noteheads of its column, the pale veil on the
   part Sonnet works on, and the blank staves that a part coming back from Sonnet is written into, column by
-  column (about two seconds); since Phase 6 also the picking of notes (a click on a notehead, ⌘ or Shift to add,
+  column (about two seconds; when the AI writes one hand only, the segment's `staff`, both cover only that staff,
+  cut halfway between the staves by `geometry.onStaff`); since Phase 6 also the picking of notes (a click on a notehead, ⌘ or Shift to add,
   a box dragged across the staves), and since Phase 7 the marking of a stretch in the strip above the upper staff
   of a line, drawn as a lavender band over the staves in scope; since implementation 04, Phase 1, the cursor
   dragged and dropped (`grab`, `grabbing`, across lines, the page scrolled near the window's edges, a seek on

@@ -120,6 +120,9 @@ class LiveRun:
     extras: Any = None
     #: Simplify (implementation 04, Phase 4): the batches done; the others are ``working`` and ``waiting``.
     done: int = 0
+    #: The hand the AI writes (1 right, 2 left) when it writes one hand only, Simplify or a stretch; the page veils
+    #: only that staff. ``None``: both hands.
+    staff: int | None = None
     _text: tuple[int, str] | None = None
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
@@ -423,7 +426,7 @@ def start_stretch(
             raise FileNotFoundError("This part has no notes.")
         notes_revision = stored.header.notes_revision
         drawn, current, notes = _as_drawn(part_id)
-        run = LiveRun(part_id, drawn.text, [(start, end)])
+        run = LiveRun(part_id, drawn.text, [(start, end)], staff=staff if staff in (1, 2) else None)
         with _live_lock:
             _live[part_id] = run
         try:
@@ -516,7 +519,7 @@ def start_simplify(
         notes_revision = stored.header.notes_revision
         drawn, current, notes = _as_drawn(part_id)
         staff = HANDS[hand]
-        run = LiveRun(part_id, drawn.text, simplify_windows(current, staff))
+        run = LiveRun(part_id, drawn.text, simplify_windows(current, staff), staff=staff)
         with _live_lock:
             _live[part_id] = run
         try:

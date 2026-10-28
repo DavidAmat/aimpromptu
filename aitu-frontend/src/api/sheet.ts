@@ -40,6 +40,8 @@ export interface SheetSegment {
   start: number;
   end: number;
   state: "llm" | "algorithm" | "working" | "waiting";
+  /** While the AI writes one hand only (Simplify or a stretch of one hand): its staff, 1 right or 2 left. */
+  staff?: 1 | 2;
 }
 
 export interface SheetLlm {

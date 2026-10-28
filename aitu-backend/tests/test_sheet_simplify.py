@@ -251,6 +251,24 @@ def test_simplify_left_stores_the_notes_as_one_step_and_keeps_the_right_hand(
     assert new <= set(notes_of(again))
 
 
+def test_while_one_hand_is_simplified_the_segments_name_its_staff(
+    client: TestClient, part: str
+) -> None:
+    prompts: list[str] = []
+    seen: list[list] = []
+    write = stand_in(prompts)
+
+    def watched(system: str, messages: list[dict]) -> str:
+        seen.append([(s["state"], s.get("staff")) for s in sheet(client, part)["segments"]])
+        return write(system, messages)
+
+    finish(job.start_simplify(part, hand="left", complete=lambda: watched))
+    assert seen and all(staff == 2 for states in seen for _, staff in states)
+    assert all(("working", 2) in states for states in seen)
+    # After the run, and for a run of both hands, no staff: the page veils the whole line.
+    assert all("staff" not in s for s in sheet(client, part)["segments"])
+
+
 def test_simplify_that_changes_nothing_stores_only_the_run(client: TestClient, part: str) -> None:
     before = sheet(client, part)
 

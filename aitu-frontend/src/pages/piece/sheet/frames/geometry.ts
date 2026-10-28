@@ -86,6 +86,16 @@ export function boxesOf(
   return out;
 }
 
+/**
+ * A box cut to one staff of its line, `1` the right hand's (above) or `2` the left hand's (below): the two meet halfway
+ * between the staves. Without a staff, the box as it is.
+ */
+export function onStaff(box: Box, system: SheetSystem | undefined, staff: 1 | 2 | undefined): Box {
+  if (!staff || !system) return box;
+  const middle = (system.staff_top + system.staff_bottom) / 2;
+  return staff === 1 ? { ...box, height: middle - box.y } : { ...box, y: middle, height: box.y + box.height - middle };
+}
+
 /** The indices of the columns of a segment or a marked stretch: `[first, end)`. */
 export function columnsOf(
   segment: Pick<SheetSegment, "start" | "end">,
