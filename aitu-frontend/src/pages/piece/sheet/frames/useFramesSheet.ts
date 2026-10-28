@@ -12,6 +12,7 @@
  *
  * A stretch the AI writes again with the user's words (Phase 7) is a job like a whole run: the page follows it the
  * same way, and the job's last message says when no answer was accepted (`notice`: the stretch stays as it was).
+ * So is **Simplify** (implementation 04, Phase 4): its last message says how many notes the AI added and left out.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -20,6 +21,38 @@ import { said } from "../../../library/shared";
 
 /** Messages closer than this are read as one. */
 const JOIN_MS = 250;
+
+type Hand = "left" | "right" | "both";
+
+/** The end of a job, as its last message sums it up. */
+interface Summary {
+  stretch?: string;
+  simplify?: string;
+  hand?: Hand;
+  added?: number;
+  leftOut?: number;
+}
+
+const HAND_WORDS: Record<Hand, string> = { left: "the left hand", right: "the right hand", both: "both hands" };
+
+function notes(count: number): string {
+  return `${count} note${count === 1 ? "" : "s"}`;
+}
+
+/** What the page says when a stretch or Simplify ends without the result the user expects; `null`: nothing. */
+function endNotice(summary: Summary): string | null {
+  if (summary.stretch === "failed") return "The AI could not write this stretch again. It stays as it was.";
+  if (summary.stretch === "stale") return "The notes changed while the AI worked. The stretch stays as it was.";
+  const where = summary.hand ? ` in ${HAND_WORDS[summary.hand]}` : "";
+  if (summary.simplify === "none") return `The AI found nothing to simplify${where}.`;
+  if (summary.simplify === "failed") return "The AI could not simplify the sheet. It stays as it was.";
+  if (summary.simplify === "stale") return "The notes changed while the AI worked. The sheet stays as it was.";
+  if (summary.simplify === "ok") {
+    const parts = [summary.added ? `added ${notes(summary.added)}` : "", summary.leftOut ? `left out ${notes(summary.leftOut)}` : ""];
+    return `The AI ${parts.filter(Boolean).join(" and ")}${where}.`;
+  }
+  return null;
+}
 
 export interface FramesSheetState {
   sheet: FramesSheet | null;
@@ -35,6 +68,8 @@ export interface FramesSheetState {
   editError: string | null;
   /** Ask the AI to write a stretch again with the user's words (Phase 7). */
   enhanceStretch: (stretch: StretchRequest) => Promise<void>;
+  /** Ask the AI to simplify one hand, or both, over the whole song (implementation 04, Phase 4). */
+  simplify: (hand: Hand) => Promise<void>;
   /** A quiet word after the AI could not write a stretch again; cleared by the next edit or request. */
   notice: string | null;
 }
@@ -101,9 +136,9 @@ export function useFramesSheet(
       again();
       changed.current?.();
       try {
-        const summary = JSON.parse((event as MessageEvent<string>).data ?? "{}") as { stretch?: string };
-        if (summary.stretch === "failed") setNotice("The AI could not write this stretch again. It stays as it was.");
-        if (summary.stretch === "stale") setNotice("The notes changed while the AI worked. The stretch stays as it was.");
+        const summary = JSON.parse((event as MessageEvent<string>).data ?? "{}") as Summary;
+        const word = endNotice(summary);
+        if (word) setNotice(word);
       } catch {
         // A message without a summary: nothing to say.
       }
@@ -151,6 +186,21 @@ export function useFramesSheet(
     [audioUuid],
   );
 
+  const simplify = useCallback(
+    async (hand: Hand) => {
+      setNotice(null);
+      setEditError(null);
+      try {
+        await sheetApi.simplify(audioUuid, hand);
+        setReload((value) => value + 1);
+        changed.current?.();
+      } catch (caught) {
+        setEditError(said(caught, "The AI could not be asked."));
+      }
+    },
+    [audioUuid],
+  );
+
   const edit = useCallback(
     async (call: () => Promise<SheetEdited>) => {
       if (editing) return null;
@@ -171,5 +221,5 @@ export function useFramesSheet(
     [audioUuid, editing],
   );
 
-  return { sheet, error, run, starting, edit, editing, editError, enhanceStretch, notice };
+  return { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, notice };
 }

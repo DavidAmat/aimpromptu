@@ -393,6 +393,30 @@ the answer of GET /sheet/{part}                                        ~40-70 ms
   drawn column moved by a frame or two (the first note of its chord taken off).
 - Tests: `tests/test_sheet_reading.py`. Command: `scripts/tools_gallery.py` (the Phase 7 gallery). Browser check:
   `npm run check:frames-tools` (aitu-frontend; `--live` makes one stretch request, about $0.01).
+- **A stretch of one hand** (implementation 04, Phase 4): `write_stretch(staff=1 or 2)`. The target holds that
+  hand's notes; the other hand is shown after it as fixed (`window_prompt(fixed=)`); `check_answer(hand=)` refuses a
+  note written in the other hand; `splice(keep=)` keeps the other hand's notes, beams and clefs as they were; and
+  `apply_stretch(staff=)` sets as by hand only the figures of the AI's hand.
+- **Simplify** (implementation 04, Phase 4; `llm.frames.write_simplify`, `job.start_simplify`, `POST
+  /sheet/{part}/llm/simplify` with `{hand: left | right | both}`): the rules of simplicity only (simple.1 to simple.4
+  of prompt 6) over the whole song, on the sheet as it is now. Batches of one hand (or both) of 24 to 32 s
+  (`simplify_windows`, about twice a window: one hand is less text). The hands, the beams and the clefs are fixed:
+  a batch answers only the change lines, with why (`# leave out f1822 G2: ...`, `# add f4556 D1: ...`, or `# no
+  change`), read by `check_simplify` (a note left out is a note of the target; a note added joins a column of the
+  target, in the hand of the nearest note there; then the limits of `simplicity`; a note whose name changes only
+  when the earlier passage like this one has it at the same place, found by the 2 columns around it: `renamed`,
+  `like_columns`). The batches are auto-regressive:
+  each sees every change made before it with its reason, the earlier passage most like it as simplified, with its
+  changes (`like_before`: the most columns in runs of 4 columns with the same keys, 30 % at least, ending before
+  the context), and the last 8 s of the previous batch as simplified. The run is stored at the end as one step
+  (`edits.apply_simplify`, "Simplify the left hand with AI"): the notes left out removed and the added ones written
+  in `notes.pmn` (`edits.change_notes`), the sheet laid on them (`build.reapply`: the rules cut the beam groups and
+  fit the clefs around the changed notes); no hand moves. `Record.simplified` lists each run `[hand, added, left
+  out, usd, written, change lines]`. Cost, measured: about $0.04 for the first request of a run (it writes the
+  instructions into the cache) and about $0.01 to $0.02 a batch: $0.10 for the left hand of 7 Years, $0.21 for
+  Moonlight Shadow. `GET /sheet/{part}/llm/costs` gives the dialog these estimates (`job.costs`). Tests:
+  `tests/test_sheet_simplify.py`; gallery: `scripts/simplify_gallery.py`; browser check: `npm run
+  check:enhance-dialog` (no AI request).
 
 ## 15. The sheet toolbox, lyrics and the sheet on paper (implementation 03, Phase 8A)
 

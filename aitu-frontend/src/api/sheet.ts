@@ -40,6 +40,8 @@ export interface SheetSegment {
   start: number;
   end: number;
   state: "llm" | "algorithm" | "working" | "waiting";
+  /** While the AI writes one hand only (Simplify or a stretch of one hand): its staff, 1 right or 2 left. */
+  staff?: 1 | 2;
 }
 
 export interface SheetLlm {
@@ -188,6 +190,17 @@ export interface StretchRequest {
   notes?: readonly string[];
   instruction: string;
 }
+
+/** A run of the AI over the whole song (implementation 04, Phase 4): **Simplify** one hand or both, or the full run. */
+export type SongRun = "simplify-left" | "simplify-right" | "simplify-both" | "all";
+
+/** About what one run of the Enhance with AI dialog costs: its requests and US dollars. */
+export interface LlmCost {
+  requests: number;
+  usd: number;
+}
+
+export type LlmCosts = Record<SongRun | "stretch", LlmCost>;
 
 /** What the next undo and redo of the part's steps are about (`null`: nothing). */
 export interface SheetHistory {
@@ -412,6 +425,16 @@ export const sheetApi = {
       method: "POST",
       body: stretch,
     }),
+
+  /** The AI simplifies one hand, or both, over the whole song; follow the job on `progressUrl(jobId)`. */
+  simplify: (audioUuid: string, hand: "left" | "right" | "both") =>
+    request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm/simplify`, {
+      method: "POST",
+      body: { hand },
+    }),
+
+  /** About what each run of the Enhance with AI dialog would cost. */
+  llmCosts: (audioUuid: string, signal?: AbortSignal) => request<LlmCosts>(`/sheet/${audioUuid}/llm/costs`, { signal }),
 
   /** What a reading edit would leave, without storing it (the preview of Transpose figures). */
   previewRead: (audioUuid: string, edit: ReadingEdit, width: number) =>

@@ -307,14 +307,13 @@ def test_the_ai_writes_a_stretch_again_with_the_users_words_as_one_step(
             start=a,
             end=b,
             instruction="all these notes are in the right hand",
-            staff=2,
             complete=lambda: stretch_stand_in(log),
         )
     )
     assert len(log) == 1
     prompt = log[0]
     assert "A stretch of song" in prompt and "all these notes are in the right hand" in prompt
-    assert "now in the left hand (L:)" in prompt and "fg" not in prompt.split("## Target")[1]
+    assert "both hands" in prompt and "fg" not in prompt.split("## Target")[1]
 
     after = sheet(client, part)
     inside = [n for n in after["notes"] if a <= frame(n["ref"]) < b]

@@ -2,7 +2,8 @@
 
 * `GET /sheet/{uuid}?width=N` — the sheet as it is now, drawn for a page `N` staff spaces wide: the SVG (a
   `data-note="<frame>:<midi>"` on every notehead), one row per drawn column (system, frame, x, ms: the cursor map),
-  one box per system, the segments of the piece-by-piece view and their state, and the state of Sonnet on the part.
+  one box per system, the segments of the piece-by-piece view and their state (with the staff the AI writes, when
+  it writes one hand), and the state of Sonnet on the part.
   While Sonnet writes, the answer is the sheet of that moment (`part_sheet.job.LiveRun`).
 * `POST /sheet/{uuid}/llm` — start Sonnet on the part (or answer the run already going). The page follows the job
   on `GET /matrix/progress/{jobId}`: an `event: sheet` message each time the sheet changes, then `event: done`.
@@ -17,7 +18,10 @@
   `part_sheet.edits.paste_passage`): its notes, its sheet and its audio; one step of undo.
 * `GET /sheet/{uuid}/stretch?start=A&end=B` — the armadura in force at a stretch and the one with the fewest signs
   over it. `POST /sheet/{uuid}/llm/stretch` — the AI writes a stretch again with the user's words (one request,
-  in the background; the page follows the job as for a whole run).
+  in the background; the page follows the job as for a whole run), of both hands or of one (the other fixed).
+* `POST /sheet/{uuid}/llm/simplify` — the AI simplifies one hand, or both, over the whole song, batch after batch
+  (implementation 04, Phase 4); one step of undo. `GET /sheet/{uuid}/llm/costs` — what each run of the Enhance with
+  AI dialog would cost, about.
 * `GET` and `PUT /sheet/{uuid}/words` — the pasted lyrics of the part and its pool of pieces (the Lyrics tab), kept
   in `project.json`, not in the sheet (moved from `/time/{uuid}/lyrics` in implementation 03, Phase 10).
 
@@ -147,6 +151,8 @@ def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
     running = job.job_of(audio_uuid)
     run = job.live(audio_uuid) if running is not None else None
     drawn = build.current(audio_uuid)
+    # The staff of a run of one hand: the page veils only that staff of the segment at the AI.
+    staff = run.staff if run is not None else None
     if run is not None:
         text, segments = run.text(), run.segments()
     else:
@@ -163,7 +169,10 @@ def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
         note["end"] = ends.get(note["ref"])
     return {
         **picture,
-        "segments": [{"start": a, "end": b, "state": s} for a, b, s in segments],
+        "segments": [
+            {"start": a, "end": b, "state": s, **({"staff": staff} if staff is not None else {})}
+            for a, b, s in segments
+        ],
         "source": drawn.source,
         "stale": drawn.stale,
         "llm": _llm_state(audio_uuid, drawn, running),
@@ -437,6 +446,34 @@ def run_llm_stretch(audio_uuid: str, body: StretchRequest = Body(...)) -> dict[s
     except job.Busy as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"jobId": started.id, "status": started.status}
+
+
+class SimplifyRequest(BaseModel):
+    hand: Literal["both", "right", "left"]
+
+
+@router.post("/{audio_uuid}/llm/simplify", status_code=202)
+def run_llm_simplify(audio_uuid: str, body: SimplifyRequest = Body(...)) -> dict[str, str]:
+    """The AI simplifies one hand, or both, over the whole song, in the background; the page follows the job."""
+    _notes_or_404(audio_uuid)
+    if not job.available():
+        raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
+    if not _writes(audio_uuid):
+        raise HTTPException(status_code=403, detail="This sheet cannot be changed here.")
+    try:
+        started = job.start_simplify(audio_uuid, hand=body.hand)
+    except job.Busy as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"jobId": started.id, "status": started.status}
+
+
+@router.get("/{audio_uuid}/llm/costs")
+def llm_costs(audio_uuid: str) -> dict[str, Any]:
+    """What each run of the Enhance with AI dialog would cost, about: requests and US dollars."""
+    _notes_or_404(audio_uuid)
+    return job.costs(audio_uuid)
 
 
 @router.post("/{audio_uuid}/undo")

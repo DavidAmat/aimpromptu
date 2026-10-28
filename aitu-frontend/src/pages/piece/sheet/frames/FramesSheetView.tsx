@@ -50,7 +50,7 @@ import Box from "@mui/material/Box";
 import { keyframes } from "@mui/material/styles";
 import type { FramesSheet, LyricFont } from "../../../../api";
 import { palette, semantic } from "../../../../ui";
-import { boxesOf, columnEdges, columnsOf, headsByColumn, msAtPoint, placeAt, steadyColumns } from "./geometry";
+import { boxesOf, columnEdges, columnsOf, headsByColumn, msAtPoint, onStaff, placeAt, steadyColumns } from "./geometry";
 import { LYRIC_LEADING, LYRIC_MAX, LYRIC_MIN, familyOf, wrapWords } from "./lyricsText";
 
 /** The reveal of a segment takes about this long, whatever its number of columns. */
@@ -226,6 +226,8 @@ interface Reveal {
   to: number;
   /** Columns shown so far, from `from`. */
   shown: number;
+  /** The staff the AI wrote, when it wrote one hand: only that staff is covered and drawn back. */
+  staff?: 1 | 2;
 }
 
 export function FramesSheetView({
@@ -330,7 +332,10 @@ export function FramesSheetView({
         .filter((segment) => segment.state === "working")
         .flatMap((segment) => {
           const [from, to] = columnsOf(segment, columns);
-          return boxesOf(from, to, columns, edges, sheet.systems);
+          // A run of one hand veils only its staff: the other hand stays as it is.
+          return boxesOf(from, to, columns, edges, sheet.systems).map((box) =>
+            onStaff(box, sheet.systems[box.system], segment.staff),
+          );
         }),
     [sheet.segments, columns, edges, sheet.systems],
   );
@@ -356,7 +361,9 @@ export function FramesSheetView({
       );
     if (back) {
       const [from, to] = columnsOf(back, columns);
-      if (to > from) setReveal({ from, to, shown: 0 });
+      // The run is over when its last segment comes back: its staff is the one the segment had while it worked.
+      const staff = wasWorking?.staff ?? seen.find((segment) => segment.staff)?.staff;
+      if (to > from) setReveal({ from, to, shown: 0, staff });
     }
   }
 
@@ -371,7 +378,12 @@ export function FramesSheetView({
     return () => window.clearTimeout(timer);
   }, [reveal]);
 
-  const hidden = reveal && reveal.shown < reveal.to - reveal.from ? boxesOf(reveal.from + reveal.shown, reveal.to, columns, edges, sheet.systems) : [];
+  const hidden =
+    reveal && reveal.shown < reveal.to - reveal.from
+      ? boxesOf(reveal.from + reveal.shown, reveal.to, columns, edges, sheet.systems).map((box) =>
+          onStaff(box, sheet.systems[box.system], reveal.staff),
+        )
+      : [];
 
   // ------------------------------------------------------------------ the cursor and the lit notes
 
@@ -1081,8 +1093,11 @@ export function FramesSheetView({
         ))}
         {hidden.map((box) => {
           const system = sheet.systems[box.system];
+          const staffs = reveal?.staff ? [reveal.staff] : [1, 2];
           const ys = system
-            ? [0, 1, 2, 3, 4].flatMap((i) => [system.staff_top + i, system.staff_bottom - 4 + i])
+            ? [0, 1, 2, 3, 4].flatMap((i) =>
+                staffs.map((staff) => (staff === 1 ? system.staff_top + i : system.staff_bottom - 4 + i)),
+              )
             : [];
           return (
             <g key={`r${box.system}`} data-revealing>

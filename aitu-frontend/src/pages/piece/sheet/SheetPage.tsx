@@ -9,7 +9,7 @@
  */
 
 import type { ReactNode, RefObject } from "react";
-import type { StepState } from "../../../api";
+import type { SongRun, StepState } from "../../../api";
 import type { ScorePlayerControls } from "../../../components/time/ScorePlayer";
 import { FramesSheetPage } from "./frames/FramesSheetPage";
 
@@ -51,8 +51,8 @@ export interface SheetStep {
    * browser kept under the old address (Phase 8 learning).
    */
   audioRevision?: number | undefined;
-  /** A version of My library: **Enhance with AI** opens the copy that edits it and starts there. */
-  enhanceInCopy?: () => void;
+  /** A version of My library: **Enhance with AI** opens the copy that edits it and starts the run there. */
+  enhanceInCopy?: (run: SongRun) => void;
 }
 
 /**

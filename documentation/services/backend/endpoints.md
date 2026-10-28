@@ -116,7 +116,9 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/sheet/{uuid}/reading` | Phase 7: one reading edit of the toolboxes (figure, finger, beam, grace note switch, ornament; armadura, clef, clef rules, octave line of a stretch); the sheet drawn again (section 4.1). |
 | POST | `/sheet/{uuid}/remove` | Phase 7: take notes off the page (marked removed in `notes.pmn`, one step of undo); the sheet drawn again. |
 | GET | `/sheet/{uuid}/stretch?start=A&end=B` | Phase 7: the armadura in force at a stretch and the one with the fewest signs over it. |
-| POST | `/sheet/{uuid}/llm/stretch` | Phase 7: the AI writes a stretch again with the user's words, in the background; follow `GET /matrix/progress/{jobId}`. |
+| POST | `/sheet/{uuid}/llm/stretch` | Phase 7: the AI writes a stretch again with the user's words, in the background; follow `GET /matrix/progress/{jobId}`. `staff` `right` or `left` (implementation 04, Phase 4): that hand only, the other stays as it is. |
+| POST | `/sheet/{uuid}/llm/simplify` | Implementation 04, Phase 4: `{hand: left \| right \| both}`; the AI simplifies that hand over the whole song (the rules of simplicity only), batch after batch; one step of undo. The job's `done` summary: `simplify` (`ok`, `none`, `stale`, `failed`), `hand`, `added`, `leftOut`, `usd`. 400 when the hand has no notes, 409 while the AI works on the part. |
+| GET | `/sheet/{uuid}/llm/costs` | Implementation 04, Phase 4: about what each run of the Enhance with AI dialog would cost: `{all, stretch, simplify-left, simplify-right, simplify-both}`, each `{requests, usd}`. |
 | POST | `/sheet/{uuid}/transpose` | Phase 8: Transpose notes, every note of the part and the sheet with them (one step of undo); `preview=true` stores nothing (section 4.1). |
 | POST | `/sheet/{uuid}/add` | Phase 8: a note added on the keyboard panel, into `notes.pmn` (one step of undo). |
 | POST | `/sheet/{uuid}/paste` | Phase 8B: a copied passage put in at a moment or over a stretch, its new sheet with it; one step of undo (the history version the paste kept). |
@@ -616,7 +618,8 @@ described in git history and in [`deprecated/time-matrix.md`](../../deprecated/t
   current notes when they or the hands changed (`stale: true`); the algorithm's on the starting hands when none
   is stored. While Sonnet writes it is the sheet of that moment.
 - `segments`: Sonnet's windows (`working`: at Sonnet now; `waiting`; `llm`; `algorithm`: a window that failed);
-  empty on a sheet Sonnet never wrote.
+  empty on a sheet Sonnet never wrote. While the AI writes one hand only (Simplify of one hand, a stretch of one
+  hand; implementation 04, Phase 4) each segment also has `staff` (1 right, 2 left): the page veils only that staff.
 - `llm.auto`: a new transcription asked for Sonnet (`sheet.pending`) and the user may change the part: the page
   starts it. `canRun`: **Enhance with AI** is offered (on a sheet the AI enhanced, as **Enhance it again with AI**).
   `enhanced`: the AI wrote this sheet or part of it (`sheet.f1` with source `llm` or `mixed`); it stays through

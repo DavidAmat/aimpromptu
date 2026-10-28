@@ -417,3 +417,24 @@ Sections 3.5 and 4.4. Backend and frontend.
   the user's figures, lyrics and titles kept.
 - After the gallery, the user asked for the **Enhance with AI dialog** and **Simplify** (section 3.5): a new Phase 4;
   the documentation and closing become Phase 5.
+
+**Phase 4** (2026-10-27; report [`04-implementation-phase-4.md`](04-implementation-phase-4.md)):
+
+- A Simplify batch **answers only the change lines**, each with its reason (`# add f4556 D1: D2 alone in a run of
+  D1+D2 octaves`), or `# no change`, not the notes of the hand (section 4.4 said the notes): the output is what costs,
+  the hands, beams and clefs cannot drift, and the reasons are what the later batches read. The rules lay the sheet on
+  the changed notes (beam groups, clefs).
+- Batches of 24 to 32 s (7 Years: 8 per hand, against 15 windows of a whole run). Each sees every change before it with
+  its reason, the earlier passage most like it as simplified, with its changes (runs of 4 columns with the same keys),
+  and the last 8 s of the previous batch as simplified.
+- Measured cost: $0.10 for the left hand of 7 Years, $0.21 for Moonlight Shadow; the dialog shows an estimate per run
+  (`GET /sheet/{uuid}/llm/costs`). The record keeps each Simplify run with its change lines (`Record.simplified`).
+- A stretch's **Right** / **Left** (the range toolbox, the dialog) now means that hand only, the other fixed; before,
+  it only told the AI which hand the user had picked.
+- New browser check `npm run check:enhance-dialog` (a stand-in answers the requests that would start the AI).
+- The AI changed a note's name (La 3 to Fa 3 at 2:09.56 of 7 Years) to match the other times the chorus plays. The
+  user's decision (2026-10-28): keeping the name is a recommendation; Simplify may change it when the earlier passage
+  like this one has the new note at the same place (found by the 2 columns around it), and the check refuses it
+  otherwise (report section 8).
+- After the user's check: a run of one hand veils only that staff on the page (the segments carry `staff`).
+
