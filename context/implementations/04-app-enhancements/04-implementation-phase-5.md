@@ -3,7 +3,7 @@
 Technical report, for the agents of later implementations. Plan: [`04-plan.md`](04-plan.md) Phase 5. Branch
 `feat/04-phase-5` (from `master` at `7479b68`). Documentation only: no code file, no database change, no AI call.
 
-State: done (2026-10-28); waiting for the user's ok to merge.
+State: done (2026-10-28); the user's ok, merged into `master` (`d5a19e7`).
 
 # 1. What was done
 
