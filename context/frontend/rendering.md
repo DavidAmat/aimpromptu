@@ -52,11 +52,15 @@ Hooks for the browser checks: `[data-frames-sheet]` (`data-source`, `data-llm`, 
 `data-testid` of each tool (`figure-4`, `beam-join`, `grace`, `ornament-trill`, `notes-remove`, `range-enhance`,
 `stretch-words`, ...); since Phase 8 `[data-lyric]` (`data-lyric-lit`, `data-lyric-picked`), `[data-lyric-landing]`,
 `[data-frames-sheet-toolbox]`, `[data-pdf-page]`, and `sheet-toolbox`, `sheet-print`, `line-space`, `piece-key`,
-`pdf-download` (`data-testid`). The checks are `npm run check:frames-sheet` (`--live` spends a few cents of Sonnet on a 40 s
+`pdf-download` (`data-testid`); since implementation 04 `[data-sheet-header]`, `[data-sheet-header-buttons]`,
+`header-floating-toggle` (`data-testid`), `[data-floating-hide]`, `[data-floating-show]` (Phase 1), and
+`[data-enhance-dialog]`, `[data-enhance-status]`, `song-run-*`, `song-confirm`, `stretch-confirm` (Phase 4). The checks are `npm run check:frames-sheet` (`--live` spends a few cents of Sonnet on a 40 s
 clip), `npm run check:frames-edit` (picking, the hand, undo and redo, and the time of one edit) and
 `npm run check:frames-tools` (every tool of the two toolboxes and the range selection; `--live` makes one stretch
 request, about $0.01) and `npm run check:frames-toolbox` (Phase 8: the sheet toolbox, lyrics, the keyboard panel,
-Print to PDF, the lyrics in Play mode).
+Print to PDF, the lyrics in Play mode), and since implementation 04 `npm run check:frames-page` (Phase 1: the header,
+the floating bar hidden and shown, the wheel zoom, the cursor dragged across lines) and `npm run
+check:enhance-dialog` (Phase 4: the dialog; a stand-in answers the requests that would start the AI).
 
 The engine stays in the backend (implementation 03, Phase 6, task 4): one edit takes about a quarter of a second
 from the click to the new drawing on the page, most of it in the backend's rules (the stored sheet laid again on

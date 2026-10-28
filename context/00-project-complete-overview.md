@@ -27,8 +27,8 @@ longer used by the app since implementation 03, Phase 10 (2026-10-27).
 
 How it was built: the MVP (implementations 01 to 09), then implementation 02, the private web app
 (Phases 0 to 15 complete 2026-10-18; Phases 16 and 17, the Spanish and Catalan regions and an
-inferred popularity, added the same day), then implementation 03, the new sheet (opened 2026-10-23):
-[implementations/README.md](implementations/README.md).
+inferred popularity, added the same day), then implementation 03, the new sheet (2026-10-23 to 27), then implementation 04, the polish of the sheet page and
+of the AI's sheet (2026-10-27 to 28): [implementations/README.md](implementations/README.md).
 
 ## Users
 
@@ -127,7 +127,7 @@ before it is ready ([frontend/projects.md](frontend/projects.md)):
 | Source | Drop an audio or a video file, or paste a YouTube link (as audio, or as a piano roll video) |
 | Audio | See the waveform, play it, cut parts out, add another audio at the end, **Transcribe**. For a video: **Video**, fit the piano, **Read notes** |
 | Notes | Watch the rectangles appear live, then edit them on a canvas piano roll |
-| **Sheet** | The piano sheet, drawn on arrival, then written by the AI in the background (**Enhance with AI**); the floating bar; the sheet toolbox (title, key, transposition, lyrics, view), the range and note toolboxes (the hands are changed here). Every change is written at once as one step of undo |
+| **Sheet** | The piano sheet, drawn on arrival, then written by the AI in the background (**Enhance with AI**: the whole song again, **Simplify** one hand or both, or a stretch); the header and the floating bar with the same buttons; the sheet toolbox (title, key, transposition, lyrics, view), the range and note toolboxes (the hands are changed here). Every change is written at once as one step of undo |
 
 The Hands step left the flow in implementation 03, Phase 5, and its code was removed in Phase 10.
 

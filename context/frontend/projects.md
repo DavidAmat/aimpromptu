@@ -19,8 +19,8 @@ one), the step it reached ("Transcribing" or "Reading" while a job works on it),
 changed. While a job works on a project (a transcription, a video read, or Sonnet writing its sheet,
 implementation 03, Phase 5) a small spinner stands before the title; its tooltip says which, and the
 list looks again every 5 s until it ends. A project whose sheet the AI enhanced has the green AI mark there
-(the icon of **Enhance with AI**, tooltip "Enhanced with AI"); a project with notes the AI has not enhanced
-has the same mark faint and hollow ("Not enhanced with AI yet"). The same mark stands before each song of My library (green when the AI
+(the AImpromptu logo, also the icon of **Enhance with AI**, tooltip "Enhanced with AI"; implementation 04, prompt
+04-2); a project with notes the AI has not enhanced has the same mark faint grey ("Not enhanced with AI yet"). The same mark stands before each song of My library (green when the AI
 enhanced one of its versions) and each version of a song (`components/piece/AiMark.tsx`). The status **Editing** is not about the AI: it is
 the edit copy of a version of My library, until **Save to library** or **Discard changes**. The whole row opens the project on that step. The `⋯` menu of a row has **Open**,
 **Duplicate**, **Export**, **Rename**, **Play** (Play mode, once it reaches its Sheet step) and **Delete** (with a
@@ -162,17 +162,23 @@ transcription in one colour.
   pale, and a part that comes back appears column by column. No text says any of it. At the end the hands are
   saved in the notes, and the sheet is saved beside them (`sheet.f1`); opening it again calls nothing.
 - **A project made before Phase 5** keeps its saved hands and shows the algorithm's sheet from them (with the
-  key and a renamed figure of its old sheet), and offers **Enhance with AI** on the floating bar (a
-  confirmation says it costs about $1 of the monthly credits). On a version of My library the button opens the
-  copy that edits it, as **Edit** does, and starts there. The 10 songs Sonnet wrote in implementation 03,
-  Phase 4 show Sonnet's sheet.
-- **Enhanced with AI.** A sheet the AI wrote (or part of it) carries the green sparkle of the Projects page next
-  to its title (tooltip "Enhanced with AI"; the hollow one, "Not enhanced with AI yet", before; implementation 04,
-  Phase 1, in place of a green badge), for good: later changes of the notes or the hands do not remove it, only a
-  new transcription does.
-  Its button then reads **Enhance it again with AI**, and the confirmation says a new run may give much the same
-  result; a new run that does not finish leaves the sheet the AI wrote before. The page says "AI", not the
-  model's name (Sonnet 5.5 today), because the model may change.
+  key and a renamed figure of its old sheet), and offers **Enhance with AI** in the header and on the floating
+  bar. On a version of My library the button opens the copy that edits it, as **Edit** does, and starts there
+  the run chosen in the dialog. The 10 songs Sonnet wrote in implementation 03, Phase 4 show Sonnet's sheet.
+- **The Enhance with AI dialog** (implementation 04, Phase 4) has two tabs. **A stretch** (open when notes or a
+  stretch are picked): both hands, only the right or only the left (the other hand then stays exactly as it is),
+  and your words. **The whole song**: **Simplify the left hand**, **the right hand** or **both hands** (only the
+  rules of simplicity: uniform patterns, no quick jump of one hand; the hands do not move; batch after batch, each
+  seeing what was simplified before, so a chorus that repeats is simplified the same way), and **Write it all
+  again** (the whole run). Each choice shows its cost (a whole run about $0.65 on 7 Years, Simplify one hand about
+  $0.10 to $0.20). A Simplify run ends with one line ("The AI added 4 notes and left out 2 in the left hand.") and
+  is one step of undo.
+- **Enhanced with AI.** A sheet the AI wrote (or part of it) carries the AI mark of the Projects page next to its
+  title: the AImpromptu logo, green, tooltip "Enhanced with AI" (faint grey, "Not enhanced with AI yet", before;
+  implementation 04, in place of a green badge), for good: later changes of the notes or the hands do not remove
+  it, only a new transcription does.
+  Its button then reads **Enhance it again with AI**; a new run that does not finish leaves the sheet the AI wrote
+  before. The page says "AI", not the model's name (Sonnet 5.5 today), because the model may change.
 - **The header** (implementation 04, Phase 1): the title, the AI symbol and the floating bar's buttons (Play,
   Record a passage, Paste, Print, Undo, Redo, the sheet toolbox, `⋯`, **Enhance with AI**), at the top of the
   window while the sheet scrolls, and one more button that hides or shows the floating bar. A hidden floating bar

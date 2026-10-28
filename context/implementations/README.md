@@ -14,7 +14,7 @@ numbered folder:
   research folder `poc-aitu-research` (an algorithm, an LLM step with Sonnet 5.5, an SVG engine), on a
   sheet with no compases, tempo, puntillos or silencios. Opened 2026-10-23, done 2026-10-27.
 - **`04-app-enhancements/`** polishes the sheet page and the sheet the AI writes, after 03. Opened
-  2026-10-27.
+  2026-10-27, done 2026-10-28.
 
 **Open a folder's own `README.md` first**, when it has one. It says whether that work is live or
 closed.
@@ -50,13 +50,16 @@ closed.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 04 | [`04-app-enhancements/`](04-app-enhancements/README.md) | The sheet page (Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag, the hidden floating toolbox back) and the AI's sheet (a new decoration-note rule on every sheet, prompt version 6 with simplicity and the amateur pianist rule, run on 7 Years; the Enhance with AI dialog with Simplify left / right / both). One branch per phase, `feat/04-phase-N` | 2026-10-27 | **In progress.** Phases 1 to 3 done; next Phase 4. [`04-checklist.md`](04-app-enhancements/04-checklist.md) is the status lookup |
+| 04 | [`04-app-enhancements/`](04-app-enhancements/README.md) | The sheet page (Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag, the hidden floating toolbox back) and the AI's sheet (a new decoration-note rule on every sheet, prompt version 6 with simplicity and the amateur pianist rule, run on 7 Years; the Enhance with AI dialog with Simplify left / right / both). One branch per phase, `feat/04-phase-N` | 2026-10-27 | **Done** (2026-10-28). Phases 1 to 5 done, each merged into `master` after the user's check; the new logo (`04-2-prompt.md`) on `feat/04-logo`. [`04-context.md`](04-app-enhancements/04-context.md) is the summary for later work, [`04-checklist.md`](04-app-enhancements/04-checklist.md) the status lookup |
 
 ## How to read this folder
 
-- **"What is being built now?"** → implementation 04 (planned 2026-10-27): its plan is
-  [`04-app-enhancements/04-plan.md`](04-app-enhancements/04-plan.md), its checklist
-  [`04-checklist.md`](04-app-enhancements/04-checklist.md). Implementation 03 is done (2026-10-27); its plan is
+- **"What is being built now?"** → nothing is open. Implementation 04 is done (2026-10-28): read
+  [`04-app-enhancements/04-context.md`](04-app-enhancements/04-context.md) (what it changed, its open points), its
+  plan [`04-plan.md`](04-app-enhancements/04-plan.md) and checklist
+  [`04-checklist.md`](04-app-enhancements/04-checklist.md). For any work on the sheet, read
+  [`03-apply-poc-research/03-context.md`](03-apply-poc-research/03-context.md) first, then `04-context.md`.
+  Implementation 03 is done (2026-10-27); its plan is
   [`03-apply-poc-research/03-plan.md`](03-apply-poc-research/03-plan.md), its checklist
   [`03-checklist.md`](03-apply-poc-research/03-checklist.md), and its notes for later are in
   [`03-implementation-phase-10.md`](03-apply-poc-research/03-implementation-phase-10.md). Implementation 02 is done (Phase 18, the

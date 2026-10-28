@@ -8,7 +8,10 @@ changed no logic; the golden files of section 7 prove it. Phase 2 added the new 
 Phase 3 its engine (section 10), Phase 4 its LLM step (section 11), Phase 5 put it in the app (section 12), Phase 6 made it editable
 (section 13), Phase 7 added the note and range tools (section 14), and Phase 8 the sheet toolbox, lyrics and the sheet
 on paper (section 15), Phase 8B the sheet through every change of a part's length (section 16), and Phase 9 the marks
-of the old sheets (section 17): the bars path below is unchanged, and so are its golden files.
+of the old sheets (section 17): the bars path below is unchanged, and so are its golden files. Implementation 04
+(`context/implementations/04-app-enhancements/04-context.md`) changed the new sheet in place: the decoration-note
+rule on every sheet (sections 9 and 12), prompt version 6 and the notes a whole run adds and leaves out (sections 11
+and 12), a stretch of one hand and Simplify (section 14).
 
 ## 1. What it does
 
@@ -37,7 +40,7 @@ enforce it.
 |---|---|---|
 | `sheet` | - | `Note`, `Bar`, `Sheet` (`sheet.data`); `f1.read(text) -> Sheet`, `f1.write(sheet, mode="bars"/"frames", anchors=bool) -> str`, `F1Error`; `matrix.sheet_from_matrix(notes, key=) -> Sheet` (frames sheet), `matrix.cells(notes)`; `pmn.notes_from_pmn(body) -> Notes`, `pmn.key_of_sheet_json(sheet_json) -> int`. The new sheet (section 9): `frames.from_notes(notes, key=) -> Sheet`, `frames.check(sheet) -> list[str]`, `frames.cells_of(sheet, notes)`, `frames.matrix_cells(notes)`, `frames.key_at(sheet)`, `frames.printed_signs(sheet)`; `figures.figure_of_ms(ms, quarter_ms, split=0.7)`; `spelling.spell(midi, key)`, `spelling.sign(step, alter, key)`, `spelling.check_rules()` |
 | `proposal` | `Notes` + hands -> F1 bars sheet | `propose(notes, *, key, key_changes=None, hand_sheet=None, track=False, quarter_ms=None, meter=None, phase_ms=None, beams="classical") -> Proposal` (`.sheet`, `.quarter_ms`, `.meter`, `.phase_ms`); `hand_sheet_of(notes, key=)`. The new sheet: `frames.propose_frames(notes, *, key=None, key_changes=None, quarter_ms=None) -> FramesProposal` (`.sheet`, `.quarter_ms`, `.info`) |
-| `llm` | `Notes` -> F1 bars sheet | `write_song(notes, complete, *, key, sid="song", hand_sheet=None, max_checks=3, guards=True, max_windows=None, on_window=None) -> SongSheet`; `windows.check(answer, target) -> (errors, sheet)`, `windows.answer_text(reply)`, `guards.guard_errors(sheet)`; `prompts.instructions()`, `prompts.window_prompt(...)`, `prompts.feedback(errors)`. The new sheet (section 11): `frames.write_frames(notes, complete, *, sid, key=None, quarter_ms=None, hands=False, max_checks=3, guards=True, max_windows=None, on_window=None) -> FramesSong`; `frames.windows_of(sheet)`, `frames.check_answer(reply, target, *, drop=False, free=None, simplify=False)`, `frames.places(notes, quarter_ms)`, `frames.assemble(algo, parts, clefs="llm")`, `frames.gap_peaks(sheet)`, `frames.reference_prompt(...)`, `frames.window_prompt(...)`, `frames.instructions()`, `frames.SkipWindow` |
+| `llm` | `Notes` -> F1 bars sheet | `write_song(notes, complete, *, key, sid="song", hand_sheet=None, max_checks=3, guards=True, max_windows=None, on_window=None) -> SongSheet`; `windows.check(answer, target) -> (errors, sheet)`, `windows.answer_text(reply)`, `guards.guard_errors(sheet)`; `prompts.instructions()`, `prompts.window_prompt(...)`, `prompts.feedback(errors)`. The new sheet (section 11): `frames.write_frames(notes, complete, *, sid, key=None, quarter_ms=None, hands=False, max_checks=3, guards=True, max_windows=None, on_window=None) -> FramesSong`; `frames.windows_of(sheet)`, `frames.check_answer(reply, target, *, drop=False, free=None, simplify=False, hand=None)`, `frames.places(notes, quarter_ms)`, `frames.write_stretch(current, notes, complete, *, start, end, instruction="", staff=None)`, `frames.write_simplify(current, notes, complete, *, staff=None) -> Simplified`, `frames.check_simplify(reply, target)`, `frames.assemble(algo, parts, clefs="llm")`, `frames.gap_peaks(sheet)`, `frames.reference_prompt(...)`, `frames.window_prompt(...)`, `frames.instructions()`, `frames.SkipWindow` |
 | `engrave` | F1 bars sheet -> SVG; F1 frames sheet -> SVG | `engrave(sheet, Options()) -> Engraving`, `to_svg(engraving, px_per_space=10, note_ids=False, id_prefix="")`, `render(sheet)`; `cursor.render_song(text, note_ids=True) -> Rendered`. The new sheet (section 10): `frames.render_frames(text_or_sheet, frames.Options(), segment=None) -> frames.Rendered`, `frames.plan(sheet, opts) -> Layout`, `frames.draw(layout, systems=None) -> Engraving`, `frames.engrave_frames(sheet, opts)` |
 
 In the research, `sheet.pmn` held copies of `aitu_backend.pmn` (`notes`, `columns`, `dense`) and
@@ -305,6 +308,11 @@ POST /sheet/{part}/llm ── part_sheet.job.start ── write_frames(on_start,
   the prompt version, the cost). `sheet.pending` marks a part whose new notes ask Sonnet to write the sheet (a
   transcription or a video read writes it; the job removes it).
 - The hands of a sheet go back to the notes by `build.hands_of_sheet` (each live note at its drawn column and key).
+- Every stored sheet is laid again on its notes when it is drawn (`build.reapply`, also for current hands;
+  implementation 04, Phase 2), so the decoration-note rule of section 9 reaches the sheets the AI wrote and the
+  user edited without writing their files; the drawing is the same note for note otherwise, in 0.04 to 0.13 s. A
+  text an edit just stored (already laid again, `build._settled`) is drawn as it is. Two written notes that a stored
+  sheet held as a pair of grace notes get one beam, once (`llm.frames.beam_pairs`).
 - Prompt 6 (implementation 04, Phase 3): the notes a run left out are marked removed in `notes.pmn` and the notes it
   added are written there, as a stretch does (`edits.change_notes`); the record counts them (`added`, `leftOut`).
   The steps of undo start again with one step, "Notes the AI added and left out": its undo puts those notes back and
@@ -338,7 +346,8 @@ the answer of GET /sheet/{part} (the sheet drawn again)                ~0.15 s i
   keeps 50 steps; `job.commit` and `store.clear` start it again. It is not in the file lists of a copy.
 - **The LLM run again** (`job.start`): on a sheet the AI enhanced, `write_frames(hands=True)`, and the window prompt
   says the shown hands are a suggestion the LLM may change (`llm.frames.window_prompt`); the record's prompt is
-  `5+hands`. The cached instructions (version 5) did not change.
+  `5+hands`. The cached instructions (version 5) did not change. Since implementation 04, Phase 3 the prompt is
+  version 6 and the record says `6+hands`.
 - `GET /sheet/{part}` also answers `notes` (`build.drawn_notes`: ref, hand, printed pitch), `editable` and
   `history`.
 - Tests: `tests/test_sheet_edits.py`. Browser check: `npm run check:frames-edit` (aitu-frontend).

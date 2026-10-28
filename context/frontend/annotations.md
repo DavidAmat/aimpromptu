@@ -28,6 +28,11 @@ this section describes the old sheet, kept as the record of what was moved. On t
   the AI (a reference request) or by the algorithm (`proposal.beat`), not by the reader; **Transpose → Figures** of
   the sheet toolbox is the override. This changes D-09 (the app showed the piles of gaps and the reader named the
   negra). The sheet has no compases, no tempo, no puntillos and no silencios.
+- **Decoration notes** (grace notes; implementation 04, Phase 2): one or two notes shorter than a semicorchea (a
+  fusa or shorter), two figures or more shorter than the next note of their hand and sounding just before it. A
+  lone short note that is not one, just before a note more than two figures longer, is written two figures shorter
+  than it (a semicorchea before a blanca is a corchea); a run of three or more keeps its figures. The **Grace**
+  switch of the note toolbox and a figure set by hand win over the rule. Every sheet follows it when it is drawn.
 
 - **Pick notes**: click a notehead (the recording goes there), ⌘-click or Shift-click to add or take one away, or
   drag a box across the staves. Escape drops the pick. The note toolbox opens beside the notes, titled with the
@@ -58,8 +63,10 @@ this section describes the old sheet, kept as the record of what was moved. On t
   each hand in scope, the hand's own clef again after the stretch; **Clefs by the rule** writes the clefs and 8va of
   the clef rules over the stretch), **Octave** (8va, 15ma, 8vb, 15mb over each hand in scope; a bass clef takes no
   8va or 15ma). A tab with a dot means the stretch already carries that setting.
-- **Enhance with AI** of a stretch, with your own words: the ✨ in the title bar of either toolbox (the stretch of
-  the notes picked, or the stretch marked). A short instruction ("all these notes are in the left hand: share them
+- **Enhance with AI** of a stretch, with your own words: the AI mark (the logo) in the title bar of either toolbox
+  (the stretch of the notes picked, or the stretch marked) opens the Enhance with AI dialog on **A stretch**:
+  **Both**, **Right** or **Left** (one hand: only that hand changes, the other stays exactly as it is; chosen from
+  the notes picked or the range toolbox's hand; implementation 04, Phase 4), and the words. A short instruction ("all these notes are in the left hand: share them
   between the two hands", "make these octaves single notes, keep the rhythm", "octaves as negras, one on each
   beat"), or none. Your words come first, and the AI aims at a stretch simpler to read and to play (uniform
   patterns, the same pitch for the same role): it writes the hands, beams, clefs and ornaments again as they ask,
@@ -69,14 +76,24 @@ this section describes the old sheet, kept as the record of what was moved. On t
   no answer is accepted, a quiet line says the stretch stays as it was.
 - **Undo and Redo**: the arrows of the floating bar, ⌘Z and ⇧⌘Z (Control-Z and Control-Y on Windows). The
   backend keeps the steps, so they survive a reload and another page; the last 50 are kept. A new AI run on the
-  whole sheet, or a new transcription, starts them again.
+  whole sheet, or a new transcription, starts them again (with one step, "Notes the AI added and left out", when
+  the run added or left out notes; implementation 04, Phase 3); a Simplify run is one step ("Simplify the left hand
+  with AI").
 - **No Save button**: each change is written at once.
 - **Nothing can be changed while the AI writes the sheet** (the whole sheet or a stretch): the toolboxes and the
   arrows say why.
-- **Enhance it again with AI** (the whole sheet) reads the current hands, the ones you moved among them, as a
-  suggestion, and may change any of them (the user's answer of Phase 6). It keeps your fingers, your figures set by
-  hand and your grace note switches; it writes the beams, clefs, 8va, armaduras and ornaments again (the user's
-  answer of Phase 7). A first run reads the notes without hands.
+- **The whole song** (the Enhance with AI dialog with nothing picked; implementation 04, Phase 4): **Simplify the
+  left hand**, **the right hand** or **both hands** writes only the rules of simplicity (a pattern that repeats is
+  written the same way every time; a quick chord that makes one hand jump far keeps the note near the main note),
+  adding or leaving out a few notes; the hands, beams and clefs stay, and the other hand is not touched. The AI goes
+  over the song batch after batch, each seeing what was simplified before, so a chorus that repeats gets the same
+  change. **Write it all again** is the whole run below. Each choice shows its cost.
+- **Enhance it again with AI** (the whole sheet, **Write it all again**) reads the current hands, the ones you
+  moved among them, as a suggestion, and may change any of them (the user's answer of Phase 6). It keeps your
+  fingers, your figures set by hand and your grace note switches; it writes the beams, clefs, 8va, armaduras and
+  ornaments again (the user's answer of Phase 7). Since prompt version 6 (implementation 04, Phase 3) it also
+  follows the rules of simplicity and may add or leave out a few notes for them (at most a tenth of a window),
+  written into the notes as a stretch does. A first run reads the notes without hands.
 - **The sheet toolbox** (the sliders icon of the floating bar; implementation 03, Phase 8): **Title** (title,
   subtitle and artist above the sheet and on the PDF, written when the field is left), **Key** (the armadura of the
   piece; *Use D major (n fewer signs)* when another prints fewer signs over the piece), **Transpose** (**Notes**:

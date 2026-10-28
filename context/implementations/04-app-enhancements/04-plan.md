@@ -1,6 +1,7 @@
 # 04 · Plan: app enhancements (the sheet page and the AI's sheet)
 
-Status: written 2026-10-27, after the first discussion. **This is the living plan**: the agents update it when a phase
+Status: written 2026-10-27, after the first discussion; **done 2026-10-28** (Phase 5 closed it; the summary for
+later work is [`04-context.md`](04-context.md)). **This is the living plan**: the agents update it when a phase
 changes direction (section 9 lists the changes). Audience: the AI agents that build it on the Ubuntu machine, and the
 user, who checks each phase in the browser. Music terms stay in Spanish where the user uses them (negra, corchea,
 semicorchea, fusa, blanca, redonda, octava). The user calls the grace notes of the sheet **decoration notes** (or
@@ -437,4 +438,17 @@ Sections 3.5 and 4.4. Backend and frontend.
   like this one has the new note at the same place (found by the 2 columns around it), and the check refuses it
   otherwise (report section 8).
 - After the user's check: a run of one hand veils only that staff on the page (the segments carry `staff`).
+
+**Prompt 04-2** (2026-10-27, the user's second brief [`04-2-prompt.md`](04-2-prompt.md), on its own branch
+`feat/04-logo`, checked by the user): the new logo, traced to one SVG path (`ui/Logo.tsx`), in the sidebar, the
+sign-in page and the favicons; and the logo as the AI mark (`AiMark`: green "Enhanced with AI", faint grey "Not
+enhanced with AI yet") and the icon of every Enhance with AI button, in place of the sparkle of section 4.1.
+
+**Phase 5** (2026-10-28; report [`04-implementation-phase-5.md`](04-implementation-phase-5.md)):
+
+- Most of the documentation of task 1 was already updated by Phases 2 to 4 (the core's `README.md` sections 9, 11,
+  12, 14; `rendering.md`; `components.md`; `endpoints.md`). What was still stale: the sparkle and the confirmation of
+  a whole run in `projects.md`, the stretch and the whole song in `annotations.md`, prompt 5 in the core's section
+  13, the index pages (03 still "LIVE", 04 "PLANNED").
+- `04-context.md` also covers prompt 04-2 (the logo), which the plan did not list.
 

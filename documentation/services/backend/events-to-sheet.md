@@ -201,7 +201,9 @@ Everything after the hand split belongs to the new sheet and is described in its
   grace notes, beam groups, the armadura, clefs and 8va. The reference figure is `quarterMs`, the
   pulse estimate of `proposal.beat` unless the AI or the user gives it.
 - **The AI** (`sheet/llm/`, `part_sheet/job.py`, sections 11 and 12): a reference request, then one
-  request per window, checked by the same rules.
+  request per window, checked by the same rules (prompt version 6 since implementation 04: the rules
+  of simplicity may add or leave out a few notes); Simplify (section 14) goes over one hand or both
+  batch after batch.
 - **The drawing** (`sheet/engrave/frames.py`, section 10): the backend lays out the frames sheet and
   answers SVG; the browser only shows it.
 - **The user's marks and edits** (`part_sheet/`, sections 13 to 17), and the marks of an old

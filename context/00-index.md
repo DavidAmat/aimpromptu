@@ -102,22 +102,27 @@ assumes.
 |------|-------------|
 | [implementations/README.md](implementations/README.md) | **Start here.** The four groups (`01-mvp/`, `02-private-web-app/`, `03-apply-poc-research/`, `04-app-enhancements/`), every implementation with its state, and the numbering rule |
 
-### 04 — App enhancements — PLANNED (opened 2026-10-27)
+### 04 — App enhancements — DONE (2026-10-27 to 28)
 
-Polish after 03: on the sheet page, Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag; in
-the sheet, a new decoration-note rule and prompt version 6 (simplicity, the amateur pianist), run on 7 Years.
+Polish after 03: on the sheet page, Command + scroll zoom, the AI mark (the new logo), the header toolbox, a cursor to
+drag; in the sheet, a new decoration-note rule on every sheet, prompt version 6 (simplicity, the amateur pianist), run
+on 7 Years, and the Enhance with AI dialog with Simplify left, right or both.
 
 | File | Description |
 |------|-------------|
 | [implementations/04-app-enhancements/README.md](implementations/04-app-enhancements/README.md) | What it is, and every file in the folder |
+| [implementations/04-app-enhancements/04-context.md](implementations/04-app-enhancements/04-context.md) | **Read after `03-context.md` for any work on the sheet.** What implementation 04 changed, the decisions that bind, where the code is, the open points |
 | [implementations/04-app-enhancements/04-1-prompt.md](implementations/04-app-enhancements/04-1-prompt.md) | The brief, in the user's own words, with the answers of the first discussion |
-| [implementations/04-app-enhancements/04-plan.md](implementations/04-app-enhancements/04-plan.md) | **The plan.** The decisions of 2026-10-27, the design notes, four phases |
-| [implementations/04-app-enhancements/04-checklist.md](implementations/04-app-enhancements/04-checklist.md) | THE status lookup for this implementation, and the open decisions |
+| [implementations/04-app-enhancements/04-2-prompt.md](implementations/04-app-enhancements/04-2-prompt.md) | The second brief: the new logo, and the logo as the AI mark |
+| [implementations/04-app-enhancements/04-plan.md](implementations/04-app-enhancements/04-plan.md) | **The plan.** The decisions of 2026-10-27, the design notes, five phases, the changes each phase made |
+| [implementations/04-app-enhancements/04-checklist.md](implementations/04-app-enhancements/04-checklist.md) | THE status lookup for this implementation, and the decisions |
+| `implementations/04-app-enhancements/04-implementation-phase-N.md` | One report per phase (Phase 1: the sheet page; Phase 2: the decoration-note rule, and its gallery in `gallery/phase-2/`; Phase 3: prompt version 6 and 7 Years, and its gallery in `gallery/phase-3/`; Phase 4: the Enhance with AI dialog and Simplify, and its gallery in `gallery/phase-4/`; Phase 5: the documentation and closing) |
 
-### 03 — The new sheet (applying the research) — LIVE (opened 2026-10-23)
+### 03 — The new sheet (applying the research) — DONE (2026-10-23 to 27)
 
 vexflow-v2 replaced by the chain of research plan 01 (the algorithm, the LLM step with Sonnet 5.5, the SVG engine),
-with no compases, tempo, puntillos or silencios on the sheet and no Hands step. On the branch `feat/migrate-new-logic`.
+with no compases, tempo, puntillos or silencios on the sheet and no Hands step. Built on the branch
+`feat/migrate-new-logic`, merged into `master`.
 
 | File | Description |
 |------|-------------|
