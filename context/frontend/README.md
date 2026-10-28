@@ -64,8 +64,8 @@ Play mode (Phase 11, [play-mode.md](play-mode.md)). The old paths redirected unt
 
 ## What a reader does on the sheet
 
-Read the sheet drawn on arrival · **Enhance with AI** (the whole sheet, or one stretch with the reader's own
-words) · change the main figure (**Transpose figures**) · title the sheet · set a note's figure by hand · choose
+Read the sheet drawn on arrival · **Enhance with AI** (the whole sheet, **Simplify** one hand or both, or one
+stretch of both hands or one with the reader's own words) · change the main figure (**Transpose figures**) · title the sheet · set a note's figure by hand · choose
 the key of the piece or of a stretch · correct which hand plays a note · fingering · cut or join a beam · clefs
 and octave lines · take a note off the page or add one on the keyboard · trills, mordents, turns, a rolled chord,
 a fermata · words under the staff · a grace note leaning on a note · re-record a passage on its own page and
@@ -87,6 +87,7 @@ PATCH /pieces/{id}/notes        ◀──  the edits of the Notes tab, as operat
 GET   /matrix/{id}/events       ──▶  Notes Falling of Play mode (seconds, as recorded)
 GET   /sheet/{id}?width=N       ──▶  the sheet as an SVG and its cursor map ──▶ FramesSheetView
 POST  /sheet/{id}/llm           ◀──  Enhance with AI; the progress stream says when to read the sheet again
+POST  /sheet/{id}/llm/simplify  ◀──  Simplify one hand or both (GET /sheet/{id}/llm/costs: the dialog's costs)
 POST  /sheet/{id}/...           ◀──  each edit of the sheet, one step of undo kept by the backend
 ```
 

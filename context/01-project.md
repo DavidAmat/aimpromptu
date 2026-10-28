@@ -101,6 +101,8 @@ The implementations, all under [implementations/](implementations/README.md):
 |---|---|
 | **01-mvp** (01 to 09) | One audio file to one piano sheet, for one person: the epics master plan, the own renderer, the wall-clock refactor, the video reader, MuScriptor and the move to the Ubuntu machine, the minimal UI guidelines. All closed |
 | **02-private-web-app** | The app of the app context: the design system and the sidebar, `.database/`, users on the home network, projects, the Private and Public Libraries, the sheet toolbox, copy and paste, Recording in Sheet, playlists, Play mode, requests and the review, sharing. Phases 0 to 15 complete 2026-10-18; Phases 16 and 17 (the `spain` and `catalan` regions, a popularity inferred from YouTube views) added the same day |
+| **03-apply-poc-research** | The new sheet: no compases, tempo, puntillos or silencios; the algorithm's sheet at once, the AI (Sonnet 5.5) improving it in the background, the backend drawing it as SVG; vexflow-v2 removed. Done 2026-10-27 |
+| **04-app-enhancements** | Polish after 03: the sheet page (Command + scroll zoom, the AI mark, the header toolbox, a cursor to drag), the decoration-note rule on every sheet, prompt version 6 (simplicity, the amateur pianist), the Enhance with AI dialog with Simplify. Done 2026-10-28 |
 
 The wall-clock refactor (01-mvp/03) replaced the model the first epics were built on;
 [`wall-clock-rewrite.md`](implementations/01-mvp/01-epics-master-plan/plan/wall-clock-rewrite.md)

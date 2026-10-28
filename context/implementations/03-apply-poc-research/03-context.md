@@ -5,6 +5,10 @@ sheet, the AI that writes it, the hands, the lyrics, the PDF or a change of a pa
 implementation 03 built, which decisions now bind, where the code is, and which phase report tells how each part was
 done and measured. The details are in the files it links; this page is the map.
 
+**Implementation 04 changed some of it** (the decoration notes, prompt version 6, the notes the AI adds and leaves
+out, the Enhance with AI dialog, the sheet page): read
+[`../04-app-enhancements/04-context.md`](../04-app-enhancements/04-context.md) after this page.
+
 State: done on 2026-10-27, merged into `master` (`57a15a2`). Eleven phases (0 to 10), one branch
 (`feat/migrate-new-logic`). Folder index: [`README.md`](README.md). Status of every task: [`03-checklist.md`](03-checklist.md).
 
@@ -35,7 +39,7 @@ binding rules and the changes each phase made (its section 11), is [`03-plan.md`
 |---|---|
 | No compases, meter, tempo, puntillos or silencios on the sheet; rule 3 of the time model confirmed | plan 3.1; [`context/backend/time-model.md`](../../backend/time-model.md) |
 | The figure of a note comes from its own length (split 0.7 below the negra, the middle point above), capped at the next onset of its hand; no tuplets; one figure per chord and per run of even gaps | plan 3.3; [phase 2](03-implementation-phase-2.md) sections 4 and 12 |
-| Grace notes: a semicorchea or shorter that sounds just before its main note; any note two figures shorter than the next is an acciaccatura | plan 3.3; [phase 2](03-implementation-phase-2.md) sections 5, 13, 14 |
+| Grace notes: a semicorchea or shorter that sounds just before its main note; any note two figures shorter than the next is an acciaccatura. **Changed by implementation 04, Phase 2**: only one or two fusas or shorter are decoration notes, and a lone short note before a much longer one is written longer | plan 3.3; [phase 2](03-implementation-phase-2.md) sections 5, 13, 14; now [`04-context.md`](../04-app-enhancements/04-context.md) section 2 |
 | The reference figure (D-09 changed): the AI names it from the gaps in words, the algorithm from its pulse estimate; **Transpose figures** is the user's override | plan 3.3 and 4; [phase 4](03-implementation-phase-4.md) section 2 |
 | Alteraciones: the user's rules 1 to 7 (a sign every time, a becuadro only to cancel the armadura, no double signs, the other name before a becuadro, sostenidos or bemoles by the armadura, an armadura per passage, a courtesy sign after a becuadro); Do mayor: Do#, Mib, Fa#, Sol#, Sib | plan 3.4; [phase 2](03-implementation-phase-2.md) sections 6 and 15 |
 | Beam groups: one figure per group (one odd note at an edge at most), at most 8 notes, cut at a jump, a turn or a broken pattern | plan 3.11; [phase 4](03-implementation-phase-4.md) section 3 |
@@ -79,7 +83,7 @@ notes.pmn ── sheet.proposal.frames.propose_frames (the algorithm, at once)
   drawing), `job` (the AI run), `edits` (every edit and its undo step), `reading` (the reading edits as pure
   functions), `lengths` (the sheet through a paste, a promotion, a split, a join), `legacy` (the old marks).
 - **The AI** `aitu_backend/sheet_llm.py`: the `anthropic` SDK, `claude-sonnet-5-5`, prompt caching, time limits,
-  retries. The prompt is version 5, in `sheet/llm/prompt/frames/`; the reference figure is its own request before the
+  retries. The prompt is version 5, in `sheet/llm/prompt/frames/` (version 6 since implementation 04, Phase 3); the reference figure is its own request before the
   windows; the checker and the guards hold the format, and the algorithm is the fallback of any window.
 - **The routes** `api/sheet.py`: `GET /sheet/{uuid}`, `POST .../hands`, `/reading`, `/transpose`, `/add`, `/paste`,
   `/remove`, `/undo`, `/redo`, `/llm`, `/llm/stretch`, `GET .../stretch`, `/pages`, and `GET`/`PUT .../words`. The
@@ -91,7 +95,7 @@ notes.pmn ── sheet.proposal.frames.propose_frames (the algorithm, at once)
 
 - `aitu-frontend/src/pages/piece/sheet/frames/`: `FramesSheetPage` (the page), `FramesSheetView` (the SVG, the cursor,
   the lit notes, click to seek), `useFramesSheet` (the data and every edit), the note, range, sheet and lyrics
-  toolboxes, the PDF and preview dialogs, `EnhanceStretchDialog`. `SheetPage.tsx` only holds the step types and
+  toolboxes, the PDF and preview dialogs, `EnhanceStretchDialog` (`EnhanceDialog` since implementation 04, Phase 4). `SheetPage.tsx` only holds the step types and
   shows `FramesSheetPage`.
 - Every screen that shows a sheet uses it: the Sheet step, Play mode, Recording in Sheet, the passage page, From other
   projects, the requests review, the PDF.

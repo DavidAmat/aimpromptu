@@ -1,11 +1,12 @@
 # 04: App enhancements (the sheet page and the AI's sheet)
 
-**State: Phase 1 done (2026-10-27, checked by the user in the browser). Phase 2 done (2026-10-27, gallery and 7 Years checked by the user). Phase 3 done (2026-10-27, 7 Years enhanced with prompt 6, checked by the user). Next: Phase 4 (the Enhance with AI dialog and Simplify, added after the Phase 3 gallery).** One branch per phase, `feat/04-phase-N` (plan section 6.3).
+**State: done (2026-10-28).** Phases 1 to 4 checked by the user in the browser; Phase 5 (documentation and closing) closes it. Read [`04-context.md`](04-context.md) first: what this implementation changed, for later ones. One branch per phase, `feat/04-phase-N` (plan section 6.3).
 
 Polish after implementation 03: on the sheet page, Command + scroll zoom, the AI symbol instead of the green badge,
 the floating toolbox's buttons also in the header, a cursor that can be dragged, and a hidden floating toolbox that
-comes back; in the sheet, a new decoration-note rule on every sheet, and a prompt (version 6) with rules of
-simplicity and an amateur pianist rule, run on 7 Years.
+comes back; a new logo, also the AI mark; in the sheet, a new decoration-note rule on every sheet, a prompt
+(version 6) with rules of simplicity and an amateur pianist rule, run on 7 Years, and the Enhance with AI dialog with
+Simplify left, right or both.
 
 The brief is [`04-1-prompt.md`](04-1-prompt.md), the plan is [`04-plan.md`](04-plan.md) and the status lookup is
 [`04-checklist.md`](04-checklist.md). Phase reports go beside them as `04-implementation-phase-N.md`, following
@@ -13,12 +14,18 @@ The brief is [`04-1-prompt.md`](04-1-prompt.md), the plan is [`04-plan.md`](04-p
 
 | File | What it is |
 |---|---|
-| [`04-1-prompt.md`](04-1-prompt.md) | The brief, in the user's own words, with the answers of the first discussion (2026-10-27) at its end |
-| [`04-plan.md`](04-plan.md) | The plan: the decisions, the design notes, the binding rules, the method, five phases, the risks |
+| [`04-context.md`](04-context.md) | **Read first for later work.** What implementation 04 changed, the decisions that bind, where the code is, the open points |
+| [`04-1-prompt.md`](04-1-prompt.md) | The brief, in the user's own words, with the answers of the first discussion (2026-10-27) at its end, and the brief of the dialog (after the Phase 3 gallery) |
+| [`04-2-prompt.md`](04-2-prompt.md) | The second brief: the new logo, traced to SVG, and the logo as the AI mark (branch `feat/04-logo`) |
+| [`04-plan.md`](04-plan.md) | The plan: the decisions, the design notes, the binding rules, the method, five phases, the risks; its section 9 has the changes each phase made |
 | [`04-checklist.md`](04-checklist.md) | The status lookup, and the open decisions |
 | [`04-implementation-phase-1.md`](04-implementation-phase-1.md) | Phase 1: the sheet page |
 | [`04-implementation-phase-2.md`](04-implementation-phase-2.md) | Phase 2: the decoration-note rule, the study of My library |
 | [`gallery/phase-2/`](gallery/phase-2/index.html) | Phase 2: nine passages, the old rule and the new one |
 | [`04-implementation-phase-3.md`](04-implementation-phase-3.md) | Phase 3: prompt version 6, the notes the AI adds and leaves out, the tests and the real run on 7 Years |
 | [`gallery/phase-3/`](gallery/phase-3/index.html) | Phase 3: 7 Years with prompt 5 and with prompt 6, the image passages |
+| [`04-implementation-phase-4.md`](04-implementation-phase-4.md) | Phase 4: the Enhance with AI dialog, a stretch of one hand, Simplify, the tests with the AI |
+| [`gallery/phase-4/`](gallery/phase-4/index.html) | Phase 4: a stretch of one hand, Simplify left on 7 Years and Moonlight Shadow, before and after |
+| [`04-implementation-phase-5.md`](04-implementation-phase-5.md) | Phase 5: the documentation, `04-context.md`, the final checks |
+| [`screenshots/phase-1/`](screenshots/phase-1/) | Phase 1: the sheet page, from `check:frames-page` and `scripts/baseline-sheets.mjs` |
 | [`images/`](images/) | The user's four examples: `abuse-decoration-notes.png`, `abuse-decoration-notes-right.png`, `left-patterns.png`, `complex-fast-notes.png` |

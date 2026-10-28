@@ -15,6 +15,7 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 
 - [x] **First discussion** (user, 2026-10-27; plan section 3): the decoration-note rule (only fusas or shorter are decoration notes; a lone short note before a much longer one is lengthened to two figures shorter; the last note of a run is not); the rule on every sheet now, at draw time; the notes the AI adds or leaves out kept as Enhance with AI of a stretch does; the AI run on the My library version of 7 Years, after a test on a copy.
 - [x] **Phase 3** (user, 2026-10-27): the real 7 Years run goes on the existing edit copy in the Personal Vault (`477086a0`), as the app does; the library version changes when the user saves the copy to the library (plan section 3.4).
+- [x] **Prompt 04-2** (user, 2026-10-27; `04-2-prompt.md`): the new logo, traced to SVG, also the AI mark; built on `feat/04-logo` and checked by the user (plan section 9).
 - [x] **After the Phase 3 gallery** (user, 2026-10-27; plan section 3.5): the Enhance with AI dialog and Simplify left / right / both, a new Phase 4; Simplify does the rules of simplicity only; Write it all again stays; a stretch of one hand leaves the other hand as it is.
 
 # [x] Phase 1: The sheet page
@@ -53,8 +54,8 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] Task 4.5 Tests with the AI on temporary copies (the user agreed, $0.40): a stretch of one hand and Simplify left on 7 Years, Simplify left on Moonlight Shadow; gallery `gallery/phase-4/`.
 - [x] Task 4.6 Checks: `check:enhance-dialog` on a temporary copy, the existing checks; the user checks in the browser (a run of one hand now veils only that staff), and decides on a note whose name the AI changed (report section 8: allowed only as the earlier passage like it has it).
 
-# [ ] Phase 5: Documentation and closing
+# [x] Phase 5: Documentation and closing
 
-- [ ] Task 5.1 The documentation still stale: the core's `README.md`, the frontend pages of the sheet page, `context/implementations/README.md`, `context/00-index.md`.
-- [ ] Task 5.2 `04-context.md` for later implementations; `03-context.md` section 2 pointed at it for the decoration-note rule.
-- [ ] Task 5.3 The final checks; the open points.
+- [x] Task 5.1 The documentation still stale: the core's `README.md`, the frontend pages of the sheet page, `context/implementations/README.md`, `context/00-index.md` (also `01-project.md`, `00-project-complete-overview.md`, `events-to-sheet.md`).
+- [x] Task 5.2 `04-context.md` for later implementations; `03-context.md` section 2 pointed at it for the decoration-note rule.
+- [x] Task 5.3 The final checks; the open points (`04-context.md` section 7).
