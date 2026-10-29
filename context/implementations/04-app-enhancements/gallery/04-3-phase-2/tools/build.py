@@ -34,6 +34,22 @@ def drawn(name, piece="From the brief, drawn by the app"):
 
 
 VARIATION = "A variation asked in the review of 2026-10-29, drawn by the app"
+STUDY = "the kern of the first edition"
+
+
+def exk(stem, piece, kern, bars, note=None):
+    """A passage found by the study of the right hand (tools/rh_study.py): no snapshot, the app's drawing only."""
+    return {"image": None, "piece": piece, "pdf": None, "page": None, "bars": bars, "kern": kern, "kernBars": bars,
+            "note": note, "drawing": f"transcribed/{stem}.svg", "f1": f"transcribed/{stem}.f1"}
+
+
+def right(level, pid, name, line, *examples):
+    return dict(hand="right", level=level, id=pid, name=name, line=line, examples=list(examples))
+
+
+def varr(level, pid, name, line):
+    """A right-hand pattern drawn by the app over the held triad of the left hand (tools/drawn.py, RIGHT)."""
+    return right(level, pid, name, line, drawn(f"drawn-right-{pid}", "Drawn by the app (review 3, 2026-10-29)"))
 
 
 def var(level, pid, name, line):
@@ -156,12 +172,16 @@ PATTERNS = [
     dict(hand="right", level="easy", id="slow-melody-single-notes", name="Slow melody in single notes",
          line="Si4 held for three beats, then Do5: the melody alone, with long notes and no chords. Easy because "
               "the hand has one note at a time and almost no movement.",
-         examples=[ex("prelude-4-right-1.png", P.format(4), "preludes.pdf", 13, "1-4", "028-1-BH-004.krn", "1-4")]),
+         examples=[ex("prelude-4-right-1.png", P.format(4), "preludes.pdf", 13, "1-4", "028-1-BH-004.krn", "1-4"),
+                   exk("rh-00-slow-single", "Nocturne Op. 55 No. 2", "055-1-BH-002.krn", "51-52",
+                       "Long notes over a left hand that moves a lot: the right hand still stays in one place.")]),
     dict(hand="right", level="easy", id="melody-single-notes", name="Melody in single notes",
          line="Fa#5-Sol5-Fa#5-Do#5-Re5-Si4 in corcheas, then La#4: one line of single notes inside one hand "
               "position. Easy because there are no chords, also when the notes are corcheas.",
          examples=[ex("waltz-69-2-right-1.png", W.format("69 No. 2"), "waltzes.pdf", 79,
-                      "1-3 (with the notes before bar 1)", "069-1-MEIf-002.krn", "1-4")]),
+                      "1-3 (with the notes before bar 1)", "069-1-MEIf-002.krn", "1-4"),
+                   exk("rh-03-corcheas-single", "Mazurka Op. 67 No. 4", "067-1-Sam-004.krn", "9-10",
+                       "A line that goes down by steps.")]),
     dict(hand="right", level="medium", id="second-note-on-long-notes", name="A second note on long notes",
          line="Single notes on the short figures, and a second note (a third, a sixth) only on the long ones; three "
               "notes only to land on a long note. Medium because the hand stays fluent and the chords come when "
@@ -173,10 +193,10 @@ PATTERNS = [
                 "Two notes on the blancas with puntillo, single notes on the negras, three notes to land on bar "
                 "70 (the user's example of page 10)."),
          ]),
-    dict(hand="right", level="hard", id="melody-in-chords-one-rhythm", name="Melody in chords, one rhythm",
+    dict(hand="right", level="medium", id="melody-in-chords-one-rhythm", name="Melody in chords, one rhythm",
          line="The melody on top of three-note chords on every negra, with the same rhythm (corchea with puntillo, "
-              "semicorchea, two negras) every two bars. Hard because every note is a chord, although the rhythm "
-              "repeats and the tempo is slow.",
+              "semicorchea, two negras) every two bars. Medium because every note is a chord, but the hand stays in "
+              "one place, the rhythm repeats and the tempo is slow (it was hard before review 3).",
          examples=[ex("prelude-7-right-1.png", P.format(7), "preludes.pdf", 16, "1-4 (with the notes before bar 1)",
                       "028-1-BH-007.krn", "0-4")]),
     dict(hand="right", level="hard", id="melody-with-pieces-of-chords", name="Melody with small pieces of chords",
@@ -188,9 +208,9 @@ PATTERNS = [
          line="The melody in negras with puntillo on the fifth finger, and a line of corcheas under it in the same "
               "hand. Hard because one hand plays two voices with different rhythms.",
          examples=[ex("waltz-42-right-1.png", W.format("42"), "waltzes.pdf", 45, "9-11", "042-1-BH.krn", "9-11")]),
-    dict(hand="right", level="hard", id="thirds-and-sixths-in-corcheas", name="Thirds and sixths in corcheas",
-         line="Two notes on every corchea (Fa5-Reb5, Mib5-Sol4) after a long two-note chord. Hard because the hand "
-              "plays double notes fast, although it keeps the same shape.",
+    dict(hand="right", level="medium", id="thirds-and-sixths-in-corcheas", name="Thirds and sixths in corcheas",
+         line="Two notes on every corchea (Fa5-Reb5, Mib5-Sol4) after a long two-note chord. Medium because the "
+              "notes are fast but the hand repeats one shape in one place (it was hard before review 3).",
          examples=[ex("waltz-70-3-right-1.png", W.format("70 No. 3"), "waltzes.pdf", 99, "17-19",
                       "070-1-MEIf-003.krn", "17-19")]),
     dict(hand="right", level="super hard", id="full-chords-in-octaves", name="Full chords in octaves",
@@ -201,6 +221,177 @@ PATTERNS = [
          line="Fast runs of semicorcheas in groups of 7 and 8 that cross positions, over the left hand's sweeps. "
               "Super hard because the hand moves without rest and both hands move at once.",
          examples=[ex("ballade4-right-2.png", B4, "ballades.pdf", 50, "152-153", "052-1-BH.krn", "152-153")]),
+    # ---------------------------------------------------------------- right hand, review 3 (study of all works)
+    right("easy", "chords-in-one-position", "Chords in one position",
+          "Two- and three-note chords with the melody on top, all inside one octava, while the left hand runs. Easy "
+          "because the hand does not move, although every note is a chord.",
+          exk("rh-04-held-chords", "Polonaise Op. 40 No. 2", "040-1-TR-002.krn", "78-79")),
+    right("easy", "repeated-note-with-chords", "Repeated note with chords",
+          "One note repeated in corcheas, with a chord below it on the strong beats (the repeated note of Prelude 15, "
+          "now in the right hand). Easy because the hand stays on the same keys.",
+          exk("rh-08-repeated-chord", "Prelude Op. 28 No. 15", "028-1-BH-015.krn", "57-58")),
+    right("easy", "repeated-two-note-chord", "Repeated two-note chord",
+          "The same third played again in negras, with one note changing now and then. Easy because two fingers stay "
+          "on two keys.",
+          exk("rh-06-two-note-chords", "Sonata Op. 35, movement 2", "035-1a-TR-002.krn", "91-92")),
+    right("medium", "broken-chord-over-two-octaves", "Broken chord over two octavas",
+          "Fa5-La5-Do6-Fa6-La6, then down: the notes of one chord in corcheas, going up two octavas and coming back. "
+          "Medium because the hand must move, but it follows the same chord all the way.",
+          exk("rh-02-corcheas-single", "Waltz Op. 34 No. 3", "034_3-1-BH-003.krn", "40-41")),
+    right("medium", "trill-in-thirds", "A trill in thirds",
+          "Two thirds that rock in semicorcheas (Sol#-Si, then La-Do#), again and again. Medium at a moderate tempo "
+          "because the hand never moves; Chopin asks for it very fast, which makes it an étude.",
+          exk("rh-09-repeated-chord", "Étude Op. 25 No. 6", "025-1b-LE-006.krn", "1-2")),
+    right("medium", "two-note-chords-dotted-rhythm", "Two-note chords in a short-long rhythm",
+          "Thirds and sixths with a short note before a long one, the same figure every beat, with a few flats outside "
+          "the armadura. Medium because of the rhythm and the alterations; the hand stays in one place.",
+          exk("rh-10-fast-in-position", "Mazurka Op. 24 No. 1", "024-1-Sm-001.krn", "46-47")),
+    right("medium", "mazurka-rhythm", "Mazurka rhythm",
+          "A short note, then a long one on the same key, repeated, with a decoration note at the start. Medium "
+          "because the rhythm is uneven, although the notes repeat.",
+          exk("rh-12-fast-repeating-shape", "Mazurka Op. 68 No. 2", "068-1-MEIf-002.krn", "21-22")),
+    right("medium", "broken-chord-shape-moving", "Broken chord that keeps its shape",
+          "A broken chord in semicorcheas that is played again one step higher, with the same shape. Medium because "
+          "it is fast and moves, but the fingers repeat one figure.",
+          exk("rh-13-fast-repeating-shape", "Rondo Op. 16", "016-1-PL.krn", "417-418")),
+    right("medium", "two-note-chords-climbing", "Two-note chords climbing",
+          "A melody in thirds and sixths in corcheas that climbs slowly, one note of the chord changing at a time. "
+          "Medium because the hand moves up with a regular shape.",
+          exk("rh-15-small-chords-moving", "Ballade No. 3, Op. 47", "047-1-BH.krn", "37-38")),
+    right("medium", "melody-with-a-decoration-note", "Melody with a decoration note",
+          "Long notes, each with one decoration note before it, and a few accidentals. Medium because of the "
+          "decoration notes; the hand stays almost still.",
+          exk("rh-01-slow-single", "Waltz Op. 64 No. 1", "064-1a-BH-001.krn", "55-56"),
+          exk("rh-16-melody-with-accidentals", "Mazurka Op. 33 No. 4", "033-1-BH-004.krn", "28-29",
+              "With a Sol# outside the armadura.")),
+    right("medium", "quick-run-into-a-note", "Quick run into a note",
+          "A few fast decoration notes that run up into a two-note chord, then a calm melody. Medium because the run "
+          "is short and lands in the position of the melody.",
+          exk("rh-20-melody-with-ornament", "Impromptu Op. 29", "029-1-BH.krn", "58-59")),
+    right("medium", "scale-run", "Scale run",
+          "A scale down over two octavas in semicorcheas, then chords. Medium because it is fast and the hand moves, "
+          "but a scale is the most regular pattern there is.",
+          exk("rh-25-fast-no-pattern", "Variations Op. 12", "012-1-Sm-001.krn", "2-3")),
+    right("hard", "melody-over-chromatic-inner-line", "Melody over a chromatic inner line",
+          "Two-note chords on top and, under them in the same hand, a line of semicorcheas that moves by semitones. "
+          "Hard because one hand plays two voices fast, with many accidentals.",
+          exk("rh-11-fast-in-position", "Étude Op. 10 No. 3", "010-1b-Sm-003.krn", "30-31")),
+    right("hard", "thirds-climbing-by-semitones", "Thirds climbing by semitones",
+          "Thirds in corcheas that climb chromatically, with naturals and flats on almost every chord. Hard because "
+          "the shape is regular but every chord is altered.",
+          exk("rh-18-thirds-sixths-corcheas", "Mazurka Op. 30 No. 3", "030-1-BH-003.krn", "21-22")),
+    right("hard", "chords-moving-in-a-run", "Chords moving in a run",
+          "Three-note chords in corcheas that go down one after the other, under an 8va line. Hard because the hand "
+          "moves with full chords in the same run (the user's hard case).",
+          exk("rh-22-chord-run", "Ballade No. 2, Op. 38", "038-1-BH.krn", "69-70")),
+    right("hard", "fast-run-without-a-shape", "Fast run without a fixed shape",
+          "A run of fusas and shorter notes that goes up and down with no repeated figure, after a decoration note. "
+          "Hard because the fingers cannot repeat a shape.",
+          exk("rh-24-fast-no-pattern", "Bolero Op. 19", "019-1-PE.krn", "159-160"),
+          exk("rh-27-fast-chromatic", "Concerto Op. 21, movement 2 (piano)", "021-1a-BH-002.krn", "41-42",
+              "An ornament of the melody (fioritura) with accidentals.")),
+    right("hard", "wide-chromatic-arpeggios", "Wide arpeggios with accidentals",
+          "Arpeggios in fusas over two octavas, with sharps outside the armadura; the shape repeats on each chord. "
+          "Hard because the notes are very fast and the hand crosses a wide range.",
+          exk("rh-26-fast-chromatic", "Fantasy on Polish airs Op. 13", "013-1a-KI.krn", "222-223")),
+    right("hard", "double-notes-dotted-climbing", "Double notes climbing in a dotted rhythm",
+          "Two-note chords with a short note before a long one, climbing, with decoration notes and accidentals. "
+          "Hard because the double notes move up while the rhythm stays uneven.",
+          exk("rh-29-fast-ornamented", "Allegro de concert Op. 46", "046-1-BH.krn", "143-144")),
+    right("hard", "double-notes-that-jump", "Double notes that jump",
+          "Two-note chords in corcheas that jump between positions, one after the other. Hard because each chord "
+          "needs a new hand position.",
+          exk("rh-30-fast-double-notes", "Sonata Op. 58, movement 4", "058-1-BH-004.krn", "127-128")),
+    right("hard", "double-notes-in-semicorcheas", "Double notes in semicorcheas",
+          "Thirds and sixths in semicorcheas with naturals and flats, doubled by the left hand. Hard because the "
+          "double notes are fast and change their alteration often.",
+          exk("rh-31-fast-double-notes", "Polonaise Op. 26 No. 2", "026-1-BH-002.krn", "141-142")),
+    right("hard", "fast-melody-many-accidentals", "Fast melody with many accidentals",
+          "A melody in semicorcheas with a few double notes, and naturals on many notes. Hard because the line is "
+          "fast and keeps leaving the armadura.",
+          exk("rh-38-doubles-fast", "Sonata Op. 4, movement 3", "004-1-HAc-003.krn", "27-28")),
+    right("hard", "fast-figure-around-a-note", "Fast figure around a note",
+          "Semicorcheas that turn around one note with chromatic neighbours (a double sharp among them), against "
+          "a left hand in another rhythm. Hard because of the speed and the alterations, although the figure repeats.",
+          exk("rh-39-doubles-fast", "Impromptu Op. 66", "066-1-Sam.krn", "9-10")),
+    right("super hard", "chords-in-semicorcheas-down", "Chords in semicorcheas going down",
+          "Three- and four-note chords in semicorcheas that go down by semitones, under an 8va line. Super hard "
+          "because full chords move fast in one run.",
+          exk("rh-23-chord-run", "Polonaise Op. 44", "044-1-ME.krn", "300-301")),
+    right("super hard", "full-chords-jumping", "Full chords that jump",
+          "Chords of three and four notes in corcheas that jump up and down, with a decoration note. Super hard "
+          "because the hand opens and moves on every chord.",
+          exk("rh-28-fast-ornamented", "Polonaise Op. 53", "053-1-BH.krn", "32-33")),
+    right("super hard", "changing-double-notes-with-ornaments", "Double notes that change shape",
+          "Thirds, sixths and chords that change shape on every beat, with decoration notes, in Fa# major. Super "
+          "hard because no shape repeats and the hand keeps moving.",
+          exk("rh-33-fast-chords-moving", "Barcarolle Op. 60", "060-1-BH.krn", "28-29")),
+    right("super hard", "cadenza-run", "Cadenza run",
+          "A run of very short notes down from a high note, outside the beat (a cadenza). Super hard because it is "
+          "very fast and covers more than two octavas.",
+          exk("rh-34-very-fast-wide", "Nocturne Op. 32 No. 1", "032-1-Sm-001.krn", "60-61")),
+    right("super hard", "wide-zigzag-very-fast", "Very fast wide zig-zag",
+          "Fusas that jump up and down in a wide zig-zag after a few chords. Super hard because each note is far "
+          "from the one before, at a high speed.",
+          exk("rh-35-very-fast-wide", "Variations on a German air (posthumous)", "VGNA-1-HAc.krn", "2-3")),
+    right("super hard", "jumps-with-fast-figures", "Jumps with fast figures",
+          "A low note, then a fast figure an octava or more higher, again and again, with sharps. Super hard because "
+          "the hand jumps and plays fast at each landing.",
+          exk("rh-36-jumps", "Polonaise Op. 71 No. 1", "071_1-1-MEIf.krn", "79-80")),
+    # ---------------------------------------------------------------- right hand, review 3, drawn by the app
+    varr("easy", "five-finger-melody", "Five-finger melody",
+         "The melody inside five keys (Mi4 to Do5) in negras and blancas. Easy because each finger has its key and "
+         "the hand never moves."),
+    varr("easy", "chords-on-each-beat", "Chords on each beat",
+         "The triad of the harmony on every negra (Fa4-La4-Do5, Mi4-Sol4-Do5, Fa4-Sib4-Re5). Easy because the "
+         "chord changes only with the harmony and stays in one place."),
+    varr("easy", "repeated-chord-in-corcheas", "Repeated chord in corcheas",
+         "The same triad played again in corcheas. Easy because the hand keeps one shape; only the speed asks "
+         "something."),
+    varr("easy", "two-note-chords-in-one-position", "Two-note chords in one position",
+         "Fa4-La4, then La4-Do5, in negras: two notes of the triad, then the two above them. Easy because the hand "
+         "does not move."),
+    varr("easy", "broken-triad-in-one-position", "Broken triad in one position",
+         "Fa4-Do5-La4-Do5 in corcheas (an Alberti figure in the right hand). Easy because the three fingers stay on "
+         "the three keys of the chord."),
+    varr("medium", "melody-in-thirds", "Melody in thirds",
+         "Every note of the melody with the third under it, also on the corcheas. Medium because two fingers move "
+         "together along the melody."),
+    varr("medium", "melody-landing-on-a-chord", "Melody landing on a chord",
+         "Single notes, and at the end of each phrase a chord of three notes of the harmony under the melody note. "
+         "Medium because the chord comes only on the long, last notes."),
+    varr("medium", "broken-chord-up-and-down-in-semicorcheas", "Broken chord up and down in semicorcheas",
+         "Fa4-La4-Do5-Fa5-Do5-La4-Fa4-La4 at every half bar. Medium because it is fast and covers an octava, but "
+         "the figure never changes."),
+    varr("medium", "turn-around-the-melody", "Turn around the melody",
+         "Each negra of the melody played as four semicorcheas around it (the note, the step above, the note, the "
+         "step below). Medium because it is fast, but it is the same turn every time."),
+    varr("medium", "chromatic-neighbour", "Chromatic neighbour",
+         "Each negra of the melody comes from the semitone below (Sol#4-La4, Si4-Do5). Medium because of the small "
+         "alterations, one per beat, in one position."),
+    varr("hard", "chords-climbing-in-corcheas", "Chords climbing in corcheas",
+         "The triad moved one step up, three times, and back, in corcheas (Fa-La-Do, Sol-Sib-Re, La-Do-Mi, "
+         "Sib-Re-Fa). Hard because full chords move in one run."),
+    varr("hard", "sixths-in-semicorcheas", "Sixths in semicorcheas",
+         "Sixths that go down by steps and back in semicorcheas. Hard because the hand plays double notes fast "
+         "while it moves."),
+    varr("hard", "melody-in-octaves", "Melody in octavas",
+         "The melody doubled at the octava below. Hard because the hand stays open on the octava and jumps with "
+         "every note."),
+    varr("hard", "chromatic-run", "Chromatic run",
+         "Eight semitones up from the top of the chord and back, in semicorcheas, with a sharp on every other "
+         "note. Hard because it is fast and every note is altered."),
+    varr("hard", "trill-on-long-notes", "Trill on long notes",
+         "The melody with a trill on its blanca. Hard because the trill asks for fast, even fingers while the "
+         "melody goes on."),
+    varr("super hard", "octaves-in-semicorcheas", "Octavas in semicorcheas",
+         "A scale in octavas going up and down in semicorcheas. Super hard because the open hand moves fast."),
+    varr("super hard", "chords-jumping-an-octave", "Chords jumping an octava",
+         "A four-note chord, then the same chord an octava higher, again and again in corcheas. Super hard because "
+         "the hand jumps with a full chord on every note."),
+    varr("super hard", "chromatic-thirds", "Chromatic thirds",
+         "Thirds that go up and down by semitones in semicorcheas. Super hard because two fingers play a fast "
+         "chromatic line together."),
     # ---------------------------------------------------------------- left hand, drawn variations (review 1)
     var("easy", "low-note-then-two-notes-rocking", "Low note, then two notes rocking",
         "Fa2, then La3-Do4-La3-Do4 in corcheas: one low note, then two notes of the chord one after the other. "
@@ -330,7 +521,9 @@ the variations of easy, medium and hard asked in your review). Each pattern has 
 (Hard 3), to name it in the Enhance with AI dialog. Every Chopin passage is also written in the app's notation from
 the kern of the first edition and drawn by the app, with the snapshot of the edition under it; the app writes one
 voice per hand, no tuplets, and its own accidentals and clefs. The drawn patterns share one melody in Fa major (two bars of Fa, one of Do, then Sib and Do), so that only
-the left hand changes from one to the next. In each snapshot the other hand is grey. The names are the ones the level
+the left hand changes from one to the next; the drawn right hands use the same harmony over the held triad of the left
+hand. The right-hand patterns of review 3 come from a study of every two bars of 198 works: they show the app's drawing
+of the kern of the first edition, without a snapshot. In each snapshot the other hand is grey. The names are the ones the level
 prompts of Phase 3 will use.</p>
 <div class="tabs">__TABS__</div>
 <div class="pills">__PILLS__</div>
@@ -380,6 +573,10 @@ def card(p: dict) -> str:
             figs.append(f'<figure class="edition"><figcaption>The edition: {e["pdf"]} page {e["page"]}'
                         f'</figcaption><a href="{src}"><img src="{src}" alt="the edition" loading="lazy"></a>'
                         f'</figure>')
+        elif e.get("kern"):
+            figs.append(f'<figure class="app"><figcaption>{html.escape(e["piece"])}, bars {e["bars"]} of {STUDY}, '
+                        f'in the app\'s notation{html.escape(note)}</figcaption><a href="{e["drawing"]}">'
+                        f'<img src="{e["drawing"]}" alt="{html.escape(p["name"])}" loading="lazy"></a></figure>')
         else:
             figs.append(f'<figure class="app"><figcaption>{html.escape(e["piece"] + note)}</figcaption>'
                         f'<a href="{e["image"]}"><img src="{e["image"]}" alt="{html.escape(p["name"])}" '
@@ -396,7 +593,10 @@ def main() -> None:
     assert len(ids) == len(set(ids)), "one pattern, one name"
     for p in PATTERNS:
         for e in p["examples"]:
-            path = (HERE / e["image"]) if not e["pdf"] else (HERE.parent.parent / "images/chopin_passages" / e["image"])
+            if e["pdf"]:
+                path = HERE.parent.parent / "images/chopin_passages" / e["image"]
+            else:
+                path = HERE / (e.get("drawing") or e["image"])
             assert path.exists(), path
     order = {lv: i for i, lv in enumerate(LEVELS)}
     pats = sorted(PATTERNS, key=lambda p: (p["hand"] != "right", order[p["level"]]))

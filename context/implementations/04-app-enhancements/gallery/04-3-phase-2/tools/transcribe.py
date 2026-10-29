@@ -37,15 +37,17 @@ def passage(kern: str, bars: str) -> dict:
     parts = [p for p in score.parts if any(True for _ in p.recurse().notes)]
     mean = [sum(n.pitches[0].midi for n in p.recurse().notes) / len(list(p.recurse().notes)) for p in parts]
     left = min(range(len(parts)), key=lambda i: mean[i])
-    first = parts[left].measure(a)
-    start = first.getOffsetInHierarchy(parts[left])
-    last = parts[left].measure(b)
-    end = last.getOffsetInHierarchy(parts[left]) + last.duration.quarterLength
+    # the bars, from the part that has them (a few files number the bars of one staff only)
+    ref = next(p for p in [parts[left]] + parts if p.measure(a) is not None and p.measure(b) is not None)
+    first = ref.measure(a)
+    start = first.getOffsetInHierarchy(ref)
+    last = ref.measure(b)
+    end = last.getOffsetInHierarchy(ref) + last.duration.quarterLength
     # the armadura in force at the start; a "*kcancel" line reads as a second armadura with nothing at the same
     # place (Waltz Op. 69 No. 2), so at one place the armadura with signs wins
-    ks = [(float(k.getOffsetInHierarchy(parts[left])), k.sharps)
-          for k in parts[left].recurse().getElementsByClass("KeySignature")
-          if k.getOffsetInHierarchy(parts[left]) <= start]
+    ks = [(float(k.getOffsetInHierarchy(ref)), k.sharps)
+          for k in ref.recurse().getElementsByClass("KeySignature")
+          if k.getOffsetInHierarchy(ref) <= start]
     at = max((o for o, _ in ks), default=None)
     here = [sh for o, sh in ks if o == at]
     key = next((sh for sh in here if sh), here[-1] if here else 0)

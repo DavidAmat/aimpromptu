@@ -26,6 +26,18 @@
           "note": null,
           "drawing": "transcribed/prelude-4-right-1.svg",
           "f1": "transcribed/prelude-4-right-1.f1"
+        },
+        {
+          "image": null,
+          "piece": "Nocturne Op. 55 No. 2",
+          "pdf": null,
+          "page": null,
+          "bars": "51-52",
+          "kern": "055-1-BH-002.krn",
+          "kernBars": "51-52",
+          "note": "Long notes over a left hand that moves a lot: the right hand still stays in one place.",
+          "drawing": "transcribed/rh-00-slow-single.svg",
+          "f1": "transcribed/rh-00-slow-single.f1"
         }
       ],
       "number": 1,
@@ -49,10 +61,201 @@
           "note": null,
           "drawing": "transcribed/waltz-69-2-right-1.svg",
           "f1": "transcribed/waltz-69-2-right-1.f1"
+        },
+        {
+          "image": null,
+          "piece": "Mazurka Op. 67 No. 4",
+          "pdf": null,
+          "page": null,
+          "bars": "9-10",
+          "kern": "067-1-Sam-004.krn",
+          "kernBars": "9-10",
+          "note": "A line that goes down by steps.",
+          "drawing": "transcribed/rh-03-corcheas-single.svg",
+          "f1": "transcribed/rh-03-corcheas-single.f1"
         }
       ],
       "number": 2,
       "ref": "right easy 2"
+    },
+    {
+      "hand": "right",
+      "level": "easy",
+      "id": "chords-in-one-position",
+      "name": "Chords in one position",
+      "line": "Two- and three-note chords with the melody on top, all inside one octava, while the left hand runs. Easy because the hand does not move, although every note is a chord.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Polonaise Op. 40 No. 2",
+          "pdf": null,
+          "page": null,
+          "bars": "78-79",
+          "kern": "040-1-TR-002.krn",
+          "kernBars": "78-79",
+          "note": null,
+          "drawing": "transcribed/rh-04-held-chords.svg",
+          "f1": "transcribed/rh-04-held-chords.f1"
+        }
+      ],
+      "number": 3,
+      "ref": "right easy 3"
+    },
+    {
+      "hand": "right",
+      "level": "easy",
+      "id": "repeated-note-with-chords",
+      "name": "Repeated note with chords",
+      "line": "One note repeated in corcheas, with a chord below it on the strong beats (the repeated note of Prelude 15, now in the right hand). Easy because the hand stays on the same keys.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Prelude Op. 28 No. 15",
+          "pdf": null,
+          "page": null,
+          "bars": "57-58",
+          "kern": "028-1-BH-015.krn",
+          "kernBars": "57-58",
+          "note": null,
+          "drawing": "transcribed/rh-08-repeated-chord.svg",
+          "f1": "transcribed/rh-08-repeated-chord.f1"
+        }
+      ],
+      "number": 4,
+      "ref": "right easy 4"
+    },
+    {
+      "hand": "right",
+      "level": "easy",
+      "id": "repeated-two-note-chord",
+      "name": "Repeated two-note chord",
+      "line": "The same third played again in negras, with one note changing now and then. Easy because two fingers stay on two keys.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Sonata Op. 35, movement 2",
+          "pdf": null,
+          "page": null,
+          "bars": "91-92",
+          "kern": "035-1a-TR-002.krn",
+          "kernBars": "91-92",
+          "note": null,
+          "drawing": "transcribed/rh-06-two-note-chords.svg",
+          "f1": "transcribed/rh-06-two-note-chords.f1"
+        }
+      ],
+      "number": 5,
+      "ref": "right easy 5"
+    },
+    {
+      "hand": "right",
+      "level": "easy",
+      "id": "five-finger-melody",
+      "name": "Five-finger melody",
+      "line": "The melody inside five keys (Mi4 to Do5) in negras and blancas. Easy because each finger has its key and the hand never moves.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-five-finger-melody.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-five-finger-melody.f1",
+          "note": null
+        }
+      ],
+      "number": 6,
+      "ref": "right easy 6"
+    },
+    {
+      "hand": "right",
+      "level": "easy",
+      "id": "chords-on-each-beat",
+      "name": "Chords on each beat",
+      "line": "The triad of the harmony on every negra (Fa4-La4-Do5, Mi4-Sol4-Do5, Fa4-Sib4-Re5). Easy because the chord changes only with the harmony and stays in one place.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-chords-on-each-beat.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-chords-on-each-beat.f1",
+          "note": null
+        }
+      ],
+      "number": 7,
+      "ref": "right easy 7"
+    },
+    {
+      "hand": "right",
+      "level": "easy",
+      "id": "repeated-chord-in-corcheas",
+      "name": "Repeated chord in corcheas",
+      "line": "The same triad played again in corcheas. Easy because the hand keeps one shape; only the speed asks something.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-repeated-chord-in-corcheas.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-repeated-chord-in-corcheas.f1",
+          "note": null
+        }
+      ],
+      "number": 8,
+      "ref": "right easy 8"
+    },
+    {
+      "hand": "right",
+      "level": "easy",
+      "id": "two-note-chords-in-one-position",
+      "name": "Two-note chords in one position",
+      "line": "Fa4-La4, then La4-Do5, in negras: two notes of the triad, then the two above them. Easy because the hand does not move.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-two-note-chords-in-one-position.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-two-note-chords-in-one-position.f1",
+          "note": null
+        }
+      ],
+      "number": 9,
+      "ref": "right easy 9"
+    },
+    {
+      "hand": "right",
+      "level": "easy",
+      "id": "broken-triad-in-one-position",
+      "name": "Broken triad in one position",
+      "line": "Fa4-Do5-La4-Do5 in corcheas (an Alberti figure in the right hand). Easy because the three fingers stay on the three keys of the chord.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-broken-triad-in-one-position.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-broken-triad-in-one-position.f1",
+          "note": null
+        }
+      ],
+      "number": 10,
+      "ref": "right easy 10"
     },
     {
       "hand": "right",
@@ -91,10 +294,10 @@
     },
     {
       "hand": "right",
-      "level": "hard",
+      "level": "medium",
       "id": "melody-in-chords-one-rhythm",
       "name": "Melody in chords, one rhythm",
-      "line": "The melody on top of three-note chords on every negra, with the same rhythm (corchea with puntillo, semicorchea, two negras) every two bars. Hard because every note is a chord, although the rhythm repeats and the tempo is slow.",
+      "line": "The melody on top of three-note chords on every negra, with the same rhythm (corchea with puntillo, semicorchea, two negras) every two bars. Medium because every note is a chord, but the hand stays in one place, the rhythm repeats and the tempo is slow (it was hard before review 3).",
       "examples": [
         {
           "image": "prelude-7-right-1.png",
@@ -109,8 +312,360 @@
           "f1": "transcribed/prelude-7-right-1.f1"
         }
       ],
-      "number": 1,
-      "ref": "right hard 1"
+      "number": 2,
+      "ref": "right medium 2"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "thirds-and-sixths-in-corcheas",
+      "name": "Thirds and sixths in corcheas",
+      "line": "Two notes on every corchea (Fa5-Reb5, Mib5-Sol4) after a long two-note chord. Medium because the notes are fast but the hand repeats one shape in one place (it was hard before review 3).",
+      "examples": [
+        {
+          "image": "waltz-70-3-right-1.png",
+          "piece": "Waltz Op. 70 No. 3",
+          "pdf": "waltzes.pdf",
+          "page": 99,
+          "bars": "17-19",
+          "kern": "070-1-MEIf-003.krn",
+          "kernBars": "17-19",
+          "note": null,
+          "drawing": "transcribed/waltz-70-3-right-1.svg",
+          "f1": "transcribed/waltz-70-3-right-1.f1"
+        }
+      ],
+      "number": 3,
+      "ref": "right medium 3"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "broken-chord-over-two-octaves",
+      "name": "Broken chord over two octavas",
+      "line": "Fa5-La5-Do6-Fa6-La6, then down: the notes of one chord in corcheas, going up two octavas and coming back. Medium because the hand must move, but it follows the same chord all the way.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Waltz Op. 34 No. 3",
+          "pdf": null,
+          "page": null,
+          "bars": "40-41",
+          "kern": "034_3-1-BH-003.krn",
+          "kernBars": "40-41",
+          "note": null,
+          "drawing": "transcribed/rh-02-corcheas-single.svg",
+          "f1": "transcribed/rh-02-corcheas-single.f1"
+        }
+      ],
+      "number": 4,
+      "ref": "right medium 4"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "trill-in-thirds",
+      "name": "A trill in thirds",
+      "line": "Two thirds that rock in semicorcheas (Sol#-Si, then La-Do#), again and again. Medium at a moderate tempo because the hand never moves; Chopin asks for it very fast, which makes it an étude.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Étude Op. 25 No. 6",
+          "pdf": null,
+          "page": null,
+          "bars": "1-2",
+          "kern": "025-1b-LE-006.krn",
+          "kernBars": "1-2",
+          "note": null,
+          "drawing": "transcribed/rh-09-repeated-chord.svg",
+          "f1": "transcribed/rh-09-repeated-chord.f1"
+        }
+      ],
+      "number": 5,
+      "ref": "right medium 5"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "two-note-chords-dotted-rhythm",
+      "name": "Two-note chords in a short-long rhythm",
+      "line": "Thirds and sixths with a short note before a long one, the same figure every beat, with a few flats outside the armadura. Medium because of the rhythm and the alterations; the hand stays in one place.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Mazurka Op. 24 No. 1",
+          "pdf": null,
+          "page": null,
+          "bars": "46-47",
+          "kern": "024-1-Sm-001.krn",
+          "kernBars": "46-47",
+          "note": null,
+          "drawing": "transcribed/rh-10-fast-in-position.svg",
+          "f1": "transcribed/rh-10-fast-in-position.f1"
+        }
+      ],
+      "number": 6,
+      "ref": "right medium 6"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "mazurka-rhythm",
+      "name": "Mazurka rhythm",
+      "line": "A short note, then a long one on the same key, repeated, with a decoration note at the start. Medium because the rhythm is uneven, although the notes repeat.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Mazurka Op. 68 No. 2",
+          "pdf": null,
+          "page": null,
+          "bars": "21-22",
+          "kern": "068-1-MEIf-002.krn",
+          "kernBars": "21-22",
+          "note": null,
+          "drawing": "transcribed/rh-12-fast-repeating-shape.svg",
+          "f1": "transcribed/rh-12-fast-repeating-shape.f1"
+        }
+      ],
+      "number": 7,
+      "ref": "right medium 7"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "broken-chord-shape-moving",
+      "name": "Broken chord that keeps its shape",
+      "line": "A broken chord in semicorcheas that is played again one step higher, with the same shape. Medium because it is fast and moves, but the fingers repeat one figure.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Rondo Op. 16",
+          "pdf": null,
+          "page": null,
+          "bars": "417-418",
+          "kern": "016-1-PL.krn",
+          "kernBars": "417-418",
+          "note": null,
+          "drawing": "transcribed/rh-13-fast-repeating-shape.svg",
+          "f1": "transcribed/rh-13-fast-repeating-shape.f1"
+        }
+      ],
+      "number": 8,
+      "ref": "right medium 8"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "two-note-chords-climbing",
+      "name": "Two-note chords climbing",
+      "line": "A melody in thirds and sixths in corcheas that climbs slowly, one note of the chord changing at a time. Medium because the hand moves up with a regular shape.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Ballade No. 3, Op. 47",
+          "pdf": null,
+          "page": null,
+          "bars": "37-38",
+          "kern": "047-1-BH.krn",
+          "kernBars": "37-38",
+          "note": null,
+          "drawing": "transcribed/rh-15-small-chords-moving.svg",
+          "f1": "transcribed/rh-15-small-chords-moving.f1"
+        }
+      ],
+      "number": 9,
+      "ref": "right medium 9"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "melody-with-a-decoration-note",
+      "name": "Melody with a decoration note",
+      "line": "Long notes, each with one decoration note before it, and a few accidentals. Medium because of the decoration notes; the hand stays almost still.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Waltz Op. 64 No. 1",
+          "pdf": null,
+          "page": null,
+          "bars": "55-56",
+          "kern": "064-1a-BH-001.krn",
+          "kernBars": "55-56",
+          "note": null,
+          "drawing": "transcribed/rh-01-slow-single.svg",
+          "f1": "transcribed/rh-01-slow-single.f1"
+        },
+        {
+          "image": null,
+          "piece": "Mazurka Op. 33 No. 4",
+          "pdf": null,
+          "page": null,
+          "bars": "28-29",
+          "kern": "033-1-BH-004.krn",
+          "kernBars": "28-29",
+          "note": "With a Sol# outside the armadura.",
+          "drawing": "transcribed/rh-16-melody-with-accidentals.svg",
+          "f1": "transcribed/rh-16-melody-with-accidentals.f1"
+        }
+      ],
+      "number": 10,
+      "ref": "right medium 10"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "quick-run-into-a-note",
+      "name": "Quick run into a note",
+      "line": "A few fast decoration notes that run up into a two-note chord, then a calm melody. Medium because the run is short and lands in the position of the melody.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Impromptu Op. 29",
+          "pdf": null,
+          "page": null,
+          "bars": "58-59",
+          "kern": "029-1-BH.krn",
+          "kernBars": "58-59",
+          "note": null,
+          "drawing": "transcribed/rh-20-melody-with-ornament.svg",
+          "f1": "transcribed/rh-20-melody-with-ornament.f1"
+        }
+      ],
+      "number": 11,
+      "ref": "right medium 11"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "scale-run",
+      "name": "Scale run",
+      "line": "A scale down over two octavas in semicorcheas, then chords. Medium because it is fast and the hand moves, but a scale is the most regular pattern there is.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Variations Op. 12",
+          "pdf": null,
+          "page": null,
+          "bars": "2-3",
+          "kern": "012-1-Sm-001.krn",
+          "kernBars": "2-3",
+          "note": null,
+          "drawing": "transcribed/rh-25-fast-no-pattern.svg",
+          "f1": "transcribed/rh-25-fast-no-pattern.f1"
+        }
+      ],
+      "number": 12,
+      "ref": "right medium 12"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "melody-in-thirds",
+      "name": "Melody in thirds",
+      "line": "Every note of the melody with the third under it, also on the corcheas. Medium because two fingers move together along the melody.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-melody-in-thirds.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-melody-in-thirds.f1",
+          "note": null
+        }
+      ],
+      "number": 13,
+      "ref": "right medium 13"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "melody-landing-on-a-chord",
+      "name": "Melody landing on a chord",
+      "line": "Single notes, and at the end of each phrase a chord of three notes of the harmony under the melody note. Medium because the chord comes only on the long, last notes.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-melody-landing-on-a-chord.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-melody-landing-on-a-chord.f1",
+          "note": null
+        }
+      ],
+      "number": 14,
+      "ref": "right medium 14"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "broken-chord-up-and-down-in-semicorcheas",
+      "name": "Broken chord up and down in semicorcheas",
+      "line": "Fa4-La4-Do5-Fa5-Do5-La4-Fa4-La4 at every half bar. Medium because it is fast and covers an octava, but the figure never changes.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-broken-chord-up-and-down-in-semicorcheas.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-broken-chord-up-and-down-in-semicorcheas.f1",
+          "note": null
+        }
+      ],
+      "number": 15,
+      "ref": "right medium 15"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "turn-around-the-melody",
+      "name": "Turn around the melody",
+      "line": "Each negra of the melody played as four semicorcheas around it (the note, the step above, the note, the step below). Medium because it is fast, but it is the same turn every time.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-turn-around-the-melody.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-turn-around-the-melody.f1",
+          "note": null
+        }
+      ],
+      "number": 16,
+      "ref": "right medium 16"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
+      "id": "chromatic-neighbour",
+      "name": "Chromatic neighbour",
+      "line": "Each negra of the melody comes from the semitone below (Sol#4-La4, Si4-Do5). Medium because of the small alterations, one per beat, in one position.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-chromatic-neighbour.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-chromatic-neighbour.f1",
+          "note": null
+        }
+      ],
+      "number": 17,
+      "ref": "right medium 17"
     },
     {
       "hand": "right",
@@ -132,8 +687,8 @@
           "f1": "transcribed/ballade4-right-1.f1"
         }
       ],
-      "number": 2,
-      "ref": "right hard 2"
+      "number": 1,
+      "ref": "right hard 1"
     },
     {
       "hand": "right",
@@ -155,31 +710,360 @@
           "f1": "transcribed/waltz-42-right-1.f1"
         }
       ],
+      "number": 2,
+      "ref": "right hard 2"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "melody-over-chromatic-inner-line",
+      "name": "Melody over a chromatic inner line",
+      "line": "Two-note chords on top and, under them in the same hand, a line of semicorcheas that moves by semitones. Hard because one hand plays two voices fast, with many accidentals.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Étude Op. 10 No. 3",
+          "pdf": null,
+          "page": null,
+          "bars": "30-31",
+          "kern": "010-1b-Sm-003.krn",
+          "kernBars": "30-31",
+          "note": null,
+          "drawing": "transcribed/rh-11-fast-in-position.svg",
+          "f1": "transcribed/rh-11-fast-in-position.f1"
+        }
+      ],
       "number": 3,
       "ref": "right hard 3"
     },
     {
       "hand": "right",
       "level": "hard",
-      "id": "thirds-and-sixths-in-corcheas",
-      "name": "Thirds and sixths in corcheas",
-      "line": "Two notes on every corchea (Fa5-Reb5, Mib5-Sol4) after a long two-note chord. Hard because the hand plays double notes fast, although it keeps the same shape.",
+      "id": "thirds-climbing-by-semitones",
+      "name": "Thirds climbing by semitones",
+      "line": "Thirds in corcheas that climb chromatically, with naturals and flats on almost every chord. Hard because the shape is regular but every chord is altered.",
       "examples": [
         {
-          "image": "waltz-70-3-right-1.png",
-          "piece": "Waltz Op. 70 No. 3",
-          "pdf": "waltzes.pdf",
-          "page": 99,
-          "bars": "17-19",
-          "kern": "070-1-MEIf-003.krn",
-          "kernBars": "17-19",
+          "image": null,
+          "piece": "Mazurka Op. 30 No. 3",
+          "pdf": null,
+          "page": null,
+          "bars": "21-22",
+          "kern": "030-1-BH-003.krn",
+          "kernBars": "21-22",
           "note": null,
-          "drawing": "transcribed/waltz-70-3-right-1.svg",
-          "f1": "transcribed/waltz-70-3-right-1.f1"
+          "drawing": "transcribed/rh-18-thirds-sixths-corcheas.svg",
+          "f1": "transcribed/rh-18-thirds-sixths-corcheas.f1"
         }
       ],
       "number": 4,
       "ref": "right hard 4"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "chords-moving-in-a-run",
+      "name": "Chords moving in a run",
+      "line": "Three-note chords in corcheas that go down one after the other, under an 8va line. Hard because the hand moves with full chords in the same run (the user's hard case).",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Ballade No. 2, Op. 38",
+          "pdf": null,
+          "page": null,
+          "bars": "69-70",
+          "kern": "038-1-BH.krn",
+          "kernBars": "69-70",
+          "note": null,
+          "drawing": "transcribed/rh-22-chord-run.svg",
+          "f1": "transcribed/rh-22-chord-run.f1"
+        }
+      ],
+      "number": 5,
+      "ref": "right hard 5"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "fast-run-without-a-shape",
+      "name": "Fast run without a fixed shape",
+      "line": "A run of fusas and shorter notes that goes up and down with no repeated figure, after a decoration note. Hard because the fingers cannot repeat a shape.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Bolero Op. 19",
+          "pdf": null,
+          "page": null,
+          "bars": "159-160",
+          "kern": "019-1-PE.krn",
+          "kernBars": "159-160",
+          "note": null,
+          "drawing": "transcribed/rh-24-fast-no-pattern.svg",
+          "f1": "transcribed/rh-24-fast-no-pattern.f1"
+        },
+        {
+          "image": null,
+          "piece": "Concerto Op. 21, movement 2 (piano)",
+          "pdf": null,
+          "page": null,
+          "bars": "41-42",
+          "kern": "021-1a-BH-002.krn",
+          "kernBars": "41-42",
+          "note": "An ornament of the melody (fioritura) with accidentals.",
+          "drawing": "transcribed/rh-27-fast-chromatic.svg",
+          "f1": "transcribed/rh-27-fast-chromatic.f1"
+        }
+      ],
+      "number": 6,
+      "ref": "right hard 6"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "wide-chromatic-arpeggios",
+      "name": "Wide arpeggios with accidentals",
+      "line": "Arpeggios in fusas over two octavas, with sharps outside the armadura; the shape repeats on each chord. Hard because the notes are very fast and the hand crosses a wide range.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Fantasy on Polish airs Op. 13",
+          "pdf": null,
+          "page": null,
+          "bars": "222-223",
+          "kern": "013-1a-KI.krn",
+          "kernBars": "222-223",
+          "note": null,
+          "drawing": "transcribed/rh-26-fast-chromatic.svg",
+          "f1": "transcribed/rh-26-fast-chromatic.f1"
+        }
+      ],
+      "number": 7,
+      "ref": "right hard 7"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "double-notes-dotted-climbing",
+      "name": "Double notes climbing in a dotted rhythm",
+      "line": "Two-note chords with a short note before a long one, climbing, with decoration notes and accidentals. Hard because the double notes move up while the rhythm stays uneven.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Allegro de concert Op. 46",
+          "pdf": null,
+          "page": null,
+          "bars": "143-144",
+          "kern": "046-1-BH.krn",
+          "kernBars": "143-144",
+          "note": null,
+          "drawing": "transcribed/rh-29-fast-ornamented.svg",
+          "f1": "transcribed/rh-29-fast-ornamented.f1"
+        }
+      ],
+      "number": 8,
+      "ref": "right hard 8"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "double-notes-that-jump",
+      "name": "Double notes that jump",
+      "line": "Two-note chords in corcheas that jump between positions, one after the other. Hard because each chord needs a new hand position.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Sonata Op. 58, movement 4",
+          "pdf": null,
+          "page": null,
+          "bars": "127-128",
+          "kern": "058-1-BH-004.krn",
+          "kernBars": "127-128",
+          "note": null,
+          "drawing": "transcribed/rh-30-fast-double-notes.svg",
+          "f1": "transcribed/rh-30-fast-double-notes.f1"
+        }
+      ],
+      "number": 9,
+      "ref": "right hard 9"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "double-notes-in-semicorcheas",
+      "name": "Double notes in semicorcheas",
+      "line": "Thirds and sixths in semicorcheas with naturals and flats, doubled by the left hand. Hard because the double notes are fast and change their alteration often.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Polonaise Op. 26 No. 2",
+          "pdf": null,
+          "page": null,
+          "bars": "141-142",
+          "kern": "026-1-BH-002.krn",
+          "kernBars": "141-142",
+          "note": null,
+          "drawing": "transcribed/rh-31-fast-double-notes.svg",
+          "f1": "transcribed/rh-31-fast-double-notes.f1"
+        }
+      ],
+      "number": 10,
+      "ref": "right hard 10"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "fast-melody-many-accidentals",
+      "name": "Fast melody with many accidentals",
+      "line": "A melody in semicorcheas with a few double notes, and naturals on many notes. Hard because the line is fast and keeps leaving the armadura.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Sonata Op. 4, movement 3",
+          "pdf": null,
+          "page": null,
+          "bars": "27-28",
+          "kern": "004-1-HAc-003.krn",
+          "kernBars": "27-28",
+          "note": null,
+          "drawing": "transcribed/rh-38-doubles-fast.svg",
+          "f1": "transcribed/rh-38-doubles-fast.f1"
+        }
+      ],
+      "number": 11,
+      "ref": "right hard 11"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "fast-figure-around-a-note",
+      "name": "Fast figure around a note",
+      "line": "Semicorcheas that turn around one note with chromatic neighbours (a double sharp among them), against a left hand in another rhythm. Hard because of the speed and the alterations, although the figure repeats.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Impromptu Op. 66",
+          "pdf": null,
+          "page": null,
+          "bars": "9-10",
+          "kern": "066-1-Sam.krn",
+          "kernBars": "9-10",
+          "note": null,
+          "drawing": "transcribed/rh-39-doubles-fast.svg",
+          "f1": "transcribed/rh-39-doubles-fast.f1"
+        }
+      ],
+      "number": 12,
+      "ref": "right hard 12"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "chords-climbing-in-corcheas",
+      "name": "Chords climbing in corcheas",
+      "line": "The triad moved one step up, three times, and back, in corcheas (Fa-La-Do, Sol-Sib-Re, La-Do-Mi, Sib-Re-Fa). Hard because full chords move in one run.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-chords-climbing-in-corcheas.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-chords-climbing-in-corcheas.f1",
+          "note": null
+        }
+      ],
+      "number": 13,
+      "ref": "right hard 13"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "sixths-in-semicorcheas",
+      "name": "Sixths in semicorcheas",
+      "line": "Sixths that go down by steps and back in semicorcheas. Hard because the hand plays double notes fast while it moves.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-sixths-in-semicorcheas.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-sixths-in-semicorcheas.f1",
+          "note": null
+        }
+      ],
+      "number": 14,
+      "ref": "right hard 14"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "melody-in-octaves",
+      "name": "Melody in octavas",
+      "line": "The melody doubled at the octava below. Hard because the hand stays open on the octava and jumps with every note.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-melody-in-octaves.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-melody-in-octaves.f1",
+          "note": null
+        }
+      ],
+      "number": 15,
+      "ref": "right hard 15"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "chromatic-run",
+      "name": "Chromatic run",
+      "line": "Eight semitones up from the top of the chord and back, in semicorcheas, with a sharp on every other note. Hard because it is fast and every note is altered.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-chromatic-run.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-chromatic-run.f1",
+          "note": null
+        }
+      ],
+      "number": 16,
+      "ref": "right hard 16"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "trill-on-long-notes",
+      "name": "Trill on long notes",
+      "line": "The melody with a trill on its blanca. Hard because the trill asks for fast, even fingers while the melody goes on.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-trill-on-long-notes.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-trill-on-long-notes.f1",
+          "note": null
+        }
+      ],
+      "number": 17,
+      "ref": "right hard 17"
     },
     {
       "hand": "right",
@@ -226,6 +1110,210 @@
       ],
       "number": 2,
       "ref": "right super hard 2"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "chords-in-semicorcheas-down",
+      "name": "Chords in semicorcheas going down",
+      "line": "Three- and four-note chords in semicorcheas that go down by semitones, under an 8va line. Super hard because full chords move fast in one run.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Polonaise Op. 44",
+          "pdf": null,
+          "page": null,
+          "bars": "300-301",
+          "kern": "044-1-ME.krn",
+          "kernBars": "300-301",
+          "note": null,
+          "drawing": "transcribed/rh-23-chord-run.svg",
+          "f1": "transcribed/rh-23-chord-run.f1"
+        }
+      ],
+      "number": 3,
+      "ref": "right super hard 3"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "full-chords-jumping",
+      "name": "Full chords that jump",
+      "line": "Chords of three and four notes in corcheas that jump up and down, with a decoration note. Super hard because the hand opens and moves on every chord.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Polonaise Op. 53",
+          "pdf": null,
+          "page": null,
+          "bars": "32-33",
+          "kern": "053-1-BH.krn",
+          "kernBars": "32-33",
+          "note": null,
+          "drawing": "transcribed/rh-28-fast-ornamented.svg",
+          "f1": "transcribed/rh-28-fast-ornamented.f1"
+        }
+      ],
+      "number": 4,
+      "ref": "right super hard 4"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "changing-double-notes-with-ornaments",
+      "name": "Double notes that change shape",
+      "line": "Thirds, sixths and chords that change shape on every beat, with decoration notes, in Fa# major. Super hard because no shape repeats and the hand keeps moving.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Barcarolle Op. 60",
+          "pdf": null,
+          "page": null,
+          "bars": "28-29",
+          "kern": "060-1-BH.krn",
+          "kernBars": "28-29",
+          "note": null,
+          "drawing": "transcribed/rh-33-fast-chords-moving.svg",
+          "f1": "transcribed/rh-33-fast-chords-moving.f1"
+        }
+      ],
+      "number": 5,
+      "ref": "right super hard 5"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "cadenza-run",
+      "name": "Cadenza run",
+      "line": "A run of very short notes down from a high note, outside the beat (a cadenza). Super hard because it is very fast and covers more than two octavas.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Nocturne Op. 32 No. 1",
+          "pdf": null,
+          "page": null,
+          "bars": "60-61",
+          "kern": "032-1-Sm-001.krn",
+          "kernBars": "60-61",
+          "note": null,
+          "drawing": "transcribed/rh-34-very-fast-wide.svg",
+          "f1": "transcribed/rh-34-very-fast-wide.f1"
+        }
+      ],
+      "number": 6,
+      "ref": "right super hard 6"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "wide-zigzag-very-fast",
+      "name": "Very fast wide zig-zag",
+      "line": "Fusas that jump up and down in a wide zig-zag after a few chords. Super hard because each note is far from the one before, at a high speed.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Variations on a German air (posthumous)",
+          "pdf": null,
+          "page": null,
+          "bars": "2-3",
+          "kern": "VGNA-1-HAc.krn",
+          "kernBars": "2-3",
+          "note": null,
+          "drawing": "transcribed/rh-35-very-fast-wide.svg",
+          "f1": "transcribed/rh-35-very-fast-wide.f1"
+        }
+      ],
+      "number": 7,
+      "ref": "right super hard 7"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "jumps-with-fast-figures",
+      "name": "Jumps with fast figures",
+      "line": "A low note, then a fast figure an octava or more higher, again and again, with sharps. Super hard because the hand jumps and plays fast at each landing.",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Polonaise Op. 71 No. 1",
+          "pdf": null,
+          "page": null,
+          "bars": "79-80",
+          "kern": "071_1-1-MEIf.krn",
+          "kernBars": "79-80",
+          "note": null,
+          "drawing": "transcribed/rh-36-jumps.svg",
+          "f1": "transcribed/rh-36-jumps.f1"
+        }
+      ],
+      "number": 8,
+      "ref": "right super hard 8"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "octaves-in-semicorcheas",
+      "name": "Octavas in semicorcheas",
+      "line": "A scale in octavas going up and down in semicorcheas. Super hard because the open hand moves fast.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-octaves-in-semicorcheas.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-octaves-in-semicorcheas.f1",
+          "note": null
+        }
+      ],
+      "number": 9,
+      "ref": "right super hard 9"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "chords-jumping-an-octave",
+      "name": "Chords jumping an octava",
+      "line": "A four-note chord, then the same chord an octava higher, again and again in corcheas. Super hard because the hand jumps with a full chord on every note.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-chords-jumping-an-octave.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-chords-jumping-an-octave.f1",
+          "note": null
+        }
+      ],
+      "number": 10,
+      "ref": "right super hard 10"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "chromatic-thirds",
+      "name": "Chromatic thirds",
+      "line": "Thirds that go up and down by semitones in semicorcheas. Super hard because two fingers play a fast chromatic line together.",
+      "examples": [
+        {
+          "image": "drawn/drawn-right-chromatic-thirds.svg",
+          "piece": "Drawn by the app (review 3, 2026-10-29)",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-right-chromatic-thirds.f1",
+          "note": null
+        }
+      ],
+      "number": 11,
+      "ref": "right super hard 11"
     },
     {
       "hand": "left",

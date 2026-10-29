@@ -149,10 +149,15 @@ def left(tpl):
     return out
 
 
-def text(events):
+def text(events, right=None):
+    """The F1 frames text: the left-hand ``events`` under the melody, or under ``right`` (beat, notes, figure, beam,
+    tag) for the right-hand patterns."""
     lines = {}
-    for beat, p, fig, beam in MELODY:
-        lines.setdefault(round(beat * Q), {}).setdefault("R", []).append(f"{p}:{fig}" + (f" b{beam}" if beam else ""))
+    if right is None:
+        right = [(beat, (p,), fig, beam, "") for beat, p, fig, beam in MELODY]
+    for beat, notes, fig, beam, tag in right:
+        lines.setdefault(round(beat * Q), {}).setdefault("R", []).append(
+            f"{','.join(notes)}:{fig}" + (f" {tag}" if tag else "") + (f" b{beam}" if beam else ""))
     for beat, notes, fig, beam in events:
         lines.setdefault(round(beat * Q), {}).setdefault("L", []).append(
             f"{','.join(notes)}:{fig}" + (f" b{beam}" if beam else ""))
@@ -181,6 +186,163 @@ def spans(t):
             wide = max(wide, max(n.midi for n in ns) - min(n.midi for n in ns))
     return chord, wide
 
+
+# ---------------------------------------------------------------- right hand (review 3, 2026-10-29)
+# The right-hand patterns that the study of Chopin's works did not give, drawn over the held triad of the left hand
+# and the same harmony, so that only the right hand changes. Notes in Fa major; chromatic notes take sharps.
+
+SCALE = {5: "F", 7: "G", 9: "A", 10: "Bb", 0: "C", 2: "D", 4: "E"}
+CHROMA = {6: "F#", 8: "G#", 11: "B", 1: "C#", 3: "D#"}
+PCS = sorted(SCALE)
+
+
+def midi(name):
+    step = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}[name[0]]
+    acc = name[1:-1]
+    return 12 * (int(name[-1]) + 1) + step + (1 if acc == "#" else -1 if acc == "b" else 0)
+
+
+def name(m):
+    pc = m % 12
+    return f"{SCALE.get(pc) or CHROMA[pc]}{m // 12 - 1}"
+
+
+def step(m, k):
+    """``m`` moved ``k`` steps of the scale of Fa major (``m`` in the scale)."""
+    octave, i = divmod(PCS.index(m % 12) + k, 7)
+    return 12 * (m // 12 + octave) + PCS[i]
+
+
+RCH = {  # the right hand's chords near the melody: the triad, with the octava, the triad one position higher
+    "F": dict(t=("F4", "A4", "C5"), four=("F4", "A4", "C5", "F5")),
+    "C": dict(t=("E4", "G4", "C5"), four=("E4", "G4", "C5", "E5")),
+    "Bb": dict(t=("F4", "Bb4", "D5"), four=("F4", "Bb4", "D5", "F5")),
+}
+
+
+def over_harmony(tpl):
+    """A template of four beats over each harmony, as the left-hand patterns: (beat, f(chord) -> notes, len, beam)."""
+    out, beams = [], {}
+    for si, (start, length, chord) in enumerate(HARMONY):
+        for beat, notes, dur, beam in tpl:
+            if beat >= length:
+                continue
+            dur = min(dur, length - beat)
+            label = beams.setdefault((si, beam), 30 + len(beams)) if beam is not None else None
+            out.append((start + beat, tuple(notes(chord)), FIGURE[dur], label, ""))
+    return out
+
+
+def rrun(fns, start, step_, every):
+    return [(start + j * step_, f, step_, f"r{start}-{j // every}") for j, f in enumerate(fns)]
+
+
+def t(i):
+    return lambda ch: (RCH[ch]["t"][i],)
+
+
+def octave_up(i):
+    return lambda ch: (name(midi(RCH[ch]["t"][i]) + 12),)
+
+
+TRI_R, FOUR_R = (lambda ch: RCH[ch]["t"]), (lambda ch: RCH[ch]["four"])
+DY_LO = lambda ch: RCH[ch]["t"][:2]  # noqa: E731
+DY_HI = lambda ch: RCH[ch]["t"][1:]  # noqa: E731
+
+
+def melody(transform, *, only=None):
+    """The melody, each note changed by ``transform(midi, figure) -> [(beat offset, notes, figure, tag)]``."""
+    out, beam = [], 50
+    for beat, p, fig, b in MELODY:
+        if only and fig not in only:
+            out.append((beat, (p,), fig, b, ""))
+            continue
+        for off, notes, f, tag in transform(midi(p), fig):
+            out.append((beat + off, notes, f, (beam if f >= 8 and len(transform(midi(p), fig)) > 1 else b), tag))
+        beam += 1
+    return out
+
+
+RIGHT = {
+    # ---- easy: the hand stays in one position, also with chords
+    "five-finger-melody": [(b, (p,), f, None, "") for b, p, f in [
+        (0, "F4", 4), (1, "A4", 4), (2, "G4", 4), (3, "Bb4", 4), (4, "A4", 2), (6, "G4", 4), (7, "F4", 4),
+        (8, "E4", 4), (9, "G4", 4), (10, "C5", 2), (12, "Bb4", 4), (13, "A4", 4), (14, "G4", 4), (15, "E4", 4)]],
+    "chords-on-each-beat": over_harmony([(0, TRI_R, 1, None), (1, TRI_R, 1, None), (2, TRI_R, 1, None),
+                                         (3, TRI_R, 1, None)]),
+    "repeated-chord-in-corcheas": over_harmony(rrun([TRI_R] * 8, 0, 0.5, 4)),
+    "two-note-chords-in-one-position": over_harmony([(0, DY_LO, 1, None), (1, DY_HI, 1, None), (2, DY_LO, 1, None),
+                                            (3, DY_HI, 1, None)]),
+    "broken-triad-in-one-position": over_harmony(rrun([t(0), t(2), t(1), t(2)] * 2, 0, 0.5, 4)),
+    # ---- medium: a pattern that repeats, small chords, a few accidentals
+    "melody-in-thirds": melody(lambda m, f: [(0, (name(step(m, -2)), name(m)), f, "")]),
+    "melody-landing-on-a-chord": "landing",  # below
+    "broken-chord-up-and-down-in-semicorcheas": over_harmony(
+        rrun([t(0), t(1), t(2), octave_up(0), t(2), t(1), t(0), t(1)] * 2, 0, 0.25, 4)),
+    "turn-around-the-melody": melody(lambda m, f: [(0, (name(m),), 16, ""), (0.25, (name(step(m, 1)),), 16, ""),
+                                                   (0.5, (name(m),), 16, ""), (0.75, (name(step(m, -1)),), 16, "")]
+                                     + ([(1, (name(m),), 4, "")] if f == 2 else []), only={4, 2}),
+    "chromatic-neighbour": melody(lambda m, f: [(0, (name(m - 1),), 8, ""), (0.5, (name(m),), 8, "")], only={4}),
+    # ---- hard: chords moving in a run, fast notes, accidentals, ornaments
+    "chords-climbing-in-corcheas": over_harmony(rrun(
+        [(lambda k: lambda ch: tuple(name(step(midi(x), k)) for x in RCH[ch]["t"]))(k) for k in (0, 1, 2, 3, 2, 1, 0, 1)],
+        0, 0.5, 4)),
+    "sixths-in-semicorcheas": over_harmony(rrun(
+        [(lambda k: lambda ch: (name(step(midi(RCH[ch]["t"][0]), -k)), name(step(midi(RCH[ch]["t"][0]), 5 - k))))(k)
+         for k in (0, 1, 2, 3, 2, 1, 0, 1)] * 2, 0, 0.25, 4)),
+    "melody-in-octaves": melody(lambda m, f: [(0, (name(m - 12), name(m)), f, "")]),
+    "chromatic-run": [],  # below, from _chromatic()
+    "trill-on-long-notes": melody(lambda m, f: [(0, (name(m),), f, "tr")], only={2}),
+    # ---- super hard: octavas and full chords that move fast, chromatic double notes
+    "octaves-in-semicorcheas": over_harmony(rrun(
+        [(lambda k: lambda ch: (name(step(midi(RCH[ch]["t"][2]), k) - 12), name(step(midi(RCH[ch]["t"][2]), k))))(k)
+         for k in (0, 1, 2, 3, 4, 3, 2, 1)] * 2, 0, 0.25, 4)),
+    "chords-jumping-an-octave": over_harmony(rrun(
+        [FOUR_R, lambda ch: tuple(name(midi(x) + 12) for x in RCH[ch]["four"])] * 4, 0, 0.5, 2)),
+    "chromatic-thirds": [],  # below, from _chromatic(thirds=True)
+}
+
+
+def _chromatic(thirds=False):
+    """A chromatic run of semicorcheas, eight semitones up from the top of each chord and back (thirds: with a
+    major third under each note)."""
+    out, n = [], 70
+    for start, length, chord in HARMONY:
+        top = midi(RCH[chord]["t"][2])
+        line = [top + k for k in range(8)] + [top + 8 - k for k in range(8)]
+        for j, m in enumerate(line[: int(length * 4)]):
+            notes = (name(m - 4), name(m)) if thirds else (name(m),)
+            out.append((start + j * 0.25, notes, 16, n + j // 4, ""))
+        n += 8
+    return out
+
+
+def _landing(at=(4, 10, 15)):
+    """The melody in single notes; at the end of each phrase, the two notes of the harmony below it make a chord."""
+    harmony_at = {b: ch for start, length, ch in HARMONY for b in range(start, start + length)}
+    out = []
+    for beat, p, fig, b in MELODY:
+        notes = (p,)
+        if beat in at:
+            m = midi(p)
+            tones = sorted({midi(x) % 12 for x in RCH[harmony_at[int(beat)]]["t"]})
+            below = [k for k in range(m - 1, m - 12, -1) if k % 12 in tones][:2]
+            notes = tuple(name(k) for k in sorted(below)) + (p,)
+        out.append((beat, notes, fig, b, ""))
+    return out
+
+
+RIGHT["melody-landing-on-a-chord"] = _landing()
+RIGHT["chromatic-run"] = _chromatic()
+RIGHT["chromatic-thirds"] = _chromatic(thirds=True)
+HELD = left(TEMPLATES["held-triad"])
+
+for name_, right in RIGHT.items():
+    tx = text(HELD, right)
+    (OUT / f"drawn-right-{name_}.f1").write_text(tx)
+    r = render_frames(tx, px_per_space=10.0, note_ids=False)
+    (OUT / f"drawn-right-{name_}.svg").write_text(r.svg)
+    print(f"right {name_:40} lines={r.lines}")
 
 for name, tpl in TEMPLATES.items():
     t = text(left(tpl))

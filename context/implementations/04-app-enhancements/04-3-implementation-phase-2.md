@@ -1,6 +1,6 @@
 # 04-3 · Phase 2: the gallery of patterns
 
-Status: **review 2 answered (every Chopin example in the app's notation, the numbers), waiting for the user's approval** (task 2.8). Branch `feat/04-3-phase-2`, in the worktree
+Status: **review 3 answered (the right hand across 198 works, 18 drawn right hands), waiting for the user's approval** (task 2.8). Branch `feat/04-3-phase-2`, in the worktree
 `/home/david/Documents/projects/music/aimpromptu-04-3-phase-2` (plan section 7.4: Phase 2 ran in parallel with Phase 1,
 which owns the main checkout). Not merged. No `src/` change, no AI call, no database access.
 
@@ -15,7 +15,7 @@ Audience: the agents of this plan (the Phase 2 agent when the user answers, and 
 | 2.2 to 2.4 sources and passages | 10 pieces used (section 2); the user's passages are all in (Ballade 1 pages 10 and 12, Ballade 4 pages 41 to 56, the Waltzes); left out: the scale-like runs, except as super hard |
 | 2.5 drawn patterns | 33 drawn with the app's engine from F1 frames text: the 3 easy ones of the brief, and 30 variations (10 easy, 10 medium, 10 hard) asked in the user's review 1 (section 4) |
 | 2.6 snapshots | 29 PNG in `images/chopin_passages/` (1.3 MB), cut by script, each checked zoomed against the score and the kern (section 3) |
-| 2.7 the gallery | `gallery/04-3-phase-2/index.html` and `patterns.json` (59 patterns: 50 left hand, 9 right hand), from one list in `tools/build.py` |
+| 2.7 the gallery | `gallery/04-3-phase-2/index.html` and `patterns.json` (105 patterns: 50 left hand, 55 right hand), from one list in `tools/build.py` |
 | 2.8 review | Served at `http://ubuntu:8098/gallery/04-3-phase-2/index.html` (8099 was taken by another server). Review 1: 30 drawn variations; review 2: the Chopin examples in the app's notation and the numbers (section 4.3), and the catalog and frame-number decisions recorded in plan section 5.10 and Phase 2b |
 
 # 2. Sources
@@ -139,6 +139,43 @@ What the zoomed comparison with the snapshots found (23 different passages, draw
 Numbers: `build.py` gives each pattern `number` (from 1 inside its hand and level, in the order of `PATTERNS`) and
 `ref` ("left hard 3"). A new pattern must be added at the end of its level in `PATTERNS`, so that approved numbers do
 not change. The page shows "Hard 3" before each name, the app's drawing first and the edition's snapshot under it.
+
+## 4.4 The user's review 3 (2026-10-29): the right hand across Chopin's works
+
+The user asked for more right-hand patterns from more works, judged by hand motion: a static right hand is easy, also
+with chords; hard is chords moving up and down in one run, or fast notes with no pattern, with many alterations or
+ornaments; medium is in between (fast but with a shape that repeats; small chords of two or three notes, sometimes a
+usual chord of four; a few alterations). The user suggested sampling about ten pages per work; the agent used the
+kern files instead, because they cover every work with the bars as data, and looked at every candidate drawn by the
+app.
+
+- `tools/rh_study.py` (research venv, 30 processes, about 20 s): 198 pieces (one edition per opus and number; left
+  out: Op. 3 and Op. 8 with cello and violin, Op. 65 whose kern has the cello only, Op. 74 songs, the violin files;
+  files without two `**kern` spines), 22,274 windows of two bars. Per window of the right hand (the staff with the
+  higher mean pitch): `fastest`, `density`, `chord_max/mean/share`, an octave hand tracker (`moves`, `shift`,
+  `jumps`, `stretch`, `span`), `pattern` (share of beats whose shape repeats one of the two beats before), `chord_run`,
+  `altered` (signs that differ from the armadura), `doubles`, `ornaments`, `graces`. The `*kcancel` armadura bug of
+  section 4.3 appeared again here and was fixed the same way. Quartiles over all windows: fastest 0.25 / 0.33 / 0.5
+  negras, moves 1 / 3 / 5, chord_mean 1 / 1.25 / 2, altered 0 / 0.13 / 0.29.
+- `tools/rh_pick.py`: 20 kinds (6 easy, 5 medium, 5 hard, 4 super hard) as rules on the measures, two windows per
+  kind at random (seed 4), one opus once only, so the 40 candidates come from 40 works. Drawn through the app's path
+  (`rh_run.py`, generated, in the container) and checked one by one.
+- Kept: 28 new Chopin patterns or examples (26 works); left out 12 (too close to a kept one, octavas in the right hand
+  where a pattern was enough, a cross-hand passage of Scherzo 3, a chordal passage that the app draws without its
+  triplets). The measures only find candidates: the level of each kept pattern was set by looking (for example the
+  Op. 12 scale is fast and moves a lot but is the most regular pattern, so medium; Op. 66 repeats its figure but is
+  fast and chromatic with a double sharp, so hard). Tempo is not in the kern, so "fast" means short figures.
+- Changed by the user's rule: `melody-in-chords-one-rhythm` (Prelude 7) and `thirds-and-sixths-in-corcheas` (Waltz
+  70/3) from hard to medium (static, a repeated shape). The right-hand numbers were not approved yet, so the numbers
+  of the right-hand tab changed; the left-hand numbers did not.
+- 18 drawn right-hand patterns (`drawn.py`, `RIGHT`: 5 easy, 5 medium, 5 hard, 3 super hard) for what the study did
+  not give, over the held triad of the left hand and the shared harmony. Zoomed check fixes: "thirds in one position"
+  also had fourths (renamed `two-note-chords-in-one-position`); the landing chord came only once (now at the end of
+  each phrase, with notes of the harmony); the chromatic run only turned around a third (now eight semitones up and
+  back).
+- The study passages have no snapshot: their bars are kern bars, and the PDF pages were not looked up.
+
+Result: the right-hand tab has 55 patterns (easy 10, medium 17, hard 17, super hard 11); the gallery 105.
 
 # 5. The patterns
 

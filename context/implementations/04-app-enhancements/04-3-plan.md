@@ -758,3 +758,13 @@ these decisions. They change sections 5.4 and 5.7 and Phases 3 and 4, and add **
 after Phases 1 and 2 are merged and before Phase 3. The catalog itself is built in Phase 4, because it needs the level
 run; the frame numbers need `src/`, which Phase 2 does not touch (section 7.4), and the browser, which shows the main
 checkout of Phase 1.
+
+**Phase 2, review 3** (2026-10-29): the user asked for more right-hand patterns from more works, with a rule for the
+levels of the right hand: a static right hand is easy, also with chords; hard is chords moving up and down in one
+run, or fast notes with no pattern and many alterations or ornaments; medium is in between. The plan's task 2.6 took
+snapshots of a few named passages; the agent instead measured every two bars of 198 works in the kern files
+(`tools/rh_study.py`), drew random candidates of each kind, and kept 28 after looking at them; it also drew 18
+right-hand patterns that the works did not give. The study passages are shown in the app's notation only, without a
+snapshot. Two right-hand patterns moved from hard to medium under the user's rule; the right-hand tab now has 55
+patterns. Phase 3 uses the same rule in the right-hand part of the level prompts and in the check of section 5.5
+(a right hand that stays in one position may hold chords at every level).
