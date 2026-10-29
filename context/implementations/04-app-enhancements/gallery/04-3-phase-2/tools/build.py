@@ -68,30 +68,30 @@ PATTERNS = [
          line="Mi2, then the octave Mi3-Mi4 on the two next beats, in a slow tempo. Medium because of the octava; "
               "the jump and the shape are the same in every bar.",
          examples=[ex("prelude-7-left-1.png", P.format(7), "preludes.pdf", 16, "1-4 (with the notes before bar 1)",
-                      "028-1-BH-007.krn", "1-4")]),
+                      "028-1-BH-007.krn", "0-4")]),
     dict(hand="left", level="medium", id="low-note-then-two-chords", name="Low note, then two chords",
          line="The waltz left hand: a low note on the first beat, then the same chord on the second and third beats. "
               "Medium because the hand jumps every bar, but the chord shape stays and only the bass note changes.",
          examples=[
              ex("waltz-69-2-left-1.png", W.format("69 No. 2"), "waltzes.pdf", 79, "1-3 (with the notes before bar 1)",
-                "069-1-MEIf-002.krn", "2-4", "Si2, then Fa#3-Si3-Re4 twice: the plain pattern."),
+                "069-1-MEIf-002.krn", "1-4", "Si2, then Fa#3-Si3-Re4 twice: the plain pattern."),
              ex("waltz-64-3-left-1.png", W.format("64 No. 3"), "waltzes.pdf", 65, "1-3", "064_3-1a-BR-003.krn",
                 "1-3", "Lab2, Mib2, Lab2 under the same chord Mib3-Lab3-Do4: only the fifth finger moves."),
              ex("waltz-64-2-left-1.png", W.format("64 No. 2"), "waltzes.pdf", 59, "1-4 (with the notes before bar 1)",
-                "064_2-1-BR-002.krn", "1-4", "Do#2, then Sol#3-Do#4-Mi4: the same pattern with a jump of more "
+                "064_2-1-BR-002.krn", "0-4", "Do#2, then Sol#3-Do#4-Mi4: the same pattern with a jump of more "
                 "than an octave, the hardest form of it."),
          ]),
     dict(hand="left", level="medium", id="held-bass-under-two-chords", name="Held bass under two chords",
          line="The low note is held for the whole bar (blanca with puntillo) while two chords sound on the second "
               "and third beats. Medium because there is no jump: the hand stays over the bass and the chord.",
          examples=[ex("waltz-69-1-left-1.png", W.format("69 No. 1"), "waltzes.pdf", 71, "1-4 (with the notes before bar 1)",
-                      "069-1-MEIf-001.krn", "2-5")]),
+                      "069-1-MEIf-001.krn", "1-5")]),
     dict(hand="left", level="medium", id="low-note-then-two-chords-in-corcheas",
          name="Low note, then two chords, in corcheas",
          line="Mib2, then two chords in beamed corcheas (Sol3-Mib4, then Sib3-Mib4-Sol4), three times in a bar. "
               "Medium because the figure repeats at every beat; the second chord only adds a note on top.",
          examples=[ex("nocturne-9-2-left-1.png", "Nocturne Op. 9 No. 2", "nocturnes.pdf", 10,
-                      "1-2 (with the notes before bar 1)", "009-1-KI-002.krn", "1-2")]),
+                      "1-2 (with the notes before bar 1)", "009-1-KI-002.krn", "0-2")]),
     dict(hand="left", level="medium", id="same-chord-one-note-changes", name="Same chord, one note changes",
          line="One chord repeated in corcheas (Sol3-Si3-Mi4); every bar or half bar one or two of its notes move "
               "down (Fa#3-La3-Mi4, then Fa#3-La3-Mib4, then Fa3-La3-Mib4). Medium because of the many notes, but "
@@ -161,14 +161,14 @@ PATTERNS = [
          line="Fa#5-Sol5-Fa#5-Do#5-Re5-Si4 in corcheas, then La#4: one line of single notes inside one hand "
               "position. Easy because there are no chords, also when the notes are corcheas.",
          examples=[ex("waltz-69-2-right-1.png", W.format("69 No. 2"), "waltzes.pdf", 79,
-                      "1-3 (with the notes before bar 1)", "069-1-MEIf-002.krn", "2-4")]),
+                      "1-3 (with the notes before bar 1)", "069-1-MEIf-002.krn", "1-4")]),
     dict(hand="right", level="medium", id="second-note-on-long-notes", name="A second note on long notes",
          line="Single notes on the short figures, and a second note (a third, a sixth) only on the long ones; three "
               "notes only to land on a long note. Medium because the hand stays fluent and the chords come when "
               "there is time for them.",
          examples=[
              ex("waltz-64-2-right-1.png", W.format("64 No. 2"), "waltzes.pdf", 59, "1-2 (with the notes before bar 1)",
-                "064_2-1-BR-002.krn", "1-2", "Sol#4-Mi5 held as a sixth, then Fa##4-Re#5."),
+                "064_2-1-BR-002.krn", "0-2", "Sol#4-Mi5 held as a sixth, then Fa##4-Re#5."),
              ex("ballade1-right-1.png", B1, "ballades.pdf", 10, "68-71", "023-1-BH.krn", "68-71",
                 "Two notes on the blancas with puntillo, single notes on the negras, three notes to land on bar "
                 "70 (the user's example of page 10)."),
@@ -178,7 +178,7 @@ PATTERNS = [
               "semicorchea, two negras) every two bars. Hard because every note is a chord, although the rhythm "
               "repeats and the tempo is slow.",
          examples=[ex("prelude-7-right-1.png", P.format(7), "preludes.pdf", 16, "1-4 (with the notes before bar 1)",
-                      "028-1-BH-007.krn", "1-4")]),
+                      "028-1-BH-007.krn", "0-4")]),
     dict(hand="right", level="hard", id="melody-with-pieces-of-chords", name="Melody with small pieces of chords",
          line="The melody on top (Sib5, Lab5, Solb5) with a second voice and two-note pieces of chords under it, and "
               "a few decoration notes. Hard because the hand plays the melody and part of the harmony (the brief's "
@@ -312,20 +312,24 @@ h1 { font-size: 22px; margin: 0 0 4px; } .lead { color: var(--soft); margin: 0 0
 .pills button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
 .card h2 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.level { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 1px 9px; }
-.easy { background: #e5f4ea; color: #1e6b3a; } .medium { background: #e6eefc; color: #1f4fa3; }
+.num { font-size: 13px; font-weight: 700; border-radius: 6px; padding: 1px 8px; }
+.num.easy, .easy { background: #e5f4ea; color: #1e6b3a; } .num.medium, .medium { background: #e6eefc; color: #1f4fa3; }
 .hard { background: #fdf0dc; color: #8a5300; } .super-hard { background: #fbe4e4; color: #9b1c1c; }
 .id { font: 12px ui-monospace, monospace; color: var(--soft); }
 .line { margin: 6px 0 10px; max-width: 980px; }
 figure { margin: 10px 0 4px; } figcaption { font-size: 13px; color: var(--soft); margin-bottom: 4px; }
 figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; }
-.drawn img { max-width: 720px; width: 100%; }
+figure.app img { max-width: 100%; width: auto; max-height: 260px; }
+figure.edition img { max-height: 200px; width: auto; opacity: .9; }
 .none { color: var(--soft); }
 </style></head><body><main>
 <h1>Gallery of patterns</h1>
 <p class="lead">Implementation 04-3, Phase 2: the patterns of each hand for the levels of the Whole Song
 simplification, found in Chopin (snapshots of your PDFs) or drawn by the app (the easy patterns of the brief, and
-the variations of easy, medium and hard asked in your review). The drawn patterns share one melody in Fa major (two bars of Fa, one of Do, then Sib and Do), so that only
+the variations of easy, medium and hard asked in your review). Each pattern has a number inside its hand and level
+(Hard 3), to name it in the Enhance with AI dialog. Every Chopin passage is also written in the app's notation from
+the kern of the first edition and drawn by the app, with the snapshot of the edition under it; the app writes one
+voice per hand, no tuplets, and its own accidentals and clefs. The drawn patterns share one melody in Fa major (two bars of Fa, one of Do, then Sib and Do), so that only
 the left hand changes from one to the next. In each snapshot the other hand is grey. The names are the ones the level
 prompts of Phase 3 will use.</p>
 <div class="tabs">__TABS__</div>
@@ -365,20 +369,24 @@ read(); show();
 def card(p: dict) -> str:
     figs = []
     for e in p["examples"]:
+        note = f". {e['note']}" if e.get("note") else ""
         if e["pdf"]:
+            drawing = e["drawing"]
+            figs.append(f'<figure class="app"><figcaption>{html.escape(e["piece"])}, bars {e["bars"]}, in the '
+                        f'app\'s notation{html.escape(note)}</figcaption><a href="{drawing}">'
+                        f'<img src="{drawing}" alt="{html.escape(p["name"])}: {html.escape(e["piece"])}" '
+                        f'loading="lazy"></a></figure>')
             src = f"../../images/chopin_passages/{e['image']}"
-            cap = f"{e['piece']}, {e['pdf']} page {e['page']}, bars {e['bars']}"
-            cls = ""
+            figs.append(f'<figure class="edition"><figcaption>The edition: {e["pdf"]} page {e["page"]}'
+                        f'</figcaption><a href="{src}"><img src="{src}" alt="the edition" loading="lazy"></a>'
+                        f'</figure>')
         else:
-            src, cap, cls = e["image"], e["piece"], ' class="drawn"'
-        if e.get("note"):
-            cap += f". {e['note']}"
-        alt = f"{p['name']}: {e['piece']}"
-        figs.append(f'<figure{cls}><figcaption>{html.escape(cap)}</figcaption>'
-                    f'<a href="{src}"><img src="{src}" alt="{html.escape(alt)}" loading="lazy"></a></figure>')
+            figs.append(f'<figure class="app"><figcaption>{html.escape(e["piece"] + note)}</figcaption>'
+                        f'<a href="{e["image"]}"><img src="{e["image"]}" alt="{html.escape(p["name"])}" '
+                        f'loading="lazy"></a></figure>')
     lv = p["level"].replace(" ", "-")
     return (f'<section class="card" data-hand="{p["hand"]}" data-level="{p["level"]}">'
-            f'<h2>{html.escape(p["name"])} <span class="level {lv}">{LABEL[p["level"]]}</span>'
+            f'<h2><span class="num {lv}">{LABEL[p["level"]]} {p["number"]}</span> {html.escape(p["name"])}'
             f'<span class="id">{p["id"]}</span></h2><p class="line">{html.escape(p["line"])}</p>'
             + "".join(figs) + "</section>")
 
@@ -392,6 +400,17 @@ def main() -> None:
             assert path.exists(), path
     order = {lv: i for i, lv in enumerate(LEVELS)}
     pats = sorted(PATTERNS, key=lambda p: (p["hand"] != "right", order[p["level"]]))
+    # the number of a pattern inside its hand and level ("left, hard 3"): the order of PATTERNS, which is stable,
+    # so a new pattern goes at the end of its level and the numbers the user already uses do not change
+    seen: dict[tuple[str, str], int] = {}
+    for p in pats:
+        p["number"] = seen[(p["hand"], p["level"])] = seen.get((p["hand"], p["level"]), 0) + 1
+        p["ref"] = f'{p["hand"]} {p["level"]} {p["number"]}'
+        for e in p["examples"]:
+            if e["pdf"]:
+                stem = e["image"][:-4]
+                e["drawing"], e["f1"] = f"transcribed/{stem}.svg", f"transcribed/{stem}.f1"
+                assert (HERE / e["drawing"]).exists() and (HERE / e["f1"]).exists(), stem
     tabs = ('<button data-hand="right">Right hand</button>'
             '<button data-hand="left">Left hand</button>')
     pills = '<button data-level="all">All <span></span></button>' + "".join(

@@ -70,6 +70,9 @@ the plan points at code.
 | **pattern** | A way of playing that repeats, named in the gallery of patterns (for example, a low note and then a chord) | |
 | **gallery of patterns** | The HTML page of Phase 2: snapshots of Chopin passages, one tab per hand, filtered by level | |
 | **decoration note** | A very short note before a main note (the code calls it a grace note) | `Note.grace`, `find_graces` |
+| **catalog** | The gallery of patterns inside **Enhance with AI**: the same patterns, numbered, that the user selects (section 5.10) | (new) |
+| **pattern number** | The number of a pattern inside its hand and level, such as "left hand, hard 3" | `number`, `ref` in `patterns.json` |
+| **frame number** | The number of a frame (40 ms) of the sheet, as the F1 text writes it (`f112`); shown on the sheet from time to time | `Note.frame` |
 
 Music terms stay in Spanish as the user writes them: negra, corchea, semicorchea, fusa, blanca, redonda, octava. The
 user names notes in solfège (Do, Re, Mi, Fa, Sol, La, Si); the sheet text and the code use letters (C, D, E, F, G, A,
@@ -313,7 +316,9 @@ would change it often. This is why the run has two steps:
 1. **The plan of the song** (one request): the AI receives a short summary of the whole song (the harmony of each
    passage as the app computes it from the notes, the passages that repeat as `like_before` finds them, the measures of
    section 5.6) and answers with the sections of the song and, for each section, the pattern of each hand, named as in
-   the gallery of patterns (for example "the chorus: a low note then a chord, in negras").
+   the gallery of patterns (for example "the chorus: a low note then a chord, in negras"). It chooses only among the
+   patterns the user selected in the catalog or named in the words, and follows the places the user gave with frame
+   numbers (section 5.10).
 2. **The batches**, one after the other, as Simplify: each batch receives the plan, the batches before it as they were
    written, the earlier passage most like it (a chorus is written the same way each time), and its own notes. It
    answers with the notes of the hand or hands it rewrites (in the F1 frames text), and comment lines that declare the
@@ -363,6 +368,8 @@ asks, with the brief's words:
 - **With nothing selected**: the whole sheet, the right hand only, the left hand only, and a level (Easy, Medium,
   Hard), next to today's Simplify and Write it all again.
 - The cost estimate shows before the run, as today. The page says "AI", never the model's name.
+- The **catalog** of section 5.10 is part of the dialog: first the left-hand patterns, then the right-hand patterns,
+  selected by the user.
 
 ## 5.8 Where a level version is stored
 
@@ -383,6 +390,35 @@ per hand on 7 Years) and is closer to a whole run (about $1.80 for 99 Red Balloo
 are estimates. Phase 3 measures the cost of each level on the test passages and, if Sonnet 5.5 fails the level
 prompts, tries Opus 5.5 on one passage (the research ladder used Opus). Every test that calls the AI is announced to
 the user with its estimated cost and starts only after the user's ok.
+
+## 5.10 The catalog of patterns and the frame numbers (the user, 2026-10-29)
+
+The plan first gave the AI the names of the gallery, one part of the prompt per level. In the review of the gallery
+the user asked for more control over which patterns a run uses, and for a way to say where each one goes. This
+section records the decisions; they change sections 5.4, 5.7 and Phases 3 and 4, and add Phase 2b.
+
+1. **Every pattern in the app's notation.** Each pattern of the gallery is written in F1 frames text and drawn by the
+   app's engine: the drawn ones from their templates, the Chopin ones from the kern of the first edition through the
+   app's own path (`propose_frames`, `f1.write`, `render_frames`). Done in Phase 2: `gallery/04-3-phase-2/transcribed/`
+   and `drawn/`, listed in `patterns.json`.
+2. **Numbers.** The patterns are numbered from 1 inside each hand and level ("left hand, medium 2"). A number never
+   changes once the user has approved the gallery: a new pattern takes the next number of its level.
+3. **The catalog in Enhance with AI.** The dialog shows the gallery as a catalog, with the pills Easy, Medium, Hard
+   and Super hard and the numbers. The user selects several patterns: first for the left hand, then for the right
+   hand. **Only the F1 text of the selected patterns goes into the prompt**, not the whole gallery, so that the prompt
+   stays short and the AI uses what the user chose.
+4. **References in the words.** The user may also write "medium 2", "hard 3" in the words of the dialog, for example
+   "at the start apply medium 2; at frame 112 use hard 3". The code finds these references and adds the F1 text of
+   those patterns, also when they are not selected; the frame numbers tell the AI where each one applies.
+5. **A range in another style.** With a range selected (both hands or one), the user chooses Enhance with AI and one
+   or more patterns of the catalog, and the AI writes that passage in that style.
+6. **Frame numbers on the sheet.** The sheet shows a frame number from time to time (at the start of each line and
+   at regular places, as a score shows bar numbers), so that the user can refer to a place.
+7. **The range toolbox** shows the first and the last frame number of the selected range.
+
+Open points, for the phase that builds each part: whether a run with no pattern selected uses the patterns of its
+level (and which); whether the prompt gets both hands of a pattern's text (the other hand shows what the pattern
+accompanies) or only its own hand; how often the sheet shows a frame number.
 
 # 6. Binding rules
 
@@ -465,13 +501,13 @@ these rules:
 5. **Serving the gallery.** Port 8099 may be in use by Phase 1. Phase 2 checks that the port is free and uses 8098 if it
    is not.
 6. **Merging.** As every phase: after the user's ok, merge `feat/04-3-phase-2` into `master` and push, then remove the
-   worktree (`git worktree remove`). Phase 3 starts after both Phase 1 and Phase 2 are merged.
+   worktree (`git worktree remove`). Phase 2b, then Phase 3, start after both Phase 1 and Phase 2 are merged.
 
 # 8. Phases
 
 The phases run in order, except Phase 2: it does not touch `src/` and needs no part of Phase 1, so it runs in a
-second session while Phase 1 runs (the user's decision, section 7.4). Phases 3 and 4 need Phase 1 merged and Phase 2
-approved and merged.
+second session while Phase 1 runs (the user's decision, section 7.4). Phases 2b, 3 and 4 need Phase 1 merged and
+Phase 2 approved and merged.
 
 ## Phase 1: Folders, the pills and the metadata
 
@@ -546,7 +582,8 @@ because the worktree does not exist yet):
    passages are preferred, also when they have jumps, if they are easy to play at their level.
 5. **Easy patterns**: Chopin seldom writes an easy left hand. Where the PDFs have no example, the easy patterns of the
    brief (a held triad; Fa2 then Fa3-La3-Do4) are drawn with the app's engine from a few written notes and marked
-   "from the brief, drawn by the app".
+   "from the brief, drawn by the app". After the user's review 1 (2026-10-29): also ten drawn variations at each of
+   easy, medium and hard (section 10).
 6. **Snapshots**: `pdftoppm` (installed) renders a page; a Python crop keeps the passage; files in
    `images/chopin_passages/` named `<piece>-<hand>-<n>.png` (for example `waltz-64-2-left-1.png`). Each one is
    checked zoomed in.
@@ -559,6 +596,31 @@ because the worktree does not exist yet):
 8. **The user's review** (HUMAN INTERVENTION): the gallery served at `http://ubuntu:8099/...`. The user may rename
    patterns, change their level, ask for more. The agent changes the gallery until the user approves it; the
    approved names and levels go into section 10.
+9. **Every pattern in the app's notation, and the numbers** (the user's review 2, section 5.10 points 1 and 2): the
+   Chopin passages transcribed from the kern into F1 frames text and drawn by the app, beside their snapshots; the
+   numbers inside each hand and level, on the page and in `patterns.json`.
+
+## Phase 2b: Frame numbers on the sheet and in the range toolbox
+
+Section 5.10 points 6 and 7. Frontend (and the engine, if the numbers are drawn in the SVG); no AI call. It comes
+before Phase 3 so that the user can name places by frame number when reviewing the level prompts. Branch
+`feat/04-3-phase-2b` from `master` after Phase 1 and Phase 2 are merged.
+
+Start prompt:
+
+> You are working on an implementation plan. Read @context/implementations/04-app-enhancements/04-3-plan.md,
+> @context/implementations/04-app-enhancements/04-3-prompt.md, @context/guidelines/guidelines-implementation-plan.md,
+> @context/guidelines/guidelines-communication-with-user.md and @context/implementations/04-app-enhancements/04-3-implementation-phase-2.md.
+> Start Phase 2b.
+
+1. Study: how the engine draws a line (`engrave/frames.py`: `_draw_system`, the columns and their frames), how the
+   page lays the SVG and the cursor (`FramesSheetView.tsx`), and the range toolbox of a selection.
+2. The frame number on the sheet: at the start of each line and at regular places (the study proposes how often, so
+   that the numbers help without filling the sheet), small and grey, as bar numbers; also in the zoom and the print
+   of the page.
+3. The range toolbox: the first and the last frame number of the selected range.
+4. Checks: `check:frames-page` with the numbers, the screenshots in `screenshots/04-3-phase-2b/`; the user checks the
+   sheet page in the browser.
 
 ## Phase 3: The level prompts, tested on 99 Red Balloons
 
@@ -583,7 +645,9 @@ Start prompt:
    the left hand, the declared lines, the answer format) and one part per level (`easy.md`, `medium.md`, `hard.md`),
    with the pattern names of the gallery and short examples in the F1 frames text (from the kern of the gallery's
    passages or from the brief). The list of levels in the code stays open for super hard. A new `VERSION` for the new
-   prompts.
+   prompts. The patterns are not written into the prompt files: the prompt has a place for the F1 text of the patterns
+   of a run (the ones selected or named, section 5.10), read from the catalog data, and for the user's places by
+   frame number.
 5. **The plan of the song** (section 5.4) and its prompt.
 6. **The check** of section 5.5, with its numbers fixed from the gallery and the test passages; tests with recorded
    answers (no credits).
@@ -609,7 +673,10 @@ Start prompt:
    (`/projects/{id}/duplicate`). Confirm section 5.8 with the user before building it (DECISIONS of the walkthrough,
    if the study found a reason to change it).
 2. The dialog: the levels on a range (Both, Right, Left) and on the whole sheet (the whole sheet, the right hand only,
-   the left hand only), with the cost.
+   the left hand only), with the cost; the **catalog** (section 5.10 points 3 to 5): the patterns drawn by the app's
+   engine from their F1 text, the pills, the numbers, the selection of the left hand and then of the right hand; the
+   references in the words ("medium 2", "at frame 112 use hard 3") found by the code. The catalog data (`patterns.json`
+   and the F1 texts) moves from the gallery folder into the backend's data.
 3. The run: `start_level` and `write_level` (the plan of the song, then the batches that see the earlier batches),
    the check, the feedback, the stand-in tests.
 4. Storing: a level of the whole sheet in a new project named with the level; a level of a range in place with one
@@ -680,3 +747,14 @@ variations at each of easy, medium and hard: positions that stay still, two-note
 note at medium, one more note in the chord at hard. The app drew 30 of them on one shared melody (the gallery now has
 50 left-hand patterns). A rule for the drawings that Phase 3 also needs: an easy left hand jumps at most from a low note
 to its chord, and every chord or figure after that stays in one position (9 semitones or less in the drawings).
+
+**Phase 2, review 2** (2026-10-29): the user approved the patterns and asked for two things the plan did not have.
+First, every Chopin example is now also written in the app's notation (F1 frames text from the kern of the first
+edition, through `propose_frames`) and drawn by the app, beside its snapshot, and every pattern has a number inside its
+hand and level. Second, the patterns become a **catalog** inside Enhance with AI: the user selects them (left hand,
+then right hand), only the selected ones go into the prompt, the words may name them ("medium 2") and places by frame
+number ("at frame 112 use hard 3"), and the sheet shows frame numbers, also in the range toolbox. Section 5.10 records
+these decisions. They change sections 5.4 and 5.7 and Phases 3 and 4, and add **Phase 2b** (frame numbers), which runs
+after Phases 1 and 2 are merged and before Phase 3. The catalog itself is built in Phase 4, because it needs the level
+run; the frame numbers need `src/`, which Phase 2 does not touch (section 7.4), and the browser, which shows the main
+checkout of Phase 1.

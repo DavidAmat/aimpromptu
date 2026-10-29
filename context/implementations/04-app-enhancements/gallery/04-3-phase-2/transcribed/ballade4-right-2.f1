@@ -1,0 +1,65 @@
+F1 frames frameMs=40 quarterMs=600
+key=4b clefs: R=treble L=bass
+[]x25
+f25      L: F2:16 b1
+[]x3
+f29      L: C3:16 b1
+[]x3
+f33      L: Ab3:16 b1  R: C5:8 b2
+[]x2
+f36      L: F3:16 b1
+[]x3
+f40      L: C4:16 b1  R: F5:8 b2
+[]x3
+f44      L: Ab4:16 b1
+[]x3
+f48      L: F2:32
+[]x1
+f50      L: Db3:16 b3  R: Fb5:32 b4
+[]x2
+f53      R: A4:32 b4
+[]x1
+f55      L: G3:16 b3  R: Bb4:16 b4
+[]x3
+f59      L: Fb3:32 b3  R: Cb5:32 b5
+[]x2
+f62      L: Bb3:16 b6  R: C5:32 b5
+[]x1
+f64      R: Eb5:32 b5
+[]x1
+f66      L: G4:16 b6  R: Db5:16 b5
+[]x3
+f70      L: F2:32
+[]x2
+f73      L: C3:16 b7  R: C5:32 b8
+[]x2
+f76      R: Db5:32 b8
+[]x1
+f78      L: Ab3:16 b7  R: Cb5:16 b8
+[]x2
+f81      L: F3:32 b7  R: C5:32 b9
+[]x2
+f84      L: C4:16 b10  R: Ab5:32 b9
+[]x2
+f87      R: G5:32 b9
+[]x1
+f89      L: Ab4:16 b10  R: F5:16 b11
+[]x3
+f93      L: F2:16 b12  R: F5:16 b11
+[]x2
+f96      L: Db3:16 b12  R: Fb5:16 b11
+[]x3
+f100     L: G3:16 b12
+[]x1
+f102     R: A4:32 b13
+[]x1
+f104     L: Fb3:16 b12  R: Bb4:32 b13
+[]x1
+f106     R: Cb5:32 b13
+[]x1
+f108     L: Bb3:16 b12
+f109     R: C5:32 b13
+[]x1
+f111     L: G4:16 b12  R: Eb5:32 b13
+[]x1
+f113     R: Db5:32 b13

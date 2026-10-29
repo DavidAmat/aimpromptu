@@ -23,9 +23,13 @@
           "bars": "1-4",
           "kern": "028-1-BH-004.krn",
           "kernBars": "1-4",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/prelude-4-right-1.svg",
+          "f1": "transcribed/prelude-4-right-1.f1"
         }
-      ]
+      ],
+      "number": 1,
+      "ref": "right easy 1"
     },
     {
       "hand": "right",
@@ -41,10 +45,14 @@
           "page": 79,
           "bars": "1-3 (with the notes before bar 1)",
           "kern": "069-1-MEIf-002.krn",
-          "kernBars": "2-4",
-          "note": null
+          "kernBars": "1-4",
+          "note": null,
+          "drawing": "transcribed/waltz-69-2-right-1.svg",
+          "f1": "transcribed/waltz-69-2-right-1.f1"
         }
-      ]
+      ],
+      "number": 2,
+      "ref": "right easy 2"
     },
     {
       "hand": "right",
@@ -60,8 +68,10 @@
           "page": 59,
           "bars": "1-2 (with the notes before bar 1)",
           "kern": "064_2-1-BR-002.krn",
-          "kernBars": "1-2",
-          "note": "Sol#4-Mi5 held as a sixth, then Fa##4-Re#5."
+          "kernBars": "0-2",
+          "note": "Sol#4-Mi5 held as a sixth, then Fa##4-Re#5.",
+          "drawing": "transcribed/waltz-64-2-right-1.svg",
+          "f1": "transcribed/waltz-64-2-right-1.f1"
         },
         {
           "image": "ballade1-right-1.png",
@@ -71,9 +81,13 @@
           "bars": "68-71",
           "kern": "023-1-BH.krn",
           "kernBars": "68-71",
-          "note": "Two notes on the blancas with puntillo, single notes on the negras, three notes to land on bar 70 (the user's example of page 10)."
+          "note": "Two notes on the blancas with puntillo, single notes on the negras, three notes to land on bar 70 (the user's example of page 10).",
+          "drawing": "transcribed/ballade1-right-1.svg",
+          "f1": "transcribed/ballade1-right-1.f1"
         }
-      ]
+      ],
+      "number": 1,
+      "ref": "right medium 1"
     },
     {
       "hand": "right",
@@ -89,10 +103,14 @@
           "page": 16,
           "bars": "1-4 (with the notes before bar 1)",
           "kern": "028-1-BH-007.krn",
-          "kernBars": "1-4",
-          "note": null
+          "kernBars": "0-4",
+          "note": null,
+          "drawing": "transcribed/prelude-7-right-1.svg",
+          "f1": "transcribed/prelude-7-right-1.f1"
         }
-      ]
+      ],
+      "number": 1,
+      "ref": "right hard 1"
     },
     {
       "hand": "right",
@@ -109,9 +127,13 @@
           "bars": "50-52",
           "kern": "052-1-BH.krn",
           "kernBars": "50-52",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/ballade4-right-1.svg",
+          "f1": "transcribed/ballade4-right-1.f1"
         }
-      ]
+      ],
+      "number": 2,
+      "ref": "right hard 2"
     },
     {
       "hand": "right",
@@ -128,9 +150,13 @@
           "bars": "9-11",
           "kern": "042-1-BH.krn",
           "kernBars": "9-11",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/waltz-42-right-1.svg",
+          "f1": "transcribed/waltz-42-right-1.f1"
         }
-      ]
+      ],
+      "number": 3,
+      "ref": "right hard 3"
     },
     {
       "hand": "right",
@@ -147,9 +173,13 @@
           "bars": "17-19",
           "kern": "070-1-MEIf-003.krn",
           "kernBars": "17-19",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/waltz-70-3-right-1.svg",
+          "f1": "transcribed/waltz-70-3-right-1.f1"
         }
-      ]
+      ],
+      "number": 4,
+      "ref": "right hard 4"
     },
     {
       "hand": "right",
@@ -166,9 +196,13 @@
           "bars": "106-108",
           "kern": "023-1-BH.krn",
           "kernBars": "106-108",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/ballade1-right-2.svg",
+          "f1": "transcribed/ballade1-right-2.f1"
         }
-      ]
+      ],
+      "number": 1,
+      "ref": "right super hard 1"
     },
     {
       "hand": "right",
@@ -185,9 +219,13 @@
           "bars": "152-153",
           "kern": "052-1-BH.krn",
           "kernBars": "152-153",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/ballade4-right-2.svg",
+          "f1": "transcribed/ballade4-right-2.f1"
         }
-      ]
+      ],
+      "number": 2,
+      "ref": "right super hard 2"
     },
     {
       "hand": "left",
@@ -207,7 +245,9 @@
           "f1": "drawn/drawn-left-held-triad.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 1,
+      "ref": "left easy 1"
     },
     {
       "hand": "left",
@@ -227,7 +267,9 @@
           "f1": "drawn/drawn-left-low-note-then-chord.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 2,
+      "ref": "left easy 2"
     },
     {
       "hand": "left",
@@ -247,7 +289,9 @@
           "f1": "drawn/drawn-left-triads-in-steps.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 3,
+      "ref": "left easy 3"
     },
     {
       "hand": "left",
@@ -264,9 +308,13 @@
           "bars": "65-67",
           "kern": "023-1-BH.krn",
           "kernBars": "65-67",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/ballade1-left-1.svg",
+          "f1": "transcribed/ballade1-left-1.f1"
         }
-      ]
+      ],
+      "number": 4,
+      "ref": "left easy 4"
     },
     {
       "hand": "left",
@@ -286,7 +334,9 @@
           "f1": "drawn/drawn-left-low-note-then-two-notes-rocking.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 5,
+      "ref": "left easy 5"
     },
     {
       "hand": "left",
@@ -306,7 +356,9 @@
           "f1": "drawn/drawn-left-alberti.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 6,
+      "ref": "left easy 6"
     },
     {
       "hand": "left",
@@ -326,7 +378,9 @@
           "f1": "drawn/drawn-left-triad-up-and-down.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 7,
+      "ref": "left easy 7"
     },
     {
       "hand": "left",
@@ -346,7 +400,9 @@
           "f1": "drawn/drawn-left-triad-up-and-hold.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 8,
+      "ref": "left easy 8"
     },
     {
       "hand": "left",
@@ -366,7 +422,9 @@
           "f1": "drawn/drawn-left-triad-down-and-hold.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 9,
+      "ref": "left easy 9"
     },
     {
       "hand": "left",
@@ -386,7 +444,9 @@
           "f1": "drawn/drawn-left-chord-then-two-notes-above.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 10,
+      "ref": "left easy 10"
     },
     {
       "hand": "left",
@@ -406,7 +466,9 @@
           "f1": "drawn/drawn-left-held-two-note-chord.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 11,
+      "ref": "left easy 11"
     },
     {
       "hand": "left",
@@ -426,7 +488,9 @@
           "f1": "drawn/drawn-left-low-note-then-two-note-chords.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 12,
+      "ref": "left easy 12"
     },
     {
       "hand": "left",
@@ -446,7 +510,9 @@
           "f1": "drawn/drawn-left-two-note-chord-then-arpeggio.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 13,
+      "ref": "left easy 13"
     },
     {
       "hand": "left",
@@ -466,7 +532,9 @@
           "f1": "drawn/drawn-left-fifth-to-sixth-rocking.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 14,
+      "ref": "left easy 14"
     },
     {
       "hand": "left",
@@ -482,10 +550,14 @@
           "page": 16,
           "bars": "1-4 (with the notes before bar 1)",
           "kern": "028-1-BH-007.krn",
-          "kernBars": "1-4",
-          "note": null
+          "kernBars": "0-4",
+          "note": null,
+          "drawing": "transcribed/prelude-7-left-1.svg",
+          "f1": "transcribed/prelude-7-left-1.f1"
         }
-      ]
+      ],
+      "number": 1,
+      "ref": "left medium 1"
     },
     {
       "hand": "left",
@@ -501,8 +573,10 @@
           "page": 79,
           "bars": "1-3 (with the notes before bar 1)",
           "kern": "069-1-MEIf-002.krn",
-          "kernBars": "2-4",
-          "note": "Si2, then Fa#3-Si3-Re4 twice: the plain pattern."
+          "kernBars": "1-4",
+          "note": "Si2, then Fa#3-Si3-Re4 twice: the plain pattern.",
+          "drawing": "transcribed/waltz-69-2-left-1.svg",
+          "f1": "transcribed/waltz-69-2-left-1.f1"
         },
         {
           "image": "waltz-64-3-left-1.png",
@@ -512,7 +586,9 @@
           "bars": "1-3",
           "kern": "064_3-1a-BR-003.krn",
           "kernBars": "1-3",
-          "note": "Lab2, Mib2, Lab2 under the same chord Mib3-Lab3-Do4: only the fifth finger moves."
+          "note": "Lab2, Mib2, Lab2 under the same chord Mib3-Lab3-Do4: only the fifth finger moves.",
+          "drawing": "transcribed/waltz-64-3-left-1.svg",
+          "f1": "transcribed/waltz-64-3-left-1.f1"
         },
         {
           "image": "waltz-64-2-left-1.png",
@@ -521,10 +597,14 @@
           "page": 59,
           "bars": "1-4 (with the notes before bar 1)",
           "kern": "064_2-1-BR-002.krn",
-          "kernBars": "1-4",
-          "note": "Do#2, then Sol#3-Do#4-Mi4: the same pattern with a jump of more than an octave, the hardest form of it."
+          "kernBars": "0-4",
+          "note": "Do#2, then Sol#3-Do#4-Mi4: the same pattern with a jump of more than an octave, the hardest form of it.",
+          "drawing": "transcribed/waltz-64-2-left-1.svg",
+          "f1": "transcribed/waltz-64-2-left-1.f1"
         }
-      ]
+      ],
+      "number": 2,
+      "ref": "left medium 2"
     },
     {
       "hand": "left",
@@ -540,10 +620,14 @@
           "page": 71,
           "bars": "1-4 (with the notes before bar 1)",
           "kern": "069-1-MEIf-001.krn",
-          "kernBars": "2-5",
-          "note": null
+          "kernBars": "1-5",
+          "note": null,
+          "drawing": "transcribed/waltz-69-1-left-1.svg",
+          "f1": "transcribed/waltz-69-1-left-1.f1"
         }
-      ]
+      ],
+      "number": 3,
+      "ref": "left medium 3"
     },
     {
       "hand": "left",
@@ -559,10 +643,14 @@
           "page": 10,
           "bars": "1-2 (with the notes before bar 1)",
           "kern": "009-1-KI-002.krn",
-          "kernBars": "1-2",
-          "note": null
+          "kernBars": "0-2",
+          "note": null,
+          "drawing": "transcribed/nocturne-9-2-left-1.svg",
+          "f1": "transcribed/nocturne-9-2-left-1.f1"
         }
-      ]
+      ],
+      "number": 4,
+      "ref": "left medium 4"
     },
     {
       "hand": "left",
@@ -579,9 +667,13 @@
           "bars": "1-4",
           "kern": "028-1-BH-004.krn",
           "kernBars": "1-4",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/prelude-4-left-1.svg",
+          "f1": "transcribed/prelude-4-left-1.f1"
         }
-      ]
+      ],
+      "number": 5,
+      "ref": "left medium 5"
     },
     {
       "hand": "left",
@@ -598,9 +690,13 @@
           "bars": "1-4",
           "kern": "028-1-BH-015.krn",
           "kernBars": "1-4",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/prelude-15-left-1.svg",
+          "f1": "transcribed/prelude-15-left-1.f1"
         }
-      ]
+      ],
+      "number": 6,
+      "ref": "left medium 6"
     },
     {
       "hand": "left",
@@ -617,9 +713,13 @@
           "bars": "5-7",
           "kern": "028-1-BH-020.krn",
           "kernBars": "5-7",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/prelude-20-left-1.svg",
+          "f1": "transcribed/prelude-20-left-1.f1"
         }
-      ]
+      ],
+      "number": 7,
+      "ref": "left medium 7"
     },
     {
       "hand": "left",
@@ -636,9 +736,13 @@
           "bars": "1-3",
           "kern": "028-1-BH-013.krn",
           "kernBars": "1-3",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/prelude-13-left-1.svg",
+          "f1": "transcribed/prelude-13-left-1.f1"
         }
-      ]
+      ],
+      "number": 8,
+      "ref": "left medium 8"
     },
     {
       "hand": "left",
@@ -655,9 +759,13 @@
           "bars": "68-71",
           "kern": "023-1-BH.krn",
           "kernBars": "68-71",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/ballade1-left-2.svg",
+          "f1": "transcribed/ballade1-left-2.f1"
         }
-      ]
+      ],
+      "number": 9,
+      "ref": "left medium 9"
     },
     {
       "hand": "left",
@@ -677,7 +785,9 @@
           "f1": "drawn/drawn-left-octave-then-arpeggio.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 10,
+      "ref": "left medium 10"
     },
     {
       "hand": "left",
@@ -697,7 +807,9 @@
           "f1": "drawn/drawn-left-low-note-then-off-beat-chords.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 11,
+      "ref": "left medium 11"
     },
     {
       "hand": "left",
@@ -717,7 +829,9 @@
           "f1": "drawn/drawn-left-added-sixth-up-and-down.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 12,
+      "ref": "left medium 12"
     },
     {
       "hand": "left",
@@ -737,7 +851,9 @@
           "f1": "drawn/drawn-left-held-bass-under-rocking-notes.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 13,
+      "ref": "left medium 13"
     },
     {
       "hand": "left",
@@ -757,7 +873,9 @@
           "f1": "drawn/drawn-left-triad-in-semicorcheas.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 14,
+      "ref": "left medium 14"
     },
     {
       "hand": "left",
@@ -777,7 +895,9 @@
           "f1": "drawn/drawn-left-octave-then-two-beamed-chords.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 15,
+      "ref": "left medium 15"
     },
     {
       "hand": "left",
@@ -797,7 +917,9 @@
           "f1": "drawn/drawn-left-alternating-bass-and-chord.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 16,
+      "ref": "left medium 16"
     },
     {
       "hand": "left",
@@ -817,7 +939,9 @@
           "f1": "drawn/drawn-left-arpeggio-three-three-two.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 17,
+      "ref": "left medium 17"
     },
     {
       "hand": "left",
@@ -837,7 +961,9 @@
           "f1": "drawn/drawn-left-octave-rocking.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 18,
+      "ref": "left medium 18"
     },
     {
       "hand": "left",
@@ -857,7 +983,9 @@
           "f1": "drawn/drawn-left-chord-then-arpeggio-down.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 19,
+      "ref": "left medium 19"
     },
     {
       "hand": "left",
@@ -874,9 +1002,13 @@
           "bars": "106-108",
           "kern": "023-1-BH.krn",
           "kernBars": "106-108",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/ballade1-left-3.svg",
+          "f1": "transcribed/ballade1-left-3.f1"
         }
-      ]
+      ],
+      "number": 1,
+      "ref": "left hard 1"
     },
     {
       "hand": "left",
@@ -893,9 +1025,13 @@
           "bars": "9-11",
           "kern": "052-1-BH.krn",
           "kernBars": "9-11",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/ballade4-left-1.svg",
+          "f1": "transcribed/ballade4-left-1.f1"
         }
-      ]
+      ],
+      "number": 2,
+      "ref": "left hard 2"
     },
     {
       "hand": "left",
@@ -912,9 +1048,13 @@
           "bars": "38-40",
           "kern": "052-1-BH.krn",
           "kernBars": "38-40",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/ballade4-left-2.svg",
+          "f1": "transcribed/ballade4-left-2.f1"
         }
-      ]
+      ],
+      "number": 3,
+      "ref": "left hard 3"
     },
     {
       "hand": "left",
@@ -931,9 +1071,13 @@
           "bars": "181-182",
           "kern": "052-1-BH.krn",
           "kernBars": "181-182",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/ballade4-left-3.svg",
+          "f1": "transcribed/ballade4-left-3.f1"
         }
-      ]
+      ],
+      "number": 4,
+      "ref": "left hard 4"
     },
     {
       "hand": "left",
@@ -950,9 +1094,13 @@
           "bars": "1-4",
           "kern": "028-1-BH-021.krn",
           "kernBars": "1-4",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/prelude-21-left-1.svg",
+          "f1": "transcribed/prelude-21-left-1.f1"
         }
-      ]
+      ],
+      "number": 5,
+      "ref": "left hard 5"
     },
     {
       "hand": "left",
@@ -972,7 +1120,9 @@
           "f1": "drawn/drawn-left-four-note-arpeggio-up-and-down.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 6,
+      "ref": "left hard 6"
     },
     {
       "hand": "left",
@@ -992,7 +1142,9 @@
           "f1": "drawn/drawn-left-low-note-then-four-note-chords.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 7,
+      "ref": "left hard 7"
     },
     {
       "hand": "left",
@@ -1012,7 +1164,9 @@
           "f1": "drawn/drawn-left-open-arpeggio-up-and-down.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 8,
+      "ref": "left hard 8"
     },
     {
       "hand": "left",
@@ -1032,7 +1186,9 @@
           "f1": "drawn/drawn-left-alberti-over-an-octave.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 9,
+      "ref": "left hard 9"
     },
     {
       "hand": "left",
@@ -1052,7 +1208,9 @@
           "f1": "drawn/drawn-left-four-note-wave-in-semicorcheas.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 10,
+      "ref": "left hard 10"
     },
     {
       "hand": "left",
@@ -1072,7 +1230,9 @@
           "f1": "drawn/drawn-left-low-note-then-chord-moving-up.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 11,
+      "ref": "left hard 11"
     },
     {
       "hand": "left",
@@ -1092,7 +1252,9 @@
           "f1": "drawn/drawn-left-octave-then-four-note-chords.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 12,
+      "ref": "left hard 12"
     },
     {
       "hand": "left",
@@ -1112,7 +1274,9 @@
           "f1": "drawn/drawn-left-held-bass-under-moving-thirds.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 13,
+      "ref": "left hard 13"
     },
     {
       "hand": "left",
@@ -1132,7 +1296,9 @@
           "f1": "drawn/drawn-left-off-beat-four-note-chords.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 14,
+      "ref": "left hard 14"
     },
     {
       "hand": "left",
@@ -1152,7 +1318,9 @@
           "f1": "drawn/drawn-left-arpeggio-up-then-chord.f1",
           "note": null
         }
-      ]
+      ],
+      "number": 15,
+      "ref": "left hard 15"
     },
     {
       "hand": "left",
@@ -1169,9 +1337,13 @@
           "bars": "152-153",
           "kern": "052-1-BH.krn",
           "kernBars": "152-153",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/ballade4-left-4.svg",
+          "f1": "transcribed/ballade4-left-4.f1"
         }
-      ]
+      ],
+      "number": 1,
+      "ref": "left super hard 1"
     },
     {
       "hand": "left",
@@ -1188,9 +1360,13 @@
           "bars": "198-200",
           "kern": "052-1-BH.krn",
           "kernBars": "198-200",
-          "note": null
+          "note": null,
+          "drawing": "transcribed/ballade4-left-5.svg",
+          "f1": "transcribed/ballade4-left-5.f1"
         }
-      ]
+      ],
+      "number": 2,
+      "ref": "left super hard 2"
     }
   ]
 }

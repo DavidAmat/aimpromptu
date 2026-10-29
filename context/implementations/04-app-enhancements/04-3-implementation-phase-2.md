@@ -1,6 +1,6 @@
 # 04-3 · Phase 2: the gallery of patterns
 
-Status: **review 1 answered (30 drawn variations added), waiting for the user's next review** (task 2.8). Branch `feat/04-3-phase-2`, in the worktree
+Status: **review 2 answered (every Chopin example in the app's notation, the numbers), waiting for the user's approval** (task 2.8). Branch `feat/04-3-phase-2`, in the worktree
 `/home/david/Documents/projects/music/aimpromptu-04-3-phase-2` (plan section 7.4: Phase 2 ran in parallel with Phase 1,
 which owns the main checkout). Not merged. No `src/` change, no AI call, no database access.
 
@@ -16,7 +16,7 @@ Audience: the agents of this plan (the Phase 2 agent when the user answers, and 
 | 2.5 drawn patterns | 33 drawn with the app's engine from F1 frames text: the 3 easy ones of the brief, and 30 variations (10 easy, 10 medium, 10 hard) asked in the user's review 1 (section 4) |
 | 2.6 snapshots | 29 PNG in `images/chopin_passages/` (1.3 MB), cut by script, each checked zoomed against the score and the kern (section 3) |
 | 2.7 the gallery | `gallery/04-3-phase-2/index.html` and `patterns.json` (59 patterns: 50 left hand, 9 right hand), from one list in `tools/build.py` |
-| 2.8 review | Served at `http://ubuntu:8098/gallery/04-3-phase-2/index.html` (8099 was taken by another server); waiting for the user |
+| 2.8 review | Served at `http://ubuntu:8098/gallery/04-3-phase-2/index.html` (8099 was taken by another server). Review 1: 30 drawn variations; review 2: the Chopin examples in the app's notation and the numbers (section 4.3), and the catalog and frame-number decisions recorded in plan section 5.10 and Phase 2b |
 
 # 2. Sources
 
@@ -106,6 +106,40 @@ first drawings changed only there.
 | Medium (10 drawn) | 12 (the octava) | 9 to 16; 19 to 28 with a low note or an octava |
 | Hard (10 drawn) | 12 (four-note chords) | 12 to 16; 24 to 31 with a low octava |
 
+## 4.3 The user's review 2 (2026-10-29): every Chopin example in the app's notation, and numbers
+
+The user asked that each passage shown only as a snapshot also be written in the app's notation and drawn as the
+synthetic ones, and that the patterns be numbered inside each hand and level, so that the coming catalog of Enhance
+with AI can name them (plan section 5.10).
+
+`tools/transcribe.py` (research venv, music21) reads the bars of each Chopin example from the kern (`kern`,
+`kernBars` in `patterns.json`), joins the ties, and writes the notes as the app stores them: onset and length in ms
+(a negra = 600 ms), MIDI, hand (the part with the lower mean pitch is the left hand). Kern grace notes become notes of
+50 ms just before their main note (60 ms per grace), so that the app's rule makes them decoration notes again. It
+writes `tools/transcribe_run.py`, which runs in the container: `Notes` -> `propose_frames(notes, key=, quarter_ms=600)`
+-> `f1.write(mode="frames")` -> `render_frames`; output in `transcribed/<snapshot name>.f1` and `.svg` (29 of each;
+the left and right examples of the same bars are the same passage).
+
+What the zoomed comparison with the snapshots found (23 different passages, drawing over snapshot):
+
+- `kernBars` of five examples missed their upbeat (kern bar 0 in Waltz 64/2, Prelude 7, Nocturne 9/2; kern bar 1 in
+  Waltz 69/1 and 69/2). Corrected in `build.py`.
+- Waltz 69/2 came out in Do major: its kern has `*kcancel` after the armadura, which music21 reads as a second
+  armadura with no signs at the same place. At one place the armadura with signs now wins.
+- The armadura is the edition's. The app's own choice (`choose_keys`) was compared: it is worse on these short
+  passages (Ballade 4, 38-40 in 5 sharps, 181-182 in 6 sharps), except Ballade 1, 106-108, which is on Mi towards La
+  and which the edition writes with sharps over 2 flats: there the app's choice (3 sharps) is kept (`KEY` in
+  `transcribe.py`), because under flats the app's rule spells the black keys as flats (Lab for Sol#).
+- The rest follows the app's rules and is kept: one voice per hand (the held bass of Waltz 69/1 becomes a negra,
+  cut by the next chord); a white key whose name is in the armadura takes its other name (Mi natural is Fab in Fa
+  minor); the app's clefs (Nocturne 9/2, bar 2, takes the left hand to the treble clef); no tuplets (the groups of 7
+  and 8 of Ballade 4, 152-153, are plain semicorcheas and fusas); the first edition's decoration notes of Waltz 42
+  are at the start of bar 9 where the PWM edition has them at the end of bar 8.
+
+Numbers: `build.py` gives each pattern `number` (from 1 inside its hand and level, in the order of `PATTERNS`) and
+`ref` ("left hard 3"). A new pattern must be added at the end of its level in `PATTERNS`, so that approved numbers do
+not change. The page shows "Hard 3" before each name, the app's drawing first and the edition's snapshot under it.
+
 # 5. The patterns
 
 The list is in `patterns.json` (status `proposed`); the page shows the same list. Levels as the agent proposed them,
@@ -138,6 +172,8 @@ Choices the user may want to change (for the review):
 - **At the merge**: stop the gallery server on port 8098 (`pkill -f "http.server 8098"`) and remove the worktree
   (`git worktree remove /home/david/Documents/projects/music/aimpromptu-04-3-phase-2`); then the gallery is served
   from the main checkout.
+- **Phase 2b and Phase 4**: the catalog and the frame numbers of plan section 5.10. The catalog data is `patterns.json`
+  with the F1 texts of `drawn/` and `transcribed/`; Phase 4 moves it into the backend's data.
 - **Phase 3**: read `patterns.json` for the ids and levels (after the user's review sets `status` to approved); the
   kern refs give the notes for short F1 examples in the prompts. The licence of the kern files for prompt examples is
   an open point of Phase 5 (plan section 8).
