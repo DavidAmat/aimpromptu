@@ -17,7 +17,9 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] **The brief** (user, 2026-10-29; `04-3-prompt.md`): folders and metadata first, in one phase; then the whole
   song simplification by levels (easy, medium, hard; super hard later) in phases that need the user's action.
 - [x] **Phase 1**: the user checks My projects, My Library and the info button in the browser (ok on 2026-10-29).
-- [ ] **Phase 2**: the user approves the gallery of patterns (names and levels go into plan section 10).
+- [x] **Phase 2**: the user approves the gallery of patterns (approved on 2026-10-29, after review 2; plan section 10).
+- [x] **The catalog and the frame numbers** (user, 2026-10-29, review 2 of Phase 2): plan section 5.10; Phase 2b
+  comes before Phase 3 (confirmed by the user at the merge).
 - [ ] **Phase 3**: the user approves the three levels on the passages of 99 Red Balloons.
 - [ ] **Phase 4**: where a level version is stored (plan section 5.8), confirmed with the user.
 
@@ -44,23 +46,36 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
   shows and changes its song's metadata and folders of My Library; revision `0009` moved the copy's rows to the song
   (plan section 10, Phase 1, point 10).
 
-# [ ] Phase 2: The gallery of patterns
+# [x] Phase 2: The gallery of patterns
 
-- [ ] Task 2.1 The Chopin folder on Ubuntu (`/home/david/Documents/projects/music/chopin`, the user copies it).
-- [ ] Task 2.2 Sources: the PDFs, the kern files of the research, its pattern library and level texts.
-- [ ] Task 2.3 The passages the user named (Ballade No. 1 pages 10 and 12, Ballade No. 4 pages 41 to 56, the Waltzes).
-- [ ] Task 2.4 Leave out the left hands that run up and down like scales.
-- [ ] Task 2.5 The easy patterns of the brief drawn by the app's engine.
-- [ ] Task 2.6 The snapshots in `images/chopin_passages/`, each checked zoomed in.
-- [ ] Task 2.7 The gallery `gallery/04-3-phase-2/index.html` (two tabs, level pills) and `patterns.json`.
-- [ ] Task 2.8 The user's review, until approved.
+- [x] Task 2.1 The Chopin folder on Ubuntu (`/home/david/Documents/projects/music/chopin`, the user copies it).
+- [x] Task 2.2 Sources: the PDFs, the kern files of the research, its pattern library and level texts.
+- [x] Task 2.3 The passages the user named (Ballade No. 1 pages 10 and 12, Ballade No. 4 pages 41 to 56, the Waltzes).
+- [x] Task 2.4 Leave out the left hands that run up and down like scales.
+- [x] Task 2.5 The easy patterns of the brief drawn by the app's engine.
+- [x] Task 2.6 The snapshots in `images/chopin_passages/`, each checked zoomed in.
+- [x] Task 2.7 The gallery `gallery/04-3-phase-2/index.html` (two tabs, level pills) and `patterns.json`.
+- [x] Task 2.8 The user's review, until approved (review 1: 30 drawn variations; review 2: the next task; approved
+  and merged into `master` on 2026-10-29).
+- [x] Task 2.9 Every pattern in the app's notation (the Chopin ones from the kern), and the numbers inside each hand
+  and level.
+
+# [ ] Phase 2b: Frame numbers on the sheet and in the range toolbox
+
+- [ ] Task 2b.1 Study: how the engine draws a line, how the page lays the SVG and the cursor, the range toolbox.
+- [ ] Task 2b.2 The frame number on the sheet: at the start of each line and at regular places; also in the zoom and
+  the print.
+- [ ] Task 2b.3 The range toolbox: the first and the last frame number of the selected range.
+- [ ] Task 2b.4 Checks: `check:frames-page` with the numbers, screenshots in `screenshots/04-3-phase-2b/`; the user
+  checks the sheet page in the browser.
 
 # [ ] Phase 3: The level prompts, tested on 99 Red Balloons
 
 - [ ] Task 3.1 Study of 99 Red Balloons (`c0e39afe`): the passages of the two images and two or three more.
 - [ ] Task 3.2 The measures ported to the app's time, with tests.
 - [ ] Task 3.3 The grid of the song, measured on 99 Red Balloons and on one song played by a human.
-- [ ] Task 3.4 The prompts: a shared part and `easy.md`, `medium.md`, `hard.md`; a new `VERSION`.
+- [ ] Task 3.4 The prompts: a shared part and `easy.md`, `medium.md`, `hard.md`; a new `VERSION`; a place for the F1
+  text of the patterns of a run and for the user's places by frame number (plan section 5.10).
 - [ ] Task 3.5 The plan of the song and its prompt.
 - [ ] Task 3.6 The check of a level run, with tests on recorded answers.
 - [ ] Task 3.7 Tests with the AI (the user asked first, with the cost).
@@ -70,7 +85,8 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 # [ ] Phase 4: The levels in the app
 
 - [ ] Task 4.1 Study; section 5.8 confirmed with the user.
-- [ ] Task 4.2 The dialog: the levels on a range and on the whole sheet, with the cost.
+- [ ] Task 4.2 The dialog: the levels on a range and on the whole sheet, with the cost; the catalog of patterns and
+  the references in the words (plan section 5.10).
 - [ ] Task 4.3 The run: `start_level`, `write_level`, the check, the feedback, the stand-in tests.
 - [ ] Task 4.4 Storing: a new project per level of the whole sheet; a range in place with one step of undo.
 - [ ] Task 4.5 Tests with the AI on a temporary copy of 99 Red Balloons; gallery `gallery/04-3-phase-4/`.

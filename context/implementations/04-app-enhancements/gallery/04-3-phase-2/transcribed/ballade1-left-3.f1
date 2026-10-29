@@ -1,0 +1,38 @@
+F1 frames frameMs=40 quarterMs=600
+key=3# clefs: R=treble L=bass
+[]x25
+f25      L: E1,E2:4  R: B4,D5,E5,G#5,B5:2
+[]x14
+f40      L: E3,G#3,D4:4
+[]x14
+f55      L: G#3,D4,E4:4
+[]x14
+f70      L: B3,D4,G#4:4  R: D5,E5,G#5,C#6:2
+[]x14
+f85      L: G#3,D4,E4:4
+[]x14
+f100     L: E3,G#3,D4:4  R: D5,E5,G#5,C#6:4
+[]x14
+f115     L: A1,A2:4  R: A4,C#5,A5:2
+[]x14
+f130     L: E3,C#4:4
+[]x14
+f145     L: A3,E4:4
+[]x14
+f160     L: C#4,A4:4  R: A5,C#6,A6:2 8va
+[]x14
+f175     L: A3,E4:4
+[]x14
+f190     L: E3,C#4:4  R: G#5,C#6,G#6:4 8va
+[]x14
+f205     L: B1,B2:4  R: F#5,C#6,F#6:2 8va
+[]x14
+f220     L: F#3,B3:4
+[]x14
+f235     L: A3,D#4:4
+[]x14
+f250     L: B3,F#4:4  R: B5,D#6,G#6:2 8va
+[]x14
+f265     L: A3,D#4:4
+[]x14
+f280     L: F#3,B3:4  R: A5,D#6,G#6:4 8va
