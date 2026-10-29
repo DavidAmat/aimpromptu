@@ -1,8 +1,8 @@
 # 04-3 · Plan: folders and metadata, and the whole song simplification by levels
 
 Status: written 2026-10-29, from the brief [`04-3-prompt.md`](04-3-prompt.md); Phase 1 built on 2026-10-29,
-changed the same day after the user's first look (section 10, Phase 1, point 10), and waiting for the user's check
-([`04-3-checklist.md`](04-3-checklist.md)). **This is the living plan**: the agents update it when a phase changes
+changed the same day after the user's first look (section 10, Phase 1, point 10), checked by the user and merged
+into `master` the same day ([`04-3-checklist.md`](04-3-checklist.md)). **This is the living plan**: the agents update it when a phase changes
 direction (section 10 lists the changes, with the reason).
 
 Audience: the AI agents that build it on the Ubuntu machine, and the user, who checks each phase in the browser at

@@ -2,8 +2,8 @@
 
 Audience: the agents of the later phases of [`04-3-plan.md`](04-3-plan.md). Technical; the walkthrough for the user
 is in the chat. Branch `feat/04-3-phase-1`, made from `master` at `4950901`. State: built and checked on 2026-10-29;
-changed the same day after the user's first look (section 2.5: the metadata belongs to the song); waiting for the
-user's check in the browser (task 1.9), then the merge.
+changed the same day after the user's first look (section 2.5: the metadata belongs to the song); checked by the
+user on 2026-10-29 and merged into `master`.
 
 # 1. Summary
 

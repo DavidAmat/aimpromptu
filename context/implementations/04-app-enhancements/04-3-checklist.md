@@ -16,12 +16,12 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 
 - [x] **The brief** (user, 2026-10-29; `04-3-prompt.md`): folders and metadata first, in one phase; then the whole
   song simplification by levels (easy, medium, hard; super hard later) in phases that need the user's action.
-- [ ] **Phase 1**: the user checks My projects, My Library and the info button in the browser.
+- [x] **Phase 1**: the user checks My projects, My Library and the info button in the browser (ok on 2026-10-29).
 - [ ] **Phase 2**: the user approves the gallery of patterns (names and levels go into plan section 10).
 - [ ] **Phase 3**: the user approves the three levels on the passages of 99 Red Balloons.
 - [ ] **Phase 4**: where a level version is stored (plan section 5.8), confirmed with the user.
 
-# [p] Phase 1: Folders, the pills and the metadata
+# [x] Phase 1: Folders, the pills and the metadata
 
 - [x] Task 1.1 This checklist; the folder's `README.md`.
 - [x] Task 1.2 Study: section 4.1 confirmed; the Save to library and Edit paths for folders; where a project has an
@@ -38,7 +38,8 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
   row's `⋯`).
 - [x] Task 1.8 Checks: `check:folders` (new), `check:projects`, `check:library`, `check:frames-page`,
   `check:enhance-dialog`; screenshots in `screenshots/04-3-phase-1/`; the documentation.
-- [ ] Task 1.9 The user checks both pages and the info button in the browser.
+- [x] Task 1.9 The user checks both pages and the info button in the browser (ok on 2026-10-29; merged into
+  `master`).
 - [x] Task 1.10 After the user's first look: the metadata belongs to the song, never to one version. An edit copy
   shows and changes its song's metadata and folders of My Library; revision `0009` moved the copy's rows to the song
   (plan section 10, Phase 1, point 10).
