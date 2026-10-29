@@ -673,3 +673,10 @@ pattern can have several examples (`low-note-then-two-chords` has three Waltzes)
 The patterns, their names and levels are in [`gallery/04-3-phase-2/patterns.json`](gallery/04-3-phase-2/patterns.json)
 with the status "proposed"; the approved names and levels go here after the review. Details:
 [`04-3-implementation-phase-2.md`](04-3-implementation-phase-2.md).
+
+**Phase 2, review 1** (2026-10-29): the user liked the gallery and asked for more drawn left hands. The plan said that
+the app draws only the easy patterns that Chopin does not have (task 2.5). The user now wants about ten drawn
+variations at each of easy, medium and hard: positions that stay still, two-note chords at easy, a new rhythm or chord
+note at medium, one more note in the chord at hard. The app drew 30 of them on one shared melody (the gallery now has
+50 left-hand patterns). A rule for the drawings that Phase 3 also needs: an easy left hand jumps at most from a low note
+to its chord, and every chord or figure after that stays in one position (9 semitones or less in the drawings).

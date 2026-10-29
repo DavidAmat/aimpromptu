@@ -270,6 +270,206 @@
     },
     {
       "hand": "left",
+      "level": "easy",
+      "id": "low-note-then-two-notes-rocking",
+      "name": "Low note, then two notes rocking",
+      "line": "Fa2, then La3-Do4-La3-Do4 in corcheas: one low note, then two notes of the chord one after the other. Easy because after the low note the hand stays on two keys.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-low-note-then-two-notes-rocking.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-low-note-then-two-notes-rocking.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "easy",
+      "id": "alberti",
+      "name": "Alberti bass",
+      "line": "Fa3-Do4-La3-Do4 in corcheas, again and again: the lowest, the highest and the middle note of the triad. Easy because the hand never leaves the position of the triad.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-alberti.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-alberti.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "easy",
+      "id": "triad-up-and-down",
+      "name": "Triad up and down",
+      "line": "Fa3-La3-Do4-La3 in corcheas: the three notes of the chord going up and coming down. Easy because the figure is symmetric and stays in one position.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-triad-up-and-down.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-triad-up-and-down.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "easy",
+      "id": "triad-up-and-hold",
+      "name": "Triad up, then held",
+      "line": "Fa3 and La3 in corcheas, then Do4 as a negra: the triad goes up and stops on its top note. Easy because three fingers stay on three keys.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-triad-up-and-hold.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-triad-up-and-hold.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "easy",
+      "id": "triad-down-and-hold",
+      "name": "Triad down, then held",
+      "line": "Do4 and La3 in corcheas, then Fa3 as a negra: the same figure going down. Easy for the same reason as going up.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-triad-down-and-hold.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-triad-down-and-hold.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "easy",
+      "id": "chord-then-two-notes-above",
+      "name": "Chord, then two notes above",
+      "line": "Fa3-La3-Do4, then Do4-Fa4: the chord, then two of its notes in a higher position, again and again. Easy because the hand moves a little and comes back, always with the same two shapes.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-chord-then-two-notes-above.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-chord-then-two-notes-above.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "easy",
+      "id": "held-two-note-chord",
+      "name": "Held two-note chord",
+      "line": "The fifth Fa3-Do4 held as blancas (Do3-Sol3 and Sib2-Fa3 for the other chords). Easy because two notes are enough to give the harmony and the hand holds one shape.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-held-two-note-chord.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-held-two-note-chord.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "easy",
+      "id": "low-note-then-two-note-chords",
+      "name": "Low note, then two-note chords",
+      "line": "Fa2, then La3-Do4 three times in negras. Easy because the chord has only two notes and its shape never changes.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-low-note-then-two-note-chords.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-low-note-then-two-note-chords.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "easy",
+      "id": "two-note-chord-then-arpeggio",
+      "name": "Two-note chord, then an arpeggio",
+      "line": "Fa3-Do4 together, then Fa3-La3-Do4-La3-Fa3-La3 in corcheas. Easy because the arpeggio uses the same position as the two-note chord.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-two-note-chord-then-arpeggio.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-two-note-chord-then-arpeggio.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "easy",
+      "id": "fifth-to-sixth-rocking",
+      "name": "Fifth to sixth, rocking",
+      "line": "Fa3-Do4, then Fa3-Re4, in negras: the upper note moves one key and back while the lower note stays. Easy because only one finger moves.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-fifth-to-sixth-rocking.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-fifth-to-sixth-rocking.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
       "level": "medium",
       "id": "low-note-then-octave",
       "name": "Low note, then the octave",
@@ -461,6 +661,206 @@
     },
     {
       "hand": "left",
+      "level": "medium",
+      "id": "octave-then-arpeggio",
+      "name": "Octava, then an arpeggio",
+      "line": "Fa2-Fa3 together, then Fa3-La3-Do4-La3-Fa3-La3 in corcheas. Medium because of the octava and the jump to the arpeggio; the arpeggio itself stays in one position.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-octave-then-arpeggio.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-octave-then-arpeggio.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "medium",
+      "id": "low-note-then-off-beat-chords",
+      "name": "Low note, then chords off the beat",
+      "line": "Fa2 on the beat, then the triad on the half beats (corcheas), with blank space between them. Medium because of the rhythm: the chord sounds between the beats.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-low-note-then-off-beat-chords.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-low-note-then-off-beat-chords.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "medium",
+      "id": "added-sixth-up-and-down",
+      "name": "Added sixth, up and down",
+      "line": "Fa3-La3-Do4-Re4 and back in corcheas: the triad with its sixth (Re), a new note of the chord. Medium because the hand uses four fingers, still in one position.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-added-sixth-up-and-down.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-added-sixth-up-and-down.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "medium",
+      "id": "held-bass-under-rocking-notes",
+      "name": "Held bass under rocking notes",
+      "line": "Fa3 held for the whole bar while La3-Do4 rock above it in corcheas. Medium because one hand plays two voices: one finger holds and the others move.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-held-bass-under-rocking-notes.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-held-bass-under-rocking-notes.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "medium",
+      "id": "triad-in-semicorcheas",
+      "name": "Triad in semicorcheas",
+      "line": "Fa3-La3-Do4-La3 in semicorcheas at every beat. Medium because the notes are fast, although the figure and the position never change.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-triad-in-semicorcheas.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-triad-in-semicorcheas.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "medium",
+      "id": "octave-then-two-beamed-chords",
+      "name": "Octava, then two beamed chords",
+      "line": "Fa2-Fa3, then the triad twice in beamed corcheas, twice in each bar (the brief's example of an octava and two corcheas of the chord). Medium because of the jump between the octava and the chord.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-octave-then-two-beamed-chords.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-octave-then-two-beamed-chords.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "medium",
+      "id": "alternating-bass-and-chord",
+      "name": "Alternating bass and chord",
+      "line": "Fa2, the triad, Do3, the triad, in negras: the bass changes between the root and the fifth of the chord. Medium because the bass note moves every two beats.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-alternating-bass-and-chord.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-alternating-bass-and-chord.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "medium",
+      "id": "arpeggio-three-three-two",
+      "name": "Arpeggio in 3 + 3 + 2",
+      "line": "The triad in corcheas grouped 3 + 3 + 2 (Fa3-La3-Do4, Fa3-La3-Do4, Fa3-La3), a common rhythm in pop songs. Medium because the groups do not follow the beat, although the notes stay in one position.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-arpeggio-three-three-two.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-arpeggio-three-three-two.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "medium",
+      "id": "octave-rocking",
+      "name": "Octavas rocking",
+      "line": "Fa2, Fa3, Fa2, Fa3 in corcheas: the octava played as two notes, one after the other. Medium because the hand stays open on the octava for the whole bar.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-octave-rocking.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-octave-rocking.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "medium",
+      "id": "chord-then-arpeggio-down",
+      "name": "Chord, then an arpeggio down",
+      "line": "The triad, then Fa4-Do4-La3-Fa3-La3-Do4 in corcheas: down from the top and back. Medium because the arpeggio covers an octava, one note more than the triad.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-chord-then-arpeggio-down.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-chord-then-arpeggio-down.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
       "level": "hard",
       "id": "octave-then-chord-up-and-down",
       "name": "Octave, then the chord up and down",
@@ -550,6 +950,206 @@
           "bars": "1-4",
           "kern": "028-1-BH-021.krn",
           "kernBars": "1-4",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "four-note-arpeggio-up-and-down",
+      "name": "Four-note arpeggio up and down",
+      "line": "Fa3-La3-Do4-Fa4 and back in corcheas: the triad with its octava as a fourth note. Hard because the hand is open on the octava and uses all five fingers.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-four-note-arpeggio-up-and-down.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-four-note-arpeggio-up-and-down.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "low-note-then-four-note-chords",
+      "name": "Low note, then four-note chords",
+      "line": "Fa2, then Fa3-La3-Do4-Fa4 three times in negras. Hard because the chord fills the octava and the hand jumps to it.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-low-note-then-four-note-chords.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-low-note-then-four-note-chords.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "open-arpeggio-up-and-down",
+      "name": "Open arpeggio up and down",
+      "line": "Fa2-Do3-Fa3-La3-Do4 and back in corcheas: the root, the fifth, the octava and the tenth. Hard because the arpeggio covers more than an octava and the hand must move inside it.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-open-arpeggio-up-and-down.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-open-arpeggio-up-and-down.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "alberti-over-an-octave",
+      "name": "Alberti over an octava",
+      "line": "Fa3-Fa4-Do4-Fa4, La3-Fa4-Do4-Fa4: the Alberti figure with the octava on top. Hard because the hand stays open on the octava while the lower fingers change.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-alberti-over-an-octave.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-alberti-over-an-octave.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "four-note-wave-in-semicorcheas",
+      "name": "Four-note wave in semicorcheas",
+      "line": "Fa2, then Fa3-La3-Do4-Fa4 up and down in semicorcheas. Hard because the wave is fast and covers an octava; it is symmetric, so the fingers repeat.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-four-note-wave-in-semicorcheas.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-four-note-wave-in-semicorcheas.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "low-note-then-chord-moving-up",
+      "name": "Octava, then a chord that moves up",
+      "line": "Fa2-Fa3, then Fa3-La3-Do4 and La3-Do4-Fa4 in corcheas: the second chord is the same chord one position higher (the brief's La4-Do5-Mi5, then Do5-Mi5-La5). Hard because the hand moves between the two chords.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-low-note-then-chord-moving-up.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-low-note-then-chord-moving-up.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "octave-then-four-note-chords",
+      "name": "Octava, then four-note chords",
+      "line": "Fa2-Fa3, then Fa3-La3-Do4-Fa4 six times in corcheas. Hard because the hand jumps and then repeats a full chord fast.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-octave-then-four-note-chords.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-octave-then-four-note-chords.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "held-bass-under-moving-thirds",
+      "name": "Held bass under moving thirds",
+      "line": "Fa3 held, with La3-Do4 and Sib3-Re4 moving above it in corcheas. Hard because one hand plays two voices and the upper voice moves two fingers at a time.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-held-bass-under-moving-thirds.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-held-bass-under-moving-thirds.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "off-beat-four-note-chords",
+      "name": "Four-note chords off the beat",
+      "line": "Fa2-Fa3 on the beat, then Fa3-La3-Do4-Fa4 on the half beats. Hard because of the jump, the full chord and the rhythm between the beats.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-off-beat-four-note-chords.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-off-beat-four-note-chords.f1",
+          "note": null
+        }
+      ]
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "arpeggio-up-then-chord",
+      "name": "Arpeggio up, then the chord",
+      "line": "Fa3-La3-Do4-Fa4 in corcheas, then the four notes together as a blanca. Hard because the hand covers the octava twice, first note by note and then all at once.",
+      "examples": [
+        {
+          "image": "drawn/drawn-left-arpeggio-up-then-chord.svg",
+          "piece": "A variation asked in the review of 2026-10-29, drawn by the app",
+          "pdf": null,
+          "page": null,
+          "bars": null,
+          "kern": null,
+          "kernBars": null,
+          "f1": "drawn/drawn-left-arpeggio-up-then-chord.f1",
           "note": null
         }
       ]

@@ -28,9 +28,18 @@ def ex(image, piece, pdf, page, bars, kern=None, kbars=None, note=None):
     }
 
 
-def drawn(name):
-    return {"image": f"drawn/{name}.svg", "piece": "From the brief, drawn by the app", "pdf": None, "page": None,
+def drawn(name, piece="From the brief, drawn by the app"):
+    return {"image": f"drawn/{name}.svg", "piece": piece, "pdf": None, "page": None,
             "bars": None, "kern": None, "kernBars": None, "f1": f"drawn/{name}.f1", "note": None}
+
+
+VARIATION = "A variation asked in the review of 2026-10-29, drawn by the app"
+
+
+def var(level, pid, name, line):
+    """A left-hand pattern drawn by the app (tools/drawn.py), on the melody shared by all the drawings."""
+    return dict(hand="left", level=level, id=pid, name=name, line=line,
+                examples=[drawn(f"drawn-left-{pid}", VARIATION)])
 
 
 B1, B4 = "Ballade No. 1 in G minor, Op. 23", "Ballade No. 4 in F minor, Op. 52"
@@ -192,6 +201,97 @@ PATTERNS = [
          line="Fast runs of semicorcheas in groups of 7 and 8 that cross positions, over the left hand's sweeps. "
               "Super hard because the hand moves without rest and both hands move at once.",
          examples=[ex("ballade4-right-2.png", B4, "ballades.pdf", 50, "152-153", "052-1-BH.krn", "152-153")]),
+    # ---------------------------------------------------------------- left hand, drawn variations (review 1)
+    var("easy", "low-note-then-two-notes-rocking", "Low note, then two notes rocking",
+        "Fa2, then La3-Do4-La3-Do4 in corcheas: one low note, then two notes of the chord one after the other. "
+        "Easy because after the low note the hand stays on two keys."),
+    var("easy", "alberti", "Alberti bass",
+        "Fa3-Do4-La3-Do4 in corcheas, again and again: the lowest, the highest and the middle note of the triad. "
+        "Easy because the hand never leaves the position of the triad."),
+    var("easy", "triad-up-and-down", "Triad up and down",
+        "Fa3-La3-Do4-La3 in corcheas: the three notes of the chord going up and coming down. Easy because the "
+        "figure is symmetric and stays in one position."),
+    var("easy", "triad-up-and-hold", "Triad up, then held",
+        "Fa3 and La3 in corcheas, then Do4 as a negra: the triad goes up and stops on its top note. Easy because "
+        "three fingers stay on three keys."),
+    var("easy", "triad-down-and-hold", "Triad down, then held",
+        "Do4 and La3 in corcheas, then Fa3 as a negra: the same figure going down. Easy for the same reason as "
+        "going up."),
+    var("easy", "chord-then-two-notes-above", "Chord, then two notes above",
+        "Fa3-La3-Do4, then Do4-Fa4: the chord, then two of its notes in a higher position, again and again. Easy "
+        "because the hand moves a little and comes back, always with the same two shapes."),
+    var("easy", "held-two-note-chord", "Held two-note chord",
+        "The fifth Fa3-Do4 held as blancas (Do3-Sol3 and Sib2-Fa3 for the other chords). Easy because two notes "
+        "are enough to give the harmony and the hand holds one shape."),
+    var("easy", "low-note-then-two-note-chords", "Low note, then two-note chords",
+        "Fa2, then La3-Do4 three times in negras. Easy because the chord has only two notes and its shape never "
+        "changes."),
+    var("easy", "two-note-chord-then-arpeggio", "Two-note chord, then an arpeggio",
+        "Fa3-Do4 together, then Fa3-La3-Do4-La3-Fa3-La3 in corcheas. Easy because the arpeggio uses the same "
+        "position as the two-note chord."),
+    var("easy", "fifth-to-sixth-rocking", "Fifth to sixth, rocking",
+        "Fa3-Do4, then Fa3-Re4, in negras: the upper note moves one key and back while the lower note stays. "
+        "Easy because only one finger moves."),
+    var("medium", "octave-then-arpeggio", "Octava, then an arpeggio",
+        "Fa2-Fa3 together, then Fa3-La3-Do4-La3-Fa3-La3 in corcheas. Medium because of the octava and the jump "
+        "to the arpeggio; the arpeggio itself stays in one position."),
+    var("medium", "low-note-then-off-beat-chords", "Low note, then chords off the beat",
+        "Fa2 on the beat, then the triad on the half beats (corcheas), with blank space between them. Medium "
+        "because of the rhythm: the chord sounds between the beats."),
+    var("medium", "added-sixth-up-and-down", "Added sixth, up and down",
+        "Fa3-La3-Do4-Re4 and back in corcheas: the triad with its sixth (Re), a new note of the chord. Medium "
+        "because the hand uses four fingers, still in one position."),
+    var("medium", "held-bass-under-rocking-notes", "Held bass under rocking notes",
+        "Fa3 held for the whole bar while La3-Do4 rock above it in corcheas. Medium because one hand plays two "
+        "voices: one finger holds and the others move."),
+    var("medium", "triad-in-semicorcheas", "Triad in semicorcheas",
+        "Fa3-La3-Do4-La3 in semicorcheas at every beat. Medium because the notes are fast, although the figure "
+        "and the position never change."),
+    var("medium", "octave-then-two-beamed-chords", "Octava, then two beamed chords",
+        "Fa2-Fa3, then the triad twice in beamed corcheas, twice in each bar (the brief's example of an octava "
+        "and two corcheas of the chord). Medium because of the jump between the octava and the chord."),
+    var("medium", "alternating-bass-and-chord", "Alternating bass and chord",
+        "Fa2, the triad, Do3, the triad, in negras: the bass changes between the root and the fifth of the chord. "
+        "Medium because the bass note moves every two beats."),
+    var("medium", "arpeggio-three-three-two", "Arpeggio in 3 + 3 + 2",
+        "The triad in corcheas grouped 3 + 3 + 2 (Fa3-La3-Do4, Fa3-La3-Do4, Fa3-La3), a common rhythm in pop "
+        "songs. Medium because the groups do not follow the beat, although the notes stay in one position."),
+    var("medium", "octave-rocking", "Octavas rocking",
+        "Fa2, Fa3, Fa2, Fa3 in corcheas: the octava played as two notes, one after the other. Medium because the "
+        "hand stays open on the octava for the whole bar."),
+    var("medium", "chord-then-arpeggio-down", "Chord, then an arpeggio down",
+        "The triad, then Fa4-Do4-La3-Fa3-La3-Do4 in corcheas: down from the top and back. Medium because the "
+        "arpeggio covers an octava, one note more than the triad."),
+    var("hard", "four-note-arpeggio-up-and-down", "Four-note arpeggio up and down",
+        "Fa3-La3-Do4-Fa4 and back in corcheas: the triad with its octava as a fourth note. Hard because the hand "
+        "is open on the octava and uses all five fingers."),
+    var("hard", "low-note-then-four-note-chords", "Low note, then four-note chords",
+        "Fa2, then Fa3-La3-Do4-Fa4 three times in negras. Hard because the chord fills the octava and the hand "
+        "jumps to it."),
+    var("hard", "open-arpeggio-up-and-down", "Open arpeggio up and down",
+        "Fa2-Do3-Fa3-La3-Do4 and back in corcheas: the root, the fifth, the octava and the tenth. Hard because "
+        "the arpeggio covers more than an octava and the hand must move inside it."),
+    var("hard", "alberti-over-an-octave", "Alberti over an octava",
+        "Fa3-Fa4-Do4-Fa4, La3-Fa4-Do4-Fa4: the Alberti figure with the octava on top. Hard because the hand stays "
+        "open on the octava while the lower fingers change."),
+    var("hard", "four-note-wave-in-semicorcheas", "Four-note wave in semicorcheas",
+        "Fa2, then Fa3-La3-Do4-Fa4 up and down in semicorcheas. Hard because the wave is fast and covers an "
+        "octava; it is symmetric, so the fingers repeat."),
+    var("hard", "low-note-then-chord-moving-up", "Octava, then a chord that moves up",
+        "Fa2-Fa3, then Fa3-La3-Do4 and La3-Do4-Fa4 in corcheas: the second chord is the same chord one position "
+        "higher (the brief's La4-Do5-Mi5, then Do5-Mi5-La5). Hard because the hand moves between the two chords."),
+    var("hard", "octave-then-four-note-chords", "Octava, then four-note chords",
+        "Fa2-Fa3, then Fa3-La3-Do4-Fa4 six times in corcheas. Hard because the hand jumps and then repeats a full "
+        "chord fast."),
+    var("hard", "held-bass-under-moving-thirds", "Held bass under moving thirds",
+        "Fa3 held, with La3-Do4 and Sib3-Re4 moving above it in corcheas. Hard because one hand plays two voices "
+        "and the upper voice moves two fingers at a time."),
+    var("hard", "off-beat-four-note-chords", "Four-note chords off the beat",
+        "Fa2-Fa3 on the beat, then Fa3-La3-Do4-Fa4 on the half beats. Hard because of the jump, the full chord "
+        "and the rhythm between the beats."),
+    var("hard", "arpeggio-up-then-chord", "Arpeggio up, then the chord",
+        "Fa3-La3-Do4-Fa4 in corcheas, then the four notes together as a blanca. Hard because the hand covers the "
+        "octava twice, first note by note and then all at once."),
 ]
 
 PAGE = """<!doctype html>
@@ -224,8 +324,10 @@ figure img { display: block; max-width: 100%; height: auto; border: 1px solid va
 </style></head><body><main>
 <h1>Gallery of patterns</h1>
 <p class="lead">Implementation 04-3, Phase 2: the patterns of each hand for the levels of the Whole Song
-simplification, found in Chopin (snapshots of your PDFs) or, where Chopin has no easy example, drawn by the app from
-the brief. In each snapshot the other hand is grey. The names are the ones the level prompts of Phase 3 will use.</p>
+simplification, found in Chopin (snapshots of your PDFs) or drawn by the app (the easy patterns of the brief, and
+the variations of easy, medium and hard asked in your review). The drawn patterns share one melody in Fa major (two bars of Fa, one of Do, then Sib and Do), so that only
+the left hand changes from one to the next. In each snapshot the other hand is grey. The names are the ones the level
+prompts of Phase 3 will use.</p>
 <div class="tabs">__TABS__</div>
 <div class="pills">__PILLS__</div>
 __CARDS__

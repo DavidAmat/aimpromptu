@@ -1,6 +1,6 @@
 # 04-3 · Phase 2: the gallery of patterns
 
-Status: **built, waiting for the user's review** (task 2.8). Branch `feat/04-3-phase-2`, in the worktree
+Status: **review 1 answered (30 drawn variations added), waiting for the user's next review** (task 2.8). Branch `feat/04-3-phase-2`, in the worktree
 `/home/david/Documents/projects/music/aimpromptu-04-3-phase-2` (plan section 7.4: Phase 2 ran in parallel with Phase 1,
 which owns the main checkout). Not merged. No `src/` change, no AI call, no database access.
 
@@ -13,9 +13,9 @@ Audience: the agents of this plan (the Phase 2 agent when the user answers, and 
 | 7.4 setup | Worktree made from `master` (`4950901`); first commit `717aaf5` holds the brief, the plan, `context/guidelines/` (all three files, untracked in the main checkout too) and the three images, copied unchanged from the main checkout |
 | 2.1 the Chopin folder | Present: `/home/david/Documents/projects/music/chopin`, 17 PDFs. Nothing asked of the user |
 | 2.2 to 2.4 sources and passages | 10 pieces used (section 2); the user's passages are all in (Ballade 1 pages 10 and 12, Ballade 4 pages 41 to 56, the Waltzes); left out: the scale-like runs, except as super hard |
-| 2.5 easy patterns | Three drawn with the app's engine from F1 frames text (section 4) |
+| 2.5 drawn patterns | 33 drawn with the app's engine from F1 frames text: the 3 easy ones of the brief, and 30 variations (10 easy, 10 medium, 10 hard) asked in the user's review 1 (section 4) |
 | 2.6 snapshots | 29 PNG in `images/chopin_passages/` (1.3 MB), cut by script, each checked zoomed against the score and the kern (section 3) |
-| 2.7 the gallery | `gallery/04-3-phase-2/index.html` and `patterns.json` (29 patterns: 20 left hand, 9 right hand), from one list in `tools/build.py` |
+| 2.7 the gallery | `gallery/04-3-phase-2/index.html` and `patterns.json` (59 patterns: 50 left hand, 9 right hand), from one list in `tools/build.py` |
 | 2.8 review | Served at `http://ubuntu:8098/gallery/04-3-phase-2/index.html` (8099 was taken by another server); waiting for the user |
 
 # 2. Sources
@@ -64,26 +64,54 @@ byte (checked).
 - Left as they are (minor): the top fingering and a trill sign of Ballade 4 bars 50 to 52 are cut by the margin to
   the system above; fingerings under some Prelude crops are cut by the margin to the system below.
 
-# 4. The easy patterns drawn by the app
+# 4. The patterns drawn by the app
 
-Chopin has no easy left hand in the sense of the brief, so `tools/easy.py` writes three F1 frames texts (key 1b,
-`quarterMs=480`, a negra = 12 frames) with the same right-hand melody in Fa major and the three left hands of the
-brief, and draws them with `aitu_backend.sheet.engrave.frames.render_frames` (`px_per_space=10`). It ran in the
-backend container, as section 7.4 rule 4 says: `docker exec -i aimpromptu-backend-1 python - < easy.py`, writing to
-`/home/app/04-3-phase-2/` (host `/mnt/ssd2/aimpromptu/home/04-3-phase-2/`), then copied into `gallery/04-3-phase-2/drawn/`
-(`.f1` and `.svg`). The drawings were checked zoomed (headless Chrome screenshots): every chord against its text, the
-ledger lines of Fa2, Do2 and Sib1. One fix: the melody first ended on La4 over a Do chord; it now ends Sol4, Mi4.
+## 4.1 First version: the three easy patterns of the brief
 
-| id | Left hand |
-|---|---|
-| `held-triad` | Fa3-La3-Do4 redonda twice, Mi3-Sol3-Do4, Fa3-Sib3-Re4 blanca, Mi3-Sol3-Do4 blanca |
-| `low-note-then-chord` | Fa2 negra then Fa3-La3-Do4 blanca; the same on Do2 and Sib1 |
-| `triads-in-steps` | Fa-La-Do, Sol-Sib-Re, La-Do-Mi, Sol-Sib-Re, ... in blancas |
+Chopin has no easy left hand in the sense of the brief, so the app drew three (`held-triad`, `low-note-then-chord`,
+`triads-in-steps`) from F1 frames text with `aitu_backend.sheet.engrave.frames.render_frames` (`px_per_space=10`). It
+runs in the backend container, as section 7.4 rule 4 says: `docker exec -i aimpromptu-backend-1 python - < drawn.py`,
+writing to `/home/app/04-3-phase-2/` (host `/mnt/ssd2/aimpromptu/home/04-3-phase-2/`), then copied into
+`gallery/04-3-phase-2/drawn/` (`.f1` and `.svg`).
+
+## 4.2 The user's review 1 (2026-10-29): ten variations per level
+
+The user found the gallery "perfect" and asked for more drawn left hands: at easy, the arpeggios that stay in one
+position (up or down), a low note then two notes of the chord repeated, the three notes of the chord up and down, a
+chord then two of its notes in a higher position, and every two-note chord (also after a bass note, or followed by an
+arpeggio in corcheas); then about ten variations each at easy, medium and hard, without overlapping, with small
+changes (two-note chords at easy, a new rhythm or chord note at medium, one more note in the chord at hard).
+
+`tools/drawn.py` (it replaces `easy.py`) draws all 33. Every drawing has the same right-hand melody (Fa major) and the
+same harmony (Fa two bars, Do one bar, Sib and Do half a bar each), so that only the left hand changes. A pattern is
+a four-beat template over named notes of each chord (`t` the triad near Fa3, `four` the triad with its octava, `six`
+with the sixth, `open` root-fifth-octava-tenth, `oct`, `low`, `fifth`, `sixth`, `dy`, `up2`, `th`); a harmony of two
+beats takes the first half of the template. Two rules came from the zoomed check:
+
+- The low note of the new patterns is near the chord (Fa2, Do3, Sib2): with Do2 and Sib1 an easy hand jumped two
+  octaves. The approved `low-note-then-chord` keeps Do2 and Sib1 (key `deep`).
+- A held note never starts on the same frame as the notes moving above it: the engine drew the held bass of
+  `held-bass-under-moving-thirds` as part of the first corchea chord. The upper voice starts half a beat later.
+  `held-bass-under-rocking-notes` first held Sib2 under Sib3-Re4 (16 semitones); it now rocks on the third above
+  each bass (`th[0]`), 7 semitones.
+
+The melody's last note is now Do5 (it was Mi4), so that no left-hand Mi4 doubles it in the last half bar; the three
+first drawings changed only there.
+
+`drawn.py` prints the widest chord and the widest range of a half bar (semitones), a first measure for Phase 3:
+
+| Level | Widest chord | Widest range of a half bar |
+|---|---|---|
+| Easy (13 drawn) | 9 (a triad), two-note chords 5 to 9 | 7 to 12 in one position; 19 with a low note, 28 in `low-note-then-chord` |
+| Medium (10 drawn) | 12 (the octava) | 9 to 16; 19 to 28 with a low note or an octava |
+| Hard (10 drawn) | 12 (four-note chords) | 12 to 16; 24 to 31 with a low octava |
 
 # 5. The patterns
 
 The list is in `patterns.json` (status `proposed`); the page shows the same list. Levels as the agent proposed them,
 from the brief's section 5.1 of the plan:
+
+The Chopin patterns (the 30 drawn variations of section 4.2 are listed in `patterns.json` and on the page):
 
 | Hand | Easy | Medium | Hard | Super hard |
 |---|---|---|---|---|
@@ -99,7 +127,7 @@ Choices the user may want to change (for the review):
 - `low-note-then-moving-chord` (Ballade 4, 9-11) is the brief's hard example almost exactly: the second chord is the
   first shape moved one step (down here; the brief's example goes up).
 - Medium right hand has one pattern (two examples). Chopin's right hands are seldom at that level; more can be drawn
-  by the app if the user wants them.
+  by the app if the user wants them. Review 1 asked only for left hands.
 
 # 6. Needed later
 
