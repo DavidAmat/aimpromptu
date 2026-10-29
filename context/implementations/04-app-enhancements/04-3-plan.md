@@ -664,3 +664,12 @@ Each phase adds a dated paragraph here: what changed in the plan, and why.
 **Before Phase 1** (2026-10-29, the planning session): the user copied the Chopin folder to
 `/home/david/Documents/projects/music/chopin` (task 2.1 done), and decided to run Phase 2 in parallel with Phase 1
 (section 7.4).
+
+**Phase 2** (2026-10-29, in the worktree `aimpromptu-04-3-phase-2`): the gallery is built and waits for the user's
+review (task 2.8). The plan changed in three small points. First, the gallery is served on port **8098**, because
+8099 was taken (section 7.4 rule 5). Second, each snapshot shows both staves with the other hand in light grey, so
+that the pattern is seen with the hand it accompanies; the file names stay `<piece>-<hand>-<n>.png`. Third, a
+pattern can have several examples (`low-note-then-two-chords` has three Waltzes), so that one pattern keeps one name.
+The patterns, their names and levels are in [`gallery/04-3-phase-2/patterns.json`](gallery/04-3-phase-2/patterns.json)
+with the status "proposed"; the approved names and levels go here after the review. Details:
+[`04-3-implementation-phase-2.md`](04-3-implementation-phase-2.md).

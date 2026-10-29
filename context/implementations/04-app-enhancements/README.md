@@ -29,3 +29,17 @@ The brief is [`04-1-prompt.md`](04-1-prompt.md), the plan is [`04-plan.md`](04-p
 | [`04-implementation-phase-5.md`](04-implementation-phase-5.md) | Phase 5: the documentation, `04-context.md`, the final checks |
 | [`screenshots/phase-1/`](screenshots/phase-1/) | Phase 1: the sheet page, from `check:frames-page` and `scripts/baseline-sheets.mjs` |
 | [`images/`](images/) | The user's four examples: `abuse-decoration-notes.png`, `abuse-decoration-notes-right.png`, `left-patterns.png`, `complex-fast-notes.png` |
+
+## 04-3: folders and metadata, and the whole song simplification by levels
+
+Started 2026-10-29. One branch per phase, `feat/04-3-phase-N`; Phase 2 ran in parallel with Phase 1 in its own
+worktree (plan section 7.4).
+
+| File | What it is |
+|---|---|
+| [`04-3-prompt.md`](04-3-prompt.md) | The brief, in the user's own words |
+| [`04-3-plan.md`](04-3-plan.md) | The living plan: folders, pills and metadata (Phase 1), the levels (Phases 2 to 4); section 10 has the changes each phase made |
+| [`04-3-implementation-phase-2.md`](04-3-implementation-phase-2.md) | Phase 2: the sources, the patterns chosen, how the snapshots were cut and checked |
+| [`gallery/04-3-phase-2/`](gallery/04-3-phase-2/index.html) | Phase 2: the gallery of patterns (a tab per hand, pills per level) and `patterns.json`, the names Phase 3 uses |
+| [`images/chopin_passages/`](images/chopin_passages/) | The Chopin snapshots of the gallery, and the user's `ballade1-ex1.png` |
+| [`images/99-red-ballons-issue.png`](images/99-red-ballons-issue.png), [`images/whole-song-simplification.png`](images/whole-song-simplification.png) | The user's two examples of a machine transcription that the levels must fix |
