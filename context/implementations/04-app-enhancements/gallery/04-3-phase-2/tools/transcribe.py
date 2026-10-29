@@ -80,7 +80,7 @@ def passage(kern: str, bars: str) -> dict:
     return {"key": key, "notes": sorted(notes, key=lambda n: (n["q"], n["midi"]))}
 
 
-IR_EXAMPLES = {"ballade1-right-3"}  # bars music21 does not read (review 4)
+IR_EXAMPLES = {"ballade1-right-3", "ballade1-right-4", "ballade1-right-5"}  # bars music21 does not read (reviews 4, 5)
 IR = Path("/home/david/Documents/projects/music/poc-aitu-research/data/derived/ir/nifc")
 
 

@@ -1,6 +1,6 @@
 # 04-3 · Phase 2: the gallery of patterns
 
-Status: **review 4 answered (a stricter super hard), waiting for the user's approval** (task 2.8). Branch `feat/04-3-phase-2`, in the worktree
+Status: **review 5 answered (two passages of Ballade No. 1 named by the user), waiting for the user's approval** (task 2.8). Branch `feat/04-3-phase-2`, in the worktree
 `/home/david/Documents/projects/music/aimpromptu-04-3-phase-2` (plan section 7.4: Phase 2 ran in parallel with Phase 1,
 which owns the main checkout). Not merged. No `src/` change, no AI call, no database access.
 
@@ -203,6 +203,23 @@ Two findings while doing it:
 - **The app spells the melodic minor as flats**: under 2 flats it writes Mi natural as Fab and Fa# as Solb (03's
   rule for accidentals: a white key whose name is in the armadura takes its other name, black keys take flats). The
   drawing of bars 255-256 therefore looks chromatic, while the edition shows one scale. The caption says it.
+
+## 4.6 The user's review 5 (2026-10-30): two passages of Ballade No. 1 named by the user
+
+The user sent two crops of Ballade No. 1 (PDF pages 13 and 14) with their reasons:
+
+- Bars 130-131 (page 13, system 3, x 658-1556, with the clef and key of the line in front): corcheas that go up by
+  jumps of 4, 3, 3, 1, 4, 3, 6, 4 semitones (Sib3-Re4-Dob4-Re4-Do#4-Fa4-Re4-Lab4-Mi4-Lab4, then
+  Fa4-Dob5-Sol4-Dob5-...), never by one step: **hard**, `line-of-irregular-jumps`, `ballade1-right-4`.
+- Bars 150-152 (page 14, system 4, the whole line): groups of six corcheas framed by an octava (Sib3-Sib4, Do4-Do5,
+  Re4-Re5) with two notes inside, then a frame of another distance (Mi4 natural to Reb5, Fa#4 to Mib5, Fa#4 to Mib5,
+  Sol#4 to Fa5), the figure a step higher each half bar, over an inner voice in negras: **super hard**,
+  `broken-octave-frames`, `ballade1-right-5`.
+
+Both are read with `passage_ir` (music21 does not read Ballade No. 1 after bar 179 in the right hand, section 4.5)
+and checked note by note against the edition. The app writes Do# as Reb, Mi natural as Fab, Si natural as Dob, and
+the held negras of bars 150-152 as corcheas; the captions say it. The right-hand tab: easy 10, medium 17, hard 20,
+super hard 10; the gallery has 107 patterns.
 
 # 5. The patterns
 

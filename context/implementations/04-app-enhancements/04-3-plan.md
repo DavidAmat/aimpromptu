@@ -288,6 +288,11 @@ The right hand, from the user's reviews of the gallery (2026-10-29 and 30):
   hard is, for example, **chords inside it whose spacing changes from one chord to the next** (a fifth, then a third,
   then a second), so the hand cannot keep one shape while it moves (the cadenza of Nocturne Op. 32 No. 1, bars
   60-61; the user, 2026-10-30).
+- **Jumps of changing size** in a fast line are hard: a line that moves by jumps of different sizes (never one tone
+  or one semitone at a time), with alterations, cannot follow a scale or a chord (Ballade No. 1, bars 130-131).
+- **A pattern that starts and then breaks** is super hard when it is fast: for example a frame of an octava with notes
+  inside it, then a frame of another distance (Do4-Do5, then Mi4 natural to Reb5), with naturals, sharps and flats
+  and no clear pattern, so the hand cannot keep one opening (Ballade No. 1, bars 150-152; the user, 2026-10-30).
 
 Rules for every level, from the brief and from the earlier decisions:
 
@@ -795,3 +800,8 @@ of this, `full-chords-in-octaves` (Ballade No. 1, bars 106-108) moved from super
 the scale of Ballade No. 1, bars 255-256, as a second example. The other super hard patterns stay. Then the user corrected the
 reason given for the cadenza of Nocturne Op. 32 No. 1: it is super hard because of the irregular chords inside the
 fast run, not because it covers more than two octavas; the rule is in section 5.1.
+
+**Phase 2, review 5** (2026-10-30): the user showed two more passages of Ballade No. 1 and their reasons: bars 130-131
+(a line of irregular jumps going up: hard) and bars 150-152 (octava frames whose pattern breaks, fast, with many
+alterations: super hard). Both are in the gallery (right hand, hard 20 and super hard 10), and their two rules are in
+section 5.1.

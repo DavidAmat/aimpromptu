@@ -403,6 +403,21 @@ PATTERNS = [
     varr("super hard", "chromatic-thirds", "Chromatic thirds",
          "Thirds that go up and down by semitones in semicorcheas. Super hard because two fingers play a fast "
          "chromatic line together."),
+    # ---------------------------------------------------------------- right hand, review 5 (the user's examples)
+    right("hard", "line-of-irregular-jumps", "A line of irregular jumps",
+          "Corcheas that go up by jumps of different sizes, never by one tone or one semitone at a time "
+          "(Sib3-Re4-Dob4-Re4-Do#4-Fa4-Re4-Lab4-Mi4-Lab4: up 4, down 3, up 3, down 1, up 4, down 3, up 6, down 4 "
+          "semitones), with flats, naturals and sharps. Hard because the hand cannot follow a scale or a chord: "
+          "each jump is a new distance, although the line keeps going up.",
+          ex("ballade1-right-4.png", B1, "ballades.pdf", 13, "130-131", "023-1-BH.krn", "130-131", "The app spells Do# as Reb, Mi natural as Fab and Si natural as Dob (its rule under flats), so its drawing shows more flats than the edition.")),
+    right("super hard", "broken-octave-frames", "Octava frames that break their pattern",
+          "Fast corcheas in groups of six: an octava (Do4-Do5), two notes inside it (Fa4, La4), then a frame that is "
+          "not an octava (Mi4 natural to Reb5), and the next group again different (Fa#4 to Mib5); the figure "
+          "moves up a step every half bar, over an inner voice held in negras, with naturals, sharps and flats. "
+          "Super hard because the pattern starts and then breaks: the hand opens an octava, then a different "
+          "distance, so it cannot keep one shape while it plays fast.",
+          ex("ballade1-right-5.png", B1, "ballades.pdf", 14, "150-152", "023-1-BH.krn", "150-152",
+             "The app spells Do# as Reb, Mi natural as Fab and Si natural as Dob (its rule under flats), so its drawing shows more flats than the edition. The held negras of the inner voice are written as corcheas (one voice per hand).")),
     # ---------------------------------------------------------------- left hand, drawn variations (review 1)
     var("easy", "low-note-then-two-notes-rocking", "Low note, then two notes rocking",
         "Fa2, then La3-Do4-La3-Do4 in corcheas: one low note, then two notes of the chord one after the other. "

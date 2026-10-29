@@ -1125,6 +1125,29 @@
     },
     {
       "hand": "right",
+      "level": "hard",
+      "id": "line-of-irregular-jumps",
+      "name": "A line of irregular jumps",
+      "line": "Corcheas that go up by jumps of different sizes, never by one tone or one semitone at a time (Sib3-Re4-Dob4-Re4-Do#4-Fa4-Re4-Lab4-Mi4-Lab4: up 4, down 3, up 3, down 1, up 4, down 3, up 6, down 4 semitones), with flats, naturals and sharps. Hard because the hand cannot follow a scale or a chord: each jump is a new distance, although the line keeps going up.",
+      "examples": [
+        {
+          "image": "ballade1-right-4.png",
+          "piece": "Ballade No. 1 in G minor, Op. 23",
+          "pdf": "ballades.pdf",
+          "page": 13,
+          "bars": "130-131",
+          "kern": "023-1-BH.krn",
+          "kernBars": "130-131",
+          "note": "The app spells Do# as Reb, Mi natural as Fab and Si natural as Dob (its rule under flats), so its drawing shows more flats than the edition.",
+          "drawing": "transcribed/ballade1-right-4.svg",
+          "f1": "transcribed/ballade1-right-4.f1"
+        }
+      ],
+      "number": 20,
+      "ref": "right hard 20"
+    },
+    {
+      "hand": "right",
       "level": "super hard",
       "id": "chords-in-semicorcheas-down",
       "name": "Chords in semicorcheas going down",
@@ -1326,6 +1349,29 @@
       ],
       "number": 9,
       "ref": "right super hard 9"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "broken-octave-frames",
+      "name": "Octava frames that break their pattern",
+      "line": "Fast corcheas in groups of six: an octava (Do4-Do5), two notes inside it (Fa4, La4), then a frame that is not an octava (Mi4 natural to Reb5), and the next group again different (Fa#4 to Mib5); the figure moves up a step every half bar, over an inner voice held in negras, with naturals, sharps and flats. Super hard because the pattern starts and then breaks: the hand opens an octava, then a different distance, so it cannot keep one shape while it plays fast.",
+      "examples": [
+        {
+          "image": "ballade1-right-5.png",
+          "piece": "Ballade No. 1 in G minor, Op. 23",
+          "pdf": "ballades.pdf",
+          "page": 14,
+          "bars": "150-152",
+          "kern": "023-1-BH.krn",
+          "kernBars": "150-152",
+          "note": "The app spells Do# as Reb, Mi natural as Fab and Si natural as Dob (its rule under flats), so its drawing shows more flats than the edition. The held negras of the inner voice are written as corcheas (one voice per hand).",
+          "drawing": "transcribed/ballade1-right-5.svg",
+          "f1": "transcribed/ballade1-right-5.f1"
+        }
+      ],
+      "number": 10,
+      "ref": "right super hard 10"
     },
     {
       "hand": "left",
