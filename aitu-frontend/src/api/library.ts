@@ -6,6 +6,7 @@
  * to edit, with `projectsApi.edit`. Mirrors `aitu-backend/src/aitu_backend/api/library.py`.
  */
 
+import type { TagRow } from "./metadata";
 import type { PieceStep } from "./pieces";
 import { request } from "./client";
 
@@ -26,6 +27,10 @@ export interface SongRow {
   /** The AI enhanced the sheet of a version of the song (implementation 03, Phase 5). */
   enhanced: boolean;
   updatedAt: string | null;
+  /** The folders of My Library it is in (implementation 04-3). */
+  folders: number[];
+  /** Its metadata (implementation 04-3). */
+  tags: TagRow[];
 }
 
 export interface VersionRow {
@@ -52,6 +57,8 @@ export interface SongDetail {
   versions: VersionRow[];
   /** The public song this one stands for (pulled from it, or saved on it: Phase 13). */
   publicId: number | null;
+  folders: number[];
+  tags: TagRow[];
 }
 
 export interface ArtistNameRow {

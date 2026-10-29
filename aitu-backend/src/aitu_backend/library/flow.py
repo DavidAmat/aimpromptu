@@ -40,7 +40,7 @@ from sqlalchemy import select, update
 from aitu_backend.audio import compact, piece_audio
 from aitu_backend.db.database import session
 from aitu_backend.db.models import Part, PrivateVersion, Project, Song
-from aitu_backend.library import rows
+from aitu_backend.library import folders, metadata, rows
 from aitu_backend.pieces import status as piece_status
 from aitu_backend.storage import audio_files, bundle, locate, paths
 from aitu_backend.storage.bundle import ProjectFile
@@ -238,6 +238,10 @@ def save(
             version = PrivateVersion(song_id=song.id, version_name=name, project_id=project_id)
             db.add(version)
             db.flush()
+            # Implementation 04-3, Phase 1: the song gets the project's metadata, and the project
+            # leaves the folders of My projects (the folders of My Library are another tree).
+            metadata.add_project_tags_to_song(db, owner, project_id, song.id)
+            folders.drop_project_folders(db, project_id)
             return Saved(song_id=song.id, version_id=version.id, project_id=project_id)
 
 
@@ -259,6 +263,8 @@ def _replace(copy: ProjectFile, owner: int) -> Saved:
         if version is None:
             raise Refused("The version this project edits was deleted: save it as a new version")
         saved = Saved(song_id=version.song_id, version_id=version.id, project_id=library_id)
+        # The copy is deleted below: the song gets its metadata first (implementation 04-3).
+        metadata.add_project_tags_to_song(db, owner, copy.id, version.song_id)
 
     with bundle.project_lock(library_id):
         replaced = _apply(_compact(copy))
@@ -461,6 +467,11 @@ def open_edit(library_id: str, *, owner: int) -> str:
         copy.model_copy(update={"based_on": library_id, "origin": {"editOf": library_id}}),
         touch=False,
     )
+    with session() as db:
+        version = rows.version_of_project(db, library_id)
+        if version is not None:
+            # The copy shows the song's metadata on its info button (implementation 04-3).
+            metadata.copy_song_tags(db, owner, version.song_id, copy.id)
     return copy.id
 
 

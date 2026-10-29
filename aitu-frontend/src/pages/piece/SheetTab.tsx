@@ -90,6 +90,7 @@ export function SheetTab() {
             reason,
             readOnly,
             audioRevision,
+            ...(projectId ? { projectId } : {}),
             onChanged: () => void refresh(),
             ...(library ? { enhanceInCopy: (run: SongRun) => void writeInCopy(run) } : {}),
             ...(readOnly ? {} : { onSplit: split }),
@@ -103,7 +104,7 @@ export function SheetTab() {
               : {}),
           }
         : null,
-    [uuid, label, state, reason, readOnly, audioRevision, refresh, split, library, writeInCopy],
+    [uuid, label, state, reason, readOnly, audioRevision, projectId, refresh, split, library, writeInCopy],
   );
 
   if (!step || !projectId) return null;

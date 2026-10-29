@@ -24,6 +24,8 @@ owner:
 - **Songs playlists** (Phase 10, `playlists`, `playlist_items`): songs of the library in order, each
   on a version and maybe a stretch of it; references, never copies
   ([frontend/playlists.md](../frontend/playlists.md) section 3).
+- **Folders** and **metadata** (implementation 04-3, Phase 1; section 5.1): a tree of folders of the
+  user's own, a song in any of them, and rows of a primary key and a secondary key per song.
 
 Names are compared ignoring case and repeated spaces, so "aitana" finds "Aitana". An integrated
 playlist is a project, so it is saved as a version of a song like any project.
@@ -82,8 +84,8 @@ replaces too, so nothing is lost by trying one.
 
 | Page | Address | What is on it |
 |---|---|---|
-| Songs | `/library/songs` | A table (title, artist, versions, changed) with a filter by title or artist; a row opens the song. Songs ticked by their checkbox make a playlist (**Make a playlist of N**, Phase 10) |
-| A song | `/library/songs/:id` | The title, its artists (each a link), and its versions. A version row opens it read only; its `⋯`: Open, Play, Edit, Duplicate, Export, **Add to a playlist** (Phase 10), **Publish** (Phase 14), Rename, History, Delete. The header's `⋯`: Rename song, Artists, Delete song |
+| Songs | `/library/songs` | Three pills (implementation 04-3): **All**, a table (title, artist, versions, changed) with a filter by title or artist; **Folders**, the same table as a tree of folders (section 5.1); **Filter**, the table with the dropdowns Artist and one per primary key. A row opens the song; its `⋯`: **Info**, **Folders…**. Songs ticked by their checkbox make a playlist (**Make a playlist of N**, Phase 10) |
+| A song | `/library/songs/:id` | The title, its artists (each a link), and its versions. A version row opens it read only; its `⋯`: Open, Play, Edit, Duplicate, Export, **Add to a playlist** (Phase 10), **Publish** (Phase 14), Rename, History, Delete. The header: Play, the **info button** (the song's metadata and folders, implementation 04-3), and the `⋯`: Rename song, Artists, Delete song |
 | Artists | `/library/artists` | A table (name, other names, songs) with a filter |
 | An artist | `/library/artists/:id` | Its names (Make default, Rename, Remove; **Add a name**) and its songs. The header's `⋯`: Merge into another artist, Delete artist (once it has no song) |
 | Playlists | `/library/playlists` | The songs playlists and the integrated playlists (Phase 10), **New playlist** |
@@ -93,13 +95,35 @@ replaces too, so nothing is lost by trying one.
 **Duplicate** of a version makes an independent project in Projects; **Export** saves its `.aitu`
 file. **Search** (`⌘K`) finds songs by title and artist, and projects by title.
 
+### 5.1 Folders and metadata (implementation 04-3, Phase 1)
+
+The user's songs had no order but the title. A playlist is an ordered list of versions to play, not a way to group,
+so the user asked for **folders** that nest as in the Finder's list view, and for **metadata** to filter by (the brief:
+`context/implementations/04-app-enhancements/04-3-prompt.md`).
+
+- **A folder** is a row with its own id and the id of its parent folder (`folders`, area `library`). A song points at
+  folder ids (`folder_songs`), never at a path, so moving a folder or making a **New parent folder** on top of it
+  changes that folder's row only. A song can be in several folders. Deleting a folder deletes the folders inside it
+  and the links, never a song. My projects has its own tree (area `projects`), independent of this one, and the Public
+  Library has none.
+- **Metadata** is a primary key of the Public Library's fixed list (Film, TV show, Video game, Advert:
+  `tag_categories`) and a secondary key of the user's own ("The Lord of the Rings"), kept in `private_tag_values` so
+  that it is never shown in the Public Library. A song can have several rows (`private_song_tags`). The secondary-key
+  field suggests the user's own values in use and the Public Library's.
+- **Between the pages**: **Add to my library** gives the song the public song's tags; **Edit** gives the copy in
+  Projects the song's metadata; **Save to library** (a new version or **Replace**) adds the project's metadata to the
+  song, and the project leaves the folders of My projects (the trees are independent, so it is in no folder of My
+  library until the user puts it there).
+
 ## 6. Who can do what
 
 Only the owner reads and changes their library: another user gets `404` for its songs, artists and
 projects (the master user too, [08-security.md](../08-security.md)), unless the owner shares it
 with them (Phase 14): then they read it, and never change it. The owner never writes a
 library project in place: the step routes answer `403`, and the changes go through **Edit** and
-**Save to library**, which check the owner themselves.
+**Save to library**, which check the owner themselves. The folders and the metadata (section 5.1) are
+the owner's only: another user gets `404`, also for a library shared with them, where the info button
+shows the song's metadata read only.
 
 ## 7. Not built yet
 

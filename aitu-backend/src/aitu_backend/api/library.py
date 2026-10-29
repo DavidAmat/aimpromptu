@@ -22,7 +22,8 @@ from aitu_backend.db import tools
 from aitu_backend.db.database import session
 from aitu_backend.db.models import Artist, ArtistName, PrivateVersion, Project, Song, SongArtist
 from aitu_backend.db.users import current_user_id
-from aitu_backend.library import flow, rows
+from aitu_backend.api.metadata import TagRow, tag_rows
+from aitu_backend.library import flow, folders, metadata, rows
 from aitu_backend.storage import bundle
 
 router = APIRouter(prefix="/library", tags=["library"])
@@ -48,6 +49,10 @@ class SongRow(_Camel):
     #: The AI enhanced the sheet of a version of the song (implementation 03, Phase 5).
     enhanced: bool = False
     updated_at: datetime | None = Field(None, alias="updatedAt")
+    #: The folders of My Library it is in (implementation 04-3, Phase 1).
+    folders: list[int] = Field(default_factory=list)
+    #: Its metadata: primary key and secondary key (implementation 04-3, Phase 1).
+    tags: list[TagRow] = Field(default_factory=list)
 
 
 class VersionRow(_Camel):
@@ -74,6 +79,8 @@ class SongDetail(_Camel):
     versions: list[VersionRow]
     #: The public song this one stands for (pulled from it, or saved on it: Phase 13).
     public_id: int | None = Field(None, alias="publicId")
+    folders: list[int] = Field(default_factory=list)
+    tags: list[TagRow] = Field(default_factory=list)
 
 
 class NameRow(_Camel):
@@ -191,12 +198,16 @@ def _song(owner: int, song_id: int) -> SongDetail:
         credits = rows.credits_of(db, [song.id])[song.id]
         versions = rows.versions_of(db, [song.id])[song.id]
         title, public_id = song.title, song.public_id
+        in_folders = folders.folders_of_songs(db, [song.id])[song.id]
+        tags = metadata.tags_of_songs(db, [song.id])[song.id]
     return SongDetail(
         id=song_id,
         title=title,
         artists=_credits(credits),
         versions=_versions(owner, versions),
         public_id=public_id,
+        folders=in_folders,
+        tags=tag_rows(tags),
     )
 
 
@@ -242,6 +253,8 @@ def list_songs() -> list[SongRow]:
         project_ids = [v.project_id for group in versions.values() for v in group]
         copies = rows.edit_copies(db, owner, project_ids)
         times = rows.project_times(db, project_ids)
+        in_folders = folders.folders_of_songs(db, ids)
+        tags = metadata.tags_of_songs(db, ids)
         out = [
             SongRow(
                 id=one.id,
@@ -254,6 +267,8 @@ def list_songs() -> list[SongRow]:
                     (times[v.project_id] for v in versions[one.id] if v.project_id in times),
                     default=one.created_at,
                 ),
+                folders=in_folders[one.id],
+                tags=tag_rows(tags[one.id]),
             )
             for one in songs
         ]

@@ -13,6 +13,10 @@ Phase 12 (revision ``0003``) adds what the downloaded music library gives and se
 place for (``context/music-library/reconciliation.md``): ``song_lyrics``, ``album_artists``,
 ``album_chart_entries``, and ``albums.release_date`` and ``albums.popularity``.
 
+Implementation 04-3, Phase 1 (revision ``0008``) adds the folders of My projects and My Library and the private
+metadata of a song or a project: ``folders``, ``folder_projects``, ``folder_songs``, ``private_tag_values``,
+``project_tags`` and ``private_song_tags``.
+
 The column names are snake_case here and camelCase on the wire. Times are UTC.
 """
 
@@ -599,6 +603,103 @@ class LibraryShare(Base):
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
     )
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+
+
+# ------------------------------------------------------ folders and metadata of a user
+
+
+#: The two trees of folders a user has (implementation 04-3, Phase 1, revision ``0008``): one for My projects
+#: (the Personal Vault) and one for My Library (the private songs). They are independent.
+FOLDER_AREAS = ("projects", "library")
+
+
+class Folder(Base):
+    """A folder of My projects or of My Library, inside another folder or at the top.
+
+    A song or a project points at the folder's id, never at a path: moving a folder, or making a parent folder on
+    top of it, changes this one row. Deleting a folder deletes its child folders (the table does it) and the links
+    of their items, never an item."""
+
+    __tablename__ = "folders"
+    __table_args__ = (
+        _one_of("area", FOLDER_AREAS),
+        Index("ix_folders_owner_area", "owner_id", "area"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    area: Mapped[str] = mapped_column(String(16))
+    #: ``None`` at the top of the tree.
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("folders.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+
+
+class FolderProject(Base):
+    """A project of My projects in a folder. A project can be in several folders."""
+
+    __tablename__ = "folder_projects"
+
+    folder_id: Mapped[int] = mapped_column(
+        ForeignKey("folders.id", ondelete="CASCADE"), primary_key=True
+    )
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+
+
+class FolderSong(Base):
+    """A song of My Library in a folder. A song can be in several folders."""
+
+    __tablename__ = "folder_songs"
+
+    folder_id: Mapped[int] = mapped_column(
+        ForeignKey("folders.id", ondelete="CASCADE"), primary_key=True
+    )
+    song_id: Mapped[int] = mapped_column(
+        ForeignKey("songs.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+
+
+class PrivateTagValue(Base):
+    """A secondary key of one user inside a primary key (``tag_categories``), such as "The Lord of the Rings" in
+    films. Its own table, so that a value a user types is never shown in the Public Library."""
+
+    __tablename__ = "private_tag_values"
+    __table_args__ = (UniqueConstraint("owner_id", "category_id", "value"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    category_id: Mapped[int] = mapped_column(ForeignKey("tag_categories.id"))
+    value: Mapped[str] = mapped_column(String(200))
+
+
+class ProjectTag(Base):
+    """A metadata row of a project of My projects."""
+
+    __tablename__ = "project_tags"
+
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True
+    )
+    tag_value_id: Mapped[int] = mapped_column(
+        ForeignKey("private_tag_values.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+
+
+class PrivateSongTag(Base):
+    """A metadata row of a song of My Library."""
+
+    __tablename__ = "private_song_tags"
+
+    song_id: Mapped[int] = mapped_column(
+        ForeignKey("songs.id", ondelete="CASCADE"), primary_key=True
+    )
+    tag_value_id: Mapped[int] = mapped_column(
+        ForeignKey("private_tag_values.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
 
 
 # -------------------------------------------------------------------- requests

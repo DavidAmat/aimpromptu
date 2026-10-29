@@ -9,6 +9,8 @@ wants, or maybe it can pull all the songs from a given artist." A pull **copies*
   is used again: the one with that ``public_id``, or else the user's own song of the same title
   and artist, or artist of the same name (it gets the link). After the pull there is no sync: the
   private rows are the user's own (section 15.1);
+* the public song's tags (its film, its TV show) as the private song's metadata (implementation
+  04-3, Phase 1); the public rows do not change;
 * the chosen version projects into ``users/<id>/library/`` as versions of the private song, each
   pointing back at its public project (``projects.public_source_id``). No audio bytes are copied
   (P-3). A version already pulled is not pulled twice.
@@ -44,7 +46,7 @@ from aitu_backend.db.models import (
     Song,
     SongArtist,
 )
-from aitu_backend.library import flow, public, rows
+from aitu_backend.library import flow, metadata, public, rows
 from aitu_backend.storage import bundle
 
 __all__ = [
@@ -115,10 +117,14 @@ def find_private_song(db: DbSession, owner: int, public_song_id: int) -> Song | 
 
 
 def private_song_for(db: DbSession, owner: int, public_song_id: int) -> Song:
-    """The owner's song for a public song, made with its artists when there is none."""
+    """The owner's song for a public song, made with its artists when there is none. A song made
+    or linked now gets the public song's tags as its metadata (implementation 04-3, Phase 1); a song
+    already linked keeps the metadata the user gave it."""
     found = find_private_song(db, owner, public_song_id)
     if found is not None:
-        found.public_id = public_song_id
+        if found.public_id != public_song_id:
+            found.public_id = public_song_id
+            metadata.copy_public_tags(db, owner, public_song_id, found.id)
         return found
     song = public.public_song(db, public_song_id)
     made = Song(
@@ -137,6 +143,7 @@ def private_song_for(db: DbSession, owner: int, public_song_id: int) -> Song:
             seen.add(name.id)
             db.add(SongArtist(song_id=made.id, artist_name_id=name.id, position=position))
     db.flush()
+    metadata.copy_public_tags(db, owner, public_song_id, made.id)
     return made
 
 

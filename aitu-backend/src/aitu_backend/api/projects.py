@@ -17,6 +17,7 @@ writing.
 from __future__ import annotations
 
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Callable, Literal
@@ -33,7 +34,8 @@ from aitu_backend.db.models import Project
 from aitu_backend.auth.dependencies import require_part
 from aitu_backend.db.users import current_user_id
 from aitu_backend.editing import parts as project_parts, paste
-from aitu_backend.library import flow, rows
+from aitu_backend.api.metadata import TagRow, tag_rows
+from aitu_backend.library import flow, folders, metadata, rows
 from aitu_backend.matrix.time_grid import DEFAULT_FRAME_MS
 from aitu_backend.part_sheet import job as sheet_job
 from aitu_backend.part_sheet import store as sheet_store
@@ -94,6 +96,10 @@ class ProjectRow(_Camel):
     library: LibraryLink | None = None
     #: A project of the Personal Vault that edits a version (section 10.6): that version.
     editing: LibraryLink | None = None
+    #: The folders of My projects it is in (implementation 04-3, Phase 1).
+    folders: list[int] = Field(default_factory=list)
+    #: Its metadata: primary key and secondary key (implementation 04-3, Phase 1).
+    tags: list[TagRow] = Field(default_factory=list)
 
 
 class ProjectOut(_Camel):
@@ -216,7 +222,27 @@ def _links(projects: list[Project]) -> dict[str, LibraryLink]:
     }
 
 
-def _row(project: Project, links: dict[str, LibraryLink] | None = None) -> ProjectRow:
+@dataclass(frozen=True)
+class _Organized:
+    """The folders and the metadata of each project of a list (one query each)."""
+
+    folders: dict[str, list[int]]
+    tags: dict[str, list[metadata.Tag]]
+
+
+def _organized(project_ids: list[str]) -> _Organized:
+    with session() as db:
+        return _Organized(
+            folders=folders.folders_of_projects(db, project_ids),
+            tags=metadata.tags_of_projects(db, project_ids),
+        )
+
+
+def _row(
+    project: Project,
+    links: dict[str, LibraryLink] | None = None,
+    organized: _Organized | None = None,
+) -> ProjectRow:
     part_ids = bundle.part_ids_of(project.id)
     step = project.step
     # "hands" is a step that no longer exists (implementation 03, Phase 5): worked out again like a cleared one.
@@ -230,6 +256,8 @@ def _row(project: Project, links: dict[str, LibraryLink] | None = None) -> Proje
     first = part_ids[0] if part_ids else None
     if links is None:
         links = _links([project])
+    if organized is None:
+        organized = _organized([project.id])
     return ProjectRow(
         id=project.id,
         title=project.title,
@@ -248,6 +276,8 @@ def _row(project: Project, links: dict[str, LibraryLink] | None = None) -> Proje
         updated_at=bundle.last_change(project.id) or project.updated_at,
         library=links.get(project.id) if project.layer == "private" else None,
         editing=links.get(project.based_on) if project.based_on else None,
+        folders=organized.folders.get(project.id, []),
+        tags=tag_rows(organized.tags.get(project.id, [])),
     )
 
 
@@ -281,7 +311,8 @@ def list_projects(
         for row in found:
             db.expunge(row)
     links = _links(found)
-    out = [_row(row, links) for row in found]
+    organized = _organized([row.id for row in found])
+    out = [_row(row, links, organized) for row in found]
     out.sort(key=lambda item: item.updated_at or item.created_at, reverse=True)
     return out
 
@@ -390,7 +421,25 @@ def duplicate(project_id: str, body: DuplicateIn | None = None) -> ProjectOut:
         )
     except locate.NotFound as exc:
         raise HTTPException(status_code=404, detail=f"No project with id '{project_id}'") from exc
+    _copy_organized(project_id, copy.id)
     return ProjectOut(id=copy.id, title=copy.title, parts=[part.id for part in copy.parts])
+
+
+def _copy_organized(source_id: str, copy_id: str) -> None:
+    """The copy keeps the metadata of the original (a project's, or a version's song), and a copy
+    of a project of My projects goes into its folders (implementation 04-3, Phase 1)."""
+    owner = current_user_id()
+    with session() as db:
+        source = db.get(Project, source_id)
+        if source is None or source.owner_id != owner:
+            return
+        if source.layer == "vault":
+            metadata.copy_project_tags(db, owner, source_id, copy_id)
+            folders.copy_project_folders(db, source_id, copy_id)
+        elif source.layer == "private":
+            link = rows.links_of(db, [source_id]).get(source_id)
+            if link is not None:
+                metadata.copy_song_tags(db, owner, link.song_id, copy_id)
 
 
 @router.get("/{project_id}/export")

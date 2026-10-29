@@ -31,6 +31,7 @@
     "check:frames-toolbox": "node scripts/check-frames-toolbox.mjs",
     "check:frames-page": "node scripts/check-frames-page.mjs",
     "check:enhance-dialog": "node scripts/check-enhance-dialog.mjs",
+    "check:folders": "node scripts/check-folders.mjs",
     "measure:lyric-fonts": "node scripts/measure-lyric-fonts.mjs"
   },
   "dependencies": {

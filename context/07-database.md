@@ -162,7 +162,14 @@ the sheet (`request_comments`); the real database moved to it after `make db-bac
 to it on 2026-10-19, after `make db-backup`. Revision `0007` (Phase 17) adds `song_signals` (a
 public song's official video, its views and its Spotify streams, with the day they were read) and a
 fourth basis of a regional popularity, `inferred`, with the day it was worked out
-([music-library/popularity.md](music-library/popularity.md) section 6).
+([music-library/popularity.md](music-library/popularity.md) section 6). Revision `0008`
+(implementation 04-3, Phase 1) adds the folders of My projects and My Library and the metadata of
+a private song or a project: `folders` (one tree per user and area, `projects` or `library`, each
+folder with the id of its parent), `folder_projects` and `folder_songs` (an item in several
+folders), `private_tag_values` (a user's own secondary keys inside the fixed primary keys of
+`tag_categories`, apart from the public `tag_values`), and `project_tags` and `private_song_tags`
+([music-library/private-library.md](music-library/private-library.md) section 5.1); the real
+database moved to it on 2026-10-29, after `make db-backup`.
 
 **The running backend migrates the real database as soon as a new revision is in `src/`**: it
 reloads on every change of a file there, and opens the database at the newest revision. Code of an

@@ -68,6 +68,10 @@ export type {
   SavedToLibrary,
   SaveToLibrary,
 } from "./projects";
+export { foldersApi } from "./folders";
+export type { FolderArea, FolderRow } from "./folders";
+export { metadataApi } from "./metadata";
+export type { MetadataKeys, SheetInfo, TagRow, TagSuggestion } from "./metadata";
 export { playlistsApi } from "./playlists";
 export type { NewPlaylistItem, PlaylistDetail, PlaylistItem, PlaylistRow } from "./playlists";
 export { passagesApi } from "./passages";

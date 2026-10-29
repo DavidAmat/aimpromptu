@@ -14,7 +14,7 @@
  * controls say the whole count. The caller asks the backend again on each change.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type HTMLAttributes, type ReactNode } from "react";
 import Box from "@mui/material/Box";
 import Checkbox from "@mui/material/Checkbox";
 import Table from "@mui/material/Table";
@@ -68,6 +68,8 @@ export interface DataTableProps<Row> {
   onSortChange?: (sort: TableSort) => void;
   /** Server mode: the rows are one page of `paging.count`. */
   paging?: TablePaging;
+  /** Props of a row's `<tr>`: drag and drop in the Folders view (implementation 04-3). */
+  rowProps?: (row: Row) => HTMLAttributes<HTMLTableRowElement> & { "data-drop-over"?: string };
 }
 
 export function DataTable<Row>({
@@ -83,6 +85,7 @@ export function DataTable<Row>({
   sort: givenSort,
   onSortChange,
   paging,
+  rowProps,
 }: DataTableProps<Row>) {
   const picking = selected !== undefined && onSelectedChange !== undefined;
   const allKeys = rows.map(rowKey);
@@ -181,9 +184,13 @@ export function DataTable<Row>({
             {visible.map((row) => (
               <TableRow
                 key={rowKey(row)}
+                {...rowProps?.(row)}
                 hover
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                sx={onRowClick ? { cursor: "pointer" } : undefined}
+                sx={(theme) => ({
+                  ...(onRowClick ? { cursor: "pointer" } : {}),
+                  "&[data-drop-over]": { outline: `2px solid ${(theme.vars ?? theme).palette.primary.main}`, outlineOffset: -2 },
+                })}
                 selected={picking && selected.has(rowKey(row))}
               >
                 {picking ? (
