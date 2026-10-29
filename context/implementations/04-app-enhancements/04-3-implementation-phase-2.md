@@ -185,7 +185,10 @@ the hand plays without moving is cheap. The rule is in plan section 5.1. Changes
 -> medium; `runs-in-groups` super hard -> hard; `scale-run` medium -> hard, with Ballade No. 1, bars 255-256 (the
 "upward progression" of the last page, PDF page 20: the melodic minor of Sol going up almost three octavas, only Mi
 natural and Fa# outside the two flats) as a second example (`ballade1-right-3.png`, `transcribed/ballade1-right-3.*`).
-The right-hand tab: easy 10, medium 17, hard 19, super hard 9.
+The right-hand tab: easy 10, medium 17, hard 19, super hard 9. Then the user corrected the reason of `cadenza-run` (Nocturne Op. 32
+No. 1, bars 60-61): its run uses only the notes of Si major (La#6 down to Mi5, Fa# skipped), and what makes it super
+hard is the end, three two-note chords at the same speed with spacings of 7, 3 and 2 semitones (Sol#4-Re#5,
+La#4-Do#5, Sol#4-La#4). The range is never a reason (plan section 5.1).
 
 Two findings while doing it:
 

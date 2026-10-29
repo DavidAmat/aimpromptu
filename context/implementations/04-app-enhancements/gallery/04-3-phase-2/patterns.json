@@ -1197,7 +1197,7 @@
       "level": "super hard",
       "id": "cadenza-run",
       "name": "Cadenza run",
-      "line": "A run of very short notes down from a high note, outside the beat (a cadenza). Super hard because it is very fast and covers more than two octavas.",
+      "line": "A run of very short notes down from Si6, outside the beat (a cadenza), which ends in two-note chords played at the same speed: Sol#4-Re#5 (a fifth), La#4-Do#5 (a third), Sol#4-La#4 (a second). Super hard because of those chords: their spacing changes from one chord to the next, so the hand cannot keep one shape, inside a fast run that goes down. The range is not the reason: the run itself uses only the notes of Si major, and a fast scale of the key over many octavas is easy to hard.",
       "examples": [
         {
           "image": null,

@@ -283,6 +283,11 @@ The right hand, from the user's reviews of the gallery (2026-10-29 and 30):
 - **Super hard** needs all of these at once: fast notes, a hand that must move, and shapes that are irregular (no
   scale, no usual chord, many alterations) or full chords that move fast. Slow chords (negras, blancas) are never
   super hard.
+- **The range is never the reason** for a level: a fast scale of the key over many octavas, without any variation,
+  is easy for the hand (one variation, as at the end of Ballade No. 1, makes it hard). What makes a fast run super
+  hard is, for example, **chords inside it whose spacing changes from one chord to the next** (a fifth, then a third,
+  then a second), so the hand cannot keep one shape while it moves (the cadenza of Nocturne Op. 32 No. 1, bars
+  60-61; the user, 2026-10-30).
 
 Rules for every level, from the brief and from the earlier decisions:
 
@@ -787,4 +792,6 @@ patterns. Phase 3 uses the same rule in the right-hand part of the level prompts
 Slow chords are never super hard, and a fast scale or usual arpeggio that keeps its pattern is hard at most. Because
 of this, `full-chords-in-octaves` (Ballade No. 1, bars 106-108) moved from super hard to medium,
 `runs-in-groups` (Ballade No. 4, bars 152-153) from super hard to hard, and `scale-run` from medium to hard, with
-the scale of Ballade No. 1, bars 255-256, as a second example. The other super hard patterns stay.
+the scale of Ballade No. 1, bars 255-256, as a second example. The other super hard patterns stay. Then the user corrected the
+reason given for the cadenza of Nocturne Op. 32 No. 1: it is super hard because of the irregular chords inside the
+fast run, not because it covers more than two octavas; the rule is in section 5.1.

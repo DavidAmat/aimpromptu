@@ -335,8 +335,11 @@ PATTERNS = [
           "hard because no shape repeats and the hand keeps moving.",
           exk("rh-33-fast-chords-moving", "Barcarolle Op. 60", "060-1-BH.krn", "28-29")),
     right("super hard", "cadenza-run", "Cadenza run",
-          "A run of very short notes down from a high note, outside the beat (a cadenza). Super hard because it is "
-          "very fast and covers more than two octavas.",
+          "A run of very short notes down from Si6, outside the beat (a cadenza), which ends in two-note chords "
+          "played at the same speed: Sol#4-Re#5 (a fifth), La#4-Do#5 (a third), Sol#4-La#4 (a second). Super hard "
+          "because of those chords: their spacing changes from one chord to the next, so the hand cannot keep one "
+          "shape, inside a fast run that goes down. The range is not the reason: the run itself uses only the notes "
+          "of Si major, and a fast scale of the key over many octavas is easy to hard.",
           exk("rh-34-very-fast-wide", "Nocturne Op. 32 No. 1", "032-1-Sm-001.krn", "60-61")),
     right("super hard", "wide-zigzag-very-fast", "Very fast wide zig-zag",
           "Fusas that jump up and down in a wide zig-zag after a few chords. Super hard because each note is far "
