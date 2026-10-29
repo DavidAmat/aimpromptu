@@ -1,6 +1,6 @@
 # 04-3 · Phase 2: the gallery of patterns
 
-Status: **review 3 answered (the right hand across 198 works, 18 drawn right hands), waiting for the user's approval** (task 2.8). Branch `feat/04-3-phase-2`, in the worktree
+Status: **review 4 answered (a stricter super hard), waiting for the user's approval** (task 2.8). Branch `feat/04-3-phase-2`, in the worktree
 `/home/david/Documents/projects/music/aimpromptu-04-3-phase-2` (plan section 7.4: Phase 2 ran in parallel with Phase 1,
 which owns the main checkout). Not merged. No `src/` change, no AI call, no database access.
 
@@ -177,6 +177,30 @@ app.
 
 Result: the right-hand tab has 55 patterns (easy 10, medium 17, hard 17, super hard 11); the gallery 105.
 
+## 4.5 The user's review 4 (2026-10-30): a stricter super hard
+
+The user: super hard is not slow chords (negras, blancas) that are the usual chords of the key with one or two
+altered notes, and not fast scales or usual arpeggios that keep their pattern (hard at most); a fast passage that
+the hand plays without moving is cheap. The rule is in plan section 5.1. Changes: `full-chords-in-octaves` super hard
+-> medium; `runs-in-groups` super hard -> hard; `scale-run` medium -> hard, with Ballade No. 1, bars 255-256 (the
+"upward progression" of the last page, PDF page 20: the melodic minor of Sol going up almost three octavas, only Mi
+natural and Fa# outside the two flats) as a second example (`ballade1-right-3.png`, `transcribed/ballade1-right-3.*`).
+The right-hand tab: easy 10, medium 17, hard 19, super hard 9.
+
+Two findings while doing it:
+
+- **music21 stops reading one staff of 36 of the 197 works** at a voice split of the kern (Ballade No. 1 after bar
+  179, the Fantaisie Op. 49 after bar 4, Scherzo No. 1 after bar 32), without an error. The study of review 3
+  (`rh_study.py`) therefore did not see the rest of those works, and its candidates come only from the bars that were
+  read; the kept patterns are not wrong, but the study is not complete. The research's own model of the same files
+  (`poc-aitu-research/data/derived/ir/nifc/*.json.gz`, made with verovio, with its checks) has every bar, the staff
+  of each note, the printed bar labels, the armadura, ornaments and the first tempo. `transcribe.passage_ir` reads it;
+  it is used for `ballade1-right-3` (`IR_EXAMPLES`). The other drawings were checked against their snapshots and stay
+  as they are.
+- **The app spells the melodic minor as flats**: under 2 flats it writes Mi natural as Fab and Fa# as Solb (03's
+  rule for accidentals: a white key whose name is in the armadura takes its other name, black keys take flats). The
+  drawing of bars 255-256 therefore looks chromatic, while the edition shows one scale. The caption says it.
+
 # 5. The patterns
 
 The list is in `patterns.json` (status `proposed`); the page shows the same list. Levels as the agent proposed them,
@@ -214,4 +238,8 @@ Choices the user may want to change (for the review):
 - **Phase 3**: read `patterns.json` for the ids and levels (after the user's review sets `status` to approved); the
   kern refs give the notes for short F1 examples in the prompts. The licence of the kern files for prompt examples is
   an open point of Phase 5 (plan section 8).
+- **Phase 3**: the measures of the level check (plan section 5.6) should read the research's model
+  (`data/derived/ir/nifc`), not music21, which loses the end of 36 works (section 4.5). The app's spelling of the
+  melodic and harmonic minor under flats (section 4.5) makes a scale look chromatic on the sheet; it is an open point
+  of the app's accidental rule, not of this plan, to raise with the user if a level sheet shows it.
 - `/home/app/04-3-phase-2/` in the container holds the drawings' first output; it can be deleted after the merge.

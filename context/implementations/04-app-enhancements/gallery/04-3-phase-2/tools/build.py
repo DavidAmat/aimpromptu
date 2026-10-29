@@ -213,13 +213,16 @@ PATTERNS = [
               "notes are fast but the hand repeats one shape in one place (it was hard before review 3).",
          examples=[ex("waltz-70-3-right-1.png", W.format("70 No. 3"), "waltzes.pdf", 99, "17-19",
                       "070-1-MEIf-003.krn", "17-19")]),
-    dict(hand="right", level="super hard", id="full-chords-in-octaves", name="Full chords in octaves",
-         line="Chords of four and five notes, ff, with the melody doubled at the octava and jumps up of an octave "
-              "(La4-Do#5-La5, then La5-Do#6-La6). Super hard because the hand is open to its limit and jumps.",
+    dict(hand="right", level="medium", id="full-chords-in-octaves", name="Full chords in octaves",
+         line="Chords of four and five notes, ff, with the melody doubled at the octava and a jump up of an octava "
+              "(La4-Do#5-La5, then La5-Do#6-La6), in negras and blancas. Medium because the chords are slow and are "
+              "the usual chords of Mi and La with one or two altered notes; the jump is the only difficulty (it was "
+              "super hard before review 4).",
          examples=[ex("ballade1-right-2.png", B1, "ballades.pdf", 12, "106-108", "023-1-BH.krn", "106-108")]),
-    dict(hand="right", level="super hard", id="runs-in-groups", name="Runs in groups of 7 and 8",
-         line="Fast runs of semicorcheas in groups of 7 and 8 that cross positions, over the left hand's sweeps. "
-              "Super hard because the hand moves without rest and both hands move at once.",
+    dict(hand="right", level="hard", id="runs-in-groups", name="Runs in groups of 7 and 8",
+         line="Runs of semicorcheas in groups of 7 and 8 over the left hand's sweeps. Hard because they are fast, but "
+              "each group is mostly a chromatic scale with a small jump, which the hand plays with one fingering "
+              "(it was super hard before review 4).",
          examples=[ex("ballade4-right-2.png", B4, "ballades.pdf", 50, "152-153", "052-1-BH.krn", "152-153")]),
     # ---------------------------------------------------------------- right hand, review 3 (study of all works)
     right("easy", "chords-in-one-position", "Chords in one position",
@@ -268,10 +271,15 @@ PATTERNS = [
           "A few fast decoration notes that run up into a two-note chord, then a calm melody. Medium because the run "
           "is short and lands in the position of the melody.",
           exk("rh-20-melody-with-ornament", "Impromptu Op. 29", "029-1-BH.krn", "58-59")),
-    right("medium", "scale-run", "Scale run",
-          "A scale down over two octavas in semicorcheas, then chords. Medium because it is fast and the hand moves, "
-          "but a scale is the most regular pattern there is.",
-          exk("rh-25-fast-no-pattern", "Variations Op. 12", "012-1-Sm-001.krn", "2-3")),
+    right("hard", "scale-run", "Scale run",
+          "A fast scale over two octavas or more, with the alterations of its key only. Hard because it is fast and "
+          "the hand moves, but not super hard: a scale keeps one pattern and one fingering (the user's rule of "
+          "review 4; it was medium before).",
+          exk("rh-25-fast-no-pattern", "Variations Op. 12", "012-1-Sm-001.krn", "2-3", "A scale going down."),
+          ex("ballade1-right-3.png", B1, "ballades.pdf", 20, "255-256", "023-1-BH.krn", "255-256",
+             "The scale of Sol minor going up almost three octavas, with only Mi natural and Fa# (the melodic minor) "
+             "outside the two flats. The app spells them Fab and Solb, its rule for the black and white keys under "
+             "flats, so its drawing looks more chromatic than the edition.")),
     right("hard", "melody-over-chromatic-inner-line", "Melody over a chromatic inner line",
           "Two-note chords on top and, under them in the same hand, a line of semicorcheas that moves by semitones. "
           "Hard because one hand plays two voices fast, with many accidentals.",

@@ -270,6 +270,20 @@ to play. The easy and medium levels must therefore keep one pattern through the 
 | **Hard** | The melody with small pieces of chords that add to it (Ballade No. 4) | The medium patterns with movement: the second chord moves (La4-Do5-Mi5, then Do5-Mi5-La5); irregular lines in corcheas that belong to no well-known chord (Si2-Fa3-Lab3-Re4-Lab3-Fa3). Once the hand is in a position, it does not make big jumps. Symmetric up and down figures (Ballade No. 1, page 12, `images/chopin_passages/ballade1-ex1.png`) |
 | **Super hard** | Later, not in this plan. Typical hard classical pieces: fast runs up and down in the left hand with big jumps while the right hand also jumps (the hard parts of Ballade No. 4) | |
 
+The right hand, from the user's reviews of the gallery (2026-10-29 and 30):
+
+- A right hand that **stays in one position** is easy, also with chords; fast notes that the hand plays without
+  moving are cheap for an experienced pianist.
+- **Medium**: fast, but with a shape that repeats (also going up and down); small usual chords of two or three notes,
+  now and then a usual chord of four; a few alterations (one note of the chord changed). Slow chords, even of four or
+  five notes with a jump, are medium when they are the usual chords of the key.
+- **Hard**: chords that move up and down in one run; fast notes without a repeated shape; many alterations or
+  ornaments. A fast **scale** or **usual arpeggio** that keeps its pattern, with the alterations of its key only, is
+  hard at most (the scale of Ballade No. 1, bars 255-256).
+- **Super hard** needs all of these at once: fast notes, a hand that must move, and shapes that are irregular (no
+  scale, no usual chord, many alterations) or full chords that move fast. Slow chords (negras, blancas) are never
+  super hard.
+
 Rules for every level, from the brief and from the earlier decisions:
 
 - **Decoration notes** only when it is very clear that the note is an ornament (the rule of implementation 04: one
@@ -768,3 +782,9 @@ right-hand patterns that the works did not give. The study passages are shown in
 snapshot. Two right-hand patterns moved from hard to medium under the user's rule; the right-hand tab now has 55
 patterns. Phase 3 uses the same rule in the right-hand part of the level prompts and in the check of section 5.5
 (a right hand that stays in one position may hold chords at every level).
+
+**Phase 2, review 4** (2026-10-30): the user made the rule for super hard stricter (section 5.1, the right hand).
+Slow chords are never super hard, and a fast scale or usual arpeggio that keeps its pattern is hard at most. Because
+of this, `full-chords-in-octaves` (Ballade No. 1, bars 106-108) moved from super hard to medium,
+`runs-in-groups` (Ballade No. 4, bars 152-153) from super hard to hard, and `scale-run` from medium to hard, with
+the scale of Ballade No. 1, bars 255-256, as a second example. The other super hard patterns stay.

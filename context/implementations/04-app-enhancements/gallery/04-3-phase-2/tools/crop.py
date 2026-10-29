@@ -16,7 +16,7 @@ OUT = sys.argv[1]
 RENAME = {'ballade1-right-2': 'ballade1-right-1', 'ballade1-right-3': 'ballade1-right-2',
           'ballade4-left-4': 'ballade4-left-3', 'ballade4-left-5': 'ballade4-left-4', 'ballade4-left-6': 'ballade4-left-5',
           'ballade4-right-3': 'ballade4-right-1', 'ballade4-right-5': 'ballade4-right-2',
-          'waltz-64-2-right-2': 'waltz-64-2-right-1'}
+          'waltz-64-2-right-2': 'waltz-64-2-right-1', 'ballade1b-right-3': 'ballade1-right-3'}
 # id: (pdf, page, [(system, x0, x1, head)], hands); head = x where the clef and key end (prepended when x0 is mid-system)
 SPEC = {
     'ballade1-{h}-1': ('ballades', 10, [(1, 96, 948, 0)], 'L'),
@@ -42,6 +42,7 @@ SPEC = {
     'prelude-20-{h}-1': ('preludes', 45, [(0, 99, 979, 0)], 'L'),
     'prelude-21-{h}-1': ('preludes', 45, [(2, 198, 1258, 0)], 'L'),
     'nocturne-9-2-{h}-1': ('nocturnes', 10, [(0, 360, 1990, 0)], 'L'),
+    'ballade1b-{h}-3': ('ballades', 20, [(3, 100, 1346, 0)], 'R'),  # review 4: bars 255-256, the scale up
 }
 FADE = 0.75
 only = sys.argv[2:]
