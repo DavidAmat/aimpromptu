@@ -65,9 +65,11 @@ import TuneIcon from "@mui/icons-material/TuneOutlined";
 import UndoIcon from "@mui/icons-material/UndoOutlined";
 import VisibilityIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOffOutlined";
+import InfoIcon from "@mui/icons-material/InfoOutlined";
 import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import {
+  metadataApi,
   passagesApi,
   sheetApi,
   type FramesSheet,
@@ -79,6 +81,7 @@ import {
   type StretchRequest,
 } from "../../../../api";
 import { AiMark } from "../../../../components/piece/AiMark";
+import { InfoDialog, type InfoTarget } from "../../../../components/folders/InfoDialog";
 import ScorePlayer, { type ScorePlayerControls } from "../../../../components/time/ScorePlayer";
 import { useElementSize } from "../../../../hooks/useElementSize";
 import { ROUTES } from "../../../../layout/routes";
@@ -991,6 +994,16 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   const [headerRef, headerSize] = useElementSize<HTMLDivElement>();
   const header = !(playMode || role || empty);
 
+  /** The info button (implementation 04-3): the metadata of the song or the project, read when it is pressed. */
+  const [info, setInfo] = useState<InfoTarget | null>(null);
+  const openInfo = useCallback(async (projectId: string) => {
+    try {
+      setInfo(await metadataApi.info(projectId));
+    } catch (caught) {
+      setFlash(caught instanceof Error ? caught.message : "The info could not be read.");
+    }
+  }, []);
+
   /**
    * The sheet's buttons, one list drawn in two places (implementation 04, Phase 1): the floating toolbox (`bar`, its
    * tooltips above) and the header (`header`, its tooltips below; its test hooks start with `header-`).
@@ -1128,6 +1141,16 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
                 <Box data-ai-mark sx={{ display: "flex", flexShrink: 0 }}>
                   <AiMark enhanced={enhanced} />
                 </Box>
+                {step.projectId ? (
+                  // About the song, not a tool of the sheet: not in `sheetButtons`, not in the floating toolbox.
+                  <IconAction
+                    title="Info"
+                    icon={<InfoIcon />}
+                    size="small"
+                    onClick={() => void openInfo(step.projectId as string)}
+                    data-testid="sheet-info"
+                  />
+                ) : null}
               </Stack>
               {sheet ? (
                 <Stack direction="row" sx={{ alignItems: "center", gap: 0.5, flexWrap: "wrap", ml: 1 }} data-sheet-header-buttons>
@@ -1421,6 +1444,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
         message={flash}
         data-testid="sheet-flash"
       />
+      {info ? <InfoDialog target={info} onClose={() => setInfo(null)} /> : null}
       {enhancing ? (
         <EnhanceDialog
           key={enhancing.key}

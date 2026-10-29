@@ -18,7 +18,8 @@
  *   a public song (Phase 14, `PublishDialog`).
  * - **Rename** and **Delete**.
  *
- * The header's `⋯` renames the song, changes its artists, or deletes it with every version.
+ * The header's `⋯` renames the song, changes its artists, or deletes it with every version. The **info button**
+ * beside it (implementation 04-3) shows and changes the song's metadata and its folders of My Library.
  *
  * A song that stands for a public song (pulled from the Public Library, or saved on a public song:
  * Phase 13) links to it under its title.
@@ -50,6 +51,7 @@ import LaunchIcon from "@mui/icons-material/Launch";
 import PersonIcon from "@mui/icons-material/PersonOutlined";
 import PlayIcon from "@mui/icons-material/PlayCircleOutlined";
 import PublishIcon from "@mui/icons-material/PublicOutlined";
+import InfoIcon from "@mui/icons-material/InfoOutlined";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
   libraryApi,
@@ -60,11 +62,13 @@ import {
   type VersionRow,
 } from "../../api";
 import { AiMark } from "../../components/piece/AiMark";
+import { InfoDialog } from "../../components/folders/InfoDialog";
 import { ROUTES } from "../../layout/routes";
 import {
   ConfirmDialog,
   EmptyState,
   fullTime,
+  IconAction,
   ListRow,
   PageBody,
   PageHeader,
@@ -98,6 +102,7 @@ export function SongPage() {
   const [publishing, setPublishing] = useState<VersionRow | null>(null);
   const [sent, setSent] = useState<number | null>(null);
   const [artists, setArtists] = useState(false);
+  const [informing, setInforming] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -193,6 +198,8 @@ export function SongPage() {
                   Play
                 </PillButton>
               ) : null}
+              {/* The info button (implementation 04-3): the song's metadata and its folders of My Library. */}
+              <IconAction title="Info" icon={<InfoIcon />} onClick={() => setInforming(true)} data-testid="song-info" />
               <RowMenu
                 title="Song actions"
                 items={[
@@ -471,6 +478,22 @@ export function SongPage() {
             setSong(answer);
             setArtists(false);
           }}
+        />
+      ) : null}
+      {informing && song ? (
+        <InfoDialog
+          target={{
+            kind: "song",
+            projectId: null,
+            songId: song.id,
+            title: song.title,
+            artists: song.artists.map((artist) => artist.name),
+            tags: song.tags,
+            folders: song.folders,
+            editable: true,
+          }}
+          onClose={() => setInforming(false)}
+          onSaved={({ tags, folders }) => setSong({ ...song, tags, folders })}
         />
       ) : null}
     </PageBody>

@@ -235,6 +235,65 @@ def test_a_playlist_is_its_owners(people: dict) -> None:
     assert [row["title"] for row in joan.get("/playlists").json()] == ["Joan's set"]
 
 
+def test_folders_and_metadata_are_their_owners(people: dict) -> None:
+    """Folders and metadata (implementation 04-3, Phase 1): only the owner sees and changes them,
+    and only on their own items; a library version changes through the song, never the project."""
+    anna_id, anna = people["anna"]
+    joan_id, joan = people["joan"]
+    annas_project = project(anna_id, "vault", "Anna's")
+    annas_version = project(anna_id, "private", "Anna's song")
+    with session() as db:
+        annas_song = rows.make_song(db, anna_id, "Anna's song", None)
+        db.add(PrivateVersion(song_id=annas_song.id, version_name="v", project_id=annas_version))
+        song_id = annas_song.id
+    made = anna.post("/folders", json={"area": "projects", "name": "Films"})
+    assert made.status_code == 201
+    folder_id = made.json()["id"]
+    tags = {"tags": [{"category": "films", "value": "Shrek"}]}
+
+    # Joan does not see Anna's folders, and nothing of Anna's is there for her to change.
+    assert joan.get("/folders", params={"area": "projects"}).json() == []
+    assert joan.patch(f"/folders/{folder_id}", json={"name": "Mine"}).status_code == 404
+    assert joan.post(f"/folders/{folder_id}/move", json={"parentId": None}).status_code == 404
+    assert joan.delete(f"/folders/{folder_id}").status_code == 404
+    assert (
+        joan.post("/folders", json={"area": "projects", "name": "x", "parentId": folder_id})
+    ).status_code == 404
+    joans = joan.post("/folders", json={"area": "projects", "name": "Joan's"}).json()["id"]
+    assert (
+        joan.put(f"/folders/projects/{annas_project}", json={"folders": [joans]}).status_code == 404
+    )
+    assert (
+        anna.put(f"/folders/projects/{annas_project}", json={"folders": [joans]}).status_code == 404
+    )
+    assert joan.put(f"/folders/songs/{song_id}", json={"folders": []}).status_code == 404
+    assert joan.put(f"/metadata/projects/{annas_project}", json=tags).status_code == 404
+    assert joan.put(f"/metadata/songs/{song_id}", json=tags).status_code == 404
+    assert joan.get(f"/metadata/info/{annas_project}").status_code == 404
+
+    # Anna's own: her project, her song; a version of her library is read only as a project.
+    assert (
+        anna.put(f"/folders/projects/{annas_project}", json={"folders": [folder_id]}).status_code
+        == 200
+    )
+    assert anna.put(f"/metadata/projects/{annas_project}", json=tags).status_code == 200
+    assert anna.put(f"/metadata/songs/{song_id}", json=tags).status_code == 200
+    assert anna.put(f"/metadata/projects/{annas_version}", json=tags).status_code == 403
+    assert anna.put(f"/folders/projects/{annas_version}", json={"folders": []}).status_code == 403
+
+    # Shared with Joan: she reads the song's metadata on the info button, and cannot change it.
+    with session() as db:
+        db.add(LibraryShare(owner_id=anna_id, shared_with_id=joan_id))
+    seen = joan.get(f"/metadata/info/{annas_version}")
+    assert seen.status_code == 200
+    assert (seen.json()["kind"], seen.json()["editable"], seen.json()["folders"]) == (
+        "song",
+        False,
+        [],
+    )
+    assert seen.json()["tags"] == tags["tags"]
+
+
 def test_the_list_of_projects_is_the_users_own(people: dict) -> None:
     anna_id, anna = people["anna"]
     joan_id, joan = people["joan"]

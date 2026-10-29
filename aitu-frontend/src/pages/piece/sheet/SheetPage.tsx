@@ -53,6 +53,11 @@ export interface SheetStep {
   audioRevision?: number | undefined;
   /** A version of My library: **Enhance with AI** opens the copy that edits it and starts the run there. */
   enhanceInCopy?: (run: SongRun) => void;
+  /**
+   * The project of the sheet, on the Sheet step (implementation 04-3, Phase 1): the header gets the **info button**,
+   * which shows the metadata of the song or the project (`GET /metadata/info/{projectId}`).
+   */
+  projectId?: string;
 }
 
 /**

@@ -159,6 +159,16 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/library/artists/{id}/names` | Another name of the artist. |
 | PATCH, DELETE | `/library/artists/{id}/names/{nameId}` | Rename a name or make it the default; remove a name. |
 | POST | `/library/artists/{id}/merge` | Every name of this artist becomes a name of another one. |
+| **Folders** | `api/folders.py` | Implementation 04-3, Phase 1: the folders of My projects and My Library ([§7.1.1](#711-folders-and-metadata-folders-and-metadata)) |
+| GET, POST | `/folders` | The user's folders of one area (`?area=projects` or `library`); a new folder. |
+| PATCH, DELETE | `/folders/{id}` | Rename a folder; delete it with its folders (never an item). |
+| POST | `/folders/{id}/move` | Move a folder inside another, or to the top. |
+| POST | `/folders/parent` | **New parent folder** on top of folders that share a parent. |
+| PUT | `/folders/projects/{id}`, `/folders/songs/{id}` | Every folder of a project of My projects, of a song of My Library. |
+| **Metadata** | `api/metadata.py` | Implementation 04-3, Phase 1: the metadata of a song or a project |
+| GET | `/metadata/keys` | The primary keys and the secondary keys to suggest. |
+| PUT | `/metadata/projects/{id}`, `/metadata/songs/{id}` | Every metadata row of a project, of a song. |
+| GET | `/metadata/info/{projectId}` | What the info button of a sheet shows: the song or the project, its metadata and folders, and whether the user may change them. |
 | **Public library** | `api/public.py` | Implementation 02, Phase 13: the Public Library, read by every user ([§7.3](#73-public-the-public-library)) |
 | GET | `/public/songs` | The public songs, searched, filtered (decade, region, genre, tag), sorted and paged, with the count of each filter value. |
 | GET | `/public/songs/{id}` | One public song: metadata, chart history, fixed versions, Other versions by user. |
@@ -949,6 +959,7 @@ the Private Library since Phase 6 (§7.1).
 | `basedOn`, `createdAt`, `updatedAt` | `basedOn`: the library project an edit copy edits. `updatedAt` is the newest file of the parts and `project.json` |
 | `library` | A project of the Private Library: `{songId, songTitle, artists, versionId, versionName, projectId}` of its song and version (Phase 6), else `null` |
 | `editing` | An edit copy (`basedOn` set): the same fields for the version it edits, else `null` |
+| `folders`, `tags` | The folders of My projects it is in (ids), and its metadata `[{category, value}]` (implementation 04-3, §7.1.1) |
 
 - `GET /projects?layer=vault&layer=private`: the current user's projects of those layers (default
   `vault`), newest change first.
@@ -1040,8 +1051,8 @@ and 15.2. Every route works on the current user's rows only and answers `404` fo
 
 | Route | Answer |
 |---|---|
-| `GET /library/songs` | `[{id, title, artists: [{artistId, nameId, name}], versions, editing, updatedAt}]`, by title. `editing`: a version has an edit copy open |
-| `GET /library/songs/{id}` | `{id, title, artists, versions: [{id, name, projectId, parts, step, createdAt, updatedAt, editCopy, history}], publicId}`. `editCopy`: the open edit copy's id; `history`: how many earlier states; `publicId`: the public song it stands for (Phase 13) |
+| `GET /library/songs` | `[{id, title, artists: [{artistId, nameId, name}], versions, editing, updatedAt, folders, tags}]`, by title. `editing`: a version has an edit copy open; `folders` and `tags`: its folders of My Library and its metadata (implementation 04-3) |
+| `GET /library/songs/{id}` | `{id, title, artists, versions: [{id, name, projectId, parts, step, createdAt, updatedAt, editCopy, history}], publicId, folders, tags}`. `editCopy`: the open edit copy's id; `history`: how many earlier states; `publicId`: the public song it stands for (Phase 13) |
 | `PATCH /library/songs/{id}` | Body `{title?, artists?: [string]}`: rename; the artists by name, in order (an unknown name makes a new artist) |
 | `DELETE /library/songs/{id}` | `204`: every version and its project, then the song |
 | `PATCH /library/versions/{id}` | Body `{name}`: 1 to 60 characters, unique in the song ignoring case (`409`) |
@@ -1055,6 +1066,29 @@ and 15.2. Every route works on the current user's rows only and answers `404` fo
 | `DELETE /library/artists/{id}/names/{nameId}` | Not the default (`409`); songs saved with it point at the default name |
 | `POST /library/artists/{id}/merge` | Body `{into}`: every name moves to `into`, which keeps its default; answers `into` |
 | `DELETE /library/artists/{id}` | `204`; `409` while the artist has songs |
+
+#### 7.1.1 Folders and metadata: `/folders` and `/metadata`
+
+`api/folders.py`, `api/metadata.py`, `library/folders.py`, `library/metadata.py`, implementation 04-3, Phase 1
+(plan sections 4.2 and 4.4). Every route works on the user's own rows only: `404` for another user's folder, project
+or song, and for a folder of the other area; `403` for a project of the Private Library (it changes through its
+song); `409` for a folder name its parent already has (ignoring case) and for a move into the folder itself or into a
+folder inside it; `422` for an empty name or an unknown primary key.
+
+| Route | Answer |
+|---|---|
+| `GET /folders?area=projects` | `[{id, parentId, name, createdAt}]`, by name. `area`: `projects` (My projects) or `library` (My Library), two independent trees; `parentId` `null` at the top |
+| `POST /folders` | Body `{area, name, parentId?}`: a new folder (`201`) |
+| `PATCH /folders/{id}` | Body `{name}` |
+| `POST /folders/{id}/move` | Body `{parentId}`: inside that folder, or `null` to the top |
+| `POST /folders/parent` | Body `{area, name, children: [id]}`: a folder made where `children` are (they must share a parent), with `children` moved into it (`201`). The items keep their folder ids |
+| `DELETE /folders/{id}` | `204`: the folder and every folder inside it; their items stay, and lose only those links |
+| `PUT /folders/projects/{id}` | Body `{folders: [id]}`: every folder of a project of My projects; answers `{folders}` |
+| `PUT /folders/songs/{id}` | The same for a song of My Library |
+| `GET /metadata/keys` | `{categories, suggestions: [{category, value, mine}]}`: the primary keys (`films`, `video_games`, `tv_shows`, `adverts`) and the secondary keys to suggest: the user's own in use, then the Public Library's |
+| `PUT /metadata/projects/{id}` | Body `{tags: [{category, value}]}` (at most 30): every metadata row of a project of My projects; a value typed in other letters is the same secondary key. On an edit copy the rows are its song's (the metadata belongs to the song, the same for every version). Answers `{tags}` |
+| `PUT /metadata/songs/{id}` | The same for a song of My Library |
+| `GET /metadata/info/{projectId}` | `{kind, projectId, songId, title, artists, tags, folders, editable}`. `kind`: `project` (a project of My projects with no song: its own metadata and folders of My projects), `song` (a version of My Library, an edit copy of one, or a version of a library shared with the user: the song's metadata and folders of My Library, the same for every version), `public` (a version of the Public Library: the public song's tags), `none` (a request's copy). `editable` only for the owner's `project` or `song` |
 
 ### 7.2 `/playlists`: songs playlists
 

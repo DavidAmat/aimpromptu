@@ -7,7 +7,7 @@
  * row to the next.
  */
 
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
@@ -25,12 +25,20 @@ export interface ListRowProps {
   menu?: readonly RowMenuItem[];
   onOpen?: () => void;
   selected?: boolean;
+  /** Steps of indentation before the row's content (the Folders view: one step per level of folder). */
+  indent?: number;
+  /** Props of the row's box: drag and drop in the Folders view (implementation 04-3). */
+  rowProps?: HTMLAttributes<HTMLDivElement> & { "data-drop-over"?: string };
   "data-testid"?: string;
 }
 
-export function ListRow({ title, leading, status, meta, menu, onOpen, selected, "data-testid": testId }: ListRowProps) {
+/** One step of indentation, in px: about the width of the disclosure triangle and the folder icon. */
+export const INDENT_STEP = 28;
+
+export function ListRow({ title, leading, status, meta, menu, onOpen, selected, indent = 0, rowProps, "data-testid": testId }: ListRowProps) {
   return (
     <Box
+      {...rowProps}
       data-testid={testId}
       sx={(theme) => ({
         display: "flex",
@@ -40,6 +48,8 @@ export function ListRow({ title, leading, status, meta, menu, onOpen, selected, 
         borderRadius: `${radius.row}px`,
         backgroundColor: selected ? (theme.vars ?? theme).palette.action.selected : "transparent",
         "&:hover": { backgroundColor: (theme.vars ?? theme).palette.action.hover },
+        // A folder a dragged row is over (the Folders view).
+        "&[data-drop-over]": { outline: `2px solid ${(theme.vars ?? theme).palette.primary.main}`, outlineOffset: -2 },
       })}
     >
       <ButtonBase
@@ -54,6 +64,7 @@ export function ListRow({ title, leading, status, meta, menu, onOpen, selected, 
           justifyContent: "flex-start",
           textAlign: "left",
           px: { xs: 1, sm: 1.5 },
+          ...(indent > 0 ? { pl: { xs: `${8 + indent * INDENT_STEP}px`, sm: `${12 + indent * INDENT_STEP}px` } } : {}),
           py: 1.25,
           borderRadius: `${radius.row}px`,
         }}

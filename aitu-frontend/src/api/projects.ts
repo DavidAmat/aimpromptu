@@ -7,6 +7,7 @@
  * `/time`, `/matrix`) take. Mirrors `aitu-backend/src/aitu_backend/api/projects.py`.
  */
 
+import type { TagRow } from "./metadata";
 import type { PieceStep } from "./pieces";
 import { buildUrl, request, upload } from "./client";
 
@@ -51,6 +52,10 @@ export interface ProjectRow {
   library: LibraryLink | null;
   /** A project of the Personal Vault that edits a version: that version. */
   editing: LibraryLink | null;
+  /** The folders of My projects it is in (implementation 04-3). */
+  folders: number[];
+  /** Its metadata (implementation 04-3). */
+  tags: TagRow[];
 }
 
 /** **Save to library**: an existing song by id, or a title and an artist; or `replace` for a copy. */

@@ -10,8 +10,9 @@ Phase 3.
 library, edit a version) and ``/library`` the Private Library's songs, artists and versions (Phase
 6), ``/passages`` Recording in Sheet (Phase 9), and ``/playlists`` the songs playlists of the
 Private Library (Phase 10), ``/public`` the Public Library (Phase 13), ``/requests`` the requests
-to it and ``/shares`` and ``/shared`` the shared libraries (Phase 14). ``/auth`` signs in and
-``/admin`` is the master user's (Phase 4; the review of requests, Phase 14).
+to it and ``/shares`` and ``/shared`` the shared libraries (Phase 14). ``/folders`` and ``/metadata``
+are the folders and the metadata of My projects and My Library (implementation 04-3, Phase 1).
+``/auth`` signs in and ``/admin`` is the master user's (Phase 4; the review of requests, Phase 14).
 
 ``/video`` brings a Synthesia video in, samples its frames and reads the
 falling rectangles off them; ``/frame-examples`` is where a detection rule earns
@@ -30,9 +31,11 @@ it.
 from aitu_backend.api.admin import router as admin_router
 from aitu_backend.api.audio import router as audio_router
 from aitu_backend.api.auth import router as auth_router
+from aitu_backend.api.folders import router as folders_router
 from aitu_backend.api.frame_examples import router as frame_examples_router
 from aitu_backend.api.library import router as library_router
 from aitu_backend.api.matrix import router as matrix_router
+from aitu_backend.api.metadata import router as metadata_router
 from aitu_backend.api.passages import router as passages_router
 from aitu_backend.api.pieces import router as pieces_router
 from aitu_backend.api.playlists import router as playlists_router
@@ -49,8 +52,10 @@ OPEN_ROUTERS = [auth_router]
 #: A session, then the rights of the project the route names (section 9.3).
 USER_ROUTERS = [
     audio_router,
+    folders_router,
     library_router,
     matrix_router,
+    metadata_router,
     passages_router,
     pieces_router,
     playlists_router,
@@ -76,9 +81,11 @@ __all__ = [
     "admin_router",
     "audio_router",
     "auth_router",
+    "folders_router",
     "frame_examples_router",
     "library_router",
     "matrix_router",
+    "metadata_router",
     "passages_router",
     "pieces_router",
     "playlists_router",

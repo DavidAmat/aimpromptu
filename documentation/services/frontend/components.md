@@ -20,7 +20,7 @@ browser before was removed in implementation 03, Phase 10 (2026-10-27), see
 |---|---|---|
 | **Sign in** | `/login` | `pages/LoginPage.tsx`, outside the shell (implementation 02, Phase 4) |
 | (start) | `/` | redirects to `/projects` |
-| **Projects** | `/projects` | `pages/ProjectsPage.tsx`: `GET /projects` (the vault), the **New project** menu with **From scratch** (`POST /projects` with `scratch`, then its Sheet step; Phase 8) and Import (`POST /projects/import`), the row menu (Duplicate, Export, Rename, **Play**, Delete) through `api/projects.ts`; an edit copy (`row.editing`) says **Editing**, adds **Open the song**, and its Delete is **Discard changes** |
+| **Projects** | `/projects` | `pages/ProjectsPage.tsx`: `GET /projects` (the vault), the **New project** menu with **From scratch** (`POST /projects` with `scratch`, then its Sheet step; Phase 8) and Import (`POST /projects/import`), the row menu (Duplicate, Export, Rename, **Folders…**, **Info**, **Play**, Delete) through `api/projects.ts`; an edit copy (`row.editing`) says **Editing**, adds **Open the song**, and its Delete is **Discard changes**. The pills **Folders**, **All**, **Filter** (implementation 04-3, section 8.1) |
 | · new project | `/projects/new` | `pages/piece/PiecePage.tsx` with the Source step only |
 | · From other projects | `/projects/compose` | `pages/compose/ComposePage.tsx` (Phase 10, section 3.2) |
 | · a project | `/projects/:id` | `PiecePage.tsx` + `PieceResume.tsx`: opens the step the project reached |
@@ -77,8 +77,8 @@ sets it when it loads a project; the sheet reads its `frameMs` from it.
 
 | File | Role |
 |---|---|
-| `pages/library/SongsPage.tsx` | **Songs**: `GET /library/songs` as a `DataTable` (Title with **Editing** when a copy is open, Artist, Versions, Changed), a **Filter** field on the title and the artists, the empty state with **Open Projects** |
-| `pages/library/SongPage.tsx` | One song: **Play** in its header (Play mode on the first version, Phase 11), its artists as links, its versions as `ListRow`s (a row opens the project read only; its `⋯`: Open, **Play**, **Edit** or **Continue editing** (`POST /projects/{id}/edit`), Duplicate, Export, Rename, History, Delete); the header's `⋯`: Rename song, Artists (an `Autocomplete` of names, `PATCH /library/songs/{id}`), Delete song. `HistoryDialog` lists `GET /library/versions/{id}/history`, each with **Restore** after a confirmation. `data-testid="version-<id>"` is read by `check:library` |
+| `pages/library/SongsPage.tsx` | **Songs**: `GET /library/songs` as a `DataTable` (Title with **Editing** when a copy is open, Artist, Versions, Changed, and a `⋯` with **Info** and **Folders…**), a **Filter** field on the title and the artists, the empty state with **Open Projects**. The pills (implementation 04-3, section 8.1): in **Folders** the table's rows are the lines of the tree (`treeLines`), without sort, only the title cell indented; in **Filter** the `FilterBar` above it |
+| `pages/library/SongPage.tsx` | One song: **Play** in its header (Play mode on the first version, Phase 11), its artists as links, its versions as `ListRow`s (a row opens the project read only; its `⋯`: Open, **Play**, **Edit** or **Continue editing** (`POST /projects/{id}/edit`), Duplicate, Export, Rename, History, Delete); the header's **info button** (`InfoDialog`, implementation 04-3) and `⋯`: Rename song, Artists (an `Autocomplete` of names, `PATCH /library/songs/{id}`), Delete song. `HistoryDialog` lists `GET /library/versions/{id}/history`, each with **Restore** after a confirmation. `data-testid="version-<id>"` is read by `check:library` |
 | `pages/library/ArtistsPage.tsx` | **Artists**: `GET /library/artists` as a `DataTable` (Name, Other names, Songs) with a **Filter** |
 | `pages/library/ArtistPage.tsx` | One artist: **Names** (`ListRow`s, the default marked; Make default, Rename, Remove) with **Add a name**, **Songs**; the header's `⋯`: Merge into another artist (`MergeDialog`), Delete artist (disabled while it has songs) |
 | `pages/library/TextDialog.tsx`, `shared.ts` | One field and one button (rename, add a name); `said()` (the backend's words of a refusal), `download()`, `stretchLabel()` |
@@ -217,7 +217,7 @@ sections 12 to 17.
 | Module | Role |
 |---|---|
 | `SheetPage.tsx` | The step types (`SheetStep`, `PassageView`, `PlayView`) and `SheetPage`, which draws `frames/FramesSheetPage` |
-| `frames/FramesSheetPage.tsx` | The page: the sheet at once (the AI's or the algorithm's), **Enhance with AI**, the header at the top of the window (title, `AiMark`, the floating bar's buttons from one list), the floating bar, ⌘ and the wheel zoom, the toolboxes, Copy and Paste, Record, the roles of `step.passage` and `step.play` |
+| `frames/FramesSheetPage.tsx` | The page: the sheet at once (the AI's or the algorithm's), **Enhance with AI**, the header at the top of the window (title, `AiMark`, the **info button** when `step.projectId` is given (implementation 04-3: `GET /metadata/info/{projectId}`, then `InfoDialog`), the floating bar's buttons from one list), the floating bar, ⌘ and the wheel zoom, the toolboxes, Copy and Paste, Record, the roles of `step.passage` and `step.play` |
 | `frames/FramesSheetView.tsx` | The SVG the backend draws, and over it, in the same staff-space units, what moves: the playhead (dragged and dropped across lines since implementation 04, Phase 1), the picked notes, the marked stretch, the veil over a segment the AI is writing |
 | `frames/useFramesSheet.ts` | The sheet of a part as the page holds it: read for the page's width, read again at each step of the AI's job (`event: sheet` on the job's stream) |
 | `frames/geometry.ts` | The arithmetic of the page from the cursor map the backend sends (one row per drawn column, one box per system) |
@@ -387,8 +387,8 @@ so the same job looks the same everywhere.
 | `IconAction` | An icon button with its tooltip, which is also its name; the shortcut after the title; a tooltip that says why when disabled; tooltips never catch the pointer, so one never covers the button beside it |
 | `PillButton` | `primary` (black), `secondary` (white, grey border), `quiet`, `danger`; `busy` shows a spinner |
 | `Segmented` | One of 2 to 4 options, as one rounded group |
-| `ListRow`, `RowMenu` | A row: title (truncated, full on hover), status and meta in fixed columns, the `⋯` menu |
-| `DataTable` | Sticky header, sortable columns, rows per page, sized to its content; with `selected` and `onSelectedChange`, a checkbox per row and one for all (Phase 10). **Server mode** (Phase 13): `sort` and `onSortChange` (the rows come sorted), `paging` (`{count, page, perPage, onPage, onPerPage}`: the rows are one page); a column's `firstDirection` is the direction of its first click (`desc` for a popularity). Under 600 px the page controls keep only the range and the arrows |
+| `ListRow`, `RowMenu` | A row: title (truncated, full on hover), status and meta in fixed columns, the `⋯` menu; `indent` (steps of `INDENT_STEP`, 28 px) and `rowProps` (drag and drop; `data-drop-over` draws the outline of a folder a row is over) for the Folders view (implementation 04-3) |
+| `DataTable` | Sticky header, sortable columns, rows per page, sized to its content; with `selected` and `onSelectedChange`, a checkbox per row and one for all (Phase 10). **Server mode** (Phase 13): `sort` and `onSortChange` (the rows come sorted), `paging` (`{count, page, perPage, onPage, onPerPage}`: the rows are one page); a column's `firstDirection` is the direction of its first click (`desc` for a popularity). Under 600 px the page controls keep only the range and the arrows. `rowProps(row)`: props of a row's `<tr>` (the Folders view's drag and drop, implementation 04-3) |
 | `FilterChip` | A filter as a chip (Phase 13): its name with a down arrow; a click opens its values with their counts (grouped under a heading when they have one), the first entry takes it off; chosen, it is filled, shows the value, and has a cross |
 | `EmptyState` | One line, and the action that creates the first one |
 | `ConfirmDialog` | The confirm button repeats the action ("Delete project"); **Cancel**; an optional third choice |
@@ -397,7 +397,7 @@ so the same job looks the same everywhere.
 | `MiniPiano` | 88 keys at half size, to pick one key; Spanish names on hover; arrows move by a semitone or an octave |
 | `FigurePicker` | The figure icons (`FigureGlyph`) as a `Segmented`, the Spanish name in the tooltip |
 | `StepTabs` | The steps of a project, section 2.1 |
-| `Pill`, `TabBar` | A small toggle chip; a tab strip that follows the address (the Lab tabs) |
+| `Pill`, `TabBar` | A small toggle chip (the pills of My projects and My library); a tab strip that follows the address (the Lab tabs) |
 | `timestamps.ts`, `progress.ts`, `relativeTime.ts` | Tabular figures that never wrap; the 520 px width of a progress bar on its own; "2 h ago", "yesterday", "3 Oct" |
 
 `MiniPiano` and `FigurePicker` are built in Phase 1 and used by the Transpose tab since Phase 7.
@@ -439,6 +439,25 @@ Timestamps are `mm:ss.cc` everywhere and never wrap:
 [timestamps.md](../../../context/frontend/timestamps.md).
 
 ---
+
+### 8.1 Folders, the pills and the metadata (implementation 04-3, Phase 1)
+
+`src/components/folders/`, shared by My projects and My library (plan `04-3-plan.md` sections 4.2 to 4.4):
+
+| File | Role |
+|---|---|
+| `listView.ts`, `ViewPills.tsx` | `useListView(storageKey)`: the view on show (`folders`, `all`, `filter`) from `?view=`, else the browser's last one, else **All**; the three `Pill`s |
+| `folderTree.ts` | The tree from the flat `GET /folders` and each item's folder ids: `childrenOf`, `inside` (a folder and every folder in it), `pathOf`, `reach` (what a deletion touches), `treeLines` (the lines of the Folders view: folders by name, an open one's folders then items one step further in, then the items in no folder), `folderCount` |
+| `useFolderTree.tsx` | One tree's state: the folders, the open ones (kept in the browser, `aitu.folders.open.<area>`), the folder's `⋯` (**New folder inside**, **Rename**, **Move to…**, **New parent folder**, **Delete**) and its dialogs, **New folder**, and the drag props of a folder row (drop target, and a folder dragged onto a folder) and of an item row. The browser sends no click after a drag, so a drag never opens the row |
+| `MoveFolderDialog.tsx` | **Move to…**: the top or any folder not inside this one, by path |
+| `FolderLeading.tsx` | The triangle and the folder icon of a folder row; `TriangleRoom`, the empty room of a triangle before an item's mark |
+| `FolderChecklist.tsx` | The tree with a checkbox per folder; `FoldersDialog` ("Folders…" of a row) |
+| `listFilter.ts`, `FilterBar.tsx` | The Filter's choices in the address (`?artist=`, `?films=` …) and `filtered`; the `FilterChip`s (Artist, then one per primary key the rows use, each count within the other choices) |
+| `tagWords.ts` | The primary keys in order and their words for one row: Film, TV show, Video game, Advert |
+| `InfoDialog.tsx` | The info dialog of the sheet page, the song page and a row's `⋯`: title and artist read only, the metadata rows (a `Select` of primary keys, an `Autocomplete` of secondary keys from `GET /metadata/keys`), the folders (`FolderChecklist`, "Folders of My Library" or "Folders of My projects"); for `song` the line "For the whole song: every version has it" (an edit copy is a `song`); read only for `public` and `none` |
+
+The API: `api/folders.ts` (`foldersApi`) and `api/metadata.ts` (`metadataApi`). `npm run check:folders` walks it all on
+temporary copies.
 
 ## 9. Removed
 
@@ -522,6 +541,7 @@ find it through `scripts/frames-page.mjs` (the new sheet's hooks: `[data-frames-
 npm run check:flow           # a project walked in a headless Chromium, every step, live transcription included
 npm run check:projects       # the Projects page: New project, Add audio, Duplicate, Export, Import, Rename, Delete, a video file
 npm run check:library        # My library on a copy: Save to library, a version read only, Edit, Replace, History, New version, Artists
+npm run check:folders        # folders, the pills and the metadata of My projects and My library, on copies (implementation 04-3)
 npm run check:paste          # Copy and Paste between two copies, undo and redo, ⌘V over a stretch, From scratch
 npm run check:passage        # Record this passage on a copy: takes, Write the proposal, Fit, the window, both promotions, undo and redo, Discard
 npm run check:compose        # From other projects on two copies, the parts (rename, move, join, split), playlists

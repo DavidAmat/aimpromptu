@@ -1,6 +1,6 @@
 # 04: App enhancements (the sheet page and the AI's sheet)
 
-**State: done (2026-10-28).** Phases 1 to 4 checked by the user in the browser; Phase 5 (documentation and closing) closes it. Read [`04-context.md`](04-context.md) first: what this implementation changed, for later ones. One branch per phase, `feat/04-phase-N` (plan section 6.3).
+**State: done (2026-10-28).** Phases 1 to 4 checked by the user in the browser; Phase 5 (documentation and closing) closes it. **04-3** (the third brief, 2026-10-29: folders and metadata, then the whole song simplification by levels) is in progress: [`04-3-plan.md`](04-3-plan.md), branches `feat/04-3-phase-N`. Read [`04-context.md`](04-context.md) first: what this implementation changed, for later ones. One branch per phase, `feat/04-phase-N` (plan section 6.3).
 
 Polish after implementation 03: on the sheet page, Command + scroll zoom, the AI symbol instead of the green badge,
 the floating toolbox's buttons also in the header, a cursor that can be dragged, and a hidden floating toolbox that
@@ -28,4 +28,9 @@ The brief is [`04-1-prompt.md`](04-1-prompt.md), the plan is [`04-plan.md`](04-p
 | [`gallery/phase-4/`](gallery/phase-4/index.html) | Phase 4: a stretch of one hand, Simplify left on 7 Years and Moonlight Shadow, before and after |
 | [`04-implementation-phase-5.md`](04-implementation-phase-5.md) | Phase 5: the documentation, `04-context.md`, the final checks |
 | [`screenshots/phase-1/`](screenshots/phase-1/) | Phase 1: the sheet page, from `check:frames-page` and `scripts/baseline-sheets.mjs` |
-| [`images/`](images/) | The user's four examples: `abuse-decoration-notes.png`, `abuse-decoration-notes-right.png`, `left-patterns.png`, `complex-fast-notes.png` |
+| [`images/`](images/) | The user's examples: `abuse-decoration-notes.png`, `abuse-decoration-notes-right.png`, `left-patterns.png`, `complex-fast-notes.png`; for 04-3, `whole-song-simplification.png`, `99-red-ballons-issue.png` and `chopin_passages/` |
+| [`04-3-prompt.md`](04-3-prompt.md) | **04-3**, the third brief: folders and metadata of My projects and My Library, and the whole song simplification by levels |
+| [`04-3-plan.md`](04-3-plan.md) | The 04-3 plan: five phases; its section 10 has the changes each phase made |
+| [`04-3-checklist.md`](04-3-checklist.md) | The 04-3 status lookup |
+| [`04-3-implementation-phase-1.md`](04-3-implementation-phase-1.md) | 04-3 Phase 1: folders, the pills (Folders, All, Filter) and the metadata, the info button |
+| [`screenshots/04-3-phase-1/`](screenshots/04-3-phase-1/) | 04-3 Phase 1: both pages and the dialogs, from `check:folders` |

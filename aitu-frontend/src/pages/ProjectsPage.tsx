@@ -7,12 +7,18 @@
  * **New project** opens a small menu: **From source**, **From scratch** (Phase 8) and **From other
  * projects** (Phase 10, its own page), and **Import** for a `.aitu` file.
  *
+ * Three pills sit above the list (implementation 04-3, Phase 1): **Folders** (the folders of My projects, opened and
+ * closed as the Finder's list view, the projects of a folder indented under it, then the projects in no folder),
+ * **All** (the list as it was) and **Filter** (Artist and the metadata). The `⋯` menu also has **Folders…** and
+ * **Info** (the metadata: an edit copy's is its song's, the same for every version); a row dragged onto a folder
+ * moves into it.
+ *
  * The list is one request (`GET /projects`), with the step of every row in it. Finished work is in
  * My library (Phase 6); a copy made there by **Edit** is listed here, says **Editing**, and its menu
  * leads back to its song. Deleting that copy discards the changes; the version stays as it was.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Dialog from "@mui/material/Dialog";
@@ -43,8 +49,20 @@ import LibraryMusicIcon from "@mui/icons-material/LibraryMusicOutlined";
 import MusicNoteIcon from "@mui/icons-material/MusicNoteOutlined";
 import UploadFileIcon from "@mui/icons-material/UploadFileOutlined";
 import PlayIcon from "@mui/icons-material/PlayCircleOutlined";
+import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolderOutlined";
+import FolderIcon from "@mui/icons-material/FolderOutlined";
+import InfoIcon from "@mui/icons-material/InfoOutlined";
 import { useNavigate } from "react-router-dom";
-import { projectsApi, type ProjectRow } from "../api";
+import { foldersApi, metadataApi, projectsApi, type ProjectRow, type SheetInfo } from "../api";
+import { FoldersDialog } from "../components/folders/FolderChecklist";
+import { FolderLeading, TriangleRoom } from "../components/folders/FolderLeading";
+import { folderCount, treeLines } from "../components/folders/folderTree";
+import { InfoDialog } from "../components/folders/InfoDialog";
+import { filtered, useListFilter } from "../components/folders/listFilter";
+import { FilterBar } from "../components/folders/FilterBar";
+import { useFolderTree } from "../components/folders/useFolderTree";
+import { useListView } from "../components/folders/listView";
+import { ViewPills } from "../components/folders/ViewPills";
 import { AiMark } from "../components/piece/AiMark";
 import { STEP_LABELS } from "../components/piece/stepLabels";
 import { ROUTES } from "../layout/routes";
@@ -78,6 +96,11 @@ function stepWords(row: ProjectRow): string {
 
 const message = (caught: unknown, fallback: string) => (caught instanceof Error ? caught.message : fallback);
 
+/** The artist of a project: the one of the song it edits, when it is an edit copy of My library; else none. */
+const artistsOf = (row: ProjectRow) => row.editing?.artists ?? row.library?.artists ?? [];
+const byTitle = (a: ProjectRow, b: ProjectRow) =>
+  (a.title || "Untitled project").localeCompare(b.title || "Untitled project", undefined, { sensitivity: "base" });
+
 /** The browser saves the `.aitu` file; the session cookie goes with the link. */
 function download(url: string) {
   const link = document.createElement("a");
@@ -98,6 +121,39 @@ export function ProjectsPage() {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [view, setView] = useListView("aitu.projects.view");
+  const [choice, changeFilter] = useListFilter();
+  const [foldering, setFoldering] = useState<ProjectRow | null>(null);
+  const [informing, setInforming] = useState<SheetInfo | null>(null);
+
+  /** A row's folders changed (the dialog, a drag): the row is updated where it is. */
+  const setFolders = useCallback(async (row: ProjectRow, folders: number[]) => {
+    const answer = await foldersApi.setOfProject(row.id, folders);
+    setRows((list) => list?.map((one) => (one.id === row.id ? { ...one, folders: answer.folders } : one)) ?? null);
+  }, []);
+  const tree = useFolderTree({
+    area: "projects",
+    items: rows ?? [],
+    onItemDrop: async (key, from, to) => {
+      const row = rows?.find((one) => one.id === key);
+      if (!row) return;
+      const next = [...row.folders.filter((one) => one !== from), to];
+      try {
+        await setFolders(row, [...new Set(next)]);
+      } catch (caught) {
+        setActionError(message(caught, "The project could not be moved."));
+      }
+    },
+    onChanged: () => setReload((count) => count + 1),
+  });
+  const lines = useMemo(
+    () => (tree.folders && rows ? treeLines(tree.folders, rows, tree.open, byTitle) : []),
+    [tree.folders, rows, tree.open],
+  );
+  const shown = useMemo(
+    () => (rows ? filtered(rows, choice, artistsOf, (row) => row.tags) : []),
+    [rows, choice],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -120,6 +176,16 @@ export function ProjectsPage() {
     const timer = window.setInterval(() => setReload((count) => count + 1), 5000);
     return () => window.clearInterval(timer);
   }, [anyRunning]);
+
+  /** The info of a row, as the sheet's info button reads it: an edit copy shows its song's metadata. */
+  const openInfo = useCallback(async (row: ProjectRow) => {
+    setActionError(null);
+    try {
+      setInforming(await metadataApi.info(row.id));
+    } catch (caught) {
+      setActionError(message(caught, "The info could not be read."));
+    }
+  }, []);
 
   const rename = useCallback(async (row: ProjectRow, title: string) => {
     setBusy(true);
@@ -204,90 +270,144 @@ export function ProjectsPage() {
     />
   );
 
-  const list = (items: ProjectRow[], label: string) => (
-    <Box role="list" aria-label={label}>
-      {items.map((row) => {
-        const changed = row.updatedAt ?? row.createdAt;
-        const title = row.title || "Untitled project";
-        const first = row.parts[0] ?? row.id;
-        return (
-          <Box role="listitem" key={row.id}>
-            <ListRow
-              data-testid={`project-${row.id}`}
-              title={title}
-              // One small slot before every name, so the names stay aligned: a spinner while a job works
-              // on the project (the AI enhancing its sheet, above all: minutes, in the background), else the
-              // green AI mark once the AI has enhanced it (the icon of Enhance with AI), the same mark faint and
-              // hollow on a project with notes the AI has not enhanced yet, else nothing.
-              leading={
-                <AiMark
-                  enhanced={row.enhanced}
-                  could={row.step === "notes" || row.step === "sheet"}
-                  busy={
-                    row.running ? (
-                      <Tooltip title={RUNNING_WORDS[row.running]}>
-                        <CircularProgress size={14} thickness={5} aria-label={RUNNING_WORDS[row.running]} data-running={row.running} />
-                      </Tooltip>
-                    ) : undefined
-                  }
-                />
-              }
-              onOpen={() => navigate(ROUTES.project(first))}
-              status={
-                row.editing ? (
-                  <Tooltip title={`Editing “${row.editing.versionName}” of ${row.editing.songTitle}`}>
-                    <Typography variant="body2" color="text.secondary" noWrap>
-                      Editing
-                    </Typography>
+  /** One project's row; in the Folders view, indented under its folder and draggable. */
+  const projectRow = (row: ProjectRow, place?: { depth: number; from: number | null }) => {
+    const changed = row.updatedAt ?? row.createdAt;
+    const title = row.title || "Untitled project";
+    const first = row.parts[0] ?? row.id;
+    return (
+      <ListRow
+        data-testid={`project-${row.id}`}
+        title={title}
+        indent={place?.depth}
+        rowProps={place ? tree.itemRowProps(row.id, place.from) : undefined}
+        // One small slot before every name, so the names stay aligned: a spinner while a job works
+        // on the project (the AI enhancing its sheet, above all: minutes, in the background), else the
+        // green AI mark once the AI has enhanced it (the icon of Enhance with AI), the same mark faint and
+        // hollow on a project with notes the AI has not enhanced yet, else nothing.
+        leading={
+          <Box component="span" sx={{ display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
+            {place ? <TriangleRoom /> : null}
+            <AiMark
+              enhanced={row.enhanced}
+              could={row.step === "notes" || row.step === "sheet"}
+              busy={
+                row.running ? (
+                  <Tooltip title={RUNNING_WORDS[row.running]}>
+                    <CircularProgress size={14} thickness={5} aria-label={RUNNING_WORDS[row.running]} data-running={row.running} />
                   </Tooltip>
-                ) : (
-                  stepWords(row)
-                )
+                ) : undefined
               }
-              meta={
-                <Tooltip title={fullTime(changed)} placement="left">
-                  <span>{relativeTime(changed)}</span>
-                </Tooltip>
-              }
-              menu={[
-                { label: "Open", icon: <LaunchIcon fontSize="small" />, onClick: () => navigate(ROUTES.project(first)) },
-                { label: "Duplicate", icon: <ContentCopyIcon fontSize="small" />, onClick: () => void duplicate(row) },
-                { label: "Export", icon: <DownloadIcon fontSize="small" />, onClick: () => download(projectsApi.exportUrl(row.id)) },
-                { label: "Rename", icon: <DriveFileRenameIcon fontSize="small" />, onClick: () => setRenaming(row) },
-                {
-                  label: "Play",
-                  icon: <PlayIcon fontSize="small" />,
-                  onClick: () => navigate(ROUTES.play(row.id)),
-                  disabled: row.step !== "sheet",
-                },
-                ...(row.editing
-                  ? [
-                      {
-                        label: "Open the song",
-                        icon: <LibraryMusicIcon fontSize="small" />,
-                        onClick: () => row.editing && navigate(ROUTES.librarySong(row.editing.songId)),
-                      },
-                    ]
-                  : []),
-                {
-                  label: row.editing ? "Discard changes" : "Delete",
-                  icon: <DeleteIcon fontSize="small" />,
-                  onClick: () => setDeleting(row),
-                  danger: true,
-                },
-              ]}
             />
           </Box>
-        );
-      })}
+        }
+        onOpen={() => navigate(ROUTES.project(first))}
+        status={
+          row.editing ? (
+            <Tooltip title={`Editing “${row.editing.versionName}” of ${row.editing.songTitle}`}>
+              <Typography variant="body2" color="text.secondary" noWrap>
+                Editing
+              </Typography>
+            </Tooltip>
+          ) : (
+            stepWords(row)
+          )
+        }
+        meta={
+          <Tooltip title={fullTime(changed)} placement="left">
+            <span>{relativeTime(changed)}</span>
+          </Tooltip>
+        }
+        menu={[
+          { label: "Open", icon: <LaunchIcon fontSize="small" />, onClick: () => navigate(ROUTES.project(first)) },
+          { label: "Duplicate", icon: <ContentCopyIcon fontSize="small" />, onClick: () => void duplicate(row) },
+          { label: "Export", icon: <DownloadIcon fontSize="small" />, onClick: () => download(projectsApi.exportUrl(row.id)) },
+          { label: "Rename", icon: <DriveFileRenameIcon fontSize="small" />, onClick: () => setRenaming(row) },
+          { label: "Folders…", icon: <FolderIcon fontSize="small" />, onClick: () => setFoldering(row) },
+          { label: "Info", icon: <InfoIcon fontSize="small" />, onClick: () => void openInfo(row) },
+          {
+            label: "Play",
+            icon: <PlayIcon fontSize="small" />,
+            onClick: () => navigate(ROUTES.play(row.id)),
+            disabled: row.step !== "sheet",
+          },
+          ...(row.editing
+            ? [
+                {
+                  label: "Open the song",
+                  icon: <LibraryMusicIcon fontSize="small" />,
+                  onClick: () => row.editing && navigate(ROUTES.librarySong(row.editing.songId)),
+                },
+              ]
+            : []),
+          {
+            label: row.editing ? "Discard changes" : "Delete",
+            icon: <DeleteIcon fontSize="small" />,
+            onClick: () => setDeleting(row),
+            danger: true,
+          },
+        ]}
+      />
+    );
+  };
+
+  const list = (items: ProjectRow[], label: string) => (
+    <Box role="list" aria-label={label}>
+      {items.map((row) => (
+        <Box role="listitem" key={row.id}>
+          {projectRow(row)}
+        </Box>
+      ))}
     </Box>
   );
+
+  /** **Folders**: the tree as the Finder's list view. */
+  const folderList = () =>
+    tree.error ? (
+      <EmptyState message={tree.error} action={<PillButton onClick={tree.reload}>Try again</PillButton>} />
+    ) : (
+      <Box role="tree" aria-label="Folders" data-testid="folder-tree">
+        {lines.map((line) =>
+          line.kind === "folder" ? (
+            <Box role="treeitem" aria-expanded={line.open} key={`folder-${line.folder.id}`}>
+              <ListRow
+                data-testid={`folder-${line.folder.id}`}
+                title={line.folder.name}
+                indent={line.depth}
+                leading={<FolderLeading open={line.open} />}
+                onOpen={() => tree.toggle(line.folder.id)}
+                status={folderCount(line.count)}
+                menu={tree.menu(line.folder)}
+                rowProps={tree.folderRowProps(line.folder)}
+              />
+            </Box>
+          ) : (
+            <Box role="treeitem" key={`item-${line.from ?? "top"}-${line.item.id}`}>
+              {projectRow(line.item, { depth: line.depth, from: line.from })}
+            </Box>
+          ),
+        )}
+      </Box>
+    );
 
   return (
     <PageBody>
       <PageHeader title="Projects" actions={newProject} />
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 1, minHeight: 36 }}>
+        <ViewPills value={view} onChange={setView} />
+        {view === "folders" ? (
+          <PillButton kind="quiet" size="small" startIcon={<CreateNewFolderIcon />} onClick={tree.newFolder} data-testid="new-folder">
+            New folder
+          </PillButton>
+        ) : null}
+      </Stack>
+      {view === "filter" && rows && rows.length > 0 ? (
+        <Box sx={{ mb: 1 }}>
+          <FilterBar rows={rows} choice={choice} onChange={changeFilter} artistsOf={artistsOf} tagsOf={(row) => row.tags} />
+        </Box>
+      ) : null}
 
-      {actionError && !renaming && !deleting ? (
+      {actionError && !renaming && !deleting && !foldering ? (
         <Alert severity="error" onClose={() => setActionError(null)} sx={{ mb: 2 }}>
           {actionError}
         </Alert>
@@ -309,11 +429,45 @@ export function ProjectsPage() {
             <Skeleton key={row} variant="rounded" height={44} />
           ))}
         </Stack>
-      ) : rows.length === 0 ? (
+      ) : rows.length === 0 && view !== "folders" ? (
         <EmptyState message="No projects yet" action={newProject} />
+      ) : view === "folders" ? (
+        <Box sx={{ pt: 1, mb: 4 }}>{folderList()}</Box>
+      ) : view === "filter" && shown.length === 0 ? (
+        <EmptyState message="No project matches the filter" />
       ) : (
-        <Box sx={{ pt: 1, mb: 4 }}>{list(rows, "Projects")}</Box>
+        <Box sx={{ pt: 1, mb: 4 }}>{list(view === "filter" ? shown : rows, "Projects")}</Box>
       )}
+      {tree.dialogs}
+      {foldering && tree.folders ? (
+        <FoldersDialog
+          title={`Folders of “${foldering.title || "Untitled project"}”`}
+          folders={tree.folders}
+          initial={foldering.folders}
+          busy={busy}
+          error={actionError}
+          onCancel={() => {
+            setFoldering(null);
+            setActionError(null);
+          }}
+          onSave={(folders) => {
+            setBusy(true);
+            setActionError(null);
+            setFolders(foldering, folders)
+              .then(() => setFoldering(null))
+              .catch((caught: unknown) => setActionError(message(caught, "The folders could not be saved.")))
+              .finally(() => setBusy(false));
+          }}
+        />
+      ) : null}
+      {informing ? (
+        <InfoDialog
+          target={informing}
+          onClose={() => setInforming(null)}
+          // An edit copy's metadata is its song's: another copy of the same song changes too.
+          onSaved={() => setReload((count) => count + 1)}
+        />
+      ) : null}
 
       {renaming ? (
         <RenameDialog

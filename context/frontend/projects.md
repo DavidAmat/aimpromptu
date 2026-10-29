@@ -23,8 +23,37 @@ list looks again every 5 s until it ends. A project whose sheet the AI enhanced 
 04-2); a project with notes the AI has not enhanced has the same mark faint grey ("Not enhanced with AI yet"). The same mark stands before each song of My library (green when the AI
 enhanced one of its versions) and each version of a song (`components/piece/AiMark.tsx`). The status **Editing** is not about the AI: it is
 the edit copy of a version of My library, until **Save to library** or **Discard changes**. The whole row opens the project on that step. The `⋯` menu of a row has **Open**,
-**Duplicate**, **Export**, **Rename**, **Play** (Play mode, once it reaches its Sheet step) and **Delete** (with a
-confirmation).
+**Duplicate**, **Export**, **Rename**, **Folders…**, **Info**, **Play** (Play mode, once it reaches its Sheet step)
+and **Delete** (with a confirmation).
+
+### 1.1 The pills: Folders, All, Filter (implementation 04-3, Phase 1)
+
+Three pills sit above the list, as on My library's Songs:
+
+- **All** is the list above, unchanged. The first visit opens it.
+- **Folders** draws the folders of My projects as the Finder's list view: the folders of the top level by name, each
+  with a triangle that opens and closes it; an open folder shows its folders and its projects under it, one step
+  further in (an item leaves the room of a triangle empty, so its mark sits under its sibling folders' icons); then
+  the projects in no folder. A project in two folders is drawn under each. **New folder** sits beside the pills; a
+  folder's `⋯` has **New folder inside**, **Rename**, **Move to…**, **New parent folder** (a folder made where this one
+  is, with this one inside it) and **Delete** (the folder and its folders; the confirmation says how many, and that no
+  project is deleted). A row dragged onto a folder moves into it from the folder it was dragged from (from the top
+  level it is added); a folder dragged onto a folder moves inside it.
+- **Filter** shows the list with dropdowns above it: **Artist** (a project's artist is the one of the song it edits,
+  for an edit copy of My library; other projects have none), then one per primary key the projects use (**Film**,
+  **TV show**, **Video game**, **Advert**), with the count of each value. Choices combine.
+
+The pill chosen is in the address (`?view=folders`) and in the browser (`aitu.projects.view`); the open folders are
+kept in the browser (`aitu.folders.open.projects`); the Filter's choices are in the address
+(`?artist=…&films=…`). **Folders…** of a row is the tree with a checkbox per folder (a project can be in several).
+**Info** is the same dialog as the sheet's info button: the project's title and artist (read only), its metadata (a
+primary key and a secondary key per row; the secondary key suggests the user's own values and the Public Library's)
+and its folders. The metadata belongs to the song, never to one version: on an edit copy of a version of My library,
+**Info** shows and changes the song's metadata and its folders of My library ("For the whole song: every version has
+it"), so every version and every copy of the song shows the change; the copy's place in the folders of My projects is
+set with **Folders…**. The code is `components/folders/` ([`../../documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md)
+section 8.1); the routes `/folders` and `/metadata`
+([`../../documentation/services/backend/endpoints.md`](../../documentation/services/backend/endpoints.md) section 7.1.1).
 
 Finished work is not here: it is in **My library** ([music-library/private-library.md](../music-library/private-library.md),
 Phase 6). A copy made there by **Edit** is listed here like any project, says **Editing** (its
@@ -156,6 +185,14 @@ transcription in one colour.
 
 **4. Sheet** (implementation 03, Phase 5). The new piano sheet, without compases, drawn by the backend
 (`pages/piece/sheet/frames/`, [rendering.md](rendering.md)). It is on screen at once:
+
+- **The info button** (the "i" beside the title and the AI mark; implementation 04-3, Phase 1) is about the song, not
+  a tool of the sheet, so it is not in the floating toolbox. It opens the dialog of section 1.1: on a project of My
+  projects with no song the project's own metadata and folders; on a version of My library, or an edit copy of one,
+  the song's metadata and folders of My library, the same for every version; on a version of the Public Library (or
+  of a library shared with the user) the song's, read only
+  (`GET /metadata/info/{projectId}`). `SheetTab` passes the project's id to the sheet (`SheetStep.projectId`); Play
+  mode, a passage and From other projects do not, so they have no info button.
 
 - **A new transcription** goes to Sonnet by itself. The algorithm's sheet is drawn first; Sonnet writes the
   hands and the reading in the background, part by part (about half a minute each). The part at Sonnet looks
