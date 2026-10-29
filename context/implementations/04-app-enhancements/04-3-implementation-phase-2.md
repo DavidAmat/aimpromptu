@@ -1,7 +1,7 @@
 # 04-3 · Phase 2: the gallery of patterns
 
-Status: **approved by the user and merged into `master` on 2026-10-29** (after review 2: every Chopin example in
-the app's notation, the numbers). Built on the branch `feat/04-3-phase-2`, in the worktree
+Status: **approved by the user and merged into `master` on 2026-10-29** (after review 3: the right hand across Chopin's works; review 2 put every Chopin example in
+the app's notation and gave the numbers). Built on the branch `feat/04-3-phase-2`, in the worktree
 `/home/david/Documents/projects/music/aimpromptu-04-3-phase-2` (plan section 7.4: Phase 2 ran in parallel with Phase 1,
 which owns the main checkout); the worktree was removed after the merge. No `src/` change, no AI call, no database
 access. The status of `patterns.json` is now "approved"; the next phase is Phase 2b (frame numbers), then Phase 3.

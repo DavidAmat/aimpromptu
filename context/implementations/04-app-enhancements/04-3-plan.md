@@ -816,7 +816,7 @@ snapshot. Two right-hand patterns moved from hard to medium under the user's rul
 patterns. Phase 3 uses the same rule in the right-hand part of the level prompts and in the check of section 5.5
 (a right hand that stays in one position may hold chords at every level).
 
-**Phase 2, approval and merge** (2026-10-29): the user approved the gallery after review 2. The names, levels and
+**Phase 2, approval and merge** (2026-10-29): the user approved the gallery after review 3. The names, levels and
 numbers of [`gallery/04-3-phase-2/patterns.json`](gallery/04-3-phase-2/patterns.json) are now the approved ones: a
 new pattern takes the next number of its level, and no approved number changes (section 5.10 point 2). The branch
 was merged into `master` after Phase 1, and the user confirmed that Phase 2b comes before Phase 3, as section 8 says.
