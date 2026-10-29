@@ -48,7 +48,10 @@ kept in the browser (`aitu.folders.open.projects`); the Filter's choices are in 
 (`?artist=…&films=…`). **Folders…** of a row is the tree with a checkbox per folder (a project can be in several).
 **Info** is the same dialog as the sheet's info button: the project's title and artist (read only), its metadata (a
 primary key and a secondary key per row; the secondary key suggests the user's own values and the Public Library's)
-and its folders. The code is `components/folders/` ([`../../documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md)
+and its folders. The metadata belongs to the song, never to one version: on an edit copy of a version of My library,
+**Info** shows and changes the song's metadata and its folders of My library ("For the whole song: every version has
+it"), so every version and every copy of the song shows the change; the copy's place in the folders of My projects is
+set with **Folders…**. The code is `components/folders/` ([`../../documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md)
 section 8.1); the routes `/folders` and `/metadata`
 ([`../../documentation/services/backend/endpoints.md`](../../documentation/services/backend/endpoints.md) section 7.1.1).
 
@@ -185,8 +188,9 @@ transcription in one colour.
 
 - **The info button** (the "i" beside the title and the AI mark; implementation 04-3, Phase 1) is about the song, not
   a tool of the sheet, so it is not in the floating toolbox. It opens the dialog of section 1.1: on a project of My
-  projects (also an edit copy of a version) the project's own metadata and folders; on a version of My library the
-  song's; on a version of the Public Library (or of a library shared with the user) the song's, read only
+  projects with no song the project's own metadata and folders; on a version of My library, or an edit copy of one,
+  the song's metadata and folders of My library, the same for every version; on a version of the Public Library (or
+  of a library shared with the user) the song's, read only
   (`GET /metadata/info/{projectId}`). `SheetTab` passes the project's id to the sheet (`SheetStep.projectId`); Play
   mode, a passage and From other projects do not, so they have no info button.
 

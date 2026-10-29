@@ -197,6 +197,9 @@ def save(
                 known_song = None
             if artist is not None and artist.strip():
                 rows.clean(artist, "An artist's name")
+            # An edit copy has its song's metadata (implementation 04-3); read before the move
+            # below makes it an ordinary version.
+            edited_song = metadata.edited_songs(db, [project_id]).get(project_id)
 
         part_ids = [entry.id for entry in project.parts]
         plans = _compact(project)
@@ -241,6 +244,8 @@ def save(
             # Implementation 04-3, Phase 1: the song gets the project's metadata, and the project
             # leaves the folders of My projects (the folders of My Library are another tree).
             metadata.add_project_tags_to_song(db, owner, project_id, song.id)
+            if edited_song is not None:
+                metadata.add_song_tags_to_song(db, owner, edited_song, song.id)
             folders.drop_project_folders(db, project_id)
             return Saved(song_id=song.id, version_id=version.id, project_id=project_id)
 
@@ -263,7 +268,7 @@ def _replace(copy: ProjectFile, owner: int) -> Saved:
         if version is None:
             raise Refused("The version this project edits was deleted: save it as a new version")
         saved = Saved(song_id=version.song_id, version_id=version.id, project_id=library_id)
-        # The copy is deleted below: the song gets its metadata first (implementation 04-3).
+        # The copy's own metadata rows, if any are left, go to the song (implementation 04-3).
         metadata.add_project_tags_to_song(db, owner, copy.id, version.song_id)
 
     with bundle.project_lock(library_id):
@@ -467,22 +472,21 @@ def open_edit(library_id: str, *, owner: int) -> str:
         copy.model_copy(update={"based_on": library_id, "origin": {"editOf": library_id}}),
         touch=False,
     )
-    with session() as db:
-        version = rows.version_of_project(db, library_id)
-        if version is not None:
-            # The copy shows the song's metadata on its info button (implementation 04-3).
-            metadata.copy_song_tags(db, owner, version.song_id, copy.id)
+    # The copy has no metadata of its own: it shows and changes its song's (implementation 04-3).
     return copy.id
 
 
-def _forget_edits_of(owner: int, library_id: str) -> None:
-    """The edit copies of a deleted version become ordinary projects of the vault."""
+def _forget_edits_of(owner: int, library_id: str, song_id: int) -> None:
+    """The edit copies of a deleted version become ordinary projects of the vault, with the song's
+    metadata as their own (implementation 04-3)."""
     with session() as db:
         copies = list(
             db.scalars(
                 select(Project.id).where(Project.owner_id == owner, Project.based_on == library_id)
             )
         )
+        for copy_id in copies:
+            metadata.copy_song_tags(db, owner, song_id, copy_id)
         db.execute(update(Project).where(Project.id.in_(copies)).values(based_on=None))
     for copy_id in copies:
         with bundle.project_lock(copy_id):
@@ -495,8 +499,9 @@ def delete_version(version_id: int, *, owner: int) -> None:
     with session() as db:
         version = rows.version(db, owner, version_id)
         project_id = version.project_id
+        song_id = version.song_id
         db.delete(version)
-    _forget_edits_of(owner, project_id)
+    _forget_edits_of(owner, project_id, song_id)
     bundle.delete_project(project_id)
 
 

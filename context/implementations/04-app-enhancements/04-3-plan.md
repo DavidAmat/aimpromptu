@@ -1,8 +1,9 @@
 # 04-3 · Plan: folders and metadata, and the whole song simplification by levels
 
-Status: written 2026-10-29, from the brief [`04-3-prompt.md`](04-3-prompt.md); Phase 1 built on 2026-10-29 and waiting
-for the user's check ([`04-3-checklist.md`](04-3-checklist.md)). **This is the living
-plan**: the agents update it when a phase changes direction (section 10 lists the changes, with the reason).
+Status: written 2026-10-29, from the brief [`04-3-prompt.md`](04-3-prompt.md); Phase 1 built on 2026-10-29,
+changed the same day after the user's first look (section 10, Phase 1, point 10), and waiting for the user's check
+([`04-3-checklist.md`](04-3-checklist.md)). **This is the living plan**: the agents update it when a phase changes
+direction (section 10 lists the changes, with the reason).
 
 Audience: the AI agents that build it on the Ubuntu machine, and the user, who checks each phase in the browser at
 `http://ubuntu:5173` from the Mac.
@@ -376,6 +377,13 @@ which Phase 4 confirms with the user before it builds it:
   The public library already has versions named Easy, Medium and Hard (`song_versions`), so a level copy can later be
   saved to My Library as a version with that name.
 - **A level of a range** changes the sheet in place, with one step of undo, as a stretch does today.
+- **The level copy shares the song's metadata** (the user, 2026-10-29; section 10, Phase 1, point 10). The metadata
+  and the folders of My Library belong to the song, never to one version, so "99 Red Balloons · Easy" must show and
+  change the same rows as the original. A level copy of an edit copy gets this for free if it is made with
+  `POST /projects/{id}/duplicate`: the duplicate keeps `based_on`, so it is an edit copy of the same version. A level
+  copy of a project with no song has no song to share, so Phase 4 links it to the original project (for example a
+  column that names the project whose metadata it uses) and makes `metadata.tags_of_projects` and
+  `metadata.set_project_tags` follow that link, as they follow `based_on` today.
 
 ## 5.9 The AI model and the cost
 
@@ -683,7 +691,8 @@ user asked in the brief; the report ([`04-3-implementation-phase-1.md`](04-3-imp
    study decided the metadata too, so the info button never shows an empty dialog after a move between the pages:
    **Edit** gives the copy the song's metadata; **Save to library** (a new version or **Replace**) adds the project's
    metadata to the song, and the project leaves the folders of My projects; **Duplicate** copies the metadata and, in
-   My projects, the folders (a copy stays beside the original, as in the Finder).
+   My projects, the folders (a copy stays beside the original, as in the Finder). Point 10 replaces the part about
+   **Edit**.
 6. **Info in the row menu too.** Setting the film of ten songs through ten sheet pages would be slow, so **Info** is
    also in the `⋯` of a row of both pages. It opens the same dialog as the info button.
 7. **The suggestions offer only the user's values in use.** A deleted song leaves its secondary keys behind until the
@@ -692,3 +701,12 @@ user asked in the brief; the report ([`04-3-implementation-phase-1.md`](04-3-imp
    so a selection of several folders can be added later without a backend change.
 9. **Indentation as in the Finder.** An item in the Folders view leaves the room of a folder's triangle empty, so its
    mark sits under its sibling folders' icons, and a child is one clear step to the right of its folder.
+10. **The metadata belongs to the song, never to one version** (the user, 2026-10-29, during the check of Phase 1).
+    A song has several versions (the original, an easy one, a hard one), and the metadata is about the song. Point 5
+    gave an edit copy a copy of the song's metadata, so a change made from the copy's sheet stayed on the copy until
+    **Save to library**. Now an edit copy has no metadata of its own: its info button, its **Info** and the Filter of
+    My projects read and change the song's metadata and folders of My Library, the same for every version. A
+    duplicate of an edit copy edits the same version, so it shares them too. A project of My projects with no song is
+    its own song. Revision `0009` moved the one row an edit copy had (7 Years, Film "A Star Is Born", set by the user
+    in the check) to the song; the real database moved to it on 2026-10-29 at 23:13, after `make db-backup`.
+    Section 5.8 gets the same rule for the level copies of Phase 4.

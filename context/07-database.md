@@ -169,7 +169,10 @@ folder with the id of its parent), `folder_projects` and `folder_songs` (an item
 folders), `private_tag_values` (a user's own secondary keys inside the fixed primary keys of
 `tag_categories`, apart from the public `tag_values`), and `project_tags` and `private_song_tags`
 ([music-library/private-library.md](music-library/private-library.md) section 5.1); the real
-database moved to it on 2026-10-29, after `make db-backup`.
+database moved to it on 2026-10-29, after `make db-backup`. Revision `0009` (the same phase) moves
+no table: the metadata belongs to a song, never to one version, so the `project_tags` of an edit
+copy move to its song's `private_song_tags`, and an edit copy has none of its own from then on; the
+real database moved to it on 2026-10-29 at 23:13, after `make db-backup`.
 
 **The running backend migrates the real database as soon as a new revision is in `src/`**: it
 reloads on every change of a file there, and opens the database at the newest revision. Code of an

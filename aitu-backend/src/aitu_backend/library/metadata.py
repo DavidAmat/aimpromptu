@@ -7,14 +7,23 @@ Rings". The secondary keys of a user are their own rows (``private_tag_values``)
 the public ``tag_values`` would be shown to every user of the Public Library. A song links to them
 through ``private_song_tags``, a project through ``project_tags``; an item can have several rows.
 
+The metadata belongs to the **song**, never to one version of it (the user, 2026-10-29): every
+version of a song shows the same rows, and a change made from any of them changes them all. A
+project of My projects with no song is its own song. An **edit copy** (a project of My projects
+that edits a version, ``projects.based_on``) has no rows of its own: it reads and changes its
+song's (:func:`edited_songs`).
+
 The metadata follows the work between the two pages:
 
 * **Add to my library** gives the private song the public song's tags (:func:`copy_public_tags`);
   the public rows do not change.
-* **Edit** gives the copy in My projects the song's metadata (:func:`copy_song_tags`), and **Save to
-  library** (a new version or **Replace**) adds the project's metadata to the song's
-  (:func:`add_project_tags_to_song`).
-* **Duplicate** gives the copy the metadata of the original.
+* **Save to library** adds the project's metadata to the song's (:func:`add_project_tags_to_song`);
+  an edit copy saved into another song gives that song its own song's metadata
+  (:func:`add_song_tags_to_song`).
+* **Duplicate** gives the copy the metadata of the original as its own; the duplicate of an edit
+  copy edits the same version, so it shares the song's.
+* A deleted version leaves its edit copy an ordinary project, which keeps the song's metadata as
+  its own (:func:`copy_song_tags`).
 
 A secondary key that no song and no project uses any more is deleted, so the Filter and the
 suggestions only offer values in use.
@@ -29,6 +38,8 @@ from sqlalchemy.orm import Session as DbSession
 
 from aitu_backend.db.models import (
     TAG_CATEGORIES,
+    PrivateVersion,
+    Project,
     PrivateSongTag,
     PrivateTagValue,
     ProjectTag,
@@ -42,10 +53,12 @@ __all__ = [
     "MAX_TAGS",
     "Tag",
     "add_project_tags_to_song",
+    "add_song_tags_to_song",
     "categories",
     "copy_project_tags",
     "copy_public_tags",
     "copy_song_tags",
+    "edited_songs",
     "public_tags_of",
     "set_project_tags",
     "set_song_tags",
@@ -136,9 +149,25 @@ def _forget_unused(db: DbSession, owner: int) -> None:
     )
 
 
+def edited_songs(db: DbSession, project_ids: list[str]) -> dict[str, int]:
+    """``project id -> the song of the version it edits``, for the edit copies among the ids (a
+    copy whose version was deleted is an ordinary project)."""
+    if not project_ids:
+        return {}
+    found = db.execute(
+        select(Project.id, PrivateVersion.song_id)
+        .join(PrivateVersion, PrivateVersion.project_id == Project.based_on)
+        .where(Project.id.in_(project_ids), Project.layer == "vault")
+    )
+    return {project_id: int(song_id) for project_id, song_id in found}
+
+
 def set_project_tags(db: DbSession, owner: int, project_id: str, tags: list[Tag]) -> list[Tag]:
-    """The metadata of a project, all of it (an empty list: none). The caller checked the project
-    is the owner's, in My projects."""
+    """The metadata of a project, all of it (an empty list: none); an edit copy's goes to its song.
+    The caller checked the project is the owner's, in My projects."""
+    song_id = edited_songs(db, [project_id]).get(project_id)
+    if song_id is not None:
+        return set_song_tags(db, owner, song_id, tags)
     ids = _value_ids(db, owner, tags)
     db.execute(delete(ProjectTag).where(ProjectTag.project_id == project_id))
     db.add_all(ProjectTag(project_id=project_id, tag_value_id=one) for one in ids)
@@ -159,7 +188,17 @@ def set_song_tags(db: DbSession, owner: int, song_id: int, tags: list[Tag]) -> l
 
 
 def tags_of_projects(db: DbSession, project_ids: list[str]) -> dict[str, list[Tag]]:
-    """``project id -> its metadata``, for every id asked."""
+    """``project id -> its metadata``, for every id asked: an edit copy's is its song's."""
+    out = _own_tags_of_projects(db, project_ids)
+    edited = edited_songs(db, project_ids)
+    songs = tags_of_songs(db, sorted(set(edited.values())))
+    for project_id, song_id in edited.items():
+        out[project_id] = songs[song_id]
+    return out
+
+
+def _own_tags_of_projects(db: DbSession, project_ids: list[str]) -> dict[str, list[Tag]]:
+    """The rows of ``project_tags`` themselves (an edit copy has none since revision 0009)."""
     out: dict[str, list[Tag]] = {project_id: [] for project_id in project_ids}
     if project_ids:
         for project_id, category, value in db.execute(
@@ -248,18 +287,29 @@ def copy_public_tags(db: DbSession, owner: int, public_song_id: int, song_id: in
 
 
 def copy_song_tags(db: DbSession, owner: int, song_id: int, project_id: str) -> None:
-    """**Edit** (or **Duplicate** of a version): the copy in My projects gets the song's metadata."""
+    """**Duplicate** of a version, or an edit copy whose version is deleted: the project in My
+    projects gets the song's metadata as its own."""
     _add(db, owner, None, project_id, tags_of_songs(db, [song_id])[song_id])
 
 
 def copy_project_tags(db: DbSession, owner: int, source_id: str, project_id: str) -> None:
-    """**Duplicate** of a project of My projects: the copy gets the original's metadata."""
+    """**Duplicate** of a project of My projects: the copy gets the original's metadata as its own.
+    The duplicate of an edit copy edits the same version, so it has its song's and nothing more."""
+    if project_id in edited_songs(db, [project_id]):
+        return
     _add(db, owner, None, project_id, tags_of_projects(db, [source_id])[source_id])
 
 
+def add_song_tags_to_song(db: DbSession, owner: int, source_id: int, song_id: int) -> None:
+    """**Save to library** of an edit copy into another song: that song gets the edited song's
+    metadata too."""
+    if source_id != song_id:
+        _add(db, owner, song_id, None, tags_of_songs(db, [source_id])[source_id])
+
+
 def add_project_tags_to_song(db: DbSession, owner: int, project_id: str, song_id: int) -> None:
-    """**Save to library**: the song keeps its metadata and gets the project's; the project's own
-    rows go, because the project is now a version of the song (or, after **Replace**, deleted)."""
-    _add(db, owner, song_id, None, tags_of_projects(db, [project_id])[project_id])
+    """**Save to library**: the song keeps its metadata and gets the project's own rows, which go,
+    because the project is now a version of the song (or, after **Replace**, deleted)."""
+    _add(db, owner, song_id, None, _own_tags_of_projects(db, [project_id])[project_id])
     db.execute(delete(ProjectTag).where(ProjectTag.project_id == project_id))
     db.flush()

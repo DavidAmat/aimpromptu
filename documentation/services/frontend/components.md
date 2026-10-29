@@ -454,7 +454,7 @@ Timestamps are `mm:ss.cc` everywhere and never wrap:
 | `FolderChecklist.tsx` | The tree with a checkbox per folder; `FoldersDialog` ("Folders…" of a row) |
 | `listFilter.ts`, `FilterBar.tsx` | The Filter's choices in the address (`?artist=`, `?films=` …) and `filtered`; the `FilterChip`s (Artist, then one per primary key the rows use, each count within the other choices) |
 | `tagWords.ts` | The primary keys in order and their words for one row: Film, TV show, Video game, Advert |
-| `InfoDialog.tsx` | The info dialog of the sheet page, the song page and a row's `⋯`: title and artist read only, the metadata rows (a `Select` of primary keys, an `Autocomplete` of secondary keys from `GET /metadata/keys`), the folders (`FolderChecklist`); read only for `public` and `none` |
+| `InfoDialog.tsx` | The info dialog of the sheet page, the song page and a row's `⋯`: title and artist read only, the metadata rows (a `Select` of primary keys, an `Autocomplete` of secondary keys from `GET /metadata/keys`), the folders (`FolderChecklist`, "Folders of My Library" or "Folders of My projects"); for `song` the line "For the whole song: every version has it" (an edit copy is a `song`); read only for `public` and `none` |
 
 The API: `api/folders.ts` (`foldersApi`) and `api/metadata.ts` (`metadataApi`). `npm run check:folders` walks it all on
 temporary copies.

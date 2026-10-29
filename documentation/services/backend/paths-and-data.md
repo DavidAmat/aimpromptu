@@ -426,7 +426,9 @@ copied by batch mode like `0002`) and `0005_request_conversation.py` (Phase 14, 
 regions `spain` and `catalan`, `song_region_popularity`, `song_keys`, `artist_keys`; only added)
 and `0007_inferred.py` (Phase 17: `song_signals`; `song_region_popularity.inferred_on` and the basis
 `inferred`, the table copied by batch mode) and `0008_folders_and_metadata.py` (implementation 04-3,
-Phase 1: the folders and the metadata of My projects and My Library; only added). SQLite runs with
+Phase 1: the folders and the metadata of My projects and My Library; only added) and
+`0009_song_level_metadata.py` (the same phase: the metadata rows of an edit copy move to its song;
+rows only). SQLite runs with
 foreign keys on and in WAL mode. Every table of plan section 8.6 exists from Phase 3; most stay
 empty until their phase.
 

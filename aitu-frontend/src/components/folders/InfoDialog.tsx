@@ -3,9 +3,11 @@
  * on the song page of My Library and in a row's `⋯` menu: the title and the artist (read only here: they keep their
  * own dialogs), the **metadata** (rows of a primary key and a secondary key) and the **folders** the item is in.
  *
- * What it changes depends on the sheet: a project of My projects changes its own metadata and its folders of My
- * projects; a version of My Library changes its song's metadata and folders of My Library; a version of the Public
- * Library (or of a library shared with the user) is read only.
+ * The metadata and the folders belong to the **song**, never to one version (the user, 2026-10-29). What the dialog
+ * changes depends on the sheet: a project of My projects with no song changes its own metadata and its folders of My
+ * projects; a version of My Library, or an edit copy of one in My projects, changes the song's metadata and folders
+ * of My Library, so every version shows the change; a version of the Public Library (or of a library shared with the
+ * user) is read only.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -30,7 +32,7 @@ import { tagKeyLabel, TAG_KEYS } from "./tagWords";
 
 /** What the dialog shows and changes. */
 export interface InfoTarget {
-  /** `project`: My projects; `song`: My Library; `public` and `none`: read only. */
+  /** `project`: a project of My projects with no song; `song`: a song of My Library; `public` and `none`: read only. */
   kind: "project" | "song" | "public" | "none";
   projectId: string | null;
   songId: number | null;
@@ -142,7 +144,12 @@ export function InfoDialog({
           </Stack>
 
           <Box>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 1 }}>Metadata</Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, mb: target.kind === "song" ? 0 : 1 }}>Metadata</Typography>
+            {target.kind === "song" ? (
+              <Typography color="text.secondary" sx={{ fontSize: 13, mb: 1 }} data-testid="info-whole-song">
+                For the whole song: every version has it.
+              </Typography>
+            ) : null}
             {!editable ? (
               rows.length === 0 ? (
                 <Typography color="text.secondary" sx={{ fontSize: 14 }}>
@@ -215,7 +222,9 @@ export function InfoDialog({
 
           {editable ? (
             <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>Folders</Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>
+                {target.kind === "song" ? "Folders of My Library" : "Folders of My projects"}
+              </Typography>
               {folders === null ? (
                 <Typography color="text.secondary" sx={{ fontSize: 14 }}>
                   …

@@ -2,7 +2,8 @@
 
 Audience: the agents of the later phases of [`04-3-plan.md`](04-3-plan.md). Technical; the walkthrough for the user
 is in the chat. Branch `feat/04-3-phase-1`, made from `master` at `4950901`. State: built and checked on 2026-10-29;
-waiting for the user's check in the browser (task 1.9), then the merge.
+changed the same day after the user's first look (section 2.5: the metadata belongs to the song); waiting for the
+user's check in the browser (task 1.9), then the merge.
 
 # 1. Summary
 
@@ -11,8 +12,10 @@ Folders are a tree per user and area (`projects`, `library`), each folder pointi
 at folder ids, so a parent folder made on top of a folder changes one row. An item can be in several folders. The
 metadata is a primary key of the Public Library's fixed list and a secondary key of the user's own, in its own table.
 The **info button** is on the sheet page and on the song page of My Library, and **Info** is in the `⋯` of a row of
-both pages. Revision `0008`; the real database is at it since 2026-10-29 19:06 (backup
-`/mnt/ssd2/aimpromptu/.database-20261029-190549.tar.zst`, 1.4 GB, taken just before).
+both pages. The metadata and the folders of My Library belong to the **song**, never to one version: an edit copy in
+My projects shows and changes its song's. Revisions `0008` and `0009`; the real database is at `0008` since
+2026-10-29 19:06 (backup `/mnt/ssd2/aimpromptu/.database-20261029-190549.tar.zst`, 1.4 GB, taken just before) and at
+`0009` since 23:13 (backup `.database-20261029-221243.tar.zst`).
 
 # 2. Study
 
@@ -44,11 +47,15 @@ project and `404` on another user's before the route runs, and `GET /metadata/in
   which also deletes the `project_tags`).
 - **Replace** (`flow._replace`) deletes the copy (its links go with the row, `ON DELETE CASCADE`); the song gets the
   copy's metadata first.
-- **Edit** (`flow.open_edit`) gives the new copy the song's metadata (`metadata.copy_song_tags`); the copy already
-  open is returned as before, with its own metadata.
+- **Edit** (`flow.open_edit`) gives the copy no metadata: an edit copy reads and changes its song's (section 2.5).
+  A copy saved as a new version of **another** song gives that song its song's metadata too
+  (`metadata.add_song_tags_to_song`, with the song read before the move clears `based_on`).
 - **Duplicate** (`POST /projects/{id}/duplicate`, `_copy_organized`): a project of My projects gives its copy its
   metadata and its folders; a version of My Library gives the copy the song's metadata; another user's (shared) or a
-  public project gives nothing.
+  public project gives nothing. `bundle.new_bundle_from` keeps `based_on`, so the duplicate of an edit copy is an
+  edit copy of the same version (it was before this phase): it gets no rows of its own and shares the song's.
+- **Delete a version** (`flow.delete_version`, `_forget_edits_of`): its edit copies become ordinary projects, and
+  each gets the song's metadata as its own first (`metadata.copy_song_tags`).
 
 ## 2.4 The three cases of the info button
 
@@ -56,10 +63,28 @@ project and `404` on another user's before the route runs, and `GET /metadata/in
 
 | Sheet | `kind` | What it shows | `editable` |
 |---|---|---|---|
-| A project of My projects, also an edit copy (99 Red Balloons `c0e39afe`) | `project` | the project's `project_tags` and `folder_projects`; the artists of the version it edits | owner |
-| A version of My Library (`layer = private`) | `song` | the song's `private_song_tags` and `folder_songs` | owner only; a library shared with the user is read only, with no folders |
+| A project of My projects with no song | `project` | the project's `project_tags` and `folder_projects` | owner |
+| A version of My Library (`layer = private`), or an edit copy of one (99 Red Balloons `c0e39afe`, 7 Years `477086a0`) | `song` | the song's `private_song_tags` and `folder_songs`, the same for every version | owner only; a library shared with the user is read only, with no folders |
 | A version of the Public Library (`layer = public`, through `song_versions` or `user_versions`) | `public` | the public song's tags | never |
 | A request's copy, or a project with no song | `none` | nothing | never |
+
+## 2.5 The metadata belongs to the song (the user, 2026-10-29)
+
+After the first walkthrough the user asked that whatever the info button changes, on the song page or on the sheet
+of `c0e39afe`, belong to the song, not to one version: a song has an original, an easy and a hard version, and the
+metadata is about the song. The song page and the sheet of a version of My Library already wrote the song's rows.
+The edit copy did not: it had a copy of the song's metadata in `project_tags`, so a change there stayed on the copy
+until **Save to library**, and the copy's dialog offered the folders of My projects.
+
+Now `metadata.edited_songs` finds the song of an edit copy (`projects.based_on` → `private_versions.song_id`, vault
+only; a copy whose version was deleted has none). `tags_of_projects` answers the song's rows for it,
+`set_project_tags` writes the song's, and `GET /metadata/info` answers `kind: song`. So the info button, the row's
+**Info** of My projects (which now reads `GET /metadata/info` instead of building the target on the page) and the
+Filter all go to the song. The dialog says "For the whole song: every version has it" and names the tree of its
+folders ("Folders of My Library", "Folders of My projects"). The copy's place in the folders of My projects stays
+with **Folders…**. Revision `0009_song_level_metadata.py` moved the `project_tags` of edit copies to their songs:
+the real database had one, the user's Film "A Star Is Born" on the 7 Years copy, now on the song 7 Years (song 4).
+The user's folders Test and Test1 (both edit copies in Test1) are folders of My projects and did not change.
 
 `SheetStep` did not know the project id; `SheetTab` now passes `projectId` (`audio.projectId ?? uuid`). Play mode, a
 passage and From other projects do not pass it, so they have no info button.
@@ -74,10 +99,12 @@ passage and From other projects do not pass it, so they have no info button.
 | `folder_projects` | `folder_id`, `project_id` | both cascade; PK the pair |
 | `folder_songs` | `folder_id`, `song_id` | both cascade |
 | `private_tag_values` | `id`, `owner_id` (cascade), `category_id` (`tag_categories`), `value` (200) | unique `(owner_id, category_id, value)`; compared with `rows.same` in Python (SQLite `lower` is ASCII only) |
-| `project_tags` | `project_id`, `tag_value_id` | both cascade |
+| `project_tags` | `project_id`, `tag_value_id` | both cascade; never on an edit copy (revision `0009`) |
 | `private_song_tags` | `song_id`, `tag_value_id` | both cascade |
 
 `alembic.autogenerate.compare_metadata` against the models: no difference for these tables. Only tables are added.
+Revision `0009_song_level_metadata.py` changes no table: it moves the `project_tags` rows of edit copies to their
+song's `private_song_tags` (`INSERT OR IGNORE`) and deletes them; its downgrade leaves them on the song.
 
 ## 3.2 Backend
 
@@ -86,7 +113,9 @@ passage and From other projects do not pass it, so they have no info button.
   the subtree and links explicitly too, so it holds with foreign keys off), `set_project_folders` (vault projects of
   the owner only), `set_song_folders`, `folders_of_projects`, `folders_of_songs`, `copy_project_folders`,
   `drop_project_folders`.
-- `library/metadata.py`: `Tag`, `set_project_tags`, `set_song_tags` (the whole list; `MAX_TAGS = 30`), `tags_of_*`,
+- `library/metadata.py`: `Tag`, `edited_songs` (section 2.5), `set_project_tags` (an edit copy's goes to its song),
+  `set_song_tags` (the whole list; `MAX_TAGS = 30`), `tags_of_*` (an edit copy's is its song's),
+  `add_song_tags_to_song`,
   `public_tags_of`, `suggestions` (own values in use, then public values the user does not have), `copy_public_tags`,
   `copy_song_tags`, `copy_project_tags`, `add_project_tags_to_song`, `_forget_unused` (runs after every set: deletes the
   owner's values no item uses).
@@ -121,20 +150,22 @@ passage and From other projects do not pass it, so they have no info button.
 
 | Check | Result |
 |---|---|
-| `tests/test_folders_and_metadata.py` (new, 7 tests) | pass |
+| `tests/test_folders_and_metadata.py` (new, 8 tests; `test_the_metadata_is_the_songs_for_every_version` for section 2.5) | pass |
 | `tests/test_rights.py` (13, one new: `test_folders_and_metadata_are_their_owners`) | pass |
 | The whole backend suite, on the CPU (the GPU was held by another project) | pass, except `test_transcription_transkun.py::test_it_satisfies_the_engine_protocol` and `::test_a_missing_file_is_a_file_error_not_a_model_error`: the model file is loaded on a CUDA device and the GPU is hidden on the CPU run (`torch.load` without `map_location`). Not from this phase |
 | `black`, `flake8` (the two remaining warnings are in untouched files), `mypy` on the new modules | clean |
 | `tsc`, `npm run lint`, `npm run build` | clean (the chunk-size warning was there before) |
-| `npm run check:folders` (new, 21 steps, run three times) | all ok; nothing left (0 folders, 0 songs, 0 projects, 0 secondary keys; checked on the real database too) |
+| `npm run check:folders` (new, 24 steps; 21 run three times, then the 24 after section 2.5) | all ok; nothing left (0 folders, 0 songs, 0 projects, 0 secondary keys; checked on the real database too) |
 | `check:projects` (26), `check:library` (30), `check:frames-page`, `check:enhance-dialog` | all ok |
 | `scripts/docs/check-links.py` | 437 files, 0 broken links |
+| The whole backend suite after section 2.5, on the CPU | 1278 passed, 3 skipped (the two transcription tests passed this time) |
 
 `check:folders` works on two duplicates of Elefants: one stays in My projects, the other is saved to My Library as
 "check-folders song" by "check-folders artist". It walks the pills, New folder, New folder inside, New parent folder,
 Folders…, a drag onto a folder, a reload, Info (a Film), Filter, Delete (the confirmation's text), My Library's folders
 and a drag from one folder to another, the song page's info button (a TV show), Filter, and the sheet's info button on
-the project and on the library version. Its metadata is emptied before its items are deleted, so its secondary keys go
+the project and on the library version, then an edit copy of that version, whose **Info** in My projects shows the
+song's TV show and adds a Film that the version's sheet then shows. Its metadata is emptied before its items are deleted, so its secondary keys go
 too. Screenshots: [`screenshots/04-3-phase-1/`](screenshots/04-3-phase-1/) (each looked at; two first runs were taken
 before the sheet and a dialog had finished drawing, and the check now waits for them).
 
@@ -148,15 +179,18 @@ folder's name).
 All are in plan section 10 (Phase 1 paragraph): six tables; the Filter's options counted on the page; metadata set as
 one list; the artist of a project from its link only; the metadata follows Edit, Save to library and Duplicate;
 **Info** in the row menus; suggestions only of values in use; **New parent folder** on one folder from the menu (the
-route takes several); the Finder's indentation.
+route takes several); the Finder's indentation; and, asked by the user after the first walkthrough, the metadata of
+the song for every version (point 10, section 2.5).
 
 # 6. Notes for later phases
 
 - **Needed later, at Phase 3 and 4**: branch from `master` after this phase is merged (plan section 4.5). A branch made
   before it refuses the database, which is at `0008`.
-- **Needed later, at Phase 4**: a level of the whole sheet writes a new project (plan section 5.8). Make it with
-  `POST /projects/{id}/duplicate` (or the same `_copy_organized` call), so the level copy keeps the metadata and the
-  folders of the original.
+- **Needed later, at Phase 4**: a level of the whole sheet writes a new project (plan section 5.8). It must share
+  the song's metadata, never have its own (the user's rule, section 2.5). Made with `POST /projects/{id}/duplicate`
+  from an edit copy, it is an edit copy of the same version and shares it already. From a project with no song,
+  Phase 4 needs a link to the original project that `tags_of_projects` and `set_project_tags` follow (plan section
+  5.8).
 - A secondary key whose last item is deleted stays in `private_tag_values` until the owner's next change of metadata
   (`_forget_unused`). It is never suggested meanwhile (`suggestions` filters by use).
 - The Phase 2 session runs in its worktree (`/home/david/Documents/projects/music/aimpromptu-04-3-phase-2`, branch

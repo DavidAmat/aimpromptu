@@ -1,8 +1,9 @@
 """Folders and metadata of My projects and My Library (implementation 04-3, Phase 1, plan sections 4.2
 and 4.4): folders that nest, a parent folder made on top of folders, a move that cannot go into
 itself, a folder deleted with its child folders and never an item; an item in several folders; the
-metadata of a song and of a project, the suggestions, the info button's three cases; and the paths
-between the two pages (Add to my library, Edit, Save to library, Duplicate).
+metadata of a song and of a project, the suggestions, the info button's three cases; the metadata of
+a song shared by all its versions and their edit copies; and the paths between the two pages (Add to
+my library, Edit, Save to library, Duplicate).
 
 Two users sign in through ``/auth``; the public rows come from the small download of
 ``test_public_import``."""
@@ -20,6 +21,7 @@ from aitu_backend.db.models import (
     Folder,
     FolderProject,
     PrivateTagValue,
+    ProjectTag,
     SongTag,
     TagCategory,
     TagValue,
@@ -100,7 +102,9 @@ def test_folders_nest_and_a_parent_folder_keeps_the_items(people: dict) -> None:
     assert renamed.status_code == 200 and renamed.json()["name"] == "LOTR"
 
 
-def test_deleting_a_folder_deletes_its_folders_and_never_an_item(people: dict) -> None:  # noqa: F811
+def test_deleting_a_folder_deletes_its_folders_and_never_an_item(
+    people: dict,
+) -> None:  # noqa: F811
     anna_id, anna = people["anna"]
     piece = vault_project(anna_id)
     other = vault_project(anna_id, "Other")
@@ -191,9 +195,16 @@ def test_the_suggestions_and_the_public_library_stay_apart(people: dict) -> None
     assert all(one["label"] != "The Lord of the Rings" for one in facets)
     # A deleted song's values are not suggested any more.
     assert anna.delete(f"/library/songs/{song}").status_code == 204
-    after = {one["value"] for one in anna.get("/metadata/keys").json()["suggestions"] if one["mine"]}
+    after = {
+        one["value"] for one in anna.get("/metadata/keys").json()["suggestions"] if one["mine"]
+    }
     assert "The Lord of the Rings" not in after
-    assert anna.put(f"/metadata/songs/{private_song(anna_id, 'Again')}", json={"tags": mine}).status_code == 200
+    assert (
+        anna.put(
+            f"/metadata/songs/{private_song(anna_id, 'Again')}", json={"tags": mine}
+        ).status_code
+        == 200
+    )
     # Another user sees neither the value nor the song's metadata.
     _, master = people["master"]
     assert all(
@@ -203,6 +214,58 @@ def test_the_suggestions_and_the_public_library_stay_apart(people: dict) -> None
 
 
 # ------------------------------------------------------- the paths between the two pages
+
+
+@needs_ffmpeg
+def test_the_metadata_is_the_songs_for_every_version(people: dict) -> None:  # noqa: F811
+    """The user, 2026-10-29: the metadata belongs to the song, never to one version of it."""
+    anna_id, anna = people["anna"]
+    first = anna.post(
+        f"/projects/{ready(anna)}/library",
+        json={"song": "Song of Storms", "artist": "Koji", "version": "Original"},
+    ).json()
+    song = first["songId"]
+    second = anna.post(
+        f"/projects/{ready(anna)}/library", json={"songId": song, "version": "Easy"}
+    ).json()
+    storms = [{"category": "video_games", "value": "Zelda"}]
+    assert anna.put(f"/metadata/songs/{song}", json={"tags": storms}).status_code == 200
+    for version in (first, second):
+        info = anna.get(f"/metadata/info/{version['projectId']}").json()
+        assert (info["kind"], info["songId"], info["tags"]) == ("song", song, storms)
+
+    # Edit the Easy version: the copy's info button and its row are the song's, and a change made
+    # there is every version's.
+    copy = anna.post(f"/projects/{second['projectId']}/edit").json()["id"]
+    assert project_row(anna, copy)["tags"] == storms
+    both = [{"category": "films", "value": "Ocarina"}] + storms
+    assert anna.put(f"/metadata/projects/{copy}", json={"tags": both}).status_code == 200
+    assert anna.get(f"/metadata/info/{first['projectId']}").json()["tags"] == both
+    assert song_row(anna, song)["tags"] == both
+    with session() as db:
+        assert db.scalar(select(func.count()).select_from(ProjectTag)) == 0
+
+    # A duplicate of the copy edits the same version: the song's metadata, with no rows of its own.
+    twin = anna.post(f"/projects/{copy}/duplicate", json={}).json()["id"]
+    info = anna.get(f"/metadata/info/{twin}").json()
+    assert (info["kind"], info["songId"], info["tags"]) == ("song", song, both)
+    with session() as db:
+        assert db.scalar(select(func.count()).select_from(ProjectTag)) == 0
+
+    # The copy saved as a version of another song: that song gets the metadata, this one keeps it.
+    other = anna.post(
+        f"/projects/{copy}/library", json={"song": "Saria", "artist": "Koji", "version": "v1"}
+    ).json()["songId"]
+    assert song_row(anna, other)["tags"] == both
+    assert song_row(anna, song)["tags"] == both
+
+    # The version an edit copy edits is deleted: the copy keeps the song's metadata as its own.
+    orphan = anna.post(f"/projects/{first['projectId']}/edit").json()["id"]
+    assert anna.delete(f"/library/versions/{first['versionId']}").status_code == 204
+    assert anna.get(f"/metadata/info/{orphan}").json()["kind"] == "project"
+    assert project_row(anna, orphan)["tags"] == both
+    assert anna.put(f"/metadata/projects/{orphan}", json={"tags": []}).status_code == 200
+    assert song_row(anna, song)["tags"] == both
 
 
 @needs_ffmpeg
@@ -230,11 +293,12 @@ def test_metadata_follows_the_work_between_the_two_pages(people: dict) -> None: 
     version = anna.get(f"/library/songs/{pulled['id']}").json()["versions"][0]
     copy = anna.post(f"/projects/{version['projectId']}/edit").json()
     info = anna.get(f"/metadata/info/{copy['id']}").json()
-    assert (info["kind"], info["editable"], info["tags"]) == ("project", True, [film])
-    assert info["artists"] == ["Bee Gees"]
-    # The copy gets one more row and a folder; Replace gives the song the row.
+    assert (info["kind"], info["songId"], info["editable"]) == ("song", pulled["id"], True)
+    assert (info["tags"], info["artists"]) == ([film], ["Bee Gees"])
+    # One more row from the copy is the song's at once; the copy goes into a folder.
     more = [film, {"category": "adverts", "value": "Disco"}]
     assert anna.put(f"/metadata/projects/{copy['id']}", json={"tags": more}).status_code == 200
+    assert anna.get(f"/library/songs/{pulled['id']}").json()["tags"] == [film, more[1]]
     folder_id = folder(anna, "projects", "Disco")
     assert (
         anna.put(f"/folders/projects/{copy['id']}", json={"folders": [folder_id]}).status_code

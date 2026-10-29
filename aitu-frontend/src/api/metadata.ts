@@ -27,7 +27,10 @@ export interface MetadataKeys {
 
 /** What the info button of the sheet page shows. */
 export interface SheetInfo {
-  /** `project`: My projects; `song`: My Library (or a library shared with the user); `public`: the Public Library. */
+  /**
+   * `project`: a project of My projects with no song; `song`: a song of My Library (one of its versions, an edit
+   * copy of one, or a library shared with the user), the same for every version; `public`: the Public Library.
+   */
   kind: "project" | "song" | "public" | "none";
   projectId: string;
   songId: number | null;

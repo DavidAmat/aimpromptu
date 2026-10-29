@@ -1086,9 +1086,9 @@ folder inside it; `422` for an empty name or an unknown primary key.
 | `PUT /folders/projects/{id}` | Body `{folders: [id]}`: every folder of a project of My projects; answers `{folders}` |
 | `PUT /folders/songs/{id}` | The same for a song of My Library |
 | `GET /metadata/keys` | `{categories, suggestions: [{category, value, mine}]}`: the primary keys (`films`, `video_games`, `tv_shows`, `adverts`) and the secondary keys to suggest: the user's own in use, then the Public Library's |
-| `PUT /metadata/projects/{id}` | Body `{tags: [{category, value}]}` (at most 30): every metadata row of a project of My projects; a value typed in other letters is the same secondary key. Answers `{tags}` |
+| `PUT /metadata/projects/{id}` | Body `{tags: [{category, value}]}` (at most 30): every metadata row of a project of My projects; a value typed in other letters is the same secondary key. On an edit copy the rows are its song's (the metadata belongs to the song, the same for every version). Answers `{tags}` |
 | `PUT /metadata/songs/{id}` | The same for a song of My Library |
-| `GET /metadata/info/{projectId}` | `{kind, projectId, songId, title, artists, tags, folders, editable}`. `kind`: `project` (a project of My projects, also an edit copy: its own metadata), `song` (a version of My Library, or of a library shared with the user: the song's), `public` (a version of the Public Library: the public song's tags), `none` (a request's copy). `editable` only for the owner's `project` or `song` |
+| `GET /metadata/info/{projectId}` | `{kind, projectId, songId, title, artists, tags, folders, editable}`. `kind`: `project` (a project of My projects with no song: its own metadata and folders of My projects), `song` (a version of My Library, an edit copy of one, or a version of a library shared with the user: the song's metadata and folders of My Library, the same for every version), `public` (a version of the Public Library: the public song's tags), `none` (a request's copy). `editable` only for the owner's `project` or `song` |
 
 ### 7.2 `/playlists`: songs playlists
 

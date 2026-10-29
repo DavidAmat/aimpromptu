@@ -39,6 +39,9 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] Task 1.8 Checks: `check:folders` (new), `check:projects`, `check:library`, `check:frames-page`,
   `check:enhance-dialog`; screenshots in `screenshots/04-3-phase-1/`; the documentation.
 - [ ] Task 1.9 The user checks both pages and the info button in the browser.
+- [x] Task 1.10 After the user's first look: the metadata belongs to the song, never to one version. An edit copy
+  shows and changes its song's metadata and folders of My Library; revision `0009` moved the copy's rows to the song
+  (plan section 10, Phase 1, point 10).
 
 # [ ] Phase 2: The gallery of patterns
 

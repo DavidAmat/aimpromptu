@@ -15,6 +15,8 @@
  *   of the song page (a TV show), **Filter** by it;
  * - the info button of the sheet page: a project of My projects (its own metadata) and a version of
  *   My Library (the song's);
+ * - an edit copy of the version: its **Info** in My projects is the song's metadata, and a Film added
+ *   there shows on the version's sheet (the metadata belongs to the song, never to one version);
  * - screenshots of both pages and of the dialogs.
  *
  *     npm run check:folders
@@ -69,6 +71,7 @@ const SONG = `${PREFIX} song`;
 const ARTIST = `${PREFIX} artist`;
 const FILM = `${PREFIX} film`;
 const SHOW = `${PREFIX} show`;
+const SAGA = `${PREFIX} saga`;
 const madeProjects = new Set();
 const madeSongs = new Set();
 const madeArtists = new Set();
@@ -268,6 +271,35 @@ try {
   await info.waitFor();
   const versionValue = await info.getByLabel('Secondary key').inputValue();
   check('the sheet of a My Library version shows the song\'s metadata', versionValue === SHOW, versionValue);
+  await info.getByRole('button', { name: 'Cancel' }).click();
+
+  // 5. An edit copy of the version: its Info in My projects is the song's, and a change there is every version's.
+  const editCopy = await post(`${api}/projects/${version.projectId}/edit`, {});
+  madeProjects.add(editCopy.id);
+  await page.goto(`${base}/projects?view=all`);
+  await page.getByTestId(`project-${editCopy.id}`).first().getByRole('button', { name: 'More actions' }).click();
+  await menuItem('Info').click();
+  await info.waitFor();
+  await info.getByTestId('folder-checklist').waitFor();
+  const copyValue = await info.getByLabel('Secondary key').inputValue();
+  const words = (await info.textContent()) ?? '';
+  check('the Info of an edit copy shows the song\'s metadata and folders',
+    copyValue === SHOW && (await info.getByTestId('info-whole-song').count()) === 1 && words.includes('Folders of My Library'), copyValue);
+  await info.getByTestId('info-add-tag').click();
+  await info.getByLabel('Secondary key').last().fill(SAGA);
+  await page.waitForTimeout(500);
+  await shot('07-info-edit-copy');
+  await info.getByTestId('info-save').click();
+  const sagaSong = await until(() => songRow(saved.songId), (row) => row.tags.length === 2);
+  const sagaCopy = await projectRow(editCopy.id);
+  check('a change from the edit copy is the song\'s', sagaSong.tags.some((one) => one.value === SAGA) && sagaCopy.tags.length === 2,
+    sagaSong.tags.map((one) => one.value).join(', '));
+  await page.goto(`${base}/projects/${version.parts[0]}/sheet`);
+  await waitForFrames(page);
+  await page.getByTestId('sheet-info').click();
+  await info.waitFor();
+  const versionValues = await info.getByLabel('Secondary key').evaluateAll((fields) => fields.map((field) => field.value));
+  check('the sheet of the version shows the change', versionValues.includes(SAGA), versionValues.join(', '));
   await info.getByRole('button', { name: 'Cancel' }).click();
 } finally {
   for (const area of ['projects', 'library']) {

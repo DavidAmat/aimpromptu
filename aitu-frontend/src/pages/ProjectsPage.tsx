@@ -10,7 +10,8 @@
  * Three pills sit above the list (implementation 04-3, Phase 1): **Folders** (the folders of My projects, opened and
  * closed as the Finder's list view, the projects of a folder indented under it, then the projects in no folder),
  * **All** (the list as it was) and **Filter** (Artist and the metadata). The `⋯` menu also has **Folders…** and
- * **Info** (the metadata); a row dragged onto a folder moves into it.
+ * **Info** (the metadata: an edit copy's is its song's, the same for every version); a row dragged onto a folder
+ * moves into it.
  *
  * The list is one request (`GET /projects`), with the step of every row in it. Finished work is in
  * My library (Phase 6); a copy made there by **Edit** is listed here, says **Editing**, and its menu
@@ -52,7 +53,7 @@ import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolderOutlined";
 import FolderIcon from "@mui/icons-material/FolderOutlined";
 import InfoIcon from "@mui/icons-material/InfoOutlined";
 import { useNavigate } from "react-router-dom";
-import { foldersApi, projectsApi, type ProjectRow } from "../api";
+import { foldersApi, metadataApi, projectsApi, type ProjectRow, type SheetInfo } from "../api";
 import { FoldersDialog } from "../components/folders/FolderChecklist";
 import { FolderLeading, TriangleRoom } from "../components/folders/FolderLeading";
 import { folderCount, treeLines } from "../components/folders/folderTree";
@@ -123,7 +124,7 @@ export function ProjectsPage() {
   const [view, setView] = useListView("aitu.projects.view");
   const [choice, changeFilter] = useListFilter();
   const [foldering, setFoldering] = useState<ProjectRow | null>(null);
-  const [informing, setInforming] = useState<ProjectRow | null>(null);
+  const [informing, setInforming] = useState<SheetInfo | null>(null);
 
   /** A row's folders changed (the dialog, a drag): the row is updated where it is. */
   const setFolders = useCallback(async (row: ProjectRow, folders: number[]) => {
@@ -175,6 +176,16 @@ export function ProjectsPage() {
     const timer = window.setInterval(() => setReload((count) => count + 1), 5000);
     return () => window.clearInterval(timer);
   }, [anyRunning]);
+
+  /** The info of a row, as the sheet's info button reads it: an edit copy shows its song's metadata. */
+  const openInfo = useCallback(async (row: ProjectRow) => {
+    setActionError(null);
+    try {
+      setInforming(await metadataApi.info(row.id));
+    } catch (caught) {
+      setActionError(message(caught, "The info could not be read."));
+    }
+  }, []);
 
   const rename = useCallback(async (row: ProjectRow, title: string) => {
     setBusy(true);
@@ -313,7 +324,7 @@ export function ProjectsPage() {
           { label: "Export", icon: <DownloadIcon fontSize="small" />, onClick: () => download(projectsApi.exportUrl(row.id)) },
           { label: "Rename", icon: <DriveFileRenameIcon fontSize="small" />, onClick: () => setRenaming(row) },
           { label: "Folders…", icon: <FolderIcon fontSize="small" />, onClick: () => setFoldering(row) },
-          { label: "Info", icon: <InfoIcon fontSize="small" />, onClick: () => setInforming(row) },
+          { label: "Info", icon: <InfoIcon fontSize="small" />, onClick: () => void openInfo(row) },
           {
             label: "Play",
             icon: <PlayIcon fontSize="small" />,
@@ -451,20 +462,10 @@ export function ProjectsPage() {
       ) : null}
       {informing ? (
         <InfoDialog
-          target={{
-            kind: "project",
-            projectId: informing.id,
-            songId: null,
-            title: informing.title || "Untitled project",
-            artists: artistsOf(informing),
-            tags: informing.tags,
-            folders: informing.folders,
-            editable: true,
-          }}
+          target={informing}
           onClose={() => setInforming(null)}
-          onSaved={({ tags, folders }) =>
-            setRows((list) => list?.map((one) => (one.id === informing.id ? { ...one, tags, folders } : one)) ?? null)
-          }
+          // An edit copy's metadata is its song's: another copy of the same song changes too.
+          onSaved={() => setReload((count) => count + 1)}
         />
       ) : null}
 

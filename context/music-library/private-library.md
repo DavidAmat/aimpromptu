@@ -110,10 +110,15 @@ so the user asked for **folders** that nest as in the Finder's list view, and fo
   `tag_categories`) and a secondary key of the user's own ("The Lord of the Rings"), kept in `private_tag_values` so
   that it is never shown in the Public Library. A song can have several rows (`private_song_tags`). The secondary-key
   field suggests the user's own values in use and the Public Library's.
-- **Between the pages**: **Add to my library** gives the song the public song's tags; **Edit** gives the copy in
-  Projects the song's metadata; **Save to library** (a new version or **Replace**) adds the project's metadata to the
-  song, and the project leaves the folders of My projects (the trees are independent, so it is in no folder of My
-  library until the user puts it there).
+- **The metadata and the folders belong to the song, never to one version** (the user, 2026-10-29). Every version
+  shows the same rows, and a change made from any of them (the song page, the sheet of a version, an edit copy in My
+  projects) changes them for all.
+- **Between the pages**: **Add to my library** gives the song the public song's tags. An **edit copy** in My projects
+  has no metadata of its own: its info button, its **Info** and the Filter read and change the song's, and so does a
+  duplicate of it (it edits the same version). **Save to library** adds a project's metadata to the song (an edit copy
+  saved into another song gives that song its song's metadata), and the project leaves the folders of My projects
+  (the trees are independent, so it is in no folder of My library until the user puts it there). A deleted version
+  leaves its edit copy an ordinary project, which keeps the song's metadata as its own.
 
 ## 6. Who can do what
 

@@ -7,10 +7,12 @@ the Public Library) and a secondary key of the user's own ("The Lord of the Ring
 the page from them. The logic is in :mod:`aitu_backend.library.metadata`.
 
 ``GET /metadata/info/{project_id}`` is what the **info button** of the sheet page opens: the song or
-the project the sheet belongs to, its metadata, its folders, and whether the user may change them:
+the project the sheet belongs to, its metadata, its folders, and whether the user may change them.
+The metadata belongs to the song, never to one version (the user, 2026-10-29):
 
-* a project of My projects (also an edit copy of a version): the project's own metadata;
-* a version of My Library: the song's;
+* a project of My projects with no song: the project's own metadata and its folders of My projects;
+* a version of My Library, or an edit copy of one in My projects: the song's metadata and its
+  folders of My Library, the same for every version;
 * a version of the Public Library (or of a library shared with the user): the song's, read only.
 """
 
@@ -68,8 +70,9 @@ class KeysOut(_Camel):
 class InfoOut(_Camel):
     """What the info button shows for the sheet of a project."""
 
-    #: ``project`` (My projects), ``song`` (My Library, or a library shared with the user),
-    #: ``public`` (the Public Library), ``none`` (a sheet with no song: a request's copy).
+    #: ``project`` (a project of My projects with no song), ``song`` (a song of My Library: one of
+    #: its versions, an edit copy of one, or a library shared with the user), ``public`` (the
+    #: Public Library), ``none`` (a sheet with no song: a request's copy).
     kind: Literal["project", "song", "public", "none"]
     project_id: str = Field(..., alias="projectId")
     #: The song of a ``song`` or ``public`` sheet.
@@ -151,22 +154,25 @@ def info(project_id: str) -> InfoOut:
         project = db.get(Project, project_id)
         if project is None:
             raise rows.NotFound(f"No project with id '{project_id}'")
+        song: Song | None = None
         if project.layer == "vault":
-            link = rows.links_of(db, [project.based_on] if project.based_on else [])
-            edited = link.get(project.based_on or "")
+            edited_song = metadata.edited_songs(db, [project_id]).get(project_id)
+            song = db.get(Song, edited_song) if edited_song is not None else None
+        if project.layer == "vault" and song is None:
             return InfoOut(
                 kind="project",
                 project_id=project_id,
                 title=project.title,
-                artists=edited.artists if edited else [],
+                artists=[],
                 tags=tag_rows(metadata.tags_of_projects(db, [project_id])[project_id]),
                 folders=folders.folders_of_projects(db, [project_id])[project_id],
                 editable=project.owner_id == user,
             )
-        song: Song | None = None
         kind: Literal["song", "public"] = "song"
         tags: list[metadata.Tag] = []
-        if project.layer == "private":
+        if song is not None:
+            tags = metadata.tags_of_songs(db, [song.id])[song.id]
+        elif project.layer == "private":
             song_id = db.scalar(
                 select(PrivateVersion.song_id).where(PrivateVersion.project_id == project_id)
             )
