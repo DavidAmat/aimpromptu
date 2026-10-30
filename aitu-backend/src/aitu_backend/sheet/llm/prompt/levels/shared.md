@@ -89,6 +89,17 @@ simplified copy of it, not a new invention.
 - **Artifacts**: a chord or a note far above the melody (more than an octava above the melody around it, alone, often
   under 8va), octavas the level does not allow, many repeated notes of a chord that add nothing. An artifact is **left
   out** (declared): do not keep it one or two octavas lower, it adds nothing to the song in any register.
+- **An octava as a third or a fifth** (the user's way to make an octava easy to play; also whenever the user's words
+  ask for "thirds or fifths instead of octavas"). Keep the note that matters (the melody note on top in the right
+  hand, the bass at the bottom in the left hand) and replace the other note of the octava by the **third or the fifth
+  of the chord that sounds there**, inside the octava. The user's example: under the chord Si-Re-Fa# (B minor), the
+  right hand's Si3-Si4 becomes Re4-Si4 (Re is the third of the chord) or Fa#4-Si4 (Fa# is the fifth); in the left
+  hand, under Mi major, Mi2-Mi3 becomes Mi2-Si2 (the fifth) or Mi2-Sol#2 (the third). When the note of the octava is
+  itself the third or the fifth of the chord, take another note of the chord (its root or the other one); never a note
+  out of the chord. Keep the same choice for the same note on the same chord, so the passage keeps one pattern. Use it
+  where the level takes an octava away but allows two notes (the right hand at medium and hard, on the notes where
+  it may play two; an octava bass), and everywhere the user's words ask for it. At easy the right hand still plays
+  single notes.
 - **The right hand helps the left hand.** Where the right hand has nothing but artifacts (or nothing at all) while the
   left hand plays big chords, the music of that passage is in the **top notes of the left-hand chords** (a riff, the
   melody of an intro). Read the line of the highest note of each chord: it usually repeats a short figure (in 99 Red

@@ -147,7 +147,7 @@ def test_the_system_prompt_has_the_level_and_only_the_patterns_of_the_run() -> N
     assert "# The level of this run: easy" in text and "# The level of this run: medium" not in text
     assert text.index("### left easy 2") < text.index("### right easy 2")
     assert "left easy 1" not in text.split("# The patterns of this run")[1]
-    assert L.LEVEL_VERSION == "1"
+    assert L.LEVEL_VERSION == "2"
 
 
 def test_the_examples_of_the_shared_prompt_parse() -> None:

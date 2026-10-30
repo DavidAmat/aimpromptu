@@ -1,4 +1,4 @@
-6
+7
 instructions.md: the system prompt of the new sheet (implementation 03, Phase 4), written from version 4
 (`../instructions.md`): F1 frames in and out, no compases, tempo, puntillos or silencios; the LLM decides the
 hands, the beam groups (plan section 3.11), the clefs and 8va (the left-hand rules of version 4, unchanged), the
@@ -6,4 +6,5 @@ ornaments, the armadura of each passage, and the reference figure (its own reque
 spelling are rules of the app. Version 6 (implementation 04, Phase 3): the grace note rule of implementation 04
 (thirty-seconds or shorter), the section "Simplicity" (uniform patterns, the amateur pianist) with the notes a
 window may leave out and add, declared in comment lines, beam.9, and Example 5. feedback.md: the message after a
-rejected answer.
+rejected answer. Version 7 (implementation 04-3, 2026-10-30): the section "An octave as a third or
+a fifth (when the user asks for it)", octave.1 to octave.4: the user's way to write an octave easier to play.

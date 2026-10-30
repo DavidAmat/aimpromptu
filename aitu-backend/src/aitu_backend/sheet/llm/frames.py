@@ -108,7 +108,7 @@ __all__ = [
 Complete = Callable[[str, list[dict]], str]
 
 PROMPT_DIR = Path(__file__).with_name("prompt") / "frames"
-PROMPT_VERSION = "6"  # prompt/frames/VERSION
+PROMPT_VERSION = "7"  # prompt/frames/VERSION
 WINDOW_MS = (12000.0, 16000.0)  # a window ends after the longest pause in this range
 MAX_ONSETS = 200
 LOOKAHEAD_MS = 4000.0

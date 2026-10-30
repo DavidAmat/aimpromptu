@@ -1121,3 +1121,15 @@ button per hand when both; it opens on the hand's level and shows each pattern's
 the words). The stretch tab has the same gallery. The older Simplify run (small corrections without a level) is no
 longer offered in the dialog; its route stays. `check:enhance-dialog` checks the new tab (37 steps).
 
+**The user's rule "an octava as a third or a fifth"** (2026-10-30, same branch): the user often asks to replace an
+octava (Si3-Si4) by the third or the fifth of the chord under it (Re4-Si4, Fa#4-Si4), and wants the prompts to know it,
+so that short words ("instead of octaves use thirds or fifths") are enough. It is now in the general prompt
+(`prompt/frames/instructions.md`, section "An octave as a third or a fifth", octave.1 to octave.4: the note that stays
+is the melody on top in the right hand and the bass in the left hand; the new note is the third or the fifth of the
+chord that sounds there, or its root when the octava's note is the third or the fifth; the same shape for the same
+role; applied when the user's words ask for it) and in the level prompts (`levels/shared.md`, "What you change": also
+where a level takes an octava away but allows two notes). Prompt versions: frames 7, levels 2. A real stretch of the
+right hand on a copy (`be248152`, f1495-f1795, the words "Instead of octaves, use thirds or fifths."): 40 octavas
+became 0, every melody note kept, the new notes the fifth or the root of the chord (C5+C6 -> G5+C6, A4+A5 -> E5+A5,
+B4+B5 -> G5+B5), the left hand unchanged; $0.036, 46 s.
+
