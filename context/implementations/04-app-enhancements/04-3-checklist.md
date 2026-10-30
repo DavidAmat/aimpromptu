@@ -20,7 +20,7 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] **Phase 2**: the user approves the gallery of patterns (approved on 2026-10-30, after review 6; plan section 10).
 - [x] **The catalog and the frame numbers** (user, 2026-10-29, review 2 of Phase 2): plan section 5.10; Phase 2b
   comes before Phase 3 (confirmed by the user at the merge).
-- [ ] **Phase 3**: the user approves the three levels on the passages of 99 Red Balloons.
+- [x] **Phase 3**: the user approves the three levels on the passages of 99 Red Balloons (2026-10-30).
 - [ ] **Phase 4**: where a level version is stored (plan section 5.8), confirmed with the user.
 
 # [x] Phase 1: Folders, the pills and the metadata
@@ -73,18 +73,22 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 - [x] Task 2b.4 Checks: `check:frames-page` with the numbers (passed), screenshots in `screenshots/04-3-phase-2b/`;
   the user checked the sheet page and approved it on 2026-10-30.
 
-# [ ] Phase 3: The level prompts, tested on 99 Red Balloons
+# [x] Phase 3: The level prompts, tested on 99 Red Balloons
 
-- [ ] Task 3.1 Study of 99 Red Balloons (`c0e39afe`): the passages of the two images and two or three more.
-- [ ] Task 3.2 The measures ported to the app's time, with tests.
-- [ ] Task 3.3 The grid of the song, measured on 99 Red Balloons and on one song played by a human.
-- [ ] Task 3.4 The prompts: a shared part and `easy.md`, `medium.md`, `hard.md`; a new `VERSION`; a place for the F1
+- [x] Task 3.1 Study of 99 Red Balloons (`c0e39afe`): the passages of the two images and two or three more.
+- [x] Task 3.2 The measures ported to the app's time, with tests.
+- [x] Task 3.3 The grid of the song, measured on 99 Red Balloons and on one song played by a human.
+- [x] Task 3.4 The prompts: a shared part and `easy.md`, `medium.md`, `hard.md`; a new `VERSION`; a place for the F1
   text of the patterns of a run and for the user's places by frame number (plan section 5.10).
-- [ ] Task 3.5 The plan of the song and its prompt.
-- [ ] Task 3.6 The check of a level run, with tests on recorded answers.
-- [ ] Task 3.7 Tests with the AI (the user asked first, with the cost).
-- [ ] Task 3.8 The gallery `gallery/04-3-phase-3/`.
-- [ ] Task 3.9 The user's review, until the three levels are approved.
+- [x] Task 3.5 The plan of the song and its prompt.
+- [x] Task 3.6 The check of a level run, with tests on recorded answers.
+- [x] Task 3.7 Tests with the AI (the user asked first, with the cost). Hard right, medium left done on the four
+  passages twice, with the user's three rules of review 1 ($1.58 in all), approved by the user; medium and easy run
+  ($1.54), then written again with the steady rhythm of easy and medium ($1.68; report sections 14 and 15).
+- [x] Task 3.8 The gallery `gallery/04-3-phase-3/`: the test passages, the patterns per level, the prompts, and the
+  hard-right medium-left, medium and easy versions (`http://ubuntu:8097/gallery/04-3-phase-3/index.html`).
+- [x] Task 3.9 The user's review, until the three levels are approved (approved on 2026-10-30; the AI's changes
+  confirmed in `notes.pmn` and the Notes tab, report section 16).
 
 # [ ] Phase 4: The levels in the app
 

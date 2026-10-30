@@ -46,5 +46,7 @@ worktree (plan section 7.4). Phases 1 and 2 are merged.
 | [`gallery/04-3-phase-2/`](gallery/04-3-phase-2/index.html) | Phase 2: the gallery of patterns (a tab per hand, pills per level, the numbers) and `patterns.json`, the approved names Phase 3 uses |
 | [`04-3-implementation-phase-2b.md`](04-3-implementation-phase-2b.md) | Phase 2b: frame marks on the sheet (a dashed line, the frame and the time every 100 frames), the frames in the range toolbox, decoration notes lit at their onset |
 | [`screenshots/04-3-phase-2b/`](screenshots/04-3-phase-2b/) | Phase 2b: the marks on 99 Red Balloons (page and print), a song with lyrics, the range toolbox and a typed range |
+| [`04-3-implementation-phase-3.md`](04-3-implementation-phase-3.md) | Phase 3: the grid, the chords, the measures, the level prompts, the plan of the song and the check |
+| [`gallery/04-3-phase-3/`](gallery/04-3-phase-3/index.html) | Phase 3: the test passages of 99 Red Balloons, the patterns of each level, the prompts (and the AI's versions after task 3.7) |
 | [`images/chopin_passages/`](images/chopin_passages/) | The Chopin snapshots of the gallery, and the user's `ballade1-ex1.png` |
 | [`images/99-red-ballons-issue.png`](images/99-red-ballons-issue.png), [`images/whole-song-simplification.png`](images/whole-song-simplification.png) | The user's two examples of a machine transcription that the levels must fix |

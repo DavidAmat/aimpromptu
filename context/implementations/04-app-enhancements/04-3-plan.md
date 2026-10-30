@@ -720,8 +720,10 @@ Start prompt:
 3. The run: `start_level` and `write_level` (the plan of the song, then the batches that see the earlier batches),
    the check, the feedback, the stand-in tests.
 4. Storing: a level of the whole sheet in a new project named with the level; a level of a range in place with one
-   step of undo; the notes in `notes.pmn` through `edits.change_notes` (hands changed where notes moved); the record of
-   `sheet.f1` keeps the level, the prompt version, the cost and the declared lines.
+   step of undo; the notes in `notes.pmn` through `edits.change_notes` (hands changed where notes moved) and the hands
+   of the sheet written there, so the Notes tab shows the level (Phase 3 report section 16; a test asserts that every
+   live note has the hand the sheet draws it in); the record of `sheet.f1` keeps the level (or the level of each
+   hand), the prompt version, the cost and the declared lines.
 5. Tests with the AI on a temporary copy of 99 Red Balloons (the user asked first, with the cost): a range at each
    level, then the whole sheet at easy, medium and hard. Gallery `gallery/04-3-phase-4/` (the whole song, original
    and each level, with the measures); checked zoomed in.
@@ -885,3 +887,43 @@ start prompt also reads the Phase 2b report.
 
 **Phase 2b, approval and merge** (2026-10-30): the user approved the frame marks, the editable frames of the range
 toolbox and the lighting of decoration notes; the branch was merged into `master`. Phase 3 is next.
+
+**Phase 3, first part** (2026-10-30, [`04-3-implementation-phase-3.md`](04-3-implementation-phase-3.md)): the grid,
+the measures, the prompts, the plan of the song and the check are built and tested without the AI. Four points
+differ from sections 5.3 to 5.6. First, the grid tracks the pulse at the negra and at the corchea and keeps the
+steadier one, because on 99 Red Balloons the negra of the sheet (600 ms) is two pulses of the song (311 ms) and the
+tracker pulled to the negra wanders; a ternary song (7 Years) divides its negra in three. Second, hand motion is
+counted **per negra**, not per second: the same pattern moves as often per negra at any tempo, and per negra the
+gallery separates the levels (left hand: easy at most 0.6, medium up to 1.4, hard up to 2.0). Third, the answer of a
+batch writes only notes, hands and figures; the app draws beams, clefs, 8va and decoration notes by its rules, so the
+decoration-note rule holds at every level by construction. Fourth, an artifact is accepted only when it is more than
+an octava above the melody around it, or, where the melody line has nothing else (the riff with the high chords),
+more than an octava above every other note. The open point of section 5.10 about the pattern's text is settled: the
+prompt gets both hands of the first 8 negras of its first example.
+
+**Phase 3, the first AI run** (2026-10-30): the user chose to start with hard, because the sheet now is at the super
+hard level, and asked for **a level per hand** (hard for the right hand, medium for the left hand), both hands still
+written together. The code takes a level or one level per hand; the prompt then joins the right-hand section of one
+level with the left-hand section of the other. The first run showed that the AI kept the high chord of the riff an
+octava lower and lost the riff hidden in the left-hand chords, so the prompt now says that an artifact is left out,
+and that where the right hand has only artifacts the top notes of the left-hand chords move to the right hand; the
+check holds both.
+
+**Phase 3, the user's review of the first run** (2026-10-30): three rules for every level. A level never makes a
+passage harder than the sheet now (the sheet now is the super hard version): a left hand that already plays single
+notes or one small chord keeps its notes and only gets a regular rhythm (pattern `keep`). The new left hand follows
+the rhythm the left hand plays now, simplified, instead of a new rhythm from the catalog. Where the right hand takes a
+riff from the left hand, it plays the whole line of the top notes; at hard, with the fifth or the third of the chord
+under each note. The prompt and the check hold the three (report section 12).
+
+**Phase 3, three new patterns** (2026-10-30): at the user's request, the left hand of Ballade No. 4, bars 3 and 4
+(page 41, the second line), adds left hard 16 (a broken octava, then the chord around its upper note), 17 (a low
+note, then a line with a passing note) and 18 (a note the thumb comes back to, with a reach below). They take the next
+numbers of their level; no approved number changed.
+
+**Phase 3, approval** (2026-10-30): the user approved the three levels on the four passages (hard right with medium
+left, medium, easy; report sections 14 and 15: easy and medium also keep a steady rhythm, no figure shorter than a
+semicorchea). The user asked that every change the AI makes reach `notes.pmn` and the Notes tab; this holds for the
+runs of today (report section 16), and Phase 4 stores a level run the same way: the notes through
+`edits.change_notes` and the hands of the sheet in `notes.pmn`, with a test that every live note has the hand the
+sheet draws it in. The galleries are served at `http://ubuntu:8097/gallery/...` (the folder `04-app-enhancements/`).
