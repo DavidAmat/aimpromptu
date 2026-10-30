@@ -477,6 +477,7 @@ of them **on purpose and only for the level run**, as section 5.2 explains.
 | Hands: one numeric truth in `notes.pmn` | kept: the notes a level adds, drops or moves go there |
 | A change of notes uses `edits.change_notes` and stores one step of undo | kept |
 | An AI change of notes is declared in comment lines and checked by code | kept, with the new check of section 5.5 |
+| After every AI change of notes, the notation is laid again on the new notes by the app's rules (figures, spelling, decoration notes, clefs and 8va, beam groups of new or moved notes), keeping the AI's and the user's decisions where their note is | added in Phase 4 (the user, 2026-10-30); the steps are listed in `part_sheet/edits.py` |
 | Simplify and a whole run change at most a tenth of a window; notes keep their frame and hand | **not for a level run** (section 5.2); still true for Simplify and Write it all again |
 | A run of one hand leaves the other hand exactly as it is | kept |
 | The page says "AI", never the model's name; the enhanced mark is never lost | kept |
@@ -944,3 +945,13 @@ dialog offers a level per hand (the same by default). The words stay possible wi
 places). The tests with the AI change: instead of the three levels on the whole song twice (tasks 4.5 and 4.7, about
 $16), one run on the first minute of 99 Red Balloons (a temporary copy split at 60 s), hard for the right hand and
 medium for the left hand, about $0.85.
+
+**Phase 4, the first-minute AI test and the rule of the notation** (2026-10-30): the run cost $0.88 (4 of 4 batches).
+Zoomed in, the stored level had no beam groups: the run stored the answers as written, and `build.reapply`, the step
+every AI change ends with, gave every note new to the reading no beam group. The user asked that after any AI change
+the notation is always laid again, because a change of notes can change the layout. The level now stores the answers
+as the app draws them, and `reapply` gives a note new to the reading, or moved to the other hand, the beam groups of
+the rule (never over a beam decision of the AI or of the user); this also reaches the notes Simplify adds and moves.
+The steps after an AI change are a binding rule (section 6). The user had saved the level as the version "medium" of
+99 Red Balloons before the fix; at the user's request its notation was drawn again with the beams (same notes and
+hands, one step of undo, no AI request).

@@ -259,3 +259,40 @@ def test_the_routes_of_the_levels(client: TestClient, part: str, monkeypatch: py
     assert client.post(f"/sheet/{part}/llm/level-copy", json={"right": "hard", "left": "medium"}).json()[
         "title"
     ] == f"{title} · Right hard, left medium"
+
+
+# ------------------------------------------------------------------ the notation after a change of notes
+
+
+def _corcheas(count: int):
+    from aitu_backend.pmn.notes import HAND_RIGHT, Notes
+    import numpy as np
+
+    return Notes(
+        id=np.arange(1, count + 1),
+        key=[60 - 21 + (k % 4) for k in range(count)],
+        on_ms=[1000 + 300 * k for k in range(count)],
+        len_ms=[280.0] * count,
+        hand=[HAND_RIGHT] * count,
+    )
+
+
+def test_notes_new_to_the_stored_sheet_get_the_beam_groups_of_the_rule() -> None:
+    """The user, 2026-10-30: after any change of notes (an AI run, an edit) the notation is laid again. Notes the
+    stored reading does not know (added by the AI, or moved to the other hand) are beamed by the rule; a beam
+    decision already stored is kept."""
+    from aitu_backend.sheet.proposal.frames import propose_frames
+
+    stored = propose_frames(_corcheas(8), key=0, quarter_ms=600.0).sheet
+    assert all(n.beam is not None for n in stored.notes)
+    grown = build.reapply(stored, _corcheas(16))
+    added = [n for n in grown.notes if n.frame >= (1000 + 300 * 8) / 40]
+    assert len(added) == 8 and all(n.beam is not None for n in added)
+    assert len({n.beam for n in added}) < len(added)  # in groups, not one group per note
+    kept = {n.frame: n.beam for n in grown.notes if n.frame < (1000 + 300 * 8) / 40}
+    assert all(beam is not None for beam in kept.values())
+
+    # A stored sheet whose notes were left without beams on purpose (a decision): the same notes keep it.
+    plain = L.replace(stored, notes=[L.replace(n, beam=None) for n in stored.notes])
+    again = build.reapply(plain, _corcheas(8))
+    assert all(n.beam is None for n in again.notes)

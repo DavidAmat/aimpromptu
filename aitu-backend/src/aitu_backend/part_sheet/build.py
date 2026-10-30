@@ -11,7 +11,9 @@ Three cases, in order (:func:`current`):
    Sonnet run that ended after an edit): the stored decisions are laid again on the current notes
    (:func:`reapply`). The hand of a note is always the one of ``notes.pmn`` (plan section 3.7); a note that kept its
    hand and its column keeps its beam group, ornaments, 8va and the user's marks (Phase 7); the clefs and the
-   armaduras stay. The rules (figures, grace notes, beam groups cut by the figures, spelling) run again. This holds
+   armaduras stay. The rules (figures, grace notes, beam groups cut by the figures, spelling) run again; a note new
+   to the stored sheet or moved to the other staff gets the beam group of the rule (implementation 04-3, Phase 4:
+   after any change of notes, by the AI or the user, the notation is laid again). This holds
    for a sheet the AI wrote and for one the user edited (``Record.decided``); a plain stored algorithm sheet is
    computed again.
 3. **Never written**: the algorithm (``propose_frames``) on the starting hands (the saved hands, the hand split for
@@ -277,6 +279,7 @@ def reapply(stored: Sheet, notes: Notes) -> Sheet:
             changed.add((n.frame, n.midi, n.staff))
             # Another hand now, or a note the stored sheet did not have: no beam group of its own.
             decided[i] = replace(near.get((n.frame, n.midi), n), staff=n.staff, beam=None)
+    _beam_as_rule(algo.sheet.notes, decided, changed)
     frames = [n.frame for n in algo.sheet.notes]
     part = Part(
         start=min(frames, default=0),
@@ -292,6 +295,35 @@ def reapply(stored: Sheet, notes: Notes) -> Sheet:
     fit_clefs(sheet, changed)
     # What the user wrote about the whole sheet (Phase 8: titles, lyrics, the spacing's figure, the line space).
     return carry_extras(stored, sheet)
+
+
+def _beam_as_rule(rule: list[Any], decided: dict[int, Any], changed: set[tuple[int, int, int]]) -> None:
+    """The beam groups of the notes a change brought (implementation 04-3, Phase 4, the user's rule: after any change
+    of notes the notation is laid again). A note new to the stored sheet, or on another staff, has no beam decision
+    (:func:`reapply` gives it none): it joins the beam group of its column when that column has one; and a beam group
+    of the rule (``rule``: the algorithm's notes, in the order of ``decided``) whose notes all have no beam group,
+    one of them changed, becomes theirs. A beam group the AI or the user decided is never changed."""
+    by_column: dict[tuple[int, int], int] = {}
+    for i, d in decided.items():
+        if d.beam is not None:
+            by_column.setdefault((rule[i].frame, rule[i].staff), d.beam)
+    for i, n in enumerate(rule):
+        if (n.frame, n.midi, n.staff) in changed and decided[i].beam is None:
+            beam = by_column.get((n.frame, n.staff))
+            if beam is not None:
+                decided[i] = replace(decided[i], beam=beam)
+    groups: dict[int, list[int]] = defaultdict(list)
+    for i, n in enumerate(rule):
+        if n.beam is not None:
+            groups[n.beam].append(i)
+    fresh = max((d.beam for d in decided.values() if d.beam is not None), default=0) + 1
+    for members in groups.values():
+        if all(decided[i].beam is None for i in members) and any(
+            (rule[i].frame, rule[i].midi, rule[i].staff) in changed for i in members
+        ):
+            for i in members:
+                decided[i] = replace(decided[i], beam=fresh)
+            fresh += 1
 
 
 def with_legacy(sheet: Sheet, notes: Notes, rhythm: Any, *, ai: bool) -> tuple[Sheet, Counter[str]]:

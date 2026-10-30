@@ -33,6 +33,23 @@ Phase 7 adds the other edits, each one step:
 Implementation 04, Phase 4 adds **Simplify** (:func:`apply_simplify`, from ``job.start_simplify``): the notes the AI
 left out and added over the whole song, for one hand or both, and the sheet laid on them, as one step.
 
+Implementation 04-3, Phase 4 adds **a level** (:func:`apply_level`, from ``job.start_level``), stored the way a
+stretch is (:func:`_store_written`).
+
+**The steps after every AI change of notes** (a whole run in ``job.commit``, a stretch, Simplify, a level), in this
+order and under the part's lock, so that the notation always follows the notes (the user, 2026-10-30):
+
+1. *The notes*: the notes left out marked removed and the new ones added in ``notes.pmn`` (:func:`change_notes`),
+   the one numeric truth.
+2. *The hands*: every note the sheet draws gets in ``notes.pmn`` the hand of its staff, notes moved to the other hand
+   too (``build.hands_of_sheet``), so the Notes tab shows the change.
+3. *The notation laid again* on the new notes (``build.reapply``): figures, spelling, decoration notes by the rule,
+   the clefs and 8va around a changed note, the beam groups of the rule for a note new to the reading or moved
+   (``build._beam_as_rule``); the decisions of the AI and of the user stay where their note is. A level's answer is
+   drawn by the app before (``levels.drawn``): the AI writes only notes, hands and figures.
+4. *The AI's figures* kept as set by hand (a stretch, a level), except on a decoration note.
+5. *Stored* with the run in the record, as one step of undo.
+
 Phase 8B adds **a paste** (:func:`paste_passage`): a copied passage put in at a frame, or over a marked stretch, with
 its notes, its sheet and its audio, everything after it moved (``editing.paste``). The paste keeps the part as it was
 as a snapshot of its history, so its step holds two versions, not changes: undo puts the snapshot back (which keeps

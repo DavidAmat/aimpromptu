@@ -159,7 +159,30 @@ designed) and exported it. That version was stored before the fix, so it still h
 Library, so the agent did not change it (a question for the user in the walkthrough).
 
 
-# 9. Needed later
+# 9. The version "medium" drawn again, and the notation after every AI change (the user, 2026-10-30)
+
+- **The version "medium"** (`99381667`, saved by the user before the fix): at the user's request its reading was drawn
+  again with the fixed path (scratch `rebeam.py`: the stored notes as the answer, `job._level_drawn` on the original
+  first minute, `build.reapply` on its notes, the AI's figures kept; a dry run first). Same notes, staffs and hands
+  (442 of 442 agree); 53 beam groups (before: 0); 7 decoration notes by the rule (before: 6); one step of undo "The
+  level's beam groups drawn again". Its old `sheet.f1` is kept in `/home/app/04-3-phase-4/backup/` (on the host
+  `/mnt/ssd2/aimpromptu/home/04-3-phase-4/backup/`).
+- **The rule** (user: "after the enhancement, we will force all of the music notation to be rewritten after the
+  changes"). Study: every AI path already ends with `build.reapply` (figures, spelling, decoration notes, clefs and
+  8va of changed notes run again), but `reapply` gave a note new to the stored reading, or on another staff, no beam
+  group. This affected the notes Simplify adds or moves, and a note moved to the other hand by an edit. Fixed in
+  `reapply` (`_beam_as_rule`): a changed note joins the beam group of its column when the column has one; a beam
+  group of the rule whose notes all have none, one of them changed, becomes theirs; a stored beam decision is never
+  changed. Test `test_notes_new_to_the_stored_sheet_get_the_beam_groups_of_the_rule`. The steps after every AI
+  change are written in the docstring of `part_sheet/edits.py` and in plan section 6.
+- Sheets stored before keep their readings (a note already in the stored reading is a decision): the 23 notes Simplify
+  added to 99 Red Balloons on 2026-10-28 are not beamed again unless a later change touches them.
+- Checks after the change: full backend suite (all passed but the two Transkun tests that need the GPU);
+  `check:frames-edit` fails one step, "a box dragged across the staves picks the notes in it" (3 notes, more than 3
+  expected, at the start of 7 Years), twice; 7 Years is drawn identically with and without the new step, so this
+  failure does not come from it (left for Phase 5).
+
+# 10. Needed later
 
 - Phase 5: the core's `README.md` (the level run, the catalog folder), `context/frontend/annotations.md` and
   `rendering.md` (the dialog), `context/music-library/private-library.md` (the level copy's metadata).
