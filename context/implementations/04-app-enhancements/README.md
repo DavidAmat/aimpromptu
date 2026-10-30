@@ -38,6 +38,7 @@ worktree (plan section 7.4). Phases 1 and 2 are merged.
 | File | What it is |
 |---|---|
 | [`04-3-prompt.md`](04-3-prompt.md) | The brief, in the user's own words |
+| [`04-4-prompt.md`](04-4-prompt.md) | 04-4, the next brief (2026-10-30): **Copy this style**, a selected and edited stretch as the reference for the similar passages of the song |
 | [`04-3-plan.md`](04-3-plan.md) | The living plan: folders, pills and metadata (Phase 1), the levels (Phases 2 to 4); section 10 has the changes each phase made |
 | [`04-3-checklist.md`](04-3-checklist.md) | The 04-3 status lookup |
 | [`04-3-implementation-phase-1.md`](04-3-implementation-phase-1.md) | Phase 1: folders, the pills (Folders, All, Filter) and the metadata, the info button |
