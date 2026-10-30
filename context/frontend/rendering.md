@@ -23,12 +23,17 @@ line. The code is `pages/piece/sheet/frames/`:
 - `FramesNoteToolbox.tsx` (Phase 6): the note toolbox of the new sheet, beside the notes picked: **Hand** since
   Phase 6, every other note tool since Phase 7, and since Phase 8A the keyboard of the picked column (drawn by
   `ui/MiniPiano.tsx`'s `MiniKeys`; see [annotations.md](annotations.md), "The new sheet");
-- `FramesRangeToolbox.tsx` (Phase 7): the range toolbox (*Frames*: Both / Right / Left, Key, Clef, Octave);
+- `FramesRangeToolbox.tsx` (Phase 7): the range toolbox (*Frames*: Both / Right / Left, Key, Clef, Octave; since
+  implementation 04-3, Phase 2b, its first line, `FrameRangeFields.tsx`, holds the frame numbers of the first and
+  last columns of the stretch in two fields, "From frame [283] to frame [495]" (`data-range-from`, `data-range-to`):
+  other numbers and Enter, or leaving both fields, mark that stretch, `readingTools.rangeOfFrames`);
   `EnhanceDialog.tsx` (implementation 04, Phase 4): **Enhance with AI**, one dialog with two tabs, **A stretch**
   (both hands or one, the other then fixed; the user's words) and **The whole song** (**Simplify** the left hand, the
   right hand or both; **Write it all again**), each with its cost; `readingTools.ts`: what the two toolboxes share;
 - `FramesSheetView.tsx`: the SVG as the backend wrote it, scaled to the page, and an overlay in the same units:
-  the cursor (a line between two columns by their times), the lit noteheads of its column, the pale veil on the
+  the cursor (a line between two columns by their times), the lit noteheads of its column (a decoration note only
+  from its own onset, never while the note before it sounds alone: the user, implementation 04-3, Phase 2b;
+  `geometry.headsByColumn`, `laterOnsets`), the pale veil on the
   part Sonnet works on, and the blank staves that a part coming back from Sonnet is written into, column by
   column (about two seconds; when the AI writes one hand only, the segment's `staff`, both cover only that staff,
   cut halfway between the staves by `geometry.onStaff`); since Phase 6 also the picking of notes (a click on a notehead, ⌘ or Shift to add,
@@ -59,7 +64,9 @@ clip), `npm run check:frames-edit` (picking, the hand, undo and redo, and the ti
 `npm run check:frames-tools` (every tool of the two toolboxes and the range selection; `--live` makes one stretch
 request, about $0.01) and `npm run check:frames-toolbox` (Phase 8: the sheet toolbox, lyrics, the keyboard panel,
 Print to PDF, the lyrics in Play mode), and since implementation 04 `npm run check:frames-page` (Phase 1: the header,
-the floating bar hidden and shown, the wheel zoom, the cursor dragged across lines) and `npm run
+the floating bar hidden and shown, the wheel zoom, the cursor dragged across lines; 04-3, Phase 2b: the frame marks
+on the sheet, after the zoom and on the printed pages, the frames typed in the range toolbox, a decoration note lit
+at its own onset) and `npm run
 check:enhance-dialog` (Phase 4: the dialog; a stand-in answers the requests that would start the AI).
 
 The engine stays in the backend (implementation 03, Phase 6, task 4): one edit takes about a quarter of a second

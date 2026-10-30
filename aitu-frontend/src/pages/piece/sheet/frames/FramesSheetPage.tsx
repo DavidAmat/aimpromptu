@@ -105,6 +105,7 @@ import { besideOnScreen, clearOfRange, firstLineBoxOf, screenBoxOf } from "../to
 import { EnhanceDialog, type EnhanceTab, type StretchHand } from "./EnhanceDialog";
 import { FramesLyricsToolbox } from "./FramesLyricsToolbox";
 import { FramesNoteToolbox } from "./FramesNoteToolbox";
+import { FrameRangeFields } from "./FrameRangeFields";
 import { FramesRangeToolbox, type RangeHand } from "./FramesRangeToolbox";
 import { FramesSheetView, type MarkedRange, type PickHow } from "./FramesSheetView";
 import { FramesPdfDialog } from "./FramesPdfDialog";
@@ -480,6 +481,14 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
     },
     [audioUuid, range, placeRange],
   );
+
+  /** The stretch named by its frame numbers in the toolbox (Phase 2b of 04-3): marked, and its start brought into view. */
+  const markFrames = (next: MarkedRange) => {
+    setMark({ uuid: audioUuid, range: next });
+    window.requestAnimationFrame(() =>
+      document.querySelector("[data-frames-sheet] [data-range-band]")?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
+    );
+  };
 
   const onPick = useCallback(
     (refs: string[], how: PickHow) => {
@@ -1317,6 +1326,8 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
         <FramesRangeToolbox
           audioUuid={audioUuid}
           range={range}
+          columns={sheet.columns}
+          onFrames={markFrames}
           reading={sheet.reading}
           notes={sheet.notes}
           at={rangeAt}
@@ -1341,6 +1352,9 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           initialPosition={rangeAt ?? { x: 24, y: 140 }}
           onClose={unmark}
         >
+          <Box sx={{ mb: 1 }}>
+            <FrameRangeFields range={range} columns={sheet.columns} onFrames={markFrames} />
+          </Box>
           <Stack direction="row" spacing={1} data-frames-stretch-panel>
             {step.stretchAction ? (
               <PillButton

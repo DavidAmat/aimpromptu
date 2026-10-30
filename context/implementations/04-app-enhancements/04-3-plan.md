@@ -671,8 +671,8 @@ Start prompt:
 
 > You are working on an implementation plan. Read @context/implementations/04-app-enhancements/04-3-plan.md,
 > @context/implementations/04-app-enhancements/04-3-prompt.md, @context/guidelines/guidelines-implementation-plan.md,
-> @context/guidelines/guidelines-communication-with-user.md and @context/implementations/04-app-enhancements/04-3-implementation-phase-2.md.
-> Start Phase 3.
+> @context/guidelines/guidelines-communication-with-user.md, @context/implementations/04-app-enhancements/04-3-implementation-phase-2.md
+> and @context/implementations/04-app-enhancements/04-3-implementation-phase-2b.md. Start Phase 3.
 
 1. **Study of 99 Red Balloons**. The project of the brief is `c0e39afe-3122-47fb-aada-54952b014783`, which is the
    user's edit copy in the Personal Vault of the My Library version `b2db46eb-b4c7-4f70-b203-1fe02f4c847d`. Its sheet
@@ -870,3 +870,18 @@ the two voices as one line of chords and single notes.
 numbers of [`gallery/04-3-phase-2/patterns.json`](gallery/04-3-phase-2/patterns.json) are now the approved ones: a
 new pattern takes the next number of its level, and no approved number changes (section 5.10 point 2). The branch
 was merged into `master` after Phase 1, and the user confirmed that Phase 2b comes before Phase 3, as section 8 says.
+
+**Phase 2b** (2026-10-30, [`04-3-implementation-phase-2b.md`](04-3-implementation-phase-2b.md)): the open point of
+section 5.10 "how often the sheet shows a frame number" is settled. A first version put the number of a column over
+the clef of each line and about every third of a line, just above the notes. The user saw that a number so close to
+a note reads as a fingering, and asked instead for a grey dashed line every 100 frames across both staves and beyond
+them, as a bar line, with the frame number on top and the time above it (`01:09`). The line may cross a note; the
+labels of a line share one height above the notes. The zoom and Print to PDF have them because the engine draws them.
+The range toolbox shows the first and last frames of the stretch in two fields ("From frame [283] to frame [495]",
+not in its title, which the buttons cut): the user asked that typing other numbers marks that stretch. During the
+phase the user also asked that a decoration note light only at its own onset, never while the note before it still
+sounds (until then it lit with the column before it, a rule of implementation 03); the page now does so. The Phase 3
+start prompt also reads the Phase 2b report.
+
+**Phase 2b, approval and merge** (2026-10-30): the user approved the frame marks, the editable frames of the range
+toolbox and the lighting of decoration notes; the branch was merged into `master`. Phase 3 is next.

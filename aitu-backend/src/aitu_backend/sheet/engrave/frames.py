@@ -8,6 +8,12 @@ lines, clefs, armaduras, the brace: Verovio's drawing rules and the Leipzig glyp
 * **Columns.** One x per drawn column (``Note.frame``) for both hands: what sounds together is on one vertical line.
   A grace note is drawn before the next note of its hand, not at its own column. Notes ``covered`` by an ornament
   (``orn``) are not drawn. One hand has one voice: no rests, no voices, no compás lines, no meter, no bar numbers.
+* **Frame marks** (implementation 04-3, Phase 2b) take the place of bar lines, so that the user can name a place of
+  the sheet ("at frame 300"): every ``FRAME_MARK_EVERY`` frames (100, 200, ...) a grey dashed line across both staves
+  and beyond them, at the x of that frame (the cursor's rule: between two columns by time), behind the notes, with
+  the frame number on its top and the time of the frame above it (``01:09``, minutes and seconds; the bars engine's
+  bar-number digits); the numbers of a line share one height, above the ink of the upper staff around any of them. The
+  line may cross a note; the number never sits on one. ``Options.frame_numbers`` turns them off.
 * **Spacing** (plan section 3.2). The gap after a column comes from the time to the next column in either hand,
   through the measured spacing model (``spacing_model.json``) with the reference figure as its negra: many short
   notes in one hand widen the stretch for both hands. When no hand starts a note for longer than a blanca, the time
@@ -72,6 +78,16 @@ LYRIC_LEADING = 1.2  # the distance between two lines of one piece, in its size
 CLEF_PAD = 0.3  # staff spaces before a clef change inside a line
 CLEF_AFTER = 0.6  # and between it and the notes it changes
 DEFAULT_QUARTER_MS = 500.0
+FRAME_MARK_EVERY = 100  # a frame mark on every frame that is a multiple of this (4 seconds of 40 ms frames)
+FRAME_NUMBER_SCALE = 0.7  # the digits of a frame number, as the bars engine's bar numbers
+FRAME_NUMBER_BASE = -2.4  # the lowest baseline of a frame number (above the top staff line)
+FRAME_NUMBER_CLEAR = 0.8  # and at least this far above the ink of the upper staff around its line
+FRAME_NUMBER_ROOM = 0.6  # a number this close to the one before it is left out (its line stays)
+FRAME_TIME_GAP = 0.35  # the time of a mark stands this far above its frame number
+FRAME_LINE_TOP = 0.35  # the dashed line starts this far under its number's baseline
+FRAME_LINE_BELOW = 2.0  # and ends this far under the lower staff
+FRAME_LINE_W = 0.09
+FRAME_LINE_DASH = (0.45, 0.35)
 
 
 @dataclass
@@ -89,6 +105,7 @@ class Options:
     merge_unisons: bool = True
     quarter_ms: float | None = None  # the reference figure (default: the sheet's)
     key_line: bool = False  # a thin double line before an armadura change inside a line
+    frame_numbers: bool = True  # the frame marks: dashed lines with their frame numbers (module notes)
 
 
 @dataclass
@@ -589,6 +606,7 @@ def _draw_system(lay: Layout, si: int) -> tuple[System, list[dict]]:
             L._ornaments(pen, c)
             L._fingers(pen, c)
     L._ottavas(pen, sys_chords)
+    marks = _frame_marks(lay, si, cols, end_x, pen)
     _lyrics(lay, si, cols, end_x, pen)
     below, above = 4.0, 0.0
     for p in pen.prims:
@@ -611,6 +629,17 @@ def _draw_system(lay: Layout, si: int) -> tuple[System, list[dict]]:
         for k in range(5):
             pen.l(staff, 0.0, k * 1.0, end_x + L.BAR_W / 2, k * 1.0, L.STAFF_LINE_W)
     bass_bottom = 4 + gap + 4
+    for frame, x, top in reversed(marks):  # first in the drawing: the notes are drawn over the lines
+        pen.prims.insert(
+            0,
+            L.Prim(
+                "l",
+                0,
+                (x, top, x, bass_bottom + FRAME_LINE_BELOW, FRAME_LINE_W, FRAME_LINE_DASH),
+                "frame-line",
+                str(frame),
+            ),
+        )
     pen.l(0, L.BAR_W / 2, 0.0, L.BAR_W / 2, bass_bottom, L.BAR_W)  # the line that joins the staves
     for kx in key_lines:
         for dx in (0.0, 0.45):
@@ -668,7 +697,52 @@ def _ink_x(p: L.Prim) -> tuple[float, float] | None:
     if p.kind == "p":
         xs = [pt[0] for pt in p.data]
         return min(xs), max(xs)
+    if p.kind == "n":
+        return L._prim_xrange(p)
     return None
+
+
+def _frame_marks(
+    lay: Layout, si: int, cols: list[Column], end_x: float, pen: L.Pen
+) -> list[tuple[int, float, float]]:
+    """The frame marks of this line (module notes): the numbers are drawn now, before the lyrics so that the words
+    clear them; the dashed lines once the space between the staves is known. A line holds the frames from its first
+    column to the next line's first column (the last line: to its last column). Returns (frame, x, top of the line).
+    """
+    if not lay.opts.frame_numbers:
+        return []
+    i, j, _ = lay.lines[si]
+    a = cols[0].frame
+    b = lay.columns[j].frame if j < len(lay.columns) else cols[-1].frame + 1
+    inks = []
+    for p in pen.prims:
+        span = _ink_x(p) if p.staff == 1 else None
+        if span is not None:
+            inks.append((span[0], span[1], L._prim_yrange(p)[0]))
+    found = []
+    for frame in range(-(-a // FRAME_MARK_EVERY) * FRAME_MARK_EVERY, b, FRAME_MARK_EVERY):
+        if frame <= 0:
+            continue
+        x = min(_x_of(lay, si, cols, end_x, frame) + L.HEAD_W / 2, end_x - 0.3)
+        text = str(frame)
+        seconds = int(frame * FRAME_MS // 1000)
+        clock = f"{seconds // 60:02d}:{seconds % 60:02d}"
+        wide = max(L.number_width(text, FRAME_NUMBER_SCALE), L.number_width(clock, FRAME_NUMBER_SCALE))
+        left = x - wide / 2
+        top = min((lo for p, q, lo in inks if q >= left - 0.3 and p <= left + wide + 0.3), default=0.0)
+        found.append((frame, x, text, clock, left, wide, top))
+    # One height for the numbers of a line, as a row of bar numbers: above the highest ink under any of them.
+    y = min([FRAME_NUMBER_BASE] + [top - FRAME_NUMBER_CLEAR for *_, top in found])
+    marks, last = [], None
+    high = max(box(f"tuplet{d}").top for d in "0123456789") * FRAME_NUMBER_SCALE
+    for frame, x, text, clock, left, wide, _ in found:
+        if last is None or left >= last + FRAME_NUMBER_ROOM:
+            for label, at, cls in ((text, y, "frame-number"), (clock, y - high - FRAME_TIME_GAP, "frame-time")):
+                w = L.number_width(label, FRAME_NUMBER_SCALE)
+                pen.prims.append(L.Prim("n", 1, (x - w / 2, at, label, FRAME_NUMBER_SCALE, frame), cls))
+            last = left + wide
+        marks.append((frame, x, y + FRAME_LINE_TOP))
+    return marks
 
 
 @dataclass

@@ -39,7 +39,11 @@ this section describes the old sheet, kept as the record of what was moved. On t
   name the sheet prints (`Do-# 5`) or the number of notes, with their time under it.
 - **Mark a stretch**: in the strip above the upper staff of a line (it shows faintly under the pointer), click for
   one column, drag across columns (on to the next lines too), Shift-click to extend. The stretch is a lavender
-  band; the range toolbox (*Frames*) opens to the left of it. Its first row, **Both / Right / Left**, narrows the
+  band; the range toolbox (*Frames*) opens to the left of it. Its first line holds the frame numbers of the first and
+  last columns of the stretch in two fields ("From frame [283] to frame [495]"; implementation 04-3, Phase 2b): other
+  numbers, then Enter or leaving both fields, mark the stretch they name. The sheet has a grey dashed line every 100
+  frames with the frame number and the time on its top, so that the user can name a place in the words of **Enhance
+  with AI**. Its first row, **Both / Right / Left**, narrows the
   band and the Clef and Octave tabs to one hand. One selection at a time: picking notes drops the stretch, and the
   other way round. Each toolbox hands its selection to the other from its title bar.
 - **The note toolbox**: the seven **figures** (pressing one sets the figure by hand: the rule keeps it, and it is

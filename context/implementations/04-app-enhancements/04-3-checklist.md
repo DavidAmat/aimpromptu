@@ -60,14 +60,18 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] Task 2.9 Every pattern in the app's notation (the Chopin ones from the kern), and the numbers inside each hand
   and level.
 
-# [ ] Phase 2b: Frame numbers on the sheet and in the range toolbox
+# [x] Phase 2b: Frame numbers on the sheet and in the range toolbox
 
-- [ ] Task 2b.1 Study: how the engine draws a line, how the page lays the SVG and the cursor, the range toolbox.
-- [ ] Task 2b.2 The frame number on the sheet: at the start of each line and at regular places; also in the zoom and
-  the print.
-- [ ] Task 2b.3 The range toolbox: the first and the last frame number of the selected range.
-- [ ] Task 2b.4 Checks: `check:frames-page` with the numbers, screenshots in `screenshots/04-3-phase-2b/`; the user
-  checks the sheet page in the browser.
+Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2b.md`](04-3-implementation-phase-2b.md).
+
+- [x] Task 2b.1 Study: how the engine draws a line, how the page lays the SVG and the cursor, the range toolbox.
+- [x] Task 2b.2 The frame number on the sheet: after the user's first look, a dashed line every 100 frames with the
+  frame number and the time on top; also in the zoom and the print (drawn by the engine).
+- [x] Task 2b.3 The range toolbox: the first and the last frame number of the selected range, in two fields that mark
+  the stretch they name (the user's request).
+- [x] (the user, during the phase) A decoration note lights at its own onset, not with the note before it.
+- [x] Task 2b.4 Checks: `check:frames-page` with the numbers (passed), screenshots in `screenshots/04-3-phase-2b/`;
+  the user checked the sheet page and approved it on 2026-10-30.
 
 # [ ] Phase 3: The level prompts, tested on 99 Red Balloons
 

@@ -54,6 +54,41 @@ export function frameOf(ref: string): number {
   return Number(ref.split(":")[0]);
 }
 
+/**
+ * The frames of a marked stretch (implementation 04-3, Phase 2b): the frame numbers of its first and last columns, as
+ * the sheet prints them, so that the user can name the place.
+ */
+export function framesOfRange(
+  range: { start: number; end: number },
+  columns: readonly { frame: number }[],
+): { first: number; last: number } {
+  const inside = columns.filter((column) => column.frame >= range.start && column.frame < range.end);
+  const first = inside[0]?.frame ?? range.start;
+  return { first, last: inside[inside.length - 1]?.frame ?? first };
+}
+
+/**
+ * The stretch the user names by two frame numbers (the toolbox's fields): the columns from the first frame to the
+ * last one, both included, `end` the next column's frame as the strip marks it. Typed the other way round, the
+ * numbers are swapped; between two columns, the column that sounds at the first frame. `null` before the first
+ * column or for a number that is not one.
+ */
+export function rangeOfFrames(
+  from: number,
+  to: number,
+  columns: readonly { frame: number }[],
+): { start: number; end: number } | null {
+  if (!Number.isFinite(from) || !Number.isFinite(to) || columns.length === 0) return null;
+  const [a, b] = from <= to ? [from, to] : [to, from];
+  let first = columns.findIndex((column) => column.frame >= a);
+  if (first < 0 || columns[first].frame > b) first = columns.findLastIndex((column) => column.frame <= a);
+  if (first < 0) return null;
+  let last = first;
+  while (last + 1 < columns.length && columns[last + 1].frame <= b) last += 1;
+  const next = columns[last + 1];
+  return { start: columns[first].frame, end: next ? next.frame : columns[last].frame + 1 };
+}
+
 export function midiOf(ref: string): number {
   return Number(ref.split(":")[1]);
 }

@@ -2,6 +2,10 @@
  * The range toolbox of the new sheet (implementation 03, Phase 7): what a marked stretch of frames can carry, as the
  * old range toolbox, on the edit model of the new sheet (each change written at once, one step of undo).
  *
+ * The first line names the frame numbers of the stretch's first and last columns (implementation 04-3, Phase 2b), as
+ * the sheet prints them, in two fields: other numbers mark another stretch (`FrameRangeFields`). The title bar is too
+ * full for them (the line under the title has the times).
+ *
  * The first row says which staff the stretch is about (**Both / Right / Left**): the highlight on the sheet shrinks
  * to that staff, and **Clef** and **Octave** act on that hand alone. Then one tab per thing a stretch carries, a dot
  * on the tab when this stretch already carries it:
@@ -37,6 +41,7 @@ import SwapHorizIcon from "@mui/icons-material/SwapHorizOutlined";
 import { sheetApi, type ReadingEdit, type SheetNote, type SheetReading, type StretchKeys } from "../../../../api";
 import { IconAction, Logo, PillButton, Segmented, Toolbox } from "../../../../ui";
 import { formatSeconds } from "../sheetConstants";
+import { FrameRangeFields } from "./FrameRangeFields";
 import { ARMADURAS, frameOf, keyName } from "./readingTools";
 
 export type RangeHand = "both" | "right" | "left";
@@ -86,6 +91,8 @@ function clefAt(reading: SheetReading, hand: Hand, frame: number): string {
 export function FramesRangeToolbox({
   audioUuid,
   range,
+  columns,
+  onFrames,
   reading,
   notes,
   at,
@@ -105,6 +112,10 @@ export function FramesRangeToolbox({
   audioUuid: string;
   /** The stretch marked, in frames (`end` excluded). */
   range: { start: number; end: number } | null;
+  /** The drawn columns of the sheet (their frames name the stretch in the title). */
+  columns: readonly { frame: number }[];
+  /** Mark the stretch the user names by its frame numbers. */
+  onFrames: (next: { start: number; end: number }) => void;
   reading: SheetReading;
   notes: readonly SheetNote[];
   at: { x: number; y: number } | undefined;
@@ -228,6 +239,7 @@ export function FramesRangeToolbox({
       }
     >
       <Stack spacing={1.5} data-frames-range-toolbox>
+        <FrameRangeFields range={range} columns={columns} onFrames={onFrames} />
         <Segmented<RangeHand> label="Which staff" value={rangeHand} options={HAND_OPTIONS} onChange={setRangeHand} />
 
         <Box role="tablist" aria-label="What this stretch carries" sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0.75 }}>

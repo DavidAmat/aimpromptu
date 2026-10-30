@@ -7,7 +7,8 @@
  * - **A segment that comes back** appears column by column, like a text an LLM writes word by word: blank staves
  *   over it, then the notes, left to right, in about two seconds.
  * - **The cursor** follows the recording (the research viewer's arithmetic, `geometry.ts`): a line between two
- *   columns by their times, the noteheads of the column it is in lit, and a click on the sheet moves the
+ *   columns by their times, the noteheads of the column it is in lit (a decoration note only from its own onset,
+ *   implementation 04-3, Phase 2b), and a click on the sheet moves the
  *   recording there. While it plays, the page keeps the line of the cursor in view (in the middle in Play mode).
  *   The cursor is dragged and dropped (implementation 04, Phase 1): the pointer shows `grab` over it, the line
  *   follows the pointer over the columns of any line (the page scrolls near the window's top and bottom edges, and
@@ -50,7 +51,7 @@ import Box from "@mui/material/Box";
 import { keyframes } from "@mui/material/styles";
 import type { FramesSheet, LyricFont } from "../../../../api";
 import { palette, semantic } from "../../../../ui";
-import { boxesOf, columnEdges, columnsOf, headsByColumn, msAtPoint, onStaff, placeAt, steadyColumns } from "./geometry";
+import { boxesOf, columnEdges, columnsOf, headsByColumn, laterOnsets, type ColumnHeads, msAtPoint, onStaff, placeAt, steadyColumns } from "./geometry";
 import { LYRIC_LEADING, LYRIC_MAX, LYRIC_MIN, familyOf, wrapWords } from "./lyricsText";
 
 /** The reveal of a segment takes about this long, whatever its number of columns. */
@@ -280,7 +281,7 @@ export function FramesSheetView({
   const columns = useMemo(() => steadyColumns(sheet.columns), [sheet.columns]);
   const edges = useMemo(() => columnEdges(columns, sheet.systems), [columns, sheet.systems]);
   /** The noteheads of each column of the drawing on the page (`data-note`). */
-  const heads = useRef<Element[][]>([]);
+  const heads = useRef<ColumnHeads[]>([]);
 
   /** The lyrics blocks of the drawing, in sheet units, by key (`"<data-lyric>:<part>"`). */
   const [lyricBlocks, setLyricBlocks] = useState<{ svg: string; boxes: Record<string, LyricBlock> }>({ svg: "", boxes: {} });
@@ -393,13 +394,17 @@ export function FramesSheetView({
   const cursorMs = cursorDrag?.moved ? cursorDrag.ms : playheadSeconds === null ? null : playheadSeconds * 1000;
   const place = cursorMs === null ? null : placeAt(columns, sheet.systems, cursorMs);
   const lit = place ? place.column : -1;
+  // The decoration notes of the column whose onset the cursor has reached (they light at their own onset).
+  const onsets = useMemo(() => laterOnsets(columns, sheet.notes.map((note) => Number(note.ref.split(":")[0]))), [columns, sheet.notes]);
+  const started = cursorMs === null ? 0 : (onsets[lit]?.filter((ms) => ms <= cursorMs).length ?? 0);
   useEffect(() => {
-    const now = heads.current[lit] ?? [];
+    const column = heads.current[lit];
+    const now = column ? [...column.now, ...column.later.slice(0, started).flatMap((one) => one.heads)] : [];
     for (const element of now) element.setAttribute("data-lit", "");
     return () => {
       for (const element of now) element.removeAttribute("data-lit");
     };
-  }, [lit, sheet.svg]);
+  }, [lit, started, sheet.svg]);
 
   // The picked noteheads, marked on the drawing (a new drawing after an edit is marked again).
   useEffect(() => {

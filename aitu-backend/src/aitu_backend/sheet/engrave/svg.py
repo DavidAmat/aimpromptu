@@ -6,12 +6,16 @@ from __future__ import annotations
 from xml.sax.saxutils import escape
 
 from aitu_backend.sheet.engrave.glyphs import UNITS, box, path_d
-from aitu_backend.sheet.engrave.layout import Engraving
+from aitu_backend.sheet.engrave.layout import COLON_W, Engraving
 
 __all__ = ["to_svg"]
 
 #: The colour of the lyrics: a soft charcoal, as the old sheet printed them.
 LYRIC_COLOR = "#3a3a3a"
+#: The colour of the frame numbers (implementation 04-3, Phase 2b): grey, as bar numbers, so they never read as notes.
+FRAME_NUMBER_COLOR = "#8a8a8a"
+#: The colour of the dashed line of a frame mark: lighter than the number, behind the notes.
+FRAME_LINE_COLOR = "#b4b4b4"
 #: The fonts of the lyrics pieces (``data.LYRIC_FONTS``), as the page loads them (`index.css`).
 LYRIC_FAMILIES = {
     "lora": "Lora, Georgia, serif",
@@ -64,6 +68,8 @@ def to_svg(
             elif p.kind == "l":
                 x1, y1, x2, y2, w, dash = p.data
                 d = f' stroke-dasharray="{_f(dash[0])} {_f(dash[1])}"' if dash else ""
+                if p.cls == "frame-line":
+                    d += f' class="frame-line" data-frame="{p.ref}" stroke="{FRAME_LINE_COLOR}"'
                 body.append(
                     f'<line x1="{_f(x1 + m)}" y1="{_f(y1 + dy)}" x2="{_f(x2 + m)}" y2="{_f(y2 + dy)}" '
                     f'stroke-width="{_f(w)}"{d}/>'
@@ -110,6 +116,30 @@ def to_svg(
                     f'<text class="lyric" data-lyric="{index}" data-start="{first}" data-end="{end}"{extra} '
                     f'font-size="{_f(size)}" font-family="{family}"{face} '
                     f'fill="{LYRIC_COLOR}" stroke="none">{spans}</text>'
+                )
+            elif p.kind == "n":
+                x, y, text, s, frame = p.data
+                uses = []
+                for ch in text:
+                    if ch == ":":  # two dots: the font has no colon
+                        cx = x + COLON_W * s / 2
+                        for h, lean in ((0.3, 0.0), (0.85, 0.12)):  # the upper dot follows the italic digits
+                            uses.append(
+                                f'<circle cx="{_f(cx + lean * s + m)}" cy="{_f(y + dy - h * s)}" r="{_f(0.11 * s)}"/>'
+                            )
+                        x += COLON_W * s
+                        continue
+                    name = f"tuplet{ch}"
+                    used.add(name)
+                    uses.append(
+                        f'<use xlink:href="#{id_prefix}{name}" '
+                        f'transform="translate({_f(x + m)},{_f(y + dy)}) scale({s / UNITS:.6f})"/>'
+                    )
+                    x += box(name).width * s
+                body.append(
+                    f'<g class="{p.cls}" data-frame="{frame}" fill="{FRAME_NUMBER_COLOR}">'
+                    + "".join(uses)
+                    + "</g>"
                 )
             elif p.kind == "b":
                 x, y0, y1 = p.data
