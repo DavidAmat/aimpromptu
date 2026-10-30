@@ -720,8 +720,10 @@ Start prompt:
 3. The run: `start_level` and `write_level` (the plan of the song, then the batches that see the earlier batches),
    the check, the feedback, the stand-in tests.
 4. Storing: a level of the whole sheet in a new project named with the level; a level of a range in place with one
-   step of undo; the notes in `notes.pmn` through `edits.change_notes` (hands changed where notes moved); the record of
-   `sheet.f1` keeps the level, the prompt version, the cost and the declared lines.
+   step of undo; the notes in `notes.pmn` through `edits.change_notes` (hands changed where notes moved) and the hands
+   of the sheet written there, so the Notes tab shows the level (Phase 3 report section 16; a test asserts that every
+   live note has the hand the sheet draws it in); the record of `sheet.f1` keeps the level (or the level of each
+   hand), the prompt version, the cost and the declared lines.
 5. Tests with the AI on a temporary copy of 99 Red Balloons (the user asked first, with the cost): a range at each
    level, then the whole sheet at easy, medium and hard. Gallery `gallery/04-3-phase-4/` (the whole song, original
    and each level, with the measures); checked zoomed in.
@@ -918,3 +920,10 @@ under each note. The prompt and the check hold the three (report section 12).
 (page 41, the second line), adds left hard 16 (a broken octava, then the chord around its upper note), 17 (a low
 note, then a line with a passing note) and 18 (a note the thumb comes back to, with a reach below). They take the next
 numbers of their level; no approved number changed.
+
+**Phase 3, approval** (2026-10-30): the user approved the three levels on the four passages (hard right with medium
+left, medium, easy; report sections 14 and 15: easy and medium also keep a steady rhythm, no figure shorter than a
+semicorchea). The user asked that every change the AI makes reach `notes.pmn` and the Notes tab; this holds for the
+runs of today (report section 16), and Phase 4 stores a level run the same way: the notes through
+`edits.change_notes` and the hands of the sheet in `notes.pmn`, with a test that every live note has the hand the
+sheet draws it in. The galleries are served at `http://ubuntu:8097/gallery/...` (the folder `04-app-enhancements/`).

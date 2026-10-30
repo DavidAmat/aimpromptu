@@ -1,9 +1,9 @@
 # 04-3 · Phase 3: the level prompts, tested on 99 Red Balloons
 
-Status: **in progress** (2026-10-30). Tasks 3.1 to 3.6 are built and tested without the AI. Task 3.7: the run of the
-user's choice (hard for the right hand, medium for the left hand) was made twice on the four passages, with rules
-added after each of the user's reviews (sections 11 and 12; $1.58 in all); it waits for the user's review. Easy and
-medium come after it. Branch `feat/04-3-phase-3` from `master` (`f85fa92`).
+Status: **approved by the user on 2026-10-30** ("perfect"), merged into `master`. Tasks 3.1 to 3.6 built and
+tested without the AI; task 3.7: hard for the right hand and medium for the left hand (sections 11 and 12), then
+medium and easy (sections 14 and 15), $4.80 in all; the user's last question, whether the AI's changes reach the Notes
+tab, is answered in section 16. Branch `feat/04-3-phase-3` from `master` (`f85fa92`).
 
 Audience: the agents of this plan (this phase when the user answers, and Phase 4). Technical.
 
@@ -364,3 +364,29 @@ place), against plan section 5.5 ("a lower level does not move more than a highe
 answer, not two levels against each other.
 
 Costs in Phase 3: $4.80 (hard-medium $1.58; medium $0.73 + $0.97; easy $0.81 + $0.71).
+
+# 16. Do the AI's changes reach the Notes tab? (the user, 2026-10-30)
+
+The user asked to confirm that every change an AI run makes to the sheet (hands, notes added, notes left out) is in
+the piano matrix notation of the part, with its split into the right hand and the left hand, so that the Notes tab
+shows it. Checked in the code and on the stored data (read only):
+
+- **One truth**: the hand of each note is in `notes.pmn` (03's rule); the Notes tab is the route `/projects/{id}/notes`
+  (`NotesEditor`), which reads `GET /pieces/{uuid}/notes` (the live notes, each with its hand; removed notes are not
+  sent) every time it is opened, and colours the notes by hand.
+- **A whole run** (`job.commit`): the hands of the sheet written into `notes.pmn` (`build.hands_of_sheet`,
+  `pipeline.save_edit(hands_changed=)`; when the user had saved hands before, the old ones are kept in the history,
+  `history.snapshot_notes`), and the notes added and left out written by `edits.change_notes` (left out = marked
+  removed, added = new notes with their hand). **A stretch** (`edits.apply_stretch`): the same, hands and notes.
+  **Simplify** (`edits.apply_simplify`): notes added and left out; hands do not move.
+- **The data**: 99 Red Balloons (`c0e39afe`): 2,606 live notes (1,348 left, 1,258 right), 0 without a hand, 0 guessed;
+  every one of them has in `notes.pmn` the hand the sheet draws it in (2,606 of 2,606); 17 marked removed (the 10 of
+  the Simplify run and 7 of the user's stretches); the 23 notes Simplify added are live notes with their hand; the
+  sheet's record is for the current hands revision (8), not stale. 7 Years (`477086a0`, prompt 6): 1,460 of 1,460 agree.
+- **One gap**: the Notes tab reads the notes again while it stays open only when the notes revision grows; an AI run
+  that changes only hands (no note added or left out) while the Notes tab is open shows the new colours when the tab
+  is opened again. In the usual flow the runs start from the Sheet tab, so the Notes tab is opened after them.
+- **Needed at Phase 4**: the level run must store the same way: the rewritten hands' notes of each batch marked
+  removed and the answer's notes added with their hands (`edits.change_notes`), and the hands of the sheet written
+  (`hands_of_sheet`), in one step of undo. A test should assert, after a stand-in level run, that every live note of
+  `notes.pmn` has the hand the stored sheet draws it in (the check of this section, scratch `hands_check.py`).
