@@ -1133,3 +1133,8 @@ right hand on a copy (`be248152`, f1495-f1795, the words "Instead of octaves, us
 became 0, every melody note kept, the new notes the fifth or the root of the chord (C5+C6 -> G5+C6, A4+A5 -> E5+A5,
 B4+B5 -> G5+B5), the left hand unchanged; $0.036, 46 s.
 
+**Only keep the selected part** (the user, 2026-10-30, same branch): the Audio step gets a tick button left of the
+scissors, "Only keep the selected part": everything before and after the selection becomes a cut, in one step of undo
+(the cuts inside the selection stay); then **Save**. `audio/cuts.keepOnly`, 4 new cases in `check:cuts`; looked at on a
+temporary copy of the user's project (deleted).
+

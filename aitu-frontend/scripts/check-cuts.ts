@@ -16,6 +16,7 @@ import {
   cutFrames,
   firstKeptFrom,
   jumpTarget,
+  keepOnly,
   keptRanges,
   normalizeCuts,
   overlapsCut,
@@ -44,6 +45,10 @@ console.log("\nDelete and Restore");
   const two = addCut(one, 500, 550, 1000);
   check("Delete adds a cut", same(two, [[100, 300], [500, 550]]));
   check("Delete over the end of a cut joins them", same(addCut(two, 290, 310, 1000), [[100, 310], [500, 550]]));
+  check("Only keep the selected part cuts the rest", same(keepOnly([], 200, 600, 1000), [[0, 200], [600, 1000]]));
+  check("and keeps the cuts inside it", same(keepOnly(two, 50, 700, 1000), [[0, 50], [100, 300], [500, 550], [700, 1000]]));
+  check("a selection from the start cuts only the end", same(keepOnly([], 0, 400, 1000), [[400, 1000]]));
+  check("joining the cuts it touches", same(keepOnly(one, 300, 1000, 1000), [[0, 300]]));
   check("Restore of a whole cut removes it", same(restoreRange(two, 100, 300), [[500, 550]]));
   check("Restore of the middle of a cut splits it", same(restoreRange(two, 150, 200), [[100, 150], [200, 300], [500, 550]]));
   check("Restore across two cuts trims both", same(restoreRange(two, 250, 520), [[100, 250], [520, 550]]));

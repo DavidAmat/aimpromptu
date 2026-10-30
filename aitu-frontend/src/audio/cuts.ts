@@ -42,6 +42,14 @@ export function addCut(cuts: readonly Cut[], start: number, end: number, totalFr
   return normalizeCuts([...cuts, [start, end]], totalFrames);
 }
 
+/** **Only keep the selected part**: everything before `start` and after `end` becomes a cut; the cuts inside stay. */
+export function keepOnly(cuts: readonly Cut[], start: number, end: number, totalFrames: number): Cut[] {
+  const out: Cut[] = [...cuts];
+  if (start > 0) out.push([0, start]);
+  if (end < totalFrames) out.push([end, totalFrames]);
+  return normalizeCuts(out, totalFrames);
+}
+
 /** The cuts with `[start, end)` put back: every cut loses the part inside the range. */
 export function restoreRange(cuts: readonly Cut[], start: number, end: number): Cut[] {
   const out: Cut[] = [];
