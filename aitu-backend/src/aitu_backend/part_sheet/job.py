@@ -3,7 +3,8 @@
 :func:`start` submits one job per part (key ``sheet-llm:<part>``; a second start returns the running one). The job:
 
 1. reads the notes with their starting hands (``pipeline.starting_hands``) and runs the LLM step of Phase 4
-   (``sheet.llm.frames.write_frames``) with Sonnet 5.5 (``sheet_llm.ClaudeComplete``);
+   (``sheet.llm.frames.write_frames``) with GPT-6.1 Terra at medium (``sheet_llm.OpenAIComplete``; Sonnet 5.5 until
+   implementation 04-3, Phase 5);
 2. keeps the sheet of the moment in memory (:class:`LiveRun`): the reference request first (the page shows the
    sheet it had, its first segment being improved), then the algorithm with Sonnet's reference figure, then each
    window's decisions as it comes back (``assemble`` of the parts so far and the algorithm's parts for the rest);
@@ -32,7 +33,6 @@ works stops the requests at the next one (:class:`PartGone`): no credits are spe
 from __future__ import annotations
 
 import importlib.util
-import os
 import threading
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
@@ -79,22 +79,28 @@ __all__ = [
     "start_stretch",
 ]
 
-#: The job key of a part: one Sonnet run at a time per part.
+#: The job key of a part: one AI run at a time per part.
 KEY = "sheet-llm:{}"
 #: The name of the stream's messages (an ``EventSource`` listener of that name receives them).
 EVENT = "sheet"
-#: US dollars, measured (implementation 04, Phases 3 and 4), for the cost the dialog shows before a run: the first
-#: request of a run writes the instructions into the cache, then each window of a whole run (the reference request
-#: too), each batch of Simplify (most of a batch reads the cache, and its answer is a few lines), a stretch.
-USD_CACHE = 0.04
-USD_WINDOW = 0.038
-USD_BATCH = 0.008
-USD_STRETCH = 0.02
+#: US dollars and seconds for the cost and the time the dialog shows before a run, measured with GPT-6.1 Terra at
+#: medium (implementation 04-3, Phase 5, on the user's song of 1.3 minutes: a whole run of 7 requests $0.064 in 102 s,
+#: Simplify of both hands in 3 batches $0.038 in 46 s, a stretch $0.024 in 26 s): the first request of a run writes
+#: the instructions into the cache, then each window of a whole run (the reference request too), each batch of
+#: Simplify (both hands count twice for the money, once for the time), a stretch.
+USD_CACHE = 0.01
+USD_WINDOW = 0.008
+USD_BATCH = 0.005
+USD_STRETCH = 0.015
+SECONDS_WINDOW = 15
+SECONDS_BATCH = 15
+SECONDS_STRETCH = 30
 #: A level run uses GPT-6.1 Terra at medium effort (implementation 04-3, Phase 5: the user's decision of 2026-10-30,
 #: after the comparison with Sonnet 5.5 on 16 cases). Measured there: the plan of the song about $0.012 and 8 s; a
 #: batch with all its replies (1.9 on average) about $0.023 and 41 s. The estimate the dialog shows rounds them up.
-LEVEL_MODEL = "gpt-6.1-terra"
-LEVEL_EFFORT = "medium"
+MODEL = "gpt-6.1-terra"
+EFFORT = "medium"
+LEVEL_MODEL, LEVEL_EFFORT = MODEL, EFFORT
 USD_LEVEL_PLAN = 0.015
 USD_LEVEL_BATCH = 0.025
 SECONDS_LEVEL_PLAN = 10
@@ -102,27 +108,28 @@ SECONDS_LEVEL_BATCH = 45
 
 
 def available() -> bool:
-    """Whether Sonnet can be asked: an API key in the environment and the SDK installed."""
-    return (
-        bool(os.environ.get("ANTHROPIC_API_KEY"))
-        and importlib.util.find_spec("anthropic") is not None
-    )
-
-
-def level_available() -> bool:
-    """Whether the model of the level runs can be asked: an OpenAI key (the environment, or ``.env``) and the SDK."""
+    """Whether the AI can be asked: an OpenAI key (the environment, or ``.env``) and the SDK installed. Every AI run
+    uses GPT-6.1 Terra since implementation 04-3, Phase 5 (the user, 2026-10-30)."""
     from aitu_backend.sheet_llm import _openai_key  # noqa: PLC0415
 
     return bool(_openai_key()) and importlib.util.find_spec("openai") is not None
 
 
-def _level_complete(part_id: str, level: Any) -> Any:
-    from aitu_backend.sheet.llm import levels  # noqa: PLC0415
+#: The level routes ask this one; the same check as every run since all of them use the same model.
+level_available = available
+
+
+def _complete(part_id: str, kind: str) -> Any:
+    """The ``complete`` function of a run: GPT-6.1 Terra at medium effort, one cache key per part and kind of run."""
     from aitu_backend.sheet_llm import OpenAIComplete  # noqa: PLC0415 - the SDK only when it is used
 
-    return OpenAIComplete(
-        model=LEVEL_MODEL, effort=LEVEL_EFFORT, cache_key=f"{part_id}|{levels.level_name(level)}"
-    )
+    return OpenAIComplete(model=MODEL, effort=EFFORT, cache_key=f"{part_id}|{kind}")
+
+
+def _level_complete(part_id: str, level: Any) -> Any:
+    from aitu_backend.sheet.llm import levels  # noqa: PLC0415
+
+    return _complete(part_id, levels.level_name(level))
 
 
 class PartGone(RuntimeError):
@@ -214,17 +221,9 @@ def live(part_id: str) -> LiveRun | None:
         return _live.get(part_id)
 
 
-def _complete() -> Any:
-    from aitu_backend.sheet_llm import (
-        ClaudeComplete,
-    )  # noqa: PLC0415 - the SDK only when it is used
-
-    return ClaudeComplete()
-
-
 def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jobs.Job:
-    """Start Sonnet on a part, or return the run already going. ``complete`` makes the ``complete`` function
-    (tests); by default Claude with the key of ``.env``."""
+    """Start the AI on a part, or return the run already going. ``complete`` makes the ``complete`` function
+    (tests); by default GPT-6.1 Terra with the key of ``.env`` (:func:`_complete`)."""
     existing = job_of(part_id)
     if existing is not None:
         return existing
@@ -253,7 +252,7 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
         with _live_lock:
             _live[part_id] = run
         try:
-            ask = (complete or _complete)()
+            ask = complete() if complete is not None else _complete(part_id, "whole")
             reporter.send(EVENT, {"phase": "reference"})
 
             def on_start(algo: FramesProposal, windows: list[tuple[int, int]]) -> None:
@@ -461,7 +460,7 @@ def start_stretch(
         with _live_lock:
             _live[part_id] = run
         try:
-            ask = (complete or _complete)()
+            ask = complete() if complete is not None else _complete(part_id, "stretch")
             reporter.send(EVENT, {"phase": "stretch", "start": start, "end": end})
 
             def asked(system: str, messages: list[dict]) -> str:
@@ -554,7 +553,7 @@ def start_simplify(
         with _live_lock:
             _live[part_id] = run
         try:
-            ask = (complete or _complete)()
+            ask = complete() if complete is not None else _complete(part_id, "simplify")
 
             def asked(system: str, messages: list[dict]) -> str:
                 if not pipeline.has_events(part_id):
@@ -775,13 +774,21 @@ def costs(part_id: str) -> dict[str, Any]:
     current = f1.read(build.current(part_id).text)
     whole = len(windows_of(current))
     out: dict[str, Any] = {
-        "all": {"requests": whole + 1, "usd": round(USD_CACHE + (whole + 1) * USD_WINDOW, 2)},
-        "stretch": {"requests": 1, "usd": round(USD_CACHE + USD_STRETCH, 2)},
+        "all": {
+            "requests": whole + 1,
+            "usd": round(USD_CACHE + (whole + 1) * USD_WINDOW, 2),
+            "minutes": _minutes((whole + 1) * SECONDS_WINDOW),
+        },
+        "stretch": {"requests": 1, "usd": round(USD_CACHE + USD_STRETCH, 2), "minutes": _minutes(SECONDS_STRETCH)},
     }
     for hand, staff in HANDS.items():
         batches = len(simplify_windows(current, staff))
         usd = USD_CACHE + batches * USD_BATCH * (2 if staff is None else 1)
-        out[f"simplify-{hand}"] = {"requests": batches, "usd": round(usd, 2)}
+        out[f"simplify-{hand}"] = {
+            "requests": batches,
+            "usd": round(usd, 2),
+            "minutes": _minutes(batches * SECONDS_BATCH),
+        }
         out[f"level-{hand}"] = level_cost(current, hand)
     return out
 
@@ -797,8 +804,13 @@ def level_cost(current: Any, hand: str, start: int | None = None, end: int | Non
         "requests": batches + 1,
         "batches": batches,
         "usd": round(USD_LEVEL_PLAN + batches * USD_LEVEL_BATCH, 2),
-        "minutes": max(1, round(seconds / 60)),
+        "minutes": _minutes(seconds),
     }
+
+
+def _minutes(seconds: float) -> int:
+    """About how many minutes a run takes, for the dialog: at least one."""
+    return max(1, round(seconds / 60))
 
 
 def _place(ref: str) -> tuple[int, int] | None:

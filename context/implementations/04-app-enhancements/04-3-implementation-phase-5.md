@@ -263,3 +263,38 @@ copy `81a6a129` "… · Medium (test of the new AI model)" made with `flow.level
 hand="both")` with the default client): 4 of 4 batches accepted, $0.086, 157 s, against the estimate $0.12 and 3
 minutes. The record names `gpt-6.1-terra`. Looked at zoomed: the left hand keeps its held chords where it was simple;
 the right hand keeps the melody with fewer chords. The copy stays in My projects for the user.
+
+# 10. Every AI run uses GPT-6.1 Terra at medium (the user, 2026-10-30)
+
+After section 9 the user asked to move every AI run to Terra, not only the levels: Write it all again (the whole run,
+also the one the page starts by itself on a new sheet), Simplify (left, right, both) and a stretch with the user's
+words. The user chose this without a comparison of those runs; each kind was run once with Terra on a copy of the
+user's song to set the estimates.
+
+- `job._complete(part, kind)`: `OpenAIComplete(model=MODEL, effort=EFFORT, cache_key="<part>|<kind>")` with `MODEL =
+  "gpt-6.1-terra"`, `EFFORT = "medium"` (`kind`: `whole`, `stretch`, `simplify`, or the level's name). `job.available()`
+  asks for the OpenAI key and SDK (`level_available` is the same function). `ClaudeComplete` stays in `sheet_llm.py`,
+  unused by the app.
+- **The measured runs** (copy `be248152` "… · test of the AI runs" of `2f133ebc`, `terra_runs_test.py`; results in
+  `/home/app/04-3-phase-5/terra_runs_test.json`):
+
+| Run | Requests | Estimate before (Sonnet's) | Measured with Terra | Estimate now |
+|---|---|---|---|---|
+| Write it all again | 7 (6 windows and the reference) | $0.31, "a few minutes" | $0.064, 102 s (6 windows accepted) | $0.07, about 2 minutes |
+| Simplify both hands | 3 batches | $0.09, none | $0.038, 46 s (7 notes left out) | $0.04, about 1 minute |
+| A stretch with words | 1 | $0.06, none | $0.024, 26 s | $0.03, about 1 minute |
+| A level, both hands (section 9) | 5 | $0.85, 10 minutes | $0.086, 157 s | $0.12, about 3 minutes |
+
+  The constants: `USD_CACHE` 0.01, `USD_WINDOW` 0.008, `USD_BATCH` 0.005 (both hands twice), `USD_STRETCH` 0.015;
+  `SECONDS_WINDOW` 15, `SECONDS_BATCH` 15, `SECONDS_STRETCH` 30. Every entry of `GET /sheet/{uuid}/llm/costs` now has
+  `minutes` (`job._minutes`, at least 1). On 99 Red Balloons: Write it all again $0.16, 5 minutes (Sonnet's estimate
+  was $0.76); Simplify both $0.12, 3 minutes; a level of both hands $0.34, 10 minutes. One measure per kind, on one song
+  of 1.3 minutes: the numbers are a first estimate.
+- The dialog: the stretch says "About $0.03, about 1 minute"; Simplify "It takes about 1 minute."; Write it all again
+  "in about 2 minutes" instead of "in a few minutes" (`EnhanceDialog.timeOf`).
+- The user's own stretch on `b41efc2f` (19:08, during this work) already ran on Terra: one request over frames 177 to
+  3248, $0.037. The backend restart of an edit at 19:08:24 waited for it to end (stored at 19:08:47).
+- Checks: `test_part_sheet.py`, `test_sheet_simplify.py`, `test_sheet_levels_app.py`, `test_sheet_llm_openai.py`,
+  `test_sheet_llm_frames.py`, `test_rights.py`: all passed; `tsc -b`, `eslint` clean; `check:enhance-dialog` all passed.
+- Needed later (Phase 6): the core's `README.md` and `context/04-context.md` say Sonnet 5.5 for every run; they now
+  need GPT-6.1 Terra at medium, with Sonnet as the model of implementations 03 and 04.

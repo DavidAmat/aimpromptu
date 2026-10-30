@@ -1098,3 +1098,9 @@ level of 99 Red Balloons: about $0.34 and 10 minutes instead of $2.65 and 28), a
 credits left the page tells the user to add credits to it. A real run on the user's new song cost $0.086 in 2.6
 minutes (estimate $0.12, 3 minutes). Report section 9.
 
+**Phase 5, every run on Terra** (2026-10-30): the user moved every AI run to GPT-6.1 Terra at `medium` (Write it all
+again, Simplify, a stretch with words, the levels). Each run was measured once with Terra on a copy and the dialog's
+estimates follow those measures, now with the minutes for every run (for example a whole run of a song of 1.3 minutes:
+about $0.07 and 2 minutes, measured $0.064 in 102 s). Report section 10. Phase 6 updates the documentation that still
+names Sonnet.
+
