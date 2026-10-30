@@ -283,7 +283,8 @@ class BarLayout:
 class Prim:
     kind: str  # "g" glyph (name, x, y, scale, rotate), "l" line (x1, y1, x2, y2, w, dash), "p" polygon (points),
     # "t" a lyrics piece of the frames engine (x, y, lines, size, index, first frame, end frame; Phase 8A++ adds
-    #     its style: font, bold, italic, width, part), its lines already wrapped
+    #     its style: font, bold, italic, width, part), its lines already wrapped; "n" a frame number of the frames
+    #     engine (x, baseline y, digits, scale, frame), drawn with the tuplet digits from x
     staff: int  # 1 / 2: y relative to that staff's top line; 0: system y (treble top line = 0)
     data: tuple
     cls: str = ""
@@ -1155,6 +1156,11 @@ def _prim_yrange(p: Prim) -> tuple[float, float]:
     if p.kind == "z":
         ys = [v for seg in p.data[0] for v in seg[2::2]]
         return min(ys), max(ys)
+    if p.kind == "n":  # a frame number (the frames engine): the digits stand on y
+        _, y, text, s = p.data[:4]
+        return y - max(box(f"tuplet{ch}").top for ch in text) * s, y - min(
+            box(f"tuplet{ch}").bottom for ch in text
+        ) * s
     if p.kind == "t":  # a lyrics piece (the frames engine): its first line's baseline is y
         _, y, lines, size = p.data[:4]
         return y - 0.75 * size, y + (len(lines) - 1) * 1.2 * size + 0.25 * size
@@ -1213,10 +1219,15 @@ def _draw_meter(pen: Pen, staff: int, meter: str, x: float) -> None:
             xx += box("timeSig0").width
 
 
+def number_width(text: str, scale: float) -> float:
+    """The width of a number drawn with the tuplet digits (bar numbers, tuplets, frame numbers)."""
+    return sum(box(f"tuplet{ch}").width for ch in text) * scale
+
+
 def _draw_number(
     pen: Pen, staff: int, text: str, x: float, y: float, scale: float = 0.75, center=True
 ) -> None:
-    w = sum(box(f"tuplet{ch}").width for ch in text) * scale
+    w = number_width(text, scale)
     xx = x - w / 2 if center else x
     for ch in text:
         pen.g(staff, f"tuplet{ch}", xx, y, scale)
@@ -1967,6 +1978,8 @@ def _prim_xrange(p: Prim) -> tuple[float, float]:
     if p.kind == "p":
         xs = [pt[0] for pt in p.data]
         return min(xs), max(xs)
+    if p.kind == "n":
+        return p.data[0], p.data[0] + number_width(p.data[2], p.data[3])
     return 0.0, 0.0
 
 

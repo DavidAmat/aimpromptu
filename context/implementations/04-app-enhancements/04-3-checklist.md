@@ -62,12 +62,15 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 
 # [ ] Phase 2b: Frame numbers on the sheet and in the range toolbox
 
-- [ ] Task 2b.1 Study: how the engine draws a line, how the page lays the SVG and the cursor, the range toolbox.
-- [ ] Task 2b.2 The frame number on the sheet: at the start of each line and at regular places; also in the zoom and
-  the print.
-- [ ] Task 2b.3 The range toolbox: the first and the last frame number of the selected range.
-- [ ] Task 2b.4 Checks: `check:frames-page` with the numbers, screenshots in `screenshots/04-3-phase-2b/`; the user
-  checks the sheet page in the browser.
+Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2b.md`](04-3-implementation-phase-2b.md).
+
+- [x] Task 2b.1 Study: how the engine draws a line, how the page lays the SVG and the cursor, the range toolbox.
+- [x] Task 2b.2 The frame number on the sheet: at the start of each line and at regular places (about every 36 staff
+  spaces); also in the zoom and the print (drawn by the engine).
+- [x] Task 2b.3 The range toolbox: the first and the last frame number of the selected range ("From frame 283 to
+  frame 495", the first line of the toolbox).
+- [ ] Task 2b.4 Checks: `check:frames-page` with the numbers (passed), screenshots in `screenshots/04-3-phase-2b/`
+  (done); the user checks the sheet page in the browser (waiting).
 
 # [ ] Phase 3: The level prompts, tested on 99 Red Balloons
 

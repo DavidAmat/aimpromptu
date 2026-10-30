@@ -8,6 +8,10 @@ lines, clefs, armaduras, the brace: Verovio's drawing rules and the Leipzig glyp
 * **Columns.** One x per drawn column (``Note.frame``) for both hands: what sounds together is on one vertical line.
   A grace note is drawn before the next note of its hand, not at its own column. Notes ``covered`` by an ornament
   (``orn``) are not drawn. One hand has one voice: no rests, no voices, no compás lines, no meter, no bar numbers.
+* **Frame numbers** (implementation 04-3, Phase 2b) take the place of bar numbers, so that the user can name a place
+  of the sheet ("at frame 112"): small grey digits (the bars engine's bar-number glyphs) above the upper staff, the
+  frame of the line's first column over the clef, then the frame of a column about every ``FRAME_NUMBER_EVERY`` staff
+  spaces, each above the ink under it. ``Options.frame_numbers`` turns them off.
 * **Spacing** (plan section 3.2). The gap after a column comes from the time to the next column in either hand,
   through the measured spacing model (``spacing_model.json``) with the reference figure as its negra: many short
   notes in one hand widen the stretch for both hands. When no hand starts a note for longer than a blanca, the time
@@ -72,6 +76,12 @@ LYRIC_LEADING = 1.2  # the distance between two lines of one piece, in its size
 CLEF_PAD = 0.3  # staff spaces before a clef change inside a line
 CLEF_AFTER = 0.6  # and between it and the notes it changes
 DEFAULT_QUARTER_MS = 500.0
+FRAME_NUMBER_SCALE = 0.7  # the digits of a frame number, as the bars engine's bar numbers
+FRAME_NUMBER_X = 0.2  # the number of a line's first column starts here, over the clef
+FRAME_NUMBER_BASE = -1.5  # the lowest baseline of a frame number (above the top staff line)
+FRAME_NUMBER_CLEAR = 0.6  # and at least this far above the ink of the upper staff under it
+FRAME_NUMBER_EVERY = 36.0  # staff spaces from one frame number of a line to the next (about four per line)
+FRAME_NUMBER_END = 8.0  # no frame number this close to the end of a line: the next line starts with one
 
 
 @dataclass
@@ -89,6 +99,7 @@ class Options:
     merge_unisons: bool = True
     quarter_ms: float | None = None  # the reference figure (default: the sheet's)
     key_line: bool = False  # a thin double line before an armadura change inside a line
+    frame_numbers: bool = True  # the frame numbers above the upper staff (module notes)
 
 
 @dataclass
@@ -589,6 +600,7 @@ def _draw_system(lay: Layout, si: int) -> tuple[System, list[dict]]:
             L._ornaments(pen, c)
             L._fingers(pen, c)
     L._ottavas(pen, sys_chords)
+    _frame_numbers(lay, cols, end_x, pen)
     _lyrics(lay, si, cols, end_x, pen)
     below, above = 4.0, 0.0
     for p in pen.prims:
@@ -668,7 +680,38 @@ def _ink_x(p: L.Prim) -> tuple[float, float] | None:
     if p.kind == "p":
         xs = [pt[0] for pt in p.data]
         return min(xs), max(xs)
+    if p.kind == "n":
+        return L._prim_xrange(p)
     return None
+
+
+def _frame_numbers(lay: Layout, cols: list[Column], end_x: float, pen: L.Pen) -> None:
+    """The frame numbers of this line (module notes), drawn before the lyrics so that the words clear them: the
+    first column's over the clef, then one over the first column at least ``FRAME_NUMBER_EVERY`` staff spaces after
+    the one before (by the centre of its notehead), none in the last ``FRAME_NUMBER_END`` staff spaces."""
+    if not lay.opts.frame_numbers:
+        return
+    inks = []
+    for p in pen.prims:
+        span = _ink_x(p) if p.staff == 1 else None
+        if span is not None:
+            inks.append((span[0], span[1], L._prim_yrange(p)[0]))
+    last = cols[0].x + L.HEAD_W / 2
+    for k, col in enumerate(cols):
+        text = str(col.frame)
+        wide = L.number_width(text, FRAME_NUMBER_SCALE)
+        if k == 0:
+            x = FRAME_NUMBER_X
+        else:
+            centre = col.x + L.HEAD_W / 2
+            if centre - last < FRAME_NUMBER_EVERY:
+                continue
+            if centre + wide / 2 > end_x - FRAME_NUMBER_END:
+                break
+            x, last = centre - wide / 2, centre
+        top = min((lo for a, b, lo in inks if b >= x - 0.2 and a <= x + wide + 0.2), default=0.0)
+        y = min(FRAME_NUMBER_BASE, top - FRAME_NUMBER_CLEAR)
+        pen.prims.append(L.Prim("n", 1, (x, y, text, FRAME_NUMBER_SCALE, col.frame), "frame-number"))
 
 
 @dataclass

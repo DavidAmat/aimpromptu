@@ -23,7 +23,9 @@ line. The code is `pages/piece/sheet/frames/`:
 - `FramesNoteToolbox.tsx` (Phase 6): the note toolbox of the new sheet, beside the notes picked: **Hand** since
   Phase 6, every other note tool since Phase 7, and since Phase 8A the keyboard of the picked column (drawn by
   `ui/MiniPiano.tsx`'s `MiniKeys`; see [annotations.md](annotations.md), "The new sheet");
-- `FramesRangeToolbox.tsx` (Phase 7): the range toolbox (*Frames*: Both / Right / Left, Key, Clef, Octave);
+- `FramesRangeToolbox.tsx` (Phase 7): the range toolbox (*Frames*: Both / Right / Left, Key, Clef, Octave; since
+  implementation 04-3, Phase 2b, its first line names the frame numbers of the first and last columns of the
+  stretch, "From frame 283 to frame 495", `data-range-frames`, as the engine prints them above the staves);
   `EnhanceDialog.tsx` (implementation 04, Phase 4): **Enhance with AI**, one dialog with two tabs, **A stretch**
   (both hands or one, the other then fixed; the user's words) and **The whole song** (**Simplify** the left hand, the
   right hand or both; **Write it all again**), each with its cost; `readingTools.ts`: what the two toolboxes share;
@@ -59,7 +61,8 @@ clip), `npm run check:frames-edit` (picking, the hand, undo and redo, and the ti
 `npm run check:frames-tools` (every tool of the two toolboxes and the range selection; `--live` makes one stretch
 request, about $0.01) and `npm run check:frames-toolbox` (Phase 8: the sheet toolbox, lyrics, the keyboard panel,
 Print to PDF, the lyrics in Play mode), and since implementation 04 `npm run check:frames-page` (Phase 1: the header,
-the floating bar hidden and shown, the wheel zoom, the cursor dragged across lines) and `npm run
+the floating bar hidden and shown, the wheel zoom, the cursor dragged across lines; 04-3, Phase 2b: the frame numbers
+on the sheet, after the zoom and on the printed pages, and in the range toolbox) and `npm run
 check:enhance-dialog` (Phase 4: the dialog; a stand-in answers the requests that would start the AI).
 
 The engine stays in the backend (implementation 03, Phase 6, task 4): one edit takes about a quarter of a second

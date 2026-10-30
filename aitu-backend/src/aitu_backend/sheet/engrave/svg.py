@@ -12,6 +12,8 @@ __all__ = ["to_svg"]
 
 #: The colour of the lyrics: a soft charcoal, as the old sheet printed them.
 LYRIC_COLOR = "#3a3a3a"
+#: The colour of the frame numbers (implementation 04-3, Phase 2b): grey, as bar numbers, so they never read as notes.
+FRAME_NUMBER_COLOR = "#8a8a8a"
 #: The fonts of the lyrics pieces (``data.LYRIC_FONTS``), as the page loads them (`index.css`).
 LYRIC_FAMILIES = {
     "lora": "Lora, Georgia, serif",
@@ -110,6 +112,22 @@ def to_svg(
                     f'<text class="lyric" data-lyric="{index}" data-start="{first}" data-end="{end}"{extra} '
                     f'font-size="{_f(size)}" font-family="{family}"{face} '
                     f'fill="{LYRIC_COLOR}" stroke="none">{spans}</text>'
+                )
+            elif p.kind == "n":
+                x, y, text, s, frame = p.data
+                uses = []
+                for ch in text:
+                    name = f"tuplet{ch}"
+                    used.add(name)
+                    uses.append(
+                        f'<use xlink:href="#{id_prefix}{name}" '
+                        f'transform="translate({_f(x + m)},{_f(y + dy)}) scale({s / UNITS:.6f})"/>'
+                    )
+                    x += box(name).width * s
+                body.append(
+                    f'<g class="frame-number" data-frame="{frame}" fill="{FRAME_NUMBER_COLOR}">'
+                    + "".join(uses)
+                    + "</g>"
                 )
             elif p.kind == "b":
                 x, y0, y1 = p.data

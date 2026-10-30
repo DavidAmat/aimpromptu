@@ -111,7 +111,7 @@ import { FramesPdfDialog } from "./FramesPdfDialog";
 import { FramesPreviewDialog } from "./FramesPreviewDialog";
 import { FramesSheetToolbox, MAX_ZOOM, MIN_ZOOM, type FramesSheetTab } from "./FramesSheetToolbox";
 import { msAtPoint, placeAt, steadyColumns } from "./geometry";
-import { frameOf, handForKey, midiOf, oneColumn } from "./readingTools";
+import { frameOf, framesLabel, handForKey, midiOf, oneColumn } from "./readingTools";
 import { songRunOf } from "./navigation";
 import { useFramesLyrics } from "./useFramesLyrics";
 import { useFramesSheet } from "./useFramesSheet";
@@ -1317,6 +1317,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
         <FramesRangeToolbox
           audioUuid={audioUuid}
           range={range}
+          columns={sheet.columns}
           reading={sheet.reading}
           notes={sheet.notes}
           at={rangeAt}
@@ -1341,6 +1342,9 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           initialPosition={rangeAt ?? { x: 24, y: 140 }}
           onClose={unmark}
         >
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }} data-range-frames>
+            {framesLabel(range, sheet.columns)}
+          </Typography>
           <Stack direction="row" spacing={1} data-frames-stretch-panel>
             {step.stretchAction ? (
               <PillButton

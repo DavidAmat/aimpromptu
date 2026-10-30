@@ -671,8 +671,8 @@ Start prompt:
 
 > You are working on an implementation plan. Read @context/implementations/04-app-enhancements/04-3-plan.md,
 > @context/implementations/04-app-enhancements/04-3-prompt.md, @context/guidelines/guidelines-implementation-plan.md,
-> @context/guidelines/guidelines-communication-with-user.md and @context/implementations/04-app-enhancements/04-3-implementation-phase-2.md.
-> Start Phase 3.
+> @context/guidelines/guidelines-communication-with-user.md, @context/implementations/04-app-enhancements/04-3-implementation-phase-2.md
+> and @context/implementations/04-app-enhancements/04-3-implementation-phase-2b.md. Start Phase 3.
 
 1. **Study of 99 Red Balloons**. The project of the brief is `c0e39afe-3122-47fb-aada-54952b014783`, which is the
    user's edit copy in the Personal Vault of the My Library version `b2db46eb-b4c7-4f70-b203-1fe02f4c847d`. Its sheet
@@ -870,3 +870,12 @@ the two voices as one line of chords and single notes.
 numbers of [`gallery/04-3-phase-2/patterns.json`](gallery/04-3-phase-2/patterns.json) are now the approved ones: a
 new pattern takes the next number of its level, and no approved number changes (section 5.10 point 2). The branch
 was merged into `master` after Phase 1, and the user confirmed that Phase 2b comes before Phase 3, as section 8 says.
+
+**Phase 2b** (2026-10-30, [`04-3-implementation-phase-2b.md`](04-3-implementation-phase-2b.md)): the open point of
+section 5.10 "how often the sheet shows a frame number" is settled by the study. A line holds 10 to 16 seconds (40 to
+75 columns), so a number only at the start of each line would leave about 300 frames between two numbers. The engine
+therefore draws the first column's number over the clef of each line, as bar numbers, and then one about every 36
+staff spaces (about three a line on the default page), small and grey above the notes; the zoom and Print to PDF get
+them because the engine draws them. The range toolbox names the first and last frames of the stretch ("From frame 283
+to frame 495") on its first line, not in its title, because the title bar is full of buttons and cut the text. The
+Phase 3 start prompt now also reads the Phase 2b report.

@@ -3,6 +3,7 @@
 The frames engine draws an F1 frames sheet: one x per column for both hands, grace notes before their note,
 the signs of ``frames.printed_signs``, armadura and clef changes inside a line, empty time drawn shorter than its
 time, line breaks that do not cut beam groups, and one segment drawn with the line breaks of the whole sheet.
+Implementation 04-3, Phase 2b: the frame numbers above the upper staff.
 """
 
 from __future__ import annotations
@@ -236,6 +237,51 @@ def test_a_beam_across_the_hands_and_the_ornaments_draw() -> None:
         p.kind == "p" and p.staff == 0 and p.cls == "beam" for s in eng.systems for p in s.prims
     )
     assert glyphs(eng, "ornamentTrill") and glyphs(eng, "ottava")
+
+
+def numbers(eng) -> list[list[tuple[float, float, str, int]]]:
+    """The frame numbers of each line: (x, baseline y, digits, frame)."""
+    return [
+        [(p.data[0], p.data[1], p.data[2], p.data[4]) for p in s.prims if p.kind == "n"]
+        for s in eng.systems
+    ]
+
+
+def test_every_line_starts_with_the_frame_of_its_first_column_and_more_follow() -> None:
+    opts = engine.Options(width=100)
+    lay = engine.plan(f1.read(stream(160)), opts)
+    eng = engine.draw(lay)
+    width = lay.opts.width
+    for (i, j, _), line, sysm in zip(lay.lines, numbers(eng), eng.systems):
+        cols = lay.columns[i:j]
+        frames = {c.frame: c for c in cols}
+        assert line[0][3] == cols[0].frame and line[0][0] == engine.FRAME_NUMBER_X
+        assert len(line) >= 2  # a line of 100 staff spaces gets more than its first number
+        for x, y, text, frame in line:
+            assert text == str(frame) and frame in frames
+            assert y <= engine.FRAME_NUMBER_BASE  # above the upper staff
+        centres = [x + layout.number_width(t, engine.FRAME_NUMBER_SCALE) / 2 for x, _, t, _ in line[1:]]
+        firsts = [frames[line[0][3]].x + layout.HEAD_W / 2] + centres
+        assert all(b - a >= engine.FRAME_NUMBER_EVERY for a, b in zip(firsts, firsts[1:]))
+        assert all(c < max(sysm.width, width) - engine.FRAME_NUMBER_END for c in centres)
+
+
+def test_a_frame_number_clears_the_notes_under_it_and_shows_in_the_svg() -> None:
+    eng = engine.engrave_frames(f1.read(SHEET))
+    line = numbers(eng)[0]
+    prims = eng.systems[0].prims
+    for x, y, text, _ in line:
+        right = x + layout.number_width(text, engine.FRAME_NUMBER_SCALE)
+        under = [
+            layout._prim_yrange(p)[0]
+            for p in prims
+            if p.staff == 1 and p.kind == "g" and x <= p.data[1] <= right
+        ]
+        assert all(y <= top - engine.FRAME_NUMBER_CLEAR + 1e-9 for top in under)
+    svg = engine.render_frames(SHEET).svg
+    assert re.findall(r'class="frame-number" data-frame="(\d+)"', svg)[0] == "0"
+    off = engine.engrave_frames(f1.read(SHEET), engine.Options(frame_numbers=False))
+    assert not any(numbers(off))
 
 
 def test_a_bars_sheet_is_refused() -> None:

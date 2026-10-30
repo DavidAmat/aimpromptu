@@ -12,7 +12,10 @@
  *   stays under it, and the browser itself does not zoom;
  * - the cursor shows `grab` under the pointer and `grabbing` while it is dragged, follows the pointer to another
  *   line, and the recording moves there when it is let go, playing on if it played; the drag picks no note; near
- *   the window's bottom edge the page scrolls.
+ *   the window's bottom edge the page scrolls;
+ * - the frame numbers (implementation 04-3, Phase 2b): every line starts with the frame of its first column, more
+ *   follow inside the lines, all are frames of columns and grey, also after the zoom and on the printed pages; a
+ *   stretch marked in the strip names its first and last frames at the top of the range toolbox.
  *
  *     npm run check:frames-page -- --out /tmp/frames-page
  */
@@ -22,7 +25,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
-import { sheetNow, waitForFrames, watchSheets } from './frames-page.mjs';
+import { markStretch, sheetNow, waitForFrames, watchSheets } from './frames-page.mjs';
 import { signIn, useSession } from './session.mjs';
 
 const { values } = parseArgs({
@@ -195,6 +198,35 @@ try {
   const stored = await page.evaluate(() => Number(window.localStorage.getItem('aitu.framesSheet.zoom')));
   check('the zoom is kept in this browser', stored > 1, `${stored}`);
   await zoomOnce('Control', 120, 'a trackpad pinch (Control and the wheel)');
+
+  // ------------------------------------------------------------------ the frame numbers (04-3, Phase 2b)
+  {
+    const sheet = await sheetNow(api, part);
+    const drawn = await page.locator('[data-frames-sheet] svg .frame-number').evaluateAll((all) =>
+      all.map((g) => ({ frame: Number(g.getAttribute('data-frame')), fill: g.getAttribute('fill') })));
+    const frames = new Set(sheet.columns.map((c) => c.frame));
+    const firsts = sheet.systems.map((s) => s.first);
+    const shown = drawn.map((one) => one.frame);
+    check('every line starts with the frame number of its first column', firsts.every((f) => shown.includes(f)), `${firsts.filter((f) => !shown.includes(f)).length} missing`);
+    check('more frame numbers inside the lines', drawn.length > sheet.systems.length * 1.5, `${drawn.length} on ${sheet.systems.length} lines`);
+    check('every frame number is the frame of a column', shown.every((f) => frames.has(f)));
+    check('the frame numbers are grey', drawn.every((one) => one.fill === '#8a8a8a'));
+    const printed = await fetch(`${api}/sheet/${part}/pages?width=130&height=180`).then((r) => r.json());
+    check('the printed pages have them too', printed.pages.length > 0 && printed.pages.every((one) => one.svg.includes('class="frame-number"')));
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(300);
+    const { box, scale } = await screenOf(page, sheet);
+    const first = sheet.systems[0];
+    await page.screenshot({ path: path.join(values.out, '07-frame-numbers.png'), clip: { x: box.x, y: box.y + (first.top - 1) * scale, width: box.width, height: (first.bottom - first.top + 2) * scale } });
+
+    const stretch = await markStretch(page, api, { from: 0.2, to: 0.6 });
+    const inside = sheet.columns.filter((c) => c.frame >= stretch.start && c.frame < stretch.end).map((c) => c.frame);
+    const named = (await page.locator('[data-frames-range-toolbox] [data-range-frames]').innerText()).trim();
+    check('the range toolbox names the first and last frames', named === `From frame ${inside[0]} to frame ${inside[inside.length - 1]}`, named);
+    await shot(page, '08-range-frames');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+  }
 
   // ------------------------------------------------------------------ dragging the cursor
   await page.evaluate(() => window.scrollTo(0, 0));

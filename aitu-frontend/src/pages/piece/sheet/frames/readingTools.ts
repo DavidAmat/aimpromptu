@@ -54,6 +54,17 @@ export function frameOf(ref: string): number {
   return Number(ref.split(":")[0]);
 }
 
+/**
+ * The frames of a marked stretch (implementation 04-3, Phase 2b): the frame numbers of its first and last columns, as
+ * the sheet prints them, so that the user can name the place ("From frame 112 to frame 240"; one column: "Frame 112").
+ */
+export function framesLabel(range: { start: number; end: number }, columns: readonly { frame: number }[]): string {
+  const inside = columns.filter((column) => column.frame >= range.start && column.frame < range.end);
+  const first = inside[0]?.frame ?? range.start;
+  const last = inside[inside.length - 1]?.frame ?? first;
+  return last === first ? `Frame ${first}` : `From frame ${first} to frame ${last}`;
+}
+
 export function midiOf(ref: string): number {
   return Number(ref.split(":")[1]);
 }
