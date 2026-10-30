@@ -1,7 +1,7 @@
 # 04-3 · Phase 2b: frame numbers on the sheet and in the range toolbox
 
-Status: **built and checked on 2026-10-30, second version after the user's first look; waits for the user's check in
-the browser** (task 2b.4). Branch `feat/04-3-phase-2b` from `master` (`9da2248`). No AI call, no database change.
+Status: **approved by the user and merged into `master` on 2026-10-30** (second version, after the user's first
+look). Branch `feat/04-3-phase-2b` from `master` (`9da2248`). No AI call, no database change.
 
 Audience: the agents of this plan (Phase 3 next). Technical.
 

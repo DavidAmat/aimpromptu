@@ -882,3 +882,6 @@ not in its title, which the buttons cut): the user asked that typing other numbe
 phase the user also asked that a decoration note light only at its own onset, never while the note before it still
 sounds (until then it lit with the column before it, a rule of implementation 03); the page now does so. The Phase 3
 start prompt also reads the Phase 2b report.
+
+**Phase 2b, approval and merge** (2026-10-30): the user approved the frame marks, the editable frames of the range
+toolbox and the lighting of decoration notes; the branch was merged into `master`. Phase 3 is next.
