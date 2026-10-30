@@ -1108,3 +1108,16 @@ names Sonnet.
 estimates); the branch was merged into `master`. Phase 6 is next: its documentation also replaces Sonnet 5.5 by GPT-6.1
 Terra where the documents describe the model of the runs (report section 10).
 
+**A request between phases: the AI starts only from the button, and the whole song tab works as the stretch tab**
+(2026-10-30, branch `feat/04-3-enhance-dialog`, waiting for the user's ok). First, the AI no longer starts by itself
+on a new transcription: implementation 03 had decided that a new transcription goes to the AI when its sheet first
+opens (03 plan, decision 5 of 2026-10-25); the user now wants it manual (`llm.auto` is always false, the page's
+automatic start is removed). Second, the user found that the whole song tab of **Enhance with AI** did not let a hand
+be simplified at a level: the levels were under a separate choice, "A level", beside three Simplify runs without a
+level, and the patterns opened in a second window. The tab now offers **A level** or **Write it all again**; a level
+has the hands (the whole sheet, the right hand only, the left hand only), a level per hand rewritten, the words, the
+cost and the minutes, and the **gallery of patterns inside the dialog** (scrollable; only the hands rewritten, with a
+button per hand when both; it opens on the hand's level and shows each pattern's number, such as "medium 2", to name in
+the words). The stretch tab has the same gallery. The older Simplify run (small corrections without a level) is no
+longer offered in the dialog; its route stays. `check:enhance-dialog` checks the new tab (37 steps).
+

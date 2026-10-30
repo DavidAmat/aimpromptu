@@ -51,7 +51,6 @@ from aitu_backend.auth import context, rights
 from aitu_backend.auth.dependencies import require_part
 from aitu_backend.editing import paste as passage_paste
 from aitu_backend.part_sheet import build, edits, job, reading
-from aitu_backend.part_sheet import store as new_sheet_store
 from aitu_backend.sheet.engrave import frames as frames_engine
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.library import flow
@@ -91,15 +90,15 @@ def _llm_state(audio_uuid: str, drawn: build.Drawn, running: Any) -> dict[str, A
         not writes and user is not None and where.layer == "private" and where.owner_id == user.id
     )
     available = job.available()
-    # A new transcription asked for Sonnet (``sheet.pending``); the parts made before Phase 5 never did.
-    fresh = drawn.record is None and new_sheet_store.asked(audio_uuid)
     return {
         "state": (
             "running" if running is not None else ("done" if drawn.record is not None else "none")
         ),
         "jobId": running.id if running is not None else None,
         "available": available,
-        "auto": available and writes and running is None and fresh,
+        # The AI never starts by itself: only the button starts it (the user, 2026-10-30; until then a new
+        # transcription, marked ``sheet.pending``, went to the AI when its sheet first opened).
+        "auto": False,
         # Always offered: **Enhance with AI**, or **Enhance it again with AI** on a sheet it enhanced.
         "canRun": available and writes and running is None,
         "viaEdit": available and via_edit,

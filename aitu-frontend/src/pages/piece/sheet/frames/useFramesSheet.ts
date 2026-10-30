@@ -98,12 +98,9 @@ export function useFramesSheet(
   /** The staff width to draw for, in staff spaces; `null` until the page is measured. */
   width: number | null,
   {
-    autoStart,
     onChanged,
   }: {
-    /** Whether this page may start Sonnet by itself (the Sheet step of a project; never Play mode). */
-    autoStart: boolean;
-    /** Sonnet started or ended: the steps of the project may have changed. */
+    /** The AI started or ended: the steps of the project may have changed. */
     onChanged?: () => void;
   },
 ): FramesSheetState {
@@ -181,14 +178,7 @@ export function useFramesSheet(
     }
   }, [audioUuid]);
 
-  // A new transcription goes to Sonnet by itself, once per page.
-  const started = useRef<string | null>(null);
-  const auto = autoStart && sheet?.llm.auto === true;
-  useEffect(() => {
-    if (!auto || started.current === audioUuid) return;
-    started.current = audioUuid;
-    void run();
-  }, [auto, audioUuid, run]);
+  // The AI never starts by itself: only **Enhance with AI** starts it (the user, 2026-10-30).
 
   const enhanceStretch = useCallback(
     async (stretch: StretchRequest) => {

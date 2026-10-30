@@ -115,8 +115,9 @@ def available() -> bool:
     return bool(_openai_key()) and importlib.util.find_spec("openai") is not None
 
 
-#: The level routes ask this one; the same check as every run since all of them use the same model.
-level_available = available
+def level_available() -> bool:
+    """The level routes ask this one: the same check as every run, since all of them use the same model."""
+    return available()
 
 
 def _complete(part_id: str, kind: str) -> Any:

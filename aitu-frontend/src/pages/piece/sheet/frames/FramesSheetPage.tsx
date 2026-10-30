@@ -232,8 +232,6 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   const [audioLoads, setAudioLoads] = useState<{ revision: number | null; loads: number }>({ revision: null, loads: 0 });
   const seekAfterLoad = useRef<number | null>(null);
   const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, level, notice } = useFramesSheet(audioUuid, width, {
-    // A take's sheet is the algorithm's, with Enhance with AI as a button (the user's answer of Phase 8).
-    autoStart: !readOnly && role === null,
     onChanged: step.onChanged,
   });
   const audioRevision = sheet?.audioRevision ?? null;
