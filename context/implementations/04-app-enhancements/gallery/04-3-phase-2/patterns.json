@@ -2575,6 +2575,75 @@
     },
     {
       "hand": "left",
+      "level": "hard",
+      "id": "broken-octave-then-notes-around-the-top",
+      "name": "Broken octava, then the chord around its upper note",
+      "line": "Sol2, then Sol3 (the octava played as two notes), and the hand stays up there: Fa3-Si3 together, Sol3, Mi3, Sol3, in semicorcheas; then Do3, Sol3, Do4, La3, Sol3. Hard because it is fast and the hand jumps an octava at every half bar, but after the jump all the notes are in reach: the thumb comes back to the upper note (Sol3) and the other fingers play the chord around it.",
+      "examples": [
+        {
+          "image": "ballade4-left-6.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 41,
+          "bars": "3 (the same in bars 5 and 6)",
+          "kern": "052-1-BH.krn",
+          "kernBars": "3-3",
+          "note": "The app writes Mi natural as Fab and Si natural as Dob (its rule: a white key whose name is in the armadura takes its other name), so Fa3-Si3 is drawn Fa3-Dob4.",
+          "drawing": "transcribed/ballade4-left-6.svg",
+          "f1": "transcribed/ballade4-left-6.f1"
+        }
+      ],
+      "number": 16,
+      "ref": "left hard 16"
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "low-note-then-line-with-a-passing-note",
+      "name": "Low note, then a line with a passing note",
+      "line": "Do2, then Sol3, Do4, Re4, Mi4 in semicorcheas up to a corchea: after the jump the hand climbs the chord (Sol, Do, Mi) with Re as a passing note between Do and Mi, so it is not a plain arpeggio. Hard because of the jump of more than an octava and the speed; the notes after the jump are next to each other, with no other jump (first half of the bar).",
+      "examples": [
+        {
+          "image": "ballade4-left-7.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 41,
+          "bars": "4 (first half)",
+          "kern": "052-1-BH.krn",
+          "kernBars": "4-4",
+          "note": "The app writes Mi natural as Fab (its rule: a white key whose name is in the armadura takes its other name).",
+          "drawing": "transcribed/ballade4-left-7.svg",
+          "f1": "transcribed/ballade4-left-7.f1"
+        }
+      ],
+      "number": 17,
+      "ref": "left hard 17"
+    },
+    {
+      "hand": "left",
+      "level": "hard",
+      "id": "pivot-note-with-a-reach-below",
+      "name": "A note the thumb comes back to, with a reach below",
+      "line": "Fa2, then Do4, La3, Do4, Re3, Do4 in semicorcheas: the thumb comes back to Do4 again and again, and the other notes are around it; Re3, ten semitones below, is reached by the fifth finger without moving the hand. Hard because it is fast and the hand is open almost an octava, but it stays in one position after the low note (second half of the bar; the same figure ends bar 2).",
+      "examples": [
+        {
+          "image": "ballade4-left-7.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 41,
+          "bars": "4 (second half; also the end of bar 2)",
+          "kern": "052-1-BH.krn",
+          "kernBars": "4-4",
+          "note": "The app writes Mi natural as Fab (its rule: a white key whose name is in the armadura takes its other name).",
+          "drawing": "transcribed/ballade4-left-7.svg",
+          "f1": "transcribed/ballade4-left-7.f1"
+        }
+      ],
+      "number": 18,
+      "ref": "left hard 18"
+    },
+    {
+      "hand": "left",
       "level": "super hard",
       "id": "sweeps-over-two-octaves",
       "name": "Sweeps over two octaves",

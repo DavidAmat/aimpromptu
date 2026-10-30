@@ -913,3 +913,8 @@ notes or one small chord keeps its notes and only gets a regular rhythm (pattern
 the rhythm the left hand plays now, simplified, instead of a new rhythm from the catalog. Where the right hand takes a
 riff from the left hand, it plays the whole line of the top notes; at hard, with the fifth or the third of the chord
 under each note. The prompt and the check hold the three (report section 12).
+
+**Phase 3, three new patterns** (2026-10-30): at the user's request, the left hand of Ballade No. 4, bars 3 and 4
+(page 41, the second line), adds left hard 16 (a broken octava, then the chord around its upper note), 17 (a low
+note, then a line with a passing note) and 18 (a note the thumb comes back to, with a reach below). They take the next
+numbers of their level; no approved number changed.

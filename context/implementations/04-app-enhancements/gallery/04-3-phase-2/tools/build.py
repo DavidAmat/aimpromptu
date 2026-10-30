@@ -545,6 +545,32 @@ PATTERNS = [
     var("hard", "arpeggio-up-then-chord", "Arpeggio up, then the chord",
         "Fa3-La3-Do4-Fa4 in corcheas, then the four notes together as a blanca. Hard because the hand covers the "
         "octava twice, first note by note and then all at once."),
+    # the user's review of Phase 3 (2026-10-30): Ballade No. 4, page 41, the second line (bars 3 to 5), the left hand
+    dict(hand="left", level="hard", id="broken-octave-then-notes-around-the-top",
+         name="Broken octava, then the chord around its upper note",
+         line="Sol2, then Sol3 (the octava played as two notes), and the hand stays up there: Fa3-Si3 together, Sol3, "
+              "Mi3, Sol3, in semicorcheas; then Do3, Sol3, Do4, La3, Sol3. Hard because it is fast and the hand jumps "
+              "an octava at every half bar, but after the jump all the notes are in reach: the thumb comes back to "
+              "the upper note (Sol3) and the other fingers play the chord around it.",
+         examples=[ex("ballade4-left-6.png", B4, "ballades.pdf", 41, "3 (the same in bars 5 and 6)", "052-1-BH.krn",
+                      "3-3", note="The app writes Mi natural as Fab and Si natural as Dob (its rule: a white key whose name "
+                      "is in the armadura takes its other name), so Fa3-Si3 is drawn Fa3-Dob4.")]),
+    dict(hand="left", level="hard", id="low-note-then-line-with-a-passing-note",
+         name="Low note, then a line with a passing note",
+         line="Do2, then Sol3, Do4, Re4, Mi4 in semicorcheas up to a corchea: after the jump the hand climbs the chord "
+              "(Sol, Do, Mi) with Re as a passing note between Do and Mi, so it is not a plain arpeggio. Hard because of "
+              "the jump of more than an octava and the speed; the notes after the jump are next to each other, with no "
+              "other jump (first half of the bar).",
+         examples=[ex("ballade4-left-7.png", B4, "ballades.pdf", 41, "4 (first half)", "052-1-BH.krn", "4-4",
+                      note="The app writes Mi natural as Fab (its rule: a white key whose name is in the armadura takes its other name).")]),
+    dict(hand="left", level="hard", id="pivot-note-with-a-reach-below",
+         name="A note the thumb comes back to, with a reach below",
+         line="Fa2, then Do4, La3, Do4, Re3, Do4 in semicorcheas: the thumb comes back to Do4 again and again, and the "
+              "other notes are around it; Re3, ten semitones below, is reached by the fifth finger without moving the "
+              "hand. Hard because it is fast and the hand is open almost an octava, but it stays in one position "
+              "after the low note (second half of the bar; the same figure ends bar 2).",
+         examples=[ex("ballade4-left-7.png", B4, "ballades.pdf", 41, "4 (second half; also the end of bar 2)",
+                      "052-1-BH.krn", "4-4", note="The app writes Mi natural as Fab (its rule: a white key whose name is in the armadura takes its other name).")]),
 ]
 
 PAGE = """<!doctype html>

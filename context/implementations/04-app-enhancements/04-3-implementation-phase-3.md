@@ -293,3 +293,27 @@ pattern for the keep sections (the riff's own section was read correctly).
 
 Looked at zoomed: the intro keeps E2 in negras then the held fifths in blancas; the high passage keeps octavas in
 negras; f1042-f1414 follows the left hand's rhythm (a negra or corchea bass, then two or three notes of the chord).
+
+# 13. Three new hard left-hand patterns from Ballade No. 4 (the user, 2026-10-30)
+
+The user asked to add to the catalog the left hand of Ballade No. 4, page 41, the second line (bars 3 to 5), as
+alternatives at hard: semicorcheas in half bars of 6/8, each starting with a low note, after which the hand stays in
+one position over the chord, with a passing note now and then, and a far note reached by the fifth finger. Read from
+`052-1-BH.krn` (kdump) and checked on the page; three patterns, at the end of the hard left level so that no approved
+number changes (checked: 0 refs changed):
+
+| Ref | Id | Bars | Notes |
+|---|---|---|---|
+| left hard 16 | `broken-octave-then-notes-around-the-top` | 3 (also 5, 6) | G2, G3, F3+B3, G3, E3, G3; then C3, G3, C4, A3, G3 |
+| left hard 17 | `low-note-then-line-with-a-passing-note` | 4, first half | C2, G3, C4, D4, E4 (D4 a passing note) |
+| left hard 18 | `pivot-note-with-a-reach-below` | 4, second half (also the end of bar 2) | F2, C4, A3, C4, D3, C4 (D3 by the fifth finger) |
+
+Tools of Phase 2: `crop.py` (`ballade4p41-left-6`, bar 3, and `-7`, bar 4 with the clef and key in front; files
+`images/chopin_passages/ballade4-left-6.png`, `-7.png`), `build.py` (three entries at the end of `PATTERNS`), the
+drawings by `transcribe.passage` and the generated run script in the container (`transcribed/ballade4-left-6.*`,
+`-7.*`). The app writes Mi natural as Fab and Si natural as Dob under four flats; the notes of the examples say it. The
+gallery of patterns now has 113 patterns (left 53, right 60).
+
+Serving: the server on port 8099 (not started by this phase) serves the folder `gallery/`, so the edition's snapshots
+(`../../images/...`) did not load there. A server on port **8097** serves the whole folder `04-app-enhancements/`:
+`http://ubuntu:8097/gallery/04-3-phase-2/index.html` and `http://ubuntu:8097/gallery/04-3-phase-3/index.html`.

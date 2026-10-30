@@ -18,7 +18,8 @@ RENAME = {'ballade1-right-2': 'ballade1-right-1', 'ballade1-right-3': 'ballade1-
           'ballade4-right-3': 'ballade4-right-1', 'ballade4-right-5': 'ballade4-right-2',
           'waltz-64-2-right-2': 'waltz-64-2-right-1', 'ballade1b-right-3': 'ballade1-right-3',
           'ballade1c-right-4': 'ballade1-right-4', 'ballade1d-right-5': 'ballade1-right-5',
-          **{f'ballade4p44-right-{n}': f'ballade4-right-{n}' for n in range(3, 9)}}
+          **{f'ballade4p44-right-{n}': f'ballade4-right-{n}' for n in range(3, 9)},
+          'ballade4p41-left-6': 'ballade4-left-6', 'ballade4p41-left-7': 'ballade4-left-7'}
 # id: (pdf, page, [(system, x0, x1, head)], hands); head = x where the clef and key end (prepended when x0 is mid-system)
 SPEC = {
     'ballade1-{h}-1': ('ballades', 10, [(1, 96, 948, 0)], 'L'),
@@ -54,6 +55,9 @@ SPEC = {
     'ballade4p44-{h}-6': ('ballades', 44, [(3, 97, 842, 0)], 'R'),  # bar 64
     'ballade4p44-{h}-7': ('ballades', 44, [(3, 842, 1559, 225)], 'R'),  # bar 65
     'ballade4p44-{h}-8': ('ballades', 44, [(4, 96, 878, 0)], 'R'),  # bar 66
+    # review of Phase 3 (2026-10-30): Ballade No. 4, page 41, the second line, the left hand
+    'ballade4p41-{h}-6': ('ballades', 41, [(1, 98, 651, 0)], 'L'),  # bar 3
+    'ballade4p41-{h}-7': ('ballades', 41, [(1, 651, 1105, 225)], 'L'),  # bar 4
 }
 FADE = 0.75
 only = sys.argv[2:]
