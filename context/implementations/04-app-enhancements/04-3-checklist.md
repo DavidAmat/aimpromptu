@@ -84,9 +84,9 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 - [x] Task 3.6 The check of a level run, with tests on recorded answers.
 - [ ] Task 3.7 Tests with the AI (the user asked first, with the cost). Hard right, medium left done on the four
   passages twice, with the user's three rules of review 1 ($1.58 in all), approved by the user; medium and easy run
-  ($1.54), to be written again with the steady rhythm of easy and medium (report section 14).
-- [ ] Task 3.8 The gallery `gallery/04-3-phase-3/` (first page done: the test passages, the patterns proposed per
-  level, the prompts; the AI versions come with task 3.7).
+  ($1.54), then written again with the steady rhythm of easy and medium ($1.68; report sections 14 and 15).
+- [x] Task 3.8 The gallery `gallery/04-3-phase-3/`: the test passages, the patterns per level, the prompts, and the
+  hard-right medium-left, medium and easy versions (`http://ubuntu:8097/gallery/04-3-phase-3/index.html`).
 - [ ] Task 3.9 The user's review, until the three levels are approved.
 
 # [ ] Phase 4: The levels in the app

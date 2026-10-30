@@ -340,7 +340,27 @@ onsets of one hand closer than 0.85 of a semicorchea, and a melody note counts a
 place (so it may move to the grid); the right hand's new notes may use the semicorcheas of the grid at every level
 (`Limits.right_grid`). `easy.md` and `medium.md` say it ("A steady rhythm"); medium no longer allows decoration notes.
 Test `test_easy_and_medium_keep_a_steady_rhythm_and_a_melody_note_may_move_to_the_grid` (24 passed). All eight easy
-and medium answers fail the new rule (1 to 7 pairs each): they have to be written again (about $1.4 for both levels
-with their plans kept, waiting for the user's ok).
+and medium answers fail the new rule (1 to 7 pairs each), so they were written again (next section).
 
 Costs so far in Phase 3: $3.12 (hard-medium $1.58, medium $0.73, easy $0.81).
+
+# 15. Easy and medium again, with the steady rhythm (the user's ok, 2026-10-30)
+
+Scratch `rerun_level.py`: the four passages of each level with the plan of its first run (read with `read_plan`, so
+`L=keep` is kept), results in `runs/easy-2/` and `runs/medium-2/`; the page shows hard-medium-2, medium-2 and easy-2.
+
+| Passage | Medium: replies, USD | Easy: replies, USD | L moves per negra, medium / easy |
+|---|---|---|---|
+| f33-f539 | 2, 0.232 | 2, 0.143 | 0.15 / 0.15 |
+| f783-f1042 | 2, 0.134 | 2, 0.119 | 0.46 / 0.52 |
+| f1042-f1414 | 3, 0.424 | 1, 0.253 | 0.44 / 0.48 |
+| f1826-f2296 | 1, 0.178 | 2, 0.199 | 0.70 / 0.54 |
+
+Total $1.68 (medium $0.97, easy $0.71; the estimate was $1.4). Checked by code on the drawings: no decoration note and no
+figure shorter than a semicorchea at either level; looked at zoomed: the right hand in even corcheas and semicorcheas,
+the left-hand patterns of the first runs kept. Open point for the user's review: in the riff and in f1042-f1414 easy
+moves the left hand a little more than medium (a low note then the triad, against octavas in negras that stay in one
+place), against plan section 5.5 ("a lower level does not move more than a higher one"); the check measures one
+answer, not two levels against each other.
+
+Costs in Phase 3: $4.80 (hard-medium $1.58; medium $0.73 + $0.97; easy $0.81 + $0.71).
