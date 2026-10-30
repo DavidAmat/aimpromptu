@@ -340,3 +340,30 @@ def test_where_the_right_hand_has_only_an_artifact_the_left_hand_tops_go_to_the_
     r = checked(answer(taken, declared), riff, level={"right": "hard", "left": "medium"},
                 allowed=("left medium 2", "right hard 1"), start=30, end=150)
     assert not any("top notes" in e for e in r.errors), r.errors
+
+
+def test_a_simple_left_hand_keeps_its_notes_and_only_a_regular_rhythm() -> None:
+    uneven = [30, 34, 37, 45, 49, 53, 60, 64, 75, 79, 83, 90]
+    mel = {30: "E5", 45: "D5", 60: "C5", 75: "D5", 90: "E5"}
+    lines = [f"f{f} L: C3:16" + (f"  R: {mel[f]}:4" if f in mel else "") for f in uneven]
+    s = f1.read(HEAD + "\n".join(lines) + "\n")
+    declared = ["# pattern L f30-f105: keep", "# pattern R f30-f105: right easy 2"]
+    kept = [f"f{f} L: C3:4  R: {m}:4" for f, m in mel.items()]
+    assert checked(answer(kept, declared), s, start=30, end=105).errors == []
+    added = [f"f{f} L: {'C2' if f % 30 == 0 else 'E3,G3'}:4  R: {m}:4" for f, m in mel.items()]
+    r = checked(answer(added, declared), s, start=30, end=105)
+    assert any("simple stretches are made harder" in e and "adds" in e for e in r.errors)
+    assert "L simple (keep): f30-f" in L.song_summary(s, song_grid(s), (1, 2))[0]
+
+
+def test_the_left_hand_follows_its_rhythm_now() -> None:
+    s = song("wide")  # the left hand plays on every negra
+    more = []
+    for k in range(32):
+        f = 30 + k * Q
+        chord, bass = PROG[(k // 4) % 4]
+        more.append(f"f{f} L: {bass}:8  R: {MELODY[k % 16]}:4")
+        more.append(f"f{f + 7} L: {chord.split(',')[1]}:8")
+    r = checked(answer(more, DECLARED), s)
+    assert any("more left-hand onsets than the sheet now" in e for e in r.errors)
+    assert any("onsets of the left hand now" in e for e in r.errors)

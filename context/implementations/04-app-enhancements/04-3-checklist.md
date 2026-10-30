@@ -83,7 +83,8 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 - [x] Task 3.5 The plan of the song and its prompt.
 - [x] Task 3.6 The check of a level run, with tests on recorded answers.
 - [ ] Task 3.7 Tests with the AI (the user asked first, with the cost). Hard right, medium left done on the four
-  passages ($0.63), waiting for the user's review; easy and medium after it.
+  passages twice, with the user's three rules of review 1 ($1.58 in all), waiting for the user's review; easy and
+  medium after it.
 - [ ] Task 3.8 The gallery `gallery/04-3-phase-3/` (first page done: the test passages, the patterns proposed per
   level, the prompts; the AI versions come with task 3.7).
 - [ ] Task 3.9 The user's review, until the three levels are approved.

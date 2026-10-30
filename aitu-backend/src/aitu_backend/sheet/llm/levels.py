@@ -302,6 +302,69 @@ def measure_text(m: Measures, sheet: Sheet, staff: int, start: int, end: int) ->
     )
 
 
+#: The pattern of a hand that keeps the notes of a simple stretch and makes only its rhythm regular.
+KEEP = "keep"
+#: The share of the left-hand onsets of an answer that are onsets of the left hand now (within a frame), at least.
+RHYTHM_SHARE = 0.7
+#: A simple stretch: the hand plays at most this many keys, inside this range (single notes, an octava, one small
+#: chord again and again).
+SIMPLE_NOTES = 3
+SIMPLE_SPAN = 12
+
+
+@dataclass
+class Simple:
+    """A stretch of one chord where one hand is already simple (the user, 2026-10-30): it plays at most
+    ``SIMPLE_NOTES`` keys inside one octava (E2 again and again, an octava E2-E3, a held fifth). A level keeps its
+    notes and makes only its rhythm regular."""
+
+    staff: int
+    start: int
+    end: int
+    keys: tuple[int, ...]  # every key the hand plays there
+    columns: int
+    single: bool
+
+
+def _plain_cols(sheet: Sheet, staff: int, start: int, end: int) -> list[tuple[int, tuple[int, ...]]]:
+    cols: dict[int, set[int]] = defaultdict(set)
+    for n in sheet.notes:
+        if n.staff == staff and not n.covered and not n.grace and start <= n.frame < end:
+            cols[n.frame].add(n.midi)
+    return [(f, tuple(sorted(ms))) for f, ms in sorted(cols.items())]
+
+
+def simple_stretches(sheet: Sheet, staff: int, cs: list[Chord], start: int, end: int) -> list[Simple]:
+    """The stretches of ``[start, end)`` (one per chord) where the hand ``staff`` is simple (:class:`Simple`)."""
+    out = []
+    for c in cs:
+        a, b = max(c.start, start), min(c.end, end)
+        cols = _plain_cols(sheet, staff, a, b)
+        if not cols:
+            continue
+        keys = sorted({m for _, ms in cols for m in ms})
+        if len(keys) <= SIMPLE_NOTES and keys[-1] - keys[0] <= SIMPLE_SPAN:
+            single = all(len(ms) == 1 for _, ms in cols)
+            out.append(Simple(staff, a, b, tuple(keys), len(cols), single))
+    return out
+
+
+def simple_text(stretches: list[Simple], key: int) -> str:
+    """``f33-f159 E2 · f159-f191 F#3+C#4`` (neighbours with the same notes joined)."""
+    from aitu_backend.sheet.sheet.common import spn  # noqa: PLC0415
+    from aitu_backend.sheet.sheet.spelling import spell  # noqa: PLC0415
+
+    joined: list[list] = []
+    for st in stretches:
+        if joined and joined[-1][1] == st.start and joined[-1][2] == st.keys:
+            joined[-1][1] = st.end
+        else:
+            joined.append([st.start, st.end, st.keys])
+    return " · ".join(
+        f"f{a}-f{b} " + "+".join(spn(*spell(m, key)) for m in keys) for a, b, keys in joined
+    )
+
+
 def song_summary(sheet: Sheet, grid: Grid, staffs: tuple[int, ...]) -> tuple[str, list[tuple[int, int]]]:
     """The summary of the whole song for the plan request: one line per stretch (``SUMMARY_MS``, ending at a pause):
     its frames and clock, the chords, the measures of each hand, and the earlier stretch that sounds the same
@@ -316,6 +379,10 @@ def song_summary(sheet: Sheet, grid: Grid, staffs: tuple[int, ...]) -> tuple[str
         parts = [f"f{a}-f{b} ({clock(a)}-{clock(b)}): chords {' '.join(c.name(key) for c in here) or '-'}"]
         for st in (1, 2):
             parts.append(f"{'R' if st == 1 else 'L'}: {measure_text(measure(sheet, st, a, b, grid), sheet, st, a, b)}")
+        if 2 in staffs:
+            simple = simple_stretches(sheet, 2, [c for c in cs if c.start < b and c.end > a], a, b)
+            if simple:
+                parts.append(f"L simple (keep): {simple_text(simple, key)}")
         like = like_before(sheet, staff, a, b, a)
         if like:
             parts.append(f"sounds like f{like[0]}-f{like[1]}")
@@ -344,7 +411,7 @@ class Section:
 _SECTION = re.compile(
     r"^\s*S(\d+)\s+f(\d+)\s*-\s*f(\d+)\s+(.*?)(?:\|(.*))?$", re.M
 )
-_HAND_REF = re.compile(r"\b([LR])\s*=\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+)", re.I)
+_HAND_REF = re.compile(r"\b([LR])\s*=\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+|keep)\b", re.I)
 
 
 def plan_prompt(
@@ -386,7 +453,9 @@ def plan_prompt(
         f"```\nS1 f{start}-f780 {hands} | the intro: why, in a few words\nS2 f780-f1440 {hands} | ...\n```\n\n"
         f"The sections cover f{start} to f{end} with no gap; each begins where the one before ends, on the first "
         "frame of a stretch. Each pattern is the ref of one pattern of this run (\"left easy 2\"), of the hand it "
-        "is for."
+        "is for, or `keep` for a left hand that the summary marks simple (\"L=keep\"): it keeps its notes and makes "
+        "only its rhythm regular. For the other left-hand sections, choose the pattern whose rhythm is nearest to "
+        "what the left hand plays now."
     )
     return "\n\n".join(out) + "\n"
 
@@ -411,6 +480,8 @@ def read_plan(
             ref = getattr(sec, h)
             if ref is None:
                 errs.append(f"S{idx}: no pattern for the {h} hand ({h[0].upper()}=...)")
+            elif ref == KEEP:
+                continue
             elif ref not in allowed:
                 errs.append(f"S{idx}: {ref} is not a pattern of this run")
             elif not ref.startswith(h):
@@ -469,6 +540,12 @@ def batch_prompt(
         + "\n".join(("> " if s in here else "  ") + s.line() for s in plan)
     )
     out.append("## The chords of this batch (found by the app in the notes)\n\n" + chord_text(cs, key))
+    simple = simple_stretches(target, 2, cs, start, end) if 2 in staffs else []
+    if simple:
+        out.append(
+            "## Simple stretches of the left hand (keep their notes: `# pattern L f...-f...: keep`; make only the "
+            "rhythm regular)\n\n" + simple_text(simple, key)
+        )
     fine = [HANDS[s] for s in staffs if LIMITS[hand_levels(level)[s]].grid == "semicorchea"]
     half = (
         ""
@@ -549,7 +626,7 @@ class Declared:
 
 
 _PATTERN = re.compile(
-    r"^\s*#\s*pattern\s+([LR])\s+f(\d+)\s*-\s*f(\d+)\s*:\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+)",
+    r"^\s*#\s*pattern\s+([LR])\s+f(\d+)\s*-\s*f(\d+)\s*:\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+|keep)\b",
     re.M | re.I,
 )
 _DROP = re.compile(r"^\s*#\s*(not melody|artifact)\s+f(\d+)\s+([A-G][#b]*-?\d+(?:\s*,\s*[A-G][#b]*-?\d+)*)(.*)$", re.M | re.I)
@@ -834,10 +911,56 @@ def check_level(
         if not mine:
             errs.append(f"declare the pattern of the {HANDS[staff]} hand: '# pattern {h} f{start}-f{end}: <ref>'")
         for _, a, b, ref in mine:
+            if ref == KEEP:
+                continue
             if ref not in allowed:
                 errs.append(f"{ref} is not a pattern of this run")
             elif not ref.startswith(HANDS[staff]):
                 errs.append(f"{ref} is a pattern of the other hand")
+    # never harder than the sheet now: a simple stretch of the left hand keeps its notes, never more of them in time;
+    # and the left hand follows the rhythm it plays now (the user, 2026-10-30)
+    for staff in [s_ for s_ in staffs if s_ == 2]:
+        harder = []
+        for st in simple_stretches(target, staff, cs, start, end):
+            now = _plain_cols(sheet, staff, st.start, st.end)
+            other = sorted({m for _, ms in now for m in ms} - set(st.keys))
+            where = f"f{st.start}-f{st.end}"
+            if other:
+                harder.append(f"{where} adds {', '.join(_name(m) for m in other)}")
+            elif st.single and any(len(ms) > 1 for _, ms in now):
+                harder.append(f"{where} plays chords where the sheet plays single notes")
+            if len(now) > st.columns:
+                harder.append(f"{where} has {len(now)} onsets where the sheet has {st.columns}")
+        if harder:
+            h = "R" if staff == 1 else "L"
+            errs.append(
+                f"{h}: {len(harder)} simple stretches are made harder: {_show(harder, 4)}. Where the sheet plays "
+                "single notes or one chord again and again, keep its notes ('# pattern "
+                f"{h} f...-f...: keep') and only make the rhythm regular, with as many onsets or fewer"
+            )
+    if 2 in staffs:
+        now_on = [f for f, _ in _plain_cols(target, 2, start, end)]
+        ans_on = [f for f, _ in _plain_cols(sheet, 2, start, end)]
+        more = []
+        for c in cs:
+            a_, b_ = max(c.start, start), min(c.end, end)
+            k_now = sum(a_ <= f < b_ for f in now_on)
+            k_ans = sum(a_ <= f < b_ for f in ans_on)
+            if k_ans > k_now:
+                more.append(f"f{a_}-f{b_} {k_ans} onsets where the sheet has {k_now}")
+        if more:
+            errs.append(
+                f"L: {len(more)} chords have more left-hand onsets than the sheet now: {_show(more, 4)}. A level "
+                "simplifies the rhythm the left hand plays; it never adds onsets"
+            )
+        on_now = sum(any(abs(f - g) <= 1 for g in now_on) for f in ans_on)
+        if ans_on and on_now < RHYTHM_SHARE * len(ans_on):
+            errs.append(
+                f"L: only {on_now} of the {len(ans_on)} left-hand onsets are onsets of the left hand now (at least "
+                f"{int(RHYTHM_SHARE * 100)} %): follow the rhythm the left hand plays now, simplified (keep its main "
+                "onsets, leave out the fast ones); do not invent another rhythm, such as an arpeggio in corcheas "
+                "where it plays a negra and two corcheas"
+            )
     # the time of new notes, and their figures
     before = {(n.frame, n.midi, n.staff) for n in target.notes}
     off, short = [], []

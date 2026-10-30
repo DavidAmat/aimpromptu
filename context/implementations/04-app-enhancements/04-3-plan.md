@@ -906,3 +906,10 @@ level with the left-hand section of the other. The first run showed that the AI 
 octava lower and lost the riff hidden in the left-hand chords, so the prompt now says that an artifact is left out,
 and that where the right hand has only artifacts the top notes of the left-hand chords move to the right hand; the
 check holds both.
+
+**Phase 3, the user's review of the first run** (2026-10-30): three rules for every level. A level never makes a
+passage harder than the sheet now (the sheet now is the super hard version): a left hand that already plays single
+notes or one small chord keeps its notes and only gets a regular rhythm (pattern `keep`). The new left hand follows
+the rhythm the left hand plays now, simplified, instead of a new rhythm from the catalog. Where the right hand takes a
+riff from the left hand, it plays the whole line of the top notes; at hard, with the fifth or the third of the chord
+under each note. The prompt and the check hold the three (report section 12).

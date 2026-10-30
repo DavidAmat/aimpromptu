@@ -8,6 +8,11 @@ later (fast runs up and down with big jumps in both hands), so hard keeps the ha
 
 - The **melody on top**, with **small pieces of chords** under it (two or three notes of the harmony) that add to it,
   on the long notes and on the strong points of the phrase (Ballade No. 4). A fast passage keeps a shape that repeats.
+- **Powerful two-note chords**: under a melody note, above all in a riff that the right hand took from the left hand
+  and on the strong beats, add one note of the chord below it: the fifth or the third of the chord (Do5 with Sol4,
+  the fifth of Do major, or with Mi4, its third); change between the two freely, as the chord and the hand position
+  allow. It sounds stronger and stays easy to read. The left hand can then play an octava as a negra and then two
+  corcheas of the chord.
 - Octavas in the right hand are allowed on a few melody notes that need power; not on every note.
 - A short fill between two phrases is allowed when it uses the notes of the chord or the scale of the key, in one
   run, and lands on the melody.

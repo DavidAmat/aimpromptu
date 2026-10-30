@@ -1,8 +1,9 @@
 # 04-3 · Phase 3: the level prompts, tested on 99 Red Balloons
 
-Status: **in progress** (2026-10-30). Tasks 3.1 to 3.6 are built and tested without the AI. Task 3.7: the first AI
-run (the user's choice: hard for the right hand, medium for the left hand) is done on the four passages ($0.63) and
-waits for the user's review; easy and medium come after it (section 11). Branch `feat/04-3-phase-3` from `master` (`f85fa92`).
+Status: **in progress** (2026-10-30). Tasks 3.1 to 3.6 are built and tested without the AI. Task 3.7: the run of the
+user's choice (hard for the right hand, medium for the left hand) was made twice on the four passages, with rules
+added after each of the user's reviews (sections 11 and 12; $1.58 in all); it waits for the user's review. Easy and
+medium come after it. Branch `feat/04-3-phase-3` from `master` (`f85fa92`).
 
 Audience: the agents of this plan (this phase when the user answers, and Phase 4). Technical.
 
@@ -241,3 +242,54 @@ The other passages (looked at zoomed): the intro keeps a low note, then two chor
 changes from medium 10 to medium 2 at f1246 as its plan says; the high passage brings the melody from E6-G#6 down an
 octava with two-note chords under it, over octavas in negras (medium 7). Measures of the answers (left hand, moves per
 negra): 0.92, 0.75, 0.60, 0.45 (the sheet now: 0.6 to 2.0); widest left-hand column 9 to 12.
+
+# 12. The user's review 1 (2026-10-30) and the second run
+
+The user looked at the first run and gave three rules:
+
+1. **Never harder than the sheet now.** The sheet now is the super hard version; where a hand already plays single
+   notes or one chord again and again (the intro's left hand: E2 in an uneven rhythm, then a held fifth per chord),
+   it keeps its notes and only its rhythm becomes regular and symmetric. The first run had put a waltz there.
+2. **The new left hand approximates the left hand now**: the same main onsets, simplified (a negra octava and two
+   corcheas of the chord stay a negra octava, or the bass, and two corcheas of the chord), never an arpeggio in
+   corcheas or a waltz where the hand did not play one.
+3. **The riff is the line of the top notes** of the left-hand chords (Mi, Mi, Do#, Mi, Do#, four times), every note
+   of it in the right hand; at hard, with the fifth or the third of the chord under each note for power (Do5 with Sol4
+   or Mi4).
+
+What changed:
+
+- `levels.simple_stretches` (`Simple`, `SIMPLE_NOTES` 3 keys, `SIMPLE_SPAN` 12): per chord, a left hand that plays at
+  most three keys inside one octava is simple. The first version asked for single notes or one identical chord and
+  missed the intro's E2 run (one column is E2+E3); widened. Shown in the summary of the song (`L simple (keep): f33-f159
+  E2+E3 · ...`) and in each batch ("Simple stretches of the left hand"). The pattern `keep` is allowed in the plan
+  (`L=keep`) and in the declared lines. The check refuses another key, chords where the hand played single notes, and
+  more onsets than now in a simple stretch. Only the left hand: the right hand keeps its melody by its own rule.
+- The rhythm of the left hand (`RHYTHM_SHARE` 0.7): in each chord, the answer has at most as many left-hand onsets as
+  now, and at least 70 % of its left-hand onsets are left-hand onsets now (within a frame).
+- `shared.md`: a section "A level simplifies the sheet: never harder than it is now" (rules 1 and 2), the plan request
+  asks for the pattern whose rhythm is nearest, and the riff paragraph reads the line of the highest notes (rule 3).
+  `hard.md`: the right hand's powerful two-note chords (rule 3).
+- Tests: `test_a_simple_left_hand_keeps_its_notes_and_only_a_regular_rhythm`, `test_the_left_hand_follows_its_rhythm_now`
+  (23 in all, passed). The first run's answers checked again: all four now fail (the intro: 18 simple stretches made
+  harder, 14 of 41 onsets on the left hand's onsets; the riff: 10 of 24).
+
+**The second run** (`runs/hard-medium-2/`, the same patterns): the plan has 11 sections, with `keep` for the intro
+(S1 f33-f539), a break (f4104-f4259) and the end (f4666-f4880). $0.79:
+
+| Request | Replies | Output tokens | USD | What the check refused first |
+|---|---|---|---|---|
+| Plan | 1 | 1,975 | 0.056 | |
+| f33-f539 | 2 | 8,520 + 1,420 | 0.134 | f419-f458: chords where the sheet plays single notes |
+| f783-f1042 | 2 | 6,198 + 963 | 0.099 | two new notes off the grid (f820, f947) |
+| f1042-f1414 | 3 | 21,891 + 1,865 + 2,076 | 0.385 | a bass E3 where C#m begins; one note off the grid |
+| f1826-f2296 | 1 | 10,355 | 0.116 | |
+
+Then the riff again with rule 3 (same plan; scratch `rerun2.py`): 2 replies, $0.156. The right hand plays E4, E4, C#4,
+E4, C#4 four times, each with the fifth under it (B3-E4, G#3-C#4); the left hand plays E2-E3, then corcheas of the
+chord (medium 10, in the rhythm it had); the six high chords are declared artifacts. Note: the scratch rerun parsed the
+plan lines with a pattern that does not read `L=keep`, so the plan shown in that one batch prompt had no left-hand
+pattern for the keep sections (the riff's own section was read correctly).
+
+Looked at zoomed: the intro keeps E2 in negras then the held fifths in blancas; the high passage keeps octavas in
+negras; f1042-f1414 follows the left hand's rhythm (a negra or corchea bass, then two or three notes of the chord).

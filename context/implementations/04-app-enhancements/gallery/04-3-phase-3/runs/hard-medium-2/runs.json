@@ -1,0 +1,391 @@
+{
+ "runs": {
+  "hard-medium-2|33": {
+   "status": "ok",
+   "replies": 2,
+   "errors": [
+    [
+     "L: 1 simple stretches are made harder: f419-f458 plays chords where the sheet plays single notes. Where the sheet plays single notes or one chord again and again, keep its notes ('# pattern L f...-f...: keep') and only make the rhythm regular, with as many onsets or fewer"
+    ]
+   ],
+   "usd": 0.13391560000000002,
+   "model": "Sonnet 5.5",
+   "declared": [
+    "pattern L f33-f539: keep",
+    "pattern R f33-f539: right hard 1",
+    "not melody f198 C#5: the top of an accompaniment chord (A4,C#5) under the held A5; the left hand plays the A chord",
+    "not melody f404 E5: a stray note one frame before G#4, the melody goes on with G#4 and C#5",
+    "not melody f498 C#5: the top of an accompaniment chord (A4,C#5) right after F#5; the left hand plays the F#m chord"
+   ],
+   "measures": {
+    "1": {
+     "seconds": 20.24,
+     "notes": 54,
+     "columns": 42,
+     "notes_s": 2.67,
+     "columns_s": 2.08,
+     "chord_max": 3,
+     "chord_mean": 1.29,
+     "span": 10,
+     "reach": 16,
+     "moves": 3,
+     "moves_s": 0.15,
+     "moves_q": 0.09,
+     "moved_s": 0.49,
+     "big_moves_s": 0.0,
+     "fast_moves_s": 0.05,
+     "regular": 0.0,
+     "effort_s": 0.49,
+     "notes_per_position": 13.5,
+     "pattern": 0.0
+    },
+    "2": {
+     "seconds": 20.24,
+     "notes": 29,
+     "columns": 20,
+     "notes_s": 1.43,
+     "columns_s": 0.99,
+     "chord_max": 2,
+     "chord_mean": 1.45,
+     "span": 12,
+     "reach": 16,
+     "moves": 5,
+     "moves_s": 0.25,
+     "moves_q": 0.15,
+     "moved_s": 1.58,
+     "big_moves_s": 0.05,
+     "fast_moves_s": 0.1,
+     "regular": 0.0,
+     "effort_s": 1.58,
+     "notes_per_position": 4.83,
+     "pattern": 0.0
+    }
+   },
+   "melody": 45,
+   "melody_dropped": 3,
+   "new_notes": 7,
+   "label": "hard for the right hand and medium for the left hand",
+   "text": "F1 frames frameMs=40 quarterMs=600\nkey=4# clefs: R=treble L=bass\n[]x33\nf33      L: E2:4\n[]x14\nf48      L: E2:4\n[]x15\nf64      L: E2:4\n[]x15\nf80      L: E2:4\n[]x17\nf98      L: E2:2\n[]x22\nf121     L: E2,E3:2  R: G#4,F#5:8\n[]x9\nf131     R: G#5:16\n[]x3\nf135     R: G#4,E5:8\n[]x8\nf144     R: G#5:4\n[]x12\nf157     R: A4,F#5:8 b1\n[]x1\nf159     L: F#3,C#4:2\n[]x9\nf169     R: E5:8 b1\n[]x3\nf173     R: C#5:2\n[]x17\nf191     L: A3,E4:2\n[]x5\nf197     R: A5:8\n[]x8\nf206     R: A5:4\n[]x12\nf219     L: F#3,A3:4  R: A5:8\n[]x8\nf228     R: A5:16 b2\n[]x3\nf232     L: F#3,B3:2  R: A5:8 b2\n[]x6\nf239     R: D#5:8 b2\n[]x8\nf248     R: G#5:16\n[]x4\nf253     R: F#5:8\n[]x8\nf262     R: E5:4\n[]x14\nf277     L: E3,B3:2  R: B4,E5,F#5:8 b3\n[]x10\nf288     R: G#5:16 b3\n[]x3\nf292     R: E5:16 b3\n[]x3\nf296     R: C#5:8 b4\n[]x7\nf304     R: B4,G#5:8 b4\n[]x11\nf316     L: F#3,C#4:2  R: A4,C#5,F#5:8 b4\n[]x11\nf328     R: E5:16 b4\n[]x4\nf333     R: C#5:4\n[]x21\nf355     R: C#5:8\n[]x1\nf357     L: A2:8\n[]x5\nf363     L: E3,C#4:2  R: A4,E5:16\n[]x5\nf369     R: C#5:8\n[]x8\nf378     R: E5:4\n[]x13\nf392     R: C#5:8\n[]x12\nf405     L: B2:1  R: G#4:8 b5\n[]x6\nf412     R: C#5:16 b5\n[]x4\nf417     R: F#4:16 b5\n[]x4\nf422     R: E5:4\n[]x18\nf441     R: E4,G#4:16 b6\n[]x4\nf446     R: F#5:8 b6\n[]x5\nf452     L: E3:16 grace\n[]x1\nf454     L: B3:16 grace\n[]x2\nf457     L: F#4:2  R: B4,E5,F#5:8 b6\n[]x6\nf464     R: G#5:8 b6\n[]x7\nf472     R: E5:16\n[]x4\nf477     R: G#4:4\n[]x6\nf484     L: A3:4\n[]x12\nf497     L: F#3,C#4:2  R: F#5:8 b7\n[]x11\nf509     R: E5:8 b7\n[]x4\nf514     R: C#5:2\n",
+   "answer": "F1 frames frameMs=40 quarterMs=600\nkey=4# clefs: R=treble L=bass\n[]x33\nf33      L: E2:4\n[]x14\nf48      L: E2:4\n[]x15\nf64      L: E2:4\n[]x15\nf80      L: E2:4\n[]x17\nf98      L: E2:2\n[]x22\nf121     L: E2,E3:2  R: G#4,F#5:8\n[]x9\nf131     R: G#5:16\n[]x3\nf135     R: G#4,E5:8\n[]x8\nf144     R: G#5:4\n[]x12\nf157     R: A4,F#5:8\n[]x1\nf159     L: F#3,C#4:2\n[]x9\nf169     R: E5:8\n[]x3\nf173     R: C#5:2\n[]x17\nf191     L: A3,E4:2\n[]x5\nf197     R: A5:8\n[]x8\nf206     R: A5:4\n[]x12\nf219     L: F#3,A3:4  R: A5:8\n[]x8\nf228     R: A5:16\n[]x3\nf232     R: A5:8\nf233     L: F#3,B3:2\n[]x5\nf239     R: D#5:8\n[]x8\nf248     R: G#5:16\n[]x4\nf253     R: F#5:8\n[]x8\nf262     R: E5:4\n[]x14\nf277     R: B4,E5,F#5:8\nf278     L: E3,B3:2\n[]x9\nf288     R: G#5:16\n[]x3\nf292     R: E5:16\n[]x3\nf296     R: C#5:8\n[]x7\nf304     R: B4,G#5:8\n[]x11\nf316     R: A4,C#5,F#5:8\nf317     L: F#3,C#4:2\n[]x10\nf328     R: E5:16\n[]x4\nf333     R: C#5:4\n[]x21\nf355     R: C#5:8\n[]x1\nf357     L: A2:8\n[]x5\nf363     L: E3,C#4:2  R: A4,E5:16\n[]x5\nf369     R: C#5:8\n[]x8\nf378     R: E5:4\n[]x13\nf392     R: C#5:8\n[]x12\nf405     L: B2:1  R: G#4:8\n[]x6\nf412     R: C#5:16\n[]x4\nf417     R: F#4:16\n[]x4\nf422     R: E5:4\n[]x18\nf441     R: E4,G#4:16\n[]x4\nf446     R: F#5:8\n[]x5\nf452     L: E3:8\n[]x1\nf454     L: B3:8\n[]x2\nf457     R: B4,E5,F#5:8\nf458     L: F#4:2\n[]x5\nf464     R: G#5:8\n[]x7\nf472     R: E5:16\n[]x4\nf477     R: G#4:4\n[]x6\nf484     L: A3:4\n[]x12\nf497     R: F#5:8\nf498     L: F#3,C#4:2\n[]x10\nf509     R: E5:8\n[]x4\nf514     R: C#5:2\n"
+  },
+  "hard-medium-2-first|783": {
+   "status": "ok",
+   "replies": 2,
+   "errors": [
+    [
+     "2 new notes are not on the grid: f820 G#3, f947 G#3. Start a new note on a frame of the grid, or at the frame of a note of the target"
+    ]
+   ],
+   "usd": 0.09893160000000001,
+   "model": "Sonnet 5.5",
+   "declared": [
+    "pattern L f783-f812: keep",
+    "pattern L f812-f1042: left medium 10",
+    "pattern R f783-f1042: right hard 1",
+    "artifact f863 D#7: a high chord alone, far above the riff",
+    "artifact f863 E7: a high chord alone, far above the riff",
+    "artifact f926 D#6: a high chord alone that adds nothing to the riff",
+    "artifact f926 E6: a high chord alone that adds nothing to the riff",
+    "artifact f990 D#7: a high chord alone, far above the riff",
+    "artifact f990 E7: a high chord alone, far above the riff"
+   ],
+   "measures": {
+    "1": {
+     "seconds": 10.36,
+     "notes": 22,
+     "columns": 22,
+     "notes_s": 2.12,
+     "columns_s": 2.12,
+     "chord_max": 1,
+     "chord_mean": 1.0,
+     "span": 0,
+     "reach": 3,
+     "moves": 0,
+     "moves_s": 0.0,
+     "moves_q": 0.0,
+     "moved_s": 0.0,
+     "big_moves_s": 0.0,
+     "fast_moves_s": 0.0,
+     "regular": 0.0,
+     "effort_s": 0.0,
+     "notes_per_position": 22.0,
+     "pattern": 0.0
+    },
+    "2": {
+     "seconds": 10.36,
+     "notes": 27,
+     "columns": 19,
+     "notes_s": 2.61,
+     "columns_s": 1.83,
+     "chord_max": 2,
+     "chord_mean": 1.42,
+     "span": 12,
+     "reach": 19,
+     "moves": 12,
+     "moves_s": 1.16,
+     "moves_q": 0.69,
+     "moved_s": 5.5,
+     "big_moves_s": 0.0,
+     "fast_moves_s": 0.19,
+     "regular": 0.0,
+     "effort_s": 5.5,
+     "notes_per_position": 2.08,
+     "pattern": 0.6
+    }
+   },
+   "melody": 23,
+   "melody_dropped": 3,
+   "new_notes": 31,
+   "label": "Hard for the right hand and medium for the left hand: before the two-note chords",
+   "text": "F1 frames frameMs=40 quarterMs=600\nkey=4# clefs: R=treble L=bass\n[]x783\nf783     L: B1:2\n[]x28\nf812     L: E2,E3:8  R: E5:8\n[]x7\nf820     L: E3:16  R: E5:16 b1\n[]x3\nf824     L: C#2,C#3:8  R: C#5:8 b1\n[]x6\nf831     L: E3:8  R: E5:8 b1\n[]x7\nf839     L: G#3:2  R: C#5:2\n[]x37\nf877     L: E2,E3:8 b2  R: E5:8 b3\n[]x7\nf885     L: C#2,C#3:8 b2  R: E5:8 grace/\n[]x2\nf888     R: C#5:8 b3\n[]x7\nf896     L: E3:8  R: E5:8 b3\n[]x6\nf903     L: G#3:4  R: C#5:8 b3\n[]x3\nf907     R: E5:2\n[]x31\nf939     L: E2,E3:8  R: E5:8\n[]x7\nf947     L: E3:16  R: E5:16 b4\n[]x3\nf951     L: C#2,C#3:8  R: C#5:8 b4\n[]x7\nf959     L: E3:8  R: E5:8 b4\n[]x6\nf966     L: G#3:2  R: C#5:2\n[]x34\nf1001    L: E2,E3:8 b5  R: E5:8 b6\n[]x7\nf1009    L: C#2,C#3:8 b5  R: E5:8 grace/\n[]x2\nf1012    R: C#5:8 b6\n[]x7\nf1020    L: E3:8  R: E5:8 b6\n[]x6\nf1027    L: G#3:4  R: C#5:16 b6\n[]x3\nf1031    R: E5:4\n",
+   "answer": "F1 frames frameMs=40 quarterMs=600\nkey=4# clefs: R=treble L=bass\n[]x783\nf783     L: B1:2\n[]x28\nf812     L: E2,E3:8  R: E5:8\n[]x7\nf820     L: E3:16  R: E5:16\n[]x3\nf824     L: C#2,C#3:8  R: C#5:8\n[]x6\nf831     L: E3:8  R: E5:8\n[]x7\nf839     L: G#3:2  R: C#5:2\n[]x37\nf877     L: E2,E3:8  R: E5:8\n[]x7\nf885     L: C#2,C#3:8  R: E5:16\n[]x2\nf888     R: C#5:8\n[]x7\nf896     L: E3:8  R: E5:8\n[]x6\nf903     L: G#3:4  R: C#5:16\n[]x3\nf907     R: E5:2\n[]x31\nf939     L: E2,E3:8  R: E5:8\n[]x7\nf947     L: E3:16  R: E5:16\n[]x3\nf951     L: C#2,C#3:8  R: C#5:8\n[]x7\nf959     L: E3:8  R: E5:8\n[]x6\nf966     L: G#3:2  R: C#5:2\n[]x34\nf1001    L: E2,E3:8  R: E5:8\n[]x7\nf1009    L: C#2,C#3:8  R: E5:16\n[]x2\nf1012    R: C#5:8\n[]x7\nf1020    L: E3:8  R: E5:8\n[]x6\nf1027    L: G#3:4  R: C#5:16\n[]x3\nf1031    R: E5:4\n"
+  },
+  "hard-medium-2|783": {
+   "status": "ok",
+   "replies": 2,
+   "errors": [
+    [
+     "2 new notes are not on the grid: f820 G#3, f947 G#3. Start a new note on a frame of the grid, or at the frame of a note of the target"
+    ]
+   ],
+   "usd": 0.1561836,
+   "model": "Sonnet 5.5",
+   "declared": [
+    "pattern L f783-f812: keep",
+    "pattern L f812-f1042: left medium 10",
+    "pattern R f783-f1042: right hard 1",
+    "artifact f863 D#7: a high chord alone, three octavas above the riff",
+    "artifact f863 E7: a high chord alone, three octavas above the riff",
+    "artifact f926 D#6: a high chord alone, two octavas above the riff",
+    "artifact f926 E6: a high chord alone, two octavas above the riff",
+    "artifact f990 D#7: a high chord alone, three octavas above the riff",
+    "artifact f990 E7: a high chord alone, three octavas above the riff"
+   ],
+   "measures": {
+    "1": {
+     "seconds": 10.36,
+     "notes": 30,
+     "columns": 22,
+     "notes_s": 2.9,
+     "columns_s": 2.12,
+     "chord_max": 2,
+     "chord_mean": 1.36,
+     "span": 5,
+     "reach": 8,
+     "moves": 0,
+     "moves_s": 0.0,
+     "moves_q": 0.0,
+     "moved_s": 0.0,
+     "big_moves_s": 0.0,
+     "fast_moves_s": 0.0,
+     "regular": 0.0,
+     "effort_s": 0.0,
+     "notes_per_position": 30.0,
+     "pattern": 0.0
+    },
+    "2": {
+     "seconds": 10.36,
+     "notes": 27,
+     "columns": 19,
+     "notes_s": 2.61,
+     "columns_s": 1.83,
+     "chord_max": 2,
+     "chord_mean": 1.42,
+     "span": 12,
+     "reach": 19,
+     "moves": 12,
+     "moves_s": 1.16,
+     "moves_q": 0.69,
+     "moved_s": 5.5,
+     "big_moves_s": 0.0,
+     "fast_moves_s": 0.19,
+     "regular": 0.0,
+     "effort_s": 5.5,
+     "notes_per_position": 2.08,
+     "pattern": 0.6
+    }
+   },
+   "melody": 23,
+   "melody_dropped": 3,
+   "new_notes": 39,
+   "label": "hard for the right hand and medium for the left hand, with two-note chords under the riff",
+   "text": "F1 frames frameMs=40 quarterMs=600\nkey=4# clefs: R=treble L=bass\n[]x783\nf783     L: B1:2\n[]x28\nf812     L: E2,E3:8  R: B3,E4:8\n[]x7\nf820     L: E3:16  R: E4:16 b1\n[]x3\nf824     L: C#2,C#3:8  R: G#3,C#4:8 b1\n[]x6\nf831     L: E3:8 b2  R: E4:8 b1\n[]x7\nf839     L: G#3:8 b2  R: C#4:4\n[]x37\nf877     L: E2,E3:8 b3  R: B3,E4:8 b4\n[]x7\nf885     L: C#2,C#3:8 b3  R: E4:8 grace/\n[]x2\nf888     R: C#4:8 b4\n[]x7\nf896     L: E3:8 b5  R: E4:8 b4\n[]x6\nf903     L: G#3:8 b5  R: C#4:8 b4\n[]x3\nf907     R: B3,E4:2\n[]x31\nf939     L: E2,E3:8  R: B3,E4:8\n[]x7\nf947     L: E3:16  R: E4:16 b6\n[]x3\nf951     L: C#2,C#3:8  R: G#3,C#4:8 b6\n[]x7\nf959     L: E3:8 b7  R: E4:8 b6\n[]x6\nf966     L: G#3:8 b7  R: C#4:4\n[]x34\nf1001    L: E2,E3:8 b8  R: B3,E4:8 b9\n[]x7\nf1009    L: C#2,C#3:8 b8  R: E4:8 grace/\n[]x2\nf1012    R: C#4:8 b9\n[]x7\nf1020    L: E3:8 b10  R: E4:8 b9\n[]x6\nf1027    L: G#3:8 b10  R: C#4:16 b9\n[]x3\nf1031    R: B3,E4:4\n",
+   "answer": "F1 frames frameMs=40 quarterMs=600\nkey=4# clefs: R=treble L=bass\n[]x783\nf783     L: B1:2\n[]x28\nf812     L: E2,E3:8  R: B3,E4:8\n[]x7\nf820     L: E3:16  R: E4:16\n[]x3\nf824     L: C#2,C#3:8  R: G#3,C#4:8\n[]x6\nf831     L: E3:8  R: E4:8\n[]x7\nf839     L: G#3:8  R: C#4:4\n[]x37\nf877     L: E2,E3:8  R: B3,E4:8\n[]x7\nf885     L: C#2,C#3:8  R: E4:16\n[]x2\nf888     R: C#4:8\n[]x7\nf896     L: E3:8  R: E4:8\n[]x6\nf903     L: G#3:8  R: C#4:16\n[]x3\nf907     R: B3,E4:2\n[]x31\nf939     L: E2,E3:8  R: B3,E4:8\n[]x7\nf947     L: E3:16  R: E4:16\n[]x3\nf951     L: C#2,C#3:8  R: G#3,C#4:8\n[]x7\nf959     L: E3:8  R: E4:8\n[]x6\nf966     L: G#3:8  R: C#4:4\n[]x34\nf1001    L: E2,E3:8  R: B3,E4:8\n[]x7\nf1009    L: C#2,C#3:8  R: E4:16\n[]x2\nf1012    R: C#4:8\n[]x7\nf1020    L: E3:8  R: E4:8\n[]x6\nf1027    L: G#3:8  R: C#4:16\n[]x3\nf1031    R: B3,E4:4\n"
+  },
+  "hard-medium-2|1042": {
+   "status": "ok",
+   "replies": 3,
+   "errors": [
+    [
+     "1 chords begin on another bass: f1207 E3 (the chord C#m at f1202 has the bass C#). The lowest left-hand note where a chord begins keeps the bass of the song (or the root of the chord)"
+    ],
+    [
+     "1 new notes are not on the grid: f1207 C#3. Start a new note on a frame of the grid, or at the frame of a note of the target"
+    ]
+   ],
+   "usd": 0.3853564,
+   "model": "Sonnet 5.5",
+   "declared": [
+    "pattern L f1042-f1242: left medium 10",
+    "pattern L f1242-f1385: left medium 2",
+    "pattern L f1385-f1414: keep",
+    "pattern R f1042-f1414: right hard 1",
+    "not melody f1084 E4: a low E4 under the held E5, doubled by the transcription",
+    "not melody f1148 E4: a low E4 repeated under the E5, a fill between two melody notes",
+    "not melody f1210 E4: a low E4 repeated under the E5, doubled by the transcription",
+    "not melody f1273 E4: a low E4 after the E5 chord, a fill between two melody notes"
+   ],
+   "measures": {
+    "1": {
+     "seconds": 14.88,
+     "notes": 74,
+     "columns": 58,
+     "notes_s": 4.97,
+     "columns_s": 3.9,
+     "chord_max": 2,
+     "chord_mean": 1.28,
+     "span": 8,
+     "reach": 12,
+     "moves": 4,
+     "moves_s": 0.27,
+     "moves_q": 0.16,
+     "moved_s": 1.01,
+     "big_moves_s": 0.07,
+     "fast_moves_s": 0.13,
+     "regular": 0.0,
+     "effort_s": 1.01,
+     "notes_per_position": 14.8,
+     "pattern": 0.0
+    },
+    "2": {
+     "seconds": 14.88,
+     "notes": 59,
+     "columns": 36,
+     "notes_s": 3.97,
+     "columns_s": 2.42,
+     "chord_max": 3,
+     "chord_mean": 1.64,
+     "span": 12,
+     "reach": 26,
+     "moves": 19,
+     "moves_s": 1.28,
+     "moves_q": 0.77,
+     "moved_s": 7.86,
+     "big_moves_s": 0.27,
+     "fast_moves_s": 0.13,
+     "regular": 0.0,
+     "effort_s": 7.86,
+     "notes_per_position": 2.95,
+     "pattern": 0.1
+    }
+   },
+   "melody": 62,
+   "melody_dropped": 4,
+   "new_notes": 33,
+   "label": "hard for the right hand and medium for the left hand",
+   "text": "F1 frames frameMs=40 quarterMs=600\nkey=4# clefs: R=treble L=bass\n[]x1042\nf1042    L: E2,E3:8\n[]x6\nf1049    L: G#3:8\n[]x3\nf1053    R: E5:8 b1\n[]x3\nf1057    L: B3:4\n[]x4\nf1062    R: B4,E5:8 b1\n[]x7\nf1070    R: E5:8 grace/\n[]x2\nf1073    L: C#2,C#3:8  R: C#5:8 b1\n[]x7\nf1081    L: E3:8 b2  R: E5:8 b1\n[]x7\nf1089    L: G#3:8 b2  R: C#5:8 b1\n[]x7\nf1097    L: E3:8 b2  R: F#5:16 b3\n[]x3\nf1101    R: G#5:16 b3\n[]x3\nf1105    L: C#3:4  R: F#5:16 b3\n[]x3\nf1109    R: E5:8 b3\n[]x7\nf1117    R: E5:32\n[]x2\nf1120    L: E3:8  R: C#5:16\n[]x4\nf1125    R: E5:8\n[]x7\nf1133    L: F#2,F#3:8  R: E5:16 b4\n[]x3\nf1137    R: C#5:8 b4\n[]x7\nf1145    L: A#3:8  R: E5:8 b4\n[]x6\nf1152    L: C#4:16  R: C#5:8 b4\n[]x5\nf1158    L: B1,B2:16\n[]x1\nf1160    R: F#4,B4:16 b5\n[]x3\nf1164    L: F#3:8 b6  R: B4:8 b5\n[]x6\nf1171    L: F#2,F#3:8 b6  R: B4:8 b5\n[]x7\nf1179    L: A3:8  R: B4:32\n[]x2\nf1182    R: A4,C#5:16\n[]x4\nf1187    L: E2,E3:8 b7  R: B4,E5:8\n[]x7\nf1195    R: E5:16 b8\n[]x3\nf1199    L: C#2,C#3:8 b7  R: C#5:8 b8\n[]x7\nf1207    R: E5:8 b8\n[]x1\nf1209    L: C#3:8 b7\n[]x4\nf1214    R: C#5:8 b8\n[]x1\nf1216    L: E3:8 b7\n[]x6\nf1223    L: G#3:8 b7  R: F#5:32 b9\n[]x2\nf1226    R: G#5:16 b9\n[]x3\nf1230    L: E3:8 b7  R: F#5:16 b9\n[]x3\nf1234    R: E5:8 b10\n[]x7\nf1242    R: E5:16 b10\n[]x3\nf1246    L: C#2:8  R: C#5:16 b10\n[]x3\nf1250    R: B4,E5:8 b11\n[]x8\nf1259    R: E5:8 grace/\n[]x2\nf1262    L: E3,G#3,C#4:8  R: C#5:8 b11\n[]x7\nf1270    R: C#5,E5:8 b11\n[]x7\nf1278    L: B2:8  R: C#5:8 b11\n[]x11\nf1290    R: F#4,B4:16 b11\n[]x3\nf1294    L: F#3,B3,D#4:8  R: F#4,B4:32 b12\n[]x2\nf1297    R: B4:16 b12\n[]x3\nf1301    R: B4:16 b12\n[]x3\nf1305    R: B4:16 b12\n[]x3\nf1309    L: F#3,B3,D#4:8  R: F#4,B4:8 b13\n[]x8\nf1318    R: B3,F#4:8 b13\n[]x7\nf1326    L: E2:8 b14  R: G#4:16 b15\n[]x3\nf1330    R: E4:16 b15\n[]x3\nf1334    L: B2,E3,G#3:8 b14  R: B3:8 b16\n[]x6\nf1341    L: F#2:4  R: E4,G#4:8 b16\n[]x8\nf1350    R: C#4,F#4:8 b16\n[]x6\nf1357    L: C#3,F#3,A3:4  R: E4:16 b17\n[]x3\nf1361    R: C#4:16 b17\n[]x4\nf1366    R: A3:8 b18\n[]x3\nf1370    L: C#3,F#3,A3:4\n[]x2\nf1373    R: A3:8 b18\n[]x7\nf1381    R: C#4,A4:16 b18\n[]x3\nf1385    L: A2,E3:8 b19  R: C#4,A4:8 b20\n[]x7\nf1393    L: A2,E3:8 b19  R: C#4,A4:8 b20\n[]x7\nf1401    L: A2,E3:8 b19\n[]x3\nf1405    R: C#4,A4:8 b20\n[]x3\nf1409    L: A2,E3:8 b19\n",
+   "answer": "F1 frames frameMs=40 quarterMs=600\nkey=4# clefs: R=treble L=bass\n[]x1042\nf1042    L: E2,E3:8\n[]x6\nf1049    L: G#3:8\n[]x3\nf1053    R: E5:8\n[]x3\nf1057    L: B3:4\n[]x4\nf1062    R: B4,E5:8\n[]x7\nf1070    R: E5:16\n[]x2\nf1073    L: C#2,C#3:8  R: C#5:8\n[]x7\nf1081    L: E3:8  R: E5:8\n[]x7\nf1089    L: G#3:8  R: C#5:8\n[]x7\nf1097    L: E3:8  R: F#5:16\n[]x3\nf1101    R: G#5:16\n[]x3\nf1105    L: C#3:4  R: F#5:16\n[]x3\nf1109    R: E5:8\n[]x7\nf1117    R: E5:16\n[]x2\nf1120    L: E3:8  R: C#5:8\n[]x4\nf1125    R: E5:8\n[]x7\nf1133    L: F#2,F#3:8  R: E5:16\n[]x3\nf1137    R: C#5:8\n[]x7\nf1145    L: A#3:8  R: E5:8\n[]x6\nf1152    L: C#4:8  R: C#5:8\n[]x5\nf1158    L: B1,B2:8\n[]x1\nf1160    R: F#4,B4:16\n[]x3\nf1164    L: F#3:8  R: B4:8\n[]x6\nf1171    L: F#2,F#3:8  R: B4:8\n[]x7\nf1179    L: A3:8  R: B4:16\n[]x2\nf1182    R: A4,C#5:16\n[]x4\nf1187    L: E2,E3:4  R: B4,E5:8\n[]x7\nf1195    R: E5:16\n[]x3\nf1199    L: C#2,C#3:8  R: C#5:8\n[]x7\nf1207    R: E5:8\n[]x1\nf1209    L: C#3:8\n[]x4\nf1214    R: C#5:8\n[]x1\nf1216    L: E3:8\n[]x6\nf1223    L: G#3:8  R: F#5:16\n[]x2\nf1226    R: G#5:16\n[]x3\nf1230    L: E3:8  R: F#5:16\n[]x3\nf1234    R: E5:8\n[]x7\nf1242    R: E5:16\n[]x3\nf1246    L: C#2:8  R: C#5:16\n[]x3\nf1250    R: B4,E5:8\n[]x8\nf1259    R: E5:16\n[]x2\nf1262    L: E3,G#3,C#4:8  R: C#5:8\n[]x7\nf1270    R: C#5,E5:8\n[]x7\nf1278    L: B2:8  R: C#5:4\n[]x11\nf1290    R: F#4,B4:16\n[]x3\nf1294    L: F#3,B3,D#4:8  R: F#4,B4:16\n[]x2\nf1297    R: B4:16\n[]x3\nf1301    R: B4:16\n[]x3\nf1305    R: B4:16\n[]x3\nf1309    L: F#3,B3,D#4:8  R: F#4,B4:8\n[]x8\nf1318    R: B3,F#4:8\n[]x7\nf1326    L: E2:8  R: G#4:16\n[]x3\nf1330    R: E4:16\n[]x3\nf1334    L: B2,E3,G#3:8  R: B3:8\n[]x6\nf1341    R: E4,G#4:8\nf1342    L: F#2:4\n[]x7\nf1350    R: C#4,F#4:8\n[]x6\nf1357    L: C#3,F#3,A3:4  R: E4:16\n[]x3\nf1361    R: C#4:16\n[]x4\nf1366    R: A3:8\n[]x3\nf1370    L: C#3,F#3,A3:4\n[]x2\nf1373    R: A3:8\n[]x7\nf1381    R: C#4,A4:8\n[]x3\nf1385    L: A2,E3:8  R: C#4,A4:8\n[]x7\nf1393    L: A2,E3:8  R: C#4,A4:8\n[]x7\nf1401    L: A2,E3:8\n[]x3\nf1405    R: C#4,A4:8\n[]x3\nf1409    L: A2,E3:8\n"
+  },
+  "hard-medium-2|1826": {
+   "status": "ok",
+   "replies": 1,
+   "errors": [],
+   "usd": 0.1162228,
+   "model": "Sonnet 5.5",
+   "declared": [
+    "pattern L f1826-f1889: keep",
+    "pattern L f1889-f1936: left medium 7",
+    "pattern L f1936-f2047: keep",
+    "pattern L f2047-f2296: left medium 7",
+    "pattern R f1826-f2296: right hard 1",
+    "not melody f2128 A4: the start of a slide under the held chord, already carried by the notes at f2129-f2131"
+   ],
+   "measures": {
+    "1": {
+     "seconds": 18.8,
+     "notes": 128,
+     "columns": 65,
+     "notes_s": 6.81,
+     "columns_s": 3.46,
+     "chord_max": 3,
+     "chord_mean": 1.97,
+     "span": 12,
+     "reach": 14,
+     "moves": 2,
+     "moves_s": 0.11,
+     "moves_q": 0.06,
+     "moved_s": 0.27,
+     "big_moves_s": 0.0,
+     "fast_moves_s": 0.0,
+     "regular": 0.0,
+     "effort_s": 0.27,
+     "notes_per_position": 42.67,
+     "pattern": 0.05
+    },
+    "2": {
+     "seconds": 18.8,
+     "notes": 60,
+     "columns": 30,
+     "notes_s": 3.19,
+     "columns_s": 1.6,
+     "chord_max": 2,
+     "chord_mean": 2.0,
+     "span": 12,
+     "reach": 22,
+     "moves": 14,
+     "moves_s": 0.74,
+     "moves_q": 0.45,
+     "moved_s": 2.71,
+     "big_moves_s": 0.05,
+     "fast_moves_s": 0.0,
+     "regular": 0.07,
+     "effort_s": 2.6,
+     "notes_per_position": 4.0,
+     "pattern": 0.0
+    }
+   },
+   "melody": 65,
+   "melody_dropped": 1,
+   "new_notes": 64,
+   "label": "hard for the right hand and medium for the left hand",
+   "text": "F1 frames frameMs=40 quarterMs=600\nkey=4# clefs: R=treble L=bass\n[]x1826\nf1826    L: E1,E2:4  R: B4,F#5:8\n[]x7\nf1834    R: E5,G#5:16 b1\n[]x3\nf1838    R: B4,E5:8 b1\n[]x3\nf1842    L: E1,E2:4\n[]x6\nf1849    R: E5,G#5:8 b1\n[]x7\nf1857    L: F#1,F#2:4  R: C#5,F#5:8 b1\n[]x7\nf1865    R: G#4,E5:16 b2\n[]x3\nf1869    R: A4,C#5:8 b2\n[]x3\nf1873    L: F#1,F#2:4\n[]x7\nf1881    R: E5,G#5:8 b2\n[]x7\nf1889    L: A1,A2:4  R: C#5,F#5:8 b2\n[]x7\nf1897    R: C#5,E5:8 b2\n[]x7\nf1905    L: A1,A2:4  R: C#5,E5:8 b2\n[]x6\nf1912    R: A4,C#5:8 b2\n[]x8\nf1921    L: A1,A2:4  R: C#5,E5:8 b3\n[]x7\nf1929    R: A4,C#5:8 grace/\n[]x2\nf1932    R: C#5,E5:8 b3\n[]x3\nf1936    L: B1,B2:4\n[]x3\nf1940    R: A4,F#5:8 b3\n[]x7\nf1948    R: A4,E5:16\n[]x3\nf1952    L: E2,E3:4  R: C#5,F#5:8\n[]x7\nf1960    R: E5,G#5:16 b4\n[]x3\nf1964    R: B4,E5:8 b4\n[]x3\nf1968    L: E2,E3:4\n[]x6\nf1975    R: E5,G#5:8 b4\n[]x7\nf1983    L: F#1,F#2:4  R: C#5,F#5:8 b4\n[]x7\nf1991    R: A4,E5:16 b5\n[]x3\nf1995    R: A4,C#5:8 b5\n[]x3\nf1999    L: F#1,F#2:4\n[]x7\nf2007    R: E5,G#5:8 b5\n[]x7\nf2015    L: A1,A2:4  R: C#5,F#5:8 b5\n[]x7\nf2023    R: C#5,E5:8 b5\n[]x7\nf2031    L: A1,A2:4  R: C#5,E5:8 b5\n[]x6\nf2038    R: A4,C#5:8 b5\n[]x8\nf2047    L: B1,B2:4  R: F#5,B5:8 b6\n[]x7\nf2055    R: E5,G#5:8 grace/\n[]x2\nf2058    R: B4,F#5:8 b6\n[]x3\nf2062    L: B1,B2:4\n[]x3\nf2066    R: B4,E5:8 b6\n[]x6\nf2073    R: B4,E5:16\n[]x4\nf2078    L: E2,E3:4  R: B4,E5:8\n[]x7\nf2086    R: G#5:16 b7\n[]x3\nf2090    R: E5:8 b7\n[]x3\nf2094    L: E2,E3:4\n[]x6\nf2101    R: E5,G#5:8 b7\n[]x8\nf2110    L: F#2,F#3:4  R: C#5,F#5:8 b7\n[]x6\nf2117    R: B4,E5:16 b8\n[]x3\nf2121    R: A4,C#5:16 b8\n[]x3\nf2125    L: F#2,F#3:4  R: A4,C#5:16 b8\n[]x3\nf2129    R: B4:16 grace\n[]x1\nf2131    R: C#5:16 grace\n[]x1\nf2133    R: A4,C#5:8 b9\n[]x7\nf2141    L: A2,A3:4  R: C#5,E5:8 b9\n[]x7\nf2149    R: A4,C#5:8 b9\n[]x7\nf2157    L: A2,A3:4  R: C#5,E5:8 b9\n[]x7\nf2165    R: A4,C#5:8 b9\n[]x7\nf2173    L: B2,B3:4  R: A4,C#5,E5:8 b9\n[]x7\nf2181    R: A4,C#5:16 b9\n[]x3\nf2185    R: B4,C#5,E5:8 b10\n[]x3\nf2189    L: B2,B3:4\n[]x3\nf2193    R: B4,C#5,F#5:8 b10\n[]x10\nf2204    L: E2,E3:4  R: B4,E5,F#5:8 b10\n[]x7\nf2212    R: G#5:8 grace/\n[]x2\nf2215    R: E5:8 b10\n[]x3\nf2219    L: E2,E3:4\n[]x3\nf2223    R: B4,D#5,G#5:8 b10\n[]x11\nf2235    L: F#2,F#3:4  R: A4,C#5,F#5:8 b10\n[]x7\nf2243    R: E5:8 grace/\n[]x2\nf2246    R: C#5:4\n[]x4\nf2251    L: F#2,F#3:4\n[]x9\nf2261    R: C#5:16 b11\n[]x3\nf2265    L: A2,A3:4  R: A4,C#5,A5:8 b11\n[]x7\nf2273    R: C#5,A5:8 b11\n[]x6\nf2280    L: A2,A3:4  R: C#5,A5:8 b11\n[]x7\nf2288    R: C#5,A5:8 b11\n",
+   "answer": "F1 frames frameMs=40 quarterMs=600\nkey=4# clefs: R=treble L=bass\n[]x1826\nf1826    L: E1,E2:4  R: B4,F#5:8\n[]x7\nf1834    R: E5,G#5:16\n[]x3\nf1838    R: B4,E5:8\n[]x3\nf1842    L: E1,E2:4\n[]x6\nf1849    R: E5,G#5:8\n[]x7\nf1857    L: F#1,F#2:4  R: C#5,F#5:8\n[]x7\nf1865    R: G#4,E5:16\n[]x3\nf1869    R: A4,C#5:8\n[]x3\nf1873    L: F#1,F#2:4\n[]x7\nf1881    R: E5,G#5:8\n[]x7\nf1889    L: A1,A2:4  R: C#5,F#5:8\n[]x7\nf1897    R: C#5,E5:8\n[]x7\nf1905    L: A1,A2:4  R: C#5,E5:8\n[]x6\nf1912    R: A4,C#5:8\n[]x8\nf1921    L: A1,A2:4  R: C#5,E5:8\n[]x7\nf1929    R: A4,C#5:16\n[]x2\nf1932    R: C#5,E5:8\n[]x3\nf1936    L: B1,B2:4\n[]x3\nf1940    R: A4,F#5:8\n[]x7\nf1948    R: A4,E5:16\n[]x3\nf1952    L: E2,E3:4  R: C#5,F#5:8\n[]x7\nf1960    R: E5,G#5:16\n[]x3\nf1964    R: B4,E5:8\n[]x3\nf1968    L: E2,E3:4\n[]x6\nf1975    R: E5,G#5:8\n[]x7\nf1983    L: F#1,F#2:4  R: C#5,F#5:8\n[]x7\nf1991    R: A4,E5:16\n[]x3\nf1995    R: A4,C#5:8\n[]x3\nf1999    L: F#1,F#2:4\n[]x7\nf2007    R: E5,G#5:8\n[]x7\nf2015    L: A1,A2:4  R: C#5,F#5:8\n[]x7\nf2023    R: C#5,E5:8\n[]x7\nf2031    L: A1,A2:4  R: C#5,E5:8\n[]x6\nf2038    R: A4,C#5:8\n[]x8\nf2047    L: B1,B2:4  R: F#5,B5:8\n[]x7\nf2055    R: E5,G#5:16\n[]x2\nf2058    R: B4,F#5:8\n[]x3\nf2062    L: B1,B2:4\n[]x3\nf2066    R: B4,E5:8\n[]x6\nf2073    R: B4,E5:16\n[]x4\nf2078    L: E2,E3:4  R: B4,E5:8\n[]x7\nf2086    R: G#5:16\n[]x3\nf2090    R: E5:8\n[]x3\nf2094    L: E2,E3:4\n[]x6\nf2101    R: E5,G#5:8\n[]x8\nf2110    L: F#2,F#3:4  R: C#5,F#5:8\n[]x6\nf2117    R: B4,E5:16\n[]x3\nf2121    R: A4,C#5:16\n[]x3\nf2125    L: F#2,F#3:4  R: A4,C#5:16\n[]x3\nf2129    R: B4:32\n[]x1\nf2131    R: C#5:32\n[]x1\nf2133    R: A4,C#5:8\n[]x7\nf2141    L: A2,A3:4  R: C#5,E5:8\n[]x7\nf2149    R: A4,C#5:8\n[]x7\nf2157    L: A2,A3:4  R: C#5,E5:8\n[]x7\nf2165    R: A4,C#5:8\n[]x7\nf2173    L: B2,B3:4  R: A4,C#5,E5:8\n[]x7\nf2181    R: A4,C#5:16\n[]x3\nf2185    R: B4,C#5,E5:8\n[]x3\nf2189    L: B2,B3:4\n[]x3\nf2193    R: B4,C#5,F#5:8\n[]x10\nf2204    L: E2,E3:4  R: B4,E5,F#5:8\n[]x7\nf2212    R: G#5:16\n[]x2\nf2215    R: E5:8\n[]x3\nf2219    L: E2,E3:4\n[]x3\nf2223    R: B4,D#5,G#5:8\n[]x11\nf2235    L: F#2,F#3:4  R: A4,C#5,F#5:8\n[]x7\nf2243    R: E5:8\n[]x2\nf2246    R: C#5:4\n[]x4\nf2251    L: F#2,F#3:4\n[]x9\nf2261    R: C#5:16\n[]x3\nf2265    L: A2,A3:4  R: A4,C#5,A5:8\n[]x7\nf2273    R: C#5,A5:8\n[]x6\nf2280    L: A2,A3:4  R: C#5,A5:8\n[]x7\nf2288    R: C#5,A5:8\n"
+  }
+ },
+ "meta": {
+  "hard-medium-2": {
+   "plan": [
+    "S1 f33-f539 L=keep R=right hard 1 | intro and first verse: the left hand is mostly one held fifth per chord (E2+E3, F#3+C#4), so it keeps its notes with a regular rhythm; the right hand plays the melody with small pieces of chords",
+    "S2 f539-f812 L=left medium 2 R=right hard 1 | verse goes on, left hand has a bass then chords: the waltz shape of a low note and two chords",
+    "S3 f812-f1242 L=left medium 10 R=right hard 1 | the E / C#m riff, where the left hand is busy and broken: an octava, then an arpeggio in one position; the right hand carries the top notes of the riff",
+    "S4 f1242-f1826 L=left medium 2 R=right hard 1 | verse B (B E F#m A): a bass then chords, the same waltz as in S2",
+    "S5 f1826-f2542 L=left medium 7 R=right hard 1 | chorus (E F#m A B7): octavas in the bass in negras (E1+E2, F#1+F#2, A1+A2, B1+B2) for the stronger sound",
+    "S6 f2542-f2981 L=left medium 10 R=right hard 1 | the riff comes again (like f1073-f1227): same pattern as S3",
+    "S7 f2981-f3637 L=left medium 2 R=right hard 1 | verse again (like S2 and S4), the waltz",
+    "S8 f3637-f4104 L=left medium 7 R=right hard 1 | last chorus: octavas in negras as in S5",
+    "S9 f4104-f4259 L=keep R=right hard 1 | calm break, the left hand plays only E2 (simple), so it keeps it",
+    "S10 f4259-f4666 L=left medium 2 R=right hard 1 | build-up with a sparse left hand: the waltz again",
+    "S11 f4666-f4880 L=keep R=right hard 1 | ending: the left hand is simple (B3+C#4+F#4, F#4), the right hand plays the melody"
+   ],
+   "plan_status": "ok",
+   "plan_usd": 0.055678,
+   "usd": 0.946288,
+   "seconds": 394,
+   "refs": [
+    "right hard 1",
+    "right hard 17",
+    "right hard 15",
+    "right hard 4",
+    "left medium 15",
+    "left medium 2",
+    "left medium 10",
+    "left medium 7"
+   ],
+   "level": {
+    "right": "hard",
+    "left": "medium"
+   },
+   "riff_rerun_usd": 0.1561836
+  }
+ }
+}

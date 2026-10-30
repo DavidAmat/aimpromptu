@@ -37,6 +37,25 @@ Difficulty is a matter of **hand movement**, of **keeping patterns**, and of **h
 - Easy and medium foster this most: few moves, one pattern, small chords. Hard allows more movement, but still with
   symmetry and repeated shapes. (Super hard is a later level and is not used here.)
 
+# A level simplifies the sheet: never harder than it is now
+
+The sheet now is the hardest version of the song (the user calls it super hard). Every level makes it simpler, so no
+passage may become harder than it is now, and the new left hand **approximates the left hand of the sheet**: it is a
+simplified copy of it, not a new invention.
+
+- **Follow the rhythm the left hand plays now, simplified.** Keep its main onsets (the long notes, the strong
+  beats, the notes that start each figure) and leave out the fast ones; write it with the regular figures of the
+  pattern. Where the left hand plays a negra (an octava, a chord) and then two corcheas of the chord, the new left
+  hand plays a negra (an octava, or the bass note) and then two corcheas of notes of the same chord; it does not
+  become an arpeggio in corcheas, a waltz or another rhythm. Choose, among the patterns of this run, the one whose
+  rhythm is nearest to what the left hand plays now. The checker counts the onsets: in each chord the left hand has at
+  most as many onsets as now, and at least 70 % of its onsets are onsets of the left hand now (within a frame).
+- **Simple stretches stay as they are.** Where the left hand plays single notes inside one octava (E2, E2, E2 in an
+  uneven rhythm) or one small chord again and again (a held fifth for each chord), it is already easy: keep its
+  notes, play them in a regular, symmetric rhythm with as many onsets or fewer, and declare the pattern `keep`
+  (`# pattern L f33-f159: keep`). Do not give it a pattern of the catalog. The app lists these stretches in each
+  batch and in the summary of the song; the checker refuses another note or more onsets there.
+
 # What you keep
 
 1. **The melody comes first.** The melody is mostly the top line of the right hand. Each note of the right hand's top
@@ -72,8 +91,10 @@ Difficulty is a matter of **hand movement**, of **keeping patterns**, and of **h
   out** (declared): do not keep it one or two octavas lower, it adds nothing to the song in any register.
 - **The right hand helps the left hand.** Where the right hand has nothing but artifacts (or nothing at all) while the
   left hand plays big chords, the music of that passage is in the **top notes of the left-hand chords** (a riff, the
-  melody of an intro). Those top notes move to the right hand, at their pitch or an octava higher, as its melody; the
-  left hand keeps only its companion under them. The checker counts those top notes as part of the melody line there
+  melody of an intro). Read the line of the highest note of each chord: it usually repeats a short figure (in 99 Red
+  Balloons E4, E4, C#4, E4, C#4, four times). That line is the melody: every note of it moves to the right hand, in
+  its rhythm, at its pitch or an octava higher; a single held note in its place is wrong. The left hand keeps only its
+  companion under it. The checker counts those top notes as part of the melody line there
   (each one in the right hand, or declared).
 
 # The patterns
@@ -111,7 +132,8 @@ Before the batches, one request gives you a summary of the whole song: per stret
 the chords the app found, how each hand plays now (the measures of a hand tracker: notes per second, the most notes
 in one column and how wide they are, the range of the hand inside two negras, the moves of the hand per second, where
 the hand is), and the earlier stretch that sounds the same. You split the song into sections and choose the pattern
-of each hand for each section, from the patterns of this run. Choose few sections and few changes: the song has an
+of each hand for each section, from the patterns of this run: for the left hand, the pattern whose rhythm is nearest to
+what it plays now, or `keep` where the summary marks it simple (`L=keep`). Choose few sections and few changes: the song has an
 intro, verses, choruses, maybe a bridge; a part that comes again gets the patterns it had the first time. A passage
 where the song is calm can take a calmer pattern of the run, and the chorus a fuller one.
 
