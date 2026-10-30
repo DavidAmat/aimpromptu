@@ -4,6 +4,9 @@
  *
  * - **The figures**: the seven shapes; one is pressed when every picked chord prints it. Pressing one sets the
  *   figure by hand (the rule keeps it, and it is never a grace note); ⌫ gives the chords back the rule's figure.
+ * - **Alteration** (the user, 2026-10-30), for notes written with a sharp or a flat (or a double one): the same key
+ *   under another name, pressed by hand (La-# 4 as Si-b 4 in a key of sharps); the spelling rule then keeps it, and ⌫
+ *   gives the notes back the spelling of the key.
  * - **Finger** 1 to 5: one number on every picked note, or on a single chord one number per note (the smallest from
  *   the lowest note up in the right hand, the largest in the left).
  * - **Hand** Right / Left: written into the notes (Phase 6).
@@ -11,6 +14,10 @@
  *   first one, or join it to the group before.
  * - **Grace**: write the picked notes as grace notes of the next note of their hand, or as normal notes, whatever the
  *   grace rule says (the user's switch, Phase 7); ⌫ back to the rule.
+ * - **Duplicate** (the user, 2026-10-30): the picked notes played again at a shorter figure, filling their own time
+ *   (a negra into two corcheas, four semicorcheas); the same shapes as the figures above. **Unite**, the opposite:
+ *   consecutive chords of the same keys and figure become one chord of the figure that fills them (two semicorcheas
+ *   into a corchea). Both change the notes (the piano matrix notation) and are one step of undo.
  * - **Marks**: a trill, a mordent or a turn over picked onsets that follow one another (the first one is written,
  *   the others are played inside it); a rolled chord; a fermata. Pressed again, the mark goes away.
  * - 🗑 takes the notes off the page (Delete): they leave the notes, and undo brings them back.
@@ -40,6 +47,7 @@ import BackspaceIcon from "@mui/icons-material/BackspaceOutlined";
 import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
 import ContentCutIcon from "@mui/icons-material/ContentCutOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import CallMergeIcon from "@mui/icons-material/CallMerge";
 import LinkIcon from "@mui/icons-material/LinkOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHorizOutlined";
 import type { ReadingEdit, SheetNote } from "../../../../api";
@@ -85,12 +93,50 @@ function MarkGlyph({ text }: { text: string }) {
   );
 }
 
-/** `C#5` as the sheet prints it, in solfège: `Do-# 5`. */
+/** `C#5` as the sheet prints it, in solfège: `Do-# 5` (a double sharp or flat: `Do-## 5`, `Si-bb 4`). */
 function printedName(pitch: string): string {
-  const match = /^([A-G])([#b]?)(-?\d+)$/.exec(pitch);
+  const match = /^([A-G])(#{0,2}|b{0,2})(-?\d+)$/.exec(pitch);
   if (!match) return pitch;
   const [, letter, sign, octave] = match;
+  if (sign.length === 2) return `${spanishNoteName({ letter, accidental: 0, octave: Number(octave) }).split(" ")[0]}-${sign} ${octave}`;
   return spanishNoteName({ letter, accidental: sign === "#" ? 1 : sign === "b" ? -1 : 0, octave: Number(octave) });
+}
+
+/** A sharp, a flat or a natural sign, upright and as large as a figure. */
+function AlterGlyph({ text }: { text: string }) {
+  return (
+    <Box component="span" sx={{ fontFamily: "serif", fontWeight: 700, fontSize: 20, lineHeight: 1, px: 0.25 }}>
+      {text}
+    </Box>
+  );
+}
+
+const STEP_PC: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+
+/** The alterations a key may be written with: double flat to double sharp. */
+const ALTERS: { alter: number; glyph: string; words: string }[] = [
+  { alter: -2, glyph: "♭♭", words: "a double flat" },
+  { alter: -1, glyph: "♭", words: "a flat" },
+  { alter: 0, glyph: "♮", words: "no alteration" },
+  { alter: 1, glyph: "♯", words: "a sharp" },
+  { alter: 2, glyph: "×", words: "a double sharp" },
+];
+
+/** The key `midi` written with `alter` (`B4` with -1 is `Bb4`... `A#4` with 1), or `null` when no letter does. */
+function spelledAs(midi: number, alter: number): string | null {
+  for (const letter of "CDEFGAB") {
+    const octave = Math.floor((midi - alter - STEP_PC[letter]!) / 12) - 1;
+    if (12 * (octave + 1) + STEP_PC[letter]! + alter === midi) {
+      return `${letter}${alter > 0 ? "#".repeat(alter) : "b".repeat(-alter)}${octave}`;
+    }
+  }
+  return null;
+}
+
+/** The alteration a note is printed with, from its pitch (`Bb4` -1, `C##5` 2). */
+function alterOf(pitch: string): number {
+  const sign = /^[A-G](#{0,2}|b{0,2})-?\d+$/.exec(pitch)?.[1] ?? "";
+  return sign.startsWith("#") ? sign.length : -sign.length;
 }
 
 /**
@@ -154,6 +200,8 @@ export function FramesNoteToolbox({
   onMoveHand,
   onEdit,
   onRemove,
+  onDuplicate,
+  onUnite,
   onChordKey,
   onSelectFrames,
   onEnhance,
@@ -173,6 +221,10 @@ export function FramesNoteToolbox({
   /** One reading edit on the picked notes (the refs are added by the page). */
   onEdit: (edit: Omit<ReadingEdit, "notes">) => void;
   onRemove: () => void;
+  /** **Duplicate** the picked notes into the shorter `figure`. */
+  onDuplicate: (figure: number) => void;
+  /** **Unite** the picked chords into one. */
+  onUnite: () => void;
   /** A key of the chord keyboard pressed: add that key to the picked column, or take it off; with `add`, pick it. */
   onChordKey: (midi: number, add: boolean) => void;
   /** Hand the selection to the range toolbox: the frames these notes cover. */
@@ -204,6 +256,20 @@ export function FramesNoteToolbox({
   const figures = new Set(heads.map((note) => (note.grace ? null : note.figure)));
   const figureNow = figures.size === 1 ? [...figures][0] : null;
   const anyFixed = known.some((note) => note.fixed);
+  // Alteration: shown for notes written with a sharp or a flat, or spelled by hand.
+  const midiOf = (note: SheetNote) => Number(note.ref.split(":")[1]);
+  const altered = known.some((note) => alterOf(note.pitch) !== 0 || note.spelled);
+  const altersNow = new Set(known.map((note) => alterOf(note.pitch)));
+  const alterNow = altersNow.size === 1 ? [...altersNow][0]! : null;
+  const anySpelled = known.some((note) => note.spelled);
+  const alterOptions = ALTERS.filter(({ alter }) => known.every((note) => spelledAs(midiOf(note), alter) !== null));
+  // Duplicate: the figures shorter than the picked chords', up to 16 copies of a note.
+  const shorter = figureNow ? FIGURES.filter(({ figure }) => figure > figureNow && figure / figureNow <= 16) : [];
+  // Unite: two, four or eight chords of one hand and one figure become one figure that fills them.
+  const unitedFigure =
+    figureNow && chords.length >= 2 && figureNow % chords.length === 0
+      ? (FIGURES.find(({ figure }) => figure === figureNow / chords.length) ?? null)
+      : null;
   const oneChord = chords.length === 1 && known.length > 1 ? chords[0]! : null;
   const fingersNow = new Set(known.map((note) => note.finger).filter((finger): finger is number => finger !== null));
 
@@ -343,6 +409,34 @@ export function FramesNoteToolbox({
           Which hand plays them, written into the notes: a note's figure is its length up to the next note of its
           hand, so its neighbours may change figure too. The AI may change it again on its next run.
         */}
+        {altered ? (
+          <Row label="Alteration">
+            {alterOptions.map(({ alter, glyph, words }) => (
+              <IconAction
+                key={alter}
+                title={
+                  known.length === 1
+                    ? `Write as ${printedName(spelledAs(midiOf(known[0]!), alter) ?? "")}`
+                    : `Write ${known.length} notes with ${words}`
+                }
+                icon={<AlterGlyph text={glyph} />}
+                active={alterNow === alter}
+                disabled={off}
+                disabledTitle={why}
+                onClick={() => onEdit({ action: "alter", value: alter })}
+                data-testid={`alter-${alter}`}
+              />
+            ))}
+            <IconAction
+              title="Back to the spelling of the key"
+              icon={<BackspaceIcon fontSize="small" />}
+              disabled={off || !anySpelled}
+              disabledTitle={why ?? "The spelling of these notes follows the key"}
+              onClick={() => onEdit({ action: "alter", value: null })}
+            />
+          </Row>
+        ) : null}
+
         <Row label="Hand">
           <Segmented<Hand | "mixed">
             label="Which hand plays these notes"
@@ -396,6 +490,40 @@ export function FramesNoteToolbox({
             disabled={off || !anyGraceRule}
             disabledTitle={why ?? "These notes follow the grace rule"}
             onClick={() => onEdit({ action: "grace", value: null })}
+          />
+        </Row>
+
+        <Row label="Duplicate">
+          {shorter.length === 0 ? (
+            <Typography variant="caption" color="text.secondary">
+              {figureNow ? "No shorter figure" : "Pick notes of one figure"}
+            </Typography>
+          ) : (
+            shorter.map(({ figure, name }) => {
+              const copies = figure / figureNow!;
+              return (
+                <IconAction
+                  key={figure}
+                  title={`Duplicate into ${copies} ${FIGURE_SHORT[name].toLowerCase()}s`}
+                  icon={<FigureGlyph figure={name} size={22} />}
+                  disabled={off}
+                  disabledTitle={why}
+                  onClick={() => onDuplicate(figure)}
+                  data-testid={`duplicate-${figure}`}
+                />
+              );
+            })
+          )}
+        </Row>
+
+        <Row label="Unite">
+          <IconAction
+            title={unitedFigure ? `Unite ${chords.length} into a ${FIGURE_SHORT[unitedFigure.name].toLowerCase()}` : "Unite"}
+            disabledTitle={why ?? "Pick 2, 4 or 8 notes of one hand that follow one another, the same keys and figure"}
+            icon={unitedFigure ? <FigureGlyph figure={unitedFigure.name} size={22} /> : <CallMergeIcon fontSize="small" />}
+            disabled={off || !oneHand || unitedFigure === null}
+            onClick={onUnite}
+            data-testid="unite"
           />
         </Row>
 

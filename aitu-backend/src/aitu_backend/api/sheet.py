@@ -357,6 +357,47 @@ def add_note(
     return {**_answer(audio_uuid, width), "edited": label}
 
 
+class DuplicateRequest(BaseModel):
+    notes: list[str] = Field(min_length=1, max_length=200)
+    #: The figure of the copies: 2 blanca ... 32 fusa; shorter than each note's own.
+    figure: int = Field(ge=2, le=64)
+
+
+@router.post("/{audio_uuid}/duplicate")
+def duplicate_notes(
+    audio_uuid: str,
+    body: DuplicateRequest = Body(...),
+    width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH),
+) -> dict[str, Any]:
+    """**Duplicate** of the note toolbox: each picked note played again at a shorter figure, filling its own time
+    (a negra into two corcheas), into `notes.pmn` (one step of undo); the sheet drawn again."""
+    _notes_or_404(audio_uuid)
+    _not_running(audio_uuid)
+    try:
+        label = edits.duplicate_notes(audio_uuid, body.notes, body.figure)
+    except (reading.Refused, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {**_answer(audio_uuid, width), "edited": label}
+
+
+@router.post("/{audio_uuid}/unite")
+def unite_notes(
+    audio_uuid: str,
+    body: NotesRequest = Body(...),
+    width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH),
+) -> dict[str, Any]:
+    """**Unite** of the note toolbox: consecutive chords of the same keys and figure become one chord of the figure
+    that fills their time (two semicorcheas into a corchea), in `notes.pmn` (one step of undo); the sheet drawn
+    again."""
+    _notes_or_404(audio_uuid)
+    _not_running(audio_uuid)
+    try:
+        label = edits.unite_notes(audio_uuid, body.notes)
+    except (reading.Refused, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {**_answer(audio_uuid, width), "edited": label}
+
+
 class PasteSource(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 

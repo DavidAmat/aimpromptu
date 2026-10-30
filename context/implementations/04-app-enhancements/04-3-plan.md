@@ -1144,3 +1144,16 @@ selection, which moves up and down with the pointer and changes as the edge move
 `waveformPaint` `paintSelection`). Before, the time showed only on an edge under the pointer, at the top, and never
 while a new selection was dragged. Looked at on a temporary copy (deleted).
 
+**Duplicate, Unite and Alteration in the note toolbox** (the user, 2026-10-30, same branch). **Duplicate**: the picked
+notes played again at a shorter figure, filling their own time (a negra into two corcheas, four semicorcheas), the
+copies of one note joined by one beam group; **Unite**, the opposite: 2, 4 or 8 consecutive chords of one hand, the same
+keys and figure, become one chord of the figure that fills them. Both change `notes.pmn` (the piano matrix notation)
+through `edits.change_notes`, one step of undo (`edits.duplicate_notes`, `unite_notes`, routes `POST
+/sheet/{uuid}/duplicate` and `/unite`). The new notes leave the stored reading first, so the first copy does not keep
+the old figure, and print the figure asked as set by hand. **Alteration**, for a note written with a sharp or a flat (or
+a double one): the same key under another name (La-# 4 as Si-b 4 in a key of sharps), the reading action `alter`; the
+spelling is the user's decision, a new mark `sp` of the F1 text (`Note.spelled`): the spelling rule (`respell`,
+`assemble`) keeps it, the sheet's check accepts it, and it never reaches the AI; ⌫ gives the notes back the key's
+spelling. Tests in `test_sheet_toolbox.py`; every sheet test passes (313). Looked at on a temporary copy (deleted): Fa#3
+written as Solb3; a corchea into two beamed semicorcheas.
+

@@ -103,6 +103,9 @@ class Note:
     grace_rule: str | None = (
         None  # the user's grace note switch: "on" (``asgrace``) or "off" (``nograce``)
     )
+    spelled: bool = (
+        False  # the spelling (letter and alteration) was set by the user (``sp``): the spelling rule keeps it
+    )
 
     @property
     def midi(self) -> int:

@@ -1064,6 +1064,8 @@ def assemble(
                     finger=d.finger,
                     fixed=d.fixed,
                     grace_rule=d.grace_rule,
+                    # The user's spelling (2026-10-30): the letter and the alteration they chose, kept.
+                    **({"step": d.step, "alter": d.alter, "octave": d.octave, "spelled": True} if d.spelled else {}),
                 )
             )
         for n in placed(base, p, quarter_ms):
@@ -1448,7 +1450,7 @@ def stretch_request(
 
 def _strip_marks(n: Note) -> Note:
     """A note as the LLM may read it: without the user's marks, which the format of the prompt does not have."""
-    return replace(n, grace=None, gslot=0, finger=None, fixed=False, grace_rule=None)
+    return replace(n, grace=None, gslot=0, finger=None, fixed=False, grace_rule=None, spelled=False)
 
 
 def write_stretch(

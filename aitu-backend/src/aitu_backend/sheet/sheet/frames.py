@@ -209,7 +209,7 @@ def check(sheet: Sheet) -> list[str]:
             problems.append(f"{where}: puntillo on {n.step}{n.octave}")
         if n.tuplet:
             problems.append(f"{where}: tuplet on {n.step}{n.octave}")
-        if (n.step, n.alter, n.octave) != spell(n.midi, key(n.frame)):
+        if not n.spelled and (n.step, n.alter, n.octave) != spell(n.midi, key(n.frame)):
             step, alter, octave = spell(n.midi, key(n.frame))
             problems.append(
                 f"{where}: {n.step}{n.alter:+d}{n.octave} is written {step}{alter:+d}{octave} "

@@ -84,6 +84,8 @@ export interface SheetNote {
   fixed: boolean;
   /** The user's grace note switch: `on` a grace note, `off` a normal note, `null` the rule decides. */
   graceRule: "on" | "off" | null;
+  /** The spelling (Sib for La#) was set by the user: the spelling rule keeps it. */
+  spelled?: boolean;
   finger: number | null;
   /** `trill`, `mordent`, `turn`, `arpeggio`, `fermata`, `tremolo`. */
   ornaments: string[];
@@ -146,6 +148,7 @@ export interface SheetReading {
 export interface ReadingEdit {
   action:
     | "figure"
+    | "alter"
     | "finger"
     | "beam-join"
     | "beam-break"
@@ -461,6 +464,22 @@ export const sheetApi = {
   /** Take notes off the page: they leave the notes (one step of undo); the sheet drawn again. */
   remove: (audioUuid: string, notes: readonly string[], width: number) =>
     request<SheetEdited>(`/sheet/${audioUuid}/remove`, {
+      method: "POST",
+      query: { width: Math.round(width) },
+      body: { notes },
+    }),
+
+  /** **Duplicate**: each picked note played again at the shorter `figure`, filling its own time (one step). */
+  duplicate: (audioUuid: string, notes: readonly string[], figure: number, width: number) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/duplicate`, {
+      method: "POST",
+      query: { width: Math.round(width) },
+      body: { notes, figure },
+    }),
+
+  /** **Unite**: consecutive chords of the same keys and figure become one chord of the figure that fills them. */
+  unite: (audioUuid: string, notes: readonly string[], width: number) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/unite`, {
       method: "POST",
       query: { width: Math.round(width) },
       body: { notes },

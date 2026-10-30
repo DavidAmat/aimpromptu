@@ -529,6 +529,7 @@ def drawn_notes(sheet: Sheet) -> list[dict[str, Any]]:
             "grace": n.grace is not None,
             "fixed": n.fixed,
             "graceRule": n.grace_rule,
+            "spelled": n.spelled,
             "finger": n.finger,
             "ornaments": list(n.ornaments),
             "ottava": n.ottava,

@@ -724,6 +724,23 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
     });
   }, [width, picked, edit, audioUuid]);
 
+  // **Duplicate** and **Unite** (the user, 2026-10-30): they change the notes, so the picked refs are let go.
+  const duplicatePicked = useCallback(
+    (figure: number) => {
+      if (width === null || picked.length === 0) return;
+      void edit(() => sheetApi.duplicate(audioUuid, picked, figure, width)).then((done) => {
+        if (done) setPick({ uuid: audioUuid, refs: [] });
+      });
+    },
+    [width, picked, edit, audioUuid],
+  );
+  const unitePicked = useCallback(() => {
+    if (width === null || picked.length === 0) return;
+    void edit(() => sheetApi.unite(audioUuid, picked, width)).then((done) => {
+      if (done) setPick({ uuid: audioUuid, refs: [] });
+    });
+  }, [width, picked, edit, audioUuid]);
+
   /** The frames the picked notes cover: from the first one to the column after the last one. */
   const framesOfPicked = (): MarkedRange | null => {
     if (!sheet || picked.length === 0) return null;
@@ -1321,6 +1338,8 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           onMoveHand={moveHand}
           onEdit={editNotes}
           onRemove={removePicked}
+          onDuplicate={duplicatePicked}
+          onUnite={unitePicked}
           onChordKey={pressChordKey}
           onSelectFrames={selectFrames}
           onEnhance={aiHere ? openEnhance : null}

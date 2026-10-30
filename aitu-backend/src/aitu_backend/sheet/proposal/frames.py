@@ -449,10 +449,11 @@ def choose_keys(sheet: Sheet) -> tuple[int, list[tuple[int, int]], dict]:
 
 
 def respell(sheet: Sheet) -> None:
-    """Every note by the spelling rules, in the armadura in force at its column."""
+    """Every note by the spelling rules, in the armadura in force at its column, but a note the user spelled."""
     at = frames_mod.key_at(sheet)
     for n in sheet.notes:
-        n.step, n.alter, n.octave = spell(n.midi, at(n.frame))
+        if not n.spelled:
+            n.step, n.alter, n.octave = spell(n.midi, at(n.frame))
 
 
 # ------------------------------------------------------------------ clefs and 8va

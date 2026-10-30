@@ -60,7 +60,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -72,7 +72,7 @@ from aitu_backend.matrix.keys import KEY_COUNT, LOWEST_MIDI
 from aitu_backend.pmn import events_file
 from aitu_backend.sheet.sheet import f1, frames
 from aitu_backend.sheet.sheet.data import FRAME_MS, Sheet
-from aitu_backend.sheet.sheet.figures import FIGURES, nominal_ms
+from aitu_backend.sheet.sheet.figures import FIGURES, NAMES, nominal_ms
 from aitu_backend.transcription.engine import NoteEvent
 from aitu_backend.sheet.sheet.frames import drawn_columns
 from aitu_backend.storage import locate, paths
@@ -937,6 +937,144 @@ def add_note(part_id: str, frame: int, midi: int, hand: str, length_ms: float | 
         label = "Add a note"
         _record(_Step(label, {}, sheet_change, {next_id: (True, False)}), part_id)
         return label
+
+
+#: The most copies one note may become (a negra into eight fusas, a redonda into sixteen semicorcheas).
+MOST_COPIES = 16
+
+
+def _places(refs: list[str]) -> set[tuple[int, int]]:
+    out: set[tuple[int, int]] = set()
+    for ref in refs:
+        try:
+            frame, midi = ref.split(":")
+            out.add((int(frame), int(midi)))
+        except ValueError:
+            continue
+    return out
+
+
+Plan = Callable[[Sheet, float], tuple[set[tuple[int, int]], list[Any], int, str, list[set[tuple[int, int]]]]]
+
+
+def _rewrite(part_id: str, plan: Plan) -> str:
+    """A change of notes of the note toolbox (Duplicate, Unite): ``plan(sheet, quarter_ms)`` returns the drawn notes
+    taken off, the notes written instead (sheet notes with their figure and length), their figure, the step's label,
+    and the beam groups to make (the copies of one note, joined: the user, 2026-10-30). The notes go into ``notes.pmn`` (the piano matrix notation) through :func:`change_notes`, in the hand of
+    their staff, as loud as their column; the sheet prints the new notes with ``figure`` set by hand. One step."""
+    with pipeline.piece_lock(part_id):
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise FileNotFoundError("This part has no notes.")
+        drawn = build.current(part_id)
+        sheet = f1.read(drawn.text)
+        quarter = drawn.quarter_ms or sheet.quarter_ms or 500.0
+        places, added, figure, label, groups = plan(sheet, quarter)
+        gone = change_notes(stored, places, added, quarter)
+        saved = _write_hands(part_id, stored, before=stored.header, hands=True, notes=True)
+        sheet_change = None
+        kept = store.load(part_id)
+        if kept is not None and kept.record.decided:
+            # The notes taken off leave the stored reading first, so a new note at the same frame and key does not
+            # keep the old figure; every new note then prints the figure asked, as set by hand.
+            without = replace(sheet, notes=[n for n in sheet.notes if (n.frame, n.midi) not in places])
+            laid = build.reapply(without, pipeline.starting_hands(part_id))
+            mine = {(n.frame, n.midi) for n in added}
+            fresh = max((n.beam for n in laid.notes if n.beam is not None), default=0) + 1
+            beam_of: dict[tuple[int, int], int] = {}
+            for k, group in enumerate(g for g in groups if len({f for f, _ in g}) > 1 and figure >= 8):
+                for place in group:
+                    beam_of[place] = fresh + k
+            laid = replace(
+                laid,
+                notes=[
+                    replace(n, figure=figure, fixed=True, beam=beam_of.get((n.frame, n.midi), n.beam))
+                    if (n.frame, n.midi) in mine
+                    else n
+                    for n in laid.notes
+                ],
+            )
+            after = f1.write(laid, mode="frames")
+            kept.record.hands_revision = saved.header.hands_revision
+            store.save(part_id, after, kept.record)
+            build.mark_settled(part_id, after)
+            sheet_change = _sheet_change(drawn.text, after)
+        build.forget(part_id)
+        _record(_Step(label, {}, sheet_change, gone), part_id)
+        return label
+
+
+def _usable(sheet: Sheet, refs: list[str]) -> list[Any]:
+    picked = _places(refs)
+    return [n for n in sheet.notes if (n.frame, n.midi) in picked and not n.grace and not n.covered]
+
+
+def duplicate_notes(part_id: str, refs: list[str], figure: int) -> str:
+    """**Duplicate** (the user, 2026-10-30): each picked note becomes the same key played again and again at the
+    shorter ``figure``, filling the time of its own figure (a negra into two corcheas, four semicorcheas, eight
+    fusas). One step; undo puts the note back."""
+    if figure not in FIGURES:
+        raise ValueError(f"No figure {figure!r}")
+
+    def plan(sheet: Sheet, quarter: float) -> tuple[set[tuple[int, int]], list[Any], int, str, list[set[tuple[int, int]]]]:
+        notes = _usable(sheet, refs)
+        if not notes:
+            raise reading.Refused("Pick the notes to duplicate first.")
+        added, copies = [], 0
+        # The copies of one chord (a hand at a column) are one beam group.
+        groups: dict[tuple[int, int], set[tuple[int, int]]] = {}
+        for n in notes:
+            if not n.figure or figure <= n.figure:
+                raise reading.Refused("Duplicate into a figure shorter than the note's own.")
+            copies = figure // n.figure
+            if copies > MOST_COPIES:
+                raise reading.Refused(f"At most {MOST_COPIES} copies of one note.")
+            length = nominal_ms(figure, quarter)
+            for k in range(copies):
+                at = n.frame + round(k * length / FRAME_MS)
+                added.append(replace(n, frame=at, figure=figure, len_ms=length, beam=None, fixed=True))
+                groups.setdefault((n.staff, n.frame), set()).add((at, n.midi))
+        what = "a note" if len(notes) == 1 else f"{len(notes)} notes"
+        label = f"Duplicate {what} into {copies} {NAMES[figure]}s"
+        return {(n.frame, n.midi) for n in notes}, added, figure, label, list(groups.values())
+
+    return _rewrite(part_id, plan)
+
+
+def unite_notes(part_id: str, refs: list[str]) -> str:
+    """**Unite** (the user, 2026-10-30), the opposite of Duplicate: the picked notes are consecutive chords of one
+    staff, the same keys and the same figure (two semicorcheas of Mi4); they become one chord of the figure that fills
+    their time (a corchea), at the first one's place. Two, four or eight of them; one step."""
+
+    def plan(sheet: Sheet, quarter: float) -> tuple[set[tuple[int, int]], list[Any], int, str, list[set[tuple[int, int]]]]:
+        notes = _usable(sheet, refs)
+        staffs = {n.staff for n in notes}
+        if len(staffs) != 1:
+            raise reading.Refused("Pick notes of one hand to unite.")
+        columns: dict[int, list[Any]] = {}
+        for n in notes:
+            columns.setdefault(n.frame, []).append(n)
+        frames = sorted(columns)
+        if len(frames) < 2:
+            raise reading.Refused("Pick two or more notes that follow one another to unite them.")
+        keys = {tuple(sorted(n.midi for n in columns[f])) for f in frames}
+        figures = {n.figure for n in notes}
+        if len(keys) != 1 or len(figures) != 1 or None in figures:
+            raise reading.Refused("The notes to unite must be the same keys with the same figure.")
+        staff = next(iter(staffs))
+        between = {n.frame for n in sheet.notes if n.staff == staff and frames[0] < n.frame < frames[-1] and not n.grace}
+        if between - set(frames):
+            raise reading.Refused("The notes to unite must follow one another, with no other note between them.")
+        figure = next(iter(figures))
+        if figure % len(frames) or figure // len(frames) not in FIGURES:
+            raise reading.Refused("Two, four or eight notes unite into one figure (two corcheas into a negra).")
+        united = figure // len(frames)
+        length = nominal_ms(united, quarter)
+        added = [replace(n, figure=united, len_ms=length, beam=None, fixed=True) for n in columns[frames[0]]]
+        label = f"Unite {len(frames)} {NAMES[figure]}s into a {NAMES[united]}"
+        return {(n.frame, n.midi) for n in notes}, added, united, label, []
+
+    return _rewrite(part_id, plan)
 
 
 def _saved(hand: str | None, guessed: bool) -> str | None:

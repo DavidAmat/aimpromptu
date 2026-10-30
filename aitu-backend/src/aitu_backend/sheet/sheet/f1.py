@@ -16,7 +16,8 @@ ABC's ``(3``), ``grace`` /
 ``turn``, ``8va`` / ``8vb`` (written an octave lower / higher than it sounds), ``orn`` (an onset played inside
 the ornament of the note before it: kept for the matrix, not drawn). The user's marks of the new sheet
 (implementation 03, Phase 7; never in an LLM prompt): ``fg3`` finger 3, ``fix`` the figure was set by the user,
-``asgrace`` / ``nograce`` written as a grace note / as a normal note whatever the grace rule says. ``clef=treble`` before the notes of a hand
+``asgrace`` / ``nograce`` written as a grace note / as a normal note whatever the grace rule says, ``sp`` the
+spelling (Sib4 for La#4) was set by the user (2026-10-30). ``clef=treble`` before the notes of a hand
 changes the clef of that hand at this time. The frames header may carry the reference figure of the new sheet,
 ``F1 frames frameMs=40 quarterMs=500`` (one negra lasts 500 ms; implementation 03, Phase 2). Implementation 03, Phase 8
 adds what the user writes about the whole new sheet (frames view only; never in an LLM prompt): ``spaceMs=`` (the
@@ -105,6 +106,8 @@ def _note_text(pitches: list[str], n: Note, beam_no: dict[int, int], tstart: boo
         tags.append("fix")
     if n.grace_rule:
         tags.append("asgrace" if n.grace_rule == "on" else "nograce")
+    if n.spelled:
+        tags.append("sp")
     return " ".join([head] + tags)
 
 
@@ -123,6 +126,7 @@ def _attrs(n: Note, starts: set[int]) -> tuple:
         n.finger,
         n.fixed,
         n.grace_rule,
+        n.spelled,
         id(n) in starts,
     )
 
@@ -565,5 +569,7 @@ def _apply_tag(n: Note, tok: str) -> None:
         n.fixed = True
     elif tok in ("asgrace", "nograce"):
         n.grace_rule = "on" if tok == "asgrace" else "off"
+    elif tok == "sp":
+        n.spelled = True
     else:
         raise F1Error(f"unknown tag {tok!r}")
