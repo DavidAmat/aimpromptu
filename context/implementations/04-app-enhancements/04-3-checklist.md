@@ -17,7 +17,7 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] **The brief** (user, 2026-10-29; `04-3-prompt.md`): folders and metadata first, in one phase; then the whole
   song simplification by levels (easy, medium, hard; super hard later) in phases that need the user's action.
 - [x] **Phase 1**: the user checks My projects, My Library and the info button in the browser (ok on 2026-10-29).
-- [x] **Phase 2**: the user approves the gallery of patterns (approved on 2026-10-29, after review 3; plan section 10).
+- [x] **Phase 2**: the user approves the gallery of patterns (approved on 2026-10-30, after review 6; plan section 10).
 - [x] **The catalog and the frame numbers** (user, 2026-10-29, review 2 of Phase 2): plan section 5.10; Phase 2b
   comes before Phase 3 (confirmed by the user at the merge).
 - [ ] **Phase 3**: the user approves the three levels on the passages of 99 Red Balloons.
@@ -55,8 +55,8 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] Task 2.5 The easy patterns of the brief drawn by the app's engine.
 - [x] Task 2.6 The snapshots in `images/chopin_passages/`, each checked zoomed in.
 - [x] Task 2.7 The gallery `gallery/04-3-phase-2/index.html` (two tabs, level pills) and `patterns.json`.
-- [x] Task 2.8 The user's review, until approved (review 1: 30 drawn variations; review 2: the next task; review 3: right hands across Chopin's works, 18 drawn; approved
-  and merged into `master` on 2026-10-29).
+- [x] Task 2.8 The user's review, until approved (review 1: 30 drawn variations; review 2: the next task; reviews 3 to 6: right hands across Chopin's works, the stricter super hard; approved
+  and merged into `master` on 2026-10-30).
 - [x] Task 2.9 Every pattern in the app's notation (the Chopin ones from the kern), and the numbers inside each hand
   and level.
 

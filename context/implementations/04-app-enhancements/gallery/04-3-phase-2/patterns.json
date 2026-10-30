@@ -1,6 +1,6 @@
 {
   "about": "Implementation 04-3, Phase 2: the gallery of patterns. One pattern, one name: Phase 3 uses these ids and levels in the level prompts. Images are relative to this folder (drawn/) or to context/implementations/04-app-enhancements/images/chopin_passages/. pdf pages are pages of the user's PDFs in /home/david/Documents/projects/music/chopin/ (outside the repo). kern files are in poc-aitu-research/data/raw/kern/humdrum-chopin-first-editions/kern/.",
-  "status": "approved by the user on 2026-10-29",
+  "status": "approved by the user on 2026-10-30",
   "levels": [
     "easy",
     "medium",
@@ -341,6 +341,29 @@
     {
       "hand": "right",
       "level": "medium",
+      "id": "full-chords-in-octaves",
+      "name": "Full chords in octaves",
+      "line": "Chords of four and five notes, ff, with the melody doubled at the octava and a jump up of an octava (La4-Do#5-La5, then La5-Do#6-La6), in negras and blancas. Medium because the chords are slow and are the usual chords of Mi and La with one or two altered notes; the jump is the only difficulty (it was super hard before review 4).",
+      "examples": [
+        {
+          "image": "ballade1-right-2.png",
+          "piece": "Ballade No. 1 in G minor, Op. 23",
+          "pdf": "ballades.pdf",
+          "page": 12,
+          "bars": "106-108",
+          "kern": "023-1-BH.krn",
+          "kernBars": "106-108",
+          "note": null,
+          "drawing": "transcribed/ballade1-right-2.svg",
+          "f1": "transcribed/ballade1-right-2.f1"
+        }
+      ],
+      "number": 4,
+      "ref": "right medium 4"
+    },
+    {
+      "hand": "right",
+      "level": "medium",
       "id": "broken-chord-over-two-octaves",
       "name": "Broken chord over two octavas",
       "line": "Fa5-La5-Do6-Fa6-La6, then down: the notes of one chord in corcheas, going up two octavas and coming back. Medium because the hand must move, but it follows the same chord all the way.",
@@ -358,8 +381,8 @@
           "f1": "transcribed/rh-02-corcheas-single.f1"
         }
       ],
-      "number": 4,
-      "ref": "right medium 4"
+      "number": 5,
+      "ref": "right medium 5"
     },
     {
       "hand": "right",
@@ -381,8 +404,8 @@
           "f1": "transcribed/rh-09-repeated-chord.f1"
         }
       ],
-      "number": 5,
-      "ref": "right medium 5"
+      "number": 6,
+      "ref": "right medium 6"
     },
     {
       "hand": "right",
@@ -404,8 +427,8 @@
           "f1": "transcribed/rh-10-fast-in-position.f1"
         }
       ],
-      "number": 6,
-      "ref": "right medium 6"
+      "number": 7,
+      "ref": "right medium 7"
     },
     {
       "hand": "right",
@@ -427,8 +450,8 @@
           "f1": "transcribed/rh-12-fast-repeating-shape.f1"
         }
       ],
-      "number": 7,
-      "ref": "right medium 7"
+      "number": 8,
+      "ref": "right medium 8"
     },
     {
       "hand": "right",
@@ -450,8 +473,8 @@
           "f1": "transcribed/rh-13-fast-repeating-shape.f1"
         }
       ],
-      "number": 8,
-      "ref": "right medium 8"
+      "number": 9,
+      "ref": "right medium 9"
     },
     {
       "hand": "right",
@@ -473,8 +496,8 @@
           "f1": "transcribed/rh-15-small-chords-moving.f1"
         }
       ],
-      "number": 9,
-      "ref": "right medium 9"
+      "number": 10,
+      "ref": "right medium 10"
     },
     {
       "hand": "right",
@@ -508,8 +531,8 @@
           "f1": "transcribed/rh-16-melody-with-accidentals.f1"
         }
       ],
-      "number": 10,
-      "ref": "right medium 10"
+      "number": 11,
+      "ref": "right medium 11"
     },
     {
       "hand": "right",
@@ -529,29 +552,6 @@
           "note": null,
           "drawing": "transcribed/rh-20-melody-with-ornament.svg",
           "f1": "transcribed/rh-20-melody-with-ornament.f1"
-        }
-      ],
-      "number": 11,
-      "ref": "right medium 11"
-    },
-    {
-      "hand": "right",
-      "level": "medium",
-      "id": "scale-run",
-      "name": "Scale run",
-      "line": "A scale down over two octavas in semicorcheas, then chords. Medium because it is fast and the hand moves, but a scale is the most regular pattern there is.",
-      "examples": [
-        {
-          "image": null,
-          "piece": "Variations Op. 12",
-          "pdf": null,
-          "page": null,
-          "bars": "2-3",
-          "kern": "012-1-Sm-001.krn",
-          "kernBars": "2-3",
-          "note": null,
-          "drawing": "transcribed/rh-25-fast-no-pattern.svg",
-          "f1": "transcribed/rh-25-fast-no-pattern.f1"
         }
       ],
       "number": 12,
@@ -716,6 +716,64 @@
     {
       "hand": "right",
       "level": "hard",
+      "id": "runs-in-groups",
+      "name": "Runs in groups of 7 and 8",
+      "line": "Runs of semicorcheas in groups of 7 and 8 over the left hand's sweeps. Hard because they are fast, but each group is mostly a chromatic scale with a small jump, which the hand plays with one fingering (it was super hard before review 4).",
+      "examples": [
+        {
+          "image": "ballade4-right-2.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 50,
+          "bars": "152-153",
+          "kern": "052-1-BH.krn",
+          "kernBars": "152-153",
+          "note": null,
+          "drawing": "transcribed/ballade4-right-2.svg",
+          "f1": "transcribed/ballade4-right-2.f1"
+        }
+      ],
+      "number": 3,
+      "ref": "right hard 3"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
+      "id": "scale-run",
+      "name": "Scale run",
+      "line": "A fast scale over two octavas or more, with the alterations of its key only. Hard because it is fast and the hand moves, but not super hard: a scale keeps one pattern and one fingering (the user's rule of review 4; it was medium before).",
+      "examples": [
+        {
+          "image": null,
+          "piece": "Variations Op. 12",
+          "pdf": null,
+          "page": null,
+          "bars": "2-3",
+          "kern": "012-1-Sm-001.krn",
+          "kernBars": "2-3",
+          "note": "A scale going down.",
+          "drawing": "transcribed/rh-25-fast-no-pattern.svg",
+          "f1": "transcribed/rh-25-fast-no-pattern.f1"
+        },
+        {
+          "image": "ballade1-right-3.png",
+          "piece": "Ballade No. 1 in G minor, Op. 23",
+          "pdf": "ballades.pdf",
+          "page": 20,
+          "bars": "255-256",
+          "kern": "023-1-BH.krn",
+          "kernBars": "255-256",
+          "note": "The scale of Sol minor going up almost three octavas, with only Mi natural and Fa# (the melodic minor) outside the two flats. The app spells them Fab and Solb, its rule for the black and white keys under flats, so its drawing looks more chromatic than the edition.",
+          "drawing": "transcribed/ballade1-right-3.svg",
+          "f1": "transcribed/ballade1-right-3.f1"
+        }
+      ],
+      "number": 4,
+      "ref": "right hard 4"
+    },
+    {
+      "hand": "right",
+      "level": "hard",
       "id": "melody-over-chromatic-inner-line",
       "name": "Melody over a chromatic inner line",
       "line": "Two-note chords on top and, under them in the same hand, a line of semicorcheas that moves by semitones. Hard because one hand plays two voices fast, with many accidentals.",
@@ -733,8 +791,8 @@
           "f1": "transcribed/rh-11-fast-in-position.f1"
         }
       ],
-      "number": 3,
-      "ref": "right hard 3"
+      "number": 5,
+      "ref": "right hard 5"
     },
     {
       "hand": "right",
@@ -756,8 +814,8 @@
           "f1": "transcribed/rh-18-thirds-sixths-corcheas.f1"
         }
       ],
-      "number": 4,
-      "ref": "right hard 4"
+      "number": 6,
+      "ref": "right hard 6"
     },
     {
       "hand": "right",
@@ -779,8 +837,8 @@
           "f1": "transcribed/rh-22-chord-run.f1"
         }
       ],
-      "number": 5,
-      "ref": "right hard 5"
+      "number": 7,
+      "ref": "right hard 7"
     },
     {
       "hand": "right",
@@ -814,8 +872,8 @@
           "f1": "transcribed/rh-27-fast-chromatic.f1"
         }
       ],
-      "number": 6,
-      "ref": "right hard 6"
+      "number": 8,
+      "ref": "right hard 8"
     },
     {
       "hand": "right",
@@ -837,8 +895,8 @@
           "f1": "transcribed/rh-26-fast-chromatic.f1"
         }
       ],
-      "number": 7,
-      "ref": "right hard 7"
+      "number": 9,
+      "ref": "right hard 9"
     },
     {
       "hand": "right",
@@ -860,8 +918,8 @@
           "f1": "transcribed/rh-29-fast-ornamented.f1"
         }
       ],
-      "number": 8,
-      "ref": "right hard 8"
+      "number": 10,
+      "ref": "right hard 10"
     },
     {
       "hand": "right",
@@ -883,8 +941,8 @@
           "f1": "transcribed/rh-30-fast-double-notes.f1"
         }
       ],
-      "number": 9,
-      "ref": "right hard 9"
+      "number": 11,
+      "ref": "right hard 11"
     },
     {
       "hand": "right",
@@ -906,8 +964,8 @@
           "f1": "transcribed/rh-31-fast-double-notes.f1"
         }
       ],
-      "number": 10,
-      "ref": "right hard 10"
+      "number": 12,
+      "ref": "right hard 12"
     },
     {
       "hand": "right",
@@ -929,8 +987,8 @@
           "f1": "transcribed/rh-38-doubles-fast.f1"
         }
       ],
-      "number": 11,
-      "ref": "right hard 11"
+      "number": 13,
+      "ref": "right hard 13"
     },
     {
       "hand": "right",
@@ -952,8 +1010,8 @@
           "f1": "transcribed/rh-39-doubles-fast.f1"
         }
       ],
-      "number": 12,
-      "ref": "right hard 12"
+      "number": 14,
+      "ref": "right hard 14"
     },
     {
       "hand": "right",
@@ -974,8 +1032,8 @@
           "note": null
         }
       ],
-      "number": 13,
-      "ref": "right hard 13"
+      "number": 15,
+      "ref": "right hard 15"
     },
     {
       "hand": "right",
@@ -996,8 +1054,8 @@
           "note": null
         }
       ],
-      "number": 14,
-      "ref": "right hard 14"
+      "number": 16,
+      "ref": "right hard 16"
     },
     {
       "hand": "right",
@@ -1018,8 +1076,8 @@
           "note": null
         }
       ],
-      "number": 15,
-      "ref": "right hard 15"
+      "number": 17,
+      "ref": "right hard 17"
     },
     {
       "hand": "right",
@@ -1040,8 +1098,8 @@
           "note": null
         }
       ],
-      "number": 16,
-      "ref": "right hard 16"
+      "number": 18,
+      "ref": "right hard 18"
     },
     {
       "hand": "right",
@@ -1062,54 +1120,31 @@
           "note": null
         }
       ],
-      "number": 17,
-      "ref": "right hard 17"
+      "number": 19,
+      "ref": "right hard 19"
     },
     {
       "hand": "right",
-      "level": "super hard",
-      "id": "full-chords-in-octaves",
-      "name": "Full chords in octaves",
-      "line": "Chords of four and five notes, ff, with the melody doubled at the octava and jumps up of an octave (La4-Do#5-La5, then La5-Do#6-La6). Super hard because the hand is open to its limit and jumps.",
+      "level": "hard",
+      "id": "line-of-irregular-jumps",
+      "name": "A line of irregular jumps",
+      "line": "Corcheas that go up by jumps of different sizes, never by one tone or one semitone at a time (Sib3-Re4-Dob4-Re4-Do#4-Fa4-Re4-Lab4-Mi4-Lab4: up 4, down 3, up 3, down 1, up 4, down 3, up 6, down 4 semitones), with flats, naturals and sharps. Hard because the hand cannot follow a scale or a chord: each jump is a new distance, although the line keeps going up.",
       "examples": [
         {
-          "image": "ballade1-right-2.png",
+          "image": "ballade1-right-4.png",
           "piece": "Ballade No. 1 in G minor, Op. 23",
           "pdf": "ballades.pdf",
-          "page": 12,
-          "bars": "106-108",
+          "page": 13,
+          "bars": "130-131",
           "kern": "023-1-BH.krn",
-          "kernBars": "106-108",
-          "note": null,
-          "drawing": "transcribed/ballade1-right-2.svg",
-          "f1": "transcribed/ballade1-right-2.f1"
+          "kernBars": "130-131",
+          "note": "The app spells Do# as Reb, Mi natural as Fab and Si natural as Dob (its rule under flats), so its drawing shows more flats than the edition.",
+          "drawing": "transcribed/ballade1-right-4.svg",
+          "f1": "transcribed/ballade1-right-4.f1"
         }
       ],
-      "number": 1,
-      "ref": "right super hard 1"
-    },
-    {
-      "hand": "right",
-      "level": "super hard",
-      "id": "runs-in-groups",
-      "name": "Runs in groups of 7 and 8",
-      "line": "Fast runs of semicorcheas in groups of 7 and 8 that cross positions, over the left hand's sweeps. Super hard because the hand moves without rest and both hands move at once.",
-      "examples": [
-        {
-          "image": "ballade4-right-2.png",
-          "piece": "Ballade No. 4 in F minor, Op. 52",
-          "pdf": "ballades.pdf",
-          "page": 50,
-          "bars": "152-153",
-          "kern": "052-1-BH.krn",
-          "kernBars": "152-153",
-          "note": null,
-          "drawing": "transcribed/ballade4-right-2.svg",
-          "f1": "transcribed/ballade4-right-2.f1"
-        }
-      ],
-      "number": 2,
-      "ref": "right super hard 2"
+      "number": 20,
+      "ref": "right hard 20"
     },
     {
       "hand": "right",
@@ -1131,8 +1166,8 @@
           "f1": "transcribed/rh-23-chord-run.f1"
         }
       ],
-      "number": 3,
-      "ref": "right super hard 3"
+      "number": 1,
+      "ref": "right super hard 1"
     },
     {
       "hand": "right",
@@ -1154,8 +1189,8 @@
           "f1": "transcribed/rh-28-fast-ornamented.f1"
         }
       ],
-      "number": 4,
-      "ref": "right super hard 4"
+      "number": 2,
+      "ref": "right super hard 2"
     },
     {
       "hand": "right",
@@ -1177,15 +1212,15 @@
           "f1": "transcribed/rh-33-fast-chords-moving.f1"
         }
       ],
-      "number": 5,
-      "ref": "right super hard 5"
+      "number": 3,
+      "ref": "right super hard 3"
     },
     {
       "hand": "right",
       "level": "super hard",
       "id": "cadenza-run",
       "name": "Cadenza run",
-      "line": "A run of very short notes down from a high note, outside the beat (a cadenza). Super hard because it is very fast and covers more than two octavas.",
+      "line": "A run of very short notes down from Si6, outside the beat (a cadenza), which ends in two-note chords played at the same speed: Sol#4-Re#5 (a fifth), La#4-Do#5 (a third), Sol#4-La#4 (a second). Super hard because of those chords: their spacing changes from one chord to the next, so the hand cannot keep one shape, inside a fast run that goes down. The range is not the reason: the run itself uses only the notes of Si major, and a fast scale of the key over many octavas is easy to hard.",
       "examples": [
         {
           "image": null,
@@ -1200,8 +1235,8 @@
           "f1": "transcribed/rh-34-very-fast-wide.f1"
         }
       ],
-      "number": 6,
-      "ref": "right super hard 6"
+      "number": 4,
+      "ref": "right super hard 4"
     },
     {
       "hand": "right",
@@ -1223,8 +1258,8 @@
           "f1": "transcribed/rh-35-very-fast-wide.f1"
         }
       ],
-      "number": 7,
-      "ref": "right super hard 7"
+      "number": 5,
+      "ref": "right super hard 5"
     },
     {
       "hand": "right",
@@ -1246,8 +1281,8 @@
           "f1": "transcribed/rh-36-jumps.f1"
         }
       ],
-      "number": 8,
-      "ref": "right super hard 8"
+      "number": 6,
+      "ref": "right super hard 6"
     },
     {
       "hand": "right",
@@ -1268,8 +1303,8 @@
           "note": null
         }
       ],
-      "number": 9,
-      "ref": "right super hard 9"
+      "number": 7,
+      "ref": "right super hard 7"
     },
     {
       "hand": "right",
@@ -1290,8 +1325,8 @@
           "note": null
         }
       ],
-      "number": 10,
-      "ref": "right super hard 10"
+      "number": 8,
+      "ref": "right super hard 8"
     },
     {
       "hand": "right",
@@ -1312,8 +1347,136 @@
           "note": null
         }
       ],
+      "number": 9,
+      "ref": "right super hard 9"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "broken-octave-frames",
+      "name": "Octava frames that break their pattern",
+      "line": "Fast corcheas in groups of six: an octava (Do4-Do5), two notes inside it (Fa4, La4), then a frame that is not an octava (Mi4 natural to Reb5), and the next group again different (Fa#4 to Mib5); the figure moves up a step every half bar, over an inner voice held in negras, with naturals, sharps and flats. Super hard because the pattern starts and then breaks: the hand opens an octava, then a different distance, so it cannot keep one shape while it plays fast.",
+      "examples": [
+        {
+          "image": "ballade1-right-5.png",
+          "piece": "Ballade No. 1 in G minor, Op. 23",
+          "pdf": "ballades.pdf",
+          "page": 14,
+          "bars": "150-152",
+          "kern": "023-1-BH.krn",
+          "kernBars": "150-152",
+          "note": "The app spells Do# as Reb, Mi natural as Fab and Si natural as Dob (its rule under flats), so its drawing shows more flats than the edition. The held negras of the inner voice are written as corcheas (one voice per hand).",
+          "drawing": "transcribed/ballade1-right-5.svg",
+          "f1": "transcribed/ballade1-right-5.f1"
+        }
+      ],
+      "number": 10,
+      "ref": "right super hard 10"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "melody-over-inner-semicorcheas",
+      "name": "A melody over its own inner semicorcheas",
+      "line": "Two voices in the right hand. On top, the melody in corcheas (stems up, fingers 4 and 5); under it, a line of semicorcheas (stems down, thumb and fingers 1 to 3) that fills the time between two melody notes, so that the melody sounds continuous. The inner line adds no new voice: it walks between the notes of the chord while the melody waits. Where both voices meet on a beat the hand plays a chord, between the beats a single note. Naturals come and go (Mi natural, La natural, Solb). Super hard because one hand plays two voices with different fingers and different weight, the melody held and sung, the inner line soft and even, while the left hand plays its own jumps and arpeggios.",
+      "examples": [
+        {
+          "image": "ballade4-right-3.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "58",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "58-58",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing. The app spells Mi natural as Fab (its rule under flats).",
+          "drawing": "transcribed/ballade4-right-3.svg",
+          "f1": "transcribed/ballade4-right-3.f1"
+        },
+        {
+          "image": "ballade4-right-8.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "66",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "66-66",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing.",
+          "drawing": "transcribed/ballade4-right-8.svg",
+          "f1": "transcribed/ballade4-right-8.f1"
+        }
+      ],
       "number": 11,
       "ref": "right super hard 11"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "chords-with-notes-between",
+      "name": "Chords with single notes between them",
+      "line": "The melody moves in octavas or chords on the beats (Do4-Do5, Mib4-Mib5, Solb4-Solb5), and between two of them the hand plays single notes (Sib4, Lab4, Sol4; Mib5, Fa5, Reb5, Do5, Sib4) that keep the pulse going while the melody waits for its next note. The single notes are accompaniment played by the right hand, not a new voice. Super hard because the hand opens to an octava or a chord and closes to one note at speed, again and again, with the melody on the top finger, while the left hand is busy.",
+      "examples": [
+        {
+          "image": "ballade4-right-4.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "60",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "60-60",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing.",
+          "drawing": "transcribed/ballade4-right-4.svg",
+          "f1": "transcribed/ballade4-right-4.f1"
+        },
+        {
+          "image": "ballade4-right-7.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "65",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "65-65",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing. Both kern editions differ from this edition in the second half of the bar; the drawing follows the edition: Mib4 over a held La natural 4, and the rising notes Do4-Mib4-Solb4-Fa4 in the left hand.",
+          "drawing": "transcribed/ballade4-right-7.svg",
+          "f1": "transcribed/ballade4-right-7.f1"
+        }
+      ],
+      "number": 12,
+      "ref": "right super hard 12"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "thirds-down-and-up-with-triads",
+      "name": "Thirds going down and up, now and then three notes",
+      "line": "Thirds in semicorcheas (Reb5-Fab5, Do5-Mib5, Sib4-Reb5, Lab4-Do5, Sol4-Sib4) that go down and come back up under a melody in corcheas (Sol5, Reb5, Fab5, Mib5), and from time to time a chord of three notes (Mib4-Lab4-Do5) or a wider one (Mib4-Reb5). Super hard because two fingers play fast thirds while the top finger holds and stresses the melody, the hand changes shape each time a third note joins, and Fab5 then Fa natural 5 come in the same bar.",
+      "examples": [
+        {
+          "image": "ballade4-right-5.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "63",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "63-63",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing.",
+          "drawing": "transcribed/ballade4-right-5.svg",
+          "f1": "transcribed/ballade4-right-5.f1"
+        },
+        {
+          "image": "ballade4-right-6.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "64",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "64-64",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing. The edition writes a becuadro on the Fa5 after the Fab5 of the same bar; the app draws no bars and prints a sign only on notes outside the armadura, so its Fa5 has no sign (it is still Fa natural).",
+          "drawing": "transcribed/ballade4-right-6.svg",
+          "f1": "transcribed/ballade4-right-6.f1"
+        }
+      ],
+      "number": 13,
+      "ref": "right super hard 13"
     },
     {
       "hand": "left",

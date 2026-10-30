@@ -59,6 +59,8 @@ def var(level, pid, name, line):
 
 
 B1, B4 = "Ballade No. 1 in G minor, Op. 23", "Ballade No. 4 in F minor, Op. 52"
+ONE_VOICE = ("The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one "
+             "line of chords and single notes, so the two voices of the edition are not visible in the drawing.")
 W = "Waltz Op. {}"
 P = "Prelude Op. 28 No. {}"
 
@@ -213,13 +215,16 @@ PATTERNS = [
               "notes are fast but the hand repeats one shape in one place (it was hard before review 3).",
          examples=[ex("waltz-70-3-right-1.png", W.format("70 No. 3"), "waltzes.pdf", 99, "17-19",
                       "070-1-MEIf-003.krn", "17-19")]),
-    dict(hand="right", level="super hard", id="full-chords-in-octaves", name="Full chords in octaves",
-         line="Chords of four and five notes, ff, with the melody doubled at the octava and jumps up of an octave "
-              "(La4-Do#5-La5, then La5-Do#6-La6). Super hard because the hand is open to its limit and jumps.",
+    dict(hand="right", level="medium", id="full-chords-in-octaves", name="Full chords in octaves",
+         line="Chords of four and five notes, ff, with the melody doubled at the octava and a jump up of an octava "
+              "(La4-Do#5-La5, then La5-Do#6-La6), in negras and blancas. Medium because the chords are slow and are "
+              "the usual chords of Mi and La with one or two altered notes; the jump is the only difficulty (it was "
+              "super hard before review 4).",
          examples=[ex("ballade1-right-2.png", B1, "ballades.pdf", 12, "106-108", "023-1-BH.krn", "106-108")]),
-    dict(hand="right", level="super hard", id="runs-in-groups", name="Runs in groups of 7 and 8",
-         line="Fast runs of semicorcheas in groups of 7 and 8 that cross positions, over the left hand's sweeps. "
-              "Super hard because the hand moves without rest and both hands move at once.",
+    dict(hand="right", level="hard", id="runs-in-groups", name="Runs in groups of 7 and 8",
+         line="Runs of semicorcheas in groups of 7 and 8 over the left hand's sweeps. Hard because they are fast, but "
+              "each group is mostly a chromatic scale with a small jump, which the hand plays with one fingering "
+              "(it was super hard before review 4).",
          examples=[ex("ballade4-right-2.png", B4, "ballades.pdf", 50, "152-153", "052-1-BH.krn", "152-153")]),
     # ---------------------------------------------------------------- right hand, review 3 (study of all works)
     right("easy", "chords-in-one-position", "Chords in one position",
@@ -268,10 +273,15 @@ PATTERNS = [
           "A few fast decoration notes that run up into a two-note chord, then a calm melody. Medium because the run "
           "is short and lands in the position of the melody.",
           exk("rh-20-melody-with-ornament", "Impromptu Op. 29", "029-1-BH.krn", "58-59")),
-    right("medium", "scale-run", "Scale run",
-          "A scale down over two octavas in semicorcheas, then chords. Medium because it is fast and the hand moves, "
-          "but a scale is the most regular pattern there is.",
-          exk("rh-25-fast-no-pattern", "Variations Op. 12", "012-1-Sm-001.krn", "2-3")),
+    right("hard", "scale-run", "Scale run",
+          "A fast scale over two octavas or more, with the alterations of its key only. Hard because it is fast and "
+          "the hand moves, but not super hard: a scale keeps one pattern and one fingering (the user's rule of "
+          "review 4; it was medium before).",
+          exk("rh-25-fast-no-pattern", "Variations Op. 12", "012-1-Sm-001.krn", "2-3", "A scale going down."),
+          ex("ballade1-right-3.png", B1, "ballades.pdf", 20, "255-256", "023-1-BH.krn", "255-256",
+             "The scale of Sol minor going up almost three octavas, with only Mi natural and Fa# (the melodic minor) "
+             "outside the two flats. The app spells them Fab and Solb, its rule for the black and white keys under "
+             "flats, so its drawing looks more chromatic than the edition.")),
     right("hard", "melody-over-chromatic-inner-line", "Melody over a chromatic inner line",
           "Two-note chords on top and, under them in the same hand, a line of semicorcheas that moves by semitones. "
           "Hard because one hand plays two voices fast, with many accidentals.",
@@ -327,8 +337,11 @@ PATTERNS = [
           "hard because no shape repeats and the hand keeps moving.",
           exk("rh-33-fast-chords-moving", "Barcarolle Op. 60", "060-1-BH.krn", "28-29")),
     right("super hard", "cadenza-run", "Cadenza run",
-          "A run of very short notes down from a high note, outside the beat (a cadenza). Super hard because it is "
-          "very fast and covers more than two octavas.",
+          "A run of very short notes down from Si6, outside the beat (a cadenza), which ends in two-note chords "
+          "played at the same speed: Sol#4-Re#5 (a fifth), La#4-Do#5 (a third), Sol#4-La#4 (a second). Super hard "
+          "because of those chords: their spacing changes from one chord to the next, so the hand cannot keep one "
+          "shape, inside a fast run that goes down. The range is not the reason: the run itself uses only the notes "
+          "of Si major, and a fast scale of the key over many octavas is easy to hard.",
           exk("rh-34-very-fast-wide", "Nocturne Op. 32 No. 1", "032-1-Sm-001.krn", "60-61")),
     right("super hard", "wide-zigzag-very-fast", "Very fast wide zig-zag",
           "Fusas that jump up and down in a wide zig-zag after a few chords. Super hard because each note is far "
@@ -392,6 +405,55 @@ PATTERNS = [
     varr("super hard", "chromatic-thirds", "Chromatic thirds",
          "Thirds that go up and down by semitones in semicorcheas. Super hard because two fingers play a fast "
          "chromatic line together."),
+    # ---------------------------------------------------------------- right hand, review 5 (the user's examples)
+    right("hard", "line-of-irregular-jumps", "A line of irregular jumps",
+          "Corcheas that go up by jumps of different sizes, never by one tone or one semitone at a time "
+          "(Sib3-Re4-Dob4-Re4-Do#4-Fa4-Re4-Lab4-Mi4-Lab4: up 4, down 3, up 3, down 1, up 4, down 3, up 6, down 4 "
+          "semitones), with flats, naturals and sharps. Hard because the hand cannot follow a scale or a chord: "
+          "each jump is a new distance, although the line keeps going up.",
+          ex("ballade1-right-4.png", B1, "ballades.pdf", 13, "130-131", "023-1-BH.krn", "130-131", "The app spells Do# as Reb, Mi natural as Fab and Si natural as Dob (its rule under flats), so its drawing shows more flats than the edition.")),
+    right("super hard", "broken-octave-frames", "Octava frames that break their pattern",
+          "Fast corcheas in groups of six: an octava (Do4-Do5), two notes inside it (Fa4, La4), then a frame that is "
+          "not an octava (Mi4 natural to Reb5), and the next group again different (Fa#4 to Mib5); the figure "
+          "moves up a step every half bar, over an inner voice held in negras, with naturals, sharps and flats. "
+          "Super hard because the pattern starts and then breaks: the hand opens an octava, then a different "
+          "distance, so it cannot keep one shape while it plays fast.",
+          ex("ballade1-right-5.png", B1, "ballades.pdf", 14, "150-152", "023-1-BH.krn", "150-152",
+             "The app spells Do# as Reb, Mi natural as Fab and Si natural as Dob (its rule under flats), so its drawing shows more flats than the edition. The held negras of the inner voice are written as corcheas (one voice per hand).")),
+    # ---------------------------------------------------------------- right hand, review 6 (Ballade No. 4, page 44)
+    right("super hard", "melody-over-inner-semicorcheas", "A melody over its own inner semicorcheas",
+          "Two voices in the right hand. On top, the melody in corcheas (stems up, fingers 4 and 5); under it, a "
+          "line of semicorcheas (stems down, thumb and fingers 1 to 3) that fills the time between two melody notes, "
+          "so that the melody sounds continuous. The inner line adds no new voice: it walks between the notes of "
+          "the chord while the melody waits. Where both voices meet on a beat the hand plays a chord, between the "
+          "beats a single note. Naturals come and go (Mi natural, La natural, Solb). Super hard because one hand "
+          "plays two voices with different fingers and different weight, the melody held and sung, the inner line "
+          "soft and even, while the left hand plays its own jumps and arpeggios.",
+          ex("ballade4-right-3.png", B4, "ballades.pdf", 44, "58", "052-1-Sm.krn", "58-58",
+             ONE_VOICE + " The app spells Mi natural as Fab (its rule under flats)."),
+          ex("ballade4-right-8.png", B4, "ballades.pdf", 44, "66", "052-1-Sm.krn", "66-66", ONE_VOICE)),
+    right("super hard", "chords-with-notes-between", "Chords with single notes between them",
+          "The melody moves in octavas or chords on the beats (Do4-Do5, Mib4-Mib5, Solb4-Solb5), and between two "
+          "of them the hand plays single notes (Sib4, Lab4, Sol4; Mib5, Fa5, Reb5, Do5, Sib4) that keep the pulse "
+          "going while the melody waits for its next note. The single notes are accompaniment played by the right "
+          "hand, not a new voice. Super hard because the hand opens to an octava or a chord and closes to one note "
+          "at speed, again and again, with the melody on the top finger, while the left hand is busy.",
+          ex("ballade4-right-4.png", B4, "ballades.pdf", 44, "60", "052-1-Sm.krn", "60-60", ONE_VOICE),
+          ex("ballade4-right-7.png", B4, "ballades.pdf", 44, "65", "052-1-Sm.krn", "65-65",
+             ONE_VOICE + " Both kern editions differ from this edition in the second half of the bar; the drawing "
+             "follows the edition: Mib4 over a held La natural 4, and the rising notes Do4-Mib4-Solb4-Fa4 in the "
+             "left hand.")),
+    right("super hard", "thirds-down-and-up-with-triads", "Thirds going down and up, now and then three notes",
+          "Thirds in semicorcheas (Reb5-Fab5, Do5-Mib5, Sib4-Reb5, Lab4-Do5, Sol4-Sib4) that go down and come back "
+          "up under a melody in corcheas (Sol5, Reb5, Fab5, Mib5), and from time to time a chord of three notes "
+          "(Mib4-Lab4-Do5) or a wider one (Mib4-Reb5). Super hard because two fingers play fast thirds while the "
+          "top finger holds and stresses the melody, the hand changes shape each time a third note joins, and Fab5 "
+          "then Fa natural 5 come in the same bar.",
+          ex("ballade4-right-5.png", B4, "ballades.pdf", 44, "63", "052-1-Sm.krn", "63-63", ONE_VOICE),
+          ex("ballade4-right-6.png", B4, "ballades.pdf", 44, "64", "052-1-Sm.krn", "64-64",
+             ONE_VOICE + " The edition writes a becuadro on the Fa5 after the Fab5 of the same bar; the app draws no "
+             "bars and prints a sign only on notes outside the armadura, so its Fa5 has no sign (it is still Fa "
+             "natural).")),
     # ---------------------------------------------------------------- left hand, drawn variations (review 1)
     var("easy", "low-note-then-two-notes-rocking", "Low note, then two notes rocking",
         "Fa2, then La3-Do4-La3-Do4 in corcheas: one low note, then two notes of the chord one after the other. "
@@ -565,7 +627,7 @@ def card(p: dict) -> str:
         note = f". {e['note']}" if e.get("note") else ""
         if e["pdf"]:
             drawing = e["drawing"]
-            figs.append(f'<figure class="app"><figcaption>{html.escape(e["piece"])}, bars {e["bars"]}, in the '
+            figs.append(f'<figure class="app"><figcaption>{html.escape(e["piece"])}, {"bars" if "-" in e["bars"] else "bar"} {e["bars"]}, in the '
                         f'app\'s notation{html.escape(note)}</figcaption><a href="{drawing}">'
                         f'<img src="{drawing}" alt="{html.escape(p["name"])}: {html.escape(e["piece"])}" '
                         f'loading="lazy"></a></figure>')
@@ -624,7 +686,7 @@ def main() -> None:
                  "context/implementations/04-app-enhancements/images/chopin_passages/. pdf pages are pages of the "
                  f"user's PDFs in {PDF} (outside the repo). kern files are in poc-aitu-research/data/raw/kern/"
                  "humdrum-chopin-first-editions/kern/.",
-        "status": "approved by the user on 2026-10-29",
+        "status": "approved by the user on 2026-10-30",
         "levels": LEVELS,
         "patterns": pats,
     }

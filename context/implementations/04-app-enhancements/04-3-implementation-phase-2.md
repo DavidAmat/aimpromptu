@@ -1,7 +1,7 @@
 # 04-3 · Phase 2: the gallery of patterns
 
-Status: **approved by the user and merged into `master` on 2026-10-29** (after review 3: the right hand across Chopin's works; review 2 put every Chopin example in
-the app's notation and gave the numbers). Built on the branch `feat/04-3-phase-2`, in the worktree
+Status: **approved by the user and merged into `master` on 2026-10-30** (after review 6: two voices in the right hand,
+Ballade No. 4 page 44; review 2 put every Chopin example in the app's notation and gave the numbers). Built on the branch `feat/04-3-phase-2`, in the worktree
 `/home/david/Documents/projects/music/aimpromptu-04-3-phase-2` (plan section 7.4: Phase 2 ran in parallel with Phase 1,
 which owns the main checkout); the worktree was removed after the merge. No `src/` change, no AI call, no database
 access. The status of `patterns.json` is now "approved"; the next phase is Phase 2b (frame numbers), then Phase 3.
@@ -179,6 +179,82 @@ app.
 
 Result: the right-hand tab has 55 patterns (easy 10, medium 17, hard 17, super hard 11); the gallery 105.
 
+## 4.5 The user's review 4 (2026-10-30): a stricter super hard
+
+The user: super hard is not slow chords (negras, blancas) that are the usual chords of the key with one or two
+altered notes, and not fast scales or usual arpeggios that keep their pattern (hard at most); a fast passage that
+the hand plays without moving is cheap. The rule is in plan section 5.1. Changes: `full-chords-in-octaves` super hard
+-> medium; `runs-in-groups` super hard -> hard; `scale-run` medium -> hard, with Ballade No. 1, bars 255-256 (the
+"upward progression" of the last page, PDF page 20: the melodic minor of Sol going up almost three octavas, only Mi
+natural and Fa# outside the two flats) as a second example (`ballade1-right-3.png`, `transcribed/ballade1-right-3.*`).
+The right-hand tab: easy 10, medium 17, hard 19, super hard 9. Then the user corrected the reason of `cadenza-run` (Nocturne Op. 32
+No. 1, bars 60-61): its run uses only the notes of Si major (La#6 down to Mi5, Fa# skipped), and what makes it super
+hard is the end, three two-note chords at the same speed with spacings of 7, 3 and 2 semitones (Sol#4-Re#5,
+La#4-Do#5, Sol#4-La#4). The range is never a reason (plan section 5.1).
+
+Two findings while doing it:
+
+- **music21 stops reading one staff of 36 of the 197 works** at a voice split of the kern (Ballade No. 1 after bar
+  179, the Fantaisie Op. 49 after bar 4, Scherzo No. 1 after bar 32), without an error. The study of review 3
+  (`rh_study.py`) therefore did not see the rest of those works, and its candidates come only from the bars that were
+  read; the kept patterns are not wrong, but the study is not complete. The research's own model of the same files
+  (`poc-aitu-research/data/derived/ir/nifc/*.json.gz`, made with verovio, with its checks) has every bar, the staff
+  of each note, the printed bar labels, the armadura, ornaments and the first tempo. `transcribe.passage_ir` reads it;
+  it is used for `ballade1-right-3` (`IR_EXAMPLES`). The other drawings were checked against their snapshots and stay
+  as they are.
+- **The app spells the melodic minor as flats**: under 2 flats it writes Mi natural as Fab and Fa# as Solb (03's
+  rule for accidentals: a white key whose name is in the armadura takes its other name, black keys take flats). The
+  drawing of bars 255-256 therefore looks chromatic, while the edition shows one scale. The caption says it.
+
+## 4.6 The user's review 5 (2026-10-30): two passages of Ballade No. 1 named by the user
+
+The user sent two crops of Ballade No. 1 (PDF pages 13 and 14) with their reasons:
+
+- Bars 130-131 (page 13, system 3, x 658-1556, with the clef and key of the line in front): corcheas that go up by
+  jumps of 4, 3, 3, 1, 4, 3, 6, 4 semitones (Sib3-Re4-Dob4-Re4-Do#4-Fa4-Re4-Lab4-Mi4-Lab4, then
+  Fa4-Dob5-Sol4-Dob5-...), never by one step: **hard**, `line-of-irregular-jumps`, `ballade1-right-4`.
+- Bars 150-152 (page 14, system 4, the whole line): groups of six corcheas framed by an octava (Sib3-Sib4, Do4-Do5,
+  Re4-Re5) with two notes inside, then a frame of another distance (Mi4 natural to Reb5, Fa#4 to Mib5, Fa#4 to Mib5,
+  Sol#4 to Fa5), the figure a step higher each half bar, over an inner voice in negras: **super hard**,
+  `broken-octave-frames`, `ballade1-right-5`.
+
+Both are read with `passage_ir` (music21 does not read Ballade No. 1 after bar 179 in the right hand, section 4.5)
+and checked note by note against the edition. The app writes Do# as Reb, Mi natural as Fab, Si natural as Dob, and
+the held negras of bars 150-152 as corcheas; the captions say it. The right-hand tab: easy 10, medium 17, hard 20,
+super hard 10; the gallery has 107 patterns.
+
+## 4.7 The user's review 6 (2026-10-30): two voices in the right hand (Ballade No. 4, page 44)
+
+The user asked to look at the five lines of PDF page 44 of `ballades.pdf` (Ballade No. 4, bars 56-67; the printed bar
+numbers are the kern's) and to add what the right hand does there to super hard: a melody with stems up over
+semicorcheas with stems down that keep it continuous, chords with single notes between them, thirds going down and
+up with a chord of three now and then, all in one hand while the left hand jumps. Bars 56-57 are the theme alone; the
+two voices start at bar 58. One bar from each line, three patterns with two examples each:
+
+| Pattern | Bars (line) | Snapshot |
+|---|---|---|
+| super hard 11 `melody-over-inner-semicorcheas` | 58 (1), 66 (5) | `ballade4-right-3`, `ballade4-right-8` |
+| super hard 12 `chords-with-notes-between` | 60 (2), 65 (4) | `ballade4-right-4`, `ballade4-right-7` |
+| super hard 13 `thirds-down-and-up-with-triads` | 63 (3), 64 (4) | `ballade4-right-5`, `ballade4-right-6` |
+
+- **Source**: `052-1-Sm.krn` through the research IR (`passage_ir`), not `052-1-BH.krn`: Sm matches the user's
+  edition in bar 58 (Do5-Fa5 on the third corchea, Sol4 under Reb5-Mi5 on the fourth), BH does not. Read note by
+  note against the zoomed page with the staff positions marked. The flat before the first chord of bars 63 and 64
+  belongs to Fab5 (the top line), under Sol5 a second higher, as both kern files have it.
+- **Bar 65**: both kern files put the left hand's rising notes (Do4-Mib4-Solb4-Fa4, second half) on the upper staff
+  and an octava Solb on the fourth corchea; the edition has Mib4 over a held La natural 4 there, arpeggiated.
+  `transcribe.py` fixes it (`FIX`, `_ballade4_bar65`).
+- **`passage_ir`** now keeps one note when both voices of a hand share a notehead (the kern repeats it in each
+  layer, as Reb5 at the start of bar 59). The 32 drawings made before came out byte for byte the same.
+- **The app's drawings**: one voice per hand, so the melody and the inner line become one line of chords and single
+  notes, and the held La4 of bar 65 a corchea. Mi natural is spelled Fab (bar 58). In bar 64 the edition writes a
+  becuadro on Fa5 after Fab5 in the same bar; the app draws no bars and signs only notes outside the armadura, so its
+  Fa5 has no sign. Correct by the app's rule 1, but a reader used to bars may read Fab5; rule 7 (the courtesy sign)
+  covers only the way back to the armadura after a becuadro. The captions say it; see section 6.
+- `transcribe.py` no longer stops on study passages that have no image (`exk`).
+
+The right-hand tab: easy 10, medium 17, hard 20, super hard 13; the gallery has 110 patterns.
+
 # 5. The patterns
 
 The list is in `patterns.json` (status `proposed`); the page shows the same list. Levels as the agent proposed them,
@@ -216,4 +292,13 @@ Choices the user may want to change (for the review):
 - **Phase 3**: read `patterns.json` for the ids and levels (after the user's review sets `status` to approved); the
   kern refs give the notes for short F1 examples in the prompts. The licence of the kern files for prompt examples is
   an open point of Phase 5 (plan section 8).
+- **Phase 3**: the measures of the level check (plan section 5.6) should read the research's model
+  (`data/derived/ir/nifc`), not music21, which loses the end of 36 works (section 4.5). The app's spelling of the
+  melodic and harmonic minor under flats (section 4.5) makes a scale look chromatic on the sheet; it is an open point
+  of the app's accidental rule, not of this plan, to raise with the user if a level sheet shows it.
+- **The app's accidental rule** (open point, not of this plan): after an altered note, the same note back in the
+  armadura gets no sign (Ballade No. 4, bar 64: Fab5, then Fa5 with no becuadro). A courtesy becuadro, as rule 7
+  does in the other direction, would help readers used to bars. Also: the app's one voice per hand cannot show a
+  melody over an inner line (section 4.7); the level prompts for super hard should not expect two voices on the
+  sheet.
 - `/home/app/04-3-phase-2/` in the container holds the drawings' first output; it can be deleted after the merge.

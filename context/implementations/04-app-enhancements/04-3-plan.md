@@ -273,6 +273,36 @@ to play. The easy and medium levels must therefore keep one pattern through the 
 | **Hard** | The melody with small pieces of chords that add to it (Ballade No. 4) | The medium patterns with movement: the second chord moves (La4-Do5-Mi5, then Do5-Mi5-La5); irregular lines in corcheas that belong to no well-known chord (Si2-Fa3-Lab3-Re4-Lab3-Fa3). Once the hand is in a position, it does not make big jumps. Symmetric up and down figures (Ballade No. 1, page 12, `images/chopin_passages/ballade1-ex1.png`) |
 | **Super hard** | Later, not in this plan. Typical hard classical pieces: fast runs up and down in the left hand with big jumps while the right hand also jumps (the hard parts of Ballade No. 4) | |
 
+The right hand, from the user's reviews of the gallery (2026-10-29 and 30):
+
+- A right hand that **stays in one position** is easy, also with chords; fast notes that the hand plays without
+  moving are cheap for an experienced pianist.
+- **Medium**: fast, but with a shape that repeats (also going up and down); small usual chords of two or three notes,
+  now and then a usual chord of four; a few alterations (one note of the chord changed). Slow chords, even of four or
+  five notes with a jump, are medium when they are the usual chords of the key.
+- **Hard**: chords that move up and down in one run; fast notes without a repeated shape; many alterations or
+  ornaments. A fast **scale** or **usual arpeggio** that keeps its pattern, with the alterations of its key only, is
+  hard at most (the scale of Ballade No. 1, bars 255-256).
+- **Super hard** needs all of these at once: fast notes, a hand that must move, and shapes that are irregular (no
+  scale, no usual chord, many alterations) or full chords that move fast. Slow chords (negras, blancas) are never
+  super hard.
+- **The range is never the reason** for a level: a fast scale of the key over many octavas, without any variation,
+  is easy for the hand (one variation, as at the end of Ballade No. 1, makes it hard). What makes a fast run super
+  hard is, for example, **chords inside it whose spacing changes from one chord to the next** (a fifth, then a third,
+  then a second), so the hand cannot keep one shape while it moves (the cadenza of Nocturne Op. 32 No. 1, bars
+  60-61; the user, 2026-10-30).
+- **Jumps of changing size** in a fast line are hard: a line that moves by jumps of different sizes (never one tone
+  or one semitone at a time), with alterations, cannot follow a scale or a chord (Ballade No. 1, bars 130-131).
+- **A pattern that starts and then breaks** is super hard when it is fast: for example a frame of an octava with notes
+  inside it, then a frame of another distance (Do4-Do5, then Mi4 natural to Reb5), with naturals, sharps and flats
+  and no clear pattern, so the hand cannot keep one opening (Ballade No. 1, bars 150-152; the user, 2026-10-30).
+- **Two voices in one hand** are super hard when the left hand is busy at the same time: a melody on top (stems up,
+  fingers 4 and 5, held and sung) over an inner line of semicorcheas (stems down, the thumb and fingers 1 to 3) that
+  fills the time between two melody notes so the melody sounds continuous. Its forms: the inner line walking between
+  the notes of the chord; **chords or octavas on the beats with single notes between them** that keep the pulse while
+  the melody waits (accompaniment notes, not a new voice); **thirds going down and up** under the melody, now and then
+  with a third note (Ballade No. 4, bars 58-66, page 44; the user, 2026-10-30).
+
 Rules for every level, from the brief and from the earlier decisions:
 
 - **Decoration notes** only when it is very clear that the note is an ornament (the rule of implementation 04: one
@@ -816,7 +846,27 @@ snapshot. Two right-hand patterns moved from hard to medium under the user's rul
 patterns. Phase 3 uses the same rule in the right-hand part of the level prompts and in the check of section 5.5
 (a right hand that stays in one position may hold chords at every level).
 
-**Phase 2, approval and merge** (2026-10-29): the user approved the gallery after review 3. The names, levels and
+**Phase 2, review 4** (2026-10-30): the user made the rule for super hard stricter (section 5.1, the right hand).
+Slow chords are never super hard, and a fast scale or usual arpeggio that keeps its pattern is hard at most. Because
+of this, `full-chords-in-octaves` (Ballade No. 1, bars 106-108) moved from super hard to medium,
+`runs-in-groups` (Ballade No. 4, bars 152-153) from super hard to hard, and `scale-run` from medium to hard, with
+the scale of Ballade No. 1, bars 255-256, as a second example. The other super hard patterns stay. Then the user corrected the
+reason given for the cadenza of Nocturne Op. 32 No. 1: it is super hard because of the irregular chords inside the
+fast run, not because it covers more than two octavas; the rule is in section 5.1.
+
+**Phase 2, review 5** (2026-10-30): the user showed two more passages of Ballade No. 1 and their reasons: bars 130-131
+(a line of irregular jumps going up: hard) and bars 150-152 (octava frames whose pattern breaks, fast, with many
+alterations: super hard). Both are in the gallery (right hand, hard 20 and super hard 10), and their two rules are in
+section 5.1.
+
+**Phase 2, review 6** (2026-10-30): the user asked to study page 44 of the Ballades (Ballade No. 4, bars 56-67): the
+right hand plays two voices, a melody with stems up over semicorcheas with stems down that keep it continuous, chords
+with single notes between them, and thirds going down and up with a chord of three now and then, while the left hand
+plays its own jumps; all super hard. Three patterns, two bars each from the five lines of the page, are in the gallery
+(right hand, super hard 11 to 13); the rule is in section 5.1. The app draws one voice per hand, so its drawings show
+the two voices as one line of chords and single notes.
+
+**Phase 2, approval and merge** (2026-10-30): the user approved the gallery after review 6. The names, levels and
 numbers of [`gallery/04-3-phase-2/patterns.json`](gallery/04-3-phase-2/patterns.json) are now the approved ones: a
 new pattern takes the next number of its level, and no approved number changes (section 5.10 point 2). The branch
 was merged into `master` after Phase 1, and the user confirmed that Phase 2b comes before Phase 3, as section 8 says.
