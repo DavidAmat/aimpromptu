@@ -75,15 +75,16 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 
 # [ ] Phase 3: The level prompts, tested on 99 Red Balloons
 
-- [ ] Task 3.1 Study of 99 Red Balloons (`c0e39afe`): the passages of the two images and two or three more.
-- [ ] Task 3.2 The measures ported to the app's time, with tests.
-- [ ] Task 3.3 The grid of the song, measured on 99 Red Balloons and on one song played by a human.
-- [ ] Task 3.4 The prompts: a shared part and `easy.md`, `medium.md`, `hard.md`; a new `VERSION`; a place for the F1
+- [x] Task 3.1 Study of 99 Red Balloons (`c0e39afe`): the passages of the two images and two or three more.
+- [x] Task 3.2 The measures ported to the app's time, with tests.
+- [x] Task 3.3 The grid of the song, measured on 99 Red Balloons and on one song played by a human.
+- [x] Task 3.4 The prompts: a shared part and `easy.md`, `medium.md`, `hard.md`; a new `VERSION`; a place for the F1
   text of the patterns of a run and for the user's places by frame number (plan section 5.10).
-- [ ] Task 3.5 The plan of the song and its prompt.
-- [ ] Task 3.6 The check of a level run, with tests on recorded answers.
+- [x] Task 3.5 The plan of the song and its prompt.
+- [x] Task 3.6 The check of a level run, with tests on recorded answers.
 - [ ] Task 3.7 Tests with the AI (the user asked first, with the cost).
-- [ ] Task 3.8 The gallery `gallery/04-3-phase-3/`.
+- [ ] Task 3.8 The gallery `gallery/04-3-phase-3/` (first page done: the test passages, the patterns proposed per
+  level, the prompts; the AI versions come with task 3.7).
 - [ ] Task 3.9 The user's review, until the three levels are approved.
 
 # [ ] Phase 4: The levels in the app

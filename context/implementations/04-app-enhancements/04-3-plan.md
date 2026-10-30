@@ -885,3 +885,16 @@ start prompt also reads the Phase 2b report.
 
 **Phase 2b, approval and merge** (2026-10-30): the user approved the frame marks, the editable frames of the range
 toolbox and the lighting of decoration notes; the branch was merged into `master`. Phase 3 is next.
+
+**Phase 3, first part** (2026-10-30, [`04-3-implementation-phase-3.md`](04-3-implementation-phase-3.md)): the grid,
+the measures, the prompts, the plan of the song and the check are built and tested without the AI. Four points
+differ from sections 5.3 to 5.6. First, the grid tracks the pulse at the negra and at the corchea and keeps the
+steadier one, because on 99 Red Balloons the negra of the sheet (600 ms) is two pulses of the song (311 ms) and the
+tracker pulled to the negra wanders; a ternary song (7 Years) divides its negra in three. Second, hand motion is
+counted **per negra**, not per second: the same pattern moves as often per negra at any tempo, and per negra the
+gallery separates the levels (left hand: easy at most 0.6, medium up to 1.4, hard up to 2.0). Third, the answer of a
+batch writes only notes, hands and figures; the app draws beams, clefs, 8va and decoration notes by its rules, so the
+decoration-note rule holds at every level by construction. Fourth, an artifact is accepted only when it is more than
+an octava above the melody around it, or, where the melody line has nothing else (the riff with the high chords),
+more than an octava above every other note. The open point of section 5.10 about the pattern's text is settled: the
+prompt gets both hands of the first 8 negras of its first example.
