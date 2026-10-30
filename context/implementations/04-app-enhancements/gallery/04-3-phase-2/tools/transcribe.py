@@ -80,7 +80,23 @@ def passage(kern: str, bars: str) -> dict:
     return {"key": key, "notes": sorted(notes, key=lambda n: (n["q"], n["midi"]))}
 
 
-IR_EXAMPLES = {"ballade1-right-3", "ballade1-right-4", "ballade1-right-5"}  # bars music21 does not read (reviews 4, 5)
+IR_EXAMPLES = {"ballade1-right-3", "ballade1-right-4", "ballade1-right-5",  # bars music21 does not read (reviews 4, 5)
+               *(f"ballade4-right-{n}" for n in range(3, 9))}  # review 6: two voices in one hand, Ballade No. 4, page 44
+
+
+def _ballade4_bar65(notes: list[dict]) -> list[dict]:
+    """Ballade No. 4, bar 65, as the user's edition prints it. Both kern editions write the left hand's rising notes
+    (Do4, Mib4, Solb4, Fa4, second half) on the upper staff, and put an octava Solb4-Solb5 on the fourth corchea where
+    the edition has Mib4 over a held La4 natural (arpeggiated)."""
+    out = [n for n in notes if not (n["hand"] == 1 and n["q"] == 1.5 and n["midi"] in (66, 78))]
+    out.append({"q": 1.5, "len": 0.5, "midi": 63, "hand": 1})
+    for n in out:
+        if n["hand"] == 1 and n["q"] >= 2.0 and n["midi"] < 67:
+            n["hand"] = 2
+    return out
+
+
+FIX = {"ballade4-right-7": _ballade4_bar65}
 IR = Path("/home/david/Documents/projects/music/poc-aitu-research/data/derived/ir/nifc")
 
 
@@ -119,6 +135,13 @@ def passage_ir(kern: str, bars: str) -> dict:
     for (q, staff), ms_ in graces.items():
         for k, m in enumerate(reversed(ms_)):
             notes.append({"q": q - (k + 1) * GRACE_Q, "len": GRACE_LEN_Q, "midi": m, "hand": staff, "grace": True})
+    # a note that both voices of one hand share is printed once and played once: keep the longer
+    keep: dict[tuple, dict] = {}
+    for n in notes:
+        k = (n["q"], n["midi"], n["hand"], n.get("grace", False))
+        if k not in keep or n["len"] > keep[k]["len"]:
+            keep[k] = n
+    notes = list(keep.values())
     lo = min(n["q"] for n in notes)
     for n in notes:
         n["q"] -= min(lo, 0.0)
@@ -162,10 +185,12 @@ def main() -> None:
     data = {}
     for p in pats:
         for e in p["examples"]:
-            if e.get("kern") and e["image"].endswith(".png"):
+            if e.get("kern") and (e["image"] or "").endswith(".png"):
                 name = e["image"][:-4]
                 read = passage_ir if name in IR_EXAMPLES else passage
                 data[name] = read(e["kern"], e["kernBars"])
+                if name in FIX:
+                    data[name]["notes"] = sorted(FIX[name](data[name]["notes"]), key=lambda n: (n["q"], n["midi"]))
                 data[name]["key"] = KEY.get(name, data[name]["key"])
     (HERE / "transcribe_run.py").write_text(
         RUN.replace("__DATA__", repr(json.dumps(data))).replace("__Q__", repr(QUARTER_MS)))

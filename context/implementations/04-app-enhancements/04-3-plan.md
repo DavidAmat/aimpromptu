@@ -293,6 +293,12 @@ The right hand, from the user's reviews of the gallery (2026-10-29 and 30):
 - **A pattern that starts and then breaks** is super hard when it is fast: for example a frame of an octava with notes
   inside it, then a frame of another distance (Do4-Do5, then Mi4 natural to Reb5), with naturals, sharps and flats
   and no clear pattern, so the hand cannot keep one opening (Ballade No. 1, bars 150-152; the user, 2026-10-30).
+- **Two voices in one hand** are super hard when the left hand is busy at the same time: a melody on top (stems up,
+  fingers 4 and 5, held and sung) over an inner line of semicorcheas (stems down, the thumb and fingers 1 to 3) that
+  fills the time between two melody notes so the melody sounds continuous. Its forms: the inner line walking between
+  the notes of the chord; **chords or octavas on the beats with single notes between them** that keep the pulse while
+  the melody waits (accompaniment notes, not a new voice); **thirds going down and up** under the melody, now and then
+  with a third note (Ballade No. 4, bars 58-66, page 44; the user, 2026-10-30).
 
 Rules for every level, from the brief and from the earlier decisions:
 
@@ -805,3 +811,10 @@ fast run, not because it covers more than two octavas; the rule is in section 5.
 (a line of irregular jumps going up: hard) and bars 150-152 (octava frames whose pattern breaks, fast, with many
 alterations: super hard). Both are in the gallery (right hand, hard 20 and super hard 10), and their two rules are in
 section 5.1.
+
+**Phase 2, review 6** (2026-10-30): the user asked to study page 44 of the Ballades (Ballade No. 4, bars 56-67): the
+right hand plays two voices, a melody with stems up over semicorcheas with stems down that keep it continuous, chords
+with single notes between them, and thirds going down and up with a chord of three now and then, while the left hand
+plays its own jumps; all super hard. Three patterns, two bars each from the five lines of the page, are in the gallery
+(right hand, super hard 11 to 13); the rule is in section 5.1. The app draws one voice per hand, so its drawings show
+the two voices as one line of chords and single notes.

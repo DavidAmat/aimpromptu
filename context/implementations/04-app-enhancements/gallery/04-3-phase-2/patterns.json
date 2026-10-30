@@ -1374,6 +1374,111 @@
       "ref": "right super hard 10"
     },
     {
+      "hand": "right",
+      "level": "super hard",
+      "id": "melody-over-inner-semicorcheas",
+      "name": "A melody over its own inner semicorcheas",
+      "line": "Two voices in the right hand. On top, the melody in corcheas (stems up, fingers 4 and 5); under it, a line of semicorcheas (stems down, thumb and fingers 1 to 3) that fills the time between two melody notes, so that the melody sounds continuous. The inner line adds no new voice: it walks between the notes of the chord while the melody waits. Where both voices meet on a beat the hand plays a chord, between the beats a single note. Naturals come and go (Mi natural, La natural, Solb). Super hard because one hand plays two voices with different fingers and different weight, the melody held and sung, the inner line soft and even, while the left hand plays its own jumps and arpeggios.",
+      "examples": [
+        {
+          "image": "ballade4-right-3.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "58",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "58-58",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing. The app spells Mi natural as Fab (its rule under flats).",
+          "drawing": "transcribed/ballade4-right-3.svg",
+          "f1": "transcribed/ballade4-right-3.f1"
+        },
+        {
+          "image": "ballade4-right-8.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "66",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "66-66",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing.",
+          "drawing": "transcribed/ballade4-right-8.svg",
+          "f1": "transcribed/ballade4-right-8.f1"
+        }
+      ],
+      "number": 11,
+      "ref": "right super hard 11"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "chords-with-notes-between",
+      "name": "Chords with single notes between them",
+      "line": "The melody moves in octavas or chords on the beats (Do4-Do5, Mib4-Mib5, Solb4-Solb5), and between two of them the hand plays single notes (Sib4, Lab4, Sol4; Mib5, Fa5, Reb5, Do5, Sib4) that keep the pulse going while the melody waits for its next note. The single notes are accompaniment played by the right hand, not a new voice. Super hard because the hand opens to an octava or a chord and closes to one note at speed, again and again, with the melody on the top finger, while the left hand is busy.",
+      "examples": [
+        {
+          "image": "ballade4-right-4.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "60",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "60-60",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing.",
+          "drawing": "transcribed/ballade4-right-4.svg",
+          "f1": "transcribed/ballade4-right-4.f1"
+        },
+        {
+          "image": "ballade4-right-7.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "65",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "65-65",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing. Both kern editions differ from this edition in the second half of the bar; the drawing follows the edition: Mib4 over a held La natural 4, and the rising notes Do4-Mib4-Solb4-Fa4 in the left hand.",
+          "drawing": "transcribed/ballade4-right-7.svg",
+          "f1": "transcribed/ballade4-right-7.f1"
+        }
+      ],
+      "number": 12,
+      "ref": "right super hard 12"
+    },
+    {
+      "hand": "right",
+      "level": "super hard",
+      "id": "thirds-down-and-up-with-triads",
+      "name": "Thirds going down and up, now and then three notes",
+      "line": "Thirds in semicorcheas (Reb5-Fab5, Do5-Mib5, Sib4-Reb5, Lab4-Do5, Sol4-Sib4) that go down and come back up under a melody in corcheas (Sol5, Reb5, Fab5, Mib5), and from time to time a chord of three notes (Mib4-Lab4-Do5) or a wider one (Mib4-Reb5). Super hard because two fingers play fast thirds while the top finger holds and stresses the melody, the hand changes shape each time a third note joins, and Fab5 then Fa natural 5 come in the same bar.",
+      "examples": [
+        {
+          "image": "ballade4-right-5.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "63",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "63-63",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing.",
+          "drawing": "transcribed/ballade4-right-5.svg",
+          "f1": "transcribed/ballade4-right-5.f1"
+        },
+        {
+          "image": "ballade4-right-6.png",
+          "piece": "Ballade No. 4 in F minor, Op. 52",
+          "pdf": "ballades.pdf",
+          "page": 44,
+          "bars": "64",
+          "kern": "052-1-Sm.krn",
+          "kernBars": "64-64",
+          "note": "The app draws one voice per hand: the melody (stems up) and the inner notes (stems down) become one line of chords and single notes, so the two voices of the edition are not visible in the drawing. The edition writes a becuadro on the Fa5 after the Fab5 of the same bar; the app draws no bars and prints a sign only on notes outside the armadura, so its Fa5 has no sign (it is still Fa natural).",
+          "drawing": "transcribed/ballade4-right-6.svg",
+          "f1": "transcribed/ballade4-right-6.f1"
+        }
+      ],
+      "number": 13,
+      "ref": "right super hard 13"
+    },
+    {
       "hand": "left",
       "level": "easy",
       "id": "held-triad",
