@@ -13,10 +13,11 @@
  * A stretch the AI writes again with the user's words (Phase 7) is a job like a whole run: the page follows it the
  * same way, and the job's last message says when no answer was accepted (`notice`: the stretch stays as it was).
  * So is **Simplify** (implementation 04, Phase 4): its last message says how many notes the AI added and left out.
+ * So is a **level** of a range (implementation 04-3, Phase 4): its last message says when no batch was accepted.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { sheetApi, type FramesSheet, type SheetEdited, type StretchRequest } from "../../../../api";
+import { sheetApi, type FramesSheet, type LevelRequest, type SheetEdited, type StretchRequest } from "../../../../api";
 import { said } from "../../../library/shared";
 
 /** Messages closer than this are read as one. */
@@ -31,6 +32,10 @@ interface Summary {
   hand?: Hand;
   added?: number;
   leftOut?: number;
+  level?: string;
+  levelName?: string;
+  batches?: number;
+  total?: number;
 }
 
 const HAND_WORDS: Record<Hand, string> = { left: "the left hand", right: "the right hand", both: "both hands" };
@@ -47,6 +52,11 @@ function endNotice(summary: Summary): string | null {
   if (summary.simplify === "none") return `The AI found nothing to simplify${where}.`;
   if (summary.simplify === "failed") return "The AI could not simplify the sheet. It stays as it was.";
   if (summary.simplify === "stale") return "The notes changed while the AI worked. The sheet stays as it was.";
+  if (summary.level === "failed") return "The AI could not write this level. The sheet stays as it was.";
+  if (summary.level === "stale") return "The notes changed while the AI worked. The sheet stays as it was.";
+  if (summary.level === "ok" && summary.total && summary.batches !== undefined && summary.batches < summary.total) {
+    return `The AI wrote ${summary.batches} of ${summary.total} parts at the level; the others stay as they were.`;
+  }
   if (summary.simplify === "ok") {
     const parts = [summary.added ? `added ${notes(summary.added)}` : "", summary.leftOut ? `left out ${notes(summary.leftOut)}` : ""];
     return `The AI ${parts.filter(Boolean).join(" and ")}${where}.`;
@@ -68,6 +78,8 @@ export interface FramesSheetState {
   editError: string | null;
   /** Ask the AI to write a stretch again with the user's words (Phase 7). */
   enhanceStretch: (stretch: StretchRequest) => Promise<void>;
+  /** Ask the AI to write a range again at a level (implementation 04-3, Phase 4). */
+  level: (request: LevelRequest) => Promise<void>;
   /** Ask the AI to simplify one hand, or both, over the whole song (implementation 04, Phase 4). */
   simplify: (hand: Hand) => Promise<void>;
   /** A quiet word after the AI could not write a stretch again; cleared by the next edit or request. */
@@ -201,6 +213,21 @@ export function useFramesSheet(
     [audioUuid],
   );
 
+  const level = useCallback(
+    async (request: LevelRequest) => {
+      setNotice(null);
+      setEditError(null);
+      try {
+        await sheetApi.level(audioUuid, request);
+        setReload((value) => value + 1);
+        changed.current?.();
+      } catch (caught) {
+        setEditError(said(caught, "The AI could not be asked."));
+      }
+    },
+    [audioUuid],
+  );
+
   const edit = useCallback(
     async (call: () => Promise<SheetEdited>) => {
       if (editing) return null;
@@ -221,5 +248,5 @@ export function useFramesSheet(
     [audioUuid, editing],
   );
 
-  return { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, notice };
+  return { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, level, notice };
 }

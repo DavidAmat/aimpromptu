@@ -55,6 +55,13 @@ export type {
   SongRun,
   LlmCost,
   LlmCosts,
+  CatalogPattern,
+  LevelCatalog,
+  LevelChoice,
+  LevelCopy,
+  LevelHand,
+  LevelName,
+  LevelRequest,
 } from "./sheet";
 export { projectsApi } from "./projects";
 export type {

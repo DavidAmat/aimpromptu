@@ -280,6 +280,7 @@ def reindex() -> Report:
             row = db.get(Project, project_id) or Project(id=project_id)
             row.owner_id, row.layer, row.kind = owner, layer, project.kind
             row.title, row.based_on = project.title, project.based_on
+            row.level_of = project.level_of
             row.created_at, row.updated_at = project.created_at, project.updated_at
             db.merge(row)
             db.flush()

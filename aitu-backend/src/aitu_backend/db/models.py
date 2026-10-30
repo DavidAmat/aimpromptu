@@ -152,6 +152,9 @@ class Project(Base):
     #: The library project a vault project edits (section 10.6). Not a foreign key: the library
     #: project may be deleted while the copy is still open.
     based_on: Mapped[str | None] = mapped_column(String(36))
+    #: The project a level copy was written from (implementation 04-3, Phase 4): it shares that project's song and
+    #: metadata. Not ``based_on`` (a level copy is not an edit copy) and not a foreign key.
+    level_of: Mapped[str | None] = mapped_column(String(36))
     #: The public project a private copy was pulled from (section 15.1).
     public_source_id: Mapped[str | None] = mapped_column(String(36))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)

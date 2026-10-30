@@ -22,6 +22,11 @@
 * `POST /sheet/{uuid}/llm/simplify` — the AI simplifies one hand, or both, over the whole song, batch after batch
   (implementation 04, Phase 4); one step of undo. `GET /sheet/{uuid}/llm/costs` — what each run of the Enhance with
   AI dialog would cost, about.
+* The levels (implementation 04-3, Phase 4): `GET /sheet/levels/catalog` — the catalog of patterns of Enhance with
+  AI and the patterns used when none is selected; `GET /sheet/levels/catalog/{hand}/{level}/{number}.svg` — the
+  drawing of a pattern's example by the app's engine. `POST /sheet/{uuid}/llm/level` — the AI writes a range again
+  at a level, in place (one step of undo); `POST /sheet/{uuid}/llm/level-copy` — a level of the whole sheet, written
+  into a new project of My projects (the level copy), whose ids it answers.
 * `GET` and `PUT /sheet/{uuid}/words` — the pasted lyrics of the part and its pool of pieces (the Lyrics tab), kept
   in `project.json`, not in the sheet (moved from `/time/{uuid}/lyrics` in implementation 03, Phase 10).
 
@@ -39,6 +44,8 @@ from typing import Literal
 from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
+from fastapi.responses import Response
+
 from aitu_backend.audio import store as audio_store
 from aitu_backend.auth import context, rights
 from aitu_backend.auth.dependencies import require_part
@@ -47,6 +54,8 @@ from aitu_backend.part_sheet import build, edits, job, reading
 from aitu_backend.part_sheet import store as new_sheet_store
 from aitu_backend.sheet.engrave import frames as frames_engine
 from aitu_backend.sheet.sheet import f1
+from aitu_backend.library import flow
+from aitu_backend.sheet.llm import levels
 from aitu_backend.storage import bundle, locate
 from aitu_backend.transcription import pipeline
 
@@ -99,6 +108,50 @@ def _llm_state(audio_uuid: str, drawn: build.Drawn, running: Any) -> dict[str, A
         "usd": drawn.record.usd if drawn.record is not None else None,
         "written": drawn.record.written if drawn.record is not None else None,
     }
+
+
+# ------------------------------------------------------------------ the catalog of patterns (before /{audio_uuid})
+
+
+class CatalogPattern(BaseModel):
+    ref: str
+    hand: str
+    level: str
+    number: int
+    name: str
+    line: str
+    source: str | None = None
+    bars: str | None = None
+
+
+class CatalogOut(BaseModel):
+    patterns: list[CatalogPattern]
+    #: ``hand -> level -> refs``: the patterns a run uses for a hand when none is selected.
+    defaults: dict[str, dict[str, list[str]]]
+
+
+@router.get("/levels/catalog", response_model=CatalogOut)
+def level_catalog() -> CatalogOut:
+    """The catalog of patterns of Enhance with AI (the gallery of patterns, numbered inside each hand and level)."""
+    patterns, defaults = levels.catalog_rows()
+    return CatalogOut(patterns=[CatalogPattern(**p) for p in patterns], defaults=defaults)
+
+
+_drawings: dict[str, str] = {}
+
+
+@router.get("/levels/catalog/{hand}/{level}/{number}.svg")
+def level_drawing(hand: Literal["left", "right"], level: str, number: int) -> Response:
+    """A pattern's example drawn by the app's engine (``super-hard`` for super hard), kept in memory once drawn."""
+    ref = f"{hand} {level.replace('-', ' ')} {number}"
+    pattern = levels.catalog().get(ref)
+    if pattern is None:
+        raise HTTPException(status_code=404, detail=f"No pattern '{ref}'")
+    if ref not in _drawings:
+        _drawings[ref] = frames_engine.render_frames(pattern.example, px_per_space=10.0, note_ids=False).svg
+    return Response(
+        _drawings[ref], media_type="image/svg+xml", headers={"Cache-Control": "max-age=86400"}
+    )
 
 
 @router.get("/{audio_uuid}")
@@ -469,11 +522,125 @@ def run_llm_simplify(audio_uuid: str, body: SimplifyRequest = Body(...)) -> dict
     return {"jobId": started.id, "status": started.status}
 
 
-@router.get("/{audio_uuid}/llm/costs")
-def llm_costs(audio_uuid: str) -> dict[str, Any]:
-    """What each run of the Enhance with AI dialog would cost, about: requests and US dollars."""
+Level = Literal["easy", "medium", "hard"]
+
+
+class LevelRequest(BaseModel):
+    #: The level of each hand (the same for both by default).
+    right: Level = "easy"
+    left: Level = "easy"
+    hand: Literal["both", "right", "left"] = "both"
+    #: A range (``POST .../llm/level``): its first frame and its end; none for a level of the whole sheet.
+    start: int | None = Field(default=None, ge=0)
+    end: int | None = Field(default=None, ge=1)
+    #: The refs selected in the catalog ("left medium 2").
+    patterns: list[str] = Field(default_factory=list, max_length=200)
+    words: str = Field(default="", max_length=1000)
+
+    def level(self) -> str | dict[str, str]:
+        if self.hand == "right":
+            return self.right
+        if self.hand == "left":
+            return self.left
+        return self.right if self.right == self.left else {"right": self.right, "left": self.left}
+
+
+LEVEL_TITLES = {"easy": "Easy", "medium": "Medium", "hard": "Hard"}
+
+
+def level_title(body: LevelRequest) -> str:
+    """The name of a level copy after its song's: ``Easy``, ``Right hard, left medium``, ``Easy, left hand``."""
+    level = body.level()
+    if isinstance(level, dict):
+        return f"Right {level['right']}, left {level['left']}"
+    name = LEVEL_TITLES[level]
+    return name if body.hand == "both" else f"{name}, {body.hand} hand"
+
+
+def _start_level(part_id: str, body: LevelRequest, start: int | None, end: int | None) -> Any:
+    try:
+        return job.start_level(
+            part_id,
+            level=body.level(),
+            hand=body.hand,
+            start=start,
+            end=end,
+            patterns=body.patterns,
+            words=body.words,
+        )
+    except job.Busy as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/{audio_uuid}/llm/level", status_code=202)
+def run_llm_level(audio_uuid: str, body: LevelRequest = Body(...)) -> dict[str, str]:
+    """The AI writes a range of the sheet again at a level, in place, in the background (one step of undo)."""
     _notes_or_404(audio_uuid)
-    return job.costs(audio_uuid)
+    if not job.available():
+        raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
+    if body.start is None or body.end is None or body.end <= body.start:
+        raise HTTPException(status_code=400, detail="Select a range first.")
+    if not _writes(audio_uuid):
+        raise HTTPException(status_code=403, detail="This sheet cannot be changed here.")
+    started = _start_level(audio_uuid, body, body.start, body.end)
+    return {"jobId": started.id, "status": started.status}
+
+
+class LevelCopyOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    job_id: str = Field(alias="jobId")
+    project_id: str = Field(alias="projectId")
+    part_id: str = Field(alias="partId")
+    title: str
+
+
+@router.post("/{audio_uuid}/llm/level-copy", status_code=202, response_model=LevelCopyOut, response_model_by_alias=True)
+def run_llm_level_copy(audio_uuid: str, body: LevelRequest = Body(...)) -> LevelCopyOut:
+    """A level of the whole sheet (plan section 5.8): a new project of My projects, a copy of the song named with the
+    level ("99 Red Balloons · Easy"), where the AI writes the level in the background. The original does not
+    change. The user's own projects and versions of My Library only."""
+    user = context.current()
+    where = locate.part(audio_uuid)
+    if user is not None and (where.owner_id != user.id or where.layer not in ("vault", "private")):
+        raise HTTPException(status_code=403, detail="Only your own songs can have a level.")
+    _notes_or_404(audio_uuid)
+    if not job.available():
+        raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
+    current = f1.read(build.current(audio_uuid).text)
+    staffs = (1, 2) if body.hand == "both" else ((1,) if body.hand == "right" else (2,))
+    if not levels.level_windows(current, staffs):
+        raise HTTPException(status_code=400, detail="This hand has no notes.")
+    source = bundle.read_project(where.project_id)
+    title = f"{source.title} · {level_title(body)}"
+    try:
+        copy_id, parts = flow.level_copy(
+            where.project_id, owner=user.id if user is not None else where.owner_id, title=title
+        )
+    except flow.Refused as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    part_id = parts[audio_uuid]
+    started = _start_level(part_id, body, None, None)
+    return LevelCopyOut(job_id=started.id, project_id=copy_id, part_id=part_id, title=title)
+
+
+@router.get("/{audio_uuid}/llm/costs")
+def llm_costs(
+    audio_uuid: str,
+    start: int | None = Query(None, ge=0),
+    end: int | None = Query(None, ge=1),
+) -> dict[str, Any]:
+    """What each run of the Enhance with AI dialog would cost, about: requests and US dollars. With a range
+    (``start``, ``end``), also a level of that range for each hand (``level-stretch-both`` ...)."""
+    _notes_or_404(audio_uuid)
+    out = job.costs(audio_uuid)
+    if start is not None and end is not None and end > start:
+        current = f1.read(build.current(audio_uuid).text)
+        for hand in job.HANDS:
+            out[f"level-stretch-{hand}"] = job.level_cost(current, hand, start, end)
+    return out
 
 
 @router.post("/{audio_uuid}/undo")

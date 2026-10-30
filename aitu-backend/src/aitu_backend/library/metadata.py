@@ -24,6 +24,11 @@ The metadata follows the work between the two pages:
   copy edits the same version, so it shares the song's.
 * A deleted version leaves its edit copy an ordinary project, which keeps the song's metadata as
   its own (:func:`copy_song_tags`).
+* A **level copy** (implementation 04-3, Phase 4: a level of the whole sheet written into a new
+  project, ``projects.level_of``) has no rows of its own either: it shares the metadata of the
+  project it was written from (:func:`homes`), that is its song's, or that project's own rows
+  when it has no song. A deleted original leaves its level copies with its metadata as their own
+  (:func:`release_levels`).
 
 A secondary key that no song and no project uses any more is deleted, so the Filter and the
 suggestions only offer values in use.
@@ -33,7 +38,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session as DbSession
 
 from aitu_backend.db.models import (
@@ -59,6 +64,8 @@ __all__ = [
     "copy_public_tags",
     "copy_song_tags",
     "edited_songs",
+    "homes",
+    "release_levels",
     "public_tags_of",
     "set_project_tags",
     "set_song_tags",
@@ -149,17 +156,63 @@ def _forget_unused(db: DbSession, owner: int) -> None:
     )
 
 
-def edited_songs(db: DbSession, project_ids: list[str]) -> dict[str, int]:
-    """``project id -> the song of the version it edits``, for the edit copies among the ids (a
-    copy whose version was deleted is an ordinary project)."""
+def homes(db: DbSession, project_ids: list[str]) -> dict[str, str]:
+    """``project id -> the project whose metadata it shares``: a level copy's original
+    (``level_of``), else itself."""
     if not project_ids:
         return {}
-    found = db.execute(
-        select(Project.id, PrivateVersion.song_id)
-        .join(PrivateVersion, PrivateVersion.project_id == Project.based_on)
-        .where(Project.id.in_(project_ids), Project.layer == "vault")
+    found = dict(
+        db.execute(
+            select(Project.id, Project.level_of).where(
+                Project.id.in_(project_ids), Project.level_of.is_not(None)
+            )
+        ).all()
     )
-    return {project_id: int(song_id) for project_id, song_id in found}
+    return {project_id: found.get(project_id) or project_id for project_id in project_ids}
+
+
+def edited_songs(db: DbSession, project_ids: list[str]) -> dict[str, int]:
+    """``project id -> its song``, for the edit copies among the ids (the song of the version it
+    edits; a copy whose version was deleted is an ordinary project) and the level copies whose
+    original has a song (an edit copy, or a version of My Library)."""
+    if not project_ids:
+        return {}
+    home = homes(db, project_ids)
+    targets = sorted(set(home.values()))
+    songs = {
+        project_id: int(song_id)
+        for project_id, song_id in db.execute(
+            select(Project.id, PrivateVersion.song_id)
+            .join(PrivateVersion, PrivateVersion.project_id == Project.based_on)
+            .where(Project.id.in_(targets), Project.layer == "vault")
+        )
+    }
+    originals = sorted({h for p, h in home.items() if h != p})
+    if originals:
+        songs.update(
+            (project_id, int(song_id))
+            for project_id, song_id in db.execute(
+                select(PrivateVersion.project_id, PrivateVersion.song_id).where(
+                    PrivateVersion.project_id.in_(originals)
+                )
+            )
+        )
+    return {project_id: songs[h] for project_id, h in home.items() if h in songs}
+
+
+def release_levels(db: DbSession, owner: int, original_id: str) -> list[str]:
+    """The original of level copies is deleted: each copy keeps the metadata it shared as its own,
+    and stops pointing at it (as an edit copy whose version is deleted). Returns the copies (the
+    caller writes their ``project.json``)."""
+    copies = list(db.scalars(select(Project.id).where(Project.level_of == original_id)))
+    if not copies:
+        return []
+    shared = tags_of_projects(db, [copies[0]])[copies[0]]
+    db.execute(update(Project).where(Project.id.in_(copies)).values(level_of=None))
+    db.flush()
+    for copy_id in copies:
+        _add(db, owner, None, copy_id, shared)
+    return copies
 
 
 def set_project_tags(db: DbSession, owner: int, project_id: str, tags: list[Tag]) -> list[Tag]:
@@ -168,9 +221,11 @@ def set_project_tags(db: DbSession, owner: int, project_id: str, tags: list[Tag]
     song_id = edited_songs(db, [project_id]).get(project_id)
     if song_id is not None:
         return set_song_tags(db, owner, song_id, tags)
+    # A level copy of a project with no song changes that project's rows.
+    home = homes(db, [project_id])[project_id]
     ids = _value_ids(db, owner, tags)
-    db.execute(delete(ProjectTag).where(ProjectTag.project_id == project_id))
-    db.add_all(ProjectTag(project_id=project_id, tag_value_id=one) for one in ids)
+    db.execute(delete(ProjectTag).where(ProjectTag.project_id == home))
+    db.add_all(ProjectTag(project_id=home, tag_value_id=one) for one in ids)
     db.flush()
     _forget_unused(db, owner)
     return tags_of_projects(db, [project_id])[project_id]
@@ -188,8 +243,11 @@ def set_song_tags(db: DbSession, owner: int, song_id: int, tags: list[Tag]) -> l
 
 
 def tags_of_projects(db: DbSession, project_ids: list[str]) -> dict[str, list[Tag]]:
-    """``project id -> its metadata``, for every id asked: an edit copy's is its song's."""
-    out = _own_tags_of_projects(db, project_ids)
+    """``project id -> its metadata``, for every id asked: an edit copy's is its song's, a level
+    copy's its original's."""
+    home = homes(db, project_ids)
+    own = _own_tags_of_projects(db, sorted(set(home.values())))
+    out = {project_id: own[home[project_id]] for project_id in project_ids}
     edited = edited_songs(db, project_ids)
     songs = tags_of_songs(db, sorted(set(edited.values())))
     for project_id, song_id in edited.items():
@@ -294,8 +352,9 @@ def copy_song_tags(db: DbSession, owner: int, song_id: int, project_id: str) -> 
 
 def copy_project_tags(db: DbSession, owner: int, source_id: str, project_id: str) -> None:
     """**Duplicate** of a project of My projects: the copy gets the original's metadata as its own.
-    The duplicate of an edit copy edits the same version, so it has its song's and nothing more."""
-    if project_id in edited_songs(db, [project_id]):
+    The duplicate of an edit copy edits the same version, so it has its song's and nothing more;
+    the duplicate of a level copy shares its original's."""
+    if project_id in edited_songs(db, [project_id]) or homes(db, [project_id])[project_id] != project_id:
         return
     _add(db, owner, None, project_id, tags_of_projects(db, [source_id])[source_id])
 

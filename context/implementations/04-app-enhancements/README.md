@@ -48,5 +48,6 @@ worktree (plan section 7.4). Phases 1 and 2 are merged.
 | [`screenshots/04-3-phase-2b/`](screenshots/04-3-phase-2b/) | Phase 2b: the marks on 99 Red Balloons (page and print), a song with lyrics, the range toolbox and a typed range |
 | [`04-3-implementation-phase-3.md`](04-3-implementation-phase-3.md) | Phase 3: the grid, the chords, the measures, the level prompts, the plan of the song and the check |
 | [`gallery/04-3-phase-3/`](gallery/04-3-phase-3/index.html) | Phase 3: the test passages of 99 Red Balloons, the patterns of each level, the prompts (and the AI's versions after task 3.7) |
+| [`04-3-implementation-phase-4.md`](04-3-implementation-phase-4.md) | Phase 4: the level copy (`projects.level_of`), the catalog in the backend, the level run and its storing, the dialog, the first-minute AI test |
 | [`images/chopin_passages/`](images/chopin_passages/) | The Chopin snapshots of the gallery, and the user's `ballade1-ex1.png` |
 | [`images/99-red-ballons-issue.png`](images/99-red-ballons-issue.png), [`images/whole-song-simplification.png`](images/whole-song-simplification.png) | The user's two examples of a machine transcription that the levels must fix |

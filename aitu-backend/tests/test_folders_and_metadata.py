@@ -26,7 +26,7 @@ from aitu_backend.db.models import (
     TagCategory,
     TagValue,
 )
-from aitu_backend.library import public, rows
+from aitu_backend.library import flow, public, rows
 from aitu_backend.storage import bundle
 from test_public import ALIVE, people, ready, song_id  # noqa: F401 - `people` is a fixture
 
@@ -342,3 +342,60 @@ def test_save_to_library_and_duplicate_carry_the_metadata(people: dict) -> None:
     assert anna.get(f"/library/songs/{saved.json()['songId']}").json()["tags"] == tags
     with session() as db:
         assert list(db.scalars(select(FolderProject.project_id))) == [copy["id"]]
+
+
+def test_a_level_copy_shares_the_songs_metadata_and_is_not_an_edit_copy(people: dict) -> None:  # noqa: F811
+    """Implementation 04-3, Phase 4 (the user, 2026-10-30): a level of the whole sheet is a new project linked to the
+    project it was written from (``level_of``), never a second edit copy of the version."""
+    anna_id, anna = people["anna"]
+    saved = anna.post(
+        f"/projects/{ready(anna)}/library",
+        json={"song": "99 Red Balloons", "artist": "Nena", "version": "Original"},
+    ).json()
+    song = saved["songId"]
+    copy = anna.post(f"/projects/{saved['projectId']}/edit").json()["id"]
+    films = [{"category": "films", "value": "Atomic Blonde"}]
+    assert anna.put(f"/metadata/songs/{song}", json={"tags": films}).status_code == 200
+
+    # A level of the edit copy, and a level of the version itself (from My Library): both share the song's.
+    easy, _ = flow.level_copy(copy, owner=anna_id, title="99 Red Balloons · Easy")
+    hard, _ = flow.level_copy(saved["projectId"], owner=anna_id, title="99 Red Balloons · Hard")
+    for level in (easy, hard):
+        info = anna.get(f"/metadata/info/{level}").json()
+        assert (info["kind"], info["songId"], info["tags"]) == ("song", song, films)
+        row = project_row(anna, level)
+        assert row["tags"] == films and row["basedOn"] is None and row["editing"] is None
+        assert row["levelSong"]["songId"] == song and row["levelSong"]["artists"] == ["Nena"]
+    assert project_row(anna, easy)["levelOf"] == copy
+    # A level of a level points at the same original.
+    again, _ = flow.level_copy(easy, owner=anna_id, title="99 Red Balloons · Easy 2")
+    assert project_row(anna, again)["levelOf"] == copy
+    # Edit on the version still opens the user's own copy, never a level copy.
+    assert anna.post(f"/projects/{saved['projectId']}/edit").json()["id"] == copy
+    # A change made from a level copy is the song's.
+    both = films + [{"category": "tv_shows", "value": "Dark"}]
+    assert anna.put(f"/metadata/projects/{easy}", json={"tags": both}).status_code == 200
+    assert song_row(anna, song)["tags"] == both
+    with session() as db:
+        assert db.scalar(select(func.count()).select_from(ProjectTag)) == 0
+
+    # A project with no song: its level copy shares the project's own rows, and keeps them when it is deleted.
+    plain = vault_project(anna_id, "Sketch")
+    assert anna.put(f"/metadata/projects/{plain}", json={"tags": films}).status_code == 200
+    sketch, _ = flow.level_copy(plain, owner=anna_id, title="Sketch · Medium")
+    assert anna.get(f"/metadata/info/{sketch}").json()["tags"] == films
+    assert anna.put(f"/metadata/projects/{sketch}", json={"tags": both}).status_code == 200
+    assert project_row(anna, plain)["tags"] == both
+    assert anna.delete(f"/projects/{plain}").status_code == 204
+    row = project_row(anna, sketch)
+    assert row["levelOf"] is None and row["tags"] == both
+    assert bundle.read_project(sketch).level_of is None
+
+    # Save to library: the level copy becomes a version of the song and stops being a copy.
+    out = anna.post(f"/projects/{hard}/library", json={"songId": song, "version": "Hard"}).json()
+    assert out["songId"] == song and bundle.read_project(hard).level_of is None
+    assert song_row(anna, song)["tags"] == both
+
+    # Nobody else makes a level of anna's song.
+    with pytest.raises(flow.Refused):
+        flow.level_copy(copy, owner=people["master"][0], title="no")

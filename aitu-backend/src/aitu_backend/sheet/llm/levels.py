@@ -71,7 +71,12 @@ __all__ = [
     "batch_prompt",
     "check_level",
     "level_feedback",
+    "catalog",
+    "catalog_rows",
     "load_patterns",
+    "run_refs",
+    "level_windows",
+    "splice",
     "plan_prompt",
     "read_declared",
     "read_plan",
@@ -181,14 +186,21 @@ def _bare(sheet: Sheet) -> Sheet:
     return replace(sheet, notes=notes, clefs={1: "G2", 2: "F4"}, clef_changes=[]).sort()
 
 
-def load_patterns(catalog: Path) -> dict[str, Pattern]:
-    """The patterns of a catalog folder (``patterns.json`` and the F1 files of the examples next to it, the gallery
-    of Phase 2), by ``ref``. The example of a pattern is its first one."""
+#: The catalog of patterns (implementation 04-3, Phase 4: moved from the gallery of Phase 2): ``patterns.json`` and
+#: the F1 text of the first example of each pattern.
+CATALOG_DIR = Path(__file__).with_name("catalog")
+
+
+def load_patterns(catalog: Path = CATALOG_DIR) -> dict[str, Pattern]:
+    """The patterns of a catalog folder, by ``ref``: the backend's catalog (each pattern with ``f1``, the file of its
+    example), or a gallery folder of Phase 2 (``examples``, the first one with an F1 file)."""
     data = json.loads((catalog / "patterns.json").read_text(encoding="utf-8"))
     out = {}
     for p in data["patterns"]:
-        ex = next((e for e in p["examples"] if e.get("f1") and (catalog / e["f1"]).exists()), None)
-        if ex is None:
+        f1_file = p.get("f1") or next(
+            (e["f1"] for e in p.get("examples", []) if e.get("f1") and (catalog / e["f1"]).exists()), None
+        )
+        if f1_file is None or not (catalog / f1_file).exists():
             continue
         out[p["ref"]] = Pattern(
             ref=p["ref"],
@@ -197,8 +209,50 @@ def load_patterns(catalog: Path) -> dict[str, Pattern]:
             number=p["number"],
             name=p["name"],
             line=p["line"],
-            example=(catalog / ex["f1"]).read_text(encoding="utf-8"),
+            example=(catalog / f1_file).read_text(encoding="utf-8"),
         )
+    return out
+
+
+_catalog: dict[str, Pattern] | None = None
+
+
+def catalog() -> dict[str, Pattern]:
+    """The backend's catalog, read once."""
+    global _catalog
+    if _catalog is None:
+        _catalog = load_patterns()
+    return _catalog
+
+
+def catalog_rows() -> tuple[list[dict], dict[str, dict[str, list[str]]]]:
+    """The catalog for the Enhance with AI dialog: every pattern without its example text, in the order of the
+    gallery, and the patterns used when none is selected (``defaults``)."""
+    data = json.loads((CATALOG_DIR / "patterns.json").read_text(encoding="utf-8"))
+    rows = [
+        {k: p[k] for k in ("ref", "hand", "level", "number", "name", "line", "source", "bars")}
+        for p in data["patterns"]
+    ]
+    defaults = {
+        hand: {level: [f"{hand} {level} {n}" for n in numbers] for level, numbers in by_level.items()}
+        for hand, by_level in data["defaults"].items()
+        if hand in STAFF
+    }
+    return rows, defaults
+
+
+def run_refs(level: "Level", staffs: tuple[int, ...], selected: list[str], words: str = "") -> list[str]:
+    """The refs of a run: the patterns selected and the ones the words name (of the hands rewritten); a hand with
+    none of them gets the patterns of its level used when none is selected (the user, 2026-10-30)."""
+    known = catalog()
+    hands = tuple(HANDS[s] for s in staffs)
+    out = [r for r in [*selected, *refs_in(words, hands)] if r in known and known[r].hand in hands]
+    out = list(dict.fromkeys(out))
+    _, defaults = catalog_rows()
+    lv = hand_levels(level)
+    for s in staffs:
+        if not any(known[r].hand == HANDS[s] for r in out):
+            out += [r for r in defaults[HANDS[s]].get(lv[s], []) if r in known]
     return out
 
 
@@ -1038,6 +1092,55 @@ def drawn(sheet: Sheet, quarter_ms: float, *, key: int, key_changes=None, keep: 
     ).sheet
 
 
+def level_windows(
+    current: Sheet, staffs: tuple[int, ...], start: int | None = None, end: int | None = None
+) -> list[tuple[int, int]]:
+    """The batches of a level run: of the whole song, or of the stretch ``[start, end)`` (a range), on the notes of
+    the hands rewritten (``LEVEL_MS``, at most ``LEVEL_ONSETS`` onsets)."""
+    lo = -(10**9) if start is None else start
+    hi = 10**9 if end is None else end
+    notes = [n for n in current.notes if n.staff in staffs and not n.covered and lo <= n.frame < hi]
+    if not notes:
+        return []
+    wins = windows_of(
+        Sheet(notes=notes, clefs=dict(current.clefs), key=current.key), span=LEVEL_MS, max_onsets=LEVEL_ONSETS
+    )
+    if start is not None and wins:
+        wins[0] = (start, wins[0][1])
+    if end is not None and wins:
+        wins[-1] = (wins[-1][0], end)
+    return wins
+
+
+def splice(
+    current: Sheet,
+    written: list[Note],
+    windows: list[tuple[int, int]],
+    staffs: tuple[int, ...],
+    *,
+    reading: bool = False,
+) -> Sheet:
+    """``current`` with the notes of the hands rewritten inside ``windows`` (the batches accepted) replaced by
+    ``written``: what is stored (the other hand, and the batches that failed, stay as they are). ``reading``: the
+    notes are the answer as the app draws it (:func:`drawn`): they keep their beam groups, numbered after the ones
+    of the rest of the sheet, and their decoration notes; else (an answer as written) they have neither."""
+
+    def inside(frame: int) -> bool:
+        return any(a <= frame < b for a, b in windows)
+
+    kept = [n for n in current.notes if not (n.staff in staffs and inside(n.frame))]
+    if reading:
+        offset = max((n.beam for n in kept if n.beam is not None), default=0) + 1
+        new = [
+            replace(n, beam=None if n.beam is None else n.beam + offset, tgroup=None)
+            for n in written
+            if n.staff in staffs and inside(n.frame)
+        ]
+    else:
+        new = [replace(n, beam=None, grace=None, gslot=0) for n in written if n.staff in staffs and inside(n.frame)]
+    return replace(current, notes=kept + new).sort()
+
+
 @dataclass
 class LevelRun:
     level: Level
@@ -1061,40 +1164,47 @@ def write_level(
     words: str = "",
     windows: list[tuple[int, int]] | None = None,
     plan: list[Section] | None = None,
+    span: tuple[int, int] | None = None,
     max_checks: int = MAX_CHECKS,
+    on_plan: Callable[[WindowLog], None] | None = None,
     on_batch: Callable[[WindowLog, Batch], None] | None = None,
 ) -> LevelRun:
     """A level run in memory: the plan of the song (unless ``plan`` is given), then the batches (``windows``, or the
-    batches of the whole song), each checked, at most ``max_checks`` replies. A batch that fails keeps no answer."""
+    batches of the whole song), each checked, at most ``max_checks`` replies. A batch that fails keeps no answer.
+    ``span``: a range of the song (implementation 04-3, Phase 4): the plan covers only it."""
     system = system_prompt(level, patterns)
     allowed = {p.ref for p in patterns}
     notes = [n for n in current.notes if not n.covered]
+    if span is not None:
+        notes = [n for n in notes if span[0] <= n.frame < span[1]]
     start, end = min(n.frame for n in notes), max(n.frame for n in notes) + 1
+    if span is not None:
+        start, end = span
     plan_log = WindowLog(k=-1, start=start, end=end)
     if plan is None:
-        summary, _ = song_summary(current, grid, staffs)
+        planned = current if span is None else replace(current, notes=notes)
+        summary, _ = song_summary(planned, grid, staffs)
         messages = [{"role": "user", "content": plan_prompt(sid=sid, level=level, staffs=staffs, summary=summary, start=start, end=end, words=words)}]
         plan = []
         errs = ["no reply"]
-        while plan_log.replies < max_checks:
-            reply = complete(system, messages)
-            plan_log.replies += 1
-            errs, plan = read_plan(reply, allowed, staffs, start, end)
-            if not errs:
-                break
-            plan_log.errors.append(errs)
-            messages += [{"role": "assistant", "content": reply}, {"role": "user", "content": level_feedback(errs)}]
-        plan_log.status = "failed" if errs else "ok"
+        try:
+            while plan_log.replies < max_checks:
+                reply = complete(system, messages)
+                plan_log.replies += 1
+                errs, plan = read_plan(reply, allowed, staffs, start, end)
+                if not errs:
+                    break
+                plan_log.errors.append(errs)
+                messages += [{"role": "assistant", "content": reply}, {"role": "user", "content": level_feedback(errs)}]
+            plan_log.status = "failed" if errs else "ok"
+        except Exception as exc:  # noqa: BLE001 (no credits, no network: nothing is written)
+            errs, plan = [str(exc)], []
+            plan_log.status, plan_log.note = "error", f"{type(exc).__name__}: {exc}"
+        if on_plan:
+            on_plan(plan_log)
         if errs:
             return LevelRun(level, staffs, [], plan_log, [], replace(current, notes=[]))
-    wins = windows or [
-        (a, b)
-        for a, b in windows_of(
-            Sheet(notes=[n for n in current.notes if n.staff in staffs], clefs=dict(current.clefs), key=current.key),
-            span=LEVEL_MS,
-            max_onsets=LEVEL_ONSETS,
-        )
-    ]
+    wins = windows or level_windows(current, staffs, *(span or (None, None)))
     cs_all = chords(current, grid)
     written: list[Note] = []
     done: list[tuple[int, int]] = []

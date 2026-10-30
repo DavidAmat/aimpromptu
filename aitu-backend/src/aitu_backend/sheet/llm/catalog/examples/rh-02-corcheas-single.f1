@@ -1,0 +1,26 @@
+F1 frames frameMs=40 quarterMs=600
+key=1b clefs: R=treble L=bass
+[]x25
+f25      L: F3:4  R: F5:8 b1
+[]x7
+f33      R: A5:8 b1
+[]x6
+f40      L: clef=treble C4,A4:4  R: C6:8 b1
+[]x7
+f48      R: E6:8 b1
+[]x6
+f55      L: C4,A4:4  R: F6:8 b1
+[]x7
+f63      R: C6:8 b2
+[]x6
+f70      L: F3:4  R: A6:8 b2
+[]x7
+f78      R: G6:8 b2
+[]x6
+f85      L: C4,A4:4  R: F6:8 b2
+[]x7
+f93      R: C6:8 b2
+[]x6
+f100     L: D4,Bb4:4  R: E6:8 b3
+[]x7
+f108     R: D6:8 b3
