@@ -309,3 +309,34 @@ def _block(reply: str) -> str:
 
 def test_the_grid_tolerance_is_one_frame() -> None:
     assert grid_mod.TOLERANCE == 1
+
+
+def test_a_level_per_hand_takes_each_hand_part_and_its_limits() -> None:
+    level = {"right": "hard", "left": "medium"}
+    text = L.system_prompt(level, [_pattern("left medium 2"), _pattern("right hard 1")])
+    assert "## The right hand at hard" in text and "## The left hand at medium" in text
+    assert "## The left hand at hard" not in text and "## The right hand at medium" not in text
+    assert "hard for the right hand, medium for the left hand" in text.replace("levels of this run: ", "")
+    assert L.level_name(level) == "hard for the right hand and medium for the left hand"
+    s = song("wide")
+    lines = [line.replace("R: E5:4", "R: G4,C5,E5:4") for line in easy_lines(s)]  # a three-note chord: hard only
+    declared = ["# pattern L f30-f510: left medium 2", "# pattern R f30-f510: right hard 1"]
+    allowed = ("left medium 2", "right hard 1")
+    assert checked(answer(lines, declared), s, level=level, allowed=allowed).errors == []
+    wide = [line.replace("L: C3,E3,G3:2", "L: C3,E3,G3,C4:2") for line in lines]  # four notes: not medium
+    r = checked(answer(wide, declared), s, level=level, allowed=allowed)
+    assert any(e.startswith("L: 2 columns are beyond the level") for e in r.errors)
+
+
+def test_where_the_right_hand_has_only_an_artifact_the_left_hand_tops_go_to_the_right_hand() -> None:
+    lines = [f"f{30 + k * Q} L: E2,E3,B3,{'E4' if k % 2 == 0 else 'C#4'}:4" for k in range(8)]
+    riff = f1.read(HEAD + "\n".join(lines[:3] + ["f75 L: E2,E3,B3,C#4:4  R: D#7,E7:4"] + lines[4:]) + "\n")
+    declared = ["# pattern L f30-f150: left medium 2", "# pattern R f30-f150: right hard 1", "# artifact f75 D#7,E7: high"]
+    kept_low = [f"f{30 + k * Q} L: E2:4" for k in range(8)]
+    r = checked(answer(kept_low, declared), riff, level={"right": "hard", "left": "medium"},
+                allowed=("left medium 2", "right hard 1"), start=30, end=150)
+    assert any("top notes of the left-hand chords are missing from the right hand" in e for e in r.errors)
+    taken = [f"f{30 + k * Q} L: E2:4  R: {'E4' if k % 2 == 0 else 'C#4'}:4" for k in range(8)]
+    r = checked(answer(taken, declared), riff, level={"right": "hard", "left": "medium"},
+                allowed=("left medium 2", "right hard 1"), start=30, end=150)
+    assert not any("top notes" in e for e in r.errors), r.errors

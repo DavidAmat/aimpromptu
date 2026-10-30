@@ -898,3 +898,11 @@ decoration-note rule holds at every level by construction. Fourth, an artifact i
 an octava above the melody around it, or, where the melody line has nothing else (the riff with the high chords),
 more than an octava above every other note. The open point of section 5.10 about the pattern's text is settled: the
 prompt gets both hands of the first 8 negras of its first example.
+
+**Phase 3, the first AI run** (2026-10-30): the user chose to start with hard, because the sheet now is at the super
+hard level, and asked for **a level per hand** (hard for the right hand, medium for the left hand), both hands still
+written together. The code takes a level or one level per hand; the prompt then joins the right-hand section of one
+level with the left-hand section of the other. The first run showed that the AI kept the high chord of the riff an
+octava lower and lost the riff hidden in the left-hand chords, so the prompt now says that an artifact is left out,
+and that where the right hand has only artifacts the top notes of the left-hand chords move to the right hand; the
+check holds both.

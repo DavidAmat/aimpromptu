@@ -211,17 +211,54 @@ def refs_in(words: str, hands: tuple[str, ...] = ("left", "right")) -> list[str]
     return out
 
 
-def instructions(level: str) -> str:
-    return (PROMPT_DIR / "shared.md").read_text(encoding="utf-8").rstrip() + "\n\n" + (
-        PROMPT_DIR / f"{level}.md"
-    ).read_text(encoding="utf-8").rstrip()
+Level = str | dict[str, str]
 
 
-def system_prompt(level: str, patterns: list[Pattern]) -> str:
-    """The system prompt of a run: the shared part, the part of the level, and the patterns of the run (left hand
-    first)."""
-    if level not in LEVELS:
-        raise ValueError(f"unknown level {level!r}")
+def hand_levels(level: Level) -> dict[int, str]:
+    """The level of each hand: one level for both (``"hard"``), or one per hand (``{"right": "hard", "left":
+    "medium"}``: the user's choice of 2026-10-30, a level per hand), as ``{staff: level}``."""
+    out = {1: level, 2: level} if isinstance(level, str) else {STAFF[h]: v for h, v in level.items()}
+    for v in out.values():
+        if v not in LEVELS:
+            raise ValueError(f"unknown level {v!r}")
+    return out
+
+
+def level_name(level: Level) -> str:
+    """``hard``, or ``hard for the right hand and medium for the left hand``."""
+    lv = hand_levels(level)
+    if len(set(lv.values())) == 1:
+        return next(iter(lv.values()))
+    return " and ".join(f"{lv[s]} for the {HANDS[s]} hand" for s in sorted(lv))
+
+
+def _hand_part(level: str, hand: str) -> str:
+    """The section of ``<level>.md`` about one hand (from its heading "## The <hand> hand at <level>")."""
+    text = (PROMPT_DIR / f"{level}.md").read_text(encoding="utf-8")
+    start = text.index(f"## The {hand} hand at {level}")
+    nxt = text.find("\n## ", start + 1)
+    return text[start : nxt if nxt >= 0 else len(text)].rstrip()
+
+
+def instructions(level: Level) -> str:
+    """The shared part, then the part of the level, or of each hand's level when they differ."""
+    shared = (PROMPT_DIR / "shared.md").read_text(encoding="utf-8").rstrip()
+    lv = hand_levels(level)
+    if lv[1] == lv[2]:
+        return shared + "\n\n" + (PROMPT_DIR / f"{lv[1]}.md").read_text(encoding="utf-8").rstrip()
+    head = (
+        f"# The levels of this run: {lv[1]} for the right hand, {lv[2]} for the left hand\n\n"
+        "The user chose a level for each hand. The two hands are still written together, as one piano part: a note "
+        "that the transcription put in the wrong hand goes to the hand where it belongs, and each hand then follows "
+        "its own level below. A hand that plays more must not make the other hand harder: they fit together."
+    )
+    return "\n\n".join([shared, head, _hand_part(lv[1], "right"), _hand_part(lv[2], "left")])
+
+
+def system_prompt(level: Level, patterns: list[Pattern]) -> str:
+    """The system prompt of a run: the shared part, the part of the level (or of each hand's level), and the
+    patterns of the run (left hand first)."""
+    hand_levels(level)
     ordered = sorted(patterns, key=lambda p: (p.hand != "left", LEVELS.index(p.level) if p.level in LEVELS else 9, p.number))
     body = "\n\n".join(p.text() for p in ordered) or "No pattern was chosen."
     return (
@@ -313,7 +350,7 @@ _HAND_REF = re.compile(r"\b([LR])\s*=\s*((?:left|right)\s+(?:easy|medium|hard|su
 def plan_prompt(
     *,
     sid: str,
-    level: str,
+    level: Level,
     staffs: tuple[int, ...],
     summary: str,
     start: int,
@@ -326,10 +363,12 @@ def plan_prompt(
         if len(staffs) == 2
         else f" The {HANDS[3 - staffs[0]]} hand stays exactly as it is: plan only the {HANDS[staffs[0]]} hand."
     )
-    hands = " ".join(f"{'L' if s == 2 else 'R'}={HANDS[s]} {level} 1" for s in sorted(staffs, reverse=True))
+    lv = hand_levels(level)
+    hands = " ".join(f"{'L' if s == 2 else 'R'}={HANDS[s]} {lv[s]} 1" for s in sorted(staffs, reverse=True))
     out = [
-        f"# The plan of the song {sid}: level {level}, {who}",
-        f"The user asked to write the song again at the level {level}, {who}.{fixed} Before the batches, plan the "
+        f"# The plan of the song {sid}: level {level_name(level)}, {who}",
+        f"The user asked to write the song again at the level {level_name(level)}, {who}.{fixed} Before the "
+        "batches, plan the "
         f"whole song (f{start}-f{end}, {clock(start)}-{clock(end)}). Below, one line per stretch of the song: its "
         "frames and clock, the chords the app found in the notes, how each hand plays now (the measures of the hand "
         "tracker), and, when the app found it, the earlier stretch that sounds the same.",
@@ -399,7 +438,7 @@ def read_plan(
 def batch_prompt(
     *,
     sid: str,
-    level: str,
+    level: Level,
     staffs: tuple[int, ...],
     index: int,
     count: int,
@@ -419,7 +458,7 @@ def batch_prompt(
     key = target.key or 0
     who = "both hands" if len(staffs) == 2 else f"the {HANDS[staffs[0]]} hand"
     out = [
-        f"# Level {level}, {who}, of song {sid}: batch {index + 1} of {count} (f{start}-f{end}, "
+        f"# Level {level_name(level)}, {who}, of song {sid}: batch {index + 1} of {count} (f{start}-f{end}, "
         f"{clock(start)}-{clock(end)})"
     ]
     if words.strip():
@@ -430,11 +469,18 @@ def batch_prompt(
         + "\n".join(("> " if s in here else "  ") + s.line() for s in plan)
     )
     out.append("## The chords of this batch (found by the app in the notes)\n\n" + chord_text(cs, key))
-    pts = "semicorchea" if LIMITS[level].grid == "semicorchea" else "corchea"
+    fine = [HANDS[s] for s in staffs if LIMITS[hand_levels(level)[s]].grid == "semicorchea"]
+    half = (
+        ""
+        if not fine
+        else ", or half way between two of them (a semicorchea)"
+        if len(fine) == len(staffs)
+        else f", or, in the {fine[0]} hand, half way between two of them (a semicorchea)"
+    )
     out.append(
         "## The grid of this batch\n\nThe negras, each with the other corcheas of its time in parentheses. A new "
         "note starts on one of these frames"
-        + (", or half way between two of them (a semicorchea)" if pts == "semicorchea" else "")
+        + half
         + ", or at the frame of a note of the target.\n\n"
         + grid.text(start, end)
     )
@@ -552,6 +598,28 @@ def _show(items: list[str], most: int = 6) -> str:
     return ", ".join(items[:most]) + (f" and {len(items) - most} more" if len(items) > most else "")
 
 
+#: A left-hand chord whose top note is at least this (C4), with no right-hand note of the melody within a negra,
+#: carries the melody (:func:`hidden_line`).
+HIDDEN_LOW = 60
+
+
+def hidden_line(target: Sheet, artifacts: set[int]) -> list[Note]:
+    """The top notes of the left-hand chords (two notes or more, top at ``HIDDEN_LOW`` or above) where the right hand
+    plays no note within one negra, apart from the right-hand columns at ``artifacts`` (frames declared artifacts):
+    the riff of 99 Red Balloons (plan section 5.1: the right hand takes over notes that help the left hand)."""
+    near = (target.quarter_ms or 500.0) / FRAME_MS
+    right = [n.frame for n in target.notes if n.staff == 1 and not n.grace and not n.covered
+             and not any(abs(n.frame - f) <= 1 for f in artifacts)]
+    out = []
+    for f, ns in sorted(_cols(target, 2).items()):
+        if len(ns) < 2 or any(n.grace for n in ns):
+            continue
+        top = max(ns, key=lambda n: n.midi)
+        if top.midi >= HIDDEN_LOW and not any(abs(r - f) <= near for r in right):
+            out.append(top)
+    return out
+
+
 def _far_above(n: Note, line: list[Note], target: Sheet, artifacts: set[tuple[int, int]]) -> bool:
     """True when ``n`` may be an artifact (plan section 5.5): more than an octava above the median of the other
     notes of the melody line within ``ARTIFACT_S`` seconds that are not declared artifacts; or, with no such note,
@@ -576,7 +644,7 @@ def check_level(
     reply: str,
     target: Sheet,
     *,
-    level: str,
+    level: Level,
     staffs: tuple[int, ...],
     grid: Grid,
     cs: list[Chord],
@@ -586,7 +654,8 @@ def check_level(
 ) -> Batch:
     """The check of a batch answer (plan section 5.5). ``target`` holds the notes of ``[start, end)`` of the hands
     rewritten as the sheet has them; ``cs`` the chords of the batch; ``allowed`` the refs of the run."""
-    lim = LIMITS[level]
+    levels = hand_levels(level)
+    lims = {s: LIMITS[v] for s, v in levels.items()}
     text = _block(reply)
     if not text.startswith("F1 frames"):
         return Batch(["the answer must be F1 frames (first line 'F1 frames frameMs=40 ...')"])
@@ -616,7 +685,27 @@ def check_level(
     if no_hand or other:
         return out
     # the melody: each note of the right hand's top line stays at its frame (or one frame from it), the same pitch
-    # or the same name an octave away, unless declared
+    # or the same name an octave away, unless declared; where the right hand has no melody, the top notes of the
+    # left-hand chords are the melody (the riff), and they go to the right hand
+    if 1 in staffs and 2 in staffs:
+        artifact_frames = {f for f, _, k, *_ in d.dropped if k == "artifact"}
+        hidden = hidden_line(target, artifact_frames)
+        right = _cols(sheet, 1)
+        said = {(f, m) for f, m, *_ in d.dropped}
+        lost = []
+        for n in hidden:
+            here = [x.midi for f in (n.frame - 1, n.frame, n.frame + 1) for x in right.get(f, [])]
+            if n.midi in here or n.midi + 12 in here or (n.frame, n.midi) in said:
+                continue
+            lost.append(f"f{n.frame} {_name(n.midi)}")
+        out.melody += len(hidden)
+        if lost:
+            errs.append(
+                f"{len(lost)} top notes of the left-hand chords are missing from the right hand: {_show(lost)}. "
+                "Where the right hand has no melody (only artifacts, or nothing), these top notes are the melody: "
+                "play each one in the right hand, at its pitch or an octava higher, or declare it "
+                "('# not melody f... pitch: why')"
+            )
     if 1 in staffs:
         line = melody(target, start, end)
         right = _cols(sheet, 1)
@@ -636,7 +725,7 @@ def check_level(
                 continue
             dropped += 1
             not_melody += kind == "not melody"
-        out.melody, out.melody_dropped = len(line), dropped
+        out.melody, out.melody_dropped = out.melody + len(line), dropped
         if not_artifact:
             errs.append(
                 f"{len(not_artifact)} notes declared artifacts are part of the melody line: {_show(not_artifact)}. An "
@@ -687,7 +776,7 @@ def check_level(
                 f"{len(wrong_bass)} chords begin on another bass: {_show(wrong_bass, 4)}. The lowest left-hand note "
                 "where a chord begins keeps the bass of the song (or the root of the chord)"
             )
-        if total and foreign > OUTSIDE_SHARE[level] * total + 1:
+        if total and foreign > OUTSIDE_SHARE[levels[2]] * total + 1:
             errs.append(
                 f"{foreign} of the {total} left-hand notes are outside the chords of the song: keep the harmony "
                 "(the left-hand companion changes the way the chord is played, not the chord)"
@@ -695,6 +784,7 @@ def check_level(
     # playable at the level, per column
     for staff in staffs:
         hand = "R" if staff == 1 else "L"
+        lim = lims[staff]
         bad = []
         for f, ns in sorted(_cols(sheet, staff).items()):
             ms = sorted(n.midi for n in ns)
@@ -718,6 +808,7 @@ def check_level(
         if staff in staffs:
             out.measures[staff] = measure(sheet, staff, start, end, grid)
     if 2 in staffs:
+        lim = lims[2]
         m = out.measures[2]
         if m.moves_q > lim.left_moves:
             errs.append(
@@ -754,6 +845,7 @@ def check_level(
         if (n.frame, n.midi, n.staff) in before:
             continue
         out.new_notes += 1
+        lim = lims.get(n.staff, lims[1])
         if not grid.on_grid(n.frame, lim.grid):
             off.append(f"f{n.frame} {_name(n.midi)}")
         if n.figure and n.figure > lim.shortest:
@@ -765,8 +857,8 @@ def check_level(
         )
     if short:
         errs.append(
-            f"{len(short)} new notes are shorter than the level allows (the shortest figure is {lim.shortest}; a "
-            f"shorter one becomes a decoration note): {_show(short)}"
+            f"{len(short)} new notes are shorter than the level allows (a figure shorter than a semicorchea becomes a "
+            f"decoration note): {_show(short)}"
         )
     return out
 
@@ -797,7 +889,7 @@ def drawn(sheet: Sheet, quarter_ms: float, *, key: int, key_changes=None, keep: 
 
 @dataclass
 class LevelRun:
-    level: str
+    level: Level
     staffs: tuple[int, ...]
     plan: list[Section]
     plan_log: WindowLog
@@ -811,7 +903,7 @@ def write_level(
     complete: Complete,
     grid: Grid,
     *,
-    level: str,
+    level: Level,
     staffs: tuple[int, ...],
     patterns: list[Pattern],
     sid: str = "song",

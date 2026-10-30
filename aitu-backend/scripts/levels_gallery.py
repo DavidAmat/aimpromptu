@@ -107,23 +107,26 @@ def passage_section(no: int, sheet: Sheet, whole: engine.Rendered, grid, a: int,
     ]
     seg = engine.render_frames(sheet, engine.Options(width=130), segment=(a, b), note_ids=False)
     parts.append(_figure("The sheet now (the band marks the passage)", banded(seg, a, b)))
-    for level in L.LEVELS:
-        run = runs.get(f"{level}|{a}")
-        if not run:
+    for key, run in runs.items():
+        if not key.endswith(f"|{a}"):
             continue
-        text = run["text"]
-        drawn = f1.read(text)
-        r = engine.render_frames(drawn, engine.Options(width=130), note_ids=False)
-        rows.append((f"{level.capitalize()}: right", run["measures"].get("1", {})))
-        rows.append((f"{level.capitalize()}: left", run["measures"].get("2", {})))
+        label = run.get("label", key.split("|")[0]).capitalize()
+        status = "" if run.get("status", "ok") == "ok" else " (the check refused the last reply: drawn as written)"
+        rows.append((f"{label}: right", run["measures"].get("1", {})))
+        rows.append((f"{label}: left", run["measures"].get("2", {})))
         said = "".join(f"<li>{html.escape(x)}</li>" for x in run.get("declared", []))
+        errs = "".join(
+            f"<li>Reply {i + 1}: {html.escape('; '.join(e))}</li>" for i, e in enumerate(run.get("errors", []))
+        )
+        body = engine.render_frames(f1.read(run["text"]), engine.Options(width=130), note_ids=False).svg if run.get("text") else "no answer"
         parts.append(
             _figure(
-                f"{level.capitalize()} ({run.get('model', 'AI')}, {run.get('replies', 1)} replies, "
-                f"${run.get('usd', 0):.3f})",
-                r.svg,
+                f"{label}{status}: {run.get('model', 'AI')}, {run.get('replies', 1)} replies, ${run.get('usd', 0):.3f}; "
+                f"melody line {run.get('melody', 0)} notes, {run.get('melody_dropped', 0)} declared not melody or artifact",
+                body,
             )
-            + (f"<details><summary>What the AI declared</summary><ul>{said}</ul></details>" if said else "")
+            + (f"<details open><summary>What the AI declared</summary><ul>{said}</ul></details>" if said else "")
+            + (f"<details><summary>What the check refused before</summary><ul>{errs}</ul></details>" if errs else "")
         )
     parts.append(measures_table(rows))
     parts.append("</section>")
@@ -201,9 +204,19 @@ def main() -> None:
     args = parser.parse_args()
     sheet = f1.read(build.current(args.part).text)
     grid = song_grid(sheet)
-    runs = json.loads(args.runs.read_text()) if args.runs else {}
+    data = json.loads(args.runs.read_text()) if args.runs else {}
+    runs, meta = data.get("runs", {}), data.get("meta", {})
     whole = None
     sections, index = [], []
+    for name, m in meta.items():
+        plan = "".join(f"<li>{html.escape(x)}</li>" for x in m.get("plan", []))
+        sections.append(
+            f'<section id="plan-{name}"><h2>The run {html.escape(name)}: '
+            f'{html.escape(L.level_name(m["level"]))}</h2><p class="look">Patterns: {html.escape(", ".join(m["refs"]))}. '
+            f"Cost of the run: ${m['usd']:.3f} (the plan request ${m['plan_usd']:.3f}), {m['seconds']} s.</p>"
+            f"<p class=\"look\">The plan of the song the AI wrote (the first request):</p><ul>{plan}</ul></section>"
+        )
+        index.append(f'<li><a href="#plan-{name}">The run {html.escape(name)} and its plan</a></li>')
     for no, (a, b, name, why) in enumerate(PASSAGES, start=1):
         sections.append(passage_section(no, sheet, whole, grid, a, b, name, why, runs))
         index.append(f'<li><a href="#p{no}">{html.escape(name)}</a> (f{a}-f{b})</li>')

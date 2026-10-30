@@ -68,10 +68,13 @@ Difficulty is a matter of **hand movement**, of **keeping patterns**, and of **h
   hand (under the melody, or while the melody rests) move to the left hand when they fit its pattern, or are left out
   when the left hand already plays that chord.
 - **Artifacts**: a chord or a note far above the melody (more than an octava above the melody around it, alone, often
-  under 8va), octavas the level does not allow, many repeated notes of a chord that add nothing. When the right hand
-  has nothing but an artifact while the left hand plays everything, the right hand takes over the notes that carry
-  the music there (the top notes of the left-hand chords are often the riff or the melody), and the left hand keeps
-  only its companion, so that both hands become simple.
+  under 8va), octavas the level does not allow, many repeated notes of a chord that add nothing. An artifact is **left
+  out** (declared): do not keep it one or two octavas lower, it adds nothing to the song in any register.
+- **The right hand helps the left hand.** Where the right hand has nothing but artifacts (or nothing at all) while the
+  left hand plays big chords, the music of that passage is in the **top notes of the left-hand chords** (a riff, the
+  melody of an intro). Those top notes move to the right hand, at their pitch or an octava higher, as its melody; the
+  left hand keeps only its companion under them. The checker counts those top notes as part of the melody line there
+  (each one in the right hand, or declared).
 
 # The patterns
 

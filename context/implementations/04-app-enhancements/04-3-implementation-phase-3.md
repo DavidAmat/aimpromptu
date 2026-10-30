@@ -1,8 +1,8 @@
 # 04-3 · Phase 3: the level prompts, tested on 99 Red Balloons
 
-Status: **in progress** (2026-10-30). Tasks 3.1 to 3.6 are built and tested without the AI; task 3.8 has its first
-page (the test passages, the patterns proposed per level, the prompts). Task 3.7 (tests with the AI) waits for the
-user's ok on the cost, the passages and the patterns. Branch `feat/04-3-phase-3` from `master` (`f85fa92`).
+Status: **in progress** (2026-10-30). Tasks 3.1 to 3.6 are built and tested without the AI. Task 3.7: the first AI
+run (the user's choice: hard for the right hand, medium for the left hand) is done on the four passages ($0.63) and
+waits for the user's review; easy and medium come after it (section 11). Branch `feat/04-3-phase-3` from `master` (`f85fa92`).
 
 Audience: the agents of this plan (this phase when the user answers, and Phase 4). Technical.
 
@@ -173,7 +173,7 @@ broken. With `--runs runs.json` the script adds the AI's version of each level u
 
 # 10. Needed later
 
-- **Task 3.7** (after the user's ok): a scratch runner with `ClaudeComplete` (Sonnet 5.5) calling `write_level` with
+- **Task 3.7** (the runner of section 11 is the scratch `run_levels.py`; the description below was the plan for it): a scratch runner with `ClaudeComplete` (Sonnet 5.5) calling `write_level` with
   `windows=[passage]` for the four passages at each level, the plan request on the whole song once per level; save
   every reply and `Call`; write `runs.json` (`level|start` -> `text` of `levels.drawn` on the answer plus the original
   notes of the other hand outside the run, `measures`, `declared`, `replies`, `usd`, `model`) and rebuild the page.
@@ -184,3 +184,60 @@ broken. With `--runs runs.json` the script adds the AI's version of each level u
   length) and lay the sheet with `build.reapply`. The catalog data moves into the backend (`load_patterns` reads a
   folder with `patterns.json` and the F1 files). A run with no pattern selected: decide the default with the user.
 - The grid of a stored song may be computed once per run (0.2 to 0.6 s per song).
+
+# 11. The first AI run: hard for the right hand, medium for the left hand (task 3.7)
+
+The user's answer (2026-10-30): start with hard, because the sheet now is at the super hard level; a level per hand,
+hard for the right hand and medium for the left hand, both hands written together (notes move to the hand where they
+belong); the agent chooses the patterns; one run of about $0.6; easy and medium later, after this one is approved.
+
+- **A level per hand** (`levels.hand_levels`, `level_name`): `level` is a level or `{"right": ..., "left": ...}`.
+  The system prompt is the shared part, a short head ("The levels of this run: hard for the right hand, medium for
+  the left hand"; the hands are written together), the section "The right hand at hard" of `hard.md` and "The left
+  hand at medium" of `medium.md`. The check takes the limits of each hand from its level (`LIMITS`); new notes use the
+  grid of their hand (semicorcheas for the right hand at hard). Test `test_a_level_per_hand_takes_each_hand_part_and_its_limits`.
+- **The patterns**: right hard 1 (melody with small pieces of chords), hard 17 (melody in octavas), hard 15 (chords
+  climbing in corcheas), hard 4 (scale run, for fills); left medium 15 (octava, then two beamed chords), medium 2 (low
+  note, then two chords), medium 10 (octava, then an arpeggio), medium 7 (octava bass in negras).
+- **The runner**: scratch `run_levels.py` (in the container: `ClaudeComplete`, Sonnet 5.5, effort high), the plan
+  request on the whole song, then `write_level(windows=PASSAGES)`; every call kept in
+  `gallery/04-3-phase-3/runs/hard-medium/calls.json`, the results in `runs.json` (read by `levels_gallery.py --runs`).
+
+| Request | Input (new / cache read) | Output | Seconds | USD | Check |
+|---|---|---|---|---|---|
+| Plan of the song | 5,351 + 8,517 written to the cache | 1,627 | 12 | 0.048 | ok (7 sections) |
+| f33-f539 | 2,883 / 8,517 | 11,984 | 84 | 0.127 | ok, first reply |
+| f783-f1042 | 2,414 / 8,517 | 4,364 | 33 | 0.050 | ok, first reply (then found wrong, below) |
+| f1042-f1414 | 4,600 / 8,517 | 17,709 | 124 | 0.188 | ok, first reply |
+| f1826-f2296 | 4,981 / 8,517 | 10,781 | 72 | 0.120 | ok, first reply |
+| f783-f1042 again, with the riff rule | | 7,025 | | 0.097 | ok, first reply |
+
+Total $0.63 (the user's budget was about $0.6). The output is mostly thinking: 4,000 to 18,000 tokens per batch. The
+system prompt is 8,517 tokens in the API's count (the estimate of section 6, 5,000, was low).
+
+The plan the AI wrote: S1 f33-f812 L medium 2, R hard 1 (intro and first verse); S2 f812-f1242 L medium 10 (the riff);
+S3 f1242-f1826 L medium 2 (the verse again); S4 f1826-f2542 L medium 7 (the chorus, octavas in negras); S5
+f2542-f3177 L medium 10 (the riff again); S6 f3177-f4104 L medium 7; S7 f4104-f4880 L medium 2 (bridge and end).
+The right hand keeps hard 1 everywhere.
+
+**The riff, first reply**: the AI declared only the D#7 and D#6 of the high chords and kept E7 and E6 as E6 (the
+melody rule accepts an octava), and the riff (the top notes of the left-hand chords, E4 and C#4) disappeared: the
+left hand played an arpeggio around E3, the right hand only three E6. This is the case of the brief's image, so two
+rules were added:
+
+- `shared.md`: an artifact is left out, never kept an octava or two lower; where the right hand has only artifacts or
+  nothing, the top notes of the left-hand chords (a riff, the melody of an intro) move to the right hand.
+- `check_level`: `hidden_line` (left-hand columns of 2 notes or more whose top is C4 or higher, with no right-hand
+  note within a negra apart from the declared artifacts) joins the melody line: each top note must be in the right
+  hand at its pitch or an octava higher, or declared. The first reply now fails (19 top notes missing). Test
+  `test_where_the_right_hand_has_only_an_artifact_the_left_hand_tops_go_to_the_right_hand`.
+
+**The riff, second reply** (same plan): the six high chords declared artifacts; the right hand plays the riff an
+octava higher (E5, C#5, landing on G#4-C#5 and B4-E5 blancas); the left hand plays E2-E3 or C#2-C#3, then the
+arpeggio (medium 10). Two decoration notes are left where the AI kept the recording's quick E5 then C#5 three frames
+apart: the app's rule draws a fusa or shorter before a note as a decoration note.
+
+The other passages (looked at zoomed): the intro keeps a low note, then two chords (medium 2) all through; f1042-f1414
+changes from medium 10 to medium 2 at f1246 as its plan says; the high passage brings the melody from E6-G#6 down an
+octava with two-note chords under it, over octavas in negras (medium 7). Measures of the answers (left hand, moves per
+negra): 0.92, 0.75, 0.60, 0.45 (the sheet now: 0.6 to 2.0); widest left-hand column 9 to 12.
