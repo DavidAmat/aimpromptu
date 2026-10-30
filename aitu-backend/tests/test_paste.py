@@ -445,3 +445,27 @@ def test_a_pasted_project_exports_and_imports_with_its_ranges(
     assert imported.status_code == 201, imported.text
     copy = imported.json()["parts"][0]
     assert bundle.read_timeline(copy).items() == bundle.read_timeline(target).items()
+
+
+def test_delete_the_frames_takes_their_notes_and_audio_out_and_undo_puts_them_back(
+    client: TestClient, two_parts: tuple[str, str]
+) -> None:
+    # The user, 2026-10-30: the range toolbox's Delete takes the frames out as if never recorded nor transcribed.
+    _, target = two_parts
+    files = ("notes.pmn", "timeline.json")
+    before = {name: (paths.part_dir(target) / name).read_bytes() for name in files}
+    answer = client.post(f"/sheet/{target}/take-out", json={"start": 50, "end": 75})  # 2.0 s to 3.0 s
+    assert answer.status_code == 200, answer.text
+    assert answer.json()["edited"] == "Take out 1.0 s" and answer.json()["notesRemoved"] == 1
+    events = pipeline.load_note_events(target)
+    assert [(e.midi_note, round(e.start, 3)) for e in events.events if not e.removed] == [
+        (60, 0.0), (61, 1.0), (63, 2.0), (64, 3.0), (65, 4.0),
+    ]
+    # The second taken out is a cut of the audio (10 ms frames), so the Audio step can restore it.
+    timeline = bundle.read_timeline(target)
+    assert bundle.cuts_of(timeline) == [(200, 300)]
+    assert audio_timeline.kept_frames(timeline) == 500
+    assert client.post(f"/sheet/{target}/take-out", json={"start": 75, "end": 75}).status_code == 409
+    back = client.post(f"/sheet/{target}/undo")
+    assert back.status_code == 200, back.text
+    assert {name: (paths.part_dir(target) / name).read_bytes() for name in files} == before

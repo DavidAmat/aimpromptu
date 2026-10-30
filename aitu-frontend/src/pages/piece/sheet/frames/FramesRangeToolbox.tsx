@@ -20,7 +20,9 @@
  * The spacing of a stretch, its speed and the hidden or dragged octave lines of the old sheet are not here: the user
  * dropped them (Phase 7). The title bar hands the stretch to the note toolbox (*Select the notes in this stretch*)
  * and asks the AI to write the stretch again with the user's words; Phase 8B adds the old title bar's actions:
- * **Record this passage**, **Start a new part here** (the parts of a project) and **Copy this stretch**.
+ * **Record this passage**, **Start a new part here** (the parts of a project) and **Copy this stretch**; and
+ * **Delete these frames** (the user, 2026-10-30): the stretch taken out, its notes and its audio, as if it had never
+ * been recorded nor transcribed, everything after it moving earlier (one step of undo; the audio becomes cuts).
  */
 
 import { useEffect, useState } from "react";
@@ -106,6 +108,7 @@ export function FramesRangeToolbox({
   onCopy,
   onRecordPassage,
   onSplit,
+  onDelete,
   busy,
   locked,
 }: {
@@ -134,6 +137,8 @@ export function FramesRangeToolbox({
   onRecordPassage: (() => void) | null;
   /** **Start a new part here** (the parts of a project; `null`: not here, or the stretch starts the part). */
   onSplit: (() => void) | null;
+  /** **Delete these frames**: their notes and their audio taken out (`null`: not here). */
+  onDelete: (() => void) | null;
   busy: boolean;
   locked: string | null;
 }) {
@@ -208,6 +213,16 @@ export function FramesRangeToolbox({
               disabled={off}
               disabledTitle={why}
               data-testid="range-split"
+            />
+          ) : null}
+          {onDelete ? (
+            <IconAction
+              title="Delete these frames: their notes and their audio"
+              icon={<DeleteOutlineIcon fontSize="small" />}
+              onClick={onDelete}
+              disabled={off}
+              disabledTitle={why}
+              data-testid="range-delete"
             />
           ) : null}
           <IconAction

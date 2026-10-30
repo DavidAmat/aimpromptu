@@ -1196,6 +1196,23 @@ def paste_passage(
     )
 
 
+def take_out(part_id: str, start: int, end: int) -> tuple[str, int]:
+    """**Delete the frames** of the range toolbox (the user, 2026-10-30): the columns ``[start, end)`` taken out of
+    the part as if that stretch had never been recorded nor transcribed: its notes go from ``notes.pmn``, its audio
+    becomes cuts (the Audio step can restore them), and everything after moves earlier (:func:`paste.cut`, the cut a
+    part split makes). One step, whose undo puts the part back as it was. Returns the label and the notes taken out.
+    Raises ``paste.PasteError``."""
+    if end <= start:
+        raise paste.PasteError("Mark a stretch first.")
+    done = paste.cut(part_id, start * FRAME_MS, end * FRAME_MS)
+    build.forget(part_id)
+    seconds = (done.to_ms - done.from_ms) / 1000
+    length = f"{seconds:.1f} s" if seconds < 10 else f"{round(seconds)} s"
+    label = f"Take out {length}"
+    record_version(part_id, label, done.before_version)
+    return label, done.notes_removed
+
+
 def record_version(part_id: str, label: str, before_version: int) -> None:
     """One step for a change that kept the part as it was as a snapshot of its history (a paste, a promotion of
     Record in Sheet): its undo puts that snapshot back."""

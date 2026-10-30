@@ -469,6 +469,14 @@ export const sheetApi = {
       body: { notes },
     }),
 
+  /** **Delete the frames** `[start, end)`: their notes and their audio taken out, everything after moved earlier. */
+  takeOut: (audioUuid: string, start: number, end: number, width: number) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/take-out`, {
+      method: "POST",
+      query: { width: Math.round(width) },
+      body: { start, end },
+    }),
+
   /** **Duplicate**: each picked note played again at the shorter `figure`, filling its own time (one step). */
   duplicate: (audioUuid: string, notes: readonly string[], figure: number, width: number) =>
     request<SheetEdited>(`/sheet/${audioUuid}/duplicate`, {

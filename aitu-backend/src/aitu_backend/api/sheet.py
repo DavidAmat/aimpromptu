@@ -453,6 +453,30 @@ def paste_passage(
     }
 
 
+class TakeOutRequest(BaseModel):
+    start: int = Field(ge=0)
+    end: int = Field(ge=1)
+
+
+@router.post("/{audio_uuid}/take-out")
+def take_out(
+    audio_uuid: str,
+    body: TakeOutRequest = Body(...),
+    width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH),
+) -> dict[str, Any]:
+    """**Delete the frames** ``[start, end)`` of the range toolbox: their notes and their audio taken out (the audio as
+    cuts), everything after moved earlier, as if that stretch had never been recorded. One step of undo; the sheet
+    drawn again."""
+    if not audio_store.exists(audio_uuid):
+        raise HTTPException(status_code=404, detail=f"No audio with uuid '{audio_uuid}'")
+    _not_running(audio_uuid)
+    try:
+        label, removed = edits.take_out(audio_uuid, body.start, body.end)
+    except passage_paste.PasteError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {**_answer(audio_uuid, width), "edited": label, "notesRemoved": removed}
+
+
 @router.get("/{audio_uuid}/pages")
 def pages(
     audio_uuid: str,

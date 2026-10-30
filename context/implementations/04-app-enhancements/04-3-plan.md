@@ -1157,3 +1157,11 @@ spelling is the user's decision, a new mark `sp` of the F1 text (`Note.spelled`)
 spelling. Tests in `test_sheet_toolbox.py`; every sheet test passes (313). Looked at on a temporary copy (deleted): Fa#3
 written as Solb3; a corchea into two beamed semicorcheas.
 
+**Delete these frames** (the user, 2026-10-30, same branch): a trash button in the title bar of the range toolbox
+takes the marked frames out as if that stretch had never been recorded nor transcribed: its notes leave `notes.pmn`,
+its audio becomes cuts (the Audio step can restore them), the new sheet and the old one lose the stretch, and
+everything after it moves earlier. It reuses `paste.cut` (the cut a part split makes) through `edits.take_out` and
+`POST /sheet/{uuid}/take-out`; one step, whose undo puts the part's snapshot back. Test in `test_paste.py` (the notes
+after the stretch 1 s earlier, the audio cut, undo gives the files back byte for byte). On a temporary copy of the
+user's project (deleted): through the API, frames 203-324 taken out moved every later note 121 frames earlier.
+

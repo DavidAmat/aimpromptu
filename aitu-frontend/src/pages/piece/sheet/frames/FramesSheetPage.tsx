@@ -724,6 +724,14 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
     });
   }, [width, picked, edit, audioUuid]);
 
+  // **Delete these frames** of the range toolbox (the user, 2026-10-30): the notes and the audio of the stretch.
+  const deleteFrames = useCallback(() => {
+    if (width === null || !range) return;
+    void edit(() => sheetApi.takeOut(audioUuid, range.start, range.end, width)).then((done) => {
+      if (done) unmark();
+    });
+  }, [width, range, edit, audioUuid, unmark]);
+
   // **Duplicate** and **Unite** (the user, 2026-10-30): they change the notes, so the picked refs are let go.
   const duplicatePicked = useCallback(
     (figure: number) => {
@@ -1383,6 +1391,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           onCopy={() => void copySelection()}
           onRecordPassage={role ? null : () => void startPassage(range.start, range.end)}
           onSplit={step.onSplit && !role && range.start > 0 && !splitting ? () => void splitHere() : null}
+          onDelete={role ? null : deleteFrames}
           busy={editing}
           locked={locked}
         />
