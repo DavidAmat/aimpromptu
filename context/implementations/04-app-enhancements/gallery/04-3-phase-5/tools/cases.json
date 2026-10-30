@@ -1,0 +1,200 @@
+[
+ {
+  "id": "cache-test",
+  "song": "99rb",
+  "span": [
+   33,
+   1286
+  ],
+  "level": "medium",
+  "kind": "cache"
+ },
+ {
+  "id": "99rb-riff.easy",
+  "song": "99rb",
+  "span": [
+   783,
+   1042
+  ],
+  "level": "easy",
+  "kind": "level"
+ },
+ {
+  "id": "99rb-riff.medium",
+  "song": "99rb",
+  "span": [
+   783,
+   1042
+  ],
+  "level": "medium",
+  "kind": "level"
+ },
+ {
+  "id": "99rb-riff.hard-medium",
+  "song": "99rb",
+  "span": [
+   783,
+   1042
+  ],
+  "level": {
+   "right": "hard",
+   "left": "medium"
+  },
+  "kind": "level"
+ },
+ {
+  "id": "99rb-riff.forced-m15-m1",
+  "song": "99rb",
+  "span": [
+   783,
+   1042
+  ],
+  "level": "medium",
+  "patterns": [
+   "left medium 15",
+   "right medium 1"
+  ],
+  "kind": "forced"
+ },
+ {
+  "id": "99rb-after.easy",
+  "song": "99rb",
+  "span": [
+   1042,
+   1414
+  ],
+  "level": "easy",
+  "kind": "level"
+ },
+ {
+  "id": "99rb-after.medium",
+  "song": "99rb",
+  "span": [
+   1042,
+   1414
+  ],
+  "level": "medium",
+  "kind": "level"
+ },
+ {
+  "id": "99rb-after.hard-medium",
+  "song": "99rb",
+  "span": [
+   1042,
+   1414
+  ],
+  "level": {
+   "right": "hard",
+   "left": "medium"
+  },
+  "kind": "level"
+ },
+ {
+  "id": "99rb-after.forced-e2-e2",
+  "song": "99rb",
+  "span": [
+   1042,
+   1414
+  ],
+  "level": "easy",
+  "patterns": [
+   "left easy 2",
+   "right easy 2"
+  ],
+  "kind": "forced"
+ },
+ {
+  "id": "7years.easy",
+  "song": "7years",
+  "span": [
+   4252,
+   4872
+  ],
+  "level": "easy",
+  "kind": "level"
+ },
+ {
+  "id": "7years.medium",
+  "song": "7years",
+  "span": [
+   4252,
+   4872
+  ],
+  "level": "medium",
+  "kind": "level"
+ },
+ {
+  "id": "7years.hard-medium",
+  "song": "7years",
+  "span": [
+   4252,
+   4872
+  ],
+  "level": {
+   "right": "hard",
+   "left": "medium"
+  },
+  "kind": "level"
+ },
+ {
+  "id": "7years.forced-m15-m1",
+  "song": "7years",
+  "span": [
+   4252,
+   4872
+  ],
+  "level": "medium",
+  "patterns": [
+   "left medium 15",
+   "right medium 1"
+  ],
+  "kind": "forced"
+ },
+ {
+  "id": "halleluyah.easy",
+  "song": "halleluyah",
+  "span": [
+   3462,
+   4003
+  ],
+  "level": "easy",
+  "kind": "level"
+ },
+ {
+  "id": "halleluyah.medium",
+  "song": "halleluyah",
+  "span": [
+   3462,
+   4003
+  ],
+  "level": "medium",
+  "kind": "level"
+ },
+ {
+  "id": "halleluyah.hard-medium",
+  "song": "halleluyah",
+  "span": [
+   3462,
+   4003
+  ],
+  "level": {
+   "right": "hard",
+   "left": "medium"
+  },
+  "kind": "level"
+ },
+ {
+  "id": "halleluyah.forced-e2-e2",
+  "song": "halleluyah",
+  "span": [
+   3462,
+   4003
+  ],
+  "level": "easy",
+  "patterns": [
+   "left easy 2",
+   "right easy 2"
+  ],
+  "kind": "forced"
+ }
+]

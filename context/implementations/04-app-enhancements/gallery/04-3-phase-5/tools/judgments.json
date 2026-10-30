@@ -1,0 +1,643 @@
+{
+ "99rb-riff.medium": {
+  "scores": {
+   "A": {
+    "melody": 8,
+    "level": 7,
+    "pattern": 7,
+    "playable": 7,
+    "musical": 8,
+    "overall": 7,
+    "reasons": "The riff is whole in the right hand with small landing chords, and the left hand plays an octava then three-note chords on its own onsets (medium 15). Some left-hand semicorcheas keep the hand busier than medium needs."
+   },
+   "B": {
+    "melody": 8,
+    "level": 9,
+    "pattern": 9,
+    "playable": 8,
+    "musical": 7,
+    "overall": 8,
+    "reasons": "The riff in single notes and four identical cycles of a low note then two beamed triads (medium 2): one pattern, read at first sight. The bass is a single low note, a little thin."
+   },
+   "C": {
+    "melody": 7,
+    "level": 6,
+    "pattern": 6,
+    "playable": 6,
+    "musical": 6,
+    "overall": 6,
+    "reasons": "The riff is there, but a low G#3 landing in the right hand breaks the line, and the left-hand arpeggio (medium 10) changes shape from cycle to cycle (range 28 in two negras)."
+   },
+   "D": {
+    "melody": 8,
+    "level": 4,
+    "pattern": 5,
+    "playable": 4,
+    "musical": 6,
+    "overall": 5,
+    "reasons": "The riff is clean, but the left hand plays on almost every corchea (octavas, chords and offbeats, 1.10 moves per negra, more than the sheet now in places): busier than a medium left hand should be."
+   }
+  }
+ },
+ "99rb-riff.easy": {
+  "scores": {
+   "A": {
+    "melody": 8,
+    "level": 7,
+    "pattern": 7,
+    "playable": 8,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "The riff in single notes with landing blancas; the left hand plays a low note then a dyad in the rhythm it had. The cycles vary a little (an extra B-G# dyad at f925)."
+   },
+   "B": {
+    "melody": 8,
+    "level": 9,
+    "pattern": 9,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The riff an octava higher, in four identical cycles; the left hand plays a low note then two triads, the same each time (easy 2). The clearest easy version."
+   },
+   "C": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 7,
+    "playable": 9,
+    "musical": 6,
+    "overall": 7,
+    "reasons": "The riff is whole and the left hand only holds two triads per cycle (0.06 moves per negra): the easiest to play, but there is no bass after the first note, so it sounds thin."
+   },
+   "D": {
+    "melody": 7,
+    "level": 6,
+    "pattern": 6,
+    "playable": 7,
+    "musical": 6,
+    "overall": 6,
+    "reasons": "The left hand is a steady low note then a dyad (easy 12), but the right hand starts with two semicorcheas and drops to a low G#3 at the end of cycles 2 and 4, which breaks the riff."
+   }
+  }
+ },
+ "99rb-riff.hard-medium": {
+  "scores": {
+   "A": {
+    "melody": 9,
+    "level": 8,
+    "pattern": 8,
+    "playable": 7,
+    "musical": 9,
+    "overall": 8,
+    "reasons": "The riff an octava higher with the fifth or the third under each main note (B4-E5, G#4-C#5): the powerful hard right hand the user asked for; the left hand keeps an octava then two beamed triads (medium 15) in every cycle. Two quick notes are drawn as decoration notes (f885, f1009)."
+   },
+   "B": {
+    "melody": 8,
+    "level": 7,
+    "pattern": 6,
+    "playable": 6,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "The riff with low dyads under it and landing chords, but the left hand changes its rhythm from cycle to cycle (semicorchea dyads in cycle 1, a lone negra in cycle 2) and two decoration notes stay."
+   },
+   "C": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 9,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The riff with dyads on its main notes, and a left hand of an octava, a low C#, then two beamed triads, the same in all four cycles. Two decoration notes stay, as in the recording."
+   },
+   "D": {
+    "melody": 8,
+    "level": 7,
+    "pattern": 7,
+    "playable": 8,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "The riff with dyads, over a left hand of an octava then single notes going up (medium 10): light and regular, but the right hand is less powerful than hard asks and decoration notes stay."
+   }
+  }
+ },
+ "99rb-riff.forced-m15-m1": {
+  "scores": {
+   "A": {
+    "melody": 7,
+    "level": 8,
+    "pattern": 9,
+    "playable": 8,
+    "musical": 7,
+    "overall": 8,
+    "reasons": "The left hand is exactly medium 15 (an octava, then two beamed triads) in every cycle. The riff is whole but its landing note became a corchea, so the riff loses its long notes."
+   },
+   "B": {
+    "melody": 8,
+    "level": 6,
+    "pattern": 6,
+    "playable": 6,
+    "musical": 7,
+    "overall": 6,
+    "reasons": "The riff with landing dyads, but both hands change rhythm between cycles (semicorchea dyads, a detached corchea triad): medium 15 is there only in part."
+   },
+   "C": {
+    "melody": 9,
+    "level": 7,
+    "pattern": 8,
+    "playable": 7,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The riff an octava higher with landing dyads (G#4-C#5, B4-E5) over medium 15; the left hand holds a C# octava in cycle 2 and the last cycle adds a semicorchea."
+   },
+   "D": {
+    "melody": 9,
+    "level": 9,
+    "pattern": 9,
+    "playable": 8,
+    "musical": 8,
+    "overall": 9,
+    "reasons": "Four identical cycles: the riff in single notes landing on a negra, and medium 15 exactly (an octava, two beamed triads, a held triad). Reads at first sight."
+   }
+  }
+ },
+ "99rb-after.medium": {
+  "scores": {
+   "A": {
+    "melody": 8,
+    "level": 7,
+    "pattern": 6,
+    "playable": 6,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "A clear single-note melody over a low note then two beamed triads, but around f1130-f1180 the left hand plays a mixed stretch (A#-C#-E dyads, a D natural, notes spread) that breaks the pattern."
+   },
+   "B": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 8,
+    "playable": 7,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The melody in single notes and a left hand that keeps a low note then two triads almost all through; accepted at the first reply. One short chromatic stretch at f1150."
+   },
+   "C": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 7,
+    "overall": 8,
+    "reasons": "The melody kept, and the steadiest left hand (0.36 moves per negra): a low note or octava, then triads on the beat; a few chords with accidentals around f1170."
+   },
+   "D": {
+    "melody": 3,
+    "level": 2,
+    "pattern": 2,
+    "playable": 2,
+    "musical": 3,
+    "overall": 2,
+    "reasons": "The check refused the first batch (f1042-f1377) three times (missing melody notes, uneven pairs, notes off the grid), so in the app the user keeps the sheet now there: the hardest version."
+   }
+  }
+ },
+ "99rb-after.hard-medium": {
+  "scores": {
+   "A": {
+    "melody": 8,
+    "level": 7,
+    "pattern": 6,
+    "playable": 6,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "The melody with a few dyads over a low note then two triads, but the left hand loses its pattern around f1150-f1190 and in the second line, and decoration notes stay."
+   },
+   "B": {
+    "melody": 8,
+    "level": 6,
+    "pattern": 8,
+    "playable": 6,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "A steady left hand (a low note, two triads), but the right hand puts a chord under almost every note (7.2 notes per second): heavier than a melody with small pieces of chords."
+   },
+   "C": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 8,
+    "playable": 7,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The melody with dyads on its main notes and a left hand that keeps a low note then two triads through most of the passage; a few decoration notes stay."
+   },
+   "D": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 7,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "A clean melody with dyads now and then, accepted at the first reply in both batches; the left hand keeps its pattern in the first line, then changes to single bass notes in the second."
+   }
+  }
+ },
+ "99rb-after.easy": {
+  "scores": {
+   "A": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 8,
+    "playable": 9,
+    "musical": 7,
+    "overall": 8,
+    "reasons": "The melody in single notes over a low note then a held triad (easy 2): the stillest left hand. One chord at f1130 (A#-C#-E) is not a simple triad."
+   },
+   "B": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 7,
+    "overall": 8,
+    "reasons": "The melody in single notes over a low note, then dyads in negras (easy 12), regular through the passage; one A# dyad at f1130."
+   },
+   "C": {
+    "melody": 8,
+    "level": 7,
+    "pattern": 7,
+    "playable": 8,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "The same plan as a low note then dyads, but the left hand adds corcheas around f1180 and the right hand starts with uneven semicorcheas."
+   },
+   "D": {
+    "melody": 3,
+    "level": 1,
+    "pattern": 1,
+    "playable": 1,
+    "musical": 3,
+    "overall": 2,
+    "reasons": "The check refused the first batch three times, so the user keeps the sheet now from f1042 to f1377: nothing easy there."
+   }
+  }
+ },
+ "99rb-after.forced-e2-e2": {
+  "scores": {
+   "A": {
+    "melody": 8,
+    "level": 7,
+    "pattern": 6,
+    "playable": 7,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "The melody in single notes; the left hand starts as easy 2 (a low note, then a triad) but turns into beamed corcheas of chords around f1150-f1200, which easy 2 does not have."
+   },
+   "B": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The melody in single notes over a low note then a held triad (easy 2) through most of the passage; only a short corchea stretch near f1150."
+   },
+   "C": {
+    "melody": 8,
+    "level": 7,
+    "pattern": 7,
+    "playable": 7,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "A low note then a chord on most beats, but more onsets than easy 2 needs and a corchea stretch at f1170-f1200."
+   },
+   "D": {
+    "melody": 7,
+    "level": 8,
+    "pattern": 8,
+    "playable": 9,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "The stillest left hand (a low note, then a held triad, 0.16 moves per negra), but the right hand moves the melody an octava lower after the first note, so its line changes register."
+   }
+  }
+ },
+ "7years.easy": {
+  "scores": {
+   "A": {
+    "melody": 9,
+    "level": 7,
+    "pattern": 7,
+    "playable": 7,
+    "musical": 8,
+    "overall": 7,
+    "reasons": "The melody is kept in single notes; the left hand keeps a low note then a chord, but at f4560-f4600 it drops to four very low notes in negras, a long reach down for an easy hand."
+   },
+   "B": {
+    "melody": 9,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The melody in single notes, and the left hand of the sheet now kept and made regular (a low note, then a dyad or triad), with blancas where the hand rests."
+   },
+   "C": {
+    "melody": 9,
+    "level": 6,
+    "pattern": 7,
+    "playable": 6,
+    "musical": 7,
+    "overall": 6,
+    "reasons": "The melody kept, but the left hand holds a redonda far below the staff at f4560 and then jumps up to the chords, which is the kind of jump easy should avoid."
+   },
+   "D": {
+    "melody": 9,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The melody kept; the left hand keeps its pattern now all through (pattern keep: a low note, a short note, a chord) in a regular rhythm, as the rule for a simple left hand asks."
+   }
+  }
+ },
+ "7years.medium": {
+  "scores": {
+   "A": {
+    "melody": 9,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The left hand of the sheet now is kept where it is simple, and the fast run of low octavas (f4520-f4590) becomes four octavas in negras: the one hard stretch is solved. Small dyads end the phrases in the right hand."
+   },
+   "B": {
+    "melody": 9,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The same solution: the low octava run in negras, the rest of the left hand as now, accepted at the first reply; a few more dyads in the right hand."
+   },
+   "C": {
+    "melody": 9,
+    "level": 5,
+    "pattern": 6,
+    "playable": 5,
+    "musical": 7,
+    "overall": 5,
+    "reasons": "The melody is kept, but the fast run of low octavas stays almost as now (semicorcheas, f4520-f4590), and the first line adds notes to a left hand that was already simple."
+   },
+   "D": {
+    "melody": 9,
+    "level": 5,
+    "pattern": 6,
+    "playable": 5,
+    "musical": 7,
+    "overall": 6,
+    "reasons": "The octava run becomes negras, but the first line puts triads on semicorcheas where the sheet now has a low note then a chord, so that stretch becomes harder than now."
+   }
+  }
+ },
+ "7years.hard-medium": {
+  "scores": {
+   "A": {
+    "melody": 5,
+    "level": 2,
+    "pattern": 2,
+    "playable": 2,
+    "musical": 5,
+    "overall": 3,
+    "reasons": "The check refused all three replies, so the user keeps the sheet now, with its fast run of low octavas at f4520-f4590."
+   },
+   "B": {
+    "melody": 9,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The melody with dyads that add to it (hard), and the left hand as now where it is simple, with the run of low octavas made negras."
+   },
+   "C": {
+    "melody": 9,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "Accepted at the first reply: the melody with small chords at the phrase ends, the octava run in negras, and a left hand that stays near its rhythm now."
+   },
+   "D": {
+    "melody": 9,
+    "level": 6,
+    "pattern": 6,
+    "playable": 5,
+    "musical": 7,
+    "overall": 6,
+    "reasons": "The right hand puts a dyad under almost every note, and the first line of the left hand adds triads on semicorcheas where the sheet now has a low note then a chord: harder than now there."
+   }
+  }
+ },
+ "halleluyah.easy": {
+  "scores": {
+   "A": {
+    "melody": 6,
+    "level": 6,
+    "pattern": 6,
+    "playable": 6,
+    "musical": 6,
+    "overall": 6,
+    "reasons": "The melody in single notes, but the left hand keeps the broken lines in corcheas of the sheet now in two places (f3540, f3800) and the final high notes of the melody are reduced to one F5."
+   },
+   "B": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 8,
+    "playable": 9,
+    "musical": 7,
+    "overall": 8,
+    "reasons": "The melody in single notes with its high ending kept; after a short broken line the left hand holds one triad per chord (0.16 moves per negra), the calmest version."
+   },
+   "C": {
+    "melody": 8,
+    "level": 7,
+    "pattern": 7,
+    "playable": 8,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "Close to B: held triads after a low note, but a beamed line of corcheas at the start and an arpeggio before the end."
+   },
+   "D": {
+    "melody": 7,
+    "level": 8,
+    "pattern": 7,
+    "playable": 8,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "A regular low note then a triad all through, but the end of the melody is changed (C5 then F5 instead of the high E, G, A)."
+   }
+  }
+ },
+ "halleluyah.medium": {
+  "scores": {
+   "A": {
+    "melody": 6,
+    "level": 5,
+    "pattern": 5,
+    "playable": 5,
+    "musical": 6,
+    "overall": 5,
+    "reasons": "Good small dyads in the right hand, but the left hand keeps the long broken lines in corcheas of the sheet now (f3640-f3780) and moves more than now (0.59 against 0.36 per negra); the high ending is reduced to one F5."
+   },
+   "B": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The melody with small dyads and its high ending; the left hand plays a low note then two chords (medium 2) through the passage, as a waltz."
+   },
+   "C": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "Like B: a low note then two chords, regular, the melody with dyads and its high ending kept, accepted at the second reply."
+   },
+   "D": {
+    "melody": 7,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "The same steady low note then two chords, but the end of the melody (the high E, G and A) becomes one held F5."
+   }
+  }
+ },
+ "7years.forced-m15-m1": {
+  "scores": {
+   "A": {
+    "melody": 5,
+    "level": 2,
+    "pattern": 2,
+    "playable": 2,
+    "musical": 5,
+    "overall": 2,
+    "reasons": "The check refused all three replies, so the user keeps the sheet now, run of low octavas included, and gets nothing of medium 15."
+   },
+   "B": {
+    "melody": 7,
+    "level": 7,
+    "pattern": 5,
+    "playable": 7,
+    "musical": 7,
+    "overall": 6,
+    "reasons": "The octava run becomes negras, but the left hand stays the sheet now elsewhere (no octava then two beamed chords: medium 15 is hardly used), and the right hand changes a few notes of the melody near f4380."
+   },
+   "C": {
+    "melody": 9,
+    "level": 7,
+    "pattern": 7,
+    "playable": 6,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "A low note or octava then chords, close to medium 15, accepted at the first reply; some triads fall on semicorcheas, so the hand is busier than the pattern asks."
+   },
+   "D": {
+    "melody": 9,
+    "level": 7,
+    "pattern": 7,
+    "playable": 8,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "The melody in single notes (medium 1) and an octava then a chord on most beats; the octava run becomes two held blancas, the simplest solution, but the two beamed chords of medium 15 rarely appear."
+   }
+  }
+ },
+ "halleluyah.hard-medium": {
+  "scores": {
+   "A": {
+    "melody": 7,
+    "level": 8,
+    "pattern": 7,
+    "playable": 8,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "The right hand keeps its dyads (hard 1) and the left hand plays calm low notes and chords in negras (0.39 moves per negra), but the high ending of the melody becomes a held A4-E5 and F5."
+   },
+   "B": {
+    "melody": 9,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The dyads of the right hand and the high ending kept; the left hand plays a low note then two chords in corcheas (medium 2), regular, after a short broken line at the start."
+   },
+   "C": {
+    "melody": 9,
+    "level": 6,
+    "pattern": 6,
+    "playable": 5,
+    "musical": 7,
+    "overall": 6,
+    "reasons": "The right hand and the ending are kept, but the left hand repeats triads on every corchea (four in a row at f3680 and f3740) and moves more than now (0.62 against 0.36 per negra)."
+   },
+   "D": {
+    "melody": 7,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "A regular left hand (a low note then two chords) under the dyads of the right hand, but the high ending of the melody is reduced to one F5."
+   }
+  }
+ },
+ "halleluyah.forced-e2-e2": {
+  "scores": {
+   "A": {
+    "melody": 6,
+    "level": 2,
+    "pattern": 2,
+    "playable": 2,
+    "musical": 5,
+    "overall": 2,
+    "reasons": "The check refused all three replies, so the user keeps the sheet now (chords in the right hand, broken lines in the left)."
+   },
+   "B": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "The melody in single notes with its high ending; the left hand is a low note then a held triad (easy 2) through most of the passage, after one short broken line at the start."
+   },
+   "C": {
+    "melody": 8,
+    "level": 7,
+    "pattern": 7,
+    "playable": 8,
+    "musical": 7,
+    "overall": 7,
+    "reasons": "Close to B, but the left hand keeps two broken lines in corcheas (f3540 and the arpeggio at f3790), which easy 2 does not have."
+   },
+   "D": {
+    "melody": 8,
+    "level": 8,
+    "pattern": 8,
+    "playable": 8,
+    "musical": 8,
+    "overall": 8,
+    "reasons": "Accepted at the first reply: the melody in single notes with its high ending, a low note then a held triad on each chord, one broken line at the start."
+   }
+  }
+ },
+ "_verdict": "<p>The question was whether OpenAI's models can write the levels as well as Sonnet 5.5, the model the app uses today, at a lower cost and in less time. On 16 cases (4 passages of 99 Red Balloons, 7 Years and Halleluyah, each at easy, medium, hard for the right hand with medium for the left, and with one forced pattern), all at <code>medium</code> effort for the OpenAI models:</p>\n<ul>\n<li><b>GPT-6.1 Terra (medium)</b> scored 7.6 of 10, Sonnet 7.4: the same quality within the noise of one judge on 16 cases (Terra was best or tied in 11 cases, Sonnet in 9). Every batch was accepted, as with Sonnet. It costs about <b>$0.33 per song against $2.72</b> (8 times less) and takes about <b>9 minutes against 26</b>.</li>\n<li><b>GPT-6.1 Sol (medium)</b> scored 7.0: every batch accepted, about $0.58 per song and 9 minutes, but its left hands were more often busier than the sheet now and it changed melody endings more than Terra.</li>\n<li><b>GPT-6 Luna (medium)</b> scored 5.2: 5 of its 20 batches were refused by the app's check after three replies, so those passages stay as hard as they were. It is the cheapest (about $0.07 per song) but not usable for the levels.</li>\n<li><b>Max effort</b> did not pay: on the riff, Terra and Sol at <code>max</code> wrote 9 to 15 times more output tokens (their thinking), cost 5 to 7 times more and took 7 to 9 minutes per batch instead of about 1, for answers that were accepted the same way.</li>\n</ul>\n<p><b>My recommendation</b>: GPT-6.1 Terra at <code>medium</code> effort for the level runs, which keeps the quality and cuts the cost and the time of a whole song by about 8 and 3 times. Limits of this result: one judge (me) and 16 cases; the prompts were written and tuned on Sonnet in Phase 3; Sonnet ran at <code>high</code> effort as in the app and without caching of its conversation turns.</p>"
+}

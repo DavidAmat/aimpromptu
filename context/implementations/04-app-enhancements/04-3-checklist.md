@@ -109,18 +109,18 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 
 # [ ] Phase 5: Other AI models for the level runs (OpenAI), judged against Sonnet 5.5
 
-- [ ] Task 5.1 Prices and model ids of GPT-6 Luna, GPT-6.1 Terra, GPT-6.1 Sol from the internet (input, cached
-  input, output; the caching rules); a first estimate of one whole song per model against Sonnet 5.5.
-- [ ] Task 5.2 `OpenAIComplete` in `sheet_llm.py` (the `openai` SDK, the Responses API, the largest effort, caching
-  on, the same `Call` measures), with tests without requests.
-- [ ] Task 5.3 The cache test with GPT-6 Luna (the plan and three or four batches in a row: cached tokens from the
-  second request on).
-- [ ] Task 5.4 The test set (passages of 99 Red Balloons, 7 Years, Halleluyah; the levels and forced patterns), run
-  by the four models in memory.
-- [ ] Task 5.5 The measures, and the cost and time extrapolated to a whole song.
-- [ ] Task 5.6 The judge (Opus 5.5): blind scores per case, then the trade-off verdict.
-- [ ] Task 5.7 The report `gallery/04-3-phase-5/index.html`, served.
-- [ ] Task 5.8 The user's review and decision.
+- [x] Task 5.1 Prices and model ids of GPT-6 Luna, GPT-6.1 Terra, GPT-6.1 Sol from the internet (input, cached
+  input, cache write, output; the caching rules of GPT-6, which bill the writes); a first estimate per song.
+- [x] Task 5.2 `OpenAIComplete` in `sheet_llm.py` (the `openai` SDK, the Responses API, explicit cache breakpoints, the
+  same `Call` measures and reasoning tokens), with tests without requests.
+- [x] Task 5.3 The cache test with GPT-6 Luna: the system prompt read from the second request on; a fault fixed (the
+  earlier turns of a conversation were not read: a breakpoint on every user message).
+- [x] Task 5.4 The test set: 16 cases (4 passages × easy, medium, hard right with medium left, one forced pattern), run
+  by Sonnet 5.5 and the three OpenAI models at `medium` (the user, 2026-10-30, after the `max` measures on the riff).
+- [x] Task 5.5 The measures, and the cost and time extrapolated to a whole song.
+- [x] Task 5.6 The judgment: by the agent itself, blind (the user, 2026-10-30: no judge through an API).
+- [x] Task 5.7 The report `gallery/04-3-phase-5/index.html` (two tabs: the comparison, the examples), served.
+- [ ] Task 5.8 The user's review and decision (which model the level runs use).
 
 # [ ] Phase 6: Documentation and closing
 
