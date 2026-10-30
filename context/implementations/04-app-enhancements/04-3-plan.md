@@ -140,6 +140,8 @@ At the end of this plan:
 7. **Enhance with AI** offers the levels: on a selected range (both hands, the right hand or the left hand) and on the
    whole sheet (the whole sheet, the right hand only, the left hand only).
 8. 99 Red Balloons has an easy, a medium and a hard version that the user approved in the browser.
+9. A comparison of other AI models for the level runs (OpenAI's GPT-6 Luna, GPT-6.1 Terra and GPT-6.1 Sol) with
+   Sonnet 5.5, on quality (judged by Opus 5.5), cost and time per song, in an HTML report (Phase 5).
 
 Not in this plan: the super hard level (the code keeps the list of levels open so that it can be added later); a
 piano sound that plays the sheet (playback stays the recording, see section 9); folders in the public library.
@@ -736,7 +738,15 @@ Start prompt:
    existing checks; the user checks the three versions in the browser.
 7. The real runs on 99 Red Balloons (`c0e39afe`), after the user's ok and with the cost said first.
 
-## Phase 5: Documentation and closing
+## Phase 5: Other AI models for the level runs (OpenAI), judged against Sonnet 5.5
+
+Added by the user on 2026-10-30, after Phase 4 (section 10). The level runs use Sonnet 5.5 today: about $0.20 per
+batch and about $2.25 to $2.70 for a whole song such as 99 Red Balloons, and 25 to 30 minutes, because the batches
+run one after the other. Public benchmarks place OpenAI's newest models close to it at a much lower cost per task.
+This phase measures whether that holds for our task, on passages of the songs of the library, and reports three
+numbers per model: the quality of its answers (a score from 0 to 10 given by a judge), the cost, and the time, each
+for the passage and extrapolated to a whole song. Nothing in the app changes in this phase: the runs are in memory
+(scratch scripts, as Phase 3), and no song of the user is written.
 
 Start prompt:
 
@@ -744,6 +754,94 @@ Start prompt:
 > @context/implementations/04-app-enhancements/04-3-prompt.md, @context/guidelines/guidelines-implementation-plan.md,
 > @context/guidelines/guidelines-communication-with-user.md and @context/implementations/04-app-enhancements/04-3-implementation-phase-4.md.
 > Start Phase 5.
+
+**The models.** All with the largest reasoning effort the model offers ("max" as the user calls it):
+
+| Name in this plan | Role | Notes |
+|---|---|---|
+| **Sonnet 5.5** (`claude-sonnet-5-5`, effort `high` as in the app) | the baseline: the model the app uses today | `sheet_llm.ClaudeComplete` |
+| **GPT-6 Luna** (max) | the cheapest and least capable; the model for every test of the OpenAI code (caching, format, retries) | the user does not mind its cost |
+| **GPT-6.1 Terra** (max) | the middle one | |
+| **GPT-6.1 Sol** (max) | the most capable of the three | |
+| **Opus 5.5** (`claude-opus-5-5`) | **the judge** only, never a candidate | the model of this plan's agents |
+
+**Budget.** The user has about $7 of OpenAI credits (`OPENAI_API_KEY` in `.env`; never print it, never write it to a
+file). This is a test to play with: a run of a few cents or a few dollars needs no question to the user. The
+Anthropic side (Sonnet 5.5 for the same passages, Opus 5.5 as the judge) is allowed at the same small scale. Say the
+measured costs in the walkthrough. Stop and ask only if a step would pass about $5 on the OpenAI side, because the
+credits would run out.
+
+1. **Prices and model ids** (first, before any code). From the internet (WebSearch, OpenAI's pricing and model
+   pages): the exact API model ids of GPT-6 Luna, GPT-6.1 Terra and GPT-6.1 Sol; how their maximum reasoning effort is
+   named in the API; and their prices per million tokens for input, **cached input** and output (reasoning tokens are
+   billed as output). Also the rules of OpenAI's prompt caching: the smallest prompt it caches, that it caches the
+   longest common **prefix**, how long a cache lives, and the `prompt_cache_key` parameter. Confirm the ids with
+   `client.models.list()`. The prices of Sonnet 5.5 and Opus 5.5 from the `claude-api` skill. Write the table, with its
+   sources and the date, into the report. Then compute, from these prices and the token counts of Phase 3 (the system
+   prompt of a run is about 8,500 tokens; a batch sends 2,400 to 5,000 new tokens and receives 4,000 to 18,000 tokens,
+   mostly reasoning), a first estimate of one whole song per model (99 Red Balloons: the plan, then 13 batches),
+   compared with Sonnet 5.5's measured $2.25 to $2.70.
+2. **The OpenAI client.** Add the `openai` SDK to the backend's dependencies (and install it in the running
+   container). Write `OpenAIComplete` next to `ClaudeComplete` in `aitu_backend/sheet_llm.py`, with the same contract
+   (`complete(system, messages) -> text`, `calls` with one `Call` per request: tokens in, cached tokens, tokens out,
+   reasoning tokens, seconds, US dollars, model), so that `levels.write_level` runs with either client and nothing
+   else changes. Use the Responses API with the maximum reasoning effort. **Caching is always on**: the system prompt
+   is the first part of every request of a run and identical in all of them (it already is: `levels.system_prompt`),
+   the stable parts of a batch prompt come before the parts that change, and every request of one run sends the same
+   `prompt_cache_key` (for example the song and the level). Unit tests with a stand-in for the API (no request). The
+   app does not use this client yet: choosing a model in the app is a later decision of the user.
+3. **The cache test, with GPT-6 Luna only.** One passage: the plan request and three or four batches in a row, as a
+   whole song runs them. Check in the usage of each answer that the first request has no cached tokens and the
+   following ones have about the length of the system prompt cached (`cached_tokens`). If they do not, find why
+   (order, length, key) and fix it before any other run. Every cost forecast of this phase assumes this caching:
+   the first request at the full price, the following ones with the cached prefix at the cached price.
+4. **The test set.** Passages of one batch each (16 to 24 s) from songs of the library: two of the four passages of
+   99 Red Balloons of Phase 3 (the riff with the high chords, f783-f1042, and the passage after it, f1042-f1414), one
+   passage of 7 Years, and one of a song played by a human (Halleluyah, Pinchivi), read only. Two kinds of case:
+   - **a level**: easy, medium, and hard for the right hand with medium for the left hand (the level the user
+     approved in Phase 3), with the patterns used when none is selected (Phase 4);
+   - **a forced pattern**: the same passage with one pattern of the catalog chosen for each hand, the same for every
+     model (for example left medium 15 with right medium 1, and left easy 2 with right easy 2), so the judge can see
+     which model follows a named pattern best.
+   About 12 to 16 cases, each run by the four models through `levels.write_level` with `span` set to the passage
+   (the plan request of the passage, then its batch, with the check and at most 3 replies, as in the app). Start with
+   GPT-6 Luna on all the cases, then the others; keep every prompt, answer and `Call` in
+   `/home/app/04-3-phase-5/` (on the host `/mnt/ssd2/aimpromptu/home/04-3-phase-5/`). Run the scripts with
+   `docker exec`, not through the backend: a reload of the backend does not stop them.
+5. **The measures** of each run: accepted or not, and after how many replies (the problems the check found); the
+   tokens (new, cached, out, reasoning), the cost and the time of each request; the hand measures of the answer (Phase
+   3: moves per negra, widest column, range in two negras) next to the original's. **Per song**: for each model, the
+   cost and the time of a whole song extrapolated from the passage runs: the plan request plus the number of batches
+   of the song (`levels.level_windows`; 99 Red Balloons has 13 for both hands, 7 Years its own count) times the mean
+   batch, with the cache as measured in task 3, and the time as the sum (the batches of a song run one after the
+   other). Also say how many batches would fail (they keep their notes) at the rate measured.
+6. **The judge.** Opus 5.5, with the largest effort. For each case it receives: the criteria of the levels (section
+   5.1 of this plan, the user's rules of section 10: never harder than the sheet now, the left hand follows its
+   rhythm, the riff in the right hand, the steady rhythm of easy and medium, the melody first, artifacts, decoration
+   notes; and the prompt files `shared.md` and the level's `.md`); the patterns asked (their name, line and F1 text);
+   the original passage (F1 frames text and its measures); and the answers of the four models as F1 frames text drawn
+   by the app, with their measures and declared lines, **without the model names, in a shuffled order** (A, B, C, D),
+   so it cannot favour one. It answers in JSON: for each answer a score from 0 to 10 for the melody kept, the fit to
+   the level, the pattern followed, how playable it is, and how musical it is, an overall score, and two lines of
+   reasons; and whether each is better, similar or worse than the baseline (named to it only in this question, after
+   the scores). A last request gives the judge the table of every model (mean scores, acceptance, cost and time per
+   passage and per song) and asks for the best trade-off between quality, cost and time, with its reasons.
+7. **The report** `gallery/04-3-phase-5/index.html`, served at `http://ubuntu:8097/gallery/04-3-phase-5/index.html`:
+   the prices table (sources, date); the summary table, one row per model: judge score (mean, and by kind of case),
+   accepted share, replies, **cost per passage, cost per song, time per passage, time per song**; the judge's
+   trade-off verdict; then each case: the original drawn by the app's engine, each model's answer drawn, its measures,
+   cost, time and the judge's scores and reasons. Every drawing checked zoomed in before the user sees it.
+8. **The user's review and decision** (DECISIONS of the walkthrough): which model the level runs should use, and
+   whether the app should get a choice of model (that would be a later phase).
+
+## Phase 6: Documentation and closing
+
+Start prompt:
+
+> You are working on an implementation plan. Read @context/implementations/04-app-enhancements/04-3-plan.md,
+> @context/implementations/04-app-enhancements/04-3-prompt.md, @context/guidelines/guidelines-implementation-plan.md,
+> @context/guidelines/guidelines-communication-with-user.md and @context/implementations/04-app-enhancements/04-3-implementation-phase-5.md.
+> Start Phase 6.
 
 1. The documentation still stale: the core's
    [`README.md`](../../../aitu-backend/src/aitu_backend/sheet/README.md) (the level run, its prompts and its check),
@@ -770,6 +868,9 @@ Start prompt:
 | Cost | Every AI test announced with its cost; passages first, then the whole song |
 | **Playback is the recording**: the easy version shows notes that the user does not hear (new left-hand chords), and does not show some that the user hears | Stated in the walkthrough of Phase 4 when the user checks; a piano sound of the sheet is an open point for a later implementation |
 | A level of the whole sheet replaces the user's edited sheet | A new project per level (section 5.8); the original stays |
+| The OpenAI credits (about $7) run out during Phase 5 | GPT-6 Luna for every test of the code; a cost estimate from the prices before the runs; stop and ask before a step above about $5 |
+| The OpenAI cache does not work, and the forecast per song is wrong | The cache test of task 5.3 first, read from the usage of each answer |
+| The judge favours the model it knows | The answers are shuffled and unnamed; the baseline is named only after the scores |
 
 # 10. Changes made by the phases
 
@@ -956,5 +1057,15 @@ The steps after an AI change are a binding rule (section 6). The user had saved 
 99 Red Balloons before the fix; at the user's request its notation was drawn again with the beams (same notes and
 hands, one step of undo, no AI request).
 
-**Phase 4, approval and merge** (2026-10-30): the user approved Phase 4; the branch was merged into `master`. Phase 5
-(documentation and closing) is next.
+**Phase 4, approval and merge** (2026-10-30): the user approved Phase 4; the branch was merged into `master`.
+
+**A request between phases** (2026-10-30, branch `feat/04-3-note-clicks`, waiting for the user's ok): one click on
+a notehead picks it and never moves the cursor (only playing, a drag of the cursor or a double click move it); each
+notehead is caught in a square that grows with its size; the note toolbox gets **Move** (ST and T, +1 and -1: the
+picked notes a semitone or a tone up or down, in `notes.pmn` and on the sheet, one step of undo).
+
+**A new phase: other AI models** (the user, 2026-10-30): before the documentation, Phase 5 now compares OpenAI's
+GPT-6 Luna, GPT-6.1 Terra and GPT-6.1 Sol (all at their largest reasoning effort) with Sonnet 5.5 on the level runs:
+the quality of the answers judged by Opus 5.5 (a score from 0 to 10, the answers shuffled and unnamed), the cost and
+the time per passage and extrapolated to a whole song, with OpenAI's prompt caching always on (and tested first with
+GPT-6 Luna, the model of every code test). The documentation and closing phase becomes Phase 6.

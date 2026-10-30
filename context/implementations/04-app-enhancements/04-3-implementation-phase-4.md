@@ -4,7 +4,7 @@ Status: built on 2026-10-30 on branch `feat/04-3-phase-4` (from `master` `7f5c23
 of 99 Red Balloons is done (section 8, $0.88); the version saved before the beam fix was drawn again (section 9);
 approved by the user and merged into `master` on 2026-10-30.
 
-Audience: the agents of this plan (this phase when the user answers, and Phase 5). Technical.
+Audience: the agents of this plan (this phase when the user answers, Phase 5 and Phase 6). Technical.
 
 # 1. Study (task 4.1)
 
@@ -180,11 +180,16 @@ Library, so the agent did not change it (a question for the user in the walkthro
 - Checks after the change: full backend suite (all passed but the two Transkun tests that need the GPU);
   `check:frames-edit` fails one step, "a box dragged across the staves picks the notes in it" (3 notes, more than 3
   expected, at the start of 7 Years), twice; 7 Years is drawn identically with and without the new step, so this
-  failure does not come from it (left for Phase 5).
+  failure does not come from it (left for Phase 6; the branch `feat/04-3-note-clicks` widens that box).
 
 # 10. Needed later
 
-- Phase 5: the core's `README.md` (the level run, the catalog folder), `context/frontend/annotations.md` and
+- **Phase 5** (other AI models, added by the user on 2026-10-30): `levels.write_level` takes any `complete(system,
+  messages) -> text`; the `Call` of `sheet_llm` and the scratch runners of Phase 3 (`/home/app/04-3-phase-3/run_levels.py`,
+  `rerun_level.py`) show how a run in memory is made and measured; the level runs' measured costs are in section 8
+  (first minute, $0.88 for the plan and 4 batches, Sonnet 5.5) and in the Phase 3 report (sections 11, 14, 15).
+
+- Phase 6 (documentation): the core's `README.md` (the level run, the catalog folder), `context/frontend/annotations.md` and
   `rendering.md` (the dialog), `context/music-library/private-library.md` (the level copy's metadata).
 - The level of a level copy shares the original's song; **Save to library** of a level copy lets the user choose the
   song (a version "Easy"): not tested with the AI.
