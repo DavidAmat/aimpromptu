@@ -96,6 +96,9 @@ class ProjectRow(_Camel):
     library: LibraryLink | None = None
     #: A project of the Personal Vault that edits a version (section 10.6): that version.
     editing: LibraryLink | None = None
+    #: A level copy (implementation 04-3, Phase 4): the project it was written from, and that project's song.
+    level_of: str | None = Field(None, alias="levelOf")
+    level_song: LibraryLink | None = Field(None, alias="levelSong")
     #: The folders of My projects it is in (implementation 04-3, Phase 1).
     folders: list[int] = Field(default_factory=list)
     #: Its metadata: primary key and secondary key (implementation 04-3, Phase 1).
@@ -204,11 +207,22 @@ def _running(part_ids: list[str]) -> str | None:
 
 
 def _links(projects: list[Project]) -> dict[str, LibraryLink]:
-    """The song and version of each library project, and of the version each edit copy edits."""
+    """The song and version of each library project, of the version each edit copy edits, and of the original of
+    each level copy (keyed by the level copy's id)."""
     wanted = [row.id for row in projects if row.layer == "private"]
     wanted += [row.based_on for row in projects if row.based_on]
     with session() as db:
-        found = rows.links_of(db, wanted)
+        originals = {row.id: row.level_of for row in projects if row.level_of}
+        # the original of a level copy: a version of My Library (its own link), or an edit copy (its version's)
+        home = {
+            one.id: one.based_on or one.id
+            for one in db.scalars(select(Project).where(Project.id.in_(set(originals.values()))))
+        }
+        wanted += list(home.values())
+        found = dict(rows.links_of(db, wanted))
+        for copy_id, original in originals.items():
+            if home.get(original) in found:
+                found[copy_id] = found[home[original]]
     return {
         project_id: LibraryLink(
             song_id=link.song_id,
@@ -276,6 +290,8 @@ def _row(
         updated_at=bundle.last_change(project.id) or project.updated_at,
         library=links.get(project.id) if project.layer == "private" else None,
         editing=links.get(project.based_on) if project.based_on else None,
+        level_of=project.level_of,
+        level_song=links.get(project.id) if project.level_of else None,
         folders=organized.folders.get(project.id, []),
         tags=tag_rows(organized.tags.get(project.id, [])),
     )
@@ -400,7 +416,8 @@ def rename_project(project_id: str, body: RenameIn) -> ProjectRow:
 def delete_project(project_id: str) -> None:
     """Delete a project with everything it has: its bundle, its history, its temporary files (a
     video and its frames), and the audio files no other project uses."""
-    _project_or_404(project_id)
+    row = _project_or_404(project_id)
+    flow.release_levels(row.owner_id, project_id)
     bundle.delete_project(project_id)
 
 

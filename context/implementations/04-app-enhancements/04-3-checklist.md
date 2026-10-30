@@ -21,7 +21,10 @@ Status letters: `[x]` complete, `[p]` in progress, `[b]` blocked, `[c]` cancelle
 - [x] **The catalog and the frame numbers** (user, 2026-10-29, review 2 of Phase 2): plan section 5.10; Phase 2b
   comes before Phase 3 (confirmed by the user at the merge).
 - [x] **Phase 3**: the user approves the three levels on the passages of 99 Red Balloons (2026-10-30).
-- [ ] **Phase 4**: where a level version is stored (plan section 5.8), confirmed with the user.
+- [x] **Phase 4**: where a level version is stored (plan section 5.8), confirmed with the user on 2026-10-30: a new
+  project per level of the whole sheet, linked to its original by `projects.level_of` (not an edit copy); the
+  patterns approved in Phase 3 when none is selected; a level per hand in the dialog; the AI test on the first minute
+  of 99 Red Balloons only, hard for the right hand and medium for the left hand (plan section 10).
 
 # [x] Phase 1: Folders, the pills and the metadata
 
@@ -90,16 +93,19 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 - [x] Task 3.9 The user's review, until the three levels are approved (approved on 2026-10-30; the AI's changes
   confirmed in `notes.pmn` and the Notes tab, report section 16).
 
-# [ ] Phase 4: The levels in the app
+# [p] Phase 4: The levels in the app
 
-- [ ] Task 4.1 Study; section 5.8 confirmed with the user.
-- [ ] Task 4.2 The dialog: the levels on a range and on the whole sheet, with the cost; the catalog of patterns and
+- [x] Task 4.1 Study; section 5.8 confirmed with the user (changed: the level copy's own link, revision `0010`).
+- [x] Task 4.2 The dialog: the levels on a range and on the whole sheet, with the cost; the catalog of patterns and
   the references in the words (plan section 5.10).
-- [ ] Task 4.3 The run: `start_level`, `write_level`, the check, the feedback, the stand-in tests.
-- [ ] Task 4.4 Storing: a new project per level of the whole sheet; a range in place with one step of undo.
-- [ ] Task 4.5 Tests with the AI on a temporary copy of 99 Red Balloons; gallery `gallery/04-3-phase-4/`.
-- [ ] Task 4.6 Checks; the user checks the three versions in the browser.
-- [ ] Task 4.7 The real runs on 99 Red Balloons, after the user's ok and with the cost said first.
+- [x] Task 4.3 The run: `start_level`, `write_level`, the check, the feedback, the stand-in tests.
+- [x] Task 4.4 Storing: a new project per level of the whole sheet; a range in place with one step of undo.
+- [x] Task 4.5 Tests with the AI: the first minute of 99 Red Balloons (a temporary copy split at 60 s), hard for the
+  right hand and medium for the left hand, through the app (the user, 2026-10-30): $0.88, 4 of 4 batches; a missing
+  beam fault found and fixed (report section 8).
+- [p] Task 4.6 Checks (`check:enhance-dialog` with the levels passes); the user checks the level in the browser.
+- [c] Task 4.7 The real runs on the whole of 99 Red Balloons: replaced by the first-minute test of task 4.5 (the user,
+  2026-10-30). The whole song at a level is for the user to start from the dialog, when wanted.
 
 # [ ] Phase 5: Documentation and closing
 

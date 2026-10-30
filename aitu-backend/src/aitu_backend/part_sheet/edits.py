@@ -69,6 +69,7 @@ __all__ = [
     "Pasted",
     "Transposed",
     "add_note",
+    "apply_level",
     "apply_simplify",
     "apply_stretch",
     "change_notes",
@@ -501,6 +502,83 @@ def apply_stretch(
     ``staff`` (1 or 2): a stretch of that hand only (implementation 04, Phase 4); the other hand's figures are not
     the AI's.
     """
+
+    def note(record: store.Record, written: str) -> None:
+        record.stretches.append([start, end, words, round(usd, 4), written])
+
+    return _store_written(
+        part_id,
+        spliced,
+        notes_revision=notes_revision,
+        start=start,
+        end=end,
+        usd=usd,
+        requests=requests,
+        model=model,
+        staff=staff,
+        label="Enhance a stretch with AI",
+        note=note,
+    )
+
+
+def apply_level(
+    part_id: str,
+    spliced: Sheet,
+    *,
+    notes_revision: int,
+    start: int,
+    end: int,
+    staff: int | None,
+    wrote: list[Any],
+    usd: float,
+    requests: int,
+    model: str | None,
+    label: str,
+    entry: dict[str, Any],
+) -> bool:
+    """Store a level run (implementation 04-3, Phase 4, ``job.start_level``): ``spliced`` is the sheet with the notes
+    of the hands rewritten replaced, inside the batches accepted, by the AI's (``wrote``). As a stretch: the notes
+    left out marked removed and the new ones added in ``notes.pmn`` (:func:`change_notes`), each note in the hand the
+    sheet draws it in (notes moved from one hand to the other too), the sheet settled on them with the AI's figures,
+    one step of undo (``label``). ``entry`` goes into the record's ``levels`` (the level of each hand, the patterns,
+    the plan, the declared lines, the cost). Returns ``False`` without writing when the notes changed meanwhile."""
+
+    def note(record: store.Record, written: str) -> None:
+        record.levels.append({**entry, "usd": round(usd, 4), "requests": requests, "written": written})
+
+    return _store_written(
+        part_id,
+        spliced,
+        notes_revision=notes_revision,
+        start=start,
+        end=end,
+        usd=usd,
+        requests=requests,
+        model=model,
+        staff=staff,
+        label=label,
+        note=note,
+        wrote=wrote,
+    )
+
+
+def _store_written(
+    part_id: str,
+    spliced: Sheet,
+    *,
+    notes_revision: int,
+    start: int,
+    end: int,
+    usd: float,
+    requests: int,
+    model: str | None,
+    staff: int | None,
+    label: str,
+    note: Callable[[store.Record, str], None],
+    wrote: list[Any] | None = None,
+) -> bool:
+    """The storing of :func:`apply_stretch` and :func:`apply_level`: ``wrote``, the notes whose figures are the AI's
+    (by default every note of ``spliced`` in ``[start, end)`` of ``staff``, or of both hands)."""
     with pipeline.piece_lock(part_id):
         stored = pipeline.load_note_events(part_id)
         if stored is None or stored.header.notes_revision != notes_revision:
@@ -548,10 +626,14 @@ def apply_stretch(
         # may ask to keep the figures or to set others. A note the AI wrote that the rule makes a grace note is
         # written as the AI wrote it, unless it was a grace note already. Notes are found a frame or two away too
         # (the drawn column of a chord moves when its first note is taken off).
-        wrote = {
+        wrote_figures = {
             (n.frame, n.midi): n.figure
-            for n in spliced.notes
-            if start <= n.frame < end and n.figure in FIGURES and staff in (None, n.staff)
+            for n in (
+                wrote
+                if wrote is not None
+                else [n for n in spliced.notes if start <= n.frame < end and staff in (None, n.staff)]
+            )
+            if n.figure in FIGURES
         }
         graces = {
             (n.frame, n.midi)
@@ -562,8 +644,8 @@ def apply_stretch(
         def written(place: tuple[int, int]) -> tuple[int | None, tuple[int, int]]:
             for d in (0, -1, -2, 1, 2):
                 near = (place[0] + d, place[1])
-                if near in wrote:
-                    return wrote[near], near
+                if near in wrote_figures:
+                    return wrote_figures[near], near
             return None, place
 
         fixed = 0
@@ -591,15 +673,11 @@ def apply_stretch(
         record.usd += usd
         record.requests += requests
         record.model = model or record.model
-        written = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        record.stretches.append([start, end, words, round(usd, 4), written])
+        note(record, datetime.now(timezone.utc).isoformat(timespec="seconds"))
         record.hands_revision = revision
         store.save(part_id, after, record)
         build.forget(part_id)
-        _record(
-            _Step("Enhance a stretch with AI", changes, _sheet_change(drawn.text, after), gone),
-            part_id,
-        )
+        _record(_Step(label, changes, _sheet_change(drawn.text, after), gone), part_id)
         return True
 
 

@@ -97,7 +97,7 @@ function stepWords(row: ProjectRow): string {
 const message = (caught: unknown, fallback: string) => (caught instanceof Error ? caught.message : fallback);
 
 /** The artist of a project: the one of the song it edits, when it is an edit copy of My library; else none. */
-const artistsOf = (row: ProjectRow) => row.editing?.artists ?? row.library?.artists ?? [];
+const artistsOf = (row: ProjectRow) => row.editing?.artists ?? row.levelSong?.artists ?? row.library?.artists ?? [];
 const byTitle = (a: ProjectRow, b: ProjectRow) =>
   (a.title || "Untitled project").localeCompare(b.title || "Untitled project", undefined, { sensitivity: "base" });
 

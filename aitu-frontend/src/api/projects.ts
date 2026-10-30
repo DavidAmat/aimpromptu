@@ -52,6 +52,9 @@ export interface ProjectRow {
   library: LibraryLink | null;
   /** A project of the Personal Vault that edits a version: that version. */
   editing: LibraryLink | null;
+  /** A level copy (implementation 04-3, Phase 4): the project it was written from, and that project's song. */
+  levelOf?: string | null;
+  levelSong?: LibraryLink | null;
   /** The folders of My projects it is in (implementation 04-3). */
   folders: number[];
   /** Its metadata (implementation 04-3). */

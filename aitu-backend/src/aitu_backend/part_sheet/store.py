@@ -85,6 +85,9 @@ class Record:
     added: int = 0
     left_out: int = 0
     simplified: list[list[Any]] = field(default_factory=list)
+    #: The level runs (implementation 04-3, Phase 4): each the level of each hand, the hands, the frames, the
+    #: patterns, the plan, the declared lines, the prompt version and the cost.
+    levels: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def enhanced(self) -> bool:
@@ -119,6 +122,7 @@ class Record:
             **({"added": self.added} if self.added else {}),
             **({"leftOut": self.left_out} if self.left_out else {}),
             **({"simplified": self.simplified} if self.simplified else {}),
+            **({"levels": self.levels} if self.levels else {}),
         }
 
     @classmethod
@@ -146,6 +150,7 @@ class Record:
             added=int(payload.get("added") or 0),
             left_out=int(payload.get("leftOut") or 0),
             simplified=list(payload.get("simplified") or []),
+            levels=list(payload.get("levels") or []),
         )
 
 

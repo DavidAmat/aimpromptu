@@ -200,7 +200,55 @@ export interface LlmCost {
   usd: number;
 }
 
-export type LlmCosts = Record<SongRun | "stretch", LlmCost>;
+export type LlmCosts = Record<SongRun | "stretch", LlmCost> &
+  Partial<Record<`level-${LevelHand}` | `level-stretch-${LevelHand}`, LlmCost>>;
+
+/** The levels of the whole song simplification (implementation 04-3, Phase 4). Super hard comes later. */
+export type LevelName = "easy" | "medium" | "hard";
+/** The hands a level writes: both, or one (the other stays exactly as it is). */
+export type LevelHand = "both" | "right" | "left";
+
+/** A level run: the level of each hand, the hands, the patterns selected in the catalog, the user's words. */
+export interface LevelChoice {
+  right: LevelName;
+  left: LevelName;
+  hand: LevelHand;
+  patterns: string[];
+  words: string;
+}
+
+/** A level of a range: in place, one step of undo. */
+export interface LevelRequest extends LevelChoice {
+  start: number;
+  end: number;
+}
+
+/** A level of the whole sheet: written into a new project of My projects (the level copy). */
+export interface LevelCopy {
+  jobId: string;
+  projectId: string;
+  partId: string;
+  title: string;
+}
+
+/** A pattern of the catalog of Enhance with AI (the gallery of patterns). */
+export interface CatalogPattern {
+  /** `"left medium 2"`. */
+  ref: string;
+  hand: "left" | "right";
+  level: "easy" | "medium" | "hard" | "super hard";
+  number: number;
+  name: string;
+  line: string;
+  source: string | null;
+  bars: string | null;
+}
+
+export interface LevelCatalog {
+  patterns: CatalogPattern[];
+  /** `hand -> level -> refs`: the patterns a run uses for a hand when none is selected. */
+  defaults: Record<"left" | "right", Record<string, string[]>>;
+}
 
 /** What the next undo and redo of the part's steps are about (`null`: nothing). */
 export interface SheetHistory {
@@ -433,8 +481,20 @@ export const sheetApi = {
       body: { hand },
     }),
 
-  /** About what each run of the Enhance with AI dialog would cost. */
-  llmCosts: (audioUuid: string, signal?: AbortSignal) => request<LlmCosts>(`/sheet/${audioUuid}/llm/costs`, { signal }),
+  /** About what each run of the Enhance with AI dialog would cost (with a range: a level of that range too). */
+  llmCosts: (audioUuid: string, signal?: AbortSignal, range?: { start: number; end: number }) =>
+    request<LlmCosts>(`/sheet/${audioUuid}/llm/costs`, { signal, ...(range ? { query: range } : {}) }),
+
+  /** The AI writes a range again at a level, in place; follow the job on `progressUrl(jobId)`. */
+  level: (audioUuid: string, body: LevelRequest) =>
+    request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm/level`, { method: "POST", body }),
+
+  /** A level of the whole sheet, in a new project of My projects: open `partId`'s sheet to follow it. */
+  levelCopy: (audioUuid: string, body: LevelChoice) =>
+    request<LevelCopy>(`/sheet/${audioUuid}/llm/level-copy`, { method: "POST", body }),
+
+  /** The catalog of patterns and the patterns used when none is selected. */
+  levelCatalog: (signal?: AbortSignal) => request<LevelCatalog>("/sheet/levels/catalog", { signal }),
 
   /** What a reading edit would leave, without storing it (the preview of Transpose figures). */
   previewRead: (audioUuid: string, edit: ReadingEdit, width: number) =>

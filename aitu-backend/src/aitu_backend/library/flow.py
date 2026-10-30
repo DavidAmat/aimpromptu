@@ -218,13 +218,16 @@ def save(
                 assert row is not None
                 row.layer = "private"
                 row.based_on = None
+                row.level_of = None
             locate.forget(project_id)
 
         replaced = _apply(plans)
         project = bundle.read_project(project_id)
-        if project.based_on is not None:
-            # A copy saved as a new version stops being a copy.
-            bundle.write_project(project.model_copy(update={"based_on": None}), touch=False)
+        if project.based_on is not None or project.level_of is not None:
+            # A copy saved as a new version stops being a copy (an edit copy, or a level copy).
+            bundle.write_project(
+                project.model_copy(update={"based_on": None, "level_of": None}), touch=False
+            )
         _drop_temporary(project_id, owner, part_ids)
         bundle.sync_audio_refs(project_id)
         audio_files.delete_unused(replaced)
@@ -494,11 +497,51 @@ def _forget_edits_of(owner: int, library_id: str, song_id: int) -> None:
             bundle.write_project(project.model_copy(update={"based_on": None}), touch=False)
 
 
+def level_copy(project_id: str, *, owner: int, title: str) -> tuple[str, dict[str, str]]:
+    """A new project of My projects for a level of the whole sheet (implementation 04-3, Phase 4, plan section
+    5.8): a copy of the project (a project of My projects, or a version of the owner's My Library) named ``title``,
+    with ``level_of`` the project it was written from (the original of a level copy, so a level of a level shares the
+    same song). It is not an edit copy (no ``based_on``): **Edit** keeps opening the user's own copy. It shares the
+    song's metadata (:func:`metadata.homes`); a copy of a project of My projects goes into its folders, as
+    **Duplicate** does. Returns the copy's id and the map of the part ids."""
+    where = locate.project(project_id)
+    if where.owner_id != owner or where.layer not in ("vault", "private"):
+        raise Refused("Only a project or a version of your own can have a level")
+    source = bundle.read_project(project_id)
+    original = source.level_of or project_id
+    copy = bundle.duplicate_project(project_id, owner_id=owner, layer="vault", title=title)
+    copy = bundle.write_project(
+        copy.model_copy(
+            update={"based_on": None, "level_of": original, "origin": {"levelOf": project_id}}
+        ),
+        touch=False,
+    )
+    if where.layer == "vault":
+        with session() as db:
+            folders.copy_project_folders(db, project_id, copy.id)
+    parts = {old.id: new.id for old, new in zip(source.parts, copy.parts)}
+    return copy.id, parts
+
+
+def release_levels(owner: int, project_id: str) -> None:
+    """Before a project is deleted: its level copies keep its metadata as their own and stop
+    pointing at it (implementation 04-3, Phase 4)."""
+    with session() as db:
+        copies = metadata.release_levels(db, owner, project_id)
+    for copy_id in copies:
+        with bundle.project_lock(copy_id):
+            project = bundle.read_project(copy_id)
+            bundle.write_project(project.model_copy(update={"level_of": None}), touch=False)
+
+
 def delete_version(version_id: int, *, owner: int) -> None:
     """Delete a version and its project, its history, and the audio no other project uses."""
     with session() as db:
         version = rows.version(db, owner, version_id)
         project_id = version.project_id
+    release_levels(owner, project_id)
+    with session() as db:
+        version = rows.version(db, owner, version_id)
         song_id = version.song_id
         db.delete(version)
     _forget_edits_of(owner, project_id, song_id)

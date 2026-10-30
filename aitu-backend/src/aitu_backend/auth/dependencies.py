@@ -42,12 +42,14 @@ __all__ = [
 test_user: Callable[[], CurrentUser] | None = None
 
 #: ``POST`` routes that read a project and change nothing in it: a preview, a copy made into the
-#: user's own vault (a duplicate, or the copy that edits a version of the Private Library).
+#: user's own vault (a duplicate, the copy that edits a version of the Private Library, the level copy of a whole
+#: sheet: implementation 04-3, Phase 4).
 READ_ROUTES = frozenset(
     {
         "/audio/{audio_uuid}/trim",
         "/projects/{project_id}/duplicate",
         "/projects/{project_id}/edit",
+        "/sheet/{audio_uuid}/llm/level-copy",
     }
 )
 

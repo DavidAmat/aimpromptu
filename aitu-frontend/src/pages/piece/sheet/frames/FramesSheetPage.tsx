@@ -73,6 +73,7 @@ import {
   passagesApi,
   sheetApi,
   type FramesSheet,
+  type LevelChoice,
   type LyricLine,
   type ReadingEdit,
   type SheetNote,
@@ -85,6 +86,7 @@ import { InfoDialog, type InfoTarget } from "../../../../components/folders/Info
 import ScorePlayer, { type ScorePlayerControls } from "../../../../components/time/ScorePlayer";
 import { useElementSize } from "../../../../hooks/useElementSize";
 import { ROUTES } from "../../../../layout/routes";
+import { said } from "../../../library/shared";
 import { noteName } from "../../../../music/noteNames";
 import { intervalWords } from "../../../../music/transpose";
 import {
@@ -229,7 +231,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   // and the cursor goes back where it was asked to be (the start of the passage), or where it was.
   const [audioLoads, setAudioLoads] = useState<{ revision: number | null; loads: number }>({ revision: null, loads: 0 });
   const seekAfterLoad = useRef<number | null>(null);
-  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, notice } = useFramesSheet(audioUuid, width, {
+  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, level, notice } = useFramesSheet(audioUuid, width, {
     // A take's sheet is the algorithm's, with Enhance with AI as a button (the user's answer of Phase 8).
     autoStart: !readOnly && role === null,
     onChanged: step.onChanged,
@@ -921,6 +923,25 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
     const stretch = stretchOfSelection();
     setEnhancing({ tab: stretch ? "stretch" : "song", stretch, key: Date.now() });
   };
+  /** A level of the selected stretch (implementation 04-3, Phase 4): in place, one step of undo. */
+  const sendStretchLevel = (choice: LevelChoice) => {
+    const stretch = enhancing?.stretch;
+    setEnhancing(null);
+    if (!stretch) return;
+    unpick();
+    unmark();
+    void level({ ...choice, start: stretch.request.start, end: stretch.request.end });
+  };
+  /** A level of the whole sheet: a new project of My projects, opened on its sheet, where the run goes on. */
+  const [levelError, setLevelError] = useState<string | null>(null);
+  const sendSongLevel = (choice: LevelChoice) => {
+    setEnhancing(null);
+    setLevelError(null);
+    sheetApi
+      .levelCopy(audioUuid, choice)
+      .then((made) => navigate(ROUTES.project(made.partId, "sheet")))
+      .catch((caught: unknown) => setLevelError(said(caught, "The AI could not be asked.")));
+  };
   const sendStretch = (hand: StretchHand, instruction: string) => {
     const stretch = enhancing?.stretch;
     setEnhancing(null);
@@ -1127,6 +1148,11 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
       {editError ? (
         <Alert severity="warning" sx={{ mb: 2 }} data-edit-error>
           {editError}
+        </Alert>
+      ) : null}
+      {levelError ? (
+        <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setLevelError(null)} data-edit-error>
+          {levelError}
         </Alert>
       ) : null}
       {notice ? (
@@ -1353,7 +1379,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           onClose={unmark}
         >
           <Box sx={{ mb: 1 }}>
-            <FrameRangeFields range={range} columns={sheet.columns} onFrames={markFrames} />
+            <FrameRangeFields range={range} columns={sheet?.columns ?? []} onFrames={markFrames} />
           </Box>
           <Stack direction="row" spacing={1} data-frames-stretch-panel>
             {step.stretchAction ? (
@@ -1465,11 +1491,17 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           open
           audioUuid={audioUuid}
           tab={enhancing.tab}
-          stretch={enhancing.stretch ? { what: enhancing.stretch.what, hand: enhancing.stretch.hand } : null}
+          stretch={
+            enhancing.stretch
+              ? { what: enhancing.stretch.what, hand: enhancing.stretch.hand, start: enhancing.stretch.request.start, end: enhancing.stretch.request.end }
+              : null
+          }
           enhanced={enhanced}
           viaEdit={!aiHere}
           onStretch={sendStretch}
+          onStretchLevel={sendStretchLevel}
           onSong={runSong}
+          onSongLevel={sendSongLevel}
           onCancel={() => setEnhancing(null)}
         />
       ) : null}

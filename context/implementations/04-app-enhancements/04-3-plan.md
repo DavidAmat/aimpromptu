@@ -415,6 +415,10 @@ which Phase 4 confirms with the user before it builds it:
   The public library already has versions named Easy, Medium and Hard (`song_versions`), so a level copy can later be
   saved to My Library as a version with that name.
 - **A level of a range** changes the sheet in place, with one step of undo, as a stretch does today.
+- **The level copy has its own link, not `based_on`** (the user, 2026-10-30; section 10, Phase 4). A duplicate of an
+  edit copy keeps `based_on`, so it would be a second edit copy of the version, and **Edit** on that version could
+  open the level copy instead of the user's own copy. The level copy therefore points at its original with
+  `projects.level_of` (revision `0010`), and `based_on` stays empty.
 - **The level copy shares the song's metadata** (the user, 2026-10-29; section 10, Phase 1, point 10). The metadata
   and the folders of My Library belong to the song, never to one version, so "99 Red Balloons · Easy" must show and
   change the same rows as the original. A level copy of an edit copy gets this for free if it is made with
@@ -927,3 +931,16 @@ semicorchea). The user asked that every change the AI makes reach `notes.pmn` an
 runs of today (report section 16), and Phase 4 stores a level run the same way: the notes through
 `edits.change_notes` and the hands of the sheet in `notes.pmn`, with a test that every live note has the hand the
 sheet draws it in. The galleries are served at `http://ubuntu:8097/gallery/...` (the folder `04-app-enhancements/`).
+
+**Phase 4, the study and the user's answers** (2026-10-30, [`04-3-implementation-phase-4.md`](04-3-implementation-phase-4.md)):
+the study found that a level copy made with **Duplicate** keeps `based_on`, so it would be a second edit copy of the
+version, and **Edit** could open it instead of the user's own edit copy. The user chose a new project per level linked
+by its own column, `projects.level_of` (revision `0010`; the real database moved to it on 2026-10-30 after `make
+db-backup`): the level copy shares the metadata of its original's song (or of the original's own rows when it has no
+song), goes into the folders of its original in My projects, and **Save to library** makes it an ordinary version.
+The open points of section 5.10 are settled: a hand with no pattern selected uses the patterns approved in Phase 3 for
+its level (hard for the left hand, never tested, uses the hard form of the medium set: left hard 11, 2, 3, 16); the
+dialog offers a level per hand (the same by default). The words stay possible with a level (they name patterns and
+places). The tests with the AI change: instead of the three levels on the whole song twice (tasks 4.5 and 4.7, about
+$16), one run on the first minute of 99 Red Balloons (a temporary copy split at 60 s), hard for the right hand and
+medium for the left hand, about $0.85.

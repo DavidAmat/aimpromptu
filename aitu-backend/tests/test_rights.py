@@ -76,6 +76,9 @@ def test_row_1_a_project_in_a_personal_vault(people: dict) -> None:
         assert other.get(f"/sheet/{part}/words").status_code == 404
         assert other.get(f"/sheet/{part}").status_code == 404
         assert other.delete(f"/audio/{part}").status_code == 404
+        # The levels (implementation 04-3, Phase 4): neither in place nor in a level copy.
+        assert other.post(f"/sheet/{part}/llm/level", json={"start": 0, "end": 9}).status_code == 404
+        assert other.post(f"/sheet/{part}/llm/level-copy", json={}).status_code == 404
 
 
 def test_row_2_a_project_in_a_private_library(people: dict) -> None:
@@ -88,6 +91,9 @@ def test_row_2_a_project_in_a_private_library(people: dict) -> None:
     # The new sheet (implementation 03, Phase 5): drawn for her; Sonnet writes it only in a copy.
     assert anna.get(f"/sheet/{part}").status_code == 200
     assert anna.post(f"/sheet/{part}/llm").status_code == 403
+    # A level of a range changes the sheet: refused; a level of the whole sheet goes into a new project.
+    assert anna.post(f"/sheet/{part}/llm/level", json={"start": 0, "end": 9}).status_code == 403
+    assert anna.post(f"/sheet/{part}/llm/level-copy", json={}).status_code != 403
     edit = anna.post(f"/projects/{part}/edit")
     assert edit.status_code == 200 and edit.json()["basedOn"] == part
     assert writes(anna, edit.json()["id"]) == 200
@@ -102,6 +108,8 @@ def test_row_2_a_project_in_a_private_library(people: dict) -> None:
     assert joan.post(f"/projects/{part}/edit").status_code == 409
     copy = joan.post(f"/projects/{part}/duplicate", json={})
     assert copy.status_code == 201
+    # A level copy is for the owner of the song only.
+    assert joan.post(f"/sheet/{part}/llm/level-copy", json={}).status_code == 403
     assert writes(joan, copy.json()["id"]) == 200
     assert (reads(master, part), writes(master, part)) == (404, 404)
     # Anna's vault is never shared: only her library.
@@ -119,6 +127,8 @@ def test_row_3_the_public_library(people: dict) -> None:
     # vault) is open to them too.
     assert anna.get(f"/sheet/{part}").status_code == 200
     assert anna.post(f"/projects/{part}/duplicate", json={}).status_code == 201
+    assert anna.post(f"/sheet/{part}/llm/level-copy", json={}).status_code == 403
+    assert anna.get("/sheet/levels/catalog").status_code == 200
 
 
 def test_row_4_a_request(people: dict) -> None:

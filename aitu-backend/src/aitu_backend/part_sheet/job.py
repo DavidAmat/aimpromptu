@@ -15,6 +15,11 @@
    window was written by Sonnet (no credits, no network), the hands stay as they were and ``sheet.f1`` keeps the
    algorithm's sheet, so the page does not start again by itself; it says nothing alarming (plan section 3.8).
 
+:func:`start_level` writes the song, or a range, again at a level (implementation 04-3, Phase 4): the plan of the
+song, then batches that see the batches before them (``sheet.llm.levels.write_level``); the notes it left out, added
+and moved to the other hand are one step of undo (``edits.apply_level``). A level of the whole sheet runs in a new
+project, the level copy (``library.flow.level_copy``), made by the route before the job starts.
+
 :func:`start_stretch` writes one stretch again with the user's words (implementation 03, Phase 7), of both hands or
 of one (implementation 04, Phase 4: the other hand fixed). :func:`start_simplify` simplifies one hand, or both, over
 the whole song, batch after batch (implementation 04, Phase 4): the notes it leaves out and adds are one step of undo.
@@ -30,7 +35,7 @@ import importlib.util
 import os
 import threading
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -69,6 +74,7 @@ __all__ = [
     "job_of",
     "live",
     "start",
+    "start_level",
     "start_simplify",
     "start_stretch",
 ]
@@ -84,6 +90,10 @@ USD_CACHE = 0.04
 USD_WINDOW = 0.038
 USD_BATCH = 0.008
 USD_STRETCH = 0.02
+#: A level run (implementation 04-3, Phase 3, measured on 99 Red Balloons with Sonnet 5.5): about $0.05 for the plan
+#: of the song (with the instructions written into the cache), and $0.20 per batch with its retries ($0.10 to $0.42).
+USD_LEVEL_PLAN = 0.05
+USD_LEVEL_BATCH = 0.2
 
 
 def available() -> bool:
@@ -579,6 +589,163 @@ def start_simplify(
     return jobs.submit(work, key=KEY.format(part_id), describe=lambda result: dict(result or {}))
 
 
+LEVEL_LABELS = {"both": "both hands", "right": "the right hand", "left": "the left hand"}
+
+
+def start_level(
+    part_id: str,
+    *,
+    level: str | dict[str, str],
+    hand: str,
+    start: int | None = None,
+    end: int | None = None,
+    patterns: list[str] | None = None,
+    words: str = "",
+    complete: Callable[[], Complete] | None = None,
+) -> jobs.Job:
+    """The AI writes the ``hand`` (``right``, ``left`` or ``both``) of the part's sheet again at ``level`` (one level,
+    or one per hand: ``{"right": "hard", "left": "medium"}``), over the whole song or over ``[start, end)`` (a range),
+    with the ``patterns`` selected in the catalog and the user's ``words`` (implementation 04-3, Phase 4; plan
+    sections 5.4 and 5.8). A hand with no pattern selected or named gets the patterns of its level used when none is
+    selected (``levels.run_refs``). While it works the page shows the sheet of the moment, its batches as segments;
+    the end stores it as one step (``edits.apply_level``). The summary of the job's ``done`` message: ``level``
+    (``ok``, ``failed`` when no batch was accepted, ``stale`` when the notes changed meanwhile, ``gone``), ``batches``
+    and ``total``, ``usd``."""
+    from aitu_backend.sheet.levels.grid import song_grid  # noqa: PLC0415
+    from aitu_backend.sheet.llm import levels  # noqa: PLC0415
+
+    if hand not in HANDS:
+        raise ValueError(f"No hand {hand!r}.")
+    levels.hand_levels(level)
+    if job_of(part_id) is not None:
+        raise Busy("The AI is already enhancing this sheet.")
+    staffs = (1, 2) if HANDS[hand] is None else (HANDS[hand],)
+    if not levels.level_windows(f1.read(build.current(part_id).text), staffs, start, end):
+        raise ValueError("This hand has no notes here.")
+    refs = levels.run_refs(level, staffs, list(patterns or []), words)
+
+    def work(reporter: BaseProgress) -> dict[str, Any]:
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise FileNotFoundError("This part has no notes.")
+        notes_revision = stored.header.notes_revision
+        drawn, current, _ = _as_drawn(part_id)
+        grid = song_grid(current)
+        windows = levels.level_windows(current, staffs, start, end)
+        run = LiveRun(part_id, drawn.text, windows, staff=HANDS[hand])
+        with _live_lock:
+            _live[part_id] = run
+        try:
+            ask = (complete or _complete)()
+
+            def asked(system: str, messages: list[dict]) -> str:
+                if not pipeline.has_events(part_id):
+                    raise PartGone("The part was deleted while the AI wrote a level of its sheet.")
+                return ask(system, messages)
+
+            accepted: list[tuple[int, int]] = []
+            written: list[Any] = []
+
+            def on_plan(log: WindowLog) -> None:
+                reporter.send(EVENT, {"phase": "plan", "status": log.status, "total": len(windows)})
+
+            def on_batch(log: WindowLog, batch: Any) -> None:
+                if log.status == "ok" and batch.sheet is not None:
+                    accepted.append((log.start, log.end))
+                    written.extend(n for n in batch.sheet.notes if n.staff in staffs)
+                run.advanced(f1.write(_level_drawn(levels, current, written, accepted, staffs), mode="frames"))
+                reporter.send(
+                    EVENT,
+                    {"phase": "batch", "done": log.k + 1, "total": len(windows), "status": log.status},
+                )
+
+            reporter.send(EVENT, {"phase": "level", "total": len(windows)})
+            out = levels.write_level(
+                current,
+                asked,
+                grid,
+                level=level,
+                staffs=staffs,
+                patterns=[levels.catalog()[r] for r in refs],
+                sid=part_id[:8],
+                words=words,
+                windows=windows,
+                span=None if start is None and end is None else (windows[0][0], windows[-1][1]),
+                on_plan=on_plan,
+                on_batch=on_batch,
+            )
+            usd = float(getattr(ask, "usd", 0.0) or 0.0)
+            requests = len(getattr(ask, "calls", []))
+            summary: dict[str, Any] = {
+                "hand": hand,
+                "levelName": levels.level_name(level),
+                "usd": round(usd, 4),
+                "batches": len(accepted),
+                "total": len(windows),
+            }
+            note = out.plan_log.note or next((log.note for log, _ in out.batches if log.note), "")
+            if note:
+                summary["note"] = note
+            if not pipeline.has_events(part_id):
+                return {**summary, "level": "gone"}
+            if not accepted:
+                return {**summary, "level": "failed"}
+            # The answers as the app draws them (beam groups, clefs, 8va and decoration notes by its rules), with
+            # the figures the AI wrote kept as set by hand (a decoration note keeps the rule's).
+            spliced = _level_drawn(levels, current, written, accepted, staffs)
+            ours = [
+                n
+                for n in spliced.notes
+                if n.staff in staffs and not n.grace and any(a <= n.frame < b for a, b in accepted)
+            ]
+            entry = {
+                "level": level,
+                "hand": hand,
+                "start": accepted[0][0],
+                "end": accepted[-1][1],
+                "range": start is not None or end is not None,
+                "prompt": levels.LEVEL_VERSION,
+                "patterns": refs,
+                "words": " ".join(words.split()),
+                "plan": [section.line() for section in out.plan],
+                "batches": [[log.start, log.end, log.status, log.replies] for log, _ in out.batches],
+                "declared": [line for _, batch in out.batches for line in batch.declared.lines()],
+            }
+            done = edits.apply_level(
+                part_id,
+                spliced,
+                notes_revision=notes_revision,
+                start=accepted[0][0],
+                end=accepted[-1][1],
+                staff=HANDS[hand],
+                wrote=ours,
+                usd=usd,
+                requests=requests,
+                model=getattr(ask, "model", None),
+                label=f"Level {levels.level_name(level)} with AI, {LEVEL_LABELS[hand]}",
+                entry=entry,
+            )
+            reporter.send(EVENT, {"phase": "saved"})
+            return {**summary, "level": "ok" if done else "stale"}
+        finally:
+            with _live_lock:
+                _live.pop(part_id, None)
+
+    return jobs.submit(work, key=KEY.format(part_id), describe=lambda result: dict(result or {}))
+
+
+def _level_drawn(levels: Any, current: Any, written: list[Any], accepted: list[tuple[int, int]], staffs: tuple[int, ...]) -> Any:
+    """The sheet with the batches accepted as the app draws the answers (``levels.drawn``, with the other hand's
+    notes of those batches), the rest as it was: the sheet of the moment during a level run, and what is stored."""
+    if not accepted:
+        return current
+    q = current.quarter_ms or 500.0
+    keep = [n for n in current.notes if n.staff not in staffs and any(a <= n.frame < b for a, b in accepted)]
+    answer = replace(current, notes=list(written))
+    shown = levels.drawn(answer, q, key=current.key or 0, key_changes=list(current.key_changes), keep=keep)
+    return levels.splice(current, list(shown.notes), accepted, staffs, reading=True)
+
+
 def costs(part_id: str) -> dict[str, Any]:
     """What each run of the Enhance with AI dialog would cost, about, before it starts (the dialog shows it): the
     windows of a whole run, the batches of Simplify for each hand, in US dollars."""
@@ -592,7 +759,17 @@ def costs(part_id: str) -> dict[str, Any]:
         batches = len(simplify_windows(current, staff))
         usd = USD_CACHE + batches * USD_BATCH * (2 if staff is None else 1)
         out[f"simplify-{hand}"] = {"requests": batches, "usd": round(usd, 2)}
+        out[f"level-{hand}"] = level_cost(current, hand)
     return out
+
+
+def level_cost(current: Any, hand: str, start: int | None = None, end: int | None = None) -> dict[str, Any]:
+    """About what a level run costs (implementation 04-3, Phase 4): the plan, then each batch."""
+    from aitu_backend.sheet.llm import levels  # noqa: PLC0415
+
+    staffs = (1, 2) if HANDS[hand] is None else (HANDS[hand],)
+    batches = len(levels.level_windows(current, staffs, start, end))
+    return {"requests": batches + 1, "usd": round(USD_LEVEL_PLAN + batches * USD_LEVEL_BATCH, 2)}
 
 
 def _place(ref: str) -> tuple[int, int] | None:

@@ -317,7 +317,8 @@ def test_simplify_that_changes_nothing_stores_only_the_run(client: TestClient, p
 
 def test_the_routes_of_the_dialog(client: TestClient, part: str, monkeypatch) -> None:
     costs = client.get(f"/sheet/{part}/llm/costs").json()
-    assert set(costs) == {"all", "stretch", "simplify-left", "simplify-right", "simplify-both"}
+    assert set(costs) == {"all", "stretch", "simplify-left", "simplify-right", "simplify-both",
+                          "level-left", "level-right", "level-both"}
     assert 0 < costs["simplify-left"]["requests"] < costs["all"]["requests"]
     monkeypatch.setattr(job, "available", lambda: True)
     assert client.post(f"/sheet/{part}/llm/simplify", json={"hand": "middle"}).status_code == 422

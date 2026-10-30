@@ -166,6 +166,8 @@ class ProjectFile(_Camel):
     origin: dict[str, Any] | None = None
     #: The library project a vault project edits (section 10.6).
     based_on: str | None = Field(None, alias="basedOn")
+    #: The project a level copy was written from (implementation 04-3, Phase 4).
+    level_of: str | None = Field(None, alias="levelOf")
     created_at: datetime = Field(default_factory=_now, alias="createdAt")
     updated_at: datetime = Field(default_factory=_now, alias="updatedAt")
     revision: int = 1
@@ -310,6 +312,7 @@ def write_project(project: ProjectFile, *, touch: bool = True) -> ProjectFile:
             row.title = project.title
             row.kind = project.kind
             row.based_on = project.based_on
+            row.level_of = project.level_of
             row.updated_at = project.updated_at
     return project
 
@@ -798,6 +801,7 @@ def new_bundle_from(
                 kind=copy.kind,
                 title=copy.title,
                 based_on=copy.based_on,
+                level_of=copy.level_of,
                 created_at=moment,
                 updated_at=moment,
             )

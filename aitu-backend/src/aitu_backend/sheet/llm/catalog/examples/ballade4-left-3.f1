@@ -1,0 +1,70 @@
+F1 frames frameMs=40 quarterMs=600
+key=4b clefs: R=treble L=bass
+[]x25
+f25      L: Cb2:8  R: Ab4,Eb5,Ab5:4
+[]x7
+f33      L: Cb3:32 b1
+[]x1
+f35      L: Db3:32 b1
+[]x2
+f38      L: F3:32 b1
+[]x1
+f40      L: Db4:32 b1  R: Ab4,Db5:8 b2
+[]x2
+f43      L: F3:32 b3
+[]x1
+f45      L: Db3:32 b3
+[]x2
+f48      L: Bb2:32 b3  R: Ab4,Db5:8 b2
+[]x1
+f50      L: Db3:32 b3
+[]x2
+f53      L: Gb3:32 b3
+[]x1
+f55      L: Eb4:32 b3  R: G4:8 b2
+[]x2
+f58      L: Gb3:32 b4
+[]x1
+f60      L: Db3:32 b4
+[]x2
+f63      L: Db4:32 b4  R: Gb4,Db5,Gb5:8 b2
+[]x1
+f65      L: Gb3:32 b4
+[]x2
+f68      L: Db3:32 b4
+[]x1
+f70      L: Ab2:32 b4  R: F4,Cb5,Db5,F5:4
+[]x2
+f73      L: Db3:32 b5
+[]x1
+f75      L: F3:32 b5
+[]x2
+f78      L: C4:32 b5
+[]x1
+f80      L: F3:32 b5
+[]x2
+f83      L: Db3:32 b5
+[]x1
+f85      L: Db4:32 b6  R: Cb5,Db5,F5,Cb6:8
+[]x2
+f88      L: F3:32 b6
+[]x1
+f90      L: Db3:32 b6
+[]x2
+f93      L: Gb2:32 b6  R: Cb5,Db5,Gb5,Cb6:4
+[]x1
+f95      L: Db3:32 b7
+[]x2
+f98      L: Gb3:32 b7
+[]x1
+f100     L: Eb4:32 b7
+[]x2
+f103     L: Gb3:32 b7
+[]x1
+f105     L: Db3:32 b7
+[]x2
+f108     L: Fb4:32 b8  R: Bb4,Db5,Bb5:8
+[]x1
+f110     L: Gb3:32 b8
+[]x2
+f113     L: Db3:32 b8
