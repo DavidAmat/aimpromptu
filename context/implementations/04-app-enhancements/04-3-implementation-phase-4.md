@@ -1,8 +1,8 @@
 # 04-3 · Phase 4: the levels in the app
 
 Status: built on 2026-10-30 on branch `feat/04-3-phase-4` (from `master` `7f5c230`); the AI test on the first minute
-of 99 Red Balloons is done (section 8, $0.88); waiting for the user's check in the browser and the decision about the
-version saved before the beam fix.
+of 99 Red Balloons is done (section 8, $0.88); the version saved before the beam fix was drawn again (section 9);
+approved by the user and merged into `master` on 2026-10-30.
 
 Audience: the agents of this plan (this phase when the user answers, and Phase 5). Technical.
 

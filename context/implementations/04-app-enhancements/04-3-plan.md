@@ -955,3 +955,6 @@ the rule (never over a beam decision of the AI or of the user); this also reache
 The steps after an AI change are a binding rule (section 6). The user had saved the level as the version "medium" of
 99 Red Balloons before the fix; at the user's request its notation was drawn again with the beams (same notes and
 hands, one step of undo, no AI request).
+
+**Phase 4, approval and merge** (2026-10-30): the user approved Phase 4; the branch was merged into `master`. Phase 5
+(documentation and closing) is next.

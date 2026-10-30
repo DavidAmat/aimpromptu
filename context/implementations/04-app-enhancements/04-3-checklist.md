@@ -93,7 +93,7 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 - [x] Task 3.9 The user's review, until the three levels are approved (approved on 2026-10-30; the AI's changes
   confirmed in `notes.pmn` and the Notes tab, report section 16).
 
-# [p] Phase 4: The levels in the app
+# [x] Phase 4: The levels in the app
 
 - [x] Task 4.1 Study; section 5.8 confirmed with the user (changed: the level copy's own link, revision `0010`).
 - [x] Task 4.2 The dialog: the levels on a range and on the whole sheet, with the cost; the catalog of patterns and
@@ -103,7 +103,7 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 - [x] Task 4.5 Tests with the AI: the first minute of 99 Red Balloons (a temporary copy split at 60 s), hard for the
   right hand and medium for the left hand, through the app (the user, 2026-10-30): $0.88, 4 of 4 batches; a missing
   beam fault found and fixed (report section 8).
-- [p] Task 4.6 Checks (`check:enhance-dialog` with the levels passes); the user checks the level in the browser.
+- [x] Task 4.6 Checks (`check:enhance-dialog` with the levels passes); the user checked the level and approved the merge (2026-10-30).
 - [c] Task 4.7 The real runs on the whole of 99 Red Balloons: replaced by the first-minute test of task 4.5 (the user,
   2026-10-30). The whole song at a level is for the user to start from the dialog, when wanted.
 
