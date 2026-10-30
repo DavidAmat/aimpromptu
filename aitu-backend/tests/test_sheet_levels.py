@@ -367,3 +367,16 @@ def test_the_left_hand_follows_its_rhythm_now() -> None:
     r = checked(answer(more, DECLARED), s)
     assert any("more left-hand onsets than the sheet now" in e for e in r.errors)
     assert any("onsets of the left hand now" in e for e in r.errors)
+
+
+def test_easy_and_medium_keep_a_steady_rhythm_and_a_melody_note_may_move_to_the_grid() -> None:
+    s = song("wide")
+    quick = f1.read(f1.write(s, mode="frames").replace("f45 ", "f42 R: G5:32\nf45 ", 1))
+    lines = easy_lines(quick)
+    with_quick = sorted(lines + ["f42 R: G5:32"], key=lambda t: int(t.split()[0][1:]))
+    r = checked(answer(with_quick, DECLARED), quick)
+    assert any("pairs of notes closer than a semicorchea" in e for e in r.errors)
+    assert any("shorter than the level allows" in e for e in r.errors)
+    moved = sorted(lines + ["f38 R: G5:16"], key=lambda t: int(t.split()[0][1:]))  # G5 to the semicorchea at f38
+    r = checked(answer(moved, DECLARED), quick)
+    assert r.errors == [], r.errors

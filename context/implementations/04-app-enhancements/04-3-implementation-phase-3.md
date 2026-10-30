@@ -317,3 +317,30 @@ gallery of patterns now has 113 patterns (left 53, right 60).
 Serving: the server on port 8099 (not started by this phase) serves the folder `gallery/`, so the edition's snapshots
 (`../../images/...`) did not load there. A server on port **8097** serves the whole folder `04-app-enhancements/`:
 `http://ubuntu:8097/gallery/04-3-phase-2/index.html` and `http://ubuntu:8097/gallery/04-3-phase-3/index.html`.
+
+# 14. Medium and easy on the four passages (the user's go-ahead, 2026-10-30)
+
+The user approved the hard-right, medium-left version (section 12) and the three new patterns, and asked for the full
+medium and the full easy versions (both hands at one level). Same runner, same passages, run together:
+
+| Run | Patterns | Plan | Requests | USD |
+|---|---|---|---|---|
+| medium | right medium 1, 14, 13; left medium 15, 2, 10, 7 | 7 sections; `keep` for f33-f812 and f4104-f4880; L medium 7 (octavas in negras) for the riff and the verses, medium 15 for the choruses | 8 (two batches needed a second reply: notes off the grid) | 0.731 |
+| easy | right easy 2, 1; left easy 2, 1, 3, 12 | 7 sections; `keep` for the intro and f4104-f4259; L easy 2 for the riff and verses, easy 12 for the chorus, easy 1 for the end | 10 (every batch needed a second or third reply: a 12-semitone column, a simple stretch with a chord, moves 0.75 per negra, a range of 26 in two negras) | 0.814 |
+
+Looked at zoomed: the intro keeps E2 and the held fifths at both levels; the riff's right hand plays the top line (E4,
+C#4) in single notes, the left hand a low note then a triad (easy) or octavas in negras (medium); passage 3 at medium
+keeps octavas in negras all through.
+
+**A fault at easy and medium**: the right hand keeps the recording's uneven rhythm (fusas, a semicorchea next to a
+corchea) and quick pairs of notes three frames apart, which the app draws as decoration notes. The check allowed it:
+the shortest figure applied to new notes only, and a melody note had to stay within one frame of its place, so the AI
+could not put it on the beat. New rule, `Limits.steady` (easy, medium): every note a semicorchea or longer, no two
+onsets of one hand closer than 0.85 of a semicorchea, and a melody note counts as kept within a semicorchea of its
+place (so it may move to the grid); the right hand's new notes may use the semicorcheas of the grid at every level
+(`Limits.right_grid`). `easy.md` and `medium.md` say it ("A steady rhythm"); medium no longer allows decoration notes.
+Test `test_easy_and_medium_keep_a_steady_rhythm_and_a_melody_note_may_move_to_the_grid` (24 passed). All eight easy
+and medium answers fail the new rule (1 to 7 pairs each): they have to be written again (about $1.4 for both levels
+with their plans kept, waiting for the user's ok).
+
+Costs so far in Phase 3: $3.12 (hard-medium $1.58, medium $0.73, easy $0.81).

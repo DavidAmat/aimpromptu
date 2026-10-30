@@ -10,6 +10,11 @@ The pianist reads the melody in the right hand and simple chords in the left han
   longer or shorter figure, so that the rhythm reads simply), but you may not leave it out.
 - Accompaniment chords that the transcription put in the right hand (wrong hands) move to the left hand when they
   fit its pattern; when the left hand already plays that chord, leave them out.
+- **A steady rhythm.** Write the melody in a rhythm that reads simply: no figure shorter than a semicorchea, and no
+  two notes of one hand closer than a semicorchea. The transcription often has a quick note just before a melody note
+  (two onsets a few frames apart): it is not a decoration note at this level. Give it its own place: move the melody
+  note to the nearest semicorchea of the grid (a melody note may move that far), or let the two be one note. Uneven
+  figures of the recording (a fusa, then a corchea with a semicorchea) become even corcheas or semicorcheas.
 - No decoration notes: a short note before a melody note gets a figure of its own (a semicorchea or longer) when it
   is part of the melody, or goes (declared) when it is not.
 - The checker allows one right-hand note per column, and no figure shorter than a semicorchea for a new note.

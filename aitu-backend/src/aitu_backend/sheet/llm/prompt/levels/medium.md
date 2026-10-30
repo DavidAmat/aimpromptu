@@ -14,7 +14,12 @@ more, and both keep their shapes.
   three notes under it makes it stronger.
 - A right hand that stays in one position may repeat a shape fast (a third that rocks, a short broken chord), but the
   melody stays on top and keeps its notes.
-- Decoration notes only where the song clearly has an ornament on a melody note, one at a time.
+- **A steady rhythm.** Write the melody in a rhythm that reads simply: no figure shorter than a semicorchea, and no
+  two notes of one hand closer than a semicorchea. The transcription often has a quick note just before a melody note
+  (two onsets a few frames apart): it is not a decoration note at this level. Give it its own place: move the melody
+  note to the nearest semicorchea of the grid (a melody note may move that far), or let the two be one note. Uneven
+  figures of the recording (a fusa, then a corchea with a semicorchea) become even corcheas or semicorcheas.
+- No decoration notes: the steady rhythm above holds for every note.
 - The checker allows at most 2 right-hand notes in a column on figures shorter than a negra and 3 on a negra or
   longer, within 9 semitones (a sixth); and no figure shorter than a semicorchea for a new note.
 

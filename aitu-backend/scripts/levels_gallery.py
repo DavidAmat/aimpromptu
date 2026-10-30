@@ -108,7 +108,7 @@ def passage_section(no: int, sheet: Sheet, whole: engine.Rendered, grid, a: int,
     seg = engine.render_frames(sheet, engine.Options(width=130), segment=(a, b), note_ids=False)
     parts.append(_figure("The sheet now (the band marks the passage)", banded(seg, a, b)))
     for key, run in runs.items():
-        if not key.endswith(f"|{a}"):
+        if not key.endswith(f"|{a}") or "-first|" in key:  # an answer replaced by a later one stays in its file
             continue
         label = run.get("label", key.split("|")[0]).capitalize()
         status = "" if run.get("status", "ok") == "ok" else " (the check refused the last reply: drawn as written)"
@@ -198,14 +198,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--part", required=True)
     parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--runs", type=Path, help="JSON of the AI runs: {'level|start': {...}}")
+    parser.add_argument("--runs", type=Path, nargs="*", default=[],
+                        help="JSON files of the AI runs ({'runs': {'name|start': {...}}, 'meta': {name: {...}}})")
     parser.add_argument("--catalog", type=Path,
                         default=Path("../context/implementations/04-app-enhancements/gallery/04-3-phase-2"))
     args = parser.parse_args()
     sheet = f1.read(build.current(args.part).text)
     grid = song_grid(sheet)
-    data = json.loads(args.runs.read_text()) if args.runs else {}
-    runs, meta = data.get("runs", {}), data.get("meta", {})
+    runs, meta = {}, {}
+    for path in args.runs:
+        data = json.loads(path.read_text())
+        runs.update(data.get("runs", {}))
+        meta.update(data.get("meta", {}))
     whole = None
     sections, index = [], []
     for name, m in meta.items():

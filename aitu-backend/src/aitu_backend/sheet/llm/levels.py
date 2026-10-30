@@ -128,11 +128,17 @@ class Limits:
     grid: str
     #: The shortest figure of a new note (a decoration note is a thirty-second or shorter).
     shortest: int
+    #: The grid of the right hand's new notes (its melody may need semicorcheas at every level).
+    right_grid: str = "semicorchea"
+    #: A steady rhythm (easy and medium): every note a semicorchea or longer, no two notes of a hand closer than a
+    #: semicorchea, and a melody note may move to the nearest semicorchea of the grid (the brief: a short melody note
+    #: may be simplified, never dropped).
+    steady: bool = False
 
 
 LIMITS = {
-    "easy": Limits(1, 1, 0, 3, 9, 24, 0.75, "corchea", 16),
-    "medium": Limits(2, 3, 9, 3, 12, 28, 1.25, "corchea", 16),
+    "easy": Limits(1, 1, 0, 3, 9, 24, 0.75, "corchea", 16, steady=True),
+    "medium": Limits(2, 3, 9, 3, 12, 28, 1.25, "corchea", 16, steady=True),
     "hard": Limits(3, 4, 12, 4, 12, 31, 2.0, "semicorchea", 64),
 }
 
@@ -546,7 +552,11 @@ def batch_prompt(
             "## Simple stretches of the left hand (keep their notes: `# pattern L f...-f...: keep`; make only the "
             "rhythm regular)\n\n" + simple_text(simple, key)
         )
-    fine = [HANDS[s] for s in staffs if LIMITS[hand_levels(level)[s]].grid == "semicorchea"]
+    fine = [
+        HANDS[s]
+        for s in staffs
+        if (LIMITS[hand_levels(level)[s]].right_grid if s == 1 else LIMITS[hand_levels(level)[s]].grid) == "semicorchea"
+    ]
     half = (
         ""
         if not fine
@@ -733,6 +743,9 @@ def check_level(
     rewritten as the sheet has them; ``cs`` the chords of the batch; ``allowed`` the refs of the run."""
     levels = hand_levels(level)
     lims = {s: LIMITS[v] for s, v in levels.items()}
+    q_frames = (target.quarter_ms or 500.0) / FRAME_MS
+    # a melody note is kept within a frame of its place, or, at a steady level, within a semicorchea
+    slack = max(1, int(q_frames / 4 + 0.5)) if lims[1].steady else 1
     text = _block(reply)
     if not text.startswith("F1 frames"):
         return Batch(["the answer must be F1 frames (first line 'F1 frames frameMs=40 ...')"])
@@ -771,7 +784,7 @@ def check_level(
         said = {(f, m) for f, m, *_ in d.dropped}
         lost = []
         for n in hidden:
-            here = [x.midi for f in (n.frame - 1, n.frame, n.frame + 1) for x in right.get(f, [])]
+            here = [x.midi for f in range(n.frame - slack, n.frame + slack + 1) for x in right.get(f, [])]
             if n.midi in here or n.midi + 12 in here or (n.frame, n.midi) in said:
                 continue
             lost.append(f"f{n.frame} {_name(n.midi)}")
@@ -790,7 +803,7 @@ def check_level(
         artifacts = {k for k, v in said.items() if v == "artifact"}
         missing, not_artifact, dropped, not_melody = [], [], 0, 0
         for n in line:
-            here = [x.midi for f in (n.frame - 1, n.frame, n.frame + 1) for x in right.get(f, [])]
+            here = [x.midi for f in range(n.frame - slack, n.frame + slack + 1) for x in right.get(f, [])]
             if n.midi in here or n.midi - 12 in here or n.midi + 12 in here:
                 continue
             kind = said.get((n.frame, n.midi))
@@ -969,10 +982,25 @@ def check_level(
             continue
         out.new_notes += 1
         lim = lims.get(n.staff, lims[1])
-        if not grid.on_grid(n.frame, lim.grid):
+        if not grid.on_grid(n.frame, lim.right_grid if n.staff == 1 else lim.grid):
             off.append(f"f{n.frame} {_name(n.midi)}")
-        if n.figure and n.figure > lim.shortest:
+        if n.figure and n.figure > lim.shortest and not lim.steady:
             short.append(f"f{n.frame} {_name(n.midi)}:{n.figure}")
+    # a steady rhythm (easy, medium): no figure shorter than a semicorchea, no two onsets of a hand closer than one
+    for staff in staffs:
+        if not lims[staff].steady:
+            continue
+        cols = sorted(_cols(sheet, staff).items())
+        short += [f"f{f} {_name(ns[0].midi)}:{min(x.figure for x in ns)}" for f, ns in cols
+                  if min((x.figure or 4) for x in ns) > 16]
+        close = [f"f{a} and f{b}" for (a, _), (b, _) in zip(cols, cols[1:]) if b - a < 0.85 * q_frames / 4]
+        if close:
+            errs.append(
+                f"{'R' if staff == 1 else 'L'}: {len(close)} pairs of notes closer than a semicorchea: "
+                f"{_show(close, 4)}. At this level the rhythm is steady: the second note moves to the next "
+                "semicorchea of the grid, or the two become one note (a quick note before a melody note is not "
+                "written as a decoration note)"
+            )
     if off:
         errs.append(
             f"{len(off)} new notes are not on the grid: {_show(off)}. Start a new note on a frame of the grid, "
@@ -980,8 +1008,8 @@ def check_level(
         )
     if short:
         errs.append(
-            f"{len(short)} new notes are shorter than the level allows (a figure shorter than a semicorchea becomes a "
-            f"decoration note): {_show(short)}"
+            f"{len(short)} notes are shorter than the level allows (the shortest figure is a semicorchea; a "
+            f"shorter one becomes a decoration note): {_show(short)}"
         )
     return out
 
