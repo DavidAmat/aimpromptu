@@ -122,9 +122,12 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 - [x] Task 5.7 The report `gallery/04-3-phase-5/index.html` (two tabs: the comparison, the examples), served.
 - [x] Task 5.8 The user's decision (2026-10-30): the level runs use GPT-6.1 Terra at `medium`; the estimates of the
   dialog follow the benchmark; the page asks the user to add OpenAI credits when they run out (report section 9).
+- [x] Every AI run moved to GPT-6.1 Terra at `medium`, each run measured once for the dialog's estimates (report
+  section 10); approved by the user and merged into `master` (2026-10-30).
 
 # [ ] Phase 6: Documentation and closing
 
-- [ ] Task 6.1 The documentation still stale (the core's `README.md`, the frontend pages, the indexes).
+- [ ] Task 6.1 The documentation still stale (the core's `README.md`, the frontend pages, the indexes; the model of
+  the runs is now GPT-6.1 Terra at `medium`, Phase 5 report section 10).
 - [ ] Task 6.2 `04-context.md`: a section for 04-3.
 - [ ] Task 6.3 The final checks; the open points.

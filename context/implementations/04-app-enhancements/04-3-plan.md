@@ -1104,3 +1104,7 @@ estimates follow those measures, now with the minutes for every run (for example
 about $0.07 and 2 minutes, measured $0.064 in 102 s). Report section 10. Phase 6 updates the documentation that still
 names Sonnet.
 
+**Phase 5, approval and merge** (2026-10-30): the user approved Phase 5 (the report, Terra for every AI run and the new
+estimates); the branch was merged into `master`. Phase 6 is next: its documentation also replaces Sonnet 5.5 by GPT-6.1
+Terra where the documents describe the model of the runs (report section 10).
+

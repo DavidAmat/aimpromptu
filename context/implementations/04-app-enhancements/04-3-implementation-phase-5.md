@@ -1,7 +1,8 @@
 # 04-3 · Phase 5: other AI models for the level runs (OpenAI), judged against Sonnet 5.5
 
 Status: built on 2026-10-30 on branch `feat/04-3-phase-5` (from `master` `113c2cb`); the 16 cases run and judged, the
-report served; the user chose GPT-6.1 Terra at `medium` for the level runs and the app uses it (section 9).
+report served; the user chose GPT-6.1 Terra at `medium` for the level runs (section 9), then for every AI run
+(section 10); approved by the user and merged into `master` on 2026-10-30.
 
 Audience: the agents of this plan (this phase when the user answers, and Phase 6). Technical.
 
