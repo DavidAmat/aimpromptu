@@ -13,9 +13,10 @@
  * - the cursor shows `grab` under the pointer and `grabbing` while it is dragged, follows the pointer to another
  *   line, and the recording moves there when it is let go, playing on if it played; the drag picks no note; near
  *   the window's bottom edge the page scrolls;
- * - the frame numbers (implementation 04-3, Phase 2b): every line starts with the frame of its first column, more
- *   follow inside the lines, all are frames of columns and grey, also after the zoom and on the printed pages; a
- *   stretch marked in the strip names its first and last frames at the top of the range toolbox.
+ * - the frame marks (implementation 04-3, Phase 2b): a grey dashed line with its number and time on every 100 frames, also
+ *   after the zoom and on the printed pages; a stretch marked in the strip names its first and last frames in the
+ *   range toolbox's two fields, and frames typed there mark that stretch; a decoration note lights at its own onset,
+ *   not with the note before it.
  *
  *     npm run check:frames-page -- --out /tmp/frames-page
  */
@@ -199,33 +200,87 @@ try {
   check('the zoom is kept in this browser', stored > 1, `${stored}`);
   await zoomOnce('Control', 120, 'a trackpad pinch (Control and the wheel)');
 
-  // ------------------------------------------------------------------ the frame numbers (04-3, Phase 2b)
+  // ------------------------------------------------------------------ the frame marks (04-3, Phase 2b)
   {
     const sheet = await sheetNow(api, part);
-    const drawn = await page.locator('[data-frames-sheet] svg .frame-number').evaluateAll((all) =>
-      all.map((g) => ({ frame: Number(g.getAttribute('data-frame')), fill: g.getAttribute('fill') })));
-    const frames = new Set(sheet.columns.map((c) => c.frame));
-    const firsts = sheet.systems.map((s) => s.first);
-    const shown = drawn.map((one) => one.frame);
-    check('every line starts with the frame number of its first column', firsts.every((f) => shown.includes(f)), `${firsts.filter((f) => !shown.includes(f)).length} missing`);
-    check('more frame numbers inside the lines', drawn.length > sheet.systems.length * 1.5, `${drawn.length} on ${sheet.systems.length} lines`);
-    check('every frame number is the frame of a column', shown.every((f) => frames.has(f)));
-    check('the frame numbers are grey', drawn.every((one) => one.fill === '#8a8a8a'));
+    const read = (selector) => page.locator(`[data-frames-sheet] svg ${selector}`).evaluateAll((all) =>
+      all.map((el) => ({ frame: Number(el.getAttribute('data-frame')), fill: el.getAttribute('fill'), stroke: el.getAttribute('stroke'), dash: el.getAttribute('stroke-dasharray') })));
+    const lines = await read('.frame-line');
+    const numbers = await read('.frame-number');
+    const last = sheet.columns[sheet.columns.length - 1].frame;
+    const wanted = [];
+    // From the first column on: nothing is drawn before the first note.
+    for (let f = Math.ceil(Math.max(1, sheet.columns[0].frame) / 100) * 100; f <= last; f += 100) wanted.push(f);
+    check('a dashed line on every 100 frames', JSON.stringify(lines.map((one) => one.frame)) === JSON.stringify(wanted) && lines.every((one) => one.dash), `${lines.length} lines, ${wanted.length} wanted`);
+    check('each with its frame number', numbers.length >= wanted.length - 2 && numbers.every((one) => wanted.includes(one.frame)), `${numbers.length} numbers`);
+    const times = await page.locator('[data-frames-sheet] svg .frame-time').evaluateAll((all) => all.map((el) => Number(el.getAttribute('data-frame'))));
+    check('and the time over each number', JSON.stringify(times) === JSON.stringify(numbers.map((one) => one.frame)), `${times.length} times`);
+    check('lines and numbers are grey', lines.every((one) => one.stroke === '#b4b4b4') && numbers.every((one) => one.fill === '#8a8a8a'));
     const printed = await fetch(`${api}/sheet/${part}/pages?width=130&height=180`).then((r) => r.json());
-    check('the printed pages have them too', printed.pages.length > 0 && printed.pages.every((one) => one.svg.includes('class="frame-number"')));
+    check('the printed pages have them too', printed.pages.length > 0 && printed.pages.every((one) => one.svg.includes('class="frame-line"')));
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(300);
     const { box, scale } = await screenOf(page, sheet);
     const first = sheet.systems[0];
-    await page.screenshot({ path: path.join(values.out, '07-frame-numbers.png'), clip: { x: box.x, y: box.y + (first.top - 1) * scale, width: box.width, height: (first.bottom - first.top + 2) * scale } });
+    await page.screenshot({ path: path.join(values.out, '07-frame-marks.png'), clip: { x: box.x, y: box.y + (first.top - 1) * scale, width: box.width, height: (first.bottom - first.top + 3) * scale } });
 
+    // The range toolbox: the frames of the stretch in two fields; other numbers mark another stretch.
     const stretch = await markStretch(page, api, { from: 0.2, to: 0.6 });
     const inside = sheet.columns.filter((c) => c.frame >= stretch.start && c.frame < stretch.end).map((c) => c.frame);
-    const named = (await page.locator('[data-frames-range-toolbox] [data-range-frames]').innerText()).trim();
-    check('the range toolbox names the first and last frames', named === `From frame ${inside[0]} to frame ${inside[inside.length - 1]}`, named);
+    const fromField = page.locator('[data-frames-range-toolbox] [data-range-from]');
+    const toField = page.locator('[data-frames-range-toolbox] [data-range-to]');
+    check('the range toolbox names the first and last frames', (await fromField.inputValue()) === String(inside[0]) && (await toField.inputValue()) === String(inside[inside.length - 1]),
+      `${await fromField.inputValue()} to ${await toField.inputValue()}`);
     await shot(page, '08-range-frames');
+    const a = sheet.columns[Math.floor(sheet.columns.length * 0.4)];
+    const bIndex = Math.floor(sheet.columns.length * 0.45);
+    const b = sheet.columns[bIndex];
+    await fromField.fill(String(a.frame + 1)); // between two columns: from the next column on
+    await toField.fill(String(b.frame));
+    await toField.press('Enter');
+    await page.waitForTimeout(800);
+    const startNow = Number(await page.locator('[data-range-band]').first().getAttribute('data-start'));
+    const ends = await page.locator('[data-range-band]').evaluateAll((all) => all.map((el) => Number(el.getAttribute('data-end'))).sort((x, y) => x - y));
+    const afterA = sheet.columns.find((c) => c.frame > a.frame).frame;
+    const nextB = sheet.columns[bIndex + 1]?.frame ?? b.frame + 1;
+    check('typed frames mark that stretch', startNow === afterA && ends[ends.length - 1] === nextB, `${startNow}-${ends[ends.length - 1]}, wanted ${afterA}-${nextB}`);
+    check('and the fields show its columns', (await fromField.inputValue()) === String(afterA) && (await toField.inputValue()) === String(b.frame));
+    const band = await page.locator('[data-range-band]').first().boundingBox();
+    check('the stretch is brought into view', band && band.y > 0 && band.y < 900, band ? `y ${Math.round(band.y)}` : 'none');
+    await shot(page, '09-range-typed');
+    await page.keyboard.press('Escape');
+    await page.mouse.click(5, 450);
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
+
+    // A decoration note lights at its own onset, not with the note before it.
+    const columnFrames = new Set(sheet.columns.map((c) => c.frame));
+    const grace = sheet.columns.map((c, k) => {
+      const next = sheet.columns[k + 1];
+      const later = sheet.notes.map((n) => Number(n.ref.split(':')[0])).filter((f) => next && f > c.frame + 1 && f < next.frame && !columnFrames.has(f));
+      return later.length && next.system === c.system ? { c, next, g: Math.min(...later) } : null;
+    }).find(Boolean);
+    if (!grace) {
+      check('a decoration note lights at its own onset (no decoration note in this sheet: not checked)', true);
+    } else {
+      const { c, next, g } = grace;
+      const xAt = (ms) => c.x + ((next.x - c.x) * (ms - c.ms)) / (next.ms - c.ms);
+      const s = sheet.systems[c.system];
+      let { box: sb, scale: sc } = await screenOf(page, sheet);
+      await page.evaluate((y) => window.scrollBy(0, y - 450), sb.y + s.staff_top * sc);
+      await page.waitForTimeout(300);
+      ({ box: sb, scale: sc } = await screenOf(page, sheet));
+      const y = sb.y + ((s.staff_top + 4 + s.staff_bottom - 4) / 2) * sc;
+      const graceLit = () => page.locator(`[data-frames-sheet] [data-note^="${g}:"][data-lit], [data-frames-sheet] [data-note~="${g}:"][data-lit]`).count();
+      await page.mouse.click(sb.x + xAt((c.ms + g * 40) / 2) * sc, y);
+      await page.waitForTimeout(500);
+      const before = await graceLit();
+      await page.mouse.click(sb.x + xAt((g * 40 + next.ms) / 2) * sc, y);
+      await page.waitForTimeout(500);
+      const after = await graceLit();
+      check('a decoration note is not lit while the note before it sounds', before === 0, `frame ${g}, after column ${c.frame}`);
+      check('it lights at its own onset', after > 0);
+    }
   }
 
   // ------------------------------------------------------------------ dragging the cursor

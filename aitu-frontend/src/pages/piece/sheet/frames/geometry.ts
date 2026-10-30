@@ -143,12 +143,22 @@ export function msAtPoint(
   return ms;
 }
 
+/** The noteheads of one column: the ones that light with it, and the later ones with their own onset. */
+export interface ColumnHeads {
+  now: Element[];
+  /** Heads whose frame is inside the column's time but after its own (a decoration note before the next column's
+   * note), in time order: each lights only once the cursor reaches its onset. */
+  later: { ms: number; heads: Element[] }[];
+}
+
 /**
  * The noteheads of each column. A head carries `data-note="<frame>:<midi>"` (several when it stands for merged
- * unisons); a column holds the frames from its own time to the next column's (a chord played unevenly spans one
- * or two frames). A grace note lights with the column before its note: it sounds just before it.
+ * unisons); a column holds the frames from its own time to the next column's. Its own frame and the one after (a
+ * chord played unevenly spans one or two frames) light with it. A decoration note has an onset of its own, before
+ * its note and after the column before: it lights when the cursor reaches that onset, never while the note before
+ * it still sounds alone (the user, implementation 04-3, Phase 2b; until then it lit with the column before).
  */
-export function headsByColumn(root: ParentNode, columns: readonly SheetColumn[], frameMs = 40): Element[][] {
+export function headsByColumn(root: ParentNode, columns: readonly SheetColumn[], frameMs = 40): ColumnHeads[] {
   const byFrame = new Map<number, Element[]>();
   for (const element of root.querySelectorAll("[data-note]")) {
     for (const ref of (element.getAttribute("data-note") ?? "").split(" ")) {
@@ -164,9 +174,32 @@ export function headsByColumn(root: ParentNode, columns: readonly SheetColumn[],
   return columns.map((column, i) => {
     const lo = Math.round(column.ms / frameMs);
     const hi = i + 1 < columns.length ? Math.round(columns[i + 1].ms / frameMs) : Infinity;
-    const out: Element[] = [];
+    const out: ColumnHeads = { now: [], later: [] };
     while (k < frames.length && frames[k] < lo) k += 1;
-    for (let j = k; j < frames.length && frames[j] < Math.max(hi, lo + 1); j += 1) out.push(...(byFrame.get(frames[j]) ?? []));
+    for (let j = k; j < frames.length && frames[j] < Math.max(hi, lo + 1); j += 1) {
+      const found = byFrame.get(frames[j]) ?? [];
+      if (frames[j] <= lo + 1) out.now.push(...found);
+      else out.later.push({ ms: frames[j] * frameMs, heads: found });
+    }
+    return out;
+  });
+}
+
+/**
+ * The onsets (ms) of each column's later heads, in time order, as {@link headsByColumn} splits them, from the frames
+ * of the drawn notes: the page counts how many the cursor has reached without reading the drawing.
+ */
+export function laterOnsets(columns: readonly SheetColumn[], noteFrames: readonly number[], frameMs = 40): number[][] {
+  const frames = [...new Set(noteFrames)].sort((a, b) => a - b);
+  let k = 0;
+  return columns.map((column, i) => {
+    const lo = Math.round(column.ms / frameMs);
+    const hi = i + 1 < columns.length ? Math.round(columns[i + 1].ms / frameMs) : Infinity;
+    const out: number[] = [];
+    while (k < frames.length && frames[k] < lo) k += 1;
+    for (let j = k; j < frames.length && frames[j] < Math.max(hi, lo + 1); j += 1) {
+      if (frames[j] > lo + 1) out.push(frames[j] * frameMs);
+    }
     return out;
   });
 }

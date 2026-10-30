@@ -215,13 +215,13 @@ Layout ---- frames.draw (all systems, or some: one segment) ---> Engraving --- s
   slot per grace column), in the clef it sounds in: when the clef changes between a grace note and its note, the
   small clef goes between them. `covered` notes are not drawn. One voice per hand: no rests, voices, compás lines,
   meter or bar numbers. `merge_unisons` keeps one head per pitch, column and hand.
-- **Frame numbers** (implementation 04-3, Phase 2b) take the place of bar numbers, so that the user can name a place
-  ("at frame 112"): the frame of a column (`Note.frame`, as the F1 text writes it) in small grey tuplet digits above
-  the upper staff (primitive `"n"`; SVG `<g class="frame-number" data-frame="112">`). Each line starts with its first
-  column's number over the clef (`FRAME_NUMBER_X`), then one over the first column at least `FRAME_NUMBER_EVERY` (36)
-  staff spaces after the one before, none in the last `FRAME_NUMBER_END` (8): about four on a line of the default
-  width. Each sits at least `FRAME_NUMBER_CLEAR` above the ink under it (baseline at most `FRAME_NUMBER_BASE`, 1.5
-  spaces above the top line), and the lyrics count it as ink. The page, its zoom and Print to PDF all have them;
+- **Frame marks** (implementation 04-3, Phase 2b) take the place of bar lines, so that the user can name a place
+  ("at frame 300"): every `FRAME_MARK_EVERY` (100) frames from the first column on, a grey dashed line (`"l"`, class
+  `frame-line`, `data-frame`, drawn first so the notes cover it) across both staves and `FRAME_LINE_BELOW` beyond the
+  lower one, at the x of that frame (between two columns by time, the cursor's rule). On its top the frame number and
+  above it the time (`01:09`; primitives `"n"`, classes `frame-number` and `frame-time`, the tuplet digits, a colon as
+  two dots). The numbers of a line share one height, `FRAME_NUMBER_CLEAR` above the highest ink of the upper staff
+  under any of them; the lyrics count them as ink. The page, its zoom and Print to PDF all have them;
   `Options(frame_numbers=False)` draws none.
 - **Spacing.** The gap after a column is `model.gap(t / quarter_ms)` (the measured spacing model; `t` is the time to
   the next column in either hand, `quarter_ms` the reference figure) up to a blanca (`LONG_GAP`); the time beyond

@@ -3,7 +3,7 @@
 The frames engine draws an F1 frames sheet: one x per column for both hands, grace notes before their note,
 the signs of ``frames.printed_signs``, armadura and clef changes inside a line, empty time drawn shorter than its
 time, line breaks that do not cut beam groups, and one segment drawn with the line breaks of the whole sheet.
-Implementation 04-3, Phase 2b: the frame numbers above the upper staff.
+Implementation 04-3, Phase 2b: the frame marks (a dashed line and its number every 100 frames).
 """
 
 from __future__ import annotations
@@ -239,49 +239,62 @@ def test_a_beam_across_the_hands_and_the_ornaments_draw() -> None:
     assert glyphs(eng, "ornamentTrill") and glyphs(eng, "ottava")
 
 
-def numbers(eng) -> list[list[tuple[float, float, str, int]]]:
-    """The frame numbers of each line: (x, baseline y, digits, frame)."""
+def numbers(eng, cls: str = "frame-number") -> list[list[tuple[float, float, str, int]]]:
+    """The frame numbers (or the times, ``frame-time``) of each line: (x, baseline y, digits, frame)."""
     return [
-        [(p.data[0], p.data[1], p.data[2], p.data[4]) for p in s.prims if p.kind == "n"]
+        [(p.data[0], p.data[1], p.data[2], p.data[4]) for p in s.prims if p.kind == "n" and p.cls == cls]
         for s in eng.systems
     ]
 
 
-def test_every_line_starts_with_the_frame_of_its_first_column_and_more_follow() -> None:
-    opts = engine.Options(width=100)
-    lay = engine.plan(f1.read(stream(160)), opts)
+def frame_lines(eng) -> list[list]:
+    """The dashed lines of the frame marks of each line (primitives)."""
+    return [[p for p in s.prims if p.kind == "l" and p.cls == "frame-line"] for s in eng.systems]
+
+
+def test_a_dashed_line_with_its_number_and_time_every_100_frames() -> None:
+    lay = engine.plan(f1.read(stream(160)), engine.Options(width=100))
     eng = engine.draw(lay)
-    width = lay.opts.width
-    for (i, j, _), line, sysm in zip(lay.lines, numbers(eng), eng.systems):
-        cols = lay.columns[i:j]
-        frames = {c.frame: c for c in cols}
-        assert line[0][3] == cols[0].frame and line[0][0] == engine.FRAME_NUMBER_X
-        assert len(line) >= 2  # a line of 100 staff spaces gets more than its first number
-        for x, y, text, frame in line:
-            assert text == str(frame) and frame in frames
-            assert y <= engine.FRAME_NUMBER_BASE  # above the upper staff
-        centres = [x + layout.number_width(t, engine.FRAME_NUMBER_SCALE) / 2 for x, _, t, _ in line[1:]]
-        firsts = [frames[line[0][3]].x + layout.HEAD_W / 2] + centres
-        assert all(b - a >= engine.FRAME_NUMBER_EVERY for a, b in zip(firsts, firsts[1:]))
-        assert all(c < max(sysm.width, width) - engine.FRAME_NUMBER_END for c in centres)
+    last = lay.columns[-1].frame
+    every = engine.FRAME_MARK_EVERY
+    marked = [int(p.ref) for line in frame_lines(eng) for p in line]
+    assert marked == list(range(every, last + 1, every))
+    for (i, j, _), line, nums, times, sysm in zip(
+        lay.lines, frame_lines(eng), numbers(eng), numbers(eng, "frame-time"), eng.systems
+    ):
+        nxt = lay.columns[j].frame if j < len(lay.columns) else last + 1
+        assert all(lay.columns[i].frame <= int(p.ref) < nxt for p in line)
+        assert sysm.prims[: len(line)] == line  # drawn first: the notes are over them
+        assert [n[3] for n in nums] == [int(p.ref) for p in line]
+        assert len({n[1] for n in nums}) <= 1  # one height for the numbers of a line
+        for (_, y, _, frame), (_, ty, clock, tf) in zip(nums, times, strict=True):
+            seconds = frame * 40 // 1000
+            assert tf == frame and clock == f"{seconds // 60:02d}:{seconds % 60:02d}" and ty < y - 0.9
+        for (x, y, text, frame), p in zip(nums, line):
+            x1, top, x2, bottom, _, dash = p.data
+            assert text == str(frame) and x1 == x2 and dash
+            assert abs(x + layout.number_width(text, engine.FRAME_NUMBER_SCALE) / 2 - x1) < 1e-9
+            assert y <= engine.FRAME_NUMBER_BASE and top == y + engine.FRAME_LINE_TOP
+            assert bottom > 4 + sysm.gap + 4  # beyond the lower staff
 
 
-def test_a_frame_number_clears_the_notes_under_it_and_shows_in_the_svg() -> None:
-    eng = engine.engrave_frames(f1.read(SHEET))
-    line = numbers(eng)[0]
-    prims = eng.systems[0].prims
-    for x, y, text, _ in line:
-        right = x + layout.number_width(text, engine.FRAME_NUMBER_SCALE)
-        under = [
-            layout._prim_yrange(p)[0]
-            for p in prims
-            if p.staff == 1 and p.kind == "g" and x <= p.data[1] <= right
-        ]
-        assert all(y <= top - engine.FRAME_NUMBER_CLEAR + 1e-9 for top in under)
-    svg = engine.render_frames(SHEET).svg
-    assert re.findall(r'class="frame-number" data-frame="(\d+)"', svg)[0] == "0"
-    off = engine.engrave_frames(f1.read(SHEET), engine.Options(frame_numbers=False))
-    assert not any(numbers(off))
+def test_a_frame_number_clears_the_notes_around_it_and_shows_in_the_svg() -> None:
+    eng = engine.draw(engine.plan(f1.read(stream(160)), engine.Options(width=100)))
+    for line, sysm in zip(numbers(eng), eng.systems):
+        for x, y, text, _ in line:
+            right = x + layout.number_width(text, engine.FRAME_NUMBER_SCALE)
+            under = [
+                layout._prim_yrange(p)[0]
+                for p in sysm.prims
+                if p.staff == 1 and p.kind == "g" and x <= p.data[1] <= right
+            ]
+            assert all(y <= top - engine.FRAME_NUMBER_CLEAR + 1e-9 for top in under)
+    svg = engine.render_frames(stream(40)).svg
+    assert re.findall(r'class="frame-number" data-frame="(\d+)"', svg)[:2] == ["100", "200"]
+    assert re.findall(r'class="frame-line" data-frame="(\d+)"', svg)[:2] == ["100", "200"]
+    assert svg.count('class="frame-time"') == svg.count('class="frame-number"')
+    off = engine.engrave_frames(f1.read(stream(40)), engine.Options(frame_numbers=False))
+    assert not any(numbers(off)) and not any(frame_lines(off))
 
 
 def test_a_bars_sheet_is_refused() -> None:

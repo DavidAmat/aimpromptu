@@ -872,10 +872,13 @@ new pattern takes the next number of its level, and no approved number changes (
 was merged into `master` after Phase 1, and the user confirmed that Phase 2b comes before Phase 3, as section 8 says.
 
 **Phase 2b** (2026-10-30, [`04-3-implementation-phase-2b.md`](04-3-implementation-phase-2b.md)): the open point of
-section 5.10 "how often the sheet shows a frame number" is settled by the study. A line holds 10 to 16 seconds (40 to
-75 columns), so a number only at the start of each line would leave about 300 frames between two numbers. The engine
-therefore draws the first column's number over the clef of each line, as bar numbers, and then one about every 36
-staff spaces (about three a line on the default page), small and grey above the notes; the zoom and Print to PDF get
-them because the engine draws them. The range toolbox names the first and last frames of the stretch ("From frame 283
-to frame 495") on its first line, not in its title, because the title bar is full of buttons and cut the text. The
-Phase 3 start prompt now also reads the Phase 2b report.
+section 5.10 "how often the sheet shows a frame number" is settled. A first version put the number of a column over
+the clef of each line and about every third of a line, just above the notes. The user saw that a number so close to
+a note reads as a fingering, and asked instead for a grey dashed line every 100 frames across both staves and beyond
+them, as a bar line, with the frame number on top and the time above it (`01:09`). The line may cross a note; the
+labels of a line share one height above the notes. The zoom and Print to PDF have them because the engine draws them.
+The range toolbox shows the first and last frames of the stretch in two fields ("From frame [283] to frame [495]",
+not in its title, which the buttons cut): the user asked that typing other numbers marks that stretch. During the
+phase the user also asked that a decoration note light only at its own onset, never while the note before it still
+sounds (until then it lit with the column before it, a rule of implementation 03); the page now does so. The Phase 3
+start prompt also reads the Phase 2b report.
