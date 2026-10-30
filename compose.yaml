@@ -39,6 +39,9 @@ services:
       HF_HUB_CACHE: /hf/hub
       # The LLM step of the new sheet (implementation 03, Phase 4); empty: the algorithm's sheet.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # The level runs (implementation 04-3, Phase 5): GPT-6.1 Terra. Until the container is created again the
+      # backend reads it from .env.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     volumes:
       - .:/work/aimpromptu
       - ${AITU_DATABASE_DIR:-./.database}:/database

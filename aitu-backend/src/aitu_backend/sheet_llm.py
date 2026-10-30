@@ -36,7 +36,7 @@ from typing import Any, Callable
 
 from aitu_backend.sheet.llm.frames import SkipWindow
 
-__all__ = ["MODEL", "Call", "ClaudeComplete", "OpenAIComplete", "openai_price", "price"]
+__all__ = ["MODEL", "Call", "ClaudeComplete", "NoCredits", "OpenAIComplete", "openai_price", "price"]
 
 MODEL = "claude-sonnet-5-5"
 EFFORT = "high"
@@ -168,6 +168,19 @@ class ClaudeComplete:
 
 
 OPENAI_EFFORT = "max"
+
+
+class NoCredits(RuntimeError):
+    """The OpenAI account has no credits left (``insufficient_quota``): the run stops, and the page asks the user to
+    add credits to the OpenAI account (the user, 2026-10-30)."""
+
+
+def _no_credits(exc: Exception) -> bool:
+    code = getattr(exc, "code", None)
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        code = code or body.get("code") or (body.get("error") or {}).get("code")
+    return code == "insufficient_quota" or "insufficient_quota" in str(exc)
 OPENAI_MAX_TOKENS = 128000
 
 #: US dollars per million tokens: input, output, cache write (30 minutes), cache read (2026-10-30, OpenAI's pricing
@@ -273,8 +286,13 @@ class OpenAIComplete:
     def __call__(self, system: str, messages: list[dict]) -> str:
         params = self.request(system, messages)
         begin = time.perf_counter()
-        with self.client.responses.stream(**params) as stream:
-            response = stream.get_final_response()
+        try:
+            with self.client.responses.stream(**params) as stream:
+                response = stream.get_final_response()
+        except Exception as exc:
+            if _no_credits(exc):
+                raise NoCredits("The OpenAI account has no credits left.") from exc
+            raise
         usage = response.usage
         details = usage.input_tokens_details
         read = details.cached_tokens or 0

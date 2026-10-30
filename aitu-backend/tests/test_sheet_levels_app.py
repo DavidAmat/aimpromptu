@@ -219,12 +219,33 @@ def test_a_level_whose_batches_all_fail_stores_nothing(client: TestClient, part:
     assert set(notes_of(after)) == set(notes_of(before)) and after["history"]["undo"] is None
 
 
+def test_a_level_runs_on_terra_and_the_estimate_follows_the_benchmark() -> None:
+    # Implementation 04-3, Phase 5: GPT-6.1 Terra at medium; a batch about $0.023 and 41 s, the plan $0.012 and 8 s.
+    complete = job._level_complete("part", {"right": "hard", "left": "medium"})
+    assert (complete.model, complete.effort) == ("gpt-6.1-terra", "medium")
+    assert complete.cache_key == "part|hard for the right hand and medium for the left hand"
+    assert 0.023 <= job.USD_LEVEL_BATCH <= 0.03 and 0.012 <= job.USD_LEVEL_PLAN <= 0.02
+    assert 41 <= job.SECONDS_LEVEL_BATCH <= 50 and 8 <= job.SECONDS_LEVEL_PLAN <= 15
+
+
+def test_a_level_that_runs_out_of_credits_says_so(client: TestClient, part: str) -> None:
+    from aitu_backend.sheet_llm import NoCredits
+
+    def broke(system: str, messages_: list[dict]) -> str:
+        raise NoCredits("The OpenAI account has no credits left.")
+
+    started = job.start_level(part, level="easy", hand="both", complete=lambda: broke)
+    finish(started)
+    assert started.summary["level"] == "failed" and started.summary["credits"] == "openai"
+
+
 def test_the_routes_of_the_levels(client: TestClient, part: str, monkeypatch: pytest.MonkeyPatch) -> None:
     costs = client.get(f"/sheet/{part}/llm/costs").json()
     assert {"level-both", "level-right", "level-left"} <= set(costs)
-    assert costs["level-both"]["usd"] == pytest.approx(
-        job.USD_LEVEL_PLAN + (costs["level-both"]["requests"] - 1) * job.USD_LEVEL_BATCH
-    )
+    both = costs["level-both"]
+    assert both["usd"] == pytest.approx(round(job.USD_LEVEL_PLAN + both["batches"] * job.USD_LEVEL_BATCH, 2))
+    assert both["requests"] == both["batches"] + 1
+    assert both["minutes"] == max(1, round((job.SECONDS_LEVEL_PLAN + both["batches"] * job.SECONDS_LEVEL_BATCH) / 60))
     ranged = client.get(f"/sheet/{part}/llm/costs", params={"start": 100, "end": 400}).json()
     assert 2 <= ranged["level-stretch-left"]["requests"] < costs["level-left"]["requests"]
     calls: list[dict] = []

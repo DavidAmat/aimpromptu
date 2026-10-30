@@ -578,7 +578,7 @@ def _start_level(part_id: str, body: LevelRequest, start: int | None, end: int |
 def run_llm_level(audio_uuid: str, body: LevelRequest = Body(...)) -> dict[str, str]:
     """The AI writes a range of the sheet again at a level, in place, in the background (one step of undo)."""
     _notes_or_404(audio_uuid)
-    if not job.available():
+    if not job.level_available():
         raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
     if body.start is None or body.end is None or body.end <= body.start:
         raise HTTPException(status_code=400, detail="Select a range first.")
@@ -607,7 +607,7 @@ def run_llm_level_copy(audio_uuid: str, body: LevelRequest = Body(...)) -> Level
     if user is not None and (where.owner_id != user.id or where.layer not in ("vault", "private")):
         raise HTTPException(status_code=403, detail="Only your own songs can have a level.")
     _notes_or_404(audio_uuid)
-    if not job.available():
+    if not job.level_available():
         raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
     current = f1.read(build.current(audio_uuid).text)
     staffs = (1, 2) if body.hand == "both" else ((1,) if body.hand == "right" else (2,))

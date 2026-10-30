@@ -93,11 +93,12 @@ function dollars(cost: LlmCost | undefined): string {
   return cost === undefined ? "" : `$${cost.usd.toFixed(2)}`;
 }
 
-/** About how long a level takes: the plan, then a minute or two per batch (Phase 3: 30 to 120 s per reply). */
+/** About how long a level takes, as the backend estimates it (the plan, then about 45 s per batch: implementation
+ * 04-3, Phase 5, GPT-6.1 Terra). */
 function minutes(cost: LlmCost | undefined): string {
   if (!cost) return "";
-  const most = Math.max(2, Math.round(cost.requests * 2));
-  return `, about ${most} minutes`;
+  const most = cost.minutes ?? Math.max(1, Math.round((cost.requests * 45) / 60));
+  return `, about ${most} minute${most === 1 ? "" : "s"}`;
 }
 
 /** The hands a level writes, the left hand first (as the catalog shows them). */

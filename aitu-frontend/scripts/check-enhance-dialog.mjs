@@ -122,7 +122,7 @@ try {
   check('the patterns approved for easy are selected', (await patternsText()) === 'Left: easy 2, easy 1, easy 3, easy 12 · Right: easy 2, easy 1', await patternsText());
   await dialog(page).getByRole('group', { name: 'The level of the right hand' }).getByRole('button', { name: 'Hard' }).click();
   check('hard for the right hand takes its patterns', /Right: hard 1, hard 17, hard 15, hard 4$/.test(await patternsText()), await patternsText());
-  check('the status says a new project and the cost', /A new project in My projects.*About \$\d+\.\d\d, about \d+ minutes/.test(await dialog(page).locator('[data-enhance-status]').innerText()));
+  check('the status says a new project and the cost', /A new project in My projects.*About \$\d+\.\d\d, about \d+ minutes?/.test(await dialog(page).locator('[data-enhance-status]').innerText()));
   await settled(page);
   await shot(page, '04-level-whole-song');
   await page.getByTestId('open-catalog').click();

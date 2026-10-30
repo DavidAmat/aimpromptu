@@ -1,7 +1,7 @@
 # 04-3 · Phase 5: other AI models for the level runs (OpenAI), judged against Sonnet 5.5
 
 Status: built on 2026-10-30 on branch `feat/04-3-phase-5` (from `master` `113c2cb`); the 16 cases run and judged, the
-report served; waiting for the user's review and decision (task 5.8).
+report served; the user chose GPT-6.1 Terra at `medium` for the level runs and the app uses it (section 9).
 
 Audience: the agents of this plan (this phase when the user answers, and Phase 6). Technical.
 
@@ -216,3 +216,50 @@ conversation turns are not cached (`ClaudeComplete` caches only the system promp
   $0.025 per batch; `OPENAI_API_KEY` must be in the container's environment (today it is read from `.env` as a
   fallback); a refusal or an API error must keep the batch's notes as today. The page still says "AI".
 - Phase 6 (documentation): the core's `README.md` (the OpenAI client, the caching rules of GPT-6), the dependency.
+
+# 9. The user's decision: the level runs use GPT-6.1 Terra at medium (2026-10-30)
+
+The user chose GPT-6.1 Terra at `medium` for the level runs, and asked that the page tell the user to add credits to
+the OpenAI account when they run out, and that every estimate of minutes and money the app shows match what the
+benchmark measured. The other runs (Write it all again, Simplify, a stretch with words) keep Sonnet 5.5: only the
+level runs were compared.
+
+**The estimates before and after.** The dialog shows two numbers before a level run. The money came from the backend
+(`job.level_cost`: $0.05 for the plan and $0.20 per batch, measured with Sonnet in Phase 3); the minutes were computed in
+the dialog itself (2 minutes per request, `EnhanceDialog.minutes`). Both were Sonnet's:
+
+| Estimate | Before (Sonnet) | Measured with Terra `medium` (16 cases) | Now |
+|---|---|---|---|
+| Plan of the song | $0.05, (2 min) | $0.012, 8 s | $0.015, 10 s (`USD_LEVEL_PLAN`, `SECONDS_LEVEL_PLAN`) |
+| A batch with all its replies | $0.20, (2 min) | $0.023, 41 s | $0.025, 45 s (`USD_LEVEL_BATCH`, `SECONDS_LEVEL_BATCH`) |
+| 99 Red Balloons, both hands (13 batches) | $2.65, 28 min | about $0.33, 9 min (projected) | $0.34, 10 min |
+| The user's new song (1.3 min, 4 batches) | $0.85, 10 min | $0.086, 2.6 min (one real run, below) | $0.12, 3 min |
+
+`level_cost` now returns `batches` and `minutes` (`max(1, round((10 + 45 × batches) / 60))`) with `requests` and `usd`;
+the dialog shows the backend's minutes (`LlmCost.minutes`), and "1 minute" in the singular.
+
+**What changed in the code:**
+
+- `job.LEVEL_MODEL = "gpt-6.1-terra"`, `LEVEL_EFFORT = "medium"`; `job._level_complete(part, level)` builds
+  `OpenAIComplete` with `prompt_cache_key = "<part>|<level name>"`; `start_level` uses it (a `complete` given by a
+  test still replaces it). `job.level_available()` (an OpenAI key and the SDK) guards the two level routes
+  (`POST /sheet/{uuid}/llm/level`, `/level-copy`); the other routes keep `job.available()` (Anthropic).
+- **No credits**: `sheet_llm.NoCredits`, raised by `OpenAIComplete` when the API answers `insufficient_quota`. A level
+  run stops there (the batches already accepted are stored, as for any error), and the job's summary gets
+  `credits: "openai"`. The page then says: "The sheet stays as it was. The AI has no credits left: add credits to the
+  OpenAI account (platform.openai.com, Billing), then run it again." (or "The AI wrote 2 of 4 parts; the others stay
+  as they were. ..." when some batches were stored). The SDK retries a 429 a few times before the error reaches the
+  run (some seconds).
+- `compose.yaml` passes `OPENAI_API_KEY` to the backend; until the container is created again, the backend reads it
+  from `.env` (`sheet_llm._openai_key`).
+- Tests: `test_a_level_runs_on_terra_and_the_estimate_follows_the_benchmark`,
+  `test_a_level_that_runs_out_of_credits_says_so`, the costs of `test_the_routes_of_the_levels` (with `minutes`),
+  `test_openai_complete_says_when_the_account_has_no_credits`. `test_sheet_llm_openai.py`, `test_sheet_levels_app.py`,
+  `test_sheet_simplify.py`, `test_rights.py`: 40 passed. `tsc -b` and `eslint` clean; `check:enhance-dialog` all passed
+  (its regex accepts "minute").
+
+**A real run through the app's code** (the user's new song `2f133ebc`, saved to My Library during this work; a level
+copy `81a6a129` "… · Medium (test of the new AI model)" made with `flow.level_copy`, then `job.start_level(level="medium",
+hand="both")` with the default client): 4 of 4 batches accepted, $0.086, 157 s, against the estimate $0.12 and 3
+minutes. The record names `gpt-6.1-terra`. Looked at zoomed: the left hand keeps its held chords where it was simple;
+the right hand keeps the melody with fewer chords. The copy stays in My projects for the user.

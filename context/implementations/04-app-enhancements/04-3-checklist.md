@@ -107,7 +107,7 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 - [c] Task 4.7 The real runs on the whole of 99 Red Balloons: replaced by the first-minute test of task 4.5 (the user,
   2026-10-30). The whole song at a level is for the user to start from the dialog, when wanted.
 
-# [ ] Phase 5: Other AI models for the level runs (OpenAI), judged against Sonnet 5.5
+# [x] Phase 5: Other AI models for the level runs (OpenAI), judged against Sonnet 5.5
 
 - [x] Task 5.1 Prices and model ids of GPT-6 Luna, GPT-6.1 Terra, GPT-6.1 Sol from the internet (input, cached
   input, cache write, output; the caching rules of GPT-6, which bill the writes); a first estimate per song.
@@ -120,7 +120,8 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 - [x] Task 5.5 The measures, and the cost and time extrapolated to a whole song.
 - [x] Task 5.6 The judgment: by the agent itself, blind (the user, 2026-10-30: no judge through an API).
 - [x] Task 5.7 The report `gallery/04-3-phase-5/index.html` (two tabs: the comparison, the examples), served.
-- [ ] Task 5.8 The user's review and decision (which model the level runs use).
+- [x] Task 5.8 The user's decision (2026-10-30): the level runs use GPT-6.1 Terra at `medium`; the estimates of the
+  dialog follow the benchmark; the page asks the user to add OpenAI credits when they run out (report section 9).
 
 # [ ] Phase 6: Documentation and closing
 

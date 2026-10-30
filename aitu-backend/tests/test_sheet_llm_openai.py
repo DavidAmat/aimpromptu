@@ -7,7 +7,7 @@ from types import SimpleNamespace as NS
 import pytest
 
 from aitu_backend.sheet.llm.frames import SkipWindow
-from aitu_backend.sheet_llm import OpenAIComplete, openai_price
+from aitu_backend.sheet_llm import NoCredits, OpenAIComplete, openai_price
 
 
 def response(text: str, *, model="gpt-6-luna", inp=10_000, read=0, written=0, out=3_000, reasoning=2_500,
@@ -121,3 +121,21 @@ def test_openai_complete_sets_at_most_four_breakpoints() -> None:
     marked = [p["content"][0]["text"] for p in body["input"]
               if isinstance(p["content"], list) and "prompt_cache_breakpoint" in p["content"][0]]
     assert marked == ["S", "u2", "u3", "u4"]
+
+
+def test_openai_complete_says_when_the_account_has_no_credits() -> None:
+    class QuotaError(Exception):
+        code = "insufficient_quota"
+
+    def stream(**params):
+        raise QuotaError("You exceeded your current quota")
+
+    gpt = OpenAIComplete(model="gpt-6.1-terra", client=NS(responses=NS(stream=stream)))
+    with pytest.raises(NoCredits):
+        gpt("S", [{"role": "user", "content": "x"}])
+
+    def other(**params):
+        raise ValueError("network")
+
+    with pytest.raises(ValueError):
+        OpenAIComplete(model="gpt-6.1-terra", client=NS(responses=NS(stream=other)))("S", [{"role": "user", "content": "x"}])

@@ -1091,3 +1091,10 @@ scores are Terra 7.6, Sonnet 5.5 7.4, Sol 7.0 and Luna 5.2 (5 of Luna's 20 batch
 song, Terra costs about $0.33 and 9 minutes against Sonnet's $2.72 and 26 minutes. The agent recommends GPT-6.1 Terra
 at `medium` for the level runs; the choice of model is the user's (task 5.8), and building it into the app would be a
 later step.
+
+**Phase 5, the user's decision** (2026-10-30): the level runs use **GPT-6.1 Terra at `medium` effort**. The other AI
+runs keep Sonnet 5.5, because only the level runs were compared. The dialog's estimates now follow the benchmark (a
+level of 99 Red Balloons: about $0.34 and 10 minutes instead of $2.65 and 28), and when the OpenAI account has no
+credits left the page tells the user to add credits to it. A real run on the user's new song cost $0.086 in 2.6
+minutes (estimate $0.12, 3 minutes). Report section 9.
+

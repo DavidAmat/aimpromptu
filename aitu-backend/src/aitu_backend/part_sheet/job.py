@@ -90,10 +90,15 @@ USD_CACHE = 0.04
 USD_WINDOW = 0.038
 USD_BATCH = 0.008
 USD_STRETCH = 0.02
-#: A level run (implementation 04-3, Phase 3, measured on 99 Red Balloons with Sonnet 5.5): about $0.05 for the plan
-#: of the song (with the instructions written into the cache), and $0.20 per batch with its retries ($0.10 to $0.42).
-USD_LEVEL_PLAN = 0.05
-USD_LEVEL_BATCH = 0.2
+#: A level run uses GPT-6.1 Terra at medium effort (implementation 04-3, Phase 5: the user's decision of 2026-10-30,
+#: after the comparison with Sonnet 5.5 on 16 cases). Measured there: the plan of the song about $0.012 and 8 s; a
+#: batch with all its replies (1.9 on average) about $0.023 and 41 s. The estimate the dialog shows rounds them up.
+LEVEL_MODEL = "gpt-6.1-terra"
+LEVEL_EFFORT = "medium"
+USD_LEVEL_PLAN = 0.015
+USD_LEVEL_BATCH = 0.025
+SECONDS_LEVEL_PLAN = 10
+SECONDS_LEVEL_BATCH = 45
 
 
 def available() -> bool:
@@ -101,6 +106,22 @@ def available() -> bool:
     return (
         bool(os.environ.get("ANTHROPIC_API_KEY"))
         and importlib.util.find_spec("anthropic") is not None
+    )
+
+
+def level_available() -> bool:
+    """Whether the model of the level runs can be asked: an OpenAI key (the environment, or ``.env``) and the SDK."""
+    from aitu_backend.sheet_llm import _openai_key  # noqa: PLC0415
+
+    return bool(_openai_key()) and importlib.util.find_spec("openai") is not None
+
+
+def _level_complete(part_id: str, level: Any) -> Any:
+    from aitu_backend.sheet.llm import levels  # noqa: PLC0415
+    from aitu_backend.sheet_llm import OpenAIComplete  # noqa: PLC0415 - the SDK only when it is used
+
+    return OpenAIComplete(
+        model=LEVEL_MODEL, effort=LEVEL_EFFORT, cache_key=f"{part_id}|{levels.level_name(level)}"
     )
 
 
@@ -636,7 +657,7 @@ def start_level(
         with _live_lock:
             _live[part_id] = run
         try:
-            ask = (complete or _complete)()
+            ask = complete() if complete is not None else _level_complete(part_id, level)
 
             def asked(system: str, messages: list[dict]) -> str:
                 if not pipeline.has_events(part_id):
@@ -686,6 +707,8 @@ def start_level(
             note = out.plan_log.note or next((log.note for log, _ in out.batches if log.note), "")
             if note:
                 summary["note"] = note
+            if "NoCredits" in note:
+                summary["credits"] = "openai"
             if not pipeline.has_events(part_id):
                 return {**summary, "level": "gone"}
             if not accepted:
@@ -769,7 +792,13 @@ def level_cost(current: Any, hand: str, start: int | None = None, end: int | Non
 
     staffs = (1, 2) if HANDS[hand] is None else (HANDS[hand],)
     batches = len(levels.level_windows(current, staffs, start, end))
-    return {"requests": batches + 1, "usd": round(USD_LEVEL_PLAN + batches * USD_LEVEL_BATCH, 2)}
+    seconds = SECONDS_LEVEL_PLAN + batches * SECONDS_LEVEL_BATCH
+    return {
+        "requests": batches + 1,
+        "batches": batches,
+        "usd": round(USD_LEVEL_PLAN + batches * USD_LEVEL_BATCH, 2),
+        "minutes": max(1, round(seconds / 60)),
+    }
 
 
 def _place(ref: str) -> tuple[int, int] | None:
