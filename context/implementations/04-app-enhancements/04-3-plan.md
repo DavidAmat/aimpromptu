@@ -1138,3 +1138,9 @@ scissors, "Only keep the selected part": everything before and after the selecti
 (the cuts inside the selection stay); then **Save**. `audio/cuts.keepOnly`, 4 new cases in `check:cuts`; looked at on a
 temporary copy of the user's project (deleted).
 
+**The time of the moving edge** (the user, 2026-10-30, same branch): while a selection of the Audio step is dragged
+(a new one, or one of its edges), the edge that follows the pointer carries its time in the purple badge of the
+selection, which moves up and down with the pointer and changes as the edge moves (`CutWaveform` `edgeY`,
+`waveformPaint` `paintSelection`). Before, the time showed only on an edge under the pointer, at the top, and never
+while a new selection was dragged. Looked at on a temporary copy (deleted).
+

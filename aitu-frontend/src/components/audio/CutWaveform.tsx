@@ -7,10 +7,11 @@
  * - **The time ruler** (the strip with `0:15`, `0:30`, …) holds the playhead. A press there moves the
  *   playhead, and a drag there moves it along. A **double-click** anywhere also moves it.
  * - **In the waveform**, a drag selects a part. The selection snaps to whole time frames (10 ms), so
- *   a cut made from it always falls on a column border of the piano matrix notation.
+ *   a cut made from it always falls on a column border of the piano matrix notation. The edge that follows the
+ *   pointer carries its time in a purple badge, which moves with the pointer and changes as the edge moves.
  * - **The two edges** of the selection carry a grip. The pointer grabs an edge from
  *   {@link EDGE_PX} pixels on either side, and the edge then moves only left or right while the other
- *   one stays; its time is shown beside it. Dragging past the side of the view scrolls the view, so
+ *   one stays; its time is shown beside it, following the pointer. Dragging past the side of the view scrolls the view, so
  *   an edge can be placed precisely while zoomed in.
  * - **A single click** in the waveform clears the selection, or, inside a cut, selects the whole cut
  *   so Restore can put it back. Shift-click stretches the selection to the click.
@@ -102,6 +103,8 @@ export function CutWaveform({
   /** The selection while a drag is under way; handed to the page when the pointer is released. */
   const [dragged, setDragged] = useState<Cut | null>(null);
   const [hover, setHover] = useState<Hover>(null);
+  /** While a selection or an edge is dragged: the pointer's height in the canvas (the edge's time follows it). */
+  const [edgeY, setEdgeY] = useState<number | null>(null);
   const shown = dragged ?? selection;
   const width = size.width;
   const total = peaks.totalFrames;
@@ -111,9 +114,9 @@ export function CutWaveform({
 
   useLayoutEffect(() => {
     if (baseRef.current && width > 0) {
-      paintWaveform(baseRef.current, width, height, { peaks, cuts, selection: shown, view, activeEdge, files });
+      paintWaveform(baseRef.current, width, height, { peaks, cuts, selection: shown, view, activeEdge, edgeY, files });
     }
-  }, [width, height, peaks, cuts, shown, view, activeEdge, scheme, files]);
+  }, [width, height, peaks, cuts, shown, view, activeEdge, edgeY, scheme, files]);
 
   useLayoutEffect(() => {
     if (overviewRef.current && width > 0) {
@@ -195,6 +198,7 @@ export function CutWaveform({
     }
     if (gesture.kind !== "scrub" && dragged) onSelectionChange(dragged);
     setDragged(null);
+    setEdgeY(null);
   };
 
   const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -237,6 +241,8 @@ export function CutWaveform({
     if (gesture.kind === "pending") {
       if (Math.abs(event.clientX - gesture.x) < DRAG_PX) return;
       gestureRef.current = { kind: "select", anchor: gesture.frame };
+      setHover(frame < gesture.frame ? "start" : "end");
+      setEdgeY(event.clientY - event.currentTarget.getBoundingClientRect().top);
       setDragged(range(gesture.frame, frame));
       return;
     }
@@ -245,7 +251,9 @@ export function CutWaveform({
     const over = event.clientX < bounds.left ? event.clientX - bounds.left : Math.max(0, event.clientX - bounds.right);
     if (over !== 0) onViewChange(panView(view, over * ((view.end - view.start) / bounds.width) * 0.5, total));
     const anchor = gesture.kind === "select" ? gesture.anchor : gesture.fixed;
-    if (gesture.kind === "edge") setHover(frame < anchor ? "start" : "end");
+    // The edge that follows the pointer carries its time, at the pointer's height.
+    setHover(frame < anchor ? "start" : "end");
+    setEdgeY(event.clientY - bounds.top);
     setDragged(range(anchor, frame));
   };
 
@@ -342,6 +350,7 @@ export function CutWaveform({
           onPointerCancel={() => {
             gestureRef.current = null;
             setDragged(null);
+            setEdgeY(null);
           }}
           onDoubleClick={onDoubleClick}
           style={{
