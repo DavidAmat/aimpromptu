@@ -49,5 +49,7 @@ worktree (plan section 7.4). Phases 1 and 2 are merged.
 | [`04-3-implementation-phase-3.md`](04-3-implementation-phase-3.md) | Phase 3: the grid, the chords, the measures, the level prompts, the plan of the song and the check |
 | [`gallery/04-3-phase-3/`](gallery/04-3-phase-3/index.html) | Phase 3: the test passages of 99 Red Balloons, the patterns of each level, the prompts (and the AI's versions after task 3.7) |
 | [`04-3-implementation-phase-4.md`](04-3-implementation-phase-4.md) | Phase 4: the level copy (`projects.level_of`), the catalog in the backend, the level run and its storing, the dialog, the first-minute AI test |
+| [`04-3-implementation-phase-5.md`](04-3-implementation-phase-5.md) | Phase 5: the OpenAI client, the cache test, Sonnet 5.5 against GPT-6 Luna, GPT-6.1 Terra and Sol on 16 cases, the judgment |
+| [`gallery/04-3-phase-5/`](gallery/04-3-phase-5/index.html) | Phase 5: the report (cost, quality and time; the examples drawn by the app) and its `tools/` |
 | [`images/chopin_passages/`](images/chopin_passages/) | The Chopin snapshots of the gallery, and the user's `ballade1-ex1.png` |
 | [`images/99-red-ballons-issue.png`](images/99-red-ballons-issue.png), [`images/whole-song-simplification.png`](images/whole-song-simplification.png) | The user's two examples of a machine transcription that the levels must fix |

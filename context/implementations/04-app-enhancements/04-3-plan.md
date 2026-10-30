@@ -815,7 +815,8 @@ credits would run out.
    of the song (`levels.level_windows`; 99 Red Balloons has 13 for both hands, 7 Years its own count) times the mean
    batch, with the cache as measured in task 3, and the time as the sum (the batches of a song run one after the
    other). Also say how many batches would fail (they keep their notes) at the rate measured.
-6. **The judge.** Opus 5.5, with the largest effort. For each case it receives: the criteria of the levels (section
+6. **The judge.** The agent of this phase (Opus 5.5), in its own session, with no request to an API (the user,
+   2026-10-30; it replaces a judge request per case, which cost $1.30). For each case it reads: the criteria of the levels (section
    5.1 of this plan, the user's rules of section 10: never harder than the sheet now, the left hand follows its
    rhythm, the riff in the right hand, the steady rhythm of easy and medium, the melody first, artifacts, decoration
    notes; and the prompt files `shared.md` and the level's `.md`); the patterns asked (their name, line and F1 text);
@@ -826,7 +827,10 @@ credits would run out.
    reasons; and whether each is better, similar or worse than the baseline (named to it only in this question, after
    the scores). A last request gives the judge the table of every model (mean scores, acceptance, cost and time per
    passage and per song) and asks for the best trade-off between quality, cost and time, with its reasons.
-7. **The report** `gallery/04-3-phase-5/index.html`, served at `http://ubuntu:8097/gallery/04-3-phase-5/index.html`:
+7. **The report** `gallery/04-3-phase-5/index.html`, served at `http://ubuntu:8097/gallery/04-3-phase-5/index.html`,
+   with two tabs (the user, 2026-10-30): the comparison of cost, quality and time of every model, and the examples
+   (each case: the passage now, the instructions of the run, Sonnet's version and each GPT model's version, all drawn
+   by the app, so that the user can judge them by eye). Its content:
    the prices table (sources, date); the summary table, one row per model: judge score (mean, and by kind of case),
    accepted share, replies, **cost per passage, cost per song, time per passage, time per song**; the judge's
    trade-off verdict; then each case: the original drawn by the app's engine, each model's answer drawn, its measures,
@@ -1069,3 +1073,38 @@ GPT-6 Luna, GPT-6.1 Terra and GPT-6.1 Sol (all at their largest reasoning effort
 the quality of the answers judged by Opus 5.5 (a score from 0 to 10, the answers shuffled and unnamed), the cost and
 the time per passage and extrapolated to a whole song, with OpenAI's prompt caching always on (and tested first with
 GPT-6 Luna, the model of every code test). The documentation and closing phase becomes Phase 6.
+
+**Phase 5, the first measures and the user's answers** (2026-10-30,
+[`04-3-implementation-phase-5.md`](04-3-implementation-phase-5.md)): on the riff of 99 Red Balloons at medium, the
+OpenAI models at `max` effort thought 20,000 to 56,000 tokens per batch and took 7 to 12 minutes (Sonnet 5.5: 7,000
+tokens, 1.3 minutes), so Terra and Sol cost about as much as Sonnet and the 16 cases would pass the $7 of credits;
+OpenAI's caching for GPT-6 and later bills the writes (1.25x) and needs a breakpoint on every user message to read the
+earlier turns of a conversation. The user decided two things. First, measure the OpenAI models at `medium` effort and
+project the costs from it before running the cases with Terra and Sol. Second, **no judge through an API**: the agent
+of the phase (Opus 5.5 itself) judges the answers in its session, reading them as the app draws them (task 6 changes;
+the one judge request already made, $1.30, is not used). The user also asked for the report as an HTML page with a tab
+for the comparison of cost, quality and time, and a tab of the examples (the passage now, the instructions of the
+run, Sonnet's version and each GPT model's version, drawn by the app) to judge them by eye (task 7).
+
+**Phase 5, the results** (2026-10-30): on the 16 cases, all at `medium` for the OpenAI models, the agent's blind
+scores are Terra 7.6, Sonnet 5.5 7.4, Sol 7.0 and Luna 5.2 (5 of Luna's 20 batches were refused by the check). Per
+song, Terra costs about $0.33 and 9 minutes against Sonnet's $2.72 and 26 minutes. The agent recommends GPT-6.1 Terra
+at `medium` for the level runs; the choice of model is the user's (task 5.8), and building it into the app would be a
+later step.
+
+**Phase 5, the user's decision** (2026-10-30): the level runs use **GPT-6.1 Terra at `medium` effort**. The other AI
+runs keep Sonnet 5.5, because only the level runs were compared. The dialog's estimates now follow the benchmark (a
+level of 99 Red Balloons: about $0.34 and 10 minutes instead of $2.65 and 28), and when the OpenAI account has no
+credits left the page tells the user to add credits to it. A real run on the user's new song cost $0.086 in 2.6
+minutes (estimate $0.12, 3 minutes). Report section 9.
+
+**Phase 5, every run on Terra** (2026-10-30): the user moved every AI run to GPT-6.1 Terra at `medium` (Write it all
+again, Simplify, a stretch with words, the levels). Each run was measured once with Terra on a copy and the dialog's
+estimates follow those measures, now with the minutes for every run (for example a whole run of a song of 1.3 minutes:
+about $0.07 and 2 minutes, measured $0.064 in 102 s). Report section 10. Phase 6 updates the documentation that still
+names Sonnet.
+
+**Phase 5, approval and merge** (2026-10-30): the user approved Phase 5 (the report, Terra for every AI run and the new
+estimates); the branch was merged into `master`. Phase 6 is next: its documentation also replaces Sonnet 5.5 by GPT-6.1
+Terra where the documents describe the model of the runs (report section 10).
+

@@ -93,11 +93,16 @@ function dollars(cost: LlmCost | undefined): string {
   return cost === undefined ? "" : `$${cost.usd.toFixed(2)}`;
 }
 
-/** About how long a level takes: the plan, then a minute or two per batch (Phase 3: 30 to 120 s per reply). */
-function minutes(cost: LlmCost | undefined): string {
+/** About how long a run takes, as the backend estimates it from what GPT-6.1 Terra measured (implementation 04-3,
+ * Phase 5): "about 3 minutes", or "" before the costs arrive. */
+function timeOf(cost: LlmCost | undefined): string {
   if (!cost) return "";
-  const most = Math.max(2, Math.round(cost.requests * 2));
-  return `, about ${most} minutes`;
+  const most = cost.minutes ?? Math.max(1, Math.round((cost.requests * 45) / 60));
+  return `about ${most} minute${most === 1 ? "" : "s"}`;
+}
+
+function minutes(cost: LlmCost | undefined): string {
+  return cost ? `, ${timeOf(cost)}` : "";
 }
 
 /** The hands a level writes, the left hand first (as the catalog shows them). */
@@ -186,16 +191,16 @@ export function EnhanceDialog({
   const levelKey: `level-${LevelHand}` | `level-stretch-${LevelHand}` = onStretchTab ? `level-stretch-${levelHand}` : `level-${levelHand}`;
   const levelCost = costs?.[levelKey];
   const status = onStretchTab
-    ? `${hand === "both" ? "" : `The ${other} hand stays as it is. `}About ${level ? `${dollars(levelCost) || "a few cents"}${minutes(levelCost)}` : dollars(costs?.stretch) || "one cent"}. Undo takes it back.`
+    ? `${hand === "both" ? "" : `The ${other} hand stays as it is. `}About ${level ? `${dollars(levelCost) || "a few cents"}${minutes(levelCost)}` : `${dollars(costs?.stretch) || "one cent"}${minutes(costs?.stretch)}`}. Undo takes it back.`
     : run === "level"
       ? `A new project in My projects, named with the level. This sheet stays as it is. About ${dollars(levelCost)}${minutes(levelCost)}.`
       : [
           viaEdit ? "This opens a copy in Projects, as Edit does, and the AI works there." : "",
           run !== "all"
-            ? "Uniform patterns and no quick jumps; the hands stay. Undo takes it back."
+            ? `Uniform patterns and no quick jumps; the hands stay. ${timeOf(costs?.[run]) ? `It takes ${timeOf(costs?.[run])}. ` : ""}Undo takes it back.`
             : enhanced
-              ? "The AI writes the hands and the reading again, in a few minutes. If it does not finish, the sheet you have now stays."
-              : "The AI writes the hands and the reading, part by part, in a few minutes. The hands you have now are kept in the history.",
+              ? `The AI writes the hands and the reading again, in ${timeOf(costs?.all) || "a few minutes"}. If it does not finish, the sheet you have now stays.`
+              : `The AI writes the hands and the reading, part by part, in ${timeOf(costs?.all) || "a few minutes"}. The hands you have now are kept in the history.`,
         ]
           .filter(Boolean)
           .join(" ");

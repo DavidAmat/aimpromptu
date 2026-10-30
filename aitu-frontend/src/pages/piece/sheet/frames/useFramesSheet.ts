@@ -36,6 +36,8 @@ interface Summary {
   levelName?: string;
   batches?: number;
   total?: number;
+  /** The run stopped because the account of the AI has no credits left (``openai``). */
+  credits?: string;
 }
 
 const HAND_WORDS: Record<Hand, string> = { left: "the left hand", right: "the right hand", both: "both hands" };
@@ -52,6 +54,11 @@ function endNotice(summary: Summary): string | null {
   if (summary.simplify === "none") return `The AI found nothing to simplify${where}.`;
   if (summary.simplify === "failed") return "The AI could not simplify the sheet. It stays as it was.";
   if (summary.simplify === "stale") return "The notes changed while the AI worked. The sheet stays as it was.";
+  if (summary.credits) {
+    const done =
+      summary.level === "ok" && summary.batches ? `The AI wrote ${summary.batches} of ${summary.total} parts; the others stay as they were. ` : "The sheet stays as it was. ";
+    return `${done}The AI has no credits left: add credits to the OpenAI account (platform.openai.com, Billing), then run it again.`;
+  }
   if (summary.level === "failed") return "The AI could not write this level. The sheet stays as it was.";
   if (summary.level === "stale") return "The notes changed while the AI worked. The sheet stays as it was.";
   if (summary.level === "ok" && summary.total && summary.batches !== undefined && summary.batches < summary.total) {

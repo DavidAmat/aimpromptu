@@ -39,6 +39,9 @@ dependencies = [
     # The LLM step of the new sheet (implementation 03, Phase 4): Sonnet 5.5 through the official
     # SDK and the API key of `.env` (ANTHROPIC_API_KEY). Imported only when the step runs.
     "anthropic>=2.2.0",
+    # Other AI models for the level runs (implementation 04-3, Phase 5): OpenAI's Responses API and the
+    # key of `.env` (OPENAI_API_KEY). Used only by the comparison scripts for now.
+    "openai>=3.41.0",
 ]
 
 [project.optional-dependencies]

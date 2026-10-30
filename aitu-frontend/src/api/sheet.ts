@@ -198,6 +198,9 @@ export type SongRun = "simplify-left" | "simplify-right" | "simplify-both" | "al
 export interface LlmCost {
   requests: number;
   usd: number;
+  /** A level run: its batches and about how many minutes it takes (the backend's estimate). */
+  batches?: number;
+  minutes?: number;
 }
 
 export type LlmCosts = Record<SongRun | "stretch", LlmCost> &
