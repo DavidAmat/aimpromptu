@@ -56,6 +56,37 @@ simplified copy of it, not a new invention.
   (`# pattern L f33-f159: keep`). Do not give it a pattern of the catalog. The app lists these stretches in each
   batch and in the summary of the song; the checker refuses another note or more onsets there.
 
+# Strict and Suggested
+
+Each pattern of this run is marked **Suggested** or **Strict** by the user (at the end of these instructions).
+
+- **Suggested**: use the pattern where it suits the passage. The two rules above hold: follow the rhythm the left
+  hand plays now, and keep the simple stretches (or play a pattern there only when it is not harder: notes of the
+  same chord, as many onsets or fewer).
+- **Strict**: the hand plays the pattern on **every chord of the whole song**, the same way from the first chord to
+  the last, also where the hand is simple now and whatever rhythm it plays now (blancas, negras, corcheas). The two
+  rules above do not hold for that hand: no `keep`, no other pattern, and it may have more or fewer onsets than now.
+  The melody, the harmony, the grid and the limits of the level still hold.
+- **The user's words may change a pattern.** The patterns of the catalog are never exactly what a user wants. When
+  the words change the shape (for example on left easy 1, Held triad Fa4-La4-Do5: "first a low note Fa3 as a blanca,
+  then Fa4-La4-Do5 as a blanca"), the changed shape is the pattern of this run: play it, Strict or Suggested as the
+  pattern is marked. Find the chord first, then play the changed shape on it.
+
+# The rules of the run and your explanations
+
+Songs come back to what they played before (a verse, a chorus, an intro that returns), and the batches are written
+one after the other, each in its own request. So that every batch makes the same decisions:
+
+- The plan writes **one rule per pattern** it uses: how this song plays it (which notes of the chord by their role,
+  root, third or fifth, in which octava, with which figures, in which order, and what happens when the chord changes
+  before the shape ends), with the user's words joined to it.
+- Every batch gets the rules of the plan and of the batches before it, under "The rules of this run", and follows
+  them. When a batch decides something the rules do not say (a kind of passage, a chord that lasts one negra), it
+  adds `# rule: ...`; the next batches follow it too.
+- Every batch explains its decisions to the user in one to three `# explain: ...` lines, in very simple words: what
+  it did, why, and what it did not do and why. The user reads them and may answer you; an answer of the user then
+  comes as a new message, and you write the whole batch again following it.
+
 # What you keep
 
 1. **The melody comes first.** The melody is mostly the top line of the right hand. Each note of the right hand's top
@@ -146,7 +177,8 @@ the hand is), and the earlier stretch that sounds the same. You split the song i
 of each hand for each section, from the patterns of this run: for the left hand, the pattern whose rhythm is nearest to
 what it plays now, or `keep` where the summary marks it simple (`L=keep`). A hand for which the user chose no
 pattern (the end of these instructions says so) is `free`: write it by the rules of its level and the user's words only.
-Choose few sections and few changes: the song has an
+After the sections, write the rule of each pattern
+you use (`rule left easy 1: ...`; see "The rules of the run"). Choose few sections and few changes: the song has an
 intro, verses, choruses, maybe a bridge; a part that comes again gets the patterns it had the first time. A passage
 where the song is calm can take a calmer pattern of the run, and the chorus a fuller one.
 
@@ -175,6 +207,7 @@ f1057    L: G#3,B3,E4:4  R: E5:4
 # pattern R f1042-f1440: right easy 2
 # not melody f1084 E4: a fill under the held E5
 # artifact f1110 E7: a high note alone, far above the melody
+# explain: The left hand plays the low E, then the chord, on each chord. I left out a very high E that is not melody.
 ```
 
 - One `# pattern` line per hand rewritten and per section of the batch, with the frames where you use it.
@@ -183,6 +216,8 @@ f1057    L: G#3,B3,E4:4  R: E5:4
   chords, the left hand) need no line: you write the hands again.
 - Write the figure that the note should have: it gives the note its length (a negra lasts `quarterMs`). A note
   lasts at most until the next note of its hand.
+- One to three `# explain:` lines (see "The rules of the run and your explanations"), and a `# rule:` line for
+  each new decision the next batches must follow.
 - No beams, clefs, 8va, dots, rests or tuplets.
 
 A checker reads the answer. It checks the format; that every note of the melody line is still there (or declared);

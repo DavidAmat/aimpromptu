@@ -556,11 +556,12 @@ def window_prompt(
 
 def _block(reply: str) -> str:
     """The F1 frames text of a reply: the fenced block that holds it, else the text from 'F1 frames'."""
-    for b in re.findall(r"```[a-zA-Z0-9_-]*\n(.*?)```", reply, re.S):
+    for b in re.findall(r"```[a-zA-Z0-9_-]*[ \t]*\n(.*?)```", reply, re.S):
         if "F1 frames" in b:
             return b[b.find("F1 frames") :]
     i = reply.find("F1 frames")
-    return reply[i:] if i >= 0 else reply
+    # no closed fence (or a fence the pattern above missed): the text to the next fence
+    return reply[i:].split("```")[0] if i >= 0 else reply
 
 
 def _name(midi: int) -> str:

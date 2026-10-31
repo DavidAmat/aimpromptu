@@ -43,6 +43,10 @@ export interface RunSummary {
   /** The user pressed **Stop**. */
   stopped?: boolean;
   usd?: number;
+  /** The id of the run's log in the history of AI runs (implementation 04-5). */
+  run?: string;
+  /** The run wrote its first batch and waits for the user: go on, or answer the AI (implementation 04-5). */
+  waiting?: boolean;
 }
 type Summary = RunSummary;
 
@@ -54,6 +58,7 @@ function notes(count: number): string {
 
 /** What the page says when a stretch or Simplify ends without the result the user expects; `null`: nothing. */
 function endNotice(summary: Summary): string | null {
+  if (summary.waiting) return "Batch 1 is written. Check it on the sheet, then go on with the other batches or answer the AI.";
   if (summary.stopped) {
     const done = summary.batches !== undefined && summary.total ? ` after ${summary.batches} of ${summary.total} batches` : "";
     return `You stopped the AI${done}. What it wrote stays; Revert takes it back.`;
@@ -107,6 +112,7 @@ export interface FramesSheetState {
   stopRun: () => Promise<void>;
   /** **Revert** a run that ended: the part as it was before it. */
   revertRun: (version: number) => Promise<boolean>;
+  reloadSheet: () => void;
 }
 
 export function useFramesSheet(
@@ -263,6 +269,12 @@ export function useFramesSheet(
     [audioUuid, editing],
   );
 
+  /** Read the sheet again (a job the page did not start itself, such as a batch written again). */
+  const reloadSheet = useCallback(() => {
+    setNotice(null);
+    setReload((value) => value + 1);
+  }, []);
+
   const stopRun = useCallback(async () => {
     try {
       await sheetApi.stopLlm(audioUuid);
@@ -293,5 +305,6 @@ export function useFramesSheet(
     lastRun,
     stopRun,
     revertRun,
+    reloadSheet,
   };
 }

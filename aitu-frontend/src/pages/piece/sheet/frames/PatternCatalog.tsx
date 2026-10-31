@@ -43,7 +43,17 @@ export interface PatternGalleryProps {
   onSelectAll: (hand: CatalogHand, refs: string[]) => void;
   onDeselectAll: (hand: CatalogHand) => void;
   onApproved: (hand: CatalogHand) => void;
+  /** The refs ticked **Strict** (the others ticked are **Suggested**, the default; implementation 04-5). */
+  strict: string[];
+  onStrict: (ref: string, strict: boolean) => void;
 }
+
+type Strictness = "suggested" | "strict";
+
+const STRICTNESS: { value: Strictness; label: string; tooltip: string }[] = [
+  { value: "suggested", label: "Suggested", tooltip: "The AI uses this pattern where it suits the passage." },
+  { value: "strict", label: "Strict", tooltip: "The hand plays this pattern on every chord, the same way through the whole song." },
+];
 
 export function PatternGallery({
   catalog,
@@ -57,6 +67,8 @@ export function PatternGallery({
   onSelectAll,
   onDeselectAll,
   onApproved,
+  strict,
+  onStrict,
 }: PatternGalleryProps) {
   const shown = catalog.patterns.filter((one) => one.hand === hand && one.level === shownLevels[hand]);
   const count = (side: CatalogHand) => selected.filter((ref) => ref.startsWith(`${side} `)).length;
@@ -116,9 +128,22 @@ export function PatternGallery({
           >
             <Checkbox size="small" checked={selected.includes(pattern.ref)} sx={{ alignSelf: "flex-start", p: 0.5 }} />
             <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {shortRef(pattern.ref)} · {pattern.name}
-              </Typography>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 0.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, flex: 1 }}>
+                  {shortRef(pattern.ref)} · {pattern.name}
+                </Typography>
+                {selected.includes(pattern.ref) ? (
+                  // A click here sets the strictness; it does not untick the pattern.
+                  <Box onClick={(event) => event.stopPropagation()} data-strictness={pattern.ref}>
+                    <Segmented<Strictness>
+                      label={`How strictly the AI follows ${shortRef(pattern.ref)}`}
+                      value={strict.includes(pattern.ref) ? "strict" : "suggested"}
+                      options={STRICTNESS}
+                      onChange={(value) => onStrict(pattern.ref, value === "strict")}
+                    />
+                  </Box>
+                ) : null}
+              </Stack>
               <Typography variant="body2" color="text.secondary">
                 {pattern.line}
               </Typography>

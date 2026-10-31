@@ -253,6 +253,27 @@ try {
   await page.waitForTimeout(600);
   const none = sent.filter((s) => /\/llm\/level$/.test(s.url)).at(-1);
   check('Deselect all sends the level with no pattern', none !== level && none?.body?.patterns?.length === 0 && none?.body?.exact === true, JSON.stringify(none?.body));
+  // Strict (implementation 04-5): a ticked pattern is Suggested by default; Strict is sent in `strict`.
+  await head.scrollIntoViewIfNeeded();
+  const strictAt = await head.boundingBox();
+  await page.mouse.click(strictAt.x + strictAt.width / 2, strictAt.y + strictAt.height / 2);
+  await page.locator('[data-frames-note-toolbox]').waitFor({ timeout: 5000 });
+  await page.getByTestId('notes-enhance').click();
+  await dialog(page).waitFor({ timeout: 5000 });
+  await dialog(page).getByRole('group', { name: 'How' }).getByRole('button', { name: 'A level' }).click();
+  await dialog(page).locator('[data-pattern-bulk]').getByRole('button', { name: 'Deselect all' }).click();
+  const one = dialog(page).locator('[data-pattern="left easy 1"]');
+  await one.scrollIntoViewIfNeeded();
+  await one.click();
+  const strictness = dialog(page).locator('[data-strictness="left easy 1"]');
+  check('a ticked pattern shows Suggested and Strict, Suggested first', (await strictness.getByRole('button', { name: 'Suggested' }).getAttribute('aria-pressed')) === 'true');
+  await strictness.getByRole('button', { name: 'Strict' }).click();
+  check('Strict keeps the pattern ticked and says so in the line of the patterns', (await one.locator('input').isChecked()) && /easy 1 \(Strict\)/.test(await dialog(page).locator('[data-level-patterns]').innerText()));
+  await shot(page, '06b-strict');
+  await page.getByTestId('stretch-confirm').click();
+  await page.waitForTimeout(600);
+  const strict = sent.filter((s) => /\/llm\/level$/.test(s.url)).at(-1);
+  check('Strict sends the pattern in strict', strict !== none && strict?.body?.patterns?.join(',') === 'left easy 1' && strict?.body?.strict?.join(',') === 'left easy 1', JSON.stringify(strict?.body));
   await head.scrollIntoViewIfNeeded();
   const again = await head.boundingBox();
   await page.mouse.click(again.x + again.width / 2, again.y + again.height / 2);

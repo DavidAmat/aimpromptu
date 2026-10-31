@@ -106,6 +106,7 @@ import { PianoToolbox } from "../PianoToolboxes";
 import { HAND_COLOUR, HELD_COLOUR, formatSeconds, type SoundingNote } from "../sheetConstants";
 import type { SheetStep } from "../SheetPage";
 import { besideOnScreen, clearOfRange, firstLineBoxOf, screenBoxOf } from "../toolboxPlacement";
+import { AiHistoryPanel } from "./AiHistoryPanel";
 import { AiRunPanel } from "./AiRunPanel";
 import { ENHANCE_PANEL_WIDTH, type BatchPreview } from "./batches";
 import { EnhanceDialog, type EnhanceTab, type StretchHand } from "./EnhanceDialog";
@@ -235,7 +236,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   // and the cursor goes back where it was asked to be (the start of the passage), or where it was.
   const [audioLoads, setAudioLoads] = useState<{ revision: number | null; loads: number }>({ revision: null, loads: 0 });
   const seekAfterLoad = useRef<number | null>(null);
-  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, level, notice, lastRun, stopRun, revertRun } =
+  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, level, notice, lastRun, stopRun, revertRun, reloadSheet } =
     useFramesSheet(audioUuid, width, {
     onChanged: step.onChanged,
   });
@@ -424,6 +425,15 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   // The panel of a run (the user, 2026-10-30): it opens when a run starts (here, after a reload, or in the level copy
   // the run went to) and stays until Close, with the batches last seen while the AI worked.
   const [runPanel, setRunPanel] = useState(false);
+  /** The history of AI runs at the right (implementation 04-5); the run to open in it first. */
+  const [historyOpen, setHistoryOpen] = useState<{ run: string | null } | null>(null);
+  // Each end of a run: the panels read the run's log again. Compared during render, as below.
+  const [seenRun, setSeenRun] = useState(lastRun);
+  const [runEnds, setRunEnds] = useState(0);
+  if (lastRun !== seenRun) {
+    setSeenRun(lastRun);
+    setRunEnds((value) => value + 1);
+  }
   const [stopping, setStopping] = useState(false);
   const [reverted, setReverted] = useState(false);
   const [runBatches, setRunBatches] = useState<readonly SheetSegment[]>([]);
@@ -433,6 +443,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
     setSeenRunning(running);
     if (running) {
       setRunPanel(true);
+      setHistoryOpen(null);
       setStopping(false);
       setReverted(false);
     }
@@ -1180,6 +1191,18 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
                   icon: <PianoIcon fontSize="small" />,
                   onClick: () => setPianoOpen((open) => !open),
                 },
+                ...(offerAi
+                  ? [
+                      {
+                        label: "History of AI runs",
+                        icon: <Logo height={16} />,
+                        onClick: () => {
+                          setRunPanel(false);
+                          setHistoryOpen({ run: null });
+                        },
+                      },
+                    ]
+                  : []),
               ]}
             />
           </>
@@ -1311,7 +1334,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
         ) : null}
         {/* ⌘ and the wheel scale the drawing from the pointer until it is laid out again (no page scroll sideways). */}
         {/* While Enhance with AI is open at the right, the sheet is laid out beside it: its batches show whole. */}
-        <Box ref={holdSheetBox} sx={{ overflowX: "clip", pr: enhancing || runPanel ? `${ENHANCE_PANEL_WIDTH}px` : 0 }}>
+        <Box ref={holdSheetBox} sx={{ overflowX: "clip", pr: enhancing || runPanel || historyOpen ? `${ENHANCE_PANEL_WIDTH}px` : 0 }}>
           <Box
             sx={
               wheelZoom && wheelZoom.to !== drawnZoom
@@ -1559,8 +1582,26 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
         data-testid="sheet-flash"
       />
       {info ? <InfoDialog target={info} onClose={() => setInfo(null)} /> : null}
+      {historyOpen && !runPanel && !enhancing ? (
+        <AiHistoryPanel
+          audioUuid={audioUuid}
+          busy={running || editing}
+          refresh={runEnds}
+          opening={historyOpen.run}
+          onStarted={reloadSheet}
+          onClose={() => setHistoryOpen(null)}
+        />
+      ) : null}
       {runPanel && !enhancing ? (
         <AiRunPanel
+          audioUuid={audioUuid}
+          refresh={runEnds}
+          onStarted={reloadSheet}
+          onHistory={() => {
+            setRunPanel(false);
+            setRunBatches([]);
+            setHistoryOpen({ run: endedRun?.summary.run ?? null });
+          }}
           running={running}
           stopping={stopping}
           batches={runBatches}

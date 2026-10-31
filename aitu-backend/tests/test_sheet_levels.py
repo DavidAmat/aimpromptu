@@ -32,7 +32,7 @@ def song(left: str = "chords"):
 
 
 def answer(lines: list[str], declared: list[str]) -> str:
-    return "```\n" + HEAD + "\n".join(lines + declared) + "\n```"
+    return "```\n" + HEAD + "\n".join(lines + declared + ["# explain: the bass, then the triad held."]) + "\n```"
 
 
 def easy_lines(s, start: int = 30, end: int = 30 + 32 * Q, *, skip: set[int] = frozenset(), bass_octave: int = 2):
@@ -147,7 +147,7 @@ def test_the_system_prompt_has_the_level_and_only_the_patterns_of_the_run() -> N
     assert "# The level of this run: easy" in text and "# The level of this run: medium" not in text
     assert text.index("### left easy 2") < text.index("### right easy 2")
     assert "left easy 1" not in text.split("# The patterns of this run")[1]
-    assert L.LEVEL_VERSION == "3"
+    assert L.LEVEL_VERSION == "4"
 
 
 def test_the_examples_of_the_shared_prompt_parse() -> None:
@@ -282,7 +282,10 @@ def test_a_run_of_one_hand_refuses_the_other_hand() -> None:
 
 def test_a_level_run_plans_then_writes_each_batch_with_feedback() -> None:
     s = song("wide")
-    plan = "```\nS1 f30-f496 L=left easy 2 R=right easy 2 | one section\n```"
+    plan = (
+        "```\nS1 f30-f496 L=left easy 2 R=right easy 2 | one section\nrule left easy 2: the bass, then the triad\n"
+        "rule right easy 2: the melody in single notes\n```"
+    )
     bad = answer(easy_lines(s, 30, 270, skip={1}), ["# pattern L f30-f270: left easy 2", "# pattern R f30-f270: right easy 2"])
     good1 = answer(easy_lines(s, 30, 270), ["# pattern L f30-f270: left easy 2", "# pattern R f30-f270: right easy 2"])
     good2 = answer(easy_lines(s, 270, 510), ["# pattern L f270-f510: left easy 2", "# pattern R f270-f510: right easy 2"])
@@ -390,3 +393,120 @@ def test_easy_and_medium_keep_a_steady_rhythm_and_a_melody_note_may_move_to_the_
     moved = sorted(lines + ["f38 R: G5:16"], key=lambda t: int(t.split()[0][1:]))  # G5 to the semicorchea at f38
     r = checked(answer(moved, DECLARED), quick)
     assert r.errors == [], r.errors
+
+
+# ------------------------------------------------------------------ Strict and Suggested, the rules, the explanations
+# (implementation 04-5, the user, 2026-10-31)
+
+
+def _simple_song():
+    """A left hand of C3 alone in an uneven rhythm (simple) under a melody of C major."""
+    uneven = [30, 34, 37, 45, 49, 53, 60, 64, 75, 79, 83, 90]
+    mel = {30: "E5", 45: "G5", 60: "C5", 75: "G5", 90: "E5"}
+    lines = [f"f{f} L: C3:16" + (f"  R: {mel[f]}:4" if f in mel else "") for f in uneven]
+    return f1.read(HEAD + "\n".join(lines) + "\n"), mel
+
+
+def _with_left(mel: dict[int, str], left: dict[int, str]) -> list[str]:
+    out = []
+    for f in sorted(set(mel) | set(left)):
+        hands = (f"L: {left[f]}  " if f in left else "") + (f"R: {mel[f]}:4" if f in mel else "")
+        out.append(f"f{f} {hands.strip()}")
+    return out
+
+
+HELD = {30: "C3,E3,G3:2", 60: "C3,E3,G3:2", 90: "C3,E3,G3:4"}
+
+
+def test_a_strict_pattern_lifts_the_simple_stretch_rules_and_covers_the_whole_hand() -> None:
+    s, mel = _simple_song()
+    chords_ = _with_left(mel, HELD)
+    strict = frozenset({"left easy 2"})
+    declared = ["# pattern L f30-f105: left easy 2", "# pattern R f30-f105: right easy 2"]
+    r = L.check_level(answer(chords_, declared), s, level="easy", staffs=(1, 2), grid=song_grid(s),
+                      cs=chords(s, song_grid(s)), allowed={"left easy 2", "right easy 2"}, start=30, end=105,
+                      strict=strict)
+    assert r.errors == [], r.errors
+    kept = ["# pattern L f30-f105: keep", "# pattern R f30-f105: right easy 2"]
+    r = L.check_level(answer(chords_, kept), s, level="easy", staffs=(1, 2), grid=song_grid(s),
+                      cs=chords(s, song_grid(s)), allowed={"left easy 2", "right easy 2"}, start=30, end=105,
+                      strict=strict)
+    assert any("is Strict" in e for e in r.errors)
+    half = ["# pattern L f30-f60: left easy 2", "# pattern R f30-f105: right easy 2"]
+    r = L.check_level(answer(chords_, half), s, level="easy", staffs=(1, 2), grid=song_grid(s),
+                      cs=chords(s, song_grid(s)), allowed={"left easy 2", "right easy 2"}, start=30, end=105,
+                      strict=strict)
+    assert any("outside the frames declared with left easy 2" in e for e in r.errors)
+    # The summary of a Strict left hand marks no simple stretch; it always shows the melody.
+    summary = L.song_summary(s, song_grid(s), (2,), strict_left=True)[0]
+    assert "L simple" not in summary and "R melody: E5 G5 C5 G5 E5" in summary
+
+
+def test_suggested_lets_a_simple_stretch_take_a_pattern_when_not_harder() -> None:
+    s, mel = _simple_song()
+    chords_ = _with_left(mel, HELD)
+    declared = ["# pattern L f30-f105: left easy 2", "# pattern R f30-f105: right easy 2"]
+    assert checked(answer(chords_, declared), s, start=30, end=105).errors == []
+    kept = ["# pattern L f30-f105: keep", "# pattern R f30-f105: right easy 2"]
+    r = checked(answer(chords_, kept), s, start=30, end=105)
+    assert any("simple stretches are made harder" in e for e in r.errors)  # keep keeps the notes
+    outside = _with_left(mel, {30: "C3,F3,A3:2", 60: "C3,F3,A3:2", 90: "C3,F3,A3:4"})
+    r = checked(answer(outside, declared), s, start=30, end=105)
+    assert any("simple stretches are made harder" in e and "adds" in e for e in r.errors)
+
+
+def test_the_plan_of_a_strict_hand_and_its_rules() -> None:
+    allowed = {"left easy 2", "left easy 1", "right easy 2"}
+    strict = frozenset({"left easy 1"})
+    keep = "```\nS1 f30-f510 L=keep R=right easy 2 | simple\n```"
+    errs, _ = L.read_plan(keep, allowed, (1, 2), 30, 510, strict)
+    assert any("is Strict: use left easy 1" in e for e in errs)
+    good = "```\nS1 f30-f510 L=left easy 1 R=right easy 2 | all\n```"
+    errs, _ = L.read_plan(good, allowed, (1, 2), 30, 510, strict, rules=True)
+    assert any("write the rule of left easy 1" in e for e in errs) and any("right easy 2" in e for e in errs)
+    ruled = good.replace("```\nS1", "```\nS1", 1).replace(
+        "| all\n", "| all\nrule left easy 1: Fa3 as a blanca, then the triad as a blanca\nrule right easy 2: single notes\n"
+    )
+    errs, plan = L.read_plan(ruled, allowed, (1, 2), 30, 510, strict, rules=True)
+    assert errs == [] and len(plan) == 1
+    rules = L.read_rules(ruled)
+    assert [r.ref for r in rules] == ["left easy 1", "right easy 2"] and rules[0].source == "plan"
+    prompt = L.plan_prompt(sid="s", level="easy", staffs=(2,), summary="x", start=30, end=510, strict=strict)
+    assert "Strict patterns" in prompt and "left easy 1 in every section" in prompt and "one rule per pattern" in prompt
+    system = L.system_prompt("easy", [L.catalog()["left easy 1"], L.catalog()["left easy 2"]], (2,), strict)
+    assert "left easy 1: Held triad (Strict)" in system and "(Suggested)" in system
+    assert "Strict for the left hand: left easy 1." in system
+
+
+def test_an_answer_must_explain_and_its_rules_reach_the_next_batches() -> None:
+    s = song("wide")
+    plan = (
+        "```\nS1 f30-f496 L=left easy 2 R=right easy 2 | one section\nrule left easy 2: the bass, then the triad\n"
+        "rule right easy 2: the melody in single notes\n```"
+    )
+    lines1 = easy_lines(s, 30, 270)
+    silent = "```\n" + HEAD + "\n".join(lines1 + ["# pattern L f30-f270: left easy 2", "# pattern R f30-f270: right easy 2"]) + "\n```"
+    good1 = answer(lines1, ["# pattern L f30-f270: left easy 2", "# pattern R f30-f270: right easy 2",
+                            "# rule: a chord of one negra plays the bass only"])
+    good2 = answer(easy_lines(s, 270, 510), ["# pattern L f270-f510: left easy 2", "# pattern R f270-f510: right easy 2"])
+    replies = [plan, silent, good1, good2]
+    seen: list[list[dict]] = []
+    talks: list[L.Talk] = []
+
+    def complete(system: str, messages: list[dict]) -> str:
+        seen.append(messages)
+        return replies[len(seen) - 1]
+
+    run = L.write_level(s, complete, song_grid(s), level="easy", staffs=(1, 2),
+                        patterns=[_pattern("left easy 2"), _pattern("right easy 2")], windows=[(30, 270), (270, 510)],
+                        on_talk=talks.append)
+    assert [log.status for log, _ in run.batches] == ["ok", "ok"]
+    assert "explain" in seen[2][-1]["content"]  # the silent answer was asked for its explanation
+    first = seen[1][0]["content"]
+    assert "The rules of this run" in first and "left easy 2 (plan): the bass, then the triad" in first
+    last = seen[3][0]["content"]
+    assert "(batch 1): a chord of one negra plays the bass only" in last and "# explain:" in last
+    assert [t.k for t in talks] == [-1, 0, 1] and run.talks == talks
+    assert talks[1].explain == ["the bass, then the triad held."] and talks[1].target.startswith("F1 frames")
+    assert talks[1].rules == ["a chord of one negra plays the bass only"] and len(talks[1].errors) == 1
+    assert [r.source for r in run.rules] == ["plan", "plan", "batch 1"]

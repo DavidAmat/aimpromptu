@@ -13,6 +13,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type { SheetSegment } from "../../../../api";
 import { PillButton } from "../../../../ui";
+import { AiRunDetail } from "./AiRunDetail";
 import { BATCH_COLOURS, ENHANCE_PANEL_WIDTH } from "./batches";
 import type { RunSummary } from "./useFramesSheet";
 
@@ -31,6 +32,12 @@ const STATE_WORDS: Record<SheetSegment["state"], string> = {
 };
 
 export interface AiRunPanelProps {
+  audioUuid: string;
+  /** Changes when a job ends: the run's explanation is read again. */
+  refresh: number;
+  /** A job was started from the panel (batch 1 written again, the other batches). */
+  onStarted: () => void;
+  onHistory: () => void;
   /** The AI works now. */
   running: boolean;
   /** **Stop** was pressed: the run ends after the request it waits for. */
@@ -49,6 +56,10 @@ export interface AiRunPanelProps {
 }
 
 export function AiRunPanel({
+  audioUuid,
+  refresh,
+  onStarted,
+  onHistory,
   running,
   stopping,
   batches,
@@ -60,14 +71,20 @@ export function AiRunPanel({
   onRevert,
   onClose,
 }: AiRunPanelProps) {
-  const done = batches.filter((batch) => batch.state === "llm" || batch.state === "algorithm").length;
+  // Once the run ended, its summary counts the batches written (a run waiting after batch 1 never saw it written).
+  const done =
+    !running && summary?.batches !== undefined && summary.total === batches.length
+      ? summary.batches
+      : batches.filter((batch) => batch.state === "llm" || batch.state === "algorithm").length;
   const title = running
     ? stopping
       ? "Stopping after this batch"
       : "The AI is writing"
     : summary?.stopped
       ? "Stopped"
-      : "The AI has finished";
+      : summary?.waiting
+        ? "Check batch 1"
+        : "The AI has finished";
   // Once the run ended, a batch it never reached was not written.
   const stateOf = (batch: SheetSegment) =>
     !running && (batch.state === "working" || batch.state === "waiting") ? "Not written" : STATE_WORDS[batch.state];
@@ -104,7 +121,8 @@ export function AiRunPanel({
         ) : null}
       </Stack>
       <Box sx={{ overflowY: "auto", px: 3, flex: 1 }} data-ai-run-batches>
-        {batches.map((batch, index) => {
+        {/* Once the run ended with its log, the batches show with the AI's explanations below instead. */}
+        {(running || !summary?.run || reverted ? batches : []).map((batch, index) => {
           const colour = BATCH_COLOURS[index % BATCH_COLOURS.length];
           return (
             <Stack
@@ -149,20 +167,28 @@ export function AiRunPanel({
             </Stack>
           );
         })}
+        {!running && summary?.run && !reverted ? (
+          <Box sx={{ pt: 1.5 }} data-ai-run-explained>
+            <AiRunDetail audioUuid={audioUuid} runId={summary.run} busy={busy} refresh={refresh} onStarted={onStarted} compact />
+          </Box>
+        ) : null}
       </Box>
       <Stack spacing={1.5} sx={{ p: 3, pt: 1.5 }}>
-        {!running && (notice || reverted) ? (
+        {!running && ((notice && !summary?.waiting) || reverted) ? (
           <Typography variant="body2" color="text.secondary" data-ai-run-notice>
             {reverted ? "Reverted: the sheet is as it was before the run. Undo brings the AI's work back." : notice}
           </Typography>
         ) : null}
         <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
           {running ? (
-            <PillButton kind="danger" onClick={onStop} disabled={stopping} data-testid="ai-run-stop">
+            <PillButton key="stop" kind="danger" onClick={onStop} disabled={stopping} data-testid="ai-run-stop">
               Stop
             </PillButton>
           ) : (
             <>
+              <PillButton key="history" kind="secondary" onClick={onHistory} data-testid="ai-run-history">
+                History
+              </PillButton>
               {summary?.before !== undefined ? (
                 <PillButton kind="secondary" onClick={onRevert} disabled={reverted || busy} busy={busy} data-testid="ai-run-revert">
                   Revert

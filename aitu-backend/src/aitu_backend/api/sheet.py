@@ -26,7 +26,10 @@
   AI and the patterns used when none is selected; `GET /sheet/levels/catalog/{hand}/{level}/{number}.svg` — the
   drawing of a pattern's example by the app's engine. `POST /sheet/{uuid}/llm/level` — the AI writes a range again
   at a level, in place (one step of undo); `POST /sheet/{uuid}/llm/level-copy` — a level of the whole sheet, written
-  into a new project of My projects (the level copy), whose ids it answers.
+  into a new project of My projects (the level copy), whose ids it answers. `GET /sheet/{uuid}/llm/runs` and
+  `GET /sheet/{uuid}/llm/runs/{id}` — the history of the AI runs and one run whole (implementation 04-5); a level
+  run of two batches or more writes its first batch and waits: `POST .../llm/runs/{id}/continue` writes the others,
+  `POST .../llm/runs/{id}/batches/{k}/again` writes one batch again with the user's answer to the AI.
 * `GET` and `PUT /sheet/{uuid}/words` — the pasted lyrics of the part and its pool of pieces (the Lyrics tab), kept
   in `project.json`, not in the sheet (moved from `/time/{uuid}/lyrics` in implementation 03, Phase 10).
 
@@ -51,7 +54,7 @@ from aitu_backend.auth import context, rights
 from aitu_backend.auth.dependencies import require_part
 from aitu_backend.editing import paste as passage_paste
 from aitu_backend.editing import history as part_history
-from aitu_backend.part_sheet import build, edits, job, reading, store
+from aitu_backend.part_sheet import build, edits, job, reading, runs, store
 from aitu_backend.sheet.engrave import frames as frames_engine
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.library import flow
@@ -628,6 +631,9 @@ class LevelRequest(RunChoice):
     #: ``patterns`` are exactly the ones ticked: a hand with none has no pattern (the user's **Deselect all**,
     #: 2026-10-30). Without it, a hand with none gets the patterns approved for its level.
     exact: bool = False
+    #: The refs of ``patterns`` ticked **Strict** (implementation 04-5, the user, 2026-10-31): the hand plays them on
+    #: every chord; the others are Suggested.
+    strict: list[str] = Field(default_factory=list, max_length=200)
 
     def level(self) -> str | dict[str, str]:
         if self.hand == "right":
@@ -660,6 +666,8 @@ def _start_level(part_id: str, body: LevelRequest, start: int | None, end: int |
             patterns=body.patterns,
             words=body.words,
             exact=body.exact,
+            strict=body.strict,
+            first=True,
             model=body.model,
             batches=body.batches,
         )
@@ -806,6 +814,64 @@ def revert_llm(
     except part_history.NoSuchVersion as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {**_answer(audio_uuid, width), "walked": label}
+
+
+@router.get("/{audio_uuid}/llm/runs")
+def llm_runs(audio_uuid: str) -> list[dict[str, Any]]:
+    """The history of the AI runs of the part (implementation 04-5): the latest first, each in short (its request,
+    its batches and their states, its cost); the level runs stored before the logs come from the record."""
+    _notes_or_404(audio_uuid)
+    return runs.listing(audio_uuid)
+
+
+@router.get("/{audio_uuid}/llm/runs/{run_id}")
+def llm_run(audio_uuid: str, run_id: str) -> dict[str, Any]:
+    """One run of the history, whole: the request, the plan, the rules, and each batch's conversation with the AI,
+    the check's refusals, its explanation and its rules."""
+    _notes_or_404(audio_uuid)
+    run = runs.load(audio_uuid, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="No such run.")
+    return run
+
+
+@router.post("/{audio_uuid}/llm/runs/{run_id}/continue", status_code=202)
+def continue_llm_run(audio_uuid: str, run_id: str) -> dict[str, str]:
+    """**Go on with the other batches** of a level run that waits after its first batch (implementation 04-5): a job,
+    followed as any run; one step of undo."""
+    _notes_or_404(audio_uuid)
+    if not _writes(audio_uuid):
+        raise HTTPException(status_code=403, detail="This sheet cannot be changed here.")
+    try:
+        started = job.continue_level(audio_uuid, run_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (job.Busy, ValueError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"jobId": started.id, "status": started.status}
+
+
+class BatchAgainRequest(BaseModel):
+    #: The user's answer to the AI about the batch ("No, I want this").
+    words: str = Field(min_length=1, max_length=1000)
+
+
+@router.post("/{audio_uuid}/llm/runs/{run_id}/batches/{k}/again", status_code=202)
+def run_batch_again(audio_uuid: str, run_id: str, k: int, body: BatchAgainRequest = Body(...)) -> dict[str, str]:
+    """**Write this batch again** with the user's answer to the AI (implementation 04-5): batch ``k`` (0 = first) of
+    a run of the history; a job, followed as any run; one step of undo."""
+    _notes_or_404(audio_uuid)
+    if not _writes(audio_uuid):
+        raise HTTPException(status_code=403, detail="This sheet cannot be changed here.")
+    try:
+        started = job.again_batch(audio_uuid, run_id, k, body.words)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except job.Busy as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"jobId": started.id, "status": started.status}
 
 
 @router.get("/{audio_uuid}/llm/batches")

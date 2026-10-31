@@ -178,6 +178,8 @@ export function EnhanceDialog({
     left: null,
   });
   /** What the gallery shows: the hand, and the level of each hand (it follows the hand's level). */
+  /** The patterns ticked **Strict**; the other ticked ones are Suggested (implementation 04-5). */
+  const [strict, setStrict] = useState<string[]>([]);
   const [galleryHand, setGalleryHand] = useState<CatalogHand>("left");
   const [shownLevels, setShownLevels] = useState<
     Record<CatalogHand, GalleryLevel>
@@ -233,6 +235,7 @@ export function EnhanceDialog({
     words: words.trim(),
     // The ticks are what the user sees only once the catalog is there; without it, the backend's defaults.
     exact: catalog !== null,
+    strict: strict.filter((ref) => patterns.includes(ref)),
   };
   // The batches of the run shown, for the preview on the sheet and the estimate. A change of run or hand starts again
   // from the run's own number.
@@ -392,7 +395,11 @@ export function EnhanceDialog({
         {hands
           .map(
             (side) =>
-              `${side === "right" ? "Right" : "Left"}: ${picked(side).map(shortRef).join(", ") || "none"}`,
+              `${side === "right" ? "Right" : "Left"}: ${
+                picked(side)
+                  .map((ref) => `${shortRef(ref)}${strict.includes(ref) ? " (Strict)" : ""}`)
+                  .join(", ") || "none"
+              }`,
           )
           .join(" · ")}
         {free.length
@@ -466,6 +473,10 @@ export function EnhanceDialog({
         onSelectAll={selectAll}
         onDeselectAll={deselectAll}
         onApproved={approved}
+        strict={strict}
+        onStrict={(ref, on) =>
+          setStrict((now) => (on ? [...now.filter((one) => one !== ref), ref] : now.filter((one) => one !== ref)))
+        }
       />
     ) : null;
 
