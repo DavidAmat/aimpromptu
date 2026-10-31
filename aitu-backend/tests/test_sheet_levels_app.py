@@ -278,7 +278,7 @@ def test_the_routes_of_the_levels(client: TestClient, part: str, monkeypatch: py
     assert calls[-1] == {
         "uuid": part, "level": {"right": "hard", "left": "medium"}, "hand": "both", "start": 50, "end": 300,
         "patterns": ["left medium 2"], "words": "", "exact": True, "model": None, "batches": None, "strict": [],
-        "first": True,
+        "first": True, "chords": "",
     }
     assert client.post(f"/sheet/{part}/llm/level", json={"right": "super hard", "start": 0, "end": 9}).status_code == 422
 

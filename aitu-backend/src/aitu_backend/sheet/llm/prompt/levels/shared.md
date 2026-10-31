@@ -70,6 +70,12 @@ Each pattern of this run is marked **Suggested** or **Strict** by the user (at t
 - **A Strict pattern keeps its figures.** The pattern's figures are the same everywhere (the user, 2026-10-31): a
   pattern in blancas is blancas through the whole song, and a chord that lasts longer plays the same figure again; do
   not mix redondas, blancas and negras. Only a chord that truly lasts less than the figure gets a shorter one.
+- **The key first, then its usual chords** (the user, 2026-10-31). Find the key of the song (from the guide when
+  there is one, else from the notes) and its usual chords: in Do major, Do, Fa and Sol, then La minor, Mi minor and Re
+  minor; Mi major (before La minor) and Sol7 are common too. Infer each chord from the notes of the sheet in both
+  hands, and choose the usual chord they fit: where the melody plays a La over a Do major song, the chord is most
+  likely Fa major (or La minor), not La major. A chord out of the key (La major in Do major) only where the guide has it
+  at that place, or where the notes clearly ask for it (a Do# that is not a passing note).
 - **The song's chords, not every chord the app lists.** First find the harmony of the song: the few chords it turns
   around (Do major, Mi major, Sol major, Fa major...), changing about every bar or every two negras. A chord the app
   lists for less than two negras is usually a passing chord made by the melody: with a Strict pattern, keep the chord

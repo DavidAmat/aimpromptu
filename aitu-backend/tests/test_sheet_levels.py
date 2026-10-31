@@ -147,7 +147,7 @@ def test_the_system_prompt_has_the_level_and_only_the_patterns_of_the_run() -> N
     assert "# The level of this run: easy" in text and "# The level of this run: medium" not in text
     assert text.index("### left easy 2") < text.index("### right easy 2")
     assert "left easy 1" not in text.split("# The patterns of this run")[1]
-    assert L.LEVEL_VERSION == "6"
+    assert L.LEVEL_VERSION == "7"
 
 
 def test_the_examples_of_the_shared_prompt_parse() -> None:
@@ -527,3 +527,21 @@ def test_a_strict_left_hand_holds_its_chord_over_a_short_passing_chord() -> None
     assert not any("begin on another bass" in e for e in passing.errors), passing.errors
     suggested = L.check_level(answer(lines, DECLARED), s, cs=short, **args)
     assert any("begin on another bass" in e for e in suggested.errors)
+
+
+def test_a_guitar_guide_gives_the_song_chords_and_the_check_accepts_them() -> None:
+    # The user, 2026-10-31: the chords of a guitar guide with the lyrics; C4 is Csus4.
+    guide = "Key:  C\n\n C     F         C\nPensé que era un buen momento\n   F    G   Am  E  C4  G#  A#\n"
+    found = L.guide_chords(guide)
+    assert (0, frozenset({0, 4, 7})) in found and (9, frozenset({9, 0, 4})) in found
+    assert (0, frozenset({0, 5, 7})) in found and (8, frozenset({8, 0, 3})) in found and len(found) == 8
+    assert "guitar guide" in L.system_prompt("easy", [_pattern("left easy 2")], (2,), guide=guide)
+    s = song("wide")
+    g = song_grid(s)
+    # the G chord at f90 played as F major: refused, unless the guide has F
+    lines = [line.replace("L: G2:4", "L: F2:4").replace("L: B2,D3,G3:2", "L: A2,C3,F3:2") if line.startswith(("f90 ", "f105 ")) else line
+             for line in easy_lines(s)]
+    args = dict(level="easy", staffs=(1, 2), grid=g, cs=chords(s, g), allowed={"left easy 2", "right easy 2"}, start=30, end=510)
+    assert any("begin on another bass" in e for e in L.check_level(answer(lines, DECLARED), s, **args).errors)
+    accepted = L.check_level(answer(lines, DECLARED), s, guide=L.guide_chords("C F G Am"), **args)
+    assert not any("begin on another bass" in e for e in accepted.errors), accepted.errors

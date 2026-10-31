@@ -30,6 +30,7 @@
   `GET /sheet/{uuid}/llm/runs/{id}` — the history of the AI runs and one run whole (implementation 04-5); a level
   run of two batches or more writes its first batch and waits: `POST .../llm/runs/{id}/continue` writes the others,
   `POST .../llm/runs/{id}/batches/{k}/again` writes one batch again with the user's answer to the AI.
+  `GET /sheet/{uuid}/chords` — the song's chords of a guitar guide, saved with the part by a level run.
 * `GET` and `PUT /sheet/{uuid}/words` — the pasted lyrics of the part and its pool of pieces (the Lyrics tab), kept
   in `project.json`, not in the sheet (moved from `/time/{uuid}/lyrics` in implementation 03, Phase 10).
 
@@ -634,6 +635,9 @@ class LevelRequest(RunChoice):
     #: The refs of ``patterns`` ticked **Strict** (implementation 04-5, the user, 2026-10-31): the hand plays them on
     #: every chord; the others are Suggested.
     strict: list[str] = Field(default_factory=list, max_length=200)
+    #: The song's chords as a guitar guide gives them with the lyrics (implementation 04-5, the user, 2026-10-31):
+    #: saved with the part, sent to the AI. ``None``: the chords saved with the part.
+    chords: str | None = Field(None, max_length=8000)
 
     def level(self) -> str | dict[str, str]:
         if self.hand == "right":
@@ -655,7 +659,22 @@ def level_title(body: LevelRequest) -> str:
     return name if body.hand == "both" else f"{name}, {body.hand} hand"
 
 
+def _chords(part_id: str, body: LevelRequest) -> str:
+    """The guide of a level run: the request's chords, saved with the part (so the dialog and a level copy have them),
+    or the ones saved before."""
+    project = _project_of_part(part_id)
+    if body.chords is None:
+        return project.part(part_id).chords or ""
+    text = body.chords.strip()
+    with bundle.project_lock(project.id):
+        project = bundle.read_project(project.id)
+        project.part(part_id).chords = text or None
+        bundle.write_project(project, touch=False)
+    return text
+
+
 def _start_level(part_id: str, body: LevelRequest, start: int | None, end: int | None) -> Any:
+    chords = _chords(part_id, body)
     try:
         return job.start_level(
             part_id,
@@ -668,6 +687,7 @@ def _start_level(part_id: str, body: LevelRequest, start: int | None, end: int |
             exact=body.exact,
             strict=body.strict,
             first=True,
+            chords=chords,
             model=body.model,
             batches=body.batches,
         )
@@ -716,6 +736,7 @@ def run_llm_level_copy(audio_uuid: str, body: LevelRequest = Body(...)) -> Level
     staffs = (1, 2) if body.hand == "both" else ((1,) if body.hand == "right" else (2,))
     if not levels.level_windows(current, staffs):
         raise HTTPException(status_code=400, detail="This hand has no notes.")
+    _chords(audio_uuid, body)  # saved with the original first, so the level copy has them
     source = bundle.read_project(where.project_id)
     title = f"{source.title} · {level_title(body)}"
     try:
@@ -814,6 +835,18 @@ def revert_llm(
     except part_history.NoSuchVersion as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {**_answer(audio_uuid, width), "walked": label}
+
+
+class PartChords(BaseModel):
+    #: The song's chords as a guitar guide gives them; empty: none saved.
+    text: str = ""
+
+
+@router.get("/{audio_uuid}/chords", response_model=PartChords)
+def get_chords(audio_uuid: str) -> PartChords:
+    """The song's chords saved with the part (a guitar guide; implementation 04-5): **Enhance with AI** opens with
+    them."""
+    return PartChords(text=_project_of_part(audio_uuid).part(audio_uuid).chords or "")
 
 
 @router.get("/{audio_uuid}/llm/runs")

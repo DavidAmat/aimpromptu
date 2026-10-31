@@ -762,6 +762,7 @@ def start_level(
     batches: int | None = None,
     strict: list[str] | None = None,
     first: bool = False,
+    chords: str = "",
 ) -> jobs.Job:
     """The AI writes the ``hand`` (``right``, ``left`` or ``both``) of the part's sheet again at ``level`` (one level,
     or one per hand: ``{"right": "hard", "left": "medium"}``), over the whole song or over ``[start, end)`` (a range),
@@ -776,7 +777,8 @@ def start_level(
     Implementation 04-5: ``strict``, the patterns ticked Strict; every conversation with the AI goes into the run's
     log (:mod:`.runs`) as it ends. ``first`` (the routes, the user, 2026-10-31): a run of two batches or more writes
     the plan and its first batch only, stores it and waits (``waiting`` in the summary and the log): the user checks
-    it, answers the AI (:func:`again_batch`) or goes on (:func:`continue_level`)."""
+    it, answers the AI (:func:`again_batch`) or goes on (:func:`continue_level`). ``chords``: the song's chords as a
+    guitar guide gives them (the user, 2026-10-31), in the system prompt of every request."""
     from aitu_backend.sheet.llm import levels  # noqa: PLC0415
 
     if hand not in HANDS:
@@ -806,8 +808,9 @@ def start_level(
                 "model": model_of(model),
                 "windows": [list(w) for w in windows],
                 "prompt": levels.LEVEL_VERSION,
+                "chords": chords.strip(),
             },
-            levels.system_prompt(level, chosen, staffs, frozenset(hard)),
+            levels.system_prompt(level, chosen, staffs, frozenset(hard), chords),
         )
         todo = windows[:1] if first and len(windows) > 1 else windows
         return _level_work(part_id, reporter, log, todo, complete=complete)
@@ -945,6 +948,7 @@ def _level_work(
                 done_before=done_before,
                 first_index=first_index,
                 count=len(windows),
+                guide=req.get("chords", ""),
             )
         except BaseException:
             log["state"] = "stopped"
@@ -1072,7 +1076,7 @@ def again_batch(
             try:
                 again, result = levels.write_again(
                     asked, log["system"], talk, words, before, grid, level=level, staffs=staffs,
-                    allowed=set(req["patterns"]), strict=hard,
+                    allowed=set(req["patterns"]), strict=hard, guide=req.get("chords", ""),
                 )
             except Exception as exc:  # noqa: BLE001 (no credits, no network: the batch stays as it is)
                 return {"level": "failed", "again": k + 1, "run": run_id, "note": f"{type(exc).__name__}: {exc}",

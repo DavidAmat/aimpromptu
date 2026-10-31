@@ -136,3 +136,12 @@ add two rules: a Strict pattern keeps the same figures everywhere, and the song'
 lists. For a Strict left hand, the check asks the bass only on chords of two negras or more (shorter ones are passing
 chords). Run E on the user's copy `39d92dbe` (Strict, 4 batches, one answer to the AI on batch 1: "blancas
 everywhere") cost $0.086. Total real runs: about $0.56.
+
+**The chords of a guitar guide, and the key first** (the user, 2026-10-31, after run E put a La major chord where the
+song has none). **Enhance with AI** has a field "Chords of the song": the chords of a guitar guide with the lyrics,
+saved with the part (`project.json`, `chords`; `GET /sheet/{uuid}/chords`) and sent in the system prompt of every
+level request. The plan writes the guide's chords of each section; the check accepts a left-hand column that is a
+guide chord (`levels.guide_chords`; `C4` is Csus4). Level prompts 7 add "the key first, then its usual chords" (a La
+in the melody of a song in Do major is most likely Fa major). Run F on `39d92dbe` (Strict easy 1, with the guide):
+the chords are only C, F, G, Am, E, Em, Ab and Csus4 (no La major); every batch was accepted at the first reply;
+$0.074. Total real runs: about $0.63.

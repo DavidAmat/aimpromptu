@@ -273,6 +273,8 @@ export interface LevelChoice extends RunChoice {
    * through the whole song. The others are **Suggested**: used where they suit the passage.
    */
   strict?: string[];
+  /** The song's chords as a guitar guide gives them with the lyrics (implementation 04-5): saved with the part. */
+  chords?: string;
 }
 
 /** A run of the history of AI runs, in short (implementation 04-5): the latest first. */
@@ -654,6 +656,10 @@ export const sheetApi = {
   /** A level of the whole sheet, in a new project of My projects: open `partId`'s sheet to follow it. */
   levelCopy: (audioUuid: string, body: LevelChoice) =>
     request<LevelCopy>(`/sheet/${audioUuid}/llm/level-copy`, { method: "POST", body }),
+
+  /** The song's chords saved with the part (a guitar guide), so Enhance with AI opens with them. */
+  chords: (audioUuid: string, signal?: AbortSignal) =>
+    request<{ text: string }>(`/sheet/${audioUuid}/chords`, { signal }),
 
   /** The history of the AI runs of the part, the latest first (implementation 04-5). */
   aiRuns: (audioUuid: string, signal?: AbortSignal) => request<AiRunShort[]>(`/sheet/${audioUuid}/llm/runs`, { signal }),

@@ -131,6 +131,50 @@ SUGGESTED, STRICT = "suggested", "strict"
 SUMMARY_MELODY = 24
 
 
+_LETTER = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+_SYMBOL = re.compile(r"^([A-G])([#b]?)(m(?!aj))?(maj7|7|sus4|sus2|4|2|dim|aug|6|9|add9)?(?:/([A-G][#b]?))?$")
+
+
+def guide_chords(text: str) -> list[tuple[int, frozenset[int]]]:
+    """The chords of a guitar guide (the user, 2026-10-31): every chord symbol of its chord lines (a line whose words
+    are all chord symbols: ``C  F  C``, ``Am  Em``, ``G#``, ``C4``), as ``(root, pitch classes)``, once each. ``C4`` is
+    the guitarists' Csus4."""
+    out: dict[tuple[int, frozenset[int]], None] = {}
+    for line in text.splitlines():
+        words = line.split()
+        found = [_SYMBOL.match(w) for w in words]
+        if not words or not all(found):
+            continue
+        for m in found:
+            root = (_LETTER[m.group(1)] + {"#": 1, "b": -1}.get(m.group(2), 0)) % 12
+            minor, kind = bool(m.group(3)), m.group(4) or ""
+            third = 5 if kind in ("sus4", "4") else 2 if kind in ("sus2", "2") else 3 if minor or kind == "dim" else 4
+            fifth = 6 if kind == "dim" else 8 if kind == "aug" else 7
+            tones = {root, (root + third) % 12, (root + fifth) % 12}
+            if kind in ("7", "maj7", "6", "9", "add9"):
+                tones.add((root + {"7": 10, "maj7": 11, "6": 9, "9": 2, "add9": 2}[kind]) % 12)
+            out[(root, frozenset(tones))] = None
+    return list(out)
+
+
+def guide_prompt(text: str) -> str:
+    """The section of the system prompt with the user's guitar guide."""
+    return (
+        "# The chords of the song (a guitar guide the user pasted)\n\n"
+        "The user pasted the chords of this song as a guitar guide gives them with the lyrics. They are the song's "
+        "harmony, section by section (verse, chorus, bridge), in the order the song sings them. Trust them more than "
+        "the chords the app finds in the notes: the app can mistake a melody note for another chord. Before the plan, "
+        "find where each part of the guide sounds in the song (the same sequence of chords comes back in each verse "
+        "and each chorus), and play the guide's chord there. A chord the app lists that does not fit the guide's "
+        "sequence at that place is a mistake of the app: do not play it. Do not add a chord that is not in the "
+        "guide. In a guitar guide, `C4` is Csus4 (a passing chord before C), `G#` is La-b major and `A#` is Si-b major. "
+        "If the recording is in another key than the guide, move the guide's chords to the key of the recording. "
+        "The guide shows the order of the chords, not their exact time: match its sequence to the notes of the sheet, "
+        "and where a chord does not fit the sequence of that part of the guide, it should not be there.\n\n"
+        "```\n" + text.strip() + "\n```"
+    )
+
+
 def strict_refs(strict: set[str] | frozenset[str] | list[str], hand: str) -> list[str]:
     """The Strict refs of ``hand`` (``left``, ``right``) among ``strict``, in order."""
     return sorted(r for r in strict if r.startswith(f"{hand} "))
@@ -347,7 +391,11 @@ def instructions(level: Level) -> str:
 
 
 def system_prompt(
-    level: Level, patterns: list[Pattern], staffs: tuple[int, ...] = (1, 2), strict: frozenset[str] = frozenset()
+    level: Level,
+    patterns: list[Pattern],
+    staffs: tuple[int, ...] = (1, 2),
+    strict: frozenset[str] = frozenset(),
+    guide: str = "",
 ) -> str:
     """The system prompt of a run: the shared part, the part of the level (or of each hand's level), and the
     patterns of the run (left hand first), each marked Strict or Suggested (``strict``: the Strict refs). A hand of
@@ -375,6 +423,7 @@ def system_prompt(
         + "\n\n# The patterns of this run\n\nThe user chose these patterns in the catalog. Use only these, adapted to "
         "the song (see \"The patterns\" above).\n\n"
         + body
+        + ("\n\n" + guide_prompt(guide) if guide.strip() else "")
         + "\n"
     )
 
@@ -631,8 +680,10 @@ def plan_prompt(
         "that every batch writes it the same way. Say which notes of the chord by their role (root, third, fifth), in "
         "which octava, with which figures, in which order, and what happens when the chord changes before the shape "
         "ends. Join the user's words to it: when they change the pattern, the rule is the changed pattern.\n\n"
-        "```\nrule left easy 1: on each chord, the root in octava 3 as a blanca, then the triad in close position "
-        "in octava 4 as a blanca; a chord shorter than a redonda plays the triad only\n```"
+        "```\nrule left easy 2: on each chord, the root in octava 2 as a blanca, then the triad in close position "
+        "in octava 3 as a blanca; a chord shorter than a redonda plays the triad only\n```\n\n"
+        "When the user gave the chords of the song (a guitar guide, in the system prompt), write after the `|` of each "
+        "section the guide's chords it plays, in order (`S2 f780-f1440 L=left easy 1 | the verse: C F C F C F G Am E`)."
     )
     return "\n\n".join(out) + "\n"
 
@@ -948,6 +999,13 @@ def _far_above(n: Note, line: list[Note], target: Sheet, artifacts: set[tuple[in
     return not rest or n.midi > max(rest) + 12
 
 
+def _guide_column(ns: list[Note], guide: list[tuple[int, frozenset[int]]], *, root: bool = True) -> bool:
+    """Whether the notes of a left-hand column are a chord of the guide (``root``: its lowest note the chord's root)."""
+    pcs = {n.midi % 12 for n in ns}
+    low = min(n.midi for n in ns) % 12
+    return any(pcs <= tones and (not root or low == r) for r, tones in guide)
+
+
 def check_level(
     reply: str,
     target: Sheet,
@@ -961,11 +1019,14 @@ def check_level(
     end: int,
     strict: frozenset[str] = frozenset(),
     explain: bool = False,
+    guide: list[tuple[int, frozenset[int]]] = (),
 ) -> Batch:
     """The check of a batch answer (plan section 5.5). ``target`` holds the notes of ``[start, end)`` of the hands
     rewritten as the sheet has them; ``cs`` the chords of the batch; ``allowed`` the refs of the run. A hand with
     Strict refs (``strict``, the user, 2026-10-31) declares only them, over all its notes, and the simple-stretch and
-    onset rules do not hold for it. ``explain``: at least one ``# explain:`` line is asked."""
+    onset rules do not hold for it. ``explain``: at least one ``# explain:`` line is asked. ``guide``: the chords of
+    the user's guitar guide (:func:`guide_chords`): a left-hand column that is one of them (its lowest note the
+    chord's root, its notes the chord's) is accepted where the app found another chord."""
     levels = hand_levels(level)
     lims = {s: LIMITS[v] for s, v in levels.items()}
     q_frames = (target.quarter_ms or 500.0) / FRAME_MS
@@ -1074,6 +1135,8 @@ def check_level(
             if not inside or c.bass is None:
                 continue
             first = inside[0]
+            if guide and _guide_column(left[first], guide):
+                continue
             # a Strict left hand holds the song's chords: a chord the app lists for less than two negras is a
             # passing chord there (the user, 2026-10-31), so its bass is not asked
             if strict_refs(strict, "left") and c.end - c.start < 2 * q / FRAME_MS * 0.95:
@@ -1087,9 +1150,10 @@ def check_level(
                     )
             ok = c.tones | orig_pcs[c.start]
             for f in inside:
+                fits = bool(guide) and _guide_column(left[f], guide, root=False)
                 for n in left[f]:
                     total += 1
-                    foreign += n.midi % 12 not in ok
+                    foreign += n.midi % 12 not in ok and not fits
         if wrong_bass:
             errs.append(
                 f"{len(wrong_bass)} chords begin on another bass: {_show(wrong_bass, 4)}. The lowest left-hand note "
@@ -1292,6 +1356,7 @@ def write_again(
     allowed: set[str],
     strict: frozenset[str] = frozenset(),
     max_checks: int = MAX_CHECKS,
+    guide: str = "",
 ) -> tuple[Talk, Batch]:
     """A batch written again with the user's answer (implementation 04-5, the user, 2026-10-31): its conversation
     goes on (``talk``: the prompt, the replies, the user's ``words`` as a new message), and each reply is checked
@@ -1312,7 +1377,7 @@ def write_again(
         messages.append({"role": "assistant", "content": reply})
         result = check_level(
             reply, target, level=level, staffs=staffs, grid=grid, cs=cs, allowed=allowed, start=a, end=b,
-            strict=strict, explain=True,
+            strict=strict, explain=True, guide=guide_chords(guide),
         )
         if not result.errors:
             break
@@ -1485,6 +1550,7 @@ def write_level(
     done_before: list[tuple[int, int]] = (),
     first_index: int = 0,
     count: int | None = None,
+    guide: str = "",
 ) -> LevelRun:
     """A level run in memory: the plan of the song (unless ``plan`` is given, with its ``rules``), then the batches
     (``windows``, or the batches of the whole song), each checked, at most ``max_checks`` replies. A batch that fails
@@ -1495,7 +1561,8 @@ def write_level(
     the first of ``windows`` among the run's ``count`` batches."""
     allowed = {p.ref for p in patterns}
     strict = frozenset(r for r in strict if r in allowed)
-    system = system_prompt(level, patterns, staffs, strict)
+    system = system_prompt(level, patterns, staffs, strict, guide)
+    known = guide_chords(guide)
     notes = [n for n in current.notes if not n.covered]
     if span is not None:
         notes = [n for n in notes if span[0] <= n.frame < span[1]]
@@ -1584,7 +1651,7 @@ def write_level(
                 log.replies += 1
                 result = check_level(
                     reply, target, level=level, staffs=staffs, grid=grid, cs=cs, allowed=allowed, start=a, end=b,
-                    strict=strict, explain=True,
+                    strict=strict, explain=True, guide=known,
                 )
                 if not result.errors:
                     break

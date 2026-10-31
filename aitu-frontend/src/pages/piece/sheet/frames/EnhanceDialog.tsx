@@ -168,6 +168,8 @@ export function EnhanceDialog({
   // A sheet the AI has not written yet is first written whole; then a level is the usual run.
   const [songHow, setSongHow] = useState<SongHow>(enhanced ? "level" : "all");
   const [words, setWords] = useState("");
+  /** The song's chords of a guitar guide, saved with the part (implementation 04-5). */
+  const [chords, setChords] = useState("");
   const [levels, setLevels] = useState<Record<CatalogHand, LevelName>>({
     right: "easy",
     left: "easy",
@@ -205,6 +207,12 @@ export function EnhanceDialog({
         // Without the cost the dialog still works: it only says less.
       });
     sheetApi
+      .chords(audioUuid, controller.signal)
+      .then((saved) => setChords((now) => now || saved.text))
+      .catch(() => {
+        // Without them the field starts empty.
+      });
+    sheetApi
       .levelCatalog(controller.signal)
       .then(setCatalog)
       .catch(() => {
@@ -236,6 +244,7 @@ export function EnhanceDialog({
     // The ticks are what the user sees only once the catalog is there; without it, the backend's defaults.
     exact: catalog !== null,
     strict: strict.filter((ref) => patterns.includes(ref)),
+    chords: chords.trim(),
   };
   // The batches of the run shown, for the preview on the sheet and the estimate. A change of run or hand starts again
   // from the run's own number.
@@ -407,6 +416,18 @@ export function EnhanceDialog({
           : ""}
       </Typography>
       {wordsField}
+      <TextField
+        fullWidth
+        multiline
+        minRows={1}
+        maxRows={8}
+        label="Chords of the song (optional)"
+        placeholder="Paste the chords of a guitar guide, with the lyrics: C  F  C  F …"
+        value={chords}
+        onChange={(event) => setChords(event.target.value.slice(0, 8000))}
+        helperText="The AI follows their order to find the right chord. Saved with the song."
+        slotProps={{ htmlInput: { "data-testid": "level-chords" } }}
+      />
     </Stack>
   );
 
