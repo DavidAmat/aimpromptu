@@ -1,5 +1,5 @@
 {
- "about": "The catalog of patterns of Enhance with AI (implementation 04-3): the gallery of patterns of Phase 2, approved by the user on 2026-10-30, with the three left-hand patterns of Ballade No. 4 added in Phase 3. A number never changes; a new pattern takes the next number of its level. Each pattern has its first example in F1 frames text (both hands).",
+ "about": "The catalog of patterns of Enhance with AI (implementation 04-3): the gallery of patterns of Phase 2, approved by the user on 2026-10-30, with the three left-hand patterns of Ballade No. 4 added in Phase 3. A new pattern takes the next number of its level; on 2026-10-31 the user put a new left easy 1 (The song's chords) first and moved the other left easy patterns one number up. Each pattern has its first example in F1 frames text (both hands).",
  "levels": [
   "easy",
   "medium",
@@ -732,6 +732,18 @@
    "hand": "left",
    "level": "easy",
    "number": 1,
+   "id": "drawn-left-song-chords",
+   "name": "The song's chords",
+   "line": "Find the chords of the song first (Fa major, Do major, Si-b major...) and play only those: each chord as one close triad on the bass staff, in a steady rhythm of blancas (the same chord again every two negras while it lasts), then the nearest position of the next chord. The simplest left hand: one shape per chord, no low note, no movement inside the chord, the same figure everywhere.",
+   "source": "Asked by the user on 2026-10-31, drawn by the app",
+   "bars": null,
+   "f1": "examples/drawn-left-song-chords.f1"
+  },
+  {
+   "ref": "left easy 2",
+   "hand": "left",
+   "level": "easy",
+   "number": 2,
    "id": "held-triad",
    "name": "Held triad",
    "line": "The chord of the harmony (Fa-La-Do) held under the melody; the hand changes position only when the harmony changes. Easy because the hand holds one shape and does not move inside the chord.",
@@ -740,10 +752,10 @@
    "f1": "examples/drawn-left-held-triad.f1"
   },
   {
-   "ref": "left easy 2",
+   "ref": "left easy 3",
    "hand": "left",
    "level": "easy",
-   "number": 2,
+   "number": 3,
    "id": "low-note-then-chord",
    "name": "Low note, then the chord",
    "line": "Fa2, then Fa3-La3-Do4: one note and one chord, the same shape every time. Easy because the hand makes one jump of an octave to a triad that does not change.",
@@ -752,10 +764,10 @@
    "f1": "examples/drawn-left-low-note-then-chord.f1"
   },
   {
-   "ref": "left easy 3",
+   "ref": "left easy 4",
    "hand": "left",
    "level": "easy",
-   "number": 3,
+   "number": 4,
    "id": "triads-in-steps",
    "name": "Triads in steps",
    "line": "The triad slides one step up or down with the melody (Fa-La-Do, Sol-Sib-Re, La-Do-Mi). Easy because the three fingers keep one shape and the hand moves one key at a time.",
@@ -764,10 +776,10 @@
    "f1": "examples/drawn-left-triads-in-steps.f1"
   },
   {
-   "ref": "left easy 4",
+   "ref": "left easy 5",
    "hand": "left",
    "level": "easy",
-   "number": 4,
+   "number": 5,
    "id": "held-chord-repeated",
    "name": "Held chord, repeated",
    "line": "A small chord held as a blanca and played again with the same notes, bar after bar. Easy because the hand does not move at all.",
@@ -776,10 +788,10 @@
    "f1": "examples/ballade1-left-1.f1"
   },
   {
-   "ref": "left easy 5",
+   "ref": "left easy 6",
    "hand": "left",
    "level": "easy",
-   "number": 5,
+   "number": 6,
    "id": "low-note-then-two-notes-rocking",
    "name": "Low note, then two notes rocking",
    "line": "Fa2, then La3-Do4-La3-Do4 in corcheas: one low note, then two notes of the chord one after the other. Easy because after the low note the hand stays on two keys.",
@@ -788,10 +800,10 @@
    "f1": "examples/drawn-left-low-note-then-two-notes-rocking.f1"
   },
   {
-   "ref": "left easy 6",
+   "ref": "left easy 7",
    "hand": "left",
    "level": "easy",
-   "number": 6,
+   "number": 7,
    "id": "alberti",
    "name": "Alberti bass",
    "line": "Fa3-Do4-La3-Do4 in corcheas, again and again: the lowest, the highest and the middle note of the triad. Easy because the hand never leaves the position of the triad.",
@@ -800,10 +812,10 @@
    "f1": "examples/drawn-left-alberti.f1"
   },
   {
-   "ref": "left easy 7",
+   "ref": "left easy 8",
    "hand": "left",
    "level": "easy",
-   "number": 7,
+   "number": 8,
    "id": "triad-up-and-down",
    "name": "Triad up and down",
    "line": "Fa3-La3-Do4-La3 in corcheas: the three notes of the chord going up and coming down. Easy because the figure is symmetric and stays in one position.",
@@ -812,10 +824,10 @@
    "f1": "examples/drawn-left-triad-up-and-down.f1"
   },
   {
-   "ref": "left easy 8",
+   "ref": "left easy 9",
    "hand": "left",
    "level": "easy",
-   "number": 8,
+   "number": 9,
    "id": "triad-up-and-hold",
    "name": "Triad up, then held",
    "line": "Fa3 and La3 in corcheas, then Do4 as a negra: the triad goes up and stops on its top note. Easy because three fingers stay on three keys.",
@@ -824,10 +836,10 @@
    "f1": "examples/drawn-left-triad-up-and-hold.f1"
   },
   {
-   "ref": "left easy 9",
+   "ref": "left easy 10",
    "hand": "left",
    "level": "easy",
-   "number": 9,
+   "number": 10,
    "id": "triad-down-and-hold",
    "name": "Triad down, then held",
    "line": "Do4 and La3 in corcheas, then Fa3 as a negra: the same figure going down. Easy for the same reason as going up.",
@@ -836,10 +848,10 @@
    "f1": "examples/drawn-left-triad-down-and-hold.f1"
   },
   {
-   "ref": "left easy 10",
+   "ref": "left easy 11",
    "hand": "left",
    "level": "easy",
-   "number": 10,
+   "number": 11,
    "id": "chord-then-two-notes-above",
    "name": "Chord, then two notes above",
    "line": "Fa3-La3-Do4, then Do4-Fa4: the chord, then two of its notes in a higher position, again and again. Easy because the hand moves a little and comes back, always with the same two shapes.",
@@ -848,10 +860,10 @@
    "f1": "examples/drawn-left-chord-then-two-notes-above.f1"
   },
   {
-   "ref": "left easy 11",
+   "ref": "left easy 12",
    "hand": "left",
    "level": "easy",
-   "number": 11,
+   "number": 12,
    "id": "held-two-note-chord",
    "name": "Held two-note chord",
    "line": "The fifth Fa3-Do4 held as blancas (Do3-Sol3 and Sib2-Fa3 for the other chords). Easy because two notes are enough to give the harmony and the hand holds one shape.",
@@ -860,10 +872,10 @@
    "f1": "examples/drawn-left-held-two-note-chord.f1"
   },
   {
-   "ref": "left easy 12",
+   "ref": "left easy 13",
    "hand": "left",
    "level": "easy",
-   "number": 12,
+   "number": 13,
    "id": "low-note-then-two-note-chords",
    "name": "Low note, then two-note chords",
    "line": "Fa2, then La3-Do4 three times in negras. Easy because the chord has only two notes and its shape never changes.",
@@ -872,10 +884,10 @@
    "f1": "examples/drawn-left-low-note-then-two-note-chords.f1"
   },
   {
-   "ref": "left easy 13",
+   "ref": "left easy 14",
    "hand": "left",
    "level": "easy",
-   "number": 13,
+   "number": 14,
    "id": "two-note-chord-then-arpeggio",
    "name": "Two-note chord, then an arpeggio",
    "line": "Fa3-Do4 together, then Fa3-La3-Do4-La3-Fa3-La3 in corcheas. Easy because the arpeggio uses the same position as the two-note chord.",
@@ -884,10 +896,10 @@
    "f1": "examples/drawn-left-two-note-chord-then-arpeggio.f1"
   },
   {
-   "ref": "left easy 14",
+   "ref": "left easy 15",
    "hand": "left",
    "level": "easy",
-   "number": 14,
+   "number": 15,
    "id": "fifth-to-sixth-rocking",
    "name": "Fifth to sixth, rocking",
    "line": "Fa3-Do4, then Fa3-Re4, in negras: the upper note moves one key and back while the lower note stays. Easy because only one finger moves.",
@@ -1385,10 +1397,11 @@
   },
   "left": {
    "easy": [
-    2,
     1,
     3,
-    12
+    2,
+    4,
+    13
    ],
    "medium": [
     15,

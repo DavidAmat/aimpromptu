@@ -105,7 +105,7 @@ try {
     (await dialog(page).getByRole('group', { name: 'The level of the left hand' }).getByRole('button', { name: 'Easy' }).getAttribute('aria-pressed')) === 'true');
   const patternsText = () => dialog(page).locator('[data-level-patterns]').innerText();
   await page.waitForFunction(() => /easy 2/.test(document.querySelector('[data-level-patterns]')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => undefined);
-  check('the patterns approved for easy are selected', (await patternsText()) === 'Left: easy 2, easy 1, easy 3, easy 12 · Right: easy 2, easy 1', await patternsText());
+  check('the patterns approved for easy are selected', (await patternsText()) === 'Left: easy 1, easy 3, easy 2, easy 4, easy 13 · Right: easy 2, easy 1', await patternsText());
   const gallery = dialog(page).locator('[data-pattern-gallery]');
   await gallery.waitFor({ timeout: 5000 });
   check('the gallery is inside the dialog, on the left hand first', /^Left hand/.test(await gallery.getByRole('group', { name: 'The patterns of which hand' }).locator('[aria-pressed="true"]').innerText()));
@@ -145,7 +145,7 @@ try {
   await shot(page, '01-whole-song');
   await gallery.locator('[data-pattern="left easy 5"]').scrollIntoViewIfNeeded();
   await gallery.locator('[data-pattern="left easy 5"]').click();
-  check('a pattern ticked in the gallery is added', /^Left: easy 2, easy 1, easy 3, easy 12, easy 5 · /.test(await patternsText()), await patternsText());
+  check('a pattern ticked in the gallery is added', /^Left: easy 1, easy 3, easy 2, easy 4, easy 13, easy 5 · /.test(await patternsText()), await patternsText());
   await dialog(page).getByRole('group', { name: 'The level of the right hand' }).getByRole('button', { name: 'Hard' }).click();
   check('hard for the right hand takes its patterns', /Right: hard 1, hard 17, hard 15, hard 4$/.test(await patternsText()), await patternsText());
   check('and the gallery shows the right hand at hard', (await gallery.locator('[data-pattern^="right hard "]').count()) >= 10 && (await gallery.locator('[data-pattern^="left "]').count()) === 0);
@@ -154,7 +154,7 @@ try {
   const ticked = (prefix) => gallery.locator(`[data-pattern^="${prefix}"] input:checked`).count();
   await bulk.getByRole('button', { name: 'Deselect all' }).click();
   check('Deselect all unticks the hand shown', (await ticked('right ')) === 0 && /Right: none\. No pattern for the right hand/.test(await patternsText()), await patternsText());
-  check('and keeps the other hand', /^Left: easy 2, easy 1, easy 3, easy 12, easy 5 · /.test(await patternsText()));
+  check('and keeps the other hand', /^Left: easy 1, easy 3, easy 2, easy 4, easy 13, easy 5 · /.test(await patternsText()));
   await bulk.getByRole('button', { name: 'Select all', exact: true }).click();
   check('Select all ticks every pattern of the level on the pill', (await ticked('right hard ')) === (await gallery.locator('[data-pattern^="right hard "]').count()));
   check('and only that level', (await patternsText()).split(' · ')[1].split(', ').every((one) => /^(Right: )?hard \d+$/.test(one)), await patternsText());

@@ -126,3 +126,13 @@ lost a reply each time), and the history also lists the level runs stored before
 runs showed two points for the user: the octave numbers of the user's words (easy 1 named "Fa4-La4-Do5" is drawn
 F3-A3-C4), and chords that change every 1 or 2 negras, which a shape of two blancas does not fit. Run D fixed the
 second point with one answer to the AI. Real runs cost about $0.47 of the $2.
+
+**A new left easy 1, "The song's chords"** (the user, 2026-10-31, after a run of the old easy 1 that mixed redondas,
+blancas and negras). The catalog has a new left easy 1: find the song's chords and play only those, one close triad
+per chord on the bass staff, in steady blancas. The other left easy patterns moved one number up (Held triad is now
+easy 2), and easy 1 leads the approved set (`[1, 3, 2, 4, 13]`). This breaks the rule "a number never changes" at the
+user's request. Stored runs and the Phase 2 gallery (`gallery/04-3-phase-2/`) keep the old numbers. Level prompts 6
+add two rules: a Strict pattern keeps the same figures everywhere, and the song's chords are not every chord the app
+lists. For a Strict left hand, the check asks the bass only on chords of two negras or more (shorter ones are passing
+chords). Run E on the user's copy `39d92dbe` (Strict, 4 batches, one answer to the AI on batch 1: "blancas
+everywhere") cost $0.086. Total real runs: about $0.56.

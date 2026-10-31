@@ -147,7 +147,7 @@ def test_the_system_prompt_has_the_level_and_only_the_patterns_of_the_run() -> N
     assert "# The level of this run: easy" in text and "# The level of this run: medium" not in text
     assert text.index("### left easy 2") < text.index("### right easy 2")
     assert "left easy 1" not in text.split("# The patterns of this run")[1]
-    assert L.LEVEL_VERSION == "5"
+    assert L.LEVEL_VERSION == "6"
 
 
 def test_the_examples_of_the_shared_prompt_parse() -> None:
@@ -474,7 +474,7 @@ def test_the_plan_of_a_strict_hand_and_its_rules() -> None:
     prompt = L.plan_prompt(sid="s", level="easy", staffs=(2,), summary="x", start=30, end=510, strict=strict)
     assert "Strict patterns" in prompt and "left easy 1 in every section" in prompt and "one rule per pattern" in prompt
     system = L.system_prompt("easy", [L.catalog()["left easy 1"], L.catalog()["left easy 2"]], (2,), strict)
-    assert "left easy 1: Held triad (Strict)" in system and "(Suggested)" in system
+    assert "left easy 1: The song's chords (Strict)" in system and "(Suggested)" in system
     assert "Strict for the left hand: left easy 1." in system
 
 
@@ -510,3 +510,20 @@ def test_an_answer_must_explain_and_its_rules_reach_the_next_batches() -> None:
     assert talks[1].explain == ["the bass, then the triad held."] and talks[1].target.startswith("F1 frames")
     assert talks[1].rules == ["a chord of one negra plays the bass only"] and len(talks[1].errors) == 1
     assert [r.source for r in run.rules] == ["plan", "plan", "batch 1"]
+
+
+def test_a_strict_left_hand_holds_its_chord_over_a_short_passing_chord() -> None:
+    # The user, 2026-10-31: a chord the app lists for less than two negras is a passing chord for a Strict hand.
+    s = song("wide")
+    g = song_grid(s)
+    cs = chords(s, g)
+    # the G chord at f90 on another bass
+    lines = [line.replace("L: G2:4", "L: B2:4") if line.startswith("f90 ") else line for line in easy_lines(s)]
+    short = [L.replace(c, end=c.start + 10) if c.start == 90 else c for c in cs]
+    args = dict(level="easy", staffs=(1, 2), grid=g, allowed={"left easy 2", "right easy 2"}, start=30, end=510)
+    long_ = L.check_level(answer(lines, DECLARED), s, cs=cs, strict=frozenset({"left easy 2"}), **args)
+    assert any("begin on another bass" in e for e in long_.errors)
+    passing = L.check_level(answer(lines, DECLARED), s, cs=short, strict=frozenset({"left easy 2"}), **args)
+    assert not any("begin on another bass" in e for e in passing.errors), passing.errors
+    suggested = L.check_level(answer(lines, DECLARED), s, cs=short, **args)
+    assert any("begin on another bass" in e for e in suggested.errors)

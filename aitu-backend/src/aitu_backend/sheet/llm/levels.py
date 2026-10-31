@@ -1074,6 +1074,10 @@ def check_level(
             if not inside or c.bass is None:
                 continue
             first = inside[0]
+            # a Strict left hand holds the song's chords: a chord the app lists for less than two negras is a
+            # passing chord there (the user, 2026-10-31), so its bass is not asked
+            if strict_refs(strict, "left") and c.end - c.start < 2 * q / FRAME_MS * 0.95:
+                continue
             if first - c.start <= q / FRAME_MS * 1.05 or c.start < start:
                 low = min(n.midi for n in left[first]) % 12
                 if low not in (c.bass, c.root):

@@ -67,9 +67,16 @@ Each pattern of this run is marked **Suggested** or **Strict** by the user (at t
   the last, also where the hand is simple now and whatever rhythm it plays now (blancas, negras, corcheas). The two
   rules above do not hold for that hand: no `keep`, no other pattern, and it may have more or fewer onsets than now.
   The melody, the harmony, the grid and the limits of the level still hold.
+- **A Strict pattern keeps its figures.** The pattern's figures are the same everywhere (the user, 2026-10-31): a
+  pattern in blancas is blancas through the whole song, and a chord that lasts longer plays the same figure again; do
+  not mix redondas, blancas and negras. Only a chord that truly lasts less than the figure gets a shorter one.
+- **The song's chords, not every chord the app lists.** First find the harmony of the song: the few chords it turns
+  around (Do major, Mi major, Sol major, Fa major...), changing about every bar or every two negras. A chord the app
+  lists for less than two negras is usually a passing chord made by the melody: with a Strict pattern, keep the chord
+  around it there (the checker does not ask its bass).
 - **The user's words may change a pattern.** The patterns of the catalog are never exactly what a user wants. When
-  the words change the shape (for example on left easy 1, Held triad Fa4-La4-Do5: "first a low note Fa3 as a blanca,
-  then Fa4-La4-Do5 as a blanca"), the changed shape is the pattern of this run: play it, Strict or Suggested as the
+  the words change the shape (for example on left easy 2, Held triad Fa3-La3-Do4: "first a low note Fa2 as a blanca,
+  then Fa3-La3-Do4 as a blanca"), the changed shape is the pattern of this run: play it, Strict or Suggested as the
   pattern is marked. Find the chord first, then play the changed shape on it.
 
 # The register: what reads best on the staff

@@ -31,7 +31,9 @@ part = test_part_sheet.part
 def test_the_catalog_has_the_approved_patterns_and_the_defaults_of_each_level() -> None:
     patterns, defaults = L.catalog_rows()
     refs = {p["ref"] for p in patterns}
-    assert len(patterns) == 113 and len(L.catalog()) == 113
+    assert len(patterns) == 114 and len(L.catalog()) == 114
+    # The new left easy 1 (the user, 2026-10-31), the others one number up.
+    assert L.catalog()["left easy 1"].name == "The song's chords" and L.catalog()["left easy 2"].name == "Held triad"
     assert {"left easy 2", "left medium 15", "left hard 18", "right super hard 13"} <= refs
     # The sets approved in Phase 3, and a set for hard in the left hand.
     assert defaults["left"]["medium"] == ["left medium 15", "left medium 2", "left medium 10", "left medium 7"]
@@ -51,7 +53,7 @@ def test_a_hand_with_no_pattern_selected_gets_its_level_set() -> None:
     assert picked[0] == "left easy 5" and set(picked[1:3]) == {"left medium 2", "right medium 2"}
     assert "right hard 99" not in picked and "left easy 2" not in picked
     # A run of one hand: the other hand's patterns are not used.
-    assert L.run_refs("easy", (2,), ["right easy 1"]) == ["left easy 2", "left easy 1", "left easy 3", "left easy 12"]
+    assert L.run_refs("easy", (2,), ["right easy 1"]) == ["left easy 1", "left easy 3", "left easy 2", "left easy 4", "left easy 13"]
 
 
 def test_deselect_all_gives_a_hand_no_pattern() -> None:
@@ -66,7 +68,7 @@ def test_deselect_all_gives_a_hand_no_pattern() -> None:
 
 def test_the_routes_of_the_catalog(client: TestClient) -> None:
     body = client.get("/sheet/levels/catalog").json()
-    assert len(body["patterns"]) == 113 and body["defaults"]["left"]["easy"][0] == "left easy 2"
+    assert len(body["patterns"]) == 114 and body["defaults"]["left"]["easy"][0] == "left easy 1"
     one = body["patterns"][0]
     assert set(one) >= {"ref", "hand", "level", "number", "name", "line"}
     drawing = client.get("/sheet/levels/catalog/left/medium/2.svg")
