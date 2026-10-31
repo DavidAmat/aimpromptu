@@ -8,7 +8,12 @@ The plan is [`04-5-plan.md`](04-5-plan.md), the brief [`04-5-prompt.md`](04-5-pr
 
 - [x] The first discussion (user, 2026-10-31): plan section 2.
 - [x] Phases 1 to 4 in one session: [`04-5-implementation-phases-1-to-4.md`](04-5-implementation-phases-1-to-4.md).
-- [ ] The user looks at the test runs (`http://ubuntu:8097/gallery/04-5/`) and decides the octave numbering of the words.
+- [x] The octaves of the words (user, 2026-10-31): only examples; the AI chooses what reads best on the bass staff, a
+  little above it rather than an octava below (level prompts 5, "The register").
+- [ ] The clef (user, 2026-10-31): a change to the treble clef only when the whole passage suits it; one or two high
+  notes take ledger lines or the 8va line. In the prompt (version 5), but the clefs are drawn by the app
+  (`proposal.frames.clefs_and_ottavas`): changing that rule changes every stored sheet, so measure it first (04-context
+  section 4). Not done.
 
 # [x] Phase 1: Backend: Strict and Suggested, the rules, the explanations, the log
 

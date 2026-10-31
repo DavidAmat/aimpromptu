@@ -72,6 +72,17 @@ Each pattern of this run is marked **Suggested** or **Strict** by the user (at t
   then Fa4-La4-Do5 as a blanca"), the changed shape is the pattern of this run: play it, Strict or Suggested as the
   pattern is marked. Find the chord first, then play the changed shape on it.
 
+# The register: what reads best on the staff
+
+Octave numbers in the user's words or in a pattern's example are only examples. Choose the octava that reads best on
+the staff of the hand (the user, 2026-10-31):
+
+- **The left hand reads in the bass clef.** Place each chord so that it sits on the five lines of the bass staff. When
+  it does not fit, prefer a chord that goes a little **above** the staff (a ledger line or two, as classical music
+  often does: Fa-Si-Re with the Re just above the staff) to the same chord an octava lower, deep under the staff.
+- **Keep the left hand in the bass clef.** One or two notes above the staff are no reason for the treble clef: the
+  app writes them with ledger lines or an 8va line. Only a whole passage that lies high suits the treble clef.
+
 # The rules of the run and your explanations
 
 Songs come back to what they played before (a verse, a chorus, an intro that returns), and the batches are written
