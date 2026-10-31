@@ -51,6 +51,7 @@ import Box from "@mui/material/Box";
 import { keyframes } from "@mui/material/styles";
 import type { FramesSheet, LyricFont } from "../../../../api";
 import { palette, semantic } from "../../../../ui";
+import { BATCH_COLOURS, type BatchPreview } from "./batches";
 import { boxesOf, columnEdges, columnsOf, headsByColumn, laterOnsets, type ColumnHeads, msAtPoint, onStaff, placeAt, steadyColumns } from "./geometry";
 import { LYRIC_LEADING, LYRIC_MAX, LYRIC_MIN, familyOf, wrapWords } from "./lyricsText";
 
@@ -247,6 +248,7 @@ export function FramesSheetView({
   frameWindow = null,
   onWindowMove,
   keepClear = 0,
+  batches = null,
 }: {
   sheet: FramesSheet;
   playheadSeconds: number | null;
@@ -274,6 +276,8 @@ export function FramesSheetView({
   onWindowMove?: (start: number, done: boolean) => void;
   /** Pixels at the top of the window covered by the page's header: the cursor is kept in view below them. */
   keepClear?: number;
+  /** The batches an AI run would make, shown while the Enhance with AI dialog is open (the user, 2026-10-30). */
+  batches?: BatchPreview | null;
 }) {
   const host = useRef<HTMLDivElement | null>(null);
   const overlay = useRef<SVGSVGElement | null>(null);
@@ -339,6 +343,20 @@ export function FramesSheetView({
           );
         }),
     [sheet.segments, columns, edges, sheet.systems],
+  );
+
+  // The batches of the run the dialog would start: each its own colour, over the staff it rewrites.
+  const batchBoxes = useMemo(
+    () =>
+      (batches?.windows ?? []).flatMap(([start, end], index) => {
+        const [from, to] = columnsOf({ start, end }, columns);
+        return boxesOf(from, to, columns, edges, sheet.systems).map((box, k) => ({
+          ...onStaff(box, sheet.systems[box.system], batches?.staff ?? undefined),
+          index,
+          first: k === 0,
+        }));
+      }),
+    [batches, columns, edges, sheet.systems],
   );
 
   const [reveal, setReveal] = useState<Reveal | null>(null);
@@ -1085,6 +1103,29 @@ export function FramesSheetView({
         preserveAspectRatio="xMinYMin meet"
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
       >
+        {batchBoxes.map((box) => {
+          const colour = BATCH_COLOURS[box.index % BATCH_COLOURS.length];
+          return (
+            <g key={`b${box.index}:${box.system}:${box.x}`} data-batch={box.index + 1}>
+              <rect
+                x={box.x}
+                y={box.y}
+                width={box.width}
+                height={box.height}
+                rx={0.6}
+                fill={colour}
+                fillOpacity={0.12}
+                stroke={colour}
+                strokeWidth={0.18}
+              />
+              {box.first ? (
+                <text x={box.x + 0.6} y={box.y + 1.8} fontSize={1.6} fontWeight={700} fill={colour}>
+                  {box.index + 1}
+                </text>
+              ) : null}
+            </g>
+          );
+        })}
         {working.map((box) => (
           <rect
             key={`w${box.system}:${box.x}`}

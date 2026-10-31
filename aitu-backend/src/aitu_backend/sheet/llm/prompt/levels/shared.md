@@ -144,7 +144,9 @@ the chords the app found, how each hand plays now (the measures of a hand tracke
 in one column and how wide they are, the range of the hand inside two negras, the moves of the hand per second, where
 the hand is), and the earlier stretch that sounds the same. You split the song into sections and choose the pattern
 of each hand for each section, from the patterns of this run: for the left hand, the pattern whose rhythm is nearest to
-what it plays now, or `keep` where the summary marks it simple (`L=keep`). Choose few sections and few changes: the song has an
+what it plays now, or `keep` where the summary marks it simple (`L=keep`). A hand for which the user chose no
+pattern (the end of these instructions says so) is `free`: write it by the rules of its level and the user's words only.
+Choose few sections and few changes: the song has an
 intro, verses, choruses, maybe a bridge; a part that comes again gets the patterns it had the first time. A passage
 where the song is calm can take a calmer pattern of the run, and the chorus a fuller one.
 

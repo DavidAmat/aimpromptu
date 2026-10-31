@@ -15,7 +15,11 @@
  * - with one note picked, the header's button opens the dialog on **A stretch**, in the hand of that note; the note
  *   toolbox's own button too; **Left** says the right hand stays; **A level** of the left hand shows its gallery only
  *   and sends `POST /sheet/{uuid}/llm/level` with its frames; **Enhance with AI** sends the stretch with that hand and
- *   the user's words.
+ *   the user's words;
+ * - in the gallery, **Select all** ticks every pattern of the level on the pill, **Deselect all** unticks the hand
+ *   (the level is then sent with no pattern, `exact`), **Approved** ticks the approved ones again (2026-10-30);
+ * - the **model** (GPT-6.1 Terra by default, Sonnet 5.5 costs more) and the **batches** (- and +), drawn on the sheet
+ *   with one number each, the dialog at the right beside the sheet; the run sends both (2026-10-30).
  *
  *     npm run check:enhance-dialog -- --out /tmp/enhance-dialog
  */
@@ -111,6 +115,32 @@ try {
   check('each pattern has its drawing', drawn);
   check('the approved ones are ticked', await gallery.locator('[data-pattern="left easy 2"] input').isChecked());
   check('the status says a new project, the cost and the minutes', /A new project in My projects.*About \$\d+\.\d\d, about \d+ minutes?/.test(await dialog(page).locator('[data-enhance-status]').innerText()));
+  // The model and the batches (the user, 2026-10-30): the batches drawn on the sheet, the dialog at its right.
+  const count = () => dialog(page).locator('[data-batch-count]').innerText().then(Number);
+  const drawnBatches = () => page.locator('[data-frames-sheet] [data-batch]').evaluateAll((els) => new Set(els.map((e) => e.getAttribute('data-batch'))).size);
+  await page.waitForFunction(() => document.querySelectorAll('[data-frames-sheet] [data-batch]').length > 0, null, { timeout: 5000 }).catch(() => undefined);
+  const first = await count();
+  check('the batches of the run are drawn on the sheet, one number each', first >= 1 && (await drawnBatches()) === first, `${first} batches`);
+  check('GPT-6.1 Terra is the model by default', (await dialog(page).getByTestId('ai-model').inputValue()) === 'gpt-6.1-terra');
+  const costOf = async () => Number(/About \$(\d+\.\d\d)/.exec(await dialog(page).locator('[data-enhance-status]').innerText())?.[1]);
+  const terraCost = await costOf();
+  await dialog(page).getByRole('button', { name: 'More batches' }).click();
+  await dialog(page).getByRole('button', { name: 'More batches' }).click();
+  await page.waitForFunction((n) => document.querySelector('[data-batch-count]')?.textContent === String(n), first + 2, { timeout: 5000 }).catch(() => undefined);
+  await page.waitForTimeout(500);
+  check('+ twice: two batches more, drawn', (await count()) === first + 2 && (await drawnBatches()) === first + 2, `${await count()} / ${await drawnBatches()}`);
+  await dialog(page).getByRole('button', { name: 'Fewer batches' }).click();
+  await page.waitForTimeout(600);
+  check('- once: one fewer', (await count()) === first + 1);
+  await dialog(page).getByTestId('ai-model').locator('..').click();
+  await page.getByRole('option', { name: 'Sonnet 5.5' }).click();
+  await page.waitForTimeout(700);
+  check('Sonnet 5.5 costs more than GPT-6.1 Terra', (await costOf()) > terraCost, `${terraCost} -> ${await costOf()}`);
+  const panel = await dialog(page).locator('.MuiDialog-paper').boundingBox();
+  const drawing = await page.locator('[data-frames-sheet] svg').first().boundingBox();
+  check('the dialog sits at the right, beside the sheet', panel.x > 700 && drawing.x + drawing.width <= panel.x + 2, `${Math.round(drawing.x + drawing.width)} <= ${Math.round(panel.x)}`);
+  await settled(page);
+  await shot(page, '08-batches');
   await settled(page);
   await shot(page, '01-whole-song');
   await gallery.locator('[data-pattern="left easy 5"]').scrollIntoViewIfNeeded();
@@ -119,6 +149,19 @@ try {
   await dialog(page).getByRole('group', { name: 'The level of the right hand' }).getByRole('button', { name: 'Hard' }).click();
   check('hard for the right hand takes its patterns', /Right: hard 1, hard 17, hard 15, hard 4$/.test(await patternsText()), await patternsText());
   check('and the gallery shows the right hand at hard', (await gallery.locator('[data-pattern^="right hard "]').count()) >= 10 && (await gallery.locator('[data-pattern^="left "]').count()) === 0);
+  // Select all, Deselect all and Approved (the user, 2026-10-30): the hand shown, the level on its pill.
+  const bulk = gallery.locator('[data-pattern-bulk]');
+  const ticked = (prefix) => gallery.locator(`[data-pattern^="${prefix}"] input:checked`).count();
+  await bulk.getByRole('button', { name: 'Deselect all' }).click();
+  check('Deselect all unticks the hand shown', (await ticked('right ')) === 0 && /Right: none\. No pattern for the right hand/.test(await patternsText()), await patternsText());
+  check('and keeps the other hand', /^Left: easy 2, easy 1, easy 3, easy 12, easy 5 · /.test(await patternsText()));
+  await bulk.getByRole('button', { name: 'Select all', exact: true }).click();
+  check('Select all ticks every pattern of the level on the pill', (await ticked('right hard ')) === (await gallery.locator('[data-pattern^="right hard "]').count()));
+  check('and only that level', (await patternsText()).split(' · ')[1].split(', ').every((one) => /^(Right: )?hard \d+$/.test(one)), await patternsText());
+  await settled(page);
+  await shot(page, '07-select-all');
+  await bulk.getByRole('button', { name: 'Approved' }).click();
+  check('Approved ticks the approved patterns again', /Right: hard 1, hard 17, hard 15, hard 4$/.test(await patternsText()), await patternsText());
   await settled(page);
   await shot(page, '04-level-whole-song');
   await which.getByRole('button', { name: 'Right hand only' }).click();
@@ -133,11 +176,13 @@ try {
   check(
     'Write the level sends the level of each hand and the patterns',
     levelCopy?.body?.right === 'hard' && levelCopy?.body?.left === 'easy' && levelCopy?.body?.hand === 'both' &&
-      levelCopy?.body?.patterns?.includes('left easy 5') && levelCopy?.body?.patterns?.includes('right hard 17'),
+      levelCopy?.body?.patterns?.includes('left easy 5') && levelCopy?.body?.patterns?.includes('right hard 17') && levelCopy?.body?.exact === true &&
+      levelCopy?.body?.model === 'claude-sonnet-5-5' && levelCopy?.body?.batches >= 1,
     JSON.stringify(levelCopy?.body),
   );
   check('the page says the stand-in refused', /Stand-in/.test(await page.locator('[data-edit-error]').first().innerText().catch(() => '')));
   check('and the dialog closes', (await dialog(page).count()) === 0);
+  check('and the batches leave the sheet', (await page.locator('[data-frames-sheet] [data-batch]').count()) === 0);
 
   // ------------------------------------------------------------------ the whole song: Write it all again
   await page.getByTestId('header-enhance-with-ai').click();
@@ -180,7 +225,9 @@ try {
   await dialog(page).getByRole('group', { name: 'How' }).getByRole('button', { name: 'A level' }).click();
   check('a level of one hand: one level only', (await dialog(page).getByRole('group', { name: /^The level of the/ }).count()) === 1);
   check('and the gallery of that hand only', (await dialog(page).locator('[data-pattern^="left easy "]').count()) >= 10 && (await dialog(page).locator('[data-pattern^="right "]').count()) === 0);
-  check('the stretch status says the right hand stays and the cost', /The right hand stays as it is\. About \$\d+\.\d\d/.test(await dialog(page).locator('[data-enhance-status]').innerText()));
+  // The estimate comes with the plan of the batches: wait for its price.
+  await page.waitForFunction(() => /About \$\d/.test(document.querySelector('[data-enhance-status]')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => undefined);
+  check('the stretch status says the right hand stays and the cost', /The right hand stays as it is\. About \$\d+\.\d\d/.test(await dialog(page).locator('[data-enhance-status]').innerText()), await dialog(page).locator('[data-enhance-status]').innerText());
   await dialog(page).getByRole('group', { name: 'The level of the left hand' }).getByRole('button', { name: 'Medium' }).click();
   await settled(page);
   await shot(page, '06-level-stretch');
@@ -193,6 +240,19 @@ try {
       level?.body?.patterns?.join(',') === 'left medium 15,left medium 2,left medium 10,left medium 7',
     JSON.stringify(level?.body),
   );
+  // Deselect all: the level is sent with no pattern, exactly (the AI writes the hand by the level's rules only).
+  await head.scrollIntoViewIfNeeded();
+  const picked = await head.boundingBox();
+  await page.mouse.click(picked.x + picked.width / 2, picked.y + picked.height / 2);
+  await page.locator('[data-frames-note-toolbox]').waitFor({ timeout: 5000 });
+  await page.getByTestId('notes-enhance').click();
+  await dialog(page).waitFor({ timeout: 5000 });
+  await dialog(page).getByRole('group', { name: 'How' }).getByRole('button', { name: 'A level' }).click();
+  await dialog(page).locator('[data-pattern-bulk]').getByRole('button', { name: 'Deselect all' }).click();
+  await page.getByTestId('stretch-confirm').click();
+  await page.waitForTimeout(600);
+  const none = sent.filter((s) => /\/llm\/level$/.test(s.url)).at(-1);
+  check('Deselect all sends the level with no pattern', none !== level && none?.body?.patterns?.length === 0 && none?.body?.exact === true, JSON.stringify(none?.body));
   await head.scrollIntoViewIfNeeded();
   const again = await head.boundingBox();
   await page.mouse.click(again.x + again.width / 2, again.y + again.height / 2);

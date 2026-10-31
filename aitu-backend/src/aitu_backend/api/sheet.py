@@ -50,7 +50,8 @@ from aitu_backend.audio import store as audio_store
 from aitu_backend.auth import context, rights
 from aitu_backend.auth.dependencies import require_part
 from aitu_backend.editing import paste as passage_paste
-from aitu_backend.part_sheet import build, edits, job, reading
+from aitu_backend.editing import history as part_history
+from aitu_backend.part_sheet import build, edits, job, reading, store
 from aitu_backend.sheet.engrave import frames as frames_engine
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.library import flow
@@ -206,7 +207,8 @@ def _answer(audio_uuid: str, width: float) -> dict[str, Any]:
     # The staff of a run of one hand: the page veils only that staff of the segment at the AI.
     staff = run.staff if run is not None else None
     if run is not None:
-        text, segments = run.text(), run.segments()
+        # The titles written during the run show at once (``store.keep_titles``).
+        text, segments = store.with_titles(audio_uuid, run.text()), run.segments()
     else:
         # The stretches the AI wrote again (Phase 7) after the windows: the page reveals the one that came back.
         stretches = drawn.record.stretches if drawn.record is not None else []
@@ -287,7 +289,14 @@ def edit_reading(
     """One reading edit of the toolboxes (one step of undo); the sheet drawn again. ``preview`` stores nothing and
     answers the sheet as the edit would leave it (Transpose figures, Phase 8)."""
     _notes_or_404(audio_uuid)
-    _not_running(audio_uuid)
+    # The title, subtitle and artist stay editable while the AI writes the sheet: they touch no note, and the run
+    # keeps them (``store.keep_titles``; the user, 2026-10-30). Every other edit waits for the run.
+    titles = body.action == "titles" and not preview
+    running = job.job_of(audio_uuid) is not None
+    if not titles:
+        _not_running(audio_uuid)
+    elif not running:
+        store.forget_titles(audio_uuid)
     try:
         change, holds = reading.plan(
             body.action,
@@ -301,6 +310,8 @@ def edit_reading(
             label, text = edits.preview_reading(audio_uuid, change, holds)
             return {**build.draw(text, width), "edited": label}
         label = edits.edit_reading(audio_uuid, change, holds)
+        if titles and running:
+            store.keep_titles(audio_uuid, f1.read(build.current(audio_uuid).text).titles)
     except (reading.Refused, ValueError, TypeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {**_answer(audio_uuid, width), "edited": label}
@@ -532,7 +543,19 @@ def stretch_keys(
     return reading.fewest_signs(f1.read(build.current(audio_uuid).text), start, end)
 
 
-class StretchRequest(BaseModel):
+#: The AI models of Enhance with AI (``job.MODELS``; the user, 2026-10-30). None: GPT-6.1 Terra.
+AiModel = Literal["gpt-6.1-terra", "gpt-6.1-sol", "claude-sonnet-5-5"]
+
+
+class RunChoice(BaseModel):
+    """What every run of Enhance with AI may choose (the user, 2026-10-30): the AI model, and the number of batches
+    (``job.batch_plan``: of about the same time, as the dialog shows them on the sheet). None: as before."""
+
+    model: AiModel | None = None
+    batches: int | None = Field(default=None, ge=1, le=60)
+
+
+class StretchRequest(RunChoice):
     start: int = Field(ge=0)
     end: int = Field(ge=1)
     staff: Literal["both", "right", "left"] = "both"
@@ -545,8 +568,8 @@ class StretchRequest(BaseModel):
 def run_llm_stretch(audio_uuid: str, body: StretchRequest = Body(...)) -> dict[str, str]:
     """The AI writes the stretch again with the user's words, in the background; the page follows the job."""
     _notes_or_404(audio_uuid)
-    if not job.available():
-        raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
+    if not job.available(body.model):
+        raise HTTPException(status_code=409, detail="This AI is not set up on this machine.")
     if body.end <= body.start:
         raise HTTPException(status_code=400, detail="The stretch is empty.")
     if not _writes(audio_uuid):
@@ -559,6 +582,8 @@ def run_llm_stretch(audio_uuid: str, body: StretchRequest = Body(...)) -> dict[s
             instruction=body.instruction,
             staff={"right": 1, "left": 2}.get(body.staff),
             picked=body.notes or None,
+            model=body.model,
+            batches=body.batches,
         )
     except job.Busy as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -589,7 +614,7 @@ def run_llm_simplify(audio_uuid: str, body: SimplifyRequest = Body(...)) -> dict
 Level = Literal["easy", "medium", "hard"]
 
 
-class LevelRequest(BaseModel):
+class LevelRequest(RunChoice):
     #: The level of each hand (the same for both by default).
     right: Level = "easy"
     left: Level = "easy"
@@ -600,6 +625,9 @@ class LevelRequest(BaseModel):
     #: The refs selected in the catalog ("left medium 2").
     patterns: list[str] = Field(default_factory=list, max_length=200)
     words: str = Field(default="", max_length=1000)
+    #: ``patterns`` are exactly the ones ticked: a hand with none has no pattern (the user's **Deselect all**,
+    #: 2026-10-30). Without it, a hand with none gets the patterns approved for its level.
+    exact: bool = False
 
     def level(self) -> str | dict[str, str]:
         if self.hand == "right":
@@ -631,6 +659,9 @@ def _start_level(part_id: str, body: LevelRequest, start: int | None, end: int |
             end=end,
             patterns=body.patterns,
             words=body.words,
+            exact=body.exact,
+            model=body.model,
+            batches=body.batches,
         )
     except job.Busy as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -642,8 +673,8 @@ def _start_level(part_id: str, body: LevelRequest, start: int | None, end: int |
 def run_llm_level(audio_uuid: str, body: LevelRequest = Body(...)) -> dict[str, str]:
     """The AI writes a range of the sheet again at a level, in place, in the background (one step of undo)."""
     _notes_or_404(audio_uuid)
-    if not job.level_available():
-        raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
+    if not job.level_available(body.model):
+        raise HTTPException(status_code=409, detail="This AI is not set up on this machine.")
     if body.start is None or body.end is None or body.end <= body.start:
         raise HTTPException(status_code=400, detail="Select a range first.")
     if not _writes(audio_uuid):
@@ -671,8 +702,8 @@ def run_llm_level_copy(audio_uuid: str, body: LevelRequest = Body(...)) -> Level
     if user is not None and (where.owner_id != user.id or where.layer not in ("vault", "private")):
         raise HTTPException(status_code=403, detail="Only your own songs can have a level.")
     _notes_or_404(audio_uuid)
-    if not job.level_available():
-        raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
+    if not job.level_available(body.model):
+        raise HTTPException(status_code=409, detail="This AI is not set up on this machine.")
     current = f1.read(build.current(audio_uuid).text)
     staffs = (1, 2) if body.hand == "both" else ((1,) if body.hand == "right" else (2,))
     if not levels.level_windows(current, staffs):
@@ -730,13 +761,72 @@ def redo(
 
 
 @router.post("/{audio_uuid}/llm", status_code=202)
-def run_llm(audio_uuid: str) -> dict[str, str]:
-    """Sonnet writes the sheet of the part in the background (the hands and the reading); the page follows it."""
+def run_llm(audio_uuid: str, body: RunChoice | None = Body(None)) -> dict[str, str]:
+    """The AI writes the sheet of the part in the background (the hands and the reading); the page follows it. The
+    body may choose the model and the number of batches (Enhance with AI, 2026-10-30)."""
     _notes_or_404(audio_uuid)
-    if not job.available():
-        raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
-    started = job.start(audio_uuid)
+    choice = body or RunChoice()
+    if not job.available(choice.model):
+        raise HTTPException(status_code=409, detail="This AI is not set up on this machine.")
+    started = job.start(audio_uuid, model=choice.model, batches=choice.batches)
     return {"jobId": started.id, "status": started.status}
+
+
+@router.post("/{audio_uuid}/llm/stop", status_code=202)
+def stop_llm(audio_uuid: str) -> dict[str, bool]:
+    """**Stop** in the panel of an AI run (the user, 2026-10-30): no more requests after the one it waits for; what it
+    wrote stays (its job's ``done`` summary says ``stopped``), and **Revert** takes it back. 409 when none runs."""
+    _notes_or_404(audio_uuid)
+    if not _writes(audio_uuid):
+        raise HTTPException(status_code=403, detail="This sheet cannot be changed here.")
+    if not job.stop(audio_uuid):
+        raise HTTPException(status_code=409, detail="The AI is not working on this sheet.")
+    return {"stopping": True}
+
+
+class RevertRequest(BaseModel):
+    #: The snapshot taken before the run: ``before`` in its job's ``done`` summary.
+    version: int = Field(ge=1)
+
+
+@router.post("/{audio_uuid}/llm/revert")
+def revert_llm(
+    audio_uuid: str,
+    body: RevertRequest = Body(...),
+    width: float = Query(DEFAULT_WIDTH, ge=build.MIN_WIDTH, le=build.MAX_WIDTH),
+) -> dict[str, Any]:
+    """**Revert** in the panel of an AI run (the user, 2026-10-30): the part as it was before the run, whatever the run
+    changed; one step, whose undo puts the run's result back. The sheet drawn again."""
+    _notes_or_404(audio_uuid)
+    _not_running(audio_uuid)
+    if not _writes(audio_uuid):
+        raise HTTPException(status_code=403, detail="This sheet cannot be changed here.")
+    try:
+        label = edits.revert_run(audio_uuid, body.version)
+    except part_history.NoSuchVersion as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {**_answer(audio_uuid, width), "walked": label}
+
+
+@router.get("/{audio_uuid}/llm/batches")
+def llm_batches(
+    audio_uuid: str,
+    run: Literal["all", "level", "stretch"] = Query(...),
+    hand: Literal["both", "right", "left"] = Query("both"),
+    start: int | None = Query(None, ge=0),
+    end: int | None = Query(None, ge=1),
+    batches: int | None = Query(None, ge=1, le=60),
+    model: AiModel | None = Query(None),
+) -> dict[str, Any]:
+    """The batches a run of Enhance with AI would make, for the preview on the sheet, with the cost and the minutes
+    with that model (``job.batch_plan``)."""
+    _notes_or_404(audio_uuid)
+    try:
+        return job.batch_plan(
+            audio_uuid, run=run, hand=hand, start=start, end=end, batches=batches, model=model
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 class PartWords(BaseModel):

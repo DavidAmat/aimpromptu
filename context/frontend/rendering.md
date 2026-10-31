@@ -44,7 +44,7 @@ line. The code is `pages/piece/sheet/frames/`:
 - `geometry.ts`: the research viewer's arithmetic (where the cursor is, the time under a click);
 - `useFramesSheet.ts`: the loads, Sonnet's job followed on its stream (`event: sheet`), Sonnet started by
   itself on a new transcription, and an edit (one request whose answer is the sheet drawn again);
-- since Phase 8: `FramesSheetToolbox.tsx` (Title, Key, Transpose, Lyrics, View), `FramesPreviewDialog.tsx` (the
+- since Phase 8: `FramesSheetToolbox.tsx` (Info, Key, Transpose, Lyrics, View), `FramesPreviewDialog.tsx` (the
   preview of a transposition), `FramesPdfDialog.tsx` (Print to PDF), `useFramesLyrics.ts` (the old Lyrics tab and
   its piece helpers on the sheet's `lyric` lines); the lyrics are drawn by the backend (`<text data-lyric>`), and
   the view picks, drags and lights them.

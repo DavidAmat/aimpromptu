@@ -19,7 +19,7 @@ saved.
 
 | Tab | Content |
 |---|---|
-| **Title** | Title, subtitle and artist printed above the sheet. Each is written when you leave the field or press Enter, so a word is one undo step, not one per letter. An empty title prints the project's name. The PDF takes the title |
+| **Info** (Title until 2026-10-30) | Title, subtitle and artist printed above the sheet, editable also while the AI writes the sheet. Each is written when you leave the field or press Enter, so a word is one undo step, not one per letter. An empty title prints the project's name. The PDF takes the title |
 | **Key** | The key signature of the piece, on both clefs. It changes spelling only: no note moves. When another key would print fewer accidentals, a button offers it: *Use B major (5 fewer accidentals)* |
 | **Transpose** | **Notes** and **Figures** (below), each with **Preview** |
 | **Lyrics** | The pasted lyrics, the pool, and the edit toolbar of the lyrics pieces (below) |

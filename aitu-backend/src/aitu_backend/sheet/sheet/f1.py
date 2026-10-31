@@ -69,7 +69,7 @@ from aitu_backend.sheet.sheet.data import (
     pos_text,
 )
 
-__all__ = ["write", "read"]
+__all__ = ["write", "read", "with_titles"]
 
 HAND = {1: "R", 2: "L", 0: "?"}
 STAFF = {"R": 1, "L": 2, "?": 0}
@@ -299,6 +299,18 @@ def _write_frames(sheet: Sheet) -> str:
             lines.append(_line(f"f{f}", slices.get(f, {}), clef_at.get(f, {}), beam_no, starts))
         prev = f
     return "\n".join(lines) + "\n"
+
+
+def with_titles(text: str, titles: dict[str, str]) -> str:
+    """A frames ``text`` with ``titles`` in place of its own title lines (the rest untouched, byte for byte): the
+    title lines follow the key and clefs line (:func:`_extras_lines`). A text without that line comes back as it is."""
+    lines = text.split("\n")
+    at = next((i for i, ln in enumerate(lines[:3]) if "clefs:" in ln), None)
+    if at is None:
+        return text
+    kept = [ln for ln in lines[at + 1 :] if ln.strip().split(" ", 1)[0] not in TITLE_FIELDS]
+    new = [f"{name} {json.dumps(titles[name], ensure_ascii=False)}" for name in TITLE_FIELDS if titles.get(name)]
+    return "\n".join(lines[: at + 1] + new + kept)
 
 
 def _extras_lines(sheet: Sheet) -> list[str]:

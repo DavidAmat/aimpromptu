@@ -52,6 +52,7 @@ from aitu_backend.sheet.llm.frames import (
     _name,
     _slice,
     like_before,
+    split_windows,
     windows_of,
 )
 from aitu_backend.sheet.proposal.frames import propose_frames
@@ -241,9 +242,13 @@ def catalog_rows() -> tuple[list[dict], dict[str, dict[str, list[str]]]]:
     return rows, defaults
 
 
-def run_refs(level: "Level", staffs: tuple[int, ...], selected: list[str], words: str = "") -> list[str]:
+def run_refs(
+    level: "Level", staffs: tuple[int, ...], selected: list[str], words: str = "", *, exact: bool = False
+) -> list[str]:
     """The refs of a run: the patterns selected and the ones the words name (of the hands rewritten); a hand with
-    none of them gets the patterns of its level used when none is selected (the user, 2026-10-30)."""
+    none of them gets the patterns of its level used when none is selected (the user, 2026-10-30). ``exact``: the
+    selection is exactly what the dialog showed ticked, so a hand with none keeps none and is written ``free``
+    (:data:`FREE`; the user's **Deselect all**, 2026-10-30)."""
     known = catalog()
     hands = tuple(HANDS[s] for s in staffs)
     out = [r for r in [*selected, *refs_in(words, hands)] if r in known and known[r].hand in hands]
@@ -251,9 +256,14 @@ def run_refs(level: "Level", staffs: tuple[int, ...], selected: list[str], words
     _, defaults = catalog_rows()
     lv = hand_levels(level)
     for s in staffs:
-        if not any(known[r].hand == HANDS[s] for r in out):
+        if not exact and not any(known[r].hand == HANDS[s] for r in out):
             out += [r for r in defaults[HANDS[s]].get(lv[s], []) if r in known]
     return out
+
+
+def _has_patterns(allowed: set[str], hand: str) -> bool:
+    """Whether the run has a pattern of ``hand`` (``left``, ``right``): without one, the hand is written ``free``."""
+    return any(ref.startswith(f"{hand} ") for ref in allowed)
 
 
 _REF = re.compile(r"\b(?:(left|right)\s+)?(easy|medium|hard|super hard)\s+(\d+)\b", re.I)
@@ -315,12 +325,19 @@ def instructions(level: Level) -> str:
     return "\n\n".join([shared, head, _hand_part(lv[1], "right"), _hand_part(lv[2], "left")])
 
 
-def system_prompt(level: Level, patterns: list[Pattern]) -> str:
+def system_prompt(level: Level, patterns: list[Pattern], staffs: tuple[int, ...] = (1, 2)) -> str:
     """The system prompt of a run: the shared part, the part of the level (or of each hand's level), and the
-    patterns of the run (left hand first)."""
+    patterns of the run (left hand first). A hand of ``staffs`` with no pattern is written ``free``."""
     hand_levels(level)
     ordered = sorted(patterns, key=lambda p: (p.hand != "left", LEVELS.index(p.level) if p.level in LEVELS else 9, p.number))
     body = "\n\n".join(p.text() for p in ordered) or "No pattern was chosen."
+    free = [HANDS[s] for s in sorted(staffs, reverse=True) if not any(p.hand == HANDS[s] for p in patterns)]
+    if free:
+        body += (
+            f"\n\n**No pattern for the {' and the '.join(free)} hand{'s' if len(free) > 1 else ''}.** The user chose none: "
+            "write it by the rules of its level and the user's words only, and declare its pattern `free` (in the plan "
+            f"`{free[0][0].upper()}=free`; in a batch `# pattern {free[0][0].upper()} f...-f...: free`)."
+        )
     return (
         instructions(level)
         + "\n\n# The patterns of this run\n\nThe user chose these patterns in the catalog. Use only these, adapted to "
@@ -364,6 +381,9 @@ def measure_text(m: Measures, sheet: Sheet, staff: int, start: int, end: int) ->
 
 #: The pattern of a hand that keeps the notes of a simple stretch and makes only its rhythm regular.
 KEEP = "keep"
+#: The pattern of a hand the user gave no pattern (every pattern unticked in the dialog, the user, 2026-10-30): the AI
+#: writes it by the rules of its level and the user's words only.
+FREE = "free"
 #: The share of the left-hand onsets of an answer that are onsets of the left hand now (within a frame), at least.
 RHYTHM_SHARE = 0.7
 #: A simple stretch: the hand plays at most this many keys, inside this range (single notes, an octava, one small
@@ -471,7 +491,7 @@ class Section:
 _SECTION = re.compile(
     r"^\s*S(\d+)\s+f(\d+)\s*-\s*f(\d+)\s+(.*?)(?:\|(.*))?$", re.M
 )
-_HAND_REF = re.compile(r"\b([LR])\s*=\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+|keep)\b", re.I)
+_HAND_REF = re.compile(r"\b([LR])\s*=\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+|keep|free)\b", re.I)
 
 
 def plan_prompt(
@@ -514,8 +534,8 @@ def plan_prompt(
         f"The sections cover f{start} to f{end} with no gap; each begins where the one before ends, on the first "
         "frame of a stretch. Each pattern is the ref of one pattern of this run (\"left easy 2\"), of the hand it "
         "is for, or `keep` for a left hand that the summary marks simple (\"L=keep\"): it keeps its notes and makes "
-        "only its rhythm regular. For the other left-hand sections, choose the pattern whose rhythm is nearest to "
-        "what the left hand plays now."
+        "only its rhythm regular, or `free` for a hand that has no pattern in this run. For the other left-hand "
+        "sections, choose the pattern whose rhythm is nearest to what the left hand plays now."
     )
     return "\n\n".join(out) + "\n"
 
@@ -541,6 +561,10 @@ def read_plan(
             if ref is None:
                 errs.append(f"S{idx}: no pattern for the {h} hand ({h[0].upper()}=...)")
             elif ref == KEEP:
+                continue
+            elif ref == FREE:
+                if _has_patterns(allowed, h):
+                    errs.append(f"S{idx}: free is only for a hand with no pattern in this run; choose one for the {h} hand")
                 continue
             elif ref not in allowed:
                 errs.append(f"S{idx}: {ref} is not a pattern of this run")
@@ -690,7 +714,7 @@ class Declared:
 
 
 _PATTERN = re.compile(
-    r"^\s*#\s*pattern\s+([LR])\s+f(\d+)\s*-\s*f(\d+)\s*:\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+|keep)\b",
+    r"^\s*#\s*pattern\s+([LR])\s+f(\d+)\s*-\s*f(\d+)\s*:\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+|keep|free)\b",
     re.M | re.I,
 )
 _DROP = re.compile(r"^\s*#\s*(not melody|artifact)\s+f(\d+)\s+([A-G][#b]*-?\d+(?:\s*,\s*[A-G][#b]*-?\d+)*)(.*)$", re.M | re.I)
@@ -980,6 +1004,10 @@ def check_level(
         for _, a, b, ref in mine:
             if ref == KEEP:
                 continue
+            if ref == FREE:
+                if _has_patterns(allowed, HANDS[staff]):
+                    errs.append(f"free is only for a hand with no pattern in this run: declare a pattern of the {HANDS[staff]} hand")
+                continue
             if ref not in allowed:
                 errs.append(f"{ref} is not a pattern of this run")
             elif not ref.startswith(HANDS[staff]):
@@ -1093,10 +1121,17 @@ def drawn(sheet: Sheet, quarter_ms: float, *, key: int, key_changes=None, keep: 
 
 
 def level_windows(
-    current: Sheet, staffs: tuple[int, ...], start: int | None = None, end: int | None = None
+    current: Sheet,
+    staffs: tuple[int, ...],
+    start: int | None = None,
+    end: int | None = None,
+    batches: int | None = None,
 ) -> list[tuple[int, int]]:
     """The batches of a level run: of the whole song, or of the stretch ``[start, end)`` (a range), on the notes of
-    the hands rewritten (``LEVEL_MS``, at most ``LEVEL_ONSETS`` onsets)."""
+    the hands rewritten (``LEVEL_MS``, at most ``LEVEL_ONSETS`` onsets); ``batches``: that many, of about the same
+    time (:func:`split_windows`, the user's choice in Enhance with AI)."""
+    if batches:
+        return split_windows(current, batches, staffs=staffs, start=start, end=end)
     lo = -(10**9) if start is None else start
     hi = 10**9 if end is None else end
     notes = [n for n in current.notes if n.staff in staffs and not n.covered and lo <= n.frame < hi]
@@ -1172,7 +1207,7 @@ def write_level(
     """A level run in memory: the plan of the song (unless ``plan`` is given), then the batches (``windows``, or the
     batches of the whole song), each checked, at most ``max_checks`` replies. A batch that fails keeps no answer.
     ``span``: a range of the song (implementation 04-3, Phase 4): the plan covers only it."""
-    system = system_prompt(level, patterns)
+    system = system_prompt(level, patterns, staffs)
     allowed = {p.ref for p in patterns}
     notes = [n for n in current.notes if not n.covered]
     if span is not None:

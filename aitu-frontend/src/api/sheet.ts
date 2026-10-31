@@ -186,7 +186,49 @@ export interface StretchKeys {
 }
 
 /** What the AI is asked to write again (Phase 7): a stretch of frames, with what was picked and the user's words. */
-export interface StretchRequest {
+/** The AI models of Enhance with AI (the user, 2026-10-30); none chosen: GPT-6.1 Terra. */
+export type AiModel = "gpt-6.1-terra" | "gpt-6.1-sol" | "claude-sonnet-5-5";
+
+export const AI_MODELS: readonly { value: AiModel; label: string }[] = [
+  { value: "gpt-6.1-terra", label: "GPT-6.1 Terra" },
+  { value: "gpt-6.1-sol", label: "GPT-6.1 Sol" },
+  { value: "claude-sonnet-5-5", label: "Sonnet 5.5" },
+];
+
+/** What every run of Enhance with AI may choose: the model, and the number of batches (as previewed on the sheet). */
+export interface RunChoice {
+  model?: AiModel;
+  batches?: number;
+}
+
+/** The batches a run would make (`GET /sheet/{uuid}/llm/batches`), for the preview on the sheet, and its estimate. */
+export interface BatchPlan {
+  run: "all" | "level" | "stretch";
+  hand: LevelHand;
+  model: AiModel;
+  /** `[first frame, end frame)` of each batch. */
+  windows: [number, number][];
+  count: number;
+  /** As many as the run makes without a choice; `min` and `max` the numbers allowed. */
+  default: number;
+  min: number;
+  max: number;
+  /** About how many seconds of music a batch holds. */
+  seconds: number;
+  usd: number;
+  minutes: number;
+}
+
+export interface BatchQuery {
+  run: BatchPlan["run"];
+  hand: LevelHand;
+  start?: number;
+  end?: number;
+  batches?: number;
+  model: AiModel;
+}
+
+export interface StretchRequest extends RunChoice {
   start: number;
   end: number;
   staff: "both" | "right" | "left";
@@ -215,12 +257,17 @@ export type LevelName = "easy" | "medium" | "hard";
 export type LevelHand = "both" | "right" | "left";
 
 /** A level run: the level of each hand, the hands, the patterns selected in the catalog, the user's words. */
-export interface LevelChoice {
+export interface LevelChoice extends RunChoice {
   right: LevelName;
   left: LevelName;
   hand: LevelHand;
   patterns: string[];
   words: string;
+  /**
+   * `patterns` are exactly the ones ticked in the gallery: a hand with none has no pattern, and the AI writes it by the
+   * rules of its level and the words only. Without it, a hand with none gets the patterns approved for its level.
+   */
+  exact?: boolean;
 }
 
 /** A level of a range: in place, one step of undo. */
@@ -440,8 +487,22 @@ export const sheetApi = {
     request<FramesSheet>(`/sheet/${audioUuid}`, { query: { width: Math.round(width) }, signal }),
 
   /** Start Sonnet on the part (or get the run already going); follow it on `progressUrl(jobId)`. */
-  runLlm: (audioUuid: string) =>
-    request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm`, { method: "POST" }),
+  runLlm: (audioUuid: string, choice?: RunChoice) =>
+    request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm`, {
+      method: "POST",
+      ...(choice ? { body: choice } : {}),
+    }),
+
+  /** **Stop** the AI run of the part before its next request; what it wrote stays (the user, 2026-10-30). */
+  stopLlm: (audioUuid: string) => request<{ stopping: boolean }>(`/sheet/${audioUuid}/llm/stop`, { method: "POST" }),
+
+  /** **Revert** an AI run: the part as it was before it (`before` of the run's summary); one step of undo. */
+  revertLlm: (audioUuid: string, version: number, width: number) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/llm/revert`, { method: "POST", query: { width }, body: { version } }),
+
+  /** The batches a run of Enhance with AI would make, with its cost and minutes (the preview on the sheet). */
+  llmBatches: (audioUuid: string, query: BatchQuery, signal?: AbortSignal) =>
+    request<BatchPlan>(`/sheet/${audioUuid}/llm/batches`, { signal, query: { ...query } }),
 
   progressUrl: (jobId: string) => buildUrl(`/matrix/progress/${jobId}`),
 

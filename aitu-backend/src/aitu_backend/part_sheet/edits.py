@@ -60,6 +60,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Any, Callable
@@ -102,6 +103,8 @@ __all__ = [
     "redo",
     "remove_notes",
     "transpose_notes",
+    "revert_run",
+    "snapshot_before_run",
     "undo",
 ]
 
@@ -1041,10 +1044,26 @@ def duplicate_notes(part_id: str, refs: list[str], figure: int) -> str:
     return _rewrite(part_id, plan)
 
 
+def united_figure(written: float, measured: float) -> int:
+    """The figure of united chords: ``written`` is the sum of their figures in negras, ``measured`` the time they fill
+    in the recording, in negras. The sum when it is a figure (0.5 + 0.5: a negra); else the figure just below or just
+    above it that is nearer to the measured time (0.5 + 1 played as 1.1 negras: a negra; as 1.6: a blanca)."""
+    exact = [f for f in FIGURES if abs(4 / f - written) < 1e-6]
+    if exact:
+        return exact[0]
+    below = [f for f in FIGURES if 4 / f < written]
+    above = [f for f in FIGURES if 4 / f > written]
+    near = [f for f in (min(below, default=None), max(above, default=None)) if f is not None]
+    return min(near, key=lambda f: abs(math.log2(4 / f) - math.log2(max(measured, 1e-6))))
+
+
 def unite_notes(part_id: str, refs: list[str]) -> str:
     """**Unite** (the user, 2026-10-30), the opposite of Duplicate: the picked notes are consecutive chords of one
-    staff, the same keys and the same figure (two semicorcheas of Mi4); they become one chord of the figure that fills
-    their time (a corchea), at the first one's place. Two, four or eight of them; one step."""
+    staff with the same keys (two semicorcheas of Mi4, or a corchea and a negra); they become one chord at the first
+    one's place, of the figure that fills their time. Any figures and any number of chords (the user, 2026-10-30: a
+    figure is never a reason to refuse): the sum of their figures when it is a figure (two corcheas: a negra), or else
+    the figure just below or just above that sum that is nearer to the time the chords fill in the recording (from
+    the first one to the next note of the hand). The sheet has no puntillos. One step."""
 
     def plan(sheet: Sheet, quarter: float) -> tuple[set[tuple[int, int]], list[Any], int, str, list[set[tuple[int, int]]]]:
         notes = _usable(sheet, refs)
@@ -1058,20 +1077,32 @@ def unite_notes(part_id: str, refs: list[str]) -> str:
         if len(frames) < 2:
             raise reading.Refused("Pick two or more notes that follow one another to unite them.")
         keys = {tuple(sorted(n.midi for n in columns[f])) for f in frames}
-        figures = {n.figure for n in notes}
-        if len(keys) != 1 or len(figures) != 1 or None in figures:
-            raise reading.Refused("The notes to unite must be the same keys with the same figure.")
+        if len(keys) != 1:
+            raise reading.Refused("The notes to unite must be the same keys.")
         staff = next(iter(staffs))
-        between = {n.frame for n in sheet.notes if n.staff == staff and frames[0] < n.frame < frames[-1] and not n.grace}
+        hand = sorted({n.frame for n in sheet.notes if n.staff == staff and not n.grace})
+        between = {f for f in hand if frames[0] < f < frames[-1]}
         if between - set(frames):
             raise reading.Refused("The notes to unite must follow one another, with no other note between them.")
-        figure = next(iter(figures))
-        if figure % len(frames) or figure // len(frames) not in FIGURES:
-            raise reading.Refused("Two, four or eight notes unite into one figure (two corcheas into a negra).")
-        united = figure // len(frames)
+        # The time the chords fill in the recording: from the first one to the next note of the hand.
+        after = next((f for f in hand if f > frames[-1]), None)
+        last = max((n.figure or 4) for n in columns[frames[-1]])
+        span = (frames[-1] - frames[0]) * FRAME_MS + (
+            (after - frames[-1]) * FRAME_MS if after is not None else nominal_ms(last, quarter)
+        )
+        # The sum of the written figures, in negras (a chord's longest figure); a chord without one, its own time.
+        written = 0.0
+        for k, f in enumerate(frames):
+            figure = min((n.figure for n in columns[f] if n.figure), default=None)
+            if figure is not None:
+                written += 4 / figure
+            else:
+                end = frames[k + 1] if k + 1 < len(frames) else (after if after is not None else f + 1)
+                written += (end - f) * FRAME_MS / quarter
+        united = united_figure(written, span / quarter)
         length = nominal_ms(united, quarter)
         added = [replace(n, figure=united, len_ms=length, beam=None, fixed=True) for n in columns[frames[0]]]
-        label = f"Unite {len(frames)} {NAMES[figure]}s into a {NAMES[united]}"
+        label = f"Unite {len(frames)} chords into a {NAMES[united]}"
         return {(n.frame, n.midi) for n in notes}, added, united, label, []
 
     return _rewrite(part_id, plan)
@@ -1218,6 +1249,30 @@ def record_version(part_id: str, label: str, before_version: int) -> None:
     Record in Sheet): its undo puts that snapshot back."""
     with pipeline.piece_lock(part_id):
         _record(_Step(label, versions=[before_version, 0]), part_id)
+
+
+#: The step of **Revert** in the panel of an AI run (the user, 2026-10-30).
+REVERT_LABEL = "Revert the AI run"
+
+
+def snapshot_before_run(part_id: str) -> int:
+    """The part as it is before an AI run, kept as a snapshot of its history (notes, sheet, audio timeline): the
+    number :func:`revert_run` puts back (the user, 2026-10-30: every change of a run can be taken back at once)."""
+    with pipeline.piece_lock(part_id):
+        version = part_history.current_version(part_id)
+        part_history.snapshot_current(part_id)
+        return version
+
+
+def revert_run(part_id: str, version: int) -> str:
+    """**Revert** an AI run: the part as it was before it (:func:`snapshot_before_run`), whatever the run changed
+    (notes, hands, the sheet; a whole run too, whose steps start again). One step, whose undo puts the run's result
+    back. Raises ``part_history.NoSuchVersion``."""
+    with pipeline.piece_lock(part_id):
+        kept = part_history.restore(part_id, version)
+        build.forget(part_id)
+        _record(_Step(REVERT_LABEL, versions=[kept, 0]), part_id)
+    return REVERT_LABEL
 
 
 def undo(part_id: str) -> str | None:

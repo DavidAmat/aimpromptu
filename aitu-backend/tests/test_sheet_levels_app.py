@@ -54,6 +54,16 @@ def test_a_hand_with_no_pattern_selected_gets_its_level_set() -> None:
     assert L.run_refs("easy", (2,), ["right easy 1"]) == ["left easy 2", "left easy 1", "left easy 3", "left easy 12"]
 
 
+def test_deselect_all_gives_a_hand_no_pattern() -> None:
+    # The dialog sends exactly its ticks (the user's Deselect all, 2026-10-30): a hand with none keeps none.
+    assert L.run_refs("easy", (1, 2), ["left easy 5"], exact=True) == ["left easy 5"]
+    assert L.run_refs("easy", (1, 2), [], "at f300 use right medium 2", exact=True) == ["right medium 2"]
+    # The system prompt says which hand is free; a hand with patterns is not.
+    text = L.system_prompt("easy", [L.catalog()["left easy 5"]], (1, 2))
+    assert "No pattern for the right hand." in text and "R=free" in text
+    assert "No pattern for" not in L.system_prompt("easy", [L.catalog()["left easy 5"]], (2,))
+
+
 def test_the_routes_of_the_catalog(client: TestClient) -> None:
     body = client.get("/sheet/levels/catalog").json()
     assert len(body["patterns"]) == 113 and body["defaults"]["left"]["easy"][0] == "left easy 2"
@@ -258,12 +268,13 @@ def test_the_routes_of_the_levels(client: TestClient, part: str, monkeypatch: py
     assert client.post(f"/sheet/{part}/llm/level", json={"right": "easy"}).status_code == 400  # no range
     answer = client.post(
         f"/sheet/{part}/llm/level",
-        json={"right": "hard", "left": "medium", "hand": "both", "start": 50, "end": 300, "patterns": ["left medium 2"]},
+        json={"right": "hard", "left": "medium", "hand": "both", "start": 50, "end": 300, "patterns": ["left medium 2"],
+              "exact": True},
     )
     assert answer.status_code == 202
     assert calls[-1] == {
         "uuid": part, "level": {"right": "hard", "left": "medium"}, "hand": "both", "start": 50, "end": 300,
-        "patterns": ["left medium 2"], "words": "",
+        "patterns": ["left medium 2"], "words": "", "exact": True, "model": None, "batches": None,
     }
     assert client.post(f"/sheet/{part}/llm/level", json={"right": "super hard", "start": 0, "end": 9}).status_code == 422
 

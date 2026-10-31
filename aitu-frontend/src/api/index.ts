@@ -27,7 +27,7 @@ export type {
   WaveformPeaks,
 } from "./audio";
 
-export { sheetApi, KEY_LABELS, KEY_SIGNATURES } from "./sheet";
+export { sheetApi, AI_MODELS, KEY_LABELS, KEY_SIGNATURES } from "./sheet";
 export type {
   FigureName,
   FramesSheet,
@@ -62,6 +62,10 @@ export type {
   LevelHand,
   LevelName,
   LevelRequest,
+  AiModel,
+  BatchPlan,
+  BatchQuery,
+  RunChoice,
 } from "./sheet";
 export { projectsApi } from "./projects";
 export type {

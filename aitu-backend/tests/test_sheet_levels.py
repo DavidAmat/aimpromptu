@@ -147,7 +147,7 @@ def test_the_system_prompt_has_the_level_and_only_the_patterns_of_the_run() -> N
     assert "# The level of this run: easy" in text and "# The level of this run: medium" not in text
     assert text.index("### left easy 2") < text.index("### right easy 2")
     assert "left easy 1" not in text.split("# The patterns of this run")[1]
-    assert L.LEVEL_VERSION == "2"
+    assert L.LEVEL_VERSION == "3"
 
 
 def test_the_examples_of_the_shared_prompt_parse() -> None:
@@ -174,6 +174,12 @@ def test_a_plan_covers_the_song_with_allowed_patterns() -> None:
     one = "S1 f30-f510 L=left easy 2 R=right easy 2"
     errs, _ = L.read_plan(one, allowed, (2,), 30, 510)
     assert any("stays as it is" in e for e in errs)
+    # free: only for a hand with no pattern in the run (every pattern of it unticked)
+    free = "S1 f30-f510 L=left easy 2 R=free"
+    errs, plan = L.read_plan(free, {"left easy 2"}, (1, 2), 30, 510)
+    assert errs == [] and plan[0].right == "free"
+    errs, _ = L.read_plan(free, allowed, (1, 2), 30, 510)
+    assert any("free is only for a hand with no pattern" in e for e in errs)
 
 
 def test_the_plan_prompt_and_the_summary() -> None:
@@ -193,6 +199,10 @@ def test_a_clean_easy_answer_passes() -> None:
     s = song("wide")
     r = checked(answer(easy_lines(s), DECLARED), s)
     assert r.errors == []
+    # The right hand with no pattern in the run is declared free.
+    free = ["# pattern L f30-f510: left easy 2", "# pattern R f30-f510: free"]
+    assert checked(answer(easy_lines(s), free), s, allowed=("left easy 2",)).errors == []
+    assert any("free is only for" in e for e in checked(answer(easy_lines(s), free), s).errors)
     assert r.melody == 32 and r.measures[2].chord_max == 3
     assert r.new_notes == 0  # every note of this answer is a note of the song at its frame
 

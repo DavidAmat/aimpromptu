@@ -10,7 +10,9 @@ import re
 
 from fastapi.testclient import TestClient
 
-from aitu_backend.part_sheet import build
+import pytest
+
+from aitu_backend.part_sheet import build, job, store
 from aitu_backend.sheet.engrave.frames import Options, render_frames
 from aitu_backend.sheet.engrave.lyric_text import text_width, wrap
 from aitu_backend.sheet.sheet import f1
@@ -112,6 +114,38 @@ def test_title_lines_armadura_and_line_space_are_steps_of_undo(
     assert walk(client, part, "undo")["reading"]["key"] == before["reading"]["key"]
     assert walk(client, part, "undo")["titles"] == {"title": "My song", "artist": "Me"}
     assert walk(client, part, "undo")["svg"] == before["svg"]
+
+
+def test_the_title_lines_are_replaced_in_the_text_and_nothing_else() -> None:
+    text = "F1 frames frameMs=40 quarterMs=500\nkey=0 clefs: R=treble L=bass\ntitle \"Old\"\nartist \"A\"\nlyric f1 f2 \"la\"\nf1    R: C4:4\n"
+    out = f1.with_titles(text, {"title": "Nuevo", "subtitle": "Sub"})
+    assert out.splitlines()[2:5] == ['title "Nuevo"', 'subtitle "Sub"', 'lyric f1 f2 "la"']
+    assert out.replace('title "Nuevo"\nsubtitle "Sub"\n', "") == text.replace('title "Old"\nartist "A"\n', "")
+    assert f1.read(out).titles == {"title": "Nuevo", "subtitle": "Sub"}
+    assert f1.with_titles("no header", {"title": "x"}) == "no header"
+
+
+def test_the_titles_stay_editable_while_the_ai_writes_the_sheet(
+    client: TestClient, part: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sheet(client, part)
+    running = type("Job", (), {"id": "j", "status": "running"})()
+    with monkeypatch.context() as during:
+        during.setattr(job, "job_of", lambda part_id: running)
+        during.setattr(job, "live", lambda part_id: None)
+        # Any other edit waits for the run; the title lines do not.
+        assert edit(client, part, 409, action="piece-key", value=-3)["detail"].startswith("The AI is enhancing")
+        titled = edit(client, part, action="titles", value={"title": "During the run", "artist": "Me"})
+        assert titled["titles"] == {"title": "During the run", "artist": "Me"}
+        # The run's own save, a sheet from before the edit (no titles), keeps them.
+        kept = stored_sheet(part)
+        store.save(part, f1.with_titles(kept.text, {}), kept.record)
+        assert f1.read(stored_sheet(part).text).titles == {"title": "During the run", "artist": "Me"}
+    # No run: the sheet's own titles hold again.
+    edit(client, part, action="titles", value={"artist": ""})
+    kept = stored_sheet(part)
+    store.save(part, f1.with_titles(kept.text, {}), kept.record)
+    assert f1.read(stored_sheet(part).text).titles == {}
 
 
 def test_lyrics_pieces_are_placed_refused_over_another_and_drawn(
@@ -426,6 +460,17 @@ def test_duplicate_writes_a_note_again_at_a_shorter_figure_and_unite_joins_them_
     assert walk(client, part, "undo")["walked"].startswith("Unite")
     assert walk(client, part, "undo")["walked"].startswith("Duplicate")
     assert live() == keys_before
+
+
+def test_unite_takes_any_figures() -> None:
+    # The user, 2026-10-30: a figure is never a reason to refuse Unite; the sheet has no puntillos.
+    from aitu_backend.part_sheet.edits import united_figure
+
+    assert united_figure(0.5 + 0.5, 1.0) == 4  # two corcheas: a negra
+    assert united_figure(0.25 + 0.25 + 0.5, 0.9) == 4  # two semicorcheas and a corchea: a negra
+    assert united_figure(0.5 + 1, 1.1) == 4  # a corchea and a negra, played short: a negra
+    assert united_figure(0.5 + 1, 1.7) == 2  # played long: a blanca
+    assert united_figure(4 + 4, 8) == 1  # longer than a redonda: a redonda
 
 
 def test_the_alteration_of_a_note_is_written_as_the_user_chooses(client: TestClient, part: str) -> None:

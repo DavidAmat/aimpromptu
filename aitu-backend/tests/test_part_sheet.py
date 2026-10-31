@@ -36,7 +36,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
     paths.ensure_database_tree()
     split_cache.forget()
-    monkeypatch.setattr(job, "available", lambda: True)
+    monkeypatch.setattr(job, "available", lambda model=None: True)
     return TestClient(create_app())
 
 
@@ -282,7 +282,7 @@ def test_an_old_sheet_json_keeps_its_key_and_a_figure_the_user_renamed(
 def test_sonnet_is_refused_when_it_is_not_set_up(
     client: TestClient, part: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(job, "available", lambda: False)
+    monkeypatch.setattr(job, "available", lambda model=None: False)
     assert client.post(f"/sheet/{part}/llm").status_code == 409
     body = sheet(client, part)
     assert body["llm"]["available"] is False and body["llm"]["auto"] is False

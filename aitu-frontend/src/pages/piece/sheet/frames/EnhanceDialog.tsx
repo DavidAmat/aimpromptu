@@ -12,30 +12,46 @@
  *
  * A level is Easy, Medium or Hard for each hand rewritten (the same for both by default). Under it, the **gallery of
  * patterns** of those hands (`PatternGallery`), inside the dialog: the patterns approved for the level are ticked, the
- * user may tick others, and the words may name them and places ("at frame 112 use hard 3").
+ * user may tick others, and the words may name them and places ("at frame 112 use hard 3"). **Select all** ticks every
+ * pattern of the level on the pill, **Deselect all** unticks the hand, **Approved** ticks the approved ones again (the
+ * user, 2026-10-30). The run gets exactly the ticks (`exact`): a hand with none has no pattern, and the AI writes it by
+ * the rules of its level and the words only.
  *
- * The cost and the time of each run, about, are read from the backend when the dialog opens. On a version of My
- * library, Write it all again runs in the edit copy, as **Edit** opens it; a level goes into its new project.
+ * Every run chooses its **model** (GPT-6.1 Terra, GPT-6.1 Sol or Sonnet 5.5) and its number of **batches** (the user,
+ * 2026-10-30): the batches, of about the same time, are drawn on the sheet while the dialog is open (`onPreview`), so
+ * the dialog sits at the right and leaves the sheet free. The cost and the time follow both (`GET .../llm/batches`).
+ * On a version of My library, Write it all again runs in the edit copy, as **Edit** opens it; a level goes into its
+ * new project.
  */
 
 import { useEffect, useMemo, useState } from "react";
+import AddRounded from "@mui/icons-material/AddRounded";
+import RemoveRounded from "@mui/icons-material/RemoveRounded";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import IconButton from "@mui/material/IconButton";
+import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import {
+  AI_MODELS,
   sheetApi,
+  type AiModel,
+  type BatchPlan,
+  type BatchQuery,
   type LevelCatalog,
   type LevelChoice,
   type LevelHand,
   type LevelName,
   type LlmCost,
   type LlmCosts,
+  type RunChoice,
   type SongRun,
 } from "../../../../api";
+import { ENHANCE_PANEL_WIDTH, type BatchPreview } from "./batches";
 import { PillButton, Segmented } from "../../../../ui";
 import { PatternGallery, type GalleryLevel } from "./PatternCatalog";
 import { shortRef, type CatalogHand } from "./patterns";
@@ -120,12 +136,14 @@ export interface EnhanceDialogProps {
   enhanced: boolean;
   /** A version of My library: the whole song runs in the edit copy. */
   viaEdit: boolean;
-  onStretch: (hand: StretchHand, words: string) => void;
+  onStretch: (hand: StretchHand, words: string, choice?: RunChoice) => void;
   /** A level of the selected stretch. */
   onStretchLevel: (choice: LevelChoice) => void;
-  onSong: (run: SongRun) => void;
+  onSong: (run: SongRun, choice?: RunChoice) => void;
   /** A level of the whole sheet: a new project. */
   onSongLevel: (choice: LevelChoice) => void;
+  /** The batches of the run chosen, to draw on the sheet; `null` when the dialog closes. */
+  onPreview?: (preview: BatchPreview | null) => void;
   onCancel: () => void;
 }
 
@@ -140,6 +158,7 @@ export function EnhanceDialog({
   onStretchLevel,
   onSong,
   onSongLevel,
+  onPreview,
   onCancel,
 }: EnhanceDialogProps) {
   const [tab, setTab] = useState<EnhanceTab>(opening);
@@ -164,6 +183,10 @@ export function EnhanceDialog({
     Record<CatalogHand, GalleryLevel>
   >({ right: "easy", left: "easy" });
   const [costs, setCosts] = useState<LlmCosts | null>(null);
+  const [model, setModel] = useState<AiModel>("gpt-6.1-terra");
+  /** The number of batches the user chose for the run shown; `null`: as many as the run makes by itself. */
+  const [batches, setBatches] = useState<{ key: string; count: number } | null>(null);
+  const [plan, setPlan] = useState<BatchPlan | null>(null);
   const [catalog, setCatalog] = useState<LevelCatalog | null>(null);
 
   useEffect(() => {
@@ -208,7 +231,63 @@ export function EnhanceDialog({
     hand: levelHand,
     patterns,
     words: words.trim(),
+    // The ticks are what the user sees only once the catalog is there; without it, the backend's defaults.
+    exact: catalog !== null,
   };
+  // The batches of the run shown, for the preview on the sheet and the estimate. A change of run or hand starts again
+  // from the run's own number.
+  const runKind: BatchQuery["run"] = onStretchTab ? (level ? "level" : "stretch") : level ? "level" : "all";
+  const runHand: LevelHand = onStretchTab ? hand : level ? songHand : "both";
+  const runKey = `${runKind}:${runHand}`;
+  const chosenBatches = batches?.key === runKey ? batches.count : undefined;
+  const rangeStart = onStretchTab ? stretch?.start : undefined;
+  const rangeEnd = onStretchTab ? stretch?.end : undefined;
+  useEffect(() => {
+    if (!open) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      sheetApi
+        .llmBatches(
+          audioUuid,
+          {
+            run: runKind,
+            hand: runHand,
+            model,
+            ...(rangeStart !== undefined && rangeEnd !== undefined ? { start: rangeStart, end: rangeEnd } : {}),
+            ...(chosenBatches ? { batches: chosenBatches } : {}),
+          },
+          controller.signal,
+        )
+        .then((next) => {
+          setPlan(next);
+          onPreview?.({
+            windows: next.windows,
+            staff: runKind === "all" || runHand === "both" ? null : runHand === "right" ? 1 : 2,
+          });
+        })
+        .catch(() => {
+          // Without the plan the run uses its own batches; the sheet shows none.
+          setPlan(null);
+          onPreview?.(null);
+        });
+    }, 120);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [open, audioUuid, runKind, runHand, model, rangeStart, rangeEnd, chosenBatches, onPreview]);
+  useEffect(() => () => onPreview?.(null), [onPreview]);
+  const shownPlan = plan && plan.run === runKind && plan.hand === runHand ? plan : null;
+  /** The number shown: the one chosen, before its plan arrives, or the plan's. */
+  const count = chosenBatches ?? shownPlan?.count;
+  const step = (by: number) => {
+    if (!shownPlan || count === undefined) return;
+    setBatches({ key: runKey, count: Math.min(shownPlan.max, Math.max(shownPlan.min, count + by)) });
+  };
+  const runChoice: RunChoice = { model, ...(shownPlan ? { batches: shownPlan.count } : {}) };
+
+  /** The hands rewritten with no pattern ticked: the AI writes them by the level's rules and the words only. */
+  const free = catalog ? hands.filter((side) => picked(side).length === 0) : [];
 
   const setLevel = (side: CatalogHand, value: LevelName) => {
     setLevels((now) => ({ ...now, [side]: value }));
@@ -225,20 +304,32 @@ export function EnhanceDialog({
         : [...now, ref],
     }));
   };
+  const selectAll = (side: CatalogHand, refs: string[]) => {
+    const now = picked(side);
+    setChosen((all) => ({ ...all, [side]: [...now, ...refs.filter((ref) => !now.includes(ref))] }));
+  };
+  const deselectAll = (side: CatalogHand) => setChosen((all) => ({ ...all, [side]: [] }));
+  const approved = (side: CatalogHand) => setChosen((all) => ({ ...all, [side]: null }));
 
   const confirm = () => {
     if (onStretchTab) {
-      if (level) onStretchLevel(choice);
-      else onStretch(hand, words.trim());
-    } else if (level) onSongLevel(choice);
-    else onSong("all");
+      if (level) onStretchLevel({ ...choice, ...runChoice });
+      else onStretch(hand, words.trim(), runChoice);
+    } else if (level) onSongLevel({ ...choice, ...runChoice });
+    else onSong("all", runChoice);
   };
   const other = hand === "right" ? "left" : "right";
   const levelKey: `level-${LevelHand}` | `level-stretch-${LevelHand}` =
     onStretchTab ? `level-stretch-${levelHand}` : `level-${levelHand}`;
-  const levelCost = costs?.[levelKey];
+  // The estimate of the run shown: from its batches and its model once the plan is there.
+  const planned: LlmCost | undefined = shownPlan
+    ? { requests: shownPlan.count, usd: shownPlan.usd, minutes: shownPlan.minutes }
+    : undefined;
+  const levelCost = planned ?? costs?.[levelKey];
+  const stretchCost = planned ?? costs?.stretch;
+  const allCost = planned ?? costs?.all;
   const status = onStretchTab
-    ? `${hand === "both" ? "" : `The ${other} hand stays as it is. `}About ${level ? `${dollars(levelCost) || "a few cents"}${minutes(levelCost)}` : `${dollars(costs?.stretch) || "one cent"}${minutes(costs?.stretch)}`}. Undo takes it back.`
+    ? `${hand === "both" ? "" : `The ${other} hand stays as it is. `}About ${level ? `${dollars(levelCost) || "a few cents"}${minutes(levelCost)}` : `${dollars(stretchCost) || "one cent"}${minutes(stretchCost)}`}. Undo takes it back.`
     : level
       ? `A new project in My projects, named with the level. This sheet stays as it is. About ${dollars(levelCost)}${minutes(levelCost)}.`
       : [
@@ -246,9 +337,9 @@ export function EnhanceDialog({
             ? "This opens a copy in Projects, as Edit does, and the AI works there."
             : "",
           enhanced
-            ? `The AI writes the hands and the reading again, in ${timeOf(costs?.all) || "a few minutes"}. If it does not finish, the sheet you have now stays.`
-            : `The AI writes the hands and the reading, part by part, in ${timeOf(costs?.all) || "a few minutes"}. The hands you have now are kept in the history.`,
-          costs?.all ? `About ${dollars(costs.all)}.` : "",
+            ? `The AI writes the hands and the reading again, in ${timeOf(allCost) || "a few minutes"}. If it does not finish, the sheet you have now stays.`
+            : `The AI writes the hands and the reading, part by part, in ${timeOf(allCost) || "a few minutes"}. The hands you have now are kept in the history.`,
+          allCost ? `About ${dollars(allCost)}.` : "",
         ]
           .filter(Boolean)
           .join(" ");
@@ -301,15 +392,64 @@ export function EnhanceDialog({
         {hands
           .map(
             (side) =>
-              `${side === "right" ? "Right" : "Left"}: ${picked(side).map(shortRef).join(", ") || "-"}`,
+              `${side === "right" ? "Right" : "Left"}: ${picked(side).map(shortRef).join(", ") || "none"}`,
           )
           .join(" · ")}
+        {free.length
+          ? `. No pattern for the ${free.length > 1 ? "two hands" : `${free[0]} hand`}: the AI follows the level and your words.`
+          : ""}
       </Typography>
       {wordsField}
     </Stack>
   );
 
   // Under the cost and the time, so those stay in sight while the user scrolls the patterns.
+  // The model and the number of batches, for every run; the batches show on the sheet.
+  const runControls = (
+    <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }} data-run-choice>
+      <TextField
+        select
+        size="small"
+        label="Model"
+        value={model}
+        onChange={(event) => setModel(event.target.value as AiModel)}
+        sx={{ minWidth: 180 }}
+        slotProps={{ htmlInput: { "data-testid": "ai-model" } }}
+      >
+        {AI_MODELS.map((one) => (
+          <MenuItem key={one.value} value={one.value}>
+            {one.label}
+          </MenuItem>
+        ))}
+      </TextField>
+      <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }} data-batches>
+        <Typography variant="body2">Batches</Typography>
+        <IconButton
+          size="small"
+          aria-label="Fewer batches"
+          disabled={!shownPlan || count === undefined || count <= shownPlan.min}
+          onClick={() => step(-1)}
+        >
+          <RemoveRounded fontSize="small" />
+        </IconButton>
+        <Typography variant="body2" sx={{ minWidth: 20, textAlign: "center", fontWeight: 600 }} data-batch-count>
+          {count ?? "-"}
+        </Typography>
+        <IconButton
+          size="small"
+          aria-label="More batches"
+          disabled={!shownPlan || count === undefined || count >= shownPlan.max}
+          onClick={() => step(1)}
+        >
+          <AddRounded fontSize="small" />
+        </IconButton>
+        <Typography variant="body2" color="text.secondary">
+          {shownPlan ? `about ${Math.round(shownPlan.seconds)} s each, shown on the sheet` : ""}
+        </Typography>
+      </Stack>
+    </Stack>
+  );
+
   const gallery =
     level && catalog ? (
       <PatternGallery
@@ -323,6 +463,9 @@ export function EnhanceDialog({
         }
         selected={hands.flatMap(picked)}
         onToggle={toggle}
+        onSelectAll={selectAll}
+        onDeselectAll={deselectAll}
+        onApproved={approved}
       />
     ) : null;
 
@@ -330,8 +473,24 @@ export function EnhanceDialog({
     <Dialog
       open={open}
       onClose={onCancel}
-      maxWidth="md"
-      fullWidth
+      maxWidth={false}
+      // At the right, without a backdrop: the sheet stays free to scroll, with the batches drawn on it.
+      hideBackdrop
+      disableScrollLock
+      disableEnforceFocus
+      sx={{ pointerEvents: "none", "& .MuiDialog-container": { justifyContent: "flex-end", alignItems: "stretch" } }}
+      slotProps={{
+        paper: {
+          elevation: 12,
+          sx: {
+            pointerEvents: "auto",
+            width: ENHANCE_PANEL_WIDTH,
+            maxWidth: "calc(100% - 32px)",
+            m: 2,
+            maxHeight: "calc(100% - 32px)",
+          },
+        },
+      }}
       data-enhance-dialog
     >
       <DialogTitle>
@@ -403,6 +562,7 @@ export function EnhanceDialog({
               {level ? levelControls : null}
             </>
           )}
+          {runControls}
           <Typography
             variant="body2"
             color="text.secondary"

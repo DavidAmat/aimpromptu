@@ -16,8 +16,10 @@
  *   grace rule says (the user's switch, Phase 7); ⌫ back to the rule.
  * - **Duplicate** (the user, 2026-10-30): the picked notes played again at a shorter figure, filling their own time
  *   (a negra into two corcheas, four semicorcheas); the same shapes as the figures above. **Unite**, the opposite:
- *   consecutive chords of the same keys and figure become one chord of the figure that fills them (two semicorcheas
- *   into a corchea). Both change the notes (the piano matrix notation) and are one step of undo.
+ *   consecutive chords of the same keys become one chord of the figure that fills them (two semicorcheas into a
+ *   corchea), whatever their figures (the user, 2026-10-30: a corchea and a negra unite too; when their sum is no
+ *   figure, the backend takes the nearer one to the time they fill). Both change the notes (the piano matrix
+ *   notation) and are one step of undo.
  * - **Marks**: a trill, a mordent or a turn over picked onsets that follow one another (the first one is written,
  *   the others are played inside it); a rolled chord; a fermata. Pressed again, the mark goes away.
  * - 🗑 takes the notes off the page (Delete): they leave the notes, and undo brings them back.
@@ -265,11 +267,11 @@ export function FramesNoteToolbox({
   const alterOptions = ALTERS.filter(({ alter }) => known.every((note) => spelledAs(midiOf(note), alter) !== null));
   // Duplicate: the figures shorter than the picked chords', up to 16 copies of a note.
   const shorter = figureNow ? FIGURES.filter(({ figure }) => figure > figureNow && figure / figureNow <= 16) : [];
-  // Unite: two, four or eight chords of one hand and one figure become one figure that fills them.
-  const unitedFigure =
-    figureNow && chords.length >= 2 && figureNow % chords.length === 0
-      ? (FIGURES.find(({ figure }) => figure === figureNow / chords.length) ?? null)
-      : null;
+  // Unite: two or more chords of one hand, any figures, become one chord of the figure that fills them. Their sum, in
+  // negras, names the figure when it is one; otherwise the backend chooses by the time they fill.
+  const unitable = chords.length >= 2 && heads.every((note) => !note.grace);
+  const sum = heads.reduce((total, note) => total + (note.figure ? 4 / note.figure : Number.NaN), 0);
+  const unitedFigure = unitable ? (FIGURES.find(({ figure }) => Math.abs(4 / figure - sum) < 1e-6) ?? null) : null;
   const oneChord = chords.length === 1 && known.length > 1 ? chords[0]! : null;
   const fingersNow = new Set(known.map((note) => note.finger).filter((finger): finger is number => finger !== null));
 
@@ -518,10 +520,10 @@ export function FramesNoteToolbox({
 
         <Row label="Unite">
           <IconAction
-            title={unitedFigure ? `Unite ${chords.length} into a ${FIGURE_SHORT[unitedFigure.name].toLowerCase()}` : "Unite"}
-            disabledTitle={why ?? "Pick 2, 4 or 8 notes of one hand that follow one another, the same keys and figure"}
+            title={unitedFigure ? `Unite ${chords.length} into a ${FIGURE_SHORT[unitedFigure.name].toLowerCase()}` : `Unite ${chords.length} chords into one`}
+            disabledTitle={why ?? "Pick two or more chords of one hand that follow one another, the same keys"}
             icon={unitedFigure ? <FigureGlyph figure={unitedFigure.name} size={22} /> : <CallMergeIcon fontSize="small" />}
-            disabled={off || !oneHand || unitedFigure === null}
+            disabled={off || !oneHand || !unitable}
             onClick={onUnite}
             data-testid="unite"
           />

@@ -7,6 +7,7 @@
  */
 
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -37,9 +38,26 @@ export interface PatternGalleryProps {
   /** The refs ticked, of every hand. */
   selected: string[];
   onToggle: (ref: string) => void;
+  /** Tick every pattern of the hand shown at the level of its pill; untick every pattern of that hand; tick the
+   * patterns approved for the hand's level again (as the dialog opens). */
+  onSelectAll: (hand: CatalogHand, refs: string[]) => void;
+  onDeselectAll: (hand: CatalogHand) => void;
+  onApproved: (hand: CatalogHand) => void;
 }
 
-export function PatternGallery({ catalog, hands, hand, shownLevels, onHand, onLevel, selected, onToggle }: PatternGalleryProps) {
+export function PatternGallery({
+  catalog,
+  hands,
+  hand,
+  shownLevels,
+  onHand,
+  onLevel,
+  selected,
+  onToggle,
+  onSelectAll,
+  onDeselectAll,
+  onApproved,
+}: PatternGalleryProps) {
   const shown = catalog.patterns.filter((one) => one.hand === hand && one.level === shownLevels[hand]);
   const count = (side: CatalogHand) => selected.filter((ref) => ref.startsWith(`${side} `)).length;
 
@@ -63,6 +81,17 @@ export function PatternGallery({ catalog, hands, hand, shownLevels, onHand, onLe
           {LEVELS.map((one) => (
             <Pill key={one.value} label={one.label} selected={shownLevels[hand] === one.value} onClick={() => onLevel(hand, one.value)} />
           ))}
+        </Stack>
+        <Stack direction="row" spacing={0.5} data-pattern-bulk>
+          <Button size="small" onClick={() => onSelectAll(hand, shown.map((one) => one.ref))} disabled={shown.every((one) => selected.includes(one.ref))}>
+            Select all
+          </Button>
+          <Button size="small" onClick={() => onDeselectAll(hand)} disabled={count(hand) === 0}>
+            Deselect all
+          </Button>
+          <Button size="small" onClick={() => onApproved(hand)}>
+            Approved
+          </Button>
         </Stack>
       </Stack>
       <Box

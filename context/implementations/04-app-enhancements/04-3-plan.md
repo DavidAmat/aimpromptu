@@ -1165,3 +1165,64 @@ everything after it moves earlier. It reuses `paste.cut` (the cut a part split m
 after the stretch 1 s earlier, the audio cut, undo gives the files back byte for byte). On a temporary copy of the
 user's project (deleted): through the API, frames 203-324 taken out moved every later note 121 frames earlier.
 
+**Select all, Deselect all and Approved in the gallery of patterns** (the user, 2026-10-30, same branch): the gallery
+of patterns inside **Enhance with AI** gets three buttons for the hand shown. **Select all** ticks every pattern of the
+level on its pill (the user's answer), **Deselect all** unticks every pattern of the hand, **Approved** ticks the
+approved ones of the hand's level again. Until then a hand with no pattern ticked quietly got the approved patterns
+(`levels.run_refs`), so **Deselect all** would have changed nothing. The dialog now sends `exact` with its ticks: a
+hand with none has no pattern, the dialog says "No pattern for the right hand: the AI follows the level and your
+words", and the AI declares that hand `free` (in the plan `R=free`, in a batch `# pattern R f...-f...: free`), which
+the plan and the check accept only for a hand with no pattern in the run. Level prompts version 3. Tests in
+`test_sheet_levels.py` and `test_sheet_levels_app.py`; `check:enhance-dialog` has the three buttons and a level sent
+with no pattern (all steps pass). One real run on a temporary copy of 7 Years (deleted): the right hand, f500-f1000,
+easy, no pattern: the plan `R=free`, the batch declared `free` and was accepted at the first answer, $0.013 in 15 s; a
+single-note melody, the left hand unchanged.
+
+**The Info tab: the title lines editable during an AI run** (the user, 2026-10-30, same branch): the user could not
+change the title of a level copy of 20 de enero, because an AI run was going on it and every edit of the sheet waits
+for the run (`_not_running`, the toolbox locked). The **Title** tab of the sheet toolbox is now **Info**, and its
+title, subtitle and artist stay editable during a run: they touch no note. The route stores them as usual and keeps
+them in memory for the run (`store.keep_titles`); every save of the run puts them in its text (`f1.with_titles`, the
+title lines only, the rest byte for byte) and the sheet of the moment shows them; the job forgets them when it ends
+(`job._submit`). Every other edit still waits for the run. Tests in `test_sheet_toolbox.py`; looked at on a temporary
+copy with a faked running state (deleted). One limit: undo of a level stored after such a title edit puts back the
+title of before the run.
+
+**The model and the batches of every run** (the user, 2026-10-30, same branch): the user saw that a model sometimes
+does not follow the instructions, and that the AI writes small batches well but makes artifacts over long ones. Every
+run of **Enhance with AI** (a stretch, a level of a stretch or of the whole song, Write it all again) now chooses its
+**model** (GPT-6.1 Terra, the default; GPT-6.1 Sol; Sonnet 5.5 at high effort: `job.MODELS`, with the cost and time
+ratios of Phase 5) and its number of **batches**. The batches are cut at about the same time over the hands rewritten
+(`frames.split_windows`: each cut within a fifth of a batch, at a column no beam group crosses, after the longest
+pause), from 1 batch per 90 s at least to one per 3 s, starting at the number the run makes today (one for a
+stretch). The dialog sits at the right without a backdrop, the sheet is laid out beside it, and each batch is drawn on
+the sheet (on the staff of the hand rewritten) with a light colour, a solid border and its number; - and + change the
+number, and the cost and the minutes follow the batches and the model (`GET /sheet/{uuid}/llm/batches`,
+`job.batch_plan`). A stretch in several batches asks them one after the other, each seeing the ones before it, and
+stores the whole as one step. The page names the models only in this selector; the AI mark and the buttons still say
+"AI". Tests in `test_sheet_batches.py`; `check:enhance-dialog` checks the model, the batches drawn and the dialog
+beside the sheet.
+
+**Unite with any figures; the panel of an AI run: Stop and Revert** (the user, 2026-10-30, same branch). First,
+**Unite** no longer asks for one figure nor for 2, 4 or 8 chords: consecutive chords of one hand with the same keys
+unite whatever their figures. The united figure is their sum when it is a figure (two semicorcheas and a corchea: a
+negra); the sheet has no puntillos, so otherwise it is the figure just below or above that sum that is nearer to the
+time the chords fill in the recording (`edits.united_figure`). Second, once a run starts, the right of the sheet
+holds the **panel of the run** (`AiRunPanel.tsx`) where the dialog was: each batch with its colour, number, time and
+state (waiting, being written, written, kept as it was; at the end, not written), also drawn on the sheet; it opens
+by itself on a page whose run is going (a reload, the level copy a level run goes to). **Stop** asks no more requests
+after the one the AI is answering (`job.stop`, `POST .../llm/stop`; a `Stopped` exception before each request); what
+it wrote stays. **Revert** puts the part back as it was before the run: every run that changes the part takes a
+snapshot as it starts (`edits.snapshot_before_run`, `before` in its summary), and `POST .../llm/revert` restores it
+as one step, whose undo brings the run's result back (Write it all again too, whose steps start again). Pause and
+resume were not built: Stop, then a new run on what is left. Tests in `test_sheet_batches.py` and
+`test_sheet_toolbox.py`; `check:ai-run-panel` (a faked run in the browser) and `check:enhance-dialog` pass.
+
+
+**Hand-off: the left hand does not follow the chosen pattern** (the user, 2026-10-31). After the requests above, the
+user found that the level runs of the left hand with patterns of the gallery work badly, and asked for a new session.
+The stored runs on copies of 20 de Enero show the AI declaring `keep` for most of the left hand, even where the words
+ask for `left easy 5` "for ALL the left hand". The likely cause is the rules of "Phase 3, the user's review of the
+first run" (a simple stretch keeps its notes; no more left-hand onsets than now), which the check holds and the
+words cannot lift. The brief [`04-5-prompt.md`](04-5-prompt.md) has the evidence, the code, the state of the branch
+(the last four requests above are not committed) and the points for the first discussion.

@@ -222,10 +222,11 @@ sections 12 to 17.
 | `frames/useFramesSheet.ts` | The sheet of a part as the page holds it: read for the page's width, read again at each step of the AI's job (`event: sheet` on the job's stream) |
 | `frames/geometry.ts` | The arithmetic of the page from the cursor map the backend sends (one row per drawn column, one box per system) |
 | `frames/FramesNoteToolbox.tsx`, `FramesRangeToolbox.tsx`, `readingTools.ts` | The note toolbox and the range toolbox (titled *Frames*), and what they share |
-| `frames/FramesSheetToolbox.tsx` | The sheet toolbox: Title, Key, Transpose, Lyrics, View |
+| `frames/FramesSheetToolbox.tsx` | The sheet toolbox: Info (the title lines), Key, Transpose, Lyrics, View |
 | `frames/FramesPreviewDialog.tsx` | The preview of a transposition: the sheet as it would be, **Transpose** or **Cancel** |
 | `frames/FramesLyricsToolbox.tsx`, `useFramesLyrics.ts`, `lyricsText.ts` | The lyrics pieces on the sheet (stored in `sheet.f1`), the pasted words and the pool (`GET`/`PUT /sheet/{uuid}/words`) |
-| `frames/EnhanceDialog.tsx` | **Enhance with AI** (implementation 04, Phase 4): **A stretch** of the selection (Both, Right, Left; the user's words) or **The whole song** (Simplify the left hand, the right hand, both; Write it all again), each with its cost (`GET /sheet/{uuid}/llm/costs`); `data-enhance-dialog`, `song-run-*`, `song-confirm`, `stretch-words`, `stretch-confirm` |
+| `frames/AiRunPanel.tsx` | The panel of an AI run (2026-10-30): at the right while the AI writes and after, each batch with the colour and number the sheet draws (`batches.ts`), its time and state; **Stop**, then **Revert** and **Close**; `data-ai-run-panel`, `data-ai-run-batch`, `ai-run-stop`, `ai-run-revert`, `ai-run-close` |
+| `frames/EnhanceDialog.tsx` | **Enhance with AI** (implementation 04, Phase 4; 04-3): **A stretch** of the selection (Both, Right, Left; the user's words or a level) or **The whole song** (a level, or Write it all again), the gallery of patterns (Select all, Deselect all, Approved), and for every run the **Model** and the **Batches** (2026-10-30: the batches drawn on the sheet by `FramesSheetView` `batches`, the dialog at the right of the sheet, `ENHANCE_PANEL_WIDTH`; the cost from `GET /sheet/{uuid}/llm/batches`); `data-enhance-dialog`, `ai-model`, `data-batch-count`, `song-confirm`, `stretch-words`, `stretch-confirm` |
 | `frames/FramesPdfDialog.tsx` | Print to PDF (section 6) |
 | `TransposeTab.tsx`, `LyricsTab.tsx`, `lyricsPieces.ts` | The **Transpose** and **Lyrics** tabs of the sheet toolbox, kept from the old sheet and used by the new one |
 | `sheetConstants.ts`, `toolboxPlacement.ts` | The colours of the hands on the keyboards; where a toolbox opens |

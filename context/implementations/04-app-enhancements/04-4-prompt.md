@@ -37,6 +37,49 @@ What this means for the design, in short:
 - **The dialog**: a new tab **Copy this style** in **Enhance with AI** when a range is selected: Both / Right / Left,
   and the user's optional words. **No level.**
 
+## 1.1 A second request: stop a transcription (the user, 2026-10-30, during the first discussion)
+
+> Also, as a side note, whenever we are in the /notes page and we are transcribing. If we have been mistakenly
+> submitting this transcription, we should have a button on the top to interrupt it while it is still working on it
+> (to avoid having to wait until it finishes).
+
+What exists today: `POST /matrix/transcribe` (`api/matrix.py`) starts the work as a job of
+`transcription/jobs.py`, in the GPU queue (one transcription at a time, the next one waits). The page follows it with
+`GET /matrix/progress/{jobId}` and finds a running one again with `GET /matrix/{audio_uuid}/job`. A job has no way to
+stop today: no route, and no stop check in `submit`. The work reports its progress through a `reporter` many times
+while it runs, which is a natural place for a stop check. Independent of "Copy this style"; no AI call.
+
+The user's answer (2026-10-30): **nothing of the stopped run is kept**; the part goes back to how it was before the
+click (its earlier notes if it had any, otherwise no notes). A transcription that waits in the GPU queue leaves the
+queue at once.
+
+## 1.2 A third request: a paste that works the first time (the user, 2026-10-30)
+
+> Whenever I try to input some text, for example, some copy-paste text, the first time that I do the paste, it doesn't
+> work. I need to do it twice in order to get it right. [...] I've found the issue in several places, but especially
+> in the text that you put whenever you are enhancing with AI and says "in your own words..."
+
+First look (2026-10-30, during the first discussion): every page-wide key handler of the frontend (`AppLayout`, the
+sheet page's ⌘C/⌘V and undo handlers, `NotesEditor`, `AudioTab`, `ScorePlayer`, `useSpacebarPlay`) steps aside when
+the target is a text field, and the app never reads the system clipboard itself (`passageClipboard.ts` reads only
+`localStorage` and the paste event). In headless Chromium on Linux, one Control+V pastes at once into the ⌘K search
+and into the words box of Enhance with AI (on a temporary copy of 7 Years, deleted). Not reproduced yet: the user
+works on a Mac with ⌘V, so the study needs the user's browser and a reproduction there.
+
+## 1.3 A fourth request: tick or untick every pattern at once (the user, 2026-10-30)
+
+> In the pattern section, offer a button to deselect all the selected patterns we have in the "Enhance it again with
+> AI" dialog box. We don't have any way to properly uncheck everything or to check everything very quickly.
+
+What exists today: the gallery of patterns inside the dialog (`PatternCatalog.tsx`, `PatternGallery`) ticks the
+patterns one by one (`EnhanceDialog.tsx`, `toggle`; `chosen[hand]`, `null` meaning the patterns approved for the
+level). In the backend, `levels.run_refs` gives **a hand with no pattern ticked or named the approved patterns of its
+level**, so today an empty selection does not mean "no pattern": the run quietly uses the approved ones. The plan must
+decide what an empty selection means before a "Deselect all" button is added.
+
+The user's answer (2026-10-30): **Select all ticks every pattern of the level chosen on the pill** (the hand and the
+level the gallery shows), not the patterns of every level.
+
 # 2. What exists today (at the end of 04-3)
 
 Read [`04-context.md`](04-context.md) and [`04-3-plan.md`](04-3-plan.md) (section 10 lists the late changes of 04-3).
