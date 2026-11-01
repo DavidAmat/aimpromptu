@@ -44,10 +44,11 @@ Chosen by the orchestrator as defaults and accepted by the user (2026-11-01).
 | Point | Decision |
 |---|---|
 | Where | This folder, `context/implementations/05-documentation-refresh/` |
-| Branch | `feat/05-docs-refresh`, made from `master` after 04-5 was merged into it (2026-11-01). One commit per phase. Merged into `master` at the user's ok |
+| Branch | `feat/05-docs-refresh`, made from `master` after 04-5 was merged into it (2026-11-01). One commit per phase and per join, all on this branch (no other branch, no worktree). Merged into `master` at the user's ok |
 | What a phase may change | Documentation only (`*.md`, plus `scripts/docs/` in Phase 1). **Never** a file under `aitu-backend/src`, `aitu-frontend/src`, `tests/` or any other code. A page that cannot be made true without a code change is reported, not patched around |
 | The old sheet's pages | Moved to `context/archive/old-sheet-tools/` (history), by the phase that writes the new page in their place |
-| The order | Phases 1 to 20 in order, one at a time. They share files (`endpoints.md`, `components.md`, `00-index.md`), so two phases never run at the same time |
+| The order | In **waves** (section 4.4): the phases of a wave run at the same time, each in its own session, on the same branch and working tree; a short **join** after each wave applies the edits of the shared files. Added at the user's ask, 2026-11-01 |
+| What a phase says to the user | Only the HAND OFF (section 4.2, step 11). A short decision only when one is critical. Everything else goes into the phase's report file. The user's ask, 2026-11-01 |
 | The model of the workers | A small model. Each phase is sized for it: about 3,000 to 8,000 lines of code read in parts, and at most about 8 doc files changed |
 
 # 3. The shape of the documentation after the refresh
@@ -83,7 +84,8 @@ The three `annotations-*` pages keep their names, but now tell the **new** toolb
    files.
 3. [`../../00-documentation-instructions.md`](../../00-documentation-instructions.md): the two folders, the limits, the
    cross-links.
-4. The report of the phase before, only its section "Left for later phases".
+4. In the reports of the phases before, only what is left for you: `grep -n "Phase N\b" 05-implementation-*.md` (N your
+   phase), and read those lines.
 
 Do not read other phases' code. Do not read `communication-style.md` in full: section 4.3 below has its rules.
 
@@ -104,27 +106,58 @@ Do not read other phases' code. Do not read `communication-style.md` in full: se
    exact files, functions, fields, constants and routes. Cross-link both ways (`Where to look deeper` at the end of a
    `context/` page; `> Context:` at the top of a `documentation/` page). Add each new file to `context/00-index.md`
    (and a `documentation/` file also to `documentation/services/README.md`).
-6. **Shared files.** In `endpoints.md` and `components.md`, change only the sections of your routes and components
-   (find them with `grep -n`). Keep the order and the style of the file.
-7. **Check.** `python3 scripts/docs/check-links.py` passes; `check-names.py` on every file you touched lists no
-   missing name, or the report explains each one.
+6. **Files you may write.** Other agents work in the same folder at the same time, so you write only:
+   - the files your phase owns **in your wave** (section 4.4, table "The owner in each wave", then section 7);
+   - the new files your phase creates;
+   - your own lines of `05-checklist.md` and `05-inventory.md` (read the file just before you edit it; another agent
+     may have changed it).
+
+   Every other change (`endpoints.md`, `components.md`, `00-index.md`, `documentation/services/README.md`, a file
+   another phase owns in your wave) goes into your report, section **Pending edits for shared files**: for each one,
+   the file, where (the heading or the line to find), and the exact text to add or the exact change. The join of
+   your wave applies them. Keep the order and the style of the target file in the text you write.
+7. **Check.** `python3 scripts/docs/check-links.py`: no broken link in your files. A broken link in a file you do not
+   write is not yours (another agent may be in the middle of its work): write it in the report, do not fix it.
+   `check-names.py` on every file you touched lists no missing name, or the report explains each one.
 8. **Report.** `05-implementation-phase-N.md`, at most about 80 lines, with these sections: Docs changed (one line
    each: what and why); What was stale; Code and docs that disagree in a way that looks like a bug (for the user);
-   New terms for the glossary (for Phase 20); Not checked; Left for later phases.
+   New terms for the glossary (for Phase 20); Not checked; Pending edits for shared files; Left for later phases
+   (name the phase: "Phase 12: ...").
 9. **Status.** Tick your tasks in the checklist, mark the phase `[x]` and put the link to your report on the
    phase's line; set the State of your files in the inventory (`true`, `updated`,
    `rewritten`, `new`, `archived`).
-10. **Commit** on `feat/05-docs-refresh`: `Docs 05, Phase N: <title>`. Do not merge, do not push.
-11. **Walkthrough** to the user (the guidelines' sections). It always ends with the **HAND OFF**: one line, for a
-    new agent in a new session that knows nothing yet, with N+1 the next phase:
+10. **Commit** on `feat/05-docs-refresh`, only your own files, named one by one:
+    `git add <your files> && git commit -m "Docs 05, Phase N: <title>" -- <your files>`.
+    Never `git add -A`, `git add .`, `git commit -a`, `git stash`, `git checkout`, `git switch`, `git reset` or
+    `git rebase`: other agents share the working tree. If git says `index.lock` exists, wait a few seconds and try
+    again. Do not merge, do not push.
+11. **Your only output.** When the phase ends, your last message to the user is **only the HAND OFF**: no summary,
+    no walkthrough, no list of changes (they are in the report). The HAND OFF is for a new agent in a new session
+    that knows nothing yet; the plan and the checklist are enough for it.
 
-    ```text
-    Read @context/implementations/05-documentation-refresh/05-plan.md and @context/implementations/05-documentation-refresh/05-checklist.md. Start working on Phase N+1.
-    ```
+    - When your wave has other phases not yet `[x]` in the checklist, or when you are the last one, the next step is
+      the join of your wave. Your output is:
 
-    Nothing else goes in it: the plan and the checklist are enough. The checklist links each finished phase's report,
-    so the next agent finds the report of the phase before from there (section 4.1, point 4). If the phase is not
-    finished (a decision or a human action is open), there is no HAND OFF.
+      ```text
+      After Phases <the phases of your wave still open, or "none">:
+      Read @context/implementations/05-documentation-refresh/05-plan.md and @context/implementations/05-documentation-refresh/05-checklist.md. Start working on the join of wave <W>.
+      ```
+
+    - The **join** ends with the hand offs of every phase of the next wave, one line each, to start at the same time
+      in separate sessions:
+
+      ```text
+      Wave <W+1>: start these in parallel, each in its own session:
+      Read @context/implementations/05-documentation-refresh/05-plan.md and @context/implementations/05-documentation-refresh/05-checklist.md. Start working on Phase <a>.
+      Read @context/implementations/05-documentation-refresh/05-plan.md and @context/implementations/05-documentation-refresh/05-checklist.md. Start working on Phase <b>.
+      ```
+
+    - **A critical decision** (the docs cannot be made true without a choice of the user): instead of the HAND OFF,
+      at most five lines: one line of context, the options (the recommended one first), one line each. The HAND OFF
+      comes after the user answers. Anything else for the user (a doc that disagrees with the code, a point not
+      checked) is not critical: it goes in the report only.
+
+    This rule replaces the walkthrough of the communication guidelines for this plan.
 
 ## 4.3 How to write
 
@@ -142,6 +175,56 @@ Do not read other phases' code. Do not read `communication-style.md` in full: se
 - Never copy a value from `.env` (keys). Names of settings only.
 - When you could not check a point, write it in the report under "Not checked". Do not guess.
 
+## 4.4 Waves and parallel phases
+
+Phases of one wave own different files, so they run at the same time. Before a phase starts, every phase of the
+waves before it and their joins are done. A wave's order follows what a phase needs: Phase 10 adds to the page that
+Phase 9 creates, Phase 15 and 16 change parts of the `projects.md` that Phase 14 splits, Phase 8 adds to the page of
+Phase 4, Phases 12 and 13 add to the page of Phase 11.
+
+| Wave | Phases (in parallel) | Then |
+|---|---|---|
+| 0 | 1 (done) | none |
+| A | 2, 5, 9, 14, 18, 19 | join A |
+| B | 3, 6, 10, 11, 15 | join B |
+| C | 4, 7, 12, 16, 17 | join C |
+| D | 8, 13 | join D |
+| E | 20 (alone: it writes any file directly, the shared ones too; its only output is one line: the refresh is ready for the user's review and the merge) | none |
+
+**The owner in each wave** of the files that several phases change (section 7 has the rest). A phase not named here
+for a file sends its change as a pending edit (section 4.2, step 6).
+
+| File | A | B | C | D |
+|---|---|---|---|---|
+| the core README `sheet/README.md` | 2 | 3 | none | none |
+| `context/backend/editing.md` | 5 | 6 | 17 | none |
+| `context/frontend/projects.md` | 14 | 15 | 16 | none |
+| `context/frontend/rendering.md` | none | 3 | 4 | none |
+| `context/frontend/annotations.md` (the hub) | 5 | none | none | none |
+| `context/frontend/playlists.md` | 18 | none | 17 | none |
+| `context/frontend/sheet-page.md` | none | none | 4 | 8 |
+| `context/07-database.md` | 14 | 11 | none | none |
+| `context/02-tech-stack.md` | 9 | none | none | none |
+| `context/music-library/private-library.md` | 18 | none | none | none |
+| `context/ai/README.md` | 9 | none | none | none |
+| `documentation/services/backend/paths-and-data.md` | 14 | 11 | none | 13 |
+| `documentation/services/backend/editing-and-compose.md` | none | 6 | 17 | none |
+| `documentation/services/backend/ai-runs.md` | 9 | 10 | none | none |
+| `documentation/services/backend/ai-levels.md` | none | 11 | 12 | 13 |
+| `endpoints.md`, `components.md`, `00-index.md`, `documentation/services/README.md` | the join | the join | the join | the join |
+
+**A join** (one agent, a small model):
+
+1. Check that every phase of the wave is `[x]` in the checklist. If one is not, stop; your output is one line: the
+   phases still open.
+2. Read the section **Pending edits for shared files** of each report of the wave. Apply each edit to its file, in the
+   order of the phases. Two edits in the same place: keep both, in the file's style.
+3. `check-links.py` passes on the whole repo, now with no exception; `check-names.py` on each file you changed.
+4. Write `05-implementation-join-<W>.md` (at most about 30 lines: the edits applied, any edit you could not apply and
+   why). Tick the join in the checklist; set the line **Next:** to the next wave.
+5. Commit: `Docs 05, join <W>`, your files named one by one (step 10 of section 4.2).
+6. Your only output: the HAND OFF of the next wave (section 4.2, step 11).
+
 # 5. Binding rules
 
 - Documentation only (section 2). No change to the app's code, its tests or its data.
@@ -156,7 +239,10 @@ Sizes are lines of code. Paths of the backend are under `aitu-backend/src/aitu_b
 `aitu-frontend/src/`. "History" names the implementation records that tell how a part was built: read only the
 sections named, to understand, not to copy.
 
-## Phase 1: The inventory and the name check
+Each phase below names its wave. When it names a file that another phase owns in that wave (section 4.4), the change
+is a pending edit for the join, not an edit of the file.
+
+## Phase 1: The inventory and the name check (wave 0)
 
 - **Write `scripts/docs/check-names.py`.** Input: doc paths (default: every file in scope, below). For each name in
   backticks: a path (has `/` or ends in `.py`, `.ts`, `.tsx`, `.md`, `.json`, `.mjs`) is checked to exist from the
@@ -176,7 +262,7 @@ sections named, to understand, not to copy.
   short section: what changed in the code since 2026-10-28 (`git log --since=2026-10-28 --stat`), summed per folder.
 - Change no other doc. Size: no code to read.
 
-## Phase 2: How a sheet is made (the notes to `sheet.f1`)
+## Phase 2: How a sheet is made (the notes to `sheet.f1`) (wave A)
 
 - **Docs**: create `documentation/services/backend/sheet-f1.md`; update `documentation/services/backend/time-matrix.md`,
   `rhythm-and-annotations.md`, `context/backend/time-model.md`; the core README sections 1 to 9, 12, 16 and 17 (fix
@@ -188,7 +274,7 @@ sections named, to understand, not to copy.
 - **History**: [`03-context.md`](../03-apply-poc-research/03-context.md) section 3; 03 Phase 2 and Phase 9 reports;
   [`04-context.md`](../04-app-enhancements/04-context.md) sections 2 and 3.1.
 
-## Phase 3: How the sheet is drawn (the backend)
+## Phase 3: How the sheet is drawn (the backend) (wave B)
 
 - **Docs**: create `documentation/services/backend/sheet-drawing.md`; update `context/frontend/rendering.md` (the
   backend half), the core README sections 10 and 15 (the drawing part).
@@ -198,7 +284,7 @@ sections named, to understand, not to copy.
 - **History**: 03 Phase 3 and Phase 8 reports; [04-3 Phase 2b](../04-app-enhancements/04-3-implementation-phase-2b.md)
   (the frame marks).
 
-## Phase 4: The sheet page (the frontend shell)
+## Phase 4: The sheet page (the frontend shell) (wave C)
 
 - **Docs**: create `context/frontend/sheet-page.md`; update `context/frontend/rendering.md` (the frontend half),
   `context/frontend/projects.md` (its Sheet step section becomes a short summary with a link), `timestamps.md`
@@ -212,7 +298,7 @@ sections named, to understand, not to copy.
 - **History**: [04 Phase 1](../04-app-enhancements/04-implementation-phase-1.md); 03 Phase 5 report;
   [`04-context.md`](../04-app-enhancements/04-context.md) section 3.3.
 
-## Phase 5: The note toolbox
+## Phase 5: The note toolbox (wave A)
 
 - **Docs**: `context/frontend/annotations.md` becomes the hub of the Sheet step's tools (at most about 200 lines: one
   short section per toolbox, links); move `context/frontend/annotations-notes.md` to
@@ -226,7 +312,7 @@ sections named, to understand, not to copy.
 - **History**: 03 Phases 6 and 7 reports; [04-3 Phase 2b](../04-app-enhancements/04-3-implementation-phase-2b.md)
   (decoration notes lit at their onset).
 
-## Phase 6: The range toolbox, copy and paste
+## Phase 6: The range toolbox, copy and paste (wave B)
 
 - **Docs**: move `annotations-stretches.md` to `context/archive/old-sheet-tools/` and write a new one for the range
   toolbox; update `context/backend/editing.md` (Paste), `documentation/services/backend/editing-and-compose.md` (the
@@ -239,7 +325,7 @@ sections named, to understand, not to copy.
 - **History**: 03 Phase 7 report; [04-3 Phase 2b](../04-app-enhancements/04-3-implementation-phase-2b.md) (frames
   in the range toolbox).
 
-## Phase 7: The sheet toolbox: Info, Key, Transpose, Lyrics, View
+## Phase 7: The sheet toolbox: Info, Key, Transpose, Lyrics, View (wave C)
 
 - **Docs**: move `annotations-sheet.md` to `context/archive/old-sheet-tools/` and write a new one for the sheet
   toolbox (its five tabs, the lyrics); `endpoints.md` (`/transpose`, `/words`), `components.md`.
@@ -249,7 +335,7 @@ sections named, to understand, not to copy.
   (`grep -rn "words" part_sheet/ storage/paths.py`).
 - **History**: 03 Phase 8 report.
 
-## Phase 8: Undo, redo, the preview and the PDF
+## Phase 8: Undo, redo, the preview and the PDF (wave D)
 
 - **Docs**: `context/frontend/printing.md`, `documentation/services/frontend/score-pdf.md`; a short section "Undo and
   redo" in `context/frontend/sheet-page.md` (made in Phase 4); `endpoints.md` (`/undo`, `/redo`),
@@ -259,7 +345,7 @@ sections named, to understand, not to copy.
   `print/drawPage.ts` (by function list), `print/pdf.ts`, `print/scorePdf.ts`.
 - **History**: 03 Phase 6 (undo) and Phase 8 (paper) reports.
 
-## Phase 9: The AI, part 1: the AI on the sheet, the whole run
+## Phase 9: The AI, part 1: the AI on the sheet, the whole run (wave A)
 
 - **Docs**: create `context/ai/README.md`, `context/ai/whole-run.md`, `documentation/services/backend/ai-runs.md`;
   update `context/02-tech-stack.md` (the AI client and the model: GPT-6.1 Terra at `medium`; the names of the
@@ -275,7 +361,7 @@ sections named, to understand, not to copy.
   [04-3 Phase 5](../04-app-enhancements/04-3-implementation-phase-5.md) (the models, section 10);
   [`04-context.md`](../04-app-enhancements/04-context.md) sections 2 and 3.2.
 
-## Phase 10: The AI, part 2: a stretch, Simplify, the Enhance with AI dialog
+## Phase 10: The AI, part 2: a stretch, Simplify, the Enhance with AI dialog (wave B)
 
 - **Docs**: create `context/ai/stretch-and-simplify.md`; add sections to `ai-runs.md`; the core README section 14;
   `endpoints.md` (`/llm/stretch`, `/llm/simplify`), `components.md` (`EnhanceDialog`, its tabs).
@@ -286,7 +372,7 @@ sections named, to understand, not to copy.
 - **History**: [04 Phase 4](../04-app-enhancements/04-implementation-phase-4.md);
   [`04-context.md`](../04-app-enhancements/04-context.md) section 2.
 
-## Phase 11: The AI, part 3: levels, the catalog of patterns, the chords of the song
+## Phase 11: The AI, part 3: levels, the catalog of patterns, the chords of the song (wave B)
 
 - **Docs**: create `context/ai/levels.md` and `documentation/services/backend/ai-levels.md` (the catalog, its
   numbers, the approved set; the grid and the chords; the guide chords); `paths-and-data.md` (the level copy,
@@ -300,7 +386,7 @@ sections named, to understand, not to copy.
 - **History**: [`04-3-plan.md`](../04-app-enhancements/04-3-plan.md) sections 5.1, 5.8, 5.10; 04-3 Phases 2 and 4
   reports; [`04-5-plan.md`](../04-app-enhancements/04-5-plan.md) section 5 (the new left easy 1, the guide chords).
 
-## Phase 12: The AI, part 4: the level run
+## Phase 12: The AI, part 4: the level run (wave C)
 
 - **Docs**: create `context/ai/level-run.md` (the plan and its sections, the rules, the batches, the check and its
   limits per level, Strict and Suggested, the explanations, the cost); add sections to `ai-levels.md` (the
@@ -312,7 +398,7 @@ sections named, to understand, not to copy.
 - **History**: 04-3 Phases 3 and 4 reports; [`04-5-plan.md`](../04-app-enhancements/04-5-plan.md) sections 3.1, 3.2;
   [04-5 report](../04-app-enhancements/04-5-implementation-phases-1-to-4.md) sections 2.1 and 4.
 
-## Phase 13: The AI, part 5: the history of AI runs, and `04-context.md`
+## Phase 13: The AI, part 5: the history of AI runs, and `04-context.md` (wave D)
 
 - **Docs**: create `context/ai/run-history.md`; add the log (`ai-runs/<id>.json`) to `ai-levels.md` and
   `paths-and-data.md`; `endpoints.md` (`/llm/runs`, `/llm/runs/{id}`, `continue`, `batches/{k}/again`);
@@ -326,7 +412,7 @@ sections named, to understand, not to copy.
 - **History**: [`04-5-plan.md`](../04-app-enhancements/04-5-plan.md) sections 3.3 to 3.5;
   [04-5 report](../04-app-enhancements/04-5-implementation-phases-1-to-4.md) sections 2.2, 2.3.
 
-## Phase 14: Projects, folders, metadata, parts, Save to library
+## Phase 14: Projects, folders, metadata, parts, Save to library (wave A)
 
 - **Docs**: split `context/frontend/projects.md` (keep the steps of a project and the editor's gestures; at most about
   200 lines); create `context/frontend/folders-and-metadata.md`; update `context/07-database.md`,
@@ -340,7 +426,7 @@ sections named, to understand, not to copy.
 - **History**: [04-3 Phase 1](../04-app-enhancements/04-3-implementation-phase-1.md);
   [`04-3-plan.md`](../04-app-enhancements/04-3-plan.md) section 4.
 
-## Phase 15: From the audio to the notes: Source, Audio, the transcription
+## Phase 15: From the audio to the notes: Source, Audio, the transcription (wave B)
 
 - **Docs**: `context/backend/muscriptor.md`, `context/backend/pieces-and-revisions.md`,
   `context/music/transcription-quality.md`, `documentation/services/backend/transcription-pipeline.md`; the Source and
@@ -351,7 +437,7 @@ sections named, to understand, not to copy.
   (by function list).
 - **History**: start from `git log --since=<the docs' dates>`; the 01-mvp 08 folder only if a doc names it.
 
-## Phase 16: The notes and the hands: the Notes step, the piano roll, the hand split
+## Phase 16: The notes and the hands: the Notes step, the piano roll, the hand split (wave C)
 
 - **Docs**: `context/backend/piano-matrix-notation.md`, `documentation/services/backend/events-to-sheet.md`,
   `hand-inference-second-pass.md`, `context/music/piano_svg/01-piano-svg.md`; check only
@@ -362,7 +448,7 @@ sections named, to understand, not to copy.
   (`infer.py`, `refine.py`, `config.py`, by function list); `pmn/events_file.py`; `matrix/model.py`; `api/matrix.py`.
 - **History**: `git log` since the docs' dates.
 
-## Phase 17: Recording in Sheet, passages, Compose and parts
+## Phase 17: Recording in Sheet, passages, Compose and parts (wave C)
 
 - **Docs**: `context/frontend/recording-in-sheet.md`, `context/frontend/playlists.md` (the page "From other projects"
   and the parts of a project), `context/backend/editing.md` (Recording in Sheet), `editing-and-compose.md` (Compose),
@@ -372,7 +458,7 @@ sections named, to understand, not to copy.
   the promotion in `part_sheet/lengths.py`.
 - **History**: 03 Phase 8 report (the sheet through a change of a part's length); the core README section 16.
 
-## Phase 18: The libraries, playlists, requests and the Public Library
+## Phase 18: The libraries, playlists, requests and the Public Library (wave A)
 
 - **Docs**: `context/music-library/*` (8 files), the playlists part of `context/frontend/playlists.md`,
   `endpoints.md` (`/library`, `/public`, `/requests`, `/playlists`, `/shares`), `components.md`.
@@ -383,7 +469,7 @@ sections named, to understand, not to copy.
   `api/library.py`, `public.py`, `requests.py`, `playlists.py`, `shares.py`; `library/requests.py` (1,876, by
   function list), `library/flow.py`.
 
-## Phase 19: Play mode, the Lab, users and admin, the routes and the shell
+## Phase 19: Play mode, the Lab, users and admin, the routes and the shell (wave A)
 
 - **Docs**: `context/frontend/play-mode.md`, `context/frontend/pages.md` (the routes against `App.tsx`),
   `context/08-security.md`; create `context/frontend/lab.md` if no page tells the Lab; `endpoints.md` (`/auth`,
@@ -393,7 +479,7 @@ sections named, to understand, not to copy.
   `auth/`, `api/auth.py`, `api/admin.py`; `pages/admin/UsersPage.tsx`, `pages/LoginPage.tsx`, `pages/dev/`.
 - **History**: [01-mvp 04 Synthesia to notes](../01-mvp/04-synthesia-to-notes/README.md) README only, for the Lab.
 
-## Phase 20: The platform pages, the READMEs, the indexes, the closing
+## Phase 20: The platform pages, the READMEs, the indexes, the closing (wave E)
 
 - **Docs**: `context/00-index.md`, `00-project-complete-overview.md`, `00-documentation-instructions.md` (the list of
   areas: add `context/ai/`), `01-project.md`, `02-tech-stack.md`, `02b-local-setup.md` (check), `03-services-overview.md`,
@@ -456,3 +542,8 @@ belongs to Phase 20.
 
 Each phase adds a dated paragraph here when it changes this plan (a new page name, a split, a point moved to another
 phase).
+
+**Waves and the only output** (the user, 2026-11-01, after Phase 1). The phases run in waves of parallel phases
+(section 4.4), with a join after each wave for the shared files. At the end of a phase, the only output to the user is
+the HAND OFF, or a very short critical decision (section 4.2, step 11). Phase 1 had already ended with a long
+walkthrough; its report is unchanged.
