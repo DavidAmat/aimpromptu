@@ -70,10 +70,12 @@ Report: [05-implementation-phase-7.md](05-implementation-phase-7.md)
 - [x] 7.1 The old `annotations-sheet.md` to the archive; a new one for the sheet toolbox and the lyrics.
 - [x] 7.2 `endpoints.md` (`/transpose`, `/words`) and `components.md` checked, no change needed; the hub `annotations.md` and `00-index.md`: pending edits E7.1 and E7.2 for the join of wave C.
 
-# [ ] Phase 8: Undo, redo, the preview and the PDF (wave D)
+# [x] Phase 8: Undo, redo, the preview and the PDF (wave D)
 
-- [ ] 8.1 `printing.md`, `score-pdf.md`.
-- [ ] 8.2 Undo and redo in `sheet-page.md`; `endpoints.md`, `paths-and-data.md`.
+Report: [05-implementation-phase-8.md](05-implementation-phase-8.md)
+
+- [x] 8.1 `printing.md`, `score-pdf.md`.
+- [x] 8.2 Undo and redo in `sheet-page.md` done; `endpoints.md` checked, no change; `paths-and-data.md`: pending edits E8.1 to E8.3 for the join of wave D.
 
 # [x] Phase 9: The AI, part 1: the AI on the sheet, the whole run (wave A)
 

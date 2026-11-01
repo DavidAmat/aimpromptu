@@ -188,13 +188,30 @@ again with AI**, **Write it all again**), [stretch-and-simplify.md](../ai/stretc
 
 `hooks/usePlayedNotes.ts` is not part of the sheet. Only Notes Falling (`pages/play/FallingView.tsx`) uses it.
 
+## 13. Undo and redo
+
+Every change to the sheet is one step of the part's log, `sheet.edits.json` (`part_sheet/edits.py`, at most 50 steps).
+The log is a file, so it survives a reload and another page. A copy of the part (duplicate, export, Save to library)
+starts without steps.
+
+- **Undo** and **Redo** (section 4) walk the log. Their tooltips name the step, for example **Undo: Move a note to the
+  left hand**. ⌘Z, ⇧⌘Z and ⌘Y walk it too (Control on Windows and Linux). Both are off with nothing to walk, while an edit
+  is on its way, and while the AI writes the sheet or the sheet is locked; the tooltip says why when it is the lock.
+- A step holds what its edit changed: the hand of each note moved, the notes taken off the page or put back, the keys
+  of a **Transpose**, and the lines of `sheet.f1` that a reading edit changed. Undo puts the before back, and redo the
+  after. A step touches only the notes still as it left them: a hand that something else changed since stays.
+- A paste, a promotion of a passage and **Revert** of an AI run keep the part as it was, in its history (see
+  [paths-and-data.md](../../documentation/services/backend/paths-and-data.md), section 4.5). Their undo puts that copy
+  back, so the audio changes too, and the player loads it again.
+- The log starts again when a whole AI run writes the sheet, and when a new transcription replaces the notes.
+
 ## Where to look deeper
 
 - [rendering.md](rendering.md): how the sheet is drawn, the checks of the page
 - [annotations.md](annotations.md): the tools of the sheet, one section per toolbox
 - [annotations-notes.md](annotations-notes.md), [annotations-stretches.md](annotations-stretches.md),
   [annotations-sheet.md](annotations-sheet.md): the note toolbox, the range toolbox, the sheet toolbox
-- [printing.md](printing.md): the PDF and the print preview
+- [printing.md](printing.md): the PDF and its pages
 - [timestamps.md](timestamps.md): how a time is written
 - [play-mode.md](play-mode.md), [recording-in-sheet.md](recording-in-sheet.md), [playlists.md](playlists.md): the other places that draw the page
 - [`documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md) section 3: the modules of the page

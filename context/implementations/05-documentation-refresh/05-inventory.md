@@ -51,12 +51,12 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/frontend/pages.md](../../../context/frontend/pages.md) | 154 | 2026-11-01 | 19 | 1 | Pages and the shell | `updated` |
 | [context/frontend/play-mode.md](../../../context/frontend/play-mode.md) | 126 | 2026-11-01 | 19 | 0 | Play mode | `updated` |
 | [context/frontend/playlists.md](../../../context/frontend/playlists.md) | 84 | 2026-10-15 | 17 (18 the playlists part) | 0 | From other projects, and the playlists | `updated` (18's part: section 3) |
-| [context/frontend/printing.md](../../../context/frontend/printing.md) | 94 | 2026-10-27 | 8 | 0 | Printing the sheet — the PDF export | `to check` |
+| [context/frontend/printing.md](../../../context/frontend/printing.md) | 93 | 2026-11-01 | 8 | 0 | Printing the sheet — the PDF export | `rewritten` (Phase 8: the new sheet's dialog and pages; the old renderer as history) |
 | [context/frontend/projects.md](../../../context/frontend/projects.md) | 286 | 2026-10-29 | 14 (4, 15, 16 adjust their step) | 0 | Projects and the steps of a project | `updated` (16: the Notes part) |
 | [context/frontend/folders-and-metadata.md](../../../context/frontend/folders-and-metadata.md) | 132 | new | 14 | 0 | The pills, the folders, the Filter, the metadata and the info dialog of My projects and My library | `new` |
 | [context/frontend/recording-in-sheet.md](../../../context/frontend/recording-in-sheet.md) | 98 | 2026-10-27 | 17 | 0 | Recording in Sheet: the page of a passage | `updated` |
 | [context/frontend/rendering.md](../../../context/frontend/rendering.md) | 89 | 2026-11-01 | 3 (backend half), 4 (frontend half) | 3 | Rendering: how the sheet is drawn | `updated` (Phase 3: the backend half and the links to `sheet-drawing.md`; Phase 4: the frontend half, now a pointer to `sheet-page.md`) |
-| [context/frontend/sheet-page.md](../../../context/frontend/sheet-page.md) | 200 | new | 4 (8 adds undo) | 0 | The Sheet page: the step's roles, the header, the buttons, the floating toolbox, the zoom, the cursor and the recording, the veil and the marks, the keys | `new` |
+| [context/frontend/sheet-page.md](../../../context/frontend/sheet-page.md) | 217 | new | 4 (8 added undo) | 0 | The Sheet page: the step's roles, the header, the buttons, the floating toolbox, the zoom, the cursor and the recording, the veil and the marks, the keys | `new` |
 | [context/frontend/timestamps.md](../../../context/frontend/timestamps.md) | 57 | 2026-11-01 | 4 | 0 | Timestamps and frame labels — UI rule; where each helper is used today | `updated` (Phase 4: the table of places rewritten; no frame label is printed today) |
 | [context/music/notation-logic/02-notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md) | 150 | 2026-10-27 | 16 (check only) | 4 | The text-notation contract | `updated` (16: check, three fixes) |
 | [context/music/piano_svg/01-piano-svg.md](../../../context/music/piano_svg/01-piano-svg.md) | 253 | 2026-07-27 | 16 | 0 | Context | `updated` (16: the status section) |
@@ -82,7 +82,7 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [documentation/services/backend/time-matrix.md](../../../documentation/services/backend/time-matrix.md) | 59 | 2026-10-27 | 2 | 0 | The time matrix: what stays of schema 2.0 | `updated` |
 | [documentation/services/backend/transcription-pipeline.md](../../../documentation/services/backend/transcription-pipeline.md) | 483 | 2026-10-27 | 15 | 8 | The transcription pipeline: modules, order, parameters | `updated` |
 | [documentation/services/frontend/components.md](../../../documentation/services/frontend/components.md) | 581 | 2026-10-31 | shared: every phase its sections; 20 checks | 85 | The component tree: where each piece lives | `to check` |
-| [documentation/services/frontend/score-pdf.md](../../../documentation/services/frontend/score-pdf.md) | 94 | 2026-10-27 | 8 | 3 | Score PDF export | `to check` |
+| [documentation/services/frontend/score-pdf.md](../../../documentation/services/frontend/score-pdf.md) | 102 | 2026-11-01 | 8 | 1 (`bravura.otf`, kept as the record of the removed font) | Score PDF export | `rewritten` (Phase 8: the writer as it is now; no font embedded) |
 
 61 files, 12020 lines, 204 missing names (first count).
 

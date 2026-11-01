@@ -1,94 +1,93 @@
-# Printing the sheet — the PDF export
+# Printing the sheet: the PDF export
 
-*The new sheet (implementation 03, Phase 8) keeps the rule of this page: the music is laid out again for the paper,
-never scaled. The backend draws the sheet for the paper's width at the printed size of the dialog's **Size of the
-music** (a staff of 5 to 8 mm; 6.5 mm by default) and deals whole lines onto the pages (`GET /sheet/{part}/pages`)
-with the dialog's **Space between lines** (1 to 20 mm of white between one line's ink and the next; 6 mm by default,
-whatever the screen's space between lines). Both are kept in the browser. The page shows the pages and writes the
-same vector PDF (`FramesPdfDialog.tsx`, `print/scorePdf.ts`). Its glyphs are paths, so no music font travels with the
-file (about 60 kB for 7 Years, 4 A4 pages). Phase 8A+++ (the user's request of a denser PDF) measured the defaults on
-the 10 viewer songs on A4: 5 to 7 lines a page (median 6) and 44 pages, where a 7 mm staff with the screen's space
-gave 51; the user's copy of 7 Years, whose screen space was 10.5 staff spaces, went from 6 pages to 4. The sections
-below describe the old sheet's renderer (vexflow-v2), whose code was removed in implementation 03, Phase 10
-(2026-10-27); they are kept as the record of the rule.*
+*The rule of this page: the music is laid out again for the paper, never scaled. The backend draws the whole song at
+the paper's width and deals whole lines onto the pages. The page shows them and writes the same vector PDF. This is
+the new sheet (implementation 03, Phase 8). The old sheet's printing is at the end, as history.*
 
-A window is as wide as the reader dragged it. A sheet of A4 is 210 mm. The two can never show the
-same line breaks, so a printed score is not a picture of the screen: it is the same music laid out
-again for a different width.
+A window is as wide as the reader dragged it. A sheet of A4 is 210 mm. The two can never show the same line breaks,
+so a printed score is not a picture of the screen: it is the same music laid out again for a different width.
 
-The **PDF** button on the Piano Sheet tab's floating bar opens a panel that does exactly that, shows the
-resulting pages, and writes them to a file.
+The **Print to PDF** button (the printer icon, in the floating toolbox and in the header) opens the PDF dialog. It is
+not shown on a passage. The dialog shows the pages, and **Download** writes them to a file.
 
 ## The rule that decides everything: re-wrap, never scale
 
-Shrinking the on-screen sheet to fit A4 would keep every line break and make the notes too small to
-read — and the smaller the window the reader happened to have, the worse the paper would be. So the
-paper is treated as **a narrower available width**: the music re-wraps to it the way it re-wraps
-when you drag the window in, and the lines are then dealt out down the pages. This is decision D5 in
-the notation package, and pagination is built on top of it (D41).
+Shrinking the on-screen sheet to fit A4 would keep every line break and make the notes too small to read. So the
+paper is treated as **a narrower available width**. The backend lays the song out for that width, and the lines are
+dealt out down the pages.
 
-Three things follow, and they are the whole reason the panel looks the way it does:
+Three things follow:
 
-- **The margin is a real control, not a constant.** Narrower side margins give each line more room,
-  so the music breaks in fewer places and the piece takes fewer pages. Nothing changes size.
-- **A line is never split across a page turn.** Pages are a budget of whole lines; a line taller
-  than a page still gets a page to itself rather than being cut.
-- **Where a line breaks, the next line starts at exactly that column.** Nothing is dropped at a
-  break and nothing is printed twice.
+- **The margins are real controls, not constants.** Narrower side margins give each line more room, so the music
+  breaks in fewer places and the piece takes fewer pages. Nothing changes size.
+- **A line is never split across a page turn.** Pages are a budget of whole lines. A line taller than a page gets a
+  page to itself rather than being cut.
+- **The paper is laid out by the backend, not measured from the screen.** The song is drawn once at the paper's
+  width (`render_pages`, see [sheet-drawing.md](../../documentation/services/backend/sheet-drawing.md), section 8).
+  The screen's zoom and window do not change the printed line breaks.
 
-## Five lines to a page
+## The dialog
 
-A printed score carries about five systems to a page, and the first version of this carried three.
-The room went to things a reader can only use on a screen:
+`pages/piece/sheet/frames/FramesPdfDialog.tsx` is titled **Download the sheet as a PDF**.
 
-| Taken off the page | Gave back |
-|---|---|
-| The row of `f1300` frame numbers over every line, and the 52-pixel strip reserved to hold it | 36 px a line |
-| The title repeated at the top of every page after the first | a line's worth over a long score |
-| Slack under the lower staff, which on screen can be generous because the page grows downwards | 20 px a line |
+| Control | What it sets | Default | Limits |
+|---|---|---|---|
+| **Paper** | A4 or US Letter | A4 | |
+| **Orientation** | Portrait or Landscape | Portrait | |
+| **Side margins** | the margin on each side | 14 mm | 5 to 35 mm |
+| **Top and bottom** | the margin at the top and at the bottom | 16 mm | 5 to 35 mm |
+| **Size of the music** | the height of a printed staff | 6.5 mm | 5 to 8 mm, in steps of 0.25 |
+| **Space between lines** | the white between one line's ink and the next | 6 mm | 1 to 20 mm, in steps of 0.5 |
+| **Title** | printed on page one, and the file's name | the piece's name | |
+| **Second line** | a line under the title | the project's subtitle | |
+| **Number the pages** | the page numbers | on | |
 
-A column number is an address, and nobody can click an address on paper — so the numbers go, and the
-strip goes with them. The **dashed guides** stay: they are the wall clock, and the whole page is
-drawn in it. The title is printed once, where the piece starts, which is also why page one carries
-one line fewer than the pages after it.
+- **Size of the music** and **Space between lines** are kept in this browser (the key `aitu.framesPdf.print`). The
+  other controls last while the dialog is open.
+- **Space between lines** is in millimetres on paper. It is not the screen's space between lines.
+- The title takes 14 mm on page one, and the second line 6 mm more. The first page has that much less room.
+- The pages in the dialog are shown at paper size, shrunk to fit the panel. The file is written at paper size.
 
-What is **not** touched is the distance between the two staves inside a line: that is the staff gap
-set on the sheet, and paper prints it exactly as the screen shows it. **Extra space between lines**
-in the panel adds air on top of what each line already keeps, and costs lines per page as it goes.
+## Lines to a page
 
-## What the printed page carries over from the screen
+The dialog asks the backend for the pages in staff spaces (a staff space is a quarter of **Size of the music**):
+the width of a line, the height of a page, the height of the first page (less the title), and the gap between two
+lines. The backend deals whole lines until the next one would not fit.
 
-Everything the reader decided, and — importantly — the **frame widths this render measured**, not a
-fresh measurement. Frames are as wide as their contents, and silence is charged per group rather
-than per column, so re-measuring for print would print the same piece with different spacing from
-the one that was approved on screen.
+Measured in implementation 03, Phase 8A+++ on the 10 viewer songs on A4, with the defaults: 5 to 7 lines a page
+(median 6), and 44 pages where a 7 mm staff with the screen's space gave 51. The user's copy of 7 Years went from 6
+pages to 4 at the same settings.
 
-That is why printing goes through one method on the renderer rather than through a call site that
-lists options by hand:
+## What is on the paper
 
-```ts
-renderer.renderPages(container, { pageSize: "a4", marginsMm, title, subtitle, pageNumbers })
-```
-
-What does **not** come across is the editing chrome — frame cells, the corner marks on annotated
-stretches, the selection, the playhead, the timestamps. Each of those is a way of pointing at
-something, and there is nothing on paper to point with.
+Each page is the engraving of the song at the paper's width, as the backend draws it. The title and the page
+numbers are the dialog's own text, drawn into each page element with the same rule: measured, never scaled.
 
 ## From pages to a file
 
-The drawn pages are SVG: lines, rectangles, filled polygons and glyphs, and nothing else. So the
-PDF is written as **vector**, operator by operator, rather than by photographing the page — it stays
-sharp at any zoom, prints at the printer's own resolution, and a twelve-page score comes to about
-450 kB, most of which is the music font travelling with the file.
+The drawn pages are SVG: lines, filled shapes, paths and text. The notes are outlines, so no music font is needed.
+The PDF is written as **vector**, operator by operator. It stays sharp at any zoom, and prints at the printer's own
+resolution.
 
-Bravura is embedded, so the notes are the same shapes on any machine. The labels — the ruler, the
-passage header, the title — are written in the PDF's built-in Helvetica, so they are the right size
-and in the right place but not quite the same letterforms as on screen.
+The labels and the lyrics are written in the PDF's base fonts: Helvetica or Times, with Symbol for a few signs. They
+are the right size and in the right place, but not the screen's letterforms. The file is named after the title
+(`pdfFilenameFor`) and carries it as its PDF title.
+
+The writer and its checks are in [score-pdf.md](../../documentation/services/frontend/score-pdf.md).
+
+## History: the old sheet's printing
+
+The old sheet (vexflow-v2) printed through its own renderer and its own panel. Its page had a row of frame numbers
+over each line, a title repeated on each page, and a music font embedded in the file. Those went in implementation 03,
+Phase 10 (2026-10-27), with the old renderer. The rule above and the five lines to a page are what carried over: the
+frame-number strip gave back about 36 px a line. The old renderer is kept in
+[documentation/deprecated/grid-notation.md](../../documentation/deprecated/grid-notation.md).
 
 ## Where to look deeper
 
-- [../../documentation/services/frontend/score-pdf.md](../../documentation/services/frontend/score-pdf.md)
-  — the files, the PDF object graph, the fonts, and how to check a file that comes out wrong
-- [../../documentation/deprecated/grid-notation.md](../../documentation/deprecated/grid-notation.md)
-  — the old sheet's drawing package (removed in implementation 03, Phase 10)
-- [rendering.md](rendering.md) — how the sheet is drawn (by the backend)
+- [sheet-page.md](sheet-page.md): the **Print to PDF** button, in the header and the floating toolbox
+- [rendering.md](rendering.md): how the sheet is drawn, by the backend and by the page
+- [../../documentation/services/backend/sheet-drawing.md](../../documentation/services/backend/sheet-drawing.md):
+  the pages (`render_pages`, section 8) and the route `GET /sheet/{audio_uuid}/pages`
+- [../../documentation/services/frontend/score-pdf.md](../../documentation/services/frontend/score-pdf.md): the files,
+  the PDF writer, and how to check a file that comes out wrong
