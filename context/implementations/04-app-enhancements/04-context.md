@@ -149,3 +149,71 @@ The checks of 03 ([`03-context.md`](../03-apply-poc-research/03-context.md) sect
 - Simplify's cost estimate is low on dense songs (Moonlight Shadow: $0.10 estimated, $0.21 measured): more thinking
   per batch.
 - 03's open points ([`03-context.md`](../03-apply-poc-research/03-context.md) section 8) are still open.
+
+# 8. Later work: implementations 04-3 and 04-5 (added 2026-11-01)
+
+Sections 1 to 7 describe implementation 04. The work after it, **04-3** (2026-10-29 to 31) and **04-5** (2026-10-31),
+has its own plans and reports, which stay the record. This section says what changed, which decisions bind, where the
+code is, and what is open. The documentation of both is in the documentation refresh (05): the AI pages of
+[`context/ai/`](../../ai/README.md) and the frontend pages linked below. 04-3's own documentation phase (its Phase 6)
+never ran; the refresh does that work, and 04-5's task 5.2 is closed the same way.
+
+## 8.1 What changed in 04-3
+
+- **Folders and metadata of projects**: the folder tree, the pills (Folders, All, Filter), the metadata and the info
+  button. Plan [`04-3-plan.md`](04-3-plan.md) section 4; [phase 1](04-3-implementation-phase-1.md). Page:
+  [folders-and-metadata.md](../../frontend/folders-and-metadata.md).
+- **Frame marks** on the sheet and frames typed in the range toolbox: [phase 2b](04-3-implementation-phase-2b.md).
+  Pages: [sheet-page.md](../../frontend/sheet-page.md), [annotations-stretches.md](../../frontend/annotations-stretches.md).
+- **The levels**: a level copy of the whole song, the catalog of patterns, and the level run with its plan and batches
+  (plan section 5; [phases 2 to 4](04-3-implementation-phase-4.md)). Pages: [levels.md](../../ai/levels.md),
+  [level-run.md](../../ai/level-run.md), [ai-levels.md](../../../documentation/services/backend/ai-levels.md).
+- **The model**: every AI run uses GPT-6.1 Terra at `medium`. Plan section 5.9 first said Sonnet 5.5; the change is in
+  [phase 5](04-3-implementation-phase-5.md) (section 10, the models). Page: [ai/README.md](../../ai/README.md).
+
+## 8.2 What changed in 04-5
+
+- **Strict and Suggested** for each ticked pattern (the default is Suggested). A Strict hand plays its pattern on every
+  chord, the same way through the song.
+- **The rules and the explanations** of a run: the plan writes one rule per pattern, each batch explains itself in
+  simple words and may add a rule.
+- **The first batch first**: a run of two batches or more writes batch 1 and waits. **Go on with the other batches**
+  writes the rest.
+- **Write this batch again**, from the history, with the user's answer; the **History of AI runs** and its log
+  (`ai-runs/<id>.json`, the four routes of `/llm/runs`).
+- **The chords of the song** (a guitar guide, saved with the part), and a new left easy 1 (the other left easy patterns
+  one number up).
+- Pages: [level-run.md](../../ai/level-run.md), [run-history.md](../../ai/run-history.md),
+  [levels.md](../../ai/levels.md); the code in
+  [ai-levels.md](../../../documentation/services/backend/ai-levels.md) section 9.
+
+## 8.3 The decisions that bind
+
+- Every AI run uses GPT-6.1 Terra at `medium` (8.1), not Sonnet 5.5.
+- A level run of two batches or more writes its first batch and waits; the user checks it on the sheet first (the
+  user, 2026-10-31).
+- A batch is written again only from the history, one at a time, with the user's answer.
+- The check decides what reaches the sheet, not the AI: a batch the check refuses three times keeps the earlier notes,
+  and the sheet does not change.
+- A Strict pattern may be changed in shape by the user's words; the changed shape is the Strict one (the words of 04-5,
+  2026-10-31).
+
+## 8.4 Where the code is
+
+- Backend: `sheet/llm/levels.py` (the prompts, the check, `write_again`), `sheet/llm/prompt/levels/` (the prompt files
+  and `VERSION`), `sheet/levels/` (the grid, the harmony, the hands), `part_sheet/job.py` (`start_level`,
+  `continue_level`, `again_batch`), `part_sheet/runs.py` (the log), `api/sheet.py` (the routes).
+- Frontend, in `pages/piece/sheet/frames/`: `EnhanceDialog.tsx`, `PatternCatalog.tsx`, `patterns.ts`, `AiRunPanel.tsx`,
+  `AiRunDetail.tsx`, `AiHistoryPanel.tsx`, `batches.ts`.
+
+## 8.5 Open points
+
+- **The octaves of the user's words** (04-5 report, finding 1): the AI follows the words literally, so "Fa4-La4-Do5"
+  is drawn as F3-A3-C4. One numbering for the user, or a prompt rule: the user decides.
+- **Hard and the figure check**: `LIMITS["hard"]` has `shortest` 64, so the figure check never fires at hard (the
+  Phase 12 report of the refresh). Please confirm that this is intended.
+- **A Stop keeps the batches it accepted** (the level run's page says so). If the user expects a Stop to discard the run,
+  the dialog and the code disagree.
+- **The temporary copies** of the 04-5 real runs (on 20 de Enero) were kept until the user had looked at the pages.
+  Delete them after that.
+- The 04-5 run cost was about $0.47 of the $2 the user allowed, measured on those copies (04-5 report, section 4).

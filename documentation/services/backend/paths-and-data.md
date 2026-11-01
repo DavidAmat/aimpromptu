@@ -55,6 +55,7 @@ made the folder, written or checked `VERSION`, and brought the tables to the new
     music-version.json                       the number of the next history snapshot (§4.5)
     audio-mismatches.json                    windows where the recording no longer matches (§4.6)
     needs-rederivation.json                  only on a piece nothing could rebuild (pre-08)
+    ai-runs/<runId>.json                     the log of each level run (12 hex characters): the request, the plan, each batch's conversation with the AI, its rules and cost; read by the **History of AI runs** (ai-levels.md section 9, run-history.md)
   staging/                                   the edit sessions until Phase 9; no longer written
   cache/<partId>/                            derived, safe to delete (§4.1)
     normalized.wav  waveform.json  piece-r<N>.flac  piece-r<N>.wav  listen-*.flac  scratch clips

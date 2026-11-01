@@ -233,13 +233,81 @@ The concept is in [context/ai/level-run.md](../../../context/ai/level-run.md). T
   (`jobId`, `projectId`, `partId`, `title`). Its checks and the copy are in section 6.
 - `GET /sheet/levels/catalog`, `GET /sheet/levels/catalog/{hand}/{level}/{number}.svg`: section 1.
 
-## 9. The history of runs, and the later sections
+## 9. The history of runs: the log, the states, the later answers
 
-Phase 13 adds the log of a run (`ai-runs/<id>.json`, `part_sheet/runs.py`), its routes (`/llm/runs`, `/llm/runs/{id}`,
-`continue`, `batches/{k}/again`) and `write_again`.
+The page of this part is [context/ai/run-history.md](../../../context/ai/run-history.md). The log of a level run is
+written to the part's folder, `ai-runs/<id>.json`. The routes are in `api/sheet.py`; the list of the runs and the
+functions of the log are in `part_sheet/runs.py`.
+
+### 9.1 `part_sheet/runs.py`: the log
+
+- `_dir(part_id)`: `paths.part_frames_path(part_id).parent / "ai-runs"`, that is `parts/<partId>/ai-runs/`. A run's
+  file is `<12 hex characters>.json`; `_ID` checks the id before a file is opened.
+- `create(part_id, request, system)`: a new run, `state` `running`, `kind` `level`, the `request`, the `system` prompt,
+  `plan` `None`, `batches` `[]`, `rules` `[]`, `usd` 0.0, `requests` 0. Written at once. The id is `uuid4().hex[:12]`.
+- `save(part_id, run)`: sets `updated`, writes `<id>.json.tmp`, then replaces `<id>.json`. Under the module lock.
+- `update(part_id, run, talk)`: a `levels.Talk` with `k` below 0 is the plan (`run["plan"]`); any other replaces the
+  batch of the same `k` in `run["batches"]`, sorted by `k`; then `save`.
+- `load(part_id, run_id)`: the log, or `None` (a bad id, no file, a file that does not read).
+- `_short(run)`: what the list shows: `id`, `log` (`True`), `created`, `state`, `level`, `hand`, `patterns`, `strict`,
+  `words`, `model`, `batches` (`k`, `start`, `end`, `status` of each), `total` (the windows of the request), `usd`.
+- `listing(part_id)`: the logs in the folder, then the record's `levels` entries whose `run` has no log (`id`
+  `record-N`, `log` `False`, the plan and `declared` from the record). Sorted by `created`, the latest first.
+
+### 9.2 `part_sheet/job.py`: the states of a run, and the two jobs
+
+- `_level_work` (the job of `start_level` and `continue_level`) sets `state` to `running` when it starts. At the end:
+  `stopped` if a Stop was asked, else `waiting` if a batch was accepted, the windows are not all done and no Stop was
+  asked, else `done` if a batch was accepted or was done before, else `failed`. A `BaseException` in the work sets
+  `stopped` and saves. The job's summary has `waiting: true` for the waiting state, and `run` (the id).
+- `continue_level(part_id, run_id, *, complete=None)`: `LookupError` ("No such run.") when there is no log;
+  `ValueError` ("This run is not waiting for you.") unless `state` is `waiting`; `Busy` when the part has a job. Its
+  batches are the windows not in the log's batches. It calls `_level_work` with the stored request, plan and rules.
+- `again_batch(part_id, run_id, k, words, *, complete=None)`: `LookupError` when there is no log, or batch `k` has no
+  `target` and no `messages` ("This batch has no conversation to answer."); `ValueError` ("Write your answer to the AI
+  first.") for empty words; `Busy`. The work: the notes of the part (`pipeline.load_note_events`), the sheet as it stood
+  before batch `k` (the current notes, with the batch's hands replaced by the `target`), `levels.Talk` from the log,
+  `levels.write_again`. A failed run of the work answers `level` `failed`.
+  - Accepted: the batch replaces its stretch of its hands, one step of undo labelled `Batch {k + 1} written again with
+    AI`; the log's batch and its rules are the new ones (the rules of `source` `batch {k + 1}` are replaced).
+  - Refused: the sheet does not change; the log keeps the old `status`, `explain`, `rules` and `declared`.
+  - Both: `answers` gets `{words, at}`; `usd` and `requests` are added; `runs.save`. A waiting run keeps `waiting`.
+- The summary of `again_batch` has `again` (`k + 1`), `run`, `batches` (1 or 0), `total` 1, `hand`, `levelName`, `usd`,
+  and `waiting` when the run waits.
+
+### 9.3 `sheet/llm/levels.py`: `write_again`
+
+- `write_again(complete, system, talk, words, before, grid, *, level, staffs, allowed, strict, max_checks, guide)`
+  returns the conversation as it is now (`Talk`) and the last check (`Batch`). The conversation goes on: the earlier
+  messages, then the answer, the prompt file `prompt/levels/answer.md` (its `{words}` is the user's answer, stripped).
+- Each reply is checked by `check_level` (with `explain=True` and the guide of the chords). A refused reply is fed back
+  by `level_feedback`. At most `MAX_CHECKS` (3) replies. A feedback that no reply answered is removed.
+- `status`: `failed` when the last check has errors, else `ok`. When `ok`, `explain`, `rules` and `declared` are the
+  reply's. The new `Talk` starts with `status` `open`.
+
+### 9.4 `api/sheet.py`: the four routes
+
+- `GET /sheet/{audio_uuid}/llm/runs` (`llm_runs`): `runs.listing`. `GET .../llm/runs/{run_id}` (`llm_run`): `runs.load`;
+  404 "No such run." when there is none.
+- `POST .../llm/runs/{run_id}/continue` (`continue_llm_run`): 403 when `_writes` is false; `continue_level`: `LookupError`
+  404, `Busy` or `ValueError` 409; 202 `{jobId, status}`.
+- `POST .../llm/runs/{run_id}/batches/{k}/again` (`run_batch_again`), body `BatchAgainRequest` (`words`, 1 to 1000
+  characters): 403; `again_batch`: `LookupError` 404, `Busy` 409, `ValueError` 400; 202 `{jobId, status}`.
+- All four call `_notes_or_404` first: 404 when the audio or its notes are missing.
+- `k` counts from 0 (the first batch is `k` 0).
+
+### 9.5 The page
+
+- `pages/piece/sheet/frames/AiHistoryPanel.tsx` (`AiHistoryPanel`, `STATE_WORDS`): the list; `AiRunDetail.tsx`
+  (`AiRunDetail`, `BatchBlock`, `STATUS_WORDS`): one run, its answer box and **Write this batch again**, and
+  **Go on with the other N batches**; `AiRunPanel.tsx`: the title **Check batch 1** and the **History** button;
+  `batches.ts` (`BATCH_COLOURS`); `FramesSheetPage.tsx`: **History of AI runs** in `sheetButtons` (when `offerAi`).
+- `api/sheet.ts`: `aiRuns`, `aiRun`, `continueRun`, `runBatchAgain`. `patterns.ts`: `runTitle`, the title of a run.
 
 ## Where to look deeper
 
+- [context/ai/run-history.md](../../../context/ai/run-history.md): the history, the waiting state, an answer, a batch
+  written again, Go on
 - [context/ai/level-run.md](../../../context/ai/level-run.md): the plan, the batches, the check, Strict and Suggested
 - [context/ai/levels.md](../../../context/ai/levels.md): what a level is, the catalog, the grid, the chords
 - [ai-runs.md](ai-runs.md): the jobs and the routes that every run shares, the model client

@@ -3,7 +3,7 @@
 The plan is [`05-plan.md`](05-plan.md). Branch `feat/05-docs-refresh`. Status letters: `[x]` complete, `[p]` in
 progress, `[b]` blocked, `[c]` cancelled, `[ ]` not started.
 
-**Next: wave D**: Phases 8, 13, in parallel; then the join of wave D. (Each join changes this line.)
+**Next: wave D**: Phase 8 (Phase 13 is done); then the join of wave D. (Each join changes this line.)
 
 The waves are in the plan, section 4.4: A (2, 5, 9, 14, 18, 19), B (3, 6, 10, 11, 15), C (4, 7, 12, 16, 17),
 D (8, 13), then 20 alone. After each wave, a join applies the pending edits of the shared files.
@@ -108,11 +108,13 @@ Report: [05-implementation-phase-12.md](05-implementation-phase-12.md)
 - [x] 12.1 New `context/ai/level-run.md`.
 - [x] 12.2 Sections in `ai-levels.md` done; `endpoints.md`: pending edit E12.1 for the join of wave C (the report).
 
-# [ ] Phase 13: The AI, part 5: the history of AI runs, and `04-context.md` (wave D)
+# [x] Phase 13: The AI, part 5: the history of AI runs, and `04-context.md` (wave D)
 
-- [ ] 13.1 New `context/ai/run-history.md`; the log in `ai-levels.md` and `paths-and-data.md`.
-- [ ] 13.2 `endpoints.md`, `components.md`.
-- [ ] 13.3 `04-context.md`: a section for 04-3 and 04-5.
+Report: [05-implementation-phase-13.md](05-implementation-phase-13.md)
+
+- [x] 13.1 New `context/ai/run-history.md`; the log in `ai-levels.md` (section 9) and `paths-and-data.md`.
+- [x] 13.2 `endpoints.md` (four rows), `components.md` (two rows, one changed), `00-index.md`, `context/ai/README.md`, `level-run.md`, `documentation/services/README.md`: pending edits E13.1 to E13.8 for the join of wave D.
+- [x] 13.3 `04-context.md`: section 8 for 04-3 and 04-5.
 
 # [x] Phase 14: Projects, folders, metadata, parts, Save to library (wave A)
 
