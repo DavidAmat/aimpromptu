@@ -99,3 +99,9 @@ None found in this phase. Two things to know, not bugs:
 - Phase 20: the glossary terms above; the archive row (pending edit 3).
 
 Commit: `Docs 05, Phase 6: the range toolbox, copy and paste` (the files named one by one).
+
+## Note for the join
+
+Commit `cfb4479` (this phase) also carries, in `05-checklist.md`, the ticks of Phases 3 and 11 that those agents had
+written to the shared file but not yet committed. They were not mine to commit; the join of wave B should read the
+checklist as it is and check that the two reports exist.
