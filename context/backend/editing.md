@@ -55,7 +55,7 @@ notes are not transcribed. The toolbox: [annotations-stretches.md](../frontend/a
 ## Recording in Sheet
 
 **Record this passage** (the range toolbox) opens the page of the marked stretch; **Record a
-passage** (the floating bar, a blank sheet) opens a new passage at the end of the piece. The page
+passage at the end** (the floating bar) and **Record a passage** (a blank sheet) open a new passage at the end of the piece. The page
 shows two sheets ([`../frontend/projects.md`](../frontend/projects.md) section 6):
 
 - **Current**: a copy of the marked frames, made by a paste into an empty part, so it has the notes,

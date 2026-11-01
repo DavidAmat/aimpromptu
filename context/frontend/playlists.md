@@ -11,16 +11,16 @@ Other Projects" and "Playlists"). What the backend writes is in
 
 **New project → From other projects** opens `/projects/compose`, in the app context's three moves:
 
-1. **Choose a project**: a list of every project with notes, of Projects and of My library (a
+1. Choose a project: a list of every project with notes, of Projects and of My library (a
    version is named "<song> (<version>)"), with a filter.
 2. Its piano sheet opens **read only**. Mark a stretch above the staves and press **Add this
-   stretch** in the *Frames* panel, or press **Add the whole sheet**. A project of several parts
+   stretch** in the *Frames* panel, or press **Add the whole sheet** (**Add the whole project** when there is no sheet). A project of several parts
    offers a **Part** choice above it. A project with no piano sheet yet can only be added whole.
 3. The passages are listed on the left in the order they will play, each with its stretch or
    "Whole". Between two passages a choice says how they join: **Sequential** (the second plays on
    from the first, in the same part) or **Subheader** (it starts a new part, with the **Title**
    typed there, or its own title). A passage is dragged to another place, or moved and removed from
-   its `⋯`. **+** adds another.
+   its `⋯`. The **+** above the list (its title is **Add a passage**) adds another.
 
 **Save as song** or **Save as integrated playlist** asks a title and makes the project in Projects,
 which opens on its Sheet step. The passages are **copies**: their notes, their marks (with the key,

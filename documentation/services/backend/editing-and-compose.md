@@ -238,7 +238,7 @@ derived files it was writing from.
   after moved, the audio as long as the notes); a renamed figure kept as a speed change; a new
   passage on a blank sheet; undo to the byte; deleting the song and discarding the passage; a
   version of the library cannot be re-recorded; a take of another passage is not found
-- `tests/test_paste.py` — 16 tests (Phase 8): the timeline put into and cut, a paste's notes, marks,
+- `tests/test_paste.py` — 17 tests (Phase 8): the timeline put into and cut, a paste's notes, marks,
   key at both edges and audio, every join, undo and redo to the byte, a paste over a marked stretch,
   From scratch, Save to library and export of a pasted project
 - `tests/test_compose.py` — 7 tests: `insert_events` (append moves nothing, an insert moves every

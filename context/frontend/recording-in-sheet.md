@@ -19,9 +19,9 @@ with "Promote the passage" as the last step of its log. Below, "the sheet" and i
 ## 1. The page
 
 **Record this passage** (the record icon in the title bar of the range toolbox) opens the page of
-the marked stretch, `/projects/<id>/passages/<passageId>`. **Record a passage** on the floating bar,
-and on a blank sheet, opens a new passage at the end of the piece. The sheet is saved first when it
-has changes. (Notes Falling had **Record this stretch** from Phase 9 until Phase 11, when it
+the marked stretch, `/projects/<id>/passages/<passageId>`. **Record a passage at the end** (the floating bar)
+and **Record a passage** (a blank sheet) open a new passage at the end of the piece. The sheet is always
+saved, so nothing waits to be saved first. (Notes Falling had **Record this stretch** from Phase 9 until Phase 11, when it
 became a view of Play mode, which only plays.)
 
 The page is a **recording mode**: it covers the window with its own title bar ("Recording ·
@@ -41,7 +41,7 @@ two tabs:
   as it stops, raised to a level that reads, and opens here.
 - **Sheet**: the Current above the **Proposal**, so the two read alike, with the speed beside the
   tabs. The Proposal is drawn with every tool of the sheet and its own undo (its sheet toolbox has
-  Key, Transpose and Layout); its edits are kept by themselves.
+  Key, Transpose and View); its edits are kept by themselves.
 
 **Record** opens a small panel: **Play the passage along** (the Current, slowed or hurried to the
 speed the take is played at), **Microphone** (when the computer has more than one; remembered in this
