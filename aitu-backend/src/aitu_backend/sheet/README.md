@@ -35,7 +35,7 @@ them, and sections 1 to 8 below describe them. The new sheet is sections 9 to 17
 Run time: Python 3.12, the standard library and numpy. Every asset is a frozen file inside the package (§6).
 
 The detail of the new sheet's files and its text is [`documentation/services/backend/sheet-f1.md`](../../../../documentation/services/backend/sheet-f1.md);
-how it is drawn is in `documentation/services/backend/sheet-drawing.md` (Phase 3).
+how it is drawn is in [`documentation/services/backend/sheet-drawing.md`](../../../../documentation/services/backend/sheet-drawing.md).
 
 ## 2. Modules
 
@@ -260,6 +260,8 @@ Layout ---- frames.draw (all systems, or some: one segment) ---> Engraving --- s
   `[a, b)`, with the line breaks of the whole song.
 - Tests: `tests/test_sheet_engrave_frames.py`. Commands: `scripts/draw_frames.py` (draw, check and time parts),
   `scripts/frames_gallery.py` (the Phase 3 gallery).
+- The drawing in words (the routes, the spacing, the line breaks, the glyphs, the SVG and its marks, the pages):
+  [`documentation/services/backend/sheet-drawing.md`](../../../../documentation/services/backend/sheet-drawing.md).
 
 ## 11. The LLM step of the new sheet (implementation 03, Phase 4)
 
@@ -494,6 +496,8 @@ step that carries `sheet.f1` carries it too). Measurements and reasons:
 - Routes: `POST /sheet/{part}/reading?preview=true`, `POST /sheet/{part}/transpose` (`preview`),
   `POST /sheet/{part}/add`, `GET /sheet/{part}/pages`; `GET /sheet/{part}` answers `titles`, `lyrics`, `quarterMs`,
   `spaceMs`, `lineSpace`, and each note's `end` frame.
+- The drawing of the lyrics and of the paper pages, in words: [`documentation/services/backend/sheet-drawing.md`](../../../../documentation/services/backend/sheet-drawing.md)
+  (sections 6 and 8).
 - Tests: `tests/test_sheet_toolbox.py` (the blocks: format, wrapping, drawing, a piece over a line break, the
   route). Browser check: `npm run check:frames-toolbox` (aitu-frontend).
 

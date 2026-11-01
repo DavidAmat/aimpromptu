@@ -80,10 +80,13 @@ Report: [05-implementation-phase-9.md](05-implementation-phase-9.md)
 - [x] 9.3 `02-tech-stack.md` (the AI client, the model) done. The core README sections 5 and 11, `endpoints.md`,
   `components.md`: pending edits for the join of wave A (the core README is Phase 2's file in wave A).
 
-# [ ] Phase 10: The AI, part 2: a stretch, Simplify, the Enhance with AI dialog (wave B)
+# [x] Phase 10: The AI, part 2: a stretch, Simplify, the Enhance with AI dialog (wave B)
 
-- [ ] 10.1 New `context/ai/stretch-and-simplify.md`; sections in `ai-runs.md`.
-- [ ] 10.2 The core README section 14; `endpoints.md`, `components.md`.
+Report: [05-implementation-phase-10.md](05-implementation-phase-10.md)
+
+- [x] 10.1 New `context/ai/stretch-and-simplify.md`; sections 7 (a stretch) and 8 (Simplify) in `ai-runs.md`.
+- [x] 10.2 The core README section 14; `endpoints.md`, `components.md`: pending edits for the join of wave B (the core
+  README and `endpoints.md` are shared files; `components.md` needs no change).
 
 # [x] Phase 11: The AI, part 3: levels, the catalog of patterns, the chords of the song (wave B)
 

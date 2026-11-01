@@ -12,7 +12,8 @@ other projects, the requests review) asks `GET /sheet/{uuid}` for an SVG and dra
 It is the sheet without compases, tempo, puntillos or silencios, which the backend draws
 (`aitu_backend.sheet.engrave.frames`, the Leipzig glyphs and Verovio's drawing rules). The page asks `GET /sheet/{part}?width=N` for the width it has (about 8.5 px a staff
 space) and gets one SVG and a cursor map: one row per drawn column (its line, its x, its time) and one box per
-line. The code is `pages/piece/sheet/frames/`:
+line. The backend side (the layout, the lines, the frame marks, the lyrics, the SVG, the pages) is told in
+[sheet-drawing.md](../../documentation/services/backend/sheet-drawing.md). The code is `pages/piece/sheet/frames/`:
 
 - `FramesSheetPage.tsx`: the page (title lines, the player, the floating bar with Undo, Redo and **Enhance with
   AI**), and since Phase 6 the notes picked and the keys (⌘Z, ⇧⌘Z, Escape); since implementation 04, Phase 1, the
@@ -95,6 +96,8 @@ as the record.
 
 ## Where to look deeper
 
+- [`documentation/services/backend/sheet-drawing.md`](../../documentation/services/backend/sheet-drawing.md): how the
+  backend draws the sheet (the routes, the layout, the lines, the glyphs, the SVG, the pages)
 - `aitu-backend/src/aitu_backend/sheet/README.md` sections 9 to 17: the engine, the AI step, the edits, the tools,
   the marks of the old sheets
 - [`documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md) section 3:

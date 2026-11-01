@@ -12,7 +12,7 @@ of the page. **State** is `to check` until the owner phase sets it.
 |---|---:|---|---|---:|---|---|
 | [README.md](../../../README.md) | 76 | 2026-10-27 | 20 | 0 | AImpromptu (aitu) | `to check` |
 | [aitu-backend/README.md](../../../aitu-backend/README.md) | 109 | 2026-10-27 | 20 | 2 | aitu-backend | `to check` |
-| [aitu-backend/src/aitu_backend/sheet/README.md](../../../aitu-backend/src/aitu_backend/sheet/README.md) | 544 | 2026-10-30 | 2, 3, 9, 10 (their sections); 20 the map | 0 | aitu_backend.sheet: the product core of the new piano sheet chain | `updated` (Phase 2: sections 1, 2, 4, 12) |
+| [aitu-backend/src/aitu_backend/sheet/README.md](../../../aitu-backend/src/aitu_backend/sheet/README.md) | 544 | 2026-10-30 | 2, 3, 9, 10 (their sections); 20 the map | 0 | aitu_backend.sheet: the product core of the new piano sheet chain | `updated` (Phase 2: sections 1, 2, 4, 12; Phase 3: sections 1, 10, 15) |
 | [aitu-frontend/README.md](../../../aitu-frontend/README.md) | 136 | 2026-10-27 | 20 | 1 | aitu-frontend | `to check` |
 | [context/00-documentation-instructions.md](../../../context/00-documentation-instructions.md) | 91 | 2026-10-27 | 20 | 0 | Documentation instructions | `to check` |
 | [context/00-index.md](../../../context/00-index.md) | 326 | 2026-10-28 | 20 | 2 | Documentation index | `to check` |
