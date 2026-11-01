@@ -92,6 +92,7 @@ assumes.
 | [ai/stretch-and-simplify.md](ai/stretch-and-simplify.md) | A stretch of the sheet with the user's words, and Simplify: the batches, the rules, the stored run |
 | [ai/levels.md](ai/levels.md) | Levels: the catalog of patterns, the grid, the chords of the song, the level copy |
 | [ai/level-run.md](ai/level-run.md) | A level run: the plan of the song, the batches, the rules, the check and its limits per level, Strict and Suggested, the explanations, the cost |
+| [ai/run-history.md](ai/run-history.md) | The history of AI runs: the log of each level run, the first batch first, an answer to the AI, a batch written again, Go on |
 
 ## Music (`context/music/`)
 
@@ -297,7 +298,7 @@ Reading a piano roll video into the same `events.json` the transcription model w
 | [../documentation/services/backend/sheet-f1.md](../documentation/services/backend/sheet-f1.md) | The new sheet: the files of a part, the F1 text, how the algorithm makes it |
 | [../documentation/services/backend/sheet-drawing.md](../documentation/services/backend/sheet-drawing.md) | How the backend draws the new sheet: the routes, the layout and the lines, the glyphs, the frame marks, the lyrics, the SVG and the pages |
 | [../documentation/services/backend/ai-runs.md](../documentation/services/backend/ai-runs.md) | The code of the AI runs: the model client, the job, the windows and the check, the prompt, the routes |
-| [../documentation/services/backend/ai-levels.md](../documentation/services/backend/ai-levels.md) | The code of the levels: the catalog, the grid, the harmony, the hands, the chords of the song, the level copy, the level run, the dialog |
+| [../documentation/services/backend/ai-levels.md](../documentation/services/backend/ai-levels.md) | The code of the levels: the catalog, the grid, the harmony, the hands, the chords of the song, the level copy, the level run, the history of runs (the log), the dialog |
 | [../documentation/services/backend/events-to-sheet.md](../documentation/services/backend/events-to-sheet.md) | The derivation path from the stored notes to the hand split the new sheet starts from, with the reason for each ordering |
 | [../documentation/services/backend/transcription-pipeline.md](../documentation/services/backend/transcription-pipeline.md) | Engines, thresholds, the artifact and leakage filters, the measurement behind each number |
 | [../documentation/services/backend/hand-inference-second-pass.md](../documentation/services/backend/hand-inference-second-pass.md) | The gated repair pass over the hand split |

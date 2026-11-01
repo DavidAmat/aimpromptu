@@ -12,7 +12,7 @@ Code-level detail per service. Overviews in [context/backend/](../../context/bac
 | [sheet-f1.md](backend/sheet-f1.md) | The new sheet: the files of a part, the F1 text, how the algorithm makes it |
 | [sheet-drawing.md](backend/sheet-drawing.md) | How the backend draws the sheet: the routes, the layout and the lines, the glyphs, the frame marks, the lyrics, the SVG and the pages |
 | [ai-runs.md](backend/ai-runs.md) | The code of the AI runs: the model client, the job, the windows and the check, the prompt, the routes |
-| [ai-levels.md](backend/ai-levels.md) | The code of the levels: the catalog of patterns, the grid, the harmony, the hands, the chords of the song, the level copy, the level run |
+| [ai-levels.md](backend/ai-levels.md) | The code of the levels: the catalog of patterns, the grid, the harmony, the hands, the chords of the song, the level copy, the level run, the history of runs (the log) |
 | [events-to-sheet.md](backend/events-to-sheet.md) | The derivation path: one stored file to the hand split the new sheet starts from, and why the steps are in that order |
 | [transcription-pipeline.md](backend/transcription-pipeline.md) | Engines, thresholds, the artifact and leakage filters, the measurement behind each number |
 | [hand-inference-second-pass.md](backend/hand-inference-second-pass.md) | The gated repair pass over the hand split |

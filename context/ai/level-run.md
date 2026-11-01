@@ -24,7 +24,7 @@ The run is one job in the background. The sheet changes as each batch is accepte
    they had.
 5. **The wait** (a run of two batches or more). The run writes the plan and the first batch, stores them, and waits.
    The user reads the first batch, may answer the AI, and then goes on. The waiting state and the history of the
-   runs are told in `run-history.md`, in this folder.
+   runs are told in [run-history.md](run-history.md).
 
 Outcomes, as the job reports them: `ok` (stored), `failed` (no batch was accepted, so nothing changes), `stale` (the
 notes changed while the AI worked, so nothing is stored), `gone` (the part was deleted).

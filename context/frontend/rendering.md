@@ -29,7 +29,7 @@ zoom, the cursor and the recording, what the view draws over the drawing, and th
 - `geometry.ts`: the page's arithmetic (where the cursor is, the time under a point, the noteheads of a column);
 - `FramesNoteToolbox.tsx`, `FramesRangeToolbox.tsx`, `FramesSheetToolbox.tsx`, `FramesLyricsToolbox.tsx`,
   `EnhanceDialog.tsx`, `AiRunPanel.tsx`, `AiRunDetail.tsx`, `AiHistoryPanel.tsx`, `PatternCatalog.tsx`, and the
-  dialogs `FramesPdfDialog.tsx`, `FramesPreviewDialog.tsx`: the tools and the runs, told in
+  dialogs `FramesPdfDialog.tsx` (Print to PDF, [printing.md](printing.md)) and `FramesPreviewDialog.tsx` (the preview of **Transpose**): the tools and the runs, told in
   [annotations.md](annotations.md) and [`context/ai/`](../ai/README.md).
 
 Hooks for the browser checks: `[data-frames-sheet]` (`data-source`, `data-llm`, `data-working`),

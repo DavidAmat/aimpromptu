@@ -16,7 +16,7 @@ Read this page first, then the page of the run you need.
 | **A stretch** | A stretch of the song, both hands or one, with the user's words | The dialog with notes or a stretch selected, the tab **A stretch** | [stretch-and-simplify.md](stretch-and-simplify.md) |
 | **Simplify** a hand | The easier version of one hand, or both, over the song: no longer in the dialog, a level of that hand does it | The tab **The whole song**, as a level | [stretch-and-simplify.md](stretch-and-simplify.md) |
 | **A level** | A passage, or the whole song, at **Easy**, **Medium** or **Hard**, with patterns | The tab **The whole song** or **A stretch**, with a level chosen | [levels.md](levels.md), [level-run.md](level-run.md) |
-| **The history of runs** | The log of each level run, the first batch first, a batch written again | The button **History of AI runs** in the sheet's buttons | `run-history.md` (Phase 13) |
+| **The history of runs** | The log of each level run, the first batch first, a batch written again | The button **History of AI runs** in the sheet's buttons | [run-history.md](run-history.md) |
 
 The names in the table are the labels of the app. A page not yet written is named in code style, with the phase
 that writes it.
@@ -56,9 +56,7 @@ The mark has the same width whatever its state, so the names of a list stay alig
 - [stretch-and-simplify.md](stretch-and-simplify.md): a stretch of the sheet with the user's words, and Simplify.
 - [levels.md](levels.md): the levels, the catalog of patterns, the chords of the song, the level copy.
 - [level-run.md](level-run.md): a level run: the plan, the batches, the rules, the check, Strict and Suggested.
-
-The other pages of the folder are written by the phases of the documentation refresh (see
-[implementations/05-documentation-refresh](../implementations/05-documentation-refresh/05-plan.md)): the history of runs.
+- [run-history.md](run-history.md): the history of AI runs: the log, the first batch first, an answer to the AI, a batch written again, Go on.
 
 ## Where to look deeper
 

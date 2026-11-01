@@ -213,7 +213,7 @@ written: the F1 frames text (`aitu_backend.sheet`), with one comment line on top
 (`source` `llm`, `mixed` or `algorithm`, the `handsRevision` it was written for, the windows, the
 reference figure `quarterMs`, the cost, `edited`, `legacy`). A sheet written for an older
 `handsRevision` is laid again on the current notes when it is drawn, so it is never stale for the
-page. **`sheet.edits.json`** is the part's log of steps (`part_sheet/edits.py`, at most 50), and
+page. **`sheet.edits.json`** is the part's log of steps (`part_sheet/edits.py`, at most 50). It starts again when a whole AI run writes the sheet, and a new transcription deletes it (`part_sheet/store.py`), and
 **`sheet.pending`** says a new transcription asked for an AI run. Detail in the sheet's
 [README](../../../aitu-backend/src/aitu_backend/sheet/README.md), sections 12 to 17.
 
@@ -345,13 +345,13 @@ Two events copy the **previous** state of a part into
 
 | When | Function (`editing/history.py`) | What is copied |
 |---|---|---|
-| A paste (Phase 8); a promotion of a re-recorded passage (Phase 9) | `snapshot_current` | `notes.pmn`, `sheet.json`, `sheet.f1`, `timeline.json`, and `source.json` (the part's entry of `project.json`: the names of its files, since Phase 8) |
+| A paste; a promotion of a re-recorded passage (`edits.record_version`); the start of an AI run, for **Revert** (`edits.snapshot_before_run`); the Lab's step that makes a video into the piece (`video/piece.py`, `write`, when the part has notes) | `snapshot_current` | `notes.pmn`, `sheet.json`, `sheet.f1`, `timeline.json`, and `source.json` (the part's entry of `project.json`: the names of its files, since Phase 8) |
 | A new transcription of a part that already has notes | `snapshot_notes` | `notes.pmn`, `sheet.json`, `sheet.f1`, and a `snapshot.json` with the reason |
 
 No audio is copied: the snapshot's `timeline.json` names the stored files, and `audio_refs` counts
 them as used by the project, so they are never deleted under it.
 
-**Putting a snapshot back** (`history.restore`, Phase 8: the undo and the redo of a paste; since
+**Putting a snapshot back** (`history.restore`, Phase 8: the undo and the redo of a paste and of a promotion, the **Revert** of an AI run (`edits.revert_run`), and the rollback of a paste that fails (`editing/paste.py`); since
 implementation 03 called by the sheet's log, `POST /sheet/{uuid}/undo` and `/redo`, the route
 `POST /time/{uuid}/versions/{n}/restore` having been removed in Phase 10): the current state is kept first as the next snapshot, then
 `v<n>`'s files are copied back (`copyfile`, so the notes get a new modification time and the hand

@@ -71,7 +71,7 @@ wave D, in this order.
   transcription deletes it (`part_sheet/store.py`)."
 - **E8.4** `context/frontend/rendering.md`, line 32 (the list under the frontend files). Replace "and the dialogs
   `FramesPdfDialog.tsx`, `FramesPreviewDialog.tsx`: the tools and the runs, told in" with "and the dialogs
-  `FramesPdfDialog.tsx` (Print to PDF, [printing.md](printing.md)) and `FramesPreviewDialog.tsx` (the preview of
+  `FramesPdfDialog.tsx` (Print to PDF, `printing.md`) and `FramesPreviewDialog.tsx` (the preview of
   **Transpose**): the tools and the runs, told in".
 
 No change needed in `endpoints.md`, `components.md`, `00-index.md` or `documentation/services/README.md` for this phase.
