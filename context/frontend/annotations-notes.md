@@ -1,82 +1,88 @@
 # The note toolbox
 
-What the Sheet step can say about the notes picked on the sheet. The overview of the page, the
-selections and undo is [annotations.md](annotations.md). Code:
-`aitu-frontend/src/pages/piece/sheet/NoteToolbox.tsx` and `useNoteActions.ts`.
+What the Sheet step can say about the notes picked on the sheet. The page, the two selections and the
+undo are in [annotations.md](annotations.md). Code: `aitu-frontend/src/pages/piece/sheet/frames/FramesNoteToolbox.tsx`
+(the panel), `readingTools.ts` (the figures, the ornaments and the chord keyboard's column, shared with the
+range toolbox). The chord keyboard's sibling, the keyboard panel under the playhead, is `PianoToolboxes.tsx`, not
+this toolbox.
 
-The note toolbox of the **new sheet** (implementation 03, Phase 7) is described in
-[annotations.md](annotations.md), section "The new sheet"; this page is the old sheet's, kept as the record. Its
-code (`NoteToolbox.tsx`, `useNoteActions.ts`) was removed in implementation 03, Phase 10 (2026-10-27).
+Every control writes at once, is one step of undo, and redraws the sheet. Nothing changes while the AI writes
+the part; the controls say why in their tooltips.
 
-## The title
+## Picking the notes
 
-**Pick one note and the panel is titled with its name**, in solfège: `Do 4`, `Do-# 3`, `Re-b 5`.
-The title bar has **Copy the frames of these notes** (⌘C, Phase 8: from the first note's onset to
-the end of the longest, for a **Paste**) and *Select the frames of these notes*.
-Middle C is `Do 4`, the reckoning the keyboard, the roll and every tooltip use. Pick several and the
-title counts them; the keyboard panel is where a chord is read. Under the title is the time of the
-notes in the recording.
+- Click a notehead. ⌘-click or Shift-click adds one or takes one away; a drag across the staves picks a box.
+  Escape drops the pick.
+- The panel opens beside the notes. Its title is the printed name of one note (`Do-# 5`, spelled against the
+  key at that column), or the number of notes. Under it, the time of the notes in the recording.
+- A figure, a beam, a grace note and an ornament belong to a **chord** (the notes of one hand at one column):
+  picking one note names the whole chord of that hand. A finger belongs to one note.
+- The title bar has three actions:
+  - **Enhance these notes with AI, with your own words**: opens the Enhance with AI dialog on the stretch of
+    these notes. Shown only where the AI can run on the sheet.
+  - **Copy the frames of these notes** (⌘C): keeps the stretch they cover for a Paste.
+  - **Select the frames of these notes**: hands the selection to the range toolbox
+    ([annotations-stretches.md](annotations-stretches.md)).
 
-The name is **the one the sheet prints**, not one worked out from the key that was pressed. The same
-black key is written `Do-#` in a sharp key and `Re-b` in a flat one, so the panel spells it against
-the signature sounding at that column, through the same code the noteheads come from. An octave
-bracket or a move to the other staff does not change it: the name is what the note **sounds**.
-`npm run check:note-names` pinned it (removed with the old sheet in implementation 03, Phase 10).
-
-## The controls
-
-Every control is an icon or a short label, and its tooltip says what it does. A disabled one says
-why in its tooltip.
+## The rows
 
 | Row | Control | What it does |
-|---|---|---|
-| (top) | **The seven figures** | The shapes themselves, redonda to semifusa. The one every picked chord is drawn as is pressed; pressing another names all of them at once. Nothing moves in time (D-18). ⌫ goes back to the figures of the sheet |
-| Finger | **1 to 5** | One number on every picked note, or on a single chord one number per note, low to high. ⌫ takes them off |
-| Hand | **Right / Left** | Which hand plays them. Written onto the recording (below) |
-| Beam | 🔗 | Beam every picked chord as one group, whatever the page's own rule makes of them. Needs two or more whole chords, all a corchea or shorter: a negra has no beam to share |
-| Beam | ✂ | Start a new beam in front of them, or join it again. Refused unless the whole chord is picked |
-| Beam | = | Set the picked run of one hand an equal distance apart |
-| Beam | + / − | Open the even run further or close it. Disabled until = is pressed |
-| Marks | 🎹 | A decoration: opens **Piano Edit**, a keyboard with the note in lavender and the decoration in pink. Click a key to say what sounds just before it |
-| Marks | A− | Print the picked notes cue-sized, or full size again |
-| Marks | *tr* | Write the picked notes as one held note with `tr` and a wavy line over it. Needs three onsets or more in one hand |
-| (bottom) | 🗑 | Take them off the page, or press **Delete** (⌫ on a Mac). For a note the transcriber invented out of a pedal blur |
+|-----|---------|--------------|
+| (top) | The seven figures, redonda to semifusa | Sets the figure of every picked chord by hand. The rule keeps it, and it is never a grace note. The figure is shown pressed when every picked chord has it. **Back to the figures of the rule** (⌫) gives the figure back to the rule |
+| **Finger** | 1 to 5 | One number on every picked note. On a single chord, one number per note: in the right hand the smallest number goes to the lowest note, in the left the largest does. **Remove the finger numbers** (⌫) takes them off |
+| **Alteration** | ♭♭, ♭, ♮, ♯, × | Shown for notes written with a sharp or a flat, or spelled by hand. The same key under another name (La-# 4 as Si-b 4 in a key of sharps). The spelling rule then keeps it. **Back to the spelling of the key** (⌫) gives it back |
+| **Hand** | Right / Left | Gives the picked notes to that hand. Written into the notes (`notes.pmn`), one step of undo |
+| **Beam** | Link icon | **Beam these notes as one group** joins the picked chords. On a group already made, **Remove the beam** takes it away. Needs one hand, chords that follow one another, none a grace note, each a corchea or shorter |
+| **Beam** | Scissors icon | **Start a new beam here** cuts the group in front of the first picked chord; when it already starts one, **Join to the beam before** joins it back. Needs one hand |
+| **Grace** | Corchea icon | **Write as grace notes of the next note** (the next note of their hand), or **Write as normal notes**. ⌫ (**Back to the grace rule**) gives them back to the rule |
+| **Duplicate** | Shorter figures | Each picked note is played again at that shorter figure, filling its own time: a negra becomes two corcheas, four semicorcheas. Up to 16 copies of a note. Offered only for figures shorter than the picked chords' |
+| **Unite** | Merge icon, or the figure it makes | Two or more consecutive chords of one hand, with the same keys, become one chord at the first one's place. Its figure is the sum of theirs when that sum is a figure (two corcheas make a negra); otherwise the figure nearest to the time the chords fill in the recording |
+| **Marks** | *tr*, *mord*, *turn* | Over picked onsets of one hand that follow one another: the first is written with the ornament, the others are played inside it and not drawn. Pressed again on the same onsets, it goes away |
+| **Marks** | *arp*, *ferm* | *arp* rolls each picked chord; *ferm* puts a fermata over each. Pressed again, it goes away |
+| (bottom) | 🗑 **Take them off the page** (Delete) | Marks the notes removed in `notes.pmn`, as the Notes step does: they leave the page. Undo brings them back |
 
-Two of these reach further than they look.
+One row reaches further than its icons say:
 
-**Moving a note between hands also changes what its old and new neighbours are called.** A note's
-printed length is the gap to the next onset in the same hand, so the correction is written onto the
-recording (`PUT /time/{uuid}/hands`) rather than kept beside the drawing, and the sheet is asked for
-again. Command-Z writes the old hands back.
+- **Hand** changes the neighbours too. A note's printed length runs to the next onset of its own hand, so the
+  notes of both hands around a moved note can be drawn with new lengths.
 
-**Taking a note off the page does the same to the note before it**, for the same reason: the
-neighbour is lengthened to cover it, which is the point. It is a page edit until **Save**, which
-also takes the note out of the matrix, so the roll and the falling view agree with the page.
+## The chord keyboard
 
-Renaming a tresillo loses its `3`, on purpose: the name says "draw it as this".
+When the picked notes sit in one column (both hands count), the panel shows a small keyboard, scrolled to the
+chord, where the column's keys are lit in their hand's colour (both hands). It works on the chord:
 
-## Even spacing
+- A **dark key** adds a note to the column, as long as that hand's chord, so it prints the chord's figure and
+  stays in its beam group. The hand is the hand of the notes picked; with both hands picked, the hand of the
+  nearest lit key (the right hand on a tie). The note goes in through `POST /sheet/{uuid}/add`.
+- A **lit key** takes that note off (`POST /sheet/{uuid}/remove`).
+- ⌘-click, Shift-click or Control-click on a lit key picks that note or lets it go. The picked notes' keys keep
+  their full colour with a dot; the other lit keys turn pale. **Hand** then moves only the picked notes. A note
+  added on the keyboard is the one picked after.
 
-Each column is as wide as what is drawn in it, and **both staves share the column**, so a run of
-even corcheas in one hand comes out unevenly spaced wherever the other hand needs room. The page is
-not wrong when that happens, but a beam of equal notes that is not equally spaced reads as an
-uneven performance. **=** sets every gap in the run to the widest gap it already had; **+** opens it
-further and moves whatever the other hand plays underneath, which is the trade.
+Notes picked in several columns show no keyboard: it is the chord of one moment.
 
-**− goes below even, and it is meant to.** The widest gap is usually wide because of the other
-hand, so evening a run to it makes the whole run as wide as its worst moment. Below 100 % the notes
-crowd and may touch; that is visible and one press back.
+## How an edit is kept
 
-## Small print and decorations
-
-**Cue size is asked for, never inferred.** A florid run set at full size crowds the other hand off
-the system; set smaller it takes less width and reads as decoration. A **decoration** (grace note)
-is never inferred and never played: nothing in a recording tells one from a very short note that
-was really struck.
+- The routes are `POST /sheet/{uuid}/reading` (the figure, alteration, finger, beam, grace and ornament actions,
+  one `action` each), `POST /sheet/{uuid}/hands`, `POST /sheet/{uuid}/duplicate`, `POST /sheet/{uuid}/unite` and
+  `POST /sheet/{uuid}/remove` (`aitu-backend/src/aitu_backend/api/sheet.py`).
+- `part_sheet/reading.py` checks an action and plans its change (`set_figure`, `set_alter`, `set_fingers`,
+  `set_grace`, `join_beam`, `break_beam`, `set_ornament`). `part_sheet/edits.py` `edit_reading` stores the decision
+  in the sheet and lays the sheet on the notes again, so the rules run (figures, grace notes, beam groups, spelling)
+  around the user's decision.
+- Hand, duplicate, unite, take off the page and a note added on the keyboard change the notes themselves, in
+  `notes.pmn` (`move_hands`, `duplicate_notes`, `unite_notes`, `remove_notes`, `add_note`). Each is one step of undo.
+- The decisions the user makes are kept through a new AI run: a figure set by hand, a finger, the grace switch.
+  The beams, clefs, octave lines, armaduras and ornaments are the AI's kinds too, and a new run writes them again
+  ([editing.md](../backend/editing.md) has the rule of the note edits).
 
 ## Where to look deeper
 
-- [annotations.md](annotations.md) — the page, the selections, undo and saving
-- [annotations-stretches.md](annotations-stretches.md) — the range toolbox
-- [`documentation/services/backend/rhythm-and-annotations.md`](../../documentation/services/backend/rhythm-and-annotations.md)
-  — how each mark is stored
+- [annotations.md](annotations.md): the page, the selections, undo and what is saved
+- [annotations-stretches.md](annotations-stretches.md): the range toolbox, which opens on the same selection
+- [annotations-sheet.md](annotations-sheet.md): the sheet toolbox
+- [editing.md](../backend/editing.md): the note edits in the backend, and the rule of undo
+- [rendering.md](rendering.md): how the sheet is drawn after an edit
+
+Archive of the old sheet's note toolbox (the record, removed in implementation 03, Phase 10):
+[`context/archive/old-sheet-tools/annotations-notes.md`](../archive/old-sheet-tools/annotations-notes.md).

@@ -18,7 +18,10 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/00-index.md](../../../context/00-index.md) | 326 | 2026-10-28 | 20 | 2 | Documentation index | `to check` |
 | [context/00-project-complete-overview.md](../../../context/00-project-complete-overview.md) | 248 | 2026-10-28 | 20 | 1 | AImpromptu (aitu) — complete project overview | `to check` |
 | [context/01-project.md](../../../context/01-project.md) | 126 | 2026-10-28 | 20 | 0 | Project | `to check` |
-| [context/02-tech-stack.md](../../../context/02-tech-stack.md) | 100 | 2026-10-27 | 9, then 20 | 1 | Tech stack | `to check` |
+| [context/02-tech-stack.md](../../../context/02-tech-stack.md) | 101 | 2026-11-01 | 9, then 20 | 1 | Tech stack (Phase 9: the AI row added; `allowedHosts` is an older name, not checked by Phase 9) | `updated` |
+| [context/ai/README.md](../../../context/ai/README.md) | 66 | 2026-11-01 | 9 | 5 | The AI in the app: the kinds of run, the model, the AI mark (later pages named by the phases that write them) | `new` |
+| [context/ai/whole-run.md](../../../context/ai/whole-run.md) | 92 | 2026-11-01 | 9 | 2 | The whole run: Enhance it again with AI, Write it all again, the windows, the check, Stop and Revert | `new` |
+| [documentation/services/backend/ai-runs.md](../../../documentation/services/backend/ai-runs.md) | 150 | 2026-11-01 | 9, then 10 | 0 | The code of the AI runs: the model client, the job, the windows and the check, the prompt, the routes | `new` |
 | [context/02b-local-setup.md](../../../context/02b-local-setup.md) | 577 | 2026-10-27 | 20 | 29 | Local setup: Mac Mini M4 + Ubuntu compute box | `to check` |
 | [context/03-services-overview.md](../../../context/03-services-overview.md) | 119 | 2026-10-27 | 20 | 0 | Services overview | `to check` |
 | [context/04-local-development.md](../../../context/04-local-development.md) | 200 | 2026-10-31 | 20 | 0 | Local development | `to check` |
@@ -29,17 +32,17 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/app/01-app-context.md](../../../context/app/01-app-context.md) | 243 | 2026-10-27 | 20 | 0 | AImpromptus | `to check` |
 | [context/backend/README.md](../../../context/backend/README.md) | 96 | 2026-10-27 | 20 | 2 | aitu-backend | `to check` |
 | [context/backend/api.md](../../../context/backend/api.md) | 121 | 2026-10-27 | 20 | 2 | HTTP API | `to check` |
-| [context/backend/editing.md](../../../context/backend/editing.md) | 122 | 2026-10-26 | 6 (17 Recording in Sheet, 5 the note edits) | 0 | Editing a piece: paste, Recording in Sheet, and parts | `to check` |
+| [context/backend/editing.md](../../../context/backend/editing.md) | 132 | 2026-11-01 | 6 (17 Recording in Sheet, 5 the note edits) | 0 | Editing a piece: paste, Recording in Sheet, and parts; the note edits (Phase 5) | `updated` |
 | [context/backend/muscriptor.md](../../../context/backend/muscriptor.md) | 109 | 2026-10-06 | 15 | 0 | MuScriptor: the transcription engine | `to check` |
 | [context/backend/piano-matrix-notation.md](../../../context/backend/piano-matrix-notation.md) | 213 | 2026-10-27 | 16 | 1 | The piano matrix notation: the stored form, the wire form, the adapters | `to check` |
 | [context/backend/pieces-and-revisions.md](../../../context/backend/pieces-and-revisions.md) | 133 | 2026-10-27 | 15 | 0 | Pieces, steps and revisions | `to check` |
 | [context/backend/time-model.md](../../../context/backend/time-model.md) | 155 | 2026-10-27 | 2 | 0 | The wall-clock model | `to check` |
 | [context/colors/color-palette.md](../../../context/colors/color-palette.md) | 90 | 2026-10-06 | 20 | 0 | Colour palette | `to check` |
 | [context/frontend/README.md](../../../context/frontend/README.md) | 115 | 2026-10-28 | 20 | 0 | aitu-frontend | `to check` |
-| [context/frontend/annotations-notes.md](../../../context/frontend/annotations-notes.md) | 82 | 2026-10-27 | 5 | 4 | The note toolbox | `to check` |
+| [context/frontend/annotations-notes.md](../../../context/frontend/annotations-notes.md) | 88 | 2026-11-01 | 5 | 0 | The note toolbox of the new sheet (the old page is in `archive/old-sheet-tools/`) | `rewritten` |
 | [context/frontend/annotations-sheet.md](../../../context/frontend/annotations-sheet.md) | 147 | 2026-10-31 | 7 | 4 | The sheet toolbox, the keyboard panel, and trills | `to check` |
 | [context/frontend/annotations-stretches.md](../../../context/frontend/annotations-stretches.md) | 97 | 2026-10-27 | 6 | 3 | The range toolbox, and octave brackets on the page | `to check` |
-| [context/frontend/annotations.md](../../../context/frontend/annotations.md) | 276 | 2026-10-31 | 5 | 1 | The Sheet step: what a reader can say about a piece | `to check` |
+| [context/frontend/annotations.md](../../../context/frontend/annotations.md) | 142 | 2026-11-01 | 5 | 0 | The Sheet step: the hub of the new sheet's tools (the old sheet's sections are in `archive/old-sheet-tools/`) | `updated` |
 | [context/frontend/pages.md](../../../context/frontend/pages.md) | 153 | 2026-10-25 | 19 | 1 | Pages and the shell | `to check` |
 | [context/frontend/play-mode.md](../../../context/frontend/play-mode.md) | 126 | 2026-10-26 | 19 | 0 | Play mode | `to check` |
 | [context/frontend/playlists.md](../../../context/frontend/playlists.md) | 84 | 2026-10-15 | 17 (18 the playlists part) | 0 | From other projects, and the playlists | `updated` (18's part: section 3) |

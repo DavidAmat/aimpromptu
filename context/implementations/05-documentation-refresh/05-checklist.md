@@ -42,11 +42,13 @@ Report: [05-implementation-phase-1.md](05-implementation-phase-1.md)
 - [ ] 4.2 `rendering.md` (the frontend half), the Sheet step in `projects.md`, `timestamps.md`.
 - [ ] 4.3 `components.md`: the page, the view, the hooks.
 
-# [ ] Phase 5: The note toolbox (wave A)
+# [x] Phase 5: The note toolbox (wave A)
 
-- [ ] 5.1 `annotations.md` as the hub of the tools (about 200 lines at most).
-- [ ] 5.2 The old `annotations-notes.md` to `context/archive/old-sheet-tools/`; a new one for the note toolbox.
-- [ ] 5.3 `editing.md` (the note edits), `endpoints.md`, `components.md`.
+Report: [05-implementation-phase-5.md](05-implementation-phase-5.md)
+
+- [x] 5.1 `annotations.md` as the hub of the tools (about 200 lines at most).
+- [x] 5.2 The old `annotations-notes.md` to `context/archive/old-sheet-tools/`; a new one for the note toolbox.
+- [x] 5.3 `editing.md` (the note edits) done; `endpoints.md` and `components.md` by the join of wave A (pending edits in the report).
 
 # [ ] Phase 6: The range toolbox, copy and paste (wave B)
 
@@ -63,12 +65,14 @@ Report: [05-implementation-phase-1.md](05-implementation-phase-1.md)
 - [ ] 8.1 `printing.md`, `score-pdf.md`.
 - [ ] 8.2 Undo and redo in `sheet-page.md`; `endpoints.md`, `paths-and-data.md`.
 
-# [ ] Phase 9: The AI, part 1: the AI on the sheet, the whole run (wave A)
+# [x] Phase 9: The AI, part 1: the AI on the sheet, the whole run (wave A)
 
-- [ ] 9.1 New `context/ai/README.md` and `context/ai/whole-run.md`.
-- [ ] 9.2 New `documentation/services/backend/ai-runs.md`.
-- [ ] 9.3 `02-tech-stack.md` (the AI client, the model); the core README sections 5 and 11; `endpoints.md`,
-  `components.md`.
+Report: [05-implementation-phase-9.md](05-implementation-phase-9.md)
+
+- [x] 9.1 New `context/ai/README.md` and `context/ai/whole-run.md`.
+- [x] 9.2 New `documentation/services/backend/ai-runs.md`.
+- [x] 9.3 `02-tech-stack.md` (the AI client, the model) done. The core README sections 5 and 11, `endpoints.md`,
+  `components.md`: pending edits for the join of wave A (the core README is Phase 2's file in wave A).
 
 # [ ] Phase 10: The AI, part 2: a stretch, Simplify, the Enhance with AI dialog (wave B)
 
@@ -91,10 +95,12 @@ Report: [05-implementation-phase-1.md](05-implementation-phase-1.md)
 - [ ] 13.2 `endpoints.md`, `components.md`.
 - [ ] 13.3 `04-context.md`: a section for 04-3 and 04-5.
 
-# [ ] Phase 14: Projects, folders, metadata, parts, Save to library (wave A)
+# [x] Phase 14: Projects, folders, metadata, parts, Save to library (wave A)
 
-- [ ] 14.1 `projects.md` split; new `context/frontend/folders-and-metadata.md`.
-- [ ] 14.2 `07-database.md`, `paths-and-data.md`, `endpoints.md`, `components.md`; `private-library.md` checked.
+Report: [05-implementation-phase-14.md](05-implementation-phase-14.md)
+
+- [x] 14.1 `projects.md` split; new `context/frontend/folders-and-metadata.md`.
+- [x] 14.2 `07-database.md`, `paths-and-data.md` done; `endpoints.md`, `components.md`, `private-library.md` by pending edits (the join of wave A); `private-library.md` checked.
 
 # [ ] Phase 15: From the audio to the notes: Source, Audio, the transcription (wave B)
 

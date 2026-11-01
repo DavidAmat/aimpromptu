@@ -89,6 +89,16 @@ the first, its audio becoming cuts). The id of the project is always one of its 
 step routes take it. Joins and splits are not on the sheet's undo. The pages:
 [`../frontend/playlists.md`](../frontend/playlists.md).
 
+## The note edits
+
+The note toolbox and the range toolbox of the sheet change a part through `POST /sheet/{uuid}/reading` (one action of
+the toolboxes: a figure, an alteration, a finger, a beam, a grace note, an ornament; a stretch's key, clef and octave
+line), `POST /sheet/{uuid}/hands`, `/duplicate`, `/unite`, `/remove` and `/add` (a note on the chord keyboard). The
+reading actions are planned by `part_sheet/reading.py`, which refuses what the notes cannot take (the page says why);
+`part_sheet/edits.py` `edit_reading` stores the decision in the sheet and lays the sheet on the notes again, so the
+rules of the sheet run around it. Hand, duplicate, unite, take off the page and add change the notes in `notes.pmn`.
+Each is one step of undo. The toolboxes: [annotations-notes.md](../frontend/annotations-notes.md).
+
 ## Undo
 
 **A paste and a promotion are one step of the sheet's undo.** Before writing, the part is kept as a
