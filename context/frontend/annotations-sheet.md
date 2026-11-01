@@ -1,147 +1,179 @@
-# The sheet toolbox, the keyboard panel, and trills
+# The sheet toolbox: Info, Key, Transpose, Lyrics, View
 
-*This page describes the old sheet (vexflow-v2). The new sheet's sheet toolbox (implementation 03, Phase 8) keeps
-Title, Key, Transpose and Lyrics as described here, replaces Layout by **View** (Zoom and Space between lines), and
-has no Find trills: see [annotations.md](annotations.md), "The new sheet". The old sheet's code (`SheetToolbox.tsx`,
-`TransposeDialog.tsx`, the `/time/...` routes named below) was removed in implementation 03, Phase 10
-(2026-10-27); this page is kept as the record.*
+What the Sheet step can say about the whole sheet. The overview of the page, the defaults and undo is
+[annotations.md](annotations.md). The note toolbox is [annotations-notes.md](annotations-notes.md) and the range
+toolbox is [annotations-stretches.md](annotations-stretches.md). The old sheet's version of this page is the record in
+[old-sheet-tools/annotations-sheet.md](../archive/old-sheet-tools/annotations-sheet.md).
 
-What the Sheet step can say about the whole piece. The overview of the page, the defaults, undo and
-saving is [annotations.md](annotations.md). Code: `aitu-frontend/src/pages/piece/sheet/SheetToolbox.tsx`,
-`TransposeTab.tsx`, `TransposeDialog.tsx`, `LyricsTab.tsx`, `lyricsPieces.ts`, `PianoToolboxes.tsx`,
-and the Trills panel in `SheetPage.tsx`; `music/transpose.ts`.
+Code: `aitu-frontend/src/pages/piece/sheet/frames/FramesSheetToolbox.tsx` (the five tabs, the Info, Key and View tabs),
+`pages/piece/sheet/TransposeTab.tsx`, `pages/piece/sheet/LyricsTab.tsx` and `lyricsPieces.ts` (the Lyrics tab and its
+pool), `frames/FramesLyricsToolbox.tsx`, `frames/useFramesLyrics.ts`, `frames/lyricsText.ts` (the lyrics pieces on the
+sheet), `pages/piece/sheet/PianoToolboxes.tsx` (the keyboard). Backend: `api/sheet.py` (`/reading`, `/transpose`,
+`/stretch`, `/words`) and `part_sheet/reading.py` (the actions of the whole sheet).
 
-## The sheet toolbox
+## Opening it
 
-Opened from the floating bar (the sliders icon, *Sheet toolbox*). Five tabs; every change in it is
-one undo step, except zoom and the frame numbers, which are how the page is looked at and are not
-saved.
+The sheet toolbox opens from the floating bar: the sliders icon, titled **Sheet toolbox**. It is one panel titled
+**Sheet** with five tabs, **Info**, **Key**, **Transpose**, **Lyrics** and **View**. A passage's Proposal shows only
+**Key**, **Transpose** and **View**.
 
-| Tab | Content |
-|---|---|
-| **Info** (Title until 2026-10-30) | Title, subtitle and artist printed above the sheet, editable also while the AI writes the sheet. Each is written when you leave the field or press Enter, so a word is one undo step, not one per letter. An empty title prints the project's name. The PDF takes the title |
-| **Key** | The key signature of the piece, on both clefs. It changes spelling only: no note moves. When another key would print fewer accidentals, a button offers it: *Use B major (5 fewer accidentals)* |
-| **Transpose** | **Notes** and **Figures** (below), each with **Preview** |
-| **Lyrics** | The pasted lyrics, the pool, and the edit toolbar of the lyrics pieces (below) |
-| **Layout** | Space between notes, space between lines, size of marks, zoom (also ⌘ and scroll over the sheet), frame numbers on or off, *Hide decorative notes*, and *Group high notes under 8va (n)* |
+Every change in it is one step of undo, except the zoom, which is how the page is looked at and is not saved.
 
-Implementation 02, Phase 7 replaced the **Figures** tab of Phase 2 (one row of figure icons for the
-main figure) by **Transpose**, and added **Lyrics**.
+While the AI writes the sheet, the panel shows why in its subtitle and only the **Info** fields can be changed. The
+run keeps them. The other tabs are off until it ends.
+
+## Info
+
+Three fields: **Title**, **Subtitle** and **Artist**. They are printed above the sheet and on the PDF
+([printing.md](printing.md)). Each field is written when you leave it or press Enter, so one word is one step, not
+one per letter. The field is kept to 200 characters. An empty **Title** shows the project's name as its placeholder.
+
+The tab was named **Title** until 2026-10-30.
+
+The request is `POST /sheet/{uuid}/reading` with the action `titles`. A title the user removes is taken off the sheet.
+
+## Key
+
+The **Armadura of the piece**: the key signature of the piece, on both clefs. It changes the spelling only; no note
+moves. A passage marked above the staves can take its own armadura with the range toolbox.
+
+When another armadura prints fewer signs over the whole piece, a button offers it, for example **Use D major (3 fewer
+signs)**. The tab asks `GET /sheet/{uuid}/stretch` for the whole sheet to find it. No button shows when no other
+armadura prints fewer signs.
+
+The request is the action `piece-key`.
 
 ## Transpose
 
-Two kinds, chosen at the top of the tab. Neither changes anything until the dialog's **Transpose**:
-**Preview** opens one dialog with the piano sheet as it would be and **Transpose** or **Cancel**;
-a line of text is added only when it changes the decision (notes that would leave the keyboard,
-marks that would be removed). Each transposition is then one undo step.
+Two modes, **Notes** and **Figures**, chosen at the top of the tab. Neither changes anything until you confirm it in
+the preview dialog (**Preview**, then **Transpose** or **Cancel**; [FramesPreviewDialog.tsx](../../aitu-frontend/src/pages/piece/sheet/frames/FramesPreviewDialog.tsx)).
+Each confirmed transposition is one undo step.
 
-**Notes.** Two small keyboards, **From** and **To** (both on Do 4 at first; the name of a key is on
-its tooltip, in Spanish). The interval between the two keys ("Up 2 semitones") moves **every note
-of the recording**: it is written on the backend (`POST /time/{id}/transpose`), no time moves, and
-each note keeps its hand. The key signature of the piece and of every passage moves with it (Db
-major up two semitones is Eb major; of two names for one key, the one with fewer accidentals), and
-so do the marks that name a key: fingering, notes taken off the page, trills, grace notes. A note
-that would leave the 88 keys is taken off the page and counted in the dialog. Command-Z moves every
-note back exactly, the ones taken off included.
+The tab starts again each time it is opened: **Notes** shows two keyboards on Do 4, and **Figures** starts on negra.
+The backend keeps a `figuresFrom` field of the rhythm, but the sheet toolbox never sets it, so the **From** figure is
+not remembered.
 
-**Figures.** Two rows of figure icons, **From** and **To**, no names. **From** is pressed on negra
-the first time and on the last **To** after that (`figuresFrom` of `sheet.json`). The step between
-them renames every figure by the same number of rungs (D-18): negra to corchea makes every figure
-one step shorter, and no note moves. A figure set by hand moves with them; one that has nothing to
-become, and a beam mark on notes that become a negra or longer, is removed, and the dialog says how
-many. Command-Z brings them back exactly.
+**Notes.** Two small keyboards, **From** and **To**. The interval between them is written in words ("Up 2
+semitones"). **Preview** asks `POST /sheet/{uuid}/transpose` with `preview=true`, and the dialog draws the sheet as it
+would be. **Transpose** asks again without the preview.
+
+- Every note of the recording moves by the same number of semitones. No time moves, and each note keeps its hand.
+- The armadura of the piece and of each passage moves too. Of two names for one key, the one with fewer signs is
+  taken (`reading.moved_key`). Spelling is written again by the rules.
+- The clefs are fitted again where a note reads four ledger lines or more from its staff.
+- A note that would leave the keyboard is taken off the page. The dialog says how many.
+
+**Figures.** Two rows of figure icons, **From** and **To**, with no names. The step between them is counted in figures
+(from redonda to fusa). **Preview** and **Transpose** send the action `figures` to `POST /sheet/{uuid}/reading`.
+
+- Every figure moves by the same number of steps. The spacing keeps the figure it was measured with, so no note
+  moves; the dialog says so.
+- The reference figure of the sheet moves by the same factor (`reading.rename_figures`).
+- A figure set by hand moves too, when the new figure exists. One that has no figure to become goes back to the rule,
+  and the dialog says how many.
+- The main figure cannot go past the end of the ladder: the tab says **No shorter or longer figure left** and
+  **Preview** is off.
+
+Each transposition is one step of undo. Command-Z brings back every note and figure exactly, the ones taken off the
+page included.
 
 ## Lyrics
 
-**Paste the lyrics**, then **Save lyrics**: the words and the pool are kept with the part (in
-`project.json`, so they outlive **Remove all** and a new transcription), and the tab opens with them
-every time. Any change of the words or of the pool (a piece added, edited, split, merged or
-removed) offers **Save lyrics** again; the sheet's own **Save** does not keep the pool.
-**Add to the pool** makes each line a **lyrics piece** in the pool, listed in the tab. The pool
-keeps every piece: one on the sheet carries a **green tick** (a line placed twice, twice), so the
-list shows what is in and what is not. Click a piece of the pool to edit its words in a one-line field:
-**Enter** (or the scissors at the end of the field) splits it where the cursor is into two pieces in
-the same place and closes the field, so a long line is broken in two and the order is kept; leaving
-the field keeps the words as typed; Escape drops the change. Each piece of the pool has a **tick
-box** beside its cross: only pieces next to each other can be ticked together (with some ticked,
-only the piece just before or after them can be added, and only an end let go), and **Merge**,
-beside the pool's title, joins them in the place of the first: the way back from a split made by
-mistake (one undo step, like every change of the pool).
+The **Lyrics** tab holds the words of the song and its **pool** of lyrics pieces. The pieces on the sheet are written
+by dragging them from the pool.
 
-A piece is **dragged from the pool onto the sheet**: it starts on **the frame under the pointer**
-(the column that holds it, as a click above the staves reads it; drop it on the note it starts on)
-and is held for about as long as its words take (120 ms a character), never past the next piece;
-pull its right edge afterwards to where it ends. On the sheet, drag a piece to move it (it starts on
-the frame under its left edge, on any line, and keeps its length), up or down to lift it over high
-notes, or pull its right edge to the frame it should end on (never into the next piece). **Two
-pieces never share a frame.** While a piece is dragged, the strip above the staves shades every
-other piece's frames in gray with a line at each end, and the frames the dragged one would cover in
-green, or in red where they would cover another; a drop on red is refused (a moved piece goes back
-where it was). A piece always starts and ends on a frame, which is what Play mode shows it by.
-While the recording plays, the piece under the cursor is drawn black and bold, saved or not
-(Phase 11, [play-mode.md](play-mode.md)).
+**The words.** Paste the lyrics in **Paste the lyrics**, then **Save lyrics**. The button reads **Lyrics saved** when
+the words and the pool are the saved ones. The words and the pool are kept with the part in `project.json`
+(`parts[].lyrics` and `parts[].lyricsPool`), so they outlive **Remove all** and a new transcription. The request is
+`PUT /sheet/{uuid}/words`. The sheet's own **Save** does not keep the pool.
 
-A piece is **plain text** on the page: a serif italic (Lora, self-hosted; Times Italic in the PDF)
-in a soft charcoal, with no block and no corner marks. Pointing at it shows its block faintly; a
-picked piece shows the block, a thin outline and a grip on its right edge, to move or resize it.
-Escape, or a click elsewhere on the sheet, lets it go and it is plain text again.
+**The pool.** **Add to the pool** makes each line of the words a lyrics piece in the pool. The pool keeps every piece.
+A piece that is on the sheet has a green tick, so the list shows what is in and what is not.
 
-While the tab is open, a click on a piece picks it, Command-click adds one, and marking a stretch
-above the staves picks every piece over it. For the picked pieces:
+- Click a piece to edit its words in a one-line field. **Enter** (or the scissors at the end of the field) splits it
+  where the cursor is, into two pieces in the same place. Leaving the field keeps the words. Escape drops the change.
+- Each piece has a tick box beside its cross. Only neighbouring pieces can be ticked together.
+- **Merge**, beside the pool's title, joins the ticked pieces into the first one. It is the way back from a split made
+  by mistake.
 
-| Action | What it does |
+**Onto the sheet.** A piece is dragged from the pool onto the sheet. It starts on the frame under the pointer (drop it
+on the note where it starts). It is held for about as long as its words take, 120 ms a character, and never past the
+next piece. Pull its right edge afterwards to where it ends. Two pieces never share a frame: a drop onto frames
+another piece holds is refused, and the piece goes back where it was.
+
+On the sheet, drag a piece to move it (it keeps its length), up or down to lift it over high notes, or pull its right
+edge to another frame. A piece always starts and ends on a frame, which is what Play mode shows.
+
+**The lyrics on the sheet.** A lyrics piece is plain text: a serif italic in a soft charcoal. A click on it picks it
+(Command-click or Shift adds one), and the **lyrics toolbox** opens beside it. Marking a stretch above the staves picks
+every piece over it. Escape, or a click elsewhere, lets go.
+
+The lyrics toolbox ([FramesLyricsToolbox.tsx](../../aitu-frontend/src/pages/piece/sheet/frames/FramesLyricsToolbox.tsx))
+has these controls. Each one is one step of undo.
+
+| Control | What it does |
 |---|---|
 | **Words** | The text of one picked piece, edited in place; Enter splits it where the cursor is |
-| Merge | Joins the picked pieces into one, in order, from the first frame to the last |
+| **Font** | Lora, Geist or Montserrat. The PDF prints Lora as Times and the others as Helvetica |
+| **Size** | The size of the words |
+| **Style** | Normal, bold or italic |
+| Back in the line of words | A block moved or made narrower by hand goes back above its first frame, on one line |
+| Merge | Joins the picked pieces into one, from the first frame to the last |
 | Split | Two pieces at the cursor; the frames are shared in proportion to the words |
-| New line | A line break inside the piece, at the cursor |
-| Smaller, Larger | The font size, one pixel at a time |
-| Back to the pool | Takes them off the sheet; their pool pieces lose the tick (words the pool does not have, from a merge or a split, join it at the top) |
+| New line | A line break at the cursor |
+| Back to the pool | Takes the picked pieces off the sheet; their pool pieces lose the tick |
 | Delete | Deletes them (also the Delete key) |
 
-Clicking a piece with the toolbox closed opens it on this tab. Words saved before Phase 7 (a line
-over a stretch, with a pixel offset or width) are read as placed pieces and drawn where they were;
-the first move puts them on frames. The range toolbox no longer has a Lyrics tab.
+A picked piece on the sheet is a block with an outline. Drag it to move it (it keeps its frames), drag its side handle
+to make it narrower or wider (the words wrap as the pointer moves), or drag its corner to make the words larger or
+smaller. A block put anywhere is saved with where it sits (`at`, `dx`, `dy`), its `width`, `font`, `bold` and `italic`.
 
-Notes on **Layout**:
+A piece whose frames cross a line break shares its words between the two lines, in proportion to the frames it takes
+on each line.
 
-- **Space between notes** is added to every column that carries a note and to no silence, so a held
-  note still takes exactly the room the wall clock gives it. It is not a zoom. A stretch that needs
-  more than the rest of the page is the range toolbox's **Spacing**.
-- **Space between lines** is the white between one pair of staves and the next. It is vertical, so
-  no column changes width. One line can also be spread on its own with the small handle between its
-  two staves; that is keyed by a column, so it stays with the music when the page re-wraps.
-- **Size of marks** sets how big every mark over and under the staff is drawn (fingering, words,
-  `tr`), one number for all of them.
-- **Frame numbers** (`f0`, `f100`) are how a mark is addressed; off to begin with, because they take
-  most of the room above every staff and mean nothing musically.
-- **Hide decorative notes** leaves off a sixteenth or shorter right before an eighth or longer, and
-  the note before it runs on.
-- **Group high notes under 8va** replaces the brackets on the page with the ones the notes ask for
-  (the same rule as the first write). A bracket already open is what a second one has to beat.
+The words are stored as the sheet's own `lyrics` (the action `lyrics` of `/reading`; `part_sheet/reading.py`,
+`set_lyrics`). Pieces saved on the old sheet are converted when they are first read (`part_sheet/legacy.py`).
 
-## The keyboard panel
+## View
 
-*Show the keyboard* in the `⋯` of the floating bar. It draws the keys sounding under the playhead,
-the right hand in blue and the left in orange, with a number on every Do. Four colours, named in the
-panel's legend: **RH onset** and **LH onset** are struck at the playhead; **RH sustain** and **LH
-sustain** are still sounding from a note struck earlier, whose notehead is where it began. That is
-why two keys of the same name can be lit where the page draws one notehead.
+- **Zoom**: a slider from 70 % to 200 %, with a mark at 100 %. It is how big the page is drawn, kept in this browser and
+  not saved with the sheet. Command and scroll over the sheet change it too.
+- **Space between lines**: from 2 to 16 staff spaces, the engine's own being 5. It is the white between one pair of
+  staves and the next, saved with the sheet (the action `line-space`). Going back to 5 saves nothing (`null`).
 
-It edits as well as reports. Click a lit key and that note comes off the page. Click a dark one and
-it is **added to the recording**, on the hand **Add to: Right / Left** says, taking the length that
-hand is already holding. Command-Z reaches an addition.
+## The keyboard
 
-## Trills
+*Show the keyboard* is in the `⋯` menu of the floating bar (**More sheet actions**). It opens the **Piano** toolbox
+(`PianoToolboxes.tsx`), with the time of the playhead as its subtitle. It draws the keys sounding under the playhead, on
+two colours for each hand: a key struck at the playhead (**RH onset**, **LH onset**) and a key still sounding from an
+earlier note (**RH sustain**, **LH sustain**). Its notehead on the staff is where the note began, so two lit keys of
+the same name can share one notehead.
 
-*Find trills* in the `⋯` asks the backend for runs where two notes take turns three times or more,
-and lists them in a small panel: the two notes, the hand, the time. ✓ writes one as a trill. A
-suggestion only: a missed trill costs nothing, a wrong one hides notes that were really played. A
-trill prints as `tr` over the note with a wavy line to where the shake stops; every alternation
-stays in the recording and still plays. *Print every trill as its notes* removes them all.
+It also edits:
+
+- Click a lit key and that note comes off the page.
+- Click a dark key and it is added to the recording, on the hand picked by **Add to: Right / Left**. It takes the
+  length that hand is already holding. Command-Z reaches it.
+
+## Print to PDF
+
+The printer icon of the floating bar prints the sheet to PDF. The paper, the margins, the size of the music and the
+space between lines on the paper are told in [printing.md](printing.md).
+
+## Not on the new sheet
+
+The old **Layout** tab was replaced by **View** (Phase 8, 2026-10-26). These were dropped, on the user's answers:
+space between notes (the spacing is measured), size of marks (one size for all), frame numbers, hide decorative notes
+(a grace note replaces it), and group high notes under 8va (**Clefs by the rule** of a stretch replaces it). **Find
+trills** and the old **Remove all** are not here either. The list of all of them is in
+[annotations.md](annotations.md).
 
 ## Where to look deeper
 
-- [annotations.md](annotations.md) — the page, the defaults, undo and saving
-- [printing.md](printing.md) — Print to PDF
-- [rendering.md](rendering.md) — how the sheet is drawn and wrapped
+- [annotations.md](annotations.md): the hub of the Sheet step's tools
+- [annotations-notes.md](annotations-notes.md): the note toolbox
+- [annotations-stretches.md](annotations-stretches.md): the range toolbox
+- [printing.md](printing.md): Print to PDF
+- [play-mode.md](play-mode.md): the lyrics as Play mode shows them
+- [`documentation/services/backend/endpoints.md`](../../documentation/services/backend/endpoints.md): the routes of
+  `/reading`, `/transpose`, `/stretch` and `/words`

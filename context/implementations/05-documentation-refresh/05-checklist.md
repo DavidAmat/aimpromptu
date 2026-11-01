@@ -61,10 +61,12 @@ Report: [05-implementation-phase-6.md](05-implementation-phase-6.md)
 - [x] 6.1 The old `annotations-stretches.md` to the archive; a new one for the range toolbox.
 - [x] 6.2 `editing.md` (Paste, Delete these frames) and `editing-and-compose.md` done; `endpoints.md`, `components.md`, the hub `annotations.md` and `00-index.md`: pending edits for the join of wave B (the report, section Pending edits).
 
-# [ ] Phase 7: The sheet toolbox: Info, Key, Transpose, Lyrics, View (wave C)
+# [x] Phase 7: The sheet toolbox: Info, Key, Transpose, Lyrics, View (wave C)
 
-- [ ] 7.1 The old `annotations-sheet.md` to the archive; a new one for the sheet toolbox and the lyrics.
-- [ ] 7.2 `endpoints.md` (`/transpose`, `/words`), `components.md`.
+Report: [05-implementation-phase-7.md](05-implementation-phase-7.md)
+
+- [x] 7.1 The old `annotations-sheet.md` to the archive; a new one for the sheet toolbox and the lyrics.
+- [x] 7.2 `endpoints.md` (`/transpose`, `/words`) and `components.md` checked, no change needed; the hub `annotations.md` and `00-index.md`: pending edits E7.1 and E7.2 for the join of wave C.
 
 # [ ] Phase 8: Undo, redo, the preview and the PDF (wave D)
 
