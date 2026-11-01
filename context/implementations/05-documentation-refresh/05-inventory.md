@@ -21,7 +21,10 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/02-tech-stack.md](../../../context/02-tech-stack.md) | 101 | 2026-11-01 | 9, then 20 | 1 | Tech stack (Phase 9: the AI row added; `allowedHosts` is an older name, not checked by Phase 9) | `updated` |
 | [context/ai/README.md](../../../context/ai/README.md) | 66 | 2026-11-01 | 9 | 5 | The AI in the app: the kinds of run, the model, the AI mark (later pages named by the phases that write them) | `new` |
 | [context/ai/whole-run.md](../../../context/ai/whole-run.md) | 92 | 2026-11-01 | 9 | 2 | The whole run: Enhance it again with AI, Write it all again, the windows, the check, Stop and Revert | `new` |
-| [documentation/services/backend/ai-runs.md](../../../documentation/services/backend/ai-runs.md) | 150 | 2026-11-01 | 9, then 10 | 0 | The code of the AI runs: the model client, the job, the windows and the check, the prompt, the routes | `new` |
+| [context/ai/levels.md](../../../context/ai/levels.md) | 123 | 2026-11-01 | 11 | 1 | Levels: the catalog of patterns, the grid, the chords of the song (`level-run.md`: Phase 12, not yet written) | `new` |
+| [context/ai/stretch-and-simplify.md](../../../context/ai/stretch-and-simplify.md) | 185 | 2026-11-01 | 10 | 3 | A stretch (the words, one hand, the batches) and Simplify (the batches, the rules, the answer, the stored run) | `new` |
+| [documentation/services/backend/ai-runs.md](../../../documentation/services/backend/ai-runs.md) | 202 | 2026-11-01 | 9, then 10 | 1 | The code of the AI runs: the model client, the job, the windows and the check, the prompt, the routes; sections 7 (a stretch) and 8 (Simplify) added by Phase 10 | `updated` |
+| [documentation/services/backend/ai-levels.md](../../../documentation/services/backend/ai-levels.md) | 149 | 2026-11-01 | 11 (12, 13 add) | 0 | The code of the levels: the catalog, the grid, the harmony, the hands, the chords of the song, the level copy, the dialog | `new` |
 | [context/02b-local-setup.md](../../../context/02b-local-setup.md) | 577 | 2026-10-27 | 20 | 29 | Local setup: Mac Mini M4 + Ubuntu compute box | `to check` |
 | [context/03-services-overview.md](../../../context/03-services-overview.md) | 119 | 2026-10-27 | 20 | 0 | Services overview | `to check` |
 | [context/04-local-development.md](../../../context/04-local-development.md) | 200 | 2026-10-31 | 20 | 0 | Local development | `to check` |
@@ -32,7 +35,7 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/app/01-app-context.md](../../../context/app/01-app-context.md) | 243 | 2026-10-27 | 20 | 0 | AImpromptus | `to check` |
 | [context/backend/README.md](../../../context/backend/README.md) | 96 | 2026-10-27 | 20 | 2 | aitu-backend | `to check` |
 | [context/backend/api.md](../../../context/backend/api.md) | 121 | 2026-10-27 | 20 | 2 | HTTP API | `to check` |
-| [context/backend/editing.md](../../../context/backend/editing.md) | 132 | 2026-11-01 | 6 (17 Recording in Sheet, 5 the note edits) | 0 | Editing a piece: paste, Recording in Sheet, and parts; the note edits (Phase 5) | `updated` |
+| [context/backend/editing.md](../../../context/backend/editing.md) | 144 | 2026-11-01 | 6 (17 Recording in Sheet, 5 the note edits) | 0 | Editing a piece: paste, Delete these frames (Phase 6), Recording in Sheet, and parts; the note edits (Phase 5) | `updated` |
 | [context/backend/muscriptor.md](../../../context/backend/muscriptor.md) | 109 | 2026-10-06 | 15 | 0 | MuScriptor: the transcription engine | `to check` |
 | [context/backend/piano-matrix-notation.md](../../../context/backend/piano-matrix-notation.md) | 213 | 2026-10-27 | 16 | 1 | The piano matrix notation: the stored form, the wire form, the adapters | `to check` |
 | [context/backend/pieces-and-revisions.md](../../../context/backend/pieces-and-revisions.md) | 133 | 2026-10-27 | 15 | 0 | Pieces, steps and revisions | `to check` |
@@ -41,7 +44,7 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/frontend/README.md](../../../context/frontend/README.md) | 115 | 2026-10-28 | 20 | 0 | aitu-frontend | `to check` |
 | [context/frontend/annotations-notes.md](../../../context/frontend/annotations-notes.md) | 88 | 2026-11-01 | 5 | 0 | The note toolbox of the new sheet (the old page is in `archive/old-sheet-tools/`) | `rewritten` |
 | [context/frontend/annotations-sheet.md](../../../context/frontend/annotations-sheet.md) | 147 | 2026-10-31 | 7 | 4 | The sheet toolbox, the keyboard panel, and trills | `to check` |
-| [context/frontend/annotations-stretches.md](../../../context/frontend/annotations-stretches.md) | 97 | 2026-10-27 | 6 | 3 | The range toolbox, and octave brackets on the page | `to check` |
+| [context/frontend/annotations-stretches.md](../../../context/frontend/annotations-stretches.md) | 113 | 2026-11-01 | 6 | 0 | The range toolbox of the new sheet: marking, the frame numbers, Key, Clef, Octave, copy and paste, Delete these frames (Phase 6; the old page moved to `archive/old-sheet-tools/annotations-stretches.md`) | `rewritten` |
 | [context/frontend/annotations.md](../../../context/frontend/annotations.md) | 142 | 2026-11-01 | 5 | 0 | The Sheet step: the hub of the new sheet's tools (the old sheet's sections are in `archive/old-sheet-tools/`) | `updated` |
 | [context/frontend/lab.md](../../../context/frontend/lab.md) | 92 | 2026-11-01 | 19 | 0 | The Lab: the video reader's five tabs, the examples and the score board, the modules | `new` |
 | [context/frontend/pages.md](../../../context/frontend/pages.md) | 154 | 2026-11-01 | 19 | 1 | Pages and the shell | `updated` |
@@ -51,7 +54,7 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/frontend/projects.md](../../../context/frontend/projects.md) | 286 | 2026-10-29 | 14 (4, 15, 16 adjust their step) | 0 | Projects and the steps of a project | `updated` |
 | [context/frontend/folders-and-metadata.md](../../../context/frontend/folders-and-metadata.md) | 132 | new | 14 | 0 | The pills, the folders, the Filter, the metadata and the info dialog of My projects and My library | `new` |
 | [context/frontend/recording-in-sheet.md](../../../context/frontend/recording-in-sheet.md) | 98 | 2026-10-27 | 17 | 0 | Recording in Sheet: the page of a passage | `to check` |
-| [context/frontend/rendering.md](../../../context/frontend/rendering.md) | 104 | 2026-10-31 | 3 (backend half), 4 (frontend half) | 3 | Rendering: how the sheet is drawn | `to check` |
+| [context/frontend/rendering.md](../../../context/frontend/rendering.md) | 106 | 2026-10-31 | 3 (backend half), 4 (frontend half) | 3 | Rendering: how the sheet is drawn | `updated` (Phase 3: the backend half and the links to `sheet-drawing.md`; the frontend half: Phase 4) |
 | [context/frontend/timestamps.md](../../../context/frontend/timestamps.md) | 49 | 2026-09-13 | 4 | 4 | Timestamps and frame labels — UI rule | `to check` |
 | [context/music/notation-logic/02-notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md) | 150 | 2026-10-27 | 16 (check only) | 4 | The text-notation contract | `to check` |
 | [context/music/piano_svg/01-piano-svg.md](../../../context/music/piano_svg/01-piano-svg.md) | 253 | 2026-07-27 | 16 | 0 | Context | `to check` |
@@ -66,13 +69,14 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/music-library/requests.md](../../../context/music-library/requests.md) | 172 | 2026-10-19 | 18 | 0 | Requests and the review | `true` |
 | [documentation/README.md](../../../documentation/README.md) | 3 | 2026-07-05 | 20 | 0 | documentation | `to check` |
 | [documentation/services/README.md](../../../documentation/services/README.md) | 38 | 2026-10-27 | 20 | 3 | documentation/services | `to check` |
-| [documentation/services/backend/editing-and-compose.md](../../../documentation/services/backend/editing-and-compose.md) | 262 | 2026-10-27 | 6 (17 the Compose part) | 10 | Copy and paste, Recording in Sheet, and the parts of a project | `to check` |
+| [documentation/services/backend/editing-and-compose.md](../../../documentation/services/backend/editing-and-compose.md) | 273 | 2026-11-01 | 6 (17 the Compose part) | 8 (section 8, the removed staged session: history) | Copy and paste, Delete these frames (Phase 6), Recording in Sheet, and the parts of a project | `updated` |
 | [documentation/services/backend/endpoints.md](../../../documentation/services/backend/endpoints.md) | 1303 | 2026-10-31 | shared: every phase its sections; 20 checks | 6 | Endpoints | `to check` |
 | [documentation/services/backend/events-to-sheet.md](../../../documentation/services/backend/events-to-sheet.md) | 231 | 2026-10-28 | 16 | 4 | From the stored notes (`notes.pmn`) to the hand split the sheet starts from | `to check` |
 | [documentation/services/backend/hand-inference-second-pass.md](../../../documentation/services/backend/hand-inference-second-pass.md) | 114 | 2026-08-13 | 16 | 0 | Hand inference: the page-level second pass | `to check` |
 | [documentation/services/backend/paths-and-data.md](../../../documentation/services/backend/paths-and-data.md) | 549 | 2026-10-29 | 14 (8, 11, 13 add their parts) | 6 | Storage layout: every path, every file, every table | `updated` |
 | [documentation/services/backend/rhythm-and-annotations.md](../../../documentation/services/backend/rhythm-and-annotations.md) | 401 | 2026-10-27 | 2 | 2 | `sheet.json`: the old sheet's reading, still read | `updated` (2 names kept on purpose: see the Phase 2 report) |
 | [documentation/services/backend/sheet-f1.md](../../../documentation/services/backend/sheet-f1.md) | new | 2026-11-01 | 2 | 0 | The new sheet: the files of a part, the F1 text, how the algorithm makes it | `new` |
+| [documentation/services/backend/sheet-drawing.md](../../../documentation/services/backend/sheet-drawing.md) | 205 | new | 3 | 1 | How the backend draws the sheet: the routes, the layout and the lines, the glyphs, the frame marks, the lyrics, the SVG and the pages | `new` (1 missing: `context/frontend/sheet-page.md`, Phase 4) |
 | [documentation/services/backend/time-matrix.md](../../../documentation/services/backend/time-matrix.md) | 59 | 2026-10-27 | 2 | 0 | The time matrix: what stays of schema 2.0 | `updated` |
 | [documentation/services/backend/transcription-pipeline.md](../../../documentation/services/backend/transcription-pipeline.md) | 483 | 2026-10-27 | 15 | 8 | The transcription pipeline: modules, order, parameters | `to check` |
 | [documentation/services/frontend/components.md](../../../documentation/services/frontend/components.md) | 581 | 2026-10-31 | shared: every phase its sections; 20 checks | 85 | The component tree: where each piece lives | `to check` |

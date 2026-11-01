@@ -33,10 +33,12 @@ Report: [05-implementation-phase-2.md](05-implementation-phase-2.md)
 - [x] 2.2 `time-matrix.md`, `rhythm-and-annotations.md`, `context/backend/time-model.md`.
 - [x] 2.3 The core README sections 1 to 9, 12, 16, 17.
 
-# [ ] Phase 3: How the sheet is drawn (the backend) (wave B)
+# [x] Phase 3: How the sheet is drawn (the backend) (wave B)
 
-- [ ] 3.1 New `documentation/services/backend/sheet-drawing.md`.
-- [ ] 3.2 `context/frontend/rendering.md` (the backend half); the core README sections 10 and 15.
+Report: [05-implementation-phase-3.md](05-implementation-phase-3.md)
+
+- [x] 3.1 New `documentation/services/backend/sheet-drawing.md`.
+- [x] 3.2 `context/frontend/rendering.md` (the backend half); the core README sections 10 and 15.
 
 # [ ] Phase 4: The sheet page (the frontend shell) (wave C)
 
@@ -52,10 +54,12 @@ Report: [05-implementation-phase-5.md](05-implementation-phase-5.md)
 - [x] 5.2 The old `annotations-notes.md` to `context/archive/old-sheet-tools/`; a new one for the note toolbox.
 - [x] 5.3 `editing.md` (the note edits) done; `endpoints.md` and `components.md` by the join of wave A (pending edits in the report).
 
-# [ ] Phase 6: The range toolbox, copy and paste (wave B)
+# [x] Phase 6: The range toolbox, copy and paste (wave B)
 
-- [ ] 6.1 The old `annotations-stretches.md` to the archive; a new one for the range toolbox.
-- [ ] 6.2 `editing.md` (Paste), `editing-and-compose.md`, `endpoints.md`, `components.md`.
+Report: [05-implementation-phase-6.md](05-implementation-phase-6.md)
+
+- [x] 6.1 The old `annotations-stretches.md` to the archive; a new one for the range toolbox.
+- [x] 6.2 `editing.md` (Paste, Delete these frames) and `editing-and-compose.md` done; `endpoints.md`, `components.md`, the hub `annotations.md` and `00-index.md`: pending edits for the join of wave B (the report, section Pending edits).
 
 # [ ] Phase 7: The sheet toolbox: Info, Key, Transpose, Lyrics, View (wave C)
 
@@ -81,10 +85,12 @@ Report: [05-implementation-phase-9.md](05-implementation-phase-9.md)
 - [ ] 10.1 New `context/ai/stretch-and-simplify.md`; sections in `ai-runs.md`.
 - [ ] 10.2 The core README section 14; `endpoints.md`, `components.md`.
 
-# [ ] Phase 11: The AI, part 3: levels, the catalog of patterns, the chords of the song (wave B)
+# [x] Phase 11: The AI, part 3: levels, the catalog of patterns, the chords of the song (wave B)
 
-- [ ] 11.1 New `context/ai/levels.md` and `documentation/services/backend/ai-levels.md`.
-- [ ] 11.2 `paths-and-data.md`, `07-database.md`, `endpoints.md`, `components.md`.
+Report: [05-implementation-phase-11.md](05-implementation-phase-11.md)
+
+- [x] 11.1 New `context/ai/levels.md` and `documentation/services/backend/ai-levels.md`.
+- [x] 11.2 `paths-and-data.md` (`levelOf`, `parts[].chords`) and `07-database.md` (checked: `level_of` already right); `endpoints.md` (`GET /sheet/{uuid}/chords`) and `components.md` (`PatternGallery`, `patterns.ts`) by pending edits for the join of wave B.
 
 # [ ] Phase 12: The AI, part 4: the level run (wave C)
 

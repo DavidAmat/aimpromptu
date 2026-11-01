@@ -40,6 +40,18 @@ The source can be any part the user may read: their own work, their library, a l
 them, the Public Library. A stretch pasted over is taken out first: its notes and marks go, and its
 audio becomes cuts that the Audio step can restore.
 
+**Copy** of picked notes (the note toolbox, ⌘C with no stretch marked) takes the frames from the first picked note to
+the later of two ends: the column after the last picked note, and the end of the longest picked note.
+
+## Delete these frames
+
+**Delete these frames** (the range toolbox, the user's answer of 2026-10-30) takes a stretch out, as if it had never
+been recorded or transcribed: `POST /sheet/{uuid}/take-out` with `{start, end}`. Its notes go, its audio becomes
+cuts, and everything after moves earlier. Its key, clef and speed changes inside it move to its start, when music
+follows. It is one step of undo: its undo puts the part back as it was, audio included. The route answers the notes
+taken out (`notesRemoved`); it refuses with `409` while the AI writes the sheet, for an empty stretch, and when the
+notes are not transcribed. The toolbox: [annotations-stretches.md](../frontend/annotations-stretches.md).
+
 ## Recording in Sheet
 
 **Record this passage** (the range toolbox) opens the page of the marked stretch; **Record a

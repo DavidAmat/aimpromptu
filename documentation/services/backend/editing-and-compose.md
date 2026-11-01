@@ -31,7 +31,7 @@ existed; now `paste.py`, `passages.py` and `parts.py` always read the saved `she
 | `marks.py` | The one list of the marks of `sheet.json`: `shift`, `cut_out`, `extract`, `put_in`, `count`, `dropped` |
 | `history.py` | `snapshot_current`, `restore`: the undo and the redo |
 | `audio_splice.py` | `stretch_by_rate`: a take played faster or slower with its pitch kept (`atempo`) |
-| `../audio/timeline.py` | `passage_pieces`, `insert_with_origins`, `remove`, `silence`: the timeline changed in the middle |
+| `audio/timeline.py` (in `audio/`, not here) | `passage_pieces`, `insert_with_origins`, `remove`, `silence`: the timeline changed in the middle |
 
 ---
 
@@ -76,6 +76,17 @@ passage's length in columns instead of its own rounded up (a take fitted into a 
 
 **A target with no music** (From scratch) takes the source's sheet settings with none of its marks
 outside the passage. A target with audio and no notes is refused (`409`).
+
+**Copy of picked notes** (no stretch marked, ⌘C or the note toolbox's **Copy**): the copy runs from the first picked
+note's frame to the later of the column after the last picked note and the end of the longest picked note. The
+clipboard reference is the same, so the paste is the same.
+
+**Delete these frames** (`POST /sheet/{uuid}/take-out`, `{start, end}` in frames, the range toolbox, 2026-10-30).
+`edits.take_out` calls `paste.cut(part, start × 40, end × 40)` (section 4), drops the derived files
+(`build.forget`), and records one step labelled `Take out N s` (`record_version`, whose undo restores the snapshot
+the cut kept). It answers the notes taken out (`notesRemoved`). `PasteError` answers `409`: an empty stretch, or
+notes not yet transcribed. The AI running answers `409` too (`_not_running`). The toolbox:
+[annotations-stretches.md](../../../context/frontend/annotations-stretches.md).
 
 ---
 
@@ -192,7 +203,7 @@ so `history.restore` undoes it exactly; the parts routes do not offer that undo 
 `project.json` as `source.json`) before the first write; the answer's `beforeVersion` names it.
 `history.restore(part, n)` keeps the current state as the next snapshot and puts `v<n>` back
 (`copyfile`, so the notes get a new time and the hand split cache cannot serve the old split), then
-forgets the derived audio. Its answer's `keptVersion` is the redo. A failure in the middle of a
+forgets the derived audio. It returns the number of the snapshot it kept, the redo. A failure in the middle of a
 paste restores the snapshot. `GET /audio/{uuid}/file` tries once more when a restore forgot the
 derived files it was writing from.
 
