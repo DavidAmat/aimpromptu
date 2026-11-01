@@ -71,12 +71,12 @@ bullet `- Tests: ...` (it names `tests/test_sheet_reading.py`). Then add at the 
 
 > - **A stretch and Simplify** (implementation 03, Phase 7; implementation 04, Phase 4): `llm.frames.write_stretch`,
 >   `write_simplify`, `job.start_stretch`, `job.start_simplify`, `edits.apply_stretch`, `edits.apply_simplify`. The
->   rules, the batches and the checks are told in [context/ai/stretch-and-simplify.md](../../../../context/ai/stretch-and-simplify.md);
->   the functions and the routes in [ai-runs.md](../../../../documentation/services/backend/ai-runs.md), sections 7 and 8.
+>   rules, the batches and the checks are told in `context/ai/stretch-and-simplify.md` (a link from the core README);
+>   the functions and the routes in `documentation/services/backend/ai-runs.md`, sections 7 and 8.
 
 **P2. `context/ai/README.md`** (owner 9; the join applies it):
 - Table, row **A stretch**: the last cell "`stretch-and-simplify.md` (Phase 10 writes it)" → `[stretch-and-simplify.md](stretch-and-simplify.md)`.
-- Table, row **Simplify** a hand: the text → "| **Simplify** a hand | The easier version of one hand, or both, over the song: no longer in the dialog, a level of that hand does it | The tab **The whole song**, as a level | [stretch-and-simplify.md](stretch-and-simplify.md) |".
+- Table, row **Simplify** a hand: the text → "| **Simplify** a hand | The easier version of one hand, or both, over the song: no longer in the dialog, a level of that hand does it | The tab **The whole song**, as a level | `[stretch-and-simplify.md](stretch-and-simplify.md)` |".
 - Section **Pages of this folder**: after the bullet `- [whole-run.md](whole-run.md): ...`, add
   `- [stretch-and-simplify.md](stretch-and-simplify.md): a stretch of the sheet with the user's words, and Simplify.`
 - The paragraph "The other pages of the folder ... : the stretch and Simplify, the levels, the level run and the history of
