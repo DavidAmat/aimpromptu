@@ -173,7 +173,7 @@ makes one stretch request).
 ## 8. Simplify: `job.start_simplify`, `frames.write_simplify`
 
 Context: [context/ai/stretch-and-simplify.md](../../../context/ai/stretch-and-simplify.md). Implementation 04, Phase 4.
-The dialog no longer calls the route: a hand is simplified as a level of that hand (`ai-levels.md` and `context/ai/level-run.md`, Phases 11 and 12).
+The dialog no longer calls the route: a hand is simplified as a level of that hand ([ai-levels.md](ai-levels.md) and [level-run.md](../../../context/ai/level-run.md)).
 
 | Name | Role |
 |---|---|

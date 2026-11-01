@@ -168,53 +168,14 @@ The roll is built for about 10,000 rectangles; the bench page `pages/dev/RollBen
 the left, red for a note with no hand. The hands are written with the sheet, so until the piece has hands
 every note has one colour (the switch is off, and disabled). The choice is kept in this browser.
 
-**4. Sheet** (implementation 03, Phase 5). The new piano sheet, without compases, drawn by the backend
-(`pages/piece/sheet/frames/`, [rendering.md](rendering.md)). It is on screen at once:
-
-- **The info button** (the "i" beside the title and the AI mark) opens the info dialog about the song, not a tool of
-  the sheet: see [folders-and-metadata.md](folders-and-metadata.md) section 6.
-
-- **A new transcription** goes to Sonnet by itself. The algorithm's sheet is drawn first; Sonnet writes the
-  hands and the reading in the background, part by part (about half a minute each). The part at Sonnet looks
-  pale, and a part that comes back appears column by column. No text says any of it. At the end the hands are
-  saved in the notes, and the sheet is saved beside them (`sheet.f1`); opening it again calls nothing.
-- **A project made before Phase 5** keeps its saved hands and shows the algorithm's sheet from them (with the
-  key and a renamed figure of its old sheet), and offers **Enhance with AI** in the header and on the floating
-  bar. On a version of My library the button opens the copy that edits it, as **Edit** does, and starts there
-  the run chosen in the dialog. The 10 songs Sonnet wrote in implementation 03, Phase 4 show Sonnet's sheet.
-- **The Enhance with AI dialog** (implementation 04, Phase 4) has two tabs. **A stretch** (open when notes or a
-  stretch are picked): both hands, only the right or only the left (the other hand then stays exactly as it is),
-  and your words. **The whole song**: **Simplify the left hand**, **the right hand** or **both hands** (only the
-  rules of simplicity: uniform patterns, no quick jump of one hand; the hands do not move; batch after batch, each
-  seeing what was simplified before, so a chorus that repeats is simplified the same way), and **Write it all
-  again** (the whole run). Each choice shows its cost (a whole run about $0.65 on 7 Years, Simplify one hand about
-  $0.10 to $0.20). A Simplify run ends with one line ("The AI added 4 notes and left out 2 in the left hand.") and
-  is one step of undo.
-- **Enhanced with AI.** A sheet the AI wrote (or part of it) carries the AI mark of the Projects page next to its
-  title: the AImpromptu logo, green, tooltip "Enhanced with AI" (faint grey, "Not enhanced with AI yet", before;
-  implementation 04, in place of a green badge), for good: later changes of the notes or the hands do not remove
-  it, only a new transcription does.
-  Its button then reads **Enhance it again with AI**; a new run that does not finish leaves the sheet the AI wrote
-  before. The page says "AI", not the model's name (Sonnet 5.5 today), because the model may change.
-- **The header** (implementation 04, Phase 1): the title, the AI symbol and the floating bar's buttons (Play,
-  Record a passage, Paste, Print, Undo, Redo, the sheet toolbox, `⋯`, **Enhance with AI**), at the top of the
-  window while the sheet scrolls, and one more button that hides or shows the floating bar. A hidden floating bar
-  leaves a small round button with an eye where its hide button was; this browser remembers it hidden.
-- **Zoom**: ⌘ and the wheel (or a trackpad pinch) over the sheet, or **View → Zoom** in the sheet toolbox (70 %
-  to 200 %, kept in this browser). The drawing scales at once, and when the wheel pauses the sheet is laid out
-  again for the window's width, with the line under the pointer kept where it was.
-- **To hear it**: Play (or Space) plays the recording with a cursor; the notes the cursor reaches are lit; a
-  click on the sheet moves the recording there. The cursor can also be dragged and dropped (the pointer shows a
-  hand over it), to another line too; the page scrolls near the window's top and bottom, and the recording moves
-  there when it is let go, playing on if it played.
-- **To edit it**: the tools of [annotations.md](annotations.md); every change is written at once as one step
-  of undo.
-- **The old sheet** (vexflow-v2) was one press away on the floating bar (**Edit in the old sheet**) until
-  implementation 03, Phase 8B, and its code was removed in Phase 10. An old saved sheet (`sheet.json`) is still
-  read for its key, its renamed figure and its marks, and nothing writes a new one.
-
-The Sheet step is *running* while the AI writes, *ready* once a sheet is stored (`sheet.f1`, or an old
-`sheet.json`), and *missing* otherwise; it is never *stale* any more.
+**4. Sheet.** The new piano sheet, drawn by the backend and shown by the Sheet page ([sheet-page.md](sheet-page.md)):
+the title with the AI mark, the buttons, the floating toolbox, the zoom and the recording. It is on screen at once.
+The AI writes the sheet only when the user presses **Enhance with AI**; the page starts no run by itself. A sheet the
+AI wrote keeps the green AI mark for good, and its button then reads **Enhance it again with AI**. The tools of the
+sheet are in [annotations.md](annotations.md), the AI's runs in [`../ai/`](../ai/README.md), and the info button in
+[folders-and-metadata.md](folders-and-metadata.md). The Sheet step is *running* while the AI writes, *ready* once a
+sheet is stored (`sheet.f1`, or an old `sheet.json`), and *missing* otherwise; it is never *stale* any more. An old
+saved sheet (`sheet.json`) is still read for its key, its renamed figure and its marks; nothing writes one.
 
 **Then, Save to library.** Once the sheet is ready, **Save to library** asks **Artist**, **Song** and
 **Version name**, moves the project into My library (its audio written again with only the ranges in
@@ -248,8 +209,8 @@ as for any project.
 `/projects/<id>/passages/<passageId>`: the **Current** (the stretch as it is) and the **Proposal** (a
 take recorded or added from a file, written in the passage's key and figure). **Promote** puts the
 take into the song, fitted into the window or in place of the whole passage, as one step of the
-sheet's undo. **Record a passage** on the floating bar and on a blank sheet opens a new passage at
-the end. The whole page: [recording-in-sheet.md](recording-in-sheet.md).
+sheet's undo. **Record a passage at the end**
+(the floating bar) and **Record a passage** (a blank sheet) open a new passage at the end. The whole page: [recording-in-sheet.md](recording-in-sheet.md).
 
 ## 7. From other projects, and the parts
 

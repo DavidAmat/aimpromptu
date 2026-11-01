@@ -89,4 +89,4 @@ the reference figure. The marks the user put on the sheet stay: the AI's marks a
 - [documentation/services/backend/ai-runs.md](../../documentation/services/backend/ai-runs.md): the jobs, the windows,
   the check, the prompt and its version, the routes
 - [README.md](README.md): the AI in the app, the kinds of run, the model and the cost
-- `context/frontend/sheet-page.md` (Phase 4 writes it): the Sheet step's page and its header
+- [sheet-page.md](../frontend/sheet-page.md): the Sheet step's page and its header

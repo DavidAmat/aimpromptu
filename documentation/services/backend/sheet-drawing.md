@@ -7,7 +7,7 @@
 The backend draws the new sheet as one SVG. The page shows that SVG and places its own overlay on it. This page
 tells the drawing: the routes, the modules, the layout (columns, spacing, lines), the drawn lines, the glyphs, the
 frame marks, the lyrics, the SVG and the pages for paper. The data the drawing reads is in
-[sheet-f1.md](sheet-f1.md). The page that shows the drawing is `context/frontend/sheet-page.md` (written by implementation 05, Phase 4).
+[sheet-f1.md](sheet-f1.md). The page that shows the drawing is [sheet-page.md](../../../context/frontend/sheet-page.md).
 
 ## 1. The routes and the call
 

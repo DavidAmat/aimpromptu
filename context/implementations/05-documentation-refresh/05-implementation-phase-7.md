@@ -57,9 +57,10 @@ The plan is [05-plan.md](05-plan.md) section 6, Phase 7. Only documentation chan
 
 **E7.1 `context/frontend/annotations.md`** (the hub; no owner in wave C, so this is a pending edit). Two changes:
 
-1. Line 9. Replace the text "`[annotations-sheet.md](annotations-sheet.md): the **sheet toolbox**, still told in the
-   section below until it is rewritten (implementation 05, Phase 7).`" by "`[annotations-sheet.md](annotations-sheet.md):
-   the **sheet toolbox**, the lyrics on the sheet, the keyboard panel and Print to PDF.`". Keep the rest of the line
+1. Line 9. Replace the text
+   "`[annotations-sheet.md](annotations-sheet.md): the **sheet toolbox**, still told in the section below until it is rewritten (implementation 05, Phase 7).`"
+   by "`[annotations-sheet.md](annotations-sheet.md): the **sheet toolbox**, the lyrics on the sheet, the keyboard panel and Print to PDF.`".
+   Keep the rest of the line
    as it is.
 2. In the section "The Sheet step's tools" (the bullets of the page), delete the four bullets whose first words are
    **The sheet toolbox** (the sliders icon of the floating bar), **Lyrics blocks**, **Print to PDF** and **The keyboard

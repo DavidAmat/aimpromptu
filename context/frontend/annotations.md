@@ -6,7 +6,7 @@ page:
 
 - [annotations-notes.md](annotations-notes.md): the **note toolbox** (figures, fingers, alteration, hand, beams, grace
   notes, duplicate, unite, marks, taking notes off the page, the chord keyboard).
-- [annotations-stretches.md](annotations-stretches.md): the **range toolbox**, copy and paste, **Delete these frames**. [annotations-sheet.md](annotations-sheet.md): the **sheet toolbox**, still told in the section below until it is rewritten (implementation 05, Phase 7).
+- [annotations-stretches.md](annotations-stretches.md): the **range toolbox**, copy and paste, **Delete these frames**. [annotations-sheet.md](annotations-sheet.md): the **sheet toolbox**, the lyrics on the sheet, the keyboard panel and Print to PDF.
 
 The code is `aitu-frontend/src/pages/piece/sheet/` (the new sheet in `frames/`). The old sheet's page and selections
 are kept in the archive: [old-sheet-tools/annotations-hub-old-sheet.md](../archive/old-sheet-tools/annotations-hub-old-sheet.md).
@@ -66,32 +66,7 @@ Since implementation 03, Phase 10 (2026-10-27) the Sheet step has only the new s
   ornaments again (the user's answer of Phase 7). Since prompt version 6 (implementation 04, Phase 3) it also
   follows the rules of simplicity and may add or leave out a few notes for them (at most a tenth of a window),
   written into the notes as a stretch does. A first run reads the notes without hands.
-- **The sheet toolbox** (the sliders icon of the floating bar; implementation 03, Phase 8): **Info** (named
-  Title until 2026-10-30: title, subtitle and artist above the sheet and on the PDF, written when the field is left;
-  editable also while the AI writes the sheet), **Key** (the armadura of the
-  piece; *Use D major (n fewer signs)* when another prints fewer signs over the piece), **Transpose** (**Notes**:
-  every note moved by the interval of two keyboards, the sheet with them, the armaduras renamed with fewer signs, a
-  note off the 88 keys taken off; **Figures**: every figure renamed by the same number of steps, the page keeps its
-  spacing; each with **Preview** and **Transpose**), **Lyrics** (as on the old sheet: paste, **Save lyrics**, the
-  pool; a piece is dragged from the pool onto the sheet, on the frame under it), and
-  **View** (**Zoom**, kept in this browser; **Space between lines**, kept with the sheet). Every change is one step
-  of Undo.
-- **Lyrics blocks** (implementation 03, Phase 8A++, the user's request): a click on a piece on the sheet picks it
-  (⌘ or Shift adds one) and opens the **lyrics toolbox** beside it: the **Words** (Enter splits the piece where the
-  cursor is), **Font** (Lora, Geist, Montserrat), **Size**, **Normal**, **Bold**, **Italic**, *Back in the line of
-  words*, merge, split, a new line, back to the pool, delete (also the Delete key). On the sheet a picked piece is a
-  block with an outline: drag it anywhere (it keeps its frames), drag its side handle to make it narrower or wider
-  (the words wrap as the pointer moves), drag its corner to make the words larger or smaller. Its frames, when the
-  words sound in Play mode, are a bar in the strip above the staves, with an end on each side to drag. While a piece
-  is picked the strip marks no stretch; a click off the pieces lets them go. A piece whose frames cross a line break
-  shares its words between the lines by the width its frames take on each (60 % of the width, about 60 % of the
-  words), so a narrower window splits it again. Every change is one step of Undo.
-- **Print to PDF** (the printer icon): the paper, the margins, the size of the music (a 6.5 mm staff by default) and
-  the space between lines on paper (6 mm by default), both kept in this browser, the title and page numbers;
-  the lines are laid out again for the paper (never shrunk) and never split across a page turn
-  ([printing.md](printing.md)).
-- **The keyboard panel** (`⋯` → *Show the keyboard*): the keys sounding under the cursor, as on the old sheet; a lit
-  key takes that note off the page, a dark one adds a note to the hand of **Add to** (one step of Undo).
+- **The sheet toolbox**, the lyrics on the sheet, Print to PDF and the keyboard panel: [annotations-sheet.md](annotations-sheet.md).
 - **Copy and paste** (Phase 8B): copy with ⌘C, the toolboxes' title bars or the read-only panel; paste with ⌘V or the floating bar. Detail in [annotations-stretches.md](annotations-stretches.md) and [annotations-notes.md](annotations-notes.md).
 - **A read-only sheet** (a version of My library, a source of From other projects, the requests review): a stretch
   marked in the strip opens a small *Frames* panel with **Copy this stretch** and the screen's own action (**Add to

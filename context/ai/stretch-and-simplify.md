@@ -23,7 +23,7 @@ and section 8 (Simplify).
    - **Your words**: the field **What should the AI change?** takes up to 1,000 characters. Without words, the AI
      writes the passage again as it is, with no change of notes.
    - **A level**: the passage is written again at Easy, Medium or Hard, with the patterns of that level. See
-     `levels.md` (written by Phase 11) and `level-run.md` (Phase 12).
+     [levels.md](levels.md) and [level-run.md](level-run.md).
 5. The dialog shows the **model** and the **batches**, as for every run, and the cost and the time. Then
    **Enhance with AI** starts the run.
 
@@ -182,4 +182,4 @@ The job's last message says what happened (the summary field `simplify`):
 - [README.md](README.md): the AI in the app, the kinds of run, the model and the cost
 - [documentation/services/backend/ai-runs.md](../../documentation/services/backend/ai-runs.md), sections 7 and 8: the
   functions, the constants and the routes of a stretch and of Simplify
-- `levels.md` and `level-run.md` (written by Phases 11 and 12): a level of one hand, the way to simplify it now
+- [levels.md](levels.md) and [level-run.md](level-run.md): a level of one hand, the way to simplify it now

@@ -258,6 +258,7 @@ sections 12 to 17.
 | `frames/FramesNoteToolbox.tsx`, `readingTools.ts` | The note toolbox: figures, alteration, finger, hand, beam, grace, duplicate, unite, marks, take off the page; its chord keyboard (`ChordKeys`); what the toolboxes share (`readingTools.ts`) |
 | `frames/FramesRangeToolbox.tsx` | The range toolbox (titled *Frames*): Which staff, Key, Clef, Octave, and the title bar's actions (Record this passage, Start a new part here, Delete these frames, Copy this stretch, Enhance, Select) |
 | `frames/FrameRangeFields.tsx` | The two frame-number fields of the range toolbox's first line (implementation 04-3, Phase 2b) |
+| `frames/navigation.ts` | The navigation state of **Enhance with AI** on a version of My library: the run (`songRunOf`), the model and the batches (`runChoiceOf`), and `enhanceWithAi` |
 | `frames/FramesSheetToolbox.tsx` | The sheet toolbox: Info (the title lines), Key, Transpose, Lyrics, View |
 | `frames/FramesPreviewDialog.tsx` | The preview of a transposition: the sheet as it would be, **Transpose** or **Cancel** |
 | `frames/FramesLyricsToolbox.tsx`, `useFramesLyrics.ts`, `lyricsText.ts` | The lyrics pieces on the sheet (stored in `sheet.f1`), the pasted words and the pool (`GET`/`PUT /sheet/{uuid}/words`) |
@@ -274,6 +275,7 @@ sections 12 to 17.
 |---|---|
 | `components/time/ScorePlayer.tsx` | Plays the recording; `compact` draws only the scrub bar (the Sheet step); `headless` (Phase 11) draws nothing but a refused start; `stopAt` and `onEnded` (the end of a stretch, the end of the file); `preload` (`metadata` for a part of Play mode not yet playing, changed on the element without a new one); `keys` (Phase 9) turns Space off for a second player on the page. `version` (Phase 8) puts the audio at a new address when it changed under the page, because the browser keeps a media file by its address; the Audio and Notes steps add the audio revision the same way (`audioApi.fileUrl(uuid, normalized, revision)`) |
 | `components/time/FigureGlyph.tsx` | One figure drawn as its glyph (the figure buttons of the toolboxes) |
+| `components/piece/AiMark.tsx` | The AI mark before a title: green (**Enhanced with AI**) once the AI enhanced the sheet, faint grey (**Not enhanced with AI yet**) when it could and has not |
 | `ui/Toolbox.tsx`, `ui/FloatingBar.tsx` | The draggable panel and the floating bar every step uses |
 
 **The old sheet was removed in implementation 03, Phase 10 (2026-10-27).** Its page
