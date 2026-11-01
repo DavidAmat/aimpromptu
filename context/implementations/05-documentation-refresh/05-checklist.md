@@ -3,7 +3,7 @@
 The plan is [`05-plan.md`](05-plan.md). Branch `feat/05-docs-refresh`. Status letters: `[x]` complete, `[p]` in
 progress, `[b]` blocked, `[c]` cancelled, `[ ]` not started.
 
-**Next phase: Phase 1.** (Each phase changes this line when it ends.)
+**Next phase: Phase 2.** (Each phase changes this line when it ends.)
 
 Each phase, when done: its tasks `[x]`, the phase `[x]`, and the link to its report after the title, as
 `Report: [05-implementation-phase-N.md](05-implementation-phase-N.md)`.
@@ -13,11 +13,13 @@ Each phase, when done: its tasks `[x]`, the phase `[x]`, and the link to its rep
 - [x] The defaults of plan section 2 (the folder, the branch, the old sheet's pages to the archive, one phase at a
   time): the user's ok (2026-11-01). 04-5 merged into `master` first; `feat/05-docs-refresh` made from `master`.
 
-# [ ] Phase 1: The inventory and the name check
+# [x] Phase 1: The inventory and the name check
 
-- [ ] 1.1 `scripts/docs/check-names.py`; a line about it in `00-documentation-instructions.md`.
-- [ ] 1.2 `05-inventory.md`: every file in scope, its owner, its missing names, State `to check`.
-- [ ] 1.3 The code changed since 2026-10-28, per folder.
+Report: [05-implementation-phase-1.md](05-implementation-phase-1.md)
+
+- [x] 1.1 `scripts/docs/check-names.py`; a line about it in `00-documentation-instructions.md`.
+- [x] 1.2 `05-inventory.md`: every file in scope, its owner, its missing names, State `to check`.
+- [x] 1.3 The code changed since 2026-10-28, per folder.
 
 # [ ] Phase 2: How a sheet is made (the notes to `sheet.f1`)
 

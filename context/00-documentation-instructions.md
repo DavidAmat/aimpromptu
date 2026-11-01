@@ -75,6 +75,10 @@ updates the `context/` and `documentation/` pages it makes false, in the same ph
 every `README.md`, and exits non-zero on a broken one. Every phase leaves it passing. A file or
 folder moved means its links are fixed in the same commit.
 
+`python3 scripts/docs/check-names.py [doc ...]` checks the names in backticks (paths, routes, identifiers) against
+the code and prints each one it cannot find as `doc:line  kind  name`. It always exits 0: it is a report for the
+reader, not a gate. Run it on each page you change, and say in the phase report which missing names it lists.
+
 ## When docs and code disagree
 
 The documentation migration that created this system is complete; its kit is in
