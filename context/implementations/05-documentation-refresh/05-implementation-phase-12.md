@@ -74,6 +74,14 @@ The plan is [`05-plan.md`](05-plan.md); the checklist is [`05-checklist.md`](05-
 
 - **E12.7** `documentation/services/backend/ai-runs.md`, line 176: replace "(`ai-levels.md` and `context/ai/level-run.md`, Phases 11 and 12)" by "(`ai-levels.md` and `context/ai/level-run.md`)".
 
+## Commit note for the join
+
+- Commit `d17ad3d` holds my files, and also, in the two shared tracking files, the lines another agent of wave C had
+  written on disk before my commit: the ticks of Phase 17, the report link of Phase 16 and 17 and their inventory rows,
+  and the inventory row of `piano-matrix-notation.md` and the other Phase 16 rows. The working tree is unchanged. The
+  Phase 16 and 17 reports were not yet committed when `d17ad3d` was made. Nothing to undo: the join should check that
+  these lines are right.
+
 ## Left for later phases
 
 - Phase 13: `context/ai/run-history.md` (the link from `level-run.md` to it is not written yet: it is named in backticks
