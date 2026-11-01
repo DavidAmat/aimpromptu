@@ -12,7 +12,7 @@ of the page. **State** is `to check` until the owner phase sets it.
 |---|---:|---|---|---:|---|---|
 | [README.md](../../../README.md) | 76 | 2026-10-27 | 20 | 0 | AImpromptu (aitu) | `to check` |
 | [aitu-backend/README.md](../../../aitu-backend/README.md) | 109 | 2026-10-27 | 20 | 2 | aitu-backend | `to check` |
-| [aitu-backend/src/aitu_backend/sheet/README.md](../../../aitu-backend/src/aitu_backend/sheet/README.md) | 544 | 2026-10-30 | 2, 3, 9, 10 (their sections); 20 the map | 0 | aitu_backend.sheet: the product core of the new piano sheet chain | `to check` |
+| [aitu-backend/src/aitu_backend/sheet/README.md](../../../aitu-backend/src/aitu_backend/sheet/README.md) | 544 | 2026-10-30 | 2, 3, 9, 10 (their sections); 20 the map | 0 | aitu_backend.sheet: the product core of the new piano sheet chain | `updated` (Phase 2: sections 1, 2, 4, 12) |
 | [aitu-frontend/README.md](../../../aitu-frontend/README.md) | 136 | 2026-10-27 | 20 | 1 | aitu-frontend | `to check` |
 | [context/00-documentation-instructions.md](../../../context/00-documentation-instructions.md) | 91 | 2026-10-27 | 20 | 0 | Documentation instructions | `to check` |
 | [context/00-index.md](../../../context/00-index.md) | 326 | 2026-10-28 | 20 | 2 | Documentation index | `to check` |
@@ -27,7 +27,7 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/04-local-development.md](../../../context/04-local-development.md) | 200 | 2026-10-31 | 20 | 0 | Local development | `to check` |
 | [context/05-deployment.md](../../../context/05-deployment.md) | 37 | 2026-10-18 | 20 | 0 | Deployment | `to check` |
 | [context/07-database.md](../../../context/07-database.md) | 211 | 2026-10-30 | 14 (11 adds `level_of`) | 1 | Database | `updated` |
-| [context/08-security.md](../../../context/08-security.md) | 124 | 2026-10-16 | 19 | 1 | Security | `to check` |
+| [context/08-security.md](../../../context/08-security.md) | 124 | 2026-10-16 | 19 | 1 | Security | `updated` |
 | [context/09-coding-conventions.md](../../../context/09-coding-conventions.md) | 118 | 2026-10-27 | 20 | 5 | Coding conventions | `to check` |
 | [context/app/01-app-context.md](../../../context/app/01-app-context.md) | 243 | 2026-10-27 | 20 | 0 | AImpromptus | `to check` |
 | [context/backend/README.md](../../../context/backend/README.md) | 96 | 2026-10-27 | 20 | 2 | aitu-backend | `to check` |
@@ -43,8 +43,9 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/frontend/annotations-sheet.md](../../../context/frontend/annotations-sheet.md) | 147 | 2026-10-31 | 7 | 4 | The sheet toolbox, the keyboard panel, and trills | `to check` |
 | [context/frontend/annotations-stretches.md](../../../context/frontend/annotations-stretches.md) | 97 | 2026-10-27 | 6 | 3 | The range toolbox, and octave brackets on the page | `to check` |
 | [context/frontend/annotations.md](../../../context/frontend/annotations.md) | 142 | 2026-11-01 | 5 | 0 | The Sheet step: the hub of the new sheet's tools (the old sheet's sections are in `archive/old-sheet-tools/`) | `updated` |
-| [context/frontend/pages.md](../../../context/frontend/pages.md) | 153 | 2026-10-25 | 19 | 1 | Pages and the shell | `to check` |
-| [context/frontend/play-mode.md](../../../context/frontend/play-mode.md) | 126 | 2026-10-26 | 19 | 0 | Play mode | `to check` |
+| [context/frontend/lab.md](../../../context/frontend/lab.md) | 92 | 2026-11-01 | 19 | 0 | The Lab: the video reader's five tabs, the examples and the score board, the modules | `new` |
+| [context/frontend/pages.md](../../../context/frontend/pages.md) | 154 | 2026-11-01 | 19 | 1 | Pages and the shell | `updated` |
+| [context/frontend/play-mode.md](../../../context/frontend/play-mode.md) | 126 | 2026-11-01 | 19 | 0 | Play mode | `updated` |
 | [context/frontend/playlists.md](../../../context/frontend/playlists.md) | 84 | 2026-10-15 | 17 (18 the playlists part) | 0 | From other projects, and the playlists | `updated` (18's part: section 3) |
 | [context/frontend/printing.md](../../../context/frontend/printing.md) | 94 | 2026-10-27 | 8 | 0 | Printing the sheet — the PDF export | `to check` |
 | [context/frontend/projects.md](../../../context/frontend/projects.md) | 286 | 2026-10-29 | 14 (4, 15, 16 adjust their step) | 0 | Projects and the steps of a project | `updated` |

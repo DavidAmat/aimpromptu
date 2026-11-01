@@ -81,6 +81,7 @@ Locked by the organizer for `context/implementations/01-mvp/01-epics-master-plan
 | Time model | A column is a fixed number of milliseconds (`frameMs`, 40 by default) and carries no rhythmic meaning. No BPM, no granularity, no bar lines. See [backend/time-model.md](backend/time-model.md) |
 | Storage | `.database/` (implementation 02, plan section 8): **SQLite** for the records (users, projects, the music library, requests), through **SQLAlchemy 2** models with **Alembic** migrations (`aitu_backend/db/`), and folders beside it for the audio files (stored once, by SHA-256) and the project bundles. On the Ubuntu machine a link to `/mnt/ssd2/aimpromptu/.database`, mounted into the backend container at `/database`. See [07-database.md](07-database.md) |
 | GPU | The RTX 4090 of the Ubuntu machine (`AITU_DEVICE=cuda` in the container); natively the default stays `cpu` |
+| AI (Enhance with AI) | Every run uses **GPT-6.1 Terra** at medium effort, through the OpenAI client of `sheet_llm.py` (the Responses API; the key is the setting `OPENAI_API_KEY`). The dialog may choose GPT-6.1 Sol or Sonnet 5.5, through the Anthropic SDK (the setting `ANTHROPIC_API_KEY`). Terra since implementation 04-3, Phase 5 (2026-10-30); before that the runs used Sonnet 5.5. See [ai/README.md](ai/README.md) |
 
 ## Not used (POC)
 

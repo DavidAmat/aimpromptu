@@ -25,11 +25,13 @@ Report: [05-implementation-phase-1.md](05-implementation-phase-1.md)
 - [x] 1.2 `05-inventory.md`: every file in scope, its owner, its missing names, State `to check`.
 - [x] 1.3 The code changed since 2026-10-28, per folder.
 
-# [ ] Phase 2: How a sheet is made (the notes to `sheet.f1`) (wave A)
+# [x] Phase 2: How a sheet is made (the notes to `sheet.f1`) (wave A)
 
-- [ ] 2.1 New `documentation/services/backend/sheet-f1.md`.
-- [ ] 2.2 `time-matrix.md`, `rhythm-and-annotations.md`, `context/backend/time-model.md`.
-- [ ] 2.3 The core README sections 1 to 9, 12, 16, 17.
+Report: [05-implementation-phase-2.md](05-implementation-phase-2.md)
+
+- [x] 2.1 New `documentation/services/backend/sheet-f1.md`.
+- [x] 2.2 `time-matrix.md`, `rhythm-and-annotations.md`, `context/backend/time-model.md`.
+- [x] 2.3 The core README sections 1 to 9, 12, 16, 17.
 
 # [ ] Phase 3: How the sheet is drawn (the backend) (wave B)
 
