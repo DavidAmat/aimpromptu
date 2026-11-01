@@ -99,6 +99,22 @@ piece rather than 2x.
 To trade quality for latency: `window_resolve=False` saves about a fifth and gives up the
 only move that can restructure rather than relocate; `max_rounds=1` saves more.
 
+## Where the code is
+
+All in `aitu-backend/src/aitu_backend/hands/`:
+
+* `config.py`: `HandInferenceConfig` (its `method`, `"refine"` by default), `RefineConfig` (`ledger_weight`,
+  `pattern_weight`, `window_resolve`, `max_rounds`, `time_budget_s`), `DEFAULT_CONFIG` and `with_refine`.
+  The gate's sustained blockers (`ledger_gate_sustained`) are set in `config.py` too.
+* `refine.py`: the second pass (`beam-refine-v1`), its window re-solve (`_window_resolve`) and the incremental
+  replay that skips the groups a move cannot change.
+* `staff.py`: `reach_gate`, the gate on the `across` charge.
+* `figuration.py`: the figuration term and the relief of the ledger charge (`merged_stream`).
+* `costs.py`: the cost weights (`CostWeights.ledger` is 0.0; the term lives in the pass).
+* `beam.py`: the beam dynamic program the pass starts from.
+
+The tests: `aitu-backend/tests/test_hands_refine.py`, `test_hands_staff.py` (the Mr Blue Sky cadence).
+
 ## Known limits
 
 * **A deliberate hand crossing is invisible in the matrix.** The pass's single regression

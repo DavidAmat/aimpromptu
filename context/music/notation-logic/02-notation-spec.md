@@ -58,7 +58,7 @@ Spanish solfège + scientific octave: `Do-4`, `Fa#-5`, `La#-0`. Chromatic set:
 
 Octave numbering: `La-0` = A0 (lowest key), `Do-8` = C8 (highest). The 88-key row
 order is canonical (`La-0` … `Do-8`) and rebuilt identically on both sides — see
-`build_grand_piano_rows()` / `buildGrandPianoRows()`.
+`build_grand_piano_rows()` (`matrix/keys.py`; the browser copy went with the VexFlow stack).
 
 ## Onset rule
 
@@ -98,6 +98,9 @@ the frontend rebuilds the canonical 88-key order.
 
 ### Score metadata (camelCase JSON)
 
+This was the payload of the old score routes. The builder now takes `frame_ms` where this table has
+`tempoBpm` and `timeStepSeconds` (see the scope at the top): the table is kept as the record of the contract.
+
 | Field | Required | Meaning |
 |-------|----------|---------|
 | `tempoBpm` | yes | Beats per minute. |
@@ -119,8 +122,9 @@ Mutually exclusive matrix forms — exactly one is present:
 Both matrices must span the **same number of time frames** (`shape[1]` equal) so the
 hands stay vertically aligned.
 
-`POST /sequence` accepts optional `leftSequence` (same frame count as `sequence`):
-`sequence` is the right hand (treble), `leftSequence` is the left hand (bass clef).
+The old route `POST /sequence` (deleted in implementation 02, Phase 1) took an optional `leftSequence`
+(same frame count as `sequence`): `sequence` is the right hand (treble), `leftSequence` is the left hand
+(bass clef). The builder `sequence_to_score` (`matrix/text_notation.py`) still takes it as `left_sequence`.
 The same notation, onset rule, lyrics, and key signature apply to both clefs unchanged.
 
 Text input uses **separate** right-hand and left-hand text areas (not inline `__`

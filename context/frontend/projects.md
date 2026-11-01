@@ -146,24 +146,27 @@ stay in **Lab** ([lab.md](lab.md)), for the master user.
 rectangles on a time axis. While MuScriptor runs, the rectangles appear and grow as the notes
 arrive, with a progress bar. After it, the audio plays with the playhead, and the notes can be
 edited. The floating bar has play, **Follow the playhead** (on by default: the roll scrolls with the playhead; moving the view by hand turns it off, and Play turns it on again), undo, redo, delete and **Save**; **Continue to Sheet** is on the
-top row:
+top row. The gestures, in short (the code: `pages/piece/NotesEditor.tsx` and `components/notes/PianoRollCanvas.tsx`):
 
 | Gesture | Effect |
 |---|---|
 | Click, Command-click, a drag on empty space | Select a note, add or remove one, select a band |
-| Drag a rectangle; Shift-drag | Move it in time by 10 ms steps; also to another key |
+| Drag a rectangle; Shift-drag | Move it in time by 10 ms steps; Shift-drag also moves it to another key |
 | Drag the left or right edge | Make it shorter or longer |
-| Arrow keys (Shift: bigger steps) | Move in time by 10 ms, or by one key (an octave) |
+| Left and Right arrows (Shift: 100 ms) | Move the selection in time by 10 ms |
+| Up and Down arrows (Shift: an octave) | Move the selection by one key |
 | Double-click on empty space | Add a 250 ms note on that key |
 | Delete or Backspace | Delete the selected notes |
 | Command-Z, Shift-Command-Z, Command-A, Escape | Undo, redo, select all, clear |
 | Press or drag in the time ruler, or on the bar under the roll | Move the playhead |
 
 One key sounds one note at a time: a note moved into the next onset of its key is shortened to it.
-The page stays at 60 frames per second with 10,000 rectangles.
+The roll is built for about 10,000 rectangles; the bench page `pages/dev/RollBenchPage.tsx` runs that case
+(its speed is not measured in this page).
 
-Until Sonnet decides them, the notes have no hand colours: the Notes step and Notes Falling show a new
-transcription in one colour.
+**Hand colours** (a switch in the Notes step, on by default): blue for a note of the right hand, green for
+the left, red for a note with no hand. The hands are written with the sheet, so until the piece has hands
+every note has one colour (the switch is off, and disabled). The choice is kept in this browser.
 
 **4. Sheet** (implementation 03, Phase 5). The new piano sheet, without compases, drawn by the backend
 (`pages/piece/sheet/frames/`, [rendering.md](rendering.md)). It is on screen at once:

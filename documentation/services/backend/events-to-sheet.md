@@ -106,6 +106,10 @@ pedal rather than the key. Transkun, on the same audio, returns 34–85 ms notes
 ByteDance calls 200–1700 ms, so a 40 ms floor would silently delete a third of a Transkun
 transcription.
 
+The floor is only the first test. `ArtifactConfig.require_coincident_attack` (on by default) also asks for
+another attack within `coincidence_seconds` (50 ms): the artifact is made by a struck chord, so a short note
+with no attack beside it is kept, as something else.
+
 **Artifacts run before everything else.** One phantom bass note under a played octave spans two
 octaves, which no hand can hold, so the hand splitter is forced into a wrong answer and the whole
 assignment unravels. It also runs before the leakage filter, whose asymmetry test asks which other
@@ -156,11 +160,13 @@ Cell values: `1` onset, `-1` sustain, `0` silence.
 
 ## 5. The hand split
 
-`matrix/hands.py` calls into `hands/`, a beam dynamic program over onset groups with a cost model
-(`hands/costs.py`), candidate partitions per group (`hands/candidates.py`) and a gated second pass
-(`hands/refine.py`, documented in
-[`hand-inference-second-pass.md`](hand-inference-second-pass.md)). The old `Do-4` threshold survives
-as `hands/threshold.py`, kept as a baseline.
+`matrix/hands.py` calls into `hands/`. The default method is `refine` (`HandInferenceConfig.method`
+in `hands/config.py`): a beam dynamic program over onset groups (`hands/beam.py`) with a cost model
+(`hands/costs.py`) and candidate partitions per group (`hands/candidates.py`), then a gated second pass
+over the whole page (`hands/refine.py`, `beam-refine-v1`), documented in
+[`hand-inference-second-pass.md`](hand-inference-second-pass.md). The old `Do-4` threshold survives
+as `hands/threshold.py`, kept as a baseline. (`matrix/hands.py` still names `beam` as the default in its docstring and in `DEFAULT_METHOD`; when no
+method is given, `split_hands` takes the config's method, which is `refine`.)
 
 **It runs here and not later** (D-31). The old sheet measured its gaps per hand, so the hands had to
 exist first; the new sheet starts from one hand per note (`pipeline.starting_hands`: a saved hand that

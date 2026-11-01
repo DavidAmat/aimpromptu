@@ -23,6 +23,25 @@ Result:       blue C#3 key
 
 Transparent areas reveal the piano underneath; the opaque blue area replaces the visible black colour.
 
+## Status (2026-11-01)
+
+The four assets exist in `aitu-frontend/public/piano/`, and the app draws the keyboard in this way:
+`aitu-frontend/src/piano/Piano.tsx`, with the four layers in the order below and each pressed key at
+`opacity` 1. The keyboard is shown in Notes Falling (Play mode) and in the Sheet step's keyboard panel
+(`pages/piece/sheet/PianoToolboxes.tsx`).
+
+Where the app differs from the sketches below:
+
+- The key positions are computed in code, not written as a table. `aitu-frontend/src/piano/keyPositions.ts`
+  builds the 88 keys (`row` 0 to 87, `midi`, the English and Spanish names, `type`, `x`, `y`, `width`,
+  `height`, `frequency`) on a grid of `PIANO_WIDTH` by `PIANO_HEIGHT`. The file calls this geometry a
+  placeholder.
+- The four layers are `<image>` elements inside one `<svg>`. No `<use>` of a sprite, and no `<img>` stack.
+- A colour can be given for any key (`keyColours`), so the page can show which hand plays a note. The
+  octave number is drawn on each Do.
+- The sample table with names such as `Do#-3` is only an illustration. The code keys a key by its `row`
+  and its `midi`.
+
 ## Best workflow for your illustrator
 
 She should **not create 88 different SVG files**. Ask her to create only four assets:

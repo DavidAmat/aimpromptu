@@ -124,11 +124,13 @@ Report: [05-implementation-phase-15.md](05-implementation-phase-15.md)
 - [x] 15.1 `muscriptor.md`, `pieces-and-revisions.md`, `transcription-quality.md`, `transcription-pipeline.md`.
 - [x] 15.2 The Source and Audio parts of `projects.md` done; `endpoints.md` by the join of wave B (E15.1 in the report); `components.md` checked, no change.
 
-# [ ] Phase 16: The notes and the hands: the Notes step, the piano roll, the hand split (wave C)
+# [x] Phase 16: The notes and the hands: the Notes step, the piano roll, the hand split (wave C)
 
-- [ ] 16.1 `piano-matrix-notation.md`, `events-to-sheet.md`, `hand-inference-second-pass.md`, `01-piano-svg.md`;
-  `02-notation-spec.md` checked.
-- [ ] 16.2 The Notes part of `projects.md`; `endpoints.md`, `components.md`.
+Report: [05-implementation-phase-16.md](05-implementation-phase-16.md)
+
+- [x] 16.1 `piano-matrix-notation.md` (checked, no change), `events-to-sheet.md`, `hand-inference-second-pass.md`, `01-piano-svg.md`;
+  `02-notation-spec.md` checked (three fixes).
+- [x] 16.2 The Notes part of `projects.md` done; `endpoints.md` by the join of wave C (E16.1 in the report); `components.md` checked, no change.
 
 # [x] Phase 17: Recording in Sheet, passages, Compose and parts (wave C)
 
