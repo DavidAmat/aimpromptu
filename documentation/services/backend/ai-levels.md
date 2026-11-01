@@ -4,7 +4,7 @@
 
 The levels of **Enhance with AI** (implementation 04-3, Phases 3 and 4; the chords of the song, implementation 04-5).
 This page tells the files and functions. The run that writes a level (the plan, the batches, the check) is in
-Phase 12's sections below; the history of runs in Phase 13's.
+section 8; the history of runs in section 9.
 
 Modules: `aitu-backend/src/aitu_backend/sheet/llm/catalog/` (the patterns), `sheet/llm/levels.py` (the catalog's
 loading, the guide's chords, the prompts of a level), `sheet/levels/` (`grid.py`, `harmony.py`, `hands.py`: the
@@ -136,13 +136,111 @@ How hard a passage is to play, per hand: the measures of the research (the track
   (the tab each hand shows), `catalog` (from `api/sheet.ts` `levelCatalog`; without it the backend's `defaults` apply).
   Builds the `LevelChoice` (`right`, `left`, `hand`, `patterns`, `exact`, `strict`, `chords`).
 
-## 8. The later sections
+## 8. The level run: the plan, the batches, the check
 
-Phase 12 adds the level run (the plan, the batches, the check, `start_level`'s `_level_work`, the prompt files of
-`sheet/llm/prompt/levels/`, the constants of `levels.py`). Phase 13 adds the log of a run and its routes.
+The concept is in [context/ai/level-run.md](../../../context/ai/level-run.md). This section tells the code.
+
+### 8.1 `sheet/llm/levels.py`: the prompts
+
+- `PROMPT_DIR` = `sheet/llm/prompt/levels/`. `LEVEL_VERSION` is the text of its `VERSION` file (`7`). Every run's log
+  stores it as `prompt`.
+- The prompt files: `shared.md` (the task, the sheet's rules, what a level is, "never harder", Strict and Suggested,
+  the register, the rules of the run, what the app keeps and changes, the patterns, the F1 input, the plan request, the
+  batch request, how to answer); `easy.md`, `medium.md`, `hard.md` (one section per hand, `## The right hand at <level>`
+  and `## The left hand at <level>`, read by `_hand_part`); `feedback.md` (the problems of a reply, `{errors}`, sent
+  back to the AI); `answer.md` (the user's answer to a batch, for `write_again`, the history's batch again).
+- `instructions(level)`: `shared.md`, then the level's file; when the two hands differ, the head of the two hands and
+  the part of each hand. `hand_levels(level)` gives `{staff: level}`; `level_name(level)` gives the words of the level.
+- `system_prompt(level, patterns, staffs, strict, guide)`: `instructions` + the run's patterns (each `Pattern.text`,
+  with `(Strict)` or `(Suggested)`) + the Strict lines + the "No pattern" line for a `free` hand + the guide's chords
+  (`guide_prompt`). The same for every request of a run.
+- `plan_prompt(...)`, `song_summary(...)` (the stretches: `windows_of` with `SUMMARY_MS`, `chords`, `measure_text`,
+  `melody`, `simple_stretches`/`simple_text`, `like_before`), `read_plan(...)` (the sections, the problems),
+  `read_rules(reply)` (the `rule <ref>:` lines). `Section` (`line()`), `Rule` (`line()`, `to_json()`).
+- `batch_prompt(...)`: the batch's sections, in the order of [context/ai/level-run.md](../../../context/ai/level-run.md)
+  (the grid is `Grid.text(start, end)`, the hands are `measure_text`, the context and the look-ahead are `_slice` of
+  the sheet, the earlier passage is `like_before`).
+- `Pattern` (`text(negras, strict)`), `load_patterns`, `catalog()`, `catalog_rows()`, `run_refs(...)`, `refs_in(words)`,
+  `strict_refs(strict, hand)`.
+
+### 8.2 `sheet/llm/levels.py`: the check and the run
+
+- `check_level(reply, target, *, level, staffs, grid, cs, allowed, start, end, strict, explain, guide)` returns a
+  `Batch`: `errors` (the problems, in plain words), `sheet` (the parsed notes), `declared` (`Declared`), `measures`,
+  and the counts `melody`, `melody_dropped`, `new_notes`. It runs the checks of the context page, in this order: the
+  format (`F1 frames`, the hands, the frames inside the batch), the melody (`melody`, `hidden_line` for a riff,
+  `_far_above` for an artifact, `MELODY_DROP_SHARE`), the harmony (`chords`, the bass of each chord, `OUTSIDE_SHARE`,
+  `_guide_column` for the guide's chords), the notes per column and the span (`LIMITS`), the hand motion (`measure`,
+  `moves_q`, `reach`), the patterns declared (`read_declared`, the Strict rule, `KEEP`, `FREE`), the simple stretches
+  and the onsets (`simple_stretches`, `_plain_cols`, `RHYTHM_SHARE`), the grid (`Grid.on_grid`), the steady rhythm
+  (`steady` of `Limits`), and the explain line.
+- `read_declared(reply)` reads `# pattern`, `# not melody`, `# artifact`, `# explain:` and `# rule:` lines (`Declared`).
+- `write_level(current, complete, grid, *, level, staffs, patterns, sid, words, windows, plan, span, max_checks, on_plan,
+  on_batch, strict, rules, on_talk, written_before, done_before, first_index, count, guide)` runs the plan (unless
+  `plan` is given), then the batches, in memory. A reply that fails is sent back with `level_feedback`, up to
+  `MAX_CHECKS`. A batch that fails keeps no answer; a `SkipWindow` fails that batch only; any other exception (the AI
+  is not available, the stop of the user) sets the batch to `error` and ends the batches.
+  It returns a `LevelRun` (`level`, `staffs`, `plan`, `plan_log`, `batches`, `written`, `rules`, `talks`). `Talk`
+  keeps one conversation (`to_json()`) for the log; `on_talk`, `on_plan` and `on_batch` report each one as it ends.
+- `level_windows(current, staffs, start, end, batches)`: the batches of a run (`LEVEL_MS` and `LEVEL_ONSETS`, or
+  `split_windows` for a batch count). `splice(current, written, windows, staffs, reading=...)` puts the accepted batches
+  into the sheet.
+- `guide_chords(text)` and `guide_prompt(text)`: see [section 5](#5-the-chords-of-the-song).
+
+### 8.3 `sheet/levels/`: the measures the run uses (no AI)
+
+- `grid.py`: `song_grid(sheet, quarter_ms)` builds the `Grid`; `TOLERANCE`, `FIT_BEATS`, `STEPS`.
+- `harmony.py`: `chords(sheet, grid, start, end)`; `BASS_WEIGHT`, `OUTSIDE`, `ROOT_BONUS`, `RICH_MARGIN`, `MIN_BEATS`.
+- `hands.py`: `measure(...)` (the `Measures`: `moves_q`, `reach`, and the rest), `melody(sheet, start, end)`,
+  `place_line(...)`; `SPAN`, `SHIFT`, `FAST`, `BIG`, `REGULAR_WEIGHT`.
+
+### 8.4 `part_sheet/job.py`: the job
+
+- `start_level(part_id, *, level, hand, start, end, patterns, words, exact, complete, model, batches, strict, first,
+  chords)`: checks the hand (`HANDS`), `Busy` when the AI works on the part, `ValueError` when the hand has no notes
+  there. It logs the run (`runs.create`: the request, `windows`, `strict`, `prompt`, `chords`) and submits `_level_work`.
+  `first=True` (both routes pass it) writes only the first batch when there are two or more; the run waits.
+- `_level_work(part_id, reporter, log, todo, *, complete)`: reads the plan and the rules back from the log for a
+  run that goes on; calls `levels.write_level`; `on_talk` keeps the usage (`usd`, `requests`) and the rules in the log;
+  the state is `running`, `stopped`, `waiting` or `done`/`failed`; the accepted batches are stored by
+  `edits.apply_level` as one step (`level`, the label `Level <name> with AI, <hand>`, the history entry). The job's
+  `done` summary gives `level` (`ok`, `failed`, `stale`, `gone`), `hand`, `levelName`, `usd`, `batches`, `total`, `run`,
+  and `waiting` or `note` when set.
+- `continue_level(part_id, run_id)` writes the other batches of a waiting run. `again_batch(...)` writes one batch again
+  with the user's answer. See [section 9](#9-the-history-of-runs-and-the-later-sections).
+- `_complete(part_id, kind, model)`: the client of the run (`OpenAIComplete` with `cache_key=<part>|<kind>`, or
+  `ClaudeComplete` for a Claude model). `_level_complete(part_id, level, model)` names the run by `level_name`.
+- Constants: `MODEL = "gpt-6.1-terra"`, `EFFORT = "medium"`, `MODELS` (the dialog's three models, with their relative
+  cost and time), `USD_LEVEL_PLAN` 0.015, `USD_LEVEL_BATCH` 0.025, `SECONDS_LEVEL_PLAN` 10, `SECONDS_LEVEL_BATCH` 45.
+- `level_cost(current, hand, start, end)`: the estimate of a level run (the plan, then the batches); `costs(part_id)`
+  gives it for each hand (`level-right`, `level-left`, `level-both`) in the dialog's numbers.
+- `batch_plan(part_id, *, run, hand, start, end, batches, model)`: the batches the dialog's preview shows (`run` `level`
+  or `stretch` or `all`); `BATCH_MAX_S` 90, `BATCH_MIN_S` 3; the count is between the two, and the cost is scaled by the
+  model's `MODELS` ratio.
+
+### 8.5 `api/sheet.py`: the request
+
+- `Level` (`Literal["easy", "medium", "hard"]`); `LevelRequest` (the fields: `right`, `left` (each level, `easy` by
+  default), `hand` (`both`, `right`, `left`), `start`, `end`, `patterns` (up to 200 refs), `words` (up to 1000
+  characters), `exact`, `strict` (up to 200 refs), `chords` (up to 8000 characters; `None` = the saved ones), and the
+  model and `batches` of `RunChoice`). `LevelRequest.level()` gives one level, or `{right, left}` when they differ.
+- `LEVEL_TITLES` and `level_title(body)` name a level copy (`Easy`, `Easy, left hand`, `Right hard, left medium`).
+- `_chords(part_id, body)` saves the request's chords with the part; `_start_level(part_id, body, start, end)` calls
+  `job.start_level(..., first=True)`, and maps `Busy` to 409 and `ValueError` to 400.
+- `POST /sheet/{uuid}/llm/level` (`run_llm_level`): 409 when the AI is not set up, 400 without a range (`start`, `end`,
+  `end > start`), 403 on a sheet that cannot be changed. Answers `{jobId, status}`.
+- `POST /sheet/{uuid}/llm/level-copy` (`run_llm_level_copy`): the same body without a range; answers `LevelCopyOut`
+  (`jobId`, `projectId`, `partId`, `title`). Its checks and the copy are in section 6.
+- `GET /sheet/levels/catalog`, `GET /sheet/levels/catalog/{hand}/{level}/{number}.svg`: section 1.
+
+## 9. The history of runs, and the later sections
+
+Phase 13 adds the log of a run (`ai-runs/<id>.json`, `part_sheet/runs.py`), its routes (`/llm/runs`, `/llm/runs/{id}`,
+`continue`, `batches/{k}/again`) and `write_again`.
 
 ## Where to look deeper
 
+- [context/ai/level-run.md](../../../context/ai/level-run.md): the plan, the batches, the check, Strict and Suggested
 - [context/ai/levels.md](../../../context/ai/levels.md): what a level is, the catalog, the grid, the chords
 - [ai-runs.md](ai-runs.md): the jobs and the routes that every run shares, the model client
 - [paths-and-data.md](paths-and-data.md): the part's `chords`, the project's `levelOf`

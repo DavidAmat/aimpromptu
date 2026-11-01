@@ -97,10 +97,12 @@ Report: [05-implementation-phase-11.md](05-implementation-phase-11.md)
 - [x] 11.1 New `context/ai/levels.md` and `documentation/services/backend/ai-levels.md`.
 - [x] 11.2 `paths-and-data.md` (`levelOf`, `parts[].chords`) and `07-database.md` (checked: `level_of` already right); `endpoints.md` (`GET /sheet/{uuid}/chords`) and `components.md` (`PatternGallery`, `patterns.ts`) by pending edits for the join of wave B.
 
-# [ ] Phase 12: The AI, part 4: the level run (wave C)
+# [x] Phase 12: The AI, part 4: the level run (wave C)
 
-- [ ] 12.1 New `context/ai/level-run.md`.
-- [ ] 12.2 Sections in `ai-levels.md`; `endpoints.md`.
+Report: [05-implementation-phase-12.md](05-implementation-phase-12.md)
+
+- [x] 12.1 New `context/ai/level-run.md`.
+- [x] 12.2 Sections in `ai-levels.md` done; `endpoints.md`: pending edit E12.1 for the join of wave C (the report).
 
 # [ ] Phase 13: The AI, part 5: the history of AI runs, and `04-context.md` (wave D)
 
@@ -128,10 +130,12 @@ Report: [05-implementation-phase-15.md](05-implementation-phase-15.md)
   `02-notation-spec.md` checked.
 - [ ] 16.2 The Notes part of `projects.md`; `endpoints.md`, `components.md`.
 
-# [ ] Phase 17: Recording in Sheet, passages, Compose and parts (wave C)
+# [x] Phase 17: Recording in Sheet, passages, Compose and parts (wave C)
 
-- [ ] 17.1 `recording-in-sheet.md`, `playlists.md` (From other projects, the parts).
-- [ ] 17.2 `editing.md` (Recording in Sheet), `editing-and-compose.md` (Compose), `endpoints.md`, `components.md`.
+Report: [05-implementation-phase-17.md](05-implementation-phase-17.md)
+
+- [x] 17.1 `recording-in-sheet.md`, `playlists.md` (From other projects, the parts).
+- [x] 17.2 `editing.md` (Recording in Sheet), `editing-and-compose.md` (Compose) done; `endpoints.md`, `components.md` checked, no change; `projects.md` section 6 label: pending edit E17.1 for the join of wave C.
 
 # [x] Phase 18: The libraries, playlists, requests and the Public Library (wave A)
 

@@ -7,7 +7,7 @@ A **level** is how hard a hand plays a passage of the sheet: **Easy**, **Medium*
 (**Enhance with AI**, the levels part of the dialog) writes a hand again at the level the user chose, in the shape of
 a **pattern** the user picked from the catalog. This page tells the levels themselves: the catalog, the grid and
 the harmony the AI works on, the chords of a guitar guide, and the two ways a level is written (in place, or as a
-copy of the whole song). How a level run writes, checks and stops is in `level-run.md` (Phase 12, not yet written).
+copy of the whole song). How a level run writes, checks and stops is in [level-run.md](level-run.md).
 
 ## What the user does
 
