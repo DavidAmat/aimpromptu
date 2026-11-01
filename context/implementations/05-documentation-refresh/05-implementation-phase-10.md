@@ -99,6 +99,8 @@ simplified as a level (`POST /sheet/{uuid}/llm/level`). |".
 - `check-links.py`: 526 files, 0 broken.
 - `check-names.py` on `stretch-and-simplify.md` and `ai-runs.md`: 4 missing, all `level-run.md` (Phase 12 writes it:
   three in the new page, one in `ai-runs.md` section 8). The other names are found.
+- Two broken links in other phases' reports, not written here: `05-implementation-phase-3.md` line 83 (`sheet-drawing.md`)
+  and `05-implementation-phase-6.md` line 62 (`annotations-stretches.md`). Left as they are.
 
 ## Left for later phases
 
