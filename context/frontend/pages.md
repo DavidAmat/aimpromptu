@@ -12,11 +12,11 @@ is plan section 6.3 of [implementation 02](../implementations/02-private-web-app
 |---|---|---|
 | `/login` | `LoginPage` | **Sign in**: Username, Password. Outside the shell and open to all. Returns to `?next=` (an address of this app only) |
 | `/` | | Redirects to `/projects` |
-| `/projects` | `ProjectsPage` | The Personal Vault, newest change first; **New project** (From source, From scratch, From other projects, Import); per row Duplicate, Export, Rename, **Play**, Delete (**Discard changes** and **Open the song** on an edit copy, which says **Editing**) |
+| `/projects` | `ProjectsPage` | The Personal Vault, newest change first; **New project** (From source, From scratch, From other projects, Import); per row **Open**, **Duplicate**, **Export**, **Rename**, **Folders…**, **Info**, **Play** (enabled once the project reaches its Sheet step), **Delete** (**Discard changes** and **Open the song** on an edit copy, which says **Editing**) |
 | `/projects/new` | `PiecePage` | A new project, with only the Source step |
 | `/projects/compose` | `ComposePage` (`pages/compose/`) | **From other projects** (Phase 10): choose passages, then **Save as song** or **Save as integrated playlist** ([playlists.md](playlists.md)) |
 | `/projects/:id` | `PiecePage` | Opens the project on the furthest step that is ready |
-| `/projects/:id/<step>` | `PiecePage` | One step: `source`, `audio`, `notes`, `hands` or `sheet`. **Save to library** once the Sheet step is ready; a version of My library opens read only, with **Edit**. `:id` may be any part of a project of several parts, whose Sheet step lists them (Phase 10) |
+| `/projects/:id/<step>` | `PiecePage` | One step: `source`, `audio`, `notes` or `sheet`. An old `hands` address opens `sheet` (the Hands step was removed in implementation 03, Phase 5). **Save to library** once the Sheet step is ready; a version of My library opens read only, with **Edit**. `:id` may be any part of a project of several parts, whose Sheet step lists them (Phase 10) |
 | `/projects/:id/passages/:passageId` | `PassagePage` | Recording in Sheet (Phase 9): the Current and the Proposal of a passage, **Promote** ([recording-in-sheet.md](recording-in-sheet.md)) |
 | `/library/songs` | `SongsPage` (`pages/library/`) | My library (Phase 6): the songs, a table with a filter |
 | `/library/songs/:id` | `SongPage` | One song: **Play** (its first version), its artists and its versions (Open, Play, Edit, Duplicate, Export, Add to a playlist, **Publish** (Phase 14), Rename, History, Delete) |
@@ -35,8 +35,9 @@ is plan section 6.3 of [implementation 02](../implementations/02-private-web-app
 | `/play/:projectId` | `PlayPage` (`pages/play/`) | **Play mode** (Phase 11), outside the shell: a project or a version, every part; `?view=falling` is Notes Falling ([play-mode.md](play-mode.md)) |
 | `/play/playlist/:id` | `PlayPage` | Play mode on a songs playlist: `?at=` the song, `?all=1` every song on one page |
 | `/admin/users` | `UsersPage` (`pages/admin/`) | Master user only. Every user; **New user**, **Reset password**, **Disable** / **Enable** |
-| `/admin/lab/<tab>` | `LabLayout` | Master user only. `video`, `calibration`, `detection`, `notes`, `examples` (and `examples/:slug`) |
+| `/admin/lab/<tab>` | `LabLayout` | Master user only. `video`, `calibration`, `detection`, `notes`, `examples` (and `examples/:slug`); the tabs are the video reader's ([lab.md](lab.md)) |
 | `/dev/roll-bench` | `RollBenchPage` | Development builds only: the Notes step's measurements |
+| `/dev/ui` | `UiGalleryPage` | Development builds only: every shared component of `ui/` on one page |
 
 **Old paths** (`/piece/...`, `/video/<tab>`, `/youtube`, `/playground/...`, `/library/play/...`,
 `/projects/:id/notes-falling`) redirected to their new home for the length of implementation 02.
@@ -139,7 +140,7 @@ through a hundred staves in a second; the page chasing it made the gesture impos
 
 `hooks/useProgress.ts` consumes a job's Server-Sent Events stream (a connection on which the backend
 keeps sending progress messages), so a run that takes tens of seconds reports real progress rather
-than a spinner. The transcription, the YouTube download and Sonnet writing the sheet (implementation 03, Phase 5) all run as
+than a spinner. The transcription, the YouTube download and the AI writing the sheet (implementation 03, Phase 5) all run as
 jobs. On the
 Notes tab the same stream also carries the notes, so the rectangles appear while the piece is
 transcribed.

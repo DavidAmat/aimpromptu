@@ -127,11 +127,13 @@ Report: [05-implementation-phase-18.md](05-implementation-phase-18.md)
 - [x] 18.1 What changed since 2026-10-19; `check-names.py` on every page of `context/music-library/`.
 - [x] 18.2 `context/music-library/*`, the playlists part of `playlists.md`, `endpoints.md` (checked, no change), `components.md` (a pending edit for the join: section 1.3).
 
-# [ ] Phase 19: Play mode, the Lab, users and admin, the routes and the shell (wave A)
+# [x] Phase 19: Play mode, the Lab, users and admin, the routes and the shell (wave A)
 
-- [ ] 19.1 `play-mode.md`, `pages.md`, `08-security.md`.
-- [ ] 19.2 New `context/frontend/lab.md` (if no page tells the Lab).
-- [ ] 19.3 `endpoints.md`, `components.md`.
+Report: [05-implementation-phase-19.md](05-implementation-phase-19.md)
+
+- [x] 19.1 `play-mode.md`, `pages.md`, `08-security.md` (corrected: the arrow keys, the step `hands`, the logout route, the `/dev/ui` route).
+- [x] 19.2 New `context/frontend/lab.md` (no page told the Lab; it was one line in five pages).
+- [x] 19.3 `endpoints.md`, `components.md`: pending edits for the join (E1 to E5 in the report, plus E6 for `00-index.md` and E7 for `projects.md`).
 
 # [ ] Phase 20: The platform pages, the READMEs, the indexes, the closing (wave E)
 

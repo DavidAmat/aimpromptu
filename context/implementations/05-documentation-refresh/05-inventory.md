@@ -36,7 +36,7 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/backend/muscriptor.md](../../../context/backend/muscriptor.md) | 109 | 2026-10-06 | 15 | 0 | MuScriptor: the transcription engine | `to check` |
 | [context/backend/piano-matrix-notation.md](../../../context/backend/piano-matrix-notation.md) | 213 | 2026-10-27 | 16 | 1 | The piano matrix notation: the stored form, the wire form, the adapters | `to check` |
 | [context/backend/pieces-and-revisions.md](../../../context/backend/pieces-and-revisions.md) | 133 | 2026-10-27 | 15 | 0 | Pieces, steps and revisions | `to check` |
-| [context/backend/time-model.md](../../../context/backend/time-model.md) | 155 | 2026-10-27 | 2 | 0 | The wall-clock model | `to check` |
+| [context/backend/time-model.md](../../../context/backend/time-model.md) | 155 | 2026-10-27 | 2 | 0 | The wall-clock model | `updated` |
 | [context/colors/color-palette.md](../../../context/colors/color-palette.md) | 90 | 2026-10-06 | 20 | 0 | Colour palette | `to check` |
 | [context/frontend/README.md](../../../context/frontend/README.md) | 115 | 2026-10-28 | 20 | 0 | aitu-frontend | `to check` |
 | [context/frontend/annotations-notes.md](../../../context/frontend/annotations-notes.md) | 88 | 2026-11-01 | 5 | 0 | The note toolbox of the new sheet (the old page is in `archive/old-sheet-tools/`) | `rewritten` |
@@ -71,8 +71,9 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [documentation/services/backend/events-to-sheet.md](../../../documentation/services/backend/events-to-sheet.md) | 231 | 2026-10-28 | 16 | 4 | From the stored notes (`notes.pmn`) to the hand split the sheet starts from | `to check` |
 | [documentation/services/backend/hand-inference-second-pass.md](../../../documentation/services/backend/hand-inference-second-pass.md) | 114 | 2026-08-13 | 16 | 0 | Hand inference: the page-level second pass | `to check` |
 | [documentation/services/backend/paths-and-data.md](../../../documentation/services/backend/paths-and-data.md) | 549 | 2026-10-29 | 14 (8, 11, 13 add their parts) | 6 | Storage layout: every path, every file, every table | `updated` |
-| [documentation/services/backend/rhythm-and-annotations.md](../../../documentation/services/backend/rhythm-and-annotations.md) | 401 | 2026-10-27 | 2 | 2 | `sheet.json`: the old sheet's reading, still read | `to check` |
-| [documentation/services/backend/time-matrix.md](../../../documentation/services/backend/time-matrix.md) | 59 | 2026-10-27 | 2 | 0 | The time matrix: what stays of schema 2.0 | `to check` |
+| [documentation/services/backend/rhythm-and-annotations.md](../../../documentation/services/backend/rhythm-and-annotations.md) | 401 | 2026-10-27 | 2 | 2 | `sheet.json`: the old sheet's reading, still read | `updated` (2 names kept on purpose: see the Phase 2 report) |
+| [documentation/services/backend/sheet-f1.md](../../../documentation/services/backend/sheet-f1.md) | new | 2026-11-01 | 2 | 0 | The new sheet: the files of a part, the F1 text, how the algorithm makes it | `new` |
+| [documentation/services/backend/time-matrix.md](../../../documentation/services/backend/time-matrix.md) | 59 | 2026-10-27 | 2 | 0 | The time matrix: what stays of schema 2.0 | `updated` |
 | [documentation/services/backend/transcription-pipeline.md](../../../documentation/services/backend/transcription-pipeline.md) | 483 | 2026-10-27 | 15 | 8 | The transcription pipeline: modules, order, parameters | `to check` |
 | [documentation/services/frontend/components.md](../../../documentation/services/frontend/components.md) | 581 | 2026-10-31 | shared: every phase its sections; 20 checks | 85 | The component tree: where each piece lives | `to check` |
 | [documentation/services/frontend/score-pdf.md](../../../documentation/services/frontend/score-pdf.md) | 94 | 2026-10-27 | 8 | 3 | Score PDF export | `to check` |

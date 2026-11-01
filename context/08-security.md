@@ -80,7 +80,7 @@ Phase 6 the owner edited it in place.
   answers only the master user; `/shared` lists only the libraries shared with the user.
 - A background job (a transcription, a download) records its owner, runs as them (a project it
   makes is theirs), and is followed only by them and the master user.
-- `/health` and `POST /auth/login` are the only routes open without a session.
+- `/health`, `POST /auth/login` and `POST /auth/logout` need no session (the logout ends the session the cookie names, if any). `GET /auth/me` and `PUT /auth/password` ask for one, and every other route needs one.
 
 The tests: `aitu-backend/tests/test_rights.py` checks each row of the table with two users and the
 master user; `test_auth.py` the sign in, the cookie, the slow-down and Admin → Users;

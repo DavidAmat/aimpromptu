@@ -67,7 +67,7 @@ so a piece just placed and not saved yet lights up too.
 | Key | Does |
 |---|---|
 | Space | Play or pause |
-| Up and Down arrows | Scroll by about half a window |
+| Up and Down arrows | Scroll by 40 % of the window's height (not in Notes Falling) |
 | Escape | Close |
 
 ## 5. Notes Falling
