@@ -142,6 +142,8 @@ reasoning, not unfinished work.
 
 ## Where to look deeper
 
+- [`documentation/services/backend/sheet-f1.md`](../../documentation/services/backend/sheet-f1.md):
+  the new sheet's files (`notes.pmn`, `sheet.f1`), its F1 text, and how the algorithm makes it
 - [`documentation/services/backend/events-to-sheet.md`](../../documentation/services/backend/events-to-sheet.md):
   from the notes to the hand split, step by step
 - [`documentation/services/backend/time-matrix.md`](../../documentation/services/backend/time-matrix.md):

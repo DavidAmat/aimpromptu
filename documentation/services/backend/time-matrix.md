@@ -52,6 +52,7 @@ Phase 3.
 
 ## 4. Where to look deeper
 
+- [`sheet-f1.md`](sheet-f1.md): the new sheet's files, its F1 text and how the algorithm makes it
 - [`events-to-sheet.md`](events-to-sheet.md): from the stored notes to the hand split the sheet starts from
 - [`endpoints.md`](endpoints.md): the whole HTTP surface (`/sheet`, section 4.1)
 - [`rhythm-and-annotations.md`](rhythm-and-annotations.md): the old `sheet.json`, still read

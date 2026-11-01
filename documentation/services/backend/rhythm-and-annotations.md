@@ -395,6 +395,7 @@ end, so it still covers exactly the notes it covered before. Detail in
 
 ## 7. Where to look deeper
 
+- [`sheet-f1.md`](sheet-f1.md): the new sheet's file, which replaced this one for the marks it keeps (section 8)
 - [`time-matrix.md`](time-matrix.md): `FigureOverride` and `BeamBreak`, kept for this file
 - [`aitu-backend/src/aitu_backend/sheet/README.md`](../../../aitu-backend/src/aitu_backend/sheet/README.md): section 17, the marks the new sheet carries
 - [`editing-and-compose.md`](editing-and-compose.md): what happens to marks across an edit

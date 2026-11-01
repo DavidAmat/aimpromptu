@@ -16,19 +16,26 @@ and 12), a stretch of one hand and Simplify (section 14).
 ## 1. What it does
 
 ```text
-notes.pmn (piano matrix notation, saved hands)
-   |                                   |
-   | proposal.propose (the algorithm)  | llm.write_song (the LLM step, offline, window by window;
-   |                                   |   the algorithm is its fallback)
-   v                                   v
-                F1 bars sheet (text, synthesis/01-f1-format.md)
-                               |
-                               | engrave.cursor.render_song (on each click, ~140 ms per song)
-                               v
-             SVG (with note ids) + cursor map + system boxes + timings
+notes.pmn (piano matrix notation, saved hands; the starting hands: transcription.pipeline.starting_hands)
+   |
+   | proposal.frames.propose_frames (the algorithm, no AI, ~0.2 s per song)
+   |   or llm.frames.write_frames (the AI, window by window; the algorithm is its fallback)
+   v
+F1 frames sheet (the stored sheet.f1; sheet/sheet/f1.py, figures, beams, armadura, clefs)
+   |
+   | engrave.frames.render_frames (each time the sheet is drawn: part_sheet/build.py)
+   v
+SVG (with data-note ids) + columns + system boxes + timings
 ```
 
+The app draws only the frames sheet. The F1 bars sheet and its modules (`proposal.pipeline`, `proposal.rules`,
+`llm.chain`, `engrave.cursor`) are the research's: the scripts (`scripts/draw_sheet.py`) and the golden tests still use
+them, and sections 1 to 8 below describe them. The new sheet is sections 9 to 17.
+
 Run time: Python 3.12, the standard library and numpy. Every asset is a frozen file inside the package (§6).
+
+The detail of the new sheet's files and its text is [`documentation/services/backend/sheet-f1.md`](../../../../documentation/services/backend/sheet-f1.md);
+how it is drawn is in `documentation/services/backend/sheet-drawing.md` (Phase 3).
 
 ## 2. Modules
 
@@ -43,9 +50,12 @@ enforce it.
 | `llm` | `Notes` -> F1 bars sheet | `write_song(notes, complete, *, key, sid="song", hand_sheet=None, max_checks=3, guards=True, max_windows=None, on_window=None) -> SongSheet`; `windows.check(answer, target) -> (errors, sheet)`, `windows.answer_text(reply)`, `guards.guard_errors(sheet)`; `prompts.instructions()`, `prompts.window_prompt(...)`, `prompts.feedback(errors)`. The new sheet (section 11): `frames.write_frames(notes, complete, *, sid, key=None, quarter_ms=None, hands=False, max_checks=3, guards=True, max_windows=None, on_window=None) -> FramesSong`; `frames.windows_of(sheet)`, `frames.check_answer(reply, target, *, drop=False, free=None, simplify=False, hand=None)`, `frames.places(notes, quarter_ms)`, `frames.write_stretch(current, notes, complete, *, start, end, instruction="", staff=None)`, `frames.write_simplify(current, notes, complete, *, staff=None) -> Simplified`, `frames.check_simplify(reply, target)`, `frames.assemble(algo, parts, clefs="llm")`, `frames.gap_peaks(sheet)`, `frames.reference_prompt(...)`, `frames.window_prompt(...)`, `frames.instructions()`, `frames.SkipWindow` |
 | `engrave` | F1 bars sheet -> SVG; F1 frames sheet -> SVG | `engrave(sheet, Options()) -> Engraving`, `to_svg(engraving, px_per_space=10, note_ids=False, id_prefix="")`, `render(sheet)`; `cursor.render_song(text, note_ids=True) -> Rendered`. The new sheet (section 10): `frames.render_frames(text_or_sheet, frames.Options(), segment=None) -> frames.Rendered`, `frames.plan(sheet, opts) -> Layout`, `frames.draw(layout, systems=None) -> Engraving`, `frames.engrave_frames(sheet, opts)` |
 
+The app calls the frames entries only (`propose_frames`, `from_notes`, `write_frames`, `render_frames`, `f1.read` and
+`f1.write` with `mode="frames"`). The bars entries are for the scripts and the tests.
+
 In the research, `sheet.pmn` held copies of `aitu_backend.pmn` (`notes`, `columns`, `dense`) and
 `aitu_backend.matrix.keys`. Here the core imports the backend's own modules (identical, imports aside, checked on
-2026-10-23), and `sheet/pmn.py` keeps only the `notes.pmn` loader (`notes_from_pmn`, `key_of_sheet_json`, `KEYS`).
+2026-10-23), and `sheet/sheet/pmn.py` keeps only the `notes.pmn` loader (`notes_from_pmn`, `key_of_sheet_json`, `KEYS`).
 These two backend modules are the only imports from outside the core (`tests/test_sheet_core_chain.py`).
 
 ## 3. Data
@@ -60,9 +70,13 @@ These two backend modules are the only imports from outside the core (`tests/tes
 - **F1** text: `synthesis/01-f1-format.md`. Both views, frame anchors. `f1.read` raises `F1Error` (a `ValueError`)
   with the line number.
 
-## 4. The rendered song (JSON of the viewer API, `viewer/server.py`)
+## 4. The rendered song (JSON of the research viewer)
 
-`render_song(text)` returns `Rendered`; the viewer sends it as JSON:
+`viewer/server.py` and `viewer/index.html` are the research's viewer. They are not in this repository. The app's
+drawing returns the same kind of fields for the frames sheet: `build.draw` gives `svg`, `columns`, `systems`, `width`,
+`height`, `notes` and `timings` (section 12).
+
+`render_song(text)` (`engrave/cursor.py`, the bars sheet) returns `Rendered`; the research viewer sent it as JSON:
 
 | field | content |
 |---|---|
@@ -300,7 +314,7 @@ GET /sheet/{part}?width=N ── part_sheet.build.current ──┬─ sheet.f1 
                                                         │       decisions (the file is not written)
                                                         └─ none ── propose_frames on the starting hands (the key
                                                                    and a renamed figure of an old sheet.json kept)
-                         (while Sonnet writes: job.LiveRun.text, the parts decided so far + the algorithm's)
+                         (while the AI writes: job.LiveRun.text, the parts decided so far + the algorithm's)
                          ── build.draw (engrave.frames.render_frames) ── SVG + columns + systems + segments
 
 POST /sheet/{part}/llm ── part_sheet.job.start ── write_frames(on_start, on_part) with sheet_llm.ClaudeComplete
@@ -313,7 +327,7 @@ POST /sheet/{part}/llm ── part_sheet.job.start ── write_frames(on_start,
   `on_part(log, part)` after each window; nothing else of the chain changed.
 - `sheet.f1` is the F1 frames text with one `# aitu-sheet {...}` record line on top (`part_sheet.store.Record`: the
   source, the `handsRevision` it was written for, the windows and their source, the reference figure, the model,
-  the prompt version, the cost). `sheet.pending` marks a part whose new notes ask Sonnet to write the sheet (a
+  the prompt version, the cost). `sheet.pending` marks a part whose new notes ask the AI to write the sheet (a
   transcription or a video read writes it; the job removes it).
 - The hands of a sheet go back to the notes by `build.hands_of_sheet` (each live note at its drawn column and key).
 - Every stored sheet is laid again on its notes when it is drawn (`build.reapply`, also for current hands;
