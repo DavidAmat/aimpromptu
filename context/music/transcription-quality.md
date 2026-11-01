@@ -2,8 +2,9 @@
 
 How a note travels from a recording to a symbol on the page, and the four distinct places that
 journey can produce something the player never played. Written 2026-08-02 after a session that
-measured all four on the same file; **layers 1 to 3 are unchanged and layer 4 was removed by the
-wall-clock model** — §4 below says what took its place.
+measured all four on the same file; **layer 4 was removed by the wall-clock model** (§4 says what took its
+place). Since implementation 08 the engine is **MuScriptor**, and the two filters of layers 2 and 3 are **off** for
+a MuScriptor piece (§2): the measurements of §1 to §3 were made with ByteDance and Transkun, the engines they name.
 
 Detail and exact parameters: [documentation/services/backend/transcription-pipeline.md](../../documentation/services/backend/transcription-pipeline.md).
 Diagnosing a specific bad passage:
@@ -26,15 +27,15 @@ The four layers, in the order they run:
 
 | # | Layer | Gets it wrong by |
 |---|-------|------------------|
-| 1 | The engine | Missing a note, or inventing one |
-| 2 | The artifact filter | Keeping something that is not a note |
+| 1 | The engine (MuScriptor) | Missing a note, or inventing one |
+| 2 | The artifact filter (off on MuScriptor pieces) | Keeping something that is not a note |
 | 3 | The hand split | Giving a note to the wrong hand |
 | 4 | ~~The grid~~ | **Removed.** It printed an evenly played run as ragged figures; see §4 |
 
-**Piano Roll** and **Notes Falling** exist to separate layer 1 from the rest: both draw
-the stored notes directly, in seconds, with no grid anywhere, and both can show the notes the artifact
-filter discarded, dashed. If a passage looks even there and ragged on the score, the engine is not
-the problem.
+The Notes step's piano roll (`components/notes/PianoRollCanvas.tsx`, the old Piano Roll was removed in
+implementation 08) and **Notes Falling** (a view of Play mode, `pages/play/FallingView.tsx`) draw the stored
+notes directly, in seconds, with no grid anywhere. A note whose hand is guessed is drawn dashed. If a passage
+looks even there and ragged on the score, the engine is not the problem.
 
 ---
 
@@ -53,6 +54,7 @@ a `D#2`/`D#3` octave; Transkun, on the same audio, got both. Elsewhere ByteDance
 No threshold fixes this — there is no extra evidence to threshold. It is a property of the
 model, which is why more than one engine is registered
 ([transkun-engine notes](../../documentation/services/backend/transcription-pipeline.md#engines)).
+These examples are ByteDance's and Transkun's. How MuScriptor does on octaves is not measured in these pages.
 
 ## 2. The artifact filter, and why 20 ms
 
@@ -64,6 +66,11 @@ milliseconds to produce a tone anyone can place.
 So notes under **20 ms** that coincide with another attack are dropped before anything else
 runs. The coincidence condition names the mechanism: the artifact is created *by* a struck
 chord, so a short note alone in silence is something else and is kept.
+
+**Not on MuScriptor pieces.** Phase 1 of implementation 08 found the filter drops 0 to 4 notes a song on
+MuScriptor's output, so `pipeline.filters_for` turns it off for any piece whose header says `muscriptor-*`
+(and for a MIDI piano's notes). The same rule turns off the leakage filter, which is described in
+[transcription-pipeline.md](../../documentation/services/backend/transcription-pipeline.md#42-leakage-transcriptionleakagepy).
 
 **The floor must stay low.** ByteDance offsets follow the pedal, so its notes are long and a
 40 ms floor looks free. Transkun reports true key release and returns 34–85 ms notes for
@@ -80,8 +87,8 @@ before the artifact filter:  LEFT F1: 19   LEFT F2: 24   RIGHT F3: 20   LEFT F3:
 after:                                     LEFT F2: 24   LEFT F3: 23
 ```
 
-This is the reason the artifact filter runs **first**. It is not tidying; it is removing an
-impossible constraint before the optimiser is asked to satisfy it.
+This is the reason the artifact filter runs **first**, on the pieces it is on for (§2). It is not tidying; it is
+removing an impossible constraint before the optimiser is asked to satisfy it.
 
 The split then runs on the **raw semifusa grid**, not the collapsed one, because two attacks
 closer together than one display column merge into a single column when collapsed and the

@@ -27,8 +27,8 @@ audio (normalized.wav, 16 kHz mono)
   -> notes.pmn                   transcription/pipeline.py          the transcription, kept forever
        |
   -> drop removed notes          time_pipeline                      the reader's deletions
-  -> drop artifacts              transcription/artifacts.py         not on muscriptor-* pieces
-  -> merge leaked re-onsets      transcription/leakage.py           not on muscriptor-* pieces
+  -> drop artifacts              transcription/artifacts.py         not on muscriptor-* or midi pieces
+  -> merge leaked re-onsets      transcription/leakage.py           not on muscriptor-* or midi pieces
   -> group chords on raw times   transcription/grouping.py          fixed 40 ms window
   -> snap to columns             transcription/events_to_matrix.py  round(ms / frameMs)
   -> split hands                 matrix/hands.py + hands/           D-31, or paint the saved hands
@@ -218,12 +218,12 @@ the header of `notes.pmn` (`pipeline.filters_for`):
 | `engine` in the header | Artifacts | Leakage |
 |---|---|---|
 | `muscriptor-*` | off | off |
+| `midi` (notes played on a MIDI piano, Recording in Sheet, Phase 9: the keys as played) | off | off |
 | `bytedance`, `transkun`, or `null` (a file written before schema 1.1) | on | on |
 
-`GET /matrix/{uuid}/events` follows the same rule: it labels no artifact on a MuScriptor piece. One
-exception remains: `editing/preview.py` still applies the default filters to a range-edit take,
-which MuScriptor now transcribes. Phase 1 measured the effect as 0 to 4 notes per song, so it was
-left as it is.
+`GET /matrix/{uuid}/events` follows the same rule: it labels no artifact on a MuScriptor piece. (The
+range-edit preview that once applied the default filters on its own, `editing/preview.py`, was removed
+in implementation 02, Phase 9.)
 
 ### 3.7 The live stream
 
@@ -286,8 +286,8 @@ replaced both.
 
 ## 4. Parameters in force
 
-The artifact and leakage filters below apply only to pieces that MuScriptor did not transcribe
-(§3.6). Chord grouping and the hand split apply to every piece.
+The artifact and leakage filters below apply only to pieces that neither MuScriptor nor a MIDI piano
+made (§3.6). Chord grouping and the hand split apply to every piece.
 
 ### 4.1 Artifacts: `transcription/artifacts.py`
 

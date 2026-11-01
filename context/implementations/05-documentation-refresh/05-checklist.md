@@ -113,10 +113,12 @@ Report: [05-implementation-phase-14.md](05-implementation-phase-14.md)
 - [x] 14.1 `projects.md` split; new `context/frontend/folders-and-metadata.md`.
 - [x] 14.2 `07-database.md`, `paths-and-data.md` done; `endpoints.md`, `components.md`, `private-library.md` by pending edits (the join of wave A); `private-library.md` checked.
 
-# [ ] Phase 15: From the audio to the notes: Source, Audio, the transcription (wave B)
+# [x] Phase 15: From the audio to the notes: Source, Audio, the transcription (wave B)
 
-- [ ] 15.1 `muscriptor.md`, `pieces-and-revisions.md`, `transcription-quality.md`, `transcription-pipeline.md`.
-- [ ] 15.2 The Source and Audio parts of `projects.md`; `endpoints.md`, `components.md`.
+Report: [05-implementation-phase-15.md](05-implementation-phase-15.md)
+
+- [x] 15.1 `muscriptor.md`, `pieces-and-revisions.md`, `transcription-quality.md`, `transcription-pipeline.md`.
+- [x] 15.2 The Source and Audio parts of `projects.md` done; `endpoints.md` by the join of wave B (E15.1 in the report); `components.md` checked, no change.
 
 # [ ] Phase 16: The notes and the hands: the Notes step, the piano roll, the hand split (wave C)
 

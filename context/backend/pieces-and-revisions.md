@@ -39,7 +39,7 @@ records the revision of the step before it when it is saved:
 
 | Stored in | Number | Goes up when | Also records |
 |---|---|---|---|
-| `timeline.json` | `audioRevision` | Cuts that change are saved on the Audio tab, or a file is added (**add audio**) | - |
+| `timeline.json` | `audioRevision` | Cuts that change are saved on the Audio tab; a file is added (**Add audio**), moved or removed on the Source step (its name alone does not count); a passage is pasted in or taken out of the piece | - |
 | `notes.pmn` header | `notesRevision` | A transcription finishes, or a notes edit is saved (move, resize, add, delete, restore) | `audioRevision`: the one the notes were transcribed from |
 | `notes.pmn` header | `handsRevision` | **Any** change of `notes.pmn`: a transcription, a notes edit, a hand | - |
 | `notes.pmn` header | `handsNotesRevision` | A hand edit leaves every live note with a hand; a new transcription sets it to 0 | - |

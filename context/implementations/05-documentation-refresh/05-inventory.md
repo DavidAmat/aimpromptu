@@ -36,9 +36,9 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/backend/README.md](../../../context/backend/README.md) | 96 | 2026-10-27 | 20 | 2 | aitu-backend | `to check` |
 | [context/backend/api.md](../../../context/backend/api.md) | 121 | 2026-10-27 | 20 | 2 | HTTP API | `to check` |
 | [context/backend/editing.md](../../../context/backend/editing.md) | 144 | 2026-11-01 | 6 (17 Recording in Sheet, 5 the note edits) | 0 | Editing a piece: paste, Delete these frames (Phase 6), Recording in Sheet, and parts; the note edits (Phase 5) | `updated` |
-| [context/backend/muscriptor.md](../../../context/backend/muscriptor.md) | 109 | 2026-10-06 | 15 | 0 | MuScriptor: the transcription engine | `to check` |
+| [context/backend/muscriptor.md](../../../context/backend/muscriptor.md) | 109 | 2026-10-06 | 15 | 0 | MuScriptor: the transcription engine | `updated` |
 | [context/backend/piano-matrix-notation.md](../../../context/backend/piano-matrix-notation.md) | 213 | 2026-10-27 | 16 | 1 | The piano matrix notation: the stored form, the wire form, the adapters | `to check` |
-| [context/backend/pieces-and-revisions.md](../../../context/backend/pieces-and-revisions.md) | 133 | 2026-10-27 | 15 | 0 | Pieces, steps and revisions | `to check` |
+| [context/backend/pieces-and-revisions.md](../../../context/backend/pieces-and-revisions.md) | 133 | 2026-10-27 | 15 | 0 | Pieces, steps and revisions | `updated` |
 | [context/backend/time-model.md](../../../context/backend/time-model.md) | 155 | 2026-10-27 | 2 | 0 | The wall-clock model | `updated` |
 | [context/colors/color-palette.md](../../../context/colors/color-palette.md) | 90 | 2026-10-06 | 20 | 0 | Colour palette | `to check` |
 | [context/frontend/README.md](../../../context/frontend/README.md) | 115 | 2026-10-28 | 20 | 0 | aitu-frontend | `to check` |
@@ -58,7 +58,7 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/frontend/timestamps.md](../../../context/frontend/timestamps.md) | 49 | 2026-09-13 | 4 | 4 | Timestamps and frame labels — UI rule | `to check` |
 | [context/music/notation-logic/02-notation-spec.md](../../../context/music/notation-logic/02-notation-spec.md) | 150 | 2026-10-27 | 16 (check only) | 4 | The text-notation contract | `to check` |
 | [context/music/piano_svg/01-piano-svg.md](../../../context/music/piano_svg/01-piano-svg.md) | 253 | 2026-07-27 | 16 | 0 | Context | `to check` |
-| [context/music/transcription-quality.md](../../../context/music/transcription-quality.md) | 161 | 2026-10-06 | 15 | 0 | Transcription quality: what goes wrong between audio and a printed figure | `to check` |
+| [context/music/transcription-quality.md](../../../context/music/transcription-quality.md) | 161 | 2026-10-06 | 15 | 0 | Transcription quality: what goes wrong between audio and a printed figure | `updated` |
 | [context/music-library/README.md](../../../context/music-library/README.md) | 38 | 2026-10-19 | 18 | 0 | The music library | `true` |
 | [context/music-library/genres.md](../../../context/music-library/genres.md) | 126 | 2026-10-19 | 18 | 0 | Genres and tags of the public songs | `true` |
 | [context/music-library/ontology.md](../../../context/music-library/ontology.md) | 126 | 2026-10-19 | 18 | 0 | The music library's ontology | `true` |
@@ -78,7 +78,7 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [documentation/services/backend/sheet-f1.md](../../../documentation/services/backend/sheet-f1.md) | new | 2026-11-01 | 2 | 0 | The new sheet: the files of a part, the F1 text, how the algorithm makes it | `new` |
 | [documentation/services/backend/sheet-drawing.md](../../../documentation/services/backend/sheet-drawing.md) | 205 | new | 3 | 1 | How the backend draws the sheet: the routes, the layout and the lines, the glyphs, the frame marks, the lyrics, the SVG and the pages | `new` (1 missing: `context/frontend/sheet-page.md`, Phase 4) |
 | [documentation/services/backend/time-matrix.md](../../../documentation/services/backend/time-matrix.md) | 59 | 2026-10-27 | 2 | 0 | The time matrix: what stays of schema 2.0 | `updated` |
-| [documentation/services/backend/transcription-pipeline.md](../../../documentation/services/backend/transcription-pipeline.md) | 483 | 2026-10-27 | 15 | 8 | The transcription pipeline: modules, order, parameters | `to check` |
+| [documentation/services/backend/transcription-pipeline.md](../../../documentation/services/backend/transcription-pipeline.md) | 483 | 2026-10-27 | 15 | 8 | The transcription pipeline: modules, order, parameters | `updated` |
 | [documentation/services/frontend/components.md](../../../documentation/services/frontend/components.md) | 581 | 2026-10-31 | shared: every phase its sections; 20 checks | 85 | The component tree: where each piece lives | `to check` |
 | [documentation/services/frontend/score-pdf.md](../../../documentation/services/frontend/score-pdf.md) | 94 | 2026-10-27 | 8 | 3 | Score PDF export | `to check` |
 

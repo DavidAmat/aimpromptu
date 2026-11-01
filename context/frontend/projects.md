@@ -107,20 +107,27 @@ and how much of it is cut. A file is dragged by its handle to another place (or 
 up** and **Move down** in its `⋯` menu), renamed in place (**Rename**), or removed (**Remove**,
 with a confirmation; not the last one). Each file keeps its own cuts when the order changes. Below
 the list, **Add audio**: drop or choose one or more files, or paste a YouTube link; each is added at
-the end. A change of the files changes the audio, so the step then says the notes must be
-transcribed again, with **Open Audio**. A video project's Source step only says where the video came
-from.
+the end. A change of the files changes the audio, so once the notes are out of date the step says
+"The audio changed after the notes were made. Transcribe it again.", with **Open Audio**. **Remove**
+says that the file's part of the audio and its cuts go. A project keeps at least one file, and a file
+cannot go if the files left would be cut completely (restore a part of them first). A video project's Source step only says where the video
+came from.
 
 **2. Audio.** The waveform of the audio, full width, with zoom down to single 10 ms time frames and
 an overview strip. Its tools are icon actions in a floating bar, each with a tooltip: play (jumping
-over the cuts), play the selection, cut, restore, undo, redo, the zooms, **Add audio at the end**,
-and **Save**. A cut is a range of time frames; the audio file is never changed. **Add audio** puts
+over the cuts), play the selection, cut, **Only keep the selected part** (it cuts everything else at once),
+restore, undo, redo, the zooms, **Add audio at the end**, and **Save** (with **Discard the changes**). A cut is a range
+of time frames; the audio file is never changed. **Add audio** puts
 another file at the end: the waveform then shows the files end to end, every second file on a
 grey band, each named, with a dashed line at each join, and a cut may cross a join. With several
 files a panel on the left lists them by name with their kept length: a click selects that file's
 part of the waveform and zooms to it, so a cut can be made inside one file. Adding a file changes the audio,
-so notes made before it are out of date. The primary action, **Transcribe**, saves first, asks
-before it replaces notes that are current, and opens the Notes step.
+so notes made before it are out of date. The primary action saves first and opens the Notes step.
+Its label says what it does: **Transcribe** when no notes exist, **Transcribe again** when they do (with
+unsaved cuts, **Save and transcribe** and **Save and transcribe again**), and **Show the transcription**
+while a transcription runs. Current
+notes are replaced only after **Transcribe again?** is confirmed (when nothing is unsaved); the old notes
+go to history.
 
 **2. Video** (a project made from a video, in place of Audio). Three moments, one thing to do in each:
 
@@ -128,7 +135,7 @@ before it replaces notes that are current, and opens the Notes step.
 2. *Fit the piano*: a frame from the middle of the video and a rectangle to drag onto the keys; the
    keys are found when it settles, and **Save the piano** keeps them.
 3. *The video with the piano on it*, played with its own audio, **Fit the piano again**, and
-   **Read notes**: one job that measures how fast the roll falls (once per fitting), reads the notes
+   **Read notes** (**Read notes again** once the notes exist): one job that measures how fast the roll falls (once per fitting), reads the notes
    and writes them into the project, then opens the Notes step. It takes about a third of the
    video's length (61 s for 3:09). The notes appear when it ends, not one by one (Q-8 of the plan).
 

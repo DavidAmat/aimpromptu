@@ -106,4 +106,5 @@ the error of the preload, if any.
 - The plan and the phase reports:
   [`implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/`](../implementations/01-mvp/08-new-algorithm-notes-detection-muscriptor/README.md)
 - Code: `aitu-backend/src/aitu_backend/transcription/` (`engine.py`, `models.py`, `jobs.py`,
-  `live.py`, `lag.py`, `pipeline.py`), `audio/frames.py`
+  `live.py`, `lag.py`, `pipeline.py`), `pmn/muscriptor.py` (the assembler of its events), `audio/frames.py`
+- The Audio step that gives the selected region: [frontend/projects.md](../frontend/projects.md) section 4
