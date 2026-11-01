@@ -10,7 +10,9 @@ import re
 
 from fastapi.testclient import TestClient
 
-from aitu_backend.part_sheet import build
+import pytest
+
+from aitu_backend.part_sheet import build, job, store
 from aitu_backend.sheet.engrave.frames import Options, render_frames
 from aitu_backend.sheet.engrave.lyric_text import text_width, wrap
 from aitu_backend.sheet.sheet import f1
@@ -112,6 +114,38 @@ def test_title_lines_armadura_and_line_space_are_steps_of_undo(
     assert walk(client, part, "undo")["reading"]["key"] == before["reading"]["key"]
     assert walk(client, part, "undo")["titles"] == {"title": "My song", "artist": "Me"}
     assert walk(client, part, "undo")["svg"] == before["svg"]
+
+
+def test_the_title_lines_are_replaced_in_the_text_and_nothing_else() -> None:
+    text = "F1 frames frameMs=40 quarterMs=500\nkey=0 clefs: R=treble L=bass\ntitle \"Old\"\nartist \"A\"\nlyric f1 f2 \"la\"\nf1    R: C4:4\n"
+    out = f1.with_titles(text, {"title": "Nuevo", "subtitle": "Sub"})
+    assert out.splitlines()[2:5] == ['title "Nuevo"', 'subtitle "Sub"', 'lyric f1 f2 "la"']
+    assert out.replace('title "Nuevo"\nsubtitle "Sub"\n', "") == text.replace('title "Old"\nartist "A"\n', "")
+    assert f1.read(out).titles == {"title": "Nuevo", "subtitle": "Sub"}
+    assert f1.with_titles("no header", {"title": "x"}) == "no header"
+
+
+def test_the_titles_stay_editable_while_the_ai_writes_the_sheet(
+    client: TestClient, part: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sheet(client, part)
+    running = type("Job", (), {"id": "j", "status": "running"})()
+    with monkeypatch.context() as during:
+        during.setattr(job, "job_of", lambda part_id: running)
+        during.setattr(job, "live", lambda part_id: None)
+        # Any other edit waits for the run; the title lines do not.
+        assert edit(client, part, 409, action="piece-key", value=-3)["detail"].startswith("The AI is enhancing")
+        titled = edit(client, part, action="titles", value={"title": "During the run", "artist": "Me"})
+        assert titled["titles"] == {"title": "During the run", "artist": "Me"}
+        # The run's own save, a sheet from before the edit (no titles), keeps them.
+        kept = stored_sheet(part)
+        store.save(part, f1.with_titles(kept.text, {}), kept.record)
+        assert f1.read(stored_sheet(part).text).titles == {"title": "During the run", "artist": "Me"}
+    # No run: the sheet's own titles hold again.
+    edit(client, part, action="titles", value={"artist": ""})
+    kept = stored_sheet(part)
+    store.save(part, f1.with_titles(kept.text, {}), kept.record)
+    assert f1.read(stored_sheet(part).text).titles == {}
 
 
 def test_lyrics_pieces_are_placed_refused_over_another_and_drawn(
@@ -385,3 +419,75 @@ def test_the_pasted_words_and_the_pool_are_kept_with_the_part(
     kept = client.put(f"/sheet/{part}/words", json={"text": ""}).json()
     assert kept == {"text": None, "pool": ["one", "two"]}
     assert client.get("/sheet/nope/words").status_code == 404
+
+
+def test_duplicate_writes_a_note_again_at_a_shorter_figure_and_unite_joins_them_back(
+    client: TestClient, part: str
+) -> None:
+    # The user, 2026-10-30: Duplicate a note into a shorter figure (a negra into two corcheas), and Unite the opposite.
+    enhance(part)
+    before = sheet(client, part)
+    # The longest of the short figures (a corchea here), so the copies are beamed.
+    note = max((n for n in before["notes"] if n["figure"] in (1, 2, 4, 8) and not n["grace"]), key=lambda n: n["figure"])
+    frame, midi = (int(x) for x in note["ref"].split(":"))
+    live = lambda: sorted(  # noqa: E731
+        round(e.start, 2) for e in pipeline.load_note_events(part).events if e.midi_note == midi and not e.removed
+    )
+    keys_before = live()
+    target = note["figure"] * 2
+    done = client.post(f"/sheet/{part}/duplicate", params={"width": 120}, json={"notes": [note["ref"]], "figure": target})
+    assert done.status_code == 200, done.text
+    body = done.json()
+    assert body["edited"].startswith("Duplicate a note into 2 ")
+    copies = [n for n in body["notes"] if int(n["ref"].split(":")[1]) == midi and n["hand"] == note["hand"]
+              and frame <= int(n["ref"].split(":")[0]) < frame + 200]
+    assert len([n for n in copies if n["figure"] == target]) >= 2
+    if target >= 8:  # the copies of one note are one beam group
+        mine = [n for n in copies if n["figure"] == target]
+        assert len({n["beam"] for n in mine}) == 1 and mine[0]["beam"] is not None
+    assert len(live()) == len(keys_before) + 1  # the piano matrix notation has the note again
+    refused = client.post(f"/sheet/{part}/duplicate", params={"width": 120}, json={"notes": [note["ref"]], "figure": 1})
+    assert refused.status_code in (400, 422)  # not shorter than the note
+
+    pair = sorted((n for n in copies if n["figure"] == target), key=lambda n: int(n["ref"].split(":")[0]))[:2]
+    united = client.post(f"/sheet/{part}/unite", params={"width": 120}, json={"notes": [n["ref"] for n in pair]})
+    assert united.status_code == 200, united.text
+    assert united.json()["edited"].startswith("Unite 2 ")
+    assert notes_of(united.json())[pair[0]["ref"]]["figure"] == note["figure"]
+    assert len(live()) == len(keys_before)
+    assert client.post(f"/sheet/{part}/unite", params={"width": 120}, json={"notes": [pair[0]["ref"]]}).status_code == 400
+
+    assert walk(client, part, "undo")["walked"].startswith("Unite")
+    assert walk(client, part, "undo")["walked"].startswith("Duplicate")
+    assert live() == keys_before
+
+
+def test_unite_takes_any_figures() -> None:
+    # The user, 2026-10-30: a figure is never a reason to refuse Unite; the sheet has no puntillos.
+    from aitu_backend.part_sheet.edits import united_figure
+
+    assert united_figure(0.5 + 0.5, 1.0) == 4  # two corcheas: a negra
+    assert united_figure(0.25 + 0.25 + 0.5, 0.9) == 4  # two semicorcheas and a corchea: a negra
+    assert united_figure(0.5 + 1, 1.1) == 4  # a corchea and a negra, played short: a negra
+    assert united_figure(0.5 + 1, 1.7) == 2  # played long: a blanca
+    assert united_figure(4 + 4, 8) == 1  # longer than a redonda: a redonda
+
+
+def test_the_alteration_of_a_note_is_written_as_the_user_chooses(client: TestClient, part: str) -> None:
+    # The user, 2026-10-30: a La# in a key of sharps written as Sib, by hand; the key stays the same.
+    from aitu_backend.part_sheet.reading import spelled_as
+
+    assert spelled_as(70, 1) == ("A", 4) and spelled_as(70, -1) == ("B", 4)
+    assert spelled_as(60, 1) == ("B", 3) and spelled_as(60, 0) == ("C", 4) and spelled_as(61, 0) is None
+    enhance(part)
+    before = sheet(client, part)
+    note = before["notes"][0]
+    midi = int(note["ref"].split(":")[1])
+    sharp = client.post(f"/sheet/{part}/reading", params={"width": 120},
+                        json={"action": "alter", "notes": [note["ref"]], "value": 1 if spelled_as(midi, 1) else -1})
+    assert sharp.status_code == 200, sharp.text
+    pitch = notes_of(sharp.json())[note["ref"]]["pitch"]
+    assert ("#" in pitch) or ("b" in pitch[1:]), pitch
+    assert client.post(f"/sheet/{part}/reading", params={"width": 120},
+                       json={"action": "alter", "notes": [note["ref"]], "value": 7}).status_code == 400
+    assert notes_of(walk(client, part, "undo"))[note["ref"]]["pitch"] == note["pitch"]

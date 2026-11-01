@@ -41,10 +41,12 @@ The record (:class:`Record`):
 from __future__ import annotations
 
 import json
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
+from aitu_backend.sheet.sheet import f1
 from aitu_backend.storage import bundle, locate, paths
 
 __all__ = [
@@ -55,9 +57,12 @@ __all__ = [
     "asked",
     "clear",
     "enhanced",
+    "forget_titles",
+    "keep_titles",
     "load",
     "save",
     "taken",
+    "with_titles",
 ]
 
 #: The first word of the comment line that holds the record.
@@ -205,7 +210,33 @@ def enhanced(part_id: str) -> bool:
         return False
 
 
+#: The titles written while the AI writes a part's sheet (the user, 2026-10-30): the title, subtitle and artist stay
+#: editable during a run, and every save of the run keeps them (:func:`save`), so its end does not take them back.
+_titles_meanwhile: dict[str, dict[str, str]] = {}
+_titles_lock = threading.Lock()
+
+
+def keep_titles(part_id: str, titles: dict[str, str]) -> None:
+    """The user wrote ``titles`` while the AI writes the part's sheet: the run's saves keep them."""
+    with _titles_lock:
+        _titles_meanwhile[part_id] = dict(titles)
+
+
+def forget_titles(part_id: str) -> None:
+    """The run ended (or none is going): the sheet's own titles hold again."""
+    with _titles_lock:
+        _titles_meanwhile.pop(part_id, None)
+
+
+def with_titles(part_id: str, text: str) -> str:
+    """``text`` (F1 frames) with the titles written during the run, when there are some."""
+    with _titles_lock:
+        titles = _titles_meanwhile.get(part_id)
+    return text if titles is None else f1.with_titles(text, titles)
+
+
 def save(part_id: str, text: str, record: Record) -> None:
+    text = with_titles(part_id, text)
     path = paths.part_frames_path(part_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     body = MARK + json.dumps(record.to_json(), separators=(",", ":")) + "\n" + text

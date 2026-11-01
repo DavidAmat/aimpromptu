@@ -98,8 +98,9 @@ this section describes the old sheet, kept as the record of what was moved. On t
   ornaments again (the user's answer of Phase 7). Since prompt version 6 (implementation 04, Phase 3) it also
   follows the rules of simplicity and may add or leave out a few notes for them (at most a tenth of a window),
   written into the notes as a stretch does. A first run reads the notes without hands.
-- **The sheet toolbox** (the sliders icon of the floating bar; implementation 03, Phase 8): **Title** (title,
-  subtitle and artist above the sheet and on the PDF, written when the field is left), **Key** (the armadura of the
+- **The sheet toolbox** (the sliders icon of the floating bar; implementation 03, Phase 8): **Info** (named
+  Title until 2026-10-30: title, subtitle and artist above the sheet and on the PDF, written when the field is left;
+  editable also while the AI writes the sheet), **Key** (the armadura of the
   piece; *Use D major (n fewer signs)* when another prints fewer signs over the piece), **Transpose** (**Notes**:
   every note moved by the interval of two keyboards, the sheet with them, the armaduras renamed with fewer signs, a
   note off the 88 keys taken off; **Figures**: every figure renamed by the same number of steps, the page keeps its
@@ -157,7 +158,7 @@ still read).
 
 The page is the sheet (plan section 11.2 of implementation 02). From top to bottom:
 
-- **The title lines**: the title (the project's name until one is written in the **Title** tab),
+- **The title lines**: the title (the project's name until one is written in the **Info** tab),
   and under it the subtitle and the artist.
 - **A scrub bar**: the time of the playhead and the length of the piece. Drag it to move the
   recording.

@@ -320,7 +320,7 @@ def test_the_routes_of_the_dialog(client: TestClient, part: str, monkeypatch) ->
     assert set(costs) == {"all", "stretch", "simplify-left", "simplify-right", "simplify-both",
                           "level-left", "level-right", "level-both"}
     assert 0 < costs["simplify-left"]["requests"] < costs["all"]["requests"]
-    monkeypatch.setattr(job, "available", lambda: True)
+    monkeypatch.setattr(job, "available", lambda model=None: True)
     assert client.post(f"/sheet/{part}/llm/simplify", json={"hand": "middle"}).status_code == 422
     started: list[str] = []
     monkeypatch.setattr(

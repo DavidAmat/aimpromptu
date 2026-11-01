@@ -31,7 +31,9 @@ part = test_part_sheet.part
 def test_the_catalog_has_the_approved_patterns_and_the_defaults_of_each_level() -> None:
     patterns, defaults = L.catalog_rows()
     refs = {p["ref"] for p in patterns}
-    assert len(patterns) == 113 and len(L.catalog()) == 113
+    assert len(patterns) == 114 and len(L.catalog()) == 114
+    # The new left easy 1 (the user, 2026-10-31), the others one number up.
+    assert L.catalog()["left easy 1"].name == "The song's chords" and L.catalog()["left easy 2"].name == "Held triad"
     assert {"left easy 2", "left medium 15", "left hard 18", "right super hard 13"} <= refs
     # The sets approved in Phase 3, and a set for hard in the left hand.
     assert defaults["left"]["medium"] == ["left medium 15", "left medium 2", "left medium 10", "left medium 7"]
@@ -51,12 +53,22 @@ def test_a_hand_with_no_pattern_selected_gets_its_level_set() -> None:
     assert picked[0] == "left easy 5" and set(picked[1:3]) == {"left medium 2", "right medium 2"}
     assert "right hard 99" not in picked and "left easy 2" not in picked
     # A run of one hand: the other hand's patterns are not used.
-    assert L.run_refs("easy", (2,), ["right easy 1"]) == ["left easy 2", "left easy 1", "left easy 3", "left easy 12"]
+    assert L.run_refs("easy", (2,), ["right easy 1"]) == ["left easy 1", "left easy 3", "left easy 2", "left easy 4", "left easy 13"]
+
+
+def test_deselect_all_gives_a_hand_no_pattern() -> None:
+    # The dialog sends exactly its ticks (the user's Deselect all, 2026-10-30): a hand with none keeps none.
+    assert L.run_refs("easy", (1, 2), ["left easy 5"], exact=True) == ["left easy 5"]
+    assert L.run_refs("easy", (1, 2), [], "at f300 use right medium 2", exact=True) == ["right medium 2"]
+    # The system prompt says which hand is free; a hand with patterns is not.
+    text = L.system_prompt("easy", [L.catalog()["left easy 5"]], (1, 2))
+    assert "No pattern for the right hand." in text and "R=free" in text
+    assert "No pattern for" not in L.system_prompt("easy", [L.catalog()["left easy 5"]], (2,))
 
 
 def test_the_routes_of_the_catalog(client: TestClient) -> None:
     body = client.get("/sheet/levels/catalog").json()
-    assert len(body["patterns"]) == 113 and body["defaults"]["left"]["easy"][0] == "left easy 2"
+    assert len(body["patterns"]) == 114 and body["defaults"]["left"]["easy"][0] == "left easy 1"
     one = body["patterns"][0]
     assert set(one) >= {"ref", "hand", "level", "number", "name", "line"}
     drawing = client.get("/sheet/levels/catalog/left/medium/2.svg")
@@ -88,7 +100,8 @@ def stand_in(prompts: list[str]):
         if prompt.startswith("# The plan of the song"):
             a, b = re.search(r"\(f(\d+)-f(\d+),", prompt).groups()
             said = " ".join(f"{h[0].upper()}={refs[h]}" for h in hands)
-            return f"```\nS1 f{a}-f{b} {said} | one section\n```"
+            rules = "\n".join(f"rule {refs[h]}: as the example" for h in hands)
+            return f"```\nS1 f{a}-f{b} {said} | one section\n{rules}\n```"
         target = target_of(prompt)
         a, b = re.search(r"batch \d+ of \d+ \(f(\d+)-f(\d+),", prompt).groups()
         lows: dict[int, int] = {}
@@ -104,7 +117,7 @@ def stand_in(prompts: list[str]):
         out.append(L.replace(low, octave=low.octave - 1, figure=4))
         text = f1.write(L._bare(L.replace(target, notes=out).sort()), mode="frames").strip()
         said = "\n".join(f"# pattern {h[0].upper()} f{a}-f{b}: {refs[h]}" for h in hands)
-        return f"```\n{text}\n{said}\n```"
+        return f"```\n{text}\n{said}\n# explain: the low note, then the melody.\n```"
 
     return complete
 
@@ -258,12 +271,14 @@ def test_the_routes_of_the_levels(client: TestClient, part: str, monkeypatch: py
     assert client.post(f"/sheet/{part}/llm/level", json={"right": "easy"}).status_code == 400  # no range
     answer = client.post(
         f"/sheet/{part}/llm/level",
-        json={"right": "hard", "left": "medium", "hand": "both", "start": 50, "end": 300, "patterns": ["left medium 2"]},
+        json={"right": "hard", "left": "medium", "hand": "both", "start": 50, "end": 300, "patterns": ["left medium 2"],
+              "exact": True},
     )
     assert answer.status_code == 202
     assert calls[-1] == {
         "uuid": part, "level": {"right": "hard", "left": "medium"}, "hand": "both", "start": 50, "end": 300,
-        "patterns": ["left medium 2"], "words": "",
+        "patterns": ["left medium 2"], "words": "", "exact": True, "model": None, "batches": None, "strict": [],
+        "first": True, "chords": "",
     }
     assert client.post(f"/sheet/{part}/llm/level", json={"right": "super hard", "start": 0, "end": 9}).status_code == 422
 
@@ -317,3 +332,76 @@ def test_notes_new_to_the_stored_sheet_get_the_beam_groups_of_the_rule() -> None
     plain = L.replace(stored, notes=[L.replace(n, beam=None) for n in stored.notes])
     again = build.reapply(plain, _corcheas(8))
     assert all(n.beam is None for n in again.notes)
+
+
+def test_a_level_run_writes_its_log_and_the_history_lists_it(client: TestClient, part: str, accepting: None) -> None:
+    # Implementation 04-5: every conversation of a level run goes into ai-runs/<id>.json; the page lists the runs.
+    prompts: list[str] = []
+    started = job.start_level(part, level="easy", hand="left", patterns=["left easy 2"], exact=True,
+                              strict=["left easy 2", "left medium 9"],
+                              complete=lambda: stand_in(prompts))
+    finish(started)
+    run_id = started.summary["run"]
+    assert started.summary["level"] == "ok", started.summary
+    listed = client.get(f"/sheet/{part}/llm/runs").json()
+    assert listed[0]["id"] == run_id and listed[0]["log"] is True and listed[0]["state"] == "done"
+    assert listed[0]["strict"] == ["left easy 2"]  # a Strict ref that is not a pattern of the run is dropped
+    run = client.get(f"/sheet/{part}/llm/runs/{run_id}").json()
+    assert run["plan"]["status"] == "ok" and run["plan"]["messages"][0]["content"].startswith("# The plan of the song")
+    assert run["rules"][0]["ref"] == "left easy 2" and run["rules"][0]["source"] == "plan"
+    assert len(run["batches"]) == len(prompts) - 1 and run["batches"][0]["explain"]
+    assert run["batches"][0]["messages"][-1]["role"] == "assistant" and "Strict" in run["system"]
+    assert stored_sheet(part).record.levels[-1]["run"] == run_id
+    assert client.get(f"/sheet/{part}/llm/runs/ffffffffffff").status_code == 404
+    assert client.get(f"/sheet/{part}/llm/runs/..%2Fx").status_code == 404
+
+
+def test_a_run_writes_its_first_batch_waits_takes_an_answer_and_goes_on(
+    client: TestClient, part: str, accepting: None
+) -> None:
+    # Implementation 04-5 (the user, 2026-10-31): batch 1 first; the user answers the AI and writes it again; then
+    # the other batches, with the rule the answer gave.
+    prompts: list[str] = []
+    write = stand_in(prompts)
+
+    def answering(system: str, messages_: list[dict]) -> str:
+        if messages_[-1]["content"].startswith("The user read your batch"):
+            reply = write(system, messages_[:1])
+            return reply.replace("\n```", "\n# rule: the bass an octava lower, as the user asked\n```", 1)
+        return write(system, messages_)
+
+    started = job.start_level(part, level="easy", hand="both", first=True, complete=lambda: answering)
+    finish(started)
+    first = started.summary
+    assert first["level"] == "ok" and first["waiting"] is True and first["batches"] == 1 and first["total"] >= 2
+    run_id = first["run"]
+    assert sheet(client, part)["history"]["undo"] == "Level easy with AI, both hands, batch 1"
+    run = client.get(f"/sheet/{part}/llm/runs/{run_id}").json()
+    assert run["state"] == "waiting" and len(run["batches"]) == 1
+
+    again = job.again_batch(part, run_id, 0, "Play the bass lower.", complete=lambda: answering)
+    finish(again)
+    assert again.summary["level"] == "ok" and again.summary["again"] == 1 and again.summary["waiting"] is True
+    assert sheet(client, part)["history"]["undo"] == "Batch 1 written again with AI"
+    run = client.get(f"/sheet/{part}/llm/runs/{run_id}").json()
+    one = run["batches"][0]
+    assert one["answers"][0]["words"] == "Play the bass lower." and run["state"] == "waiting"
+    assert one["messages"][-2]["content"].startswith("The user read your batch") and one["messages"][-1]["role"] == "assistant"
+    assert {"text": "the bass an octava lower, as the user asked", "source": "batch 1", "ref": None} in run["rules"]
+
+    before = len(prompts)
+    went = job.continue_level(part, run_id, complete=lambda: answering)
+    finish(went)
+    done = went.summary
+    assert done["level"] == "ok" and "waiting" not in done and done["batches"] == done["total"] == first["total"]
+    assert done["before"] == first["before"]  # Revert goes back to before batch 1
+    later = prompts[before:]
+    assert not any(p.startswith("# The plan of the song") for p in later)  # the plan is the run's
+    assert "batch 2 of" in later[0] and "(batch 1): the bass an octava lower, as the user asked" in later[0]
+    assert "Decided context" in later[0]  # batch 2 sees the end of batch 1 as written
+    run = client.get(f"/sheet/{part}/llm/runs/{run_id}").json()
+    assert run["state"] == "done" and [b["k"] for b in run["batches"]] == list(range(first["total"]))
+    assert sheet(client, part)["history"]["undo"] == "Level easy with AI, both hands, the other batches"
+    assert client.post(f"/sheet/{part}/llm/runs/{run_id}/continue").status_code == 409
+    assert client.post(f"/sheet/{part}/llm/runs/{run_id}/batches/40/again", json={"words": "x"}).status_code == 404
+    assert client.post(f"/sheet/{part}/llm/runs/{run_id}/batches/0/again", json={"words": ""}).status_code == 422

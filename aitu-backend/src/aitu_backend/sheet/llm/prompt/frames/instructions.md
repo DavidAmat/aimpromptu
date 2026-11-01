@@ -180,6 +180,31 @@ jumps of one hand are hard to play. Fix them, and only them:
   far notes of quick chords. The checker accepts at most a tenth of the notes of the target. When in doubt, write the
   notes as they are.
 
+## An octave as a third or a fifth (when the user asks for it)
+
+An octave (B3+B4, Si3-Si4) makes the hand open to its widest, on every note. The user often asks to write an octave
+in a shape that is easier to play and still sounds full: **keep the note that matters and replace the other note of
+the octave by the third or the fifth of the chord that sounds there**, inside the octave. The user may ask for it in
+short words, such as "octaves as thirds or fifths", "thirds or fifths instead of octaves", "no octaves, use the
+chord". When the user's words ask for it, this is how you write every octave of the passage it is about:
+
+- octave.1 **Which note stays.** In the right hand the top note is the melody: it stays, and the new note goes under
+  it, inside the octave. In the left hand the bottom note is the bass: it stays, and the new note goes above it,
+  inside the octave.
+- octave.2 **Which note comes in.** A note of the chord that sounds at that moment (the harmony of the song around
+  it, from the key and the other notes, not from the octave alone): its third or its fifth. Example of the user: under
+  the chord B-D-F# (Si-Re-Fa#, B minor), the octave B3+B4 becomes D4+B4 (Re is the third of the chord) or F#4+B4 (Fa#
+  is the fifth). In the left hand, under E major, E2+E3 becomes E2+B2 (the fifth) or E2+G#2 (the third). When the
+  note of the octave is itself the third or the fifth of the chord, take another note of the chord (its root or the
+  other one): under G major (Sol-Si-Re), the right hand's B3+B4 becomes G4+B4 or D4+B4. Never a note out of the chord.
+- octave.3 **The same shape for the same role.** Choose the third or the fifth by the sound of the passage and keep
+  that choice through it: the same melody note on the same chord takes the same shape every time, so the pattern
+  reads at once. A run of octaves becomes a run of these shapes, not a mix of octaves and thirds.
+- octave.4 **In the answer** it is a change of the pitch of one note of the octave: the old note left out and the new
+  one written at the same frame, with the same figure. The rhythm, the hands and the other notes stay.
+
+Without such words, write octaves as the target has them (the rules of simplicity still apply).
+
 ## Key signature of a passage
 
 - key.1 The header of the target gives the key signature in force. Keep it unless a passage of several seconds

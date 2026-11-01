@@ -84,6 +84,8 @@ export interface SheetNote {
   fixed: boolean;
   /** The user's grace note switch: `on` a grace note, `off` a normal note, `null` the rule decides. */
   graceRule: "on" | "off" | null;
+  /** The spelling (Sib for La#) was set by the user: the spelling rule keeps it. */
+  spelled?: boolean;
   finger: number | null;
   /** `trill`, `mordent`, `turn`, `arpeggio`, `fermata`, `tremolo`. */
   ornaments: string[];
@@ -146,6 +148,7 @@ export interface SheetReading {
 export interface ReadingEdit {
   action:
     | "figure"
+    | "alter"
     | "finger"
     | "beam-join"
     | "beam-break"
@@ -183,7 +186,49 @@ export interface StretchKeys {
 }
 
 /** What the AI is asked to write again (Phase 7): a stretch of frames, with what was picked and the user's words. */
-export interface StretchRequest {
+/** The AI models of Enhance with AI (the user, 2026-10-30); none chosen: GPT-6.1 Terra. */
+export type AiModel = "gpt-6.1-terra" | "gpt-6.1-sol" | "claude-sonnet-5-5";
+
+export const AI_MODELS: readonly { value: AiModel; label: string }[] = [
+  { value: "gpt-6.1-terra", label: "GPT-6.1 Terra" },
+  { value: "gpt-6.1-sol", label: "GPT-6.1 Sol" },
+  { value: "claude-sonnet-5-5", label: "Sonnet 5.5" },
+];
+
+/** What every run of Enhance with AI may choose: the model, and the number of batches (as previewed on the sheet). */
+export interface RunChoice {
+  model?: AiModel;
+  batches?: number;
+}
+
+/** The batches a run would make (`GET /sheet/{uuid}/llm/batches`), for the preview on the sheet, and its estimate. */
+export interface BatchPlan {
+  run: "all" | "level" | "stretch";
+  hand: LevelHand;
+  model: AiModel;
+  /** `[first frame, end frame)` of each batch. */
+  windows: [number, number][];
+  count: number;
+  /** As many as the run makes without a choice; `min` and `max` the numbers allowed. */
+  default: number;
+  min: number;
+  max: number;
+  /** About how many seconds of music a batch holds. */
+  seconds: number;
+  usd: number;
+  minutes: number;
+}
+
+export interface BatchQuery {
+  run: BatchPlan["run"];
+  hand: LevelHand;
+  start?: number;
+  end?: number;
+  batches?: number;
+  model: AiModel;
+}
+
+export interface StretchRequest extends RunChoice {
   start: number;
   end: number;
   staff: "both" | "right" | "left";
@@ -212,12 +257,90 @@ export type LevelName = "easy" | "medium" | "hard";
 export type LevelHand = "both" | "right" | "left";
 
 /** A level run: the level of each hand, the hands, the patterns selected in the catalog, the user's words. */
-export interface LevelChoice {
+export interface LevelChoice extends RunChoice {
   right: LevelName;
   left: LevelName;
   hand: LevelHand;
   patterns: string[];
   words: string;
+  /**
+   * `patterns` are exactly the ones ticked in the gallery: a hand with none has no pattern, and the AI writes it by the
+   * rules of its level and the words only. Without it, a hand with none gets the patterns approved for its level.
+   */
+  exact?: boolean;
+  /**
+   * The refs of `patterns` ticked **Strict** (implementation 04-5): the hand plays them on every chord, the same way
+   * through the whole song. The others are **Suggested**: used where they suit the passage.
+   */
+  strict?: string[];
+  /** The song's chords as a guitar guide gives them with the lyrics (implementation 04-5): saved with the part. */
+  chords?: string;
+}
+
+/** A run of the history of AI runs, in short (implementation 04-5): the latest first. */
+export interface AiRunShort {
+  id: string;
+  /** The run has its log (its conversations); `false`: a level run stored before the logs (from the record only). */
+  log: boolean;
+  created: string | null;
+  /** `running`, `waiting` (batch 1 written; the user checks it), `done`, `stopped`, `failed`. */
+  state: string;
+  level: LevelName | Record<"right" | "left", LevelName> | null;
+  hand: LevelHand | null;
+  patterns: string[];
+  strict: string[];
+  words: string;
+  model: string | null;
+  batches: { k: number; start: number; end: number; status: string }[];
+  total: number;
+  usd: number;
+  /** Only for a run without a log: its plan and declared lines from the record. */
+  plan?: string[];
+  declared?: string[];
+}
+
+export interface AiRunRule {
+  text: string;
+  /** `plan`, or `batch 2`. */
+  source: string;
+  ref: string | null;
+}
+
+/** One conversation of a run with the AI: the plan (`k` -1) or a batch. */
+export interface AiRunTalk {
+  k: number;
+  start: number;
+  end: number;
+  status: string;
+  messages: { role: "user" | "assistant"; content: string }[];
+  /** The check's refusals, one list per refused reply. */
+  errors: string[][];
+  explain: string[];
+  rules: string[];
+  declared: string[];
+  /** The user's answers to this batch, in order. */
+  answers?: { words: string; at: string }[];
+}
+
+/** A run of the history, whole. */
+export interface AiRun {
+  id: string;
+  created: string;
+  state: string;
+  request: {
+    level: LevelName | Record<"right" | "left", LevelName>;
+    hand: LevelHand;
+    patterns: string[];
+    strict: string[];
+    words: string;
+    model: string;
+    windows: [number, number][];
+  };
+  plan: AiRunTalk | null;
+  batches: AiRunTalk[];
+  rules: AiRunRule[];
+  usd: number;
+  requests: number;
 }
 
 /** A level of a range: in place, one step of undo. */
@@ -437,8 +560,22 @@ export const sheetApi = {
     request<FramesSheet>(`/sheet/${audioUuid}`, { query: { width: Math.round(width) }, signal }),
 
   /** Start Sonnet on the part (or get the run already going); follow it on `progressUrl(jobId)`. */
-  runLlm: (audioUuid: string) =>
-    request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm`, { method: "POST" }),
+  runLlm: (audioUuid: string, choice?: RunChoice) =>
+    request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm`, {
+      method: "POST",
+      ...(choice ? { body: choice } : {}),
+    }),
+
+  /** **Stop** the AI run of the part before its next request; what it wrote stays (the user, 2026-10-30). */
+  stopLlm: (audioUuid: string) => request<{ stopping: boolean }>(`/sheet/${audioUuid}/llm/stop`, { method: "POST" }),
+
+  /** **Revert** an AI run: the part as it was before it (`before` of the run's summary); one step of undo. */
+  revertLlm: (audioUuid: string, version: number, width: number) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/llm/revert`, { method: "POST", query: { width }, body: { version } }),
+
+  /** The batches a run of Enhance with AI would make, with its cost and minutes (the preview on the sheet). */
+  llmBatches: (audioUuid: string, query: BatchQuery, signal?: AbortSignal) =>
+    request<BatchPlan>(`/sheet/${audioUuid}/llm/batches`, { signal, query: { ...query } }),
 
   progressUrl: (jobId: string) => buildUrl(`/matrix/progress/${jobId}`),
 
@@ -461,6 +598,30 @@ export const sheetApi = {
   /** Take notes off the page: they leave the notes (one step of undo); the sheet drawn again. */
   remove: (audioUuid: string, notes: readonly string[], width: number) =>
     request<SheetEdited>(`/sheet/${audioUuid}/remove`, {
+      method: "POST",
+      query: { width: Math.round(width) },
+      body: { notes },
+    }),
+
+  /** **Delete the frames** `[start, end)`: their notes and their audio taken out, everything after moved earlier. */
+  takeOut: (audioUuid: string, start: number, end: number, width: number) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/take-out`, {
+      method: "POST",
+      query: { width: Math.round(width) },
+      body: { start, end },
+    }),
+
+  /** **Duplicate**: each picked note played again at the shorter `figure`, filling its own time (one step). */
+  duplicate: (audioUuid: string, notes: readonly string[], figure: number, width: number) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/duplicate`, {
+      method: "POST",
+      query: { width: Math.round(width) },
+      body: { notes, figure },
+    }),
+
+  /** **Unite**: consecutive chords of the same keys and figure become one chord of the figure that fills them. */
+  unite: (audioUuid: string, notes: readonly string[], width: number) =>
+    request<SheetEdited>(`/sheet/${audioUuid}/unite`, {
       method: "POST",
       query: { width: Math.round(width) },
       body: { notes },
@@ -495,6 +656,28 @@ export const sheetApi = {
   /** A level of the whole sheet, in a new project of My projects: open `partId`'s sheet to follow it. */
   levelCopy: (audioUuid: string, body: LevelChoice) =>
     request<LevelCopy>(`/sheet/${audioUuid}/llm/level-copy`, { method: "POST", body }),
+
+  /** The song's chords saved with the part (a guitar guide), so Enhance with AI opens with them. */
+  chords: (audioUuid: string, signal?: AbortSignal) =>
+    request<{ text: string }>(`/sheet/${audioUuid}/chords`, { signal }),
+
+  /** The history of the AI runs of the part, the latest first (implementation 04-5). */
+  aiRuns: (audioUuid: string, signal?: AbortSignal) => request<AiRunShort[]>(`/sheet/${audioUuid}/llm/runs`, { signal }),
+
+  /** One run of the history, whole: the plan, the rules, each batch's conversation and explanation. */
+  aiRun: (audioUuid: string, runId: string, signal?: AbortSignal) =>
+    request<AiRun>(`/sheet/${audioUuid}/llm/runs/${runId}`, { signal }),
+
+  /** A run waiting after its first batch: write the other batches; follow the job on `progressUrl(jobId)`. */
+  continueRun: (audioUuid: string, runId: string) =>
+    request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm/runs/${runId}/continue`, { method: "POST" }),
+
+  /** Write one batch of a run again with the user's answer to the AI; one step of undo. */
+  runBatchAgain: (audioUuid: string, runId: string, k: number, words: string) =>
+    request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm/runs/${runId}/batches/${k}/again`, {
+      method: "POST",
+      body: { words },
+    }),
 
   /** The catalog of patterns and the patterns used when none is selected. */
   levelCatalog: (signal?: AbortSignal) => request<LevelCatalog>("/sheet/levels/catalog", { signal }),

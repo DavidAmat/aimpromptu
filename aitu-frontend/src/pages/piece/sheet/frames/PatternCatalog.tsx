@@ -1,24 +1,23 @@
 /**
- * The **catalog** of patterns inside **Enhance with AI** (implementation 04-3, Phase 4; plan section 5.10): the gallery
- * of patterns, numbered inside each hand and level ("left hand, medium 2"), each drawn by the app's engine from its F1
- * text. First the left hand, then the right hand; pills by level. The user selects the patterns the level run uses;
- * only those go into the AI's prompt.
+ * The **gallery of patterns** inside **Enhance with AI** (implementation 04-3, Phase 4; plan section 5.10; inside the
+ * dialog since the user's request of 2026-10-30): the patterns numbered inside each hand and level ("left hand, medium
+ * 2"), each drawn by the app's engine from its F1 text. Only the hands the run rewrites are shown (the left hand first,
+ * with a button per hand when both are rewritten), with pills by level that open on the hand's level. The user ticks
+ * the patterns the level run uses; only those go into the AI's prompt, and the words may name them ("medium 2").
  */
 
-import { useState } from "react";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type { CatalogPattern, LevelCatalog } from "../../../../api";
-import { Pill, PillButton, Segmented } from "../../../../ui";
+import { Pill, Segmented } from "../../../../ui";
 import { drawingUrl, shortRef, type CatalogHand } from "./patterns";
 
-const LEVELS: { value: CatalogPattern["level"]; label: string }[] = [
+export type GalleryLevel = CatalogPattern["level"];
+
+const LEVELS: { value: GalleryLevel; label: string }[] = [
   { value: "easy", label: "Easy" },
   { value: "medium", label: "Medium" },
   { value: "hard", label: "Hard" },
@@ -27,98 +26,144 @@ const LEVELS: { value: CatalogPattern["level"]; label: string }[] = [
 
 const HAND_LABELS: Record<CatalogHand, string> = { left: "Left hand", right: "Right hand" };
 
-export interface PatternCatalogProps {
+export interface PatternGalleryProps {
   catalog: LevelCatalog;
-  /** The hands the run writes, in the order shown (the left hand first). */
+  /** The hands the run rewrites, in the order shown (the left hand first). */
   hands: CatalogHand[];
-  /** The level of each hand: the pill each hand opens on. */
-  levels: Record<CatalogHand, string>;
+  /** The hand shown, and the level shown for each hand (the pills). */
+  hand: CatalogHand;
+  shownLevels: Record<CatalogHand, GalleryLevel>;
+  onHand: (hand: CatalogHand) => void;
+  onLevel: (hand: CatalogHand, level: GalleryLevel) => void;
+  /** The refs ticked, of every hand. */
   selected: string[];
-  onDone: (selected: string[]) => void;
-  onCancel: () => void;
+  onToggle: (ref: string) => void;
+  /** Tick every pattern of the hand shown at the level of its pill; untick every pattern of that hand; tick the
+   * patterns approved for the hand's level again (as the dialog opens). */
+  onSelectAll: (hand: CatalogHand, refs: string[]) => void;
+  onDeselectAll: (hand: CatalogHand) => void;
+  onApproved: (hand: CatalogHand) => void;
+  /** The refs ticked **Strict** (the others ticked are **Suggested**, the default; implementation 04-5). */
+  strict: string[];
+  onStrict: (ref: string, strict: boolean) => void;
 }
 
-export function PatternCatalog({ catalog, hands, levels, selected: start, onDone, onCancel }: PatternCatalogProps) {
-  const [hand, setHand] = useState<CatalogHand>(hands[0]);
-  const [level, setLevel] = useState<Record<CatalogHand, string>>(levels);
-  const [selected, setSelected] = useState<string[]>(start);
-  const shown = catalog.patterns.filter((one) => one.hand === hand && one.level === level[hand]);
-  const toggle = (ref: string) =>
-    setSelected((now) => (now.includes(ref) ? now.filter((one) => one !== ref) : [...now, ref]));
+type Strictness = "suggested" | "strict";
+
+const STRICTNESS: { value: Strictness; label: string; tooltip: string }[] = [
+  { value: "suggested", label: "Suggested", tooltip: "The AI uses this pattern where it suits the passage." },
+  { value: "strict", label: "Strict", tooltip: "The hand plays this pattern on every chord, the same way through the whole song." },
+];
+
+export function PatternGallery({
+  catalog,
+  hands,
+  hand,
+  shownLevels,
+  onHand,
+  onLevel,
+  selected,
+  onToggle,
+  onSelectAll,
+  onDeselectAll,
+  onApproved,
+  strict,
+  onStrict,
+}: PatternGalleryProps) {
+  const shown = catalog.patterns.filter((one) => one.hand === hand && one.level === shownLevels[hand]);
   const count = (side: CatalogHand) => selected.filter((ref) => ref.startsWith(`${side} `)).length;
 
   return (
-    <Dialog open onClose={onCancel} maxWidth="md" fullWidth data-pattern-catalog>
-      <DialogTitle>Patterns</DialogTitle>
-      <DialogContent>
-        <Stack spacing={1.5}>
-          {hands.length > 1 ? (
-            <Segmented<CatalogHand>
-              label="Which hand"
-              value={hand}
-              options={hands.map((one) => ({ value: one, label: `${HAND_LABELS[one]} (${count(one)})` }))}
-              onChange={setHand}
-            />
-          ) : null}
-          <Stack direction="row" spacing={1}>
-            {LEVELS.map((one) => (
-              <Pill
-                key={one.value}
-                label={one.label}
-                selected={level[hand] === one.value}
-                onClick={() => setLevel((now) => ({ ...now, [hand]: one.value }))}
-              />
-            ))}
-          </Stack>
-          {shown.map((pattern) => (
-            <Box
-              key={pattern.ref}
-              data-pattern={pattern.ref}
-              onClick={() => toggle(pattern.ref)}
-              sx={{
-                display: "flex",
-                gap: 1,
-                p: 1,
-                borderRadius: 1,
-                cursor: "pointer",
-                border: 1,
-                borderColor: selected.includes(pattern.ref) ? "primary.main" : "divider",
-              }}
-            >
-              <Checkbox size="small" checked={selected.includes(pattern.ref)} sx={{ alignSelf: "flex-start", p: 0.5 }} />
-              <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {shortRef(pattern.ref)} · {pattern.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {pattern.line}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {pattern.source}
-                  {pattern.bars ? `, bars ${pattern.bars}` : ""}
-                </Typography>
-                <Box
-                  component="img"
-                  loading="lazy"
-                  alt={pattern.name}
-                  src={drawingUrl(pattern)}
-                  sx={{ display: "block", maxWidth: "100%", maxHeight: 220, objectFit: "contain", objectPosition: "left", bgcolor: "#fff" }}
-                />
-              </Stack>
-            </Box>
+    <Stack spacing={1} data-pattern-gallery>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>
+        <Typography variant="subtitle2">Patterns</Typography>
+        {hands.length > 1 ? (
+          <Segmented<CatalogHand>
+            label="The patterns of which hand"
+            value={hand}
+            options={hands.map((one) => ({ value: one, label: `${HAND_LABELS[one]} (${count(one)})` }))}
+            onChange={onHand}
+          />
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            {HAND_LABELS[hand]} ({count(hand)})
+          </Typography>
+        )}
+        <Stack direction="row" spacing={0.75}>
+          {LEVELS.map((one) => (
+            <Pill key={one.value} label={one.label} selected={shownLevels[hand] === one.value} onClick={() => onLevel(hand, one.value)} />
           ))}
         </Stack>
-      </DialogContent>
-      <DialogActions>
-        <PillButton kind="quiet" onClick={onCancel}>
-          Cancel
-        </PillButton>
-        <PillButton kind="primary" onClick={() => onDone(selected)} data-testid="catalog-done">
-          Use {selected.length} pattern{selected.length === 1 ? "" : "s"}
-        </PillButton>
-      </DialogActions>
-    </Dialog>
+        <Stack direction="row" spacing={0.5} data-pattern-bulk>
+          <Button size="small" onClick={() => onSelectAll(hand, shown.map((one) => one.ref))} disabled={shown.every((one) => selected.includes(one.ref))}>
+            Select all
+          </Button>
+          <Button size="small" onClick={() => onDeselectAll(hand)} disabled={count(hand) === 0}>
+            Deselect all
+          </Button>
+          <Button size="small" onClick={() => onApproved(hand)}>
+            Approved
+          </Button>
+        </Stack>
+      </Stack>
+      <Box
+        sx={{ maxHeight: 380, overflowY: "auto", pr: 0.5, display: "flex", flexDirection: "column", gap: 1 }}
+        data-pattern-list
+      >
+        {shown.map((pattern) => (
+          <Box
+            key={pattern.ref}
+            data-pattern={pattern.ref}
+            onClick={() => onToggle(pattern.ref)}
+            sx={{
+              display: "flex",
+              gap: 1,
+              p: 1,
+              borderRadius: 1,
+              cursor: "pointer",
+              border: 1,
+              borderColor: selected.includes(pattern.ref) ? "primary.main" : "divider",
+              flexShrink: 0,
+            }}
+          >
+            <Checkbox size="small" checked={selected.includes(pattern.ref)} sx={{ alignSelf: "flex-start", p: 0.5 }} />
+            <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 0.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, flex: 1 }}>
+                  {shortRef(pattern.ref)} · {pattern.name}
+                </Typography>
+                {selected.includes(pattern.ref) ? (
+                  // A click here sets the strictness; it does not untick the pattern.
+                  <Box onClick={(event) => event.stopPropagation()} data-strictness={pattern.ref}>
+                    <Segmented<Strictness>
+                      label={`How strictly the AI follows ${shortRef(pattern.ref)}`}
+                      value={strict.includes(pattern.ref) ? "strict" : "suggested"}
+                      options={STRICTNESS}
+                      onChange={(value) => onStrict(pattern.ref, value === "strict")}
+                    />
+                  </Box>
+                ) : null}
+              </Stack>
+              <Typography variant="body2" color="text.secondary">
+                {pattern.line}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {pattern.source}
+                {pattern.bars ? `, bars ${pattern.bars}` : ""}
+              </Typography>
+              <Box
+                component="img"
+                loading="lazy"
+                alt={pattern.name}
+                src={drawingUrl(pattern)}
+                sx={{ display: "block", maxWidth: "100%", maxHeight: 200, objectFit: "contain", objectPosition: "left", bgcolor: "#fff" }}
+              />
+            </Stack>
+          </Box>
+        ))}
+      </Box>
+    </Stack>
   );
 }
 
-export default PatternCatalog;
+export default PatternGallery;

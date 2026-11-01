@@ -36,7 +36,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setattr(paths, "backend_root", lambda: tmp_path)
     paths.ensure_database_tree()
     split_cache.forget()
-    monkeypatch.setattr(job, "available", lambda: True)
+    monkeypatch.setattr(job, "available", lambda model=None: True)
     return TestClient(create_app())
 
 
@@ -87,10 +87,10 @@ def test_a_part_without_a_sheet_draws_the_algorithm_and_asks_for_sonnet(
     assert body["columns"] and body["systems"] and body["width"] == pytest.approx(128, abs=1)
     assert body["source"] == "algorithm" and body["stale"] is False and body["segments"] == []
     assert body["llm"]["state"] == "none"
-    # A part made before Phase 5 waits for the button; a new transcription asks Sonnet by itself.
+    # The AI starts only from the button (the user, 2026-10-30), also on a new transcription.
     assert body["llm"]["auto"] is False and body["llm"]["canRun"] is True
     pipeline.clear_new_sheet(part)
-    assert sheet(client, part)["llm"]["auto"] is True
+    assert sheet(client, part)["llm"]["auto"] is False
     # The cursor map: one row per drawn column, in time order, each with its x on its system.
     ms = [column["ms"] for column in body["columns"]]
     assert ms == sorted(ms) and {column["system"] for column in body["columns"]} == set(
@@ -282,7 +282,7 @@ def test_an_old_sheet_json_keeps_its_key_and_a_figure_the_user_renamed(
 def test_sonnet_is_refused_when_it_is_not_set_up(
     client: TestClient, part: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(job, "available", lambda: False)
+    monkeypatch.setattr(job, "available", lambda model=None: False)
     assert client.post(f"/sheet/{part}/llm").status_code == 409
     body = sheet(client, part)
     assert body["llm"]["available"] is False and body["llm"]["auto"] is False

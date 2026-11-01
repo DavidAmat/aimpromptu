@@ -179,6 +179,8 @@ export interface WaveformScene {
   view: FrameView;
   /** The edge under the pointer or being dragged: drawn stronger, with its time beside it. */
   activeEdge?: "start" | "end" | null;
+  /** While an edge is dragged: the pointer's height in the canvas, so the time of the edge follows the pointer. */
+  edgeY?: number | null;
   /** Where each file of the audio starts, when there are several (**add audio**). */
   files?: readonly WaveformFile[];
 }
@@ -282,7 +284,8 @@ function tag(context: CanvasRenderingContext2D, text: string, x: number, y: numb
  *
  * The grips say "this edge can be dragged" before the reader tries it. The edge under the pointer,
  * or the one being dragged, is drawn wider and carries its time, so a precise edge can be placed by
- * reading it rather than by guessing.
+ * reading it rather than by guessing. While it is dragged, the time follows the pointer up and down (`edgeY`) and
+ * changes as the edge moves (the user, 2026-10-30).
  */
 function paintSelection(
   context: CanvasRenderingContext2D,
@@ -292,6 +295,7 @@ function paintSelection(
   body: number,
   width: number,
   activeEdge: "start" | "end" | null,
+  edgeY: number | null = null,
 ): void {
   const left = toX(selection[0]);
   const right = toX(selection[1]);
@@ -328,7 +332,8 @@ function paintSelection(
     if (active) {
       const seconds = selection[edge === "start" ? 0 : 1] / FRAMES_PER_SECOND;
       // The label sits inside the selection, so it never covers the part being reached for.
-      tag(context, formatTime(seconds), edge === "start" ? x + 8 : x - 8, top + 6, edge === "start" ? "left" : "right");
+      const y = edgeY === null ? top + 6 : Math.min(top + body - 19, Math.max(top + 2, edgeY - 8));
+      tag(context, formatTime(seconds), edge === "start" ? x + 8 : x - 8, y, edge === "start" ? "left" : "right");
     }
   }
 }
@@ -338,7 +343,7 @@ export function paintWaveform(
   canvas: HTMLCanvasElement,
   width: number,
   height: number,
-  { peaks, cuts, selection, view, activeEdge = null, files = [] }: WaveformScene,
+  { peaks, cuts, selection, view, activeEdge = null, edgeY = null, files = [] }: WaveformScene,
 ): void {
   const context = prepare(canvas, width, height);
   if (!context || width <= 0) return;
@@ -369,7 +374,7 @@ export function paintWaveform(
 
   paintFiles(context, files, toX, top, body, width, true);
 
-  if (selection) paintSelection(context, selection, toX, top, body, width, activeEdge);
+  if (selection) paintSelection(context, selection, toX, top, body, width, activeEdge, edgeY);
 }
 
 /**

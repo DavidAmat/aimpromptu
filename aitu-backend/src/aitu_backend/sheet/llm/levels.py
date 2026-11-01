@@ -26,6 +26,13 @@ other. So it has its own prompts, answer and check:
 
 :func:`write_level` runs the plan and the batches in memory (Phase 3's tests; Phase 4 stores the result). The
 numbers of the limits come from the measures of the gallery (Phase 3 report, section 4).
+
+Implementation 04-5 (the user, 2026-10-31) adds three things. A pattern is **Suggested** (used where it suits) or
+**Strict** (:data:`STRICT`: the hand plays it on every chord; the simple-stretch and onset rules are lifted for that
+hand). The plan writes one **rule** per pattern it uses (:class:`Rule`: how this song plays it), and every batch gets
+the rules and may add some, so the same passage is written the same way in every batch. Every batch answer explains
+its decisions in simple words (``# explain:``), and :class:`Talk` keeps each conversation for the history of the
+runs.
 """
 
 from __future__ import annotations
@@ -52,6 +59,7 @@ from aitu_backend.sheet.llm.frames import (
     _name,
     _slice,
     like_before,
+    split_windows,
     windows_of,
 )
 from aitu_backend.sheet.proposal.frames import propose_frames
@@ -67,7 +75,9 @@ __all__ = [
     "LevelRun",
     "Limits",
     "Pattern",
+    "Rule",
     "Section",
+    "Talk",
     "batch_prompt",
     "check_level",
     "level_feedback",
@@ -84,6 +94,7 @@ __all__ = [
     "song_summary",
     "system_prompt",
     "to_notes",
+    "write_again",
     "write_level",
 ]
 
@@ -113,6 +124,60 @@ MELODY_DROP_SHARE = 0.5
 ARTIFACT_S = 3.0
 #: The share of the left-hand notes of a chord's stretch that may be outside the chord (passing notes), at most.
 OUTSIDE_SHARE = {"easy": 0.15, "medium": 0.25, "hard": 0.4}
+#: The two strictness of a pattern ticked in the gallery (the user, 2026-10-31): Suggested (the default) is used where
+#: the pattern suits the passage; Strict is played on every chord of its hand, the same way through the whole song.
+SUGGESTED, STRICT = "suggested", "strict"
+#: The melody notes of a stretch of the song summary, at most (the plan sees both hands, the user, 2026-10-31).
+SUMMARY_MELODY = 24
+
+
+_LETTER = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+_SYMBOL = re.compile(r"^([A-G])([#b]?)(m(?!aj))?(maj7|7|sus4|sus2|4|2|dim|aug|6|9|add9)?(?:/([A-G][#b]?))?$")
+
+
+def guide_chords(text: str) -> list[tuple[int, frozenset[int]]]:
+    """The chords of a guitar guide (the user, 2026-10-31): every chord symbol of its chord lines (a line whose words
+    are all chord symbols: ``C  F  C``, ``Am  Em``, ``G#``, ``C4``), as ``(root, pitch classes)``, once each. ``C4`` is
+    the guitarists' Csus4."""
+    out: dict[tuple[int, frozenset[int]], None] = {}
+    for line in text.splitlines():
+        words = line.split()
+        found = [_SYMBOL.match(w) for w in words]
+        if not words or not all(found):
+            continue
+        for m in found:
+            root = (_LETTER[m.group(1)] + {"#": 1, "b": -1}.get(m.group(2), 0)) % 12
+            minor, kind = bool(m.group(3)), m.group(4) or ""
+            third = 5 if kind in ("sus4", "4") else 2 if kind in ("sus2", "2") else 3 if minor or kind == "dim" else 4
+            fifth = 6 if kind == "dim" else 8 if kind == "aug" else 7
+            tones = {root, (root + third) % 12, (root + fifth) % 12}
+            if kind in ("7", "maj7", "6", "9", "add9"):
+                tones.add((root + {"7": 10, "maj7": 11, "6": 9, "9": 2, "add9": 2}[kind]) % 12)
+            out[(root, frozenset(tones))] = None
+    return list(out)
+
+
+def guide_prompt(text: str) -> str:
+    """The section of the system prompt with the user's guitar guide."""
+    return (
+        "# The chords of the song (a guitar guide the user pasted)\n\n"
+        "The user pasted the chords of this song as a guitar guide gives them with the lyrics. They are the song's "
+        "harmony, section by section (verse, chorus, bridge), in the order the song sings them. Trust them more than "
+        "the chords the app finds in the notes: the app can mistake a melody note for another chord. Before the plan, "
+        "find where each part of the guide sounds in the song (the same sequence of chords comes back in each verse "
+        "and each chorus), and play the guide's chord there. A chord the app lists that does not fit the guide's "
+        "sequence at that place is a mistake of the app: do not play it. Do not add a chord that is not in the "
+        "guide. In a guitar guide, `C4` is Csus4 (a passing chord before C), `G#` is La-b major and `A#` is Si-b major. "
+        "If the recording is in another key than the guide, move the guide's chords to the key of the recording. "
+        "The guide shows the order of the chords, not their exact time: match its sequence to the notes of the sheet, "
+        "and where a chord does not fit the sequence of that part of the guide, it should not be there.\n\n"
+        "```\n" + text.strip() + "\n```"
+    )
+
+
+def strict_refs(strict: set[str] | frozenset[str] | list[str], hand: str) -> list[str]:
+    """The Strict refs of ``hand`` (``left``, ``right``) among ``strict``, in order."""
+    return sorted(r for r in strict if r.startswith(f"{hand} "))
 
 
 @dataclass(frozen=True)
@@ -163,16 +228,17 @@ class Pattern:
     line: str
     example: str
 
-    def text(self, negras: int = EXAMPLE_NEGRAS) -> str:
+    def text(self, negras: int = EXAMPLE_NEGRAS, strict: bool = False) -> str:
         """The pattern for the prompt: its number, name and line, and the start of its example (``negras``
-        negras, both hands: the other hand shows what the pattern goes with)."""
+        negras, both hands: the other hand shows what the pattern goes with). ``strict``: marked Strict."""
         ex = f1.read(self.example)
         q = ex.quarter_ms or 500.0
         first = min((n.frame for n in ex.notes), default=0)
         end = first + int(round(negras * q / FRAME_MS))
         cut = replace(ex, notes=[n for n in ex.notes if n.frame < end]).sort()
         body = f1.write(_bare(cut), mode="frames").strip()
-        return f"### {self.ref}: {self.name}\n\n{self.line}\n\n```\n{body}\n```"
+        mark = " (Strict)" if strict else " (Suggested)"
+        return f"### {self.ref}: {self.name}{mark}\n\n{self.line}\n\n```\n{body}\n```"
 
 
 def _bare(sheet: Sheet) -> Sheet:
@@ -241,9 +307,13 @@ def catalog_rows() -> tuple[list[dict], dict[str, dict[str, list[str]]]]:
     return rows, defaults
 
 
-def run_refs(level: "Level", staffs: tuple[int, ...], selected: list[str], words: str = "") -> list[str]:
+def run_refs(
+    level: "Level", staffs: tuple[int, ...], selected: list[str], words: str = "", *, exact: bool = False
+) -> list[str]:
     """The refs of a run: the patterns selected and the ones the words name (of the hands rewritten); a hand with
-    none of them gets the patterns of its level used when none is selected (the user, 2026-10-30)."""
+    none of them gets the patterns of its level used when none is selected (the user, 2026-10-30). ``exact``: the
+    selection is exactly what the dialog showed ticked, so a hand with none keeps none and is written ``free``
+    (:data:`FREE`; the user's **Deselect all**, 2026-10-30)."""
     known = catalog()
     hands = tuple(HANDS[s] for s in staffs)
     out = [r for r in [*selected, *refs_in(words, hands)] if r in known and known[r].hand in hands]
@@ -251,9 +321,14 @@ def run_refs(level: "Level", staffs: tuple[int, ...], selected: list[str], words
     _, defaults = catalog_rows()
     lv = hand_levels(level)
     for s in staffs:
-        if not any(known[r].hand == HANDS[s] for r in out):
+        if not exact and not any(known[r].hand == HANDS[s] for r in out):
             out += [r for r in defaults[HANDS[s]].get(lv[s], []) if r in known]
     return out
+
+
+def _has_patterns(allowed: set[str], hand: str) -> bool:
+    """Whether the run has a pattern of ``hand`` (``left``, ``right``): without one, the hand is written ``free``."""
+    return any(ref.startswith(f"{hand} ") for ref in allowed)
 
 
 _REF = re.compile(r"\b(?:(left|right)\s+)?(easy|medium|hard|super hard)\s+(\d+)\b", re.I)
@@ -315,17 +390,40 @@ def instructions(level: Level) -> str:
     return "\n\n".join([shared, head, _hand_part(lv[1], "right"), _hand_part(lv[2], "left")])
 
 
-def system_prompt(level: Level, patterns: list[Pattern]) -> str:
+def system_prompt(
+    level: Level,
+    patterns: list[Pattern],
+    staffs: tuple[int, ...] = (1, 2),
+    strict: frozenset[str] = frozenset(),
+    guide: str = "",
+) -> str:
     """The system prompt of a run: the shared part, the part of the level (or of each hand's level), and the
-    patterns of the run (left hand first)."""
+    patterns of the run (left hand first), each marked Strict or Suggested (``strict``: the Strict refs). A hand of
+    ``staffs`` with no pattern is written ``free``."""
     hand_levels(level)
     ordered = sorted(patterns, key=lambda p: (p.hand != "left", LEVELS.index(p.level) if p.level in LEVELS else 9, p.number))
-    body = "\n\n".join(p.text() for p in ordered) or "No pattern was chosen."
+    body = "\n\n".join(p.text(strict=p.ref in strict) for p in ordered) or "No pattern was chosen."
+    for s in sorted(staffs, reverse=True):
+        mine = strict_refs({p.ref for p in patterns if p.ref in strict}, HANDS[s])
+        if mine:
+            body += (
+                f"\n\n**Strict for the {HANDS[s]} hand: {' or '.join(mine)}.** Every chord of the {HANDS[s]} hand "
+                f"plays {'this pattern' if len(mine) == 1 else 'one of these patterns'}, the same way through the "
+                "whole song (see \"Strict and Suggested\" above): no `keep`, no other pattern."
+            )
+    free = [HANDS[s] for s in sorted(staffs, reverse=True) if not any(p.hand == HANDS[s] for p in patterns)]
+    if free:
+        body += (
+            f"\n\n**No pattern for the {' and the '.join(free)} hand{'s' if len(free) > 1 else ''}.** The user chose none: "
+            "write it by the rules of its level and the user's words only, and declare its pattern `free` (in the plan "
+            f"`{free[0][0].upper()}=free`; in a batch `# pattern {free[0][0].upper()} f...-f...: free`)."
+        )
     return (
         instructions(level)
         + "\n\n# The patterns of this run\n\nThe user chose these patterns in the catalog. Use only these, adapted to "
         "the song (see \"The patterns\" above).\n\n"
         + body
+        + ("\n\n" + guide_prompt(guide) if guide.strip() else "")
         + "\n"
     )
 
@@ -364,6 +462,9 @@ def measure_text(m: Measures, sheet: Sheet, staff: int, start: int, end: int) ->
 
 #: The pattern of a hand that keeps the notes of a simple stretch and makes only its rhythm regular.
 KEEP = "keep"
+#: The pattern of a hand the user gave no pattern (every pattern unticked in the dialog, the user, 2026-10-30): the AI
+#: writes it by the rules of its level and the user's words only.
+FREE = "free"
 #: The share of the left-hand onsets of an answer that are onsets of the left hand now (within a frame), at least.
 RHYTHM_SHARE = 0.7
 #: A simple stretch: the hand plays at most this many keys, inside this range (single notes, an octava, one small
@@ -425,10 +526,17 @@ def simple_text(stretches: list[Simple], key: int) -> str:
     )
 
 
-def song_summary(sheet: Sheet, grid: Grid, staffs: tuple[int, ...]) -> tuple[str, list[tuple[int, int]]]:
+def song_summary(
+    sheet: Sheet, grid: Grid, staffs: tuple[int, ...], *, strict_left: bool = False
+) -> tuple[str, list[tuple[int, int]]]:
     """The summary of the whole song for the plan request: one line per stretch (``SUMMARY_MS``, ending at a pause):
-    its frames and clock, the chords, the measures of each hand, and the earlier stretch that sounds the same
+    its frames and clock, the chords, the measures of each hand, the melody of the right hand (also when the run
+    rewrites the left hand only: the plan sees both hands, the user, 2026-10-31), the simple stretches of the left
+    hand (not when its pattern is Strict: ``strict_left``), and the earlier stretch that sounds the same
     (:func:`like_before` on the right hand, or on the hand rewritten). Returns the text and the stretches."""
+    from aitu_backend.sheet.sheet.common import spn  # noqa: PLC0415
+    from aitu_backend.sheet.sheet.spelling import spell  # noqa: PLC0415
+
     rows = windows_of(sheet, span=SUMMARY_MS, max_onsets=10**6)
     cs = chords(sheet, grid)
     key = sheet.key or 0
@@ -439,7 +547,11 @@ def song_summary(sheet: Sheet, grid: Grid, staffs: tuple[int, ...]) -> tuple[str
         parts = [f"f{a}-f{b} ({clock(a)}-{clock(b)}): chords {' '.join(c.name(key) for c in here) or '-'}"]
         for st in (1, 2):
             parts.append(f"{'R' if st == 1 else 'L'}: {measure_text(measure(sheet, st, a, b, grid), sheet, st, a, b)}")
-        if 2 in staffs:
+        tops = melody(sheet, a, b)
+        if tops:
+            names = " ".join(spn(*spell(n.midi, key)) for n in tops[:SUMMARY_MELODY])
+            parts.append(f"R melody: {names}{' ...' if len(tops) > SUMMARY_MELODY else ''}")
+        if 2 in staffs and not strict_left:
             simple = simple_stretches(sheet, 2, [c for c in cs if c.start < b and c.end > a], a, b)
             if simple:
                 parts.append(f"L simple (keep): {simple_text(simple, key)}")
@@ -468,10 +580,43 @@ class Section:
         return f"S{self.index} f{self.start}-f{self.end} {hands} | {self.why}".rstrip(" |")
 
 
+@dataclass
+class Rule:
+    """A rule of a run (the user, 2026-10-31): how this song plays a pattern (from the plan: ``ref``), or a decision a
+    batch took for a kind of passage (``ref`` None). Every later batch gets the rules, so the same passage is written
+    the same way everywhere."""
+
+    text: str
+    #: ``plan``, or ``batch 2``.
+    source: str
+    ref: str | None = None
+
+    def line(self) -> str:
+        return f"- {self.ref + ' ' if self.ref else ''}({self.source}): {self.text}"
+
+    def to_json(self) -> dict:
+        return {"text": self.text, "source": self.source, "ref": self.ref}
+
+
+_PLAN_RULE = re.compile(
+    r"^\s*rule\s+((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+)\s*:\s*(.+?)\s*$", re.M | re.I
+)
+
+
+def read_rules(reply: str) -> list[Rule]:
+    """The rule lines of a plan answer (``rule left easy 1: ...``), one per pattern (the last one wins)."""
+    text = "\n".join(re.findall(r"```[a-zA-Z0-9_-]*[ \t]*\n(.*?)```", reply, re.S)) or reply
+    out: dict[str, Rule] = {}
+    for ref, body in _PLAN_RULE.findall(text):
+        ref = " ".join(ref.lower().split())
+        out[ref] = Rule(body, "plan", ref)
+    return list(out.values())
+
+
 _SECTION = re.compile(
     r"^\s*S(\d+)\s+f(\d+)\s*-\s*f(\d+)\s+(.*?)(?:\|(.*))?$", re.M
 )
-_HAND_REF = re.compile(r"\b([LR])\s*=\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+|keep)\b", re.I)
+_HAND_REF = re.compile(r"\b([LR])\s*=\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+|keep|free)\b", re.I)
 
 
 def plan_prompt(
@@ -483,6 +628,7 @@ def plan_prompt(
     start: int,
     end: int,
     words: str = "",
+    strict: frozenset[str] = frozenset(),
 ) -> str:
     who = "both hands" if len(staffs) == 2 else f"the {HANDS[staffs[0]]} hand only"
     fixed = (
@@ -498,8 +644,21 @@ def plan_prompt(
         "batches, plan the "
         f"whole song (f{start}-f{end}, {clock(start)}-{clock(end)}). Below, one line per stretch of the song: its "
         "frames and clock, the chords the app found in the notes, how each hand plays now (the measures of the hand "
-        "tracker), and, when the app found it, the earlier stretch that sounds the same.",
+        "tracker), the melody of the right hand, and, when the app found it, the earlier stretch that sounds the "
+        "same.",
     ]
+    strict_lines = [
+        f"- The {HANDS[s]} hand: {' or '.join(strict_refs(strict, HANDS[s]))} in every section; no `keep`, no other "
+        "pattern."
+        for s in sorted(staffs, reverse=True)
+        if strict_refs(strict, HANDS[s])
+    ]
+    if strict_lines:
+        out.append(
+            "## Strict patterns (the user's choice)\n\nThe user marked these patterns Strict: the hand plays them on "
+            "every chord of the song, also where it is simple now, the same way from the first section to the last.\n\n"
+            + "\n".join(strict_lines)
+        )
     if words.strip():
         out.append(
             "## The user's words (of the utmost importance: they override the usual choices)\n\n" + words.strip()
@@ -513,19 +672,35 @@ def plan_prompt(
         f"```\nS1 f{start}-f780 {hands} | the intro: why, in a few words\nS2 f780-f1440 {hands} | ...\n```\n\n"
         f"The sections cover f{start} to f{end} with no gap; each begins where the one before ends, on the first "
         "frame of a stretch. Each pattern is the ref of one pattern of this run (\"left easy 2\"), of the hand it "
-        "is for, or `keep` for a left hand that the summary marks simple (\"L=keep\"): it keeps its notes and makes "
-        "only its rhythm regular. For the other left-hand sections, choose the pattern whose rhythm is nearest to "
-        "what the left hand plays now."
+        "is for, or `keep` for a left hand that the summary marks simple (\"L=keep\", never for a Strict hand): it "
+        "keeps its notes and makes only its rhythm regular, or `free` for a hand that has no pattern in this run. "
+        "For the other left-hand sections, choose the pattern whose rhythm is nearest to what the left hand plays "
+        "now.\n\n"
+        "Then, in the same block, write **one rule per pattern you use**: how this song plays it, precisely enough "
+        "that every batch writes it the same way. Say which notes of the chord by their role (root, third, fifth), in "
+        "which octava, with which figures, in which order, and what happens when the chord changes before the shape "
+        "ends. Join the user's words to it: when they change the pattern, the rule is the changed pattern.\n\n"
+        "```\nrule left easy 2: on each chord, the root in octava 2 as a blanca, then the triad in close position "
+        "in octava 3 as a blanca; a chord shorter than a redonda plays the triad only\n```\n\n"
+        "When the user gave the chords of the song (a guitar guide, in the system prompt), write after the `|` of each "
+        "section the guide's chords it plays, in order (`S2 f780-f1440 L=left easy 1 | the verse: C F C F C F G Am E`)."
     )
     return "\n\n".join(out) + "\n"
 
 
 def read_plan(
-    reply: str, allowed: set[str], staffs: tuple[int, ...], start: int, end: int
+    reply: str,
+    allowed: set[str],
+    staffs: tuple[int, ...],
+    start: int,
+    end: int,
+    strict: frozenset[str] = frozenset(),
+    rules: bool = False,
 ) -> tuple[list[str], list[Section]]:
     """The sections of a plan reply, and its problems (empty: accepted): in order, from ``start`` to ``end`` with no
-    gap, a pattern of the run for each hand rewritten."""
-    text = "\n".join(re.findall(r"```[a-zA-Z0-9_-]*\n(.*?)```", reply, re.S)) or reply
+    gap, a pattern of the run for each hand rewritten; a hand with Strict patterns (``strict``) uses only them;
+    ``rules``: a rule line for each pattern used (:func:`read_rules`)."""
+    text = "\n".join(re.findall(r"```[a-zA-Z0-9_-]*[ \t]*\n(.*?)```", reply, re.S)) or reply
     found = _SECTION.findall(text)
     if not found:
         return ["write one line per section: 'S1 f33-f780 L=left easy 2 R=right easy 2 | why'"], []
@@ -538,9 +713,18 @@ def read_plan(
         for staff in staffs:
             h = HANDS[staff]
             ref = getattr(sec, h)
+            mine = strict_refs(strict, h)
             if ref is None:
                 errs.append(f"S{idx}: no pattern for the {h} hand ({h[0].upper()}=...)")
+            elif mine and ref not in mine:
+                errs.append(
+                    f"S{idx}: the {h} hand is Strict: use {' or '.join(mine)} in every section (not {ref})"
+                )
             elif ref == KEEP:
+                continue
+            elif ref == FREE:
+                if _has_patterns(allowed, h):
+                    errs.append(f"S{idx}: free is only for a hand with no pattern in this run; choose one for the {h} hand")
                 continue
             elif ref not in allowed:
                 errs.append(f"S{idx}: {ref} is not a pattern of this run")
@@ -560,6 +744,11 @@ def read_plan(
     for s, t in zip(out, out[1:]):
         if s.end != t.start:
             errs.append(f"S{s.index} ends at f{s.end} but S{t.index} begins at f{t.start} (no gap, no overlap)")
+    if rules:
+        used = {r for sec in out for r in (sec.left, sec.right) if r and r not in (KEEP, FREE)}
+        have = {r.ref for r in read_rules(reply)}
+        for ref in sorted(used - have):
+            errs.append(f"write the rule of {ref}: 'rule {ref}: how this song plays it (notes by role, octava, figures, order)'")
     return errs, ([] if errs else out)
 
 
@@ -584,8 +773,11 @@ def batch_prompt(
     like: Sheet | None = None,
     lookahead: Sheet | None = None,
     words: str = "",
+    rules: list[Rule] = (),
+    strict: frozenset[str] = frozenset(),
 ) -> str:
-    """The prompt of batch ``index`` (0 = first) of ``count``: the notes of ``[start, end)`` to write again."""
+    """The prompt of batch ``index`` (0 = first) of ``count``: the notes of ``[start, end)`` to write again, with the
+    rules of the run so far (``rules``) and the Strict refs (``strict``)."""
     key = target.key or 0
     who = "both hands" if len(staffs) == 2 else f"the {HANDS[staffs[0]]} hand"
     out = [
@@ -599,12 +791,26 @@ def batch_prompt(
         "## The plan of the song (your plan; the sections of this batch are marked)\n\n"
         + "\n".join(("> " if s in here else "  ") + s.line() for s in plan)
     )
+    if rules:
+        out.append(
+            "## The rules of this run (follow them: the same kind of passage is written the same way in every batch)"
+            "\n\n" + "\n".join(r.line() for r in rules)
+        )
+    strict_here = {s_: strict_refs(strict, HANDS[s_]) for s_ in staffs if strict_refs(strict, HANDS[s_])}
+    for s_, mine in sorted(strict_here.items(), reverse=True):
+        out.append(
+            f"## Strict: the {HANDS[s_]} hand plays {' or '.join(mine)} on every chord of this batch\n\nDeclare it "
+            f"over the whole batch (`# pattern {'L' if s_ == 2 else 'R'} f{start}-f{end}: {mine[0]}`). Where the "
+            f"{HANDS[s_]} hand is simple now, it still plays the pattern: the simple stretches are not kept, and it may "
+            "have more or fewer onsets than now."
+        )
     out.append("## The chords of this batch (found by the app in the notes)\n\n" + chord_text(cs, key))
-    simple = simple_stretches(target, 2, cs, start, end) if 2 in staffs else []
+    simple = simple_stretches(target, 2, cs, start, end) if 2 in staffs and 2 not in strict_here else []
     if simple:
         out.append(
-            "## Simple stretches of the left hand (keep their notes: `# pattern L f...-f...: keep`; make only the "
-            "rhythm regular)\n\n" + simple_text(simple, key)
+            "## Simple stretches of the left hand (keep their notes, `# pattern L f...-f...: keep`, and make only the "
+            "rhythm regular; or, where a pattern of this run suits the passage, play it there when it is not harder: "
+            "notes of the same chord, as many onsets or fewer)\n\n" + simple_text(simple, key)
         )
     fine = [
         HANDS[s]
@@ -668,7 +874,11 @@ def batch_prompt(
         "## Answer\n\nWrite the batch at the level, as one block in triple backticks: the two header lines of the "
         f"target, the note lines of f{start}-f{end} ({who} only), then the declared lines: {hand_lines} (one line per "
         "pattern used, with the frames where it is used), and one line for each note of the melody line that you "
-        "leave out (`# not melody f1084 E4: why`, `# artifact f863 D#7: why`)."
+        "leave out (`# not melody f1084 E4: why`, `# artifact f863 D#7: why`).\n\n"
+        "Then one to three `# explain: ...` lines for the user, in very simple words: what you did in this batch, "
+        "why, and what you did not do and why (`# explain: The left hand plays the root, then the triad, on every "
+        "chord. I kept the right hand as it is.`). When you decide something the rules above do not say (a kind of "
+        "passage, a chord that changes fast), add it as `# rule: ...`, so the next batches do the same."
     )
     return "\n\n".join(out) + "\n"
 
@@ -682,6 +892,10 @@ class Declared:
     patterns: list[tuple[str, int, int, str]] = field(default_factory=list)
     #: ``(frame, midi, kind "not melody"/"artifact", pitch as written, why)``
     dropped: list[tuple[int, int, str, str, str]] = field(default_factory=list)
+    #: The ``# explain:`` lines (the AI's decisions in simple words, for the user) and the ``# rule:`` lines (a
+    #: decision the next batches follow).
+    explain: list[str] = field(default_factory=list)
+    rules: list[str] = field(default_factory=list)
 
     def lines(self) -> list[str]:
         out = [f"pattern {h} f{a}-f{b}: {r}" for h, a, b, r in self.patterns]
@@ -690,9 +904,11 @@ class Declared:
 
 
 _PATTERN = re.compile(
-    r"^\s*#\s*pattern\s+([LR])\s+f(\d+)\s*-\s*f(\d+)\s*:\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+|keep)\b",
+    r"^\s*#\s*pattern\s+([LR])\s+f(\d+)\s*-\s*f(\d+)\s*:\s*((?:left|right)\s+(?:easy|medium|hard|super hard)\s+\d+|keep|free)\b",
     re.M | re.I,
 )
+_EXPLAIN = re.compile(r"^\s*#\s*explain\s*:\s*(.+?)\s*$", re.M | re.I)
+_BATCH_RULE = re.compile(r"^\s*#\s*rule\s*:\s*(.+?)\s*$", re.M | re.I)
 _DROP = re.compile(r"^\s*#\s*(not melody|artifact)\s+f(\d+)\s+([A-G][#b]*-?\d+(?:\s*,\s*[A-G][#b]*-?\d+)*)(.*)$", re.M | re.I)
 
 
@@ -711,6 +927,8 @@ def read_declared(reply: str) -> Declared:
             except (ValueError, KeyError, IndexError):
                 continue
             d.dropped.append((int(frame), m, kind.lower(), p, why))
+    d.explain = [x for x in _EXPLAIN.findall(reply) if x]
+    d.rules = [x for x in _BATCH_RULE.findall(reply) if x]
     return d
 
 
@@ -781,6 +999,13 @@ def _far_above(n: Note, line: list[Note], target: Sheet, artifacts: set[tuple[in
     return not rest or n.midi > max(rest) + 12
 
 
+def _guide_column(ns: list[Note], guide: list[tuple[int, frozenset[int]]], *, root: bool = True) -> bool:
+    """Whether the notes of a left-hand column are a chord of the guide (``root``: its lowest note the chord's root)."""
+    pcs = {n.midi % 12 for n in ns}
+    low = min(n.midi for n in ns) % 12
+    return any(pcs <= tones and (not root or low == r) for r, tones in guide)
+
+
 def check_level(
     reply: str,
     target: Sheet,
@@ -792,9 +1017,16 @@ def check_level(
     allowed: set[str],
     start: int,
     end: int,
+    strict: frozenset[str] = frozenset(),
+    explain: bool = False,
+    guide: list[tuple[int, frozenset[int]]] = (),
 ) -> Batch:
     """The check of a batch answer (plan section 5.5). ``target`` holds the notes of ``[start, end)`` of the hands
-    rewritten as the sheet has them; ``cs`` the chords of the batch; ``allowed`` the refs of the run."""
+    rewritten as the sheet has them; ``cs`` the chords of the batch; ``allowed`` the refs of the run. A hand with
+    Strict refs (``strict``, the user, 2026-10-31) declares only them, over all its notes, and the simple-stretch and
+    onset rules do not hold for it. ``explain``: at least one ``# explain:`` line is asked. ``guide``: the chords of
+    the user's guitar guide (:func:`guide_chords`): a left-hand column that is one of them (its lowest note the
+    chord's root, its notes the chord's) is accepted where the app found another chord."""
     levels = hand_levels(level)
     lims = {s: LIMITS[v] for s, v in levels.items()}
     q_frames = (target.quarter_ms or 500.0) / FRAME_MS
@@ -903,6 +1135,12 @@ def check_level(
             if not inside or c.bass is None:
                 continue
             first = inside[0]
+            if guide and _guide_column(left[first], guide):
+                continue
+            # a Strict left hand holds the song's chords: a chord the app lists for less than two negras is a
+            # passing chord there (the user, 2026-10-31), so its bass is not asked
+            if strict_refs(strict, "left") and c.end - c.start < 2 * q / FRAME_MS * 0.95:
+                continue
             if first - c.start <= q / FRAME_MS * 1.05 or c.start < start:
                 low = min(n.midi for n in left[first]) % 12
                 if low not in (c.bass, c.root):
@@ -912,9 +1150,10 @@ def check_level(
                     )
             ok = c.tones | orig_pcs[c.start]
             for f in inside:
+                fits = bool(guide) and _guide_column(left[f], guide, root=False)
                 for n in left[f]:
                     total += 1
-                    foreign += n.midi % 12 not in ok
+                    foreign += n.midi % 12 not in ok and not fits
         if wrong_bass:
             errs.append(
                 f"{len(wrong_bass)} chords begin on another bass: {_show(wrong_bass, 4)}. The lowest left-hand note "
@@ -977,8 +1216,28 @@ def check_level(
         mine = [p for p in d.patterns if p[0] == h]
         if not mine:
             errs.append(f"declare the pattern of the {HANDS[staff]} hand: '# pattern {h} f{start}-f{end}: <ref>'")
+        hard_refs = strict_refs(strict, HANDS[staff])
+        if hard_refs:
+            others = sorted({ref for _, _, _, ref in mine if ref not in hard_refs})
+            if others:
+                errs.append(
+                    f"{h}: the {HANDS[staff]} hand is Strict: declare only {' or '.join(hard_refs)} (not "
+                    f"{', '.join(others)}) and play it on every chord, also where the hand is simple now"
+                )
+            covered = [(a, b) for _, a, b, ref in mine if ref in hard_refs]
+            bare = [f for f in sorted(_cols(sheet, staff)) if not any(a - 2 <= f < b + 2 for a, b in covered)]
+            if bare and not others:
+                errs.append(
+                    f"{h}: {len(bare)} columns are outside the frames declared with {hard_refs[0]} (first at "
+                    f"f{bare[0]}): the Strict pattern covers the whole batch"
+                )
+            continue
         for _, a, b, ref in mine:
             if ref == KEEP:
+                continue
+            if ref == FREE:
+                if _has_patterns(allowed, HANDS[staff]):
+                    errs.append(f"free is only for a hand with no pattern in this run: declare a pattern of the {HANDS[staff]} hand")
                 continue
             if ref not in allowed:
                 errs.append(f"{ref} is not a pattern of this run")
@@ -986,15 +1245,25 @@ def check_level(
                 errs.append(f"{ref} is a pattern of the other hand")
     # never harder than the sheet now: a simple stretch of the left hand keeps its notes, never more of them in time;
     # and the left hand follows the rhythm it plays now (the user, 2026-10-30)
-    for staff in [s_ for s_ in staffs if s_ == 2]:
+    # Suggested (the user, 2026-10-31): a simple stretch declared with a pattern (not keep) may play other notes of
+    # its chord, and chords where it plays single notes; never more onsets. A Strict hand has none of these rules.
+    left_strict = bool(strict_refs(strict, "left"))
+    with_pattern = [(a, b) for h_, a, b, ref in d.patterns if h_ == "L" and ref not in (KEEP, FREE)]
+    for staff in [s_ for s_ in staffs if s_ == 2 and not left_strict]:
         harder = []
         for st in simple_stretches(target, staff, cs, start, end):
             now = _plain_cols(sheet, staff, st.start, st.end)
             other = sorted({m for _, ms in now for m in ms} - set(st.keys))
             where = f"f{st.start}-f{st.end}"
+            patterned = any(a - 2 <= st.start and st.end <= b + 2 for a, b in with_pattern)
+            if patterned:
+                tones = set().union(*(c.tones for c in cs if c.start < st.end and c.end > st.start)) | {
+                    m % 12 for m in st.keys
+                }
+                other = [m for m in other if m % 12 not in tones]
             if other:
                 harder.append(f"{where} adds {', '.join(_name(m) for m in other)}")
-            elif st.single and any(len(ms) > 1 for _, ms in now):
+            elif st.single and not patterned and any(len(ms) > 1 for _, ms in now):
                 harder.append(f"{where} plays chords where the sheet plays single notes")
             if len(now) > st.columns:
                 harder.append(f"{where} has {len(now)} onsets where the sheet has {st.columns}")
@@ -1003,9 +1272,10 @@ def check_level(
             errs.append(
                 f"{h}: {len(harder)} simple stretches are made harder: {_show(harder, 4)}. Where the sheet plays "
                 "single notes or one chord again and again, keep its notes ('# pattern "
-                f"{h} f...-f...: keep') and only make the rhythm regular, with as many onsets or fewer"
+                f"{h} f...-f...: keep') and only make the rhythm regular, with as many onsets or fewer; or play a "
+                "pattern of this run there with notes of the same chord and as many onsets or fewer"
             )
-    if 2 in staffs:
+    if 2 in staffs and not left_strict:
         now_on = [f for f, _ in _plain_cols(target, 2, start, end)]
         ans_on = [f for f, _ in _plain_cols(sheet, 2, start, end)]
         more = []
@@ -1065,7 +1335,61 @@ def check_level(
             f"{len(short)} notes are shorter than the level allows (the shortest figure is a semicorchea; a "
             f"shorter one becomes a decoration note): {_show(short)}"
         )
+    if explain and not d.explain:
+        errs.append(
+            "add one to three '# explain: ...' lines: what you did in this batch, why, and what you did not do, in "
+            "very simple words for the user"
+        )
     return out
+
+
+def write_again(
+    complete: Complete,
+    system: str,
+    talk: Talk,
+    words: str,
+    before: Sheet,
+    grid: Grid,
+    *,
+    level: Level,
+    staffs: tuple[int, ...],
+    allowed: set[str],
+    strict: frozenset[str] = frozenset(),
+    max_checks: int = MAX_CHECKS,
+    guide: str = "",
+) -> tuple[Talk, Batch]:
+    """A batch written again with the user's answer (implementation 04-5, the user, 2026-10-31): its conversation
+    goes on (``talk``: the prompt, the replies, the user's ``words`` as a new message), and each reply is checked
+    against the batch's target as before. ``before``: the sheet with the batch's hands as they were before the run
+    (its chords). Returns the conversation as it is now and the last check (no errors: accepted)."""
+    target = f1.read(talk.target)
+    target.quarter_ms = before.quarter_ms
+    a, b = talk.start, talk.end
+    cs = [c for c in chords(before, grid) if c.start < b and c.end > a]
+    answer = (PROMPT_DIR / "answer.md").read_text(encoding="utf-8").format(words=words.strip()).rstrip("\n")
+    messages = list(talk.messages) + [{"role": "user", "content": answer}]
+    out = Talk(talk.k, a, b, messages, "open", list(talk.errors), talk.target)
+    result = Batch(["no reply"])
+    replies = 0
+    while replies < max_checks:
+        reply = complete(system, messages)
+        replies += 1
+        messages.append({"role": "assistant", "content": reply})
+        result = check_level(
+            reply, target, level=level, staffs=staffs, grid=grid, cs=cs, allowed=allowed, start=a, end=b,
+            strict=strict, explain=True, guide=guide_chords(guide),
+        )
+        if not result.errors:
+            break
+        out.errors.append(result.errors)
+        messages.append({"role": "user", "content": level_feedback(result.errors)})
+    if result.errors and messages[-1]["role"] == "user":
+        messages.pop()  # the feedback no reply answered
+    out.status = "failed" if result.errors else "ok"
+    if not result.errors:
+        out.explain, out.rules = result.declared.explain, result.declared.rules
+        out.declared = result.declared.lines()
+    return out, result
 
 
 # ------------------------------------------------------------------ the notes of an answer, and a run in memory
@@ -1093,10 +1417,17 @@ def drawn(sheet: Sheet, quarter_ms: float, *, key: int, key_changes=None, keep: 
 
 
 def level_windows(
-    current: Sheet, staffs: tuple[int, ...], start: int | None = None, end: int | None = None
+    current: Sheet,
+    staffs: tuple[int, ...],
+    start: int | None = None,
+    end: int | None = None,
+    batches: int | None = None,
 ) -> list[tuple[int, int]]:
     """The batches of a level run: of the whole song, or of the stretch ``[start, end)`` (a range), on the notes of
-    the hands rewritten (``LEVEL_MS``, at most ``LEVEL_ONSETS`` onsets)."""
+    the hands rewritten (``LEVEL_MS``, at most ``LEVEL_ONSETS`` onsets); ``batches``: that many, of about the same
+    time (:func:`split_windows`, the user's choice in Enhance with AI)."""
+    if batches:
+        return split_windows(current, batches, staffs=staffs, start=start, end=end)
     lo = -(10**9) if start is None else start
     hi = 10**9 if end is None else end
     notes = [n for n in current.notes if n.staff in staffs and not n.covered and lo <= n.frame < hi]
@@ -1142,6 +1473,46 @@ def splice(
 
 
 @dataclass
+class Talk:
+    """One conversation of a run with the AI (the plan, ``k`` -1, or a batch), kept for the history of the runs (the
+    user, 2026-10-31): the messages (the prompts, the replies and the check's feedback, in order), the target of a
+    batch (F1 frames text: what a batch written again checks against), and what the answer declared."""
+
+    k: int
+    start: int
+    end: int
+    messages: list[dict] = field(default_factory=list)
+    status: str = "open"
+    errors: list[list[str]] = field(default_factory=list)
+    target: str = ""
+    explain: list[str] = field(default_factory=list)
+    rules: list[str] = field(default_factory=list)
+    declared: list[str] = field(default_factory=list)
+
+    def to_json(self) -> dict:
+        return {
+            "k": self.k,
+            "start": self.start,
+            "end": self.end,
+            "status": self.status,
+            "messages": self.messages,
+            "errors": self.errors,
+            "target": self.target,
+            "explain": self.explain,
+            "rules": self.rules,
+            "declared": self.declared,
+        }
+
+
+def _conversation(messages: list[dict], reply: str) -> list[dict]:
+    """The messages of a request with its last reply: after a refused last reply, the messages already hold it and
+    end with the feedback no reply answered, which is left out."""
+    if len(messages) >= 2 and messages[-2]["role"] == "assistant" and messages[-2]["content"] == reply:
+        return list(messages[:-1])
+    return list(messages) + ([{"role": "assistant", "content": reply}] if reply else [])
+
+
+@dataclass
 class LevelRun:
     level: Level
     staffs: tuple[int, ...]
@@ -1150,6 +1521,10 @@ class LevelRun:
     batches: list[tuple[WindowLog, Batch]]
     #: The answer notes of every batch accepted (the hands rewritten), in order.
     written: Sheet
+    #: The rules of the run: the plan's, then the ones the batches added.
+    rules: list[Rule] = field(default_factory=list)
+    #: The conversations: the plan's (when it was asked), then each batch's.
+    talks: list[Talk] = field(default_factory=list)
 
 
 def write_level(
@@ -1168,12 +1543,26 @@ def write_level(
     max_checks: int = MAX_CHECKS,
     on_plan: Callable[[WindowLog], None] | None = None,
     on_batch: Callable[[WindowLog, Batch], None] | None = None,
+    strict: frozenset[str] = frozenset(),
+    rules: list[Rule] | None = None,
+    on_talk: Callable[[Talk], None] | None = None,
+    written_before: list[Note] = (),
+    done_before: list[tuple[int, int]] = (),
+    first_index: int = 0,
+    count: int | None = None,
+    guide: str = "",
 ) -> LevelRun:
-    """A level run in memory: the plan of the song (unless ``plan`` is given), then the batches (``windows``, or the
-    batches of the whole song), each checked, at most ``max_checks`` replies. A batch that fails keeps no answer.
-    ``span``: a range of the song (implementation 04-3, Phase 4): the plan covers only it."""
-    system = system_prompt(level, patterns)
+    """A level run in memory: the plan of the song (unless ``plan`` is given, with its ``rules``), then the batches
+    (``windows``, or the batches of the whole song), each checked, at most ``max_checks`` replies. A batch that fails
+    keeps no answer. ``span``: a range of the song (implementation 04-3, Phase 4): the plan covers only it.
+    ``strict``: the Strict refs (implementation 04-5). Each batch gets the rules of the plan and of the batches
+    before it; ``on_talk`` gets each conversation when it ends. ``written_before`` and ``done_before``: the notes and
+    batches an earlier part of the run wrote (the run goes on after its first batch); ``first_index`` the number of
+    the first of ``windows`` among the run's ``count`` batches."""
     allowed = {p.ref for p in patterns}
+    strict = frozenset(r for r in strict if r in allowed)
+    system = system_prompt(level, patterns, staffs, strict, guide)
+    known = guide_chords(guide)
     notes = [n for n in current.notes if not n.covered]
     if span is not None:
         notes = [n for n in notes if span[0] <= n.frame < span[1]]
@@ -1181,17 +1570,20 @@ def write_level(
     if span is not None:
         start, end = span
     plan_log = WindowLog(k=-1, start=start, end=end)
+    run_rules: list[Rule] = list(rules or [])
+    talks: list[Talk] = []
     if plan is None:
         planned = current if span is None else replace(current, notes=notes)
-        summary, _ = song_summary(planned, grid, staffs)
-        messages = [{"role": "user", "content": plan_prompt(sid=sid, level=level, staffs=staffs, summary=summary, start=start, end=end, words=words)}]
+        summary, _ = song_summary(planned, grid, staffs, strict_left=bool(strict_refs(strict, "left")))
+        messages = [{"role": "user", "content": plan_prompt(sid=sid, level=level, staffs=staffs, summary=summary, start=start, end=end, words=words, strict=strict)}]
         plan = []
         errs = ["no reply"]
+        reply = ""
         try:
             while plan_log.replies < max_checks:
                 reply = complete(system, messages)
                 plan_log.replies += 1
-                errs, plan = read_plan(reply, allowed, staffs, start, end)
+                errs, plan = read_plan(reply, allowed, staffs, start, end, strict, rules=True)
                 if not errs:
                     break
                 plan_log.errors.append(errs)
@@ -1200,17 +1592,24 @@ def write_level(
         except Exception as exc:  # noqa: BLE001 (no credits, no network: nothing is written)
             errs, plan = [str(exc)], []
             plan_log.status, plan_log.note = "error", f"{type(exc).__name__}: {exc}"
+        if not errs:
+            run_rules = read_rules(reply)
+        talk = Talk(-1, start, end, _conversation(messages, reply), plan_log.status, plan_log.errors)
+        talk.rules = [r.line() for r in run_rules]
+        talks.append(talk)
+        if on_talk:
+            on_talk(talk)
         if on_plan:
             on_plan(plan_log)
         if errs:
-            return LevelRun(level, staffs, [], plan_log, [], replace(current, notes=[]))
+            return LevelRun(level, staffs, [], plan_log, [], replace(current, notes=[]), run_rules, talks)
     wins = windows or level_windows(current, staffs, *(span or (None, None)))
     cs_all = chords(current, grid)
-    written: list[Note] = []
-    done: list[tuple[int, int]] = []
+    written: list[Note] = list(written_before)
+    done: list[tuple[int, int]] = list(done_before)
     out: list[tuple[WindowLog, Batch]] = []
     back = int(CONTEXT_MS / FRAME_MS)
-    for k, (a, b) in enumerate(wins):
+    for k, (a, b) in enumerate(wins, start=first_index):
         log = WindowLog(k=k, start=a, end=b)
         target = _slice(current, a, b, staffs)
         target.quarter_ms = current.quarter_ms
@@ -1228,7 +1627,7 @@ def write_level(
             level=level,
             staffs=staffs,
             index=k,
-            count=len(wins),
+            count=count or first_index + len(wins),
             target=target,
             fixed=fixed,
             plan=plan,
@@ -1240,15 +1639,19 @@ def write_level(
             like=like_sheet,
             lookahead=_slice(current, b, b + int(LOOKAHEAD_MS / FRAME_MS), (1, 2)),
             words=words,
+            rules=run_rules,
+            strict=strict,
         )
         messages = [{"role": "user", "content": prompt}]
         result = Batch(["no reply"])
+        reply = ""
         try:
             while log.replies < max_checks:
                 reply = complete(system, messages)
                 log.replies += 1
                 result = check_level(
-                    reply, target, level=level, staffs=staffs, grid=grid, cs=cs, allowed=allowed, start=a, end=b
+                    reply, target, level=level, staffs=staffs, grid=grid, cs=cs, allowed=allowed, start=a, end=b,
+                    strict=strict, explain=True, guide=known,
                 )
                 if not result.errors:
                     break
@@ -1262,12 +1665,22 @@ def write_level(
             log.status, log.note = "failed", str(exc)
         except Exception as exc:  # noqa: BLE001 (no credits, no network: the batches done stay)
             log.status, log.note = "error", f"{type(exc).__name__}: {exc}"
-            out.append((log, result))
-            break
+        talk = Talk(k, a, b, _conversation(messages, reply), log.status, log.errors, f1.write(_bare(target), mode="frames"))
         if log.status == "ok" and result.sheet is not None:
             written += [n for n in result.sheet.notes if n.staff in staffs]
             done.append((a, b))
+            talk.explain, talk.rules = result.declared.explain, result.declared.rules
+            talk.declared = result.declared.lines()
+            run_rules += [Rule(x, f"batch {k + 1}") for x in result.declared.rules]
+        talks.append(talk)
+        if on_talk:
+            on_talk(talk)
         out.append((log, result))
+        if log.status == "error":
+            break
         if on_batch:
             on_batch(log, result)
-    return LevelRun(level, staffs, plan, plan_log, out, replace(current, notes=sorted(written, key=lambda n: (n.frame, n.staff, n.midi))))
+    return LevelRun(
+        level, staffs, plan, plan_log, out,
+        replace(current, notes=sorted(written, key=lambda n: (n.frame, n.staff, n.midi))), run_rules, talks,
+    )

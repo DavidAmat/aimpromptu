@@ -60,7 +60,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, field
+import math
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -72,7 +73,7 @@ from aitu_backend.matrix.keys import KEY_COUNT, LOWEST_MIDI
 from aitu_backend.pmn import events_file
 from aitu_backend.sheet.sheet import f1, frames
 from aitu_backend.sheet.sheet.data import FRAME_MS, Sheet
-from aitu_backend.sheet.sheet.figures import FIGURES, nominal_ms
+from aitu_backend.sheet.sheet.figures import FIGURES, NAMES, nominal_ms
 from aitu_backend.transcription.engine import NoteEvent
 from aitu_backend.sheet.sheet.frames import drawn_columns
 from aitu_backend.storage import locate, paths
@@ -102,6 +103,8 @@ __all__ = [
     "redo",
     "remove_notes",
     "transpose_notes",
+    "revert_run",
+    "snapshot_before_run",
     "undo",
 ]
 
@@ -939,6 +942,172 @@ def add_note(part_id: str, frame: int, midi: int, hand: str, length_ms: float | 
         return label
 
 
+#: The most copies one note may become (a negra into eight fusas, a redonda into sixteen semicorcheas).
+MOST_COPIES = 16
+
+
+def _places(refs: list[str]) -> set[tuple[int, int]]:
+    out: set[tuple[int, int]] = set()
+    for ref in refs:
+        try:
+            frame, midi = ref.split(":")
+            out.add((int(frame), int(midi)))
+        except ValueError:
+            continue
+    return out
+
+
+Plan = Callable[[Sheet, float], tuple[set[tuple[int, int]], list[Any], int, str, list[set[tuple[int, int]]]]]
+
+
+def _rewrite(part_id: str, plan: Plan) -> str:
+    """A change of notes of the note toolbox (Duplicate, Unite): ``plan(sheet, quarter_ms)`` returns the drawn notes
+    taken off, the notes written instead (sheet notes with their figure and length), their figure, the step's label,
+    and the beam groups to make (the copies of one note, joined: the user, 2026-10-30). The notes go into ``notes.pmn`` (the piano matrix notation) through :func:`change_notes`, in the hand of
+    their staff, as loud as their column; the sheet prints the new notes with ``figure`` set by hand. One step."""
+    with pipeline.piece_lock(part_id):
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise FileNotFoundError("This part has no notes.")
+        drawn = build.current(part_id)
+        sheet = f1.read(drawn.text)
+        quarter = drawn.quarter_ms or sheet.quarter_ms or 500.0
+        places, added, figure, label, groups = plan(sheet, quarter)
+        gone = change_notes(stored, places, added, quarter)
+        saved = _write_hands(part_id, stored, before=stored.header, hands=True, notes=True)
+        sheet_change = None
+        kept = store.load(part_id)
+        if kept is not None and kept.record.decided:
+            # The notes taken off leave the stored reading first, so a new note at the same frame and key does not
+            # keep the old figure; every new note then prints the figure asked, as set by hand.
+            without = replace(sheet, notes=[n for n in sheet.notes if (n.frame, n.midi) not in places])
+            laid = build.reapply(without, pipeline.starting_hands(part_id))
+            mine = {(n.frame, n.midi) for n in added}
+            fresh = max((n.beam for n in laid.notes if n.beam is not None), default=0) + 1
+            beam_of: dict[tuple[int, int], int] = {}
+            for k, group in enumerate(g for g in groups if len({f for f, _ in g}) > 1 and figure >= 8):
+                for place in group:
+                    beam_of[place] = fresh + k
+            laid = replace(
+                laid,
+                notes=[
+                    replace(n, figure=figure, fixed=True, beam=beam_of.get((n.frame, n.midi), n.beam))
+                    if (n.frame, n.midi) in mine
+                    else n
+                    for n in laid.notes
+                ],
+            )
+            after = f1.write(laid, mode="frames")
+            kept.record.hands_revision = saved.header.hands_revision
+            store.save(part_id, after, kept.record)
+            build.mark_settled(part_id, after)
+            sheet_change = _sheet_change(drawn.text, after)
+        build.forget(part_id)
+        _record(_Step(label, {}, sheet_change, gone), part_id)
+        return label
+
+
+def _usable(sheet: Sheet, refs: list[str]) -> list[Any]:
+    picked = _places(refs)
+    return [n for n in sheet.notes if (n.frame, n.midi) in picked and not n.grace and not n.covered]
+
+
+def duplicate_notes(part_id: str, refs: list[str], figure: int) -> str:
+    """**Duplicate** (the user, 2026-10-30): each picked note becomes the same key played again and again at the
+    shorter ``figure``, filling the time of its own figure (a negra into two corcheas, four semicorcheas, eight
+    fusas). One step; undo puts the note back."""
+    if figure not in FIGURES:
+        raise ValueError(f"No figure {figure!r}")
+
+    def plan(sheet: Sheet, quarter: float) -> tuple[set[tuple[int, int]], list[Any], int, str, list[set[tuple[int, int]]]]:
+        notes = _usable(sheet, refs)
+        if not notes:
+            raise reading.Refused("Pick the notes to duplicate first.")
+        added, copies = [], 0
+        # The copies of one chord (a hand at a column) are one beam group.
+        groups: dict[tuple[int, int], set[tuple[int, int]]] = {}
+        for n in notes:
+            if not n.figure or figure <= n.figure:
+                raise reading.Refused("Duplicate into a figure shorter than the note's own.")
+            copies = figure // n.figure
+            if copies > MOST_COPIES:
+                raise reading.Refused(f"At most {MOST_COPIES} copies of one note.")
+            length = nominal_ms(figure, quarter)
+            for k in range(copies):
+                at = n.frame + round(k * length / FRAME_MS)
+                added.append(replace(n, frame=at, figure=figure, len_ms=length, beam=None, fixed=True))
+                groups.setdefault((n.staff, n.frame), set()).add((at, n.midi))
+        what = "a note" if len(notes) == 1 else f"{len(notes)} notes"
+        label = f"Duplicate {what} into {copies} {NAMES[figure]}s"
+        return {(n.frame, n.midi) for n in notes}, added, figure, label, list(groups.values())
+
+    return _rewrite(part_id, plan)
+
+
+def united_figure(written: float, measured: float) -> int:
+    """The figure of united chords: ``written`` is the sum of their figures in negras, ``measured`` the time they fill
+    in the recording, in negras. The sum when it is a figure (0.5 + 0.5: a negra); else the figure just below or just
+    above it that is nearer to the measured time (0.5 + 1 played as 1.1 negras: a negra; as 1.6: a blanca)."""
+    exact = [f for f in FIGURES if abs(4 / f - written) < 1e-6]
+    if exact:
+        return exact[0]
+    below = [f for f in FIGURES if 4 / f < written]
+    above = [f for f in FIGURES if 4 / f > written]
+    near = [f for f in (min(below, default=None), max(above, default=None)) if f is not None]
+    return min(near, key=lambda f: abs(math.log2(4 / f) - math.log2(max(measured, 1e-6))))
+
+
+def unite_notes(part_id: str, refs: list[str]) -> str:
+    """**Unite** (the user, 2026-10-30), the opposite of Duplicate: the picked notes are consecutive chords of one
+    staff with the same keys (two semicorcheas of Mi4, or a corchea and a negra); they become one chord at the first
+    one's place, of the figure that fills their time. Any figures and any number of chords (the user, 2026-10-30: a
+    figure is never a reason to refuse): the sum of their figures when it is a figure (two corcheas: a negra), or else
+    the figure just below or just above that sum that is nearer to the time the chords fill in the recording (from
+    the first one to the next note of the hand). The sheet has no puntillos. One step."""
+
+    def plan(sheet: Sheet, quarter: float) -> tuple[set[tuple[int, int]], list[Any], int, str, list[set[tuple[int, int]]]]:
+        notes = _usable(sheet, refs)
+        staffs = {n.staff for n in notes}
+        if len(staffs) != 1:
+            raise reading.Refused("Pick notes of one hand to unite.")
+        columns: dict[int, list[Any]] = {}
+        for n in notes:
+            columns.setdefault(n.frame, []).append(n)
+        frames = sorted(columns)
+        if len(frames) < 2:
+            raise reading.Refused("Pick two or more notes that follow one another to unite them.")
+        keys = {tuple(sorted(n.midi for n in columns[f])) for f in frames}
+        if len(keys) != 1:
+            raise reading.Refused("The notes to unite must be the same keys.")
+        staff = next(iter(staffs))
+        hand = sorted({n.frame for n in sheet.notes if n.staff == staff and not n.grace})
+        between = {f for f in hand if frames[0] < f < frames[-1]}
+        if between - set(frames):
+            raise reading.Refused("The notes to unite must follow one another, with no other note between them.")
+        # The time the chords fill in the recording: from the first one to the next note of the hand.
+        after = next((f for f in hand if f > frames[-1]), None)
+        last = max((n.figure or 4) for n in columns[frames[-1]])
+        span = (frames[-1] - frames[0]) * FRAME_MS + (
+            (after - frames[-1]) * FRAME_MS if after is not None else nominal_ms(last, quarter)
+        )
+        # The sum of the written figures, in negras (a chord's longest figure); a chord without one, its own time.
+        written = 0.0
+        for k, f in enumerate(frames):
+            figure = min((n.figure for n in columns[f] if n.figure), default=None)
+            if figure is not None:
+                written += 4 / figure
+            else:
+                end = frames[k + 1] if k + 1 < len(frames) else (after if after is not None else f + 1)
+                written += (end - f) * FRAME_MS / quarter
+        united = united_figure(written, span / quarter)
+        length = nominal_ms(united, quarter)
+        added = [replace(n, figure=united, len_ms=length, beam=None, fixed=True) for n in columns[frames[0]]]
+        label = f"Unite {len(frames)} chords into a {NAMES[united]}"
+        return {(n.frame, n.midi) for n in notes}, added, united, label, []
+
+    return _rewrite(part_id, plan)
+
+
 def _saved(hand: str | None, guessed: bool) -> str | None:
     """The hand a person or the AI decided, or ``None``: a guessed hand (``save_edit``'s quick rule fills the notes
     without one once the hands were saved as a whole) is no decision, the split decides it."""
@@ -1058,11 +1227,52 @@ def paste_passage(
     )
 
 
+def take_out(part_id: str, start: int, end: int) -> tuple[str, int]:
+    """**Delete the frames** of the range toolbox (the user, 2026-10-30): the columns ``[start, end)`` taken out of
+    the part as if that stretch had never been recorded nor transcribed: its notes go from ``notes.pmn``, its audio
+    becomes cuts (the Audio step can restore them), and everything after moves earlier (:func:`paste.cut`, the cut a
+    part split makes). One step, whose undo puts the part back as it was. Returns the label and the notes taken out.
+    Raises ``paste.PasteError``."""
+    if end <= start:
+        raise paste.PasteError("Mark a stretch first.")
+    done = paste.cut(part_id, start * FRAME_MS, end * FRAME_MS)
+    build.forget(part_id)
+    seconds = (done.to_ms - done.from_ms) / 1000
+    length = f"{seconds:.1f} s" if seconds < 10 else f"{round(seconds)} s"
+    label = f"Take out {length}"
+    record_version(part_id, label, done.before_version)
+    return label, done.notes_removed
+
+
 def record_version(part_id: str, label: str, before_version: int) -> None:
     """One step for a change that kept the part as it was as a snapshot of its history (a paste, a promotion of
     Record in Sheet): its undo puts that snapshot back."""
     with pipeline.piece_lock(part_id):
         _record(_Step(label, versions=[before_version, 0]), part_id)
+
+
+#: The step of **Revert** in the panel of an AI run (the user, 2026-10-30).
+REVERT_LABEL = "Revert the AI run"
+
+
+def snapshot_before_run(part_id: str) -> int:
+    """The part as it is before an AI run, kept as a snapshot of its history (notes, sheet, audio timeline): the
+    number :func:`revert_run` puts back (the user, 2026-10-30: every change of a run can be taken back at once)."""
+    with pipeline.piece_lock(part_id):
+        version = part_history.current_version(part_id)
+        part_history.snapshot_current(part_id)
+        return version
+
+
+def revert_run(part_id: str, version: int) -> str:
+    """**Revert** an AI run: the part as it was before it (:func:`snapshot_before_run`), whatever the run changed
+    (notes, hands, the sheet; a whole run too, whose steps start again). One step, whose undo puts the run's result
+    back. Raises ``part_history.NoSuchVersion``."""
+    with pipeline.piece_lock(part_id):
+        kept = part_history.restore(part_id, version)
+        build.forget(part_id)
+        _record(_Step(REVERT_LABEL, versions=[kept, 0]), part_id)
+    return REVERT_LABEL
 
 
 def undo(part_id: str) -> str | None:

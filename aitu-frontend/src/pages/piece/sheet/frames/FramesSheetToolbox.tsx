@@ -2,8 +2,9 @@
  * The sheet toolbox of the new sheet (implementation 03, Phase 8): what the reader says about the whole sheet, in
  * five tabs, each change written at once as one step of undo (the edit model of Phase 6).
  *
- * - **Title**: the title, subtitle and artist printed above the sheet (and on the PDF); each is written when the
- *   field is left or Enter is pressed, so a word is one step, not one per letter.
+ * - **Info** (named Title until 2026-10-30): the title, subtitle and artist printed above the sheet (and on the PDF);
+ *   each is written when the field is left or Enter is pressed, so a word is one step, not one per letter. They stay
+ *   editable while the AI writes the sheet (the user, 2026-10-30): they touch no note, and the run keeps them.
  * - **Key**: the armadura of the piece, on both clefs (the armaduras of passages stay); when another one prints fewer
  *   signs over the whole piece, a button names it.
  * - **Transpose**: **Notes** (every note moved, the sheet with them) and **Figures** (every figure renamed by the same
@@ -33,7 +34,7 @@ import { ARMADURAS, keyName } from "./readingTools";
 export type FramesSheetTab = "title" | "key" | "transpose" | "lyrics" | "view";
 
 const TABS = [
-  { value: "title" as const, label: "Title" },
+  { value: "title" as const, label: "Info" },
   { value: "key" as const, label: "Key" },
   { value: "transpose" as const, label: "Transpose" },
   { value: "lyrics" as const, label: "Lyrics" },
@@ -58,6 +59,7 @@ export function FramesSheetToolbox({
   onEdit,
   busy,
   locked,
+  aiRunning,
   transposing,
   onPreviewNotes,
   onPreviewFigures,
@@ -78,6 +80,8 @@ export function FramesSheetToolbox({
   busy: boolean;
   /** Why nothing can be changed now (the AI writes the sheet), or `null`. */
   locked: string | null;
+  /** The AI writes the sheet now: only the Info tab's fields can be changed. */
+  aiRunning: boolean;
   transposing: boolean;
   onPreviewNotes: (semitones: number) => void;
   onPreviewFigures: (steps: number) => void;
@@ -117,7 +121,12 @@ export function FramesSheetToolbox({
       <Stack spacing={2} data-sheet-toolbox={tab} data-frames-sheet-toolbox>
         <Segmented<FramesSheetTab> label="Sheet toolbox tab" value={tab} options={shownTabs} onChange={onTab} />
         {tab === "title" ? (
-          <TitleTab titles={sheet.titles} pieceLabel={pieceLabel} disabled={disabled} onEdit={onEdit} />
+          <TitleTab
+            titles={sheet.titles}
+            pieceLabel={pieceLabel}
+            disabled={busy || (locked !== null && !aiRunning)}
+            onEdit={onEdit}
+          />
         ) : null}
         {tab === "key" ? <KeyTab audioUuid={audioUuid} sheet={sheet} disabled={disabled} onEdit={onEdit} /> : null}
         {tab === "transpose" ? (

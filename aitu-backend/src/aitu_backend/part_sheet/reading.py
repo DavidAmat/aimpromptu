@@ -40,6 +40,7 @@ from aitu_backend.sheet.sheet.data import (
 )
 from aitu_backend.sheet.sheet.figures import FIGURES, NAMES
 from aitu_backend.sheet.sheet.frames import MAX_BEAM
+from aitu_backend.sheet.sheet.pitch import _STEP_PC, STEPS, pitch_to_midi
 from aitu_backend.sheet.sheet.spelling import spell
 
 __all__ = [
@@ -168,6 +169,39 @@ def set_figure(sheet: Sheet, refs: list[str], figure: int | None) -> str:
     if figure is None:
         return f"Give {_count(k, 'a chord', 'chords')} back {'its' if k == 1 else 'their'} figure"
     return f"Write {_count(k, 'a chord', 'chords')} as {_count(k, f'a {NAMES[figure]}', NAMES[figure] + 's')}"
+
+
+ALTER_WORDS = {2: "a double sharp", 1: "a sharp", 0: "no alteration", -1: "a flat", -2: "a double flat"}
+
+
+def spelled_as(midi: int, alter: int) -> tuple[str, int] | None:
+    """The letter and the octave that write the key ``midi`` with ``alter`` (La#4 or Sib4), or ``None``."""
+    for step in STEPS:
+        octave = (midi - alter - _STEP_PC[step]) // 12 - 1
+        if pitch_to_midi(step, alter, octave) == midi:
+            return step, octave
+    return None
+
+
+def set_alter(sheet: Sheet, refs: list[str], alter: int | None) -> str:
+    """**Alteration** (the user, 2026-10-30): the picked notes written with ``alter`` (1 a sharp, -1 a flat, 2 and
+    -2 double, 0 none), the same key under another name: La#4 as Sib4 in a key of sharps. The spelling is the user's
+    decision (``Note.spelled``): the spelling rule keeps it. ``None`` gives the notes back the key's spelling."""
+    if alter is None:
+        notes = picked_notes(sheet, refs)
+        for n in notes:
+            n.spelled = False
+        return f"Give {_count(len(notes), 'a note', 'notes')} back the spelling of the key"
+    if alter not in ALTER_WORDS:
+        raise Refused("An alteration is a sharp, a flat, a double one, or none.")
+    notes = picked_notes(sheet, refs)
+    for n in notes:
+        spelled = spelled_as(n.midi, alter)
+        if spelled is None:
+            raise Refused(f"This key cannot be written with {ALTER_WORDS[alter]}.")
+        n.step, n.octave = spelled
+        n.alter, n.spelled = alter, True
+    return f"Write {_count(len(notes), 'a note', 'notes')} with {ALTER_WORDS[alter]}"
 
 
 def set_fingers(sheet: Sheet, refs: list[str], fingers: list[int]) -> str:
@@ -652,6 +686,7 @@ def transpose_sheet(sheet: Sheet, semitones: int) -> None:
             if n.frame is not None and f <= n.frame:
                 at = k
         n.step, n.alter, n.octave = spell(n.midi + semitones, at)
+        n.spelled = False
 
 
 def far_notes(sheet: Sheet) -> set[tuple[int, int, int]]:
@@ -671,6 +706,7 @@ def far_notes(sheet: Sheet) -> set[tuple[int, int, int]]:
 STAFFS = {"right": [1], "left": [2], "both": [1, 2]}
 ACTIONS = (
     "figure",
+    "alter",
     "finger",
     "beam-join",
     "beam-break",
@@ -718,7 +754,7 @@ def plan(
     staffs = STAFFS.get(staff)
     if staffs is None:
         raise Refused(f"No staff {staff!r}.")
-    if action in ("figure", "finger", "beam-join", "beam-break", "grace", "ornament") and not refs:
+    if action in ("figure", "alter", "finger", "beam-join", "beam-break", "grace", "ornament") and not refs:
         raise Refused("Pick a note first.")
     if action in ("key", "clef", "clef-rule", "ottava") and (start is None or end is None):
         raise Refused("Mark a stretch first.")
@@ -730,6 +766,8 @@ def plan(
 
     if action == "figure":
         return (lambda s: set_figure(s, refs, None if value is None else int(value))), None
+    if action == "alter":
+        return (lambda s: set_alter(s, refs, None if value is None else int(value))), None
     if action == "finger":
         fingers = (
             [int(f) for f in (value or [])]

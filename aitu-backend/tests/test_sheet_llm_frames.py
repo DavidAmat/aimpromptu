@@ -268,7 +268,7 @@ def test_the_prompt_examples_pass_the_checker() -> None:
     assert (
         text.startswith("# Task") and "clef.L1 Priority for the left hand" in text
     )  # version 4 clef rules
-    assert "At most 8 notes in a group" in text and llm.PROMPT_VERSION == "6"
+    assert "At most 8 notes in a group" in text and llm.PROMPT_VERSION == "7"
     assert "Only a thirty-second or shorter" in text and "simple.2 **The amateur pianist.**" in text
     blocks = re.findall(r"Input \(target\):\n```\n(.*?)```\n\nAnswer:\n```\n(.*?)```", text, re.S)
     assert len(blocks) == 5

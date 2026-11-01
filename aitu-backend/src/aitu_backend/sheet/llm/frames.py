@@ -99,6 +99,7 @@ __all__ = [
     "stretch_request",
     "trim_beams",
     "window_prompt",
+    "split_windows",
     "windows_of",
     "write_frames",
     "write_simplify",
@@ -108,7 +109,7 @@ __all__ = [
 Complete = Callable[[str, list[dict]], str]
 
 PROMPT_DIR = Path(__file__).with_name("prompt") / "frames"
-PROMPT_VERSION = "6"  # prompt/frames/VERSION
+PROMPT_VERSION = "7"  # prompt/frames/VERSION
 WINDOW_MS = (12000.0, 16000.0)  # a window ends after the longest pause in this range
 MAX_ONSETS = 200
 LOOKAHEAD_MS = 4000.0
@@ -263,6 +264,59 @@ def windows_of(
         out.append((start, cols[k]))
         i = k
     return out
+
+
+#: How far a cut of :func:`split_windows` may move from its equal share of the time, as a share of one batch.
+SPLIT_SLACK = 0.2
+
+
+def split_windows(
+    sheet: Sheet,
+    count: int,
+    *,
+    staffs: tuple[int, ...] = (1, 2),
+    start: int | None = None,
+    end: int | None = None,
+) -> list[tuple[int, int]]:
+    """``count`` batches of about the same time over the columns of ``staffs`` in ``[start, end)``, as ``(first
+    frame, end frame)`` (the number of batches the user chooses in Enhance with AI, 2026-10-30). Each cut is at a
+    column of those hands near its equal share of the time (within ``SPLIT_SLACK`` of a batch): one that no beam
+    group crosses when there is one, then the one after the longest pause, then the nearest. The first batch starts
+    at ``start`` (or the first column), the last ends at ``end`` (or after the last column). Fewer batches when the
+    hands have fewer columns."""
+    lo = -(10**9) if start is None else start
+    hi = 10**9 if end is None else end
+    mine = [n for n in sheet.notes if n.staff in staffs and not n.covered and lo <= n.frame < hi]
+    cols = sorted({n.frame for n in mine})
+    if not cols:
+        return []
+    first = cols[0] if start is None else start
+    last = cols[-1] + 1 if end is None else end
+    count = max(1, min(int(count), len(cols)))
+    groups: dict[tuple[int, int], list[int]] = defaultdict(list)
+    for n in mine:
+        if n.beam is not None:
+            groups[(n.staff, n.beam)].append(n.frame)
+    inside = Counter()  # columns that a beam group crosses: a cut there would split the group
+    for fs in groups.values():
+        for c in cols[bisect_left(cols, min(fs)) + 1 : bisect_left(cols, max(fs)) + 1]:
+            inside[c] += 1
+    share = (last - first) / count
+    cuts: list[int] = []
+    prev = 0
+    for k in range(1, count):
+        target = first + share * k
+        # Leave a column for each batch still to come.
+        room = range(prev + 1, len(cols) - (count - k) + 1)
+        if not room:
+            break
+        near = [i for i in room if abs(cols[i] - target) <= SPLIT_SLACK * share]
+        cands = near or [min(room, key=lambda i: abs(cols[i] - target))]
+        i = max(cands, key=lambda i: (-inside[cols[i]], cols[i] - cols[i - 1], -abs(cols[i] - target)))
+        cuts.append(cols[i])
+        prev = i
+    bounds = [first, *cuts, last]
+    return [(a, b) for a, b in zip(bounds, bounds[1:]) if b > a]
 
 
 def _part(sheet: Sheet, a: int, b: int) -> list[Note]:
@@ -502,11 +556,12 @@ def window_prompt(
 
 def _block(reply: str) -> str:
     """The F1 frames text of a reply: the fenced block that holds it, else the text from 'F1 frames'."""
-    for b in re.findall(r"```[a-zA-Z0-9_-]*\n(.*?)```", reply, re.S):
+    for b in re.findall(r"```[a-zA-Z0-9_-]*[ \t]*\n(.*?)```", reply, re.S):
         if "F1 frames" in b:
             return b[b.find("F1 frames") :]
     i = reply.find("F1 frames")
-    return reply[i:] if i >= 0 else reply
+    # no closed fence (or a fence the pattern above missed): the text to the next fence
+    return reply[i:].split("```")[0] if i >= 0 else reply
 
 
 def _name(midi: int) -> str:
@@ -1064,6 +1119,8 @@ def assemble(
                     finger=d.finger,
                     fixed=d.fixed,
                     grace_rule=d.grace_rule,
+                    # The user's spelling (2026-10-30): the letter and the alteration they chose, kept.
+                    **({"step": d.step, "alter": d.alter, "octave": d.octave, "spelled": True} if d.spelled else {}),
                 )
             )
         for n in placed(base, p, quarter_ms):
@@ -1226,6 +1283,7 @@ def write_frames(
     max_checks: int = MAX_CHECKS,
     guards: bool = True,
     max_windows: int | None = None,
+    windows: list[tuple[int, int]] | None = None,
     only: set[int] | None = None,
     simplify: bool = True,
     on_window: Callable[[WindowLog], None] | None = None,
@@ -1236,7 +1294,8 @@ def write_frames(
     the algorithm uses them for the input's figures and for the fallback. ``hands=True`` shows them to the LLM
     (a run again on the numeric truth, plan section 3.7); by default the LLM reads the notes without hands, as the
     research measured best. ``key`` fixes the armadura of the algorithm (the header of window 1); ``quarter_ms``
-    skips the reference request. ``max_windows`` limits the requests (later windows keep the algorithm); ``only``
+    skips the reference request. ``windows`` are the batches the user chose (:func:`split_windows`; by default
+    :func:`windows_of`). ``max_windows`` limits the requests (later windows keep the algorithm); ``only``
     asks only the windows of those indexes (0 = first; a test of some passages). ``simplify`` lets the windows leave
     out and add notes for the rules of simplicity (prompt 6, :func:`check_answer`; ``FramesSong.changes``).
     ``on_start(algo, windows)`` is called once the reference figure is known, before the first window request, and
@@ -1277,6 +1336,13 @@ def write_frames(
     algo = propose_frames(notes, key=key, key_changes=key_changes, quarter_ms=quarter_ms)
     base = algo.sheet
     wins = windows_of(base)
+    if windows:
+        # The batches the user chose (Enhance with AI): they cover every note of the song.
+        frames = [n.frame for n in base.notes]
+        wins = [tuple(w) for w in windows]
+        if frames:
+            wins[0] = (min(wins[0][0], min(frames)), wins[0][1])
+            wins[-1] = (wins[-1][0], max(wins[-1][1], max(frames) + 1))
     if on_start:
         on_start(algo, wins)
     figures = _own_figures(notes, quarter_ms)
@@ -1448,7 +1514,7 @@ def stretch_request(
 
 def _strip_marks(n: Note) -> Note:
     """A note as the LLM may read it: without the user's marks, which the format of the prompt does not have."""
-    return replace(n, grace=None, gslot=0, finger=None, fixed=False, grace_rule=None)
+    return replace(n, grace=None, gslot=0, finger=None, fixed=False, grace_rule=None, spelled=False)
 
 
 def write_stretch(

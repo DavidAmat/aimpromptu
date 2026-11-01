@@ -5,7 +5,8 @@
  *
  * The audio file is never copied or changed. The reader selects a part of the waveform and presses
  * **Delete**, and that part becomes a cut: a range of 10 ms time frames that the piece leaves out
- * (Q-1). A cut is drawn shaded and crossed; clicking it selects it, and **Restore** puts it back.
+ * (Q-1). **Only keep the selected part** (the tick left of the scissors) cuts everything else at once. A cut is drawn
+ * shaded and crossed; clicking it selects it, and **Restore** puts it back.
  * **Play all** plays the selected region and jumps over the cuts; **Play selection** plays the part
  * selected, cut or not. Undo and redo walk back through every Delete and Restore.
  *
@@ -35,6 +36,7 @@ import Typography from "@mui/material/Typography";
 import AddCircleIcon from "@mui/icons-material/AddCircleOutlineOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
+import DoneIcon from "@mui/icons-material/Done";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
 import GraphicEqIcon from "@mui/icons-material/GraphicEq";
 import PauseIcon from "@mui/icons-material/Pause";
@@ -59,6 +61,7 @@ import {
 } from "../../api";
 import {
   addCut,
+  keepOnly,
   cutAt,
   cutFrames,
   overlapsCut,
@@ -256,6 +259,12 @@ function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps)
   const deleteSelection = useCallback(() => {
     if (readOnly || !selection || selection[1] <= selection[0]) return;
     setCuts((current) => addCut(current, selection[0], selection[1], total));
+  }, [readOnly, selection, setCuts, total]);
+
+  // **Only keep the selected part** (the user, 2026-10-30): the rest of the piece becomes cuts, in one step of undo.
+  const keepSelection = useCallback(() => {
+    if (readOnly || !selection || selection[1] <= selection[0]) return;
+    setCuts((current) => keepOnly(current, selection[0], selection[1], total));
   }, [readOnly, selection, setCuts, total]);
 
   const restoreSelection = useCallback(() => {
@@ -483,6 +492,13 @@ function AudioEditor({ uuid, initial, peaks, onAudioChanged }: AudioEditorProps)
         {readOnly ? null : (
           <>
             <Divider orientation="vertical" flexItem />
+            <IconAction
+              title="Only keep the selected part"
+              disabledTitle="Select a part of the waveform first"
+              icon={<DoneIcon fontSize="small" />}
+              disabled={!hasSelection}
+              onClick={keepSelection}
+            />
             <IconAction
               title="Cut the selection"
               shortcut="Delete"

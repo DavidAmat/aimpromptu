@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { sheetApi, type FramesSheet, type LevelRequest, type SheetEdited, type StretchRequest } from "../../../../api";
+import { sheetApi, type FramesSheet, type LevelRequest, type RunChoice, type SheetEdited, type StretchRequest } from "../../../../api";
 import { said } from "../../../library/shared";
 
 /** Messages closer than this are read as one. */
@@ -26,7 +26,7 @@ const JOIN_MS = 250;
 type Hand = "left" | "right" | "both";
 
 /** The end of a job, as its last message sums it up. */
-interface Summary {
+export interface RunSummary {
   stretch?: string;
   simplify?: string;
   hand?: Hand;
@@ -38,7 +38,17 @@ interface Summary {
   total?: number;
   /** The run stopped because the account of the AI has no credits left (``openai``). */
   credits?: string;
+  /** The snapshot of the part before the run: **Revert** puts it back (2026-10-30). */
+  before?: number;
+  /** The user pressed **Stop**. */
+  stopped?: boolean;
+  usd?: number;
+  /** The id of the run's log in the history of AI runs (implementation 04-5). */
+  run?: string;
+  /** The run wrote its first batch and waits for the user: go on, or answer the AI (implementation 04-5). */
+  waiting?: boolean;
 }
+type Summary = RunSummary;
 
 const HAND_WORDS: Record<Hand, string> = { left: "the left hand", right: "the right hand", both: "both hands" };
 
@@ -48,6 +58,11 @@ function notes(count: number): string {
 
 /** What the page says when a stretch or Simplify ends without the result the user expects; `null`: nothing. */
 function endNotice(summary: Summary): string | null {
+  if (summary.waiting) return "Batch 1 is written. Check it on the sheet, then go on with the other batches or answer the AI.";
+  if (summary.stopped) {
+    const done = summary.batches !== undefined && summary.total ? ` after ${summary.batches} of ${summary.total} batches` : "";
+    return `You stopped the AI${done}. What it wrote stays; Revert takes it back.`;
+  }
   if (summary.stretch === "failed") return "The AI could not write this stretch again. It stays as it was.";
   if (summary.stretch === "stale") return "The notes changed while the AI worked. The stretch stays as it was.";
   const where = summary.hand ? ` in ${HAND_WORDS[summary.hand]}` : "";
@@ -75,7 +90,7 @@ export interface FramesSheetState {
   sheet: FramesSheet | null;
   error: string | null;
   /** Start the AI on the part: **Enhance with AI**. */
-  run: () => Promise<void>;
+  run: (choice?: RunChoice) => Promise<void>;
   starting: boolean;
   /** Send one edit; its answer (the sheet drawn again) replaces the sheet. `null` when it failed or another is out. */
   edit: (call: () => Promise<SheetEdited>) => Promise<SheetEdited | null>;
@@ -91,6 +106,13 @@ export interface FramesSheetState {
   simplify: (hand: Hand) => Promise<void>;
   /** A quiet word after the AI could not write a stretch again; cleared by the next edit or request. */
   notice: string | null;
+  /** The end of the last AI run followed here, its summary and its notice (the panel of the run, 2026-10-30). */
+  lastRun: { summary: RunSummary; notice: string | null } | null;
+  /** **Stop** the run now going. */
+  stopRun: () => Promise<void>;
+  /** **Revert** a run that ended: the part as it was before it. */
+  revertRun: (version: number) => Promise<boolean>;
+  reloadSheet: () => void;
 }
 
 export function useFramesSheet(
@@ -98,12 +120,9 @@ export function useFramesSheet(
   /** The staff width to draw for, in staff spaces; `null` until the page is measured. */
   width: number | null,
   {
-    autoStart,
     onChanged,
   }: {
-    /** Whether this page may start Sonnet by itself (the Sheet step of a project; never Play mode). */
-    autoStart: boolean;
-    /** Sonnet started or ended: the steps of the project may have changed. */
+    /** The AI started or ended: the steps of the project may have changed. */
     onChanged?: () => void;
   },
 ): FramesSheetState {
@@ -114,6 +133,7 @@ export function useFramesSheet(
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [lastRun, setLastRun] = useState<FramesSheetState["lastRun"]>(null);
   const changed = useRef(onChanged);
   useEffect(() => {
     changed.current = onChanged;
@@ -158,6 +178,7 @@ export function useFramesSheet(
         const summary = JSON.parse((event as MessageEvent<string>).data ?? "{}") as Summary;
         const word = endNotice(summary);
         if (word) setNotice(word);
+        setLastRun({ summary, notice: word });
       } catch {
         // A message without a summary: nothing to say.
       }
@@ -168,10 +189,10 @@ export function useFramesSheet(
     };
   }, [jobId]);
 
-  const run = useCallback(async () => {
+  const run = useCallback(async (choice?: RunChoice) => {
     setStarting(true);
     try {
-      await sheetApi.runLlm(audioUuid);
+      await sheetApi.runLlm(audioUuid, choice);
       setReload((value) => value + 1);
       changed.current?.();
     } catch (caught) {
@@ -181,14 +202,7 @@ export function useFramesSheet(
     }
   }, [audioUuid]);
 
-  // A new transcription goes to Sonnet by itself, once per page.
-  const started = useRef<string | null>(null);
-  const auto = autoStart && sheet?.llm.auto === true;
-  useEffect(() => {
-    if (!auto || started.current === audioUuid) return;
-    started.current = audioUuid;
-    void run();
-  }, [auto, audioUuid, run]);
+  // The AI never starts by itself: only **Enhance with AI** starts it (the user, 2026-10-30).
 
   const enhanceStretch = useCallback(
     async (stretch: StretchRequest) => {
@@ -255,5 +269,42 @@ export function useFramesSheet(
     [audioUuid, editing],
   );
 
-  return { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, level, notice };
+  /** Read the sheet again (a job the page did not start itself, such as a batch written again). */
+  const reloadSheet = useCallback(() => {
+    setNotice(null);
+    setReload((value) => value + 1);
+  }, []);
+
+  const stopRun = useCallback(async () => {
+    try {
+      await sheetApi.stopLlm(audioUuid);
+    } catch (caught) {
+      setEditError(said(caught, "The AI could not be stopped."));
+    }
+  }, [audioUuid]);
+  const revertRun = useCallback(
+    async (version: number) => {
+      if (width === null) return false;
+      return (await edit(() => sheetApi.revertLlm(audioUuid, version, width))) !== null;
+    },
+    [audioUuid, width, edit],
+  );
+
+  return {
+    sheet,
+    error,
+    run,
+    starting,
+    edit,
+    editing,
+    editError,
+    enhanceStretch,
+    simplify,
+    level,
+    notice,
+    lastRun,
+    stopRun,
+    revertRun,
+    reloadSheet,
+  };
 }

@@ -56,6 +56,61 @@ simplified copy of it, not a new invention.
   (`# pattern L f33-f159: keep`). Do not give it a pattern of the catalog. The app lists these stretches in each
   batch and in the summary of the song; the checker refuses another note or more onsets there.
 
+# Strict and Suggested
+
+Each pattern of this run is marked **Suggested** or **Strict** by the user (at the end of these instructions).
+
+- **Suggested**: use the pattern where it suits the passage. The two rules above hold: follow the rhythm the left
+  hand plays now, and keep the simple stretches (or play a pattern there only when it is not harder: notes of the
+  same chord, as many onsets or fewer).
+- **Strict**: the hand plays the pattern on **every chord of the whole song**, the same way from the first chord to
+  the last, also where the hand is simple now and whatever rhythm it plays now (blancas, negras, corcheas). The two
+  rules above do not hold for that hand: no `keep`, no other pattern, and it may have more or fewer onsets than now.
+  The melody, the harmony, the grid and the limits of the level still hold.
+- **A Strict pattern keeps its figures.** The pattern's figures are the same everywhere (the user, 2026-10-31): a
+  pattern in blancas is blancas through the whole song, and a chord that lasts longer plays the same figure again; do
+  not mix redondas, blancas and negras. Only a chord that truly lasts less than the figure gets a shorter one.
+- **The key first, then its usual chords** (the user, 2026-10-31). Find the key of the song (from the guide when
+  there is one, else from the notes) and its usual chords: in Do major, Do, Fa and Sol, then La minor, Mi minor and Re
+  minor; Mi major (before La minor) and Sol7 are common too. Infer each chord from the notes of the sheet in both
+  hands, and choose the usual chord they fit: where the melody plays a La over a Do major song, the chord is most
+  likely Fa major (or La minor), not La major. A chord out of the key (La major in Do major) only where the guide has it
+  at that place, or where the notes clearly ask for it (a Do# that is not a passing note).
+- **The song's chords, not every chord the app lists.** First find the harmony of the song: the few chords it turns
+  around (Do major, Mi major, Sol major, Fa major...), changing about every bar or every two negras. A chord the app
+  lists for less than two negras is usually a passing chord made by the melody: with a Strict pattern, keep the chord
+  around it there (the checker does not ask its bass).
+- **The user's words may change a pattern.** The patterns of the catalog are never exactly what a user wants. When
+  the words change the shape (for example on left easy 2, Held triad Fa3-La3-Do4: "first a low note Fa2 as a blanca,
+  then Fa3-La3-Do4 as a blanca"), the changed shape is the pattern of this run: play it, Strict or Suggested as the
+  pattern is marked. Find the chord first, then play the changed shape on it.
+
+# The register: what reads best on the staff
+
+Octave numbers in the user's words or in a pattern's example are only examples. Choose the octava that reads best on
+the staff of the hand (the user, 2026-10-31):
+
+- **The left hand reads in the bass clef.** Place each chord so that it sits on the five lines of the bass staff. When
+  it does not fit, prefer a chord that goes a little **above** the staff (a ledger line or two, as classical music
+  often does: Fa-Si-Re with the Re just above the staff) to the same chord an octava lower, deep under the staff.
+- **Keep the left hand in the bass clef.** One or two notes above the staff are no reason for the treble clef: the
+  app writes them with ledger lines or an 8va line. Only a whole passage that lies high suits the treble clef.
+
+# The rules of the run and your explanations
+
+Songs come back to what they played before (a verse, a chorus, an intro that returns), and the batches are written
+one after the other, each in its own request. So that every batch makes the same decisions:
+
+- The plan writes **one rule per pattern** it uses: how this song plays it (which notes of the chord by their role,
+  root, third or fifth, in which octava, with which figures, in which order, and what happens when the chord changes
+  before the shape ends), with the user's words joined to it.
+- Every batch gets the rules of the plan and of the batches before it, under "The rules of this run", and follows
+  them. When a batch decides something the rules do not say (a kind of passage, a chord that lasts one negra), it
+  adds `# rule: ...`; the next batches follow it too.
+- Every batch explains its decisions to the user in one to three `# explain: ...` lines, in very simple words: what
+  it did, why, and what it did not do and why. The user reads them and may answer you; an answer of the user then
+  comes as a new message, and you write the whole batch again following it.
+
 # What you keep
 
 1. **The melody comes first.** The melody is mostly the top line of the right hand. Each note of the right hand's top
@@ -89,6 +144,17 @@ simplified copy of it, not a new invention.
 - **Artifacts**: a chord or a note far above the melody (more than an octava above the melody around it, alone, often
   under 8va), octavas the level does not allow, many repeated notes of a chord that add nothing. An artifact is **left
   out** (declared): do not keep it one or two octavas lower, it adds nothing to the song in any register.
+- **An octava as a third or a fifth** (the user's way to make an octava easy to play; also whenever the user's words
+  ask for "thirds or fifths instead of octavas"). Keep the note that matters (the melody note on top in the right
+  hand, the bass at the bottom in the left hand) and replace the other note of the octava by the **third or the fifth
+  of the chord that sounds there**, inside the octava. The user's example: under the chord Si-Re-Fa# (B minor), the
+  right hand's Si3-Si4 becomes Re4-Si4 (Re is the third of the chord) or Fa#4-Si4 (Fa# is the fifth); in the left
+  hand, under Mi major, Mi2-Mi3 becomes Mi2-Si2 (the fifth) or Mi2-Sol#2 (the third). When the note of the octava is
+  itself the third or the fifth of the chord, take another note of the chord (its root or the other one); never a note
+  out of the chord. Keep the same choice for the same note on the same chord, so the passage keeps one pattern. Use it
+  where the level takes an octava away but allows two notes (the right hand at medium and hard, on the notes where
+  it may play two; an octava bass), and everywhere the user's words ask for it. At easy the right hand still plays
+  single notes.
 - **The right hand helps the left hand.** Where the right hand has nothing but artifacts (or nothing at all) while the
   left hand plays big chords, the music of that passage is in the **top notes of the left-hand chords** (a riff, the
   melody of an intro). Read the line of the highest note of each chord: it usually repeats a short figure (in 99 Red
@@ -133,7 +199,10 @@ the chords the app found, how each hand plays now (the measures of a hand tracke
 in one column and how wide they are, the range of the hand inside two negras, the moves of the hand per second, where
 the hand is), and the earlier stretch that sounds the same. You split the song into sections and choose the pattern
 of each hand for each section, from the patterns of this run: for the left hand, the pattern whose rhythm is nearest to
-what it plays now, or `keep` where the summary marks it simple (`L=keep`). Choose few sections and few changes: the song has an
+what it plays now, or `keep` where the summary marks it simple (`L=keep`). A hand for which the user chose no
+pattern (the end of these instructions says so) is `free`: write it by the rules of its level and the user's words only.
+After the sections, write the rule of each pattern
+you use (`rule left easy 1: ...`; see "The rules of the run"). Choose few sections and few changes: the song has an
 intro, verses, choruses, maybe a bridge; a part that comes again gets the patterns it had the first time. A passage
 where the song is calm can take a calmer pattern of the run, and the chorus a fuller one.
 
@@ -162,6 +231,7 @@ f1057    L: G#3,B3,E4:4  R: E5:4
 # pattern R f1042-f1440: right easy 2
 # not melody f1084 E4: a fill under the held E5
 # artifact f1110 E7: a high note alone, far above the melody
+# explain: The left hand plays the low E, then the chord, on each chord. I left out a very high E that is not melody.
 ```
 
 - One `# pattern` line per hand rewritten and per section of the batch, with the frames where you use it.
@@ -170,6 +240,8 @@ f1057    L: G#3,B3,E4:4  R: E5:4
   chords, the left hand) need no line: you write the hands again.
 - Write the figure that the note should have: it gives the note its length (a negra lasts `quarterMs`). A note
   lasts at most until the next note of its hand.
+- One to three `# explain:` lines (see "The rules of the run and your explanations"), and a `# rule:` line for
+  each new decision the next batches must follow.
 - No beams, clefs, 8va, dots, rests or tuplets.
 
 A checker reads the answer. It checks the format; that every note of the melody line is still there (or declared);

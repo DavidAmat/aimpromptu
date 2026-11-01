@@ -33,6 +33,8 @@ works stops the requests at the next one (:class:`PartGone`): no credits are spe
 from __future__ import annotations
 
 import importlib.util
+import math
+import os
 import threading
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
@@ -53,6 +55,7 @@ from aitu_backend.sheet.llm.frames import (
     _algorithm_part,
     assemble,
     simplify_windows,
+    split_windows,
     windows_of,
     write_frames,
     write_simplify,
@@ -60,15 +63,17 @@ from aitu_backend.sheet.llm.frames import (
 )
 from aitu_backend.sheet.proposal.frames import FramesProposal
 from aitu_backend.sheet.sheet import f1
-from aitu_backend.sheet.sheet.data import carry_extras
+from aitu_backend.sheet.sheet.data import FRAME_MS, carry_extras
 from aitu_backend.transcription import jobs, pipeline
 
-from . import build, edits, store
+from . import build, edits, runs, store
 
 __all__ = [
     "Busy",
     "LiveRun",
+    "MODELS",
     "available",
+    "batch_plan",
     "commit",
     "costs",
     "job_of",
@@ -77,6 +82,7 @@ __all__ = [
     "start_level",
     "start_simplify",
     "start_stretch",
+    "stop",
 ]
 
 #: The job key of a part: one AI run at a time per part.
@@ -107,29 +113,90 @@ SECONDS_LEVEL_PLAN = 10
 SECONDS_LEVEL_BATCH = 45
 
 
-def available() -> bool:
-    """Whether the AI can be asked: an OpenAI key (the environment, or ``.env``) and the SDK installed. Every AI run
-    uses GPT-6.1 Terra since implementation 04-3, Phase 5 (the user, 2026-10-30)."""
+#: The AI models the user may choose in Enhance with AI (the user, 2026-10-30; GPT-6.1 Terra when none is chosen):
+#: the name the dialog shows, the effort, and the cost and the time of a request compared with Terra, measured per
+#: passage of a level run in implementation 04-3, Phase 5 (Terra $0.041 and 1.0 min, Sol $0.072 and 1.0 min, Sonnet
+#: 5.5 at high effort $0.269 and 2.5 min).
+MODELS: dict[str, dict[str, Any]] = {
+    "gpt-6.1-terra": {"label": "GPT-6.1 Terra", "effort": "medium", "usd": 1.0, "time": 1.0},
+    "gpt-6.1-sol": {"label": "GPT-6.1 Sol", "effort": "medium", "usd": 1.8, "time": 1.0},
+    "claude-sonnet-5-5": {"label": "Sonnet 5.5", "effort": "high", "usd": 6.6, "time": 2.5},
+}
+
+
+def model_of(model: str | None) -> str:
+    """The model a run uses: the one chosen, or GPT-6.1 Terra. An unknown name is refused (``ValueError``)."""
+    if model is None:
+        return MODEL
+    if model not in MODELS:
+        raise ValueError(f"No AI model {model!r}.")
+    return model
+
+
+def available(model: str | None = None) -> bool:
+    """Whether the AI can be asked with ``model`` (GPT-6.1 Terra by default): its key (the environment, or ``.env``)
+    and its SDK installed."""
     from aitu_backend.sheet_llm import _openai_key  # noqa: PLC0415
 
+    if model_of(model).startswith("claude"):
+        return bool(os.environ.get("ANTHROPIC_API_KEY")) and importlib.util.find_spec("anthropic") is not None
     return bool(_openai_key()) and importlib.util.find_spec("openai") is not None
 
 
-#: The level routes ask this one; the same check as every run since all of them use the same model.
-level_available = available
+def level_available(model: str | None = None) -> bool:
+    """The level routes ask this one: the same check as every run."""
+    return available(model)
 
 
-def _complete(part_id: str, kind: str) -> Any:
-    """The ``complete`` function of a run: GPT-6.1 Terra at medium effort, one cache key per part and kind of run."""
+def _complete(part_id: str, kind: str, model: str | None = None) -> Any:
+    """The ``complete`` function of a run: the model chosen (GPT-6.1 Terra at medium effort by default; OpenAI's with
+    one cache key per part and kind of run, Sonnet 5.5 at high effort)."""
+    name = model_of(model)
+    if name.startswith("claude"):
+        from aitu_backend.sheet_llm import ClaudeComplete  # noqa: PLC0415
+
+        return ClaudeComplete(model=name, effort=MODELS[name]["effort"])
     from aitu_backend.sheet_llm import OpenAIComplete  # noqa: PLC0415 - the SDK only when it is used
 
-    return OpenAIComplete(model=MODEL, effort=EFFORT, cache_key=f"{part_id}|{kind}")
+    return OpenAIComplete(model=name, effort=MODELS[name]["effort"], cache_key=f"{part_id}|{kind}")
 
 
-def _level_complete(part_id: str, level: Any) -> Any:
+def _level_complete(part_id: str, level: Any, model: str | None = None) -> Any:
     from aitu_backend.sheet.llm import levels  # noqa: PLC0415
 
-    return _complete(part_id, levels.level_name(level))
+    return _complete(part_id, levels.level_name(level), model)
+
+
+class Stopped(RuntimeError):
+    """The user pressed **Stop** in the panel of the run (2026-10-30): no more requests; what was written stays, and
+    **Revert** takes it back."""
+
+
+#: The parts whose run the user asked to stop, and what the end of a run adds to its summary (``before``: the
+#: snapshot **Revert** puts back).
+_stop_asked: set[str] = set()
+_meta: dict[str, dict[str, Any]] = {}
+
+
+def stop(part_id: str) -> bool:
+    """Ask the part's AI run to stop before its next request (the one it waits for ends first). ``False``: none
+    runs."""
+    if job_of(part_id) is None:
+        return False
+    _stop_asked.add(part_id)
+    return True
+
+
+def _check_stop(part_id: str) -> None:
+    if part_id in _stop_asked:
+        raise Stopped("Stopped by the user.")
+
+
+def _begin(part_id: str) -> int:
+    """The start of a run that changes the part: the part as it is now kept for **Revert**."""
+    before = edits.snapshot_before_run(part_id)
+    _meta[part_id] = {"before": before}
+    return before
 
 
 class PartGone(RuntimeError):
@@ -138,6 +205,24 @@ class PartGone(RuntimeError):
 
 def job_of(part_id: str) -> jobs.Job | None:
     return jobs.active(KEY.format(part_id))
+
+
+def _submit(part_id: str, work: Callable[[BaseProgress], dict[str, Any]]) -> jobs.Job:
+    """Run ``work`` as the part's AI job. The titles the user writes while it works are kept by every save of the run
+    (``store.keep_titles``) until it ends, when the sheet's own titles hold again (the user, 2026-10-30)."""
+
+    def run(reporter: BaseProgress) -> dict[str, Any]:
+        try:
+            out = work(reporter)
+            # The snapshot Revert puts back, and whether the user stopped the run.
+            extra = {**_meta.get(part_id, {}), **({"stopped": True} if part_id in _stop_asked else {})}
+            return {**out, **extra} if isinstance(out, dict) else out
+        finally:
+            store.forget_titles(part_id)
+            _meta.pop(part_id, None)
+            _stop_asked.discard(part_id)
+
+    return jobs.submit(run, key=KEY.format(part_id), describe=lambda result: dict(result or {}))
 
 
 @dataclass
@@ -161,13 +246,16 @@ class LiveRun:
     #: The hand the AI writes (1 right, 2 left) when it writes one hand only, Simplify or a stretch; the page veils
     #: only that staff. ``None``: both hands.
     staff: int | None = None
+    #: For each batch done: written (``True``) or kept as it was (the check refused it, or the run stopped).
+    outcomes: list[bool] = field(default_factory=list)
     _text: tuple[int, str] | None = None
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
-    def advanced(self, text: str) -> None:
-        """One more batch of Simplify is done: ``text`` is the sheet now."""
+    def advanced(self, text: str, ok: bool = True) -> None:
+        """One more batch is done (Simplify, a level, a stretch in batches): ``text`` is the sheet now."""
         with self._lock:
             self.before, self.done = text, self.done + 1
+            self.outcomes.append(ok)
 
     def started(self, algo: FramesProposal, windows: list[tuple[int, int]]) -> None:
         with self._lock:
@@ -200,7 +288,13 @@ class LiveRun:
         with self._lock:
             if self.algo is None:
                 return [
-                    (a, b, "llm" if k < self.done else "working" if k == self.done else "waiting")
+                    (
+                        a,
+                        b,
+                        ("llm" if k >= len(self.outcomes) or self.outcomes[k] else "algorithm")
+                        if k < self.done
+                        else "working" if k == self.done else "waiting",
+                    )
                     for k, (a, b) in enumerate(self.provisional)
                 ]
             out = []
@@ -221,9 +315,16 @@ def live(part_id: str) -> LiveRun | None:
         return _live.get(part_id)
 
 
-def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jobs.Job:
+def start(
+    part_id: str,
+    *,
+    complete: Callable[[], Complete] | None = None,
+    model: str | None = None,
+    batches: int | None = None,
+) -> jobs.Job:
     """Start the AI on a part, or return the run already going. ``complete`` makes the ``complete`` function
-    (tests); by default GPT-6.1 Terra with the key of ``.env`` (:func:`_complete`)."""
+    (tests); by default the ``model`` chosen (GPT-6.1 Terra) with the key of ``.env`` (:func:`_complete`).
+    ``batches``: the windows are that many, of about the same time (``split_windows``; the user's choice)."""
     existing = job_of(part_id)
     if existing is not None:
         return existing
@@ -233,6 +334,7 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
         if stored is None:
             raise FileNotFoundError("This part has no notes to write a sheet from.")
         header = stored.header
+        _begin(part_id)
         store.taken(part_id)
         notes = pipeline.starting_hands(part_id)
         before = build.current(part_id)
@@ -252,7 +354,7 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
         with _live_lock:
             _live[part_id] = run
         try:
-            ask = complete() if complete is not None else _complete(part_id, "whole")
+            ask = complete() if complete is not None else _complete(part_id, "whole", model)
             reporter.send(EVENT, {"phase": "reference"})
 
             def on_start(algo: FramesProposal, windows: list[tuple[int, int]]) -> None:
@@ -272,6 +374,7 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
                 )
 
             def asked(system: str, messages: list[dict]) -> str:
+                _check_stop(part_id)
                 # A part deleted while Sonnet works (its project, or a check's temporary copy): no more requests.
                 if not pipeline.has_events(part_id):
                     raise PartGone("The part was deleted while Sonnet wrote its sheet.")
@@ -283,6 +386,7 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
                 sid=part_id[:8],
                 hands=shown,
                 quarter_ms=drawn_before.quarter_ms if named else None,
+                windows=split_windows(drawn_before, batches) if batches else None,
                 on_start=on_start,
                 on_part=on_part,
             )
@@ -334,7 +438,7 @@ def start(part_id: str, *, complete: Callable[[], Complete] | None = None) -> jo
             with _live_lock:
                 _live.pop(part_id, None)
 
-    return jobs.submit(work, key=KEY.format(part_id), describe=lambda result: dict(result or {}))
+    return _submit(part_id, work)
 
 
 def commit(
@@ -439,6 +543,8 @@ def start_stretch(
     staff: int | None = None,
     picked: list[str] | None = None,
     complete: Callable[[], Complete] | None = None,
+    model: str | None = None,
+    batches: int | None = None,
 ) -> jobs.Job:
     """The AI writes the columns ``[start, end)`` of the part's sheet again with the user's words (Phase 7, plan
     task 7.5): one window request (``sheet.llm.frames.write_stretch``), the hands of the sheet now shown as a
@@ -446,7 +552,9 @@ def start_stretch(
     be edited (same job key as a whole run); its answer is stored as one step (``edits.apply_stretch``), or nothing
     when no reply was accepted (the summary of the job's ``done`` message says ``failed``). ``staff`` (1 or 2) or
     ``picked`` (the refs ``"<frame>:<midi>"`` of the notes picked) say what the user selected; with ``staff`` the
-    stretch is of that hand only, and the other hand stays as it is (implementation 04, Phase 4)."""
+    stretch is of that hand only, and the other hand stays as it is (implementation 04, Phase 4). ``batches`` (the
+    user's choice, 2026-10-30): the stretch in that many requests of about the same time, one after the other, each
+    seeing the ones before it as written; a batch that fails keeps its notes, and the whole is one step."""
     if job_of(part_id) is not None:
         raise Busy("The AI is already enhancing this sheet.")
 
@@ -455,15 +563,23 @@ def start_stretch(
         if stored is None:
             raise FileNotFoundError("This part has no notes.")
         notes_revision = stored.header.notes_revision
+        _begin(part_id)
         drawn, current, notes = _as_drawn(part_id)
-        run = LiveRun(part_id, drawn.text, [(start, end)], staff=staff if staff in (1, 2) else None)
+        one = staff if staff in (1, 2) else None
+        subs = (
+            split_windows(current, batches, staffs=(one,) if one else (1, 2), start=start, end=end)
+            if batches and batches > 1
+            else []
+        ) or [(start, end)]
+        run = LiveRun(part_id, drawn.text, subs, staff=one)
         with _live_lock:
             _live[part_id] = run
         try:
-            ask = complete() if complete is not None else _complete(part_id, "stretch")
-            reporter.send(EVENT, {"phase": "stretch", "start": start, "end": end})
+            ask = complete() if complete is not None else _complete(part_id, "stretch", model)
+            reporter.send(EVENT, {"phase": "stretch", "start": start, "end": end, "total": len(subs)})
 
             def asked(system: str, messages: list[dict]) -> str:
+                _check_stop(part_id)
                 if not pipeline.has_events(part_id):
                     raise PartGone(
                         "The part was deleted while the AI wrote a stretch of its sheet."
@@ -471,21 +587,34 @@ def start_stretch(
                 return ask(system, messages)
 
             places = [p for p in (_place(ref) for ref in picked or []) if p is not None]
-            sheet, log = write_stretch(
-                current,
-                notes,
-                asked,
-                start=start,
-                end=end,
-                instruction=instruction,
-                staff=staff,
-                picked=places or None,
-                sid=part_id[:8],
-            )
+            sheet, log, accepted = current, None, 0
+            for k, (a, b) in enumerate(subs):
+                try:
+                    written, log = write_stretch(
+                        sheet,
+                        notes,
+                        asked,
+                        start=a,
+                        end=b,
+                        instruction=instruction,
+                        staff=staff,
+                        picked=[p for p in places if a <= p[0] < b] or None,
+                        sid=part_id[:8],
+                    )
+                except ValueError:  # a batch with no note of the hand: nothing to write there
+                    written = None
+                if written is not None:
+                    sheet, accepted = written, accepted + 1
+                run.advanced(f1.write(sheet, mode="frames"), written is not None)
+                reporter.send(EVENT, {"phase": "batch", "done": k + 1, "total": len(subs)})
+                if log is not None and log.status == "error":
+                    break  # no credits, no network: the next batches would fail the same way
+            if not accepted:
+                sheet = None
             usd = float(getattr(ask, "usd", 0.0) or 0.0)
             requests = len(getattr(ask, "calls", []))
             if sheet is None:
-                return {"stretch": "failed", "usd": round(usd, 4), "note": log.note or None}
+                return {"stretch": "failed", "usd": round(usd, 4), "note": (log.note if log else None) or None}
             words = " ".join(instruction.split())
             done = edits.apply_stretch(
                 part_id,
@@ -500,12 +629,17 @@ def start_stretch(
                 staff=staff,
             )
             reporter.send(EVENT, {"phase": "saved"})
-            return {"stretch": "ok" if done else "stale", "usd": round(usd, 4)}
+            return {
+                "stretch": "ok" if done else "stale",
+                "usd": round(usd, 4),
+                "batches": accepted,
+                "total": len(subs),
+            }
         finally:
             with _live_lock:
                 _live.pop(part_id, None)
 
-    return jobs.submit(work, key=KEY.format(part_id), describe=lambda result: dict(result or {}))
+    return _submit(part_id, work)
 
 
 def _as_drawn(part_id: str) -> tuple[build.Drawn, Any, Any]:
@@ -556,6 +690,7 @@ def start_simplify(
             ask = complete() if complete is not None else _complete(part_id, "simplify")
 
             def asked(system: str, messages: list[dict]) -> str:
+                _check_stop(part_id)
                 if not pipeline.has_events(part_id):
                     raise PartGone("The part was deleted while the AI simplified its sheet.")
                 return ask(system, messages)
@@ -606,7 +741,7 @@ def start_simplify(
             with _live_lock:
                 _live.pop(part_id, None)
 
-    return jobs.submit(work, key=KEY.format(part_id), describe=lambda result: dict(result or {}))
+    return _submit(part_id, work)
 
 
 LEVEL_LABELS = {"both": "both hands", "right": "the right hand", "left": "the left hand"}
@@ -621,17 +756,29 @@ def start_level(
     end: int | None = None,
     patterns: list[str] | None = None,
     words: str = "",
+    exact: bool = False,
     complete: Callable[[], Complete] | None = None,
+    model: str | None = None,
+    batches: int | None = None,
+    strict: list[str] | None = None,
+    first: bool = False,
+    chords: str = "",
 ) -> jobs.Job:
     """The AI writes the ``hand`` (``right``, ``left`` or ``both``) of the part's sheet again at ``level`` (one level,
     or one per hand: ``{"right": "hard", "left": "medium"}``), over the whole song or over ``[start, end)`` (a range),
     with the ``patterns`` selected in the catalog and the user's ``words`` (implementation 04-3, Phase 4; plan
     sections 5.4 and 5.8). A hand with no pattern selected or named gets the patterns of its level used when none is
-    selected (``levels.run_refs``). While it works the page shows the sheet of the moment, its batches as segments;
-    the end stores it as one step (``edits.apply_level``). The summary of the job's ``done`` message: ``level``
-    (``ok``, ``failed`` when no batch was accepted, ``stale`` when the notes changed meanwhile, ``gone``), ``batches``
-    and ``total``, ``usd``."""
-    from aitu_backend.sheet.levels.grid import song_grid  # noqa: PLC0415
+    selected (``levels.run_refs``), unless ``exact``: then a hand with none is written by its level's rules only.
+    While it works the page shows the sheet of the moment, its batches as segments; the end stores it as one step
+    (``edits.apply_level``). The summary of the job's ``done`` message: ``level`` (``ok``, ``failed`` when no batch
+    was accepted, ``stale`` when the notes changed meanwhile, ``gone``), ``batches`` and ``total``, ``usd``, ``run``
+    (the id of its log).
+
+    Implementation 04-5: ``strict``, the patterns ticked Strict; every conversation with the AI goes into the run's
+    log (:mod:`.runs`) as it ends. ``first`` (the routes, the user, 2026-10-31): a run of two batches or more writes
+    the plan and its first batch only, stores it and waits (``waiting`` in the summary and the log): the user checks
+    it, answers the AI (:func:`again_batch`) or goes on (:func:`continue_level`). ``chords``: the song's chords as a
+    guitar guide gives them (the user, 2026-10-31), in the system prompt of every request."""
     from aitu_backend.sheet.llm import levels  # noqa: PLC0415
 
     if hand not in HANDS:
@@ -639,113 +786,340 @@ def start_level(
     levels.hand_levels(level)
     if job_of(part_id) is not None:
         raise Busy("The AI is already enhancing this sheet.")
-    staffs = (1, 2) if HANDS[hand] is None else (HANDS[hand],)
+    staffs = _staffs(hand)
     if not levels.level_windows(f1.read(build.current(part_id).text), staffs, start, end):
         raise ValueError("This hand has no notes here.")
-    refs = levels.run_refs(level, staffs, list(patterns or []), words)
+    refs = levels.run_refs(level, staffs, list(patterns or []), words, exact=exact)
+    hard = sorted({r for r in strict or [] if r in refs})
 
     def work(reporter: BaseProgress) -> dict[str, Any]:
-        stored = pipeline.load_note_events(part_id)
-        if stored is None:
-            raise FileNotFoundError("This part has no notes.")
-        notes_revision = stored.header.notes_revision
-        drawn, current, _ = _as_drawn(part_id)
-        grid = song_grid(current)
-        windows = levels.level_windows(current, staffs, start, end)
-        run = LiveRun(part_id, drawn.text, windows, staff=HANDS[hand])
-        with _live_lock:
-            _live[part_id] = run
-        try:
-            ask = complete() if complete is not None else _level_complete(part_id, level)
+        windows = levels.level_windows(f1.read(build.current(part_id).text), staffs, start, end, batches)
+        chosen = [levels.catalog()[r] for r in refs]
+        log = runs.create(
+            part_id,
+            {
+                "level": level,
+                "hand": hand,
+                "start": start,
+                "end": end,
+                "patterns": refs,
+                "strict": hard,
+                "words": " ".join(words.split()),
+                "model": model_of(model),
+                "windows": [list(w) for w in windows],
+                "prompt": levels.LEVEL_VERSION,
+                "chords": chords.strip(),
+            },
+            levels.system_prompt(level, chosen, staffs, frozenset(hard), chords),
+        )
+        todo = windows[:1] if first and len(windows) > 1 else windows
+        return _level_work(part_id, reporter, log, todo, complete=complete)
 
-            def asked(system: str, messages: list[dict]) -> str:
-                if not pipeline.has_events(part_id):
-                    raise PartGone("The part was deleted while the AI wrote a level of its sheet.")
-                return ask(system, messages)
+    return _submit(part_id, work)
 
-            accepted: list[tuple[int, int]] = []
-            written: list[Any] = []
 
-            def on_plan(log: WindowLog) -> None:
-                reporter.send(EVENT, {"phase": "plan", "status": log.status, "total": len(windows)})
+def _staffs(hand: str) -> tuple[int, ...]:
+    return (1, 2) if HANDS[hand] is None else (HANDS[hand],)
 
-            def on_batch(log: WindowLog, batch: Any) -> None:
-                if log.status == "ok" and batch.sheet is not None:
-                    accepted.append((log.start, log.end))
-                    written.extend(n for n in batch.sheet.notes if n.staff in staffs)
-                run.advanced(f1.write(_level_drawn(levels, current, written, accepted, staffs), mode="frames"))
-                reporter.send(
-                    EVENT,
-                    {"phase": "batch", "done": log.k + 1, "total": len(windows), "status": log.status},
+
+def continue_level(part_id: str, run_id: str, *, complete: Callable[[], Complete] | None = None) -> jobs.Job:
+    """**Go on with the other batches** of a run that waits after its first batch (implementation 04-5): the batches
+    not written yet, with the run's plan and rules, each seeing the batches before it; one step of undo. **Revert**
+    then puts back the part as it was before the first batch."""
+    log = runs.load(part_id, run_id)
+    if log is None:
+        raise LookupError("No such run.")
+    if log["state"] != "waiting":
+        raise ValueError("This run is not waiting for you.")
+    if job_of(part_id) is not None:
+        raise Busy("The AI is already enhancing this sheet.")
+    seen = {(b["start"], b["end"]) for b in log["batches"]}
+    todo = [tuple(w) for w in log["request"]["windows"] if tuple(w) not in seen]
+
+    def work(reporter: BaseProgress) -> dict[str, Any]:
+        return _level_work(part_id, reporter, log, todo, complete=complete)
+
+    return _submit(part_id, work)
+
+
+def _level_work(
+    part_id: str,
+    reporter: BaseProgress,
+    log: dict[str, Any],
+    todo: list[tuple[int, int]],
+    *,
+    complete: Callable[[], Complete] | None,
+) -> dict[str, Any]:
+    """The batches ``todo`` of the run whose log is ``log``: the plan first when the log has none yet (a new run),
+    then the batches, stored as one step. The batches of the run already written (a run that goes on after its first
+    batch) are read from the sheet: the next batches see them, and the page shows them written."""
+    from aitu_backend.sheet.levels.grid import song_grid  # noqa: PLC0415
+    from aitu_backend.sheet.llm import levels  # noqa: PLC0415
+
+    req = log["request"]
+    level, hand, refs, hard, words = req["level"], req["hand"], req["patterns"], req["strict"], req["words"]
+    staffs = _staffs(hand)
+    stored = pipeline.load_note_events(part_id)
+    if stored is None:
+        raise FileNotFoundError("This part has no notes.")
+    notes_revision = stored.header.notes_revision
+    if "before" in log:
+        _meta[part_id] = {"before": log["before"]}  # Revert goes back to before the first batch
+    else:
+        log["before"] = _begin(part_id)
+    drawn, current, _ = _as_drawn(part_id)
+    grid = song_grid(current)
+    windows = [tuple(w) for w in req["windows"]]
+    chosen = [levels.catalog()[r] for r in refs]
+    allowed = set(refs)
+    plan = rules = None
+    done_before = [(b["start"], b["end"]) for b in log["batches"] if b["status"] == "ok"]
+    if log.get("plan") and log["plan"]["status"] == "ok":
+        p = log["plan"]
+        _, plan = levels.read_plan(p["messages"][-1]["content"], allowed, staffs, p["start"], p["end"], frozenset(hard))
+        rules = [levels.Rule(r["text"], r["source"], r.get("ref")) for r in log["rules"]]
+    written_before = [n for n in current.notes if n.staff in staffs and any(a <= n.frame < b for a, b in done_before)]
+    first_index = windows.index(todo[0]) if todo else 0
+    run = LiveRun(part_id, drawn.text, windows, staff=HANDS[hand])
+    run.done, run.outcomes = first_index, [True] * first_index
+    log["state"] = "running"
+    runs.save(part_id, log)
+    with _live_lock:
+        _live[part_id] = run
+    try:
+        ask = complete() if complete is not None else _level_complete(part_id, level, req.get("model"))
+        usd0 = float(log.get("usd", 0.0))
+        requests0 = int(log.get("requests", 0))
+
+        def asked(system: str, messages: list[dict]) -> str:
+            _check_stop(part_id)
+            if not pipeline.has_events(part_id):
+                raise PartGone("The part was deleted while the AI wrote a level of its sheet.")
+            return ask(system, messages)
+
+        accepted: list[tuple[int, int]] = []
+        written: list[Any] = []
+
+        def on_plan(wlog: WindowLog) -> None:
+            reporter.send(EVENT, {"phase": "plan", "status": wlog.status, "total": len(windows)})
+
+        def on_batch(wlog: WindowLog, batch: Any) -> None:
+            if wlog.status == "ok" and batch.sheet is not None:
+                accepted.append((wlog.start, wlog.end))
+                written.extend(n for n in batch.sheet.notes if n.staff in staffs)
+            run.advanced(
+                f1.write(_level_drawn(levels, current, written, accepted, staffs), mode="frames"),
+                wlog.status == "ok" and batch.sheet is not None,
+            )
+            reporter.send(EVENT, {"phase": "batch", "done": wlog.k + 1, "total": len(windows), "status": wlog.status})
+
+        def on_talk(talk: Any) -> None:
+            log["usd"] = round(usd0 + float(getattr(ask, "usd", 0.0) or 0.0), 4)
+            log["requests"] = requests0 + len(getattr(ask, "calls", []))
+            if talk.k < 0:
+                log["rules"] = (
+                    [r.to_json() for r in levels.read_rules(talk.messages[-1]["content"])] if talk.status == "ok" else []
                 )
+            else:
+                log["rules"] += [{"text": x, "source": f"batch {talk.k + 1}", "ref": None} for x in talk.rules]
+            runs.update(part_id, log, talk)
 
-            reporter.send(EVENT, {"phase": "level", "total": len(windows)})
+        reporter.send(EVENT, {"phase": "level", "total": len(windows)})
+        span = None if req.get("start") is None and req.get("end") is None else (windows[0][0], windows[-1][1])
+        try:
             out = levels.write_level(
                 current,
                 asked,
                 grid,
                 level=level,
                 staffs=staffs,
-                patterns=[levels.catalog()[r] for r in refs],
+                patterns=chosen,
                 sid=part_id[:8],
                 words=words,
-                windows=windows,
-                span=None if start is None and end is None else (windows[0][0], windows[-1][1]),
+                windows=list(todo),
+                plan=plan,
+                rules=rules,
+                span=span,
                 on_plan=on_plan,
                 on_batch=on_batch,
+                strict=frozenset(hard),
+                on_talk=on_talk,
+                written_before=written_before,
+                done_before=done_before,
+                first_index=first_index,
+                count=len(windows),
+                guide=req.get("chords", ""),
             )
+        except BaseException:
+            log["state"] = "stopped"
+            runs.save(part_id, log)
+            raise
+        usd = float(getattr(ask, "usd", 0.0) or 0.0)
+        requests = len(getattr(ask, "calls", []))
+        log["usd"], log["requests"] = round(usd0 + usd, 4), requests0 + requests
+        left = len(windows) - first_index - len(todo)
+        waiting = bool(accepted) and left > 0 and part_id not in _stop_asked
+        log["state"] = (
+            "stopped" if part_id in _stop_asked else "waiting" if waiting else "done" if accepted or done_before else "failed"
+        )
+        runs.save(part_id, log)
+        summary: dict[str, Any] = {
+            "hand": hand,
+            "levelName": levels.level_name(level),
+            "usd": round(usd, 4),
+            "batches": len(accepted) + len(done_before),
+            "total": len(windows),
+            "run": log["id"],
+        }
+        if waiting:
+            summary["waiting"] = True
+        note = out.plan_log.note or next((wlog.note for wlog, _ in out.batches if wlog.note), "")
+        if note:
+            summary["note"] = note
+        if "NoCredits" in note:
+            summary["credits"] = "openai"
+        if not pipeline.has_events(part_id):
+            return {**summary, "level": "gone"}
+        if not accepted:
+            return {**summary, "level": "failed"}
+        # The answers as the app draws them (beam groups, clefs, 8va and decoration notes by its rules), with the
+        # figures the AI wrote kept as set by hand (a decoration note keeps the rule's).
+        spliced = _level_drawn(levels, current, written, accepted, staffs)
+        ours = [n for n in spliced.notes if n.staff in staffs and not n.grace and any(a <= n.frame < b for a, b in accepted)]
+        entry = {
+            "level": level,
+            "hand": hand,
+            "start": accepted[0][0],
+            "end": accepted[-1][1],
+            "range": req.get("start") is not None or req.get("end") is not None,
+            "prompt": levels.LEVEL_VERSION,
+            "patterns": refs,
+            "strict": hard,
+            "run": log["id"],
+            "words": words,
+            "plan": [section.line() for section in out.plan],
+            "batches": [[wlog.start, wlog.end, wlog.status, wlog.replies] for wlog, _ in out.batches],
+            "declared": [line for _, batch in out.batches for line in batch.declared.lines()],
+        }
+        part = ", batch 1" if waiting else ", the other batches" if first_index else ""
+        done = edits.apply_level(
+            part_id,
+            spliced,
+            notes_revision=notes_revision,
+            start=accepted[0][0],
+            end=accepted[-1][1],
+            staff=HANDS[hand],
+            wrote=ours,
+            usd=usd,
+            requests=requests,
+            model=getattr(ask, "model", None),
+            label=f"Level {levels.level_name(level)} with AI, {LEVEL_LABELS[hand]}{part}",
+            entry=entry,
+        )
+        reporter.send(EVENT, {"phase": "saved"})
+        return {**summary, "level": "ok" if done else "stale"}
+    finally:
+        with _live_lock:
+            _live.pop(part_id, None)
+
+
+def again_batch(
+    part_id: str, run_id: str, k: int, words: str, *, complete: Callable[[], Complete] | None = None
+) -> jobs.Job:
+    """**Write this batch again** (implementation 04-5, the user, 2026-10-31): batch ``k`` (0 = first) of a run with a
+    log goes on with the user's answer (``levels.write_again``), is checked against the notes it had before the run,
+    and replaces that stretch of its hands on the sheet as one step of undo. Its explanation and rules in the log are
+    the new ones, and the answer is kept with the batch. A run waiting after its first batch keeps waiting."""
+    from aitu_backend.sheet.levels.grid import song_grid  # noqa: PLC0415
+    from aitu_backend.sheet.llm import levels  # noqa: PLC0415
+
+    log = runs.load(part_id, run_id)
+    if log is None:
+        raise LookupError("No such run.")
+    old = next((b for b in log["batches"] if b["k"] == k), None)
+    if old is None or not old.get("target") or not old.get("messages"):
+        raise LookupError("This batch has no conversation to answer.")
+    if not words.strip():
+        raise ValueError("Write your answer to the AI first.")
+    if job_of(part_id) is not None:
+        raise Busy("The AI is already enhancing this sheet.")
+    req = log["request"]
+    level, hand, hard = req["level"], req["hand"], frozenset(req["strict"])
+    staffs = _staffs(hand)
+
+    def work(reporter: BaseProgress) -> dict[str, Any]:
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise FileNotFoundError("This part has no notes.")
+        notes_revision = stored.header.notes_revision
+        _begin(part_id)
+        drawn, current, _ = _as_drawn(part_id)
+        a, b = old["start"], old["end"]
+        target = f1.read(old["target"])
+        kept = [n for n in current.notes if not (n.staff in staffs and a <= n.frame < b)]
+        before = replace(current, notes=kept + [n for n in target.notes if n.staff in staffs]).sort()
+        grid = song_grid(before)
+        run = LiveRun(part_id, drawn.text, [(a, b)], staff=HANDS[hand])
+        with _live_lock:
+            _live[part_id] = run
+        try:
+            ask = complete() if complete is not None else _level_complete(part_id, level, req.get("model"))
+
+            def asked(system: str, messages: list[dict]) -> str:
+                _check_stop(part_id)
+                return ask(system, messages)
+
+            reporter.send(EVENT, {"phase": "level", "total": 1})
+            talk = levels.Talk(
+                old["k"], a, b, old["messages"], old["status"], list(old.get("errors", [])), old["target"]
+            )
+            try:
+                again, result = levels.write_again(
+                    asked, log["system"], talk, words, before, grid, level=level, staffs=staffs,
+                    allowed=set(req["patterns"]), strict=hard, guide=req.get("chords", ""),
+                )
+            except Exception as exc:  # noqa: BLE001 (no credits, no network: the batch stays as it is)
+                return {"level": "failed", "again": k + 1, "run": run_id, "note": f"{type(exc).__name__}: {exc}",
+                        **({"waiting": True} if log["state"] == "waiting" else {})}
             usd = float(getattr(ask, "usd", 0.0) or 0.0)
             requests = len(getattr(ask, "calls", []))
+            ok = again.status == "ok" and result.sheet is not None
+            answers = list(old.get("answers", [])) + [{"words": " ".join(words.split()), "at": runs._now()}]
+            entry_talk = again.to_json() | {"answers": answers}
+            if not ok:  # the batch on the sheet stays the earlier answer: its explanation too
+                entry_talk.update(status=old["status"], explain=old["explain"], rules=old["rules"], declared=old["declared"])
+            log["batches"] = sorted([x for x in log["batches"] if x["k"] != k] + [entry_talk], key=lambda x: x["k"])
+            if ok:
+                source = f"batch {k + 1}"
+                log["rules"] = [r for r in log["rules"] if r["source"] != source] + [
+                    {"text": x, "source": source, "ref": None} for x in again.rules
+                ]
+            log["usd"] = round(float(log.get("usd", 0.0)) + usd, 4)
+            log["requests"] = int(log.get("requests", 0)) + requests
+            runs.save(part_id, log)
             summary: dict[str, Any] = {
-                "hand": hand,
-                "levelName": levels.level_name(level),
-                "usd": round(usd, 4),
-                "batches": len(accepted),
-                "total": len(windows),
+                "hand": hand, "levelName": levels.level_name(level), "usd": round(usd, 4), "batches": int(ok),
+                "total": 1, "run": run_id, "again": k + 1,
             }
-            note = out.plan_log.note or next((log.note for log, _ in out.batches if log.note), "")
-            if note:
-                summary["note"] = note
-            if "NoCredits" in note:
-                summary["credits"] = "openai"
-            if not pipeline.has_events(part_id):
-                return {**summary, "level": "gone"}
-            if not accepted:
+            if log["state"] == "waiting":
+                summary["waiting"] = True
+            if not ok:
+                run.advanced(drawn.text, False)
                 return {**summary, "level": "failed"}
-            # The answers as the app draws them (beam groups, clefs, 8va and decoration notes by its rules), with
-            # the figures the AI wrote kept as set by hand (a decoration note keeps the rule's).
-            spliced = _level_drawn(levels, current, written, accepted, staffs)
-            ours = [
-                n
-                for n in spliced.notes
-                if n.staff in staffs and not n.grace and any(a <= n.frame < b for a, b in accepted)
-            ]
+            written = [n for n in result.sheet.notes if n.staff in staffs]
+            spliced = _level_drawn(levels, current, written, [(a, b)], staffs)
+            run.advanced(f1.write(spliced, mode="frames"), True)
+            ours = [n for n in spliced.notes if n.staff in staffs and not n.grace and a <= n.frame < b]
             entry = {
-                "level": level,
-                "hand": hand,
-                "start": accepted[0][0],
-                "end": accepted[-1][1],
-                "range": start is not None or end is not None,
-                "prompt": levels.LEVEL_VERSION,
-                "patterns": refs,
-                "words": " ".join(words.split()),
-                "plan": [section.line() for section in out.plan],
-                "batches": [[log.start, log.end, log.status, log.replies] for log, _ in out.batches],
-                "declared": [line for _, batch in out.batches for line in batch.declared.lines()],
+                "level": level, "hand": hand, "start": a, "end": b, "range": True, "prompt": levels.LEVEL_VERSION,
+                "patterns": req["patterns"], "strict": req["strict"], "run": run_id, "again": k + 1,
+                "words": " ".join(words.split()), "plan": [], "batches": [[a, b, "ok", len(again.errors) + 1]],
+                "declared": again.declared,
             }
             done = edits.apply_level(
-                part_id,
-                spliced,
-                notes_revision=notes_revision,
-                start=accepted[0][0],
-                end=accepted[-1][1],
-                staff=HANDS[hand],
-                wrote=ours,
-                usd=usd,
-                requests=requests,
-                model=getattr(ask, "model", None),
-                label=f"Level {levels.level_name(level)} with AI, {LEVEL_LABELS[hand]}",
-                entry=entry,
+                part_id, spliced, notes_revision=notes_revision, start=a, end=b, staff=HANDS[hand], wrote=ours,
+                usd=usd, requests=requests, model=getattr(ask, "model", None),
+                label=f"Batch {k + 1} written again with AI", entry=entry,
             )
             reporter.send(EVENT, {"phase": "saved"})
             return {**summary, "level": "ok" if done else "stale"}
@@ -753,7 +1127,7 @@ def start_level(
             with _live_lock:
                 _live.pop(part_id, None)
 
-    return jobs.submit(work, key=KEY.format(part_id), describe=lambda result: dict(result or {}))
+    return _submit(part_id, work)
 
 
 def _level_drawn(levels: Any, current: Any, written: list[Any], accepted: list[tuple[int, int]], staffs: tuple[int, ...]) -> Any:
@@ -805,6 +1179,75 @@ def level_cost(current: Any, hand: str, start: int | None = None, end: int | Non
         "batches": batches,
         "usd": round(USD_LEVEL_PLAN + batches * USD_LEVEL_BATCH, 2),
         "minutes": _minutes(seconds),
+    }
+
+
+#: The longest batch the user may choose, in seconds of music: one request must still answer a whole batch.
+BATCH_MAX_S = 90.0
+#: The shortest one, about: a batch needs a few notes to be worth a request.
+BATCH_MIN_S = 3.0
+
+
+def batch_plan(
+    part_id: str,
+    *,
+    run: str,
+    hand: str = "both",
+    start: int | None = None,
+    end: int | None = None,
+    batches: int | None = None,
+    model: str | None = None,
+) -> dict[str, Any]:
+    """The batches a run of Enhance with AI would make (the user, 2026-10-30), for the dialog's preview on the sheet:
+    ``run`` ``all`` (Write it all again), ``level`` (of the whole song, or of ``[start, end)``) or ``stretch``; the
+    ``hand`` rewritten. ``batches`` (by default as many as the run makes today, one for a stretch, within ``min`` and
+    ``max``) cut at about the same time (``split_windows``), which is what the run uses when the dialog sends that
+    number. Also the cost and the minutes with ``model``: the run's estimate for the batches it makes today, half of
+    it following the number of requests and half the music, times the model's measured ratio to GPT-6.1 Terra."""
+    from aitu_backend.sheet.llm import levels  # noqa: PLC0415
+
+    name = model_of(model)
+    if hand not in HANDS:
+        raise ValueError(f"No hand {hand!r}.")
+    staffs = (1, 2) if HANDS[hand] is None or run == "all" else (HANDS[hand],)
+    current = f1.read(build.current(part_id).text)
+    if run == "all":
+        default = len(windows_of(current))
+        usd, seconds = USD_CACHE + (default + 1) * USD_WINDOW, (default + 1) * SECONDS_WINDOW
+        start = end = None
+    elif run == "level":
+        default = len(levels.level_windows(current, staffs, start, end))
+        usd, seconds = USD_LEVEL_PLAN + default * USD_LEVEL_BATCH, SECONDS_LEVEL_PLAN + default * SECONDS_LEVEL_BATCH
+    elif run == "stretch":
+        if start is None or end is None:
+            raise ValueError("A stretch needs its frames.")
+        default = 1
+        usd, seconds = USD_CACHE + USD_STRETCH, SECONDS_STRETCH
+    else:
+        raise ValueError(f"No run {run!r}.")
+    whole = split_windows(current, 1, staffs=staffs, start=start, end=end)
+    if not whole:
+        raise ValueError("This hand has no notes here.")
+    span_s = (whole[0][1] - whole[0][0]) * FRAME_MS / 1000
+    low = max(1, math.ceil(span_s / BATCH_MAX_S))
+    high = max(low, min(60, int(span_s // BATCH_MIN_S) or 1))
+    default = min(high, max(low, default or 1))
+    count = min(high, max(low, batches or default))
+    windows = split_windows(current, count, staffs=staffs, start=start, end=end)
+    ratio = MODELS[name]
+    scale = 0.5 + 0.5 * len(windows) / default
+    return {
+        "run": run,
+        "hand": hand,
+        "model": name,
+        "windows": [[a, b] for a, b in windows],
+        "count": len(windows),
+        "default": default,
+        "min": low,
+        "max": high,
+        "seconds": round(span_s / max(1, len(windows)), 1),
+        "usd": round(usd * scale * ratio["usd"], 2),
+        "minutes": _minutes(seconds * scale * ratio["time"]),
     }
 
 

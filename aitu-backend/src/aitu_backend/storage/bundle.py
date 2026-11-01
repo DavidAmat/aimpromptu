@@ -148,6 +148,9 @@ class PartEntry(_Camel):
     #: The lyrics pieces of the pool, in order, saved with the words by the same **Save lyrics**.
     #: ``None`` until saved; an older pool may still sit in ``sheet.json`` (``lyricsPool``).
     lyrics_pool: list[str] | None = Field(None, alias="lyricsPool")
+    #: The chords of the song as a guitar guide gives them with the lyrics, pasted by the user in **Enhance with AI**
+    #: (implementation 04-5, 2026-10-31): every level run sends them to the AI, which follows their sequence.
+    chords: str | None = Field(None, max_length=8000)
 
 
 class ProjectFile(_Camel):
@@ -301,7 +304,7 @@ def write_project(project: ProjectFile, *, touch: bool = True) -> ProjectFile:
         if not entry["source"].get("files"):
             # A part of one file keeps the shape it had before **add audio** existed.
             entry["source"].pop("files", None)
-        for name in ("lyrics", "lyricsPool"):
+        for name in ("lyrics", "lyricsPool", "chords"):
             # Absent until the Lyrics tab saves them (Phase 7).
             if entry.get(name) is None:
                 entry.pop(name, None)

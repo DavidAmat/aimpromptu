@@ -15,7 +15,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import { projectsApi, type PartRow, type SongRun } from "../../api";
+import { projectsApi, type PartRow, type RunChoice, type SongRun } from "../../api";
 import { ROUTES } from "../../layout/routes";
 import SheetPage, { type SheetStep } from "./sheet/SheetPage";
 import { enhanceWithAi } from "./sheet/frames/navigation";
@@ -70,11 +70,11 @@ export function SheetTab() {
   );
 
   /** A version of My library changes through its edit copy: the AI runs there (as **Edit**, then the dialog's run). */
-  const writeInCopy = useCallback(async (run: SongRun) => {
+  const writeInCopy = useCallback(async (run: SongRun, choice?: RunChoice) => {
     if (!projectId) return;
     try {
       const copy = await projectsApi.edit(projectId);
-      navigate(ROUTES.project(copy.parts[0] ?? copy.id, "sheet"), { state: enhanceWithAi(run) });
+      navigate(ROUTES.project(copy.parts[0] ?? copy.id, "sheet"), { state: enhanceWithAi(run, choice) });
     } catch (caught) {
       setError(said(caught, "The version could not be opened for editing."));
     }
@@ -92,7 +92,7 @@ export function SheetTab() {
             audioRevision,
             ...(projectId ? { projectId } : {}),
             onChanged: () => void refresh(),
-            ...(library ? { enhanceInCopy: (run: SongRun) => void writeInCopy(run) } : {}),
+            ...(library ? { enhanceInCopy: (run: SongRun, choice?: RunChoice) => void writeInCopy(run, choice) } : {}),
             ...(readOnly ? {} : { onSplit: split }),
             ...(library
               ? {

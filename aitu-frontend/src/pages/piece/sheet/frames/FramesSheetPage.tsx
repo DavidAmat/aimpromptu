@@ -78,6 +78,8 @@ import {
   type ReadingEdit,
   type SheetNote,
   type SheetPreview,
+  type SheetSegment,
+  type RunChoice,
   type SongRun,
   type StretchRequest,
 } from "../../../../api";
@@ -104,6 +106,9 @@ import { PianoToolbox } from "../PianoToolboxes";
 import { HAND_COLOUR, HELD_COLOUR, formatSeconds, type SoundingNote } from "../sheetConstants";
 import type { SheetStep } from "../SheetPage";
 import { besideOnScreen, clearOfRange, firstLineBoxOf, screenBoxOf } from "../toolboxPlacement";
+import { AiHistoryPanel } from "./AiHistoryPanel";
+import { AiRunPanel } from "./AiRunPanel";
+import { ENHANCE_PANEL_WIDTH, type BatchPreview } from "./batches";
 import { EnhanceDialog, type EnhanceTab, type StretchHand } from "./EnhanceDialog";
 import { FramesLyricsToolbox } from "./FramesLyricsToolbox";
 import { FramesNoteToolbox } from "./FramesNoteToolbox";
@@ -115,7 +120,7 @@ import { FramesPreviewDialog } from "./FramesPreviewDialog";
 import { FramesSheetToolbox, MAX_ZOOM, MIN_ZOOM, type FramesSheetTab } from "./FramesSheetToolbox";
 import { msAtPoint, placeAt, steadyColumns } from "./geometry";
 import { frameOf, handForKey, midiOf, oneColumn } from "./readingTools";
-import { songRunOf } from "./navigation";
+import { runChoiceOf, songRunOf } from "./navigation";
 import { useFramesLyrics } from "./useFramesLyrics";
 import { useFramesSheet } from "./useFramesSheet";
 
@@ -231,9 +236,8 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   // and the cursor goes back where it was asked to be (the start of the passage), or where it was.
   const [audioLoads, setAudioLoads] = useState<{ revision: number | null; loads: number }>({ revision: null, loads: 0 });
   const seekAfterLoad = useRef<number | null>(null);
-  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, level, notice } = useFramesSheet(audioUuid, width, {
-    // A take's sheet is the algorithm's, with Enhance with AI as a button (the user's answer of Phase 8).
-    autoStart: !readOnly && role === null,
+  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, level, notice, lastRun, stopRun, revertRun, reloadSheet } =
+    useFramesSheet(audioUuid, width, {
     onChanged: step.onChanged,
   });
   const audioRevision = sheet?.audioRevision ?? null;
@@ -415,26 +419,69 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   const enhanceLabel = enhanced ? "Enhance it again with AI" : "Enhance with AI";
   // The Enhance with AI dialog (implementation 04, Phase 4), opened on a stretch or on the whole song (below).
   const [enhancing, setEnhancing] = useState<Enhancing | null>(null);
+  /** The batches the dialog's run would make, drawn on the sheet while it is open (the user, 2026-10-30). */
+  const [batchPreview, setBatchPreview] = useState<BatchPreview | null>(null);
+
+  // The panel of a run (the user, 2026-10-30): it opens when a run starts (here, after a reload, or in the level copy
+  // the run went to) and stays until Close, with the batches last seen while the AI worked.
+  const [runPanel, setRunPanel] = useState(false);
+  /** The history of AI runs at the right (implementation 04-5); the run to open in it first. */
+  const [historyOpen, setHistoryOpen] = useState<{ run: string | null } | null>(null);
+  // Each end of a run: the panels read the run's log again. Compared during render, as below.
+  const [seenRun, setSeenRun] = useState(lastRun);
+  const [runEnds, setRunEnds] = useState(0);
+  if (lastRun !== seenRun) {
+    setSeenRun(lastRun);
+    setRunEnds((value) => value + 1);
+  }
+  const [stopping, setStopping] = useState(false);
+  const [reverted, setReverted] = useState(false);
+  const [runBatches, setRunBatches] = useState<readonly SheetSegment[]>([]);
+  // Compared during render, as the page does for what it derives from the sheet.
+  const [seenRunning, setSeenRunning] = useState(false);
+  if (running !== seenRunning) {
+    setSeenRunning(running);
+    if (running) {
+      setRunPanel(true);
+      setHistoryOpen(null);
+      setStopping(false);
+      setReverted(false);
+    }
+  }
+  const segments = sheet?.segments;
+  if (running && segments && segments.length > 0 && segments !== runBatches) setRunBatches(segments);
+  const endedRun = !running && runPanel ? lastRun : null;
+  const stopNow = () => {
+    setStopping(true);
+    void stopRun();
+  };
+  const revertNow = () => {
+    const version = endedRun?.summary.before;
+    if (version === undefined) return;
+    void revertRun(version).then((ok) => setReverted(ok));
+  };
   /** A run over the whole song: here, or in the edit copy of a version of My library. */
   const startSong = useCallback(
-    (choice: SongRun) => {
-      if (choice === "all") void run();
+    (choice: SongRun, options?: RunChoice) => {
+      if (choice === "all") void run(options);
       else void simplify(SIMPLIFY_HANDS[choice]);
     },
     [run, simplify],
   );
-  const runSong = (choice: SongRun) => {
+  const runSong = (choice: SongRun, options?: RunChoice) => {
     setEnhancing(null);
-    if (sheet?.llm.canRun) startSong(choice);
-    else step.enhanceInCopy?.(choice);
+    if (sheet?.llm.canRun) startSong(choice, options);
+    else step.enhanceInCopy?.(choice, options);
   };
-  // The edit copy opened by **Enhance with AI** on a version of My library: the run chosen starts here.
+  // The edit copy opened by **Enhance with AI** on a version of My library: the run chosen starts here, with the
+  // model and the number of batches chosen.
   const askedInCopy = songRunOf(location.state);
+  const askedChoice = runChoiceOf(location.state);
   useEffect(() => {
     if (!askedInCopy || !sheet) return;
     navigate(location.pathname, { replace: true, state: null });
-    if (sheet.llm.canRun) startSong(askedInCopy);
-  }, [askedInCopy, sheet, navigate, location.pathname, startSong]);
+    if (sheet.llm.canRun) startSong(askedInCopy, askedChoice);
+  }, [askedInCopy, askedChoice, sheet, navigate, location.pathname, startSong]);
 
   // ------------------------------------------------------------------ editing (Phase 6)
 
@@ -726,6 +773,31 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
     });
   }, [width, picked, edit, audioUuid]);
 
+  // **Delete these frames** of the range toolbox (the user, 2026-10-30): the notes and the audio of the stretch.
+  const deleteFrames = useCallback(() => {
+    if (width === null || !range) return;
+    void edit(() => sheetApi.takeOut(audioUuid, range.start, range.end, width)).then((done) => {
+      if (done) unmark();
+    });
+  }, [width, range, edit, audioUuid, unmark]);
+
+  // **Duplicate** and **Unite** (the user, 2026-10-30): they change the notes, so the picked refs are let go.
+  const duplicatePicked = useCallback(
+    (figure: number) => {
+      if (width === null || picked.length === 0) return;
+      void edit(() => sheetApi.duplicate(audioUuid, picked, figure, width)).then((done) => {
+        if (done) setPick({ uuid: audioUuid, refs: [] });
+      });
+    },
+    [width, picked, edit, audioUuid],
+  );
+  const unitePicked = useCallback(() => {
+    if (width === null || picked.length === 0) return;
+    void edit(() => sheetApi.unite(audioUuid, picked, width)).then((done) => {
+      if (done) setPick({ uuid: audioUuid, refs: [] });
+    });
+  }, [width, picked, edit, audioUuid]);
+
   /** The frames the picked notes cover: from the first one to the column after the last one. */
   const framesOfPicked = (): MarkedRange | null => {
     if (!sheet || picked.length === 0) return null;
@@ -942,13 +1014,13 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
       .then((made) => navigate(ROUTES.project(made.partId, "sheet")))
       .catch((caught: unknown) => setLevelError(said(caught, "The AI could not be asked.")));
   };
-  const sendStretch = (hand: StretchHand, instruction: string) => {
+  const sendStretch = (hand: StretchHand, instruction: string, options?: RunChoice) => {
     const stretch = enhancing?.stretch;
     setEnhancing(null);
     if (!stretch) return;
     unpick();
     unmark();
-    void enhanceStretch({ ...stretch.request, staff: hand, instruction });
+    void enhanceStretch({ ...stretch.request, ...options, staff: hand, instruction });
   };
   const history = sheet?.history ?? { undo: null, redo: null };
   const walk = useCallback(
@@ -1119,6 +1191,18 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
                   icon: <PianoIcon fontSize="small" />,
                   onClick: () => setPianoOpen((open) => !open),
                 },
+                ...(offerAi
+                  ? [
+                      {
+                        label: "History of AI runs",
+                        icon: <Logo height={16} />,
+                        onClick: () => {
+                          setRunPanel(false);
+                          setHistoryOpen({ run: null });
+                        },
+                      },
+                    ]
+                  : []),
               ]}
             />
           </>
@@ -1155,7 +1239,8 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           {levelError}
         </Alert>
       ) : null}
-      {notice ? (
+      {/* The panel of the run says it while it is open. */}
+      {notice && !runPanel ? (
         <Alert severity="info" sx={{ mb: 2 }} data-sheet-notice>
           {notice}
         </Alert>
@@ -1248,7 +1333,8 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           />
         ) : null}
         {/* ⌘ and the wheel scale the drawing from the pointer until it is laid out again (no page scroll sideways). */}
-        <Box ref={holdSheetBox} sx={{ overflowX: "clip" }}>
+        {/* While Enhance with AI is open at the right, the sheet is laid out beside it: its batches show whole. */}
+        <Box ref={holdSheetBox} sx={{ overflowX: "clip", pr: enhancing || runPanel || historyOpen ? `${ENHANCE_PANEL_WIDTH}px` : 0 }}>
           <Box
             sx={
               wheelZoom && wheelZoom.to !== drawnZoom
@@ -1260,6 +1346,13 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           {sheet && !empty ? (
             <FramesSheetView
               sheet={sheet}
+              batches={
+                enhancing
+                  ? batchPreview
+                  : runPanel && running && runBatches.length > 0
+                    ? { windows: runBatches.map((one) => [one.start, one.end] as const), staff: runBatches[0]?.staff ?? null }
+                    : null
+              }
               playheadSeconds={seconds}
               follow={playing}
               centre={playMode}
@@ -1323,6 +1416,8 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           onMoveHand={moveHand}
           onEdit={editNotes}
           onRemove={removePicked}
+          onDuplicate={duplicatePicked}
+          onUnite={unitePicked}
           onChordKey={pressChordKey}
           onSelectFrames={selectFrames}
           onEnhance={aiHere ? openEnhance : null}
@@ -1366,6 +1461,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           onCopy={() => void copySelection()}
           onRecordPassage={role ? null : () => void startPassage(range.start, range.end)}
           onSplit={step.onSplit && !role && range.start > 0 && !splitting ? () => void splitHere() : null}
+          onDelete={role ? null : deleteFrames}
           busy={editing}
           locked={locked}
         />
@@ -1410,6 +1506,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           onEdit={(change) => void apply(change)}
           busy={editing}
           locked={locked}
+          aiRunning={running}
           transposing={previewing !== null && previewing.preview === null && previewing.error === null}
           onPreviewNotes={previewNotes}
           onPreviewFigures={previewFigures}
@@ -1485,6 +1582,41 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
         data-testid="sheet-flash"
       />
       {info ? <InfoDialog target={info} onClose={() => setInfo(null)} /> : null}
+      {historyOpen && !runPanel && !enhancing ? (
+        <AiHistoryPanel
+          audioUuid={audioUuid}
+          busy={running || editing}
+          refresh={runEnds}
+          opening={historyOpen.run}
+          onStarted={reloadSheet}
+          onClose={() => setHistoryOpen(null)}
+        />
+      ) : null}
+      {runPanel && !enhancing ? (
+        <AiRunPanel
+          audioUuid={audioUuid}
+          refresh={runEnds}
+          onStarted={reloadSheet}
+          onHistory={() => {
+            setRunPanel(false);
+            setRunBatches([]);
+            setHistoryOpen({ run: endedRun?.summary.run ?? null });
+          }}
+          running={running}
+          stopping={stopping}
+          batches={runBatches}
+          summary={endedRun?.summary ?? null}
+          notice={endedRun?.notice ?? null}
+          reverted={reverted}
+          busy={editing}
+          onStop={stopNow}
+          onRevert={revertNow}
+          onClose={() => {
+            setRunPanel(false);
+            setRunBatches([]);
+          }}
+        />
+      ) : null}
       {enhancing ? (
         <EnhanceDialog
           key={enhancing.key}
@@ -1502,6 +1634,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           onStretchLevel={sendStretchLevel}
           onSong={runSong}
           onSongLevel={sendSongLevel}
+          onPreview={setBatchPreview}
           onCancel={() => setEnhancing(null)}
         />
       ) : null}
