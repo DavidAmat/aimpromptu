@@ -33,6 +33,7 @@ browser before was removed in implementation 03, Phase 10 (2026-10-27), see
 | **Users** (Admin) | `/admin/users` | `pages/admin/UsersPage.tsx`, inside `RequireMaster` |
 | **Lab** (Admin) | `/admin/lab/<tab>` | `layout/LabLayout.tsx` and `pages/video/`, inside `RequireMaster` |
 | (development only) | `/dev/roll-bench` | `pages/dev/RollBenchPage.tsx`, lazy, only when `import.meta.env.DEV` |
+| (development only) | `/dev/ui` | `pages/dev/UiGalleryPage.tsx`, lazy, only when `import.meta.env.DEV` |
 
 `<step>` is one of `PIECE_STEPS` in `api/pieces.ts`: `source`, `audio`, `notes`, `sheet`.
 `ROUTES.project(id, step?)` builds the address. Until Phase 3 the id of a project is the uuid of its
@@ -102,6 +103,39 @@ sets it when it loads a project; the sheet reads its `frameMs` from it.
 | `pages/piece/SaveToLibraryDialog.tsx` (Phase 13) | The Artist and Song fields add `publicApi.suggest` answers under "Public library" (`groupBy`); a public song sends `publicSongId`, a public artist `publicArtistId` |
 | `layout/SearchDialog.tsx` (Phase 13) | After 200 ms of no typing, the public songs and artists that match, under the user's own results |
 | `pages/play/playQueue.ts`, `PlayPage.tsx` (Phase 13) | `?from=public` on `/play/playlist/:id` reads a public playlist; **Close** goes back to it |
+
+### 1.3 Shared libraries and requests (implementation 02, Phase 14)
+
+| File | Role |
+|---|---|
+| `pages/library/SharedPage.tsx` | **Shared** (`/library/shared`, `?from=<owner id>` picks one library): the songs of the libraries other users share, read only; **Whose library** and **Library of** when there are several |
+| `pages/library/SharedSongPage.tsx` | One song of a shared library (`/library/shared/songs/:id`): its versions, each with **Open** (read only), **Play**, **Add to my library** (`POST /shared/songs/{id}/pull`) |
+| `layout/ShareDialog.tsx` | **Share my library**: a switch per user (`PUT` and `DELETE /shares/{userId}`); opened from the user menu and from Shared |
+| `pages/requests/RequestsPage.tsx` | **Requests** (`/requests`, the author's list) and **Review** (`/admin/requests`, the master user's, with **All**) |
+| `pages/requests/RequestPage.tsx` | One request, laid out like a pull request: the title and status, then **Conversation** (`/requests/:id`) and **Sheet** (`/requests/:id/sheet`); the same page for the author and the review |
+| `pages/requests/Conversation.tsx` | The timeline: the request as sent, the comments (on a stretch of the sheet, with replies), the reviews and the events; **Comment on this stretch** writes `POST /requests/{id}/comments` |
+| `pages/requests/RequestSheet.tsx` | **Sheet**: the whole proposed piano sheet, read only, with its player; **Proposed** and **Now** when the Public Library has a version to replace; **Mark a stretch** |
+| `pages/requests/RequestItems.tsx` | What each item proposes (a new artist or song, the metadata changed in bold, a piano sheet, a playlist) |
+| `pages/requests/PublishDialog.tsx` | **Publish** a version or a playlist: the public song (**Propose this song** when none), the version name, **Send request** |
+| `pages/requests/SuggestChangeDialog.tsx` | **Suggest a change** (a public song or artist) and **Propose a song** |
+| `pages/requests/SmallRequestDialogs.tsx` | **Ask for a fixed version**, and the short dialogs of the Change and send again flow |
+| `pages/requests/ReviewDialog.tsx` | **Finish your review**: **Accept** (the name can change), **Ask for a change**, **Refuse**; **Send decision** |
+| `pages/requests/SongFieldsForm.tsx`, `songDraft.ts`, `items.ts`, `words.ts` | The song fields of a request and their state; the names of kinds, statuses and items on screen; the simple form of a version name |
+
+### 1.4 The Lab (the video reader)
+
+The Lab's tabs and their order are in `LAB_TABS` (`layout/routes.ts`); the shell is `layout/LabLayout.tsx`. What
+each tab does: [`context/frontend/lab.md`](../../../context/frontend/lab.md).
+
+| File | What |
+|---|---|
+| `pages/video/VideoPlayerPage.tsx` | **Video**: the YouTube link, the sampling, the frames |
+| `pages/video/VideoCalibrationPage.tsx` | **Calibration**: the piano on one frame, the scroll speed |
+| `pages/video/VideoDetectionPage.tsx` | **Detection**: the detector over every frame |
+| `pages/video/VideoNotesPage.tsx` | **Notes**: the stitched roll, the notes, the corrections, the write into the piece |
+| `pages/video/ExamplesPage.tsx` | **Examples** and `examples/:slug`: the example set, the manual annotation, the score board |
+| `components/video/` | `AnnotationEditor.tsx`, `CalibrationEditor.tsx`, `DetectionView.tsx`, `FrameCanvas.tsx`, `FramePlayer.tsx`, `NotesOnFrame.tsx`, `OffsetLine.tsx`, `PianoOverlay.tsx`, `PianoRect.tsx`, `ScoreBoardTable.tsx`, `TimeFrameLines.tsx`, `VideoBar.tsx`, `overlayColours.ts`, `videoSteps.ts` |
+| `video/selectedVideo.ts` | The video the Lab's tabs share (read and written by the Video and Notes tabs) |
 
 ## 2. The page of a project
 
@@ -221,7 +255,8 @@ sections 12 to 17.
 | `frames/FramesSheetView.tsx` | The SVG the backend draws, and over it, in the same staff-space units, what moves: the playhead (dragged and dropped across lines since implementation 04, Phase 1), the picked notes, the marked stretch, the veil over a segment the AI is writing |
 | `frames/useFramesSheet.ts` | The sheet of a part as the page holds it: read for the page's width, read again at each step of the AI's job (`event: sheet` on the job's stream) |
 | `frames/geometry.ts` | The arithmetic of the page from the cursor map the backend sends (one row per drawn column, one box per system) |
-| `frames/FramesNoteToolbox.tsx`, `FramesRangeToolbox.tsx`, `readingTools.ts` | The note toolbox and the range toolbox (titled *Frames*), and what they share |
+| `frames/FramesNoteToolbox.tsx`, `readingTools.ts` | The note toolbox: figures, alteration, finger, hand, beam, grace, duplicate, unite, marks, take off the page; its chord keyboard (`ChordKeys`); what the toolboxes share (`readingTools.ts`) |
+| `frames/FramesRangeToolbox.tsx` | The range toolbox (titled *Frames*) |
 | `frames/FramesSheetToolbox.tsx` | The sheet toolbox: Info (the title lines), Key, Transpose, Lyrics, View |
 | `frames/FramesPreviewDialog.tsx` | The preview of a transposition: the sheet as it would be, **Transpose** or **Cancel** |
 | `frames/FramesLyricsToolbox.tsx`, `useFramesLyrics.ts`, `lyricsText.ts` | The lyrics pieces on the sheet (stored in `sheet.f1`), the pasted words and the pool (`GET`/`PUT /sheet/{uuid}/words`) |
@@ -400,6 +435,7 @@ so the same job looks the same everywhere.
 | `StepTabs` | The steps of a project, section 2.1 |
 | `Pill`, `TabBar` | A small toggle chip (the pills of My projects and My library); a tab strip that follows the address (the Lab tabs) |
 | `timestamps.ts`, `progress.ts`, `relativeTime.ts` | Tabular figures that never wrap; the 520 px width of a progress bar on its own; "2 h ago", "yesterday", "3 Oct" |
+| `components/piece/AiMark.tsx` | The AI mark before a song's name (implementation 03, Phase 5): green once the AI enhanced the sheet, faint grey when it could and has not, a spinner while a job works on it. Always the same width |
 
 `MiniPiano` and `FigurePicker` are built in Phase 1 and used by the Transpose tab since Phase 7.
 `music/transpose.ts` holds what moves with a transposition: `transposeKey` (of two names for one key,
@@ -442,6 +478,8 @@ Timestamps are `mm:ss.cc` everywhere and never wrap:
 ---
 
 ### 8.1 Folders, the pills and the metadata (implementation 04-3, Phase 1)
+
+The page that tells them: [folders-and-metadata.md](../../../context/frontend/folders-and-metadata.md).
 
 `src/components/folders/`, shared by My projects and My library (plan `04-3-plan.md` sections 4.2 to 4.4):
 

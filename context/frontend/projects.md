@@ -133,7 +133,7 @@ before it replaces notes that are current, and opens the Notes step.
    video's length (61 s for 3:09). The notes appear when it ends, not one by one (Q-8 of the plan).
 
 The video reader's development views (the detection, the measurements, correcting single notes)
-stay in **Lab**, for the master user.
+stay in **Lab** ([lab.md](lab.md)), for the master user.
 
 **3. Notes.** The piano roll on a canvas: a vertical keyboard on the left, one row per key, the
 rectangles on a time axis. While MuScriptor runs, the rectangles appear and grow as the notes

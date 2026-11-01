@@ -97,6 +97,8 @@ file. **Search** (`⌘K`) finds songs by title and artist, and projects by title
 
 ### 5.1 Folders and metadata (implementation 04-3, Phase 1)
 
+The page that tells them: [folders-and-metadata.md](../frontend/folders-and-metadata.md).
+
 The user's songs had no order but the title. A playlist is an ordered list of versions to play, not a way to group,
 so the user asked for **folders** that nest as in the Finder's list view, and for **metadata** to filter by (the brief:
 `context/implementations/04-app-enhancements/04-3-prompt.md`).
@@ -147,7 +149,7 @@ without one.
 
 The 30 songs the migration of Phase 3 put in the master user's library had notes but no hands and
 no sheet. On 2026-10-16 each got them through the real pages, as a user would
-(the frontend's sheet-library script: **Edit**, **Predict hands** and **Save**, the Sheet
+(the frontend's sheet-library script, since removed: **Edit**, **Predict hands** and **Save**, the Sheet
 step's **Save**, **Replace the version**), so their cuts were written away then, and their earlier
 state (without a sheet) stays in their history, where it cannot be restored. That script, **Predict
 hands** and the old sheet's **Save** were removed in implementation 03, Phase 10 (2026-10-27): a sheet

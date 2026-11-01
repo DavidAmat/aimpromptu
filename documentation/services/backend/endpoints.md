@@ -17,8 +17,8 @@ Every request and response body is camelCase, produced by Pydantic aliases. CORS
 origin can never send the session cookie. The page itself calls the backend as `/api` through the
 Vite server, on its own origin, so the browser sends the cookie by itself.
 
-**Every route needs a session** (implementation 02, Phase 4), except `GET /health` and
-`POST /auth/login`. The session is the cookie `aitu_session` that `POST /auth/login` sets; its
+**Every route needs a session** (implementation 02, Phase 4), except `GET /health`, `POST /auth/login` and
+`POST /auth/logout` (the logout needs no session: it ends the session the cookie names, if any). The session is the cookie `aitu_session` that `POST /auth/login` sets; its
 properties and the reasons for them are in [`context/08-security.md`](../../../context/08-security.md).
 `main.py` includes the routers in three groups (`api/__init__.py`):
 
@@ -109,12 +109,15 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | GET | `/pieces/{uuid}/notes` | The live notes as columns, with the revisions (implementation 08). |
 | PATCH | `/pieces/{uuid}/notes` | A list of operations on notes named by id (implementation 08). |
 | **The sheet** | `api/sheet.py` | Implementation 03, Phases 5 to 10 |
-| GET | `/sheet/{uuid}?width=N` | The new sheet of a part drawn for a page `N` staff spaces wide: the SVG, the cursor map, the segments of Sonnet's windows and their state, and what the page may do with Sonnet (section 4.1). |
+| GET | `/sheet/{uuid}?width=N` | The new sheet of a part drawn for a page `N` staff spaces wide: the SVG, the cursor map, the segments of the AI's windows and their state, and what the page may do with the AI (section 4.1). |
 | POST | `/sheet/{uuid}/llm` | Start the AI on the part (or answer the run already going); follow `GET /matrix/progress/{jobId}`. An optional body `{model, batches}` (2026-10-30): `model` `gpt-6.1-terra` (the default), `gpt-6.1-sol` or `claude-sonnet-5-5`; `batches` (1 to 60) the number of windows, of about the same time (`frames.split_windows`). 409 when that model has no key. |
 | POST | `/sheet/{uuid}/hands` | Phase 6: give notes to one hand, in `notes.pmn` (one step of undo); the sheet drawn again (section 4.1). |
 | POST | `/sheet/{uuid}/undo`, `/sheet/{uuid}/redo` | Phase 6: walk the part's steps back or forward; the sheet drawn again. |
 | POST | `/sheet/{uuid}/reading` | Phase 7: one reading edit of the toolboxes (figure, finger, beam, grace note switch, ornament; armadura, clef, clef rules, octave line of a stretch); the sheet drawn again (section 4.1). |
 | POST | `/sheet/{uuid}/remove` | Phase 7: take notes off the page (marked removed in `notes.pmn`, one step of undo); the sheet drawn again. |
+| POST | `/sheet/{uuid}/duplicate` | Phase 5: **Duplicate** of the note toolbox: `{notes, figure}` (`figure` 2 to 64, shorter than each note's own); each picked note played again at that figure, filling its own time; one step of undo; the sheet drawn again. 400 for a figure not shorter. |
+| POST | `/sheet/{uuid}/unite` | Phase 5: **Unite** of the note toolbox: `{notes}`; consecutive chords of one hand with the same keys become one chord of the figure that fills their time; one step of undo. |
+| POST | `/sheet/{uuid}/take-out` | Phase 5: **Delete these frames** of the range toolbox: `{start, end}`; their notes and audio taken out, everything after moved earlier; one step of undo; answers `notesRemoved`. 409 when a paste cannot be made. |
 | GET | `/sheet/{uuid}/stretch?start=A&end=B` | Phase 7: the armadura in force at a stretch and the one with the fewest signs over it. |
 | POST | `/sheet/{uuid}/llm/stretch` | Phase 7: the AI writes a stretch again with the user's words, in the background; follow `GET /matrix/progress/{jobId}`. `staff` `right` or `left` (implementation 04, Phase 4): that hand only, the other stays as it is. Also `model` and `batches` (2026-10-30): the stretch in that many requests, one after the other, stored as one step; the summary adds `batches` (accepted) and `total`. |
 | POST | `/sheet/{uuid}/llm/simplify` | Implementation 04, Phase 4: `{hand: left \| right \| both}`; the AI simplifies that hand over the whole song (the rules of simplicity only), batch after batch; one step of undo. The job's `done` summary: `simplify` (`ok`, `none`, `stale`, `failed`), `hand`, `added`, `leftOut`, `usd`. 400 when the hand has no notes, 409 while the AI works on the part. |
@@ -217,7 +220,7 @@ Phase 1. See [§9](#9-the-text-notation-mvp-routes). The old Piano Library route
 deleted in Phase 3; `/library` is the Private Library since Phase 6 ([§7.1](#71-library-the-private-library)).
 
 The video reader's routers (`/video` in `api/video.py`, `/frame-examples` in
-`api/frame_examples.py`, implementations 04 to 07) are not described on this page. Their reasoning
+`api/frame_examples.py`, implementations 04 to 07) are described in the next section and in [lab.md](../../../context/frontend/lab.md). Their reasoning
 is in `context/implementations/01-mvp/04-synthesia-to-notes/` and `05-piano-overlay-from-black-keys/`.
 Since implementation 02, Phase 4 their access is this: `/frame-examples` (Lab) answers only the
 master user (`403` otherwise). `/video` checks the rights of the project of its `audio_uuid` like
@@ -243,6 +246,47 @@ Two `/video` routes serve the **Video step of a project** (implementation 02, Ph
 
 `PUT /video/{uuid}/calibration` also keeps `measuredFor`, the overlay the stored measurement was
 made with, so **Read notes** measures again only after the piano was fitted again.
+
+#### The video reader's routes (the Lab, and the Video step)
+
+`/video` (`api/video.py`, a user router) and `/frame-examples` (`api/frame_examples.py`, a master router). The Video
+step uses `upload` and `read`; the Lab's pages use the rest. The pages are in [lab.md](../../../context/frontend/lab.md).
+
+| Method and path | What |
+|---|---|
+| POST `/video/download` | `201`. One YouTube URL: the video and the audio of it. |
+| POST `/video/upload` | `201`. A video file from the user's disk, as a project (see above). |
+| GET `/video` | The user's own videos; every video for the master user. |
+| GET `/video/{uuid}` | One video's metadata. |
+| POST `/video/{uuid}/sample` | `202`, a job: the sampled frames. |
+| GET `/video/{uuid}/frames/{index}` | One sampled frame, as a picture. |
+| GET, PUT `/video/{uuid}/calibration` | The piano calibration of the video. |
+| POST `/video/{uuid}/find` | The piano overlay from one rectangle. |
+| POST `/video/{uuid}/measure` | `202`, a job: the scroll speed of the roll. |
+| POST `/video/{uuid}/detect` | `202`, a job: the detector over every frame. |
+| POST `/video/{uuid}/frames/{index}/detect` | The detector on one frame. |
+| GET `/video/{uuid}/detection`, `GET /video/{uuid}/report` | What the detector found; its report. |
+| POST `/video/{uuid}/read` | `202`, a job: **Read notes** (see above). |
+| POST `/video/{uuid}/notes` | `202`, a job: stitch the roll and read the notes. |
+| GET `/video/{uuid}/notes` | The notes read from the roll. |
+| GET, PUT `/video/{uuid}/corrections` | The corrections of the notes. |
+| POST `/video/{uuid}/events` | Writes the notes into the piece. |
+| GET `/video/progress/{jobId}` | The progress of a job (a stream). `404` to anyone who did not start it, except the master user. |
+
+`/frame-examples`: the master user only (`403` otherwise).
+
+| Method and path | What |
+|---|---|
+| GET `/frame-examples` | The example set. |
+| GET `/frame-examples/score` | The score board. |
+| GET `/frame-examples/{slug}` | One example. |
+| GET `/frame-examples/{slug}/image` | Its picture, at the working width. |
+| PUT `/frame-examples/{slug}/calibration` | Its calibration. |
+| POST `/frame-examples/{slug}/find` | Its piano overlay from one rectangle. |
+| POST `/frame-examples/{slug}/geometry` | Its piano geometry. |
+| PUT, DELETE `/frame-examples/{slug}/annotation` | Its manual annotation (`DELETE` takes `offsetPx`). |
+| PATCH `/frame-examples/{slug}` | Sets `noRoll`. |
+| POST `/frame-examples/{slug}/detect` | The detector on the example. |
 
 ### 1.1 `/auth`: signing in
 
@@ -633,11 +677,11 @@ described in git history and in [`deprecated/time-matrix.md`](../../deprecated/t
 
 - The sheet is the stored one (`sheet.f1`) when it was written for the current `handsRevision`; laid again on the
   current notes when they or the hands changed (`stale: true`); the algorithm's on the starting hands when none
-  is stored. While Sonnet writes it is the sheet of that moment.
-- `segments`: Sonnet's windows (`working`: at Sonnet now; `waiting`; `llm`; `algorithm`: a window that failed);
-  empty on a sheet Sonnet never wrote. While the AI writes one hand only (Simplify of one hand, a stretch of one
+  is stored. While the AI writes it, it is the sheet of that moment.
+- `segments`: the AI's windows (`working`: being written now; `waiting`; `llm`; `algorithm`: a window that failed);
+  empty on a sheet the AI never wrote. While the AI writes one hand only (Simplify of one hand, a stretch of one
   hand; implementation 04, Phase 4) each segment also has `staff` (1 right, 2 left): the page veils only that staff.
-- `llm.auto`: a new transcription asked for Sonnet (`sheet.pending`) and the user may change the part: the page
+- `llm.auto`: a new transcription asked for the AI (`sheet.pending`) and the user may change the part: the page
   starts it. `canRun`: **Enhance with AI** is offered (on a sheet the AI enhanced, as **Enhance it again with AI**).
   `enhanced`: the AI wrote this sheet or part of it (`sheet.f1` with source `llm` or `mixed`); it stays through
   every later change of the notes or the hands. `runs`: how many AI runs wrote it. `viaEdit`: the owner's
@@ -657,7 +701,7 @@ described in git history and in [`deprecated/time-matrix.md`](../../deprecated/t
 
 `POST /sheet/{uuid}/llm` answers `202 {"jobId", "status"}` (`409` when no API key or SDK is set up). The job's
 stream sends `event: sheet` with `{"phase": "reference" | "windows" | "window" | "saved", "done", "total"}`, then
-`event: done` with `source`, `windows`, `usd`. The job stops asking Sonnet when the part is deleted. On a sheet the
+`event: done` with `source`, `windows`, `usd`. The job stops asking the AI when the part is deleted. On a sheet the
 AI enhanced, the run reads the current hands (the user's moves among them) as a suggestion it may change (Phase 6);
 a first run reads the notes without hands.
 
@@ -959,7 +1003,7 @@ the Private Library since Phase 6 (§7.1).
 |---|---|
 | `id`, `title`, `kind`, `layer`, `mine` | `kind`: `song` or `integratedPlaylist`; `layer`: `vault`, `private`, `public`, or `request` (the copy a request sent, Phase 14); `mine`: the user owns it (a library project of another user is one shared with them, Phase 14) |
 | `step` | The lowest `resume` of the parts (`source`, `audio`, `notes`, `sheet`), kept in `projects.step` and worked out again only after a part changed |
-| `running` | `transcribing` or `reading` while a job works on a part, `writing` while Sonnet writes the sheet of a part (implementation 03, Phase 5), else `null` |
+| `running` | `transcribing` or `reading` while a job works on a part, `writing` while the AI writes the sheet of a part (implementation 03, Phase 5), else `null` |
 | `enhanced` | The AI wrote the sheet of a part of it (its `sheet.f1` record says `llm` or `mixed`; implementation 03, Phase 5) |
 | `parts` | The ids of the parts, in order |
 | `source` | Where the first part's audio came from (`upload`, `youtube`, `recording` ...) |
@@ -1082,6 +1126,7 @@ and 15.2. Every route works on the current user's rows only and answers `404` fo
 or song, and for a folder of the other area; `403` for a project of the Private Library (it changes through its
 song); `409` for a folder name its parent already has (ignoring case) and for a move into the folder itself or into a
 folder inside it; `422` for an empty name or an unknown primary key.
+The page that tells them: [folders-and-metadata.md](../../../context/frontend/folders-and-metadata.md).
 
 | Route | Answer |
 |---|---|

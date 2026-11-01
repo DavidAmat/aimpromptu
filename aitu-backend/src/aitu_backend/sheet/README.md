@@ -117,9 +117,10 @@ at start (the product uses the default style, "verovio").
    (`WindowLog`: start, end, first bar, status `ok`/`failed`, replies, the errors of each rejected reply),
    `.summary` (windows, ok, ok at the first check, failed, requests).
 
-The core imports no LLM SDK. A `complete` for the Anthropic API is a few lines in the product (`messages.create`
-with `system`, `messages`, the model `claude-sonnet-5-5` by default, the decision of 2026-10-22); a `complete` that
-raises stops the chain with that error (the product decides retries and time limits).
+The core imports no LLM SDK. The product's `complete` functions are in `sheet_llm.py`: the OpenAI client (GPT-6.1
+Terra at medium, the model of every run unless the user chooses another) and the Anthropic client (Sonnet 5.5, when
+the user chooses it). The pages of the AI: `context/ai/README.md` and `documentation/services/backend/ai-runs.md`. A
+`complete` that raises stops the chain with that error (the product decides retries and time limits).
 
 ## 6. Frozen files
 
@@ -263,8 +264,8 @@ Layout ---- frames.draw (all systems, or some: one segment) ---> Engraving --- s
 ## 11. The LLM step of the new sheet (implementation 03, Phase 4)
 
 `llm/frames.py` writes the F1 frames sheet with an LLM behind the same function as the bars chain,
-`complete(system, messages) -> text`; the product's function is `aitu_backend.sheet_llm.ClaudeComplete` (Sonnet 5.5,
-outside the core). Measurements and reasons: `context/implementations/03-apply-poc-research/03-implementation-phase-4.md`.
+`complete(system, messages) -> text`; the product's functions are in `aitu_backend.sheet_llm` (GPT-6.1 Terra at medium
+by default, Sonnet 5.5 when chosen; section 5 above). Measurements and reasons: `context/implementations/03-apply-poc-research/03-implementation-phase-4.md`.
 
 ```text
 notes (starting hands)
@@ -286,8 +287,9 @@ assemble: decisions on the notes, then the rules: figures (capped by the new han
   whole. The decided context of window k is the end of answer k-1.
 - **Errors**: `SkipWindow` from `complete` fails one window (a refusal); any other exception keeps the algorithm for
   that window and the rest of the song (`WindowLog.status`, `.note`).
-- **Frozen files**: `llm/prompt/frames/instructions.md` (version 6, five examples checked by
-  `test_the_prompt_examples_pass_the_checker`), `feedback.md`, `VERSION`.
+- **Frozen files**: `llm/prompt/frames/instructions.md` (version 7 since implementation 04-3, the examples checked by
+  `test_the_prompt_examples_pass_the_checker`), `feedback.md`, `VERSION`. The prompt's history and the job that runs
+  it: `documentation/services/backend/ai-runs.md`.
 - **Prompt 6** (implementation 04, Phase 3; `context/implementations/04-app-enhancements/04-implementation-phase-3.md`):
   the decoration-note rule of implementation 04 (section 9), and the section "Simplicity": uniform patterns
   (simple.1: the missing note of an octave or a repeated chord added, the extra ones left out) and the amateur
@@ -317,7 +319,7 @@ GET /sheet/{part}?width=N ── part_sheet.build.current ──┬─ sheet.f1 
                          (while the AI writes: job.LiveRun.text, the parts decided so far + the algorithm's)
                          ── build.draw (engrave.frames.render_frames) ── SVG + columns + systems + segments
 
-POST /sheet/{part}/llm ── part_sheet.job.start ── write_frames(on_start, on_part) with sheet_llm.ClaudeComplete
+POST /sheet/{part}/llm ── part_sheet.job.start ── write_frames(on_start, on_part) with the chosen model's client (job._complete)
                          ── event: sheet on /matrix/progress/{job} at the reference figure and at each window
                          ── commit: the hands into notes.pmn (save_edit), with the notes the run left out and added
                             (edits.change_notes; one step of undo, edits.record_run), the sheet into sheet.f1
@@ -369,7 +371,7 @@ the answer of GET /sheet/{part} (the sheet drawn again)                ~0.15 s i
 - **The LLM run again** (`job.start`): on a sheet the AI enhanced, `write_frames(hands=True)`, and the window prompt
   says the shown hands are a suggestion the LLM may change (`llm.frames.window_prompt`); the record's prompt is
   `5+hands`. The cached instructions (version 5) did not change. Since implementation 04, Phase 3 the prompt is
-  version 6 and the record says `6+hands`.
+  version 6 and the record says `6+hands`. Since implementation 04-3 (2026-10-30) version 7.
 - `GET /sheet/{part}` also answers `notes` (`build.drawn_notes`: ref, hand, printed pitch), `editable` and
   `history`.
 - Tests: `tests/test_sheet_edits.py`. Browser check: `npm run check:frames-edit` (aitu-frontend).
