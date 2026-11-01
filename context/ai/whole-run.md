@@ -13,7 +13,7 @@ Code: `part_sheet/job.py` (`start`, `stop`, `commit`), `sheet/llm/frames.py` (`w
    AI**. It opens the dialog **Enhance with AI**.
 2. The dialog has two tabs. With no notes selected, it opens on **The whole song**, where the whole run is the button
    **Write it all again**. (With notes or a stretch selected, the dialog opens on **A stretch**, which is told in
-   `context/ai/stretch-and-simplify.md`, a page Phase 10 writes.)
+   [stretch-and-simplify.md](stretch-and-simplify.md).)
 3. The dialog asks for two things before the run:
    - **Model**: the AI model of the run. The choices are GPT-6.1 Terra (the default), GPT-6.1 Sol and Sonnet 5.5. The
      dialog is the one place that names the model.

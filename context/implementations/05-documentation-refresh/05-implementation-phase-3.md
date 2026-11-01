@@ -80,7 +80,7 @@ listed with the right query: no pending edit). The frontend half of `rendering.m
   ```
 - **E3** `documentation/services/backend/sheet-f1.md`, line 7 (Phase 2's file): replace
   "The drawing is told in `sheet-drawing.md`, written by Phase 3 of implementation 05." with
-  "The drawing is told in [sheet-drawing.md](sheet-drawing.md)."
+  `The drawing is told in [sheet-drawing.md](sheet-drawing.md).`
 
 ## Left for later phases
 

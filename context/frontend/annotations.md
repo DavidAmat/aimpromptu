@@ -6,9 +6,7 @@ page:
 
 - [annotations-notes.md](annotations-notes.md): the **note toolbox** (figures, fingers, alteration, hand, beams, grace
   notes, duplicate, unite, marks, taking notes off the page, the chord keyboard).
-- [annotations-stretches.md](annotations-stretches.md) and [annotations-sheet.md](annotations-sheet.md): the **range
-  toolbox** and the **sheet toolbox**. Both pages still tell the old sheet until they are rewritten (implementation 05,
-  Phases 6 and 7); until then, these two toolboxes are told in the section below.
+- [annotations-stretches.md](annotations-stretches.md): the **range toolbox**, copy and paste, **Delete these frames**. [annotations-sheet.md](annotations-sheet.md): the **sheet toolbox**, still told in the section below until it is rewritten (implementation 05, Phase 7).
 
 The code is `aitu-frontend/src/pages/piece/sheet/` (the new sheet in `frames/`). The old sheet's page and selections
 are kept in the archive: [old-sheet-tools/annotations-hub-old-sheet.md](../archive/old-sheet-tools/annotations-hub-old-sheet.md).
@@ -31,24 +29,12 @@ Since implementation 03, Phase 10 (2026-10-27) the Sheet step has only the new s
 - **Pick notes**: click a notehead (the recording goes there), ⌘-click or Shift-click to add or take one away, or
   drag a box across the staves. Escape drops the pick. The note toolbox opens beside the notes, titled with the
   name the sheet prints (`Do-# 5`) or the number of notes, with their time under it.
-- **Mark a stretch**: in the strip above the upper staff of a line (it shows faintly under the pointer), click for
-  one column, drag across columns (on to the next lines too), Shift-click to extend. The stretch is a lavender
-  band; the range toolbox (*Frames*) opens to the left of it. Its first line holds the frame numbers of the first and
-  last columns of the stretch in two fields ("From frame [283] to frame [495]"; implementation 04-3, Phase 2b): other
-  numbers, then Enter or leaving both fields, mark the stretch they name. The sheet has a grey dashed line every 100
-  frames with the frame number and the time on its top, so that the user can name a place in the words of **Enhance
-  with AI**. Its first row, **Both / Right / Left**, narrows the
-  band and the Clef and Octave tabs to one hand. One selection at a time: picking notes drops the stretch, and the
-  other way round. Each toolbox hands its selection to the other from its title bar.
+- **Mark a stretch**: a click, a drag or Shift-click in the strip above the upper staff; the range toolbox opens beside it. One selection at a time: picking notes drops the stretch, and the other way round. The detail is in [annotations-stretches.md](annotations-stretches.md).
 - **The note toolbox**: the seven figures, **Finger**, **Alteration**, **Hand**, **Beam**, **Grace**, **Duplicate**,
   **Unite**, **Marks** and the trash icon, with the chord keyboard. Its title bar holds **Enhance these notes with AI**
   (the AI mark), **Copy the frames of these notes** and **Select the frames of these notes**. Every control is one step
   of Undo. The detail is in [annotations-notes.md](annotations-notes.md).
-- **The range toolbox**: **Key** (the armadura of the stretch on both clefs, ✓; 🗑 back to the armadura of the
-  piece; *Use D major here* when another armadura prints fewer signs over the stretch), **Clef** (treble or bass for
-  each hand in scope, the hand's own clef again after the stretch; **Clefs by the rule** writes the clefs and 8va of
-  the clef rules over the stretch), **Octave** (8va, 15ma, 8vb, 15mb over each hand in scope; a bass clef takes no
-  8va or 15ma). A tab with a dot means the stretch already carries that setting.
+- **The range toolbox** (*Frames*): the frame numbers, **Which staff**, the tabs **Key**, **Clef** and **Octave**, its title bar's actions. Detail in [annotations-stretches.md](annotations-stretches.md).
 - **Enhance with AI** of a stretch, with your own words: the AI mark (the logo) in the title bar of either toolbox
   (the stretch of the notes picked, or the stretch marked) opens the Enhance with AI dialog on **A stretch**:
   **Both**, **Right** or **Left** (one hand: only that hand changes, the other stays exactly as it is; chosen from
@@ -106,14 +92,7 @@ Since implementation 03, Phase 10 (2026-10-27) the Sheet step has only the new s
   ([printing.md](printing.md)).
 - **The keyboard panel** (`⋯` → *Show the keyboard*): the keys sounding under the cursor, as on the old sheet; a lit
   key takes that note off the page, a dark one adds a note to the hand of **Add to** (one step of Undo).
-- **Copy and paste** (Phase 8B): **Copy this stretch** (the range toolbox), **Copy the frames of these notes** (the
-  note toolbox) or ⌘C keep a reference to the stretch in the app's clipboard (every tab, and the system clipboard as
-  text); **Paste** (the floating bar, ⌘V) puts it in at the cursor, or over the marked stretch: its notes, its audio
-  and its sheet (the AI's or your decisions in it come along, read in their own armadura and clefs, and yours again
-  after it); everything after it moves later. One step of undo: Undo puts the part back as it was, audio included.
-  The range toolbox also has **Record this passage** and **Start a new part here** (a project of parts), the floating
-  bar **Record a passage at the end**; a blank sheet (From scratch) says *Nothing to write yet.* with **Record a
-  passage** and **Paste the copied passage**.
+- **Copy and paste** (Phase 8B): copy with ⌘C, the toolboxes' title bars or the read-only panel; paste with ⌘V or the floating bar. Detail in [annotations-stretches.md](annotations-stretches.md) and [annotations-notes.md](annotations-notes.md).
 - **A read-only sheet** (a version of My library, a source of From other projects, the requests review): a stretch
   marked in the strip opens a small *Frames* panel with **Copy this stretch** and the screen's own action (**Add to
   a playlist**, **Add this stretch**, **Comment on this stretch**).

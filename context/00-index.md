@@ -45,7 +45,7 @@ assumes.
 | [backend/piano-matrix-notation.md](backend/piano-matrix-notation.md) | The piano matrix notation: the sparse form, `events.json` with ids and header, the wire columns, every adapter (`pmn/`) |
 | [backend/muscriptor.md](backend/muscriptor.md) | **The transcription engine.** MuScriptor's settings and why, the GPU queue, the live stream of notes, the lag correction |
 | [backend/pieces-and-revisions.md](backend/pieces-and-revisions.md) | The steps of a piece, the revisions, what makes a step stale, the `/pieces` routes, the saved hands |
-| [backend/editing.md](backend/editing.md) | Paste, and Recording in Sheet: the length rule, the promotions, the undo |
+| [backend/editing.md](backend/editing.md) | Paste, Delete these frames, and Recording in Sheet: the length rule, the promotions, the undo |
 | [backend/api.md](backend/api.md) | The HTTP surface: the routers, the session and rights check every route runs, and the shape of a working session |
 | [notation-and-parsing.md](../documentation/deprecated/notation-and-parsing.md) | Deprecated: the text-notation MVP path, deleted in implementation 02, Phase 1 |
 
@@ -77,7 +77,7 @@ assumes.
 | [frontend/rendering.md](frontend/rendering.md) | How the sheet is drawn: by the backend (`GET /sheet/{uuid}`, an SVG), shown by `frames/FramesSheetPage`; the old vexflow-v2 sheet, removed in implementation 03, Phase 10 |
 | [frontend/annotations.md](frontend/annotations.md) | **The Sheet step**: the hub of the new sheet's tools (the note, range and sheet toolboxes, undo, the AI mark); the old sheet's sections are in the archive |
 | [frontend/annotations-notes.md](frontend/annotations-notes.md) | The note toolbox of the new sheet: figures, alteration, fingers, hand, beams, grace notes, duplicate, unite, marks, take off the page, the chord keyboard |
-| [frontend/annotations-stretches.md](frontend/annotations-stretches.md) | The old sheet's range toolbox, the record (key and Key for this passage, clef and the clef rule, octave, spacing, speed, Record this passage, Start a new part here) and brackets on the page |
+| [frontend/annotations-stretches.md](frontend/annotations-stretches.md) | The range toolbox of the new sheet (*Frames*): the frame numbers, Which staff, Key, Clef, Octave, the title bar's actions, Copy and Paste, Delete these frames |
 | [frontend/annotations-sheet.md](frontend/annotations-sheet.md) | The old sheet's sheet toolbox, the record (title, key, transpose, lyrics, layout), the keyboard panel, Find trills |
 | [frontend/printing.md](frontend/printing.md) | The PDF export: re-wrap to the paper, never scale; the margin is the control |
 | [frontend/timestamps.md](frontend/timestamps.md) | UI rule: `mm:ss.cc`, frame labelled by start only, never wraps |
@@ -88,6 +88,8 @@ assumes.
 |------|-------------|
 | [ai/README.md](ai/README.md) | The AI in the app: the kinds of run, the model and the cost, the AI mark |
 | [ai/whole-run.md](ai/whole-run.md) | The whole run: **Write it all again**, the batches, the panel, **Stop** and **Revert** |
+| [ai/stretch-and-simplify.md](ai/stretch-and-simplify.md) | A stretch of the sheet with the user's words, and Simplify: the batches, the rules, the stored run |
+| [ai/levels.md](ai/levels.md) | Levels: the catalog of patterns, the grid, the chords of the song, the level copy |
 
 ## Music (`context/music/`)
 
@@ -272,7 +274,7 @@ Reading a piano roll video into the same `events.json` the transcription model w
 | [archive/README.md](archive/README.md) | Historical context; pointer to the docs-migration kit |
 | [archive/superseded/README.md](archive/superseded/README.md) | **Documents describing a model or screen the app no longer has**, with where each current answer lives |
 | `archive/superseded/` | `01-matrix-notation-logic.md`, `03-editing-logic.md`, `app-shell.md`, `compose-panel.md`, `loaded-scores.md`, `rendering-pipeline.md` |
-| [archive/old-sheet-tools/annotations-notes.md](archive/old-sheet-tools/annotations-notes.md), [archive/old-sheet-tools/annotations-hub-old-sheet.md](archive/old-sheet-tools/annotations-hub-old-sheet.md) | The old sheet's toolbox pages and the hub's old-sheet sections: the record of the vexflow-v2 sheet (removed in implementation 03, Phase 10) |
+| [archive/old-sheet-tools/annotations-notes.md](archive/old-sheet-tools/annotations-notes.md), [archive/old-sheet-tools/annotations-stretches.md](archive/old-sheet-tools/annotations-stretches.md), [archive/old-sheet-tools/annotations-hub-old-sheet.md](archive/old-sheet-tools/annotations-hub-old-sheet.md) | The old sheet's toolbox pages (the old sheet's note and range toolboxes) and the hub's old-sheet sections: the record of the vexflow-v2 sheet (removed in implementation 03, Phase 10) |
 | `archive/docs-migration/` | The completed documentation migration kit: plan, checklist, templates, deletions log |
 | `archive/TODO.md`, `archive/project-features.md`, `archive/project-implementation-organization.md` | The first notes and briefs of the project, from before the MVP; they describe the old model |
 | [archive/piano-transcription-python-solutions.md](archive/piano-transcription-python-solutions.md) | The engine survey that chose ByteDance before MuScriptor replaced it |
@@ -291,7 +293,9 @@ Reading a piano roll video into the same `events.json` the transcription model w
 | [../documentation/services/backend/endpoints.md](../documentation/services/backend/endpoints.md) | The whole HTTP surface, route by route, and what each obeys |
 | [../documentation/services/backend/time-matrix.md](../documentation/services/backend/time-matrix.md) | What stays of schema 2.0: the frame length, the figure names, the marks an old `sheet.json` holds |
 | [../documentation/services/backend/sheet-f1.md](../documentation/services/backend/sheet-f1.md) | The new sheet: the files of a part, the F1 text, how the algorithm makes it |
+| [../documentation/services/backend/sheet-drawing.md](../documentation/services/backend/sheet-drawing.md) | How the backend draws the new sheet: the routes, the layout and the lines, the glyphs, the frame marks, the lyrics, the SVG and the pages |
 | [../documentation/services/backend/ai-runs.md](../documentation/services/backend/ai-runs.md) | The code of the AI runs: the model client, the job, the windows and the check, the prompt, the routes |
+| [../documentation/services/backend/ai-levels.md](../documentation/services/backend/ai-levels.md) | The code of the levels: the catalog, the grid, the harmony, the hands, the chords of the song, the level copy, the dialog |
 | [../documentation/services/backend/events-to-sheet.md](../documentation/services/backend/events-to-sheet.md) | The derivation path from the stored notes to the hand split the new sheet starts from, with the reason for each ordering |
 | [../documentation/services/backend/transcription-pipeline.md](../documentation/services/backend/transcription-pipeline.md) | Engines, thresholds, the artifact and leakage filters, the measurement behind each number |
 | [../documentation/services/backend/hand-inference-second-pass.md](../documentation/services/backend/hand-inference-second-pass.md) | The gated repair pass over the hand split |

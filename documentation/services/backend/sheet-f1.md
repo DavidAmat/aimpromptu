@@ -4,7 +4,7 @@
 # The new sheet: the files of a part, the F1 text, and how the sheet is made
 
 This page is the detail of the new sheet's data: the files a part holds, the text they hold, and the steps that turn
-the notes into a sheet. The drawing is told in `sheet-drawing.md`, written by Phase 3 of implementation 05.
+the notes into a sheet. The drawing is told in [sheet-drawing.md](sheet-drawing.md).
 
 The notes are the music. The sheet is a reading of the notes: where each note sits, how long it is written, which
 hand plays it, and which key and clefs it uses. The rule of the time model applies: a column never moves

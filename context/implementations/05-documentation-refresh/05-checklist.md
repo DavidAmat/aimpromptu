@@ -3,7 +3,7 @@
 The plan is [`05-plan.md`](05-plan.md). Branch `feat/05-docs-refresh`. Status letters: `[x]` complete, `[p]` in
 progress, `[b]` blocked, `[c]` cancelled, `[ ]` not started.
 
-**Next: wave B**: Phases 3, 6, 10, 11, 15, in parallel; then the join of wave B. (Each join changes this line.)
+**Next: wave C**: Phases 4, 7, 12, 16, 17, in parallel; then the join of wave C. (Each join changes this line.)
 
 The waves are in the plan, section 4.4: A (2, 5, 9, 14, 18, 19), B (3, 6, 10, 11, 15), C (4, 7, 12, 16, 17),
 D (8, 13), then 20 alone. After each wave, a join applies the pending edits of the shared files.
@@ -156,6 +156,6 @@ Report: [05-implementation-phase-19.md](05-implementation-phase-19.md)
 # Joins
 
 - [x] Join of wave A (after Phases 2, 5, 9, 14, 18, 19). Report: [05-implementation-join-A.md](05-implementation-join-A.md)
-- [ ] Join of wave B (after Phases 3, 6, 10, 11, 15).
+- [x] Join of wave B (after Phases 3, 6, 10, 11, 15). Report: [05-implementation-join-B.md](05-implementation-join-B.md)
 - [ ] Join of wave C (after Phases 4, 7, 12, 16, 17).
 - [ ] Join of wave D (after Phases 8, 13).

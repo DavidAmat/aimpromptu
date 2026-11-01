@@ -59,7 +59,7 @@ None found in this phase. Two things to know, not bugs:
 
 1. `context/frontend/annotations.md` (the hub; no owner in wave B). Its three range-toolbox texts move to
    `annotations-stretches.md`:
-   a. The first bullet of the intro list (the one that starts `- [annotations-stretches.md](annotations-stretches.md)
+   a. The first bullet of the intro list (the one that starts `- [annotations-stretches.md]`
       and [annotations-sheet.md]`): replace its text by
       `- [annotations-stretches.md](annotations-stretches.md): the **range toolbox**, copy and paste, **Delete these frames**. [annotations-sheet.md](annotations-sheet.md): the **sheet toolbox**, still told in the section below until it is rewritten (implementation 05, Phase 7).`
       (This removes the sentence "Both pages still tell the old sheet…".)
