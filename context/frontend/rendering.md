@@ -13,62 +13,43 @@ It is the sheet without compases, tempo, puntillos or silencios, which the backe
 (`aitu_backend.sheet.engrave.frames`, the Leipzig glyphs and Verovio's drawing rules). The page asks `GET /sheet/{part}?width=N` for the width it has (about 8.5 px a staff
 space) and gets one SVG and a cursor map: one row per drawn column (its line, its x, its time) and one box per
 line. The backend side (the layout, the lines, the frame marks, the lyrics, the SVG, the pages) is told in
-[sheet-drawing.md](../../documentation/services/backend/sheet-drawing.md). The code is `pages/piece/sheet/frames/`:
+[sheet-drawing.md](../../documentation/services/backend/sheet-drawing.md).
 
-- `FramesSheetPage.tsx`: the page (title lines, the player, the floating bar with Undo, Redo and **Enhance with
-  AI**), and since Phase 6 the notes picked and the keys (⌘Z, ⇧⌘Z, Escape); since implementation 04, Phase 1, the
-  header at the top of the window (the title, `AiMark`, and the floating bar's buttons: one list, `sheetButtons`,
-  drawn in both places), the floating bar's hidden state (`aitu.framesSheet.floatingHidden` in this browser), and
-  ⌘ and the wheel over the sheet (a CSS scale at once, one `GET /sheet` at a pause of 220 ms, the line under the
-  pointer kept under it);
-- `FramesNoteToolbox.tsx` (Phase 6): the note toolbox of the new sheet, beside the notes picked: **Hand** since
-  Phase 6, every other note tool since Phase 7, and since Phase 8A the keyboard of the picked column (drawn by
-  `ui/MiniPiano.tsx`'s `MiniKeys`; see [annotations.md](annotations.md), "The new sheet");
-- `FramesRangeToolbox.tsx` (Phase 7): the range toolbox (*Frames*: Both / Right / Left, Key, Clef, Octave; since
-  implementation 04-3, Phase 2b, its first line, `FrameRangeFields.tsx`, holds the frame numbers of the first and
-  last columns of the stretch in two fields, "From frame [283] to frame [495]" (`data-range-from`, `data-range-to`):
-  other numbers and Enter, or leaving both fields, mark that stretch, `readingTools.rangeOfFrames`);
-  `EnhanceDialog.tsx` (implementation 04, Phase 4): **Enhance with AI**, one dialog with two tabs, **A stretch**
-  (both hands or one, the other then fixed; the user's words) and **The whole song** (**Simplify** the left hand, the
-  right hand or both; **Write it all again**), each with its cost; `readingTools.ts`: what the two toolboxes share;
-- `FramesSheetView.tsx`: the SVG as the backend wrote it, scaled to the page, and an overlay in the same units:
-  the cursor (a line between two columns by their times), the lit noteheads of its column (a decoration note only
-  from its own onset, never while the note before it sounds alone: the user, implementation 04-3, Phase 2b;
-  `geometry.headsByColumn`, `laterOnsets`), the pale veil on the
-  part Sonnet works on, and the blank staves that a part coming back from Sonnet is written into, column by
-  column (about two seconds; when the AI writes one hand only, the segment's `staff`, both cover only that staff,
-  cut halfway between the staves by `geometry.onStaff`); since Phase 6 also the picking of notes (a click on a notehead, ⌘ or Shift to add,
-  a box dragged across the staves), and since Phase 7 the marking of a stretch in the strip above the upper staff
-  of a line, drawn as a lavender band over the staves in scope; since implementation 04, Phase 1, the cursor
-  dragged and dropped (`grab`, `grabbing`, across lines, the page scrolled near the window's edges, a seek on
-  release; a press that does not move stays a click);
-- `geometry.ts`: the research viewer's arithmetic (where the cursor is, the time under a click);
-- `useFramesSheet.ts`: the loads, Sonnet's job followed on its stream (`event: sheet`), Sonnet started by
-  itself on a new transcription, and an edit (one request whose answer is the sheet drawn again);
-- since Phase 8: `FramesSheetToolbox.tsx` (Info, Key, Transpose, Lyrics, View), `FramesPreviewDialog.tsx` (the
-  preview of a transposition), `FramesPdfDialog.tsx` (Print to PDF), `useFramesLyrics.ts` (the old Lyrics tab and
-  its piece helpers on the sheet's `lyric` lines); the lyrics are drawn by the backend (`<text data-lyric>`), and
-  the view picks, drags and lights them.
+The frontend side is told in [sheet-page.md](sheet-page.md): the header and the buttons, the floating toolbox, the
+zoom, the cursor and the recording, what the view draws over the drawing, and the keys. In short, the code is in
+`pages/piece/sheet/frames/`:
+
+- `FramesSheetPage.tsx`: the page (the header, the buttons, the floating toolbox, the zoom, the recording, the keys,
+  the toolboxes and the dialogs);
+- `FramesSheetView.tsx`: the SVG as the backend wrote it, scaled to the page, and an overlay in the same units (the
+  cursor, the lit noteheads, the picked notes, the marked stretch, the lyrics pieces, the veil and the reveal of a
+  segment the AI writes, the batches of a run);
+- `useFramesSheet.ts`: the sheet as the page holds it (read for the width, read again at each message of the AI's
+  job on its stream, `event: sheet`; an edit is one request whose answer is the sheet drawn again);
+- `geometry.ts`: the page's arithmetic (where the cursor is, the time under a point, the noteheads of a column);
+- `FramesNoteToolbox.tsx`, `FramesRangeToolbox.tsx`, `FramesSheetToolbox.tsx`, `FramesLyricsToolbox.tsx`,
+  `EnhanceDialog.tsx`, `AiRunPanel.tsx`, `AiRunDetail.tsx`, `AiHistoryPanel.tsx`, `PatternCatalog.tsx`, and the
+  dialogs `FramesPdfDialog.tsx`, `FramesPreviewDialog.tsx`: the tools and the runs, told in
+  [annotations.md](annotations.md) and [`context/ai/`](../ai/README.md).
 
 Hooks for the browser checks: `[data-frames-sheet]` (`data-source`, `data-llm`, `data-working`),
 `data-note="<frame>:<midi>"` on each notehead, `[data-lit]`, `[data-frames-cursor]` (`data-ms`, `data-dragging`),
-`[data-segment-state=working]`, `[data-revealing]`; since Phase 6 `[data-selected]` on the picked noteheads,
-`[data-pick-box]`, `[data-frames-note-toolbox]`, and `sheet-undo`, `sheet-redo` (`data-testid`); since Phase 7
-`[data-range-strip]`, `[data-range-band]` (`data-start`, `data-end`), `[data-frames-range-toolbox]`, and the
-`data-testid` of each tool (`figure-4`, `beam-join`, `grace`, `ornament-trill`, `notes-remove`, `range-enhance`,
-`stretch-words`, ...); since Phase 8 `[data-lyric]` (`data-lyric-lit`, `data-lyric-picked`), `[data-lyric-landing]`,
-`[data-frames-sheet-toolbox]`, `[data-pdf-page]`, and `sheet-toolbox`, `sheet-print`, `line-space`, `piece-key`,
-`pdf-download` (`data-testid`); since implementation 04 `[data-sheet-header]`, `[data-sheet-header-buttons]`,
-`header-floating-toggle` (`data-testid`), `[data-floating-hide]`, `[data-floating-show]` (Phase 1), and
-`[data-enhance-dialog]`, `[data-enhance-status]`, `song-run-*`, `song-confirm`, `stretch-confirm` (Phase 4). The checks are `npm run check:frames-sheet` (`--live` spends a few cents of Sonnet on a 40 s
-clip), `npm run check:frames-edit` (picking, the hand, undo and redo, and the time of one edit) and
+`[data-segment-state=working]`, `[data-revealing]`, `[data-selected]` on the picked noteheads, `[data-pick-box]`,
+`[data-frames-note-toolbox]`, `sheet-undo`, `sheet-redo` (`data-testid`), `[data-range-strip]`,
+`[data-range-band]` (`data-start`, `data-end`), `[data-frames-range-toolbox]`, the `data-testid` of each tool
+(`figure-4`, `beam-join`, `grace`, `ornament-trill`, `notes-remove`, `range-enhance`, `stretch-words`, ...),
+`[data-lyric]` (`data-lyric-lit`, `data-lyric-picked`), `[data-lyric-landing]`, `[data-frames-sheet-toolbox]`,
+`[data-pdf-page]`, `sheet-toolbox`, `sheet-print`, `line-space`, `piece-key`, `pdf-download` (`data-testid`),
+`[data-sheet-header]`, `[data-sheet-header-buttons]`, `header-floating-toggle` (`data-testid`), `[data-floating-hide]`,
+`[data-floating-show]`, `[data-enhance-dialog]`, `[data-enhance-status]`, `song-run-*`, `song-confirm`,
+`stretch-confirm`. The checks are `npm run check:frames-sheet` (`--live` spends a few cents of the AI on a 40 s
+clip), `npm run check:frames-edit` (picking, the hand, undo and redo, and the time of one edit),
 `npm run check:frames-tools` (every tool of the two toolboxes and the range selection; `--live` makes one stretch
-request, about $0.01) and `npm run check:frames-toolbox` (Phase 8: the sheet toolbox, lyrics, the keyboard panel,
-Print to PDF, the lyrics in Play mode), and since implementation 04 `npm run check:frames-page` (Phase 1: the header,
-the floating bar hidden and shown, the wheel zoom, the cursor dragged across lines; 04-3, Phase 2b: the frame marks
-on the sheet, after the zoom and on the printed pages, the frames typed in the range toolbox, a decoration note lit
-at its own onset) and `npm run
-check:enhance-dialog` (Phase 4: the dialog; a stand-in answers the requests that would start the AI).
+request, about $0.01), `npm run check:frames-toolbox` (the sheet toolbox, lyrics, the keyboard panel, Print to PDF,
+the lyrics in Play mode), `npm run check:frames-page` (the header, the floating bar hidden and shown, the wheel
+zoom, the cursor dragged across lines, the frame marks on the sheet and on the printed pages, the frames typed in
+the range toolbox, a decoration note lit at its own onset) and `npm run check:enhance-dialog` (the dialog; a stand-in
+answers the requests that would start the AI).
 
 The engine stays in the backend (implementation 03, Phase 6, task 4): one edit takes about a quarter of a second
 from the click to the new drawing on the page, most of it in the backend's rules (the stored sheet laid again on
@@ -98,6 +79,7 @@ as the record.
 
 - [`documentation/services/backend/sheet-drawing.md`](../../documentation/services/backend/sheet-drawing.md): how the
   backend draws the sheet (the routes, the layout, the lines, the glyphs, the SVG, the pages)
+- [sheet-page.md](sheet-page.md): the Sheet page, the frontend shell of the sheet
 - `aitu-backend/src/aitu_backend/sheet/README.md` sections 9 to 17: the engine, the AI step, the edits, the tools,
   the marks of the old sheets
 - [`documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md) section 3:

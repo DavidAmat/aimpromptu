@@ -40,11 +40,13 @@ Report: [05-implementation-phase-3.md](05-implementation-phase-3.md)
 - [x] 3.1 New `documentation/services/backend/sheet-drawing.md`.
 - [x] 3.2 `context/frontend/rendering.md` (the backend half); the core README sections 10 and 15.
 
-# [ ] Phase 4: The sheet page (the frontend shell) (wave C)
+# [x] Phase 4: The sheet page (the frontend shell) (wave C)
 
-- [ ] 4.1 New `context/frontend/sheet-page.md`.
-- [ ] 4.2 `rendering.md` (the frontend half), the Sheet step in `projects.md`, `timestamps.md`.
-- [ ] 4.3 `components.md`: the page, the view, the hooks.
+Report: [05-implementation-phase-4.md](05-implementation-phase-4.md)
+
+- [x] 4.1 New `context/frontend/sheet-page.md`.
+- [x] 4.2 `rendering.md` (the frontend half), `timestamps.md` done; the Sheet step in `projects.md`: pending edit E4.1 for the join of wave C.
+- [x] 4.3 `components.md`: the page, the view, the hooks: pending edits E4.2 and E4.3 for the join of wave C (the table already names the page, the view and the hooks).
 
 # [x] Phase 5: The note toolbox (wave A)
 
