@@ -145,3 +145,9 @@ guide chord (`levels.guide_chords`; `C4` is Csus4). Level prompts 7 add "the key
 in the melody of a song in Do major is most likely Fa major). Run F on `39d92dbe` (Strict easy 1, with the guide):
 the chords are only C, F, G, Am, E, Em, Ab and Csus4 (no La major); every batch was accepted at the first reply;
 $0.074. Total real runs: about $0.63.
+
+**Phase 5: the documentation becomes its own plan** (the user, 2026-11-01). The documentation of Phase 5 grew into a
+refresh of every `context/` and `documentation/services/` page, which also covers 04-3 (its Phase 6 never ran):
+[`05-documentation-refresh/05-plan.md`](../05-documentation-refresh/05-plan.md), 20 phases for small AI models, on
+`feat/05-docs-refresh`. Task 5.1 (one real run through the page) was cancelled by the user: run D did the whole loop
+through the API. 04-5 merged into `master` on 2026-11-01, at the user's ok.

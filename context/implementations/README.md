@@ -52,6 +52,12 @@ closed.
 |---|---|---|---|---|
 | 04 | [`04-app-enhancements/`](04-app-enhancements/README.md) | The sheet page (Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag, the hidden floating toolbox back) and the AI's sheet (a new decoration-note rule on every sheet, prompt version 6 with simplicity and the amateur pianist rule, run on 7 Years; the Enhance with AI dialog with Simplify left / right / both). One branch per phase, `feat/04-phase-N` | 2026-10-27 | **Done** (2026-10-28). Phases 1 to 5 done, each merged into `master` after the user's check; the new logo (`04-2-prompt.md`) on `feat/04-logo`. [`04-context.md`](04-app-enhancements/04-context.md) is the summary for later work, [`04-checklist.md`](04-app-enhancements/04-checklist.md) the status lookup |
 
+## 05-documentation-refresh: the documentation brought up to date
+
+| # | Folder | What it is | Opened | State |
+|---|---|---|---|---|
+| 05 | [`05-documentation-refresh/`](05-documentation-refresh/README.md) | Every page of `context/` and `documentation/services/` checked against the app after 03, 04, 04-3 and 04-5, in 20 small phases for small AI models. Branch `feat/05-docs-refresh` | 2026-11-01 | **Planned.** [`05-checklist.md`](05-documentation-refresh/05-checklist.md) is the status lookup and names the next phase |
+
 ## How to read this folder
 
 - **"What is being built now?"** → nothing is open. Implementation 04 is done (2026-10-28): read

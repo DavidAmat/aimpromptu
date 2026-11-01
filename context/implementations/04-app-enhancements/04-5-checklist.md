@@ -40,7 +40,10 @@ The plan is [`04-5-plan.md`](04-5-plan.md), the brief [`04-5-prompt.md`](04-5-pr
 - [x] 4.2 The run panel waiting after batch 1.
 - [x] 4.3 The history of AI runs; the browser checks.
 
-# [ ] Phase 5: A real run in the app, the documentation
+# [x] Phase 5: A real run in the app, the documentation
 
-- [p] 5.1 One real run through the page on a temporary copy (run D did the whole loop through the API; the page itself is checked with a faked run).
-- [ ] 5.2 The documentation; the links check; the user's review and the merge.
+- [c] 5.1 One real run through the page on a temporary copy. Cancelled by the user (2026-11-01): run D did the whole
+  loop through the API, and the page is checked with a faked run.
+- [x] 5.2 The documentation: moved to its own plan at the user's ask (2026-11-01), a refresh of all `context/` and
+  `documentation/services/` pages in 20 small phases: [`05-plan.md`](../05-documentation-refresh/05-plan.md).
+- [x] 5.3 The user's review and the merge into `master` (2026-11-01), with `feat/04-3-enhance-dialog`.
