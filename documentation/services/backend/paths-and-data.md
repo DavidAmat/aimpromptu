@@ -109,6 +109,7 @@ The functions that read and write a bundle are in `storage/bundle.py`: `create_p
 `AudioMetadata` shape of implementation 08: `alias` is `title`, the source fields come from
 `parts[].source`, `cuts` and `audioRevision` from the timeline, `createdAt` and `frameMs` from the
 project. `updatedAt` is the newest modification time of the part's files and of `project.json`.
+The folders and the metadata of a project are not in the bundle either: they are rows of the tables of section 6.
 The links of a project to a song, an artist and a version are **not** in the bundle: they are rows
 of a library (§6), because the same bundle can sit in two libraries under two songs.
 
@@ -526,8 +527,7 @@ and `AITU_DATA_DIR`; git history keeps them. The committed Lab records it copied
 | Script | What it does |
 |---|---|
 | `make_demo_pieces.py` | Writes two hand-built demo pieces (`11111111-…`, `22222222-…`), so the right answer is known before you open anything |
-| `bench_pieces.py` | Times the piece routes on a temporary copy of each piece (`POST /projects/{id}/duplicate`, deleted at the end) |
-| `bench_payloads.py`, `bench_device.py`, `bench_stream.py`, `check_saved_hands.py` | Measurements of implementation 08, now on parts |
+| `bench_device.py`, `bench_stream.py`, `check_saved_hands.py` | Measurements of implementation 08, now on parts (`bench_pieces.py` and `bench_payloads.py` were removed) |
 | `benchmark_hands.py` | Hand-split quality against a reference |
 
 The browser scripts of `aitu-frontend/scripts/` (`check:flow`, `bench:sheet`, `time:flow`) reach a

@@ -47,9 +47,9 @@ database. Every path in the folder is built by one module, `aitu_backend/storage
                                  03, Phase 9, its marks the new sheet keeps are in sheet.f1 (part_sheet/legacy.py);
                                  nothing writes a new one since Phase 10 (2026-10-27), which removed the old sheet
     sheet.f1                     the new piano sheet: F1 frames text and a record of how it was written
-                                 (Sonnet or the algorithm, implementation 03, Phase 5; since Phase 7 also edited by
+                                 (the AI or the algorithm, implementation 03, Phase 5; since Phase 7 also edited by
                                  the user, and the stretches the AI wrote again); the hands stay in notes.pmn
-    sheet.pending                a new transcription asks Sonnet to write the sheet (removed when it starts)
+    sheet.pending                a new transcription asks the AI to write the sheet (removed when it starts)
     sheet.edits.json             the steps of undo and redo of the new sheet (implementation 03, Phase 6): each
                                  note's hand before and after, the notes taken off the page (Phase 7), the lines of
                                  sheet.f1 changed; not copied with the part
