@@ -57,7 +57,7 @@ chosen, a **stretch** of it ("0:12 – 1:05", else "Whole"). Nothing of a song c
 only chosen: a row opens the version (read only); its `⋯` has **Use “<version>”** for each other
 version, **The whole song** when it has a stretch, **Move up**, **Move down** and **Remove from the
 playlist**; a row is dragged to another place. **Add a song** puts a song of the library at the end
-on its first version. The header's `⋯` renames or deletes the playlist (its songs stay).
+on its first version. The header's `⋯` has **Rename**, **Publish** (Phase 14, [requests.md](../music-library/requests.md)) and **Delete playlist** (its songs stay).
 
 Three more ways in:
 

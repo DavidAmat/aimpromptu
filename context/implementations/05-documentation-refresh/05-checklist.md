@@ -112,10 +112,12 @@ Report: [05-implementation-phase-1.md](05-implementation-phase-1.md)
 - [ ] 17.1 `recording-in-sheet.md`, `playlists.md` (From other projects, the parts).
 - [ ] 17.2 `editing.md` (Recording in Sheet), `editing-and-compose.md` (Compose), `endpoints.md`, `components.md`.
 
-# [ ] Phase 18: The libraries, playlists, requests and the Public Library (wave A)
+# [x] Phase 18: The libraries, playlists, requests and the Public Library (wave A)
 
-- [ ] 18.1 What changed since 2026-10-19; `check-names.py` on every page of `context/music-library/`.
-- [ ] 18.2 `context/music-library/*`, the playlists part of `playlists.md`, `endpoints.md`, `components.md`.
+Report: [05-implementation-phase-18.md](05-implementation-phase-18.md)
+
+- [x] 18.1 What changed since 2026-10-19; `check-names.py` on every page of `context/music-library/`.
+- [x] 18.2 `context/music-library/*`, the playlists part of `playlists.md`, `endpoints.md` (checked, no change), `components.md` (a pending edit for the join: section 1.3).
 
 # [ ] Phase 19: Play mode, the Lab, users and admin, the routes and the shell (wave A)
 

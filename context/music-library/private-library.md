@@ -62,7 +62,7 @@ song, and its one action is **Edit**.
 
 **Edit** makes a copy in Projects that points at the version (`basedOn`; no audio bytes copied) and
 opens it. The version itself does not change. While a copy is open, the song says **Editing** beside
-the version, Projects says **Editing** on the copy, and **Edit** opens that same copy again. The copy
+the version, Projects says **Editing** on the copy, and **Edit** opens that same copy again (the version's `⋯` says **Continue editing** then). The copy
 is an ordinary project; its **Save to library** offers two things:
 
 - **Replace “<version>”**: the version gets the copy's content (the library project keeps its id
@@ -85,7 +85,7 @@ replaces too, so nothing is lost by trying one.
 | Page | Address | What is on it |
 |---|---|---|
 | Songs | `/library/songs` | Three pills (implementation 04-3): **All**, a table (title, artist, versions, changed) with a filter by title or artist; **Folders**, the same table as a tree of folders (section 5.1); **Filter**, the table with the dropdowns Artist and one per primary key. A row opens the song; its `⋯`: **Info**, **Folders…**. Songs ticked by their checkbox make a playlist (**Make a playlist of N**, Phase 10) |
-| A song | `/library/songs/:id` | The title, its artists (each a link), and its versions. A version row opens it read only; its `⋯`: Open, Play, Edit, Duplicate, Export, **Add to a playlist** (Phase 10), **Publish** (Phase 14), Rename, History, Delete. The header: Play, the **info button** (the song's metadata and folders, implementation 04-3), and the `⋯`: Rename song, Artists, Delete song |
+| A song | `/library/songs/:id` | The title, its artists (each a link), and its versions. A version row opens it read only; its `⋯`: Open, Play, Edit (**Continue editing** while a copy is open), Duplicate, Export, **Add to a playlist** (Phase 10), **Publish** (Phase 14), Rename, History, Delete. The header: Play, the **info button** (the song's metadata and folders, implementation 04-3), and the `⋯`: Rename song, Artists, Delete song |
 | Artists | `/library/artists` | A table (name, other names, songs) with a filter |
 | An artist | `/library/artists/:id` | Its names (Make default, Rename, Remove; **Add a name**) and its songs. The header's `⋯`: Merge into another artist, Delete artist (once it has no song) |
 | Playlists | `/library/playlists` | The songs playlists and the integrated playlists (Phase 10), **New playlist** |
@@ -93,7 +93,7 @@ replaces too, so nothing is lost by trying one.
 | Shared | `/library/shared`, `/library/shared/songs/:id` | The libraries other users share with the user (Phase 14): their songs, one song with its versions (Play, open read only), **Add to my library**; **Share my library** |
 
 **Duplicate** of a version makes an independent project in Projects; **Export** saves its `.aitu`
-file. **Search** (`⌘K`) finds songs by title and artist, and projects by title.
+file. **Search** (`⌘K`) finds songs by title and artist, and projects by title; under them it lists the Public Library's most popular songs and artists that match (Phase 13, [ontology.md](ontology.md) section 6).
 
 ### 5.1 Folders and metadata (implementation 04-3, Phase 1)
 
@@ -130,7 +130,7 @@ library project in place: the step routes answer `403`, and the changes go throu
 the owner's only: another user gets `404`, also for a library shared with them, where the info button
 shows the song's metadata read only.
 
-## 7. Not built yet
+## 7. Later phases, and what is still open
 
 | Thing | When |
 |---|---|
@@ -147,7 +147,7 @@ without one.
 
 The 30 songs the migration of Phase 3 put in the master user's library had notes but no hands and
 no sheet. On 2026-10-16 each got them through the real pages, as a user would
-(`aitu-frontend/scripts/sheet-library.mjs`: **Edit**, **Predict hands** and **Save**, the Sheet
+(the frontend's sheet-library script: **Edit**, **Predict hands** and **Save**, the Sheet
 step's **Save**, **Replace the version**), so their cuts were written away then, and their earlier
 state (without a sheet) stays in their history, where it cannot be restored. That script, **Predict
 hands** and the old sheet's **Save** were removed in implementation 03, Phase 10 (2026-10-27): a sheet
