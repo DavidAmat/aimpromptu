@@ -10,7 +10,7 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
-from aitu_backend.part_sheet import build, job
+from aitu_backend.part_sheet import build, job, runs
 from aitu_backend.sheet.llm import levels as L
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet.data import Sheet
@@ -354,6 +354,50 @@ def test_a_level_run_writes_its_log_and_the_history_lists_it(client: TestClient,
     assert stored_sheet(part).record.levels[-1]["run"] == run_id
     assert client.get(f"/sheet/{part}/llm/runs/ffffffffffff").status_code == 404
     assert client.get(f"/sheet/{part}/llm/runs/..%2Fx").status_code == 404
+
+
+def test_a_run_the_backend_did_not_finish_is_marked_stopped_when_it_starts(
+    client: TestClient, part: str, accepting: None
+) -> None:
+    # Implementation 04-6: the backend stopped while batch 2 was written. Batch 1 is on the sheet (the wait saved
+    # it), batch 2 was accepted but never saved, and the log still says running.
+    started = job.start_level(part, level="easy", hand="both", first=True, complete=lambda: stand_in([]))
+    finish(started)
+    run_id = started.summary["run"]
+    log = runs.load(part, run_id)
+    assert log is not None and log["state"] == "waiting" and len(log["batches"]) == 1
+    a, b = log["request"]["windows"][1]
+    log["batches"].append({**log["batches"][0], "k": 1, "start": a, "end": b, "status": "ok"})
+    log["state"] = "running"
+    runs.save(part, log)
+    finished = runs.create(part, {"windows": []}, "system")
+    finished["state"] = "done"
+    runs.save(part, finished)
+
+    assert runs.close_unfinished() >= 1
+    run = client.get(f"/sheet/{part}/llm/runs/{run_id}").json()
+    assert run["state"] == "stopped" and run["note"] == runs.STOPPED_NOTE
+    assert [x["status"] for x in run["batches"]] == ["ok", "error"]  # batch 2 is "Not written"
+    assert runs.load(part, finished["id"])["state"] == "done"  # a run that ended is not touched
+    listed = {r["id"]: r for r in client.get(f"/sheet/{part}/llm/runs").json()}
+    assert listed[run_id]["state"] == "stopped"
+    assert runs.close_unfinished() == 0  # nothing left running
+
+
+def test_the_backend_start_closes_a_run_left_running(part: str) -> None:
+    from aitu_backend.main import create_app  # noqa: PLC0415
+
+    left = runs.create(part, {"windows": []}, "system")
+    with TestClient(create_app()):  # the app's start (lifespan)
+        pass
+    assert runs.load(part, left["id"])["state"] == "stopped"
+
+
+def test_a_log_that_cannot_be_read_does_not_stop_the_start(part: str) -> None:
+    folder = runs._dir(part)
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "000000000000.json").write_text("{ not json", encoding="utf-8")
+    assert runs.close_unfinished() == 0
 
 
 def test_a_run_writes_its_first_batch_waits_takes_an_answer_and_goes_on(

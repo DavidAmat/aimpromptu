@@ -253,13 +253,20 @@ functions of the log are in `part_sheet/runs.py`.
   `words`, `model`, `batches` (`k`, `start`, `end`, `status` of each), `total` (the windows of the request), `usd`.
 - `listing(part_id)`: the logs in the folder, then the record's `levels` entries whose `run` has no log (`id`
   `record-N`, `log` `False`, the plan and `declared` from the record). Sorted by `created`, the latest first.
+- `close_unfinished()` (implementation 04-6): called once by `main.lifespan`, after `ensure_master_user`, when no job
+  can be running. It reads every `ai-runs/*.json` under `users/`, `public/` and `requests/` (`_logs`). A log with
+  `state` `running` gets `state` `stopped` and `note` `STOPPED_NOTE` ("The backend stopped during the run."); each of
+  its batches `ok` or `open` whose `(start, end)` is not in a record `levels` entry of this run with status `ok`
+  (`_saved_batches`) gets `status` `error`. Returns the number of runs closed and logs it. A log that does not read
+  or write is logged and left as it is: the start never fails for a log.
 
 ### 9.2 `part_sheet/job.py`: the states of a run, and the two jobs
 
 - `_level_work` (the job of `start_level` and `continue_level`) sets `state` to `running` when it starts. At the end:
   `stopped` if a Stop was asked, else `waiting` if a batch was accepted, the windows are not all done and no Stop was
   asked, else `done` if a batch was accepted or was done before, else `failed`. A `BaseException` in the work sets
-  `stopped` and saves. The job's summary has `waiting: true` for the waiting state, and `run` (the id).
+  `stopped` and saves. A process that stops (a crash, a reload) sets nothing: `runs.close_unfinished` closes that log
+  at the next start (9.1). The job's summary has `waiting: true` for the waiting state, and `run` (the id).
 - `continue_level(part_id, run_id, *, complete=None)`: `LookupError` ("No such run.") when there is no log;
   `ValueError` ("This run is not waiting for you.") unless `state` is `waiting`; `Busy` when the part has a job. Its
   batches are the windows not in the log's batches. It calls `_level_work` with the stored request, plan and rules.
@@ -299,7 +306,8 @@ functions of the log are in `part_sheet/runs.py`.
 ### 9.5 The page
 
 - `pages/piece/sheet/frames/AiHistoryPanel.tsx` (`AiHistoryPanel`, `STATE_WORDS`): the list; `AiRunDetail.tsx`
-  (`AiRunDetail`, `BatchBlock`, `STATUS_WORDS`): one run, its answer box and **Write this batch again**, and
+  (`AiRunDetail`, `BatchBlock`, `STATUS_WORDS`): one run (with its `note`, `data-run-note`, when the log has one), its
+  answer box and **Write this batch again**, and
   **Go on with the other N batches**; `AiRunPanel.tsx`: the title **Check batch 1** and the **History** button;
   `batches.ts` (`BATCH_COLOURS`); `FramesSheetPage.tsx`: **History of AI runs** in `sheetButtons` (when `offerAi`).
 - `api/sheet.ts`: `aiRuns`, `aiRun`, `continueRun`, `runBatchAgain`. `patterns.ts`: `runTitle`, the title of a run.

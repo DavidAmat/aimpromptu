@@ -89,3 +89,13 @@ The docs dropped Simplify on 2026-11-02 (the dialog no longer offers it). Its co
 - Never print or copy a key from `.env`.
 - Tests on CPU (another project often holds the GPU); no AI request in the tests.
 - `python3 scripts/docs/check-links.py` passes at the end; `scripts/docs/check-names.py` on each doc changed.
+
+## The user's answers (2026-11-03)
+
+- The setting: `AITU_LLM_MODEL`.
+- The dialog keeps its **Model** selector; its choices live in one table of the backend, and the frontend reads them.
+- A model never measured: the cost ratio from the price table, the time ratio 1; no price: ratio 1, and the cost
+  counts as 0 with a warning, instead of a crash.
+- Part C: yes, Simplify's code goes.
+
+The plan: [`04-6-plan.md`](04-6-plan.md); the status: [`04-6-checklist.md`](04-6-checklist.md).

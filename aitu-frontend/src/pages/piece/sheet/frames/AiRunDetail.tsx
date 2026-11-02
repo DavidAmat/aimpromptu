@@ -191,6 +191,11 @@ export function AiRunDetail({ audioUuid, runId, busy, refresh = 0, onStarted, co
           </Typography>
         </>
       ) : null}
+      {run.note ? (
+        <Typography variant="body2" color="text.secondary" data-run-note>
+          {run.note}
+        </Typography>
+      ) : null}
       {run.rules.length ? (
         <Stack spacing={0.25} data-run-rules>
           <Typography variant="subtitle2" component="p">

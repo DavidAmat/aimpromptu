@@ -341,6 +341,8 @@ export interface AiRun {
   rules: AiRunRule[];
   usd: number;
   requests: number;
+  /** Why the run ended early, when the backend says so ("The backend stopped during the run."). */
+  note?: string;
 }
 
 /** A level of a range: in place, one step of undo. */
