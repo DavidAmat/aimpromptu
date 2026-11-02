@@ -37,11 +37,11 @@ sheet's renderer, so a change there needed `make build` too; the app no longer u
 used at once.
 
 **Variables.** Compose reads `.env` beside `compose.yaml` (copy `.env.example`, which lists the
-variables with their defaults; `OPENAI_API_KEY` is not in it yet). Nothing is required on Ubuntu: `HF_TOKEN` is exported in the shell,
+variables with their defaults). One is required: `OPENAI_API_KEY` (compose stops without it). `HF_TOKEN` is exported in the shell,
 `.database/` is `AITU_DATABASE_DIR` in `.env` (mounted at `/database` in the backend), the
 master user is `master` unless `AITU_MASTER_USERNAME` says otherwise, and the Hugging Face cache is
-`/mnt/ssd2/hf/data/hub`. The AI needs a key: `OPENAI_API_KEY` for GPT-6.1 Terra (the
-default) and Sol, `ANTHROPIC_API_KEY` only for Sonnet 5.5; without it a run answers "The AI is not set
+`/mnt/ssd2/hf/data/hub`. The AI needs a key: `OPENAI_API_KEY` (required) for the
+default model, `ANTHROPIC_API_KEY` (optional) only for a Claude model chosen in the dialog; without the key a run answers "The AI is not set
 up on this machine." ([ai/README.md](ai/README.md)). An edit of a backend `.py` file reloads the backend and stops a running
 AI run. Three names of `.env` came with the users and the home network (implementation 02, Phase 4):
 
@@ -156,7 +156,7 @@ Playwright's Chromium, installed once with `npx playwright install chromium`):
 | `npm run check:ai-run-panel` | The panel of an AI run on a copy (2026-10-30): it opens on a running run, lists each batch and its state, the sheet draws them, Stop, the end (Stopped, Not written), Revert with the run's snapshot, Close. The browser is told a run is going: no AI is asked |
 | `npm run check:ai-history` | The first batch of a level run and its panel (**Check batch 1**, an answer to the AI, **Go on with the other 3 batches**), then **History**, the history of AI runs. No AI is asked (implementation 04-5) |
 | `npm run check:folders` | Folders, the pills and the metadata of My projects and My Library, on temporary copies (implementation 04-3, Phase 1) |
-| `npm run check:enhance-dialog` | The Enhance with AI dialog on a copy of a library version: the whole song (the four runs and their cost, Simplify sends the hand) and a stretch (opened on the selection's hand, sent with the hand and the words). The requests that would start the AI are answered by a stand-in in the browser: no credits (implementation 04, Phase 4) |
+| `npm run check:enhance-dialog` | The Enhance with AI dialog on a copy of a library version: the whole song (the runs and their cost) and a stretch (opened on the selection's hand, sent with the hand and the words). The requests that would start the AI are answered by a stand-in in the browser: no credits (implementation 04, Phase 4) |
 | `npm run check:journey` | **The whole journey**, timed: a YouTube link to a piano sheet, saved, published, reviewed and accepted, then pulled, played and composed by a second user (two temporary users; it transcribes) |
 | `npm run time:flow` | The whole flow, timed, on three temporary pieces (an upload, a copied library piece, a new YouTube download) |
 | `npm run bench:roll` | The Notes tab's frame rate |

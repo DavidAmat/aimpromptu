@@ -32,7 +32,7 @@ is not on the network. Who can sign in and what each user can open: [08-security
 | `hands/` | Which hand plays each onset: a beam search with a gated second pass; the starting hands of the sheet come from it |
 | `sheet/` | The piano sheet chain of implementation 03 (the F1 text, the algorithm, the LLM step with its prompts and the catalog of patterns, the music analysis of the levels in `levels/`, the engine that draws the SVG) |
 | `sheet_llm.py` | The clients of the AI: GPT-6.1 Terra and Sol through OpenAI, Sonnet 5.5 through Anthropic, and the price of a request ([ai/README.md](ai/README.md)) |
-| `part_sheet/` | The sheet of a part: build, store (`sheet.f1`), edits and undo, the reading edits of the toolboxes, the AI's jobs (the whole run, a stretch, Simplify, the level run), the history of AI runs (`runs.py`), the lengths through a paste or a promotion, the marks of an old `sheet.json` |
+| `part_sheet/` | The sheet of a part: build, store (`sheet.f1`), edits and undo, the reading edits of the toolboxes, the AI's jobs (the whole run, a stretch, the level run), the history of AI runs (`runs.py`), the lengths through a paste or a promotion, the marks of an old `sheet.json` |
 | `editing/` | The replacement splice, composing, paste, passages, parts, history |
 | `library/` | The Private and the Public Library: songs, artists, versions, playlists, folders and metadata, requests, shares, the import and popularity |
 | `video/` | Reading a Synthesia-style video into notes (Lab) |

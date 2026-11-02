@@ -9,7 +9,7 @@ Every **level run** keeps a log of what it asked and what the AI answered. The u
 AI runs**. From there the user can answer the AI about one batch, write that batch again, or go on with the batches
 that were not written yet. A level run of two batches or more writes its first batch and then waits for the user.
 
-Only level runs have a log. A whole run, a stretch and Simplify do not appear in the history.
+Only level runs have a log. A whole run and a stretch do not appear in the history.
 
 ## 1. The first batch first
 

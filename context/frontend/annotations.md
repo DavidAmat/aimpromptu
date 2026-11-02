@@ -49,17 +49,10 @@ Since implementation 03, Phase 10 (2026-10-27) the Sheet step has only the new s
 - **Undo and Redo**: the arrows of the floating bar, ⌘Z and ⇧⌘Z (Control-Z and Control-Y on Windows). The
   backend keeps the steps, so they survive a reload and another page; the last 50 are kept. A new AI run on the
   whole sheet, or a new transcription, starts them again (with one step, "Notes the AI added and left out", when
-  the run added or left out notes; implementation 04, Phase 3); a Simplify run is one step ("Simplify the left hand
-  with AI").
+  the run added or left out notes; implementation 04, Phase 3).
 - **No Save button**: each change is written at once.
 - **Nothing can be changed while the AI writes the sheet** (the whole sheet or a stretch): the toolboxes and the
   arrows say why.
-- **The whole song** (the Enhance with AI dialog with nothing picked; implementation 04, Phase 4): **Simplify the
-  left hand**, **the right hand** or **both hands** writes only the rules of simplicity (a pattern that repeats is
-  written the same way every time; a quick chord that makes one hand jump far keeps the note near the main note),
-  adding or leaving out a few notes; the hands, beams and clefs stay, and the other hand is not touched. The AI goes
-  over the song batch after batch, each seeing what was simplified before, so a chorus that repeats gets the same
-  change. **Write it all again** is the whole run below. Each choice shows its cost.
 - **Enhance it again with AI** (the whole sheet, **Write it all again**) reads the current hands, the ones you
   moved among them, as a suggestion, and may change any of them (the user's answer of Phase 6). It keeps your
   fingers, your figures set by hand and your grace note switches; it writes the beams, clefs, 8va, armaduras and

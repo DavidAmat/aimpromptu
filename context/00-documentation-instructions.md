@@ -33,7 +33,7 @@ How the AImpromptu (aitu) documentation system works and where to put new materi
 
 **Service overviews:**
 - `context/backend/` — aitu-backend: parsing, API, notation entry points
-- `context/ai/` — the AI on the sheet: [README.md](ai/README.md) (the kinds of run, the model, the cost), the whole run, a stretch and Simplify, the levels and the level run, the history of runs (implementations 03, 04, 04-3, 04-5)
+- `context/ai/` — the AI on the sheet: [README.md](ai/README.md) (the kinds of run, the model, the cost), the whole run, a stretch, the levels and the level run, the history of runs (implementations 03, 04, 04-3, 04-5)
 - `context/frontend/` — aitu-frontend: app shell, projects and their steps, the Sheet step, how the sheet is drawn
 - `context/music/notation-logic/` — the text-notation contract (`02-notation-spec.md`), which still
   owns the sparse-COO wire format and the 88-key row order

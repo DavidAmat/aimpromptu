@@ -17,6 +17,7 @@ The brief is [`04-1-prompt.md`](04-1-prompt.md), the plan is [`04-plan.md`](04-p
 | [`04-context.md`](04-context.md) | **Read first for later work.** What implementation 04 changed, the decisions that bind, where the code is, the open points |
 | [`04-1-prompt.md`](04-1-prompt.md) | The brief, in the user's own words, with the answers of the first discussion (2026-10-27) at its end, and the brief of the dialog (after the Phase 3 gallery) |
 | [`04-2-prompt.md`](04-2-prompt.md) | The second brief: the new logo, traced to SVG, and the logo as the AI mark (branch `feat/04-logo`) |
+| [`04-6-prompt.md`](04-6-prompt.md) | 04-6, a brief (2026-11-02), not started: a level run marked stopped when the backend stops, the model of the AI in one setting, and (if the user agrees) the dead Simplify code removed |
 | [`04-plan.md`](04-plan.md) | The plan: the decisions, the design notes, the binding rules, the method, five phases, the risks; its section 9 has the changes each phase made |
 | [`04-checklist.md`](04-checklist.md) | The status lookup, and the open decisions |
 | [`04-implementation-phase-1.md`](04-implementation-phase-1.md) | Phase 1: the sheet page |

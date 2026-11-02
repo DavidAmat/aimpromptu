@@ -1,13 +1,11 @@
-# A stretch and Simplify
+# A stretch
 
-Two runs of the AI that change part of a sheet, not the whole song. **A stretch** writes one passage again, from the
-user's words. **Simplify** makes one hand (or both) easier to read and play, over the whole song, by leaving out
-and adding a few notes. Both are background jobs: the page shows the change as it is written, and each one ends as
-one step of undo.
+A run of the AI that changes part of a sheet, not the whole song: **A stretch** writes one passage again, from the
+user's words. It is a background job: the page shows the change as it is written, and it ends as one step of undo.
+To make one hand easier over the song, the user writes that hand at a level ([levels.md](levels.md)).
 
-The whole song is on [whole-run.md](whole-run.md). The code of these runs is in
-[documentation/services/backend/ai-runs.md](../../documentation/services/backend/ai-runs.md), section 7 (a stretch)
-and section 8 (Simplify).
+The whole song is on [whole-run.md](whole-run.md). The code of this run is in
+[documentation/services/backend/ai-runs.md](../../documentation/services/backend/ai-runs.md), section 7.
 
 ## A stretch
 
@@ -100,86 +98,15 @@ The whole is one step of undo. The sheet shows the batches while the dialog is o
 - A stretch cannot reach past its frames: the AI writes inside the stretch only.
 - The run does not start while another run works on the part (409): "The AI is already enhancing this sheet."
 
-## Simplify
-
-Simplify is the AI making one hand easier to read and play, over the whole song, with the rules of simplicity only.
-The hands, the beam groups, the clefs and the figures are decided and stay. The AI only chooses notes to **leave out**
-and notes to **add**.
-
-### How it is reached now
-
-The dialog no longer offers the Simplify run without a level: its docstring says "the older Simplify run without a
-level is no longer offered here". Making a hand simpler is now **a level of that hand** (`levels.md`, `level-run.md`).
-The run is still in the code: the route `POST /sheet/{uuid}/llm/simplify` with `{hand: left | right | both}`, and the
-job `start_simplify`. The dialog does not call it.
-
-The rest of this section tells the run as the code has it.
-
-### The batches
-
-The song is cut into batches of one hand (or both): 24 to 32 seconds of music each, at most 300 onsets (`SIMPLIFY_MS`,
-`SIMPLIFY_ONSETS`). A batch ends after a pause of that hand. Each batch sees:
-
-- every change made before it, with its reason (`so_far`): the batches repeat each other's choices;
-- the earlier passage most like it, as simplified, with its changes (`like_before`: the same keys, in runs of 4
-  columns, at least 30 % of the batch);
-- the last 8 seconds of the previous batch, as simplified (`SIMPLIFY_CONTEXT_MS`);
-- the places the app finds to check (`places`): the far notes of quick chords and the broken octaves.
-
-### The rules
-
-The prompt has the rules of simplicity only (`simple.1` to `simple.4` in `prompt/frames/instructions.md`):
-
-- simple.1: a passage that repeats one pattern (octaves, chords, single notes, a bass and chord figure) is written
-  the same way every time;
-- simple.2: a quick note or chord just before a main note of the hand, that makes the hand jump far, keeps only the
-  notes near the main note;
-- simple.3: the notes keep their place: no note moves to another frame, and no pitch changes its name, except a name
-  that the earlier passage like it also changes at the same place;
-- simple.4: change little.
-
-### The answer
-
-The AI answers the change lines only, one per note: `# leave out f120 G2: why` or `# add f240 D1: why`, or the one
-line `# no change`. The checker (`check_simplify`) refuses:
-
-- a note left out that is not a note of the target;
-- a note added where its hand plays no note of the target, or that is not within an octave of a note of its column,
-  or that does not have the name of a note of that column or of the pattern around it;
-- more than a tenth of the target's notes changed (and at least 4 in a small batch);
-- a name changed where the earlier passage like it has no new note at the same place.
-
-A refused reply gets the problems as the next message, at most 3 replies. A batch that still fails keeps its notes. An
-error that stops the requests (no credits, no network) stops the rest of the batches; the batches done stay.
-
-### What is stored
-
-The run is one step of undo, stored at the end (`apply_simplify`):
-
-- the notes left out are removed in `notes.pmn`, and the notes added are written there;
-- the sheet is laid again on those notes: the beam groups are cut and the clefs fitted around the changed notes;
-- `Record.simplified` lists each run: the hand, the notes added, the notes left out, the cost, what was written, and
-  the change lines.
-
-The job's last message says what happened (the summary field `simplify`):
-
-| `simplify` | What the user reads |
-|---|---|
-| `ok` | "The AI added N notes and left out M notes in the right hand." |
-| `none` | "The AI found nothing to simplify in the right hand." |
-| `failed` | "The AI could not simplify the sheet. It stays as it was." |
-| `stale` | "The notes changed while the AI worked. The sheet stays as it was." |
-
 ## Limits
 
-- Simplify does not move a note to the other hand: each hand stays as it is, and the AI changes only its notes.
-- The audio does not change in either run: a note added is a note of the part's notes, the audio is the same.
+- The audio does not change: a note added is a note of the part's notes, the audio is the same.
 - A run whose notes changed while the AI worked is not stored: the sheet stays as it was.
 
 ## Where to look deeper
 
 - [whole-run.md](whole-run.md): the whole run, the same panel, Stop and Revert
 - [README.md](README.md): the AI in the app, the kinds of run, the model and the cost
-- [documentation/services/backend/ai-runs.md](../../documentation/services/backend/ai-runs.md), sections 7 and 8: the
-  functions, the constants and the routes of a stretch and of Simplify
-- [levels.md](levels.md) and [level-run.md](level-run.md): a level of one hand, the way to simplify it now
+- [documentation/services/backend/ai-runs.md](../../documentation/services/backend/ai-runs.md), section 7: the
+  functions, the constants and the route of a stretch
+- [levels.md](levels.md) and [level-run.md](level-run.md): a level of one hand, the way to make it easier

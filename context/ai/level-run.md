@@ -187,6 +187,6 @@ spent is stored with the run (in USD, with the number of requests), and the step
 - [documentation/services/backend/ai-levels.md](../../documentation/services/backend/ai-levels.md): section 8, the
   functions and constants of the run, and the prompt files
 - [levels.md](levels.md): what a level is, the catalog, the grid, the chords of the song
-- [stretch-and-simplify.md](stretch-and-simplify.md): a stretch, and the level of one hand that replaced Simplify
+- [stretch.md](stretch.md): a stretch of the sheet with the user's words
 - [whole-run.md](whole-run.md): the other whole-song run, which rewrites the song in one kind of run
 - [README.md](README.md): the AI in the app, the kinds of run, the model and the cost

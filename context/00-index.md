@@ -89,7 +89,7 @@ assumes.
 |------|-------------|
 | [ai/README.md](ai/README.md) | The AI in the app: the kinds of run, the model and the cost, the AI mark |
 | [ai/whole-run.md](ai/whole-run.md) | The whole run: **Write it all again**, the batches, the panel, **Stop** and **Revert** |
-| [ai/stretch-and-simplify.md](ai/stretch-and-simplify.md) | A stretch of the sheet with the user's words, and Simplify: the batches, the rules, the stored run |
+| [ai/stretch.md](ai/stretch.md) | A stretch of the sheet with the user's words: the hands, the batches, the checks, the stored run |
 | [ai/levels.md](ai/levels.md) | Levels: the catalog of patterns, the grid, the chords of the song, the level copy |
 | [ai/level-run.md](ai/level-run.md) | A level run: the plan of the song, the batches, the rules, the check and its limits per level, Strict and Suggested, the explanations, the cost |
 | [ai/run-history.md](ai/run-history.md) | The history of AI runs: the log of each level run, the first batch first, an answer to the AI, a batch written again, Go on |
@@ -150,6 +150,7 @@ the song. **04-4** is a brief only, not built.
 | `implementations/04-app-enhancements/04-implementation-phase-N.md` | One report per phase (Phase 1: the sheet page; Phase 2: the decoration-note rule, and its gallery in `gallery/phase-2/`; Phase 3: prompt version 6 and 7 Years, and its gallery in `gallery/phase-3/`; Phase 4: the Enhance with AI dialog and Simplify, and its gallery in `gallery/phase-4/`; Phase 5: the documentation and closing) |
 | `implementations/04-app-enhancements/04-3-prompt.md`, [04-3-plan.md](implementations/04-app-enhancements/04-3-plan.md), [04-3-checklist.md](implementations/04-app-enhancements/04-3-checklist.md), `04-3-implementation-phase-N.md` | 04-3: the brief, the plan, the status lookup and one report per phase (1, 2, 2b, 3, 4, 5; Phase 6, the documentation, done by 05) |
 | `implementations/04-app-enhancements/04-4-prompt.md` | 04-4: the brief "Copy this style"; not built |
+| [implementations/04-app-enhancements/04-6-prompt.md](implementations/04-app-enhancements/04-6-prompt.md) | 04-6: the brief of a run marked stopped when the backend stops, and the model of the AI in one setting; not started |
 | `implementations/04-app-enhancements/04-5-prompt.md`, [04-5-plan.md](implementations/04-app-enhancements/04-5-plan.md), [04-5-checklist.md](implementations/04-app-enhancements/04-5-checklist.md), [04-5-implementation-phases-1-to-4.md](implementations/04-app-enhancements/04-5-implementation-phases-1-to-4.md) | 04-5: the brief, the plan, the status lookup and the report of Phases 1 to 4 |
 
 ### 03 — The new sheet (applying the research) — DONE (2026-10-23 to 27)
