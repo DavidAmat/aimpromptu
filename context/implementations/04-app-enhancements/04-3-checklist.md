@@ -125,9 +125,13 @@ Built on `feat/04-3-phase-2b` (2026-10-30); report [`04-3-implementation-phase-2
 - [x] Every AI run moved to GPT-6.1 Terra at `medium`, each run measured once for the dialog's estimates (report
   section 10); approved by the user and merged into `master` (2026-10-30).
 
-# [ ] Phase 6: Documentation and closing
+# [x] Phase 6: Documentation and closing
 
-- [ ] Task 6.1 The documentation still stale (the core's `README.md`, the frontend pages, the indexes; the model of
-  the runs is now GPT-6.1 Terra at `medium`, Phase 5 report section 10).
-- [ ] Task 6.2 `04-context.md`: a section for 04-3.
-- [ ] Task 6.3 The final checks; the open points.
+Done by the documentation refresh, implementation 05 (2026-11-01 to 02):
+[`05-plan.md`](../05-documentation-refresh/05-plan.md).
+
+- [x] Task 6.1 The documentation still stale (the core's `README.md`, the frontend pages, the indexes; the model of
+  the runs is now GPT-6.1 Terra at `medium`, Phase 5 report section 10). Done by 05, Phases 2 to 20.
+- [x] Task 6.2 `04-context.md`: a section for 04-3. Done by 05, Phase 13 (`04-context.md` section 8).
+- [x] Task 6.3 The final checks; the open points. Done by 05, Phase 20; the open points are in `04-context.md`
+  section 8.5.

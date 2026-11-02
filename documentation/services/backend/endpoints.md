@@ -25,7 +25,7 @@ properties and the reasons for them are in [`context/08-security.md`](../../../c
 | Group | Routers | Check before the handler (`auth/dependencies.py`) |
 |---|---|---|
 | `OPEN_ROUTERS` | `/auth` | None for `POST /auth/login` and `POST /auth/logout`; `GET /auth/me` and `PUT /auth/password` ask for the session themselves |
-| `USER_ROUTERS` | `/audio`, `/library`, `/matrix`, `/passages`, `/pieces`, `/playlists`, `/projects`, `/public`, `/requests`, `/shares` and `/shared`, `/sheet`, `/youtube`, `/video` | `signed_in`, then `project_rights` |
+| `USER_ROUTERS` | `/audio`, `/folders`, `/library`, `/matrix`, `/metadata`, `/passages`, `/pieces`, `/playlists`, `/projects`, `/public`, `/requests`, `/shares` and `/shared`, `/sheet`, `/youtube`, `/video` | `signed_in`, then `project_rights` |
 | `MASTER_ROUTERS` | `/frame-examples`, `/admin` | `signed_in`, then `master_only` |
 
 The answers of these checks:

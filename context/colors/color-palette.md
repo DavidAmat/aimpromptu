@@ -75,16 +75,29 @@ What they mean on screen (`semantic` in `palette.ts`):
 | Right hand | dark Blue for an onset, light Blue for a sustain |
 | Left hand | dark Green for an onset, light Green for a sustain |
 | A note with no hand, a note marked to come off | Red |
+| A key sounding on a drawn piano | dark Blue |
+| The marks on the music (`status`): info, success, warning, error | dark Blue, dark Green, dark Orange, dark Red |
 | The selection in the piano roll | Lavender |
 | The playhead | Pink |
 | The waveform, its selection, its cursor | light Blue, dark Lavender, dark Pink |
 | A step out of date, an unsaved step (the dot of the step tabs) | dark Orange |
 
 The piano roll visualization has its own dark panel (`semantic.roll`), so the rectangles are the
-brightest thing on it.
+brightest thing on it. Its notes before the hand split are dark Orange (red means "no hand"); the
+picked notes are Lavender. The greys of drawn notes and keys are `grays` of `palette.ts`.
+
+### 2.1 The sheet
+
+The sheet is black ink on white paper, drawn by the backend (`sheet/engrave/svg.py`): the lyrics in a
+soft charcoal, the frame numbers and the dashed lines of the frame marks in greys. The page draws over
+it what moves (the cursor, the picked notes, a marked stretch), and gives each batch of an AI run its
+own colour (`BATCH_COLOURS` of `pages/piece/sheet/frames/batches.ts`, [../ai/level-run.md](../ai/level-run.md)).
+`BATCH_COLOURS` and a few colours of `FramesSheetView.tsx` (the window over a take, the shades of the
+lyrics while they are dragged) are hex values outside `palette.ts`, against the rule above.
 
 ## 3. Where to look deeper
 
 - [`../frontend/README.md`](../frontend/README.md): the app shell and the shared components
+- [`../frontend/sheet-page.md`](../frontend/sheet-page.md): the sheet page and what it draws over the SVG
 - [`documentation/services/frontend/components.md`](../../documentation/services/frontend/components.md):
   every shared component of `src/ui/`

@@ -1,7 +1,7 @@
 # Services overview
 
-Two deployable services in the monorepo (`aitu-backend/`, `aitu-frontend/`) and one library in a
-sibling checkout. Same git root as the docs; not separate repos. Since implementation 08 both
+Two deployable services in the monorepo (`aitu-backend/`, `aitu-frontend/`); the library of the old
+sheet in a sibling checkout is no longer used (below). Same git root as the docs; not separate repos. Since implementation 08 both
 services run in containers on the Ubuntu machine (`compose.yaml`). Since implementation 02, Phase 4
 the browser of any device of the home network opens the frontend's port, `http://ubuntu:5173`, and
 signs in; the SSH tunnel to that port still works. The frontend passes `/api` to the backend, which
@@ -11,12 +11,12 @@ is not on the network. Who can sign in and what each user can open: [08-security
 
 | Property | Value |
 |---|---|
-| Stack | Python 3.12, FastAPI, Pydantic 2, uvicorn, numpy, scipy, PyTorch with CUDA, SQLAlchemy 2 and Alembic over SQLite |
+| Stack | Python 3.12, FastAPI, Pydantic 2, uvicorn, numpy, scipy, PyTorch with CUDA, SQLAlchemy 2 and Alembic over SQLite, the OpenAI and Anthropic SDKs for the AI |
 | Module | `aitu_backend` under `src/aitu_backend/` |
 | Container | `backend` (`aimpromptu-backend:dev`), the GPU reserved, published on `127.0.0.1:8765` only (not on the network) |
 | Natively | `127.0.0.1:8765` (`AITU_HOST` / `AITU_PORT`) |
-| Data | `.database/` at the repository root (`AITU_DATABASE_DIR`), mounted at `/database` in the container: [07-database.md](07-database.md) |
-| Role | Run MuScriptor on the GPU, store the recorded notes, keep the revisions of each step, derive the score |
+| Data | `.database/`: the folder `AITU_DATABASE_DIR` names (on this machine `/mnt/ssd2/aimpromptu/.database`; without it, the repository root), mounted at `/database` in the container: [07-database.md](07-database.md) |
+| Role | Run MuScriptor on the GPU, store the recorded notes, keep the revisions of each step, derive the sheet, run the AI on it, keep the music library |
 
 **Packages:**
 
@@ -30,15 +30,18 @@ is not on the network. Who can sign in and what each user can open: [08-security
 | `pmn/` | The piano matrix notation: the sparse form and every adapter |
 | `matrix/` | Frame ↔ ms, the hand split, the 88 keys, the matrix model and its operations (the negra ladder, the gap peaks, passages and figure bands were removed in implementation 03, Phase 10) |
 | `hands/` | Which hand plays each onset: a beam search with a gated second pass; the starting hands of the sheet come from it |
-| `sheet/` | The piano sheet chain of implementation 03 (the F1 text, the algorithm, the LLM step, the engine that draws the SVG) |
-| `part_sheet/` | The sheet of a part: build, store (`sheet.f1`), edits and undo, the AI's job, the lengths through a paste or a promotion, the marks of an old `sheet.json` |
-| `editing/` | The replacement splice, composing, staging, history |
+| `sheet/` | The piano sheet chain of implementation 03 (the F1 text, the algorithm, the LLM step with its prompts and the catalog of patterns, the music analysis of the levels in `levels/`, the engine that draws the SVG) |
+| `sheet_llm.py` | The clients of the AI: GPT-6.1 Terra and Sol through OpenAI, Sonnet 5.5 through Anthropic, and the price of a request ([ai/README.md](ai/README.md)) |
+| `part_sheet/` | The sheet of a part: build, store (`sheet.f1`), edits and undo, the reading edits of the toolboxes, the AI's jobs (the whole run, a stretch, Simplify, the level run), the history of AI runs (`runs.py`), the lengths through a paste or a promotion, the marks of an old `sheet.json` |
+| `editing/` | The replacement splice, composing, paste, passages, parts, history |
+| `library/` | The Private and the Public Library: songs, artists, versions, playlists, folders and metadata, requests, shares, the import and popularity |
+| `video/` | Reading a Synthesia-style video into notes (Lab) |
 | `storage/` | Every filesystem path in one module; the project bundle, the audio store |
 | `db/` | The SQLite tables, the Alembic migrations, the users (the master user and the others), the backup, check and reindex tools |
 | `schemas/` | Pydantic contracts, camelCase on the wire, mirrored in TypeScript |
 
 **Endpoints:** `/health`, `/auth`, `/admin`, `/audio`, `/matrix`, `/pieces`, `/sheet`,
-`/passages`, `/projects`, `/playlists`, `/library`, `/public`, `/requests`, `/shares`, `/youtube`, `/video`,
+`/passages`, `/projects`, `/folders`, `/metadata`, `/playlists`, `/library`, `/public`, `/requests`, `/shares`, `/youtube`, `/video`,
 `/frame-examples`. Every route needs a
 session except `/health` and `POST /auth/login`. (The text-notation MVP `/scores` and `/sequence` was deleted
 in implementation 02, Phase 1, the old Piano Library router `/library` in Phase 3 (the name now serves My library), and
@@ -59,10 +62,13 @@ as an SVG (`GET /sheet/{uuid}`). It does not decide how the rest of a page looks
 | API base | `/api`, which the Vite server passes to the backend; `VITE_AITU_API_URL` overrides it |
 | Role | Every screen; it shows the sheet's SVG and draws what moves over it (the cursor, the picked notes, the marked stretch) |
 
-**Sections** (a left sidebar): **Projects** (each project: Source, Audio, Notes, Sheet;
-[frontend/projects.md](frontend/projects.md)), **My library** (Songs, Artists;
-[music-library/private-library.md](music-library/private-library.md)) and, for the master user only,
-**Admin**: **Users** and **Lab** (the video reader's pages). Every page asks to sign in first (`/login`).
+**Sections** (a left sidebar, [frontend/pages.md](frontend/pages.md)): **Projects** (folders, pills
+and metadata, [frontend/folders-and-metadata.md](frontend/folders-and-metadata.md); each project: Source,
+Audio, Notes, Sheet, [frontend/projects.md](frontend/projects.md) and
+[frontend/sheet-page.md](frontend/sheet-page.md)), **My library** (Songs, Artists, Playlists, Shared;
+[music-library/private-library.md](music-library/private-library.md)), **Public library** (Songs,
+Artists, Playlists), **Requests** and, for the master user only, **Admin**: **Review**, **Users** and
+**Lab** (the video reader's pages, [frontend/lab.md](frontend/lab.md)). Every page asks to sign in first (`/login`).
 
 **Does not:** decide any note's name or lay the sheet out: both come from the backend.
 
@@ -114,6 +120,7 @@ about a second follows this pattern.
 - The users, the session, the rights and the network: [08-security.md](08-security.md)
 - The model both services obey: [backend/time-model.md](backend/time-model.md)
 - Backend: [backend/README.md](backend/README.md) · [backend/api.md](backend/api.md)
+- The AI on the sheet: [ai/README.md](ai/README.md)
 - Frontend: [frontend/README.md](frontend/README.md) · [frontend/rendering.md](frontend/rendering.md)
 - Endpoint detail: [`../documentation/services/backend/endpoints.md`](../documentation/services/backend/endpoints.md)
 - Component detail: [`../documentation/services/frontend/components.md`](../documentation/services/frontend/components.md)

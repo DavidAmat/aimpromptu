@@ -36,12 +36,14 @@ sheet's renderer, so a change there needed `make build` too; the app no longer u
 `make up` builds with `--build` and renews the frontend's `node_modules` volume, so a new image is
 used at once.
 
-**Variables.** Compose reads `.env` beside `compose.yaml` (copy `.env.example`, which lists every
-variable with its default). Nothing is required on Ubuntu: `HF_TOKEN` is exported in the shell,
+**Variables.** Compose reads `.env` beside `compose.yaml` (copy `.env.example`, which lists the
+variables with their defaults; `OPENAI_API_KEY` is not in it yet). Nothing is required on Ubuntu: `HF_TOKEN` is exported in the shell,
 `.database/` is `AITU_DATABASE_DIR` in `.env` (mounted at `/database` in the backend), the
 master user is `master` unless `AITU_MASTER_USERNAME` says otherwise, and the Hugging Face cache is
-`/mnt/ssd2/hf/data/hub`. Three names of `.env` came with the users and the home network
-(implementation 02, Phase 4):
+`/mnt/ssd2/hf/data/hub`. The AI needs a key: `OPENAI_API_KEY` for GPT-6.1 Terra (the
+default) and Sol, `ANTHROPIC_API_KEY` only for Sonnet 5.5; without it a run answers "The AI is not set
+up on this machine." ([ai/README.md](ai/README.md)). An edit of a backend `.py` file reloads the backend and stops a running
+AI run. Three names of `.env` came with the users and the home network (implementation 02, Phase 4):
 
 | Name | What it does |
 |---|---|
@@ -68,7 +70,9 @@ Set `AITU_DATABASE_DIR=/mnt/ssd2/aimpromptu/.database` in `.env`. Do not put a l
 
 They run with the local environment (`uv run --no-sync`), because they need `tar` with zstd, which
 the image does not have. The tables reach the newest Alembic revision by themselves when the backend
-starts.
+starts. The Makefile's Public Library targets (`public-import`, `regional-*`, `popularity-*`,
+`genres-*`) are told in [music-library/reconciliation.md](music-library/reconciliation.md),
+[popularity.md](music-library/popularity.md) and [genres.md](music-library/genres.md).
 
 ## 2. Open the app from the Mac
 
@@ -150,11 +154,14 @@ Playwright's Chromium, installed once with `npx playwright install chromium`):
 | `npm run check:frames-sheet`, `check:frames-edit`, `check:frames-tools`, `check:frames-toolbox` | The sheet on a copy of a library version: drawn and played; picking notes, the hand, undo and redo; the note and range toolboxes; the sheet toolbox, lyrics and Print to PDF (`--live` spends a few cents of the AI) |
 | `npm run check:frames-page` | The sheet page on a copy of a library version: the AI symbol, the header and its buttons, the floating bar hidden and shown, ⌘ and the wheel (and a pinch) zoom, the cursor dragged across lines (implementation 04, Phase 1); the frame marks on the sheet (after the zoom, on the printed pages), the frames typed in the range toolbox, a decoration note lit at its own onset (implementation 04-3, Phase 2b; `--version c0e39afe-…` for a sheet with decoration notes) |
 | `npm run check:ai-run-panel` | The panel of an AI run on a copy (2026-10-30): it opens on a running run, lists each batch and its state, the sheet draws them, Stop, the end (Stopped, Not written), Revert with the run's snapshot, Close. The browser is told a run is going: no AI is asked |
+| `npm run check:ai-history` | The first batch of a level run and its panel (**Check batch 1**, an answer to the AI, **Go on with the other 3 batches**), then **History**, the history of AI runs. No AI is asked (implementation 04-5) |
+| `npm run check:folders` | Folders, the pills and the metadata of My projects and My Library, on temporary copies (implementation 04-3, Phase 1) |
 | `npm run check:enhance-dialog` | The Enhance with AI dialog on a copy of a library version: the whole song (the four runs and their cost, Simplify sends the hand) and a stretch (opened on the selection's hand, sent with the hand and the words). The requests that would start the AI are answered by a stand-in in the browser: no credits (implementation 04, Phase 4) |
 | `npm run check:journey` | **The whole journey**, timed: a YouTube link to a piano sheet, saved, published, reviewed and accepted, then pulled, played and composed by a second user (two temporary users; it transcribes) |
 | `npm run time:flow` | The whole flow, timed, on three temporary pieces (an upload, a copied library piece, a new YouTube download) |
 | `npm run bench:roll` | The Notes tab's frame rate |
 | `npm run screenshot -- <path> [--piece <uuid>] [--theme dark] [--signed-out]` | One screenshot of the app, in the light or the dark scheme, signed in or on the sign-in page |
+| `npm run measure:lyric-fonts` | Not a check: measures the lyrics fonts in the browser and writes `sheet/engrave/lyric_fonts.json` of the backend |
 
 Run the browser checks one at a time, and not while the backend tests run on the CPU: under load a
 check can time out while the page is right. When another project holds the GPU, skip the checks
@@ -171,11 +178,9 @@ temporary user it makes), never on a project of a library, and removes what it m
 
 ## 6. The notation renderer
 
-The piano sheet is laid out and drawn by the backend (`aitu_backend/sheet/`, an SVG answered by
-`GET /sheet/{uuid}`), so there is no renderer to build on the frontend side. `npm run check:render`
-and `npm run check:note-names`, which checked the old renderer `@aimpromptu/grid-notation` (the
-sibling checkout `../vexflow-v2`), were removed with it in implementation 03, Phase 10, and
-`make build` no longer needs `../vexflow-v2`. See [frontend/rendering.md](frontend/rendering.md).
+The backend lays out and draws the sheet (`aitu_backend/sheet/`, `GET /sheet/{uuid}`): there is no
+renderer to build on the frontend side. The old one (`../vexflow-v2`) and its checks left in
+implementation 03, Phase 10. See [frontend/rendering.md](frontend/rendering.md).
 
 ## 7. Troubleshooting
 

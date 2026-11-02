@@ -1,6 +1,6 @@
 # 05: The documentation refresh
 
-**State: planned (2026-11-01).** Bring every page of `context/` and `documentation/services/` up to date with the app
+**State: done (2026-11-02), merged into `master`.** Bring every page of `context/` and `documentation/services/` up to date with the app
 after implementations 03, 04, 04-3 and 04-5, in 20 small phases, each done by a small AI model in one session. Asked
 by the user in Phase 5 of 04-5.
 
@@ -10,3 +10,4 @@ by the user in Phase 5 of 04-5.
 | [`05-checklist.md`](05-checklist.md) | The status lookup; its first lines say which phase is next |
 | `05-inventory.md` | From Phase 1: every page in scope, its owner, its state |
 | `05-implementation-phase-N.md` | One report per phase |
+| `05-implementation-join-<W>.md` | One report per join of a wave (A to D): the edits of the shared files |

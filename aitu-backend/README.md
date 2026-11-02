@@ -14,7 +14,9 @@ of every note and a score payload that the browser drew with `@aimpromptu/grid-n
 the model: [time-model.md](../context/backend/time-model.md) ·
 the engine: [muscriptor.md](../context/backend/muscriptor.md) ·
 the steps: [pieces-and-revisions.md](../context/backend/pieces-and-revisions.md) ·
-the sheet: [src/aitu_backend/sheet/README.md](src/aitu_backend/sheet/README.md)
+the sheet: [src/aitu_backend/sheet/README.md](src/aitu_backend/sheet/README.md) ·
+the AI: [context/ai/](../context/ai/README.md) ·
+the routes: [api.md](../context/backend/api.md), [endpoints.md](../documentation/services/backend/endpoints.md)
 
 It runs in a container from the repository root (`make up`; the tests with `make test-backend`).
 Every way to run and test it, natively too, is in
@@ -38,7 +40,7 @@ src/aitu_backend/
   audio/          # upload, recording ingest, waveform, youtube, cuts and the frame table; the
                   # audio written again with only the ranges in use on Save to library
   library/        # the music library: private and public rows, save, edit, history, playlists, the
-                  # public import, popularity, pull, requests, shares
+                  # public import, popularity, genres, pull, requests, shares, folders, metadata
   transcription/  # engines (MuScriptor first), the GPU queue, the live stream, the lag
                   # correction, filters, events -> the wall-clock matrix, jobs, saved hands
   pieces/         # the state of each step of a piece; the note operations
@@ -46,15 +48,20 @@ src/aitu_backend/
   matrix/         # frame <-> ms, the matrix model, the keys, the hand split's entry point
   hands/          # which hand plays each onset: a beam search + a gated second pass
   sheet/          # the piano sheet's core (implementation 03): the F1 text, the algorithm, the
-                  # LLM step and the engine that draws the SVG
-  part_sheet/     # the sheet of a part in the app: sheet.f1, the AI's job, edits and their log,
-                  # the reading tools, a change of length, the old sheet.json's marks
-  sheet_llm.py    # the Claude function of the LLM step (outside the core)
+                  # AI step (a whole run, a level), the levels' music analysis, and the engine
+                  # that draws the SVG
+  part_sheet/     # the sheet of a part in the app: sheet.f1, the AI's jobs, the history of AI
+                  # runs, edits and their log, the reading tools, a change of length, the old
+                  # sheet.json's marks
+  sheet_llm.py    # the AI's clients, outside the core: OpenAI (GPT-6.1 Terra at medium, the
+                  # model of every run unless the user chooses another) and Anthropic (Sonnet 5.5)
+  video/          # the video reader: a Synthesia-style video read into notes (the Lab)
   editing/        # paste, Recording in Sheet, the parts of a project, marks, history
   storage/        # every filesystem path in one module; the project bundle, the audio store
   db/             # SQLAlchemy models, Alembic migrations, the users, backup/check/reindex
   schemas/        # Pydantic models (camelCase on the wire)
   progress.py     # ProgressReporter: one code path for tqdm and SSE
+  compression.py  # gzip for the JSON answers only
   config.py       # the AITU_* settings
   main.py         # thin app factory
 ```

@@ -3,7 +3,7 @@
 The plan is [`05-plan.md`](05-plan.md). Branch `feat/05-docs-refresh`. Status letters: `[x]` complete, `[p]` in
 progress, `[b]` blocked, `[c]` cancelled, `[ ]` not started.
 
-**Next: wave E**: Phase 20 (alone). (Each join changes this line.)
+**Done (2026-11-02).** Every phase and join is complete; the branch is merged into `master`.
 
 The waves are in the plan, section 4.4: A (2, 5, 9, 14, 18, 19), B (3, 6, 10, 11, 15), C (4, 7, 12, 16, 17),
 D (8, 13), then 20 alone. After each wave, a join applies the pending edits of the shared files.
@@ -160,12 +160,14 @@ Report: [05-implementation-phase-19.md](05-implementation-phase-19.md)
 - [x] 19.2 New `context/frontend/lab.md` (no page told the Lab; it was one line in five pages).
 - [x] 19.3 `endpoints.md`, `components.md`: pending edits for the join (E1 to E5 in the report, plus E6 for `00-index.md` and E7 for `projects.md`).
 
-# [ ] Phase 20: The platform pages, the READMEs, the indexes, the closing (wave E)
+# [x] Phase 20: The platform pages, the READMEs, the indexes, the closing (wave E)
 
-- [ ] 20.1 The platform pages `00` to `09`, the app context and its glossary.
-- [ ] 20.2 The READMEs (the folders, the services, the root); the map at the top of the core README.
-- [ ] 20.3 The journals; 04-3 Phase 6 and 04-5 task 5.2 closed; the inventory final.
-- [ ] 20.4 `check-names.py` on the whole scope; the links check.
+Report: [05-implementation-phase-20.md](05-implementation-phase-20.md)
+
+- [x] 20.1 The platform pages `00` to `09`, the app context and its glossary.
+- [x] 20.2 The READMEs (the folders, the services, the root); the map at the top of the core README.
+- [x] 20.3 The journals; 04-3 Phase 6 and 04-5 task 5.2 closed; the inventory final.
+- [x] 20.4 `check-names.py` on the whole scope; the links check.
 
 # Joins
 

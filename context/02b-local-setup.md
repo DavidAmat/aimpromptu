@@ -310,7 +310,7 @@ SSD 2 is the bulk disk. Approximate sizes:
 | `/mnt/ssd2/docker` | live Docker data-root (root-owned; `docker system df` is the right way to measure it) | Images, containers, volumes, build cache |
 | `/mnt/ssd2/docker_bk` | ~116 G | Old Docker data backup |
 | `/mnt/ssd2/hf` | ~84 G | Hugging Face cache and model checkouts. `hf/data/hub` holds the MuScriptor weights (5.5 GB for `large`), which the AImpromptu backend container mounts |
-| `/mnt/ssd2/aimpromptu` | ~0.2 G | AImpromptu's backend container home: the ByteDance checkpoint and the torch cache |
+| `/mnt/ssd2/aimpromptu` | ~20 G (2026-11) | AImpromptu's `.database/` and its backups (`make db-backup`), and `home/`, the backend container's home: the ByteDance checkpoint and the torch cache |
 | `/mnt/ssd2/ollama` | ~73 G | Ollama blobs/manifests |
 | `/mnt/ssd2/image-generation` | ~44 G | ComfyUI and its HF cache |
 | `/mnt/ssd2/lms` | ~34 G | LM Studio models |

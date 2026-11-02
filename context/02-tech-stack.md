@@ -15,6 +15,9 @@ Locked versions from lockfiles. Re-read `uv.lock` and `package-lock.json` when u
 | Progress / uploads | tqdm >=4.67, python-multipart >=0.0.20 |
 | YouTube | yt-dlp **>=2026.8.19** — a hard floor, not a preference: every earlier build picks a YouTube player client that now answers `403`, so downloads fail outright |
 | MIDI | mido 1.3.3 (base dependency since implementation 08: the MIDI adapter of `pmn/`) |
+| Database | SQLAlchemy 2.1.3, Alembic 1.20.0 (the records of `.database/aitu.sqlite`, [07-database.md](07-database.md)) |
+| AI | openai 3.41.0 (GPT-6.1 Terra and Sol), anthropic 2.2.0 (Sonnet 5.5); imported only when a run starts ([ai/README.md](ai/README.md)) |
+| Images | pillow 12.3.0 (the video reader's frames) |
 | Passwords | argon2-cffi 25.1.0 (`>=23.1.0`): Argon2id hashes with its default parameters (`auth/passwords.py`, implementation 02, Phase 4) |
 | Sessions | No library: 32 random bytes in the cookie `aitu_session` (`HttpOnly`, `SameSite=Lax`, 30 days, renewed on use), and only their SHA-256 in the `sessions` table (`auth/sessions.py`). See [08-security.md](08-security.md) |
 | Optional extras | `muscriptor` (muscriptor 0.3.0, librosa 0.11.0; **the engine in use**), `transcription` (ByteDance's piano_transcription_inference 0.0.6, librosa), `transkun` (Transkun 2.0.1). All three pull torch **2.13.0** (with its own CUDA 13.0 libraries on Linux) and torchaudio 2.11.0. The lock is resolved for Linux and Apple Silicon only. **No `basic-pitch` extra** — it pins tensorflow <2.15.1, which has no cp312 wheels, and a declared-but-unresolvable extra breaks `uv lock` for the whole project |
@@ -30,15 +33,15 @@ container (`compose.yaml`).
 |------|----------------------|
 | Runtime | React 19.2.6, react-dom 19.2.6 |
 | Language | TypeScript 6.0.3 |
-| Bundler | Vite 8.1.5, `@vitejs/plugin-react` 6.0.1. The development server proxies `/api` to the backend, and answers only to the host names of `allowedHosts` (`vite.config.ts`) and to IP addresses |
+| Bundler | Vite 8.1.5, `@vitejs/plugin-react` 6.0.2. The development server proxies `/api` to the backend, and answers only to IP addresses and to the host names of `server.allowedHosts` in `vite.config.ts` (`localhost`, `ubuntu`, `david-ubuntu`, `david-ubuntu.local`, and the names of the setting `AITU_ALLOWED_HOSTS`) |
 | Notation | None in the browser: the sheet is an SVG drawn by the backend (`GET /sheet/{uuid}`). `@aimpromptu/grid-notation` (`file:../../vexflow-v2`) was removed in implementation 03, Phase 10 |
 | Routing | react-router-dom 7.x |
 | Components | MUI 9.x (`@mui/material`, `@mui/icons-material`, `@mui/x-data-grid`) + emotion 11.x. The theme has a light and a dark colour scheme on CSS variables; MUI keeps the user's choice in the browser (`mui-mode`) |
 | Lint | ESLint 10.4.0 flat config: `@eslint/js`, `typescript-eslint` 8.x, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `globals` |
-| Browser checks | Playwright 1.63.0 with its headless Chromium (`check:flow`, `time:flow`, `bench:*`, `screenshot`), and tsx for the `check:*` scripts in TypeScript |
+| Browser checks | Playwright 1.63.0 with its headless Chromium (the `.mjs` scripts: `check:flow`, `time:flow`, `bench:*`, `screenshot`, ...), and tsx 4.23.1 with jsdom 30.0.0 for the `check:*` scripts in TypeScript |
 
 Scripts: `npm run dev` (vite), `npm run build` (`tsc -b && vite build`), `npm run lint`, the
-`check:*`, `bench:*` and `time:flow` scripts ([04-local-development.md](04-local-development.md)
+`check:*`, `bench:*`, `time:flow` and `measure:lyric-fonts` scripts ([04-local-development.md](04-local-development.md)
 section 5), `npm run preview`.
 
 ## Containers (implementation 08)
@@ -81,7 +84,7 @@ Locked by the organizer for `context/implementations/01-mvp/01-epics-master-plan
 | Time model | A column is a fixed number of milliseconds (`frameMs`, 40 by default) and carries no rhythmic meaning. No BPM, no granularity, no bar lines. See [backend/time-model.md](backend/time-model.md) |
 | Storage | `.database/` (implementation 02, plan section 8): **SQLite** for the records (users, projects, the music library, requests), through **SQLAlchemy 2** models with **Alembic** migrations (`aitu_backend/db/`), and folders beside it for the audio files (stored once, by SHA-256) and the project bundles. On the Ubuntu machine a link to `/mnt/ssd2/aimpromptu/.database`, mounted into the backend container at `/database`. See [07-database.md](07-database.md) |
 | GPU | The RTX 4090 of the Ubuntu machine (`AITU_DEVICE=cuda` in the container); natively the default stays `cpu` |
-| AI (Enhance with AI) | Every run uses **GPT-6.1 Terra** at medium effort, through the OpenAI client of `sheet_llm.py` (the Responses API; the key is the setting `OPENAI_API_KEY`). The dialog may choose GPT-6.1 Sol or Sonnet 5.5, through the Anthropic SDK (the setting `ANTHROPIC_API_KEY`). Terra since implementation 04-3, Phase 5 (2026-10-30); before that the runs used Sonnet 5.5. See [ai/README.md](ai/README.md) |
+| AI (Enhance with AI) | Every run uses **GPT-6.1 Terra** at medium effort, through the OpenAI client of `sheet_llm.py` (the Responses API; the key is the setting `OPENAI_API_KEY`). The dialog may choose GPT-6.1 Sol (the same client) or Sonnet 5.5 (the Anthropic SDK, the setting `ANTHROPIC_API_KEY`); the list is `MODELS` in `part_sheet/job.py`. Terra since implementation 04-3, Phase 5 (2026-10-30); before that the runs used Sonnet 5.5. See [ai/README.md](ai/README.md) |
 
 ## Not used (POC)
 

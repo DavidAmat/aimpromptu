@@ -11,7 +11,28 @@ on paper (section 15), Phase 8B the sheet through every change of a part's lengt
 of the old sheets (section 17): the bars path below is unchanged, and so are its golden files. Implementation 04
 (`context/implementations/04-app-enhancements/04-context.md`) changed the new sheet in place: the decoration-note
 rule on every sheet (sections 9 and 12), prompt version 6 and the notes a whole run adds and leaves out (sections 11
-and 12), a stretch of one hand and Simplify (section 14).
+and 12), a stretch of one hand and Simplify (section 14). Implementation 04-3 raised the frames prompt to version 7 (an octave written as a
+third or a fifth, section 11) and added the levels (`levels/`, `llm/levels.py`, `llm/catalog/`), which this README
+does not describe.
+
+## Map: which page tells each part
+
+This README keeps the contracts and the history of each phase. The documentation of the app tells the same parts,
+up to date, on these pages:
+
+| Section | What it holds | The page that tells it now |
+|---|---|---|
+| 1 to 8 | The research's bars path (F1 bars, `proposal.pipeline`, `llm.chain`, `engrave.cursor`): scripts and golden tests only | This README only; the app does not use it |
+| 9 | The new sheet without compases: F1 frames, figures, spelling, the algorithm | [sheet-f1.md](../../../../documentation/services/backend/sheet-f1.md) |
+| 10 | The engine: `render_frames`, the layout, the SVG | [sheet-drawing.md](../../../../documentation/services/backend/sheet-drawing.md) |
+| 11 | The AI step of the new sheet: windows, the prompt, the check | [context/ai/whole-run.md](../../../../context/ai/whole-run.md), [ai-runs.md](../../../../documentation/services/backend/ai-runs.md) |
+| 12 | The new sheet in the app: `part_sheet/`, the record line, laying a sheet again, the AI's job | [sheet-f1.md](../../../../documentation/services/backend/sheet-f1.md) sections 1, 3 and 7; [ai-runs.md](../../../../documentation/services/backend/ai-runs.md) section 2 |
+| 13 | Editing: the hands, undo and redo, the log `sheet.edits.json` | [context/frontend/sheet-page.md](../../../../context/frontend/sheet-page.md), [sheet-f1.md](../../../../documentation/services/backend/sheet-f1.md) section 1 |
+| 14 | The note and range tools; a stretch and Simplify by the AI | [annotations-notes.md](../../../../context/frontend/annotations-notes.md), [annotations-stretches.md](../../../../context/frontend/annotations-stretches.md), [context/ai/stretch-and-simplify.md](../../../../context/ai/stretch-and-simplify.md) |
+| 15 | The sheet toolbox, lyrics, the sheet on paper | [annotations-sheet.md](../../../../context/frontend/annotations-sheet.md), [printing.md](../../../../context/frontend/printing.md), [sheet-drawing.md](../../../../documentation/services/backend/sheet-drawing.md) sections 6 and 8 |
+| 16 | The sheet through a change of a part's length | [context/backend/editing.md](../../../../context/backend/editing.md) |
+| 17 | The marks of the old sheets (`part_sheet/legacy.py`) | [sheet-f1.md](../../../../documentation/services/backend/sheet-f1.md) section 8 |
+| none | The levels: the grid, the harmony, the hands, the catalog of patterns, the level run | [context/ai/levels.md](../../../../context/ai/levels.md), [level-run.md](../../../../context/ai/level-run.md), [ai-levels.md](../../../../documentation/services/backend/ai-levels.md) |
 
 ## 1. What it does
 

@@ -7,7 +7,7 @@ Code-level detail per service. Overviews in [context/backend/](../../context/bac
 
 | File | Topic |
 |------|-------|
-| [endpoints.md](backend/endpoints.md) | The whole HTTP surface: `/audio`, `/matrix`, `/pieces`, `/sheet`, `/passages`, `/projects`, `/youtube` |
+| [endpoints.md](backend/endpoints.md) | The whole HTTP surface: `/auth`, `/admin`, `/audio`, `/matrix`, `/sheet`, `/passages`, `/pieces`, `/projects`, `/folders`, `/metadata`, `/library`, `/playlists`, `/public`, `/requests`, `/shares`, `/youtube`, `/video` |
 | [time-matrix.md](backend/time-matrix.md) | What stays of schema 2.0 (`schemas/time_matrix.py`): the frame length, the figure names, the marks an old `sheet.json` holds |
 | [sheet-f1.md](backend/sheet-f1.md) | The new sheet: the files of a part, the F1 text, how the algorithm makes it |
 | [sheet-drawing.md](backend/sheet-drawing.md) | How the backend draws the sheet: the routes, the layout and the lines, the glyphs, the frame marks, the lyrics, the SVG and the pages |
@@ -33,8 +33,8 @@ Code-level detail per service. Overviews in [context/backend/](../../context/bac
 
 ## What was removed with the code it described
 
-The VexFlow-era pages (`piano-sheet.md`, `matrix-to-notation.md`, `notes.md`) described modules
-that no longer exist and were deleted with them. The renderer that replaced them,
+The VexFlow-era pages (piano-sheet, matrix-to-notation and notes) described modules that no longer
+exist and were deleted with them; no copy is kept. The renderer that replaced them,
 `@aimpromptu/grid-notation` from the sibling `vexflow-v2` checkout, was itself removed in
 implementation 03, Phase 10 (2026-10-27): its page is kept as
 [deprecated/grid-notation.md](../deprecated/grid-notation.md). The sheet is now laid out and drawn by

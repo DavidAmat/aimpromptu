@@ -16,13 +16,13 @@ session cookie `aitu_session` that the sign in sets. `main.py` includes the rout
 | Group | Routers | Check |
 |---|---|---|
 | Open | `/auth` | none for the sign in |
-| User | `/audio`, `/matrix`, `/passages`, `/pieces`, `/sheet`, `/projects`, `/library`, `/playlists`, `/public`, `/requests`, `/shares` and `/shared`, `/youtube`, `/video` | a session, then the rights of the project the route names |
+| User | `/audio`, `/folders`, `/library`, `/matrix`, `/metadata`, `/passages`, `/pieces`, `/playlists`, `/projects`, `/public`, `/requests`, `/shares` and `/shared`, `/sheet`, `/youtube`, `/video` | a session, then the rights of the project the route names |
 | Master | `/admin`, `/frame-examples` (Lab) | a session of the master user |
 
 The rights check reads the project from the path (`audio_uuid`, the id of a part, or `project_id`)
 and applies the rights table of [08-security.md](../08-security.md). A `GET` reads and every other
-method writes, except three `POST` routes that read a project and change nothing in it (trim,
-duplicate, and the edit copy of a library version: `READ_ROUTES`). Until implementation 03, Phase 10
+method writes, except four `POST` routes that read a project and change nothing in it (trim,
+duplicate, the edit copy of a library version, and the level copy of a whole sheet: `READ_ROUTES`). Until implementation 03, Phase 10
 the list also held the old sheet with the page edits, its ladder preview and the hand prediction. `POST /matrix/transcribe`
 names its part in the body and checks it itself.
 
@@ -40,7 +40,7 @@ the master user can follow it.
 | `/audio` | `api/audio.py` | The working store: bring a recording in, trim it, stream it |
 | `/matrix` | `api/matrix.py` | Run the model, follow it (the notes arrive live on the stream), read back the notes it heard |
 | `/pieces` | `api/pieces.py` | The state of each step, the notes as columns, note operations ([pieces-and-revisions.md](pieces-and-revisions.md)) |
-| `/sheet` | `api/sheet.py` | The sheet of a part (implementation 03): drawn by the backend as SVG, the AI run, the hands, the reading tools, transpose, add, remove, paste, undo and redo, the pages for print, the song's words (`/sheet/{uuid}/words`) |
+| `/sheet` | `api/sheet.py` | The sheet of a part (implementation 03): drawn by the backend as SVG, the hands, the reading tools, transpose, add, remove, paste, undo and redo, the pages for print, the song's words (`/sheet/{uuid}/words`). The AI runs under `/sheet/{uuid}/llm`: the whole run, a stretch, Simplify, a level and a level copy, Stop and Revert, the costs and the batches, the history of AI runs (`/llm/runs`); the catalog of patterns (`/sheet/levels/catalog`) and the chords of the song (`/sheet/{uuid}/chords`). Overview: [../ai/README.md](../ai/README.md) |
 | `/passages` | `api/passages.py` | Recording in Sheet (implementation 02, Phase 9): a passage of a part, its takes, the promotion ([editing.md](editing.md)) |
 | `/projects` | `api/projects.py` | The Personal Vault: list (with the step of each project), create, rename, delete, duplicate (new ids, the same audio files), export and import a `.aitu` file (implementation 02, Phase 5); **Save to library** and **Edit** (Phase 6) |
 | `/library` | `api/library.py` | The Private Library (Phase 6): songs and their versions, artists and their names, the history of a version ([music-library/private-library.md](../music-library/private-library.md)) |
@@ -48,6 +48,8 @@ the master user can follow it.
 | `/public` | `api/public.py` | The Public Library (Phase 13): songs, artists, playlists, likes, **Add to my library**, the suggestions ([music-library/ontology.md](../music-library/ontology.md)) |
 | `/requests` | `api/requests.py` | Requests to the Public Library (Phase 14): send, send again, withdraw, read ([music-library/requests.md](../music-library/requests.md)) |
 | `/shares`, `/shared` | `api/shares.py` | A Private Library shared read only (Phase 14): who the user shares with; the libraries shared with the user, **Add to my library** |
+| `/folders` | `api/folders.py` | The folders of My projects and My Library, and the folders of a project or a song (implementation 04-3, Phase 1; [frontend/folders-and-metadata.md](../frontend/folders-and-metadata.md)) |
+| `/metadata` | `api/metadata.py` | The metadata of a project or a song, the keys to suggest, and what the info button of a sheet shows (implementation 04-3, Phase 1) |
 | `/youtube` | `api/youtube.py` | Downloads via yt-dlp, also as a job with progress |
 | `/video`, `/frame-examples` | `api/video.py`, `api/frame_examples.py` | Reading a Synthesia-style video into a piece (implementations 04 and 05). `/frame-examples` is the master user's (Lab) |
 
@@ -118,4 +120,5 @@ download, an AI run on a sheet and **Write the proposal** of a take are jobs on 
 - `http://127.0.0.1:8765/docs` — the generated, always-current field reference
 - [time-model.md](time-model.md) — the wall-clock model the sheet is built on
 - [`aitu-backend/src/aitu_backend/sheet/README.md`](../../aitu-backend/src/aitu_backend/sheet/README.md) — the sheet behind `/sheet`, sections 9 to 17
+- [../ai/README.md](../ai/README.md) — the AI runs behind `/sheet/{uuid}/llm`
 - [editing.md](editing.md) — paste and Recording in Sheet, behind `/sheet/{uuid}/paste` and `/passages`

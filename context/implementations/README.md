@@ -1,6 +1,6 @@
 # context/implementations
 
-Every piece of planned work this project has run. The work is in four groups, and each group is a
+Every piece of planned work this project has run. The work is in five groups, and each group is a
 numbered folder:
 
 - **`01-mvp/`** holds the nine implementations that built the MVP: one audio file to one piano
@@ -14,7 +14,10 @@ numbered folder:
   research folder `poc-aitu-research` (an algorithm, an LLM step with Sonnet 5.5, an SVG engine), on a
   sheet with no compases, tempo, puntillos or silencios. Opened 2026-10-23, done 2026-10-27.
 - **`04-app-enhancements/`** polishes the sheet page and the sheet the AI writes, after 03. Opened
-  2026-10-27, done 2026-10-28.
+  2026-10-27, done 2026-10-28; then 04-3 (folders, metadata, the levels; done 2026-10-31) and 04-5 (the patterns
+  Strict and Suggested, the history of AI runs; done 2026-11-01).
+- **`05-documentation-refresh/`** brings every page of `context/` and `documentation/services/` up to date after 03
+  and 04. Opened 2026-11-01, done 2026-11-02.
 
 **Open a folder's own `README.md` first**, when it has one. It says whether that work is live or
 closed.
@@ -50,13 +53,13 @@ closed.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 04 | [`04-app-enhancements/`](04-app-enhancements/README.md) | The sheet page (Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag, the hidden floating toolbox back) and the AI's sheet (a new decoration-note rule on every sheet, prompt version 6 with simplicity and the amateur pianist rule, run on 7 Years; the Enhance with AI dialog with Simplify left / right / both). One branch per phase, `feat/04-phase-N` | 2026-10-27 | **Done** (2026-10-28). Phases 1 to 5 done, each merged into `master` after the user's check; the new logo (`04-2-prompt.md`) on `feat/04-logo`. [`04-context.md`](04-app-enhancements/04-context.md) is the summary for later work, [`04-checklist.md`](04-app-enhancements/04-checklist.md) the status lookup |
+| 04 | [`04-app-enhancements/`](04-app-enhancements/README.md) | The sheet page (Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag, the hidden floating toolbox back) and the AI's sheet (a new decoration-note rule on every sheet, prompt version 6 with simplicity and the amateur pianist rule, run on 7 Years; the Enhance with AI dialog with Simplify left / right / both). One branch per phase, `feat/04-phase-N` | 2026-10-27 | **Done** (2026-10-28). Phases 1 to 5 done, each merged into `master` after the user's check; the new logo (`04-2-prompt.md`) on `feat/04-logo`. **04-3** (folders and metadata, frame marks, the levels, every run on GPT-6.1 Terra) done 2026-10-31; **04-5** (Strict and Suggested, the rules and explanations of a run, the first batch first, the history of AI runs, the chords of the song) done and merged 2026-11-01; their documentation by 05. **04-4** is a brief only. [`04-context.md`](04-app-enhancements/04-context.md) is the summary for later work, [`04-checklist.md`](04-app-enhancements/04-checklist.md) the status lookup |
 
 ## 05-documentation-refresh: the documentation brought up to date
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 05 | [`05-documentation-refresh/`](05-documentation-refresh/README.md) | Every page of `context/` and `documentation/services/` checked against the app after 03, 04, 04-3 and 04-5, in 20 small phases for small AI models. Branch `feat/05-docs-refresh` | 2026-11-01 | **Planned.** [`05-checklist.md`](05-documentation-refresh/05-checklist.md) is the status lookup and names the next phase |
+| 05 | [`05-documentation-refresh/`](05-documentation-refresh/README.md) | Every page of `context/` and `documentation/services/` checked against the app after 03, 04, 04-3 and 04-5, in 20 small phases for small AI models, run in parallel waves. Branch `feat/05-docs-refresh` | 2026-11-01 | **Done** (2026-11-02), merged into `master`. New: `context/ai/`, `sheet-page.md`, `folders-and-metadata.md`, `lab.md`, the three toolbox pages, `sheet-f1.md`, `sheet-drawing.md`, `ai-runs.md`, `ai-levels.md`. [`05-checklist.md`](05-documentation-refresh/05-checklist.md) is the status lookup; the reports name what disagrees with the code |
 
 ## How to read this folder
 

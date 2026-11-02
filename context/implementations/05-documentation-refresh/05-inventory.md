@@ -6,18 +6,18 @@ Written in Phase 1 (2026-11-01). One row per file in the scope of plan section 1
 **Missing** is the count of names that `scripts/docs/check-names.py` cannot find in the code (its rules are
 in the script's first lines). It is a first count: a missing name may be stale, a name of another machine, or
 a name that the checker does not know how to search. Each phase reads its own rows. **Covers** is the H1 title
-of the page. **State** is `to check` until the owner phase sets it.
+of the page. **State** is `to check` until the owner phase sets it; every row has its final State since Phase 20 (2026-11-02).
 
 | File | Lines | Last change | Owner | Missing | Covers | State |
 |---|---:|---|---|---:|---|---|
-| [README.md](../../../README.md) | 76 | 2026-10-27 | 20 | 0 | AImpromptu (aitu) | `to check` |
-| [aitu-backend/README.md](../../../aitu-backend/README.md) | 109 | 2026-10-27 | 20 | 2 | aitu-backend | `to check` |
+| [README.md](../../../README.md) | 76 | 2026-10-27 | 20 | 0 | AImpromptu (aitu) | `updated` (Phase 20) |
+| [aitu-backend/README.md](../../../aitu-backend/README.md) | 109 | 2026-10-27 | 20 | 2 | aitu-backend | `updated` (Phase 20) |
 | [aitu-backend/src/aitu_backend/sheet/README.md](../../../aitu-backend/src/aitu_backend/sheet/README.md) | 544 | 2026-10-30 | 2, 3, 9, 10 (their sections); 20 the map | 0 | aitu_backend.sheet: the product core of the new piano sheet chain | `updated` (Phase 2: sections 1, 2, 4, 12; Phase 3: sections 1, 10, 15) |
-| [aitu-frontend/README.md](../../../aitu-frontend/README.md) | 136 | 2026-10-27 | 20 | 1 | aitu-frontend | `to check` |
-| [context/00-documentation-instructions.md](../../../context/00-documentation-instructions.md) | 91 | 2026-10-27 | 20 | 0 | Documentation instructions | `to check` |
-| [context/00-index.md](../../../context/00-index.md) | 326 | 2026-10-28 | 20 | 2 | Documentation index | `to check` |
-| [context/00-project-complete-overview.md](../../../context/00-project-complete-overview.md) | 248 | 2026-10-28 | 20 | 1 | AImpromptu (aitu) — complete project overview | `to check` |
-| [context/01-project.md](../../../context/01-project.md) | 126 | 2026-10-28 | 20 | 0 | Project | `to check` |
+| [aitu-frontend/README.md](../../../aitu-frontend/README.md) | 136 | 2026-10-27 | 20 | 1 | aitu-frontend | `updated` (Phase 20) |
+| [context/00-documentation-instructions.md](../../../context/00-documentation-instructions.md) | 91 | 2026-10-27 | 20 | 0 | Documentation instructions | `updated` (Phase 20) |
+| [context/00-index.md](../../../context/00-index.md) | 326 | 2026-10-28 | 20 | 2 | Documentation index | `updated` (Phase 20) |
+| [context/00-project-complete-overview.md](../../../context/00-project-complete-overview.md) | 248 | 2026-10-28 | 20 | 1 | AImpromptu (aitu) — complete project overview | `updated` (Phase 20) |
+| [context/01-project.md](../../../context/01-project.md) | 126 | 2026-10-28 | 20 | 0 | Project | `updated` (Phase 20) |
 | [context/02-tech-stack.md](../../../context/02-tech-stack.md) | 101 | 2026-11-01 | 9, then 20 | 1 | Tech stack (Phase 9: the AI row added; `allowedHosts` is an older name, not checked by Phase 9) | `updated` |
 | [context/ai/README.md](../../../context/ai/README.md) | 66 | 2026-11-01 | 9 | 5 | The AI in the app: the kinds of run, the model, the AI mark (later pages named by the phases that write them) | `new` |
 | [context/ai/whole-run.md](../../../context/ai/whole-run.md) | 92 | 2026-11-01 | 9 | 2 | The whole run: Enhance it again with AI, Write it all again, the windows, the check, Stop and Revert | `new` |
@@ -27,23 +27,23 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/ai/run-history.md](../../../context/ai/run-history.md) | 153 | 2026-11-01 | 13 | 0 | The history of AI runs: the log (`ai-runs/<id>.json`), the first batch first and the states, an answer to the AI, Write this batch again, Go on, the four routes, the history panel | `new` |
 | [documentation/services/backend/ai-runs.md](../../../documentation/services/backend/ai-runs.md) | 202 | 2026-11-01 | 9, then 10 | 1 | The code of the AI runs: the model client, the job, the windows and the check, the prompt, the routes; sections 7 (a stretch) and 8 (Simplify) added by Phase 10 | `updated` |
 | [documentation/services/backend/ai-levels.md](../../../documentation/services/backend/ai-levels.md) | 315 | 2026-11-01 | 11 (12, 13 add) | 0 | The code of the levels: the catalog, the grid, the harmony, the hands, the chords of the song, the level copy, the dialog; section 8 the level run (Phase 12); section 9 the history of runs (Phase 13: the log, the states, `write_again`, the routes, the page) | `updated` |
-| [context/02b-local-setup.md](../../../context/02b-local-setup.md) | 577 | 2026-10-27 | 20 | 29 | Local setup: Mac Mini M4 + Ubuntu compute box | `to check` |
-| [context/03-services-overview.md](../../../context/03-services-overview.md) | 119 | 2026-10-27 | 20 | 0 | Services overview | `to check` |
-| [context/04-local-development.md](../../../context/04-local-development.md) | 200 | 2026-10-31 | 20 | 0 | Local development | `to check` |
-| [context/05-deployment.md](../../../context/05-deployment.md) | 37 | 2026-10-18 | 20 | 0 | Deployment | `to check` |
+| [context/02b-local-setup.md](../../../context/02b-local-setup.md) | 577 | 2026-10-27 | 20 | 29 | Local setup: Mac Mini M4 + Ubuntu compute box | `updated` (Phase 20) |
+| [context/03-services-overview.md](../../../context/03-services-overview.md) | 119 | 2026-10-27 | 20 | 0 | Services overview | `updated` (Phase 20) |
+| [context/04-local-development.md](../../../context/04-local-development.md) | 200 | 2026-10-31 | 20 | 0 | Local development | `updated` (Phase 20) |
+| [context/05-deployment.md](../../../context/05-deployment.md) | 37 | 2026-10-18 | 20 | 0 | Deployment | `updated` (Phase 20) |
 | [context/07-database.md](../../../context/07-database.md) | 211 | 2026-10-30 | 14 (11 adds `level_of`) | 1 | Database | `updated` |
 | [context/08-security.md](../../../context/08-security.md) | 124 | 2026-10-16 | 19 | 1 | Security | `updated` |
-| [context/09-coding-conventions.md](../../../context/09-coding-conventions.md) | 118 | 2026-10-27 | 20 | 5 | Coding conventions | `to check` |
-| [context/app/01-app-context.md](../../../context/app/01-app-context.md) | 243 | 2026-10-27 | 20 | 0 | AImpromptus | `to check` |
-| [context/backend/README.md](../../../context/backend/README.md) | 96 | 2026-10-27 | 20 | 2 | aitu-backend | `to check` |
-| [context/backend/api.md](../../../context/backend/api.md) | 121 | 2026-10-27 | 20 | 2 | HTTP API | `to check` |
+| [context/09-coding-conventions.md](../../../context/09-coding-conventions.md) | 118 | 2026-10-27 | 20 | 5 | Coding conventions | `updated` (Phase 20) |
+| [context/app/01-app-context.md](../../../context/app/01-app-context.md) | 243 | 2026-10-27 | 20 | 0 | AImpromptus | `updated` (Phase 20) |
+| [context/backend/README.md](../../../context/backend/README.md) | 96 | 2026-10-27 | 20 | 2 | aitu-backend | `updated` (Phase 20) |
+| [context/backend/api.md](../../../context/backend/api.md) | 121 | 2026-10-27 | 20 | 2 | HTTP API | `updated` (Phase 20) |
 | [context/backend/editing.md](../../../context/backend/editing.md) | 144 | 2026-11-01 | 6 (17 Recording in Sheet, 5 the note edits) | 0 | Editing a piece: paste, Delete these frames (Phase 6), Recording in Sheet, and parts; the note edits (Phase 5) | `updated` |
 | [context/backend/muscriptor.md](../../../context/backend/muscriptor.md) | 109 | 2026-10-06 | 15 | 0 | MuScriptor: the transcription engine | `updated` |
 | [context/backend/piano-matrix-notation.md](../../../context/backend/piano-matrix-notation.md) | 213 | 2026-10-27 | 16 | 1 | The piano matrix notation: the stored form, the wire form, the adapters | `true` (checked 16, no change) |
 | [context/backend/pieces-and-revisions.md](../../../context/backend/pieces-and-revisions.md) | 133 | 2026-10-27 | 15 | 0 | Pieces, steps and revisions | `updated` |
 | [context/backend/time-model.md](../../../context/backend/time-model.md) | 155 | 2026-10-27 | 2 | 0 | The wall-clock model | `updated` |
-| [context/colors/color-palette.md](../../../context/colors/color-palette.md) | 90 | 2026-10-06 | 20 | 0 | Colour palette | `to check` |
-| [context/frontend/README.md](../../../context/frontend/README.md) | 115 | 2026-10-28 | 20 | 0 | aitu-frontend | `to check` |
+| [context/colors/color-palette.md](../../../context/colors/color-palette.md) | 90 | 2026-10-06 | 20 | 0 | Colour palette | `updated` (Phase 20) |
+| [context/frontend/README.md](../../../context/frontend/README.md) | 115 | 2026-10-28 | 20 | 0 | aitu-frontend | `updated` (Phase 20) |
 | [context/frontend/annotations-notes.md](../../../context/frontend/annotations-notes.md) | 88 | 2026-11-01 | 5 | 0 | The note toolbox of the new sheet (the old page is in `archive/old-sheet-tools/`) | `rewritten` |
 | [context/frontend/annotations-sheet.md](../../../context/frontend/annotations-sheet.md) | 179 | 2026-11-01 | 7 | 0 | The sheet toolbox: Info, Key, Transpose, Lyrics, View; the keyboard; Print to PDF (Phase 7; the old page moved to `archive/old-sheet-tools/annotations-sheet.md`) | `rewritten` |
 | [context/frontend/annotations-stretches.md](../../../context/frontend/annotations-stretches.md) | 113 | 2026-11-01 | 6 | 0 | The range toolbox of the new sheet: marking, the frame numbers, Key, Clef, Octave, copy and paste, Delete these frames (Phase 6; the old page moved to `archive/old-sheet-tools/annotations-stretches.md`) | `rewritten` |
@@ -70,10 +70,10 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [context/music-library/reconciliation.md](../../../context/music-library/reconciliation.md) | 223 | 2026-10-19 | 18 | 4 | The music library data, reconciled | `true` |
 | [context/music-library/regional-sources.md](../../../context/music-library/regional-sources.md) | 169 | 2026-10-19 | 18 | 0 | The sources of the `spain` and `catalan` regions | `true` |
 | [context/music-library/requests.md](../../../context/music-library/requests.md) | 172 | 2026-10-19 | 18 | 0 | Requests and the review | `true` |
-| [documentation/README.md](../../../documentation/README.md) | 3 | 2026-07-05 | 20 | 0 | documentation | `to check` |
-| [documentation/services/README.md](../../../documentation/services/README.md) | 38 | 2026-10-27 | 20 | 3 | documentation/services | `to check` |
+| [documentation/README.md](../../../documentation/README.md) | 3 | 2026-07-05 | 20 | 0 | documentation | `updated` (Phase 20) |
+| [documentation/services/README.md](../../../documentation/services/README.md) | 38 | 2026-10-27 | 20 | 3 | documentation/services | `updated` (Phase 20) |
 | [documentation/services/backend/editing-and-compose.md](../../../documentation/services/backend/editing-and-compose.md) | 273 | 2026-11-01 | 6 (17 the Compose part) | 8 (section 8, the removed staged session: history) | Copy and paste, Delete these frames (Phase 6), Recording in Sheet, and the parts of a project | `updated` |
-| [documentation/services/backend/endpoints.md](../../../documentation/services/backend/endpoints.md) | 1303 | 2026-10-31 | shared: every phase its sections; 20 checks | 6 | Endpoints | `to check` |
+| [documentation/services/backend/endpoints.md](../../../documentation/services/backend/endpoints.md) | 1303 | 2026-10-31 | shared: every phase its sections; 20 checks | 6 | Endpoints | `updated` (Phase 20) |
 | [documentation/services/backend/events-to-sheet.md](../../../documentation/services/backend/events-to-sheet.md) | 231 | 2026-10-28 | 16 | 4 | From the stored notes (`notes.pmn`) to the hand split the sheet starts from | `updated` (16: the artifact test, the default method) |
 | [documentation/services/backend/hand-inference-second-pass.md](../../../documentation/services/backend/hand-inference-second-pass.md) | 114 | 2026-08-13 | 16 | 0 | Hand inference: the page-level second pass | `updated` (16: where the code is) |
 | [documentation/services/backend/paths-and-data.md](../../../documentation/services/backend/paths-and-data.md) | 552 | 2026-10-29 | 14 (8, 11, 13 add their parts) | 6 | Storage layout: every path, every file, every table | `updated` |
@@ -82,7 +82,7 @@ of the page. **State** is `to check` until the owner phase sets it.
 | [documentation/services/backend/sheet-drawing.md](../../../documentation/services/backend/sheet-drawing.md) | 205 | new | 3 | 1 | How the backend draws the sheet: the routes, the layout and the lines, the glyphs, the frame marks, the lyrics, the SVG and the pages | `new` (1 missing: `context/frontend/sheet-page.md`, Phase 4) |
 | [documentation/services/backend/time-matrix.md](../../../documentation/services/backend/time-matrix.md) | 59 | 2026-10-27 | 2 | 0 | The time matrix: what stays of schema 2.0 | `updated` |
 | [documentation/services/backend/transcription-pipeline.md](../../../documentation/services/backend/transcription-pipeline.md) | 483 | 2026-10-27 | 15 | 8 | The transcription pipeline: modules, order, parameters | `updated` |
-| [documentation/services/frontend/components.md](../../../documentation/services/frontend/components.md) | 581 | 2026-10-31 | shared: every phase its sections; 20 checks | 85 | The component tree: where each piece lives | `to check` |
+| [documentation/services/frontend/components.md](../../../documentation/services/frontend/components.md) | 581 | 2026-10-31 | shared: every phase its sections; 20 checks | 85 | The component tree: where each piece lives | `updated` (Phase 20) |
 | [documentation/services/frontend/score-pdf.md](../../../documentation/services/frontend/score-pdf.md) | 102 | 2026-11-01 | 8 | 1 (`bravura.otf`, kept as the record of the removed font) | Score PDF export | `rewritten` (Phase 8: the writer as it is now; no font embedded) |
 
 61 files, 12020 lines, 204 missing names (first count).

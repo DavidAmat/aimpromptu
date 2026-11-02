@@ -201,7 +201,6 @@ sheet, and a hand is changed on the sheet.
 | `notes/liveFeed.ts` | `LiveFeed`: the queue of stream messages, drained once per animation frame, and the frontier |
 | `notes/useLiveTranscription.ts` | Follows the running transcription's progress stream into the feed |
 | `notes/noteEdits.ts` | The edits as overrides on the saved notes; `toOperations` turns them into the `PATCH /pieces/{uuid}/notes` operations |
-| `hooks/followJob.ts` | Follows one job to its end from a button (its one user, **Predict hands**, was removed in implementation 03, Phase 10) |
 | `hooks/useEditHistory.ts` | Undo and redo, shared with the Audio tab and the sheet. `commit` (Phase 8) makes one step that replaces every edit at once, with its backend undo and redo (a paste) |
 
 **Why a canvas.** The old Piano Roll was SVG, one React element per note, rebuilt many times per
@@ -371,7 +370,7 @@ box now: one unit is one pixel, text is undistorted, and a 2 px border is 2 px.
 | Module | Role |
 |---|---|
 | `pages/piece/sheet/frames/FramesPdfDialog.tsx` | The panel: the pages the backend lays out (`GET /sheet/{uuid}/pages`), the preview, Download |
-| `print/scorePdf.ts`, `drawPage.ts`, `pdf.ts`, `opentype.ts` | The PDF writer |
+| `print/scorePdf.ts`, `drawPage.ts`, `pdf.ts` | The PDF writer |
 
 Detail on the PDF in [score-pdf.md](score-pdf.md).
 
@@ -411,8 +410,8 @@ streams included. `VITE_AITU_API_URL` still points the page at another backend d
 has no session (the backend's CORS sends no credentials).
 
 `hooks/useProgress.ts` consumes the Server-Sent Events (SSE) progress stream of a job and returns
-its `done` payload as `result`. `hooks/followJob.ts` does the same as one `await`, for a button
-that starts a short job and uses its answer.
+its `done` payload as `result`. (`hooks/followJob.ts`, the same as one `await`, was removed in implementation 03,
+Phase 10, with its one user, **Predict hands**.)
 
 ---
 
@@ -445,9 +444,8 @@ so the same job looks the same everywhere.
 | `components/piece/AiMark.tsx` | The AI mark before a song's name (implementation 03, Phase 5): green once the AI enhanced the sheet, faint grey when it could and has not, a spinner while a job works on it. Always the same width |
 
 `MiniPiano` and `FigurePicker` are built in Phase 1 and used by the Transpose tab since Phase 7.
-`music/transpose.ts` holds what moves with a transposition: `transposeKey` (of two names for one key,
-the one with fewer accidentals), `transposeKeyChanges`, `transposeRowMarks` (fingering, notes taken
-off, trills, grace notes), `figureSteps`, `shiftFigure`, `intervalWords`.
+`music/transpose.ts` holds the words and the figures of a transposition: `intervalWords`, `FIGURE_LADDER`,
+`figureSteps`, `shiftFigure`. The notes and the keys are moved by the backend (`POST /sheet/{uuid}/transpose`).
 
 **The tokens** are in `tokens.ts`: the colours of the page, light and dark, the type scale (13, 14,
 16, 20, 28 px), the radii (12 for inputs, 16 for floating things, a pill for buttons) and the one
@@ -463,7 +461,7 @@ follows a change this way (Phase 4):
 - `SchemeSync` (`ui/scheme.tsx`, in `main.tsx`) reads MUI's mode, calls `applyScheme` before its
   children render, and provides the scheme in use.
 - A component that draws with `ui` calls `useScheme()` (`ui/schemeContext.ts`), so it re-renders with
-  the new colours: `CutWaveform`, `WaveformView`, `LiveLevelBars`, `PeakPlot`, `ProgressBar`,
+  the new colours: `CutWaveform`, `WaveformView`, `LiveLevelBars`, `ProgressBar`,
   `MiniPiano`, `StepTabs`, `SourceTab`. Nothing is remounted, so a page with unsaved changes keeps
   them.
 - The Lab pages draw with many `ui` colours, so `LabLayout` redraws them from the start on a change

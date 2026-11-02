@@ -114,13 +114,30 @@ assumes.
 
 | File | Description |
 |------|-------------|
-| [implementations/README.md](implementations/README.md) | **Start here.** The four groups (`01-mvp/`, `02-private-web-app/`, `03-apply-poc-research/`, `04-app-enhancements/`), every implementation with its state, and the numbering rule |
+| [implementations/README.md](implementations/README.md) | **Start here.** The five groups (`01-mvp/`, `02-private-web-app/`, `03-apply-poc-research/`, `04-app-enhancements/`, `05-documentation-refresh/`), every implementation with its state, and the numbering rule |
 
-### 04 — App enhancements — DONE (2026-10-27 to 28)
+### 05 — The documentation refresh — DONE (2026-11-01 to 02)
+
+Every page of `context/` and `documentation/services/` checked against the app after 03, 04, 04-3 and 04-5, in 20
+phases run in parallel waves, each with a join for the shared files.
+
+| File | Description |
+|------|-------------|
+| [implementations/05-documentation-refresh/README.md](implementations/05-documentation-refresh/README.md) | What it is, and every file in the folder |
+| [implementations/05-documentation-refresh/05-plan.md](implementations/05-documentation-refresh/05-plan.md) | **The plan.** What was stale, the new pages, how a phase works, the waves, the 20 phases, the owner of every page |
+| [implementations/05-documentation-refresh/05-checklist.md](implementations/05-documentation-refresh/05-checklist.md) | THE status lookup |
+| [implementations/05-documentation-refresh/05-inventory.md](implementations/05-documentation-refresh/05-inventory.md) | Every page in scope, its owner, its final state |
+| `implementations/05-documentation-refresh/05-implementation-phase-N.md`, `05-implementation-join-<W>.md` | One report per phase and per join; each names the code and docs that disagree, for the user |
+
+### 04 — App enhancements — DONE (2026-10-27 to 28; 04-3 and 04-5 to 2026-11-01)
 
 Polish after 03: on the sheet page, Command + scroll zoom, the AI mark (the new logo), the header toolbox, a cursor to
 drag; in the sheet, a new decoration-note rule on every sheet, prompt version 6 (simplicity, the amateur pianist), run
 on 7 Years, and the Enhance with AI dialog with Simplify left, right or both.
+**04-3** (2026-10-29 to 31): folders, the pills and the metadata of projects, frame marks, the levels (the level
+copy, the catalog of patterns, the level run), every AI run on GPT-6.1 Terra. **04-5** (2026-10-31 to 11-01): Strict and
+Suggested patterns, the rules and explanations of a run, the first batch first, the history of AI runs, the chords of
+the song. **04-4** is a brief only, not built.
 
 | File | Description |
 |------|-------------|
@@ -131,6 +148,9 @@ on 7 Years, and the Enhance with AI dialog with Simplify left, right or both.
 | [implementations/04-app-enhancements/04-plan.md](implementations/04-app-enhancements/04-plan.md) | **The plan.** The decisions of 2026-10-27, the design notes, five phases, the changes each phase made |
 | [implementations/04-app-enhancements/04-checklist.md](implementations/04-app-enhancements/04-checklist.md) | THE status lookup for this implementation, and the decisions |
 | `implementations/04-app-enhancements/04-implementation-phase-N.md` | One report per phase (Phase 1: the sheet page; Phase 2: the decoration-note rule, and its gallery in `gallery/phase-2/`; Phase 3: prompt version 6 and 7 Years, and its gallery in `gallery/phase-3/`; Phase 4: the Enhance with AI dialog and Simplify, and its gallery in `gallery/phase-4/`; Phase 5: the documentation and closing) |
+| `implementations/04-app-enhancements/04-3-prompt.md`, [04-3-plan.md](implementations/04-app-enhancements/04-3-plan.md), [04-3-checklist.md](implementations/04-app-enhancements/04-3-checklist.md), `04-3-implementation-phase-N.md` | 04-3: the brief, the plan, the status lookup and one report per phase (1, 2, 2b, 3, 4, 5; Phase 6, the documentation, done by 05) |
+| `implementations/04-app-enhancements/04-4-prompt.md` | 04-4: the brief "Copy this style"; not built |
+| `implementations/04-app-enhancements/04-5-prompt.md`, [04-5-plan.md](implementations/04-app-enhancements/04-5-plan.md), [04-5-checklist.md](implementations/04-app-enhancements/04-5-checklist.md), [04-5-implementation-phases-1-to-4.md](implementations/04-app-enhancements/04-5-implementation-phases-1-to-4.md) | 04-5: the brief, the plan, the status lookup and the report of Phases 1 to 4 |
 
 ### 03 — The new sheet (applying the research) — DONE (2026-10-23 to 27)
 
@@ -280,6 +300,7 @@ Reading a piano roll video into the same `events.json` the transcription model w
 | [archive/old-sheet-tools/annotations-notes.md](archive/old-sheet-tools/annotations-notes.md), [archive/old-sheet-tools/annotations-stretches.md](archive/old-sheet-tools/annotations-stretches.md), [archive/old-sheet-tools/annotations-hub-old-sheet.md](archive/old-sheet-tools/annotations-hub-old-sheet.md) | The old sheet's toolbox pages (the old sheet's note and range toolboxes) and the hub's old-sheet sections: the record of the vexflow-v2 sheet (removed in implementation 03, Phase 10) |
 | `archive/docs-migration/` | The completed documentation migration kit: plan, checklist, templates, deletions log |
 | `archive/TODO.md`, `archive/project-features.md`, `archive/project-implementation-organization.md` | The first notes and briefs of the project, from before the MVP; they describe the old model |
+| [archive/project-timings.md](archive/project-timings.md) | The measured times of a project's steps (implementations 08 and 03), moved out of `frontend/projects.md` |
 | [archive/piano-transcription-python-solutions.md](archive/piano-transcription-python-solutions.md) | The engine survey that chose ByteDance before MuScriptor replaced it |
 
 ## Documentation tree (`documentation/`)

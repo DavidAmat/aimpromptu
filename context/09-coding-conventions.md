@@ -13,14 +13,15 @@ Grounded in existing configs and visible patterns across the codebase. Do not in
 
 | Convention | Detail |
 |------------|--------|
-| Layout | `src/aitu_backend/` package; hatchling wheel. Feature packages: `api/`, `matrix/`, `audio/`, `transcription/`, `storage/`, `notation/`, `sheet/`, `schemas/`. `sheet/` (the new sheet chain, implementation 03) is copied from the research core: black and flake8 apply, mypy skips it until it is typed |
+| Layout | `src/aitu_backend/` package; hatchling wheel. Feature packages: `api/`, `auth/`, `audio/`, `transcription/`, `pieces/`, `pmn/`, `matrix/`, `hands/`, `sheet/`, `part_sheet/`, `editing/`, `library/`, `storage/`, `db/`, `schemas/`, `video/` ([03-services-overview.md](03-services-overview.md)). `sheet/` (the new sheet chain, implementation 03) is copied from the research core: black and flake8 apply, mypy skips it until it is typed |
 | Dependencies | `uv` + `uv.lock`; `uv sync` to install (runtime deps + the `dev` group) |
 | Notation logic | Single source of truth: `matrix/text_notation.py` — do not duplicate parsing elsewhere |
 | Key tables | Single source of truth: `matrix/keys.py` (88-key order, EN/ES names, MIDI) |
 | JSON wire format | camelCase via Pydantic `Field(alias=...)` and `model_config` populate_by_name. Build models with **snake_case kwargs**; camelCase belongs in JSON payloads (the pydantic-mypy plugin rejects alias kwargs) |
 | Paths | Centralized in `storage/paths.py`; backend root derived from `__file__`. No path literal elsewhere |
 | Folder names | Built by `schemas/naming.py` (`slugify`, `version_folder`, `matrix_filename`) |
-| API | One `APIRouter` per section in `api/`; `main.py` is a thin app factory. Endpoints owned by a later epic exist already and answer `501` |
+| API | One `APIRouter` per section in `api/`; `main.py` is a thin app factory. `api/_placeholders.py` still holds the `501` helper of the early epics; no router uses it now |
+| AI | The clients of the AI live only in `sheet_llm.py`, and their SDK is imported only when a run starts. The model of a run comes from `part_sheet/job.py` (`MODEL`, `MODELS`); the prompts are frozen files in `sheet/llm/prompt/` ([ai/README.md](ai/README.md)). Never a key in code: the settings `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` |
 | Progress | Anything >~10 s takes a `ProgressReporter` from `progress.py`; never call `tqdm` directly |
 | Docstrings | Module-level and public functions; explain non-obvious domain rules |
 | Notebooks | One thematic subfolder per POC under `notebooks/<theme>/` |
@@ -78,20 +79,16 @@ one. The rules and the rights table are in [08-security.md](08-security.md). New
 
 ## Documentation work
 
-- Markdown only during migration (except Phase 0 rename).
+- Follow [00-documentation-instructions.md](00-documentation-instructions.md); `python3 scripts/docs/check-links.py` must pass, and `scripts/docs/check-names.py` lists the names a page gives that the code no longer has.
 - `context/<area>/*.md` ≤ ~200 lines; overflow to `documentation/`.
 - Cross-link overviews down and detail files up (`> Context:`).
 - Update [00-index.md](00-index.md) when adding files.
 
 ## LLM agent config (`.claude/`)
 
-Root `.claude/` is **gitignored** today (see root `.gitignore`). Local inventory as of migration:
-
-| Path | Contents |
-|------|----------|
-| `.claude/settings.local.json` | Bash permission allowlist only: `npx tsc *`, `npx --yes tsx -e ' *`, `npm run *` |
-
-**Not present:** slash-commands, project skills, or agent definitions under `.claude/`.
+Root `.claude/` is **gitignored** (see root `.gitignore`), and on the Ubuntu machine it is empty
+(2026-11): no settings, slash-commands, project skills or agent definitions. The agent's memory of
+this project lives outside the repository.
 
 ### Recommended commands (not built — add if repeatability matters)
 

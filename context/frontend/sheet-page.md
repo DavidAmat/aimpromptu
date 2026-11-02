@@ -171,22 +171,11 @@ again with AI**, **Write it all again**), [stretch-and-simplify.md](../ai/stretc
 
 ## 12. The files of the page
 
-| File | Role |
-|---|---|
-| `pages/piece/SheetTab.tsx` | The Sheet step: gives the page the piece, its status and the step's callbacks (`onChanged`, `onSplit`, `stretchAction`) |
-| `pages/piece/sheet/SheetPage.tsx` | The types of the step (`SheetStep`, `PassageView`, `PlayView`); draws `FramesSheetPage` |
-| `pages/piece/sheet/frames/FramesSheetPage.tsx` | The page: the header, `sheetButtons`, the floating toolbox, the zoom and the wheel, the recording, the keys, the toolboxes and the dialogs |
-| `pages/piece/sheet/frames/FramesSheetView.tsx` | The drawing and its overlay: the cursor, the picks, the marked stretch, the veil, the reveal, the lyrics pieces, the window |
-| `pages/piece/sheet/frames/useFramesSheet.ts` | The sheet as the page holds it: the reads, the job's messages, the edits, the AI's start, stop and revert |
-| `pages/piece/sheet/frames/geometry.ts` | The arithmetic of the page: the cursor's place, the time under a point, the noteheads of a column |
-| `pages/piece/sheet/frames/navigation.ts` | The navigation state of **Enhance with AI** on a version of My library (which run, which model, how many batches) |
-| `pages/piece/sheet/toolboxPlacement.ts` | Where a toolbox opens, measured from what is drawn |
-| `pages/piece/sheet/sheetConstants.ts` | The colours of the hands on the keyboards; `formatSeconds`, a time as `mm:ss.cc` (see [timestamps.md](timestamps.md)) |
-| `ui/FloatingBar.tsx` | The floating bar: grip, hide, the eye button |
-| `components/piece/AiMark.tsx` | The AI mark |
-| `components/time/ScorePlayer.tsx` | The recording, with its scrub bar |
-
-`hooks/usePlayedNotes.ts` is not part of the sheet. Only Notes Falling (`pages/play/FallingView.tsx`) uses it.
+The page is `pages/piece/sheet/frames/FramesSheetPage.tsx` (the header, `sheetButtons`, the floating toolbox, the
+zoom, the recording, the keys), its drawing `FramesSheetView.tsx`, and its state `useFramesSheet.ts`; the Sheet step
+gives it the piece (`pages/piece/SheetTab.tsx`, through `pages/piece/sheet/SheetPage.tsx`). Every module, with its
+role: [`components.md`](../../documentation/services/frontend/components.md) section 3. `hooks/usePlayedNotes.ts` is
+not part of the sheet: only Notes Falling (`pages/play/FallingView.tsx`) uses it.
 
 ## 13. Undo and redo
 

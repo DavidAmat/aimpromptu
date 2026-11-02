@@ -8,13 +8,16 @@ implementation 03, Phase 10 (2026-10-27).
 The app first asks to sign in (`/login`, implementation 02, Phase 4), then opens on **Projects**
 (`/projects`), inside a shell with a left sidebar. A project goes from
 its audio to its piano sheet in four steps (Source, Audio, Notes, Sheet), at
-`/projects/:id/:step`. For the master user an **Admin** group holds **Users** (make users, reset a
-password, disable a user) and **Lab** (the video reader's pages). The look is black, white and grey,
+`/projects/:id/:step`. The sidebar also holds **My library**, the **Public library** and **Requests**. For
+the master user an **Admin** group holds **Review** (the requests to the Public Library), **Users** (make users,
+reset a password, disable a user) and **Lab** (the video reader's pages: [lab.md](../context/frontend/lab.md)). The look is black, white and grey,
 with colour only on the music (implementation 02, plan section 7), in a light or a dark scheme chosen
 in the user menu. Who can open what: [08-security.md](../context/08-security.md).
 
 **Documentation:** [context/frontend/](../context/frontend/README.md) ·
 projects and their steps: [projects.md](../context/frontend/projects.md) ·
+the Sheet page: [sheet-page.md](../context/frontend/sheet-page.md) ·
+the AI: [context/ai/](../context/ai/README.md) ·
 colours: [color-palette.md](../context/colors/color-palette.md) ·
 components: [components.md](../documentation/services/frontend/components.md) ·
 rendering: [rendering.md](../context/frontend/rendering.md)
@@ -62,19 +65,25 @@ particular to this app:
 | `npm run check:frames-edit` | Picking notes, moving them to the other hand, undo and redo, the time of one edit |
 | `npm run check:frames-tools` | The note and range toolboxes, each tool checked against the backend |
 | `npm run check:frames-toolbox` | The sheet toolbox (Title, Key, Transpose, Lyrics, View), the lyrics, the keyboard panel, Print to PDF |
+| `npm run check:frames-page` | The Sheet page (implementation 04, Phase 1): the AI symbol by the title, the header, the floating toolbox hidden and shown, the zoom, the cursor dragged, the frame marks |
+| `npm run check:enhance-dialog` | The **Enhance with AI** dialog (implementation 04, Phase 4, and 04-3): the whole song, a stretch, a level and its patterns, the model and the batches; the requests that would start the AI are caught, so no AI is asked |
+| `npm run check:ai-run-panel` | The panel of an AI run: its batches, **Stop**, **Revert**, **Close**; the run is a stand-in, no AI is asked |
+| `npm run check:ai-history` | The first batch first and the history of AI runs (implementation 04-5): an answer to the AI, **Go on with the other** batches, **History of AI runs**; no AI is asked |
+| `npm run check:folders` | Folders, the pills and the metadata of My projects and My Library (implementation 04-3, Phase 1), on temporary copies |
+| `npm run measure:lyric-fonts` | Measures the lyrics fonts in the browser and writes `aitu-backend/src/aitu_backend/sheet/engrave/lyric_fonts.json`, the widths the backend wraps the words with |
 | `npm run time:flow` | The whole flow timed on three temporary pieces (an upload, a copy opened from Projects, a YouTube URL) |
 | `npm run bench:roll` | The Notes tab at 10,000 rectangles and at 100 stream messages per second |
 | `npm run screenshot -- <path>` | A screenshot of a page in a headless Chromium, for a machine with no screen. Options: `--piece <uuid>`, `--wait <selector>`, `--delay <ms>`, `--out <file.png>`, `--width`, `--height`, `--full`, `--base <url>`, `--theme dark` (the dark scheme), `--signed-out` (the sign-in page, without signing in) |
 
-**These need the running app** (`make up`): `check:flow`, `check:projects`, `check:library`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `check:journey`, the four `check:frames-*`, `time:flow`,
-`bench:roll` and `screenshot`. They open `http://localhost:5173` (`--base` changes
-it). All but `bench:roll` and `screenshot` work on temporary pieces and delete them at the end, so the library is never
+**These need the running app** (`make up`): `check:flow`, `check:projects`, `check:library`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `check:journey`, the five `check:frames-*`, `check:enhance-dialog`, `check:ai-run-panel`, `check:ai-history`, `check:folders`, `time:flow`,
+`bench:roll`, `measure:lyric-fonts` and `screenshot`. They open `http://localhost:5173` (`--base` changes
+it). All but `bench:roll`, `measure:lyric-fonts` and `screenshot` work on temporary pieces and delete them at the end, so the library is never
 changed. `bench:roll` opens
 `/dev/roll-bench`, which exists in development builds only and needs no sign in. The other checks
 need no browser and no backend.
 
 **Signing in.** Every page and every route of the backend need a session, so `check:flow`,
-`check:projects`, `check:library`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `check:journey`, the `check:frames-*`, `time:flow` and
+`check:projects`, `check:library`, `check:paste`, `check:passage`, `check:compose`, `check:play`, `check:public`, `check:requests`, `check:journey`, the `check:frames-*`, `check:enhance-dialog`, `check:ai-run-panel`, `check:ai-history`, `check:folders`, `time:flow` and
 `screenshot` sign in first through `scripts/session.mjs`. Once the master user's password was changed in the app (as on the Ubuntu
 machine since 2026-10-06), the line of `.env` no longer signs in: give `AITU_CHECK_PASSWORD` (and
 `AITU_CHECK_USERNAME` for another user) in the environment of the command. They act as
@@ -94,12 +103,17 @@ src/
   pages/      # one component per route
     LoginPage.tsx     # Sign in
     ProjectsPage.tsx  # Projects
+    NotFoundPage.tsx  # "Page not found"
     admin/    #   UsersPage: Admin → Users
-    piece/    #   a project: PiecePage, the four steps, NotesEditor (Notes), sheet/ (the Sheet step: SheetPage and frames/, the page of the sheet the backend draws), passage/ (Recording in Sheet)
+    piece/    #   a project: PiecePage, the four steps, NotesEditor (Notes), sheet/ (the Sheet step: SheetPage and frames/, the page of the sheet the backend draws, its toolboxes, the Enhance with AI dialog, the panels of AI runs), passage/ (Recording in Sheet)
+    compose/  #   From other projects
+    library/  #   My library: songs, artists, playlists, Shared
+    public/   #   the Public Library: songs, artists, playlists
+    requests/ #   Requests and Review: a request, its conversation and its sheet
     play/     #   Play mode: PlayPage, its Notes Falling view, what it plays (a project, a playlist)
     video/    #   the Lab pages: the video reader
-    dev/      #   /dev/roll-bench, development builds only
-  state/      # AuthProvider: the signed-in user; WorkingArtifactProvider: the working piece and its frameMs
+    dev/      #   /dev/roll-bench and /dev/ui, development builds only
+  state/      # AuthProvider: the signed-in user; WorkingArtifactProvider: the working piece and its frameMs; the compose draft, the passage clipboard
   ui/         # the design system: tokens (light and dark), theme, scheme (SchemeSync, useScheme), palette (the colours of the music), the shared components
   music/      # note names, figures, transposition
   notes/      # the piano roll visualization's data: typed arrays, view, live feed, edits
@@ -109,7 +123,9 @@ src/
   print/      # the PDF writer
   video/      # the video piano overlay geometry, note placement, the selected video
   components/
-    piece/    # step names, step progress
+    ProgressBanner.tsx
+    piece/    # step names, step progress, AiMark (the AI mark of a list)
+    folders/  # the folders, the pills, the filter, the info dialog of My projects and My library
     notes/    # PianoRollCanvas, rollPaint, RollTimeBar
     time/     # ScorePlayer, FigureGlyph
     audio/    # waveforms (CutWaveform for the Audio step), range selection, level bars

@@ -22,13 +22,12 @@ home opens the page at `http://ubuntu:5173`. Everything the app knows is in one 
 | `aitu-backend` | Python 3.12 / FastAPI. Runs MuScriptor on the GPU, stores the recorded notes, derives everything else, keeps the music library |
 | `aitu-frontend` | React 19 + TypeScript + Vite + MUI. Every screen; the sheet is an SVG the backend draws (`GET /sheet/{uuid}`) |
 
-The sibling checkout `../vexflow-v2` (`@aimpromptu/grid-notation`, the renderer of the old sheet) is no
-longer used by the app since implementation 03, Phase 10 (2026-10-27).
-
 How it was built: the MVP (implementations 01 to 09), then implementation 02, the private web app
 (Phases 0 to 15 complete 2026-10-18; Phases 16 and 17, the Spanish and Catalan regions and an
 inferred popularity, added the same day), then implementation 03, the new sheet (2026-10-23 to 27), then implementation 04, the polish of the sheet page and
-of the AI's sheet (2026-10-27 to 28): [implementations/README.md](implementations/README.md).
+of the AI's sheet (2026-10-27 to 28), with 04-3 (folders and metadata, frame marks, the levels, every run
+on GPT-6.1 Terra) and 04-5 (Strict and Suggested, the history of AI runs, the chords of the song) to
+2026-11-01, then 05, this documentation brought up to date: [implementations/README.md](implementations/README.md).
 
 ## Users
 
@@ -52,7 +51,7 @@ The two jobs are now separate numbers.
   40 ms by default. The frame of an onset is `round(onset_ms / frameMs)`. Nothing is fitted.
 - **The figure is a name.** The gaps between one note and the next pile up around a few lengths; the
   highest pile is a **negra** by default, and every other note takes its name from it. The reader
-  changes that choice with **Figures transposition** or note by note.
+  changes that choice with **Transpose** → **Figures** or note by note.
 - **There is no BPM anywhere in the product.** Not in the transcription, not in the drawing, not in
   any file format.
 
@@ -63,7 +62,7 @@ D-01 … D-34; implementation 02 changed three of them on purpose (its plan, sec
 ## What is stored
 
 ```
-.database/aitu.sqlite                                             every record: users, projects, the music library, requests
+.database/aitu.sqlite                                             every record: users, projects, folders, metadata, the music library, requests
 .database/audio/<sha256>.<ext>                                    every audio file, once, never changed
 .database/users/<user>/vault/<projectId>/                         the Personal Vault: work in progress
 .database/users/<user>/library/<projectId>/                       the Private Library: finished versions
@@ -71,8 +70,10 @@ D-01 … D-34; implementation 02 changed three of them on purpose (its plan, sec
 .database/requests/<projectId>/                                   the copy a request sent, kept with it
 <projectId>/project.json                                          a project: title, kind, owner, its parts in order
 <projectId>/parts/<partId>/notes.pmn                              the notes, with ids, hands and revisions
-<projectId>/parts/<partId>/sheet.json                             what the reader decided on the piano sheet
+<projectId>/parts/<partId>/sheet.f1                               the piano sheet the AI or the algorithm wrote, with the reader's edits
+<projectId>/parts/<partId>/sheet.edits.json                       the sheet's steps of undo and redo
 <projectId>/parts/<partId>/timeline.json                          the audio files it plays, their ranges, the cuts
+<projectId>/parts/<partId>/ai-runs/<runId>.json                   the log of each level run (the history of AI runs)
 ```
 
 A project is the work; it has one **part**, or one per sub-song for an integrated playlist. The uuid
@@ -82,10 +83,11 @@ say which later step is out of date ([backend/pieces-and-revisions.md](backend/p
 An audio file is stored once by its content, so a copy, a paste or a pull copies no audio bytes.
 
 Everything else about the music is derived on every request: the matrix, the gap distribution, the
-figure of each note, the sheet. Reading the same piece at 20 ms is another request, not another
-stored file, and there is no state on disk that can disagree with the screen. `sheet.json` holds
-only what a person chose: the key and its stretches, renamed figures, beams, clefs, octave
-brackets, fingering, trills, grace notes, lyrics, spacing. `make db-backup`, `db-restore`,
+figure of each note, the drawing of the sheet. Reading the same piece at 20 ms is another request,
+not another stored file. `sheet.f1` holds the reading the AI or the algorithm wrote, with what the
+reader changed on it: figures, beams, clefs, the key and its stretches, octave marks, fingering,
+ornaments, titles and lyrics ([sheet-f1.md](../documentation/services/backend/sheet-f1.md)). The hands
+live only in `notes.pmn`. An old `sheet.json` is still read for its marks. `make db-backup`, `db-restore`,
 `db-check` and `db-reindex` keep the folder ([07-database.md](07-database.md)).
 
 ## The flow of a piano sheet
@@ -95,15 +97,18 @@ audio in ──▶ cuts ──▶ MuScriptor (GPU, live) ──▶ notes.pmn (ms
                           │
                           ├─▶ the starting hands (the beam search of hands/)
                           ├─▶ the algorithm's sheet (proposal: the reference figure, the figures, the beams)
-                          ├─▶ the AI writes the hands and the reading (Sonnet 5.5), saved as sheet.f1
+                          ├─▶ the AI writes the hands and the reading (GPT-6.1 Terra), saved as sheet.f1
                           └─▶ engrave.frames ──▶ SVG (GET /sheet/{uuid}) ──▶ FramesSheetPage
 ```
 
 The sheet has no compases, no tempo, no puntillos and no silencios. Its reference figure (the length it
-calls a negra) is named by the AI or by the algorithm, and **Transpose figures** overrides it.
+calls a negra) is named by the AI or by the algorithm, and **Transpose** → **Figures** overrides it.
 
-The new sheet chain, phase by phase: `aitu-backend/src/aitu_backend/sheet/README.md`; the browser side:
-[frontend/rendering.md](frontend/rendering.md).
+The new sheet chain, phase by phase: `aitu-backend/src/aitu_backend/sheet/README.md` and
+[sheet-drawing.md](../documentation/services/backend/sheet-drawing.md); the browser side:
+[frontend/rendering.md](frontend/rendering.md) and [frontend/sheet-page.md](frontend/sheet-page.md). The AI's
+runs (the whole song, a stretch, a level with its plan and batches, the history of AI runs):
+[ai/README.md](ai/README.md).
 
 ## The screens
 
@@ -113,11 +118,11 @@ A sign-in page, then a left sidebar in black, white and grey (colour only on the
 | Sidebar | What it is |
 |---|---|
 | **Search** (`⌘K`) | Songs, artists and projects of every library the user may read |
-| **Projects** | The Personal Vault. **New project**: From source, From scratch, From other projects; **Import** a `.aitu` file; per row Duplicate, Export, Rename, Delete |
+| **Projects** | The Personal Vault, in folders, with pills and metadata ([frontend/folders-and-metadata.md](frontend/folders-and-metadata.md)). **New project**: From source, From scratch, From other projects; **Import** a `.aitu` file; per row Duplicate, Export, Rename, Folders…, Info, Play, Delete |
 | **My library**: Songs, Artists, Playlists, Shared | The Private Library: songs with their versions, artists with several names, songs playlists, the libraries others share with you |
 | **Public library**: Songs, Artists, Playlists | Every user's catalogue: 9,055 songs imported from a chart history, with popularity, filters, versions and likes |
 | **Requests** | What you asked to publish, with a number when a change is asked |
-| **Admin** (master user): Review, Users, Lab | The review of requests, the users, the video reader's pages |
+| **Admin** (master user): Review, Users, Lab | The review of requests, the users, the video reader's pages ([frontend/lab.md](frontend/lab.md)) |
 
 **A project** goes through four steps in the order of the work; a step opens only when the step
 before it is ready ([frontend/projects.md](frontend/projects.md)):
@@ -127,9 +132,7 @@ before it is ready ([frontend/projects.md](frontend/projects.md)):
 | Source | Drop an audio or a video file, or paste a YouTube link (as audio, or as a piano roll video) |
 | Audio | See the waveform, play it, cut parts out, add another audio at the end, **Transcribe**. For a video: **Video**, fit the piano, **Read notes** |
 | Notes | Watch the rectangles appear live, then edit them on a canvas piano roll |
-| **Sheet** | The piano sheet, drawn on arrival, then written by the AI in the background (**Enhance with AI**: the whole song again, **Simplify** one hand or both, or a stretch); the header and the floating bar with the same buttons; the sheet toolbox (title, key, transposition, lyrics, view), the range and note toolboxes (the hands are changed here). Every change is written at once as one step of undo |
-
-The Hands step left the flow in implementation 03, Phase 5, and its code was removed in Phase 10.
+| **Sheet** | The piano sheet, drawn on arrival ([frontend/sheet-page.md](frontend/sheet-page.md)). **Enhance with AI**: the whole song again, a stretch, or a level (easy, medium, hard) of a passage or of the song (a level copy), with a plan and batches, patterns **Strict** or **Suggested**, and the **History of AI runs** ([ai/README.md](ai/README.md)); the header and the floating bar with the same buttons; the sheet toolbox, the range and note toolboxes (the hands are changed here). Every change is one step of undo |
 
 **From scratch** starts on a blank sheet, to record or paste into. **From other projects** picks
 passages of other projects, one after the other or under a subheader, and saves them as a song or as
@@ -162,10 +165,10 @@ views.
 
 ## What a reader can do to a sheet
 
-Name the figures (Figures transposition) · move every note by an interval (Notes transposition) ·
+Name the figures (**Transpose** → **Figures**) · move every note by an interval (**Transpose** → **Notes**) ·
 choose the key, for the piece or a stretch · correct which hand plays a note · fingering 1–5 · break
 or join a beam · clefs and octave brackets, automatic for the left hand · take a note off the page ·
-accept a suggested trill · lyrics dragged onto their frames · a stretch cue-sized · grace notes ·
+accept a suggested trill · lyrics dragged onto their frames · frame marks · a stretch cue-sized · grace notes ·
 re-record a marked passage and promote it · copy and paste a passage, across projects · undo every
 step · export a vector PDF · play the recording and follow the line.
 
@@ -182,7 +185,9 @@ section ([backend/api.md](backend/api.md), every route in
 | `/auth`, `/admin` | Sign in, sign out, one's password; the users (master user only) |
 | `/projects` | The Personal Vault: list, create, rename, delete, duplicate, export, import, compose, save to library |
 | `/audio`, `/youtube` | Bring a recording in, its cuts, its waveform, stream it; downloads as jobs |
-| `/matrix`, `/pieces`, `/time` | Run the model and follow it live; the steps and the notes; the piano sheet and its saved reading |
+| `/folders`, `/metadata` | The folders and the metadata of My projects and My Library |
+| `/matrix`, `/pieces` | Run the model and follow it live; the steps and the notes |
+| `/sheet` | The piano sheet of a part (an SVG), its edits and undo, the AI's runs, the levels and their catalog, the history of AI runs |
 | `/passages` | Recording in Sheet: a passage, its takes, the promotion |
 | `/library`, `/playlists` | The Private Library: songs, artists, versions, history; songs playlists |
 | `/public` | The Public Library: lists, one song or artist, likes, Add to my library |
@@ -205,10 +210,11 @@ passwords, the rights check), `audio/` (cuts, the frame table, the audio written
 `transcription/` (engines, the GPU queue, the live stream, filters, jobs, saved hands), `pieces/`,
 `pmn/` (the piano matrix notation and its adapters), `matrix/` (frame ↔ ms, the hand split, keys),
 `hands/` (the beam search the starting hands come from), `sheet/` (the new sheet chain of
-implementation 03: the algorithm, the AI step, the engine), `part_sheet/` (the sheet of a part: build,
-store, edits, the AI's job, the marks of an old `sheet.json`), `editing/` (splice, compose, paste,
-passages, history), `library/`
-(the private and public rows, the import, popularity, pull, requests, shares), `storage/` (every
+implementation 03: the algorithm, the AI step and its catalog of patterns, the levels' music analysis,
+the engine), `sheet_llm.py` (the clients of the AI), `part_sheet/` (the sheet of a part: build, store,
+edits, the AI's jobs, the history of AI runs, the marks of an old `sheet.json`), `editing/` (splice,
+compose, paste, passages, history), `library/` (the private and public rows, folders and metadata, the
+import, popularity, pull, requests, shares), `video/` (the video reader), `storage/` (every
 path in one module, the project bundle, the audio store), `db/` (the tables, the Alembic revisions,
 the backup and check tools), `schemas/`, `main.py`.
 
@@ -239,6 +245,7 @@ work.
   [03-services-overview.md](03-services-overview.md) · [04-local-development.md](04-local-development.md) ·
   [05-deployment.md](05-deployment.md) · [07-database.md](07-database.md) · [08-security.md](08-security.md)
 - The model: [backend/time-model.md](backend/time-model.md)
+- The AI on the sheet: [ai/README.md](ai/README.md)
 - The music library: [music-library/README.md](music-library/README.md)
 - Backend: [backend/README.md](backend/README.md) ·
   detail [../documentation/services/backend/](../documentation/services/backend/)

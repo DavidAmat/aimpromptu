@@ -185,18 +185,11 @@ opens on **Replace “<version>”**, with **New version** beside it. The whole 
 
 ## 5. Copy and paste, and From scratch
 
-**Copy** a stretch of any sheet: the copy icon of the range toolbox (titled *Frames*) or of the note
-toolbox (the frames those notes cover), or ⌘C. A version of My library, which opens read only, still
-lets a stretch be marked and offers **Copy this stretch**. **Paste** is on the sheet's floating bar
-(its tooltip names what was copied and where it goes) and ⌘V: it puts the passage in **at the
-cursor**, or **in place of the marked frames** when a stretch is marked. Its notes, its marks (with
-the key and the clefs it had) and its audio come with it; everything after moves later; the sheet is
-saved with it, and the cursor stays at the start of the passage. One **Undo** takes the whole paste
-back, notes and audio included, and **Redo** puts it again. The copied passage stays in the app's
-clipboard across projects and browser tabs. On the Source step a pasted passage is a file of its
-own ("Pasted"), between the two halves of the file it was pasted into; on the Audio step its band
-is named after where it came from. What the backend does:
-[`backend/editing.md`](../backend/editing.md).
+**Copy** a stretch of any sheet (the range toolbox, the note toolbox, ⌘C; also **Copy this stretch** on a read-only
+version of My library) and **Paste** it at the cursor or in place of the marked frames (the floating bar, ⌘V). Its
+notes, its marks and its audio come with it, and one **Undo** takes the whole paste back. On the Source step a pasted
+passage is a file of its own ("Pasted"). The tools: [annotations-stretches.md](annotations-stretches.md); what the
+backend does: [`backend/editing.md`](../backend/editing.md).
 
 **From scratch** makes "Untitled project" and opens its blank sheet. With no audio yet the page has
 no step tabs, only the sheet's empty state: **Record a passage** (the page of a new passage,
@@ -222,24 +215,8 @@ playlists: [playlists.md](playlists.md).
 
 ## 8. Timings
 
-Measured with `npm run time:flow` on the RTX 4090 (implementation 08, 2026-10-01; the first piano
-sheet measured again in every phase of implementation 02):
-
-| Piece | Length | Piece in | First note | Notes saved | Predict hands (gone since implementation 03, Phase 5) | First piano sheet |
-|---|---|---|---|---|---|---|
-| Superestrella, uploaded | 3:09 | 0.2 s | 0.3 s | 27 s | 0.9 s | 0.6 s |
-| The Winner Takes It All, from the library | 5:56 | 0.2 s | 0.2 s | 52 s | 2.4 s | 1.0 s |
-| A new YouTube URL | 2:21 | 3.8 s (download) | 0.3 s | 21 s | 1.4 s | 0.6 s |
-
-The Hands step and its column are gone since implementation 03, Phase 5. On the new Sheet step
-(`npm run check:frames-sheet -- --live`, 2026-10-25, a 40 s clip of 7 Years): the algorithm's sheet on screen
-0.9 s after the step opened, the AI's first part back after about 19 s (the measure of implementation 03, Phase 5), the whole clip written in 91 s for
-$0.18. A whole song takes 4 to 17 minutes and $0.5 to $1.7 (implementation 03, Phase 4).
-
-**Read notes** of a video, measured with `aitu-backend/scripts/bench_video_read.py` (Phase 5) on a
-copy of Superestrella's tutorial video (3:09, 1,892 frames, 1,495 notes): 61 s in all, of which
-measuring the roll takes about 37 s and reading the notes about 22 s. In the browser, the first
-**Read notes** took 66 s and a second one 25.5 s, because the roll is measured once per fitting.
+The measures of the steps (implementation 08, and the new Sheet step of implementation 03) are kept in
+[`archive/project-timings.md`](../archive/project-timings.md).
 
 ## Where to look deeper
 

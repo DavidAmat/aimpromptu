@@ -22,21 +22,25 @@ what) are in [`../08-security.md`](../08-security.md); the guards are in [pages.
 A left sidebar and the page on its right, no top bar (implementation 02, plan section 6.2). The
 sidebar has the logo, **Search** (`⌘K`), the sections, and the user menu at the bottom. It is
 260 px wide with words, or 64 px with icons only; it is open on the list pages and closed inside a
-project. A section appears only once it is built:
+project. Its sections (`layout/AppLayout.tsx`):
 
 | Section | What it is for |
 |---|---|
 | **Projects** | The user's own projects; each one goes from its audio to its piano sheet, one step at a time |
-| **Songs**, **Artists** (under My library) | The user's Private Library: songs with their versions, artists with their names ([music-library/private-library.md](../music-library/private-library.md)) |
+| **Songs**, **Artists**, **Playlists**, **Shared** (under My library) | The user's Private Library: songs with their versions, artists with their names, the songs playlists, and the libraries other users share with the user ([music-library/private-library.md](../music-library/private-library.md), [playlists.md](playlists.md)) |
+| **Songs**, **Artists**, **Playlists** (under Public library) | The Public Library that every user shares ([music-library/ontology.md](../music-library/ontology.md)) |
+| **Requests** | The user's requests to the Public Library, with the number of those with changes asked ([music-library/requests.md](../music-library/requests.md)) |
+| **Review** (under Admin, master user only) | The requests waiting for a review, with their number |
 | **Users** (under Admin, master user only) | Every user: **New user**, **Reset password**, **Disable** / **Enable** |
-| **Lab** (under Admin, master user only) | The video reader's pages: the video, its calibration, the detection, its notes, the examples |
+| **Lab** (under Admin, master user only) | The video reader's pages: the video, its calibration, the detection, its notes, the examples ([lab.md](lab.md)) |
 
-Another user sees no Admin group, and an Admin address shows them "Page not found". Playlists,
-Shared, the Public Library, Requests and Admin's other pages appear in the phases that build them. `/` goes to `/projects`.
+Projects and the songs of My library can be put in folders and carry metadata ([folders-and-metadata.md](folders-and-metadata.md)).
+Another user sees no Admin group, and an Admin address shows them "Page not found". `/` goes to `/projects`.
+**Play mode** (`/play/...`) is the sheet alone, outside the shell ([play-mode.md](play-mode.md)).
 
 The user menu at the bottom shows the username and the role (Master user or User), then
-**Change password** (a dialog: the current password and a new one of at least 8 characters), the
-theme (**Light**, **Dark** or **System**, the device's own setting), **Keyboard shortcuts** and
+**Change password** (a dialog: the current password and a new one of at least 8 characters),
+**Share my library**, the theme (**Light**, **Dark** or **System**, the device's own setting), **Keyboard shortcuts** and
 **Sign out**.
 
 A page has a title on the left and its one primary action on the right, and no subtitle. The look
@@ -64,15 +68,17 @@ Play mode (Phase 11, [play-mode.md](play-mode.md)). The old paths redirected unt
 
 ## What a reader does on the sheet
 
-Read the sheet drawn on arrival · **Enhance with AI** (the whole sheet, **Simplify** one hand or both, or one
-stretch of both hands or one with the reader's own words) · change the main figure (**Transpose figures**) · title the sheet · set a note's figure by hand · choose
+Read the sheet drawn on arrival · **Enhance with AI** (the whole song written again, a level, easy, medium or hard,
+of one hand or both with its patterns, or one stretch of both hands or one with the reader's own words; the
+history of AI runs: [../ai/README.md](../ai/README.md)) · change the main figure (**Transpose figures**) · title the sheet · set a note's figure by hand · choose
 the key of the piece or of a stretch · correct which hand plays a note · fingering · cut or join a beam · clefs
 and octave lines · take a note off the page or add one on the keyboard · trills, mordents, turns, a rolled chord,
 a fermata · words under the staff · a grace note leaning on a note · re-record a passage on its own page and
 promote it · copy and paste a passage · print to PDF · play it and follow along. Every change is written at once
 as one step of undo.
 
-Detail: [annotations.md](annotations.md).
+Detail: the page itself (the header, the zoom, the floating toolbox, undo) in [sheet-page.md](sheet-page.md);
+the toolboxes in [annotations.md](annotations.md).
 
 ## Data flow
 
@@ -87,7 +93,9 @@ PATCH /pieces/{id}/notes        ◀──  the edits of the Notes tab, as operat
 GET   /matrix/{id}/events       ──▶  Notes Falling of Play mode (seconds, as recorded)
 GET   /sheet/{id}?width=N       ──▶  the sheet as an SVG and its cursor map ──▶ FramesSheetView
 POST  /sheet/{id}/llm           ◀──  Enhance with AI; the progress stream says when to read the sheet again
-POST  /sheet/{id}/llm/simplify  ◀──  Simplify one hand or both (GET /sheet/{id}/llm/costs: the dialog's costs)
+POST  /sheet/{id}/llm/level     ◀──  a level of a stretch; /llm/level-copy the whole song at a level, a new project
+GET   /sheet/{id}/llm/batches   ──▶  the batches of a run and the dialog's cost and time (also /llm/costs)
+GET   /sheet/{id}/llm/runs      ──▶  the history of AI runs
 POST  /sheet/{id}/...           ◀──  each edit of the sheet, one step of undo kept by the backend
 ```
 
@@ -105,11 +113,18 @@ script: [aitu-frontend/README.md](../../aitu-frontend/README.md).
 - [projects.md](projects.md): Projects and the steps of a project
 - [pages.md](pages.md): the routes, the shell, the shared working artifact
 - [../colors/color-palette.md](../colors/color-palette.md): the tokens and the colours of the music
+- [folders-and-metadata.md](folders-and-metadata.md): the folders, the pills and the metadata of My projects and My library
 - [rendering.md](rendering.md): how the sheet is drawn (by the backend)
-- [annotations.md](annotations.md): the Sheet step (the page, the defaults, undo, saving), with
+- [sheet-page.md](sheet-page.md): the Sheet step's page: the header, the zoom, the floating toolbox, undo and redo
+- [annotations.md](annotations.md): the toolboxes of the Sheet step, with
   [annotations-notes.md](annotations-notes.md), [annotations-stretches.md](annotations-stretches.md)
   and [annotations-sheet.md](annotations-sheet.md) for its three toolboxes
 - [printing.md](printing.md): the PDF, re-wrapped to the paper, never scaled
+- [recording-in-sheet.md](recording-in-sheet.md): a passage re-recorded and promoted
+- [playlists.md](playlists.md): From other projects, the parts, the playlists
+- [play-mode.md](play-mode.md): Play mode and Notes Falling
+- [lab.md](lab.md): the Lab, the video reader's pages
+- [../ai/README.md](../ai/README.md): the AI on the sheet: every kind of run
 - [timestamps.md](timestamps.md): the `mm:ss.cc` rule
 - [documentation/services/frontend/](../../documentation/services/frontend/): the component tree and
   the PDF writer

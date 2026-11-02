@@ -3,7 +3,8 @@
 **A web app to catalogue songs and make their piano versions.** Bring in a recording (upload it,
 record it in the browser, or download it from YouTube) and the app transcribes it with MuScriptor on
 the GPU while you watch the notes appear, lets you correct the notes on a piano roll, and writes the
-piano sheet (an AI decides the hands and the reading with it), which you edit, print and play from. A finished piano sheet becomes a
+piano sheet (an AI decides the hands and the reading with it), which you edit, print and play from. The AI can
+also write a stretch again with your words, or the song at a level (easy, medium or hard) for a learner. A finished piano sheet becomes a
 version of a song in **My library**, and can be published to the **Public Library** that every user
 shares, after the master user reviews the request. The product, in the user's words:
 [context/app/01-app-context.md](context/app/01-app-context.md).
@@ -70,6 +71,7 @@ containers, backup and restore, the checks, troubleshooting) is in one place:
 | [context/00-project-complete-overview.md](context/00-project-complete-overview.md) | One-shot orientation — paste this alone to get the whole project |
 | [context/00-index.md](context/00-index.md) | Full map of all docs |
 | [context/backend/time-model.md](context/backend/time-model.md) | The wall-clock model everything follows from |
+| [context/ai/README.md](context/ai/README.md) | The AI on the sheet: every kind of run, the model, the cost |
 | [documentation/README.md](documentation/README.md) | Code-level detail tree |
 
 Subrepo entry points: [aitu-backend/README.md](aitu-backend/README.md) ·

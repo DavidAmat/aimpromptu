@@ -14,10 +14,15 @@ glossary is the vocabulary of every page here. In short:
   file, or a YouTube link), from scratch (record or paste), or from passages of other projects. The
   app transcribes the audio live and writes the piano sheet (the AI decides the hands with it), which
   the user edits: figures, keys, clefs, lyrics, transposition, re-recorded passages.
+- **The AI on the sheet** (**Enhance with AI**): it writes the whole song again or a stretch, and
+  writes a passage, or the whole song as a new project (a level copy), at a **level** (easy, medium,
+  hard), with a plan and batches, keeping the patterns marked **Strict** or **Suggested**. The level
+  runs are kept in the history of AI runs ([ai/README.md](ai/README.md)).
 - **Three storage layers.** Work in progress is in the user's **Personal Vault** (Projects). A
   finished piano sheet is saved to the user's **Private Library** as a **version** of a **song** of
   an **artist**. The **Public Library** is everyone's: a catalogue of songs imported from a chart
-  history, with popularity, and the versions users publish to it.
+  history, with popularity, and the versions users publish to it. Projects and songs sort into
+  folders and carry metadata ([frontend/folders-and-metadata.md](frontend/folders-and-metadata.md)).
 - **Requests.** A user publishes to the Public Library by a request, like a pull request, which the
   **master user** reviews in the Admin panel and accepts in whole or in part.
 - **Play mode** shows the piano sheet alone and plays the recording with it, for one song or a
@@ -73,7 +78,7 @@ git repositories.
 | `aitu-backend/` | Python / FastAPI service |
 | `aitu-frontend/` | React / TypeScript / Vite app |
 | `context/` + `documentation/` | Platform and code-level docs ([00-documentation-instructions.md](00-documentation-instructions.md)) |
-| `scripts/` | The link checker of the docs, the seed list of 31 songs, the tunnel from the Mac |
+| `scripts/` | The docs checks (`docs/check-links.py`, `docs/check-names.py`), the seed list of 31 songs, the regional downloads of the Public Library, the tunnel from the Mac |
 | `pocs/` | Measurement proofs of concept, kept for their data |
 
 The piano sheet is laid out and drawn by the backend (`aitu_backend/sheet/`, an SVG answered by
@@ -101,8 +106,9 @@ The implementations, all under [implementations/](implementations/README.md):
 |---|---|
 | **01-mvp** (01 to 09) | One audio file to one piano sheet, for one person: the epics master plan, the own renderer, the wall-clock refactor, the video reader, MuScriptor and the move to the Ubuntu machine, the minimal UI guidelines. All closed |
 | **02-private-web-app** | The app of the app context: the design system and the sidebar, `.database/`, users on the home network, projects, the Private and Public Libraries, the sheet toolbox, copy and paste, Recording in Sheet, playlists, Play mode, requests and the review, sharing. Phases 0 to 15 complete 2026-10-18; Phases 16 and 17 (the `spain` and `catalan` regions, a popularity inferred from YouTube views) added the same day |
-| **03-apply-poc-research** | The new sheet: no compases, tempo, puntillos or silencios; the algorithm's sheet at once, the AI (Sonnet 5.5) improving it in the background, the backend drawing it as SVG; vexflow-v2 removed. Done 2026-10-27 |
-| **04-app-enhancements** | Polish after 03: the sheet page (Command + scroll zoom, the AI mark, the header toolbox, a cursor to drag), the decoration-note rule on every sheet, prompt version 6 (simplicity, the amateur pianist), the Enhance with AI dialog with Simplify. Done 2026-10-28 |
+| **03-apply-poc-research** | The new sheet: no compases, tempo, puntillos or silencios; the algorithm's sheet at once, the AI (then Sonnet 5.5) improving it in the background, the backend drawing it as SVG; vexflow-v2 removed. Done 2026-10-27 |
+| **04-app-enhancements** | Polish after 03: the sheet page (Command + scroll zoom, the AI mark, the header toolbox, a cursor to drag), the decoration-note rule on every sheet, prompt version 6 (simplicity, the amateur pianist), the Enhance with AI dialog with Simplify. Done 2026-10-28. Then **04-3** (folders and metadata, frame marks, the levels, every run on GPT-6.1 Terra; done 2026-10-31) and **04-5** (Strict and Suggested, the first batch first, the history of AI runs, the chords of the song; done 2026-11-01) |
+| **05-documentation-refresh** | Every page of `context/` and `documentation/services/` checked against the app after 03 and 04; new: `context/ai/` and the sheet page's pages. 2026-11-01 to 02 |
 
 The wall-clock refactor (01-mvp/03) replaced the model the first epics were built on;
 [`wall-clock-rewrite.md`](implementations/01-mvp/01-epics-master-plan/plan/wall-clock-rewrite.md)
@@ -122,5 +128,6 @@ is the bridge, and its five rules still bind new work.
 - The model: [backend/time-model.md](backend/time-model.md)
 - Services and ports: [03-services-overview.md](03-services-overview.md)
 - Running it: [04-local-development.md](04-local-development.md)
+- The AI on the sheet: [ai/README.md](ai/README.md)
 - Backend: [backend/README.md](backend/README.md) · Frontend: [frontend/README.md](frontend/README.md)
   · The music library: [music-library/README.md](music-library/README.md)
