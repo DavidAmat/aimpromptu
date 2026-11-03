@@ -40,7 +40,7 @@ export interface SheetSegment {
   start: number;
   end: number;
   state: "llm" | "algorithm" | "working" | "waiting";
-  /** While the AI writes one hand only (Simplify or a stretch of one hand): its staff, 1 right or 2 left. */
+  /** While the AI writes one hand only (a level or a stretch of one hand): its staff, 1 right or 2 left. */
   staff?: 1 | 2;
 }
 
@@ -241,8 +241,9 @@ export interface StretchRequest extends RunChoice {
   instruction: string;
 }
 
-/** A run of the AI over the whole song (implementation 04, Phase 4): **Simplify** one hand or both, or the full run. */
-export type SongRun = "simplify-left" | "simplify-right" | "simplify-both" | "all";
+/** A run of the AI over the whole song that is not a level: the full run (**Write it all again**). The Simplify runs
+ * of implementation 04, Phase 4 were removed in implementation 04-6. */
+export type SongRun = "all";
 
 /** About what one run of the Enhance with AI dialog costs: its requests and US dollars. */
 export interface LlmCost {
@@ -648,13 +649,6 @@ export const sheetApi = {
     request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm/stretch`, {
       method: "POST",
       body: stretch,
-    }),
-
-  /** The AI simplifies one hand, or both, over the whole song; follow the job on `progressUrl(jobId)`. */
-  simplify: (audioUuid: string, hand: "left" | "right" | "both") =>
-    request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm/simplify`, {
-      method: "POST",
-      body: { hand },
     }),
 
   /** About what each run of the Enhance with AI dialog would cost (with a range: a level of that range too). */

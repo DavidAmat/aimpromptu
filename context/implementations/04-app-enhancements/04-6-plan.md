@@ -159,3 +159,10 @@ record's `simplified` field (old sheets hold it). Each name is checked with `git
   names none and the backend uses the setting. `check-enhance-dialog` names no model: it reads `GET /llm/costs` and
   checks the cost against the backend's estimate for the model chosen. There is no `npm run typecheck`: the type
   check is `npx tsc -b` (section 5 corrected). Report: [`04-6-implementation-phase-3.md`](04-6-implementation-phase-3.md).
+- **Phase 4 (2026-11-03).** `tests/test_sheet_simplify.py` is renamed `test_sheet_stretch_one_hand.py`, not deleted:
+  4 of its tests test code that stays (the one-hand stretch, `splice`, `like_before`); the 7 Simplify tests go, the
+  route test checks the costs without `simplify-*` and the route gone. `like_before`, `_like_columns_of`,
+  `LIKE_GRAM`, `LIKE_SHARE` and `_slice` stay in `frames.py` (the level runs use them); `like_columns` goes.
+  `SongRun` stays, as `"all"` only. The fresh backend image has no `openai`: the suite runs in the running container
+  (`docker exec`, GPU hidden). Two Transkun tests fail on the CPU (a GPU checkpoint), unrelated. Report:
+  [`04-6-implementation-phase-4.md`](04-6-implementation-phase-4.md).

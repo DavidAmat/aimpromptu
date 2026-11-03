@@ -12,7 +12,7 @@ export const enhanceWithAi = (run: SongRun, choice?: RunChoice): EnhanceWithAi =
   ...(choice ? { choice } : {}),
 });
 
-const RUNS: readonly SongRun[] = ["all", "simplify-left", "simplify-right", "simplify-both"];
+const RUNS: readonly SongRun[] = ["all"];
 
 /** The run a navigation state asks for; `null`: none. */
 export function songRunOf(state: unknown): SongRun | null {

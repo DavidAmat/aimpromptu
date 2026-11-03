@@ -15,8 +15,8 @@
  *   width, with the line under the pointer kept where it was.
  * - **The AI in the background** (plan section 3.6): a new transcription is sent by itself; any other part offers
  *   **Enhance with AI**, which opens one dialog (implementation 04, Phase 4, `EnhanceDialog`): **A stretch** of the
- *   selection (both hands or one, with the user's words) or **The whole song** (**Simplify** the left hand, the right
- *   hand or both, or **Write it all again**). On a version of My library the whole song runs in the copy that edits
+ *   selection (both hands or one, with the user's words) or **The whole song** (**a level** of the whole sheet, or
+ *   **Write it all again**). On a version of My library the whole song runs in the copy that edits
  *   it, as **Edit** opens it. The segment at the AI looks pale, a segment that comes back appears column by column, and
  *   no text says any of it. Nothing can be edited while the AI writes: the segments still waiting cannot be edited.
  * - **Copy and paste** (Phase 8B): a marked stretch or the picked notes are copied (⌘C, or the toolboxes' title
@@ -136,13 +136,6 @@ interface Enhancing {
   key: number;
 }
 
-/** The hand each Simplify run of the dialog works on. */
-const SIMPLIFY_HANDS: Record<Exclude<SongRun, "all">, "left" | "right" | "both"> = {
-  "simplify-left": "left",
-  "simplify-right": "right",
-  "simplify-both": "both",
-};
-
 /** The width asked for moves in steps of this many staff spaces, so a small resize draws nothing again. */
 const WIDTH_STEP = 4;
 /** The zoom of the page is kept in this browser (it is how the page is looked at, not part of the sheet). */
@@ -236,7 +229,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   // and the cursor goes back where it was asked to be (the start of the passage), or where it was.
   const [audioLoads, setAudioLoads] = useState<{ revision: number | null; loads: number }>({ revision: null, loads: 0 });
   const seekAfterLoad = useRef<number | null>(null);
-  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, simplify, level, notice, lastRun, stopRun, revertRun, reloadSheet } =
+  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, level, notice, lastRun, stopRun, revertRun, reloadSheet } =
     useFramesSheet(audioUuid, width, {
     onChanged: step.onChanged,
   });
@@ -462,11 +455,10 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   };
   /** A run over the whole song: here, or in the edit copy of a version of My library. */
   const startSong = useCallback(
-    (choice: SongRun, options?: RunChoice) => {
-      if (choice === "all") void run(options);
-      else void simplify(SIMPLIFY_HANDS[choice]);
+    (_choice: SongRun, options?: RunChoice) => {
+      void run(options);
     },
-    [run, simplify],
+    [run],
   );
   const runSong = (choice: SongRun, options?: RunChoice) => {
     setEnhancing(null);

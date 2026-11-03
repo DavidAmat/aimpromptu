@@ -35,11 +35,13 @@ The plan is [`04-6-plan.md`](04-6-plan.md), the brief [`04-6-prompt.md`](04-6-pr
 - [x] 3.3 `npx tsc -b`, `check:enhance-dialog`, `check:ai-history` (all passed). Report:
   [`04-6-implementation-phase-3.md`](04-6-implementation-phase-3.md).
 
-# [ ] Phase 4: Part C, Simplify removed
+# [x] Phase 4: Part C, Simplify removed
 
-- [ ] 4.1 Backend: the route, the job, the frames code, the costs keys, the test, the script.
-- [ ] 4.2 Frontend: `simplify`, the navigation states.
-- [ ] 4.3 Tests and checks.
+- [x] 4.1 Backend: the route, the job, the frames code, the costs keys, the script; the test file renamed
+  `test_sheet_stretch_one_hand.py` (its tests of the one-hand stretch and `like_before` kept).
+- [x] 4.2 Frontend: `simplify`, the navigation states.
+- [x] 4.3 Backend suite on CPU (1348 passed, 1 skipped, 2 Transkun tests failed on the CPU, unrelated); `npx tsc -b`;
+  `check:enhance-dialog` (all passed). Report: [`04-6-implementation-phase-4.md`](04-6-implementation-phase-4.md).
 
 # [ ] Phase 5: The docs and the closing
 

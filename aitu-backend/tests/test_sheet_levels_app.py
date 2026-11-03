@@ -215,6 +215,8 @@ def test_a_level_of_one_hand_on_a_range_keeps_the_rest(client: TestClient, part:
     entry = stored_sheet(part).record.levels[0]
     assert entry["range"] is True and entry["hand"] == "left" and 100 <= entry["start"] < entry["end"] <= 400
     assert after["history"]["undo"] == "Level medium with AI, the left hand"
+    # After the run no segment names a staff: the page veils nothing.
+    assert all("staff" not in s for s in after["segments"])
 
 
 def test_a_level_whose_batches_all_fail_stores_nothing(client: TestClient, part: str) -> None:

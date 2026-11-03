@@ -3,9 +3,9 @@ check of an answer, and a run in memory.
 
 A **level run** writes a passage or the whole song again at a level (easy, medium, hard; super hard later) with the
 patterns the user chose in the catalog (the gallery of patterns of Phase 2, numbered inside each hand and level). It
-breaks three limits of Simplify on purpose (plan section 5.2): it adds notes at new times (a bass note, then a
-chord), leaves out many notes (octavas the song does not need, artifacts), and moves notes from one hand to the
-other. So it has its own prompts, answer and check:
+breaks three limits of the Simplify run (implementation 04, removed in 04-6) on purpose (plan section 5.2): it adds
+notes at new times (a bass note, then a chord), leaves out many notes (octavas the song does not need, artifacts),
+and moves notes from one hand to the other. So it has its own prompts, answer and check:
 
 1. **The system prompt** of a run (:func:`system_prompt`): the shared part (``prompt/levels/shared.md``), the part of
    the level (``easy.md``, ``medium.md``, ``hard.md``) and the patterns of the run (:class:`Pattern`: the ones the
@@ -107,7 +107,7 @@ LEVEL_VERSION = (PROMPT_DIR / "VERSION").read_text(encoding="utf-8").strip()
 HANDS = {1: "right", 2: "left"}
 STAFF = {"right": 1, "left": 2}
 #: A batch: 16 to 24 s (a level answer writes every note of its hands, as a whole run's window does, so a batch is
-#: shorter than a batch of Simplify), at most this many onsets.
+#: shorter than the 24 to 32 s batch of the old Simplify run), at most this many onsets.
 LEVEL_MS = (16000.0, 24000.0)
 LEVEL_ONSETS = 260
 #: The end of the previous batch, as written, that a batch sees.

@@ -33,7 +33,8 @@ The record (:class:`Record`):
 * ``simplified``: the Simplify runs of the AI (implementation 04, Phase 4), ``[hand, added, left out, usd,
   written, changes]``, oldest first (``hand``: ``right``, ``left`` or ``both``; ``changes``: one line per note, where
   and why, ``- f4556 add D1 (L): D2 alone in a run of D1+D2 octaves``); written only when there is one. Their cost
-  is in ``usd`` and ``requests`` too.
+  is in ``usd`` and ``requests`` too. The app no longer runs Simplify (implementation 04-6): the field is kept, read
+  and written again, for the sheets that hold it.
 * ``legacy``: what the migration of Phase 9 (``scripts/migrate_sheets.py``) carried from the old ``sheet.json``, by
   kind (``{"lyrics": 2, "figures": 6}``); a sheet that has it is not migrated again.
 """

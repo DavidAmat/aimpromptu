@@ -82,7 +82,7 @@ try {
   page.on('pageerror', (e) => problems.push(`page error: ${e.message}`));
   // Every request that would start the AI is caught here and answered "busy": the AI is never asked.
   const sent = [];
-  await page.route(/\/api\/sheet\/[^/]+\/llm(\/stretch|\/simplify|\/level|\/level-copy)?$/, (route) => {
+  await page.route(/\/api\/sheet\/[^/]+\/llm(\/stretch|\/level|\/level-copy)?$/, (route) => {
     const request = route.request();
     if (request.method() !== 'POST') return route.continue();
     sent.push({ url: request.url(), body: request.postDataJSON?.() ?? null });

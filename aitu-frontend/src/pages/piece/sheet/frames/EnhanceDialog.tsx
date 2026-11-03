@@ -7,8 +7,7 @@
  *   AI writes that stretch again under the pale veil; one step of undo.
  * - **The whole song** (open when nothing is selected): **a level** of the whole sheet, the right hand only or the left
  *   hand only, written into a new project of My projects named with the level (the original stays); or **Write it all
- *   again** (the AI writes the hands and the reading of the whole song). Simplifying a hand is a level of that hand;
- *   the older Simplify run without a level is no longer offered here.
+ *   again** (the AI writes the hands and the reading of the whole song). Simplifying a hand is a level of that hand.
  *
  * A level is Easy, Medium or Hard for each hand rewritten (the same for both by default). Under it, the **gallery of
  * patterns** of those hands (`PatternGallery`), inside the dialog: the patterns approved for the level are ticked, the
