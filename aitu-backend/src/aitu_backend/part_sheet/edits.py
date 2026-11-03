@@ -572,6 +572,45 @@ def apply_level(
     )
 
 
+def apply_style(
+    part_id: str,
+    spliced: Sheet,
+    *,
+    notes_revision: int,
+    start: int,
+    end: int,
+    staff: int | None,
+    wrote: list[Any],
+    usd: float,
+    requests: int,
+    model: str | None,
+    label: str,
+    entry: dict[str, Any],
+) -> bool:
+    """Store a Copy this style run (implementation 06, ``job.start_style``) as a level run is stored
+    (:func:`apply_level`): ``spliced`` holds the passages accepted, with the marks the code copied; ``start`` and
+    ``end`` cover them (the sheet between them is as it was); the AI's figures (``wrote``) printed as set by hand; one
+    step of undo (``label``). ``entry`` goes into the record's ``styles``."""
+
+    def note(record: store.Record, written: str) -> None:
+        record.styles.append({**entry, "usd": round(usd, 4), "requests": requests, "written": written})
+
+    return _store_written(
+        part_id,
+        spliced,
+        notes_revision=notes_revision,
+        start=start,
+        end=end,
+        usd=usd,
+        requests=requests,
+        model=model,
+        staff=staff,
+        label=label,
+        note=note,
+        wrote=wrote,
+    )
+
+
 def _store_written(
     part_id: str,
     spliced: Sheet,

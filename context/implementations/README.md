@@ -70,11 +70,11 @@ closed.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 06 | [`06-copy-this-style/`](06-copy-this-style/README.md) | **Copy this style** (the brief [`04-4-prompt.md`](04-app-enhancements/04-4-prompt.md)): the code finds the passages similar to a reference the user edited, the AI checks them and writes each again in the reference's way of writing, the first passage first; a Stop button for a transcription; the first paste. Branch `feat/06-copy-this-style` | 2026-11-03 | **In progress**: Phase 1 (the matcher) done; Phase 2 (the run in the backend). [`06-plan.md`](06-copy-this-style/06-plan.md) is the plan, [`06-checklist.md`](06-copy-this-style/06-checklist.md) the status lookup |
+| 06 | [`06-copy-this-style/`](06-copy-this-style/README.md) | **Copy this style** (the brief [`04-4-prompt.md`](04-app-enhancements/04-4-prompt.md)): the code finds the passages similar to a reference the user edited, the AI checks them and writes each again in the reference's way of writing, the first passage first; a Stop button for a transcription; the first paste. Branch `feat/06-copy-this-style` | 2026-11-03 | **In progress**: Phases 1 (the matcher) and 2 (the run in the backend) done; Phase 3 (the frontend) next. [`06-plan.md`](06-copy-this-style/06-plan.md) is the plan, [`06-checklist.md`](06-copy-this-style/06-checklist.md) the status lookup |
 
 ## How to read this folder
 
-- **"What is being built now?"** → implementation 06, **Copy this style**, is in progress (Phase 1 done, 2026-11-03):
+- **"What is being built now?"** → implementation 06, **Copy this style**, is in progress (Phases 1 and 2 done, 2026-11-03):
   [`06-copy-this-style/06-plan.md`](06-copy-this-style/06-plan.md). Before it, Implementation 04 is done (2026-10-28): read
   [`04-app-enhancements/04-context.md`](04-app-enhancements/04-context.md) (what it changed, its open points), its
   plan [`04-plan.md`](04-app-enhancements/04-plan.md) and checklist

@@ -377,3 +377,20 @@ this style: an agent may do them at any time after Phase 1, but not while a brow
 - A reference of fewer than 4 columns or 2 negras finds nothing (`REF_COLUMNS`, `REF_NEGRAS`); the dialog of Phase 3
   says so.
 - The gallery is at `http://192.168.0.112:8099/06/phase-1/`.
+
+**Phase 2 (2026-11-03)**, report [`06-implementation-phase-2.md`](06-implementation-phase-2.md):
+
+- **The store splices each answer as a stretch** (`frames.splice`, then the rules when stored), not as `apply_level`
+  (section 4.3.5): the level path draws an answer again by the app's rules and keeps the sheet's old clefs, so the
+  reference's clefs, 8va and beam groups would be lost. One range, `wrote`, `change_notes` and one step stay as
+  `apply_level` (`edits.apply_style`).
+- The run matches the ticked passages again when it starts (`match.of_places`); when the notes changed since the
+  dialog's list, the POST answers 400 "open it again".
+- The limit of the notes changed (section 4.3.3, "chosen in Phase 2"): a tenth of the target (4 at least) plus what the
+  reference's way asks for at the matching columns (`style.change_budget`); an added note takes a pitch class the
+  passage plays within a negra; a melody note may be left out only at a column with no reference column.
+- A batch sees the latest two passages written before (`EARLIER_SHOWN`), not all of them: the prompt stays small.
+- When the first passage is refused three times the run ends `failed` and does not wait (as a level run).
+- The job's summary names the run `style` (`ok`, `dropped`, `failed`, `stale`, `gone`); the check is the log's
+  `plan` (`k` -1), the passages are the log's `passages`.
+

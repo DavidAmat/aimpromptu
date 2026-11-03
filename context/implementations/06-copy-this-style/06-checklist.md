@@ -29,18 +29,18 @@ branch, `feat/06-copy-this-style`. Status letters: `[x]` complete, `[p]` in prog
   checked zoomed in, served at `http://192.168.0.112:8099/06/`.
 - [x] 1.6 The backend suite on CPU. Report `06-implementation-phase-1.md`; the user looks at the gallery (Decisions).
 
-# [ ] Phase 2: The run in the backend
+# [x] Phase 2: The run in the backend
 
-- [ ] 2.1 The routes `GET` and `POST /sheet/{uuid}/llm/style` (409, 403, 400).
-- [ ] 2.2 `sheet/llm/style.py`: the check request and its reader (keep, drop, edges of two negras at most).
-- [ ] 2.3 The batch prompt (the words, the reference as written, the column map and `shift`, the passages written
+- [x] 2.1 The routes `GET` and `POST /sheet/{uuid}/llm/style` (409, 403, 400).
+- [x] 2.2 `sheet/llm/style.py`: the check request and its reader (keep, drop, edges of two negras at most).
+- [x] 2.3 The batch prompt (the words, the reference as written, the column map and `shift`, the passages written
   before, the context, the look-ahead, the target, the fixed hand); the prompt files `prompt/style/`, `VERSION` 1.
-- [ ] 2.4 `check_style`: format, hand, frames, declared changes and their limits, the melody, the hard rules.
-- [ ] 2.5 The marks the code copies (plan section 4.4): spelling, fingers on the same note, the switch, `clefset`.
-- [ ] 2.6 `job.start_style`: the log (`kind: "style"`), the first passage first, Go on, Write this batch again, Stop,
+- [x] 2.4 `check_style`: format, hand, frames, declared changes and their limits, the melody, the hard rules.
+- [x] 2.5 The marks the code copies (plan section 4.4): spelling, fingers on the same note, the switch, `clefset`.
+- [x] 2.6 `job.start_style`: the log (`kind: "style"`), the first passage first, Go on, Write this batch again, Stop,
   Revert, `runs.close_unfinished`; the store as `apply_level`, one step, the record's `styles`.
-- [ ] 2.7 The costs (`USD_STYLE_CHECK`, `USD_STYLE_BATCH`, the seconds), in the `GET` route.
-- [ ] 2.8 Tests with stand-ins (no credits): a run of two passages (waits after the first, goes on), a passage the
+- [x] 2.7 The costs (`USD_STYLE_CHECK`, `USD_STYLE_BATCH`, the seconds), in the `GET` route.
+- [x] 2.8 Tests with stand-ins (no credits): a run of two passages (waits after the first, goes on), a passage the
   check drops, a refused answer three times (the passage keeps its notes), one hand (the other unchanged), the marks
   copied and not copied, stale notes, Stop, Revert, undo. The backend suite on CPU. Report.
 

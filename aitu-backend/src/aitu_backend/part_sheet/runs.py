@@ -1,6 +1,6 @@
 """The history of the AI runs of a part (implementation 04-5, the user, 2026-10-31).
 
-Every level run writes a log in the part's folder, ``ai-runs/<run id>.json``, after its plan and after each batch, so
+Every level run, and every Copy this style run (implementation 06, ``kind: "style"``), writes a log in the part's folder, ``ai-runs/<run id>.json``, after its plan and after each batch, so
 that a run that stops (Stop, a reload) still explains itself. The log holds the request (level, hands, patterns,
 Strict refs, words, model), the system prompt once, and each conversation with the AI (``levels.Talk``: the prompts,
 the replies, the check's refusals, the target of a batch, its explanation, its rules and its declared lines), the
@@ -47,11 +47,12 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def create(part_id: str, request: dict[str, Any], system: str) -> dict[str, Any]:
-    """A new log, ``running``, written at once."""
+def create(part_id: str, request: dict[str, Any], system: str, kind: str = "level") -> dict[str, Any]:
+    """A new log, ``running``, written at once. ``kind``: ``level``, or ``style`` (Copy this style, implementation 06:
+    its ``plan`` is the check of the passages, and the log has ``passages``)."""
     run = {
         "id": uuid.uuid4().hex[:12],
-        "kind": "level",
+        "kind": kind,
         "created": _now(),
         "state": "running",
         "request": request,
@@ -106,8 +107,15 @@ def load(part_id: str, run_id: str) -> dict[str, Any] | None:
 
 def _short(run: dict[str, Any]) -> dict[str, Any]:
     req = run.get("request", {})
+    style = run.get("kind") == "style"
     return {
         "id": run["id"],
+        "kind": run.get("kind", "level"),
+        **(
+            {"reference": [req.get("start"), req.get("end")], "passages": run.get("passages", [])}
+            if style
+            else {}
+        ),
         "log": True,
         "created": run.get("created"),
         "state": run.get("state"),
@@ -148,6 +156,7 @@ def listing(part_id: str) -> list[dict[str, Any]]:
         out.append(
             {
                 "id": f"record-{k}",
+                "kind": "level",
                 "log": False,
                 "created": entry.get("written"),
                 "state": "done",
@@ -172,12 +181,17 @@ def listing(part_id: str) -> list[dict[str, Any]]:
 
 def _saved_batches(part_id: str, run_id: str) -> set[tuple[int, int]]:
     """The batches of a run whose notes are on the sheet: the record's ``levels`` entries of that run hold them (a
-    level run saves its notes and its entry together, at its end or at the wait after batch 1)."""
+    level run saves its notes and its entry together, at its end or at the wait after batch 1), and its ``styles``
+    entries (a Copy this style run: its passages)."""
     stored = store.load(part_id)
     out: set[tuple[int, int]] = set()
-    for entry in stored.record.levels if stored is not None else []:
+    record = stored.record if stored is not None else None
+    for entry in record.levels if record is not None else []:
         if entry.get("run") == run_id:
             out.update((int(b[0]), int(b[1])) for b in entry.get("batches", []) if len(b) > 2 and b[2] == "ok")
+    for entry in record.styles if record is not None else []:
+        if entry.get("run") == run_id:
+            out.update((int(p[0]), int(p[1])) for p in entry.get("passages", []) if len(p) > 2 and p[2] == "ok")
     return out
 
 

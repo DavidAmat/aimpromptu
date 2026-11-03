@@ -39,7 +39,7 @@ copies the user's marks through it (plan sections 4.3 and 4.4).
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Iterable
 
 import numpy as np
@@ -62,6 +62,7 @@ __all__ = [
     "THRESHOLD",
     "WEIGHTS",
     "Match",
+    "of_places",
     "ranked",
     "similar",
 ]
@@ -537,3 +538,17 @@ def similar(
         limit=limit,
     )
     return sorted(found, key=lambda m: m.start)
+
+
+def of_places(found: list[Match], places: Iterable[tuple[int, int]]) -> list[Match | None]:
+    """For each place ``(start, end)`` (a passage the user ticked in the dialog, or moved by the AI's check), the
+    match of ``found`` (:func:`ranked` with a low floor) that overlaps it most, cut to the place: its frames, and its
+    column map inside them. ``None``: no match overlaps the place (the notes changed since the dialog asked)."""
+    out: list[Match | None] = []
+    for a, b in places:
+        best = max(found, key=lambda m: min(m.end, b) - max(m.start, a), default=None)
+        if best is None or min(best.end, b) - max(best.start, a) <= 0:
+            out.append(None)
+            continue
+        out.append(replace(best, start=a, end=b, columns=[c for c in best.columns if a <= c[2] < b]))
+    return out

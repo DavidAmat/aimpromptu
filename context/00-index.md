@@ -116,7 +116,7 @@ assumes.
 |------|-------------|
 | [implementations/README.md](implementations/README.md) | **Start here.** The six groups (`01-mvp/`, `02-private-web-app/`, `03-apply-poc-research/`, `04-app-enhancements/`, `05-documentation-refresh/`, `06-copy-this-style/`), every implementation with its state, and the numbering rule |
 
-### 06 — Copy this style — IN PROGRESS (Phase 1 done 2026-11-03)
+### 06 — Copy this style — IN PROGRESS (Phases 1 and 2 done 2026-11-03)
 
 A stretch the user edited by hand becomes the reference: the code finds the similar passages of the song, the AI checks
 them and writes each again in the reference's way of writing. Also a Stop button for a transcription and the first

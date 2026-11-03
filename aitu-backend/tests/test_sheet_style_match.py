@@ -144,6 +144,7 @@ def test_the_notes_taken_off_the_reference_count_as_played() -> None:
     top = max(ref, key=lambda n: n.midi)
     s.notes.remove(top)
     taken = Notes.build([top.midi - 21], [at[0] * 40.0 + 15], [500.0], hand=[2], removed=[True])
+
     def repeat(notes):
         return next(m for m in match.similar(s, notes, at[0], end_of(at[0]), (2,)) if m.start == at[2])
 
