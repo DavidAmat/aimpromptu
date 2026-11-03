@@ -15,8 +15,8 @@ Code: `part_sheet/job.py` (`start`, `stop`, `commit`), `sheet/llm/frames.py` (`w
    **Write it all again**. (With notes or a stretch selected, the dialog opens on **A stretch**, which is told in
    [stretch.md](stretch.md).)
 3. The dialog asks for two things before the run:
-   - **Model**: the AI model of the run. The choices are GPT-6.1 Terra (the default), GPT-6.1 Sol and Sonnet 5.5. The
-     dialog is the one place that names the model.
+   - **Model**: the AI model of the run. It starts on the model of the setting; the choices come from the backend
+     ([README.md](README.md), "The model and the cost"). The dialog is the one place of the app that names the model.
    - **Batches**: how many parts the song is written in. The batches are of about the same time. Each one is drawn on
      the sheet while the dialog is open, so the user sees where each part starts and ends.
 4. The dialog shows the cost and the time of the run, about, before it starts. They change with the batches and the

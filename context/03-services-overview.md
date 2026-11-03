@@ -31,7 +31,8 @@ is not on the network. Who can sign in and what each user can open: [08-security
 | `matrix/` | Frame ↔ ms, the hand split, the 88 keys, the matrix model and its operations (the negra ladder, the gap peaks, passages and figure bands were removed in implementation 03, Phase 10) |
 | `hands/` | Which hand plays each onset: a beam search with a gated second pass; the starting hands of the sheet come from it |
 | `sheet/` | The piano sheet chain of implementation 03 (the F1 text, the algorithm, the LLM step with its prompts and the catalog of patterns, the music analysis of the levels in `levels/`, the engine that draws the SVG) |
-| `sheet_llm.py` | The clients of the AI: GPT-6.1 Terra and Sol through OpenAI, Sonnet 5.5 through Anthropic, and the price of a request ([ai/README.md](ai/README.md)) |
+| `sheet_llm.py` | The clients of the LLM, OpenAI and Anthropic, and the price of a request ([ai/README.md](ai/README.md)) |
+| `llm_models.py` | The one table of the models of the LLM: the dialog's choices, their providers, efforts, prices and ratios; the model of the setting `AITU_LLM_MODEL` ([ai/README.md](ai/README.md)) |
 | `part_sheet/` | The sheet of a part: build, store (`sheet.f1`), edits and undo, the reading edits of the toolboxes, the AI's jobs (the whole run, a stretch, the level run), the history of AI runs (`runs.py`), the lengths through a paste or a promotion, the marks of an old `sheet.json` |
 | `editing/` | The replacement splice, composing, paste, passages, parts, history |
 | `library/` | The Private and the Public Library: songs, artists, versions, playlists, folders and metadata, requests, shares, the import and popularity |

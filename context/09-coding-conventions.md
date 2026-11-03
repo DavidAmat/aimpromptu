@@ -21,7 +21,7 @@ Grounded in existing configs and visible patterns across the codebase. Do not in
 | Paths | Centralized in `storage/paths.py`; backend root derived from `__file__`. No path literal elsewhere |
 | Folder names | Built by `schemas/naming.py` (`slugify`, `version_folder`, `matrix_filename`) |
 | API | One `APIRouter` per section in `api/`; `main.py` is a thin app factory. `api/_placeholders.py` still holds the `501` helper of the early epics; no router uses it now |
-| AI | The clients of the AI live only in `sheet_llm.py`, and their SDK is imported only when a run starts. The model of a run comes from `part_sheet/job.py` (`MODEL`, `MODELS`); the prompts are frozen files in `sheet/llm/prompt/` ([ai/README.md](ai/README.md)). Never a key in code: the settings `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` |
+| AI | The clients of the AI live only in `sheet_llm.py`, and their SDK is imported only when a run starts. The model of a run comes from the setting and the table of `llm_models.py`; no model's name in the code elsewhere, nor in a comment (say "the LLM"); the prompts are frozen files in `sheet/llm/prompt/` ([ai/README.md](ai/README.md)). Never a key in code: the settings `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` |
 | Progress | Anything >~10 s takes a `ProgressReporter` from `progress.py`; never call `tqdm` directly |
 | Docstrings | Module-level and public functions; explain non-obvious domain rules |
 | Notebooks | One thematic subfolder per POC under `notebooks/<theme>/` |

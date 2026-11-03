@@ -8,7 +8,8 @@ tells how each part was done and measured. 03's context stays true except where 
 
 State: done on 2026-10-28. Five phases, one branch each (`feat/04-phase-1` to `feat/04-phase-5`), each merged into
 `master` after the user's check; the new logo (prompt `04-2-prompt.md`) on its own branch `feat/04-logo`. Folder
-index: [`README.md`](README.md). Status of every task: [`04-checklist.md`](04-checklist.md).
+index: [`README.md`](README.md). Status of every task: [`04-checklist.md`](04-checklist.md). The Simplify run this
+page tells of was removed in 04-6, its code too (section 9): what the page says of it is the record of 04.
 
 # 1. What implementation 04 did
 
@@ -67,7 +68,7 @@ notes.pmn ── propose_frames / assemble: figures, find_graces (fusas or short
           ── part_sheet.build: every stored sheet laid again (reapply), except a text an edit just stored
           ── POST /sheet/{uuid}/llm           write_frames, prompt 6, places to check, declared changes
           ── POST /sheet/{uuid}/llm/stretch   write_stretch(staff=None | 1 | 2)
-          ── POST /sheet/{uuid}/llm/simplify  write_simplify(staff), batch after batch -> edits.apply_simplify
+          ── POST /sheet/{uuid}/llm/simplify  write_simplify(staff), batch after batch (removed in 04-6)
           ── GET  /sheet/{uuid}/llm/costs     the dialog's estimates (job.costs)
 ```
 
@@ -80,8 +81,8 @@ notes.pmn ── propose_frames / assemble: figures, find_graces (fusas or short
 | The check of note changes | `frames.declared`, `frames.simplicity` (`NEAR = 12`, `PATTERN_COLUMNS = 8`, `CHANGE_MIN = 4`, `CHANGE_SHARE = 0.1`), `check_answer(simplify=True)` |
 | Storing a whole run's changes | `Part.added`, `frames.placed`, `FramesSong.changes()`; `job.commit(changes=)`; `edits.change_notes`, `edits.record_run` |
 | A stretch of one hand | `window_prompt(fixed=)`, `stretch_request(staff=)`, `check_answer(hand=)`, `write_stretch(staff=)`, `splice(keep=)`, `edits.apply_stretch(staff=)` |
-| Simplify | `frames.simplify_windows` (`SIMPLIFY_MS = (24000, 32000)`, `SIMPLIFY_ONSETS = 300`), `like_before`, `like_columns`, `simplify_prompt`, `check_simplify` (`renamed`), `write_simplify`, `Change`, `Simplified`; `job.start_simplify`, `LiveRun.advanced`, `LiveRun.staff`; `edits.apply_simplify`, `SIMPLIFY_LABELS` |
-| Costs | `job.costs`: `USD_CACHE = 0.04`, `USD_WINDOW = 0.038`, `USD_BATCH = 0.008`, `USD_STRETCH = 0.02` |
+| Simplify (removed in 04-6, section 9; `like_before` and `LiveRun.staff` stay, for the level runs) | `frames.simplify_windows` (`SIMPLIFY_MS = (24000, 32000)`, `SIMPLIFY_ONSETS = 300`), `like_before`, `like_columns`, `simplify_prompt`, `check_simplify` (`renamed`), `write_simplify`, `Change`, `Simplified`; `job.start_simplify`, `LiveRun.advanced`, `LiveRun.staff`; `edits.apply_simplify`, `SIMPLIFY_LABELS` |
+| Costs | `job.costs`: `USD_CACHE = 0.04`, `USD_WINDOW = 0.038`, `USD_BATCH = 0.008` (Simplify's, removed in 04-6), `USD_STRETCH = 0.02` |
 
 The core's [`README.md`](../../../aitu-backend/src/aitu_backend/sheet/README.md) is still the reference: section 9 the
 rule, 11 prompt 6 and the check, 12 the drawing of every sheet and a whole run's note changes, 14 a stretch of one
@@ -128,13 +129,13 @@ The pages for a reader: [`context/frontend/projects.md`](../../frontend/projects
 | The header, the floating toolbox and why it did not seem to come back, the wheel zoom, the cursor dragged | [phase 1](04-implementation-phase-1.md) | [`screenshots/phase-1/`](screenshots/phase-1/); `npm run check:frames-page` |
 | The decoration notes of My library before and after, the rule, every sheet laid again, two written notes with one beam | [phase 2](04-implementation-phase-2.md) | [`gallery/phase-2/`](gallery/phase-2/index.html); `scripts/grace_gallery.py` |
 | Prompt 6, places to check, the check of note changes, storing them, the tests and the real run on 7 Years | [phase 3](04-implementation-phase-3.md) | [`gallery/phase-3/`](gallery/phase-3/index.html); `scripts/simplicity_gallery.py` |
-| The Enhance with AI dialog, a stretch of one hand, Simplify, the costs, a note whose name changed | [phase 4](04-implementation-phase-4.md) | [`gallery/phase-4/`](gallery/phase-4/index.html); `scripts/simplify_gallery.py`; `npm run check:enhance-dialog` |
+| The Enhance with AI dialog, a stretch of one hand, Simplify, the costs, a note whose name changed | [phase 4](04-implementation-phase-4.md) | [`gallery/phase-4/`](gallery/phase-4/index.html); `scripts/simplify_gallery.py` (removed in 04-6); `npm run check:enhance-dialog` |
 | The documentation, this page, the final checks | [phase 5](04-implementation-phase-5.md) | |
 
 # 6. Checks
 
 The checks of 03 ([`03-context.md`](../03-apply-poc-research/03-context.md) section 6), and: the tests
-`tests/test_sheet_simplify.py` (no credits; stand-ins answer for the AI), the new cases of `test_sheet_frames.py`,
+`tests/test_sheet_simplify.py` (renamed `test_sheet_stretch_one_hand.py` in 04-6, its Simplify tests removed; no credits; stand-ins answer for the AI), the new cases of `test_sheet_frames.py`,
 `test_sheet_llm_frames.py` and `test_part_sheet.py`; the browser checks `npm run check:frames-page` and
 `npm run check:enhance-dialog` (a stand-in in the browser answers the requests that would start the AI).
 
@@ -143,11 +144,9 @@ The checks of 03 ([`03-context.md`](../03-apply-poc-research/03-context.md) sect
 - **7 Years in My library** (`1a16a836`) still holds its prompt 5 sheet. The prompt 6 run is on the edit copy in
   the Personal Vault (`477086a0`, the user's answer of Phase 3); the library version changes when the user saves
   that copy to the library (**Save to library** → **Replace**).
-- The other songs keep their prompt 5 sheets until the user runs **Enhance it again with AI** or **Simplify** on
-  them (credits: about $0.65 a whole run, $0.10 to $0.20 a Simplify of one hand).
-- A Simplify run, like a whole run, is not saved batch by batch: a backend reload stops it and loses it.
-- Simplify's cost estimate is low on dense songs (Moonlight Shadow: $0.10 estimated, $0.21 measured): more thinking
-  per batch.
+- The other songs keep their prompt 5 sheets until the user runs **Enhance it again with AI** (or a level) on
+  them (credits: about $0.65 a whole run).
+- (Closed by 04-6: Simplify was removed. It was not saved batch by batch, and its estimate was low on dense songs.)
 - 03's open points ([`03-context.md`](../03-apply-poc-research/03-context.md) section 8) are still open.
 
 # 8. Later work: implementations 04-3 and 04-5 (added 2026-11-01)
@@ -168,8 +167,9 @@ never ran; the refresh does that work, and 04-5's task 5.2 is closed the same wa
 - **The levels**: a level copy of the whole song, the catalog of patterns, and the level run with its plan and batches
   (plan section 5; [phases 2 to 4](04-3-implementation-phase-4.md)). Pages: [levels.md](../../ai/levels.md),
   [level-run.md](../../ai/level-run.md), [ai-levels.md](../../../documentation/services/backend/ai-levels.md).
-- **The model**: every AI run uses GPT-6.1 Terra at `medium`. Plan section 5.9 first said Sonnet 5.5; the change is in
-  [phase 5](04-3-implementation-phase-5.md) (section 10, the models). Page: [ai/README.md](../../ai/README.md).
+- **The model**: every AI run uses one OpenAI model at `medium`, chosen by measure in
+  [phase 5](04-3-implementation-phase-5.md) (section 10, the models; plan section 5.9 first said an Anthropic one).
+  Since 04-6 the model is a setting (section 9). Page: [ai/README.md](../../ai/README.md).
 
 ## 8.2 What changed in 04-5
 
@@ -189,7 +189,7 @@ never ran; the refresh does that work, and 04-5's task 5.2 is closed the same wa
 
 ## 8.3 The decisions that bind
 
-- Every AI run uses GPT-6.1 Terra at `medium` (8.1), not Sonnet 5.5.
+- The model of every AI run is the setting `AITU_LLM_MODEL` (04-6, section 9; its default is the model 04-3 chose, 8.1).
 - A level run of two batches or more writes its first batch and waits; the user checks it on the sheet first (the
   user, 2026-10-31).
 - A batch is written again only from the history, one at a time, with the user's answer.
@@ -217,3 +217,45 @@ never ran; the refresh does that work, and 04-5's task 5.2 is closed the same wa
 - **The temporary copies** of the 04-5 real runs (on 20 de Enero) were kept until the user had looked at the pages.
   Delete them after that.
 - The 04-5 run cost was about $0.47 of the $2 the user allowed, measured on those copies (04-5 report, section 4).
+
+# 9. Later work: implementation 04-6 (added 2026-11-03)
+
+04-6 has its own brief, plan, checklist and phase reports ([`04-6-plan.md`](04-6-plan.md)), which stay the record.
+Branch `feat/04-6-run-safety-and-model`, merged into `master` only at the user's ok.
+
+## 9.1 What changed
+
+- **A run left after a crash** (Part A): at each start of the backend, `part_sheet/runs.close_unfinished` (called by
+  `main.lifespan`) marks every log `ai-runs/<id>.json` still `running` as `stopped`, with the note "The backend
+  stopped during the run."; a batch marked written whose notes never reached the sheet becomes not written (`error`),
+  and keeps its conversation, so **Write this batch again** still works. The note shows in the run's detail of
+  **History of AI runs**. The other marks of a run in progress are not stored, or are removed when the run starts
+  (plan section 3.1). Page: [run-history.md](../../ai/run-history.md).
+- **The model of the LLM in one place** (Part B): the setting `AITU_LLM_MODEL` (`config.llm_model`) and one table,
+  `aitu_backend/llm_models.py` (labels, providers, efforts, prices, measured ratios). `GET /sheet/{uuid}/llm/costs`
+  answers the dialog's choices (`models`) and the setting's model (`model`); the frontend keeps no list. A model
+  never measured takes its cost ratio from its prices; with no price it costs $0, with a warning, and never stops a
+  run. The code's comments say "the LLM", the page "the AI". Page: [ai/README.md](../../ai/README.md), the only page
+  of the docs that names the default model.
+- **Simplify removed** (Part C): its route, job, frames code, cost keys, script and frontend calls. Its tests of code
+  that stays are in `tests/test_sheet_stretch_one_hand.py`. The rules of simplicity of the whole run stay, and so does
+  the record's `simplified` field of old sheets.
+
+## 9.2 The decisions that bind
+
+- No model's name in the code, the comments or the docs, except: the default of `config.py`, the table of
+  `llm_models.py`, `llm_models.MEASURED_WITH` (a dated measure), [ai/README.md](../../ai/README.md), and history (a
+  measure, an implementation's record, a golden file).
+- A new model: add it to `llm_models.TABLE` (with `choice` on to offer it) and, to make it the default, set
+  `AITU_LLM_MODEL`. The page needs no change.
+- The dialog sends a model only when the user chose one; left on the setting's, the backend uses the setting.
+
+## 9.3 Open points
+
+- **The fresh backend image has no `openai`** (Phase 4 report, section 3): the image of 2026-10-25 was built before
+  `openai` entered `pyproject.toml`; the running container has it installed by hand. `docker compose build backend`
+  fixes it, at a time the user chooses.
+- **Two Transkun tests fail on the CPU** (a checkpoint saved on the GPU, loaded without `map_location`): not related
+  to 04-6.
+- A level copy made just before a crash stays as a project of My projects, holding the song as it was (plan section
+  3.1).

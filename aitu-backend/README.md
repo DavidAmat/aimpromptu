@@ -53,8 +53,10 @@ src/aitu_backend/
   part_sheet/     # the sheet of a part in the app: sheet.f1, the AI's jobs, the history of AI
                   # runs, edits and their log, the reading tools, a change of length, the old
                   # sheet.json's marks
-  sheet_llm.py    # the AI's clients, outside the core: OpenAI (GPT-6.1 Terra at medium, the
-                  # model of every run unless the user chooses another) and Anthropic (Sonnet 5.5)
+  sheet_llm.py    # the LLM's clients, outside the core: OpenAI and Anthropic, and the price of
+                  # a request
+  llm_models.py   # the one table of the LLM's models: the dialog's choices, providers, efforts,
+                  # prices, ratios; the model of the setting AITU_LLM_MODEL (config.py)
   video/          # the video reader: a Synthesia-style video read into notes (the Lab)
   editing/        # paste, Recording in Sheet, the parts of a project, marks, history
   storage/        # every filesystem path in one module; the project bundle, the audio store

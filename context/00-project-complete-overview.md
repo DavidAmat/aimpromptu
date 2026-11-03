@@ -25,8 +25,8 @@ home opens the page at `http://ubuntu:5173`. Everything the app knows is in one 
 How it was built: the MVP (implementations 01 to 09), then implementation 02, the private web app
 (Phases 0 to 15 complete 2026-10-18; Phases 16 and 17, the Spanish and Catalan regions and an
 inferred popularity, added the same day), then implementation 03, the new sheet (2026-10-23 to 27), then implementation 04, the polish of the sheet page and
-of the AI's sheet (2026-10-27 to 28), with 04-3 (folders and metadata, frame marks, the levels, every run
-on GPT-6.1 Terra) and 04-5 (Strict and Suggested, the history of AI runs, the chords of the song) to
+of the AI's sheet (2026-10-27 to 28), with 04-3 (folders and metadata, frame marks, the levels, one
+model for every run) and 04-5 (Strict and Suggested, the history of AI runs, the chords of the song) to
 2026-11-01, then 05, this documentation brought up to date: [implementations/README.md](implementations/README.md).
 
 ## Users
@@ -97,7 +97,7 @@ audio in ──▶ cuts ──▶ MuScriptor (GPU, live) ──▶ notes.pmn (ms
                           │
                           ├─▶ the starting hands (the beam search of hands/)
                           ├─▶ the algorithm's sheet (proposal: the reference figure, the figures, the beams)
-                          ├─▶ the AI writes the hands and the reading (GPT-6.1 Terra), saved as sheet.f1
+                          ├─▶ the AI writes the hands and the reading (the LLM), saved as sheet.f1
                           └─▶ engrave.frames ──▶ SVG (GET /sheet/{uuid}) ──▶ FramesSheetPage
 ```
 

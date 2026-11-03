@@ -43,9 +43,11 @@ The plan is [`04-6-plan.md`](04-6-plan.md), the brief [`04-6-prompt.md`](04-6-pr
 - [x] 4.3 Backend suite on CPU (1348 passed, 1 skipped, 2 Transkun tests failed on the CPU, unrelated); `npx tsc -b`;
   `check:enhance-dialog` (all passed). Report: [`04-6-implementation-phase-4.md`](04-6-implementation-phase-4.md).
 
-# [ ] Phase 5: The docs and the closing
+# [x] Phase 5: The docs and the closing
 
-- [ ] 5.1 The setting named once (`02-tech-stack.md`, `ai/README.md`); "the LLM" / "the AI" elsewhere.
-- [ ] 5.2 The code pages checked for the Simplify names.
-- [ ] 5.3 `04-context.md` section 9; the folder's README.
-- [ ] 5.4 `check-links.py`, `check-names.py`; the closing report.
+- [x] 5.1 The setting named once (`02-tech-stack.md`, `ai/README.md`); "the LLM" / "the AI" elsewhere.
+- [x] 5.2 The code pages checked for the Simplify names (and `04-context.md`, its Simplify marked removed).
+- [x] 5.3 `04-context.md` section 9 (and 8.1, 8.3 no longer bind a model by name); the folder's README, `00-index.md`,
+  `implementations/README.md`.
+- [x] 5.4 `check-links.py` (0 broken links), `check-names.py` (no name of 04-6's code missing); the closing report:
+  [`04-6-implementation-phase-5.md`](04-6-implementation-phase-5.md).

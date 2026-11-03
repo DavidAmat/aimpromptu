@@ -41,7 +41,7 @@ variables with their defaults). One is required: `OPENAI_API_KEY` (compose stops
 `.database/` is `AITU_DATABASE_DIR` in `.env` (mounted at `/database` in the backend), the
 master user is `master` unless `AITU_MASTER_USERNAME` says otherwise, and the Hugging Face cache is
 `/mnt/ssd2/hf/data/hub`. The AI needs a key: `OPENAI_API_KEY` (required) for the
-default model, `ANTHROPIC_API_KEY` (optional) only for a Claude model chosen in the dialog; without the key a run answers "The AI is not set
+default model, `ANTHROPIC_API_KEY` (optional) only for an Anthropic model chosen in the dialog (the model of the LLM is a setting too); without the key a run answers "The AI is not set
 up on this machine." ([ai/README.md](ai/README.md)). An edit of a backend `.py` file reloads the backend and stops a running
 AI run. Three names of `.env` came with the users and the home network (implementation 02, Phase 4):
 

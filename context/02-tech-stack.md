@@ -16,7 +16,7 @@ Locked versions from lockfiles. Re-read `uv.lock` and `package-lock.json` when u
 | YouTube | yt-dlp **>=2026.8.19** — a hard floor, not a preference: every earlier build picks a YouTube player client that now answers `403`, so downloads fail outright |
 | MIDI | mido 1.3.3 (base dependency since implementation 08: the MIDI adapter of `pmn/`) |
 | Database | SQLAlchemy 2.1.3, Alembic 1.20.0 (the records of `.database/aitu.sqlite`, [07-database.md](07-database.md)) |
-| AI | openai 3.41.0 (GPT-6.1 Terra and Sol), anthropic 2.2.0 (Sonnet 5.5); imported only when a run starts ([ai/README.md](ai/README.md)) |
+| AI | openai 3.41.0 and anthropic 2.2.0, the SDKs of the two providers of the LLM; imported only when a run starts ([ai/README.md](ai/README.md)) |
 | Images | pillow 12.3.0 (the video reader's frames) |
 | Passwords | argon2-cffi 25.1.0 (`>=23.1.0`): Argon2id hashes with its default parameters (`auth/passwords.py`, implementation 02, Phase 4) |
 | Sessions | No library: 32 random bytes in the cookie `aitu_session` (`HttpOnly`, `SameSite=Lax`, 30 days, renewed on use), and only their SHA-256 in the `sessions` table (`auth/sessions.py`). See [08-security.md](08-security.md) |
@@ -84,7 +84,7 @@ Locked by the organizer for `context/implementations/01-mvp/01-epics-master-plan
 | Time model | A column is a fixed number of milliseconds (`frameMs`, 40 by default) and carries no rhythmic meaning. No BPM, no granularity, no bar lines. See [backend/time-model.md](backend/time-model.md) |
 | Storage | `.database/` (implementation 02, plan section 8): **SQLite** for the records (users, projects, the music library, requests), through **SQLAlchemy 2** models with **Alembic** migrations (`aitu_backend/db/`), and folders beside it for the audio files (stored once, by SHA-256) and the project bundles. On the Ubuntu machine a link to `/mnt/ssd2/aimpromptu/.database`, mounted into the backend container at `/database`. See [07-database.md](07-database.md) |
 | GPU | The RTX 4090 of the Ubuntu machine (`AITU_DEVICE=cuda` in the container); natively the default stays `cpu` |
-| AI (Enhance with AI) | Every run uses **GPT-6.1 Terra** at medium effort, through the OpenAI client of `sheet_llm.py` (the Responses API; the key is the setting `OPENAI_API_KEY`). The dialog may choose GPT-6.1 Sol (the same client) or Sonnet 5.5 (the Anthropic SDK, the setting `ANTHROPIC_API_KEY`); the list is `MODELS` in `part_sheet/job.py`. Terra since implementation 04-3, Phase 5 (2026-10-30); before that the runs used Sonnet 5.5. See [ai/README.md](ai/README.md) |
+| AI (Enhance with AI) | The model of the LLM is the setting **`AITU_LLM_MODEL`** (empty: the default of `aitu_backend/config.py`); every run the user starts without choosing a model uses it. The dialog's **Model** selector offers the models of one table, `aitu_backend/llm_models.py` (label, provider, effort, prices, measured ratios), which the page reads from the backend. The clients are in `sheet_llm.py`: the OpenAI one (the Responses API, the setting `OPENAI_API_KEY`, required) and the Anthropic one (the setting `ANTHROPIC_API_KEY`, optional). Since implementation 04-6 (2026-11-03). The default model and the choices: [ai/README.md](ai/README.md) |
 
 ## Not used (POC)
 

@@ -209,14 +209,14 @@ The concept is in [context/ai/level-run.md](../../../context/ai/level-run.md). T
 - `continue_level(part_id, run_id)` writes the other batches of a waiting run. `again_batch(...)` writes one batch again
   with the user's answer. See [section 9](#9-the-history-of-runs-and-the-later-sections).
 - `_complete(part_id, kind, model)`: the client of the run (`OpenAIComplete` with `cache_key=<part>|<kind>`, or
-  `ClaudeComplete` for a Claude model). `_level_complete(part_id, level, model)` names the run by `level_name`.
-- Constants: `MODEL = "gpt-6.1-terra"`, `EFFORT = "medium"`, `MODELS` (the dialog's three models, with their relative
-  cost and time), `USD_LEVEL_PLAN` 0.015, `USD_LEVEL_BATCH` 0.025, `SECONDS_LEVEL_PLAN` 10, `SECONDS_LEVEL_BATCH` 45.
+  `ClaudeComplete` for an Anthropic model, `llm_models.provider`). `_level_complete(part_id, level, model)` names the run by `level_name`.
+- The model: the setting's or the one chosen, from the table of `llm_models.py` (`resolve`, `ratio`;
+  [ai-runs.md](ai-runs.md) section 1). Constants: `USD_LEVEL_PLAN` 0.015, `USD_LEVEL_BATCH` 0.025, `SECONDS_LEVEL_PLAN` 10, `SECONDS_LEVEL_BATCH` 45.
 - `level_cost(current, hand, start, end)`: the estimate of a level run (the plan, then the batches); `costs(part_id)`
   gives it for each hand (`level-right`, `level-left`, `level-both`) in the dialog's numbers.
 - `batch_plan(part_id, *, run, hand, start, end, batches, model)`: the batches the dialog's preview shows (`run` `level`
   or `stretch` or `all`); `BATCH_MAX_S` 90, `BATCH_MIN_S` 3; the count is between the two, and the cost is scaled by the
-  model's `MODELS` ratio.
+  model's ratio (`llm_models.ratio`).
 
 ### 8.5 `api/sheet.py`: the request
 

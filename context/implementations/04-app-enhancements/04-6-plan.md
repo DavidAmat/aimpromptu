@@ -166,3 +166,8 @@ record's `simplified` field (old sheets hold it). Each name is checked with `git
   `SongRun` stays, as `"all"` only. The fresh backend image has no `openai`: the suite runs in the running container
   (`docker exec`, GPU hidden). Two Transkun tests fail on the CPU (a GPU checkpoint), unrelated. Report:
   [`04-6-implementation-phase-4.md`](04-6-implementation-phase-4.md).
+- **Phase 5 (2026-11-03).** The default model is named in one page only, `context/ai/README.md`; `02-tech-stack.md`
+  names the setting and links there. `04-context.md` sections 8.1 and 8.3 (a decision that bound a model by name) now
+  point to the setting; its sections 1 to 7 keep Simplify as the record of 04, each item marked removed. History
+  keeps its names (the 03 summaries, the golden files, `guards.py`). Report:
+  [`04-6-implementation-phase-5.md`](04-6-implementation-phase-5.md).

@@ -176,10 +176,10 @@ Each pattern the user ticks in the gallery is **Suggested** (the default: used w
 
 ## The cost and the time
 
-A level run uses GPT-6.1 Terra at medium effort by default. The dialog may choose GPT-6.1 Sol or Sonnet 5.5. The
-estimate the dialog shows is about **$0.015 and 10 seconds** for the plan, and about **$0.025 and 45 seconds** for each
-batch (`USD_LEVEL_PLAN`, `USD_LEVEL_BATCH`, `SECONDS_LEVEL_PLAN`, `SECONDS_LEVEL_BATCH`). The dialog's preview scales
-these by the model: Sol at about 1.8 times Terra's cost, Sonnet 5.5 at about 6.6 times. The cost of the run that was
+A level run uses the model of the setting by default; the dialog may choose another ([README.md](README.md), "The
+model and the cost"). The estimate the dialog shows is about **$0.015 and 10 seconds** for the plan, and about **$0.025 and 45 seconds** for each
+batch (`USD_LEVEL_PLAN`, `USD_LEVEL_BATCH`, `SECONDS_LEVEL_PLAN`, `SECONDS_LEVEL_BATCH`). These were measured with one model
+(`llm_models.MEASURED_WITH`); the dialog's preview scales them by the ratio of the model chosen (`llm_models.ratio`). The cost of the run that was
 spent is stored with the run (in USD, with the number of requests), and the step it makes in the part.
 
 ## Where to look deeper

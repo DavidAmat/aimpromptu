@@ -12,7 +12,7 @@ home network; then, if it is worth it, a production version in the cloud
 | The backend (`aitu-backend`), with the GPU | A Docker container on the Ubuntu machine (`david-ubuntu`, RTX 4090), on `127.0.0.1:8765` only |
 | The page (`aitu-frontend`, Vite's development server) | A Docker container on the same machine, on port 5173 of every address (`WEB_BIND`), so any device at home opens `http://ubuntu:5173` |
 | The data | One folder, `.database/`, on this machine `/mnt/ssd2/aimpromptu/.database` (`AITU_DATABASE_DIR` in `.env`), mounted into the backend ([07-database.md](07-database.md)) |
-| The AI | Not on this machine: the backend calls the OpenAI API (GPT-6.1 Terra, Sol) and the Anthropic API (Sonnet 5.5) over the internet, with the keys of `.env` ([ai/README.md](ai/README.md)) |
+| The AI | Not on this machine: the backend calls the LLM through the OpenAI API or the Anthropic API over the internet, with the keys of `.env` ([ai/README.md](ai/README.md)) |
 
 `make up` builds and starts both containers; there is no deploy step beyond it. How to start, stop,
 test and reach it: [04-local-development.md](04-local-development.md). The machine itself:

@@ -17,20 +17,36 @@ checks), `sheet/llm/prompt/frames/` (the prompt), `sheet_llm.py` (the model clie
 
 | Name | What it is |
 |---|---|
-| `sheet_llm.OpenAIComplete` | The client of the OpenAI models (the Responses API, the key `OPENAI_API_KEY` from the environment or `.env`, read by `_openai_key`). Each request is one call with the system prompt cached: `cache_key` is `<part id>\|<kind of run>`. Used by every run on GPT-6.1 Terra or GPT-6.1 Sol |
-| `sheet_llm.ClaudeComplete` | The client of Claude (`ANTHROPIC_API_KEY`, the official SDK, streaming, retries). Used only when the user chooses **Sonnet 5.5** in the dialog |
+| `sheet_llm.OpenAIComplete` | The client of the OpenAI models (the Responses API, the key `OPENAI_API_KEY` from the environment or `.env`, read by `_openai_key`). Each request is one call with the system prompt cached: `cache_key` is `<part id>\|<kind of run>`. Used by every run on a model whose provider is `openai` |
+| `sheet_llm.ClaudeComplete` | The client of the Anthropic models (`ANTHROPIC_API_KEY`, the official SDK, streaming, retries). Used only for a model whose provider is `anthropic` |
+| `sheet_llm.price(model, ...)` | The US dollars of one request, from the prices of `llm_models`; a model with no price costs $0 and the backend log warns, so a run never stops for a price |
 | `sheet_llm.NoCredits`, `SkipWindow` | A run stops for no credits; a refusal (a declined request) fails one window only |
 | `Call` | One request's tokens, seconds and US dollars; `ask.calls` and `ask.usd` add them up for the run |
 
-The model table is `part_sheet/job.py`:
+The model of a run (implementation 04-6): the setting `AITU_LLM_MODEL` (`config.llm_model()`; empty: the default
+`config.DEFAULT_LLM_MODEL`) and one table, `aitu_backend/llm_models.py`. The default model's name is written in the
+docs only in [context/ai/README.md](../../../context/ai/README.md).
 
-- `MODEL = "gpt-6.1-terra"` and `EFFORT = "medium"`: the model of a run when none is chosen.
-- `MODELS`: the three choices the dialog offers, each with its label, its effort, and the cost and the time of one
-  request compared with Terra (the measured ratios; the dialog shows them).
-- `model_of(model)` returns the choice or Terra; an unknown name raises `ValueError`.
-- `available(model)` is the check before a run: the key and the SDK of that provider. A run asked when it is not
-  available answers `409` ("This AI is not set up on this machine.").
-- `_complete(part_id, kind, model)` builds the client of a run.
+- `TABLE`: for each model the backend knows, a `Model`: `label`, `provider` (`openai` or `anthropic`), `effort`,
+  `prices` (input, output, cache write, cache read, US dollars per million tokens), `choice` (offered by the dialog's
+  **Model** selector; off: kept for its price only, such as a model the server-side fallback answers with), and
+  `measured` (the cost and the time of a request compared with `MEASURED_WITH`, measured in 04-3 Phase 5).
+- `default()`: the setting's model. `choices()`: the selector's models, `{value, label}`, the setting's first (added
+  when the table does not offer it: label its name, provider `anthropic` for a `claude-` name, else `openai`,
+  effort `medium`). `GET /llm/costs` answers them as `models`, and the setting's as `model`.
+- `resolve(name)`: `None` gives the setting's model; a name `choices()` does not hold raises `ValueError` (the routes
+  answer 422).
+- `provider(name)`, `effort(name)`, `prices(name)` (None when unknown; a dated name such as `<model>-2026-10-01` takes
+  the price of `<model>`), `cost(name, ...)`.
+- `ratio(name)`: the measured ratios; else the cost of a typical request (`TYPICAL_REQUEST`) at its prices against
+  `MEASURED_WITH`, and time 1; with no price, 1 and 1. The estimates `USD_*` and `SECONDS_*` of `job.py` were measured
+  with `MEASURED_WITH`, and `batch_plan` scales them by this ratio.
+
+In `part_sheet/job.py`:
+
+- `available(model)` is the check before a run: the key and the SDK of the model's provider. A run asked when it is
+  not available answers `409` ("This AI is not set up on this machine.").
+- `_complete(part_id, kind, model)` builds the client of a run, with the model and the effort of the table.
 
 Keys are never written in the docs or in the code: only the names of the settings.
 

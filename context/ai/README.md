@@ -22,13 +22,24 @@ that writes it.
 
 ## The model and the cost
 
-- Every run uses **GPT-6.1 Terra** at medium effort, unless the user chooses another model in the dialog. The choices
-  are GPT-6.1 Terra, GPT-6.1 Sol and Sonnet 5.5 (the dialog is the only place that names them).
-- The keys are read from the environment or from the repository's `.env`: `OPENAI_API_KEY` for the OpenAI models,
-  `ANTHROPIC_API_KEY` for Sonnet. A run is refused when the key of its model is missing ("This AI is not set up on
-  this machine").
+- **The model of the LLM is one setting**, `AITU_LLM_MODEL` (in `.env`; `compose.yaml` passes it to the backend).
+  Every run the user starts without choosing a model uses it. When the setting is empty, the model is the default of
+  `aitu_backend/config.py` (`DEFAULT_LLM_MODEL`, `gpt-6.1-terra` today). This is the only page of the docs that
+  names a model: every other page says "the LLM" (the code) or "the AI" (the app) and links here.
+- **The choices of the dialog's Model selector** are one table of the backend, `aitu_backend/llm_models.py`
+  (`TABLE`): for each model its label, its provider (OpenAI or Anthropic), its effort, its prices, and its cost and
+  time measured against the model the estimates were measured with. The page reads the list from
+  `GET /sheet/{uuid}/llm/costs` (`models`, the setting's model first, and `model`) and keeps none of its own. A model
+  in the setting that the table does not hold is still offered first, named by its name.
+- **A model never measured**: its cost in the estimate comes from its prices; its time is the measured model's. With no
+  price at all, the estimate is the measured model's, and the cost of its requests counts as $0 (a warning in the
+  backend log), so a new model never stops a run.
+- The keys are read from the environment or from the repository's `.env`: `OPENAI_API_KEY` for the OpenAI models
+  (required), `ANTHROPIC_API_KEY` for the Anthropic ones. A run is refused when the key of its model is missing ("This
+  AI is not set up on this machine").
 - The dialog shows the cost and the time of a run before it starts, about: the requests of the run, in US dollars and
-  in minutes. The estimate is made from the song (its windows, its batches) and the measured cost of a request.
+  in minutes. The estimate is made from the song (its windows, its batches), the measured cost of a request, and the
+  model's ratio.
 - The user chooses **batches** in the dialog: the song is written in that many parts, of about the same time.
 
 The code and the numbers: [documentation/services/backend/ai-runs.md](../../documentation/services/backend/ai-runs.md).
@@ -45,7 +56,8 @@ The mark has the same width whatever its state, so the names of a list stay alig
 
 ## Words the app uses
 
-- **the AI** is the word on the page. The model's name is shown only in the dialog's model choice.
+- **the AI** is the word on the page. The model's name is shown only in the dialog's model choice. The docs of the
+  code say **the LLM**.
 - **Enhance with AI** opens the dialog. **Enhance it again with AI** is its label once the part was enhanced.
 - The states of a batch: **Waiting**, **Being written**, **Written**, **Kept as it was** (the check refused every reply).
 
