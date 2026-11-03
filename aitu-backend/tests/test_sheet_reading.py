@@ -238,9 +238,13 @@ def test_clefs_and_octave_lines_of_one_hand_over_a_stretch(client: TestClient, p
     up = edit(client, part, action="ottava", start=a, end=b, staff="right", value=1)
     inside = [n for n in up["notes"] if n["hand"] == "right" and a <= frame(n["ref"]) < b]
     assert inside and all(n["ottava"] == 1 for n in inside)
+    # 04-7: an 8va over the left hand in the bass clef is allowed; a 15ma there is not.
+    low = edit(client, part, action="ottava", start=a, end=b, staff="left", value=1)
+    left = [n for n in low["notes"] if n["hand"] == "left" and a <= frame(n["ref"]) < b]
+    assert left and all(n["ottava"] == 1 for n in left)
     assert (
-        "bass clef"
-        in edit(client, part, 400, action="ottava", start=a, end=b, staff="left", value=1)["detail"]
+        "no 15ma"
+        in edit(client, part, 400, action="ottava", start=a, end=b, staff="left", value=2)["detail"]
     )
     down = edit(client, part, action="ottava", start=a, end=b, staff="right", value=0)
     assert all(

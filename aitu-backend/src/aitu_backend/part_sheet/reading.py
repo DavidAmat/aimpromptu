@@ -30,6 +30,7 @@ from aitu_backend.sheet.proposal.frames import (
     clefs_and_ottavas,
 )
 from aitu_backend.sheet.sheet.data import (
+    cut_clef_marks,
     LYRIC_FONTS,
     LYRIC_MAX,
     LYRIC_MIN,
@@ -462,7 +463,9 @@ def fewest_signs(sheet: Sheet, start: int, end: int) -> dict[str, int]:
 
 def set_clef(sheet: Sheet, start: int, end: int, staff: int, clef: str | None) -> str:
     """The clef of one hand over the stretch (``treble``, ``bass``; ``None``: the hand's own clef); the clef in force
-    after it comes back at its end. A bass clef takes no 8va: the notes under one in the stretch lose it.
+    after it comes back at its end. The stretch is marked as set by hand (``Sheet.user_clefs``, implementation
+    04-7): the shortest-stretch rule never takes the hand's other clef away from it. A bass clef keeps the 8va of
+    the notes (04-7: 8va in the bass clef is allowed); a 15ma there becomes an 8va.
     """
     if staff not in (1, 2):
         raise Refused("A clef belongs to one hand.")
@@ -479,18 +482,23 @@ def set_clef(sheet: Sheet, start: int, end: int, staff: int, clef: str | None) -
     if after and not any(f == end and st == staff for f, st, _ in changes):
         changes.append((end, staff, at_end))
     sheet.clef_changes = sorted(changes, key=lambda c: (c[0], c[1]))
+    sheet.user_clefs = cut_clef_marks(sheet.user_clefs, start, end, [staff])
+    if code != OWN_CLEF[staff]:
+        sheet.user_clefs = sorted(sheet.user_clefs + [(start, end, staff, code)])
     if code == "F4":
         for n in sheet.notes:
-            if n.staff == staff and n.frame is not None and start <= n.frame < end and n.ottava > 0:
-                n.ottava = 0
+            if n.staff == staff and n.frame is not None and start <= n.frame < end and n.ottava > 1:
+                n.ottava = 1
     hand = "right" if staff == 1 else "left"
     return f"{'Treble' if code == 'G2' else 'Bass'} clef for a stretch of the {hand} hand"
 
 
 def clef_rule(sheet: Sheet, start: int, end: int, staffs: list[int]) -> str:
-    """The clefs and 8va of the clef rules (version 4: ``proposal.frames.clefs_and_ottavas``) over the stretch, for
-    the hands in ``staffs``; the stored ones stay everywhere else."""
+    """The clefs and 8va of the clef rules (version 4 and the shortest stretch of 04-7:
+    ``proposal.frames.clefs_and_ottavas``) over the stretch, for the hands in ``staffs``; the stored ones stay
+    everywhere else. The clefs the user set by hand in the stretch are the rule's again (their marks go)."""
     first, after = _stretch(sheet, start, end)
+    sheet.user_clefs = cut_clef_marks(sheet.user_clefs, start, end, staffs)
     rule = replace(
         sheet,
         notes=[replace(n) for n in sheet.notes],
@@ -519,7 +527,8 @@ def clef_rule(sheet: Sheet, start: int, end: int, staffs: list[int]) -> str:
 
 def set_ottava(sheet: Sheet, start: int, end: int, staff: int, ottava: int) -> str:
     """An octave line over one hand's notes in the stretch (``1`` 8va, ``2`` 15ma, ``-1`` 8vb, ``-2`` 15mb; ``0``
-    none). The notes are written that far from where they sound. A bass clef takes no 8va or 15ma.
+    none). The notes are written that far from where they sound. A bass clef takes an 8va (implementation 04-7: a
+    short high stretch of the left hand), not a 15ma.
     """
     if staff not in (1, 2):
         raise Refused("An octave line belongs to one hand.")
@@ -535,8 +544,8 @@ def set_ottava(sheet: Sheet, start: int, end: int, staff: int, ottava: int) -> s
         raise Refused(
             f"The {'right' if staff == 1 else 'left'} hand plays nothing in this stretch."
         )
-    if ottava > 0 and any(_clef_at(sheet, staff, n.frame) == "F4" for n in notes):
-        raise Refused("A bass clef takes no 8va: write this stretch in the treble clef first.")
+    if ottava > 1 and any(_clef_at(sheet, staff, n.frame) == "F4" for n in notes):
+        raise Refused("A bass clef takes no 15ma: use 8va, or write this stretch in the treble clef first.")
     for n in notes:
         n.ottava = ottava
     hand = "right" if staff == 1 else "left"

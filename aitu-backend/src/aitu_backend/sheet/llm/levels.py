@@ -249,7 +249,7 @@ def _bare(sheet: Sheet) -> Sheet:
         for n in sheet.notes
         if not n.covered
     ]
-    return replace(sheet, notes=notes, clefs={1: "G2", 2: "F4"}, clef_changes=[]).sort()
+    return replace(sheet, notes=notes, clefs={1: "G2", 2: "F4"}, clef_changes=[], user_clefs=[]).sort()
 
 
 #: The catalog of patterns (implementation 04-3, Phase 4: moved from the gallery of Phase 2): ``patterns.json`` and

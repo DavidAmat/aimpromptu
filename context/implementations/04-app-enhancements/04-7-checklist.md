@@ -25,17 +25,19 @@ The plan is [`04-7-plan.md`](04-7-plan.md), the brief [`04-7-prompt.md`](04-7-pr
 - [x] 1.4 `04-context.md` 8.5: the line on the octaves of the user's words closed (decided 2026-10-31, in the prompt).
 - [x] 1.5 Report: [`04-7-implementation-phase-1.md`](04-7-implementation-phase-1.md).
 
-# [ ] Phase 2: The clef rule
+# [x] Phase 2: The clef rule
 
-- [ ] 2.1 `STATES`: the left hand's bass clef under 8va, the right hand's treble clef under 8vb (and its limit).
-- [ ] 2.2 `short_clefs` (`CLEF_MIN = 5`), at the end of `clefs_and_ottavas` and in `build.reapply`.
-- [ ] 2.3 The user's clefs win: the mark of a clef set by hand; the three parts with clefs set before it keep them.
-- [ ] 2.4 "Never 8va in the bass clef" ended: `frames.check`, the AI's check, `reading.set_ottava`,
+- [x] 2.1 `STATES`: the left hand's bass clef under 8va, the right hand's treble clef under 8vb (and its limit).
+- [x] 2.2 `short_clefs` (`CLEF_MIN = 5`), at the end of `clefs_and_ottavas` and in `build.reapply`.
+- [x] 2.3 The user's clefs win: the mark of a clef set by hand (`Sheet.user_clefs`, the `clefset` line); the three
+  parts with clefs set before it keep them by the rule itself, no one-time step (plan section 8).
+- [x] 2.4 "Never 8va in the bass clef" ended: `frames.check`, the AI's check, `reading.set_ottava`,
   `reading.set_clef`, the range toolbox's 8va chips; the 8va line over a bass staff drawn right.
-- [ ] 2.5 The whole-run prompt: the user's rule, `prompt/frames/VERSION` 8, `PROMPT_VERSION = "8"`.
-- [ ] 2.6 Tests (a high note alone, a passage of 5 columns, a wide chord, the right hand, a stored AI sheet, a clef
-  set by hand); the backend suite on CPU; `npx tsc -b`; `check:frames-tools`, `check:frames-page`.
-- [ ] 2.7 Report: `04-7-implementation-phase-2.md`.
+- [x] 2.5 The whole-run prompt: the user's rule, `prompt/frames/VERSION` 8, `PROMPT_VERSION = "8"`.
+- [x] 2.6 Tests (a high note alone, a passage of 5 columns, a wide chord, the right hand, a stored AI sheet, a clef
+  set by hand); the backend suite on CPU (1362 passed, 1 skipped); `npx tsc -b`; `check:frames-tools`,
+  `check:frames-page` (all passed).
+- [x] 2.7 Report: [`04-7-implementation-phase-2.md`](04-7-implementation-phase-2.md).
 
 # [ ] Phase 3: The measure and the gallery
 

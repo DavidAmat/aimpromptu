@@ -50,6 +50,7 @@ import numpy as np
 from aitu_backend.pmn.notes import Notes
 from aitu_backend.sheet.proposal.frames import (
     BASS_LIMIT,
+    CLEF_MIN,
     FramesProposal,
     _ledger,
     assign_figures,
@@ -62,7 +63,7 @@ from aitu_backend.sheet.proposal.frames import (
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet import frames as frames_mod
 from aitu_backend.sheet.sheet.common import parse_spn, spn
-from aitu_backend.sheet.sheet.data import FRAME_MS, Note, Sheet, carry_extras
+from aitu_backend.sheet.sheet.data import FRAME_MS, Note, Sheet, carry_extras, cut_clef_marks
 from aitu_backend.sheet.sheet.figures import FIGURES, figure_of_ms, nominal_ms, steps
 from aitu_backend.sheet.sheet.pitch import pitch_to_midi
 from aitu_backend.sheet.sheet.spelling import spell
@@ -98,7 +99,7 @@ __all__ = [
 Complete = Callable[[str, list[dict]], str]
 
 PROMPT_DIR = Path(__file__).with_name("prompt") / "frames"
-PROMPT_VERSION = "7"  # prompt/frames/VERSION
+PROMPT_VERSION = "8"  # prompt/frames/VERSION
 WINDOW_MS = (12000.0, 16000.0)  # a window ends after the longest pause in this range
 MAX_ONSETS = 200
 LOOKAHEAD_MS = 4000.0
@@ -559,10 +560,12 @@ def _name(midi: int) -> str:
 
 
 def _structure(sheet: Sheet) -> list[str]:
-    """Beam groups (at most ``frames.MAX_BEAM`` notes, two or more, consecutive notes of one hand), 8va in the
-    bass clef, no note four or more ledger lines above its staff (clef.L3 for the left hand in the bass clef, the
-    algorithm's hard limit; clef.L5 and clef.6 under 8va otherwise), and ``orn`` after an ornament. Grace notes are a rule of the app, so the prompt does not ask for
-    them; a column tagged ``grace`` may sit inside a group, as ``frames.check`` allows."""
+    """Beam groups (at most ``frames.MAX_BEAM`` notes, two or more, consecutive notes of one hand), no 15ma in the
+    bass clef, no note written four or more ledger lines above its staff (clef.L3 for the left hand in the bass
+    clef, also under 8va, the algorithm's hard limit; clef.L5 and clef.6 under 8va in the treble clef), and ``orn``
+    after an ornament. An 8va in the bass clef is allowed since implementation 04-7 (the user's rule: a short high
+    stretch of the left hand stays in the bass clef). Grace notes are a rule of the app, so the prompt does not ask
+    for them; a column tagged ``grace`` may sit inside a group, as ``frames.check`` allows."""
     errs: list[str] = []
     for staff, hand in ((1, "R"), (2, "L")):
         cols: dict[int, list[Note]] = defaultdict(list)
@@ -603,24 +606,26 @@ def _structure(sheet: Sheet) -> list[str]:
                     errs.append(
                         f"{hand} at f{f}: 'orn' with no ornament (tr, mord, turn) before it"
                     )
-            if any(n.ottava for n in cols[f]) and frames_mod._clef_at(sheet, staff, f) == "F4":
+            if any(n.ottava > 1 for n in cols[f]) and frames_mod._clef_at(sheet, staff, f) == "F4":
                 errs.append(
-                    f"{hand} at f{f}: 8va in the bass clef (never; use the treble clef first)"
+                    f"{hand} at f{f}: 15ma in the bass clef (never; use 8va, or the treble clef first)"
                 )
         # clef.L3 and clef.6: no note four or more ledger lines above its staff (the first two places of each)
         high = []
         for f in frames:
             clef = frames_mod._clef_at(sheet, staff, f)
             top = max(cols[f], key=lambda n: n.midi)
-            # a note already under 8va is not checked: only a 15ma line would lower it more
-            if not top.covered and not top.ottava and _ledger(top, clef, 0)[1] >= BASS_LIMIT:
+            # a note under 8va in the treble clef is not checked: only a 15ma line would lower it more
+            if top.covered or (top.ottava and clef != "F4"):
+                continue
+            if _ledger(top, clef, max(top.ottava, 0))[1] >= BASS_LIMIT:
                 high.append((f, top, clef))
         for f, top, clef in high[:2]:
             name = spn(top.step, top.alter, top.octave)
             if clef == "F4":
                 errs.append(
-                    f"{hand} at f{f}: {name} is four or more ledger lines above the bass staff; write it in "
-                    "the treble clef (clef.L3)"
+                    f"{hand} at f{f}: {name} is four or more ledger lines above the bass staff; write it under "
+                    "8va in a short stretch, or in the treble clef for a passage (clef.L3)"
                 )
             else:
                 errs.append(
@@ -1027,14 +1032,16 @@ def beam_pairs(
 
 
 OTTAVA_JOIN_MS = 2000.0  # two 8va lines of one hand closer than this become one
-OTTAVA_LOWEST = 72  # C5: under 8va it is written C4, one ledger line below the treble staff
+#: The lowest note that joins an 8va line, by clef: C5 in the treble clef (written C4 under the line, one ledger line
+#: below the staff), E3 in the bass clef (written E2, one ledger line below; 04-7: 8va in the bass clef).
+OTTAVA_LOWEST = {"G2": 72, "F4": 52}
 
 
 def join_ottavas(sheet: Sheet) -> int:
     """One 8va line instead of several short ones: two 8va notes of one hand less than ``OTTAVA_JOIN_MS`` apart, in
-    the treble clef, with every note between them at C5 or higher (written no lower than C4 under the line), put
-    those notes under 8va too. The LLM marks single high notes (clef.6), which draws one bracket per note. Returns
-    how many gaps were joined."""
+    one clef, with every note between them written no lower than one ledger line below the staff under the line
+    (``OTTAVA_LOWEST``), put those notes under 8va too. The LLM marks single high notes (clef.6), which draws one
+    bracket per note. Returns how many gaps were joined."""
     joined = 0
     for staff in (1, 2):
         cols: dict[int, list[Note]] = defaultdict(list)
@@ -1047,8 +1054,9 @@ def join_ottavas(sheet: Sheet) -> int:
             if b == a + 1 or (frames[b] - frames[a]) * FRAME_MS >= OTTAVA_JOIN_MS:
                 continue
             between = [n for f in frames[a + 1 : b] for n in cols[f]]
-            treble = all(frames_mod._clef_at(sheet, staff, f) == "G2" for f in frames[a : b + 1])
-            if treble and all(n.midi >= OTTAVA_LOWEST and n.ottava == 0 for n in between):
+            clefs = {frames_mod._clef_at(sheet, staff, f) for f in frames[a : b + 1]}
+            lowest = OTTAVA_LOWEST.get(next(iter(clefs))) if len(clefs) == 1 else None
+            if lowest is not None and all(n.midi >= lowest and n.ottava == 0 for n in between):
                 for n in between:
                     n.ottava = 1
                 joined += 1
@@ -1496,8 +1504,10 @@ def stretch_request(
         "figure, write the one the target shows.\n\n"
         f"What you cannot do: write a note outside {inside}. When the instruction asks to keep something (the "
         "rhythm, the figures, the beam groups, a hand), keep it as the target has it. Only the format of the answer "
-        "and these limits stay hard rules: a beam group has at most 8 notes, no note four or more ledger lines "
-        "above its staff, no 8va in the bass clef."
+        "and these limits stay hard rules: a beam group has at most 8 notes, no note written four or more ledger "
+        "lines above its staff, no 15ma in the bass clef. A hand changes to its other clef only for a passage of "
+        f"{CLEF_MIN} onsets or more; a shorter high stretch of the left hand stays in the bass clef, under 8va "
+        "when it is too high for ledger lines."
     )
 
 
@@ -1695,6 +1705,8 @@ def splice(
         key_changes=_collapse_keys(key_changes, key),
         quarter_ms=current.quarter_ms,
     )
+    # The clefs the user set by hand stay, but where the answer wrote the clefs again (04-7).
+    out.user_clefs = cut_clef_marks(current.user_clefs, start, end, [st for st in (1, 2) if st != keep])
     return carry_extras(current, out).sort()
 
 

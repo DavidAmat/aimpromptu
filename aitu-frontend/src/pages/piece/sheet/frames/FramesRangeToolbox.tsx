@@ -13,9 +13,11 @@
  * - **Key**: the armadura of the stretch, drawn on both clefs (✓), or the armadura of the piece again (🗑). When
  *   another armadura prints fewer signs over the stretch, a button names it ("Use D major here").
  * - **Clef**: the clef of each hand in scope over the stretch, then its own clef again after it; **Clefs by the rule**
- *   writes the clefs and 8va the clef rules give the stretch.
+ *   writes the clefs and 8va the clef rules give the stretch. A clef set here stays, also on a stretch shorter than
+ *   the rule's shortest (5 columns of the hand; the backend marks it, implementation 04-7).
  * - **Octave**: an octave line over each hand in scope (8va, 15ma, 8vb, 15mb), pressed again or 🗑 to remove it. A
- *   bass clef takes no 8va or 15ma.
+ *   bass clef takes an 8va (implementation 04-7: a short high stretch of the left hand stays in the bass clef), not
+ *   a 15ma.
  *
  * The spacing of a stretch, its speed and the hidden or dragged octave lines of the old sheet are not here: the user
  * dropped them (Phase 7). The title bar hands the stretch to the note toolbox (*Select the notes in this stretch*)
@@ -391,8 +393,8 @@ export function FramesRangeToolbox({
                   {OTTAVAS.map((choice) => {
                     const refused = !plays
                       ? `The ${hand} hand plays nothing in this stretch`
-                      : choice.value > 0 && bass
-                        ? "A bass clef takes no 8va: write the stretch in the treble clef first"
+                      : choice.value > 1 && bass
+                        ? "A bass clef takes no 15ma: use 8va, or write the stretch in the treble clef first"
                         : null;
                     return (
                       <Tooltip key={choice.value} title={locked ?? refused ?? choice.hint}>

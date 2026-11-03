@@ -273,3 +273,27 @@ Phases 1 and 4 are small; one agent may do 1 and 2 together, or 4 and 5. Phase 3
   by hand. The app deletes a version of My library with `flow.delete_version` (or the song with `flow.delete_song`),
   not `delete_project`. The user's answer (2026-11-03): delete the whole song; done with `flow.delete_song`. Deleting them did not touch `39d92dbe`: its `levelOf` is in `origin` only, and `release_levels` and
   `bundle.dependents` do not read it.
+- **Phase 2, the mark of a clef set by hand (2026-11-03).** The mark is a stretch, not a clef change:
+  `Sheet.user_clefs`, a list of `(start, end, staff, clef)`, stored in `sheet.f1` as one line per stretch after the
+  lyrics (`clefset L f1998 f2033 treble`). `reading.set_clef` writes it when it sets the hand's other clef (setting
+  the hand's own clef only cuts the marks there); **Clefs and 8va by the rule** cuts the marks of its stretch; a stretch
+  run (`frames.splice`) cuts them where the answer wrote the clefs again; a level batch (`levels.splice`) keeps them;
+  `reapply` carries them. A **whole run does not carry them**: the AI writes every clef again (the rule of 03, Phase 7:
+  clefs are the AI's kind too). `levels._bare` drops them, so they never reach a prompt. `short_clefs` keeps a short
+  stretch that holds a column inside a mark of its clef.
+- **Phase 2, the clefs set before the mark: no one-time step.** The four clef steps of the undo logs (section 3.3,
+  three parts now) were read: three set the hand's **own** clef (My Way, "Treble clef ... right hand" twice; 946c21f2,
+  "Bass clef ... left hand"), which `short_clefs` never removes; the fourth (7b9a41e4, "Treble clef ... left hand"
+  at f1998) is a stretch of **6** left-hand columns (f1998 to f2023, back to bass at f2033), which the rule keeps by
+  itself. So nothing needed a mark written into a stored file. Phase 3 checks the three parts by name.
+- **Phase 2, the shortest stretch is a step** (`short_clefs`), as planned; not inside `_path`. It also runs after
+  Transpose's `fit_clefs(far_notes)` (`edits.py`), where a fitted region could leave a short stretch. A short stretch
+  stays as it is when one of its columns reads neither way (a chord too wide for the line: plan section 7); the counts
+  say how many (`short stretches kept`).
+- **Phase 2, 15ma.** Only 8va is allowed in the bass clef: `frames.check`, the AI's check, `reading.set_ottava` and the
+  range toolbox still refuse a 15ma there ("15ma in the bass clef"); `reading.set_clef` writing a bass clef turns a
+  15ma into an 8va and keeps an 8va.
+- **Phase 2, the prompt.** Version 8 also teaches the tag `8vb` (the format had only `8va`), and Example 2 (a waltz)
+  no longer writes its two-chord treble stretches: the chords (G4, Ab4: three ledger lines) stay in the bass clef. The
+  stretch prompt (in `sheet/llm/frames.py`) says the shortest stretch too. `join_ottavas` (a whole run's 8va lines)
+  joins in the bass clef too (`OTTAVA_LOWEST` by clef).

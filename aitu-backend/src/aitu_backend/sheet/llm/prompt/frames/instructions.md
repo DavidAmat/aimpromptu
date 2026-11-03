@@ -56,6 +56,7 @@ first window, one request asks you for the reference figure (section "The refere
   - `orn`: an onset played inside the ornament of the note before it in the same hand (the alternating notes of a
     trill after its main note). It stays in the text, so that every onset is kept, but it is not drawn.
   - `8va`: the note is printed an octave lower under an 8va line (the pitch written here is the sounding pitch).
+    `8vb`: the note is printed an octave higher under an 8vb line (below the staff).
 
 # Output format: F1 frames with your decisions
 
@@ -131,22 +132,27 @@ pattern). Very long groups do not help: the eye cannot find a shape in them.
 
 ## Clefs and 8va (left hand: the user's rules, a clean left hand first; right hand: measured)
 
-- clef.L1 Priority for the left hand: (1) the bass clef, (2) the treble clef, (3) the treble clef with `8va`. Use
-  the next one only when the one before is not readable. Never `8va` in the bass clef.
+- clef.L1 A hand changes to its other clef only for a whole passage: **5 onsets of that hand or more** (the user's
+  rule). Priority for the left hand: (1) the bass clef, (2) the bass clef with `8va` for a short high stretch (1 to 4
+  onsets), (3) the treble clef for a high passage of 5 onsets or more, (4) the treble clef with `8va`. Use the next
+  one only when the one before is not readable.
 - clef.L2 Readable in the bass clef: notes up to C4 (one ledger line); a single note or chord up to about G4 (three
   ledger lines) may stay; an octave whose lower note is readable stays (C4-C5).
-- clef.L3 Change to treble for a stretch of two or more onsets not readable in the bass clef, when the music after
-  them stays high too. No onset stays four or more ledger lines above the bass staff (above about G4): write it in
-  the treble clef, also when this needs a clef change for that one onset.
+- clef.L3 No onset stays four or more ledger lines above the bass staff (B4 or higher) without a line. One to four
+  such onsets: the bass clef with `8va` over them (they print an octave lower). A passage of 5 onsets or more not
+  readable in the bass clef, when the music after them stays high too: the treble clef.
 - clef.L4 In the treble clef, left-hand notes below A3 are hard to read. Low notes (below A3) that alternate with a
-  high part not readable in the bass clef: the low notes in the bass clef, the high part in the treble clef, also
-  inside a beam group.
+  high part: the bass clef for the low notes; the high part in the treble clef only when it is a passage of 5
+  onsets or more, else in the bass clef (with `8va` when it is four or more ledger lines above the staff).
 - clef.L5 A left hand very high even in the treble clef (from about E6 up): treble clef with `8va`.
 - clef.L6 Otherwise change between two beam groups or at a pause, and go back to bass as soon as the hand is
   readable there. Fewer changes are better (a change is worth about 3 ledger lines saved). These rules are
-  recommendations for a pleasant sheet: choose the cleanest option.
-- clef.2 Right hand in the bass clef when its notes sit around G3 or lower for a while. clef.6 Right hand `8va`
-  from about G6 up.
+  recommendations for a pleasant sheet: choose the cleanest option. The app has the last word on the shortest
+  stretch: a stretch of the other clef shorter than 5 onsets of the hand goes back to the hand's own clef when the
+  sheet is drawn.
+- clef.2 Right hand in the bass clef when its notes sit around G3 or lower for a passage of 5 onsets or more; a
+  shorter low stretch stays in the treble clef, with `8vb` when it is four or more ledger lines below the staff
+  (D3 or lower). clef.6 Right hand `8va` from about G6 up.
 
 ## Ornaments
 
@@ -333,7 +339,7 @@ f138     L: F#3:8 b8  R: D5:4
 f144     L: A3:8 b8
 ```
 
-## Example 2 (a classical waltz): left-hand bass and chords (quarters, no beams) with clef changes for the high chords; the right hand's six eighths repeat one shape, one group each
+## Example 2 (a classical waltz): left-hand bass and chords (quarters, no beams); the high chords are short stretches (two onsets each), so they stay in the bass clef with ledger lines (clef.L1, clef.L2); the right hand's six eighths repeat one shape, one group each
 
 Input (target):
 ```
@@ -388,13 +394,13 @@ f30      L: Ab3,C4,Eb4:4  R: Cb5:8 b1
 f38      R: C5:8 b1
 f45      L: Eb2:4  R: Eb5:8 b2
 f53      R: C5:8 b2
-f60      L: clef=treble Bb3,Eb4,G4:4  R: Db5:8 b2
+f60      L: Bb3,Eb4,G4:4  R: Db5:8 b2
 f68      R: Bb5:8 b2
 f75      L: Bb3,Eb4,G4:4  R: C5:8 b2
 f83      R: Db5:8 b2
-f90      L: clef=bass Ab3:4  R: Eb5:8 b3
+f90      L: Ab3:4  R: Eb5:8 b3
 f98      R: Cb5:8 b3
-f105     L: clef=treble Eb4,Ab4:4  R: C5:8 b3
+f105     L: Eb4,Ab4:4  R: C5:8 b3
 f113     R: C6:8 b3
 f120     L: Eb4,Ab4:4  R: D5:8 b3
 f128     R: Eb5:8 b3
@@ -669,6 +675,7 @@ f56      L: Eb2,Eb3:2  R: Bb4,G5:4
 Reply with the F1 frames text only, as one block in triple backticks: the two header lines, the note lines, then the
 `# leave out` and `# add` lines, if any. A checker reads it: it checks that every onset of the target is there
 exactly once with a hand (but the declared changes, within the limits of simple.3 and simple.4), that no beam group
-has more than 8 notes or skips a note of its hand, that `8va` is never in the bass clef, and that no note stands
-four or more ledger lines above its staff (clef.L3; clef.L5 and clef.6: under `8va` in the treble clef). If it finds a problem,
+has more than 8 notes or skips a note of its hand, and that no note stands four or more ledger lines above its
+staff as it is printed (clef.L3: under `8va` or in the treble clef; clef.L5 and
+clef.6: under `8va` in the treble clef). If it finds a problem,
 the next message lists the problems; then write the whole corrected answer again, in the same way.
