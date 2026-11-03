@@ -3,7 +3,7 @@
 Plan [`04-7-plan.md`](04-7-plan.md) sections 4.2 and 5 (and its section 8, the Phase 3 changes); checklist
 [`04-7-checklist.md`](04-7-checklist.md). Branch `feat/04-7-open-points`. 2026-11-03.
 
-State: the measure and the gallery are done; **the user's look at the drawn passages is pending** (checklist 3.3).
+State: done. The user looked at the gallery on 2026-11-03: "all good" (`CLEF_MIN` 5 and the step stay).
 
 # 1. The checks before the edits of `src/`
 
@@ -188,6 +188,5 @@ Each drawing was screenshot (Playwright, 2x) and looked at zoomed against `--fin
 
 # 7. For the next step
 
-- The user looks at the gallery (checklist Decisions, 3.3): ok, or a change of `CLEF_MIN` or of the step (then back
-  to Phase 2, written in plan section 8). The study and the gallery run again in about a minute after any change.
-- When the user says ok: checklist 3.3 done, Phase 3 done; Phase 4 (Hard's figure check, Stop) can start.
+- The user's ok (2026-11-03): no change of the rule. Phase 4 (Hard's figure check, Stop) is next.
+- The case 10 finding (a G2 in a 5-column treble stretch) was shown to the user, who asked for no change.

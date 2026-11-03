@@ -12,7 +12,8 @@ The plan is [`04-7-plan.md`](04-7-plan.md), the brief [`04-7-prompt.md`](04-7-pr
   user runs the image rebuild.
 - [x] The sixth TEMP copy (Phase 1, plan section 8): `39d92dbe` is the only version of the song "20 de enero" in
   My library (folder Karaoke Viernes). The user (2026-11-03): delete the whole song.
-- [ ] The drawn passages of the clef rule (Phase 3): the user's ok, or a change of `CLEF_MIN` or of the step.
+- [x] The drawn passages of the clef rule (Phase 3): the user's ok (2026-11-03, "all good"): `CLEF_MIN` 5 and the
+  step stay as they are.
 
 # [x] Phase 1: Housekeeping (no edit of `src/`)
 
@@ -39,16 +40,15 @@ The plan is [`04-7-plan.md`](04-7-plan.md), the brief [`04-7-prompt.md`](04-7-pr
   `check:frames-page` (all passed).
 - [x] 2.7 Report: [`04-7-implementation-phase-2.md`](04-7-implementation-phase-2.md).
 
-# [p] Phase 3: The measure and the gallery
+# [x] Phase 3: The measure and the gallery
 
 - [x] 3.1 `scripts/clef_study.py --study`: the old counts equal plan section 3.3; per sheet the clef changes and the
   8va and 8vb notes, old and new; nothing but clefs and octave lines changed; the seconds per sheet. Three faults of
   the Phase 2 rule found and fixed, with tests (plan section 8); the backend suite on CPU 1365 passed, 1 skipped.
 - [x] 3.2 The gallery `gallery/04-7/` (every kind of plan section 4.2), each drawing checked zoomed in against the
   data, served at `http://192.168.0.112:8099/04-7/`.
-- [ ] 3.3 The user looks at the drawn passages (Decisions above); a change goes back to Phase 2 and into plan
-  section 8.
-- [p] 3.4 Report: [`04-7-implementation-phase-3.md`](04-7-implementation-phase-3.md) (to close after 3.3).
+- [x] 3.3 The user looks at the drawn passages (Decisions above): ok, no change.
+- [x] 3.4 Report: [`04-7-implementation-phase-3.md`](04-7-implementation-phase-3.md).
 
 # [ ] Phase 4: Hard's figure check, Stop
 
