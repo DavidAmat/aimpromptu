@@ -297,3 +297,13 @@ Phases 1 and 4 are small; one agent may do 1 and 2 together, or 4 and 5. Phase 3
   no longer writes its two-chord treble stretches: the chords (G4, Ab4: three ledger lines) stay in the bass clef. The
   stretch prompt (in `sheet/llm/frames.py`) says the shortest stretch too. `join_ottavas` (a whole run's 8va lines)
   joins in the bass clef too (`OTTAVA_LOWEST` by clef).
+- **Phase 3, three faults of the Phase 2 rule fixed (2026-11-03)**, found by the measure
+  ([phase 3](04-7-implementation-phase-3.md) section 3), each with a test: (1) the octave line of a hand's own clef
+  (left 8va, right 8vb) only for a column that does not read without it (the path had put Grace Kelly's G3 B3 D4 G4
+  chords under 8vb); (2) the right hand's new limit (no D3 or lower in the treble clef without a line) holds only
+  where 8vb reads the column, so a chord too wide for the line keeps the treble clef as before 04-7; (3)
+  `_grace_lines` at the end of `short_clefs`: grace notes and their main column take one line (the engraver draws
+  grace notes under the main column's line; 21 grace columns of My library were already an octave off with the old
+  rule). The plan's design is unchanged; these make it do what section 4.1 says.
+- **Phase 3, the measure counts stretches by ledger lines** ("a note B4 or higher" of section 3.3 is a note 4 ledger
+  lines or more above the bass staff, so a Bb4 counts): 56, as 3.3 says.

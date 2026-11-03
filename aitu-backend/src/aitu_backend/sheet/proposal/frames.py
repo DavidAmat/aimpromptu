@@ -515,6 +515,25 @@ def clefs_and_ottavas(sheet: Sheet) -> dict:
                 below_above = [_ledger(n, clef, ottava) for n in ns]
                 c = sum(a + b for a, b in below_above) + penalty
                 if clef == OWN[staff] and not _fits(below_above, staff, ottava):
+                    # The right hand's limit (new in 04-7) holds only where its 8vb line reads the column: a chord
+                    # too wide for the line (A2 with E6) keeps the treble clef by its ledger lines, as before 04-7,
+                    # rather than the bass clef with eight ledger lines above (04-7, Phase 3).
+                    line = LINE[staff]
+                    wide = (
+                        staff == 1
+                        and ottava == 0
+                        and not _fits([_ledger(n, clef, line) for n in ns], staff, line)
+                    )
+                    if not wide:
+                        c = np.inf
+                # The octave line of the hand's own clef (left 8va, right 8vb) only for a column that needs it: a
+                # right-hand chord G3 B3 D4 G4 reads with ledger lines, not under 8vb (04-7, Phase 3: the path
+                # found 2.5 for the line cheaper than its 3 ledger lines).
+                if (
+                    clef == OWN[staff]
+                    and ottava == LINE[staff]
+                    and _fits([_ledger(n, clef, 0) for n in ns], staff, 0)
+                ):
                     c = np.inf
                 cost[i, s] = c
             beams = {n.beam for n in ns if n.beam is not None}
@@ -645,10 +664,45 @@ def short_clefs(sheet: Sheet) -> dict:
                     n.ottava = o
             info["short clef stretches"] += 1
             changed = True
-        if changed:
-            _ornament_lines(sheet, staff)
+        info["grace lines matched"] = info.get("grace lines matched", 0) + _grace_lines(sheet, staff)
+        _ornament_lines(sheet, staff)
     sheet.clef_changes.sort(key=lambda c: (c[0], c[1]))
     return info
+
+
+def _grace_lines(sheet: Sheet, staff: int) -> int:
+    """Grace notes and their main column under one octave line (04-7, Phase 3). The engraver draws grace notes
+    with the column after them, under that column's line, but writes each head by its own line: a grace chord B4
+    D#5 under 8va before an F#4 without it was written B3 D#4 outside the line (an octave too low to read). Where
+    the two differ, the main column takes the grace notes' line when its notes read under it (fewer than
+    ``BASS_LIMIT`` ledger lines on each side, in its clef); else the grace notes take the main column's line.
+    Returns how many grace columns were matched."""
+    cols = _columns(sheet, staff)
+    clefs = _track(sheet, staff, [f for f, _ in cols])
+    count, k = 0, 0
+    while k < len(cols):
+        if not all(n.grace for n in cols[k][1]):
+            k += 1
+            continue
+        j = k
+        while j < len(cols) and all(n.grace for n in cols[j][1]):
+            j += 1
+        if j == len(cols):
+            break
+        graces = [n for i in range(k, j) for n in cols[i][1]]
+        main = cols[j][1]
+        lines = {n.ottava for n in graces}
+        line = main[0].ottava
+        if lines != {line}:
+            wanted = next(iter(lines)) if len(lines) == 1 else None
+            reads = wanted is not None and all(
+                max(_ledger(n, clefs[j], wanted)) < BASS_LIMIT for n in main
+            )
+            for n in main if reads else graces:
+                n.ottava = wanted if reads else line
+            count += j - k
+        k = j + 1
+    return count
 
 
 # ------------------------------------------------------------------ the whole algorithm

@@ -121,6 +121,36 @@ def test_the_right_hand_keeps_its_treble_clef_for_a_short_low_stretch() -> None:
     assert any(c[1] == 1 and c[2] == "F4" for c in passage.clef_changes), "a low passage reads in the bass clef"
 
 
+def test_a_right_hand_chord_readable_with_ledger_lines_takes_no_8vb() -> None:
+    """Grace Kelly (04-7, Phase 3): G3 B3 D4 G4 chords (3 ledger lines in all) once came out under 8vb, the line
+    (2.5) being cheaper than the ledger lines; the octave line of the own clef is only for a column that needs it."""
+    n = 12
+    midi = [m for _ in range(n) for m in (55, 59, 62, 67)]
+    on = [k * STEP_MS for k in range(n) for _ in range(4)]
+    chords = Notes.build(
+        key=np.array(midi) - 21, on_ms=on, len_ms=[STEP_MS * 0.9] * len(midi), hand=[R] * len(midi)
+    )
+    sheet = algo.propose_frames(chords, key=0, quarter_ms=STEP_MS).sheet
+    assert sheet.clefs[1] == "G2" and [c for c in sheet.clef_changes if c[1] == 1] == []
+    assert all(n.ottava == 0 for n in sheet.notes if n.staff == 1), "ledger lines, no 8vb"
+
+
+def test_a_right_hand_chord_too_wide_for_8vb_keeps_the_treble_clef() -> None:
+    """Die Young (04-7, Phase 3): A2 E3 E4 A4 E5 E6 in the right hand reads neither in the treble clef (A2 five ledger
+    lines below) nor under 8vb (E6 written E7); the bass clef would put E6 eight ledger lines up. The cost decides,
+    as before 04-7: the treble clef."""
+    rows = [(k, [76 + (k % 3)]) for k in range(12)]
+    rows[6] = (6, [45, 52, 64, 69, 76, 88])
+    midi = [m for _, ms in rows for m in ms]
+    on = [k * STEP_MS for k, ms in rows for _ in ms]
+    notes = Notes.build(
+        key=np.array(midi) - 21, on_ms=on, len_ms=[STEP_MS * 0.9] * len(midi), hand=[R] * len(midi)
+    )
+    sheet = algo.propose_frames(notes, key=0, quarter_ms=STEP_MS).sheet
+    assert sheet.clefs[1] == "G2" and [c for c in sheet.clef_changes if c[1] == 1] == []
+    assert all(n.ottava == 0 for n in sheet.notes if n.staff == 1)
+
+
 # ------------------------------------------------------------------ a stored sheet (the AI's) laid again
 
 
@@ -223,3 +253,25 @@ def test_a_bass_clef_set_by_hand_keeps_the_8va() -> None:
     reading.set_ottava(sheet, frames_[2], frames_[6], 2, 1)
     reading.set_clef(sheet, frames_[2], frames_[6], 2, "bass")
     assert all(n.ottava == 1 for n in sheet.notes if n.staff == 2 and frames_[2] <= n.frame < frames_[6])
+
+
+def test_grace_notes_and_their_main_column_share_one_octave_line() -> None:
+    """Superestrella (04-7, Phase 3): a grace chord B4 D#5 under 8va before an F#4 without it was drawn outside the
+    line (the engraver draws the line of the main column). The main column takes the grace notes' line when it
+    reads under it; else the grace notes take the main column's."""
+
+    def with_grace(main: int) -> Sheet:
+        sheet = drawn(notes_of(low_with({6: 71, 7: main}), right=None))
+        cols = sorted({n.frame for n in sheet.notes if n.staff == 2})
+        sheet.clefs, sheet.clef_changes = {1: "G2", 2: "F4"}, []
+        for n in sheet.notes:
+            n.ottava = 1 if n.frame == cols[6] else 0
+            if n.frame == cols[6]:
+                n.grace, n.figure = "acc", 8
+        algo.short_clefs(sheet)
+        return sheet
+
+    up = with_grace(66)  # F#4: written F#3 under the line
+    assert {n.ottava for n in up.notes if n.midi in (71, 66)} == {1}
+    down = with_grace(40)  # E2: written E1 under the line, four ledger lines below: the grace takes no line
+    assert {n.ottava for n in down.notes if n.midi in (71, 40)} == {0}

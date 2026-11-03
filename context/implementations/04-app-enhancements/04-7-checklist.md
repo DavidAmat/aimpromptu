@@ -39,15 +39,16 @@ The plan is [`04-7-plan.md`](04-7-plan.md), the brief [`04-7-prompt.md`](04-7-pr
   `check:frames-page` (all passed).
 - [x] 2.7 Report: [`04-7-implementation-phase-2.md`](04-7-implementation-phase-2.md).
 
-# [ ] Phase 3: The measure and the gallery
+# [p] Phase 3: The measure and the gallery
 
-- [ ] 3.1 `scripts/clef_study.py --study`: the old counts equal plan section 3.3; per sheet the clef changes and the
-  8va and 8vb notes, old and new; nothing but clefs and octave lines changed; the seconds per sheet.
-- [ ] 3.2 The gallery `gallery/04-7/` (every kind of plan section 4.2), each drawing checked zoomed in against the
-  data, served at `http://192.168.0.112:8099/`.
+- [x] 3.1 `scripts/clef_study.py --study`: the old counts equal plan section 3.3; per sheet the clef changes and the
+  8va and 8vb notes, old and new; nothing but clefs and octave lines changed; the seconds per sheet. Three faults of
+  the Phase 2 rule found and fixed, with tests (plan section 8); the backend suite on CPU 1365 passed, 1 skipped.
+- [x] 3.2 The gallery `gallery/04-7/` (every kind of plan section 4.2), each drawing checked zoomed in against the
+  data, served at `http://192.168.0.112:8099/04-7/`.
 - [ ] 3.3 The user looks at the drawn passages (Decisions above); a change goes back to Phase 2 and into plan
   section 8.
-- [ ] 3.4 Report: `04-7-implementation-phase-3.md`.
+- [p] 3.4 Report: [`04-7-implementation-phase-3.md`](04-7-implementation-phase-3.md) (to close after 3.3).
 
 # [ ] Phase 4: Hard's figure check, Stop
 
