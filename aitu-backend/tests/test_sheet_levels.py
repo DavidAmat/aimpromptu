@@ -147,7 +147,7 @@ def test_the_system_prompt_has_the_level_and_only_the_patterns_of_the_run() -> N
     assert "# The level of this run: easy" in text and "# The level of this run: medium" not in text
     assert text.index("### left easy 2") < text.index("### right easy 2")
     assert "left easy 1" not in text.split("# The patterns of this run")[1]
-    assert L.LEVEL_VERSION == "7"
+    assert L.LEVEL_VERSION == "8"
 
 
 def test_the_examples_of_the_shared_prompt_parse() -> None:
@@ -545,3 +545,26 @@ def test_a_guitar_guide_gives_the_song_chords_and_the_check_accepts_them() -> No
     assert any("begin on another bass" in e for e in L.check_level(answer(lines, DECLARED), s, **args).errors)
     accepted = L.check_level(answer(lines, DECLARED), s, guide=L.guide_chords("C F G Am"), **args)
     assert not any("begin on another bass" in e for e in accepted.errors), accepted.errors
+
+
+# ------------------------------------------------------------------ hard: the shortest figure (04-7, Phase 4)
+
+
+def _at_hard(extra: list[str]):
+    """The easy answer checked at hard with ``extra`` right-hand notes: only the figure message is looked at."""
+    s = song("wide")
+    lines = sorted(easy_lines(s) + extra, key=lambda t: int(t.split()[0][1:]))
+    r = checked(answer(lines, DECLARED), s, level="hard")
+    return [e for e in r.errors if "shorter than the level allows" in e]
+
+
+def test_hard_refuses_a_semifusa_that_is_not_a_decoration_note() -> None:
+    """The user (2026-11-03): Hard refuses figures shorter than a fusa. Three semifusas before a negra are a run,
+    not decoration notes."""
+    errs = _at_hard(["f34 R: G5:64", "f38 R: A5:64", "f41 R: B5:64"])
+    assert errs and "at hard the shortest figure is a fusa" in errs[0], errs
+
+
+def test_hard_accepts_fusas_and_a_decoration_note() -> None:
+    assert _at_hard(["f34 R: G5:32", "f38 R: A5:32", "f41 R: B5:32"]) == []  # fusas: the shortest figure of hard
+    assert _at_hard(["f38 R: G5:64"]) == []  # one semifusa just before a negra: the app draws a decoration note

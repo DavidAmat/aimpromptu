@@ -40,6 +40,7 @@ __all__ = [
     "beat_unit",
     "carry_extras",
     "compare",
+    "cut_clef_marks",
     "frame_of_ms",
     "frames_from_times",
     "meter_quarters",
@@ -186,6 +187,10 @@ class Sheet:
     lyrics: list[Lyric] = field(default_factory=list)
     space_ms: float | None = None
     line_space: float | None = None
+    # The clefs the user set by hand (implementation 04-7, frames sheets, never in an LLM prompt): the stretches
+    # ``(start, end, staff, clef)``, frames ``[start, end)``, where the user chose the other clef of a hand in the
+    # range toolbox. The shortest-stretch rule (``proposal.frames.short_clefs``) never takes such a clef away.
+    user_clefs: list[tuple[int, int, int, str]] = field(default_factory=list)
 
     def sort(self) -> "Sheet":
         self.notes.sort(key=note_order)
@@ -201,6 +206,25 @@ def carry_extras(source: Sheet, target: Sheet) -> Sheet:
     target.space_ms = source.space_ms
     target.line_space = source.line_space
     return target
+
+
+def cut_clef_marks(
+    marks: list[tuple[int, int, int, str]], start: int, end: int, staffs: Iterable[int]
+) -> list[tuple[int, int, int, str]]:
+    """``marks`` (``Sheet.user_clefs``) without the frames ``[start, end)`` of ``staffs``: a stretch whose clefs are
+    written again (by the user, the rule or the AI) loses the marks there; a mark that reaches outside keeps its
+    outer pieces."""
+    staffs = set(staffs)
+    out = []
+    for a, b, staff, clef in marks:
+        if staff not in staffs or b <= start or a >= end:
+            out.append((a, b, staff, clef))
+            continue
+        if a < start:
+            out.append((a, start, staff, clef))
+        if b > end:
+            out.append((end, b, staff, clef))
+    return sorted(out)
 
 
 def note_order(n: Note) -> tuple:

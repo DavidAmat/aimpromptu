@@ -129,7 +129,7 @@ phases run in parallel waves, each with a join for the shared files.
 | [implementations/05-documentation-refresh/05-inventory.md](implementations/05-documentation-refresh/05-inventory.md) | Every page in scope, its owner, its final state |
 | `implementations/05-documentation-refresh/05-implementation-phase-N.md`, `05-implementation-join-<W>.md` | One report per phase and per join; each names the code and docs that disagree, for the user |
 
-### 04 — App enhancements — DONE (2026-10-27 to 28; 04-3 and 04-5 to 2026-11-01)
+### 04 — App enhancements — DONE, closed (2026-10-27 to 28; 04-3 to 04-7 to 2026-11-03)
 
 Polish after 03: on the sheet page, Command + scroll zoom, the AI mark (the new logo), the header toolbox, a cursor to
 drag; in the sheet, a new decoration-note rule on every sheet, prompt version 6 (simplicity, the amateur pianist), run
@@ -137,7 +137,10 @@ on 7 Years, and the Enhance with AI dialog with Simplify left, right or both.
 **04-3** (2026-10-29 to 31): folders, the pills and the metadata of projects, frame marks, the levels (the level
 copy, the catalog of patterns, the level run), one model for every AI run. **04-5** (2026-10-31 to 11-01): Strict and
 Suggested patterns, the rules and explanations of a run, the first batch first, the history of AI runs, the chords of
-the song. **04-4** is a brief only, left for a later, larger implementation plan (the user, 2026-11-03).
+the song. **04-6** (2026-11-03): a run left after a crash, the model of the AI in one setting, Simplify removed.
+**04-7** (2026-11-03): the open points of 04 (the clef rule of 5 columns with 8va in the bass clef, Hard's figures,
+Stop, the backend image); 04 is closed. **04-4** is a brief only, left for a later, larger implementation plan (the
+user, 2026-11-03).
 
 | File | Description |
 |------|-------------|

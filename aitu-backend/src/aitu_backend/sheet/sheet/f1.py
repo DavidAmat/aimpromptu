@@ -30,7 +30,8 @@ lines, in staff spaces) in the header, and after the clefs line one line per tit
 
 (the words as a JSON string, ``\n`` breaks a line; ``size`` and ``lift`` in staff spaces, left out at their
 defaults). Phase 8A++ adds a block moved by hand and its style, also left out at their defaults:
-``at=f412 dx=1.5 dy=-3 width=12 font=geist bold=1 italic=0`` (``data.Lyric``). Example::
+``at=f412 dx=1.5 dy=-3 width=12 font=geist bold=1 italic=0`` (``data.Lyric``). Implementation 04-7 adds one line
+per stretch whose clef the user set by hand (``Sheet.user_clefs``), ``clefset L f1998 f2033 treble``. Example::
 
     F1 bars
     clefs: R=treble L=bass
@@ -338,6 +339,8 @@ def _extras_lines(sheet: Sheet) -> list[str]:
         if not lyric.italic:
             line += " italic=0"
         out.append(line)
+    for start, end, staff, clef in sorted(sheet.user_clefs):
+        out.append(f"clefset {HAND[staff]} f{start} f{end} {CLEF_NAMES.get(clef, clef)}")
     return out
 
 
@@ -394,6 +397,9 @@ def read(text: str) -> Sheet:
             if word == "lyric":
                 sheet.lyrics.append(_read_lyric(s))
                 continue
+            if word == "clefset":
+                sheet.user_clefs.append(_read_clefset(s))
+                continue
             if s.startswith("bar "):
                 words = s.split()
                 label = words[1]
@@ -444,6 +450,16 @@ def read(text: str) -> Sheet:
             raise F1Error(f"line {no}: {exc} :: {ln}") from None
     _tuplet_groups(sheet.notes, starts)
     return sheet.sort()
+
+
+_CLEFSET = re.compile(r"^clefset ([LR]) f(\d+) f(\d+) (\w+)$")
+
+
+def _read_clefset(line: str) -> tuple[int, int, int, str]:
+    match = _CLEFSET.match(line)
+    if match is None or int(match[3]) <= int(match[2]):
+        raise F1Error("a clefset line is: clefset L|R f<start> f<end> treble|bass, the end after the start")
+    return int(match[2]), int(match[3]), STAFF[match[1]], CLEF_CODES.get(match[4], match[4])
 
 
 def _read_lyric(line: str) -> Lyric:

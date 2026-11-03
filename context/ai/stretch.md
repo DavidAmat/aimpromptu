@@ -55,7 +55,10 @@ Without words, the notes stay. The AI changes the hands, the beam groups, the cl
 only.
 
 It may not write a note outside the stretch. The hard limits hold in every case: a beam group has at most 8 notes, no
-note stands four or more ledger lines above its staff, and there is no 8va in the bass clef.
+note stands four or more ledger lines above its staff, and there is no 15ma in the bass clef. An 8va in the bass clef
+is allowed (implementation 04-7): a hand changes to its other clef only for a passage of 5 columns or more, and a
+shorter stretch stays in the hand's own clef with ledger lines or an octave line (8va in the bass clef, 8vb in the
+treble clef). The app draws that rule on every sheet, whatever the AI writes.
 
 ### The checks
 

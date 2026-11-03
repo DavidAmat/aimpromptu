@@ -776,6 +776,8 @@ def _level_work(
         requests0 = int(log.get("requests", 0))
 
         def asked(system: str, messages: list[dict]) -> str:
+            # A Stop of a level run keeps the batches already accepted and saved (on the level copy; the song does
+            # not change), and **Revert** removes the whole run. The user's answer of 2026-11-03 (04-7): keep it so.
             _check_stop(part_id)
             if not pipeline.has_events(part_id):
                 raise PartGone("The part was deleted while the AI wrote a level of its sheet.")

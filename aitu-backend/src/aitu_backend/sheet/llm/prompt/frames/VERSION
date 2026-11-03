@@ -1,4 +1,4 @@
-7
+8
 instructions.md: the system prompt of the new sheet (implementation 03, Phase 4), written from version 4
 (`../instructions.md`): F1 frames in and out, no compases, tempo, puntillos or silencios; the LLM decides the
 hands, the beam groups (plan section 3.11), the clefs and 8va (the left-hand rules of version 4, unchanged), the
@@ -7,4 +7,8 @@ spelling are rules of the app. Version 6 (implementation 04, Phase 3): the grace
 (thirty-seconds or shorter), the section "Simplicity" (uniform patterns, the amateur pianist) with the notes a
 window may leave out and add, declared in comment lines, beam.9, and Example 5. feedback.md: the message after a
 rejected answer. Version 7 (implementation 04-3, 2026-10-30): the section "An octave as a third or
-a fifth (when the user asks for it)", octave.1 to octave.4: the user's way to write an octave easier to play.
+a fifth (when the user asks for it)", octave.1 to octave.4: the user's way to write an octave easier to play. Version 8 (implementation 04-7, 2026-11-03): the
+user's clef rule, clef.L1 to clef.L6 and clef.2: a hand changes to its other clef only for a passage of 5 onsets
+or more; a short high stretch of the left hand stays in the bass clef, under `8va` when needed (the rule of 03
+"never 8va in the bass clef" ended); a short low stretch of the right hand stays in the treble clef, under `8vb`;
+the tag `8vb`; Example 2 without the short treble stretches.

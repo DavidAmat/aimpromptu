@@ -139,8 +139,10 @@ def test_the_checker_lists_each_kind_of_problem() -> None:
     )
     skip = [x.replace(" b1", "") if x.startswith("f12 ") else x for x in good]
     assert "skips the R note at f12" in errs(skip)
-    assert "8va in the bass clef" in errs(
-        [x.replace("R:", "L:") + (" 8va" if x.startswith("f0 ") else "") for x in good]
+    # 04-7: an 8va in the bass clef is allowed (a short high stretch of the left hand); a 15ma there is not.
+    assert errs([x.replace("R:", "L:") + (" 8va" if x.startswith("f0 ") else "") for x in good]) == ""
+    assert "15ma in the bass clef" in errs(
+        [x.replace("R:", "L:") + (" 15ma" if x.startswith("f0 ") else "") for x in good]
     )
     assert "'orn' with no ornament" in errs(good[:-1] + ["f54 R: C4:8 orn"])
     assert "parse error" in errs(good[:-1] + ["f54 R: H4:8"])
@@ -266,9 +268,12 @@ def test_the_beam_floor_counts_only_notes_that_can_be_joined() -> None:
 def test_the_prompt_examples_pass_the_checker() -> None:
     text = llm.instructions()
     assert (
-        text.startswith("# Task") and "clef.L1 Priority for the left hand" in text
-    )  # version 4 clef rules
-    assert "At most 8 notes in a group" in text and llm.PROMPT_VERSION == "7"
+        text.startswith("# Task")
+        and "clef.L1 A hand changes to its other clef only for a whole passage" in text
+        and "Priority for the left hand" in text
+    )  # version 4 clef rules with the shortest stretch of 04-7 (prompt version 8)
+    assert "At most 8 notes in a group" in text and llm.PROMPT_VERSION == "8"
+    assert "Never `8va` in the bass clef" not in text and "`8vb`" in text
     assert "Only a thirty-second or shorter" in text and "simple.2 **The amateur pianist.**" in text
     blocks = re.findall(r"Input \(target\):\n```\n(.*?)```\n\nAnswer:\n```\n(.*?)```", text, re.S)
     assert len(blocks) == 5

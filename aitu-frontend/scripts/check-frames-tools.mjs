@@ -6,8 +6,8 @@
  * - the note toolbox: a figure set by hand (pressed, then back to the rule), a finger, a beam cut and joined again,
  *   the grace note switch, a trill over three onsets, a note taken off the page with Delete (and undone);
  * - the range selection: a drag in the strip above the staves marks a stretch (a band) and opens the range toolbox;
- *   **Right** narrows it; an 8va over the right hand; a clef for the left hand; an armadura; the notes of the stretch
- *   handed to the note toolbox;
+ *   **Right** narrows it; an 8va over the right hand; a clef for the left hand; an 8va over the left hand in the bass
+ *   clef (04-7); an armadura; the notes of the stretch handed to the note toolbox;
  * - **Enhance with AI** opens its dialog from both toolboxes. With `--live` one real request writes a short stretch
  *   again with words (a few cents): the stretch gets the pale veil, then the answer is one step of undo.
  *
@@ -259,6 +259,27 @@ try {
   check('a treble clef for the left hand over the stretch', sheet.reading.clefChanges.some(([f, hand, clef]) => f === start && hand === 'left' && clef === 'treble'));
   check('the clef tab carries its dot', (await rangeToolbox(page).locator('[data-tab="clef"]').getAttribute('data-edited')) === 'yes');
   await lineShot(page, sheet, start, '08-clef');
+  await page.keyboard.press('Control+z');
+  await page.waitForResponse((r) => /\/undo/.test(r.url()));
+
+  // 04-7: an 8va over the left hand in the bass clef (the rule of 03 "never 8va in the bass clef" ended).
+  await markStretch();
+  sheet = await now(part);
+  const leftClefAt = (frame) => {
+    let clef = sheet.reading.clefs.left;
+    for (const [f, hand, c] of sheet.reading.clefChanges) if (hand === 'left' && f <= frame) clef = c;
+    return clef;
+  };
+  const bassHere = leftClefAt(start) === 'bass';
+  await rangeToolbox(page).getByRole('button', { name: 'Left' }).click();
+  await rangeToolbox(page).locator('[data-tab="octave"]').click();
+  const leftEightva = rangeToolbox(page).locator('[data-ottava="left:8va"]');
+  check('the 8va chip works over a bass clef stretch', bassHere && !((await leftEightva.getAttribute('class')) ?? '').includes('Mui-disabled'), `clef ${leftClefAt(start)}`);
+  await press(page, leftEightva);
+  sheet = await now(part);
+  const inLeft = sheet.notes.filter((n) => n.hand === 'left' && frameOf(n.ref) >= start && frameOf(n.ref) < end);
+  check('8va over the left hand in the bass clef', inLeft.length > 0 && inLeft.every((n) => n.ottava === 1) && leftClefAt(start) === 'bass');
+  await lineShot(page, sheet, start, '08b-8va-bass');
   await page.keyboard.press('Control+z');
   await page.waitForResponse((r) => /\/undo/.test(r.url()));
 

@@ -208,14 +208,17 @@ never ran; the refresh does that work, and 04-5's task 5.2 is closed the same wa
 
 ## 8.5 Open points
 
-- **The octaves of the user's words** (04-5 report, finding 1): the AI follows the words literally, so "Fa4-La4-Do5"
-  is drawn as F3-A3-C4. One numbering for the user, or a prompt rule: the user decides.
-- **Hard and the figure check**: `LIMITS["hard"]` has `shortest` 64, so the figure check never fires at hard (the
-  Phase 12 report of the refresh). Please confirm that this is intended.
-- **A Stop keeps the batches it accepted** (the level run's page says so). If the user expects a Stop to discard the run,
-  the dialog and the code disagree.
-- **The temporary copies** of the 04-5 real runs (on 20 de Enero) were kept until the user had looked at the pages.
-  Delete them after that.
+- (Closed by 04-7, Phase 1: **the octaves of the user's words**, 04-5 report, finding 1. Decided by the user on
+  2026-10-31, [`04-5-checklist.md`](04-5-checklist.md) Decisions: the octave numbers in the user's words are only
+  examples, and the AI chooses what reads best on the staff. The level prompt says it
+  (`sheet/llm/prompt/levels/shared.md`, "The register"). No code.)
+- (Closed by 04-7, Phase 4: **Hard and the figure check**. The user, 2026-11-03: Hard refuses figures shorter than a
+  fusa; `LIMITS["hard"]` `shortest` 32, a decoration note the app draws is left out; section 10.)
+- (Closed by 04-7: **a Stop keeps the batches it accepted**. The user, 2026-11-03: keep it so; **Revert** removes the
+  whole run. A comment in `job._level_work` and the pages [level-run.md](../../ai/level-run.md),
+  [run-history.md](../../ai/run-history.md) say it.)
+- (Closed by 04-7, Phase 1: **the temporary copies** of the 04-5 real runs. The six TEMP projects were deleted, the
+  sixth with its song 20 de enero of My library, at the user's word; [04-7 phase 1](04-7-implementation-phase-1.md).)
 - The 04-5 run cost was about $0.47 of the $2 the user allowed, measured on those copies (04-5 report, section 4).
 
 # 9. Later work: implementation 04-6 (added 2026-11-03)
@@ -252,10 +255,62 @@ Branch `feat/04-6-run-safety-and-model`, merged into `master` only at the user's
 
 ## 9.3 Open points
 
-- **The fresh backend image has no `openai`** (Phase 4 report, section 3): the image of 2026-10-25 was built before
-  `openai` entered `pyproject.toml`; the running container has it installed by hand. `docker compose build backend`
-  fixes it, at a time the user chooses.
-- **Two Transkun tests fail on the CPU** (a checkpoint saved on the GPU, loaded without `map_location`): not related
-  to 04-6.
+- (Closed by 04-7, Phase 5: **the fresh backend image had no `openai`**. The user rebuilt it on 2026-11-03
+  (`docker compose build backend`, image `66186ec78869`); `import openai` works in a fresh container (3.41.0).)
+- (Closed by 04-7, Phase 1: **two Transkun tests failed on the CPU**. The tests build the engine with `device="cpu"`;
+  the engine's code did not change.)
 - A level copy made just before a crash stays as a project of My projects, holding the song as it was (plan section
   3.1).
+
+# 10. Later work: implementation 04-7 (added 2026-11-03)
+
+04-7 closed the open points of 04 ([`04-7-prompt.md`](04-7-prompt.md), [`04-7-plan.md`](04-7-plan.md), the phase
+reports `04-7-implementation-phase-1.md` to `-5.md`, which stay the record). Branch `feat/04-7-open-points`.
+
+## 10.1 What changed
+
+- **The clef rule** (Phases 2 and 3): a hand changes to its other clef only for a whole passage, 5 of its columns
+  or more. A shorter stretch stays in the hand's own clef: ledger lines, and an octave line for a note four ledger
+  lines or more outside the staff (left: 8va in the bass clef; right: 8vb in the treble clef). It runs on **every
+  sheet when it is drawn** (`short_clefs`, in `clefs_and_ottavas` and `build.reapply`), the AI's sheets too: only
+  the short stretches go, every other clef stays. A clef the user sets by hand is marked (`Sheet.user_clefs`, the F1
+  line `clefset`) and kept. Grace notes and their main column take one octave line. Measured on every sheet of My
+  library ([phase 3](04-7-implementation-phase-3.md)): left-hand clef changes 344 -> 96, right 153 -> 116, nothing
+  but clefs and octave lines changed; the user looked at the gallery ([`gallery/04-7/`](gallery/04-7/index.html))
+  and said ok.
+- **The whole-run prompt version 8** (`prompt/frames/VERSION`, `frames.PROMPT_VERSION`): the user's clef rule, the
+  tag `8vb`. No real run (credits); the app draws the rule whatever the AI writes.
+- **Hard's figures** (Phase 4): no new note shorter than a fusa, except a note the app draws as a decoration note.
+  Level prompts version 8 (`prompt/levels/hard.md` says the limit).
+- **Housekeeping** (Phase 1): the TEMP projects of 04-5 deleted; the Transkun tests on the CPU.
+
+## 10.2 The decisions that bind
+
+| Decision | Where |
+|---|---|
+| **`CLEF_MIN` = 5**: a stretch of a hand's other clef needs 5 of its columns (grace columns do not count); the right hand the same | plan section 2; `proposal/frames.py` |
+| **8va in the bass clef is allowed** (the 03 rule "never 8va in the bass clef", clef rules version 4, ended); 15ma in the bass clef stays refused | plan section 2; [phase 2](04-7-implementation-phase-2.md) section 2.4 |
+| The octave line of a hand's own clef only for a column that does not read without it; a chord too wide for 8vb keeps the treble clef | [phase 3](04-7-implementation-phase-3.md) section 3 |
+| On a stored sheet only the short stretches go; a clef set by hand always stays (`clefset`); a whole run of the AI writes every clef again and drops the marks | plan section 8 (Phase 2) |
+| Hard refuses figures shorter than a fusa (`LIMITS["hard"].shortest` 32) | plan section 2; [phase 4](04-7-implementation-phase-4.md) |
+| A Stop of a level run keeps the batches it accepted; **Revert** removes the whole run | plan section 2 |
+
+A change of the clef rule changes every stored sheet at once (section 4): measure it again with
+`scripts/clef_study.py --study` (old against new, `rule()` keeps the rule before 04-7) and show the gallery.
+
+## 10.3 Where the code is
+
+- `sheet/proposal/frames.py`: `STATES`, `_fits`, `CLEF_MIN`, `READABLE`, `short_clefs`, `_grace_lines`.
+- `part_sheet/build.py` (`reapply`), `part_sheet/edits.py` (Transpose), `part_sheet/reading.py` (`set_clef`,
+  `clef_rule`, `set_ottava`), `sheet/sheet/data.py` and `f1.py` (`user_clefs`, `clefset`), `sheet/sheet/frames.py`
+  (`check`), `sheet/llm/frames.py` (the AI's check, `join_ottavas`, prompt 8), `sheet/llm/levels.py` (`LIMITS`, the
+  figure check); frontend `FramesRangeToolbox.tsx` (the 8va chip in the bass clef).
+- Tests: `tests/test_sheet_clefs.py`, the Hard cases of `tests/test_sheet_levels.py`.
+- The core's [`README.md`](../../../aitu-backend/src/aitu_backend/sheet/README.md) section 9 tells the rule.
+
+## 10.4 Open points
+
+- The six-TEMP, Transkun and image points are closed (8.5, 9.3); the image was rebuilt by the user on 2026-11-03.
+- Found in Phase 3, not changed (the user's ok): a 5-column treble stretch of a stored level sheet (20 de enero,
+  `946c21f2`) holds a G2 with eight ledger lines; the rule counts columns and keeps any passage of 5.
+

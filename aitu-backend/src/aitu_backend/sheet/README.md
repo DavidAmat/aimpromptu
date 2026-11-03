@@ -219,7 +219,23 @@ F1 frames sheet:  F1 frames frameMs=40 quarterMs=500
   more keeps its figures), beam groups (corcheas and shorter no farther apart than a corchea, of one
   figure with at most one odd note at an edge; cut at a jump of more than an octave, at a turn after three steps, and
   into parts of at most 8), the armadura of each passage (fewest signs, a cost per change), clefs and 8va (the
-  left-hand rules of the prompt, version 4).
+  left-hand rules of the prompt, version 4, and the clef rule of implementation 04-7, below).
+- **The clef rule of 04-7** (the user, 2026-11-03; `proposal.frames`): a hand changes to its other clef only for a
+  whole passage, **`CLEF_MIN` = 5 of its columns or more** (grace columns do not count). A shorter stretch stays in
+  the hand's own clef, with ledger lines, and an octave line for a note four ledger lines or more outside the staff:
+  the left hand under **8va in the bass clef** (the rule of 03 "never 8va in the bass clef" ended), the right hand
+  under **8vb in the treble clef**. The states of the cheapest path (`STATES`) have the bass clef with 8va (left) and
+  the treble clef with 8vb (right), each only for a column that does not read without the line; the right hand never
+  reads a note four ledger lines below the treble staff without a line, unless 8vb cannot read the column either (a
+  chord too wide). Then `short_clefs(sheet)` runs at the end of `clefs_and_ottavas` **and on every stored sheet when
+  it is drawn** (`build.reapply`, also after Transpose's `fit_clefs`): each short stretch of the other clef goes back
+  to the own clef (its columns take the line when needed; the columns between two marked ones join one line when they
+  read under it, `READABLE` 1 ledger line); a stretch stays when a column reads neither way (a note too far even for
+  the line, a chord too wide), or when it holds a clef the user set by hand (`Sheet.user_clefs`, the F1 line
+  `clefset L f1998 f2033 treble`, written by `reading.set_clef`). Every other clef stays, the AI's and the user's.
+  `_grace_lines` (at the end of `short_clefs`): grace notes and their main column take one octave line (the engraver
+  draws grace notes under the main column's line). Measured on every sheet of My library:
+  `scripts/clef_study.py --study`; the gallery `--out` (04-7 Phase 3).
 - **F1 additions** (both views; the bars output is unchanged): the header field `quarterMs=` of the frames view, and
   the tag `orn` (an onset played inside the ornament of the note before it: kept for the matrix, not drawn). Phase 7
   adds the user's marks (section 14): `fg3` (finger), `fix` (a figure set by hand), `asgrace` / `nograce` (the grace
@@ -228,8 +244,9 @@ F1 frames sheet:  F1 frames frameMs=40 quarterMs=500
   `Sheet.quarter_ms`.
 - `frames.check(sheet)` lists what breaks the product rules (no compases, a hand and a plain figure on every note,
   the spelling rule, one figure per chord, beam groups of 2 to 8 consecutive notes, grace notes followed by a note,
-  no 8va or 15ma in the bass clef; an 8vb is allowed since Phase 7). The LLM step of Phase 4 uses it as its checker,
-  with its own stricter rules (`llm.frames._structure`: no octave line at all in the bass clef).
+  no 15ma in the bass clef; an 8vb is allowed since Phase 7, an 8va in the bass clef since 04-7). The LLM step of
+  Phase 4 uses it as its checker, with its own stricter rules (`llm.frames._structure`: no 15ma in the bass clef,
+  and no note written four ledger lines or more above the bass staff, under 8va too).
 - Commands: `scripts/write_sheet.py` (the sheet of parts, checked), `scripts/sheet_gallery.py` (the Phase 2
   gallery, drawn by Verovio).
 
@@ -303,7 +320,8 @@ assemble: decisions on the notes, then the rules: figures (capped by the new han
 ```
 
 - **What the LLM decides**: hands, beam groups (at most 8 notes, a hard check), clefs and 8va (the version 4
-  rules; no note four or more ledger lines above its staff, a hard check), ornaments (`orn` for the onsets inside
+  rules and, since prompt 8, the shortest stretch of 04-7; no note four or more ledger lines above its staff, a hard
+  check; when the sheet is drawn, `short_clefs` takes away a short stretch of the other clef whatever the AI wrote), ornaments (`orn` for the onsets inside
   one), the armadura of a passage, and the reference figure. **What the app computes**: figures, grace notes,
   spelling.
 - **Windows** are known before any request (they depend on the notes and the algorithm), and every answer is kept
@@ -386,7 +404,7 @@ the answer of GET /sheet/{part} (the sheet drawn again)                ~0.15 s i
   A sheet the algorithm wrote is not stored: it is a function of the notes and their hands.
 - **Clefs around a moved note** (`build.fit_clefs`, inside `reapply`): a note on another staff than in the stored
   sheet (or new to it) gets the clefs and 8va of the algorithm's rule (`proposal.frames.clefs_and_ottavas`, the
-  clef rules version 4) on the stretch of its staff where the rule and the stored sheet differ; the stored clefs and
+  clef rules version 4 and the shortest stretch of 04-7) on the stretch of its staff where the rule and the stored sheet differ; the stored clefs and
   8va stay everywhere else. `frames.check` holds on the result.
 - **Undo and redo** (`edits.undo`, `edits.redo`): a step touches only what is still as it left it (a guessed hand
   counts as no hand); `sheet.f1` is patched only when it is the text the step left, for the hands it left. The log

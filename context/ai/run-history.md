@@ -38,6 +38,9 @@ The log's `state` is one of these. The history shows them in plain words:
 | `stopped` | The user pressed **Stop**, the job ended with an error, or the backend stopped during the run | Stopped |
 | `failed` | The run ended with no batch written | Not written |
 
+A `stopped` run keeps the batches it wrote before the Stop (on the level copy); **Revert** takes the whole run back
+(the user's choice, 2026-11-03, implementation 04-7).
+
 The batches have their own status: `ok` (**Written**), `failed` (**Kept as it was**: the check refused the answer, so
 the sheet keeps the earlier notes), `error` (**Not written**: an error stopped the batch), and `open` (**Being
 written**).

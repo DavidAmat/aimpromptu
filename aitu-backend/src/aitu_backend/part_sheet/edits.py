@@ -68,6 +68,7 @@ from aitu_backend.editing import history as part_history
 from aitu_backend.editing import paste
 from aitu_backend.matrix.keys import KEY_COUNT, LOWEST_MIDI
 from aitu_backend.pmn import events_file
+from aitu_backend.sheet.proposal.frames import short_clefs
 from aitu_backend.sheet.sheet import f1, frames
 from aitu_backend.sheet.sheet.data import FRAME_MS, Sheet
 from aitu_backend.sheet.sheet.figures import FIGURES, NAMES, nominal_ms
@@ -782,6 +783,7 @@ def transpose_notes(part_id: str, semitones: int, *, preview: bool = False) -> T
         notes = events_file.notes_from_events(stored.events)
         settled = build.reapply(sheet, starting(part_id, notes))
         build.fit_clefs(settled, reading.far_notes(settled))
+        short_clefs(settled)  # the shortest stretch of a clef, also where the far notes were fitted (04-7)
         after = f1.write(settled, mode="frames")
         steps = abs(semitones)
         label = f"Transpose {steps} semitone{'' if steps == 1 else 's'} {'up' if semitones > 0 else 'down'}"

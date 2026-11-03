@@ -29,7 +29,9 @@ The run is one job in the background. The sheet changes as each batch is accepte
 Outcomes, as the job reports them: `ok` (stored), `failed` (no batch was accepted, so nothing changes), `stale` (the
 notes changed while the AI worked, so nothing is stored), `gone` (the part was deleted).
 
-**Stop** asks the run to stop at its next request. The batches it already accepted are kept and stored.
+**Stop** asks the run to stop at its next request. The batches it already accepted are kept and stored, on the level
+copy (the song itself does not change). **Revert** takes the whole run back. This is the user's choice (2026-11-03,
+implementation 04-7): a Stop does not throw the run away.
 
 ## The plan of the song
 
@@ -132,8 +134,10 @@ are stored.
   chords where the sheet plays single notes, and no more onsets. For each chord, the left hand has no more onsets than
   now, and at least 70 % of its onsets are onsets it has now. A Strict hand is not held to these two rules.
 - **Time and figures.** Each new note starts on the grid of its hand. At easy and medium, no figure is shorter than a
-  semicorchea and no two notes of one hand are closer than a semicorchea (a steady rhythm). At hard, the figures are not
-  checked for length.
+  semicorchea and no two notes of one hand are closer than a semicorchea (a steady rhythm). At hard, no new note is
+  shorter than a fusa (the user, 2026-11-03, implementation 04-7), except a note the app draws as a decoration note
+  (one or two fusas or shorter just before a longer note): the check draws the answer once by the app's rules to know
+  them.
 
 The numbers per level (`LIMITS`, `OUTSIDE_SHARE`):
 
@@ -147,6 +151,7 @@ The numbers per level (`LIMITS`, `OUTSIDE_SHARE`):
 | Left hand, moves per negra | 0.75 | 1.25 | 2.0 |
 | Left hand, new notes on | the corcheas | the corcheas | the semicorcheas |
 | Left hand, share of notes outside the chord | 15 % | 25 % | 40 % |
+| Shortest figure of a new note | semicorchea | semicorchea | fusa (a decoration note may be shorter) |
 | Steady rhythm | yes | yes | no |
 
 The right hand's new notes start on the semicorcheas at every level.

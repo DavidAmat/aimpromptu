@@ -209,7 +209,9 @@ class Limits:
 LIMITS = {
     "easy": Limits(1, 1, 0, 3, 9, 24, 0.75, "corchea", 16, steady=True),
     "medium": Limits(2, 3, 9, 3, 12, 28, 1.25, "corchea", 16, steady=True),
-    "hard": Limits(3, 4, 12, 4, 12, 31, 2.0, "semicorchea", 64),
+    # Hard refuses figures shorter than a fusa (the user, 2026-11-03, 04-7): a semifusa or shorter is only a
+    # decoration note, which the app draws by its own rule (``proposal.frames.find_graces``).
+    "hard": Limits(3, 4, 12, 4, 12, 31, 2.0, "semicorchea", 32),
 }
 
 
@@ -249,7 +251,7 @@ def _bare(sheet: Sheet) -> Sheet:
         for n in sheet.notes
         if not n.covered
     ]
-    return replace(sheet, notes=notes, clefs={1: "G2", 2: "F4"}, clef_changes=[]).sort()
+    return replace(sheet, notes=notes, clefs={1: "G2", 2: "F4"}, clef_changes=[], user_clefs=[]).sort()
 
 
 #: The catalog of patterns (implementation 04-3, Phase 4: moved from the gallery of Phase 2): ``patterns.json`` and
@@ -1300,7 +1302,7 @@ def check_level(
             )
     # the time of new notes, and their figures
     before = {(n.frame, n.midi, n.staff) for n in target.notes}
-    off, short = [], []
+    off, short, quick = [], [], []
     for n in sheet.notes:
         if (n.frame, n.midi, n.staff) in before:
             continue
@@ -1308,8 +1310,21 @@ def check_level(
         lim = lims.get(n.staff, lims[1])
         if not grid.on_grid(n.frame, lim.right_grid if n.staff == 1 else lim.grid):
             off.append(f"f{n.frame} {_name(n.midi)}")
-        if n.figure and n.figure > lim.shortest and not lim.steady:
-            short.append(f"f{n.frame} {_name(n.midi)}:{n.figure}")
+        if n.figure and n.figure > lim.shortest and not lim.steady and not n.grace:
+            quick.append(n)
+    if quick:
+        # a note the app draws as a decoration note (one or two fusas or shorter just before a longer note) is not a
+        # figure of the sheet: it does not fail the batch (04-7, Phase 4)
+        graces = {
+            (n.frame, n.midi, n.staff)
+            for n in drawn(sheet, q, key=target.key or 0).notes
+            if n.grace
+        }
+        short_hard = [
+            f"f{n.frame} {_name(n.midi)}:{n.figure}" for n in quick if (n.frame, n.midi, n.staff) not in graces
+        ]
+    else:
+        short_hard = []
     # a steady rhythm (easy, medium): no figure shorter than a semicorchea, no two onsets of a hand closer than one
     for staff in staffs:
         if not lims[staff].steady:
@@ -1334,6 +1349,12 @@ def check_level(
         errs.append(
             f"{len(short)} notes are shorter than the level allows (the shortest figure is a semicorchea; a "
             f"shorter one becomes a decoration note): {_show(short)}"
+        )
+    if short_hard:
+        errs.append(
+            f"{len(short_hard)} notes are shorter than the level allows (at hard the shortest figure is a fusa; "
+            "only one or two quick notes just before a longer note may be shorter: the app draws them as "
+            f"decoration notes): {_show(short_hard)}"
         )
     if explain and not d.explain:
         errs.append(

@@ -50,6 +50,7 @@ from aitu_backend.sheet.proposal.frames import (
     _columns,
     clefs_and_ottavas,
     propose_frames,
+    short_clefs,
 )
 from aitu_backend.sheet.sheet import f1
 from aitu_backend.sheet.sheet.common import spn
@@ -166,11 +167,11 @@ def _clef_track(sheet: Sheet, staff: int, frames: list[int]) -> list[str]:
 def fit_clefs(sheet: Sheet, changed: set[tuple[int, int, int]]) -> int:
     """Clefs and 8va where notes changed hand (Phase 6). ``changed`` holds the notes, ``(frame, midi, staff)``, that
     are on another staff than in the stored sheet (or new to it). Around each one, the clefs and 8va of the
-    algorithm's rule (``clefs_and_ottavas``, the clef rules version 4: the bass clef, then the treble clef, then the
-    treble clef with 8va for the left hand, never 8va in the bass clef, no note four ledger lines or more above the
-    bass staff) replace the stored ones, on the stretch of that staff where the two differ; everywhere else the
-    stored clefs and 8va stay (the AI's, or the user's). A high note moved to the left hand gets a treble clef for
-    its stretch rather than five ledger lines. Returns the number of stretches changed.
+    algorithm's rule (``clefs_and_ottavas``: the clef rules version 4 and the shortest stretch of 04-7; no note four
+    ledger lines or more above the bass staff) replace the stored ones, on the stretch of that staff where the two
+    differ; everywhere else the stored clefs and 8va stay (the AI's, or the user's). A high passage moved to the left
+    hand gets a treble clef for its stretch rather than five ledger lines; one or two high notes stay in the bass
+    clef under 8va. Returns the number of stretches changed.
     """
     if not changed:
         return 0
@@ -251,7 +252,9 @@ def fit_clefs(sheet: Sheet, changed: set[tuple[int, int, int]]) -> int:
 def reapply(stored: Sheet, notes: Notes) -> Sheet:
     """The decisions of a stored sheet laid on the current notes and their hands (the case 2 of the module). A note
     on another staff than in the stored sheet, or new to it, gets the clefs and 8va of the rule around it
-    (:func:`fit_clefs`)."""
+    (:func:`fit_clefs`). Then the shortest stretch of a clef (``short_clefs``, implementation 04-7): on every stored
+    sheet when it is drawn, the AI's included, a stretch of a hand's other clef shorter than ``CLEF_MIN`` columns
+    goes back to the hand's own clef, unless the user set that clef by hand (``Sheet.user_clefs``, kept here)."""
     algo = propose_frames(
         notes,
         key=stored.key or 0,
@@ -292,7 +295,9 @@ def reapply(stored: Sheet, notes: Notes) -> Sheet:
         key_changes=list(stored.key_changes),
     )
     sheet, _ = assemble(algo, [part], join=False)
+    sheet.user_clefs = list(stored.user_clefs)
     fit_clefs(sheet, changed)
+    short_clefs(sheet)
     # What the user wrote about the whole sheet (Phase 8: titles, lyrics, the spacing's figure, the line space).
     return carry_extras(stored, sheet)
 

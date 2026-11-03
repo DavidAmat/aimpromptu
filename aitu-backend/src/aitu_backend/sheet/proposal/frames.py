@@ -22,10 +22,14 @@ its chord (:func:`aitu_backend.sheet.sheet.frames.from_notes`); then, per hand:
 5. **Armadura** of each passage: the armadura that prints the fewest signs, with a cost for each change
    (:func:`choose_keys`), unless the armadura is given; then every note is spelled by the user's rules
    (:mod:`aitu_backend.sheet.sheet.spelling`).
-6. **Clefs and 8va** (the left-hand rules of the frozen prompt, version 4): fewest ledger lines with a cost for each
-   change; the left hand prefers the bass clef, then the treble clef, then the treble clef with 8va, and never stays
-   in the bass clef four ledger lines or more above the staff; the right hand prefers the treble clef, then 8va,
-   then the bass clef.
+6. **Clefs and 8va** (the left-hand rules of the frozen prompt, version 4, and the user's rule of implementation
+   04-7): fewest ledger lines with a cost for each change; the left hand prefers the bass clef, then the treble clef,
+   then the bass clef under 8va or the treble clef with 8va, and never reads a note four ledger lines or more above
+   the bass staff; the right hand prefers the treble clef, then 8va, then the bass clef or the treble clef under
+   8vb, and never reads a note four ledger lines or more below the treble staff without a line. Then **the shortest
+   stretch** (:func:`short_clefs`, the user, 2026-11-03): a hand changes to its other clef only for a whole passage,
+   ``CLEF_MIN`` of its columns or more; a shorter stretch goes back to the hand's own clef, with ledger lines, and an
+   octave line (left 8va, right 8vb) for the notes too far for them. A clef the user set by hand stays.
 """
 
 from __future__ import annotations
@@ -53,6 +57,7 @@ __all__ = [
     "lengthen_lone",
     "propose_frames",
     "respell",
+    "short_clefs",
 ]
 
 RUN_TOLERANCE = 0.12  # gaps within 12 % of the run's first gap are even
@@ -71,7 +76,10 @@ CLEF_PREFER = 0.25  # per column, for the second clef of a hand
 OTTAVA_COST = (
     2.5  # per column under an 8va line: E6 alone (3 ledger lines) rarely pays it, G6 does (clef.6)
 )
-BASS_LIMIT = 4  # ledger lines above the bass staff that the left hand never reads (clef.L3)
+BASS_LIMIT = 4  # ledger lines above the bass staff that the left hand never reads (clef.L3); below the treble staff
+#: for the right hand without an octave line (04-7)
+CLEF_MIN = 5  # columns of a hand: a stretch of its other clef shorter than this goes back to its own clef (04-7)
+READABLE = 1  # ledger lines on the far side of an octave line: the notes between two marked columns that may join it
 
 
 @dataclass
@@ -462,11 +470,22 @@ _LINES = {
     "G2": (4 * 7 + 2, 5 * 7 + 3),
     "F4": (2 * 7 + 4, 3 * 7 + 5),
 }  # E4..F5, G2..A3 (diatonic index)
-#: (clef, ottava, cost per column) of each state; the first one is the hand's own clef
+#: (clef, ottava, cost per column) of each state; the first one is the hand's own clef. Implementation 04-7 ends the
+#: rule of 03 "never 8va in the bass clef": the left hand may read a short high stretch in the bass clef under 8va,
+#: and the right hand a short low one in the treble clef under 8vb.
 STATES = {
-    1: [("G2", 0, 0.0), ("G2", 1, OTTAVA_COST), ("F4", 0, CLEF_PREFER)],
-    2: [("F4", 0, 0.0), ("G2", 0, CLEF_PREFER), ("G2", 1, CLEF_PREFER + OTTAVA_COST)],
+    1: [("G2", 0, 0.0), ("G2", 1, OTTAVA_COST), ("F4", 0, CLEF_PREFER), ("G2", -1, OTTAVA_COST)],
+    2: [
+        ("F4", 0, 0.0),
+        ("G2", 0, CLEF_PREFER),
+        ("G2", 1, CLEF_PREFER + OTTAVA_COST),
+        ("F4", 1, OTTAVA_COST),
+    ],
 }
+#: The hand's own clef, its other clef, and the octave line a short stretch takes in its own clef.
+OWN = {1: "G2", 2: "F4"}
+OTHER = {1: "F4", 2: "G2"}
+LINE = {1: -1, 2: 1}
 
 
 def _ledger(n: Note, clef: str, ottava: int) -> tuple[int, int]:
@@ -495,7 +514,26 @@ def clefs_and_ottavas(sheet: Sheet) -> dict:
             for s, (clef, ottava, penalty) in enumerate(states):
                 below_above = [_ledger(n, clef, ottava) for n in ns]
                 c = sum(a + b for a, b in below_above) + penalty
-                if staff == 2 and clef == "F4" and max(b for _, b in below_above) >= BASS_LIMIT:
+                if clef == OWN[staff] and not _fits(below_above, staff, ottava):
+                    # The right hand's limit (new in 04-7) holds only where its 8vb line reads the column: a chord
+                    # too wide for the line (A2 with E6) keeps the treble clef by its ledger lines, as before 04-7,
+                    # rather than the bass clef with eight ledger lines above (04-7, Phase 3).
+                    line = LINE[staff]
+                    wide = (
+                        staff == 1
+                        and ottava == 0
+                        and not _fits([_ledger(n, clef, line) for n in ns], staff, line)
+                    )
+                    if not wide:
+                        c = np.inf
+                # The octave line of the hand's own clef (left 8va, right 8vb) only for a column that needs it: a
+                # right-hand chord G3 B3 D4 G4 reads with ledger lines, not under 8vb (04-7, Phase 3: the path
+                # found 2.5 for the line cheaper than its 3 ledger lines).
+                if (
+                    clef == OWN[staff]
+                    and ottava == LINE[staff]
+                    and _fits([_ledger(n, clef, 0) for n in ns], staff, 0)
+                ):
                     c = np.inf
                 cost[i, s] = c
             beams = {n.beam for n in ns if n.beam is not None}
@@ -511,20 +549,160 @@ def clefs_and_ottavas(sheet: Sheet) -> dict:
                 sheet.clefs[staff] = clef
             elif clef != prev_clef:
                 sheet.clef_changes.append((f, staff, clef))
-                info["clef changes"] += 1
             prev_clef = clef
             for n in ns:
                 n.ottava = ottava
-            info["8va notes"] += len(ns) if ottava else 0
-        # ornament onsets take the 8va of the note before them
-        last = 0
-        for n in sorted((n for n in sheet.notes if n.staff == staff), key=lambda n: n.frame):
-            if n.covered:
-                n.ottava = last
-            else:
-                last = n.ottava
+        _ornament_lines(sheet, staff)
+    sheet.clef_changes.sort(key=lambda c: (c[0], c[1]))
+    info.update(short_clefs(sheet))
+    drawn = [n for n in sheet.notes if not n.covered]
+    info["clef changes"] = len(sheet.clef_changes)
+    info["8va notes"] = sum(1 for n in drawn if n.ottava > 0)
+    info["8vb notes"] = sum(1 for n in drawn if n.ottava < 0)
+    return info
+
+
+def _fits(below_above: list[tuple[int, int]], staff: int, ottava: int) -> bool:
+    """The notes of a column in the hand's own clef are readable: the left hand never ``BASS_LIMIT`` ledger lines
+    or more above the bass staff, the right hand never that far below the treble staff; under the octave line of
+    the hand's own clef (left 8va, right 8vb) no note that far on the other side either (a wide chord)."""
+    below = max(b for b, _ in below_above)
+    above = max(a for _, a in below_above)
+    far = above if staff == 2 else below
+    if far >= BASS_LIMIT:
+        return False
+    if ottava and ottava == LINE[staff] and max(below, above) >= BASS_LIMIT:
+        return False
+    return True
+
+
+def _ornament_lines(sheet: Sheet, staff: int) -> None:
+    """Ornament onsets take the octave line of the note before them."""
+    last = 0
+    for n in sorted((n for n in sheet.notes if n.staff == staff), key=lambda n: n.frame):
+        if n.covered:
+            n.ottava = last
+        else:
+            last = n.ottava
+
+
+def _track(sheet: Sheet, staff: int, frames: list[int]) -> list[str]:
+    """The clef of ``staff`` in force at each of ``frames`` (sorted)."""
+    changes = sorted((f, c) for f, st, c in sheet.clef_changes if st == staff)
+    clef, k, out = sheet.clefs.get(staff, OWN[staff]), 0, []
+    for frame in frames:
+        while k < len(changes) and changes[k][0] <= frame:
+            clef, k = changes[k][1], k + 1
+        out.append(clef)
+    return out
+
+
+def short_clefs(sheet: Sheet) -> dict:
+    """The shortest stretch of a clef (implementation 04-7, the user's rule of 2026-11-03): a hand changes to its
+    other clef only for a whole passage. Each stretch of a hand in its other clef with fewer than ``CLEF_MIN`` of the
+    hand's columns (grace notes do not count) goes back to the hand's own clef: its two clef changes go, and each of
+    its columns takes the octave line of the own clef (left 8va, right 8vb) when a note would otherwise stand
+    ``BASS_LIMIT`` ledger lines or more outside the staff; the columns between two marked columns join the line when
+    their notes stay readable under it (at most ``READABLE`` ledger lines on its far side). A stretch stays as it is
+    when one of its columns is readable neither way (a chord too wide for the line), or when it holds a clef the user
+    set by hand (``Sheet.user_clefs``). Every other clef stays: the rule's, the AI's and the user's. Changes only
+    clefs and octave lines; returns the counts."""
+    info = {"short clef stretches": 0, "short stretches kept": 0, "notes under a new line": 0}
+    for staff in (1, 2):
+        cols = _columns(sheet, staff)
+        if not cols:
+            continue
+        frames = [f for f, _ in cols]
+        track = _track(sheet, staff, frames)
+        own, other, line = OWN[staff], OTHER[staff], LINE[staff]
+        marks = [(a, b) for a, b, st, c in sheet.user_clefs if st == staff and c == other]
+        i, changed = 0, False
+        while i < len(cols):
+            if track[i] != other:
+                i += 1
+                continue
+            j = i
+            while j + 1 < len(cols) and track[j + 1] == other:
+                j += 1
+            a, b, i = i, j, j + 1
+            main = sum(1 for k in range(a, b + 1) if any(not n.grace for n in cols[k][1]))
+            if main >= CLEF_MIN:
+                continue
+            if any(lo <= frames[k] < hi for k in range(a, b + 1) for lo, hi in marks):
+                info["short stretches kept"] += 1
+                continue
+            choice = []
+            for k in range(a, b + 1):
+                ns = cols[k][1]
+                pick = next(
+                    (o for o in (0, line) if _fits([_ledger(n, own, o) for n in ns], staff, o)), None
+                )
+                choice.append(pick)
+            if None in choice:
+                info["short stretches kept"] += 1
+                continue
+            marked = [k for k, o in enumerate(choice) if o]
+            for p, q in zip(marked, marked[1:]):
+                between = [n for k in range(p + 1, q) for n in cols[a + k][1]]
+                far = [_ledger(n, own, line)[0 if staff == 2 else 1] for n in between]
+                if all(x <= READABLE for x in far):
+                    for k in range(p + 1, q):
+                        choice[k] = line
+            lo = frames[a - 1] if a > 0 else None
+            hi = frames[b + 1] if b + 1 < len(frames) else None
+            sheet.clef_changes = [
+                c
+                for c in sheet.clef_changes
+                if not (c[1] == staff and (lo is None or c[0] > lo) and (hi is None or c[0] <= hi))
+            ]
+            if a == 0:
+                sheet.clefs[staff] = own
+            for k, o in enumerate(choice):
+                for n in cols[a + k][1]:
+                    if o and n.ottava != o:
+                        info["notes under a new line"] += 1
+                    n.ottava = o
+            info["short clef stretches"] += 1
+            changed = True
+        info["grace lines matched"] = info.get("grace lines matched", 0) + _grace_lines(sheet, staff)
+        _ornament_lines(sheet, staff)
     sheet.clef_changes.sort(key=lambda c: (c[0], c[1]))
     return info
+
+
+def _grace_lines(sheet: Sheet, staff: int) -> int:
+    """Grace notes and their main column under one octave line (04-7, Phase 3). The engraver draws grace notes
+    with the column after them, under that column's line, but writes each head by its own line: a grace chord B4
+    D#5 under 8va before an F#4 without it was written B3 D#4 outside the line (an octave too low to read). Where
+    the two differ, the main column takes the grace notes' line when its notes read under it (fewer than
+    ``BASS_LIMIT`` ledger lines on each side, in its clef); else the grace notes take the main column's line.
+    Returns how many grace columns were matched."""
+    cols = _columns(sheet, staff)
+    clefs = _track(sheet, staff, [f for f, _ in cols])
+    count, k = 0, 0
+    while k < len(cols):
+        if not all(n.grace for n in cols[k][1]):
+            k += 1
+            continue
+        j = k
+        while j < len(cols) and all(n.grace for n in cols[j][1]):
+            j += 1
+        if j == len(cols):
+            break
+        graces = [n for i in range(k, j) for n in cols[i][1]]
+        main = cols[j][1]
+        lines = {n.ottava for n in graces}
+        line = main[0].ottava
+        if lines != {line}:
+            wanted = next(iter(lines)) if len(lines) == 1 else None
+            reads = wanted is not None and all(
+                max(_ledger(n, clefs[j], wanted)) < BASS_LIMIT for n in main
+            )
+            for n in main if reads else graces:
+                n.ottava = wanted if reads else line
+            count += j - k
+        k = j + 1
+    return count
 
 
 # ------------------------------------------------------------------ the whole algorithm

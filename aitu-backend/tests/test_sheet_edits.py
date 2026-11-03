@@ -197,7 +197,7 @@ def test_notes_the_sheet_does_not_hold_are_counted_not_moved(client: TestClient,
     assert edits.history(part) == {"undo": None, "redo": None}
 
 
-def test_a_high_run_moved_to_the_left_hand_gets_the_treble_clef_for_its_stretch_only(
+def test_a_high_passage_moved_to_the_left_hand_gets_the_treble_clef_a_lone_high_note_8va(
     client: TestClient, part: str
 ) -> None:
     enhance(part)
@@ -214,9 +214,13 @@ def test_a_high_run_moved_to_the_left_hand_gets_the_treble_clef_for_its_stretch_
     assert frames.check(now) == []
     left = [n for n in now.notes if n.staff == 2 and n.frame in run]
     clef = dict(zip(run, build._clef_track(now, 2, run)))
+    # 04-7, the shortest stretch: the passage of seven columns (f56 to f94) reads in the treble clef; the lone high
+    # note after it (f156, B4 over D3) stays in the bass clef under 8va.
+    passage, lone = run[:7], run[7]
     assert left and all(
-        clef[n.frame] == "G2" for n in left
-    ), "the left hand reads them in the treble clef"
+        clef[n.frame] == "G2" for n in left if n.frame in passage
+    ), "the left hand reads the passage in the treble clef"
+    assert clef[lone] == "F4" and all(n.ottava == 1 for n in left if n.frame == lone)
     # Nothing far above the bass staff, and the clefs of the rest of the song are the ones the AI wrote.
     assert all(
         _ledger(n, clef, n.ottava)[1] < BASS_LIMIT
