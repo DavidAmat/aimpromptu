@@ -28,11 +28,12 @@ The plan is [`04-6-plan.md`](04-6-plan.md), the brief [`04-6-prompt.md`](04-6-pr
 - [x] 2.6 Tests (`test_llm_models.py`, 5 test files changed); the whole backend suite on CPU (1355 passed, 3
   skipped). Report: [`04-6-implementation-phase-2.md`](04-6-implementation-phase-2.md).
 
-# [ ] Phase 3: Part B, the frontend
+# [x] Phase 3: Part B, the frontend
 
-- [ ] 3.1 The dialog's list and default from the backend; `AI_MODELS` removed.
-- [ ] 3.2 Comments; the browser checks' stand-ins.
-- [ ] 3.3 typecheck, `check:enhance-dialog`, `check:ai-history`.
+- [x] 3.1 The dialog's list and default from the backend; `AI_MODELS` removed.
+- [x] 3.2 Comments; the browser checks' stand-ins.
+- [x] 3.3 `npx tsc -b`, `check:enhance-dialog`, `check:ai-history` (all passed). Report:
+  [`04-6-implementation-phase-3.md`](04-6-implementation-phase-3.md).
 
 # [ ] Phase 4: Part C, Simplify removed
 

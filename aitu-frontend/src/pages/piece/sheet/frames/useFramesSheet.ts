@@ -1,8 +1,8 @@
 /**
  * The new sheet of a part as the page holds it (implementation 03, Phase 5): read for the page's width, read again
- * at each step of Sonnet's job, and Sonnet started by itself on a new transcription.
+ * at each step of the AI's job, and the AI started by itself on a new transcription.
  *
- * While Sonnet writes, the backend sends an `event: sheet` message on the job's stream each time the sheet changes
+ * While the AI writes, the backend sends an `event: sheet` message on the job's stream each time the sheet changes
  * (the reference figure, then each window) and `event: done` at the end; each one asks for the sheet again. A
  * stream opened late, or again after a reload, first receives every message already sent: the reads that follow
  * one another closely are joined into one.
@@ -157,7 +157,7 @@ export function useFramesSheet(
   const sheet = loaded && loaded.uuid === audioUuid ? loaded.sheet : null;
   const jobId = sheet?.llm.state === "running" ? sheet.llm.jobId : null;
 
-  // Follow Sonnet's job: read the sheet again at each of its messages.
+  // Follow the AI's job: read the sheet again at each of its messages.
   useEffect(() => {
     if (!jobId) return;
     const source = new EventSource(sheetApi.progressUrl(jobId));

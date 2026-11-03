@@ -3,7 +3,7 @@
  *
  * The backend draws the sheet (the engine without compases of `aitu_backend.sheet`) for the width the page asks for,
  * and answers the SVG with the cursor map: one row per drawn column (its system, its x, its time) and one box per
- * system. While Sonnet writes the sheet in the background, the answer is the sheet of that moment, with the state
+ * system. While the AI writes the sheet in the background, the answer is the sheet of that moment, with the state
  * of each segment; the page follows the job's stream and asks again at each `sheet` message.
  */
 
@@ -33,8 +33,8 @@ export interface SheetSystem {
 }
 
 /**
- * A segment of the piece-by-piece view (one window of Sonnet): `llm` written by Sonnet, `algorithm` kept from the
- * algorithm (a window that failed), `working` at Sonnet now, `waiting` not sent yet.
+ * A segment of the piece-by-piece view (one window of the AI): `llm` written by the AI, `algorithm` kept from the
+ * algorithm (a window that failed), `working` at the AI now, `waiting` not sent yet.
  */
 export interface SheetSegment {
   start: number;
@@ -52,12 +52,12 @@ export interface SheetLlm {
   enhanced: boolean;
   /** How many AI runs wrote it. */
   runs: number;
-  /** `none`: never written by Sonnet; `running`: a run is going; `done`: a run ended (it may have failed). */
+  /** `none`: never written by the AI; `running`: a run is going; `done`: a run ended (it may have failed). */
   state: "none" | "running" | "done";
   jobId: string | null;
   /** The API key and the SDK are there. */
   available: boolean;
-  /** A new transcription: the page starts Sonnet by itself. */
+  /** A new transcription: the page starts the AI by itself. */
   auto: boolean;
   /** The page may offer **Enhance with AI**, or **Enhance it again with AI** (the user may change this part). */
   canRun: boolean;
@@ -186,14 +186,18 @@ export interface StretchKeys {
 }
 
 /** What the AI is asked to write again (Phase 7): a stretch of frames, with what was picked and the user's words. */
-/** The AI models of Enhance with AI (the user, 2026-10-30); none chosen: GPT-6.1 Terra. */
-export type AiModel = "gpt-6.1-terra" | "gpt-6.1-sol" | "claude-sonnet-5-5";
+/**
+ * The name of an AI model, as a run asks for it. The page keeps no list of its own (implementation 04-6): the
+ * choices of the **Model** selector and the model of the setting come from the backend (`LlmCosts.models`, `.model`);
+ * a run that names none uses the setting's.
+ */
+export type AiModel = string;
 
-export const AI_MODELS: readonly { value: AiModel; label: string }[] = [
-  { value: "gpt-6.1-terra", label: "GPT-6.1 Terra" },
-  { value: "gpt-6.1-sol", label: "GPT-6.1 Sol" },
-  { value: "claude-sonnet-5-5", label: "Sonnet 5.5" },
-];
+/** One choice of the dialog's **Model** selector: the name a run asks with, and what the selector shows. */
+export interface AiModelChoice {
+  value: AiModel;
+  label: string;
+}
 
 /** What every run of Enhance with AI may choose: the model, and the number of batches (as previewed on the sheet). */
 export interface RunChoice {
@@ -225,7 +229,8 @@ export interface BatchQuery {
   start?: number;
   end?: number;
   batches?: number;
-  model: AiModel;
+  /** None: the setting's model. */
+  model?: AiModel;
 }
 
 export interface StretchRequest extends RunChoice {
@@ -249,7 +254,12 @@ export interface LlmCost {
 }
 
 export type LlmCosts = Record<SongRun | "stretch", LlmCost> &
-  Partial<Record<`level-${LevelHand}` | `level-stretch-${LevelHand}`, LlmCost>>;
+  Partial<Record<`level-${LevelHand}` | `level-stretch-${LevelHand}`, LlmCost>> & {
+    /** The choices of the **Model** selector, the setting's first. */
+    models: AiModelChoice[];
+    /** The model of the setting (`AITU_LLM_MODEL`): the one a run uses when none is chosen. */
+    model: AiModel;
+  };
 
 /** The levels of the whole song simplification (implementation 04-3, Phase 4). Super hard comes later. */
 export type LevelName = "easy" | "medium" | "hard";
@@ -561,7 +571,7 @@ export const sheetApi = {
   get: (audioUuid: string, width: number, signal?: AbortSignal) =>
     request<FramesSheet>(`/sheet/${audioUuid}`, { query: { width: Math.round(width) }, signal }),
 
-  /** Start Sonnet on the part (or get the run already going); follow it on `progressUrl(jobId)`. */
+  /** Start the AI on the part (or get the run already going); follow it on `progressUrl(jobId)`. */
   runLlm: (audioUuid: string, choice?: RunChoice) =>
     request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm`, {
       method: "POST",

@@ -2,7 +2,7 @@
  * The new piano sheet on the page (implementation 03, Phase 5): the SVG the backend draws, and over it, in the same
  * staff-space units, what moves.
  *
- * - **The segment at Sonnet** (plan section 3.6) is covered by a pale, slowly breathing veil: the notes under it
+ * - **The segment at the AI** (plan section 3.6) is covered by a pale, slowly breathing veil: the notes under it
  *   read grey. No text: the look alone says that it is changing.
  * - **A segment that comes back** appears column by column, like a text an LLM writes word by word: blank staves
  *   over it, then the notes, left to right, in about two seconds.
@@ -329,7 +329,7 @@ export function FramesSheetView({
     setLyricBlocks({ svg: sheet.svg, boxes });
   }, [sheet.svg, columns]);
 
-  // ------------------------------------------------------------------ segments: at Sonnet, and coming back
+  // ------------------------------------------------------------------ segments: at the AI, and coming back
 
   const working = useMemo(
     () =>
@@ -367,7 +367,7 @@ export function FramesSheetView({
     const earlier = new Map(seen.map((segment) => [segment.start, segment.state]));
     const wasWorking = seen.find((segment) => segment.state === "working");
     const decided = (segment: (typeof sheet.segments)[number]) => segment.state === "llm" || segment.state === "algorithm";
-    // The segment that was at Sonnet (or waiting) and is decided now: the same stretch first (a stretch the AI wrote
+    // The segment that was at the AI (or waiting) and is decided now: the same stretch first (a stretch the AI wrote
     // again with the user's words, Phase 7, ends where it ended), else a window with the same start.
     const back =
       sheet.segments.find(

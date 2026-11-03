@@ -18,8 +18,10 @@
  *   the user's words;
  * - in the gallery, **Select all** ticks every pattern of the level on the pill, **Deselect all** unticks the hand
  *   (the level is then sent with no pattern, `exact`), **Approved** ticks the approved ones again (2026-10-30);
- * - the **model** (GPT-6.1 Terra by default, Sonnet 5.5 costs more) and the **batches** (- and +), drawn on the sheet
- *   with one number each, the dialog at the right beside the sheet; the run sends both (2026-10-30).
+ * - the **model** and the **batches** (- and +), drawn on the sheet with one number each, the dialog at the right
+ *   beside the sheet; the run sends both (2026-10-30). The models are the backend's (implementation 04-6): the
+ *   selector shows the setting's model first and offers the choices of `GET .../llm/costs`, and the cost follows the
+ *   model chosen (the backend's own estimate for it). No model is named here: they follow `AITU_LLM_MODEL`.
  *
  *     npm run check:enhance-dialog -- --out /tmp/enhance-dialog
  */
@@ -71,6 +73,9 @@ try {
   const copy = await post(`${api}/projects/${values.version}/duplicate`, {});
   made.push(copy.id);
   const part = copy.parts?.[0] ?? copy.id;
+  // The models as the backend offers them: the check names none (they follow the setting).
+  const offered = await (await fetch(`${api}/sheet/${part}/llm/costs`)).json();
+  const other = offered.models.find((one) => one.value !== offered.model) ?? null;
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   // The stand-in's refusal is said on the page as an error: expected, not a problem.
   page.on('console', (m) => { if (m.type() === 'error' && !/status of (404|409)/.test(m.text())) problems.push(`console: ${m.text()}`); });
@@ -121,9 +126,8 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('[data-frames-sheet] [data-batch]').length > 0, null, { timeout: 5000 }).catch(() => undefined);
   const first = await count();
   check('the batches of the run are drawn on the sheet, one number each', first >= 1 && (await drawnBatches()) === first, `${first} batches`);
-  check('GPT-6.1 Terra is the model by default', (await dialog(page).getByTestId('ai-model').inputValue()) === 'gpt-6.1-terra');
+  check('the model of the setting is the model by default', (await dialog(page).getByTestId('ai-model').inputValue()) === offered.model, offered.model);
   const costOf = async () => Number(/About \$(\d+\.\d\d)/.exec(await dialog(page).locator('[data-enhance-status]').innerText())?.[1]);
-  const terraCost = await costOf();
   await dialog(page).getByRole('button', { name: 'More batches' }).click();
   await dialog(page).getByRole('button', { name: 'More batches' }).click();
   await page.waitForFunction((n) => document.querySelector('[data-batch-count]')?.textContent === String(n), first + 2, { timeout: 5000 }).catch(() => undefined);
@@ -133,9 +137,19 @@ try {
   await page.waitForTimeout(600);
   check('- once: one fewer', (await count()) === first + 1);
   await dialog(page).getByTestId('ai-model').locator('..').click();
-  await page.getByRole('option', { name: 'Sonnet 5.5' }).click();
-  await page.waitForTimeout(700);
-  check('Sonnet 5.5 costs more than GPT-6.1 Terra', (await costOf()) > terraCost, `${terraCost} -> ${await costOf()}`);
+  const options = await page.getByRole('option').allInnerTexts();
+  check('the selector offers the backend\'s models, the setting\'s first',
+    options.join('|') === offered.models.map((one) => one.label).join('|'), options.join(' | '));
+  if (other) {
+    await page.getByRole('option', { name: other.label, exact: true }).click();
+    await page.waitForTimeout(700);
+    const query = new URLSearchParams({ run: 'level', hand: 'both', batches: String(first + 1), model: other.value });
+    const expected = (await (await fetch(`${api}/sheet/${part}/llm/batches?${query}`)).json()).usd;
+    check(`the cost follows the model chosen (${other.label})`, (await costOf()).toFixed(2) === expected.toFixed(2), `$${await costOf()}, the backend $${expected.toFixed(2)}`);
+  } else {
+    await page.keyboard.press('Escape');
+    console.log('note  the backend offers one model only: no other to choose');
+  }
   const panel = await dialog(page).locator('.MuiDialog-paper').boundingBox();
   const drawing = await page.locator('[data-frames-sheet] svg').first().boundingBox();
   check('the dialog sits at the right, beside the sheet', panel.x > 700 && drawing.x + drawing.width <= panel.x + 2, `${Math.round(drawing.x + drawing.width)} <= ${Math.round(panel.x)}`);
@@ -177,7 +191,7 @@ try {
     'Write the level sends the level of each hand and the patterns',
     levelCopy?.body?.right === 'hard' && levelCopy?.body?.left === 'easy' && levelCopy?.body?.hand === 'both' &&
       levelCopy?.body?.patterns?.includes('left easy 5') && levelCopy?.body?.patterns?.includes('right hard 17') && levelCopy?.body?.exact === true &&
-      levelCopy?.body?.model === 'claude-sonnet-5-5' && levelCopy?.body?.batches >= 1,
+      levelCopy?.body?.model === (other?.value ?? undefined) && levelCopy?.body?.batches >= 1,
     JSON.stringify(levelCopy?.body),
   );
   check('the page says the stand-in refused', /Stand-in/.test(await page.locator('[data-edit-error]').first().innerText().catch(() => '')));

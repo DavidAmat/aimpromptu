@@ -117,10 +117,10 @@ record's `simplified` field (old sheets hold it). Each name is checked with `git
 
 | Phase | Work | Checks |
 |---|---|---|
-| 1 | Part A: `runs.close_unfinished`, the call in `lifespan`, the note in the detail, tests, the docs of Part A | backend tests on CPU; `npm run typecheck` |
+| 1 | Part A: `runs.close_unfinished`, the call in `lifespan`, the note in the detail, tests, the docs of Part A | backend tests on CPU; `npx tsc -b` |
 | 2 | Part B, backend: `config.llm_model`, `llm_models.py`, `sheet_llm`, `job`, `api/sheet.py`, the costs route, comments and messages, `.env.example`, `compose.yaml`; tests | backend tests on CPU |
-| 3 | Part B, frontend: the list from the backend, the dialog, comments, the browser checks' stand-ins | `npm run typecheck`, `npm run check:enhance-dialog`, `npm run check:ai-history` |
-| 4 | Part C: Simplify removed, backend and frontend | backend tests, typecheck, `check:enhance-dialog` |
+| 3 | Part B, frontend: the list from the backend, the dialog, comments, the browser checks' stand-ins | `npx tsc -b`, `npm run check:enhance-dialog`, `npm run check:ai-history` |
+| 4 | Part C: Simplify removed, backend and frontend | backend tests, `npx tsc -b`, `check:enhance-dialog` |
 | 5 | The docs of Parts B and C, `04-context.md` section 9, the README of the folder, the closing report | `check-links.py`, `check-names.py` |
 
 # 6. Rules
@@ -155,3 +155,7 @@ record's `simplified` field (old sheets hold it). Each name is checked with `git
   written, 1,850 output) against `MEASURED_WITH`. `price` replaces `openai_price`; the clients take their effort from
   the table. `aitu-backend/README.md` and `sheet/README.md` name the models: Phase 5. Report:
   [`04-6-implementation-phase-2.md`](04-6-implementation-phase-2.md).
+- **Phase 3 (2026-11-03).** The dialog sends a model only when the user chose one; left on the setting's, the run
+  names none and the backend uses the setting. `check-enhance-dialog` names no model: it reads `GET /llm/costs` and
+  checks the cost against the backend's estimate for the model chosen. There is no `npm run typecheck`: the type
+  check is `npx tsc -b` (section 5 corrected). Report: [`04-6-implementation-phase-3.md`](04-6-implementation-phase-3.md).

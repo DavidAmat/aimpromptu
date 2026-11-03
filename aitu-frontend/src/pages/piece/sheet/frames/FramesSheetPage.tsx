@@ -3,7 +3,7 @@
  * edit. Since Phase 8B it is the only sheet `SheetPage` draws: the Sheet step, a version of My library, Play mode,
  * the two sheets of a passage (Record in Sheet), the sources of From other projects and the requests review.
  *
- * - **At once**: the sheet as it is now: the AI's (Sonnet 5.5 today), or the algorithm's on a part it has not
+ * - **At once**: the sheet as it is now: the AI's, or the algorithm's on a part it has not
  *   enhanced. A sheet the AI enhanced carries the green sparkle of the Projects page next to its title for good
  *   (tooltip **Enhanced with AI**; implementation 04, Phase 1, in place of the green badge), whatever changes later
  *   (the user's rule of 2026-10-25): a new run is then **Enhance it again with AI**, at the user's own risk of the

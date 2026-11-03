@@ -9,7 +9,7 @@
 import { request } from "./client";
 
 /**
- * The steps of the flow page, in order. The Hands step was removed by implementation 03, Phase 5: Sonnet decides
+ * The steps of the flow page, in order. The Hands step was removed by implementation 03, Phase 5: the AI decides
  * the hands with the sheet.
  */
 export const PIECE_STEPS = ["source", "audio", "notes", "sheet"] as const;

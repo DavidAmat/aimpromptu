@@ -2,7 +2,7 @@
  * Editing the new sheet in the browser (implementation 03, Phase 6): picking notes, moving them to the other hand,
  * undo and redo, and the time of one edit.
  *
- * Without credits, on a temporary copy of a version of My library that Sonnet wrote (7 Years by default; the copy
+ * Without credits, on a temporary copy of a version of My library that the AI wrote (7 Years by default; the copy
  * is deleted at the end, the library is only read):
  * - a click on a notehead picks it (`[data-selected]`) and opens the note toolbox (`[data-frames-note-toolbox]`)
  *   titled with its printed name; ⌘ (Control) adds a note; a box dragged across the staves picks every notehead in it;

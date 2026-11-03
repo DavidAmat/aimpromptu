@@ -33,6 +33,8 @@ const check = (what, ok, detail = '') => {
 };
 
 const RUN = 'abcdef123456';
+/** The model of the stand-in run: the history does not show it, so no real model is named (implementation 04-6). */
+const MODEL = 'stand-in-model';
 const windows = [[5, 600], [600, 1200], [1200, 1700], [1700, 2216]];
 const talk = {
   k: 0, start: 5, end: 600, status: 'ok', target: 'F1 frames', declared: ['pattern L f5-f600: left easy 1'],
@@ -43,7 +45,7 @@ const talk = {
 };
 const log = {
   id: RUN, created: '2026-10-31T11:00:00+00:00', state: 'waiting', usd: 0.03, requests: 3, system: '...',
-  request: { level: 'easy', hand: 'left', patterns: ['left easy 1'], strict: ['left easy 1'], words: 'Fa2, then the triad.', model: 'gpt-6.1-terra', windows },
+  request: { level: 'easy', hand: 'left', patterns: ['left easy 1'], strict: ['left easy 1'], words: 'Fa2, then the triad.', model: MODEL, windows },
   plan: { k: -1, start: 5, end: 2216, status: 'ok', messages: [], errors: [], explain: [], rules: [], declared: [], target: '' },
   rules: [
     { text: 'On each chord, the root in octave 2 as a blanca, then the triad as a blanca.', source: 'plan', ref: 'left easy 1' },
@@ -52,7 +54,7 @@ const log = {
   batches: [talk],
 };
 const listed = [
-  { id: RUN, log: true, created: log.created, state: 'waiting', level: 'easy', hand: 'left', patterns: ['left easy 1'], strict: ['left easy 1'], words: log.request.words, model: 'gpt-6.1-terra', batches: [{ k: 0, start: 5, end: 600, status: 'ok' }], total: 4, usd: 0.03 },
+  { id: RUN, log: true, created: log.created, state: 'waiting', level: 'easy', hand: 'left', patterns: ['left easy 1'], strict: ['left easy 1'], words: log.request.words, model: MODEL, batches: [{ k: 0, start: 5, end: 600, status: 'ok' }], total: 4, usd: 0.03 },
   { id: 'record-0', log: false, created: '2026-10-30T20:46:57+00:00', state: 'done', level: 'easy', hand: 'left', patterns: ['left easy 5'], strict: [], words: '', model: null, batches: [{ k: 0, start: 5, end: 628, status: 'ok' }], total: 1, usd: 0.1, plan: ['S1 f5-f612 L=left easy 5 | Low note and rocking corcheas'], declared: ['pattern L f5-f35: keep'] },
 ];
 
