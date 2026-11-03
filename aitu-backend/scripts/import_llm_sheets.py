@@ -27,9 +27,11 @@ from aitu_backend.part_sheet import job, store
 from aitu_backend.pmn import events_file
 from aitu_backend.sheet.llm.frames import PROMPT_VERSION
 from aitu_backend.sheet.sheet import f1, frames
-from aitu_backend.sheet_llm import MODEL
 from aitu_backend.storage import bundle, paths
 from aitu_backend.transcription import pipeline
+
+#: The model the research's sheets were written with (history: the sheets this script imports).
+RESEARCH_MODEL = "claude-sonnet-5-5"
 
 
 def unhanded(cells: Counter) -> Counter:
@@ -78,7 +80,7 @@ def main() -> None:
             windows=windows,
             quarter_ms=row["quarterMs"],
             reference=row["reference"].get("source"),
-            model=MODEL,
+            model=RESEARCH_MODEL,
             prompt=PROMPT_VERSION,
             usd=float(row["usd"]),
             requests=int(row["requests"]),

@@ -149,3 +149,9 @@ record's `simplified` field (old sheets hold it). Each name is checked with `git
   notes are not on the sheet (a level run saves only at its end or at the wait). `close_unfinished` makes those
   `error`. Also a test of the wiring: `TestClient(create_app())` runs the start. Report:
   [`04-6-implementation-phase-1.md`](04-6-implementation-phase-1.md).
+- **Phase 2 (2026-11-03).** The table also holds models kept for their price only (`choice` off: a model the
+  server-side fallback may answer with, an old comparison); they are not offered and a run cannot ask for them. The
+  cost ratio of a model never measured is the price of a typical request of 04-3 Phase 5 (6,500 tokens read, 3,000
+  written, 1,850 output) against `MEASURED_WITH`. `price` replaces `openai_price`; the clients take their effort from
+  the table. `aitu-backend/README.md` and `sheet/README.md` name the models: Phase 5. Report:
+  [`04-6-implementation-phase-2.md`](04-6-implementation-phase-2.md).

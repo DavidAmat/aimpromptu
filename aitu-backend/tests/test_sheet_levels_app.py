@@ -10,6 +10,7 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
+from aitu_backend import config, llm_models
 from aitu_backend.part_sheet import build, job, runs
 from aitu_backend.sheet.llm import levels as L
 from aitu_backend.sheet.sheet import f1
@@ -232,10 +233,11 @@ def test_a_level_whose_batches_all_fail_stores_nothing(client: TestClient, part:
     assert set(notes_of(after)) == set(notes_of(before)) and after["history"]["undo"] is None
 
 
-def test_a_level_runs_on_terra_and_the_estimate_follows_the_benchmark() -> None:
-    # Implementation 04-3, Phase 5: GPT-6.1 Terra at medium; a batch about $0.023 and 41 s, the plan $0.012 and 8 s.
+def test_a_level_runs_on_the_setting_and_the_estimate_follows_the_benchmark() -> None:
+    # The model of the setting at the table's effort (04-6); the estimates measured in implementation 04-3, Phase 5:
+    # a batch about $0.023 and 41 s, the plan $0.012 and 8 s.
     complete = job._level_complete("part", {"right": "hard", "left": "medium"})
-    assert (complete.model, complete.effort) == ("gpt-6.1-terra", "medium")
+    assert (complete.model, complete.effort) == (config.llm_model(), llm_models.effort(config.llm_model()))
     assert complete.cache_key == "part|hard for the right hand and medium for the left hand"
     assert 0.023 <= job.USD_LEVEL_BATCH <= 0.03 and 0.012 <= job.USD_LEVEL_PLAN <= 0.02
     assert 41 <= job.SECONDS_LEVEL_BATCH <= 50 and 8 <= job.SECONDS_LEVEL_PLAN <= 15

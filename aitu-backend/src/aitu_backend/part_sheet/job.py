@@ -1,19 +1,19 @@
-"""Sonnet writes the sheet of a part in the background, window by window (implementation 03, Phase 5; plan 3.6).
+"""The LLM writes the sheet of a part in the background, window by window (implementation 03, Phase 5; plan 3.6).
 
 :func:`start` submits one job per part (key ``sheet-llm:<part>``; a second start returns the running one). The job:
 
 1. reads the notes with their starting hands (``pipeline.starting_hands``) and runs the LLM step of Phase 4
-   (``sheet.llm.frames.write_frames``) with GPT-6.1 Terra at medium (``sheet_llm.OpenAIComplete``; Sonnet 5.5 until
-   implementation 04-3, Phase 5);
+   (``sheet.llm.frames.write_frames``) with the model chosen, or the setting's (``llm_models``, the one table of the
+   models; ``sheet_llm`` holds the clients);
 2. keeps the sheet of the moment in memory (:class:`LiveRun`): the reference request first (the page shows the
-   sheet it had, its first segment being improved), then the algorithm with Sonnet's reference figure, then each
+   sheet it had, its first segment being improved), then the algorithm with the LLM's reference figure, then each
    window's decisions as it comes back (``assemble`` of the parts so far and the algorithm's parts for the rest);
 3. sends an ``event: sheet`` message on the job's stream at each of those moments, so the page reads the sheet again;
 4. at the end writes the hands of the sheet into ``notes.pmn`` (the numeric truth, plan section 3.7; the hands that
    were saved before go to the part's history first), with the notes the windows left out and added for the rules
    of simplicity (implementation 04, Phase 3: one step of undo, ``edits.record_run``), and the sheet into
    ``sheet.f1`` (:mod:`.store`). When no
-   window was written by Sonnet (no credits, no network), the hands stay as they were and ``sheet.f1`` keeps the
+   window was written by the LLM (no credits, no network), the hands stay as they were and ``sheet.f1`` keeps the
    algorithm's sheet, so the page does not start again by itself; it says nothing alarming (plan section 3.8).
 
 :func:`start_level` writes the song, or a range, again at a level (implementation 04-3, Phase 4): the plan of the
@@ -25,8 +25,8 @@ project, the level copy (``library.flow.level_copy``), made by the route before 
 of one (implementation 04, Phase 4: the other hand fixed). :func:`start_simplify` simplifies one hand, or both, over
 the whole song, batch after batch (implementation 04, Phase 4): the notes it leaves out and adds are one step of undo.
 
-The notes may change while Sonnet works (the Notes step). The job then stores what it wrote for the notes it read,
-without touching the hands, and the page lays it on the current notes (``build.reapply``). A part deleted while Sonnet
+The notes may change while the LLM works (the Notes step). The job then stores what it wrote for the notes it read,
+without touching the hands, and the page lays it on the current notes (``build.reapply``). A part deleted while the LLM
 works stops the requests at the next one (:class:`PartGone`): no credits are spent on a project that is gone.
 """
 
@@ -43,6 +43,7 @@ from typing import Any, Callable
 
 import numpy as np
 
+from aitu_backend import llm_models
 from aitu_backend.editing import history
 from aitu_backend.pmn import events_file
 from aitu_backend.pmn.notes import HAND_LEFT, HAND_RIGHT
@@ -71,7 +72,6 @@ from . import build, edits, runs, store
 __all__ = [
     "Busy",
     "LiveRun",
-    "MODELS",
     "available",
     "batch_plan",
     "commit",
@@ -89,11 +89,12 @@ __all__ = [
 KEY = "sheet-llm:{}"
 #: The name of the stream's messages (an ``EventSource`` listener of that name receives them).
 EVENT = "sheet"
-#: US dollars and seconds for the cost and the time the dialog shows before a run, measured with GPT-6.1 Terra at
-#: medium (implementation 04-3, Phase 5, on the user's song of 1.3 minutes: a whole run of 7 requests $0.064 in 102 s,
-#: Simplify of both hands in 3 batches $0.038 in 46 s, a stretch $0.024 in 26 s): the first request of a run writes
-#: the instructions into the cache, then each window of a whole run (the reference request too), each batch of
-#: Simplify (both hands count twice for the money, once for the time), a stretch.
+#: US dollars and seconds for the cost and the time the dialog shows before a run, measured with
+#: ``llm_models.MEASURED_WITH`` at medium (implementation 04-3, Phase 5, on the user's song of 1.3 minutes: a whole run
+#: of 7 requests $0.064 in 102 s, Simplify of both hands in 3 batches $0.038 in 46 s, a stretch $0.024 in 26 s): the
+#: first request of a run writes the instructions into the cache, then each window of a whole run (the reference
+#: request too), each batch of Simplify (both hands count twice for the money, once for the time), a stretch. Another
+#: model: times its ratio (``llm_models.ratio``).
 USD_CACHE = 0.01
 USD_WINDOW = 0.008
 USD_BATCH = 0.005
@@ -101,44 +102,20 @@ USD_STRETCH = 0.015
 SECONDS_WINDOW = 15
 SECONDS_BATCH = 15
 SECONDS_STRETCH = 30
-#: A level run uses GPT-6.1 Terra at medium effort (implementation 04-3, Phase 5: the user's decision of 2026-10-30,
-#: after the comparison with Sonnet 5.5 on 16 cases). Measured there: the plan of the song about $0.012 and 8 s; a
-#: batch with all its replies (1.9 on average) about $0.023 and 41 s. The estimate the dialog shows rounds them up.
-MODEL = "gpt-6.1-terra"
-EFFORT = "medium"
-LEVEL_MODEL, LEVEL_EFFORT = MODEL, EFFORT
+#: A level run, measured there too: the plan of the song about $0.012 and 8 s; a batch with all its replies (1.9 on
+#: average) about $0.023 and 41 s. The estimate the dialog shows rounds them up.
 USD_LEVEL_PLAN = 0.015
 USD_LEVEL_BATCH = 0.025
 SECONDS_LEVEL_PLAN = 10
 SECONDS_LEVEL_BATCH = 45
 
 
-#: The AI models the user may choose in Enhance with AI (the user, 2026-10-30; GPT-6.1 Terra when none is chosen):
-#: the name the dialog shows, the effort, and the cost and the time of a request compared with Terra, measured per
-#: passage of a level run in implementation 04-3, Phase 5 (Terra $0.041 and 1.0 min, Sol $0.072 and 1.0 min, Sonnet
-#: 5.5 at high effort $0.269 and 2.5 min).
-MODELS: dict[str, dict[str, Any]] = {
-    "gpt-6.1-terra": {"label": "GPT-6.1 Terra", "effort": "medium", "usd": 1.0, "time": 1.0},
-    "gpt-6.1-sol": {"label": "GPT-6.1 Sol", "effort": "medium", "usd": 1.8, "time": 1.0},
-    "claude-sonnet-5-5": {"label": "Sonnet 5.5", "effort": "high", "usd": 6.6, "time": 2.5},
-}
-
-
-def model_of(model: str | None) -> str:
-    """The model a run uses: the one chosen, or GPT-6.1 Terra. An unknown name is refused (``ValueError``)."""
-    if model is None:
-        return MODEL
-    if model not in MODELS:
-        raise ValueError(f"No AI model {model!r}.")
-    return model
-
-
 def available(model: str | None = None) -> bool:
-    """Whether the AI can be asked with ``model`` (GPT-6.1 Terra by default): its key (the environment, or ``.env``)
-    and its SDK installed."""
+    """Whether the LLM can be asked with ``model`` (the setting's by default, ``llm_models.resolve``): the key of its
+    provider (the environment; for OpenAI also ``.env``) and its SDK installed."""
     from aitu_backend.sheet_llm import _openai_key  # noqa: PLC0415
 
-    if model_of(model).startswith("claude"):
+    if llm_models.provider(llm_models.resolve(model)) == "anthropic":
         return bool(os.environ.get("ANTHROPIC_API_KEY")) and importlib.util.find_spec("anthropic") is not None
     return bool(_openai_key()) and importlib.util.find_spec("openai") is not None
 
@@ -149,16 +126,16 @@ def level_available(model: str | None = None) -> bool:
 
 
 def _complete(part_id: str, kind: str, model: str | None = None) -> Any:
-    """The ``complete`` function of a run: the model chosen (GPT-6.1 Terra at medium effort by default; OpenAI's with
-    one cache key per part and kind of run, Sonnet 5.5 at high effort)."""
-    name = model_of(model)
-    if name.startswith("claude"):
+    """The ``complete`` function of a run: the model chosen, or the setting's, at the table's effort
+    (``llm_models``); an OpenAI one with one cache key per part and kind of run."""
+    name = llm_models.resolve(model)
+    if llm_models.provider(name) == "anthropic":
         from aitu_backend.sheet_llm import ClaudeComplete  # noqa: PLC0415
 
-        return ClaudeComplete(model=name, effort=MODELS[name]["effort"])
+        return ClaudeComplete(model=name)
     from aitu_backend.sheet_llm import OpenAIComplete  # noqa: PLC0415 - the SDK only when it is used
 
-    return OpenAIComplete(model=name, effort=MODELS[name]["effort"], cache_key=f"{part_id}|{kind}")
+    return OpenAIComplete(model=name, cache_key=f"{part_id}|{kind}")
 
 
 def _level_complete(part_id: str, level: Any, model: str | None = None) -> Any:
@@ -200,7 +177,7 @@ def _begin(part_id: str) -> int:
 
 
 class PartGone(RuntimeError):
-    """The part was deleted while Sonnet wrote its sheet: the chain stops asking, nothing is stored."""
+    """The part was deleted while the LLM wrote its sheet: the chain stops asking, nothing is stored."""
 
 
 def job_of(part_id: str) -> jobs.Job | None:
@@ -227,7 +204,7 @@ def _submit(part_id: str, work: Callable[[BaseProgress], dict[str, Any]]) -> job
 
 @dataclass
 class LiveRun:
-    """The sheet of a part while Sonnet writes it."""
+    """The sheet of a part while the LLM writes it."""
 
     part_id: str
     #: The sheet the page showed when the job started, and its segments: what is drawn during the reference request.
@@ -284,7 +261,7 @@ class LiveRun:
         return text
 
     def segments(self) -> list[tuple[int, int, str]]:
-        """Each segment and its state: ``llm`` or ``algorithm`` (decided), ``working`` (at Sonnet), ``waiting``."""
+        """Each segment and its state: ``llm`` or ``algorithm`` (decided), ``working`` (at the LLM), ``waiting``."""
         with self._lock:
             if self.algo is None:
                 return [
@@ -323,7 +300,7 @@ def start(
     batches: int | None = None,
 ) -> jobs.Job:
     """Start the AI on a part, or return the run already going. ``complete`` makes the ``complete`` function
-    (tests); by default the ``model`` chosen (GPT-6.1 Terra) with the key of ``.env`` (:func:`_complete`).
+    (tests); by default the ``model`` chosen (or the setting's) with the key of ``.env`` (:func:`_complete`).
     ``batches``: the windows are that many, of about the same time (``split_windows``; the user's choice)."""
     existing = job_of(part_id)
     if existing is not None:
@@ -375,9 +352,9 @@ def start(
 
             def asked(system: str, messages: list[dict]) -> str:
                 _check_stop(part_id)
-                # A part deleted while Sonnet works (its project, or a check's temporary copy): no more requests.
+                # A part deleted while the LLM works (its project, or a check's temporary copy): no more requests.
                 if not pipeline.has_events(part_id):
-                    raise PartGone("The part was deleted while Sonnet wrote its sheet.")
+                    raise PartGone("The part was deleted while the AI wrote its sheet.")
                 return ask(system, messages)
 
             song = write_frames(
@@ -470,7 +447,7 @@ def commit(
             return
         record.runs = (earlier.runs if earlier is not None else 0) + (1 if record.enhanced else 0)
         if header.notes_revision != notes_revision:
-            # The notes changed while Sonnet worked: keep its reading, lay it on the new notes when drawn.
+            # The notes changed while the LLM worked: keep its reading, lay it on the new notes when drawn.
             record.hands_revision = None
             store.save(part_id, text, record)
             edits.forget(part_id)
@@ -805,7 +782,7 @@ def start_level(
                 "patterns": refs,
                 "strict": hard,
                 "words": " ".join(words.split()),
-                "model": model_of(model),
+                "model": llm_models.resolve(model),
                 "windows": [list(w) for w in windows],
                 "prompt": levels.LEVEL_VERSION,
                 "chords": chords.strip(),
@@ -1203,10 +1180,10 @@ def batch_plan(
     ``hand`` rewritten. ``batches`` (by default as many as the run makes today, one for a stretch, within ``min`` and
     ``max``) cut at about the same time (``split_windows``), which is what the run uses when the dialog sends that
     number. Also the cost and the minutes with ``model``: the run's estimate for the batches it makes today, half of
-    it following the number of requests and half the music, times the model's measured ratio to GPT-6.1 Terra."""
+    it following the number of requests and half the music, times the model's ratio (``llm_models.ratio``)."""
     from aitu_backend.sheet.llm import levels  # noqa: PLC0415
 
-    name = model_of(model)
+    name = llm_models.resolve(model)
     if hand not in HANDS:
         raise ValueError(f"No hand {hand!r}.")
     staffs = (1, 2) if HANDS[hand] is None or run == "all" else (HANDS[hand],)
@@ -1234,7 +1211,7 @@ def batch_plan(
     default = min(high, max(low, default or 1))
     count = min(high, max(low, batches or default))
     windows = split_windows(current, count, staffs=staffs, start=start, end=end)
-    ratio = MODELS[name]
+    usd_ratio, time_ratio = llm_models.ratio(name)
     scale = 0.5 + 0.5 * len(windows) / default
     return {
         "run": run,
@@ -1246,8 +1223,8 @@ def batch_plan(
         "min": low,
         "max": high,
         "seconds": round(span_s / max(1, len(windows)), 1),
-        "usd": round(usd * scale * ratio["usd"], 2),
-        "minutes": _minutes(seconds * scale * ratio["time"]),
+        "usd": round(usd * scale * usd_ratio, 2),
+        "minutes": _minutes(seconds * scale * time_ratio),
     }
 
 

@@ -5,7 +5,7 @@ model behind one function::
 
     complete(system: str, messages: list[{"role": "user" | "assistant", "content": str}]) -> str
 
-The product passes a function that calls its LLM (the Anthropic SDK with Sonnet 5.5 by default); the core imports no
+The product passes a function that calls its LLM (``aitu_backend.sheet_llm``, with the model of ``llm_models``); the core imports no
 SDK. One conversation per window: system = the frozen instructions; user = the window prompt; assistant = the reply
 (the F1 bars text in one fenced block); after a rejected answer, user = the feedback with the checker's problems, and
 the model writes the whole answer again. At most ``max_checks`` replies per window. A window that fails them all keeps

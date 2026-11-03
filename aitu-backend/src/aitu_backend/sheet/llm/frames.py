@@ -1044,7 +1044,7 @@ OTTAVA_LOWEST = 72  # C5: under 8va it is written C4, one ledger line below the 
 def join_ottavas(sheet: Sheet) -> int:
     """One 8va line instead of several short ones: two 8va notes of one hand less than ``OTTAVA_JOIN_MS`` apart, in
     the treble clef, with every note between them at C5 or higher (written no lower than C4 under the line), put
-    those notes under 8va too. Sonnet marks single high notes (clef.6), which draws one bracket per note. Returns
+    those notes under 8va too. The LLM marks single high notes (clef.6), which draws one bracket per note. Returns
     how many gaps were joined."""
     joined = 0
     for staff in (1, 2):

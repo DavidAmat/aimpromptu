@@ -18,14 +18,15 @@ The plan is [`04-6-plan.md`](04-6-plan.md), the brief [`04-6-prompt.md`](04-6-pr
 - [x] 1.5 Docs: `run-history.md`, `ai-levels.md` section 9, `paths-and-data.md`.
 - [x] 1.6 The whole backend suite on CPU (1347 passed, 3 skipped). Report: [`04-6-implementation-phase-1.md`](04-6-implementation-phase-1.md).
 
-# [ ] Phase 2: Part B, the backend
+# [x] Phase 2: Part B, the backend
 
-- [ ] 2.1 `config.llm_model` (`AITU_LLM_MODEL`), `.env.example`, `compose.yaml`.
-- [ ] 2.2 `llm_models.py`: the table, `default`, `choices`, `resolve`, `provider`, `effort`, `prices`, `ratio`.
-- [ ] 2.3 `sheet_llm` prices from the table, no crash without a price; `job`, `api/sheet.py` use the table.
-- [ ] 2.4 `GET /llm/costs` adds `models` and `model`.
-- [ ] 2.5 Comments and messages say "the LLM" / "the AI"; `ask_sonnet` renamed.
-- [ ] 2.6 Tests.
+- [x] 2.1 `config.llm_model` (`AITU_LLM_MODEL`), `.env.example`, `compose.yaml`.
+- [x] 2.2 `llm_models.py`: the table, `default`, `choices`, `resolve`, `provider`, `effort`, `prices`, `ratio`.
+- [x] 2.3 `sheet_llm` prices from the table, no crash without a price; `job`, `api/sheet.py` use the table.
+- [x] 2.4 `GET /llm/costs` adds `models` and `model`.
+- [x] 2.5 Comments and messages say "the LLM" / "the AI"; `ask_sonnet` renamed.
+- [x] 2.6 Tests (`test_llm_models.py`, 5 test files changed); the whole backend suite on CPU (1355 passed, 3
+  skipped). Report: [`04-6-implementation-phase-2.md`](04-6-implementation-phase-2.md).
 
 # [ ] Phase 3: Part B, the frontend
 

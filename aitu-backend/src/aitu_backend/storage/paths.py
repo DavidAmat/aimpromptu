@@ -176,14 +176,14 @@ def part_sheet_path(part_id: str) -> Path:
 
 
 def part_frames_path(part_id: str) -> Path:
-    """`sheet.f1` — the new piano sheet of the part: F1 frames text, written by Sonnet or the algorithm
+    """`sheet.f1` — the new piano sheet of the part: F1 frames text, written by the LLM or the algorithm
     (implementation 03, Phase 5). The hands stay in `notes.pmn` (plan section 3.7)."""
     return part_dir(part_id) / "sheet.f1"
 
 
 def part_frames_pending_path(part_id: str) -> Path:
-    """`sheet.pending` — a new transcription asks Sonnet to write the sheet: the Sheet step starts it by itself
-    (implementation 03, Phase 5). Removed when Sonnet starts."""
+    """`sheet.pending` — a new transcription asks the LLM to write the sheet: the Sheet step starts it by itself
+    (implementation 03, Phase 5). Removed when the LLM starts."""
     return part_dir(part_id) / "sheet.pending"
 
 

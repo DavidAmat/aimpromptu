@@ -37,6 +37,8 @@ services:
       AITU_MASTER_PASSWORD: ${AITU_MASTER_PASSWORD:-}
       HF_TOKEN: ${HF_TOKEN:-}
       HF_HUB_CACHE: /hf/hub
+      # The model of the LLM when the user chooses none; empty: the default of aitu_backend/config.py.
+      AITU_LLM_MODEL: ${AITU_LLM_MODEL:-}
       # The AI: required, the default model of every run is an OpenAI one. Until the container is created
       # again the backend reads it from .env.
       OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in .env (copy .env.example)}

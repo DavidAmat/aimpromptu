@@ -1,6 +1,6 @@
 """The model and the batches of Enhance with AI (the user, 2026-10-30): the batches of about the same time that the
 dialog shows on the sheet (``frames.split_windows``, ``job.batch_plan``, ``GET /sheet/{uuid}/llm/batches``), the model
-chosen (``job.MODELS``), and a stretch written in several batches. The AI is a stand-in: no request leaves the machine.
+chosen (``llm_models``), and a stretch written in several batches. The AI is a stand-in: no request leaves the machine.
 """
 
 from __future__ import annotations
@@ -8,6 +8,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from aitu_backend import config, llm_models
 from aitu_backend.part_sheet import job
 from aitu_backend.sheet.llm import frames as llm
 from aitu_backend.sheet.sheet.data import Note, Sheet
@@ -64,14 +65,15 @@ def test_the_cut_follows_the_hands_rewritten() -> None:
 def test_the_route_answers_the_batches_and_the_cost_of_each_model(client: TestClient, part: str) -> None:
     sheet(client, part)
     plain = client.get(f"/sheet/{part}/llm/batches", params={"run": "all"}).json()
-    assert plain["model"] == "gpt-6.1-terra" and plain["count"] == plain["default"] >= 1
+    assert plain["model"] == config.llm_model() and plain["count"] == plain["default"] >= 1
     assert plain["min"] <= plain["count"] <= plain["max"]
     more = client.get(f"/sheet/{part}/llm/batches", params={"run": "all", "batches": plain["count"] + 1}).json()
     assert more["count"] == plain["count"] + 1 and len(more["windows"]) == more["count"]
-    sonnet = client.get(
-        f"/sheet/{part}/llm/batches", params={"run": "all", "model": "claude-sonnet-5-5"}
-    ).json()
-    assert sonnet["usd"] > plain["usd"] and sonnet["minutes"] >= plain["minutes"]
+    terra, sonnet = (
+        client.get(f"/sheet/{part}/llm/batches", params={"run": "all", "model": m}).json()
+        for m in ("gpt-6.1-terra", "claude-sonnet-5-5")
+    )
+    assert sonnet["usd"] > terra["usd"] and sonnet["minutes"] >= terra["minutes"]
     cols = sorted({int(n["ref"].split(":")[0]) for n in sheet(client, part)["notes"]})
     stretch = client.get(
         f"/sheet/{part}/llm/batches",
@@ -112,9 +114,9 @@ def test_each_model_gets_its_client(monkeypatch: pytest.MonkeyPatch) -> None:
     assert type(sonnet).__name__ == "ClaudeComplete" and sonnet.model == "claude-sonnet-5-5" and sonnet.effort == "high"
     sol = job._complete("p", "stretch", "gpt-6.1-sol")
     assert type(sol).__name__ == "OpenAIComplete" and sol.model == "gpt-6.1-sol"
-    assert job._complete("p", "stretch").model == job.MODEL == "gpt-6.1-terra"
+    assert job._complete("p", "stretch").model == config.llm_model()
     with pytest.raises(ValueError):
-        job.model_of("gpt-9")
+        llm_models.resolve("gpt-9")
 
 
 # ------------------------------------------------------------------ a stretch in several batches

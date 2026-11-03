@@ -352,7 +352,7 @@ def get_raw_events(
     for event in stored.events:
         dropped = discarded.get(id(event))
         # Only the saved hands (implementation 03, Phase 5, plan section 3.5): the hand split is no longer shown
-        # before Sonnet decides the hands, so Notes Falling plays new notes without hand colours. Every part of the
+        # before the LLM decides the hands, so Notes Falling plays new notes without hand colours. Every part of the
         # database had saved hands when the split's labels stopped (2026-10-25).
         hand = event.hand
 

@@ -10,7 +10,7 @@ its first part, so the uuid of a piece is also the id of its project, and the ro
 ``projects.step``. Computing it reads the notes and the sheet of every part (about 25 ms a part), so
 it is stored: a write of a part's notes, sheet or timeline clears it
 (:func:`aitu_backend.storage.bundle.step_changed`), and the list works out again only the rows it
-finds cleared. A part whose transcription or video reading is running says so instead, and so does a part whose sheet Sonnet is
+finds cleared. A part whose transcription or video reading is running says so instead, and so does a part whose sheet the AI is
 writing.
 """
 
@@ -78,7 +78,7 @@ class ProjectRow(_Camel):
     mine: bool = True
     #: The lowest step the parts reached: ``audio``, ``notes``, ``hands`` or ``sheet``.
     step: str | None = None
-    #: ``transcribing`` or ``reading`` while a job works on a part, ``writing`` while Sonnet writes the sheet of a
+    #: ``transcribing`` or ``reading`` while a job works on a part, ``writing`` while the AI writes the sheet of a
     #: part (implementation 03, Phase 5), else ``None``.
     running: str | None = None
     #: The AI wrote the sheet of a part of it (implementation 03, Phase 5): the list shows its badge.

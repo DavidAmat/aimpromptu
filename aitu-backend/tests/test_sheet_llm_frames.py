@@ -470,7 +470,7 @@ def test_claude_complete_sends_the_cached_instructions_and_records_the_cost() ->
         return FakeStream(replies[len(sent) - 1])
 
     client = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(stream=stream)))
-    claude = ClaudeComplete(client=client)
+    claude = ClaudeComplete(model="claude-sonnet-5-5", client=client)
     assert claude("SYSTEM", [{"role": "user", "content": "window"}]) == "first"
     p = sent[0]
     assert p["model"] == "claude-sonnet-5-5" and p["thinking"] == {"type": "adaptive"}

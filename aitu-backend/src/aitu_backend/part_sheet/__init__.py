@@ -3,7 +3,7 @@
 * :mod:`.store`: ``sheet.f1``, the sheet as it was last written, with a record of how;
 * :mod:`.build`: the sheet of a part at any moment (stored, laid again on changed notes, or the algorithm) and its
   drawing for a page;
-* :mod:`.job`: Sonnet writing the sheet in the background, window by window;
+* :mod:`.job`: the LLM writing the sheet in the background, window by window;
 * :mod:`.edits` (Phase 6): editing the sheet (a hand moved in ``notes.pmn``, ``sheet.f1`` laid again on it), with
   undo and redo from the part's log; Phase 7 adds the reading edits, notes taken off the page and a stretch the AI
   wrote again;
