@@ -1,6 +1,6 @@
 # context/implementations
 
-Every piece of planned work this project has run. The work is in five groups, and each group is a
+Every piece of planned work this project has run. The work is in six groups, and each group is a
 numbered folder:
 
 - **`01-mvp/`** holds the nine implementations that built the MVP: one audio file to one piano
@@ -20,6 +20,9 @@ numbered folder:
   the bass clef, Hard's figures, the backend image; done 2026-11-03). **04 is closed** (2026-11-03).
 - **`05-documentation-refresh/`** brings every page of `context/` and `documentation/services/` up to date after 03
   and 04. Opened 2026-11-01, done 2026-11-02.
+- **`06-copy-this-style/`** builds **Copy this style** (the brief 04-4): a stretch the user edited by hand becomes the
+  reference for every similar passage of the song; also a Stop button for a transcription and a paste that works the
+  first time. Planned 2026-11-03.
 
 **Open a folder's own `README.md` first**, when it has one. It says whether that work is live or
 closed.
@@ -63,9 +66,16 @@ closed.
 |---|---|---|---|---|
 | 05 | [`05-documentation-refresh/`](05-documentation-refresh/README.md) | Every page of `context/` and `documentation/services/` checked against the app after 03, 04, 04-3 and 04-5, in 20 small phases for small AI models, run in parallel waves. Branch `feat/05-docs-refresh` | 2026-11-01 | **Done** (2026-11-02), merged into `master`. New: `context/ai/`, `sheet-page.md`, `folders-and-metadata.md`, `lab.md`, the three toolbox pages, `sheet-f1.md`, `sheet-drawing.md`, `ai-runs.md`, `ai-levels.md`. [`05-checklist.md`](05-documentation-refresh/05-checklist.md) is the status lookup; the reports name what disagrees with the code |
 
+## 06-copy-this-style: Copy this style
+
+| # | Folder | What it is | Opened | State |
+|---|---|---|---|---|
+| 06 | [`06-copy-this-style/`](06-copy-this-style/README.md) | **Copy this style** (the brief [`04-4-prompt.md`](04-app-enhancements/04-4-prompt.md)): the code finds the passages similar to a reference the user edited, the AI checks them and writes each again in the reference's way of writing, the first passage first; a Stop button for a transcription; the first paste. Branch `feat/06-copy-this-style` | 2026-11-03 | **In progress**: Phase 1 (the matcher) done, waiting for the user's look at its gallery. [`06-plan.md`](06-copy-this-style/06-plan.md) is the plan, [`06-checklist.md`](06-copy-this-style/06-checklist.md) the status lookup |
+
 ## How to read this folder
 
-- **"What is being built now?"** → nothing is open. Implementation 04 is done (2026-10-28): read
+- **"What is being built now?"** → implementation 06, **Copy this style**, is in progress (Phase 1 done, 2026-11-03):
+  [`06-copy-this-style/06-plan.md`](06-copy-this-style/06-plan.md). Before it, Implementation 04 is done (2026-10-28): read
   [`04-app-enhancements/04-context.md`](04-app-enhancements/04-context.md) (what it changed, its open points), its
   plan [`04-plan.md`](04-app-enhancements/04-plan.md) and checklist
   [`04-checklist.md`](04-app-enhancements/04-checklist.md). For any work on the sheet, read
