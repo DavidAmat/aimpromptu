@@ -30,14 +30,17 @@ None had dependents (`bundle.dependents`: passages, takes) or edit copies (`base
 `bundle.delete_project(id)`), each checked first to be a `vault` row with a title starting `TEMP 04-5`. After: each
 row gone and each folder gone.
 
-**Not deleted, waiting for the user**: `39d92dbe`. It is the only version of a song "20 de enero" (song 21108, artist
+**Deleted after the user's answer**: `39d92dbe`. It is the only version of a song "20 de enero" (song 21108, artist
 La Oreja de Van Gogh) of My library, in the user's folder **Karaoke Viernes** (folder 4, 8 songs), saved on
 2026-10-31 at 11:24; its undo log holds clefs set by hand (plan section 3.3). The app deletes a version of My library
 with `flow.delete_version` (which also turns its edit copies into projects of the vault) and a song with
 `flow.delete_song`, not `delete_project`; and deleting the last version leaves an empty song in the folder. The plan
 asked for `delete_project`, written when the copy was thought a project of My projects (plan section 8). The options
-for the user: delete the whole song (`delete_song`), delete the version only (the song "20 de enero" stays empty in
-Karaoke Viernes), or keep it.
+were: delete the whole song, delete the version only (the song stays empty in Karaoke Viernes), or keep it. **The
+user's answer (2026-11-03): delete the whole song.** Done with `flow.delete_song(21108, owner=1)` (what
+`DELETE /library/songs/{id}` does), after a check that the song still had the one version `39d92dbe`. After: the song,
+the project, its version row, its folder row and its folder gone; Karaoke Viernes holds 7 songs; the logs
+`ai-runs/*.json` of the copy (one `waiting`) went with it.
 
 Deleting `3ed5bde6` before `39d92dbe` was safe: `metadata.release_levels` reads the `level_of` column, which is empty
 for `39d92dbe`, and `bundle.dependents` reads `passageOf` and `takeOf` only.
@@ -48,9 +51,8 @@ for `39d92dbe`, and `bundle.dependents` reads `passageOf` and `takeOf` only.
 |---|---|---|
 | `7603ca29` | vault | the original song 20 de enero (never enhanced: `notes.pmn`, no `sheet.f1`; files last changed 2026-10-30) |
 | `d6211999`, `7b9a41e4`, `0df15e84`, `b13cbcde`, `946c21f2` | vault | the user's level copies, each with its `sheet.f1` |
-| `39d92dbe` | private | the sixth TEMP copy (above) |
 
-The only project left with a title starting `TEMP` is `39d92dbe`.
+No project with a title starting `TEMP` is left.
 
 Note for the plan: section 3.4 names six level copies of the user ("`7603ca29`, `d6211999`, ..."), but `7603ca29` is
 the original song, so the user's level copies are five.
@@ -74,8 +76,6 @@ are closed in Phase 5 (plan section 4.7).
 
 # 5. For the next phases
 
-- The step of the sixth copy waits for the user (checklist, Decisions). If the user says delete, it is a script like
-  the one of this phase, with `flow.delete_version(40, owner=1)` or `flow.delete_song(21108, owner=1)` in the
-  container. If kept, plan section 3.3 counts it among the parts with clefs set by hand (Phase 2 keeps them, Phase 3
-  checks them by name).
+- The parts with clefs set by hand (plan section 3.3) are now three: My Way (`c33860b5`) and two level copies of 20
+  de enero (`7b9a41e4`, `946c21f2`).
 - Phase 2 edits `src/`: do the checks of 1.1 again first (the backend reloads on each `.py` edit).

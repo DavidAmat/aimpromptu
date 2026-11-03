@@ -10,16 +10,16 @@ The plan is [`04-7-plan.md`](04-7-plan.md), the brief [`04-7-prompt.md`](04-7-pr
   too; on sheets written by the AI only the short stretches go; 8va in the bass clef allowed (the 03 rule ends);
   Hard refuses figures shorter than a fusa; Stop keeps the accepted batches; the six TEMP projects deleted; the
   user runs the image rebuild.
-- [ ] The sixth TEMP copy (Phase 1, plan section 8): `39d92dbe` is the only version of the song "20 de enero" in
-  My library (folder Karaoke Viernes). Delete the version, the whole song, or keep it: the user's word.
+- [x] The sixth TEMP copy (Phase 1, plan section 8): `39d92dbe` is the only version of the song "20 de enero" in
+  My library (folder Karaoke Viernes). The user (2026-11-03): delete the whole song.
 - [ ] The drawn passages of the clef rule (Phase 3): the user's ok, or a change of `CLEF_MIN` or of the step.
 
-# [p] Phase 1: Housekeeping (no edit of `src/`)
+# [x] Phase 1: Housekeeping (no edit of `src/`)
 
 - [x] 1.1 `ps aux`, `docker logs aimpromptu-backend-1`, no log `ai-runs/*.json` in `running`.
-- [p] 1.2 The six TEMP projects of plan section 3.4 deleted the app's way (`release_levels`, `delete_project`),
-  `39d92dbe` first; the original song and the level copies of 20 de enero still there. Five deleted; `39d92dbe`
-  waits for the user (Decisions).
+- [x] 1.2 The six TEMP projects of plan section 3.4 deleted the app's way (`release_levels`, `delete_project`),
+  `39d92dbe` first; the original song and the level copies of 20 de enero still there. The five of the vault
+  deleted; `39d92dbe` deleted with its song (`flow.delete_song`, the user's answer).
 - [x] 1.3 The two Transkun tests build the engine with `device="cpu"`; the whole backend suite on CPU, 0 failed
   (1350 passed, 1 skipped).
 - [x] 1.4 `04-context.md` 8.5: the line on the octaves of the user's words closed (decided 2026-10-31, in the prompt).

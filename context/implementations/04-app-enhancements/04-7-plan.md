@@ -271,6 +271,5 @@ Phases 1 and 4 are small; one agent may do 1 and 2 together, or 4 and 5. Phase 3
   (layer `private`) as the only version (`easy`, version 40) of a song "20 de enero" (song 21108, artist La Oreja de
   Van Gogh) in the user's folder **Karaoke Viernes**, saved on 2026-10-31 at 11:24, and its undo log holds clefs set
   by hand. The app deletes a version of My library with `flow.delete_version` (or the song with `flow.delete_song`),
-  not `delete_project`. It waits for the user's word (checklist, Decisions); the five copies of the Personal Vault
-  are deleted. Deleting them did not touch `39d92dbe`: its `levelOf` is in `origin` only, and `release_levels` and
+  not `delete_project`. The user's answer (2026-11-03): delete the whole song; done with `flow.delete_song`. Deleting them did not touch `39d92dbe`: its `levelOf` is in `origin` only, and `release_levels` and
   `bundle.dependents` do not read it.
