@@ -137,7 +137,7 @@ on 7 Years, and the Enhance with AI dialog with Simplify left, right or both.
 **04-3** (2026-10-29 to 31): folders, the pills and the metadata of projects, frame marks, the levels (the level
 copy, the catalog of patterns, the level run), one model for every AI run. **04-5** (2026-10-31 to 11-01): Strict and
 Suggested patterns, the rules and explanations of a run, the first batch first, the history of AI runs, the chords of
-the song. **04-4** is a brief only, not built.
+the song. **04-4** is a brief only, left for a later, larger implementation plan (the user, 2026-11-03).
 
 | File | Description |
 |------|-------------|
@@ -149,7 +149,7 @@ the song. **04-4** is a brief only, not built.
 | [implementations/04-app-enhancements/04-checklist.md](implementations/04-app-enhancements/04-checklist.md) | THE status lookup for this implementation, and the decisions |
 | `implementations/04-app-enhancements/04-implementation-phase-N.md` | One report per phase (Phase 1: the sheet page; Phase 2: the decoration-note rule, and its gallery in `gallery/phase-2/`; Phase 3: prompt version 6 and 7 Years, and its gallery in `gallery/phase-3/`; Phase 4: the Enhance with AI dialog and Simplify, and its gallery in `gallery/phase-4/`; Phase 5: the documentation and closing) |
 | `implementations/04-app-enhancements/04-3-prompt.md`, [04-3-plan.md](implementations/04-app-enhancements/04-3-plan.md), [04-3-checklist.md](implementations/04-app-enhancements/04-3-checklist.md), `04-3-implementation-phase-N.md` | 04-3: the brief, the plan, the status lookup and one report per phase (1, 2, 2b, 3, 4, 5; Phase 6, the documentation, done by 05) |
-| `implementations/04-app-enhancements/04-4-prompt.md` | 04-4: the brief "Copy this style"; not built |
+| `implementations/04-app-enhancements/04-4-prompt.md` | 04-4: the brief "Copy this style"; not built, left for a later, larger implementation plan (the user, 2026-11-03) |
 | [implementations/04-app-enhancements/04-6-prompt.md](implementations/04-app-enhancements/04-6-prompt.md), [04-6-plan.md](implementations/04-app-enhancements/04-6-plan.md), [04-6-checklist.md](implementations/04-app-enhancements/04-6-checklist.md), `04-6-implementation-phase-N.md` | 04-6: a run marked stopped when the backend stops, the model of the AI in one setting, Simplify removed; the brief, the plan, the status lookup and one report per phase (1 to 5). Done 2026-11-03 |
 | `implementations/04-app-enhancements/04-5-prompt.md`, [04-5-plan.md](implementations/04-app-enhancements/04-5-plan.md), [04-5-checklist.md](implementations/04-app-enhancements/04-5-checklist.md), [04-5-implementation-phases-1-to-4.md](implementations/04-app-enhancements/04-5-implementation-phases-1-to-4.md) | 04-5: the brief, the plan, the status lookup and the report of Phases 1 to 4 |
 
