@@ -208,8 +208,10 @@ never ran; the refresh does that work, and 04-5's task 5.2 is closed the same wa
 
 ## 8.5 Open points
 
-- **The octaves of the user's words** (04-5 report, finding 1): the AI follows the words literally, so "Fa4-La4-Do5"
-  is drawn as F3-A3-C4. One numbering for the user, or a prompt rule: the user decides.
+- (Closed by 04-7, Phase 1: **the octaves of the user's words**, 04-5 report, finding 1. Decided by the user on
+  2026-10-31, [`04-5-checklist.md`](04-5-checklist.md) Decisions: the octave numbers in the user's words are only
+  examples, and the AI chooses what reads best on the staff. The level prompt says it
+  (`sheet/llm/prompt/levels/shared.md`, "The register"). No code.)
 - **Hard and the figure check**: `LIMITS["hard"]` has `shortest` 64, so the figure check never fires at hard (the
   Phase 12 report of the refresh). Please confirm that this is intended.
 - **A Stop keeps the batches it accepted** (the level run's page says so). If the user expects a Stop to discard the run,

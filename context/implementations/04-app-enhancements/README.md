@@ -18,7 +18,10 @@ The brief is [`04-1-prompt.md`](04-1-prompt.md), the plan is [`04-plan.md`](04-p
 | [`04-1-prompt.md`](04-1-prompt.md) | The brief, in the user's own words, with the answers of the first discussion (2026-10-27) at its end, and the brief of the dialog (after the Phase 3 gallery) |
 | [`04-2-prompt.md`](04-2-prompt.md) | The second brief: the new logo, traced to SVG, and the logo as the AI mark (branch `feat/04-logo`) |
 | [`04-6-prompt.md`](04-6-prompt.md) | 04-6, the brief (2026-11-02) and the user's answers (2026-11-03): a level run marked stopped when the backend stops, the model of the AI in one setting, the dead Simplify code removed |
-| [`04-7-prompt.md`](04-7-prompt.md) | 04-7, the brief (2026-11-03): the open points of 04 (the clef of the left hand, Hard's figure check, a Stop of a level run, the copies of 20 de Enero, the backend image, the Transkun tests on the CPU); not started |
+| [`04-7-prompt.md`](04-7-prompt.md) | 04-7, the brief (2026-11-03): the open points of 04 (the clef of the left hand, Hard's figure check, a Stop of a level run, the copies of 20 de Enero, the backend image, the Transkun tests on the CPU), with the user's answers in [`04-7-plan.md`](04-7-plan.md) section 2 |
+| [`04-7-plan.md`](04-7-plan.md) | 04-7, the plan: five phases on `feat/04-7-open-points` (the clef rule: a passage of 5 columns, 8va in the bass clef) |
+| [`04-7-checklist.md`](04-7-checklist.md) | 04-7, the status of every task |
+| [`04-7-implementation-phase-1.md`](04-7-implementation-phase-1.md) | 04-7 Phase 1: five TEMP projects deleted (the sixth waits for the user), the Transkun tests on the CPU, the octaves line of 8.5 closed |
 | [`04-6-plan.md`](04-6-plan.md) | 04-6, the plan: five phases on `feat/04-6-run-safety-and-model` |
 | [`04-6-checklist.md`](04-6-checklist.md) | 04-6, the status of every task |
 | [`04-6-implementation-phase-1.md`](04-6-implementation-phase-1.md) | 04-6 Phase 1: a run left `running` marked stopped at the next start (`runs.close_unfinished`), the note in the run's detail |

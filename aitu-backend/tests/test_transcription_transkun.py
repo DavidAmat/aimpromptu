@@ -30,6 +30,10 @@ from aitu_backend.transcription.engine import (
 INSTALLED = engine_installed("transkun")
 needs_transkun = pytest.mark.skipif(not INSTALLED, reason="transkun is not installed")
 
+# The engines below are built on the CPU: the container sets AITU_DEVICE=cuda, and the suite runs
+# with no GPU (another project often holds it), where loading the weights on "cuda" fails. A
+# transcription still runs on the device of config.device() (implementation 04-7, Phase 1).
+
 
 def test_transkun_is_registered_whether_or_not_it_is_installed() -> None:
     """It has to appear in the dropdown to be installable-and-then-selectable."""
@@ -59,7 +63,7 @@ def test_the_class_is_the_one_registered() -> None:
 
 @needs_transkun
 def test_it_satisfies_the_engine_protocol() -> None:
-    engine = TranskunEngine()
+    engine = TranskunEngine(device="cpu")
     assert isinstance(engine, TranscriptionEngine)
     # The optional progress extension the pipeline probes for with getattr.
     assert callable(engine.transcribe_with_progress)
@@ -70,4 +74,4 @@ def test_a_missing_file_is_a_file_error_not_a_model_error() -> None:
     from pathlib import Path
 
     with pytest.raises(FileNotFoundError):
-        TranskunEngine().transcribe(Path("/definitely/not/here.wav"))
+        TranskunEngine(device="cpu").transcribe(Path("/definitely/not/here.wav"))
