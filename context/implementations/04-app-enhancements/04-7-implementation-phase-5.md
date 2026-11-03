@@ -4,7 +4,7 @@ Plan [`04-7-plan.md`](04-7-plan.md) sections 4.6, 4.7 and 5; checklist [`04-7-ch
 Branch `feat/04-7-open-points`. 2026-11-03. Done in the same session as Phases 3 and 4 (the plan allows 4 and 5
 together).
 
-State: the docs are done; **the image rebuild waits for the user** (checklist 5.5), then 04 is closed.
+State: done (2026-11-03). The user rebuilt the image; 04 is closed.
 
 # 1. The six points of 04 (plan section 1)
 
@@ -35,9 +35,9 @@ State: the docs are done; **the image rebuild waits for the user** (checklist 5.
 names it does not find are branch names and the history of removed code (Simplify), there before 04-7.
 
 The state lines of [`README.md`](README.md), [`../README.md`](../README.md) and [`../../00-index.md`](../../00-index.md)
-are **not changed yet**: they say 04 is closed only after the image is rebuilt and checked (checklist 5.5).
+say 04 is closed, written after the image was rebuilt and checked (section 3).
 
-# 3. The image (needed now: HUMAN INTERVENTION of the closing message)
+# 3. The image
 
 Checked on 2026-11-03: the image `aimpromptu-backend:dev` (`000e5ad1e0f3`, built 2026-10-25) has no `openai`
 (`docker run --rm --entrypoint python aimpromptu-backend:dev -c "import openai"`: `ModuleNotFoundError`). The running
@@ -58,3 +58,11 @@ checklist 5.5; the state lines of the three READMEs: 04 closed.
 
 - Merge `feat/04-7-open-points` into `master` at the user's ok (no PR).
 - 04-4 ("Copy this style") is a later implementation plan.
+
+# 5. After the rebuild (2026-11-03)
+
+- The user ran the rebuild. Image `aimpromptu-backend:dev` `66186ec78869` (2026-11-03 14:17); `docker run --rm
+  --entrypoint python aimpromptu-backend:dev -c "import openai"`: openai 3.41.0.
+- The backend runs from the new image: "Application startup complete", `/health` 200.
+- The whole backend suite on the CPU in the new container: **1367 passed, 1 skipped, 0 failed**.
+

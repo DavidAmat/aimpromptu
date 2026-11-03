@@ -59,7 +59,7 @@ The plan is [`04-7-plan.md`](04-7-plan.md), the brief [`04-7-prompt.md`](04-7-pr
 - [x] 4.4 The backend suite on CPU (1367 passed, 1 skipped). Report:
   [`04-7-implementation-phase-4.md`](04-7-implementation-phase-4.md).
 
-# [p] Phase 5: The docs and the closing
+# [x] Phase 5: The docs and the closing
 
 - [x] 5.1 The docs of plan section 4.7 (`sheet/README.md`, `stretch.md`, `annotations-stretches.md`,
   `level-run.md`, `run-history.md`, `ai-levels.md`).
@@ -67,5 +67,5 @@ The plan is [`04-7-plan.md`](04-7-plan.md), the brief [`04-7-prompt.md`](04-7-pr
   line.
 - [x] 5.3 `check-links.py`, `check-names.py` on each doc changed.
 - [x] 5.4 The closing report [`04-7-implementation-phase-5.md`](04-7-implementation-phase-5.md), with the HUMAN INTERVENTION of the image rebuild.
-- [ ] 5.5 After the user's rebuild: `import openai` in a fresh container; 9.3 closed; the state lines of
+- [x] 5.5 After the user's rebuild (2026-11-03; openai 3.41.0; the suite in the new container 1367 passed): `import openai` in a fresh container; 9.3 closed; the state lines of
   `README.md`, `../README.md`, `../../00-index.md`: 04 closed.

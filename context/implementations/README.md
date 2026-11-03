@@ -16,7 +16,8 @@ numbered folder:
 - **`04-app-enhancements/`** polishes the sheet page and the sheet the AI writes, after 03. Opened
   2026-10-27, done 2026-10-28; then 04-3 (folders, metadata, the levels; done 2026-10-31) and 04-5 (the patterns
   Strict and Suggested, the history of AI runs; done 2026-11-01), and 04-6 (a run left after a crash, the model in one
-  setting, Simplify removed; done 2026-11-03).
+  setting, Simplify removed; done 2026-11-03), and 04-7 (the open points of 04: the clef rule of 5 columns with 8va in
+  the bass clef, Hard's figures, the backend image; done 2026-11-03). **04 is closed** (2026-11-03).
 - **`05-documentation-refresh/`** brings every page of `context/` and `documentation/services/` up to date after 03
   and 04. Opened 2026-11-01, done 2026-11-02.
 
@@ -54,7 +55,7 @@ closed.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 04 | [`04-app-enhancements/`](04-app-enhancements/README.md) | The sheet page (Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag, the hidden floating toolbox back) and the AI's sheet (a new decoration-note rule on every sheet, prompt version 6 with simplicity and the amateur pianist rule, run on 7 Years; the Enhance with AI dialog with Simplify left / right / both). One branch per phase, `feat/04-phase-N` | 2026-10-27 | **Done** (2026-10-28). Phases 1 to 5 done, each merged into `master` after the user's check; the new logo (`04-2-prompt.md`) on `feat/04-logo`. **04-3** (folders and metadata, frame marks, the levels, one model for every run) done 2026-10-31; **04-5** (Strict and Suggested, the rules and explanations of a run, the first batch first, the history of AI runs, the chords of the song) done and merged 2026-11-01; their documentation by 05. **04-4** is a brief only, left for a later, larger implementation plan (the user, 2026-11-03). **04-6** (a run left after a crash, the model of the AI in one setting, Simplify removed) done 2026-11-03. [`04-context.md`](04-app-enhancements/04-context.md) is the summary for later work, [`04-checklist.md`](04-app-enhancements/04-checklist.md) the status lookup |
+| 04 | [`04-app-enhancements/`](04-app-enhancements/README.md) | The sheet page (Command + scroll zoom, the AI symbol, the header toolbox, a cursor to drag, the hidden floating toolbox back) and the AI's sheet (a new decoration-note rule on every sheet, prompt version 6 with simplicity and the amateur pianist rule, run on 7 Years; the Enhance with AI dialog with Simplify left / right / both). One branch per phase, `feat/04-phase-N` | 2026-10-27 | **Done** (2026-10-28). Phases 1 to 5 done, each merged into `master` after the user's check; the new logo (`04-2-prompt.md`) on `feat/04-logo`. **04-3** (folders and metadata, frame marks, the levels, one model for every run) done 2026-10-31; **04-5** (Strict and Suggested, the rules and explanations of a run, the first batch first, the history of AI runs, the chords of the song) done and merged 2026-11-01; their documentation by 05. **04-4** is a brief only, left for a later, larger implementation plan (the user, 2026-11-03). **04-6** (a run left after a crash, the model of the AI in one setting, Simplify removed) done 2026-11-03. **04-7** (the open points of 04: the clef rule, Hard's figures, Stop, the copies, the image, the Transkun tests) done 2026-11-03: **04 is closed**. [`04-context.md`](04-app-enhancements/04-context.md) is the summary for later work, [`04-checklist.md`](04-app-enhancements/04-checklist.md) the status lookup |
 
 ## 05-documentation-refresh: the documentation brought up to date
 

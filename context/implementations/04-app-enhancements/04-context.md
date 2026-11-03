@@ -255,9 +255,8 @@ Branch `feat/04-6-run-safety-and-model`, merged into `master` only at the user's
 
 ## 9.3 Open points
 
-- **The fresh backend image has no `openai`** (Phase 4 report, section 3): the image of 2026-10-25 was built before
-  `openai` entered `pyproject.toml`; the running container has it installed by hand. `docker compose build backend`
-  fixes it, at a time the user chooses.
+- (Closed by 04-7, Phase 5: **the fresh backend image had no `openai`**. The user rebuilt it on 2026-11-03
+  (`docker compose build backend`, image `66186ec78869`); `import openai` works in a fresh container (3.41.0).)
 - (Closed by 04-7, Phase 1: **two Transkun tests failed on the CPU**. The tests build the engine with `device="cpu"`;
   the engine's code did not change.)
 - A level copy made just before a crash stays as a project of My projects, holding the song as it was (plan section
@@ -311,8 +310,7 @@ A change of the clef rule changes every stored sheet at once (section 4): measur
 
 ## 10.4 Open points
 
-- The six-TEMP and Transkun points are closed (8.5, 9.3). The fresh backend image without `openai` (9.3) is left to
-  the user: a rebuild at a time the user chooses (the 04-7 closing report).
+- The six-TEMP, Transkun and image points are closed (8.5, 9.3); the image was rebuilt by the user on 2026-11-03.
 - Found in Phase 3, not changed (the user's ok): a 5-column treble stretch of a stored level sheet (20 de enero,
   `946c21f2`) holds a G2 with eight ledger lines; the rule counts columns and keeps any passage of 5.
 
