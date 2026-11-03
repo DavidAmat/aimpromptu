@@ -18,7 +18,8 @@ later (fast runs up and down with big jumps in both hands), so hard keeps the ha
   run, and lands on the melody.
 - Decoration notes where the song has an ornament on a melody note.
 - The checker allows at most 3 right-hand notes in a column on figures shorter than a negra and 4 on a negra or
-  longer, within 12 semitones.
+  longer, within 12 semitones; and no figure shorter than a fusa for a new note, in either hand (one or two quicker
+  notes just before a longer note are drawn by the app as decoration notes, and they are allowed).
 
 ## The left hand at hard
 

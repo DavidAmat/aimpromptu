@@ -50,21 +50,22 @@ The plan is [`04-7-plan.md`](04-7-plan.md), the brief [`04-7-prompt.md`](04-7-pr
 - [x] 3.3 The user looks at the drawn passages (Decisions above): ok, no change.
 - [x] 3.4 Report: [`04-7-implementation-phase-3.md`](04-7-implementation-phase-3.md).
 
-# [ ] Phase 4: Hard's figure check, Stop
+# [x] Phase 4: Hard's figure check, Stop
 
-- [ ] 4.1 `LIMITS["hard"]` `shortest` 32; a decoration note does not fail a batch; the level prompt if it says
+- [x] 4.1 `LIMITS["hard"]` `shortest` 32; a decoration note does not fail a batch; the level prompt if it says
   otherwise (`prompt/levels/VERSION` 8).
-- [ ] 4.2 Tests with stand-ins: a semifusa at Hard refused, a fusa and a decoration note accepted.
-- [ ] 4.3 Stop keeps the accepted batches: a comment in `job._level_work`.
-- [ ] 4.4 The backend suite on CPU. Report: `04-7-implementation-phase-4.md`.
+- [x] 4.2 Tests with stand-ins: a semifusa at Hard refused, a fusa and a decoration note accepted.
+- [x] 4.3 Stop keeps the accepted batches: a comment in `job._level_work`.
+- [x] 4.4 The backend suite on CPU (1367 passed, 1 skipped). Report:
+  [`04-7-implementation-phase-4.md`](04-7-implementation-phase-4.md).
 
-# [ ] Phase 5: The docs and the closing
+# [p] Phase 5: The docs and the closing
 
-- [ ] 5.1 The docs of plan section 4.7 (`sheet/README.md`, `stretch.md`, `annotations-stretches.md`,
+- [x] 5.1 The docs of plan section 4.7 (`sheet/README.md`, `stretch.md`, `annotations-stretches.md`,
   `level-run.md`, `run-history.md`, `ai-levels.md`).
-- [ ] 5.2 `04-context.md` 8.5 and 9.3 closed, section 10; `03-context.md` section 2's row; the 04-5 checklist's clef
+- [x] 5.2 `04-context.md` 8.5 and 9.3 closed, section 10; `03-context.md` section 2's row; the 04-5 checklist's clef
   line.
-- [ ] 5.3 `check-links.py`, `check-names.py` on each doc changed.
-- [ ] 5.4 The closing report `04-7-implementation-phase-5.md`, with the HUMAN INTERVENTION of the image rebuild.
+- [x] 5.3 `check-links.py`, `check-names.py` on each doc changed.
+- [x] 5.4 The closing report [`04-7-implementation-phase-5.md`](04-7-implementation-phase-5.md), with the HUMAN INTERVENTION of the image rebuild.
 - [ ] 5.5 After the user's rebuild: `import openai` in a fresh container; 9.3 closed; the state lines of
   `README.md`, `../README.md`, `../../00-index.md`: 04 closed.

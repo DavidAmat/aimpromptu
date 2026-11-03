@@ -60,8 +60,10 @@ Then three tabs. A tab with a dot (an orange dot) means that this stretch alread
 ([rendering.md](rendering.md)).
 
 **Octave**: the chips **8va**, **15ma**, **8vb** and **15mb** for each hand in scope. A chip pressed again, or 🗑, takes
-the octave line off. The chips are off where the hand plays nothing in the stretch. A bass clef takes no 8va or 15ma:
-the chip says to write the stretch in the treble clef first.
+the octave line off. The chips are off where the hand plays nothing in the stretch. A bass clef takes an 8va
+(implementation 04-7: a short high stretch of the left hand stays in the bass clef), not a 15ma: the 15ma chip is off
+there and says why. A clef set with the **Clef** chips is kept by the app's clef rule (even a stretch of fewer than 5
+columns); **Clefs by the rule** gives the stretch back to the rule.
 
 Not on the new sheet: the spacing of a stretch, its speed, and an octave line that is hidden or dragged on the page.
 The user dropped them when the toolbox was rebuilt (implementation 03, Phase 7). Trills and small notes are in the note

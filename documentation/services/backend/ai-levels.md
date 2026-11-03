@@ -172,8 +172,9 @@ The concept is in [context/ai/level-run.md](../../../context/ai/level-run.md). T
   `_far_above` for an artifact, `MELODY_DROP_SHARE`), the harmony (`chords`, the bass of each chord, `OUTSIDE_SHARE`,
   `_guide_column` for the guide's chords), the notes per column and the span (`LIMITS`), the hand motion (`measure`,
   `moves_q`, `reach`), the patterns declared (`read_declared`, the Strict rule, `KEEP`, `FREE`), the simple stretches
-  and the onsets (`simple_stretches`, `_plain_cols`, `RHYTHM_SHARE`), the grid (`Grid.on_grid`), the steady rhythm
-  (`steady` of `Limits`), and the explain line.
+  and the onsets (`simple_stretches`, `_plain_cols`, `RHYTHM_SHARE`), the grid (`Grid.on_grid`), the shortest figure
+  (`shortest` of `Limits`: 16 at easy and medium, 32 at hard since 04-7; at hard a note the app draws as a decoration
+  note, found by `drawn`, is left out), the steady rhythm (`steady` of `Limits`), and the explain line.
 - `read_declared(reply)` reads `# pattern`, `# not melody`, `# artifact`, `# explain:` and `# rule:` lines (`Declared`).
 - `write_level(current, complete, grid, *, level, staffs, patterns, sid, words, windows, plan, span, max_checks, on_plan,
   on_batch, strict, rules, on_talk, written_before, done_before, first_index, count, guide)` runs the plan (unless
