@@ -12,7 +12,8 @@ Branch `feat/06-copy-this-style` (from `master` at `27918ec`). No AI request, no
 - The gallery: [`gallery/phase-1/index.html`](gallery/phase-1/index.html), 12 references, 74 drawings, served at
   `http://192.168.0.112:8099/06/phase-1/` (a link `06` in the 04 gallery folder, which the 8099 server serves; the link
   is in `.git/info/exclude`).
-- Open: the user's look at the gallery (the Decisions of the checklist).
+- The user looked at the gallery (2026-11-03, "okey! revised! continue"): `THRESHOLD` 0.6 and the shifts searched, as
+  recommended.
 
 # 2. The matcher (`sheet/style/match.py`)
 

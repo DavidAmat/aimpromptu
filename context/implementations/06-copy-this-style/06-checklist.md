@@ -10,11 +10,13 @@ branch, `feat/06-copy-this-style`. Status letters: `[x]` complete, `[p]` in prog
   them as the first request of the run; a list in the dialog and on the sheet, with ticks; everything is copied,
   fingers only on the same note; the first passage first, one step of undo and Revert; 1.1 and 1.2 are part of 06, as
   the last phases; two songs (7 Years and a piano cover), the user edits the reference.
-- [p] The gallery of the matcher (Phase 1): the threshold, the weights, the length range, `shift` searched or not.
+- [x] The gallery of the matcher (Phase 1): the threshold, the weights, the length range, `shift` searched or not.
+  The user looked at the gallery (2026-11-03, "okey! revised! continue", no objection): the recommended options,
+  `THRESHOLD` 0.6 and the shifts searched; the weights and the lengths as they are.
 - [ ] The copies of the real test (Phase 4): the prompt and the check as they are, or changed.
 - [ ] The temporary copies of Phase 4 deleted (Phase 7, at the user's word).
 
-# [p] Phase 1: The matcher, the study and the gallery
+# [x] Phase 1: The matcher, the study and the gallery
 
 - [x] 1.1 `ps aux`, `docker logs aimpromptu-backend-1`, no log `ai-runs/*.json` in `running`; the branch
   `feat/06-copy-this-style` from `master`.

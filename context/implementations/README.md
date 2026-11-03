@@ -70,7 +70,7 @@ closed.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 06 | [`06-copy-this-style/`](06-copy-this-style/README.md) | **Copy this style** (the brief [`04-4-prompt.md`](04-app-enhancements/04-4-prompt.md)): the code finds the passages similar to a reference the user edited, the AI checks them and writes each again in the reference's way of writing, the first passage first; a Stop button for a transcription; the first paste. Branch `feat/06-copy-this-style` | 2026-11-03 | **In progress**: Phase 1 (the matcher) done, waiting for the user's look at its gallery. [`06-plan.md`](06-copy-this-style/06-plan.md) is the plan, [`06-checklist.md`](06-copy-this-style/06-checklist.md) the status lookup |
+| 06 | [`06-copy-this-style/`](06-copy-this-style/README.md) | **Copy this style** (the brief [`04-4-prompt.md`](04-app-enhancements/04-4-prompt.md)): the code finds the passages similar to a reference the user edited, the AI checks them and writes each again in the reference's way of writing, the first passage first; a Stop button for a transcription; the first paste. Branch `feat/06-copy-this-style` | 2026-11-03 | **In progress**: Phase 1 (the matcher) done; Phase 2 (the run in the backend). [`06-plan.md`](06-copy-this-style/06-plan.md) is the plan, [`06-checklist.md`](06-copy-this-style/06-checklist.md) the status lookup |
 
 ## How to read this folder
 

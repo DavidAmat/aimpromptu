@@ -368,7 +368,8 @@ this style: an agent may do them at any time after Phase 1, but not while a brow
   the rhythm, the **contour** (the steps of the line, the same in any key), the pitch classes and the harmony (section
   4.1 named the contour inside "the shape of the pitches"). First numbers: `WEIGHTS` rhythm 0.3, contour 0.25, classes
   0.2, harmony 0.25; `THRESHOLD` 0.6; `LENGTHS` 0.8 to 1.25; `SHIFTS` -5 to +6 with `SHIFT_COST` 0.03; `STEP_COST` 0.3;
-  `STYLE_MAX` 12. Waiting for the user's look at the gallery.
+  `STYLE_MAX` 12. The user looked at the gallery (2026-11-03, "okey! revised! continue", no objection to the two
+  recommendations): `THRESHOLD` stays 0.6 and the shifts stay searched; the other numbers as they are.
 - The notes marked removed count as played in the reference **and in every passage** (section 3.4 said the
   reference): the comparison stays fair where a run of the AI left notes out of some passages.
 - `similar` takes the song's grid and chords (`grid=`, `harmony=`): the grid costs 0.3 to 0.6 s, the matcher 3 to 25

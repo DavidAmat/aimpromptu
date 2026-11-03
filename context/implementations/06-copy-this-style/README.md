@@ -1,6 +1,6 @@
 # 06-copy-this-style
 
-**State: Phase 1 done (2026-11-03), waiting for the user's look at its gallery.** The user selects a stretch, edits it by hand, and **Copy this style**
+**State: Phase 1 done (2026-11-03, the gallery seen by the user); Phase 2 in progress.** The user selects a stretch, edits it by hand, and **Copy this style**
 (a new tab of **Enhance with AI**) writes every similar passage of the song again in the reference's way of writing.
 Also two small requests of the same brief: a Stop button for a transcription, and a paste that works the first time.
 One implementation, so its files sit at the top of the group folder. Branch `feat/06-copy-this-style`.
