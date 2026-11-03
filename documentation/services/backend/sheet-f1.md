@@ -80,7 +80,7 @@ reads it into a `Stored` (the record and the text). `Record` holds:
 | `runs` | How many AI runs wrote this sheet. |
 | `edited` | The user changed the reading (a figure, a finger, a beam, a clef). |
 | `decided` | The sheet holds decisions (the AI's or the user's) that laying again must keep. |
-| `stretches`, `simplified` | The stretches written again with the user's words, and the Simplify runs (each with its cost). |
+| `stretches` | The stretches written again with the user's words (each with its cost). |
 | `key` | The armadura the algorithm uses, when the song or the user chose it. |
 | `added`, `leftOut` | The notes a whole AI run added to the notes or left out of them. |
 | `legacy` | What the migration carried from an old `sheet.json` (section 8), by kind. |

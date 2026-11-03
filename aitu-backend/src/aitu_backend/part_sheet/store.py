@@ -13,7 +13,7 @@ numeric truth, plan section 3.7): the file is only the reading of the notes, rul
 
 The record (:class:`Record`):
 
-* ``source``: ``llm`` (every window by Sonnet), ``mixed`` (some windows kept the algorithm), ``algorithm`` (none);
+* ``source``: ``llm`` (every window by the LLM), ``mixed`` (some windows kept the algorithm), ``algorithm`` (none);
 * ``handsRevision``: the ``handsRevision`` of ``notes.pmn`` the sheet was written for. Another value means the
   notes or the hands changed since: the sheet is then laid again on the current notes (:mod:`.build`);
 * ``windows``: the segments of the piece-by-piece view, ``[first frame, end frame, "llm" | "algorithm"]``;
@@ -33,7 +33,8 @@ The record (:class:`Record`):
 * ``simplified``: the Simplify runs of the AI (implementation 04, Phase 4), ``[hand, added, left out, usd,
   written, changes]``, oldest first (``hand``: ``right``, ``left`` or ``both``; ``changes``: one line per note, where
   and why, ``- f4556 add D1 (L): D2 alone in a run of D1+D2 octaves``); written only when there is one. Their cost
-  is in ``usd`` and ``requests`` too.
+  is in ``usd`` and ``requests`` too. The app no longer runs Simplify (implementation 04-6): the field is kept, read
+  and written again, for the sheets that hold it.
 * ``legacy``: what the migration of Phase 9 (``scripts/migrate_sheets.py``) carried from the old ``sheet.json``, by
   kind (``{"lyrics": 2, "figures": 6}``); a sheet that has it is not migrated again.
 """
@@ -53,7 +54,7 @@ __all__ = [
     "MARK",
     "Record",
     "Stored",
-    "ask_sonnet",
+    "ask_ai",
     "asked",
     "clear",
     "enhanced",
@@ -246,8 +247,8 @@ def save(part_id: str, text: str, record: Record) -> None:
     bundle.step_changed(part_id)
 
 
-def ask_sonnet(part_id: str) -> None:
-    """A whole new set of notes (a transcription, a video read): the Sheet step starts Sonnet by itself. Parts that
+def ask_ai(part_id: str) -> None:
+    """A whole new set of notes (a transcription, a video read): the Sheet step starts the LLM by itself. Parts that
     existed before Phase 5 never carry the mark, so they keep their sheet until the user asks (the user's answer).
     """
     path = paths.part_frames_pending_path(part_id)
@@ -265,7 +266,7 @@ def asked(part_id: str) -> bool:
 
 
 def taken(part_id: str) -> None:
-    """Sonnet started on the part: the mark is used."""
+    """The LLM started on the part: the mark is used."""
     try:
         paths.part_frames_pending_path(part_id).unlink(missing_ok=True)
     except locate.NotFound:

@@ -1,6 +1,6 @@
 # 04: App enhancements (the sheet page and the AI's sheet)
 
-**State: done (2026-10-28).** Phases 1 to 4 checked by the user in the browser; Phase 5 (documentation and closing) closes it. **04-3** (the third brief, 2026-10-29: folders and metadata, then the whole song simplification by levels) is done (2026-10-31): [`04-3-plan.md`](04-3-plan.md), branches `feat/04-3-phase-N`. **04-5** (Strict and Suggested patterns, the rules and the explanations of a run, the history of AI runs, the chords of the song) is done and merged (2026-11-01): [`04-5-plan.md`](04-5-plan.md). **04-4** is a brief only, not built. Their documentation was done by implementation 05; [`04-context.md`](04-context.md) section 8 sums up 04-3 and 04-5. Read [`04-context.md`](04-context.md) first: what this implementation changed, for later ones. One branch per phase, `feat/04-phase-N` (plan section 6.3).
+**State: done (2026-10-28).** Phases 1 to 4 checked by the user in the browser; Phase 5 (documentation and closing) closes it. **04-3** (the third brief, 2026-10-29: folders and metadata, then the whole song simplification by levels) is done (2026-10-31): [`04-3-plan.md`](04-3-plan.md), branches `feat/04-3-phase-N`. **04-5** (Strict and Suggested patterns, the rules and the explanations of a run, the history of AI runs, the chords of the song) is done and merged (2026-11-01): [`04-5-plan.md`](04-5-plan.md). **04-4** is a brief only, not built. Their documentation was done by implementation 05; [`04-context.md`](04-context.md) section 8 sums up 04-3 and 04-5. **04-6** (a level run marked stopped when the backend stops, the model of the AI in one setting, Simplify removed) is done (2026-11-03) on `feat/04-6-run-safety-and-model`, merged into `master` at the user's ok: [`04-6-plan.md`](04-6-plan.md); [`04-context.md`](04-context.md) section 9 sums it up. Read [`04-context.md`](04-context.md) first: what this implementation changed, for later ones. One branch per phase, `feat/04-phase-N` (plan section 6.3).
 
 Polish after implementation 03: on the sheet page, Command + scroll zoom, the AI symbol instead of the green badge,
 the floating toolbox's buttons also in the header, a cursor that can be dragged, and a hidden floating toolbox that
@@ -17,6 +17,14 @@ The brief is [`04-1-prompt.md`](04-1-prompt.md), the plan is [`04-plan.md`](04-p
 | [`04-context.md`](04-context.md) | **Read first for later work.** What implementation 04 changed, the decisions that bind, where the code is, the open points |
 | [`04-1-prompt.md`](04-1-prompt.md) | The brief, in the user's own words, with the answers of the first discussion (2026-10-27) at its end, and the brief of the dialog (after the Phase 3 gallery) |
 | [`04-2-prompt.md`](04-2-prompt.md) | The second brief: the new logo, traced to SVG, and the logo as the AI mark (branch `feat/04-logo`) |
+| [`04-6-prompt.md`](04-6-prompt.md) | 04-6, the brief (2026-11-02) and the user's answers (2026-11-03): a level run marked stopped when the backend stops, the model of the AI in one setting, the dead Simplify code removed |
+| [`04-6-plan.md`](04-6-plan.md) | 04-6, the plan: five phases on `feat/04-6-run-safety-and-model` |
+| [`04-6-checklist.md`](04-6-checklist.md) | 04-6, the status of every task |
+| [`04-6-implementation-phase-1.md`](04-6-implementation-phase-1.md) | 04-6 Phase 1: a run left `running` marked stopped at the next start (`runs.close_unfinished`), the note in the run's detail |
+| [`04-6-implementation-phase-2.md`](04-6-implementation-phase-2.md) | 04-6 Phase 2: the setting `AITU_LLM_MODEL` and the one table `llm_models.py`, in the backend |
+| [`04-6-implementation-phase-3.md`](04-6-implementation-phase-3.md) | 04-6 Phase 3: the dialog's models from the backend, in the frontend |
+| [`04-6-implementation-phase-4.md`](04-6-implementation-phase-4.md) | 04-6 Phase 4: Simplify removed, backend and frontend |
+| [`04-6-implementation-phase-5.md`](04-6-implementation-phase-5.md) | 04-6 Phase 5: the docs (the model named once), `04-context.md` section 9, the closing report |
 | [`04-plan.md`](04-plan.md) | The plan: the decisions, the design notes, the binding rules, the method, five phases, the risks; its section 9 has the changes each phase made |
 | [`04-checklist.md`](04-checklist.md) | The status lookup, and the open decisions |
 | [`04-implementation-phase-1.md`](04-implementation-phase-1.md) | Phase 1: the sheet page |

@@ -1,8 +1,8 @@
 /**
  * The new sheet of a part as the page holds it (implementation 03, Phase 5): read for the page's width, read again
- * at each step of Sonnet's job, and Sonnet started by itself on a new transcription.
+ * at each step of the AI's job, and the AI started by itself on a new transcription.
  *
- * While Sonnet writes, the backend sends an `event: sheet` message on the job's stream each time the sheet changes
+ * While the AI writes, the backend sends an `event: sheet` message on the job's stream each time the sheet changes
  * (the reference figure, then each window) and `event: done` at the end; each one asks for the sheet again. A
  * stream opened late, or again after a reload, first receives every message already sent: the reads that follow
  * one another closely are joined into one.
@@ -12,7 +12,6 @@
  *
  * A stretch the AI writes again with the user's words (Phase 7) is a job like a whole run: the page follows it the
  * same way, and the job's last message says when no answer was accepted (`notice`: the stretch stays as it was).
- * So is **Simplify** (implementation 04, Phase 4): its last message says how many notes the AI added and left out.
  * So is a **level** of a range (implementation 04-3, Phase 4): its last message says when no batch was accepted.
  */
 
@@ -28,10 +27,7 @@ type Hand = "left" | "right" | "both";
 /** The end of a job, as its last message sums it up. */
 export interface RunSummary {
   stretch?: string;
-  simplify?: string;
   hand?: Hand;
-  added?: number;
-  leftOut?: number;
   level?: string;
   levelName?: string;
   batches?: number;
@@ -50,13 +46,7 @@ export interface RunSummary {
 }
 type Summary = RunSummary;
 
-const HAND_WORDS: Record<Hand, string> = { left: "the left hand", right: "the right hand", both: "both hands" };
-
-function notes(count: number): string {
-  return `${count} note${count === 1 ? "" : "s"}`;
-}
-
-/** What the page says when a stretch or Simplify ends without the result the user expects; `null`: nothing. */
+/** What the page says when a run ends without the result the user expects; `null`: nothing. */
 function endNotice(summary: Summary): string | null {
   if (summary.waiting) return "Batch 1 is written. Check it on the sheet, then go on with the other batches or answer the AI.";
   if (summary.stopped) {
@@ -65,10 +55,6 @@ function endNotice(summary: Summary): string | null {
   }
   if (summary.stretch === "failed") return "The AI could not write this stretch again. It stays as it was.";
   if (summary.stretch === "stale") return "The notes changed while the AI worked. The stretch stays as it was.";
-  const where = summary.hand ? ` in ${HAND_WORDS[summary.hand]}` : "";
-  if (summary.simplify === "none") return `The AI found nothing to simplify${where}.`;
-  if (summary.simplify === "failed") return "The AI could not simplify the sheet. It stays as it was.";
-  if (summary.simplify === "stale") return "The notes changed while the AI worked. The sheet stays as it was.";
   if (summary.credits) {
     const done =
       summary.level === "ok" && summary.batches ? `The AI wrote ${summary.batches} of ${summary.total} parts; the others stay as they were. ` : "The sheet stays as it was. ";
@@ -78,10 +64,6 @@ function endNotice(summary: Summary): string | null {
   if (summary.level === "stale") return "The notes changed while the AI worked. The sheet stays as it was.";
   if (summary.level === "ok" && summary.total && summary.batches !== undefined && summary.batches < summary.total) {
     return `The AI wrote ${summary.batches} of ${summary.total} parts at the level; the others stay as they were.`;
-  }
-  if (summary.simplify === "ok") {
-    const parts = [summary.added ? `added ${notes(summary.added)}` : "", summary.leftOut ? `left out ${notes(summary.leftOut)}` : ""];
-    return `The AI ${parts.filter(Boolean).join(" and ")}${where}.`;
   }
   return null;
 }
@@ -102,8 +84,6 @@ export interface FramesSheetState {
   enhanceStretch: (stretch: StretchRequest) => Promise<void>;
   /** Ask the AI to write a range again at a level (implementation 04-3, Phase 4). */
   level: (request: LevelRequest) => Promise<void>;
-  /** Ask the AI to simplify one hand, or both, over the whole song (implementation 04, Phase 4). */
-  simplify: (hand: Hand) => Promise<void>;
   /** A quiet word after the AI could not write a stretch again; cleared by the next edit or request. */
   notice: string | null;
   /** The end of the last AI run followed here, its summary and its notice (the panel of the run, 2026-10-30). */
@@ -157,7 +137,7 @@ export function useFramesSheet(
   const sheet = loaded && loaded.uuid === audioUuid ? loaded.sheet : null;
   const jobId = sheet?.llm.state === "running" ? sheet.llm.jobId : null;
 
-  // Follow Sonnet's job: read the sheet again at each of its messages.
+  // Follow the AI's job: read the sheet again at each of its messages.
   useEffect(() => {
     if (!jobId) return;
     const source = new EventSource(sheetApi.progressUrl(jobId));
@@ -210,21 +190,6 @@ export function useFramesSheet(
       setEditError(null);
       try {
         await sheetApi.enhanceStretch(audioUuid, stretch);
-        setReload((value) => value + 1);
-        changed.current?.();
-      } catch (caught) {
-        setEditError(said(caught, "The AI could not be asked."));
-      }
-    },
-    [audioUuid],
-  );
-
-  const simplify = useCallback(
-    async (hand: Hand) => {
-      setNotice(null);
-      setEditError(null);
-      try {
-        await sheetApi.simplify(audioUuid, hand);
         setReload((value) => value + 1);
         changed.current?.();
       } catch (caught) {
@@ -299,7 +264,6 @@ export function useFramesSheet(
     editing,
     editError,
     enhanceStretch,
-    simplify,
     level,
     notice,
     lastRun,

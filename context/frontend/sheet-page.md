@@ -166,8 +166,8 @@ The page listens to the window's keys. A key in a text field does nothing.
   short message at the bottom (`data-testid="sheet-refused"`).
 
 The runs themselves are told in [`context/ai/`](../ai/README.md): [whole-run.md](../ai/whole-run.md) (**Enhance it
-again with AI**, **Write it all again**), [stretch-and-simplify.md](../ai/stretch-and-simplify.md) (a stretch and
-**Simplify**), and [levels.md](../ai/levels.md).
+again with AI**, **Write it all again**), [stretch.md](../ai/stretch.md) (a stretch),
+and [levels.md](../ai/levels.md).
 
 ## 12. The files of the page
 

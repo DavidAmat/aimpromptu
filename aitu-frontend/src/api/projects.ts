@@ -35,7 +35,7 @@ export interface ProjectRow {
   mine: boolean;
   /** The lowest step its parts reached; `null` when it could not be worked out. */
   step: PieceStep | null;
-  /** A job working on a part right now: a transcription, a video read, or Sonnet writing the sheet. */
+  /** A job working on a part right now: a transcription, a video read, or the AI writing the sheet. */
   running: "transcribing" | "reading" | "writing" | null;
   /** The AI enhanced the sheet of a part of it (implementation 03, Phase 5). */
   enhanced: boolean;

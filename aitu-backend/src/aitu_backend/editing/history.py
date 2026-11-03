@@ -73,7 +73,7 @@ def snapshot_notes(
     Called before a new transcription replaces them (implementation 08, plan section 8.3): before
     this, a new transcription deleted the saved sheet with no copy. The audio is not copied, unlike
     :func:`snapshot_current`, because a transcription does not change it. The version counter is
-    the same, so the two kinds of snapshot never share a folder. Sonnet writing the hands of a part that had
+    the same, so the two kinds of snapshot never share a folder. The LLM writing the hands of a part that had
     saved hands takes one too (implementation 03, Phase 5), with its own ``reason``.
     """
     version = current_version(audio_uuid)

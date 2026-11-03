@@ -11,7 +11,7 @@
  * removes the two users with everything they made, then the public song and artist.
  *
  * 1. The author: **New project**, a YouTube link, **Download the audio**; **Transcribe**, followed
- *    live; the Sheet step (no Hands step since implementation 03, Phase 5): the new sheet at once, Sonnet
+ *    live; the Sheet step (no Hands step since implementation 03, Phase 5): the new sheet at once, the AI
  *    writes it in the background (it costs about $1 of the monthly credits for a song); **Save to library**.
  * 2. The author: **Publish** the version, **Propose this song** (a new song, a new artist).
  * 3. The master user: **Review**, every item accepted.
@@ -197,7 +197,7 @@ try {
     await author.waitForSelector('[data-frames-sheet] [data-note]', { timeout: 120000 });
   });
   await shot(author, '04-sheet');
-  await timed('Sonnet writes the sheet', 'the last segment back', async () => {
+  await timed('the AI writes the sheet', 'the last segment back', async () => {
     await author.waitForSelector('[data-frames-sheet][data-llm="done"]:not([data-working])', { timeout: 1800000 });
   });
   const status = (await as('author', `/pieces/${projectId}/status`)).body;

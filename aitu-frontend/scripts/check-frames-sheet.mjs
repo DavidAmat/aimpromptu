@@ -1,7 +1,7 @@
 /**
  * The new Sheet step in the browser (implementation 03, Phase 5): the sheet without compases, to see and to hear.
  *
- * Without credits, on a temporary copy of a version of My library that Sonnet wrote (7 Years by default; the copy
+ * Without credits, on a temporary copy of a version of My library that the AI wrote (7 Years by default; the copy
  * is deleted at the end, the library is only read):
  * - the Sheet step draws the new sheet (`[data-frames-sheet]`, a `data-note` on every notehead), and the steps are
  *   Source, Audio, Notes, Sheet (no Hands);
@@ -12,8 +12,8 @@
  *   no switch to the old vexflow-v2 sheet (removed in implementation 03, Phases 8B and 10);
  * - an old address of the Hands step opens the Sheet step.
  *
- * With `--live` (it spends Sonnet credits: a few cents), a new project from a clip of `--seconds` of that song's
- * audio: transcribed, then its Sheet step starts Sonnet by itself; the check records the segment at Sonnet (pale),
+ * With `--live` (it spends AI credits: a few cents), a new project from a clip of `--seconds` of that song's
+ * audio: transcribed, then its Sheet step starts the AI by itself; the check records the segment at the AI (pale),
  * each segment that comes back (it appears column by column), the time of each step, and at the end the hands in
  * the notes (Notes Falling's colours). The project is deleted at the end.
  *
@@ -73,7 +73,7 @@ const shot = (page, name, clip) => page.screenshot({ path: path.join(values.out,
 
 const made = [];
 try {
-  // ------------------------------------------------------------------ a copy of a version Sonnet wrote
+  // ------------------------------------------------------------------ a copy of a version the AI wrote
   const copy = await post(`${api}/projects/${values.version}/duplicate`, {});
   made.push(copy.id);
   const part = copy.parts?.[0] ?? copy.id;
@@ -84,7 +84,7 @@ try {
   const tabs = await page.locator('[role="tab"]').allInnerTexts();
   check('the steps are Source, Audio, Notes, Sheet', !tabs.some((t) => /Hands/.test(t)), tabs.join(' | '));
   const root = page.locator('[data-frames-sheet]');
-  check('the copy keeps the sheet Sonnet wrote', (await root.getAttribute('data-source')) === 'llm');
+  check('the copy keeps the sheet the AI wrote', (await root.getAttribute('data-source')) === 'llm');
   check('a sheet the AI enhanced has the AI symbol next to its title', (await page.locator('[data-sheet-header] [data-ai-mark] [data-enhanced]').count()) === 1);
   check('and offers Enhance it again with AI', (await page.getByTestId('enhance-with-ai').innerText()).trim() === 'Enhance it again with AI');
   await page.waitForTimeout(600);
@@ -110,7 +110,7 @@ try {
   check('an old address of the Hands step opens the Sheet step', page.url().endsWith('/sheet'));
   await page.close();
 
-  // ------------------------------------------------------------------ live: a new transcription goes to Sonnet
+  // ------------------------------------------------------------------ live: a new transcription goes to the AI
   if (values.live) {
     const work = mkdtempSync(path.join(os.tmpdir(), 'frames-sheet-'));
     const original = await fetch(`${api}/audio/${values.version}/file?original=true`);
@@ -162,15 +162,15 @@ try {
       if (now.llm === 'done' && now.working === 0 && now.revealing === 0) break;
       await live.waitForTimeout(250);
     }
-    check('Sonnet started by itself and a segment looked pale while it worked', seen.some((s) => s.working > 0));
+    check('the AI started by itself and a segment looked pale while it worked', seen.some((s) => s.working > 0));
     check('a segment that came back appeared little by little', seen.some((s) => s.revealing > 0));
-    check('Sonnet finished', lastStates.startsWith('done'), `${Math.round((Date.now() - start) / 1000)} s`);
+    check('the AI finished', lastStates.startsWith('done'), `${Math.round((Date.now() - start) / 1000)} s`);
     await shot(live, '03-live-done');
     const after = await json(`${api}/matrix/${uuid}/events`);
     const handed = after.events.filter((e) => !e.removed && e.hand !== null).length;
     check('the hands are in the notes (Notes Falling\'s colours)', handed > 0, `${handed} of ${after.events.length}`);
     const sheet = await json(`${api}/sheet/${uuid}?width=130`);
-    check('the stored sheet is Sonnet\'s', sheet.source !== 'algorithm', `${sheet.source}, $${sheet.llm.usd}`);
+    check('the stored sheet is the AI\'s', sheet.source !== 'algorithm', `${sheet.source}, $${sheet.llm.usd}`);
     writeFileSync(path.join(values.out, 'live.json'), JSON.stringify({ seen, usd: sheet.llm.usd, segments: sheet.segments }, null, 1));
     await live.close();
   }

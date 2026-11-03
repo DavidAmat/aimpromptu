@@ -9,7 +9,7 @@ Every **level run** keeps a log of what it asked and what the AI answered. The u
 AI runs**. From there the user can answer the AI about one batch, write that batch again, or go on with the batches
 that were not written yet. A level run of two batches or more writes its first batch and then waits for the user.
 
-Only level runs have a log. A whole run, a stretch and Simplify do not appear in the history.
+Only level runs have a log. A whole run and a stretch do not appear in the history.
 
 ## 1. The first batch first
 
@@ -35,12 +35,20 @@ The log's `state` is one of these. The history shows them in plain words:
 | `running` | The job works on the run | The AI is writing |
 | `waiting` | Batch 1 is stored and the other batches are not written | Waiting for you after batch 1 |
 | `done` | The run ended with its batches written | Finished |
-| `stopped` | The user pressed **Stop**, or the job ended with an error | Stopped |
+| `stopped` | The user pressed **Stop**, the job ended with an error, or the backend stopped during the run | Stopped |
 | `failed` | The run ended with no batch written | Not written |
 
 The batches have their own status: `ok` (**Written**), `failed` (**Kept as it was**: the check refused the answer, so
 the sheet keeps the earlier notes), `error` (**Not written**: an error stopped the batch), and `open` (**Being
 written**).
+
+**When the backend stops during a run** (a crash, a restart, a reload after a `.py` edit), the run cannot write its
+end, so its log stays `running`. The next time the backend starts, before it answers the first request, it marks every
+log still `running` as `stopped`, with the note "The backend stopped during the run." (the history shows it under the
+run's title). A batch the log marks written but whose notes never reached the sheet becomes **Not written**: a level
+run saves its notes only at its end, or at the wait after batch 1. Such a batch keeps its conversation, so **Write this
+batch again** still works on it. Nothing else of a run stays after a restart: the job, the live sheet and **Revert**
+live in memory only.
 
 ## 3. The log
 

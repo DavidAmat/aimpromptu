@@ -5,7 +5,7 @@
 Every run of **Enhance with AI** on a part is a background job of `part_sheet/job.py`. The job asks the model
 through one `complete(system, messages) -> text` function, reads the answers with the checker of
 `sheet/llm/`, and writes the result into the part's files. This page tells the code of the **whole run** (the
-hands and the reading of the whole song, implementation 03, Phase 5). Sections 7 and 8 tell a stretch and Simplify.
+hands and the reading of the whole song, implementation 03, Phase 5). Section 7 tells a stretch.
 The levels and the history of runs are added by Phases 11 to 13.
 
 Modules: `aitu-backend/src/aitu_backend/part_sheet/job.py` (the jobs), `sheet/llm/frames.py` (the windows and the
@@ -17,20 +17,36 @@ checks), `sheet/llm/prompt/frames/` (the prompt), `sheet_llm.py` (the model clie
 
 | Name | What it is |
 |---|---|
-| `sheet_llm.OpenAIComplete` | The client of the OpenAI models (the Responses API, the key `OPENAI_API_KEY` from the environment or `.env`, read by `_openai_key`). Each request is one call with the system prompt cached: `cache_key` is `<part id>\|<kind of run>`. Used by every run on GPT-6.1 Terra or GPT-6.1 Sol |
-| `sheet_llm.ClaudeComplete` | The client of Claude (`ANTHROPIC_API_KEY`, the official SDK, streaming, retries). Used only when the user chooses **Sonnet 5.5** in the dialog |
+| `sheet_llm.OpenAIComplete` | The client of the OpenAI models (the Responses API, the key `OPENAI_API_KEY` from the environment or `.env`, read by `_openai_key`). Each request is one call with the system prompt cached: `cache_key` is `<part id>\|<kind of run>`. Used by every run on a model whose provider is `openai` |
+| `sheet_llm.ClaudeComplete` | The client of the Anthropic models (`ANTHROPIC_API_KEY`, the official SDK, streaming, retries). Used only for a model whose provider is `anthropic` |
+| `sheet_llm.price(model, ...)` | The US dollars of one request, from the prices of `llm_models`; a model with no price costs $0 and the backend log warns, so a run never stops for a price |
 | `sheet_llm.NoCredits`, `SkipWindow` | A run stops for no credits; a refusal (a declined request) fails one window only |
 | `Call` | One request's tokens, seconds and US dollars; `ask.calls` and `ask.usd` add them up for the run |
 
-The model table is `part_sheet/job.py`:
+The model of a run (implementation 04-6): the setting `AITU_LLM_MODEL` (`config.llm_model()`; empty: the default
+`config.DEFAULT_LLM_MODEL`) and one table, `aitu_backend/llm_models.py`. The default model's name is written in the
+docs only in [context/ai/README.md](../../../context/ai/README.md).
 
-- `MODEL = "gpt-6.1-terra"` and `EFFORT = "medium"`: the model of a run when none is chosen.
-- `MODELS`: the three choices the dialog offers, each with its label, its effort, and the cost and the time of one
-  request compared with Terra (the measured ratios; the dialog shows them).
-- `model_of(model)` returns the choice or Terra; an unknown name raises `ValueError`.
-- `available(model)` is the check before a run: the key and the SDK of that provider. A run asked when it is not
-  available answers `409` ("This AI is not set up on this machine.").
-- `_complete(part_id, kind, model)` builds the client of a run.
+- `TABLE`: for each model the backend knows, a `Model`: `label`, `provider` (`openai` or `anthropic`), `effort`,
+  `prices` (input, output, cache write, cache read, US dollars per million tokens), `choice` (offered by the dialog's
+  **Model** selector; off: kept for its price only, such as a model the server-side fallback answers with), and
+  `measured` (the cost and the time of a request compared with `MEASURED_WITH`, measured in 04-3 Phase 5).
+- `default()`: the setting's model. `choices()`: the selector's models, `{value, label}`, the setting's first (added
+  when the table does not offer it: label its name, provider `anthropic` for a `claude-` name, else `openai`,
+  effort `medium`). `GET /llm/costs` answers them as `models`, and the setting's as `model`.
+- `resolve(name)`: `None` gives the setting's model; a name `choices()` does not hold raises `ValueError` (the routes
+  answer 422).
+- `provider(name)`, `effort(name)`, `prices(name)` (None when unknown; a dated name such as `<model>-2026-10-01` takes
+  the price of `<model>`), `cost(name, ...)`.
+- `ratio(name)`: the measured ratios; else the cost of a typical request (`TYPICAL_REQUEST`) at its prices against
+  `MEASURED_WITH`, and time 1; with no price, 1 and 1. The estimates `USD_*` and `SECONDS_*` of `job.py` were measured
+  with `MEASURED_WITH`, and `batch_plan` scales them by this ratio.
+
+In `part_sheet/job.py`:
+
+- `available(model)` is the check before a run: the key and the SDK of the model's provider. A run asked when it is
+  not available answers `409` ("This AI is not set up on this machine.").
+- `_complete(part_id, kind, model)` builds the client of a run, with the model and the effort of the table.
 
 Keys are never written in the docs or in the code: only the names of the settings.
 
@@ -145,7 +161,7 @@ Version history: 4 (the clef rules of phase 14), 6 (the decoration-note rule of 
 
 ## 7. A stretch: `job.start_stretch`, `frames.write_stretch`
 
-Context: [context/ai/stretch-and-simplify.md](../../../context/ai/stretch-and-simplify.md). Implementation 03, Phase 7
+Context: [context/ai/stretch.md](../../../context/ai/stretch.md). Implementation 03, Phase 7
 (the user's words); 04, Phase 4 (one hand); 2026-10-30 (the batches).
 
 | Name | Role |
@@ -169,31 +185,6 @@ works on the part; `403` when the sheet cannot be changed here. The stretch's ra
 
 Tests: `tests/test_sheet_reading.py` (the tools of Phase 7); `npm run check:frames-tools` (aitu-frontend; `--live`
 makes one stretch request).
-
-## 8. Simplify: `job.start_simplify`, `frames.write_simplify`
-
-Context: [context/ai/stretch-and-simplify.md](../../../context/ai/stretch-and-simplify.md). Implementation 04, Phase 4.
-The dialog no longer calls the route: a hand is simplified as a level of that hand ([ai-levels.md](ai-levels.md) and [level-run.md](../../../context/ai/level-run.md)).
-
-| Name | Role |
-|---|---|
-| `job.start_simplify(part_id, *, hand, complete)` | The job. `hand` is `right` (staff 1), `left` (staff 2) or `both` (`job.HANDS`); another name, or a hand with no notes, is `ValueError` (`400`). `Busy` when a job runs. The model is always `_complete(part_id, "simplify")`: GPT-6.1 Terra, no choice. Its `done` summary: `simplify` (`ok`, `none`, `stale`, `failed`, `gone`), `hand`, `added`, `leftOut`, `usd`, and `note` when a batch said why it stopped |
-| `frames.write_simplify(current, notes, complete, *, staff, sid, max_checks, on_start, on_batch) -> Simplified` | The loop over the batches of `simplify_windows`. Each batch: `like_before` (the earlier passage most like it), `like_columns`, `simplify_prompt` (the changes so far, the like passage, the end of the previous batch, the places), the reply through `check_simplify`, its retries (at most `MAX_CHECKS`). A failed batch keeps its notes; an error (no credits, no network) stops the rest. Returns `Simplified` (`sheet`, `changes`, `windows`, `added`) |
-| `frames.simplify_windows(sheet, staff)` | The batches of one hand (or both, `staff=None`): `windows_of(span=SIMPLIFY_MS, max_onsets=SIMPLIFY_ONSETS)`, so 24 to 32 s and at most 300 onsets, each ending after a pause of that hand |
-| `frames.simplify_prompt(...)` | The message of a batch: "the rules of simplicity only", the hands and the figures fixed, the changes so far with their reasons, the like passage with its changes, the decided context, the target, the places to check, the look-ahead, and the answer format (`# leave out f120 G2: why`, `# add f240 D1: why`, `# no change`) |
-| `frames.check_simplify(reply, target, *, like, aligned)` | The checker: the change lines (`_CHANGE`), a note left out that is a note of the target, a note added in a column of the target within an octave, then `simplicity` (the limits: a note left out keeps a note of its column within `NEAR`, 12 semitones; a note added is near one and has a name of its pattern; at most `CHANGE_SHARE`, a tenth, of the target's notes, at least `CHANGE_MIN`, 4) and `renamed` (a name changed only when the like passage has it at the same place) |
-| `edits.apply_simplify(part_id, simplified, *, notes_revision, hand, left, added, usd, requests, model, lines)` | Stores the run as one step: the notes left out removed and the added ones written (`change_notes`), the sheet laid again on them (`build.reapply`), `Record.simplified` appended (`[hand, added, left out, usd, written, change lines]`). Returns the counts, or `None` when the notes changed meanwhile |
-
-The batch constants (`frames.py`): `SIMPLIFY_MS = (24000, 32000)`, `SIMPLIFY_ONSETS = 300`, `SIMPLIFY_CONTEXT_MS =
-8000`, `LIKE_GRAM = 4`, `LIKE_SHARE = 0.3`, `SAME_PLACE = 2`. The rules are the prompt's `simple.1` to `simple.4`
-(section "Simplicity" of `prompt/frames/instructions.md`, prompt version 7). The estimate: `job.costs` (`simplify-left`,
-`simplify-right`, `simplify-both`: one request per batch, `USD_BATCH`, a `USD_CACHE` for the first request).
-
-Route: `POST /sheet/{uuid}/llm/simplify`, body `{hand: both | right | left}`. `409` when the AI is not set up or a job
-runs; `403` when the sheet cannot be changed here; `400` for a hand with no notes.
-
-Tests: `tests/test_sheet_simplify.py`; gallery `scripts/simplify_gallery.py`; browser check `npm run
-check:enhance-dialog` (no AI request).
 
 ## Where to look deeper
 

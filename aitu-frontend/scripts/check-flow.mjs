@@ -14,8 +14,8 @@
  *   delete, a band, Save (checked against `GET /pieces/{uuid}/notes`), undo after the save, and
  *   playback from the ruler;
  * - no Hands step (implementation 03, Phase 5): the Notes step goes on to the Sheet step, and has no hand
- *   colours before Sonnet decides the hands; the Sheet step draws the new sheet at once and starts Sonnet by
- *   itself (a pale segment while it works). The walk deletes its upload at the end, which stops Sonnet at its
+ *   colours before the AI decides the hands; the Sheet step draws the new sheet at once and starts the AI by
+ *   itself (a pale segment while it works). The walk deletes its upload at the end, which stops the AI at its
  *   next request: a run costs one or two requests (a few cents). The old sheet's tools are walked by
  *   `check:sheet-toolbox` and `check:paste`.
  *
@@ -461,7 +461,7 @@ try {
   check('Play starts from the playhead', first >= rested && first < rested + 300, `started after ${startedAfter} ms, at ${first} ms`);
   check('the playhead keeps the pace of the audio', Math.abs((to - from) - wall) < 150, `${to - from} ms of audio in ${wall} ms`);
 
-  // 14. No Hands step (implementation 03, Phase 5): Sonnet decides the hands with the sheet.
+  // 14. No Hands step (implementation 03, Phase 5): the AI decides the hands with the sheet.
   const tabs = await page.locator('[role=tab]').allInnerTexts();
   check('the steps are Source, Audio, Notes, Sheet', !tabs.some((tab) => /Hands/.test(tab)), tabs.join(' | '));
   const handSwitch = page.getByLabel('Hand colours');
@@ -469,18 +469,18 @@ try {
   const continueButton = page.getByRole('button', { name: 'Continue to Sheet', exact: true });
   check('the Notes step goes on to the Sheet step', (await continueButton.count()) === 1);
 
-  // 15. The Sheet step: the new sheet at once, and Sonnet started by itself on the new transcription.
+  // 15. The Sheet step: the new sheet at once, and the AI started by itself on the new transcription.
   await continueButton.click();
   await page.waitForURL('**/sheet');
   const begin = Date.now();
   await page.locator('[data-frames-sheet] [data-note]').first().waitFor({ timeout: 60000 });
   check('the Sheet step draws the new sheet at once', true, `${Date.now() - begin} ms`);
   const working = await page.locator("[data-segment-state='working']").first().waitFor({ timeout: 30000 }).then(() => true, () => false);
-  check('Sonnet starts by itself, and the segment it works on looks pale', working);
-  check('nothing can be pasted while Sonnet writes', await page.getByTestId('sheet-paste').isDisabled());
-  await shot('16-sheet-sonnet-working');
+  check('the AI starts by itself, and the segment it works on looks pale', working);
+  check('nothing can be pasted while the AI writes', await page.getByTestId('sheet-paste').isDisabled());
+  await shot('16-sheet-ai-working');
   const sheetStep = (await (await fetch(`${api}/pieces/${uuid}/status`)).json()).steps.find((step) => step.step === 'sheet');
-  check('the Sheet step is running while Sonnet writes', sheetStep.state === 'running', sheetStep.state);
+  check('the Sheet step is running while the AI writes', sheetStep.state === 'running', sheetStep.state);
   }
 } catch (caught) {
   check('the walk finished', false, caught instanceof Error ? caught.message.split('\n')[0] : String(caught));

@@ -30,13 +30,10 @@ Phase 7 adds the other edits, each one step:
 * **a stretch the AI wrote again** with the user's words (:func:`apply_stretch`, from ``job.start_stretch``): its
   hands and its sheet, as one step.
 
-Implementation 04, Phase 4 adds **Simplify** (:func:`apply_simplify`, from ``job.start_simplify``): the notes the AI
-left out and added over the whole song, for one hand or both, and the sheet laid on them, as one step.
-
 Implementation 04-3, Phase 4 adds **a level** (:func:`apply_level`, from ``job.start_level``), stored the way a
 stretch is (:func:`_store_written`).
 
-**The steps after every AI change of notes** (a whole run in ``job.commit``, a stretch, Simplify, a level), in this
+**The steps after every AI change of notes** (a whole run in ``job.commit``, a stretch, a level), in this
 order and under the part's lock, so that the notation always follows the notes (the user, 2026-10-30):
 
 1. *The notes*: the notes left out marked removed and the new ones added in ``notes.pmn`` (:func:`change_notes`),
@@ -88,7 +85,6 @@ __all__ = [
     "Transposed",
     "add_note",
     "apply_level",
-    "apply_simplify",
     "apply_stretch",
     "change_notes",
     "edit_reading",
@@ -118,13 +114,6 @@ HANDS = ("right", "left")
 
 #: The step of the notes a whole AI run added and left out (implementation 04, Phase 3).
 RUN_LABEL = "Notes the AI added and left out"
-
-#: The step of a Simplify run (implementation 04, Phase 4), by hand.
-SIMPLIFY_LABELS = {
-    "right": "Simplify the right hand with AI",
-    "left": "Simplify the left hand with AI",
-    "both": "Simplify both hands with AI",
-}
 
 
 @dataclass(frozen=True)
@@ -699,73 +688,6 @@ def _store_written(
         build.forget(part_id)
         _record(_Step(label, changes, _sheet_change(drawn.text, after), gone), part_id)
         return True
-
-
-def apply_simplify(
-    part_id: str,
-    simplified: Sheet,
-    *,
-    notes_revision: int,
-    hand: str,
-    left: set[tuple[int, int]],
-    added: list[Any],
-    usd: float,
-    requests: int,
-    model: str | None,
-    lines: list[str] | None = None,
-) -> dict[str, int] | None:
-    """Store a Simplify run (implementation 04, Phase 4, ``job.start_simplify``): the notes the AI left out (drawn
-    columns and keys, ``left``) marked removed in ``notes.pmn`` and the notes it added (``added``, sheet notes)
-    written there (:func:`change_notes`), the sheet ``simplified`` laid on them (``build.reapply``: the figures, the
-    beam groups and the clefs around the changed notes by the rules) into ``sheet.f1``, as one step of undo
-    (:data:`SIMPLIFY_LABELS`). No hand moves. The run goes into the record (``simplified``, the cost), also when it
-    changed nothing, with ``lines``, each change and why (``Change.line``); a sheet the algorithm wrote becomes
-    ``mixed`` when it changed. Returns the counts
-    (``added``, ``leftOut``), or ``None`` without writing when the notes changed while the AI worked.
-    """
-    with pipeline.piece_lock(part_id):
-        stored = pipeline.load_note_events(part_id)
-        if stored is None or stored.header.notes_revision != notes_revision:
-            return None
-        drawn = build.current(part_id)
-        quarter = simplified.quarter_ms or drawn.quarter_ms or 500.0
-        gone = change_notes(stored, left, added, quarter) if left or added else {}
-        revision = stored.header.hands_revision
-        after = drawn.text
-        if gone:
-            revision = _write_hands(
-                part_id, stored, before=stored.header, hands=False, notes=True
-            ).header.hands_revision
-            after = f1.write(
-                build.reapply(simplified, pipeline.starting_hands(part_id)), mode="frames"
-            )
-        counts = {
-            "added": sum(1 for was, _ in gone.values() if was),
-            "leftOut": sum(1 for was, _ in gone.values() if not was),
-        }
-        kept = store.load(part_id)
-        record = (
-            kept.record
-            if kept is not None
-            else store.Record(source="algorithm", quarter_ms=drawn.quarter_ms)
-        )
-        if gone and record.source == "algorithm":
-            record.source = "mixed"
-        record.usd += usd
-        record.requests += requests
-        record.model = model or record.model
-        written = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        record.simplified.append(
-            [hand, counts["added"], counts["leftOut"], round(usd, 4), written, list(lines or [])]
-        )
-        record.hands_revision = revision
-        store.save(part_id, after, record)
-        build.forget(part_id)
-        if gone:
-            _record(
-                _Step(SIMPLIFY_LABELS[hand], {}, _sheet_change(drawn.text, after), gone), part_id
-            )
-        return counts
 
 
 def change_notes(

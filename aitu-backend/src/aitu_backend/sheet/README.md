@@ -11,7 +11,7 @@ on paper (section 15), Phase 8B the sheet through every change of a part's lengt
 of the old sheets (section 17): the bars path below is unchanged, and so are its golden files. Implementation 04
 (`context/implementations/04-app-enhancements/04-context.md`) changed the new sheet in place: the decoration-note
 rule on every sheet (sections 9 and 12), prompt version 6 and the notes a whole run adds and leaves out (sections 11
-and 12), a stretch of one hand and Simplify (section 14). Implementation 04-3 raised the frames prompt to version 7 (an octave written as a
+and 12), a stretch of one hand (section 14; the Simplify run it also added was removed in 04-6). Implementation 04-3 raised the frames prompt to version 7 (an octave written as a
 third or a fifth, section 11) and added the levels (`levels/`, `llm/levels.py`, `llm/catalog/`), which this README
 does not describe.
 
@@ -28,7 +28,7 @@ up to date, on these pages:
 | 11 | The AI step of the new sheet: windows, the prompt, the check | [context/ai/whole-run.md](../../../../context/ai/whole-run.md), [ai-runs.md](../../../../documentation/services/backend/ai-runs.md) |
 | 12 | The new sheet in the app: `part_sheet/`, the record line, laying a sheet again, the AI's job | [sheet-f1.md](../../../../documentation/services/backend/sheet-f1.md) sections 1, 3 and 7; [ai-runs.md](../../../../documentation/services/backend/ai-runs.md) section 2 |
 | 13 | Editing: the hands, undo and redo, the log `sheet.edits.json` | [context/frontend/sheet-page.md](../../../../context/frontend/sheet-page.md), [sheet-f1.md](../../../../documentation/services/backend/sheet-f1.md) section 1 |
-| 14 | The note and range tools; a stretch and Simplify by the AI | [annotations-notes.md](../../../../context/frontend/annotations-notes.md), [annotations-stretches.md](../../../../context/frontend/annotations-stretches.md), [context/ai/stretch-and-simplify.md](../../../../context/ai/stretch-and-simplify.md) |
+| 14 | The note and range tools; a stretch by the AI | [annotations-notes.md](../../../../context/frontend/annotations-notes.md), [annotations-stretches.md](../../../../context/frontend/annotations-stretches.md), [context/ai/stretch.md](../../../../context/ai/stretch.md) |
 | 15 | The sheet toolbox, lyrics, the sheet on paper | [annotations-sheet.md](../../../../context/frontend/annotations-sheet.md), [printing.md](../../../../context/frontend/printing.md), [sheet-drawing.md](../../../../documentation/services/backend/sheet-drawing.md) sections 6 and 8 |
 | 16 | The sheet through a change of a part's length | [context/backend/editing.md](../../../../context/backend/editing.md) |
 | 17 | The marks of the old sheets (`part_sheet/legacy.py`) | [sheet-f1.md](../../../../documentation/services/backend/sheet-f1.md) section 8 |
@@ -68,7 +68,7 @@ enforce it.
 |---|---|---|
 | `sheet` | - | `Note`, `Bar`, `Sheet` (`sheet.data`); `f1.read(text) -> Sheet`, `f1.write(sheet, mode="bars"/"frames", anchors=bool) -> str`, `F1Error`; `matrix.sheet_from_matrix(notes, key=) -> Sheet` (frames sheet), `matrix.cells(notes)`; `pmn.notes_from_pmn(body) -> Notes`, `pmn.key_of_sheet_json(sheet_json) -> int`. The new sheet (section 9): `frames.from_notes(notes, key=) -> Sheet`, `frames.check(sheet) -> list[str]`, `frames.cells_of(sheet, notes)`, `frames.matrix_cells(notes)`, `frames.key_at(sheet)`, `frames.printed_signs(sheet)`; `figures.figure_of_ms(ms, quarter_ms, split=0.7)`; `spelling.spell(midi, key)`, `spelling.sign(step, alter, key)`, `spelling.check_rules()` |
 | `proposal` | `Notes` + hands -> F1 bars sheet | `propose(notes, *, key, key_changes=None, hand_sheet=None, track=False, quarter_ms=None, meter=None, phase_ms=None, beams="classical") -> Proposal` (`.sheet`, `.quarter_ms`, `.meter`, `.phase_ms`); `hand_sheet_of(notes, key=)`. The new sheet: `frames.propose_frames(notes, *, key=None, key_changes=None, quarter_ms=None) -> FramesProposal` (`.sheet`, `.quarter_ms`, `.info`) |
-| `llm` | `Notes` -> F1 bars sheet | `write_song(notes, complete, *, key, sid="song", hand_sheet=None, max_checks=3, guards=True, max_windows=None, on_window=None) -> SongSheet`; `windows.check(answer, target) -> (errors, sheet)`, `windows.answer_text(reply)`, `guards.guard_errors(sheet)`; `prompts.instructions()`, `prompts.window_prompt(...)`, `prompts.feedback(errors)`. The new sheet (section 11): `frames.write_frames(notes, complete, *, sid, key=None, quarter_ms=None, hands=False, max_checks=3, guards=True, max_windows=None, on_window=None) -> FramesSong`; `frames.windows_of(sheet)`, `frames.check_answer(reply, target, *, drop=False, free=None, simplify=False, hand=None)`, `frames.places(notes, quarter_ms)`, `frames.write_stretch(current, notes, complete, *, start, end, instruction="", staff=None)`, `frames.write_simplify(current, notes, complete, *, staff=None) -> Simplified`, `frames.check_simplify(reply, target)`, `frames.assemble(algo, parts, clefs="llm")`, `frames.gap_peaks(sheet)`, `frames.reference_prompt(...)`, `frames.window_prompt(...)`, `frames.instructions()`, `frames.SkipWindow` |
+| `llm` | `Notes` -> F1 bars sheet | `write_song(notes, complete, *, key, sid="song", hand_sheet=None, max_checks=3, guards=True, max_windows=None, on_window=None) -> SongSheet`; `windows.check(answer, target) -> (errors, sheet)`, `windows.answer_text(reply)`, `guards.guard_errors(sheet)`; `prompts.instructions()`, `prompts.window_prompt(...)`, `prompts.feedback(errors)`. The new sheet (section 11): `frames.write_frames(notes, complete, *, sid, key=None, quarter_ms=None, hands=False, max_checks=3, guards=True, max_windows=None, on_window=None) -> FramesSong`; `frames.windows_of(sheet)`, `frames.check_answer(reply, target, *, drop=False, free=None, simplify=False, hand=None)`, `frames.places(notes, quarter_ms)`, `frames.write_stretch(current, notes, complete, *, start, end, instruction="", staff=None)`, `frames.assemble(algo, parts, clefs="llm")`, `frames.gap_peaks(sheet)`, `frames.reference_prompt(...)`, `frames.window_prompt(...)`, `frames.instructions()`, `frames.SkipWindow` |
 | `engrave` | F1 bars sheet -> SVG; F1 frames sheet -> SVG | `engrave(sheet, Options()) -> Engraving`, `to_svg(engraving, px_per_space=10, note_ids=False, id_prefix="")`, `render(sheet)`; `cursor.render_song(text, note_ids=True) -> Rendered`. The new sheet (section 10): `frames.render_frames(text_or_sheet, frames.Options(), segment=None) -> frames.Rendered`, `frames.plan(sheet, opts) -> Layout`, `frames.draw(layout, systems=None) -> Engraving`, `frames.engrave_frames(sheet, opts)` |
 
 The app calls the frames entries only (`propose_frames`, `from_notes`, `write_frames`, `render_frames`, `f1.read` and
@@ -138,9 +138,9 @@ at start (the product uses the default style, "verovio").
    (`WindowLog`: start, end, first bar, status `ok`/`failed`, replies, the errors of each rejected reply),
    `.summary` (windows, ok, ok at the first check, failed, requests).
 
-The core imports no LLM SDK. The product's `complete` functions are in `sheet_llm.py`: the OpenAI client (GPT-6.1
-Terra at medium, the model of every run unless the user chooses another) and the Anthropic client (Sonnet 5.5, when
-the user chooses it). The pages of the AI: `context/ai/README.md` and `documentation/services/backend/ai-runs.md`. A
+The core imports no LLM SDK. The product's `complete` functions are in `sheet_llm.py`: the OpenAI client and the
+Anthropic client of the LLM, with the model of the setting `AITU_LLM_MODEL` unless the user chooses another
+(`aitu_backend/llm_models.py`). The pages of the AI: `context/ai/README.md` and `documentation/services/backend/ai-runs.md`. A
 `complete` that raises stops the chain with that error (the product decides retries and time limits).
 
 ## 6. Frozen files
@@ -287,8 +287,8 @@ Layout ---- frames.draw (all systems, or some: one segment) ---> Engraving --- s
 ## 11. The LLM step of the new sheet (implementation 03, Phase 4)
 
 `llm/frames.py` writes the F1 frames sheet with an LLM behind the same function as the bars chain,
-`complete(system, messages) -> text`; the product's functions are in `aitu_backend.sheet_llm` (GPT-6.1 Terra at medium
-by default, Sonnet 5.5 when chosen; section 5 above). Measurements and reasons: `context/implementations/03-apply-poc-research/03-implementation-phase-4.md`.
+`complete(system, messages) -> text`; the product's functions are in `aitu_backend.sheet_llm` (the model of the
+setting by default, `context/ai/README.md`; section 5 above). Measurements and reasons: `context/implementations/03-apply-poc-research/03-implementation-phase-4.md`.
 
 ```text
 notes (starting hands)
@@ -436,10 +436,10 @@ the answer of GET /sheet/{part}                                        ~40-70 ms
   Phase 7).
 - Tests: `tests/test_sheet_reading.py`. Command: `scripts/tools_gallery.py` (the Phase 7 gallery). Browser check:
   `npm run check:frames-tools` (aitu-frontend; `--live` makes one stretch request, about $0.01).
-- **A stretch and Simplify** (implementation 03, Phase 7; implementation 04, Phase 4): `llm.frames.write_stretch`,
-  `write_simplify`, `job.start_stretch`, `job.start_simplify`, `edits.apply_stretch`, `edits.apply_simplify`. The
-  rules, the batches and the checks are told in `context/ai/stretch-and-simplify.md`; the functions and the routes in
-  `documentation/services/backend/ai-runs.md`, sections 7 and 8.
+- **A stretch** (implementation 03, Phase 7; implementation 04, Phase 4): `llm.frames.write_stretch`,
+  `job.start_stretch`, `edits.apply_stretch`. The rules, the batches and the checks are told in `context/ai/stretch.md`;
+  the functions and the route in `documentation/services/backend/ai-runs.md`, section 7. (The Simplify run of
+  implementation 04, Phase 4 was removed in 04-6, its code too: a hand is made easier with a level.)
 
 ## 15. The sheet toolbox, lyrics and the sheet on paper (implementation 03, Phase 8A)
 

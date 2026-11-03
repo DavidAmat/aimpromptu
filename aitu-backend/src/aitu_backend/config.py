@@ -23,6 +23,9 @@ MODEL``                                                    or ``large`` (Phase 1
 DTYPE``                                                    or ``bfloat16`` (Phase 1: ``float16``)
 ``AITU_PRELOAD_        empty (nothing is preloaded)        An engine to load when the server starts,
 ENGINE``                                                   for example ``muscriptor-large``
+``AITU_LLM_MODEL``     :data:`DEFAULT_LLM_MODEL`           The model of the LLM of every AI run when
+                                                           the user chooses none (implementation
+                                                           04-6; ``llm_models`` has the choices)
 =====================  ==================================  =========================================
 
 Read on every call, not once at import: a test sets a variable with ``monkeypatch.setenv`` and the
@@ -115,6 +118,16 @@ def muscriptor_dtype() -> str:
             f"AITU_MUSCRIPTOR_DTYPE must be one of {', '.join(MUSCRIPTOR_DTYPES)}; got {value!r}"
         )
     return value
+
+
+#: The model of the LLM when ``AITU_LLM_MODEL`` is unset: the one place of the code that names it (implementation
+#: 04-6). Every other place asks :func:`llm_model`.
+DEFAULT_LLM_MODEL = "gpt-6.1-terra"
+
+
+def llm_model() -> str:
+    """The model of the LLM of every AI run the user starts without choosing one (``AITU_LLM_MODEL``)."""
+    return os.environ.get("AITU_LLM_MODEL", "").strip() or DEFAULT_LLM_MODEL
 
 
 def preload_engine() -> str | None:

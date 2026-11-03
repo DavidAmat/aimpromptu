@@ -7,7 +7,7 @@ from types import SimpleNamespace as NS
 import pytest
 
 from aitu_backend.sheet.llm.frames import SkipWindow
-from aitu_backend.sheet_llm import NoCredits, OpenAIComplete, openai_price
+from aitu_backend.sheet_llm import NoCredits, OpenAIComplete, price
 
 
 def response(text: str, *, model="gpt-6-luna", inp=10_000, read=0, written=0, out=3_000, reasoning=2_500,
@@ -60,7 +60,7 @@ def test_openai_complete_caches_the_system_prompt_and_the_conversation_and_recor
     gpt = OpenAIComplete(model="gpt-6-luna", cache_key="song|easy", client=fake_client(replies, sent))
     assert gpt("SYSTEM", [{"role": "user", "content": "batch"}]) == "first"
     p = sent[0]
-    assert p["model"] == "gpt-6-luna" and p["reasoning"] == {"effort": "max"}
+    assert p["model"] == "gpt-6-luna" and p["reasoning"] == {"effort": "medium"}  # the table's effort
     assert p["prompt_cache_options"] == {"mode": "explicit"} and p["prompt_cache_key"] == "song|easy"
     assert p["store"] is False
     # the system prompt is the first part, as a developer message with a breakpoint after it
@@ -105,11 +105,13 @@ def test_openai_complete_skips_a_refusal_and_returns_an_incomplete_answer() -> N
     assert [c.stop_reason for c in gpt.calls] == ["refusal", "incomplete:max_output_tokens"]
 
 
-def test_openai_prices_follow_the_model_and_its_dated_names() -> None:
-    assert openai_price("gpt-6.1-terra", 1_000_000, 0, 0, 0) == pytest.approx(1.0)
-    assert openai_price("gpt-6.1-terra-2026-10-01", 0, 1_000_000, 0, 1_000_000) == pytest.approx(5.05)
-    with pytest.raises(KeyError):
-        openai_price("gpt-4o", 1, 1, 0, 0)
+def test_prices_follow_the_model_and_its_dated_names(caplog: pytest.LogCaptureFixture) -> None:
+    assert price("gpt-6.1-terra", 1_000_000, 0, 0, 0) == pytest.approx(1.0)
+    assert price("gpt-6.1-terra-2026-10-01", 0, 1_000_000, 0, 1_000_000) == pytest.approx(5.05)
+    # A model with no price costs 0 and says so in the backend log, instead of stopping the run (04-6).
+    with caplog.at_level("WARNING", logger="aitu_backend.llm_models"):
+        assert price("gpt-4o", 1, 1, 0, 0) == 0.0
+    assert "gpt-4o" in caplog.text
 
 
 def test_openai_complete_sets_at_most_four_breakpoints() -> None:

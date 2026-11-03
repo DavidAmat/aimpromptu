@@ -201,7 +201,7 @@ def test_key(out: Path) -> None:
     cached instructions)."""
     from aitu_backend.sheet_llm import ClaudeComplete
 
-    claude = ClaudeComplete()
+    claude = ClaudeComplete(model="claude-sonnet-5-5")  # the model of the test of task 4.1 (history)
     rows = []
     begin = time.perf_counter()
     msg = claude.client.messages.create(

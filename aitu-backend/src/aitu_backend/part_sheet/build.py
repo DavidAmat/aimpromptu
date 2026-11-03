@@ -8,7 +8,7 @@ Three cases, in order (:func:`current`):
    is drawn, and the stored file is not written again. Measured on the 16 stored sheets of 2026-10-27: with the
    same rules the result is the stored sheet, note for note, in 0.03 to 0.1 s.
 2. **Stored, but the notes or the hands changed since** (a notes edit, a hand moved in the vexflow-v2 editor, a
-   Sonnet run that ended after an edit): the stored decisions are laid again on the current notes
+   run of the LLM that ended after an edit): the stored decisions are laid again on the current notes
    (:func:`reapply`). The hand of a note is always the one of ``notes.pmn`` (plan section 3.7); a note that kept its
    hand and its column keeps its beam group, ornaments, 8va and the user's marks (Phase 7); the clefs and the
    armaduras stay. The rules (figures, grace notes, beam groups cut by the figures, spelling) run again; a note new
@@ -102,7 +102,7 @@ class Drawn:
     #: ``llm``, ``mixed`` or ``algorithm`` (who decided the hands and the reading).
     source: str
     #: The segments of the piece-by-piece view, ``(first frame, end frame, "llm" | "algorithm")``; empty for a sheet
-    #: Sonnet never wrote.
+    #: the LLM never wrote.
     windows: list[tuple[int, int, str]] = field(default_factory=list)
     #: Stored for older notes or hands, and laid again on the current ones.
     stale: bool = False

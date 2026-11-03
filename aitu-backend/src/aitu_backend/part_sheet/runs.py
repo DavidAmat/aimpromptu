@@ -7,11 +7,16 @@ the replies, the check's refusals, the target of a batch, its explanation, its r
 rules of the run, its state and its cost. The page lists the runs, the latest first (:func:`listing`), and opens one
 (:func:`load`). Level runs stored before this log have only their entry in the record's ``levels``: the listing shows
 them from it.
+
+A run whose backend process stopped (a crash, a restart, a reload after a ``.py`` edit) never wrote its end: its log
+stays ``running``. :func:`close_unfinished`, called once when the backend starts (implementation 04-6), marks those
+logs ``stopped``, with a note, and marks "not written" the batches whose notes never reached the sheet.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import re
 import threading
 import uuid
@@ -23,7 +28,12 @@ from aitu_backend.storage import locate, paths
 
 from . import store
 
-__all__ = ["create", "listing", "load", "save", "update"]
+__all__ = ["close_unfinished", "create", "listing", "load", "save", "update"]
+
+log = logging.getLogger(__name__)
+
+#: The note of a run the backend did not finish (implementation 04-6).
+STOPPED_NOTE = "The backend stopped during the run."
 
 _lock = threading.Lock()
 _ID = re.compile(r"^[0-9a-f]{12}$")
@@ -158,3 +168,46 @@ def listing(part_id: str) -> list[dict[str, Any]]:
         )
     out.sort(key=lambda r: r.get("created") or "", reverse=True)
     return out
+
+
+def _saved_batches(part_id: str, run_id: str) -> set[tuple[int, int]]:
+    """The batches of a run whose notes are on the sheet: the record's ``levels`` entries of that run hold them (a
+    level run saves its notes and its entry together, at its end or at the wait after batch 1)."""
+    stored = store.load(part_id)
+    out: set[tuple[int, int]] = set()
+    for entry in stored.record.levels if stored is not None else []:
+        if entry.get("run") == run_id:
+            out.update((int(b[0]), int(b[1])) for b in entry.get("batches", []) if len(b) > 2 and b[2] == "ok")
+    return out
+
+
+def _logs() -> list[Path]:
+    roots = (paths.users_dir(), paths.public_dir(), paths.requests_dir())
+    return [path for root in roots if root.is_dir() for path in root.glob("**/parts/*/ai-runs/*.json")]
+
+
+def close_unfinished() -> int:
+    """At the start of the backend, when no run can be going: every log still ``running`` becomes ``stopped`` with
+    :data:`STOPPED_NOTE`, and each of its batches written (``ok``) or being written (``open``) whose notes are not on
+    the sheet becomes ``error`` (the page says "Not written"; **Write this batch again** still works on it). Returns
+    how many runs it closed. A log it cannot read or write is left as it is: the start never fails for a log."""
+    closed = 0
+    for path in _logs():
+        try:
+            run = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(run, dict) or run.get("state") != "running":
+                continue
+            part_id = path.parent.parent.name
+            saved = _saved_batches(part_id, run["id"])
+            for batch in run.get("batches", []):
+                if batch.get("status") in ("ok", "open") and (batch.get("start"), batch.get("end")) not in saved:
+                    batch["status"] = "error"
+            run["state"] = "stopped"
+            run["note"] = STOPPED_NOTE
+            save(part_id, run)
+            closed += 1
+        except Exception:  # noqa: BLE001 - one bad log must not stop the backend from starting
+            log.exception("Could not close the unfinished AI run %s", path)
+    if closed:
+        log.warning("%d AI run(s) were left running when the backend stopped: marked stopped.", closed)
+    return closed

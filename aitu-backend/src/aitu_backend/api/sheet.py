@@ -3,9 +3,9 @@
 * `GET /sheet/{uuid}?width=N` — the sheet as it is now, drawn for a page `N` staff spaces wide: the SVG (a
   `data-note="<frame>:<midi>"` on every notehead), one row per drawn column (system, frame, x, ms: the cursor map),
   one box per system, the segments of the piece-by-piece view and their state (with the staff the AI writes, when
-  it writes one hand), and the state of Sonnet on the part.
-  While Sonnet writes, the answer is the sheet of that moment (`part_sheet.job.LiveRun`).
-* `POST /sheet/{uuid}/llm` — start Sonnet on the part (or answer the run already going). The page follows the job
+  it writes one hand), and the state of the AI on the part.
+  While the AI writes, the answer is the sheet of that moment (`part_sheet.job.LiveRun`).
+* `POST /sheet/{uuid}/llm` — start the AI on the part (or answer the run already going). The page follows the job
   on `GET /matrix/progress/{jobId}`: an `event: sheet` message each time the sheet changes, then `event: done`.
 * `POST /sheet/{uuid}/hands?width=N` — give notes to one hand (Phase 6: `part_sheet.edits`), and
   `POST /sheet/{uuid}/undo` and `/redo` — walk the steps of the part's log. Each answers the sheet drawn again, as
@@ -19,9 +19,7 @@
 * `GET /sheet/{uuid}/stretch?start=A&end=B` — the armadura in force at a stretch and the one with the fewest signs
   over it. `POST /sheet/{uuid}/llm/stretch` — the AI writes a stretch again with the user's words (one request,
   in the background; the page follows the job as for a whole run), of both hands or of one (the other fixed).
-* `POST /sheet/{uuid}/llm/simplify` — the AI simplifies one hand, or both, over the whole song, batch after batch
-  (implementation 04, Phase 4); one step of undo. `GET /sheet/{uuid}/llm/costs` — what each run of the Enhance with
-  AI dialog would cost, about.
+* `GET /sheet/{uuid}/llm/costs` — what each run of the Enhance with AI dialog would cost, about.
 * The levels (implementation 04-3, Phase 4): `GET /sheet/levels/catalog` — the catalog of patterns of Enhance with
   AI and the patterns used when none is selected; `GET /sheet/levels/catalog/{hand}/{level}/{number}.svg` — the
   drawing of a pattern's example by the app's engine. `POST /sheet/{uuid}/llm/level` — the AI writes a range again
@@ -36,20 +34,21 @@
 
 The sheet is never stale for the page: a sheet stored for older notes is laid again on the current ones
 (`part_sheet.build`). What the old Sheet step saved (`sheet.json`, vexflow-v2) is not read here, except the armadura
-and the reference figure of a part Sonnet never wrote.
+and the reference figure of a part the AI never wrote.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from fastapi.responses import Response
 
+from aitu_backend import llm_models
 from aitu_backend.audio import store as audio_store
 from aitu_backend.auth import context, rights
 from aitu_backend.auth.dependencies import require_part
@@ -86,7 +85,7 @@ def _writes(audio_uuid: str) -> bool:
 
 
 def _llm_state(audio_uuid: str, drawn: build.Drawn, running: Any) -> dict[str, Any]:
-    """What the page may do with Sonnet on this part."""
+    """What the page may do with the AI on this part."""
     user = context.current()
     writes = _writes(audio_uuid)
     where = locate.part(audio_uuid)
@@ -547,8 +546,12 @@ def stretch_keys(
     return reading.fewest_signs(f1.read(build.current(audio_uuid).text), start, end)
 
 
-#: The AI models of Enhance with AI (``job.MODELS``; the user, 2026-10-30). None: GPT-6.1 Terra.
-AiModel = Literal["gpt-6.1-terra", "gpt-6.1-sol", "claude-sonnet-5-5"]
+def _offered(name: str) -> str:
+    return llm_models.resolve(name)  # ValueError for a model the selector does not offer: 422
+
+
+#: A model of the dialog's **Model** selector (``llm_models.choices``; the user, 2026-10-30). None: the setting's.
+AiModel = Annotated[str, AfterValidator(_offered)]
 
 
 class RunChoice(BaseModel):
@@ -591,27 +594,6 @@ def run_llm_stretch(audio_uuid: str, body: StretchRequest = Body(...)) -> dict[s
         )
     except job.Busy as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return {"jobId": started.id, "status": started.status}
-
-
-class SimplifyRequest(BaseModel):
-    hand: Literal["both", "right", "left"]
-
-
-@router.post("/{audio_uuid}/llm/simplify", status_code=202)
-def run_llm_simplify(audio_uuid: str, body: SimplifyRequest = Body(...)) -> dict[str, str]:
-    """The AI simplifies one hand, or both, over the whole song, in the background; the page follows the job."""
-    _notes_or_404(audio_uuid)
-    if not job.available():
-        raise HTTPException(status_code=409, detail="The AI is not set up on this machine.")
-    if not _writes(audio_uuid):
-        raise HTTPException(status_code=403, detail="This sheet cannot be changed here.")
-    try:
-        started = job.start_simplify(audio_uuid, hand=body.hand)
-    except job.Busy as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"jobId": started.id, "status": started.status}
 
 
@@ -757,9 +739,11 @@ def llm_costs(
     end: int | None = Query(None, ge=1),
 ) -> dict[str, Any]:
     """What each run of the Enhance with AI dialog would cost, about: requests and US dollars. With a range
-    (``start``, ``end``), also a level of that range for each hand (``level-stretch-both`` ...)."""
+    (``start``, ``end``), also a level of that range for each hand (``level-stretch-both`` ...). Also the choices of
+    the dialog's **Model** selector (``models``: ``value`` and ``label``, the setting's first) and the setting's
+    model (``model``), so the page keeps no list of its own (implementation 04-6)."""
     _notes_or_404(audio_uuid)
-    out = job.costs(audio_uuid)
+    out: dict[str, Any] = {**job.costs(audio_uuid), "models": llm_models.choices(), "model": llm_models.default()}
     if start is not None and end is not None and end > start:
         current = f1.read(build.current(audio_uuid).text)
         for hand in job.HANDS:

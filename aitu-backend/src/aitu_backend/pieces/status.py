@@ -16,8 +16,8 @@ until a passage brings audio (Record or Paste); the page shows only the sheet. *
 from reading the video instead of a transcription, so its Notes step says so, and is ``running``
 while the video is read.
 
-**The hands and the sheet** (implementation 03, Phase 5). The Hands step is gone: Sonnet decides the hands with the
-sheet, and the Sheet step opens as soon as the notes are ready. It is ``running`` while Sonnet writes, ``ready`` once
+**The hands and the sheet** (implementation 03, Phase 5). The Hands step is gone: the LLM decides the hands with the
+sheet, and the Sheet step opens as soon as the notes are ready. It is ``running`` while the LLM writes, ``ready`` once
 a sheet is stored (``sheet.f1``, or the ``sheet.json`` the vexflow-v2 sheet saved, whose marks the new sheet carries),
 and ``missing`` otherwise. The sheet is never stale for the page: it is laid again on the current notes
 (``part_sheet.build``), so the old sheet's ``stale`` state (its notes or hands changed since it was saved) went with
@@ -40,7 +40,7 @@ from aitu_backend.video import store as video_store
 State = Literal["missing", "running", "stale", "ready"]
 
 #: The steps of the flow page, in order (plan section 7.1). The Hands step was removed by implementation 03,
-#: Phase 5: Sonnet decides the hands with the sheet.
+#: Phase 5: the LLM decides the hands with the sheet.
 STEPS = ("source", "audio", "notes", "sheet")
 
 
@@ -124,7 +124,7 @@ def piece_status(audio_uuid: str) -> PieceStatus:
         notes.details.update({"noteCount": len(live), "engine": header.engine if header else None})
 
     # ------------------------------------------------------------------ sheet
-    # The Hands step is gone (implementation 03, Phase 5, plan section 3.5): Sonnet decides the hands with the
+    # The Hands step is gone (implementation 03, Phase 5, plan section 3.5): the LLM decides the hands with the
     # sheet, so the Sheet step opens as soon as the notes are ready.
     sheet: StepStatus
     sheet_enabled = notes.state == "ready"

@@ -176,14 +176,14 @@ def clear_rhythm(audio_uuid: str) -> None:
 def clear_new_sheet(audio_uuid: str) -> None:
     """Forget the new sheet (``sheet.f1``, implementation 03, Phase 5) when a whole new set of notes replaces the old
     one: its columns would point at other notes. The copy is in history (``history.snapshot_notes``). The new notes
-    ask Sonnet for their sheet: the Sheet step starts it by itself.
+    ask the LLM for their sheet: the Sheet step starts it by itself.
     """
     from aitu_backend.part_sheet import (
         store as new_sheet,
     )  # noqa: PLC0415 - a small module, read late
 
     new_sheet.clear(audio_uuid)
-    new_sheet.ask_sonnet(audio_uuid)
+    new_sheet.ask_ai(audio_uuid)
 
 
 @dataclass(frozen=True)

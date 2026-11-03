@@ -10,9 +10,9 @@
  * - `transcribe`: Transcribe to the first note received in the live view (`firstNote`), and to the saved notes on screen
  *   (`notes`); `backend` is no longer on screen (implementation 02, Phase 1) and stays empty;
  * - `sheet`: the Sheet tab to the page (`open`), the Sheet tab to the first notehead of the new sheet
- *   (`firstSheet`), and to the first segment written by Sonnet (`firstSonnet`). There is no Hands step and no
- *   Save since implementation 03, Phase 5: Sonnet decides the hands with the sheet, in the background. The pieces
- *   are deleted at the end, which stops Sonnet at its next request (a few cents a piece).
+ *   (`firstSheet`), and to the first segment written by the AI (`firstAi`). There is no Hands step and no
+ *   Save since implementation 03, Phase 5: the AI decides the hands with the sheet, in the background. The pieces
+ *   are deleted at the end, which stops the AI at its next request (a few cents a piece).
  *
  * The three pieces, all temporary, deleted at the end, so the library is never changed:
  *
@@ -177,14 +177,14 @@ async function walk(name, arrive) {
     const firstSheet = Date.now() - tabPressed;
     await page.waitForTimeout(400);
     await shot('4-sheet');
-    // The first segment back from Sonnet starts to appear column by column.
+    // The first segment back from the AI starts to appear column by column.
     const back = await page.waitForSelector('[data-revealing]', { timeout: 180000 }).then(() => true, () => false);
-    const firstSonnet = back ? Date.now() - tabPressed : null;
+    const firstAi = back ? Date.now() - tabPressed : null;
     const finalStatus = await (await fetch(`${api}/pieces/${arrived.uuid}/status`)).json();
     row.sheet = {
       open: sheetOpen,
       firstSheet,
-      firstSonnet,
+      firstAi,
       noteheads: await page.locator('[data-frames-sheet] [data-note]').count(),
       steps: finalStatus.steps.map((s) => s.state).join(' '),
     };
@@ -256,12 +256,12 @@ try {
 }
 
 const seconds = (ms) => (ms === null || ms === undefined ? '-' : `${(ms / 1000).toFixed(1)} s`);
-console.log('\npiece | length | in | first note | notes | sheet ready | first sheet | first Sonnet segment | total');
+console.log('\npiece | length | in | first note | notes | sheet ready | first sheet | first AI segment | total');
 for (const r of report) {
   if (r.error) { console.log(`${r.piece} | FAILED: ${r.error}`); continue; }
   console.log([
     r.piece, `${r.durationSeconds} s`, seconds(r.in?.ms), seconds(r.transcribe.firstNote), seconds(r.transcribe.notes),
-    seconds(r.sheet.open), seconds(r.sheet.firstSheet), seconds(r.sheet.firstSonnet), seconds(r.total),
+    seconds(r.sheet.open), seconds(r.sheet.firstSheet), seconds(r.sheet.firstAi), seconds(r.total),
   ].join(' | '));
   if (r.problems.length) console.log(`  problems: ${r.problems.join('; ')}`);
 }

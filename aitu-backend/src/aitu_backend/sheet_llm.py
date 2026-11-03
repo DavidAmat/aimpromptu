@@ -1,11 +1,12 @@
-"""Claude for the LLM step of the new sheet (implementation 03, Phase 4): the ``complete`` function of the core.
+"""The clients of the LLM: the ``complete(system, messages) -> text`` function of the core, one per provider.
 
-The core (:mod:`aitu_backend.sheet.llm.frames`) imports no SDK; it calls ``complete(system, messages) -> text``.
-:class:`ClaudeComplete` is that function with the official ``anthropic`` SDK and the API key of ``.env``
-(``ANTHROPIC_API_KEY``, from the Claude Console organization linked to the Max 5x credits, plan section 3.8):
+The core (:mod:`aitu_backend.sheet.llm.frames`) imports no SDK; it calls ``complete(system, messages) -> text``. The
+model and its effort come from the caller (``part_sheet.job``, from :mod:`aitu_backend.llm_models`, the one table of
+the models); the prices of every request too (:func:`price`).
 
-* the model is Sonnet 5.5 (``claude-sonnet-5-5``, the user's choice of 2026-10-22), with adaptive thinking and an
-  explicit effort (``high``, the model's default);
+:class:`ClaudeComplete` (implementation 03, Phase 4) uses the official ``anthropic`` SDK and ``ANTHROPIC_API_KEY``:
+
+* adaptive thinking and an explicit effort;
 * the system prompt (the frozen instructions, the same for every request of every song) is cached
   (``cache_control``): the first request of a song writes it, the others read it at a tenth of the price;
 * each request is streamed, so a long answer never meets the HTTP time limit; the SDK retries a lost connection, a
@@ -20,9 +21,8 @@ The core (:mod:`aitu_backend.sheet.llm.frames`) imports no SDK; it calls ``compl
 Any other error (no key, no credits left, no network after the retries) is raised; the chain then keeps the
 algorithm for the rest of the song and says why in its result.
 
-:class:`OpenAIComplete` (implementation 04-3, Phase 5) is the same function with OpenAI's models (GPT-6 Luna,
-GPT-6.1 Terra, GPT-6.1 Sol), through the Responses API and ``OPENAI_API_KEY``, for the comparison of models on the
-level runs. The app does not use it yet. Its caching is explicit: a breakpoint after the system prompt (the same in
+:class:`OpenAIComplete` (implementation 04-3, Phase 5) is the same function with OpenAI's models, through the
+Responses API and ``OPENAI_API_KEY``. Its caching is explicit: a breakpoint after the system prompt (the same in
 every request of a run, read at a tenth of the price or less) and one after each user message (so a reply after a
 rejected answer reads the whole conversation before it); every request of one client sends the same
 ``prompt_cache_key``.
@@ -34,32 +34,23 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from aitu_backend import llm_models
 from aitu_backend.sheet.llm.frames import SkipWindow
 
-__all__ = ["MODEL", "Call", "ClaudeComplete", "NoCredits", "OpenAIComplete", "openai_price", "price"]
+__all__ = ["Call", "ClaudeComplete", "NoCredits", "OpenAIComplete", "price"]
 
-MODEL = "claude-sonnet-5-5"
-EFFORT = "high"
 MAX_TOKENS = 64000
 TIMEOUT_S = 600.0
 MAX_RETRIES = 4
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
-#: US dollars per million tokens: input, output, cache write (5 minutes), cache read (2026-10, platform prices)
-PRICES = {
-    "claude-sonnet-5-5": (2.0, 10.0, 2.5, 0.20),
-    "claude-sonnet-5": (2.0, 10.0, 2.5, 0.20),
-    "claude-opus-5-5": (4.0, 20.0, 5.0, 0.20),
-}
-
 
 def price(
     model: str, input_tokens: int, output_tokens: int, cache_write: int, cache_read: int
 ) -> float:
-    p_in, p_out, p_write, p_read = PRICES.get(model, PRICES[MODEL])
-    return (
-        input_tokens * p_in + output_tokens * p_out + cache_write * p_write + cache_read * p_read
-    ) / 1e6
+    """US dollars of one request (``input_tokens``: the tokens neither read from nor written to the cache), from the
+    table of the models. A model with no price: 0, with a warning in the backend log."""
+    return llm_models.cost(model, input_tokens, output_tokens, cache_write, cache_read)
 
 
 @dataclass
@@ -77,13 +68,14 @@ class Call:
 
 
 class ClaudeComplete:
-    """``complete(system, messages) -> text`` with Claude. ``client`` replaces the SDK client (tests)."""
+    """``complete(system, messages) -> text`` with an Anthropic model. ``effort``: by default the table's.
+    ``client`` replaces the SDK client (tests)."""
 
     def __init__(
         self,
         *,
-        model: str = MODEL,
-        effort: str = EFFORT,
+        model: str,
+        effort: str | None = None,
         max_tokens: int = MAX_TOKENS,
         timeout: float = TIMEOUT_S,
         max_retries: int = MAX_RETRIES,
@@ -97,7 +89,7 @@ class ClaudeComplete:
             client = anthropic.Anthropic(timeout=timeout, max_retries=max_retries)
         self.client = client
         self.model = model
-        self.effort = effort
+        self.effort = effort or llm_models.effort(model)
         self.max_tokens = max_tokens
         self.fallbacks = fallbacks
         self.on_call = on_call
@@ -167,9 +159,6 @@ class ClaudeComplete:
         return text
 
 
-OPENAI_EFFORT = "max"
-
-
 class NoCredits(RuntimeError):
     """The OpenAI account has no credits left (``insufficient_quota``): the run stops, and the page asks the user to
     add credits to the OpenAI account (the user, 2026-10-30)."""
@@ -181,24 +170,9 @@ def _no_credits(exc: Exception) -> bool:
     if isinstance(body, dict):
         code = code or body.get("code") or (body.get("error") or {}).get("code")
     return code == "insufficient_quota" or "insufficient_quota" in str(exc)
+
+
 OPENAI_MAX_TOKENS = 128000
-
-#: US dollars per million tokens: input, output, cache write (30 minutes), cache read (2026-10-30, OpenAI's pricing
-#: page, Standard tier, prompts up to 272K tokens)
-OPENAI_PRICES = {
-    "gpt-6-luna": (0.10, 0.50, 0.125, 0.01),
-    "gpt-6.1-terra": (1.0, 5.0, 1.25, 0.05),
-    "gpt-6.1-sol": (2.0, 10.0, 2.5, 0.10),
-}
-
-
-def openai_price(model: str, input_tokens: int, output_tokens: int, cache_write: int, cache_read: int) -> float:
-    """``input_tokens``: the tokens neither read from nor written to the cache."""
-    base = next((m for m in OPENAI_PRICES if model == m or model.startswith(m + "-")), None)
-    if base is None:
-        raise KeyError(f"no price for {model}")
-    p_in, p_out, p_write, p_read = OPENAI_PRICES[base]
-    return (input_tokens * p_in + output_tokens * p_out + cache_write * p_write + cache_read * p_read) / 1e6
 
 
 def _openai_key() -> str | None:
@@ -218,14 +192,15 @@ def _openai_key() -> str | None:
 
 
 class OpenAIComplete:
-    """``complete(system, messages) -> text`` with an OpenAI model. ``cache_key``: the ``prompt_cache_key`` of every
-    request (one per run, for example the song and the level). ``client`` replaces the SDK client (tests)."""
+    """``complete(system, messages) -> text`` with an OpenAI model. ``effort``: by default the table's.
+    ``cache_key``: the ``prompt_cache_key`` of every request (one per run, for example the song and the level).
+    ``client`` replaces the SDK client (tests)."""
 
     def __init__(
         self,
         *,
         model: str,
-        effort: str = OPENAI_EFFORT,
+        effort: str | None = None,
         cache_key: str | None = None,
         max_tokens: int = OPENAI_MAX_TOKENS,
         timeout: float = 1800.0,
@@ -239,7 +214,7 @@ class OpenAIComplete:
             client = openai.OpenAI(api_key=_openai_key(), timeout=timeout, max_retries=max_retries)
         self.client = client
         self.model = model
-        self.effort = effort
+        self.effort = effort or llm_models.effort(model)
         self.cache_key = cache_key
         self.max_tokens = max_tokens
         self.on_call = on_call
@@ -316,7 +291,7 @@ class OpenAIComplete:
             usd=0.0,
             reasoning_tokens=usage.output_tokens_details.reasoning_tokens or 0,
         )
-        call.usd = openai_price(
+        call.usd = price(
             call.model, call.input_tokens, call.output_tokens, call.cache_write_tokens, call.cache_read_tokens
         )
         self.calls.append(call)

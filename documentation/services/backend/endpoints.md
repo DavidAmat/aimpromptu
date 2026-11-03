@@ -110,7 +110,7 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | PATCH | `/pieces/{uuid}/notes` | A list of operations on notes named by id (implementation 08). |
 | **The sheet** | `api/sheet.py` | Implementation 03, Phases 5 to 10 |
 | GET | `/sheet/{uuid}?width=N` | The new sheet of a part drawn for a page `N` staff spaces wide: the SVG, the cursor map, the segments of the AI's windows and their state, and what the page may do with the AI (section 4.1). |
-| POST | `/sheet/{uuid}/llm` | Start the AI on the part (or answer the run already going); follow `GET /matrix/progress/{jobId}`. An optional body `{model, batches}` (2026-10-30): `model` `gpt-6.1-terra` (the default), `gpt-6.1-sol` or `claude-sonnet-5-5`; `batches` (1 to 60) the number of windows, of about the same time (`frames.split_windows`). 409 when that model has no key. |
+| POST | `/sheet/{uuid}/llm` | Start the AI on the part (or answer the run already going); follow `GET /matrix/progress/{jobId}`. An optional body `{model, batches}` (2026-10-30): `model` one of the `models` of `GET /llm/costs` (none: the model of the setting, `llm_models.resolve`; another name: 422); `batches` (1 to 60) the number of windows, of about the same time (`frames.split_windows`). 409 when that model has no key. |
 | POST | `/sheet/{uuid}/hands` | Phase 6: give notes to one hand, in `notes.pmn` (one step of undo); the sheet drawn again (section 4.1). |
 | POST | `/sheet/{uuid}/undo`, `/sheet/{uuid}/redo` | Phase 6: walk the part's steps back or forward; the sheet drawn again. |
 | POST | `/sheet/{uuid}/reading` | Phase 7: one reading edit of the toolboxes (figure, finger, beam, grace note switch, ornament; armadura, clef, clef rules, octave line of a stretch); the sheet drawn again (section 4.1). |
@@ -120,11 +120,10 @@ sheet answer is about 11 times smaller this way (634 KB median, 56 KB sent). A `
 | POST | `/sheet/{uuid}/take-out` | Phase 5: **Delete these frames** of the range toolbox: `{start, end}`; their notes and audio taken out, everything after moved earlier; one step of undo; answers `notesRemoved`. 409 when a paste cannot be made. |
 | GET | `/sheet/{uuid}/stretch?start=A&end=B` | Phase 7: the armadura in force at a stretch and the one with the fewest signs over it. |
 | POST | `/sheet/{uuid}/llm/stretch` | Phase 7: the AI writes a stretch again with the user's words, in the background; follow `GET /matrix/progress/{jobId}`. `staff` `right` or `left` (implementation 04, Phase 4): that hand only, the other stays as it is. Also `model` and `batches` (2026-10-30): the stretch in that many requests, one after the other, stored as one step; the summary adds `batches` (accepted) and `total`. |
-| POST | `/sheet/{uuid}/llm/simplify` | Implementation 04, Phase 4: `{hand: left \| right \| both}`; the AI simplifies that hand over the whole song (the rules of simplicity only), batch after batch; one step of undo. The job's `done` summary: `simplify` (`ok`, `none`, `stale`, `failed`), `hand`, `added`, `leftOut`, `usd`. 400 when the hand has no notes, 409 while the AI works on the part. The dialog no longer offers it: a hand is simplified as a level (`POST /sheet/{uuid}/llm/level`). |
 | POST | `/sheet/{uuid}/llm/stop` | 2026-10-30: **Stop** in the panel of an AI run: no more requests after the one it waits for; what it wrote stays, its `done` summary says `stopped`. 409 when none runs. |
 | POST | `/sheet/{uuid}/llm/revert?width=N` | 2026-10-30: **Revert** an AI run: `{version}` (`before` of the run's `done` summary, the snapshot taken as it started) puts the part back as it was (notes, sheet, audio timeline); one step "Revert the AI run", whose undo brings the run's result back. 404 for an unknown snapshot, 409 while a run goes. |
 | GET | `/sheet/{uuid}/llm/batches` | 2026-10-30: the batches a run of Enhance with AI would make, for the preview on the sheet: `?run=all\|level\|stretch&hand=both\|right\|left&start=&end=&batches=&model=` answers `{windows: [[first, end]], count, default, min, max, seconds, usd, minutes, model}` (`job.batch_plan`; the cost and the minutes with that model). The level routes take `model` and `batches` in their body too. 400 for a stretch without frames or a hand with no notes. |
-| GET | `/sheet/{uuid}/llm/costs` | Implementation 04, Phase 4: about what each run of the Enhance with AI dialog would cost: `{all, stretch, simplify-left, simplify-right, simplify-both, level-left, level-right, level-both}`, each `{requests, usd}`; with `?start=&end=` (a range), also `level-stretch-left`, `-right`, `-both`. |
+| GET | `/sheet/{uuid}/llm/costs` | Implementation 04, Phase 4: about what each run of the Enhance with AI dialog would cost: `{all, stretch, level-left, level-right, level-both}`, each `{requests, usd}`; with `?start=&end=` (a range), also `level-stretch-left`, `-right`, `-both`. Since 04-6 also `models` (the choices of the dialog's **Model** selector, `{value, label}`, the setting's model first, `llm_models.choices`) and `model` (the setting's). |
 | GET | `/sheet/levels/catalog` | Implementation 04-3, Phase 4: the catalog of patterns of Enhance with AI (`patterns`: `ref`, `hand`, `level`, `number`, `name`, `line`, `source`, `bars`) and `defaults` (`hand -> level -> refs`: the patterns a run uses for a hand when none is selected). |
 | GET | `/sheet/levels/catalog/{hand}/{level}/{number}.svg` | Implementation 04-3, Phase 4: a pattern's example drawn by the app's engine (`super-hard` for super hard); 404 for an unknown pattern. |
 | POST | `/sheet/{uuid}/llm/level` | Implementation 04-3, Phase 4; changed by 04-5: a level of a range, in place: `{right, left: easy \| medium \| hard, hand: both \| right \| left, start, end, patterns, words, exact, strict, chords, batches, model}`; the plan of the range, then batches (each checked, at most three replies each); one step of undo. `exact` (the dialog's **Deselect all**): `patterns` are exactly the ticks, so a hand with none has no pattern (written `free`); without it a hand with none gets `defaults`. `strict`: the ticked refs written Strict. `chords`: the guide of the song, saved with the part (`null` keeps the saved one). The run writes its first batch and waits when it has two batches or more (`waiting` in the `done` summary); `continue` and `again` are in the run's routes. The job's `done` summary: `level` (`ok`, `failed`, `stale`, `gone`), `batches`, `total`, `levelName`, `usd`, `run`, `waiting`, `note`. 202 `{jobId, status}`. 400 without a range, 403 on a sheet the user cannot change, 409 while the AI works on the part or when the AI is not set up. |
@@ -613,7 +612,7 @@ Each event carries:
 
 - `id`, the stable note id of `notes.pmn`, which `PATCH /pieces/{uuid}/notes` names it by;
 - `hand`: the saved hand, or `null` (since implementation 03, Phase 5 the hand split is no longer shown before
-  Sonnet decides the hands: a new transcription plays in Notes Falling without hand colours; `frameMs` is kept
+  the AI decides the hands: a new transcription plays in Notes Falling without hand colours; `frameMs` is kept
   for the pages that send it);
 - `removed`, `artifact`, `octaveBelow`.
 
@@ -684,8 +683,8 @@ described in git history and in [`deprecated/time-matrix.md`](../../deprecated/t
   current notes when they or the hands changed (`stale: true`); the algorithm's on the starting hands when none
   is stored. While the AI writes it, it is the sheet of that moment.
 - `segments`: the AI's windows (`working`: being written now; `waiting`; `llm`; `algorithm`: a window that failed);
-  empty on a sheet the AI never wrote. While the AI writes one hand only (Simplify of one hand, a stretch of one
-  hand; implementation 04, Phase 4) each segment also has `staff` (1 right, 2 left): the page veils only that staff.
+  empty on a sheet the AI never wrote. While the AI writes one hand only (a stretch of one hand, a level of one
+  hand) each segment also has `staff` (1 right, 2 left): the page veils only that staff.
 - `llm.auto`: a new transcription asked for the AI (`sheet.pending`) and the user may change the part: the page
   starts it. `canRun`: **Enhance with AI** is offered (on a sheet the AI enhanced, as **Enhance it again with AI**).
   `enhanced`: the AI wrote this sheet or part of it (`sheet.f1` with source `llm` or `mixed`); it stays through

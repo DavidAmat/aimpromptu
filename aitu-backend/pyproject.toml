@@ -36,11 +36,11 @@ dependencies = [
     "alembic>=1.14.0",
     # The password hashes of the users (implementation 02, plan section 9.2): Argon2id.
     "argon2-cffi>=23.1.0",
-    # The LLM step of the new sheet (implementation 03, Phase 4): Sonnet 5.5 through the official
-    # SDK and the API key of `.env` (ANTHROPIC_API_KEY). Imported only when the step runs.
+    # The LLM step of the new sheet (implementation 03, Phase 4): an Anthropic model through the
+    # official SDK and the API key of `.env` (ANTHROPIC_API_KEY). Imported only when such a run starts.
     "anthropic>=2.2.0",
-    # Other AI models for the level runs (implementation 04-3, Phase 5): OpenAI's Responses API and the
-    # key of `.env` (OPENAI_API_KEY). Used only by the comparison scripts for now.
+    # The default AI of every run (implementation 04-3, Phase 5): OpenAI's Responses API and the key of
+    # `.env` (OPENAI_API_KEY, required).
     "openai>=3.41.0",
 ]
 

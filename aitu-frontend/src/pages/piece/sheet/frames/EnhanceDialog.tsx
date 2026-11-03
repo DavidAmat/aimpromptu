@@ -7,8 +7,7 @@
  *   AI writes that stretch again under the pale veil; one step of undo.
  * - **The whole song** (open when nothing is selected): **a level** of the whole sheet, the right hand only or the left
  *   hand only, written into a new project of My projects named with the level (the original stays); or **Write it all
- *   again** (the AI writes the hands and the reading of the whole song). Simplifying a hand is a level of that hand;
- *   the older Simplify run without a level is no longer offered here.
+ *   again** (the AI writes the hands and the reading of the whole song). Simplifying a hand is a level of that hand.
  *
  * A level is Easy, Medium or Hard for each hand rewritten (the same for both by default). Under it, the **gallery of
  * patterns** of those hands (`PatternGallery`), inside the dialog: the patterns approved for the level are ticked, the
@@ -17,8 +16,9 @@
  * user, 2026-10-30). The run gets exactly the ticks (`exact`): a hand with none has no pattern, and the AI writes it by
  * the rules of its level and the words only.
  *
- * Every run chooses its **model** (GPT-6.1 Terra, GPT-6.1 Sol or Sonnet 5.5) and its number of **batches** (the user,
- * 2026-10-30): the batches, of about the same time, are drawn on the sheet while the dialog is open (`onPreview`), so
+ * Every run chooses its **model** and its number of **batches** (the user, 2026-10-30). The models are the backend's
+ * (`GET .../llm/costs`: `models`, and `model`, the setting's, shown first; implementation 04-6): a run left on the
+ * setting's names no model, and the backend uses the setting. The batches, of about the same time, are drawn on the sheet while the dialog is open (`onPreview`), so
  * the dialog sits at the right and leaves the sheet free. The cost and the time follow both (`GET .../llm/batches`).
  * On a version of My library, Write it all again runs in the edit copy, as **Edit** opens it; a level goes into its
  * new project.
@@ -37,7 +37,6 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import {
-  AI_MODELS,
   sheetApi,
   type AiModel,
   type BatchPlan,
@@ -103,8 +102,8 @@ function dollars(cost: LlmCost | undefined): string {
   return cost === undefined ? "" : `$${cost.usd.toFixed(2)}`;
 }
 
-/** About how long a run takes, as the backend estimates it from what GPT-6.1 Terra measured (implementation 04-3,
- * Phase 5): "about 3 minutes", or "" before the costs arrive. */
+/** About how long a run takes, as the backend estimates it from what was measured (implementation 04-3, Phase 5)
+ * and the model chosen: "about 3 minutes", or "" before the costs arrive. */
 function timeOf(cost: LlmCost | undefined): string {
   if (!cost) return "";
   const most =
@@ -187,7 +186,8 @@ export function EnhanceDialog({
     Record<CatalogHand, GalleryLevel>
   >({ right: "easy", left: "easy" });
   const [costs, setCosts] = useState<LlmCosts | null>(null);
-  const [model, setModel] = useState<AiModel>("gpt-6.1-terra");
+  /** The model the user chose; `null`: the setting's (the backend's). */
+  const [model, setModel] = useState<AiModel | null>(null);
   /** The number of batches the user chose for the run shown; `null`: as many as the run makes by itself. */
   const [batches, setBatches] = useState<{ key: string; count: number } | null>(null);
   const [plan, setPlan] = useState<BatchPlan | null>(null);
@@ -248,6 +248,11 @@ export function EnhanceDialog({
   };
   // The batches of the run shown, for the preview on the sheet and the estimate. A change of run or hand starts again
   // from the run's own number.
+  const models = costs?.models ?? [];
+  /** The model a run asks for: the user's choice while the backend offers it; `null`: none named (the setting's). */
+  const asked = model !== null && models.some((one) => one.value === model) ? model : null;
+  /** The model the selector shows: the one asked for, else the setting's ("" until the costs arrive). */
+  const shownModel = asked ?? costs?.model ?? "";
   const runKind: BatchQuery["run"] = onStretchTab ? (level ? "level" : "stretch") : level ? "level" : "all";
   const runHand: LevelHand = onStretchTab ? hand : level ? songHand : "both";
   const runKey = `${runKind}:${runHand}`;
@@ -264,7 +269,7 @@ export function EnhanceDialog({
           {
             run: runKind,
             hand: runHand,
-            model,
+            ...(asked ? { model: asked } : {}),
             ...(rangeStart !== undefined && rangeEnd !== undefined ? { start: rangeStart, end: rangeEnd } : {}),
             ...(chosenBatches ? { batches: chosenBatches } : {}),
           },
@@ -287,7 +292,7 @@ export function EnhanceDialog({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [open, audioUuid, runKind, runHand, model, rangeStart, rangeEnd, chosenBatches, onPreview]);
+  }, [open, audioUuid, runKind, runHand, asked, rangeStart, rangeEnd, chosenBatches, onPreview]);
   useEffect(() => () => onPreview?.(null), [onPreview]);
   const shownPlan = plan && plan.run === runKind && plan.hand === runHand ? plan : null;
   /** The number shown: the one chosen, before its plan arrives, or the plan's. */
@@ -296,7 +301,10 @@ export function EnhanceDialog({
     if (!shownPlan || count === undefined) return;
     setBatches({ key: runKey, count: Math.min(shownPlan.max, Math.max(shownPlan.min, count + by)) });
   };
-  const runChoice: RunChoice = { model, ...(shownPlan ? { batches: shownPlan.count } : {}) };
+  const runChoice: RunChoice = {
+    ...(asked ? { model: asked } : {}),
+    ...(shownPlan ? { batches: shownPlan.count } : {}),
+  };
 
   /** The hands rewritten with no pattern ticked: the AI writes them by the level's rules and the words only. */
   const free = catalog ? hands.filter((side) => picked(side).length === 0) : [];
@@ -439,12 +447,12 @@ export function EnhanceDialog({
         select
         size="small"
         label="Model"
-        value={model}
-        onChange={(event) => setModel(event.target.value as AiModel)}
+        value={shownModel}
+        onChange={(event) => setModel(event.target.value)}
         sx={{ minWidth: 180 }}
         slotProps={{ htmlInput: { "data-testid": "ai-model" } }}
       >
-        {AI_MODELS.map((one) => (
+        {models.map((one) => (
           <MenuItem key={one.value} value={one.value}>
             {one.label}
           </MenuItem>
