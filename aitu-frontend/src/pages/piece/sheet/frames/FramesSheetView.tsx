@@ -51,7 +51,7 @@ import Box from "@mui/material/Box";
 import { keyframes } from "@mui/material/styles";
 import type { FramesSheet, LyricFont } from "../../../../api";
 import { palette, semantic } from "../../../../ui";
-import { BATCH_COLOURS, type BatchPreview } from "./batches";
+import { batchColour, REFERENCE_COLOUR, type BatchPreview } from "./batches";
 import { boxesOf, columnEdges, columnsOf, headsByColumn, laterOnsets, type ColumnHeads, msAtPoint, onStaff, placeAt, steadyColumns } from "./geometry";
 import { LYRIC_LEADING, LYRIC_MAX, LYRIC_MIN, familyOf, wrapWords } from "./lyricsText";
 
@@ -348,16 +348,29 @@ export function FramesSheetView({
   // The batches of the run the dialog would start: each its own colour, over the staff it rewrites.
   const batchBoxes = useMemo(
     () =>
-      (batches?.windows ?? []).flatMap(([start, end], index) => {
+      (batches?.windows ?? []).flatMap(([start, end], order) => {
         const [from, to] = columnsOf({ start, end }, columns);
         return boxesOf(from, to, columns, edges, sheet.systems).map((box, k) => ({
           ...onStaff(box, sheet.systems[box.system], batches?.staff ?? undefined),
-          index,
+          index: batches?.places?.[order] ?? order,
           first: k === 0,
         }));
       }),
     [batches, columns, edges, sheet.systems],
   );
+  // The reference of Copy this style, over the same staff, under its own name.
+  const referenceBoxes = useMemo(() => {
+    if (!batches?.reference) return [];
+    const [start, end] = batches.reference;
+    const [from, to] = columnsOf({ start, end }, columns);
+    const boxes = boxesOf(from, to, columns, edges, sheet.systems);
+    // The name goes on the widest box: the first may hold a column or two at the end of a line.
+    const widest = boxes.reduce((best, box, k) => (box.width > boxes[best].width ? k : best), 0);
+    return boxes.map((box, k) => ({
+      ...onStaff(box, sheet.systems[box.system], batches.staff ?? undefined),
+      named: k === widest,
+    }));
+  }, [batches, columns, edges, sheet.systems]);
 
   const [reveal, setReveal] = useState<Reveal | null>(null);
   // Compared during render, so the new drawing never shows for one frame before its segment is covered.
@@ -1103,8 +1116,28 @@ export function FramesSheetView({
         preserveAspectRatio="xMinYMin meet"
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
       >
+        {referenceBoxes.map((box) => (
+          <g key={`r${box.system}:${box.x}`} data-batch-reference>
+            <rect
+              x={box.x}
+              y={box.y}
+              width={box.width}
+              height={box.height}
+              rx={0.6}
+              fill={REFERENCE_COLOUR}
+              fillOpacity={0.12}
+              stroke={REFERENCE_COLOUR}
+              strokeWidth={0.18}
+            />
+            {box.named ? (
+              <text x={box.x + 0.6} y={box.y + 1.8} fontSize={1.6} fontWeight={700} fill={REFERENCE_COLOUR}>
+                The reference
+              </text>
+            ) : null}
+          </g>
+        ))}
         {batchBoxes.map((box) => {
-          const colour = BATCH_COLOURS[box.index % BATCH_COLOURS.length];
+          const colour = batchColour(box.index);
           return (
             <g key={`b${box.index}:${box.system}:${box.x}`} data-batch={box.index + 1}>
               <rect

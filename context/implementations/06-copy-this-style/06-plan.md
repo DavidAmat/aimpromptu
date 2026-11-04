@@ -394,3 +394,13 @@ this style: an agent may do them at any time after Phase 1, but not while a brow
 - The job's summary names the run `style` (`ok`, `dropped`, `failed`, `stale`, `gone`); the check is the log's
   `plan` (`k` -1), the passages are the log's `passages`.
 
+**Phase 3 (2026-11-04)**, report [`06-implementation-phase-3.md`](06-implementation-phase-3.md):
+
+- The `GET` route also answers `costs`, the estimate for each number of passages ticked, so the status line follows the
+  ticks with no request and the page holds no price. The event `style` says `checking`, so the panel says "The AI is
+  checking the passages".
+- The ticks belong to a hand: each hand finds its own passages and comes back as the user left it.
+- The list has the reference as its first row. "Very similar" from a score of 0.8, else "Similar", then the key.
+- The list says "Select a longer stretch." for a reference too short (Phase 1), as "Select a shorter stretch." past
+  `BATCH_MAX_S`.
+- **Revert** is not offered when a run wrote nothing; this holds for a level run too.

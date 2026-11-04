@@ -1,10 +1,15 @@
 /**
- * **Enhance with AI** (implementation 04, Phase 4; reworked on the user's request of 2026-10-30): one dialog, two tabs
- * that work the same way.
+ * **Enhance with AI** (implementation 04, Phase 4; reworked on the user's request of 2026-10-30): one dialog, three
+ * tabs.
  *
  * - **A stretch** (open when notes or a stretch are selected; implementation 03, Phase 7): both hands, only the right
  *   or only the left (the other hand then stays exactly as it is), and either **a level** or the user's own words: the
  *   AI writes that stretch again under the pale veil; one step of undo.
+ * - **Copy this style** (implementation 06; open when notes or a stretch are selected, which are the reference): both
+ *   hands, only the right or only the left. The code finds the passages of the song like the reference (`GET
+ *   .../llm/style`, free); they are listed with a tick (`StylePassageList`) and drawn on the sheet with the reference.
+ *   The AI checks the passages ticked, then writes each one kept the way the reference is written. No level, no
+ *   patterns, no **Batches** control: each passage is a batch.
  * - **The whole song** (open when nothing is selected): **a level** of the whole sheet, the right hand only or the left
  *   hand only, written into a new project of My projects named with the level (the original stays); or **Write it all
  *   again** (the AI writes the hands and the reading of the whole song). Simplifying a hand is a level of that hand.
@@ -49,22 +54,25 @@ import {
   type LlmCosts,
   type RunChoice,
   type SongRun,
+  type StylePassages,
 } from "../../../../api";
-import { ENHANCE_PANEL_WIDTH, type BatchPreview } from "./batches";
+import { ENHANCE_PANEL_WIDTH, passageKey, type BatchPreview } from "./batches";
 import { PillButton, Segmented } from "../../../../ui";
 import { PatternGallery, type GalleryLevel } from "./PatternCatalog";
 import { shortRef, type CatalogHand } from "./patterns";
+import { StylePassageList } from "./StylePassageList";
 
 /** As the backend takes them (`REQUEST_CHARS`). */
 const MAX_WORDS = 1000;
 
-export type EnhanceTab = "stretch" | "song";
+export type EnhanceTab = "stretch" | "style" | "song";
 export type StretchHand = "both" | "right" | "left";
 /** What the dialog runs on the whole song: one of today's runs, or a level. */
 export type SongChoice = SongRun | "level";
 
 const TABS = [
   { value: "stretch" as const, label: "A stretch" },
+  { value: "style" as const, label: "Copy this style" },
   { value: "song" as const, label: "The whole song" },
 ];
 
@@ -138,6 +146,8 @@ export interface EnhanceDialogProps {
   onStretch: (hand: StretchHand, words: string, choice?: RunChoice) => void;
   /** A level of the selected stretch. */
   onStretchLevel: (choice: LevelChoice) => void;
+  /** **Copy this style**: the selection is the reference; `passages`: the ones ticked, `[first frame, end frame)`. */
+  onStyle: (hand: StretchHand, words: string, passages: [number, number][], choice?: RunChoice) => void;
   onSong: (run: SongRun, choice?: RunChoice) => void;
   /** A level of the whole sheet: a new project. */
   onSongLevel: (choice: LevelChoice) => void;
@@ -155,6 +165,7 @@ export function EnhanceDialog({
   viaEdit,
   onStretch,
   onStretchLevel,
+  onStyle,
   onSong,
   onSongLevel,
   onPreview,
@@ -192,6 +203,12 @@ export function EnhanceDialog({
   const [batches, setBatches] = useState<{ key: string; count: number } | null>(null);
   const [plan, setPlan] = useState<BatchPlan | null>(null);
   const [catalog, setCatalog] = useState<LevelCatalog | null>(null);
+  /** The passages the code found for a hand and a try; `list` `null`: they could not be read. */
+  const [found, setFound] = useState<{ key: string; list: StylePassages | null } | null>(null);
+  /** A new try of the list, after it could not be read. */
+  const [styleTry, setStyleTry] = useState(0);
+  /** The passages not ticked, for each hand: each hand finds its own passages, and comes back as the user left it. */
+  const [unticked, setUnticked] = useState<Record<StretchHand, string[]>>({ both: [], right: [], left: [] });
 
   useEffect(() => {
     if (!open) return;
@@ -221,8 +238,10 @@ export function EnhanceDialog({
     return () => controller.abort();
   }, [open, audioUuid, stretch]);
 
-  const onStretchTab = tab === "stretch" && stretch !== null;
-  const level = onStretchTab ? how === "level" : songHow === "level";
+  const shownTab: EnhanceTab = stretch === null ? "song" : tab;
+  const onStretchTab = shownTab === "stretch";
+  const onStyleTab = shownTab === "style";
+  const level = onStretchTab ? how === "level" : !onStyleTab && songHow === "level";
   const levelHand: LevelHand = onStretchTab ? hand : songHand;
   const hands = handsOf(levelHand);
   const shownHand = hands.includes(galleryHand) ? galleryHand : hands[0];
@@ -260,7 +279,7 @@ export function EnhanceDialog({
   const rangeStart = onStretchTab ? stretch?.start : undefined;
   const rangeEnd = onStretchTab ? stretch?.end : undefined;
   useEffect(() => {
-    if (!open) return;
+    if (!open || onStyleTab) return;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       sheetApi
@@ -292,8 +311,46 @@ export function EnhanceDialog({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [open, audioUuid, runKind, runHand, asked, rangeStart, rangeEnd, chosenBatches, onPreview]);
+  }, [open, onStyleTab, audioUuid, runKind, runHand, asked, rangeStart, rangeEnd, chosenBatches, onPreview]);
   useEffect(() => () => onPreview?.(null), [onPreview]);
+
+  // Copy this style: the passages of the song like the reference, asked when the tab opens and when the hand changes.
+  const referenceStart = stretch?.start;
+  const referenceEnd = stretch?.end;
+  const foundKey = `${hand}:${styleTry}`;
+  useEffect(() => {
+    if (!open || !onStyleTab || referenceStart === undefined || referenceEnd === undefined) return;
+    const controller = new AbortController();
+    sheetApi
+      .stylePassages(
+        audioUuid,
+        { start: referenceStart, end: referenceEnd, hand, ...(asked ? { model: asked } : {}) },
+        controller.signal,
+      )
+      .then((list) => setFound({ key: foundKey, list }))
+      .catch(() => {
+        if (!controller.signal.aborted) setFound({ key: foundKey, list: null });
+      });
+    return () => controller.abort();
+  }, [open, onStyleTab, audioUuid, referenceStart, referenceEnd, hand, asked, foundKey]);
+  /** The answer for this hand: `undefined` until it arrives, `null` when it could not be read. */
+  const styleList = found?.key === foundKey ? found.list : undefined;
+  const offKeys = unticked[hand];
+  const ticked = useMemo(
+    () => (styleList?.passages ?? []).filter((one) => !offKeys.includes(passageKey(one))),
+    [styleList, offKeys],
+  );
+  // The reference and the passages ticked, on the sheet, with the numbers of the list.
+  useEffect(() => {
+    if (!open || !onStyleTab || referenceStart === undefined || referenceEnd === undefined) return;
+    const all = styleList?.passages ?? [];
+    onPreview?.({
+      windows: ticked.map((one) => [one.start, one.end] as const),
+      places: ticked.map((one) => all.indexOf(one)),
+      staff: hand === "both" ? null : hand === "right" ? 1 : 2,
+      reference: [referenceStart, referenceEnd],
+    });
+  }, [open, onStyleTab, referenceStart, referenceEnd, hand, styleList, ticked, onPreview]);
   const shownPlan = plan && plan.run === runKind && plan.hand === runHand ? plan : null;
   /** The number shown: the one chosen, before its plan arrives, or the plan's. */
   const count = chosenBatches ?? shownPlan?.count;
@@ -331,8 +388,11 @@ export function EnhanceDialog({
   const deselectAll = (side: CatalogHand) => setChosen((all) => ({ ...all, [side]: [] }));
   const approved = (side: CatalogHand) => setChosen((all) => ({ ...all, [side]: null }));
 
+  const canCopy = ticked.length > 0;
   const confirm = () => {
-    if (onStretchTab) {
+    if (onStyleTab) {
+      if (canCopy) onStyle(hand, words.trim(), ticked.map((one) => [one.start, one.end]), asked ? { model: asked } : {});
+    } else if (onStretchTab) {
       if (level) onStretchLevel({ ...choice, ...runChoice });
       else onStretch(hand, words.trim(), runChoice);
     } else if (level) onSongLevel({ ...choice, ...runChoice });
@@ -348,7 +408,21 @@ export function EnhanceDialog({
   const levelCost = planned ?? costs?.[levelKey];
   const stretchCost = planned ?? costs?.stretch;
   const allCost = planned ?? costs?.all;
-  const status = onStretchTab
+  const styleCost = styleList?.costs[ticked.length];
+  const styleStatus = (): string => {
+    if (styleList === undefined) return "Looking for similar passages.";
+    if (styleList === null) return "The passages could not be read.";
+    if (styleList.tooLong) return "Select a shorter stretch.";
+    if (styleList.tooShort) return "Select a longer stretch.";
+    if (styleList.passages.length === 0) return "No passage of the song is like this one.";
+    if (ticked.length === 0) return "Tick a passage first.";
+    const stays = hand === "both" ? "The reference stays as it is." : `The reference and the ${other} hand stay as they are.`;
+    const count = `${ticked.length} passage${ticked.length === 1 ? "" : "s"}`;
+    return `${stays} ${count}. About ${dollars(styleCost)}${minutes(styleCost)}. Undo takes it back.`;
+  };
+  const status = onStyleTab
+    ? styleStatus()
+    : onStretchTab
     ? `${hand === "both" ? "" : `The ${other} hand stays as it is. `}About ${level ? `${dollars(levelCost) || "a few cents"}${minutes(levelCost)}` : `${dollars(stretchCost) || "one cent"}${minutes(stretchCost)}`}. Undo takes it back.`
     : level
       ? `A new project in My projects, named with the level. This sheet stays as it is. About ${dollars(levelCost)}${minutes(levelCost)}.`
@@ -382,6 +456,22 @@ export function EnhanceDialog({
           confirm();
       }}
       slotProps={{ htmlInput: { "data-testid": "stretch-words" } }}
+    />
+  );
+
+  const styleField = (
+    <TextField
+      fullWidth
+      multiline
+      minRows={2}
+      maxRows={6}
+      label="What should the copy keep or change? (optional)"
+      value={words}
+      onChange={(event) => setWords(event.target.value.slice(0, MAX_WORDS))}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) confirm();
+      }}
+      slotProps={{ htmlInput: { "data-testid": "style-words" } }}
     />
   );
 
@@ -441,48 +531,53 @@ export function EnhanceDialog({
 
   // Under the cost and the time, so those stay in sight while the user scrolls the patterns.
   // The model and the number of batches, for every run; the batches show on the sheet.
+  const modelField = (
+    <TextField
+      select
+      size="small"
+      label="Model"
+      value={shownModel}
+      onChange={(event) => setModel(event.target.value)}
+      sx={{ minWidth: 180 }}
+      slotProps={{ htmlInput: { "data-testid": "ai-model" } }}
+    >
+      {models.map((one) => (
+        <MenuItem key={one.value} value={one.value}>
+          {one.label}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
   const runControls = (
     <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }} data-run-choice>
-      <TextField
-        select
-        size="small"
-        label="Model"
-        value={shownModel}
-        onChange={(event) => setModel(event.target.value)}
-        sx={{ minWidth: 180 }}
-        slotProps={{ htmlInput: { "data-testid": "ai-model" } }}
-      >
-        {models.map((one) => (
-          <MenuItem key={one.value} value={one.value}>
-            {one.label}
-          </MenuItem>
-        ))}
-      </TextField>
-      <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }} data-batches>
-        <Typography variant="body2">Batches</Typography>
-        <IconButton
-          size="small"
-          aria-label="Fewer batches"
-          disabled={!shownPlan || count === undefined || count <= shownPlan.min}
-          onClick={() => step(-1)}
-        >
-          <RemoveRounded fontSize="small" />
-        </IconButton>
-        <Typography variant="body2" sx={{ minWidth: 20, textAlign: "center", fontWeight: 600 }} data-batch-count>
-          {count ?? "-"}
-        </Typography>
-        <IconButton
-          size="small"
-          aria-label="More batches"
-          disabled={!shownPlan || count === undefined || count >= shownPlan.max}
-          onClick={() => step(1)}
-        >
-          <AddRounded fontSize="small" />
-        </IconButton>
-        <Typography variant="body2" color="text.secondary">
-          {shownPlan ? `about ${Math.round(shownPlan.seconds)} s each, shown on the sheet` : ""}
-        </Typography>
-      </Stack>
+      {modelField}
+      {onStyleTab ? null : (
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }} data-batches>
+          <Typography variant="body2">Batches</Typography>
+          <IconButton
+            size="small"
+            aria-label="Fewer batches"
+            disabled={!shownPlan || count === undefined || count <= shownPlan.min}
+            onClick={() => step(-1)}
+          >
+            <RemoveRounded fontSize="small" />
+          </IconButton>
+          <Typography variant="body2" sx={{ minWidth: 20, textAlign: "center", fontWeight: 600 }} data-batch-count>
+            {count ?? "-"}
+          </Typography>
+          <IconButton
+            size="small"
+            aria-label="More batches"
+            disabled={!shownPlan || count === undefined || count >= shownPlan.max}
+            onClick={() => step(1)}
+          >
+            <AddRounded fontSize="small" />
+          </IconButton>
+          <Typography variant="body2" color="text.secondary">
+            {shownPlan ? `about ${Math.round(shownPlan.seconds)} s each, shown on the sheet` : ""}
+          </Typography>
+        </Stack>
+      )}
     </Stack>
   );
 
@@ -540,9 +635,9 @@ export function EnhanceDialog({
         <Stack spacing={2}>
           <Segmented<EnhanceTab>
             label="What the AI works on"
-            value={onStretchTab ? "stretch" : "song"}
+            value={shownTab}
             options={TABS.map((one) =>
-              one.value === "stretch" && stretch === null
+              one.value !== "song" && stretch === null
                 ? {
                     ...one,
                     disabled: true,
@@ -552,7 +647,7 @@ export function EnhanceDialog({
             )}
             onChange={setTab}
           />
-          {onStretchTab ? (
+          {onStretchTab && stretch ? (
             <>
               <Stack
                 direction="row"
@@ -576,6 +671,17 @@ export function EnhanceDialog({
                 </Typography>
               </Stack>
               {level ? levelControls : wordsField}
+            </>
+          ) : onStyleTab && stretch ? (
+            <>
+              <Segmented<StretchHand> label="Which hand" value={hand} options={HANDS} onChange={setHand} />
+              <StylePassageList
+                reference={[stretch.start, stretch.end]}
+                passages={styleList?.passages ?? null}
+                off={offKeys}
+                onOff={(keys) => setUnticked((now) => ({ ...now, [hand]: keys }))}
+              />
+              {styleField}
             </>
           ) : (
             <>
@@ -606,10 +712,18 @@ export function EnhanceDialog({
           <Typography
             variant="body2"
             color="text.secondary"
+            role="status"
             data-enhance-status
           >
             {status}
           </Typography>
+          {onStyleTab && styleList === null ? (
+            <Stack direction="row">
+              <PillButton kind="secondary" onClick={() => setStyleTry((now) => now + 1)} data-testid="style-again">
+                Try again
+              </PillButton>
+            </Stack>
+          ) : null}
           {gallery}
         </Stack>
       </DialogContent>
@@ -620,13 +734,16 @@ export function EnhanceDialog({
         <PillButton
           kind="primary"
           onClick={confirm}
-          data-testid={onStretchTab ? "stretch-confirm" : "song-confirm"}
+          disabled={onStyleTab && !canCopy}
+          data-testid={onStyleTab ? "style-confirm" : onStretchTab ? "stretch-confirm" : "song-confirm"}
         >
-          {level
-            ? "Write the level"
-            : onStretchTab
-              ? "Enhance with AI"
-              : "Write it all again"}
+          {onStyleTab
+            ? "Copy this style"
+            : level
+              ? "Write the level"
+              : onStretchTab
+                ? "Enhance with AI"
+                : "Write it all again"}
         </PillButton>
       </DialogActions>
     </Dialog>

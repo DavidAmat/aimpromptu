@@ -1106,8 +1106,8 @@ def style_passages(
 ) -> dict[str, Any]:
     """The passages of the song like the reference ``[start, end)`` of the ``hand`` (the dialog's list, free: code
     only, ``sheet.style.match.similar``), in the order of the song, with the cost and the minutes of a run over all
-    of them. ``tooLong``: the reference is longer than ``BATCH_MAX_S`` (a batch must fit one request); ``tooShort``:
-    it holds too few columns to find anything."""
+    of them, and ``costs``, the same for each number of passages ticked. ``tooLong``: the reference is longer than
+    ``BATCH_MAX_S`` (a batch must fit one request); ``tooShort``: it holds too few columns to find anything."""
     from aitu_backend.sheet.style import match  # noqa: PLC0415
 
     if hand not in HANDS:
@@ -1127,6 +1127,8 @@ def style_passages(
         "tooLong": too_long,
         "tooShort": too_short,
         **style_cost(len(found), model),
+        # What a run costs with each number of passages ticked, none first: the dialog follows the ticks with no request.
+        "costs": [style_cost(n, model) for n in range(len(found) + 1)],
     }
 
 
@@ -1310,7 +1312,7 @@ def _style_work(
             log["requests"] = requests0 + len(getattr(ask, "calls", []))
             runs.update(part_id, log, talk)
 
-        reporter.send(EVENT, {"phase": "style", "total": len(passages)})
+        reporter.send(EVENT, {"phase": "style", "total": len(passages), "checking": not checked})
         try:
             out = style.write_style(
                 current,

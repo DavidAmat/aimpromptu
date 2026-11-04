@@ -27,6 +27,9 @@ const STATE_WORDS: Record<string, string> = {
   failed: "Not written",
 };
 
+/** The passages the AI's check dropped from a run of Copy this style. */
+const dropped = (run: AiRunShort): number => run.passages?.filter((one) => !one.keep).length ?? 0;
+
 export interface AiHistoryPanelProps {
   audioUuid: string;
   /** An AI run goes on this sheet now. */
@@ -133,8 +136,8 @@ export function AiHistoryPanel({ audioUuid, busy, refresh, opening = null, onSta
               ) : null}
               <Typography variant="caption" color="text.secondary">
                 {one.created ? new Date(one.created).toLocaleString() : ""} · {STATE_WORDS[one.state] ?? one.state} ·{" "}
-                {one.batches.filter((batch) => batch.status === "ok").length} of {one.total} batches · $
-                {one.usd.toFixed(2)}
+                {one.batches.filter((batch) => batch.status === "ok").length} of {one.total} batches
+                {dropped(one) ? ` · ${dropped(one)} dropped` : ""} · ${one.usd.toFixed(2)}
               </Typography>
             </Stack>
           ))

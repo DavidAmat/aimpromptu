@@ -177,6 +177,8 @@ def test_the_dialog_lists_the_passages_like_the_reference_for_free(client: TestC
     starts = [p["start"] for p in body["passages"]]
     assert len(starts) >= 3 and all(s >= REF[1] for s in starts)
     assert body["requests"] == len(starts) + 1 and body["usd"] > 0 and body["minutes"] >= 1
+    assert len(body["costs"]) == len(starts) + 1 and body["costs"][0]["requests"] == 0
+    assert body["costs"][-1] == {key: body[key] for key in ("requests", "usd", "minutes")}
     assert body["tooLong"] is False and body["tooShort"] is False and body["threshold"] == 0.6
     short = client.get(f"/sheet/{part}/llm/style", params={"start": 0, "end": 3}).json()
     assert short["tooShort"] is True and short["passages"] == []
@@ -195,6 +197,7 @@ def test_a_run_checks_writes_the_first_passage_waits_and_goes_on(client: TestCli
     assert first["dropped"] == 0 and first["before"] >= 1
     phases = [m.get("phase") for m in messages(started)]
     assert phases[:2] == ["style", "check"] and phases.count("batch") == 1 and phases[-1] == "saved"
+    assert messages(started)[0]["checking"] is True  # the page says the AI checks until the event "check"
     assert "the check of 3 passages" in prompts[0] and "## The reference (f0-f225" in prompts[0]
     assert "## The column map" in prompts[1] and "## Target (both hands" in prompts[1]
     assert sheet(client, part)["history"]["undo"] == "Copy this style with AI, both hands, passage 1"

@@ -44,13 +44,13 @@ branch, `feat/06-copy-this-style`. Status letters: `[x]` complete, `[p]` in prog
   check drops, a refused answer three times (the passage keeps its notes), one hand (the other unchanged), the marks
   copied and not copied, stale notes, Stop, Revert, undo. The backend suite on CPU. Report.
 
-# [ ] Phase 3: The frontend
+# [x] Phase 3: The frontend
 
-- [ ] 3.1 The tab **Copy this style** in `EnhanceDialog.tsx`: Which hand, the list with ticks, Select all and Deselect
+- [x] 3.1 The tab **Copy this style** in `EnhanceDialog.tsx`: Which hand, the list with ticks, Select all and Deselect
   all, the words, the Model, the status line, the button; no passage found.
-- [ ] 3.2 The reference and the passages on the sheet (`BatchPreview` with the reference).
-- [ ] 3.3 The run's panel, the history and the run's detail for the kind `style` (the check: kept, dropped, why).
-- [ ] 3.4 `npm run check:copy-style` with a stand-in; `check:enhance-dialog`, `check:ai-run-panel`,
+- [x] 3.2 The reference and the passages on the sheet (`BatchPreview` with the reference).
+- [x] 3.3 The run's panel, the history and the run's detail for the kind `style` (the check: kept, dropped, why).
+- [x] 3.4 `npm run check:copy-style` with a stand-in; `check:enhance-dialog`, `check:ai-run-panel`,
   `check:ai-history`; `npx tsc -b`; the pass of 13 checks of the minimal UI. Report.
 
 # [ ] Phase 4: The real test

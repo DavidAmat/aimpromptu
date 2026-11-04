@@ -15,7 +15,7 @@
  *   width, with the line under the pointer kept where it was.
  * - **The AI in the background** (plan section 3.6): a new transcription is sent by itself; any other part offers
  *   **Enhance with AI**, which opens one dialog (implementation 04, Phase 4, `EnhanceDialog`): **A stretch** of the
- *   selection (both hands or one, with the user's words) or **The whole song** (**a level** of the whole sheet, or
+ *   selection (both hands or one, with the user's words), **Copy this style** of the selection, or **The whole song** (**a level** of the whole sheet, or
  *   **Write it all again**). On a version of My library the whole song runs in the copy that edits
  *   it, as **Edit** opens it. The segment at the AI looks pale, a segment that comes back appears column by column, and
  *   no text says any of it. Nothing can be edited while the AI writes: the segments still waiting cannot be edited.
@@ -229,7 +229,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
   // and the cursor goes back where it was asked to be (the start of the passage), or where it was.
   const [audioLoads, setAudioLoads] = useState<{ revision: number | null; loads: number }>({ revision: null, loads: 0 });
   const seekAfterLoad = useRef<number | null>(null);
-  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, level, notice, lastRun, stopRun, revertRun, reloadSheet } =
+  const { sheet, error, run, starting, edit, editing, editError, enhanceStretch, level, copyStyle, checking, notice, lastRun, stopRun, revertRun, reloadSheet } =
     useFramesSheet(audioUuid, width, {
     onChanged: step.onChanged,
   });
@@ -1014,6 +1014,15 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
     unmark();
     void enhanceStretch({ ...stretch.request, ...options, staff: hand, instruction });
   };
+  /** **Copy this style**: the selection is the reference; the passages ticked are written the way it is written. */
+  const sendStyle = (hand: StretchHand, words: string, passages: [number, number][], options?: RunChoice) => {
+    const stretch = enhancing?.stretch;
+    setEnhancing(null);
+    if (!stretch) return;
+    unpick();
+    unmark();
+    void copyStyle({ start: stretch.request.start, end: stretch.request.end, hand, words, passages, ...(options?.model ? { model: options.model } : {}) });
+  };
   const history = sheet?.history ?? { undo: null, redo: null };
   const walk = useCallback(
     (to: "undo" | "redo") => {
@@ -1595,6 +1604,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
             setHistoryOpen({ run: endedRun?.summary.run ?? null });
           }}
           running={running}
+          checking={checking}
           stopping={stopping}
           batches={runBatches}
           summary={endedRun?.summary ?? null}
@@ -1624,6 +1634,7 @@ export function FramesSheetPage({ step }: { step: SheetStep }) {
           viaEdit={!aiHere}
           onStretch={sendStretch}
           onStretchLevel={sendStretchLevel}
+          onStyle={sendStyle}
           onSong={runSong}
           onSongLevel={sendSongLevel}
           onPreview={setBatchPreview}
