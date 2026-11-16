@@ -14,7 +14,8 @@ import Typography from "@mui/material/Typography";
 import type { SheetSegment } from "../../../../api";
 import { PillButton } from "../../../../ui";
 import { AiRunDetail } from "./AiRunDetail";
-import { BATCH_COLOURS, ENHANCE_PANEL_WIDTH } from "./batches";
+import { BatchNumber } from "./BatchNumber";
+import { batchColour, ENHANCE_PANEL_WIDTH } from "./batches";
 import type { RunSummary } from "./useFramesSheet";
 
 const FRAME_MS = 40;
@@ -40,6 +41,8 @@ export interface AiRunPanelProps {
   onHistory: () => void;
   /** The AI works now. */
   running: boolean;
+  /** The AI is checking the passages of a Copy this style run: no passage is being written yet. */
+  checking: boolean;
   /** **Stop** was pressed: the run ends after the request it waits for. */
   stopping: boolean;
   /** The batches of the run, as last seen while it worked. */
@@ -61,6 +64,7 @@ export function AiRunPanel({
   onStarted,
   onHistory,
   running,
+  checking,
   stopping,
   batches,
   summary,
@@ -72,14 +76,18 @@ export function AiRunPanel({
   onClose,
 }: AiRunPanelProps) {
   // Once the run ended, its summary counts the batches written (a run waiting after batch 1 never saw it written).
+  // A run of Copy this style: the batches the page last saw may still hold a passage the AI's check dropped.
+  const count = !running && summary?.style && summary.total ? summary.total : batches.length;
   const done =
-    !running && summary?.batches !== undefined && summary.total === batches.length
+    !running && summary?.batches !== undefined && summary.total === count
       ? summary.batches
       : batches.filter((batch) => batch.state === "llm" || batch.state === "algorithm").length;
   const title = running
     ? stopping
       ? "Stopping after this batch"
-      : "The AI is writing"
+      : checking
+        ? "The AI is checking the passages"
+        : "The AI is writing"
     : summary?.stopped
       ? "Stopped"
       : summary?.waiting
@@ -87,7 +95,11 @@ export function AiRunPanel({
         : "The AI has finished";
   // Once the run ended, a batch it never reached was not written.
   const stateOf = (batch: SheetSegment) =>
-    !running && (batch.state === "working" || batch.state === "waiting") ? "Not written" : STATE_WORDS[batch.state];
+    !running && (batch.state === "working" || batch.state === "waiting")
+      ? "Not written"
+      : checking && batch.state === "working"
+        ? STATE_WORDS.waiting
+        : STATE_WORDS[batch.state];
   return (
     <Paper
       elevation={12}
@@ -111,10 +123,10 @@ export function AiRunPanel({
           <>
             <LinearProgress
               variant={running && done === 0 ? "indeterminate" : "determinate"}
-              value={(100 * done) / batches.length}
+              value={(100 * done) / count}
             />
             <Typography variant="body2" color="text.secondary">
-              {done} of {batches.length} batches
+              {done} of {count} batches
               {summary?.usd !== undefined ? `, $${summary.usd.toFixed(2)}` : ""}
             </Typography>
           </>
@@ -123,7 +135,7 @@ export function AiRunPanel({
       <Box sx={{ overflowY: "auto", px: 3, flex: 1 }} data-ai-run-batches>
         {/* Once the run ended with its log, the batches show with the AI's explanations below instead. */}
         {(running || !summary?.run || reverted ? batches : []).map((batch, index) => {
-          const colour = BATCH_COLOURS[index % BATCH_COLOURS.length];
+          const colour = batchColour(index);
           return (
             <Stack
               key={`${batch.start}-${batch.end}`}
@@ -133,24 +145,7 @@ export function AiRunPanel({
               data-ai-run-batch={index + 1}
               data-state={batch.state}
             >
-              <Box
-                sx={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 1,
-                  border: `2px solid ${colour}`,
-                  bgcolor: `${colour}1f`,
-                  color: colour,
-                  fontWeight: 700,
-                  fontSize: 13,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                {index + 1}
-              </Box>
+              <BatchNumber colour={colour}>{index + 1}</BatchNumber>
               <Typography variant="body2" sx={{ flex: 1 }}>
                 {clockOf(batch.start)} - {clockOf(batch.end)}{" "}
                 <Typography component="span" variant="caption" color="text.secondary">
@@ -159,8 +154,8 @@ export function AiRunPanel({
               </Typography>
               <Typography
                 variant="body2"
-                color={batch.state === "working" && running ? "primary" : "text.secondary"}
-                sx={{ fontWeight: batch.state === "working" && running ? 600 : 400 }}
+                color={batch.state === "working" && running && !checking ? "primary" : "text.secondary"}
+                sx={{ fontWeight: batch.state === "working" && running && !checking ? 600 : 400 }}
               >
                 {stateOf(batch)}
               </Typography>
@@ -189,7 +184,7 @@ export function AiRunPanel({
               <PillButton key="history" kind="secondary" onClick={onHistory} data-testid="ai-run-history">
                 History
               </PillButton>
-              {summary?.before !== undefined ? (
+              {summary?.before !== undefined && summary.batches !== 0 ? (
                 <PillButton kind="secondary" onClick={onRevert} disabled={reverted || busy} busy={busy} data-testid="ai-run-revert">
                   Revert
                 </PillButton>

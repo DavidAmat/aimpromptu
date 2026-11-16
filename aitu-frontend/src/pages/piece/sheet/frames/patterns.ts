@@ -12,20 +12,22 @@ export function drawingUrl(pattern: Pick<CatalogPattern, "hand" | "level" | "num
 /** `medium 2`: a pattern as the user names it in the words. */
 export const shortRef = (ref: string): string => ref.split(" ").slice(1).join(" ");
 
-/** "Easy, left hand · easy 1 (Strict)". */
+/** "Easy, left hand · easy 1 (Strict)"; "Copy this style, the right hand". */
 export function runTitle(run: {
-  level: LevelName | Record<"right" | "left", LevelName> | null;
+  kind?: "level" | "style";
+  level?: LevelName | Record<"right" | "left", LevelName> | null;
   hand: string | null;
-  patterns: string[];
-  strict: string[];
+  patterns?: string[];
+  strict?: string[];
 }): string {
+  if (run.kind === "style") return `Copy this style, ${run.hand === "both" ? "both hands" : `the ${run.hand} hand`}`;
   const level =
-    run.level === null
+    run.level === null || run.level === undefined
       ? "A level"
       : typeof run.level === "string"
         ? run.level[0].toUpperCase() + run.level.slice(1)
         : `Right ${run.level.right}, left ${run.level.left}`;
   const hand = run.hand === "both" || run.hand === null ? "" : `, ${run.hand} hand`;
-  const patterns = run.patterns.map((ref) => `${shortRef(ref)}${run.strict.includes(ref) ? " (Strict)" : ""}`);
+  const patterns = (run.patterns ?? []).map((ref) => `${shortRef(ref)}${run.strict?.includes(ref) ? " (Strict)" : ""}`);
   return `${level}${hand}${patterns.length ? ` · ${patterns.join(", ")}` : ""}`;
 }

@@ -31,10 +31,12 @@ works stops the requests at the next one (:class:`PartGone`): no credits are spe
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import math
 import os
 import threading
+from collections import Counter, OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
@@ -718,6 +720,17 @@ def continue_level(part_id: str, run_id: str, *, complete: Callable[[], Complete
     if job_of(part_id) is not None:
         raise Busy("The AI is already enhancing this sheet.")
     seen = {(b["start"], b["end"]) for b in log["batches"]}
+    if log.get("kind") == "style":  # Copy this style (implementation 06): the passages kept not written yet
+        rest = [
+            int(p["k"])
+            for p in sorted(log["passages"], key=lambda p: p["start"])
+            if p.get("keep", True) and (p["start"], p["end"]) not in seen
+        ]
+
+        def go_on(reporter: BaseProgress) -> dict[str, Any]:
+            return _style_work(part_id, reporter, log, rest, complete=complete)
+
+        return _submit(part_id, go_on)
     todo = [tuple(w) for w in log["request"]["windows"] if tuple(w) not in seen]
 
     def work(reporter: BaseProgress) -> dict[str, Any]:
@@ -922,6 +935,8 @@ def again_batch(
     log = runs.load(part_id, run_id)
     if log is None:
         raise LookupError("No such run.")
+    if log.get("kind") == "style":
+        return _again_style(part_id, log, k, words, complete)
     old = next((b for b in log["batches"] if b["k"] == k), None)
     if old is None or not old.get("target") or not old.get("messages"):
         raise LookupError("This batch has no conversation to answer.")
@@ -1026,6 +1041,503 @@ def _level_drawn(levels: Any, current: Any, written: list[Any], accepted: list[t
     answer = replace(current, notes=list(written))
     shown = levels.drawn(answer, q, key=current.key or 0, key_changes=list(current.key_changes), keep=keep)
     return levels.splice(current, list(shown.notes), accepted, staffs, reading=True)
+
+
+# ------------------------------------------------------------------ Copy this style (implementation 06, Phase 2)
+
+#: A Copy this style run: the check of the passages, then each passage, first taken from the level run's numbers (a
+#: batch prompt of about the same size); measured in Phase 4 and written back. Another model: times its ratio.
+USD_STYLE_CHECK = 0.015
+USD_STYLE_BATCH = 0.025
+SECONDS_STYLE_CHECK = 10
+SECONDS_STYLE_BATCH = 45
+STYLE_LABELS = {"both": "both hands", "right": "the right hand", "left": "the left hand"}
+
+#: The song's grid and chords for the matcher, per part: about half a second to compute, and the dialog asks again
+#: when the hand changes. Keyed by the drawn sheet and the notes' revision.
+_style_cache: "OrderedDict[str, tuple[tuple[str, int], Any]]" = OrderedDict()
+_style_lock = threading.Lock()
+
+
+def _style_inputs(part_id: str) -> tuple[Any, Any, Any, Any]:
+    """The sheet drawn now, the part's notes with the removed ones (the reference as played), the song's grid and
+    its chords."""
+    from aitu_backend.sheet.levels.grid import song_grid  # noqa: PLC0415
+    from aitu_backend.sheet.levels.harmony import chords  # noqa: PLC0415
+
+    drawn = build.current(part_id)
+    stored = pipeline.load_note_events(part_id)
+    if stored is None:
+        raise FileNotFoundError("This part has no notes.")
+    key = (hashlib.sha1(drawn.text.encode("utf-8")).hexdigest(), int(stored.header.notes_revision or 0))
+    with _style_lock:
+        hit = _style_cache.get(part_id)
+    current = f1.read(drawn.text)
+    notes = events_file.notes_from_events(stored.events)
+    if hit is not None and hit[0] == key:
+        grid, cs = hit[1]
+    else:
+        grid = song_grid(current)
+        cs = chords(current, grid)
+        with _style_lock:
+            _style_cache[part_id] = (key, (grid, cs))
+            _style_cache.move_to_end(part_id)
+            while len(_style_cache) > 8:
+                _style_cache.popitem(last=False)
+    return current, notes, grid, cs
+
+
+def style_cost(passages: int, model: str | None = None) -> dict[str, Any]:
+    """About what a Copy this style run over ``passages`` passages costs: the check, then each passage."""
+    usd_ratio, time_ratio = llm_models.ratio(llm_models.resolve(model))
+    return {
+        "requests": passages + 1 if passages else 0,
+        "usd": round((USD_STYLE_CHECK + passages * USD_STYLE_BATCH) * usd_ratio, 2) if passages else 0.0,
+        "minutes": _minutes((SECONDS_STYLE_CHECK + passages * SECONDS_STYLE_BATCH) * time_ratio) if passages else 0,
+    }
+
+
+def _reference_columns(current: Any, staffs: tuple[int, ...], start: int, end: int) -> int:
+    return len({n.frame for n in current.notes if n.staff in staffs and start <= n.frame < end and not n.grace})
+
+
+def style_passages(
+    part_id: str, *, start: int, end: int, hand: str, model: str | None = None
+) -> dict[str, Any]:
+    """The passages of the song like the reference ``[start, end)`` of the ``hand`` (the dialog's list, free: code
+    only, ``sheet.style.match.similar``), in the order of the song, with the cost and the minutes of a run over all
+    of them, and ``costs``, the same for each number of passages ticked. ``tooLong``: the reference is longer than
+    ``BATCH_MAX_S`` (a batch must fit one request); ``tooShort``: it holds too few columns to find anything."""
+    from aitu_backend.sheet.style import match  # noqa: PLC0415
+
+    if hand not in HANDS:
+        raise ValueError(f"No hand {hand!r}.")
+    staffs = _staffs(hand)
+    current, notes, grid, cs = _style_inputs(part_id)
+    too_long = (end - start) * FRAME_MS / 1000 > BATCH_MAX_S
+    too_short = _reference_columns(current, staffs, start, end) < match.REF_COLUMNS
+    found = [] if too_long or too_short else match.similar(current, notes, start, end, staffs, grid=grid, harmony=cs)
+    return {
+        "reference": [start, end],
+        "hand": hand,
+        "model": llm_models.resolve(model),
+        "passages": [{"start": m.start, "end": m.end, "score": m.score, "shift": m.shift} for m in found],
+        "threshold": match.THRESHOLD,
+        "max": match.STYLE_MAX,
+        "tooLong": too_long,
+        "tooShort": too_short,
+        **style_cost(len(found), model),
+        # What a run costs with each number of passages ticked, none first: the dialog follows the ticks with no request.
+        "costs": [style_cost(n, model) for n in range(len(found) + 1)],
+    }
+
+
+def start_style(
+    part_id: str,
+    *,
+    start: int,
+    end: int,
+    hand: str,
+    passages: list[tuple[int, int]],
+    words: str = "",
+    model: str | None = None,
+    first: bool = True,
+    complete: Callable[[], Complete] | None = None,
+) -> jobs.Job:
+    """**Copy this style** (implementation 06, plan section 4.3): the reference ``[start, end)`` of the ``hand``, the
+    passages the user ticked (``[first frame, end frame)``, as the dialog listed them), the user's ``words``. The job
+    asks the check of the passages, then writes each passage kept in the order of the song; with ``first`` (the
+    routes) it writes the check and the first passage, stores them and waits (``waiting``), as a level run; **Go on
+    with the other batches** is :func:`continue_level`. One step of undo; the log ``ai-runs/<id>.json`` has ``kind``
+    ``style``. The summary of the job's ``done`` message: ``style`` (``ok``, ``dropped`` when the check dropped every
+    passage, ``failed``, ``stale``, ``gone``), ``batches``, ``total``, ``dropped``, ``usd``, ``run``."""
+    from aitu_backend.sheet.llm import style  # noqa: PLC0415
+    from aitu_backend.sheet.style import match  # noqa: PLC0415
+
+    if hand not in HANDS:
+        raise ValueError(f"No hand {hand!r}.")
+    if job_of(part_id) is not None:
+        raise Busy("The AI is already enhancing this sheet.")
+    if not passages:
+        raise ValueError("Tick a passage first.")
+    if len(passages) > match.STYLE_MAX:
+        raise ValueError(f"At most {match.STYLE_MAX} passages.")
+    if end <= start:
+        raise ValueError("The reference is empty.")
+    if (end - start) * FRAME_MS / 1000 > BATCH_MAX_S:
+        raise ValueError("Select a shorter stretch.")
+    staffs = _staffs(hand)
+    current, notes, grid, cs = _style_inputs(part_id)
+    if _reference_columns(current, staffs, start, end) < match.REF_COLUMNS:
+        raise ValueError("Select a longer stretch.")
+    places = sorted((int(a), int(b)) for a, b in passages)
+    for a, b in places:
+        if b <= a:
+            raise ValueError("A passage is empty.")
+        if a < end and start < b:
+            raise ValueError("A passage overlaps the reference.")
+        if (b - a) * FRAME_MS / 1000 > BATCH_MAX_S:
+            raise ValueError("A passage is too long.")
+    if any(y[0] < x[1] for x, y in zip(places, places[1:])):
+        raise ValueError("Two passages overlap.")
+    found = match.ranked(current, notes, start, end, staffs, grid=grid, harmony=cs, floor=0.0)
+    matched = match.of_places(found, places)
+    if any(m is None for m in matched):
+        raise ValueError("The notes changed since the list was made: open it again.")
+    plist = [
+        style.Passage(k, a, b, m.score, m.shift, list(m.columns))
+        for k, ((a, b), m) in enumerate(zip(places, matched))
+        if m is not None
+    ]
+
+    def work(reporter: BaseProgress) -> dict[str, Any]:
+        log = runs.create(
+            part_id,
+            {
+                "hand": hand,
+                "start": start,
+                "end": end,
+                "words": " ".join(words.split()),
+                "model": llm_models.resolve(model),
+                "prompt": style.STYLE_VERSION,
+                "windows": [[p.start, p.end] for p in plist],
+            },
+            style.system_prompt(),
+            kind="style",
+        )
+        log["passages"] = [p.to_json() for p in plist]
+        runs.save(part_id, log)
+        return _style_work(part_id, reporter, log, None, complete=complete, limit=1 if first else None)
+
+    return _submit(part_id, work)
+
+
+def _style_drawn(current: Any, answers: list[tuple[Any, Any]], staffs: tuple[int, ...]) -> Any:
+    """``current`` with each passage accepted taken from its answer as the AI wrote it (``frames.splice``, as a
+    stretch: its hands, beam groups, clefs, 8va and figures; the user's marks of a note kept), the other hand kept
+    when one hand is rewritten. Not settled: the store lays the rules on it."""
+    from aitu_backend.sheet.llm import frames as llm_frames  # noqa: PLC0415
+
+    sheet = current
+    keep = None if len(staffs) == 2 else 3 - staffs[0]
+    for p, answer in answers:
+        sheet = llm_frames.splice(sheet, answer, p.start, p.end, keep=keep)
+    return sheet
+
+
+def _style_work(
+    part_id: str,
+    reporter: BaseProgress,
+    log: dict[str, Any],
+    todo: list[int] | None,
+    *,
+    complete: Callable[[], Complete] | None,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    """The passages of a Copy this style run: the check first when the log has none yet, then the passages kept
+    (``todo``: their ``k``; ``limit``: at most that many, the first passage first), stored as one step with the marks
+    the code copies. The passages written before (a run that goes on) are read from the sheet."""
+    from aitu_backend.sheet.llm import style  # noqa: PLC0415
+    from aitu_backend.sheet.llm.frames import _slice  # noqa: PLC0415
+
+    req = log["request"]
+    hand, words = req["hand"], req["words"]
+    staffs = _staffs(hand)
+    reference = (int(req["start"]), int(req["end"]))
+    stored = pipeline.load_note_events(part_id)
+    if stored is None:
+        raise FileNotFoundError("This part has no notes.")
+    notes_revision = stored.header.notes_revision
+    if "before" in log:
+        _meta[part_id] = {"before": log["before"]}  # Revert goes back to before the first passage
+    else:
+        log["before"] = _begin(part_id)
+    drawn, current, _ = _as_drawn(part_id)
+    passages = [style.Passage.from_json(p) for p in log["passages"]]
+    checked = bool(log.get("plan")) and log["plan"]["status"] == "ok"
+    done_before = [(b["start"], b["end"]) for b in log["batches"] if b["status"] == "ok"]
+    kept = sorted((p for p in passages if p.keep), key=lambda p: p.start)
+    if todo is not None:
+        wanted = set(todo)
+        first_index = next((i for i, p in enumerate(kept) if p.k in wanted), len(kept))
+    else:
+        first_index = 0
+    written_before = [n for n in current.notes if n.staff in staffs and any(a <= n.frame < b for a, b in done_before)]
+    earlier_before = [
+        (p, _slice(current, p.start, p.end, staffs)) for p in kept if (p.start, p.end) in set(done_before)
+    ]
+    windows = [(p.start, p.end) for p in (kept if checked else sorted(passages, key=lambda p: p.start))]
+    run = LiveRun(part_id, drawn.text, windows, staff=HANDS[hand])
+    run.done, run.outcomes = first_index, [True] * first_index
+    log["state"] = "running"
+    runs.save(part_id, log)
+    with _live_lock:
+        _live[part_id] = run
+    try:
+        ask = complete() if complete is not None else _complete(part_id, "style", req.get("model"))
+        usd0 = float(log.get("usd", 0.0))
+        requests0 = int(log.get("requests", 0))
+
+        def asked(system: str, messages: list[dict]) -> str:
+            # A Stop keeps the passages already accepted (the rule of 04-7); Revert removes the whole run.
+            _check_stop(part_id)
+            if not pipeline.has_events(part_id):
+                raise PartGone("The part was deleted while the AI copied a style on its sheet.")
+            return ask(system, messages)
+
+        answers: list[tuple[Any, Any]] = []
+
+        def on_check(wlog: WindowLog, decided: list[Any]) -> None:
+            log["passages"] = [p.to_json() for p in decided]
+            now_kept = sorted((p for p in decided if p.keep), key=lambda p: p.start)
+            req["windows"] = [[p.start, p.end] for p in now_kept]
+            with run._lock:
+                run.provisional = [(p.start, p.end) for p in now_kept]
+            runs.save(part_id, log)
+            reporter.send(
+                EVENT, {"phase": "check", "status": wlog.status, "kept": len(now_kept), "total": len(decided)}
+            )
+
+        def on_batch(wlog: WindowLog, result: Any, p: Any) -> None:
+            ok = wlog.status == "ok" and result.sheet is not None
+            if ok:
+                answers.append((p, result.sheet))
+            run.advanced(f1.write(_style_drawn(current, answers, staffs), mode="frames"), ok)
+            reporter.send(
+                EVENT, {"phase": "batch", "done": wlog.k + 1, "total": len(req["windows"]), "status": wlog.status}
+            )
+
+        def on_talk(talk: Any) -> None:
+            log["usd"] = round(usd0 + float(getattr(ask, "usd", 0.0) or 0.0), 4)
+            log["requests"] = requests0 + len(getattr(ask, "calls", []))
+            runs.update(part_id, log, talk)
+
+        reporter.send(EVENT, {"phase": "style", "total": len(passages), "checking": not checked})
+        try:
+            out = style.write_style(
+                current,
+                asked,
+                reference=reference,
+                passages=passages,
+                staffs=staffs,
+                sid=part_id[:8],
+                words=words,
+                checked=checked,
+                todo=todo,
+                written_before=written_before,
+                done_before=done_before,
+                earlier_before=earlier_before,
+                first_index=first_index,
+                limit=limit,
+                on_check=on_check,
+                on_batch=on_batch,
+                on_talk=on_talk,
+            )
+        except BaseException:
+            log["state"] = "stopped"
+            runs.save(part_id, log)
+            raise
+        usd = float(getattr(ask, "usd", 0.0) or 0.0)
+        requests = len(getattr(ask, "calls", []))
+        log["usd"], log["requests"] = round(usd0 + usd, 4), requests0 + requests
+        passages = out.passages
+        kept = sorted((p for p in passages if p.keep), key=lambda p: p.start)
+        dropped = sum(not p.keep for p in passages)
+        tried = {(w.start, w.end): w.status for w, _ in out.batches}
+        left = len(kept) - first_index - len(out.batches)
+        stopped = part_id in _stop_asked
+        waiting = bool(answers) and left > 0 and not stopped
+        check_failed = out.check_log.status != "ok" and not checked
+        log["state"] = (
+            "stopped"
+            if stopped
+            else "failed"
+            if check_failed
+            else "waiting"
+            if waiting
+            else "done"
+            if answers or done_before or not kept
+            else "failed"
+        )
+        runs.save(part_id, log)
+        summary: dict[str, Any] = {
+            "hand": hand,
+            "usd": round(usd, 4),
+            "batches": len(answers) + len(done_before),
+            "total": len(kept),
+            "dropped": dropped,
+            "run": log["id"],
+        }
+        if waiting:
+            summary["waiting"] = True
+        note = out.check_log.note or next((w.note for w, _ in out.batches if w.note), "")
+        if note:
+            summary["note"] = note
+        if "NoCredits" in note:
+            summary["credits"] = "openai"
+        if not pipeline.has_events(part_id):
+            return {**summary, "style": "gone"}
+        if check_failed:
+            return {**summary, "style": "failed"}
+        if not kept:
+            return {**summary, "style": "dropped"}
+        if not answers:
+            return {**summary, "style": "failed"}
+        spliced = _style_drawn(current, answers, staffs)
+        ref_sheet = style._reference_sheet(current, reference)
+        total_copied: Counter = Counter()
+        for p, _answer in answers:
+            before = [n for n in current.notes if n.staff in staffs and p.start <= n.frame < p.end]
+            counts = style.copy_marks(spliced, reference=ref_sheet, before=before, passage=p, staffs=staffs)
+            total_copied.update(counts)
+            for b in log["batches"]:
+                if (b["start"], b["end"]) == (p.start, p.end):
+                    b["copied"] = dict(counts)
+                    b["copiedText"] = style.copied_text(counts)
+        runs.save(part_id, log)
+        ours = [
+            n
+            for _, answer in answers
+            for n in answer.notes
+            if n.staff in staffs and not n.covered
+        ]
+        accepted = sorted((p.start, p.end) for p, _ in answers)
+        entry = {
+            "hand": hand,
+            "reference": [reference[0], reference[1]],
+            "words": words,
+            "prompt": style.STYLE_VERSION,
+            "run": log["id"],
+            "passages": [
+                [p.start, p.end, "dropped" if not p.keep else tried.get((p.start, p.end), "waiting"), p.why]
+                for p in sorted(passages, key=lambda p: p.start)
+                if (p.start, p.end) not in set(done_before)
+            ],
+            "copied": dict(total_copied),
+        }
+        part = ", passage 1" if waiting and not first_index else ", the other passages" if first_index else ""
+        done = edits.apply_style(
+            part_id,
+            spliced,
+            notes_revision=notes_revision,
+            start=accepted[0][0],
+            end=accepted[-1][1],
+            staff=HANDS[hand],
+            wrote=ours,
+            usd=usd,
+            requests=requests,
+            model=getattr(ask, "model", None),
+            label=f"Copy this style with AI, {STYLE_LABELS[hand]}{part}",
+            entry=entry,
+        )
+        reporter.send(EVENT, {"phase": "saved"})
+        return {**summary, "style": "ok" if done else "stale"}
+    finally:
+        with _live_lock:
+            _live.pop(part_id, None)
+
+
+def _again_style(part_id: str, log: dict[str, Any], k: int, words: str, complete: Callable[[], Complete] | None) -> jobs.Job:
+    """**Write this batch again** for a passage of a Copy this style run (as :func:`again_batch` for a level batch):
+    its conversation goes on with the user's answer, checked as in the run, and replaces the passage as one step."""
+    from aitu_backend.sheet.llm import levels, style  # noqa: PLC0415
+
+    old = next((b for b in log["batches"] if b["k"] == k), None)
+    if old is None or not old.get("target") or not old.get("messages"):
+        raise LookupError("This batch has no conversation to answer.")
+    if not words.strip():
+        raise ValueError("Write your answer to the AI first.")
+    if job_of(part_id) is not None:
+        raise Busy("The AI is already enhancing this sheet.")
+    req = log["request"]
+    hand = req["hand"]
+    staffs = _staffs(hand)
+    reference = (int(req["start"]), int(req["end"]))
+    passage = next(
+        (
+            style.Passage.from_json(p)
+            for p in log["passages"]
+            if (int(p["start"]), int(p["end"])) == (old["start"], old["end"])
+        ),
+        None,
+    )
+    if passage is None:
+        raise LookupError("This batch has no passage.")
+    run_id = log["id"]
+
+    def work(reporter: BaseProgress) -> dict[str, Any]:
+        stored = pipeline.load_note_events(part_id)
+        if stored is None:
+            raise FileNotFoundError("This part has no notes.")
+        notes_revision = stored.header.notes_revision
+        _begin(part_id)
+        drawn, current, _ = _as_drawn(part_id)
+        a, b = old["start"], old["end"]
+        run = LiveRun(part_id, drawn.text, [(a, b)], staff=HANDS[hand])
+        with _live_lock:
+            _live[part_id] = run
+        try:
+            ask = complete() if complete is not None else _complete(part_id, "style", req.get("model"))
+
+            def asked(system: str, messages: list[dict]) -> str:
+                _check_stop(part_id)
+                return ask(system, messages)
+
+            reporter.send(EVENT, {"phase": "style", "total": 1})
+            talk = levels.Talk(old["k"], a, b, old["messages"], old["status"], list(old.get("errors", [])), old["target"])
+            waiting = {"waiting": True} if log["state"] == "waiting" else {}
+            try:
+                again, result = style.write_again(
+                    asked, log["system"], talk, words, current, reference=reference, passage=passage, staffs=staffs
+                )
+            except Exception as exc:  # noqa: BLE001 (no credits, no network: the passage stays as it is)
+                return {"style": "failed", "again": k + 1, "run": run_id, "note": f"{type(exc).__name__}: {exc}", **waiting}
+            usd = float(getattr(ask, "usd", 0.0) or 0.0)
+            requests = len(getattr(ask, "calls", []))
+            ok = again.status == "ok" and result.sheet is not None
+            answers = list(old.get("answers", [])) + [{"words": " ".join(words.split()), "at": runs._now()}]
+            entry_talk = again.to_json() | {"answers": answers}
+            if not ok:  # the passage on the sheet stays the earlier answer: its explanation too
+                entry_talk.update(status=old["status"], explain=old["explain"], declared=old["declared"])
+            summary: dict[str, Any] = {"hand": hand, "usd": round(usd, 4), "batches": int(ok), "total": 1, "run": run_id,
+                                       "again": k + 1, **waiting}
+            if not ok:
+                log["batches"] = sorted([x for x in log["batches"] if x["k"] != k] + [entry_talk], key=lambda x: x["k"])
+                log["usd"] = round(float(log.get("usd", 0.0)) + usd, 4)
+                log["requests"] = int(log.get("requests", 0)) + requests
+                runs.save(part_id, log)
+                run.advanced(drawn.text, False)
+                return {**summary, "style": "failed"}
+            spliced = _style_drawn(current, [(passage, result.sheet)], staffs)
+            before = [n for n in current.notes if n.staff in staffs and a <= n.frame < b]
+            counts = style.copy_marks(
+                spliced, reference=style._reference_sheet(current, reference), before=before, passage=passage,
+                staffs=staffs,
+            )
+            entry_talk |= {"copied": dict(counts), "copiedText": style.copied_text(counts)}
+            log["batches"] = sorted([x for x in log["batches"] if x["k"] != k] + [entry_talk], key=lambda x: x["k"])
+            log["usd"] = round(float(log.get("usd", 0.0)) + usd, 4)
+            log["requests"] = int(log.get("requests", 0)) + requests
+            runs.save(part_id, log)
+            run.advanced(f1.write(spliced, mode="frames"), True)
+            ours = [n for n in result.sheet.notes if n.staff in staffs and not n.covered]
+            entry = {
+                "hand": hand, "reference": [reference[0], reference[1]], "words": " ".join(words.split()),
+                "prompt": style.STYLE_VERSION, "run": run_id, "again": k + 1,
+                "passages": [[a, b, "ok", passage.why]], "copied": dict(counts),
+            }
+            done = edits.apply_style(
+                part_id, spliced, notes_revision=notes_revision, start=a, end=b, staff=HANDS[hand], wrote=ours,
+                usd=usd, requests=requests, model=getattr(ask, "model", None),
+                label=f"Passage {k + 1} written again with AI", entry=entry,
+            )
+            reporter.send(EVENT, {"phase": "saved"})
+            return {**summary, "style": "ok" if done else "stale"}
+        finally:
+            with _live_lock:
+                _live.pop(part_id, None)
+
+    return _submit(part_id, work)
 
 
 def costs(part_id: str) -> dict[str, Any]:

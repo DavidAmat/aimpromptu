@@ -3,12 +3,7 @@
 # Executive Summary
 
 My personal computer is a Mac Mini M4, and I also have a ubuntu machine with 64GB
-RAM and 32 cores with i9 processor intel. I have 2 SSD, one of 1TB and another called "ssd2" mounted in /mnt/ssd2 with 2TB where I save most of the
-heavy stuff like heavy docker images and heavy AI models.  It is really powerful. Sometimes I run AI models locally in my ubuntu using ollama or
-llama cpp or vllm and then in m My mac, which I only have 16GB and few storage, I connect to 192.168.0.112 (the local IP of my ubuntu machine) to
-run requests there. Bear this in mind. I also run jupyter hub sometimes from my ubuntu machine and access it from my mac with this IP. So you can
-see that normally when I develop with an IDE I tend to SSH into "ubuntu" host (this is the name of my etc hosts) and then develop in the SSH mode.
-Remember this setup with all these details
+RAM and 32 cores with i9 processor intel. I have 2 SSD, one of 1TB and another called "ssd2" mounted in /mnt/ssd2 with 2TB where I save most of the heavy stuff like heavy docker images and heavy AI models.  It is really powerful. Sometimes I run AI models locally in my ubuntu using ollama or llama cpp or vllm and then in m My mac, which I only have 16GB and few storage, I connect to 192.168.0.112 (the local IP of my ubuntu machine) to run requests there. Bear this in mind. I also run jupyter hub sometimes from my ubuntu machine and access it from my mac with this IP. So you can see that normally when I develop with an IDE I tend to SSH into "ubuntu" host (this is the name of my etc hosts) and then develop in the SSH mode. Remember this setup with all these details
 
 # Home machines — LLM context
 Short reference for agents working from the Mac and offloading heavy work to the Ubuntu box.

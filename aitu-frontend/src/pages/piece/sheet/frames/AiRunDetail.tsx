@@ -3,7 +3,8 @@
  * the run, and each batch with the AI's explanation in simple words, the check's refusals and the user's answers.
  * Under a batch, the user can answer the AI ("No, I want this") and **Write this batch again**. A run that waits after
  * its first batch offers **Go on with the other batches**. The panel of a run shows it when the first batch is
- * written; the history of AI runs shows it when a run is opened.
+ * written; the history of AI runs shows it when a run is opened. A run of **Copy this style** (implementation 06) also
+ * shows its reference and the AI's check of the passages: the panel only the passages dropped, with the reason.
  */
 
 import Box from "@mui/material/Box";
@@ -14,7 +15,8 @@ import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
 import { sheetApi, type AiRun, type AiRunTalk } from "../../../../api";
 import { PillButton } from "../../../../ui";
-import { BATCH_COLOURS } from "./batches";
+import { batchColour } from "./batches";
+import { BatchNumber } from "./BatchNumber";
 import { runTitle, shortRef } from "./patterns";
 
 const FRAME_MS = 40;
@@ -49,24 +51,9 @@ function BatchBlock({
   return (
     <Stack spacing={0.75} sx={{ py: 1.25, borderBottom: 1, borderColor: "divider" }} data-run-batch={talk.k + 1}>
       <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
-        <Box
-          sx={{
-            width: 24,
-            height: 24,
-            borderRadius: 1,
-            border: `2px solid ${colour}`,
-            bgcolor: `${colour}1f`,
-            color: colour,
-            fontWeight: 700,
-            fontSize: 12,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
+        <BatchNumber colour={colour} size={24}>
           {talk.k + 1}
-        </Box>
+        </BatchNumber>
         <Typography variant="body2" sx={{ flex: 1 }}>
           {clockOf(talk.start)} - {clockOf(talk.end)}{" "}
           <Typography component="span" variant="caption" color="text.secondary">
@@ -82,6 +69,11 @@ function BatchBlock({
           {line}
         </Typography>
       ))}
+      {talk.copiedText ? (
+        <Typography variant="body2" color="text.secondary" data-run-copied>
+          {talk.copiedText[0].toUpperCase() + talk.copiedText.slice(1)} from the reference.
+        </Typography>
+      ) : null}
       {talk.rules.map((line, index) => (
         <Typography key={index} variant="body2" color="text.secondary">
           Rule for the next batches: {line}
@@ -125,6 +117,50 @@ function BatchBlock({
   );
 }
 
+/** What the AI's check decided on the passages of a Copy this style run; `compact`: only the ones dropped. */
+function StyleCheck({ run, compact }: { run: AiRun; compact: boolean }) {
+  const passages = run.passages ?? [];
+  const checked = run.plan?.status === "ok";
+  const shown = compact ? passages.filter((one) => checked && !one.keep) : passages;
+  const refused = run.plan?.errors ?? [];
+  return (
+    <Stack spacing={0.25} data-run-check>
+      {!compact && run.request.start !== undefined && run.request.end !== undefined ? (
+        <Typography variant="body2" color="text.secondary" data-run-reference>
+          The reference: {clockOf(run.request.start)} - {clockOf(run.request.end)}{" "}
+          <Typography component="span" variant="caption">
+            f{run.request.start}-f{run.request.end}
+          </Typography>
+        </Typography>
+      ) : null}
+      {shown.length ? (
+        <Typography variant="subtitle2" component="p" sx={{ pt: 0.5 }}>
+          {compact ? "Passages the AI dropped" : "The AI's check"}
+        </Typography>
+      ) : null}
+      {shown.map((one) => (
+        <Stack key={one.k} direction="row" spacing={1} sx={{ alignItems: "baseline" }} data-run-passage={one.keep ? "kept" : "dropped"}>
+          <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+            {clockOf(one.start)} - {clockOf(one.end)}{" "}
+            <Typography component="span" variant="caption" color="text.secondary">
+              f{one.start}-f{one.end}
+            </Typography>
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {compact ? one.why : `${checked ? (one.keep ? "Kept" : "Dropped") : "Not checked"}${one.why ? `: ${one.why}` : ""}`}
+          </Typography>
+        </Stack>
+      ))}
+      {refused.length ? (
+        <Typography variant="caption" color="text.secondary" data-run-check-refused>
+          The check refused {refused.length} {refused.length === 1 ? "answer" : "answers"} of the AI:{" "}
+          {refused.map((errors) => errors.join(" ")).join(" · ")}
+        </Typography>
+      ) : null}
+    </Stack>
+  );
+}
+
 export interface AiRunDetailProps {
   audioUuid: string;
   runId: string;
@@ -162,6 +198,7 @@ export function AiRunDetail({ audioUuid, runId, busy, refresh = 0, onStarted, co
 
   const waiting = run.state === "waiting";
   const left = run.request.windows.length - run.batches.length;
+  const others = left === 1 ? "the other batch" : `the other ${left} batches`;
   const start = async (call: () => Promise<unknown>) => {
     setSending(true);
     try {
@@ -179,7 +216,7 @@ export function AiRunDetail({ audioUuid, runId, busy, refresh = 0, onStarted, co
       {!compact ? (
         <>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {runTitle(run.request)}
+            {runTitle({ ...run.request, kind: run.kind })}
           </Typography>
           {run.request.words ? (
             <Typography variant="body2" color="text.secondary">
@@ -196,6 +233,7 @@ export function AiRunDetail({ audioUuid, runId, busy, refresh = 0, onStarted, co
           {run.note}
         </Typography>
       ) : null}
+      {run.kind === "style" ? <StyleCheck run={run} compact={compact} /> : null}
       {run.rules.length ? (
         <Stack spacing={0.25} data-run-rules>
           <Typography variant="subtitle2" component="p">
@@ -214,7 +252,7 @@ export function AiRunDetail({ audioUuid, runId, busy, refresh = 0, onStarted, co
           <BatchBlock
             key={talk.k}
             talk={talk}
-            colour={BATCH_COLOURS[talk.k % BATCH_COLOURS.length]}
+            colour={batchColour(talk.k)}
             canAnswer={!busy && talk.status !== "open" && run.state !== "running"}
             sending={sending}
             onAgain={(words) => void start(() => sheetApi.runBatchAgain(audioUuid, run.id, talk.k, words))}
@@ -224,7 +262,7 @@ export function AiRunDetail({ audioUuid, runId, busy, refresh = 0, onStarted, co
       {waiting && left > 0 ? (
         <Stack spacing={1} sx={{ pt: 0.5 }}>
           <Typography variant="body2" color="text.secondary">
-            Check batch 1 on the sheet. If it is good, the AI writes the other {left} batches in the same way.
+            Check batch 1 on the sheet. If it is good, the AI writes {others} in the same way.
           </Typography>
           <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
             <PillButton
@@ -233,7 +271,7 @@ export function AiRunDetail({ audioUuid, runId, busy, refresh = 0, onStarted, co
               onClick={() => void start(() => sheetApi.continueRun(audioUuid, run.id))}
               data-testid="run-continue"
             >
-              Go on with the other {left} batches
+              Go on with {others}
             </PillButton>
           </Stack>
         </Stack>

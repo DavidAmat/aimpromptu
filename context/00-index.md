@@ -114,7 +114,20 @@ assumes.
 
 | File | Description |
 |------|-------------|
-| [implementations/README.md](implementations/README.md) | **Start here.** The five groups (`01-mvp/`, `02-private-web-app/`, `03-apply-poc-research/`, `04-app-enhancements/`, `05-documentation-refresh/`), every implementation with its state, and the numbering rule |
+| [implementations/README.md](implementations/README.md) | **Start here.** The six groups (`01-mvp/`, `02-private-web-app/`, `03-apply-poc-research/`, `04-app-enhancements/`, `05-documentation-refresh/`, `06-copy-this-style/`), every implementation with its state, and the numbering rule |
+
+### 06 — Copy this style — IN PROGRESS (Phases 1 and 2 done 2026-11-03)
+
+A stretch the user edited by hand becomes the reference: the code finds the similar passages of the song, the AI checks
+them and writes each again in the reference's way of writing. Also a Stop button for a transcription and the first
+paste (the brief 04-4, sections 1.1 and 1.2).
+
+| File | Description |
+|---|---|
+| [implementations/06-copy-this-style/README.md](implementations/06-copy-this-style/README.md) | What it is, and every file in the folder |
+| [implementations/06-copy-this-style/06-prompt.md](implementations/06-copy-this-style/06-prompt.md) | Where the brief is (04-4), and what of it 06 does |
+| [implementations/06-copy-this-style/06-plan.md](implementations/06-copy-this-style/06-plan.md) | **The plan.** The user's answers, the matcher, the dialog tab, the run, the marks copied, seven phases |
+| [implementations/06-copy-this-style/06-checklist.md](implementations/06-copy-this-style/06-checklist.md) | THE status lookup |
 
 ### 05 — The documentation refresh — DONE (2026-11-01 to 02)
 
@@ -153,7 +166,7 @@ user, 2026-11-03).
 | `implementations/04-app-enhancements/04-implementation-phase-N.md` | One report per phase (Phase 1: the sheet page; Phase 2: the decoration-note rule, and its gallery in `gallery/phase-2/`; Phase 3: prompt version 6 and 7 Years, and its gallery in `gallery/phase-3/`; Phase 4: the Enhance with AI dialog and Simplify, and its gallery in `gallery/phase-4/`; Phase 5: the documentation and closing) |
 | `implementations/04-app-enhancements/04-3-prompt.md`, [04-3-plan.md](implementations/04-app-enhancements/04-3-plan.md), [04-3-checklist.md](implementations/04-app-enhancements/04-3-checklist.md), `04-3-implementation-phase-N.md` | 04-3: the brief, the plan, the status lookup and one report per phase (1, 2, 2b, 3, 4, 5; Phase 6, the documentation, done by 05) |
 | [implementations/04-app-enhancements/04-7-prompt.md](implementations/04-app-enhancements/04-7-prompt.md) | 04-7: the brief of the open points of 04 (the clef of the left hand, Hard's figure check, a Stop of a level run, and others); not started |
-| `implementations/04-app-enhancements/04-4-prompt.md` | 04-4: the brief "Copy this style"; not built, left for a later, larger implementation plan (the user, 2026-11-03) |
+| `implementations/04-app-enhancements/04-4-prompt.md` | 04-4: the brief "Copy this style"; not built in 04, planned as implementation 06 (2026-11-03) |
 | [implementations/04-app-enhancements/04-6-prompt.md](implementations/04-app-enhancements/04-6-prompt.md), [04-6-plan.md](implementations/04-app-enhancements/04-6-plan.md), [04-6-checklist.md](implementations/04-app-enhancements/04-6-checklist.md), `04-6-implementation-phase-N.md` | 04-6: a run marked stopped when the backend stops, the model of the AI in one setting, Simplify removed; the brief, the plan, the status lookup and one report per phase (1 to 5). Done 2026-11-03 |
 | `implementations/04-app-enhancements/04-5-prompt.md`, [04-5-plan.md](implementations/04-app-enhancements/04-5-plan.md), [04-5-checklist.md](implementations/04-app-enhancements/04-5-checklist.md), [04-5-implementation-phases-1-to-4.md](implementations/04-app-enhancements/04-5-implementation-phases-1-to-4.md) | 04-5: the brief, the plan, the status lookup and the report of Phases 1 to 4 |
 

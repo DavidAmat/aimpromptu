@@ -33,6 +33,7 @@
     "check:enhance-dialog": "node scripts/check-enhance-dialog.mjs",
     "check:ai-run-panel": "node scripts/check-ai-run-panel.mjs",
     "check:ai-history": "node scripts/check-ai-history.mjs",
+    "check:copy-style": "node scripts/check-copy-style.mjs",
     "check:folders": "node scripts/check-folders.mjs",
     "measure:lyric-fonts": "node scripts/measure-lyric-fonts.mjs"
   },

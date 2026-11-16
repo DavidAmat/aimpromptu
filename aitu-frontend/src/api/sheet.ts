@@ -288,9 +288,59 @@ export interface LevelChoice extends RunChoice {
   chords?: string;
 }
 
+/** A place of the song like the reference, as the code found it (**Copy this style**, implementation 06). */
+export interface StylePassage {
+  /** `[start, end)` in frames. */
+  start: number;
+  end: number;
+  /** How similar, from 0 to 1. */
+  score: number;
+  /** In semitones: the passage plays the reference this much higher (0: the same key). */
+  shift: number;
+}
+
+/** What `GET /sheet/{uuid}/llm/style` answers: free, no AI. */
+export interface StylePassages {
+  reference: [number, number];
+  hand: LevelHand;
+  model: AiModel;
+  /** In the order of the song. */
+  passages: StylePassage[];
+  /** The reference is longer than a batch can hold, or holds too few columns: no passage is searched. */
+  tooLong: boolean;
+  tooShort: boolean;
+  /** The estimate of a run with each number of passages ticked, none first. */
+  costs: LlmCost[];
+}
+
+export interface StyleQuery {
+  start: number;
+  end: number;
+  hand: LevelHand;
+  model?: AiModel;
+}
+
+/** A run of **Copy this style**: the reference, its hand, the user's words and the passages ticked. */
+export interface StyleRequest extends StyleQuery {
+  words: string;
+  passages: [number, number][];
+}
+
+/** A passage of a Copy this style run, after the AI's check: kept or dropped, and why. */
+export interface AiRunPassage extends StylePassage {
+  k: number;
+  keep: boolean;
+  why: string;
+}
+
 /** A run of the history of AI runs, in short (implementation 04-5): the latest first. */
 export interface AiRunShort {
   id: string;
+  /** `style`: **Copy this style**. A run of an older log has none: a level. */
+  kind?: "level" | "style";
+  /** A run of Copy this style: the frames of its reference, and its passages. */
+  reference?: [number, number];
+  passages?: AiRunPassage[];
   /** The run has its log (its conversations); `false`: a level run stored before the logs (from the record only). */
   log: boolean;
   created: string | null;
@@ -331,22 +381,31 @@ export interface AiRunTalk {
   declared: string[];
   /** The user's answers to this batch, in order. */
   answers?: { words: string; at: string }[];
+  /** A passage of Copy this style: the marks the code copied, in words ("3 spellings, 2 fingers copied"). */
+  copiedText?: string;
 }
 
 /** A run of the history, whole. */
 export interface AiRun {
   id: string;
+  kind?: "level" | "style";
   created: string;
   state: string;
   request: {
-    level: LevelName | Record<"right" | "left", LevelName>;
+    /** A level run only. */
+    level?: LevelName | Record<"right" | "left", LevelName>;
     hand: LevelHand;
-    patterns: string[];
-    strict: string[];
+    patterns?: string[];
+    strict?: string[];
+    /** A run of Copy this style: the frames of its reference. */
+    start?: number;
+    end?: number;
     words: string;
     model: string;
     windows: [number, number][];
   };
+  /** A run of Copy this style: each passage ticked, with the AI's check. */
+  passages?: AiRunPassage[];
   plan: AiRunTalk | null;
   batches: AiRunTalk[];
   rules: AiRunRule[];
@@ -658,6 +717,14 @@ export const sheetApi = {
   /** The AI writes a range again at a level, in place; follow the job on `progressUrl(jobId)`. */
   level: (audioUuid: string, body: LevelRequest) =>
     request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm/level`, { method: "POST", body }),
+
+  /** The passages of the song like the reference, found by the code (free), with the cost of a run. */
+  stylePassages: (audioUuid: string, query: StyleQuery, signal?: AbortSignal) =>
+    request<StylePassages>(`/sheet/${audioUuid}/llm/style`, { signal, query: { ...query } }),
+
+  /** **Copy this style**: the AI checks the passages, then writes the first; follow the job on `progressUrl(jobId)`. */
+  copyStyle: (audioUuid: string, body: StyleRequest) =>
+    request<{ jobId: string; status: string }>(`/sheet/${audioUuid}/llm/style`, { method: "POST", body }),
 
   /** A level of the whole sheet, in a new project of My projects: open `partId`'s sheet to follow it. */
   levelCopy: (audioUuid: string, body: LevelChoice) =>

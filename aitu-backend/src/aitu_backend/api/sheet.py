@@ -732,6 +732,65 @@ def run_llm_level_copy(audio_uuid: str, body: LevelRequest = Body(...)) -> Level
     return LevelCopyOut(job_id=started.id, project_id=copy_id, part_id=part_id, title=title)
 
 
+@router.get("/{audio_uuid}/llm/style")
+def style_passages(
+    audio_uuid: str,
+    start: int = Query(..., ge=0),
+    end: int = Query(..., ge=1),
+    hand: Literal["both", "right", "left"] = Query("both"),
+    model: AiModel | None = Query(None),
+) -> dict[str, Any]:
+    """**Copy this style** (implementation 06): the passages of the song like the reference ``[start, end)`` of the
+    hand, found by the code (free, no AI), in the order of the song, each with its score and its shift; the cost and
+    the minutes of a run over all of them; ``tooLong`` and ``tooShort`` for a reference the run cannot take."""
+    _notes_or_404(audio_uuid)
+    if end <= start:
+        raise HTTPException(status_code=400, detail="The stretch is empty.")
+    return job.style_passages(audio_uuid, start=start, end=end, hand=hand, model=model)
+
+
+class StyleRequest(BaseModel):
+    model: AiModel | None = None
+    start: int = Field(ge=0)
+    end: int = Field(ge=1)
+    hand: Literal["both", "right", "left"] = "both"
+    words: str = Field(default="", max_length=1000)
+    #: The passages ticked in the dialog: ``[[first frame, end frame], ...]``.
+    passages: list[list[int]] = Field(default_factory=list, max_length=40)
+
+
+@router.post("/{audio_uuid}/llm/style", status_code=202)
+def run_llm_style(audio_uuid: str, body: StyleRequest = Body(...)) -> dict[str, str]:
+    """**Copy this style** (implementation 06): the AI checks the passages ticked, then writes each one kept again
+    the way the reference is written, the first passage first (the run waits; **Go on with the other batches**). One
+    step of undo; **Revert**. 409 when a run works on the part, 403 when the sheet cannot be changed here, 400 when no
+    passage is ticked or the stretch cannot be a reference."""
+    _notes_or_404(audio_uuid)
+    if not job.available(body.model):
+        raise HTTPException(status_code=409, detail="This AI is not set up on this machine.")
+    if not _writes(audio_uuid):
+        raise HTTPException(status_code=403, detail="This sheet cannot be changed here.")
+    if not body.passages:
+        raise HTTPException(status_code=400, detail="Tick a passage first.")
+    if any(len(p) != 2 for p in body.passages):
+        raise HTTPException(status_code=422, detail="A passage is [first frame, end frame].")
+    try:
+        started = job.start_style(
+            audio_uuid,
+            start=body.start,
+            end=body.end,
+            hand=body.hand,
+            passages=[(p[0], p[1]) for p in body.passages],
+            words=body.words,
+            model=body.model,
+        )
+    except job.Busy as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"jobId": started.id, "status": started.status}
+
+
 @router.get("/{audio_uuid}/llm/costs")
 def llm_costs(
     audio_uuid: str,

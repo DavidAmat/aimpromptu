@@ -12,11 +12,20 @@
  *
  * A stretch the AI writes again with the user's words (Phase 7) is a job like a whole run: the page follows it the
  * same way, and the job's last message says when no answer was accepted (`notice`: the stretch stays as it was).
- * So is a **level** of a range (implementation 04-3, Phase 4): its last message says when no batch was accepted.
+ * So is a **level** of a range (implementation 04-3, Phase 4): its last message says when no batch was accepted. So is
+ * **Copy this style** (implementation 06): its first messages say while the AI checks the passages (`checking`).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { sheetApi, type FramesSheet, type LevelRequest, type RunChoice, type SheetEdited, type StretchRequest } from "../../../../api";
+import {
+  sheetApi,
+  type FramesSheet,
+  type LevelRequest,
+  type RunChoice,
+  type SheetEdited,
+  type StretchRequest,
+  type StyleRequest,
+} from "../../../../api";
 import { said } from "../../../library/shared";
 
 /** Messages closer than this are read as one. */
@@ -30,6 +39,10 @@ export interface RunSummary {
   hand?: Hand;
   level?: string;
   levelName?: string;
+  /** A run of Copy this style: `ok`, `dropped` (the AI's check kept no passage), `failed`, `stale`, `gone`. */
+  style?: string;
+  /** A passage written again (its number). */
+  again?: number;
   batches?: number;
   total?: number;
   /** The run stopped because the account of the AI has no credits left (``openai``). */
@@ -57,8 +70,21 @@ function endNotice(summary: Summary): string | null {
   if (summary.stretch === "stale") return "The notes changed while the AI worked. The stretch stays as it was.";
   if (summary.credits) {
     const done =
-      summary.level === "ok" && summary.batches ? `The AI wrote ${summary.batches} of ${summary.total} parts; the others stay as they were. ` : "The sheet stays as it was. ";
+      (summary.level === "ok" || summary.style === "ok") && summary.batches
+        ? `The AI wrote ${summary.batches} of ${summary.total} parts; the others stay as they were. `
+        : "The sheet stays as it was. ";
     return `${done}The AI has no credits left: add credits to the OpenAI account (platform.openai.com, Billing), then run it again.`;
+  }
+  if (summary.style === "dropped") return "The AI kept no passage. The sheet stays as it was.";
+  if (summary.style === "failed") {
+    if (summary.again) return "The AI could not write this passage again. It stays as it was.";
+    return summary.batches
+      ? `The AI wrote ${summary.batches} of ${summary.total} passages; the others stay as they were.`
+      : "The AI could not copy this style. The sheet stays as it was.";
+  }
+  if (summary.style === "stale") return "The notes changed while the AI worked. The sheet stays as it was.";
+  if (summary.style === "ok" && summary.total && summary.batches !== undefined && summary.batches < summary.total) {
+    return `The AI wrote ${summary.batches} of ${summary.total} passages; the others stay as they were.`;
   }
   if (summary.level === "failed") return "The AI could not write this level. The sheet stays as it was.";
   if (summary.level === "stale") return "The notes changed while the AI worked. The sheet stays as it was.";
@@ -84,6 +110,10 @@ export interface FramesSheetState {
   enhanceStretch: (stretch: StretchRequest) => Promise<void>;
   /** Ask the AI to write a range again at a level (implementation 04-3, Phase 4). */
   level: (request: LevelRequest) => Promise<void>;
+  /** Ask the AI to write the passages ticked the way the reference is written (implementation 06). */
+  copyStyle: (request: StyleRequest) => Promise<void>;
+  /** The AI is checking the passages of a Copy this style run: it writes none yet. */
+  checking: boolean;
   /** A quiet word after the AI could not write a stretch again; cleared by the next edit or request. */
   notice: string | null;
   /** The end of the last AI run followed here, its summary and its notice (the panel of the run, 2026-10-30). */
@@ -114,6 +144,7 @@ export function useFramesSheet(
   const [editError, setEditError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [lastRun, setLastRun] = useState<FramesSheetState["lastRun"]>(null);
+  const [checking, setChecking] = useState(false);
   const changed = useRef(onChanged);
   useEffect(() => {
     changed.current = onChanged;
@@ -149,9 +180,19 @@ export function useFramesSheet(
         setReload((value) => value + 1);
       }, JOIN_MS);
     };
-    source.addEventListener("sheet", again);
+    source.addEventListener("sheet", (event) => {
+      again();
+      try {
+        const step = JSON.parse((event as MessageEvent<string>).data ?? "{}") as { phase?: string; checking?: boolean };
+        if (step.phase === "style") setChecking(step.checking === true);
+        if (step.phase === "check") setChecking(false);
+      } catch {
+        // A message without words: only the sheet to read again.
+      }
+    });
     source.addEventListener("done", (event) => {
       source.close();
+      setChecking(false);
       again();
       changed.current?.();
       try {
@@ -214,6 +255,21 @@ export function useFramesSheet(
     [audioUuid],
   );
 
+  const copyStyle = useCallback(
+    async (request: StyleRequest) => {
+      setNotice(null);
+      setEditError(null);
+      try {
+        await sheetApi.copyStyle(audioUuid, request);
+        setReload((value) => value + 1);
+        changed.current?.();
+      } catch (caught) {
+        setEditError(said(caught, "The AI could not be asked."));
+      }
+    },
+    [audioUuid],
+  );
+
   const edit = useCallback(
     async (call: () => Promise<SheetEdited>) => {
       if (editing) return null;
@@ -265,6 +321,8 @@ export function useFramesSheet(
     editError,
     enhanceStretch,
     level,
+    copyStyle,
+    checking,
     notice,
     lastRun,
     stopRun,

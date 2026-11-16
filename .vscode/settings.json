@@ -1,0 +1,26 @@
+{
+  "files.watcherExclude": {
+    "**/.venv/**": true,
+    "**/node_modules/**": true,
+    "**/aitu-backend/data/audio/**": true,
+    "**/.mypy_cache/**": true,
+    "**/.pytest_cache/**": true,
+    "**/.ruff_cache/**": true,
+    "**/pocs/**/out/**": true,
+    "**/.music-library/**": true,
+    "**/__pycache__/**": true,
+    "**/.run/**": true,
+    "**/aitu-frontend/dist/**": true,
+    "**/pocs/**": true,
+    "**/.git/objects/**": true
+  },
+  "search.exclude": {
+    "**/.venv": true,
+    "**/node_modules": true,
+    "**/aitu-backend/data/audio": true,
+    "**/.music-library": true,
+    "**/__pycache__": true,
+    "**/.run": true,
+    "**/aitu-frontend/dist": true
+  }
+}

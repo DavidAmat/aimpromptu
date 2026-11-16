@@ -35,6 +35,9 @@ The record (:class:`Record`):
   and why, ``- f4556 add D1 (L): D2 alone in a run of D1+D2 octaves``); written only when there is one. Their cost
   is in ``usd`` and ``requests`` too. The app no longer runs Simplify (implementation 04-6): the field is kept, read
   and written again, for the sheets that hold it.
+* ``styles``: the Copy this style runs (implementation 06, Phase 2): each the hand, the reference's frames, the
+  user's words, the prompt version, the run's id, the passages (``[first frame, end frame, status, why]``: ``ok``,
+  ``failed`` or ``dropped`` by the check), the marks the code copied, and the cost; written only when there is one.
 * ``legacy``: what the migration of Phase 9 (``scripts/migrate_sheets.py``) carried from the old ``sheet.json``, by
   kind (``{"lyrics": 2, "figures": 6}``); a sheet that has it is not migrated again.
 """
@@ -94,6 +97,8 @@ class Record:
     #: The level runs (implementation 04-3, Phase 4): each the level of each hand, the hands, the frames, the
     #: patterns, the plan, the declared lines, the prompt version and the cost.
     levels: list[dict[str, Any]] = field(default_factory=list)
+    #: The Copy this style runs (implementation 06, Phase 2).
+    styles: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def enhanced(self) -> bool:
@@ -129,6 +134,7 @@ class Record:
             **({"leftOut": self.left_out} if self.left_out else {}),
             **({"simplified": self.simplified} if self.simplified else {}),
             **({"levels": self.levels} if self.levels else {}),
+            **({"styles": self.styles} if self.styles else {}),
         }
 
     @classmethod
@@ -157,6 +163,7 @@ class Record:
             left_out=int(payload.get("leftOut") or 0),
             simplified=list(payload.get("simplified") or []),
             levels=list(payload.get("levels") or []),
+            styles=list(payload.get("styles") or []),
         )
 
 
