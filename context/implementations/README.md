@@ -70,7 +70,7 @@ closed.
 
 | # | Folder | What it is | Opened | State |
 |---|---|---|---|---|
-| 06 | [`06-copy-this-style/`](06-copy-this-style/README.md) | **Copy this style** (the brief [`04-4-prompt.md`](04-app-enhancements/04-4-prompt.md)): the code finds the passages similar to a reference the user edited, the AI checks them and writes each again in the reference's way of writing, the first passage first; a Stop button for a transcription; the first paste. Branch `feat/06-copy-this-style` | 2026-11-03 | **In progress**: Phases 1 (the matcher) and 2 (the run in the backend) done; Phase 3 (the frontend) next. [`06-plan.md`](06-copy-this-style/06-plan.md) is the plan, [`06-checklist.md`](06-copy-this-style/06-checklist.md) the status lookup |
+| 06 | [`06-copy-this-style/`](06-copy-this-style/README.md) | **Copy this style** (the brief [`04-4-prompt.md`](04-app-enhancements/04-4-prompt.md)): the code finds the passages similar to a reference the user edited, the AI checks them and writes each again in the reference's way of writing, the first passage first; a Stop button for a transcription; the first paste. Branch `feat/06-copy-this-style` | 2026-11-03 | **Paused during Phase 4** (2026-11-16): Phases 1 to 3 done; merged into `master` as it was so that 07 could start; resumes after 07 on `feat/06-copy-this-style-resume`. [`06-plan.md`](06-copy-this-style/06-plan.md) is the plan, [`06-checklist.md`](06-copy-this-style/06-checklist.md) the status lookup |
 
 ## How to read this folder
 

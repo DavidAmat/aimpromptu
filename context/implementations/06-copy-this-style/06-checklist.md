@@ -53,9 +53,13 @@ branch, `feat/06-copy-this-style`. Status letters: `[x]` complete, `[p]` in prog
 - [x] 3.4 `npm run check:copy-style` with a stand-in; `check:enhance-dialog`, `check:ai-run-panel`,
   `check:ai-history`; `npx tsc -b`; the pass of 13 checks of the minimal UI. Report.
 
-# [ ] Phase 4: The real test
+# [p] Phase 4: The real test
 
-- [ ] 4.1 Two temporary copies (7 Years, a piano cover); the user edits the reference on each (HUMAN INTERVENTION).
+**Paused (2026-11-16).** The user merged `feat/06-copy-this-style` into `master` here, with 4.1 open, so that implementation 07 (the PDF sheet
+reader) could run first. Resume after 07 on `feat/06-copy-this-style-resume` from `master`: first check what 07 changed in `aitu_backend/sheet/`
+and on the sheet page, and that the two copies (`8a273e92`, `57f81fa5`) still open; then go on with 4.1.
+
+- [p] 4.1 Two temporary copies (7 Years `8a273e92`, My Way `57f81fa5`, made 2026-11-04); the user edits the reference on each (HUMAN INTERVENTION).
 - [ ] 4.2 The matcher on the user's references (with and without the notes the user added).
 - [ ] 4.3 The cost given, the user's yes; Copy this style run on both copies.
 - [ ] 4.4 The gallery before and after per passage, each drawing checked zoomed in, served for the Mac; the user

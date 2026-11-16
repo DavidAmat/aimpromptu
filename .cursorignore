@@ -1,0 +1,17 @@
+# Cursor watches and indexes these unless they are listed here.
+# .gitignore does not stop the file watcher. Over SSH that watcher
+# is what freezes the window. Linux allows about 65,000 watches;
+# node_modules and .venv alone are about 100,000 files.
+
+aitu-backend/.venv/
+aitu-backend/data/audio/
+aitu-backend/.mypy_cache/
+aitu-backend/.pytest_cache/
+aitu-backend/.ruff_cache/
+aitu-frontend/node_modules/
+aitu-frontend/dist/
+pocs/**/out/
+.music-library/
+
+.database
+.database/
